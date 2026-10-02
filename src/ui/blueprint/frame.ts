@@ -2,12 +2,17 @@
 // exterior ground the scenario really uses (porch, steps, entries' staging points, squads, people, notes,
 // the FRONT mark, planting, fence) extends the frame beyond a thin ring of yard around the footprint.
 import type { BuiltLocation, SpaceView, SquadTask, Vec } from '../../sim/types';
-import { bboxOf, type Rect } from './geometry';
+import { bboxOf, clipPolyToRect, inflate, type Rect } from './geometry';
 import { objectRect } from './furniture';
 import { FONT, computeFront } from './layout';
 
 /** Yard ring kept around the footprint, feet. Holds window-side staging points and the dimension rows' extension lines. */
 export const FRAME_PAD = 2.3;
+/**
+ * Depth of street, alley and parking ground kept in frame where the building actually meets it (an entry zone,
+ * or a zone a door opens onto). These zones can be lot-sized; only this band around the footprint is drawn.
+ */
+export const BAND_PAD = 4.2;
 
 const W_MARKER = 0.52;
 
@@ -38,6 +43,21 @@ export function computeFrame(built: BuiltLocation, squadTasks: SquadTask[], spac
   const point = (p: Vec, r: number) => grow({ x: p.x - r, y: p.y - r, w: r * 2, h: r * 2 });
 
   for (const z of loc.zones) if (z.kind === 'porch') grow(bboxOf(z.polygon));
+  if (loc.upperFootprint?.length) grow(bboxOf(loc.upperFootprint));
+  // street / alley / parking: the band of those zones next to the building where it opens onto them
+  const doorZones = new Set<string>(loc.entries);
+  for (const o of loc.openings) if (o.type !== 'window' && o.type !== 'stair') (doorZones.add(o.a), doorZones.add(o.b));
+  const band = inflate(fp, BAND_PAD);
+  for (const z of loc.zones) {
+    if (z.kind !== 'street' && z.kind !== 'alley' && z.kind !== 'parking') continue;
+    if (!doorZones.has(z.id)) continue;
+    const clip = clipPolyToRect(z.polygon, band);
+    if (clip.length < 3) continue;
+    // a strip along one side deepens the frame on that side only, not along the building's length
+    const cb = bboxOf(clip);
+    if (cb.w >= cb.h) grow({ x: x0, y: cb.y, w: x1 - x0, h: cb.h });
+    else grow({ x: cb.x, y: y0, w: cb.w, h: y1 - y0 });
+  }
   const zoneIds = new Set(loc.zones.map((z) => z.id));
   for (const o of loc.objects) if (zoneIds.has(o.in)) grow(objectRect(o));
   for (const n of loc.notes) grow(noteRect(loc, n));

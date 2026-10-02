@@ -102,6 +102,11 @@ export interface ActionRequirements {
   notFlags?: { flag: string; reason: string }[];
   /** Opening states matter: blocked refuses; locked needs the tool or costs time. */
   openings?: { openingId: Id; blockedReason: string; lockedTag?: string; lockedNote: string }[];
+  /**
+   * Environment aids the action depends on (engine checks `scenario.environment`):
+   * 'cctv' needs cameras that work (environment.cctv and power on); 'keyholder' needs a keyholder.
+   */
+  env?: ('cctv' | 'keyholder')[];
 }
 
 export interface EquipmentEffect {
@@ -204,8 +209,25 @@ export interface ActionDefinition {
   /** Useful participants are limited by the smallest listed space's capacity. */
   capacityBound?: Id[];
   maxParticipants?: number;
-  /** Acting squads allowed (default 1). */
+  /** Acting squads allowed (1..4, default 1). */
   maxActing?: number;
+  /**
+   * Spaces this action lets the squad see into. A favourable result updates what the player last
+   * saw there (and settles location/armament facts of the people actually present). Default:
+   * [targetId] when the action has an approach other than 'none' or a spatial signal; pass [] for none.
+   * A remote camera action uses approach 'none' with explicit `observes`.
+   */
+  observes?: Id[];
+  /** Locked doors on the route open with the keyholder: no force time. Needs environment.keyholder. */
+  keyholder?: boolean;
+  /**
+   * Perimeter / coverage action: each acting squad claims a DIFFERENT exterior side (a zone with a
+   * way into the building). Squads beyond the number of sides add nothing. Use with approach 'window'
+   * and coveragePerVantage; a spatial signal is optional.
+   */
+  perimeter?: boolean;
+  /** Why a rushed (execution + urgent) entry or an upstairs approach is justified under a hazard ('Someone is down inside'). */
+  hazardReason?: string;
   /** Extra score per additional distinct vantage covered by acting squads. */
   coveragePerVantage?: number;
   stressBase: number;
@@ -272,7 +294,7 @@ export interface ScenarioDefinition {
   people?: PersonDefinition[];
   environment?: EnvironmentDefinition;
   /** Expected difficulty, shown as a band with its top drivers (conditional on known info). */
-  difficulty?: { score: number; band: 'low' | 'moderate' | 'high' | 'severe'; drivers: string[] };
+  difficulty?: DifficultyInfo;
 }
 
 export function scenarioActions(s: ScenarioDefinition): ActionDefinition[] {
@@ -345,8 +367,17 @@ export interface PersonDefinition {
   mobility: 'normal' | 'limited' | 'immobile';
   /** Engine-driven movement between stages (truth only). Positions must be valid points in existing spaces. */
   moves?: Partial<Record<StageId, { spaceId: Id; at: Vec; reason: string }>>;
-  /** Facts that describe this person (presence, location, armament, condition). */
+  /**
+   * Facts that describe this person. The engine reads the kind from the fact id prefix:
+   * 'loc:' (where they are / whether they are present), 'arm:' (armament and readiness),
+   * 'cond:' (disposition, intent, awareness). See FACT_PREFIX.
+   */
   factIds: Id[];
+  /**
+   * What the player is told while the matching fact is only 'reported' (may differ from `threat`:
+   * 'reported unarmed' for a person who has a long gun). Missing fields are unknown, not assumed.
+   */
+  reported?: Partial<ThreatProfile>;
 }
 
 export interface EnvironmentDefinition {
@@ -364,4 +395,50 @@ export interface EnvironmentDefinition {
   plansOnFile: boolean;
   alarm: 'none' | 'armed' | 'triggered';
   cctv: boolean;
+}
+
+// ---------------------------------------------------------------- engine conventions (operation module)
+// Everything below is additive to the phase-3 types. The incident generator relies on these
+// names; see docs in src/sim/threat.ts for what each one does in resolution.
+
+/** Fact id prefixes the engine reads (facts must also be listed in the person's `factIds`). */
+export const FACT_PREFIX = {
+  /** 'loc:<personId>[:suffix]': where a person is / whether they are present. Auto-settled by observing the space. */
+  location: 'loc:',
+  /** 'arm:<personId>[:suffix]': armament and readiness. Shown on the map only once confirmed. */
+  armament: 'arm:',
+  /** 'cond:<personId>[:suffix]': disposition, intent, awareness. */
+  condition: 'cond:',
+  /** 'use:<spaceId>[:suffix]': what a room is used for. Starts 'reported' instead of 'unknown' when plans are on file. */
+  use: 'use:',
+} as const;
+
+/** Run flags the engine reads. Outcome effects set them (`setFlags`); requirements and conditions may test them. */
+export const PERSON_FLAG = {
+  /** Subject safely contained: no longer a threat contributor, no longer moves. */
+  contained: (personId: Id) => `contained:${personId}`,
+  /** Civilian or held person with officers: stays put, no longer counts as exposed. */
+  withPolice: (personId: Id) => `with_police:${personId}`,
+  /** Person led out of the building: removed from risk and movement. */
+  evacuated: (personId: Id) => `evacuated:${personId}`,
+  /** Person left the scene on their own: removed from risk and movement. */
+  escaped: (personId: Id) => `escaped:${personId}`,
+  /** Person is being kept under observation: their moves are followed (knowledge does not go stale). */
+  watched: (personId: Id) => `watched:${personId}`,
+} as const;
+
+/** Run flags that clear a hazard restriction for any action. */
+export const HAZARD_FLAG = {
+  gas: 'hazard_cleared:gas',
+  structural: 'hazard_cleared:structural',
+} as const;
+
+export type DifficultyBand = 'low' | 'moderate' | 'high' | 'severe';
+
+/** Expected difficulty as shown to the player, conditional on what is currently known. */
+export interface DifficultyInfo {
+  score: number;
+  band: DifficultyBand;
+  /** Up to three drivers in player language, biggest first. */
+  drivers: string[];
 }

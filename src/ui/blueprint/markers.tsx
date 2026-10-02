@@ -1,7 +1,7 @@
 // Hand-drawn annotation layer: marker loops, arrows, glyphs, the FRONT highlighter, notes, squad tokens.
 import { add, perp, r2, scale, seeded, smoothPath, sub, unit, type Rect } from './geometry';
 import type { Vec } from '../../sim/types';
-import type { FrontItem, MarkerItem, NoteItem, PersonItem, SquadItem } from './layout';
+import type { FrontItem, MarkerItem, NoteItem, PersonItem, PersonKindKey, SquadItem } from './layout';
 import { FONT } from './layout';
 
 const toneVar = (tone: 'amber' | 'mint') => (tone === 'amber' ? 'var(--marker-amber)' : 'var(--marker-mint)');
@@ -161,34 +161,120 @@ function wobbleRing(cx: number, cy: number, r: number, key: string): string {
   return smoothPath(pts, true);
 }
 
+// ------------------------------------------------------------------ people pictograms
+// Simple marker-style pictograms in a ~2.4 ft box centred on (0,0). Shapes differ by kind so the kind never
+// rests on colour: subject = figure in a diamond, civilian = bare figure, child = small figure, patient = lying
+// figure with a cross, dog = four-legged side view, unknown = dashed figure with '?'.
+
+function Figure({ k = 1, dy = 0 }: { k?: number; dy?: number }) {
+  return (
+    <g transform={`translate(0 ${dy}) scale(${k})`}>
+      <circle cx="0" cy="-0.62" r="0.52" />
+      <path d="M-0.98 0.98 C-0.98 0.2 -0.58 -0.08 0 -0.08 C0.58 -0.08 0.98 0.2 0.98 0.98 Z" />
+    </g>
+  );
+}
+
+export function KindGlyph({ kind }: { kind: PersonKindKey | null }) {
+  switch (kind) {
+    case 'subject':
+      return (
+        <g>
+          <Figure k={0.82} dy={0.05} />
+          <path d="M0 -1.5 L1.5 0 L0 1.5 L-1.5 0 Z" className="bp-pg-line" />
+        </g>
+      );
+    case 'child':
+      return <Figure k={0.68} dy={0.34} />;
+    case 'patient':
+      return (
+        <g>
+          <circle cx="-0.95" cy="0.1" r="0.46" />
+          <rect x="-0.42" y="-0.38" width="1.7" height="0.9" rx="0.4" />
+          <path d="M0.55 -1.0 V-0.5 M0.3 -0.75 H0.8" className="bp-pg-line" />
+        </g>
+      );
+    case 'dog':
+      return (
+        <g>
+          <rect x="-1.0" y="-0.42" width="1.75" height="0.78" rx="0.38" />
+          <circle cx="1.0" cy="-0.56" r="0.4" />
+          <path d="M1.3 -0.5 L1.75 -0.36" className="bp-pg-line" />
+          <path d="M0.9 -0.9 L1.05 -1.2 L1.22 -0.88" />
+          <path d="M-1.0 -0.3 Q-1.45 -0.8 -1.55 -0.95 M-0.7 0.35 V0.95 M-0.2 0.35 V0.95 M0.35 0.35 V0.95 M0.65 0.35 V0.95" className="bp-pg-line" />
+        </g>
+      );
+    case 'unknown':
+      return (
+        <g>
+          <Figure k={0.9} />
+          <text y="0.58" textAnchor="middle" className="bp-pg-q">
+            ?
+          </text>
+        </g>
+      );
+    default:
+      return <Figure />;
+  }
+}
+
 /**
- * People the player's knowledge allows on the map. reported = dashed amber ring with '?' (approximate),
- * confirmed = mint head-and-shoulders figure with a label, disproved = small mint cross and 'clear'.
+ * People the player's knowledge allows on the map.
+ *  reported  = dashed amber ring with a '?'; a known kind is drawn inside it as a dashed outline. A report
+ *              whose label says 'last seen' is faded and captioned 'last seen'.
+ *  confirmed = mint pictogram by kind, with its label.
+ *  disproved = small mint cross and 'clear'.
+ * An armament chip is drawn only when the data names one.
  */
 export function PersonGlyph({ p }: { p: PersonItem }) {
   const { x, y } = p.at;
+  const chip = p.chip && (
+    <g className={`bp-chip bp-chip-${p.status}`}>
+      <rect x={r2(p.chip.x)} y={r2(p.chip.y)} width={r2(p.chip.w)} height={r2(p.chip.h)} rx="0.35" className="bp-chip-box" />
+      <text x={r2(p.chip.x + p.chip.w / 2)} y={r2(p.chip.y + p.chip.h * 0.7)} textAnchor="middle" className="bp-chip-text">
+        {p.chip.text}
+      </text>
+    </g>
+  );
   if (p.status === 'reported') {
     return (
-      <g className="bp-person bp-person-reported" data-person={p.id} pointerEvents="none" aria-hidden="true">
+      <g className={`bp-person bp-person-reported${p.stale ? ' bp-person-stale' : ''}`} data-person={p.id} data-kind={p.kind ?? ''} pointerEvents="none" aria-hidden="true">
         <path d={wobbleRing(x, y, 1.75, `${p.id}:ring`)} className="bp-person-ring" />
-        <text x={r2(x)} y={r2(y + 0.72)} textAnchor="middle" className="bp-person-q">
-          ?
-        </text>
+        {p.kind ? (
+          <>
+            <g transform={`translate(${r2(x)} ${r2(y + 0.1)}) scale(0.74)`} className="bp-pg bp-pg-rep">
+              <KindGlyph kind={p.kind} />
+            </g>
+            <text x={r2(x + 1.45)} y={r2(y - 0.95)} textAnchor="middle" className="bp-person-q bp-person-q-sm">
+              ?
+            </text>
+          </>
+        ) : (
+          <text x={r2(x)} y={r2(y + 0.72)} textAnchor="middle" className="bp-person-q">
+            ?
+          </text>
+        )}
+        {p.caption && (
+          <text x={r2(p.caption.x)} y={r2(p.caption.y)} className="bp-person-caption" textAnchor="middle">
+            {p.caption.text}
+          </text>
+        )}
+        {chip}
       </g>
     );
   }
   if (p.status === 'confirmed') {
     return (
-      <g className="bp-person bp-person-confirmed" data-person={p.id} pointerEvents="none" aria-hidden="true">
-        <g transform={`translate(${r2(x)} ${r2(y)}) scale(1.12)`}>
-          <circle cx="0" cy="-0.62" r="0.52" className="bp-figure" />
-          <path d="M-0.98 0.98 C-0.98 0.2 -0.58 -0.08 0 -0.08 C0.58 -0.08 0.98 0.2 0.98 0.98 Z" className="bp-figure" />
+      <g className="bp-person bp-person-confirmed" data-person={p.id} data-kind={p.kind ?? ''} pointerEvents="none" aria-hidden="true">
+        <g transform={`translate(${r2(x)} ${r2(y)}) scale(1.12)`} className="bp-pg bp-pg-conf">
+          <KindGlyph kind={p.kind} />
         </g>
         {p.label && (
           <text x={r2(p.label.x)} y={r2(p.label.y)} textAnchor={p.label.anchor} className="bp-person-label">
             {p.label.text}
           </text>
         )}
+        {chip}
       </g>
     );
   }
@@ -200,6 +286,15 @@ export function PersonGlyph({ p }: { p: PersonItem }) {
           {p.label.text}
         </text>
       )}
+    </g>
+  );
+}
+
+/** One member of the crowd outside: a tiny neutral figure. */
+export function CrowdFigure({ at }: { at: Vec }) {
+  return (
+    <g className="bp-crowd-fig" transform={`translate(${r2(at.x)} ${r2(at.y)}) scale(0.72)`}>
+      <Figure />
     </g>
   );
 }

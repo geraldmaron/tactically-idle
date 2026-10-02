@@ -1,13 +1,19 @@
 import type { ReactNode } from 'react';
 import { useGame } from '../store';
 import { pendingDebrief } from '../../sim/operation-selectors';
-import type { DebriefResult } from '../../sim/types';
+import type { DebriefResult, KnowledgeStatus } from '../../sim/types';
+import type { PersonDefinition } from '../../sim/scenario-types';
+import { getScenario } from '../../sim/scenario-registry';
+import { builtForScenario } from '../../sim/operation-selectors';
+import { spaceName } from '../../sim/resolution';
+import { armamentLabel } from '../components/incident';
 import { BeforeAfter, Button, Card, Chip, Meter, SubHead } from '../components/ui';
 import { useToast } from '../components/toast';
 import { ITEMS } from '../../content/items';
 import { Icon, itemIcon } from '../icons';
 import type { IconName } from '../icons';
 import { signed, signedMoney } from '../format';
+import { useMemo } from 'react';
 
 export function OpsDebrief() {
   const g = useGame();
@@ -40,6 +46,7 @@ export function OpsDebrief() {
         )}
       </div>
       <Rows d={d} officers={g.officers} />
+      <Reality d={d} />
       {d.causes.length > 0 && (
         <Card>
           <SubHead icon="list">What decided it</SubHead>
@@ -203,6 +210,125 @@ function Rows({ d, officers }: { d: DebriefResult; officers: Record<string, { su
           </div>
         )}
       </Row>
+    </Card>
+  );
+}
+
+// ---------------------------------------------------------------- what was really there
+
+const ROLE_WORD: Record<PersonDefinition['role'], string> = {
+  subject: 'Subject',
+  resident: 'Resident',
+  child: 'Child',
+  elderly: 'Elderly resident',
+  staff: 'Staff member',
+  customer: 'Customer',
+  held_person: 'Held person',
+  patient: 'Patient',
+  dog: 'Dog',
+  dangerous_dog: 'Aggressive dog',
+};
+const ROLE_ICON: Record<PersonDefinition['role'], IconName> = {
+  subject: 'user',
+  resident: 'house',
+  child: 'child',
+  elderly: 'user',
+  staff: 'desk',
+  customer: 'people',
+  held_person: 'lock',
+  patient: 'medic',
+  dog: 'paw',
+  dangerous_dog: 'paw',
+};
+const DISPOSITION_WORD: Record<string, string> = {
+  cooperative: 'cooperative',
+  distressed: 'distressed',
+  intoxicated: 'intoxicated',
+  agitated: 'agitated',
+  hostile: 'hostile',
+  in_crisis: 'in crisis',
+};
+
+function knew(status: KnowledgeStatus | undefined): { text: string; tone: 'mint' | 'amber' | 'danger' | 'neutral'; icon: IconName } {
+  if (status === 'confirmed') return { text: 'You confirmed it', tone: 'mint', icon: 'check' };
+  if (status === 'disproved') return { text: 'You ruled it out', tone: 'mint', icon: 'check' };
+  if (status === 'reported') return { text: 'Still only a report', tone: 'amber', icon: 'question' };
+  return { text: 'Never confirmed', tone: 'neutral', icon: 'question' };
+}
+
+/**
+ * Debrief only: the report beside what was actually there. This is the one place truth is shown, after
+ * the operation, so the player can learn which sources to trust and what to look for next time.
+ */
+function Reality({ d }: { d: DebriefResult }) {
+  const scenario = useMemo(() => getScenario(d.scenarioId), [d.scenarioId]);
+  const built = useMemo(() => builtForScenario(d.scenarioId), [d.scenarioId]);
+  if (!scenario) return null;
+  const status = new Map(d.informationPreserved.map((f) => [f.factId, f.status]));
+  const facts = scenario.facts;
+  const people = scenario.people ?? [];
+  if (facts.length === 0 && people.length === 0) return null;
+  return (
+    <Card className="reality">
+      <SubHead icon="eye">What was really there</SubHead>
+      {facts.length > 0 && (
+        <ul className="realrows">
+          {facts.map((f) => {
+            const told = f.initial === 'reported' || f.initial === 'confirmed';
+            const note = f.truth ? f.resolved?.confirmed : f.resolved?.disproved;
+            const k = knew(status.get(f.id));
+            return (
+              <li key={f.id} className={`realrow ${f.truth ? 'realrow-ok' : 'realrow-off'}`}>
+                <div className="realrow-top">
+                  <Icon name={f.truth ? 'checkcircle' : 'xcircle'} size={18} />
+                  <strong>{f.label}</strong>
+                  <Chip tone={f.truth ? 'mint' : 'amber'}>{f.truth ? 'Report was right' : 'Not as reported'}</Chip>
+                </div>
+                <p className="realrow-line">
+                  <Icon name="chat" size={14} />
+                  <span>
+                    {told ? 'Told' : 'Not reported'}: {f.claim}
+                    {told && f.source ? <span className="dim"> ({f.source})</span> : null}
+                  </span>
+                </p>
+                {note && (
+                  <p className="realrow-line">
+                    <Icon name="eye" size={14} />
+                    <span>{note}</span>
+                  </p>
+                )}
+                <Chip tone={k.tone} icon={k.icon}>
+                  {k.text}
+                </Chip>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      {people.length > 0 && (
+        <>
+          <h4 className="realpeople-h">
+            <Icon name="people" size={15} />
+            Everyone present
+          </h4>
+          <ul className="realpeople">
+            {people.map((p) => (
+              <li key={p.id}>
+                <Icon name={ROLE_ICON[p.role]} size={16} />
+                <span>
+                  <strong>{p.label || ROLE_WORD[p.role]}</strong> <span className="dim">in {spaceName(built, p.spaceId)}</span>
+                  {p.threat && (
+                    <span className="realpeople-threat">
+                      {armamentLabel(p.threat.armament)}
+                      {p.threat.armament !== 'none' ? `, ${p.threat.readiness}` : ''}; {DISPOSITION_WORD[p.threat.disposition] ?? p.threat.disposition}
+                    </span>
+                  )}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
     </Card>
   );
 }

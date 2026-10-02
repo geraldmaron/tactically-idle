@@ -1,11 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { getState, useGame } from '../store';
 import {
   actionViews,
   currentBuilt,
   lastResolution,
   previewAction,
-  scenarioCards,
   spaceViews,
   stageProgress,
 } from '../../sim/operation-selectors';
@@ -13,7 +12,9 @@ import type { Id, SquadId } from '../../sim/types';
 import { useToast } from '../components/toast';
 import { Sheet } from '../components/Sheet';
 import { Button } from '../components/ui';
+import { getScenario } from '../../sim/scenario-registry';
 import { ActionSheet, BAND_LABEL, LiveView, RoomSheet } from './LiveView';
+import { cardFor } from './helpers';
 
 interface Override {
   actionId: Id;
@@ -36,6 +37,7 @@ export function OpsLive() {
   const [override, setOverride] = useState<Override | null>(null);
   const [lastChange, setLastChange] = useState<{ revision: number; spaceIds: Id[] } | null>(null);
   const [confirmCancel, setConfirmCancel] = useState(false);
+  const [floor, setFloor] = useState(0);
 
   const built = currentBuilt(g);
   const deployed = g.squads.filter((s) => run.squadIds.includes(s.id));
@@ -53,7 +55,19 @@ export function OpsLive() {
   const defaultOfficer = view?.officerIds.find((id) => focus?.officerIds.includes(id)) ?? officers[0]?.id ?? null;
   const activeOfficerId = activeOfficer && officers.some((o) => o.id === activeOfficer) ? activeOfficer : defaultOfficer;
 
-  const card = scenarioCards(g, now).find((c) => c.id === run.scenarioId);
+  const card = cardFor(g, run.scenarioId, now);
+  const environment = useMemo(() => getScenario(run.scenarioId)?.environment ?? null, [run.scenarioId]);
+  const floors = built?.location.floors ?? 1;
+  /** Floor a room or zone sits on (exterior zones are ground). */
+  const floorOf = (id: Id | null): number | null => {
+    if (!id || !built) return null;
+    return built.derived.spaces[id]?.floor ?? built.location.rooms.find((r) => r.id === id)?.floor ?? 0;
+  };
+  // Follow the selected action: when its target is on another floor, show that floor.
+  const targetFloor = floorOf(view?.targetId ?? null);
+  useEffect(() => {
+    if (targetFloor !== null) setFloor(targetFloor);
+  }, [view?.id, targetFloor]);
   const title = (card?.title ?? built?.location.name ?? run.scenarioId.replace(/_/g, ' ')).toUpperCase();
   const subtitle = `${(card?.setting ?? built?.location.setting ?? '').toUpperCase()} / ${card?.code ?? 'OP'}`;
 
@@ -129,7 +143,12 @@ export function OpsLive() {
       onSelectSpace={(id) => {
         setSelSpace(id);
         setPanel('room');
+        const f = floorOf(id);
+        if (f !== null) setFloor(f);
       }}
+      floor={Math.min(floor, Math.max(0, floors - 1))}
+      onFloorChange={setFloor}
+      environment={environment}
       highlightSpaceIds={view?.targetId ? [view.targetId] : []}
       lastChange={lastChange}
       showRooms={showRooms}

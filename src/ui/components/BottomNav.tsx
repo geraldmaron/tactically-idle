@@ -14,7 +14,9 @@ const TABS: { id: Tab; label: string; icon: IconName }[] = [
 
 export function BottomNav() {
   const { tab, go } = useNav();
-  const live = useGame().activeRun !== null;
+  const g = useGame();
+  const live = g.activeRun !== null;
+  const fresh = ((g as { incidents?: { seen: boolean; expiresAt: number }[] }).incidents ?? []).filter((i) => !i.seen).length;
   return (
     <nav className="bottomnav" aria-label="Main">
       {TABS.map((t) => {
@@ -30,6 +32,11 @@ export function BottomNav() {
             <span className="navicon">
               <Icon name={t.icon} size={24} />
               {t.id === 'ops' && live && <span className="live-dot" role="img" aria-label="Operation in progress" />}
+              {t.id === 'ops' && !live && fresh > 0 && !on && (
+                <span className="navbadge" role="img" aria-label={`${fresh} new incident${fresh === 1 ? '' : 's'}`}>
+                  {fresh}
+                </span>
+              )}
             </span>
             <span className="navlabel">{t.label}</span>
           </button>

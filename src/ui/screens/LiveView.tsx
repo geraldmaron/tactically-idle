@@ -17,11 +17,13 @@ import type {
   StageId,
 } from '../../sim/types';
 import type { StageProgress } from '../../sim/operation-selectors';
+import type { EnvironmentDefinition } from '../../sim/scenario-types';
 import { Blueprint } from '../blueprint/Blueprint';
 import { RoomList } from '../blueprint/RoomList';
 import { OfficerCard } from '../components/OfficerCard';
 import { Sheet } from '../components/Sheet';
 import { Button, Chip, SubHead } from '../components/ui';
+import { armamentLabel } from '../components/incident';
 import { ROLE_META, ROOM_TYPE_LABEL, STAGE_LABEL } from '../components/labels';
 import { highRiskAllowed } from '../../sim/officer';
 import { describeConstruction } from '../../sim/spatial';
@@ -54,6 +56,11 @@ export interface LiveViewProps {
   selectedSpaceId: Id | null;
   onSelectSpace: (id: Id) => void;
   highlightSpaceIds: Id[];
+  /** Floor shown on the map (controlled). The renderer draws the floor tabs when the building has two floors. */
+  floor: number;
+  onFloorChange: (floor: number) => void;
+  /** Incident environment; the renderer draws its own chips, so none are drawn here. */
+  environment: EnvironmentDefinition | null;
   lastChange: { revision: number; spaceIds: Id[] } | null;
   showRooms: boolean;
   onToggleRooms: () => void;
@@ -72,6 +79,8 @@ export function LiveView(p: LiveViewProps) {
   const sel = p.selectedAction;
   const multi = p.deployedSquads.length > 1;
   const [materials, setMaterials] = useState(false);
+  // Renderer props that may not be declared yet (floor tabs, environment overlay). Spread so this compiles either way.
+  const blueprintExtras = { floor: p.floor, onFloorChange: p.onFloorChange, environment: p.environment ?? undefined };
 
   return (
     <div className="live">
@@ -105,6 +114,7 @@ export function LiveView(p: LiveViewProps) {
               lastChange={p.lastChange}
               overlays={sel?.overlays}
               showMaterials={materials}
+              {...blueprintExtras}
             />
           )}
         </div>
@@ -156,17 +166,19 @@ export function LiveView(p: LiveViewProps) {
       </div>
 
       {multi && (
-        <div className="squadsel" role="tablist" aria-label="Deployed squads">
+        <div className={`squadsel squadsel-n${p.deployedSquads.length}`} role="tablist" aria-label="Deployed squads">
           {p.deployedSquads.map((s) => {
             // In the field, readiness means members still fit for high-risk work (not deploy eligibility).
             const fit = s.officerIds.filter((id) => p.g.officers[id] && highRiskAllowed(p.g.officers[id])).length;
             const on = s.id === focus?.id;
             return (
-              <button key={s.id} type="button" role="tab" aria-selected={on} className={`sq${on ? ' sq-on' : ''}`} onClick={() => p.onFocusSquad(s.id)}>
+              <button key={s.id} type="button" role="tab" aria-selected={on} aria-label={`Squad ${s.id}, ${s.name}, ${fit} of ${s.officerIds.length} fit`} className={`sq${on ? ' sq-on' : ''}`} onClick={() => p.onFocusSquad(s.id)}>
                 <b>{s.id}</b>
-                <span className="sq-name">{s.name}</span>
-                <span className="sq-ready">
-                  {fit}/{s.officerIds.length} fit
+                <span className="sq-text">
+                  <span className="sq-name">{s.name}</span>
+                  <span className="sq-ready">
+                    {fit}/{s.officerIds.length} fit
+                  </span>
                 </span>
               </button>
             );
@@ -557,6 +569,7 @@ export function RoomSheet(p: RoomSheetProps) {
             {type && (
               <Chip icon={roomIcon(type)}>{ROOM_TYPE_LABEL[type] ?? type}</Chip>
             )}
+            {(loc.floors ?? 1) > 1 && <Chip icon="layers">{floorName(d?.floor ?? loc.rooms.find((r) => r.id === s.id)?.floor ?? 0)}</Chip>}
             <StatusChip status={s.status} />
           </span>
         ) : undefined
@@ -590,12 +603,7 @@ export function RoomSheet(p: RoomSheetProps) {
               <SubHead icon="user">People</SubHead>
               <ul className="peoplelist">
                 {people.map((m) => (
-                  <li key={m.id}>
-                    <Icon name={m.status === 'confirmed' ? 'user' : 'question'} size={16} />
-                    <strong>{m.label}</strong>
-                    <StatusChip status={m.status} />
-                    <span className="dim">{m.status === 'confirmed' ? 'Position confirmed' : 'Approximate position'}</span>
-                  </li>
+                  <PersonRow key={m.id} m={m} />
                 ))}
               </ul>
             </>
@@ -672,6 +680,55 @@ export function RoomSheet(p: RoomSheetProps) {
         </div>
       )}
     </Sheet>
+  );
+}
+
+export function floorName(f: number): string {
+  return f <= 0 ? 'Ground floor' : 'Upper floor';
+}
+
+const KIND_META: Record<string, { icon: IconName; word: string }> = {
+  subject: { icon: 'user', word: 'Subject' },
+  civilian: { icon: 'civilian', word: 'Civilian' },
+  child: { icon: 'child', word: 'Child' },
+  patient: { icon: 'medic', word: 'Patient' },
+  dog: { icon: 'paw', word: 'Dog' },
+  unknown: { icon: 'question', word: 'Unknown person' },
+};
+
+/**
+ * One person on the map, only as far as the player knows. Armament is shown as a report or a confirmation,
+ * never as truth; a subject with no armament information says so rather than implying unarmed.
+ */
+function PersonRow({ m }: { m: SpaceView['people'][number] }) {
+  const meta = KIND_META[m.kind ?? 'unknown'] ?? KIND_META.unknown;
+  const confirmed = m.status === 'confirmed';
+  const armed = m.armament ?? null;
+  const isSubject = m.kind === 'subject' || m.kind === 'unknown' || m.kind === undefined;
+  return (
+    <li className="person">
+      <div className="person-top">
+        <Icon name={confirmed ? meta.icon : 'question'} size={16} />
+        <strong>{m.label}</strong>
+        <StatusChip status={m.status} />
+        <span className="dim">{confirmed ? 'Position confirmed' : 'Approximate position'}</span>
+      </div>
+      {armed ? (
+        <p className={`person-arm${armed === 'none' ? ' person-arm-ok' : ''}`}>
+          <Icon name={armed === 'none' ? 'checkcircle' : 'warning'} size={14} />
+          <span>
+            {armamentLabel(armed)} <span className="dim">({confirmed ? 'confirmed' : 'reported, unverified'})</span>
+          </span>
+        </p>
+      ) : (
+        isSubject && (
+          <p className="person-arm person-arm-unk">
+            <Icon name="question" size={14} />
+            <span>Armament not known</span>
+          </p>
+        )
+      )}
+    </li>
   );
 }
 

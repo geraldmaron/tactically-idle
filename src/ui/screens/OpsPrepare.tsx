@@ -4,7 +4,6 @@ import {
   briefing,
   builtForScenario,
   prepCheck,
-  scenarioCards,
   spaceViewsForScenario,
 } from '../../sim/operation-selectors';
 import type { StartOperationCommand } from '../../sim/operation-selectors';
@@ -14,37 +13,53 @@ import { readyUnits, unitEffectiveness } from '../../sim/inventory';
 import { stagingPointsIn } from '../../sim/spatial';
 import { spaceName } from '../../sim/resolution';
 import { ITEMS } from '../../content/items';
-import type { Id, ItemUnit, SquadId, StagingPoint } from '../../sim/types';
+import { autoLoadout } from '../../sim/auto-equip';
+import type { AutoLoadout } from '../../sim/auto-equip';
+import { getScenario } from '../../sim/scenario-registry';
+import type { Id, ItemUnit, KnowledgeStatus, SquadId, StagingPoint } from '../../sim/types';
 import { Blueprint } from '../blueprint/Blueprint';
 import { Button, Card, Chip, Section, Stepper, SubHead } from '../components/ui';
+import { DifficultyChip, EnvChips, familyBlurb, incidentMeta } from '../components/incident';
 import { useToast } from '../components/toast';
 import { UNIT_STATE_META, unitStateOf } from '../components/labels';
 import { Icon, itemIcon } from '../icons';
 import type { IconName } from '../icons';
 import { pct } from '../format';
-import { hasNodeEffect } from './helpers';
-
-type Loadouts = Partial<Record<SquadId, Record<Id, number>>>;
+import { cardFor, hasNodeEffect, isReplayOnly } from './helpers';
+import { planAuto } from './autoPlan';
+import type { AutoNote, Explicit, Loadouts } from './autoPlan';
+import { buildIntel } from './intel';
+import type { IntelLine } from './intel';
 
 export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel: () => void }) {
   const g = useGame();
   const now = Date.now();
-  const { act } = useToast();
-  const card = scenarioCards(g, now).find((c) => c.id === scenarioId);
+  const { act, notify } = useToast();
+  const card = cardFor(g, scenarioId, now);
+  const scenario = useMemo(() => getScenario(scenarioId), [scenarioId]);
   const brief = useMemo(() => briefing(scenarioId), [scenarioId]);
   const built = useMemo(() => builtForScenario(scenarioId), [scenarioId]);
   const spaces = useMemo(() => spaceViewsForScenario(scenarioId), [scenarioId]);
+  const intel = useMemo(() => buildIntel(scenario, built), [scenario, built]);
   const store = storeOptions(g);
   const presets = hasNodeEffect(g, 'loadoutPresets');
+  const replay = isReplayOnly(g, scenarioId);
 
   const [chosen, setChosen] = useState<SquadId[]>([]);
   const [positions, setPositions] = useState<Partial<Record<SquadId, Id>>>({});
   const [loadouts, setLoadouts] = useState<Loadouts>({});
+  const [explicit, setExplicit] = useState<Explicit>({});
+  const [autoNote, setAutoNote] = useState<Partial<Record<SquadId, AutoNote>>>({});
+  const [autoWarnings, setAutoWarnings] = useState<string[]>([]);
   const [staging, setStaging] = useState<Partial<Record<SquadId, Id>>>({});
-  const [practice, setPractice] = useState(false);
+  const [practice, setPractice] = useState(replay);
+  const [floor, setFloor] = useState(0);
 
-  const range = card?.squadRange ?? { min: 1, max: 3 };
+  const range = card?.squadRange ?? { min: 1, max: 4 };
   const defaultEntry = brief.entries[0]?.id;
+  const floors = built.location.floors ?? 1;
+  // Renderer props that may not be declared yet (floor tabs, environment overlay). Spread so this compiles either way.
+  const blueprintExtras = { floor: Math.min(floor, floors - 1), onFloorChange: setFloor, environment: intel.environment ?? undefined };
 
   /** Staging points available from a squad's starting zone. */
   const pointsFor = (sid: SquadId): StagingPoint[] => {
@@ -52,7 +67,10 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
     return p ? stagingPointsIn(built, p) : [];
   };
 
-  /** The exact units each squad will take: best-condition ready units, never the same unit twice. Matches the engine's rule. */
+  /**
+   * The exact units each squad will take. Explicit picks (auto-equip) are honoured first and never taken twice;
+   * the rest are filled best-condition first, matching the engine's default rule.
+   */
   const picks = useMemo(() => {
     const taken = new Set<Id>();
     const out: Partial<Record<SquadId, Record<Id, ItemUnit[]>>> = {};
@@ -60,16 +78,29 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
       const per: Record<Id, ItemUnit[]> = {};
       for (const [itemId, qty] of Object.entries(loadouts[sid] ?? {})) {
         if (qty <= 0) continue;
-        const take = readyUnits(g, itemId)
-          .filter((u) => !taken.has(u.id))
+        const want = explicit[sid]?.[itemId] ?? [];
+        const have = want
+          .map((id) => g.units[id])
+          .filter((u): u is ItemUnit => !!u && u.itemId === itemId && u.status === 'ready' && !taken.has(u.id))
           .slice(0, qty);
-        take.forEach((u) => taken.add(u.id));
-        per[itemId] = take;
+        have.forEach((u) => taken.add(u.id));
+        per[itemId] = have;
       }
       out[sid] = per;
     }
+    for (const sid of chosen) {
+      for (const [itemId, qty] of Object.entries(loadouts[sid] ?? {})) {
+        if (qty <= 0) continue;
+        const have = out[sid]?.[itemId] ?? [];
+        const more = readyUnits(g, itemId)
+          .filter((u) => !taken.has(u.id))
+          .slice(0, Math.max(0, qty - have.length));
+        more.forEach((u) => taken.add(u.id));
+        out[sid]![itemId] = [...have, ...more];
+      }
+    }
     return out;
-  }, [g, chosen, loadouts]);
+  }, [g, chosen, loadouts, explicit]);
 
   const cmd: StartOperationCommand = useMemo(() => {
     const pos: Partial<Record<SquadId, Id>> = {};
@@ -102,8 +133,19 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
 
   /** Quantity of an item already allocated to every chosen squad except `except`. */
   const allocated = (itemId: Id, except: SquadId) => chosen.filter((s) => s !== except).reduce((n, s) => n + (loadouts[s]?.[itemId] ?? 0), 0);
-  const setQty = (squad: SquadId, itemId: Id, qty: number) => setLoadouts((l) => ({ ...l, [squad]: { ...(l[squad] ?? {}), [itemId]: qty } }));
   const readyOf = (itemId: Id) => readyUnits(g, itemId).length;
+  const touch = (squad: SquadId) => setAutoNote((n) => (n[squad] && !n[squad]!.edited ? { ...n, [squad]: { ...n[squad]!, edited: true } } : n));
+  const dropPicks = (squad: SquadId, itemId?: Id) =>
+    setExplicit((e) => {
+      if (!e[squad]) return e;
+      if (!itemId) return omit(e, squad);
+      return { ...e, [squad]: omit(e[squad]!, itemId) };
+    });
+  const setQty = (squad: SquadId, itemId: Id, qty: number) => {
+    setLoadouts((l) => ({ ...l, [squad]: { ...(l[squad] ?? {}), [itemId]: qty } }));
+    dropPicks(squad, itemId);
+    touch(squad);
+  };
   const applyPreset = (squad: SquadId) => {
     const preset = g.squads.find((s) => s.id === squad)?.loadoutPreset ?? {};
     const next: Record<Id, number> = {};
@@ -111,9 +153,45 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
       next[itemId] = Math.max(0, Math.min(q, readyOf(itemId) - allocated(itemId, squad)));
     }
     setLoadouts((l) => ({ ...l, [squad]: next }));
+    dropPicks(squad);
+    touch(squad);
+  };
+
+  /**
+   * Auto-equip. `only` limits the change to one squad: its share is worked out across every chosen squad
+   * (so scarce items are spread), then clamped to what the other squads have not already taken.
+   */
+  const runAuto = (only?: SquadId) => {
+    if (chosen.length === 0) return;
+    let res: AutoLoadout;
+    try {
+      res = autoLoadout(g, scenarioId, chosen, Date.now());
+    } catch {
+      notify('Auto-equip is not available right now', { tone: 'error' });
+      return;
+    }
+    const plan = planAuto({
+      res,
+      targets: only ? [only] : chosen,
+      chosen,
+      loadouts,
+      takenBy: Object.fromEntries(chosen.map((s) => [s, Object.values(picks[s] ?? {}).flat().map((u) => u.id)])),
+      itemOf: (id) => g.units[id]?.itemId,
+      ready: readyOf,
+    });
+    setLoadouts((l) => ({ ...l, ...plan.loadouts }));
+    setExplicit((e) => ({ ...e, ...plan.explicit }));
+    setAutoNote((n) => ({ ...n, ...plan.notes }));
+    setAutoWarnings(res.warnings);
+    notify(plan.total > 0 ? (only ? `Squad ${only} equipped` : 'Squads equipped') : 'Nothing to add from stock', { tone: plan.total > 0 ? 'ok' : 'amber' });
   };
 
   const deploy = () => act(cmd, practice ? 'Practice started' : 'Squads deployed');
+
+  const incidentType = scenario?.incident?.type ?? null;
+  const familyId = scenario?.incident?.familyId ?? scenario?.locationFamilyId ?? null;
+  const kicker = [incidentType ? incidentMeta(incidentType).label : null, familyBlurb(familyId)].filter(Boolean).join(' · ');
+  const knownRest = brief.known.filter((k) => !intel.covered.has(k));
 
   return (
     <div className="page prepare">
@@ -125,17 +203,79 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
         <div className="prep-title">
           <span className="opboard-code">{card?.code ?? 'OP'}</span>
           <h2 className="live-name">{(card?.title ?? scenarioId.replace(/_/g, ' ')).toUpperCase()}</h2>
+          {kicker && <p className="prep-kicker">{kicker}</p>}
         </div>
       </div>
 
       <div className="prep-map" aria-label="Location preview">
-        <Blueprint built={built} spaces={spaces} squadTasks={[]} selectedSpaceId={null} focusSquadId={null} />
+        <Blueprint built={built} spaces={spaces} squadTasks={[]} selectedSpaceId={null} focusSquadId={null} {...blueprintExtras} />
       </div>
 
-      <Section title="Briefing" icon="intel">
+      <Section title="Briefing" icon="intel" hint="What dispatch has told you. Reports can be wrong until a squad confirms them.">
         <Card>
-          <BriefList icon="check" tone="mint" title="Known" items={brief.known} empty="Nothing confirmed yet." />
+          <BriefList icon="check" tone="mint" title="Known" items={knownRest} empty="Nothing confirmed yet." />
           <BriefList icon="question" tone="amber" title="Unknown" items={brief.unknown} empty="No open questions." />
+          <div className="brief">
+            <h3 className="brief-h tone-neutral">
+              <Icon name="people" size={16} />
+              People
+            </h3>
+            {intel.people.length === 0 ? (
+              <p className="dim">Nobody reported. Occupancy is unverified.</p>
+            ) : (
+              <ul className="intel">
+                {intel.people.map((p) => (
+                  <IntelRow key={p.id} line={p} icon="user" />
+                ))}
+              </ul>
+            )}
+          </div>
+          <div className="brief">
+            <h3 className="brief-h tone-warn">
+              <Icon name="warning" size={16} />
+              Threat information
+            </h3>
+            {intel.threats.length === 0 ? (
+              <p className="dim">No weapon reported. That does not mean none is present.</p>
+            ) : (
+              <ul className="intel">
+                {intel.threats.map((t) => (
+                  <IntelRow key={t.id} line={t} icon="warning" lead="Armament" />
+                ))}
+              </ul>
+            )}
+          </div>
+          {intel.environment && (
+            <div className="brief">
+              <h3 className="brief-h tone-neutral">
+                <Icon name="cloud" size={16} />
+                Environment
+              </h3>
+              <EnvChips env={intel.environment} />
+            </div>
+          )}
+          {intel.difficulty && (
+            <div className="brief">
+              <h3 className="brief-h tone-neutral">
+                <Icon name="mountain" size={16} />
+                Difficulty
+              </h3>
+              <div className="chips">
+                <DifficultyChip band={intel.difficulty.band} />
+              </div>
+              {intel.difficulty.drivers.length > 0 && (
+                <ul className="drivers">
+                  {intel.difficulty.drivers.slice(0, 3).map((d, i) => (
+                    <li key={i}>
+                      <Icon name="gauge" size={14} />
+                      {d}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <p className="dim">Conditional on what is known. New information can raise or lower it.</p>
+            </div>
+          )}
           <BriefList icon="flag" tone="neutral" title="Objectives" items={brief.objectives} empty="No objectives listed." />
         </Card>
       </Section>
@@ -146,29 +286,45 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
             <p className="dim">Create a squad on the Squad tab first.</p>
           </Card>
         ) : (
-          <div className="squadpick">
-            {g.squads.map((s) => {
-              const r = squadReadiness(g, s.id, now);
-              const on = chosen.includes(s.id);
-              return (
-                <button key={s.id} type="button" className={`pickcard${on ? ' pickcard-on' : ''}`} aria-pressed={on} onClick={() => toggleSquad(s.id)}>
-                  <span className="squad-badge">{s.id}</span>
-                  <span className="pickcard-main">
-                    <strong>{s.name}</strong>
-                    <span className={r.deployable ? 'tone-mint' : 'tone-warn'}>
-                      {r.ready}/{r.total} ready{r.deployable ? '' : ' · not deployable'}
-                    </span>
-                    {r.issues.slice(0, 1).map((i, k) => (
-                      <span key={k} className="dim">
-                        {i}
+          <>
+            <div className="squadpick">
+              {g.squads.map((s) => {
+                const r = squadReadiness(g, s.id, now);
+                const on = chosen.includes(s.id);
+                return (
+                  <button key={s.id} type="button" className={`pickcard${on ? ' pickcard-on' : ''}`} aria-pressed={on} onClick={() => toggleSquad(s.id)}>
+                    <span className="squad-badge">{s.id}</span>
+                    <span className="pickcard-main">
+                      <strong>{s.name}</strong>
+                      <span className={r.deployable ? 'tone-mint' : 'tone-warn'}>
+                        {r.ready}/{r.total} ready{r.deployable ? '' : ' · not deployable'}
                       </span>
-                    ))}
-                  </span>
-                  <span className="pickcard-check">{on && <Icon name="check" size={18} />}</span>
-                </button>
-              );
-            })}
-          </div>
+                      {r.issues.slice(0, 1).map((i, k) => (
+                        <span key={k} className="dim">
+                          {i}
+                        </span>
+                      ))}
+                    </span>
+                    <span className="pickcard-check">{on && <Icon name="check" size={18} />}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <Button block icon="wand" disabled={chosen.length === 0} onClick={() => runAuto()}>
+              Auto-equip {chosen.length > 1 ? 'all squads' : chosen.length === 1 ? `squad ${chosen[0]}` : 'all'}
+            </Button>
+            {chosen.length === 0 && <p className="dim autohint">Choose squads, then let auto-equip fill their loadouts from stock. You can edit the result.</p>}
+            {autoWarnings.length > 0 && (
+              <div className="autowarn" aria-live="polite">
+                {autoWarnings.map((w, i) => (
+                  <p key={i} className="note note-amber">
+                    <Icon name="warning" size={16} />
+                    {w}
+                  </p>
+                ))}
+              </div>
+            )}
+          </>
         )}
       </Section>
 
@@ -178,6 +334,7 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
         const visible = store.filter((o: StoreOption) => o.owned > 0 || brief.usefulItemIds.includes(o.item.id));
         const points = pointsFor(sid);
         const chosenPoint = cmd.staging?.[sid] ?? null;
+        const note = autoNote[sid];
         const unreliable = Object.values(picks[sid] ?? {})
           .flat()
           .filter((u) => unitStateOf(u.condition, ITEMS[u.itemId].wear) !== 'Good' && unitStateOf(u.condition, ITEMS[u.itemId].wear) !== 'Worn');
@@ -186,7 +343,32 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
             <div className="prepsquad-head">
               <span className="squad-badge">{sid}</span>
               <strong>{squad.name}</strong>
+              <Button size="sm" icon="wand" className="prepsquad-auto" onClick={() => runAuto(sid)} aria-label={`Auto-equip squad ${sid}`}>
+                Auto
+              </Button>
             </div>
+            {note && (
+              <div className="autonote">
+                <span className="autonote-h">
+                  <Icon name="wand" size={14} />
+                  Auto-equip chose
+                  {note.edited && (
+                    <Chip tone="amber" icon="edit">
+                      You changed this
+                    </Chip>
+                  )}
+                </span>
+                {note.lines.length > 0 ? (
+                  <ul>
+                    {note.lines.map((l, i) => (
+                      <li key={i}>{l}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="dim">Nothing in stock suits this incident.</p>
+                )}
+              </div>
+            )}
             <label className="field">
               <span className="field-label">
                 <Icon name="pin" size={14} />
@@ -300,11 +482,15 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
 
       <Section title="Mode" icon="flag">
         <label className="toggle">
-          <input type="checkbox" checked={practice} onChange={(e) => setPractice(e.target.checked)} />
+          <input type="checkbox" checked={practice} disabled={replay} onChange={(e) => setPractice(e.target.checked)} />
           <span className="toggle-ui" aria-hidden="true" />
           <span className="toggle-text">
             <strong>Practice run</strong>
-            <span className="dim">No rewards and no consequences: stress, supplies and trust are untouched. Good for trying a different squad.</span>
+            <span className="dim">
+              {replay
+                ? 'This incident is already closed, so it replays as practice: no rewards and no consequences.'
+                : 'No rewards and no consequences: stress, supplies and trust are untouched. Good for trying a different squad.'}
+            </span>
           </span>
         </label>
       </Section>
@@ -340,23 +526,34 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
   );
 }
 
-function BriefList({ icon, tone, title, items, empty }: { icon: 'check' | 'question' | 'flag'; tone: 'mint' | 'amber' | 'neutral'; title: string; items: string[]; empty: string }) {
+/** Confidence word for a briefing line: never stronger than the report. */
+function confidence(status: KnowledgeStatus): { label: string; tone: 'mint' | 'amber' | 'danger'; icon: IconName } {
+  if (status === 'confirmed') return { label: 'Confirmed', tone: 'mint', icon: 'check' };
+  if (status === 'disproved') return { label: 'Ruled out', tone: 'danger', icon: 'x' };
+  return { label: 'Unverified', tone: 'amber', icon: 'question' };
+}
+
+function IntelRow({ line, icon, lead }: { line: IntelLine; icon: IconName; lead?: string }) {
+  const c = confidence(line.status);
   return (
-    <div className="brief">
-      <h3 className={`brief-h tone-${tone}`}>
+    <li className="intelrow">
+      <div className="intelrow-top">
         <Icon name={icon} size={16} />
-        {title}
-      </h3>
-      {items.length === 0 ? (
-        <p className="dim">{empty}</p>
-      ) : (
-        <ul>
-          {items.map((t, i) => (
-            <li key={i}>{t}</li>
-          ))}
-        </ul>
-      )}
-    </div>
+        <strong>{line.label}</strong>
+        {line.where && <span className="dim">{line.where}</span>}
+      </div>
+      <p className="intelrow-claim">{lead ? `${lead}: ` : ''}{line.claim}</p>
+      <div className="chips">
+        <Chip tone={c.tone} icon={c.icon}>
+          {c.label}
+        </Chip>
+        {line.source && (
+          <Chip icon="chat" title="Who reported it">
+            {line.source}
+          </Chip>
+        )}
+      </div>
+    </li>
   );
 }
 
@@ -394,4 +591,24 @@ function stageLabels(built: ReturnType<typeof builtForScenario>, points: Staging
     seen.set(b.title, n);
     return { ...b, title: `${b.title} ${n}` };
   });
+}
+
+function BriefList({ icon, tone, title, items, empty }: { icon: 'check' | 'question' | 'flag'; tone: 'mint' | 'amber' | 'neutral'; title: string; items: string[]; empty: string }) {
+  return (
+    <div className="brief">
+      <h3 className={`brief-h tone-${tone}`}>
+        <Icon name={icon} size={16} />
+        {title}
+      </h3>
+      {items.length === 0 ? (
+        <p className="dim">{empty}</p>
+      ) : (
+        <ul>
+          {items.map((t, i) => (
+            <li key={i}>{t}</li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
 }

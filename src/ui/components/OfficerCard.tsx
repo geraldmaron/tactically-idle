@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react';
 import type { Officer } from '../../sim/types';
 import { Portrait } from '../portraits/Portrait';
+import { useGame } from '../store';
+import { agePortraitProps } from '../screens/helpers';
 import { Icon } from '../icons';
 import { useWidth } from './hooks';
 import { ROLE_META, bandOf, BAND_SHORT, STATUS_META } from './labels';
@@ -25,6 +27,7 @@ export interface OfficerCardProps {
 
 /** Portrait card from the approved reference: portrait, SURNAME, role icon + label, readiness bar. */
 export function OfficerCard({ officer, now, variant = 'strip', selected, onClick, chip, footer, leader, note }: OfficerCardProps) {
+  const g = useGame();
   const [ref, w] = useWidth<HTMLSpanElement>(80);
   const band = bandOf(officer);
   const injured = !!officer.injury && officer.injury.until > now;
@@ -45,7 +48,7 @@ export function OfficerCard({ officer, now, variant = 'strip', selected, onClick
       aria-label={`${officer.firstName} ${officer.surname}, ${role.label}, ${injured ? 'injured' : BAND_SHORT[band]}`}
     >
       <span className="ocard-art" ref={ref} style={{ height: crop }}>
-        <Portrait officer={officer} size={size} />
+        <Portrait officer={officer} size={size} {...agePortraitProps(g, officer, now)} />
         {chip && <span className="ocard-chip">{chip}</span>}
         {status && statusKey && (
           <span className={`ocard-status band-${injured ? 'recovery' : statusKey === 'training' || statusKey === 'deployed' ? 'strained' : statusKey}`}>

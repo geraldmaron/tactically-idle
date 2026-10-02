@@ -10,6 +10,7 @@ import { useToast } from '../components/toast';
 import type { StatusKey } from '../components/labels';
 import { BAND_SHORT, CERT_ICON, CERT_LABEL, RATING_META, ROLE_META, TRAIT_INFO, bandOf, ratingTone } from '../components/labels';
 import { Portrait } from '../portraits/Portrait';
+import { agePortraitProps } from './helpers';
 import { Icon } from '../icons';
 import { duration, money, perHour, rate, relativeTime, signedMoney, yearsText } from '../format';
 
@@ -45,7 +46,7 @@ function OfficerBody({ o, onClose }: { o: Officer; onClose: () => void }) {
     <div className="osheet">
       <div className="osheet-top">
         <div className="osheet-portrait">
-          <Portrait officer={o} size={84} />
+          <Portrait officer={o} size={84} {...agePortraitProps(g, o, now)} />
         </div>
         <div className="osheet-id">
           <div className="chips">

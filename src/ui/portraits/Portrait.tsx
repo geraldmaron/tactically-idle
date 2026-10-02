@@ -15,7 +15,7 @@ const PROC = 'proc:';
 /** Accepts a bare key ('chen'), a path ('/portraits/chen.png') or 'proc:<seed>'. */
 function paintedSrc(key: string): string {
   if (key.startsWith('/') || key.startsWith('http')) return key;
-  return `/portraits/${key}.png`;
+  return `${import.meta.env.BASE_URL}portraits/${key}.png`;
 }
 
 export function Portrait({ officer, size = 80, className }: PortraitProps) {

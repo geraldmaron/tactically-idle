@@ -250,8 +250,22 @@ interface Trace {
   distance: number;
 }
 
-function trace(built: BuiltLocation, from: Vec, to: Vec, channel: Channel): Trace {
+/** Opening that joins `room` to an exterior zone near point p on a floor, if any. */
+function exteriorOpeningAt(built: BuiltLocation, prep: Prepared, room: Id, floor: number, p: Vec): Opening | undefined {
+  const roomIds = new Set(built.location.rooms.map((r) => r.id));
+  return built.location.openings.find((o) => {
+    if (o.type === 'stair' || (o.a !== room && o.b !== room)) return false;
+    const other = o.a === room ? o.b : o.a;
+    if (roomIds.has(other)) return false;
+    const of = o.floor ?? prep.floorOf.get(room) ?? 0;
+    return of === floor && distToSegment(p, o.from, o.to) <= OPENING_TOL;
+  });
+}
+
+/** Trace a straight plan segment on one floor's geometry. */
+function trace(built: BuiltLocation, from: Vec, to: Vec, channel: Channel, floor = 0): Trace {
   const prep = prepare(built);
+  const geom = floorGeom(prep, floor);
   const len = dist(from, to);
   const blockers: { at: number; b: Blocker }[] = [];
   let layers = 1;
@@ -259,7 +273,7 @@ function trace(built: BuiltLocation, from: Vec, to: Vec, channel: Channel): Trac
 
   // Distinct wall crossings along the segment.
   const raw: number[] = [];
-  for (const [q0, q1] of prep.edges) {
+  for (const [q0, q1] of geom.edges) {
     const t = crossT(from, to, q0, q1);
     if (t === null || t * len < EPS_END || (1 - t) * len < EPS_END) continue;
     raw.push(t);
@@ -270,13 +284,31 @@ function trace(built: BuiltLocation, from: Vec, to: Vec, channel: Channel): Trac
 
   if (ts.length > 0) {
     const bounds = [0, ...ts, 1];
-    const spaceIds = bounds.slice(0, -1).map((t0, i) => spaceAt(built, lerp(from, to, (t0 + bounds[i + 1]) / 2)));
+    const spaceIds = bounds.slice(0, -1).map((t0, i) => spaceAt(built, lerp(from, to, (t0 + bounds[i + 1]) / 2), floor));
     for (let j = 0; j < ts.length; j++) {
       const sa = spaceIds[j];
       const sb = spaceIds[j + 1];
-      if (!sa || !sb || sa === sb) continue;
-      if (!prep.byId.get(sa)?.isRoom && !prep.byId.get(sb)?.isRoom) continue; // zone to zone: open ground
+      if (sa === sb) continue;
       const p = lerp(from, to, ts[j]);
+      if (!sa || !sb) {
+        // Ground floor: beyond the lot is not modelled. Upper floors: beyond the upper
+        // outline is open air, so the edge is an exterior wall or one of its openings.
+        if (floor === 0) continue;
+        const room = (sa ?? sb) as Id;
+        const opening = exteriorOpeningAt(built, prep, room, floor, p);
+        const layer = opening ? openingLayer(opening, channel) : null;
+        if (opening && layer) {
+          layers *= layer.t;
+          if (layer.t < 0.999) blockers.push({ at: ts[j], b: { kind: 'opening', id: opening.id, label: layer.label, transmission: layer.t } });
+        } else {
+          const m = built.location.materials.exterior;
+          const t = WALLS[m][channel];
+          layers *= t;
+          blockers.push({ at: ts[j], b: { kind: 'wall', id: null, label: `${WALLS[m].label} wall`, transmission: t } });
+        }
+        continue;
+      }
+      if (!prep.byId.get(sa)?.isRoom && !prep.byId.get(sb)?.isRoom) continue; // zone to zone: open ground
       const opening = built.location.openings.find(
         (o) => ((o.a === sa && o.b === sb) || (o.a === sb && o.b === sa)) && distToSegment(p, o.from, o.to) <= OPENING_TOL,
       );
@@ -294,7 +326,7 @@ function trace(built: BuiltLocation, from: Vec, to: Vec, channel: Channel): Trac
   }
 
   if (channel === 'visual' || channel === 'thermal') {
-    for (const o of prep.blockers) {
+    for (const o of geom.blockers) {
       const hit = clipRect(from, to, o);
       if (!hit || (hit[1] - hit[0]) * len < EPS_MERGE) continue;
       layers *= OBJECT_BLOCK;
@@ -312,43 +344,154 @@ function result(transmission: number, distance: number, blockers: Blocker[]): Si
   return { transmission, distance, blockers, clear: transmission >= CLEAR_AT };
 }
 
-/** Signal along the straight segment from → to, crossing walls, openings (by state/material) and blocking objects. */
-export function signalBetween(built: BuiltLocation, from: Vec, to: Vec, channel: Channel): SignalResult {
-  const t = trace(built, from, to, channel);
+/**
+ * Signal along the straight segment from → to on one floor (default 0), crossing that
+ * floor's walls, openings (by state/material) and blocking objects. Both points are taken
+ * to be on `floor`; for points on different floors use signalBetweenFloors.
+ */
+export function signalBetween(built: BuiltLocation, from: Vec, to: Vec, channel: Channel, floor = 0): SignalResult {
+  const t = trace(built, from, to, channel, floor);
   return result(t.layers * falloff(channel, t.distance), t.distance, t.blockers);
+}
+
+interface Leg {
+  layers: number;
+  /** Path length in feet the air falloff applies to. */
+  travel: number;
+  /** Straight-line distance of the leg. */
+  distance: number;
+  blockers: Blocker[];
+  via: Id | null;
+}
+
+/**
+ * Best path on one floor: the straight line and, for sound and visual, two-leg routes
+ * through each (non-stair) opening of the target's space (from → opening midpoint → to).
+ */
+function bestLeg(built: BuiltLocation, from: Vec, to: Vec, channel: Channel, floor: number): Leg {
+  const straight = trace(built, from, to, channel, floor);
+  const base: Leg = { layers: straight.layers, travel: straight.distance, distance: straight.distance, blockers: straight.blockers, via: null };
+  if (channel !== 'sound' && channel !== 'visual') return base;
+  const target = spaceAt(built, to, floor);
+  if (!target || spaceAt(built, from, floor) === target) return base;
+
+  let best = base;
+  let bestT = base.layers * falloff(channel, base.travel);
+  for (const o of built.location.openings) {
+    if (o.type === 'stair' || (o.a !== target && o.b !== target)) continue;
+    const layer = openingLayer(o, channel);
+    if (!layer) continue;
+    const m = midpoint(o.from, o.to);
+    const l1 = trace(built, from, m, channel, floor);
+    const l2 = trace(built, m, to, channel, floor);
+    const travel = l1.distance + l2.distance;
+    const total = l1.layers * layer.t * l2.layers * falloff(channel, travel);
+    if (total > bestT + 1e-12) {
+      bestT = total;
+      const own: Blocker[] = layer.t < 0.999 ? [{ kind: 'opening', id: o.id, label: layer.label, transmission: layer.t }] : [];
+      best = { layers: l1.layers * layer.t * l2.layers, travel, distance: straight.distance, blockers: [...l1.blockers, ...own, ...l2.blockers], via: o.id };
+    }
+  }
+  return best;
 }
 
 /**
  * Best of the straight line and, for sound and visual, two-leg routes through each
- * opening of the target's space (from → opening midpoint → to). `distance` stays
- * the straight-line distance; `via` names the opening when a route beats it.
+ * opening of the target's space (from → opening midpoint → to), on one floor (default 0).
+ * `distance` stays the straight-line distance; `via` names the opening when a route beats
+ * it. For points on different floors use signalBetweenFloors.
  */
-export function bestSignal(built: BuiltLocation, from: Vec, to: Vec, channel: Channel): SignalResult & { via: Id | null } {
-  const straight = signalBetween(built, from, to, channel);
-  if (channel !== 'sound' && channel !== 'visual') return { ...straight, via: null };
-  const target = spaceAt(built, to);
-  if (!target || spaceAt(built, from) === target) return { ...straight, via: null };
-
-  let best: (SignalResult & { via: Id | null }) | null = null;
-  let bestT = straight.transmission;
-  for (const o of built.location.openings) {
-    if (o.a !== target && o.b !== target) continue;
-    const layer = openingLayer(o, channel);
-    if (!layer) continue;
-    const m = midpoint(o.from, o.to);
-    const l1 = trace(built, from, m, channel);
-    const l2 = trace(built, m, to, channel);
-    const total = l1.layers * layer.t * l2.layers * falloff(channel, l1.distance + l2.distance);
-    if (total > bestT + 1e-12) {
-      bestT = total;
-      const own: Blocker[] = layer.t < 0.999 ? [{ kind: 'opening', id: o.id, label: layer.label, transmission: layer.t }] : [];
-      best = { ...result(total, straight.distance, [...l1.blockers, ...own, ...l2.blockers]), via: o.id };
-    }
-  }
-  return best ?? { ...straight, via: null };
+export function bestSignal(built: BuiltLocation, from: Vec, to: Vec, channel: Channel, floor = 0): SignalResult & { via: Id | null } {
+  const leg = bestLeg(built, from, to, channel, floor);
+  return { ...result(leg.layers * falloff(channel, leg.travel), leg.distance, leg.blockers), via: leg.via };
 }
 
-/** Nearest opening of a space to a point (optionally filtered by type), with distance in feet to its midpoint. */
+export interface FloorPoint {
+  at: Vec;
+  floor: number;
+}
+
+/**
+ * Signal between points that may be on different floors. Same floor: exactly bestSignal on
+ * that floor. Different floors: the best of
+ *   1. through the floor/ceiling (materials.floorCeiling, default timber joist), with each
+ *      floor's walls traced on its own side and the slab crossed once, at the source's,
+ *      the target's or the mid-point's plan position (skipped when one end is outdoors);
+ *   2. when one end is outdoors on the ground and the other upstairs: straight through the
+ *      upper floor's exterior wall or window;
+ *   3. each stair that is not blocked: walk to the stair end on the source floor, along the
+ *      stair (open air, or its door when closed), then on to the target.
+ * `distance` is the 3D straight-line distance (STOREY_HEIGHT_FT per floor of difference);
+ * `via` is the stair opening id when a stair route is the best, else null.
+ */
+export function signalBetweenFloors(built: BuiltLocation, from: FloorPoint, to: FloorPoint, channel: Channel): SignalResult & { via: Id | null } {
+  if (from.floor === to.floor) return bestSignal(built, from.at, to.at, channel, from.floor);
+  const loc = built.location;
+  const prep = prepare(built);
+  const rise = STOREY_HEIGHT_FT * Math.abs(from.floor - to.floor);
+  const plan = dist(from.at, to.at);
+  const straight3d = Math.hypot(plan, rise);
+
+  type Cand = { total: number; layers: number; blockers: Blocker[]; via: Id | null };
+  let best: Cand | null = null;
+  const consider = (c: Cand) => {
+    if (!best || c.total > best.total + 1e-12) best = c;
+  };
+
+  const roomIds = new Set(loc.rooms.map((r) => r.id));
+  const inRoom = (p: FloorPoint) => {
+    const id = spaceAt(built, p.at, p.floor);
+    return id !== null && roomIds.has(id);
+  };
+  const lowPt = from.floor < to.floor ? from : to;
+  const highPt = from.floor < to.floor ? to : from;
+
+  // 1. Through the slab.
+  const matId = loc.materials.floorCeiling ?? 'timber_joist';
+  const slab = FLOORS[matId][channel];
+  if (inRoom(lowPt)) {
+    const slabBlocker: Blocker = { kind: 'floor', id: null, label: `${FLOORS[matId].label} between storeys`, transmission: slab };
+    for (const x of [from.at, to.at, midpoint(from.at, to.at)]) {
+      const l1 = bestLeg(built, from.at, x, channel, from.floor);
+      const l2 = bestLeg(built, x, to.at, channel, to.floor);
+      const layers = l1.layers * slab * l2.layers;
+      consider({ layers, total: layers * falloff(channel, Math.hypot(l1.travel + l2.travel, rise)), blockers: [...l1.blockers, slabBlocker, ...l2.blockers], via: null });
+    }
+  }
+
+  // 2. Outdoors on the ground to a point upstairs: through the upper floor's exterior.
+  if (!inRoom(lowPt) && lowPt.floor === 0) {
+    const t = trace(built, from.at, to.at, channel, highPt.floor);
+    consider({ layers: t.layers, total: t.layers * falloff(channel, straight3d), blockers: t.blockers, via: null });
+  }
+
+  // 3. Via a stair.
+  for (const o of loc.openings) {
+    if (o.type !== 'stair') continue;
+    const layer = openingLayer(o, channel);
+    const ends = stairEnds(o, prep.floorOf);
+    if (!layer || !ends) continue;
+    const here = from.floor === ends.low.floor ? ends.low : from.floor === ends.high.floor ? ends.high : null;
+    const there = to.floor === ends.low.floor ? ends.low : to.floor === ends.high.floor ? ends.high : null;
+    if (!here || !there || here === there) continue;
+    const l1 = bestLeg(built, from.at, here.at, channel, from.floor);
+    const l2 = bestLeg(built, there.at, to.at, channel, to.floor);
+    const layers = l1.layers * layer.t * l2.layers;
+    const travel = l1.travel + l2.travel + Math.hypot(dist(ends.low.at, ends.high.at), rise);
+    const own: Blocker[] = layer.t < 0.999 ? [{ kind: 'opening', id: o.id, label: layer.label, transmission: layer.t }] : [];
+    consider({ layers, total: layers * falloff(channel, travel), blockers: [...l1.blockers, ...own, ...l2.blockers], via: o.id });
+  }
+
+  const b = best as Cand | null;
+  if (!b) return { ...result(0, straight3d, []), via: null };
+  return { ...result(b.total, straight3d, b.blockers), via: b.via };
+}
+
+/**
+ * Nearest opening of a space to a point (optionally filtered by type), with distance in feet
+ * to its midpoint (a stair: to its end inside this space). The space fixes the floor, so a
+ * stair is offered from both of its rooms and a point on the other floor is not a candidate.
+ */
 export function nearestOpening(
   built: BuiltLocation,
   spaceId: Id,
@@ -359,7 +502,9 @@ export function nearestOpening(
   for (const o of built.location.openings) {
     if (o.a !== spaceId && o.b !== spaceId) continue;
     if (types && !types.includes(o.type)) continue;
-    const d = dist(p, midpoint(o.from, o.to));
+    // A stair is reached at its end in this space: `from` in room a, `to` in room b.
+    const at = o.type === 'stair' ? (o.a === spaceId ? o.from : o.to) : midpoint(o.from, o.to);
+    const d = dist(p, at);
     if (!best || d < best.distance) best = { opening: o, distance: d };
   }
   return best;
@@ -369,18 +514,28 @@ export function stagingPointById(built: BuiltLocation, id: Id): StagingPoint | u
   return built.derived.stagingPoints.find((s) => s.id === id);
 }
 
-/** Staging points in a given space (e.g. all window/door points available from 'side_yard_e'). */
-export function stagingPointsIn(built: BuiltLocation, spaceId: Id): StagingPoint[] {
-  return built.derived.stagingPoints.filter((s) => s.spaceId === spaceId);
+/**
+ * Staging points in a given space (e.g. all window/door points available from 'side_yard_e').
+ * With `floor`, only points on that floor (a point's floor is its space's; zones are 0).
+ */
+export function stagingPointsIn(built: BuiltLocation, spaceId: Id, floor?: number): StagingPoint[] {
+  return built.derived.stagingPoints.filter((s) => s.spaceId === spaceId && (floor === undefined || (s.floor ?? 0) === floor));
 }
 
 // ---------------------------------------------------------------- description
 
-/** Spaces sharing a wall with `spaceId`, in the order first met walking its outline. */
-function neighbours(built: BuiltLocation, spaceId: Id): Id[] {
-  const s = prepare(built).byId.get(spaceId);
-  if (!s) return [];
+/**
+ * Spaces sharing a wall with `spaceId` on its own floor, in the order first met walking its
+ * outline, and whether any wall faces the outdoors (a zone on the ground floor; on upper
+ * floors, anywhere beyond the upper outline).
+ */
+function neighbours(built: BuiltLocation, spaceId: Id): { ids: Id[]; exterior: boolean } {
+  const prep = prepare(built);
+  const s = prep.byId.get(spaceId);
+  if (!s) return { ids: [], exterior: false };
+  const floor = prep.floorOf.get(spaceId) ?? 0;
   const found: Id[] = [];
+  let exterior = false;
   for (let i = 0; i < s.polygon.length; i++) {
     const a = s.polygon[i];
     const b = s.polygon[(i + 1) % s.polygon.length];
@@ -393,15 +548,16 @@ function neighbours(built: BuiltLocation, spaceId: Id): Id[] {
       const c = lerp(a, b, (k + 0.5) / n);
       for (const sign of [1, -1]) {
         const q = { x: c.x + nx * sign * 0.2, y: c.y + ny * sign * 0.2 };
-        const id = spaceAt(built, q);
+        const id = spaceAt(built, q, floor);
         if (id && id !== spaceId && !found.includes(id)) found.push(id);
+        if (!id && floor >= 1 && !pointInPolygon(q, s.polygon)) exterior = true;
       }
     }
   }
-  return found;
+  return { ids: found, exterior };
 }
 
-/** Player-language description of a space's construction: walls, doors, windows and coverings. */
+/** Player-language description of a space's construction: walls, floor, stairs, doors, windows and coverings. */
 export function describeConstruction(built: BuiltLocation, spaceId: Id): string[] {
   const prep = prepare(built);
   const space = prep.byId.get(spaceId);
@@ -410,21 +566,31 @@ export function describeConstruction(built: BuiltLocation, spaceId: Id): string[
   const m = built.location.materials;
   const other = (o: Opening) => prep.byId.get(o.a === spaceId ? o.b : o.a);
   const lower = (s: string) => s.toLowerCase();
+  const myFloor = prep.floorOf.get(spaceId) ?? 0;
 
   if (space.isRoom) {
-    const ns = neighbours(built, spaceId).map((id) => prep.byId.get(id)).filter((x): x is PreparedSpace => Boolean(x));
-    if (ns.some((n) => !n.isRoom)) lines.push(`${WALLS[m.exterior].label} exterior walls`);
+    const nb = neighbours(built, spaceId);
+    const ns = nb.ids.map((id) => prep.byId.get(id)).filter((x): x is PreparedSpace => Boolean(x));
+    if (nb.exterior || ns.some((n) => !n.isRoom)) lines.push(`${WALLS[m.exterior].label} exterior walls`);
     const rooms = ns.filter((n) => n.isRoom);
     const special = rooms.filter((n) => wallMaterialBetween(built, spaceId, n.id) !== m.interior);
     if (rooms.length > special.length) lines.push(`${WALLS[m.interior].label} interior walls`);
     for (const n of special) lines.push(`${WALLS[wallMaterialBetween(built, spaceId, n.id)].label} wall to the ${lower(n.label)}`);
+    // A floor/ceiling exists wherever a room on the next floor up or down overlaps this one in plan.
+    const stacked = built.location.rooms.some(
+      (r) => Math.abs((r.floor ?? 0) - myFloor) === 1 && polygonOverlapArea(r.polygon, space.polygon, 0.5) >= 1,
+    );
+    if (stacked) lines.push(`${FLOORS[m.floorCeiling ?? 'timber_joist'].label} between storeys`);
   }
 
   const mine = built.location.openings.filter((o) => o.a === spaceId || o.b === spaceId);
   for (const o of mine) {
     const to = other(o);
     if (!to) continue;
-    if (o.type === 'doorway') {
+    if (o.type === 'stair') {
+      const up = (prep.floorOf.get(to.id) ?? 0) > myFloor;
+      lines.push(`${o.state === 'blocked' ? 'Blocked stairs' : 'Stairs'} to the ${up ? 'upper' : 'ground'} floor`);
+    } else if (o.type === 'doorway') {
       if (space.isRoom || to.isRoom) lines.push(`${o.state === 'blocked' ? 'Blocked' : 'Open'} doorway to the ${lower(to.label)}`);
     } else if (o.type === 'door') {
       const state = o.state === 'closed' ? '' : ` (${o.state})`;

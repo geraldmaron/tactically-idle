@@ -1,7 +1,7 @@
 // Label, marker, token and note placement. Pure; operates on feet. Placement searches avoid furniture
 // and previously placed text so annotations stay legible without hand tuning per location.
 import type { BuiltLocation, Id, LocationDefinition, Polygon, SpaceView, SquadId, SquadTask, Vec } from '../../sim/types';
-import { add, areaOutside, bboxOf, clipPolyToRect, distToPolygonEdges, distToSegment, hash32, inflate, len, mid, perp, pointInPolygon, rectsOverlapArea, scale, sub, unit, type Rect } from './geometry';
+import { add, areaOutside, bboxOf, clipPolyToRect, distToPolygonEdges, distToSegment, hash32, inflate, isRectilinearBox, len, mid, mulberry32, perp, pointInPolygon, poleOfInaccessibility, rectsOverlapArea, scale, sub, unit, type Rect } from './geometry';
 import { isFloorLayer, objectRect } from './furniture';
 import { isPath } from './walls';
 
@@ -16,6 +16,7 @@ export const FONT = {
   sub: 1.3,
   person: 1.45,
   overlay: 1.35,
+  chip: 1.1,
 };
 
 /** Squad token radius when it stands at an exact staging point (smaller than the room-centroid badge). */
@@ -29,6 +30,8 @@ const W_TASK = 0.46;
 export interface LabelItem {
   id: Id;
   text: string;
+  /** Wrapped lines (room labels that needed two lines to fit). Absent = one line, `text`. */
+  lines?: string[];
   x: number;
   y: number;
   size: number;
@@ -88,11 +91,20 @@ export interface SquadItem {
   tick: { from: Vec; to: Vec } | null;
 }
 
+export type PersonKindKey = 'subject' | 'civilian' | 'child' | 'patient' | 'dog' | 'unknown';
+
 export interface PersonItem {
   id: Id;
   status: 'reported' | 'confirmed' | 'disproved';
   at: Vec;
+  /** Pictogram. null = the data gave no kind: the plain figure (confirmed) or a bare '?' ring (reported). */
+  kind: PersonKindKey | null;
   label: { text: string; x: number; y: number; anchor: 'start' | 'middle' | 'end' } | null;
+  /** Armament chip, exactly what the data says (never inferred). */
+  chip: { text: string; x: number; y: number; w: number; h: number } | null;
+  /** A 'reported' person whose label says 'last seen': drawn faded with a 'last seen' caption. */
+  stale: boolean;
+  caption: { text: string; x: number; y: number } | null;
 }
 
 export interface Layout {
@@ -103,6 +115,8 @@ export interface Layout {
   notes: NoteItem[];
   squads: SquadItem[];
   people: PersonItem[];
+  /** Small head-and-shoulders marks for the crowd the environment says is outside (ground floor, street zone). */
+  crowd: Vec[];
   /** Everything placed so far (furniture and text boxes); overlays place their labels around these. */
   obstacles: Rect[];
   /** The frame the layout was fitted to. */
@@ -179,7 +193,14 @@ function placeBeside(at: Vec, gap: number, w: number, h: number, firstBaseline: 
   return best!;
 }
 
-export function computeLayout(built: BuiltLocation, spaces: SpaceView[], squadTasks: SquadTask[], focusSquadId: SquadId | null, frameIn?: Rect): Layout {
+export interface LayoutOptions {
+  /** Environment crowd level: 0 none, 1 some, 2 crowd. */
+  crowd?: 0 | 1 | 2;
+  /** Draw exterior zone labels and the crowd (ground floor only). */
+  exterior?: boolean;
+}
+
+export function computeLayout(built: BuiltLocation, spaces: SpaceView[], squadTasks: SquadTask[], focusSquadId: SquadId | null, frameIn?: Rect, opts: LayoutOptions = {}): Layout {
   const loc = built.location;
   const derived = built.derived;
   const frame: Rect = frameIn ?? { x: 0, y: 0, w: loc.bounds.w, h: loc.bounds.h };
@@ -210,12 +231,13 @@ export function computeLayout(built: BuiltLocation, spaces: SpaceView[], squadTa
 
   // ---- fixed glyphs first: squads that stand at a staging point and people marks claim their spot, text dodges them
   for (const t of squadTasks) if (t.at) add_({ x: t.at.x - TOKEN_R - 0.15, y: t.at.y - TOKEN_R - 0.15, w: TOKEN_R * 2 + 0.3, h: TOKEN_R * 2 + 0.3 });
-  const peopleDrawn: { id: Id; status: PersonItem['status']; at: Vec }[] = [];
+  const peopleDrawn: { id: Id; status: PersonItem['status']; at: Vec; kind: PersonKindKey | null; armament: string | null; labelText: string }[] = [];
   for (const sv of spaces) {
     for (const pm of sv.people ?? []) {
       if (pm.status !== 'reported' && pm.status !== 'confirmed' && pm.status !== 'disproved') continue; // 'unknown' is never drawn
-      peopleDrawn.push({ id: pm.id, status: pm.status, at: pm.at });
-      const r = pm.status === 'reported' ? 2.1 : 1.35;
+      const kind = personKind(pm.kind);
+      peopleDrawn.push({ id: pm.id, status: pm.status, at: pm.at, kind, armament: pm.armament ?? null, labelText: (pm.label ?? '').trim() });
+      const r = pm.status === 'reported' ? 2.1 : kind === 'dog' ? 1.7 : 1.5;
       add_({ x: pm.at.x - r, y: pm.at.y - r, w: r * 2, h: r * 2 });
     }
   }
@@ -276,25 +298,49 @@ export function computeLayout(built: BuiltLocation, spaces: SpaceView[], squadTa
     add_(textRect(tcx, tcy, tw + 2.2, th));
   }
 
-  // ---- room labels
+  // ---- room labels. The anchor is the pole of inaccessibility for notched rooms (the centroid of an L can sit
+  // outside it). If the name does not fit on one line it wraps, then rotates, then shrinks.
   const roomLabels: LabelItem[] = [];
   for (const room of loc.rooms) {
     const view = viewById.get(room.id);
     if (!view) continue;
     const text = view.label.toUpperCase();
-    const size = FONT.room;
-    const w = text.length * W_COND * size;
-    const h = size * 1.1;
     const rb = bboxOf(room.polygon);
-    const pref = derived.spaces[room.id]?.centroid ?? { x: rb.x + rb.w / 2, y: rb.y + rb.h / 2 };
-    const spot = findSpot(room.polygon, w, h, pref, placed, 0.6);
-    roomLabels.push({ id: room.id, text, x: spot.center.x, y: spot.center.y + size * 0.36, size, rot: 0 });
-    add_(textRect(spot.center.x, spot.center.y, w, h));
+    const boxy = isRectilinearBox(room.polygon);
+    const pole = boxy ? null : poleOfInaccessibility(room.polygon);
+    const pref = pole ? { x: pole.x, y: pole.y } : (derived.spaces[room.id]?.centroid ?? { x: rb.x + rb.w / 2, y: rb.y + rb.h / 2 });
+    let first: { v: LabelVariant; spot: Spot } | null = null;
+    let pick: { v: LabelVariant; spot: Spot } | null = null;
+    for (const v of labelVariants(text)) {
+      const w = v.rot ? v.h : v.w;
+      const h = v.rot ? v.w : v.h;
+      const spot = findSpot(room.polygon, w, h, pref, placed, v.size < FONT.room ? 0.35 : 0.6);
+      if (!spot.fits) continue;
+      first ??= { v, spot };
+      if (spot.overlap === 0) {
+        pick = { v, spot };
+        break;
+      }
+    }
+    const chosen = pick ?? first;
+    if (!chosen) {
+      // nowhere inside: put it at the anchor, smallest size, so the room is still named
+      const v = labelVariants(text).at(-1)!;
+      roomLabels.push({ id: room.id, text, x: pref.x, y: pref.y + v.size * 0.36, size: v.size, rot: 0 });
+      add_(textRect(pref.x, pref.y, v.w, v.h));
+      continue;
+    }
+    const { v, spot } = chosen;
+    const lh = v.size * 1.15;
+    const firstBase = spot.center.y + (v.rot ? 0 : v.size * 0.36 - ((v.lines.length - 1) * lh) / 2);
+    roomLabels.push({ id: room.id, text, lines: v.lines.length > 1 ? v.lines : undefined, x: spot.center.x + (v.rot ? v.size * 0.36 : 0), y: firstBase, size: v.size, rot: v.rot });
+    add_(textRect(spot.center.x, spot.center.y, v.rot ? v.h : v.w, v.rot ? v.w : v.h));
   }
 
   // ---- zone labels (small; tall narrow zones read vertically)
   const zoneLabels: LabelItem[] = [];
   for (const zone of loc.zones) {
+    if (opts.exterior === false) break;
     const view = viewById.get(zone.id);
     if (!view) continue;
     const text = view.label.toUpperCase();
@@ -469,25 +515,155 @@ export function computeLayout(built: BuiltLocation, spaces: SpaceView[], squadTa
 
   // ---- people marks (only what the player's knowledge allows; labels dodge everything placed so far)
   const people: PersonItem[] = [];
-  const labelOf = new Map<Id, string>();
-  for (const sv of spaces) for (const pm of sv.people ?? []) labelOf.set(pm.id, pm.label);
   for (const pd of peopleDrawn) {
     let label: PersonItem['label'] = null;
+    let chip: PersonItem['chip'] = null;
+    let caption: PersonItem['caption'] = null;
+    const stale = pd.status === 'reported' && /last\s*seen/i.test(pd.labelText);
     if (pd.status === 'confirmed' || pd.status === 'disproved') {
-      const text = pd.status === 'disproved' ? 'clear' : (labelOf.get(pd.id) ?? '').trim();
+      const text = pd.status === 'disproved' ? 'clear' : pd.labelText;
       if (text) {
         const size = FONT.person;
         const w = text.length * W_MARKER * size * 0.95 + 0.4;
-        const gap = pd.status === 'disproved' ? 1.05 : 1.45;
+        const gap = pd.status === 'disproved' ? 1.05 : 1.65;
         const place = placeBeside(pd.at, gap, w, size * 1.15, size * 0.88, frame, placed);
         label = { text, x: place.x, y: place.y, anchor: place.anchor };
         add_(place.rect);
       }
     }
-    people.push({ id: pd.id, status: pd.status, at: pd.at, label });
+    if (stale) {
+      const w = 'last seen'.length * W_MARKER * FONT.sub * 0.95 + 0.4;
+      const h = FONT.sub * 1.15;
+      const place = placeBeside(pd.at, 2.0, w, h, FONT.sub * 0.88, frame, placed);
+      caption = { text: 'last seen', x: place.x, y: place.y };
+      add_(place.rect);
+    }
+    const chipText = pd.status === 'disproved' ? null : armamentText(pd.armament, pd.status);
+    if (chipText) {
+      const size = FONT.chip;
+      const w = chipText.length * W_MARKER * size * 0.98 + 1.1;
+      const h = size * 1.55;
+      const place = placeBeside(pd.at, 1.9, w, h, 0, frame, placed);
+      chip = { text: chipText, x: place.rect.x, y: place.rect.y, w, h };
+      add_(place.rect);
+    }
+    people.push({ id: pd.id, status: pd.status, at: pd.at, kind: pd.kind, label, chip, stale, caption });
   }
 
-  return { roomLabels, zoneLabels, markers, front: frontItem, notes, squads, people, obstacles: placed, frame };
+  // ---- crowd outside (ground floor): a handful of small figures in the street zone, dodging everything placed
+  const crowd = opts.exterior === false ? [] : crowdFigures(loc, frame, opts.crowd ?? 0, placed);
+
+  return { roomLabels, zoneLabels, markers, front: frontItem, notes, squads, people, crowd, obstacles: placed, frame };
+}
+
+
+// ------------------------------------------------------------------ labels, people kinds, crowd
+
+interface LabelVariant {
+  lines: string[];
+  size: number;
+  rot: 0 | -90;
+  /** Unrotated text block extent, feet. */
+  w: number;
+  h: number;
+}
+
+/** Candidate renderings of a room name, in order of preference. */
+function labelVariants(text: string): LabelVariant[] {
+  const out: LabelVariant[] = [];
+  const words = text.split(/\s+/).filter(Boolean);
+  const two = (): string[] | null => {
+    if (words.length < 2) return null;
+    let best = 1;
+    let bestW = Infinity;
+    for (let i = 1; i < words.length; i++) {
+      const w = Math.max(words.slice(0, i).join(' ').length, words.slice(i).join(' ').length);
+      if (w < bestW) (best = i), (bestW = w);
+    }
+    return [words.slice(0, best).join(' '), words.slice(best).join(' ')];
+  };
+  const make = (lines: string[], size: number, rot: 0 | -90): LabelVariant => ({
+    lines,
+    size,
+    rot,
+    w: Math.max(...lines.map((l) => l.length)) * W_COND * size,
+    h: size * 1.1 + (lines.length - 1) * size * 1.15,
+  });
+  const l2 = two();
+  out.push(make([text], FONT.room, 0));
+  if (l2) out.push(make(l2, FONT.room, 0));
+  out.push(make([text], FONT.room * 0.82, 0));
+  out.push(make([text], FONT.room, -90));
+  if (l2) out.push(make(l2, FONT.room * 0.82, 0));
+  out.push(make([text], FONT.room * 0.66, 0));
+  out.push(make([text], FONT.room * 0.66, -90));
+  return out;
+}
+
+const KIND_ALIAS: Record<string, PersonKindKey> = {
+  subject: 'subject',
+  civilian: 'civilian',
+  resident: 'civilian',
+  elderly: 'civilian',
+  staff: 'civilian',
+  customer: 'civilian',
+  held_person: 'civilian',
+  child: 'child',
+  patient: 'patient',
+  dog: 'dog',
+  dangerous_dog: 'dog',
+  unknown: 'unknown',
+};
+
+/** PersonMark.kind (a free string from the sim) to a pictogram key; unrecognised text is 'unknown', absent is null. */
+export function personKind(kind: string | undefined): PersonKindKey | null {
+  if (!kind) return null;
+  return KIND_ALIAS[kind.toLowerCase().trim()] ?? 'unknown';
+}
+
+const ARMAMENT_TEXT: Record<string, string> = { none: 'UNARMED', blunt: 'BLUNT', edged: 'EDGED', handgun: 'HANDGUN', long_gun: 'LONG GUN', unknown: 'WEAPON?' };
+
+/**
+ * Chip text for a known armament, straight from the data. A reported (unverified) claim carries a '?'
+ * so the chip never reads as confirmed. Nothing known, nothing drawn.
+ */
+export function armamentText(armament: string | null | undefined, status: 'reported' | 'confirmed' | 'disproved'): string | null {
+  const a = (armament ?? '').trim();
+  if (!a) return null;
+  let t = ARMAMENT_TEXT[a.toLowerCase()] ?? a.replace(/_/g, ' ').toUpperCase();
+  if (status === 'reported' && !t.endsWith('?')) t += '?';
+  return t;
+}
+
+/** Street zone first, then alley, parking, yard: where a crowd stands. */
+function crowdZone(loc: LocationDefinition): Polygon | null {
+  for (const kind of ['street', 'alley', 'parking', 'yard'] as const) {
+    const z = loc.zones.find((q) => q.kind === kind);
+    if (z) return z.polygon;
+  }
+  return null;
+}
+
+function crowdFigures(loc: LocationDefinition, frame: Rect, level: 0 | 1 | 2, obstacles: Rect[]): Vec[] {
+  if (!level) return [];
+  const zone = crowdZone(loc);
+  if (!zone) return [];
+  const clip = clipPolyToRect(zone, inflate(frame, -0.8));
+  if (clip.length < 3) return [];
+  const bb = bboxOf(clip);
+  const rnd = mulberry32(hash32(`crowd:${loc.id}:${loc.seed}`));
+  const want = level === 2 ? 8 : 3;
+  const out: Vec[] = [];
+  for (let tries = 0; tries < 260 && out.length < want; tries++) {
+    const p = { x: bb.x + rnd() * bb.w, y: bb.y + rnd() * bb.h };
+    if (!pointInPolygon(p, clip) || distToPolygonEdges(p, clip) < 0.5) continue;
+    const box: Rect = { x: p.x - 0.9, y: p.y - 0.9, w: 1.8, h: 1.8 };
+    if (out.some((q) => len(sub(q, p)) < 2.0)) continue;
+    if (obstacles.some((o) => rectsOverlapArea(box, o) > 0.01)) continue;
+    out.push(p);
+  }
+  for (const p of out) obstacles.push({ x: p.x - 0.9, y: p.y - 0.9, w: 1.8, h: 1.8 });
+  return out;
 }
 
 function exitPoint(r: Rect, c: Vec, dir: Vec): Vec {

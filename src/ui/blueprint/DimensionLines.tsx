@@ -11,8 +11,9 @@ function Dim({ d }: { d: DimLine }) {
   const lineB = p(d.b, d.line);
   const extDir = Math.sign(d.line - d.from) || 1;
   const extEnd = d.line + extDir * 0.45;
+  const from2 = d.from2 ?? d.from;
   const e0 = p(d.a, d.from);
-  const e1 = p(d.b, d.from);
+  const e1 = p(d.b, from2);
   const x0 = p(d.a, extEnd);
   const x1 = p(d.b, extEnd);
   const midAlong = (d.a + d.b) / 2;

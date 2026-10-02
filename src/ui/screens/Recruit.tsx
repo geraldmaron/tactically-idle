@@ -7,6 +7,7 @@ import { useToast } from '../components/toast';
 import { CERT_ICON, CERT_LABEL, RATING_META, ROLES, ROLE_META, TRAIT_INFO } from '../components/labels';
 import { CareerMini } from '../components/Career';
 import { Portrait } from '../portraits/Portrait';
+import { agePortraitProps } from './helpers';
 import { Icon } from '../icons';
 import { money, perHour, rate, relativeTime } from '../format';
 
@@ -75,7 +76,7 @@ function CandidateCard({ c, now, open, onToggle, onHired }: { c: Candidate; now:
     <Card className="cand">
       <div className="cand-top">
         <div className="cand-portrait">
-          <Portrait officer={o} size={58} />
+          <Portrait officer={o} size={58} {...agePortraitProps(g, o, now)} />
         </div>
         <div className="cand-id">
           <strong className="cand-name">

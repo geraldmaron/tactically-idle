@@ -9,17 +9,20 @@ import { useToast } from '../components/toast';
 import { DUTY_META } from '../components/labels';
 import { Icon } from '../icons';
 import { fullName } from '../../sim/officer';
+import { SQUAD_IDS } from '../../sim/types';
 import { OfficerSheet } from './OfficerSheet';
 import { Recruit } from './Recruit';
 import { officerList } from './helpers';
 
-const DEFAULT_NAMES = ['Alpha', 'Bravo', 'Charlie'];
+const DEFAULT_NAMES = ['Alpha', 'Bravo', 'Charlie', 'Delta'];
 
 export function SquadScreen() {
   const g = useGame();
   const [sel, setSel] = useState<SquadId | null>(g.squads[0]?.id ?? null);
   const [officerId, setOfficerId] = useState<Id | null>(null);
   const [creating, setCreating] = useState(false);
+  const { notify } = useToast();
+  const full = g.squads.length >= SQUAD_IDS.length;
   const active = g.squads.find((s) => s.id === sel) ?? g.squads[0];
 
   useEffect(() => {
@@ -30,12 +33,13 @@ export function SquadScreen() {
 
   return (
     <div className="page">
-      <div className="squadtabs" role="tablist" aria-label="Squads">
+      <div className={`squadtabs${g.squads.length >= 4 ? ' squadtabs-4' : ''}`} role="tablist" aria-label="Squads">
         {g.squads.map((s) => (
           <button
             key={s.id}
             type="button"
             role="tab"
+            aria-label={`Squad ${s.id}, ${s.name}`}
             aria-selected={active?.id === s.id}
             className={`squadtab${active?.id === s.id ? ' squadtab-on' : ''}`}
             onClick={() => setSel(s.id)}
@@ -46,10 +50,17 @@ export function SquadScreen() {
         ))}
         <button
           type="button"
-          className="squadtab squadtab-add"
-          aria-label="Create squad"
-          onClick={() => setCreating((v) => !v)}
-          aria-expanded={creating}
+          className={`squadtab squadtab-add${full ? ' squadtab-full' : ''}`}
+          aria-label={full ? 'All four squad slots are in use' : 'Create squad'}
+          onClick={() => {
+            if (full) {
+              setCreating(false);
+              notify(`All ${SQUAD_IDS.length} squad slots are in use`, { tone: 'error' });
+              return;
+            }
+            setCreating((v) => !v);
+          }}
+          aria-expanded={full ? undefined : creating}
         >
           <Icon name="plus" size={18} />
           <span>Squad</span>
@@ -62,7 +73,7 @@ export function SquadScreen() {
       ) : (
         <Card>
           <EmptyState icon="people" title="No squads yet">
-            Create up to three squads, then assign officers to them.
+            Create up to four squads, then assign officers to them.
           </EmptyState>
         </Card>
       )}

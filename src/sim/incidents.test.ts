@@ -104,6 +104,22 @@ describe('arrivals and expiry are event-ordered', () => {
     expect(offline.rngState).not.toBe(start.rngState);
   });
 
+  it('stays identical when restocking also draws from the shared PRNG', () => {
+    let start = createInitialState(T0);
+    start.department.devPoints = 10;
+    start = ok(start, { type: 'unlockNode', nodeId: 'logistics_presets' }, T0);
+    start = ok(start, { type: 'unlockNode', nodeId: 'logistics_restock' }, T0);
+    start = ok(start, { type: 'setRestockRule', rule: { itemId: 'battery_pack', target: 40, budgetCeiling: 400 } }, T0);
+    const end = T0 + 24 * HOUR_MS;
+    const offline = ok(start, { type: 'tick' }, end);
+    expect(Object.keys(offline.units).length).toBeGreaterThan(Object.keys(start.units).length);
+    for (const times of [every(T0, end, HOUR_MS), every(T0, end, 7 * MIN), irregular(T0, end, 5)]) {
+      const online = tickThrough(start, times);
+      expect(boardOf(online)).toEqual(boardOf(offline));
+      expect(Object.keys(online.units)).toEqual(Object.keys(offline.units));
+    }
+  });
+
   it('holds for 7 days away too, and for later arrivals when ticked from a mid-point', () => {
     const start = createInitialState(T0);
     const end = T0 + 7 * 24 * HOUR_MS;
@@ -174,7 +190,7 @@ describe('arrivals and expiry are event-ordered', () => {
   it('expires silently: no report line, no trust or funding penalty, and the card is gone at its time', () => {
     const base = createInitialState(T0);
     const s0 = structuredClone(base);
-    s0.department.nextIncidentAt = T0 + 400 * 24 * HOUR_MS; // no arrivals muddying this test
+    (s0.department as { nextIncidentAt?: number }).nextIncidentAt = T0 + 400 * 24 * HOUR_MS; // no arrivals muddying this test
     s0.incidents.sort((a, b) => a.expiresAt - b.expiresAt);
     const first = s0.incidents[0];
     const before = ok(s0, { type: 'tick' }, first.expiresAt - 1);
@@ -307,10 +323,10 @@ describe('board commands and selectors', () => {
   });
 
   it('a state without a schedule or board (older fixtures) still settles', () => {
-    const s0 = createInitialState(T0) as GameState & { incidents?: unknown };
+    const s0 = createInitialState(T0) as unknown as { incidents?: unknown; department: object };
     delete s0.incidents;
     delete (s0.department as { nextIncidentAt?: number }).nextIncidentAt;
-    const s = ok(s0 as GameState, { type: 'tick' }, T0 + 8 * HOUR_MS);
+    const s = ok(s0 as unknown as GameState, { type: 'tick' }, T0 + 8 * HOUR_MS);
     expect(Array.isArray(s.incidents)).toBe(true);
     expect(nextIncidentAt(s)).not.toBeNull();
   });

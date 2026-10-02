@@ -245,7 +245,7 @@ export function rangeToPoint(item: ItemDefinition, from: Vec, target: Vec): Rang
   return { ok: true, factor, reason: null, label: `${item.name}: ${Math.round(d)} ft (${within})`, overlays };
 }
 
-const OPENING_WORD: Record<Opening['type'], string> = { door: 'door', doorway: 'doorway', window: 'window', sliding: 'sliding door' };
+const OPENING_WORD: Record<Opening['type'], string> = { door: 'door', doorway: 'doorway', window: 'window', sliding: 'sliding door', stair: 'stairs' };
 
 /** Range of an item that must pass through an opening of the target space (throw phone). */
 export function rangeThroughOpening(built: BuiltLocation, item: ItemDefinition, from: Vec, targetSpace: Id): RangeResult {
@@ -281,6 +281,8 @@ export interface ForcedDoor {
   label: string;
   minutes: number;
   withTool: boolean;
+  /** Opened by a keyholder: no force time. */
+  keyed?: boolean;
 }
 
 export interface Route {
@@ -297,10 +299,11 @@ export interface Route {
 
 const UNREACHABLE: Route = { minutes: Infinity, forceMinutes: 0, forced: [], points: [], lastOpeningId: null, reachable: false };
 
-function forceFor(o: Opening, tool: { effectiveness: number } | null): ForcedDoor {
+function forceFor(o: Opening, tool: { effectiveness: number } | null, keyed = false): ForcedDoor {
   const mat = o.type === 'sliding' || o.material === 'glass' ? DOORS.glass : DOORS[o.material ?? 'hollow_core'];
   const full = mat.forceMinutes;
   const quick = mat.forceMinutesWithTool;
+  if (keyed) return { openingId: o.id, label: mat.label, minutes: 0, withTool: false, keyed: true };
   const minutes = tool ? quick + (full - quick) * (1 - Math.max(0, Math.min(1, tool.effectiveness))) : full;
   return { openingId: o.id, label: mat.label, minutes: round1(minutes * 100) / 100, withTool: Boolean(tool) };
 }
@@ -311,12 +314,12 @@ function forceFor(o: Opening, tool: { effectiveness: number } | null): ForcedDoo
  * tool) in place of the flat default. Minutes are then measured along the actual
  * points: start, each opening midpoint, end.
  */
-export function routeBetween(built: BuiltLocation, fromSpace: Id, fromAt: Vec, toSpace: Id, toAt: Vec, tool: { effectiveness: number } | null): Route {
+export function routeBetween(built: BuiltLocation, fromSpace: Id, fromAt: Vec, toSpace: Id, toAt: Vec, tool: { effectiveness: number } | null, keyed = false): Route {
   const T = LOCATION_TUNING;
   const openings = new Map(built.location.openings.map((o) => [o.id, o]));
   const edgeCost = (e: { cost: number; openingId: Id }) => {
     const o = openings.get(e.openingId);
-    if (o?.state === 'locked') return e.cost - T.lockedMinutes + forceFor(o, tool).minutes;
+    if (o?.state === 'locked') return e.cost - T.lockedMinutes + forceFor(o, tool, keyed).minutes;
     return e.cost;
   };
   if (fromSpace === toSpace) {
@@ -355,7 +358,7 @@ export function routeBetween(built: BuiltLocation, fromSpace: Id, fromAt: Vec, t
     points.push(mid(o.from, o.to));
     minutes += T.openingMinutes;
     if (o.state === 'locked') {
-      const f = forceFor(o, tool);
+      const f = forceFor(o, tool, keyed);
       forced.push(f);
       forceMinutes += f.minutes;
     }

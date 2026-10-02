@@ -5,7 +5,7 @@ import { CURRENT_SAVE_VERSION, SAVE_KEY, deserialize, loadGame, migrate, saveGam
 import { HOUR_MS } from './economy';
 import { ownedCount } from './equipment';
 import { readyUnits } from './inventory';
-import { careerInfo } from './department-selectors';
+import { boardSummary, careerInfo } from './department-selectors';
 import type { Command, GameState } from './types';
 
 const T0 = Date.UTC(2026, 0, 5, 12, 0, 0);
@@ -236,5 +236,120 @@ describe('migration from version 1', () => {
     s = ok(s, { type: 'serviceUnit', unitId: radio.id }, T0);
     s = ok(s, { type: 'tick' }, T0 + 3 * HOUR_MS);
     expect(deserialize(serialize(s, T0))).toEqual(s);
+  });
+});
+
+/** A version 2 save as it sits on disk: no incident board, no arrival schedule. */
+function v2Envelope(savedAt = T0 + 5 * HOUR_MS) {
+  const s = JSON.parse(JSON.stringify(createInitialState(T0)));
+  delete s.incidents;
+  delete s.department.nextIncidentAt;
+  s.saveVersion = 2;
+  s.rngState = 424242;
+  return { saveVersion: 2, contentVersion: 1, savedAt, state: s };
+}
+
+describe('migration from version 2 to 3', () => {
+  it('adds a deterministic three-card board arriving at the save time, plus a schedule', () => {
+    const a = deserialize(JSON.stringify(v2Envelope()))!;
+    const b = deserialize(JSON.stringify(v2Envelope()))!;
+    expect(a).not.toBeNull();
+    expect(a.saveVersion).toBe(3);
+    expect(a).toEqual(b);
+    expect(a.incidents).toHaveLength(3);
+    for (const c of a.incidents) {
+      expect(c).toMatchObject({ arrivedAt: T0 + 5 * HOUR_MS, seen: false });
+      expect(c.expiresAt).toBeGreaterThan(c.arrivedAt);
+    }
+    expect(new Set(a.incidents.map((c) => c.id)).size).toBe(3);
+    expect(boardSummary(a, T0 + 5 * HOUR_MS)).toMatchObject({ count: 3, newCount: 3 });
+    expect(boardSummary(a, T0 + 5 * HOUR_MS).nextArrivalAt).toBeGreaterThan(T0 + 5 * HOUR_MS);
+    // Everything else is carried over untouched.
+    const fresh = createInitialState(T0);
+    expect(a.officers).toEqual(fresh.officers);
+    expect(a.squads).toEqual(fresh.squads);
+    expect(a.units).toEqual(fresh.units);
+  });
+
+  it('seeds from rngState and savedAt: either one changing changes the board', () => {
+    const base = deserialize(JSON.stringify(v2Envelope()))!;
+    const later = deserialize(JSON.stringify(v2Envelope(T0 + 9 * HOUR_MS)))!;
+    expect(later.incidents.map((c) => c.id)).not.toEqual(base.incidents.map((c) => c.id));
+    const other = v2Envelope();
+    other.state.rngState = 99;
+    const changed = deserialize(JSON.stringify(other))!;
+    expect(changed.incidents.map((c) => c.id)).not.toEqual(base.incidents.map((c) => c.id));
+  });
+
+  it('migrate() reports version 3, and the result round-trips and settles', () => {
+    const m = migrate(v2Envelope() as any)!;
+    expect(m.saveVersion).toBe(3);
+    expect(m.state.saveVersion).toBe(3);
+    const s = deserialize(JSON.stringify(v2Envelope()))!;
+    expect(deserialize(serialize(s, T0))).toEqual(s);
+    // Away for 15 hours: the migrated cards expire and the board keeps going.
+    const later = ok(s, { type: 'tick' }, T0 + 20 * HOUR_MS);
+    expect(later.incidents.every((c) => !s.incidents.some((o) => o.id === c.id))).toBe(true);
+    expect(later.incidents.length).toBeGreaterThan(0);
+  });
+
+  it('a v2 save with a corrupt shape is still refused after migration', () => {
+    const bad = v2Envelope() as any;
+    bad.state.officers.off_chen.career = null;
+    expect(deserialize(JSON.stringify(bad))).toBeNull();
+  });
+});
+
+describe('migration chains from version 1 to 3', () => {
+  it('a v1 save arrives at version 3 with a board and the v2 conversions applied', () => {
+    const s = deserialize(JSON.stringify(v1Envelope()))!;
+    expect(s.saveVersion).toBe(3);
+    expect(s.incidents).toHaveLength(3);
+    expect(s.incidents.every((c) => c.arrivedAt === T0 && !c.seen)).toBe(true);
+    expect(Object.keys(s.units).length).toBeGreaterThan(0);
+    expect(Number.isFinite(s.officers.off_chen.bornDay)).toBe(true);
+    expect(deserialize(JSON.stringify(v1Envelope()))).toEqual(s);
+    expect(deserialize(serialize(s, T0))).toEqual(s);
+  });
+});
+
+describe('version 3 validation and squad D', () => {
+  const good = () => JSON.parse(serialize(createInitialState(T0), T0));
+
+  it('a four-squad department round-trips', () => {
+    let s = busyState();
+    s = ok(s, { type: 'createSquad', name: 'Delta' }, T0 + 3 * HOUR_MS);
+    s = ok(s, { type: 'assignToSquad', officerId: 'off_chen', squadId: 'D' }, T0 + 3 * HOUR_MS);
+    expect(s.squads.map((q) => q.id)).toEqual(['A', 'B', 'C', 'D']);
+    expect(deserialize(serialize(s, T0))).toEqual(s);
+    expect(deserialize(serialize(s, T0))!.officers.off_chen.squadId).toBe('D');
+  });
+
+  it('refuses a squad outside A to D', () => {
+    const e = good();
+    e.state.squads.push({ id: 'E', name: 'Echo', officerIds: [], leaderId: null, duty: 'standby', loadoutPreset: {} });
+    expect(deserialize(JSON.stringify(e))).toBeNull();
+  });
+
+  it('refuses a missing or malformed board', () => {
+    const noBoard = good();
+    delete noBoard.state.incidents;
+    expect(deserialize(JSON.stringify(noBoard))).toBeNull();
+    const badCard = good();
+    badCard.state.incidents[0].expiresAt = 'soon';
+    expect(deserialize(JSON.stringify(badCard))).toBeNull();
+    const dupes = good();
+    dupes.state.incidents[1].id = dupes.state.incidents[0].id;
+    expect(deserialize(JSON.stringify(dupes))).toBeNull();
+    const badSchedule = good();
+    badSchedule.state.department.nextIncidentAt = 'later';
+    expect(deserialize(JSON.stringify(badSchedule))).toBeNull();
+  });
+
+  it('a reload mid-schedule does not double or lose arrivals', () => {
+    const s = busyState();
+    const loaded = deserialize(serialize(s, T0 + 3 * HOUR_MS))!;
+    const end = T0 + 30 * HOUR_MS;
+    expect(ok(loaded, { type: 'tick' }, end).incidents).toEqual(ok(s, { type: 'tick' }, end).incidents);
   });
 });

@@ -1,16 +1,21 @@
 // The operations blueprint. Drawn entirely from built.location / built.derived plus the player's
 // SpaceViews; nothing here is a bitmap of the house, so the drawing cannot drift from the rules.
-import { useCallback, useId, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { PointerEvent as ReactPointerEvent } from 'react';
+import type { EnvironmentDefinition } from '../../sim/scenario-types';
 import type { BuiltLocation, Id, MapOverlay, SpaceView, SquadId, SquadTask, Vec } from '../../sim/types';
 import './blueprint.css';
-import { computeDimensions, sheetViewBox } from './dimensions';
+import { SHEET_MARGIN, computeDimensions, sheetViewBox } from './dimensions';
 import { DimensionLines, NorthArrow } from './DimensionLines';
+import { EnvChips, EnvDefs, EnvWash, WeatherHatch, chipRows, envChips } from './environment';
+import { FloorTabs } from './FloorTabs';
+import { floorBadges, floorCount, floorView, spaceFloor } from './floors';
+import { StairGhosts, StairLayer } from './stairs';
 import { ObjectLabels, ObjectSymbol, isFloorLayer } from './furniture';
 import { bboxOf, polyPath, r2 } from './geometry';
 import { computeFrame } from './frame';
-import { computeLayout } from './layout';
-import { FrontMark, MarkerLoop, NoteMark, PersonGlyph, SquadToken } from './markers';
+import { FONT, armamentText, computeLayout, personKind } from './layout';
+import { CrowdFigure, FrontMark, MarkerLoop, NoteMark, PersonGlyph, SquadToken } from './markers';
 import { MaterialLegend, WallMaterialRuns, WallPatternDefs, materialsInUse } from './materials';
 import { OverlayLayer, placeOverlays } from './overlays';
 import { OpeningsLayer } from './openings';
@@ -36,12 +41,23 @@ export interface BlueprintProps {
   /** Shows the MATERIALS key listing the wall, door and window patterns this plan uses. */
   showMaterials?: boolean;
   className?: string;
+  /** Floor shown (0 ground, 1 upper) when the location has two floors. Controlled when given; otherwise the map keeps its own. */
+  floor?: number;
+  onFloorChange?: (floor: number) => void;
+  /** Conditions drawn on the sheet: dusk/night wash, weather hatch outside, crowd, and a row of chips. */
+  environment?: EnvironmentDefinition;
+  /** Pixels from the map's top edge where the chips / floor tabs row starts: the live screen's clock and pressure pills sit above it. */
+  stripTop?: number;
 }
+
+const STRIP_TOP = 38;
+const STRIP_ROW = 24;
+const TABS_PX = 176;
 
 const DOUBLE_TAP_MS = 380;
 const DRAG_SLOP_PX = 5;
 
-export function Blueprint({ built, spaces, squadTasks, selectedSpaceId, focusSquadId, highlightSpaceIds, onSelectSpace, lastChange, overlays, showMaterials, className }: BlueprintProps) {
+export function Blueprint({ built, spaces, squadTasks, selectedSpaceId, focusSquadId, highlightSpaceIds, onSelectSpace, lastChange, overlays, showMaterials, className, floor: floorProp, onFloorChange, environment, stripTop = STRIP_TOP }: BlueprintProps) {
   const uid = useId().replace(/[^a-zA-Z0-9]/g, '');
   const loc = built.location;
   const id = ids(uid);
