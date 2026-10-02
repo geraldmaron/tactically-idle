@@ -15,55 +15,35 @@ export interface AutoPlan {
   loadouts: Loadouts;
   explicit: Explicit;
   notes: Partial<Record<SquadId, AutoNote>>;
-  /** Total items placed across the targets. */
+  /** Total items in the complete target loadouts, including retained choices. */
   total: number;
 }
 
 /**
- * `targets` are the squads being changed (all chosen squads, or one). Squads outside `targets` keep what the
- * player set: their quantities reduce what is free, and their unit picks are never reused.
+ * Adapt the engine's complete, inventory-checked plan to prepare-screen state.
+ * Allocation belongs to autoLoadout so this layer never silently reduces a manual
+ * quantity, discards a deliberate zero, or reallocates a unit to another squad.
  */
 export function planAuto(args: {
   res: AutoLoadout;
   targets: SquadId[];
-  chosen: SquadId[];
-  /** Current quantities per chosen squad. */
-  loadouts: Loadouts;
-  /** Unit ids each chosen squad currently takes (flattened). */
-  takenBy: Partial<Record<SquadId, Id[]>>;
   /** Which item a unit belongs to (undefined when the unit no longer exists). */
   itemOf: (unitId: Id) => Id | undefined;
-  /** Ready units available for an item across the department. */
-  ready: (itemId: Id) => number;
 }): AutoPlan {
-  const { res, targets, chosen, loadouts, takenBy, itemOf, ready } = args;
-  const others = chosen.filter((s) => !targets.includes(s));
-  const takenElsewhere = new Set<Id>(others.flatMap((s) => takenBy[s] ?? []));
-  const heldElsewhere = (itemId: Id) => others.reduce((n, s) => n + (loadouts[s]?.[itemId] ?? 0), 0);
-
+  const { res, targets, itemOf } = args;
   const out: AutoPlan = { loadouts: {}, explicit: {}, notes: {}, total: 0 };
-  // Items handed out so far to targets, so two squads never exceed what is ready.
-  const handed = new Map<Id, number>();
-  for (const sid of targets) {
-    const lo: Record<Id, number> = {};
-    for (const [itemId, q] of Object.entries(res.loadouts[sid] ?? {})) {
-      const free = Math.max(0, ready(itemId) - heldElsewhere(itemId) - (handed.get(itemId) ?? 0));
-      const n = Math.min(q, free);
-      if (n > 0) {
-        lo[itemId] = n;
-        handed.set(itemId, (handed.get(itemId) ?? 0) + n);
-      }
-    }
+  for (const sid of new Set(targets)) {
+    if (!res.loadouts[sid]) continue;
+    const lo = { ...res.loadouts[sid] };
     const ex: Record<Id, Id[]> = {};
     for (const id of res.units[sid] ?? []) {
       const itemId = itemOf(id);
-      if (!itemId || takenElsewhere.has(id) || !lo[itemId]) continue;
+      if (!itemId) continue;
       (ex[itemId] ??= []).push(id);
     }
-    for (const itemId of Object.keys(ex)) ex[itemId] = ex[itemId].slice(0, lo[itemId]);
     out.loadouts[sid] = lo;
     out.explicit[sid] = ex;
-    out.notes[sid] = { lines: res.rationale[sid] ?? [], edited: false };
+    out.notes[sid] = { lines: [...(res.rationale[sid] ?? [])], edited: false };
     out.total += Object.values(lo).reduce((a, b) => a + b, 0);
   }
   return out;

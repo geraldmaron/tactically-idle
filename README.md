@@ -26,6 +26,8 @@ npm run build
 
 Use **Saves / New** below the header for ten local campaign slots, New Game, loading, named copies, and backup import/export. The active slot autosaves; starting or loading another campaign saves the current one first. Existing single-slot saves migrate into slot 1 and keep their original recovery data. See [local campaigns](docs/local-campaigns.md).
 
+In an incident briefing, **Auto-equip** fills untouched loadout choices from usable stock, keeps manual quantities, and explains shortages. See [auto-equip](docs/auto-equip.md).
+
 Dev-only state handle in the browser console: `window.__ti.getState()`, `__ti.send(cmd)`. The blueprint visual harness is at `/harness.html` (`?only=map&w=358&seed=7&door=blocked`, `?only=portraits&n=100`).
 
 ## Layout
