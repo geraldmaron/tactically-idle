@@ -4113,3 +4113,38 @@ button.ocard {
 .gear-dossier { display: flex; align-items: center; gap: 16px; margin: 0 0 16px; }
 .gear-dossier > img, .gear-dossier > svg { flex: none; }
 .gear-dossier p { margin: 0; line-height: 1.4; font-size: 13px; }
+
+/* Local campaign saves */
+.campaign-bar { flex: 0 0 auto; display: flex; align-items: center; gap: 10px; padding: 5px var(--gutter); min-height: 38px; background: #101b2d; border-bottom: 1px solid var(--line); }
+.campaign-bar > span { display: grid; min-width: 0; flex: 1; }
+.campaign-bar strong { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.campaign-bar small { font-size: 10px; color: var(--text-dim); }
+.campaign-bar button { min-height: 34px; padding: 4px 9px; border: 1px solid var(--line-strong); background: var(--panel); border-radius: 6px; color: var(--text); font: 600 13px var(--font-cond); cursor: pointer; }
+.campaign-warning small { color: var(--amber); }
+.save-manager .sheet-body { padding-top: 8px; }
+.save-explainer { margin: 0 0 12px; font-size: 13px; line-height: 1.45; }
+.save-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.save-actions .btn { min-height: 36px; }
+.save-primary-actions { margin-bottom: 12px; }
+.save-slots { padding: 0; margin: 12px 0; list-style: none; display: grid; gap: 10px; }
+.save-slot { border: 1px solid var(--line); border-radius: 8px; padding: 10px; background: rgba(0,0,0,.13); }
+.save-slot-active { border-color: rgba(63,208,142,.5); }
+.save-slot-head { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
+.save-slot-head strong { min-width: 0; overflow-wrap: anywhere; flex: 1; font-size: 15px; }
+.save-slot-number { color: var(--amber); font: 500 17px var(--font-display); }
+.save-slot-summary { margin: 0 0 3px; font-size: 12px; line-height: 1.4; }
+.save-slot-time { margin: 0 0 10px; font-size: 11px; }
+.save-alert, .save-success { padding: 9px; margin: 0 0 10px; border-radius: 6px; font-size: 13px; line-height: 1.45; }
+.save-alert { border: 1px solid rgba(243,180,50,.4); color: #ffe3a6; background: rgba(243,180,50,.08); }
+.save-success { color: var(--mint); background: rgba(63,208,142,.08); }
+.save-edit { display: grid; gap: 12px; padding-bottom: 8px; }
+.save-edit p { margin: 0; line-height: 1.5; }
+.save-edit label { display: grid; gap: 6px; font-size: 14px; }
+.save-edit input { min-width: 0; width: 100%; box-sizing: border-box; min-height: 44px; padding: 9px; color: var(--text); background: var(--bg); border: 1px solid var(--line-strong); border-radius: 6px; font: inherit; }
+.save-edit select { min-width: 0; width: 100%; min-height: 44px; padding: 8px; color: var(--text); background: var(--panel); border: 1px solid var(--line-strong); border-radius: 6px; font: inherit; }
+.save-import { position: relative; overflow: hidden; }
+.save-import input { position: absolute; inset: 0; width: 100%; opacity: 0; cursor: pointer; }
+.save-import:focus-within { outline: 2px solid var(--amber); outline-offset: 2px; }
+.save-controls { margin: 0; padding: 0; border: 0; min-width: 0; }
+.save-edit .save-permanent { display: flex; align-items: flex-start; gap: 8px; font-size: 13px; line-height: 1.45; }
+.save-edit .save-permanent input { width: 18px; min-height: 18px; flex: 0 0 18px; margin-top: 2px; }

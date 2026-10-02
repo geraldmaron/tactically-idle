@@ -1,7 +1,7 @@
 // Floor handling for the blueprint: which floor a space, opening, object or person belongs to, the
 // per-floor view of a LocationDefinition (so walls, dimensions and furniture are computed unchanged),
 // stair geometry, and the marker/person counts shown on the floor tabs. Pure; no React.
-import type { LocationDefinition, Opening, PlacedObject, Polygon, SpaceView, Vec } from '../../sim/types';
+import type { BuiltLocation, MapOverlay, SquadTask, LocationDefinition, Opening, PlacedObject, Polygon, SpaceView, Vec } from '../../sim/types';
 import { add, bboxOf, len, mid, perp, pointInPolygon, scale, sub, unit } from './geometry';
 
 /** 1 or 2 (the contract caps a structure at 2 floors). A plan that only lists floor-1 rooms still counts as 2. */
@@ -173,4 +173,30 @@ export function floorBadges(loc: LocationDefinition, spaces: SpaceView[]): Floor
   }
   for (const b of out) b.count = b.markers + b.people;
   return out;
+}
+
+/** Stable geometry for one floor. Keep this separate from frequently changing player knowledge. */
+export function floorGeometry(built: BuiltLocation, floor: number) {
+  const plan = floorView(built.location, floor);
+  const active = plan.floor;
+  const location = active === 0 ? plan.loc : { ...plan.loc, zones: [], entries: [] };
+  return {
+    plan,
+    built: { ...built, location, derived: { ...built.derived, stagingPoints: built.derived.stagingPoints.filter((p) => (p.floor ?? spaceFloor(built.location, p.spaceId)) === active) } },
+  };
+}
+
+/** Everything drawn or targetable belongs to the active floor, including knowledge and action overlays. */
+export function floorKnowledge(loc: LocationDefinition, spaces: SpaceView[], squadTasks: SquadTask[], overlays: MapOverlay[], floor: number) {
+  const onFloor = (id: string) => spaceFloor(loc, id) === floor;
+  return {
+    spaces: spaces.filter((s) => onFloor(s.id)).map((s) => ({ ...s, people: s.people.filter((p) => (p.floor ?? spaceFloor(loc, s.id)) === floor) })),
+    squadTasks: squadTasks.filter((t) => onFloor(t.positionId)),
+    overlays: overlays.filter((o) => (o.floor ?? 0) === floor),
+  };
+}
+
+export function floorScene(built: BuiltLocation, spaces: SpaceView[], squadTasks: SquadTask[], overlays: MapOverlay[], floor: number) {
+  const geometry = floorGeometry(built, floor);
+  return { ...geometry, ...floorKnowledge(built.location, spaces, squadTasks, overlays, geometry.plan.floor) };
 }

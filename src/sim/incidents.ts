@@ -82,7 +82,7 @@ export function takeIncident(d: GameState, id: Id): IncidentCard | null {
  */
 function drawCard(d: GameState, at: number): IncidentCard | null {
   const dep = d.department;
-  const drawn = drawIncidentSpec(d.rngState, { level: dep.level, trust: dep.trust, contentVersion: d.contentVersion });
+  const drawn = drawIncidentSpec(d.rngState, { level: dep.level, trust: dep.trust, contentVersion: d.contentVersion, avoidFamilies: [...board(d).map((c) => c.familyId), ...(d.activeRun ? [d.activeRun.locationFamilyId] : [])] });
   const spec = { ...drawn.spec, tier: Math.min(5, Math.max(1, Math.round(drawn.spec.tier))) };
   const life = drawBetween(drawn.state, INCIDENT_TUNING.minLifetimeMs, INCIDENT_TUNING.maxLifetimeMs);
   d.rngState = life.state;
@@ -147,7 +147,7 @@ export function applyIncidentsDue(d: GameState, _prev: number, t: number): void 
     at = nextIncidentAt(d)!;
   }
   const run = d.activeRun;
-  d.incidents = board(d).filter((c) => c.expiresAt > t && !(run && c.id === run.scenarioId));
+  d.incidents = board(d).filter((c) => c.expiresAt > t && !(run && !run.practice && c.id === run.scenarioId));
 }
 
 /** Earliest future board event after `t` (an arrival or an expiry), or null. */

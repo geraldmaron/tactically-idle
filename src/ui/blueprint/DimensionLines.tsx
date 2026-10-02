@@ -29,9 +29,10 @@ function Dim({ d }: { d: DimLine }) {
   else if (d.side === 'left') [tx, ty] = [d.line - 0.5, midAlong];
   else [tx, ty] = [d.line + 0.5 + FS * 0.72, midAlong];
   const span = Math.abs(d.b - d.a);
-  const showText = span > 2.2;
+  const showText = span >= d.label.length * FS * 0.5 + 0.6;
   return (
     <g className="bp-dim">
+      <title>{d.label}</title>
       <path d={`M${r2(e0.x)} ${r2(e0.y)}L${r2(x0.x)} ${r2(x0.y)}M${r2(e1.x)} ${r2(e1.y)}L${r2(x1.x)} ${r2(x1.y)}`} className="bp-dim-ext" />
       <path d={`M${r2(lineA.x)} ${r2(lineA.y)}L${r2(lineB.x)} ${r2(lineB.y)}`} className="bp-dim-line" />
       <path d={`${tick(d.a)}${tick(d.b)}`} className="bp-dim-tick" />

@@ -1,29 +1,10 @@
 // Hand-drawn annotation layer: marker loops, arrows, glyphs, the FRONT highlighter, notes, squad tokens.
-import { add, perp, r2, scale, seeded, smoothPath, sub, unit, type Rect } from './geometry';
+import { add, perp, polyPath, r2, scale, seeded, smoothPath, sub, unit, type Rect } from './geometry';
 import type { Vec } from '../../sim/types';
 import type { FrontItem, MarkerItem, NoteItem, PersonItem, PersonKindKey, SquadItem } from './layout';
 import { FONT } from './layout';
 
 const toneVar = (tone: 'amber' | 'mint') => (tone === 'amber' ? 'var(--marker-amber)' : 'var(--marker-mint)');
-
-function loopPoints(m: MarkerItem, key: string, sweep: number, grow: number, start: number): Vec[] {
-  const rnd = seeded(`${m.spaceId}:${key}`);
-  const p1 = rnd() * 6.28;
-  const p2 = rnd() * 6.28;
-  const tilt = (m.tilt * Math.PI) / 180;
-  const N = 30;
-  const pts: Vec[] = [];
-  for (let i = 0; i <= N; i++) {
-    const t = i / N;
-    const th = start + t * sweep * Math.PI * 2;
-    const g = 1 + (t - 0.5) * grow;
-    const j = 1 + 0.035 * Math.sin(2 * th + p1) + 0.028 * Math.sin(3 * th + p2) + (rnd() - 0.5) * 0.018;
-    const ex = Math.cos(th) * m.rx * g * j;
-    const ey = Math.sin(th) * m.ry * g * j;
-    pts.push({ x: m.cx + ex * Math.cos(tilt) - ey * Math.sin(tilt), y: m.cy + ex * Math.sin(tilt) + ey * Math.cos(tilt) });
-  }
-  return pts;
-}
 
 export function arrowShape(from: Vec, to: Vec, bend: number, headLen = 0.85): { shaft: string; head: string } {
   const dir = unit(sub(to, from));
@@ -45,29 +26,24 @@ export function arrowShape(from: Vec, to: Vec, bend: number, headLen = 0.85): { 
 
 export function MarkerLoop({ m, draw }: { m: MarkerItem; draw: boolean }) {
   const color = toneVar(m.tone);
-  const main = smoothPath(loopPoints(m, 'a', 1.1, 0.1, -0.35 * Math.PI));
-  const second = smoothPath(loopPoints(m, 'b', 0.82, 0.05, 0.1 * Math.PI));
   const cls = draw ? 'bp-draw' : '';
-  const arrow = arrowShape(m.arrow.from, m.arrow.to, 0.5, 0.75);
-  const tcx = m.textX + m.textW / 2;
+  const arrow = m.arrow ? arrowShape(m.arrow.from, m.arrow.to, 0, 0.75) : null;
   return (
     <g className={`bp-marker bp-marker-${m.tone}`} data-space={m.spaceId} pointerEvents="none" color={color} aria-hidden="true">
-      <path d={main} pathLength={1} className={`bp-mloop ${cls}`} stroke={color} />
-      <path d={second} pathLength={1} className={`bp-mloop bp-mloop-2 ${cls}`} stroke={color} />
+      <path d={polyPath(m.outline)} pathLength={1} className={`bp-mloop ${cls}`} stroke={color} />
       <g className={draw ? 'bp-fade' : ''}>
-        <path d={arrow.shaft} className="bp-mline" stroke={color} />
-        <path d={arrow.head} className="bp-mline" stroke={color} />
-        <text x={r2(m.textX)} y={r2(m.textY)} className="bp-marker-text" fill={color} transform={`rotate(${r2(m.tilt)} ${r2(tcx)} ${r2(m.textY)})`}>
+        {arrow && <>
+          <path d={arrow.shaft} className="bp-mline" stroke={color} />
+          <path d={arrow.head} className="bp-mline" stroke={color} />
+        </>}
+        <rect x={r2(m.box.x)} y={r2(m.box.y)} width={r2(m.box.w)} height={r2(m.box.h)} rx="0.45" className="bp-marker-back" />
+        <text x={r2(m.textX)} y={r2(m.textY)} className="bp-marker-text" fill={color} style={{ fontSize: `${m.size}px` }}>
           {m.text}
         </text>
-        {m.sub && (
-          <text x={r2(m.sub.x)} y={r2(m.sub.y)} className="bp-marker-sub" fill={color} transform={`rotate(${r2(m.tilt)} ${r2(tcx)} ${r2(m.textY)})`}>
-            {m.sub.text}
-          </text>
-        )}
-        <g transform={`translate(${r2(m.glyphAt.x)} ${r2(m.glyphAt.y)}) rotate(${r2(m.tilt)})`}>
-          <circle r="0.95" className="bp-mline" stroke={color} fill="rgba(10,30,90,0.55)" />
-          {m.tone === 'mint' ? <path d="M-0.45 0.05 L-0.1 0.45 L0.52 -0.42" className="bp-mline bp-check" stroke={color} /> : <text y="0.36" textAnchor="middle" className="bp-glyph-q" fill={color}>?</text>}
+        {m.sub && <text x={r2(m.sub.x)} y={r2(m.sub.y)} className="bp-marker-sub" fill={color}>{m.sub.text}</text>}
+        <g transform={`translate(${r2(m.glyphAt.x)} ${r2(m.glyphAt.y)})`}>
+          <circle r="0.8" className="bp-mline" stroke={color} fill="rgba(10,30,90,0.55)" />
+          {m.tone === 'mint' ? <path d="M-0.4 0.05 L-0.1 0.4 L0.45 -0.36" className="bp-mline bp-check" stroke={color} /> : <text y="0.36" textAnchor="middle" className="bp-glyph-q" fill={color}>?</text>}
         </g>
       </g>
     </g>
@@ -255,7 +231,7 @@ export function PersonGlyph({ p }: { p: PersonItem }) {
           </text>
         )}
         {p.caption && (
-          <text x={r2(p.caption.x)} y={r2(p.caption.y)} className="bp-person-caption" textAnchor="middle">
+          <text x={r2(p.caption.x)} y={r2(p.caption.y)} className="bp-person-caption" textAnchor={p.caption.anchor}>
             {p.caption.text}
           </text>
         )}

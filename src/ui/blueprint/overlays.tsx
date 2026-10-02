@@ -123,7 +123,7 @@ export function placeOverlays(built: BuiltLocation, overlays: MapOverlay[], fram
         for (const t of [0.5, 0.38, 0.62, 0.27, 0.73]) for (const side of [1, -1]) cands.push(add(add(ov.from, scale(sub(ov.to, ov.from), t)), scale(n, side * (h / 2 + 0.7))));
         label = placeLabel(ov.label, cands, pl);
       }
-      const blockAt = ov.tone === 'blocked' ? (firstBlocker(built, ov.from, ov.to) ?? add(ov.from, scale(sub(ov.to, ov.from), 0.55))) : null;
+      const blockAt = ov.tone === 'blocked' ? (ov.blockedAt ?? firstBlocker(built, ov.from, ov.to)) : null;
       out.push({ key, kind: 'line', tone: ov.tone, d, head, from: ov.from, blockAt, label });
     } else if (ov.kind === 'range') {
       let label: OverlayLabel | null = null;
@@ -141,7 +141,8 @@ export function placeOverlays(built: BuiltLocation, overlays: MapOverlay[], fram
       out.push({ key, kind: 'range', tone: ov.tone, d: ringPath(ov.at, ov.radius), at: ov.at, r: ov.radius, label });
     } else {
       if (ov.points.length < 2) return;
-      const d = smoothPath(ov.points);
+      // Travel follows the supplied route vertices. Smoothing can cut a corner through a wall.
+      const d = ov.points.map((p, j) => `${j ? 'L' : 'M'}${r2(p.x)} ${r2(p.y)}`).join(' ');
       const last = ov.points[ov.points.length - 1];
       const prev = ov.points[ov.points.length - 2];
       const head = arrowShape(prev, last, 0, 1.0).head;

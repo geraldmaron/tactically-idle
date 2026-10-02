@@ -908,3 +908,139 @@
     animation: none;
   }
 }
+
+/* Keep the drawing and its controls in distinct areas, even inside a fixed-height map panel. */
+.bp-canvas {
+  position: absolute;
+  inset: 0;
+}
+.bp-multifloor .bp-canvas {
+  top: 48px;
+}
+.bp-floor-controls {
+  position: absolute;
+  inset: 0 0 auto;
+  min-height: 48px;
+  padding: 4px 8px;
+  background: #102f74;
+  border-bottom: 1px solid rgba(243, 247, 255, 0.3);
+}
+.live-map .bp-floor-controls {
+  top: 38px;
+}
+.live-map .bp-multifloor .bp-canvas {
+  top: 86px;
+}
+.bp-tabwrap,
+.bp-tabs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.bp-tabwrap {
+  justify-content: flex-end;
+}
+.bp-tab {
+  min-height: 40px;
+  padding: 4px 12px;
+  border: 1px solid rgba(243, 247, 255, 0.35);
+  border-radius: 5px;
+  background: #0b255c;
+  color: var(--chalk);
+  font-family: var(--font-cond);
+  font-size: 14px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+.bp-tab-on {
+  background: var(--amber);
+  color: var(--amber-ink);
+  border-color: var(--amber);
+}
+.bp-tab:focus-visible {
+  outline: 2px solid var(--chalk);
+  outline-offset: 1px;
+}
+.bp-tab-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.bp-tab-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.bp-compass-ring {
+  fill: none;
+  stroke: var(--chalk);
+}
+.bp-compass-needle,
+.bp-compass-n {
+  fill: var(--chalk);
+}
+.bp-compass-n {
+  font-size: 5px;
+}
+.bp-mloop {
+  stroke-width: 1.8px;
+  vector-effect: non-scaling-stroke;
+  stroke-opacity: 0.85;
+}
+.bp-marker-back {
+  fill: #123c92;
+  fill-opacity: 0.96;
+  stroke: none;
+}
+.bp-ghost-outline,
+.bp-ghost-stair,
+.bp-stair-box,
+.bp-stair-tread,
+.bp-stair-arrow {
+  fill: none;
+  stroke: var(--chalk);
+  stroke-width: 1px;
+  vector-effect: non-scaling-stroke;
+}
+.bp-ghost-outline,
+.bp-ghost-stair {
+  stroke-opacity: 0.25;
+  stroke-dasharray: 4 3;
+}
+.bp-stair-box {
+  fill: rgba(12, 39, 104, 0.6);
+}
+.bp-stair-tread {
+  stroke-opacity: 0.65;
+}
+.bp-stair-label {
+  font-family: var(--font-cond);
+  font-size: 1.35px;
+  font-weight: 700;
+  fill: var(--chalk);
+  paint-order: stroke;
+  stroke: #123c92;
+  stroke-width: 0.7px;
+}
+.bp-person-caption {
+  font-family: var(--font-marker);
+  font-size: 1.3px;
+  fill: var(--marker-amber);
+  paint-order: stroke;
+  stroke: #123c92;
+  stroke-width: 0.4px;
+}
+/* A 230px preview letterboxed a full-height plan down to unreadable labels on a phone. */
+.prep-map:has(> .bp-root) {
+  height: clamp(330px, 58vh, 440px);
+}
+.live-map:has(.bp-root) {
+  min-height: 300px;
+}
+.live-map:has(.bp-multifloor) {
+  min-height: 380px;
+}

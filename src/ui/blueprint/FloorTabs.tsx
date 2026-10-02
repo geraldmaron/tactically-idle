@@ -54,7 +54,6 @@ export function FloorTabs({ floors, floor, badges, onChange }: FloorTabsProps) {
               }}
               type="button"
               role="tab"
-              id={`bp-tab-${i}`}
               aria-selected={sel}
               tabIndex={sel ? 0 : -1}
               aria-label={parts.length ? `${floorWord(i)}, ${parts.join(', ')}` : floorWord(i)}

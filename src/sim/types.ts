@@ -541,6 +541,8 @@ export interface OperationRun {
   id: Id;
   scenarioId: Id;
   scenarioVersion: number;
+  /** Unstarted generated card, retained so cancelling deployment can restore it. */
+  sourceIncident?: IncidentCard;
   locationFamilyId: Id;
   locationSeed: number;
   contentVersion: number;
