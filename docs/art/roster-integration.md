@@ -6,7 +6,7 @@
 
 `ageAtStart` means age when first introduced for a recruit, and campaign-start age for the eight starters. It is retained as an authoring field name; it does not make the whole unseen reserve age on campaign day zero. People introduced in an earlier cohort keep their real saved birth dates.
 
-`identityId` joins an officer to the catalog. The gameplay officer id remains separate and stable. Existing v1–v3 people keep their names, builds, portraits and careers. Known starter identities are linked only when both old officer id and full name match. Unrecognized historical officers are not silently remapped to a new face.
+`identityId` joins an officer to the catalog. The gameplay officer id remains separate and stable. Existing v1–v3 people keep their names, builds, saved portrait keys and careers. Known starter identities are linked only when both old officer id and full name match. Unrecognized historical officers are not silently remapped to a new face.
 
 ## Campaign and succession
 
@@ -29,7 +29,7 @@ Production portraits are `public/art/portraits/person_NNN.webp`, 512×532. Only 
 
 The photograph is the person's file portrait, not a claim that their face is dynamically repainted every birthday. Current career age is preserved in the portrait tooltip and career UI. Full headwear must fit the crop. No changing rank, role insignia, specialist equipment or text is baked into officer portraits.
 
-Legacy procedural portrait keys remain intact even when migration safely links a known catalog identity. Legacy painted keys still resolve. All local art paths honor Vite `BASE_URL`, including GitHub Pages subdirectory builds.
+The renderer resolves a verified catalog identity to its current ready photograph, even if a saved record still has a procedural or old painted portrait key. Identity and full name must agree; an exact legacy starter id and name can also establish the match. Unmatched historical candidates and hired officers show the same intentional personnel-file card. No old procedural face is rendered, and no save reset, candidate refresh, name change or gameplay reroll is needed. Saved portrait keys are left untouched for compatibility. All local art paths honor Vite `BASE_URL`, including GitHub Pages subdirectory builds.
 
 The real app surfaces use the compact header lockup, browser favicon, touch icon and an immediate HTML loading state. The brand pack's title/menu and native-sized exports are reusable assets; this browser game does not have a native project or new installed-app/PWA behavior.
 
