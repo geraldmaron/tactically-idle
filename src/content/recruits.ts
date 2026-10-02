@@ -1,5 +1,7 @@
 import type { Candidate, CertId, Id, Officer, RatingKey, Ratings, Role, TraitId } from '../sim/types';
-import { next } from '../sim/rng';
+import { hashSeed, next } from '../sim/rng';
+import { PERSONAS, type Persona } from './personas';
+import { CAREER_TUNING } from '../sim/career';
 
 export const RECRUIT_TUNING = {
   /** Candidates in the pool before any development node adds more. */
@@ -13,12 +15,8 @@ export const RECRUIT_TUNING = {
   rookiePenalty: 8,
   /** Chance that a non-targeted slot also takes the targeted role. */
   targetBiasChance: 0.35,
-  /** Rookies: age and years of prior service. */
-  rookieAge: [21, 27] as [number, number],
+  /** Newcomers can be any adult age. Prior service is rolled separately. */
   rookieService: [0, 1.2] as [number, number],
-  /** Everyone else: age, and the age they joined (service = age - joined). */
-  recruitAge: [26, 50] as [number, number],
-  joinedAge: [21, 29] as [number, number],
   /** Experience adds this much wage per 3 years of prior service (capped), and this much signing fee per year. */
   wagePerThreeYears: 1,
   wageExperienceCap: 6,
@@ -26,18 +24,6 @@ export const RECRUIT_TUNING = {
 };
 
 export const ROLES: Role[] = ['comms', 'breach', 'medic', 'recon', 'lead'];
-
-export const FIRST_NAMES = [
-  'Priya', 'Jonas', 'Leila', 'Declan', 'Maren', 'Theo', 'Imani', 'Callum', 'Yuki', 'Rafael',
-  'Greta', 'Osei', 'Noor', 'Felix', 'Ingrid', 'Mateo', 'Zara', 'Henrik', 'Dara', 'Luca',
-  'Amara', 'Silas', 'Kavya', 'Bram', 'Elena', 'Nico', 'Tamsin', 'Idris', 'Wren', 'Anselm',
-];
-
-export const SURNAMES = [
-  'Adeyemi', 'Halloran', 'Voss', 'Nakamura', 'Delacroix', 'Whitlock', 'Ferreira', 'Kowalski', 'Mbeki', 'Ashworth',
-  'Petrov', 'Castellan', 'Doyle', 'Haddad', 'Lindgren', 'Moreau', 'Osei', 'Pryce', 'Quill', 'Rahman',
-  'Sandoval', 'Thackeray', 'Umber', 'Varga', 'Winslow', 'Yamada', 'Zielinski', 'Bellamy', 'Corrigan', 'Dunmore',
-];
 
 type Range = [number, number];
 
@@ -80,6 +66,9 @@ const PROFILES: Record<Role, RoleProfile> = {
 export interface RecruitGen {
   rng: number;
   nextId: number;
+  campaignSeed?: number;
+  builds?: Record<Id, Officer>;
+  unavailable?: readonly Id[];
 }
 
 function roll(gen: RecruitGen): number {
@@ -103,109 +92,89 @@ function wageFor(ratings: Ratings, certs: CertId[], traits: TraitId[], serviceYe
   return Math.max(38, Math.min(62, Math.round(w)));
 }
 
-/**
- * `day` is the current game-calendar day (calendar.gameDay), so ages and service
- * dates line up with the department's calendar. Experienced recruits earn and cost
- * more; they also learn slower (see career.LEARNING_MULTIPLIER).
- */
-export function generateCandidate(gen: RecruitGen, now: number, role: Role, takenNames: Set<string>, day = 0): Candidate {
+/** Role and build seeds never depend on demographic or visual fields. */
+export function roleForPersona(seed: number, identityId: string): Role {
+  return ROLES[Math.floor(next(hashSeed(`${seed}:role:${identityId}`)).value * ROLES.length)];
+}
+
+export function buildPersona(person: Persona, seed: number, role = roleForPersona(seed, person.id), introducedDay = 0): Officer {
+  const gen: RecruitGen = { rng: hashSeed(`${seed}:build:${person.id}`), nextId: 0 };
   const profile = PROFILES[role];
-
-  let first = FIRST_NAMES[rollInt(gen, FIRST_NAMES.length)];
-  let last = SURNAMES[rollInt(gen, SURNAMES.length)];
-  for (let i = 0; i < 40 && takenNames.has(fullNameKey(first, last)); i++) {
-    first = FIRST_NAMES[rollInt(gen, FIRST_NAMES.length)];
-    last = SURNAMES[rollInt(gen, SURNAMES.length)];
-  }
-  takenNames.add(fullNameKey(first, last));
-
-  // Zero or one trait; a rookie is weaker on paper and cheaper to sign.
   const trait = roll(gen) < 0.7 ? profile.traits[rollInt(gen, profile.traits.length)] : null;
   const traits: TraitId[] = trait ? [trait] : [];
   const rookie = traits.includes('rookie');
-
   const ratings = {} as Ratings;
   for (const key of Object.keys(profile.ratings) as RatingKey[]) {
     const [lo, hi] = profile.ratings[key];
-    const v = Math.round(lo + roll(gen) * (hi - lo)) - (rookie ? RECRUIT_TUNING.rookiePenalty : 0);
-    ratings[key] = Math.max(15, Math.min(95, v));
+    ratings[key] = Math.max(15, Math.min(95, Math.round(lo + roll(gen) * (hi - lo)) - (rookie ? RECRUIT_TUNING.rookiePenalty : 0)));
   }
-
   const certs: CertId[] = [];
   for (const [cert, chance] of profile.certs) {
     if (roll(gen) < (rookie ? chance / 2 : chance)) certs.push(cert);
   }
-
-  const portraitSeed = Math.floor(roll(gen) * 90_000) + 1000;
-
-  // Age and prior service. Rookies are young with next to no service; the rest joined in their twenties.
-  const span = (r: [number, number]) => r[0] + roll(gen) * (r[1] - r[0]);
-  const age = rookie ? span(RECRUIT_TUNING.rookieAge) : span(RECRUIT_TUNING.recruitAge);
-  const service = rookie ? span(RECRUIT_TUNING.rookieService) : Math.max(0.5, age - span(RECRUIT_TUNING.joinedAge));
+  // Adult age constrains possible service length; it never forces someone to be a rookie or veteran.
+  const maxService = Math.max(0, person.ageAtStart - 21);
+  const service = rookie ? roll(gen) * Math.min(1.2, maxService) : roll(gen) * maxService;
   const operations = Math.floor(service * 5 * roll(gen));
-  const wage = wageFor(ratings, certs, traits, service);
-  const candId: Id = `cand_${gen.nextId++}`;
-  const offId: Id = `off_${gen.nextId++}`;
-
-  const officer: Officer = {
-    id: offId,
-    firstName: first,
-    surname: last,
-    role,
-    portrait: `proc:${portraitSeed}`,
-    ratings,
-    certs,
-    traits,
-    wage,
-    xp: rookie ? 0 : rollInt(gen, 200),
-    stress: rollInt(gen, 20),
-    injury: null,
-    squadId: null,
-    assignment: null,
-    hiredAt: 0,
-    bornDay: day - Math.round(age * 365),
-    serviceStartDay: day - Math.round(service * 365),
-    career: { operations, favorable: Math.round(operations * 0.55), adverse: Math.round(operations * 0.12) },
-    retirement: null,
-  };
-  // Hidden bookkeeping (career.OfficerExt): the recruit's starting xp is already banked.
-  (officer as Officer & { xpBanked?: number }).xpBanked = officer.xp;
+  const xp = rookie ? 0 : rollInt(gen, 200);
   return {
-    id: candId,
-    officer,
-    signingCost: Math.round((wage * RECRUIT_TUNING.signingHours + service * RECRUIT_TUNING.signingPerServiceYear) / 10) * 10,
-    shortlisted: false,
-    expiresAt: now + RECRUIT_TUNING.lifetimeMs,
+    id: `off_${person.id}`, identityId: person.id,
+    firstName: person.firstName, surname: person.surname, portrait: person.portrait,
+    role, ratings, certs, traits, wage: wageFor(ratings, certs, traits, service), xp, xpBanked: xp,
+    stress: rollInt(gen, 20), injury: null, squadId: null, assignment: null, hiredAt: 0,
+    // Birth/service dates are fixed at first introduction, never reset on a later refresh.
+    bornDay: introducedDay - Math.round(person.ageAtStart * 365), serviceStartDay: introducedDay - Math.round(service * 365),
+    career: { operations, favorable: Math.round(operations * 0.55), adverse: Math.round(operations * 0.12) }, retirement: null,
   };
 }
 
-/**
- * Generate `count` candidates. Slot roles avoid repeating a role already in the
- * batch (or in `existingRoles`) while an unused role remains. With `targetRole`,
- * the first slot is that role and later slots take it with a modest chance.
- */
+function candidateFor(gen: RecruitGen, now: number, person: Persona, day: number): Candidate {
+  const seed = gen.campaignSeed ?? 12345;
+  const officer = structuredClone(gen.builds?.[person.id] ?? buildPersona(person, seed, undefined, day));
+  if (gen.builds) gen.builds[person.id] = structuredClone(officer);
+  const service = Math.max(0, (day - officer.serviceStartDay) / 365);
+  return {
+    id: `cand_${gen.nextId++}`, officer,
+    signingCost: Math.round((officer.wage * RECRUIT_TUNING.signingHours + service * RECRUIT_TUNING.signingPerServiceYear) / 10) * 10,
+    shortlisted: false, expiresAt: now + RECRUIT_TUNING.lifetimeMs,
+  };
+}
+
+/** A small hiring window onto the authored cast; build assignment is fixed for the campaign. */
 export function generateBatch(
-  gen: RecruitGen,
-  now: number,
-  count: number,
-  existingRoles: Role[],
-  takenNames: Set<string>,
-  targetRole?: Role,
-  day = 0,
+  gen: RecruitGen, now: number, count: number, existingRoles: Role[], takenNames: Set<string>, targetRole?: Role, day = 0,
 ): Candidate[] {
+  const seed = gen.campaignSeed ?? 12345;
+  const excluded = new Set(gen.unavailable ?? []);
+  const eligible = PERSONAS.filter((p) => !p.legacyOfficerId && !excluded.has(p.id)
+    && !takenNames.has(fullNameKey(p.firstName, p.surname))
+    && (!gen.builds?.[p.id] || (day - gen.builds[p.id].bornDay) / 365 < CAREER_TUNING.retireAge));
+  const introduced = eligible.filter((p) => gen.builds?.[p.id]);
+  // Keep a small local recruitment market. New distinct people arrive as hiring and
+  // retirement open room, rather than ageing the entire unseen reserve on day zero.
+  const reserve = eligible.filter((p) => !gen.builds?.[p.id]).sort((a, b) =>
+    (Number(a.id.slice(-3)) > 24 ? 1 : 0) - (Number(b.id.slice(-3)) > 24 ? 1 : 0) || hashSeed(`${seed}:arrival:${a.id}`) - hashSeed(`${seed}:arrival:${b.id}`));
+  // The core cohort (009–024) establishes the world first; this never depends on image download state.
+  const available = [...introduced, ...reserve.slice(0, Math.max(0, 12 - introduced.length))];
   const out: Candidate[] = [];
-  const used: Role[] = [...existingRoles];
-  for (let i = 0; i < count; i++) {
-    let role: Role;
-    if (targetRole && (i === 0 || roll(gen) < RECRUIT_TUNING.targetBiasChance)) {
-      role = targetRole;
-    } else {
-      const unused = ROLES.filter((x) => !used.includes(x));
-      const pool = unused.length > 0 ? unused : ROLES;
-      role = pool[rollInt(gen, pool.length)];
-    }
-    used.push(role);
-    out.push(generateCandidate(gen, now, role, takenNames, day));
+  const used = [...existingRoles];
+  const roleOf = (p: Persona) => gen.builds?.[p.id]?.role ?? roleForPersona(seed, p.id);
+  // Target the entire eligible reserve, not just the current local cohort. A role
+  // search can introduce one new specialist without rerolling an existing person.
+  if (targetRole && !available.some((p) => roleOf(p) === targetRole)) {
+    const specialist = reserve.find((p) => roleOf(p) === targetRole);
+    if (specialist) available.push(specialist);
+  }
+  while (out.length < count && available.length) {
+    const target = targetRole && (out.length === 0 || roll(gen) < RECRUIT_TUNING.targetBiasChance);
+    let pool = target ? available.filter((p) => roleOf(p) === targetRole) : available.filter((p) => !used.includes(roleOf(p)));
+    if (!pool.length) pool = available;
+    const person = pool[rollInt(gen, pool.length)];
+    available.splice(available.indexOf(person), 1);
+    takenNames.add(fullNameKey(person.firstName, person.surname));
+    const candidate = candidateFor(gen, now, person, day);
+    used.push(candidate.officer.role);
+    out.push(candidate);
   }
   return out;
 }

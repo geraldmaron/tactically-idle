@@ -265,10 +265,12 @@ export type Assignment =
 
 export interface Officer {
   id: Id;
+  /** Stable authored person; absent on legacy procedurally generated officers. */
+  identityId?: string;
   firstName: string;
   surname: string;
   role: Role;
-  /** Asset key: '/portraits/<key>.png' if painted, otherwise procedural portrait seed. */
+  /** Authored portrait path, or a preserved legacy portrait key. */
   portrait: string;
   ratings: Ratings;
   certs: CertId[];
@@ -685,7 +687,19 @@ export interface IncidentCard {
   seen: boolean;
 }
 
+/** Persisted campaign identities and first-seen builds. No departed officer can be recycled. */
+export interface PersonnelState {
+  campaignSeed: number;
+  catalogVersion: number;
+  /** Every person ever employed, including retired and dismissed officers. */
+  employedIdentityIds: Id[];
+  /** Preserve first-seen builds across refreshes and future balancing changes. */
+  builds: Record<Id, Officer>;
+}
+
 export interface GameState {
+  /** Added in save v4. Optional only for historical test fixtures and migration inputs. */
+  personnel?: PersonnelState;
   saveVersion: number;
   contentVersion: number;
   department: Department;

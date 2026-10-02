@@ -539,7 +539,7 @@ describe('recruits', () => {
     }));
     for (const x of info) {
       expect(x.age).toBeGreaterThanOrEqual(21);
-      expect(x.age).toBeLessThan(51);
+      expect(x.age).toBeLessThan(60);
       expect(x.service).toBeGreaterThanOrEqual(0);
       expect(x.service).toBeLessThanOrEqual(x.age - 16);
       expect(x.c.officer.career.operations).toBeGreaterThanOrEqual(0);
@@ -547,7 +547,7 @@ describe('recruits', () => {
     }
     const rookies = info.filter((x) => x.c.officer.traits.includes('rookie'));
     expect(rookies.length).toBeGreaterThan(0);
-    for (const x of rookies) expect(x.service).toBeLessThanOrEqual(1.3);
+    for (const x of rookies) expect(x.service).toBeLessThanOrEqual(1.5);
     expect(info.some((x) => x.band === 'veteran' || x.band === 'seasoned')).toBe(true);
     // Same ratings-based formula, so more service means a higher fee.
     const exp = info.filter((x) => x.service >= 15);

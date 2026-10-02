@@ -1,3 +1,5 @@
+import { MaterialGuide } from '../art/MaterialGuide';
+import { GearArt } from '../art/GearArt';
 import { useEffect, useState } from 'react';
 import { useGame } from '../store';
 import { storeOptions, unitViews } from '../../sim/department-selectors';
@@ -37,6 +39,7 @@ export function GearScreen() {
       </Section>
 
       <UnitSheet itemId={unitsFor} onClose={() => setUnitsFor(null)} />
+      <MaterialGuide />
 
       <Section title="Loadout presets" icon="list" hint="A preset is the gear a squad takes by default. Apply it on the prepare screen.">
         {!presets.unlocked ? (
@@ -89,7 +92,7 @@ function GearTile({ o, onOpen }: { o: StoreOption; onOpen: () => void }) {
       <div className="gear-hit">
         <span className="gear-row">
           <span className="gear-art" aria-hidden="true">
-            <Icon name={itemIcon(o.item.id)} size={40} strokeWidth={1.5} />
+            <GearArt itemId={o.item.id} />
           </span>
           <span className="gear-main">
             <span className="gear-top">
@@ -163,7 +166,10 @@ function UnitSheet({ itemId, onClose }: { itemId: Id | null; onClose: () => void
         ) : undefined
       }
     >
-      {item && <UnitList itemId={item.id} />}
+      {item && <>
+        <div className="gear-dossier"><GearArt itemId={item.id} size={104} /><p className="dim">{item.description}</p></div>
+        <UnitList itemId={item.id} />
+      </>}
     </Sheet>
   );
 }

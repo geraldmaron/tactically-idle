@@ -1,3 +1,4 @@
+import { personaNote } from '../../content/personas';
 import { useState } from 'react';
 import { useGame } from '../store';
 import { careerInfo, courseOptions, projectDismiss, recoveryInfo } from '../../sim/department-selectors';
@@ -63,6 +64,7 @@ function OfficerBody({ o, onClose }: { o: Officer; onClose: () => void }) {
         </div>
       </div>
 
+      {personaNote(o.identityId) && <p className="dim persona-note">{personaNote(o.identityId)}</p>}
       <CareerSection o={o} />
 
       <SubHead icon="gauge">Ratings</SubHead>

@@ -4094,3 +4094,22 @@ button.ocard {
   font-size: 14px;
   color: var(--text-dim);
 }
+
+/* The compact lockup leaves department status readable at 320px. */
+.wordmark { flex: 0 1 146px; min-width: 0; }
+.brand-lockup { display: block; width: 100%; max-width: 146px; height: 36px; object-fit: contain; object-position: left center; }
+.persona-note { margin: 8px 0; line-height: 1.4; font-size: 13px; }
+@media(max-width: 380px) { .wordmark { flex-basis: 120px; } .brand-lockup { max-width: 120px; height: 30px; } }
+@media(max-width: 340px) { .wordmark { flex-basis: 108px; } .brand-lockup { max-width: 108px; height: 27px; } }
+
+.material-guide { padding: 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); }
+.material-guide summary { cursor: pointer; font-family: var(--font-cond); font-size: 16px; min-height: 44px; align-content: center; }
+.material-guide p { font-size: 12px; line-height: 1.4; }
+.material-guide-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.material-guide-grid figure { margin: 0; min-width: 0; }
+.material-guide-grid img { display: block; width: 100%; height: auto; aspect-ratio: 1; object-fit: cover; border-radius: 5px; }
+.material-guide-grid figcaption { margin-top: 5px; font-family: var(--font-cond); font-size: 12px; }
+
+.gear-dossier { display: flex; align-items: center; gap: 16px; margin: 0 0 16px; }
+.gear-dossier > img, .gear-dossier > svg { flex: none; }
+.gear-dossier p { margin: 0; line-height: 1.4; font-size: 13px; }

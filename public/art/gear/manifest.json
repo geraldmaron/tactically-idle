@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "readyIds": [
+    "ballistic_shield",
+    "battery_pack",
+    "camera_drone",
+    "door_ram",
+    "loud_hailer",
+    "radio_kit",
+    "thermal_imager",
+    "throw_phone",
+    "trauma_kit"
+  ],
+  "width": 512,
+  "height": 512
+}

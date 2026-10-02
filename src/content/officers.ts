@@ -1,3 +1,5 @@
+import { STARTER_PERSONAS } from './personas';
+import { hashSeed, next } from '../sim/rng';
 import type { CertId, Id, Officer, Ratings, Role, Squad, SquadId, TraitId } from '../sim/types';
 
 const DAY = 86_400_000;
@@ -63,16 +65,24 @@ const YEAR = 365;
  * so birth and service-start days are simply negative year counts. Ages are spread
  * 24..57 with matching service: Park is a rookie, Okafor a veteran nearing 60.
  */
-export function startingOfficers(now: number): Record<Id, Officer> {
+export function startingOfficers(now: number, campaignSeed = 12345): Record<Id, Officer> {
   const out: Record<Id, Officer> = {};
   for (const s of SEEDS) {
+    const person = STARTER_PERSONAS.find((p) => p.legacyOfficerId === s.id)!;
+    let roll = hashSeed(`${campaignSeed}:starter:${person.id}`);
+    const ratings = { ...s.ratings };
+    for (const key of Object.keys(ratings) as (keyof Ratings)[]) {
+      const draw = next(roll); roll = draw.state;
+      ratings[key] = Math.max(15, Math.min(95, ratings[key] + Math.round(draw.value * 8) - 4));
+    }
     const officer: Officer & { xpBanked: number } = {
       id: s.id,
+      identityId: person.id,
       firstName: s.firstName,
       surname: s.surname,
       role: s.role,
-      portrait: s.portrait,
-      ratings: { ...s.ratings },
+      portrait: person.portrait,
+      ratings,
       certs: [...s.certs],
       traits: [...s.traits],
       wage: s.wage,

@@ -1,3 +1,4 @@
+import { assetUrl } from '../art/assetUrl';
 import { useGame } from '../store';
 import { budget } from '../../sim/department-selectors';
 import { Icon } from '../icons';
@@ -10,7 +11,7 @@ export function TopBar() {
   const d = g.department;
   return (
     <header className="topbar">
-      <h1 className="wordmark">TACTICALLY IDLE</h1>
+      <h1 className="wordmark"><img className="brand-lockup" src={assetUrl("brand/header-lockup-dark.svg")} alt="Tactically Idle" width="146" height="36" /></h1>
       <ul className="stats" aria-label="Department status">
         <li className="stat stat-cash" title="Funding">
           <Icon name="cash" size={18} />
