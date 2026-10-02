@@ -9,11 +9,11 @@ import {
 import type { StartOperationCommand } from '../../sim/operation-selectors';
 import { squadReadiness, storeOptions } from '../../sim/department-selectors';
 import type { StoreOption } from '../../sim/department-selectors';
-import { readyUnits, unitEffectiveness } from '../../sim/inventory';
+import { unitEffectiveness } from '../../sim/inventory';
 import { stagingPointsIn } from '../../sim/spatial';
 import { spaceName } from '../../sim/resolution';
 import { ITEMS } from '../../content/items';
-import { autoLoadout } from '../../sim/auto-equip';
+import { autoEquipReadyUnits, autoLoadout } from '../../sim/auto-equip';
 import type { AutoLoadout } from '../../sim/auto-equip';
 import { getScenario } from '../../sim/scenario-registry';
 import type { Id, ItemUnit, KnowledgeStatus, SquadId, StagingPoint } from '../../sim/types';
@@ -56,6 +56,12 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
   const [explicit, setExplicit] = useState<Explicit>({});
   const [autoNote, setAutoNote] = useState<Partial<Record<SquadId, AutoNote>>>({});
   const [autoWarnings, setAutoWarnings] = useState<string[]>([]);
+  const [autoUndo, setAutoUndo] = useState<{
+    loadouts: Loadouts;
+    explicit: Explicit;
+    notes: Partial<Record<SquadId, AutoNote>>;
+    warnings: string[];
+  } | null>(null);
   const [staging, setStaging] = useState<Partial<Record<SquadId, Id>>>({});
   const [practice, setPractice] = useState(replay);
   const [floor, setFloor] = useState(0);
@@ -84,9 +90,10 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
       for (const [itemId, qty] of Object.entries(loadouts[sid] ?? {})) {
         if (qty <= 0) continue;
         const want = explicit[sid]?.[itemId] ?? [];
+        const usable = autoEquipReadyUnits(g, itemId, now);
         const have = want
-          .map((id) => g.units[id])
-          .filter((u): u is ItemUnit => !!u && u.itemId === itemId && u.status === 'ready' && !taken.has(u.id))
+          .map((id) => usable.find((u) => u.id === id))
+          .filter((u): u is ItemUnit => !!u && !taken.has(u.id))
           .slice(0, qty);
         have.forEach((u) => taken.add(u.id));
         per[itemId] = have;
@@ -97,7 +104,7 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
       for (const [itemId, qty] of Object.entries(loadouts[sid] ?? {})) {
         if (qty <= 0) continue;
         const have = out[sid]?.[itemId] ?? [];
-        const more = readyUnits(g, itemId)
+        const more = autoEquipReadyUnits(g, itemId, now)
           .filter((u) => !taken.has(u.id))
           .slice(0, Math.max(0, qty - have.length));
         more.forEach((u) => taken.add(u.id));
@@ -105,7 +112,7 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
       }
     }
     return out;
-  }, [g, chosen, loadouts, explicit]);
+  }, [g, chosen, loadouts, explicit, now]);
 
   const cmd: StartOperationCommand = useMemo(() => {
     const pos: Partial<Record<SquadId, Id>> = {};
@@ -134,11 +141,14 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
   }, [chosen, positions, loadouts, picks, staging, practice, scenarioId, defaultEntry, built]);
   const check = prepCheck(g, now, cmd);
 
-  const toggleSquad = (id: SquadId) => setChosen((c) => (c.includes(id) ? c.filter((x) => x !== id) : [...c, id].sort()));
+  const toggleSquad = (id: SquadId) => {
+    setAutoUndo(null);
+    setChosen((c) => (c.includes(id) ? c.filter((x) => x !== id) : [...c, id].sort()));
+  };
 
   /** Quantity of an item already allocated to every chosen squad except `except`. */
   const allocated = (itemId: Id, except: SquadId) => chosen.filter((s) => s !== except).reduce((n, s) => n + (loadouts[s]?.[itemId] ?? 0), 0);
-  const readyOf = (itemId: Id) => readyUnits(g, itemId).length;
+  const readyOf = (itemId: Id) => autoEquipReadyUnits(g, itemId, now).length;
   const touch = (squad: SquadId) => setAutoNote((n) => (n[squad] && !n[squad]!.edited ? { ...n, [squad]: { ...n[squad]!, edited: true } } : n));
   const dropPicks = (squad: SquadId, itemId?: Id) =>
     setExplicit((e) => {
@@ -147,11 +157,13 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
       return { ...e, [squad]: omit(e[squad]!, itemId) };
     });
   const setQty = (squad: SquadId, itemId: Id, qty: number) => {
+    setAutoUndo(null);
     setLoadouts((l) => ({ ...l, [squad]: { ...(l[squad] ?? {}), [itemId]: qty } }));
     dropPicks(squad, itemId);
     touch(squad);
   };
   const applyPreset = (squad: SquadId) => {
+    setAutoUndo(null);
     const preset = g.squads.find((s) => s.id === squad)?.loadoutPreset ?? {};
     const next: Record<Id, number> = {};
     for (const [itemId, q] of Object.entries(preset)) {
@@ -163,14 +175,18 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
   };
 
   /**
-   * Auto-equip. `only` limits the change to one squad: its share is worked out across every chosen squad
-   * (so scarce items are spread), then clamped to what the other squads have not already taken.
+   * Fill untouched choices only. Existing quantities (including zero) and exact
+   * picks reserve stock first; a single-squad request leaves the others alone.
    */
   const runAuto = (only?: SquadId) => {
     if (chosen.length === 0) return;
     let res: AutoLoadout;
     try {
-      res = autoLoadout(g, scenarioId, chosen, Date.now());
+      res = autoLoadout(g, scenarioId, chosen, Date.now(), {
+        loadouts,
+        units: Object.fromEntries(chosen.map((s) => [s, Object.values(picks[s] ?? {}).flat().map((u) => u.id)])),
+        targets: only ? [only] : chosen,
+      });
     } catch {
       notify('Auto-equip is not available right now', { tone: 'error' });
       return;
@@ -178,17 +194,24 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
     const plan = planAuto({
       res,
       targets: only ? [only] : chosen,
-      chosen,
-      loadouts,
-      takenBy: Object.fromEntries(chosen.map((s) => [s, Object.values(picks[s] ?? {}).flat().map((u) => u.id)])),
       itemOf: (id) => g.units[id]?.itemId,
-      ready: readyOf,
     });
+    if (res.added > 0) setAutoUndo({ loadouts, explicit, notes: autoNote, warnings: autoWarnings });
     setLoadouts((l) => ({ ...l, ...plan.loadouts }));
     setExplicit((e) => ({ ...e, ...plan.explicit }));
     setAutoNote((n) => ({ ...n, ...plan.notes }));
     setAutoWarnings(res.warnings);
-    notify(plan.total > 0 ? (only ? `Squad ${only} equipped` : 'Squads equipped') : 'Nothing to add from stock', { tone: plan.total > 0 ? 'ok' : 'amber' });
+    notify(res.added > 0 ? `Added ${res.added} item${res.added === 1 ? '' : 's'} from stock` : 'No extra gear added; current choices kept', { tone: res.added > 0 ? 'ok' : 'amber' });
+  };
+
+  const undoAuto = () => {
+    if (!autoUndo) return;
+    setLoadouts(autoUndo.loadouts);
+    setExplicit(autoUndo.explicit);
+    setAutoNote(autoUndo.notes);
+    setAutoWarnings(autoUndo.warnings);
+    setAutoUndo(null);
+    notify('Previous loadout choices restored', { tone: 'ok' });
   };
 
   const deploy = () => act(cmd, practice ? 'Practice started' : 'Squads deployed');
@@ -318,7 +341,8 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
             <Button block icon="wand" disabled={chosen.length === 0} onClick={() => runAuto()}>
               Auto-equip {chosen.length > 1 ? 'all squads' : chosen.length === 1 ? `squad ${chosen[0]}` : 'all'}
             </Button>
-            {chosen.length === 0 && <p className="dim autohint">Choose squads, then let auto-equip fill their loadouts from stock. You can edit the result.</p>}
+            <p className="dim autohint">{chosen.length === 0 ? 'Choose squads first. ' : ''}Fills untouched gear choices from stock. Keeps your quantities, including zero. You can edit the result; no gear is bought.</p>
+            {autoUndo && <Button size="sm" onClick={undoAuto}>Undo auto-equip</Button>}
             {autoWarnings.length > 0 && (
               <div className="autowarn" aria-live="polite">
                 {autoWarnings.map((w, i) => (
@@ -356,7 +380,7 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
               <div className="autonote">
                 <span className="autonote-h">
                   <Icon name="wand" size={14} />
-                  Auto-equip chose
+                  Auto-equip plan
                   {note.edited && (
                     <Chip tone="amber" icon="edit">
                       You changed this
@@ -370,7 +394,7 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
                     ))}
                   </ul>
                 ) : (
-                  <p className="dim">Nothing in stock suits this incident.</p>
+                  <p className="dim">Current choices kept. No extra gear added.</p>
                 )}
               </div>
             )}
