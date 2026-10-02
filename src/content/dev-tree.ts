@@ -1,0 +1,134 @@
+import type { DevelopmentNode, Id } from '../sim/types';
+
+// Thirteen non-exclusive nodes across five branches. Costs are proposed tuning values.
+// Starting devPoints are 3, so the first purchase is a real choice, not a forced order.
+export const DEV_NODES: Record<Id, DevelopmentNode> = {
+  // ---- personnel
+  personnel_negotiation: {
+    id: 'personnel_negotiation',
+    branch: 'personnel',
+    name: 'Negotiation training',
+    description: 'Lets the department train officers in crisis negotiation so more than one person can open contact.',
+    cost: { dp: 2, funding: 800 },
+    requires: [],
+    effects: [{ kind: 'unlockCourse', courseId: 'crisis_negotiation_course' }],
+  },
+  personnel_academy: {
+    id: 'personnel_academy',
+    branch: 'personnel',
+    name: 'Training academy',
+    description: 'A second classroom, so two officers can be in courses at once.',
+    cost: { dp: 3, funding: 2500 },
+    requires: [],
+    effects: [{ kind: 'trainingSlots', delta: 1 }],
+  },
+  personnel_recruiting: {
+    id: 'personnel_recruiting',
+    branch: 'personnel',
+    name: 'Recruiting office',
+    description: 'More desks and a wider outreach: room for more officers and a larger candidate pool.',
+    cost: { dp: 2, funding: 1500 },
+    requires: [],
+    effects: [
+      { kind: 'rosterCap', delta: 2 },
+      { kind: 'candidatePool', delta: 1 },
+    ],
+  },
+  personnel_fourth_squad: {
+    id: 'personnel_fourth_squad',
+    branch: 'personnel',
+    name: 'Fourth squad',
+    description: 'Barracks space and a command post for another full squad. With the recruiting office, the roster reaches 18, enough to staff four squads of four.',
+    cost: { dp: 3, funding: 3000 },
+    requires: ['personnel_recruiting'],
+    effects: [{ kind: 'rosterCap', delta: 4 }],
+  },
+  // ---- field capability
+  field_contact_kit: {
+    id: 'field_contact_kit',
+    branch: 'field',
+    name: 'Contact kit',
+    description: 'Approves throw phones for two-way contact with a qualified negotiator.',
+    cost: { dp: 1, funding: 600 },
+    requires: [],
+    effects: [{ kind: 'unlockItem', itemId: 'throw_phone' }],
+  },
+  field_entry_course: {
+    id: 'field_entry_course',
+    branch: 'field',
+    name: 'Entry team course',
+    description: 'Lets the department qualify more officers for entry team duty.',
+    cost: { dp: 2, funding: 1200 },
+    requires: [],
+    effects: [{ kind: 'unlockCourse', courseId: 'entry_course' }],
+  },
+  // ---- intelligence
+  intel_thermal: {
+    id: 'intel_thermal',
+    branch: 'intel',
+    name: 'Thermal imaging',
+    description: 'Approves thermal imagers for checking occupancy through an exterior wall.',
+    cost: { dp: 2, funding: 1500 },
+    requires: [],
+    effects: [{ kind: 'unlockItem', itemId: 'thermal_imager' }],
+  },
+  intel_drone: {
+    id: 'intel_drone',
+    branch: 'intel',
+    name: 'Drone program',
+    description: 'Approves camera drones and the course that licenses operators.',
+    cost: { dp: 3, funding: 2200 },
+    requires: ['intel_thermal'],
+    effects: [
+      { kind: 'unlockItem', itemId: 'camera_drone' },
+      { kind: 'unlockCourse', courseId: 'drone_course' },
+    ],
+  },
+  intel_records: {
+    id: 'intel_records',
+    branch: 'intel',
+    name: 'Records office',
+    description: 'Digitised case records cut paperwork and bring in small service fees.',
+    cost: { dp: 1, funding: 1000 },
+    requires: [],
+    effects: [{ kind: 'income', perHour: 60 }],
+  },
+  // ---- logistics
+  logistics_presets: {
+    id: 'logistics_presets',
+    branch: 'logistics',
+    name: 'Loadout presets',
+    description: 'Save a standard loadout for each squad so deployments need fewer taps.',
+    cost: { dp: 1, funding: 500 },
+    requires: [],
+    effects: [{ kind: 'loadoutPresets' }],
+  },
+  logistics_restock: {
+    id: 'logistics_restock',
+    branch: 'logistics',
+    name: 'Supply restocking',
+    description: 'Set a target stock and a spending ceiling; the department reorders hourly, never overspending.',
+    cost: { dp: 2, funding: 900 },
+    requires: ['logistics_presets'],
+    effects: [{ kind: 'restockRules' }],
+  },
+  // ---- wellbeing
+  wellbeing_peer_support: {
+    id: 'wellbeing_peer_support',
+    branch: 'wellbeing',
+    name: 'Peer support program',
+    description: 'Debriefs and peer check-ins help officers recover from strain faster.',
+    cost: { dp: 2, funding: 1000 },
+    requires: [],
+    effects: [{ kind: 'recoveryRate', mult: 1.5 }],
+  },
+  wellbeing_first_aid: {
+    id: 'wellbeing_first_aid',
+    branch: 'wellbeing',
+    name: 'Medical training',
+    description: 'Lets the department train officers in advanced first aid so a second medic is possible.',
+    cost: { dp: 2, funding: 1100 },
+    requires: ['wellbeing_peer_support'],
+    effects: [{ kind: 'unlockCourse', courseId: 'first_aid_course' }],
+  },
+};

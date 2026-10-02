@@ -1,0 +1,197 @@
+import { useState } from 'react';
+import { getState, useGame } from '../store';
+import {
+  actionViews,
+  currentBuilt,
+  lastResolution,
+  previewAction,
+  scenarioCards,
+  spaceViews,
+  stageProgress,
+} from '../../sim/operation-selectors';
+import type { Id, SquadId } from '../../sim/types';
+import { useToast } from '../components/toast';
+import { Sheet } from '../components/Sheet';
+import { Button } from '../components/ui';
+import { ActionSheet, BAND_LABEL, LiveView, RoomSheet } from './LiveView';
+
+interface Override {
+  actionId: Id;
+  acting: SquadId[];
+  support: SquadId[];
+}
+
+export function OpsLive() {
+  const g = useGame();
+  const now = Date.now();
+  const { act, notify } = useToast();
+  const run = g.activeRun!;
+
+  const [focusId, setFocusId] = useState<SquadId | null>(null);
+  const [selActionId, setSelActionId] = useState<Id | null>(null);
+  const [activeOfficer, setActiveOfficer] = useState<Id | null>(null);
+  const [selSpace, setSelSpace] = useState<Id | null>(null);
+  const [panel, setPanel] = useState<'none' | 'action' | 'room'>('none');
+  const [showRooms, setShowRooms] = useState(false);
+  const [override, setOverride] = useState<Override | null>(null);
+  const [lastChange, setLastChange] = useState<{ revision: number; spaceIds: Id[] } | null>(null);
+  const [confirmCancel, setConfirmCancel] = useState(false);
+
+  const built = currentBuilt(g);
+  const deployed = g.squads.filter((s) => run.squadIds.includes(s.id));
+  const focus = deployed.find((s) => s.id === focusId) ?? deployed[0] ?? null;
+  const spaces = spaceViews(g);
+  const progress = stageProgress(g);
+  const actions = actionViews(g, now, focus?.id ?? null);
+  const base = actions.find((a) => a.id === selActionId) ?? actions.find((a) => a.eligible) ?? actions[0] ?? null;
+  const ov = override && base && override.actionId === base.id ? override : null;
+  const view = base && ov ? (previewAction(g, now, base.id, ov.acting, ov.support) ?? base) : base;
+  const acting = ov?.acting ?? view?.actingSquadIds ?? [];
+  const support = ov?.support ?? view?.supportSquadIds ?? [];
+
+  const officers = focus ? focus.officerIds.map((id) => g.officers[id]).filter((o) => !!o) : [];
+  const defaultOfficer = view?.officerIds.find((id) => focus?.officerIds.includes(id)) ?? officers[0]?.id ?? null;
+  const activeOfficerId = activeOfficer && officers.some((o) => o.id === activeOfficer) ? activeOfficer : defaultOfficer;
+
+  const card = scenarioCards(g, now).find((c) => c.id === run.scenarioId);
+  const title = (card?.title ?? built?.location.name ?? run.scenarioId.replace(/_/g, ' ')).toUpperCase();
+  const subtitle = `${(card?.setting ?? built?.location.setting ?? '').toUpperCase()} / ${card?.code ?? 'OP'}`;
+
+  const spaceById = new Map(spaces.map((s) => [s.id, s]));
+  const targetLabel = view?.targetId ? (spaceById.get(view.targetId)?.label ?? built?.location.rooms.find((r) => r.id === view.targetId)?.label ?? null) : null;
+
+  if (!built) return <div className="page"><p className="dim">Operation location unavailable.</p></div>;
+
+  const selectAction = (id: Id) => {
+    if (view?.id === id) {
+      setPanel(panel === 'action' ? 'none' : 'action');
+      return;
+    }
+    setSelActionId(id);
+    setOverride(null);
+    setActiveOfficer(null);
+    setPanel('action');
+  };
+
+  const toggleActing = (id: SquadId) => {
+    if (!view) return;
+    const nextActing = acting.includes(id) ? acting.filter((x) => x !== id) : [...acting, id];
+    if (nextActing.length === 0) return;
+    setOverride({ actionId: view.id, acting: nextActing, support: support.filter((x) => !nextActing.includes(x)) });
+  };
+  const toggleSupport = (id: SquadId) => {
+    if (!view || acting.includes(id)) return;
+    setOverride({ actionId: view.id, acting, support: support.includes(id) ? support.filter((x) => x !== id) : [...support, id] });
+  };
+
+  const confirm = () => {
+    if (!view) return;
+    const res = act({ type: 'decide', actionId: view.id, actingSquadIds: acting, supportSquadIds: support });
+    if (!res.ok) return;
+    const r = lastResolution(getState());
+    setPanel('none');
+    setOverride(null);
+    setSelActionId(null);
+    setActiveOfficer(null);
+    if (r) {
+      const ids = new Set(spaces.map((s) => s.id));
+      const spaceIds = [r.targetId, ...r.knowledgeChanges.map((k) => k.factId)].filter((x): x is Id => !!x && ids.has(x));
+      setLastChange({ revision: r.revision, spaceIds });
+      notify(`${BAND_LABEL[r.band]} result`, { tone: r.band === 'adverse' ? 'error' : r.band === 'favorable' ? 'ok' : 'amber', lines: r.explanation.slice(0, 2) });
+    }
+  };
+
+  return (
+    <LiveView
+      g={g}
+      now={now}
+      title={title}
+      subtitle={subtitle}
+      practice={run.practice}
+      progress={progress}
+      built={built}
+      spaces={spaces}
+      squadTasks={run.squadTasks}
+      deployedSquads={deployed}
+      focusSquadId={focus?.id ?? null}
+      onFocusSquad={(id) => {
+        setFocusId(id);
+        setOverride(null);
+        setActiveOfficer(null);
+      }}
+      officers={officers}
+      actions={actions}
+      selectedAction={view}
+      onSelectAction={selectAction}
+      activeOfficerId={activeOfficerId}
+      onSelectOfficer={setActiveOfficer}
+      selectedSpaceId={selSpace}
+      onSelectSpace={(id) => {
+        setSelSpace(id);
+        setPanel('room');
+      }}
+      highlightSpaceIds={view?.targetId ? [view.targetId] : []}
+      lastChange={lastChange}
+      showRooms={showRooms}
+      onToggleRooms={() => setShowRooms((v) => !v)}
+      clock={run.clock}
+      pressure={run.pressure}
+      canCancel={run.history.length === 0}
+      onCancel={() => setConfirmCancel(true)}
+      onOpenDetails={() => setPanel(panel === 'action' ? 'none' : 'action')}
+      detailsOpen={panel === 'action'}
+    >
+      <ActionSheet
+        open={panel === 'action'}
+        onClose={() => setPanel('none')}
+        view={view}
+        all={actions}
+        onPick={(id) => {
+          setSelActionId(id);
+          setOverride(null);
+          setActiveOfficer(null);
+        }}
+        squads={deployed}
+        acting={acting}
+        support={support}
+        onToggleActing={toggleActing}
+        onToggleSupport={toggleSupport}
+        targetLabel={targetLabel}
+        onConfirm={confirm}
+      />
+      <RoomSheet
+        open={panel === 'room'}
+        onClose={() => setPanel('none')}
+        space={selSpace ? (spaceById.get(selSpace) ?? null) : null}
+        built={built}
+        squads={deployed}
+        actions={actions}
+        onPickAction={(id) => {
+          setSelActionId(id);
+          setOverride(null);
+          setPanel('none');
+        }}
+      />
+      <Sheet
+        open={confirmCancel}
+        onClose={() => setConfirmCancel(false)}
+        title="Cancel this operation?"
+        footer={
+          <div className="row-actions">
+            <Button onClick={() => setConfirmCancel(false)}>Keep going</Button>
+            <Button
+              variant="danger"
+              onClick={() => {
+                if (act({ type: 'cancelOperation' }, 'Operation cancelled. Gear released.').ok) setConfirmCancel(false);
+              }}
+            >
+              Cancel operation
+            </Button>
+          </div>
+        }
+      >
+        <p>No decisions have been made yet, so squads return unchanged and reserved equipment is released.</p>
+      </Sheet>
+    </LiveView>
+  );
+}

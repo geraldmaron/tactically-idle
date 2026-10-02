@@ -1,0 +1,910 @@
+/* Blueprint renderer styles. Colours come from the shared tokens in ../theme.css. */
+.bp-root {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  background: var(--paper);
+  border-radius: 2px;
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.45), inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+  user-select: none;
+  -webkit-user-select: none;
+}
+.bp-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: pan-y;
+  font-family: var(--font-cond);
+}
+.bp-zoomed .bp-svg {
+  touch-action: none;
+  cursor: grab;
+}
+.bp-zoomed .bp-svg:active {
+  cursor: grabbing;
+}
+
+/* ---------------------------------------------------------------- paper */
+.bp-grid-fine {
+  stroke: #fff;
+  stroke-opacity: 0.13;
+  stroke-width: 0.6px;
+  fill: none;
+  vector-effect: non-scaling-stroke;
+  shape-rendering: crispEdges;
+}
+.bp-grid-major {
+  stroke: #fff;
+  stroke-opacity: 0.27;
+  stroke-width: 0.9px;
+  fill: none;
+  vector-effect: non-scaling-stroke;
+  shape-rendering: crispEdges;
+}
+.bp-lot {
+  fill: none;
+  stroke: var(--chalk);
+  stroke-opacity: 0.28;
+  stroke-width: 0.9px;
+  stroke-dasharray: 7 4 1.5 4;
+  vector-effect: non-scaling-stroke;
+}
+
+/* ---------------------------------------------------------------- zones & floors */
+.bp-zone {
+  fill: rgba(255, 255, 255, 0.025);
+  stroke: none;
+}
+.bp-zone-porch {
+  fill: rgba(255, 255, 255, 0.07);
+  stroke: var(--chalk);
+  stroke-width: 1px;
+  stroke-opacity: 0.85;
+  vector-effect: non-scaling-stroke;
+}
+.bp-floor {
+  fill: rgba(8, 30, 90, 0.2);
+  stroke: none;
+}
+
+/* ---------------------------------------------------------------- walls & openings */
+.bp-wall-casing {
+  fill: none;
+  stroke: var(--chalk);
+}
+.bp-wall-fill {
+  fill: none;
+  stroke: #123c92;
+}
+.bp-wall-hatch {
+  fill: none;
+}
+.bp-jamb {
+  fill: none;
+  stroke: var(--chalk);
+  stroke-width: 1.2px;
+  vector-effect: non-scaling-stroke;
+  stroke-linecap: square;
+}
+.bp-win-face {
+  fill: none;
+  stroke: var(--chalk);
+  stroke-width: 1.1px;
+  vector-effect: non-scaling-stroke;
+}
+.bp-win-glass {
+  fill: none;
+  stroke: var(--chalk);
+  stroke-opacity: 0.85;
+  stroke-width: 0.8px;
+  vector-effect: non-scaling-stroke;
+}
+.bp-door-leaf {
+  fill: #0f3685;
+  stroke: var(--chalk);
+  stroke-width: 1.1px;
+  vector-effect: non-scaling-stroke;
+  stroke-linejoin: round;
+}
+.bp-door-arc {
+  fill: none;
+  stroke: var(--chalk);
+  stroke-width: 0.9px;
+  stroke-opacity: 0.9;
+  vector-effect: non-scaling-stroke;
+}
+.bp-door-arc-open {
+  stroke-dasharray: 3 2.5;
+}
+.bp-door-wedge {
+  fill: rgba(255, 255, 255, 0.14);
+  stroke: none;
+}
+.bp-lock-body {
+  fill: #0f3685;
+  stroke: var(--marker-amber);
+  stroke-width: 1.2px;
+  vector-effect: non-scaling-stroke;
+}
+.bp-lock-shackle {
+  fill: none;
+  stroke: var(--marker-amber);
+  stroke-width: 1.2px;
+  vector-effect: non-scaling-stroke;
+}
+.bp-blocked-x {
+  fill: none;
+  stroke: var(--marker-orange);
+  stroke-width: 2.2px;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+
+/* ---------------------------------------------------------------- furniture */
+.bp-furniture {
+  fill: none;
+  stroke: var(--chalk);
+  stroke-width: 1px;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.bp-furniture * {
+  vector-effect: non-scaling-stroke;
+}
+.bp-ink2 {
+  stroke-width: 1.25px;
+}
+.bp-faint {
+  stroke-opacity: 0.55;
+  fill: none;
+}
+.bp-solid {
+  fill: #1a4aa6;
+  fill-opacity: 0.88;
+}
+.bp-soft {
+  fill: rgba(255, 255, 255, 0.1);
+}
+.bp-chalkfill {
+  fill: var(--chalk);
+  fill-opacity: 0.8;
+  stroke: none;
+}
+.bp-rugfill {
+  fill: rgba(255, 255, 255, 0.07);
+  stroke: var(--chalk);
+  stroke-opacity: 0.8;
+}
+.bp-rugline {
+  stroke: var(--chalk);
+  stroke-width: 0.08px;
+  stroke-opacity: 0.5;
+  fill: none;
+  vector-effect: none;
+}
+.bp-reflabel {
+  font-family: var(--font-cond);
+  font-weight: 700;
+  font-size: 1.05px;
+  letter-spacing: 0.04em;
+  fill: var(--chalk);
+  stroke: none;
+  vector-effect: none;
+}
+
+/* ---------------------------------------------------------------- labels */
+.bp-room-label {
+  font-family: var(--font-cond);
+  font-weight: 600;
+  font-size: 1.75px;
+  letter-spacing: 0.1em;
+  fill: var(--chalk);
+  paint-order: stroke;
+  stroke: #17469d;
+  stroke-width: 0.5px;
+  stroke-linejoin: round;
+  stroke-opacity: 0.85;
+}
+.bp-zone-label {
+  font-family: var(--font-cond);
+  font-weight: 600;
+  font-size: 1.28px;
+  letter-spacing: 0.14em;
+  fill: var(--chalk-dim);
+  paint-order: stroke;
+  stroke: #17469d;
+  stroke-width: 0.4px;
+  stroke-linejoin: round;
+}
+
+/* ---------------------------------------------------------------- dimensions */
+.bp-dim-line {
+  fill: none;
+  stroke: var(--chalk);
+  stroke-opacity: 0.9;
+  stroke-width: 1px;
+  vector-effect: non-scaling-stroke;
+}
+.bp-dim-ext {
+  fill: none;
+  stroke: var(--chalk);
+  stroke-opacity: 0.45;
+  stroke-width: 0.7px;
+  vector-effect: non-scaling-stroke;
+}
+.bp-dim-tick {
+  fill: none;
+  stroke: var(--chalk);
+  stroke-width: 1.5px;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+.bp-dim-text {
+  font-family: var(--font-cond);
+  font-style: italic;
+  font-weight: 500;
+  font-size: 1.7px;
+  letter-spacing: 0.04em;
+  fill: var(--chalk);
+}
+.bp-north-arrow {
+  fill: var(--chalk);
+  fill-opacity: 0.85;
+  stroke: var(--chalk);
+  stroke-width: 0.9px;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+/* ---------------------------------------------------------------- annotations */
+.bp-mloop {
+  fill: none;
+  stroke-width: 0.32px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-opacity: 0.96;
+}
+.bp-mloop-2 {
+  stroke-width: 0.2px;
+  stroke-opacity: 0.8;
+}
+.bp-mline {
+  fill: none;
+  stroke-width: 0.26px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.bp-check {
+  stroke-width: 0.3px;
+}
+.bp-marker-text {
+  font-family: var(--font-marker);
+  font-weight: 700;
+  font-size: 2.15px;
+  letter-spacing: 0.02em;
+  paint-order: stroke;
+  stroke: #17469d;
+  stroke-width: 0.55px;
+  stroke-linejoin: round;
+}
+.bp-glyph-q {
+  font-family: var(--font-marker);
+  font-weight: 700;
+  font-size: 1.35px;
+}
+.bp-hl {
+  fill: var(--marker-orange);
+  fill-opacity: 0.86;
+}
+.bp-hl-streak {
+  stroke: #ffd2a1;
+  stroke-opacity: 0.5;
+  stroke-width: 0.12px;
+  fill: none;
+}
+.bp-front-text {
+  font-family: var(--font-marker);
+  font-weight: 700;
+  font-size: 1.95px;
+  letter-spacing: 0.05em;
+  fill: #0a1d4f;
+}
+.bp-front-arrow {
+  fill: none;
+  stroke: var(--marker-orange);
+  stroke-width: 0.34px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  paint-order: stroke;
+}
+.bp-note-text {
+  font-family: var(--font-marker);
+  font-weight: 400;
+  font-size: 1.75px;
+  fill: var(--chalk);
+  paint-order: stroke;
+  stroke: #17469d;
+  stroke-width: 0.45px;
+  stroke-linejoin: round;
+}
+.bp-note-line {
+  fill: none;
+  stroke: var(--chalk);
+  stroke-width: 0.17px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* squad tokens */
+.bp-badge {
+  fill: #0d2a6e;
+  stroke: var(--chalk);
+  stroke-width: 0.2px;
+  stroke-linejoin: round;
+}
+.bp-badge-letter {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.5px;
+  fill: var(--chalk);
+}
+.bp-task-text {
+  font-family: var(--font-cond);
+  font-weight: 700;
+  font-size: 1.2px;
+  letter-spacing: 0.12em;
+  fill: var(--chalk);
+  paint-order: stroke;
+  stroke: #0b2a72;
+  stroke-width: 0.5px;
+  stroke-linejoin: round;
+}
+.bp-squad-focus .bp-badge {
+  fill: var(--amber);
+  stroke: #0b1d4d;
+  stroke-width: 0.22px;
+}
+.bp-squad-focus .bp-badge-letter {
+  fill: var(--amber-ink);
+}
+.bp-squad-focus .bp-task-text {
+  fill: var(--amber-2);
+}
+
+/* ---------------------------------------------------------------- selection */
+.bp-select {
+  fill: rgba(255, 255, 255, 0.07);
+  stroke: var(--chalk);
+  stroke-width: 1.6px;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+.bp-select-glow {
+  fill: none;
+  stroke: #fff;
+  stroke-opacity: 0.75;
+  stroke-width: 5px;
+  vector-effect: non-scaling-stroke;
+}
+.bp-highlight {
+  fill: rgba(255, 191, 46, 0.08);
+  stroke: var(--marker-amber);
+  stroke-width: 2px;
+  stroke-dasharray: 6 4;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+.bp-hit {
+  fill: transparent;
+  stroke: none;
+  cursor: pointer;
+  outline: none;
+}
+.bp-hit:focus-visible {
+  stroke: var(--amber-2);
+  stroke-width: 2.5px;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+  fill: rgba(255, 201, 77, 0.08);
+}
+
+/* ---------------------------------------------------------------- animation */
+.bp-draw {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: bp-draw 0.9s cubic-bezier(0.3, 0.6, 0.3, 1) forwards;
+}
+.bp-mloop-2.bp-draw {
+  animation-delay: 0.18s;
+}
+.bp-fade {
+  animation: bp-fade 0.5s ease-out 0.45s both;
+}
+@keyframes bp-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes bp-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bp-draw {
+    animation: none;
+    stroke-dasharray: none;
+    stroke-dashoffset: 0;
+  }
+  .bp-fade {
+    animation: none;
+  }
+}
+
+/* ---------------------------------------------------------------- zoom controls */
+.bp-zoomctl {
+  position: absolute;
+  left: 2px;
+  bottom: 2px;
+  display: flex;
+  gap: 0;
+  opacity: 0.8;
+}
+.bp-zoomctl:hover,
+.bp-zoomctl:focus-within {
+  opacity: 1;
+}
+.bp-zbtn {
+  width: var(--touch);
+  height: var(--touch);
+  padding: 0;
+  display: grid;
+  place-items: center;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  color: var(--chalk);
+  font-family: var(--font-display);
+  font-size: 18px;
+  line-height: 1;
+}
+.bp-zbtn > span {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(9, 28, 78, 0.78);
+  border: 1px solid rgba(243, 247, 255, 0.55);
+}
+.bp-zbtn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.bp-zbtn:focus-visible {
+  outline: 2px solid var(--amber-2);
+  outline-offset: -4px;
+  border-radius: 8px;
+}
+
+/* ---------------------------------------------------------------- room list */
+.bp-roomlist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+.bp-roomlist-btn {
+  width: 100%;
+  min-height: var(--touch);
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 2px 10px;
+  align-items: baseline;
+  text-align: left;
+  padding: 8px 12px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+.bp-roomlist-btn[aria-pressed='true'] {
+  border-color: var(--amber);
+  background: var(--panel-2);
+}
+.bp-roomlist-btn:focus-visible {
+  outline: 2px solid var(--amber-2);
+  outline-offset: 2px;
+}
+.bp-roomlist-name {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 15px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text);
+}
+.bp-roomlist-tag {
+  margin-left: 8px;
+  font-family: var(--font-cond);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  border: 1px solid var(--line-strong);
+  border-radius: 4px;
+  padding: 0 4px;
+}
+.bp-roomlist-status {
+  font-family: var(--font-cond);
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+.bp-roomlist-glyph {
+  display: inline-block;
+  width: 16px;
+  margin-right: 4px;
+  text-align: center;
+  font-weight: 700;
+}
+.bp-status-unknown,
+.bp-status-reported {
+  color: var(--amber-2);
+}
+.bp-status-confirmed {
+  color: var(--mint);
+}
+.bp-status-disproved {
+  color: var(--danger);
+}
+.bp-roomlist-meta {
+  grid-column: 1 / -1;
+  font-family: var(--font-ui);
+  font-size: 12.5px;
+  color: var(--text-dim);
+}
+
+/* ---------------------------------------------------------------- materials (walls, doors, windows) */
+.bp-wall-core {
+  fill: none;
+  stroke: var(--chalk);
+  stroke-opacity: 0.7;
+  stroke-width: 0.6px;
+  vector-effect: non-scaling-stroke;
+}
+.bp-wall-plaster {
+  stroke-dasharray: none;
+}
+.bp-wall-glassfill {
+  fill: none;
+  stroke: #8fc2ff;
+  stroke-opacity: 0.45;
+}
+.bp-win-bar {
+  fill: none;
+  stroke: var(--chalk);
+  stroke-width: 1.7px;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+.bp-win-cover {
+  fill: none;
+  stroke: var(--chalk);
+  stroke-opacity: 0.88;
+  stroke-width: 0.9px;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+.bp-leaf-solid_core {
+  fill: var(--chalk);
+  fill-opacity: 0.9;
+  stroke-width: 1.4px;
+}
+.bp-leaf-hollow_core {
+  fill: #0f3685;
+  stroke-width: 0.9px;
+}
+.bp-leaf-steel {
+  fill: #0f3685;
+  stroke-width: 1.2px;
+}
+.bp-leaf-glass {
+  fill: rgba(190, 225, 255, 0.28);
+  stroke-width: 0.9px;
+}
+.bp-steel-plate-bg {
+  fill: var(--chalk);
+  stroke: #0b2a72;
+  stroke-width: 0.8px;
+  vector-effect: non-scaling-stroke;
+}
+.bp-steel-plate-s {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.78px;
+  fill: #0b2a72;
+}
+.bp-glass-tick {
+  fill: none;
+  stroke: var(--chalk);
+  stroke-width: 0.9px;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+
+/* materials key */
+.bp-key {
+  position: absolute;
+  left: 6px;
+  bottom: 48px;
+  max-width: calc(100% - 12px);
+  max-height: calc(100% - 60px);
+  overflow: auto;
+  padding: 5px 9px 7px 8px;
+  background: rgba(8, 28, 78, 0.92);
+  border: 1px solid rgba(243, 247, 255, 0.5);
+  border-radius: 6px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+}
+.bp-key-title {
+  margin: 0 0 4px;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--chalk);
+}
+.bp-key-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, max-content);
+  gap: 3px 12px;
+}
+.bp-key-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.bp-swatch {
+  flex: none;
+  display: block;
+  overflow: visible;
+}
+.bp-key-label {
+  font-family: var(--font-cond);
+  font-weight: 500;
+  font-size: 12px;
+  letter-spacing: 0.03em;
+  color: var(--chalk);
+  white-space: nowrap;
+}
+
+/* ---------------------------------------------------------------- people on the map */
+.bp-marker-sub {
+  font-family: var(--font-marker);
+  font-weight: 400;
+  font-size: 1.3px;
+  letter-spacing: 0.01em;
+  paint-order: stroke;
+  stroke: #17469d;
+  stroke-width: 0.45px;
+  stroke-linejoin: round;
+}
+.bp-person-ring {
+  fill: rgba(255, 191, 46, 0.1);
+  stroke: var(--marker-amber);
+  stroke-width: 0.28px;
+  stroke-dasharray: 0.6 0.45;
+  stroke-linecap: round;
+}
+.bp-person-q {
+  font-family: var(--font-marker);
+  font-weight: 700;
+  font-size: 2.1px;
+  fill: var(--marker-amber);
+  paint-order: stroke;
+  stroke: #17469d;
+  stroke-width: 0.4px;
+  stroke-linejoin: round;
+}
+.bp-figure {
+  fill: var(--marker-mint);
+  stroke: #0b2a72;
+  stroke-width: 0.16px;
+  stroke-linejoin: round;
+}
+.bp-person-label {
+  font-family: var(--font-marker);
+  font-weight: 700;
+  font-size: 1.45px;
+  fill: var(--marker-mint);
+  paint-order: stroke;
+  stroke: #17469d;
+  stroke-width: 0.5px;
+  stroke-linejoin: round;
+}
+.bp-person-label-sm {
+  font-weight: 400;
+  font-size: 1.3px;
+}
+.bp-person-x {
+  fill: none;
+  stroke: var(--marker-mint);
+  stroke-width: 0.3px;
+  stroke-linecap: round;
+}
+
+/* squads at a staging point */
+.bp-tick-halo {
+  fill: none;
+  stroke: #0b2a72;
+  stroke-opacity: 0.7;
+  stroke-width: 0.62px;
+  stroke-linecap: round;
+}
+.bp-tick {
+  fill: none;
+  stroke: var(--chalk);
+  stroke-width: 0.3px;
+  stroke-linecap: round;
+}
+.bp-squad-focus .bp-tick {
+  stroke: var(--amber-2);
+}
+.bp-staging-dot {
+  fill: var(--chalk);
+  fill-opacity: 0.4;
+  stroke: #0b2a72;
+  stroke-opacity: 0.5;
+  stroke-width: 0.08px;
+}
+
+/* ---------------------------------------------------------------- action overlays */
+.bp-ov-halo {
+  fill: none;
+  stroke: #0b2a72;
+  stroke-opacity: 0.5;
+  stroke-width: 0.72px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.bp-ov-stroke {
+  fill: none;
+  stroke-width: 0.32px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.bp-ov-clear .bp-ov-stroke {
+  stroke: var(--marker-mint);
+}
+.bp-ov-partial .bp-ov-stroke,
+.bp-ov-partial .bp-ov-halo {
+  stroke-dasharray: 1.1 0.75;
+}
+.bp-ov-partial .bp-ov-stroke {
+  stroke: var(--marker-amber);
+}
+.bp-ov-blocked .bp-ov-stroke,
+.bp-ov-blocked .bp-ov-halo {
+  stroke-dasharray: 0.85 0.8;
+}
+.bp-ov-blocked .bp-ov-stroke {
+  stroke: var(--marker-orange);
+}
+.bp-ov-range .bp-ov-halo {
+  stroke-width: 0.6px;
+}
+.bp-ov-effective .bp-ov-stroke {
+  stroke: var(--marker-amber);
+  stroke-width: 0.34px;
+  stroke-dasharray: 2.4 0.35;
+}
+.bp-ov-effective .bp-ov-halo {
+  stroke-dasharray: 2.4 0.35;
+}
+.bp-ov-max .bp-ov-stroke {
+  stroke: var(--chalk);
+  stroke-opacity: 0.6;
+  stroke-width: 0.24px;
+  stroke-dasharray: 0.7 0.9;
+}
+.bp-ov-max .bp-ov-halo {
+  stroke-opacity: 0.25;
+  stroke-dasharray: 0.7 0.9;
+}
+.bp-ov-path .bp-ov-stroke {
+  stroke: var(--chalk);
+  stroke-width: 0.5px;
+  stroke-dasharray: 0.01 0.85;
+}
+.bp-ov-path .bp-ov-halo {
+  stroke-width: 0.85px;
+  stroke-dasharray: 0.01 0.85;
+}
+.bp-ov-path .bp-ov-head,
+.bp-ov-path .bp-ov-headhalo,
+.bp-ov-line .bp-ov-head,
+.bp-ov-line .bp-ov-headhalo {
+  stroke-dasharray: none;
+  stroke-width: 0.34px;
+}
+.bp-ov-line .bp-ov-headhalo,
+.bp-ov-path .bp-ov-headhalo {
+  stroke-width: 0.7px;
+}
+.bp-ov-dot {
+  fill: var(--chalk);
+  stroke: #0b2a72;
+  stroke-width: 0.12px;
+}
+.bp-ov-clear .bp-ov-dot {
+  fill: var(--marker-mint);
+}
+.bp-ov-partial .bp-ov-dot {
+  fill: var(--marker-amber);
+}
+.bp-ov-blocked .bp-ov-dot {
+  fill: var(--marker-orange);
+}
+.bp-ov-x {
+  fill: none;
+  stroke: var(--marker-orange);
+  stroke-width: 0.38px;
+  stroke-linecap: round;
+}
+.bp-ov-x-halo {
+  fill: none;
+  stroke: #0b2a72;
+  stroke-opacity: 0.75;
+  stroke-width: 0.8px;
+  stroke-linecap: round;
+}
+.bp-ov-label {
+  font-family: var(--font-marker);
+  font-weight: 700;
+  font-size: 1.35px;
+  fill: var(--chalk);
+  paint-order: stroke;
+  stroke: #123c92;
+  stroke-width: 0.5px;
+  stroke-linejoin: round;
+}
+.bp-ov-label-clear {
+  fill: var(--marker-mint);
+}
+.bp-ov-label-partial,
+.bp-ov-label-effective {
+  fill: var(--marker-amber);
+}
+.bp-ov-label-blocked {
+  fill: var(--marker-orange);
+}
+.bp-ov-draw {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: bp-draw 0.55s cubic-bezier(0.3, 0.6, 0.3, 1) forwards;
+}
+.bp-ov-fade {
+  animation: bp-fade 0.3s ease-out 0.3s both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .bp-ov-draw {
+    animation: none;
+    stroke-dasharray: none;
+    stroke-dashoffset: 0;
+  }
+  .bp-ov-fade {
+    animation: none;
+  }
+}
