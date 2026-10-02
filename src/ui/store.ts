@@ -2,7 +2,9 @@ import { useSyncExternalStore } from 'react';
 import type { Command, GameState, HandlerResult } from '../sim/types';
 import { dispatch as apply } from '../sim/game';
 import { createInitialState } from '../sim/department';
-import { loadGame, saveGame } from '../sim/save';
+import { saveGame } from '../sim/save';
+import { restoreCampaign } from '../sim/session';
+import { randomCampaignSeed } from '../sim/personnel';
 
 // Single game store. All mutations go through sim/game.dispatch as transactions.
 
@@ -20,12 +22,7 @@ function storage(): Storage | null {
 }
 
 function boot(): GameState {
-  const now = Date.now();
-  const s = storage();
-  const loaded = s ? loadGame(s) : null;
-  const initial = loaded ?? createInitialState(now);
-  // Settle offline time once on boot through the same path as online ticks.
-  return apply(initial, { type: 'tick' }, { now }).state;
+  return restoreCampaign(Date.now(), storage());
 }
 
 function commit(next: GameState) {
@@ -54,7 +51,7 @@ export function getState(): GameState {
 
 /** Dev/test helper: replace the whole state (e.g. reset). */
 export function resetGame(next?: GameState) {
-  commit(next ?? createInitialState(Date.now()));
+  commit(next ?? createInitialState(Date.now(), randomCampaignSeed()));
 }
 
 function subscribe(l: () => void) {

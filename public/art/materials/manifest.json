@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "readyIds": [
+    "brick",
+    "concrete",
+    "drywall",
+    "glass_partition",
+    "plaster",
+    "wood_frame"
+  ],
+  "width": 256,
+  "height": 256
+}

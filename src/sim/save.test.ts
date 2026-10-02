@@ -146,15 +146,15 @@ function v1Envelope() {
 
 describe('migration from version 1', () => {
   it('writes the current version', () => {
-    expect(CURRENT_SAVE_VERSION).toBe(3);
-    expect(createInitialState(T0).saveVersion).toBe(3);
+    expect(CURRENT_SAVE_VERSION).toBe(4);
+    expect(createInitialState(T0).saveVersion).toBe(4);
   });
 
   it('turns stacks into units, adds the calendar and careers, and releases the in-flight run', () => {
     const text = JSON.stringify(v1Envelope());
     const s = deserialize(text)!;
     expect(s).not.toBeNull();
-    expect(s.saveVersion).toBe(3);
+    expect(s.saveVersion).toBe(4);
     expect((s as any).inventory).toBeUndefined();
 
     // Same stock, now as individual units.
@@ -206,7 +206,7 @@ describe('migration from version 1', () => {
 
   it('migrate() converts a v1 envelope and refuses a malformed one without throwing', () => {
     const env = v1Envelope() as any;
-    expect(migrate(env)?.saveVersion).toBe(3);
+    expect(migrate(env)?.saveVersion).toBe(4);
     expect(migrate({ ...v1Envelope(), state: { ...v1Envelope().state, inventory: null } } as any)).toBeNull();
   });
 
@@ -254,7 +254,7 @@ describe('migration from version 2 to 3', () => {
     const a = deserialize(JSON.stringify(v2Envelope()))!;
     const b = deserialize(JSON.stringify(v2Envelope()))!;
     expect(a).not.toBeNull();
-    expect(a.saveVersion).toBe(3);
+    expect(a.saveVersion).toBe(4);
     expect(a).toEqual(b);
     expect(a.incidents).toHaveLength(3);
     for (const c of a.incidents) {
@@ -281,10 +281,10 @@ describe('migration from version 2 to 3', () => {
     expect(changed.incidents.map((c) => c.id)).not.toEqual(base.incidents.map((c) => c.id));
   });
 
-  it('migrate() reports version 3, and the result round-trips and settles', () => {
+  it('migrate() reports the current version, and the result round-trips and settles', () => {
     const m = migrate(v2Envelope() as any)!;
-    expect(m.saveVersion).toBe(3);
-    expect(m.state.saveVersion).toBe(3);
+    expect(m.saveVersion).toBe(4);
+    expect(m.state.saveVersion).toBe(4);
     const s = deserialize(JSON.stringify(v2Envelope()))!;
     expect(deserialize(serialize(s, T0))).toEqual(s);
     // Away for 15 hours: the migrated cards expire and the board keeps going.
@@ -301,9 +301,9 @@ describe('migration from version 2 to 3', () => {
 });
 
 describe('migration chains from version 1 to 3', () => {
-  it('a v1 save arrives at version 3 with a board and the v2 conversions applied', () => {
+  it('a v1 save arrives at the current version with a board and the v2 conversions applied', () => {
     const s = deserialize(JSON.stringify(v1Envelope()))!;
-    expect(s.saveVersion).toBe(3);
+    expect(s.saveVersion).toBe(4);
     expect(s.incidents).toHaveLength(3);
     expect(s.incidents.every((c) => c.arrivedAt === T0 && !c.seen)).toBe(true);
     expect(Object.keys(s.units).length).toBeGreaterThan(0);

@@ -5,11 +5,12 @@ import { ITEMS } from '../content/items';
 import { createUnit } from './equipment';
 import { seedIncidentBoard } from './incidents';
 import { hashSeed } from './rng';
+import { initializePersonnel } from './personnel';
 
 export const SAVE_KEY = 'tactically-idle/save';
 
 /** Version written by this build. Older versions pass through migrate(). */
-export const CURRENT_SAVE_VERSION = 3;
+export const CURRENT_SAVE_VERSION = 4;
 
 export interface SaveStorage {
   getItem(key: string): string | null;
@@ -34,6 +35,7 @@ const RETIREMENT_REASONS = ['age', 'service', 'burnout'];
 /** Fields every version has. `v2` adds the career fields introduced in version 2. */
 function validOfficer(o: unknown, key: string, v2: boolean): boolean {
   if (!isObj(o)) return false;
+  if (o.identityId !== undefined && !isStr(o.identityId)) return false;
   if (o.id !== key || !isStr(o.firstName) || !isStr(o.surname) || !isStr(o.role) || !isStr(o.portrait)) return false;
   if (!isObj(o.ratings) || !RATING_KEYS.every((k) => isNum((o.ratings as Record<string, unknown>)[k]))) return false;
   if (!Array.isArray(o.certs) || !Array.isArray(o.traits)) return false;
@@ -129,6 +131,14 @@ function validIncidents(s: Record<string, unknown>): boolean {
 function validState(s: unknown): s is GameState {
   if (!validBase(s, true)) return false;
   if (!validIncidents(s)) return false;
+  const people = s.personnel;
+  if (!isObj(people) || !isNum(people.campaignSeed) || !Number.isInteger(people.campaignSeed) || people.campaignSeed < 0 || people.campaignSeed > 0xffffffff || !isNum(people.catalogVersion)) return false;
+  if (!Array.isArray(people.employedIdentityIds) || !people.employedIdentityIds.every(isStr) || new Set(people.employedIdentityIds).size !== people.employedIdentityIds.length || !isObj(people.builds)) return false;
+  for (const [identityId, officer] of Object.entries(people.builds)) {
+    if (!isObj(officer) || officer.identityId !== identityId || !isStr(officer.id) || !validOfficer(officer, officer.id, true)) return false;
+  }
+  const activePeople = [...Object.values(s.officers as Record<string, { identityId?: string }>), ...(s.candidates as { officer: { identityId?: string } }[]).map((c) => c.officer)].map((o) => o.identityId).filter(Boolean);
+  if (new Set(activePeople).size !== activePeople.length) return false;
   if (!isObj(s.units)) return false;
   const units = s.units as Record<string, unknown>;
   if (!Object.entries(units).every(([k, u]) => validUnit(u, k))) return false;
@@ -252,6 +262,13 @@ export function migrate(envelope: SaveEnvelope): SaveEnvelope | null {
         case 2:
           env = migrateV2toV3(env);
           break;
+        case 3: {
+          const state = structuredClone(env.state);
+          initializePersonnel(state);
+          state.saveVersion = 4;
+          env = { ...env, saveVersion: 4, state };
+          break;
+        }
         default:
           return null;
       }

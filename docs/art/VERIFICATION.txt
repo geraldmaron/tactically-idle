@@ -1,0 +1,19 @@
+Tactically Idle roster and brand integration — 2026-10-02
+
+Pinned baseline / remote main checked before delivery:
+0d6fe402472d688d99d0a9f9e2b93d177e6c88b8
+
+PASS: TypeScript typecheck
+PASS: Full unit and server-rendered component suite, 378 tests in 15 files
+PASS: 100 authored identities; 24 ready portraits; 76 intentional no-photo cards
+PASS: Nine ready gear images; six ready material swatches; required brand paths
+PASS: Production build at / and separate /tactically-idle/ subpath build
+PASS: git diff --check
+
+Personnel regression coverage includes 100 seeds × five target roles, all 92 reserve hires/dismissals across three full campaigns with save/reload at every departure, true exhaustion, retirement exclusion, older newcomers, independent demographic/gameplay fields, stable reoffers, v1–v3 migration, immediate first-frame seed persistence, and legacy portrait preservation.
+
+The baseline had 356 passing tests and 21 TypeScript errors. The specific fixture and unused-import errors are repaired. Pages CI now runs tests and art validation, then the typechecked production build instead of bypassing TypeScript.
+
+NON-FATAL WARNING: the main JavaScript chunk remains above Vite's 500 KB warning threshold (about 686 KB uncompressed / 208 KB gzip).
+NOT VERIFIED: live-browser mobile viewport, click-through and screenshot QA. The cloud environment could not run the local headless browser or access its localhost preview from the cloud browser. No screenshots from an older build are presented as verification of this change.
+NOT PERFORMED: remote push, pull request, merge, deployment, native device run or PWA installation.

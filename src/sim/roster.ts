@@ -15,11 +15,13 @@ import type {
 import { SQUAD_IDS } from './types';
 import type { Projection } from './department-selectors';
 import { ITEMS } from '../content/items';
-import { fullNameKey, generateBatch, RECRUIT_TUNING, type RecruitGen } from '../content/recruits';
+import { fullNameKey, generateBatch, roleForPersona, RECRUIT_TUNING, type RecruitGen } from '../content/recruits';
 import { candidatePoolSize, formatDuration, hasEffect, isNodeUnlocked, money, ratesAt, simNow, squadDeployed } from './economy';
 import { fullName } from './officer';
 import { gameDay } from './calendar';
-import { applyRetention, retentionCheck } from './career';
+import { PERSONAS } from '../content/personas';
+import { applyRetention, retentionCheck, mandatoryRetirementDay } from './career';
+import { initializePersonnel, markEmployed } from './personnel';
 
 export const ROSTER_TUNING = {
   /** Owner decision (2026-10-02): up to four squads. */
@@ -60,6 +62,8 @@ export function hireCheck(state: GameState, candidateId: Id): Projection {
   const wage = cand.officer.wage;
   const netAfter = netBefore - wage;
   const base = { upfront: cand.signingCost, wageDelta: wage, netBefore, netAfter };
+  if (cand.officer.identityId && state.personnel?.employedIdentityIds.includes(cand.officer.identityId)) return { ...base, ok: false, reason: 'That officer has already served in this campaign' };
+  if (gameDay(state, t) >= mandatoryRetirementDay(cand.officer)) return { ...base, ok: false, reason: 'That candidate has reached retirement age; refresh the pool' };
   const cap = state.department.rosterCap;
   if (rosterSize(state) >= cap) return { ...base, ok: false, reason: `Roster is full (${rosterSize(state)}/${cap})` };
   if (state.department.funding < cand.signingCost) {
@@ -76,6 +80,7 @@ function hire(d: GameState, candidateId: Id): HandlerResult {
   if (!check.ok) return refusal(check.reason ?? 'Cannot hire');
   const idx = d.candidates.findIndex((c) => c.id === candidateId);
   const cand = d.candidates[idx];
+  markEmployed(d, cand.officer);
   d.department.funding -= cand.signingCost;
   d.candidates.splice(idx, 1);
   d.officers[cand.officer.id] = { ...cand.officer, squadId: null, assignment: null, hiredAt: simNow(d) };
@@ -153,18 +158,35 @@ export function refreshCheck(state: GameState): { ok: boolean; reason: string | 
   if (t < availableAt) {
     return { ok: false, reason: `Next free candidate search in ${formatDuration(availableAt - t)}`, availableAt };
   }
-  const kept = state.candidates.filter((c) => c.shortlisted).length;
+  const kept = state.candidates.filter((c) => c.shortlisted && gameDay(state, t) < mandatoryRetirementDay(c.officer)).length;
   if (kept >= candidatePoolSize(state, RECRUIT_TUNING.basePool)) {
     return { ok: false, reason: 'Every candidate slot is shortlisted; remove one to search again', availableAt };
   }
   return { ok: true, reason: null, availableAt };
 }
 
+/** The reserve can grow by adding authored identities; absent portraits do not block a career. */
+export function recruitmentStatus(state: GameState, now: number) {
+  const employed = new Set(state.personnel?.employedIdentityIds ?? []);
+  const day = gameDay(state, now);
+  let unseen = 0;
+  let available = 0;
+  const roles = new Set<Role>();
+  for (const person of PERSONAS) {
+    if (person.legacyOfficerId || employed.has(person.id)) continue;
+    const build = state.personnel?.builds[person.id];
+    if (!build) { unseen++; available++; roles.add(roleForPersona(state.personnel?.campaignSeed ?? 12345, person.id)); }
+    else if (day < mandatoryRetirementDay(build)) { available++; roles.add(build.role); }
+  }
+  return { total: PERSONAS.length, unseen, available, roles: [...roles], exhausted: available === 0 };
+}
+
 /** Fill the pool up to its size with deterministic candidates; shortlisted ones stay. */
 export function fillCandidates(d: GameState, now: number, targetRole?: Role): void {
-  const kept = d.candidates.filter((c) => c.shortlisted);
+  const kept = d.candidates.filter((c) => c.shortlisted && gameDay(d, now) < mandatoryRetirementDay(c.officer));
   const size = candidatePoolSize(d, RECRUIT_TUNING.basePool);
-  const gen: RecruitGen = { rng: d.rngState, nextId: d.nextId };
+  const personnel = initializePersonnel(d);
+  const gen: RecruitGen = { rng: d.rngState, nextId: d.nextId, campaignSeed: personnel.campaignSeed, builds: personnel.builds, unavailable: personnel.employedIdentityIds };
   const taken = new Set<string>();
   for (const o of Object.values(d.officers)) taken.add(fullNameKey(o.firstName, o.surname));
   for (const c of kept) taken.add(fullNameKey(c.officer.firstName, c.officer.surname));
@@ -178,6 +200,7 @@ export function fillCandidates(d: GameState, now: number, targetRole?: Role): vo
 function refreshCandidates(d: GameState, targetRole?: Role): HandlerResult {
   const check = refreshCheck(d);
   if (!check.ok) return refusal(check.reason ?? 'Cannot search for candidates');
+  if (targetRole && !recruitmentStatus(d, simNow(d)).roles.includes(targetRole)) return refusal(`No ${targetRole} candidates remain available in this campaign`);
   fillCandidates(d, simNow(d), targetRole);
   return OK;
 }

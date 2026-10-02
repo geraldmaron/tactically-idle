@@ -3,10 +3,11 @@ import { StrictMode, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import './ui/theme.css';
 import { buildLocation } from './sim/location';
-import type { BuiltLocation, Id, MapOverlay, Officer, PersonMark, SpaceView, SquadTask, Vec } from './sim/types';
+import type { BuiltLocation, Id, MapOverlay, PersonMark, SpaceView, SquadTask, Vec } from './sim/types';
 import { Blueprint } from './ui/blueprint/Blueprint';
 import { RoomList } from './ui/blueprint/RoomList';
 import { Portrait } from './ui/portraits/Portrait';
+import { PERSONAS } from './content/personas';
 
 /**
  * Staging point for an opening: from derived.stagingPoints when the spatial agent has landed them,
@@ -170,32 +171,18 @@ function Column({ title, width, seed, materials = false, overlay = 'none' }: { t
   );
 }
 
-const SURNAMES = ['Okafor', 'Lindqvist', 'Mbeki', 'Tanaka', 'Rossi', 'Haddad', 'Novak', 'Silva', 'Kowalski', 'Adeyemi', 'Petrov', 'Nguyen'];
-
-function officer(key: string, i: number): Pick<Officer, 'id' | 'firstName' | 'surname' | 'portrait' | 'role'> {
-  const painted = ['chen', 'brooks', 'ortiz', 'vale'];
-  const isPainted = painted.includes(key);
-  return { id: `o_${key}`, firstName: 'Test', surname: isPainted ? key[0].toUpperCase() + key.slice(1) : SURNAMES[i % SURNAMES.length], portrait: key, role: 'lead' };
-}
-
 function PortraitGrid() {
-  const count = Number(new URLSearchParams(window.location.search).get('n') ?? 12);
-  const keys = ['chen', 'brooks', 'ortiz', 'vale', ...Array.from({ length: count }, (_, i) => `proc:seed${i + 1}`)];
+  const count = Number(new URLSearchParams(window.location.search).get('n') ?? 24);
   return (
     <section className="h-col" style={{ width: 358 }}>
-      <h2>Portraits (4 painted, 12 procedural) at 80 px</h2>
+      <h2>Personnel files · authored identities</h2>
+      <p>File portraits stay attached to the same person. Missing photographs use a personnel-file card.</p>
       <div className="h-grid">
-        {keys.map((k, i) => (
-          <figure key={k} className="h-fig">
-            <Portrait officer={officer(k, i)} size={80} />
-            <figcaption>{k.startsWith('proc:') ? k.slice(5) : k}</figcaption>
+        {PERSONAS.slice(0, count).map((p) => (
+          <figure key={p.id} className="h-fig">
+            <Portrait officer={{ ...p, identityId: p.id, role: 'lead' }} size={80} age={p.ageAtStart} />
+            <figcaption>{p.firstName} {p.surname}<br />{Math.floor(p.ageAtStart)} at introduction</figcaption>
           </figure>
-        ))}
-      </div>
-      <h2>Larger (220 px)</h2>
-      <div className="h-big">
-        {['proc:seed1', 'proc:seed4', 'proc:seed9', 'proc:seed3'].map((k, i) => (
-          <Portrait key={k} officer={officer(k, i)} size={220} />
         ))}
       </div>
     </section>

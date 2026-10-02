@@ -24,7 +24,7 @@ npm test
 npm run build
 ```
 
-Dev-only state handle in the browser console: `window.__ti.getState()`, `__ti.send(cmd)`, `__ti.resetGame()`. Saves live in `localStorage` under `tactically-idle/save`. The blueprint visual harness is at `/harness.html` (`?only=map&w=358&seed=7&door=blocked`, `?only=portraits&n=36`).
+Dev-only state handle in the browser console: `window.__ti.getState()`, `__ti.send(cmd)`, `__ti.resetGame()`. Saves live in `localStorage` under `tactically-idle/save`. The blueprint visual harness is at `/harness.html` (`?only=map&w=358&seed=7&door=blocked`, `?only=portraits&n=100`).
 
 ## Layout
 
@@ -61,7 +61,7 @@ Dev-only state handle in the browser console: `window.__ti.getState()`, `__ti.se
 - Content beyond the slice: one layout and two scenarios exist; the "Next" row wants three layouts and six scenarios.
 - The camera drone, a separate "change priorities" action, and team familiarity are not used in any scenario yet.
 - Balance numbers are first-pass and directional only. There's been no playtest (acceptance 12 and 14).
-- Procedural portraits are stylised. Only the four reference crops are painted art.
+- The authored roster has 100 distinct identities. Portrait availability is explicit in `public/art/portraits/manifest.json`; remaining people use intentional personnel-file cards. See [personnel and art integration](docs/art/roster-integration.md).
 - Room shapes on the 320px map are smaller than 44px. Zoom and the Rooms list are the accessible path.
 
 ## Re-running the UI checks

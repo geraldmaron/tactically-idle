@@ -6,6 +6,7 @@ import { EQUIPMENT_HANDLERS, createStartingUnits } from './equipment';
 import { fillCandidates, ROSTER_HANDLERS } from './roster';
 import { RECRUIT_TUNING } from '../content/recruits';
 import { CURRENT_SAVE_VERSION } from './save';
+import { createPersonnel } from './personnel';
 import { INCIDENT_HANDLERS, seedIncidentBoard } from './incidents';
 
 export const DEPARTMENT_HANDLERS: HandlerMap<DepartmentCommandType> = {
@@ -37,9 +38,10 @@ export const DEPARTMENT_HANDLERS: HandlerMap<DepartmentCommandType> = {
   markIncidentsSeen: (d) => INCIDENT_HANDLERS.markIncidentsSeen(d),
 };
 
-export function createInitialState(now: number): GameState {
+export function createInitialState(now: number, campaignSeed = 12345): GameState {
   const state: GameState = {
     saveVersion: CURRENT_SAVE_VERSION,
+    personnel: createPersonnel(campaignSeed),
     contentVersion: 1,
     department: {
       name: 'Westhaven Department',
@@ -57,7 +59,7 @@ export function createInitialState(now: number): GameState {
       // Game day 0 (1 Jan 2026) is the moment the department is created.
       calendarEpoch: now,
     },
-    officers: startingOfficers(now),
+    officers: startingOfficers(now, campaignSeed),
     squads: startingSquads(),
     candidates: [],
     units: {},
@@ -67,7 +69,7 @@ export function createInitialState(now: number): GameState {
     debriefs: [],
     report: null,
     nextId: 1,
-    rngState: 12345,
+    rngState: campaignSeed >>> 0,
   };
   createStartingUnits(state, now);
   fillCandidates(state, now);

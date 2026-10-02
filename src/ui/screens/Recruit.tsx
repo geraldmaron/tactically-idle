@@ -1,3 +1,5 @@
+import { recruitmentStatus } from '../../sim/roster';
+import { personaNote } from '../../content/personas';
 import { useState } from 'react';
 import { useGame } from '../store';
 import { projectHire, sortedCandidates } from '../../sim/department-selectors';
@@ -20,6 +22,7 @@ export function Recruit() {
   const roster = Object.keys(g.officers).length;
   const full = roster >= g.department.rosterCap;
   const now = Date.now();
+  const recruitment = recruitmentStatus(g, now);
 
   return (
     <Section
@@ -52,8 +55,8 @@ export function Recruit() {
       </Card>
       {candidates.length === 0 ? (
         <Card>
-          <EmptyState icon="people" title="No candidates right now">
-            Refresh the pool to see new recruits.
+          <EmptyState icon="people" title={recruitment.exhausted ? "Recruitment reserve exhausted" : "No candidates right now"}>
+            {recruitment.exhausted ? "Every available person in this campaign has served or reached retirement age. Retired officers will not return under a new name." : "Refresh the pool to see new recruits. New personnel arrive as existing officers move through their careers."}
           </EmptyState>
         </Card>
       ) : (
@@ -97,6 +100,7 @@ function CandidateCard({ c, now, open, onToggle, onHired }: { c: Candidate; now:
           <Icon name="bookmark" size={20} />
         </button>
       </div>
+      {personaNote(o.identityId) && <p className="dim persona-note">{personaNote(o.identityId)}</p>}
       <CareerMini officer={o} prior />
       <ul className="miniratings">
         {RATING_META.map((r) => (

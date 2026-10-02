@@ -194,6 +194,7 @@ export function makeState(opts: FixtureOptions = {}): GameState {
     units,
     reservations: [],
     activeRun: null,
+    incidents: [],
     debriefs: [],
     report: null,
     nextId: 1,
@@ -205,9 +206,10 @@ export const DEFAULT_LOADOUTS: Record<SquadId, Record<Id, number>> = {
   A: { radio_kit: 1, throw_phone: 1, ballistic_shield: 1, trauma_kit: 2, battery_pack: 2 },
   B: { radio_kit: 1, loud_hailer: 1, door_ram: 1, ballistic_shield: 1, trauma_kit: 2, battery_pack: 1 },
   C: { radio_kit: 1, loud_hailer: 1, trauma_kit: 1 },
+  D: { radio_kit: 1, trauma_kit: 1 },
 };
 
-export const DEFAULT_POSITIONS: Record<SquadId, Id> = { A: 'front_yard', B: 'side_yard_e', C: 'front_yard' };
+export const DEFAULT_POSITIONS: Record<SquadId, Id> = { A: 'front_yard', B: 'side_yard_e', C: 'front_yard', D: 'front_yard' };
 
 export function startCmd(
   scenarioId: Id,

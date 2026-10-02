@@ -1,49 +1,46 @@
-// Officer portrait: painted art from /public/portraits, or a deterministic illustrated SVG for `proc:<seed>`.
+import portraitManifest from '../../../public/art/portraits/manifest.json';
 import { useId, useState } from 'react';
 import type { Officer } from '../../sim/types';
 import { ProceduralFace } from './procedural';
+import { assetUrl } from '../art/assetUrl';
 
 export interface PortraitProps {
-  officer: Pick<Officer, 'id' | 'firstName' | 'surname' | 'portrait' | 'role'>;
-  /** Rendered width in CSS px; height is width * 1.04. */
+  officer: Pick<Officer, 'id' | 'firstName' | 'surname' | 'portrait' | 'role'> & Pick<Partial<Officer>, 'identityId'>;
   size?: number;
   className?: string;
+  /** Current career age, not a request to randomly replace the person's file photograph. */
+  age?: number;
 }
 
-const PROC = 'proc:';
-
-/** Accepts a bare key ('chen'), a path ('/portraits/chen.png') or 'proc:<seed>'. */
-function paintedSrc(key: string): string {
-  if (key.startsWith('/') || key.startsWith('http')) return key;
-  return `${import.meta.env.BASE_URL}portraits/${key}.png`;
+export function portraitSource(key: string): string {
+  return assetUrl(key.includes('/') || /\.(png|webp|jpe?g|svg)$/i.test(key) ? key : `portraits/${key}.png`);
 }
 
-export function Portrait({ officer, size = 80, className }: PortraitProps) {
+export function Portrait({ officer, size = 80, className, age }: PortraitProps) {
   const uid = useId().replace(/[^a-zA-Z0-9]/g, '');
-  const [failed, setFailed] = useState(false);
+  const [failedKey, setFailedKey] = useState<string | null>(null);
   const key = officer.portrait;
-  const procedural = key.startsWith(PROC) || failed;
+  const legacyProcedural = key.startsWith('proc:');
+  const authoredPortrait = key.replace(/^\/+/, '').startsWith('art/portraits/');
+  const failed = failedKey === key || (authoredPortrait && !!officer.identityId && !portraitManifest.readyIds.includes(officer.identityId));
   const name = `${officer.firstName} ${officer.surname}`.trim();
   const style = {
-    position: 'relative' as const,
-    width: size,
-    height: Math.round(size * 1.04 * 100) / 100,
-    overflow: 'hidden',
-    borderRadius: 'inherit',
-    background: 'linear-gradient(160deg, #1c2c49 0%, #0d1628 100%)',
-    flex: 'none',
+    position: 'relative' as const, width: size, height: Math.round(size * 1.04 * 100) / 100,
+    overflow: 'hidden', borderRadius: 'inherit', background: 'linear-gradient(160deg, #1c2c49 0%, #0d1628 100%)', flex: 'none',
   };
   return (
-    <div className={className} style={style} data-portrait={procedural ? 'procedural' : 'painted'}>
-      {procedural ? (
-        <div role="img" aria-label={`Portrait of ${name}`} style={{ position: 'absolute', inset: 0 }}>
-          <ProceduralFace seed={key.startsWith(PROC) ? key.slice(PROC.length) : `${officer.id}:${key}`} uid={uid} />
+    <div className={className} style={style} data-portrait={legacyProcedural ? 'legacy-procedural' : failed ? 'unavailable' : 'painted'} title={age === undefined ? name : `${name} · age ${Math.floor(age)} · file portrait`}>
+      {legacyProcedural ? (
+        <div role="img" aria-label={`Legacy portrait of ${name}`} style={{ position: 'absolute', inset: 0 }}>
+          <ProceduralFace seed={key.slice(5)} uid={uid} />
+        </div>
+      ) : failed ? (
+        <div role="img" aria-label={`Personnel file for ${name}; no photo on file`} style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: size * .06, color: '#b8c8dc', fontSize: size * .3, letterSpacing: '.06em', backgroundImage: 'linear-gradient(rgba(158,184,212,.055) 1px, transparent 1px), linear-gradient(90deg, rgba(158,184,212,.055) 1px, transparent 1px)', backgroundSize: `${size / 6}px ${size / 6}px`, border: '1px solid rgba(158,184,212,.18)', boxSizing: 'border-box' }}>
+          <span aria-hidden="true" style={{ fontFamily: 'var(--font-display, sans-serif)', lineHeight: 1.2 }}>{officer.firstName.slice(0, 1)}{officer.surname.slice(0, 1)}</span>
+          {size >= 54 && <span aria-hidden="true" style={{ fontSize: Math.max(6, size * .085), letterSpacing: '.04em', lineHeight: 1.35, textAlign: 'center', opacity: .7 }}>NO PHOTO<br />ON FILE</span>}
         </div>
       ) : (
-        <>
-          <img src={paintedSrc(key)} alt={`Portrait of ${name}`} width={size} height={Math.round(size * 1.04)} draggable={false} onError={() => setFailed(true)} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top', display: 'block' }} />
-          <div aria-hidden="true" style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'radial-gradient(ellipse at 50% 42%, rgba(0,0,0,0) 55%, rgba(2,5,12,0.55) 100%)' }} />
-        </>
+        <img key={key} src={portraitSource(key)} alt={`File portrait of ${name}`} width={size} height={Math.round(size * 1.04)} draggable={false} onError={() => setFailedKey(key)} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top', display: 'block' }} />
       )}
     </div>
   );
