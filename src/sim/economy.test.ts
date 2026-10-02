@@ -84,6 +84,7 @@ describe('start budget', () => {
 
 describe('offline equivalence', () => {
   for (const hours of [4, 24, 30]) {
+    // Up to 21,600 complete simulation ticks: verify equivalence, not runner speed.
     it(`${hours}h by 5-second ticks equals one settlement`, () => {
       const start = scenario();
       const end = T0 + hours * HOUR_MS;
@@ -95,7 +96,7 @@ describe('offline equivalence', () => {
       expect(online.officers.off_chen.ratings.communication).toBe(start.officers.off_chen.ratings.communication + 3);
       expect(offline.officers.off_vale.injury).toBeNull();
       expect(firstUnit(offline, 'radio_kit').status).toBe('ready');
-    });
+    }, 15_000);
   }
 
   it('funding is the sum of per-segment rates, not the final rate times the absence', () => {
