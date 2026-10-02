@@ -1,5 +1,6 @@
-// STUB (owned by the building-generator agent). Export names and signatures are fixed.
 import type { LocationDefinition } from '../../sim/types';
+import { NEIGHBOURHOOD_FAMILIES } from '../../content/locations/neighbourhood';
+import { applyVariations } from '../../sim/location-variation';
 
 export interface BuildingFamilyInfo {
   id: string;
@@ -10,15 +11,22 @@ export interface BuildingFamilyInfo {
   blurb: string;
 }
 
-export const BUILDING_FAMILIES: BuildingFamilyInfo[] = [];
+export const BUILDING_FAMILIES: BuildingFamilyInfo[] = [
+  { id: 'cedar_close', label: 'Cedar Close', setting: 'residential', floors: [1, 1], blurb: 'Narrow house · long central hall' },
+  { id: 'harbour_court', label: 'Harbour Court', setting: 'apartment', floors: [1, 1], blurb: 'Garden flat · shared walkway' },
+  { id: 'market_row', label: 'Market Row Stores', setting: 'business', floors: [1, 1], blurb: 'Corner shop · stockroom and delivery lane' },
+];
 
 /**
  * Deterministic: same (familyId, seed) → identical, validated LocationDefinition.
- * Implementations retry internally on validation/plausibility failure and fall back
- * to a known-valid layout; they never return an invalid building.
+ * Authored variation choices are exhaustively validated in generation.test.ts.
+ * buildLocation derives metrics and validates the resulting building before play.
  */
 export function generateBuilding(familyId: string, seed: number): LocationDefinition {
-  throw new Error(`No generator for ${familyId} (seed ${seed})`);
+  const family = NEIGHBOURHOOD_FAMILIES.find((f) => f.id === familyId);
+  if (!family) throw new Error(`Unknown building family ${familyId}`);
+  if (!Number.isSafeInteger(seed) || seed < 0) throw new Error('Building seed must be a non-negative integer');
+  return applyVariations(family, seed);
 }
 
 export function isGeneratedFamily(familyId: string): boolean {

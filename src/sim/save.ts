@@ -2,10 +2,14 @@ import type { GameState, SaveEnvelope } from './types';
 import { SQUAD_IDS as SQUAD_ID_LIST } from './types';
 import { CAREER_SEEDS } from '../content/officers';
 import { ITEMS } from '../content/items';
+import { COURSES } from '../content/courses';
+import { DEV_NODES } from '../content/dev-tree';
 import { createUnit } from './equipment';
 import { seedIncidentBoard } from './incidents';
 import { hashSeed } from './rng';
 import { initializePersonnel } from './personnel';
+import { getScenario } from './scenario-registry';
+import { parseIncidentId } from '../gen/incident';
 
 export const SAVE_KEY = 'tactically-idle/save';
 
@@ -25,30 +29,107 @@ export function serialize(state: GameState, now: number): string {
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 const isStr = (v: unknown): v is string => typeof v === 'string';
+const isBool = (v: unknown): v is boolean => typeof v === 'boolean';
+const isList = (v: unknown, valid: (entry: unknown) => boolean): v is unknown[] => Array.isArray(v) && v.every(valid);
+const isStrings = (v: unknown): v is string[] => isList(v, isStr);
+const oneOf = (v: unknown, choices: readonly string[]): v is string => isStr(v) && choices.includes(v);
+const numbers = (v: Record<string, unknown>, keys: string[]) => keys.every((key) => isNum(v[key]));
+const strings = (v: Record<string, unknown>, keys: string[]) => keys.every((key) => isStr(v[key]));
+const validPoint = (v: unknown) => isObj(v) && numbers(v, ['x', 'y']);
+const validNumericRecord = (v: unknown) => isObj(v) && Object.values(v).every(isNum);
 
 const SQUAD_IDS: readonly string[] = SQUAD_ID_LIST;
 const RATING_KEYS = ['shooting', 'composure', 'communication', 'awareness', 'medical', 'coordination'];
 const DUTIES = ['patrol', 'standby', 'rest'];
 const UNIT_STATUSES = ['ready', 'reserved', 'service', 'expired', 'scrapped'];
 const RETIREMENT_REASONS = ['age', 'service', 'burnout'];
+const ROLES = ['comms', 'breach', 'medic', 'recon', 'lead'];
+const CERTS = ['crisis_negotiation', 'entry_team', 'advanced_first_aid', 'surveillance', 'drone_operator'];
+const TRAITS = ['steady', 'observant', 'mentor', 'impatient', 'calm_voice', 'rookie'];
+const KNOWLEDGE = ['unknown', 'reported', 'confirmed', 'disproved'];
+const STAGES = ['assess', 'adapt', 'resolve'];
+const CONTRIBUTOR_SOURCES = ['rating', 'condition', 'trait', 'equipment', 'space', 'support', 'familiarity', 'preparation', 'difficulty', 'pressure'];
+
+function validReport(r: unknown): boolean {
+  return isObj(r) && numbers(r, ['from', 'to', 'accruedHours', 'gross', 'wages', 'operating', 'restockSpend', 'net', 'devPoints'])
+    && isBool(r.capped) && isStrings(r.recovered) && isStrings(r.shortages)
+    && isList(r.completedCourses, (c) => isObj(c) && strings(c, ['officerId', 'courseId']))
+    && isList(r.equipment, (e) => isObj(e) && isStr(e.unitId) && oneOf(e.event, ['unreliable', 'failed', 'expired', 'serviced']))
+    && isList(r.personnel, (p) => isObj(p) && strings(p, ['officerId', 'detail'])
+      && oneOf(p.event, ['retirement_announced', 'retired', 'anniversary', 'birthday']));
+}
+
+function validDecision(d: unknown): boolean {
+  return isObj(d) && numbers(d, ['revision', 'score', 'difficulty', 'sample', 'timeCost'])
+    && isStr(d.actionId) && oneOf(d.stage, STAGES) && oneOf(d.band, ['favorable', 'mixed', 'adverse'])
+    && isList(d.actingSquadIds, (id) => oneOf(id, SQUAD_IDS)) && isList(d.supportSquadIds, (id) => oneOf(id, SQUAD_IDS))
+    && isStrings(d.officerIds) && (d.targetId === null || isStr(d.targetId)) && validNumericRecord(d.stressDeltas)
+    && isStrings(d.unitsUsed) && isStrings(d.explanation)
+    && isList(d.inputs, (c) => isObj(c) && isStr(c.label) && isNum(c.value) && oneOf(c.source, CONTRIBUTOR_SOURCES)
+      && (c.ref === undefined || isStr(c.ref)))
+    && isList(d.itemsConsumed, (i) => isObj(i) && isStr(i.itemId) && isNum(i.qty))
+    && isList(d.knowledgeChanges, (k) => isObj(k) && isStr(k.factId) && oneOf(k.status, KNOWLEDGE));
+}
+
+function validIncident(c: unknown): c is Record<string, unknown> {
+  if (!isObj(c) || !strings(c, ['id', 'type', 'familyId']) || !numbers(c, ['tier', 'arrivedAt', 'expiresAt']) || !isBool(c.seen)) return false;
+  const spec = parseIncidentId(c.id as string);
+  return !!spec && spec.type === c.type && spec.familyId === c.familyId && spec.tier === c.tier;
+}
+
+function validRun(r: unknown): boolean {
+  if (!isObj(r) || !strings(r, ['id', 'scenarioId', 'locationFamilyId'])
+    || !numbers(r, ['scenarioVersion', 'locationSeed', 'contentVersion', 'rngState', 'clock', 'pressure', 'objective', 'civilianSafety', 'revision', 'startedAt'])
+    || !isBool(r.practice) || !isBool(r.settled) || !oneOf(r.stage, [...STAGES, 'debrief'])
+    || !oneOf(r.status, ['active', 'debrief', 'closed']) || !(r.endingId === null || isStr(r.endingId))
+    || !isList(r.squadIds, (id) => oneOf(id, SQUAD_IDS)) || r.squadIds.length === 0
+    || new Set(r.squadIds).size !== r.squadIds.length || !isStrings(r.reservationIds) || !isStrings(r.flags)
+    || !isObj(r.knowledge) || !Object.values(r.knowledge).every((status) => oneOf(status, KNOWLEDGE))
+    || !isList(r.history, validDecision)) return false;
+  if (!isList(r.squadTasks, (t) => isObj(t) && oneOf(t.squadId, SQUAD_IDS) && strings(t, ['positionId', 'task'])
+    && (t.stagingId === null || isStr(t.stagingId)) && (t.at === null || validPoint(t.at)))) return false;
+  for (const key of ['people', 'lastSeen']) {
+    const positions = r[key];
+    if (positions !== undefined && (!isObj(positions) || !Object.values(positions).every((p) => isObj(p)
+      && isStr(p.spaceId) && validPoint(p.at) && (key !== 'lastSeen' || isNum(p.revision))))) return false;
+  }
+  if (r.sourceIncident !== undefined && (!validIncident(r.sourceIncident) || r.sourceIncident.id !== r.scenarioId)) return false;
+  // A structurally sound run still needs a resolvable map; selectors rebuild it immediately.
+  const scenario = getScenario(r.scenarioId as string);
+  return !!scenario && scenario.locationFamilyId === r.locationFamilyId && Number.isSafeInteger(r.locationSeed)
+    && (r.locationSeed as number) >= 0;
+}
+
+function validDebrief(d: unknown): boolean {
+  return isObj(d) && strings(d, ['runId', 'scenarioId', 'endingId', 'endingTitle']) && isBool(d.practice)
+    && numbers(d, ['trustDelta', 'fundingReward', 'devPointReward']) && isStrings(d.causes)
+    && [d.objective, d.civilianSafety].every((v) => isObj(v) && isNum(v.score) && isStr(v.label))
+    && isList(d.officerCondition, (o) => isObj(o) && isStr(o.officerId) && numbers(o, ['stressBefore', 'stressAfter', 'xpGained']))
+    && isList(d.informationPreserved, (f) => isObj(f) && strings(f, ['factId', 'label']) && oneOf(f.status, KNOWLEDGE))
+    && isList(d.resources, (i) => isObj(i) && isStr(i.itemId) && numbers(i, ['used', 'returned']))
+    && isList(d.unitWear, (u) => isObj(u) && strings(u, ['unitId', 'itemId', 'serial']) && numbers(u, ['before', 'after']));
+}
 
 /** Fields every version has. `v2` adds the career fields introduced in version 2. */
 function validOfficer(o: unknown, key: string, v2: boolean): boolean {
   if (!isObj(o)) return false;
   if (o.identityId !== undefined && !isStr(o.identityId)) return false;
-  if (o.id !== key || !isStr(o.firstName) || !isStr(o.surname) || !isStr(o.role) || !isStr(o.portrait)) return false;
+  if (o.id !== key || !isStr(o.firstName) || !isStr(o.surname) || !oneOf(o.role, ROLES) || !isStr(o.portrait)) return false;
   if (!isObj(o.ratings) || !RATING_KEYS.every((k) => isNum((o.ratings as Record<string, unknown>)[k]))) return false;
-  if (!Array.isArray(o.certs) || !Array.isArray(o.traits)) return false;
+  if (!isList(o.certs, (c) => oneOf(c, CERTS)) || !isList(o.traits, (t) => oneOf(t, TRAITS))) return false;
   if (!isNum(o.wage) || !isNum(o.xp) || !isNum(o.stress) || !isNum(o.hiredAt)) return false;
   if (o.injury !== null && !(isObj(o.injury) && isStr(o.injury.label) && isNum(o.injury.until))) return false;
   if (o.squadId !== null && !(isStr(o.squadId) && SQUAD_IDS.includes(o.squadId))) return false;
   if (o.assignment !== null) {
     const a = o.assignment;
-    const training = isObj(a) && a.kind === 'training' && isStr(a.courseId) && isNum(a.startedAt) && isNum(a.endsAt);
+    const training = isObj(a) && a.kind === 'training' && isStr(a.courseId) && Object.hasOwn(COURSES, a.courseId) && isNum(a.startedAt) && isNum(a.endsAt);
     const op = isObj(a) && a.kind === 'operation' && isStr(a.runId);
     if (!training && !op) return false;
   }
   if (!v2) return true;
+  if ((o.xpBanked !== undefined && !isNum(o.xpBanked))
+    || (o.highStressSince !== undefined && o.highStressSince !== null && !isNum(o.highStressSince))
+    || (o.lastRunCounted !== undefined && o.lastRunCounted !== null && !isStr(o.lastRunCounted))) return false;
   if (!isNum(o.bornDay) || !isNum(o.serviceStartDay)) return false;
   const c = o.career;
   if (!isObj(c) || !isNum(c.operations) || !isNum(c.favorable) || !isNum(c.adverse)) return false;
@@ -62,7 +143,7 @@ function validOfficer(o: unknown, key: string, v2: boolean): boolean {
 
 function validUnit(u: unknown, key: string): boolean {
   if (!isObj(u)) return false;
-  if (u.id !== key || !isStr(u.itemId) || !isStr(u.serial)) return false;
+  if (u.id !== key || !isStr(u.itemId) || !Object.hasOwn(ITEMS, u.itemId) || !isStr(u.serial)) return false;
   if (!['condition', 'acquiredAt', 'uses', 'wearRate', 'lastWearAt'].every((f) => isNum(u[f]))) return false;
   if (!isStr(u.status) || !UNIT_STATUSES.includes(u.status)) return false;
   if (u.serviceUntil !== null && !isNum(u.serviceUntil)) return false;
@@ -78,7 +159,9 @@ function validBase(s: unknown, v2: boolean): s is Record<string, unknown> {
   const depNums = ['funding', 'devPoints', 'trust', 'level', 'rosterCap', 'trainingSlots', 'lastSettledAt', 'lastInteractionAt', 'clockHighWater'];
   if (!isStr(dep.name) || !depNums.every((k) => isNum(dep[k]))) return false;
   if (v2 && !isNum(dep.calendarEpoch)) return false;
-  if (!Array.isArray(dep.unlockedNodes) || !Array.isArray(dep.restockRules)) return false;
+  if (!isStrings(dep.unlockedNodes) || !dep.unlockedNodes.every((id) => Object.hasOwn(DEV_NODES, id))
+    || !isList(dep.restockRules, (r) => isObj(r) && isStr(r.itemId) && Object.hasOwn(ITEMS, r.itemId) && numbers(r, ['target', 'budgetCeiling']))) return false;
+  if (dep.candidateRefreshedAt !== undefined && !isNum(dep.candidateRefreshedAt)) return false;
   if (!isObj(s.officers)) return false;
   const officers = s.officers as Record<string, unknown>;
   if (!Object.entries(officers).every(([k, o]) => validOfficer(o, k, v2))) return false;
@@ -87,8 +170,8 @@ function validBase(s: unknown, v2: boolean): s is Record<string, unknown> {
   for (const sq of s.squads as unknown[]) {
     if (!isObj(sq) || !isStr(sq.id) || !SQUAD_IDS.includes(sq.id) || seen.has(sq.id)) return false;
     seen.add(sq.id);
-    if (!isStr(sq.name) || !DUTIES.includes(sq.duty as string) || !isObj(sq.loadoutPreset)) return false;
-    if (!Array.isArray(sq.officerIds) || !sq.officerIds.every((id) => isStr(id) && id in officers)) return false;
+    if (!isStr(sq.name) || !DUTIES.includes(sq.duty as string) || !validNumericRecord(sq.loadoutPreset)) return false;
+    if (!Array.isArray(sq.officerIds) || !sq.officerIds.every((id) => isStr(id) && Object.hasOwn(officers, id))) return false;
     if (sq.leaderId !== null && !(isStr(sq.leaderId) && sq.officerIds.includes(sq.leaderId))) return false;
   }
   if (!Array.isArray(s.candidates)) return false;
@@ -119,9 +202,8 @@ function validIncidents(s: Record<string, unknown>): boolean {
   if (!Array.isArray(s.incidents)) return false;
   const ids = new Set<string>();
   for (const c of s.incidents as unknown[]) {
-    if (!isObj(c) || !isStr(c.id) || !isStr(c.type) || !isStr(c.familyId) || ids.has(c.id)) return false;
+    if (!validIncident(c) || !isStr(c.id) || ids.has(c.id)) return false;
     ids.add(c.id);
-    if (!isNum(c.tier) || !isNum(c.arrivedAt) || !isNum(c.expiresAt) || typeof c.seen !== 'boolean') return false;
   }
   const dep = s.department as Record<string, unknown>;
   return dep.nextIncidentAt === undefined || isNum(dep.nextIncidentAt);
@@ -131,6 +213,9 @@ function validIncidents(s: Record<string, unknown>): boolean {
 function validState(s: unknown): s is GameState {
   if (!validBase(s, true)) return false;
   if (!validIncidents(s)) return false;
+  if (s.report !== null && !validReport(s.report)) return false;
+  if (s.activeRun !== null && !validRun(s.activeRun)) return false;
+  if (!isList(s.debriefs, validDebrief)) return false;
   const people = s.personnel;
   if (!isObj(people) || !isNum(people.campaignSeed) || !Number.isInteger(people.campaignSeed) || people.campaignSeed < 0 || people.campaignSeed > 0xffffffff || !isNum(people.catalogVersion)) return false;
   if (!Array.isArray(people.employedIdentityIds) || !people.employedIdentityIds.every(isStr) || new Set(people.employedIdentityIds).size !== people.employedIdentityIds.length || !isObj(people.builds)) return false;
@@ -143,8 +228,8 @@ function validState(s: unknown): s is GameState {
   const units = s.units as Record<string, unknown>;
   if (!Object.entries(units).every(([k, u]) => validUnit(u, k))) return false;
   for (const r of s.reservations as unknown[]) {
-    if (!isObj(r) || !isStr(r.id) || !isStr(r.runId) || !isStr(r.itemId) || !isStr(r.unitId) || !isStr(r.squadId)) return false;
-    if (!(r.unitId in units)) return false;
+    if (!isObj(r) || !isStr(r.id) || !isStr(r.runId) || !isStr(r.itemId) || !isStr(r.unitId) || !oneOf(r.squadId, SQUAD_IDS)) return false;
+    if (!Object.hasOwn(units, r.unitId)) return false;
   }
   return true;
 }

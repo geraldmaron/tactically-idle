@@ -18,7 +18,8 @@ import type {
 } from './types';
 import type { ActionDefinition, FactDefinition, ScenarioDefinition } from './scenario-types';
 import { scenarioActions } from './scenario-types';
-import { SCENARIOS, SCENARIO_ORDER } from '../content/scenarios';
+import { SCENARIO_ORDER } from '../content/scenarios';
+import { getScenario } from './scenario-registry';
 import { ITEMS } from '../content/items';
 import { deployability } from './officer';
 import { builtFor, CERT_LABEL, evaluateAction, getBuilt, squadLabel, spaceName, tagNames, type Evaluation } from './resolution';
@@ -73,7 +74,9 @@ const STAGE_ORDER: StageId[] = ['assess', 'adapt', 'resolve'];
 // ---------------------------------------------------------------- scenario list and briefing
 
 export function scenarioCards(state: GameState, now: number): ScenarioCard[] {
-  return SCENARIO_ORDER.map((id) => SCENARIOS[id]).filter(Boolean).map((s) => {
+  const clock = Math.max(now, state.department.clockHighWater);
+  const ids = [...new Set([...(state.incidents ?? []).filter((c) => c.expiresAt > clock).map((c) => c.id), ...SCENARIO_ORDER])];
+  return ids.map(getScenario).filter((s): s is ScenarioDefinition => s !== null).map((s) => {
     const issues: string[] = [];
     const eligible: SquadId[] = [];
     const why: string[] = [];
@@ -123,7 +126,7 @@ export function scenarioCards(state: GameState, now: number): ScenarioCard[] {
 }
 
 export function briefing(scenarioId: Id): Briefing {
-  const s = SCENARIOS[scenarioId];
+  const s = getScenario(scenarioId);
   if (!s) return { scenarioId, known: [], unknown: [], objectives: [], entries: [], usefulItemIds: [] };
   const built = getBuilt(s.locationFamilyId, s.locationSeed);
   const known = [...s.briefing.known, ...s.facts.filter((f) => f.initial === 'reported' && f.reportedText).map((f) => f.reportedText as string)];
@@ -148,7 +151,7 @@ export function briefing(scenarioId: Id): Briefing {
 }
 
 export function builtForScenario(scenarioId: Id): BuiltLocation {
-  const s = SCENARIOS[scenarioId];
+  const s = getScenario(scenarioId);
   return s ? getBuilt(s.locationFamilyId, s.locationSeed) : getBuilt('maple_street', 0);
 }
 
@@ -267,7 +270,7 @@ function isTargetHidden(a: ActionDefinition, run: OperationRun): boolean {
 }
 
 export function spaceViewsForScenario(scenarioId: Id): SpaceView[] {
-  const s = SCENARIOS[scenarioId];
+  const s = getScenario(scenarioId);
   if (!s) return [];
   const built = getBuilt(s.locationFamilyId, s.locationSeed);
   const knowledge: Record<Id, KnowledgeStatus> = {};
@@ -278,14 +281,14 @@ export function spaceViewsForScenario(scenarioId: Id): SpaceView[] {
 export function spaceViews(state: GameState): SpaceView[] {
   const run = state.activeRun;
   if (!run) return [];
-  const s = SCENARIOS[run.scenarioId];
+  const s = getScenario(run.scenarioId);
   if (!s) return [];
   return buildSpaceViews(s, builtFor(run.locationFamilyId, run.locationSeed, run.flags), run.knowledge, run, state);
 }
 
 export function stageProgress(state: GameState): StageProgress {
   const run = state.activeRun;
-  const s = run ? SCENARIOS[run.scenarioId] : null;
+  const s = run ? getScenario(run.scenarioId) : null;
   const stage: StageId | 'debrief' = run?.stage ?? 'assess';
   const cur = stage === 'debrief' ? 3 : STAGE_ORDER.indexOf(stage);
   return {
@@ -349,7 +352,7 @@ function toView(state: GameState, run: OperationRun, a: ActionDefinition, ev: Ev
 export function actionViews(state: GameState, _now: number, focusSquadId: SquadId | null): ActionView[] {
   const run = state.activeRun;
   if (!run || run.status !== 'active' || run.stage === 'debrief') return [];
-  const s = SCENARIOS[run.scenarioId];
+  const s = getScenario(run.scenarioId);
   if (!s) return [];
   const built = builtFor(run.locationFamilyId, run.locationSeed, run.flags);
   return s.stages[run.stage].actions.map((a) => {
@@ -368,7 +371,7 @@ export function previewAction(
 ): ActionView | null {
   const run = state.activeRun;
   if (!run || run.status !== 'active' || run.stage === 'debrief') return null;
-  const s = SCENARIOS[run.scenarioId];
+  const s = getScenario(run.scenarioId);
   const a = s?.stages[run.stage].actions.find((x) => x.id === actionId);
   if (!s || !a) return null;
   const built = builtFor(run.locationFamilyId, run.locationSeed, run.flags);
@@ -399,4 +402,3 @@ export function lastResolution(state: GameState): DecisionResolution | null {
 export function resolutionTrace(res: DecisionResolution): string[] {
   return res.inputs.map((c) => `${c.label}: ${c.value}`);
 }
-

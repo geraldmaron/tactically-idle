@@ -1,58 +1,87 @@
 import { useSyncExternalStore } from 'react';
 import type { Command, GameState, HandlerResult } from '../sim/types';
-import { dispatch as apply } from '../sim/game';
-import { createInitialState } from '../sim/department';
-import { saveGame } from '../sim/save';
-import { restoreCampaign } from '../sim/session';
-import { randomCampaignSeed } from '../sim/personnel';
+import { CampaignSlots } from '../sim/campaign-slots';
+import { withSaveLock } from '../sim/save-lock';
+import type { SaveStorage } from '../sim/save';
 
 // Single game store. All mutations go through sim/game.dispatch as transactions.
 
 const TICK_MS = 5000;
 
-let state: GameState = boot();
 const listeners = new Set<() => void>();
+const locks = typeof navigator !== 'undefined' && navigator.locks ? navigator.locks : null;
 
-function storage(): Storage | null {
+function storage(readOnly = !locks): SaveStorage | null {
   try {
-    return window.localStorage;
+    const local = window.localStorage;
+    // Older browsers can read and export saves, but must not race other writers.
+    return !readOnly ? local : { getItem: (key: string) => local.getItem(key), setItem: () => { throw new Error('Safe local saving is unavailable in this browser. Export your game or use a current browser.'); } };
   } catch {
     return null;
   }
 }
 
-function boot(): GameState {
-  return restoreCampaign(Date.now(), storage());
+const campaigns = await withSaveLock(locks, () => new CampaignSlots(storage(), Date.now()))
+  .catch(() => new CampaignSlots(storage(true), Date.now()));
+if (!locks) campaigns.reportStorageIssue('Safe local saving is unavailable in this browser. You can read or export existing saves; use a current browser to save progress.');
+let pendingSave: Promise<unknown> = Promise.resolve();
+function serialized<T>(action: () => T): Promise<T> {
+  const result = pendingSave.then(() => withSaveLock(locks, action));
+  pendingSave = result.catch(() => undefined);
+  return result;
 }
 
-function commit(next: GameState) {
-  if (next === state) return;
-  state = next;
-  const s = storage();
-  if (s) {
-    try {
-      saveGame(state, Date.now(), s);
-    } catch {
-      /* storage full or blocked: keep playing in memory */
-    }
-  }
+function notify() {
   listeners.forEach((l) => l());
+}
+function lockFailure(): HandlerResult {
+  const reason = 'Local saving could not acquire its browser lock. No saved data was changed. Export your current game before leaving.';
+  campaigns.reportStorageIssue(reason); notify(); return { ok: false, reason };
 }
 
 export function send(cmd: Command): HandlerResult {
-  const { state: next, result } = apply(state, cmd, { now: Date.now() });
-  if (result.ok) commit(next);
+  const result = campaigns.send(cmd, Date.now(), false);
+  notify();
+  if (result.ok && campaigns.getSnapshot().activeSlotId) void serialized(() => { campaigns.save(Date.now()); notify(); }).catch(lockFailure);
   return result;
 }
 
 export function getState(): GameState {
-  return state;
+  return campaigns.getSnapshot().state;
 }
 
-/** Dev/test helper: replace the whole state (e.g. reset). */
-export function resetGame(next?: GameState) {
-  commit(next ?? createInitialState(Date.now(), randomCampaignSeed()));
+export type SaveAction =
+  | { type: 'save' }
+  | { type: 'load'; id: number; discardUnsaved?: boolean }
+  | { type: 'new' | 'copy'; id: number; name: string; overwrite: boolean; discardUnsaved?: boolean }
+  | { type: 'rename'; id: number; name: string }
+  | { type: 'import'; id: number; name: string; data: string; overwrite: boolean }
+  | { type: 'delete'; id: number; confirmed: boolean; permanent?: boolean }
+  | { type: 'undoDelete' };
+
+export function manageSave(action: SaveAction): Promise<HandlerResult> {
+  return serialized(() => {
+  const now = Date.now();
+  let result: HandlerResult;
+  switch (action.type) {
+    case 'save': result = campaigns.save(now); break;
+    case 'load': result = campaigns.load(action.id, now, action.discardUnsaved); break;
+    case 'new': result = campaigns.newGame(action.id, action.name, now, action.overwrite, action.discardUnsaved); break;
+    case 'copy': result = campaigns.saveAs(action.id, action.name, now, action.overwrite); break;
+    case 'rename': result = campaigns.rename(action.id, action.name, now); break;
+    case 'import': result = campaigns.importGame(action.id, action.name, action.data, now, action.overwrite); break;
+    case 'delete': result = campaigns.delete(action.id, now, action.confirmed, action.permanent); break;
+    case 'undoDelete': result = campaigns.undoDelete(now); break;
+  }
+  notify();
+  return result;
+  }).catch(lockFailure);
 }
+
+export const exportCurrentSave = () => campaigns.exportCurrent(Date.now());
+export const exportSlotSave = (id: number) => campaigns.exportSlot(id);
+export const exportSaveRecovery = () => campaigns.exportRecovery();
+export const getCampaignSnapshot = campaigns.getSnapshot;
 
 function subscribe(l: () => void) {
   listeners.add(l);
@@ -63,10 +92,19 @@ export function useGame(): GameState {
   return useSyncExternalStore(subscribe, getState, getState);
 }
 
+export function useCampaigns() {
+  return useSyncExternalStore(subscribe, getCampaignSnapshot, getCampaignSnapshot);
+}
+
 if (typeof window !== 'undefined') {
+  if (campaigns.getSnapshot().activeSlotId) void serialized(() => { campaigns.save(Date.now()); notify(); }).catch(lockFailure);
   window.setInterval(() => send({ type: 'tick' }), TICK_MS);
+  window.addEventListener('beforeunload', (event) => {
+    if (campaigns.getSnapshot().dirty) { event.preventDefault(); event.returnValue = ''; }
+  });
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') send({ type: 'tick' });
   });
-  (window as unknown as { __ti: unknown }).__ti = { getState, send, resetGame };
+  // Production has no console reset shortcut that can silently discard a campaign.
+  if (import.meta.env.DEV) (window as unknown as { __ti: unknown }).__ti = { getState, send };
 }

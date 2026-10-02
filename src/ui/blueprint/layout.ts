@@ -8,7 +8,7 @@ import { isPath } from './walls';
 export const FONT = {
   room: 1.75,
   zone: 1.28,
-  marker: 2.15,
+  marker: 1.75,
   front: 1.95,
   note: 1.75,
   task: 1.2,
@@ -42,17 +42,17 @@ export interface MarkerItem {
   spaceId: Id;
   tone: 'amber' | 'mint';
   text: string;
-  cx: number;
-  cy: number;
-  rx: number;
-  ry: number;
-  tilt: number;
+  /** Exact room/zone boundary: a report concerns this space, never its bounding ellipse. */
+  outline: Polygon;
+  size: number;
+  box: Rect;
   textX: number;
   textY: number;
   textW: number;
   /** Smaller marker lettering under the word, e.g. 'per neighbour'. */
   sub: { text: string; x: number; y: number } | null;
-  arrow: { from: Vec; to: Vec };
+  /** Only used for a callout that cannot fit inside its own space. */
+  arrow: { from: Vec; to: Vec } | null;
   glyphAt: Vec;
 }
 
@@ -104,7 +104,7 @@ export interface PersonItem {
   chip: { text: string; x: number; y: number; w: number; h: number } | null;
   /** A 'reported' person whose label says 'last seen': drawn faded with a 'last seen' caption. */
   stale: boolean;
-  caption: { text: string; x: number; y: number } | null;
+  caption: { text: string; x: number; y: number; anchor: 'start' | 'middle' | 'end' } | null;
 }
 
 export interface Layout {
@@ -143,7 +143,7 @@ interface Spot {
 }
 
 /** Best centre for a w x h box inside `poly`, close to `pref`, away from `obstacles`. */
-function findSpot(poly: Polygon, w: number, h: number, pref: Vec, obstacles: Rect[], margin = 0.45): Spot {
+function findSpot(poly: Polygon, w: number, h: number, pref: Vec, obstacles: Rect[], margin = 0.45, keepClear: Rect[] = []): Spot {
   const bb = bboxOf(poly);
   let best: Spot | null = null;
   let bestScore = Infinity;
@@ -151,7 +151,7 @@ function findSpot(poly: Polygon, w: number, h: number, pref: Vec, obstacles: Rec
   for (let y = bb.y; y <= bb.y + bb.h; y += step) {
     for (let x = bb.x; x <= bb.x + bb.w; x += step) {
       const box = { x: x - w / 2, y: y - h / 2, w, h };
-      if (!boxInside(box, poly, margin)) continue;
+      if (!boxInside(box, poly, margin) || keepClear.some((r) => rectsOverlapArea(box, r) > 0)) continue;
       let overlap = 0;
       for (const o of obstacles) overlap += rectsOverlapArea(box, o);
       const score = overlap * 24 + len(sub({ x, y }, pref)) * 0.5;
@@ -209,7 +209,8 @@ export function computeLayout(built: BuiltLocation, spaces: SpaceView[], squadTa
 
   // obstacles: every object that sits above the floor
   const placed: Rect[] = loc.objects.filter((o) => !isFloorLayer(o.type)).map((o) => inflate(objectRect(o), 0.12));
-  const add_ = (r: Rect) => placed.push(r);
+  const protectedRects: Rect[] = [];
+  const add_ = (r: Rect) => { placed.push(r); protectedRects.push(r); };
 
   // ---- front entry
   const front = computeFront(loc);
@@ -222,8 +223,8 @@ export function computeLayout(built: BuiltLocation, spaces: SpaceView[], squadTa
     let tc = add(front.center, scale(front.out, dist));
     tc = { x: Math.max(frame.x + w / 2 + 0.6, Math.min(frame.x + frame.w - w / 2 - 0.6, tc.x)), y: Math.max(frame.y + h, Math.min(frame.y + frame.h - h / 2 - 0.4, tc.y)) };
     const band: Rect = { x: tc.x - w / 2 - 0.8, y: tc.y - h / 2 - 0.35, w: w + 1.6, h: h + 0.7 };
-    const aFrom = add(tc, scale(front.out, -(h / 2 + 0.55)));
-    const aTo = add(front.center, scale(front.out, 1.2));
+    const aTo = front.center;
+    const aFrom = exitPoint(band, tc, unit(sub(aTo, tc)));
     frontItem = { openingId: front.openingId, text: tc, band, arrow: { from: aFrom, to: aTo } };
     add_(band);
     add_({ x: Math.min(aFrom.x, aTo.x) - 0.6, y: Math.min(aFrom.y, aTo.y), w: Math.abs(aFrom.x - aTo.x) + 1.2, h: Math.abs(aFrom.y - aTo.y) });
@@ -240,62 +241,6 @@ export function computeLayout(built: BuiltLocation, spaces: SpaceView[], squadTa
       const r = pm.status === 'reported' ? 2.1 : kind === 'dog' ? 1.7 : 1.5;
       add_({ x: pm.at.x - r, y: pm.at.y - r, w: r * 2, h: r * 2 });
     }
-  }
-
-  // ---- markers
-  const markers: MarkerItem[] = [];
-  for (const view of spaces) {
-    if (!view.marker) continue;
-    const sp = polys.get(view.id);
-    const ds = derived.spaces[view.id];
-    if (!sp || !ds) continue;
-    const bb = ds.bbox;
-    let cx = bb.x + bb.w / 2;
-    let cy = bb.y + bb.h / 2;
-    let rx = (bb.w / 2) * 0.98 + 0.25;
-    let ry = (bb.h / 2) * 0.98 + 0.25;
-    if (sp.zone || bb.w > 17.5 || bb.h > 14) {
-      // large or L-shaped spaces: loop the centroid region only
-      const c = ds.centroid;
-      cx = c.x;
-      cy = c.y;
-      rx = Math.min(rx, 8.2);
-      ry = Math.min(ry, 6.2);
-    }
-    const text = view.marker.text.toUpperCase();
-    const subText = view.marker.subtext?.trim() ? view.marker.subtext.trim() : null;
-    const size = FONT.marker;
-    const textW = text.length * W_MARKER * size;
-    const subW = subText ? subText.length * W_MARKER * FONT.sub * 0.92 + 0.6 : 0;
-    const tw = Math.max(textW + 3.4, subW + 0.4); // text plus glyph
-    const th = size * 1.1 + (subText ? FONT.sub * 1.15 : 0);
-    const pref = { x: cx + rx * 0.35, y: cy + ry * 0.74 };
-    const area: Polygon = ellipsePolygon(cx, cy, rx + 2.4, ry + 3.2);
-    const spot = findSpot(area, tw, th, pref, placed, 0.2);
-    const tcx = spot.center.x;
-    const tcy = spot.center.y;
-    const left = tcx - tw / 2;
-    const textY = subText ? tcy - th / 2 + size * 0.88 : tcy + size * 0.34;
-    const glyphAt = { x: left + textW + 2.0, y: subText ? textY - size * 0.38 : tcy - 0.1 };
-    const aFrom = { x: left - 0.35, y: (subText ? textY - size * 0.38 : tcy) - 0.35 };
-    const aTo = { x: aFrom.x - 1.9, y: aFrom.y - 1.5 };
-    markers.push({
-      spaceId: view.id,
-      tone: view.marker.tone,
-      text,
-      cx,
-      cy,
-      rx,
-      ry,
-      tilt: -6 + ((hash32(view.id) % 5) - 2),
-      textX: left,
-      textY,
-      textW,
-      sub: subText ? { text: subText, x: left + 0.15, y: textY + FONT.sub * 1.18 } : null,
-      arrow: { from: aFrom, to: aTo },
-      glyphAt,
-    });
-    add_(textRect(tcx, tcy, tw + 2.2, th));
   }
 
   // ---- room labels. The anchor is the pole of inaccessibility for notched rooms (the centroid of an L can sit
@@ -337,6 +282,50 @@ export function computeLayout(built: BuiltLocation, spaces: SpaceView[], squadTa
     add_(textRect(spot.center.x, spot.center.y, v.rot ? v.h : v.w, v.rot ? v.w : v.h));
   }
 
+  // ---- knowledge labels. Room names claim their space first. Reports use the actual boundary;
+  // only a label placed outside its room needs a leader, ending on that same room.
+  const markers: MarkerItem[] = [];
+  for (const view of spaces) {
+    if (!view.marker) continue;
+    const sp = polys.get(view.id);
+    if (!sp) continue;
+    const poly = sp.zone ? clipPolyToRect(sp.poly, frame) : sp.poly;
+    if (poly.length < 3) continue;
+    const pole = poleOfInaccessibility(poly);
+    const text = view.marker.text.toUpperCase();
+    const subText = view.marker.subtext?.trim() || null;
+    let chosen: { size: number; textW: number; w: number; h: number; spot: Spot } | null = null;
+    for (const size of [FONT.marker, FONT.marker * 0.86]) {
+      const textW = text.length * 0.62 * size;
+      const subW = subText ? subText.length * W_MARKER * FONT.sub + 0.3 : 0;
+      const w = Math.max(textW + 2.7, subW + 0.6);
+      const h = size * 1.35 + (subText ? FONT.sub * 1.25 : 0) + 0.4;
+      const spot = findSpot(poly, w, h, pole, placed, 0.6, protectedRects);
+      if (!chosen || (!spot.fits && !chosen.spot.fits) || (spot.fits && (!chosen.spot.fits || spot.overlap < chosen.spot.overlap))) chosen = { size, textW, w, h, spot };
+      if (spot.fits && spot.overlap === 0) break;
+    }
+    const { size, textW, w, h, spot } = chosen!;
+    const outside = !spot.fits;
+    const center = outside ? findSpot(rectPolygon(frame), w, h, pole, [...placed, inflate(bboxOf(poly), 0.7)], 0.35, protectedRects).center : spot.center;
+    const box = textRect(center.x, center.y, w, h);
+    const textX = box.x + 0.3;
+    const textY = box.y + size + 0.2;
+    let arrow: MarkerItem['arrow'] = null;
+    if (outside) {
+      const to = closestOnPolygon(center, poly);
+      const dir = unit(sub(to, center));
+      const from = exitPoint(box, center, dir);
+      if (len(sub(to, from)) > 0.5) arrow = { from, to };
+    }
+    markers.push({
+      spaceId: view.id, tone: view.marker.tone, text, outline: poly, size, box,
+      textX, textY, textW,
+      sub: subText ? { text: subText, x: textX, y: textY + FONT.sub * 1.25 } : null,
+      arrow, glyphAt: { x: box.x + w - 1.15, y: box.y + size * 0.7 + 0.2 },
+    });
+    add_(inflate(box, 0.2));
+  }
+
   // ---- zone labels (small; tall narrow zones read vertically)
   const zoneLabels: LabelItem[] = [];
   for (const zone of loc.zones) {
@@ -369,13 +358,14 @@ export function computeLayout(built: BuiltLocation, spaces: SpaceView[], squadTa
     const x0 = anchor === 'start' ? n.at.x : n.at.x - w;
     const shift = Math.max(frame.x + 0.6 - x0, Math.min(0, frame.x + frame.w - 0.6 - (x0 + w)));
     const ax = n.at.x + shift;
-    const rect: Rect = { x: (anchor === 'start' ? ax : ax - w), y: n.at.y - size, w, h: size * 1.25 };
-    const center = { x: rect.x + rect.w / 2, y: rect.y + rect.h / 2 };
+    const pref = { x: (anchor === 'start' ? ax : ax - w) + w / 2, y: n.at.y - size * 0.375 };
+    const center = findSpot(rectPolygon(frame), w + 0.5, size * 1.4, pref, placed, 0.3, protectedRects).center;
+    const rect = textRect(center.x, center.y, w + 0.5, size * 1.4);
     let target: Rect | null = null;
     let tDist = Infinity;
     const lower = n.text.toLowerCase();
     const named = extObjects.filter((o) => lower.includes(o.type) || o.tags.some((t) => lower.includes(t)));
-    for (const o of named.length ? named : extObjects) {
+    for (const o of named) {
       const r = objectRect(o);
       const cl = { x: Math.max(r.x, Math.min(r.x + r.w, center.x)), y: Math.max(r.y, Math.min(r.y + r.h, center.y)) };
       const d = len(sub(cl, center));
@@ -388,21 +378,17 @@ export function computeLayout(built: BuiltLocation, spaces: SpaceView[], squadTa
     }
     let arrow: NoteItem['arrow'] = null;
     if (target && tDist < 18) {
-      const compact = Math.max(target.w, target.h) < 4 * Math.min(target.w, target.h) + 2;
-      const aim = compact
-        ? { x: target.x + target.w / 2, y: target.y + target.h / 2 }
-        : { x: Math.max(target.x, Math.min(target.x + target.w, center.x)), y: Math.max(target.y, Math.min(target.y + target.h, center.y)) };
+      const aim = closestOnRect(center, target);
       const dir = unit(sub(aim, center));
       const exit = exitPoint(rect, center, dir);
-      const reach = len(sub(aim, exit)) - (compact ? (Math.min(target.w, target.h) / 2) * 0.9 : 0.5) - 0.15;
-      if (reach > 1.5) {
-        const from = add(exit, scale(dir, 0.45));
-        const to = add(exit, scale(dir, Math.min(reach, 6.5)));
-        arrow = { from, to };
-        add_({ x: Math.min(from.x, to.x) - 0.4, y: Math.min(from.y, to.y) - 0.4, w: Math.abs(from.x - to.x) + 0.8, h: Math.abs(from.y - to.y) + 0.8 });
+      if (len(sub(aim, exit)) > 1) {
+        const from = add(exit, scale(dir, 0.3));
+        // End on the named object. A length cap left arrows pointing at unrelated empty ground.
+        arrow = { from, to: aim };
+        add_(inflate(bboxOf([from, aim]), 0.25));
       }
     }
-    notes.push({ id: n.id, text: n.text, x: ax, y: n.at.y, anchor, rot: -5, arrow });
+    notes.push({ id: n.id, text: n.text, x: anchor === 'start' ? rect.x + 0.25 : rect.x + rect.w - 0.25, y: center.y + size * 0.375, anchor, rot: 0, arrow });
     add_(rect);
   }
 
@@ -455,8 +441,8 @@ export function computeLayout(built: BuiltLocation, spaces: SpaceView[], squadTa
         if (dist > 0.3) {
           const dir = scale(toward, 1 / dist);
           const from = add(t.at, scale(dir, TOKEN_R + 0.1));
-          const reach = Math.max(TOKEN_R + 0.75, Math.min(dist - 0.1, TOKEN_R + 1.7));
-          tick = { from, to: add(t.at, scale(dir, reach)) };
+          const reach = Math.min(dist, TOKEN_R + 1.7);
+          if (reach > TOKEN_R + 0.1) tick = { from, to: add(t.at, scale(dir, reach)) };
         }
       }
       squads.push({ squadId: t.squadId, spaceId: t.positionId, task: t.task, badge: t.at, label: { x: place.x, y: place.y }, anchor: place.anchor, lines: pick!.lines, focus: t.squadId === focusSquadId, r: TOKEN_R, at: t.at, tick });
@@ -535,7 +521,7 @@ export function computeLayout(built: BuiltLocation, spaces: SpaceView[], squadTa
       const w = 'last seen'.length * W_MARKER * FONT.sub * 0.95 + 0.4;
       const h = FONT.sub * 1.15;
       const place = placeBeside(pd.at, 2.0, w, h, FONT.sub * 0.88, frame, placed);
-      caption = { text: 'last seen', x: place.x, y: place.y };
+      caption = { text: 'last seen', x: place.x, y: place.y, anchor: place.anchor };
       add_(place.rect);
     }
     const chipText = pd.status === 'disproved' ? null : armamentText(pd.armament, pd.status);
@@ -672,13 +658,26 @@ function exitPoint(r: Rect, c: Vec, dir: Vec): Vec {
   return add(c, scale(dir, Math.min(tx, ty)));
 }
 
-function ellipsePolygon(cx: number, cy: number, rx: number, ry: number): Polygon {
-  const pts: Polygon = [];
-  for (let i = 0; i < 20; i++) {
-    const a = (i / 20) * Math.PI * 2;
-    pts.push({ x: cx + Math.cos(a) * rx, y: cy + Math.sin(a) * ry });
+function rectPolygon(r: Rect): Polygon {
+  return [{ x: r.x, y: r.y }, { x: r.x + r.w, y: r.y }, { x: r.x + r.w, y: r.y + r.h }, { x: r.x, y: r.y + r.h }];
+}
+
+function closestOnRect(p: Vec, r: Rect): Vec {
+  return { x: Math.max(r.x, Math.min(r.x + r.w, p.x)), y: Math.max(r.y, Math.min(r.y + r.h, p.y)) };
+}
+
+function closestOnPolygon(p: Vec, poly: Polygon): Vec {
+  let best = poly[0];
+  let distance = Infinity;
+  for (let i = 0; i < poly.length; i++) {
+    const a = poly[i];
+    const d = sub(poly[(i + 1) % poly.length], a);
+    const t = Math.max(0, Math.min(1, ((p.x - a.x) * d.x + (p.y - a.y) * d.y) / (d.x * d.x + d.y * d.y || 1)));
+    const q = add(a, scale(d, t));
+    const dist = len(sub(p, q));
+    if (dist < distance) { best = q; distance = dist; }
   }
-  return pts;
+  return best;
 }
 
 /** The entry door into the house, derived from data: a door from an entry zone (or its porch) into a room. */

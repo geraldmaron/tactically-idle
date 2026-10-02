@@ -7,6 +7,8 @@ import { ownedCount } from './equipment';
 import { readyUnits } from './inventory';
 import { boardSummary, careerInfo } from './department-selectors';
 import type { Command, GameState } from './types';
+import { actionViews, briefing } from './operation-selectors';
+import { playPolicy, startCmd } from './test-fixtures';
 
 const T0 = Date.UTC(2026, 0, 5, 12, 0, 0);
 
@@ -29,6 +31,15 @@ function busyState(): GameState {
   s = ok(s, { type: 'shortlist', candidateId: s.candidates[1].id, on: true }, T0);
   s = ok(s, { type: 'createSquad', name: 'Charlie' }, T0);
   return ok(s, { type: 'tick' }, T0 + 3 * HOUR_MS);
+}
+
+function operationState(generated = false): GameState {
+  const s = createInitialState(T0);
+  const scenarioId = generated ? s.incidents[0].id : 'ms_occupancy';
+  const positions = { A: briefing(scenarioId).entries[0].id };
+  const started = ok(s, startCmd(scenarioId, ['A'], { positions }), T0);
+  const action = actionViews(started, T0, 'A').find((a) => a.eligible)!;
+  return ok(started, { type: 'decide', actionId: action.id, actingSquadIds: action.actingSquadIds, supportSquadIds: action.supportSquadIds }, T0);
 }
 
 describe('save round trip', () => {
@@ -69,6 +80,39 @@ describe('save round trip', () => {
     expect(done.officers.off_reyes.certs.filter((c) => c === 'crisis_negotiation')).toHaveLength(1);
     expect(done.report!.completedCourses).toEqual([{ officerId: 'off_reyes', courseId: 'crisis_negotiation_course' }]);
   });
+
+  it('keeps authored and generated operation history, positions and source cards unchanged', () => {
+    for (const generated of [false, true]) {
+      const s = operationState(generated);
+      expect(s.activeRun!.history.length).toBeGreaterThan(0);
+      expect(!!s.activeRun!.sourceIncident).toBe(generated);
+      const loaded = deserialize(serialize(s, T0))!;
+      expect(loaded).toEqual(s);
+      expect(actionViews(loaded, T0, 'A')).toEqual(actionViews(s, T0, 'A'));
+      expect(ok(loaded, { type: 'tick' }, T0 + HOUR_MS)).toEqual(ok(s, { type: 'tick' }, T0 + HOUR_MS));
+    }
+  });
+
+  it('preserves a version 2 or 3 in-progress operation through migration', () => {
+    for (const version of [2, 3]) {
+      const s = operationState();
+      const envelope = JSON.parse(serialize(s, T0));
+      envelope.saveVersion = envelope.state.saveVersion = version;
+      delete envelope.state.personnel;
+      if (version === 2) { delete envelope.state.incidents; delete envelope.state.department.nextIncidentAt; }
+      const loaded = deserialize(JSON.stringify(envelope))!;
+      expect(loaded).not.toBeNull();
+      expect(loaded.activeRun).toEqual(s.activeRun);
+      expect(loaded.reservations).toEqual(s.reservations);
+      expect(actionViews(loaded, T0, 'A')).toEqual(actionViews(s, T0, 'A'));
+    }
+  });
+
+  it('restores a complete finished debrief', () => {
+    const s = playPolicy(operationState(), {}).state;
+    expect(s.debriefs).toHaveLength(1);
+    expect(deserialize(serialize(s, T0))).toEqual(s);
+  });
 });
 
 describe('corrupt saves', () => {
@@ -101,6 +145,61 @@ describe('corrupt saves', () => {
     const storage = memoryStorage();
     storage.setItem(SAVE_KEY, '{broken');
     expect(loadGame(storage)).toBeNull();
+  });
+
+  it('rejects nested reports, collection entries and UI enums before runtime uses them', () => {
+    const changes: [string, (s: any) => void][] = [
+      ['empty report', (s) => { s.report = {}; }],
+      ['report courses', (s) => { s.report.completedCourses = [null]; }],
+      ['report recovered', (s) => { s.report.recovered = {}; }],
+      ['equipment event', (s) => { s.report.equipment = [{ unitId: 'unit_1', event: 'lost' }]; }],
+      ['personnel event', (s) => { s.report.personnel = [{ officerId: 'off_chen', event: 'unknown', detail: 'Unknown' }]; }],
+      ['restock entry', (s) => { s.department.restockRules = [null]; }],
+      ['unlocked entry', (s) => { s.department.unlockedNodes = [{}]; }],
+      ['prototype development node', (s) => { s.department.unlockedNodes = ['__proto__']; }],
+      ['prototype training course', (s) => { s.officers.off_chen.assignment = { kind: 'training', courseId: '__proto__', startedAt: T0, endsAt: T0 }; }],
+      ['loadout quantity', (s) => { s.squads[0].loadoutPreset = { radio_kit: {} }; }],
+      ['officer role', (s) => { s.officers.off_chen.role = 'unknown'; }],
+      ['officer trait', (s) => { s.officers.off_chen.traits = ['unknown']; }],
+      ['officer certificate', (s) => { s.officers.off_chen.certs = [null]; }],
+      ['unknown unit item', (s) => { s.units.unit_1.itemId = 'missing'; }],
+      ['prototype officer reference', (s) => { s.squads[0].officerIds.push('__proto__'); }],
+      ['unknown incident', (s) => { s.incidents[0].id = 'gen:unknown:maple_street:1:1:1:1'; }],
+      ['empty debrief', (s) => { s.debriefs = [{}]; }],
+    ];
+    for (const [label, mutate] of changes) {
+      const s = structuredClone(busyState());
+      mutate(s);
+      expect(deserialize(serialize(s, T0)), label).toBeNull();
+    }
+  });
+
+  it('rejects corrupt active-run records, nested decisions and source cards', () => {
+    const goodRun = operationState(true);
+    const changes: [string, (r: any) => void][] = [
+      ['squad collection', (r) => { r.squadIds = {}; }],
+      ['empty squad collection', (r) => { r.squadIds = []; }],
+      ['task entry', (r) => { r.squadTasks = [null]; }],
+      ['task point', (r) => { r.squadTasks[0].at = { x: 1 }; }],
+      ['stage', (r) => { r.stage = 'unknown'; }],
+      ['status', (r) => { r.status = 'unknown'; }],
+      ['knowledge', (r) => { r.knowledge = { fact: 'certain' }; }],
+      ['history', (r) => { r.history = [{}]; }],
+      ['decision inputs', (r) => { r.history[0].inputs = [null]; }],
+      ['decision band', (r) => { r.history[0].band = 'unknown'; }],
+      ['decision stress', (r) => { r.history[0].stressDeltas = { off_chen: {} }; }],
+      ['decision explanation', (r) => { r.history[0].explanation = [{}]; }],
+      ['last seen point', (r) => { r.lastSeen = { person: { spaceId: 'kitchen', at: null, revision: 0 } }; }],
+      ['unknown map', (r) => { r.locationFamilyId = 'missing'; }],
+      ['unknown scenario', (r) => { r.scenarioId = '__proto__'; }],
+      ['source card shape', (r) => { r.sourceIncident = {}; }],
+      ['source card identity', (r) => { r.sourceIncident.id = 'gen:welfare_check:maple_street:1:1:1:1'; }],
+    ];
+    for (const [label, mutate] of changes) {
+      const s = structuredClone(goodRun);
+      mutate(s.activeRun);
+      expect(deserialize(serialize(s, T0)), label).toBeNull();
+    }
   });
 });
 
@@ -140,7 +239,9 @@ function v1Envelope() {
   s.reservations = [{ id: 'res_1', runId: 'run_1', squadId: 'A', itemId: 'radio_kit', qty: 2 }];
   s.activeRun = { id: 'run_1', status: 'active', squadIds: ['A'], reservationIds: ['res_1'] };
   s.officers.off_chen.assignment = { kind: 'operation', runId: 'run_1' };
-  s.debriefs = [{ runId: 'run_0', practice: false, officerCondition: [], resources: [] }];
+  s.debriefs = [{ runId: 'run_0', scenarioId: 'ms_occupancy', endingId: 'handed_over', endingTitle: 'Handed over', practice: false,
+    objective: { score: 50, label: 'Partial' }, civilianSafety: { score: 100, label: 'Safe' }, officerCondition: [],
+    informationPreserved: [], resources: [], trustDelta: 0, fundingReward: 0, devPointReward: 0, causes: [] }];
   return { saveVersion: 1, contentVersion: 1, savedAt: T0, state: s };
 }
 

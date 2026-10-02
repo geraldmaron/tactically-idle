@@ -21,7 +21,8 @@ import type {
 } from './types';
 import type { ActionDefinition, OutcomeEffect, ScenarioDefinition } from './scenario-types';
 import { scenarioActions } from './scenario-types';
-import { SCENARIOS } from '../content/scenarios';
+import { getScenario } from './scenario-registry';
+import { INCIDENT_TUNING, takeIncident } from './incidents';
 import { ITEMS } from '../content/items';
 import { hashSeed, next } from './rng';
 import { deployability, fullName } from './officer';
@@ -144,12 +145,15 @@ type StartCmd = Extract<Command, { type: 'startOperation' }>;
 export function checkStart(state: GameState, now: number, cmd: StartCmd): StartCheck {
   const issues: string[] = [];
   const warnings: string[] = [];
-  const scenario = SCENARIOS[cmd.scenarioId] ?? null;
+  const scenario = getScenario(cmd.scenarioId);
   let built: BuiltLocation | null = null;
   if (state.activeRun) issues.push('An operation is already in progress');
   if (!scenario) {
     issues.push(`Unknown operation ${cmd.scenarioId}`);
     return { issues, warnings, scenario, built };
+  }
+  if (scenario.incident && !cmd.practice && !state.incidents?.some((c) => c.id === scenario.id && c.expiresAt > Math.max(now, state.department.clockHighWater))) {
+    issues.push('This incident is no longer on the board. Replay it in practice.');
   }
   const ids = cmd.squadIds;
   if (ids.length < 1) issues.push('Choose at least one squad');
@@ -270,6 +274,9 @@ function makeRun(state: GameState, built: BuiltLocation, scenario: ScenarioDefin
     id: runId,
     scenarioId: scenario.id,
     scenarioVersion: scenario.version,
+    ...(!cmd.practice && state.incidents?.some((c) => c.id === scenario.id)
+      ? { sourceIncident: structuredClone(state.incidents.find((c) => c.id === scenario.id)!) }
+      : {}),
     locationFamilyId: scenario.locationFamilyId,
     locationSeed: scenario.locationSeed,
     contentVersion: state.contentVersion,
@@ -464,7 +471,7 @@ export function outcomeFactor(run: Pick<OperationRun, 'objective' | 'civilianSaf
 
 /** Compute the debrief for a run in 'debrief' status without mutating state. */
 export function computeDebrief(state: GameState, run: OperationRun): DebriefResult | null {
-  const scenario = SCENARIOS[run.scenarioId];
+  const scenario = getScenario(run.scenarioId);
   if (!scenario || !run.endingId) return null;
   const ending = scenario.endings[run.endingId];
   if (!ending) return null;
@@ -584,16 +591,21 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
       }
     }
     draft.activeRun = run;
+    if (!cmd.practice) takeIncident(draft, scenario.id);
     return { ok: true };
   },
 
-  cancelOperation(draft) {
+  cancelOperation(draft, _cmd, ctx) {
     const run = draft.activeRun;
     if (!run) return fail('No operation to cancel');
     if (run.status !== 'active') return fail('The operation is already over');
     if (run.history.length > 0) return fail('Cannot cancel after the first decision');
     releaseRun(draft, run.id);
     clearAssignments(draft, run);
+    if (run.sourceIncident && run.sourceIncident.expiresAt > Math.max(ctx.now, draft.department.clockHighWater)) {
+      // Give the player's cancelled call priority if idle arrivals filled the board.
+      draft.incidents = [run.sourceIncident, ...draft.incidents.filter((c) => c.id !== run.scenarioId)].slice(0, INCIDENT_TUNING.boardMax);
+    }
     draft.activeRun = null;
     return { ok: true };
   },
@@ -602,7 +614,7 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     const run = draft.activeRun;
     if (!run) return fail('No operation in progress');
     if (run.status !== 'active' || run.stage === 'debrief') return fail('The operation is over; close the debrief');
-    const scenario = SCENARIOS[run.scenarioId];
+    const scenario = getScenario(run.scenarioId);
     if (!scenario) return fail('Unknown scenario');
     const stage = run.stage;
     const action = scenario.stages[stage].actions.find((a) => a.id === cmd.actionId);
@@ -714,7 +726,7 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     if (run.settled) return fail('This debrief was already settled');
     const result = computeDebrief(draft, run);
     if (!result) return fail('Debrief unavailable');
-    const scenario = SCENARIOS[run.scenarioId];
+    const scenario = getScenario(run.scenarioId);
 
     if (!run.practice) {
       const settled = settleRun(draft, run.id, unitsUsedTotals(run), ctx.now);

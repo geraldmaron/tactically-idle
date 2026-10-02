@@ -4,6 +4,11 @@ import type { Rect } from './geometry';
 
 export const MAX_ZOOM = 4;
 
+/** preserveAspectRatio="meet" may letterbox either axis; pointer movement uses the rendered scale. */
+export function unitsPerPixel(view: Rect, width: number, height: number): number {
+  return Math.max(view.w / Math.max(width, 1), view.h / Math.max(height, 1));
+}
+
 const prefersReducedMotion = (): boolean => typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 export function clampView(v: Rect, base: Rect): Rect {

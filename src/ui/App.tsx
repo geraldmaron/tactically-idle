@@ -11,9 +11,17 @@ import { SquadScreen } from './screens/Squad';
 import { OpsScreen } from './screens/Ops';
 import { DevelopScreen } from './screens/Develop';
 import { GearScreen } from './screens/Gear';
+import { CampaignBar, SaveManager } from './components/SaveManager';
+import { useCampaigns } from './store';
 
 export function App() {
+  const saved = useCampaigns();
+  return <GameShell key={saved.session} />;
+}
+
+function GameShell() {
   const [tab, setTab] = useState<Tab>('hq');
+  const [savesOpen, setSavesOpen] = useState(false);
   const [overlay, setOverlay] = useState<HTMLElement | null>(null);
   const nav = useMemo(() => ({ tab, go: setTab }), [tab]);
 
@@ -24,6 +32,7 @@ export function App() {
           <OverlayRootContext.Provider value={overlay}>
             <ToastProvider>
               <TopBar />
+              <CampaignBar onOpen={() => setSavesOpen(true)} />
               <main className={`screen screen-${tab}`} key={tab}>
                 {tab === 'hq' && <HQ />}
                 {tab === 'squad' && <SquadScreen />}
@@ -32,6 +41,7 @@ export function App() {
                 {tab === 'gear' && <GearScreen />}
               </main>
               <BottomNav />
+              <SaveManager open={savesOpen} onClose={() => setSavesOpen(false)} />
             </ToastProvider>
           </OverlayRootContext.Provider>
         </NavContext.Provider>
