@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useGame } from '../store';
 import {
   briefing,
@@ -32,6 +32,11 @@ import { buildIntel } from './intel';
 import type { IntelLine } from './intel';
 
 export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel: () => void }) {
+  const pageRef = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const screen = pageRef.current?.closest('.screen');
+    if (screen) screen.scrollTop = 0;
+  }, [scenarioId]);
   const g = useGame();
   const now = Date.now();
   const { act, notify } = useToast();
@@ -194,7 +199,7 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
   const knownRest = brief.known.filter((k) => !intel.covered.has(k));
 
   return (
-    <div className="page prepare">
+    <div className="page prepare" ref={pageRef}>
       <div className="prep-head">
         <button type="button" className="back" onClick={onCancel}>
           <Icon name="chevronLeft" size={18} />
