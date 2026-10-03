@@ -90,6 +90,12 @@ function createController(root: HTMLElement) {
       const stops = tabStops(modal.sheet);
       const active = element(doc.activeElement);
       const index = active ? stops.indexOf(active) : -1;
+      // Review/receipt headings can hold programmatic focus without being tab
+      // stops. Preserve native adjacent navigation from that position, wrapping
+      // only when there is no usable control in the requested direction.
+      if (index === -1 && available(active) && modal.sheet.contains(active)
+        && stops.some((stop) => active.compareDocumentPosition(stop)
+          & (event.shiftKey ? active.DOCUMENT_POSITION_PRECEDING : active.DOCUMENT_POSITION_FOLLOWING))) return;
       if (index === -1 || (event.shiftKey ? index === 0 : index === stops.length - 1)) {
         event.preventDefault();
         focus((event.shiftKey ? stops.at(-1) : stops[0]) ?? modal.sheet);

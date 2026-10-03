@@ -20,8 +20,8 @@ import { Sheet } from '../components/Sheet';
 /** A saved debrief is self-contained; it never borrows history from a newer active run. */
 export function SavedDebriefContents({ debrief: d, officers }: { debrief: DebriefResult; officers: DebriefOfficers }) {
   return <div className="saved-debrief-content">
-    {d.endingSummary && <p className="debrief-narrative">{d.endingSummary}</p>}
     <DebriefSummary debrief={d} />
+    {d.endingSummary && <p className="debrief-narrative">{d.endingSummary}</p>}
     <DebriefConsequences debrief={d} />
     <OfficerResults debrief={d} officers={officers} />
     <DebriefEvidence debrief={d} decisions={d.decisions ?? []} />
@@ -45,18 +45,17 @@ export function OpsDebrief() {
     <Button variant="primary" block onClick={close}>Close</Button>
   </Card></div>;
   const decisions = d.decisions ?? decisionViews(g);
-  return <div className="page debrief">
+  return <div className="debrief-layout"><div className="page debrief">
     <div className="debrief-hero">
       <span className="kicker">{d.practice ? 'PRACTICE DEBRIEF' : 'DEBRIEF'}</span>
       <h2 className="debrief-title">{d.endingTitle}</h2>
-      {d.endingSummary && <p className="debrief-narrative">{d.endingSummary}</p>}
     </div>
     <DebriefSummary debrief={d} />
+    {d.endingSummary && <p className="debrief-narrative">{d.endingSummary}</p>}
     <DebriefConsequences debrief={d} decisions={decisions} />
     <OfficerResults debrief={d} officers={g.officers} />
     <DebriefEvidence debrief={d} decisions={decisions} />
-    <div className="stickyfoot"><Button variant="primary" block onClick={close}>Close debrief</Button></div>
-  </div>;
+  </div><div className="debrief-footer"><Button variant="primary" block onClick={close}>Close debrief</Button></div></div>;
 }
 
 function DebriefEvidence({ debrief: d, decisions }: { debrief: DebriefResult; decisions: DecisionView[] }) {

@@ -5,6 +5,8 @@ import { containSheetFocus } from './sheet-focus';
 // lifecycle/listeners, including browser-like failed focus on disabled/inert
 // controls, without adding a DOM dependency or pretending to test layout.
 class TestElement {
+  readonly DOCUMENT_POSITION_PRECEDING = 2;
+  readonly DOCUMENT_POSITION_FOLLOWING = 4;
   children: TestElement[] = [];
   parentElement: TestElement | null = null;
   attributes = new Map<string, string>();
@@ -21,12 +23,26 @@ class TestElement {
   setAttribute(name: string, value: string) { this.attributes.set(name, value); }
   removeAttribute(name: string) { this.attributes.delete(name); }
   append(child: TestElement) { child.remove(); child.parentElement = this; this.children.push(child); return child; }
+  insertBefore(child: TestElement, before: TestElement) {
+    child.remove();
+    child.parentElement = this;
+    this.children.splice(this.children.indexOf(before), 0, child);
+    return child;
+  }
   remove() {
     if (this.parentElement) this.parentElement.children.splice(this.parentElement.children.indexOf(this), 1);
     this.parentElement = null;
     if (this.contains(this.ownerDocument.activeElement)) this.ownerDocument.activeElement = this.ownerDocument.body;
   }
   contains(other: TestElement | null): boolean { return this === other || this.children.some((child) => child.contains(other)); }
+  compareDocumentPosition(other: TestElement): number {
+    if (this === other) return 0;
+    if (!this.isConnected || !other.isConnected || this.ownerDocument !== other.ownerDocument) return 1;
+    const nodes: TestElement[] = [];
+    const walk = (node: TestElement) => { nodes.push(node); node.children.forEach(walk); };
+    walk(this.ownerDocument.documentElement);
+    return nodes.indexOf(other) < nodes.indexOf(this) ? this.DOCUMENT_POSITION_PRECEDING : this.DOCUMENT_POSITION_FOLLOWING;
+  }
   matches(selector: string) { return selector === ':disabled' && this.disabled; }
   closest() : TestElement | null {
     return this.hasAttribute('inert') || this.hasAttribute('hidden') || this.getAttribute('aria-hidden') === 'true'
@@ -161,6 +177,64 @@ describe('modal sheet focus containment', () => {
     heading.setAttribute('hidden', '');
     state.doc.mutate();
     expect(state.doc.activeElement).toBe(modal.close);
+    modal.stop();
+  });
+
+  it.each([false, true])('keeps native adjacent Tab order from a heading between Close and the footer (receipt: %s)', (receipt) => {
+    const state = fixture();
+    const modal = state.modal();
+    const heading = modal.sheet.insertBefore(new TestElement(state.doc), modal.enrol);
+    heading.tabIndex = -1;
+    modal.enrol.disabled = receipt;
+    heading.focus({});
+    expect(state.doc.key('Tab').defaultPrevented).toBe(false);
+    expect(state.doc.activeElement).toBe(heading);
+    expect(state.doc.key('Tab', true).defaultPrevented).toBe(false);
+    expect(state.doc.activeElement).toBe(heading);
+    modal.stop();
+  });
+
+  it.each(['before', 'after'] as const)('wraps only at the outer edge of a heading %s every tab stop', (position) => {
+    const state = fixture();
+    const modal = state.modal();
+    const heading = new TestElement(state.doc);
+    heading.tabIndex = -1;
+    if (position === 'before') modal.sheet.insertBefore(heading, modal.close);
+    else modal.sheet.append(heading);
+    heading.focus({});
+    const backward = position === 'before';
+    expect(state.doc.key('Tab', !backward).defaultPrevented).toBe(false);
+    expect(state.doc.activeElement).toBe(heading);
+    expect(state.doc.key('Tab', backward).defaultPrevented).toBe(true);
+    expect(state.doc.activeElement).toBe(backward ? modal.done : modal.close);
+    modal.stop();
+  });
+
+  it('wraps from a heading when all controls in the requested direction are disabled', () => {
+    const state = fixture();
+    const modal = state.modal();
+    const heading = modal.sheet.insertBefore(new TestElement(state.doc), modal.enrol);
+    heading.tabIndex = -1;
+    modal.enrol.disabled = true;
+    modal.done.disabled = true;
+    heading.focus({});
+    expect(state.doc.key('Tab').defaultPrevented).toBe(true);
+    expect(state.doc.activeElement).toBe(modal.close);
+    modal.done.disabled = false;
+    modal.close.disabled = true;
+    heading.focus({});
+    expect(state.doc.key('Tab', true).defaultPrevented).toBe(true);
+    expect(state.doc.activeElement).toBe(modal.done);
+    modal.stop();
+  });
+
+  it.each([false, true])('still recovers focus retained on a disabled control before mutation delivery (backward: %s)', (backward) => {
+    const state = fixture();
+    const modal = state.modal();
+    modal.enrol.focus({});
+    modal.enrol.disabled = true;
+    expect(state.doc.key('Tab', backward).defaultPrevented).toBe(true);
+    expect(state.doc.activeElement).toBe(backward ? modal.done : modal.close);
     modal.stop();
   });
 
