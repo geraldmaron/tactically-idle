@@ -168,3 +168,6 @@
 
 /* Full skill names stay readable in the selected officer’s contribution badge. */
 .capchip { white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; }
+
+/* Portraits keep enough width for full skill names, and the strip scrolls on phones. */
+.strip { grid-auto-columns: minmax(112px, calc((100% - 24px) / 4)); }

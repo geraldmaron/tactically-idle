@@ -14,10 +14,10 @@ import { useToast } from '../components/toast';
 import { Sheet } from '../components/Sheet';
 import { Button } from '../components/ui';
 import { getScenario } from '../../sim/scenario-registry';
-import { ActionSheet, BAND_LABEL, LiveView, RoomSheet } from './LiveView';
+import { ActionSheet, LiveView, RoomSheet } from './LiveView';
 import { cardFor } from './helpers';
 import { planActionResupply } from '../../sim/equipment-resupply';
-import { OperationFeedback } from './OperationFeedback';
+import { OperationFeedback, RESULT_LABEL } from './OperationFeedback';
 
 interface Override {
   actionId: Id;
@@ -120,7 +120,7 @@ export function OpsLive() {
       const ids = new Set(spaces.map((s) => s.id));
       const spaceIds = [r.targetId, ...r.knowledgeChanges.map((k) => k.factId)].filter((x): x is Id => !!x && ids.has(x));
       setLastChange({ revision: r.revision, spaceIds });
-      notify(`${BAND_LABEL[r.band]} result recorded`, { tone: r.band === 'adverse' ? 'error' : r.band === 'favorable' ? 'ok' : 'amber', lines: ['See Last decision for the outcome, changes and causes.'] });
+      notify(`${RESULT_LABEL[r.band]}`, { tone: r.band === 'adverse' ? 'error' : r.band === 'favorable' ? 'ok' : 'amber', lines: ['See Last decision for the outcome, changes and causes.'] });
     }
   };
 

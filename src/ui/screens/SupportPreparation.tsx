@@ -60,18 +60,18 @@ export function SupportPreparation({ state, now, cmd, built, onSelect }: {
     .flatMap((squad) => squad.officerIds.map((id) => state.officers[id]))
     .filter((officer) => officer?.certs.includes('vehicle_operations'));
   const selectedIssues = selectedId ? supportStartCheck(state, now, cmd) : [];
-  return <Section title="Operation support" icon="pin" hint="Optional: choose one vehicle for the exterior support slot. Vehicle operations certification is required in a selected squad.">
+  return <Section title="Operation support" icon="pin" hint="Optional: bring one support vehicle. It stays outside the building. A selected squad needs an officer trained in vehicle operations.">
     <Card className="prep-support-summary">
       <div className="prep-support-heading">
-        <Chip tone={selectedId ? 'amber' : 'neutral'}>{selectedId ? '1 of 1 support slots selected' : 'No support vehicle selected'}</Chip>
+        <Chip tone={selectedId ? 'amber' : 'neutral'}>{selectedId ? '1 support vehicle selected' : 'No support vehicle selected'}</Chip>
         {selectedId && <Button size="sm" onClick={() => onSelect(null)}>Clear support</Button>}
       </div>
       <p className={operators.length ? 'tone-mint' : 'tone-amber'}>{operators.length
         ? `Vehicle operations: ${operators.map((officer) => `${officer.firstName} ${officer.surname}`).join(', ')}`
-        : 'Vehicle operations: choose a squad with a certified operator, or train an officer in Develop.'}</p>
+        : 'Choose a squad with an officer trained in vehicle operations, or open Squad → Training.'}</p>
       <p className="dim">{stage
         ? `Exterior staging: ${stage.label}, following squad ${leadSquad}’s starting position.${stage.tags.includes('vehicle_inaccessible') ? ' This staging area cannot take a vehicle.' : ''}`
-        : 'Choose a squad and an accessible exterior starting position to stage support.'}</p>
+        : 'Choose a squad and an outside starting position the vehicle can reach.'}</p>
       <p className="dim">{cmd.practice
         ? 'Practice support is virtual: no funding, owned stock or condition is used. Your selected squads still need a certified operator.'
         : `Available funding: ${moneyFull(state.department.funding)}. Select an owned unit below; purchase vehicles on the Gear tab.`}</p>

@@ -46,7 +46,7 @@ export function DecisionCard({ decision: d, full = false, officers = {} }: { dec
   const narrative = d.consequences.filter((line) => !line.startsWith('Next: '));
   const next = d.consequences.filter((line) => line.startsWith('Next: '));
   // Keep every saved explanation available, without repeating consequence text in the default view.
-  const causes = d.explanation.filter((line) => !d.consequences.includes(line) && !line.startsWith('Most strain:'));
+  const causes = d.explanation.filter((line) => !d.consequences.includes(line) && !line.startsWith('Most strain:')).map(plainDecisionCause);
   return (
     <article className={`decision-card decision-${d.band}`} aria-label={`${d.title}: ${RESULT_LABEL[d.band]}`}>
       <header className="decision-heading">
@@ -72,6 +72,7 @@ export function DecisionCard({ decision: d, full = false, officers = {} }: { dec
       </details>}
       {full && d.contributors.length > 0 && <details className="decision-causes">
         <summary>What affected the result</summary>
+        <p>These numbers show how much each factor helped or hindered this choice. They are not experience rewards or percentage chances.</p>
         <ul>{d.contributors.map((contributor, index) => <li key={index}>{contributor.label}: {signed(contributor.value, 1)} points</li>)}</ul>
       </details>}
     </article>
@@ -123,4 +124,10 @@ function DecisionStress({ decision: d, officers }: { decision: DecisionView; off
     {!d.actualStressDeltas && <p className="decision-legacy-note">Older record: strain may differ from the applied change.</p>}
     {changed.some((row) => row.stressAfter !== undefined) && <StressGuide />}
   </section>;
+}
+
+/** Keep the detailed contribution numbers in their breakdown, not in narrative prose. */
+export function plainDecisionCause(line: string): string {
+  if (/^(Helped most|Held back by): /.test(line)) return line.replace(/ \([+-]?\d+(?:\.\d+)?\)\.$/, '.');
+  return line;
 }
