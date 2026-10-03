@@ -1,8 +1,9 @@
-import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createContext, useContext, useLayoutEffect, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { Icon } from '../icons';
 import { useEscape } from './hooks';
+import { containSheetFocus } from './sheet-focus';
 import { observeSheetViewport, type SheetViewportInsets } from './sheet-viewport';
 import './sheet-viewport.css';
 
@@ -26,35 +27,28 @@ export interface SheetProps {
 
 export function Sheet({ open, onClose, title, subtitle, children, footer, modal = true, maxHeight = 'tall', className }: SheetProps) {
   const root = useContext(OverlayRootContext);
-  const closeRef = useRef<HTMLButtonElement>(null);
+  const backdropRef = useRef<HTMLDivElement>(null);
   const sheetRef = useRef<HTMLElement>(null);
+  const onCloseRef = useRef(onClose);
   const [viewport, setViewport] = useState<SheetViewportInsets | null>(null);
-  useEscape(open, onClose);
+  useEscape(open && !modal, onClose);
+  useLayoutEffect(() => { onCloseRef.current = onClose; }, [onClose]);
   useLayoutEffect(() => {
     if (!open || !root) return;
     return observeSheetViewport(root, (next) => setViewport((previous) =>
       previous && Object.keys(next).every((key) => next[key as keyof SheetViewportInsets] === previous[key as keyof SheetViewportInsets]) ? previous : next));
   }, [open, root]);
-  useEffect(() => {
-    if (!open || !modal) return;
-    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    closeRef.current?.focus();
-    return () => { if (opener?.isConnected) opener.focus({ preventScroll: true }); };
-  }, [open, modal]);
+  useLayoutEffect(() => {
+    if (!open || !modal || !root || !sheetRef.current) return;
+    return containSheetFocus(root, sheetRef.current, backdropRef.current, () => onCloseRef.current());
+  }, [open, modal, root]);
   if (!open || !root) return null;
   return createPortal(
     <>
-      {modal && <div className="sheet-backdrop" onClick={onClose} />}
+      {modal && <div ref={backdropRef} className="sheet-backdrop" onClick={onClose} />}
       <section
         ref={sheetRef}
-        onKeyDown={(event) => {
-          if (!modal || event.key !== 'Tab') return;
-          const elements = [...(sheetRef.current?.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [tabindex="0"]') ?? [])].filter((element) => element.getClientRects().length > 0);
-          const first = elements[0], last = elements.at(-1);
-          if (!first) { event.preventDefault(); return; }
-          if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
-          else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
-        }}
+        tabIndex={modal ? -1 : undefined}
         className={`sheet sheet-${maxHeight}${modal ? '' : ' sheet-nonmodal'}${className ? ` ${className}` : ''}`}
         data-viewport-constrained={viewport && (viewport.top > 0 || viewport.bottom > 0) ? true : undefined}
         style={viewport ? {
@@ -71,7 +65,7 @@ export function Sheet({ open, onClose, title, subtitle, children, footer, modal 
             <h2 className="sheet-title">{title}</h2>
             {subtitle && <div className="sheet-sub">{subtitle}</div>}
           </div>
-          <button ref={closeRef} type="button" className="icon-btn" onClick={onClose} aria-label="Close">
+          <button type="button" className="icon-btn" onClick={onClose} aria-label="Close">
             <Icon name="x" size={20} />
           </button>
         </header>

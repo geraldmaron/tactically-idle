@@ -185,7 +185,7 @@ export function TrainingStore({ requestedCert, requestedOfficer, requestedCourse
 export function TrainingEnrolmentActions({ course, onDone }: { course: Course; onDone: () => void }) {
   return <>
     <p className="training-confirm-cost">{money(course.cost)} funding paid · {course.hours} game hours</p>
-    <div className="training-confirm-actions"><Button onClick={(event) => { if (event.detail <= 1) onDone(); }}>Done</Button><Button variant="primary" disabled>Enrolled</Button></div>
+    <div className="training-confirm-actions"><Button variant="primary" onClick={(event) => { if (event.detail <= 1) onDone(); }}>Done</Button><Button disabled>Enrolled</Button></div>
   </>;
 }
 
