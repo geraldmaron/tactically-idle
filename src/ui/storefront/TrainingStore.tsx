@@ -162,7 +162,7 @@ export function TrainingStore({ requestedCert, requestedOfficer, requestedCourse
         <div className="training-confirm-details"><p>{game.department.funding >= selectedCourse.cost ? `Funding: ${money(game.department.funding)} → ${money(game.department.funding - selectedCourse.cost)}` : `Funding: ${money(game.department.funding)} of ${money(selectedCourse.cost)} needed`}</p><p>{Math.max(0, game.department.trainingSlots - inTraining)} training {game.department.trainingSlots - inTraining === 1 ? 'slot' : 'slots'} free</p><p className="dim">Away from squad duties for {selectedCourse.hours} game hours. Grants arrive on completion; XP may also improve a rating.</p></div>
         {feedback?.courseId === selectedCourse.id && <p className="reason" role="status">{feedback.text}</p>}
       </div> : <div className="training-candidates">
-        <div className="training-comparison-intro"><p>{selectedCourse.grants.cert ? `Certification on completion: ${CERT_LABEL[selectedCourse.grants.cert]}.` : `Compare current ratings and direct course gains. Enrolment requires a rating below ${COURSE_RATING_CEILING}.`} XP may also improve a rating.</p><p className="dim" role="status">{eligible} can enrol · {candidates.length - eligible} unavailable · {candidates.length} officers shown</p></div>
+        <div className="training-comparison-intro"><p>{selectedCourse.grants.cert ? `Certification on completion: ${CERT_LABEL[selectedCourse.grants.cert]}.` : `Compare current ratings and direct course gains. Enrol below ${COURSE_RATING_CEILING}.`} Gains arrive on completion; XP may also improve a rating.</p><p className="dim" role="status">{eligible} can enrol · {candidates.length - eligible} unavailable · Stress: lower is better</p></div>
         {selectedCourse.requiresNode && !game.department.unlockedNodes.includes(selectedCourse.requiresNode) && <div className="training-program-lock"><p className="reason">Requires {DEV_NODES[selectedCourse.requiresNode]?.name ?? selectedCourse.requiresNode}</p><Button size="sm" onClick={() => openDevelopment(selectedCourse.requiresNode!)}>View development program</Button></div>}
         {!candidates.length && <EmptyState icon="people" title="No officers to train">Recruit an officer before starting a course.</EmptyState>}
         {candidates.map((candidate) => <TrainingOfficerCard key={candidate.officer.id} candidate={candidate} now={game.department.clockHighWater} selected={candidate.officer.id === officerId} onSelect={() => {
@@ -175,13 +175,13 @@ export function TrainingStore({ requestedCert, requestedOfficer, requestedCourse
   </div>;
 }
 
-function TrainingGain({ course, officer }: { course: Course; officer: Officer }) {
+function TrainingGain({ course, officer, compact = false }: { course: Course; officer: Officer; compact?: boolean }) {
   const gain = trainingRatingGain(course, officer);
   const cert = course.grants.cert;
   if (gain) return <p className={`training-gain${gain.delta ? ' training-gain-positive' : ''}`}>
-    <span>Direct course gain</span>
+    {!compact && <span>Direct course gain</span>}
     <strong>{RATING_META.find((meta) => meta.key === gain.key)?.short}: {gain.before} → {gain.after}</strong>
-    <span>{gain.delta ? `+${gain.delta} on completion` : `Enrolment cutoff reached (${COURSE_RATING_CEILING})`}</span>
+    {(!compact || !gain.delta) && <span>{gain.delta ? `+${gain.delta} on completion` : `Enrolment cutoff reached (${COURSE_RATING_CEILING})`}</span>}
   </p>;
   return cert ? <p className="training-gain"><strong>{officer.certs.includes(cert) ? `Already certified: ${CERT_LABEL[cert]}` : `Earns ${CERT_LABEL[cert]}`}</strong></p> : null;
 }
@@ -190,17 +190,14 @@ function TrainingGain({ course, officer }: { course: Course; officer: Officer })
 export function TrainingOfficerCard({ candidate: { officer, option }, now, selected, onSelect }: { candidate: TrainingCandidate; now: number; selected?: boolean; onSelect?: () => void }) {
   const keys = trainingRatingKeys(option.course);
   return <article className={`training-officer-card${selected ? ' training-officer-selected' : ''}`} data-training-candidate={officer.id} tabIndex={-1} aria-label={`${fullName(officer)}, ${option.available ? 'can enrol' : 'unavailable'}`}>
-    <div className="training-person"><Portrait officer={officer} size={52} className="training-portrait" /><div className="training-person-name"><strong>{fullName(officer)}</strong><span className="dim">{ROLE_META[officer.role].label}{officer.squadId ? ` · Squad ${officer.squadId}` : ' · Unassigned'}</span><span className="training-condition">{trainingOfficerCondition(officer, now)}</span></div>{selected && <span className="training-selected-label">Selected</span>}</div>
-    <p className="training-stress">Stress {Math.round(officer.stress)}/100 <span className="dim">· lower is better</span></p>
+    <div className="training-person"><Portrait officer={officer} size={52} className="training-portrait" /><div className="training-person-name"><strong>{fullName(officer)}</strong><span className="dim">{ROLE_META[officer.role].label}{officer.squadId ? ` · Squad ${officer.squadId}` : ' · Unassigned'}</span><span className="training-condition">{trainingOfficerCondition(officer, now)} · Stress {Math.round(officer.stress)}/100</span></div>{selected && <span className="training-selected-label">Selected</span>}</div>
     <div className="training-rating-list" aria-label="Current relevant ratings">{keys.map((key) => {
       const meta = RATING_META.find((rating) => rating.key === key)!;
       return <div className="training-rating" key={key}><div><span title={meta.label}>{meta.short}</span><strong>{officer.ratings[key]}</strong></div><Meter value={officer.ratings[key]} label={meta.label} /></div>;
     })}</div>
-    <TrainingGain course={option.course} officer={officer} />
-    <p className="training-xp">+{courseXpGain(option.course.hours)} XP on completion</p>
+    <div className="training-benefits" aria-label="On completion"><TrainingGain course={option.course} officer={officer} compact /><span className="training-xp">+{courseXpGain(option.course.hours)} XP</span></div>
     {!!option.course.requiresCerts?.length && <p className="training-prerequisite">Prior qualification: {option.course.requiresCerts.map((cert) => `${CERT_LABEL[cert]} (${officer.certs.includes(cert) ? 'held' : 'needed'})`).join(' · ')}</p>}
-    {officer.certs.length > 0 ? <details className="training-cert-list"><summary>Certifications ({officer.certs.length})</summary><p>{officer.certs.map((cert) => CERT_LABEL[cert]).join(' · ')}</p></details> : <p className="training-current-certs dim">No certifications</p>}
-    {option.reason ? <p className="reason">{option.reason}</p> : <p className="training-eligible">Can enrol</p>}
+    {option.reason ? <p className="reason">{option.reason}</p> : !onSelect && <p className="training-eligible">Can enrol</p>}
     {onSelect && <Button block size="sm" variant={option.available ? 'primary' : 'secondary'} disabled={!option.available} onClick={onSelect} aria-label={`Select ${fullName(officer)} for ${option.course.name}`}>Select {officer.firstName}</Button>}
   </article>;
 }
