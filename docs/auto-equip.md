@@ -1,9 +1,13 @@
-# Auto-equip
+# Mission equipment recommendations
 
-In an incident briefing, choose squads and use **Auto-equip** to fill gear choices that have not been set yet. The planner uses the incident's action requirements, relevant officer capabilities and certifications, and the department's usable stock. Scarce specialist tools go to the squad best suited to use them. Unit serials and reasons are shown beneath each squad.
+Auto-equip adds useful owned equipment to preparation. It preserves explicit manual quantities, exact unit picks and zero quantities, and reserves non-target squad selections first. It does not purchase gear, spend funding or invent units. Radios are standard kit: exactly one usable unit per selected officer is reserved automatically.
 
-Existing specialist-gear quantities and exact unit choices are kept, including an item deliberately reduced to zero. Radios are mandatory standard kit: one usable owned radio per deployed officer is loaded automatically, with an explicit stock-shortage message when unavailable. A squad's **Auto** button changes only that squad and respects stock already chosen for the others. **Undo auto-equip** restores the previous preparation choices; changing a quantity, preset, or selected squad ends that undo opportunity. Repeating Auto-equip does not keep accumulating equipment.
+The shared equipment-requirements model derives action hard requirements, alternative bundles, certifications and contextual optional benefits. Briefing, preparation repair, field resupply and the recommendation use the same declared requirements. An optional tactic is never presented as a mandatory deployment requirement.
 
-The planner packs at most one unit of each equipment type per squad and bounds consumables by relevant incident stages. This is a packing recommendation, not a new carry-capacity rule. Manual quantities may be larger. Powered equipment needs battery supplies, and certification-gated tools are recommended only to qualified squads. Missing gear, unavailable personnel, and retained manual requests that exceed stock are explained in the preparation screen.
+The planner ranks genuinely qualified participants and actual serviceable unit contribution in public context. Daylight lights, nighttime binoculars and a solo-squad relay are not useful bonuses. Better nominal equipment can lose to a healthier simpler item. Hidden truth and person positions are never recommendation inputs.
 
-Auto-equip only prepares a loadout. It does not buy, service, consume, or reserve stock, and does not change funding. Deployment reserves the exact physical units, and the existing operation save preserves those reservations across reloads. Leaving preparation cancels the draft choices. Practice uses the game's existing simulated practice equipment.
+Reusable equipment is bounded to useful participating squads. Consumables cover feasible sequential uses; simply sharing a stage does not make actions mutually exclusive. Complete required bundles precede optional bonuses. There is no invented hand-carried capacity rule. Manual requests exceeding available stock stay visible with a shortage rather than being silently clipped.
+
+Power is included with equipment. Separate battery stock is retired by save migration and unused units refunded at their historical $40 price. Legacy scenario IDs and historical decisions remain readable through integrated-power compatibility.
+
+A recommendation is a deterministic suggestion with reasons and shortages. It is not a guarantee of success or a claim of global mathematical optimality. Undo restores the previous preparation selections where safe.

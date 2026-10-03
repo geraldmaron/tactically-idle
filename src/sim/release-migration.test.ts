@@ -102,6 +102,24 @@ describe('published v4 saves upgraded to integrated power and tiered development
     expect(deserialize(serialize(loaded, NOW))).toEqual(loaded);
   });
 
+  it('can finish and close the old operation after reload without losing recorded battery use or repeating rewards', () => {
+    const loaded = deserialize(activeV4Text)!;
+    const historicalDecisions = decisionViews(loaded);
+    const direct = playPolicy(loaded, {}).state;
+    const resumed = playPolicy(deserialize(serialize(loaded, NOW))!, {}).state;
+    expect(resumed).toEqual(direct);
+    expect(resumed.activeRun).toBeNull();
+    expect(resumed.reservations).toEqual([]);
+    expect(resumed.debriefs[0].decisions!.slice(0, 2)).toEqual(historicalDecisions);
+    expect(resumed.debriefs[0].decisions![1].supplies).toContainEqual({ itemId: 'battery_pack', label: 'Battery pack', qty: 1 });
+    expect(resumed.department.funding).toBe(loaded.department.funding + resumed.debriefs[0].fundingReward);
+    expect(resumed.department.devPoints).toBe(loaded.department.devPoints + resumed.debriefs[0].devPointReward);
+    expect(deserialize(serialize(resumed, NOW))).toEqual(resumed);
+    const repeated = dispatch(resumed, { type: 'closeDebrief' }, { now: NOW });
+    expect(repeated.result.ok).toBe(false);
+    expect(repeated.state).toBe(resumed);
+  });
+
   it('deduplicates historical entitlements but rejects duplicate current entitlements', () => {
     const raw = v4();
     raw.state.department.unlockedNodes.push('personnel_academy');
@@ -133,6 +151,24 @@ describe('published v4 saves upgraded to integrated power and tiered development
   ] as const)('rejects %s before retiring units or claiming a refund', (_name, mutate) => {
     const raw = v4(); mutate(raw);
     expect(deserialize(JSON.stringify(raw))).toBeNull();
+  });
+
+  it.each([
+    ['missing map', (state: any) => { delete state.department.developmentTiers; }],
+    ['array map', (state: any) => { state.department.developmentTiers = []; }],
+    ['unknown node', (state: any) => { state.department.developmentTiers.unreleased_node = 1; }],
+    ['zero tier', (state: any) => { state.department.developmentTiers.personnel_academy = 0; }],
+    ['negative tier', (state: any) => { state.department.developmentTiers.personnel_academy = -1; }],
+    ['fractional tier', (state: any) => { state.department.developmentTiers.personnel_academy = 1.5; }],
+    ['string tier', (state: any) => { state.department.developmentTiers.personnel_academy = '2'; }],
+    ['service above maximum', (state: any) => { state.department.developmentTiers.personnel_academy = 4; }],
+    ['one-time program above maximum', (state: any) => { state.department.developmentTiers.personnel_recruiting = 2; }],
+    ['entitlement without tier', (state: any) => { delete state.department.developmentTiers.personnel_academy; }],
+    ['tier without entitlement', (state: any) => { state.department.unlockedNodes = state.department.unlockedNodes.filter((id: string) => id !== 'personnel_academy'); }],
+    ['prototype node', (state: any) => { state.department.developmentTiers = JSON.parse('{"__proto__":1}'); }],
+  ] as const)('rejects a current-version tier map with %s', (_name, mutate) => {
+    const loaded = deserialize(activeV4Text)!; mutate(loaded);
+    expect(deserialize(serialize(loaded, NOW))).toBeNull();
   });
 });
 

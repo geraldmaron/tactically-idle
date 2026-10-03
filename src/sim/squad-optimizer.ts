@@ -416,7 +416,7 @@ export function normalizeSquadArrangementState(state: GameState): void {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) { delete (state as StateExt).squadArrangement; return; }
   const data = raw as Record<string, unknown>;
   const clean: SquadArrangementState = {
-    officerLocks: Array.isArray(data.officerLocks) ? sorted([...new Set(data.officerLocks.filter((id): id is Id => typeof id === 'string' && !!state.officers[id]))]) : [],
+    officerLocks: Array.isArray(data.officerLocks) ? sorted([...new Set(data.officerLocks.filter((id): id is Id => typeof id === 'string' && Object.hasOwn(state.officers, id)))]) : [],
     squadLocks: Array.isArray(data.squadLocks) ? sorted([...new Set(data.squadLocks.filter((id): id is SquadId => typeof id === 'string' && state.squads.some((s) => s.id === id)))]) : [],
   };
   if (data.undo && typeof data.undo === 'object') {
