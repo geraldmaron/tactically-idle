@@ -91,7 +91,7 @@ describe('scannable debrief results', () => {
   it('keeps structured losses visible while leaving adverse scoring details in the full log', () => {
     const failed = { ...decision, band: 'adverse' as const, objectiveDelta: -8, civilianSafetyDelta: 0, consequences: ['The transfer was not completed.'], explanation: ['Coordination 42 contributed 11 points.', 'The time cost was four minutes.'] };
     const lines = visibleDebriefConsequences({ ...result, decisions: [failed] });
-    expect(lines).toContain('Provide aid: Objective -8.');
+    expect(lines).toContain('Provide aid: Call progress -8.');
     expect(lines).toContain('Provide aid: The transfer was not completed.');
     expect(lines.join(' ')).not.toContain('Coordination 42');
     expect(lines.join(' ')).not.toContain('The time cost');

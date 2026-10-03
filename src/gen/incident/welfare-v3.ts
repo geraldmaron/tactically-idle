@@ -125,7 +125,7 @@ export function buildWelfareV3(ctx: V3Context): void {
   };
   const close = action(ctx, 'v3_welfare_close', 'resolve', 'Close the mistaken report', 'Tell the caller what you checked and explain why the report was wrong.', 'intel', {
     favorable: 'Explain the correction to the caller and close the mistaken report.',
-    mixed: 'The caller needs another explanation before the report can be closed.',
+    mixed: 'Close the mistaken report after taking extra time to explain it to the caller.',
     adverse: 'Explaining the mistake takes longer, but the report is still closed.',
   }, { visibleWhen: { facts: [{ factId: 'f_person', in: ['disproved'] }, { factId: 'f_context', in: ['disproved'] }] }, requires: { facts: [{ factId: 'f_person', in: ['disproved'], reason: 'Check that the person is not there first' }, { factId: 'f_context', in: ['disproved'], reason: 'Check that no help is needed' }] }, consequenceLevel: 'low', stressBase: 1 });
   close.outcomes = { favorable: [{ ending: 'report_disproved', objective: 100, text: 'The caller received an explanation of the mistake. The report is closed.' }], mixed: [{ ending: 'report_disproved', objective: 90, extraMinutes: 2, text: 'The caller needed clarification, but the correction and closure were recorded.' }], adverse: [{ ending: 'report_disproved', objective: 84, extraMinutes: 4, text: 'Explaining the mistake took longer. The report was wrong and is now closed.' }] };

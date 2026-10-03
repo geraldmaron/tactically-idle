@@ -127,6 +127,62 @@ function navigationFixture() {
 }
 
 describe('department help navigation', () => {
+  it('reconciles a retained help entry on reload so the same metric can reopen without changing the player route', () => {
+    const state = navigationFixture();
+    state.help.open('trust');
+    const savedRoute = structuredClone(state.history.state[PLAYER_NAV_HISTORY_KEY]);
+    let reloadedTopic: DepartmentStat | null = null;
+    // A real reload retains history but recreates component state and may repeat useId.
+    const reloaded = createDepartmentHelpNavigation(state.history, 'header', (next) => { reloadedTopic = next; });
+    reloaded.initialize();
+    expect(reloadedTopic).toBeNull();
+    expect(state.history.state[TOPBAR_HELP_HISTORY_KEY]).toBeUndefined();
+    expect(state.history.state[PLAYER_NAV_HISTORY_KEY]).toEqual(savedRoute);
+    expect(state.history.state.campaign).toBe(3);
+    expect(state.history.back).not.toHaveBeenCalled();
+    expect(reloaded.open('trust')).toBe(true);
+    expect(reloadedTopic).toBe('trust');
+    expect(state.history.state[PLAYER_NAV_HISTORY_KEY]).toEqual(savedRoute);
+    reloaded.close();
+    expect(state.history.back).toHaveBeenCalledOnce();
+    state.back();
+    reloaded.onPop();
+    expect(reloadedTopic).toBeNull();
+    expect(state.history.state[PLAYER_NAV_HISTORY_KEY]).toEqual(savedRoute);
+    expect(reloaded.open('trust')).toBe(true);
+    expect(reloadedTopic).toBe('trust');
+  });
+
+  it('recovers a matching retained topic even before mount reconciliation without stacking history', () => {
+    const state = navigationFixture();
+    state.help.open('funding');
+    const select = vi.fn();
+    const reloaded = createDepartmentHelpNavigation(state.history, 'header', select);
+    expect(reloaded.open('funding')).toBe(false);
+    expect(select).toHaveBeenCalledExactlyOnceWith('funding');
+    expect(state.entries).toHaveLength(3);
+  });
+
+  it('initialization preserves unrelated owners and malformed markers and tolerates remount lifecycle replay', () => {
+    const state = navigationFixture();
+    state.help.open('level');
+    const foreign = createDepartmentHelpNavigation(state.history, 'another-header', vi.fn());
+    const before = structuredClone(state.history.state);
+    foreign.initialize();
+    expect(state.history.state).toEqual(before);
+    state.help.initialize();
+    state.help.dispose();
+    state.help.initialize();
+    expect(state.help.open('level')).toBe(true);
+    expect(state.topic()).toBe('level');
+    state.history.replaceState({ ...state.history.state, [TOPBAR_HELP_HISTORY_KEY]: { owner: 'header', topic: 'invalid' } });
+    const malformed = structuredClone(state.history.state);
+    state.help.initialize();
+    expect(state.history.state).toEqual(malformed);
+    expect(state.help.open('income')).toBe(true);
+    expect(state.topic()).toBe('income');
+  });
+
   it('uses one shared history entry, ignores repeated opening and keeps the current player route', () => {
     const state = navigationFixture();
     const before = state.player.getRoute();

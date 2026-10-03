@@ -29,9 +29,9 @@ export function StressDisplay({ value, before, label = 'Stress', compact = false
 
 export function StressGuide() {
   return <details className="stress-guide"><summary>How stress affects officers</summary><p>Lower is better. Stress can reduce an officer’s performance. Training, injury and current duties also affect whether they can join an operation.</p><ol>
-    <li><strong>0–{STRESS_BANDS.strained - 1} · Low stress</strong><span>No stress restrictions.</span></li>
-    <li><strong>{STRESS_BANDS.strained}–{STRESS_BANDS.overloaded - 1} · Under strain</strong><span>Can still take part, with reduced performance.</span></li>
-    <li><strong>{STRESS_BANDS.overloaded}–{STRESS_BANDS.recovery - 1} · Overloaded</strong><span>Sits out high-risk actions.</span></li>
+    <li><strong>Below {STRESS_BANDS.strained} · Low stress</strong><span>No stress restrictions.</span></li>
+    <li><strong>{STRESS_BANDS.strained} to under {STRESS_BANDS.overloaded} · Under strain</strong><span>Can still take part, with reduced performance.</span></li>
+    <li><strong>{STRESS_BANDS.overloaded} to under {STRESS_BANDS.recovery} · Overloaded</strong><span>Sits out high-risk actions.</span></li>
     <li><strong>{STRESS_BANDS.recovery}–100 · Needs rest</strong><span>Cannot deploy again until stress falls below {STRESS_BANDS.recovery}.</span></li>
   </ol></details>;
 }

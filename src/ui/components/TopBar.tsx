@@ -20,10 +20,24 @@ export function createDepartmentHelpNavigation(history: HistoryPort, owner: stri
     const value = history.state?.[TOPBAR_HELP_HISTORY_KEY];
     return value?.owner === owner && Object.hasOwn(STAT_TITLES, value.topic) ? value as { owner: string; topic: DepartmentStat } : null;
   };
+  const clearOwnedMarker = () => {
+    if (!owned()) return;
+    const next = { ...history.state };
+    delete next[TOPBAR_HELP_HISTORY_KEY];
+    history.replaceState(next, '');
+  };
   return {
+    initialize() {
+      // Reloading resets the transient sheet. Reconcile its retained history
+      // marker as well; a repeated useId must not make its trigger a no-op.
+      closing = false;
+      clearOwnedMarker();
+      select(null);
+    },
     open(topic: DepartmentStat) {
       const current = owned();
-      if (closing || current?.topic === topic) return false;
+      if (closing) return false;
+      if (current?.topic === topic) { select(topic); return false; }
       const next = { ...history.state, [TOPBAR_HELP_HISTORY_KEY]: { owner, topic } };
       if (current) history.replaceState(next, ''); else history.pushState(next, '');
       select(topic);
@@ -35,12 +49,7 @@ export function createDepartmentHelpNavigation(history: HistoryPort, owner: stri
       else select(null);
     },
     onPop() { closing = false; select(owned()?.topic ?? null); },
-    dispose() {
-      if (!owned()) return;
-      const next = { ...history.state };
-      delete next[TOPBAR_HELP_HISTORY_KEY];
-      history.replaceState(next, '');
-    },
+    dispose: clearOwnedMarker,
   };
 }
 
@@ -54,6 +63,7 @@ export function TopBar() {
   useEffect(() => {
     const current = navigation.current;
     if (!current) return;
+    current.initialize();
     window.addEventListener('popstate', current.onPop);
     return () => { window.removeEventListener('popstate', current.onPop); current.dispose(); };
   }, []);

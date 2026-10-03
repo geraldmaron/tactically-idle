@@ -14,7 +14,7 @@ const scoreTone = (value: number) => value >= 70 ? 'hi' : value >= 40 ? 'mid' : 
 export function DebriefSummary({ debrief: d }: { debrief: DebriefResult }) {
   return <Card className="result-summary">
     <div className="result-scores">
-      {([{ label: 'Objective', icon: 'flag', result: d.objective }, { label: 'Civilian safety', icon: 'civilian', result: d.civilianSafety }] as const).map(({ label, icon, result }) => <section className="result-score" key={label} aria-label={`${label} ${Math.round(result.score)}/100`}>
+      {([{ label: 'Call progress', icon: 'flag', result: d.objective }, { label: 'Civilian safety', icon: 'civilian', result: d.civilianSafety }] as const).map(({ label, icon, result }) => <section className="result-score" key={label} aria-label={`${label} ${Math.round(result.score)}/100`}>
         <span className="result-score-label"><Icon name={icon} size={16} />{label}</span>
         <strong className="result-score-value">{Math.round(result.score)}<span>/100</span></strong>
         <Meter value={result.score} tone={scoreTone(result.score)} label={label} valueText={`${Math.round(result.score)} of 100; ${result.label}`} />
@@ -83,7 +83,7 @@ export function visibleDebriefConsequences(d: DebriefResult, decisions: Decision
     const evidence = decision.explanation.filter((line) => consequenceWords.test(line));
     const losses = [
       ...(decision.civilianSafetyDelta < 0 ? [`Civilian safety ${signed(decision.civilianSafetyDelta, 1)}.`] : []),
-      ...(decision.objectiveDelta < 0 ? [`Objective ${signed(decision.objectiveDelta, 1)}.`] : []),
+      ...(decision.objectiveDelta < 0 ? [`Call progress ${signed(decision.objectiveDelta, 1)}.`] : []),
     ];
     return [...new Set([...losses, ...narrative, ...evidence])].map((line) => `${decision.title}: ${line}`);
   });
