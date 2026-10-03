@@ -17,7 +17,7 @@ The production build now includes `harness.html`. Open `harness.html?only=app&w=
 
 This is an iframe running the actual app, so viewport units and media queries use its dimensions. Changing its size retains its temporary session. The outer inspection area deliberately scrolls if a tablet or desktop test frame is wider than the browser.
 
-The iframe uses `sandbox="allow-scripts"` without `allow-same-origin` and a dedicated `ti-responsive-preview=1` query. Both being framed and that exact flag are required to choose a private in-memory `SaveStorage`; a top-level game with the flag still uses normal production behavior. The preview never accesses real localStorage or Web Locks. It uses the same `CampaignSlots` implementation, with the ordinary local promise queue serializing its operations. Its initial populated slot, copies, renames and new games stay testable without touching existing campaigns. The campaign bar and save dialog explicitly label all slots as temporary; the entire library is lost when the frame reloads.
+The iframe uses `sandbox="allow-scripts allow-forms"` without `allow-same-origin` and a dedicated `ti-responsive-preview=1` query. Forms are allowed so React's local submit handlers run; same-origin, popup and top-navigation privileges remain absent. Both being framed and that exact flag are required to choose a private in-memory `SaveStorage`; a top-level game with the flag still uses normal production behavior. The preview never accesses real localStorage or Web Locks. It uses the same `CampaignSlots` implementation, with the ordinary local promise queue serializing its operations. Its initial populated slot, copies, renames and new games stay testable without touching existing campaigns. The campaign bar and save dialog explicitly label all slots as temporary; the entire library is lost when the frame reloads.
 
 A blank frame is a harness failure, commonly module CORS on a host that rejects the opaque `null` origin. Check console/network errors before using it. Do not remove the storage sandbox to make a test appear to pass.
 
@@ -36,12 +36,32 @@ At each size, inspect both the pixels and element bounds. A document-level `scro
 
 Check that every action is reachable, labels wrap, controls do not overlap, and scrolling a screen or sheet does not create horizontal page movement. For dialogs, test at the top and bottom of the body and verify the close button and footer remain reachable.
 
-## Evidence for this change
+## Hosted results, 2026-10-03
 
-- Source audit completed across every screen and sheet. Fixes use minimum-size constraints, flexible grid tracks and wrapping; no new page-level horizontal clipping was added.
-- The user's phone screenshot was inspected, including the long live action title, decision switcher, blocked-equipment reason and confirmation footer.
-- The existing hosted build was inspected in a cloud browser at 1180 × 757, which produced a 430px game frame. HQ, Gear, the save dialog and the Squad rename form had no elements outside the frame in those states. These observations concern the pre-change hosted build.
-- The new app/harness production bundles compile at both `/` and `/tactically-idle/`, and `dist/harness.html` is emitted with the appropriate base path.
-- Updated pixels at 320/375/390/430/tablet/desktop widths, sandbox module loading, and phone safe areas have **not** been verified in this environment. Local preview navigation was denied earlier; no alternate preview route was used. The cloud browser has no documented viewport-resize API, and the updated harness has not been deployed.
+The source audit and the user's phone screenshot informed the fixes. The hosted build at commit `05da89a33441e5e9e2b68b70d255c6fadfeb99c8` was then inspected in the cloud browser through real iframe viewports. The sandbox loaded the module assets successfully, displayed `TEST` and `Temporary test saves`, and kept its own initial populated slot. No normal browser save was reset or edited.
 
-Treat the viewport list as required follow-up coverage, not as a passing results table. Once the updated build is available through an authorized preview or deployment, verify the sandbox frame loads first, then record the results of the matrix above.
+| Viewport | Primary screens | Officer / Gear / room / action sheets | Save library and edit-form layout | Debrief |
+| --- | --- | --- | --- | --- |
+| 320 × 568 | No horizontal overflow | No horizontal overflow | No horizontal overflow | No horizontal overflow |
+| 375 × 667 | No horizontal overflow | No horizontal overflow | No horizontal overflow | No horizontal overflow |
+| 390 × 844 | No horizontal overflow; header issue below | No horizontal overflow | No horizontal overflow | No horizontal overflow |
+| 430 × 932 | No horizontal overflow | No horizontal overflow | No horizontal overflow | No horizontal overflow |
+| 768 × 1024 | No horizontal overflow | No horizontal overflow | No horizontal overflow | No horizontal overflow |
+| 1280 × 800 | No horizontal overflow | No horizontal overflow | No horizontal overflow | No horizontal overflow |
+
+These checks used screenshots and child-element bounds against the app frame, including content below each scroller's current position. The SVG drawing, deliberately scrollable portrait strip and screen-reader-only content were excluded from the offscreen-element scan. Observed HTML buttons measured at least 44 × 44px; small SVG room shapes remain available through the full-size Rooms-list alternative. Tablet and desktop retain the centered 430px portrait layout.
+
+Additional observed coverage:
+
+- All five primary tabs at each width, Equipment Manager before/after hire and with active budget controls, 20-character squad-name edit fields, officer condition/rating content, Gear unit controls, populated save library, 36-character save-name fields and copy forms
+- Automatic radio shortage, exact purchase button, and blocked Deploy at 320/375/390px; buying two test radios cleared the shortage and allowed a two-squad deployment
+- Long `Call at the bedroom door` title, wrapped decision buttons, exact-unit resupply preview and pinned confirm footer at every width; inline resupply enabled Confirm in the temporary campaign
+- Separate map zoom and Materials/Rooms rows at 320px: zoom buttons measured 44 × 44px with an 8px vertical gap before the 44px Materials/Rooms controls
+- Rooms and room facts at each width, followed by a complete temporary operation and debrief at each width
+
+Two defects from the hosted sweep are corrected in source and require the small follow-up deployment:
+
+1. At 390px with four-digit funding such as `$9,920`, the level badge wrapped onto its own header row. The top bar now keeps a single flex row so its shrinkable wordmark yields space; the status group can still wrap unusually long values.
+2. The first hosted harness used only `allow-scripts`, which prevented form submit handlers. Squad Save and save-rename/copy submissions were therefore **not** successful in that build. The harness now also allows forms while keeping same-origin and other privileges absent. Its query/frame gate and in-memory storage isolation are covered by focused tests. Recheck saved long names, copy, rename and New Game after this harness correction is deployed.
+
+The production app/harness bundles compile for both `/` and `/tactically-idle/`. Local preview navigation was denied earlier and no alternate local route was attempted. Physical iOS/Android touch, real safe-area insets, software-keyboard behavior and 200% browser/text zoom remain unverified here; a sized browser frame is not hardware emulation.
