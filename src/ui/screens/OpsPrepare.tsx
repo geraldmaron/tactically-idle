@@ -10,6 +10,8 @@ import type { StartOperationCommand } from '../../sim/operation-selectors';
 import { squadReadiness, storeOptions } from '../../sim/department-selectors';
 import type { StoreOption } from '../../sim/department-selectors';
 import { unitEffectiveness } from '../../sim/inventory';
+import { standardRadioPlan, STANDARD_RADIO } from '../../sim/standard-kit';
+import { projectedCondition } from '../../sim/equipment';
 import { stagingPointsIn } from '../../sim/spatial';
 import { spaceName } from '../../sim/resolution';
 import { ITEMS } from '../../content/items';
@@ -24,9 +26,10 @@ import { useToast } from '../components/toast';
 import { UNIT_STATE_META, unitStateOf } from '../components/labels';
 import { Icon, itemIcon } from '../icons';
 import type { IconName } from '../icons';
-import { pct } from '../format';
+import { moneyFull, pct } from '../format';
 import { cardFor, hasNodeEffect, isReplayOnly } from './helpers';
-import { planAuto } from './autoPlan';
+import { planAuto, planPreparationEquipment } from './autoPlan';
+import { scenarioActions } from '../../sim/scenario-types';
 import type { AutoNote, Explicit, Loadouts } from './autoPlan';
 import { buildIntel } from './intel';
 import type { IntelLine } from './intel';
@@ -52,7 +55,7 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
 
   const [chosen, setChosen] = useState<SquadId[]>([]);
   const [positions, setPositions] = useState<Partial<Record<SquadId, Id>>>({});
-  const [loadouts, setLoadouts] = useState<Loadouts>({});
+  const [optionalLoadouts, setLoadouts] = useState<Loadouts>({});
   const [explicit, setExplicit] = useState<Explicit>({});
   const [autoNote, setAutoNote] = useState<Partial<Record<SquadId, AutoNote>>>({});
   const [autoWarnings, setAutoWarnings] = useState<string[]>([]);
@@ -65,6 +68,13 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
   const [staging, setStaging] = useState<Partial<Record<SquadId, Id>>>({});
   const [practice, setPractice] = useState(replay);
   const [floor, setFloor] = useState(0);
+
+  const radioPlan = useMemo(() => standardRadioPlan(g, chosen, now), [g, chosen, now]);
+  const loadouts = useMemo<Loadouts>(() => {
+    const next = { ...optionalLoadouts };
+    for (const sid of chosen) next[sid] = { ...next[sid], ...radioPlan.loadouts[sid] };
+    return next;
+  }, [optionalLoadouts, chosen, radioPlan]);
 
   const range = card?.squadRange ?? { min: 1, max: 4 };
   const defaultEntry = brief.entries[0]?.id;
@@ -89,7 +99,7 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
       const per: Record<Id, ItemUnit[]> = {};
       for (const [itemId, qty] of Object.entries(loadouts[sid] ?? {})) {
         if (qty <= 0) continue;
-        const want = explicit[sid]?.[itemId] ?? [];
+        const want = itemId === STANDARD_RADIO ? radioPlan.units[sid] ?? [] : explicit[sid]?.[itemId] ?? [];
         const usable = autoEquipReadyUnits(g, itemId, now);
         const have = want
           .map((id) => usable.find((u) => u.id === id))
@@ -112,7 +122,7 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
       }
     }
     return out;
-  }, [g, chosen, loadouts, explicit, now]);
+  }, [g, chosen, loadouts, explicit, radioPlan, now]);
 
   const cmd: StartOperationCommand = useMemo(() => {
     const pos: Partial<Record<SquadId, Id>> = {};
@@ -157,6 +167,7 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
       return { ...e, [squad]: omit(e[squad]!, itemId) };
     });
   const setQty = (squad: SquadId, itemId: Id, qty: number) => {
+    if (itemId === STANDARD_RADIO) return;
     setAutoUndo(null);
     setLoadouts((l) => ({ ...l, [squad]: { ...(l[squad] ?? {}), [itemId]: qty } }));
     dropPicks(squad, itemId);
@@ -212,6 +223,27 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
     setAutoWarnings(autoUndo.warnings);
     setAutoUndo(null);
     notify('Previous loadout choices restored', { tone: 'ok' });
+  };
+
+  const preparationFix = (warning: string) => {
+    if (practice || !scenario || !/No .*loadout|Not enough .*left/.test(warning)) return null;
+    const action = scenarioActions(scenario).find((a) => warning.startsWith(`${a.title}:`));
+    if (!action) return null;
+    const sid = chosen.find((id) => {
+      const roster = g.squads.find((s) => s.id === id)?.officerIds.map((oid) => g.officers[oid]).filter(Boolean) ?? [];
+      return (action.requires.certs ?? []).every((cert) => roster.some((officer) => officer.certs.includes(cert)));
+    });
+    if (!sid) return null;
+    return { sid, plan: planPreparationEquipment({ state: g, now, action, squadId: sid, chosen, loadouts, picks }) };
+  };
+
+  const equipPreparationFix = (fix: NonNullable<ReturnType<typeof preparationFix>>) => {
+    if (fix.plan.issue || !fix.plan.added) return;
+    setAutoUndo(null);
+    setLoadouts((current) => ({ ...current, [fix.sid]: fix.plan.loadout }));
+    setExplicit((current) => ({ ...current, [fix.sid]: fix.plan.explicit }));
+    touch(fix.sid);
+    notify(`Equipped ${fix.plan.label} on squad ${fix.sid} from stock`, { tone: 'ok' });
   };
 
   const deploy = () => act(cmd, practice ? 'Practice started' : 'Squads deployed');
@@ -338,10 +370,10 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
                 );
               })}
             </div>
-            <Button block icon="wand" disabled={chosen.length === 0} onClick={() => runAuto()}>
+            <Button block icon="wand" disabled={chosen.length === 0 || practice} onClick={() => runAuto()}>
               Auto-equip {chosen.length > 1 ? 'all squads' : chosen.length === 1 ? `squad ${chosen[0]}` : 'all'}
             </Button>
-            <p className="dim autohint">{chosen.length === 0 ? 'Choose squads first. ' : ''}Fills untouched gear choices from stock. Keeps your quantities, including zero. You can edit the result; no gear is bought.</p>
+            <p className="dim autohint">{practice ? 'Practice uses virtual gear; owned stock is not reserved.' : <>{chosen.length === 0 ? 'Choose squads first. ' : ''}One radio per officer is assigned automatically. Auto-equip fills untouched optional gear choices from stock and keeps your quantities, including zero. No gear is bought.</>}</p>
             {autoUndo && <Button size="sm" onClick={undoAuto}>Undo auto-equip</Button>}
             {autoWarnings.length > 0 && (
               <div className="autowarn" aria-live="polite">
@@ -360,7 +392,7 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
       {chosen.map((sid) => {
         const squad = g.squads.find((s) => s.id === sid)!;
         const hasPreset = Object.values(squad.loadoutPreset).some((q) => q > 0);
-        const visible = store.filter((o: StoreOption) => o.owned > 0 || brief.usefulItemIds.includes(o.item.id));
+        const visible = store.filter((o: StoreOption) => o.item.id === STANDARD_RADIO || o.owned > 0 || brief.usefulItemIds.includes(o.item.id));
         const points = pointsFor(sid);
         const chosenPoint = cmd.staging?.[sid] ?? null;
         const note = autoNote[sid];
@@ -372,7 +404,7 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
             <div className="prepsquad-head">
               <span className="squad-badge">{sid}</span>
               <strong>{squad.name}</strong>
-              <Button size="sm" icon="wand" className="prepsquad-auto" onClick={() => runAuto(sid)} aria-label={`Auto-equip squad ${sid}`}>
+              <Button size="sm" icon="wand" className="prepsquad-auto" disabled={practice} onClick={() => runAuto(sid)} aria-label={`Auto-equip squad ${sid}`}>
                 Auto
               </Button>
             </div>
@@ -438,7 +470,7 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
             )}
             <div className="prepsquad-lo">
               <SubHead icon="box">Loadout</SubHead>
-              {hasPreset && presets.unlocked && (
+              {hasPreset && presets.unlocked && !practice && (
                 <Button size="sm" onClick={() => applyPreset(sid)}>
                   Apply preset
                 </Button>
@@ -453,6 +485,7 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
                   const qty = loadouts[sid]?.[o.item.id] ?? 0;
                   const useful = brief.usefulItemIds.includes(o.item.id);
                   const units = picks[sid]?.[o.item.id] ?? [];
+                  const standard = o.item.id === STANDARD_RADIO;
                   return (
                     <li key={o.item.id} className={`lo lo-wrap${useful ? ' lo-useful' : ''}`}>
                       <div className="lo-line">
@@ -460,28 +493,37 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
                         <span className="lo-main">
                           <strong>{o.item.name}</strong>
                           <span className="lo-sub">
-                            <span className="dim">{free} ready</span>
-                            {useful && (
+                            <span className="dim">{standard ? practice ? `${qty} virtual radios · one per officer` : `${units.length}/${qty} ready · one per officer · automatic` : practice ? 'Virtual practice gear' : `${free} ready`}</span>
+                            {useful && !standard && (
                               <Chip tone="amber" icon="check">
                                 Useful
                               </Chip>
                             )}
                           </span>
                         </span>
-                        <Stepper label={o.item.name} value={qty} max={Math.max(qty, free)} onChange={(n) => setQty(sid, o.item.id, Math.min(n, Math.max(qty, free)))} />
+                        {standard ? <Chip tone={practice || units.length === qty ? 'mint' : 'amber'}>{practice ? 'Virtual kit' : 'Standard kit'}</Chip>
+                          : !practice && <Stepper label={o.item.name} value={qty} max={Math.max(qty, free)} onChange={(n) => setQty(sid, o.item.id, Math.min(n, Math.max(qty, free)))} />}
                       </div>
-                      {units.length > 0 && (
+                      {standard && !practice && units.length < qty && <div className="lo-sub">
+                        <Button size="sm" icon="plus" disabled={g.department.funding < radioPlan.shortage * o.item.cost}
+                          onClick={() => act({ type: 'buyItem', itemId: STANDARD_RADIO, qty: radioPlan.shortage }, `Bought ${radioPlan.shortage} standard radio${radioPlan.shortage === 1 ? '' : 's'}`)}>
+                          Buy {radioPlan.shortage} radio{radioPlan.shortage === 1 ? '' : 's'} · {moneyFull(radioPlan.shortage * o.item.cost)}
+                        </Button>
+                        {g.department.funding < radioPlan.shortage * o.item.cost && <span className="dim">Needs {moneyFull(radioPlan.shortage * o.item.cost - g.department.funding)} more funding, or deploy fewer officers.</span>}
+                      </div>}
+                      {!practice && (units.length > 0 || standard) && (
                         <ul className="lo-units" aria-label={`Units taking ${o.item.name}`}>
                           {units.map((u) => {
-                            const state = unitStateOf(u.condition, o.item.wear);
+                            const condition = projectedCondition(g, u, Math.max(now, g.department.clockHighWater));
+                            const state = unitStateOf(condition, o.item.wear);
                             const meta = UNIT_STATE_META[state];
                             return (
                               <li key={u.id} className={`lo-unit lo-unit-${meta.tone}`}>
                                 <Icon name={meta.icon} size={13} />
                                 <b>{u.serial}</b>
                                 <span>
-                                  {Math.round(u.condition)}% · {state}
-                                  {meta.tone === 'bad' ? ` · ${pct(unitEffectiveness(u, o.item))} effect` : ''}
+                                  {Math.round(condition)}% · {state}
+                                  {meta.tone === 'bad' ? ` · ${pct(unitEffectiveness({ ...u, condition }, o.item))} effect` : ''}
                                 </span>
                               </li>
                             );
@@ -489,7 +531,7 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
                           {units.length < qty && (
                             <li className="lo-unit lo-unit-bad">
                               <Icon name="warning" size={13} />
-                              <span>Only {units.length} of {qty} ready</span>
+                              <span>{qty - units.length} {standard ? 'standard radios missing. Buy or service radios on the Gear tab, or choose fewer officers.' : `units missing; only ${units.length} of ${qty} ready.`}</span>
                             </li>
                           )}
                         </ul>
@@ -499,7 +541,7 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
                 })}
               </ul>
             )}
-            {unreliable.length > 0 && (
+            {!practice && unreliable.length > 0 && (
               <p className="note note-amber">
                 <Icon name="warning" size={16} />
                 {unreliable.map((u) => u.serial).join(', ')} {unreliable.length === 1 ? 'is' : 'are'} unreliable: reduced effect and a chance of malfunction. Service {unreliable.length === 1 ? 'it' : 'them'} on the Gear tab or take a better unit.
@@ -518,7 +560,7 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
             <span className="dim">
               {replay
                 ? 'This incident is already closed, so it replays as practice: no rewards and no consequences.'
-                : 'No rewards and no consequences: stress, supplies and trust are untouched. Good for trying a different squad.'}
+                : 'Uses virtual gear: no owned equipment is reserved or worn. No rewards or consequences; stress, supplies and trust are untouched.'}
             </span>
           </span>
         </label>
@@ -531,12 +573,14 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
             {i}
           </p>
         ))}
-        {check.warnings.map((w, k) => (
-          <p key={`w${k}`} className="note note-amber">
-            <Icon name="warning" size={16} />
-            {w}
-          </p>
-        ))}
+        {check.warnings.map((w, k) => {
+          const fix = preparationFix(w);
+          return <div key={`w${k}`}>
+            <p className="note note-amber"><Icon name="warning" size={16} />{w}</p>
+            {fix?.plan.issue && <p className="dim">{fix.plan.issue}</p>}
+            {fix && !fix.plan.issue && fix.plan.added > 0 && <Button size="sm" icon="box" onClick={() => equipPreparationFix(fix)}>Equip {fix.plan.label} on squad {fix.sid}</Button>}
+          </div>;
+        })}
         {check.ok && check.warnings.length === 0 && (
           <p className="note note-mint">
             <Icon name="check" size={16} />

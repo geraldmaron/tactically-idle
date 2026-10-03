@@ -15,6 +15,7 @@ import { Button } from '../components/ui';
 import { getScenario } from '../../sim/scenario-registry';
 import { ActionSheet, BAND_LABEL, LiveView, RoomSheet } from './LiveView';
 import { cardFor } from './helpers';
+import { planActionResupply } from '../../sim/equipment-resupply';
 
 interface Override {
   actionId: Id;
@@ -50,6 +51,11 @@ export function OpsLive() {
   const view = base && ov ? (previewAction(g, now, base.id, ov.acting, ov.support) ?? base) : base;
   const acting = ov?.acting ?? view?.actingSquadIds ?? [];
   const support = ov?.support ?? view?.supportSquadIds ?? [];
+  const resupply = view && !view.eligible ? planActionResupply(g, now, view.id, acting, support) : null;
+  const alternatives = view && !view.eligible ? deployed
+    .filter((s) => !acting.includes(s.id))
+    .map((s) => actionViews(g, now, s.id).find((a) => a.id === view.id))
+    .filter((a): a is NonNullable<typeof a> => !!a?.eligible) : [];
 
   const officers = focus ? focus.officerIds.map((id) => g.officers[id]).filter((o) => !!o) : [];
   const defaultOfficer = view?.officerIds.find((id) => focus?.officerIds.includes(id)) ?? officers[0]?.id ?? null;
@@ -155,7 +161,7 @@ export function OpsLive() {
       onToggleRooms={() => setShowRooms((v) => !v)}
       clock={run.clock}
       pressure={run.pressure}
-      canCancel={run.history.length === 0}
+      canCancel={run.history.length === 0 && !run.resupplies?.length}
       onCancel={() => setConfirmCancel(true)}
       onOpenDetails={() => setPanel(panel === 'action' ? 'none' : 'action')}
       detailsOpen={panel === 'action'}
@@ -177,6 +183,18 @@ export function OpsLive() {
         onToggleSupport={toggleSupport}
         targetLabel={targetLabel}
         onConfirm={confirm}
+        resupply={resupply}
+        resupplyMinutes={(run.resupplies ?? []).reduce((sum, delivery) => sum + delivery.minutes, 0)}
+        onResupply={() => {
+          if (!view || !resupply?.ok) return;
+          act({ type: 'resupplyAction', actionId: view.id, actingSquadIds: acting, supportSquadIds: support }, `Equipment delivered · +${resupply.minutes} min. Review the action, then confirm.`);
+        }}
+        alternatives={alternatives}
+        onUseAlternative={(candidate) => {
+          setFocusId(candidate.actingSquadIds[0] ?? null);
+          setOverride({ actionId: candidate.id, acting: candidate.actingSquadIds, support: candidate.supportSquadIds });
+          setActiveOfficer(null);
+        }}
       />
       <RoomSheet
         open={panel === 'room'}

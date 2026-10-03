@@ -6,6 +6,7 @@ import { tierRewardMultiplier } from '../../sim/incidents';
 import { MS_OCCUPANCY } from '../../content/scenarios/ms-occupancy';
 import { MS_URGENT } from '../../content/scenarios/ms-urgent';
 import { BUILDING_FAMILIES } from '../building';
+import { RESIDENTIAL_LAYOUT_NOTES } from '../../content/locations/residential-v1';
 
 export interface IncidentTypeInfo {
   type: IncidentType;
@@ -13,7 +14,7 @@ export interface IncidentTypeInfo {
   families: string[];
   squads: [min: number, max: number];
 }
-const homes = ['cedar_close', 'harbour_court'];
+const homes = BUILDING_FAMILIES.filter((family) => family.setting !== 'business').map((family) => family.id);
 const allFamilies = BUILDING_FAMILIES.map((f) => f.id);
 // A bounded, playable neighbourhood catalog. Other schema types remain readable
 // in legacy Maple seed IDs, but are not advertised as new generated templates.
@@ -88,11 +89,11 @@ export function generateIncident(spec: IncidentSpec): ScenarioDefinition {
       : uncertain ? `A neighbour reports an unfamiliar person in the ${targetName}; their identity is unconfirmed.`
         : spec.type === 'disturbance' ? `Raised voices were reported in the ${targetName}. The caller cannot explain what happened.`
           : `A neighbour has been unable to reach the resident, last reported in the ${targetName}.`;
-  const layoutNote = spec.familyId === 'cedar_close'
+  const layoutNote = RESIDENTIAL_LAYOUT_NOTES[spec.familyId] ?? (spec.familyId === 'cedar_close'
     ? 'A long, narrow hall links the bedrooms to the front room; the rear lane gives a second approach.'
     : spec.familyId === 'harbour_court'
       ? 'The flat opens onto a shared walkway and a small courtyard. Concrete outer walls limit signals.'
-      : 'Shop shelving interrupts sightlines. The stockroom has its own steel delivery door.';
+      : 'Shop shelving interrupts sightlines. The stockroom has its own steel delivery door.');
   const difficulty = 37 + spec.tier * 4;
   const action = (id: string, stage: StageId, title: string, icon: ActionDefinition['icon']): ActionDefinition => ({
     id, stage, title, icon, summary: '{lead} ready', targetId: target.id, task: title,

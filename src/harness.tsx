@@ -1,4 +1,4 @@
-// Dev-only visual harness: /harness.html. Not part of the shipped app.
+// Visual QA entry point: /harness.html. Separate from normal game navigation.
 import { StrictMode, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import './ui/theme.css';
@@ -8,6 +8,7 @@ import { Blueprint } from './ui/blueprint/Blueprint';
 import { RoomList } from './ui/blueprint/RoomList';
 import { Portrait } from './ui/portraits/Portrait';
 import { PERSONAS } from './content/personas';
+import { RESPONSIVE_PREVIEW_PARAM } from './ui/save-environment';
 
 /**
  * Staging point for an opening: from derived.stagingPoints when the spatial agent has landed them,
@@ -189,6 +190,54 @@ function PortraitGrid() {
   );
 }
 
+const DEVICE_SIZES = [
+  { label: 'Small phone', width: 320, height: 568 },
+  { label: 'Phone', width: 375, height: 667 },
+  { label: 'Design phone', width: 390, height: 844 },
+  { label: 'Large phone', width: 430, height: 932 },
+  { label: 'Tablet', width: 768, height: 1024 },
+  { label: 'Desktop', width: 1280, height: 800 },
+] as const;
+
+function dimension(value: string | null, fallback: number, min: number, max: number) {
+  const n = Number(value);
+  return value !== null && Number.isFinite(n) ? Math.max(min, Math.min(max, Math.round(n))) : fallback;
+}
+
+/** A real child viewport; constraining a div would not exercise viewport media queries. */
+function ResponsiveGame() {
+  const q = new URLSearchParams(window.location.search);
+  const [size, setSize] = useState({
+    width: dimension(q.get('w'), 390, 240, 1920),
+    height: dimension(q.get('h'), 844, 320, 1440),
+  });
+  return (
+    <div className="h-page h-responsive">
+      <h1>Game viewport · {size.width} × {size.height}</h1>
+      <p className="h-note">The frame runs the real app with ten temporary in-memory save slots. Its sandbox blocks access to normal browser saves; closing or reloading it discards every test slot. Changing size keeps that campaign.</p>
+      <div className="h-ctl" role="group" aria-label="Test viewport">
+        {DEVICE_SIZES.map((device) => (
+          <button key={device.width} type="button" className="h-btn" aria-pressed={size.width === device.width && size.height === device.height} onClick={() => setSize(device)}>
+            {device.label} · {device.width} × {device.height}
+          </button>
+        ))}
+      </div>
+      <p className="h-note">Check all five tabs, squad rename, officer and gear sheets, saves, preparation, live action details, Rooms, Materials and zoom. Wider frames can be panned in the inspection area below. No result here implies those checks passed.</p>
+      <div className="h-viewport-scroll">
+        <iframe
+          title={`Tactically Idle test viewport ${size.width} by ${size.height}`}
+          src={`${import.meta.env.BASE_URL}?${RESPONSIVE_PREVIEW_PARAM}=1`}
+          sandbox="allow-scripts"
+          width={size.width}
+          height={size.height}
+          className="h-game-frame"
+        />
+      </div>
+      <p className="h-note">A blank frame means this host may block module loads from the sandbox’s opaque origin. Check its console and CORS response before treating the harness as usable. Keep the storage sandbox intact.</p>
+    </div>
+  );
+}
+
 function Harness() {
   const built = useMemo(() => buildLocation('maple_street', 0), []);
   const spaces = useMemo(() => sampleSpaces(built), [built]);
@@ -196,6 +245,7 @@ function Harness() {
   // ?only=map&w=760&seed=0 shows one large map; ?only=portraits shows just the portrait grid.
   const q = new URLSearchParams(window.location.search);
   const only = q.get('only');
+  if (only === 'app') return <ResponsiveGame />;
   if (only === 'map') {
     const w = Number(q.get('w') ?? 760);
     return (
@@ -241,6 +291,10 @@ const css = `
 .h-big { display: flex; flex-wrap: wrap; gap: 12px; width: 760px; }
 .h-fig { margin: 0; font: 11px var(--font-ui); color: var(--muted); text-align: center; }
 .h-fig figcaption { margin-top: 3px; }
+.h-responsive { min-width: 0; }
+.h-responsive > .h-note { max-width: 760px; line-height: 1.5; }
+.h-viewport-scroll { max-width: 100%; margin-top: 16px; overflow: auto; border: 1px solid var(--line); }
+.h-game-frame { display: block; border: 0; max-width: none; }
 `;
 
 const host = document.getElementById('root')! as HTMLElement & { __root?: ReturnType<typeof createRoot> };

@@ -1,103 +1,90 @@
-// Pan/zoom state for the blueprint, expressed as a viewBox in feet. Keeps the aspect of the base sheet.
+// A single SVG viewBox keeps every object, label, annotation and hit target together.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Rect } from './geometry';
-
-export const MAX_ZOOM = 4;
-
-/** preserveAspectRatio="meet" may letterbox either axis; pointer movement uses the rendered scale. */
-export function unitsPerPixel(view: Rect, width: number, height: number): number {
-  return Math.max(view.w / Math.max(width, 1), view.h / Math.max(height, 1));
-}
+import { clampView } from './camera';
+export { MAX_ZOOM, clampView, unitsPerPixel } from './camera';
 
 const prefersReducedMotion = (): boolean => typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-export function clampView(v: Rect, base: Rect): Rect {
-  const w = Math.max(base.w / MAX_ZOOM, Math.min(base.w, v.w));
-  const h = (w * base.h) / base.w;
-  const x = Math.max(base.x, Math.min(base.x + base.w - w, v.x));
-  const y = Math.max(base.y, Math.min(base.y + base.h - h, v.y));
-  return { x, y, w, h };
-}
-
-export function useViewport(base: Rect) {
+export function useViewport(base: Rect, sceneKey = '') {
   const [view, setView] = useState<Rect>(base);
   const viewRef = useRef(view);
-  viewRef.current = view;
+  const baseRef = useRef(base);
+  baseRef.current = base;
+  const previousScene = useRef({ base, sceneKey });
   const raf = useRef(0);
   const baseKey = `${base.x},${base.y},${base.w},${base.h}`;
 
-  const cancel = () => {
+  const stop = useCallback(() => {
     if (raf.current) cancelAnimationFrame(raf.current);
     raf.current = 0;
-  };
+  }, []);
 
-  const animateTo = useCallback(
-    (target: Rect) => {
-      const goal = clampView(target, base);
-      cancel();
-      if (prefersReducedMotion()) {
-        setView(goal);
-        return;
-      }
-      const from = viewRef.current;
-      const t0 = performance.now();
-      const dur = 240;
-      const tick = (now: number) => {
-        const t = Math.min(1, (now - t0) / dur);
-        const e = 1 - Math.pow(1 - t, 3);
-        setView({ x: from.x + (goal.x - from.x) * e, y: from.y + (goal.y - from.y) * e, w: from.w + (goal.w - from.w) * e, h: from.h + (goal.h - from.h) * e });
-        raf.current = t < 1 ? requestAnimationFrame(tick) : 0;
-      };
-      raf.current = requestAnimationFrame(tick);
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [baseKey],
-  );
+  // Update the ref immediately: several touch/wheel events can precede React's next render.
+  const publish = useCallback((next: Rect) => {
+    viewRef.current = next;
+    setView(next);
+  }, []);
+  const getView = useCallback(() => viewRef.current, []);
+  const getBase = useCallback(() => baseRef.current, []);
+
+  const moveTo = useCallback((next: Rect) => {
+    stop();
+    publish(clampView(next, baseRef.current));
+  }, [stop, publish]);
+
+  const animateTo = useCallback((target: Rect) => {
+    const goal = clampView(target, baseRef.current);
+    stop();
+    if (prefersReducedMotion()) {
+      publish(goal);
+      return;
+    }
+    const from = viewRef.current;
+    const t0 = performance.now();
+    const tick = (now: number) => {
+      const t = Math.min(1, (now - t0) / 240);
+      const ease = 1 - Math.pow(1 - t, 3);
+      publish({ x: from.x + (goal.x - from.x) * ease, y: from.y + (goal.y - from.y) * ease, w: from.w + (goal.w - from.w) * ease, h: from.h + (goal.h - from.h) * ease });
+      raf.current = t < 1 ? requestAnimationFrame(tick) : 0;
+    };
+    raf.current = requestAnimationFrame(tick);
+  }, [publish, stop]);
 
   useEffect(() => {
-    cancel();
-    setView(base);
-    return cancel;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [baseKey]);
+    const previous = previousScene.current;
+    const currentBase = baseRef.current;
+    const current = viewRef.current;
+    const priorZoom = previous.base.w / current.w;
+    if (previous.sceneKey !== sceneKey || priorZoom <= 1.01) moveTo(currentBase);
+    else {
+      // Knowledge can expand the sheet. Keep the player's world center and relative zoom.
+      const w = currentBase.w / priorZoom;
+      const h = currentBase.h / priorZoom;
+      moveTo({ x: current.x + (current.w - w) / 2, y: current.y + (current.h - h) / 2, w, h });
+    }
+    previousScene.current = { base: currentBase, sceneKey };
+    return stop;
+  }, [baseKey, sceneKey, moveTo, stop]);
 
-  const zoomBy = useCallback(
-    (factor: number) => {
-      const v = viewRef.current;
-      const w = v.w / factor;
-      const h = (w * base.h) / base.w;
-      animateTo({ x: v.x + v.w / 2 - w / 2, y: v.y + v.h / 2 - h / 2, w, h });
-    },
-    [animateTo, base],
-  );
+  const zoomBy = useCallback((factor: number) => {
+    const current = viewRef.current;
+    const shape = clampView({ ...current, w: current.w / factor }, baseRef.current);
+    animateTo({ ...shape, x: current.x + (current.w - shape.w) / 2, y: current.y + (current.h - shape.h) / 2 });
+  }, [animateTo]);
 
-  const reset = useCallback(() => animateTo(base), [animateTo, base]);
+  const reset = useCallback(() => animateTo(baseRef.current), [animateTo]);
 
-  const zoomToRect = useCallback(
-    (r: Rect, pad = 2.5) => {
-      const aspect = base.w / base.h;
-      let w = r.w + pad * 2;
-      let h = r.h + pad * 2;
-      if (w / h < aspect) w = h * aspect;
-      else h = w / aspect;
-      const cx = r.x + r.w / 2;
-      const cy = r.y + r.h / 2;
-      animateTo({ x: cx - w / 2, y: cy - h / 2, w, h });
-    },
-    [animateTo, base],
-  );
+  const zoomToRect = useCallback((rect: Rect, pad = 2.5) => {
+    const aspect = baseRef.current.w / baseRef.current.h;
+    let w = rect.w + pad * 2;
+    let h = rect.h + pad * 2;
+    if (w / h < aspect) w = h * aspect;
+    else h = w / aspect;
+    // Clamp size before centering, so tiny rooms don't move toward a sheet edge at max zoom.
+    const shape = clampView({ x: rect.x, y: rect.y, w, h }, baseRef.current);
+    animateTo({ ...shape, x: rect.x + (rect.w - shape.w) / 2, y: rect.y + (rect.h - shape.h) / 2 });
+  }, [animateTo]);
 
-  /** Immediate pan (no animation), used while dragging. */
-  const panTo = useCallback(
-    (x: number, y: number) => {
-      cancel();
-      const v = viewRef.current;
-      setView(clampView({ ...v, x, y }, base));
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [baseKey],
-  );
-
-  const zoom = base.w / view.w;
-  return { view, zoom, zoomBy, reset, zoomToRect, panTo };
+  return { view, zoom: base.w / view.w, getView, getBase, moveTo, stop, zoomBy, reset, zoomToRect };
 }

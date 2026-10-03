@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { planAuto } from './autoPlan';
+import { planAuto, planPreparationEquipment } from './autoPlan';
+import { makeState, NOW, unitId } from '../../sim/test-fixtures';
+import { SCENARIOS } from '../../content/scenarios';
 import type { AutoLoadout } from '../../sim/auto-equip';
 
 const item: Record<string, string> = { u1: 'thermal', u2: 'thermal', u3: 'radio', u4: 'radio' };
@@ -41,5 +43,41 @@ describe('planAuto', () => {
     p.notes.A!.lines.push('edited');
     expect(res.loadouts.A!.radio).toBe(1);
     expect(res.rationale.A).toHaveLength(1);
+  });
+});
+
+
+describe('contextual preparation equipment', () => {
+  const thermal = Object.values(SCENARIOS.ms_occupancy.stages).flatMap((stage) => stage.actions).find((action) => action.requires.allTags?.includes('thermal'))!;
+
+  it('equips a complete required bundle from stock while retaining manual optional choices', () => {
+    const state = makeState({ inventory: { thermal_imager: 1 } });
+    const before = structuredClone(state);
+    const plan = planPreparationEquipment({ state, now: NOW, action: thermal, squadId: 'A', chosen: ['A'], loadouts: { A: { throw_phone: 0, radio_kit: 4 } }, picks: {} });
+    expect(plan.issue).toBeNull();
+    expect(plan.added).toBe(2);
+    expect(plan.loadout).toMatchObject({ thermal_imager: 1, battery_pack: 1, throw_phone: 0, radio_kit: 4 });
+    expect(plan.explicit.thermal_imager).toEqual([unitId('thermal_imager')]);
+    expect(plan.label).toContain('Battery pack');
+    expect(state).toEqual(before);
+  });
+
+  it('does not offer a repair when a companion item is unavailable or assigned elsewhere', () => {
+    const state = makeState({ inventory: { thermal_imager: 1, battery_pack: 0 } });
+    const args = { state, now: NOW, action: thermal, squadId: 'A' as const, chosen: ['A' as const, 'B' as const], loadouts: { A: { thermal_imager: 0 } }, picks: {} };
+    const incomplete = planPreparationEquipment(args);
+    expect(incomplete.issue).toMatch(/No unassigned usable Battery pack/);
+    const held = state.units[unitId('thermal_imager')];
+    expect(planPreparationEquipment({ ...args, picks: { B: { thermal_imager: [held] } } }).issue).toMatch(/Thermal imager/);
+    expect(state.reservations).toEqual([]);
+  });
+
+  it('never adds duplicate units when the required gear is already chosen', () => {
+    const state = makeState({ inventory: { thermal_imager: 1 } });
+    const picks = { A: { thermal_imager: [state.units[unitId('thermal_imager')]], battery_pack: [state.units[unitId('battery_pack')]] } };
+    const plan = planPreparationEquipment({ state, now: NOW, action: thermal, squadId: 'A', chosen: ['A'], loadouts: { A: { thermal_imager: 1, battery_pack: 1 } }, picks });
+    expect(plan.added).toBe(0);
+    expect(plan.issue).toBeNull();
+    expect(new Set(Object.values(plan.explicit).flat()).size).toBe(2);
   });
 });

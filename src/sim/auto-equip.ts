@@ -1,7 +1,8 @@
 import type { GameState, Id, ItemUnit, Officer, Role, SquadId, StageId } from './types';
 import type { ActionDefinition } from './scenario-types';
 import { ITEMS } from '../content/items';
-import { projectedCondition } from './equipment';
+import { readyUnits } from './inventory';
+import { radioRequirement, standardRadioPlan, STANDARD_RADIO } from './standard-kit';
 import { deployability, highRiskAllowed } from './officer';
 import { conditionFraction } from './resolution';
 import { scenarioActions } from './scenario-types';
@@ -18,7 +19,7 @@ export interface AutoLoadout {
 }
 
 export interface AutoLoadoutOptions {
-  /** Every supplied item key is a player choice, including zero. */
+  /** Every supplied optional item key is a player choice, including zero; radios follow the roster. */
   loadouts?: Partial<Record<SquadId, Record<Id, number>>>;
   units?: Partial<Record<SquadId, Id[]>>;
   /** Only these chosen squads are changed; all chosen squads reserve their current picks. */
@@ -27,13 +28,7 @@ export interface AutoLoadoutOptions {
 
 /** Current usable stock, shared with preparation previews; never settles or buys. */
 export function autoEquipReadyUnits(state: GameState, itemId: Id, now: number): ItemUnit[] {
-  const def = ITEMS[itemId];
-  if (!def || def.kind === 'infrastructure') return [];
-  const time = Math.max(now, state.department.clockHighWater);
-  const reserved = new Set(state.reservations.map((r) => r.unitId));
-  return Object.values(state.units).filter((u) => u.itemId === itemId && u.status === 'ready' && !reserved.has(u.id)
-    && (u.expiresAt === null || u.expiresAt > time) && projectedCondition(state, u, time) > def.wear.failAt)
-    .sort((a, b) => projectedCondition(state, b, time) - projectedCondition(state, a, time) || a.id.localeCompare(b.id));
+  return readyUnits(state, itemId, now);
 }
 
 const ROLE_FOR_CHECK: Record<ActionDefinition['check']['kind'], Role> = {
@@ -53,7 +48,7 @@ function aptitude(officer: Officer, action: ActionDefinition): number {
 /**
  * Pure preparation helper: uses owned stock, never buys, settles time, or advances RNG.
  * There is no carry-capacity mechanic. Pack at most one of each reusable item per
- * squad; consumables cover the largest relevant use in each stage (alternatives
+ * squad, plus one standard radio per officer; consumables cover the largest relevant use in each stage (alternatives
  * within a stage share that allowance). Manual quantities are never capped.
  * Only public action requirements/bonuses are inspected, never fact truth or people.
  */
@@ -69,12 +64,12 @@ export function autoLoadout(state: GameState, scenarioId: Id, squadIds: SquadId[
   const warnings = new Map<string, string>();
   const label = (sid: SquadId) => state.squads.find((s) => s.id === sid)?.name ?? `Squad ${sid}`;
   const warn = (key: string, message: string) => warnings.set(key, message);
-  const locked = (sid: SquadId, itemId: Id) => Object.hasOwn(options.loadouts?.[sid] ?? {}, itemId);
+  const locked = (sid: SquadId, itemId: Id) => itemId === STANDARD_RADIO || Object.hasOwn(options.loadouts?.[sid] ?? {}, itemId);
   const pool = Object.keys(ITEMS).flatMap((id) => autoEquipReadyUnits(state, id, time));
   const usableIds = new Set(pool.map((u) => u.id));
 
   for (const sid of chosen) {
-    counts[sid] = { ...options.loadouts?.[sid] };
+    counts[sid] = { ...options.loadouts?.[sid], [STANDARD_RADIO]: radioRequirement(state, sid) };
     picks[sid] = [];
     if (targets.has(sid)) {
       result.loadouts[sid] = counts[sid];
@@ -92,10 +87,26 @@ export function autoLoadout(state: GameState, scenarioId: Id, squadIds: SquadId[
     }
   }
 
-  // Exact picks across ALL chosen squads take precedence over any quantity fill.
+  // Standard radios are automatic even when only one squad's optional gear is
+  // targeted. They take distinct best-condition stock before optional choices.
+  const radioPlan = standardRadioPlan(state, chosen.filter((sid) => officers[sid]), time);
+  if (radioPlan.issue) warn('standard-radios', radioPlan.issue);
+  for (const sid of chosen) {
+    for (const id of radioPlan.units[sid] ?? []) {
+      taken.add(id);
+      picks[sid]!.push(state.units[id]);
+      if (targets.has(sid) && !options.units?.[sid]?.includes(id)) result.added += 1;
+    }
+    if (targets.has(sid) && officers[sid]) {
+      result.rationale[sid]!.push(`${radioPlan.units[sid]?.length ?? 0}/${radioRequirement(state, sid)} standard radios ready: one per officer, assigned automatically.`);
+    }
+  }
+
+  // Exact optional picks across ALL squads take precedence over quantity fill.
   for (const sid of chosen) {
     for (const id of options.units?.[sid] ?? []) {
       const unit = state.units[id];
+      if (unit?.itemId === STANDARD_RADIO) continue;
       const quantity = unit && locked(sid, unit.itemId) ? counts[sid]![unit.itemId] : undefined;
       const quantityFull = quantity !== undefined && (!Number.isInteger(quantity) || quantity < 0 || picks[sid]!.filter((u) => u.itemId === unit.itemId).length >= quantity);
       if (!unit || !usableIds.has(id) || taken.has(id) || quantityFull) {
@@ -120,6 +131,7 @@ export function autoLoadout(state: GameState, scenarioId: Id, squadIds: SquadId[
   // Honor manually requested quantities first, without inventing missing units.
   for (const sid of chosen) {
     for (const [itemId, qty] of Object.entries(counts[sid]!)) {
+      if (itemId === STANDARD_RADIO) continue;
       if (!Number.isInteger(qty) || qty < 0 || !ITEMS[itemId]) {
         warn(`quantity:${sid}:${itemId}`, `${label(sid)}: invalid quantity or unknown item ${ITEMS[itemId]?.name ?? itemId}; check the manual loadout.`);
         continue;
@@ -157,19 +169,6 @@ export function autoLoadout(state: GameState, scenarioId: Id, squadIds: SquadId[
   const withTag = (units: ItemUnit[], tag: string) => units.filter((u) => ITEMS[u.itemId].tags.includes(tag));
   const tagName = (tag: string) => Object.values(ITEMS).find((i) => i.tags.includes(tag))?.name ?? tag;
   const shortage = (sid: SquadId, tag: string) => warn(`stock:${sid}:${tag}`, `${label(sid)}: no additional usable ${tagName(tag)} available for this loadout.`);
-
-  // Multi-squad support uses a radio at both ends. Best coordination gets first pick.
-  if (scenario && eligible.length > 1) {
-    const ranked = [...eligible].sort((a, b) => Math.max(...officers[b]!.map((o) => o.ratings.coordination)) - Math.max(...officers[a]!.map((o) => o.ratings.coordination)) || a.localeCompare(b));
-    for (const sid of ranked.filter((id) => targets.has(id))) {
-      if (withTag(picks[sid]!, 'comms_kit').length || locked(sid, 'radio_kit')) continue;
-      const unit = pool.find((u) => ITEMS[u.itemId].tags.includes('comms_kit') && !taken.has(u.id));
-      if (unit) {
-        add(sid, unit);
-        result.rationale[sid]!.push(`${ITEMS[unit.itemId].name} → ${label(sid)}: keeps the deployed squads in contact.`);
-      } else shortage(sid, 'comms_kit');
-    }
-  }
 
   for (const { sid, action, lead } of candidates) {
     const planned: ItemUnit[] = [];

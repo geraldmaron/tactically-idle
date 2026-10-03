@@ -93,7 +93,7 @@ describe('scenario content and selectors', () => {
     const running = startRun(s, 'ms_occupancy', ['A']);
     expect(apply(running, startCmd('ms_urgent', ['B'])).result.ok).toBe(false);
     expect(apply(s, startCmd('nope', ['A'])).result.ok).toBe(false);
-    expect(apply(s, startCmd('ms_occupancy', ['A'], { loadouts: { A: { radio_kit: 99 } } })).result.ok).toBe(false);
+    expect(apply(s, startCmd('ms_occupancy', ['A'], { loadouts: { A: { throw_phone: 99 } } })).result.ok).toBe(false);
   });
 
   it('starting reserves loadouts, assigns officers and shows staging tasks', () => {
@@ -341,10 +341,10 @@ describe('joint operations (acceptance 18)', () => {
     // Each squad holds its own distinct reservation.
     const items = (r: ReturnType<typeof play>, sq: SquadId) => r.start.reservations.filter((x) => x.squadId === sq).map((x) => x.itemId).sort();
     expect(items(three, 'A')).not.toEqual(items(three, 'C'));
-    // Three radios, three distinct physical units.
+    // Twelve officers carry twelve distinct physical radios.
     const radios = three.start.reservations.filter((x) => x.itemId === 'radio_kit').map((x) => x.unitId);
-    expect(radios).toHaveLength(3);
-    expect(new Set(radios).size).toBe(3);
+    expect(radios).toHaveLength(12);
+    expect(new Set(radios).size).toBe(12);
   });
 
   it('three squads give wider cover and more strain exposure, not automatic success', () => {

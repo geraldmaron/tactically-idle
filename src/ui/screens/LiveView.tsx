@@ -18,6 +18,7 @@ import type {
 } from '../../sim/types';
 import type { StageProgress } from '../../sim/operation-selectors';
 import type { EnvironmentDefinition } from '../../sim/scenario-types';
+import type { ActionResupplyPlan } from '../../sim/equipment-resupply';
 import { Blueprint } from '../blueprint/Blueprint';
 import { RoomList } from '../blueprint/RoomList';
 import { OfficerCard } from '../components/OfficerCard';
@@ -398,12 +399,23 @@ export interface ActionSheetProps {
   onToggleSupport: (id: SquadId) => void;
   targetLabel: string | null;
   onConfirm: () => void;
+  resupply?: ActionResupplyPlan | null;
+  resupplyMinutes?: number;
+  onResupply?: () => void;
+  alternatives?: ActionView[];
+  onUseAlternative?: (view: ActionView) => void;
 }
 
 export function ActionSheet(p: ActionSheetProps) {
   const v = p.view;
   const names = (ids: SquadId[]) => ids.map((id) => p.squads.find((s) => s.id === id)?.name ?? id);
   const squadText = p.acting.length === 0 ? 'No squad' : p.acting.length === 1 ? `Squad ${p.acting[0]}` : `Squads ${p.acting.join(' + ')}`;
+  const resupplyNames = p.resupply?.items.reduce((list, item) => {
+    const row = list.find((entry) => entry.id === item.itemId);
+    if (row) row.qty += 1;
+    else list.push({ id: item.itemId, name: item.name, qty: 1 });
+    return list;
+  }, [] as { id: Id; name: string; qty: number }[]) ?? [];
   return (
     <Sheet
       open={p.open && !!v}
@@ -446,6 +458,34 @@ export function ActionSheet(p: ActionSheetProps) {
               {v.reason}
             </p>
           )}
+          {!v.eligible && (p.resupply?.needed || !!p.alternatives?.length) && (
+            <section className="action-resolution" aria-label="Resolve action requirements">
+              {p.resupply?.needed && (
+                <>
+                  <strong className="action-resolution-title">Equipment from stores</strong>
+                  {p.resupply.ok ? (
+                    <>
+                      <ul className="action-resolution-items">
+                        {p.resupply.items.map((item) => <li key={item.unitId}>Squad {item.squadId}: {item.name} · {item.serial}</li>)}
+                      </ul>
+                      <p className="action-resolution-note dim">Available while staged outside, before your first decision. Delivery takes {p.resupply.minutes} minutes, raises pressure and commits this operation. You can no longer cancel after delivery.</p>
+                      {p.onResupply && <div className="action-resolution-actions"><Button onClick={p.onResupply}>Equip {resupplyNames.map((item) => `${item.qty > 1 ? `${item.qty} × ` : ''}${item.name}`).join(' + ')} · +{p.resupply.minutes} min</Button></div>}
+                    </>
+                  ) : <p className="action-resolution-note dim">{p.resupply.reason}</p>}
+                </>
+              )}
+              {!!p.alternatives?.length && p.onUseAlternative && (
+                <>
+                  <strong className="action-resolution-title">Ready to act</strong>
+                  <p className="action-resolution-note dim">These deployed squads meet this action’s requirements.</p>
+                  <div className="action-resolution-actions">
+                    {p.alternatives.map((candidate) => <Button key={candidate.actingSquadIds.join('-')} onClick={() => p.onUseAlternative?.(candidate)}>Use Squad {candidate.actingSquadIds.join(' + ')} · {names(candidate.actingSquadIds).join(' + ')}</Button>)}
+                  </div>
+                </>
+              )}
+            </section>
+          )}
+          {!!p.resupplyMinutes && <p className="dim adetail-note">Stores deliveries: {p.resupplyMinutes} operation minutes. Equipment is reserved for this run.</p>}
           {p.squads.length > 1 && (
             <div className="pickers">
               <div className="picker">

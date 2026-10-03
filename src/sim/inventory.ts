@@ -3,17 +3,23 @@
 // can never carry the same radio and wear lands on the unit that was used.
 import type { GameState, HandlerResult, Id, ItemDefinition, ItemUnit, SquadId } from './types';
 import { ITEMS } from '../content/items';
+import { equipmentWearMultiplier } from './equipment-manager-policy';
+import { projectedCondition } from './equipment';
 
 /** Ready, above failAt, not expired. Best condition first. */
-export function readyUnits(state: GameState, itemId: Id): ItemUnit[] {
+export function readyUnits(state: GameState, itemId: Id, now = state.department.clockHighWater): ItemUnit[] {
   const def = ITEMS[itemId];
+  if (!def || def.kind === 'infrastructure') return [];
+  const time = Math.max(now, state.department.clockHighWater);
+  const reserved = new Set(state.reservations.map((r) => r.unitId));
   return Object.values(state.units)
-    .filter((u) => u.itemId === itemId && u.status === 'ready' && (!def || u.condition > def.wear.failAt))
-    .sort((a, b) => b.condition - a.condition || a.id.localeCompare(b.id));
+    .filter((u) => u.itemId === itemId && u.status === 'ready' && !reserved.has(u.id)
+      && (u.expiresAt === null || u.expiresAt > time) && projectedCondition(state, u, time) > def.wear.failAt)
+    .sort((a, b) => projectedCondition(state, b, time) - projectedCondition(state, a, time) || a.id.localeCompare(b.id));
 }
 
-export function readyCount(state: GameState, itemId: Id): number {
-  return readyUnits(state, itemId).length;
+export function readyCount(state: GameState, itemId: Id, now = state.department.clockHighWater): number {
+  return readyUnits(state, itemId, now).length;
 }
 
 /**
@@ -34,7 +40,7 @@ export function reserveLoadouts(
   runId: Id,
   loadouts: Partial<Record<SquadId, Record<Id, number>>>,
   explicit: Partial<Record<SquadId, Id[]>> | undefined,
-  _now: number,
+  now: number,
 ): HandlerResult {
   const taken = new Set<Id>();
   const picks: { squadId: SquadId; unit: ItemUnit }[] = [];
@@ -46,7 +52,8 @@ export function reserveLoadouts(
       const def = ITEMS[u.itemId];
       if (taken.has(id)) return { ok: false, reason: `${u.serial} is assigned to two squads` };
       if (u.status !== 'ready') return { ok: false, reason: `${u.serial} is ${u.status === 'service' ? 'in service' : u.status}` };
-      if (def && u.condition <= def.wear.failAt) return { ok: false, reason: `${u.serial} has failed and needs service` };
+      if (def && projectedCondition(draft, u, Math.max(now, draft.department.clockHighWater)) <= def.wear.failAt) return { ok: false, reason: `${u.serial} has failed and needs service` };
+      if (!readyUnits(draft, u.itemId, now).some((ready) => ready.id === id)) return { ok: false, reason: `${u.serial} is expired or already reserved` };
       taken.add(id);
       picks.push({ squadId, unit: u });
     }
@@ -60,9 +67,9 @@ export function reserveLoadouts(
       const already = picks.filter((p) => p.squadId === squadId && p.unit.itemId === itemId).length;
       const need = qty - already;
       if (need <= 0) continue;
-      const pool = readyUnits(draft, itemId).filter((u) => !taken.has(u.id));
+      const pool = readyUnits(draft, itemId, now).filter((u) => !taken.has(u.id));
       if (pool.length < need) {
-        const usable = readyCount(draft, itemId);
+        const usable = readyCount(draft, itemId, now);
         return { ok: false, reason: `Only ${usable} usable ${def.name} (requested ${qty + countOther(picks, squadId, itemId)})` };
       }
       for (const u of pool.slice(0, need)) {
@@ -123,7 +130,7 @@ export function settleRun(
     }
     if (wasUsed) {
       const before = u.condition;
-      u.condition = Math.max(0, Math.round((u.condition - def.wear.perUse * u.wearRate) * 10) / 10);
+      u.condition = Math.max(0, Math.round((u.condition - def.wear.perUse * u.wearRate * equipmentWearMultiplier(draft, def)) * 10) / 10);
       u.uses += 1;
       unitWear.push({ unitId: u.id, itemId: u.itemId, serial: u.serial, before, after: u.condition });
     }

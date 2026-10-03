@@ -1,3 +1,4 @@
+import { withLegacyRadios } from './test-fixtures';
 import { describe, expect, it } from 'vitest';
 import type { BuiltLocation, Contributor, GameState, Id, LocationDefinition, SquadId, Vec } from './types';
 import type { ActionDefinition, ScenarioDefinition } from './scenario-types';
@@ -221,7 +222,7 @@ describe('equipment range', () => {
 
 describe('unit condition: the specific unit used sets effectiveness, and wear is per unit', () => {
   const joint = () => {
-    const s = setRun(startRun(makeState(), 'ms_urgent', ['A', 'B']), { stage: 'adapt' });
+    const s = withLegacyRadios(setRun(startRun(makeState(), 'ms_urgent', ['A', 'B']), { stage: 'adapt' }), { A: 1, B: 1 });
     const radioB = s.reservations.find((r) => r.squadId === 'B' && r.itemId === 'radio_kit')!.unitId;
     return { s, radioB };
   };
@@ -347,7 +348,7 @@ describe('entry and movement', () => {
     const nearLink = link(s);
     const farLink = link(setRun(s, { positions: { B: 'back_yard' } }));
     expect(nearLink.value).toBeGreaterThan(farLink.value);
-    const noRadios = startRun(makeState(), 'ms_occupancy', ['A', 'B'], { loadouts: { A: { throw_phone: 1 }, B: { door_ram: 1 } } });
+    const noRadios = withLegacyRadios(startRun(makeState(), 'ms_occupancy', ['A', 'B'], { loadouts: { A: { throw_phone: 1 }, B: { door_ram: 1 } } }), { A: 0, B: 0 });
     const dull = link(setRun(noRadios, { stage: 'resolve', positions: { B: 'back_yard' } }));
     expect(dull.label).toMatch(/no radios/);
     expect(dull.label).toMatch(/out of voice range/);
