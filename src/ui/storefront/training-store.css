@@ -24,6 +24,8 @@
 .training-chooser .sheet-sub { font-size: 13px; line-height: 1.4; }
 .training-chooser .sheet-body { padding-top: 10px; }
 .training-candidates, .training-review { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.training-enrolment { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.training-enrolment .training-person-name > span { font-size: 13px; line-height: 1.4; overflow-wrap: anywhere; }
 .training-comparison-intro { display: flex; flex-direction: column; gap: 7px; }
 .training-comparison-intro p { margin: 0; font-size: 13px; line-height: 1.45; }
 .training-program-lock { display: flex; flex-direction: column; gap: 7px; }

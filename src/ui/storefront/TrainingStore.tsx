@@ -9,11 +9,11 @@ import { useToast } from '../components/toast';
 import { Button, Chip, EmptyState, Meter } from '../components/ui';
 import { Sheet } from '../components/Sheet';
 import { Portrait } from '../portraits/Portrait';
-import { moneyFull as money } from '../format';
-import { useGame } from '../store';
+import { duration, moneyFull as money } from '../format';
+import { getState, useGame } from '../store';
 import { useNav, type TrainingDraft, type TrainingFocus } from '../components/nav';
 import { trainingCandidates, trainingOfficerCondition, trainingRatingGain, trainingRatingKeys, trainingStrongestRatings, type TrainingCandidate } from './training-officers';
-import { createTrainingChooserNavigation, type TrainingChoice } from './training-chooser-navigation';
+import { createTrainingChooserNavigation, type TrainingChoice, type TrainingEnrolment } from './training-chooser-navigation';
 import './training-store.css';
 
 /** Apply a deep link once; returning from Develop keeps the officer and search the player edited. */
@@ -76,7 +76,7 @@ export function TrainingStore({ requestedCert, requestedOfficer, requestedCourse
     if (!choice?.reviewOfficerId) return;
     reviewHeading.current?.focus({ preventScroll: true });
     reviewHeading.current?.scrollIntoView({ block: 'nearest' });
-  }, [choice?.reviewOfficerId]);
+  }, [choice?.reviewOfficerId, choice?.enrolment]);
   const officers = Object.values(game.officers).sort((a, b) => a.surname.localeCompare(b.surname) || a.id.localeCompare(b.id));
   const officer = game.officers[officerId];
   const options = courseOptions(game, officer?.id ?? null, game.department.clockHighWater)
@@ -84,7 +84,7 @@ export function TrainingStore({ requestedCert, requestedOfficer, requestedCourse
   const inTraining = officers.filter((member) => member.assignment?.kind === 'training').length;
   const selectedCourse = choice ? COURSES[choice.courseId] : null;
   const candidates = selectedCourse ? trainingCandidates(game, selectedCourse.id) : [];
-  const reviewing = choice?.reviewOfficerId ? candidates.find((candidate) => candidate.officer.id === choice.reviewOfficerId) : null;
+  const reviewing = choice?.reviewOfficerId && !choice.enrolment ? candidates.find((candidate) => candidate.officer.id === choice.reviewOfficerId) : null;
   const eligible = candidates.filter(({ option }) => option.available).length;
   const closeChooser = () => chooser.current?.close();
   const openChooser = (id: Id) => {
@@ -111,7 +111,10 @@ export function TrainingStore({ requestedCert, requestedOfficer, requestedCourse
     submitting.current = true;
     const result = act({ type: 'startCourse', officerId: reviewing.officer.id, courseId: selectedCourse.id }, `${fullName(reviewing.officer)} started ${selectedCourse.name}`);
     setFeedback({ courseId: selectedCourse.id, text: result.ok ? `${fullName(reviewing.officer)} is training for ${selectedCourse.hours} game hours.` : result.reason });
-    if (result.ok) chooser.current?.close(true);
+    if (result.ok) {
+      const assignment = getState().officers[reviewing.officer.id]?.assignment;
+      if (assignment?.kind === 'training') chooser.current?.complete({ officerName: fullName(reviewing.officer), startedAt: assignment.startedAt, endsAt: assignment.endsAt });
+    }
     else submitting.current = false;
   };
   return <div ref={root} className="store-training">
@@ -150,13 +153,16 @@ export function TrainingStore({ requestedCert, requestedOfficer, requestedCourse
       </article>;
     })}</div>
     {!options.length && <EmptyState icon="mortarboard" title="No courses match">Clear the course search to see all training.</EmptyState>}
-    <Sheet open={!!selectedCourse} onClose={closeChooser} title={reviewing ? 'Review enrolment' : 'Choose officer'} subtitle={selectedCourse ? `${selectedCourse.name} · ${money(selectedCourse.cost)} · ${selectedCourse.hours}h` : undefined} className="training-chooser" footer={selectedCourse && <div className="training-chooser-footer">
-      {reviewing ? <>
+    <Sheet open={!!selectedCourse} onClose={closeChooser} title={choice?.enrolment ? 'Enrolment confirmed' : reviewing ? 'Review enrolment' : 'Choose officer'} subtitle={selectedCourse ? `${selectedCourse.name} · ${money(selectedCourse.cost)} · ${selectedCourse.hours}h` : undefined} className="training-chooser" footer={selectedCourse && <div className="training-chooser-footer">
+      {choice?.enrolment ? <TrainingEnrolmentActions course={selectedCourse} onDone={closeChooser} /> : reviewing ? <>
         <p className="training-confirm-cost">{money(selectedCourse.cost)} funding · 1 slot · {selectedCourse.hours} game hours</p>
         <div className="training-confirm-actions"><Button onClick={backToCandidates}>Back</Button><Button variant="primary" disabled={!reviewing.option.available} onClick={enrol} aria-label={`Enrol ${fullName(reviewing.officer)} in ${selectedCourse.name} for ${money(selectedCourse.cost)}`}>Enrol officer</Button></div>
       </> : <Button block onClick={closeChooser}>Cancel</Button>}
     </div>}>
-      {selectedCourse && (reviewing ? <div className="training-review">
+      {selectedCourse && (choice?.enrolment ? <div className="training-review">
+        <h3 ref={reviewHeading} className="training-review-heading" tabIndex={-1}>{choice.enrolment.officerName} enrolled</h3>
+        <TrainingEnrolmentReceipt course={selectedCourse} enrolment={choice.enrolment} officer={game.officers[choice.reviewOfficerId!]} now={game.department.clockHighWater} />
+      </div> : reviewing ? <div className="training-review">
         <h3 ref={reviewHeading} className="training-review-heading" tabIndex={-1}>Confirm {fullName(reviewing.officer)}</h3>
         <TrainingOfficerCard candidate={reviewing} now={game.department.clockHighWater} selected />
         <div className="training-confirm-details"><p>{game.department.funding >= selectedCourse.cost ? `Funding: ${money(game.department.funding)} → ${money(game.department.funding - selectedCourse.cost)}` : `Funding: ${money(game.department.funding)} of ${money(selectedCourse.cost)} needed`}</p><p>{Math.max(0, game.department.trainingSlots - inTraining)} training {game.department.trainingSlots - inTraining === 1 ? 'slot' : 'slots'} free</p><p className="dim">Away from squad duties for {selectedCourse.hours} game hours. Grants arrive on completion; XP may also improve a rating.</p></div>
@@ -172,6 +178,29 @@ export function TrainingStore({ requestedCert, requestedOfficer, requestedCourse
         }} />)}
       </div>)}
     </Sheet>
+  </div>;
+}
+
+/** Keep the previous Enrol hit area inert so a repeated tap cannot dismiss the sheet. */
+export function TrainingEnrolmentActions({ course, onDone }: { course: Course; onDone: () => void }) {
+  return <>
+    <p className="training-confirm-cost">{money(course.cost)} funding paid · {course.hours} game hours</p>
+    <div className="training-confirm-actions"><Button onClick={(event) => { if (event.detail <= 1) onDone(); }}>Done</Button><Button variant="primary" disabled>Enrolled</Button></div>
+  </>;
+}
+
+export function TrainingEnrolmentReceipt({ course, enrolment, officer, now }: { course: Course; enrolment: TrainingEnrolment; officer?: Officer; now: number }) {
+  const assignment = officer?.assignment;
+  const inTraining = assignment?.kind === 'training' && assignment.courseId === course.id && assignment.startedAt === enrolment.startedAt;
+  const completed = !!officer && !inTraining && now >= enrolment.endsAt;
+  const rating = course.grants.rating;
+  const cert = course.grants.cert;
+  return <div className="training-enrolment" data-training-enrolment={course.id}>
+    <div className="training-person">
+      {officer && <Portrait officer={officer} size={52} className="training-portrait" />}
+      <div className="training-person-name"><strong>{enrolment.officerName}</strong><span>{course.name}</span><span className="training-eligible" role="status">{inTraining ? `In training · ${duration(assignment.endsAt - now)} remaining` : completed ? 'Course completed' : officer ? trainingOfficerCondition(officer, now) : 'No longer on the roster'}</span></div>
+    </div>
+    <div className="training-confirm-details"><strong>{completed ? 'Course completion benefits' : 'On completion'}</strong><p className="training-course-gain">{cert ? `Earn ${CERT_LABEL[cert]}` : rating ? `+${rating.delta} ${RATING_META.find((meta) => meta.key === rating.key)?.label ?? rating.key}` : ''}</p><p>+{courseXpGain(course.hours)} XP</p><p className="dim">{inTraining ? 'Away from squad duties until training finishes. Gains arrive on completion; XP may also improve a rating.' : completed ? 'Training has finished. Course gains and XP have been applied.' : 'Enrolment recorded. Check the officer’s current assignment for their availability.'}</p></div>
   </div>;
 }
 
