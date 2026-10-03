@@ -207,6 +207,9 @@ function dimension(value: string | null, fallback: number, min: number, max: num
 /** A real child viewport; constraining a div would not exercise viewport media queries. */
 function ResponsiveGame() {
   const q = new URLSearchParams(window.location.search);
+  // A new disposable session must read the current entry HTML after deployment.
+  // Keep its URL stable while resizing so the in-memory campaign is preserved.
+  const [previewUrl] = useState(() => `${import.meta.env.BASE_URL}?${RESPONSIVE_PREVIEW_PARAM}=1&preview-load=${Date.now().toString(36)}`);
   const [size, setSize] = useState({
     width: dimension(q.get('w'), 390, 240, 1920),
     height: dimension(q.get('h'), 844, 320, 1440),
@@ -226,7 +229,7 @@ function ResponsiveGame() {
       <div className="h-viewport-scroll">
         <iframe
           title={`Tactically Idle test viewport ${size.width} by ${size.height}`}
-          src={`${import.meta.env.BASE_URL}?${RESPONSIVE_PREVIEW_PARAM}=1`}
+          src={previewUrl}
           sandbox={RESPONSIVE_PREVIEW_SANDBOX}
           width={size.width}
           height={size.height}
