@@ -10,14 +10,14 @@ import { deserialize, serialize } from './save';
 import { practiceEntries } from '../ui/screens/helpers';
 
 describe('immediately discoverable decision exercises', () => {
-  it('keeps tutorials first and exposes three distinct practice families in existing campaigns', () => {
+  it('keeps tutorials first and exposes six distinct decision exercises in existing campaigns', () => {
     const state = createInitialState(NOW, 41); const entries = practiceEntries(state, NOW);
     expect(SCENARIO_ORDER.slice(0, 2)).toEqual(['ms_occupancy', 'ms_urgent']);
-    expect(DECISION_EXERCISES).toHaveLength(3);
+    expect(DECISION_EXERCISES).toHaveLength(6);
     expect(new Set(DECISION_EXERCISES.map((exercise) => exercise.spec.familyId)).size).toBe(3);
     for (const exercise of DECISION_EXERCISES) {
       expect(entries.find((entry) => entry.card.id === exercise.id)?.kind).toBe('exercise');
-      expect(getScenario(exercise.id)).toMatchObject({ practiceOnly:true,version:3,id:exercise.id });
+      expect(getScenario(exercise.id)).toMatchObject({ practiceOnly:true,version:4,id:exercise.id });
     }
   });
   it.each(DECISION_EXERCISES)('$title is playable, reloadable and reward-free with the starting squad', (exercise) => {

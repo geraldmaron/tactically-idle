@@ -65,3 +65,14 @@
   .result-officer-heading strong { font-size: 14px; }
   .result-portrait-stack > :nth-child(3) { display: none; }
 }
+
+.result-completion { min-width: 0; border-left: 3px solid var(--amber); padding-left: 12px; display: grid; gap: 7px; }
+.result-completion-achieved { border-left-color: var(--mint); }
+.result-completion-label { color: var(--amber-2); font-size: 23px; line-height: 1.2; }
+.result-completion-achieved .result-completion-label { color: var(--mint); }
+.result-completion p { margin: 0; font-size: 14px; line-height: 1.45; }
+.result-remaining h3 { margin: 5px 0; font-size: 14px; }
+.result-remaining ul { padding-left: 18px; margin: 0; font-size: 14px; line-height: 1.5; }
+.result-remaining li + li { margin-top: 5px; }
+.result-scores-explicit { border-top: 1px solid var(--line); padding-top: 12px; }
+.result-scores-explicit .result-score-value { font-size: 28px; }

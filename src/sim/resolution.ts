@@ -1,4 +1,6 @@
 import { actionEquipmentRequirements, effectiveTags, normalizedActionConsumption, operatorQualified, orderActionParticipants } from './equipment-requirements';
+import { casualtyActionIssue, incidentOfficerUnavailable } from './incident-consequences';
+import { externalSupportActionIssue, remainingSupportWait } from './external-support';
 import { evaluateCapabilities } from './capabilities';
 import { getScenario } from './scenario-registry';
 // Operation resolution: eligibility, contributors, score, probability and strain.
@@ -542,8 +544,18 @@ export function evaluateAction(input: EvalInput): Evaluation {
   // ---- squad validity
   if (run.history.some((h) => h.stage === action.stage && h.actionId === action.id)) return blank('Already tried this stage');
   if (!conditionHolds(action.visibleWhen, run)) return blank('That option does not fit the current situation');
+  if (scenario.version >= 4) {
+    const supportIssue = externalSupportActionIssue(run, scenario, action);
+    if (supportIssue) return blank(supportIssue);
+    const casualtyIssue = casualtyActionIssue(run, scenario, action);
+    if (casualtyIssue) return blank(casualtyIssue);
+  }
   if (acting.length === 0) return blank('Choose an acting squad');
   for (const sq of [...acting, ...support]) if (!run.squadIds.includes(sq)) return blank(`${squadLabel(sq)} is not deployed`);
+  if (scenario.version >= 4) for (const sq of [...acting, ...support]) {
+    const hasAvailable = state.squads.find(squad => squad.id === sq)?.officerIds.some(id => !!state.officers[id] && !incidentOfficerUnavailable(state, run, id));
+    if (!hasAvailable && !(action.commandOnly && acting.includes(sq))) return blank(`${squadLabel(sq)} has no uninjured officer available to take part`);
+  }
   const maxActing = action.maxActing ?? 1;
   if (acting.length > maxActing) return blank(`Only ${maxActing} squad${maxActing === 1 ? '' : 's'} can act on this`);
   if (support.length > 0 && !action.support) return blank('This option does not use support squads');
@@ -584,7 +596,10 @@ export function evaluateAction(input: EvalInput): Evaluation {
   const excluded: { officerId: Id; reason: string }[] = [];
   const pool: Officer[] = [];
   for (const o of candidates) {
-    if (highRisk && !highRiskAllowed(o)) {
+    if (incidentOfficerUnavailable(state, run, o.id)) {
+      excluded.push({ officerId: o.id, reason: `${o.surname} is injured and out of action` });
+      contributors.push({ label: `${o.surname}: injured and out of action`, value: 0, source: 'condition', ref: o.id });
+    } else if (highRisk && !highRiskAllowed(o)) {
       excluded.push({ officerId: o.id, reason: `${o.surname} is overloaded and sits out high-risk work` });
       contributors.push({ label: `${o.surname}: overloaded, sits out high-risk work`, value: 0, source: 'condition', ref: o.id });
     } else pool.push(o);
@@ -594,7 +609,7 @@ export function evaluateAction(input: EvalInput): Evaluation {
   for (const cert of certs) {
     if (!pool.some((o) => o.certs.includes(cert))) {
       const sidelined = candidates.find((o) => o.certs.includes(cert) && excluded.some((e) => e.officerId === o.id));
-      if (sidelined) reasons.push(`${sidelined.surname} is overloaded and cannot take high-risk work`);
+      if (sidelined) reasons.push(incidentOfficerUnavailable(state, run, sidelined.id) ? excluded.find(entry => entry.officerId === sidelined.id)!.reason : `${sidelined.surname} is overloaded and cannot take high-risk work`);
       else {
         const who = acting.length === 1 ? `${squadLabel(acting[0])} has none` : `none of ${listSquads(acting)} has one`;
         reasons.push(`Needs a ${CERT_LABEL[cert] ?? cert} — ${who}`);
@@ -632,9 +647,9 @@ export function evaluateAction(input: EvalInput): Evaluation {
   const ordered = orderActionParticipants(pool, action);
   const participants = ordered.slice(0, Math.max(0, cap));
   const benched = ordered.slice(participants.length);
-  if (participants.length === 0) {
+  if (participants.length === 0 && !(scenario.version >= 4 && action.commandOnly)) {
     const sidelined = excluded[0];
-    reasons.push(sidelined ? `No one in ${listSquads(acting)} can take high-risk work (${sidelined.reason.split(' is ')[0]} is overloaded)` : `No officer in ${listSquads(acting)} can take part`);
+    reasons.push(sidelined ? scenario.version >= 4 ? `No one in ${listSquads(acting)} can take part (${sidelined.reason})` : `No one in ${listSquads(acting)} can take high-risk work (${sidelined.reason.split(' is ')[0]} is overloaded)` : `No officer in ${listSquads(acting)} can take part`);
   }
   if (benched.length > 0 && capSpace) {
     const n = benched.length;
@@ -671,7 +686,7 @@ export function evaluateAction(input: EvalInput): Evaluation {
   const mentorSquads = new Set<SquadId>();
   for (const sq of acting) {
     const squad = state.squads.find((s) => s.id === sq);
-    if (squad?.officerIds.some((id) => state.officers[id]?.traits.includes('mentor'))) mentorSquads.add(sq);
+    if (squad?.officerIds.some((id) => !incidentOfficerUnavailable(state, run, id) && state.officers[id]?.traits.includes('mentor'))) mentorSquads.add(sq);
   }
   const hasUnresolvedReport = Object.values(run.knowledge).includes('reported');
   const lead = participants[0] ?? null;
@@ -717,7 +732,7 @@ export function evaluateAction(input: EvalInput): Evaluation {
     }
     if (band === 'rookie') {
       const sq = squadOf.get(o.id);
-      const mentor = (state.squads.find((s) => s.id === sq)?.officerIds ?? []).map((id) => state.officers[id]).find((m) => m && m.id !== o.id && experienceBand(m, day) === 'veteran');
+      const mentor = (state.squads.find((s) => s.id === sq)?.officerIds ?? []).map((id) => state.officers[id]).find((m) => m && !incidentOfficerUnavailable(state, run, m.id) && m.id !== o.id && experienceBand(m, day) === 'veteran');
       if (mentor) contributors.push({ label: `${mentor.surname}: mentoring ${o.surname} +${E.mentoring}`, value: round1(E.mentoring * seat), source: 'familiarity', ref: o.id });
     }
     const age = ageYears(o, day);
@@ -948,6 +963,7 @@ export function evaluateAction(input: EvalInput): Evaluation {
       supportTravel = Math.max(supportTravel, dist);
       const squad = state.squads.find((s) => s.id === sq);
       const coords = (squad?.officerIds ?? [])
+        .filter(id => !incidentOfficerUnavailable(state, run, id))
         .map((id) => state.officers[id]?.ratings.coordination ?? 0)
         .sort((a, b) => b - a)
         .slice(0, 2);
@@ -1063,8 +1079,9 @@ export function evaluateAction(input: EvalInput): Evaluation {
   const all = [...diffContribs, ...contributors];
   const margin = round1(score - difficulty);
   const probs = bandProbabilities(margin);
-  const timeBase = round1(Math.max(0.5, workloadMinutes + travel + entryMinutes + capability.minutes));
-  const timeExpected = round1(timeBase * (probs.favorable * T.bandTime.favorable + probs.mixed * T.bandTime.mixed + probs.adverse * T.bandTime.adverse));
+  const supportWait = scenario.version >= 4 && action.awaitSupport ? remainingSupportWait(run, scenario, action.awaitSupport) : null;
+  const timeBase = supportWait ?? round1(Math.max(0.5, workloadMinutes + travel + entryMinutes + capability.minutes));
+  const timeExpected = supportWait ?? round1(timeBase * (probs.favorable * T.bandTime.favorable + probs.mixed * T.bandTime.mixed + probs.adverse * T.bandTime.adverse));
 
   // ---- text
   const rated = action.check.ratings.filter((r) => r.weight > 0 && (r.key !== 'shooting' || kind === 'execution'));
@@ -1136,7 +1153,7 @@ export function strainFor(input: EvalInput, ev: Evaluation, band: OutcomeBand): 
   const pressured = underPressure(run, action.check.kind);
   for (const sq of run.squadIds) {
     const squad = state.squads.find((s) => s.id === sq);
-    const mentor = squad?.officerIds.some((id) => state.officers[id]?.traits.includes('mentor')) ?? false;
+    const mentor = squad?.officerIds.some((id) => !incidentOfficerUnavailable(state, run, id) && state.officers[id]?.traits.includes('mentor')) ?? false;
     for (const id of squad?.officerIds ?? []) {
       const o = state.officers[id];
       if (!o) continue;

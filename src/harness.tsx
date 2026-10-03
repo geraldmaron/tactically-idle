@@ -8,6 +8,7 @@ import { Blueprint } from './ui/blueprint/Blueprint';
 import { RoomList } from './ui/blueprint/RoomList';
 import { Portrait } from './ui/portraits/Portrait';
 import { PERSONAS } from './content/personas';
+import { QA_CAMPAIGN_PARAM, type QaCampaignPreset } from './ui/qa-campaign';
 import { RESPONSIVE_PREVIEW_PARAM, RESPONSIVE_PREVIEW_SANDBOX } from './ui/save-environment';
 
 /**
@@ -209,7 +210,10 @@ function ResponsiveGame() {
   const q = new URLSearchParams(window.location.search);
   // A new disposable session must read the current entry HTML after deployment.
   // Keep its URL stable while resizing so the in-memory campaign is preserved.
-  const [previewUrl] = useState(() => `${import.meta.env.BASE_URL}?${RESPONSIVE_PREVIEW_PARAM}=1&preview-load=${Date.now().toString(36)}`);
+  const [previewLoad] = useState(() => Date.now().toString(36));
+  const [requestedPreset, setRequestedPreset] = useState<QaCampaignPreset>('fresh');
+  const [preview, setPreview] = useState<{ preset: QaCampaignPreset; revision: number }>({ preset: 'fresh', revision: 0 });
+  const previewUrl = `${import.meta.env.BASE_URL}?${RESPONSIVE_PREVIEW_PARAM}=1&${QA_CAMPAIGN_PARAM}=${preview.preset}&preview-load=${previewLoad}-${preview.revision}`;
   const [size, setSize] = useState({
     width: dimension(q.get('w'), 390, 240, 1920),
     height: dimension(q.get('h'), 844, 320, 1440),
@@ -218,6 +222,11 @@ function ResponsiveGame() {
     <div className="h-page h-responsive">
       <h1>Game viewport · {size.width} × {size.height}</h1>
       <p className="h-note">The frame runs the real app with ten temporary in-memory save slots. Its sandbox blocks access to normal browser saves; closing or reloading it discards every test slot. Changing size keeps that campaign.</p>
+      <div className="h-ctl h-preset" role="group" aria-label="Temporary test campaign">
+        <label>Test campaign<select value={requestedPreset} onChange={(event) => setRequestedPreset(event.target.value as QaCampaignPreset)}><option value="fresh">Fresh department</option><option value="equipped">Equipped test team</option></select></label>
+        <button type="button" className="h-btn" onClick={() => setPreview((current) => ({ preset: requestedPreset, revision: current.revision + 1 }))}>Reset temporary test slots</button>
+      </div>
+      <p className="h-note" role="status">TEST · {preview.preset === 'equipped' ? 'Equipped test team: qualified officers and stocked equipment' : 'Fresh department'}. Reset clears only this frame’s temporary slots. Normal saves stay separate.</p>
       <div className="h-ctl" role="group" aria-label="Test viewport">
         {DEVICE_SIZES.map((device) => (
           <button key={device.width} type="button" className="h-btn" aria-pressed={size.width === device.width && size.height === device.height} onClick={() => setSize(device)}>
@@ -290,6 +299,9 @@ const css = `
 .h-btn { margin-top: 8px; min-height: 44px; padding: 0 12px; background: var(--panel-2); border: 1px solid var(--line-strong); border-radius: 8px; color: var(--text); }
 .h-btn[aria-pressed='true'] { border-color: var(--amber); }
 .h-ctl { display: flex; flex-wrap: wrap; gap: 6px; }
+.h-preset { align-items: end; }
+.h-preset label { display: grid; gap: 5px; font-size: 14px; }
+.h-preset select { min-height: 44px; padding: 8px; color: var(--text); background: var(--panel); border: 1px solid var(--line); border-radius: 6px; font: inherit; }
 .h-grid { display: grid; grid-template-columns: repeat(4, 80px); gap: 14px 10px; margin-bottom: 14px; }
 .h-big { display: flex; flex-wrap: wrap; gap: 12px; width: 760px; }
 .h-fig { margin: 0; font: 11px var(--font-ui); color: var(--muted); text-align: center; }

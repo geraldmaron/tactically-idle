@@ -27,6 +27,7 @@ import { ChoiceRail } from '../components/ChoiceRail';
 import { armamentLabel } from '../components/incident';
 import { ROLE_META, ROOM_TYPE_LABEL, STAGE_LABEL } from '../components/labels';
 import { highRiskAllowed } from '../../sim/officer';
+import { incidentOfficerUnavailable } from '../../sim/incident-consequences';
 import { describeConstruction } from '../../sim/spatial';
 import { Icon, actionIcon, materialIcon, roomIcon } from '../icons';
 import type { IconName } from '../icons';
@@ -74,6 +75,8 @@ export interface LiveViewProps {
   onOpenDetails: () => void;
   detailsOpen: boolean;
   feedback?: ReactNode;
+  /** Named external services stay beside the next decision, separate from squad support. */
+  supportContext?: ReactNode;
   /** Overlay sheets (action detail, room sheet, cancel confirm) rendered by the container. */
   children?: ReactNode;
 }
@@ -176,7 +179,7 @@ export function LiveView(p: LiveViewProps) {
       {multi && (
         <div className="live-squad-rail"><ChoiceRail value={focus?.id ?? p.deployedSquads[0].id} kind="tabs" label="Deployed squads" panelId="deployed-officer-strip" onChange={p.onFocusSquad} options={p.deployedSquads.map((s) => {
             // In the field, readiness means members still fit for high-risk work (not deploy eligibility).
-            const fit = s.officerIds.filter((id) => p.g.officers[id] && highRiskAllowed(p.g.officers[id])).length;
+            const fit = s.officerIds.filter((id) => p.g.officers[id] && highRiskAllowed(p.g.officers[id]) && (!p.g.activeRun || !incidentOfficerUnavailable(p.g, p.g.activeRun, id))).length;
             return { value: s.id, accessibleLabel: `Squad ${s.id}, ${s.name}, ${fit} of ${s.officerIds.length} fit`,
               label: <><b>{s.id}</b><span className="squad-tab-name">{s.name}</span><span className="choice-rail-count">{fit}/{s.officerIds.length} fit</span></> };
           })} /></div>
@@ -184,14 +187,17 @@ export function LiveView(p: LiveViewProps) {
 
       <div className="strip" id="deployed-officer-strip" role={multi ? 'tabpanel' : undefined} aria-label={focus ? `${focus.name} officers` : 'Officers'}>
         {p.officers.map((o) => {
-          const acting = sel?.officerIds.includes(o.id) ?? false;
+          const casualty = p.g.activeRun?.officerCasualties?.[o.id];
+          const acting = !casualty && (sel?.officerIds.includes(o.id) ?? false);
           const active = p.activeOfficerId === o.id;
-          const cap = active && sel ? capabilityFor(sel, o) : null;
+          const cap = !casualty && active && sel ? capabilityFor(sel, o) : null;
           return (
             <OfficerCard
               key={o.id}
               officer={o}
               now={p.now}
+              incidentInjury={casualty?.label}
+              note={casualty ? 'Out of action' : undefined}
               selected={active}
               onClick={() => p.onSelectOfficer(o.id)}
               leader={focus?.leaderId === o.id}
@@ -211,6 +217,8 @@ export function LiveView(p: LiveViewProps) {
       </div>
 
       {p.feedback}
+
+      {p.supportContext}
 
       <div className="call operation-choices" aria-label="Your call">
         <div className="call-head">
@@ -385,6 +393,8 @@ const GROUPS: { source: Contributor['source']; label: string; icon: IconName }[]
 ];
 
 export interface ActionSheetProps {
+  /** Support-origin reviews keep the contextual modal route and a clear Back action. */
+  onBackToSupport?: () => void;
   open: boolean;
   onClose: () => void;
   view: ActionView | null;
@@ -420,7 +430,7 @@ export function ActionSheet(p: ActionSheetProps) {
     <Sheet
       open={p.open && !!v}
       onClose={p.onClose}
-      modal={false}
+      modal={!!p.onBackToSupport}
       maxHeight="short"
       className="operation-action-sheet"
       title={v ? v.title : ''}
@@ -437,6 +447,7 @@ export function ActionSheet(p: ActionSheetProps) {
     >
       {v && (
         <div className="adetail">
+          {p.onBackToSupport && <Button variant="ghost" onClick={p.onBackToSupport}>Back to care &amp; support</Button>}
           {v.summary !== v.outcomePreview.favorable && <p className="operation-action-summary">{v.summary}</p>}
           <div className="chips">
             <Chip icon="clock">Estimated time: {opMinutes(v.timeCost)}</Chip>

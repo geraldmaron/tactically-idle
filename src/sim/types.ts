@@ -510,6 +510,18 @@ export type StageId = 'assess' | 'adapt' | 'resolve';
 export type KnowledgeStatus = 'unknown' | 'reported' | 'confirmed' | 'disproved';
 export type OutcomeBand = 'favorable' | 'mixed' | 'adverse';
 export type RiskBand = 'low' | 'moderate' | 'high' | 'severe';
+export type CompletionDisposition = 'resolved' | 'care_accepted' | 'followup_agreed' | 'relief_partial' | 'unresolved';
+export interface ExternalSupportState {
+  requestedAt: number;
+  /** Null means this service could not provide a response for this incident. */
+  availableAt: number | null;
+  acceptedAt: number | null;
+}
+export interface ExternalSupportEvent {
+  serviceId: Id;
+  kind: 'requested' | 'accepted';
+  at: number;
+}
 
 export interface Contributor {
   label: string;
@@ -550,6 +562,9 @@ export interface DecisionResolution {
     pressureDelta: number;
     consequences: string[];
     endingTitle: string | null;
+    /** Exact external responsibility events, saved once at commit in v4. */
+    externalSupport?: ExternalSupportEvent[];
+    officerCasualties?: OfficerCasualtyRecord[];
   };
   /** Run revision this decision was applied to. */
   revision: number;
@@ -599,6 +614,9 @@ export interface OperationRun {
   stage: StageId | 'debrief';
   knowledge: Record<Id, KnowledgeStatus>;
   flags: string[];
+  /** External care/response services; distinct from deployed squad support and vehicles. */
+  externalSupport?: Record<Id, ExternalSupportState>;
+  officerCasualties?: Record<Id, OfficerCasualtyRecord>;
   /** Operation minutes elapsed. */
   clock: number;
   /** 0..100 situation pressure. */
@@ -629,6 +647,13 @@ export interface DebriefResult {
   endingTitle: string;
   /** Absent only in older saved debriefs. */
   endingSummary?: string;
+  /** Saved disposition and receiver evidence survive future content updates. */
+  disposition?: CompletionDisposition;
+  completionAchieved?: boolean;
+  remainingTasks?: string[];
+  receivingService?: { id: Id; label: string; kind: string; acceptedAt: number };
+  officerCasualties?: OfficerCasualtyRecord[];
+  civilianOutcomes?: CivilianOutcomeView[];
   /** Detached complete decision log; absent from previously closed legacy debriefs. */
   decisions?: DecisionView[];
   practice: boolean;
@@ -644,6 +669,23 @@ export interface DebriefResult {
   devPointReward: number;
   /** Material causes, most significant first. */
   causes: string[];
+}
+
+export interface OfficerCasualtyRecord {
+  officerId: Id;
+  severity: 'wounded' | 'serious';
+  label: string;
+  /** Operation minute when this injury occurred. */
+  at: number;
+  care: 'needed' | 'stabilized' | 'evacuated';
+  /** Department clock time; practice records never change the real officer. */
+  recoveryUntil: number;
+}
+
+export interface CivilianOutcomeView {
+  id: Id;
+  label: string;
+  status: 'unaccounted' | 'needs_help' | 'safe' | 'injured_needs_care' | 'care_accepted' | 'accounted_elsewhere';
 }
 
 // ---------------------------------------------------------------- view models consumed by the UI

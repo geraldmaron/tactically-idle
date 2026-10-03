@@ -1,4 +1,6 @@
-import type { GameState, SaveEnvelope } from './types';
+import type { GameState, OperationRun, SaveEnvelope } from './types';
+import { COMPLETION_DISPOSITIONS, validExternalSupportState } from './external-support';
+import { validCasualtyRecord, validIncidentConsequences } from './incident-consequences';
 import { SQUAD_IDS as SQUAD_ID_LIST } from './types';
 import { CAREER_SEEDS } from '../content/officers';
 import { ITEMS } from '../content/items';
@@ -83,7 +85,9 @@ function validDecision(d: unknown): boolean {
       && (c.ref === undefined || isStr(c.ref)))
     && isList(d.itemsConsumed, (i) => isObj(i) && isStr(i.itemId) && isNum(i.qty))
     && isList(d.knowledgeChanges, (k) => isObj(k) && isStr(k.factId) && oneOf(k.status, KNOWLEDGE))
-    && (d.committed === undefined || (isObj(d.committed) && numbers(d.committed, ['objectiveDelta', 'civilianSafetyDelta', 'pressureDelta']) && isStrings(d.committed.consequences) && (d.committed.endingTitle === null || isStr(d.committed.endingTitle))));
+    && (d.committed === undefined || (isObj(d.committed) && numbers(d.committed, ['objectiveDelta', 'civilianSafetyDelta', 'pressureDelta']) && isStrings(d.committed.consequences) && (d.committed.endingTitle === null || isStr(d.committed.endingTitle))
+      && (d.committed.externalSupport === undefined || isList(d.committed.externalSupport, (event) => isObj(event) && isStr(event.serviceId) && oneOf(event.kind, ['requested', 'accepted']) && isNum(event.at) && event.at >= 0))
+      && (d.committed.officerCasualties === undefined || isList(d.committed.officerCasualties, validCasualtyRecord))));
 }
 
 function validDecisionView(d: unknown): boolean {
@@ -131,7 +135,15 @@ function validRun(r: unknown): boolean {
   // A structurally sound run still needs a resolvable map; selectors rebuild it immediately.
   const scenario = getScenario(r.scenarioId as string);
   return !!scenario && scenario.locationFamilyId === r.locationFamilyId && Number.isSafeInteger(r.locationSeed)
-    && (r.locationSeed as number) >= 0;
+    && (r.locationSeed as number) >= 0
+    && validExternalSupportState(r as unknown as OperationRun, scenario)
+    && (scenario.version < 4 || (r.scenarioVersion === scenario.version && r.locationSeed === scenario.locationSeed
+      && Number.isSafeInteger(r.revision) && r.revision === r.history.length
+      && (r.clock as number) >= 0 && (r.objective as number) >= 0 && (r.objective as number) <= 100
+      && (r.civilianSafety as number) >= 0 && (r.civilianSafety as number) <= 100
+      && (r.pressure as number) >= 0 && (r.pressure as number) <= 100
+      && r.history.every((entry, index) => (entry as Record<string, unknown>).revision === index)
+      && (r.status === 'active' ? r.stage !== 'debrief' && r.endingId === null : r.stage === 'debrief' && isStr(r.endingId) && !!scenario.endings[r.endingId])));
 }
 
 function validDebrief(d: unknown): boolean {
@@ -142,7 +154,16 @@ function validDebrief(d: unknown): boolean {
     && isList(d.informationPreserved, (f) => isObj(f) && strings(f, ['factId', 'label']) && oneOf(f.status, KNOWLEDGE))
     && isList(d.resources, (i) => isObj(i) && isStr(i.itemId) && numbers(i, ['used', 'returned']))
     && isList(d.unitWear, (u) => isObj(u) && strings(u, ['unitId', 'itemId', 'serial']) && numbers(u, ['before', 'after']))
-    && (d.endingSummary === undefined || isStr(d.endingSummary)) && (d.decisions === undefined || isList(d.decisions, validDecisionView));
+    && (d.endingSummary === undefined || isStr(d.endingSummary)) && (d.decisions === undefined || isList(d.decisions, validDecisionView))
+    && (d.officerCasualties === undefined || isList(d.officerCasualties, validCasualtyRecord))
+    && (d.civilianOutcomes === undefined || isList(d.civilianOutcomes, person => isObj(person) && strings(person, ['id', 'label']) && oneOf(person.status, ['unaccounted', 'needs_help', 'safe', 'injured_needs_care', 'care_accepted', 'accounted_elsewhere'])))
+    && (d.disposition === undefined || oneOf(d.disposition, COMPLETION_DISPOSITIONS))
+    && (d.completionAchieved === undefined || isBool(d.completionAchieved))
+    && (d.remainingTasks === undefined || isStrings(d.remainingTasks))
+    && (d.receivingService === undefined || (isObj(d.receivingService) && strings(d.receivingService, ['id', 'label', 'kind']) && isNum(d.receivingService.acceptedAt) && d.receivingService.acceptedAt >= 0))
+    && (d.disposition === undefined || (isBool(d.completionAchieved)
+      && (d.completionAchieved ? ['resolved', 'care_accepted', 'followup_agreed'].includes(d.disposition as string) : ['relief_partial', 'unresolved'].includes(d.disposition as string))
+      && (d.disposition !== 'care_accepted' || d.receivingService !== undefined)));
 }
 
 /** Fields every version has. `v2` adds the career fields introduced in version 2. */
@@ -259,6 +280,7 @@ function validState(s: unknown, historical = false): s is GameState {
   if (!validIncidents(s)) return false;
   if (s.report !== null && !validReport(s.report)) return false;
   if (s.activeRun !== null && !validRun(s.activeRun)) return false;
+  if (s.activeRun !== null && !validIncidentConsequences(s.activeRun as unknown as OperationRun, getScenario((s.activeRun as unknown as OperationRun).scenarioId)!, s.officers as GameState['officers'], s.squads as GameState['squads'], (s.department as GameState['department']).clockHighWater)) return false;
   if (!isList(s.debriefs, validDebrief)) return false;
   const people = s.personnel;
   if (!isObj(people) || !isNum(people.campaignSeed) || !Number.isInteger(people.campaignSeed) || people.campaignSeed < 0 || people.campaignSeed > 0xffffffff || !isNum(people.catalogVersion)) return false;

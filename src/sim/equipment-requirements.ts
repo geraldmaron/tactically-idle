@@ -27,7 +27,9 @@ export function actionEquipmentRequirements(action: ActionDefinition) {
   return { groups, consumes: normalizedActionConsumption(action), certs: action.requires.certs ?? [], minSquads: Math.max(action.requires.minSquads?.count ?? 1, (action.capabilities?.required ?? []).some((cap) => ['specialist_support', 'weak_radio_link', 'scene_coordination'].includes(cap)) ? 2 : 1) };
 }
 export function qualifiedOfficers(state: GameState, squads: SquadId[], action: ActionDefinition): Officer[] {
-  return [...new Set(squads.flatMap((sid) => state.squads.find((s) => s.id === sid)?.officerIds ?? []))].map((id) => state.officers[id]).filter((o): o is Officer => !!o && (action.check.kind !== 'execution' || highRiskAllowed(o)));
+  return [...new Set(squads.flatMap((sid) => state.squads.find((s) => s.id === sid)?.officerIds ?? []))].map((id) => state.officers[id]).filter((o): o is Officer => !!o
+    && !(state.activeRun?.scenarioVersion && state.activeRun.scenarioVersion >= 4 && (state.activeRun.officerCasualties?.[o.id] || o.injury && o.injury.until > state.department.clockHighWater))
+    && (action.check.kind !== 'execution' || highRiskAllowed(o)));
 }
 export function operatorQualified(state: GameState, squadId: SquadId, action: ActionDefinition, item: ItemDefinition): boolean {
   return qualifiedOfficers(state, [squadId], action).some((o) => (item.requiresCerts ?? []).every((cert) => o.certs.includes(cert)));

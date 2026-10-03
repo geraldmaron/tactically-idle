@@ -1,6 +1,7 @@
 // All effects below are fictional score/time rules. Only public action context and
 // player knowledge are read: compatibility never asks a hidden fact for its truth.
 import { CAPABILITIES } from '../content/capabilities';
+import { incidentOfficerUnavailable } from './incident-consequences';
 import { ITEMS } from '../content/items';
 import type { ActionDefinition, ScenarioDefinition } from './scenario-types';
 import type { BuiltLocation, CapabilityId, Contributor, GameState, Id, ItemUnit, OperationRun, SquadId } from './types';
@@ -48,7 +49,7 @@ export function supportVehicle(state: GameState, run: OperationRun): ItemUnit | 
   const def = ITEMS[unit.itemId];
   const now = state.department.clockHighWater;
   if ((unit.expiresAt !== null && unit.expiresAt <= now) || unitEffectiveness({ ...unit, condition: projectedCondition(state, unit, now) }, def) <= 0) return null;
-  if (!run.squadIds.some((sid) => state.squads.find((s) => s.id === sid)?.officerIds.some((oid) => ['vehicle_operations', ...def.requiresCerts ?? []].every((cert) => (state.officers[oid]?.certs as string[] | undefined)?.includes(cert))))) return null;
+  if (!run.squadIds.some((sid) => state.squads.find((s) => s.id === sid)?.officerIds.some((oid) => !incidentOfficerUnavailable(state, run, oid) && ['vehicle_operations', ...def.requiresCerts ?? []].every((cert) => (state.officers[oid]?.certs as string[] | undefined)?.includes(cert))))) return null;
   return unit;
 }
 

@@ -65,7 +65,7 @@ function DebriefEvidence({ debrief: d, decisions, officers }: { debrief: Debrief
     <SubHead icon="list">Review the operation</SubHead>
     {d.causes.length > 0 && <details className="result-disclosure"><summary>Why this outcome · {d.causes.length} reasons</summary><ol className="causes">{d.causes.map((cause, index) => <li key={index}>{cause}</li>)}</ol></details>}
     <details className="result-disclosure"><summary>Decision log{decisions.length > 0 ? ` (${decisions.length})` : ''}</summary>
-      {decisions.length ? <OperationLogContents decisions={decisions} practice={d.practice} officers={officers} /> : <p className="operation-note">No per-decision log is stored for this operation. The saved result and causes are shown above.</p>}
+      {decisions.length ? <OperationLogContents decisions={decisions} practice={d.practice} officers={officers} explicitCompletion={!!d.disposition} /> : <p className="operation-note">No per-decision log is stored for this operation. The saved result and causes are shown above.</p>}
     </details>
     <details className="result-disclosure"><summary>Information &amp; reality</summary><Information d={d} /><Reality d={d} /></details>
     {!d.practice && <details className="result-disclosure"><summary>Supplies &amp; equipment{used > 0 || worn > 0 ? ` · ${used} used · ${worn} worn` : ' · unchanged'}</summary><Supplies d={d} /></details>}
