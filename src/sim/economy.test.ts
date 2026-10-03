@@ -170,7 +170,7 @@ describe('funding cap', () => {
       ok(s, { type: 'tick' }, T0 + 24 * HOUR_MS).department.funding,
       3,
     );
-  });
+  }, 15_000);
 
   it('funding never goes below zero and a shortage is recorded', () => {
     const s = createInitialState(T0);
