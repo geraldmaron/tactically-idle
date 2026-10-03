@@ -165,3 +165,6 @@
   .decision-effects > div { grid-template-columns: 77px minmax(0, 1fr); gap: 6px; }
   .operation-choices .callbtn { gap: 8px; padding: 10px; }
 }
+
+/* Full skill names stay readable in the selected officer’s contribution badge. */
+.capchip { white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; }

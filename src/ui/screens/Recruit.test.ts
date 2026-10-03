@@ -55,7 +55,7 @@ describe('recruitment role selection', () => {
     expect(html.match(/role="radio"/g)).toHaveLength(6);
     expect(html.match(/aria-checked="true"/g)).toHaveLength(1);
     expect(html.match(/tabindex="0"/g)).toHaveLength(1);
-    for (const label of ['Any', 'Comms', 'Breach', 'Medic', 'Recon', 'Lead']) expect(html).toContain(`>${label}</button>`);
+    for (const label of ['Any', 'Communication', 'Entry', 'Medical', 'Observation', 'Leadership']) expect(html).toContain(`>${label}</button>`);
     for (const c of state.candidates) expect(html).toContain(`${c.officer.firstName} ${c.officer.surname}`);
     expect(html).not.toContain('Hire…');
   });

@@ -43,7 +43,7 @@ describe('course-first Training presentation', () => {
     expect(html).toContain('Stress');
     expect(html).not.toContain('Readiness');
     expect(html).toContain('Direct course gain');
-    expect(html).toContain('Comms: 84 → 87');
+    expect(html).toContain('Communication: 84 → 87');
     expect(html).toContain('+3 on completion');
     expect(html).not.toContain('data-course-id="drone_course"');
   });

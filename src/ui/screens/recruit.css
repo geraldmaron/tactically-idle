@@ -24,3 +24,6 @@
   font: 600 17px/1.3 var(--font-cond);
   color: var(--text);
 }
+
+.cand .miniratings { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.cand .miniratings li > span { min-width: 0; overflow-wrap: anywhere; }

@@ -1,13 +1,12 @@
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
 import { Icon } from '../icons';
 import type { IconName } from '../icons';
-import type { StressBand } from '../../sim/officer';
-import { stressBand } from '../../sim/officer';
-import { BAND_SHORT, EXPERIENCE_META, STATUS_META } from './labels';
+import { EXPERIENCE_META, STATUS_META } from './labels';
 import type { StatusKey } from './labels';
 import type { ExperienceBand } from '../../sim/calendar';
 import { EXPERIENCE_LABEL } from '../../sim/calendar';
 import { ChoiceRail } from './ChoiceRail';
+import { StressDisplay } from './StressDisplay';
 
 // Small shared primitives. Styling lives in app.css.
 
@@ -126,22 +125,9 @@ export function Meter({
   );
 }
 
-/** Readiness bar coloured by stress band; the band name is always available as text. */
+/** Compact stress reading; overall availability is shown separately. */
 export function ReadinessBar({ stress, withText }: { stress: number; withText?: boolean }) {
-  const band: StressBand = stressBand(stress);
-  const pct = Math.max(0, Math.min(100, Math.round(100 - stress)));
-  return (
-    <span className={`rbar-wrap`}>
-      <span className={`rbar rbar-${band}`} role="img" aria-label={`Readiness ${pct} percent, ${BAND_SHORT[band]}`}>
-        <span className="rbar-fill" style={{ width: `${Math.max(6, pct)}%` }} />
-      </span>
-      {withText && (
-        <span className={`rbar-text band-${band}`}>
-          {BAND_SHORT[band]} {pct}%
-        </span>
-      )}
-    </span>
-  );
+  return <StressDisplay value={stress} compact={!withText} />;
 }
 
 export function Stepper({

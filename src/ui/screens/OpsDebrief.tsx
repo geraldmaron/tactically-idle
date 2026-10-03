@@ -24,7 +24,7 @@ export function SavedDebriefContents({ debrief: d, officers }: { debrief: Debrie
     {d.endingSummary && <p className="debrief-narrative">{d.endingSummary}</p>}
     <DebriefConsequences debrief={d} />
     <OfficerResults debrief={d} officers={officers} />
-    <DebriefEvidence debrief={d} decisions={d.decisions ?? []} />
+    <DebriefEvidence debrief={d} decisions={d.decisions ?? []} officers={officers} />
   </div>;
 }
 
@@ -54,18 +54,18 @@ export function OpsDebrief() {
     {d.endingSummary && <p className="debrief-narrative">{d.endingSummary}</p>}
     <DebriefConsequences debrief={d} decisions={decisions} />
     <OfficerResults debrief={d} officers={g.officers} />
-    <DebriefEvidence debrief={d} decisions={decisions} />
+    <DebriefEvidence debrief={d} decisions={decisions} officers={g.officers} />
   </div><div className="debrief-footer"><Button variant="primary" block onClick={close}>Close debrief</Button></div></div>;
 }
 
-function DebriefEvidence({ debrief: d, decisions }: { debrief: DebriefResult; decisions: DecisionView[] }) {
+function DebriefEvidence({ debrief: d, decisions, officers }: { debrief: DebriefResult; decisions: DecisionView[]; officers: DebriefOfficers }) {
   const used = d.resources.filter((row) => row.itemId !== 'battery_pack').reduce((total, row) => total + row.used, 0);
   const worn = (d.unitWear ?? []).filter((row) => row.itemId !== 'battery_pack' && row.after < row.before).length;
   return <Card className="result-evidence">
     <SubHead icon="list">Review the operation</SubHead>
     {d.causes.length > 0 && <details className="result-disclosure"><summary>Why this outcome · {d.causes.length} reasons</summary><ol className="causes">{d.causes.map((cause, index) => <li key={index}>{cause}</li>)}</ol></details>}
     <details className="result-disclosure"><summary>Decision log{decisions.length > 0 ? ` (${decisions.length})` : ''}</summary>
-      {decisions.length ? <OperationLogContents decisions={decisions} practice={d.practice} /> : <p className="operation-note">No per-decision log is stored for this operation. The saved result and causes are shown above.</p>}
+      {decisions.length ? <OperationLogContents decisions={decisions} practice={d.practice} officers={officers} /> : <p className="operation-note">No per-decision log is stored for this operation. The saved result and causes are shown above.</p>}
     </details>
     <details className="result-disclosure"><summary>Information &amp; reality</summary><Information d={d} /><Reality d={d} /></details>
     {!d.practice && <details className="result-disclosure"><summary>Supplies &amp; equipment{used > 0 || worn > 0 ? ` · ${used} used · ${worn} worn` : ' · unchanged'}</summary><Supplies d={d} /></details>}

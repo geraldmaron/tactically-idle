@@ -30,8 +30,8 @@ export function OfficerProgress({ officer, day }: { officer: Officer; day: numbe
       <span className="officer-progress-rating">{number(current)}{!capped && <><span aria-hidden="true"> → </span><span className="sr-only"> to </span>{number(current + 1)}</>}</span>
     </div>
     {capped ? <>
-      <p className="officer-progress-next">XP growth cap reached</p>
-      <p className="officer-progress-note">XP increases this rating only while it is below {CAREER_TUNING.xpRatingCeiling}.</p>
+      <p className="officer-progress-next">Experience can’t raise this skill further</p>
+      <p className="officer-progress-note">Experience can raise this skill up to {CAREER_TUNING.xpRatingCeiling}.</p>
     </> : <>
       <Meter value={progress} tone="hi" label={`XP toward the next ${rating.label.toLowerCase()} point`} valueText={`${number(Math.min(earned, threshold))} of ${threshold} XP; ${number(remaining)} XP remaining`} />
       <div className="officer-progress-count"><strong>{number(Math.min(earned, threshold))} / {threshold} XP</strong><span>{remaining > 0 ? `${number(remaining)} XP to +1` : 'Rating point ready'}</span></div>

@@ -9,6 +9,8 @@ This pass addresses decision clarity and comparison, in addition to responsive c
 - Filter groups expose radio semantics; view destinations expose navigation semantics; squad tabs identify the panel they control.
 - Arrow keys and Home/End move through available choices. Selection reveals the option horizontally without scrolling the surrounding page.
 - The five main destinations remain HQ, Squad, Ops, Develop and Gear. Shared control styling also covers duties and deployed squads.
+- Recruitment's six role choices share this rail and explicitly target the next refresh. Equipment's nine longer categories use one labeled native select; the current category stays visible when the filter section is closed.
+- Hiring starts with **Review hire**, then an explicit priced confirmation or **Cancel**. A repeated confirmation cannot send a second hire command.
 
 ## Training
 
@@ -21,6 +23,14 @@ Direct rating gains and XP are different benefits. The existing 85 rating thresh
 Debriefs lead with objective, safety and rewards. Meaningful officer changes receive portraits and visual stress comparisons. Unchanged practice participants are grouped, and detailed evidence and logs remain available through disclosure controls. Harm and losses remain prominent.
 
 Officer XP fills a real progress gauge toward the next primary-rating point, using the same career threshold and bank as the simulation. There is no invented officer level. Archived debriefs display recorded deltas rather than reconstructing past progress from the current roster.
+
+Stress is a condition reading from 0–100, not an overall readiness percentage. Its marked ranges follow the engine's 30/60/80 thresholds. Portrait-led decision rows show each recorded before/after change and any crossed range. New decisions save those readings; older decisions show only their recorded change. Current roster stress is never used to invent a past reading. Injury, training and deployment remain separate availability facts.
+
+## Player language
+
+Action titles say what the team will do, and neutral descriptions are authored separately from the best possible outcome. The forecast distinguishes a choice going well from a whole call being resolved. Costs and limits remain explicit; conditional outcomes do not promise help that the engine may leave unfinished.
+
+Use full skill names, explain development points on first use, and label real-time waits as real hours. Header values open touch- and keyboard-accessible explanations rather than relying on hover titles. Existing saved explanations remain historical records.
 
 ## Verification
 

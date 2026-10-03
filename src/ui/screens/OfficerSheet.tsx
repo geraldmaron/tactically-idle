@@ -10,6 +10,7 @@ import { COURSES } from '../../content/courses';
 import { Button, Chip, ExperienceChip, KV, Meter, ReadinessBar, OfficerStatusChip, SubHead } from '../components/ui';
 import { RetirementChip, useCareerSnapshot } from '../components/Career';
 import { OfficerProgress } from '../components/OfficerProgress';
+import { StressGuide } from '../components/StressDisplay';
 import { useToast } from '../components/toast';
 import type { StatusKey } from '../components/labels';
 import { BAND_SHORT, CERT_ICON, CERT_LABEL, RATING_META, ROLE_META, TRAIT_INFO, bandOf, ratingTone } from '../components/labels';
@@ -69,7 +70,7 @@ function OfficerBody({ o, onClose }: { o: Officer; onClose: () => void }) {
       <OfficerProgress officer={o} day={gameDay(g, Math.max(now, g.department.clockHighWater))} />
       {personaNote(o.identityId) && <p className="dim persona-note">{personaNote(o.identityId)}</p>}
 
-      <SubHead icon="gauge">Ratings</SubHead>
+      <SubHead icon="gauge">Skills · out of 100</SubHead>
       <ul className="ratings">
         {RATING_META.map((r) => (
           <li key={r.key} className="rating">
@@ -85,7 +86,7 @@ function OfficerBody({ o, onClose }: { o: Officer; onClose: () => void }) {
 
       <CareerSection o={o} />
 
-      <SubHead icon="medal">Certifications</SubHead>
+      <SubHead icon="medal">Qualifications</SubHead>
       {o.certs.length === 0 ? (
         <p className="dim">None yet. Courses grant certifications on completion.</p>
       ) : (
@@ -117,10 +118,8 @@ function OfficerBody({ o, onClose }: { o: Officer; onClose: () => void }) {
 
       <SubHead icon="pulse">Condition</SubHead>
       <div className="cond">
-        <div className="cond-row">
-          <ReadinessBar stress={o.stress} withText />
-          <span className="dim">Stress {Math.round(o.stress)}/100</span>
-        </div>
+        <ReadinessBar stress={o.stress} withText />
+        <StressGuide />
         <KV icon="info" k="Status" v={injured ? `Injured: ${o.injury!.label}` : BAND_SHORT[band]} />
         {info.blocker ? (
           <p className="note note-warn">
@@ -130,10 +129,10 @@ function OfficerBody({ o, onClose }: { o: Officer; onClose: () => void }) {
         ) : (
           <p className="note note-mint">
             <Icon name="check" size={16} />
-            Deployable now.
+            Ready for a call.
           </p>
         )}
-        {info.deployableAt !== null && <KV icon="clock" k="Deployable" v={relativeTime(info.deployableAt, now)} />}
+        {info.deployableAt !== null && <KV icon="clock" k="Ready again" v={relativeTime(info.deployableAt, now)} />}
         {info.factors.length > 0 && (
           <ul className="factors">
             {info.factors.map((f, i) => (

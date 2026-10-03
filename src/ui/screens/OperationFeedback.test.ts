@@ -49,10 +49,10 @@ describe('reviewing a decision', () => {
     expect(html).toContain('73% chance');
     expect(html).toContain('19% chance');
     expect(html).toContain('8% chance');
-    expect(html).toContain('High consequence severity');
+    expect(html).toContain('Possible harm: high');
     expect(html).toContain('Prepare aid without losing access.');
     expect(html).toContain('Medical access remains unresolved.');
-    expect(html).toContain('do not guarantee a result');
+    expect(html).toContain('Even when a choice goes well, there may be more work to do');
     expect(html).not.toContain('Low risk');
   });
 
@@ -60,7 +60,7 @@ describe('reviewing a decision', () => {
     const html = render(sheet(action()));
     expect(html).toContain('Estimated time: 5 min');
     expect(html).toContain('4–8 min depending on the result.');
-    expect(html).toContain('Supplies on commit');
+    expect(html).toContain('Supplies used when confirmed');
     expect(html).toContain('1 × Trauma supplies');
     expect(html.indexOf('1 × Trauma supplies')).toBeLessThan(html.indexOf('Confirm: Prepare medical access'));
     expect(html).toContain('<footer><div class="operation-commit">');
@@ -75,7 +75,7 @@ describe('reviewing a decision', () => {
     expect(html).toContain('Needs a qualified medic — Squad A has none');
     expect(html).toContain('Available now: Reassess the report');
     expect(html).toMatch(/<button[^>]+disabled=""[^>]*>Confirm: Prepare medical access/);
-    expect(html).toContain('Meet the requirements to see a usable forecast.');
+    expect(html).toContain('Check what is missing to see the chances for this choice.');
     expect(html).not.toContain('% chance');
   });
 
@@ -85,8 +85,8 @@ describe('reviewing a decision', () => {
     expect(html).toContain('How will you verify the report before committing?');
     for (let index = 1; index <= 5; index++) expect(html).toContain(`aria-label="Review Decision ${index}"`);
     expect(html).not.toContain('Show all');
-    expect(html).toContain('73% favorable');
-    expect(html).toContain('high severity');
+    expect(html).toContain('73% chance to go well');
+    expect(html).toContain('possible harm: high');
   });
 
   it('keeps exact owned equipment and delivery consequences in the locked action sheet', () => {
@@ -118,8 +118,8 @@ describe('reviewing a decision', () => {
     const base = action();
     const selected = action({ likelihood: { favorable: .9, mixed: .08, adverse: .02 }, timeCost: 3 });
     const html = render(createElement(LiveView, liveProps([base], selected)));
-    expect(html).toContain('90% favorable');
-    expect(html).not.toContain('73% favorable');
+    expect(html).toContain('90% chance to go well');
+    expect(html).not.toContain('73% chance to go well');
     expect(html).toContain('~3 min');
   });
 });
@@ -127,7 +127,7 @@ describe('reviewing a decision', () => {
 describe('persistent decision results', () => {
   it('keeps actual changes and specific consequences visible after the toast is gone', () => {
     const html = render(createElement(OperationFeedback, { decisions: [decision()], practice: false }));
-    for (const expected of ['Last decision', 'Mixed result', 'The patient received aid, but the route is still unresolved.', '+8 min', 'Objective', '+12', 'Civilian safety', '-4', 'Pressure', '+5', 'Officer stress', '+1.5 to +3', '1 × Trauma supplies', 'Patient condition: Confirmed', 'Decision log (1)']) expect(html).toContain(expected);
+    for (const expected of ['Last decision', 'Had complications', 'The patient received aid, but the route is still unresolved.', '+8 min', 'Call progress', '+12', 'Civilian safety', '-4', 'Pressure', '+5', 'Officer stress', '+1.5 stress', '1 × Trauma supplies', 'Patient condition: Confirmed', 'Decision log (1)']) expect(html).toContain(expected);
     expect(html).toContain('aria-haspopup="dialog"');
     expect(html).toContain('aria-expanded="false"');
     expect(html).not.toContain('role="dialog"');
@@ -136,17 +136,17 @@ describe('persistent decision results', () => {
   it('retains every decision, explanation, officer and contributor in the full log', () => {
     const last = decision({ revision: 2, title: 'Preserve access', band: 'favorable', endingTitle: 'Assistance completed' });
     const html = render(createElement(OperationLogContents, { decisions: [decision(), last], practice: false }));
-    expect(html).toContain('2 committed decisions, in order');
+    expect(html).toContain('2 decisions, in order');
     expect(html.indexOf('Decision 1')).toBeLessThan(html.indexOf('Decision 2'));
-    for (const expected of ['Ortiz +3', 'Chen +1.5', 'The delay leaves the squad with less time.', 'Pressure reduced the margin.', 'Ortiz medical rating', 'Operation ended:', 'Assistance completed']) expect(html).toContain(expected);
+    for (const expected of ['Ortiz', '+3 stress', 'Chen', '+1.5 stress', 'The delay leaves the squad with less time.', 'Pressure reduced the margin.', 'Ortiz medical rating', 'Operation ended:', 'Assistance completed']) expect(html).toContain(expected);
   });
 
   it('distinguishes zero changes and older recorded strain from exact new stress deltas', () => {
     const html = render(createElement(DecisionCard, { decision: decision({ actualStressDeltas: false, stressDeltas: [], supplies: [], knowledgeChanges: [] }) }));
     expect(html).toContain('Recorded strain');
     expect(html).toContain('No change');
-    expect(html).toContain('No new information');
-    expect(html).toContain('Older log: recorded strain may differ from applied stress at its limits.');
+    expect(html).toContain('Nothing new confirmed');
+    expect(html).toContain('Older record: strain may differ from the applied change.');
     expect(html).not.toContain('Officer stress');
   });
 
@@ -179,7 +179,7 @@ describe('persistent decision results', () => {
     expect(saved.decisions).toHaveLength(debrief.decisions!.length);
     const review = render(createElement(SavedDebriefReview, { debrief: saved, officers: closed.state.officers, onClose: noop }));
     expect(review).toContain(saved.endingSummary);
-    expect(review).toContain(`${saved.decisions!.length} committed decisions`);
+    expect(review).toContain(`${saved.decisions!.length} decisions`);
     expect(review).toContain('Return to HQ');
     expect(review).toContain('role="dialog"');
     const hq = render(createElement(Debriefs, { g: closed.state, now: NOW }));
@@ -202,7 +202,7 @@ describe('saved result review', () => {
   it('never borrows another operation’s history when reopening a saved result', () => {
     const html = render(createElement(SavedDebriefContents, { debrief: { ...saved, decisions: [decision({ title: 'Saved original choice' })] }, officers: {} }));
     expect(html).toContain('Saved original choice');
-    expect(html).toContain('1 committed decision');
+    expect(html).toContain('1 decision');
     expect(html).not.toContain('No per-decision log');
   });
 });

@@ -14,9 +14,10 @@ export interface V3Context {
   difficulty: number;
 }
 
-export function action(ctx: V3Context, id: string, stage: StageId, title: string, icon: ActionDefinition['icon'], preview: Record<OutcomeBand, string>, over: Partial<ActionDefinition> = {}): ActionDefinition {
+// A card describes the attempted action. Outcome forecasts are separate, conditional copy.
+export function action(ctx: V3Context, id: string, stage: StageId, title: string, summary: string, icon: ActionDefinition['icon'], preview: Record<OutcomeBand, string>, over: Partial<ActionDefinition> = {}): ActionDefinition {
   return {
-    id, stage, title, icon, summary: preview.favorable, targetId: ctx.targetId, task: title,
+    id, stage, title, icon, summary, targetId: ctx.targetId, task: title,
     requires: {}, check: { kind: 'coordination', ratings: [{ key: 'coordination', weight: 0.55 }, { key: 'composure', weight: 0.45 }], difficulty: ctx.difficulty },
     approach: 'none', observes: [], workload: { base: 3, perSqFt: 0 }, stressBase: 3,
     outcomePreview: preview, consequenceLevel: 'moderate', outcomes: { favorable: [], mixed: [], adverse: [] },
@@ -42,14 +43,14 @@ export function incidentTruth(ctx: V3Context, claim: string, likelihood = 0.65):
 export function commonEndings(): ScenarioDefinition['endings'] {
   const ending = (id: string, title: string, summary: string, trustAdjust: number, strain: number) => ({ id, title, summary, trustAdjust, strain });
   return {
-    report_disproved: ending('report_disproved', 'Report disproved and closed', 'The team checked the claim, recorded what disproved it, and explained the correction to the caller. No person was treated as a confirmed threat.', 2, -3),
-    voluntary_resolution: ending('voluntary_resolution', 'A voluntary way forward', 'A verified conversation produced an agreed next step. The team documented who would follow through and closed the immediate concern.', 2, -3),
-    aid_completed: ending('aid_completed', 'Assistance completed', 'The located person received the planned assistance. The team checked the immediate need and passed the relevant information to continuing support.', 1, -2),
-    protective_resolution: ending('protective_resolution', 'Protective response completed', 'The qualified team completed the verified protective objective and transferred the remaining support responsibility. The recorded safety cost remains part of the outcome.', 1, -1),
-    protected_transfer: ending('protected_transfer', 'Protected transfer completed', 'The prepared route and receiving support let the person leave the incident safely. Responsibility was explicitly transferred at the agreed meeting point.', 1, -1),
-    informed_handover: ending('informed_handover', 'Specialists have a verified handover', 'Specialists received checked locations, the outstanding concern, and a clear account of what the team had already tried. Continuing support remains their responsibility.', 1, 0),
-    partial_followthrough: ending('partial_followthrough', 'Follow-through remains outstanding', 'The available information was passed on, but important checks or practical arrangements remain incomplete. The receiving team has the outstanding tasks.', 0, 2),
-    withdrawal_with_info: ending('withdrawal_with_info', 'Withdrew with the information preserved', 'The team stepped back after recording what it knew and what remained uncertain. The original concern is still open for the receiving team.', -1, 1),
-    handed_over: ending('handed_over', 'Responsibility transferred', 'Available options were exhausted. The recorded observations and unresolved concern were passed to continuing support.', 0, 1),
+    report_disproved: ending('report_disproved', 'Mistaken report closed', 'The team checked the report, found it was wrong, and explained the correction to the caller.', 2, -3),
+    voluntary_resolution: ending('voluntary_resolution', 'Agreed plan completed', 'The person agreed on the next step. The team confirmed who would help and closed the immediate call.', 2, -3),
+    aid_completed: ending('aid_completed', 'Help completed', 'The person received the planned help. The team passed the details to anyone providing further support.', 1, -2),
+    protective_resolution: ending('protective_resolution', 'Response completed', 'The team completed the response and handed over any remaining support. The recorded safety losses still apply.', 1, -1),
+    protected_transfer: ending('protected_transfer', 'Person brought outside', 'The person reached the agreed meeting point, where the waiting team took over.', 1, -1),
+    informed_handover: ending('informed_handover', 'Specialists took over', 'Specialists received the checked details, remaining concerns, and what the team had tried. They are responsible for the next steps.', 1, 0),
+    partial_followthrough: ending('partial_followthrough', 'More help or checks needed', 'The team passed on what it knew. The receiving team still needs to finish important checks or arrangements.', 0, 2),
+    withdrawal_with_info: ending('withdrawal_with_info', 'Team left; call unresolved', 'The team left and passed on what it knew and what it could not confirm. The original concern remains open.', -1, 1),
+    handed_over: ending('handed_over', 'Another team took over', 'No available choices remained. The team passed on its observations and the unresolved concern.', 0, 1),
   };
 }

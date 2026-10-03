@@ -201,7 +201,7 @@ export function LiveView(p: LiveViewProps) {
                     {cap.text}
                   </span>
                 ) : acting ? (
-                  <span className="capchip capchip-quiet">Acting</span>
+                  <span className="capchip capchip-quiet">Taking part</span>
                 ) : undefined
               }
             />
@@ -223,7 +223,7 @@ export function LiveView(p: LiveViewProps) {
           )}
         </div>
         {p.progress.prompt && <p className="operation-stage-prompt">{p.progress.prompt}</p>}
-        {p.actions.length > 0 && <p className="operation-choice-count">{available.filter((action) => action.eligible).length} ready{available.some((action) => !action.eligible) ? ` · ${available.filter((action) => !action.eligible).length} need requirements` : ''}. Select to review outcomes and costs.</p>}
+        {p.actions.length > 0 && <p className="operation-choice-count">{available.filter((action) => action.eligible).length} available{available.some((action) => !action.eligible) ? ` · ${available.filter((action) => !action.eligible).length} unavailable` : ''}. Choose an option to see what it costs and what could happen.</p>}
         {p.actions.length === 0 ? (
           <p className="call-empty">No decisions available right now.</p>
         ) : (
@@ -251,7 +251,7 @@ export function LiveView(p: LiveViewProps) {
                         a.summary
                       )}
                     </span>
-                    <span className="callbtn-forecast">~{opMinutes(a.timeCost)} · {a.eligible ? `${outcomePercentages(a.likelihood).favorable}% favorable · ` : ''}{CONSEQUENCE_LABEL[a.consequenceLevel].toLowerCase()} severity</span>
+                    <span className="callbtn-forecast">~{opMinutes(a.timeCost)} · {a.eligible ? `${outcomePercentages(a.likelihood).favorable}% chance to go well · ` : ''}possible harm: {CONSEQUENCE_LABEL[a.consequenceLevel].toLowerCase()}</span>
                   </span>
                 </button>
               );
@@ -292,19 +292,19 @@ function signedPoints(v: number): string {
 }
 
 const SHORT: [RegExp, string][] = [
-  [/communicat/i, 'Comms'],
-  [/awareness/i, 'Aware'],
-  [/coordinat/i, 'Coord'],
+  [/communicat/i, 'Communication'],
+  [/awareness/i, 'Awareness'],
+  [/coordinat/i, 'Coordination'],
   [/composure/i, 'Calm'],
-  [/shooting/i, 'Shoot'],
-  [/medical/i, 'Medic'],
+  [/shooting/i, 'Shooting'],
+  [/medical/i, 'Medical'],
 ];
 
 function shortLabel(label: string, o: Officer): string {
   for (const [re, word] of SHORT) if (re.test(label)) return word;
   let s = label.replace(new RegExp(`^${o.surname}\\s*`, 'i'), '').replace(new RegExp(`^${o.firstName}\\s*`, 'i'), '');
   s = s.replace(/^[:\-–\s]+/, '');
-  return s.length > 9 ? s.slice(0, 8) + '…' : s;
+  return s.length > 24 ? 'Contribution' : s;
 }
 
 // ---------------------------------------------------------------- stage progress
@@ -444,7 +444,7 @@ export function ActionSheet(p: ActionSheetProps) {
             {names(p.support).length > 0 && <Chip tone="blue" icon="handover">Support: {names(p.support).join(', ')}</Chip>}
           </div>
           {v.timeRange && <p className="operation-note operation-time-range">{v.timeRange.min === v.timeRange.max ? `${opMinutes(v.timeRange.min)} for any outcome.` : `${v.timeRange.min}–${opMinutes(v.timeRange.max)} depending on the result.`}</p>}
-          <dl className="operation-costs"><div><dt>Requirements</dt><dd>{v.requirementLine}</dd></div><div><dt>Supplies on commit</dt><dd>{v.suppliesRequired.length ? v.suppliesRequired.map((item) => `${item.qty} × ${item.label}`).join(', ') : 'None'}</dd></div></dl>
+          <dl className="operation-costs"><div><dt>Requirements</dt><dd>{v.requirementLine}</dd></div><div><dt>Supplies used when confirmed</dt><dd>{v.suppliesRequired.length ? v.suppliesRequired.map((item) => `${item.qty} × ${item.label}`).join(', ') : 'None'}</dd></div></dl>
           {!v.eligible && v.reason && (
             <p className="note note-warn">
               <Icon name="lock" size={16} />
@@ -486,7 +486,7 @@ export function ActionSheet(p: ActionSheetProps) {
               <div className="picker">
                 <span className="picker-label">
                   <Icon name="people" size={14} />
-                  Acting squad
+                  Squad taking action
                 </span>
                 <div className="chips">
                   {p.squads.map((s) => (

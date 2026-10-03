@@ -1,17 +1,15 @@
 import type { DebriefResult, DecisionView, Officer } from '../../sim/types';
-import { stressBand } from '../../sim/officer';
 import { Portrait } from '../portraits/Portrait';
 import { Icon } from '../icons';
 import { signed, signedMoney } from '../format';
 import { Card, Chip, Meter, SubHead } from './ui';
+import { StressDisplay } from './StressDisplay';
 import './debrief-results.css';
 
 /** Only identity is read from the roster. All result values come from the saved debrief. */
 export type DebriefOfficers = Record<string, Pick<Officer, 'surname' | 'firstName'> & Partial<Pick<Officer, 'id' | 'identityId' | 'portrait' | 'role'>>>;
 type Condition = DebriefResult['officerCondition'][number];
-const number = (value: number) => Number(value.toFixed(1)).toLocaleString('en-US');
 const scoreTone = (value: number) => value >= 70 ? 'hi' : value >= 40 ? 'mid' : 'lo';
-const stressTone = (value: number) => stressBand(value) === 'ready' ? 'hi' : stressBand(value) === 'strained' ? 'mid' : 'lo';
 
 export function DebriefSummary({ debrief: d }: { debrief: DebriefResult }) {
   return <Card className="result-summary">
@@ -35,7 +33,7 @@ export function DebriefSummary({ debrief: d }: { debrief: DebriefResult }) {
   </Card>;
 }
 
-function ResultPortrait({ officerId, officers, size = 48 }: { officerId: string; officers: DebriefOfficers; size?: number }) {
+export function ResultPortrait({ officerId, officers, size = 48 }: { officerId: string; officers: DebriefOfficers; size?: number }) {
   const officer = officers[officerId];
   if (officer?.role && officer.portrait) return <Portrait officer={{ ...officer, id: officer.id ?? officerId, role: officer.role, portrait: officer.portrait }} size={size} className="result-officer-portrait" />;
   const initials = officer ? `${officer.firstName.slice(0, 1)}${officer.surname.slice(0, 1)}` : '?';
@@ -53,11 +51,8 @@ function OfficerChange({ condition: c, officers, practice }: { condition: Condit
         <div><strong>{label}</strong>{!officer && <span className="result-officer-id">{c.officerId}</span>}</div>
         {!practice && c.xpGained !== 0 && <span className={c.xpGained > 0 ? 'result-xp' : 'result-xp tone-danger'}>{signed(c.xpGained, 1)} XP</span>}
       </div>
-      {delta !== 0 ? <div className="result-stress">
-        <div className="result-stress-heading"><span>Stress</span><strong className={delta > 0 ? 'tone-warn' : 'tone-mint'}>{signed(delta, 1)}</strong></div>
-        <div className="result-stress-line"><span>Before</span><Meter value={c.stressBefore} tone={stressTone(c.stressBefore)} label={`${label} stress before`} valueText={`${number(c.stressBefore)} of 100`} /><span>{number(c.stressBefore)}</span></div>
-        <div className="result-stress-line"><span>After</span><Meter value={c.stressAfter} tone={stressTone(c.stressAfter)} label={`${label} stress after`} valueText={`${number(c.stressAfter)} of 100`} /><span>{number(c.stressAfter)}</span></div>
-      </div> : <div className="result-stress-unchanged"><span>Stress {number(c.stressAfter)} · unchanged</span><Meter value={c.stressAfter} tone={stressTone(c.stressAfter)} label={`${label} unchanged stress`} valueText={`${number(c.stressAfter)} of 100`} /></div>}
+      <StressDisplay value={c.stressAfter} before={delta !== 0 ? c.stressBefore : undefined} />
+      {delta === 0 && <span className="result-stress-unchanged">Stress unchanged</span>}
     </div>
   </li>;
 }

@@ -100,12 +100,12 @@ function SquadOptimizerSession({ open, onClose, campaignId, session }: { open: b
     </div>
   }>
     <div className="arrangement-intro">
-      <p>Balance fresh and deployable officers with complementary ratings and certifications across selected squads.</p>
+      <p>Build squads with a useful mix of skills, qualifications and officers fit for duty.</p>
       <p className="dim">Keeps squad duties and existing headcounts; opted-in unassigned officers can fill vacancies. Injured, training, deployed and recovering officers stay in place, as do entire deployed squads. Every proposed move is shown before you apply it.</p>
       <details className="arrangement-method">
-        <summary>How suggestions and coverage work</summary>
-        <p className="dim">The planner tries improving swaps in a bounded search, so it may miss a better arrangement. It balances fresh and deployable numbers, rewards strong and backup stress-adjusted ratings with less benefit for duplicates, and considers distinct earned certifications and actual rookie/mentor or service rookie/veteran pairings. Equal results favor fewer moves.</p>
-        <p className="dim">Coverage numbers are each squad’s best available stress-adjusted rating. A rating of 50 meets the planning coverage threshold; it does not guarantee mission success. Officers with stress 60 or higher cannot provide execution coverage.</p>
+        <summary>How suggestions work</summary>
+        <p className="dim">Looks for useful skills, qualifications and officers fit for duty across your squads. It favors fewer moves when choices are otherwise similar. This is a suggestion; another arrangement may work better.</p>
+        <p className="dim">Each skill score shows the strongest available officer after stress is taken into account. A score of 50 or more counts as covered for this suggestion; it does not guarantee a good result. Officers with stress 60 or higher sit out high-risk work.</p>
       </details>
     </div>
 
