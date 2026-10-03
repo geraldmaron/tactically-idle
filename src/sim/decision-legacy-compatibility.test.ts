@@ -22,7 +22,10 @@ function completedRun(scenarioId: string, seed: number) {
     expect(result.result).toEqual({ ok: true });
     state = result.state;
   }
-  const run = state.activeRun;
+  const run = state.activeRun ? {
+    ...state.activeRun,
+    history: state.activeRun.history.map(({ stressLevels: _stressLevels, ...decision }) => decision),
+  } : null;
   const closed = apply(state, { type: 'closeDebrief' });
   expect(closed.result).toEqual({ ok: true });
   const result = closed.state;

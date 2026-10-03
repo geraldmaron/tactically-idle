@@ -48,8 +48,8 @@ describe('scannable debrief results', () => {
     const html = renderToStaticMarkup(createElement(OfficerResults, { debrief: result, officers: state.officers }));
     expect(html).toContain('+29 XP');
     expect(html).toContain('File portrait of');
-    expect(html).toContain('stress before 12.5 of 100');
-    expect(html).toContain('stress after 23.5 of 100');
+    expect(html).toContain('before 12.5, change +11');
+    expect(html).toContain('Stress 23.5 of 100');
     expect(html).toContain('+11');
     expect(html).not.toContain('>+0');
     expect(html).not.toContain('<details');
@@ -59,7 +59,7 @@ describe('scannable debrief results', () => {
     const unchanged = { ...result, officerCondition: [{ officerId: 'off_chen', stressBefore: 12, stressAfter: 12, xpGained: 0 }] };
     const html = renderToStaticMarkup(createElement(OfficerResults, { debrief: unchanged, officers: state.officers }));
     expect(html).toContain('1 officer · unchanged');
-    expect(html).toContain('Stress 12 · unchanged');
+    expect(html).toContain('Stress unchanged');
     expect(html).not.toContain('XP');
     expect(html).not.toContain('stress before');
   });
@@ -91,7 +91,7 @@ describe('scannable debrief results', () => {
   it('keeps structured losses visible while leaving adverse scoring details in the full log', () => {
     const failed = { ...decision, band: 'adverse' as const, objectiveDelta: -8, civilianSafetyDelta: 0, consequences: ['The transfer was not completed.'], explanation: ['Coordination 42 contributed 11 points.', 'The time cost was four minutes.'] };
     const lines = visibleDebriefConsequences({ ...result, decisions: [failed] });
-    expect(lines).toContain('Provide aid: Objective -8.');
+    expect(lines).toContain('Provide aid: Call progress -8.');
     expect(lines).toContain('Provide aid: The transfer was not completed.');
     expect(lines.join(' ')).not.toContain('Coordination 42');
     expect(lines.join(' ')).not.toContain('The time cost');
@@ -121,6 +121,6 @@ describe('scannable debrief results', () => {
     expect(html).not.toContain('data-portrait="painted"');
     expect(html).not.toContain('Chen');
     expect(html).toContain('+29 XP');
-    expect(html).toContain('stress after 23.5 of 100');
+    expect(html).toContain('Stress 23.5 of 100');
   });
 });

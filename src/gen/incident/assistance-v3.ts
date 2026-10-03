@@ -12,35 +12,35 @@ export function buildAssistanceV3(ctx: V3Context): void {
   s.facts[0].markers = { reported: 'NEEDS HELP?', confirmed: 'PERSON LOCATED' };
   s.facts[0].resolved = { confirmed: `The person needing assistance has been located in the ${targetName}.` };
   s.facts.push({
-    id: transferFact, label: 'Suitability of a supported transfer', spaceId: targetId,
+    id: transferFact, label: 'Whether the person can be helped outside', spaceId: targetId,
     truth: incidentTruth(ctx, 'transfer_suitability'), initial: 'unknown', showWhenUnknown: false,
     markers: { confirmed: 'TRANSFER POSSIBLE', disproved: 'CARE IN PLACE' },
-    claim: 'The person can use a prepared transfer route with assistance.', source: null,
-    note: 'Check the person’s needs before relying on a transfer. Protection does not establish suitability.',
-    resolved: { confirmed: 'A supported transfer is possible once the route and receiving care are ready.', disproved: 'The person needs care in place or a specialist handover; a routine transfer is unsuitable.' },
-    uncertainty: 'Whether a supported transfer would meet this person’s needs',
+    claim: 'The person can be helped outside along a prepared route.', source: null,
+    note: 'Check the person’s needs before moving them. Preparing protection does not tell you whether they can be moved.',
+    resolved: { confirmed: 'The person can be helped outside once the route and care team are ready.', disproved: 'The person needs care where they are or help from specialists. Moving them outside is unsuitable.' },
+    uncertainty: 'Whether helping the person outside would meet their needs',
   }, {
-    id: accessFact, label: 'Delay on the assistance route', spaceId: targetId,
+    id: accessFact, label: 'Extra work needed to reach the person', spaceId: targetId,
     truth: incidentTruth(ctx, 'access_delay', 0.5), initial: 'unknown', showWhenUnknown: false,
     markers: { confirmed: 'ACCESS DELAY', disproved: 'ROUTE CLEAR' },
-    claim: 'The assistance route needs additional preparation.', source: null,
-    note: 'The caller’s account or a route check can establish the access delay.',
-    resolved: { confirmed: 'Additional route preparation is needed and will take time.', disproved: 'No additional route preparation delay was found.' },
-    uncertainty: 'Whether the assistance route will need additional preparation',
+    claim: 'The way to the person needs extra work before it can be used.', source: null,
+    note: 'Ask the caller or check the route to find out whether it needs extra work.',
+    resolved: { confirmed: 'The route needs extra work, which will take time.', disproved: 'The route does not need extra preparation time.' },
+    uncertainty: 'Whether the route needs extra work',
   });
   s.objectives = [
-    { id: 'o_assistance', label: 'Complete suitable assistance or an informed care handover' },
-    { id: 'o_needs', label: 'Locate the person and establish the next care responsibility' },
+    { id: 'o_assistance', label: 'Give the help needed or hand over the checked details to a care team' },
+    { id: 'o_needs', label: 'Find the person and arrange who will care for them next' },
   ];
   s.pressure = { start: 24 + spec.tier * 2, perMinute: 1.35, threshold: 62, civilianPerMinute: 1.2 };
-  s.pressureLabel = 'Time before assistance becomes harder';
-  s.briefing.known.push('Preparation takes time. Locate the person, arrange receiving care, and choose qualified assistance, a suitable transfer, or a verified handover.');
-  s.briefing.unknown = ['The person’s exact circumstances and whether a supported transfer is suitable.', 'Whether the route needs extra preparation.'];
+  s.pressureLabel = 'Time before helping becomes harder';
+  s.briefing.known.push('Preparation takes time. Find the person and arrange a care team. Then give first aid, help them outside if suitable, or ask specialists to take over.');
+  s.briefing.unknown = ['What help the person needs and whether they can be helped outside.', 'Whether the route needs extra preparation.'];
 
-  const contact = action(ctx, 'assist_contact', 'assess', 'Establish a line of contact', 'radio', {
-    favorable: 'Locate the person by contact and improve the next needs check',
-    mixed: 'Open a weak line; the location still needs checking',
-    adverse: 'No clear answer; use another way to locate the person',
+  const contact = action(ctx, 'assist_contact', 'assess', 'Try to contact the person', 'Call out or speak to them to find out where they are and what help they need.', 'radio', {
+    favorable: 'Find the person through a clear answer and make the next needs check easier.',
+    mixed: 'Get a faint answer, but still need to check where the person is.',
+    adverse: 'No clear answer. Find the person another way.',
   }, {
     check: { kind: 'contact', ratings: [{ key: 'communication', weight: .7 }, { key: 'composure', weight: .3 }], difficulty },
     spatial: { channel: 'sound', subjectFactId: 'f_person', weight: 12, noun: 'Voice' },
@@ -52,10 +52,10 @@ export function buildAssistanceV3(ctx: V3Context): void {
       adverse: [{ stage: 'adapt', objective: 0, pressure: 4, setFlags: ['assist_needs_followthrough'], text: 'There was no clear answer. The team needs to locate the person another way.' }],
     },
   });
-  const urgentLocate = action(ctx, 'assist_locate_urgent', 'assess', 'Go directly to the reported person', 'search', {
-    favorable: 'Locate the person quickly, before arranging the care plan',
-    mixed: 'Find the person with delay and a reduced safety margin',
-    adverse: 'The approach stalls; access and location still need checking',
+  const urgentLocate = action(ctx, 'assist_locate_urgent', 'assess', 'Go straight to the reported room', 'Try to find the person now, before arranging a care plan.', 'search', {
+    favorable: 'Find the person quickly. A care plan is still needed.',
+    mixed: 'Find the person after a delay and lose safety points.',
+    adverse: 'The rushed approach stalls. You still need to find the person, and safety falls.',
   }, {
     approach: 'path', tempo: 'urgent', workload: { base: 2, perSqFt: .012 },
     check: { kind: 'observation', ratings: [{ key: 'awareness', weight: .65 }, { key: 'coordination', weight: .35 }], difficulty: difficulty + 3 },
@@ -66,10 +66,10 @@ export function buildAssistanceV3(ctx: V3Context): void {
       adverse: [{ stage: 'adapt', objective: 0, pressure: 6, civilian: -4, setFlags: ['assist_needs_followthrough'], text: 'The hurried approach stalled. The team has not yet verified the person’s location.' }],
     },
   });
-  const reviewReport = action(ctx, 'assist_review_report', 'assess', 'Check the caller’s access account', 'intel', {
-    favorable: 'Check the access concern and prepare a useful case summary',
-    mixed: 'Clarify the route, while leaving gaps in the case summary',
-    adverse: 'The caller cannot settle the access concern; time is lost',
+  const reviewReport = action(ctx, 'assist_review_report', 'assess', 'Ask the caller how to reach them', 'Check the route described by the caller and gather details for the care team.', 'intel', {
+    favorable: 'Check the route and gather enough details to brief the care team.',
+    mixed: 'Check the route, but leave gaps in the information for the care team.',
+    adverse: 'The caller cannot explain the route. The team loses time.',
   }, {
     workload: { base: 2, perSqFt: 0 }, consequenceLevel: 'low',
     outcomes: {
@@ -78,10 +78,10 @@ export function buildAssistanceV3(ctx: V3Context): void {
       adverse: [{ stage: 'adapt', objective: 0, pressure: 3, extraMinutes: 1, text: 'The caller could not clarify the route. Direct verification remains necessary.' }],
     },
   });
-  const alertCare = action(ctx, 'assist_alert_care', 'assess', 'Arrange receiving care first', 'handover', {
-    favorable: 'Agree who will receive the person or the verified case',
-    mixed: 'Receiving care is ready, but the case details remain incomplete',
-    adverse: 'The receiving arrangement is incomplete; rebuild it during preparation',
+  const alertCare = action(ctx, 'assist_alert_care', 'assess', 'Arrange a care team first', 'Ask a care team to take over once you have found the person and checked their needs.', 'handover', {
+    favorable: 'A care team agrees to take over once you find the person and check their needs.',
+    mixed: 'A care team is ready after a delay. You still need to find the person and check their needs.',
+    adverse: 'The care arrangement falls through. Try arranging it again during preparation.',
   }, {
     targetId: entryId, consequenceLevel: 'low',
     outcomes: {
@@ -91,10 +91,10 @@ export function buildAssistanceV3(ctx: V3Context): void {
     },
   });
 
-  const locate = action(ctx, 'assist_locate_person', 'adapt', 'Verify the person’s location', 'search', {
-    favorable: 'Locate the person and check whether a transfer could be suitable',
-    mixed: 'Locate the person after delay; transfer suitability remains uncertain',
-    adverse: 'The location check stalls; carry that uncertainty into the next plan',
+  const locate = action(ctx, 'assist_locate_person', 'adapt', 'Find the person', 'Check their location and whether they can be helped outside.', 'search', {
+    favorable: 'Find the person and check whether they can be helped outside.',
+    mixed: 'Find the person after a delay, but still need to check whether moving them is suitable.',
+    adverse: 'The check stalls. The person’s location remains unknown.',
   }, {
     visibleWhen: { facts: [{ factId: 'f_person', in: ['unknown', 'reported'] }] },
     approach: 'path', workload: { base: 3, perSqFt: .012 },
@@ -108,10 +108,10 @@ export function buildAssistanceV3(ctx: V3Context): void {
   });
   const routeOpen = ctx.openingId ? [{ openingId: ctx.openingId, state: 'open' as const }] : [];
   const accessDelay: OutcomeEffect = { truth: [{ factId: accessFact, is: true }], extraMinutes: 3, text: 'The route needed additional preparation before it could be used.' };
-  const access = action(ctx, 'assist_prepare_access', 'adapt', 'Prepare an assistance route', 'door', {
-    favorable: 'Make the route usable; any real access problem adds preparation time',
-    mixed: 'Prepare a usable route slowly, reducing time left for care',
-    adverse: 'The route stays unready; transfer remains unavailable',
+  const access = action(ctx, 'assist_prepare_access', 'adapt', 'Prepare a way to reach them', 'Make the route usable so officers can reach the person and help them outside if needed.', 'door', {
+    favorable: 'Make the route usable. If it needs extra work, preparation takes longer.',
+    mixed: 'Make the route usable after a delay, leaving less time for care.',
+    adverse: 'The route is not ready. You cannot use it to help the person outside yet.',
   }, {
     targetId, approach: 'path', visibleWhen: { notFlags: ['assist_access_ready'] },
     workload: { base: 4, perSqFt: 0 },
@@ -121,22 +121,22 @@ export function buildAssistanceV3(ctx: V3Context): void {
       adverse: [{ stage: 'adapt', objective: 0, reveal: [accessFact], setFlags: ['assist_needs_followthrough'], pressure: 5, text: 'The route could not be prepared. Transfer needs a rebuilt plan or a different response.' }],
     },
   });
-  const care = action(ctx, 'assist_prepare_care', 'adapt', 'Confirm the receiving care plan', 'medic', {
-    favorable: 'Make qualified assistance and a care handover ready',
-    mixed: 'Secure receiving care with extra coordination time',
-    adverse: 'Care remains unready; a revised plan will be needed',
+  const care = action(ctx, 'assist_prepare_care', 'adapt', 'Confirm who will provide care', 'Make sure a care team is ready to take over.', 'medic', {
+    favorable: 'A care team is ready to take over after first aid or a handover.',
+    mixed: 'Get the care team ready after a delay.',
+    adverse: 'The care team is not ready. Revise the plan before relying on them.',
   }, {
     targetId: entryId, visibleWhen: { notFlags: ['assist_care_ready'] }, consequenceLevel: 'low',
     outcomes: {
-      favorable: [{ stage: 'adapt', objective: 0, setFlags: ['assist_care_ready'], pressure: -4, text: 'Receiving care confirmed the plan, opening qualified assistance and a fully informed care handover.' }],
+      favorable: [{ stage: 'adapt', objective: 0, setFlags: ['assist_care_ready'], pressure: -4, text: 'The care team confirmed the plan. The team can now give first aid or hand over once the other checks are complete.' }],
       mixed: [{ stage: 'adapt', objective: 0, setFlags: ['assist_care_ready'], extraMinutes: 2, text: 'Receiving care confirmed after extra coordination. The plan is ready, with less time in hand.' }],
-      adverse: [{ stage: 'adapt', objective: 0, setFlags: ['assist_needs_followthrough'], pressure: 4, text: 'The care arrangement remained incomplete. It will need rebuilding before a planned response.' }],
+      adverse: [{ stage: 'adapt', objective: 0, setFlags: ['assist_needs_followthrough'], pressure: 4, text: 'The care team was not ready. Revise the plan before relying on them.' }],
     },
   });
-  const needs = action(ctx, 'assist_check_needs', 'adapt', 'Check needs and brief receiving care', 'intel', {
-    favorable: 'Settle transfer suitability and prepare a verified case summary',
-    mixed: 'Check the needs and summary, at an additional time cost',
-    adverse: 'The person’s needs remain uncertain; equipment cannot settle them',
+  const needs = action(ctx, 'assist_check_needs', 'adapt', 'Check what help they need', 'Find out whether the person can be moved and pass the details to the care team.', 'intel', {
+    favorable: 'Check whether moving the person is suitable and brief the care team.',
+    mixed: 'Check the person’s needs and brief the care team after a longer conversation.',
+    adverse: 'The person’s needs remain unclear. Moving them may still be unsuitable.',
   }, {
     requires: { facts: [{ factId: 'f_person', in: ['confirmed'], reason: 'Locate the person before checking their needs' }] },
     check: { kind: 'contact', ratings: [{ key: 'communication', weight: .6 }, { key: 'medical', weight: .4 }], difficulty: difficulty - 4 },
@@ -148,25 +148,25 @@ export function buildAssistanceV3(ctx: V3Context): void {
       adverse: [{ stage: 'adapt', objective: 0, pressure: 3, setFlags: ['assist_needs_followthrough'], text: 'The exchange did not settle the person’s needs. A transfer still carries that uncertainty.' }],
     },
   });
-  const commit = action(ctx, 'assist_commit_plan', 'adapt', 'Move to assistance and follow-through', 'handover', {
-    favorable: 'Choose a response using the information and readiness already established',
-    mixed: 'Begin follow-through with a small coordination delay',
-    adverse: 'Proceed with unresolved gaps; rebuilding the plan remains available',
+  const commit = action(ctx, 'assist_commit_plan', 'adapt', 'Choose how to help', 'Move to the final choices using the checks and preparations already made.', 'handover', {
+    favorable: 'Move to the final choices with the checks and preparations already made.',
+    mixed: 'Move to the final choices after a short delay.',
+    adverse: 'Move to the final choices with gaps in the plan. You can still revise it.',
   }, {
     workload: { base: 1, perSqFt: 0 }, consequenceLevel: 'low',
     outcomes: {
       favorable: [{ stage: 'resolve', objective: 0, text: 'The team moved to the response decision with its current information and preparation.' }],
       mixed: [{ stage: 'resolve', objective: 0, extraMinutes: 1, text: 'The response briefing took extra time. Existing preparation remains available.' }],
-      adverse: [{ stage: 'resolve', objective: 0, pressure: 3, setFlags: ['assist_needs_followthrough'], text: 'The response briefing exposed gaps. The team can rebuild the plan before acting.' }],
+      adverse: [{ stage: 'resolve', objective: 0, pressure: 3, setFlags: ['assist_needs_followthrough'], text: 'The team found gaps in the plan. They can revise it before trying to help.' }],
     },
   });
 
-  const medical = action(ctx, 'assist_qualified_aid', 'resolve', 'Provide qualified assistance', 'medic', {
-    favorable: 'Complete care and its handover using one trauma kit',
-    mixed: 'Use the kit for partial assistance; transfer or handover is still needed',
-    adverse: 'Use the kit without resolving the need; safety worsens and recovery remains possible',
+  const medical = action(ctx, 'assist_qualified_aid', 'resolve', 'Give first aid', 'Use one trauma kit to treat the person. They may still need more help afterward.', 'medic', {
+    favorable: 'Use one trauma kit to finish the immediate care and hand over to the care team.',
+    mixed: 'Use the kit for some care, but lose safety points. More help or a specialist handover is still needed.',
+    adverse: 'Use the kit without finishing the care. Safety falls; revise the plan or ask specialists to take over.',
   }, {
-    requires: { certs: ['advanced_first_aid'], allTags: ['medkit'], facts: [{ factId: 'f_person', in: ['confirmed'], reason: 'Locate the person before providing care' }], flags: [{ flag: 'assist_care_ready', reason: 'Arrange receiving care before qualified assistance' }] },
+    requires: { certs: ['advanced_first_aid'], allTags: ['medkit'], facts: [{ factId: 'f_person', in: ['confirmed'], reason: 'Locate the person before providing care' }], flags: [{ flag: 'assist_care_ready', reason: 'Arrange a care team before giving first aid' }] },
     consumes: [{ tag: 'medkit', qty: 1 }], approach: 'path', tempo: 'urgent',
     workload: { base: 5, perSqFt: .01 },
     check: { kind: 'medical', ratings: [{ key: 'medical', weight: .8 }, { key: 'coordination', weight: .2 }], difficulty: difficulty + 2 },
@@ -180,48 +180,48 @@ export function buildAssistanceV3(ctx: V3Context): void {
       adverse: [{ stage: 'resolve', objective: 0, setFlags: ['assist_aid_setback', 'assist_needs_followthrough'], civilian: -10, pressure: 7, text: 'The kit was used, but the immediate need remains unresolved. A rebuilt plan or specialist handover is required.' }, { when: { flags: ['assist_access_ready'] }, civilian: 3, extraMinutes: -2, text: 'Prepared access limited the delay and the loss of safety.' }],
     },
   });
-  const transfer = action(ctx, 'assist_protected_transfer', 'resolve', 'Complete a supported exterior transfer', 'shield', {
-    favorable: 'Complete a suitable transfer; an unsuitable transfer pauses for care in place',
-    mixed: 'A suitable transfer can finish slowly; unresolved needs require another plan',
-    adverse: 'Transfer stalls and safety worsens; qualified aid or handover remains',
+  const transfer = action(ctx, 'assist_protected_transfer', 'resolve', 'Help the person outside', 'Try to move them along the prepared route to the waiting care team.', 'shield', {
+    favorable: 'If moving is suitable, reach the care team outside. Otherwise, stop and arrange care where the person is.',
+    mixed: 'If moving is suitable, reach the care team after a delay. Otherwise, stop and revise the plan. Either way, safety falls.',
+    adverse: 'The move stalls and safety falls. Give first aid, revise the plan, or ask specialists to take over.',
   }, {
     targetId: entryId, approach: 'path', tempo: 'urgent', workload: { base: 5, perSqFt: 0 },
-    requires: { facts: [{ factId: 'f_person', in: ['confirmed'], reason: 'Locate the person before a transfer' }, { factId: transferFact, in: ['unknown', 'reported', 'confirmed'], reason: 'The checked needs rule out routine transfer; arrange care in place or specialist handover' }], flags: [{ flag: 'assist_access_ready', reason: 'Prepare the assistance route before transferring the person' }, { flag: 'assist_route_reached', reason: 'Reach the person along the checked physical route before exterior transfer' }, { flag: 'assist_care_ready', reason: 'Agree the receiving care before a transfer' }] },
+    requires: { facts: [{ factId: 'f_person', in: ['confirmed'], reason: 'Locate the person before a transfer' }, { factId: transferFact, in: ['unknown', 'reported', 'confirmed'], reason: 'Moving the person is unsuitable; arrange care here or ask specialists to take over' }], flags: [{ flag: 'assist_access_ready', reason: 'Prepare a route before helping the person outside' }, { flag: 'assist_route_reached', reason: 'Reach the person along the physical route before helping them outside' }, { flag: 'assist_care_ready', reason: 'Arrange a care team before helping the person outside' }] },
     check: { kind: 'medical', ratings: [{ key: 'medical', weight: .45 }, { key: 'coordination', weight: .55 }], difficulty: difficulty + 5 },
     capabilities: { rules: ['medical_exposure', 'vehicle_exterior'], vehicleAccessible: !built.location.zones.find((z) => z.id === entryId)?.tags.some((tag) => tag === 'narrow' || tag === 'vehicle_inaccessible') },
     modifiers: [{ label: 'Transfer needs have been checked', when: { facts: [{ factId: transferFact, in: ['confirmed'] }] }, source: 'preparation', value: 7 }, { label: 'Receiving care has the case summary', when: { flags: ['assist_case_briefed'] }, source: 'preparation', value: 4 }],
     consequenceLevel: 'high',
     outcomes: {
-      favorable: [{ stage: 'resolve', objective: 0, reveal: [transferFact] }, { truth: [{ factId: transferFact, is: true }], ending: 'protected_transfer', objective: 100, pressure: -8, text: 'The suitable transfer was completed along the prepared route. Receiving care accepted responsibility at the meeting point.' }, { truth: [{ factId: transferFact, is: false }], setFlags: ['assist_needs_followthrough'], extraMinutes: 2, pressure: 4, text: 'The person’s needs ruled out routine transfer. The team paused safely and must arrange care in place or specialist handover.' }],
+      favorable: [{ stage: 'resolve', objective: 0, reveal: [transferFact] }, { truth: [{ factId: transferFact, is: true }], ending: 'protected_transfer', objective: 100, pressure: -8, text: 'The suitable transfer was completed along the prepared route. Receiving care accepted responsibility at the meeting point.' }, { truth: [{ factId: transferFact, is: false }], setFlags: ['assist_needs_followthrough'], extraMinutes: 2, pressure: 4, text: 'The person could not be moved outside. The team stopped and must arrange care here or ask specialists to take over.' }],
       mixed: [{ stage: 'resolve', objective: 0, reveal: [transferFact] }, { truth: [{ factId: transferFact, is: true }], ending: 'protected_transfer', objective: 86, civilian: -4, extraMinutes: 2, text: 'The suitable transfer reached receiving care after delays, with a smaller safety margin.' }, { truth: [{ factId: transferFact, is: false }], setFlags: ['assist_needs_followthrough'], civilian: -4, extraMinutes: 2, pressure: 6, text: 'The transfer plan did not fit the person’s needs. It was stopped; care in place or specialist handover remains.' }],
       adverse: [{ stage: 'resolve', objective: 0, reveal: [transferFact], setFlags: ['assist_needs_followthrough'], civilian: -9, pressure: 8, text: 'The transfer stalled and the person remains in need of help. The team can rebuild the care plan or make an explicit handover.' }],
     },
   });
-  const handover = action(ctx, 'assist_informed_handover', 'resolve', 'Hand responsibility to receiving specialists', 'handover', {
-    favorable: 'A located person, case summary and ready care complete an informed handover; gaps produce partial follow-through',
-    mixed: 'Prepared information supports a delayed handover; remaining gaps stay explicit',
-    adverse: 'Transfer the outstanding concern with reduced confidence; further work remains',
+  const handover = action(ctx, 'assist_informed_handover', 'resolve', 'Ask specialists to take over', 'Pass on the person’s location, needs, and any unfinished care arrangements.', 'handover', {
+    favorable: 'If the person is located, a care team is ready, and the case has been briefed, specialists take over with the full details. Missing checks or arrangements leave more work to finish.',
+    mixed: 'Hand over after a delay. With the location checked, care ready, and case briefed, the handover is complete; otherwise, more work remains.',
+    adverse: 'Specialists accept the call, but gaps in communication leave more care to arrange.',
   }, {
     targetId: entryId, check: { kind: 'coordination', ratings: [{ key: 'communication', weight: .6 }, { key: 'coordination', weight: .4 }], difficulty: difficulty - 9 },
     workload: { base: 3, perSqFt: 0 }, consequenceLevel: 'moderate',
     modifiers: [{ label: 'Receiving care is ready', when: { flags: ['assist_care_ready'] }, source: 'preparation', value: 5 }, { label: 'The case summary is complete', when: { flags: ['assist_case_briefed'] }, source: 'preparation', value: 5 }],
-    outcomes: { favorable: [], mixed: [], adverse: [{ ending: 'partial_followthrough', objective: 45, pressure: 3, text: 'Specialists accepted the outstanding concern, but communication gaps left the care follow-through incomplete.' }] },
+    outcomes: { favorable: [], mixed: [], adverse: [{ ending: 'partial_followthrough', objective: 45, pressure: 3, text: 'Specialists accepted the call, but gaps in communication left more care to arrange.' }] },
   });
   // Mutually exclusive public-state branches. Equipment alone cannot turn gaps
   // in location, receiving responsibility, or the case summary into completion.
   for (const band of ['favorable', 'mixed'] as const) {
     handover.outcomes[band] = [
       { stage: 'resolve', objective: 0 },
-      { when: { facts: [{ factId: 'f_person', in: ['confirmed'] }], flags: ['assist_care_ready', 'assist_case_briefed'] }, ending: 'informed_handover', objective: band === 'favorable' ? 100 : 86, ...(band === 'mixed' ? { extraMinutes: 2, civilian: -2 } : {}), text: band === 'favorable' ? 'Specialists received the verified location, checked case summary and agreed care responsibility. The informed handover completed the team’s assistance.' : 'The verified case and care responsibility reached specialists after delay. The informed handover was completed.' },
+      { when: { facts: [{ factId: 'f_person', in: ['confirmed'] }], flags: ['assist_care_ready', 'assist_case_briefed'] }, ending: 'informed_handover', objective: band === 'favorable' ? 100 : 86, ...(band === 'mixed' ? { extraMinutes: 2, civilian: -2 } : {}), text: band === 'favorable' ? 'Specialists received the checked location and case notes. They agreed to take over the care, completing the team’s part in the call.' : 'After a delay, specialists received the checked details and took over the care.' },
       { when: { facts: [{ factId: 'f_person', in: ['unknown', 'reported', 'disproved'] }] }, ending: 'partial_followthrough', objective: band === 'favorable' ? 35 : 25, text: 'The location remained unverified. Specialists accepted the report and the explicit need to locate the person.' },
       { when: { facts: [{ factId: 'f_person', in: ['confirmed'] }], notFlags: ['assist_care_ready'] }, ending: 'partial_followthrough', objective: band === 'favorable' ? 55 : 40, text: 'The person’s location was passed on, but the receiving care plan remained incomplete.' },
       { when: { facts: [{ factId: 'f_person', in: ['confirmed'] }], flags: ['assist_care_ready'], notFlags: ['assist_case_briefed'] }, ending: 'partial_followthrough', objective: band === 'favorable' ? 65 : 50, text: 'Receiving care accepted the located person with gaps in the case summary still to resolve.' },
     ];
   }
-  const rebuild = action(ctx, 'assist_rebuild_plan', 'resolve', 'Rebuild the assistance plan', 'perimeter', {
-    favorable: 'Recheck the person and needs, restore access and receiving care, then choose another response',
-    mixed: 'Restore a workable care plan with extra delay and a smaller safety margin',
-    adverse: 'Verify the available case information; care readiness may still be missing',
+  const rebuild = action(ctx, 'assist_rebuild_plan', 'resolve', 'Revise the care plan', 'Recheck the person’s needs and try to arrange a usable route and care team.', 'perimeter', {
+    favorable: 'Recheck the person and their needs, prepare the route, and get a care team ready for another attempt.',
+    mixed: 'Get the plan ready for another attempt, but lose time and safety points.',
+    adverse: 'Find the person and check their needs, but leave some care arrangements unfinished.',
   }, {
     visibleWhen: { flags: ['assist_needs_followthrough'] }, approach: 'path', workload: { base: 5, perSqFt: .008 },
     check: { kind: 'coordination', ratings: [{ key: 'coordination', weight: .6 }, { key: 'medical', weight: .4 }], difficulty: difficulty - 4 },
@@ -231,10 +231,10 @@ export function buildAssistanceV3(ctx: V3Context): void {
       adverse: [{ stage: 'resolve', objective: 0, reveal: ['f_person', transferFact], setFlags: ['assist_case_briefed'], pressure: 5, text: 'The team verified the person and recorded the outstanding needs, but could not restore all care arrangements. An explicit handover remains available.' }],
     },
   });
-  const withdraw = action(ctx, 'assist_withdraw', 'resolve', 'Withdraw with the unresolved concern recorded', 'wait', {
-    favorable: 'Preserve checked information while leaving assistance unfinished',
-    mixed: 'Withdraw with a partial account and an open care concern',
-    adverse: 'Withdraw after delay; the person’s need remains unresolved',
+  const withdraw = action(ctx, 'assist_withdraw', 'resolve', 'Leave with help still needed', 'Leave the scene and pass on your notes. The person’s need remains unresolved.', 'wait', {
+    favorable: 'Leave and pass on what you know. The person still needs help.',
+    mixed: 'Leave with gaps in the notes and care still needed. Safety falls.',
+    adverse: 'Leave after a delay. Safety falls, and the person still needs help.',
   }, {
     targetId: entryId, workload: { base: 2, perSqFt: 0 }, consequenceLevel: 'high',
     outcomes: {
@@ -244,8 +244,8 @@ export function buildAssistanceV3(ctx: V3Context): void {
     },
   });
   s.stages = {
-    assess: { id: 'assess', label: 'Locate and assess', prompt: 'Choose what to establish first: contact, location, access information or receiving care.', actions: [contact, urgentLocate, reviewReport, alertCare] },
-    adapt: { id: 'adapt', label: 'Prepare a care plan', prompt: 'Preparation opens specific responses and costs time. Move on when the chosen plan is ready.', actions: [locate, access, care, needs, commit] },
-    resolve: { id: 'resolve', label: 'Assist and follow through', prompt: 'Choose suitable assistance, complete a verified handover, or recover from a stalled plan.', actions: [medical, transfer, handover, rebuild, withdraw] },
+    assess: { id: 'assess', label: 'Find out what is wrong', prompt: 'Contact the person, go to the reported room, ask about access, or arrange a care team.', actions: [contact, urgentLocate, reviewReport, alertCare] },
+    adapt: { id: 'adapt', label: 'Get ready to help', prompt: 'Find the person, check their needs, and prepare care or a route outside. Each step takes time.', actions: [locate, access, care, needs, commit] },
+    resolve: { id: 'resolve', label: 'Help or hand over', prompt: 'Give first aid, help the person outside, or ask specialists to take over. If the plan fails, revise it.', actions: [medical, transfer, handover, rebuild, withdraw] },
   };
 }

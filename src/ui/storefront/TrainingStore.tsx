@@ -110,7 +110,7 @@ export function TrainingStore({ requestedCert, requestedOfficer, requestedCourse
     if (!reviewing || !selectedCourse || !reviewing.option.available || submitting.current) return;
     submitting.current = true;
     const result = act({ type: 'startCourse', officerId: reviewing.officer.id, courseId: selectedCourse.id }, `${fullName(reviewing.officer)} started ${selectedCourse.name}`);
-    setFeedback({ courseId: selectedCourse.id, text: result.ok ? `${fullName(reviewing.officer)} is training for ${selectedCourse.hours} game hours.` : result.reason });
+    setFeedback({ courseId: selectedCourse.id, text: result.ok ? `${fullName(reviewing.officer)} is training for ${selectedCourse.hours} real hours.` : result.reason });
     if (result.ok) {
       const assignment = getState().officers[reviewing.officer.id]?.assignment;
       if (assignment?.kind === 'training') chooser.current?.complete({ officerName: fullName(reviewing.officer), startedAt: assignment.startedAt, endsAt: assignment.endsAt });
@@ -155,7 +155,7 @@ export function TrainingStore({ requestedCert, requestedOfficer, requestedCourse
     {!options.length && <EmptyState icon="mortarboard" title="No courses match">Clear the course search to see all training.</EmptyState>}
     <Sheet open={!!selectedCourse} onClose={closeChooser} title={choice?.enrolment ? 'Enrolment confirmed' : reviewing ? 'Review enrolment' : 'Choose officer'} subtitle={selectedCourse ? `${selectedCourse.name} · ${money(selectedCourse.cost)} · ${selectedCourse.hours}h` : undefined} className="training-chooser" footer={selectedCourse && <div className="training-chooser-footer">
       {choice?.enrolment ? <TrainingEnrolmentActions course={selectedCourse} onDone={closeChooser} /> : reviewing ? <>
-        <p className="training-confirm-cost">{money(selectedCourse.cost)} funding · 1 slot · {selectedCourse.hours} game hours</p>
+        <p className="training-confirm-cost">{money(selectedCourse.cost)} funding · 1 slot · {selectedCourse.hours} real hours</p>
         <div className="training-confirm-actions"><Button onClick={backToCandidates}>Back</Button><Button variant="primary" disabled={!reviewing.option.available} onClick={enrol} aria-label={`Enrol ${fullName(reviewing.officer)} in ${selectedCourse.name} for ${money(selectedCourse.cost)}`}>Enrol officer</Button></div>
       </> : <Button block onClick={closeChooser}>Cancel</Button>}
     </div>}>
@@ -165,7 +165,7 @@ export function TrainingStore({ requestedCert, requestedOfficer, requestedCourse
       </div> : reviewing ? <div className="training-review">
         <h3 ref={reviewHeading} className="training-review-heading" tabIndex={-1}>Confirm {fullName(reviewing.officer)}</h3>
         <TrainingOfficerCard candidate={reviewing} now={game.department.clockHighWater} selected />
-        <div className="training-confirm-details"><p>{game.department.funding >= selectedCourse.cost ? `Funding: ${money(game.department.funding)} → ${money(game.department.funding - selectedCourse.cost)}` : `Funding: ${money(game.department.funding)} of ${money(selectedCourse.cost)} needed`}</p><p>{Math.max(0, game.department.trainingSlots - inTraining)} training {game.department.trainingSlots - inTraining === 1 ? 'slot' : 'slots'} free</p><p className="dim">Away from squad duties for {selectedCourse.hours} game hours. Grants arrive on completion; XP may also improve a rating.</p></div>
+        <div className="training-confirm-details"><p>{game.department.funding >= selectedCourse.cost ? `Funding: ${money(game.department.funding)} → ${money(game.department.funding - selectedCourse.cost)}` : `Funding: ${money(game.department.funding)} of ${money(selectedCourse.cost)} needed`}</p><p>{Math.max(0, game.department.trainingSlots - inTraining)} training {game.department.trainingSlots - inTraining === 1 ? 'slot' : 'slots'} free</p><p className="dim">Away from squad duties for {selectedCourse.hours} real hours. Grants arrive on completion; XP may also improve a rating.</p></div>
         {feedback?.courseId === selectedCourse.id && <p className="reason" role="status">{feedback.text}</p>}
       </div> : <div className="training-candidates">
         <div className="training-comparison-intro"><p>{selectedCourse.grants.cert ? `Certification on completion: ${CERT_LABEL[selectedCourse.grants.cert]}.` : `Compare current ratings and direct course gains. Enrol below ${COURSE_RATING_CEILING}.`} Gains arrive on completion; XP may also improve a rating.</p><p className="dim" role="status">{eligible} can enrol · {candidates.length - eligible} unavailable · Stress: lower is better</p></div>
@@ -184,7 +184,7 @@ export function TrainingStore({ requestedCert, requestedOfficer, requestedCourse
 /** Keep the previous Enrol hit area inert so a repeated tap cannot dismiss the sheet. */
 export function TrainingEnrolmentActions({ course, onDone }: { course: Course; onDone: () => void }) {
   return <>
-    <p className="training-confirm-cost">{money(course.cost)} funding paid · {course.hours} game hours</p>
+    <p className="training-confirm-cost">{money(course.cost)} funding paid · {course.hours} real hours</p>
     <div className="training-confirm-actions"><Button variant="primary" onClick={(event) => { if (event.detail <= 1) onDone(); }}>Done</Button><Button disabled>Enrolled</Button></div>
   </>;
 }

@@ -97,7 +97,7 @@ describe('development browsing and shared detail', () => {
     const html = detail('wellbeing_peer_support', 3, { purchasedTier: 3 });
     expect(html).toContain('Current · Tier III');
     expect(html).toContain('x2 faster');
-    expect(html).toContain('Maximum tier reached');
+    expect(html).toContain('Fully upgraded');
     expect(html).not.toContain('Upgrade to tier');
     const program = detail('personnel_negotiation', 1);
     expect(program).toContain('Current · Owned');

@@ -261,6 +261,7 @@ describe('legacy compatibility boundaries', () => {
     SCENARIOS[ID].version = 1;
     SCENARIOS[ID].stages.resolve.actions = [action('finish', 'resolve', [{ ending: 'handed_over' }])];
     const state = decide(started(), 'prime');
+    delete state.activeRun!.history[0].stressLevels;
     state.activeRun!.history[0].itemsConsumed.push({ itemId: 'battery_pack', qty: 1 });
     expect(lastDecisionView(state)?.supplies).toContainEqual({ itemId: 'battery_pack', label: 'Battery pack', qty: 1 });
     expect(lastDecisionView(state)?.actualStressDeltas).toBe(false);
@@ -271,7 +272,7 @@ describe('legacy compatibility boundaries', () => {
     scenario.stages.resolve.actions = [action('finish', 'resolve', [{ ending: 'handed_over' }])];
     const state = decide(started(), 'prime');
     expect(state.activeRun!.history[0]).not.toHaveProperty('committed');
-    expect(lastDecisionView(state)?.actualStressDeltas).toBe(false);
+    expect(lastDecisionView(state)?.actualStressDeltas).toBe(true);
     expect(pendingDebrief(decide(state, 'finish'))).not.toHaveProperty('endingSummary');
   });
 

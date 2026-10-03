@@ -59,7 +59,7 @@ export function DevelopScreen({ highlightedNode, highlightRequest }: { highlight
       <div className="development-balance-row"><div className="chips"><Chip icon="chart">{Math.floor(budget.totalDP * 100) / 100} DP</Chip><Chip icon="cash">{compactMoney(g.department.funding)}</Chip></div>
         <Button size="sm" onClick={() => setPointsOpen(true)}>Get Points</Button></div>
     </header>
-    <p className="dim development-intro">Upgrade services or unlock equipment and courses.</p>
+    <p className="dim development-intro">Spend development points (DP) and funding to improve services or unlock equipment and courses.</p>
     <PointPacks open={pointsOpen} onClose={() => setPointsOpen(false)} />
     <ChoiceRail value={branch} onChange={setBranch} label="Development branches" options={[
       { value: 'all', label: 'All branches' }, ...BRANCHES.map((id) => ({ value: id, label: <><Icon name={BRANCH_META[id].icon} size={16} />{BRANCH_META[id].label}</> })),
@@ -94,7 +94,7 @@ export function DevelopmentCard({ option: o, highlighted, onOpen }: { option: No
     <div className="node-top"><h3 className="node-name">{o.node.name}</h3><Chip tone={o.currentTier ? 'mint' : 'neutral'}>{label}</Chip></div>
     <p className="development-benefit"><span className="dim">{o.targetTier ? o.maxTier > 1 ? `Next · Tier ${tierLabel(o.targetTier)}` : 'Unlocks' : 'Current'}</span><br />{o.effects.join(' · ')}</p>
     <div className="node-foot">
-      {o.quote.cost ? <span className="node-cost"><Chip icon="chart">{o.quote.cost.dp} DP</Chip><Chip icon="cash">{money(o.quote.cost.funding)}</Chip></span> : <span className="dim">{o.maxTier > 1 ? 'Maximum tier' : 'One-time program owned'}</span>}
+      {o.quote.cost ? <span className="node-cost"><Chip icon="chart">{o.quote.cost.dp} DP</Chip><Chip icon="cash">{money(o.quote.cost.funding)}</Chip></span> : <span className="dim">{o.maxTier > 1 ? 'Fully upgraded' : 'Already unlocked'}</span>}
       <Button size="sm" onClick={onOpen} aria-label={`${o.targetTier ? 'Upgrade' : 'View'} ${o.node.name}`}>{o.targetTier ? 'Upgrade' : 'Details'}</Button>
     </div>
     {o.reason && <p className="reason">{o.reason}</p>}
@@ -106,7 +106,7 @@ export function DevelopmentDetail({ option: o, onClose, pending, failure, purcha
 }) {
   const nav = useNav();
   const currentLabel = o.currentTier ? o.maxTier > 1 ? `Tier ${tierLabel(o.currentTier)}` : 'Owned' : 'Not owned';
-  const nextLabel = o.targetTier ? o.maxTier > 1 ? `Tier ${tierLabel(o.targetTier)}` : 'Owned' : o.maxTier > 1 ? 'Maximum tier' : 'Complete';
+  const nextLabel = o.targetTier ? o.maxTier > 1 ? `Tier ${tierLabel(o.targetTier)}` : 'Owned' : o.maxTier > 1 ? 'Fully upgraded' : 'Complete';
   const baseline: Record<string, string[]> = {
     personnel_academy: ['1 total training slot'],
     intel_records: ['$0/h records funding'],
@@ -122,7 +122,7 @@ export function DevelopmentDetail({ option: o, onClose, pending, failure, purcha
     o.targetTier && o.quote.cost ? <div className="development-purchase">
       <strong>{o.quote.cost.dp} DP + {money(o.quote.cost.funding)} funding</strong>
       <Button variant="primary" disabled={!o.quote.ok || pending} onClick={onPurchase}>{pending ? 'Upgrading…' : o.maxTier > 1 ? `Upgrade to tier ${tierLabel(o.targetTier)}` : 'Unlock program'}</Button>
-    </div> : <p className="dim">{o.maxTier > 1 ? 'Maximum tier reached. All listed benefits are active.' : 'Program owned. Its unlocks are active.'}</p>
+    </div> : <p className="dim">{o.maxTier > 1 ? 'Fully upgraded. All listed benefits are active.' : 'Program owned. Its unlocks are active.'}</p>
   }>
     <div className="stack development-detail">
       <p className="dim">{o.node.description}</p>

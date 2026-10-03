@@ -1,6 +1,6 @@
 import { recruitmentStatus } from '../../sim/roster';
 import { personaNote } from '../../content/personas';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useGame } from '../store';
 import { projectHire, sortedCandidates } from '../../sim/department-selectors';
 import type { Candidate, Id, Role } from '../../sim/types';
@@ -9,13 +9,14 @@ import { useToast } from '../components/toast';
 import { CERT_ICON, CERT_LABEL, RATING_META, ROLES, ROLE_META, TRAIT_INFO } from '../components/labels';
 import { CareerMini } from '../components/Career';
 import { Portrait } from '../portraits/Portrait';
+import { ChoiceRail } from '../components/ChoiceRail';
 import { agePortraitProps } from './helpers';
 import { Icon } from '../icons';
 import { money, perHour, rate, relativeTime } from '../format';
+import './recruit.css';
 
 export function Recruit() {
   const g = useGame();
-  const { act } = useToast();
   const [target, setTarget] = useState<Role | null>(null);
   const [hireFor, setHireFor] = useState<Id | null>(null);
   const candidates = sortedCandidates(g);
@@ -32,26 +33,7 @@ export function Recruit() {
       hint={`Roster ${roster}/${g.department.rosterCap}${full ? ' (full: dismiss or expand capacity to hire)' : ''}. Hiring adds the wage to every hour.`}
     >
       <Card>
-        <div className="refresh">
-          <span className="dim">
-            <Icon name="refresh" size={14} /> Refresh pool, target a role:
-          </span>
-          <div className="chips" role="radiogroup" aria-label="Target role">
-            <button type="button" role="radio" aria-checked={target === null} className={`pill pill-icon${target === null ? ' pill-on' : ''}`} onClick={() => setTarget(null)}>
-              <Icon name="people" size={14} />
-              Any
-            </button>
-            {ROLES.map((r) => (
-              <button key={r} type="button" role="radio" aria-checked={target === r} className={`pill pill-icon${target === r ? ' pill-on' : ''}`} onClick={() => setTarget(r)}>
-                <Icon name={ROLE_META[r].icon} size={14} />
-                {ROLE_META[r].label}
-              </button>
-            ))}
-          </div>
-          <Button size="sm" icon="refresh" onClick={() => act(target ? { type: 'refreshCandidates', targetRole: target } : { type: 'refreshCandidates' })}>
-            Refresh candidates
-          </Button>
-        </div>
+        <RecruitRefresh target={target} onTargetChange={setTarget} />
       </Card>
       {candidates.length === 0 ? (
         <Card>
@@ -62,7 +44,7 @@ export function Recruit() {
       ) : (
         <div className="stack">
           {candidates.map((c) => (
-            <CandidateCard key={c.id} c={c} now={now} open={hireFor === c.id} onToggle={() => setHireFor(hireFor === c.id ? null : c.id)} onHired={() => setHireFor(null)} />
+            <CandidateCard key={c.id} c={c} now={now} open={hireFor === c.id} onToggle={() => setHireFor((current) => current === c.id ? null : c.id)} onHired={() => setHireFor(null)} />
           ))}
         </div>
       )}
@@ -70,11 +52,28 @@ export function Recruit() {
   );
 }
 
-function CandidateCard({ c, now, open, onToggle, onHired }: { c: Candidate; now: number; open: boolean; onToggle: () => void; onHired: () => void }) {
+export function RecruitRefresh({ target, onTargetChange }: { target: Role | null; onTargetChange: (role: Role | null) => void }) {
+  const { act } = useToast();
+  return <div className="recruit-refresh">
+    <strong className="recruit-refresh-title">Role for next refresh</strong>
+    <ChoiceRail<Role | 'any'> value={target ?? 'any'} onChange={(role) => onTargetChange(role === 'any' ? null : role)} label="Role for next candidate refresh" grow options={[
+      { value: 'any', label: 'Any' },
+      ...ROLES.map((role) => ({ value: role, label: ROLE_META[role].label })),
+    ]} />
+    <p className="recruit-refresh-hint">Choose the role to target when you refresh candidates.</p>
+    <Button size="sm" icon="refresh" onClick={() => act(target ? { type: 'refreshCandidates', targetRole: target } : { type: 'refreshCandidates' })}>
+      Refresh candidates
+    </Button>
+  </div>;
+}
+
+export function CandidateCard({ c, now, open, onToggle, onHired }: { c: Candidate; now: number; open: boolean; onToggle: () => void; onHired: () => void }) {
   const g = useGame();
   const { act } = useToast();
+  const hiring = useRef(false);
   const o = c.officer;
   const proj = open ? projectHire(g, c.id) : null;
+  const reviewId = `hire-review-${c.id}`;
   return (
     <Card className="cand">
       <div className="cand-top">
@@ -132,12 +131,13 @@ function CandidateCard({ c, now, open, onToggle, onHired }: { c: Candidate; now:
           <Icon name="cash" size={13} />
           Signing {money(c.signingCost)} · <Icon name="clock" size={13} /> leaves {relativeTime(c.expiresAt, now)}
         </span>
-        <Button size="sm" variant={open ? 'secondary' : 'primary'} onClick={onToggle}>
-          {open ? 'Close' : 'Hire…'}
+        <Button size="sm" variant={open ? 'secondary' : 'primary'} aria-expanded={open} aria-controls={open ? reviewId : undefined} aria-label={`${open ? 'Cancel hire review for' : 'Review hire for'} ${o.firstName} ${o.surname}`} onClick={onToggle}>
+          {open ? 'Cancel' : 'Review hire'}
         </Button>
       </div>
       {open && proj && (
-        <div className="confirm">
+        <div className="confirm recruit-hire-review" id={reviewId} role="region" aria-label={`Hire ${o.firstName} ${o.surname}`}>
+          <h3>Hire {o.firstName} {o.surname}</h3>
           <KV k="Signing cost" v={money(proj.upfront)} />
           <KV k="Wage change" v={`${proj.wageDelta >= 0 ? '+' : '-'}${perHour(Math.abs(proj.wageDelta))}`} />
           <KV k="Net funding" v={`${rate(proj.netBefore)} → ${rate(proj.netAfter)}`} tone={proj.netAfter < 0 ? 'danger' : undefined} />
@@ -152,7 +152,10 @@ function CandidateCard({ c, now, open, onToggle, onHired }: { c: Candidate; now:
             block
             disabled={!proj.ok}
             onClick={() => {
+              if (!proj.ok || hiring.current) return;
+              hiring.current = true;
               if (act({ type: 'hire', candidateId: c.id }, `${o.surname} hired`).ok) onHired();
+              else hiring.current = false;
             }}
           >
             Confirm hire · {money(proj.upfront)}

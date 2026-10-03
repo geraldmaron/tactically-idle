@@ -1,0 +1,45 @@
+.stress-display { --stress-ink: var(--mint); min-width: 0; }
+.stress-strained { --stress-ink: var(--amber); }
+.stress-overloaded { --stress-ink: var(--warn); }
+.stress-recovery { --stress-ink: var(--danger); }
+.stress-reading { display: flex; flex-wrap: wrap; align-items: center; gap: 5px 8px; }
+.stress-reading-label { color: var(--text-dim); font-size: 12px; }
+.stress-band-label { color: var(--stress-ink); font-weight: 600; font-size: 12px; }
+.stress-value { margin-left: auto; font: 600 24px/1.1 var(--font-cond); font-variant-numeric: tabular-nums; }
+.stress-value small { font: 400 12px/1 var(--font-ui); color: var(--text-dim); padding-left: 2px; }
+.stress-scale { position: relative; margin: 12px 4px 8px; height: 9px; }
+.stress-zones { display: grid; grid-template-columns: 3fr 3fr 2fr 2fr; gap: 3px; height: 100%; }
+.stress-zones i { background: var(--mint); opacity: .28; border-radius: 2px; }
+.stress-zones i:nth-child(2) { background: var(--amber); }
+.stress-zones i:nth-child(3) { background: var(--warn); }
+.stress-zones i:nth-child(4) { background: var(--danger); }
+.stress-pin { position: absolute; top: -3px; bottom: -3px; width: 3px; background: var(--text); transform: translateX(-50%); border-radius: 2px; box-shadow: 0 0 0 2px var(--panel); }
+.stress-pin::before { content: ''; position: absolute; width: 7px; height: 4px; left: -2px; top: -3px; background: var(--text); clip-path: polygon(0 0, 100% 0, 50% 100%); }
+.stress-pin-before { opacity: .45; width: 2px; top: 0; bottom: 0; box-shadow: none; }
+.stress-pin-before::before { display: none; }
+.stress-change { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 10px; font-size: 12px; font-variant-numeric: tabular-nums; color: var(--text-dim); }
+.stress-change strong { font-weight: 600; }
+.stress-crossing { margin: 6px 0 0; color: var(--stress-ink); font-size: 12px; font-weight: 600; }
+.stress-mini { --stress-ink: var(--mint); display: inline-flex; flex-wrap: nowrap; align-items: baseline; justify-content: space-between; gap: 5px; color: var(--stress-ink); font-size: 11px; letter-spacing: 0; text-transform: none; }
+.stress-mini.stress-strained { --stress-ink: var(--amber); }
+.stress-mini.stress-overloaded { --stress-ink: var(--warn); }
+.stress-mini.stress-recovery { --stress-ink: var(--danger); }
+.stress-mini strong { font-variant-numeric: tabular-nums; }
+.ocard-row:has(.stress-mini) { flex-wrap: wrap; }
+.ocard-row .stress-mini { flex-basis: 100%; }
+.stress-guide { margin-top: 8px; border-top: 1px solid var(--line); color: var(--text-dim); font-size: 13px; }
+.stress-guide summary { min-height: 44px; padding: 12px 0; cursor: pointer; color: var(--text); font-weight: 600; }
+.stress-guide p { margin: 0 0 12px; }
+.stress-guide ol { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
+.stress-guide li { display: grid; gap: 2px; }
+.stress-guide li strong { color: var(--text); }
+.decision-stress { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); }
+.decision-stress h4 { font: 600 15px/1.2 var(--font-cond); margin: 0 0 10px; }
+.decision-stress-list { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.decision-stress-officer { display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 10px; align-items: start; }
+.decision-stress-officer > .portrait, .decision-stress-officer > .result-officer-fallback { border-radius: 5px; }
+.decision-stress-name { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 10px; margin: 0 0 3px; font: 600 15px/1.2 var(--font-cond); }
+.decision-stress-delta { font-variant-numeric: tabular-nums; }
+.decision-stress-legacy { margin: 3px 0 0; font-size: 12px; color: var(--text-dim); }
+
+.ocard-role span { overflow: visible; text-overflow: clip; white-space: normal; overflow-wrap: anywhere; }

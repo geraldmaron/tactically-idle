@@ -41,19 +41,19 @@ export function EquipmentStore({ active, onDevelopment, onTraining }: EquipmentS
     <p className="dim store-intro">Browse every equipment unlock. Funding buys stock; training qualifies officers. Each item has a specific use and limits.</p>
     <label className="field store-search">
       <span className="field-label">Search equipment</span>
-      <input type="search" placeholder="Name, category or capability" value={query.search} onChange={(event) => patch({ search: event.target.value })} />
+      <input type="search" placeholder="Search equipment or what it helps with" value={query.search} onChange={(event) => patch({ search: event.target.value })} />
     </label>
     <details className="store-filters">
-      <summary>Filters{activeFilters ? ` · ${activeFilters} active` : ''}<span className="dim">Search and filters combine</span></summary>
+      <summary>Filters{activeFilters ? ` · ${activeFilters} active` : ''}<span className="dim">{query.category === 'all' ? 'Search and filters combine' : `Category: ${ITEM_CATEGORY_LABELS[query.category]}`}</span></summary>
       <div className="store-filter-body">
-        <fieldset className="store-category-fieldset">
-          <legend>Category</legend>
-          <div className="store-category-list">
-            {(['all', ...ITEM_CATEGORIES] as const).map((category) => <button key={category} type="button" className={`store-category${query.category === category ? ' is-selected' : ''}`} aria-pressed={query.category === category} onClick={() => patch({ category })}>
-              {category === 'all' ? 'All equipment' : ITEM_CATEGORY_LABELS[category]} <span>{facets.categories[category]}</span>
-            </button>)}
-          </div>
-        </fieldset>
+        <label className="field">
+          <span className="field-label">Category</span>
+          <select name="equipment-category" value={query.category} onChange={(event) => patch({ category: event.target.value as EquipmentQuery['category'] })}>
+            {(['all', ...ITEM_CATEGORIES] as const).map((category) => <option key={category} value={category}>
+              {category === 'all' ? 'All equipment' : ITEM_CATEGORY_LABELS[category]} ({facets.categories[category]})
+            </option>)}
+          </select>
+        </label>
         <div className="store-filter-row">
           <label className="field"><span className="field-label">Availability</span>
             <select value={query.availability} onChange={(event) => patch({ availability: event.target.value as AvailabilityFilter })}>
@@ -126,19 +126,19 @@ function EquipmentDetail({ entry, onClose, onDevelopment, onTraining }: {
   </div>}>
     <div className="store-detail-art"><GearArtFrame itemId={item.id} size={108} /><p>{item.description}</p></div>
     <DetailSection title="Helps with" lines={item.helpsWith ?? [item.description]} />
-    <DetailSection title="Counters and limits" lines={item.counters ?? []} />
+    <DetailSection title="When it won’t help" lines={item.counters ?? []} />
     <section className="store-detail-section"><h3>Unlock and qualifications</h3>
       <p>{entry.unlocked ? 'Purchase unlocked.' : `Purchase requires ${entry.unlockName}.`} {entry.affordable ? 'One unit is affordable with current funding.' : 'Current funding is below the unit price.'}</p>
       {item.requiresNode && <Button size="sm" onClick={() => onDevelopment(item.requiresNode!)}>View {entry.unlockName}</Button>}
       {item.requiresCerts?.length ? <><p>Use requires {item.requiresCerts.map((cert) => CERT_LABEL[cert]).join(' + ')}. {entry.qualified} officer{entry.qualified === 1 ? '' : 's'} currently hold{entry.qualified === 1 ? 's' : ''} all required certifications.</p><p className="dim">Buying stock does not qualify an officer. Certified officers may still be unavailable or unsuitable for a particular action.</p><Button size="sm" onClick={() => onTraining(item.requiresCerts?.[0])}>Find qualification training</Button></> : <p>No item-specific certification required. Individual action requirements still apply.</p>}
     </section>
-    <section className="store-detail-section"><h3>Consumed supplies</h3>
-      {item.supplies?.length ? <ul className="bullets">{item.supplies.map((supply) => <li key={supply.itemId}>{supply.qty} × {ITEMS[supply.itemId]?.name ?? supply.itemId} per applicable committed action. Supplies are bought separately.</li>)}</ul> : <p>{item.kind === 'consumable' ? 'The committed action consumes this exact supply unit.' : 'No extra supply specified for this item. The selected action may have additional requirements.'}</p>}
+    <section className="store-detail-section"><h3>Supplies used</h3>
+      {item.supplies?.length ? <ul className="bullets">{item.supplies.map((supply) => <li key={supply.itemId}>{supply.qty} × {ITEMS[supply.itemId]?.name ?? supply.itemId} each time this equipment is used. Buy these supplies separately.</li>)}</ul> : <p>{item.kind === 'consumable' ? 'Used once when you confirm an action that needs it.' : 'No separate supply needed for this item. A particular action may still need other equipment.'}</p>}
     </section>
     <section className="store-detail-section"><h3>Upkeep</h3>
       {item.kind === 'consumable' ? <p>Single-use; cannot be serviced.{item.wear.shelfLifeDays ? ` Shelf life: ${item.wear.shelfLifeDays} game days.` : ''}{item.wear.perDay ? ` Condition also falls ${item.wear.perDay} per game day.` : ''}</p>
-        : <p>Base wear: {Math.round(item.wear.perUse * wear * 100) / 100} per use and {Math.round(item.wear.perDay * wear * 1000) / 1000} per game day, adjusted by each unit’s wear rate. Service takes {item.wear.serviceHours} game hours; base cost {money(item.wear.serviceCost)} funding before any manager discount. No automatic hourly equipment charge.</p>}
-      <p className="dim">Manage unit condition, service and restock rules in Inventory.</p>
+        : <p>Base wear: {Math.round(item.wear.perUse * wear * 100) / 100} per use and {Math.round(item.wear.perDay * wear * 1000) / 1000} per game day, adjusted by each unit’s wear rate. Service takes {item.wear.serviceHours} real hours; base cost {money(item.wear.serviceCost)} funding before any manager discount. No automatic hourly equipment charge.</p>}
+      <p className="dim">Repair equipment and manage automatic restocking in Inventory.</p>
     </section>
     <section className="store-detail-section"><h3>Action compatibility</h3><p>{preview.reasons.join(' ')}</p><p className="dim">This store view has no selected action. It does not claim a score bonus or reveal unconfirmed scene information. Check the action preview during an operation.</p></section>
   </Sheet>;

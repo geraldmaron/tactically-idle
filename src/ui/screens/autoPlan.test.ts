@@ -75,7 +75,7 @@ describe('contextual preparation equipment', () => {
     expect(incomplete.issue).toMatch(/No unassigned usable 1 Device cartridge/);
     expect(incomplete).toMatchObject({ added: 0, explicit: {}, loadout: args.loadouts.A });
     const held = state.units[unitId('conducted_energy_device')];
-    expect(planPreparationEquipment({ ...args, picks: { B: { conducted_energy_device: [held] } } }).issue).toMatch(/Conducted-energy device class/);
+    expect(planPreparationEquipment({ ...args, picks: { B: { conducted_energy_device: [held] } } }).issue).toMatch(/Conducted-energy device/);
     expect(state).toEqual(before);
   });
 

@@ -49,8 +49,8 @@ describe('real officer rating progress', () => {
     o.ratings.communication = rating;
     o.xp = 800;
     const html = render(o);
-    expect(html).toContain('XP growth cap reached');
-    expect(html).toContain('XP increases this rating only while it is below 90.');
+    expect(html).toContain('Experience can’t raise this skill further');
+    expect(html).toContain('Experience can raise this skill up to 90.');
     expect(html).toContain('800 total XP');
     expect(html).not.toContain('to +1');
     expect(html).not.toContain('role="img"');

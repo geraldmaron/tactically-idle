@@ -9,7 +9,7 @@ export const DEV_NODES: Record<Id, DevelopmentNode> = {
     id: 'personnel_negotiation',
     branch: 'personnel',
     name: 'Negotiation training',
-    description: 'Lets the department train officers in crisis negotiation so more than one person can open contact.',
+    description: "Adds courses in crisis negotiation and calming tense situations. Officers must complete the courses before they gain the qualifications.",
     cost: { dp: 2, funding: 800 },
     requires: [],
     effects: [{ kind: 'unlockCourse', courseId: 'crisis_negotiation_course' }, { kind: 'unlockCourse', courseId: 'deescalation_course' }],
@@ -18,7 +18,7 @@ export const DEV_NODES: Record<Id, DevelopmentNode> = {
     id: 'personnel_academy',
     branch: 'personnel',
     name: 'Training academy',
-    description: 'Expand the academy to train two, three, then four officers at once.',
+    description: "Train 2, 3, then 4 officers at once as you buy each upgrade.",
     cost: { dp: 3, funding: 2500 },
     requires: [],
     effects: [{ kind: 'trainingSlots', delta: 1 }],
@@ -32,7 +32,7 @@ export const DEV_NODES: Record<Id, DevelopmentNode> = {
     id: 'personnel_recruiting',
     branch: 'personnel',
     name: 'Recruiting office',
-    description: 'More desks and a wider outreach: room for more officers and a larger candidate pool.',
+    description: "Adds room for 2 more officers and 1 more candidate to choose from when recruiting.",
     cost: { dp: 2, funding: 1500 },
     requires: [],
     effects: [
@@ -44,7 +44,7 @@ export const DEV_NODES: Record<Id, DevelopmentNode> = {
     id: 'personnel_fourth_squad',
     branch: 'personnel',
     name: 'Expanded barracks',
-    description: 'Four extra roster places. With the recruiting office, the roster reaches 18, enough to staff the four available squads.',
+    description: "Adds room for 4 more officers. With the Recruiting office, you can employ 18 officers to staff the four available squads.",
     cost: { dp: 3, funding: 3000 },
     requires: ['personnel_recruiting'],
     effects: [{ kind: 'rosterCap', delta: 4 }],
@@ -54,7 +54,7 @@ export const DEV_NODES: Record<Id, DevelopmentNode> = {
     id: 'field_contact_kit',
     branch: 'field',
     name: 'Contact kit',
-    description: 'Approves throw phones for two-way contact with a qualified negotiator.',
+    description: "Makes throw phones available to buy for two-way conversations. An officer still needs crisis negotiation training to use one.",
     cost: { dp: 1, funding: 600 },
     requires: [],
     effects: [{ kind: 'unlockItem', itemId: 'throw_phone' }],
@@ -63,7 +63,7 @@ export const DEV_NODES: Record<Id, DevelopmentNode> = {
     id: 'field_entry_course',
     branch: 'field',
     name: 'Entry team course',
-    description: 'Lets the department qualify more officers for entry team duty.',
+    description: "Adds the entry team training course. Officers must complete it before they qualify for entry team duty.",
     cost: { dp: 2, funding: 1200 },
     requires: [],
     effects: [{ kind: 'unlockCourse', courseId: 'entry_course' }],
@@ -82,7 +82,7 @@ export const DEV_NODES: Record<Id, DevelopmentNode> = {
     id: 'intel_drone',
     branch: 'intel',
     name: 'Drone program',
-    description: 'Approves camera drones and the course that licenses operators.',
+    description: "Makes camera drones available to buy and adds the drone operator course. Officers must complete the course before using a drone.",
     cost: { dp: 3, funding: 2200 },
     requires: ['intel_thermal'],
     effects: [
@@ -94,7 +94,7 @@ export const DEV_NODES: Record<Id, DevelopmentNode> = {
     id: 'intel_records',
     branch: 'intel',
     name: 'Records office',
-    description: 'Digitised case records cut paperwork and bring in small service fees.',
+    description: "Earn service fees from better case records. The three upgrades bring in $60, $120 and $200 per hour in total.",
     cost: { dp: 1, funding: 1000 },
     requires: [],
     effects: [{ kind: 'income', perHour: 60 }],
@@ -109,7 +109,7 @@ export const DEV_NODES: Record<Id, DevelopmentNode> = {
     id: 'logistics_equipment_manager',
     branch: 'logistics',
     name: 'Equipment manager',
-    description: 'Improve the maintenance workshop for cheaper repairs, slower reusable-gear wear, and more automatic service jobs. Choose the optional hourly spending ceiling on Gear.',
+    description: "Pay less for repairs, slow equipment wear and repair more items at once. Each upgrade improves all three. Choose an hourly repair budget in Gear to turn on automatic repairs.",
     cost: { dp: 3, funding: 2500 },
     requires: [],
     effects: [{ kind: 'equipmentManager', repairMultiplier: 0.75, wearMultiplier: 0.8, maxConcurrentServices: 2 }],
@@ -122,8 +122,8 @@ export const DEV_NODES: Record<Id, DevelopmentNode> = {
   logistics_presets: {
     id: 'logistics_presets',
     branch: 'logistics',
-    name: 'Loadout presets',
-    description: 'Save a standard loadout for each squad so deployments need fewer taps.',
+    name: 'Saved equipment sets',
+    description: "Save a usual set of equipment for each squad to make preparing for calls quicker.",
     cost: { dp: 1, funding: 500 },
     requires: [],
     effects: [{ kind: 'loadoutPresets' }],
@@ -132,7 +132,7 @@ export const DEV_NODES: Record<Id, DevelopmentNode> = {
     id: 'logistics_restock',
     branch: 'logistics',
     name: 'Supply restocking',
-    description: 'Set a target stock and a spending ceiling; the department reorders hourly, never overspending.',
+    description: "Choose how many items to keep in stock and an hourly spending limit. The department buys replacements each hour within that limit and its available funds.",
     cost: { dp: 2, funding: 900 },
     requires: ['logistics_presets'],
     effects: [{ kind: 'restockRules' }],
@@ -142,7 +142,7 @@ export const DEV_NODES: Record<Id, DevelopmentNode> = {
     id: 'wellbeing_peer_support',
     branch: 'wellbeing',
     name: 'Peer support program',
-    description: 'Debriefs and peer check-ins help officers recover from strain faster.',
+    description: "Help officers recover from stress between calls. The three upgrades make recovery 50%, 75% and 100% faster.",
     cost: { dp: 2, funding: 1000 },
     requires: [],
     effects: [{ kind: 'recoveryRate', mult: 1.5 }],
@@ -156,7 +156,7 @@ export const DEV_NODES: Record<Id, DevelopmentNode> = {
     id: 'wellbeing_first_aid',
     branch: 'wellbeing',
     name: 'Medical training',
-    description: 'Lets the department train officers in advanced first aid so a second medic is possible.',
+    description: "Adds the advanced first aid course and makes rescue shields available to buy. Officers must complete the course before providing advanced first aid or using a rescue shield.",
     cost: { dp: 2, funding: 1100 },
     requires: ['wellbeing_peer_support'],
     effects: [{ kind: 'unlockCourse', courseId: 'first_aid_course' }, { kind: 'unlockItem', itemId: 'rescue_shield' }],
@@ -165,7 +165,7 @@ export const DEV_NODES: Record<Id, DevelopmentNode> = {
     "id": "field_less_lethal",
     "branch": "field",
     "name": "Less-lethal response program",
-    "description": "Approves situational equipment and related training. Officers must complete their own required qualifications; buying this program grants no certification.",
+    "description": "Makes less-lethal devices, launchers and their supplies available to buy, and adds their training courses. Officers must complete the required training before using the equipment.",
     "cost": {
         "dp": 2,
         "funding": 1000
@@ -202,7 +202,7 @@ export const DEV_NODES: Record<Id, DevelopmentNode> = {
     "id": "field_response_program",
     "branch": "field",
     "name": "Protective response program",
-    "description": "Approves situational equipment and related training. Officers must complete their own required qualifications; buying this program grants no certification.",
+    "description": "Makes sidearms, carbines, response shotguns and light protective kits available to buy. Weapons still require an officer trained for entry team duty.",
     "cost": {
         "dp": 2,
         "funding": 1000
@@ -233,7 +233,7 @@ export const DEV_NODES: Record<Id, DevelopmentNode> = {
     "id": "field_specialist_response",
     "branch": "field",
     "name": "Specialist response program",
-    "description": "Approves situational equipment and related training. Officers must complete their own required qualifications; buying this program grants no certification.",
+    "description": "Makes precision support rifles available to buy and adds their training course. Officers must complete the required training before using the equipment.",
     "cost": {
         "dp": 2,
         "funding": 1400
@@ -256,7 +256,7 @@ export const DEV_NODES: Record<Id, DevelopmentNode> = {
     "id": "field_controlled_access",
     "branch": "field",
     "name": "Controlled access program",
-    "description": "Approves situational equipment and related training. Officers must complete their own required qualifications; buying this program grants no certification.",
+    "description": "Makes hydraulic rescue tools and single-use door charges available to buy, and adds their training course. Officers must complete the required training before using either item.",
     "cost": {
         "dp": 2,
         "funding": 1200
@@ -283,7 +283,7 @@ export const DEV_NODES: Record<Id, DevelopmentNode> = {
     "id": "logistics_field_support",
     "branch": "logistics",
     "name": "Field support program",
-    "description": "Approves situational equipment and related training. Officers must complete their own required qualifications; buying this program grants no certification.",
+    "description": "Makes support vans, command vans and radio relays available to buy, and adds vehicle training. Officers must complete the course before operating a support vehicle.",
     "cost": {
         "dp": 2,
         "funding": 1500
@@ -312,7 +312,7 @@ export const DEV_NODES: Record<Id, DevelopmentNode> = {
     "id": "logistics_armored_support",
     "branch": "logistics",
     "name": "Armored rescue support",
-    "description": "Approves situational equipment and related training. Officers must complete their own required qualifications; buying this program grants no certification.",
+    "description": "Makes armored rescue vehicles available to buy for rescues outside buildings. A trained vehicle operator is still required.",
     "cost": {
         "dp": 3,
         "funding": 2500

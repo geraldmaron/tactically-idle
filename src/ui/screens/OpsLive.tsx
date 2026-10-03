@@ -168,7 +168,7 @@ export function OpsLive() {
       onCancel={() => setConfirmCancel(true)}
       onOpenDetails={() => setPanel(panel === 'action' ? 'none' : 'action')}
       detailsOpen={panel === 'action'}
-      feedback={<OperationFeedback decisions={decisions} practice={run.practice} onOpenLog={() => setPanel('none')} />}
+      feedback={<OperationFeedback officers={g.officers} decisions={decisions} practice={run.practice} onOpenLog={() => setPanel('none')} />}
     >
       <ActionSheet
         open={panel === 'action'}
