@@ -3,7 +3,7 @@ import { createInitialState } from './department';
 import { buildLocation } from './location';
 import { applyIncidentsDue, nextIncidentAt, seedIncidentBoard } from './incidents';
 import { getScenario } from './scenario-registry';
-import { parseIncidentId } from '../gen/incident';
+import { parseIncidentId, INCIDENT_CONTENT_VERSION } from '../gen/incident';
 import { deserialize, serialize } from './save';
 import { apply, NOW, startCmd } from './test-fixtures';
 
@@ -19,12 +19,12 @@ function legacyActive() {
   return started.state;
 }
 
-describe('v2 future-content migration', () => {
-  it('preserves an issued v1 queue and active run byte-for-byte while enabling future v2 draws', () => {
+describe('future-content migration', () => {
+  it('preserves an issued v1 queue and active run byte-for-byte while enabling current-version draws', () => {
     const old = legacyActive();
     const oldScenario = structuredClone(getScenario(old.activeRun!.scenarioId));
     const current = deserialize(serialize(old, NOW))!;
-    expect(current.contentVersion).toBe(2);
+    expect(current.contentVersion).toBe(INCIDENT_CONTENT_VERSION);
     expect(current.activeRun).toEqual(old.activeRun);
     expect(current.incidents).toEqual(old.incidents);
     expect(current.rngState).toBe(old.rngState);
@@ -36,7 +36,7 @@ describe('v2 future-content migration', () => {
     applyIncidentsDue(current, NOW, nextIncidentAt(current)!);
     const added = current.incidents.filter((card) => !issued.has(card.id));
     expect(added.length).toBeGreaterThan(0);
-    expect(added.every((card) => parseIncidentId(card.id)?.contentVersion === 2)).toBe(true);
+    expect(added.every((card) => parseIncidentId(card.id)?.contentVersion === INCIDENT_CONTENT_VERSION)).toBe(true);
     expect(current.activeRun).toEqual(old.activeRun);
   });
   it('reload is stable with mixed-version queue entries and never repeats migration rewards or RNG draws', () => {

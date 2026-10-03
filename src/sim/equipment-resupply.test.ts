@@ -1,4 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
+import { SCENARIOS } from '../content/scenarios';
+import type { ActionDefinition } from './scenario-types';
 import { planActionResupply, RESUPPLY_MINUTES } from './equipment-resupply';
 import { dispatch } from './game';
 import { ITEMS } from '../content/items';
@@ -115,19 +117,19 @@ describe('contextual equipment resupply', () => {
     expect(deliver(state).state).toBe(state);
   });
 
-  it('bundles required batteries and refuses the whole batch when any are missing', () => {
+  it('delivers a powered tool alone and refuses an unusable physical tool', () => {
     const equipped = makeState({ inventory: { thermal_imager: 1 } });
     const state = setRun(noContactKit(equipped), { stage: 'adapt' });
     const p = planActionResupply(state, NOW, 'ms_thermal', ['A'], []);
     expect(p.ok).toBe(true);
-    expect(p.items.map((i) => i.itemId)).toEqual(['thermal_imager', 'battery_pack']);
+    expect(p.items.map((i) => i.itemId)).toEqual(['thermal_imager']);
     const next = dispatch(state, { ...command(), actionId: 'ms_thermal' }, { now: NOW });
     expect(next.result.ok).toBe(true);
     expect(previewAction(next.state, NOW, 'ms_thermal', ['A'], [])?.eligible).toBe(true);
     const missing = structuredClone(state);
-    for (const unit of Object.values(missing.units)) if (unit.itemId === 'battery_pack') unit.expiresAt = NOW;
+    for (const unit of Object.values(missing.units)) if (unit.itemId === 'thermal_imager') unit.status = 'service';
     const blocked = planActionResupply(missing, NOW, 'ms_thermal', ['A'], []);
-    expect(blocked.reason).toMatch(/No usable unassigned battery pack/);
+    expect(blocked.reason).toMatch(/No usable unassigned thermal imager/);
     expect(dispatch(missing, { ...command(), actionId: 'ms_thermal' }, { now: NOW }).state).toBe(missing);
   });
 
@@ -188,5 +190,64 @@ describe('contextual equipment resupply', () => {
     expect(actionViews(reloaded.getSnapshot().state, NOW, 'A').find((a) => a.id === request.actionId)?.eligible).toBe(true);
     expect(reloaded.send(command(), NOW).ok).toBe(false);
     expect(reloaded.send({ type: 'cancelOperation' }, NOW).ok).toBe(false);
+  });
+});
+
+
+const customIds: string[] = [];
+afterEach(() => { for (const id of customIds.splice(0)) delete SCENARIOS[id]; });
+function customBundleRun(action: Partial<ActionDefinition>, state = makeState()) {
+  const scenario = structuredClone(SCENARIOS.ms_occupancy);
+  scenario.id = `resupply_bundle_${customIds.length}`;
+  const template = scenario.stages.adapt.actions.find((candidate) => candidate.id === 'ms_thermal')!;
+  scenario.stages.assess.actions.unshift({ ...template, id: 'bundle_action', stage: 'assess', targetId: 'front_yard', requires: {}, spatial: undefined, ...action });
+  SCENARIOS[scenario.id] = scenario;
+  customIds.push(scenario.id);
+  return startRun(state, scenario.id, ['A'], { loadouts: { A: {} } });
+}
+const customBundlePlan = (state: GameState) => planActionResupply(state, NOW, 'bundle_action', ['A'], []);
+
+describe('shared required equipment in live delivery', () => {
+  it('delivers required capability equipment without an authored item tag', () => {
+    const state = customBundleRun({ capabilities: { rules: ['visible_exterior'], required: ['visible_exterior'] } }, makeState({ inventory: { observation_binoculars: 1 } }));
+    const before = structuredClone(state);
+    const preview = customBundlePlan(state);
+    expect(preview.ok, preview.reason ?? '').toBe(true);
+    expect(preview.items.map((item) => item.itemId)).toEqual(['observation_binoculars']);
+    expect(state).toEqual(before);
+    const delivered = dispatch(state, { type: 'resupplyAction', actionId: 'bundle_action', actingSquadIds: ['A'], supportSquadIds: [] }, { now: NOW });
+    expect(delivered.result.ok).toBe(true);
+    expect(previewAction(delivered.state, NOW, 'bundle_action', ['A'], [])?.eligible).toBe(true);
+  });
+  it('includes true companion supplies and refuses the entire bundle if one is missing', () => {
+    const initial = makeState({ inventory: { conducted_energy_device: 1, energy_cartridge: 1 } });
+    initial.officers.off_chen.certs.push('less_lethal');
+    const state = customBundleRun({ requires: { allTags: ['energy_device'] } }, initial);
+    expect(customBundlePlan(state).items.map((item) => item.itemId)).toEqual(['conducted_energy_device', 'energy_cartridge']);
+    state.units[unitId('energy_cartridge')].status = 'expired';
+    const before = structuredClone(state);
+    const preview = customBundlePlan(state);
+    expect(preview.ok).toBe(false);
+    expect(preview.allocations).toEqual([]);
+    expect(preview.reason).toMatch(/device cartridge/i);
+    expect(state).toEqual(before);
+  });
+  it('cannot replace unresolved public safety context with equipment delivery', () => {
+    const initial = makeState({ inventory: { conducted_energy_device: 1, energy_cartridge: 1 } });
+    initial.officers.off_chen.certs.push('less_lethal');
+    const state = customBundleRun({ capabilities: { rules: ['less_lethal_device'], required: ['less_lethal_device'], safetyFactIds: ['unconfirmed_safety'], subjectFactIds: ['unconfirmed_subject'] } }, initial);
+    const before = structuredClone(state);
+    const preview = customBundlePlan(state);
+    expect(preview.ok).toBe(false);
+    expect(preview.allocations).toEqual([]);
+    expect(preview.reason).toMatch(/Equipment alone.*must be confirmed/);
+    expect(state).toEqual(before);
+  });
+  it('reports required capability squad counts before reserving any equipment', () => {
+    const initial = makeState({ inventory: { precision_support: 1 } });
+    initial.officers.off_chen.certs.push('precision_support');
+    const state = customBundleRun({ capabilities: { rules: ['specialist_support'], required: ['specialist_support'] } }, initial);
+    expect(customBundlePlan(state)).toMatchObject({ ok: false, allocations: [] });
+    expect(customBundlePlan(state).reason).toMatch(/at least two participating squads/);
   });
 });

@@ -1,0 +1,436 @@
+{
+  "saveVersion": 1,
+  "contentVersion": 1,
+  "savedAt": 1800000000000,
+  "state": {
+    "saveVersion": 1,
+    "contentVersion": 1,
+    "department": {
+      "name": "Westhaven Department",
+      "funding": 12400,
+      "devPoints": 3,
+      "trust": 78,
+      "level": 3,
+      "rosterCap": 12,
+      "trainingSlots": 2,
+      "unlockedNodes": [
+        "personnel_academy"
+      ],
+      "restockRules": [],
+      "lastSettledAt": 1800000000000,
+      "lastInteractionAt": 1800000000000,
+      "clockHighWater": 1800000000000,
+      "candidateRefreshedAt": 1799985600000
+    },
+    "officers": {
+      "off_chen": {
+        "id": "off_chen",
+        "firstName": "Mei",
+        "surname": "Chen",
+        "role": "comms",
+        "portrait": "/art/portraits/person_001.webp",
+        "ratings": {
+          "shooting": 46,
+          "composure": 69,
+          "communication": 78,
+          "awareness": 63,
+          "medical": 36,
+          "coordination": 71
+        },
+        "certs": [
+          "crisis_negotiation"
+        ],
+        "traits": [
+          "calm_voice"
+        ],
+        "wage": 48,
+        "xp": 220,
+        "stress": 12,
+        "injury": null,
+        "squadId": "A",
+        "assignment": {
+          "kind": "operation",
+          "runId": "legacy-run"
+        },
+        "hiredAt": 1744704000000
+      },
+      "off_brooks": {
+        "id": "off_brooks",
+        "firstName": "Marcus",
+        "surname": "Brooks",
+        "role": "breach",
+        "portrait": "/art/portraits/person_002.webp",
+        "ratings": {
+          "shooting": 77,
+          "composure": 68,
+          "communication": 48,
+          "awareness": 57,
+          "medical": 34,
+          "coordination": 58
+        },
+        "certs": [
+          "entry_team"
+        ],
+        "traits": [
+          "steady"
+        ],
+        "wage": 52,
+        "xp": 310,
+        "stress": 18,
+        "injury": null,
+        "squadId": "A",
+        "assignment": null,
+        "hiredAt": 1722240000000
+      },
+      "off_ortiz": {
+        "id": "off_ortiz",
+        "firstName": "Ana",
+        "surname": "Ortiz",
+        "role": "medic",
+        "portrait": "/art/portraits/person_003.webp",
+        "ratings": {
+          "shooting": 41,
+          "composure": 68,
+          "communication": 61,
+          "awareness": 62,
+          "medical": 85,
+          "coordination": 53
+        },
+        "certs": [
+          "advanced_first_aid"
+        ],
+        "traits": [],
+        "wage": 46,
+        "xp": 180,
+        "stress": 8,
+        "injury": null,
+        "squadId": "A",
+        "assignment": null,
+        "hiredAt": 1763712000000
+      },
+      "off_vale": {
+        "id": "off_vale",
+        "firstName": "Daniel",
+        "surname": "Vale",
+        "role": "recon",
+        "portrait": "/art/portraits/person_004.webp",
+        "ratings": {
+          "shooting": 56,
+          "composure": 54,
+          "communication": 49,
+          "awareness": 80,
+          "medical": 34,
+          "coordination": 59
+        },
+        "certs": [
+          "surveillance"
+        ],
+        "traits": [
+          "observant"
+        ],
+        "wage": 44,
+        "xp": 150,
+        "stress": 22,
+        "injury": null,
+        "squadId": "A",
+        "assignment": null,
+        "hiredAt": 1767168000000
+      },
+      "off_okafor": {
+        "id": "off_okafor",
+        "firstName": "Naomi",
+        "surname": "Okafor",
+        "role": "lead",
+        "portrait": "/art/portraits/person_005.webp",
+        "ratings": {
+          "shooting": 73,
+          "composure": 77,
+          "communication": 66,
+          "awareness": 62,
+          "medical": 46,
+          "coordination": 76
+        },
+        "certs": [
+          "entry_team"
+        ],
+        "traits": [
+          "mentor"
+        ],
+        "wage": 55,
+        "xp": 400,
+        "stress": 15,
+        "injury": null,
+        "squadId": "B",
+        "assignment": null,
+        "hiredAt": 1696320000000
+      },
+      "off_lindqvist": {
+        "id": "off_lindqvist",
+        "firstName": "Sofia",
+        "surname": "Lindqvist",
+        "role": "recon",
+        "portrait": "/art/portraits/person_006.webp",
+        "ratings": {
+          "shooting": 49,
+          "composure": 57,
+          "communication": 54,
+          "awareness": 76,
+          "medical": 38,
+          "coordination": 69
+        },
+        "certs": [
+          "drone_operator"
+        ],
+        "traits": [],
+        "wage": 47,
+        "xp": 140,
+        "stress": 5,
+        "injury": null,
+        "squadId": "B",
+        "assignment": null,
+        "hiredAt": 1774080000000
+      },
+      "off_reyes": {
+        "id": "off_reyes",
+        "firstName": "Tomas",
+        "surname": "Reyes",
+        "role": "comms",
+        "portrait": "/art/portraits/person_007.webp",
+        "ratings": {
+          "shooting": 51,
+          "composure": 49,
+          "communication": 74,
+          "awareness": 57,
+          "medical": 38,
+          "coordination": 60
+        },
+        "certs": [],
+        "traits": [
+          "impatient"
+        ],
+        "wage": 44,
+        "xp": 90,
+        "stress": 45,
+        "injury": null,
+        "squadId": "B",
+        "assignment": null,
+        "hiredAt": 1781856000000
+      },
+      "off_park": {
+        "id": "off_park",
+        "firstName": "Hana",
+        "surname": "Park",
+        "role": "medic",
+        "portrait": "/art/portraits/person_008.webp",
+        "ratings": {
+          "shooting": 41,
+          "composure": 45,
+          "communication": 56,
+          "awareness": 54,
+          "medical": 68,
+          "coordination": 49
+        },
+        "certs": [
+          "advanced_first_aid"
+        ],
+        "traits": [
+          "rookie"
+        ],
+        "wage": 44,
+        "xp": 40,
+        "stress": 25,
+        "injury": null,
+        "squadId": "B",
+        "assignment": null,
+        "hiredAt": 1794816000000
+      }
+    },
+    "squads": [
+      {
+        "id": "A",
+        "name": "Alpha",
+        "officerIds": [
+          "off_chen",
+          "off_brooks",
+          "off_ortiz",
+          "off_vale"
+        ],
+        "leaderId": "off_brooks",
+        "duty": "patrol",
+        "loadoutPreset": {}
+      },
+      {
+        "id": "B",
+        "name": "Bravo",
+        "officerIds": [
+          "off_okafor",
+          "off_lindqvist",
+          "off_reyes",
+          "off_park"
+        ],
+        "leaderId": "off_okafor",
+        "duty": "standby",
+        "loadoutPreset": {}
+      }
+    ],
+    "candidates": [
+      {
+        "id": "cand_25",
+        "officer": {
+          "id": "off_person_013",
+          "firstName": "Samira",
+          "surname": "Haddad",
+          "portrait": "/art/portraits/person_013.webp",
+          "role": "breach",
+          "ratings": {
+            "shooting": 81,
+            "composure": 67,
+            "communication": 51,
+            "awareness": 51,
+            "medical": 46,
+            "coordination": 58
+          },
+          "certs": [
+            "entry_team"
+          ],
+          "traits": [
+            "steady"
+          ],
+          "wage": 50,
+          "xp": 81,
+          "stress": 17,
+          "injury": null,
+          "squadId": null,
+          "assignment": null,
+          "hiredAt": 0
+        },
+        "signingCost": 1310,
+        "shortlisted": false,
+        "expiresAt": 1800172800000
+      },
+      {
+        "id": "cand_26",
+        "officer": {
+          "id": "off_person_014",
+          "firstName": "Omar",
+          "surname": "Farouk",
+          "portrait": "/art/portraits/person_014.webp",
+          "role": "medic",
+          "ratings": {
+            "shooting": 39,
+            "composure": 58,
+            "communication": 64,
+            "awareness": 59,
+            "medical": 72,
+            "coordination": 49
+          },
+          "certs": [
+            "advanced_first_aid"
+          ],
+          "traits": [],
+          "wage": 55,
+          "xp": 119,
+          "stress": 18,
+          "injury": null,
+          "squadId": null,
+          "assignment": null,
+          "hiredAt": 0
+        },
+        "signingCost": 1790,
+        "shortlisted": false,
+        "expiresAt": 1800172800000
+      },
+      {
+        "id": "cand_27",
+        "officer": {
+          "id": "off_person_010",
+          "firstName": "Amandeep",
+          "surname": "Kaur",
+          "portrait": "/art/portraits/person_010.webp",
+          "role": "comms",
+          "ratings": {
+            "shooting": 45,
+            "composure": 71,
+            "communication": 65,
+            "awareness": 64,
+            "medical": 47,
+            "coordination": 64
+          },
+          "certs": [
+            "crisis_negotiation"
+          ],
+          "traits": [
+            "steady"
+          ],
+          "wage": 49,
+          "xp": 161,
+          "stress": 5,
+          "injury": null,
+          "squadId": null,
+          "assignment": null,
+          "hiredAt": 0
+        },
+        "signingCost": 1220,
+        "shortlisted": false,
+        "expiresAt": 1800172800000
+      }
+    ],
+    "reservations": [
+      {
+        "id": "legacy-reservation",
+        "runId": "legacy-run",
+        "squadId": "A",
+        "itemId": "battery_pack",
+        "qty": 2
+      }
+    ],
+    "activeRun": {
+      "id": "legacy-run",
+      "status": "active",
+      "squadIds": [
+        "A"
+      ],
+      "reservationIds": [
+        "legacy-reservation"
+      ]
+    },
+    "debriefs": [],
+    "report": null,
+    "nextId": 101,
+    "rngState": 123456789,
+    "inventory": {
+      "radio_kit": {
+        "itemId": "radio_kit",
+        "owned": 3,
+        "reserved": 1,
+        "maintenance": 1,
+        "uses": 11,
+        "maintenanceUntil": 1800003600000
+      },
+      "battery_pack": {
+        "itemId": "battery_pack",
+        "owned": 5,
+        "reserved": 2,
+        "maintenance": 0,
+        "uses": 0,
+        "maintenanceUntil": null
+      },
+      "ballistic_shield": {
+        "itemId": "ballistic_shield",
+        "owned": 3,
+        "reserved": 0,
+        "maintenance": 1,
+        "uses": 8,
+        "maintenanceUntil": 1800007200000
+      },
+      "trauma_kit": {
+        "itemId": "trauma_kit",
+        "owned": 2,
+        "reserved": 0,
+        "maintenance": 0,
+        "uses": 0,
+        "maintenanceUntil": null
+      }
+    }
+  }
+}

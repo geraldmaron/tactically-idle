@@ -53,8 +53,8 @@ export interface UnitSeed {
  * the department PRNG (deterministic), expiry for consumables. Returns the unit,
  * already stored in draft.units.
  */
-export function createUnit(d: GameState, itemId: Id, now: number, seed: UnitSeed = {}): ItemUnit {
-  const def = ITEMS[itemId];
+export function createUnit(d: GameState, itemId: Id, now: number, seed: UnitSeed = {}, historicalDefinition?: ItemDefinition): ItemUnit {
+  const def = historicalDefinition ?? ITEMS[itemId];
   const r = next(d.rngState);
   d.rngState = r.state;
   const wearRate = Math.round((EQUIPMENT_TUNING.wearRateMin + r.value * (EQUIPMENT_TUNING.wearRateMax - EQUIPMENT_TUNING.wearRateMin)) * 1000) / 1000;
@@ -105,7 +105,6 @@ const STARTING_UNITS: Record<Id, UnitSeed[]> = {
   // Consumables derive condition from age; trauma kits do not fade, only expire (540 days).
   trauma_kit: [{ ageDays: 20 }, { ageDays: 90 }, { ageDays: 150 }, { ageDays: 260 }, { ageDays: 350 }, { ageDays: 490 }],
   // Batteries fade fastest: the oldest is ~25 days from unreliable (50).
-  battery_pack: [{ ageDays: 15 }, { ageDays: 40 }, { ageDays: 70 }, { ageDays: 95 }, { ageDays: 115 }, { ageDays: 124 }],
 };
 
 export function createStartingUnits(d: GameState, now: number): void {

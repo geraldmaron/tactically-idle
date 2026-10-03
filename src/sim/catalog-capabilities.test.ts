@@ -47,9 +47,9 @@ const additions: [string, CapabilityId][] = [
 ];
 
 describe('bounded catalog and common gates', () => {
-  it('publishes exactly 28 valid physical definitions and preserves nine existing prices', () => {
-    expect(Object.keys(ITEMS)).toHaveLength(28);
-    const old = { radio_kit: 400, loud_hailer: 250, throw_phone: 900, thermal_imager: 1500, camera_drone: 2200, ballistic_shield: 1200, door_ram: 300, trauma_kit: 120, battery_pack: 40 };
+  it('publishes exactly 27 active physical definitions and preserves eight existing prices', () => {
+    expect(Object.keys(ITEMS)).toHaveLength(27);
+    const old = { radio_kit: 400, loud_hailer: 250, throw_phone: 900, thermal_imager: 1500, camera_drone: 2200, ballistic_shield: 1200, door_ram: 300, trauma_kit: 120 };
     for (const [id, cost] of Object.entries(old)) expect(ITEMS[id].cost).toBe(cost);
     for (const [id, item] of Object.entries(ITEMS)) {
       expect(item.id).toBe(id); expect(item.cost).toBeGreaterThan(0); expect(ITEM_CATEGORIES).toContain(item.category);
@@ -85,8 +85,8 @@ describe('bounded catalog and common gates', () => {
   it('rejects invalid purchase quantities in both preview and command and permits one vehicle per purchase', () => {
     const state = makeState(); state.department.funding = 100000; state.department.unlockedNodes = Object.keys(DEV_NODES);
     for (const qty of [0, -1, .5, NaN, Infinity, 100]) {
-      expect(itemCheck(state, ITEMS.battery_pack, qty).ok).toBe(false);
-      expect(DEVELOP_HANDLERS.buyItem(state, 'battery_pack', qty).ok).toBe(false);
+      expect(itemCheck(state, ITEMS.trauma_kit, qty).ok).toBe(false);
+      expect(DEVELOP_HANDLERS.buyItem(state, 'trauma_kit', qty).ok).toBe(false);
     }
     expect(itemCheck(state, ITEMS.support_van, 2).ok).toBe(false);
     expect(itemCheck(state, ITEMS.support_van, 1).ok).toBe(true);
@@ -130,11 +130,9 @@ describe('context, material and safety consequences', () => {
       input.units.A![0].status = status; expect(evaluateCapabilities(input).applied).toHaveLength(0);
     }
   });
-  it('inspection respects closed, blocked and glazed openings and spends only one declared battery', () => {
+  it('inspection respects closed and blocked openings with integrated power', () => {
     const input = context('inspection_camera', 'opening_inspection');
-    const battery = input.units.A!.find((u) => u.itemId === 'battery_pack')!;
     input.action.requires.allTags = ['inspection_camera'];
-    input.existingUses = [{ unitId: battery.id, itemId: battery.itemId, squadId: 'A', qty: 1, consumable: true }];
     expect(evaluateCapabilities(input).uses.filter((u) => u.consumable)).toHaveLength(0);
     for (const state of ['closed', 'blocked'] as const) {
       input.built.location.openings.find((o) => o.id === 'd_side')!.state = state;
@@ -146,7 +144,7 @@ describe('context, material and safety consequences', () => {
       const input = context(itemId, cap); input.run.knowledge.safety = 'reported';
       const before = structuredClone(input);
       const result = evaluateCapabilities(input);
-      expect(result.eligible).toBe(false); expect(result.reasons[0]).toMatch(/Safety of adjacent area is unconfirmed/);
+      expect(result.eligible).toBe(false); expect(result.reasons[0]).toMatch(/safety of adjacent area must be confirmed/i);
       input.scenario.facts.forEach((f) => { f.truth = !f.truth; });
       expect(evaluateCapabilities(input).reasons).toEqual(result.reasons);
       expect(input.state).toEqual(before.state);

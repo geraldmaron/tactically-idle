@@ -122,8 +122,8 @@ export function settleRun(
   for (const r of draft.reservations.filter((x) => x.runId === runId)) {
     const u = draft.units[r.unitId];
     const def = ITEMS[r.itemId];
-    const row = (byItem[r.itemId] ??= { used: 0, returned: 0 });
     if (!u || !def) continue;
+    const row = (byItem[r.itemId] ??= { used: 0, returned: 0 });
     const wasUsed = used.has(u.id);
     if (wasUsed) row.used += 1;
     if (def.kind === 'consumable' && wasUsed) {

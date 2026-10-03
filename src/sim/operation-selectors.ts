@@ -1,3 +1,4 @@
+import { actionEquipmentRequirements, capabilityRuleEffect, effectiveSupplies, normalizedActionConsumption, operatorQualified, planningEquipmentContext } from './equipment-requirements';
 // Operation selectors consumed by the UI. Everything here is derived from game
 // state and content; nothing mutates. Export names and signatures are a contract.
 import type {
@@ -6,6 +7,7 @@ import type {
   Command,
   DebriefResult,
   DecisionResolution,
+  DecisionView,
   FactView,
   GameState,
   Id,
@@ -22,8 +24,8 @@ import { SCENARIO_ORDER } from '../content/scenarios';
 import { getScenario } from './scenario-registry';
 import { ITEMS } from '../content/items';
 import { deployability } from './officer';
-import { builtFor, CERT_LABEL, evaluateAction, getBuilt, squadLabel, spaceName, tagNames, type Evaluation } from './resolution';
-import { checkStart, computeDebrief, defaultSupport, evaluateDefault } from './operation';
+import { builtFor, CERT_LABEL, conditionHolds, evaluateAction, getBuilt, squadLabel, spaceName, tagNames, type Evaluation } from './resolution';
+import { checkStart, computeDebrief, defaultSupport, evaluateDefault, decisionViewsFor } from './operation';
 import { approxPoint } from './spatial-factors';
 
 export interface ScenarioCard {
@@ -55,6 +57,7 @@ export interface Briefing {
 }
 
 export interface StageProgress {
+  prompt: string;
   stage: StageId | 'debrief';
   index: number;
   stages: { id: StageId; label: string; state: 'done' | 'current' | 'todo' }[];
@@ -125,24 +128,32 @@ export function scenarioCards(state: GameState, now: number): ScenarioCard[] {
   });
 }
 
-export function briefing(scenarioId: Id): Briefing {
+export function briefing(scenarioId: Id, state?: GameState, squadIds?: SquadId[]): Briefing {
   const s = getScenario(scenarioId);
   if (!s) return { scenarioId, known: [], unknown: [], objectives: [], entries: [], usefulItemIds: [] };
   const built = getBuilt(s.locationFamilyId, s.locationSeed);
   const known = [...s.briefing.known, ...s.facts.filter((f) => f.initial === 'reported' && f.reportedText).map((f) => f.reportedText as string)];
   const unknown = [...s.briefing.unknown];
-  const tags = new Set<string>();
-  const capabilities = new Set<string>();
-  for (const a of scenarioActions(s)) {
-    for (const t of [...(a.requires.anyTags ?? []), ...(a.requires.allTags ?? []), ...(a.consumes ?? []).map((c) => c.tag), ...(a.equipment ?? []).map((e) => e.tag)]) tags.add(t);
-    for (const o of a.requires.openings ?? []) if (o.lockedTag) tags.add(o.lockedTag);
-    if (a.support) tags.add('comms_kit');
-    for (const capability of [...(a.capabilities?.rules ?? []), ...(a.capabilities?.required ?? [])]) capabilities.add(capability);
+  const useful = new Set<Id>();
+  const chosen = squadIds?.length ? squadIds : state?.squads.filter((s) => s.officerIds.length).map((s) => s.id);
+  const squadCount = chosen?.length ?? s.squadRange.max;
+  for (const action of scenarioActions(s)) {
+    const requirements = actionEquipmentRequirements(action);
+    if (requirements.minSquads > squadCount) continue;
+    const context = planningEquipmentContext(s, action, built, squadCount);
+    const requiredIds = new Set(requirements.groups.flatMap((g) => g.itemIds));
+    const requiredTags = new Set(requirements.consumes.map((c) => c.tag));
+    for (const item of Object.values(ITEMS)) {
+      if (state && chosen?.length && !chosen.some((sid) => operatorQualified(state, sid, action, item))) continue;
+      const requiredCapabilities = (action.capabilities?.required ?? []).filter((cap) => item.capabilities?.includes(cap));
+      if (requiredCapabilities.length && !requiredCapabilities.some((cap) => !capabilityRuleEffect(item, cap, context).reason)) continue;
+      const optionalCapability = item.capabilities?.some((cap) => action.capabilities?.rules.includes(cap) && !capabilityRuleEffect(item, cap, context).reason);
+      const optionalTag = (action.equipment ?? []).some((e) => item.tags.includes(e.tag) && Math.max(e.value, e.narrowValue ?? 0) > 0);
+      const routeTool = item.tags.includes('entry_tool') && action.approach === 'path' && built.location.openings.some((o) => o.state === 'locked');
+      if (requiredIds.has(item.id) || item.tags.some((tag) => requiredTags.has(tag)) || optionalCapability || optionalTag || routeTool || item.id === 'radio_kit') useful.add(item.id);
+    }
   }
-  const useful = new Set(Object.values(ITEMS)
-    .filter((i) => i.tags.some((t) => tags.has(t)) || i.capabilities?.some((capability) => capabilities.has(capability)))
-    .map((i) => i.id));
-  for (const itemId of useful) for (const supply of ITEMS[itemId]?.supplies ?? []) useful.add(supply.itemId);
+  for (const itemId of useful) for (const supply of effectiveSupplies(ITEMS[itemId])) useful.add(supply.itemId);
   const usefulItemIds = [...useful];
   return {
     scenarioId,
@@ -190,8 +201,9 @@ function markerFor(sources: MarkerSource[]): Pick<SpaceView, 'status' | 'marker'
 function verifyActionsFor(s: ScenarioDefinition, factId: Id, run: OperationRun | null, state: GameState | null, built: BuiltLocation): FactView['verifyActions'] {
   const out: FactView['verifyActions'] = [];
   for (const a of scenarioActions(s)) {
+    if (!conditionHolds(a.visibleWhen, run ?? { knowledge: Object.fromEntries(s.facts.map((f) => [f.id, f.initial])), flags: [], pressure: s.pressure.start })) continue;
     const settles = (['favorable', 'mixed', 'adverse'] as const).some((band) =>
-      a.outcomes[band].some((e) => (e.knowledge ?? []).some((k) => k.factId === factId && (k.status === 'confirmed' || k.status === 'disproved'))),
+      a.outcomes[band].some((e) => e.reveal?.includes(factId) || (e.knowledge ?? []).some((k) => k.factId === factId && (k.status === 'confirmed' || k.status === 'disproved'))),
     );
     if (!settles) continue;
     let availableNow = false;
@@ -270,7 +282,7 @@ function visibleTargets(state: GameState, run: OperationRun, s: ScenarioDefiniti
 }
 
 function isTargetHidden(a: ActionDefinition, run: OperationRun): boolean {
-  return (a.requires.facts ?? []).some((f) => !f.in.includes(run.knowledge[f.factId] ?? 'unknown'));
+  return !conditionHolds(a.visibleWhen, run) || (a.requires.facts ?? []).some((f) => !f.in.includes(run.knowledge[f.factId] ?? 'unknown'));
 }
 
 export function spaceViewsForScenario(scenarioId: Id): SpaceView[] {
@@ -297,6 +309,7 @@ export function stageProgress(state: GameState): StageProgress {
   const cur = stage === 'debrief' ? 3 : STAGE_ORDER.indexOf(stage);
   return {
     stage,
+    prompt: stage === 'debrief' ? (s?.endings[run?.endingId ?? '']?.summary ?? 'Review the operation result.') : (s?.stages[stage].prompt ?? ''),
     index: cur,
     stages: STAGE_ORDER.map((id, i) => ({
       id,
@@ -311,10 +324,10 @@ export function stageProgress(state: GameState): StageProgress {
 function requirementLine(a: ActionDefinition): string {
   const parts: string[] = [];
   for (const c of a.requires.certs ?? []) parts.push(CERT_LABEL[c] ?? c);
-  if (a.requires.anyTags) parts.push(tagNames(a.requires.anyTags));
-  for (const t of a.requires.allTags ?? []) parts.push(tagNames([t]));
-  for (const c of a.consumes ?? []) if (!(a.requires.allTags ?? []).includes(c.tag) && !(a.requires.anyTags ?? []).includes(c.tag)) parts.push(`uses ${tagNames([c.tag])}`);
-  if (a.requires.minSquads) parts.push(`${a.requires.minSquads.count} squads`);
+  const equipment = actionEquipmentRequirements(a);
+  for (const group of equipment.groups) parts.push(group.label.toLowerCase());
+  for (const consume of equipment.consumes) parts.push(`uses ${consume.qty} ${tagNames([consume.tag])}`);
+  if (equipment.minSquads > 1) parts.push(`${equipment.minSquads} squads`);
   if (parts.length === 0) return 'No special requirements';
   const line = parts.join(' + ');
   return line.charAt(0).toUpperCase() + line.slice(1);
@@ -323,7 +336,63 @@ function requirementLine(a: ActionDefinition): string {
 function summaryFor(a: ActionDefinition, ev: Evaluation, state: GameState): string {
   if (!ev.eligible) return (ev.reason ?? 'Unavailable').split(' — ')[0];
   const lead = ev.leadId ? state.officers[ev.leadId]?.surname : undefined;
-  return a.summary.replace('{lead}', lead ?? 'Squad');
+  return a.summary.replace(/Uses a battery pack/gi, 'Uses integrated equipment power').replace('{lead}', lead ?? 'Squad');
+}
+
+function expectedSupplies(action: ActionDefinition, ev: Evaluation): ActionView['suppliesRequired'] {
+  const used = new Map<string, number>();
+  for (const use of ev.uses) if (use.consumable && use.itemId !== 'battery_pack') used.set(ITEMS[use.itemId]?.name ?? use.itemId, (used.get(ITEMS[use.itemId]?.name ?? use.itemId) ?? 0) + use.qty);
+  // A missing supply can make the plan incomplete; still show the complete declared cost.
+  for (const use of normalizedActionConsumption(action)) {
+    const candidates = Object.values(ITEMS).filter((item) => item.kind === 'consumable' && item.tags.includes(use.tag));
+    const label = candidates.length === 1 ? candidates[0].name : tagNames([use.tag]);
+    const matching = [...used].filter(([name]) => Object.values(ITEMS).some((item) => item.name === name && item.tags.includes(use.tag)));
+    if (!matching.length) used.set(label, Math.max(used.get(label) ?? 0, use.qty));
+  }
+  // Required devices may bring their own supplies even without an explicit consumes
+  // row. Show requirements shared by every permitted alternative, never batteries.
+  for (const group of actionEquipmentRequirements(action).groups) {
+    const candidates = group.itemIds.map((id) => ITEMS[id]).filter(Boolean);
+    for (const need of candidates[0] ? effectiveSupplies(candidates[0]) : []) {
+      if (!candidates.every((item) => effectiveSupplies(item).some((other) => other.itemId === need.itemId))) continue;
+      const qty = Math.min(...candidates.map((item) => effectiveSupplies(item).find((other) => other.itemId === need.itemId)!.qty));
+      const label = ITEMS[need.itemId]?.name ?? need.itemId;
+      used.set(label, Math.max(used.get(label) ?? 0, qty));
+    }
+  }
+  return [...used].map(([label, qty]) => ({ label, qty }));
+}
+
+/** Never select a hidden truth branch for a preview; include its possible delay in the bounds. */
+function durationRange(action: ActionDefinition, ev: Evaluation, run: OperationRun): ActionView['timeRange'] {
+  const limits = (['favorable', 'mixed', 'adverse'] as const).flatMap((band) => {
+    const base = ev.timeBase * ({ favorable: 1, mixed: 1.2, adverse: 1.5 } as const)[band];
+    let min = base;
+    let max = base;
+    for (const effect of action.outcomes[band]) {
+      if (!conditionHolds(effect.when, run)) continue;
+      const extra = effect.extraMinutes ?? 0;
+      if (effect.truth?.length) { min += Math.min(0, extra); max += Math.max(0, extra); }
+      else { min += extra; max += extra; }
+    }
+    return [min, max];
+  });
+  const round = (n: number) => Math.round(Math.max(0.5, n) * 10) / 10;
+  return { min: round(Math.min(...limits)), max: round(Math.max(...limits)) };
+}
+
+/** Legacy authored content has no hidden outcome branches; include possibilities without testing truth. */
+function legacyOutcomePreview(_action: ActionDefinition): ActionView['outcomePreview'] {
+  return {
+    favorable: 'The intended step can advance the operation. The result will record any newly verified facts and costs.',
+    mixed: 'The step may only partly work, take longer, or leave gaps for the next decision.',
+    adverse: 'The intended result may not be achieved. Time, strain, and the situation can worsen; read the committed result before continuing.',
+  };
+}
+
+function legacyConsequenceLevel(action: ActionDefinition): ActionView['consequenceLevel'] {
+  const safetyLoss = Math.max(0, ...Object.values(action.outcomes).flat().map((effect) => -(effect.civilian ?? 0)));
+  return safetyLoss >= 18 ? 'severe' : safetyLoss >= 10 ? 'high' : safetyLoss > 0 || action.stressBase >= 5 ? 'moderate' : 'low';
 }
 
 function toView(state: GameState, run: OperationRun, a: ActionDefinition, ev: Evaluation, alternates: SquadId[]): ActionView {
@@ -344,6 +413,11 @@ function toView(state: GameState, run: OperationRun, a: ActionDefinition, ev: Ev
     eligible: ev.eligible,
     reason,
     risk: ev.risk,
+    likelihood: { favorable: ev.pFavorable, mixed: Math.max(0, 1 - ev.pFavorable - ev.pAdverse), adverse: ev.pAdverse },
+    consequenceLevel: a.consequenceLevel ?? legacyConsequenceLevel(a),
+    outcomePreview: { ...(a.outcomePreview ?? legacyOutcomePreview(a)) },
+    suppliesRequired: expectedSupplies(a, ev),
+    timeRange: durationRange(a, ev, run),
     timeCost: Math.max(1, Math.round(ev.timeExpected)),
     contributors: ev.contributors,
     uncertainty: ev.uncertainty,
@@ -359,7 +433,7 @@ export function actionViews(state: GameState, _now: number, focusSquadId: SquadI
   const s = getScenario(run.scenarioId);
   if (!s) return [];
   const built = builtFor(run.locationFamilyId, run.locationSeed, run.flags);
-  return s.stages[run.stage].actions.map((a) => {
+  return s.stages[run.stage].actions.filter((a) => conditionHolds(a.visibleWhen, run)).map((a) => {
     const { ev, alternates } = evaluateDefault(state, run, s, built, a, focusSquadId);
     return toView(state, run, a, ev, alternates);
   });
@@ -377,7 +451,7 @@ export function previewAction(
   if (!run || run.status !== 'active' || run.stage === 'debrief') return null;
   const s = getScenario(run.scenarioId);
   const a = s?.stages[run.stage].actions.find((x) => x.id === actionId);
-  if (!s || !a) return null;
+  if (!s || !a || !conditionHolds(a.visibleWhen, run)) return null;
   const built = builtFor(run.locationFamilyId, run.locationSeed, run.flags);
   const ev = evaluateAction({ state, run, scenario: s, action: a, built, acting: actingSquadIds, support: supportSquadIds });
   return toView(state, run, a, ev, []);
@@ -405,4 +479,16 @@ export function lastResolution(state: GameState): DecisionResolution | null {
 /** Developer trace of a resolution's inputs, for tuning views. */
 export function resolutionTrace(res: DecisionResolution): string[] {
   return res.inputs.map((c) => `${c.label}: ${c.value}`);
+}
+
+/** Complete durable decision log. Uses committed deltas; legacy saves replay their versioned content. */
+export function decisionViews(state: GameState): DecisionView[] {
+  const run = state.activeRun;
+  const scenario = run ? getScenario(run.scenarioId) : null;
+  if (!run || !scenario) return [];
+  return decisionViewsFor(state, run, scenario);
+}
+
+export function lastDecisionView(state: GameState): DecisionView | null {
+  return decisionViews(state).at(-1) ?? null;
 }
