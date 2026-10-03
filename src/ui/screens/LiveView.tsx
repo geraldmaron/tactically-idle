@@ -9,7 +9,6 @@ import type {
   Id,
   Officer,
   OutcomeBand,
-  RiskBand,
   SpaceView,
   Squad,
   SquadId,
@@ -31,6 +30,8 @@ import { describeConstruction } from '../../sim/spatial';
 import { Icon, actionIcon, materialIcon, roomIcon } from '../icons';
 import type { IconName } from '../icons';
 import { feetInches, opMinutes, signed, sqft } from '../format';
+import { CONSEQUENCE_LABEL, OutcomeForecast } from './OperationFeedback';
+import { outcomePercentages, visibleDecisions } from './liveModels';
 
 // Presentational live-operation screen. OpsLive.tsx feeds it from the selectors.
 
@@ -71,6 +72,7 @@ export interface LiveViewProps {
   onCancel: () => void;
   onOpenDetails: () => void;
   detailsOpen: boolean;
+  feedback?: ReactNode;
   /** Overlay sheets (action detail, room sheet, cancel confirm) rendered by the container. */
   children?: ReactNode;
 }
@@ -80,6 +82,10 @@ export function LiveView(p: LiveViewProps) {
   const sel = p.selectedAction;
   const multi = p.deployedSquads.length > 1;
   const [materials, setMaterials] = useState(false);
+  const [expandedStage, setExpandedStage] = useState<string | null>(null);
+  const expanded = expandedStage === p.progress.stage;
+  const available = p.actions.map((action) => action.id === sel?.id ? sel : action);
+  const decisions = visibleDecisions(available, sel?.id ?? null, expanded);
   // Renderer props that may not be declared yet (floor tabs, environment overlay). Spread so this compiles either way.
   const blueprintExtras = { floor: p.floor, onFloorChange: p.onFloorChange, environment: p.environment ?? undefined };
 
@@ -215,21 +221,25 @@ export function LiveView(p: LiveViewProps) {
         {p.officers.length === 0 && <p className="strip-empty">No officers in this squad.</p>}
       </div>
 
-      <div className="call" aria-label="Your call">
+      {p.feedback}
+
+      <div className="call operation-choices" aria-label="Your call">
         <div className="call-head">
-          <span className="call-label">YOUR CALL</span>
+          <span className="call-label">YOUR NEXT DECISION</span>
           {sel && (
             <button type="button" className="call-details" onClick={p.onOpenDetails} aria-expanded={p.detailsOpen}>
-              Details
+              Review decision
               <Icon name="chevronDown" size={14} />
             </button>
           )}
         </div>
+        {p.progress.prompt && <p className="operation-stage-prompt">{p.progress.prompt}</p>}
+        {p.actions.length > 0 && <p className="operation-choice-count">{available.filter((action) => action.eligible).length} ready{available.some((action) => !action.eligible) ? ` · ${available.filter((action) => !action.eligible).length} need requirements` : ''}. Select to review outcomes and costs.</p>}
         {p.actions.length === 0 ? (
           <p className="call-empty">No decisions available right now.</p>
         ) : (
-          <div className={`call-grid call-n${Math.min(p.actions.length, 4)}`}>
-            {p.actions.map((a) => {
+          <div className="call-grid">
+            {decisions.map((a) => {
               const on = sel?.id === a.id;
               return (
                 <button
@@ -237,6 +247,7 @@ export function LiveView(p: LiveViewProps) {
                   type="button"
                   className={`callbtn${on ? ' callbtn-on' : ''}${a.eligible ? '' : ' callbtn-off'}`}
                   aria-pressed={on}
+                  aria-label={`Review ${a.title}${a.eligible ? '' : ': requirements unmet'}`}
                   onClick={() => p.onSelectAction(a.id)}
                 >
                   <Icon name={actionIcon(a.icon)} size={p.actions.length > 2 ? 24 : 30} className="callbtn-icon" />
@@ -251,12 +262,14 @@ export function LiveView(p: LiveViewProps) {
                         a.summary
                       )}
                     </span>
+                    <span className="callbtn-forecast">~{opMinutes(a.timeCost)} · {a.eligible ? `${outcomePercentages(a.likelihood).favorable}% favorable · ` : ''}{CONSEQUENCE_LABEL[a.consequenceLevel].toLowerCase()} severity</span>
                   </span>
                 </button>
               );
             })}
           </div>
         )}
+        {p.actions.length > 5 && <Button block className="operation-more-choices" onClick={() => setExpandedStage(expanded ? null : p.progress.stage)} aria-expanded={expanded}>{expanded ? 'Show fewer choices' : `Show all ${p.actions.length} choices`}</Button>}
       </div>
       {p.children}
     </div>
@@ -368,9 +381,6 @@ export function StatusChip({ status }: { status: SpaceView['status'] }) {
 
 // ---------------------------------------------------------------- action detail sheet
 
-const RISK_TONE: Record<RiskBand, 'mint' | 'amber' | 'warn' | 'danger'> = { low: 'mint', moderate: 'amber', high: 'warn', severe: 'danger' };
-const RISK_TEXT: Record<RiskBand, string> = { low: 'Low risk', moderate: 'Moderate risk', high: 'High risk', severe: 'Severe risk' };
-
 /** One group per contributor source, in the order a player reads them: who, what they carry, where, then the situation. */
 const GROUPS: { source: Contributor['source']; label: string; icon: IconName }[] = [
   { source: 'rating', label: 'Officer ratings', icon: 'gauge' },
@@ -408,6 +418,7 @@ export interface ActionSheetProps {
 
 export function ActionSheet(p: ActionSheetProps) {
   const v = p.view;
+  const availableAlternative = p.all.find((action) => action.id !== v?.id && action.eligible);
   const names = (ids: SquadId[]) => ids.map((id) => p.squads.find((s) => s.id === id)?.name ?? id);
   const squadText = p.acting.length === 0 ? 'No squad' : p.acting.length === 1 ? `Squad ${p.acting[0]}` : `Squads ${p.acting.join(' + ')}`;
   const resupplyNames = p.resupply?.items.reduce((list, item) => {
@@ -422,36 +433,29 @@ export function ActionSheet(p: ActionSheetProps) {
       onClose={p.onClose}
       modal={false}
       maxHeight="short"
+      className="operation-action-sheet"
       title={v ? v.title : ''}
-      subtitle={v?.requirementLine}
       footer={
         v && (
-          <Button variant="primary" block disabled={!v.eligible || p.acting.length === 0} onClick={p.onConfirm}>
-            Confirm · {squadText}
-            {p.targetLabel ? ` → ${p.targetLabel}` : ''}
-          </Button>
+          <div className="operation-commit">
+            <p className="operation-commit-meta">{squadText} · Est. {opMinutes(v.timeCost)}{v.suppliesRequired.length ? ` · ${v.suppliesRequired.reduce((total, item) => total + item.qty, 0)} supplies` : ' · No supplies'}</p>
+            <Button variant="primary" block disabled={!v.eligible || p.acting.length === 0} onClick={p.onConfirm}>
+              Confirm: {v.title}
+            </Button>
+          </div>
         )
       }
     >
       {v && (
         <div className="adetail">
-          {p.all.length > 1 && (
-            <div className="switcher" role="group" aria-label="Decisions">
-              {p.all.map((a) => (
-                <button key={a.id} type="button" className={`pill${a.id === v.id ? ' pill-on' : ''}`} aria-pressed={a.id === v.id} onClick={() => p.onPick(a.id)}>
-                  {a.title}
-                </button>
-              ))}
-            </div>
-          )}
+          {v.summary !== v.outcomePreview.favorable && <p className="operation-action-summary">{v.summary}</p>}
           <div className="chips">
-            <Chip tone={RISK_TONE[v.risk]} icon={v.risk === 'low' ? 'checkcircle' : 'warning'}>
-              {RISK_TEXT[v.risk]}
-            </Chip>
-            <Chip icon="clock">~{opMinutes(v.timeCost)}</Chip>
+            <Chip icon="clock">Estimated time: {opMinutes(v.timeCost)}</Chip>
+            {p.targetLabel && <Chip>{p.targetLabel}</Chip>}
             {names(p.support).length > 0 && <Chip tone="blue" icon="handover">Support: {names(p.support).join(', ')}</Chip>}
           </div>
-          <p className="dim adetail-note">Risk is conditional on what the squad currently knows.</p>
+          {v.timeRange && <p className="operation-note operation-time-range">{v.timeRange.min === v.timeRange.max ? `${opMinutes(v.timeRange.min)} for any outcome.` : `${v.timeRange.min}–${opMinutes(v.timeRange.max)} depending on the result.`}</p>}
+          <dl className="operation-costs"><div><dt>Requirements</dt><dd>{v.requirementLine}</dd></div><div><dt>Supplies on commit</dt><dd>{v.suppliesRequired.length ? v.suppliesRequired.map((item) => `${item.qty} × ${item.label}`).join(', ') : 'None'}</dd></div></dl>
           {!v.eligible && v.reason && (
             <p className="note note-warn">
               <Icon name="lock" size={16} />
@@ -485,7 +489,9 @@ export function ActionSheet(p: ActionSheetProps) {
               )}
             </section>
           )}
+          {!v.eligible && availableAlternative && <div className="action-resolution-actions"><Button onClick={() => p.onPick(availableAlternative.id)}>Available now: {availableAlternative.title}</Button></div>}
           {!!p.resupplyMinutes && <p className="dim adetail-note">Stores deliveries: {p.resupplyMinutes} operation minutes. Equipment is reserved for this run.</p>}
+          <OutcomeForecast action={v} />
           {p.squads.length > 1 && (
             <div className="pickers">
               <div className="picker">
@@ -519,7 +525,17 @@ export function ActionSheet(p: ActionSheetProps) {
               </div>
             </div>
           )}
-          <SubHead icon="list">What counts toward this</SubHead>
+          {p.all.length > 1 && <details className="operation-switcher"><summary>Compare another decision ({p.all.length})</summary>
+            <div className="switcher" role="group" aria-label="Decisions">
+              {p.all.map((a) => (
+                <button key={a.id} type="button" className={`pill${a.id === v.id ? ' pill-on' : ''}`} aria-pressed={a.id === v.id} onClick={() => p.onPick(a.id)}>
+                  {a.title}
+                </button>
+              ))}
+            </div>
+          </details>}
+          <details className="operation-contributors">
+          <summary>Why these odds · officer, equipment and situation factors</summary>
           {v.contributors.length === 0 ? (
             <p className="dim">No contributors listed.</p>
           ) : (
@@ -546,6 +562,7 @@ export function ActionSheet(p: ActionSheetProps) {
               );
             })
           )}
+          </details>
           {v.uncertainty.length > 0 && (
             <>
               <SubHead icon="question" tone="amber">Still unknown</SubHead>

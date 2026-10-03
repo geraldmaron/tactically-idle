@@ -1,10 +1,11 @@
 import { personaNote } from '../../content/personas';
 import { useState } from 'react';
 import { useGame } from '../store';
-import { careerInfo, courseOptions, projectDismiss, recoveryInfo } from '../../sim/department-selectors';
-import type { CourseOption } from '../../sim/department-selectors';
+import { careerInfo, projectDismiss, recoveryInfo } from '../../sim/department-selectors';
 import type { Id, Officer, SquadId } from '../../sim/types';
 import { Sheet } from '../components/Sheet';
+import { useNav } from '../components/nav';
+import { COURSES } from '../../content/courses';
 import { Button, Chip, ExperienceChip, KV, Meter, ReadinessBar, OfficerStatusChip, SubHead } from '../components/ui';
 import { RetirementChip, useCareerSnapshot } from '../components/Career';
 import { useToast } from '../components/toast';
@@ -13,7 +14,7 @@ import { BAND_SHORT, CERT_ICON, CERT_LABEL, RATING_META, ROLE_META, TRAIT_INFO, 
 import { Portrait } from '../portraits/Portrait';
 import { agePortraitProps } from './helpers';
 import { Icon } from '../icons';
-import { duration, money, perHour, rate, relativeTime, signedMoney, yearsText } from '../format';
+import { money, perHour, rate, relativeTime, signedMoney, yearsText } from '../format';
 
 export function OfficerSheet({ officerId, onClose }: { officerId: Id | null; onClose: () => void }) {
   const g = useGame();
@@ -35,7 +36,7 @@ function OfficerBody({ o, onClose }: { o: Officer; onClose: () => void }) {
   const now = Date.now();
   const [confirmDismiss, setConfirmDismiss] = useState(false);
   const info = recoveryInfo(g, o.id, now);
-  const courses = courseOptions(g, o.id, now);
+  const nav = useNav();
   const squad = o.squadId ? g.squads.find((s) => s.id === o.squadId) : undefined;
   const isLeader = squad?.leaderId === o.id;
   const band = bandOf(o);
@@ -154,15 +155,12 @@ function OfficerBody({ o, onClose }: { o: Officer; onClose: () => void }) {
       <SquadControls o={o} />
 
       <SubHead icon="mortarboard">Training</SubHead>
-      {courses.length === 0 ? (
-        <p className="dim">No courses unlocked. Open the Develop tab to unlock training.</p>
-      ) : (
-        <ul className="courses">
-          {courses.map((c) => (
-            <CourseRow key={c.course.id} c={c} officerId={o.id} />
-          ))}
-        </ul>
-      )}
+      <p className="dim">Choose a certification or skills course in Training. This officer will be selected for you.</p>
+      <Button icon="mortarboard" onClick={() => { onClose(); nav.openTraining({ officerId: o.id }); }}>Train {o.surname}</Button>
+      {o.assignment?.kind === 'training' && <Button onClick={() => {
+        const courseId = o.assignment?.kind === 'training' ? o.assignment.courseId : undefined;
+        onClose(); nav.openTraining({ officerId: o.id, courseId });
+      }}>View {COURSES[o.assignment.courseId]?.name ?? 'current course'}</Button>}
 
       <SubHead icon="trash">Dismiss</SubHead>
       {!confirmDismiss ? (
@@ -214,36 +212,6 @@ function SquadControls({ o }: { o: Officer }) {
         </Button>
       )}
     </div>
-  );
-}
-
-function CourseRow({ c, officerId }: { c: CourseOption; officerId: Id }) {
-  const { act } = useToast();
-  const grants: string[] = [];
-  if (c.course.grants.cert) grants.push(CERT_LABEL[c.course.grants.cert]);
-  if (c.course.grants.rating) {
-    const meta = RATING_META.find((r) => r.key === c.course.grants.rating!.key);
-    grants.push(`+${c.course.grants.rating.delta} ${meta?.label ?? c.course.grants.rating.key}`);
-  }
-  return (
-    <li className={`course${c.available ? '' : ' course-off'}`}>
-      <div className="course-main">
-        <strong>{c.course.name}</strong>
-        <span className="dim">
-          {duration(c.course.hours * 3600000)} · {money(c.course.cost)}
-          {grants.length ? ` · grants ${grants.join(', ')}` : ''}
-        </span>
-        {!c.available && c.reason && <span className="reason">{c.reason}</span>}
-      </div>
-      <Button
-        size="sm"
-        variant="secondary"
-        disabled={!c.available}
-        onClick={() => act({ type: 'startCourse', officerId, courseId: c.course.id }, `Started ${c.course.name}`)}
-      >
-        Start
-      </Button>
-    </li>
   );
 }
 

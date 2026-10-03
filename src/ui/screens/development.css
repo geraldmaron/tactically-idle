@@ -1,0 +1,25 @@
+.develop-page .development-filters { display: flex; flex-wrap: wrap; gap: 6px; }
+.develop-page .btn, .development-sheet .btn { min-height: 44px; white-space: normal; }
+.develop-page input, .develop-page select, .development-sheet input, .development-sheet select { font-size: 16px; }
+.development-count { margin: 0; }
+.development-branch, .development-cards { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.development-branch > h2 { margin: 6px 0 0; display: flex; align-items: center; gap: 6px; }
+.development-card { display: flex; flex-direction: column; gap: 10px; min-width: 0; padding: 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); }
+.development-card.node-available { border-color: rgba(243, 180, 50, .35); }
+.development-card.store-node-highlight { outline: 2px solid var(--amber); outline-offset: 2px; }
+.development-card .node-name { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.development-benefit { margin: 0; font-size: 14px; line-height: 1.45; overflow-wrap: anywhere; }
+.development-card .reason { margin: 0; }
+.development-detail { gap: 18px; }
+.development-detail p, .development-detail h3 { margin: 0; }
+.development-detail h3 { font-size: 15px; margin-bottom: 8px; }
+.development-comparison { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; padding: 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); }
+.development-arrow { color: var(--amber); font-size: 22px; line-height: 1; }
+.development-effects { margin: 0; overflow-wrap: anywhere; }
+.development-ladder { display: grid; gap: 10px; list-style: none; margin: 10px 0 0; padding: 0; }
+.development-ladder > li { display: flex; flex-direction: column; gap: 8px; border: 1px solid var(--line); border-radius: var(--radius); padding: 10px; }
+.development-ladder > li[aria-current] { border-color: var(--mint); }
+.development-success { color: var(--mint); }
+.development-purchase { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+.development-purchase > .btn { flex: 1 1 170px; }
+.development-sheet .row-actions { flex-wrap: wrap; }
