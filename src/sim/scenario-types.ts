@@ -1,7 +1,7 @@
 // Scenario schema for the operation engine. Owned by the operation module.
 // A ScenarioDefinition is static authored content; everything that changes during
 // play lives in OperationRun (types.ts). See docs/operation-model.md.
-import type { CapabilityId, CertId, Id, KnowledgeStatus, OpeningState, OutcomeBand, RatingKey, RiskBand, StageId, Vec } from './types';
+import type { CapabilityId, CertId, CompletionDisposition, Id, KnowledgeStatus, OpeningState, OutcomeBand, RatingKey, RiskBand, StageId, Vec } from './types';
 import type { Channel } from './spatial';
 
 export type ActionIcon =
@@ -89,6 +89,8 @@ export interface RatingWeight {
 }
 
 export interface ActionRequirements {
+  /** 'requested' includes a service that has arrived, but excludes an accepted handover. */
+  externalSupport?: { serviceId: Id; status: 'requested' | 'available' | 'accepted'; reason: string }[];
   /** Every cert must be held by an officer in the acting squads who can take part. */
   certs?: CertId[];
   /** At least one acting squad must carry an item with any of these tags. */
@@ -164,6 +166,8 @@ export interface SupportRule {
 }
 
 export interface OutcomeEffect {
+  requestSupport?: Id[];
+  acceptSupport?: Id[];
   /** Engine-only branches, evaluated only when a decision commits. Never preview these texts. */
   truth?: { factId: Id; is: boolean }[];
   /** Settle a claim against scenario truth at commit, without exposing truth during evaluation. */
@@ -199,6 +203,8 @@ export interface ActionCapabilities {
 }
 
 export interface ActionDefinition {
+  /** Wait exactly the remaining response time of a bounded, authored service. */
+  awaitSupport?: Id;
   /** Public-state visibility; hidden truth must never participate. */
   visibleWhen?: Condition;
   /** Authored public possibilities. These describe uncertainty rather than reveal the sampled truth. */
@@ -280,6 +286,23 @@ export interface EndingDefinition {
   trustAdjust: number;
   /** Added to every deployed officer's strain at debrief (negative = relief). */
   strain: number;
+  disposition?: CompletionDisposition;
+  /** V4 completion is earned by these authored conditions, never by a numeric score alone. */
+  completion?: Condition & { acceptedServiceId?: Id };
+  /** Public unfinished responsibilities, saved with incomplete debriefs. */
+  remainingTasks?: string[];
+}
+
+export interface ExternalServiceDefinition {
+  id: Id;
+  label: string;
+  kind: string;
+  description: string;
+  /** Public, fixed for this seeded incident; begins when the request is committed. */
+  arrivalMinutes: number;
+  available: boolean;
+  /** Public care/safety conditions that must already hold before responsibility is accepted. */
+  acceptWhen?: Condition;
 }
 
 export interface ScenarioRewards {
@@ -307,7 +330,8 @@ export interface ScenarioDefinition {
   /** e.g. 'Low time pressure' */
   pressureLabel: string;
   squadRange: { min: number; max: number };
-  briefing: { known: string[]; unknown: string[] };
+  briefing: { known: string[]; unknown: string[]; dispatchReason?: string; teamResponsibilities?: string[] };
+  externalServices?: ExternalServiceDefinition[];
   facts: FactDefinition[];
   objectives: ObjectiveDefinition[];
   pressure: PressureModel;

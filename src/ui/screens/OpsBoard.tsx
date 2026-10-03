@@ -10,6 +10,8 @@ import { Icon } from '../icons';
 import { relativeTime } from '../format';
 import { boardEntries, boardNote, incidentsOf, practiceEntries } from './helpers';
 import type { BoardEntry, PracticeEntry } from './helpers';
+import { DECISION_EXERCISES } from '../../content/scenarios/decision-exercises';
+import { IncidentBriefContext } from './SupportContext';
 
 /**
  * Ops board: live incidents (arrive over time, close if nobody takes them), then standing assignments
@@ -20,6 +22,9 @@ export function OpsBoard({ onPrepare }: { onPrepare: (id: Id) => void }) {
   const now = useNow(1000);
   const entries = boardEntries(g, now).filter((e) => e.incident.expiresAt > now);
   const practice = practiceEntries(g, now);
+  const featuredIds = new Set(DECISION_EXERCISES.map((exercise) => exercise.id));
+  const featured = practice.filter((entry) => featuredIds.has(entry.card.id));
+  const otherPractice = practice.filter((entry) => !featuredIds.has(entry.card.id));
   const note = boardNote(g, now);
   const fresh = useFreshIncidents(g);
   const arrival = note.line ?? (note.nextAt ? `Next call expected ${relativeTime(note.nextAt, now)}` : null);
@@ -52,8 +57,12 @@ export function OpsBoard({ onPrepare }: { onPrepare: (id: Id) => void }) {
         )}
       </Section>
 
-      <Section title="Standing and practice" icon="flag" hint="Try three decision exercises, equipment practice or past incidents. Exercises and replays use virtual gear with no rewards or consequences.">
-        {practice.length === 0 ? (
+      {featured.length > 0 && <Section title="Decision practice" icon="flag" hint="Try welfare, urgent assistance and protective response. These exercises are always available, with virtual gear and no lasting consequences.">
+        <div className="stack">{featured.map((entry) => <PracticeCardView key={entry.card.id} entry={entry} onPrepare={onPrepare} />)}</div>
+      </Section>}
+
+      <Section title="Standing and practice" icon="flag" hint="Equipment exercises, standing assignments and past incidents. Exercises and replays use virtual gear with no rewards or consequences.">
+        {otherPractice.length === 0 ? (
           <Card>
             <EmptyState icon="flag" title="Nothing to practise yet">
               Finished incidents appear here so you can replay them with a different squad or kit.
@@ -61,7 +70,7 @@ export function OpsBoard({ onPrepare }: { onPrepare: (id: Id) => void }) {
           </Card>
         ) : (
           <div className="stack">
-            {practice.map((p) => (
+            {otherPractice.map((p) => (
               <PracticeCardView key={p.card.id} entry={p} onPrepare={onPrepare} />
             ))}
           </div>
@@ -140,6 +149,7 @@ function CardBody({ card, scenario, familyId, type, tier, children }: { card: Sc
         </p>
       )}
       <p className="opboard-summary">{card.summary}</p>
+      {scenario && <IncidentBriefContext scenario={scenario} compact />}
       <div className="chips">
         <Chip icon="question" tone="amber">
           {card.variantLabel}

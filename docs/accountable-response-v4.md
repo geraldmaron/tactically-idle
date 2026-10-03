@@ -1,6 +1,6 @@
 # Accountable response and incident variety
 
-This release gives newly generated calls a specific reason for the tactical team's involvement, named support responsibilities, and outcomes that distinguish completed work from unresolved tasks. It is a fictional management model. The sources below support the roles and mission categories; they do not constitute practitioner validation of the game or its balance.
+This release gives newly generated calls a specific reason for the tactical team's involvement, named support responsibilities, and outcomes that distinguish completed work from unresolved tasks. Role research is a sanity check for believable premises; choices prioritize fun, variety and clarity in a fictional management game.
 
 ## Player contract
 

@@ -365,6 +365,7 @@ function expectedSupplies(action: ActionDefinition, ev: Evaluation): ActionView[
 
 /** Never select a hidden truth branch for a preview; include its possible delay in the bounds. */
 function durationRange(action: ActionDefinition, ev: Evaluation, run: OperationRun): ActionView['timeRange'] {
+  if (run.scenarioVersion >= 4 && action.awaitSupport) return { min: ev.timeBase, max: ev.timeBase };
   const limits = (['favorable', 'mixed', 'adverse'] as const).flatMap((band) => {
     const base = ev.timeBase * ({ favorable: 1, mixed: 1.2, adverse: 1.5 } as const)[band];
     let min = base;

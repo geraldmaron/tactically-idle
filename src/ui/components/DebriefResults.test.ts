@@ -124,3 +124,38 @@ describe('scannable debrief results', () => {
     expect(html).toContain('Stress 23.5 of 100');
   });
 });
+
+
+describe('explicit completion evidence in current and archived results', () => {
+  it('does not turn a high score into resolution when work remains', () => {
+    const debrief: DebriefResult = { ...result, disposition: 'unresolved', completionAchieved: false, objective: { score: 100, label: 'Resolved' }, remainingTasks: ['Keep the resident safe until care is accepted.'] };
+    const html = renderToStaticMarkup(createElement(DebriefSummary, { debrief }));
+    expect(html).toContain('Call unresolved');
+    expect(html).toContain('Still needed');
+    expect(html).toContain('Keep the resident safe until care is accepted.');
+    expect(html).not.toContain('100/100');
+    expect(html).not.toContain('>Resolved<');
+    expect(html).toContain('68/100');
+  });
+
+  it('shows care acceptance only with the saved receiving service and accepted time', () => {
+    const debrief: DebriefResult = { ...result, disposition: 'care_accepted', completionAchieved: true, receivingService: { id: 'medics', label: 'Original receiving crew', kind: 'medical', acceptedAt: 17.5 }, remainingTasks: [] };
+    const html = renderToStaticMarkup(createElement(DebriefSummary, { debrief }));
+    expect(html).toContain('Care accepted');
+    expect(html).toContain('Original receiving crew accepted responsibility at 17.5 min.');
+    expect(html).not.toContain('Call progress');
+    expect(html).not.toContain('Still needed');
+    const missingReceiver = renderToStaticMarkup(createElement(DebriefSummary, { debrief: { ...debrief, receivingService: undefined } }));
+    expect(missingReceiver).toContain('Call unresolved');
+    expect(missingReceiver).not.toContain('Care accepted');
+  });
+
+  it('distinguishes partial relief and agreed follow-up from a fully resolved call', () => {
+    const followup = renderToStaticMarkup(createElement(DebriefSummary, { debrief: { ...result, disposition: 'followup_agreed', completionAchieved: true } }));
+    expect(followup).toContain('Follow-up agreed');
+    expect(followup).not.toContain('Call resolved');
+    const partial = renderToStaticMarkup(createElement(DebriefSummary, { debrief: { ...result, disposition: 'relief_partial', completionAchieved: false, remainingTasks: ['The access route still needs to be made safe.'] } }));
+    expect(partial).toContain('Partial relief · call unresolved');
+    expect(partial).toContain('The access route still needs to be made safe.');
+  });
+});

@@ -34,6 +34,7 @@ import type { AutoNote, Explicit, Loadouts } from './autoPlan';
 import { buildIntel } from './intel';
 import type { IntelLine } from './intel';
 import { handCarriedLoadout, SupportPreparation } from './SupportPreparation';
+import { IncidentBriefContext } from './SupportContext';
 
 export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel: () => void }) {
   const pageRef = useRef<HTMLDivElement>(null);
@@ -273,6 +274,7 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
 
       <Section title="Briefing" icon="intel" hint="What dispatch has told you. Reports can be wrong until a squad confirms them.">
         <Card>
+          {scenario && <IncidentBriefContext scenario={scenario} />}
           <BriefList icon="check" tone="mint" title="Known" items={knownRest} empty="Nothing confirmed yet." />
           <BriefList icon="question" tone="amber" title="Unknown" items={brief.unknown} empty="No open questions." />
           <div className="brief">
@@ -563,7 +565,7 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
             <strong>Practice run</strong>
             <span className="dim">
               {scenario?.practiceOnly
-                ? 'This equipment exercise is practice only. Virtual gear and supplies are provided; no funding, owned stock, stress, trust or rewards change.'
+                ? `${scenario.version >= 4 ? 'This decision exercise' : 'This equipment exercise'} is practice only. Virtual gear and supplies are provided; no funding, owned stock, stress, trust or rewards change.`
                 : replay
                 ? 'This incident is already closed, so it replays as practice: no rewards and no consequences.'
                 : 'Uses virtual gear: no owned equipment is reserved or worn. No rewards or consequences; stress, supplies and trust are untouched.'}

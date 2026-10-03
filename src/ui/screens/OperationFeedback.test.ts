@@ -68,6 +68,13 @@ describe('reviewing a decision', () => {
     expect(html).toContain('role="region"');
   });
 
+  it('keeps support-origin reviews in a focused dialog with a way back to their context', () => {
+    const html = render(createElement(ActionSheet, { ...sheet(action()).props, onBackToSupport: noop }));
+    expect(html).toContain('role="dialog"');
+    expect(html).toContain('Back to care &amp; support');
+    expect(html).toContain('Confirm: Prepare medical access');
+  });
+
   it('keeps locked actions inspectable, explains the blocker and offers an available alternative', () => {
     const locked = action({ eligible: false, reason: 'Needs a qualified medic — Squad A has none' });
     const alternative = action({ id: 'wait', title: 'Reassess the report', suppliesRequired: [] });
@@ -148,6 +155,15 @@ describe('persistent decision results', () => {
     expect(html).toContain('Nothing new confirmed');
     expect(html).toContain('Older record: strain may differ from the applied change.');
     expect(html).not.toContain('Officer stress');
+  });
+
+  it('keeps current completion separate from the numeric progress score without changing legacy feedback', () => {
+    const html = render(createElement(DecisionCard, { decision: decision(), explicitCompletion: true }));
+    expect(html).not.toContain('Call progress');
+    expect(html).toContain('Completion depends on the work done');
+    expect(html).toContain('The patient received aid, but the route is still unresolved.');
+    expect(html).toContain('Civilian safety');
+    expect(render(createElement(DecisionCard, { decision: decision() }))).toContain('Call progress');
   });
 
   it('shows no empty feedback panel before the first decision', () => {

@@ -1,4 +1,5 @@
 import { actionEquipmentRequirements, effectiveTags, normalizedActionConsumption, operatorQualified, orderActionParticipants } from './equipment-requirements';
+import { externalSupportActionIssue, remainingSupportWait } from './external-support';
 import { evaluateCapabilities } from './capabilities';
 import { getScenario } from './scenario-registry';
 // Operation resolution: eligibility, contributors, score, probability and strain.
@@ -542,6 +543,10 @@ export function evaluateAction(input: EvalInput): Evaluation {
   // ---- squad validity
   if (run.history.some((h) => h.stage === action.stage && h.actionId === action.id)) return blank('Already tried this stage');
   if (!conditionHolds(action.visibleWhen, run)) return blank('That option does not fit the current situation');
+  if (scenario.version >= 4) {
+    const supportIssue = externalSupportActionIssue(run, scenario, action);
+    if (supportIssue) return blank(supportIssue);
+  }
   if (acting.length === 0) return blank('Choose an acting squad');
   for (const sq of [...acting, ...support]) if (!run.squadIds.includes(sq)) return blank(`${squadLabel(sq)} is not deployed`);
   const maxActing = action.maxActing ?? 1;
@@ -1063,8 +1068,9 @@ export function evaluateAction(input: EvalInput): Evaluation {
   const all = [...diffContribs, ...contributors];
   const margin = round1(score - difficulty);
   const probs = bandProbabilities(margin);
-  const timeBase = round1(Math.max(0.5, workloadMinutes + travel + entryMinutes + capability.minutes));
-  const timeExpected = round1(timeBase * (probs.favorable * T.bandTime.favorable + probs.mixed * T.bandTime.mixed + probs.adverse * T.bandTime.adverse));
+  const supportWait = scenario.version >= 4 && action.awaitSupport ? remainingSupportWait(run, scenario, action.awaitSupport) : null;
+  const timeBase = supportWait ?? round1(Math.max(0.5, workloadMinutes + travel + entryMinutes + capability.minutes));
+  const timeExpected = supportWait ?? round1(timeBase * (probs.favorable * T.bandTime.favorable + probs.mixed * T.bandTime.mixed + probs.adverse * T.bandTime.adverse));
 
   // ---- text
   const rated = action.check.ratings.filter((r) => r.weight > 0 && (r.key !== 'shooting' || kind === 'execution'));

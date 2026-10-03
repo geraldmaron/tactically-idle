@@ -1,7 +1,7 @@
 import type { DebriefResult, DecisionView, Officer } from '../../sim/types';
 import { Portrait } from '../portraits/Portrait';
 import { Icon } from '../icons';
-import { signed, signedMoney } from '../format';
+import { opMinutes, signed, signedMoney } from '../format';
 import { Card, Chip, Meter, SubHead } from './ui';
 import { StressDisplay } from './StressDisplay';
 import './debrief-results.css';
@@ -13,8 +13,9 @@ const scoreTone = (value: number) => value >= 70 ? 'hi' : value >= 40 ? 'mid' : 
 
 export function DebriefSummary({ debrief: d }: { debrief: DebriefResult }) {
   return <Card className="result-summary">
-    <div className="result-scores">
-      {([{ label: 'Call progress', icon: 'flag', result: d.objective }, { label: 'Civilian safety', icon: 'civilian', result: d.civilianSafety }] as const).map(({ label, icon, result }) => <section className="result-score" key={label} aria-label={`${label} ${Math.round(result.score)}/100`}>
+    {d.disposition && <CompletionResult debrief={d} />}
+    <div className={`result-scores${d.disposition ? ' result-scores-explicit' : ''}`}>
+      {(d.disposition ? [{ label: 'Civilian safety', icon: 'civilian', result: d.civilianSafety }] as const : [{ label: 'Call progress', icon: 'flag', result: d.objective }, { label: 'Civilian safety', icon: 'civilian', result: d.civilianSafety }] as const).map(({ label, icon, result }) => <section className="result-score" key={label} aria-label={`${label} ${Math.round(result.score)}/100`}>
         <span className="result-score-label"><Icon name={icon} size={16} />{label}</span>
         <strong className="result-score-value">{Math.round(result.score)}<span>/100</span></strong>
         <Meter value={result.score} tone={scoreTone(result.score)} label={label} valueText={`${Math.round(result.score)} of 100; ${result.label}`} />
@@ -31,6 +32,28 @@ export function DebriefSummary({ debrief: d }: { debrief: DebriefResult }) {
       </div>
     </section>}
   </Card>;
+}
+
+/** Saved completion evidence wins over numeric progress and later scenario content. */
+export function completionLabel(d: DebriefResult): string {
+  if (!d.disposition) return d.objective.label;
+  if (d.disposition === 'relief_partial') return 'Partial relief · call unresolved';
+  if (!d.completionAchieved) return 'Call unresolved';
+  if (d.disposition === 'care_accepted') return d.receivingService ? 'Care accepted' : 'Call unresolved';
+  if (d.disposition === 'followup_agreed') return 'Follow-up agreed';
+  return d.disposition === 'resolved' ? 'Call resolved' : 'Call unresolved';
+}
+
+export function CompletionResult({ debrief: d }: { debrief: DebriefResult }) {
+  const label = completionLabel(d);
+  const complete = d.completionAchieved && !label.includes('unresolved');
+  return <section className={`result-completion${complete ? ' result-completion-achieved' : ''}`} aria-label="Call outcome">
+    <span className="result-score-label"><Icon name="flag" size={16} />Call outcome</span>
+    <strong className="result-completion-label">{label}</strong>
+    {d.receivingService && <p>{d.receivingService.label} accepted responsibility at {opMinutes(d.receivingService.acceptedAt)}.</p>}
+    {!!d.remainingTasks?.length && <div className="result-remaining"><h3>Still needed</h3><ul>{d.remainingTasks.map((task) => <li key={task}>{task}</li>)}</ul></div>}
+    {!complete && !d.remainingTasks?.length && <p>Further work was still needed when the call ended.</p>}
+  </section>;
 }
 
 export function ResultPortrait({ officerId, officers, size = 48 }: { officerId: string; officers: DebriefOfficers; size?: number }) {

@@ -2,12 +2,13 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { SCENARIOS } from '../../content/scenarios';
+import { DECISION_EXERCISES } from '../../content/scenarios/decision-exercises';
 import { briefing } from '../../sim/operation-selectors';
 import { practiceUnits } from '../../sim/resolution';
 import { makeState, NOW } from '../../sim/test-fixtures';
 import { boardEntries, isReplayOnly, practiceEntries } from './helpers';
 import { OpsPrepare } from './OpsPrepare';
-import { PracticeCardView } from './OpsBoard';
+import { OpsBoard, PracticeCardView } from './OpsBoard';
 
 const state = makeState();
 vi.mock('../store', () => ({ useGame: () => state, send: vi.fn() }));
@@ -27,6 +28,19 @@ describe('practice-only equipment exercises', () => {
     }
     expect(entries.find((entry) => entry.card.id === 'ms_occupancy')?.kind).toBe('standing');
     expect(isReplayOnly(state, 'ms_occupancy')).toBe(false);
+  });
+
+  it('features current decision exercises without resetting an existing campaign or inventing a live call', () => {
+    const incidents = state.incidents;
+    state.incidents = [];
+    try {
+      const html = renderToStaticMarkup(createElement(OpsBoard, { onPrepare: () => {} }));
+      expect(html).toContain('No open incidents');
+      expect(html).toContain('Decision practice');
+      expect(html.indexOf('Decision practice')).toBeLessThan(html.indexOf('Standing and practice'));
+      for (const exercise of DECISION_EXERCISES) expect(html).toContain(exercise.title);
+      expect(boardEntries(state, NOW)).toEqual([]);
+    } finally { state.incidents = incidents; }
   });
 
   it('labels an exercise card as practice before preparation', () => {

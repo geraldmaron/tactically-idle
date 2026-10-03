@@ -74,6 +74,8 @@ export interface LiveViewProps {
   onOpenDetails: () => void;
   detailsOpen: boolean;
   feedback?: ReactNode;
+  /** Named external services stay beside the next decision, separate from squad support. */
+  supportContext?: ReactNode;
   /** Overlay sheets (action detail, room sheet, cancel confirm) rendered by the container. */
   children?: ReactNode;
 }
@@ -211,6 +213,8 @@ export function LiveView(p: LiveViewProps) {
       </div>
 
       {p.feedback}
+
+      {p.supportContext}
 
       <div className="call operation-choices" aria-label="Your call">
         <div className="call-head">
@@ -385,6 +389,8 @@ const GROUPS: { source: Contributor['source']; label: string; icon: IconName }[]
 ];
 
 export interface ActionSheetProps {
+  /** Support-origin reviews keep the contextual modal route and a clear Back action. */
+  onBackToSupport?: () => void;
   open: boolean;
   onClose: () => void;
   view: ActionView | null;
@@ -420,7 +426,7 @@ export function ActionSheet(p: ActionSheetProps) {
     <Sheet
       open={p.open && !!v}
       onClose={p.onClose}
-      modal={false}
+      modal={!!p.onBackToSupport}
       maxHeight="short"
       className="operation-action-sheet"
       title={v ? v.title : ''}
@@ -437,6 +443,7 @@ export function ActionSheet(p: ActionSheetProps) {
     >
       {v && (
         <div className="adetail">
+          {p.onBackToSupport && <Button variant="ghost" onClick={p.onBackToSupport}>Back to care &amp; support</Button>}
           {v.summary !== v.outcomePreview.favorable && <p className="operation-action-summary">{v.summary}</p>}
           <div className="chips">
             <Chip icon="clock">Estimated time: {opMinutes(v.timeCost)}</Chip>

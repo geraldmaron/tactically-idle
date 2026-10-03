@@ -18,6 +18,7 @@ import { ActionSheet, LiveView, RoomSheet } from './LiveView';
 import { cardFor } from './helpers';
 import { planActionResupply } from '../../sim/equipment-resupply';
 import { OperationFeedback, RESULT_LABEL } from './OperationFeedback';
+import { SupportContext } from './SupportContext';
 
 interface Override {
   actionId: Id;
@@ -35,7 +36,8 @@ export function OpsLive() {
   const [selActionId, setSelActionId] = useState<Id | null>(null);
   const [activeOfficer, setActiveOfficer] = useState<Id | null>(null);
   const [selSpace, setSelSpace] = useState<Id | null>(null);
-  const [panel, setPanel] = useState<'none' | 'action' | 'room'>('none');
+  const [panel, setPanel] = useState<'none' | 'action' | 'room' | 'support'>('none');
+  const [actionFromSupport, setActionFromSupport] = useState(false);
   const [showRooms, setShowRooms] = useState(false);
   const [override, setOverride] = useState<Override | null>(null);
   const [lastChange, setLastChange] = useState<{ revision: number; spaceIds: Id[] } | null>(null);
@@ -65,7 +67,8 @@ export function OpsLive() {
   const activeOfficerId = activeOfficer && officers.some((o) => o.id === activeOfficer) ? activeOfficer : defaultOfficer;
 
   const card = cardFor(g, run.scenarioId, now);
-  const environment = useMemo(() => getScenario(run.scenarioId)?.environment ?? null, [run.scenarioId]);
+  const scenario = useMemo(() => getScenario(run.scenarioId), [run.scenarioId]);
+  const environment = scenario?.environment ?? null;
   const floors = built?.location.floors ?? 1;
   /** Floor a room or zone sits on (exterior zones are ground). */
   const floorOf = (id: Id | null): number | null => {
@@ -86,6 +89,7 @@ export function OpsLive() {
   if (!built) return <div className="page"><p className="dim">Operation location unavailable.</p></div>;
 
   const selectAction = (id: Id) => {
+    setActionFromSupport(false);
     if (view?.id === id) {
       setPanel(panel === 'action' ? 'none' : 'action');
       return;
@@ -108,7 +112,9 @@ export function OpsLive() {
   };
 
   const confirm = () => {
-    if (!view) return;
+    const currentRun = getState().activeRun;
+    // A second tap from the same rendered choice must not commit another decision.
+    if (!view || currentRun?.id !== run.id || currentRun.revision !== run.revision || currentRun.status !== 'active') return;
     const res = act({ type: 'decide', actionId: view.id, actingSquadIds: acting, supportSquadIds: support });
     if (!res.ok) return;
     const r = lastResolution(getState());
@@ -166,12 +172,20 @@ export function OpsLive() {
       pressure={run.pressure}
       canCancel={run.history.length === 0 && !run.resupplies?.length}
       onCancel={() => setConfirmCancel(true)}
-      onOpenDetails={() => setPanel(panel === 'action' ? 'none' : 'action')}
+      onOpenDetails={() => { setActionFromSupport(false); setPanel(panel === 'action' ? 'none' : 'action'); }}
       detailsOpen={panel === 'action'}
-      feedback={<OperationFeedback officers={g.officers} decisions={decisions} practice={run.practice} onOpenLog={() => setPanel('none')} />}
+      feedback={<OperationFeedback officers={g.officers} decisions={decisions} practice={run.practice} explicitCompletion={(scenario?.version ?? 0) >= 4} onOpenLog={() => setPanel('none')} />}
+      supportContext={scenario && <SupportContext scenario={scenario} run={run} actions={actions} open={panel === 'support'} onOpen={() => setPanel('support')} onClose={() => setPanel('none')} onPickAction={(id) => {
+        setActionFromSupport(true);
+        setSelActionId(id);
+        setOverride(null);
+        setActiveOfficer(null);
+        setPanel('action');
+      }} />}
     >
       <ActionSheet
         open={panel === 'action'}
+        onBackToSupport={actionFromSupport ? () => setPanel('support') : undefined}
         onClose={() => setPanel('none')}
         view={view}
         all={actions}
@@ -208,6 +222,7 @@ export function OpsLive() {
         squads={deployed}
         actions={actions}
         onPickAction={(id) => {
+          setActionFromSupport(false);
           setSelActionId(id);
           setOverride(null);
           setPanel('action');

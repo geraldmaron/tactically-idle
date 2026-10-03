@@ -36,10 +36,10 @@ export function OutcomeForecast({ action }: { action: ActionView }) {
   );
 }
 
-export function DecisionCard({ decision: d, full = false, officers = {} }: { decision: DecisionView; full?: boolean; officers?: DebriefOfficers }) {
+export function DecisionCard({ decision: d, full = false, officers = {}, explicitCompletion = false }: { decision: DecisionView; full?: boolean; officers?: DebriefOfficers; explicitCompletion?: boolean }) {
   const changes = [
     { label: 'Time', value: `+${opMinutes(d.timeCost)}`, tone: '' },
-    { label: 'Call progress', value: signed(d.objectiveDelta, 1), tone: d.objectiveDelta > 0 ? 'tone-mint' : d.objectiveDelta < 0 ? 'tone-danger' : '' },
+    ...(!explicitCompletion ? [{ label: 'Call progress', value: signed(d.objectiveDelta, 1), tone: d.objectiveDelta > 0 ? 'tone-mint' : d.objectiveDelta < 0 ? 'tone-danger' : '' }] : []),
     { label: 'Civilian safety', value: signed(d.civilianSafetyDelta, 1), tone: d.civilianSafetyDelta > 0 ? 'tone-mint' : d.civilianSafetyDelta < 0 ? 'tone-danger' : '' },
     { label: 'Pressure', value: signed(d.pressureDelta, 1), tone: d.pressureDelta < 0 ? 'tone-mint' : d.pressureDelta > 0 ? 'tone-warn' : '' },
   ];
@@ -54,7 +54,7 @@ export function DecisionCard({ decision: d, full = false, officers = {} }: { dec
         <Chip tone={RESULT_TONE[d.band]}>{RESULT_LABEL[d.band]}</Chip>
       </header>
       {narrative.length > 0 ? <ul className="decision-narrative">{(full ? narrative : narrative.slice(0, 1)).map((line, index) => <li key={index}>{line}</li>)}</ul> : <p className="decision-lead">{d.explanation[0]}</p>}
-      <dl className="decision-metrics" aria-label="What changed">
+      <dl className={`decision-metrics${explicitCompletion ? ' decision-metrics-compact' : ''}`} aria-label="What changed">
         {changes.map((change) => <div key={change.label}><dt>{change.label}</dt><dd className={change.tone}>{change.value}</dd></div>)}
       </dl>
       <div className="decision-effects">
@@ -62,7 +62,7 @@ export function DecisionCard({ decision: d, full = false, officers = {} }: { dec
         <div><strong>What you learned</strong>{d.knowledgeChanges.length ? (full ? <ul>{d.knowledgeChanges.map((fact) => <li key={fact.factId}>{fact.label}: {KNOWLEDGE_LABEL[fact.status]}</li>)}</ul> : <p>{d.knowledgeChanges.map((fact) => `${fact.label}: ${KNOWLEDGE_LABEL[fact.status]}`).join(' · ')}</p>) : <p>Nothing new confirmed</p>}</div>
       </div>
       <DecisionStress decision={d} officers={officers} />
-      <details className="decision-causes"><summary>What do the scores mean?</summary><p>Call progress shows how much of the call has been resolved. Civilian safety tracks how safely it has gone. Both run from 0 to 100; higher is better.</p><p>Pressure runs from 0 to 100; lower is better. Delays and setbacks can raise it and make the situation harder. A lower safety score does not by itself mean someone was injured.</p></details>
+      <details className="decision-causes"><summary>What do the scores mean?</summary>{explicitCompletion ? <p>Civilian safety tracks how safely the call has gone, from 0 to 100. Completion depends on the work done and any agreed transfer of responsibility.</p> : <p>Call progress shows how much of the call has been resolved. Civilian safety tracks how safely it has gone. Both run from 0 to 100; higher is better.</p>}<p>Pressure runs from 0 to 100; lower is better. Delays and setbacks can raise it and make the situation harder. A lower safety score does not by itself mean someone was injured.</p></details>
       {next.length > 0 && <div className="decision-next">{next.map((line, index) => <p key={index}>{line}</p>)}</div>}
       {d.endingTitle && <p className="decision-next"><strong>Operation ended:</strong> {d.endingTitle}</p>}
       {(causes.length > 0 || (!full && narrative.length > 1)) && <details className="decision-causes">
@@ -79,26 +79,26 @@ export function DecisionCard({ decision: d, full = false, officers = {} }: { dec
   );
 }
 
-export function OperationLogContents({ decisions, practice, officers = {} }: { decisions: DecisionView[]; practice: boolean; officers?: DebriefOfficers }) {
+export function OperationLogContents({ decisions, practice, officers = {}, explicitCompletion = false }: { decisions: DecisionView[]; practice: boolean; officers?: DebriefOfficers; explicitCompletion?: boolean }) {
   return (
     <div className="operation-log-content">
       <p className="operation-note">{decisions.length} decision{decisions.length === 1 ? '' : 's'}, in order. {practice ? 'Practice results do not change your department.' : 'Each choice records the time, supplies and changes it caused.'}</p>
-      <ol className="operation-log-list">{decisions.map((decision, index) => <li key={decision.revision}><span className="decision-number">Decision {index + 1}</span><DecisionCard decision={decision} officers={officers} full /></li>)}</ol>
+      <ol className="operation-log-list">{decisions.map((decision, index) => <li key={decision.revision}><span className="decision-number">Decision {index + 1}</span><DecisionCard decision={decision} officers={officers} explicitCompletion={explicitCompletion} full /></li>)}</ol>
     </div>
   );
 }
 
 /** The history comes from the saved run, so closing a sheet or reloading cannot discard it. */
-export function OperationFeedback({ decisions, practice, ended = false, onOpenLog, officers = {} }: { decisions: DecisionView[]; practice: boolean; ended?: boolean; onOpenLog?: () => void; officers?: DebriefOfficers }) {
+export function OperationFeedback({ decisions, practice, ended = false, onOpenLog, officers = {}, explicitCompletion = false }: { decisions: DecisionView[]; practice: boolean; ended?: boolean; onOpenLog?: () => void; officers?: DebriefOfficers; explicitCompletion?: boolean }) {
   const [open, setOpen] = useState(false);
   const last = decisions.at(-1);
   if (!last) return null;
   return (
     <section className="operation-feedback" aria-label="Operation feedback">
       <div className="operation-feedback-heading"><h2>Last decision</h2><Button variant="ghost" size="sm" className="operation-log-trigger" onClick={() => { onOpenLog?.(); setOpen(true); }} aria-haspopup="dialog" aria-expanded={open}>Decision log ({decisions.length})</Button></div>
-      <DecisionCard key={last.revision} decision={last} officers={officers} />
+      <DecisionCard key={last.revision} decision={last} officers={officers} explicitCompletion={explicitCompletion} />
       <Sheet open={open} onClose={() => setOpen(false)} title="Decision log" className="operation-log-sheet" footer={<Button block onClick={() => setOpen(false)}>{ended ? 'Return to debrief' : 'Return to operation'}</Button>}>
-        <OperationLogContents decisions={decisions} practice={practice} officers={officers} />
+        <OperationLogContents decisions={decisions} practice={practice} officers={officers} explicitCompletion={explicitCompletion} />
       </Sheet>
     </section>
   );
