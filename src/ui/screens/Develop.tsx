@@ -9,9 +9,10 @@ import { PointPacks } from '../components/PointPacks';
 import { Sheet } from '../components/Sheet';
 import { useNav } from '../components/nav';
 import { Button, Chip, EmptyState } from '../components/ui';
+import { ChoiceRail } from '../components/ChoiceRail';
 import { BRANCHES, BRANCH_META } from '../components/labels';
 import { Icon } from '../icons';
-import { moneyFull as money } from '../format';
+import { moneyFull as money, money as compactMoney } from '../format';
 import { useDevelopmentBudget, useGame } from '../store';
 import { useDevelopmentPurchase } from '../storefront/useDevelopmentPurchase';
 import './development.css';
@@ -54,18 +55,18 @@ export function DevelopScreen({ highlightedNode, highlightRequest }: { highlight
 
   return <div ref={rootRef} className="page develop-page">
     <header className="development-balance">
-      <div><h2 className="section-title">Department development</h2><div className="chips"><Chip icon="chart">{Math.floor(budget.totalDP * 1000) / 1000} DP available</Chip><Chip icon="cash">{money(g.department.funding)} funding</Chip></div></div>
-      <Button size="sm" onClick={() => setPointsOpen(true)}>Get Points</Button>
+      <h2 className="section-title">Department development</h2>
+      <div className="development-balance-row"><div className="chips"><Chip icon="chart">{Math.floor(budget.totalDP * 100) / 100} DP</Chip><Chip icon="cash">{compactMoney(g.department.funding)}</Chip></div>
+        <Button size="sm" onClick={() => setPointsOpen(true)}>Get Points</Button></div>
     </header>
-    <p className="dim development-intro">Services improve through three tiers. Programs unlock equipment or courses; qualifications come from completed training.</p>
+    <p className="dim development-intro">Upgrade services or unlock equipment and courses.</p>
     <PointPacks open={pointsOpen} onClose={() => setPointsOpen(false)} />
-    <nav className="development-filters" aria-label="Development branches">
-      <Button size="sm" variant={branch === 'all' ? 'primary' : 'secondary'} aria-pressed={branch === 'all'} onClick={() => setBranch('all')}>All branches</Button>
-      {BRANCHES.map((id) => <Button key={id} size="sm" icon={BRANCH_META[id].icon} variant={branch === id ? 'primary' : 'secondary'} aria-pressed={branch === id} onClick={() => setBranch(id)}>{BRANCH_META[id].label}</Button>)}
-    </nav>
-    <nav className="development-filters" aria-label="Development ownership">
-      {(['all', 'available', 'owned'] as const).map((value) => <Button key={value} size="sm" variant={filter === value ? 'primary' : 'secondary'} aria-pressed={filter === value} onClick={() => setFilter(value)}>{value === 'all' ? 'All' : value === 'available' ? 'Available' : 'Owned'}</Button>)}
-    </nav>
+    <ChoiceRail value={branch} onChange={setBranch} label="Development branches" options={[
+      { value: 'all', label: 'All branches' }, ...BRANCHES.map((id) => ({ value: id, label: <><Icon name={BRANCH_META[id].icon} size={16} />{BRANCH_META[id].label}</> })),
+    ]} />
+    <ChoiceRail value={filter} onChange={setFilter} label="Development ownership" grow options={[
+      { value: 'all', label: 'All' }, { value: 'available', label: 'Available' }, { value: 'owned', label: 'Owned' },
+    ]} />
     <p className="dim development-count" role="status">{filtered.length} developments{filter === 'available' ? ' ready to buy' : filter === 'owned' ? ' owned' : ''}</p>
     {!filtered.length && <EmptyState icon="chart" title="No developments match">Choose another branch or show all developments.</EmptyState>}
     {BRANCHES.map((id) => {

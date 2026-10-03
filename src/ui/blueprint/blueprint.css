@@ -967,9 +967,20 @@
 }
 .bp-tabwrap {
   justify-content: flex-end;
+  min-width: 0;
+  max-width: 100%;
+}
+.bp-tabs {
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
 }
 .bp-tab {
-  min-height: 40px;
+  flex: 0 0 auto;
+  min-height: 44px;
+  white-space: nowrap;
   padding: 4px 12px;
   border: 1px solid rgba(243, 247, 255, 0.35);
   border-radius: 5px;

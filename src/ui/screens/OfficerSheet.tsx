@@ -2,12 +2,14 @@ import { personaNote } from '../../content/personas';
 import { useState } from 'react';
 import { useGame } from '../store';
 import { careerInfo, projectDismiss, recoveryInfo } from '../../sim/department-selectors';
+import { gameDay } from '../../sim/calendar';
 import type { Id, Officer, SquadId } from '../../sim/types';
 import { Sheet } from '../components/Sheet';
 import { useNav } from '../components/nav';
 import { COURSES } from '../../content/courses';
 import { Button, Chip, ExperienceChip, KV, Meter, ReadinessBar, OfficerStatusChip, SubHead } from '../components/ui';
 import { RetirementChip, useCareerSnapshot } from '../components/Career';
+import { OfficerProgress } from '../components/OfficerProgress';
 import { useToast } from '../components/toast';
 import type { StatusKey } from '../components/labels';
 import { BAND_SHORT, CERT_ICON, CERT_LABEL, RATING_META, ROLE_META, TRAIT_INFO, bandOf, ratingTone } from '../components/labels';
@@ -61,12 +63,11 @@ function OfficerBody({ o, onClose }: { o: Officer; onClose: () => void }) {
             {career.retirement && <RetirementChip date={career.retirement.date} inDays={career.retirement.inDays} compact />}
           </div>
           <KV icon="cash" k="Wage" v={perHour(o.wage)} />
-          <KV icon="chart" k="Experience" v={`${Math.round(o.xp)} xp`} />
         </div>
       </div>
 
+      <OfficerProgress officer={o} day={gameDay(g, Math.max(now, g.department.clockHighWater))} />
       {personaNote(o.identityId) && <p className="dim persona-note">{personaNote(o.identityId)}</p>}
-      <CareerSection o={o} />
 
       <SubHead icon="gauge">Ratings</SubHead>
       <ul className="ratings">
@@ -81,6 +82,8 @@ function OfficerBody({ o, onClose }: { o: Officer; onClose: () => void }) {
           </li>
         ))}
       </ul>
+
+      <CareerSection o={o} />
 
       <SubHead icon="medal">Certifications</SubHead>
       {o.certs.length === 0 ? (
@@ -280,7 +283,7 @@ function CareerSection({ o }: { o: Officer }) {
         )}
         {info && info.effects.length > 0 && (
           <ul className="career-effects">
-            {info.effects.map((e, i) => (
+            {info.effects.filter((effect) => !effect.startsWith('Needs ') || !effect.includes('xp per rating point')).map((e, i) => (
               <li key={i}>
                 <Icon name="chevronRight" size={13} />
                 {e}

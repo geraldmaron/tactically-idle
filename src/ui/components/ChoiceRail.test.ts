@@ -27,4 +27,9 @@ describe('single-row choice navigation', () => {
     expect(html).toContain('aria-current="page"');
     expect(html).not.toContain('role="radio"');
   });
+  it('keeps a keyboard entry when the selected option becomes unavailable', () => {
+    const html = renderToStaticMarkup(createElement(ChoiceRail, { value: 'busy', options, onChange: () => {}, label: 'Options' }));
+    expect(html.match(/tabindex="0"/g)).toHaveLength(1);
+    expect(html).toMatch(/aria-checked="false" tabindex="0">First/);
+  });
 });

@@ -19,7 +19,16 @@ export function ChoiceRail<T extends string>({ value, options, onChange, label, 
   panelId?: string;
 }) {
   const buttons = useRef(new Map<T, HTMLButtonElement>());
-  useEffect(() => { buttons.current.get(value)?.scrollIntoView({ block: 'nearest', inline: 'nearest' }); }, [value]);
+  const rail = useRef<HTMLDivElement>(null);
+  const tabStop = options.some((option) => option.value === value && !option.disabled) ? value : options.find((option) => !option.disabled)?.value;
+  useEffect(() => {
+    const node = buttons.current.get(value), strip = rail.current;
+    if (!node || !strip) return;
+    // Reveal only within the horizontal rail; never move the surrounding screen.
+    const box = node.getBoundingClientRect(), viewport = strip.getBoundingClientRect();
+    if (box.left < viewport.left + 4) strip.scrollLeft += box.left - viewport.left - 4;
+    else if (box.right > viewport.right - 4) strip.scrollLeft += box.right - viewport.right + 4;
+  }, [value]);
   const move = (event: KeyboardEvent<HTMLButtonElement>, current: T) => {
     const next = railKeyboardValue(options, current, event.key);
     if (next === null) return;
@@ -27,7 +36,7 @@ export function ChoiceRail<T extends string>({ value, options, onChange, label, 
     onChange(next);
     buttons.current.get(next)?.focus({ preventScroll: true });
   };
-  return <div className={`choice-rail${grow ? ' choice-rail-grow' : ''}`} role={kind === 'tabs' ? 'tablist' : kind === 'filter' ? 'radiogroup' : 'navigation'} aria-label={label}>
+  return <div ref={rail} className={`choice-rail${grow ? ' choice-rail-grow' : ''}`} role={kind === 'tabs' ? 'tablist' : kind === 'filter' ? 'radiogroup' : 'navigation'} aria-label={label}>
     {options.map((option) => <button key={option.value} type="button"
       ref={(node) => { if (node) buttons.current.set(option.value, node); else buttons.current.delete(option.value); }}
       className={`choice-rail-item${value === option.value ? ' choice-rail-selected' : ''}`}
@@ -37,7 +46,7 @@ export function ChoiceRail<T extends string>({ value, options, onChange, label, 
       aria-checked={kind === 'filter' ? value === option.value : undefined}
       aria-current={kind === 'navigation' && value === option.value ? 'page' : undefined}
       aria-controls={kind === 'tabs' ? panelId : undefined}
-      tabIndex={kind === 'navigation' ? 0 : value === option.value ? 0 : -1}
+      tabIndex={kind === 'navigation' ? 0 : tabStop === option.value ? 0 : -1}
       disabled={option.disabled}
       onClick={() => onChange(option.value)} onKeyDown={(event) => move(event, option.value)}>{option.label}</button>)}
   </div>;

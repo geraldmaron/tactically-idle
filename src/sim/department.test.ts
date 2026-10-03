@@ -435,6 +435,15 @@ describe('development tree, training and store', () => {
     expect(s.officers.off_vale.ratings.composure).toBe(before + 3);
   });
 
+  it('retains the full completion gain below the enrolment cutoff', () => {
+    let s = createInitialState(T0);
+    s.officers.off_vale.ratings.composure = 84;
+    s = ok(s, { type: 'startCourse', officerId: 'off_vale', courseId: 'composure_workshop' }, T0);
+    s = ok(s, { type: 'tick' }, T0 + 4 * HOUR_MS + 1);
+    expect(s.officers.off_vale.ratings.composure).toBe(87);
+    expect(refused(s, { type: 'startCourse', officerId: 'off_vale', courseId: 'composure_workshop' }, T0 + 4 * HOUR_MS + 1)).toContain('course ceiling');
+  });
+
   it('buyItem needs the node, funding, and never goes below zero', () => {
     let s = createInitialState(T0);
     expect(refused(s, { type: 'buyItem', itemId: 'thermal_imager', qty: 1 }, T0)).toMatch(/Requires Thermal imaging/);

@@ -7,7 +7,7 @@
 // boundaries and online ticks match one offline settlement.
 import type { GameState, Id, NodeEffect, Officer, ShiftReport, SquadDuty, SquadId } from './types';
 import { developmentTier, effectiveDevelopmentEffects } from './development-tiers';
-import { COURSES } from '../content/courses';
+import { COURSES, courseRatingAfter, courseXpGain } from '../content/courses';
 import { ITEMS } from '../content/items';
 import { STRESS_BANDS } from './officer';
 import { gameDay } from './calendar';
@@ -186,8 +186,8 @@ function applyCourseCompletion(o: Officer, acc: Acc): void {
   if (course) {
     const { cert, rating } = course.grants;
     if (cert && !o.certs.includes(cert)) o.certs.push(cert);
-    if (rating) o.ratings[rating.key] = Math.min(100, o.ratings[rating.key] + rating.delta);
-    o.xp += Math.round(course.hours * 5);
+    if (rating) o.ratings[rating.key] = courseRatingAfter(o.ratings[rating.key], rating.delta);
+    o.xp += courseXpGain(course.hours);
   }
   o.assignment = null;
   acc.courses.push({ officerId: o.id, courseId: a.courseId });

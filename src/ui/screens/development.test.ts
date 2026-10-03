@@ -27,7 +27,7 @@ function detail(nodeId: string, tier = 0, patch = {}) {
 describe('development browsing and shared detail', () => {
   it('renders compact balances, branch and ownership filters, and request-target markers', () => {
     const html = renderToStaticMarkup(createElement(DevelopScreen, { highlightedNode: 'personnel_academy', highlightRequest: 2 }));
-    expect(html).toContain('100 DP available');
+    expect(html).toContain('100 DP</span>');
     expect(html).toContain('Get Points');
     expect(html).toContain('aria-label="Development branches"');
     expect(html).toContain('aria-label="Development ownership"');

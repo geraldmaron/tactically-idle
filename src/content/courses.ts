@@ -3,6 +3,16 @@ import type { Course, Id } from '../sim/types';
 /** Rating courses stop being offered once an officer's rating reaches this value. */
 export const COURSE_RATING_CEILING = 85;
 
+/** Completion retains the full authored gain; 85 is the enrolment cutoff, not a grant cap. */
+export function courseRatingAfter(current: number, gain: number): number {
+  return Math.min(100, current + gain);
+}
+
+/** Every completed course also contributes XP to the existing career growth system. */
+export function courseXpGain(hours: number): number {
+  return Math.round(hours * 5);
+}
+
 // Courses are offered by development nodes (requiresNode) or are always available
 // (refreshers). Unlocking a node never qualifies anyone: the grant lands only when
 // the course finishes (see economy.settle).
