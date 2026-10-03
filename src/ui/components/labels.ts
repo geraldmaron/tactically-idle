@@ -29,6 +29,12 @@ export const CERT_LABEL: Record<CertId, string> = {
   advanced_first_aid: 'Advanced first aid',
   surveillance: 'Surveillance',
   drone_operator: 'Drone operator',
+  less_lethal: 'Less-lethal response',
+  advanced_less_lethal: 'Advanced less-lethal response',
+  deescalation: 'De-escalation',
+  vehicle_operations: 'Vehicle operations',
+  precision_support: 'Precision support',
+  controlled_access: 'Controlled access',
 };
 
 export const CERT_ICON: Record<CertId, IconName> = {
@@ -37,6 +43,12 @@ export const CERT_ICON: Record<CertId, IconName> = {
   advanced_first_aid: 'medic',
   surveillance: 'binoculars',
   drone_operator: 'drone',
+  less_lethal: 'shield',
+  advanced_less_lethal: 'shield',
+  deescalation: 'chat',
+  vehicle_operations: 'box',
+  precision_support: 'binoculars',
+  controlled_access: 'door',
 };
 
 export const TRAIT_INFO: Record<TraitId, { label: string; condition: string; icon: IconName }> = {

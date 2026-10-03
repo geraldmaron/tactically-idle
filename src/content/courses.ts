@@ -60,4 +60,76 @@ export const COURSES: Record<Id, Course> = {
     cost: 600,
     grants: { rating: { key: 'shooting', delta: 3 } },
   },
+  less_lethal_course: {
+    "id": "less_lethal_course",
+    "name": "Less-lethal response",
+    "hours": 6,
+    "cost": 1200,
+    "requiresNode": "field_less_lethal",
+    "requiresCerts": [],
+    "grants": {
+        "cert": "less_lethal"
+    }
+},
+  advanced_less_lethal_course: {
+    "id": "advanced_less_lethal_course",
+    "name": "Advanced less-lethal response",
+    "hours": 8,
+    "cost": 1700,
+    "requiresNode": "field_less_lethal",
+    "requiresCerts": [
+        "less_lethal"
+    ],
+    "grants": {
+        "cert": "advanced_less_lethal"
+    }
+},
+  deescalation_course: {
+    "id": "deescalation_course",
+    "name": "De-escalation",
+    "hours": 6,
+    "cost": 1000,
+    "requiresNode": "personnel_negotiation",
+    "requiresCerts": [],
+    "grants": {
+        "cert": "deescalation"
+    }
+},
+  vehicle_operations_course: {
+    "id": "vehicle_operations_course",
+    "name": "Support vehicle operations",
+    "hours": 6,
+    "cost": 1300,
+    "requiresNode": "logistics_field_support",
+    "requiresCerts": [],
+    "grants": {
+        "cert": "vehicle_operations"
+    }
+},
+  precision_support_course: {
+    "id": "precision_support_course",
+    "name": "Precision support qualification",
+    "hours": 10,
+    "cost": 2200,
+    "requiresNode": "field_specialist_response",
+    "requiresCerts": [
+        "entry_team"
+    ],
+    "grants": {
+        "cert": "precision_support"
+    }
+},
+  controlled_access_course: {
+    "id": "controlled_access_course",
+    "name": "Controlled access qualification",
+    "hours": 8,
+    "cost": 1800,
+    "requiresNode": "field_controlled_access",
+    "requiresCerts": [
+        "entry_team"
+    ],
+    "grants": {
+        "cert": "controlled_access"
+    }
+},
 };

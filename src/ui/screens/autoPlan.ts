@@ -69,7 +69,7 @@ export function planPreparationEquipment(args: {
   const all = () => [...held, ...added];
   const take = (tag: string, quantity: number) => {
     let have = all().filter((unit) => ITEMS[unit.itemId].tags.includes(tag)).length;
-    const stock = Object.values(ITEMS).filter((item) => item.tags.includes(tag))
+    const stock = Object.values(ITEMS).filter((item) => !item.supportOnly && item.tags.includes(tag))
       .flatMap((item) => readyUnits(state, item.id, now)).filter((unit) => !taken.has(unit.id));
     if (stock.length < quantity - have) return false;
     for (const unit of stock) {

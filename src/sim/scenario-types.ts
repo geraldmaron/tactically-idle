@@ -1,7 +1,7 @@
 // Scenario schema for the operation engine. Owned by the operation module.
 // A ScenarioDefinition is static authored content; everything that changes during
 // play lives in OperationRun (types.ts). See docs/operation-model.md.
-import type { CertId, Id, KnowledgeStatus, OpeningState, OutcomeBand, RatingKey, StageId, Vec } from './types';
+import type { CapabilityId, CertId, Id, KnowledgeStatus, OpeningState, OutcomeBand, RatingKey, StageId, Vec } from './types';
 import type { Channel } from './spatial';
 
 export type ActionIcon =
@@ -182,7 +182,21 @@ export interface OutcomeEffect {
 
 export type OutcomeTable = Record<OutcomeBand, OutcomeEffect[]>;
 
+export interface ActionCapabilities {
+  rules: CapabilityId[];
+  required?: CapabilityId[];
+  openingId?: Id;
+  safetyFactIds?: Id[];
+  subjectFactIds?: Id[];
+  responseContext?: 'open' | 'constrained';
+  accessMethod?: 'mechanical' | 'charge';
+  vehicleAccessible?: boolean;
+  deescalation?: boolean;
+}
+
 export interface ActionDefinition {
+  /** Opt-in fictional contextual equipment rules. Legacy actions remain unchanged. */
+  capabilities?: ActionCapabilities;
   id: Id;
   stage: StageId;
   title: string;
@@ -269,6 +283,8 @@ export interface ScenarioRewards {
 export interface ScenarioDefinition {
   id: Id;
   version: number;
+  /** Authored equipment exercises cannot be deployed as live incidents. */
+  practiceOnly?: boolean;
   /** e.g. 'OP 0141' */
   code: string;
   title: string;

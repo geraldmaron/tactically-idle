@@ -44,7 +44,7 @@ export function createInitialState(now: number, campaignSeed = 12345): GameState
   const state: GameState = {
     saveVersion: CURRENT_SAVE_VERSION,
     personnel: createPersonnel(campaignSeed),
-    contentVersion: 1,
+    contentVersion: 2,
     department: {
       name: 'Westhaven Department',
       funding: 12400,

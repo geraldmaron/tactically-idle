@@ -333,8 +333,12 @@ describe('squads', () => {
 });
 
 describe('development tree, training and store', () => {
-  it('has 14 non-exclusive nodes with the required ids and effects', () => {
-    expect(Object.keys(DEV_NODES)).toHaveLength(14);
+  it('has 20 non-exclusive nodes including six qualified catalog programs', () => {
+    expect(Object.keys(DEV_NODES)).toHaveLength(20);
+    for (const id of ['field_less_lethal', 'field_response_program', 'field_specialist_response', 'field_controlled_access', 'logistics_field_support', 'logistics_armored_support']) {
+      expect(DEV_NODES[id].effects.some((effect) => effect.kind === 'unlockItem')).toBe(true);
+      expect(DEV_NODES[id].cost.dp).toBeGreaterThan(0);
+    }
     const n = DEV_NODES;
     expect(n.personnel_negotiation.effects).toContainEqual({ kind: 'unlockCourse', courseId: 'crisis_negotiation_course' });
     expect(n.field_contact_kit.effects).toContainEqual({ kind: 'unlockItem', itemId: 'throw_phone' });

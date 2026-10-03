@@ -25,6 +25,13 @@ export const INCIDENT_TYPES: IncidentTypeInfo[] = [
   { type: 'burglary', label: 'Alarm response', families: ['market_row'], squads: [1, 3] },
   { type: 'false_intruder', label: 'Uncertain occupancy', families: homes, squads: [1, 2] },
 ];
+/** New calls opt into v2; saved v1 IDs and draws retain their original content. */
+export const INCIDENT_CONTENT_VERSION = 2;
+export const INCIDENT_TYPES_V2: IncidentTypeInfo[] = [
+  ...INCIDENT_TYPES,
+  { type: 'barricaded', label: 'Reported barricade', families: homes, squads: [1, 3] },
+  { type: 'business_robbery', label: 'Reported business robbery', families: ['market_row'], squads: [1, 3] },
+];
 const legacyTypes: IncidentType[] = ['domestic', 'person_in_crisis', 'barricaded', 'business_robbery', 'holding', 'missing_vulnerable', 'vacant_occupancy'];
 const validTypes = new Set([...INCIDENT_TYPES.map((x) => x.type), ...legacyTypes]);
 
@@ -75,7 +82,7 @@ export function generateIncident(spec: IncidentSpec): ScenarioDefinition {
   const business = location.setting === 'business';
   const alarm = spec.type === 'burglary';
   const uncertain = spec.type === 'false_intruder';
-  const kind = INCIDENT_TYPES.find((x) => x.type === spec.type);
+  const kind = (spec.contentVersion >= 2 ? INCIDENT_TYPES_V2 : INCIDENT_TYPES).find((x) => x.type === spec.type);
   if (!kind || !kind.families.includes(spec.familyId)) throw new Error('Unsupported incident and building combination');
   const candidates = location.rooms.filter((r) => business ? ['office', 'storage'].includes(r.type) : urgent ? ['bedroom', 'bathroom', 'living'].includes(r.type) : ['bedroom', 'living'].includes(r.type));
   const chosen = pick(hashSeed(incidentId(spec)), candidates);
@@ -84,7 +91,9 @@ export function generateIncident(spec: IncidentSpec): ScenarioDefinition {
   const at = occupantPoint(target, built, chosen.state);
   const hasWindow = location.openings.some((o) => o.type === 'window' && (o.a === target.id || o.b === target.id));
   const personLabel = urgent ? 'Person needing help' : business ? 'Staff member' : 'Resident';
-  const report = urgent ? `A caller reports someone needs medical help in the ${targetName}.`
+  const report = spec.type === 'barricaded' ? `A caller reports a distressed person refusing to leave the ${targetName}. The report of a barricade has not been verified.`
+    : spec.type === 'business_robbery' ? `A caller reports a possible robbery and a person in the ${targetName}. Staff locations and the circumstances are unconfirmed.`
+    : urgent ? `A caller reports someone needs medical help in the ${targetName}.`
     : alarm ? `The shop alarm has sounded. A caller reports movement in the ${targetName}.`
       : uncertain ? `A neighbour reports an unfamiliar person in the ${targetName}; their identity is unconfirmed.`
         : spec.type === 'disturbance' ? `Raised voices were reported in the ${targetName}. The caller cannot explain what happened.`
@@ -171,7 +180,7 @@ export function generateIncident(spec: IncidentSpec): ScenarioDefinition {
     adverse: [{ ending: 'handed_over', objective: 15, text: 'Specialists took over; the handover left some questions unanswered.' }],
   };
   const multiplier = tierRewardMultiplier(spec.tier);
-  return {
+  const scenario: ScenarioDefinition = {
     id: incidentId(spec), version: 1, code: `CALL ${String(spec.seed % 10000).padStart(4, '0')}`,
     title: location.name, setting: location.setting, locationFamilyId: spec.familyId, locationSeed: spec.buildingSeed,
     summary: report, variantLabel: kind.label, pressureLabel: urgent ? 'Medical time pressure' : 'Time to verify',
@@ -199,6 +208,153 @@ export function generateIncident(spec: IncidentSpec): ScenarioDefinition {
     rewards: { funding: Math.round((business ? 2100 : 1700) * multiplier), devPoints: Math.round(2 * multiplier), trust: Math.round(4 * multiplier), xp: Math.round(30 * multiplier) },
     incident: { ...spec },
   };
+  return spec.contentVersion >= 2 ? withVersionTwoCapabilities(scenario, built) : scenario;
+}
+
+/** Additive v2 mechanics. Never runs for a saved v1 scenario. */
+function withVersionTwoCapabilities(s: ScenarioDefinition, built: BuiltLocation): ScenarioDefinition {
+  s.version = 2;
+  const spec = s.incident!;
+  const target = s.facts[0].spaceId;
+  const exterior = built.location.entries[0];
+  const highRisk = spec.type === 'barricaded' || spec.type === 'business_robbery';
+  const contact = s.stages.assess.actions.find((a) => a.id === 'gen_contact')!;
+  const observe = s.stages.assess.actions.find((a) => a.id === 'gen_observe')!;
+  const coordinate = s.stages.adapt.actions.find((a) => a.id === 'gen_coordinate')!;
+  const verify = s.stages.adapt.actions.find((a) => a.id === 'gen_verify')!;
+  const resolve = s.stages.resolve.actions.find((a) => a.id === 'gen_resolve')!;
+  s.environment = { timeOfDay: spec.seed % 3 === 0 ? 'night' : 'day', weather: 'clear', power: 'on', clutter: 0, hazards: [], communication: 'normal', crowd: 0, keyholder: !highRisk, plansOnFile: false, alarm: spec.type === 'business_robbery' ? 'triggered' : 'none', cctv: false };
+  contact.capabilities = { rules: [], deescalation: true };
+  contact.equipment = [{ tag: 'hailer', value: 5, group: 'contact_link', label: 'one-way contact aid' }, { tag: 'throw_phone', value: 8, group: 'contact_link', range: 'opening', label: 'a two-way line' }];
+  observe.capabilities = { rules: ['visible_exterior', 'dark_visible_scene'] };
+  coordinate.targetId = exterior;
+  coordinate.capabilities = { rules: ['weak_radio_link', 'scene_coordination'], vehicleAccessible: true };
+  coordinate.support = { max: 8, coverSpaceId: exterior, reachMinutes: 15, maxSquads: 2, label: 'sharing the current report', task: 'Coordinate' };
+  resolve.capabilities = { rules: [], deescalation: !highRisk || spec.type === 'barricaded' };
+
+  const extra = (id: string, stage: StageId, title: string, targetId = target): ActionDefinition => ({
+    id, stage, title, icon: 'shield', summary: title, targetId, task: title,
+    requires: {}, check: { kind: 'execution', ratings: [{ key: 'composure', weight: 0.6 }, { key: 'coordination', weight: 0.4 }], difficulty: 40 + spec.tier * 4 },
+    approach: 'none', observes: [], workload: { base: 3, perSqFt: 0 }, stressBase: 3,
+    outcomes: {
+      favorable: [{ objective: stage === 'resolve' ? 60 : 14, pressure: -3, ...(stage === 'resolve' ? { ending: 'resolved' } : {}), text: stage === 'resolve' ? 'The reported concern was resolved safely.' : 'The team completed the declared support task safely.' }],
+      mixed: [{ objective: stage === 'resolve' ? 38 : 7, civilian: -4, ...(stage === 'resolve' ? { ending: 'resolved_late' } : {}), text: stage === 'resolve' ? 'The call was resolved after delay, with a reduced safety margin.' : 'The support task partly worked, with avoidable delay.' }],
+      adverse: [{ objective: stage === 'resolve' ? 20 : 2, civilian: -12, pressure: 6, ...(stage === 'resolve' ? { ending: 'handed_over' } : {}), text: stage === 'resolve' ? 'The call remained unresolved; specialists took over after the safety margin worsened.' : 'The support task did not go as planned; specialists received the remaining concerns.' }],
+    },
+  });
+  if (spec.type === 'medical_complication') {
+    const medical = extra('gen_medical_aid', 'resolve', 'Provide qualified medical assistance');
+    medical.icon = 'medic';
+    medical.approach = 'path';
+    medical.requires = { certs: ['advanced_first_aid'], allTags: ['medkit'], facts: [{ factId: 'f_person', in: ['confirmed'], reason: 'Locate the patient before giving assistance' }] };
+    medical.consumes = [{ tag: 'medkit', qty: 1 }];
+    medical.check = { kind: 'medical', ratings: [{ key: 'medical', weight: 0.8 }, { key: 'coordination', weight: 0.2 }], difficulty: 39 + spec.tier * 4 };
+    medical.capabilities = { rules: ['medical_exposure'] };
+    medical.equipment = [{ tag: 'medkit', value: 8, label: 'medical supplies ready' }];
+    medical.outcomes.favorable[0].text = 'Qualified assistance resolved the medical concern and completed the care handover.';
+    medical.outcomes.mixed[0].text = 'The medical concern was resolved after delays, with a reduced patient safety margin.';
+    medical.outcomes.adverse[0].text = 'Medical assistance did not safely resolve the concern; specialist care took over after the patient safety margin worsened.';
+    s.stages.resolve.actions.unshift(medical);
+  }
+  if (highRisk) {
+    s.pressure = { start: 20 + spec.tier * 2, perMinute: 0.7, threshold: 75, civilianPerMinute: 1 };
+    s.pressureLabel = 'Time to verify and protect';
+    s.briefing.known.push('The report does not establish a threat. Communication, protected assistance and specialist handover are available alternatives.');
+    s.briefing.unknown.push('The subject’s circumstances and safety of adjacent areas.');
+    s.facts.push({ id: 'f_adjacent_safety', label: 'Adjacent area checked', spaceId: target, truth: true, initial: 'unknown', showWhenUnknown: false,
+      markers: { unknown: 'UNCHECKED', confirmed: 'CHECKED' }, claim: 'The adjacent area has been checked.', source: null,
+      note: 'Safety of the adjacent area is unconfirmed. Verify it before context-dependent intervention or access.', uncertainty: 'Whether the adjacent area has been checked' });
+    for (const band of ['favorable', 'mixed'] as const) verify.outcomes[band][0].knowledge!.push({ factId: 'f_adjacent_safety', status: 'confirmed' });
+    const containment = extra('gen_protective_containment', 'adapt', 'Maintain declared protective containment', exterior);
+    containment.capabilities = { rules: ['authorized_response'], responseContext: spec.type === 'barricaded' ? 'constrained' : 'open' };
+    containment.requires = { certs: ['entry_team'] };
+    containment.equipment = [{ tag: 'shield', value: 5, narrowValue: 2, group: 'personal_protection', label: 'protected support' }];
+    s.stages.adapt.actions.push(containment);
+    const specialist = extra('gen_specialist_support', 'adapt', 'Prepare declared specialist support', exterior);
+    specialist.summary = 'A qualified separate support role for the verified scene; blocked views offer no benefit';
+    specialist.requires = { certs: ['precision_support'], allTags: ['precision_support'], minSquads: { count: 2, reason: 'Specialist support needs a separate supporting squad' } };
+    specialist.spatial = { channel: 'visual', weight: 10, noun: 'Support view' };
+    specialist.capabilities = { rules: ['specialist_support'], required: ['specialist_support'], subjectFactIds: ['f_person'] };
+    specialist.support = { max: 6, coverSpaceId: exterior, reachMinutes: 12, maxSquads: 1, label: 'separate support role', task: 'Support' };
+    s.stages.adapt.actions.push(specialist);
+
+    resolve.title = 'Continue communication toward a voluntary resolution';
+    resolve.summary = 'Verify the concern through calm contact; specialist handover remains available';
+    resolve.task = 'Communication';
+    resolve.approach = 'none';
+    resolve.check.difficulty = 36 + spec.tier * 4;
+    resolve.capabilities = { rules: [], deescalation: true };
+    resolve.outcomes.favorable[0].text = 'Calm communication resolved the concern without a forced intervention.';
+    const evacuation = extra('gen_protected_evacuation', 'resolve', 'Coordinate an exterior protected evacuation', exterior);
+    evacuation.check.kind = 'coordination';
+    evacuation.capabilities = { rules: ['vehicle_exterior'], vehicleAccessible: !built.location.zones.find((z) => z.id === exterior)?.tags.includes('narrow') };
+    evacuation.outcomes.favorable[0].text = 'Exterior protected assistance resolved the reported concern and completed the evacuation handover.';
+    evacuation.outcomes.mixed[0].text = 'The exterior evacuation was completed after delays, with a reduced civilian safety margin.';
+    evacuation.outcomes.adverse[0].text = 'The exterior evacuation could not be completed safely; specialists took over the remaining concern.';
+    s.stages.resolve.actions.push(evacuation);
+
+    for (const [id, title, rule, tag, supply, cert] of [
+      ['gen_device_option', 'Consider a device-class intervention', 'less_lethal_device', 'energy_device', 'energy_cartridge', 'less_lethal'],
+      ['gen_impact_option', 'Consider an impact-class intervention', 'less_lethal_impact', 'impact_launcher', 'impact_supply', 'advanced_less_lethal'],
+    ] as const) {
+      const a = extra(id, 'resolve', title);
+      a.summary = 'Requires verified context and a qualified operator; an adverse result can cause harm';
+      a.requires = { allTags: [tag], certs: [cert] };
+      a.consumes = [{ tag: supply, qty: 1 }];
+      a.approach = 'path';
+      a.spatial = { channel: 'visual', subjectFactId: 'f_person', weight: 10, noun: 'Scene view' };
+      a.capabilities = { rules: [rule], required: [rule], subjectFactIds: ['f_person'], safetyFactIds: ['f_adjacent_safety'] };
+      a.outcomes.favorable[0].text = `${rule === 'less_lethal_device' ? 'Device-class' : 'Impact-class'} intervention resolved the verified concern; the team completed the safety handover.`;
+      a.outcomes.mixed[0].text = `${rule === 'less_lethal_device' ? 'Device-class' : 'Impact-class'} intervention resolved the concern after delay, with a reduced civilian safety margin.`;
+      a.outcomes.adverse[0].civilian = -20;
+      a.outcomes.adverse[0].text = `${rule === 'less_lethal_device' ? 'Device-class' : 'Impact-class'} intervention did not resolve the concern safely; civilian safety worsened and specialist care took over.`;
+      s.stages.resolve.actions.push(a);
+    }
+    const door = built.location.openings.find((o) => o.type === 'door' && (o.a === target || o.b === target) && ['hollow_core', 'solid_core', 'steel'].includes(o.material ?? ''));
+    if (door) for (const accessMethod of ['mechanical', 'charge'] as const) {
+      // Steel supports a mechanical alternative; it never grants a charge bypass.
+      if (accessMethod === 'charge' && door.material === 'steel') continue;
+      const a = extra(`gen_access_${accessMethod}`, 'adapt', accessMethod === 'mechanical' ? 'Prepare qualified mechanical access' : 'Compare abstract single-use access');
+      a.icon = 'door';
+      a.approach = 'path';
+      a.targetId = door.a === target ? door.b : door.a;
+      a.requires = { allTags: [accessMethod === 'mechanical' ? 'rescue_tool' : 'door_charge'], certs: ['controlled_access'] };
+      if (accessMethod === 'charge') a.consumes = [{ tag: 'door_charge', qty: 1 }];
+      a.capabilities = { rules: ['permitted_door_access'], required: ['permitted_door_access'], accessMethod, openingId: door.id, safetyFactIds: ['f_adjacent_safety'] };
+      for (const [band, civilian] of [['favorable', -2], ['mixed', -6], ['adverse', -14]] as const) {
+        a.outcomes[band][0].pressure = accessMethod === 'charge' ? 8 : 1;
+        if (accessMethod === 'charge') a.outcomes[band][0].civilian = civilian;
+        if (band !== 'adverse') a.outcomes[band][0].openings = [{ openingId: door.id, state: 'open' }];
+      }
+      s.stages.adapt.actions.push(a);
+    }
+    if (door) {
+      const inspect = extra('gen_inspect_opening', 'adapt', 'Inspect the accessible opening');
+      inspect.icon = 'intel';
+      inspect.summary = 'A qualified camera operator checks the local view after the opening is accessible';
+      inspect.requires = { allTags: ['inspection_camera'], certs: ['drone_operator'] };
+      inspect.consumes = [{ tag: 'battery', qty: 1 }];
+      inspect.check.kind = 'observation';
+      inspect.spatial = { channel: 'visual', subjectFactId: 'f_person', weight: 12, noun: 'Camera view' };
+      inspect.capabilities = { rules: ['opening_inspection'], required: ['opening_inspection'], openingId: door.id };
+      inspect.outcomes.favorable[0].knowledge = [{ factId: 'f_person', status: 'confirmed' }];
+      s.stages.adapt.actions.push(inspect);
+    }
+    // A separate, one-shot context check allows preparing access before moving
+    // to the resolution stage. It never confirms anything via equipment alone.
+    const safety = extra('gen_check_context', 'adapt', 'Check the adjacent area and reported location');
+    safety.icon = 'search';
+    safety.check.kind = 'observation';
+    safety.approach = 'path';
+    for (const band of ['favorable', 'mixed'] as const) safety.outcomes[band][0].knowledge = [{ factId: 'f_person', status: 'confirmed' }, { factId: 'f_adjacent_safety', status: 'confirmed' }];
+    s.stages.adapt.actions.unshift(safety);
+  }
+  for (const stage of Object.values(s.stages)) for (const a of stage.actions) {
+    const flag = `used:${a.id}`;
+    a.requires.notFlags = [...(a.requires.notFlags ?? []), { flag, reason: 'This step has already been completed' }];
+    for (const band of ['favorable', 'mixed', 'adverse'] as const) a.outcomes[band][0].setFlags = [...(a.outcomes[band][0].setFlags ?? []), flag];
+  }
+  return s;
 }
 
 /** Avoid the locations already on the board while another is available. */
@@ -208,7 +364,12 @@ export function drawIncidentSpec(
 ): { spec: IncidentSpec; state: number } {
   const fresh = allFamilies.filter((id) => !ctx.avoidFamilies?.includes(id));
   const family = pick(rngState, fresh.length ? fresh : allFamilies);
-  const incident = pick(family.state, INCIDENT_TYPES.filter((x) => x.families.includes(family.value)));
+  // Four slots for each everyday call, one for each specialist report. Keep the
+  // v1 array and number of PRNG draws exactly unchanged for saved campaigns.
+  const pool = ctx.contentVersion >= 2
+    ? [...INCIDENT_TYPES.flatMap((type) => [type, type, type, type]), ...INCIDENT_TYPES_V2.slice(INCIDENT_TYPES.length)]
+    : INCIDENT_TYPES;
+  const incident = pick(family.state, pool.filter((x) => x.families.includes(family.value)));
   const building = next(incident.state);
   const seed = next(building.state);
   const tier = next(seed.state);

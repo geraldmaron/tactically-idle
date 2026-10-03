@@ -65,7 +65,7 @@ export function autoLoadout(state: GameState, scenarioId: Id, squadIds: SquadId[
   const label = (sid: SquadId) => state.squads.find((s) => s.id === sid)?.name ?? `Squad ${sid}`;
   const warn = (key: string, message: string) => warnings.set(key, message);
   const locked = (sid: SquadId, itemId: Id) => itemId === STANDARD_RADIO || Object.hasOwn(options.loadouts?.[sid] ?? {}, itemId);
-  const pool = Object.keys(ITEMS).flatMap((id) => autoEquipReadyUnits(state, id, time));
+  const pool = Object.keys(ITEMS).filter((id) => !ITEMS[id].supportOnly).flatMap((id) => autoEquipReadyUnits(state, id, time));
   const usableIds = new Set(pool.map((u) => u.id));
 
   for (const sid of chosen) {
@@ -107,6 +107,7 @@ export function autoLoadout(state: GameState, scenarioId: Id, squadIds: SquadId[
     for (const id of options.units?.[sid] ?? []) {
       const unit = state.units[id];
       if (unit?.itemId === STANDARD_RADIO) continue;
+      if (unit && ITEMS[unit.itemId]?.supportOnly) { warn(`support:${id}`, 'Vehicles require an explicit exterior support slot and are never packed automatically.'); continue; }
       const quantity = unit && locked(sid, unit.itemId) ? counts[sid]![unit.itemId] : undefined;
       const quantityFull = quantity !== undefined && (!Number.isInteger(quantity) || quantity < 0 || picks[sid]!.filter((u) => u.itemId === unit.itemId).length >= quantity);
       if (!unit || !usableIds.has(id) || taken.has(id) || quantityFull) {
@@ -132,6 +133,7 @@ export function autoLoadout(state: GameState, scenarioId: Id, squadIds: SquadId[
   for (const sid of chosen) {
     for (const [itemId, qty] of Object.entries(counts[sid]!)) {
       if (itemId === STANDARD_RADIO) continue;
+      if (ITEMS[itemId]?.supportOnly) { delete counts[sid]![itemId]; warn(`support:${itemId}`, 'Vehicles require an explicit exterior support slot and are never packed automatically.'); continue; }
       if (!Number.isInteger(qty) || qty < 0 || !ITEMS[itemId]) {
         warn(`quantity:${sid}:${itemId}`, `${label(sid)}: invalid quantity or unknown item ${ITEMS[itemId]?.name ?? itemId}; check the manual loadout.`);
         continue;
@@ -178,6 +180,7 @@ export function autoLoadout(state: GameState, scenarioId: Id, squadIds: SquadId[
       for (const unit of pool) {
         if (have >= quantity) break;
         const def = ITEMS[unit.itemId];
+        if (!officers[sid]!.some((o) => (def.requiresCerts ?? []).every((cert) => o.certs.includes(cert)) && (action.check.kind !== 'execution' || highRiskAllowed(o)))) continue;
         if (!def.tags.includes(tag) || taken.has(unit.id) || planned.some((u) => u.id === unit.id) || locked(sid, unit.itemId)) continue;
         if (def.kind === 'equipment' && available().some((u) => u.itemId === unit.itemId)) continue;
         planned.push(unit);
@@ -213,12 +216,30 @@ export function autoLoadout(state: GameState, scenarioId: Id, squadIds: SquadId[
       const key = eq.group ?? eq.tag;
       groups.set(key, [...groups.get(key) ?? [], eq.tag]);
     }
+    for (const item of Object.values(ITEMS)) {
+      if (item.supportOnly || !item.capabilities?.some((cap) => action.capabilities?.rules.includes(cap))) continue;
+      if (!officers[sid]!.some((o) => (item.requiresCerts ?? []).every((cert) => o.certs.includes(cert)))) continue;
+      // Optional powered aids are only packed when their matching supply is available.
+      if ((item.supplies ?? []).some((need) => [...available(), ...pool.filter((u) => !taken.has(u.id))].filter((u) => u.itemId === need.itemId).length < need.qty)) continue;
+      const group = item.category === 'response' ? 'response_class' : item.category === 'protection' ? 'personal_protection' : item.capabilities[0];
+      groups.set(group, [...groups.get(group) ?? [], item.tags[0]]);
+    }
     // Entry tools also shorten routes in the engine, independent of equipment bonuses.
     for (const opening of action.requires.openings ?? []) if (opening.lockedTag) groups.set(opening.lockedTag, [opening.lockedTag]);
     if (action.approach === 'path') groups.set('entry_tool', ['entry_tool']);
     for (const tags of groups.values()) {
       if (!choose(tags) && !tags.every((tag) => Object.values(ITEMS).filter((item) => item.tags.includes(tag)).every((item) => locked(sid, item.id)))) {
         shortage(sid, tags[0]);
+      }
+    }
+    for (const unit of [...planned]) {
+      for (const supply of ITEMS[unit.itemId].supplies ?? []) {
+        const tag = ITEMS[supply.itemId].tags[0];
+        const stages = { ...stageNeeds[tag], [action.stage]: Math.max(stageNeeds[tag]?.[action.stage] ?? 0, supply.qty) };
+        if (!take(tag, Object.values(stages).reduce((sum, qty) => sum + qty, 0))) {
+          const i = planned.findIndex((p) => p.id === unit.id);
+          if (i >= 0) planned.splice(i, 1);
+        } else stageNeeds[tag] = stages;
       }
     }
     needs[sid] = stageNeeds;

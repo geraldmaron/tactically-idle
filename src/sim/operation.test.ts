@@ -45,9 +45,10 @@ const swapChenForReyes = (s: GameState): GameState => {
 };
 
 describe('scenario content and selectors', () => {
-  it('lists both scenarios with eligible squads and the briefing map shows the amber unknown', () => {
+  it('preserves the original scenario order and adds equipment practice cards', () => {
     const cards = scenarioCards(makeState(), NOW);
-    expect(cards.map((c) => c.code)).toEqual(['OP 0141', 'OP 0142']);
+    expect(cards.map((c) => c.code)).toEqual(['OP 0141', 'OP 0142', 'PRACTICE 03', 'PRACTICE 04', 'PRACTICE 05']);
+    expect(cards.slice(2).map((c) => c.id)).toEqual(['practice_signals_v2', 'practice_response_v2', 'practice_rescue_v2']);
     expect(cards[0].variantLabel).toBe('Uncertain occupancy');
     expect(cards[1].variantLabel).toBe('Time pressure');
     expect(cards[0].eligibleSquadIds).toEqual(['A', 'B']);

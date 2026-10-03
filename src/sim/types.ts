@@ -255,7 +255,7 @@ export interface BuiltLocation {
 export type RatingKey = 'shooting' | 'composure' | 'communication' | 'awareness' | 'medical' | 'coordination';
 export type Ratings = Record<RatingKey, number>; // 0..100 display scale
 
-export type CertId = 'crisis_negotiation' | 'entry_team' | 'advanced_first_aid' | 'surveillance' | 'drone_operator';
+export type CertId = 'crisis_negotiation' | 'entry_team' | 'advanced_first_aid' | 'surveillance' | 'drone_operator' | 'less_lethal' | 'advanced_less_lethal' | 'deescalation' | 'vehicle_operations' | 'precision_support' | 'controlled_access';
 export type TraitId = 'steady' | 'observant' | 'mentor' | 'impatient' | 'calm_voice' | 'rookie';
 export type Role = 'comms' | 'breach' | 'medic' | 'recon' | 'lead';
 
@@ -325,12 +325,24 @@ export interface Squad {
 
 // ---------------------------------------------------------------- department
 
+export type ItemCategory = 'comms' | 'intel' | 'protection' | 'access' | 'medical' | 'response' | 'less_lethal' | 'vehicles' | 'supplies';
+export type CapabilityId = 'visible_exterior' | 'dark_visible_scene' | 'opening_inspection' | 'weak_radio_link' | 'medical_exposure' | 'authorized_response' | 'specialist_support' | 'less_lethal_device' | 'less_lethal_impact' | 'permitted_door_access' | 'vehicle_exterior' | 'scene_coordination';
+
 export type ItemKind = 'equipment' | 'consumable' | 'infrastructure';
 
 export interface ItemDefinition {
   id: Id;
   name: string;
   kind: ItemKind;
+  category: ItemCategory;
+  aliases?: string[];
+  capabilities?: CapabilityId[];
+  requiresCerts?: CertId[];
+  /** Only deployable in the single explicit exterior support slot. */
+  supportOnly?: boolean;
+  helpsWith?: string[];
+  counters?: string[];
+  supplies?: { itemId: Id; qty: number }[];
   cost: number;
   /** Capability tags actions require, e.g. 'comms_kit', 'throw_phone', 'thermal', 'medkit', 'shield'. */
   tags: string[];
@@ -427,6 +439,7 @@ export interface Course {
   hours: number;
   cost: number;
   requiresNode?: Id;
+  requiresCerts?: CertId[];
   grants: { cert?: CertId; rating?: { key: RatingKey; delta: number } };
 }
 
@@ -558,6 +571,9 @@ export interface OperationRun {
   squadIds: SquadId[];
   squadTasks: SquadTask[];
   reservationIds: Id[];
+  /** Exact exterior support asset; never a hand-carried loadout. */
+  supportUnitIds?: Id[];
+  supportPositionId?: Id;
   stage: StageId | 'debrief';
   knowledge: Record<Id, KnowledgeStatus>;
   flags: string[];
@@ -571,7 +587,7 @@ export interface OperationRun {
   civilianSafety: number;
   history: DecisionResolution[];
   /** Pre-decision deliveries at exterior staging; distinct from tactical outcomes. */
-  resupplies?: { minutes: number; allocations: { squadId: SquadId; unitIds: Id[] }[] }[];
+  resupplies?: { minutes: number; supportUnitId?: Id; allocations: { squadId: SquadId; unitIds: Id[] }[] }[];
   revision: number;
   status: 'active' | 'debrief' | 'closed';
   endingId: Id | null;
@@ -766,6 +782,8 @@ export type Command =
       loadouts: Partial<Record<SquadId, Record<Id, number>>>;
       /** Optional explicit unit picks per squad; otherwise the best-condition ready units are taken. */
       units?: Partial<Record<SquadId, Id[]>>;
+      /** A maximum of one owned vehicle unit, explicitly selected. */
+      supportUnitIds?: Id[];
       /** Optional staging point per squad (from derived.stagingPoints); must lie in that squad's position zone. */
       staging?: Partial<Record<SquadId, Id>>;
       practice: boolean;

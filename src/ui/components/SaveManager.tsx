@@ -49,7 +49,7 @@ export function SaveManager({ open, onClose }: { open: boolean; onClose: () => v
     {message && <p className="save-success" role="status">{message}</p>}
     {busy && <p role="status">Saving locally…</p>}
     <fieldset disabled={busy} className="save-controls">
-    {edit ? <form className="save-edit" onSubmit={(e) => {
+    {edit ? <form className="save-edit" autoComplete="off" onSubmit={(e) => {
       e.preventDefault();
       if (edit.type === 'delete') void run({ type: 'delete', id: edit.id, confirmed: true, permanent: edit.permanent }, edit.permanent ? 'Save permanently deleted.' : 'Save deleted. You can undo the most recent deletion.');
       else if (edit.type === 'load') run({ type: 'load', id: edit.id, discardUnsaved: true }, 'Campaign loaded.', true);
@@ -58,7 +58,7 @@ export function SaveManager({ open, onClose }: { open: boolean; onClose: () => v
       else run({ type: edit.type, id: edit.id, name: edit.name, overwrite: !!selected, discardUnsaved: !saved.activeSlotId }, edit.type === 'new' ? 'New game started.' : 'Copy saved.', edit.type === 'new');
     }}>
       {edit.type === 'delete' || edit.type === 'rename' || edit.type === 'load' ? <p>Slot {edit.id}{selected ? ` · ${selected.name}` : ' · Empty'}</p> : <label>Destination slot<select value={edit.id} onChange={(e) => setEdit({ ...edit, id: Number(e.target.value) })}>{saved.slots.map((slot, i) => <option key={i} value={i + 1} disabled={edit.type === 'import' && saved.activeSlotId === i + 1}>Slot {i + 1} · {slot?.name ?? 'Empty'}</option>)}</select></label>}
-      {edit.type !== 'delete' && edit.type !== 'load' && <label>Save name<input autoFocus value={edit.name} maxLength={36} onChange={(e) => setEdit({ ...edit, name: e.target.value })} /></label>}
+      {edit.type !== 'delete' && edit.type !== 'load' && <label>Save name<input autoComplete="off" value={edit.name} maxLength={36} onChange={(e) => setEdit({ ...edit, name: e.target.value })} /></label>}
       {!saved.activeSlotId && (edit.type === 'new' || edit.type === 'load') && <><p className="save-alert">Your current game is only in memory. Continuing will discard it. Export it now if you want to keep it; your existing save slots stay intact unless you explicitly replace one.</p><Button onClick={() => download(exportCurrentSave(), 'tactically-idle-campaign.json')}>Export current game first</Button></>}
       {edit.type === 'delete' ? <><p>This removes “{selected?.name}” from slot {edit.id}. The most recent deletion can be undone unless you select permanent deletion.</p><label className="save-permanent"><input type="checkbox" checked={!!edit.permanent} onChange={(e) => setEdit({ ...edit, permanent: e.target.checked })} />Delete permanently to free storage, and clear the previous undo backup</label>{edit.permanent && <p className="save-alert">This cannot be undone. Export a backup first if you need to keep this save.</p>}</> : edit.type !== 'rename' && edit.type !== 'load' && <>
         {selected && <p className="save-alert">This replaces “{selected.name}” in slot {edit.id}. Its current progress will be overwritten.</p>}
