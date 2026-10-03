@@ -35,6 +35,8 @@ import { buildIntel } from './intel';
 import type { IntelLine } from './intel';
 import { handCarriedLoadout, SupportPreparation } from './SupportPreparation';
 import { IncidentBriefContext } from './SupportContext';
+import { preparationOptions } from './preparation-options';
+import './preparation-options.css';
 
 export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel: () => void }) {
   const pageRef = useRef<HTMLDivElement>(null);
@@ -247,6 +249,11 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
     notify(`Equipped ${fix.plan.label} on squad ${fix.sid} from stock`, { tone: 'ok' });
   };
 
+  const preparation = scenario && scenario.version >= 4 ? preparationOptions({
+    actions: scenarioActions(scenario), warnings: check.warnings, practice, state: g, now, chosen, loadouts, picks,
+  }) : null;
+  const visibleWarnings = preparation?.warnings ?? check.warnings;
+
   const deploy = () => act(cmd, practice ? 'Practice started' : 'Squads deployed');
 
   const incidentType = scenario?.incident?.type ?? null;
@@ -283,7 +290,7 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
               People
             </h3>
             {intel.people.length === 0 ? (
-              <p className="dim">Nobody reported. Occupancy is unverified.</p>
+              <p className="dim">{scenario && scenario.version >= 4 ? 'No individual person details are listed here. Check the dispatch account.' : 'Nobody reported. Occupancy is unverified.'}</p>
             ) : (
               <ul className="intel">
                 {intel.people.map((p) => (
@@ -298,7 +305,7 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
               Threat information
             </h3>
             {intel.threats.length === 0 ? (
-              <p className="dim">No weapon reported. That does not mean none is present.</p>
+              <p className="dim">{scenario && scenario.version >= 4 ? 'No separate weapon details are listed. Check the dispatch account.' : 'No weapon reported. That does not mean none is present.'}</p>
             ) : (
               <ul className="intel">
                 {intel.threats.map((t) => (
@@ -581,7 +588,7 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
             {i}
           </p>
         ))}
-        {check.warnings.map((w, k) => {
+        {visibleWarnings.map((w, k) => {
           const fix = preparationFix(w);
           return <div key={`w${k}`}>
             <p className="note note-amber"><Icon name="warning" size={16} />{w}</p>
@@ -590,13 +597,23 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
             {fix && !fix.plan.issue && fix.plan.added > 0 && <Button size="sm" icon="box" onClick={() => equipPreparationFix(fix)}>Equip {fix.plan.label} on squad {fix.sid}</Button>}
           </div>;
         })}
-        {check.ok && check.warnings.length === 0 && (
+        {check.ok && visibleWarnings.length === 0 && (
           <p className="note note-mint">
             <Icon name="check" size={16} />
-            Ready to deploy.
+            {preparation && practice ? 'Ready to practise.' : 'Ready to deploy.'}
           </p>
         )}
       </div>
+
+      {!!preparation?.equipment.length && <details className="prep-equipment-options">
+        <summary>Optional equipment · {preparation.equipment.length} {preparation.equipment.length === 1 ? 'option' : 'options'} to review</summary>
+        <p>These bundles open up more choices. You can deploy without them; each decision will show its requirements when it becomes relevant.</p>
+        <ul>{preparation.equipment.map(({ key, label, actionTitles, fix }) => <li key={key}>
+          <strong>{label}</strong>
+          <p className="dim">For {actionTitles[0]}{actionTitles.length > 1 ? ` and ${actionTitles.length - 1} other ${actionTitles.length === 2 ? 'choice' : 'choices'}` : ''}.</p>
+          {fix.plan.issue ? <p>{fix.plan.issue}</p> : <Button size="sm" icon="box" onClick={() => equipPreparationFix(fix)}>Equip {fix.plan.label} on squad {fix.sid}</Button>}
+        </li>)}</ul>
+      </details>}
 
       <div className="stickyfoot prepfoot">
         <Button onClick={onCancel}>Cancel</Button>

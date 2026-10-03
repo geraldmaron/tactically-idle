@@ -1,0 +1,8 @@
+.prep-equipment-options { min-width: 0; border: 1px solid var(--line); border-radius: var(--radius); padding: 0 12px; background: var(--panel); overflow-wrap: anywhere; }
+.prep-equipment-options > summary { min-height: 44px; padding: 12px 0; color: var(--amber-2); font-size: 14px; font-weight: 600; cursor: pointer; }
+.prep-equipment-options > summary:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+.prep-equipment-options p { margin: 0 0 9px; font-size: 13px; line-height: 1.45; }
+.prep-equipment-options > ul { margin: 0; padding: 0; list-style: none; }
+.prep-equipment-options li { padding: 12px 0; border-top: 1px solid var(--line); }
+.prep-equipment-options strong { display: block; margin-bottom: 5px; font-size: 14px; }
+.prep-equipment-options .btn { min-height: 44px; height: auto; max-width: 100%; white-space: normal; }

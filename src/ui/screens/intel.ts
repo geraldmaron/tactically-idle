@@ -33,17 +33,21 @@ function isWeaponFact(f: FactDefinition): boolean {
   return WEAPON.test(f.claim) || WEAPON.test(f.label);
 }
 
-function line(f: FactDefinition, built: BuiltLocation): IntelLine {
-  return { id: f.id, label: f.person?.label ?? f.label, claim: f.claim, source: f.source, status: f.initial, where: spaceName(built, f.spaceId) };
+function line(f: FactDefinition, built: BuiltLocation, label?: string): IntelLine {
+  return { id: f.id, label: label ?? f.person?.label ?? f.label, claim: f.claim, source: f.source, status: f.initial, where: spaceName(built, f.spaceId) };
 }
 
 export function buildIntel(s: ScenarioDefinition | null, built: BuiltLocation): Intel {
   const empty: Intel = { people: [], threats: [], environment: null, difficulty: null, covered: new Set() };
   if (!s) return empty;
   const told = s.facts.filter((f) => f.initial === 'reported' || f.initial === 'confirmed');
-  const people = told.filter((f) => f.person).map((f) => line(f, built));
+  // V4's individual civilian outcomes link public person reports without adding
+  // dynamic engine people or exposing their hidden positions/truth.
+  const civilians = new Map(s.version >= 4 ? (s.civilianOutcomes ?? []).map(person => [person.factId, person.label]) : []);
+  const isPerson = (fact: FactDefinition) => !!fact.person || civilians.has(fact.id);
+  const people = told.filter(isPerson).map((f) => line(f, built, civilians.get(f.id)));
   const threats = told.filter(isWeaponFact).map((f) => line(f, built));
   const covered = new Set<string>();
-  for (const f of told) if ((f.person || isWeaponFact(f)) && f.reportedText) covered.add(f.reportedText);
+  for (const f of told) if ((isPerson(f) || isWeaponFact(f)) && f.reportedText) covered.add(f.reportedText);
   return { people, threats, environment: s.environment ?? null, difficulty: s.difficulty ?? null, covered };
 }
