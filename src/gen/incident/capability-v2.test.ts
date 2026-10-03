@@ -126,38 +126,38 @@ describe('playable equipment practice', () => {
   });
 
   it('makes opening inspection usable after the authored opening change and refuses the sealed view', () => {
-    const equipment = ['inspection_camera', 'battery_pack'];
+    const equipment = ['inspection_camera'];
     const positive = exerciseEvaluation('practice_inspect', equipment, { openDoor: true });
     expect(positive.eligible, positive.reason ?? undefined).toBe(true);
     expect(contribution(positive, 'inspection_camera')).toBe(6);
-    expect(positive.uses.filter((unit) => unit.itemId === 'battery_pack')).toHaveLength(1);
+    expect(positive.uses.filter((unit) => unit.itemId === 'battery_pack')).toHaveLength(0);
     const sealed = exerciseEvaluation('practice_inspect', equipment);
     expect(sealed.eligible).toBe(false);
     expect(contribution(sealed, 'inspection_camera')).toBe(0);
   });
 
   it('lets old powered observation tools read an opening while glazing limits heat', () => {
-    const open = exerciseEvaluation('practice_heat_open', ['thermal_imager', 'battery_pack'], { openDoor: true });
-    const glazed = exerciseEvaluation('practice_heat', ['thermal_imager', 'battery_pack']);
+    const open = exerciseEvaluation('practice_heat_open', ['thermal_imager'], { openDoor: true });
+    const glazed = exerciseEvaluation('practice_heat', ['thermal_imager']);
     expect(open.eligible, open.reason ?? undefined).toBe(true);
-    expect(open.uses.filter((unit) => unit.itemId === 'battery_pack')).toHaveLength(1);
+    expect(open.uses.filter((unit) => unit.itemId === 'battery_pack')).toHaveLength(0);
     const heatScore = (result: typeof open) => result.contributors.filter((entry) => entry.label.startsWith('Heat')).reduce((total, entry) => total + entry.value, 0);
     expect(heatScore(open)).toBeGreaterThan(heatScore(glazed));
-    const drone = exerciseEvaluation('practice_drone', ['camera_drone', 'battery_pack'], { openDoor: true });
+    const drone = exerciseEvaluation('practice_drone', ['camera_drone'], { openDoor: true });
     expect(drone.eligible, drone.reason ?? undefined).toBe(true);
     expect(contribution(drone, 'camera_drone')).toBe(8);
-    expect(drone.uses.filter((unit) => unit.itemId === 'battery_pack')).toHaveLength(1);
+    expect(drone.uses.filter((unit) => unit.itemId === 'battery_pack')).toHaveLength(0);
   });
 
-  it('recovers a genuine weak radio link and consumes one battery without improving a clear link', () => {
-    const equipment = ['radio_kit', 'radio_relay', 'battery_pack'];
+  it('recovers a genuine weak radio link with integrated power without improving a clear link', () => {
+    const equipment = ['radio_kit', 'radio_relay'];
     const weak = exerciseEvaluation('practice_radio_weak', equipment, { support: true, distantSupport: true });
     expect(weak.eligible, weak.reason ?? undefined).toBe(true);
     expect(contribution(weak, 'radio_relay')).toBeGreaterThan(0);
     expect(contribution(weak, 'radio_relay')).toBeLessThanOrEqual(5);
-    expect(weak.uses.filter((unit) => unit.itemId === 'battery_pack')).toHaveLength(1);
+    expect(weak.uses.filter((unit) => unit.itemId === 'battery_pack')).toHaveLength(0);
     expect(contribution(exerciseEvaluation('practice_radio_clear', equipment, { support: true }), 'radio_relay')).toBe(0);
-    expect(contribution(exerciseEvaluation('practice_radio_weak', ['radio_relay', 'battery_pack'], { support: true, distantSupport: true }), 'radio_relay')).toBe(0);
+    expect(contribution(exerciseEvaluation('practice_radio_weak', ['radio_relay'], { support: true, distantSupport: true }), 'radio_relay')).toBe(0);
   });
 
   it('uses medical protection only on the patient action and selects one response class', () => {
@@ -229,7 +229,7 @@ describe('playable equipment practice', () => {
       expect(scenario.rewards).toEqual({ funding: 0, devPoints: 0, trust: 0, xp: 0 });
     }
     for (const [id, tag, cert, supply] of [
-      ['practice_inspect', 'inspection_camera', 'drone_operator', 'battery'],
+      ['practice_inspect', 'inspection_camera', 'drone_operator', null],
       ['practice_device', 'energy_device', 'less_lethal', 'energy_cartridge'],
       ['practice_impact', 'impact_launcher', 'advanced_less_lethal', 'impact_supply'],
       ['practice_access_charge', 'door_charge', 'controlled_access', 'door_charge'],
@@ -237,7 +237,8 @@ describe('playable equipment practice', () => {
       const a = all.find((action) => action.id === id)!;
       expect(a.requires.allTags).toContain(tag);
       expect(a.requires.certs).toContain(cert);
-      expect(a.consumes).toContainEqual({ tag: supply, qty: 1 });
+      if (supply) expect(a.consumes).toContainEqual({ tag: supply, qty: 1 });
+      else expect(a.consumes ?? []).toEqual([]);
     }
   });
 

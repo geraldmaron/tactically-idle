@@ -18,10 +18,15 @@ export const DEV_NODES: Record<Id, DevelopmentNode> = {
     id: 'personnel_academy',
     branch: 'personnel',
     name: 'Training academy',
-    description: 'A second classroom, so two officers can be in courses at once.',
+    description: 'Expand the academy to train two, three, then four officers at once.',
     cost: { dp: 3, funding: 2500 },
     requires: [],
     effects: [{ kind: 'trainingSlots', delta: 1 }],
+    tiers: [
+      { cost: { dp: 3, funding: 2500 }, effects: [{ kind: 'trainingSlots', delta: 1 }] },
+      { cost: { dp: 4, funding: 4000 }, effects: [{ kind: 'trainingSlots', delta: 2 }] },
+      { cost: { dp: 6, funding: 6500 }, effects: [{ kind: 'trainingSlots', delta: 3 }] },
+    ],
   },
   personnel_recruiting: {
     id: 'personnel_recruiting',
@@ -38,8 +43,8 @@ export const DEV_NODES: Record<Id, DevelopmentNode> = {
   personnel_fourth_squad: {
     id: 'personnel_fourth_squad',
     branch: 'personnel',
-    name: 'Fourth squad',
-    description: 'Barracks space and a command post for another full squad. With the recruiting office, the roster reaches 18, enough to staff four squads of four.',
+    name: 'Expanded barracks',
+    description: 'Four extra roster places. With the recruiting office, the roster reaches 18, enough to staff the four available squads.',
     cost: { dp: 3, funding: 3000 },
     requires: ['personnel_recruiting'],
     effects: [{ kind: 'rosterCap', delta: 4 }],
@@ -93,16 +98,26 @@ export const DEV_NODES: Record<Id, DevelopmentNode> = {
     cost: { dp: 1, funding: 1000 },
     requires: [],
     effects: [{ kind: 'income', perHour: 60 }],
+    tiers: [
+      { cost: { dp: 1, funding: 1000 }, effects: [{ kind: 'income', perHour: 60 }] },
+      { cost: { dp: 3, funding: 3000 }, effects: [{ kind: 'income', perHour: 120 }] },
+      { cost: { dp: 5, funding: 6000 }, effects: [{ kind: 'income', perHour: 200 }] },
+    ],
   },
   // ---- logistics
   logistics_equipment_manager: {
     id: 'logistics_equipment_manager',
     branch: 'logistics',
     name: 'Equipment manager',
-    description: 'A dedicated maintenance workshop: reusable gear wears 20% more slowly and repairs cost 25% less. Optional hourly servicing starts paused; choose its spending ceiling on Gear.',
+    description: 'Improve the maintenance workshop for cheaper repairs, slower reusable-gear wear, and more automatic service jobs. Choose the optional hourly spending ceiling on Gear.',
     cost: { dp: 3, funding: 2500 },
     requires: [],
-    effects: [{ kind: 'equipmentManager' }],
+    effects: [{ kind: 'equipmentManager', repairMultiplier: 0.75, wearMultiplier: 0.8, maxConcurrentServices: 2 }],
+    tiers: [
+      { cost: { dp: 3, funding: 2500 }, effects: [{ kind: 'equipmentManager', repairMultiplier: 0.75, wearMultiplier: 0.8, maxConcurrentServices: 2 }] },
+      { cost: { dp: 5, funding: 4500 }, effects: [{ kind: 'equipmentManager', repairMultiplier: 0.65, wearMultiplier: 0.7, maxConcurrentServices: 3 }] },
+      { cost: { dp: 7, funding: 7500 }, effects: [{ kind: 'equipmentManager', repairMultiplier: 0.55, wearMultiplier: 0.6, maxConcurrentServices: 4 }] },
+    ],
   },
   logistics_presets: {
     id: 'logistics_presets',
@@ -131,6 +146,11 @@ export const DEV_NODES: Record<Id, DevelopmentNode> = {
     cost: { dp: 2, funding: 1000 },
     requires: [],
     effects: [{ kind: 'recoveryRate', mult: 1.5 }],
+    tiers: [
+      { cost: { dp: 2, funding: 1000 }, effects: [{ kind: 'recoveryRate', mult: 1.5 }] },
+      { cost: { dp: 4, funding: 2800 }, effects: [{ kind: 'recoveryRate', mult: 1.75 }] },
+      { cost: { dp: 6, funding: 5000 }, effects: [{ kind: 'recoveryRate', mult: 2 }] },
+    ],
   },
   wellbeing_first_aid: {
     id: 'wellbeing_first_aid',

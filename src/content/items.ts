@@ -47,14 +47,13 @@ export const ITEMS: Record<string, ItemDefinition> = {
   },
   thermal_imager: {
     id: 'thermal_imager',
-    helpsWith: ["Heat observation through usable sight paths, with one battery per declared action."],
+    helpsWith: ["Heat observation through usable sight paths, with integrated power."],
     counters: ["Walls and glass block most thermal observation. Heat does not identify a person."],
     category: 'intel',
     name: 'Thermal imager',
     kind: 'equipment',
     cost: 1500,
     tags: ['thermal'],
-    supplies: [{ itemId: 'battery_pack', qty: 1 }],
     requiresNode: 'intel_thermal',
     description: THERMAL_DESCRIPTION,
     wear: { perUse: 5, perDay: 0.2, unreliableBelow: 50, failAt: 20, serviceHours: 6, serviceCost: 200, restoreTo: 90 },
@@ -62,17 +61,16 @@ export const ITEMS: Record<string, ItemDefinition> = {
   },
   camera_drone: {
     id: 'camera_drone',
-    helpsWith: ["A certified operator observes a declared area using one battery per action."],
+    helpsWith: ["A certified operator observes a declared area using integrated power."],
     counters: ["Blocked openings, range and worn condition limit observation; no automatic whole-building reveal."],
     category: 'intel',
     name: 'Camera drone',
     kind: 'equipment',
     cost: 2200,
     tags: ['drone'],
-    supplies: [{ itemId: 'battery_pack', qty: 1 }],
     requiresNode: 'intel_drone',
     requiresCerts: ['drone_operator'],
-    description: 'Indoor survey by a certified operator. Uses a battery pack.',
+    description: 'Indoor survey by a certified operator. Power is included in the equipment.',
     wear: { perUse: 12, perDay: 0.1, unreliableBelow: 55, failAt: 25, serviceHours: 8, serviceCost: 260, restoreTo: 88 },
     range: { effective: 150, max: 300 },
   },
@@ -112,18 +110,6 @@ export const ITEMS: Record<string, ItemDefinition> = {
     requiresCerts: ['advanced_first_aid'],
     description: 'Consumed when used for stabilisation.',
     wear: { perUse: 100, perDay: 0, unreliableBelow: 0, failAt: 0, serviceHours: 0, serviceCost: 0, restoreTo: 0, shelfLifeDays: 540 },
-  },
-  battery_pack: {
-    id: 'battery_pack',
-    helpsWith: ["One exact unit powers a declared thermal, camera or relay action."],
-    counters: ["No passive score bonus. Expired batteries cannot be used or serviced."],
-    category: 'supplies',
-    name: 'Battery pack',
-    kind: 'consumable',
-    cost: 40,
-    tags: ['battery'],
-    description: 'Consumed by thermal and drone use.',
-    wear: { perUse: 100, perDay: 0.4, unreliableBelow: 50, failAt: 20, serviceHours: 0, serviceCost: 0, restoreTo: 0, shelfLifeDays: 365 },
   },
   observation_binoculars: {
     "id": "observation_binoculars",
@@ -185,12 +171,6 @@ export const ITEMS: Record<string, ItemDefinition> = {
     ],
     "capabilities": [
         "opening_inspection"
-    ],
-    "supplies": [
-        {
-            "itemId": "battery_pack",
-            "qty": 1
-        }
     ]
 },
   portable_light: {
@@ -250,12 +230,6 @@ export const ITEMS: Record<string, ItemDefinition> = {
     "requiresNode": "logistics_field_support",
     "capabilities": [
         "weak_radio_link"
-    ],
-    "supplies": [
-        {
-            "itemId": "battery_pack",
-            "qty": 1
-        }
     ]
 },
   light_protection: {

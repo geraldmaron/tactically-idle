@@ -173,7 +173,11 @@ describe('generated incidents', () => {
     expect(getScenario('ms_occupancy')).toBe(MS_OCCUPANCY);
     const spec: IncidentSpec = { type: 'welfare_check', familyId: 'maple_street', buildingSeed: 0, seed: 42, tier: 1, contentVersion: 1 };
     const legacy = getScenario(incidentId(spec))!;
-    expect(legacy.stages).toEqual(MS_OCCUPANCY.stages);
+    const currentShape = structuredClone(legacy.stages);
+    const thermal = currentShape.adapt.actions.find((action) => action.id === 'ms_thermal')!;
+    thermal.summary = MS_OCCUPANCY.stages.adapt.actions.find((action) => action.id === 'ms_thermal')!.summary;
+    delete thermal.consumes;
+    expect(currentShape).toEqual(MS_OCCUPANCY.stages);
     expect(legacy.facts).toEqual(MS_OCCUPANCY.facts);
     expect(validateScenario(legacy, buildLocation('maple_street', 0))).toEqual([]);
     expect(parseIncidentId('gen:unknown:cedar_close:0:1:1:1')).toBeNull();

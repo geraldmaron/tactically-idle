@@ -23,6 +23,9 @@ export interface TestTransaction {
   allocations: Record<string, number>;
   completionFailed: boolean;
   refundedAt?: number;
+  /** Player pack claims remember their destination across close/reload. */
+  claimCampaignId?: string;
+  claimDelivered?: boolean;
 }
 export interface TestWallet {
   version: 1;

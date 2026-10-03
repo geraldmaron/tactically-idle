@@ -79,14 +79,12 @@ function signals(): ScenarioDefinition {
   const thermal = action('practice_heat', 'assess', 'Compare heat observation through glazing', 'shop');
   thermal.icon = 'thermal';
   thermal.requires = { ...thermal.requires, allTags: ['thermal'] };
-  thermal.consumes = [{ tag: 'battery', qty: 1 }];
   thermal.check.kind = 'observation';
   thermal.spatial = { channel: 'thermal', weight: 14, noun: 'Heat', openingId: 'w_shop_front' };
   thermal.approach = 'window';
   thermal.equipment = [{ tag: 'thermal', value: 8, label: 'heat observation aid' }];
   const inspect = action('practice_inspect', 'assess', 'Inspect a usable exterior opening', 'shop');
   inspect.requires = { ...inspect.requires, allTags: ['inspection_camera'], certs: ['drone_operator'] };
-  inspect.consumes = [{ tag: 'battery', qty: 1 }];
   inspect.approach = 'window';
   inspect.check.kind = 'observation';
   inspect.spatial = { channel: 'visual', weight: 12, noun: 'Camera view', openingId: 'd_side' };
@@ -94,7 +92,6 @@ function signals(): ScenarioDefinition {
   const drone = action('practice_drone', 'assess', 'Observe with a remote camera', 'shop');
   drone.icon = 'drone';
   drone.requires = { ...drone.requires, allTags: ['drone'], certs: ['drone_operator'] };
-  drone.consumes = [{ tag: 'battery', qty: 1 }];
   drone.approach = 'window';
   drone.check.kind = 'observation';
   drone.spatial = { channel: 'visual', weight: 12, noun: 'Camera view', openingId: 'd_side' };
