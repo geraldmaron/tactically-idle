@@ -7,6 +7,9 @@ import type { StoreOption, UnitView } from '../../sim/department-selectors';
 import type { GameState, Id, RestockRule, Squad } from '../../sim/types';
 import { CALENDAR } from '../../sim/calendar';
 import { ITEMS } from '../../content/items';
+import { DEV_NODES } from '../../content/dev-tree';
+import { nodeCheck } from '../../sim/develop';
+import { EQUIPMENT_MANAGER, equipmentWearMultiplier, hasEquipmentManager, maintenanceBudget } from '../../sim/equipment-manager-policy';
 import { Button, Card, Chip, EmptyState, Section, Stepper, UnitBar } from '../components/ui';
 import { Sheet } from '../components/Sheet';
 import { useToast } from '../components/toast';
@@ -24,6 +27,7 @@ export function GearScreen() {
   const [unitsFor, setUnitsFor] = useState<Id | null>(null);
   return (
     <div className="page">
+      <EquipmentManager />
       <Section title="Inventory" icon="box" hint="Every item is a set of individual units that wear at their own pace. Tap a tile to see each unit, service it or scrap it.">
         {opts.length === 0 ? (
           <Card>
@@ -41,7 +45,7 @@ export function GearScreen() {
       <UnitSheet itemId={unitsFor} onClose={() => setUnitsFor(null)} />
       <MaterialGuide />
 
-      <Section title="Loadout presets" icon="list" hint="A preset is the gear a squad takes by default. Apply it on the prepare screen.">
+      <Section title="Loadout presets" icon="list" hint="Save specialist gear choices here and apply them on preparation. Radios are standard kit: one per deployed officer is loaded automatically.">
         {!presets.unlocked ? (
           <p className="note note-warn">
             <Icon name="lock" size={16} />
@@ -77,6 +81,43 @@ export function GearScreen() {
         )}
       </Section>
     </div>
+  );
+}
+
+function EquipmentManager() {
+  const g = useGame();
+  const { act } = useToast();
+  const hired = hasEquipmentManager(g);
+  const node = DEV_NODES[EQUIPMENT_MANAGER.nodeId];
+  const check = nodeCheck(g, node);
+  const budget = maintenanceBudget(g);
+  const [draft, setDraft] = useState(budget || 200);
+  return (
+    <Section title="Equipment manager" icon="wrench" hint="25% cheaper servicing and 20% less wear on reusable equipment. Consumables still age and are consumed normally.">
+      <Card>
+        {!hired ? <>
+          <p className="dim">Hire once for {money(node.cost.funding)} + {node.cost.dp} development points. Automatic service starts paused; hiring does not authorize an hourly service budget.</p>
+          <Button variant="primary" disabled={!!check.reason} onClick={() => act({ type: 'unlockNode', nodeId: node.id }, 'Equipment manager hired. Automatic service is paused.')}>
+            Hire manager · {money(node.cost.funding)} + {node.cost.dp} DP
+          </Button>
+          {check.reason && <p className="reason">{check.reason}</p>}
+        </> : <>
+          <p><strong>{budget ? `Automatic service: up to ${money(budget)}/hour` : 'Automatic service paused'}</strong></p>
+          <p className="dim">Checks at the next clock hour, services worn idle gear below {EQUIPMENT_MANAGER.serviceBelow}% condition, and keeps {money(EQUIPMENT_MANAGER.fundingReserve)} in reserve. The manager starts a job only while fewer than {EQUIPMENT_MANAGER.maxConcurrentServices} repairs are underway, counting manual jobs. You can order additional manual repairs separately. Working radios are kept ready for assigned officers; spare radios allow routine servicing.</p>
+          <label className="field">
+            <span className="field-label">Hourly service spending ceiling</span>
+            <select value={draft} onChange={(e) => setDraft(Number(e.target.value))}>
+              {[...new Set([50, 100, 200, 300, 500, budget || 200])].sort((a, b) => a - b).map((n) => <option key={n} value={n}>{money(n)}/hour maximum</option>)}
+            </select>
+          </label>
+          <div className="row-actions">
+            <Button variant="primary" disabled={budget === draft} onClick={() => act({ type: 'setMaintenanceBudget', perHour: draft }, `Automatic service budget set to ${money(draft)}/hour`)}>{budget ? 'Update ceiling' : 'Enable automatic service'}</Button>
+            {budget > 0 && <Button onClick={() => act({ type: 'setMaintenanceBudget', perHour: 0 }, 'Automatic service paused. Existing repairs will finish.')}>Pause automatic service</Button>}
+          </div>
+          <p className="dim">The ceiling includes the repair discount. No purchases are made. Pausing stops new repairs; current repairs finish normally. Automatic spending stops after 24 hours without orders.</p>
+        </>}
+      </Card>
+    </Section>
   );
 }
 
@@ -180,11 +221,12 @@ function UnitList({ itemId }: { itemId: Id }) {
   const views = unitViews(g, itemId, now);
   const item = ITEMS[itemId];
   const w = item.wear;
+  const wearMultiplier = equipmentWearMultiplier(g, item);
   return (
     <div className="units">
       <p className="dim units-note">
         <Icon name="info" size={14} />
-        Each unit wears on its own. Used units lose {w.perUse} per operation and {w.perDay} per game day; below {w.unreliableBelow} they turn unreliable, at {w.failAt} or lower they need service.
+        Each unit wears on its own. Base wear is {Math.round(w.perUse * wearMultiplier * 100) / 100} per use and {Math.round(w.perDay * wearMultiplier * 1000) / 1000} per game day, adjusted by the unit's wear rate; below {w.unreliableBelow} it turns unreliable, at {w.failAt} or lower it needs service.{wearMultiplier < 1 && ' Equipment manager wear reduction is included.'}
       </p>
       {views.length === 0 ? (
         <EmptyState icon="box" title="No units to show">
@@ -276,7 +318,7 @@ function UnitRow({ v, now }: { v: UnitView; now: number }) {
         <div className="row-actions unit-actions">
           {canServiceAtAll && (
             <Button size="sm" icon="wrench" aria-disabled={!v.canService} className={v.canService ? '' : 'btn-soft-off'} onClick={() => tryOpen('service')}>
-              Service · {money(w.serviceCost)} · {w.serviceHours}h
+              Service · {money(v.serviceCost)} · {w.serviceHours}h
             </Button>
           )}
           <Button size="sm" variant="ghost" icon="trash" aria-disabled={!v.canScrap} className={v.canScrap ? '' : 'btn-soft-off'} onClick={() => tryOpen('scrap')}>
@@ -287,7 +329,7 @@ function UnitRow({ v, now }: { v: UnitView; now: number }) {
         <div className="confirm unit-confirm">
           <p>
             {pending === 'service'
-              ? `Service ${u.serial}? It costs ${money(w.serviceCost)} and is away for ${w.serviceHours}h, then returns at up to ${w.restoreTo}% condition.`
+              ? `Service ${u.serial}? It costs ${money(v.serviceCost)} and is away for ${w.serviceHours}h, then returns at up to ${w.restoreTo}% condition.`
               : `Scrap ${u.serial}? It is removed from the department and cannot be recovered.`}
           </p>
           <div className="row-actions">
@@ -316,7 +358,7 @@ function PresetEditor({ squad, opts }: { squad: Squad; opts: StoreOption[] }) {
   const { act } = useToast();
   const [draft, setDraft] = useState<Record<Id, number>>(squad.loadoutPreset);
   useEffect(() => setDraft(squad.loadoutPreset), [squad.loadoutPreset]);
-  const rows = opts.filter((o) => o.owned > 0 && o.item.kind !== 'infrastructure');
+  const rows = opts.filter((o) => o.owned > 0 && o.item.kind !== 'infrastructure' && o.item.id !== 'radio_kit');
   const dirty = JSON.stringify(normalize(draft)) !== JSON.stringify(normalize(squad.loadoutPreset));
   return (
     <Card className="preset">

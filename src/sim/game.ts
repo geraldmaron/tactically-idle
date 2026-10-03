@@ -1,8 +1,9 @@
 import type { Command, CommandType, Ctx, GameState, HandlerMap, HandlerResult } from './types';
 import { DEPARTMENT_HANDLERS } from './department';
 import { OPERATION_HANDLERS } from './operation';
+import { RESUPPLY_HANDLERS } from './equipment-resupply';
 
-const HANDLERS = { ...DEPARTMENT_HANDLERS, ...OPERATION_HANDLERS } as HandlerMap<CommandType>;
+const HANDLERS = { ...DEPARTMENT_HANDLERS, ...OPERATION_HANDLERS, ...RESUPPLY_HANDLERS } as HandlerMap<CommandType>;
 
 /**
  * Apply one command as a transaction. Time is settled first (same code path for

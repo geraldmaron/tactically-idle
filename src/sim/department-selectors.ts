@@ -43,6 +43,7 @@ import {
   LEARNING_MULTIPLIER,
 } from './career';
 import { daysToUnreliable, projectedCondition, scrapCheck, serviceCheck, stateLabelFor } from './equipment';
+import { equipmentWearMultiplier } from './equipment-manager-policy';
 import { readyUnits, unitEffectiveness } from './inventory';
 import { boardSummaryOf, type BoardSummary } from './incidents';
 
@@ -283,6 +284,7 @@ export interface UnitView {
   serviceUntil: number | null;
   expiresAt: number | null;
   canService: boolean;
+  serviceCost: number;
   serviceReason: string | null;
   canScrap: boolean;
   scrapReason: string | null;
@@ -306,10 +308,11 @@ export function unitViews(state: GameState, itemId: Id, now: number): UnitView[]
         item: def,
         stateLabel: stateLabelFor(u, def, condition),
         effectiveness: unitEffectiveness(shown, def),
-        daysToUnreliable: daysToUnreliable(def, u, condition),
+        daysToUnreliable: daysToUnreliable(def, u, condition, equipmentWearMultiplier(state, def)),
         serviceUntil: u.serviceUntil,
         expiresAt: u.expiresAt,
         canService: svc.ok,
+        serviceCost: svc.cost,
         serviceReason: svc.reason,
         canScrap: scrap.ok,
         scrapReason: scrap.reason,

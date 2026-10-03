@@ -1,7 +1,6 @@
 // The operations blueprint. Drawn entirely from built.location / built.derived plus the player's
 // SpaceViews; nothing here is a bitmap of the house, so the drawing cannot drift from the rules.
 import { useCallback, useId, useMemo, useRef, useState } from 'react';
-import type { PointerEvent as ReactPointerEvent } from 'react';
 import type { EnvironmentDefinition } from '../../sim/scenario-types';
 import type { BuiltLocation, Id, MapOverlay, SpaceView, SquadId, SquadTask, Vec } from '../../sim/types';
 import './blueprint.css';
@@ -18,7 +17,8 @@ import { OpeningsLayer } from './openings';
 import { PaperBack, PaperDefs, PaperFront, ids } from './paper';
 import { computeWalls } from './walls';
 import { statusWord } from './RoomList';
-import { useViewport, unitsPerPixel } from './useViewport';
+import { useViewport } from './useViewport';
+import { useBlueprintNavigation } from './useBlueprintNavigation';
 import { floorBadges, floorCount, floorGeometry, floorKnowledge, floorWord } from './floors';
 import { FloorTabs } from './FloorTabs';
 import { StairGhosts, StairLayer } from './stairs';
@@ -52,7 +52,6 @@ export interface BlueprintProps {
 
 
 const DOUBLE_TAP_MS = 380;
-const DRAG_SLOP_PX = 5;
 
 export function Blueprint({ built: allBuilt, spaces: allSpaces, squadTasks: allSquadTasks, selectedSpaceId, focusSquadId, highlightSpaceIds, onSelectSpace, lastChange, overlays: allOverlays, showMaterials, className, floor: controlledFloor, onFloorChange }: BlueprintProps) {
   const uid = useId().replace(/[^a-zA-Z0-9]/g, '');
@@ -93,10 +92,12 @@ export function Blueprint({ built: allBuilt, spaces: allSpaces, squadTasks: allS
   const stagingPoints = built.derived.stagingPoints ?? [];
 
   const viewById = useMemo(() => new Map(spaces.map((s) => [s.id, s])), [spaces]);
-  const { view, zoom, zoomBy, reset, zoomToRect, panTo } = useViewport(base);
+  const sceneKey = `${allBuilt.location.id}:${floor}`;
+  const camera = useViewport(base, sceneKey);
+  const { view, zoom, zoomBy, reset, zoomToRect } = camera;
   const svgRef = useRef<SVGSVGElement>(null);
-  const dragged = useRef(false);
   const lastTap = useRef<{ id: Id; t: number } | null>(null);
+  useBlueprintNavigation(svgRef, camera, `${sceneKey}:${base.x},${base.y},${base.w},${base.h}`, () => { lastTap.current = null; });
 
   const changed = useMemo(() => new Set(lastChange?.spaceIds ?? []), [lastChange]);
   const revision = lastChange?.revision ?? 0;
@@ -112,44 +113,8 @@ export function Blueprint({ built: allBuilt, spaces: allSpaces, squadTasks: allS
   const floorObjects = useMemo(() => loc.objects.filter((o) => isFloorLayer(o.type)), [loc]);
   const upperObjects = useMemo(() => loc.objects.filter((o) => !isFloorLayer(o.type)), [loc]);
 
-  // ------------------------------------------------------------ pan (only while zoomed)
-  const onPointerDown = useCallback(
-    (e: ReactPointerEvent<SVGSVGElement>) => {
-      if (zoom < 1.05 || (e.pointerType === 'mouse' && e.button !== 0)) return;
-      const svg = svgRef.current;
-      if (!svg) return;
-      const startX = e.clientX;
-      const startY = e.clientY;
-      const v0 = view;
-      const bounds = svg.getBoundingClientRect();
-      const perPx = unitsPerPixel(v0, bounds.width, bounds.height);
-      dragged.current = false;
-      const move = (ev: PointerEvent) => {
-        const dx = ev.clientX - startX;
-        const dy = ev.clientY - startY;
-        if (!dragged.current && Math.hypot(dx, dy) < DRAG_SLOP_PX) return;
-        dragged.current = true;
-        panTo(v0.x - dx * perPx, v0.y - dy * perPx);
-      };
-      const up = () => {
-        window.removeEventListener('pointermove', move);
-        window.removeEventListener('pointerup', up);
-        window.removeEventListener('pointercancel', up);
-        // let the click that follows a drag see the flag, then clear it
-        window.setTimeout(() => {
-          dragged.current = false;
-        }, 0);
-      };
-      window.addEventListener('pointermove', move);
-      window.addEventListener('pointerup', up);
-      window.addEventListener('pointercancel', up);
-    },
-    [zoom, view, panTo],
-  );
-
   const choose = useCallback(
     (spaceId: Id, poly: Vec[]) => {
-      if (dragged.current) return;
       onSelectSpace?.(spaceId);
       const now = performance.now();
       const prev = lastTap.current;
@@ -179,13 +144,13 @@ export function Blueprint({ built: allBuilt, spaces: allSpaces, squadTasks: allS
   };
 
   const sheetCls = `bp-root ${count > 1 ? 'bp-multifloor' : ''} ${zoom > 1.05 ? 'bp-zoomed' : ''} ${className ?? ''}`;
-  const vbStr = `${r2(view.x)} ${r2(view.y)} ${r2(view.w)} ${r2(view.h)}`;
+  const vbStr = `${view.x} ${view.y} ${view.w} ${view.h}`;
   const north = { x: frame.x + frame.w + 0.4, y: frame.y - 0.8 };
 
   return (
     <div className={sheetCls} style={{ aspectRatio: `${base.w} / ${base.h}` }}>
       <div className="bp-canvas">
-        <svg ref={svgRef} className="bp-svg" viewBox={vbStr} role="group" aria-label={`Floor plan of ${loc.name}${count > 1 ? `, ${floorWord(floor).toLowerCase()}` : ''}`} data-floor={floor} onPointerDown={onPointerDown} preserveAspectRatio="xMidYMid meet">
+        <svg ref={svgRef} className="bp-svg" viewBox={vbStr} role="group" tabIndex={0} aria-label={`Floor plan of ${loc.name}${count > 1 ? `, ${floorWord(floor).toLowerCase()}` : ''}`} aria-describedby={`${uid}-navigation-help`} aria-keyshortcuts="ArrowUp ArrowDown ArrowLeft ArrowRight Home" data-floor={floor} preserveAspectRatio="xMidYMid meet">
           <PaperDefs uid={uid} vb={base} />
           <defs>
             <WallPatternDefs uid={uid} runs={walls.runs} />
@@ -340,14 +305,16 @@ export function Blueprint({ built: allBuilt, spaces: allSpaces, squadTasks: allS
 
       {showMaterials && <MaterialLegend uid={uid} use={keyUse} />}
 
+      <p className="bp-nav-help" id={`${uid}-navigation-help`}>Drag to pan · Pinch or scroll to zoom<span className="bp-sr-only">. Keyboard: + and − to zoom, arrow keys to pan, Home to fit the map. Tab to a room and press Enter to select it.</span></p>
+
       <div className="bp-zoomctl" role="group" aria-label="Map zoom">
-        <button type="button" className="bp-zbtn" aria-label="Zoom in" onClick={() => zoomBy(1.6)} disabled={zoom >= 3.95}>
+        <button type="button" className="bp-zbtn" aria-label="Zoom in" title="Zoom in (+)" onClick={() => { lastTap.current = null; zoomBy(1.6); }} disabled={zoom >= 3.95}>
           <span aria-hidden="true">+</span>
         </button>
-        <button type="button" className="bp-zbtn" aria-label="Zoom out" onClick={() => zoomBy(1 / 1.6)} disabled={zoom <= 1.01}>
+        <button type="button" className="bp-zbtn" aria-label="Zoom out" title="Zoom out (−)" onClick={() => { lastTap.current = null; zoomBy(1 / 1.6); }} disabled={zoom <= 1.01}>
           <span aria-hidden="true">{'−'}</span>
         </button>
-        <button type="button" className="bp-zbtn" aria-label="Reset zoom" onClick={reset} disabled={zoom <= 1.01}>
+        <button type="button" className="bp-zbtn" aria-label="Fit map" title="Fit map (Home)" onClick={() => { lastTap.current = null; reset(); }} disabled={zoom <= 1.01}>
           <span aria-hidden="true">{'⤢'}</span>
         </button>
       </div>

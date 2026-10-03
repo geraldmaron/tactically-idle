@@ -52,6 +52,8 @@ const CONTRIBUTOR_SOURCES = ['rating', 'condition', 'trait', 'equipment', 'space
 
 function validReport(r: unknown): boolean {
   return isObj(r) && numbers(r, ['from', 'to', 'accruedHours', 'gross', 'wages', 'operating', 'restockSpend', 'net', 'devPoints'])
+    && (r.maintenanceSpend === undefined || (isNum(r.maintenanceSpend) && r.maintenanceSpend >= 0))
+    && (r.maintenanceStarted === undefined || isStrings(r.maintenanceStarted))
     && isBool(r.capped) && isStrings(r.recovered) && isStrings(r.shortages)
     && isList(r.completedCourses, (c) => isObj(c) && strings(c, ['officerId', 'courseId']))
     && isList(r.equipment, (e) => isObj(e) && isStr(e.unitId) && oneOf(e.event, ['unreliable', 'failed', 'expired', 'serviced']))
@@ -94,6 +96,11 @@ function validRun(r: unknown): boolean {
       && isStr(p.spaceId) && validPoint(p.at) && (key !== 'lastSeen' || isNum(p.revision))))) return false;
   }
   if (r.sourceIncident !== undefined && (!validIncident(r.sourceIncident) || r.sourceIncident.id !== r.scenarioId)) return false;
+  if (r.resupplies !== undefined && !isList(r.resupplies, (delivery) => isObj(delivery)
+    && isNum(delivery.minutes) && delivery.minutes > 0 && delivery.minutes <= 60
+    && isList(delivery.allocations, (allocation) => isObj(allocation) && oneOf(allocation.squadId, SQUAD_IDS)
+      && (r.squadIds as unknown[]).includes(allocation.squadId) && isStrings(allocation.unitIds)
+      && allocation.unitIds.length > 0 && new Set(allocation.unitIds).size === allocation.unitIds.length))) return false;
   // A structurally sound run still needs a resolvable map; selectors rebuild it immediately.
   const scenario = getScenario(r.scenarioId as string);
   return !!scenario && scenario.locationFamilyId === r.locationFamilyId && Number.isSafeInteger(r.locationSeed)
@@ -162,6 +169,7 @@ function validBase(s: unknown, v2: boolean): s is Record<string, unknown> {
   if (!isStrings(dep.unlockedNodes) || !dep.unlockedNodes.every((id) => Object.hasOwn(DEV_NODES, id))
     || !isList(dep.restockRules, (r) => isObj(r) && isStr(r.itemId) && Object.hasOwn(ITEMS, r.itemId) && numbers(r, ['target', 'budgetCeiling']))) return false;
   if (dep.candidateRefreshedAt !== undefined && !isNum(dep.candidateRefreshedAt)) return false;
+  if (dep.maintenanceBudgetPerHour !== undefined && (!isNum(dep.maintenanceBudgetPerHour) || !Number.isInteger(dep.maintenanceBudgetPerHour) || dep.maintenanceBudgetPerHour < 0 || dep.maintenanceBudgetPerHour > 500)) return false;
   if (!isObj(s.officers)) return false;
   const officers = s.officers as Record<string, unknown>;
   if (!Object.entries(officers).every(([k, o]) => validOfficer(o, k, v2))) return false;

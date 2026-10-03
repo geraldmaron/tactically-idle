@@ -28,6 +28,8 @@ Use **Saves / New** below the header for ten local campaign slots, New Game, loa
 
 In an incident briefing, **Auto-equip** fills untouched loadout choices from usable stock, keeps manual quantities, and explains shortages. See [auto-equip](docs/auto-equip.md).
 
+Radios load automatically at one per deployed officer. Gear offers an equipment-manager upgrade with discounted repairs, slower wear and explicitly enabled maintenance budgets. Blocked action details can request a timed stores delivery while squads remain staged outside. See [field readiness](docs/field-readiness.md). Maps support drag, pinch, wheel, keyboard navigation and Fit; the isolated [responsive harness](docs/responsive-layout.md) exercises real viewport widths.
+
 Dev-only state handle in the browser console: `window.__ti.getState()`, `__ti.send(cmd)`. The blueprint visual harness is at `/harness.html` (`?only=map&w=358&seed=7&door=blocked`, `?only=portraits&n=100`).
 
 ## Layout
@@ -51,7 +53,7 @@ Dev-only state handle in the browser console: `window.__ti.getState()`, `__ti.se
 - Two-squad deployment with a joint action (one squad acting, one supporting).
 - The live screen follows the approved composition: blueprint, marker annotations that change with knowledge, painted portrait strip, amber decisions. It fits 390×844 without scrolling, and there's no horizontal scroll at 320px.
 
-**Covered by unit tests only** (159 passing, `npm test`):
+**Covered by the regression suite** (`npm test`):
 
 - Offline equivalence, the 24h cap, and backward-clock checks.
 - Hiring and dismissal, training and the tree, three-squad limits.
@@ -62,7 +64,7 @@ Dev-only state handle in the browser console: `window.__ti.getState()`, `__ti.se
 **Not done or not proven:**
 
 - Native device spike: no engine comparison, no touch hardware, no suspend/resume on a phone.
-- Content beyond the slice: one layout and two scenarios exist; the "Next" row wants three layouts and six scenarios.
+- Generated calls now span six distinct location families, in addition to the authored Maple Street scenarios. See [residential layouts](docs/residential-layouts.md) for the versioned geometry and compatibility guarantees.
 - The camera drone, a separate "change priorities" action, and team familiarity are not used in any scenario yet.
 - Balance numbers are first-pass and directional only. There's been no playtest (acceptance 12 and 14).
 - The authored roster has 100 distinct identities. Portrait availability is explicit in `public/art/portraits/manifest.json`; remaining people use intentional personnel-file cards. See [personnel and art integration](docs/art/roster-integration.md).

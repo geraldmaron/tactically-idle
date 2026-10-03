@@ -152,7 +152,8 @@ export function makeState(opts: FixtureOptions = {}): GameState {
   const list = [...rosterOfficers(), ...(opts.squadC ? squadCOfficers() : [])];
   for (const o of list) officers[o.id] = o;
   const inv: Record<Id, number> = {
-    radio_kit: 6,
+    // Operation fixtures are fully stocked; real new-game stock remains six.
+    radio_kit: opts.squadC ? 12 : 8,
     loud_hailer: 2,
     throw_phone: 1,
     ballistic_shield: 2,
@@ -243,6 +244,23 @@ export function startRun(state: GameState, scenarioId: Id, squadIds: SquadId[], 
   const r = apply(state, startCmd(scenarioId, squadIds, over));
   if (!r.result.ok) throw new Error(`startOperation refused: ${r.result.reason}`);
   return r.state;
+}
+
+/** Model a pre-standard-kit active save; never used by the deployment path. */
+export function withLegacyRadios(state: GameState, quantities: Partial<Record<SquadId, number>>): GameState {
+  const legacy = structuredClone(state);
+  const retained: Partial<Record<SquadId, number>> = {};
+  legacy.reservations = legacy.reservations.filter((reservation) => {
+    const limit = quantities[reservation.squadId];
+    if (reservation.itemId !== 'radio_kit' || limit === undefined) return true;
+    const count = retained[reservation.squadId] ?? 0;
+    retained[reservation.squadId] = count + 1;
+    if (count < limit) return true;
+    legacy.units[reservation.unitId].status = 'ready';
+    return false;
+  });
+  if (legacy.activeRun) legacy.activeRun.reservationIds = legacy.reservations.map((r) => r.id);
+  return legacy;
 }
 
 type Status = 'unknown' | 'reported' | 'confirmed' | 'disproved';

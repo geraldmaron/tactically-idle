@@ -13,14 +13,17 @@
   display: block;
   width: 100%;
   height: 100%;
-  touch-action: pan-y;
-  font-family: var(--font-cond);
-}
-.bp-zoomed .bp-svg {
+  /* Only the drawing owns touch gestures; scrolling and browser zoom elsewhere are untouched. */
   touch-action: none;
   cursor: grab;
+  font-family: var(--font-cond);
 }
-.bp-zoomed .bp-svg:active {
+.bp-svg:focus-visible {
+  outline: 2px solid var(--amber-2);
+  outline-offset: -3px;
+}
+.bp-svg[data-navigating="true"],
+.bp-svg[data-navigating="true"] .bp-hit {
   cursor: grabbing;
 }
 
@@ -445,6 +448,31 @@
 }
 
 /* ---------------------------------------------------------------- zoom controls */
+.bp-nav-help {
+  position: absolute;
+  right: 8px;
+  bottom: 9px;
+  max-width: calc(100% - 152px);
+  margin: 0;
+  padding: 3px 6px;
+  border-radius: 4px;
+  background: rgba(9, 28, 78, 0.88);
+  color: var(--chalk);
+  font: 500 11px/1.3 var(--font-cond);
+  text-align: right;
+  pointer-events: none;
+}
+.bp-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
 .bp-zoomctl {
   position: absolute;
   left: 2px;

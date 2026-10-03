@@ -36,6 +36,8 @@ export function describeEffect(e: NodeEffect): string {
       return 'Unlocks saved squad loadout presets';
     case 'restockRules':
       return 'Unlocks automatic restocking with a spending ceiling';
+    case 'equipmentManager':
+      return '25% cheaper repairs, 20% less reusable-gear wear; opt-in automatic servicing on Gear';
     case 'candidatePool':
       return `+${e.delta} recruit candidate in the pool`;
   }

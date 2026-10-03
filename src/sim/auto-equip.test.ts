@@ -52,9 +52,9 @@ describe('auto-equip owned inventory', () => {
     const before = structuredClone(s);
     const plan = autoLoadout(s, 'ms_occupancy', ['A', 'B'], NOW + CALENDAR.gameDayMs);
     expect(plan.added).toBe(0);
-    expect(plan.loadouts).toEqual({ A: {}, B: {} });
+    expect(plan.loadouts).toEqual({ A: { radio_kit: 4 }, B: { radio_kit: 4 } });
     expect(plan.units).toEqual({ A: [], B: [] });
-    expect(plan.warnings.join(' ')).toMatch(/no.*usable.*Radio headset/i);
+    expect(plan.warnings.join(' ')).toMatch(/8 officers need 8 Radio headsets; only 0 usable/i);
     expect(plan.warnings.join(' ')).toMatch(/Thermal imager/);
     expect(s).toEqual(before);
   });
@@ -77,10 +77,10 @@ describe('auto-equip owned inventory', () => {
     const s = makeState({ inventory: { thermal_imager: 3, camera_drone: 3 } });
     const plan = autoLoadout(s, 'ms_occupancy', ['A', 'B'], NOW);
     expect(plan.added).toBeGreaterThan(4);
-    expect(plan.loadouts.A).toMatchObject({ throw_phone: 1, radio_kit: 1, thermal_imager: 1, battery_pack: 1 });
-    expect(plan.loadouts.B).toMatchObject({ radio_kit: 1, thermal_imager: 1, battery_pack: 1 });
+    expect(plan.loadouts.A).toMatchObject({ throw_phone: 1, radio_kit: 4, thermal_imager: 1, battery_pack: 1 });
+    expect(plan.loadouts.B).toMatchObject({ radio_kit: 4, thermal_imager: 1, battery_pack: 1 });
     for (const quantities of Object.values(plan.loadouts)) {
-      for (const [itemId, qty] of Object.entries(quantities)) if (ITEMS[itemId].kind === 'equipment') expect(qty).toBe(1);
+      for (const [itemId, qty] of Object.entries(quantities)) if (ITEMS[itemId].kind === 'equipment') expect(qty).toBe(itemId === 'radio_kit' ? 4 : 1);
       expect(quantities.camera_drone).toBeUndefined(); // No drone action in this scenario.
       expect(quantities.trauma_kit).toBeUndefined(); // No medical use here.
     }
@@ -103,10 +103,10 @@ describe('auto-equip owned inventory', () => {
     const scenarioId = scenarioWith([contact]);
     const s = makeState();
     const full = autoLoadout(s, scenarioId, ['A'], NOW);
-    expect(full.loadouts.A).toEqual({ throw_phone: 1 });
+    expect(full.loadouts.A).toEqual({ radio_kit: 4, throw_phone: 1 });
     delete s.units[unitId('throw_phone')];
     const fallback = autoLoadout(s, scenarioId, ['A'], NOW);
-    expect(fallback.loadouts.A).toEqual({ loud_hailer: 1 });
+    expect(fallback.loadouts.A).toEqual({ radio_kit: 4, loud_hailer: 1 });
     expect(fallback.warnings).toEqual([]);
   });
 
@@ -128,13 +128,13 @@ describe('auto-equip owned inventory', () => {
     const scenarioId = scenarioWith([thermal({ consumes: [{ tag: 'battery', qty: 2 }] })]);
     const s = onlyUnits(makeState(), [makeUnit('thermal_imager', 1), makeUnit('battery_pack', 1)]);
     const partial = autoLoadout(s, scenarioId, ['A'], NOW);
-    expect(partial.loadouts.A).toEqual({});
+    expect(partial.loadouts.A).toEqual({ radio_kit: 4 });
     expect(partial.added).toBe(0);
     expect(partial.warnings.join(' ')).toMatch(/Battery pack/);
     s.units[unitId('battery_pack', 2)] = makeUnit('battery_pack', 2);
-    expect(autoLoadout(s, scenarioId, ['A'], NOW).loadouts.A).toEqual({ thermal_imager: 1, battery_pack: 2 });
+    expect(autoLoadout(s, scenarioId, ['A'], NOW).loadouts.A).toEqual({ radio_kit: 4, thermal_imager: 1, battery_pack: 2 });
     const optOut = autoLoadout(s, scenarioId, ['A'], NOW, { loadouts: { A: { battery_pack: 0 } } });
-    expect(optOut.loadouts.A).toEqual({ battery_pack: 0 });
+    expect(optOut.loadouts.A).toEqual({ radio_kit: 4, battery_pack: 0 });
     expect(optOut.units.A).toEqual([]);
   });
 
@@ -145,7 +145,7 @@ describe('auto-equip owned inventory', () => {
     ]);
     const s = makeState({ inventory: { thermal_imager: 5, battery_pack: 20 } });
     const plan = autoLoadout(s, scenarioId, ['A'], NOW);
-    expect(plan.loadouts.A).toEqual({ thermal_imager: 1, battery_pack: 3 });
+    expect(plan.loadouts.A).toEqual({ radio_kit: 4, thermal_imager: 1, battery_pack: 3 });
     assertActualUnits(s, plan);
   });
 
@@ -161,7 +161,7 @@ describe('auto-equip owned inventory', () => {
 });
 
 describe('manual choices, repeat clicks, and current stock', () => {
-  it('preserves manual quantities, zero choices, and exact lower-condition units', () => {
+  it('preserves optional quantities and zeros while assigning standard radios by condition', () => {
     const s = makeState({ inventory: { thermal_imager: 1 } });
     const radio = unitId('radio_kit', 6);
     s.units[radio].condition = 35;
@@ -169,9 +169,9 @@ describe('manual choices, repeat clicks, and current stock', () => {
       loadouts: { A: { radio_kit: 2, throw_phone: 0, thermal_imager: 0, battery_pack: 0 } },
       units: { A: [radio] },
     });
-    expect(plan.loadouts.A).toMatchObject({ radio_kit: 2, throw_phone: 0, thermal_imager: 0, battery_pack: 0 });
-    expect(plan.units.A?.[0]).toBe(radio);
-    expect(plan.units.A?.filter((id) => s.units[id].itemId === 'radio_kit')).toHaveLength(2);
+    expect(plan.loadouts.A).toMatchObject({ radio_kit: 4, throw_phone: 0, thermal_imager: 0, battery_pack: 0 });
+    expect(plan.units.A).not.toContain(radio);
+    expect(plan.units.A?.filter((id) => s.units[id].itemId === 'radio_kit')).toHaveLength(4);
     assertActualUnits(s, plan);
   });
 
@@ -180,7 +180,7 @@ describe('manual choices, repeat clicks, and current stock', () => {
     const plan = autoLoadout(s, 'ms_occupancy', ['A'], NOW, { loadouts: { A: { radio_kit: 4 } } });
     expect(plan.loadouts.A?.radio_kit).toBe(4);
     expect(plan.units.A).toEqual([unitId('radio_kit')]);
-    expect(plan.warnings.join(' ')).toMatch(/requested 4 Radio headset; only 1 usable unit/);
+    expect(plan.warnings.join(' ')).toMatch(/4 officers need 4 Radio headsets; only 1 usable/);
     expect(s.department.funding).toBe(12400);
   });
 
@@ -193,9 +193,9 @@ describe('manual choices, repeat clicks, and current stock', () => {
     const plan = autoLoadout(s, 'ms_occupancy', ['A', 'B'], NOW, options);
     expect(Object.keys(plan.loadouts)).toEqual(['A']);
     expect(Object.keys(plan.units)).toEqual(['A']);
-    expect(plan.loadouts.A?.radio_kit).toBeUndefined();
+    expect(plan.loadouts.A?.radio_kit).toBe(4);
     expect(plan.loadouts.A?.thermal_imager).toBeUndefined();
-    expect(plan.units.A).not.toContain(otherRadio);
+    expect(plan.units.A).toContain(otherRadio); // Radios are automatic; optional exact picks stay with their squad.
     expect(plan.units.A).not.toContain(otherThermal);
     expect(options).toEqual(before);
   });
@@ -212,8 +212,8 @@ describe('manual choices, repeat clicks, and current stock', () => {
 
   it('ignores stale or duplicate exact picks with explicit warnings and never double allocates a unit', () => {
     const s = makeState();
-    const id = unitId('radio_kit');
-    const plan = autoLoadout(s, 'ms_occupancy', ['A', 'B'], NOW, { loadouts: { A: { radio_kit: 1 }, B: { radio_kit: 1 } }, units: { A: [id, id, 'missing'], B: [id] } });
+    const id = unitId('loud_hailer');
+    const plan = autoLoadout(s, 'ms_occupancy', ['A', 'B'], NOW, { loadouts: { A: { loud_hailer: 1 }, B: { loud_hailer: 1 } }, units: { A: [id, id, 'missing'], B: [id] } });
     const ids = Object.values(plan.units).flat();
     expect(ids.filter((x) => x === id)).toHaveLength(1);
     expect(ids).not.toContain('missing');
@@ -224,10 +224,10 @@ describe('manual choices, repeat clicks, and current stock', () => {
 
   it('never keeps more exact units than a manual item quantity requests', () => {
     const s = makeState();
-    const first = unitId('radio_kit', 1);
-    const extra = unitId('radio_kit', 2);
-    const plan = autoLoadout(s, 'ms_occupancy', ['A'], NOW, { loadouts: { A: { radio_kit: 1 } }, units: { A: [first, extra] } });
-    expect(plan.loadouts.A?.radio_kit).toBe(1);
+    const first = unitId('loud_hailer', 1);
+    const extra = unitId('loud_hailer', 2);
+    const plan = autoLoadout(s, 'ms_occupancy', ['A'], NOW, { loadouts: { A: { loud_hailer: 1 } }, units: { A: [first, extra] } });
+    expect(plan.loadouts.A?.loud_hailer).toBe(1);
     expect(plan.units.A).toContain(first);
     expect(plan.units.A).not.toContain(extra);
     expect(plan.warnings.join(' ')).toMatch(/manual quantity already filled/);

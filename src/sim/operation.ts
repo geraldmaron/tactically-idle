@@ -27,6 +27,7 @@ import { ITEMS } from '../content/items';
 import { hashSeed, next } from './rng';
 import { deployability, fullName } from './officer';
 import { releaseRun, reserveLoadouts, settleRun, squadUnits } from './inventory';
+import { withStandardRadios } from './standard-kit';
 import { spaceAt, stagingPointById } from './spatial';
 import { centroidOf, defaultStagingFor, reachableOverGround } from './spatial-factors';
 import {
@@ -211,10 +212,14 @@ export function checkStart(state: GameState, now: number, cmd: StartCmd): StartC
   }
 
   if (!cmd.practice) {
+    const standard = withStandardRadios(state, ids, cmd.loadouts, cmd.units, now);
+    if (standard.issue) issues.push(standard.issue);
+    cmd = { ...cmd, loadouts: standard.loadouts, units: standard.units };
+    for (const sid of Object.keys(cmd.units ?? {}) as SquadId[]) if (!ids.includes(sid)) issues.push(`Equipment given for ${squadLabel(sid)}, which is not deployed`);
     for (const sid of Object.keys(cmd.loadouts) as SquadId[]) if (!ids.includes(sid)) issues.push(`Loadout given for ${squadLabel(sid)}, which is not deployed`);
     const probe = structuredClone(state);
     const r = reserveLoadouts(probe, 'probe', cmd.loadouts, cmd.units, now);
-    if (!r.ok) issues.push(r.reason);
+    if (!r.ok && !standard.issue) issues.push(r.reason);
   }
 
   if (issues.length === 0 && built) warnings.push(...startWarnings(state, now, scenario, built, cmd));
@@ -369,6 +374,7 @@ export function traceRun(scenario: ScenarioDefinition, run: OperationRun): { ste
   const sim = { knowledge: initialKnowledge(scenario), flags: [] as string[], pressure: scenario.pressure.start, objective: 0, civilianSafety: 100, clock: 0 };
   const actions = new Map(scenarioActions(scenario).map((a) => [a.id, a]));
   const steps: StepTrace[] = [];
+  for (const resupply of run.resupplies ?? []) advanceTime(sim, scenario, resupply.minutes);
   for (const h of run.history) {
     const a = actions.get(h.actionId) ?? null;
     const matched = (a?.outcomes[h.band] ?? []).filter((e) => conditionHolds(e.when, sim));
@@ -559,6 +565,8 @@ function debriefCauses(scenario: ScenarioDefinition, run: OperationRun, steps: S
   const unresolved = scenario.facts.filter((f) => ['unknown', 'reported'].includes(run.knowledge[f.id] ?? f.initial));
   for (const f of unresolved) sorted.push(`Never confirmed: ${f.label.toLowerCase()}.`);
   const head: string[] = run.practice ? ['Practice run: nothing here is recorded to the department.'] : [];
+  const resupplyMinutes = (run.resupplies ?? []).reduce((sum, delivery) => sum + delivery.minutes, 0);
+  if (resupplyMinutes > 0) head.push(`Equipment resupply took ${resupplyMinutes} min before the first decision; time pressure continued while squads waited.`);
   return [...head, ...sorted].slice(0, 7);
 }
 
@@ -568,6 +576,10 @@ const fail = (reason: string): HandlerResult => ({ ok: false, reason });
 
 export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
   startOperation(draft, cmd, ctx) {
+    if (!cmd.practice) {
+      const standard = withStandardRadios(draft, cmd.squadIds, cmd.loadouts, cmd.units, ctx.now);
+      cmd = { ...cmd, loadouts: standard.loadouts, units: standard.units };
+    }
     const chk = checkStart(draft, ctx.now, cmd);
     if (chk.issues.length > 0 || !chk.scenario) return fail(chk.issues[0] ?? 'Cannot start this operation');
     const scenario = chk.scenario;
@@ -600,6 +612,7 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     if (!run) return fail('No operation to cancel');
     if (run.status !== 'active') return fail('The operation is already over');
     if (run.history.length > 0) return fail('Cannot cancel after the first decision');
+    if (run.resupplies?.length) return fail('Cannot cancel after equipment resupply; operation time has already advanced');
     releaseRun(draft, run.id);
     clearAssignments(draft, run);
     if (run.sourceIncident && run.sourceIncident.expiresAt > Math.max(ctx.now, draft.department.clockHighWater)) {

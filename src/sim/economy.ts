@@ -14,6 +14,8 @@ import { gameDay } from './calendar';
 import { ageRecoveryFactor, applyCareerDue, nextCareerEventTime } from './career';
 import { applyUnitDue, applyUnitWear, createUnit, nextUnitEventTime, ownedCount } from './equipment';
 import { applyIncidentsDue, nextIncidentEventTime } from './incidents';
+import { runEquipmentMaintenance } from './equipment-manager';
+import { maintenanceBudget } from './equipment-manager-policy';
 
 export const HOUR_MS = 3_600_000;
 
@@ -173,6 +175,8 @@ interface Acc {
   wages: number;
   operating: number;
   restock: number;
+  maintenance: number;
+  maintenanceStarted: Id[];
   dp: number;
   courses: { officerId: Id; courseId: Id }[];
   shortages: Set<string>;
@@ -238,7 +242,12 @@ function applyDue(d: GameState, prev: number, t: number, acc: Acc, restock: bool
   }
   applyUnitDue(d, t, acc.equipment);
   applyCareerDue(d, prev, t, acc.personnel);
-  if (restock) runRestock(d, acc, t);
+  if (restock) {
+    runRestock(d, acc, t);
+    const maintenance = runEquipmentMaintenance(d, t);
+    acc.maintenance += maintenance.spent;
+    acc.maintenanceStarted.push(...maintenance.started);
+  }
   applyIncidentsDue(d, prev, t);
 }
 
@@ -289,6 +298,8 @@ export function settle(d: GameState, now: number): void {
     wages: 0,
     operating: 0,
     restock: 0,
+    maintenance: 0,
+    maintenanceStarted: [],
     dp: 0,
     courses: [],
     shortages: new Set(),
@@ -305,7 +316,7 @@ export function settle(d: GameState, now: number): void {
   applyDue(d, L, L, acc, false);
   let t = L;
   while (t < T) {
-    const restockActive = hasEffect(d, 'restockRules');
+    const restockActive = hasEffect(d, 'restockRules') || maintenanceBudget(d) > 0;
     const e = nextEventTime(d, t, T, W, restockActive);
 
     const r = ratesAt(d, t);
@@ -334,7 +345,7 @@ export function settle(d: GameState, now: number): void {
   dep.lastSettledAt = T;
 
   // A short settlement is not worth a report unless something happened that the player should see.
-  const notable = acc.courses.length > 0 || acc.equipment.length > 0 || acc.personnel.length > 0;
+  const notable = acc.courses.length > 0 || acc.equipment.length > 0 || acc.personnel.length > 0 || acc.maintenanceStarted.length > 0;
   if (T - L < ECONOMY_TUNING.reportMinMs && !notable) return;
   const recovered = [...wasRecovering].filter((id) => d.officers[id] && d.officers[id].stress < STRESS_BANDS.recovery);
   const rep: ShiftReport = {
@@ -345,6 +356,8 @@ export function settle(d: GameState, now: number): void {
     wages: acc.wages,
     operating: acc.operating,
     restockSpend: acc.restock,
+    maintenanceSpend: acc.maintenance,
+    maintenanceStarted: acc.maintenanceStarted,
     net: dep.funding - fundingBefore,
     devPoints: acc.dp,
     completedCourses: acc.courses,
@@ -367,6 +380,8 @@ export function settle(d: GameState, now: number): void {
     wages: prev.wages + rep.wages,
     operating: prev.operating + rep.operating,
     restockSpend: prev.restockSpend + rep.restockSpend,
+    maintenanceSpend: (prev.maintenanceSpend ?? 0) + (rep.maintenanceSpend ?? 0),
+    maintenanceStarted: [...(prev.maintenanceStarted ?? []), ...(rep.maintenanceStarted ?? [])],
     net: prev.net + rep.net,
     devPoints: prev.devPoints + rep.devPoints,
     completedCourses: [...prev.completedCourses, ...rep.completedCourses],

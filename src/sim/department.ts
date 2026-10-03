@@ -8,6 +8,7 @@ import { RECRUIT_TUNING } from '../content/recruits';
 import { CURRENT_SAVE_VERSION } from './save';
 import { createPersonnel } from './personnel';
 import { INCIDENT_HANDLERS, seedIncidentBoard } from './incidents';
+import { setMaintenanceBudget } from './equipment-manager';
 
 export const DEPARTMENT_HANDLERS: HandlerMap<DepartmentCommandType> = {
   tick: (d, _cmd, ctx) => {
@@ -33,6 +34,7 @@ export const DEPARTMENT_HANDLERS: HandlerMap<DepartmentCommandType> = {
   setLoadoutPreset: (d, c) => ROSTER_HANDLERS.setLoadoutPreset(d, c.squadId, c.items),
   setRestockRule: (d, c) => ROSTER_HANDLERS.setRestockRule(d, c.rule),
   serviceUnit: (d, c) => EQUIPMENT_HANDLERS.serviceUnit(d, c.unitId),
+  setMaintenanceBudget: (d, c) => setMaintenanceBudget(d, c.perHour),
   scrapUnit: (d, c) => EQUIPMENT_HANDLERS.scrapUnit(d, c.unitId),
   offerRetention: (d, c) => ROSTER_HANDLERS.offerRetention(d, c.officerId),
   markIncidentsSeen: (d) => INCIDENT_HANDLERS.markIncidentsSeen(d),

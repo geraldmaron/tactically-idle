@@ -7,6 +7,7 @@ import type { GameState, HandlerResult, Id, ItemDefinition, ItemUnit, ShiftRepor
 import { ITEMS } from '../content/items';
 import { CALENDAR } from './calendar';
 import { next } from './rng';
+import { equipmentServiceCost, equipmentWearMultiplier } from './equipment-manager-policy';
 
 const REAL_HOUR_MS = 3_600_000;
 
@@ -129,7 +130,7 @@ export function projectedCondition(state: GameState, u: ItemUnit, now: number): 
   const def = ITEMS[u.itemId];
   if (!def || (u.status !== 'ready' && u.status !== 'reserved')) return u.condition;
   const gapDays = Math.max(0, now - state.department.clockHighWater) / CALENDAR.gameDayMs;
-  return Math.max(0, u.condition - def.wear.perDay * u.wearRate * gapDays);
+  return Math.max(0, u.condition - def.wear.perDay * u.wearRate * equipmentWearMultiplier(state, def) * gapDays);
 }
 
 export function stateLabelFor(u: ItemUnit, def: ItemDefinition, condition: number): string {
@@ -142,9 +143,9 @@ export function stateLabelFor(u: ItemUnit, def: ItemDefinition, condition: numbe
 }
 
 /** Game days until the unit drops below unreliableBelow at its own daily rate; null when it never will or already has. */
-export function daysToUnreliable(def: ItemDefinition, u: ItemUnit, condition: number): number | null {
+export function daysToUnreliable(def: ItemDefinition, u: ItemUnit, condition: number, wearMultiplier = 1): number | null {
   if (u.status === 'expired' || u.status === 'scrapped' || u.status === 'service') return null;
-  const rate = def.wear.perDay * u.wearRate;
+  const rate = def.wear.perDay * u.wearRate * wearMultiplier;
   if (rate <= 0 || def.wear.unreliableBelow <= 0) return null;
   if (condition < def.wear.unreliableBelow) return null;
   return (condition - def.wear.unreliableBelow) / rate;
@@ -191,7 +192,7 @@ export function applyUnitWear(d: GameState, t: number, e: number, events: Equipm
     if (u.status !== 'ready' && u.status !== 'reserved') continue;
     const def = ITEMS[u.itemId];
     if (!def) continue;
-    const loss = def.wear.perDay * u.wearRate * days;
+    const loss = def.wear.perDay * u.wearRate * equipmentWearMultiplier(d, def) * days;
     if (loss > 0) {
       const before = u.condition;
       const after = Math.max(0, before - loss);
@@ -225,7 +226,8 @@ export function serviceCheck(state: GameState, unitId: Id, now: number): UnitAct
   if (!u) return no('No such unit');
   const def = ITEMS[u.itemId];
   if (!def) return no('Unknown item');
-  const { serviceCost: cost, serviceHours: hours, restoreTo } = def.wear;
+  const { serviceHours: hours, restoreTo } = def.wear;
+  const cost = equipmentServiceCost(state, def);
   if (def.kind !== 'equipment') return no('Consumables cannot be serviced', cost, hours);
   if (hours <= 0) return no(`${def.name} cannot be serviced`, cost, hours);
   if (u.status !== 'ready') return no(`${u.serial} is ${STATUS_WORD[u.status]}`, cost, hours);
@@ -247,8 +249,7 @@ export function scrapCheck(state: GameState, unitId: Id): UnitActionCheck & { sa
   return { ok: true, reason: null, salvage };
 }
 
-function serviceUnit(d: GameState, unitId: Id): HandlerResult {
-  const now = d.department.clockHighWater;
+export function beginService(d: GameState, unitId: Id, now: number): HandlerResult {
   const c = serviceCheck(d, unitId, now);
   if (!c.ok) return { ok: false, reason: c.reason ?? 'Cannot service this unit' };
   const u = d.units[unitId];
@@ -257,6 +258,10 @@ function serviceUnit(d: GameState, unitId: Id): HandlerResult {
   u.serviceUntil = now + c.hours * REAL_HOUR_MS;
   u.lastWearAt = now;
   return { ok: true };
+}
+
+function serviceUnit(d: GameState, unitId: Id): HandlerResult {
+  return beginService(d, unitId, d.department.clockHighWater);
 }
 
 function scrapUnit(d: GameState, unitId: Id): HandlerResult {

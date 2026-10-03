@@ -2,28 +2,25 @@ import { useSyncExternalStore } from 'react';
 import type { Command, GameState, HandlerResult } from '../sim/types';
 import { CampaignSlots } from '../sim/campaign-slots';
 import { withSaveLock } from '../sim/save-lock';
-import type { SaveStorage } from '../sim/save';
+import { createSaveEnvironment } from './save-environment';
 
 // Single game store. All mutations go through sim/game.dispatch as transactions.
 
 const TICK_MS = 5000;
 
 const listeners = new Set<() => void>();
-const locks = typeof navigator !== 'undefined' && navigator.locks ? navigator.locks : null;
-
-function storage(readOnly = !locks): SaveStorage | null {
-  try {
-    const local = window.localStorage;
-    // Older browsers can read and export saves, but must not race other writers.
-    return !readOnly ? local : { getItem: (key: string) => local.getItem(key), setItem: () => { throw new Error('Safe local saving is unavailable in this browser. Export your game or use a current browser.'); } };
-  } catch {
-    return null;
-  }
-}
+const environment = createSaveEnvironment({
+  search: typeof window === 'undefined' ? '' : window.location.search,
+  framed: typeof window !== 'undefined' && window.parent !== window,
+  getLocks: () => typeof navigator !== 'undefined' && navigator.locks ? navigator.locks : null,
+  getLocalStorage: () => window.localStorage,
+});
+const { locks, storage } = environment;
+export const isResponsivePreview = environment.temporary;
 
 const campaigns = await withSaveLock(locks, () => new CampaignSlots(storage(), Date.now()))
   .catch(() => new CampaignSlots(storage(true), Date.now()));
-if (!locks) campaigns.reportStorageIssue('Safe local saving is unavailable in this browser. You can read or export existing saves; use a current browser to save progress.');
+if (!locks && !isResponsivePreview) campaigns.reportStorageIssue('Safe local saving is unavailable in this browser. You can read or export existing saves; use a current browser to save progress.');
 let pendingSave: Promise<unknown> = Promise.resolve();
 function serialized<T>(action: () => T): Promise<T> {
   const result = pendingSave.then(() => withSaveLock(locks, action));

@@ -68,6 +68,8 @@ function ShiftReportCard({ report, g }: { report: ShiftReport; g: GameState }) {
       <KV icon="people" k="Wages" v={`-${money(report.wages)}`} />
       <KV icon="gear" k="Operating costs" v={`-${money(report.operating)}`} />
       {report.restockSpend > 0 && <KV icon="box" k="Restocking" v={`-${money(report.restockSpend)}`} />}
+      {(report.maintenanceSpend ?? 0) > 0 && <KV icon="wrench" k="Equipment manager servicing" v={`-${money(report.maintenanceSpend ?? 0)}`} />}
+      {(report.maintenanceStarted?.length ?? 0) > 0 && <p className="dim">Sent for service: {report.maintenanceStarted!.map((id) => g.units[id]?.serial ?? id).join(', ')}.</p>}
       {report.devPoints > 0 && <KV icon="chart" k="Development points" v={`+${Math.round(report.devPoints * 10) / 10}`} tone="amber" />}
       {report.capped && (
         <p className="note note-amber">

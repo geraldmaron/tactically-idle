@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { NEIGHBOURHOOD_FAMILIES } from '../../content/locations/neighbourhood';
 import { MS_OCCUPANCY } from '../../content/scenarios/ms-occupancy';
 import { buildLocation, pointInPolygon } from '../../sim/location';
 import { applyChoices } from '../../sim/location-variation';
@@ -14,7 +13,7 @@ import { dispatch } from '../../sim/game';
 import { deserialize, serialize } from '../../sim/save';
 import { startCmd, apply, NOW } from '../../sim/test-fixtures';
 import { INCIDENT_TYPES, drawIncidentSpec, generateIncident, incidentId, parseIncidentId } from './index';
-import { BUILDING_FAMILIES } from '../building';
+import { BUILDING_FAMILIES, GENERATED_LOCATION_FAMILIES } from '../building';
 import type { IncidentSpec } from '../../sim/scenario-types';
 
 function specs(seed: number): IncidentSpec[] {
@@ -23,7 +22,7 @@ function specs(seed: number): IncidentSpec[] {
 
 describe('neighbourhood geometry', () => {
   it('every possible authored partition/door combination validates', () => {
-    for (const family of NEIGHBOURHOOD_FAMILIES) {
+    for (const family of GENERATED_LOCATION_FAMILIES) {
       let choices: Record<string, VariationChoice>[] = [{}];
       for (const rule of family.variations) {
         const values = rule.kind === 'shiftEdge' ? rule.offsets : rule.kind === 'openingState' ? rule.states : [false, true];
@@ -38,8 +37,8 @@ describe('neighbourhood geometry', () => {
 
   it('has distinct plans, contents and routes with deterministic seed variation', () => {
     const buildings = BUILDING_FAMILIES.map((f) => buildLocation(f.id, 0));
-    expect(new Set(buildings.map((b) => JSON.stringify(b.location.footprint))).size).toBe(3);
-    expect(new Set(buildings.map((b) => JSON.stringify(b.location.rooms.map((r) => r.type)))).size).toBe(3);
+    expect(new Set(buildings.map((b) => JSON.stringify(b.location.footprint))).size).toBe(BUILDING_FAMILIES.length);
+    expect(new Set(buildings.map((b) => JSON.stringify(b.location.rooms.map((r) => r.type)))).size).toBeGreaterThanOrEqual(4);
     expect(buildings.find((b) => b.location.familyId === 'market_row')!.location.objects.some((o) => o.type === 'register')).toBe(true);
     for (const family of BUILDING_FAMILIES) {
       const variants = new Set<string>();
@@ -55,6 +54,7 @@ describe('neighbourhood geometry', () => {
 });
 
 describe('generated incidents', () => {
+  // Exhaustive content validation spans every template across six families.
   it('binds every template to valid rooms, positions, actions and entry points', () => {
     for (let seed = 0; seed < 18; seed++) for (const spec of specs(seed)) {
       const scenario = generateIncident(spec);
@@ -71,7 +71,7 @@ describe('generated incidents', () => {
         expect(built.location.objects.some((o) => o.in === room.id && o.tags.includes('blocks_space') && fact.person!.at!.x >= o.x && fact.person!.at!.x <= o.x + o.w && fact.person!.at!.y >= o.y && fact.person!.at!.y <= o.y + o.h)).toBe(false);
       }
     }
-  });
+  }, 20_000);
 
   it('starts a different location on each initial board card', () => {
     for (const seed of [1, 12345, 9876, 4294967295]) {

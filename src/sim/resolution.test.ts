@@ -1,3 +1,4 @@
+import { withLegacyRadios } from './test-fixtures';
 import { describe, expect, it } from 'vitest';
 import type { BuiltLocation, Contributor, GameState, Id, SquadId } from './types';
 import type { ScenarioDefinition } from './scenario-types';
@@ -252,7 +253,7 @@ describe('diminishing returns and support', () => {
     const far = evalAction(setRun(base, { positions: { B: 'back_yard' } }), occ, 'ms_controlled_entry', ['A'], ['B']);
     expect(sup(near)).toBeGreaterThan(sup(far));
     expect(sup(far)).toBeGreaterThan(0);
-    const noRadio = startRun(makeState(), 'ms_occupancy', ['A', 'B'], { loadouts: { B: { ballistic_shield: 1, trauma_kit: 1 } } });
+    const noRadio = withLegacyRadios(startRun(makeState(), 'ms_occupancy', ['A', 'B'], { loadouts: { B: { ballistic_shield: 1, trauma_kit: 1 } } }), { B: 0 });
     const dull = evalAction(setRun(noRadio, { stage: 'resolve', flags: ['in_contact'] }), occ, 'ms_controlled_entry', ['A'], ['B']);
     expect(sup(dull)).toBeLessThan(sup(near));
     expect(dull.contributors.some((c) => /Squad B link: one radio only/.test(c.label))).toBe(true);

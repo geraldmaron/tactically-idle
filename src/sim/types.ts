@@ -408,6 +408,7 @@ export type NodeEffect =
   | { kind: 'income'; perHour: number }
   | { kind: 'loadoutPresets' }
   | { kind: 'restockRules' }
+  | { kind: 'equipmentManager' }
   | { kind: 'candidatePool'; delta: number };
 
 export interface DevelopmentNode {
@@ -440,6 +441,8 @@ export interface Department {
   trainingSlots: number;
   unlockedNodes: Id[];
   restockRules: RestockRule[];
+  /** Opt-in automatic servicing ceiling per clock hour; absent/zero means paused. */
+  maintenanceBudgetPerHour?: number;
   /** Simulation time already settled. */
   lastSettledAt: number;
   /** Last player command; unattended funding accrual stops 24h after this. */
@@ -461,6 +464,9 @@ export interface ShiftReport {
   wages: number;
   operating: number;
   restockSpend: number;
+  /** Automatic manager service only; absent in earlier saves. */
+  maintenanceSpend?: number;
+  maintenanceStarted?: Id[];
   net: number;
   devPoints: number;
   completedCourses: { officerId: Id; courseId: Id }[];
@@ -564,6 +570,8 @@ export interface OperationRun {
   /** 0..100 civilian safety. */
   civilianSafety: number;
   history: DecisionResolution[];
+  /** Pre-decision deliveries at exterior staging; distinct from tactical outcomes. */
+  resupplies?: { minutes: number; allocations: { squadId: SquadId; unitIds: Id[] }[] }[];
   revision: number;
   status: 'active' | 'debrief' | 'closed';
   endingId: Id | null;
@@ -743,6 +751,7 @@ export type Command =
   | { type: 'setLoadoutPreset'; squadId: SquadId; items: Record<Id, number> }
   | { type: 'setRestockRule'; rule: RestockRule | { itemId: Id; remove: true } }
   | { type: 'serviceUnit'; unitId: Id }
+  | { type: 'setMaintenanceBudget'; perHour: number }
   | { type: 'scrapUnit'; unitId: Id }
   | { type: 'offerRetention'; officerId: Id }
   | { type: 'markIncidentsSeen' }
@@ -762,6 +771,7 @@ export type Command =
       practice: boolean;
     }
   | { type: 'cancelOperation' }
+  | { type: 'resupplyAction'; actionId: Id; actingSquadIds: SquadId[]; supportSquadIds: SquadId[] }
   | { type: 'decide'; actionId: Id; actingSquadIds: SquadId[]; supportSquadIds: SquadId[] }
   | { type: 'closeDebrief' };
 
@@ -788,6 +798,7 @@ export type Handler<T extends CommandType> = (
 export type HandlerMap<T extends CommandType> = { [K in T]: Handler<K> };
 
 export type DepartmentCommandType =
+  | 'setMaintenanceBudget'
   | 'tick'
   | 'acknowledgeReport'
   | 'hire'

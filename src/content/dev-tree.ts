@@ -1,6 +1,6 @@
 import type { DevelopmentNode, Id } from '../sim/types';
 
-// Thirteen non-exclusive nodes across five branches. Costs are proposed tuning values.
+// Non-exclusive nodes across five branches. Costs are proposed tuning values.
 // Starting devPoints are 3, so the first purchase is a real choice, not a forced order.
 export const DEV_NODES: Record<Id, DevelopmentNode> = {
   // ---- personnel
@@ -94,6 +94,15 @@ export const DEV_NODES: Record<Id, DevelopmentNode> = {
     effects: [{ kind: 'income', perHour: 60 }],
   },
   // ---- logistics
+  logistics_equipment_manager: {
+    id: 'logistics_equipment_manager',
+    branch: 'logistics',
+    name: 'Equipment manager',
+    description: 'A dedicated maintenance workshop: reusable gear wears 20% more slowly and repairs cost 25% less. Optional hourly servicing starts paused; choose its spending ceiling on Gear.',
+    cost: { dp: 3, funding: 2500 },
+    requires: [],
+    effects: [{ kind: 'equipmentManager' }],
+  },
   logistics_presets: {
     id: 'logistics_presets',
     branch: 'logistics',
