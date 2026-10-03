@@ -25,6 +25,14 @@ export function candidatesWithHireReceipt(candidates: Candidate[], receipt: Hire
   return displayed;
 }
 
+/** Removing a receipt also removes its slot from every later receipt's position. */
+export function dismissHireReceipt(receipts: HireReceipt[], candidateId: Id): HireReceipt[] {
+  const dismissed = receipts.find((receipt) => receipt.candidate.id === candidateId);
+  if (!dismissed) return receipts;
+  return receipts.filter((receipt) => receipt.candidate.id !== candidateId).map((receipt) =>
+    receipt.index > dismissed.index ? { ...receipt, index: receipt.index - 1 } : receipt);
+}
+
 export function Recruit() {
   const g = useGame();
   const [target, setTarget] = useState<Role | null>(null);
@@ -60,7 +68,7 @@ export function Recruit() {
               receipt={receipt?.projection}
               onToggle={() => setHireFor((current) => current === c.id ? null : c.id)}
               onHired={(projection) => { setReceipts((previous) => [...previous, { candidate: c, projection, index }]); setHireFor(null); }}
-              onDone={() => setReceipts((previous) => previous.filter((entry) => entry.candidate.id !== c.id))} />;
+              onDone={() => setReceipts((previous) => dismissHireReceipt(previous, c.id))} />;
           })}
         </div>
       )}

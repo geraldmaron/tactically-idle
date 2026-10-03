@@ -8,7 +8,7 @@ import type { Command, Role } from '../../sim/types';
 import { ChoiceRail } from '../components/ChoiceRail';
 import { Button } from '../components/ui';
 import { money, perHour, rate } from '../format';
-import { CandidateCard, candidatesWithHireReceipt, Recruit, RecruitRefresh } from './Recruit';
+import { CandidateCard, candidatesWithHireReceipt, dismissHireReceipt, Recruit, RecruitRefresh, type HireReceipt } from './Recruit';
 
 const NOW = Date.UTC(2026, 9, 3, 12);
 let state = createInitialState(NOW);
@@ -131,6 +131,43 @@ describe('candidate hire review', () => {
       expect(candidatesWithHireReceipt([], receipt)).toEqual([candidate]);
       expect(candidatesWithHireReceipt(remaining, null)).toBe(remaining);
     }
+  });
+
+  it.each([[0, 1], [1, 0]])('keeps a later live candidate after two hire receipts when Done follows order %j', (first, second) => {
+    const [a, b, c] = state.candidates;
+    const original: HireReceipt[] = [a, b].map((candidate, index) => ({ candidate, index, projection: projectHire(state, candidate.id) }));
+    const live = [c];
+    const before = structuredClone({ receipts: original, live, state });
+    const displayed = (receipts: HireReceipt[]) => [...receipts].sort((x, y) => x.index - y.index).reduce(candidatesWithHireReceipt, live).map((candidate) => candidate.id);
+    expect(displayed(original)).toEqual([a.id, b.id, c.id]);
+    const afterFirst = dismissHireReceipt(original, original[first].candidate.id);
+    expect(displayed(afterFirst)).toEqual([original[second].candidate.id, c.id]);
+    const afterSecond = dismissHireReceipt(afterFirst, original[second].candidate.id);
+    expect(displayed(afterSecond)).toEqual([c.id]);
+    expect({ receipts: original, live, state }).toEqual(before);
+    expect(dismissHireReceipt(afterFirst, original[first].candidate.id)).toBe(afterFirst);
+    expect(act).not.toHaveBeenCalled();
+  });
+
+  it.each([[0, 1, 2], [2, 0, 1], [1, 2, 0]])('preserves every remaining receipt order through Done sequence %j', (first, second, third) => {
+    const candidates = state.candidates;
+    const original: HireReceipt[] = candidates.map((candidate, index) => ({ candidate, index, projection: projectHire(state, candidate.id) }));
+    // Hiring out of display order must not make insertion order dictate the result.
+    let receipts = [original[2], original[0], original[1]];
+    const before = structuredClone(receipts);
+    let remaining = candidates.map((candidate) => candidate.id);
+    for (const index of [first, second, third]) {
+      const id = candidates[index].id;
+      const previous = receipts;
+      const snapshot = structuredClone(previous);
+      receipts = dismissHireReceipt(previous, id);
+      remaining = remaining.filter((candidateId) => candidateId !== id);
+      const displayed = [...receipts].sort((x, y) => x.index - y.index).reduce(candidatesWithHireReceipt, []);
+      expect(displayed.map((candidate) => candidate.id)).toEqual(remaining);
+      expect(previous).toEqual(snapshot);
+    }
+    expect([original[2], original[0], original[1]]).toEqual(before);
+    expect(dismissHireReceipt(original, 'not-a-receipt')).toBe(original);
   });
 
   it('keeps the old Confirm area inert for repeated desktop clicks and mobile taps while showing a stable success receipt', () => {
