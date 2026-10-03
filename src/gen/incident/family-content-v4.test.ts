@@ -91,6 +91,11 @@ describe('version-four varied responsibilities', () => {
     for (let i = 0; i < 300; i++) { const draw = drawIncidentSpec(state, { level: 5, trust: 80, contentVersion: 4 }); types.add(draw.spec.type); expect(parseIncidentId(incidentId(draw.spec))).toEqual(draw.spec); state = draw.state; }
     expect(types).toEqual(new Set(INCIDENT_TYPES_V4.map(type => type.type)));
     for (const type of HIGH_RISK_TYPES_V4) for (const version of [1, 2, 3]) expect(parseIncidentId(incidentId({ ...specFor(type), contentVersion: version }))).toBeNull();
+    for (const type of HIGH_RISK_TYPES_V4) {
+      const spec = { ...specFor(type), familyId: 'maple_street' };
+      expect(parseIncidentId(incidentId(spec))).toBeNull();
+      expect(() => generateIncident(spec)).toThrow('Invalid incident specification');
+    }
   });
   it('retains old practice IDs while exposing the new v4 entries', () => {
     for (const exercise of LEGACY_DECISION_EXERCISES) expect(getScenario(exercise.id)?.version).toBe(3);

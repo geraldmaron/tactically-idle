@@ -11,7 +11,7 @@ export function withVersionFourChoices(s: ScenarioDefinition, built: BuiltLocati
   const spec = s.incident!;
   const premise = premiseForV4(spec);
   const targetId = s.facts[0].spaceId;
-  const opening = built.location.openings.find(o => o.type === 'door' && (o.a === targetId || o.b === targetId));
+  const opening = built.location.openings.find(o => ['door', 'doorway', 'sliding'].includes(o.type) && (o.a === targetId || o.b === targetId));
   const ctx: V4Context = { scenario: s, built, premise, targetId, targetName: built.location.rooms.find(r => r.id === targetId)!.label.toLowerCase(), entryId: built.location.entries[0], openingId: opening?.id, difficulty: 33 + spec.tier * 3, careServiceId: premise.delayedReceiver ? 'district_paramedics' : 'city_paramedics' };
   s.summary = premise.report;
   s.variantLabel = premise.label;
