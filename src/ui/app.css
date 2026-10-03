@@ -95,7 +95,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   padding: 6px var(--gutter);
   background: linear-gradient(180deg, #0f1828, #0c1422);
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);

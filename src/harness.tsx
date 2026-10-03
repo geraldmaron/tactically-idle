@@ -8,7 +8,7 @@ import { Blueprint } from './ui/blueprint/Blueprint';
 import { RoomList } from './ui/blueprint/RoomList';
 import { Portrait } from './ui/portraits/Portrait';
 import { PERSONAS } from './content/personas';
-import { RESPONSIVE_PREVIEW_PARAM } from './ui/save-environment';
+import { RESPONSIVE_PREVIEW_PARAM, RESPONSIVE_PREVIEW_SANDBOX } from './ui/save-environment';
 
 /**
  * Staging point for an opening: from derived.stagingPoints when the spatial agent has landed them,
@@ -227,7 +227,7 @@ function ResponsiveGame() {
         <iframe
           title={`Tactically Idle test viewport ${size.width} by ${size.height}`}
           src={`${import.meta.env.BASE_URL}?${RESPONSIVE_PREVIEW_PARAM}=1`}
-          sandbox="allow-scripts"
+          sandbox={RESPONSIVE_PREVIEW_SANDBOX}
           width={size.width}
           height={size.height}
           className="h-game-frame"

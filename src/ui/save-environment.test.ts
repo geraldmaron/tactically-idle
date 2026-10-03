@@ -1,11 +1,14 @@
 import { describe, expect, it, vi } from 'vitest';
 import { CampaignSlots, SLOTS_KEY } from '../sim/campaign-slots';
-import { createSaveEnvironment, RESPONSIVE_PREVIEW_PARAM } from './save-environment';
+import { createSaveEnvironment, RESPONSIVE_PREVIEW_PARAM, RESPONSIVE_PREVIEW_SANDBOX } from './save-environment';
 
 const flag = `?${RESPONSIVE_PREVIEW_PARAM}=1`;
 const T0 = Date.UTC(2026, 9, 3);
 
 describe('responsive preview save isolation', () => {
+  it('allows local form handlers without same-origin, popup or navigation privileges', () => {
+    expect(new Set(RESPONSIVE_PREVIEW_SANDBOX.split(/\s+/))).toEqual(new Set(['allow-scripts', 'allow-forms']));
+  });
   it('requires both the exact harness flag and a child frame', () => {
     for (const [search, framed] of [['', true], [flag, false], [`?${RESPONSIVE_PREVIEW_PARAM}=true`, true], [`?${RESPONSIVE_PREVIEW_PARAM}=0`, true]] as const) {
       const getLocks = vi.fn(() => null);

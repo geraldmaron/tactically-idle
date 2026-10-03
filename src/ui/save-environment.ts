@@ -1,6 +1,8 @@
 import type { SaveStorage } from '../sim/save';
 
 export const RESPONSIVE_PREVIEW_PARAM = 'ti-responsive-preview';
+// Forms must fire React's submit handlers; keeping same-origin absent isolates browser saves.
+export const RESPONSIVE_PREVIEW_SANDBOX = 'allow-scripts allow-forms';
 type SaveLocks = Pick<LockManager, 'request'> | null;
 
 interface SaveEnvironmentContext {
