@@ -1,4 +1,5 @@
 import { reserveSupportVehicle, supportStartCheck } from './support-vehicles';
+import { applyIncidentConsequences, civilianOutcomeViews } from './incident-consequences';
 import { applyExternalSupportEffects, completionEvidence, COMPLETION_DISPOSITIONS, hasCompletionConditions, MAX_EXTERNAL_RESPONSE_MINUTES } from './external-support';
 // Operation engine: start, cancel, decide, closeDebrief. The run record is the
 // save: every committed decision stores its sample and result, so resuming never
@@ -116,6 +117,7 @@ export function validateScenario(s: ScenarioDefinition, built: BuiltLocation): s
       seen.add(a.id);
       if (a.stage !== stage) errs.push(`${a.id}: declared stage ${a.stage} but listed under ${stage}`);
       if (s.version >= 4) {
+        if (a.commandOnly && (a.approach !== 'none' || a.consumes?.length || a.check.kind === 'execution' || Object.values(a.outcomes).flat().some(effect => effect.officerHarm))) errs.push(`${a.id}: command decisions cannot perform field work or cause injury`);
         for (const requirement of a.requires.externalSupport ?? []) if (!serviceIds.has(requirement.serviceId)) errs.push(`${a.id}: unknown required service ${requirement.serviceId}`);
         if (a.awaitSupport && !serviceIds.has(a.awaitSupport)) errs.push(`${a.id}: unknown service to await ${a.awaitSupport}`);
         const requests = Object.values(a.outcomes).flat().flatMap((effect) => effect.requestSupport ?? []);
@@ -148,6 +150,9 @@ export function validateScenario(s: ScenarioDefinition, built: BuiltLocation): s
         }
         for (const e of effects) {
           if (s.version >= 4) {
+            if (e.officerHarm && (!['wounded', 'serious'].includes(e.officerHarm.severity) || !e.officerHarm.label.trim())) errs.push(`${a.id}: invalid officer injury`);
+            if (e.officerCare === 'stabilize' && (!a.requires.certs?.includes('advanced_first_aid') || !a.consumes?.some(use => use.tag === 'medkit' && use.qty >= 1))) errs.push(`${a.id}: field care needs a first aider and trauma kit`);
+            if (e.officerCare === 'evacuate' && !s.externalServices?.some(service => service.kind === 'medical' && e.acceptSupport?.includes(service.id))) errs.push(`${a.id}: injured officers need an explicit medical receiver`);
             for (const id of [...e.requestSupport ?? [], ...e.acceptSupport ?? []]) if (!serviceIds.has(id)) errs.push(`${a.id}: unknown external service ${id}`);
             if (effects.some((effect) => effect.requestSupport?.length) && (e.ending || e.objective)) errs.push(`${a.id}: requesting support cannot complete or reward the objective`);
             if (a.awaitSupport && e.extraMinutes) errs.push(`${a.id}: a response wait must use exactly the remaining time`);
@@ -631,8 +636,9 @@ export function computeDebrief(state: GameState, run: OperationRun): DebriefResu
     decisions: decisionViewsFor(state, run, scenario, steps),
     ...(scenario.version >= 3 ? { endingSummary: ending.summary } : {}),
     ...completion,
+    ...(scenario.version >= 4 ? { officerCasualties: Object.values(run.officerCasualties ?? {}).map(person => ({ ...person })), civilianOutcomes: civilianOutcomeViews(scenario, run) } : {}),
     practice: run.practice,
-    objective: { score: Math.round(run.objective), label: completion ? ({ resolved: 'Resolved', care_accepted: 'Care accepted', followup_agreed: 'Follow-up agreed', relief_partial: 'Partial relief', unresolved: 'Unresolved' } as const)[completion.disposition!] : objectiveLabel(run.objective) },
+    objective: { score: Math.round(run.objective), label: completion ? ({ resolved: 'Resolved', care_accepted: 'Care accepted', followup_agreed: 'Follow-up agreed', relief_partial: 'Partial progress', unresolved: 'Unresolved' } as const)[completion.disposition!] : objectiveLabel(run.objective) },
     civilianSafety: { score: Math.round(run.civilianSafety), label: civilianLabel(run.civilianSafety) },
     officerCondition,
     informationPreserved: scenario.facts.map((f) => ({ factId: f.id, label: f.label, status: run.knowledge[f.id] ?? f.initial })),
@@ -762,6 +768,7 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     if (scenario.version >= 3) t.civilianLoss = round1(before.civilianSafety - run.civilianSafety);
     const { changes, stage: nextStage, ending } = applyEffects(run, matched);
     const externalSupportEvents = scenario.version >= 4 ? applyExternalSupportEffects(run, scenario, matched) : undefined;
+    const incidentConsequences = scenario.version >= 4 ? applyIncidentConsequences(draft, run, scenario, matched, ev.participantIds) : undefined;
 
     // positions, staging points and task labels
     for (const arr of ev.arrivals) {
@@ -799,7 +806,7 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     const consumed = Object.entries(used).map(([itemId, qty]) => ({ itemId, qty }));
 
     const knowledgeChanges = changes;
-    const texts = matched.map((e) => e.text).filter((x): x is string => Boolean(x));
+    const texts = [...matched.map((e) => e.text).filter((x): x is string => Boolean(x)), ...incidentConsequences?.text ?? []];
     const resolution: DecisionResolution = {
       revision: run.revision,
       stage,
@@ -863,6 +870,7 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
       ],
       endingTitle: run.endingId ? scenario.endings[run.endingId]?.title ?? run.endingId : null,
       ...(externalSupportEvents ? { externalSupport: externalSupportEvents } : {}),
+      ...(incidentConsequences ? { officerCasualties: incidentConsequences.records } : {}),
     };
     resolution.explanation = explain(draft, scenario, ev, band, texts, timeCost, t.civilianLoss, knowledgeChanges, consumed, strain, stageNote, run.practice);
     return { ok: true };

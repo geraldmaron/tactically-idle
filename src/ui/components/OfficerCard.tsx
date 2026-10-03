@@ -23,14 +23,16 @@ export interface OfficerCardProps {
   leader?: boolean;
   /** Dims the card and adds a text status (e.g. 'Not deployed'). */
   note?: string;
+  /** A run injury also applies in practice, where the roster itself stays unchanged. */
+  incidentInjury?: string;
 }
 
 /** Portrait card from the approved reference: portrait, SURNAME, role icon + label, readiness bar. */
-export function OfficerCard({ officer, now, variant = 'strip', selected, onClick, chip, footer, leader, note }: OfficerCardProps) {
+export function OfficerCard({ officer, now, variant = 'strip', selected, onClick, chip, footer, leader, note, incidentInjury }: OfficerCardProps) {
   const g = useGame();
   const [ref, w] = useWidth<HTMLSpanElement>(80);
   const band = bandOf(officer);
-  const injured = !!officer.injury && officer.injury.until > now;
+  const injured = !!incidentInjury || (!!officer.injury && officer.injury.until > now);
   const trainingOrDeployed: StatusKey | null =
     variant === 'roster' && !injured ? (officer.assignment?.kind === 'training' ? 'training' : officer.assignment?.kind === 'operation' ? 'deployed' : null) : null;
   const statusKey: StatusKey | null = injured ? 'injured' : trainingOrDeployed ? trainingOrDeployed : band === 'ready' ? null : band;
@@ -42,10 +44,10 @@ export function OfficerCard({ officer, now, variant = 'strip', selected, onClick
   return (
     <Tag
       type={onClick ? 'button' : undefined}
-      className={`ocard ocard-${variant}${selected ? ' ocard-on' : ''}${note ? ' ocard-dim' : ''}`}
+      className={`ocard ocard-${variant}${selected ? ' ocard-on' : ''}${incidentInjury ? ' ocard-casualty' : note ? ' ocard-dim' : ''}`}
       onClick={onClick}
       aria-pressed={onClick && selected !== undefined ? selected : undefined}
-      aria-label={`${officer.firstName} ${officer.surname}, ${role.label}, ${injured ? 'injured' : BAND_SHORT[band]}`}
+      aria-label={`${officer.firstName} ${officer.surname}, ${role.label}, ${incidentInjury ? `injured: ${incidentInjury}, out of action` : injured ? 'injured' : BAND_SHORT[band]}`}
     >
       <span className="ocard-art" ref={ref} style={{ height: crop }}>
         <Portrait officer={officer} size={size} {...agePortraitProps(g, officer, now)} />

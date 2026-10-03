@@ -97,7 +97,7 @@ describe('bounded catalog and common gates', () => {
     state.units.new_device = { ...makeUnit('conducted_energy_device', 1), id: 'new_device' };
     const restored = deserialize(serialize(state, NOW));
     expect(restored?.officers.off_chen.certs).toEqual(state.officers.off_chen.certs);
-    expect(restored?.contentVersion).toBe(3);
+    expect(restored?.contentVersion).toBe(4);
     expect(restored?.units.new_device.itemId).toBe('conducted_energy_device');
   });
 });

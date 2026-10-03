@@ -2,6 +2,7 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { SCENARIOS } from '../../content/scenarios';
+import { INCIDENT_TYPES_V4 } from '../../gen/incident';
 import { DECISION_EXERCISES } from '../../content/scenarios/decision-exercises';
 import { briefing } from '../../sim/operation-selectors';
 import { practiceUnits } from '../../sim/resolution';
@@ -41,6 +42,15 @@ describe('practice-only equipment exercises', () => {
       for (const exercise of DECISION_EXERCISES) expect(html).toContain(exercise.title);
       expect(boardEntries(state, NOW)).toEqual([]);
     } finally { state.incidents = incidents; }
+  });
+
+  it('uses the authored incident labels for every current exercise, including high-risk calls', () => {
+    const entries = practiceEntries(state, NOW);
+    for (const exercise of DECISION_EXERCISES) {
+      const entry = entries.find((candidate) => candidate.card.id === exercise.id)!;
+      const label = INCIDENT_TYPES_V4.find((kind) => kind.type === exercise.spec.type)!.label;
+      expect(renderToStaticMarkup(createElement(PracticeCardView, { entry, onPrepare: () => {} }))).toContain(label);
+    }
   });
 
   it('labels an exercise card as practice before preparation', () => {

@@ -3,7 +3,7 @@
 // own INCIDENT_TYPES / BUILDING_FAMILIES win when they provide a label.
 import { useEffect, useState } from 'react';
 import type { Armament, EnvironmentDefinition } from '../../sim/scenario-types';
-import { INCIDENT_TYPES } from '../../gen/incident';
+import { INCIDENT_TYPES_V4 } from '../../gen/incident';
 import { BUILDING_FAMILIES } from '../../gen/building';
 import { Chip } from './ui';
 import { Icon } from '../icons';
@@ -26,6 +26,9 @@ const INCIDENT_FALLBACK: Record<string, { label: string; icon: IconName }> = {
   missing_vulnerable: { label: 'Missing person', icon: 'binoculars' },
   false_intruder: { label: 'Reported intruder', icon: 'question' },
   vacant_occupancy: { label: 'Vacant property', icon: 'eye' },
+  active_armed_incident: { label: 'Active armed incident', icon: 'shield' },
+  hostage_crisis: { label: 'Hostage crisis', icon: 'lock' },
+  protected_rescue: { label: 'Protected rescue', icon: 'medic' },
 };
 
 function titleCase(id: string): string {
@@ -35,7 +38,7 @@ function titleCase(id: string): string {
 export function incidentMeta(type: string | null | undefined): { label: string; icon: IconName } {
   if (!type) return { label: 'Operation', icon: 'pin' };
   const fb = INCIDENT_FALLBACK[type];
-  const gen = INCIDENT_TYPES.find((t) => t.type === type);
+  const gen = INCIDENT_TYPES_V4.find((t) => t.type === type);
   return { label: gen?.label ?? fb?.label ?? titleCase(type), icon: fb?.icon ?? 'pin' };
 }
 

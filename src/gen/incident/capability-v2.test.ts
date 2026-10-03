@@ -38,7 +38,7 @@ const specFor = (type: IncidentSpec['type'], familyId: string, seed = 7): Incide
 
 describe('content v2 specialist reports', () => {
   it('adds only the two bounded archetypes and keeps version one unadvertised cases unavailable', () => {
-    expect(INCIDENT_CONTENT_VERSION).toBe(3);
+    expect(INCIDENT_CONTENT_VERSION).toBe(4);
     expect(specialistTypes.map((type) => type.type)).toEqual(['barricaded', 'business_robbery']);
     expect(() => generateIncident({ ...specFor('barricaded', 'cedar_close'), contentVersion: 1 })).toThrow('Unsupported incident');
     expect(() => generateIncident({ ...specFor('business_robbery', 'market_row'), contentVersion: 1 })).toThrow('Unsupported incident');

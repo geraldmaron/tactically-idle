@@ -57,7 +57,7 @@ export function OpsBoard({ onPrepare }: { onPrepare: (id: Id) => void }) {
         )}
       </Section>
 
-      {featured.length > 0 && <Section title="Decision practice" icon="flag" hint="Try welfare, urgent assistance and protective response. These exercises are always available, with virtual gear and no lasting consequences.">
+      {featured.length > 0 && <Section title="Decision practice" icon="flag" hint="Practise current calls with virtual gear and no lasting consequences. These exercises are always available.">
         <div className="stack">{featured.map((entry) => <PracticeCardView key={entry.card.id} entry={entry} onPrepare={onPrepare} />)}</div>
       </Section>}
 

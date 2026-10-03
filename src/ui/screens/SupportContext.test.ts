@@ -72,6 +72,16 @@ describe('external service context beside the next decision', () => {
     expect(contextualSupportAction(scenario, actions, externalSupportViews(scenario, run)[0])).toBeNull();
   });
 
+  it('finds the authored continuation when help was requested earlier but care arrangements are not open yet', () => {
+    const { scenario, run, actions } = fixture();
+    const original = scenario.stages.assess.actions[0];
+    scenario.stages.assess.actions = [{ ...original, id: 'continue_care', requires: { externalSupport: [{ serviceId: 'medics', status: 'requested', reason: 'Request the crew first' }] }, outcomes: { favorable: [], mixed: [], adverse: [] } }];
+    run.externalSupport = { medics: { requestedAt: 2, availableAt: 8, acceptedAt: null } };
+    run.clock = 9;
+    const visible = [{ ...actions[0], id: 'continue_care', title: 'Continue the care plan' }];
+    expect(contextualSupportAction(scenario, visible, externalSupportViews(scenario, run)[0])?.id).toBe('continue_care');
+  });
+
   it('provides dispatch context, concrete responsibilities, action review and a way back', () => {
     const { props } = support(true);
     const html = render(createElement(SupportContext, props));

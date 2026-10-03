@@ -1,6 +1,7 @@
 import type { ActionDefinition, Condition, EndingDefinition, ExternalServiceDefinition, OutcomeEffect, ScenarioDefinition } from './scenario-types';
-import type { CompletionDisposition, DebriefResult, ExternalSupportEvent, ExternalSupportState, OperationRun } from './types';
+import type { CompletionDisposition, DebriefResult, ExternalSupportEvent, ExternalSupportState, OfficerCasualtyRecord, OperationRun } from './types';
 import { next } from './rng';
+import { syncCasualtyFlags } from './incident-consequences';
 
 type SupportRun = Pick<OperationRun, 'clock' | 'externalSupport'>;
 type PublicRun = Pick<OperationRun, 'knowledge' | 'flags' | 'pressure'>;
@@ -133,6 +134,7 @@ export function validExternalSupportState(run: OperationRun, scenario: ScenarioD
   if (scenario.version < 4) return run.externalSupport === undefined;
   if (!run.externalSupport || typeof run.externalSupport !== 'object' || Array.isArray(run.externalSupport)) return false;
   const expected: Record<string, ExternalSupportState> = {};
+  const casualties: Record<string, OfficerCasualtyRecord> = {};
   let clock = (run.resupplies ?? []).reduce((sum, delivery) => round1(sum + delivery.minutes), 0);
   const publicState: PublicRun = { knowledge: Object.fromEntries(scenario.facts.map((fact) => [fact.id, fact.initial])), flags: [], pressure: scenario.pressure.start };
   for (const delivery of run.resupplies ?? []) publicState.pressure = round1(Math.max(0, Math.min(100, publicState.pressure + scenario.pressure.perMinute * delivery.minutes)));
@@ -184,6 +186,31 @@ export function validExternalSupportState(run: OperationRun, scenario: ScenarioD
         publicState.flags.push(`opening:${opening.openingId}=${opening.state}`);
       }
     }
+    let casualtyIndex = 0;
+    const casualtyEvents = decision.committed?.officerCasualties ?? [];
+    const acceptCasualty = (id: string, care: OfficerCasualtyRecord['care'], severity?: OfficerCasualtyRecord['severity'], label?: string): boolean => {
+      const event = casualtyEvents[casualtyIndex++];
+      if (!event || event.officerId !== id || event.care !== care || severity && event.severity !== severity || label && event.label !== label) return false;
+      casualties[id] = { ...event };
+      return true;
+    };
+    for (const effect of effects) {
+      if (effect.officerHarm) {
+        const id = decision.officerIds.find(candidate => !casualties[candidate]);
+        if (id && !acceptCasualty(id, 'needed', effect.officerHarm.severity, effect.officerHarm.label)) return false;
+      }
+      if (effect.officerCare === 'stabilize') {
+        const person = Object.values(casualties).filter(candidate => candidate.care === 'needed').sort((a, b) => Number(b.severity === 'serious') - Number(a.severity === 'serious') || a.at - b.at || a.officerId.localeCompare(b.officerId))[0];
+        if (person && !acceptCasualty(person.officerId, 'stabilized')) return false;
+      }
+      if (effect.officerCare === 'evacuate') {
+        for (const person of Object.values(casualties).filter(candidate => candidate.care !== 'evacuated')) if (!acceptCasualty(person.officerId, 'evacuated')) return false;
+      }
+    }
+    if (casualtyIndex !== casualtyEvents.length) return false;
+    const casualtyState = { flags: publicState.flags, officerCasualties: casualties };
+    syncCasualtyFlags(casualtyState);
+    publicState.flags = casualtyState.flags;
     for (const change of decision.knowledgeChanges) publicState.knowledge[change.factId] = change.status;
     publicState.pressure = round1(publicState.pressure + decision.committed!.pressureDelta);
   }

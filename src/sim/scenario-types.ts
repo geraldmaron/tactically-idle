@@ -166,6 +166,9 @@ export interface SupportRule {
 }
 
 export interface OutcomeEffect {
+  /** Fictional person-level injury; selected from actual participants, without an extra random draw. */
+  officerHarm?: { severity: 'wounded' | 'serious'; label: string };
+  officerCare?: 'stabilize' | 'evacuate';
   requestSupport?: Id[];
   acceptSupport?: Id[];
   /** Engine-only branches, evaluated only when a decision commits. Never preview these texts. */
@@ -203,6 +206,8 @@ export interface ActionCapabilities {
 }
 
 export interface ActionDefinition {
+  /** V4 dispatch/care administration can remain possible when every deployed officer is hurt. */
+  commandOnly?: boolean;
   /** Wait exactly the remaining response time of a bounded, authored service. */
   awaitSupport?: Id;
   /** Public-state visibility; hidden truth must never participate. */
@@ -332,6 +337,7 @@ export interface ScenarioDefinition {
   squadRange: { min: number; max: number };
   briefing: { known: string[]; unknown: string[]; dispatchReason?: string; teamResponsibilities?: string[] };
   externalServices?: ExternalServiceDefinition[];
+  civilianOutcomes?: { id: Id; label: string; factId: Id; safeFlag: string; injuredFlag: string; careFlag: string }[];
   facts: FactDefinition[];
   objectives: ObjectiveDefinition[];
   pressure: PressureModel;
@@ -366,7 +372,10 @@ export type IncidentType =
   | 'disturbance'
   | 'missing_vulnerable'
   | 'false_intruder'
-  | 'vacant_occupancy';
+  | 'vacant_occupancy'
+  | 'active_armed_incident'
+  | 'hostage_crisis'
+  | 'protected_rescue';
 
 /** Deterministic seed tuple for a generated incident. */
 export interface IncidentSpec {

@@ -19,6 +19,7 @@ import { cardFor } from './helpers';
 import { planActionResupply } from '../../sim/equipment-resupply';
 import { OperationFeedback, RESULT_LABEL } from './OperationFeedback';
 import { SupportContext } from './SupportContext';
+import { IncidentPeopleStatus } from '../components/IncidentPeople';
 
 interface Override {
   actionId: Id;
@@ -175,13 +176,13 @@ export function OpsLive() {
       onOpenDetails={() => { setActionFromSupport(false); setPanel(panel === 'action' ? 'none' : 'action'); }}
       detailsOpen={panel === 'action'}
       feedback={<OperationFeedback officers={g.officers} decisions={decisions} practice={run.practice} explicitCompletion={(scenario?.version ?? 0) >= 4} onOpenLog={() => setPanel('none')} />}
-      supportContext={scenario && <SupportContext scenario={scenario} run={run} actions={actions} open={panel === 'support'} onOpen={() => setPanel('support')} onClose={() => setPanel('none')} onPickAction={(id) => {
+      supportContext={scenario && <><IncidentPeopleStatus scenario={scenario} run={run} state={g} /><SupportContext scenario={scenario} run={run} actions={actions} open={panel === 'support'} onOpen={() => setPanel('support')} onClose={() => setPanel('none')} onPickAction={(id) => {
         setActionFromSupport(true);
         setSelActionId(id);
         setOverride(null);
         setActiveOfficer(null);
         setPanel('action');
-      }} />}
+      }} /></>}
     >
       <ActionSheet
         open={panel === 'action'}

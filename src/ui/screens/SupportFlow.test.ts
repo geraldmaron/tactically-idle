@@ -23,6 +23,7 @@ const act = vi.fn((command: Parameters<typeof apply>[1]) => {
 vi.mock('../store', () => ({ useGame: () => state, getState: () => state }));
 vi.mock('../components/toast', () => ({ useToast: () => ({ act, notify: vi.fn() }) }));
 const render = () => { hooks.cursor = 0; return OpsLive(); };
+const supportOf = (view: ReturnType<typeof render>) => view.props.supportContext.props.children[1].props;
 
 beforeEach(() => {
   hooks.values = [];
@@ -33,26 +34,26 @@ beforeEach(() => {
 describe('support review panel transitions and repeated confirmations', () => {
   it('opens support, returns to decisions and switches to an existing action without committing it', () => {
     const first = render();
-    first.props.supportContext.props.onOpen();
+    supportOf(first).onOpen();
     const support = render();
-    expect(support.props.supportContext.props.open).toBe(true);
+    expect(supportOf(support).open).toBe(true);
     expect(support.props.children[0].props.open).toBe(false);
-    support.props.supportContext.props.onClose();
-    expect(render().props.supportContext.props.open).toBe(false);
+    supportOf(support).onClose();
+    expect(supportOf(render()).open).toBe(false);
 
-    first.props.supportContext.props.onOpen();
+    supportOf(first).onOpen();
     const current = render();
     const id = current.props.actions[0].id;
-    current.props.supportContext.props.onPickAction(id);
+    supportOf(current).onPickAction(id);
     const action = render();
-    expect(action.props.supportContext.props.open).toBe(false);
+    expect(supportOf(action).open).toBe(false);
     expect(action.props.children[0].props.open).toBe(true);
     expect(action.props.children[0].props.view.id).toBe(id);
     action.props.children[0].props.onBackToSupport();
     const returnedSupport = render();
-    expect(returnedSupport.props.supportContext.props.open).toBe(true);
+    expect(supportOf(returnedSupport).open).toBe(true);
     expect(returnedSupport.props.children[0].props.open).toBe(false);
-    returnedSupport.props.supportContext.props.onPickAction(id);
+    supportOf(returnedSupport).onPickAction(id);
     render().props.children[0].props.onClose();
     expect(render().props.children[0].props.open).toBe(false);
     expect(act).not.toHaveBeenCalled();

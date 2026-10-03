@@ -41,7 +41,11 @@ export function contextualSupportAction(scenario: ScenarioDefinition, actions: A
     const effect = service.status === 'unrequested' ? 'requestSupport' : 'acceptSupport';
     return Object.values(action.outcomes).some((effects) => effects.some((outcome) => outcome[effect]?.includes(service.id)));
   });
-  return candidates.find((action) => action.eligible) ?? candidates[0] ?? null;
+  const direct = candidates.find((action) => action.eligible) ?? candidates[0];
+  if (direct) return direct;
+  if (service.status === 'unrequested') return null;
+  const continuing = actions.filter((view) => definitions.get(view.id)?.requires.externalSupport?.some((requirement) => requirement.serviceId === service.id));
+  return continuing.find((action) => action.eligible) ?? continuing[0] ?? null;
 }
 
 export function SupportContext({ scenario, run, actions, open, onOpen, onClose, onPickAction }: {

@@ -155,7 +155,7 @@ describe('explicit completion evidence in current and archived results', () => {
     expect(followup).toContain('Follow-up agreed');
     expect(followup).not.toContain('Call resolved');
     const partial = renderToStaticMarkup(createElement(DebriefSummary, { debrief: { ...result, disposition: 'relief_partial', completionAchieved: false, remainingTasks: ['The access route still needs to be made safe.'] } }));
-    expect(partial).toContain('Partial relief · call unresolved');
+    expect(partial).toContain('Partial progress · call unresolved');
     expect(partial).toContain('The access route still needs to be made safe.');
   });
 });
