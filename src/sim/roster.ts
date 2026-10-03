@@ -22,6 +22,7 @@ import { gameDay } from './calendar';
 import { PERSONAS } from '../content/personas';
 import { applyRetention, retentionCheck, mandatoryRetirementDay } from './career';
 import { initializePersonnel, markEmployed } from './personnel';
+import { applySquadArrangement, setSquadArrangementLock, undoSquadArrangement } from './squad-optimizer';
 
 export const ROSTER_TUNING = {
   /** Owner decision (2026-10-02): up to four squads. */
@@ -318,6 +319,9 @@ function setRestockRule(d: GameState, rule: { itemId: Id; target: number; budget
 }
 
 export const ROSTER_HANDLERS = {
+  applySquadArrangement,
+  setSquadArrangementLock,
+  undoSquadArrangement,
   hire,
   dismiss,
   shortlist,

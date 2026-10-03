@@ -1,3 +1,4 @@
+import { actionEquipmentRequirements, effectiveTags, normalizedActionConsumption, operatorQualified, orderActionParticipants } from './equipment-requirements';
 import { evaluateCapabilities } from './capabilities';
 import { getScenario } from './scenario-registry';
 // Operation resolution: eligibility, contributors, score, probability and strain.
@@ -58,6 +59,7 @@ import {
   type Subject,
 } from './spatial-factors';
 import { ITEMS } from '../content/items';
+import { projectedCondition } from './equipment';
 
 export const RESOLUTION_TUNING = {
   /** Rating (0..100) to score points for the lead seat. */
@@ -276,7 +278,7 @@ export function practiceUnits(state: GameState, allEquipment = false): ItemUnit[
 export function availableUnits(state: GameState, run: OperationRun, sq: SquadId): ItemUnit[] {
   if (run.practice) return practiceUnits(state, getScenario(run.scenarioId)?.practiceOnly === true);
   const spent = new Set(run.history.flatMap((h) => h.unitsUsed));
-  return squadUnits(state, run.id, sq).filter((u) => !(ITEMS[u.itemId]?.kind === 'consumable' && spent.has(u.id)));
+  return squadUnits(state, run.id, sq).filter((u) => ITEMS[u.itemId] && !(ITEMS[u.itemId].kind === 'consumable' && spent.has(u.id)));
 }
 
 const effOf = (u: ItemUnit) => {
@@ -315,14 +317,14 @@ export interface Use {
 }
 
 /** Take consumable units from acting squads (then supporters) in order. null when short. */
-function planConsumption(action: ActionDefinition, acting: SquadId[], support: SquadId[], units: Record<SquadId, ItemUnit[]>): Use[] | null {
+function planConsumption(state: GameState, action: ActionDefinition, acting: SquadId[], support: SquadId[], units: Record<SquadId, ItemUnit[]>): Use[] | null {
   const uses: Use[] = [];
   const taken = new Set<Id>();
-  for (const c of action.consumes ?? []) {
+  for (const c of normalizedActionConsumption(action)) {
     let need = c.qty;
     for (const sq of [...acting, ...support]) {
       const pool = (units[sq] ?? [])
-        .filter((u) => !taken.has(u.id) && effOf(u) > 0 && ITEMS[u.itemId]?.tags.includes(c.tag))
+        .filter((u) => !taken.has(u.id) && effOf(u) > 0 && ITEMS[u.itemId]?.tags.includes(c.tag) && acting.some((sid) => operatorQualified(state, sid, action, ITEMS[u.itemId])))
         .sort((a, b) => effOf(b) - effOf(a) || a.id.localeCompare(b.id));
       for (const u of pool) {
         if (need <= 0) break;
@@ -406,6 +408,7 @@ function relatedFactIds(a: ActionDefinition): Set<Id> {
     for (const e of band) {
       cond(e.when);
       e.knowledge?.forEach((k) => ids.add(k.factId));
+      e.reveal?.forEach((id) => ids.add(id));
     }
   return ids;
 }
@@ -538,6 +541,7 @@ export function evaluateAction(input: EvalInput): Evaluation {
 
   // ---- squad validity
   if (run.history.some((h) => h.stage === action.stage && h.actionId === action.id)) return blank('Already tried this stage');
+  if (!conditionHolds(action.visibleWhen, run)) return blank('That option does not fit the current situation');
   if (acting.length === 0) return blank('Choose an acting squad');
   for (const sq of [...acting, ...support]) if (!run.squadIds.includes(sq)) return blank(`${squadLabel(sq)} is not deployed`);
   const maxActing = action.maxActing ?? 1;
@@ -546,15 +550,15 @@ export function evaluateAction(input: EvalInput): Evaluation {
   if (action.support && support.length > action.support.maxSquads) return blank(`At most ${action.support.maxSquads} support squad${action.support.maxSquads === 1 ? '' : 's'}`);
 
   const units: Record<SquadId, ItemUnit[]> = {} as Record<SquadId, ItemUnit[]>;
-  for (const sq of [...acting, ...support, ...run.squadIds]) units[sq] ??= input.unitOverride?.[sq] ?? availableUnits(state, run, sq);
+  for (const sq of [...acting, ...support, ...run.squadIds]) units[sq] ??= input.unitOverride?.[sq] ?? availableUnits(state, run, sq).map((unit) => run.practice ? unit : ({ ...unit, condition: projectedCondition(state, unit, state.department.clockHighWater) }));
   const taskOf = (sq: SquadId) => run.squadTasks.find((t) => t.squadId === sq) ?? { squadId: sq, positionId: '', task: '', stagingId: null, at: null };
   const actingTags = new Set<string>();
-  for (const sq of acting) for (const t of tagsOf(units[sq])) actingTags.add(t);
+  for (const sq of acting) for (const t of tagsOf(units[sq].filter((u) => ITEMS[u.itemId] && operatorQualified(state, sq, action, ITEMS[u.itemId])))) actingTags.add(t);
   const supportHas = (tag: string) => support.some((sq) => tagsOf(units[sq]).has(tag));
   const actingHas = (tag: string) => actingTags.has(tag);
 
   // ---- requirement gates, in reading order
-  const req = action.requires;
+  const req = { ...action.requires, allTags: effectiveTags(action.requires.allTags), anyTags: action.requires.anyTags?.some((t) => t === 'battery') ? [] : effectiveTags(action.requires.anyTags) };
   if (req.minSquads && acting.length + support.length < req.minSquads.count) reasons.push(req.minSquads.reason);
   for (const f of req.facts ?? []) if (!f.in.includes(run.knowledge[f.factId] ?? 'unknown')) reasons.push(f.reason);
   for (const f of req.flags ?? []) if (!run.flags.includes(f.flag)) reasons.push(f.reason);
@@ -597,14 +601,14 @@ export function evaluateAction(input: EvalInput): Evaluation {
       }
     }
   }
-  if (req.anyTags && !req.anyTags.some(actingHas)) {
+  if (req.anyTags.length && !req.anyTags.some(actingHas)) {
     reasons.push(`No ${tagNames(req.anyTags)} in ${listSquads(acting)}'s loadout`);
   }
   for (const t of req.allTags ?? []) if (!actingHas(t)) reasons.push(`No ${tagNames([t])} in ${listSquads(acting)}'s loadout`);
 
-  const consumption = planConsumption(action, acting, support, units);
+  const consumption = planConsumption(state, action, acting, support, units);
   if (consumption === null) {
-    for (const c of action.consumes ?? []) {
+    for (const c of normalizedActionConsumption(action)) {
       if (!actingHas(c.tag) && !supportHas(c.tag)) {
         const msg = `No ${tagNames([c.tag])} in ${listSquads(acting)}'s loadout`;
         if (!reasons.includes(msg)) reasons.push(msg);
@@ -625,9 +629,7 @@ export function evaluateAction(input: EvalInput): Evaluation {
   }
 
   // ---- seat order: cert holders lead, then by effective aptitude
-  const eff = (o: Officer) => aptitude(o, action).value * (1 - conditionFraction(o.stress));
-  const isCert = (o: Officer) => certs.some((c) => o.certs.includes(c));
-  const ordered = [...pool].sort((a, b) => Number(isCert(b)) - Number(isCert(a)) || eff(b) - eff(a) || a.id.localeCompare(b.id));
+  const ordered = orderActionParticipants(pool, action);
   const participants = ordered.slice(0, Math.max(0, cap));
   const benched = ordered.slice(participants.length);
   if (participants.length === 0) {
@@ -733,14 +735,14 @@ export function evaluateAction(input: EvalInput): Evaluation {
   const spec = action.spatial;
   const narrow = cap <= 1;
   const subject: Subject | null = spec ? resolveSubject(scenario, built, run.knowledge, action.targetId, spec.subjectFactId) : null;
-  const requiredAll = req.allTags ?? [];
+  const requiredAll = actionEquipmentRequirements(action).groups.filter((g) => g.tags.length === 1).flatMap((g) => g.tags);
   const anyTags = req.anyTags ?? [];
 
   const picksAt = (sq: SquadId, at: Vec): { picks: EquipPick[]; blocked: Plan['blocked'] } => {
     const byGroup = new Map<string, EquipPick>();
     const blocked: Plan['blocked'] = [];
     for (const eq of action.equipment ?? []) {
-      const unit = bestOf(units[sq], eq.tag);
+      const unit = bestOf(units[sq].filter((u) => ITEMS[u.itemId] && operatorQualified(state, sq, action, ITEMS[u.itemId])), eq.tag);
       if (!unit) continue;
       const def = ITEMS[unit.itemId];
       let range: RangeResult | null = null;

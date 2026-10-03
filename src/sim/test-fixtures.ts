@@ -107,7 +107,6 @@ const SERIAL: Record<string, string> = {
   ballistic_shield: 'BS',
   door_ram: 'DR',
   trauma_kit: 'TK',
-  battery_pack: 'BP',
 };
 
 /** One physical unit. Ids are `u_<item>_<n>` so tests can address them. */
@@ -159,7 +158,6 @@ export function makeState(opts: FixtureOptions = {}): GameState {
     ballistic_shield: 2,
     door_ram: 1,
     trauma_kit: 6,
-    battery_pack: 6,
     thermal_imager: 0,
     camera_drone: 0,
     ...(opts.inventory ?? {}),
@@ -183,6 +181,7 @@ export function makeState(opts: FixtureOptions = {}): GameState {
       rosterCap: 12,
       trainingSlots: 1,
       unlockedNodes: opts.unlockedNodes ?? [],
+      developmentTiers: Object.fromEntries((opts.unlockedNodes ?? []).map((id) => [id, 1])),
       restockRules: [],
       lastSettledAt: NOW,
       lastInteractionAt: NOW,
@@ -204,8 +203,8 @@ export function makeState(opts: FixtureOptions = {}): GameState {
 }
 
 export const DEFAULT_LOADOUTS: Record<SquadId, Record<Id, number>> = {
-  A: { radio_kit: 1, throw_phone: 1, ballistic_shield: 1, trauma_kit: 2, battery_pack: 2 },
-  B: { radio_kit: 1, loud_hailer: 1, door_ram: 1, ballistic_shield: 1, trauma_kit: 2, battery_pack: 1 },
+  A: { radio_kit: 1, throw_phone: 1, ballistic_shield: 1, trauma_kit: 2 },
+  B: { radio_kit: 1, loud_hailer: 1, door_ram: 1, ballistic_shield: 1, trauma_kit: 2 },
   C: { radio_kit: 1, loud_hailer: 1, trauma_kit: 1 },
   D: { radio_kit: 1, trauma_kit: 1 },
 };

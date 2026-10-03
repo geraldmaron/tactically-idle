@@ -154,7 +154,7 @@ describe('placement: where the squad stands changes the contributors and overlay
     const open = variant((l) => {
       opening(l, 'd_hall_bede').state = 'open';
     });
-    let s = startRun(makeState({ inventory: { thermal_imager: 1 } }), 'ms_occupancy', ['A'], { loadouts: { A: { thermal_imager: 1, battery_pack: 1, radio_kit: 1 } } });
+    let s = startRun(makeState({ inventory: { thermal_imager: 1 } }), 'ms_occupancy', ['A'], { loadouts: { A: { thermal_imager: 1, radio_kit: 1 } } });
     s = setRun(confirmed(s), { stage: 'adapt' });
     const hall = evalAction(at(s, 'sp_d_hall_bede_hall'), none('ms_thermal'), ['A'], [], open);
     const win = evalAction(at(s, 'sp_w_bede_e_side_yard_e'), none('ms_thermal'), ['A'], [], open);
@@ -165,7 +165,7 @@ describe('placement: where the squad stands changes the contributors and overlay
   });
 
   it('through a closed hollow-core door heat is faint, which is why opening it matters', () => {
-    let s = startRun(makeState({ inventory: { thermal_imager: 1 } }), 'ms_occupancy', ['A'], { loadouts: { A: { thermal_imager: 1, battery_pack: 1 } } });
+    let s = startRun(makeState({ inventory: { thermal_imager: 1 } }), 'ms_occupancy', ['A'], { loadouts: { A: { thermal_imager: 1 } } });
     s = setRun(confirmed(s), { stage: 'adapt', staging: { A: 'sp_d_hall_bede_hall' } });
     const closed = evalAction(s, none('ms_thermal'), ['A'], [], variant());
     const open = evalAction(s, none('ms_thermal'), ['A'], [], variant((l) => (opening(l, 'd_hall_bede').state = 'open')));
