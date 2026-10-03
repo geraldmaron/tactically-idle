@@ -95,8 +95,8 @@ export function useCampaigns() {
 }
 
 export function useDevelopmentBudget() { return useCampaigns().developmentBudget; }
-export function unlockDevelopment(nodeId: string): Promise<HandlerResult> {
-  return serialized(() => { const result = campaigns.unlockDevelopment(nodeId, Date.now()); notify(); return result; }).catch(lockFailure);
+export function unlockDevelopment(nodeId: string, expectedTier = 1): Promise<HandlerResult> {
+  return serialized(() => { const result = campaigns.unlockDevelopment(nodeId, Date.now(), expectedTier); notify(); return result; }).catch(lockFailure);
 }
 
 export type TestStoreAction =
@@ -106,6 +106,20 @@ export type TestStoreAction =
   | { type: 'unassign'; campaignId: string }
   | { type: 'reconcile' };
 export const canUseTestStore = !!locks || isResponsivePreview;
+export async function claimPointPack(productId: string, campaignId: string, requestId = newLocalId()): Promise<HandlerResult> {
+  if (!canUseTestStore) return { ok: false, reason: 'This browser cannot safely save point claims. Use a current browser.' };
+  const started = await serialized(() => { const result = campaigns.beginPointClaim(productId, requestId, campaignId, Date.now()); notify(); return result; }).catch(lockFailure);
+  if (!started.ok) return started;
+  return serialized(() => { const result = campaigns.finishPointClaim(`mock:apple:${requestId}`, Date.now()); notify(); return result; }).catch(lockFailure);
+}
+export function resumePointPacks(): Promise<HandlerResult> {
+  if (!canUseTestStore) return Promise.resolve({ ok: false, reason: 'Point claims require safe local saving.' });
+  return serialized(() => { const result = campaigns.resumePointClaims(Date.now()); notify(); return result; }).catch(lockFailure);
+}
+export function claimSavedPoints(campaignId: string): Promise<HandlerResult> {
+  if (!canUseTestStore) return Promise.resolve({ ok: false, reason: 'Point claims require safe local saving.' });
+  return serialized(() => { const result = campaigns.claimHeldPoints(campaignId, Date.now()); notify(); return result; }).catch(lockFailure);
+}
 export function manageTestStore(action: TestStoreAction): Promise<HandlerResult> {
   if (!canUseTestStore) return Promise.resolve({ ok: false, reason: 'This browser cannot safely lock local test purchases. Use a current browser; existing saves can still be exported.' });
   return serialized(() => {

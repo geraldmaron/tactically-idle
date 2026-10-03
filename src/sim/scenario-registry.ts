@@ -5,6 +5,7 @@ import type { Id } from './types';
 import type { ScenarioDefinition } from './scenario-types';
 import { SCENARIOS } from '../content/scenarios';
 import { generateIncident, parseIncidentId } from '../gen/incident';
+import { DECISION_EXERCISES } from '../content/scenarios/decision-exercises';
 
 const cache = new Map<Id, ScenarioDefinition>();
 
@@ -13,6 +14,12 @@ export function getScenario(id: Id): ScenarioDefinition | null {
   if (authored) return authored;
   const hit = cache.get(id);
   if (hit) return hit;
+  const exercise = DECISION_EXERCISES.find((entry) => entry.id === id);
+  if (exercise) {
+    const scenario = { ...generateIncident(exercise.spec), id, code: exercise.code, title: exercise.title, summary: exercise.summary, variantLabel:'Decision exercise', practiceOnly:true };
+    cache.set(id, scenario);
+    return scenario;
+  }
   const spec = parseIncidentId(id);
   if (!spec) return null;
   try {

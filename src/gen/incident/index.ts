@@ -1,3 +1,5 @@
+import { restoreLegacyMaplePowerSnapshot } from '../../sim/compatibility/legacy-scenarios';
+import { withVersionThreeChoices } from './choices-v3';
 import type { ActionDefinition, IncidentSpec, IncidentType, ScenarioDefinition } from '../../sim/scenario-types';
 import type { BuiltLocation, Room, StageId, Vec } from '../../sim/types';
 import { buildLocation, pointInPolygon, polygonBBox } from '../../sim/location';
@@ -25,8 +27,8 @@ export const INCIDENT_TYPES: IncidentTypeInfo[] = [
   { type: 'burglary', label: 'Alarm response', families: ['market_row'], squads: [1, 3] },
   { type: 'false_intruder', label: 'Uncertain occupancy', families: homes, squads: [1, 2] },
 ];
-/** New calls opt into v2; saved v1 IDs and draws retain their original content. */
-export const INCIDENT_CONTENT_VERSION = 2;
+/** Future calls use v3; issued v1/v2 seed tuples retain their original content. */
+export const INCIDENT_CONTENT_VERSION = 3;
 export const INCIDENT_TYPES_V2: IncidentTypeInfo[] = [
   ...INCIDENT_TYPES,
   { type: 'barricaded', label: 'Reported barricade', families: homes, squads: [1, 3] },
@@ -43,7 +45,7 @@ export function parseIncidentId(id: string): IncidentSpec | null {
   const m = /^gen:([a-z_]+):([a-z0-9_]+):(\d+):(\d+):(\d+):(\d+)$/.exec(id);
   if (!m || !validTypes.has(m[1] as IncidentType)) return null;
   const [buildingSeed, seed, tier, contentVersion] = m.slice(3).map(Number);
-  if (![buildingSeed, seed, tier, contentVersion].every(Number.isSafeInteger) || tier < 1 || tier > 5 || contentVersion < 1) return null;
+  if (![buildingSeed, seed, tier, contentVersion].every(Number.isSafeInteger) || tier < 1 || tier > 5 || contentVersion < 1 || contentVersion > INCIDENT_CONTENT_VERSION) return null;
   if (m[2] !== 'maple_street' && !allFamilies.includes(m[2])) return null;
   return { type: m[1] as IncidentType, familyId: m[2], buildingSeed, seed, tier, contentVersion };
 }
@@ -73,6 +75,7 @@ export function generateIncident(spec: IncidentSpec): ScenarioDefinition {
   // now resolve, while authored tutorial/practice scenarios remain untouched.
   if (spec.familyId === 'maple_street') {
     const old = structuredClone(spec.type === 'medical_complication' ? MS_URGENT : MS_OCCUPANCY);
+    if (spec.contentVersion === 1) restoreLegacyMaplePowerSnapshot(old);
     return { ...old, id: incidentId(spec), locationSeed: spec.buildingSeed, incident: { ...spec } };
   }
   const built = buildLocation(spec.familyId, spec.buildingSeed);
@@ -208,7 +211,8 @@ export function generateIncident(spec: IncidentSpec): ScenarioDefinition {
     rewards: { funding: Math.round((business ? 2100 : 1700) * multiplier), devPoints: Math.round(2 * multiplier), trust: Math.round(4 * multiplier), xp: Math.round(30 * multiplier) },
     incident: { ...spec },
   };
-  return spec.contentVersion >= 2 ? withVersionTwoCapabilities(scenario, built) : scenario;
+  if (spec.contentVersion === 3) return withVersionThreeChoices(scenario, built);
+  return spec.contentVersion === 2 ? withVersionTwoCapabilities(scenario, built) : scenario;
 }
 
 /** Additive v2 mechanics. Never runs for a saved v1 scenario. */
@@ -333,7 +337,6 @@ function withVersionTwoCapabilities(s: ScenarioDefinition, built: BuiltLocation)
       inspect.icon = 'intel';
       inspect.summary = 'A qualified camera operator checks the local view after the opening is accessible';
       inspect.requires = { allTags: ['inspection_camera'], certs: ['drone_operator'] };
-      inspect.consumes = [{ tag: 'battery', qty: 1 }];
       inspect.check.kind = 'observation';
       inspect.spatial = { channel: 'visual', subjectFactId: 'f_person', weight: 12, noun: 'Camera view' };
       inspect.capabilities = { rules: ['opening_inspection'], required: ['opening_inspection'], openingId: door.id };

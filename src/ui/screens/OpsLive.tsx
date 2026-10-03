@@ -3,6 +3,7 @@ import { getState, useGame } from '../store';
 import {
   actionViews,
   currentBuilt,
+  decisionViews,
   lastResolution,
   previewAction,
   spaceViews,
@@ -16,6 +17,7 @@ import { getScenario } from '../../sim/scenario-registry';
 import { ActionSheet, BAND_LABEL, LiveView, RoomSheet } from './LiveView';
 import { cardFor } from './helpers';
 import { planActionResupply } from '../../sim/equipment-resupply';
+import { OperationFeedback } from './OperationFeedback';
 
 interface Override {
   actionId: Id;
@@ -45,6 +47,7 @@ export function OpsLive() {
   const focus = deployed.find((s) => s.id === focusId) ?? deployed[0] ?? null;
   const spaces = spaceViews(g);
   const progress = stageProgress(g);
+  const decisions = decisionViews(g);
   const actions = actionViews(g, now, focus?.id ?? null);
   const base = actions.find((a) => a.id === selActionId) ?? actions.find((a) => a.eligible) ?? actions[0] ?? null;
   const ov = override && base && override.actionId === base.id ? override : null;
@@ -117,7 +120,7 @@ export function OpsLive() {
       const ids = new Set(spaces.map((s) => s.id));
       const spaceIds = [r.targetId, ...r.knowledgeChanges.map((k) => k.factId)].filter((x): x is Id => !!x && ids.has(x));
       setLastChange({ revision: r.revision, spaceIds });
-      notify(`${BAND_LABEL[r.band]} result`, { tone: r.band === 'adverse' ? 'error' : r.band === 'favorable' ? 'ok' : 'amber', lines: r.explanation.slice(0, 2) });
+      notify(`${BAND_LABEL[r.band]} result recorded`, { tone: r.band === 'adverse' ? 'error' : r.band === 'favorable' ? 'ok' : 'amber', lines: ['See Last decision for the outcome, changes and causes.'] });
     }
   };
 
@@ -165,6 +168,7 @@ export function OpsLive() {
       onCancel={() => setConfirmCancel(true)}
       onOpenDetails={() => setPanel(panel === 'action' ? 'none' : 'action')}
       detailsOpen={panel === 'action'}
+      feedback={<OperationFeedback decisions={decisions} practice={run.practice} onOpenLog={() => setPanel('none')} />}
     >
       <ActionSheet
         open={panel === 'action'}
@@ -206,7 +210,7 @@ export function OpsLive() {
         onPickAction={(id) => {
           setSelActionId(id);
           setOverride(null);
-          setPanel('none');
+          setPanel('action');
         }}
       />
       <Sheet

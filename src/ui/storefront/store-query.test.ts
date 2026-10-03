@@ -12,7 +12,8 @@ describe('store catalog queries', () => {
   it('keeps the entire playable catalog discoverable, including zero-owned and locked equipment', () => {
     const state = makeState();
     const entries = catalogEntries(state);
-    expect(entries).toHaveLength(28);
+    expect(entries).toHaveLength(Object.keys(ITEMS).length);
+    expect(ids(entries)).not.toContain('battery_pack');
     expect(ids(queryEquipment(entries, query()))).toContain('armored_rescue_vehicle');
     const locked = entries.find((row) => row.item.id === 'armored_rescue_vehicle')!;
     expect(locked.owned).toBe(0);
@@ -82,13 +83,13 @@ describe('store catalog queries', () => {
   });
 
   it('flags shortages against ready units and explicit targets, not simply unowned catalog entries', () => {
-    const state = makeState({ inventory: { battery_pack: 0 } });
-    state.department.restockRules.push({ itemId: 'battery_pack', target: 3, budgetCeiling: 120 });
+    const state = makeState({ inventory: { trauma_kit: 0 } });
+    state.department.restockRules.push({ itemId: 'trauma_kit', target: 3, budgetCeiling: ITEMS.trauma_kit.cost * 3 });
     const radio = Object.values(state.units).filter((unit) => unit.itemId === 'radio_kit');
     for (const unit of radio) { unit.status = 'service'; unit.serviceUntil = NOW + 60_000; }
     const entries = catalogEntries(state);
     const shortages = ids(queryEquipment(entries, query({ ownership: 'replenish' })));
-    expect(shortages).toContain('battery_pack');
+    expect(shortages).toContain('trauma_kit');
     expect(shortages).toContain('radio_kit');
     expect(shortages).not.toContain('armored_rescue_vehicle');
   });
@@ -101,10 +102,10 @@ describe('store catalog queries', () => {
 
   it('checks the exact integer quantity and combined funding, with one vehicle per purchase', () => {
     const state = makeState({ unlockedNodes: Object.keys(DEV_NODES) });
-    state.department.funding = 500;
-    expect(itemCheck(state, ITEMS.battery_pack, 12).ok).toBe(true);
-    expect(itemCheck(state, ITEMS.battery_pack, 13).ok).toBe(false);
-    for (const quantity of [0, -1, 1.5, 100, NaN]) expect(itemCheck(state, ITEMS.battery_pack, quantity).ok).toBe(false);
+    state.department.funding = ITEMS.trauma_kit.cost * 12;
+    expect(itemCheck(state, ITEMS.trauma_kit, 12).ok).toBe(true);
+    expect(itemCheck(state, ITEMS.trauma_kit, 13).ok).toBe(false);
+    for (const quantity of [0, -1, 1.5, 100, NaN]) expect(itemCheck(state, ITEMS.trauma_kit, quantity).ok).toBe(false);
     state.department.funding = 100_000;
     expect(itemCheck(state, ITEMS.support_van, 1).ok).toBe(true);
     expect(itemCheck(state, ITEMS.support_van, 2).ok).toBe(false);

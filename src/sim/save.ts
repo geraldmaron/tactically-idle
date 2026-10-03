@@ -9,12 +9,15 @@ import { seedIncidentBoard } from './incidents';
 import { hashSeed } from './rng';
 import { initializePersonnel } from './personnel';
 import { getScenario } from './scenario-registry';
-import { parseIncidentId } from '../gen/incident';
+import { parseIncidentId, INCIDENT_CONTENT_VERSION } from '../gen/incident';
+import { legacyItemDefinition, retireLegacyBatteries } from './compatibility/retirement';
+import { maxDevelopmentTier } from './development-tiers';
+import { normalizeSquadArrangementState } from './squad-optimizer';
 
 export const SAVE_KEY = 'tactically-idle/save';
 
 /** Version written by this build. Older versions pass through migrate(). */
-export const CURRENT_SAVE_VERSION = 4;
+export const CURRENT_SAVE_VERSION = 5;
 
 export interface SaveStorage {
   getItem(key: string): string | null;
@@ -70,7 +73,18 @@ function validDecision(d: unknown): boolean {
     && isList(d.inputs, (c) => isObj(c) && isStr(c.label) && isNum(c.value) && oneOf(c.source, CONTRIBUTOR_SOURCES)
       && (c.ref === undefined || isStr(c.ref)))
     && isList(d.itemsConsumed, (i) => isObj(i) && isStr(i.itemId) && isNum(i.qty))
-    && isList(d.knowledgeChanges, (k) => isObj(k) && isStr(k.factId) && oneOf(k.status, KNOWLEDGE));
+    && isList(d.knowledgeChanges, (k) => isObj(k) && isStr(k.factId) && oneOf(k.status, KNOWLEDGE))
+    && (d.committed === undefined || (isObj(d.committed) && numbers(d.committed, ['objectiveDelta', 'civilianSafetyDelta', 'pressureDelta']) && isStrings(d.committed.consequences) && (d.committed.endingTitle === null || isStr(d.committed.endingTitle))));
+}
+
+function validDecisionView(d: unknown): boolean {
+  return isObj(d) && strings(d, ['actionId', 'title', 'stageLabel']) && numbers(d, ['revision', 'timeCost', 'objectiveDelta', 'civilianSafetyDelta', 'pressureDelta'])
+    && oneOf(d.band, ['favorable', 'mixed', 'adverse']) && isBool(d.actualStressDeltas) && isStrings(d.explanation) && isStrings(d.consequences)
+    && (d.endingTitle === null || isStr(d.endingTitle))
+    && isList(d.stressDeltas, (x) => isObj(x) && strings(x, ['officerId', 'label']) && isNum(x.delta))
+    && isList(d.supplies, (x) => isObj(x) && strings(x, ['itemId', 'label']) && isNum(x.qty) && x.qty >= 0)
+    && isList(d.knowledgeChanges, (x) => isObj(x) && strings(x, ['factId', 'label']) && oneOf(x.status, KNOWLEDGE))
+    && isList(d.contributors, (x) => isObj(x) && isStr(x.label) && isNum(x.value) && oneOf(x.source, CONTRIBUTOR_SOURCES) && (x.ref === undefined || isStr(x.ref)));
 }
 
 function validIncident(c: unknown): c is Record<string, unknown> {
@@ -117,7 +131,8 @@ function validDebrief(d: unknown): boolean {
     && isList(d.officerCondition, (o) => isObj(o) && isStr(o.officerId) && numbers(o, ['stressBefore', 'stressAfter', 'xpGained']))
     && isList(d.informationPreserved, (f) => isObj(f) && strings(f, ['factId', 'label']) && oneOf(f.status, KNOWLEDGE))
     && isList(d.resources, (i) => isObj(i) && isStr(i.itemId) && numbers(i, ['used', 'returned']))
-    && isList(d.unitWear, (u) => isObj(u) && strings(u, ['unitId', 'itemId', 'serial']) && numbers(u, ['before', 'after']));
+    && isList(d.unitWear, (u) => isObj(u) && strings(u, ['unitId', 'itemId', 'serial']) && numbers(u, ['before', 'after']))
+    && (d.endingSummary === undefined || isStr(d.endingSummary)) && (d.decisions === undefined || isList(d.decisions, validDecisionView));
 }
 
 /** Fields every version has. `v2` adds the career fields introduced in version 2. */
@@ -151,9 +166,9 @@ function validOfficer(o: unknown, key: string, v2: boolean): boolean {
   return true;
 }
 
-function validUnit(u: unknown, key: string): boolean {
+function validUnit(u: unknown, key: string, historical = false): boolean {
   if (!isObj(u)) return false;
-  if (u.id !== key || !isStr(u.itemId) || !Object.hasOwn(ITEMS, u.itemId) || !isStr(u.serial)) return false;
+  if (u.id !== key || !isStr(u.itemId) || !(historical ? legacyItemDefinition(u.itemId) : Object.hasOwn(ITEMS, u.itemId)) || !isStr(u.serial)) return false;
   if (!['condition', 'acquiredAt', 'uses', 'wearRate', 'lastWearAt'].every((f) => isNum(u[f]))) return false;
   if (!isStr(u.status) || !UNIT_STATUSES.includes(u.status)) return false;
   if (u.serviceUntil !== null && !isNum(u.serviceUntil)) return false;
@@ -162,7 +177,7 @@ function validUnit(u: unknown, key: string): boolean {
 }
 
 /** Structural checks shared by every version. */
-function validBase(s: unknown, v2: boolean): s is Record<string, unknown> {
+function validBase(s: unknown, v2: boolean, historical = false): s is Record<string, unknown> {
   if (!isObj(s)) return false;
   const dep = s.department;
   if (!isObj(dep)) return false;
@@ -170,7 +185,7 @@ function validBase(s: unknown, v2: boolean): s is Record<string, unknown> {
   if (!isStr(dep.name) || !depNums.every((k) => isNum(dep[k]))) return false;
   if (v2 && !isNum(dep.calendarEpoch)) return false;
   if (!isStrings(dep.unlockedNodes) || !dep.unlockedNodes.every((id) => Object.hasOwn(DEV_NODES, id))
-    || !isList(dep.restockRules, (r) => isObj(r) && isStr(r.itemId) && Object.hasOwn(ITEMS, r.itemId) && numbers(r, ['target', 'budgetCeiling']))) return false;
+    || !isList(dep.restockRules, (r) => isObj(r) && isStr(r.itemId) && !!(historical ? legacyItemDefinition(r.itemId) : Object.hasOwn(ITEMS, r.itemId)) && numbers(r, ['target', 'budgetCeiling']))) return false;
   if (dep.candidateRefreshedAt !== undefined && !isNum(dep.candidateRefreshedAt)) return false;
   if (dep.maintenanceBudgetPerHour !== undefined && (!isNum(dep.maintenanceBudgetPerHour) || !Number.isInteger(dep.maintenanceBudgetPerHour) || dep.maintenanceBudgetPerHour < 0 || dep.maintenanceBudgetPerHour > 500)) return false;
   if (!isObj(s.officers)) return false;
@@ -198,7 +213,7 @@ function validBase(s: unknown, v2: boolean): s is Record<string, unknown> {
 
 /** Version 1: items were stacks with owned / reserved / maintenance counts. */
 function validV1(s: unknown): boolean {
-  if (!validBase(s, false)) return false;
+  if (!validBase(s, false, true)) return false;
   if (!isObj(s.inventory)) return false;
   for (const [k, st] of Object.entries(s.inventory as Record<string, unknown>)) {
     if (!isObj(st) || st.itemId !== k) return false;
@@ -221,8 +236,16 @@ function validIncidents(s: Record<string, unknown>): boolean {
 }
 
 /** Basic structural validation: enough that the UI and sim cannot crash on a loaded state. */
-function validState(s: unknown): s is GameState {
-  if (!validBase(s, true)) return false;
+function validState(s: unknown, historical = false): s is GameState {
+  if (!validBase(s, true, historical)) return false;
+  const dep = s.department as Record<string, unknown>;
+  if (!historical) {
+    if (!isObj(dep.developmentTiers) || !isStrings(dep.unlockedNodes) || new Set(dep.unlockedNodes).size !== dep.unlockedNodes.length) return false;
+    if (!Object.entries(dep.developmentTiers).every(([id, tier]) => Object.hasOwn(DEV_NODES, id) && Number.isInteger(tier) && (tier as number) >= 1 && (tier as number) <= maxDevelopmentTier(DEV_NODES[id]) && (dep.unlockedNodes as string[]).includes(id))) return false;
+    if (!dep.unlockedNodes.every((id) => Object.hasOwn(dep.developmentTiers as object, id))) return false;
+  }
+  const receipt = s.equipmentPowerUpgrade;
+  if (receipt !== undefined && (!isObj(receipt) || !Number.isSafeInteger(receipt.retiredUnits) || (receipt.retiredUnits as number) < 1 || !Number.isSafeInteger(receipt.refundedFunding) || (receipt.refundedFunding as number) < 0 || (receipt.refundedFunding as number) > (receipt.retiredUnits as number) * 40 || (receipt.refundedFunding as number) % 40 !== 0)) return false;
   if (!validIncidents(s)) return false;
   if (s.report !== null && !validReport(s.report)) return false;
   if (s.activeRun !== null && !validRun(s.activeRun)) return false;
@@ -237,7 +260,7 @@ function validState(s: unknown): s is GameState {
   if (new Set(activePeople).size !== activePeople.length) return false;
   if (!isObj(s.units)) return false;
   const units = s.units as Record<string, unknown>;
-  if (!Object.entries(units).every(([k, u]) => validUnit(u, k))) return false;
+  if (!Object.entries(units).every(([k, u]) => validUnit(u, k, historical))) return false;
   for (const r of s.reservations as unknown[]) {
     if (!isObj(r) || !isStr(r.id) || !isStr(r.runId) || !isStr(r.itemId) || !isStr(r.unitId) || !oneOf(r.squadId, SQUAD_IDS)) return false;
     if (!Object.hasOwn(units, r.unitId)) return false;
@@ -284,13 +307,13 @@ function migrateV1toV2(env: SaveEnvelope): SaveEnvelope {
   draft.units = {};
   let index = 0;
   for (const stack of Object.values(raw.inventory)) {
-    const def = ITEMS[stack.itemId];
+    const def = legacyItemDefinition(stack.itemId);
     if (!def) continue;
     const owned = Math.max(0, Math.floor(stack.owned));
     for (let i = 0; i < owned; i++, index++) {
       const ageDays = 20 + (index % 6) * 14;
       const uses = Math.floor(stack.uses / Math.max(1, owned)) + (i < stack.uses % Math.max(1, owned) ? 1 : 0);
-      const unit = createUnit(draft, stack.itemId, now, { ageDays, uses });
+      const unit = createUnit(draft, stack.itemId, now, { ageDays, uses }, def);
       if (def.kind === 'equipment') unit.condition = Math.max(30, Math.round((unit.condition - def.wear.perUse * unit.wearRate * uses) * 100) / 100);
       // Units that were in maintenance carry on with that servicing.
       if (i >= owned - Math.max(0, Math.floor(stack.maintenance)) && def.kind === 'equipment') {
@@ -365,6 +388,17 @@ export function migrate(envelope: SaveEnvelope): SaveEnvelope | null {
           env = { ...env, saveVersion: 4, state };
           break;
         }
+        case 4: {
+          if (!validState(env.state, true)) return null;
+          const state = structuredClone(env.state);
+          state.department.unlockedNodes = [...new Set(state.department.unlockedNodes)];
+          state.department.developmentTiers = Object.fromEntries(state.department.unlockedNodes.map((id) => [id, 1]));
+          const retired = retireLegacyBatteries(state);
+          if (retired.removed) state.equipmentPowerUpgrade = { retiredUnits: retired.removed, refundedFunding: retired.refunded };
+          state.saveVersion = 5;
+          env = { ...env, saveVersion: 5, state };
+          break;
+        }
         default:
           return null;
       }
@@ -374,7 +408,7 @@ export function migrate(envelope: SaveEnvelope): SaveEnvelope | null {
   }
   // New draws use v2. Issued incident IDs encode their own content version;
   // never rewrite the board, an active run, its RNG, or its scenario fields.
-  const contentVersion = Math.max(2, env.state.contentVersion);
+  const contentVersion = Math.max(INCIDENT_CONTENT_VERSION, env.state.contentVersion);
   env = { ...env, contentVersion, state: { ...env.state, contentVersion, saveVersion: env.saveVersion } };
   return env;
 }
@@ -387,10 +421,12 @@ export function deserialize(text: string): GameState | null {
     return null;
   }
   if (!isObj(raw) || !isNum(raw.saveVersion) || !isNum(raw.contentVersion) || !isNum(raw.savedAt) || !isObj(raw.state)) return null;
+  if (![raw.contentVersion, raw.state.contentVersion].every((v) => Number.isInteger(v) && (v as number) >= 1 && (v as number) <= INCIDENT_CONTENT_VERSION)) return null;
   // Older versions are checked against their own shape before they are migrated.
   if (raw.saveVersion === 1 && !validV1(raw.state)) return null;
   const migrated = migrate(raw as unknown as SaveEnvelope);
   if (!migrated || !validState(migrated.state)) return null;
+  normalizeSquadArrangementState(migrated.state);
   return migrated.state;
 }
 

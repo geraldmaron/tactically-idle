@@ -32,7 +32,7 @@ describe('starting units', () => {
 
   it('turns the starting stock into individual units with unique serials', () => {
     const counts = Object.fromEntries(Object.keys(ITEMS).map((id) => [id, unitsOf(s, id).length]));
-    expect(counts).toMatchObject({ radio_kit: 6, loud_hailer: 2, throw_phone: 1, ballistic_shield: 2, door_ram: 1, trauma_kit: 6, battery_pack: 6, thermal_imager: 0, camera_drone: 0 });
+    expect(counts).toMatchObject({ radio_kit: 6, loud_hailer: 2, throw_phone: 1, ballistic_shield: 2, door_ram: 1, trauma_kit: 6, thermal_imager: 0, camera_drone: 0 });
     const serials = Object.values(s.units).map((u) => u.serial);
     expect(new Set(serials).size).toBe(serials.length);
     expect(unitsOf(s, 'radio_kit')[0].serial).toBe('RH-0101');
@@ -56,11 +56,10 @@ describe('starting units', () => {
     expect(Math.max(...radios)).toBeGreaterThan(90);
   });
 
-  it('has one battery close to fading and consumables with an expiry', () => {
-    const batteries = unitsOf(s, 'battery_pack');
-    expect(Math.min(...batteries.map((u) => u.condition))).toBeLessThan(65);
-    expect(Math.min(...batteries.map((u) => u.condition))).toBeGreaterThan(ITEMS.battery_pack.wear.failAt);
-    for (const u of [...batteries, ...unitsOf(s, 'trauma_kit')]) expect(u.expiresAt).toBeGreaterThan(T0);
+  it('includes power with equipment and keeps expiry on true consumables', () => {
+    expect(unitsOf(s, 'battery_pack')).toEqual([]);
+    expect(ITEMS.battery_pack).toBeUndefined();
+    for (const u of unitsOf(s, 'trauma_kit')) expect(u.expiresAt).toBeGreaterThan(T0);
     for (const u of unitsOf(s, 'radio_kit')) expect(u.expiresAt).toBeNull();
   });
 });
@@ -90,10 +89,10 @@ describe('time wear', () => {
 
   it('condition never goes below zero', () => {
     const s = createInitialState(T0);
-    const battery = unitsOf(s, 'battery_pack')[0];
-    battery.condition = 1;
+    const radio = unitsOf(s, 'radio_kit')[0];
+    radio.condition = 1;
     const next = ok(s, { type: 'tick' }, T0 + 24 * HOUR_MS);
-    expect(next.units[battery.id].condition).toBe(0);
+    expect(next.units[radio.id].condition).toBe(0);
   });
 
   it('units in service do not age', () => {

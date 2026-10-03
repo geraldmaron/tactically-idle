@@ -28,7 +28,7 @@ import { Icon, itemIcon } from '../icons';
 import type { IconName } from '../icons';
 import { moneyFull, pct } from '../format';
 import { cardFor, hasNodeEffect, isReplayOnly } from './helpers';
-import { planAuto, planPreparationEquipment } from './autoPlan';
+import { planAuto, preparationEquipmentFix } from './autoPlan';
 import { scenarioActions } from '../../sim/scenario-types';
 import type { AutoNote, Explicit, Loadouts } from './autoPlan';
 import { buildIntel } from './intel';
@@ -46,7 +46,6 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
   const { act, notify } = useToast();
   const card = cardFor(g, scenarioId, now);
   const scenario = useMemo(() => getScenario(scenarioId), [scenarioId]);
-  const brief = useMemo(() => briefing(scenarioId), [scenarioId]);
   const built = useMemo(() => builtForScenario(scenarioId), [scenarioId]);
   const spaces = useMemo(() => spaceViewsForScenario(scenarioId), [scenarioId]);
   const intel = useMemo(() => buildIntel(scenario, built), [scenario, built]);
@@ -55,6 +54,7 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
   const replay = isReplayOnly(g, scenarioId);
 
   const [chosen, setChosen] = useState<SquadId[]>([]);
+  const brief = useMemo(() => briefing(scenarioId, g, chosen), [scenarioId, g, chosen]);
   const [positions, setPositions] = useState<Partial<Record<SquadId, Id>>>({});
   const [optionalLoadouts, setLoadouts] = useState<Loadouts>({});
   const [explicit, setExplicit] = useState<Explicit>({});
@@ -233,15 +233,8 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
   };
 
   const preparationFix = (warning: string) => {
-    if (practice || !scenario || !/No .*loadout|Not enough .*left/.test(warning)) return null;
-    const action = scenarioActions(scenario).find((a) => warning.startsWith(`${a.title}:`));
-    if (!action) return null;
-    const sid = chosen.find((id) => {
-      const roster = g.squads.find((s) => s.id === id)?.officerIds.map((oid) => g.officers[oid]).filter(Boolean) ?? [];
-      return (action.requires.certs ?? []).every((cert) => roster.some((officer) => officer.certs.includes(cert)));
-    });
-    if (!sid) return null;
-    return { sid, plan: planPreparationEquipment({ state: g, now, action, squadId: sid, chosen, loadouts, picks }) };
+    if (practice || !scenario) return null;
+    return preparationEquipmentFix({ warning, actions: scenarioActions(scenario), state: g, now, chosen, loadouts, picks });
   };
 
   const equipPreparationFix = (fix: NonNullable<ReturnType<typeof preparationFix>>) => {
@@ -591,6 +584,7 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
           return <div key={`w${k}`}>
             <p className="note note-amber"><Icon name="warning" size={16} />{w}</p>
             {fix?.plan.issue && <p className="dim">{fix.plan.issue}</p>}
+            {!!fix?.plan.prerequisites.length && <p className="dim">Also needed: {fix.plan.prerequisites.join('; ')}.</p>}
             {fix && !fix.plan.issue && fix.plan.added > 0 && <Button size="sm" icon="box" onClick={() => equipPreparationFix(fix)}>Equip {fix.plan.label} on squad {fix.sid}</Button>}
           </div>;
         })}

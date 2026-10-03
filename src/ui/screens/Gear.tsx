@@ -1,17 +1,15 @@
 import { MaterialGuide } from '../art/MaterialGuide';
-import { GearArt } from '../art/GearArt';
+import { GearArtFrame } from '../art/GearArt';
 import { useEffect, useState } from 'react';
-import { useDevelopmentBudget, useGame } from '../store';
-import { Storefront } from '../storefront/Storefront';
-import { useDevelopmentPurchase } from '../storefront/useDevelopmentPurchase';
+import { useGame } from '../store';
+import { useNav } from '../components/nav';
+import { EquipmentStore } from '../storefront/EquipmentStore';
 import { storeOptions, unitViews } from '../../sim/department-selectors';
 import type { StoreOption, UnitView } from '../../sim/department-selectors';
 import type { GameState, Id, RestockRule, Squad } from '../../sim/types';
 import { CALENDAR } from '../../sim/calendar';
 import { ITEMS } from '../../content/items';
-import { DEV_NODES } from '../../content/dev-tree';
-import { nodeCheck } from '../../sim/develop';
-import { EQUIPMENT_MANAGER, equipmentWearMultiplier, hasEquipmentManager, maintenanceBudget } from '../../sim/equipment-manager-policy';
+import { EQUIPMENT_MANAGER, equipmentManagerBenefits, equipmentWearMultiplier, hasEquipmentManager, maintenanceBudget } from '../../sim/equipment-manager-policy';
 import { Button, Card, Chip, EmptyState, Section, Stepper, UnitBar } from '../components/ui';
 import { Sheet } from '../components/Sheet';
 import { useToast } from '../components/toast';
@@ -27,33 +25,36 @@ export function GearScreen() {
   const presets = hasNodeEffect(g, 'loadoutPresets');
   const restock = hasNodeEffect(g, 'restockRules');
   const [unitsFor, setUnitsFor] = useState<Id | null>(null);
-  const [surface, setSurface] = useState<'inventory' | 'store'>('inventory');
+  const nav = useNav();
+  const surface = nav.gearSection;
+  const setSurface = nav.setGearSection;
   const owned = opts.filter((option) => option.owned > 0);
   return (
     <div className="page gear-page">
       <nav className="gear-surfaces" aria-label="Gear sections">
-        <button type="button" className={surface === 'inventory' ? 'is-selected' : ''} aria-current={surface === 'inventory' ? 'page' : undefined} onClick={() => setSurface('inventory')}>Inventory <span>{owned.length}</span></button>
-        <button type="button" className={surface === 'store' ? 'is-selected' : ''} aria-current={surface === 'store' ? 'page' : undefined} onClick={() => { setUnitsFor(null); setSurface('store'); }}>Store <span>{opts.length} items</span></button>
+        <Button className={surface === 'inventory' ? 'is-selected' : ''} aria-current={surface === 'inventory' ? 'page' : undefined} onClick={() => setSurface('inventory')}>Inventory <span>{owned.length}</span></Button>
+        <Button className={surface === 'equipment' ? 'is-selected' : ''} aria-current={surface === 'equipment' ? 'page' : undefined} onClick={() => { setUnitsFor(null); setSurface('equipment'); }}>Equipment <span>{opts.length} items</span></Button>
       </nav>
-      <Storefront active={surface === 'store'} />
+      {surface === 'equipment' && <EquipmentStore active />}
       <div className="gear-inventory" hidden={surface !== 'inventory'}>
-      <EquipmentManager />
       <Section title="Inventory" icon="box" hint="Every item is a set of individual units that wear at their own pace. Tap a tile to see each unit, service it or scrap it.">
         {owned.length === 0 ? (
           <Card>
-            <EmptyState icon="box" title="No owned equipment">Browse the Store to inspect capabilities and buy stock.</EmptyState><Button onClick={() => setSurface('store')}>Browse Store</Button>
+            <EmptyState icon="box" title="No owned equipment">Browse Equipment to inspect capabilities and buy stock.</EmptyState><Button onClick={() => setSurface('equipment')}>Browse Equipment</Button>
           </Card>
         ) : (
           <div className="gear-grid">
             {owned.map((o) => (
-              <GearTile key={o.item.id} o={o} onOpen={() => setUnitsFor(o.item.id)} />
+              <GearTile key={o.item.id} o={o} onOpen={() => setUnitsFor(o.item.id)} onRestock={() => { setUnitsFor(null); nav.openEquipment({ itemId: o.item.id }); }} />
             ))}
           </div>
         )}
       </Section>
 
-      <Button block onClick={() => setSurface('store')}>Browse equipment, training and development</Button>
+      <Button block onClick={() => setSurface('equipment')}>Browse Equipment</Button>
       <UnitSheet itemId={unitsFor} onClose={() => setUnitsFor(null)} />
+      <details className="gear-maintenance"><summary>Maintenance &amp; loadouts<span className="dim">Service budgets, presets and hourly restock rules</span></summary><div className="gear-maintenance-body">
+      <EquipmentManager />
       <MaterialGuide />
 
       <Section title="Loadout presets" icon="list" hint="Save specialist gear choices here and apply them on preparation. Radios are standard kit: one per deployed officer is loaded automatically.">
@@ -75,7 +76,7 @@ export function GearScreen() {
         )}
       </Section>
 
-      <Section title="Restock rules" icon="refresh" hint="Refill an item up to a target after each operation, spending no more than the ceiling. Rules never take funding below zero.">
+      <Section title="Restock rules" icon="refresh" hint="At each clock hour, refill held stock up to the target (excluding expired units) within each rule’s spending ceiling. Rules never take funding below zero and stop after 24 hours without orders.">
         {!restock.unlocked ? (
           <p className="note note-warn">
             <Icon name="lock" size={16} />
@@ -91,6 +92,7 @@ export function GearScreen() {
           </div>
         )}
       </Section>
+      </div></details>
       </div>
     </div>
   );
@@ -100,26 +102,20 @@ function EquipmentManager() {
   const g = useGame();
   const { act } = useToast();
   const hired = hasEquipmentManager(g);
-  const node = DEV_NODES[EQUIPMENT_MANAGER.nodeId];
-  const developmentBudget = useDevelopmentBudget();
-  const purchases = useDevelopmentPurchase();
-  const check = nodeCheck({ ...g, department: { ...g.department, devPoints: developmentBudget.totalDP } }, node);
+  const benefits = equipmentManagerBenefits(g);
+  const nav = useNav();
   const budget = maintenanceBudget(g);
   const [draft, setDraft] = useState(budget || 200);
+  if (!hired) return <Card className="equipment-manager-locked">
+    <span><strong>Equipment manager</strong><span className="dim">Unlock service and wear benefits.</span></span>
+    <Button size="sm" onClick={() => nav.openDevelopment(EQUIPMENT_MANAGER.nodeId)}>Unlock in Develop</Button>
+  </Card>;
   return (
-    <Section title="Equipment manager" icon="wrench" hint="25% cheaper servicing and 20% less wear on reusable equipment. Consumables still age and are consumed normally.">
+    <Section title="Equipment manager" icon="wrench" hint={`Tier ${benefits.tier}: ${Math.round((1 - benefits.repairMultiplier) * 100)}% cheaper servicing and ${Math.round((1 - benefits.wearMultiplier) * 100)}% less wear on reusable equipment.`}>
       <Card>
-        {!hired ? <>
-          <p className="dim">Hire once for {money(node.cost.funding)} + {node.cost.dp} development points. Automatic service starts paused; hiring does not authorize an hourly service budget.</p>
-          <Button variant="primary" disabled={!!check.reason || !!purchases.pendingNode} onClick={() => void purchases.purchase(node.id, 'Equipment manager hired. Automatic service is paused.')}>
-            {purchases.pendingNode ? 'Hiring…' : `Hire manager · ${money(node.cost.funding)} + ${node.cost.dp} DP`}
-          </Button>
-          <p className="dim">Available DP: {Math.floor(developmentBudget.earnedDP * 10) / 10} earned + {Math.floor(developmentBudget.testDP * 10) / 10} test. Earned DP is spent first.</p>
-          {check.reason && <p className="reason">{check.reason}</p>}
-          {purchases.failure && <p className="reason" role="alert">{purchases.failure.reason}</p>}
-        </> : <>
+
           <p><strong>{budget ? `Automatic service: up to ${money(budget)}/hour` : 'Automatic service paused'}</strong></p>
-          <p className="dim">Checks at the next clock hour, services worn idle gear below {EQUIPMENT_MANAGER.serviceBelow}% condition, and keeps {money(EQUIPMENT_MANAGER.fundingReserve)} in reserve. The manager starts a job only while fewer than {EQUIPMENT_MANAGER.maxConcurrentServices} repairs are underway, counting manual jobs. You can order additional manual repairs separately. Working radios are kept ready for assigned officers; spare radios allow routine servicing.</p>
+          <p className="dim">Checks at the next clock hour, services worn idle gear below {EQUIPMENT_MANAGER.serviceBelow}% condition, and keeps {money(EQUIPMENT_MANAGER.fundingReserve)} in reserve. The manager starts a job only while fewer than {benefits.maxConcurrentServices} repairs are underway, counting manual jobs. You can order additional manual repairs separately. Working radios are kept ready for assigned officers; spare radios allow routine servicing.</p>
           <label className="field">
             <span className="field-label">Hourly service spending ceiling</span>
             <select value={draft} onChange={(e) => setDraft(Number(e.target.value))}>
@@ -131,14 +127,12 @@ function EquipmentManager() {
             {budget > 0 && <Button onClick={() => act({ type: 'setMaintenanceBudget', perHour: 0 }, 'Automatic service paused. Existing repairs will finish.')}>Pause automatic service</Button>}
           </div>
           <p className="dim">The ceiling includes the repair discount. No purchases are made. Pausing stops new repairs; current repairs finish normally. Automatic spending stops after 24 hours without orders.</p>
-        </>}
       </Card>
     </Section>
   );
 }
 
-function GearTile({ o, onOpen }: { o: StoreOption; onOpen: () => void }) {
-  const { act } = useToast();
+function GearTile({ o, onOpen, onRestock }: { o: StoreOption; onOpen: () => void; onRestock: () => void }) {
   const hasUnits = o.owned > 0;
   const tone = o.meanCondition === null ? 'neutral' : conditionTone(o.meanCondition, o.item.wear);
   return (
@@ -148,9 +142,7 @@ function GearTile({ o, onOpen }: { o: StoreOption; onOpen: () => void }) {
       )}
       <div className="gear-hit">
         <span className="gear-row">
-          <span className="gear-art" aria-hidden="true">
-            <GearArt itemId={o.item.id} />
-          </span>
+          <GearArtFrame itemId={o.item.id} />
           <span className="gear-main">
             <span className="gear-top">
               <strong>{o.item.name}</strong>
@@ -182,8 +174,8 @@ function GearTile({ o, onOpen }: { o: StoreOption; onOpen: () => void }) {
         )}
       </div>
       <div className="gear-buy">
-        <Button size="sm" variant="primary" icon="plus" disabled={!o.canBuy} onClick={() => act({ type: 'buyItem', itemId: o.item.id, qty: 1 }, `Bought ${o.item.name}`)}>
-          Buy 1 · {money(o.item.cost)} funding
+        <Button size="sm" variant="primary" icon="plus" onClick={onRestock}>
+          Restock · {money(o.item.cost)} each
         </Button>
         {!o.canBuy && o.reason && <span className="reason">{o.reason}</span>}
       </div>
@@ -224,7 +216,7 @@ function UnitSheet({ itemId, onClose }: { itemId: Id | null; onClose: () => void
       }
     >
       {item && <>
-        <div className="gear-dossier"><GearArt itemId={item.id} size={104} /><p className="dim">{item.description}</p></div>
+        <div className="gear-dossier"><GearArtFrame itemId={item.id} size={104} /><p className="dim">{item.description}</p></div>
         <UnitList itemId={item.id} />
       </>}
     </Sheet>

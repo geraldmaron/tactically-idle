@@ -241,7 +241,7 @@ export const MS_OCCUPANCY: ScenarioDefinition = {
           stage: 'adapt',
           title: 'Thermal check',
           icon: 'thermal',
-          summary: 'Uses a battery pack',
+          summary: 'Check a reachable room with the imager’s integrated power',
           targetId: 'bedroom_e',
           task: 'Thermal',
           requires: { allTags: ['thermal'] },
@@ -257,7 +257,6 @@ export const MS_OCCUPANCY: ScenarioDefinition = {
           spatial: { channel: 'thermal', subjectFactId: 'f_occ_e', weight: 22, noun: 'Heat' },
           workload: { base: 2, perSqFt: 0.01 },
           stressBase: 3,
-          consumes: [{ tag: 'battery', qty: 1 }],
           equipment: [{ tag: 'thermal', value: 4, range: 'target', label: 'a heat reading, range permitting' }],
           certBonus: { cert: 'surveillance', value: 4, label: 'trained to read thermal images' },
           outcomes: {

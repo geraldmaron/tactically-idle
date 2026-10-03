@@ -8,6 +8,7 @@ import { ITEMS } from '../content/items';
 import { HOUR_MS, isNodeUnlocked, money, ratesAt, simNow } from './economy';
 import { fullName } from './officer';
 import { createUnit } from './equipment';
+import { quoteDevelopment } from './development-tiers';
 
 export const DEVELOP_TUNING = {
   maxPurchase: 99,
@@ -27,7 +28,7 @@ export function describeEffect(e: NodeEffect): string {
     case 'rosterCap':
       return `${e.delta >= 0 ? '+' : ''}${e.delta} roster slots`;
     case 'trainingSlots':
-      return `${e.delta >= 0 ? '+' : ''}${e.delta} training slot`;
+      return `${1 + e.delta} total training slots`;
     case 'recoveryRate':
       return `Officers recover from stress x${e.mult} faster`;
     case 'income':
@@ -37,7 +38,7 @@ export function describeEffect(e: NodeEffect): string {
     case 'restockRules':
       return 'Unlocks automatic restocking with a spending ceiling';
     case 'equipmentManager':
-      return '25% cheaper repairs, 20% less reusable-gear wear; opt-in automatic servicing on Gear';
+      return `${Math.round((1 - e.repairMultiplier) * 100)}% cheaper repairs, ${Math.round((1 - e.wearMultiplier) * 100)}% slower reusable-gear wear, ${e.maxConcurrentServices} automatic service jobs`;
     case 'candidatePool':
       return `+${e.delta} recruit candidate in the pool`;
   }
@@ -49,35 +50,29 @@ export interface NodeCheck {
 }
 
 export function nodeCheck(state: GameState, node: DevelopmentNode): NodeCheck {
-  if (isNodeUnlocked(state, node.id)) return { status: 'unlocked', reason: null };
-  const missing = node.requires.filter((id) => !isNodeUnlocked(state, id));
-  if (missing.length > 0) {
-    return { status: 'locked', reason: `Requires ${missing.map((id) => DEV_NODES[id]?.name ?? id).join(', ')}` };
-  }
-  const dep = state.department;
-  if (dep.devPoints < node.cost.dp) {
-    return { status: 'available', reason: `Needs ${node.cost.dp} development points (have ${Math.floor(dep.devPoints * 10) / 10})` };
-  }
-  if (dep.funding < node.cost.funding) {
-    return { status: 'available', reason: `Needs ${money(node.cost.funding)} (have ${money(dep.funding)})` };
-  }
-  return { status: 'available', reason: null };
+  const quote = quoteDevelopment(state, node.id);
+  return {
+    status: quote.targetTier === null ? 'unlocked' : quote.missingPrerequisites.length ? 'locked' : 'available',
+    reason: quote.targetTier === null ? null : quote.reason,
+  };
 }
 
-function unlockNode(d: GameState, nodeId: Id): HandlerResult {
-  const node = DEV_NODES[nodeId];
-  if (!node) return refusal('Unknown development node');
-  const check = nodeCheck(d, node);
-  if (check.status === 'unlocked') return refusal(`${node.name} is already unlocked`);
-  if (check.reason) return refusal(check.reason);
+function unlockNode(d: GameState, nodeId: Id, expectedTier = 1): HandlerResult {
+  const quote = quoteDevelopment(d, nodeId, expectedTier);
+  if (!quote.ok) return refusal(quote.reason ?? 'Cannot buy this development');
+  const { node, cost, targetTier, effects, currentEffects } = quote;
   const dep = d.department;
-  dep.devPoints -= node.cost.dp;
-  dep.funding -= node.cost.funding;
-  dep.unlockedNodes.push(node.id);
-  // Capacity effects live on the department record; the rest are derived from unlockedNodes.
-  for (const e of node.effects) {
-    if (e.kind === 'rosterCap') dep.rosterCap += e.delta;
-    if (e.kind === 'trainingSlots') dep.trainingSlots += e.delta;
+  dep.devPoints -= cost!.dp;
+  dep.funding -= cost!.funding;
+  dep.developmentTiers ??= {};
+  dep.developmentTiers[node!.id] = targetTier!;
+  if (!dep.unlockedNodes.includes(node!.id)) dep.unlockedNodes.push(node!.id);
+  // Persist only the difference: migration never replays purchased capacities.
+  for (const kind of ['rosterCap', 'trainingSlots'] as const) {
+    const total = (list: NodeEffect[]) => list.reduce((sum, effect) => sum + (effect.kind === kind ? effect.delta : 0), 0);
+    const difference = total(effects) - total(currentEffects);
+    if (kind === 'rosterCap') dep.rosterCap += difference;
+    else dep.trainingSlots += difference;
   }
   return OK;
 }

@@ -1,0 +1,86 @@
+import { expect, it } from 'vitest';
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { createInitialState } from './department';
+import { dispatch } from './game';
+import { deserialize, serialize, SAVE_KEY } from './save';
+import { CampaignSlots, SLOTS_KEY } from './campaign-slots';
+import { startCmd, NOW } from './test-fixtures';
+import type { Command, GameState } from './types';
+
+const out = '/workspace/scratch/bb685210f96f/tactically-idle-recovered/src/sim/fixtures';
+const send = (state: GameState, cmd: Command) => {
+  const result = dispatch(state, cmd, { now: NOW });
+  expect(result.result, JSON.stringify(cmd)).toEqual({ ok: true });
+  return result.state;
+};
+it('captures independently generated old saves', () => {
+  let state = createInitialState(NOW, 19);
+  state.department.funding = 100000;
+  state.department.devPoints = 100;
+  for (const nodeId of ['personnel_academy', 'personnel_recruiting', 'personnel_fourth_squad', 'intel_records', 'intel_thermal', 'logistics_presets', 'logistics_restock']) {
+    state = send(state, { type: 'unlockNode', nodeId });
+  }
+  state = send(state, { type: 'buyItem', itemId: 'thermal_imager', qty: 1 });
+  state.squads[0].loadoutPreset = { radio_kit: 4, thermal_imager: 1, battery_pack: 2 };
+  state.department.restockRules = [{ itemId: 'battery_pack', target: 8, budgetCeiling: 160 }, { itemId: 'trauma_kit', target: 4, budgetCeiling: 100 }];
+  state = send(state, startCmd('ms_occupancy', ['A'], { loadouts: { A: { thermal_imager: 1, battery_pack: 2 } } }));
+  state = send(state, { type: 'decide', actionId: 'ms_gather', actingSquadIds: ['A'], supportSquadIds: [] });
+  expect(state.activeRun!.stage).toBe('adapt');
+  state = send(state, { type: 'decide', actionId: 'ms_thermal', actingSquadIds: ['A'], supportSquadIds: [] });
+  expect(state.activeRun!.history[1].itemsConsumed).toContainEqual({ itemId: 'battery_pack', qty: 1 });
+  const batteries = Object.values(state.units).filter((unit) => unit.itemId === 'battery_pack');
+  const consumedId = state.activeRun!.history[1].unitsUsed.find((id) => state.units[id]?.itemId === 'battery_pack')!;
+  expect(consumedId).toBeTruthy();
+  const ready = batteries.filter((unit) => unit.status === 'ready');
+  ready[0].status = 'expired'; ready[0].expiresAt = NOW - 1;
+  ready[1].status = 'scrapped';
+  const consumed = state.units[consumedId];
+  // Historical saves may retain a consumed reservation before the debrief settles it.
+  expect(consumed.status).toBe('reserved');
+  const batteryReservation = state.reservations.find((r) => r.unitId === consumedId)!;
+  state.activeRun!.resupplies = [{ minutes: 3, allocations: [{ squadId: 'A', unitIds: [consumedId] }] }];
+  state.activeRun!.clock += 3; state.activeRun!.revision++;
+  state.activeRun!.reservationIds.push(batteryReservation.id);
+  const v4 = JSON.parse(serialize(state, NOW));
+  expect(deserialize(JSON.stringify(v4))).not.toBeNull();
+
+  const old = createInitialState(NOW, 2718) as any;
+  old.saveVersion = 1; old.contentVersion = 1;
+  old.inventory = {
+    radio_kit: { itemId: 'radio_kit', owned: 3, reserved: 1, maintenance: 1, uses: 11, maintenanceUntil: NOW + 3600000 },
+    battery_pack: { itemId: 'battery_pack', owned: 5, reserved: 2, maintenance: 0, uses: 0, maintenanceUntil: null },
+    ballistic_shield: { itemId: 'ballistic_shield', owned: 3, reserved: 0, maintenance: 1, uses: 8, maintenanceUntil: NOW + 7200000 },
+    trauma_kit: { itemId: 'trauma_kit', owned: 2, reserved: 0, maintenance: 0, uses: 0, maintenanceUntil: null },
+  };
+  old.nextId = 101; old.rngState = 123456789;
+  delete old.units; delete old.personnel; delete old.incidents;
+  delete old.department.calendarEpoch; delete old.department.nextIncidentAt;
+  old.department.unlockedNodes = ['personnel_academy']; old.department.trainingSlots = 2;
+  for (const officer of [...Object.values(old.officers), ...old.candidates.map((c: any) => c.officer)] as any[]) {
+    for (const key of ['bornDay', 'serviceStartDay', 'career', 'retirement', 'xpBanked', 'identityId']) delete officer[key];
+  }
+  old.reservations = [{ id: 'legacy-reservation', runId: 'legacy-run', squadId: 'A', itemId: 'battery_pack', qty: 2 }];
+  old.activeRun = { id: 'legacy-run', status: 'active', squadIds: ['A'], reservationIds: ['legacy-reservation'] };
+  old.officers.off_chen.assignment = { kind: 'operation', runId: 'legacy-run' };
+  const v1 = { saveVersion: 1, contentVersion: 1, savedAt: NOW, state: old };
+  const baselineV1 = deserialize(JSON.stringify(v1))!;
+  expect(baselineV1).not.toBeNull();
+
+  const entries = new Map<string, string>();
+  const storage = { getItem: (key: string) => entries.get(key) ?? null, setItem: (key: string, value: string) => { entries.set(key, value); } };
+  const walletState = createInitialState(NOW, 909); walletState.department.devPoints = 0.70000001;
+  storage.setItem(SAVE_KEY, serialize(walletState, NOW));
+  const bank = new CampaignSlots(storage, NOW, () => 202);
+  expect(bank.beginPurchase('google', 'mock.dp.8', 'baseline-eight', NOW).ok).toBe(true);
+  expect(bank.resolvePurchase('mock:google:baseline-eight', 'success', NOW).ok).toBe(true);
+  expect(bank.completePurchase('mock:google:baseline-eight', NOW).ok).toBe(true);
+  expect(bank.allocatePurchase(bank.getSnapshot().campaignId!, 3300, NOW).ok).toBe(true);
+  expect(bank.saveAs(2, 'Old second campaign', NOW).ok).toBe(true);
+  expect(bank.allocatePurchase(bank.getSnapshot().campaignId!, 1700, NOW).ok).toBe(true);
+  expect(bank.load(1, NOW).ok).toBe(true);
+  mkdirSync(out, { recursive: true });
+  writeFileSync(`${out}/release-v4-active.json`, JSON.stringify(v4, null, 2) + '\n');
+  writeFileSync(`${out}/release-v1-stacks.json`, JSON.stringify(v1, null, 2) + '\n');
+  writeFileSync(`${out}/release-v1-expected-v4.json`, JSON.stringify(baselineV1, null, 2) + '\n');
+  writeFileSync(`${out}/release-v4-wallet.json`, entries.get(SLOTS_KEY)! + '\n');
+});

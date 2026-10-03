@@ -52,7 +52,7 @@ export function OpsBoard({ onPrepare }: { onPrepare: (id: Id) => void }) {
         )}
       </Section>
 
-      <Section title="Standing and practice" icon="flag" hint="Standing assignments, equipment exercises and past incidents. Exercises and replays use virtual gear with no rewards or consequences.">
+      <Section title="Standing and practice" icon="flag" hint="Try three decision exercises, equipment practice or past incidents. Exercises and replays use virtual gear with no rewards or consequences.">
         {practice.length === 0 ? (
           <Card>
             <EmptyState icon="flag" title="Nothing to practise yet">
@@ -214,7 +214,7 @@ export function PracticeCardView({ entry, onPrepare }: { entry: PracticeEntry; o
         {kind !== 'standing' ? (
           <p className="note note-amber">
             <Icon name={kind === 'exercise' ? 'flag' : 'refresh'} size={16} />
-            {kind === 'exercise' ? 'Equipment exercise: practice only, with virtual gear and no rewards.' : 'Past incident: replays as practice only.'}
+            {kind === 'exercise' ? 'Exercise: practice only, with virtual gear and no rewards.' : 'Past incident: replays as practice only.'}
           </p>
         ) : (
           <Eligibility card={card} />

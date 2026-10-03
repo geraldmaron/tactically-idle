@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { useGame } from '../store';
-import { pendingDebrief } from '../../sim/operation-selectors';
+import { decisionViews, pendingDebrief } from '../../sim/operation-selectors';
 import type { DebriefResult, KnowledgeStatus } from '../../sim/types';
 import type { PersonDefinition } from '../../sim/scenario-types';
 import { getScenario } from '../../sim/scenario-registry';
@@ -14,6 +14,32 @@ import { Icon, itemIcon } from '../icons';
 import type { IconName } from '../icons';
 import { signed, signedMoney } from '../format';
 import { useMemo } from 'react';
+import { OperationFeedback, OperationLogContents } from './OperationFeedback';
+import { Sheet } from '../components/Sheet';
+
+type DebriefOfficers = Record<string, { surname: string; firstName: string }>;
+
+/** A saved debrief is self-contained; it never borrows history from a newer active run. */
+export function SavedDebriefContents({ debrief: d, officers }: { debrief: DebriefResult; officers: DebriefOfficers }) {
+  return <div className="saved-debrief-content">
+    {d.endingSummary && <p className="debrief-narrative">{d.endingSummary}</p>}
+    <div className="chips">
+      <Chip>Objective: {d.objective.label} · {Math.round(d.objective.score)}/100</Chip>
+      <Chip>Civilian safety: {d.civilianSafety.label} · {Math.round(d.civilianSafety.score)}/100</Chip>
+      {d.practice && <Chip tone="amber">Practice · no department consequences</Chip>}
+    </div>
+    <details className="decision-causes saved-debrief-totals"><summary>Officer condition, supplies and rewards</summary><Rows d={d} officers={officers} /></details>
+    {!!d.causes.length && <details className="decision-causes"><summary>What decided this result</summary><ul>{d.causes.map((cause, index) => <li key={index}>{cause}</li>)}</ul></details>}
+    <h3 className="saved-debrief-log-title">Decision log</h3>
+    {d.decisions?.length ? <OperationLogContents decisions={d.decisions} practice={d.practice} /> : <p className="operation-note">No per-decision log is stored for this operation. The saved result and causes are shown above.</p>}
+  </div>;
+}
+
+export function SavedDebriefReview({ debrief, officers, onClose }: { debrief: DebriefResult | null; officers: DebriefOfficers; onClose: () => void }) {
+  return <Sheet open={!!debrief} onClose={onClose} title={debrief?.endingTitle ?? 'Saved result'} className="operation-log-sheet" footer={<Button block onClick={onClose}>Return to HQ</Button>}>
+    {debrief && <SavedDebriefContents debrief={debrief} officers={officers} />}
+  </Sheet>;
+}
 
 export function OpsDebrief() {
   const g = useGame();
@@ -38,6 +64,7 @@ export function OpsDebrief() {
       <div className="debrief-hero">
         <span className="kicker">{d.practice ? 'PRACTICE DEBRIEF' : 'DEBRIEF'}</span>
         <h2 className="debrief-title">{d.endingTitle}</h2>
+        {d.endingSummary && <p className="debrief-narrative">{d.endingSummary}</p>}
         {d.practice && (
           <p className="note note-amber">
             <Icon name="info" size={16} />
@@ -45,6 +72,7 @@ export function OpsDebrief() {
           </p>
         )}
       </div>
+      <OperationFeedback decisions={decisionViews(g)} practice={d.practice} ended />
       <Rows d={d} officers={g.officers} />
       <Reality d={d} />
       {d.causes.length > 0 && (
@@ -78,7 +106,9 @@ function Row({ icon, title, children }: { icon: IconName; title: string; childre
   );
 }
 
-function Rows({ d, officers }: { d: DebriefResult; officers: Record<string, { surname: string; firstName: string }> }) {
+function Rows({ d, officers }: { d: DebriefResult; officers: DebriefOfficers }) {
+  const resources = d.resources.filter((row) => row.itemId !== 'battery_pack');
+  const wear = (d.unitWear ?? []).filter((row) => row.itemId !== 'battery_pack');
   const tone = (n: number) => (n >= 70 ? 'hi' : n >= 40 ? 'mid' : 'lo');
   return (
     <Card className="drows">
@@ -150,11 +180,11 @@ function Rows({ d, officers }: { d: DebriefResult; officers: Record<string, { su
         )}
       </Row>
       <Row icon="box" title="Resources">
-        {d.resources.length === 0 ? (
+        {resources.length === 0 ? (
           <span className="dim">No equipment was carried.</span>
         ) : (
           <ul className="offrows">
-            {d.resources.map((r) => (
+            {resources.map((r) => (
               <li key={r.itemId}>
                 <strong>
                   <Icon name={itemIcon(r.itemId)} size={15} />
@@ -169,11 +199,11 @@ function Rows({ d, officers }: { d: DebriefResult; officers: Record<string, { su
         )}
       </Row>
       <Row icon="wrench" title="Equipment wear">
-        {(d.unitWear ?? []).length === 0 ? (
+        {wear.length === 0 ? (
           <span className="dim">No equipment wore down on this run.</span>
         ) : (
           <ul className="wearrows">
-            {d.unitWear.map((w) => {
+            {wear.map((w) => {
               const delta = w.after - w.before;
               return (
                 <li key={w.unitId}>

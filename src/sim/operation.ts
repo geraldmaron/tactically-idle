@@ -7,6 +7,7 @@ import type {
   Command,
   DebriefResult,
   DecisionResolution,
+  DecisionView,
   GameState,
   HandlerMap,
   ItemUnit,
@@ -25,6 +26,7 @@ import { scenarioActions } from './scenario-types';
 import { getScenario } from './scenario-registry';
 import { INCIDENT_TUNING, takeIncident } from './incidents';
 import { ITEMS } from '../content/items';
+import { legacyItemDefinition } from './compatibility/retirement';
 import { hashSeed, next } from './rng';
 import { deployability, fullName } from './officer';
 import { releaseRun, reserveLoadouts, settleRun, squadUnits } from './inventory';
@@ -106,6 +108,7 @@ export function validateScenario(s: ScenarioDefinition, built: BuiltLocation): s
       if (a.check.kind !== 'execution' && a.check.ratings.some((r) => r.key === 'shooting' && r.weight > 0)) errs.push(`${a.id}: shooting counts only toward execution checks`);
       if (a.check.ratings.every((r) => r.weight <= 0)) errs.push(`${a.id}: no relevant ratings`);
       for (const f of a.requires.facts ?? []) fact(f.factId, `action ${a.id}`);
+      for (const f of a.visibleWhen?.facts ?? []) fact(f.factId, `action ${a.id} visibility`);
       for (const m of a.modifiers ?? []) for (const f of m.when.facts ?? []) fact(f.factId, `action ${a.id} modifier`);
       for (const band of ['favorable', 'mixed', 'adverse'] as OutcomeBand[]) {
         const effects = a.outcomes[band];
@@ -115,11 +118,13 @@ export function validateScenario(s: ScenarioDefinition, built: BuiltLocation): s
         }
         for (const e of effects) {
           for (const k of e.knowledge ?? []) fact(k.factId, `action ${a.id} outcome`);
+          for (const id of e.reveal ?? []) fact(id, `action ${a.id} reveal`);
+          for (const entry of e.truth ?? []) fact(entry.factId, `action ${a.id} truth`);
           for (const f of e.when?.facts ?? []) fact(f.factId, `action ${a.id} outcome`);
           if (e.ending && !s.endings[e.ending]) errs.push(`${a.id}: unknown ending ${e.ending}`);
           for (const o of e.openings ?? []) if (!built.location.openings.some((x) => x.id === o.openingId)) errs.push(`${a.id}: unknown opening ${o.openingId}`);
         }
-        if (stage === 'resolve' && !effects.some((e) => e.ending && !e.when)) errs.push(`${a.id}: resolve action must always reach an ending (${band})`);
+        if (stage === 'resolve' && !effects.some((e) => (e.ending || (s.version >= 3 && e.stage === 'resolve')) && !e.when && !e.truth)) errs.push(`${a.id}: resolve action must always reach an ending (${band})`);
       }
     }
   }
@@ -330,6 +335,13 @@ export function advanceTime(run: Pick<OperationRun, 'clock' | 'pressure' | 'civi
   return { civilianLoss: loss, crossed: p0 < m.threshold && run.pressure >= m.threshold };
 }
 
+/** Hidden truth is consulted only when committing/replaying an outcome, never in previews. */
+export function matchedEffects(action: ActionDefinition, band: OutcomeBand, run: Pick<OperationRun, 'knowledge' | 'flags' | 'pressure'>, scenario: ScenarioDefinition): OutcomeEffect[] {
+  return action.outcomes[band]
+    .filter((effect) => conditionHolds(effect.when, run) && (effect.truth ?? []).every((entry) => scenario.facts.find((fact) => fact.id === entry.factId)?.truth === entry.is))
+    .map((effect) => effect.reveal?.length ? { ...effect, knowledge: [...effect.knowledge ?? [], ...effect.reveal.map((factId) => ({ factId, status: scenario.facts.find((fact) => fact.id === factId)?.truth ? 'confirmed' as const : 'disproved' as const }))] } : effect);
+}
+
 const RANK: Record<KnowledgeStatus, number> = { unknown: 0, reported: 1, confirmed: 2, disproved: 2 };
 
 /** Apply matched effects to run state. Knowledge only moves forward. */
@@ -369,6 +381,7 @@ export interface StepTrace {
   band: OutcomeBand;
   objectiveDelta: number;
   civilianDelta: number;
+  pressureDelta: number;
   /** Civilian safety lost to elapsed time above the pressure threshold. */
   pressureLoss: number;
   effects: OutcomeEffect[];
@@ -382,23 +395,58 @@ export function traceRun(scenario: ScenarioDefinition, run: OperationRun): { ste
   for (const resupply of run.resupplies ?? []) advanceTime(sim, scenario, resupply.minutes);
   for (const h of run.history) {
     const a = actions.get(h.actionId) ?? null;
-    const matched = (a?.outcomes[h.band] ?? []).filter((e) => conditionHolds(e.when, sim));
+    const matched = a ? matchedEffects(a, h.band, sim, scenario) : [];
+    const pressure0 = sim.pressure;
     const obj0 = sim.objective;
     const civ0 = sim.civilianSafety;
     advanceTime(sim, scenario, h.timeCost);
     const civAfterTime = sim.civilianSafety;
     applyEffects(sim, matched);
+    // Saved v3 deltas are authoritative, including clamping. Older histories retain
+    // the original replay through their versioned content and stored outcome bands.
+    if (h.committed) {
+      sim.objective = round1(clamp(obj0 + h.committed.objectiveDelta, 0, 100));
+      sim.civilianSafety = round1(clamp(civ0 + h.committed.civilianSafetyDelta, 0, 100));
+      sim.pressure = round1(clamp(pressure0 + h.committed.pressureDelta, 0, 100));
+      for (const change of h.knowledgeChanges) sim.knowledge[change.factId] = change.status;
+    }
     steps.push({
       resolution: h,
       action: a,
       band: h.band,
       objectiveDelta: round1(sim.objective - obj0),
+      pressureDelta: round1(sim.pressure - pressure0),
       civilianDelta: round1(sim.civilianSafety - civ0),
       pressureLoss: round1(civ0 - civAfterTime),
       effects: matched,
     });
   }
   return { steps, end: sim };
+}
+
+/** Build a detached display snapshot from a versioned trace; safe to retain after closing the run. */
+export function decisionViewsFor(state: GameState, run: OperationRun, scenario: ScenarioDefinition, steps = traceRun(scenario, run).steps): DecisionView[] {
+  return steps.map((step) => {
+    const record = step.resolution;
+    const committed = record.committed;
+    const ending = [...step.effects].reverse().find((effect) => effect.ending)?.ending ?? (record === run.history.at(-1) ? run.endingId : null);
+    return {
+      revision: record.revision, actionId: record.actionId,
+      title: step.action?.title ?? record.actionId,
+      stageLabel: scenario.stages[record.stage].label,
+      band: record.band, explanation: [...record.explanation], timeCost: record.timeCost,
+      objectiveDelta: committed?.objectiveDelta ?? step.objectiveDelta,
+      civilianSafetyDelta: committed?.civilianSafetyDelta ?? step.civilianDelta,
+      pressureDelta: committed?.pressureDelta ?? step.pressureDelta,
+      actualStressDeltas: committed !== undefined,
+      stressDeltas: Object.entries(record.stressDeltas).map(([officerId, delta]) => ({ officerId, label: state.officers[officerId]?.surname ?? officerId, delta })),
+      supplies: record.itemsConsumed.filter((use) => legacyItemDefinition(use.itemId)?.kind === 'consumable').map((use) => ({ ...use, label: legacyItemDefinition(use.itemId)?.name ?? use.itemId })),
+      knowledgeChanges: record.knowledgeChanges.map((change) => ({ ...change, label: scenario.facts.find((fact) => fact.id === change.factId)?.label ?? change.factId })),
+      contributors: record.inputs.map((input) => ({ ...input })),
+      consequences: committed ? [...committed.consequences] : step.effects.map((effect) => effect.text).filter((text): text is string => !!text),
+      endingTitle: committed ? committed.endingTitle : (ending ? scenario.endings[ending]?.title ?? ending : null),
+    };
+  });
 }
 
 // ---------------------------------------------------------------- squad choice helpers
@@ -521,15 +569,23 @@ export function computeDebrief(state: GameState, run: OperationRun): DebriefResu
     ({ resources, unitWear } = settleRun(probe, run.id, unitsUsedTotals(run), 0));
   }
 
-  const trustDelta = run.practice ? 0 : Math.round(scenario.rewards.trust * (2 * factor - 1)) + ending.trustAdjust;
+  const proposedTrust = run.practice ? 0 : Math.round(scenario.rewards.trust * (2 * factor - 1)) + ending.trustAdjust;
+  const trustDelta = run.practice ? 0 : scenario.version >= 3 ? clamp(state.department.trust + proposedTrust, 0, 100) - state.department.trust : proposedTrust;
   const fundingReward = run.practice ? 0 : Math.round(scenario.rewards.funding * (0.4 + 0.6 * factor));
   const devPointReward = run.practice ? 0 : factor >= 0.6 ? scenario.rewards.devPoints : factor >= 0.4 ? Math.floor(scenario.rewards.devPoints / 2) : 0;
+  const causes = debriefCauses(scenario, run, steps);
+  if (scenario.version >= 3 && !run.practice) {
+    const closingStrain = officerCondition.map((officer) => ({ ...officer, delta: round1(officer.stressAfter - (state.officers[officer.officerId]?.stress ?? officer.stressAfter)) })).filter((officer) => officer.delta !== 0);
+    if (closingStrain.length) causes.unshift(`Ending adjustment at close: ${closingStrain.map((officer) => `${state.officers[officer.officerId]?.surname ?? officer.officerId} ${officer.delta > 0 ? '+' : ''}${officer.delta} strain`).join('; ')}.`);
+  }
 
   return {
     runId: run.id,
     scenarioId: run.scenarioId,
     endingId: run.endingId,
     endingTitle: ending.title,
+    decisions: decisionViewsFor(state, run, scenario, steps),
+    ...(scenario.version >= 3 ? { endingSummary: ending.summary } : {}),
     practice: run.practice,
     objective: { score: Math.round(run.objective), label: objectiveLabel(run.objective) },
     civilianSafety: { score: Math.round(run.civilianSafety), label: civilianLabel(run.civilianSafety) },
@@ -540,7 +596,7 @@ export function computeDebrief(state: GameState, run: OperationRun): DebriefResu
     trustDelta,
     fundingReward,
     devPointReward,
-    causes: debriefCauses(scenario, run, steps),
+    causes: causes.slice(0, 7),
   };
 }
 
@@ -650,12 +706,15 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     const sample = r.value;
     const band = bandFor(ev.margin, sample);
 
-    const matched = action.outcomes[band].filter((e) => conditionHolds(e.when, run));
+    const matched = matchedEffects(action, band, run, scenario);
+    const before = { objective: run.objective, civilianSafety: run.civilianSafety, pressure: run.pressure };
     const extra = matched.reduce((s, e) => s + (e.extraMinutes ?? 0), 0);
-    const timeCost = round1(ev.timeBase * ({ favorable: 1, mixed: 1.2, adverse: 1.5 } as Record<OutcomeBand, number>)[band] + extra);
+    const proposedTime = ev.timeBase * ({ favorable: 1, mixed: 1.2, adverse: 1.5 } as Record<OutcomeBand, number>)[band] + extra;
+    const timeCost = round1(scenario.version >= 3 ? Math.max(0.5, proposedTime) : proposedTime);
     const strain = run.practice ? {} : strainFor(input, ev, band);
 
     const t = advanceTime(run, scenario, timeCost);
+    if (scenario.version >= 3) t.civilianLoss = round1(before.civilianSafety - run.civilianSafety);
     const { changes, stage: nextStage, ending } = applyEffects(run, matched);
 
     // positions, staging points and task labels
@@ -675,7 +734,11 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     // strain lands on the officers now: later decisions see the real condition
     for (const [id, dlt] of Object.entries(strain)) {
       const o = draft.officers[id];
-      if (o) o.stress = round1(clamp(o.stress + dlt, 0, 100));
+      if (o) {
+        const stressBefore = o.stress;
+        o.stress = round1(clamp(o.stress + dlt, 0, 100));
+        if (scenario.version >= 3) strain[id] = round1(o.stress - stressBefore);
+      }
     }
 
     const used: Record<Id, number> = {};
@@ -734,6 +797,20 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
         }
       } else if (run.stage !== stage) stageNote = `Moved on to ${scenario.stages[run.stage as StageId].label}.`;
     }
+    if (scenario.version >= 3) resolution.committed = {
+      objectiveDelta: round1(run.objective - before.objective),
+      civilianSafetyDelta: round1(run.civilianSafety - before.civilianSafety),
+      pressureDelta: round1(run.pressure - before.pressure),
+      consequences: [
+        ...texts,
+        ...matched.flatMap((effect) => (effect.openings ?? []).map((change) => {
+          const opening = built.location.openings.find((candidate) => candidate.id === change.openingId);
+          return opening ? `${spaceName(built, opening.a)} to ${spaceName(built, opening.b)}: ${change.state}.` : `${change.openingId.replaceAll('_', ' ')}: ${change.state}.`;
+        })),
+        ...(run.stage !== 'debrief' ? [`Next: ${scenario.stages[run.stage].prompt}`] : []),
+      ],
+      endingTitle: run.endingId ? scenario.endings[run.endingId]?.title ?? run.endingId : null,
+    };
     resolution.explanation = explain(draft, scenario, ev, band, texts, timeCost, t.civilianLoss, knowledgeChanges, consumed, strain, stageNote, run.practice);
     return { ok: true };
   },

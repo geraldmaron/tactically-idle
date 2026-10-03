@@ -16,6 +16,7 @@ import { COURSES } from '../content/courses';
 import { DEV_NODES } from '../content/dev-tree';
 import { ITEMS } from '../content/items';
 import { courseCheck, describeEffect, itemCheck, nodeCheck } from './develop';
+import { quoteDevelopment, type DevelopmentQuote } from './development-tiers';
 import {
   ECONOMY_TUNING,
   HOUR_MS,
@@ -90,6 +91,11 @@ export interface CourseOption {
 
 export interface NodeOption {
   node: DevelopmentNode;
+  quote: DevelopmentQuote;
+  currentTier: number;
+  targetTier: number | null;
+  maxTier: number;
+  currentEffects: string[];
   /**
    * 'available' means prerequisites are met. When it cannot be bought yet
    * (points or funding), `reason` says what is missing; a null reason means buy now.
@@ -201,7 +207,13 @@ export function courseOptions(state: GameState, officerId: Id | null, _now: numb
 export function nodeOptions(state: GameState): NodeOption[] {
   return Object.values(DEV_NODES).map((node) => {
     const c = nodeCheck(state, node);
-    return { node, status: c.status, reason: c.reason, effects: node.effects.map(describeEffect) };
+    const quote = quoteDevelopment(state, node.id);
+    return {
+      node, quote, currentTier: quote.currentTier, targetTier: quote.targetTier, maxTier: quote.maxTier,
+      status: c.status, reason: c.reason,
+      currentEffects: quote.currentEffects.map(describeEffect),
+      effects: (quote.targetTier ? quote.effects : quote.currentEffects).map(describeEffect),
+    };
   });
 }
 

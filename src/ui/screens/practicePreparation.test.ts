@@ -32,7 +32,7 @@ describe('practice-only equipment exercises', () => {
   it('labels an exercise card as practice before preparation', () => {
     const entry = practiceEntries(state, NOW).find((candidate) => candidate.kind === 'exercise')!;
     const html = renderToStaticMarkup(createElement(PracticeCardView, { entry, onPrepare: () => {} }));
-    expect(html).toContain('Equipment exercise: practice only');
+    expect(html).toContain('Exercise: practice only');
     expect(html).toContain('Prepare practice');
     expect(html).not.toContain('Past incident');
   });
@@ -61,9 +61,11 @@ describe('practice-only equipment exercises', () => {
 
   it('includes capability equipment and companion supplies in a useful, supported practice kit', () => {
     const signals = briefing('practice_signals_v2').usefulItemIds;
-    expect(signals).toEqual(expect.arrayContaining(['observation_binoculars', 'portable_light', 'radio_relay', 'battery_pack', 'command_van']));
+    expect(signals).toEqual(expect.arrayContaining(['portable_light', 'radio_relay', 'command_van']));
+    expect(signals).not.toContain('observation_binoculars');
+    expect(signals).not.toContain('battery_pack');
     const virtual = new Set(practiceUnits(state, true).map((unit) => unit.itemId));
-    for (const id of ['radio_relay', 'battery_pack', 'inspection_camera']) expect(virtual.has(id)).toBe(true);
+    for (const id of ['radio_relay', 'inspection_camera']) expect(virtual.has(id)).toBe(true);
     expect(virtual.has('command_van')).toBe(false);
     const ordinary = new Set(practiceUnits(state).map((unit) => unit.itemId));
     expect(ordinary.has('radio_relay')).toBe(false);

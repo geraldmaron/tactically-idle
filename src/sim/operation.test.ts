@@ -47,8 +47,8 @@ const swapChenForReyes = (s: GameState): GameState => {
 describe('scenario content and selectors', () => {
   it('preserves the original scenario order and adds equipment practice cards', () => {
     const cards = scenarioCards(makeState(), NOW);
-    expect(cards.map((c) => c.code)).toEqual(['OP 0141', 'OP 0142', 'PRACTICE 03', 'PRACTICE 04', 'PRACTICE 05']);
-    expect(cards.slice(2).map((c) => c.id)).toEqual(['practice_signals_v2', 'practice_response_v2', 'practice_rescue_v2']);
+    expect(cards.slice(0, 5).map((c) => c.code)).toEqual(['OP 0141', 'OP 0142', 'PRACTICE 03', 'PRACTICE 04', 'PRACTICE 05']);
+    expect(cards.slice(2, 5).map((c) => c.id)).toEqual(['practice_signals_v2', 'practice_response_v2', 'practice_rescue_v2']);
     expect(cards[0].variantLabel).toBe('Uncertain occupancy');
     expect(cards[1].variantLabel).toBe('Time pressure');
     expect(cards[0].eligibleSquadIds).toEqual(['A', 'B']);
@@ -161,16 +161,16 @@ describe('capability dependency (acceptance 3)', () => {
     expect(previewAction(s, NOW, 'ms_contact', ['A'], [])!.eligible).toBe(true);
   });
 
-  it('thermal needs the imager and a battery; both are reported separately', () => {
+  it('thermal needs its reusable imager with integrated power', () => {
     const adapt = (s: GameState) => setRun(s, { stage: 'adapt' });
     const none = adapt(startRun(makeState(), 'ms_occupancy', ['A']));
     expect(view(none, 'ms_thermal').reason).toBe("No thermal imager in Squad A's loadout");
     const inv = { thermal_imager: 1 };
     const noBattery = adapt(startRun(makeState({ inventory: inv }), 'ms_occupancy', ['A'], { loadouts: { A: { thermal_imager: 1 } } }));
-    expect(view(noBattery, 'ms_thermal').reason).toBe("No battery pack in Squad A's loadout");
-    const ok = adapt(startRun(makeState({ inventory: inv }), 'ms_occupancy', ['A'], { loadouts: { A: { thermal_imager: 1, battery_pack: 1 } } }));
+    expect(view(noBattery, 'ms_thermal').eligible).toBe(true);
+    const ok = adapt(startRun(makeState({ inventory: inv }), 'ms_occupancy', ['A'], { loadouts: { A: { thermal_imager: 1 } } }));
     expect(view(ok, 'ms_thermal').eligible).toBe(true);
-    expect(view(ok, 'ms_thermal').requirementLine).toBe('Thermal imager + uses battery pack');
+    expect(view(ok, 'ms_thermal').requirementLine).toBe('Thermal imager');
   });
 });
 
@@ -449,7 +449,7 @@ describe('integrity (acceptance 11)', () => {
     const count = (st: GameState, itemId: Id) => Object.values(st.units).filter((u) => u.itemId === itemId).length;
     expect(kit.used).toBeLessThanOrEqual(1);
     expect(count(done.state, 'trauma_kit')).toBe(6 - kit.used);
-    expect(count(done.state, 'battery_pack')).toBe(6); // reserved, never used
+    expect(count(done.state, 'battery_pack')).toBe(0); // power is integrated
     expect(count(done.state, 'throw_phone')).toBe(1);
     expect(Object.values(done.state.units).every((u) => u.status === 'ready')).toBe(true);
     // Wear lands only on units the decisions actually used, and the debrief says which.
@@ -459,7 +459,7 @@ describe('integrity (acceptance 11)', () => {
       if (!usedUnits.has(u.id)) expect(u.condition).toBe(before.condition);
       else expect(u.condition).toBeLessThan(before.condition);
     }
-    expect(done.debrief.resources.find((r) => r.itemId === 'battery_pack')).toMatchObject({ used: 0, returned: 2 });
+    expect(done.debrief.resources.find((r) => r.itemId === 'battery_pack')).toBeUndefined();
     // The same close again changes nothing.
     const twice = apply(done.state, { type: 'closeDebrief' });
     expect(twice.result.ok).toBe(false);

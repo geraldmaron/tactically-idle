@@ -1,0 +1,633 @@
+{
+  "catalogCount": 28,
+  "readyCount": 28,
+  "newGeneratedCount": 19,
+  "originalPreservedCount": 9,
+  "allDimensions": [
+    512,
+    512
+  ],
+  "allTrueAlpha": true,
+  "allDistinctHashes": true,
+  "runtimeBytes": 1375158,
+  "newRuntimeBytes": 906486,
+  "visualReview": "All 28 equipment images reviewed together on a dark-navy contact sheet. Each new silhouette matches its catalog role; vehicles, response classes, rescue tools and supplies remain distinct. Door charge is deliberately represented by a sealed abstract fictional access pouch.",
+  "entries": [
+    {
+      "id": "armored_rescue_vehicle",
+      "file": "armored_rescue_vehicle.webp",
+      "bytes": 56334,
+      "dimensions": [
+        512,
+        512
+      ],
+      "mode": "RGBA",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "alphaBoundingBox": [
+        0,
+        72,
+        512,
+        472
+      ],
+      "sha256": "ed2a888ce28868f8c8d5b8995952993f39071b486ff5faf38d3cef81fad49f1b",
+      "newInExpansion": true
+    },
+    {
+      "id": "ballistic_shield",
+      "file": "ballistic_shield.webp",
+      "bytes": 44408,
+      "dimensions": [
+        512,
+        512
+      ],
+      "mode": "RGBA",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "alphaBoundingBox": [
+        47,
+        11,
+        427,
+        501
+      ],
+      "sha256": "0707b79d6f591afc868212e8fdf2c3ad81b197b4d48eb10e5bd1010f29df54de",
+      "newInExpansion": false
+    },
+    {
+      "id": "battery_pack",
+      "file": "battery_pack.webp",
+      "bytes": 38410,
+      "dimensions": [
+        512,
+        512
+      ],
+      "mode": "RGBA",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "alphaBoundingBox": [
+        13,
+        41,
+        499,
+        471
+      ],
+      "sha256": "90910022cfba049fd46449343b3d672d5e28fed26d77029c92fe16790b6f8d39",
+      "newInExpansion": false
+    },
+    {
+      "id": "camera_drone",
+      "file": "camera_drone.webp",
+      "bytes": 65542,
+      "dimensions": [
+        512,
+        512
+      ],
+      "mode": "RGBA",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "alphaBoundingBox": [
+        5,
+        52,
+        506,
+        512
+      ],
+      "sha256": "95392a06ec38fa182cb7e5605d935ededae10bd9a310d9f9529731b288281469",
+      "newInExpansion": false
+    },
+    {
+      "id": "command_van",
+      "file": "command_van.webp",
+      "bytes": 50540,
+      "dimensions": [
+        512,
+        512
+      ],
+      "mode": "RGBA",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "alphaBoundingBox": [
+        0,
+        9,
+        512,
+        501
+      ],
+      "sha256": "0fe6137836f8a2067e30c8299063daeb7ac085ea40ed6efef1f948bd01201a20",
+      "newInExpansion": true
+    },
+    {
+      "id": "compact_carbine",
+      "file": "compact_carbine.webp",
+      "bytes": 40254,
+      "dimensions": [
+        512,
+        512
+      ],
+      "mode": "RGBA",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "alphaBoundingBox": [
+        6,
+        21,
+        502,
+        499
+      ],
+      "sha256": "efe72688192fdbddcbe67e3107c4148472b999ef4a38d14530aac635696982f4",
+      "newInExpansion": true
+    },
+    {
+      "id": "conducted_energy_device",
+      "file": "conducted_energy_device.webp",
+      "bytes": 50912,
+      "dimensions": [
+        512,
+        512
+      ],
+      "mode": "RGBA",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "alphaBoundingBox": [
+        19,
+        32,
+        505,
+        481
+      ],
+      "sha256": "85f0023c339082c35d9acf1b015d0ff3c4e1531c82be2614ac40bd36898eb9b6",
+      "newInExpansion": true
+    },
+    {
+      "id": "door_charge",
+      "file": "door_charge.webp",
+      "bytes": 55932,
+      "dimensions": [
+        512,
+        512
+      ],
+      "mode": "RGBA",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "alphaBoundingBox": [
+        29,
+        46,
+        492,
+        495
+      ],
+      "sha256": "5d7d2db3193dcd012b18f0d6fd2afcd5bcf4d8e393898b06384ef0ac8bde738d",
+      "newInExpansion": true
+    },
+    {
+      "id": "door_ram",
+      "file": "door_ram.webp",
+      "bytes": 38754,
+      "dimensions": [
+        512,
+        512
+      ],
+      "mode": "RGBA",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "alphaBoundingBox": [
+        7,
+        21,
+        506,
+        460
+      ],
+      "sha256": "e85c964c00004348563abd84c303f5108b546caf50df2aac8c9a3a2137edfff1",
+      "newInExpansion": false
+    },
+    {
+      "id": "energy_cartridge",
+      "file": "energy_cartridge.webp",
+      "bytes": 55268,
+      "dimensions": [
+        512,
+        512
+      ],
+      "mode": "RGBA",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "alphaBoundingBox": [
+        26,
+        25,
+        493,
+        492
+      ],
+      "sha256": "970a56f2738b5a54dc274949eefad3dded3b6de3cbc0c10bd239cbed0bc03ee9",
+      "newInExpansion": true
+    },
+    {
+      "id": "impact_launcher",
+      "file": "impact_launcher.webp",
+      "bytes": 38308,
+      "dimensions": [
+        512,
+        512
+      ],
+      "mode": "RGBA",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "alphaBoundingBox": [
+        8,
+        32,
+        512,
+        505
+      ],
+      "sha256": "82f426bfa73381ad7e4ceb5eb34627f703d1d73cca3759735104a3156467b1c3",
+      "newInExpansion": true
+    },
+    {
+      "id": "impact_supply",
+      "file": "impact_supply.webp",
+      "bytes": 44196,
+      "dimensions": [
+        512,
+        512
+      ],
+      "mode": "RGBA",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "alphaBoundingBox": [
+        0,
+        50,
+        506,
+        480
+      ],
+      "sha256": "8401feaf65bc34b2e0db10f8e443341976a9dce0a78032ccae6d2405bc5ddda9",
+      "newInExpansion": true
+    },
+    {
+      "id": "inspection_camera",
+      "file": "inspection_camera.webp",
+      "bytes": 39224,
+      "dimensions": [
+        512,
+        512
+      ],
+      "mode": "RGBA",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "alphaBoundingBox": [
+        7,
+        7,
+        498,
+        505
+      ],
+      "sha256": "ec4c7e00fabf9cdb458a598a828c9d0da7703b842b0911bcbe4e5f6da433af6b",
+      "newInExpansion": true
+    },
+    {
+      "id": "light_protection",
+      "file": "light_protection.webp",
+      "bytes": 62920,
+      "dimensions": [
+        512,
+        512
+      ],
+      "mode": "RGBA",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "alphaBoundingBox": [
+        7,
+        26,
+        505,
+        492
+      ],
+      "sha256": "ffd5ef8438880e8ae8a300a04c5b2c73f0229cf096765bda6b0de0b0fdb0ffe0",
+      "newInExpansion": true
+    },
+    {
+      "id": "loud_hailer",
+      "file": "loud_hailer.webp",
+      "bytes": 40390,
+      "dimensions": [
+        512,
+        512
+      ],
+      "mode": "RGBA",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "alphaBoundingBox": [
+        7,
+        15,
+        506,
+        499
+      ],
+      "sha256": "cf961b5d4042ab4f3090b0e288fb838e68cfb0b8fbe9e976ce113dd6f7fead5d",
+      "newInExpansion": false
+    },
+    {
+      "id": "observation_binoculars",
+      "file": "observation_binoculars.webp",
+      "bytes": 53266,
+      "dimensions": [
+        512,
+        512
+      ],
+      "mode": "RGBA",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "alphaBoundingBox": [
+        5,
+        39,
+        512,
+        488
+      ],
+      "sha256": "a0c7887f99ff4eb919cfe06ff77a6a4958131f6c422dab138e9f1d76dbd21020",
+      "newInExpansion": true
+    },
+    {
+      "id": "portable_light",
+      "file": "portable_light.webp",
+      "bytes": 64232,
+      "dimensions": [
+        512,
+        512
+      ],
+      "mode": "RGBA",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "alphaBoundingBox": [
+        13,
+        7,
+        505,
+        505
+      ],
+      "sha256": "4481f68a25cecd13bf940cadaa8c5149f783ba212e3cf6d8a51b1960a27cb518",
+      "newInExpansion": true
+    },
+    {
+      "id": "precision_support",
+      "file": "precision_support.webp",
+      "bytes": 32040,
+      "dimensions": [
+        512,
+        512
+      ],
+      "mode": "RGBA",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "alphaBoundingBox": [
+        7,
+        26,
+        507,
+        487
+      ],
+      "sha256": "caecad3790d8232bd6a9fe97fba81d224952c85a5423eca87d3680dadcfa99c2",
+      "newInExpansion": true
+    },
+    {
+      "id": "radio_kit",
+      "file": "radio_kit.webp",
+      "bytes": 65084,
+      "dimensions": [
+        512,
+        512
+      ],
+      "mode": "RGBA",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "alphaBoundingBox": [
+        32,
+        14,
+        498,
+        498
+      ],
+      "sha256": "6200462122353e1960fcf5e703aad9b8da717f5a78305ab9e5d747237664455a",
+      "newInExpansion": false
+    },
+    {
+      "id": "radio_relay",
+      "file": "radio_relay.webp",
+      "bytes": 51048,
+      "dimensions": [
+        512,
+        512
+      ],
+      "mode": "RGBA",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "alphaBoundingBox": [
+        15,
+        7,
+        495,
+        500
+      ],
+      "sha256": "b2d3e2c45e8b7a767631d3f3853680b66cccf8b2341db7ff17b2e51ad3fae657",
+      "newInExpansion": true
+    },
+    {
+      "id": "rescue_shield",
+      "file": "rescue_shield.webp",
+      "bytes": 55604,
+      "dimensions": [
+        512,
+        512
+      ],
+      "mode": "RGBA",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "alphaBoundingBox": [
+        40,
+        0,
+        491,
+        508
+      ],
+      "sha256": "844b3201103012f3ca2169c26eb27b22ba03640c8af5a36385cfd12ffe1f106d",
+      "newInExpansion": true
+    },
+    {
+      "id": "rescue_spreader",
+      "file": "rescue_spreader.webp",
+      "bytes": 40358,
+      "dimensions": [
+        512,
+        512
+      ],
+      "mode": "RGBA",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "alphaBoundingBox": [
+        0,
+        65,
+        512,
+        447
+      ],
+      "sha256": "08ea8ec181ad1cef244ae97001867ff861bbda4ac96d972afd76e2cfd1610959",
+      "newInExpansion": true
+    },
+    {
+      "id": "response_shotgun",
+      "file": "response_shotgun.webp",
+      "bytes": 25268,
+      "dimensions": [
+        512,
+        512
+      ],
+      "mode": "RGBA",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "alphaBoundingBox": [
+        0,
+        25,
+        512,
+        490
+      ],
+      "sha256": "fceb984c7a7c4563ccec46fef9909e701c3c92b9cee2941bc6b5dfba7a70e824",
+      "newInExpansion": true
+    },
+    {
+      "id": "service_sidearm",
+      "file": "service_sidearm.webp",
+      "bytes": 47614,
+      "dimensions": [
+        512,
+        512
+      ],
+      "mode": "RGBA",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "alphaBoundingBox": [
+        13,
+        13,
+        495,
+        505
+      ],
+      "sha256": "79204d7049ae08419cc8cb3220d5d854bcd49be818896170a8a813668a1838c4",
+      "newInExpansion": true
+    },
+    {
+      "id": "support_van",
+      "file": "support_van.webp",
+      "bytes": 43168,
+      "dimensions": [
+        512,
+        512
+      ],
+      "mode": "RGBA",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "alphaBoundingBox": [
+        0,
+        41,
+        512,
+        459
+      ],
+      "sha256": "29712bfe7e7044d4b1009c7160a0cd1779299cc33ba59d33a3394ef9cd3c77f1",
+      "newInExpansion": true
+    },
+    {
+      "id": "thermal_imager",
+      "file": "thermal_imager.webp",
+      "bytes": 49604,
+      "dimensions": [
+        512,
+        512
+      ],
+      "mode": "RGBA",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "alphaBoundingBox": [
+        32,
+        5,
+        482,
+        506
+      ],
+      "sha256": "ebe90605bb092d5d3f167a94477cbce3cfefddacabaa5fc5967cf40e27caed1a",
+      "newInExpansion": false
+    },
+    {
+      "id": "throw_phone",
+      "file": "throw_phone.webp",
+      "bytes": 46320,
+      "dimensions": [
+        512,
+        512
+      ],
+      "mode": "RGBA",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "alphaBoundingBox": [
+        7,
+        45,
+        512,
+        469
+      ],
+      "sha256": "f6a6c271c6c24f196c61759f1e4d3ff4baa4e5d60a1c98289f937d842cb9562c",
+      "newInExpansion": false
+    },
+    {
+      "id": "trauma_kit",
+      "file": "trauma_kit.webp",
+      "bytes": 80160,
+      "dimensions": [
+        512,
+        512
+      ],
+      "mode": "RGBA",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "alphaBoundingBox": [
+        8,
+        12,
+        512,
+        504
+      ],
+      "sha256": "25204da9f421e47936b704f6e031284f0c05ee8c373687939071bc662ba2e30f",
+      "newInExpansion": false
+    }
+  ]
+}

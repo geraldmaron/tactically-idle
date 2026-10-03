@@ -4,6 +4,8 @@
 // Units: geometry in feet (y grows downward), time in epoch milliseconds for the
 // department clock, and abstract "operation minutes" inside an operation run.
 
+import type { SquadArrangementLockTarget, SquadArrangementProposal, SquadArrangementState } from './squad-optimizer';
+
 export type Id = string;
 
 // ---------------------------------------------------------------- geometry
@@ -420,8 +422,14 @@ export type NodeEffect =
   | { kind: 'income'; perHour: number }
   | { kind: 'loadoutPresets' }
   | { kind: 'restockRules' }
-  | { kind: 'equipmentManager' }
+  | { kind: 'equipmentManager'; repairMultiplier: number; wearMultiplier: number; maxConcurrentServices: number }
   | { kind: 'candidatePool'; delta: number };
+
+export interface DevelopmentTier {
+  /** Incremental purchase price; effects are the total benefit at this tier. */
+  cost: { dp: number; funding: number };
+  effects: NodeEffect[];
+}
 
 export interface DevelopmentNode {
   id: Id;
@@ -431,6 +439,8 @@ export interface DevelopmentNode {
   cost: { dp: number; funding: number };
   requires: Id[];
   effects: NodeEffect[];
+  /** Ordered tiers I through III. Missing for a one-time program or license. */
+  tiers?: DevelopmentTier[];
 }
 
 export interface Course {
@@ -453,6 +463,8 @@ export interface Department {
   rosterCap: number;
   trainingSlots: number;
   unlockedNodes: Id[];
+  /** Purchased tier by node ID. Entitlements remain in unlockedNodes. */
+  developmentTiers: Record<Id, number>;
   restockRules: RestockRule[];
   /** Opt-in automatic servicing ceiling per clock hour; absent/zero means paused. */
   maintenanceBudgetPerHour?: number;
@@ -531,6 +543,14 @@ export interface SquadTask {
 }
 
 export interface DecisionResolution {
+  /** Actual, clamped changes committed by v3 decisions. Optional for pre-v3 saves. */
+  committed?: {
+    objectiveDelta: number;
+    civilianSafetyDelta: number;
+    pressureDelta: number;
+    consequences: string[];
+    endingTitle: string | null;
+  };
   /** Run revision this decision was applied to. */
   revision: number;
   stage: StageId;
@@ -605,6 +625,10 @@ export interface DebriefResult {
   scenarioId: Id;
   endingId: Id;
   endingTitle: string;
+  /** Absent only in older saved debriefs. */
+  endingSummary?: string;
+  /** Detached complete decision log; absent from previously closed legacy debriefs. */
+  decisions?: DecisionView[];
   practice: boolean;
   objective: { score: number; label: string };
   civilianSafety: { score: number; label: string };
@@ -622,7 +646,34 @@ export interface DebriefResult {
 
 // ---------------------------------------------------------------- view models consumed by the UI
 
+export interface DecisionView {
+  revision: number;
+  actionId: Id;
+  title: string;
+  stageLabel: string;
+  band: OutcomeBand;
+  explanation: string[];
+  timeCost: number;
+  objectiveDelta: number;
+  civilianSafetyDelta: number;
+  pressureDelta: number;
+  /** Older records saved requested strain, which may have been clamped on application. */
+  actualStressDeltas: boolean;
+  stressDeltas: { officerId: Id; label: string; delta: number }[];
+  supplies: { itemId: Id; label: string; qty: number }[];
+  knowledgeChanges: { factId: Id; label: string; status: KnowledgeStatus }[];
+  contributors: Contributor[];
+  consequences: string[];
+  endingTitle: string | null;
+}
+
 export interface ActionView {
+  likelihood: Record<OutcomeBand, number>;
+  suppliesRequired: { label: string; qty: number }[];
+  outcomePreview: Record<OutcomeBand, string>;
+  consequenceLevel: RiskBand;
+  /** Conservative public duration bounds, including possible outcome delays. */
+  timeRange: { min: number; max: number };
   id: Id;
   stage: StageId;
   title: string;
@@ -724,6 +775,8 @@ export interface PersonnelState {
 }
 
 export interface GameState {
+  /** Saved arrangement protections and a mapping-only undo point. */
+  squadArrangement?: SquadArrangementState;
   /** Added in save v4. Optional only for historical test fixtures and migration inputs. */
   personnel?: PersonnelState;
   saveVersion: number;
@@ -742,6 +795,8 @@ export interface GameState {
   debriefs: DebriefResult[];
   /** Unacknowledged shift report from the last settlement with meaningful elapsed time. */
   report: ShiftReport | null;
+  /** One-time receipt for retired standalone power supplies. */
+  equipmentPowerUpgrade?: { retiredUnits: number; refundedFunding: number };
   /** Monotonic counter for new ids. */
   nextId: number;
   /** Department-level PRNG state for recruit generation. */
@@ -752,16 +807,20 @@ export type Command =
   // department (src/sim/department.ts)
   | { type: 'tick' }
   | { type: 'acknowledgeReport' }
+  | { type: 'acknowledgePowerUpgrade' }
   | { type: 'hire'; candidateId: Id }
   | { type: 'dismiss'; officerId: Id }
   | { type: 'shortlist'; candidateId: Id; on: boolean }
   | { type: 'refreshCandidates'; targetRole?: Role }
   | { type: 'startCourse'; officerId: Id; courseId: Id }
-  | { type: 'unlockNode'; nodeId: Id }
+  | { type: 'unlockNode'; nodeId: Id; expectedTier?: number }
   | { type: 'buyItem'; itemId: Id; qty: number }
   | { type: 'createSquad'; name: string }
   | { type: 'renameSquad'; squadId: SquadId; name: string }
   | { type: 'assignToSquad'; officerId: Id; squadId: SquadId | null }
+  | { type: 'setSquadArrangementLock'; target: SquadArrangementLockTarget; locked: boolean }
+  | { type: 'applySquadArrangement'; proposal: SquadArrangementProposal }
+  | { type: 'undoSquadArrangement' }
   | { type: 'setLeader'; squadId: SquadId; officerId: Id }
   | { type: 'setSquadDuty'; squadId: SquadId; duty: SquadDuty }
   | { type: 'setLoadoutPreset'; squadId: SquadId; items: Record<Id, number> }
@@ -819,6 +878,7 @@ export type DepartmentCommandType =
   | 'setMaintenanceBudget'
   | 'tick'
   | 'acknowledgeReport'
+  | 'acknowledgePowerUpgrade'
   | 'hire'
   | 'dismiss'
   | 'shortlist'
@@ -829,6 +889,9 @@ export type DepartmentCommandType =
   | 'createSquad'
   | 'renameSquad'
   | 'assignToSquad'
+  | 'setSquadArrangementLock'
+  | 'applySquadArrangement'
+  | 'undoSquadArrangement'
   | 'setLeader'
   | 'setSquadDuty'
   | 'setLoadoutPreset'

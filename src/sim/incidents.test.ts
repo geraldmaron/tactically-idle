@@ -81,7 +81,7 @@ describe('initial board', () => {
   it('passes department level, trust and content version to the generator', () => {
     createInitialState(T0);
     expect(draw).toHaveBeenCalled();
-    for (const call of draw.mock.calls) expect(call[1]).toMatchObject({ level: 3, trust: 78, contentVersion: 2 });
+    for (const call of draw.mock.calls) expect(call[1]).toMatchObject({ level: 3, trust: 78, contentVersion: 3 });
   });
 
   it('is deterministic and leaves the starting candidates unchanged by the board', () => {
@@ -109,7 +109,7 @@ describe('arrivals and expiry are event-ordered', () => {
     start.department.devPoints = 10;
     start = ok(start, { type: 'unlockNode', nodeId: 'logistics_presets' }, T0);
     start = ok(start, { type: 'unlockNode', nodeId: 'logistics_restock' }, T0);
-    start = ok(start, { type: 'setRestockRule', rule: { itemId: 'battery_pack', target: 40, budgetCeiling: 400 } }, T0);
+    start = ok(start, { type: 'setRestockRule', rule: { itemId: 'trauma_kit', target: 40, budgetCeiling: 400 } }, T0);
     const end = T0 + 24 * HOUR_MS;
     const offline = ok(start, { type: 'tick' }, end);
     expect(Object.keys(offline.units).length).toBeGreaterThan(Object.keys(start.units).length);

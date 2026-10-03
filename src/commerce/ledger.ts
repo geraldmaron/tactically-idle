@@ -23,6 +23,9 @@ export function validTestWallet(value: unknown): value is TestWallet {
       || !Number.isFinite(t.createdAt) || !Number.isFinite(t.updatedAt)
       || !['pending', 'cancelled', 'failed', 'credited', 'completed'].includes(t.status)
       || !integer(t.debtPaid) || !integer(t.spent) || typeof t.completionFailed !== 'boolean'
+      || (t.claimCampaignId !== undefined && !validId(t.claimCampaignId))
+      || (t.claimDelivered !== undefined && (typeof t.claimDelivered !== 'boolean' || !t.claimCampaignId))
+      || (t.claimDelivered === true && !credited(t))
       || !t.allocations || typeof t.allocations !== 'object' || Array.isArray(t.allocations)
       || !Object.entries(t.allocations).every(([id, n]) => validId(id) && integer(n))
       || (t.refundedAt !== undefined && (!Number.isFinite(t.refundedAt) || !credited(t)))

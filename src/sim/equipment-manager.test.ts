@@ -35,7 +35,7 @@ describe('equipment manager', () => {
     next.department.unlockedNodes.push('logistics_equipment_manager');
     expect(equipmentServiceCost(next, ITEMS.radio_kit)).toBe(45);
     expect(equipmentWearMultiplier(next, ITEMS.radio_kit)).toBe(0.8);
-    expect(equipmentWearMultiplier(next, ITEMS.battery_pack)).toBe(1);
+    expect(equipmentWearMultiplier(next, ITEMS.trauma_kit)).toBe(1);
   });
 
   it('uses the same discounted quote and charge, rounds upward, and does not refund pre-hire repairs', () => {
@@ -59,16 +59,16 @@ describe('equipment manager', () => {
   it('reduces reusable time and per-use wear once, while consumables retain their normal aging and consumption', () => {
     const state = hired();
     const radio = Object.values(state.units).find((u) => u.itemId === 'radio_kit')!;
-    const battery = Object.values(state.units).find((u) => u.itemId === 'battery_pack')!;
+    const consumable = Object.values(state.units).find((u) => u.itemId === 'trauma_kit')!;
     const next = ok(state, { type: 'tick' }, T0 + HOUR_MS);
     expect(next.units[radio.id].condition).toBeCloseTo(radio.condition - ITEMS.radio_kit.wear.perDay * radio.wearRate * 0.8, 8);
     expect(projectedCondition(state, radio, T0 + HOUR_MS)).toBeCloseTo(next.units[radio.id].condition, 8);
-    expect(next.units[battery.id].condition).toBeCloseTo(battery.condition - ITEMS.battery_pack.wear.perDay * battery.wearRate, 8);
-    expect(reserveLoadouts(next, 'wear-test', { A: { radio_kit: 1, battery_pack: 1 } }, { A: [radio.id, battery.id] }, T0 + HOUR_MS)).toEqual({ ok: true });
+    expect(next.units[consumable.id].condition).toBeCloseTo(consumable.condition - ITEMS.trauma_kit.wear.perDay * consumable.wearRate, 8);
+    expect(reserveLoadouts(next, 'wear-test', { A: { radio_kit: 1, trauma_kit: 1 } }, { A: [radio.id, consumable.id] }, T0 + HOUR_MS)).toEqual({ ok: true });
     const radioBefore = next.units[radio.id].condition;
-    settleRun(next, 'wear-test', [radio.id, battery.id], T0 + HOUR_MS);
+    settleRun(next, 'wear-test', [radio.id, consumable.id], T0 + HOUR_MS);
     expect(next.units[radio.id].condition).toBe(Math.round((radioBefore - 6 * radio.wearRate * 0.8) * 10) / 10);
-    expect(next.units[battery.id]).toBeUndefined();
+    expect(next.units[consumable.id]).toBeUndefined();
   });
 
   it('does not spend automatically until a budget is explicitly enabled and cannot enable without a manager', () => {

@@ -77,8 +77,8 @@ describe('auto-equip owned inventory', () => {
     const s = makeState({ inventory: { thermal_imager: 3, camera_drone: 3 } });
     const plan = autoLoadout(s, 'ms_occupancy', ['A', 'B'], NOW);
     expect(plan.added).toBeGreaterThan(4);
-    expect(plan.loadouts.A).toMatchObject({ throw_phone: 1, radio_kit: 4, thermal_imager: 1, battery_pack: 1 });
-    expect(plan.loadouts.B).toMatchObject({ radio_kit: 4, thermal_imager: 1, battery_pack: 1 });
+    expect(plan.loadouts.A).toMatchObject({ throw_phone: 1, radio_kit: 4, thermal_imager: 1 });
+    expect(plan.loadouts.B).toMatchObject({ radio_kit: 4, thermal_imager: 1 });
     for (const quantities of Object.values(plan.loadouts)) {
       for (const [itemId, qty] of Object.entries(quantities)) if (ITEMS[itemId].kind === 'equipment') expect(qty).toBe(itemId === 'radio_kit' ? 4 : 1);
       expect(quantities.camera_drone).toBeUndefined(); // No drone action in this scenario.
@@ -124,28 +124,25 @@ describe('auto-equip owned inventory', () => {
     assertActualUnits(s, plan);
   });
 
-  it('does not allocate a dependent tool or its partial consumable allowance without a full usable package', () => {
+  it('treats legacy power as integrated without separate consumable picks', () => {
     const scenarioId = scenarioWith([thermal({ consumes: [{ tag: 'battery', qty: 2 }] })]);
-    const s = onlyUnits(makeState(), [makeUnit('thermal_imager', 1), makeUnit('battery_pack', 1)]);
-    const partial = autoLoadout(s, scenarioId, ['A'], NOW);
-    expect(partial.loadouts.A).toEqual({ radio_kit: 4 });
-    expect(partial.added).toBe(0);
-    expect(partial.warnings.join(' ')).toMatch(/Battery pack/);
-    s.units[unitId('battery_pack', 2)] = makeUnit('battery_pack', 2);
-    expect(autoLoadout(s, scenarioId, ['A'], NOW).loadouts.A).toEqual({ radio_kit: 4, thermal_imager: 1, battery_pack: 2 });
-    const optOut = autoLoadout(s, scenarioId, ['A'], NOW, { loadouts: { A: { battery_pack: 0 } } });
-    expect(optOut.loadouts.A).toEqual({ radio_kit: 4, battery_pack: 0 });
-    expect(optOut.units.A).toEqual([]);
+    const s = onlyUnits(makeState(), [makeUnit('thermal_imager', 1)]);
+    const plan = autoLoadout(s, scenarioId, ['A'], NOW);
+    expect(plan.loadouts.A).toEqual({ radio_kit: 4, thermal_imager: 1 });
+    expect(plan.warnings.join(' ')).not.toMatch(/battery/i);
+    expect(plan.units.A).toEqual([unitId('thermal_imager')]);
   });
 
-  it('uses the maximum consumables per stage, shares alternatives, and supplies later stages', () => {
+  it('budgets sequential same-stage supplies and shares only terminal alternatives', () => {
+    const med = structuredClone(SCENARIOS.ms_urgent.stages.resolve.actions.find((a) => a.consumes?.some((c) => c.tag === 'medkit'))!);
+    const sequential = { ...med, stage: 'assess' as const, approach: 'none' as const, outcomes: { favorable: [{ objective: 1 }], mixed: [{ objective: 1 }], adverse: [{ objective: 1 }] } };
     const scenarioId = scenarioWith([
-      thermal({ id: 'first', stage: 'assess' }), thermal({ id: 'same_stage', stage: 'assess' }),
-      thermal({ id: 'later', stage: 'adapt', consumes: [{ tag: 'battery', qty: 2 }] }),
+      { ...sequential, id: 'first' }, { ...sequential, id: 'second' },
+      { ...med, id: 'terminal1' }, { ...med, id: 'terminal2' },
     ]);
-    const s = makeState({ inventory: { thermal_imager: 5, battery_pack: 20 } });
+    const s = makeState({ inventory: { trauma_kit: 10 } });
     const plan = autoLoadout(s, scenarioId, ['A'], NOW);
-    expect(plan.loadouts.A).toEqual({ radio_kit: 4, thermal_imager: 1, battery_pack: 3 });
+    expect(plan.loadouts.A?.trauma_kit).toBe(3);
     assertActualUnits(s, plan);
   });
 
@@ -166,10 +163,10 @@ describe('manual choices, repeat clicks, and current stock', () => {
     const radio = unitId('radio_kit', 6);
     s.units[radio].condition = 35;
     const plan = autoLoadout(s, 'ms_occupancy', ['A', 'B'], NOW, {
-      loadouts: { A: { radio_kit: 2, throw_phone: 0, thermal_imager: 0, battery_pack: 0 } },
+      loadouts: { A: { radio_kit: 2, throw_phone: 0, thermal_imager: 0 } },
       units: { A: [radio] },
     });
-    expect(plan.loadouts.A).toMatchObject({ radio_kit: 4, throw_phone: 0, thermal_imager: 0, battery_pack: 0 });
+    expect(plan.loadouts.A).toMatchObject({ radio_kit: 4, throw_phone: 0, thermal_imager: 0 });
     expect(plan.units.A).not.toContain(radio);
     expect(plan.units.A?.filter((id) => s.units[id].itemId === 'radio_kit')).toHaveLength(4);
     assertActualUnits(s, plan);

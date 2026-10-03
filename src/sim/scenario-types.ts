@@ -1,7 +1,7 @@
 // Scenario schema for the operation engine. Owned by the operation module.
 // A ScenarioDefinition is static authored content; everything that changes during
 // play lives in OperationRun (types.ts). See docs/operation-model.md.
-import type { CapabilityId, CertId, Id, KnowledgeStatus, OpeningState, OutcomeBand, RatingKey, StageId, Vec } from './types';
+import type { CapabilityId, CertId, Id, KnowledgeStatus, OpeningState, OutcomeBand, RatingKey, RiskBand, StageId, Vec } from './types';
 import type { Channel } from './spatial';
 
 export type ActionIcon =
@@ -164,6 +164,10 @@ export interface SupportRule {
 }
 
 export interface OutcomeEffect {
+  /** Engine-only branches, evaluated only when a decision commits. Never preview these texts. */
+  truth?: { factId: Id; is: boolean }[];
+  /** Settle a claim against scenario truth at commit, without exposing truth during evaluation. */
+  reveal?: Id[];
   when?: Condition;
   knowledge?: { factId: Id; status: KnowledgeStatus }[];
   setFlags?: string[];
@@ -195,6 +199,12 @@ export interface ActionCapabilities {
 }
 
 export interface ActionDefinition {
+  /** Public-state visibility; hidden truth must never participate. */
+  visibleWhen?: Condition;
+  /** Authored public possibilities. These describe uncertainty rather than reveal the sampled truth. */
+  outcomePreview?: Record<OutcomeBand, string>;
+  /** Severity of the possible consequences, independent of success probability. */
+  consequenceLevel?: RiskBand;
   /** Opt-in fictional contextual equipment rules. Legacy actions remain unchanged. */
   capabilities?: ActionCapabilities;
   id: Id;

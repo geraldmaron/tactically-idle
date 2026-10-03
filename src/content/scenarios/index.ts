@@ -3,6 +3,7 @@ import type { ScenarioDefinition } from '../../sim/scenario-types';
 import { MS_OCCUPANCY } from './ms-occupancy';
 import { MS_URGENT } from './ms-urgent';
 import { CAPABILITY_PRACTICE_SCENARIOS } from './capability-practice';
+import { DECISION_EXERCISES } from './decision-exercises';
 
 export const SCENARIOS: Record<Id, ScenarioDefinition> = {
   [MS_OCCUPANCY.id]: MS_OCCUPANCY,
@@ -10,4 +11,4 @@ export const SCENARIOS: Record<Id, ScenarioDefinition> = {
   ...Object.fromEntries(CAPABILITY_PRACTICE_SCENARIOS.map((scenario) => [scenario.id, scenario])),
 };
 
-export const SCENARIO_ORDER: Id[] = [MS_OCCUPANCY.id, MS_URGENT.id, ...CAPABILITY_PRACTICE_SCENARIOS.map((scenario) => scenario.id)];
+export const SCENARIO_ORDER: Id[] = [MS_OCCUPANCY.id, MS_URGENT.id, ...CAPABILITY_PRACTICE_SCENARIOS.map((scenario) => scenario.id), ...DECISION_EXERCISES.map((scenario) => scenario.id)];

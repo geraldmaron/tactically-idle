@@ -1,0 +1,41 @@
+/* Canonical player destinations share the same controls and equipment presentation. */
+.player-return { padding: 12px var(--gutter) 0; }
+.player-return .btn { min-height: 44px; width: 100%; text-align: left; justify-content: flex-start; white-space: normal; }
+.player-sections { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.player-sections .btn { min-height: 44px; }
+.gear-art-frame {
+  display: inline-grid; place-items: center; flex-shrink: 0; box-sizing: border-box;
+  border: 1px solid var(--paper-edge); border-radius: 8px; color: var(--chalk);
+  background:
+    linear-gradient(var(--grid-fine) 1px, transparent 1px) 0 0 / 12px 12px,
+    linear-gradient(90deg, var(--grid-fine) 1px, transparent 1px) 0 0 / 12px 12px,
+    radial-gradient(circle at 30% 20%, #2a63c9, var(--paper-deep));
+}
+.store-card-heading h3, .store-detail-section h3, .gear-maintenance > summary {
+  font-family: var(--font-display); font-weight: 500; letter-spacing: .03em; text-transform: uppercase;
+}
+.store-card-heading h3 { font-size: 17px; }
+.store-equipment .field, .store-training .field { min-width: 0; margin: 0; }
+.store-equipment .field input, .store-equipment .field select,
+.store-training .field input, .store-training .field select { width: 100%; min-width: 0; min-height: 44px; }
+.gear-maintenance { border: 1px solid var(--line); border-radius: var(--radius); min-width: 0; background: var(--panel); }
+.gear-maintenance > summary { cursor: pointer; min-height: 44px; padding: 14px 12px; font-size: 17px; }
+.gear-maintenance > summary .dim { display: block; margin-top: 6px; font-family: var(--font-ui); font-size: 12px; text-transform: none; letter-spacing: normal; }
+.gear-maintenance-body { display: flex; flex-direction: column; gap: 18px; padding: 0 10px 12px; min-width: 0; }
+.gear-maintenance .section, .gear-maintenance .card, .gear-maintenance .rule-controls, .gear-maintenance .rule-field { min-width: 0; }
+.gear-maintenance .field select { width: 100%; min-width: 0; }
+.gear-maintenance .btn, .gear-buy .btn, .store-training .btn { min-height: 44px; white-space: normal; }
+.training-heading { margin: 0; }
+.training-course-highlight { outline: 2px solid var(--amber); outline-offset: 2px; }
+.store-training .store-card-heading { align-items: flex-start; }
+.store-training .store-card-heading > .chip { flex-shrink: 0; }
+@container game (max-width: 359px) {
+  .gear-maintenance .rule-controls { flex-wrap: wrap; }
+  .gear-maintenance .rule-field { flex: 1 1 100%; }
+  .store-card-heading { gap: 8px; }
+  .gear-maintenance .row-actions > .btn { flex: 1 1 100%; }
+}
+
+.equipment-manager-locked { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+.equipment-manager-locked > span { flex: 1 1 140px; min-width: 0; }
+.equipment-manager-locked .dim { display: block; margin-top: 4px; font-size: 12px; }

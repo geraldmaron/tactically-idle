@@ -9,6 +9,7 @@ import { CURRENT_SAVE_VERSION } from './save';
 import { createPersonnel } from './personnel';
 import { INCIDENT_HANDLERS, seedIncidentBoard } from './incidents';
 import { setMaintenanceBudget } from './equipment-manager';
+import { INCIDENT_CONTENT_VERSION } from '../gen/incident';
 
 export const DEPARTMENT_HANDLERS: HandlerMap<DepartmentCommandType> = {
   tick: (d, _cmd, ctx) => {
@@ -19,16 +20,20 @@ export const DEPARTMENT_HANDLERS: HandlerMap<DepartmentCommandType> = {
     d.report = null;
     return { ok: true };
   },
+  acknowledgePowerUpgrade: (d) => { delete d.equipmentPowerUpgrade; return { ok: true }; },
   hire: (d, c) => ROSTER_HANDLERS.hire(d, c.candidateId),
   dismiss: (d, c) => ROSTER_HANDLERS.dismiss(d, c.officerId),
   shortlist: (d, c) => ROSTER_HANDLERS.shortlist(d, c.candidateId, c.on),
   refreshCandidates: (d, c) => ROSTER_HANDLERS.refreshCandidates(d, c.targetRole),
   startCourse: (d, c) => DEVELOP_HANDLERS.startCourse(d, c.officerId, c.courseId),
-  unlockNode: (d, c) => DEVELOP_HANDLERS.unlockNode(d, c.nodeId),
+  unlockNode: (d, c) => DEVELOP_HANDLERS.unlockNode(d, c.nodeId, c.expectedTier),
   buyItem: (d, c) => DEVELOP_HANDLERS.buyItem(d, c.itemId, c.qty),
   createSquad: (d, c) => ROSTER_HANDLERS.createSquad(d, c.name),
   renameSquad: (d, c) => ROSTER_HANDLERS.renameSquad(d, c.squadId, c.name),
   assignToSquad: (d, c) => ROSTER_HANDLERS.assignToSquad(d, c.officerId, c.squadId),
+  setSquadArrangementLock: (d, c) => ROSTER_HANDLERS.setSquadArrangementLock(d, c.target, c.locked),
+  applySquadArrangement: (d, c) => ROSTER_HANDLERS.applySquadArrangement(d, c.proposal),
+  undoSquadArrangement: (d) => ROSTER_HANDLERS.undoSquadArrangement(d),
   setLeader: (d, c) => ROSTER_HANDLERS.setLeader(d, c.squadId, c.officerId),
   setSquadDuty: (d, c) => ROSTER_HANDLERS.setSquadDuty(d, c.squadId, c.duty),
   setLoadoutPreset: (d, c) => ROSTER_HANDLERS.setLoadoutPreset(d, c.squadId, c.items),
@@ -44,7 +49,7 @@ export function createInitialState(now: number, campaignSeed = 12345): GameState
   const state: GameState = {
     saveVersion: CURRENT_SAVE_VERSION,
     personnel: createPersonnel(campaignSeed),
-    contentVersion: 2,
+    contentVersion: INCIDENT_CONTENT_VERSION,
     department: {
       name: 'Westhaven Department',
       funding: 12400,
@@ -54,6 +59,7 @@ export function createInitialState(now: number, campaignSeed = 12345): GameState
       rosterCap: 12,
       trainingSlots: 1,
       unlockedNodes: [],
+      developmentTiers: {},
       restockRules: [],
       lastSettledAt: now,
       lastInteractionAt: now,

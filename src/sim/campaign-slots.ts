@@ -1,7 +1,9 @@
 import { DEV_NODES } from '../content/dev-tree';
+import { developmentSpendPlan } from '../commerce/development-spend';
+import { quoteDevelopment } from './development-tiers';
 import { newLocalId, type MockOutcome, type MockProvider, type ProviderEvent, type TestWallet } from '../commerce/types';
 import { MockStoreProvider } from '../commerce/mock-provider';
-import { allocateTestMilli, applyTestEvent, beginTestPurchase, campaignTestMilli, completeTestPurchase, emptyTestWallet, refundTestPurchase, spendTestMilli, unassignTestMilli, validTestWallet } from '../commerce/ledger';
+import { allocateTestMilli, availableInLot, availableTestMilli, applyTestEvent, beginTestPurchase, campaignTestMilli, completeTestPurchase, emptyTestWallet, refundTestPurchase, spendTestMilli, unassignTestMilli, validTestWallet } from '../commerce/ledger';
 import { createInitialState } from './department';
 import { dispatch } from './game';
 import { randomCampaignSeed } from './personnel';
@@ -178,6 +180,14 @@ export class CampaignSlots {
     if (!this.storage) throw new Error('Local storage is unavailable. Enable browser storage to save this game.');
     if (this.blocked) throw new Error('The save library is unreadable. Existing data will not be overwritten.');
     if (this.storage.getItem(SLOTS_KEY) !== this.expectedRaw) throw new Error('Saves changed in another tab. Reload this page before switching or saving; this tab has not overwritten them.');
+    // Return unused credits only after their campaign can no longer be restored with Undo.
+    const retained = new Set(next.slots.flatMap((slot) => slot ? [slot.campaignId] : []));
+    if (next.deleted) retained.add(next.deleted.slot.campaignId);
+    let released = false;
+    for (const receipt of next.commerce.transactions) for (const id of Object.keys(receipt.allocations)) {
+      if (!retained.has(id)) { delete receipt.allocations[id]; released = true; }
+    }
+    if (released) next.commerce.revision++;
     const raw = JSON.stringify(next);
     this.storage.setItem(SLOTS_KEY, raw);
     this.expectedRaw = raw;
@@ -235,6 +245,7 @@ export class CampaignSlots {
       next.slots[id - 1] = this.record(cleanName(name, id), now);
       next.activeSlotId = id;
       this.write(next);
+      this.session++;
     });
   }
   newGame(id: number, name: string, now: number, overwrite = false, discardUnsaved = false): HandlerResult {
@@ -339,7 +350,53 @@ export class CampaignSlots {
   unassignPurchase(campaignId: string, now: number): HandlerResult {
     return this.walletChange(now, (wallet) => unassignTestMilli(wallet, campaignId));
   }
-  unlockDevelopment(nodeId: string, now: number): HandlerResult {
+  /** The confirmation captures the campaign UUID, so switching slots cannot redirect a claim. */
+  beginPointClaim(productId: string, requestId: string, campaignId: string, now: number): HandlerResult {
+    if (campaignId !== this.getSnapshot().campaignId || !this.library.slots.some((slot) => slot?.campaignId === campaignId && deserialize(slot.data))) return failure('The selected campaign changed. Reopen Get Points and confirm the current campaign.');
+    return this.walletChange(now, (wallet) => {
+      const key = beginTestPurchase(wallet, 'apple', productId, requestId, now);
+      const t = wallet.transactions.find((entry) => entry.key === key)!;
+      if (t.claimCampaignId && t.claimCampaignId !== campaignId) throw new Error('This claim belongs to another campaign.');
+      if (!t.claimCampaignId && t.status !== 'pending') throw new Error('This receipt already belongs to an earlier purchase.');
+      t.claimCampaignId = campaignId;
+      t.claimDelivered ??= false;
+    });
+  }
+  finishPointClaim(key: string, now: number): HandlerResult {
+    return this.attempt(() => {
+      const next = this.withCurrent(now);
+      const t = next.commerce.transactions.find((entry) => entry.key === key);
+      if (!t?.claimCampaignId) throw new Error('Unknown point claim.');
+      if (t.claimDelivered) return;
+      if (t.status === 'cancelled' || t.status === 'failed' || t.refundedAt !== undefined) throw new Error('This claim ended without a reward.');
+      applyTestEvent(next.commerce, new MockStoreProvider(t.provider).resolve(t, 'success'), now);
+      // Allocate only this receipt, never unrelated held credits or another campaign's points.
+      const destination = next.slots.find((slot) => slot !== null && slot.campaignId === t.claimCampaignId && deserialize(slot.data));
+      if (destination) t.allocations[t.claimCampaignId] = (t.allocations[t.claimCampaignId] ?? 0) + availableInLot(t);
+      // A removed destination leaves its credited reward available for a later explicit claim.
+      t.claimDelivered = true;
+      completeTestPurchase(next.commerce, key, now);
+      this.write(next);
+    });
+  }
+  resumePointClaims(now: number): HandlerResult {
+    for (const t of this.library.commerce.transactions) {
+      if (t.claimCampaignId && !t.claimDelivered && !['cancelled', 'failed'].includes(t.status)) {
+        const result = this.finishPointClaim(t.key, now);
+        if (!result.ok) return result;
+      }
+    }
+    return { ok: true };
+  }
+  claimHeldPoints(campaignId: string, now: number): HandlerResult {
+    if (campaignId !== this.getSnapshot().campaignId) return failure('The active campaign changed. Reopen Get Points.');
+    return this.walletChange(now, (wallet) => {
+      const amount = availableTestMilli(wallet);
+      if (!amount) throw new Error('No saved points are waiting to be collected.');
+      allocateTestMilli(wallet, campaignId, amount);
+    });
+  }
+  unlockDevelopment(nodeId: string, now: number, expectedTier = 1): HandlerResult {
     const id = this.library.activeSlotId;
     const slot = id ? this.library.slots[id - 1] : null;
     if (!id || !slot) return failure('Save this campaign in a slot before spending development points');
@@ -348,12 +405,13 @@ export class CampaignSlots {
     return this.attempt(() => {
       const state = dispatch(this.state, { type: 'tick' }, { now }).state;
       const earned = state.department.devPoints;
-      const paidMilli = earned >= node.cost.dp ? 0 : Math.max(0, Math.ceil((node.cost.dp - earned) * 1000));
+      const quote = quoteDevelopment({ ...state, department: { ...state.department, devPoints: earned + campaignTestMilli(this.library.commerce, slot.campaignId) / 1000 } }, nodeId, expectedTier);
+      if (!quote.ok || !quote.cost) throw new Error(quote.reason ?? 'Development is unavailable.');
+      const { paidMilli, earnedUsed } = developmentSpendPlan(quote.cost.dp, earned);
       if (campaignTestMilli(this.library.commerce, slot.campaignId) < paidMilli) throw new Error('Not enough development points. Earn points or explicitly allocate test DP to this campaign.');
-      const earnedUsed = node.cost.dp - paidMilli / 1000;
       const temporary = structuredClone(state);
-      temporary.department.devPoints = node.cost.dp;
-      const applied = dispatch(temporary, { type: 'unlockNode', nodeId }, { now });
+      temporary.department.devPoints = quote.cost.dp;
+      const applied = dispatch(temporary, { type: 'unlockNode', nodeId, expectedTier }, { now });
       if (!applied.result.ok) throw new Error(applied.result.reason);
       applied.state.department.devPoints = Math.max(0, earned - earnedUsed);
       const next = this.withCurrent(now);

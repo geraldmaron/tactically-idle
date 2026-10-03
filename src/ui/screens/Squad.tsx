@@ -13,14 +13,19 @@ import { SQUAD_IDS } from '../../sim/types';
 import { OfficerSheet } from './OfficerSheet';
 import { Recruit } from './Recruit';
 import { officerList } from './helpers';
+import { useNav } from '../components/nav';
+import { TrainingStore } from '../storefront/TrainingStore';
+import { SquadOptimizer } from './SquadOptimizer';
 
 const DEFAULT_NAMES = ['Alpha', 'Bravo', 'Charlie', 'Delta'];
 
 export function SquadScreen() {
   const g = useGame();
+  const nav = useNav();
   const [sel, setSel] = useState<SquadId | null>(g.squads[0]?.id ?? null);
   const [officerId, setOfficerId] = useState<Id | null>(null);
   const [creating, setCreating] = useState(false);
+  const [arranging, setArranging] = useState(false);
   const { notify } = useToast();
   const full = g.squads.length >= SQUAD_IDS.length;
   const active = g.squads.find((s) => s.id === sel) ?? g.squads[0];
@@ -32,7 +37,13 @@ export function SquadScreen() {
   const unassigned = officerList(g).filter((o) => o.squadId === null);
 
   return (
-    <div className="page">
+    <div className="page squad-page">
+      <nav className="player-sections" aria-label="Squad sections">
+        <Button variant={nav.squadSection === 'roster' ? 'primary' : 'secondary'} aria-current={nav.squadSection === 'roster' ? 'page' : undefined} onClick={() => nav.setSquadSection('roster')}>Roster</Button>
+        <Button variant={nav.squadSection === 'training' ? 'primary' : 'secondary'} aria-current={nav.squadSection === 'training' ? 'page' : undefined} onClick={() => nav.setSquadSection('training')}>Training</Button>
+      </nav>
+      {nav.squadSection === 'training' ? <TrainingStore /> : <>
+      <div className="squad-arrangement-entry"><Button onClick={() => { setOfficerId(null); setArranging(true); }} disabled={g.squads.length === 0}>Arrange squads</Button></div>
       <div className={`squadtabs${g.squads.length >= 4 ? ' squadtabs-4' : ''}`} role="tablist" aria-label="Squads">
         {g.squads.map((s) => (
           <button
@@ -94,6 +105,8 @@ export function SquadScreen() {
 
       <Recruit />
       <OfficerSheet officerId={officerId} onClose={() => setOfficerId(null)} />
+      {arranging && <SquadOptimizer open onClose={() => setArranging(false)} />}
+      </>}
     </div>
   );
 }

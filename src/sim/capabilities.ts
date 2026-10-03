@@ -8,7 +8,7 @@ import type { EvalInput, Use } from './resolution';
 import { squadUnits, unitEffectiveness } from './inventory';
 import { projectedCondition } from './equipment';
 import { observationDifficulty } from './environment';
-import { highRiskAllowed } from './officer';
+import { capabilityRuleEffect, effectiveSupplies, operatorQualified } from './equipment-requirements';
 import { resolveSubject, standingOf } from './spatial-factors';
 import { practiceSupportUnit } from './support-vehicles';
 import { signalBetween } from './spatial';
@@ -29,7 +29,6 @@ export interface CapabilityResult {
 }
 interface Candidate { capabilityId: CapabilityId; item: typeof ITEMS[string]; unit: ItemUnit; squadId: SquadId; value: number; group: string; minutes: number; supplies: Use[] }
 const round1 = (n: number) => Math.round(n * 10) / 10;
-const known = (run: OperationRun, id: Id) => ['confirmed', 'disproved'].includes(run.knowledge[id] ?? 'unknown');
 
 export function capabilityVisibility(input: Pick<CapabilityInput, 'built' | 'run' | 'scenario' | 'action' | 'acting'>): number {
   const subject = resolveSubject(input.scenario, input.built, input.run.knowledge, input.action.targetId, input.action.spatial?.subjectFactId);
@@ -64,12 +63,6 @@ export function evaluateCapabilities(input: CapabilityInput): CapabilityResult {
   const failures = new Map<CapabilityId, string[]>();
   const sight = input.visibility ?? capabilityVisibility(input);
   const dark = observationDifficulty(scenario.environment ?? null, false)?.value ?? 0;
-  const exterior = built.location.zones.some((z) => z.id === action.targetId);
-  const opening = built.location.openings.find((o) => o.id === context.openingId);
-  const ordinaryDoor = !!opening && ['door', 'sliding'].includes(opening.type) && ['hollow_core', 'solid_core'].includes(opening.material ?? 'solid_core');
-  const usableDoor = !!opening && [opening.a, opening.b].includes(action.targetId) && opening.type === 'door' && opening.material !== 'glass' && !['blocked', 'open'].includes(opening.state);
-  const roster = (squads: SquadId[]) => squads.flatMap((sid) => state.squads.find((s) => s.id === sid)?.officerIds.map((id) => state.officers[id]).filter(Boolean) ?? [])
-    .filter((o) => action.check.kind !== 'execution' || highRiskAllowed(o));
   const usedSupplies = new Map<Id, Use>((input.existingUses ?? []).filter((u) => u.consumable).map((u) => [u.unitId, u]));
   const supplyClaimed = new Set<Id>();
   const available = [...new Set([...input.acting, ...input.support])].flatMap((squadId) => (input.units[squadId] ?? []).map((unit) => ({ squadId, unit })));
@@ -89,79 +82,19 @@ export function evaluateCapabilities(input: CapabilityInput): CapabilityResult {
     for (const cap of item.capabilities ?? []) {
       if (!rules.has(cap)) continue;
       const requiredCerts = item.requiresCerts ?? [];
-      const qualified = roster(item.supportOnly ? run.squadIds : [squadId]).some((o) => requiredCerts.every((cert) => o.certs.includes(cert)));
+      const qualified = (item.supportOnly ? run.squadIds : [squadId]).some((sid) => operatorQualified(state, sid, action, item));
       const missing = requiredCerts.length && !qualified ? requiredCerts : [];
       let reason = missing.length ? `Needs qualified operator: ${missing.map((c) => c.replaceAll('_', ' ')).join(', ')}` : null;
-      let value = 0, minutes = 0, group = cap as string;
-      if (!reason) switch (cap) {
-        case 'visible_exterior':
-          group = 'observation_aid'; value = 4;
-          if (sight < 0.6) reason = 'A clear visual path is needed; opaque surfaces block observation';
-          else if (dark > 0) reason = 'Darkness removes the binocular observation benefit';
-          else if (!input.acting.some((sid) => built.location.zones.some((z) => z.id === run.squadTasks.find((t) => t.squadId === sid)?.positionId))) reason = 'Binocular observation needs exterior staging';
-          break;
-        case 'dark_visible_scene':
-          group = 'scene_lighting'; value = Math.min(5, dark);
-          if (sight < 0.6) reason = 'A scene light cannot illuminate through an opaque barrier';
-          else if (dark <= 0) reason = 'The scene is already bright; lighting adds no benefit';
-          break;
-        case 'opening_inspection':
-          group = 'observation_aid'; value = 6;
-          if (!opening || !['door', 'doorway', 'sliding'].includes(opening.type) || opening.state !== 'open') reason = 'Inspection needs a declared accessible open doorway; sealed or blocked surfaces cannot be inspected';
-          else if (sight < 0.3) reason = 'The accessible opening does not provide a usable view from this position';
-          break;
-        case 'weak_radio_link':
-          group = 'radio_recovery'; value = Math.min(5, input.radioDeficit ?? 0);
-          if (value <= 0) reason = 'No weak working radio link to recover; headsets are still required';
-          break;
-        case 'medical_exposure':
-          group = 'personal_protection'; value = 5; minutes = context.responseContext === 'constrained' ? 1 : 0;
-          if (action.check.kind !== 'medical') reason = 'Rescue protection is limited to an exposed medical action';
-          break;
-        case 'authorized_response':
-          if (action.check.kind !== 'execution') { reason = 'Response equipment only contributes to declared protective-response actions'; break; }
-          group = item.category === 'protection' ? 'personal_protection' : 'response_class';
-          value = item.id === 'light_protection' ? 4 : item.id === 'service_sidearm' ? 3 : item.id === 'compact_carbine' ? 6 : context.responseContext === 'constrained' ? 5 : 2;
-          minutes = ['compact_carbine', 'response_shotgun'].includes(item.id) ? 1 : 0;
-          break;
-        case 'specialist_support':
-          group = 'response_class'; value = 7; minutes = 2;
-          if (!input.support.length) reason = 'Specialist support needs a separate supporting squad';
-          else if (sight < 0.6) reason = 'Specialist support needs a clear visual path';
-          else if (context.safetyFactIds?.some((id) => run.knowledge[id] === 'disproved')) reason = 'The verified adjacent-area check does not permit this intervention';
-          else if (!context.subjectFactIds?.length || context.subjectFactIds.some((id) => !known(run, id))) reason = 'The subject context is unconfirmed';
-          else if (context.subjectFactIds.some((id) => run.knowledge[id] !== 'confirmed')) reason = 'The verified subject context does not permit this intervention';
-          break;
-        case 'less_lethal_device': case 'less_lethal_impact':
-          group = 'less_lethal_option'; value = cap === 'less_lethal_device' ? 4 : 5; minutes = cap === 'less_lethal_impact' ? 1 : 0;
-          if (!context.safetyFactIds?.length || context.safetyFactIds.some((id) => !known(run, id))) reason = 'Safety of adjacent area is unconfirmed';
-          else if (context.safetyFactIds.some((id) => run.knowledge[id] !== 'confirmed')) reason = 'The verified adjacent-area check does not permit this intervention';
-          else if (!context.subjectFactIds?.length || context.subjectFactIds.some((id) => !known(run, id))) reason = 'The subject context is unconfirmed';
-          else if (context.subjectFactIds.some((id) => run.knowledge[id] !== 'confirmed')) reason = 'The verified subject context does not permit this intervention';
-          else if (sight < 0.6) reason = 'A clear observed scene is required for this authored intervention';
-          break;
-        case 'permitted_door_access':
-          group = 'access_option'; value = 5;
-          if (item.id === 'door_charge') {
-            minutes = -1;
-            if (context.accessMethod !== 'charge') reason = 'This action uses a mechanical access tool';
-            else if (!usableDoor || !ordinaryDoor) reason = 'This access token only supports a declared ordinary door; no reinforced, blocked, glazed or wall bypass';
-            else if (!context.safetyFactIds?.length || context.safetyFactIds.some((id) => !known(run, id))) reason = 'Safety of adjacent area is unconfirmed';
-            else if (context.safetyFactIds.some((id) => run.knowledge[id] !== 'confirmed')) reason = 'The verified adjacent-area check does not permit this access';
-          } else {
-            minutes = 2;
-            if (context.accessMethod !== 'mechanical') reason = 'This action requires a single-use fictional access token';
-            else if (!usableDoor) reason = 'Mechanical access needs a declared closed ordinary or steel door; no blocked-route, glazing or wall bypass';
-          }
-          break;
-        case 'vehicle_exterior': case 'scene_coordination':
-          group = 'vehicle_support'; value = cap === 'vehicle_exterior' ? 8 : 5; minutes = cap === 'vehicle_exterior' ? 3 : 2;
-          if (!exterior || context.vehicleAccessible !== true || !run.supportPositionId || !built.location.zones.some((z) => z.id === run.supportPositionId && !z.tags.includes('vehicle_inaccessible'))) reason = 'Vehicle support needs accessible exterior staging; no interior or upper-floor coverage';
-          else if (cap === 'scene_coordination' && input.acting.length + input.support.length < 2) reason = 'Mobile command support needs at least two participating squads';
-          break;
-      }
+      const effect = capabilityRuleEffect(item, cap, { action, scenario, built, knowledge: run.knowledge, sight,
+        squadCount: input.acting.length + input.support.length, supportCount: input.support.length,
+        radioDeficit: input.radioDeficit,
+        exteriorStaging: input.acting.some((sid) => built.location.zones.some((z) => z.id === run.squadTasks.find((t) => t.squadId === sid)?.positionId)),
+        supportAccessible: !!run.supportPositionId && built.location.zones.some((z) => z.id === run.supportPositionId && !z.tags.includes('vehicle_inaccessible')),
+      });
+      reason ??= effect.reason;
+      const { value, minutes, group } = effect;
       const supplies: Use[] = [];
-      if (!reason) for (const need of item.supplies ?? []) {
+      if (!reason) for (const need of effectiveSupplies(item)) {
         const sharesDeclaredUse = [...action.requires.allTags ?? [], ...action.requires.anyTags ?? []].some((tag) => item.tags.includes(tag));
         const pool = available.filter(({ unit: u }) => u.itemId === need.itemId && unitEffectiveness(u, ITEMS[u.itemId]) > 0 && (u.expiresAt === null || u.expiresAt > state.department.clockHighWater) && (!usedSupplies.has(u.id) || sharesDeclaredUse) && !supplies.some((p) => p.unitId === u.id));
         if (pool.length < need.qty) { reason = `Needs ${need.qty} ${ITEMS[need.itemId].name.toLowerCase()} for this use`; break; }
@@ -172,11 +105,21 @@ export function evaluateCapabilities(input: CapabilityInput): CapabilityResult {
     }
   }
   const byGroup = new Map<string, Candidate>();
-  for (const pick of candidates.sort((a, b) => b.value - a.value || a.minutes - b.minutes || a.unit.id.localeCompare(b.unit.id))) {
+  for (const pick of candidates.sort((a, b) => Number(required.has(b.capabilityId)) - Number(required.has(a.capabilityId)) || b.value - a.value || a.minutes - b.minutes || a.unit.id.localeCompare(b.unit.id))) {
     if (byGroup.has(pick.group)) continue;
-    // A battery may be shared with the base action describing this SAME tool,
-    // but two separate optional powered devices never consume the same serial.
-    if (pick.supplies.some((u) => supplyClaimed.has(u.unitId))) continue;
+    // The base action may declare the same supply, but distinct devices
+    // cannot consume the same physical cartridge or other supply.
+    if (pick.supplies.some((u) => supplyClaimed.has(u.unitId))) {
+      const replacement: Use[] = [];
+      let complete = true;
+      for (const need of effectiveSupplies(pick.item)) {
+        const pool = available.filter(({ unit }) => unit.itemId === need.itemId && unitEffectiveness(unit, ITEMS[unit.itemId]) > 0 && !usedSupplies.has(unit.id) && !supplyClaimed.has(unit.id) && !replacement.some((u) => u.unitId === unit.id));
+        if (pool.length < need.qty) { complete = false; break; }
+        for (const p of pool.slice(0, need.qty)) replacement.push({ itemId: p.unit.itemId, unitId: p.unit.id, squadId: p.squadId, qty: 1, consumable: true });
+      }
+      if (!complete) continue;
+      pick.supplies = replacement;
+    }
     byGroup.set(pick.group, pick);
     pick.supplies.forEach((u) => supplyClaimed.add(u.unitId));
   }

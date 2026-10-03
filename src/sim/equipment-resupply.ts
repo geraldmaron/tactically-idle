@@ -7,7 +7,8 @@ import type { GameState, HandlerMap, Id, ItemUnit, SquadId } from './types';
 import { projectedCondition } from './equipment';
 import { readyUnits, reserveLoadouts, unitEffectiveness } from './inventory';
 import { advanceTime } from './operation';
-import { availableUnits, builtFor, evaluateAction, tagNames } from './resolution';
+import { availableUnits, builtFor, CERT_LABEL, evaluateAction } from './resolution';
+import { actionEquipmentRequirements, operatorQualified, qualifiedOfficers, requiredEquipmentBundle } from './equipment-requirements';
 import { getScenario } from './scenario-registry';
 
 export const RESUPPLY_MINUTES = 3;
@@ -60,16 +61,14 @@ export function planActionResupply(
   const units = Object.fromEntries(participants.map((sq) => [sq, availableUnits(state, run, sq)
     .map((u) => ({ ...u, condition: projectedCondition(state, u, time) })).filter(usable)])) as Record<SquadId, ItemUnit[]>;
   const carrying = (picks: Pick[], squads: SquadId[]) => squads.flatMap((sq) => [...units[sq], ...picks.filter((p) => p.squadId === sq).map((p) => p.unit)]);
-  const hasTag = (list: ItemUnit[], tag: string) => list.some((u) => ITEMS[u.itemId]?.tags.includes(tag));
-  const requiredGroups = [...(action.requires.anyTags?.length ? [action.requires.anyTags] : []), ...(action.requires.allTags ?? []).map((tag) => [tag])];
-  const missingGear = requiredGroups.some((tags) => !tags.some((tag) => hasTag(carrying([], acting), tag)));
-  const consumableTaken = new Set<Id>();
-  const missingConsumables = (action.consumes ?? []).some((c) => {
-    const pool = carrying([], participants).filter((u) => !consumableTaken.has(u.id) && ITEMS[u.itemId]?.tags.includes(c.tag));
-    pool.slice(0, c.qty).forEach((u) => consumableTaken.add(u.id));
-    return pool.length < c.qty;
-  });
-  if (!missingGear && !missingConsumables) return result(false, 'Required equipment is already equipped');
+  const held = participants.flatMap((squadId) => units[squadId].map((unit) => ({ squadId, unit })));
+  const requirements = actionEquipmentRequirements(action);
+  const existing = requiredEquipmentBundle({ action, acting, held, stock: [], allowed: ({ squadId, unit }) => operatorQualified(state, squadId, action, ITEMS[unit.itemId]) });
+  if (!existing.missing.length) {
+    const current = evaluateAction({ state, run, scenario, action, built, acting, support, unitOverride: units });
+    return current.eligible ? result(false, 'Required equipment is already equipped')
+      : result(false, `Equipment alone will not unlock this action. ${current.reason ?? 'Another requirement is unmet.'}`);
+  }
   if (run.history.length > 0) return result(true, 'Stores delivery is only available before the first decision. Use equipped squads or another action.');
 
   const receivers = acting.filter((sq) => {
@@ -77,80 +76,70 @@ export function planActionResupply(
     return task?.task === 'Staging' && built.location.zones.some((z) => z.id === task.positionId);
   });
   if (!receivers.length) return result(true, 'The acting squad must still be staged outside to receive equipment.');
-
-  const shortages = new Set<string>();
-  const choices = (tags: string[], picks: Pick[]): ItemUnit[] => {
-    const taken = new Set(picks.map((p) => p.unit.id));
-    // One best unit per compatible item makes alternatives deterministic. A
-    // later requirement sees the next unit, never the same physical unit twice.
-    return tags.flatMap((tag) => Object.values(ITEMS).filter((def) => !def.supportOnly && def.tags.includes(tag)))
-      .filter((def, index, all) => all.findIndex((d) => d.id === def.id) === index)
-      .flatMap((def) => readyUnits(state, def.id, time).filter((u) => !taken.has(u.id)).slice(0, 1))
-      .map((u) => ({ ...u, condition: projectedCondition(state, u, time) }));
-  };
-  const shortage = (tags: string[]) => {
-    const matching = Object.values(state.units).filter((u) => ITEMS[u.itemId]?.tags.some((tag) => tags.includes(tag)) && u.status !== 'scrapped');
-    const reasons: string[] = [];
-    const reserved = matching.filter((u) => u.status === 'reserved' || state.reservations.some((r) => r.unitId === u.id)).length;
-    const service = matching.filter((u) => u.status === 'service').length;
-    const unusable = matching.filter((u) => u.status === 'expired' || (u.expiresAt !== null && u.expiresAt <= time)
-      || projectedCondition(state, u, time) <= ITEMS[u.itemId].wear.failAt).length;
-    if (reserved) reasons.push(`${reserved} already allocated`);
-    if (service) reasons.push(`${service} in service`);
-    if (unusable) reasons.push(`${unusable} expired or failed`);
-    shortages.add(`No usable unassigned ${tagNames(tags)} in stores${reasons.length ? ` (${reasons.join(', ')})` : ''}.`);
-  };
-
-  let variants: Pick[][] = [[]];
-  for (const tags of requiredGroups) {
-    variants = variants.flatMap((picks) => {
-      if (tags.some((tag) => hasTag(carrying(picks, acting), tag))) return [picks];
-      const pool = choices(tags, picks);
-      if (!pool.length) shortage(tags);
-      return pool.flatMap((unit) => receivers.map((squadId) => [...picks, { squadId, unit }]));
-    });
+  if (participants.length < requirements.minSquads) return result(true, `Equipment alone will not unlock this action. ${action.requires.minSquads?.reason ?? 'This capability needs at least two participating squads'}`);
+  const officers = qualifiedOfficers(state, acting, action);
+  const missingCerts = requirements.certs.filter((cert) => !officers.some((officer) => officer.certs.includes(cert)));
+  if (!officers.length) return result(true, 'Equipment alone will not unlock this action. No acting officer can take part.');
+  if (missingCerts.length) return result(true, `Equipment alone will not unlock this action. Needs a ${missingCerts.map((cert) => CERT_LABEL[cert] ?? cert).join(' and a ')} in the acting squads.`);
+  for (const group of requirements.groups) {
+    const items = group.itemIds.map((id) => ITEMS[id]);
+    if (items.length && !items.some((item) => acting.some((squadId) => operatorQualified(state, squadId, action, item)))) {
+      const certs = [...new Set(items.flatMap((item) => item.requiresCerts ?? []))];
+      return result(true, `Equipment alone will not unlock this action. ${group.label} needs a qualified operator: ${certs.map((cert) => CERT_LABEL[cert] ?? cert).join(' or ')}.`);
+    }
   }
 
-  // Bundle every consumed unit required by the selected action. Consumable
-  // quantity is counted across acting and supporting squads, as in resolution.
-  variants = variants.flatMap((initial) => {
-    let picks = [...initial];
-    const taken = new Set<Id>();
-    for (const c of action.consumes ?? []) {
-      let need = c.qty;
-      for (const u of carrying(picks, participants)) {
-        if (need <= 0) break;
-        if (taken.has(u.id) || !ITEMS[u.itemId]?.tags.includes(c.tag)) continue;
-        taken.add(u.id);
-        need -= 1;
-      }
-      while (need > 0) {
-        const unit = choices([c.tag], picks)[0];
-        if (!unit) { shortage([c.tag]); return []; }
-        picks = [...picks, { squadId: receivers[0], unit }];
-        taken.add(unit.id);
-        need -= 1;
-      }
-    }
-    return [picks];
-  });
-  if (!variants.length) return result(true, [...shortages].join(' ') || 'Required equipment is unavailable');
-
+  const stock = Object.values(ITEMS).filter((item) => !item.supportOnly)
+    .flatMap((item) => readyUnits(state, item.id, time))
+    .flatMap((unit) => receivers.map((squadId) => ({ squadId, unit: { ...unit, condition: projectedCondition(state, unit, time) } })));
+  // Choose the best current physical condition; a tie retains an authored OR preference.
+  const preference = (unit: ItemUnit) => {
+    const index = (action.requires.anyTags ?? []).findIndex((tag) => ITEMS[unit.itemId]?.tags.includes(tag));
+    return index < 0 ? Number.MAX_SAFE_INTEGER : index;
+  };
   const afterDelivery = { ...run };
   advanceTime(afterDelivery, scenario, minutes);
   let remainingReason: string | null = null;
-  for (const picks of variants) {
-    const unitOverride = Object.fromEntries(participants.map((sq) => [sq, carrying(picks, [sq])])) as Record<SquadId, ItemUnit[]>;
-    const ev = evaluateAction({ state, run: afterDelivery, scenario, action, built, acting, support, unitOverride });
-    if (!ev.eligible) { remainingReason ??= ev.reason; continue; }
-    const allocations = receivers.map((squadId) => ({ squadId, unitIds: picks.filter((p) => p.squadId === squadId).map((p) => p.unit.id) })).filter((p) => p.unitIds.length > 0);
-    if (!allocations.length) return result(false, 'Required equipment is already equipped');
-    return {
-      needed: true, ok: true, reason: null, minutes, allocations,
-      items: picks.map(({ squadId, unit }) => ({ squadId, itemId: unit.itemId, unitId: unit.id, name: ITEMS[unit.itemId].name, serial: unit.serial })),
-    };
+  const bundle = requiredEquipmentBundle({
+    action, acting, held, stock,
+    allowed: ({ squadId, unit }) => operatorQualified(state, squadId, action, ITEMS[unit.itemId]),
+    compare: (a, b) => b.unit.condition - a.unit.condition || preference(a.unit) - preference(b.unit)
+      || a.unit.id.localeCompare(b.unit.id) || receivers.indexOf(a.squadId) - receivers.indexOf(b.squadId),
+    accept: (picks) => {
+      const unitOverride = Object.fromEntries(participants.map((sq) => [sq, carrying(picks, [sq])])) as Record<SquadId, ItemUnit[]>;
+      const evaluation = evaluateAction({ state, run: afterDelivery, scenario, action, built, acting, support, unitOverride });
+      if (evaluation.eligible) return null;
+      remainingReason = evaluation.reason ?? 'Another requirement is unmet.';
+      return remainingReason;
+    },
+  });
+  if (bundle.missing.length) {
+    if (remainingReason) return result(true, `Equipment alone will not unlock this action. ${remainingReason}`);
+    const requiredItems = new Set(requirements.groups.flatMap((group) => group.itemIds));
+    for (const itemId of [...requiredItems]) for (const supply of ITEMS[itemId].supplies ?? []) requiredItems.add(supply.itemId);
+    for (const use of requirements.consumes) for (const item of Object.values(ITEMS)) if (item.tags.includes(use.tag)) requiredItems.add(item.id);
+    const matching = Object.values(state.units).filter((unit) => requiredItems.has(unit.itemId) && unit.status !== 'scrapped');
+    const reasons: string[] = [];
+    const reserved = matching.filter((unit) => unit.status === 'reserved' || state.reservations.some((reservation) => reservation.unitId === unit.id)).length;
+    const service = matching.filter((unit) => unit.status === 'service').length;
+    const unusable = matching.filter((unit) => unit.status === 'expired' || (unit.expiresAt !== null && unit.expiresAt <= time)
+      || projectedCondition(state, unit, time) <= ITEMS[unit.itemId].wear.failAt).length;
+    if (reserved) reasons.push(`${reserved} already allocated`);
+    if (service) reasons.push(`${service} in service`);
+    if (unusable) reasons.push(`${unusable} expired or failed`);
+    return result(true, `No usable unassigned ${bundle.missing.join(' / ').toLowerCase()} in stores${reasons.length ? ` (${reasons.join(', ')})` : ''}.`);
   }
-  return result(true, `Equipment alone will not unlock this action. ${remainingReason ?? 'Another requirement is unmet.'}`);
+
+  const picks = bundle.additions;
+  const unitOverride = Object.fromEntries(participants.map((sq) => [sq, carrying(picks, [sq])])) as Record<SquadId, ItemUnit[]>;
+  const evaluation = evaluateAction({ state, run: afterDelivery, scenario, action, built, acting, support, unitOverride });
+  if (!evaluation.eligible) return result(true, `Equipment alone will not unlock this action. ${evaluation.reason ?? 'Another requirement is unmet.'}`);
+  const allocations = receivers.map((squadId) => ({ squadId, unitIds: picks.filter((pick) => pick.squadId === squadId).map((pick) => pick.unit.id) })).filter((allocation) => allocation.unitIds.length > 0);
+  if (!allocations.length) return result(false, 'Required equipment is already equipped');
+  return {
+    needed: true, ok: true, reason: null, minutes, allocations,
+    items: picks.map(({ squadId, unit }) => ({ squadId, itemId: unit.itemId, unitId: unit.id, name: ITEMS[unit.itemId].name, serial: unit.serial })),
+  };
 }
 
 export const RESUPPLY_HANDLERS: HandlerMap<'resupplyAction'> = {

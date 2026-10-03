@@ -6,7 +6,7 @@
 // absence. Equipment wear is linear in game days, so it is split at the same
 // boundaries and online ticks match one offline settlement.
 import type { GameState, Id, NodeEffect, Officer, ShiftReport, SquadDuty, SquadId } from './types';
-import { DEV_NODES } from '../content/dev-tree';
+import { developmentTier, effectiveDevelopmentEffects } from './development-tiers';
 import { COURSES } from '../content/courses';
 import { ITEMS } from '../content/items';
 import { STRESS_BANDS } from './officer';
@@ -64,16 +64,11 @@ export function simNow(state: GameState): number {
 }
 
 export function unlockedEffects(state: GameState): NodeEffect[] {
-  const out: NodeEffect[] = [];
-  for (const id of state.department.unlockedNodes) {
-    const node = DEV_NODES[id];
-    if (node) out.push(...node.effects);
-  }
-  return out;
+  return effectiveDevelopmentEffects(state);
 }
 
 export function isNodeUnlocked(state: GameState, nodeId: Id): boolean {
-  return state.department.unlockedNodes.includes(nodeId);
+  return developmentTier(state, nodeId) > 0;
 }
 
 export function hasEffect(state: GameState, kind: NodeEffect['kind']): boolean {

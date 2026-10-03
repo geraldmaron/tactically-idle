@@ -1,7 +1,7 @@
 import type { GameState, HandlerResult, Id } from './types';
 import { ITEMS } from '../content/items';
 import { beginService, serviceCheck } from './equipment';
-import { EQUIPMENT_MANAGER, hasEquipmentManager, maintenanceBudget } from './equipment-manager-policy';
+import { EQUIPMENT_MANAGER, equipmentManagerBenefits, hasEquipmentManager, maintenanceBudget } from './equipment-manager-policy';
 
 export function setMaintenanceBudget(state: GameState, perHour: number): HandlerResult {
   if (!hasEquipmentManager(state)) return { ok: false, reason: 'Hire the equipment manager first.' };
@@ -22,7 +22,7 @@ export function runEquipmentMaintenance(state: GameState, now: number): { spent:
   // must not change which job starts or whether the treasury floor is met.
   const decisionValue = (value: number) => Math.round(value * 1_000_000) / 1_000_000;
   const reserved = new Set(state.reservations.map((r) => r.unitId));
-  let serviceSlots = Math.max(0, EQUIPMENT_MANAGER.maxConcurrentServices - units.filter((u) => u.status === 'service').length);
+  let serviceSlots = Math.max(0, equipmentManagerBenefits(state).maxConcurrentServices - units.filter((u) => u.status === 'service').length);
   const officersNeedingRadios = new Set(state.squads.flatMap((s) => s.officerIds)
     .filter((id) => state.officers[id] && state.officers[id].assignment?.kind !== 'operation')).size;
   let readyRadios = units.filter((u) => u.itemId === 'radio_kit' && u.status === 'ready' && !reserved.has(u.id)
