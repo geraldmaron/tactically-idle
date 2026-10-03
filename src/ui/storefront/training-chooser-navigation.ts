@@ -1,7 +1,8 @@
 import type { Id } from '../../sim/types';
 
 export const TRAINING_CHOOSER_HISTORY_KEY = 'tacticallyIdleTrainingChooser';
-export interface TrainingChoice { courseId: Id; reviewOfficerId: Id | null }
+export interface TrainingEnrolment { officerName: string; startedAt: number; endsAt: number }
+export interface TrainingChoice { courseId: Id; reviewOfficerId: Id | null; enrolment?: TrainingEnrolment }
 type HistoryPort = Pick<History, 'state' | 'pushState' | 'replaceState' | 'back'>;
 interface Callbacks {
   owner: string;
@@ -33,16 +34,25 @@ export function createTrainingChooserNavigation(history: HistoryPort, callbacks:
     },
     review(officerId: Id | null) {
       const choice = owned();
-      if (!choice || closing) return;
+      if (!choice || closing || choice.enrolment) return;
       const next = { ...choice, reviewOfficerId: officerId };
       history.replaceState({ ...history.state, [TRAINING_CHOOSER_HISTORY_KEY]: next }, '');
       callbacks.select(next);
     },
-    close(completed = false) {
+    complete(enrolment: TrainingEnrolment) {
+      const choice = owned();
+      if (!choice?.reviewOfficerId || choice.enrolment || closing) return;
+      const next = { ...choice, enrolment };
+      history.replaceState({ ...history.state, [TRAINING_CHOOSER_HISTORY_KEY]: next }, '');
+      callbacks.select(next);
+    },
+    close() {
       if (closing) return;
       callbacks.select(null);
-      if (!owned()) return;
-      if (completed) removeMarker();
+      const choice = owned();
+      if (!choice) return;
+      // A completed entry is a receipt until deliberately dismissed, never a review.
+      if (choice.enrolment) removeMarker();
       closing = true;
       history.back();
     },

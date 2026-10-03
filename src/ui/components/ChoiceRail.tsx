@@ -29,11 +29,14 @@ export function ChoiceRail<T extends string>({ value, options, onChange, label, 
     if (box.left < viewport.left + 4) strip.scrollLeft += box.left - viewport.left - 4;
     else if (box.right > viewport.right - 4) strip.scrollLeft += box.right - viewport.right + 4;
   }, [value]);
+  const select = (next: T) => {
+    if (next !== value) onChange(next);
+  };
   const move = (event: KeyboardEvent<HTMLButtonElement>, current: T) => {
     const next = railKeyboardValue(options, current, event.key);
     if (next === null) return;
     event.preventDefault();
-    onChange(next);
+    select(next);
     buttons.current.get(next)?.focus({ preventScroll: true });
   };
   return <div ref={rail} className={`choice-rail${grow ? ' choice-rail-grow' : ''}`} role={kind === 'tabs' ? 'tablist' : kind === 'filter' ? 'radiogroup' : 'navigation'} aria-label={label}>
@@ -48,7 +51,7 @@ export function ChoiceRail<T extends string>({ value, options, onChange, label, 
       aria-controls={kind === 'tabs' ? panelId : undefined}
       tabIndex={kind === 'navigation' ? 0 : tabStop === option.value ? 0 : -1}
       disabled={option.disabled}
-      onClick={() => onChange(option.value)} onKeyDown={(event) => move(event, option.value)}>{option.label}</button>)}
+      onClick={() => select(option.value)} onKeyDown={(event) => move(event, option.value)}>{option.label}</button>)}
   </div>;
 }
 

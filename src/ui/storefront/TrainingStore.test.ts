@@ -1,15 +1,17 @@
-import { createElement, type ReactNode } from 'react';
+import { createElement, type ComponentProps, type MouseEvent, type ReactElement, type ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { COURSES } from '../../content/courses';
 import { createInitialState } from '../../sim/department';
+import { dispatch } from '../../sim/game';
+import { HOUR_MS } from '../../sim/economy';
 import { DEFAULT_NAV, NavContext, type NavApi } from '../components/nav';
-import { TrainingOfficerCard, TrainingStore } from './TrainingStore';
+import { TrainingEnrolmentActions, TrainingEnrolmentReceipt, TrainingOfficerCard, TrainingStore } from './TrainingStore';
 import { trainingCandidates } from './training-officers';
 
 const NOW = Date.UTC(2026, 9, 3, 12);
 let state = createInitialState(NOW, 1);
-vi.mock('../store', () => ({ useGame: () => state }));
+vi.mock('../store', () => ({ useGame: () => state, getState: () => state }));
 vi.mock('../components/toast', () => ({ useToast: () => ({ act: vi.fn(), notify: vi.fn() }) }));
 beforeEach(() => { state = createInitialState(NOW, 1); });
 
@@ -78,5 +80,73 @@ describe('course-first Training presentation', () => {
     const noResults = markup(createElement(TrainingStore), { trainingDraft: { officerId: '', search: 'no-such-course' } });
     expect(noResults).toContain('No courses match');
     expect(noResults).toContain('Show all training');
+  });
+
+  it('keeps the old Enrol hit area inert and lets an intentional Done or keyboard activation dismiss the receipt', () => {
+    const onDone = vi.fn();
+    const actions = TrainingEnrolmentActions({ course: COURSES.composure_workshop, onDone });
+    const buttons = actions.props.children[1].props.children as ReactElement<ComponentProps<'button'>>[];
+    expect(buttons[1].props.disabled).toBe(true);
+    expect(buttons[1].props.onClick).toBeUndefined();
+    const click = (detail: number) => buttons[0].props.onClick?.({ detail } as MouseEvent<HTMLButtonElement>);
+    click(2); click(3);
+    expect(onDone).not.toHaveBeenCalled();
+    click(1);
+    expect(onDone).toHaveBeenCalledOnce();
+    click(0);
+    expect(onDone).toHaveBeenCalledTimes(2);
+    const html = markup(actions);
+    expect(html).toContain('training-confirm-actions');
+    expect(html).toContain('disabled="">Enrolled</button>');
+    expect(html).toContain('$600 funding paid');
+    expect(html).not.toContain('Enrol officer');
+  });
+
+  it('shows the named course, real remaining training time and pending benefit without granting it early', () => {
+    const course = COURSES.composure_workshop;
+    const before = state.officers.off_chen.ratings.composure;
+    const originalXp = state.officers.off_chen.xp;
+    const started = dispatch(state, { type: 'startCourse', officerId: 'off_chen', courseId: course.id }, { now: NOW });
+    expect(started.result.ok).toBe(true);
+    state = started.state;
+    const officer = state.officers.off_chen;
+    const assignment = officer.assignment!;
+    if (assignment.kind !== 'training') throw new Error('Expected a real training assignment');
+    const enrolment = { officerName: 'Mei Chen', startedAt: assignment.startedAt, endsAt: assignment.endsAt };
+    const html = markup(createElement(TrainingEnrolmentReceipt, { course, enrolment, officer, now: NOW + HOUR_MS }));
+    expect(html).toContain('Mei Chen');
+    expect(html).toContain('Composure workshop');
+    expect(html).toContain('In training · 3h remaining');
+    expect(html).toContain('On completion');
+    expect(html).toContain('+3 Composure');
+    expect(html).toContain('+20 XP');
+    expect(html).not.toContain('Can enrol');
+    expect(html).not.toContain('already in training');
+    expect(officer.ratings.composure).toBe(before);
+    expect(officer.xp).toBe(originalXp);
+
+    state = dispatch(state, { type: 'tick' }, { now: assignment.endsAt }).state;
+    const completed = markup(createElement(TrainingEnrolmentReceipt, { course, enrolment, officer: state.officers.off_chen, now: state.department.clockHighWater }));
+    expect(completed).toContain('Course completed');
+    expect(completed).toContain('Course gains and XP have been applied');
+    expect(completed).not.toContain('In training');
+    expect(completed).not.toContain('Can enrol');
+    const completedState = structuredClone(state);
+    // Reopening a completed receipt is presentation only, including after the course finishes.
+    markup(createElement(TrainingEnrolmentReceipt, { course, enrolment, officer: state.officers.off_chen, now: state.department.clockHighWater }));
+    expect(state).toEqual(completedState);
+    expect(state.officers.off_chen.ratings.composure).toBe(before + 3);
+  });
+
+  it('shows certification benefits and does not claim a missing officer completed their course', () => {
+    const course = COURSES.drone_course;
+    const enrolment = { officerName: 'Mei Chen', startedAt: NOW, endsAt: NOW + 10 * HOUR_MS };
+    const html = markup(createElement(TrainingEnrolmentReceipt, { course, enrolment, now: enrolment.endsAt }));
+    expect(html).toContain('Mei Chen');
+    expect(html).toContain('Drone operator licence');
+    expect(html).toContain('No longer on the roster');
+    expect(html).toContain('Earn Drone operator');
+    expect(html).toContain('+50 XP');
+    expect(html).not.toContain('Course completed');
   });
 });
