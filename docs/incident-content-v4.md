@@ -22,6 +22,19 @@ Every briefing says why SWAT was requested or why the team is already at the sce
 
 New v4 calls also include active armed incidents, hostage crises and protected rescues. These use separate builders with individual civilian outcomes, qualified equipment choices, reserved vehicle support where physically usable, and explicit officer casualty decisions. The six practice entries expose all six decision families immediately. The new draw pool gives these three patterns additional weight; the old v1–v3 draw streams remain unchanged.
 
+- An adverse armed response can leave danger active and wound an officer. One new regrouped plan can continue with the remaining qualified team; it does not reset the failed roll. A checked pause and later dialogue are separate paths. Less-lethal equipment only becomes an option in an appropriate, checked post-interruption context.
+- A hostage release accounts for two people separately. Protecting one does not finish the second person's objective.
+- A rescue can use an assigned, serviceable armored vehicle with a qualified driver and accessible exterior staging, or a separately checked slower assistance route. Rescue checks use awareness, coordination and composure, not shooting.
+- People who are safe and have no current medical need can agree on their next step and finish without an ambulance. A recorded injury overrides an earlier report of no medical complaint.
+
+## Officer injuries and civilian outcomes
+
+An authored injury affects a named officer who actually took part. Wounded officers stop contributing skills, qualifications, mentoring, vehicle operation or squad support. Command-level requests and recorded withdrawal remain available if no deployed officer can continue field work.
+
+Qualified first aid uses one trauma kit for one untreated officer and shortens the game recovery timer once. The officer remains out of action; an available named ambulance must explicitly accept the medical transfer. Direct professional transfer stays possible without a first aider or kit. Other duties may continue with the reduced team, but unhandled casualties block full completion.
+
+Recovery lasts two real hours for a wound and eight for a serious wound, reduced by 20% once after successful field care. These are game-balance values. Practice changes its simulated run only. Real operations save the injury and recovery deadline, and debriefs retain their own injury snapshots. Civilian status separately records unaccounted people, people needing help, safety, actual injury and accepted care; the general safety score never invents a casualty or proves everybody was accounted for.
+
 ## Support and completion
 
 The named City or District paramedic crew has a public arrival time and availability. A request starts its operation-time clock without objective credit. Other useful preparation can happen while the crew travels. One waiting choice advances exactly the remaining time, and cannot be replayed after arrival. Crew arrival, physical access and agreement are separate from acceptance of care.

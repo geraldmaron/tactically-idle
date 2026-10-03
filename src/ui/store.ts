@@ -3,6 +3,7 @@ import type { Command, GameState, HandlerResult } from '../sim/types';
 import { CampaignSlots } from '../sim/campaign-slots';
 import { withSaveLock } from '../sim/save-lock';
 import { createSaveEnvironment } from './save-environment';
+import { initializeQaCampaign } from './qa-campaign';
 import { newLocalId, type MockOutcome, type MockProvider } from '../commerce/types';
 
 // Single game store. All mutations go through sim/game.dispatch as transactions.
@@ -21,6 +22,11 @@ export const isResponsivePreview = environment.temporary;
 
 const campaigns = await withSaveLock(locks, () => new CampaignSlots(storage(), Date.now()))
   .catch(() => new CampaignSlots(storage(true), Date.now()));
+// Only the already isolated, framed memory library can receive a QA preset.
+if (environment.temporary && typeof window !== 'undefined' && window.parent !== window) {
+  const initialized = initializeQaCampaign(campaigns, { temporary: true, framed: true, search: window.location.search }, Date.now());
+  if (initialized && !initialized.ok) campaigns.reportStorageIssue(initialized.reason);
+}
 if (!locks && !isResponsivePreview) campaigns.reportStorageIssue('Safe local saving is unavailable in this browser. You can read or export existing saves; use a current browser to save progress.');
 let pendingSave: Promise<unknown> = Promise.resolve();
 function serialized<T>(action: () => T): Promise<T> {

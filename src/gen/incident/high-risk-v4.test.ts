@@ -17,6 +17,7 @@ import { generateIncident, incidentId } from './index';
 const TYPES = ['active_armed_incident', 'hostage_crisis', 'protected_rescue'] as const;
 const specFor = (type: typeof TYPES[number], seed = 7, familyId = 'cedar_close'): IncidentSpec => ({ type, familyId, seed, buildingSeed: 7, tier: 2, contentVersion: 4 });
 function findSpec(type: typeof TYPES[number], truths: Record<string, boolean> = {}, services = ['civilian_ambulance', 'officer_ambulance']) {
+  truths = { f_care_needed: true, ...(type === 'active_armed_incident' ? { f_subject_stand_down: true } : {}), ...truths };
   for (let seed = 0; seed < 500; seed++) {
     const spec = specFor(type, seed);
     const s = generateIncident(spec);
@@ -64,6 +65,7 @@ function decide(state: GameState, id: string, band?: OutcomeBand): GameState {
 function play(state: GameState, ids: string[]): GameState { for (const id of ids) state = decide(state, id); return state; }
 function serviceCare(state: GameState, who: 'officer' | 'civilian'): GameState {
   const prefix = who === 'officer' ? `hr_${state.activeRun!.stage}_officer` : 'hr_civilian';
+  if (who === 'civilian' && !state.activeRun!.flags.includes('hr_care_checked')) state = decide(state, 'hr_check_civilian_needs');
   state = decide(state, `${prefix}_request`);
   if (evaluate(state, `${prefix}_wait`).eligible) state = decide(state, `${prefix}_wait`);
   if (who === 'civilian') state = decide(state, 'hr_civilian_agreement');
@@ -137,7 +139,7 @@ describe('new high-risk version-four families', () => {
     refused(state, 'hr_resolve_officer_aid');
     state = serviceCare(state, 'officer');
     expect(state.activeRun!.officerCasualties![injury.officerId].care).toBe('evacuated');
-    state = play(state, ['hr_verify_danger_ended', 'hr_protect_resident']);
+    state = play(state, ['hr_verify_danger_ended', 'hr_resident_alternative', 'hr_protect_resident']);
     expect(state.activeRun!.history.at(-1)!.officerIds).not.toContain(injury.officerId);
     expect(state.activeRun!.externalSupport!.civilian_ambulance).toBeUndefined();
     state = serviceCare(state, 'civilian');
@@ -150,7 +152,11 @@ describe('new high-risk version-four families', () => {
     let state = decide(decide(running(spec, ['service_sidearm']), 'hr_check_accounts'), 'hr_armed_response', 'adverse');
     expect(civilianOutcomeViews(getScenario(state.activeRun!.scenarioId)!, state.activeRun!)[0].status).toBe('injured_needs_care');
     state = decide(state, 'hr_resolve_officer_continue');
-    state = play(state, ['hr_verify_danger_ended', 'hr_protect_resident']);
+    expect(state.activeRun!.flags).toContain('hr_danger_active');
+    expect(state.activeRun!.flags).not.toContain('hr_danger_interrupted');
+    state = decide(state, 'hr_armed_regroup');
+    state = decide(state, 'hr_armed_revised_response', 'favorable');
+    state = play(state, ['hr_verify_danger_ended', 'hr_resident_alternative', 'hr_protect_resident']);
     expect(state.activeRun!.flags).toContain('hr_injury_pause');
     state = serviceCare(state, 'officer');
     expect(civilianOutcomeViews(getScenario(state.activeRun!.scenarioId)!, state.activeRun!)[0].status).toBe('injured_needs_care');
@@ -256,7 +262,7 @@ describe('new high-risk version-four families', () => {
 
   it('keeps visible public menus small across real hostage and rescue state changes', () => {
     const scenarios: [IncidentSpec, string[]][] = [
-      [findSpec('hostage_crisis', { f_partial_release: false, f_second_exit: false }), ['hr_check_accounts', 'hr_hostage_conversation', 'hr_hostage_release_concern', 'hr_hostage_revised_release', 'hr_hostage_maintain_contact', 'hr_hostage_second_arrangement', 'hr_hostage_second_alternative', 'hr_civilian_request', 'hr_civilian_agreement']],
+      [findSpec('hostage_crisis', { f_partial_release: false, f_second_exit: false }), ['hr_check_accounts', 'hr_hostage_conversation', 'hr_hostage_release_concern', 'hr_hostage_revised_release', 'hr_hostage_maintain_contact', 'hr_hostage_second_arrangement', 'hr_hostage_second_alternative', 'hr_check_civilian_needs', 'hr_civilian_request', 'hr_civilian_agreement']],
       [findSpec('protected_rescue', { f_assisted_route: true }), ['hr_check_accounts', 'hr_rescue_reach', 'hr_rescue_prepare_assistance', 'hr_rescue_reach_pickup']],
     ];
     for (const [spec, path] of scenarios) {
@@ -266,5 +272,81 @@ describe('new high-risk version-four families', () => {
         expect(menu.some(a => a.eligible)).toBe(true); state = decide(state, id);
       }
     }
+  });
+
+  it('keeps danger active after failure and permits only one regrouped armed response', () => {
+    const spec = findSpec('active_armed_incident', { f_pause_possible: false });
+    let state = decide(decide(running(spec, ['service_sidearm']), 'hr_check_accounts'), 'hr_armed_response', 'adverse');
+    expect(state.activeRun!.flags).toContain('hr_danger_active');
+    expect(state.activeRun!.flags).not.toContain('hr_danger_interrupted');
+    state = serviceCare(state, 'officer');
+    refused(state, 'hr_verify_danger_ended'); refused(state, 'hr_armed_revised_response');
+    state = decide(state, 'hr_armed_regroup');
+    state = decide(state, 'hr_armed_revised_response', 'adverse');
+    expect(state.activeRun!.flags).toContain('hr_danger_active');
+    refused(state, 'hr_armed_revised_response'); refused(state, 'hr_armed_regroup');
+    state = decide(state, 'hr_resolve_withdraw');
+    expect(computeDebrief(state, state.activeRun!)!).toMatchObject({ completionAchieved: false, disposition: 'relief_partial' });
+  });
+
+  it('allows a real one-cartridge less-lethal option only after interruption and a suitable current check', () => {
+    const spec = findSpec('active_armed_incident', { f_pause_possible: true, f_subject_stand_down: false, f_device_context: true, f_exit_usable: true });
+    const equipment = ['conducted_energy_device', 'energy_cartridge'];
+    let state = running(spec, equipment);
+    refused(state, 'hr_checked_device_response');
+    state = play(state, ['hr_check_accounts', 'hr_agreed_pause']);
+    refused(state, 'hr_checked_device_response');
+    state = decide(state, 'hr_verify_danger_ended');
+    expect(state.activeRun!.flags).not.toContain('hr_danger_resolved');
+    expect(evaluate(state, 'hr_checked_device_response').eligible).toBe(true);
+    for (const mutation of [
+      (value: GameState) => { value.reservations = value.reservations.filter(r => r.itemId !== 'conducted_energy_device'); },
+      (value: GameState) => { value.reservations = value.reservations.filter(r => r.itemId !== 'energy_cartridge'); },
+      (value: GameState) => { for (const officer of Object.values(value.officers)) officer.certs = officer.certs.filter(cert => cert !== 'less_lethal'); },
+      (value: GameState) => { value.activeRun!.knowledge.f_device_context = 'disproved'; },
+    ]) { const copy = structuredClone(state); mutation(copy); expect(evaluate(copy, 'hr_checked_device_response').eligible).toBe(false); }
+    state = decide(state, 'hr_checked_device_response', 'favorable');
+    expect(state.activeRun!.history.at(-1)!.itemsConsumed.filter(use => use.itemId === 'energy_cartridge')).toEqual([{ itemId: 'energy_cartridge', qty: 1 }]);
+    expect(state.activeRun!.flags).toContain('hr_danger_resolved');
+    refused(state, 'hr_checked_device_response');
+    state = play(state, ['hr_resident_alternative', 'hr_protect_resident']);
+    const exterior = buildLocation(spec.familyId, spec.buildingSeed).location.entries[0];
+    expect(state.activeRun!.squadTasks.find(task => task.squadId === 'A')!.positionId).toBe(exterior);
+  });
+
+  it('offers continued dialogue when the checked device context is unsafe', () => {
+    const spec = findSpec('active_armed_incident', { f_pause_possible: true, f_subject_stand_down: false, f_device_context: false });
+    let state = play(running(spec, ['conducted_energy_device', 'energy_cartridge']), ['hr_check_accounts', 'hr_agreed_pause', 'hr_verify_danger_ended']);
+    expect(evaluate(state, 'hr_checked_device_response').eligible).toBe(false);
+    state = decide(state, 'hr_followup_dialogue');
+    expect(state.activeRun!.flags).toContain('hr_danger_resolved');
+    expect(state.activeRun!.history.flatMap(h => h.itemsConsumed)).toEqual([]);
+  });
+
+  it('closes a clean protected rescue with a chosen next step without forcing ambulance care', () => {
+    const spec = findSpec('protected_rescue', { f_care_needed: false, f_assisted_route: true });
+    let state = play(running(spec), ['hr_check_accounts', 'hr_rescue_reach', 'hr_rescue_prepare_assistance', 'hr_rescue_reach_pickup']);
+    state = decide(state, 'hr_rescue_assisted_move', 'favorable');
+    refused(state, 'hr_civilian_next_step');
+    state = decide(state, 'hr_check_civilian_needs');
+    expect(state.activeRun!.knowledge.f_care_needed).toBe('disproved');
+    expect(actionViews(state, NOW, 'A').some(a => a.id === 'hr_civilian_request')).toBe(false);
+    state = decide(state, 'hr_civilian_next_step');
+    expect(state.activeRun!.externalSupport).toEqual({});
+    expect(computeDebrief(state, state.activeRun!)!).toMatchObject({ completionAchieved: true, disposition: 'followup_agreed' });
+  });
+
+  it('lets a later actual civilian injury override a no-medical-need report', () => {
+    const spec = findSpec('active_armed_incident', { f_care_needed: false, f_exit_usable: true });
+    let state = decide(decide(running(spec, ['service_sidearm']), 'hr_check_accounts'), 'hr_armed_response', 'adverse');
+    state = serviceCare(state, 'officer');
+    state = decide(state, 'hr_armed_regroup');
+    state = decide(state, 'hr_armed_revised_response', 'favorable');
+    state = play(state, ['hr_verify_danger_ended', 'hr_resident_alternative', 'hr_protect_resident', 'hr_check_civilian_needs']);
+    expect(state.activeRun!.knowledge.f_care_needed).toBe('disproved');
+    expect(state.activeRun!.flags).toContain('hr_care_required');
+    refused(state, 'hr_civilian_next_step');
+    state = serviceCare(state, 'civilian');
+    expect(computeDebrief(state, state.activeRun!)!).toMatchObject({ completionAchieved: true, disposition: 'care_accepted' });
   });
 });
