@@ -438,8 +438,15 @@ export function decisionViewsFor(state: GameState, run: OperationRun, scenario: 
       objectiveDelta: committed?.objectiveDelta ?? step.objectiveDelta,
       civilianSafetyDelta: committed?.civilianSafetyDelta ?? step.civilianDelta,
       pressureDelta: committed?.pressureDelta ?? step.pressureDelta,
-      actualStressDeltas: committed !== undefined,
-      stressDeltas: Object.entries(record.stressDeltas).map(([officerId, delta]) => ({ officerId, label: state.officers[officerId]?.surname ?? officerId, delta })),
+      actualStressDeltas: committed !== undefined || record.stressLevels !== undefined,
+      stressDeltas: Object.entries(record.stressDeltas).map(([officerId, delta]) => {
+        const levels = record.stressLevels?.[officerId];
+        return {
+          officerId, label: state.officers[officerId]?.surname ?? officerId,
+          delta: levels ? round1(levels.stressAfter - levels.stressBefore) : delta,
+          ...(levels ? { stressBefore: levels.stressBefore, stressAfter: levels.stressAfter } : {}),
+        };
+      }),
       supplies: record.itemsConsumed.filter((use) => legacyItemDefinition(use.itemId)?.kind === 'consumable').map((use) => ({ ...use, label: legacyItemDefinition(use.itemId)?.name ?? use.itemId })),
       knowledgeChanges: record.knowledgeChanges.map((change) => ({ ...change, label: scenario.facts.find((fact) => fact.id === change.factId)?.label ?? change.factId })),
       contributors: record.inputs.map((input) => ({ ...input })),
@@ -732,11 +739,13 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     }
 
     // strain lands on the officers now: later decisions see the real condition
+    const stressLevels: NonNullable<DecisionResolution['stressLevels']> = {};
     for (const [id, dlt] of Object.entries(strain)) {
       const o = draft.officers[id];
       if (o) {
         const stressBefore = o.stress;
         o.stress = round1(clamp(o.stress + dlt, 0, 100));
+        stressLevels[id] = { stressBefore, stressAfter: o.stress };
         if (scenario.version >= 3) strain[id] = round1(o.stress - stressBefore);
       }
     }
@@ -767,6 +776,7 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
       band,
       timeCost,
       stressDeltas: strain,
+      stressLevels,
       itemsConsumed: consumed,
       unitsUsed,
       knowledgeChanges,

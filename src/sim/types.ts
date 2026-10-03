@@ -567,6 +567,8 @@ export interface DecisionResolution {
   band: OutcomeBand;
   timeCost: number;
   stressDeltas: Record<Id, number>;
+  /** Recorded at application time; absent in older decisions. Never reconstructed from current stress. */
+  stressLevels?: Record<Id, { stressBefore: number; stressAfter: number }>;
   itemsConsumed: { itemId: Id; qty: number }[];
   /** Physical units actually used by this decision (wear is applied per unit at debrief). */
   unitsUsed: Id[];
@@ -657,9 +659,9 @@ export interface DecisionView {
   objectiveDelta: number;
   civilianSafetyDelta: number;
   pressureDelta: number;
-  /** Older records saved requested strain, which may have been clamped on application. */
+  /** Older records without snapshots saved requested strain, which may have been clamped on application. */
   actualStressDeltas: boolean;
-  stressDeltas: { officerId: Id; label: string; delta: number }[];
+  stressDeltas: { officerId: Id; label: string; delta: number; stressBefore?: number; stressAfter?: number }[];
   supplies: { itemId: Id; label: string; qty: number }[];
   knowledgeChanges: { factId: Id; label: string; status: KnowledgeStatus }[];
   contributors: Contributor[];

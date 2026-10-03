@@ -40,6 +40,14 @@ const numbers = (v: Record<string, unknown>, keys: string[]) => keys.every((key)
 const strings = (v: Record<string, unknown>, keys: string[]) => keys.every((key) => isStr(v[key]));
 const validPoint = (v: unknown) => isObj(v) && numbers(v, ['x', 'y']);
 const validNumericRecord = (v: unknown) => isObj(v) && Object.values(v).every(isNum);
+const validStressLevel = (v: unknown) => isNum(v) && v >= 0 && v <= 100;
+const validStressPair = (v: unknown) => isObj(v) && validStressLevel(v.stressBefore) && validStressLevel(v.stressAfter);
+
+function validStressLevels(levels: unknown, deltas: unknown): boolean {
+  return levels === undefined || (isObj(levels) && isObj(deltas)
+    && Object.keys(levels).length === Object.keys(deltas).length
+    && Object.entries(levels).every(([id, pair]) => Object.hasOwn(deltas, id) && validStressPair(pair)));
+}
 
 const SQUAD_IDS: readonly string[] = SQUAD_ID_LIST;
 const RATING_KEYS = ['shooting', 'composure', 'communication', 'awareness', 'medical', 'coordination'];
@@ -69,6 +77,7 @@ function validDecision(d: unknown): boolean {
     && isStr(d.actionId) && oneOf(d.stage, STAGES) && oneOf(d.band, ['favorable', 'mixed', 'adverse'])
     && isList(d.actingSquadIds, (id) => oneOf(id, SQUAD_IDS)) && isList(d.supportSquadIds, (id) => oneOf(id, SQUAD_IDS))
     && isStrings(d.officerIds) && (d.targetId === null || isStr(d.targetId)) && validNumericRecord(d.stressDeltas)
+    && validStressLevels(d.stressLevels, d.stressDeltas)
     && isStrings(d.unitsUsed) && isStrings(d.explanation)
     && isList(d.inputs, (c) => isObj(c) && isStr(c.label) && isNum(c.value) && oneOf(c.source, CONTRIBUTOR_SOURCES)
       && (c.ref === undefined || isStr(c.ref)))
@@ -81,7 +90,8 @@ function validDecisionView(d: unknown): boolean {
   return isObj(d) && strings(d, ['actionId', 'title', 'stageLabel']) && numbers(d, ['revision', 'timeCost', 'objectiveDelta', 'civilianSafetyDelta', 'pressureDelta'])
     && oneOf(d.band, ['favorable', 'mixed', 'adverse']) && isBool(d.actualStressDeltas) && isStrings(d.explanation) && isStrings(d.consequences)
     && (d.endingTitle === null || isStr(d.endingTitle))
-    && isList(d.stressDeltas, (x) => isObj(x) && strings(x, ['officerId', 'label']) && isNum(x.delta))
+    && isList(d.stressDeltas, (x) => isObj(x) && strings(x, ['officerId', 'label']) && isNum(x.delta)
+      && ((x.stressBefore === undefined && x.stressAfter === undefined) || validStressPair(x)))
     && isList(d.supplies, (x) => isObj(x) && strings(x, ['itemId', 'label']) && isNum(x.qty) && x.qty >= 0)
     && isList(d.knowledgeChanges, (x) => isObj(x) && strings(x, ['factId', 'label']) && oneOf(x.status, KNOWLEDGE))
     && isList(d.contributors, (x) => isObj(x) && isStr(x.label) && isNum(x.value) && oneOf(x.source, CONTRIBUTOR_SOURCES) && (x.ref === undefined || isStr(x.ref)));
