@@ -7,6 +7,7 @@ import { BAND_SHORT, EXPERIENCE_META, STATUS_META } from './labels';
 import type { StatusKey } from './labels';
 import type { ExperienceBand } from '../../sim/calendar';
 import { EXPERIENCE_LABEL } from '../../sim/calendar';
+import { ChoiceRail } from './ChoiceRail';
 
 // Small shared primitives. Styling lives in app.css.
 
@@ -182,23 +183,7 @@ export function Segmented<T extends string>({
   onChange: (v: T) => void;
   label: string;
 }) {
-  return (
-    <div className="segmented" role="radiogroup" aria-label={label}>
-      {options.map((o) => (
-        <button
-          key={o.value}
-          type="button"
-          role="radio"
-          aria-checked={o.value === value}
-          disabled={o.disabled}
-          className={`seg${o.value === value ? ' seg-on' : ''}`}
-          onClick={() => onChange(o.value)}
-        >
-          {o.label}
-        </button>
-      ))}
-    </div>
-  );
+  return <ChoiceRail value={value} options={options} onChange={onChange} label={label} grow />;
 }
 
 /** Sub-section heading with a leading icon. */

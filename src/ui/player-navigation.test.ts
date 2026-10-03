@@ -129,8 +129,8 @@ describe('rendered player destinations and persistent drafts', () => {
   it('puts owned inventory before collapsed maintenance, with one Equipment destination', () => {
     const html = markup(createElement(GearScreen));
     expect(html).toContain('aria-label="Gear sections"');
-    expect(html).toMatch(/>Inventory <span>/);
-    expect(html).toMatch(/>Equipment <span>/);
+    expect(html).toMatch(/>Inventory <span class="choice-rail-count">/);
+    expect(html).toMatch(/>Equipment <span class="choice-rail-count">/);
     expect(html.indexOf('class="gear-grid"')).toBeLessThan(html.indexOf('class="gear-maintenance"'));
     expect(html).toContain('<details class="gear-maintenance">');
     expect(html).toContain('Unlock in Develop');
@@ -176,10 +176,9 @@ describe('rendered player destinations and persistent drafts', () => {
     const officer = state.officers[id];
     const squad = markup(createElement(SquadScreen), { tab: 'squad', squadSection: 'training', trainingDraft: { officerId: id, search: '' } });
     expect(squad).toContain('aria-label="Squad sections"');
-    expect(squad).toContain('Officer to train');
+    expect(squad).toContain(`data-training-officer-id="${id}"`);
     expect(squad).toContain('Search courses');
-    expect(squad).toContain('Enrol officer');
-    expect(squad).toContain(`value="${id}" selected=""`);
+    expect(squad).toContain('Choose officer');
     const sheet = markup(createElement(OfficerSheet, { officerId: id, onClose: () => {} }));
     expect(sheet).toContain(`Train ${officer.surname}`);
     expect(sheet).not.toContain('class="courses"');
@@ -208,7 +207,7 @@ describe('rendered player destinations and persistent drafts', () => {
   it('applies officer and certification preselection on the first render', () => {
     const id = Object.keys(state.officers)[0];
     const html = markup(createElement(SquadScreen), { tab: 'squad', squadSection: 'training', trainingRequest: 2, trainingFocus: { officerId: id, certId: 'drone_operator' } });
-    expect(html).toContain(`value="${id}" selected=""`);
+    expect(html).toContain(`data-training-officer-id="${id}"`);
     expect(html).toContain('data-course-id="drone_course"');
     expect(html).not.toContain('data-course-id="composure_workshop"');
   });

@@ -1,37 +1,30 @@
 import type { ReactNode } from 'react';
+import { useMemo } from 'react';
 import { useGame } from '../store';
-import { decisionViews, pendingDebrief } from '../../sim/operation-selectors';
-import type { DebriefResult, KnowledgeStatus } from '../../sim/types';
+import { decisionViews, pendingDebrief, builtForScenario } from '../../sim/operation-selectors';
+import type { DebriefResult, DecisionView, KnowledgeStatus } from '../../sim/types';
 import type { PersonDefinition } from '../../sim/scenario-types';
 import { getScenario } from '../../sim/scenario-registry';
-import { builtForScenario } from '../../sim/operation-selectors';
 import { spaceName } from '../../sim/resolution';
 import { armamentLabel } from '../components/incident';
-import { BeforeAfter, Button, Card, Chip, Meter, SubHead } from '../components/ui';
+import { BeforeAfter, Button, Card, Chip, SubHead } from '../components/ui';
+import { DebriefConsequences, DebriefSummary, OfficerResults, type DebriefOfficers } from '../components/DebriefResults';
 import { useToast } from '../components/toast';
 import { ITEMS } from '../../content/items';
 import { Icon, itemIcon } from '../icons';
 import type { IconName } from '../icons';
-import { signed, signedMoney } from '../format';
-import { useMemo } from 'react';
-import { OperationFeedback, OperationLogContents } from './OperationFeedback';
+import { signed } from '../format';
+import { OperationLogContents } from './OperationFeedback';
 import { Sheet } from '../components/Sheet';
-
-type DebriefOfficers = Record<string, { surname: string; firstName: string }>;
 
 /** A saved debrief is self-contained; it never borrows history from a newer active run. */
 export function SavedDebriefContents({ debrief: d, officers }: { debrief: DebriefResult; officers: DebriefOfficers }) {
   return <div className="saved-debrief-content">
     {d.endingSummary && <p className="debrief-narrative">{d.endingSummary}</p>}
-    <div className="chips">
-      <Chip>Objective: {d.objective.label} · {Math.round(d.objective.score)}/100</Chip>
-      <Chip>Civilian safety: {d.civilianSafety.label} · {Math.round(d.civilianSafety.score)}/100</Chip>
-      {d.practice && <Chip tone="amber">Practice · no department consequences</Chip>}
-    </div>
-    <details className="decision-causes saved-debrief-totals"><summary>Officer condition, supplies and rewards</summary><Rows d={d} officers={officers} /></details>
-    {!!d.causes.length && <details className="decision-causes"><summary>What decided this result</summary><ul>{d.causes.map((cause, index) => <li key={index}>{cause}</li>)}</ul></details>}
-    <h3 className="saved-debrief-log-title">Decision log</h3>
-    {d.decisions?.length ? <OperationLogContents decisions={d.decisions} practice={d.practice} /> : <p className="operation-note">No per-decision log is stored for this operation. The saved result and causes are shown above.</p>}
+    <DebriefSummary debrief={d} />
+    <DebriefConsequences debrief={d} />
+    <OfficerResults debrief={d} officers={officers} />
+    <DebriefEvidence debrief={d} decisions={d.decisions ?? []} />
   </div>;
 }
 
@@ -46,202 +39,72 @@ export function OpsDebrief() {
   const { act } = useToast();
   const d = pendingDebrief(g);
   const close = () => act({ type: 'closeDebrief' });
-  if (!d) {
-    return (
-      <div className="page">
-        <Card>
-          <h2 className="section-title">Debrief</h2>
-          <p className="dim">The operation is over. The debrief is not available yet.</p>
-          <Button variant="primary" block onClick={close}>
-            Close
-          </Button>
-        </Card>
-      </div>
-    );
-  }
-  return (
-    <div className="page debrief">
-      <div className="debrief-hero">
-        <span className="kicker">{d.practice ? 'PRACTICE DEBRIEF' : 'DEBRIEF'}</span>
-        <h2 className="debrief-title">{d.endingTitle}</h2>
-        {d.endingSummary && <p className="debrief-narrative">{d.endingSummary}</p>}
-        {d.practice && (
-          <p className="note note-amber">
-            <Icon name="info" size={16} />
-            Practice run: no rewards, no stress, no supplies or reputation consequences.
-          </p>
-        )}
-      </div>
-      <OperationFeedback decisions={decisionViews(g)} practice={d.practice} ended />
-      <Rows d={d} officers={g.officers} />
-      <Reality d={d} />
-      {d.causes.length > 0 && (
-        <Card>
-          <SubHead icon="list">What decided it</SubHead>
-          <ol className="causes">
-            {d.causes.map((c, i) => (
-              <li key={i}>{c}</li>
-            ))}
-          </ol>
-        </Card>
-      )}
-      <div className="stickyfoot">
-        <Button variant="primary" block onClick={close}>
-          Close debrief
-        </Button>
-      </div>
+  if (!d) return <div className="page"><Card>
+    <h2 className="section-title">Debrief</h2>
+    <p className="dim">The operation is over. The debrief is not available yet.</p>
+    <Button variant="primary" block onClick={close}>Close</Button>
+  </Card></div>;
+  const decisions = d.decisions ?? decisionViews(g);
+  return <div className="page debrief">
+    <div className="debrief-hero">
+      <span className="kicker">{d.practice ? 'PRACTICE DEBRIEF' : 'DEBRIEF'}</span>
+      <h2 className="debrief-title">{d.endingTitle}</h2>
+      {d.endingSummary && <p className="debrief-narrative">{d.endingSummary}</p>}
     </div>
-  );
+    <DebriefSummary debrief={d} />
+    <DebriefConsequences debrief={d} decisions={decisions} />
+    <OfficerResults debrief={d} officers={g.officers} />
+    <DebriefEvidence debrief={d} decisions={decisions} />
+    <div className="stickyfoot"><Button variant="primary" block onClick={close}>Close debrief</Button></div>
+  </div>;
+}
+
+function DebriefEvidence({ debrief: d, decisions }: { debrief: DebriefResult; decisions: DecisionView[] }) {
+  const used = d.resources.filter((row) => row.itemId !== 'battery_pack').reduce((total, row) => total + row.used, 0);
+  const worn = (d.unitWear ?? []).filter((row) => row.itemId !== 'battery_pack' && row.after < row.before).length;
+  return <Card className="result-evidence">
+    <SubHead icon="list">Review the operation</SubHead>
+    {d.causes.length > 0 && <details className="result-disclosure"><summary>Why this outcome · {d.causes.length} reasons</summary><ol className="causes">{d.causes.map((cause, index) => <li key={index}>{cause}</li>)}</ol></details>}
+    <details className="result-disclosure"><summary>Decision log{decisions.length > 0 ? ` (${decisions.length})` : ''}</summary>
+      {decisions.length ? <OperationLogContents decisions={decisions} practice={d.practice} /> : <p className="operation-note">No per-decision log is stored for this operation. The saved result and causes are shown above.</p>}
+    </details>
+    <details className="result-disclosure"><summary>Information &amp; reality</summary><Information d={d} /><Reality d={d} /></details>
+    {!d.practice && <details className="result-disclosure"><summary>Supplies &amp; equipment{used > 0 || worn > 0 ? ` · ${used} used · ${worn} worn` : ' · unchanged'}</summary><Supplies d={d} /></details>}
+  </Card>;
 }
 
 function Row({ icon, title, children }: { icon: IconName; title: string; children: ReactNode }) {
-  return (
-    <section className="drow">
-      <h3 className="drow-h">
-        <Icon name={icon} size={18} />
-        {title}
-      </h3>
-      <div className="drow-body">{children}</div>
-    </section>
-  );
+  return <section className="drow"><h3 className="drow-h"><Icon name={icon} size={18} />{title}</h3><div className="drow-body">{children}</div></section>;
 }
 
-function Rows({ d, officers }: { d: DebriefResult; officers: DebriefOfficers }) {
+function Information({ d }: { d: DebriefResult }) {
+  return <Row icon="intel" title="Information preserved">
+    {d.informationPreserved.length === 0 ? <span className="dim">Nothing recorded.</span> : <ul className="offrows">{d.informationPreserved.map((f) => <li key={f.factId}>
+      <strong>{f.label}</strong><span>{f.status === 'confirmed' ? <Chip tone="mint" icon="check">Confirmed</Chip> : f.status === 'disproved' ? <Chip tone="danger" icon="x">Disproved</Chip> : <Chip tone="amber" icon="question">{f.status === 'reported' ? 'Reported' : 'Unknown'}</Chip>}</span>
+    </li>)}</ul>}
+  </Row>;
+}
+
+function Supplies({ d }: { d: DebriefResult }) {
   const resources = d.resources.filter((row) => row.itemId !== 'battery_pack');
   const wear = (d.unitWear ?? []).filter((row) => row.itemId !== 'battery_pack');
-  const tone = (n: number) => (n >= 70 ? 'hi' : n >= 40 ? 'mid' : 'lo');
-  return (
-    <Card className="drows">
-      <Row icon="flag" title="Objective">
-        <div className="drow-meter">
-          <strong>{d.objective.label}</strong>
-          <Meter value={d.objective.score} tone={tone(d.objective.score)} label="Objective" valueText={`${Math.round(d.objective.score)} of 100`} />
-          <span className="dim">{Math.round(d.objective.score)}/100</span>
-        </div>
-      </Row>
-      <Row icon="civilian" title="Civilian safety">
-        <div className="drow-meter">
-          <strong>{d.civilianSafety.label}</strong>
-          <Meter value={d.civilianSafety.score} tone={tone(d.civilianSafety.score)} label="Civilian safety" valueText={`${Math.round(d.civilianSafety.score)} of 100`} />
-          <span className="dim">{Math.round(d.civilianSafety.score)}/100</span>
-        </div>
-      </Row>
-      <Row icon="pulse" title="Officer condition">
-        {d.officerCondition.length === 0 ? (
-          <span className="dim">No officers deployed.</span>
-        ) : (
-          <ul className="offrows">
-            {d.officerCondition.map((o) => {
-              const off = officers[o.officerId];
-              const delta = o.stressAfter - o.stressBefore;
-              return (
-                <li key={o.officerId}>
-                  <strong>
-                    <Icon name="user" size={14} />
-                    {off ? off.surname : o.officerId}
-                  </strong>
-                  <span>
-                    Stress {Math.round(o.stressBefore)} {'→'} {Math.round(o.stressAfter)}{' '}
-                    <b className={delta > 0 ? 'tone-danger' : delta < 0 ? 'tone-mint' : ''}>({signed(delta)})</b>
-                  </span>
-                  <span className="dim">+{Math.round(o.xpGained)} xp</span>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </Row>
-      <Row icon="intel" title="Information preserved">
-        {d.informationPreserved.length === 0 ? (
-          <span className="dim">Nothing recorded.</span>
-        ) : (
-          <ul className="offrows">
-            {d.informationPreserved.map((f) => (
-              <li key={f.factId}>
-                <strong>{f.label}</strong>
-                <span>
-                  {f.status === 'confirmed' ? (
-                    <Chip tone="mint" icon="check">
-                      Confirmed
-                    </Chip>
-                  ) : f.status === 'disproved' ? (
-                    <Chip tone="danger" icon="x">
-                      Disproved
-                    </Chip>
-                  ) : (
-                    <Chip tone="amber" icon="question">
-                      {f.status === 'reported' ? 'Reported' : 'Unknown'}
-                    </Chip>
-                  )}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </Row>
-      <Row icon="box" title="Resources">
-        {resources.length === 0 ? (
-          <span className="dim">No equipment was carried.</span>
-        ) : (
-          <ul className="offrows">
-            {resources.map((r) => (
-              <li key={r.itemId}>
-                <strong>
-                  <Icon name={itemIcon(r.itemId)} size={15} />
-                  {ITEMS[r.itemId]?.name ?? r.itemId}
-                </strong>
-                <span>
-                  Used {r.used} · returned {r.returned}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </Row>
-      <Row icon="wrench" title="Equipment wear">
-        {wear.length === 0 ? (
-          <span className="dim">No equipment wore down on this run.</span>
-        ) : (
-          <ul className="wearrows">
-            {wear.map((w) => {
-              const delta = w.after - w.before;
-              return (
-                <li key={w.unitId}>
-                  <span className="wear-id">
-                    <Icon name={itemIcon(w.itemId)} size={15} />
-                    <strong>{w.serial}</strong>
-                    <span className="dim">{ITEMS[w.itemId]?.name ?? w.itemId}</span>
-                  </span>
-                  <span className="wear-nums">
-                    {Math.round(w.before)}% <Icon name="arrowRight" size={12} /> {Math.round(w.after)}%{' '}
-                    <b className={delta < 0 ? 'tone-warn' : delta > 0 ? 'tone-mint' : ''}>({signed(delta)})</b>
-                  </span>
-                  <BeforeAfter before={w.before} after={w.after} />
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </Row>
-      <Row icon="cash" title="Rewards">
-        {d.practice ? (
-          <span className="dim">None. Practice runs grant no rewards.</span>
-        ) : (
-          <div className="chips">
-            <Chip tone="mint" icon="cash">
-              Funding {signedMoney(d.fundingReward)}
-            </Chip>
-            <Chip tone={d.trustDelta < 0 ? 'danger' : 'mint'} icon="shield">
-              Trust {signed(d.trustDelta)}
-            </Chip>
-            <Chip tone="amber" icon="chart">
-              {d.devPointReward} dev point{d.devPointReward === 1 ? '' : 's'}
-            </Chip>
-          </div>
-        )}
-      </Row>
-    </Card>
-  );
+  return <div className="drows">
+    <Row icon="box" title="Resources">
+      {resources.length === 0 ? <span className="dim">No equipment was carried.</span> : <ul className="offrows">{resources.map((r) => <li key={r.itemId}>
+        <strong><Icon name={itemIcon(r.itemId)} size={15} />{ITEMS[r.itemId]?.name ?? r.itemId}</strong><span>Used {r.used} · returned {r.returned}</span>
+      </li>)}</ul>}
+    </Row>
+    <Row icon="wrench" title="Equipment wear">
+      {wear.length === 0 ? <span className="dim">No equipment wore down on this run.</span> : <ul className="wearrows">{wear.map((w) => {
+        const delta = w.after - w.before;
+        return <li key={w.unitId}>
+          <span className="wear-id"><Icon name={itemIcon(w.itemId)} size={15} /><strong>{w.serial}</strong><span className="dim">{ITEMS[w.itemId]?.name ?? w.itemId}</span></span>
+          <span className="wear-nums">{Math.round(w.before)}% <Icon name="arrowRight" size={12} /> {Math.round(w.after)}% {delta !== 0 && <b className={delta < 0 ? 'tone-warn' : 'tone-mint'}>({signed(delta, 1)})</b>}</span>
+          <BeforeAfter before={w.before} after={w.after} />
+        </li>;
+      })}</ul>}
+    </Row>
+  </div>;
 }
 
 // ---------------------------------------------------------------- what was really there

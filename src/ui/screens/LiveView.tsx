@@ -23,6 +23,7 @@ import { RoomList } from '../blueprint/RoomList';
 import { OfficerCard } from '../components/OfficerCard';
 import { Sheet } from '../components/Sheet';
 import { Button, Chip, SubHead } from '../components/ui';
+import { ChoiceRail } from '../components/ChoiceRail';
 import { armamentLabel } from '../components/incident';
 import { ROLE_META, ROOM_TYPE_LABEL, STAGE_LABEL } from '../components/labels';
 import { highRiskAllowed } from '../../sim/officer';
@@ -173,27 +174,15 @@ export function LiveView(p: LiveViewProps) {
       </div>
 
       {multi && (
-        <div className={`squadsel squadsel-n${p.deployedSquads.length}`} role="tablist" aria-label="Deployed squads">
-          {p.deployedSquads.map((s) => {
+        <div className="live-squad-rail"><ChoiceRail value={focus?.id ?? p.deployedSquads[0].id} kind="tabs" label="Deployed squads" panelId="deployed-officer-strip" onChange={p.onFocusSquad} options={p.deployedSquads.map((s) => {
             // In the field, readiness means members still fit for high-risk work (not deploy eligibility).
             const fit = s.officerIds.filter((id) => p.g.officers[id] && highRiskAllowed(p.g.officers[id])).length;
-            const on = s.id === focus?.id;
-            return (
-              <button key={s.id} type="button" role="tab" aria-selected={on} aria-label={`Squad ${s.id}, ${s.name}, ${fit} of ${s.officerIds.length} fit`} className={`sq${on ? ' sq-on' : ''}`} onClick={() => p.onFocusSquad(s.id)}>
-                <b>{s.id}</b>
-                <span className="sq-text">
-                  <span className="sq-name">{s.name}</span>
-                  <span className="sq-ready">
-                    {fit}/{s.officerIds.length} fit
-                  </span>
-                </span>
-              </button>
-            );
-          })}
-        </div>
+            return { value: s.id, accessibleLabel: `Squad ${s.id}, ${s.name}, ${fit} of ${s.officerIds.length} fit`,
+              label: <><b>{s.id}</b><span className="squad-tab-name">{s.name}</span><span className="choice-rail-count">{fit}/{s.officerIds.length} fit</span></> };
+          })} /></div>
       )}
 
-      <div className="strip" aria-label={focus ? `${focus.name} officers` : 'Officers'}>
+      <div className="strip" id="deployed-officer-strip" role={multi ? 'tabpanel' : undefined} aria-label={focus ? `${focus.name} officers` : 'Officers'}>
         {p.officers.map((o) => {
           const acting = sel?.officerIds.includes(o.id) ?? false;
           const active = p.activeOfficerId === o.id;

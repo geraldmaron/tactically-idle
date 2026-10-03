@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useGame } from '../store';
 import { useNav } from '../components/nav';
 import { EquipmentStore } from '../storefront/EquipmentStore';
+import { ChoiceRail } from '../components/ChoiceRail';
 import { storeOptions, unitViews } from '../../sim/department-selectors';
 import type { StoreOption, UnitView } from '../../sim/department-selectors';
 import type { GameState, Id, RestockRule, Squad } from '../../sim/types';
@@ -31,10 +32,10 @@ export function GearScreen() {
   const owned = opts.filter((option) => option.owned > 0);
   return (
     <div className="page gear-page">
-      <nav className="gear-surfaces" aria-label="Gear sections">
-        <Button className={surface === 'inventory' ? 'is-selected' : ''} aria-current={surface === 'inventory' ? 'page' : undefined} onClick={() => setSurface('inventory')}>Inventory <span>{owned.length}</span></Button>
-        <Button className={surface === 'equipment' ? 'is-selected' : ''} aria-current={surface === 'equipment' ? 'page' : undefined} onClick={() => { setUnitsFor(null); setSurface('equipment'); }}>Equipment <span>{opts.length} items</span></Button>
-      </nav>
+      <ChoiceRail value={surface} kind="navigation" label="Gear sections" grow onChange={(next) => { setUnitsFor(null); setSurface(next); }} options={[
+        { value: 'inventory', label: <>Inventory <span className="choice-rail-count">{owned.length}</span></> },
+        { value: 'equipment', label: <>Equipment <span className="choice-rail-count">{opts.length}</span></> },
+      ]} />
       {surface === 'equipment' && <EquipmentStore active />}
       <div className="gear-inventory" hidden={surface !== 'inventory'}>
       <Section title="Inventory" icon="box" hint="Every item is a set of individual units that wear at their own pace. Tap a tile to see each unit, service it or scrap it.">

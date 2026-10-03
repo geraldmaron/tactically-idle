@@ -16,6 +16,7 @@ import { officerList } from './helpers';
 import { useNav } from '../components/nav';
 import { TrainingStore } from '../storefront/TrainingStore';
 import { SquadOptimizer } from './SquadOptimizer';
+import { ChoiceRail } from '../components/ChoiceRail';
 
 const DEFAULT_NAMES = ['Alpha', 'Bravo', 'Charlie', 'Delta'];
 
@@ -38,30 +39,18 @@ export function SquadScreen() {
 
   return (
     <div className="page squad-page">
-      <nav className="player-sections" aria-label="Squad sections">
-        <Button variant={nav.squadSection === 'roster' ? 'primary' : 'secondary'} aria-current={nav.squadSection === 'roster' ? 'page' : undefined} onClick={() => nav.setSquadSection('roster')}>Roster</Button>
-        <Button variant={nav.squadSection === 'training' ? 'primary' : 'secondary'} aria-current={nav.squadSection === 'training' ? 'page' : undefined} onClick={() => nav.setSquadSection('training')}>Training</Button>
-      </nav>
+      <ChoiceRail value={nav.squadSection} kind="navigation" label="Squad sections" grow onChange={nav.setSquadSection} options={[
+        { value: 'roster', label: 'Roster' }, { value: 'training', label: 'Training' },
+      ]} />
       {nav.squadSection === 'training' ? <TrainingStore /> : <>
       <div className="squad-arrangement-entry"><Button onClick={() => { setOfficerId(null); setArranging(true); }} disabled={g.squads.length === 0}>Arrange squads</Button></div>
-      <div className={`squadtabs${g.squads.length >= 4 ? ' squadtabs-4' : ''}`} role="tablist" aria-label="Squads">
-        {g.squads.map((s) => (
-          <button
-            key={s.id}
-            type="button"
-            role="tab"
-            aria-label={`Squad ${s.id}, ${s.name}`}
-            aria-selected={active?.id === s.id}
-            className={`squadtab${active?.id === s.id ? ' squadtab-on' : ''}`}
-            onClick={() => setSel(s.id)}
-          >
-            <b>{s.id}</b>
-            <span>{s.name}</span>
-          </button>
-        ))}
+      <div className="squad-navigation">
+        <ChoiceRail value={active?.id ?? 'A'} kind="tabs" label="Squads" panelId="selected-squad-panel" onChange={setSel} options={g.squads.map((s) => ({
+          value: s.id, accessibleLabel: `Squad ${s.id}, ${s.name}`, label: <><b>{s.id}</b><span className="squad-tab-name">{s.name}</span></>,
+        }))} />
         <button
           type="button"
-          className={`squadtab squadtab-add${full ? ' squadtab-full' : ''}`}
+          className={`squad-add-control${full ? ' squadtab-full' : ''}`}
           aria-label={full ? 'All four squad slots are in use' : 'Create squad'}
           onClick={() => {
             if (full) {
@@ -74,12 +63,11 @@ export function SquadScreen() {
           aria-expanded={full ? undefined : creating}
         >
           <Icon name="plus" size={18} />
-          <span>Squad</span>
         </button>
       </div>
       {creating && <CreateSquad count={g.squads.length} onDone={(id) => { setCreating(false); if (id) setSel(id); }} />}
 
-      {active ? (
+      <div id="selected-squad-panel" role="tabpanel" aria-label={active ? `Squad ${active.id}, ${active.name}` : 'Squads'}>{active ? (
         <SquadPanel squad={active} onOpen={setOfficerId} />
       ) : (
         <Card>
@@ -87,7 +75,7 @@ export function SquadScreen() {
             Create up to four squads, then assign officers to them.
           </EmptyState>
         </Card>
-      )}
+      )}</div>
 
       <Section title="Unassigned officers" icon="user" hint="Not in any squad. They do not patrol or deploy until assigned.">
         {unassigned.length === 0 ? (

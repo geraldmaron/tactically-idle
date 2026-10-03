@@ -1,4 +1,10 @@
-.develop-page .development-filters { display: flex; flex-wrap: wrap; gap: 6px; }
+.develop-page { gap: 12px; }
+.development-balance { display: flex; flex-direction: column; gap: 8px; }
+.development-balance .section-title { margin: 0; }
+.development-balance-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.development-balance-row .btn { flex: 0 0 auto; }
+.development-balance-row .chips { gap: 5px; }
+.development-intro { margin: 0; font-size: 13px; line-height: 1.4; }
 .develop-page .btn, .development-sheet .btn { min-height: 44px; white-space: normal; }
 .develop-page input, .develop-page select, .development-sheet input, .development-sheet select { font-size: 16px; }
 .development-count { margin: 0; }
