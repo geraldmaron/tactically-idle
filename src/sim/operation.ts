@@ -1,3 +1,4 @@
+import { reserveSupportVehicle, supportStartCheck } from './support-vehicles';
 // Operation engine: start, cancel, decide, closeDebrief. The run record is the
 // save: every committed decision stores its sample and result, so resuming never
 // rerolls. Resolution math lives in resolution.ts; content in content/scenarios.
@@ -156,6 +157,8 @@ export function checkStart(state: GameState, now: number, cmd: StartCmd): StartC
   if (scenario.incident && !cmd.practice && !state.incidents?.some((c) => c.id === scenario.id && c.expiresAt > Math.max(now, state.department.clockHighWater))) {
     issues.push('This incident is no longer on the board. Replay it in practice.');
   }
+  if (scenario.practiceOnly && !cmd.practice) issues.push('This training exercise is practice only');
+  issues.push(...supportStartCheck(state, now, cmd));
   const ids = cmd.squadIds;
   if (ids.length < 1) issues.push('Choose at least one squad');
   if (ids.length > 3) issues.push('At most three squads can deploy');
@@ -293,6 +296,8 @@ function makeRun(state: GameState, built: BuiltLocation, scenario: ScenarioDefin
       return 'error' in st ? { squadId: sid, positionId: cmd.positions[sid] ?? '', task: 'Staging', stagingId: null, at: null } : { squadId: sid, positionId: st.positionId, task: 'Staging', stagingId: st.stagingId, at: st.at };
     }),
     reservationIds: [],
+    supportUnitIds: [...cmd.supportUnitIds ?? []],
+    supportPositionId: cmd.positions[cmd.squadIds[0]],
     stage: 'assess',
     knowledge: initialKnowledge(scenario),
     flags: [],
@@ -541,7 +546,7 @@ export function computeDebrief(state: GameState, run: OperationRun): DebriefResu
 
 /** Every specific unit the run's decisions used, once each. */
 export function unitsUsedTotals(run: OperationRun): Id[] {
-  return [...new Set(run.history.flatMap((h) => h.unitsUsed))];
+  return [...new Set([...run.history.flatMap((h) => h.unitsUsed), ...(run.resupplies ?? []).flatMap((r) => r.supportUnitId ? [r.supportUnitId] : [])])];
 }
 
 export function consumedTotals(run: OperationRun): { itemId: Id; qty: number }[] {
@@ -596,6 +601,7 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
       if (!r.ok) return r;
       run.reservationIds = draft.reservations.slice(before).map((x) => x.id);
     }
+    reserveSupportVehicle(draft, run);
     for (const sid of cmd.squadIds) {
       for (const oid of draft.squads.find((s) => s.id === sid)?.officerIds ?? []) {
         const o = draft.officers[oid];

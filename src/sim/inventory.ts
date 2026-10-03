@@ -27,7 +27,7 @@ export function readyCount(state: GameState, itemId: Id, now = state.department.
  * just above failAt, 0 when failed, expired or scrapped.
  */
 export function unitEffectiveness(unit: ItemUnit, def: ItemDefinition): number {
-  if (unit.status === 'expired' || unit.status === 'scrapped') return 0;
+  if (unit.status === 'expired' || unit.status === 'scrapped' || unit.status === 'service') return 0;
   const { failAt, unreliableBelow } = def.wear;
   if (unit.condition <= failAt) return 0;
   if (unit.condition >= unreliableBelow) return 1;
@@ -50,6 +50,7 @@ export function reserveLoadouts(
       const u = draft.units[id];
       if (!u) return { ok: false, reason: `Unknown unit ${id}` };
       const def = ITEMS[u.itemId];
+      if (def?.supportOnly) return { ok: false, reason: `${def.name} belongs in the exterior support slot, not a carried loadout` };
       if (taken.has(id)) return { ok: false, reason: `${u.serial} is assigned to two squads` };
       if (u.status !== 'ready') return { ok: false, reason: `${u.serial} is ${u.status === 'service' ? 'in service' : u.status}` };
       if (def && projectedCondition(draft, u, Math.max(now, draft.department.clockHighWater)) <= def.wear.failAt) return { ok: false, reason: `${u.serial} has failed and needs service` };
@@ -63,6 +64,7 @@ export function reserveLoadouts(
     for (const [itemId, qty] of Object.entries(items ?? {})) {
       const def = ITEMS[itemId];
       if (!def) return { ok: false, reason: `Unknown item ${itemId}` };
+      if (def.supportOnly && qty > 0) return { ok: false, reason: `${def.name} belongs in the exterior support slot, not a carried loadout` };
       if (!Number.isInteger(qty) || qty < 0) return { ok: false, reason: `Invalid quantity for ${def.name}` };
       const already = picks.filter((p) => p.squadId === squadId && p.unit.itemId === itemId).length;
       const need = qty - already;
@@ -144,7 +146,7 @@ export function settleRun(
 /** Units reserved by one squad in a run. */
 export function squadUnits(state: GameState, runId: Id, squadId: SquadId): ItemUnit[] {
   const ids = state.reservations.filter((r) => r.runId === runId && r.squadId === squadId).map((r) => r.unitId);
-  return ids.map((id) => state.units[id]).filter((u): u is ItemUnit => Boolean(u));
+  return ids.map((id) => state.units[id]).filter((u): u is ItemUnit => Boolean(u) && !ITEMS[u.itemId]?.supportOnly);
 }
 
 /** Capability tags carried by one squad, counting only units that still work. */

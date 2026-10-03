@@ -102,6 +102,8 @@ export function courseCheck(state: GameState, course: Course, officer: Officer |
   if (officer) {
     if (officer.assignment?.kind === 'operation') return no(`${fullName(officer)} is deployed`);
     if (officer.assignment?.kind === 'training') return no(`${fullName(officer)} is already in training`);
+    const missing = (course.requiresCerts ?? []).filter((cert) => !officer.certs.includes(cert));
+    if (missing.length) return no(`Requires prior qualification: ${missing.map((cert) => cert.replaceAll('_', ' ')).join(', ')}`);
     const { cert, rating } = course.grants;
     if (cert && officer.certs.includes(cert)) return no(`${fullName(officer)} already holds this certification`);
     if (rating && officer.ratings[rating.key] >= COURSE_RATING_CEILING) {
@@ -149,6 +151,8 @@ export interface ItemCheck {
 }
 
 export function itemCheck(state: GameState, item: ItemDefinition, qty: number): ItemCheck {
+  if (!Number.isInteger(qty) || qty < 1 || qty > DEVELOP_TUNING.maxPurchase) return { ok: false, reason: `Quantity must be a whole number from 1 to ${DEVELOP_TUNING.maxPurchase}` };
+  if (item.supportOnly && qty !== 1) return { ok: false, reason: 'Buy one support vehicle at a time' };
   if (item.requiresNode && !isNodeUnlocked(state, item.requiresNode)) {
     return { ok: false, reason: `Requires ${DEV_NODES[item.requiresNode]?.name ?? item.requiresNode}` };
   }

@@ -44,7 +44,7 @@ const DUTIES = ['patrol', 'standby', 'rest'];
 const UNIT_STATUSES = ['ready', 'reserved', 'service', 'expired', 'scrapped'];
 const RETIREMENT_REASONS = ['age', 'service', 'burnout'];
 const ROLES = ['comms', 'breach', 'medic', 'recon', 'lead'];
-const CERTS = ['crisis_negotiation', 'entry_team', 'advanced_first_aid', 'surveillance', 'drone_operator'];
+const CERTS = ['crisis_negotiation', 'entry_team', 'advanced_first_aid', 'surveillance', 'drone_operator', 'less_lethal', 'advanced_less_lethal', 'deescalation', 'vehicle_operations', 'precision_support', 'controlled_access'];
 const TRAITS = ['steady', 'observant', 'mentor', 'impatient', 'calm_voice', 'rookie'];
 const KNOWLEDGE = ['unknown', 'reported', 'confirmed', 'disproved'];
 const STAGES = ['assess', 'adapt', 'resolve'];
@@ -95,8 +95,11 @@ function validRun(r: unknown): boolean {
     if (positions !== undefined && (!isObj(positions) || !Object.values(positions).every((p) => isObj(p)
       && isStr(p.spaceId) && validPoint(p.at) && (key !== 'lastSeen' || isNum(p.revision))))) return false;
   }
+  if (r.supportUnitIds !== undefined && (!isStrings(r.supportUnitIds) || r.supportUnitIds.length > 1)) return false;
+  if (r.supportPositionId !== undefined && !isStr(r.supportPositionId)) return false;
   if (r.sourceIncident !== undefined && (!validIncident(r.sourceIncident) || r.sourceIncident.id !== r.scenarioId)) return false;
   if (r.resupplies !== undefined && !isList(r.resupplies, (delivery) => isObj(delivery)
+    && (delivery.supportUnitId === undefined || isStr(delivery.supportUnitId))
     && isNum(delivery.minutes) && delivery.minutes > 0 && delivery.minutes <= 60
     && isList(delivery.allocations, (allocation) => isObj(allocation) && oneOf(allocation.squadId, SQUAD_IDS)
       && (r.squadIds as unknown[]).includes(allocation.squadId) && isStrings(allocation.unitIds)
@@ -369,7 +372,10 @@ export function migrate(envelope: SaveEnvelope): SaveEnvelope | null {
   } catch {
     return null;
   }
-  env = { ...env, state: { ...env.state, saveVersion: env.saveVersion } };
+  // New draws use v2. Issued incident IDs encode their own content version;
+  // never rewrite the board, an active run, its RNG, or its scenario fields.
+  const contentVersion = Math.max(2, env.state.contentVersion);
+  env = { ...env, contentVersion, state: { ...env.state, contentVersion, saveVersion: env.saveVersion } };
   return env;
 }
 

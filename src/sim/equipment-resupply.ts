@@ -1,3 +1,4 @@
+import { supportVehicle } from './capabilities';
 // Contextual field resupply: physical stock may reach a squad only while it is
 // still staged outside, before its first tactical decision. Preview and command
 // share the same planner; the command never trusts a stale UI allocation.
@@ -36,8 +37,10 @@ export function planActionResupply(
   acting: SquadId[],
   support: SquadId[],
 ): ActionResupplyPlan {
-  const result = (needed: boolean, reason: string | null): ActionResupplyPlan => ({ needed, ok: false, reason, minutes: RESUPPLY_MINUTES, allocations: [], items: [] });
   const run = state.activeRun;
+  const vehicle = run ? supportVehicle(state, run) : null;
+  const minutes = vehicle?.itemId === 'support_van' ? 2 : RESUPPLY_MINUTES;
+  const result = (needed: boolean, reason: string | null): ActionResupplyPlan => ({ needed, ok: false, reason, minutes, allocations: [], items: [] });
   if (!run || run.status !== 'active' || run.stage === 'debrief') return result(false, 'No active operation to equip');
   if (run.practice) return result(false, 'Practice already provides its available equipment');
   const scenario = getScenario(run.scenarioId);
@@ -80,7 +83,7 @@ export function planActionResupply(
     const taken = new Set(picks.map((p) => p.unit.id));
     // One best unit per compatible item makes alternatives deterministic. A
     // later requirement sees the next unit, never the same physical unit twice.
-    return tags.flatMap((tag) => Object.values(ITEMS).filter((def) => def.tags.includes(tag)))
+    return tags.flatMap((tag) => Object.values(ITEMS).filter((def) => !def.supportOnly && def.tags.includes(tag)))
       .filter((def, index, all) => all.findIndex((d) => d.id === def.id) === index)
       .flatMap((def) => readyUnits(state, def.id, time).filter((u) => !taken.has(u.id)).slice(0, 1))
       .map((u) => ({ ...u, condition: projectedCondition(state, u, time) }));
@@ -134,7 +137,7 @@ export function planActionResupply(
   if (!variants.length) return result(true, [...shortages].join(' ') || 'Required equipment is unavailable');
 
   const afterDelivery = { ...run };
-  advanceTime(afterDelivery, scenario, RESUPPLY_MINUTES);
+  advanceTime(afterDelivery, scenario, minutes);
   let remainingReason: string | null = null;
   for (const picks of variants) {
     const unitOverride = Object.fromEntries(participants.map((sq) => [sq, carrying(picks, [sq])])) as Record<SquadId, ItemUnit[]>;
@@ -143,7 +146,7 @@ export function planActionResupply(
     const allocations = receivers.map((squadId) => ({ squadId, unitIds: picks.filter((p) => p.squadId === squadId).map((p) => p.unit.id) })).filter((p) => p.unitIds.length > 0);
     if (!allocations.length) return result(false, 'Required equipment is already equipped');
     return {
-      needed: true, ok: true, reason: null, minutes: RESUPPLY_MINUTES, allocations,
+      needed: true, ok: true, reason: null, minutes, allocations,
       items: picks.map(({ squadId, unit }) => ({ squadId, itemId: unit.itemId, unitId: unit.id, name: ITEMS[unit.itemId].name, serial: unit.serial })),
     };
   }
@@ -161,7 +164,8 @@ export const RESUPPLY_HANDLERS: HandlerMap<'resupplyAction'> = {
     if (!reserved.ok) return reserved;
     run.reservationIds.push(...draft.reservations.slice(before).map((r) => r.id));
     advanceTime(run, getScenario(run.scenarioId)!, plan.minutes);
-    (run.resupplies ??= []).push({ minutes: plan.minutes, allocations: plan.allocations });
+    const vehicle = supportVehicle(draft, run);
+    (run.resupplies ??= []).push({ minutes: plan.minutes, allocations: plan.allocations, ...(vehicle?.itemId === 'support_van' ? { supportUnitId: vehicle.id } : {}) });
     run.revision += 1;
     return { ok: true };
   },

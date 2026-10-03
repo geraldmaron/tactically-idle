@@ -1,0 +1,44 @@
+/* A focused text control below 16px can trigger Safari's automatic page zoom.
+   Keep browser/user zoom available, and retain larger inherited text sizes. */
+.app :is(input, select, textarea):not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]) {
+  font-size: max(16px, 1em);
+}
+
+/* Insets are the intersection of the app overlay and the visual viewport.
+   The defaults preserve the existing layout where that API is unavailable. */
+.sheet.sheet-tall, .sheet.sheet-short {
+  --sheet-bottom: var(--sheet-visible-bottom, 0px);
+  --sheet-available-height: max(0px, calc(100% - var(--sheet-visible-top, 0px) - var(--sheet-bottom)));
+  left: var(--sheet-visible-left, 0px);
+  right: var(--sheet-visible-right, 0px);
+  bottom: var(--sheet-bottom);
+}
+.sheet.sheet-tall { max-height: min(88%, var(--sheet-available-height)); }
+.sheet.sheet-short { max-height: min(56%, var(--sheet-available-height)); }
+.sheet.sheet-nonmodal {
+  --sheet-bottom: max(var(--sheet-visible-bottom, 0px), calc(var(--nav-h) + env(safe-area-inset-bottom)));
+}
+/* A keyboard or zoom can leave less room than a pinned header + footer.
+   In that case the entire sheet scrolls, keeping every action reachable. */
+.sheet[data-viewport-constrained] {
+  display: block;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.sheet[data-viewport-constrained] .sheet-body { overflow-y: visible; }
+@media (max-height: 560px) {
+  .sheet.sheet-tall { max-height: var(--sheet-available-height); }
+  .sheet.sheet-short {
+    max-height: min(calc(100% - var(--nav-h) - env(safe-area-inset-bottom) - 12px), var(--sheet-available-height));
+  }
+}
+/* Browsers that resize the layout viewport for the keyboard need the same
+   fallback, even though the overlay/visual-viewport intersection is complete. */
+@media (max-height: 480px) {
+  .sheet.sheet-tall, .sheet.sheet-short {
+    display: block;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  .sheet .sheet-body { overflow-y: visible; }
+}

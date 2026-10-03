@@ -1,3 +1,4 @@
+import { THERMAL_DESCRIPTION } from './capabilities';
 import type { DevelopmentNode, Id } from '../sim/types';
 
 // Non-exclusive nodes across five branches. Costs are proposed tuning values.
@@ -11,7 +12,7 @@ export const DEV_NODES: Record<Id, DevelopmentNode> = {
     description: 'Lets the department train officers in crisis negotiation so more than one person can open contact.',
     cost: { dp: 2, funding: 800 },
     requires: [],
-    effects: [{ kind: 'unlockCourse', courseId: 'crisis_negotiation_course' }],
+    effects: [{ kind: 'unlockCourse', courseId: 'crisis_negotiation_course' }, { kind: 'unlockCourse', courseId: 'deescalation_course' }],
   },
   personnel_academy: {
     id: 'personnel_academy',
@@ -67,10 +68,10 @@ export const DEV_NODES: Record<Id, DevelopmentNode> = {
     id: 'intel_thermal',
     branch: 'intel',
     name: 'Thermal imaging',
-    description: 'Approves thermal imagers for checking occupancy through an exterior wall.',
+    description: THERMAL_DESCRIPTION,
     cost: { dp: 2, funding: 1500 },
     requires: [],
-    effects: [{ kind: 'unlockItem', itemId: 'thermal_imager' }],
+    effects: [{ kind: 'unlockItem', itemId: 'thermal_imager' }, { kind: 'unlockItem', itemId: 'inspection_camera' }],
   },
   intel_drone: {
     id: 'intel_drone',
@@ -138,6 +139,172 @@ export const DEV_NODES: Record<Id, DevelopmentNode> = {
     description: 'Lets the department train officers in advanced first aid so a second medic is possible.',
     cost: { dp: 2, funding: 1100 },
     requires: ['wellbeing_peer_support'],
-    effects: [{ kind: 'unlockCourse', courseId: 'first_aid_course' }],
+    effects: [{ kind: 'unlockCourse', courseId: 'first_aid_course' }, { kind: 'unlockItem', itemId: 'rescue_shield' }],
   },
+  field_less_lethal: {
+    "id": "field_less_lethal",
+    "branch": "field",
+    "name": "Less-lethal response program",
+    "description": "Approves situational equipment and related training. Officers must complete their own required qualifications; buying this program grants no certification.",
+    "cost": {
+        "dp": 2,
+        "funding": 1000
+    },
+    "requires": [],
+    "effects": [
+        {
+            "kind": "unlockItem",
+            "itemId": "conducted_energy_device"
+        },
+        {
+            "kind": "unlockItem",
+            "itemId": "impact_launcher"
+        },
+        {
+            "kind": "unlockItem",
+            "itemId": "energy_cartridge"
+        },
+        {
+            "kind": "unlockItem",
+            "itemId": "impact_supply"
+        },
+        {
+            "kind": "unlockCourse",
+            "courseId": "less_lethal_course"
+        },
+        {
+            "kind": "unlockCourse",
+            "courseId": "advanced_less_lethal_course"
+        }
+    ]
+},
+  field_response_program: {
+    "id": "field_response_program",
+    "branch": "field",
+    "name": "Protective response program",
+    "description": "Approves situational equipment and related training. Officers must complete their own required qualifications; buying this program grants no certification.",
+    "cost": {
+        "dp": 2,
+        "funding": 1000
+    },
+    "requires": [
+        "field_entry_course"
+    ],
+    "effects": [
+        {
+            "kind": "unlockItem",
+            "itemId": "service_sidearm"
+        },
+        {
+            "kind": "unlockItem",
+            "itemId": "compact_carbine"
+        },
+        {
+            "kind": "unlockItem",
+            "itemId": "response_shotgun"
+        },
+        {
+            "kind": "unlockItem",
+            "itemId": "light_protection"
+        }
+    ]
+},
+  field_specialist_response: {
+    "id": "field_specialist_response",
+    "branch": "field",
+    "name": "Specialist response program",
+    "description": "Approves situational equipment and related training. Officers must complete their own required qualifications; buying this program grants no certification.",
+    "cost": {
+        "dp": 2,
+        "funding": 1400
+    },
+    "requires": [
+        "field_response_program"
+    ],
+    "effects": [
+        {
+            "kind": "unlockItem",
+            "itemId": "precision_support"
+        },
+        {
+            "kind": "unlockCourse",
+            "courseId": "precision_support_course"
+        }
+    ]
+},
+  field_controlled_access: {
+    "id": "field_controlled_access",
+    "branch": "field",
+    "name": "Controlled access program",
+    "description": "Approves situational equipment and related training. Officers must complete their own required qualifications; buying this program grants no certification.",
+    "cost": {
+        "dp": 2,
+        "funding": 1200
+    },
+    "requires": [
+        "field_entry_course"
+    ],
+    "effects": [
+        {
+            "kind": "unlockItem",
+            "itemId": "rescue_spreader"
+        },
+        {
+            "kind": "unlockItem",
+            "itemId": "door_charge"
+        },
+        {
+            "kind": "unlockCourse",
+            "courseId": "controlled_access_course"
+        }
+    ]
+},
+  logistics_field_support: {
+    "id": "logistics_field_support",
+    "branch": "logistics",
+    "name": "Field support program",
+    "description": "Approves situational equipment and related training. Officers must complete their own required qualifications; buying this program grants no certification.",
+    "cost": {
+        "dp": 2,
+        "funding": 1500
+    },
+    "requires": [],
+    "effects": [
+        {
+            "kind": "unlockItem",
+            "itemId": "support_van"
+        },
+        {
+            "kind": "unlockItem",
+            "itemId": "command_van"
+        },
+        {
+            "kind": "unlockItem",
+            "itemId": "radio_relay"
+        },
+        {
+            "kind": "unlockCourse",
+            "courseId": "vehicle_operations_course"
+        }
+    ]
+},
+  logistics_armored_support: {
+    "id": "logistics_armored_support",
+    "branch": "logistics",
+    "name": "Armored rescue support",
+    "description": "Approves situational equipment and related training. Officers must complete their own required qualifications; buying this program grants no certification.",
+    "cost": {
+        "dp": 3,
+        "funding": 2500
+    },
+    "requires": [
+        "logistics_field_support"
+    ],
+    "effects": [
+        {
+            "kind": "unlockItem",
+            "itemId": "armored_rescue_vehicle"
+        }
+    ]
+},
 };

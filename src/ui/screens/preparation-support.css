@@ -1,0 +1,45 @@
+.prep-support-summary,
+.prep-support-card {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.prep-support-summary p,
+.prep-support-card p {
+  margin: 8px 0 0;
+}
+.prep-support-heading {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.prep-support-heading strong {
+  flex: 1 1 140px;
+  min-width: 0;
+}
+.prep-support-heading .icon {
+  flex: 0 0 auto;
+}
+.prep-support-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+.prep-support-selected {
+  border-color: var(--amber);
+}
+.prep-support-card .field {
+  margin-top: 12px;
+}
+.prep-support-card select {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+.prep-support-issues {
+  margin: 8px 0;
+  padding-left: 18px;
+  color: var(--amber);
+  font-size: 13px;
+}

@@ -52,7 +52,7 @@ export function OpsBoard({ onPrepare }: { onPrepare: (id: Id) => void }) {
         )}
       </Section>
 
-      <Section title="Standing and practice" icon="flag" hint="Standing assignments and past incidents. Past incidents replay as practice: no rewards, no consequences.">
+      <Section title="Standing and practice" icon="flag" hint="Standing assignments, equipment exercises and past incidents. Exercises and replays use virtual gear with no rewards or consequences.">
         {practice.length === 0 ? (
           <Card>
             <EmptyState icon="flag" title="Nothing to practise yet">
@@ -205,22 +205,22 @@ function IncidentCardView({ entry, now, isNew, onPrepare }: { entry: BoardEntry;
   );
 }
 
-function PracticeCardView({ entry, onPrepare }: { entry: PracticeEntry; onPrepare: (id: Id) => void }) {
+export function PracticeCardView({ entry, onPrepare }: { entry: PracticeEntry; onPrepare: (id: Id) => void }) {
   const { card, scenario, kind } = entry;
   const spec = scenario?.incident;
   return (
     <Card className="opboard">
       <CardBody card={card} scenario={scenario} familyId={spec?.familyId ?? scenario?.locationFamilyId ?? null} type={spec?.type ?? null} tier={spec?.tier ?? null}>
-        {kind === 'replay' ? (
+        {kind !== 'standing' ? (
           <p className="note note-amber">
-            <Icon name="refresh" size={16} />
-            Past incident: replays as practice only.
+            <Icon name={kind === 'exercise' ? 'flag' : 'refresh'} size={16} />
+            {kind === 'exercise' ? 'Equipment exercise: practice only, with virtual gear and no rewards.' : 'Past incident: replays as practice only.'}
           </p>
         ) : (
           <Eligibility card={card} />
         )}
-        <Button variant={kind === 'replay' ? 'secondary' : 'primary'} block onClick={() => onPrepare(card.id)}>
-          {kind === 'replay' ? 'Replay as practice' : 'Prepare'}
+        <Button variant={kind === 'standing' ? 'primary' : 'secondary'} block onClick={() => onPrepare(card.id)}>
+          {kind === 'exercise' ? 'Prepare practice' : kind === 'replay' ? 'Replay as practice' : 'Prepare'}
         </Button>
       </CardBody>
     </Card>

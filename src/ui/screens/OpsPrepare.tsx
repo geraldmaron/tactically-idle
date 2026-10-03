@@ -13,7 +13,7 @@ import { unitEffectiveness } from '../../sim/inventory';
 import { standardRadioPlan, STANDARD_RADIO } from '../../sim/standard-kit';
 import { projectedCondition } from '../../sim/equipment';
 import { stagingPointsIn } from '../../sim/spatial';
-import { spaceName } from '../../sim/resolution';
+import { practiceUnits, spaceName } from '../../sim/resolution';
 import { ITEMS } from '../../content/items';
 import { autoEquipReadyUnits, autoLoadout } from '../../sim/auto-equip';
 import type { AutoLoadout } from '../../sim/auto-equip';
@@ -33,6 +33,7 @@ import { scenarioActions } from '../../sim/scenario-types';
 import type { AutoNote, Explicit, Loadouts } from './autoPlan';
 import { buildIntel } from './intel';
 import type { IntelLine } from './intel';
+import { handCarriedLoadout, SupportPreparation } from './SupportPreparation';
 
 export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel: () => void }) {
   const pageRef = useRef<HTMLDivElement>(null);
@@ -66,13 +67,18 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
     warnings: string[];
   } | null>(null);
   const [staging, setStaging] = useState<Partial<Record<SquadId, Id>>>({});
-  const [practice, setPractice] = useState(replay);
+  const [requestedPractice, setPractice] = useState(false);
+  const practice = replay || requestedPractice;
+  const [liveSupport, setLiveSupport] = useState<Id | null>(null);
+  const [practiceSupport, setPracticeSupport] = useState<Id | null>(null);
+  const supportUnitId = practice ? practiceSupport : liveSupport;
   const [floor, setFloor] = useState(0);
 
   const radioPlan = useMemo(() => standardRadioPlan(g, chosen, now), [g, chosen, now]);
+  const virtualItems = useMemo(() => new Set(practiceUnits(g, scenario?.practiceOnly === true).map((unit) => unit.itemId)), [g, scenario]);
   const loadouts = useMemo<Loadouts>(() => {
     const next = { ...optionalLoadouts };
-    for (const sid of chosen) next[sid] = { ...next[sid], ...radioPlan.loadouts[sid] };
+    for (const sid of chosen) next[sid] = { ...handCarriedLoadout(next[sid] ?? {}), ...radioPlan.loadouts[sid] };
     return next;
   }, [optionalLoadouts, chosen, radioPlan]);
 
@@ -146,9 +152,10 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
       loadouts: lo,
       ...(Object.keys(units).length > 0 ? { units } : {}),
       ...(Object.keys(stage).length > 0 ? { staging: stage } : {}),
+      ...(supportUnitId ? { supportUnitIds: [supportUnitId] } : {}),
       practice,
     };
-  }, [chosen, positions, loadouts, picks, staging, practice, scenarioId, defaultEntry, built]);
+  }, [chosen, positions, loadouts, picks, staging, supportUnitId, practice, scenarioId, defaultEntry, built]);
   const check = prepCheck(g, now, cmd);
 
   const toggleSquad = (id: SquadId) => {
@@ -167,7 +174,7 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
       return { ...e, [squad]: omit(e[squad]!, itemId) };
     });
   const setQty = (squad: SquadId, itemId: Id, qty: number) => {
-    if (itemId === STANDARD_RADIO) return;
+    if (itemId === STANDARD_RADIO || ITEMS[itemId]?.supportOnly) return;
     setAutoUndo(null);
     setLoadouts((l) => ({ ...l, [squad]: { ...(l[squad] ?? {}), [itemId]: qty } }));
     dropPicks(squad, itemId);
@@ -177,7 +184,7 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
     setAutoUndo(null);
     const preset = g.squads.find((s) => s.id === squad)?.loadoutPreset ?? {};
     const next: Record<Id, number> = {};
-    for (const [itemId, q] of Object.entries(preset)) {
+    for (const [itemId, q] of Object.entries(handCarriedLoadout(preset))) {
       next[itemId] = Math.max(0, Math.min(q, readyOf(itemId) - allocated(itemId, squad)));
     }
     setLoadouts((l) => ({ ...l, [squad]: next }));
@@ -391,8 +398,10 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
 
       {chosen.map((sid) => {
         const squad = g.squads.find((s) => s.id === sid)!;
-        const hasPreset = Object.values(squad.loadoutPreset).some((q) => q > 0);
-        const visible = store.filter((o: StoreOption) => o.item.id === STANDARD_RADIO || o.owned > 0 || brief.usefulItemIds.includes(o.item.id));
+        const hasPreset = Object.values(handCarriedLoadout(squad.loadoutPreset)).some((q) => q > 0);
+        const visible = store.filter((o: StoreOption) => !o.item.supportOnly
+          && (!practice || virtualItems.has(o.item.id))
+          && (o.item.id === STANDARD_RADIO || o.owned > 0 || brief.usefulItemIds.includes(o.item.id)));
         const points = pointsFor(sid);
         const chosenPoint = cmd.staging?.[sid] ?? null;
         const note = autoNote[sid];
@@ -551,6 +560,8 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
         );
       })}
 
+      <SupportPreparation state={g} now={now} cmd={cmd} built={built} onSelect={practice ? setPracticeSupport : setLiveSupport} />
+
       <Section title="Mode" icon="flag">
         <label className="toggle">
           <input type="checkbox" checked={practice} disabled={replay} onChange={(e) => setPractice(e.target.checked)} />
@@ -558,7 +569,9 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
           <span className="toggle-text">
             <strong>Practice run</strong>
             <span className="dim">
-              {replay
+              {scenario?.practiceOnly
+                ? 'This equipment exercise is practice only. Virtual gear and supplies are provided; no funding, owned stock, stress, trust or rewards change.'
+                : replay
                 ? 'This incident is already closed, so it replays as practice: no rewards and no consequences.'
                 : 'Uses virtual gear: no owned equipment is reserved or worn. No rewards or consequences; stress, supplies and trust are untouched.'}
             </span>

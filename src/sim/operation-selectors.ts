@@ -132,14 +132,18 @@ export function briefing(scenarioId: Id): Briefing {
   const known = [...s.briefing.known, ...s.facts.filter((f) => f.initial === 'reported' && f.reportedText).map((f) => f.reportedText as string)];
   const unknown = [...s.briefing.unknown];
   const tags = new Set<string>();
+  const capabilities = new Set<string>();
   for (const a of scenarioActions(s)) {
     for (const t of [...(a.requires.anyTags ?? []), ...(a.requires.allTags ?? []), ...(a.consumes ?? []).map((c) => c.tag), ...(a.equipment ?? []).map((e) => e.tag)]) tags.add(t);
     for (const o of a.requires.openings ?? []) if (o.lockedTag) tags.add(o.lockedTag);
     if (a.support) tags.add('comms_kit');
+    for (const capability of [...(a.capabilities?.rules ?? []), ...(a.capabilities?.required ?? [])]) capabilities.add(capability);
   }
-  const usefulItemIds = Object.values(ITEMS)
-    .filter((i) => i.tags.some((t) => tags.has(t)))
-    .map((i) => i.id);
+  const useful = new Set(Object.values(ITEMS)
+    .filter((i) => i.tags.some((t) => tags.has(t)) || i.capabilities?.some((capability) => capabilities.has(capability)))
+    .map((i) => i.id));
+  for (const itemId of useful) for (const supply of ITEMS[itemId]?.supplies ?? []) useful.add(supply.itemId);
+  const usefulItemIds = [...useful];
   return {
     scenarioId,
     known,

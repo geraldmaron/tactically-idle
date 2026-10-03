@@ -78,8 +78,8 @@ export interface BoardEntry {
 export interface PracticeEntry {
   card: ScenarioCard;
   scenario: ScenarioDefinition | null;
-  /** Authored standing assignment (real run allowed) or a past incident (practice only). */
-  kind: 'standing' | 'replay';
+  /** Standing assignments allow real runs; exercises and past incidents require practice. */
+  kind: 'standing' | 'exercise' | 'replay';
 }
 
 /** Live incidents, newest first. */
@@ -88,7 +88,8 @@ export function boardEntries(g: GameState, now: number): BoardEntry[] {
   const out: BoardEntry[] = [];
   for (const inc of incidentsOf(g)) {
     const card = cards.find((c) => c.id === inc.id);
-    if (card) out.push({ card, incident: inc, scenario: getScenario(inc.id) });
+    const scenario = getScenario(inc.id);
+    if (card && !scenario?.practiceOnly) out.push({ card, incident: inc, scenario });
   }
   return out;
 }
@@ -100,7 +101,8 @@ export function practiceEntries(g: GameState, now: number): PracticeEntry[] {
   const out: PracticeEntry[] = [];
   for (const id of SCENARIO_ORDER) {
     const card = cards.find((c) => c.id === id);
-    if (card) out.push({ card, scenario: getScenario(id), kind: 'standing' });
+    const scenario = getScenario(id);
+    if (card) out.push({ card, scenario, kind: scenario?.practiceOnly ? 'exercise' : 'standing' });
   }
   const seen = new Set<Id>(SCENARIO_ORDER);
   for (const d of g.debriefs ?? []) {
@@ -113,8 +115,9 @@ export function practiceEntries(g: GameState, now: number): PracticeEntry[] {
   return out;
 }
 
-/** True when this scenario is a finished incident the player can only replay as practice. */
+/** Authored exercises and closed incidents can only be launched as practice. */
 export function isReplayOnly(g: GameState, id: Id): boolean {
+  if (getScenario(id)?.practiceOnly) return true;
   if (SCENARIO_ORDER.includes(id)) return false;
   return !incidentsOf(g).some((i) => i.id === id);
 }

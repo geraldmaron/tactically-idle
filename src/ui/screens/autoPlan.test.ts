@@ -80,4 +80,15 @@ describe('contextual preparation equipment', () => {
     expect(plan.issue).toBeNull();
     expect(new Set(Object.values(plan.explicit).flat()).size).toBe(2);
   });
+
+  it('never suggests packing a support vehicle through contextual equipment repair', () => {
+    const state = makeState({ inventory: { support_van: 1 } });
+    const action = { ...thermal, requires: { allTags: ['support_van'] }, consumes: [] };
+    const plan = planPreparationEquipment({ state, now: NOW, action, squadId: 'A', chosen: ['A'], loadouts: { A: { radio_kit: 4, trauma_kit: 0 } }, picks: {} });
+    expect(plan.added).toBe(0);
+    expect(plan.loadout).toEqual({ radio_kit: 4, trauma_kit: 0 });
+    expect(plan.explicit).toEqual({});
+    expect(plan.issue).toContain('Support van');
+    expect(state.units[unitId('support_van')].status).toBe('ready');
+  });
 });

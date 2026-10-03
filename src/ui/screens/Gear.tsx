@@ -1,7 +1,9 @@
 import { MaterialGuide } from '../art/MaterialGuide';
 import { GearArt } from '../art/GearArt';
 import { useEffect, useState } from 'react';
-import { useGame } from '../store';
+import { useDevelopmentBudget, useGame } from '../store';
+import { Storefront } from '../storefront/Storefront';
+import { useDevelopmentPurchase } from '../storefront/useDevelopmentPurchase';
 import { storeOptions, unitViews } from '../../sim/department-selectors';
 import type { StoreOption, UnitView } from '../../sim/department-selectors';
 import type { GameState, Id, RestockRule, Squad } from '../../sim/types';
@@ -25,23 +27,32 @@ export function GearScreen() {
   const presets = hasNodeEffect(g, 'loadoutPresets');
   const restock = hasNodeEffect(g, 'restockRules');
   const [unitsFor, setUnitsFor] = useState<Id | null>(null);
+  const [surface, setSurface] = useState<'inventory' | 'store'>('inventory');
+  const owned = opts.filter((option) => option.owned > 0);
   return (
-    <div className="page">
+    <div className="page gear-page">
+      <nav className="gear-surfaces" aria-label="Gear sections">
+        <button type="button" className={surface === 'inventory' ? 'is-selected' : ''} aria-current={surface === 'inventory' ? 'page' : undefined} onClick={() => setSurface('inventory')}>Inventory <span>{owned.length}</span></button>
+        <button type="button" className={surface === 'store' ? 'is-selected' : ''} aria-current={surface === 'store' ? 'page' : undefined} onClick={() => { setUnitsFor(null); setSurface('store'); }}>Store <span>{opts.length} items</span></button>
+      </nav>
+      <Storefront active={surface === 'store'} />
+      <div className="gear-inventory" hidden={surface !== 'inventory'}>
       <EquipmentManager />
       <Section title="Inventory" icon="box" hint="Every item is a set of individual units that wear at their own pace. Tap a tile to see each unit, service it or scrap it.">
-        {opts.length === 0 ? (
+        {owned.length === 0 ? (
           <Card>
-            <EmptyState icon="box" title="No equipment catalogue yet" />
+            <EmptyState icon="box" title="No owned equipment">Browse the Store to inspect capabilities and buy stock.</EmptyState><Button onClick={() => setSurface('store')}>Browse Store</Button>
           </Card>
         ) : (
           <div className="gear-grid">
-            {opts.map((o) => (
+            {owned.map((o) => (
               <GearTile key={o.item.id} o={o} onOpen={() => setUnitsFor(o.item.id)} />
             ))}
           </div>
         )}
       </Section>
 
+      <Button block onClick={() => setSurface('store')}>Browse equipment, training and development</Button>
       <UnitSheet itemId={unitsFor} onClose={() => setUnitsFor(null)} />
       <MaterialGuide />
 
@@ -80,6 +91,7 @@ export function GearScreen() {
           </div>
         )}
       </Section>
+      </div>
     </div>
   );
 }
@@ -89,7 +101,9 @@ function EquipmentManager() {
   const { act } = useToast();
   const hired = hasEquipmentManager(g);
   const node = DEV_NODES[EQUIPMENT_MANAGER.nodeId];
-  const check = nodeCheck(g, node);
+  const developmentBudget = useDevelopmentBudget();
+  const purchases = useDevelopmentPurchase();
+  const check = nodeCheck({ ...g, department: { ...g.department, devPoints: developmentBudget.totalDP } }, node);
   const budget = maintenanceBudget(g);
   const [draft, setDraft] = useState(budget || 200);
   return (
@@ -97,10 +111,12 @@ function EquipmentManager() {
       <Card>
         {!hired ? <>
           <p className="dim">Hire once for {money(node.cost.funding)} + {node.cost.dp} development points. Automatic service starts paused; hiring does not authorize an hourly service budget.</p>
-          <Button variant="primary" disabled={!!check.reason} onClick={() => act({ type: 'unlockNode', nodeId: node.id }, 'Equipment manager hired. Automatic service is paused.')}>
-            Hire manager · {money(node.cost.funding)} + {node.cost.dp} DP
+          <Button variant="primary" disabled={!!check.reason || !!purchases.pendingNode} onClick={() => void purchases.purchase(node.id, 'Equipment manager hired. Automatic service is paused.')}>
+            {purchases.pendingNode ? 'Hiring…' : `Hire manager · ${money(node.cost.funding)} + ${node.cost.dp} DP`}
           </Button>
+          <p className="dim">Available DP: {Math.floor(developmentBudget.earnedDP * 10) / 10} earned + {Math.floor(developmentBudget.testDP * 10) / 10} test. Earned DP is spent first.</p>
           {check.reason && <p className="reason">{check.reason}</p>}
+          {purchases.failure && <p className="reason" role="alert">{purchases.failure.reason}</p>}
         </> : <>
           <p><strong>{budget ? `Automatic service: up to ${money(budget)}/hour` : 'Automatic service paused'}</strong></p>
           <p className="dim">Checks at the next clock hour, services worn idle gear below {EQUIPMENT_MANAGER.serviceBelow}% condition, and keeps {money(EQUIPMENT_MANAGER.fundingReserve)} in reserve. The manager starts a job only while fewer than {EQUIPMENT_MANAGER.maxConcurrentServices} repairs are underway, counting manual jobs. You can order additional manual repairs separately. Working radios are kept ready for assigned officers; spare radios allow routine servicing.</p>
@@ -167,7 +183,7 @@ function GearTile({ o, onOpen }: { o: StoreOption; onOpen: () => void }) {
       </div>
       <div className="gear-buy">
         <Button size="sm" variant="primary" icon="plus" disabled={!o.canBuy} onClick={() => act({ type: 'buyItem', itemId: o.item.id, qty: 1 }, `Bought ${o.item.name}`)}>
-          Buy · {money(o.item.cost)}
+          Buy 1 · {money(o.item.cost)} funding
         </Button>
         {!o.canBuy && o.reason && <span className="reason">{o.reason}</span>}
       </div>
@@ -358,7 +374,7 @@ function PresetEditor({ squad, opts }: { squad: Squad; opts: StoreOption[] }) {
   const { act } = useToast();
   const [draft, setDraft] = useState<Record<Id, number>>(squad.loadoutPreset);
   useEffect(() => setDraft(squad.loadoutPreset), [squad.loadoutPreset]);
-  const rows = opts.filter((o) => o.owned > 0 && o.item.kind !== 'infrastructure' && o.item.id !== 'radio_kit');
+  const rows = opts.filter((o) => o.owned > 0 && o.item.kind !== 'infrastructure' && !o.item.supportOnly && o.item.id !== 'radio_kit');
   const dirty = JSON.stringify(normalize(draft)) !== JSON.stringify(normalize(squad.loadoutPreset));
   return (
     <Card className="preset">

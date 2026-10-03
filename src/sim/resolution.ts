@@ -1,3 +1,5 @@
+import { evaluateCapabilities } from './capabilities';
+import { getScenario } from './scenario-registry';
 // Operation resolution: eligibility, contributors, score, probability and strain.
 // Pure functions of (state, run, scenario, action, squads). No randomness is drawn
 // here; the engine draws exactly one saved sample per committed decision and
@@ -127,6 +129,12 @@ export const CERT_LABEL: Record<string, string> = {
   advanced_first_aid: 'advanced first aider',
   surveillance: 'surveillance specialist',
   drone_operator: 'drone operator',
+  less_lethal: 'less-lethal qualified officer',
+  advanced_less_lethal: 'advanced less-lethal qualified officer',
+  deescalation: 'de-escalation qualified officer',
+  vehicle_operations: 'qualified vehicle operator',
+  precision_support: 'qualified specialist support officer',
+  controlled_access: 'controlled-access qualified officer',
 };
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
@@ -254,11 +262,11 @@ function itemUnlocked(state: GameState, itemId: Id): boolean {
 }
 
 /** Practice assumes one fresh unit of every item the department owns or has unlocked. Never wears. */
-export function practiceUnits(state: GameState): ItemUnit[] {
+export function practiceUnits(state: GameState, allEquipment = false): ItemUnit[] {
   const out: ItemUnit[] = [];
   for (const id of Object.keys(ITEMS)) {
     const owned = Object.values(state.units).some((u) => u.itemId === id && u.status !== 'scrapped');
-    if (owned || itemUnlocked(state, id))
+    if (!ITEMS[id].supportOnly && (allEquipment || owned || itemUnlocked(state, id)))
       out.push({ id: `practice_${id}`, itemId: id, serial: 'PRACTICE', condition: 100, acquiredAt: 0, uses: 0, status: 'reserved', serviceUntil: null, wearRate: 1, expiresAt: null, lastWearAt: 0 });
   }
   return out;
@@ -266,7 +274,7 @@ export function practiceUnits(state: GameState): ItemUnit[] {
 
 /** Units a squad still holds in a run: its reservations minus consumables already used by committed decisions. */
 export function availableUnits(state: GameState, run: OperationRun, sq: SquadId): ItemUnit[] {
-  if (run.practice) return practiceUnits(state);
+  if (run.practice) return practiceUnits(state, getScenario(run.scenarioId)?.practiceOnly === true);
   const spent = new Set(run.history.flatMap((h) => h.unitsUsed));
   return squadUnits(state, run.id, sq).filter((u) => !(ITEMS[u.itemId]?.kind === 'consumable' && spent.has(u.id)));
 }
@@ -908,6 +916,7 @@ export function evaluateAction(input: EvalInput): Evaluation {
 
   // ---- support
   let supportTravel = 0;
+  let radioDeficit = 0;
   const radioUses: Use[] = [];
   const pushRadio = (sq: SquadId, u: ItemUnit | null) => {
     if (u) radioUses.push({ squadId: sq, itemId: u.itemId, unitId: u.id, qty: 1, consumable: false });
@@ -973,6 +982,7 @@ export function evaluateAction(input: EvalInput): Evaluation {
         link = 0.3;
         text = `no radios, voice carries ${Math.round(gap)} ft`;
       } else text = `no radios, ${Math.round(gap)} ft apart is out of voice range (${SPATIAL_TUNING.voiceLinkFt} ft)`;
+      if (radioA && radioB) radioDeficit += raw * E.radioShare * (1 - clamp(link, 0, 1));
       contributors.push({ label: `${squadLabel(sq)} link: ${text}`, value: round1(raw * E.radioShare * clamp(link, 0, 1)), source: 'equipment', ref: radioB?.itemId ?? sq });
       for (const [r, who] of [[radioA, acting[0]], [radioB, sq]] as const) {
         if (r && effOf(r) < 1) {
@@ -1017,12 +1027,41 @@ export function evaluateAction(input: EvalInput): Evaluation {
   contributors.push(...modContribs);
   for (const m of modContribs) details.push(`${m.label}.`);
 
+  // Contextual catalog rules are opt-in, leaving v1 action behavior unchanged.
+  const capability = evaluateCapabilities({ state, run, scenario, action, built, acting, support, units, existingUses: consumption ?? [], radioDeficit,
+    visibility: Math.max(0, ...plans.map((p) => {
+      const target = resolveSubject(scenario, built, run.knowledge, action.targetId, action.spatial?.subjectFactId);
+      return signalBetween(built, p.stand.at, target.at, 'visual').transmission;
+    })),
+  });
+  reasons.push(...capability.reasons);
+  // Legacy authored equipment and contextual equipment share best-of groups.
+  for (const applied of capability.applied) {
+    const previous = bestByGroup.get(applied.group);
+    if (previous && previous.value >= applied.value) {
+      capability.contributors = capability.contributors.filter((c) => c.ref !== applied.itemId);
+      capability.uses = capability.uses.filter((u) => u.unitId !== applied.unitId);
+      capability.minutes -= applied.minutes;
+      capability.details = capability.details.filter((line) => !line.startsWith(`${ITEMS[applied.itemId].name}:`));
+    } else if (previous) {
+      const i = equipUses.findIndex((u) => u.unitId === previous.unit.id);
+      if (i >= 0) equipUses.splice(i, 1);
+      for (let i = contributors.length - 1; i >= 0; i--) if (contributors[i].source === 'equipment' && (contributors[i].ref === previous.def.id || contributors[i].ref === previous.unit.id)) contributors.splice(i, 1);
+    }
+  }
+  contributors.push(...capability.contributors);
+  details.push(...capability.details);
+  if (action.capabilities?.deescalation && pool.some((o) => o.certs.includes('deescalation'))) {
+    const existingTraining = action.certBonus && pool.some((o) => o.certs.includes(action.certBonus!.cert)) ? action.certBonus.value : 0;
+    if (existingTraining < 4) contributors.push({ label: 'De-escalation training: distressed contact', value: 4 - existingTraining, source: 'preparation', ref: 'deescalation' });
+  }
+
   // ---- totals
   const score = round1(contributors.filter((c) => c.source !== 'difficulty').reduce((s, c) => s + c.value, 0));
   const all = [...diffContribs, ...contributors];
   const margin = round1(score - difficulty);
   const probs = bandProbabilities(margin);
-  const timeBase = round1(workloadMinutes + travel + entryMinutes);
+  const timeBase = round1(Math.max(0.5, workloadMinutes + travel + entryMinutes + capability.minutes));
   const timeExpected = round1(timeBase * (probs.favorable * T.bandTime.favorable + probs.mixed * T.bandTime.mixed + probs.adverse * T.bandTime.adverse));
 
   // ---- text
@@ -1038,7 +1077,7 @@ export function evaluateAction(input: EvalInput): Evaluation {
   // one entry per unit, however many reasons it was used
   const seenUnits = new Set<Id>();
   const allUses: Use[] = [];
-  for (const u of [...(consumption ?? []), ...equipUses, ...toolUses, ...radioUses]) {
+  for (const u of [...(consumption ?? []), ...equipUses, ...toolUses, ...radioUses, ...capability.uses]) {
     if (seenUnits.has(u.unitId)) continue;
     seenUnits.add(u.unitId);
     allUses.push(u);

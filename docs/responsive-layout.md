@@ -59,9 +59,21 @@ Additional observed coverage:
 - Separate map zoom and Materials/Rooms rows at 320px: zoom buttons measured 44 × 44px with an 8px vertical gap before the 44px Materials/Rooms controls
 - Rooms and room facts at each width, followed by a complete temporary operation and debrief at each width
 
-Two defects from the hosted sweep are corrected in source and require the small follow-up deployment:
+Two defects from the initial hosted sweep were corrected in the follow-up deployment:
 
 1. At 390px with four-digit funding such as `$9,920`, the level badge wrapped onto its own header row. The top bar now keeps a single flex row so its shrinkable wordmark yields space; the status group can still wrap unusually long values.
-2. The first hosted harness used only `allow-scripts`, which prevented form submit handlers. Squad Save and save-rename/copy submissions were therefore **not** successful in that build. The harness now also allows forms while keeping same-origin and other privileges absent. Its query/frame gate and in-memory storage isolation are covered by focused tests. Recheck saved long names, copy, rename and New Game after this harness correction is deployed.
+2. The first hosted harness used only `allow-scripts`, which prevented form submit handlers. Squad Save and save-rename/copy submissions were therefore **not** successful in that build. The harness now also allows forms while keeping same-origin and other privileges absent. Its query/frame gate and in-memory storage isolation are covered by focused tests.
+
+### Final follow-up verification
+
+Commit `17ca7e674657b50437696013b8abb5740aea6f1c` was loaded from the successful hosted deployment and rechecked at all six widths. The iframe reports exactly `allow-scripts allow-forms`. Real form submissions now work: a 20-character squad name was saved, a save slot was renamed to 36 characters, a copy was created in an empty slot, a New Game was started in another slot, and the prior slot was loaded with its previous squad/name/state intact. Save Now also returned its success message. Populated long-name rows remain inside the app at every width.
+
+The corrected header was checked with funding around `$9,900`. The level badge stays alongside the wordmark and status group at all six widths. At 390px the status group wraps its trust item onto a second line within the header; this is intentional, readable and contained. At 320/375px and the larger framed layouts the observed status group remained one line. No remaining horizontal overflow, overlapping controls or clipped actions was found in these checks. Normal browser saves stayed outside the isolated test libraries.
+
+Physical-device and browser-zoom limits below still apply; the final check does not claim those tests were run.
 
 The production app/harness bundles compile for both `/` and `/tactically-idle/`. Local preview navigation was denied earlier and no alternate local route was attempted. Physical iOS/Android touch, real safe-area insets, software-keyboard behavior and 200% browser/text zoom remain unverified here; a sized browser frame is not hardware emulation.
+
+## Keyboard viewport correction
+
+The reported iPhone New Game screenshot showed focus magnification, a clipped right edge and actions hidden by the software keyboard. Editable text controls now use at least 16px, save forms do not autofocus or request contact autofill, and sheets observe their overlay's intersection with the VisualViewport. When a keyboard or magnified/short viewport cannot fit a pinned header and footer, the whole sheet scrolls so every control stays reachable. Browser zoom remains enabled. Geometry and observer cleanup have 13 focused tests; physical iPhone keyboard behavior still requires device confirmation.
