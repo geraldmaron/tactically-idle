@@ -61,8 +61,8 @@ describe('compact equipment category filter', () => {
     expect(setQuery).toHaveBeenCalledExactlyOnceWith({ ...previousQuery, category: 'comms' });
     expect(state).toEqual(before);
     const { html } = renderStore();
-    expect(html).toContain('Category: Comms');
-    expect(html).toContain('<option value="comms" selected="">Comms (1)</option>');
+    expect(html).toContain('Category: Communication');
+    expect(html).toContain('<option value="comms" selected="">Communication (1)</option>');
     expect(html).toContain('1 of ');
     expect(html).toContain(`<h3>${ITEMS.radio_kit.name}</h3>`);
     expect(html).not.toContain(`<h3>${ITEMS.armored_rescue_vehicle.name}</h3>`);
@@ -75,7 +75,7 @@ describe('compact equipment category filter', () => {
     const { html } = renderStore();
     expect(html).toContain('<details class="store-filters"><summary>Filters · 3 active<span class="dim">Category: Vehicles</span></summary>');
     expect(html).toContain('<option value="vehicles" selected="">Vehicles (0)</option>');
-    expect(html).toContain('<option value="comms">Comms (1)</option>');
+    expect(html).toContain('<option value="comms">Communication (1)</option>');
     expect(html).toContain('No equipment matches these filters');
   });
 
