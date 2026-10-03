@@ -40,7 +40,7 @@
 .arrangement-empty { padding: 6px 0; }
 .arrangement-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .arrangement-actions .btn { flex: 1 1 120px; }
-.arrangement-actions .btn:first-child { flex: 0 1 70px; }
+.arrangement-actions .btn:first-child { flex: 0 0 auto; min-width: 80px; white-space: nowrap; }
 .arrangement-review { min-width: 0; }
 .arrangement-review-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin: 16px 0 8px; }
 .arrangement-review-heading h3 { margin: 0; }
