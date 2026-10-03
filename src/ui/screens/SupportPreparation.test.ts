@@ -90,7 +90,7 @@ describe('operation support preparation', () => {
     expect(html).toContain('No owned stock');
     expect(html).toContain('Available funding: $0');
     expect(html).toContain('more funding');
-    expect(html).toContain('certified operator');
+    expect(html).toContain('officer trained in vehicle operations');
     expect(html).toContain('Exterior staging:');
     expect(html).not.toContain('<button');
   });

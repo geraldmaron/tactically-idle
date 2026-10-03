@@ -27,3 +27,7 @@
 
 .cand .miniratings { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .cand .miniratings li > span { min-width: 0; overflow-wrap: anywhere; }
+.recruit-candidate-slot { min-width: 0; }
+.recruit-review-toggle { min-width: 88px; }
+.cand.cand-hired { border-color: var(--mint); }
+.recruit-hire-success { display: flex; align-items: center; gap: 6px; color: var(--mint); }

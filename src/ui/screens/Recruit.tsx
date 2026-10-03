@@ -2,7 +2,7 @@ import { recruitmentStatus } from '../../sim/roster';
 import { personaNote } from '../../content/personas';
 import { useRef, useState } from 'react';
 import { useGame } from '../store';
-import { projectHire, sortedCandidates } from '../../sim/department-selectors';
+import { projectHire, sortedCandidates, type Projection } from '../../sim/department-selectors';
 import type { Candidate, Id, Role } from '../../sim/types';
 import { Button, Card, Chip, EmptyState, KV, Section } from '../components/ui';
 import { useToast } from '../components/toast';
@@ -15,11 +15,22 @@ import { Icon } from '../icons';
 import { money, perHour, rate, relativeTime } from '../format';
 import './recruit.css';
 
+export interface HireReceipt { candidate: Candidate; projection: Projection; index: number }
+
+/** Keep a completed hire in its original slot until the player dismisses it. */
+export function candidatesWithHireReceipt(candidates: Candidate[], receipt: HireReceipt | null): Candidate[] {
+  if (!receipt || candidates.some((candidate) => candidate.id === receipt.candidate.id)) return candidates;
+  const displayed = [...candidates];
+  displayed.splice(Math.min(receipt.index, displayed.length), 0, receipt.candidate);
+  return displayed;
+}
+
 export function Recruit() {
   const g = useGame();
   const [target, setTarget] = useState<Role | null>(null);
   const [hireFor, setHireFor] = useState<Id | null>(null);
-  const candidates = sortedCandidates(g);
+  const [receipts, setReceipts] = useState<HireReceipt[]>([]);
+  const candidates = [...receipts].sort((a, b) => a.index - b.index).reduce(candidatesWithHireReceipt, sortedCandidates(g));
   const roster = Object.keys(g.officers).length;
   const full = roster >= g.department.rosterCap;
   const now = Date.now();
@@ -43,9 +54,14 @@ export function Recruit() {
         </Card>
       ) : (
         <div className="stack">
-          {candidates.map((c) => (
-            <CandidateCard key={c.id} c={c} now={now} open={hireFor === c.id} onToggle={() => setHireFor((current) => current === c.id ? null : c.id)} onHired={() => setHireFor(null)} />
-          ))}
+          {candidates.map((c, index) => {
+            const receipt = receipts.find((entry) => entry.candidate.id === c.id);
+            return <CandidateCard key={c.id} c={c} now={now} open={hireFor === c.id || !!receipt}
+              receipt={receipt?.projection}
+              onToggle={() => setHireFor((current) => current === c.id ? null : c.id)}
+              onHired={(projection) => { setReceipts((previous) => [...previous, { candidate: c, projection, index }]); setHireFor(null); }}
+              onDone={() => setReceipts((previous) => previous.filter((entry) => entry.candidate.id !== c.id))} />;
+          })}
         </div>
       )}
     </Section>
@@ -67,15 +83,18 @@ export function RecruitRefresh({ target, onTargetChange }: { target: Role | null
   </div>;
 }
 
-export function CandidateCard({ c, now, open, onToggle, onHired }: { c: Candidate; now: number; open: boolean; onToggle: () => void; onHired: () => void }) {
+export function CandidateCard({ c, now, open, onToggle, onHired, receipt, onDone }: { c: Candidate; now: number; open: boolean; onToggle: () => void; onHired: (projection: Projection) => void; receipt?: Projection; onDone?: () => void }) {
   const g = useGame();
   const { act } = useToast();
   const hiring = useRef(false);
+  const slot = useRef<HTMLDivElement>(null);
+  const [receiptHeight, setReceiptHeight] = useState(0);
   const o = c.officer;
-  const proj = open ? projectHire(g, c.id) : null;
+  const proj = receipt ?? (open ? projectHire(g, c.id) : null);
   const reviewId = `hire-review-${c.id}`;
   return (
-    <Card className="cand">
+    <div ref={slot} className="recruit-candidate-slot" style={receipt && receiptHeight ? { minHeight: receiptHeight } : undefined}>
+    <Card className={`cand${receipt ? ' cand-hired' : ''}`}>
       <div className="cand-top">
         <div className="cand-portrait">
           <Portrait officer={o} size={58} {...agePortraitProps(g, o, now)} />
@@ -93,8 +112,9 @@ export function CandidateCard({ c, now, open, onToggle, onHired }: { c: Candidat
           type="button"
           className={`icon-btn${c.shortlisted ? ' icon-btn-on' : ''}`}
           aria-pressed={c.shortlisted}
+          disabled={!!receipt}
           aria-label={c.shortlisted ? `Remove ${o.surname} from shortlist` : `Shortlist ${o.surname}`}
-          onClick={() => act({ type: 'shortlist', candidateId: c.id, on: !c.shortlisted })}
+          onClick={() => { if (!receipt) act({ type: 'shortlist', candidateId: c.id, on: !c.shortlisted }); }}
         >
           <Icon name="bookmark" size={20} />
         </button>
@@ -129,10 +149,10 @@ export function CandidateCard({ c, now, open, onToggle, onHired }: { c: Candidat
       <div className="cand-foot">
         <span className="dim cand-meta">
           <Icon name="cash" size={13} />
-          Signing {money(c.signingCost)} · <Icon name="clock" size={13} /> leaves {relativeTime(c.expiresAt, now)}
+          {receipt ? <>Signing {money(receipt.upfront)} paid · Added to roster</> : <>Signing {money(c.signingCost)} · <Icon name="clock" size={13} /> leaves {relativeTime(c.expiresAt, now)}</>}
         </span>
-        <Button size="sm" variant={open ? 'secondary' : 'primary'} aria-expanded={open} aria-controls={open ? reviewId : undefined} aria-label={`${open ? 'Cancel hire review for' : 'Review hire for'} ${o.firstName} ${o.surname}`} onClick={onToggle}>
-          {open ? 'Cancel' : 'Review hire'}
+        <Button className="recruit-review-toggle" size="sm" variant={open ? 'secondary' : 'primary'} aria-expanded={receipt ? undefined : open} aria-controls={open ? reviewId : undefined} aria-label={`${receipt ? 'Done reviewing hire for' : open ? 'Cancel hire review for' : 'Review hire for'} ${o.firstName} ${o.surname}`} onClick={(event) => { if (event.detail > 1) return; if (receipt) onDone?.(); else onToggle(); }}>
+          {receipt ? 'Done' : open ? 'Cancel' : 'Review hire'}
         </Button>
       </div>
       {open && proj && (
@@ -150,18 +170,21 @@ export function CandidateCard({ c, now, open, onToggle, onHired }: { c: Candidat
           <Button
             variant="primary"
             block
-            disabled={!proj.ok}
+            disabled={!!receipt || !proj.ok}
             onClick={() => {
-              if (!proj.ok || hiring.current) return;
+              if (receipt || !proj.ok || hiring.current) return;
               hiring.current = true;
-              if (act({ type: 'hire', candidateId: c.id }, `${o.surname} hired`).ok) onHired();
+              const height = slot.current?.getBoundingClientRect().height ?? 0;
+              if (act({ type: 'hire', candidateId: c.id }, `${o.surname} hired`).ok) { setReceiptHeight(height); onHired(proj); }
               else hiring.current = false;
             }}
           >
-            Confirm hire · {money(proj.upfront)}
+            {receipt ? 'Hired' : `Confirm hire · ${money(proj.upfront)}`}
           </Button>
+          {receipt && <p className="recruit-hire-success" role="status"><Icon name="check" size={16} />{o.firstName} {o.surname} is now on your roster.</p>}
         </div>
       )}
     </Card>
+    </div>
   );
 }

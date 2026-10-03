@@ -6,7 +6,7 @@ import { apply, makeState, NOW, startRun } from '../../sim/test-fixtures';
 import { actionViews, currentBuilt, decisionViews, pendingDebrief, previewAction, spaceViews, stageProgress } from '../../sim/operation-selectors';
 import { planActionResupply } from '../../sim/equipment-resupply';
 import { ActionSheet, LiveView, type LiveViewProps } from './LiveView';
-import { DecisionCard, OperationFeedback, OperationLogContents, OutcomeForecast } from './OperationFeedback';
+import { DecisionCard, OperationFeedback, OperationLogContents, OutcomeForecast, plainDecisionCause } from './OperationFeedback';
 import { OpsDebrief, SavedDebriefContents, SavedDebriefReview } from './OpsDebrief';
 import { Debriefs } from './HQ';
 import { generateIncident } from '../../gen/incident';
@@ -225,4 +225,10 @@ describe('decision display models', () => {
     expect(visibleDecisions(actions, 'choice_7', true)).toHaveLength(8);
     expect(actions).toEqual(before);
   });
+});
+
+it('keeps unexplained score decimals out of narrative while preserving other saved evidence', () => {
+  expect(plainDecisionCause('Helped most: Chen: coordination 65, composure 67 (+36.2).')).toBe('Helped most: Chen: coordination 65, composure 67.');
+  expect(plainDecisionCause('Held back by: Pressure (-4.2).')).toBe('Held back by: Pressure.');
+  expect(plainDecisionCause('Safety fell 3.2.')).toBe('Safety fell 3.2.');
 });

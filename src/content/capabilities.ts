@@ -1,7 +1,7 @@
 import type { CapabilityId, ItemCategory } from '../sim/types';
 
 export const ITEM_CATEGORIES: ItemCategory[] = ['comms', 'intel', 'protection', 'access', 'medical', 'response', 'less_lethal', 'vehicles', 'supplies'];
-export const ITEM_CATEGORY_LABELS: Record<ItemCategory, string> = { comms: 'Comms', intel: 'Intel', protection: 'Protection', access: 'Access', medical: 'Medical', response: 'Response classes', less_lethal: 'Less-lethal', vehicles: 'Vehicles', supplies: 'Supplies' };
+export const ITEM_CATEGORY_LABELS: Record<ItemCategory, string> = { comms: 'Communication', intel: 'Observation', protection: 'Protection', access: 'Access', medical: 'Medical', response: 'Response equipment', less_lethal: 'Less-lethal', vehicles: 'Vehicles', supplies: 'Supplies' };
 export const THERMAL_DESCRIPTION = 'Reads heat signatures in line of sight. Walls and glass block most of it; an open door or gap works best. Power is included in the equipment.';
 export interface CapabilityDefinition { id: CapabilityId; name: string; description: string; counters: string[] }
 const rule = (id: CapabilityId, name: string, description: string, ...counters: string[]): CapabilityDefinition => ({ id, name, description, counters });
