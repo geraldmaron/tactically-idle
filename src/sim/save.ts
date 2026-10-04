@@ -11,7 +11,7 @@ import { seedIncidentBoard } from './incidents';
 import { hashSeed } from './rng';
 import { initializePersonnel } from './personnel';
 import { getScenario } from './scenario-registry';
-import { parseIncidentId, INCIDENT_CONTENT_VERSION } from '../gen/incident';
+import { parseIncidentId, INCIDENT_CONTENT_VERSION, SUPPORTED_INCIDENT_CONTENT_VERSION } from '../gen/incident';
 import { legacyItemDefinition, retireLegacyBatteries } from './compatibility/retirement';
 import { maxDevelopmentTier } from './development-tiers';
 import { normalizeSquadArrangementState } from './squad-optimizer';
@@ -453,7 +453,7 @@ export function deserialize(text: string): GameState | null {
     return null;
   }
   if (!isObj(raw) || !isNum(raw.saveVersion) || !isNum(raw.contentVersion) || !isNum(raw.savedAt) || !isObj(raw.state)) return null;
-  if (![raw.contentVersion, raw.state.contentVersion].every((v) => Number.isInteger(v) && (v as number) >= 1 && (v as number) <= INCIDENT_CONTENT_VERSION)) return null;
+  if (![raw.contentVersion, raw.state.contentVersion].every((v) => Number.isInteger(v) && (v as number) >= 1 && (v as number) <= SUPPORTED_INCIDENT_CONTENT_VERSION)) return null;
   // Older versions are checked against their own shape before they are migrated.
   if (raw.saveVersion === 1 && !validV1(raw.state)) return null;
   const migrated = migrate(raw as unknown as SaveEnvelope);

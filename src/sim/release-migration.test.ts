@@ -5,7 +5,7 @@ import expectedV4Text from './fixtures/release-v1-expected-v4.json?raw';
 import { createInitialState } from './department';
 import { dispatch } from './game';
 import { CURRENT_SAVE_VERSION, deserialize, serialize } from './save';
-import { INCIDENT_CONTENT_VERSION } from '../gen/incident';
+import { INCIDENT_CONTENT_VERSION, SUPPORTED_INCIDENT_CONTENT_VERSION } from '../gen/incident';
 import { decisionViews, actionViews, briefing } from './operation-selectors';
 import { startCmd, playPolicy } from './test-fixtures';
 import { squadTopology } from './squad-optimizer';
@@ -142,8 +142,8 @@ describe('published v4 saves upgraded to integrated power and tiered development
   it.each([
     ['bad legacy battery', (raw: any) => { raw.state.units[Object.keys(raw.state.units).find((id) => raw.state.units[id].itemId === 'battery_pack')!].condition = 'unknown'; }],
     ['unknown legacy item', (raw: any) => { raw.state.units.unit_1.itemId = 'unreleased_device'; }],
-    ['future envelope content', (raw: any) => { raw.contentVersion = INCIDENT_CONTENT_VERSION + 1; }],
-    ['future state content', (raw: any) => { raw.state.contentVersion = INCIDENT_CONTENT_VERSION + 1; }],
+    ['future envelope content', (raw: any) => { raw.contentVersion = SUPPORTED_INCIDENT_CONTENT_VERSION + 1; }],
+    ['future state content', (raw: any) => { raw.state.contentVersion = SUPPORTED_INCIDENT_CONTENT_VERSION + 1; }],
     ['fractional content', (raw: any) => { raw.contentVersion = 1.5; }],
     ['future save', (raw: any) => { raw.saveVersion = CURRENT_SAVE_VERSION + 1; }],
     ['zero-time resupply', (raw: any) => { raw.state.activeRun.resupplies[0].minutes = 0; }],
