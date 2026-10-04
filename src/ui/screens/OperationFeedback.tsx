@@ -37,46 +37,64 @@ export function OutcomeForecast({ action }: { action: ActionView }) {
 }
 
 export function DecisionCard({ decision: d, full = false, officers = {}, explicitCompletion = false }: { decision: DecisionView; full?: boolean; officers?: DebriefOfficers; explicitCompletion?: boolean }) {
-  const changes = [
-    { label: 'Time', value: `+${opMinutes(d.timeCost)}`, tone: '' },
-    ...(!explicitCompletion ? [{ label: 'Call progress', value: signed(d.objectiveDelta, 1), tone: d.objectiveDelta > 0 ? 'tone-mint' : d.objectiveDelta < 0 ? 'tone-danger' : '' }] : []),
-    { label: 'Civilian safety', value: signed(d.civilianSafetyDelta, 1), tone: d.civilianSafetyDelta > 0 ? 'tone-mint' : d.civilianSafetyDelta < 0 ? 'tone-danger' : '' },
-    { label: 'Pressure', value: signed(d.pressureDelta, 1), tone: d.pressureDelta < 0 ? 'tone-mint' : d.pressureDelta > 0 ? 'tone-warn' : '' },
-  ];
+  // Consequences are saved facts, in authored order. A later line can contain an injury or discovery.
   const narrative = d.consequences.filter((line) => !line.startsWith('Next: '));
   const next = d.consequences.filter((line) => line.startsWith('Next: '));
-  // Keep every saved explanation available, without repeating consequence text in the default view.
-  const causes = d.explanation.filter((line) => !d.consequences.includes(line) && !line.startsWith('Most strain:')).map(plainDecisionCause);
+  const fallback = narrative.length === 0 ? d.explanation.find((line) => line.trim()) : undefined;
   return (
     <article className={`decision-card decision-${d.band}`} aria-label={`${d.title}: ${RESULT_LABEL[d.band]}`}>
       <header className="decision-heading">
         <div><span className="decision-stage">{d.stageLabel}</span><h3>{d.title}</h3></div>
         <Chip tone={RESULT_TONE[d.band]}>{RESULT_LABEL[d.band]}</Chip>
       </header>
-      {narrative.length > 0 ? <ul className="decision-narrative">{(full ? narrative : narrative.slice(0, 1)).map((line, index) => <li key={index}>{line}</li>)}</ul> : <p className="decision-lead">{d.explanation[0]}</p>}
-      <dl className={`decision-metrics${explicitCompletion ? ' decision-metrics-compact' : ''}`} aria-label="What changed">
-        {changes.map((change) => <div key={change.label}><dt>{change.label}</dt><dd className={change.tone}>{change.value}</dd></div>)}
-      </dl>
-      <div className="decision-effects">
-        <div><strong>Supplies used</strong><p>{d.supplies.length ? d.supplies.map((item) => `${item.qty} × ${item.label}`).join(', ') : 'None'}</p></div>
-        <div><strong>What you learned</strong>{d.knowledgeChanges.length ? (full ? <ul>{d.knowledgeChanges.map((fact) => <li key={fact.factId}>{fact.label}: {KNOWLEDGE_LABEL[fact.status]}</li>)}</ul> : <p>{d.knowledgeChanges.map((fact) => `${fact.label}: ${KNOWLEDGE_LABEL[fact.status]}`).join(' · ')}</p>) : <p>Nothing new confirmed</p>}</div>
-      </div>
-      <DecisionStress decision={d} officers={officers} />
-      <details className="decision-causes"><summary>What do the scores mean?</summary>{explicitCompletion ? <p>Civilian safety tracks how safely the call has gone, from 0 to 100. Completion depends on the work done and any agreed transfer of responsibility.</p> : <p>Call progress shows how much of the call has been resolved. Civilian safety tracks how safely it has gone. Both run from 0 to 100; higher is better.</p>}<p>Pressure runs from 0 to 100; lower is better. Delays and setbacks can raise it and make the situation harder. A lower safety score does not by itself mean someone was injured.</p></details>
+      {narrative.length > 0 ? <ul className="decision-narrative">{narrative.map((line, index) => <li key={index}>{line}</li>)}</ul> : fallback ? <p className="decision-lead">{fallback}</p> : null}
+      <DecisionChanges decision={d} complete={full} explicitCompletion={explicitCompletion} />
+      <DecisionEffects decision={d} complete={full} />
+      <DecisionStress decision={d} officers={officers} complete={full} />
       {next.length > 0 && <div className="decision-next">{next.map((line, index) => <p key={index}>{line}</p>)}</div>}
       {d.endingTitle && <p className="decision-next"><strong>Operation ended:</strong> {d.endingTitle}</p>}
-      {(causes.length > 0 || (!full && narrative.length > 1)) && <details className="decision-causes">
-        <summary>{full ? 'Why this happened' : 'Details and reasons'}</summary>
-        {!full && narrative.length > 1 && <ul>{narrative.slice(1).map((line, index) => <li key={index}>{line}</li>)}</ul>}
-        {causes.length > 0 && <ul>{causes.map((line, index) => <li key={index}>{line}</li>)}</ul>}
-      </details>}
-      {full && d.contributors.length > 0 && <details className="decision-causes">
-        <summary>What affected the result</summary>
-        <p>These numbers show how much each factor helped or hindered this choice. They are not experience rewards or percentage chances.</p>
-        <ul>{d.contributors.map((contributor, index) => <li key={index}>{contributor.label}: {signed(contributor.value, 1)} points</li>)}</ul>
-      </details>}
+      <details className="decision-causes decision-record" open={full}>
+        <summary>Details and reasons</summary>
+        {!full && <>
+          <h4>Recorded changes</h4>
+          <DecisionChanges decision={d} complete />
+          <DecisionEffects decision={d} complete />
+          <DecisionStress decision={d} officers={officers} complete />
+        </>}
+        {d.explanation.length > 0 && <><h4>Recorded explanation</h4><ul>{d.explanation.map((line, index) => <li key={index}>{line}</li>)}</ul></>}
+        {d.contributors.length > 0 && <>
+          <h4>What affected the result</h4>
+          <p>These numbers show how much each factor helped or hindered this choice. They are not experience rewards or percentage chances.</p>
+          <ul>{d.contributors.map((contributor, index) => <li key={index}>{contributor.label}: {signed(contributor.value, 1)} points</li>)}</ul>
+        </>}
+        <h4>What do the scores mean?</h4>
+        {explicitCompletion ? <p>The recorded call progress score is separate from completion. Completion depends on the work done and any agreed transfer of responsibility. Civilian safety tracks how safely the call has gone, from 0 to 100.</p> : <p>Call progress shows how much of the call has been resolved. Civilian safety tracks how safely it has gone. Both run from 0 to 100; higher is better.</p>}
+        <p>Pressure runs from 0 to 100; lower is better. Delays and setbacks can raise it and make the situation harder. A lower safety score does not by itself mean someone was injured.</p>
+      </details>
     </article>
   );
+}
+
+/** Time and nonzero changes stay visible; the complete record also includes unchanged scores. */
+function DecisionChanges({ decision: d, complete = false, explicitCompletion = false }: { decision: DecisionView; complete?: boolean; explicitCompletion?: boolean }) {
+  const changes = [
+    { label: 'Time', value: d.timeCost, text: `+${opMinutes(d.timeCost)}`, tone: '' },
+    ...(!explicitCompletion || complete ? [{ label: 'Call progress', value: d.objectiveDelta, text: signed(d.objectiveDelta, 1), tone: d.objectiveDelta > 0 ? 'tone-mint' : d.objectiveDelta < 0 ? 'tone-danger' : '' }] : []),
+    { label: 'Civilian safety', value: d.civilianSafetyDelta, text: signed(d.civilianSafetyDelta, 1), tone: d.civilianSafetyDelta > 0 ? 'tone-mint' : d.civilianSafetyDelta < 0 ? 'tone-danger' : '' },
+    { label: 'Pressure', value: d.pressureDelta, text: signed(d.pressureDelta, 1), tone: d.pressureDelta < 0 ? 'tone-mint' : d.pressureDelta > 0 ? 'tone-warn' : '' },
+  ].filter((change) => complete || change.label === 'Time' || change.value !== 0);
+  return <dl className="decision-metrics" aria-label={complete ? 'Recorded changes' : 'What changed'}>
+    {changes.map((change) => <div key={change.label}><dt>{change.label}</dt><dd className={change.tone}>{change.text}</dd></div>)}
+  </dl>;
+}
+
+function DecisionEffects({ decision: d, complete = false }: { decision: DecisionView; complete?: boolean }) {
+  const supplies = d.supplies.filter((item) => complete || item.qty !== 0);
+  if (!complete && !supplies.length && !d.knowledgeChanges.length) return null;
+  return <div className="decision-effects">
+    {(complete || supplies.length > 0) && <div><strong>Supplies used</strong><p>{supplies.length ? supplies.map((item) => `${item.qty} × ${item.label}`).join(', ') : 'None'}</p></div>}
+    {(complete || d.knowledgeChanges.length > 0) && <div><strong>What you learned</strong>{d.knowledgeChanges.length ? <ul>{d.knowledgeChanges.map((fact) => <li key={fact.factId}>{fact.label}: {KNOWLEDGE_LABEL[fact.status]}</li>)}</ul> : <p>No knowledge changes recorded.</p>}</div>}
+  </div>;
 }
 
 export function OperationLogContents({ decisions, practice, officers = {}, explicitCompletion = false }: { decisions: DecisionView[]; practice: boolean; officers?: DebriefOfficers; explicitCompletion?: boolean }) {
@@ -105,8 +123,9 @@ export function OperationFeedback({ decisions, practice, ended = false, onOpenLo
 }
 
 /** Saved levels are authoritative. Older decisions show changes without invented condition. */
-function DecisionStress({ decision: d, officers }: { decision: DecisionView; officers: DebriefOfficers }) {
-  const changed = d.stressDeltas.filter((row) => row.delta !== 0);
+function DecisionStress({ decision: d, officers, complete = false }: { decision: DecisionView; officers: DebriefOfficers; complete?: boolean }) {
+  const changed = d.stressDeltas.filter((row) => complete || row.delta !== 0);
+  if (!complete && changed.length === 0) return null;
   return <section className="decision-stress" aria-label={d.actualStressDeltas ? 'Officer stress' : 'Recorded strain'}>
     <h4>{d.actualStressDeltas ? 'Stress on the team' : 'Recorded strain'}</h4>
     {changed.length ? <ul className="decision-stress-list">{changed.map((row) => {
@@ -115,19 +134,13 @@ function DecisionStress({ decision: d, officers }: { decision: DecisionView; off
       const known = row.stressBefore !== undefined && row.stressAfter !== undefined;
       return <li key={row.officerId} className="decision-stress-officer">
         <ResultPortrait officerId={row.officerId} officers={officers} size={40} />
-        <div><div className="decision-stress-name"><strong>{name}</strong>{!known && <span className={`decision-stress-delta ${row.delta > 0 ? 'tone-warn' : 'tone-mint'}`}>{signed(row.delta, 1)} stress</span>}</div>
+        <div><div className="decision-stress-name"><strong>{name}</strong>{!known && <span className={`decision-stress-delta ${row.delta > 0 ? 'tone-warn' : row.delta < 0 ? 'tone-mint' : ''}`}>{signed(row.delta, 1)} {d.actualStressDeltas ? 'stress' : 'recorded strain'}</span>}</div>
           {known ? <StressDisplay value={row.stressAfter!} before={row.stressBefore} /> : null}
         </div>
       </li>;
-    })}</ul> : <p className="decision-stress-legacy">No change to officer stress.</p>}
+    })}</ul> : <p className="decision-stress-legacy">{d.actualStressDeltas ? 'No change to officer stress.' : 'No strain entries were saved.'}</p>}
     {d.actualStressDeltas && changed.some((row) => row.stressAfter === undefined) && <p className="decision-legacy-note">Only the stress change was saved for this older decision.</p>}
     {!d.actualStressDeltas && <p className="decision-legacy-note">Older record: strain may differ from the applied change.</p>}
     {changed.some((row) => row.stressAfter !== undefined) && <StressGuide />}
   </section>;
-}
-
-/** Keep the detailed contribution numbers in their breakdown, not in narrative prose. */
-export function plainDecisionCause(line: string): string {
-  if (/^(Helped most|Held back by): /.test(line)) return line.replace(/ \([+-]?\d+(?:\.\d+)?\)\.$/, '.');
-  return line;
 }

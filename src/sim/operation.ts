@@ -1,4 +1,5 @@
 import { reserveSupportVehicle, supportStartCheck } from './support-vehicles';
+import { currentStoryPrompt } from './story-context';
 import { applyIncidentConsequences, civilianOutcomeViews } from './incident-consequences';
 import { applyExternalSupportEffects, completionEvidence, COMPLETION_DISPOSITIONS, hasCompletionConditions, MAX_EXTERNAL_RESPONSE_MINUTES } from './external-support';
 // Operation engine: start, cancel, decide, closeDebrief. The run record is the
@@ -866,7 +867,7 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
           const opening = built.location.openings.find((candidate) => candidate.id === change.openingId);
           return opening ? `${spaceName(built, opening.a)} to ${spaceName(built, opening.b)}: ${change.state}.` : `${change.openingId.replaceAll('_', ' ')}: ${change.state}.`;
         })),
-        ...(run.stage !== 'debrief' ? [`Next: ${scenario.stages[run.stage].prompt}`] : []),
+        ...(run.stage !== 'debrief' ? [`Next: ${currentStoryPrompt(scenario, run)}`] : []),
       ],
       endingTitle: run.endingId ? scenario.endings[run.endingId]?.title ?? run.endingId : null,
       ...(externalSupportEvents ? { externalSupport: externalSupportEvents } : {}),

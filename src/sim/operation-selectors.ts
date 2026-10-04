@@ -1,4 +1,5 @@
 import { actionEquipmentRequirements, capabilityRuleEffect, effectiveSupplies, normalizedActionConsumption, operatorQualified, planningEquipmentContext } from './equipment-requirements';
+import { currentStoryPrompt } from './story-context';
 // Operation selectors consumed by the UI. Everything here is derived from game
 // state and content; nothing mutates. Export names and signatures are a contract.
 import type {
@@ -309,7 +310,7 @@ export function stageProgress(state: GameState): StageProgress {
   const cur = stage === 'debrief' ? 3 : STAGE_ORDER.indexOf(stage);
   return {
     stage,
-    prompt: stage === 'debrief' ? (s?.endings[run?.endingId ?? '']?.summary ?? 'Review the operation result.') : (s?.stages[stage].prompt ?? ''),
+    prompt: s && run ? currentStoryPrompt(s, run) : '',
     index: cur,
     stages: STAGE_ORDER.map((id, i) => ({
       id,

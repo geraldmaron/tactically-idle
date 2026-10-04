@@ -280,6 +280,8 @@ export interface StageDefinition {
   label: string;
   /** One-line situation prompt for the stage. */
   prompt: string;
+  /** V5 story dilemmas in priority order, based only on public committed state. */
+  contextPrompts?: { when: Condition; prompt: string }[];
   actions: ActionDefinition[];
 }
 

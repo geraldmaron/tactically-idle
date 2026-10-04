@@ -57,21 +57,20 @@
 }
 .decision-heading .chip { white-space: normal; max-width: 100%; }
 .decision-lead { margin: 12px 0; }
-.decision-narrative { padding: 0; margin: 12px 0; list-style: none; }
+.decision-narrative { padding: 0; margin: 12px 0; list-style: none; font-size: 15px; line-height: 1.5; }
 .decision-narrative li + li { margin-top: 7px; }
 .decision-metrics {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  margin: 12px 0;
-  gap: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  margin: 10px 0;
+  gap: 5px 16px;
 }
-.decision-metrics-compact { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-.decision-metrics > div { min-width: 0; background: var(--bg); border-radius: 5px; padding: 6px; }
-.decision-metrics dt { min-height: 34px; }
+.decision-metrics > div { display: flex; flex-wrap: wrap; align-items: baseline; gap: 3px 6px; min-width: 0; max-width: 100%; }
 .decision-metrics dt { color: var(--text-dim); font-size: 12px; }
-.decision-metrics dd { margin: 2px 0 0; font-size: 16px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.decision-metrics dd { margin: 0; font-size: 13px; font-weight: 650; font-variant-numeric: tabular-nums; }
 .decision-effects { display: grid; gap: 5px; }
-.decision-effects > div { display: grid; grid-template-columns: 88px minmax(0, 1fr); gap: 8px; }
+.decision-effects > div { display: grid; grid-template-columns: minmax(0, 88px) minmax(0, 1fr); gap: 8px; }
 .decision-effects strong { font-size: 12px; color: var(--text-dim); font-weight: 600; }
 .decision-effects p { margin: 1px 0 0; }
 .decision-effects ul { padding-left: 18px; margin: 2px 0 0; }
@@ -88,6 +87,8 @@
   cursor: pointer;
   font-weight: 600;
 }
+.decision-record h4 { margin: 12px 0 5px; font-size: 13px; font-weight: 650; }
+.decision-record > p { margin: 6px 0; color: var(--text-dim); font-size: 13px; }
 .decision-causes ul { margin: 0 0 6px; padding-left: 18px; }
 .decision-causes li + li { margin-top: 6px; }
 .decision-legacy-note { margin: 8px 0 0; color: var(--text-dim); font-size: 12px; }
@@ -161,9 +162,8 @@
   .operation-feedback { margin-inline: 12px; }
   .debrief > .operation-feedback { margin-inline: 0; }
   .decision-card { padding: 10px; }
-  .decision-metrics { gap: 4px; }
-  .decision-metrics dd { font-size: 14px; }
-  .decision-effects > div { grid-template-columns: 77px minmax(0, 1fr); gap: 6px; }
+  .decision-metrics { gap: 5px 12px; }
+  .decision-effects > div { grid-template-columns: minmax(0, 77px) minmax(0, 1fr); gap: 6px; }
   .operation-choices .callbtn { gap: 8px; padding: 10px; }
 }
 
