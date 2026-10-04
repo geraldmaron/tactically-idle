@@ -562,9 +562,13 @@ export interface DecisionResolution {
     pressureDelta: number;
     consequences: string[];
     endingTitle: string | null;
+    /** Authored event label frozen at commit; the original sampled band remains unchanged. */
+    resultLabel?: string;
     /** Exact external responsibility events, saved once at commit in v4. */
     externalSupport?: ExternalSupportEvent[];
     officerCasualties?: OfficerCasualtyRecord[];
+    /** V5 opening changes resolved against the route actually used, in committed order. */
+    openingChanges?: { openingId: Id; state: OpeningState }[];
   };
   /** Run revision this decision was applied to. */
   revision: number;
@@ -696,6 +700,7 @@ export interface DecisionView {
   title: string;
   stageLabel: string;
   band: OutcomeBand;
+  resultLabel?: string;
   explanation: string[];
   timeCost: number;
   objectiveDelta: number;
@@ -712,6 +717,8 @@ export interface DecisionView {
 }
 
 export interface ActionView {
+  /** Explicitly authored common event across effort bands, never inferred from prose. */
+  eventResult?: string;
   likelihood: Record<OutcomeBand, number>;
   suppliesRequired: { label: string; qty: number }[];
   outcomePreview: Record<OutcomeBand, string>;

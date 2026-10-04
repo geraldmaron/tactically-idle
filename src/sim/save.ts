@@ -11,7 +11,7 @@ import { seedIncidentBoard } from './incidents';
 import { hashSeed } from './rng';
 import { initializePersonnel } from './personnel';
 import { getScenario } from './scenario-registry';
-import { parseIncidentId, INCIDENT_CONTENT_VERSION } from '../gen/incident';
+import { parseIncidentId, INCIDENT_CONTENT_VERSION, SUPPORTED_INCIDENT_CONTENT_VERSION } from '../gen/incident';
 import { legacyItemDefinition, retireLegacyBatteries } from './compatibility/retirement';
 import { maxDevelopmentTier } from './development-tiers';
 import { normalizeSquadArrangementState } from './squad-optimizer';
@@ -86,6 +86,8 @@ function validDecision(d: unknown): boolean {
     && isList(d.itemsConsumed, (i) => isObj(i) && isStr(i.itemId) && isNum(i.qty))
     && isList(d.knowledgeChanges, (k) => isObj(k) && isStr(k.factId) && oneOf(k.status, KNOWLEDGE))
     && (d.committed === undefined || (isObj(d.committed) && numbers(d.committed, ['objectiveDelta', 'civilianSafetyDelta', 'pressureDelta']) && isStrings(d.committed.consequences) && (d.committed.endingTitle === null || isStr(d.committed.endingTitle))
+      && (d.committed.resultLabel === undefined || (isStr(d.committed.resultLabel) && d.committed.resultLabel.length > 0 && d.committed.resultLabel.length <= 100))
+      && (d.committed.openingChanges === undefined || isList(d.committed.openingChanges, (change) => isObj(change) && isStr(change.openingId) && oneOf(change.state, ['open', 'closed', 'locked', 'blocked'])))
       && (d.committed.externalSupport === undefined || isList(d.committed.externalSupport, (event) => isObj(event) && isStr(event.serviceId) && oneOf(event.kind, ['requested', 'accepted']) && isNum(event.at) && event.at >= 0))
       && (d.committed.officerCasualties === undefined || isList(d.committed.officerCasualties, validCasualtyRecord))));
 }
@@ -94,6 +96,7 @@ function validDecisionView(d: unknown): boolean {
   return isObj(d) && strings(d, ['actionId', 'title', 'stageLabel']) && numbers(d, ['revision', 'timeCost', 'objectiveDelta', 'civilianSafetyDelta', 'pressureDelta'])
     && oneOf(d.band, ['favorable', 'mixed', 'adverse']) && isBool(d.actualStressDeltas) && isStrings(d.explanation) && isStrings(d.consequences)
     && (d.endingTitle === null || isStr(d.endingTitle))
+    && (d.resultLabel === undefined || (isStr(d.resultLabel) && d.resultLabel.length > 0 && d.resultLabel.length <= 100))
     && isList(d.stressDeltas, (x) => isObj(x) && strings(x, ['officerId', 'label']) && isNum(x.delta)
       && ((x.stressBefore === undefined && x.stressAfter === undefined) || validStressPair(x)))
     && isList(d.supplies, (x) => isObj(x) && strings(x, ['itemId', 'label']) && isNum(x.qty) && x.qty >= 0)
@@ -438,7 +441,7 @@ export function migrate(envelope: SaveEnvelope): SaveEnvelope | null {
   } catch {
     return null;
   }
-  // New draws use v2. Issued incident IDs encode their own content version;
+  // New draws use the current content version. Issued incident IDs encode their own content version;
   // never rewrite the board, an active run, its RNG, or its scenario fields.
   const contentVersion = Math.max(INCIDENT_CONTENT_VERSION, env.state.contentVersion);
   env = { ...env, contentVersion, state: { ...env.state, contentVersion, saveVersion: env.saveVersion } };
@@ -453,7 +456,7 @@ export function deserialize(text: string): GameState | null {
     return null;
   }
   if (!isObj(raw) || !isNum(raw.saveVersion) || !isNum(raw.contentVersion) || !isNum(raw.savedAt) || !isObj(raw.state)) return null;
-  if (![raw.contentVersion, raw.state.contentVersion].every((v) => Number.isInteger(v) && (v as number) >= 1 && (v as number) <= INCIDENT_CONTENT_VERSION)) return null;
+  if (![raw.contentVersion, raw.state.contentVersion].every((v) => Number.isInteger(v) && (v as number) >= 1 && (v as number) <= SUPPORTED_INCIDENT_CONTENT_VERSION)) return null;
   // Older versions are checked against their own shape before they are migrated.
   if (raw.saveVersion === 1 && !validV1(raw.state)) return null;
   const migrated = migrate(raw as unknown as SaveEnvelope);

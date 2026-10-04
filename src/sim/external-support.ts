@@ -55,7 +55,10 @@ export function externalSupportActionIssue(run: SupportRun & PublicRun, scenario
     const matches = requirement.status === 'requested' ? status === 'requested' || status === 'available' : status === requirement.status;
     if (!matches) return requirement.reason;
   }
-  const effects = Object.values(action.outcomes).flat();
+  // Check every publicly possible band before sampling. Hidden truth must not
+  // change eligibility, and issued v1–v4 actions retain their original scan.
+  const effects = Object.values(action.outcomes).flat()
+    .filter((effect) => scenario.version < 5 || conditionsHold(effect.when, run));
   for (const id of new Set(effects.flatMap((effect) => effect.requestSupport ?? []))) {
     const service = services.get(id);
     if (!service) return 'That response service is not part of this incident';
@@ -185,6 +188,10 @@ export function validExternalSupportState(run: OperationRun, scenario: ScenarioD
         publicState.flags = publicState.flags.filter((entry) => !entry.startsWith(`opening:${opening.openingId}=`));
         publicState.flags.push(`opening:${opening.openingId}=${opening.state}`);
       }
+    }
+    if (scenario.version >= 5) for (const opening of decision.committed?.openingChanges ?? []) {
+      publicState.flags = publicState.flags.filter(entry => !entry.startsWith(`opening:${opening.openingId}=`));
+      publicState.flags.push(`opening:${opening.openingId}=${opening.state}`);
     }
     let casualtyIndex = 0;
     const casualtyEvents = decision.committed?.officerCasualties ?? [];

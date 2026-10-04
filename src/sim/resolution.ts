@@ -3,6 +3,8 @@ import { casualtyActionIssue, incidentOfficerUnavailable } from './incident-cons
 import { externalSupportActionIssue, remainingSupportWait } from './external-support';
 import { evaluateCapabilities } from './capabilities';
 import { getScenario } from './scenario-registry';
+import { hydrateStoryAction, storyActionTarget, storyPropsPublic, storyPublicScenario } from './story-people';
+import { currentStoryRoute } from './story-bindings';
 // Operation resolution: eligibility, contributors, score, probability and strain.
 // Pure functions of (state, run, scenario, action, squads). No randomness is drawn
 // here; the engine draws exactly one saved sample per committed decision and
@@ -47,6 +49,7 @@ import {
   rangeThroughOpening,
   rangeToPoint,
   resolveSubject,
+  routeAlongOpenings,
   routeBetween,
   SPATIAL_TUNING,
   standingCandidates,
@@ -365,6 +368,15 @@ export interface Arrival {
 
 export interface Evaluation {
   action: ActionDefinition;
+  /** Present only for opted-in story person targets; null means no known on-scene target. */
+  publicTargetId?: Id | null;
+  /** V5 bound movement opens traversed locks only when this evaluation is committed. */
+  storyOpenedIds?: Id[];
+  storySquadOpenedIds?: Id[];
+  /** Conditional movement portion; commitment removes it when the person did not move. */
+  storyMovementMinutes?: number;
+  /** Tools reserved only for conditional person movement are unused if the person declines. */
+  storyMovementOnlyUnitIds?: Id[];
   acting: SquadId[];
   support: SquadId[];
   eligible: boolean;
@@ -497,7 +509,25 @@ interface Plan {
 }
 
 export function evaluateAction(input: EvalInput): Evaluation {
-  const { state, run, scenario, action, built } = input;
+  const { state, built } = input;
+  let { run, scenario, action } = input;
+  const followsPerson = scenario.version >= 5 && !!action.storyTargetPersonId;
+  const target = followsPerson ? storyActionTarget(scenario, action, built, run) : null;
+  if (target) {
+    action = hydrateStoryAction(action, target, built);
+    const publicView = storyPublicScenario(scenario, built, run);
+    scenario = publicView.scenario;
+    run = { ...run, knowledge: publicView.knowledge };
+  }
+  const publicTarget = followsPerson ? { publicTargetId: target ? action.targetId : null } : {};
+  const followsRoute = scenario.version >= 5 && !!action.storyRoute;
+  const storyRoute = followsRoute ? currentStoryRoute(scenario, built, action.storyRoute!) : null;
+  if (storyRoute) action = { ...action, requires: { ...action.requires, openings: storyRoute.map(openingId => ({
+    openingId,
+    blockedReason: 'The route for this move is blocked.',
+    lockedTag: 'entry_tool',
+    lockedNote: 'Locked route: opening it adds time to this move.',
+  })) } };
   const T = RESOLUTION_TUNING;
   const E = EXPERIENCE_TUNING;
   const kind = action.check.kind;
@@ -513,6 +543,7 @@ export function evaluateAction(input: EvalInput): Evaluation {
 
   const blank = (reason: string): Evaluation => ({
     action,
+    ...publicTarget,
     acting,
     support,
     eligible: false,
@@ -544,6 +575,8 @@ export function evaluateAction(input: EvalInput): Evaluation {
   // ---- squad validity
   if (run.history.some((h) => h.stage === action.stage && h.actionId === action.id)) return blank('Already tried this stage');
   if (!conditionHolds(action.visibleWhen, run)) return blank('That option does not fit the current situation');
+  if (followsPerson && !target) return blank('The person has no known location at the scene');
+  if (followsRoute && !storyRoute) return blank('There is no usable route for this move');
   if (scenario.version >= 4) {
     const supportIssue = externalSupportActionIssue(run, scenario, action);
     if (supportIssue) return blank(supportIssue);
@@ -575,6 +608,13 @@ export function evaluateAction(input: EvalInput): Evaluation {
   for (const f of req.facts ?? []) if (!f.in.includes(run.knowledge[f.factId] ?? 'unknown')) reasons.push(f.reason);
   for (const f of req.flags ?? []) if (!run.flags.includes(f.flag)) reasons.push(f.reason);
   for (const f of req.notFlags ?? []) if (run.flags.includes(f.flag)) reasons.push(f.reason);
+  if (scenario.version >= 5 && req.storyProps?.length) {
+    const props = storyPropsPublic(scenario, built, run);
+    for (const requirement of req.storyProps) {
+      const prop = props.find(prop => prop.id === requirement.propId);
+      if (!prop || !prop.position || 'kind' in prop.position || (requirement.holderPersonId !== undefined && prop.holderPersonId !== requirement.holderPersonId)) reasons.push(requirement.reason);
+    }
+  }
   for (const o of req.openings ?? []) {
     const st = location.openings.find((x) => x.id === o.openingId)?.state;
     if (st === 'blocked') reasons.push(o.blockedReason);
@@ -791,6 +831,9 @@ export function evaluateAction(input: EvalInput): Evaluation {
     // candidate standing points
     let cands: { stand: Standing; zone: Id | null }[] = [];
     if (action.approach === 'none') cands = [{ stand: start, zone: null }];
+    else if (action.approach === 'path' && target?.position && !('kind' in target.position)) {
+      cands = [{ stand: { stagingId: null, at: target.position.at, spaceId: target.position.spaceId, openingId: null, kind: 'ground' }, zone: null }];
+    }
     else if (spec) {
       const mode = action.approach === 'window' ? 'outside' : 'inside';
       cands = standingCandidates(built, action.targetId, mode, spec.openingId).map((p) => ({ stand: standingFromPoint(p), zone: action.approach === 'window' ? p.spaceId : null }));
@@ -897,11 +940,14 @@ export function evaluateAction(input: EvalInput): Evaluation {
   // ---- travel, locked doors and workload
   const arrivals: Arrival[] = [];
   const toolUses: Use[] = [];
+  const storyToolUses: Use[] = [];
+  const travelledRoutes: Route[] = [];
   const targetArea = (action.workload.areaSpaces ?? [action.targetId]).reduce((s, id) => s + (derived.spaces[id]?.area ?? 0), 0);
   const extraMinutes = action.workload.perSqFt * targetArea;
   const workloadMinutes = round1(action.workload.base + extraMinutes);
   let actingTravel = 0;
   for (const p of plans) {
+    if (p.route) travelledRoutes.push(p.route);
     actingTravel = Math.max(actingTravel, p.travel);
     arrivals.push({ squadId: p.squad, spaceId: p.stand.spaceId, role: 'acting', stagingId: p.stand.stagingId, at: p.stand.at });
     if (p.route && p.route.points.length > 1 && p.travel >= 0.5) overlays.push({ kind: 'path', points: p.route.points, label: `${squadLabel(p.squad)} route, ${round1(p.travel)} min` });
@@ -954,6 +1000,7 @@ export function evaluateAction(input: EvalInput): Evaluation {
         return;
       }
       const dist = route.minutes;
+      travelledRoutes.push(route);
       for (const f of route.forced) {
         if (f.withTool && tool) {
           toolUses.push({ squadId: sq, itemId: tool.itemId, unitId: tool.id, qty: 1, consumable: false });
@@ -1036,7 +1083,38 @@ export function evaluateAction(input: EvalInput): Evaluation {
     const areaName = (action.workload.areaSpaces?.length ?? 0) > 1 ? 'The search area' : spaceName(built, action.targetId);
     details.push(`${areaName} covers ${Math.round(targetArea)} sq ft, about ${round1(extraMinutes)} min of work.`);
   }
-  const travel = Math.max(actingTravel, supportTravel);
+  let travel = Math.max(actingTravel, supportTravel);
+  let storyOpenedIds: Id[] | undefined;
+  let storySquadOpenedIds: Id[] | undefined;
+  let storyMovementMinutes: number | undefined;
+  if (followsRoute && storyRoute) {
+    const binding = scenario.story!.bindings.routes[action.storyRoute!];
+    const tools = acting.flatMap(squad => {
+      const unit = bestOf(units[squad], 'entry_tool');
+      return unit ? [{ squad, unit }] : [];
+    }).sort((a, b) => effOf(b.unit) - effOf(a.unit) || a.unit.id.localeCompare(b.unit.id));
+    const tool = tools[0];
+    const route = routeAlongOpenings(built, centroidOf(built, binding.fromSpaceId), centroidOf(built, binding.toSpaceId), storyRoute, tool ? { effectiveness: effOf(tool.unit) } : null, !!action.keyholder && !!scenario.environment?.keyholder);
+    const alreadyForced = new Set(travelledRoutes.flatMap(path => path.forced.map(door => door.openingId)));
+    storySquadOpenedIds = [...alreadyForced];
+    for (const door of route.forced) {
+      if (alreadyForced.has(door.openingId)) continue;
+      if (door.withTool && tool) {
+        storyToolUses.push({ squadId: tool.squad, itemId: tool.unit.itemId, unitId: tool.unit.id, qty: 1, consumable: false });
+        contributors.push({ label: `${ITEMS[tool.unit.itemId]?.name ?? 'Entry tool'}: opens the ${door.label.toLowerCase()} in ${door.minutes} min`, value: 0, source: 'equipment', ref: tool.unit.itemId });
+      } else contributors.push({ label: `Locked ${door.label.toLowerCase()}: ${door.minutes} min to open the movement route`, value: 0, source: 'space', ref: door.openingId });
+    }
+    travelledRoutes.push(route);
+    const locks = new Map<Id, number>();
+    for (const path of travelledRoutes) for (const door of path.forced) locks.set(door.openingId, Math.max(locks.get(door.openingId) ?? 0, door.minutes));
+    // Squads and the story person move in parallel. Each physical lock is charged once.
+    const routeTravel = round1(Math.max(0, ...travelledRoutes.map(path => path.minutes - path.forceMinutes)) + [...locks.values()].reduce((sum, minutes) => sum + minutes, 0));
+    storyMovementMinutes = round1(Math.max(0, routeTravel - travel));
+    travel = routeTravel;
+    storyOpenedIds = [...locks.keys()];
+    overlays.push({ kind: 'path', points: route.points, label: `Movement route, ${round1(route.minutes)} min` });
+    details.push(`The movement route runs from ${spaceName(built, binding.fromSpaceId)} to ${spaceName(built, binding.toSpaceId)}.`);
+  }
   if (travel >= 0.5) {
     contributors.push({ label: `Travel: ${round1(travel)} min`, value: -round1(travel * T.travelScore), source: 'space' });
     details.push(action.approach === 'window' ? `${round1(travel)} min to get into position.` : `${round1(travel)} min of movement through the building.`);
@@ -1096,7 +1174,9 @@ export function evaluateAction(input: EvalInput): Evaluation {
   // one entry per unit, however many reasons it was used
   const seenUnits = new Set<Id>();
   const allUses: Use[] = [];
-  for (const u of [...(consumption ?? []), ...equipUses, ...toolUses, ...radioUses, ...capability.uses]) {
+  const unconditionalUses = [...(consumption ?? []), ...equipUses, ...toolUses, ...radioUses, ...capability.uses];
+  const storyMovementOnlyUnitIds = storyToolUses.filter(use => !unconditionalUses.some(existing => existing.unitId === use.unitId)).map(use => use.unitId);
+  for (const u of [...unconditionalUses, ...storyToolUses]) {
     if (seenUnits.has(u.unitId)) continue;
     seenUnits.add(u.unitId);
     allUses.push(u);
@@ -1105,6 +1185,8 @@ export function evaluateAction(input: EvalInput): Evaluation {
   const reason = reasons[0] ?? null;
   return {
     action,
+    ...publicTarget,
+    ...(storyOpenedIds ? { storyOpenedIds, storySquadOpenedIds, storyMovementMinutes, storyMovementOnlyUnitIds } : {}),
     acting,
     support,
     eligible: reason === null,

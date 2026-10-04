@@ -259,7 +259,7 @@ export function LiveView(p: LiveViewProps) {
                         a.summary
                       )}
                     </span>
-                    <span className="callbtn-forecast">~{opMinutes(a.timeCost)} · {a.eligible ? `${outcomePercentages(a.likelihood).favorable}% chance to go well · ` : ''}possible harm: {CONSEQUENCE_LABEL[a.consequenceLevel].toLowerCase()}</span>
+                    <span className="callbtn-forecast">~{opMinutes(a.timeCost)} · {a.eligible && !a.eventResult ? `${outcomePercentages(a.likelihood).favorable}% chance to go well · ` : ''}possible harm: {CONSEQUENCE_LABEL[a.consequenceLevel].toLowerCase()}</span>
                   </span>
                 </button>
               );

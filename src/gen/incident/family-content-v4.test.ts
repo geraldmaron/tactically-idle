@@ -97,9 +97,9 @@ describe('version-four varied responsibilities', () => {
       expect(() => generateIncident(spec)).toThrow('Invalid incident specification');
     }
   });
-  it('retains old practice IDs while exposing the new v4 entries', () => {
-    for (const exercise of LEGACY_DECISION_EXERCISES) expect(getScenario(exercise.id)?.version).toBe(3);
-    for (const exercise of DECISION_EXERCISES) expect(getScenario(exercise.id)?.version).toBe(4);
+  it('retains issued v3 and v4 practice IDs while exposing the v5 stories', () => {
+    for (const exercise of LEGACY_DECISION_EXERCISES) expect(getScenario(exercise.id)?.version).toBe(exercise.spec.contentVersion);
+    for (const exercise of DECISION_EXERCISES) expect(getScenario(exercise.id)?.version).toBe(5);
   });
   it.each(['welfare_check', 'medical_complication', 'barricaded'] as const)('%s hides truth from briefing, branch visibility, support ETA and evaluation', type => {
     const state = running(specFor(type)); const s = getScenario(state.activeRun!.scenarioId)!; const facts = structuredClone(s.facts);

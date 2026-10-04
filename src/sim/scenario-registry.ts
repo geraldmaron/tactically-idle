@@ -16,7 +16,10 @@ export function getScenario(id: Id): ScenarioDefinition | null {
   if (hit) return hit;
   const exercise = [...DECISION_EXERCISES, ...LEGACY_DECISION_EXERCISES].find((entry) => entry.id === id);
   if (exercise) {
-    const scenario = { ...generateIncident(exercise.spec), id, code: exercise.code, title: exercise.title, summary: exercise.summary, variantLabel:'Decision exercise', practiceOnly:true };
+    const generated = generateIncident(exercise.spec);
+    const scenario = exercise.spec.contentVersion >= 5
+      ? { ...generated, id, code: exercise.code, practiceOnly: true }
+      : { ...generated, id, code: exercise.code, title: exercise.title, summary: exercise.summary, variantLabel:'Decision exercise', practiceOnly:true };
     cache.set(id, scenario);
     return scenario;
   }

@@ -349,12 +349,20 @@ export function routeBetween(built: BuiltLocation, fromSpace: Id, fromAt: Vec, t
     chain.unshift(p.openingId);
     at = p.from;
   }
+  return routeAlongOpenings(built, fromAt, toAt, chain, tool, keyed);
+}
+
+/** Price an already validated connected route with exactly the ordinary traversal/material rules. */
+export function routeAlongOpenings(built: BuiltLocation, fromAt: Vec, toAt: Vec, chain: Id[], tool: { effectiveness: number } | null, keyed = false): Route {
+  const T = LOCATION_TUNING;
+  const openings = new Map(built.location.openings.map(opening => [opening.id, opening]));
   const points: Vec[] = [fromAt];
   let minutes = 0;
   let forceMinutes = 0;
   const forced: ForcedDoor[] = [];
   for (const oid of chain) {
-    const o = openings.get(oid)!;
+    const o = openings.get(oid);
+    if (!o || o.state === 'blocked') return UNREACHABLE;
     points.push(mid(o.from, o.to));
     minutes += T.openingMinutes;
     if (o.state === 'locked') {

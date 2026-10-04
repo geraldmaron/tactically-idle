@@ -2,6 +2,7 @@ import { restoreLegacyMaplePowerSnapshot } from '../../sim/compatibility/legacy-
 import { withVersionThreeChoices } from './choices-v3';
 import { withVersionFourChoices } from './choices-v4';
 import { withHighRiskVersionFourChoices } from './high-risk-v4';
+import { withVersionFiveStory } from './stories-v5';
 import type { ActionDefinition, IncidentSpec, IncidentType, ScenarioDefinition } from '../../sim/scenario-types';
 import type { BuiltLocation, Room, StageId, Vec } from '../../sim/types';
 import { buildLocation, pointInPolygon, polygonBBox } from '../../sim/location';
@@ -29,8 +30,10 @@ export const INCIDENT_TYPES: IncidentTypeInfo[] = [
   { type: 'burglary', label: 'Alarm response', families: ['market_row'], squads: [1, 3] },
   { type: 'false_intruder', label: 'Uncertain occupancy', families: homes, squads: [1, 2] },
 ];
-/** Future calls use v4; issued v1/v2/v3 seed tuples retain their original content. */
-export const INCIDENT_CONTENT_VERSION = 4;
+/** Future calls use v5; issued v1–v4 seed tuples retain their original content. */
+export const INCIDENT_CONTENT_VERSION = 5;
+/** Highest incident content version this build can read. */
+export const SUPPORTED_INCIDENT_CONTENT_VERSION = 5;
 export const INCIDENT_TYPES_V2: IncidentTypeInfo[] = [
   ...INCIDENT_TYPES,
   { type: 'barricaded', label: 'Reported barricade', families: homes, squads: [1, 3] },
@@ -43,6 +46,14 @@ export const INCIDENT_TYPES_V4: IncidentTypeInfo[] = [
   { type: 'hostage_crisis', label: 'Hostage crisis', families: allFamilies, squads: [1, 3] },
   { type: 'protected_rescue', label: 'Protected rescue', families: allFamilies, squads: [1, 3] },
 ];
+export const INCIDENT_TYPES_V5: IncidentTypeInfo[] = [
+  { type: 'welfare_check', label: 'Conflicting reports', families: homes, squads: [1, 2] },
+  { type: 'medical_complication', label: 'Medical assistance', families: ['market_row'], squads: [1, 2] },
+  { type: 'barricaded', label: 'Protective response', families: homes, squads: [1, 3] },
+  { type: 'active_armed_incident', label: 'Active armed incident', families: ['market_row'], squads: [1, 3] },
+  { type: 'hostage_crisis', label: 'Hostage crisis', families: ['market_row'], squads: [1, 3] },
+  { type: 'protected_rescue', label: 'Protected rescue', families: ['juniper_court_v1', 'willow_terrace_v1', 'harbour_court'], squads: [1, 3] },
+];
 const legacyTypes: IncidentType[] = ['domestic', 'person_in_crisis', 'barricaded', 'business_robbery', 'holding', 'missing_vulnerable', 'vacant_occupancy'];
 const validTypes = new Set([...INCIDENT_TYPES_V4.map((x) => x.type), ...legacyTypes]);
 
@@ -54,8 +65,9 @@ export function parseIncidentId(id: string): IncidentSpec | null {
   const m = /^gen:([a-z_]+):([a-z0-9_]+):(\d+):(\d+):(\d+):(\d+)$/.exec(id);
   if (!m || !validTypes.has(m[1] as IncidentType)) return null;
   const [buildingSeed, seed, tier, contentVersion] = m.slice(3).map(Number);
-  if (![buildingSeed, seed, tier, contentVersion].every(Number.isSafeInteger) || tier < 1 || tier > 5 || contentVersion < 1 || contentVersion > INCIDENT_CONTENT_VERSION) return null;
-  if (HIGH_RISK_TYPES_V4.includes(m[1] as IncidentType) && (contentVersion !== 4 || m[2] === 'maple_street')) return null;
+  if (![buildingSeed, seed, tier, contentVersion].every(Number.isSafeInteger) || tier < 1 || tier > 5 || contentVersion < 1 || contentVersion > SUPPORTED_INCIDENT_CONTENT_VERSION) return null;
+  if (HIGH_RISK_TYPES_V4.includes(m[1] as IncidentType) && (contentVersion < 4 || m[2] === 'maple_street')) return null;
+  if (contentVersion === 5 && !INCIDENT_TYPES_V5.some(type => type.type === m[1] && type.families.includes(m[2]))) return null;
   if (m[2] !== 'maple_street' && !allFamilies.includes(m[2])) return null;
   return { type: m[1] as IncidentType, familyId: m[2], buildingSeed, seed, tier, contentVersion };
 }
@@ -95,7 +107,7 @@ export function generateIncident(spec: IncidentSpec): ScenarioDefinition {
   const business = location.setting === 'business';
   const alarm = spec.type === 'burglary';
   const uncertain = spec.type === 'false_intruder';
-  const kind = (spec.contentVersion >= 4 ? INCIDENT_TYPES_V4 : spec.contentVersion >= 2 ? INCIDENT_TYPES_V2 : INCIDENT_TYPES).find((x) => x.type === spec.type);
+  const kind = (spec.contentVersion === 5 ? INCIDENT_TYPES_V5 : spec.contentVersion >= 4 ? INCIDENT_TYPES_V4 : spec.contentVersion >= 2 ? INCIDENT_TYPES_V2 : INCIDENT_TYPES).find((x) => x.type === spec.type);
   if (!kind || !kind.families.includes(spec.familyId)) throw new Error('Unsupported incident and building combination');
   const candidates = location.rooms.filter((r) => business ? ['office', 'storage'].includes(r.type) : urgent ? ['bedroom', 'bathroom', 'living'].includes(r.type) : ['bedroom', 'living'].includes(r.type));
   const chosen = pick(hashSeed(incidentId(spec)), candidates);
@@ -221,6 +233,7 @@ export function generateIncident(spec: IncidentSpec): ScenarioDefinition {
     rewards: { funding: Math.round((business ? 2100 : 1700) * multiplier), devPoints: Math.round(2 * multiplier), trust: Math.round(4 * multiplier), xp: Math.round(30 * multiplier) },
     incident: { ...spec },
   };
+  if (spec.contentVersion === 5) return withVersionFiveStory(scenario, built);
   if (spec.contentVersion === 4) return HIGH_RISK_TYPES_V4.includes(spec.type) ? withHighRiskVersionFourChoices(scenario, built) : withVersionFourChoices(scenario, built);
   if (spec.contentVersion === 3) return withVersionThreeChoices(scenario, built);
   return spec.contentVersion === 2 ? withVersionTwoCapabilities(scenario, built) : scenario;
@@ -371,20 +384,29 @@ function withVersionTwoCapabilities(s: ScenarioDefinition, built: BuiltLocation)
   return s;
 }
 
-/** Avoid the locations already on the board while another is available. */
+/** Prefer unused v5 story types, then unused compatible locations, without extra RNG draws. */
 export function drawIncidentSpec(
   rngState: number,
-  ctx: { level: number; trust: number; contentVersion: number; avoidFamilies?: readonly string[] },
+  ctx: { level: number; trust: number; contentVersion: number; avoidFamilies?: readonly string[]; avoidTypes?: readonly IncidentType[] },
 ): { spec: IncidentSpec; state: number } {
-  const fresh = allFamilies.filter((id) => !ctx.avoidFamilies?.includes(id));
-  const family = pick(rngState, fresh.length ? fresh : allFamilies);
   // Four slots for each everyday call, one for each specialist report. Keep the
   // v1 array and number of PRNG draws exactly unchanged for saved campaigns.
-  const pool = ctx.contentVersion >= 4
+  let pool = ctx.contentVersion >= 5
+    ? INCIDENT_TYPES_V5
+    : ctx.contentVersion >= 4
     ? [...INCIDENT_TYPES_V2, ...INCIDENT_TYPES_V4.slice(INCIDENT_TYPES_V2.length).flatMap(type => [type, type])]
     : ctx.contentVersion >= 2
     ? [...INCIDENT_TYPES.flatMap((type) => [type, type, type, type]), ...INCIDENT_TYPES_V2.slice(INCIDENT_TYPES.length)]
     : INCIDENT_TYPES;
+  if (ctx.contentVersion >= 5) {
+    const unused = pool.filter(type => !ctx.avoidTypes?.includes(type.type));
+    if (unused.length) pool = unused;
+  }
+  // Restrict v5 family selection to remaining stories before preferring a fresh
+  // location. Otherwise a fresh home could repeat a story while a shop story is unused.
+  const families = ctx.contentVersion >= 5 ? allFamilies.filter(id => pool.some(type => type.families.includes(id))) : allFamilies;
+  const fresh = families.filter(id => !ctx.avoidFamilies?.includes(id));
+  const family = pick(rngState, fresh.length ? fresh : families);
   const incident = pick(family.state, pool.filter((x) => x.families.includes(family.value)));
   const building = next(incident.state);
   const seed = next(building.state);

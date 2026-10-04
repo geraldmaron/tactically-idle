@@ -127,7 +127,7 @@ export function OpsLive() {
       const ids = new Set(spaces.map((s) => s.id));
       const spaceIds = [r.targetId, ...r.knowledgeChanges.map((k) => k.factId)].filter((x): x is Id => !!x && ids.has(x));
       setLastChange({ revision: r.revision, spaceIds });
-      notify(`${RESULT_LABEL[r.band]}`, { tone: r.band === 'adverse' ? 'error' : r.band === 'favorable' ? 'ok' : 'amber', lines: ['See Last decision for the outcome, changes and causes.'] });
+      notify(r.committed?.resultLabel ?? RESULT_LABEL[r.band], { tone: r.committed?.resultLabel ? 'info' : r.band === 'adverse' ? 'error' : r.band === 'favorable' ? 'ok' : 'amber', lines: ['See Last decision for the outcome, changes and causes.'] });
     }
   };
 

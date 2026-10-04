@@ -6,7 +6,7 @@ import { apply, makeState, NOW, startRun } from '../../sim/test-fixtures';
 import { actionViews, currentBuilt, decisionViews, pendingDebrief, previewAction, spaceViews, stageProgress } from '../../sim/operation-selectors';
 import { planActionResupply } from '../../sim/equipment-resupply';
 import { ActionSheet, LiveView, type LiveViewProps } from './LiveView';
-import { DecisionCard, OperationFeedback, OperationLogContents, OutcomeForecast, plainDecisionCause } from './OperationFeedback';
+import { DecisionCard, OperationFeedback, OperationLogContents, OutcomeForecast } from './OperationFeedback';
 import { OpsDebrief, SavedDebriefContents, SavedDebriefReview } from './OpsDebrief';
 import { Debriefs } from './HQ';
 import { generateIncident } from '../../gen/incident';
@@ -19,6 +19,8 @@ vi.mock('../components/toast', () => ({ useToast: () => ({ act: vi.fn(), notify:
 vi.mock('../components/Sheet', () => ({ Sheet: ({ open, title, children, footer, modal = true, className }: { open: boolean; title: string; children: ReactNode; footer?: ReactNode; modal?: boolean; className?: string }) => open ? createElement('section', { role: modal ? 'dialog' : 'region', 'aria-label': title, className }, createElement('h2', null, title), children, createElement('footer', null, footer)) : null }));
 const noop = () => {};
 const render = (node: ReactNode) => renderToStaticMarkup(node);
+// The native details boundary separates the default result from its complete saved evidence.
+const defaultResult = (html: string) => html.split('<details class="decision-causes decision-record"')[0];
 const action = (patch: Partial<ActionView> = {}): ActionView => ({
   id: 'treat', stage: 'adapt', title: 'Prepare medical access', icon: 'medic', summary: 'Keep access open while preparing aid.', requirementLine: 'Qualified medic + trauma supplies',
   actingSquadIds: ['A'], supportSquadIds: [], officerIds: ['off_ortiz'], targetId: null, eligible: true, reason: null, risk: 'low',
@@ -34,6 +36,41 @@ const decision = (patch: Partial<DecisionView> = {}): DecisionView => ({
   contributors: [{ source: 'rating', label: 'Ortiz medical rating', value: 12, ref: 'off_ortiz' }],
   consequences: ['The patient received aid, but the route is still unresolved.', 'The delay leaves the squad with less time.', 'Next: choose how to preserve access.'],
   explanation: ['The patient received aid, but the route is still unresolved.', 'Pressure reduced the margin.'], endingTitle: null, ...patch,
+});
+
+it('shows an authored completed event without a contradictory failure badge, preserving costs and the sampled check', () => {
+  const saved = decision({
+    title: 'Receive Ben', band: 'adverse', resultLabel: 'Ben reached safety',
+    consequences: ['Ben reaches patrol with the unsigned delivery slip. Mara is still inside.'],
+    civilianSafetyDelta: -2, pressureDelta: 4,
+  });
+  const before = structuredClone(saved);
+  const html = render(createElement(DecisionCard, { decision: saved }));
+  const visible = defaultResult(html);
+  expect(visible).toContain('Ben reached safety');
+  expect(visible).toContain('Mara is still inside');
+  expect(visible).toContain('decision-event');
+  expect(visible).not.toContain('decision-adverse');
+  expect(visible).not.toContain('Went badly');
+  expect(visible).toContain('Civilian safety');
+  expect(visible).toContain('-2');
+  expect(visible).toContain('Supplies used');
+  expect(visible).toContain('Stress on the team');
+  expect(html).toContain('Recorded check: adverse');
+  expect(saved).toEqual(before);
+});
+
+it('collapses repeated forecasts only when the author explicitly declares a common event', () => {
+  const text = 'Ben reaches safety; Mara remains inside.';
+  const same = action({ outcomePreview: { favorable: text, mixed: text, adverse: text } });
+  expect(render(createElement(OutcomeForecast, { action: same }))).toContain('Goes badly');
+  const fixed = render(createElement(OutcomeForecast, { action: { ...same, eventResult: 'Ben reached safety' } }));
+  expect(fixed).toContain('Expected event');
+  expect(fixed.split(text)).toHaveLength(2);
+  expect(fixed).not.toContain('Goes badly');
+  const distinct = render(createElement(OutcomeForecast, { action: action({ eventResult: 'A response was recorded' }) }));
+  expect(distinct).toContain('Medical access remains unresolved.');
+  expect(distinct).toContain('With difficulty');
 });
 function sheet(view: ActionView, all = [view]) {
   return createElement(ActionSheet, { open: true, onClose: noop, view, all, onPick: noop, squads: makeState().squads, acting: ['A'], support: [], onToggleActing: noop, onToggleSupport: noop, targetLabel: null, onConfirm: noop });
@@ -148,22 +185,76 @@ describe('persistent decision results', () => {
     for (const expected of ['Ortiz', '+3 stress', 'Chen', '+1.5 stress', 'The delay leaves the squad with less time.', 'Pressure reduced the margin.', 'Ortiz medical rating', 'Operation ended:', 'Assistance completed']) expect(html).toContain(expected);
   });
 
-  it('distinguishes zero changes and older recorded strain from exact new stress deltas', () => {
-    const html = render(createElement(DecisionCard, { decision: decision({ actualStressDeltas: false, stressDeltas: [], supplies: [], knowledgeChanges: [] }) }));
-    expect(html).toContain('Recorded strain');
-    expect(html).toContain('No change');
-    expect(html).toContain('Nothing new confirmed');
-    expect(html).toContain('Older record: strain may differ from the applied change.');
-    expect(html).not.toContain('Officer stress');
+  it('keeps no-change sections in the record while a quiet result leads with its saved consequence and time', () => {
+    const quiet = decision({ timeCost: .5, objectiveDelta: 0, civilianSafetyDelta: 0, pressureDelta: 0, stressDeltas: [], supplies: [], knowledgeChanges: [], consequences: ['The resident agrees to speak at the door.'], explanation: ['The resident agrees to speak at the door.'] });
+    const before = structuredClone(quiet);
+    const html = render(createElement(DecisionCard, { decision: quiet, explicitCompletion: true }));
+    const visible = defaultResult(html);
+    expect(visible).toContain('The resident agrees to speak at the door.');
+    expect(visible).toContain('+0.5 min');
+    expect(visible.match(/<dt>/g)).toHaveLength(1);
+    for (const absent of ['Civilian safety', 'Pressure', 'Supplies used', 'What you learned', 'Stress on the team', 'No change', 'Nothing new']) expect(visible).not.toContain(absent);
+    expect(html).toContain('<details class="decision-causes decision-record">');
+    for (const saved of ['Civilian safety', 'Pressure', 'Supplies used', 'None', 'No knowledge changes recorded.', 'No change to officer stress.']) expect(html).toContain(saved);
+    expect(quiet).toEqual(before);
   });
 
-  it('keeps current completion separate from the numeric progress score without changing legacy feedback', () => {
+  it('keeps all authored consequences, discoveries and real costs ahead of the collapsed explanation', () => {
+    const saved = decision({
+      consequences: ['The team reaches the landing.', 'Mei Chen is injured by falling debris.', 'The resident confirms her son is waiting outside.', 'Next: arrange care for Chen.'],
+      knowledgeChanges: [{ factId: 'son', label: 'Son waiting outside', status: 'confirmed' }, { factId: 'fire', label: 'Fire in the kitchen', status: 'disproved' }],
+      explanation: ['The team reaches the landing.', 'Mei Chen is injured by falling debris.', 'Helped most: Ortiz medical rating (+12).', 'Most strain: Chen (+1.5).'],
+    });
+    const html = render(createElement(DecisionCard, { decision: saved }));
+    const visible = defaultResult(html);
+    for (const line of saved.consequences) expect(visible).toContain(line);
+    expect(visible.indexOf(saved.consequences[1])).toBeLessThan(visible.indexOf('aria-label="What changed"'));
+    for (const expected of ['Son waiting outside: Confirmed', 'Fire in the kitchen: Ruled out', '1 × Trauma supplies', '+8 min', '-4', '+5', '+1.5 stress']) expect(visible).toContain(expected);
+    expect(visible).not.toContain('Helped most');
+    expect(visible).not.toContain('Most strain');
+    for (const line of saved.explanation) expect(html).toContain(line);
+    expect(html).toContain('Ortiz medical rating: +12 points');
+    expect(visible).not.toContain('Operation ended');
+  });
+
+  it('retains exact legacy deltas without claiming unknown stress levels or an injury from scores alone', () => {
+    const old = decision({ actualStressDeltas: false, stressDeltas: [{ officerId: 'off_chen', label: 'Chen', delta: 2 }], supplies: [], knowledgeChanges: [], consequences: ['The route stays open.'] });
+    const visible = defaultResult(render(createElement(DecisionCard, { decision: old })));
+    for (const expected of ['Recorded strain', '+2 recorded strain', 'Older record: strain may differ from the applied change.', '-4']) expect(visible).toContain(expected);
+    for (const absent of ['Officer stress', 'stress-scale', 'Low stress', 'injured', 'Nothing new']) expect(visible).not.toContain(absent);
+    const emptyOld = render(createElement(DecisionCard, { decision: { ...old, stressDeltas: [] } }));
+    expect(defaultResult(emptyOld)).not.toContain('Recorded strain');
+    expect(emptyOld).toContain('No strain entries were saved.');
+    expect(emptyOld).not.toContain('No change to officer stress.');
+  });
+
+  it('preserves zero-delta officer snapshots and all evidence in the expanded full log', () => {
+    const saved = decision({ objectiveDelta: 0, civilianSafetyDelta: 0, pressureDelta: 0, stressDeltas: [{ officerId: 'off_chen', label: 'Chen', delta: 0, stressBefore: 80, stressAfter: 80 }], supplies: [], knowledgeChanges: [], explanation: ['The room is empty.', 'Helped most: Chen: coordination 65, composure 67 (+36.2).', 'Most strain: Chen (+0).'], consequences: ['The room is empty.'] });
+    const visible = defaultResult(render(createElement(DecisionCard, { decision: saved })));
+    expect(visible).not.toContain('Stress on the team');
+    const log = render(createElement(OperationLogContents, { decisions: [saved], practice: true, explicitCompletion: true }));
+    expect(log).toContain('Practice results do not change your department.');
+    expect(log).toContain('<details class="decision-causes decision-record" open="">');
+    for (const line of saved.explanation) expect(log).toContain(line);
+    for (const expected of ['Call progress', 'Civilian safety', 'Pressure', 'before 80, change 0', 'Needs rest', 'No knowledge changes recorded.', 'Supplies used', 'None', 'Ortiz medical rating: +12 points']) expect(log).toContain(expected);
+  });
+
+  it('keeps current completion separate from recorded numeric progress without changing legacy feedback', () => {
     const html = render(createElement(DecisionCard, { decision: decision(), explicitCompletion: true }));
-    expect(html).not.toContain('Call progress');
+    expect(defaultResult(html)).not.toContain('Call progress');
+    expect(html).toContain('Call progress');
     expect(html).toContain('Completion depends on the work done');
-    expect(html).toContain('The patient received aid, but the route is still unresolved.');
-    expect(html).toContain('Civilian safety');
-    expect(render(createElement(DecisionCard, { decision: decision() }))).toContain('Call progress');
+    expect(defaultResult(html)).toContain('The patient received aid, but the route is still unresolved.');
+    expect(defaultResult(html)).toContain('Civilian safety');
+    expect(defaultResult(render(createElement(DecisionCard, { decision: decision() })))).toContain('Call progress');
+  });
+
+  it('uses saved explanation only when there is no consequence and does not invent an empty-result story', () => {
+    const fallback = decision({ consequences: [], explanation: ['The caller answered the second attempt.'] });
+    expect(defaultResult(render(createElement(DecisionCard, { decision: fallback })))).toContain('The caller answered the second attempt.');
+    const absent = defaultResult(render(createElement(DecisionCard, { decision: { ...fallback, explanation: [], band: 'favorable' } })));
+    expect(absent).toContain('Went well');
+    for (const invented of ['decision-lead', 'decision-narrative', 'Successfully completed', 'Everyone is safe', 'Operation ended']) expect(absent).not.toContain(invented);
   });
 
   it('shows no empty feedback panel before the first decision', () => {
@@ -241,10 +332,4 @@ describe('decision display models', () => {
     expect(visibleDecisions(actions, 'choice_7', true)).toHaveLength(8);
     expect(actions).toEqual(before);
   });
-});
-
-it('keeps unexplained score decimals out of narrative while preserving other saved evidence', () => {
-  expect(plainDecisionCause('Helped most: Chen: coordination 65, composure 67 (+36.2).')).toBe('Helped most: Chen: coordination 65, composure 67.');
-  expect(plainDecisionCause('Held back by: Pressure (-4.2).')).toBe('Held back by: Pressure.');
-  expect(plainDecisionCause('Safety fell 3.2.')).toBe('Safety fell 3.2.');
 });

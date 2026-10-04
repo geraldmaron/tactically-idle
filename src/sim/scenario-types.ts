@@ -33,6 +33,8 @@ export interface Condition {
 
 export interface FactDefinition {
   id: Id;
+  /** V5 subject facts follow only the person’s publicly observed location. */
+  storyPersonId?: Id;
   /** Player-facing name for debrief ('Occupancy of the east bedroom'). */
   label: string;
   spaceId: Id;
@@ -89,6 +91,8 @@ export interface RatingWeight {
 }
 
 export interface ActionRequirements {
+  /** Story props bind to existing map objects or an explicit person's carried item. */
+  storyProps?: { propId: Id; holderPersonId?: Id; reason: string }[];
   /** 'requested' includes a service that has arrived, but excludes an accepted handover. */
   externalSupport?: { serviceId: Id; status: 'requested' | 'available' | 'accepted'; reason: string }[];
   /** Every cert must be held by an officer in the acting squads who can take part. */
@@ -185,6 +189,8 @@ export interface OutcomeEffect {
   pressure?: number;
   extraMinutes?: number;
   openings?: { openingId: Id; state: OpeningState }[];
+  /** V5: change the actual exit doorway of this decision's bound route, only after the person moves. */
+  storyExitState?: OpeningState;
   stage?: StageId;
   ending?: Id;
   /** Cause sentence (past tense) used in the explanation and debrief. */
@@ -206,6 +212,12 @@ export interface ActionCapabilities {
 }
 
 export interface ActionDefinition {
+  /** Optional bound person target; current public position drives spatial evaluation. */
+  storyTargetPersonId?: Id;
+  /** Full archetype route rechecked against current openings at action evaluation. */
+  storyRoute?: string;
+  /** The bound route moves a person by default; on-site care may instead bring the accepting crew. */
+  storyRouteActor?: 'person' | 'external_support';
   /** V4 dispatch/care administration can remain possible when every deployed officer is hurt. */
   commandOnly?: boolean;
   /** Wait exactly the remaining response time of a bounded, authored service. */
@@ -214,6 +226,8 @@ export interface ActionDefinition {
   visibleWhen?: Condition;
   /** Authored public possibilities. These describe uncertainty rather than reveal the sampled truth. */
   outcomePreview?: Record<OutcomeBand, string>;
+  /** Explicit event labels for v5 steps whose narrative result differs from the effort check. */
+  resultLabels?: Record<OutcomeBand, string>;
   /** Severity of the possible consequences, independent of success probability. */
   consequenceLevel?: RiskBand;
   /** Opt-in fictional contextual equipment rules. Legacy actions remain unchanged. */
@@ -280,6 +294,8 @@ export interface StageDefinition {
   label: string;
   /** One-line situation prompt for the stage. */
   prompt: string;
+  /** V5 story dilemmas in priority order, based only on public committed state. */
+  contextPrompts?: { when: Condition; prompt: string }[];
   actions: ActionDefinition[];
 }
 
@@ -336,6 +352,8 @@ export interface ScenarioDefinition {
   pressureLabel: string;
   squadRange: { min: number; max: number };
   briefing: { known: string[]; unknown: string[]; dispatchReason?: string; teamResponsibilities?: string[] };
+  /** V5 archetype bindings share the generated world with narrative, actions and map views. */
+  story?: StoryInstance;
   externalServices?: ExternalServiceDefinition[];
   civilianOutcomes?: { id: Id; label: string; factId: Id; safeFlag: string; injuredFlag: string; careFlag: string }[];
   facts: FactDefinition[];
@@ -351,6 +369,29 @@ export interface ScenarioDefinition {
   environment?: EnvironmentDefinition;
   /** Expected difficulty, shown as a band with its top drivers (conditional on known info). */
   difficulty?: DifficultyInfo;
+}
+
+export interface StoryAnchor { spaceId: Id; at: Vec }
+export interface StoryPersonBinding {
+  id: Id;
+  label: string;
+  locationFactId: Id;
+  initial: StoryAnchor;
+  reported?: StoryAnchor;
+  transitions: { when: Condition; to: StoryAnchor | { kind: 'offscene'; label: string }; observed: boolean; label?: string }[];
+}
+export interface StoryInstance {
+  archetypeId: string;
+  version: number;
+  episodeId: string;
+  seed: number;
+  bindings: {
+    rooms: Record<string, { spaceId: Id }>;
+    exterior: Record<string, { spaceId: Id }>;
+    routes: Record<string, { fromSpaceId: Id; toSpaceId: Id; openingIds: Id[]; profile: 'walking' | 'chair' }>;
+    people: Record<string, StoryPersonBinding>;
+    props: Record<string, { id: Id; label: string; kind: 'carried' | 'mapped'; holderPersonId?: Id; objectId?: Id; transitions?: { when: Condition; holderPersonId: Id }[] }>;
+  };
 }
 
 export function scenarioActions(s: ScenarioDefinition): ActionDefinition[] {

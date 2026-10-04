@@ -1,4 +1,7 @@
 import { reserveSupportVehicle, supportStartCheck } from './support-vehicles';
+import { currentStoryPrompt } from './story-context';
+import { storyMovedAlongRoute } from './story-people';
+import { validateStoryBindings } from './story-bindings';
 import { applyIncidentConsequences, civilianOutcomeViews } from './incident-consequences';
 import { applyExternalSupportEffects, completionEvidence, COMPLETION_DISPOSITIONS, hasCompletionConditions, MAX_EXTERNAL_RESPONSE_MINUTES } from './external-support';
 // Operation engine: start, cancel, decide, closeDebrief. The run record is the
@@ -19,6 +22,7 @@ import type {
   OperationCommandType,
   OperationRun,
   OutcomeBand,
+  OpeningState,
   SquadId,
   StageId,
   Vec,
@@ -100,7 +104,8 @@ export function validateScenario(s: ScenarioDefinition, built: BuiltLocation): s
     space(f.spaceId, `fact ${f.id}`);
     if (!f.claim.trim()) errs.push(`${s.id}: fact ${f.id} has no claim sentence`);
     for (const [label, at] of [['position', f.person?.at], ['reported position', f.person?.reportedAt]] as const) {
-      if (at && spaceAt(built, at) !== f.spaceId) errs.push(`${s.id}: fact ${f.id} ${label} is not inside ${f.spaceId}`);
+      const floor = s.version >= 5 ? built.location.rooms.find(room => room.id === f.spaceId)?.floor ?? 0 : 0;
+      if (at && spaceAt(built, at, floor) !== f.spaceId) errs.push(`${s.id}: fact ${f.id} ${label} is not inside ${f.spaceId}`);
     }
   }
   const seen = new Set<Id>();
@@ -163,12 +168,13 @@ export function validateScenario(s: ScenarioDefinition, built: BuiltLocation): s
           for (const f of e.when?.facts ?? []) fact(f.factId, `action ${a.id} outcome`);
           if (e.ending && !s.endings[e.ending]) errs.push(`${a.id}: unknown ending ${e.ending}`);
           for (const o of e.openings ?? []) if (!built.location.openings.some((x) => x.id === o.openingId)) errs.push(`${a.id}: unknown opening ${o.openingId}`);
+          if (e.storyExitState && (s.version < 5 || !a.storyRoute || !s.story?.bindings.routes[a.storyRoute])) errs.push(`${a.id}: a story exit change needs a bound movement route`);
         }
         if (stage === 'resolve' && !effects.some((e) => (e.ending || (s.version >= 3 && e.stage === 'resolve')) && !e.when && !e.truth)) errs.push(`${a.id}: resolve action must always reach an ending (${band})`);
       }
     }
   }
-  return errs;
+  return [...errs, ...validateStoryBindings(s, built)];
 }
 
 // ---------------------------------------------------------------- start
@@ -383,6 +389,28 @@ export function matchedEffects(action: ActionDefinition, band: OutcomeBand, run:
     .map((effect) => effect.reveal?.length ? { ...effect, knowledge: [...effect.knowledge ?? [], ...effect.reveal.map((factId) => ({ factId, status: scenario.facts.find((fact) => fact.id === factId)?.truth ? 'confirmed' as const : 'disproved' as const }))] } : effect);
 }
 
+/** Resolve an authored exit change from this evaluation's route, never a stale binding path. */
+function storyExitEffects(scenario: ScenarioDefinition, action: ActionDefinition, built: BuiltLocation, effects: OutcomeEffect[], personMoved: boolean): OutcomeEffect[] {
+  if (!personMoved || scenario.version < 5 || !action.storyRoute || !effects.some(effect => effect.storyExitState)) return effects;
+  const route = scenario.story?.bindings.routes[action.storyRoute];
+  if (!route) return effects;
+  const rooms = new Set(built.location.rooms.map(room => room.id));
+  const exterior = new Set(built.location.zones.map(zone => zone.id));
+  let current = route.fromSpaceId;
+  let exitId: Id | null = null;
+  for (const { openingId } of action.requires.openings ?? []) {
+    const opening = built.location.openings.find(opening => opening.id === openingId);
+    if (!opening) return effects;
+    const next = opening.a === current ? opening.b : opening.b === current ? opening.a : null;
+    if (!next) return effects;
+    if (rooms.has(current) && exterior.has(next) && ['door', 'doorway', 'sliding'].includes(opening.type)) exitId = openingId;
+    current = next;
+  }
+  if (!exitId || current !== route.toSpaceId || effects.some(effect => effect.openings?.some(change => change.openingId === exitId))) return effects;
+  const openingId = exitId;
+  return effects.map(effect => effect.storyExitState ? { ...effect, openings: [...effect.openings ?? [], { openingId, state: effect.storyExitState }] } : effect);
+}
+
 const RANK: Record<KnowledgeStatus, number> = { unknown: 0, reported: 1, confirmed: 2, disproved: 2 };
 
 /** Apply matched effects to run state. Knowledge only moves forward. */
@@ -446,6 +474,7 @@ export function traceRun(scenario: ScenarioDefinition, run: OperationRun): { ste
     // Saved v3 deltas are authoritative, including clamping. Older histories retain
     // the original replay through their versioned content and stored outcome bands.
     if (h.committed) {
+      if (scenario.version >= 5 && h.committed.openingChanges) applyEffects(sim, [{ openings: h.committed.openingChanges }]);
       sim.objective = round1(clamp(obj0 + h.committed.objectiveDelta, 0, 100));
       sim.civilianSafety = round1(clamp(civ0 + h.committed.civilianSafetyDelta, 0, 100));
       sim.pressure = round1(clamp(pressure0 + h.committed.pressureDelta, 0, 100));
@@ -476,6 +505,7 @@ export function decisionViewsFor(state: GameState, run: OperationRun, scenario: 
       title: step.action?.title ?? record.actionId,
       stageLabel: scenario.stages[record.stage].label,
       band: record.band, explanation: [...record.explanation], timeCost: record.timeCost,
+      ...(committed?.resultLabel ? { resultLabel: committed.resultLabel } : {}),
       objectiveDelta: committed?.objectiveDelta ?? step.objectiveDelta,
       civilianSafetyDelta: committed?.civilianSafetyDelta ?? step.civilianDelta,
       pressureDelta: committed?.pressureDelta ?? step.pressureDelta,
@@ -757,16 +787,34 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     const sample = r.value;
     const band = bandFor(ev.margin, sample);
 
-    const matched = matchedEffects(action, band, run, scenario);
+    let matched = matchedEffects(action, band, run, scenario);
+    let personMoved = false;
+    let storyRouteUsed = false;
+    if (ev.storyMovementMinutes !== undefined) {
+      const projected = structuredClone(run);
+      applyEffects(projected, matched);
+      personMoved = storyMovedAlongRoute(scenario, action, run, projected);
+      storyRouteUsed = action.storyRouteActor === 'external_support' ? matched.some(effect => !!effect.acceptSupport?.length) : personMoved;
+    }
+    matched = storyExitEffects(scenario, ev.action, built, matched, personMoved);
+    const openingChanges = new Map<Id, OpeningState>(matched.flatMap(effect => (effect.openings ?? []).map(change => [change.openingId, change.state] as const)));
     const before = { objective: run.objective, civilianSafety: run.civilianSafety, pressure: run.pressure };
     const extra = matched.reduce((s, e) => s + (e.extraMinutes ?? 0), 0);
-    const proposedTime = ev.timeBase * ({ favorable: 1, mixed: 1.2, adverse: 1.5 } as Record<OutcomeBand, number>)[band] + extra;
+    const movementTime = storyRouteUsed ? 0 : ev.storyMovementMinutes ?? 0;
+    const proposedTime = (ev.timeBase - movementTime) * ({ favorable: 1, mixed: 1.2, adverse: 1.5 } as Record<OutcomeBand, number>)[band] + extra;
     const timeCost = round1(scenario.version >= 4 && action.awaitSupport ? ev.timeBase : scenario.version >= 3 ? Math.max(0.5, proposedTime) : proposedTime);
     const strain = run.practice ? {} : strainFor(input, ev, band);
 
     const t = advanceTime(run, scenario, timeCost);
     if (scenario.version >= 3) t.civilianLoss = round1(before.civilianSafety - run.civilianSafety);
     const { changes, stage: nextStage, ending } = applyEffects(run, matched);
+    // Bound v5 movement records opened locks once; explicit outcome changes retain priority.
+    for (const openingId of (storyRouteUsed ? ev.storyOpenedIds : ev.storySquadOpenedIds) ?? []) {
+      if (matched.some(effect => effect.openings?.some(change => change.openingId === openingId))) continue;
+      run.flags = run.flags.filter(flag => !flag.startsWith(`opening:${openingId}=`));
+      run.flags.push(openingFlag(openingId, 'open'));
+      openingChanges.set(openingId, 'open');
+    }
     const externalSupportEvents = scenario.version >= 4 ? applyExternalSupportEffects(run, scenario, matched) : undefined;
     const incidentConsequences = scenario.version >= 4 ? applyIncidentConsequences(draft, run, scenario, matched, ev.participantIds) : undefined;
 
@@ -800,6 +848,7 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     const unitsUsed: Id[] = [];
     if (!run.practice)
       for (const u of ev.uses) {
+        if (!storyRouteUsed && ev.storyMovementOnlyUnitIds?.includes(u.unitId)) continue;
         used[u.itemId] = (used[u.itemId] ?? 0) + u.qty;
         unitsUsed.push(u.unitId);
       }
@@ -814,7 +863,7 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
       actingSquadIds: [...ev.acting],
       supportSquadIds: [...ev.support],
       officerIds: [...ev.participantIds],
-      targetId: action.targetId,
+      targetId: ev.action.targetId,
       inputs: ev.contributors,
       score: ev.score,
       difficulty: ev.difficulty,
@@ -866,9 +915,11 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
           const opening = built.location.openings.find((candidate) => candidate.id === change.openingId);
           return opening ? `${spaceName(built, opening.a)} to ${spaceName(built, opening.b)}: ${change.state}.` : `${change.openingId.replaceAll('_', ' ')}: ${change.state}.`;
         })),
-        ...(run.stage !== 'debrief' ? [`Next: ${scenario.stages[run.stage].prompt}`] : []),
+        ...(run.stage !== 'debrief' ? [`Next: ${currentStoryPrompt(scenario, run)}`] : []),
       ],
       endingTitle: run.endingId ? scenario.endings[run.endingId]?.title ?? run.endingId : null,
+      ...(scenario.version >= 5 && action.resultLabels?.[band] ? { resultLabel: action.resultLabels[band] } : {}),
+      ...(scenario.version >= 5 && openingChanges.size ? { openingChanges: [...openingChanges].map(([openingId, state]) => ({ openingId, state })) } : {}),
       ...(externalSupportEvents ? { externalSupport: externalSupportEvents } : {}),
       ...(incidentConsequences ? { officerCasualties: incidentConsequences.records } : {}),
     };

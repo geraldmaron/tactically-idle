@@ -1,4 +1,6 @@
 import { actionEquipmentRequirements, capabilityRuleEffect, effectiveSupplies, normalizedActionConsumption, operatorQualified, planningEquipmentContext } from './equipment-requirements';
+import { currentStoryPrompt } from './story-context';
+import { hydrateStoryAction, storyActionTarget, storyPublicScenario } from './story-people';
 // Operation selectors consumed by the UI. Everything here is derived from game
 // state and content; nothing mutates. Export names and signatures are a contract.
 import type {
@@ -248,6 +250,9 @@ function peopleFor(s: ScenarioDefinition, spaceId: Id, built: BuiltLocation, kno
 }
 
 function buildSpaceViews(s: ScenarioDefinition, built: BuiltLocation, knowledge: Record<Id, KnowledgeStatus>, run: OperationRun | null, state: GameState | null): SpaceView[] {
+  const publicView = storyPublicScenario(s, built, run ?? { knowledge, flags: [], pressure: s.pressure.start });
+  s = publicView.scenario;
+  knowledge = publicView.knowledge;
   const ids = [...built.location.rooms.map((r) => r.id), ...built.location.zones.map((z) => z.id)];
   const actions = run && state ? visibleTargets(state, run, s, built) : new Map<Id, Id[]>();
   return ids.map((id) => {
@@ -267,15 +272,19 @@ function buildSpaceViews(s: ScenarioDefinition, built: BuiltLocation, knowledge:
 }
 
 /** Unresolved current-stage actions grouped by target. Actions gated on unknown facts stay hidden. */
-function visibleTargets(state: GameState, run: OperationRun, s: ScenarioDefinition, _built: BuiltLocation): Map<Id, Id[]> {
+function visibleTargets(state: GameState, run: OperationRun, s: ScenarioDefinition, built: BuiltLocation): Map<Id, Id[]> {
   const out = new Map<Id, Id[]>();
   if (run.status !== 'active' || run.stage === 'debrief') return out;
   for (const a of s.stages[run.stage].actions) {
     if (run.history.some((h) => h.stage === run.stage && h.actionId === a.id)) continue;
     if (isTargetHidden(a, run)) continue;
-    const list = out.get(a.targetId) ?? [];
+    const followsPerson = s.version >= 5 && !!a.storyTargetPersonId;
+    const person = followsPerson ? storyActionTarget(s, a, built, run) : null;
+    if (followsPerson && !person) continue;
+    const targetId = person ? hydrateStoryAction(a, person, built).targetId : a.targetId;
+    const list = out.get(targetId) ?? [];
     list.push(a.id);
-    out.set(a.targetId, list);
+    out.set(targetId, list);
   }
   void state;
   return out;
@@ -309,7 +318,7 @@ export function stageProgress(state: GameState): StageProgress {
   const cur = stage === 'debrief' ? 3 : STAGE_ORDER.indexOf(stage);
   return {
     stage,
-    prompt: stage === 'debrief' ? (s?.endings[run?.endingId ?? '']?.summary ?? 'Review the operation result.') : (s?.stages[stage].prompt ?? ''),
+    prompt: s && run ? currentStoryPrompt(s, run) : '',
     index: cur,
     stages: STAGE_ORDER.map((id, i) => ({
       id,
@@ -368,7 +377,7 @@ function durationRange(action: ActionDefinition, ev: Evaluation, run: OperationR
   if (run.scenarioVersion >= 4 && action.awaitSupport) return { min: ev.timeBase, max: ev.timeBase };
   const limits = (['favorable', 'mixed', 'adverse'] as const).flatMap((band) => {
     const base = ev.timeBase * ({ favorable: 1, mixed: 1.2, adverse: 1.5 } as const)[band];
-    let min = base;
+    let min = base - (ev.storyMovementMinutes ?? 0) * ({ favorable: 1, mixed: 1.2, adverse: 1.5 } as const)[band];
     let max = base;
     for (const effect of action.outcomes[band]) {
       if (!conditionHolds(effect.when, run)) continue;
@@ -401,6 +410,7 @@ function toView(state: GameState, run: OperationRun, a: ActionDefinition, ev: Ev
   let reason = ev.reason;
   if (reason && alternates.length > 0) reason = `${reason}. ${alternates.map(squadLabel).join(' and ')} can.`;
   return {
+    ...(run.scenarioVersion >= 5 && a.resultLabels && new Set(Object.values(a.resultLabels)).size === 1 ? { eventResult: a.resultLabels.favorable } : {}),
     id: a.id,
     stage: a.stage,
     title: a.title,
@@ -410,7 +420,7 @@ function toView(state: GameState, run: OperationRun, a: ActionDefinition, ev: Ev
     actingSquadIds: ev.acting,
     supportSquadIds: ev.support,
     officerIds: ev.participantIds,
-    targetId: hidden ? null : a.targetId,
+    targetId: hidden ? null : ev.publicTargetId === undefined ? ev.action.targetId : ev.publicTargetId,
     eligible: ev.eligible,
     reason,
     risk: ev.risk,

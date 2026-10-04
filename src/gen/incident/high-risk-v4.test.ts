@@ -12,7 +12,7 @@ import { scenarioActions, type IncidentSpec } from '../../sim/scenario-types';
 import { deserialize, serialize } from '../../sim/save';
 import { apply, makeState, NOW, setRun, startCmd, unitId } from '../../sim/test-fixtures';
 import type { GameState, OutcomeBand } from '../../sim/types';
-import { generateIncident, incidentId } from './index';
+import { generateIncident, INCIDENT_CONTENT_VERSION, incidentId } from './index';
 
 const TYPES = ['active_armed_incident', 'hostage_crisis', 'protected_rescue'] as const;
 const specFor = (type: typeof TYPES[number], seed = 7, familyId = 'cedar_close'): IncidentSpec => ({ type, familyId, seed, buildingSeed: 7, tier: 2, contentVersion: 4 });
@@ -255,7 +255,10 @@ describe('new high-risk version-four families', () => {
     const restored = deserialize(serialize(state, NOW)); expect(restored).not.toBeNull();
     expect(restored!.activeRun).toEqual(state.activeRun);
     const nextId = evaluate(state, 'hr_resolve_officer_wait').eligible ? 'hr_resolve_officer_wait' : 'hr_resolve_officer_evacuate';
-    expect(decide(restored!, nextId)).toEqual(decide(state, nextId));
+    const nextOriginal = decide(state, nextId);
+    const nextRestored = decide(restored!, nextId);
+    expect(nextRestored.contentVersion).toBe(INCIDENT_CONTENT_VERSION);
+    expect(nextRestored).toEqual({ ...nextOriginal, contentVersion: INCIDENT_CONTENT_VERSION });
     refused(state, 'hr_armed_response'); refused(state, 'hr_resolve_officer_request');
     expect(state.activeRun!.objective).toBe(0);
   });
