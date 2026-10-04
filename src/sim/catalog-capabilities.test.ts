@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { INCIDENT_CONTENT_VERSION } from '../gen/incident';
 import { ITEMS } from '../content/items';
 import { DEV_NODES } from '../content/dev-tree';
 import { COURSES } from '../content/courses';
@@ -97,7 +98,7 @@ describe('bounded catalog and common gates', () => {
     state.units.new_device = { ...makeUnit('conducted_energy_device', 1), id: 'new_device' };
     const restored = deserialize(serialize(state, NOW));
     expect(restored?.officers.off_chen.certs).toEqual(state.officers.off_chen.certs);
-    expect(restored?.contentVersion).toBe(4);
+    expect(restored?.contentVersion).toBe(INCIDENT_CONTENT_VERSION);
     expect(restored?.units.new_device.itemId).toBe('conducted_energy_device');
   });
 });

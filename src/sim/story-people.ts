@@ -97,10 +97,16 @@ export function storyPublicScenario(scenario: ScenarioDefinition, built: BuiltLo
   const people = storyPeoplePublic(scenario, built, run);
   if (!people.length) return { scenario, knowledge: run.knowledge };
   const byFact = new Map(people.map(person => [person.locationFactId, person]));
+  const byPerson = new Map(people.map(person => [person.id, person]));
   const knowledge = { ...run.knowledge };
   const facts = scenario.facts.flatMap(fact => {
     const person = byFact.get(fact.id);
-    if (!person) return [fact];
+    if (!person) {
+      if (!fact.storyPersonId) return [fact];
+      const subject = byPerson.get(fact.storyPersonId);
+      if (!subject?.position || 'kind' in subject.position) return [];
+      return [{ ...fact, spaceId: subject.position.spaceId, person: undefined }];
+    }
     knowledge[fact.id] = person.status;
     if (!person.position) return [{ ...fact, person: undefined }];
     if ('kind' in person.position) return [];

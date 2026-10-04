@@ -74,7 +74,7 @@ export function attachStoryBindings(s: ScenarioDefinition, built: BuiltLocation)
   const move = (id: string, flag: string, spaceId = outside, label?: string) => story.bindings.people[id].transitions.push({ when: { flags: [flag] }, to: point(spaceId), observed: true, label: label ?? `Outside: ${built.location.zones.find(z => z.id === spaceId)?.label ?? spaceId}` });
   const carried = (id: string, label: string, holderPersonId: string) => { story.bindings.props[id] = { id, label, kind: 'carried', holderPersonId }; };
   const actions = scenarioActions(s);
-  const choose = (ids: string[]) => actions.filter(a => ids.includes(a.id));
+  const choose = (ids: string[]) => ids.map(id => { const action = actions.find(a => a.id === id); if (!action) throw new Error(`Story recipe references missing action ${id}`); return action; });
   const bindRoute = (ids: string[], role: string, destination = false) => {
     for (const action of choose(ids)) {
       action.storyRoute = role;
@@ -96,8 +96,10 @@ export function attachStoryBindings(s: ScenarioDefinition, built: BuiltLocation)
     carried('bens_phone', 'Ben’s mobile phone', 'ben'); carried('delivery_slip', 'Unsigned delivery slip', 'ben');
     story.bindings.props.bens_phone.transitions = [{ when: { flags: ['sig_phone_left'] }, holderPersonId: 'mara' }];
     bindRoute(ids('release_ben', 'ask_phone', 'bring_mara_out'), 'exit', true);
+    bindRoute(ids('urgent_protection'), 'entry');
+    choose(ids('urgent_protection'))[0].approach = 'path';
     propGate(ids('release_ben', 'ask_phone'), 'bens_phone', 'ben', 'Ben must still have his own phone for this release choice');
-    personTarget(ids('civilian_aid', 'civilian_transfer'), 'mara');
+    personTarget(ids('civilian_aid', 'civilian_transfer', 'civilian_agreement', 'civilian_next_step'), 'mara');
   } else if (spec.type === 'active_armed_incident') {
     extra('grant', 'Grant', target, 'Patrol reports Grant inside the shop with Eli.');
     for (const action of actions) for (const effects of Object.values(action.outcomes)) for (const effect of effects) if (effect.reveal?.includes('v5_noise_f_eli')) effect.reveal.push('story_grant_location');
@@ -105,8 +107,9 @@ export function attachStoryBindings(s: ScenarioDefinition, built: BuiltLocation)
     const register = findStoryObject(built, { spaceId: target, type: 'register' }, seed);
     if (!register) throw new Error('Eli’s shop scene requires an actual register');
     story.bindings.props.register = { id: 'register', label: 'Shop register', kind: 'mapped', objectId: register.id };
-    bindRoute(ids('reach_eli'), 'entry'); bindRoute(ids('bring_eli_out'), 'exit', true);
-    personTarget(ids('reach_eli', 'civilian_aid', 'civilian_transfer'), 'eli');
+    bindRoute(ids('reach_eli', 'urgent_response'), 'entry');
+    choose(ids('urgent_response'))[0].approach = 'path'; bindRoute(ids('bring_eli_out'), 'exit', true);
+    personTarget(ids('reach_eli', 'civilian_aid', 'civilian_transfer', 'civilian_agreement', 'civilian_next_step'), 'eli');
   } else if (spec.type === 'protected_rescue') {
     move('jun', p + 'at_pickup', outside, 'At the outside pickup');
     move('jun', p + 'jun_safe', outside, 'With the receiving team outside');
@@ -115,28 +118,33 @@ export function attachStoryBindings(s: ScenarioDefinition, built: BuiltLocation)
     bindRoute(ids('reach_pickup_assistance', 'reach_pickup_vehicle'), 'chair_exit', true);
     // The route-check beat can honestly report an access limitation. Movement must recheck it at commit.
     for (const action of choose(ids('check_chair_route'))) delete action.requires.openings;
-    personTarget(ids('reach_and_hear', 'reach_jun', 'civilian_aid', 'civilian_transfer'), 'jun');
+    personTarget(ids('reach_and_hear', 'reach_jun', 'civilian_aid', 'civilian_transfer', 'civilian_agreement', 'civilian_next_step'), 'jun');
     propGate(ids('reach_pickup_assistance', 'reach_pickup_vehicle', 'vehicle_move', 'assisted_move'), 'wheelchair', 'jun', 'Jun’s wheelchair must remain with Jun for this move');
   } else if (spec.type === 'medical_complication') {
     move('rosa', p + 'outside');
-    carried('shop_keys', 'Rosa’s shop keys', 'rosa'); carried('rosas_phone', 'Rosa’s mobile phone', 'rosa'); carried('cleaning_bucket', 'Rosa’s cleaning bucket', 'rosa');
+    carried('shop_keys', 'Rosa’s shop keys', 'rosa'); carried('rosas_phone', 'Rosa’s mobile phone', 'rosa');
     bindRoute(ids('lock_and_step_out'), 'exit', true); bindRoute(ids('receive_here'), 'entry');
+    choose(ids('receive_here'))[0].storyRouteActor = 'external_support';
     personTarget(ids('receive_here', 'receive_outside', 'aid_rosa_adapt', 'aid_rosa_resolve', 'aid_rosa_resolve_outside'), 'rosa');
     propGate(ids('lock_and_step_out', 'receive_here', 'receive_outside'), 'shop_keys', 'rosa', 'Rosa keeps her own keys throughout this arrangement');
     propGate(ids('call_supervisor'), 'rosas_phone', 'rosa', 'This call uses Rosa’s own phone');
-    const exitDoor = [...story.bindings.routes.exit.openingIds].reverse().map(id => built.location.openings.find(o => o.id === id)!).find(o => o.a === outside || o.b === outside)!;
-    for (const action of choose(ids('lock_and_step_out'))) for (const effects of Object.values(action.outcomes)) for (const effect of effects) if (effect.setFlags?.includes(p + 'shop_locked')) effect.openings = [...effect.openings ?? [], { openingId: exitDoor.id, state: 'locked' }];
+    for (const action of choose(ids('lock_and_step_out'))) for (const effects of Object.values(action.outcomes)) for (const effect of effects) if (effect.setFlags?.includes(p + 'shop_locked')) effect.storyExitState = 'locked';
   } else if (spec.type === 'barricaded') {
     extra('cal', 'Cal Voss', outside, 'Patrol sees Cal outside with his phone raised.', 'confirmed');
     move('mina', p + 'mina_outside');
     story.bindings.people.cal.transitions.push({ when: { flags: [p + 'cal_waits_apart'] }, to: { kind: 'offscene', label: 'With patrol away from Mina’s doorway' }, observed: true, label: 'With patrol away from Mina’s doorway' });
     carried('cals_phone', 'Cal’s mobile phone', 'cal');
+    propGate(ids('ask_camera_off'), 'cals_phone', 'cal', 'Cal must still have the phone he is recording with');
+    personTarget(ids('ask_camera_off'), 'cal');
     bindRoute(ids('meet_mina_outside', 'meet_at_clear_doorway'), 'exit', true);
-    personTarget(ids('receive_mina', 'private_conversation'), 'mina');
+    personTarget(ids('receive_mina', 'talk_separately', 'honor_next_step'), 'mina');
   } else {
     bindRoute(ids('receive_ada'), 'entry');
+    choose(ids('receive_ada'))[0].storyRouteActor = 'external_support';
     personTarget(ids('receive_ada'), 'ada');
   }
+  const subject = spec.type === 'hostage_crisis' ? 'mara' : (s.civilianOutcomes?.[0]?.id);
+  if (subject) for (const fact of s.facts) if (fact.id.endsWith('care_needed') || fact.id.endsWith('assessment_needed')) fact.storyPersonId = subject;
   s.story = story;
   const errors = validateStoryBindings(s, built);
   if (errors.length) throw new Error(errors.join('\n'));

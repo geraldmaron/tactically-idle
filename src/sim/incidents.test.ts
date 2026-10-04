@@ -81,7 +81,7 @@ describe('initial board', () => {
   it('passes department level, trust and content version to the generator', () => {
     createInitialState(T0);
     expect(draw).toHaveBeenCalled();
-    for (const call of draw.mock.calls) expect(call[1]).toMatchObject({ level: 3, trust: 78, contentVersion: 4 });
+    for (const call of draw.mock.calls) expect(call[1]).toMatchObject({ level: 3, trust: 78, contentVersion: 5 });
   });
 
   it('is deterministic and leaves the starting candidates unchanged by the board', () => {

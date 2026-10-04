@@ -144,8 +144,9 @@ describe('The Second Knock', () => {
   it('requires a real unblocked path for the at-home crew and cannot farm a correction or debrief twice', () => {
     const s = find('welfare', { care_needed: true }); let state = play(running(s), ['trace_sources_assess', 'check_ada_now', 'offer_assessment']);
     if (evaluate(state, 'wait_with_ada').eligible) state = decide(state, 'wait_with_ada');
-    const door = scenarioActions(s).find(a => a.id === id(s, 'receive_ada'))!.requires.openings![0].openingId;
-    const blocked = structuredClone(state); blocked.activeRun!.flags.push(openingFlag(door, 'blocked')); refused(blocked, 'receive_ada');
+    const route = s.story!.bindings.routes[scenarioActions(s).find(a => a.id === id(s, 'receive_ada'))!.storyRoute!];
+    const blockedOpenings = buildLocation(s.locationFamilyId, s.locationSeed).location.openings.filter(opening => opening.a === route.fromSpaceId || opening.b === route.fromSpaceId);
+    const blocked = structuredClone(state); blocked.activeRun!.flags.push(...blockedOpenings.map(opening => openingFlag(opening.id, 'blocked'))); refused(blocked, 'receive_ada');
     state = decide(state, 'receive_ada'); refused(state, 'receive_ada'); const closed = apply(state, { type: 'closeDebrief' }); expect(closed.result.ok).toBe(true);
     const twice = apply(closed.state, { type: 'closeDebrief' }); expect(twice.result.ok).toBe(false); expect(twice.state).toBe(closed.state);
   });
@@ -206,10 +207,11 @@ describe('Still on the Clock', () => {
 
   it('will not teleport a receiving crew or Rosa through a blocked shop route', () => {
     const s = find('assistance', { supervisor_answers: true }); let state = play(running(s), ['hear_rosa_assess', 'call_supervisor']);
-    const door = scenarioActions(s).find(a => a.id === id(s, 'lock_and_step_out'))!.requires.openings![0].openingId;
-    const blocked = structuredClone(state); blocked.activeRun!.flags.push(openingFlag(door, 'blocked')); refused(blocked, 'lock_and_step_out');
+    const route = s.story!.bindings.routes[scenarioActions(s).find(a => a.id === id(s, 'lock_and_step_out'))!.storyRoute!];
+    const blockedOpenings = buildLocation(s.locationFamilyId, s.locationSeed).location.openings.filter(opening => opening.a === route.fromSpaceId || opening.b === route.fromSpaceId);
+    const blocked = structuredClone(state); blocked.activeRun!.flags.push(...blockedOpenings.map(opening => openingFlag(opening.id, 'blocked'))); refused(blocked, 'lock_and_step_out');
     state = decide(state, 'offer_here'); if (evaluate(state, 'wait_with_rosa').eligible) state = decide(state, 'wait_with_rosa');
-    const blockedCare = structuredClone(state); blockedCare.activeRun!.flags.push(openingFlag(door, 'blocked')); refused(blockedCare, 'receive_here');
+    const blockedCare = structuredClone(state); blockedCare.activeRun!.flags.push(...blockedOpenings.map(opening => openingFlag(opening.id, 'blocked'))); refused(blockedCare, 'receive_here');
   });
 });
 
@@ -281,8 +283,9 @@ describe('Leave the Camera Off', () => {
 
   it('keeps private agreement from bypassing a blocked physical exit and does not replay rewarded decisions', () => {
     const s = find('protective', { camera_response: true, care_needed: false }); let state = ready(s);
-    const door = scenarioActions(s).find(a => a.id === id(s, 'meet_mina_outside'))!.requires.openings![0].openingId;
-    const blocked = structuredClone(state); blocked.activeRun!.flags.push(openingFlag(door, 'blocked')); refused(blocked, 'meet_mina_outside');
+    const route = s.story!.bindings.routes[scenarioActions(s).find(a => a.id === id(s, 'meet_mina_outside'))!.storyRoute!];
+    const blockedOpenings = buildLocation(s.locationFamilyId, s.locationSeed).location.openings.filter(opening => opening.a === route.fromSpaceId || opening.b === route.fromSpaceId);
+    const blocked = structuredClone(state); blocked.activeRun!.flags.push(...blockedOpenings.map(opening => openingFlag(opening.id, 'blocked'))); refused(blocked, 'meet_mina_outside');
     state = play(state, ['meet_mina_outside', 'talk_separately']); expect(state.activeRun!.objective).toBe(0); refused(state, 'talk_separately');
     state = decide(state, 'honor_next_step'); refused(state, 'honor_next_step'); expect(state.activeRun!.objective).toBe(100);
   });

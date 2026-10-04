@@ -33,6 +33,8 @@ export interface Condition {
 
 export interface FactDefinition {
   id: Id;
+  /** V5 subject facts follow only the person’s publicly observed location. */
+  storyPersonId?: Id;
   /** Player-facing name for debrief ('Occupancy of the east bedroom'). */
   label: string;
   spaceId: Id;
@@ -187,6 +189,8 @@ export interface OutcomeEffect {
   pressure?: number;
   extraMinutes?: number;
   openings?: { openingId: Id; state: OpeningState }[];
+  /** V5: change the actual exit doorway of this decision's bound route, only after the person moves. */
+  storyExitState?: OpeningState;
   stage?: StageId;
   ending?: Id;
   /** Cause sentence (past tense) used in the explanation and debrief. */
@@ -212,6 +216,8 @@ export interface ActionDefinition {
   storyTargetPersonId?: Id;
   /** Full archetype route rechecked against current openings at action evaluation. */
   storyRoute?: string;
+  /** The bound route moves a person by default; on-site care may instead bring the accepting crew. */
+  storyRouteActor?: 'person' | 'external_support';
   /** V4 dispatch/care administration can remain possible when every deployed officer is hurt. */
   commandOnly?: boolean;
   /** Wait exactly the remaining response time of a bounded, authored service. */

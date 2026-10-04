@@ -87,6 +87,7 @@ function validDecision(d: unknown): boolean {
     && isList(d.knowledgeChanges, (k) => isObj(k) && isStr(k.factId) && oneOf(k.status, KNOWLEDGE))
     && (d.committed === undefined || (isObj(d.committed) && numbers(d.committed, ['objectiveDelta', 'civilianSafetyDelta', 'pressureDelta']) && isStrings(d.committed.consequences) && (d.committed.endingTitle === null || isStr(d.committed.endingTitle))
       && (d.committed.resultLabel === undefined || (isStr(d.committed.resultLabel) && d.committed.resultLabel.length > 0 && d.committed.resultLabel.length <= 100))
+      && (d.committed.openingChanges === undefined || isList(d.committed.openingChanges, (change) => isObj(change) && isStr(change.openingId) && oneOf(change.state, ['open', 'closed', 'locked', 'blocked'])))
       && (d.committed.externalSupport === undefined || isList(d.committed.externalSupport, (event) => isObj(event) && isStr(event.serviceId) && oneOf(event.kind, ['requested', 'accepted']) && isNum(event.at) && event.at >= 0))
       && (d.committed.officerCasualties === undefined || isList(d.committed.officerCasualties, validCasualtyRecord))));
 }
@@ -440,7 +441,7 @@ export function migrate(envelope: SaveEnvelope): SaveEnvelope | null {
   } catch {
     return null;
   }
-  // New draws use v2. Issued incident IDs encode their own content version;
+  // New draws use the current content version. Issued incident IDs encode their own content version;
   // never rewrite the board, an active run, its RNG, or its scenario fields.
   const contentVersion = Math.max(INCIDENT_CONTENT_VERSION, env.state.contentVersion);
   env = { ...env, contentVersion, state: { ...env.state, contentVersion, saveVersion: env.saveVersion } };

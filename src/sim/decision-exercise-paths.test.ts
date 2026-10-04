@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DECISION_EXERCISES } from '../content/scenarios/decision-exercises';
+import { LEGACY_DECISION_EXERCISES } from '../content/scenarios/decision-exercises';
 import { COURSES } from '../content/courses';
 import { computeDebrief } from './operation';
 import { actionViews } from './operation-selectors';
@@ -33,7 +33,7 @@ function decide(state: GameState, id: string): GameState {
 
 describe('protected-rescue comparison exercise', () => {
   it('registers a fixed teaching scene with both suitable routes and available care crews', () => {
-    const exercise = DECISION_EXERCISES.find(entry => entry.id === RESCUE)!;
+    const exercise = LEGACY_DECISION_EXERCISES.find(entry => entry.id === RESCUE)!;
     expect(exercise.spec.seed).toBe(0);
     const scenario = getScenario(RESCUE)!;
     for (const id of ['f_resident', 'f_exterior_pickup', 'f_assisted_route']) {

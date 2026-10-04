@@ -318,6 +318,20 @@ describe('One Last Signature v5', () => {
     expect(computeDebrief(state, state.activeRun!)!.completionAchieved).toBe(true);
   });
 
+  it('requires a complete physical entry route before urgent protection can reach Mara', () => {
+    const s = find({ lost_line_threat: true });
+    let state = play(running(s, ['service_sidearm']), ['check_patrol', 'release_ben', 'lost_line_update']);
+    expect(evaluate(state, 'urgent_protection').eligible).toBe(true);
+    const blocked = structuredClone(state);
+    const rooms = new Set(built.location.rooms.map(room => room.id));
+    for (const opening of built.location.openings) if (rooms.has(opening.a) !== rooms.has(opening.b)) blocked.activeRun!.flags.push(openingFlag(opening.id, 'blocked'));
+    refused(blocked, 'urgent_protection');
+    expect(blocked.activeRun!.flags).not.toContain('sig_threat_stopped');
+    state = decide(state, 'urgent_protection');
+    expect(state.activeRun!.squadTasks.find(task => task.squadId === 'A')!.positionId).toBe(s.story!.bindings.rooms.scene.spaceId);
+    expect(state.activeRun!.flags).toContain('sig_threat_stopped');
+  });
+
   it('updates public dilemmas and committed Next text only after real state changes', () => {
     const s = find({ care_needed: false });
     let state = play(running(s), ['check_patrol', 'release_ben']);
@@ -399,8 +413,9 @@ describe('One Last Signature v5', () => {
   it('rejects blocked release routes and never awards progress for replaying a completed beat', () => {
     const s = find({ phone_consent: true });
     let state = decide(running(s), 'hear_ben');
-    const door = scenarioActions(s).find(a => a.id === id('release_ben'))!.requires.openings![0].openingId;
-    const blocked = structuredClone(state); blocked.activeRun!.flags.push(openingFlag(door, 'blocked'));
+    const route = s.story!.bindings.routes[scenarioActions(s).find(a => a.id === id('release_ben'))!.storyRoute!];
+    const blockedOpenings = buildLocation(s.locationFamilyId, s.locationSeed).location.openings.filter(opening => opening.a === route.fromSpaceId || opening.b === route.fromSpaceId);
+    const blocked = structuredClone(state); blocked.activeRun!.flags.push(...blockedOpenings.map(opening => openingFlag(opening.id, 'blocked')));
     refused(blocked, 'release_ben'); refused(blocked, 'ask_phone');
     state = play(state, ['ask_phone', 'hear_mara', 'record_account', 'bring_mara_out']);
     for (const prior of ['hear_ben', 'ask_phone', 'hear_mara', 'record_account', 'bring_mara_out']) refused(state, prior);

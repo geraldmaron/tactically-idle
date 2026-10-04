@@ -2,10 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { VALID_TINY } from '../content/locations/test-fixtures';
 import { TWO_FLOOR_FIXTURE } from '../content/locations/two-floor-fixture';
 import { BUILDING_FAMILIES } from '../gen/building';
+import { generateIncident, INCIDENT_TYPES_V5 } from '../gen/incident';
 import { buildLocation, deriveLocation, pointInPolygon } from './location';
 import { validateScenario } from './operation';
 import { builtFor } from './resolution';
-import type { ActionDefinition, ScenarioDefinition, StoryAnchor } from './scenario-types';
+import type { ActionDefinition, IncidentSpec, ScenarioDefinition, StoryAnchor } from './scenario-types';
 import type { BuiltLocation, LocationDefinition, Opening } from './types';
 import { currentStoryRoute, findStoryObject, findStoryRoute, queryStoryRooms, selectStoryExterior, selectStoryRoom, storyPoint, validateStoryBindings } from './story-bindings';
 
@@ -192,6 +193,24 @@ describe('routes use complete current opening chains', () => {
 });
 
 describe('story authoring validation', () => {
+  it.each(INCIDENT_TYPES_V5.flatMap(type => type.families.map(family => [type.type, family] as const)))('deterministically validates the actual %s recipe on %s across map and story seeds', (type, familyId) => {
+    for (const buildingSeed of [0, 7, 42]) for (const seed of [0, 13, 91]) {
+      const spec: IncidentSpec = { type, familyId, buildingSeed, seed, tier: seed % 5 + 1, contentVersion: 5 };
+      const before = structuredClone(spec);
+      const first = generateIncident(spec), second = generateIncident(spec);
+      expect(first.story, `${type}/${familyId}/${buildingSeed}/${seed}`).toBeDefined();
+      expect(first).toEqual(second);
+      expect(spec).toEqual(before);
+      const built = buildLocation(familyId, buildingSeed);
+      expect(validateScenario(first, built), first.id).toEqual([]);
+      expect(Object.keys(first.story!.bindings.people).length).toBeGreaterThan(0);
+      for (const [role, route] of Object.entries(first.story!.bindings.routes)) {
+        expect(currentStoryRoute(first, built, role)).toEqual(route.openingIds);
+        expect(route.openingIds.length).toBeGreaterThan(0);
+      }
+    }
+  });
+
   it('accepts actual bindings, carried and mapped props, and explicitly labeled offscene transitions', () => {
     const built = build(), scenario = fixture(built);
     scenario.story!.bindings.people.resident.transitions.push({ when: { facts: [{ factId: 'loc:resident', in: ['confirmed'] }] }, to: { kind: 'offscene', label: 'Left with family' }, observed: true, label: 'With family' });

@@ -122,7 +122,9 @@ describe('After the Noise v5', () => {
   it('keeps no-resource and blocked-door partials honest, without invented alternatives', () => {
     const unavailable = find('noise', { pause: false }); let state = play(running(unavailable), 'noise', ['check_patrol']); refused(state, id('noise', 'agreed_pause')); refused(state, id('noise', 'urgent_response')); state = decide(state, id('noise', 'adapt_withdraw')); expect(computeDebrief(state, state.activeRun!)!.completionAchieved).toBe(false);
     const s = find('noise', { pause: true, stand_down: true }); let blocked = play(running(s), 'noise', ['check_patrol', 'agreed_pause', 'check_stand_down']);
-    const reach = scenarioActions(s).find(a => a.id === id('noise', 'reach_eli'))!; const opening = reach.requires.openings![0].openingId; blocked.activeRun!.flags.push(openingFlag(opening, 'blocked')); refused(blocked, id('noise', 'reach_eli'));
+    const reach = scenarioActions(s).find(a => a.id === id('noise', 'reach_eli'))!; const route = s.story!.bindings.routes[reach.storyRoute!];
+    const blockedOpenings = buildLocation(s.locationFamilyId, s.locationSeed).location.openings.filter(opening => opening.a === route.fromSpaceId || opening.b === route.fromSpaceId);
+    blocked.activeRun!.flags.push(...blockedOpenings.map(opening => openingFlag(opening.id, 'blocked'))); refused(blocked, id('noise', 'reach_eli'));
     blocked = decide(blocked, id('noise', 'resolve_withdraw')); expect(blocked.activeRun!.flags).not.toContain(id('noise', 'eli_reached'));
   });
   it('reloads the same natural progress and freezes the committed turn', () => {
@@ -197,7 +199,9 @@ describe('My Chair Comes Too v5', () => {
     for (const short of ['prepare_assistance', 'check_reserved_vehicle', 'reach_pickup_assistance', 'reach_pickup_vehicle', 'assisted_move', 'vehicle_move']) expect(scenarioActions(inaccessible).find(a => a.id === id('chair', short))!.requires.facts).toContainEqual(expect.objectContaining({ factId: id('chair', 'f_chair_route'), in: ['confirmed'] }));
     const blocked = play(running(find('chair'), [], true), 'chair', ['reach_and_hear', 'check_chair_route', 'check_reserved_vehicle']);
     const scenario = getScenario(blocked.activeRun!.scenarioId)!; const action = scenarioActions(scenario).find(a => a.id === id('chair', 'reach_pickup_vehicle'))!;
-    blocked.activeRun!.flags.push(openingFlag(action.requires.openings![0].openingId, 'blocked')); refused(blocked, id('chair', 'reach_pickup_vehicle'));
+    const route = scenario.story!.bindings.routes[action.storyRoute!];
+    const blockedOpenings = buildLocation(scenario.locationFamilyId, scenario.locationSeed).location.openings.filter(opening => opening.a === route.fromSpaceId || opening.b === route.fromSpaceId);
+    blocked.activeRun!.flags.push(...blockedOpenings.map(opening => openingFlag(opening.id, 'blocked'))); refused(blocked, id('chair', 'reach_pickup_vehicle'));
   });
   it('recovers a failed vehicle loading attempt with a distinct slower arrangement', () => {
     const s = find('chair', { vehicle_fit: true, care_needed: false }); let state = play(running(s, [], true), 'chair', ['reach_and_hear', 'check_chair_route', 'check_reserved_vehicle', 'reach_pickup_vehicle']);

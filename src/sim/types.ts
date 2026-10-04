@@ -567,6 +567,8 @@ export interface DecisionResolution {
     /** Exact external responsibility events, saved once at commit in v4. */
     externalSupport?: ExternalSupportEvent[];
     officerCasualties?: OfficerCasualtyRecord[];
+    /** V5 opening changes resolved against the route actually used, in committed order. */
+    openingChanges?: { openingId: Id; state: OpeningState }[];
   };
   /** Run revision this decision was applied to. */
   revision: number;

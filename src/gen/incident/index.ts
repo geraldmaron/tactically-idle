@@ -30,9 +30,9 @@ export const INCIDENT_TYPES: IncidentTypeInfo[] = [
   { type: 'burglary', label: 'Alarm response', families: ['market_row'], squads: [1, 3] },
   { type: 'false_intruder', label: 'Uncertain occupancy', families: homes, squads: [1, 2] },
 ];
-/** Future calls use v4; issued v1/v2/v3 seed tuples retain their original content. */
-export const INCIDENT_CONTENT_VERSION = 4;
-/** V5 practice is staged while the full new-call collection is authored. */
+/** Future calls use v5; issued v1–v4 seed tuples retain their original content. */
+export const INCIDENT_CONTENT_VERSION = 5;
+/** Highest incident content version this build can read. */
 export const SUPPORTED_INCIDENT_CONTENT_VERSION = 5;
 export const INCIDENT_TYPES_V2: IncidentTypeInfo[] = [
   ...INCIDENT_TYPES,
@@ -384,22 +384,29 @@ function withVersionTwoCapabilities(s: ScenarioDefinition, built: BuiltLocation)
   return s;
 }
 
-/** Avoid the locations already on the board while another is available. */
+/** Prefer unused v5 story types, then unused compatible locations, without extra RNG draws. */
 export function drawIncidentSpec(
   rngState: number,
-  ctx: { level: number; trust: number; contentVersion: number; avoidFamilies?: readonly string[] },
+  ctx: { level: number; trust: number; contentVersion: number; avoidFamilies?: readonly string[]; avoidTypes?: readonly IncidentType[] },
 ): { spec: IncidentSpec; state: number } {
-  const fresh = allFamilies.filter((id) => !ctx.avoidFamilies?.includes(id));
-  const family = pick(rngState, fresh.length ? fresh : allFamilies);
   // Four slots for each everyday call, one for each specialist report. Keep the
   // v1 array and number of PRNG draws exactly unchanged for saved campaigns.
-  const pool = ctx.contentVersion >= 5
+  let pool = ctx.contentVersion >= 5
     ? INCIDENT_TYPES_V5
     : ctx.contentVersion >= 4
     ? [...INCIDENT_TYPES_V2, ...INCIDENT_TYPES_V4.slice(INCIDENT_TYPES_V2.length).flatMap(type => [type, type])]
     : ctx.contentVersion >= 2
     ? [...INCIDENT_TYPES.flatMap((type) => [type, type, type, type]), ...INCIDENT_TYPES_V2.slice(INCIDENT_TYPES.length)]
     : INCIDENT_TYPES;
+  if (ctx.contentVersion >= 5) {
+    const unused = pool.filter(type => !ctx.avoidTypes?.includes(type.type));
+    if (unused.length) pool = unused;
+  }
+  // Restrict v5 family selection to remaining stories before preferring a fresh
+  // location. Otherwise a fresh home could repeat a story while a shop story is unused.
+  const families = ctx.contentVersion >= 5 ? allFamilies.filter(id => pool.some(type => type.families.includes(id))) : allFamilies;
+  const fresh = families.filter(id => !ctx.avoidFamilies?.includes(id));
+  const family = pick(rngState, fresh.length ? fresh : families);
   const incident = pick(family.state, pool.filter((x) => x.families.includes(family.value)));
   const building = next(incident.state);
   const seed = next(building.state);

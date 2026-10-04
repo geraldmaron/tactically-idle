@@ -189,6 +189,10 @@ export function validExternalSupportState(run: OperationRun, scenario: ScenarioD
         publicState.flags.push(`opening:${opening.openingId}=${opening.state}`);
       }
     }
+    if (scenario.version >= 5) for (const opening of decision.committed?.openingChanges ?? []) {
+      publicState.flags = publicState.flags.filter(entry => !entry.startsWith(`opening:${opening.openingId}=`));
+      publicState.flags.push(`opening:${opening.openingId}=${opening.state}`);
+    }
     let casualtyIndex = 0;
     const casualtyEvents = decision.committed?.officerCasualties ?? [];
     const acceptCasualty = (id: string, care: OfficerCasualtyRecord['care'], severity?: OfficerCasualtyRecord['severity'], label?: string): boolean => {

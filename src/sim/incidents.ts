@@ -9,7 +9,8 @@
 // This module must not import economy.ts (economy imports it).
 import type { Department, GameState, HandlerResult, Id, IncidentCard } from './types';
 import { next } from './rng';
-import { drawIncidentSpec, incidentId } from '../gen/incident';
+import { drawIncidentSpec, incidentId, parseIncidentId } from '../gen/incident';
+import { DECISION_EXERCISES } from '../content/scenarios/decision-exercises';
 
 const HOUR = 3_600_000;
 const MINUTE = 60_000;
@@ -82,7 +83,14 @@ export function takeIncident(d: GameState, id: Id): IncidentCard | null {
  */
 function drawCard(d: GameState, at: number): IncidentCard | null {
   const dep = d.department;
-  const drawn = drawIncidentSpec(d.rngState, { level: dep.level, trust: dep.trust, contentVersion: d.contentVersion, avoidFamilies: [...board(d).map((c) => c.familyId), ...(d.activeRun ? [d.activeRun.locationFamilyId] : [])] });
+  const run = d.activeRun;
+  const activeStory = run && run.scenarioVersion >= 5
+    ? parseIncidentId(run.scenarioId) ?? DECISION_EXERCISES.find(exercise => exercise.id === run.scenarioId)?.spec
+    : null;
+  const avoidTypes = d.contentVersion >= 5
+    ? [...board(d).flatMap(card => { const spec = parseIncidentId(card.id); return spec?.contentVersion === 5 ? [spec.type] : []; }), ...(activeStory ? [activeStory.type] : [])]
+    : undefined;
+  const drawn = drawIncidentSpec(d.rngState, { level: dep.level, trust: dep.trust, contentVersion: d.contentVersion, avoidFamilies: [...board(d).map((c) => c.familyId), ...(run ? [run.locationFamilyId] : [])], ...(avoidTypes ? { avoidTypes } : {}) });
   const spec = { ...drawn.spec, tier: Math.min(5, Math.max(1, Math.round(drawn.spec.tier))) };
   const life = drawBetween(drawn.state, INCIDENT_TUNING.minLifetimeMs, INCIDENT_TUNING.maxLifetimeMs);
   d.rngState = life.state;

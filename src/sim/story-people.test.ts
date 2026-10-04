@@ -104,6 +104,24 @@ describe('bound story people project existing committed state', () => {
     expect({ people: storyPeoplePublic(scenario, built, state.activeRun!), spaces: spaceViews(state), action: actionViews(state, NOW, 'A'), evaluation: evaluate(scenario, state, care) }).toEqual(before);
   });
 
+  it('relocates subject care facts with public position, preserving their status without duplicating markers', () => {
+    const { scenario, state } = fixture();
+    scenario.facts.push({ ...fact('alex_care', 'Alex needs assessment', inside, 'reported'), storyPersonId: 'alex', markers: { reported: 'ASSESSMENT?' }, person: undefined });
+    state.activeRun!.knowledge.alex_care = 'reported';
+    const before = spaceViews(state);
+    state.activeRun!.flags.push('secret_move');
+    expect(spaceViews(state)).toEqual(before);
+    state.activeRun!.flags.push('alex_released');
+    const spaces = spaceViews(state);
+    expect(spaces.find(space => space.id === inside.spaceId)!.facts.some(fact => fact.id === 'alex_care')).toBe(false);
+    expect(spaces.find(space => space.id === outside.spaceId)!.facts.find(fact => fact.id === 'alex_care')).toMatchObject({ status: 'reported', label: 'Alex needs assessment' });
+    expect(markers(state).filter(marker => marker.id === 'person_where_alex')).toHaveLength(1);
+    expect(markers(state).some(marker => marker.id === 'person_alex_care')).toBe(false);
+    state.activeRun!.flags.push('alex_picked_up');
+    expect(spaceViews(state).flatMap(space => space.facts).some(fact => fact.id === 'alex_care')).toBe(false);
+    expect(state.activeRun!.knowledge.alex_care).toBe('reported');
+  });
+
   it.each(['unknown', 'disproved'] as const)('does not invent a location for an %s person', status => {
     const { scenario, state, care } = fixture(status);
     expect(storyPeoplePublic(scenario, built, state.activeRun!)[0].position).toBeNull();
@@ -268,5 +286,26 @@ describe('bound story people project existing committed state', () => {
     const uniqueLocks = new Map([...squad.forced, ...person.forced].map(door => [door.openingId, door.minutes]));
     expect(ev.travelMinutes).toBeCloseTo(Math.round((Math.max(squad.minutes - squad.forceMinutes, person.minutes - person.forceMinutes) + [...uniqueLocks.values()].reduce((sum, value) => sum + value, 0)) * 10) / 10, 1);
     expect(ev.storyOpenedIds!.filter(id => id === shared)).toHaveLength(1);
+  });
+
+  it('applies route exit state only after an actual person move and preserves explicit outcome changes', () => {
+    const { scenario, state, care } = fixture();
+    care.approach = 'none'; care.spatial = undefined; care.storyRoute = 'exit';
+    scenario.story!.bindings.routes.exit = { fromSpaceId: inside.spaceId, toSpaceId: outside.spaceId, openingIds: [], profile: 'walking' };
+    state.activeRun!.flags.push(...built.location.openings.map(opening => openingFlag(opening.id, 'open')));
+    const current = builtFor(scenario.locationFamilyId, scenario.locationSeed, state.activeRun!.flags);
+    const route = currentStoryRoute(scenario, current, 'exit')!;
+    const exit = [...route].reverse().map(id => current.location.openings.find(opening => opening.id === id)!).find(opening =>
+      current.location.rooms.some(room => [opening.a, opening.b].includes(room.id)) && current.location.zones.some(zone => [opening.a, opening.b].includes(zone.id)))!;
+    for (const band of ['favorable', 'mixed', 'adverse'] as const) care.outcomes[band] = [{ storyExitState: 'locked' }];
+    const declined = apply(state, { type: 'decide', actionId: care.id, actingSquadIds: ['A'], supportSquadIds: [] });
+    expect(declined.result).toEqual({ ok: true });
+    expect(builtFor(scenario.locationFamilyId, scenario.locationSeed, declined.state.activeRun!.flags).location.openings.find(opening => opening.id === exit.id)!.state).toBe('open');
+    expect(declined.state.activeRun!.history.at(-1)!.committed!.openingChanges).toBeUndefined();
+    for (const band of ['favorable', 'mixed', 'adverse'] as const) care.outcomes[band] = [{ setFlags: ['alex_released'], storyExitState: 'locked', openings: [{ openingId: exit.id, state: 'closed' }] }];
+    const moved = apply(state, { type: 'decide', actionId: care.id, actingSquadIds: ['A'], supportSquadIds: [] });
+    expect(moved.result).toEqual({ ok: true });
+    expect(builtFor(scenario.locationFamilyId, scenario.locationSeed, moved.state.activeRun!.flags).location.openings.find(opening => opening.id === exit.id)!.state).toBe('closed');
+    expect(moved.state.activeRun!.history.at(-1)!.committed!.openingChanges).toEqual([{ openingId: exit.id, state: 'closed' }]);
   });
 });

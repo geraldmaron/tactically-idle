@@ -167,6 +167,7 @@ export function validateStoryBindings(scenario: ScenarioDefinition, built: Built
   const facts = new Map(scenario.facts.map(fact => [fact.id, fact]));
   const people = Object.values(bindings.people);
   const personIds = new Set(people.map(person => person.id));
+  for (const fact of scenario.facts) if (fact.storyPersonId && !personIds.has(fact.storyPersonId)) errors.push(`${scenario.id}: story fact ${fact.id} references unknown subject ${fact.storyPersonId}`);
   const actions = Object.values(scenario.stages).flatMap(stage => stage.actions);
   const effects = actions.flatMap(action => Object.values(action.outcomes).flat());
   const flags = new Set(['casualty:officers', 'casualty:untreated', 'casualty:awaiting_transport', 'casualty:evacuated',
