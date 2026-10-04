@@ -1,25 +1,13 @@
 import type { ActionDefinition, Condition, FactDefinition, OutcomeEffect, ScenarioDefinition } from '../../../sim/scenario-types';
 import type { BuiltLocation, StageId } from '../../../sim/types';
 import { hashSeed } from '../../../sim/rng';
+import { findStoryRoute } from '../../../sim/story-bindings';
 import { withHighRiskVersionFourChoices } from '../high-risk-v4';
 import { actionHR, civilianCareHR, enterCareHR, factHR, finalizeHR, HR_BANDS, injuryHR, officerCareHR, partialHR, previewHR, reqFact, reqFlag, sameHR, visibleHR, type HighRiskContext } from '../high-risk-common-v4';
 
-/** A route made entirely of existing doors; no new opening is invented by prose. */
+/** Authoring uses the same current doorway, exterior-path and access-profile rules as live play. */
 export function storyDoorRoute(built: BuiltLocation, from: string, to: string, chair = false): string[] | null {
-  const ground = new Set([...built.location.zones.map(z => z.id), ...built.location.rooms.filter(r => (r.floor ?? 0) === 0).map(r => r.id)]);
-  const queue: { at: string; route: string[] }[] = [{ at: from, route: [] }];
-  const seen = new Set([from]);
-  while (queue.length) {
-    const step = queue.shift()!;
-    if (step.at === to) return step.route;
-    for (const opening of built.location.openings) {
-      if (!['door', 'doorway', 'sliding'].includes(opening.type)) continue;
-      if (chair && (!ground.has(opening.a) || !ground.has(opening.b) || Math.hypot(opening.to.x - opening.from.x, opening.to.y - opening.from.y) < 3)) continue;
-      const at = opening.a === step.at ? opening.b : opening.b === step.at ? opening.a : null;
-      if (at && !seen.has(at)) { seen.add(at); queue.push({ at, route: [...step.route, opening.id] }); }
-    }
-  }
-  return null;
+  return findStoryRoute(built, from, to, chair ? 'chair' : 'walking');
 }
 export function storyOpenings(ids: string[]) {
   return ids.map(openingId => ({ openingId, blockedReason: 'This checked route is physically blocked. The person cannot complete this move.', lockedNote: 'The locked door adds time before this route can be used.' }));

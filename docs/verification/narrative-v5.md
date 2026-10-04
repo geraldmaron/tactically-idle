@@ -36,4 +36,6 @@ The journeys identified presentation fixes included in the follow-up: nonwrappin
 
 The browser's supported import picker did not open inside the isolated harness. The synthetic legacy-v4 import was therefore not completed in the browser; migration, ten-slot preservation and new-story discovery remain covered by source tests. No user save was reset or changed to perform QA.
 
-The frozen follow-up passes `npm run verify`: 1,494 tests in 95 files, typecheck, artwork validation and production build. The explicit `/tactically-idle/` Pages build also passes.
+The frozen follow-up passes `npm run verify`: 1,497 tests in 96 files, typecheck, artwork validation and production build. The explicit `/tactically-idle/` Pages build also passes.
+
+The review follow-up also removes the duplicate authoring route finder. Access facts, bindings and live movement now use the same blocked-opening, alternate-path and walking/chair rules.
