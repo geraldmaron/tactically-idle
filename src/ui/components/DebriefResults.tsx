@@ -106,9 +106,12 @@ const consequenceWords = /\b(injur\w*|wound\w*|kill\w*|dead|death\w*|fatal\w*|ha
 
 export function visibleDebriefConsequences(d: DebriefResult, decisions: DecisionView[] = d.decisions ?? []): string[] {
   const lines = decisions.flatMap((decision) => {
-    const material = decision.band === 'adverse' || decision.civilianSafetyDelta < 0 || decision.objectiveDelta < 0;
-    const narrative = decision.consequences.filter((line) => !line.startsWith('Next: ') && (material || consequenceWords.test(line)));
-    const evidence = decision.explanation.filter((line) => consequenceWords.test(line));
+    const structured = decision.officerCasualties !== undefined;
+    const material = (decision.band === 'adverse' && !decision.resultLabel) || decision.civilianSafetyDelta < 0 || decision.objectiveDelta < 0 || !!decision.officerCasualties?.length;
+    const narrative = decision.consequences.filter((line) => !line.startsWith('Next: ') && (material || (!structured && consequenceWords.test(line))));
+    // Current records already contain every committed event. Their explanations
+    // repeat joined narrative, so reserve prose mining for older saved records.
+    const evidence = structured ? [] : decision.explanation.filter((line) => consequenceWords.test(line));
     const losses = [
       ...(decision.civilianSafetyDelta < 0 ? [`Civilian safety ${signed(decision.civilianSafetyDelta, 1)}.`] : []),
       ...(decision.objectiveDelta < 0 ? [`Call progress ${signed(decision.objectiveDelta, 1)}.`] : []),

@@ -2,10 +2,10 @@ import { createElement, type ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 import type { ActionView, DebriefResult, DecisionView } from '../../sim/types';
-import { apply, makeState, NOW, startRun } from '../../sim/test-fixtures';
+import { apply, makeState, NOW, setRun, startRun } from '../../sim/test-fixtures';
 import { actionViews, currentBuilt, decisionViews, pendingDebrief, previewAction, spaceViews, stageProgress } from '../../sim/operation-selectors';
 import { planActionResupply } from '../../sim/equipment-resupply';
-import { ActionSheet, LiveView, type LiveViewProps } from './LiveView';
+import { ActionSheet, LiveView, revealStageStep, StageSteps, type LiveViewProps } from './LiveView';
 import { DecisionCard, OperationFeedback, OperationLogContents, OutcomeForecast } from './OperationFeedback';
 import { OpsDebrief, SavedDebriefContents, SavedDebriefReview } from './OpsDebrief';
 import { Debriefs } from './HQ';
@@ -23,7 +23,7 @@ const render = (node: ReactNode) => renderToStaticMarkup(node);
 const defaultResult = (html: string) => html.split('<details class="decision-causes decision-record"')[0];
 const action = (patch: Partial<ActionView> = {}): ActionView => ({
   id: 'treat', stage: 'adapt', title: 'Prepare medical access', icon: 'medic', summary: 'Keep access open while preparing aid.', requirementLine: 'Qualified medic + trauma supplies',
-  actingSquadIds: ['A'], supportSquadIds: [], officerIds: ['off_ortiz'], targetId: null, eligible: true, reason: null, risk: 'low',
+  actingSquadIds: ['A'], supportSquadIds: [], support: null, officerIds: ['off_ortiz'], targetId: null, eligible: true, reason: null, risk: 'low',
   timeCost: 5, timeRange: { min: 4, max: 8 }, likelihood: { favorable: .73, mixed: .19, adverse: .08 }, consequenceLevel: 'high',
   outcomePreview: { favorable: 'Prepare aid without losing access.', mixed: 'Aid takes longer and pressure rises.', adverse: 'Medical access remains unresolved.' }, suppliesRequired: [{ label: 'Trauma supplies', qty: 1 }],
   contributors: [], uncertainty: ['Patient condition is unconfirmed.'], details: [], overlays: [], ...patch,
@@ -81,6 +81,42 @@ function liveProps(actions: ActionView[], selectedAction = actions[0]): LiveView
 }
 
 describe('reviewing a decision', () => {
+  it('hides unsupported squad controls while preserving the acting-squad choice', () => {
+    const g = startRun(makeState(), 'ms_occupancy', ['A', 'B']);
+    const view = previewAction(g, NOW, 'ms_contact_hall', ['A'], [])!;
+    expect(view.support).toBeNull();
+    const html = render(sheet(view));
+    expect(html).toContain('Squad taking action');
+    expect(html).not.toContain('Supporting squad');
+    expect(html).toContain('aria-pressed="true"');
+    expect(previewAction(g, NOW, view.id, ['B'], [])!.actingSquadIds).toEqual(['B']);
+  });
+
+  it('keeps optional coverage and genuinely required support controls', () => {
+    const optionalState = setRun(startRun(makeState(), 'ms_occupancy', ['A', 'B']), { stage: 'resolve' });
+    const optional = actionViews(optionalState, NOW, 'A').find(a => a.support)!;
+    expect(optional.support).toEqual({ minSquads: 0, maxSquads: 2 });
+    expect(render(sheet(optional))).toContain('Supporting squad (optional)');
+
+    const jointState = setRun(startRun(makeState(), 'ms_urgent', ['A', 'B']), { stage: 'adapt' });
+    const joint = previewAction(jointState, NOW, 'mu_two_point', ['A'], ['B'])!;
+    expect(joint.support).toEqual({ minSquads: 1, maxSquads: 2 });
+    expect(joint.eligible).toBe(true);
+    const html = render(createElement(ActionSheet, { ...sheet(joint).props, support: ['B'] }));
+    expect(html).toContain('Supporting squad (1 required)');
+    expect(html).not.toContain('Supporting squad (optional)');
+    expect(previewAction(jointState, NOW, joint.id, ['A'], [])!.reason).toContain('Needs a second squad');
+  });
+
+  it('keeps qualified specialist support visible even while another requirement is missing', () => {
+    const g = setRun(startRun(makeState(), 'practice_response_v2', ['A', 'B'], {
+      practice: true, positions: { A: 'front_yard', B: 'front_yard' }, loadouts: { A: {}, B: {} },
+    }), { stage: 'adapt' });
+    const view = previewAction(g, NOW, 'practice_specialist_clear', ['A'], ['B'])!;
+    expect(view.support).toEqual({ minSquads: 1, maxSquads: 1 });
+    expect(render(sheet(view))).toContain('Supporting squad (1 required)');
+  });
+
   it('separates high consequence severity from a favorable forecast and preserves authored possibilities', () => {
     const html = render(createElement(OutcomeForecast, { action: action() }));
     expect(html).toContain('73% chance');
@@ -331,5 +367,33 @@ describe('decision display models', () => {
     expect(visibleDecisions(actions, 'choice_7', false)).toHaveLength(5);
     expect(visibleDecisions(actions, 'choice_7', true)).toHaveLength(8);
     expect(actions).toEqual(before);
+  });
+});
+
+describe('operation stage rail', () => {
+  it('keeps complete narrative stage labels and exposes the current stage in a keyboard-reachable rail', () => {
+    const html = render(createElement(StageSteps, { progress: {
+      stage: 'resolve', index: 2, prompt: '', stages: [
+        { id: 'assess', label: 'She stepped back', state: 'done' },
+        { id: 'adapt', label: 'Her terms', state: 'done' },
+        { id: 'resolve', label: 'The promised conversation', state: 'current' },
+      ],
+    } }));
+    expect(html).toContain('aria-label="Operation stages" tabindex="0"');
+    expect(html).toContain('THE PROMISED CONVERSATION');
+    expect(html.match(/aria-current="step"/g)).toHaveLength(1);
+    expect(html).toContain('step-current" aria-current="step"');
+    expect(html).not.toContain('<button');
+  });
+
+  it.each([
+    { left: 370, right: 600, before: 0, after: 230 },
+    { left: -100, right: 110, before: 200, after: 80 },
+    { left: 20, right: 230, before: 150, after: 150 },
+  ])('reveals the active stage horizontally without moving a visible stage ($left–$right)', ({ left, right, before, after }) => {
+    const strip = { scrollLeft: before, getBoundingClientRect: () => ({ left: 16, right: 374 }) } as unknown as HTMLOListElement;
+    const step = { getBoundingClientRect: () => ({ left, right }) } as unknown as HTMLLIElement;
+    revealStageStep(strip, step);
+    expect(strip.scrollLeft).toBe(after);
   });
 });

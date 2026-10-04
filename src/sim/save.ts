@@ -95,6 +95,7 @@ function validDecision(d: unknown): boolean {
 function validDecisionView(d: unknown): boolean {
   return isObj(d) && strings(d, ['actionId', 'title', 'stageLabel']) && numbers(d, ['revision', 'timeCost', 'objectiveDelta', 'civilianSafetyDelta', 'pressureDelta'])
     && oneOf(d.band, ['favorable', 'mixed', 'adverse']) && isBool(d.actualStressDeltas) && isStrings(d.explanation) && isStrings(d.consequences)
+    && (d.officerCasualties === undefined || isList(d.officerCasualties, validCasualtyRecord))
     && (d.endingTitle === null || isStr(d.endingTitle))
     && (d.resultLabel === undefined || (isStr(d.resultLabel) && d.resultLabel.length > 0 && d.resultLabel.length <= 100))
     && isList(d.stressDeltas, (x) => isObj(x) && strings(x, ['officerId', 'label']) && isNum(x.delta)

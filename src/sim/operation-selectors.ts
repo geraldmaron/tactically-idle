@@ -419,6 +419,7 @@ function toView(state: GameState, run: OperationRun, a: ActionDefinition, ev: Ev
     requirementLine: requirementLine(a),
     actingSquadIds: ev.acting,
     supportSquadIds: ev.support,
+    support: a.support ? { maxSquads: a.support.maxSquads, minSquads: Math.max(0, (a.requires.minSquads?.count ?? 1) - ev.acting.length) } : null,
     officerIds: ev.participantIds,
     targetId: hidden ? null : ev.publicTargetId === undefined ? ev.action.targetId : ev.publicTargetId,
     eligible: ev.eligible,

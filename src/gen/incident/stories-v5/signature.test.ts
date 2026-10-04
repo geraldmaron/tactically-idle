@@ -69,6 +69,26 @@ function care(state: GameState, who: 'officer' | 'civilian'): GameState {
 const notes = (state: GameState) => state.activeRun!.history.flatMap(h => h.committed?.consequences ?? []).join(' ');
 
 describe('One Last Signature v5', () => {
+  it('uses complete reported claims for public uncertainty without exposing future conversations', () => {
+    const s = find();
+    const visible = s.facts.filter(f => f.showWhenUnknown);
+    for (const fact of visible) {
+      expect(fact.uncertainty).toBe(fact.claim);
+      expect(fact.uncertainty).toMatch(/[.!?]$/);
+      expect(fact.uncertainty).not.toMatch(/^Whether /);
+    }
+    const unknown = actionViews(running(s), NOW, 'A').flatMap(a => a.uncertainty);
+    expect(unknown).toContain('Ben is being held in the print shop.');
+    expect(unknown).toContain('Mara is being held in her shop.');
+    expect(unknown).toContain('Patrol saw Lewis with a handgun and heard a threat.');
+    for (const fact of s.facts.filter(f => !f.showWhenUnknown)) {
+      expect(fact.source).toBeNull();
+      expect(fact.note).toBeNull();
+      expect(fact.uncertainty).toBe('Further details depend on the next conversation.');
+      expect(unknown).not.toContain(fact.claim);
+    }
+  });
+
   it('is deterministic, validates, leaves v4 unchanged and owns every action ID', () => {
     for (const seed of [0, 7, 42]) {
       const spec: IncidentSpec = { type: 'hostage_crisis', familyId: 'market_row', buildingSeed: 7, seed, tier: 2, contentVersion: 4 };
@@ -355,6 +375,9 @@ describe('One Last Signature v5', () => {
       expect(computeDebrief(state, state.activeRun!)!.completionAchieved).toBe(false);
     }
     expect(s.endings[carePending.activeRun!.endingId!].summary).toContain('no medical crew has accepted Mara’s care');
+    expect(s.endings[stillInside.activeRun!.endingId!].remainingTasks).toContain('Complete Ben’s and Mara’s release to safety');
+    expect(s.endings[benOnly.activeRun!.endingId!].remainingTasks).toEqual(['Complete Mara’s release to safety', 'Complete any needed civilian care', 'Complete any outstanding officer care']);
+    expect(computeDebrief(carePending, carePending.activeRun!)!.remainingTasks).toEqual(['Arrange accepted medical care for Mara', 'Complete any outstanding officer care']);
   });
 
   it('does not reopen accepted officer care when both civilians are safe but the player ends before their next steps', () => {
@@ -372,6 +395,7 @@ describe('One Last Signature v5', () => {
     expect(summary).toContain('their actual care status');
     expect(summary).not.toContain('officer care, are not yet complete');
     expect(state.activeRun!.history.at(-1)!.committed!.consequences[0]).toBe(summary);
+    expect(computeDebrief(state, state.activeRun!)!.remainingTasks).toEqual(['Agree Ben’s and Mara’s next steps', 'Complete any outstanding officer care']);
   });
 
   it('labels fixed events without presenting conditional releases, offers or urgent responses as guaranteed', () => {

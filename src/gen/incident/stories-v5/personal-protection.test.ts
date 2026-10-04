@@ -67,6 +67,23 @@ function care(state: GameState, family: Family, who: 'officer' | 'civilian'): Ga
 }
 const notes = (state: GameState) => state.activeRun!.history.flatMap(h => h.committed?.consequences ?? []).join(' ');
 
+it.each(['noise', 'chair'] as const)('%s uses complete public uncertainty and keeps future needs hidden', family => {
+  const s = find(family);
+  const unknown = actionViews(running(s), NOW, 'A').flatMap(a => a.uncertainty);
+  for (const fact of s.facts.filter(f => f.showWhenUnknown)) {
+    expect(fact.uncertainty).toBe(fact.claim);
+    expect(fact.uncertainty).toMatch(/[.!?]$/);
+    expect(fact.uncertainty).not.toMatch(/^Whether /);
+    expect(unknown).toContain(fact.claim);
+  }
+  for (const fact of s.facts.filter(f => !f.showWhenUnknown)) {
+    expect(fact.uncertainty).toBe('This needs a current conversation or observation.');
+    expect(fact.source).toBeNull();
+    expect(fact.note).toBeNull();
+    expect(unknown).not.toContain(fact.claim);
+  }
+});
+
 describe('After the Noise v5', () => {
   it('owns new actions, preserves v4, and uses only the Market Row shop', () => {
     for (const seed of [0, 7, 42]) {
@@ -127,6 +144,33 @@ describe('After the Noise v5', () => {
     blocked.activeRun!.flags.push(...blockedOpenings.map(opening => openingFlag(opening.id, 'blocked'))); refused(blocked, id('noise', 'reach_eli'));
     blocked = decide(blocked, id('noise', 'resolve_withdraw')); expect(blocked.activeRun!.flags).not.toContain(id('noise', 'eli_reached'));
   });
+  it('keeps only care outstanding after Eli is outside, first aid is given and no ambulance is available', () => {
+    let s: ScenarioDefinition | undefined;
+    for (let seed = 0; seed < 500 && !s; seed++) {
+      const candidate = fixture('noise', seed);
+      if (candidate.facts.find(f => f.id === id('noise', 'f_pause'))!.truth
+        && candidate.facts.find(f => f.id === id('noise', 'f_care_needed'))!.truth
+        && !candidate.externalServices!.find(service => service.id === id('noise', 'civilian_ambulance'))!.available) s = candidate;
+    }
+    expect(s).toBeDefined();
+    let state = play(running(s!, ['trauma_kit']), 'noise', ['check_patrol', 'agreed_pause', 'check_stand_down']);
+    if (!state.activeRun!.flags.includes(id('noise', 'danger_ended'))) state = decide(state, id('noise', 'clarify_stand_down'));
+    state = play(state, 'noise', ['reach_eli', 'bring_eli_out', 'civilian_request', 'civilian_agreement', 'civilian_aid', 'civilian_partial']);
+    expect(state.activeRun!.flags).toEqual(expect.arrayContaining(['danger_ended', 'eli_reached', 'eli_safe', 'civilian_aid'].map(flag => id('noise', flag))));
+    expect(state.activeRun!.history.flatMap(turn => turn.itemsConsumed)).toContainEqual({ itemId: 'trauma_kit', qty: 1 });
+    expect(state.activeRun!.externalSupport![id('noise', 'civilian_ambulance')].acceptedAt).toBeNull();
+    const ending = s!.endings[state.activeRun!.endingId!];
+    expect(ending.title).toBe('Eli is outside; care is pending');
+    expect(ending.remainingTasks).toEqual(['Arrange accepted medical care for Eli', 'Complete any outstanding officer care']);
+    expect(computeDebrief(state, state.activeRun!)!).toMatchObject({ completionAchieved: false, remainingTasks: ending.remainingTasks });
+  });
+
+  it('does not reopen Eli’s move or danger checks when only his next step is open', () => {
+    const s = find('noise', { pause: true, stand_down: true, care_needed: false });
+    const state = play(running(s), 'noise', ['check_patrol', 'agreed_pause', 'check_stand_down', 'reach_eli', 'bring_eli_out', 'civilian_partial']);
+    expect(s.endings[state.activeRun!.endingId!].remainingTasks).toEqual(['Agree Eli’s next step', 'Complete any outstanding officer care']);
+  });
+
   it('reloads the same natural progress and freezes the committed turn', () => {
     const s = find('noise', { pause: true, stand_down: true }); let state = play(running(s), 'noise', ['hear_eli', 'agreed_pause', 'check_stand_down', 'reach_eli'], null);
     const committed = structuredClone(state.activeRun!.history); const saved = deserialize(serialize(state, NOW)); expect(saved).not.toBeNull(); expect(saved!.activeRun).toEqual(state.activeRun);
@@ -154,12 +198,12 @@ describe('My Chair Comes Too v5', () => {
       const menu = actionViews(state, NOW, 'A'); expect(menu.length, menu.map(a => a.id).join(', ')).toBeLessThanOrEqual(5);
       state = decide(state, id('chair', action)); refused(state, id('chair', action));
       if (action === 'hear_jun') { expect(notes(state)).toContain('I said I can’t leave it'); expect(state.activeRun!.flags).not.toContain(id('chair', 'jun_reached')); }
-      if (action === 'reach_jun') { expect(state.activeRun!.flags).not.toContain(id('chair', 'at_pickup')); expect(notes(state)).toContain('Have you checked this can go with me'); }
+      if (action === 'reach_jun') { expect(currentStoryPrompt(s, state.activeRun!)).toContain('The team has reached Jun'); expect(state.activeRun!.flags).not.toContain(id('chair', 'at_pickup')); expect(notes(state)).toContain('Have you checked this can go with me'); }
       if (action === 'reach_pickup_assistance') expect(state.activeRun!.flags).not.toContain(id('chair', 'jun_safe'));
     }
     expect(computeDebrief(state, state.activeRun!)!.completionAchieved).toBe(true); expect(state.activeRun!.history.flatMap(h => h.unitsUsed)).toEqual([]);
     expect(civilianOutcomeViews(s, state.activeRun!)).toMatchObject([{ label: 'Jun Park', status: 'safe' }]);
-    expect(notes(state)).toContain('wheelchair complete the protected move together'); expect(notes(state)).toContain('community room'); expect(notes(state)).toContain('No onward journey is recorded as completed');
+    expect(notes(state)).toContain('wheelchair complete the protected move together'); expect(notes(state)).toContain('community room'); expect(notes(state)).toContain('onward journey has not happened');
   });
   it('offers the physical opening alternative and preserves exact unreached, reached and pickup partials', () => {
     const s = find('chair'); const states = [
@@ -172,6 +216,15 @@ describe('My Chair Comes Too v5', () => {
     expect(s.endings[states[2].activeRun!.endingId!].summary).toContain('final protected move remains unfinished');
     for (const state of states) { expect(computeDebrief(state, state.activeRun!)!.completionAchieved).toBe(false); expect(state.activeRun!.flags).not.toContain(id('chair', 'jun_safe')); }
   });
+  it.each([true, false])('keeps Jun’s completed chair-preserving move out of remaining tasks (care needed: %s)', careNeeded => {
+    const s = find('chair', { care_needed: careNeeded });
+    const state = play(running(s), 'chair', ['reach_and_hear', 'check_chair_route', 'prepare_assistance', 'reach_pickup_assistance', 'assisted_move', 'civilian_partial']);
+    expect(state.activeRun!.flags).toEqual(expect.arrayContaining([id('chair', 'jun_safe'), id('chair', 'chair_safe')]));
+    const expected = [careNeeded ? 'Arrange accepted medical care for Jun' : 'Agree Jun’s next step', 'Complete any outstanding officer care'];
+    expect(s.endings[state.activeRun!.endingId!].remainingTasks).toEqual(expected);
+    expect(computeDebrief(state, state.activeRun!)!).toMatchObject({ completionAchieved: false, remainingTasks: expected });
+  });
+
   it('requires actual assigned, reserved, serviceable and qualified vehicle support at both checks and movement', () => {
     const s = find('chair', { vehicle_fit: true, care_needed: false }); const prep = (vehicle: boolean) => play(running(s, [], vehicle), 'chair', ['reach_and_hear', 'check_chair_route']);
     expect(evaluate(prep(false), id('chair', 'check_reserved_vehicle')).eligible).toBe(false); const prepared = prep(true);

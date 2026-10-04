@@ -4,7 +4,7 @@ import { externalSupportActionIssue, remainingSupportWait } from './external-sup
 import { evaluateCapabilities } from './capabilities';
 import { getScenario } from './scenario-registry';
 import { hydrateStoryAction, storyActionTarget, storyPropsPublic, storyPublicScenario } from './story-people';
-import { currentStoryRoute } from './story-bindings';
+import { currentStoryRoute, findStoryRoute } from './story-bindings';
 // Operation resolution: eligibility, contributors, score, probability and strain.
 // Pure functions of (state, run, scenario, action, squads). No randomness is drawn
 // here; the engine draws exactly one saved sample per committed decision and
@@ -521,7 +521,14 @@ export function evaluateAction(input: EvalInput): Evaluation {
   }
   const publicTarget = followsPerson ? { publicTargetId: target ? action.targetId : null } : {};
   const followsRoute = scenario.version >= 5 && !!action.storyRoute;
-  const storyRoute = followsRoute ? currentStoryRoute(scenario, built, action.storyRoute!) : null;
+  const followsSquadRoute = followsRoute && action.storyRouteActor === 'squad';
+  const routeBinding = followsRoute ? scenario.story?.bindings.routes[action.storyRoute!] : undefined;
+  const squadStoryRoutes = followsSquadRoute && routeBinding ? new Map([...new Set(input.acting)].map(squad => [
+    squad, findStoryRoute(built, run.squadTasks.find(task => task.squadId === squad)?.positionId ?? '', action.targetId, routeBinding.profile),
+  ])) : null;
+  const storyRoute = followsSquadRoute
+    ? squadStoryRoutes && [...squadStoryRoutes.values()].every(route => route !== null) ? [...new Set([...squadStoryRoutes.values()].flatMap(route => route!))] : null
+    : followsRoute ? currentStoryRoute(scenario, built, action.storyRoute!) : null;
   if (storyRoute) action = { ...action, requires: { ...action.requires, openings: storyRoute.map(openingId => ({
     openingId,
     blockedReason: 'The route for this move is blocked.',
@@ -826,7 +833,12 @@ export function evaluateAction(input: EvalInput): Evaluation {
     const start = standingOf(built, task);
     const tool = bestOf(units[sq], 'entry_tool');
     const toolArg = tool ? { effectiveness: effOf(tool) } : null;
-    const routeTo = (spaceId: Id, at: Vec) => routeBetween(built, task.positionId, start.at, spaceId, at, toolArg);
+    const routeTo = (spaceId: Id, at: Vec): Route => {
+      if (!followsSquadRoute || !routeBinding) return routeBetween(built, task.positionId, start.at, spaceId, at, toolArg);
+      const openings = spaceId === action.targetId ? squadStoryRoutes?.get(sq) : findStoryRoute(built, task.positionId, spaceId, routeBinding.profile);
+      return openings ? routeAlongOpenings(built, start.at, at, openings, toolArg)
+        : { minutes: Infinity, forceMinutes: 0, forced: [], points: [], lastOpeningId: null, reachable: false };
+    };
 
     // candidate standing points
     let cands: { stand: Standing; zone: Id | null }[] = [];
@@ -836,7 +848,9 @@ export function evaluateAction(input: EvalInput): Evaluation {
     }
     else if (spec) {
       const mode = action.approach === 'window' ? 'outside' : 'inside';
-      cands = standingCandidates(built, action.targetId, mode, spec.openingId).map((p) => ({ stand: standingFromPoint(p), zone: action.approach === 'window' ? p.spaceId : null }));
+      cands = standingCandidates(built, action.targetId, mode, spec.openingId)
+        .filter(point => !followsSquadRoute || action.approach !== 'path' || point.spaceId === action.targetId)
+        .map((p) => ({ stand: standingFromPoint(p), zone: action.approach === 'window' ? p.spaceId : null }));
     }
     if (cands.length === 0 && action.approach === 'window' && vantage.length > 0) {
       for (const z of vantage) {
@@ -1087,7 +1101,11 @@ export function evaluateAction(input: EvalInput): Evaluation {
   let storyOpenedIds: Id[] | undefined;
   let storySquadOpenedIds: Id[] | undefined;
   let storyMovementMinutes: number | undefined;
-  if (followsRoute && storyRoute) {
+  if (followsSquadRoute) {
+    // The ordinary squad plans already contain every actual passage and within-room movement.
+    storySquadOpenedIds = [...new Set(travelledRoutes.flatMap(route => route.forced.map(door => door.openingId)))];
+    storyOpenedIds = storySquadOpenedIds;
+  } else if (followsRoute && storyRoute) {
     const binding = scenario.story!.bindings.routes[action.storyRoute!];
     const tools = acting.flatMap(squad => {
       const unit = bestOf(units[squad], 'entry_tool');

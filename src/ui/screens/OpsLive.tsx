@@ -108,7 +108,7 @@ export function OpsLive() {
     setOverride({ actionId: view.id, acting: nextActing, support: support.filter((x) => !nextActing.includes(x)) });
   };
   const toggleSupport = (id: SquadId) => {
-    if (!view || acting.includes(id)) return;
+    if (!view?.support || acting.includes(id)) return;
     setOverride({ actionId: view.id, acting, support: support.includes(id) ? support.filter((x) => x !== id) : [...support, id] });
   };
 

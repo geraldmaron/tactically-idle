@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import type {
   ActionView,
@@ -318,6 +318,18 @@ function shortLabel(label: string, o: Officer): string {
 // ---------------------------------------------------------------- stage progress
 
 export function StageSteps({ progress }: { progress: StageProgress }) {
+  const rail = useRef<HTMLOListElement>(null);
+  const current = useRef<HTMLLIElement>(null);
+  useEffect(() => {
+    const strip = rail.current;
+    const step = current.current;
+    if (!strip || !step) return;
+    const reveal = () => revealStageStep(strip, step);
+    reveal();
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(reveal);
+    observer?.observe(strip);
+    return () => observer?.disconnect();
+  }, [progress.stage, progress.index]);
   const fallback: { id: StageId; label: string }[] = [
     { id: 'assess', label: 'Assess' },
     { id: 'adapt', label: 'Adapt' },
@@ -328,9 +340,9 @@ export function StageSteps({ progress }: { progress: StageProgress }) {
       ? progress.stages
       : fallback.map((s, i) => ({ ...s, state: (i < progress.index ? 'done' : i === progress.index ? 'current' : 'todo') as 'done' | 'current' | 'todo' }));
   return (
-    <ol className="steps" aria-label="Operation stages">
+    <ol ref={rail} className="steps" aria-label="Operation stages" tabIndex={0}>
       {stages.map((s, i) => (
-        <li key={s.id} className={`step step-${s.state}`} aria-current={s.state === 'current' ? 'step' : undefined}>
+        <li key={s.id} ref={s.state === 'current' ? current : undefined} className={`step step-${s.state}`} aria-current={s.state === 'current' ? 'step' : undefined}>
           <span className="step-track">
             <span className={`step-line${i === 0 ? ' step-line-hide' : ''}${s.state !== 'todo' ? ' step-line-on' : ''}`} />
             <span className="step-dot">{s.state === 'done' && <Icon name="check" size={9} strokeWidth={3.2} />}</span>
@@ -341,6 +353,14 @@ export function StageSteps({ progress }: { progress: StageProgress }) {
       ))}
     </ol>
   );
+}
+
+/** Reveal the current stage inside its own rail without scrolling the operation screen. */
+export function revealStageStep(strip: HTMLOListElement, step: HTMLLIElement) {
+  const box = step.getBoundingClientRect();
+  const viewport = strip.getBoundingClientRect();
+  if (box.left < viewport.left + 4) strip.scrollLeft += box.left - viewport.left - 4;
+  else if (box.right > viewport.right - 4) strip.scrollLeft += box.right - viewport.right + 4;
 }
 
 // ---------------------------------------------------------------- status chip
@@ -507,10 +527,10 @@ export function ActionSheet(p: ActionSheetProps) {
                   ))}
                 </div>
               </div>
-              <div className="picker">
+              {v.support && v.support.maxSquads > 0 && <div className="picker">
                 <span className="picker-label">
                   <Icon name="handover" size={14} />
-                  Supporting squad (optional)
+                  Supporting squad ({v.support.minSquads > 0 ? `${v.support.minSquads} required` : 'optional'})
                 </span>
                 <div className="chips">
                   {p.squads
@@ -522,7 +542,7 @@ export function ActionSheet(p: ActionSheetProps) {
                     ))}
                   {p.squads.every((s) => p.acting.includes(s.id)) && <span className="dim">No other squad to support.</span>}
                 </div>
-              </div>
+              </div>}
             </div>
           )}
           {p.all.length > 1 && <details className="operation-switcher"><summary>Compare another decision ({p.all.length})</summary>

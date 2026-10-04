@@ -78,6 +78,7 @@ export function attachStoryBindings(s: ScenarioDefinition, built: BuiltLocation)
   const bindRoute = (ids: string[], role: string, destination = false) => {
     for (const action of choose(ids)) {
       action.storyRoute = role;
+      if (role === 'entry') { action.storyRouteActor = 'squad'; action.approach = 'path'; }
       // A complete current route replaces the old first-door proxy. It can choose a valid alternate path.
       delete action.requires.openings;
       if (destination) action.targetId = story.bindings.routes[role].toSpaceId;
@@ -108,7 +109,7 @@ export function attachStoryBindings(s: ScenarioDefinition, built: BuiltLocation)
     if (!register) throw new Error('Eli’s shop scene requires an actual register');
     story.bindings.props.register = { id: 'register', label: 'Shop register', kind: 'mapped', objectId: register.id };
     bindRoute(ids('reach_eli', 'urgent_response'), 'entry');
-    choose(ids('urgent_response'))[0].approach = 'path'; bindRoute(ids('bring_eli_out'), 'exit', true);
+    bindRoute(ids('bring_eli_out'), 'exit', true);
     personTarget(ids('reach_eli', 'civilian_aid', 'civilian_transfer', 'civilian_agreement', 'civilian_next_step'), 'eli');
   } else if (spec.type === 'protected_rescue') {
     move('jun', p + 'at_pickup', outside, 'At the outside pickup');

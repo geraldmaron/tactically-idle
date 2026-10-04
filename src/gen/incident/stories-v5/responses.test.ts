@@ -225,7 +225,10 @@ describe('Leave the Camera Off', () => {
     state = decide(state, 'withdraw_group_proposal'); expect(state.activeRun!.flags).toContain(id(s, 'group_proposal_withdrawn'));
     state = decide(state, 'meet_mina_outside'); refused(state, 'honor_next_step');
     expect(civilianOutcomeViews(s, state.activeRun!)[0].status).toBe('safe'); expect(currentStoryPrompt(s, state.activeRun!)).toContain('has not happened');
-    state = play(state, ['talk_separately', 'honor_next_step']); expect(computeDebrief(state, state.activeRun!)!.completionAchieved).toBe(true);
+    state = decide(state, 'talk_separately');
+    expect(currentStoryPrompt(s, state.activeRun!)).toContain('Mina has spoken privately');
+    expect(state.activeRun!.history.at(-1)!.committed!.consequences.at(-1)).toContain('Complete that next step');
+    state = decide(state, 'honor_next_step'); expect(computeDebrief(state, state.activeRun!)!.completionAchieved).toBe(true);
   });
 
   it('a faster private phone requires a working assigned unit and an actual participating negotiator', () => {
@@ -278,6 +281,9 @@ describe('Leave the Camera Off', () => {
     const care = find('protective', { camera_response: true, care_needed: true });
     const pending = decide(play(ready(care), ['meet_mina_outside', 'talk_separately']), 'resolve_partial');
     expect(care.endings[pending.activeRun!.endingId!].summary).toContain('no receiving crew has accepted her care');
+    expect(plain.endings[unheard.activeRun!.endingId!].remainingTasks).toEqual(['Complete the separate conversation Mina accepted', 'Complete any needed civilian care', 'Complete any outstanding officer care']);
+    expect(computeDebrief(heard, heard.activeRun!)!.remainingTasks).toEqual(['Complete Mina’s chosen next step', 'Complete any outstanding officer care']);
+    expect(computeDebrief(pending, pending.activeRun!)!.remainingTasks).toEqual(['Arrange accepted wrist assessment for Mina', 'Complete any outstanding officer care']);
     for (const state of [inside, unheard, heard, pending]) expect(computeDebrief(state, state.activeRun!)!.completionAchieved).toBe(false);
   });
 
