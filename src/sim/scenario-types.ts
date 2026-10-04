@@ -216,8 +216,8 @@ export interface ActionDefinition {
   storyTargetPersonId?: Id;
   /** Full archetype route rechecked against current openings at action evaluation. */
   storyRoute?: string;
-  /** The bound route moves a person by default; on-site care may instead bring the accepting crew. */
-  storyRouteActor?: 'person' | 'external_support';
+  /** Person routes use bound endpoints; squad routes start at each squad's actual current position. */
+  storyRouteActor?: 'person' | 'squad' | 'external_support';
   /** V4 dispatch/care administration can remain possible when every deployed officer is hurt. */
   commandOnly?: boolean;
   /** Wait exactly the remaining response time of a bounded, authored service. */

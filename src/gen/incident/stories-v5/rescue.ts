@@ -61,7 +61,8 @@ export function withRescueStory(input: ScenarioDefinition, built: BuiltLocation)
       { when: { flags: ['hr_vehicle_rejected'] }, prompt: 'The reserved vehicle cannot provide the checked chair-loading arrangement. Jun can still use a suitable slower assistance plan.' },
       { when: { flags: ['hr_route_checked'], notFlags: ['hr_assistance_ready', 'hr_vehicle_ready'] }, prompt: 'The existing door route fits Jun and the chair. Arrange suitable slower help or check the actual reserved vehicle before moving to pickup.' },
       { when: { flags: ['hr_assistance_ready'] }, prompt: 'Jun and the chair have a checked assistance plan. The move to exterior staging is still unfinished.' },
-      { when: { flags: ['hr_vehicle_ready'] }, prompt: 'The actual reserved vehicle can receive Jun and the chair. First complete the separate move through the checked doors.' },
+      { when: { flags: ['hr_jun_reached'], notFlags: ['hr_route_checked', 'hr_route_rejected'] }, prompt: 'The team has reached Jun and heard why the wheelchair must come too. Check the actual door route together before choosing how to make the move.' },
+    { when: { flags: ['hr_vehicle_ready'] }, prompt: 'The actual reserved vehicle can receive Jun and the chair. First complete the separate move through the checked doors.' },
     ] },
     resolve: { id: 'resolve', label: 'Jun chooses what comes next', prompt: 'Jun and the wheelchair are at exterior staging. The final protected move remains unfinished.', actions: [], contextPrompts: [
       { when: { flags: ['hr_injury_pause', 'hr_jun_safe'] }, prompt: 'An officer is hurt and out of action. Jun and the chair reached safety; the officer now needs a receiving crew.' },
@@ -115,14 +116,13 @@ export function withRescueStory(input: ScenarioDefinition, built: BuiltLocation)
   s.endings.care_accepted.summary = 'Jun Park and the wheelchair reached safety together, and the ambulance crew accepted Jun’s care. Jun chose the community room for afterward; that journey has not happened. Any injured officer has reached a separate medical receiver. The wider armed incident remains separate.';
   s.endings.partial.remainingTasks = ['Complete Jun’s unfinished chair-preserving move', 'Complete any needed care for Jun and injured officers'];
   return finishPersonalStory(s, 'v5_chair', [
-    { id: 'jun_unreached', when: { notFlags: ['hr_jun_reached'] }, title: 'Jun is still waiting at home', text: 'Jun Park remains in the living room and has not been physically reached. The wheelchair remains there too.' },
-    { id: 'jun_reached', when: { flags: ['hr_jun_reached'], notFlags: ['hr_at_pickup'] }, title: 'Jun is reached, but still at home', text: 'The team reached Jun Park in the living room. Jun and the wheelchair have not reached exterior staging.' },
-    { id: 'jun_pickup', when: { flags: ['hr_at_pickup'], notFlags: ['hr_jun_safe'] }, title: 'Jun is at staging; the move is unfinished', text: 'Jun Park and the wheelchair reached exterior staging. The final protected move remains unfinished.' },
-    { id: 'jun_care_pending', when: { flags: ['hr_jun_safe', 'hr_care_required'] }, title: 'Jun is safe; care is pending', text: 'Jun Park and the wheelchair reached safety. A receiving crew has not yet accepted Jun’s needed care.' },
-    { id: 'jun_next_pending', when: { flags: ['hr_jun_safe'], notFlags: ['hr_care_required'] }, title: 'Jun is safe; next steps remain open', text: 'Jun Park and the wheelchair reached safety, with no current medical need reported. The next step or recorded officer care remains unfinished.' },
+    { id: 'jun_unreached', when: { notFlags: ['hr_jun_reached'] }, title: 'Jun is still waiting at home', text: 'Jun Park remains in the living room and has not been physically reached. The wheelchair remains there too.', remainingTasks: ['Reach Jun and complete the move with the wheelchair', 'Complete any needed civilian care', 'Complete any outstanding officer care'] },
+    { id: 'jun_reached', when: { flags: ['hr_jun_reached'], notFlags: ['hr_at_pickup'] }, title: 'Jun is reached, but still at home', text: 'The team reached Jun Park in the living room. Jun and the wheelchair have not reached exterior staging.', remainingTasks: ['Complete Jun’s move with the wheelchair to staging and safety', 'Complete any needed civilian care', 'Complete any outstanding officer care'] },
+    { id: 'jun_pickup', when: { flags: ['hr_at_pickup'], notFlags: ['hr_jun_safe'] }, title: 'Jun is at staging; the move is unfinished', text: 'Jun Park and the wheelchair reached exterior staging. The final protected move remains unfinished.', remainingTasks: ['Complete Jun’s protected move with the wheelchair from staging', 'Complete any needed civilian care', 'Complete any outstanding officer care'] },
+    { id: 'jun_care_pending', when: { flags: ['hr_jun_safe', 'hr_care_required'] }, title: 'Jun is safe; care is pending', text: 'Jun Park and the wheelchair reached safety. A receiving crew has not yet accepted Jun’s needed care.', remainingTasks: ['Arrange accepted medical care for Jun', 'Complete any outstanding officer care'] },
+    { id: 'jun_next_pending', when: { flags: ['hr_jun_safe'], notFlags: ['hr_care_required'] }, title: 'Jun is safe; next steps remain open', text: 'Jun Park and the wheelchair reached safety, with no current medical need reported. The next step or recorded officer care remains unfinished.', remainingTasks: ['Agree Jun’s next step', 'Complete any outstanding officer care'] },
   ], [
     { when: { flags: ['hr_jun_injured'], notFlags: ['hr_jun_care'] }, text: 'Jun’s recorded injury still needs accepted care.' },
-    { when: { flags: ['hr_jun_safe'], notFlags: ['hr_destination_chosen'] }, text: 'Jun asked about the community room for afterward, with a place for the wheelchair by the window. No onward journey is recorded as completed.' },
     { text: 'The wider armed incident remains a separate responsibility.' },
   ]);
 }

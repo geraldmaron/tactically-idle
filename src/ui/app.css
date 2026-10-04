@@ -2043,16 +2043,26 @@ button.ocard {
 .steps {
   list-style: none;
   margin: 0;
-  padding: 0;
+  padding: 5px 4px 8px;
   display: flex;
-  flex: 0 0 auto;
-  width: 188px;
+  flex-wrap: nowrap;
+  flex: 1 0 100%;
+  width: 100%;
+  min-width: 0;
   max-width: 100%;
-  margin-left: auto;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-padding-inline: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+}
+.steps:focus-visible {
+  outline: 2px solid var(--amber);
+  outline-offset: 2px;
 }
 .step {
   position: relative;
-  flex: 1 1 0;
+  flex: 1 0 auto;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -2110,9 +2120,13 @@ button.ocard {
 .step-label {
   font-family: var(--font-cond);
   font-weight: 600;
-  font-size: 11.5px;
+  font-size: 13px;
   letter-spacing: 0.06em;
   color: #7d8da6;
+  padding-inline: 12px;
+  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: normal;
 }
 .step-current .step-label {
   color: var(--amber-2);
@@ -3007,13 +3021,6 @@ button.ocard {
   }
   .live-name {
     font-size: 24px;
-  }
-  .steps {
-    width: 150px;
-  }
-  .step-label {
-    font-size: 10px;
-    letter-spacing: 0.03em;
   }
   .live-sub {
     font-size: 11px;

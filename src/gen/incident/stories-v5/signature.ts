@@ -24,7 +24,8 @@ export function withSignatureStory(input: ScenarioDefinition, built: BuiltLocati
   const fact = (id: string, label: string, truth: boolean, claim: string, confirmed: string, disproved: string, hidden = false): FactDefinition => ({
     ...factHR(ctx, id, label, truth, claim, { confirmed, disproved }, hidden ? 'unknown' : 'reported'),
     // Hidden story beats must not become map markers or unresolved briefing spoilers.
-    showWhenUnknown: !hidden, ...(hidden ? { source: null, note: null, uncertainty: 'Further details depend on the next conversation.' } : {}),
+    showWhenUnknown: !hidden, uncertainty: claim,
+    ...(hidden ? { source: null, note: null, uncertainty: 'Further details depend on the next conversation.' } : {}),
   });
   s.version = 5;
   s.title = 'One Last Signature';
@@ -49,7 +50,7 @@ export function withSignatureStory(input: ScenarioDefinition, built: BuiltLocati
     fact('f_phone_consent', 'Lewis permits the changed release', episode.leavesPhone, 'Lewis has not agreed to Ben leaving his phone with Mara.', 'Ben agrees to lend Mara his phone if he can call his dispatcher outside; Lewis permits the change.', 'Ben is willing to lend his phone if he can call outside, but Lewis refuses the changed release.', true),
     fact('f_mara_refusal', 'Mara will not sign the statement', true, 'Mara has not yet given her own account.', 'Mara says, “I won’t sign something I don’t believe.” She asks whether she can leave without signing.', 'Mara’s position is still unknown.', true),
     fact('f_lost_line_threat', 'Patrol’s current danger update', episode.urgentWithoutContact, 'Patrol has not yet supplied a fresh update.', 'Patrol hears Lewis threaten to shoot Mara now and sees him raise the handgun toward her.', 'Patrol reports no new threat or visible attack. The original danger remains unresolved.', true),
-    fact('f_care_needed', 'Current care needs', episode.medicalNeed, 'Their needs can be checked once they are safe.', 'Mara reports dizziness and asks for a medical assessment.', 'Neither Ben nor Mara reports a current medical need. Any recorded injury still needs care.', true),
+    fact('f_care_needed', 'Additional reported care needs', episode.medicalNeed, 'Their needs can be checked once they are safe.', 'Mara reports dizziness and asks for a medical assessment.', 'Neither Ben nor Mara reports an additional symptom. Any recorded injury still needs care.', true),
   ];
   s.civilianOutcomes = [
     { id: 'ben', label: 'Ben Flores', factId: 'f_ben', safeFlag: 'sig_ben_safe', injuredFlag: 'sig_ben_injured', careFlag: 'sig_ben_care' },
@@ -177,12 +178,12 @@ export function withSignatureStory(input: ScenarioDefinition, built: BuiltLocati
   // Specific epilogues lead with committed human outcomes. Partial endings have
   // separate summaries so the final screen also reflects who actually got out.
   const partials = [
-    { id: 'v5_sig_partial_inside', when: { notFlags: ['sig_ben_safe'] }, title: 'Both are still inside', text: 'Ben and Mara are still inside. Ben’s delivery slip is still waiting for its signature; neither release is complete.' },
-    { id: 'v5_sig_partial_ben', when: { flags: ['sig_ben_safe'], notFlags: ['sig_mara_safe'] }, title: 'Ben is out; Mara is still inside', text: 'Ben is outside with his unsigned slip. Mara is still inside; her safety remains unresolved.' },
-    { id: 'v5_sig_partial_care', when: { flags: ['sig_ben_safe', 'sig_mara_safe', 'hr_care_required'] }, title: 'Both are out; Mara’s care is pending', text: 'Ben and Mara are outside. Ben is safe with patrol, but no medical crew has accepted Mara’s care.' },
-    { id: 'v5_sig_partial_next', when: { flags: ['sig_ben_safe', 'sig_mara_safe'], notFlags: ['hr_care_required'] }, title: 'Both are out; the next step is open', text: 'Ben and Mara are outside and report no current medical need. Their next steps have not been agreed. The record retains any officer injuries and their actual care status.' },
+    { id: 'v5_sig_partial_inside', when: { notFlags: ['sig_ben_safe'] }, title: 'Both are still inside', text: 'Ben and Mara are still inside. Ben’s delivery slip is still waiting for its signature; neither release is complete.', remainingTasks: ['Complete Ben’s and Mara’s release to safety', 'Complete any needed civilian care', 'Complete any outstanding officer care'] },
+    { id: 'v5_sig_partial_ben', when: { flags: ['sig_ben_safe'], notFlags: ['sig_mara_safe'] }, title: 'Ben is out; Mara is still inside', text: 'Ben is outside with his unsigned slip. Mara is still inside; her safety remains unresolved.', remainingTasks: ['Complete Mara’s release to safety', 'Complete any needed civilian care', 'Complete any outstanding officer care'] },
+    { id: 'v5_sig_partial_care', when: { flags: ['sig_ben_safe', 'sig_mara_safe', 'hr_care_required'] }, title: 'Both are out; Mara’s care is pending', text: 'Ben and Mara are outside. Ben is safe with patrol, but no medical crew has accepted Mara’s care.', remainingTasks: ['Arrange accepted medical care for Mara', 'Complete any outstanding officer care'] },
+    { id: 'v5_sig_partial_next', when: { flags: ['sig_ben_safe', 'sig_mara_safe'], notFlags: ['hr_care_required'] }, title: 'Both are out; the next step is open', text: 'Ben and Mara are outside and report no current medical need. Their next steps have not been agreed. The record retains any officer injuries and their actual care status.', remainingTasks: ['Agree Ben’s and Mara’s next steps', 'Complete any outstanding officer care'] },
   ];
-  for (const partial of partials) s.endings[partial.id] = { ...structuredClone(s.endings.partial), id: partial.id, title: partial.title, summary: partial.text };
+  for (const partial of partials) s.endings[partial.id] = { ...structuredClone(s.endings.partial), id: partial.id, title: partial.title, summary: partial.text, remainingTasks: [...partial.remainingTasks] };
   for (const stage of Object.values(s.stages)) for (const action of stage.actions) for (const band of HR_BANDS) {
     const effects = action.outcomes[band];
     if (!effects.some(effect => effect.ending)) continue;

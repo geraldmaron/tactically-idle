@@ -25,7 +25,7 @@ export function storyOpenings(ids: string[]) {
   return ids.map(openingId => ({ openingId, blockedReason: 'This checked route is physically blocked. The person cannot complete this move.', lockedNote: 'The locked door adds time before this route can be used.' }));
 }
 export function personalFact(ctx: HighRiskContext, id: string, label: string, truth: boolean, claim: string, confirmed: string, disproved: string, hidden = true): FactDefinition {
-  return { ...factHR(ctx, id, label, truth, claim, { confirmed, disproved }, hidden ? 'unknown' : 'reported'), showWhenUnknown: !hidden,
+  return { ...factHR(ctx, id, label, truth, claim, { confirmed, disproved }, hidden ? 'unknown' : 'reported'), showWhenUnknown: !hidden, uncertainty: claim,
     ...(hidden ? { source: null, note: null, uncertainty: 'This needs a current conversation or observation.' } : {}) };
 }
 /** Shared medical mechanics receive character-specific narration before namespace isolation. */
@@ -64,8 +64,8 @@ export function personalOfficerCare(ctx: HighRiskContext): ActionDefinition[] {
   }
   return actions;
 }
-export function finishPersonalStory(s: ScenarioDefinition, prefix: string, partials: { id: string; when: Condition; title: string; text: string }[], epilogue: OutcomeEffect[]): ScenarioDefinition {
-  for (const partial of partials) s.endings[partial.id] = { ...structuredClone(s.endings.partial), id: partial.id, title: partial.title, summary: partial.text };
+export function finishPersonalStory(s: ScenarioDefinition, prefix: string, partials: { id: string; when: Condition; title: string; text: string; remainingTasks: string[] }[], epilogue: OutcomeEffect[]): ScenarioDefinition {
+  for (const partial of partials) s.endings[partial.id] = { ...structuredClone(s.endings.partial), id: partial.id, title: partial.title, summary: partial.text, remainingTasks: [...partial.remainingTasks] };
   for (const stage of Object.values(s.stages)) for (const action of stage.actions) for (const band of HR_BANDS) {
     const effects = action.outcomes[band];
     if (!effects.some(e => e.ending)) continue;
@@ -77,8 +77,7 @@ export function finishPersonalStory(s: ScenarioDefinition, prefix: string, parti
     }
     effects.push(...structuredClone(epilogue),
       { when: { flags: ['casualty:awaiting_transport'] }, text: 'The injured officer still needs an accepted medical transfer and remains out of action.' },
-      { when: { flags: ['casualty:evacuated'] }, text: 'The separate medical crew has accepted the injured officer. That officer did not return to the team.' },
-      { when: { notFlags: ['casualty:officers'] }, text: 'No officer injury was recorded.' });
+      { when: { flags: ['casualty:evacuated'] }, text: 'The separate medical crew has accepted the injured officer. That officer did not return to the team.' });
   }
   const fixedLabels: Record<string, string> = {
     hr_hear_eli: 'Accounts checked', hr_check_patrol: 'Accounts checked', hr_agreed_pause: 'Gunfire paused', hr_return_to_pause: 'Gunfire paused', hr_check_stand_down: 'Current conduct checked', hr_reach_eli: 'Eli reached', hr_bring_eli_out: 'Eli reached safety',
@@ -177,10 +176,10 @@ export function withArmedStory(input: ScenarioDefinition, built: BuiltLocation):
   s.endings.care_accepted.summary = 'Eli Tran is outside and the receiving ambulance has accepted his care. Any injured officer has reached a separate medical receiver. Grant’s stand-down is verified; his investigation remains open.';
   s.endings.partial.remainingTasks = ['Complete Eli’s unfinished move and current danger checks', 'Complete any needed civilian or officer care'];
   return finishPersonalStory(s, 'v5_noise', [
-    { id: 'eli_inside', when: { notFlags: ['hr_eli_reached', 'hr_eli_safe'] }, title: 'Eli is still inside', text: 'Eli Tran remains inside the shop and has not been reached. His protection is unfinished.' },
-    { id: 'eli_reached', when: { flags: ['hr_eli_reached'], notFlags: ['hr_eli_safe'] }, title: 'Eli is reached, but still inside', text: 'The team reached Eli Tran and heard what he needs, but his move outside is unfinished.' },
-    { id: 'eli_care_pending', when: { flags: ['hr_eli_safe', 'hr_care_required'] }, title: 'Eli is outside; care is pending', text: 'Eli Tran is outside. His medical care has not been accepted by a receiving crew.' },
-    { id: 'eli_next_pending', when: { flags: ['hr_eli_safe'], notFlags: ['hr_care_required'] }, title: 'Eli is outside; next steps are open', text: 'Eli Tran is outside and reports no current medical need. His next step or recorded officer care remains unfinished.' },
+    { id: 'eli_inside', when: { notFlags: ['hr_eli_reached', 'hr_eli_safe'] }, title: 'Eli is still inside', text: 'Eli Tran remains inside the shop and has not been reached. His protection is unfinished.', remainingTasks: ['Reach Eli and complete his move outside', 'Complete any outstanding danger checks', 'Complete any needed civilian care', 'Complete any outstanding officer care'] },
+    { id: 'eli_reached', when: { flags: ['hr_eli_reached'], notFlags: ['hr_eli_safe'] }, title: 'Eli is reached, but still inside', text: 'The team reached Eli Tran and heard what he needs, but his move outside is unfinished.', remainingTasks: ['Complete Eli’s move outside', 'Complete any needed civilian care', 'Complete any outstanding officer care'] },
+    { id: 'eli_care_pending', when: { flags: ['hr_eli_safe', 'hr_care_required'] }, title: 'Eli is outside; care is pending', text: 'Eli Tran is outside. His medical care has not been accepted by a receiving crew.', remainingTasks: ['Arrange accepted medical care for Eli', 'Complete any outstanding officer care'] },
+    { id: 'eli_next_pending', when: { flags: ['hr_eli_safe'], notFlags: ['hr_care_required'] }, title: 'Eli is outside; next steps are open', text: 'Eli Tran is outside and reports no current medical need. His next step or recorded officer care remains unfinished.', remainingTasks: ['Agree Eli’s next step', 'Complete any outstanding officer care'] },
   ], [
     { when: { flags: ['hr_eli_injured'], notFlags: ['hr_eli_care'] }, text: 'Eli’s recorded injury still needs accepted care.' },
     { when: { flags: ['hr_voice_kept'] }, text: 'The team kept talking beside Eli until he was outside, as he asked.' },

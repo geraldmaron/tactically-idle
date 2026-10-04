@@ -522,6 +522,7 @@ export function decisionViewsFor(state: GameState, run: OperationRun, scenario: 
       knowledgeChanges: record.knowledgeChanges.map((change) => ({ ...change, label: scenario.facts.find((fact) => fact.id === change.factId)?.label ?? change.factId })),
       contributors: record.inputs.map((input) => ({ ...input })),
       consequences: committed ? [...committed.consequences] : step.effects.map((effect) => effect.text).filter((text): text is string => !!text),
+      ...(committed?.officerCasualties !== undefined ? { officerCasualties: committed.officerCasualties.map(person => ({ ...person })) } : {}),
       endingTitle: committed ? committed.endingTitle : (ending ? scenario.endings[ending]?.title ?? ending : null),
     };
   });

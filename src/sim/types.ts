@@ -701,6 +701,8 @@ export interface DecisionView {
   stageLabel: string;
   band: OutcomeBand;
   resultLabel?: string;
+  /** Present for current committed records; absence keeps legacy prose fallback. */
+  officerCasualties?: OfficerCasualtyRecord[];
   explanation: string[];
   timeCost: number;
   objectiveDelta: number;
@@ -736,6 +738,8 @@ export interface ActionView {
   requirementLine: string;
   actingSquadIds: SquadId[];
   supportSquadIds: SquadId[];
+  /** Authored support capacity and the minimum still needed for the selected acting squads. */
+  support: { maxSquads: number; minSquads: number } | null;
   officerIds: Id[];
   targetId: Id | null;
   eligible: boolean;

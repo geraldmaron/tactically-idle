@@ -88,6 +88,22 @@ describe('scannable debrief results', () => {
     expect(html).toContain('An officer suffered an injury while withdrawing.');
   });
 
+  it('does not turn a completed fixed event into a warning because its effort band was adverse', () => {
+    const event = { ...decision, band: 'adverse' as const, resultLabel: 'Mara reached safety', officerCasualties: [], civilianSafetyDelta: 0, objectiveDelta: 0,
+      consequences: ['Mara reached safety.', 'No new symptom was reported. Any recorded injury still needs care.'],
+      explanation: ['Mara reached safety. No new symptom was reported. Any recorded injury still needs care.'] };
+    expect(visibleDebriefConsequences({ ...result, decisions: [event] })).toEqual([]);
+    const entire = renderToStaticMarkup(createElement(SavedDebriefContents, { debrief: { ...result, decisions: [event] }, officers: {} }));
+    expect(entire).toContain('Mara reached safety.');
+  });
+
+  it('keeps actual adverse events once without repeating their joined explanation', () => {
+    const event = { ...decision, band: 'adverse' as const, officerCasualties: [], civilianSafetyDelta: 0, objectiveDelta: 0,
+      consequences: ['Lewis stopped answering.', 'The phone carried his current threat.'],
+      explanation: ['Lewis stopped answering. The phone carried his current threat.'] };
+    expect(visibleDebriefConsequences({ ...result, decisions: [event] })).toEqual(['Provide aid: Lewis stopped answering.', 'Provide aid: The phone carried his current threat.']);
+  });
+
   it('keeps structured losses visible while leaving adverse scoring details in the full log', () => {
     const failed = { ...decision, band: 'adverse' as const, objectiveDelta: -8, civilianSafetyDelta: 0, consequences: ['The transfer was not completed.'], explanation: ['Coordination 42 contributed 11 points.', 'The time cost was four minutes.'] };
     const lines = visibleDebriefConsequences({ ...result, decisions: [failed] });
