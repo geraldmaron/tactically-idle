@@ -37,6 +37,41 @@ const decision = (patch: Partial<DecisionView> = {}): DecisionView => ({
   consequences: ['The patient received aid, but the route is still unresolved.', 'The delay leaves the squad with less time.', 'Next: choose how to preserve access.'],
   explanation: ['The patient received aid, but the route is still unresolved.', 'Pressure reduced the margin.'], endingTitle: null, ...patch,
 });
+
+it('shows an authored completed event without a contradictory failure badge, preserving costs and the sampled check', () => {
+  const saved = decision({
+    title: 'Receive Ben', band: 'adverse', resultLabel: 'Ben reached safety',
+    consequences: ['Ben reaches patrol with the unsigned delivery slip. Mara is still inside.'],
+    civilianSafetyDelta: -2, pressureDelta: 4,
+  });
+  const before = structuredClone(saved);
+  const html = render(createElement(DecisionCard, { decision: saved }));
+  const visible = defaultResult(html);
+  expect(visible).toContain('Ben reached safety');
+  expect(visible).toContain('Mara is still inside');
+  expect(visible).toContain('decision-event');
+  expect(visible).not.toContain('decision-adverse');
+  expect(visible).not.toContain('Went badly');
+  expect(visible).toContain('Civilian safety');
+  expect(visible).toContain('-2');
+  expect(visible).toContain('Supplies used');
+  expect(visible).toContain('Stress on the team');
+  expect(html).toContain('Recorded check: adverse');
+  expect(saved).toEqual(before);
+});
+
+it('collapses repeated forecasts only when the author explicitly declares a common event', () => {
+  const text = 'Ben reaches safety; Mara remains inside.';
+  const same = action({ outcomePreview: { favorable: text, mixed: text, adverse: text } });
+  expect(render(createElement(OutcomeForecast, { action: same }))).toContain('Goes badly');
+  const fixed = render(createElement(OutcomeForecast, { action: { ...same, eventResult: 'Ben reached safety' } }));
+  expect(fixed).toContain('Expected event');
+  expect(fixed.split(text)).toHaveLength(2);
+  expect(fixed).not.toContain('Goes badly');
+  const distinct = render(createElement(OutcomeForecast, { action: action({ eventResult: 'A response was recorded' }) }));
+  expect(distinct).toContain('Medical access remains unresolved.');
+  expect(distinct).toContain('With difficulty');
+});
 function sheet(view: ActionView, all = [view]) {
   return createElement(ActionSheet, { open: true, onClose: noop, view, all, onPick: noop, squads: makeState().squads, acting: ['A'], support: [], onToggleActing: noop, onToggleSupport: noop, targetLabel: null, onConfirm: noop });
 }

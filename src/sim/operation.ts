@@ -1,5 +1,7 @@
 import { reserveSupportVehicle, supportStartCheck } from './support-vehicles';
 import { currentStoryPrompt } from './story-context';
+import { storyMovedAlongRoute } from './story-people';
+import { validateStoryBindings } from './story-bindings';
 import { applyIncidentConsequences, civilianOutcomeViews } from './incident-consequences';
 import { applyExternalSupportEffects, completionEvidence, COMPLETION_DISPOSITIONS, hasCompletionConditions, MAX_EXTERNAL_RESPONSE_MINUTES } from './external-support';
 // Operation engine: start, cancel, decide, closeDebrief. The run record is the
@@ -101,7 +103,8 @@ export function validateScenario(s: ScenarioDefinition, built: BuiltLocation): s
     space(f.spaceId, `fact ${f.id}`);
     if (!f.claim.trim()) errs.push(`${s.id}: fact ${f.id} has no claim sentence`);
     for (const [label, at] of [['position', f.person?.at], ['reported position', f.person?.reportedAt]] as const) {
-      if (at && spaceAt(built, at) !== f.spaceId) errs.push(`${s.id}: fact ${f.id} ${label} is not inside ${f.spaceId}`);
+      const floor = s.version >= 5 ? built.location.rooms.find(room => room.id === f.spaceId)?.floor ?? 0 : 0;
+      if (at && spaceAt(built, at, floor) !== f.spaceId) errs.push(`${s.id}: fact ${f.id} ${label} is not inside ${f.spaceId}`);
     }
   }
   const seen = new Set<Id>();
@@ -169,7 +172,7 @@ export function validateScenario(s: ScenarioDefinition, built: BuiltLocation): s
       }
     }
   }
-  return errs;
+  return [...errs, ...validateStoryBindings(s, built)];
 }
 
 // ---------------------------------------------------------------- start
@@ -477,6 +480,7 @@ export function decisionViewsFor(state: GameState, run: OperationRun, scenario: 
       title: step.action?.title ?? record.actionId,
       stageLabel: scenario.stages[record.stage].label,
       band: record.band, explanation: [...record.explanation], timeCost: record.timeCost,
+      ...(committed?.resultLabel ? { resultLabel: committed.resultLabel } : {}),
       objectiveDelta: committed?.objectiveDelta ?? step.objectiveDelta,
       civilianSafetyDelta: committed?.civilianSafetyDelta ?? step.civilianDelta,
       pressureDelta: committed?.pressureDelta ?? step.pressureDelta,
@@ -759,15 +763,28 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     const band = bandFor(ev.margin, sample);
 
     const matched = matchedEffects(action, band, run, scenario);
+    let storyMoved = false;
+    if (ev.storyMovementMinutes !== undefined) {
+      const projected = structuredClone(run);
+      applyEffects(projected, matched);
+      storyMoved = storyMovedAlongRoute(scenario, action, run, projected);
+    }
     const before = { objective: run.objective, civilianSafety: run.civilianSafety, pressure: run.pressure };
     const extra = matched.reduce((s, e) => s + (e.extraMinutes ?? 0), 0);
-    const proposedTime = ev.timeBase * ({ favorable: 1, mixed: 1.2, adverse: 1.5 } as Record<OutcomeBand, number>)[band] + extra;
+    const movementTime = storyMoved ? 0 : ev.storyMovementMinutes ?? 0;
+    const proposedTime = (ev.timeBase - movementTime) * ({ favorable: 1, mixed: 1.2, adverse: 1.5 } as Record<OutcomeBand, number>)[band] + extra;
     const timeCost = round1(scenario.version >= 4 && action.awaitSupport ? ev.timeBase : scenario.version >= 3 ? Math.max(0.5, proposedTime) : proposedTime);
     const strain = run.practice ? {} : strainFor(input, ev, band);
 
     const t = advanceTime(run, scenario, timeCost);
     if (scenario.version >= 3) t.civilianLoss = round1(before.civilianSafety - run.civilianSafety);
     const { changes, stage: nextStage, ending } = applyEffects(run, matched);
+    // Bound v5 movement records opened locks once; explicit outcome changes retain priority.
+    for (const openingId of (storyMoved ? ev.storyOpenedIds : ev.storySquadOpenedIds) ?? []) {
+      if (matched.some(effect => effect.openings?.some(change => change.openingId === openingId))) continue;
+      run.flags = run.flags.filter(flag => !flag.startsWith(`opening:${openingId}=`));
+      run.flags.push(openingFlag(openingId, 'open'));
+    }
     const externalSupportEvents = scenario.version >= 4 ? applyExternalSupportEffects(run, scenario, matched) : undefined;
     const incidentConsequences = scenario.version >= 4 ? applyIncidentConsequences(draft, run, scenario, matched, ev.participantIds) : undefined;
 
@@ -801,6 +818,7 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     const unitsUsed: Id[] = [];
     if (!run.practice)
       for (const u of ev.uses) {
+        if (!storyMoved && ev.storyMovementOnlyUnitIds?.includes(u.unitId)) continue;
         used[u.itemId] = (used[u.itemId] ?? 0) + u.qty;
         unitsUsed.push(u.unitId);
       }
@@ -815,7 +833,7 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
       actingSquadIds: [...ev.acting],
       supportSquadIds: [...ev.support],
       officerIds: [...ev.participantIds],
-      targetId: action.targetId,
+      targetId: ev.action.targetId,
       inputs: ev.contributors,
       score: ev.score,
       difficulty: ev.difficulty,
@@ -870,6 +888,7 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
         ...(run.stage !== 'debrief' ? [`Next: ${currentStoryPrompt(scenario, run)}`] : []),
       ],
       endingTitle: run.endingId ? scenario.endings[run.endingId]?.title ?? run.endingId : null,
+      ...(scenario.version >= 5 && action.resultLabels?.[band] ? { resultLabel: action.resultLabels[band] } : {}),
       ...(externalSupportEvents ? { externalSupport: externalSupportEvents } : {}),
       ...(incidentConsequences ? { officerCasualties: incidentConsequences.records } : {}),
     };

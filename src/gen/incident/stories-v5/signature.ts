@@ -180,7 +180,7 @@ export function withSignatureStory(input: ScenarioDefinition, built: BuiltLocati
     { id: 'v5_sig_partial_inside', when: { notFlags: ['sig_ben_safe'] }, title: 'Both are still inside', text: 'Ben and Mara are still inside. Ben’s delivery slip is still waiting for its signature; neither release is complete.' },
     { id: 'v5_sig_partial_ben', when: { flags: ['sig_ben_safe'], notFlags: ['sig_mara_safe'] }, title: 'Ben is out; Mara is still inside', text: 'Ben is outside with his unsigned slip. Mara is still inside; her safety remains unresolved.' },
     { id: 'v5_sig_partial_care', when: { flags: ['sig_ben_safe', 'sig_mara_safe', 'hr_care_required'] }, title: 'Both are out; Mara’s care is pending', text: 'Ben and Mara are outside. Ben is safe with patrol, but no medical crew has accepted Mara’s care.' },
-    { id: 'v5_sig_partial_next', when: { flags: ['sig_ben_safe', 'sig_mara_safe'], notFlags: ['hr_care_required'] }, title: 'Both are out; the next step is open', text: 'Ben and Mara are outside and report no current medical need. Their next steps, and any recorded officer care, are not yet complete.' },
+    { id: 'v5_sig_partial_next', when: { flags: ['sig_ben_safe', 'sig_mara_safe'], notFlags: ['hr_care_required'] }, title: 'Both are out; the next step is open', text: 'Ben and Mara are outside and report no current medical need. Their next steps have not been agreed. The record retains any officer injuries and their actual care status.' },
   ];
   for (const partial of partials) s.endings[partial.id] = { ...structuredClone(s.endings.partial), id: partial.id, title: partial.title, summary: partial.text };
   for (const stage of Object.values(s.stages)) for (const action of stage.actions) for (const band of HR_BANDS) {
@@ -207,6 +207,25 @@ export function withSignatureStory(input: ScenarioDefinition, built: BuiltLocati
   s.endings.partial.title = 'The shop is not finished';
   s.endings.partial.summary = 'The record preserves who got outside, any injuries and care still needed. The team has not completed both people’s protection and care.';
   s.endings.partial.remainingTasks = ['Complete any unfinished protection for Ben or Mara', 'Complete any outstanding civilian or officer care'];
+  // These events happen in every effort band. Their labels describe the event;
+  // the sampled band still records the real time and stress costs in the trace.
+  const fixedResultLabels: Record<string, string> = {
+    hr_hear_ben: 'Ben and patrol heard',
+    hr_check_patrol: 'Accounts checked',
+    hr_release_ben: 'Ben reached safety',
+    hr_independent_phone: 'Two-way contact established',
+    hr_independent_phone_later: 'Two-way contact established',
+    hr_hear_mara: 'Mara’s account heard',
+    hr_hear_mara_later: 'Mara’s account heard',
+    hr_bring_mara_out: 'Mara reached safety',
+    hr_civilian_transfer: 'Mara’s care accepted',
+    hr_civilian_next_step: 'Next steps agreed',
+  };
+  for (const stage of Object.values(s.stages)) for (const action of stage.actions) {
+    const partial = Object.values(action.outcomes).every(effects => effects.some(effect => effect.ending?.startsWith('v5_sig_partial_')));
+    const label = partial ? 'Partial outcome recorded' : fixedResultLabels[action.id];
+    if (label) action.resultLabels = previewHR(label);
+  }
   finalizeHR(s);
   // Reusing stable care semantics does not reuse live v4 action IDs or flags.
   return JSON.parse(JSON.stringify(s).replace(/hr_/g, 'v5_sig_').replace(/\bf_(ben|mara|reported_weapon|phone_consent|mara_refusal|lost_line_threat|care_needed)\b/g, 'v5_sig_$1')) as ScenarioDefinition;

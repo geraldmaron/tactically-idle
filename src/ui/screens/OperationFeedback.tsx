@@ -17,21 +17,24 @@ const KNOWLEDGE_LABEL: Record<KnowledgeStatus, string> = { unknown: 'Unknown', r
 /** Public forecasts only. The engine owns the odds and the authored consequence descriptions. */
 export function OutcomeForecast({ action }: { action: ActionView }) {
   const percentages = outcomePercentages(action.likelihood);
+  const commonEvent = action.eventResult && new Set(Object.values(action.outcomePreview)).size === 1;
   return (
     <section className="outcome-forecast" aria-label="Possible outcomes">
       <div className="outcome-forecast-heading">
-        <h3>What could happen</h3>
+        <h3>{commonEvent ? 'Expected event' : 'What could happen'}</h3>
         <span className={`consequence-level consequence-${action.consequenceLevel}`}>Possible harm: {CONSEQUENCE_LABEL[action.consequenceLevel].toLowerCase()}</span>
       </div>
-      <p className="operation-note">{action.eligible ? 'Chances depend on your team and what you know. Even when a choice goes well, there may be more work to do.' : 'Check what is missing to see the chances for this choice.'} Possible harm describes how badly things could go.</p>
+      {commonEvent ? <p>{action.outcomePreview.favorable}</p> : <>
+      <p className="operation-note">{action.eventResult ? 'The event is established. These checks describe how the step unfolds and its costs.' : action.eligible ? 'Chances depend on your team and what you know. Even when a choice goes well, there may be more work to do.' : 'Check what is missing to see the chances for this choice.'} Possible harm describes how badly things could go.</p>
       <ul className="outcome-options">
         {(['favorable', 'mixed', 'adverse'] as const).map((band) => (
           <li key={band} className={`outcome-option outcome-${band}`}>
-            <div><strong>{FORECAST_LABEL[band]}</strong>{action.eligible && <span>{percentages[band]}% chance</span>}</div>
+            <div><strong>{action.eventResult ? ({ favorable: 'Smoothly', mixed: 'With delays', adverse: 'With difficulty' } as const)[band] : FORECAST_LABEL[band]}</strong>{action.eligible && <span>{percentages[band]}% chance</span>}</div>
             <p>{action.outcomePreview[band]}</p>
           </li>
         ))}
       </ul>
+      </>}
     </section>
   );
 }
@@ -42,10 +45,10 @@ export function DecisionCard({ decision: d, full = false, officers = {}, explici
   const next = d.consequences.filter((line) => line.startsWith('Next: '));
   const fallback = narrative.length === 0 ? d.explanation.find((line) => line.trim()) : undefined;
   return (
-    <article className={`decision-card decision-${d.band}`} aria-label={`${d.title}: ${RESULT_LABEL[d.band]}`}>
+    <article className={`decision-card decision-${d.resultLabel ? 'event' : d.band}`} aria-label={`${d.title}: ${d.resultLabel ?? RESULT_LABEL[d.band]}`}>
       <header className="decision-heading">
         <div><span className="decision-stage">{d.stageLabel}</span><h3>{d.title}</h3></div>
-        <Chip tone={RESULT_TONE[d.band]}>{RESULT_LABEL[d.band]}</Chip>
+        <Chip tone={d.resultLabel ? 'neutral' : RESULT_TONE[d.band]}>{d.resultLabel ?? RESULT_LABEL[d.band]}</Chip>
       </header>
       {narrative.length > 0 ? <ul className="decision-narrative">{narrative.map((line, index) => <li key={index}>{line}</li>)}</ul> : fallback ? <p className="decision-lead">{fallback}</p> : null}
       <DecisionChanges decision={d} complete={full} explicitCompletion={explicitCompletion} />
@@ -55,6 +58,7 @@ export function DecisionCard({ decision: d, full = false, officers = {}, explici
       {d.endingTitle && <p className="decision-next"><strong>Operation ended:</strong> {d.endingTitle}</p>}
       <details className="decision-causes decision-record" open={full}>
         <summary>Details and reasons</summary>
+        {d.resultLabel && <p>Recorded check: {d.band}. Time, supplies and stress are recorded below.</p>}
         {!full && <>
           <h4>Recorded changes</h4>
           <DecisionChanges decision={d} complete />

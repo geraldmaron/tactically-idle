@@ -86,6 +86,7 @@ function validDecision(d: unknown): boolean {
     && isList(d.itemsConsumed, (i) => isObj(i) && isStr(i.itemId) && isNum(i.qty))
     && isList(d.knowledgeChanges, (k) => isObj(k) && isStr(k.factId) && oneOf(k.status, KNOWLEDGE))
     && (d.committed === undefined || (isObj(d.committed) && numbers(d.committed, ['objectiveDelta', 'civilianSafetyDelta', 'pressureDelta']) && isStrings(d.committed.consequences) && (d.committed.endingTitle === null || isStr(d.committed.endingTitle))
+      && (d.committed.resultLabel === undefined || (isStr(d.committed.resultLabel) && d.committed.resultLabel.length > 0 && d.committed.resultLabel.length <= 100))
       && (d.committed.externalSupport === undefined || isList(d.committed.externalSupport, (event) => isObj(event) && isStr(event.serviceId) && oneOf(event.kind, ['requested', 'accepted']) && isNum(event.at) && event.at >= 0))
       && (d.committed.officerCasualties === undefined || isList(d.committed.officerCasualties, validCasualtyRecord))));
 }
@@ -94,6 +95,7 @@ function validDecisionView(d: unknown): boolean {
   return isObj(d) && strings(d, ['actionId', 'title', 'stageLabel']) && numbers(d, ['revision', 'timeCost', 'objectiveDelta', 'civilianSafetyDelta', 'pressureDelta'])
     && oneOf(d.band, ['favorable', 'mixed', 'adverse']) && isBool(d.actualStressDeltas) && isStrings(d.explanation) && isStrings(d.consequences)
     && (d.endingTitle === null || isStr(d.endingTitle))
+    && (d.resultLabel === undefined || (isStr(d.resultLabel) && d.resultLabel.length > 0 && d.resultLabel.length <= 100))
     && isList(d.stressDeltas, (x) => isObj(x) && strings(x, ['officerId', 'label']) && isNum(x.delta)
       && ((x.stressBefore === undefined && x.stressAfter === undefined) || validStressPair(x)))
     && isList(d.supplies, (x) => isObj(x) && strings(x, ['itemId', 'label']) && isNum(x.qty) && x.qty >= 0)

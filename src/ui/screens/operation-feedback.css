@@ -46,6 +46,7 @@
 }
 .decision-favorable { border-top-color: var(--mint); }
 .decision-adverse { border-top-color: var(--danger); }
+.decision-event { border-top-color: var(--line-strong); }
 .decision-heading > div { min-width: 0; flex: 1 1 150px; }
 .decision-heading h3 { margin: 2px 0 0; font-size: 17px; line-height: 1.25; }
 .decision-stage,

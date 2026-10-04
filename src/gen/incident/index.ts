@@ -47,7 +47,12 @@ export const INCIDENT_TYPES_V4: IncidentTypeInfo[] = [
   { type: 'protected_rescue', label: 'Protected rescue', families: allFamilies, squads: [1, 3] },
 ];
 export const INCIDENT_TYPES_V5: IncidentTypeInfo[] = [
+  { type: 'welfare_check', label: 'Conflicting reports', families: homes, squads: [1, 2] },
+  { type: 'medical_complication', label: 'Medical assistance', families: ['market_row'], squads: [1, 2] },
+  { type: 'barricaded', label: 'Protective response', families: homes, squads: [1, 3] },
+  { type: 'active_armed_incident', label: 'Active armed incident', families: ['market_row'], squads: [1, 3] },
   { type: 'hostage_crisis', label: 'Hostage crisis', families: ['market_row'], squads: [1, 3] },
+  { type: 'protected_rescue', label: 'Protected rescue', families: ['juniper_court_v1', 'willow_terrace_v1', 'harbour_court'], squads: [1, 3] },
 ];
 const legacyTypes: IncidentType[] = ['domestic', 'person_in_crisis', 'barricaded', 'business_robbery', 'holding', 'missing_vulnerable', 'vacant_occupancy'];
 const validTypes = new Set([...INCIDENT_TYPES_V4.map((x) => x.type), ...legacyTypes]);

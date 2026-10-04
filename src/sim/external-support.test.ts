@@ -1,16 +1,17 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { SCENARIOS } from '../content/scenarios';
-import type { ActionDefinition, OutcomeEffect, ScenarioDefinition } from './scenario-types';
-import type { GameState } from './types';
+import type { ActionDefinition, Condition, OutcomeEffect, ScenarioDefinition } from './scenario-types';
+import type { GameState, OutcomeBand } from './types';
 import { createInitialState } from './department';
 import { apply, NOW, startRun } from './test-fixtures';
 import { actionViews } from './operation-selectors';
 import { computeDebrief, outcomeFactor, validateScenario } from './operation';
-import { externalSupportViews, validExternalSupportState } from './external-support';
+import { externalSupportActionIssue, externalSupportViews, validExternalSupportState } from './external-support';
 import { deserialize, serialize } from './save';
 import { getBuilt } from './resolution';
 
 const ID = 'test_external_support_v4';
+const CONDITIONAL_ID = 'test_external_support_v5';
 const effects = (effect: OutcomeEffect) => ({ favorable: [effect], mixed: [effect], adverse: [effect] });
 function action(id: string, effect: OutcomeEffect, extra: Partial<ActionDefinition> = {}): ActionDefinition {
   return {
@@ -54,7 +55,21 @@ function definition(): ScenarioDefinition {
     },
   };
 }
-function started(): GameState { return startRun(createInitialState(NOW), ID, ['A']); }
+function conditionalDefinition(): ScenarioDefinition {
+  const scenario = definition();
+  scenario.id = CONDITIONAL_ID;
+  scenario.version = 5;
+  for (const effect of Object.values(scenario.stages.assess.actions[0].outcomes).flat()) effect.setFlags = ['crew_requested'];
+  for (const id of ['conditional_offer', 'conditional_escort']) {
+    const option = action(id, { stage: 'assess' });
+    for (const band of Object.keys(option.outcomes) as OutcomeBand[]) option.outcomes[band].push({
+      when: { notFlags: ['crew_requested'] }, requestSupport: ['medical'], setFlags: ['crew_requested'],
+    });
+    scenario.stages.assess.actions.push(option);
+  }
+  return scenario;
+}
+function started(scenarioId = ID): GameState { return startRun(createInitialState(NOW), scenarioId, ['A']); }
 function decide(state: GameState, actionId: string): GameState {
   const result = apply(state, { type: 'decide', actionId, actingSquadIds: ['A'], supportSquadIds: [] });
   expect(result.result).toEqual({ ok: true });
@@ -65,8 +80,8 @@ function refused(state: GameState, actionId: string) {
   expect(result.result.ok).toBe(false);
   expect(result.state).toEqual(state);
 }
-beforeAll(() => { SCENARIOS[ID] = definition(); });
-afterAll(() => { delete SCENARIOS[ID]; });
+beforeAll(() => { SCENARIOS[ID] = definition(); SCENARIOS[CONDITIONAL_ID] = conditionalDefinition(); });
+afterAll(() => { delete SCENARIOS[ID]; delete SCENARIOS[CONDITIONAL_ID]; });
 
 describe('external support responsibility lifecycle', () => {
   it('keeps requests nonterminal, unrewarded, named and one-shot', () => {
@@ -207,5 +222,89 @@ describe('external support responsibility lifecycle', () => {
     expect(validateScenario(invalid, built)).toEqual(expect.arrayContaining([
       expect.stringMatching(/response time/), expect.stringMatching(/acceptance requires/), expect.stringMatching(/requesting support cannot/),
     ]));
+  });
+});
+
+describe('v5 public conditions on support effects', () => {
+  const run = () => ({
+    clock: 10, knowledge: { observed: 'confirmed' as const }, flags: ['care_ready', 'crew_requested'], pressure: 20,
+    externalSupport: { medical: { requestedAt: 0, availableAt: 10, acceptedAt: null } },
+  });
+  const conditions: [string, Condition, Condition][] = [
+    ['known fact', { facts: [{ factId: 'observed', in: ['confirmed'] }] }, { facts: [{ factId: 'observed', in: ['reported'] }] }],
+    ['unknown fact', { facts: [{ factId: 'unseen', in: ['unknown'] }] }, { facts: [{ factId: 'unseen', in: ['confirmed'] }] }],
+    ['required flag', { flags: ['care_ready'] }, { flags: ['not_ready'] }],
+    ['excluded flag', { notFlags: ['not_ready'] }, { notFlags: ['crew_requested'] }],
+    ['minimum pressure', { pressureAtLeast: 20 }, { pressureAtLeast: 21 }],
+    ['maximum pressure', { pressureBelow: 21 }, { pressureBelow: 20 }],
+  ];
+
+  it.each(conditions)('checks requests only when the public %s condition matches', (_label, matches, misses) => {
+    const scenario = SCENARIOS[CONDITIONAL_ID];
+    expect(externalSupportActionIssue(run(), scenario, action('request', { when: misses, requestSupport: ['medical'] }))).toBeNull();
+    expect(externalSupportActionIssue(run(), scenario, action('request', { when: matches, requestSupport: ['medical'] }))).toContain('already been requested');
+  });
+
+  it.each([1, 2, 3, 4])('preserves the issued v%s scan even when its public condition does not match', version => {
+    const scenario = { ...SCENARIOS[CONDITIONAL_ID], version };
+    expect(externalSupportActionIssue(run(), scenario, action('request', { when: { notFlags: ['crew_requested'] }, requestSupport: ['medical'] }))).toContain('already been requested');
+    expect(externalSupportActionIssue(run(), scenario, action('accept', { when: { flags: ['not_ready'] }, acceptSupport: ['medical'] }))).toContain('identify the available receiving service');
+  });
+
+  it.each(['favorable', 'mixed', 'adverse'] as const)('still validates a matching request or acceptance found only in the %s band', band => {
+    const scenario = SCENARIOS[CONDITIONAL_ID];
+    for (const effect of [{ requestSupport: ['medical'] }, { acceptSupport: ['medical'] }]) {
+      const option = action('conditional', { when: { flags: ['not_ready'] }, ...effect });
+      option.outcomes[band] = [{ when: { flags: ['care_ready'] }, ...effect }];
+      expect(externalSupportActionIssue(run(), scenario, option)).toContain('requestSupport' in effect ? 'already been requested' : 'identify the available receiving service');
+    }
+  });
+
+  it('keeps explicit support requirements even when no conditional acceptance will commit', () => {
+    const option = action('accept', { when: { flags: ['not_ready'] }, acceptSupport: ['medical'] }, {
+      requires: { externalSupport: [{ serviceId: 'medical', status: 'available', reason: 'The crew must arrive.' }] },
+    });
+    expect(externalSupportActionIssue({ ...run(), clock: 9 }, SCENARIOS[CONDITIONAL_ID], option)).toBe('The crew must arrive.');
+    expect(externalSupportActionIssue(run(), SCENARIOS[CONDITIONAL_ID], option)).toBeNull();
+  });
+
+  it('skips inactive acceptance effects but preserves all receiving-service gates for possible effects', () => {
+    const scenario = SCENARIOS[CONDITIONAL_ID];
+    const option = action('accept', { when: { flags: ['transfer_needed'] }, acceptSupport: ['medical'] });
+    const state = run();
+    expect(externalSupportActionIssue(state, scenario, option)).toBeNull();
+    state.flags.push('transfer_needed');
+    expect(externalSupportActionIssue({ ...state, clock: 9 }, scenario, option)).toContain('must be available');
+    expect(externalSupportActionIssue({ ...state, flags: ['transfer_needed'] }, scenario, option)).toContain('care and safety preparations');
+    expect(externalSupportActionIssue(state, scenario, option)).toContain('identify the available receiving service');
+    option.requires.externalSupport = [{ serviceId: 'medical', status: 'available', reason: 'The crew must arrive.' }];
+    expect(externalSupportActionIssue(state, scenario, option)).toBeNull();
+    expect(externalSupportActionIssue({ ...state, externalSupport: { medical: { ...state.externalSupport.medical, acceptedAt: 10 } } }, scenario, option)).toBe('The crew must arrive.');
+  });
+
+  it('never uses hidden truth to dismiss a publicly possible support effect', () => {
+    const scenario = structuredClone(SCENARIOS[CONDITIONAL_ID]);
+    const option = action('request', { when: { flags: ['care_ready'] }, truth: [{ factId: scenario.facts[0].id, is: true }], requestSupport: ['medical'] });
+    for (const truth of [false, true]) {
+      scenario.facts[0].truth = truth;
+      expect(externalSupportActionIssue(run(), scenario, option)).toContain('already been requested');
+    }
+  });
+
+  it.each([true, false])('commits one request across later conditional steps and resumes it exactly (early request: %s)', early => {
+    let state = started(CONDITIONAL_ID);
+    if (early) state = decide(state, 'request_medical');
+    state = decide(state, 'conditional_offer');
+    const requested = structuredClone(state.activeRun!.externalSupport);
+    state = decide(state, 'conditional_escort');
+    refused(state, 'conditional_offer');
+    refused(state, 'conditional_escort');
+    refused(state, 'request_alias');
+    expect(state.activeRun!.externalSupport).toEqual(requested);
+    expect(state.activeRun!.history.flatMap(record => record.committed!.externalSupport!)).toHaveLength(1);
+    expect(state.activeRun!.externalSupport!.medical.acceptedAt).toBeNull();
+    expect(state.activeRun!.objective).toBe(0);
+    expect(validExternalSupportState(state.activeRun!, SCENARIOS[CONDITIONAL_ID])).toBe(true);
+    expect(deserialize(serialize(state, NOW))!.activeRun).toEqual(state.activeRun);
   });
 });

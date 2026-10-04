@@ -343,6 +343,59 @@ describe('One Last Signature v5', () => {
     expect(s.endings[carePending.activeRun!.endingId!].summary).toContain('no medical crew has accepted Mara’s care');
   });
 
+  it('does not reopen accepted officer care when both civilians are safe but the player ends before their next steps', () => {
+    const s = find({ phone_consent: true, care_needed: false });
+    let state = play(running(s, ['service_sidearm']), ['hear_ben', 'ask_phone', 'hear_mara']);
+    state = decide(state, 'record_account', 'adverse');
+    state = decide(state, 'urgent_protection', 'mixed');
+    const officerId = Object.keys(state.activeRun!.officerCasualties!)[0];
+    state = care(state, 'officer');
+    state = play(state, ['bring_mara_out', 'civilian_partial']);
+    expect(state.activeRun!.officerCasualties![officerId].care).toBe('evacuated');
+    expect(state.activeRun!.flags).not.toContain('casualty:awaiting_transport');
+    const summary = s.endings[state.activeRun!.endingId!].summary;
+    expect(summary).toContain('Their next steps have not been agreed');
+    expect(summary).toContain('their actual care status');
+    expect(summary).not.toContain('officer care, are not yet complete');
+    expect(state.activeRun!.history.at(-1)!.committed!.consequences[0]).toBe(summary);
+  });
+
+  it('labels fixed events without presenting conditional releases, offers or urgent responses as guaranteed', () => {
+    const s = find();
+    const actions = scenarioActions(s);
+    for (const [name, label] of [
+      ['hear_ben', 'Ben and patrol heard'], ['check_patrol', 'Accounts checked'],
+      ['release_ben', 'Ben reached safety'], ['independent_phone', 'Two-way contact established'],
+      ['hear_mara', 'Mara’s account heard'], ['bring_mara_out', 'Mara reached safety'],
+      ['civilian_transfer', 'Mara’s care accepted'], ['civilian_next_step', 'Next steps agreed'],
+      ['adapt_withdraw', 'Partial outcome recorded'],
+    ]) expect(actions.find(action => action.id === id(name))!.resultLabels).toEqual({ favorable: label, mixed: label, adverse: label });
+    for (const name of ['ask_phone', 'relay_contact', 'lost_line_update', 'record_account', 'clarify_recording', 'urgent_protection'])
+      expect(actions.find(action => action.id === id(name))!.resultLabels).toBeUndefined();
+  });
+
+  it('saves a guaranteed safe release event label alongside its actual adverse effort band', () => {
+    const s = find();
+    const natural = (state: GameState, action: string) => {
+      const result = apply(state, { type: 'decide', actionId: id(action), actingSquadIds: ['A'], supportSquadIds: [] });
+      expect(result.result).toEqual({ ok: true }); return result.state;
+    };
+    let state: GameState | undefined;
+    for (let seed = 1; seed < 500; seed++) {
+      const initial = running(s); initial.activeRun!.rngState = seed;
+      const candidate = natural(natural(initial, 'check_patrol'), 'release_ben');
+      if (candidate.activeRun!.history.at(-1)!.band === 'adverse') { state = candidate; break; }
+    }
+    expect(state).toBeDefined();
+    expect(state!.activeRun!.flags).toContain('sig_ben_safe');
+    expect(state!.activeRun!.history.at(-1)).toMatchObject({ band: 'adverse', committed: { resultLabel: 'Ben reached safety' } });
+    const restored = deserialize(serialize(state!, NOW));
+    expect(restored).not.toBeNull();
+    expect(restored!.activeRun).toEqual(state!.activeRun);
+    expect(restored!.activeRun!.history.at(-1)).toMatchObject({ band: 'adverse', committed: { resultLabel: 'Ben reached safety' } });
+    expect(natural(restored!, 'adapt_withdraw').activeRun!.history.at(-1)!.committed!.resultLabel).toBe('Partial outcome recorded');
+  });
+
   it('rejects blocked release routes and never awards progress for replaying a completed beat', () => {
     const s = find({ phone_consent: true });
     let state = decide(running(s), 'hear_ben');
