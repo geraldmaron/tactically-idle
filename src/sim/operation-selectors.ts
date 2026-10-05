@@ -31,6 +31,7 @@ import { deployability } from './officer';
 import { builtFor, CERT_LABEL, conditionHolds, evaluateAction, getBuilt, squadLabel, spaceName, tagNames, type Evaluation } from './resolution';
 import { checkStart, computeDebrief, defaultSupport, evaluateDefault, decisionViewsFor } from './operation';
 import { approxPoint } from './spatial-factors';
+import { actionEventResult } from './action-result';
 
 export interface ScenarioCard {
   id: Id;
@@ -410,10 +411,11 @@ function legacyConsequenceLevel(action: ActionDefinition): ActionView['consequen
 
 function toView(state: GameState, run: OperationRun, a: ActionDefinition, ev: Evaluation, alternates: SquadId[]): ActionView {
   const hidden = isTargetHidden(a, run);
+  const eventResult = actionEventResult(a, run.scenarioVersion);
   let reason = ev.reason;
   if (reason && alternates.length > 0) reason = `${reason}. ${alternates.map(squadLabel).join(' and ')} can.`;
   return {
-    ...(run.scenarioVersion >= 5 && a.resultLabels && new Set(Object.values(a.resultLabels)).size === 1 ? { eventResult: a.resultLabels.favorable } : {}),
+    ...(eventResult ? { eventResult } : {}),
     id: a.id,
     stage: a.stage,
     title: a.title,

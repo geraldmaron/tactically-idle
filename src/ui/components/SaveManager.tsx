@@ -28,22 +28,25 @@ export function SaveManager({ open, onClose }: { open: boolean; onClose: () => v
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const inFlight = useRef(false);
   const importRequest = useRef(0);
   const firstEmpty = saved.slots.findIndex((slot) => !slot) + 1;
-  const close = () => { if (busy) return; importRequest.current++; setEdit(null); setError(null); setMessage(null); onClose(); };
-  const begin = (type: Edit['type'], id: number) => { importRequest.current++; setEdit({ type, id, name: type === 'new' ? `Campaign ${id}` : saved.slots[id - 1]?.name ?? `Campaign ${id}` }); setError(null); setMessage(null); };
+  const close = () => { if (inFlight.current) return; importRequest.current++; setEdit(null); setError(null); setMessage(null); onClose(); };
+  const begin = (type: Edit['type'], id: number) => { if (inFlight.current) return; importRequest.current++; setEdit({ type, id, name: type === 'new' ? `Campaign ${id}` : saved.slots[id - 1]?.name ?? `Campaign ${id}` }); setError(null); setMessage(null); };
   const run = async (action: SaveAction, success: string, leave = false) => {
-    if (busy) return;
+    if (inFlight.current) return;
+    inFlight.current = true;
     importRequest.current++;
     setBusy(true);
     const result = await manageSave(action);
+    inFlight.current = false;
     setBusy(false);
     if (!result.ok) { setError(result.reason); return; }
     setEdit(null); setError(null); setMessage(success);
     if (leave) { importRequest.current++; onClose(); }
   };
   const selected = edit ? saved.slots[edit.id - 1] : null;
-  return <Sheet open={open} onClose={close} title={edit ? edit.type === 'delete' ? 'Delete save?' : edit.type === 'rename' ? 'Rename save' : edit.type === 'new' ? 'Start a new game' : edit.type === 'load' ? 'Load saved campaign?' : edit.type === 'import' ? 'Import backup' : 'Save a copy' : isResponsivePreview ? 'Temporary test saves' : 'Local saves'} subtitle={isResponsivePreview ? 'Ten in-memory slots · lost when this frame reloads or closes' : 'Ten slots · stored in this browser on this device'} className="save-manager">
+  return <Sheet open={open} onClose={close} interactionKey={`${edit?.type ?? 'slots'}:${busy}`} title={edit ? edit.type === 'delete' ? 'Delete save?' : edit.type === 'rename' ? 'Rename save' : edit.type === 'new' ? 'Start a new game' : edit.type === 'load' ? 'Load saved campaign?' : edit.type === 'import' ? 'Import backup' : 'Save a copy' : isResponsivePreview ? 'Temporary test saves' : 'Local saves'} subtitle={isResponsivePreview ? 'Ten in-memory slots · lost when this frame reloads or closes' : 'Ten slots · stored in this browser on this device'} className="save-manager">
     {saved.issue && <p className="save-alert" role="alert">{saved.issue}</p>}
     {error && <p className="save-alert" role="alert">{error}</p>}
     {message && <p className="save-success" role="status">{message}</p>}
@@ -65,7 +68,7 @@ export function SaveManager({ open, onClose }: { open: boolean; onClose: () => v
         <p>{edit.type === 'new' ? `Start a separate campaign with a fresh roster roll.${saved.activeSlotId ? ' Your current campaign is saved before switching.' : ''}` : edit.type === 'import' ? 'Store this backup in a slot, then load it when you are ready. Your current campaign stays active.' : 'Keep a snapshot of this campaign in the selected slot. Autosaving will continue in that slot.'}</p>
       </>}
       {selected && edit.type !== 'rename' && <Button onClick={() => { const data = exportSlotSave(edit.id); if (data) download(data, `tactically-idle-slot-${edit.id}.json`); }}>Export existing slot {edit.id}</Button>}
-      <div className="save-actions"><Button onClick={() => { importRequest.current++; setEdit(null); setError(null); }}>Cancel</Button><Button type="submit" variant={edit.type === 'delete' || (selected && edit.type !== 'rename') ? 'danger' : 'primary'}>{edit.type === 'delete' ? edit.permanent ? 'Permanently delete save' : 'Delete save' : edit.type === 'rename' ? 'Save name' : edit.type === 'load' ? 'Discard unsaved game and load' : selected ? edit.type === 'new' ? 'Replace and start new' : 'Replace save' : edit.type === 'new' ? 'Start new game' : edit.type === 'import' ? 'Import backup' : 'Save copy'}</Button></div>
+      <div className="save-actions"><Button onClick={() => { if (inFlight.current) return; importRequest.current++; setEdit(null); setError(null); }}>Cancel</Button><Button type="submit" variant={edit.type === 'delete' || (selected && edit.type !== 'rename') ? 'danger' : 'primary'}>{edit.type === 'delete' ? edit.permanent ? 'Permanently delete save' : 'Delete save' : edit.type === 'rename' ? 'Save name' : edit.type === 'load' ? 'Discard unsaved game and load' : selected ? edit.type === 'new' ? 'Replace and start new' : 'Replace save' : edit.type === 'new' ? 'Start new game' : edit.type === 'import' ? 'Import backup' : 'Save copy'}</Button></div>
     </form> : <>
       <p className="dim save-explainer">{isResponsivePreview ? 'This test library exists only in memory. New games, copies, renames and loads never read or change normal browser campaigns. Reloading or closing this frame discards every test slot.' : 'The active campaign saves automatically. Loading another slot first saves your current progress. Browser data clearing removes local saves; export a backup to keep a copy.'}</p>
       <div className="save-actions save-primary-actions"><Button variant="primary" onClick={() => begin('new', firstEmpty || 1)}>New game</Button><Button onClick={() => run({ type: 'save' }, 'Current campaign saved.')}>Save now</Button><Button onClick={() => begin('copy', firstEmpty || 1)}>Save a copy</Button></div>

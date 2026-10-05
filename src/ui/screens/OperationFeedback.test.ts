@@ -60,7 +60,7 @@ it('shows an authored completed event without a contradictory failure badge, pre
   expect(saved).toEqual(before);
 });
 
-it('collapses repeated forecasts only when the author explicitly declares a common event', () => {
+it('collapses repeated forecasts only when the selector identifies a common event', () => {
   const text = 'Ben reaches safety; Mara remains inside.';
   const same = action({ outcomePreview: { favorable: text, mixed: text, adverse: text } });
   expect(render(createElement(OutcomeForecast, { action: same }))).toContain('Goes badly');
@@ -79,6 +79,29 @@ function liveProps(actions: ActionView[], selectedAction: ActionView | null = ac
   const g = startRun(makeState(), 'ms_occupancy', ['A']);
   return { g, now: NOW, title: 'Operation test', subtitle: 'RESIDENTIAL', practice: false, progress: { ...stageProgress(g), prompt: 'How will you verify the report before committing?' }, built: currentBuilt(g)!, spaces: spaceViews(g), squadTasks: g.activeRun!.squadTasks, deployedSquads: [g.squads[0]], focusSquadId: 'A', onFocusSquad: noop, officers: [], actions, selectedAction, onSelectAction: noop, activeOfficerId: null, onSelectOfficer: noop, selectedSpaceId: null, onSelectSpace: noop, highlightSpaceIds: [], floor: 0, onFloorChange: noop, environment: null, lastChange: null, showRooms: true, onToggleRooms: noop, clock: 0, pressure: 15, canCancel: true, onCancel: noop, onOpenDetails: noop, detailsOpen: false };
 }
+
+it('shows the v6 welfare partial ending without a success percentage or favorable result claim', () => {
+  const scenario = generateIncident({ type: 'welfare_check', familyId: 'cedar_close', buildingSeed: 7, seed: 2, tier: 1, contentVersion: 6 });
+  const g = startRun(makeState(), scenario.id, ['A'], { practice: true, positions: { A: 'front_yard' }, loadouts: { A: {} } });
+  const view = actionViews(g, NOW, 'A').find(a => a.id.endsWith('assess_partial'))!;
+  expect(view.eventResult).toBe('Response ended');
+  const card = render(createElement(LiveView, liveProps([view])));
+  expect(card).toContain('End with the progress made');
+  expect(card).not.toContain('chance to go well');
+  const forecast = render(createElement(OutcomeForecast, { action: view }));
+  expect(forecast).toContain('Expected event');
+  expect(forecast).not.toContain('% chance');
+  expect(forecast).toContain('Possible harm');
+  const committed = apply(g, { type: 'decide', actionId: view.id, actingSquadIds: ['A'], supportSquadIds: [] });
+  expect(committed.result).toEqual({ ok: true });
+  const recorded = decisionViews(committed.state)[0];
+  const html = render(createElement(DecisionCard, { decision: recorded }));
+  expect(defaultResult(html)).toContain('Response ended');
+  expect(defaultResult(html)).toContain('Time');
+  expect(defaultResult(html)).not.toMatch(/Went well|Went badly|Had complications/);
+  expect(html).toContain(`Recorded check: ${recorded.band}`);
+  expect(pendingDebrief(committed.state)?.completionAchieved).toBe(false);
+});
 
 describe('reviewing a decision', () => {
   it('shows every initial option without highlighting a decision the player has not chosen', () => {
