@@ -5,6 +5,7 @@ import { Icon } from '../icons';
 import { useEscape } from './hooks';
 import { containSheetFocus } from './sheet-focus';
 import { observeSheetViewport, type SheetViewportInsets } from './sheet-viewport';
+import { guardSheetPointerTransitions } from './sheet-pointer-transition';
 import './sheet-viewport.css';
 
 /** Element inside the phone frame that sheets render into, so they stay clipped to it. */
@@ -23,16 +24,27 @@ export interface SheetProps {
   /** Cap on height as a fraction of the phone frame. */
   maxHeight?: 'short' | 'tall';
   className?: string;
+  /** Opt into guarding repeat taps when the sheet replaces an action surface. */
+  interactionKey?: string;
 }
 
-export function Sheet({ open, onClose, title, subtitle, children, footer, modal = true, maxHeight = 'tall', className }: SheetProps) {
+export function Sheet({ open, onClose, title, subtitle, children, footer, modal = true, maxHeight = 'tall', className, interactionKey }: SheetProps) {
   const root = useContext(OverlayRootContext);
   const backdropRef = useRef<HTMLDivElement>(null);
   const sheetRef = useRef<HTMLElement>(null);
   const onCloseRef = useRef(onClose);
+  const pointerGuard = useRef<ReturnType<typeof guardSheetPointerTransitions> | null>(null);
+  const guardPointers = interactionKey !== undefined;
   const [viewport, setViewport] = useState<SheetViewportInsets | null>(null);
   useEscape(open && !modal, onClose);
   useLayoutEffect(() => { onCloseRef.current = onClose; }, [onClose]);
+  useLayoutEffect(() => {
+    if (!open || !root || !guardPointers || !sheetRef.current) return;
+    const guard = guardSheetPointerTransitions(sheetRef.current, backdropRef.current);
+    pointerGuard.current = guard;
+    return () => { guard.release(); pointerGuard.current = null; };
+  }, [open, root, guardPointers]);
+  useLayoutEffect(() => { pointerGuard.current?.transition(); }, [interactionKey]);
   useLayoutEffect(() => {
     if (!open || !root) return;
     return observeSheetViewport(root, (next) => setViewport((previous) =>

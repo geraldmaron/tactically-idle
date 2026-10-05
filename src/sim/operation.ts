@@ -3,6 +3,7 @@ import { availableStageContinuations, legacyStageNavigation } from './compatibil
 import { currentStoryPrompt } from './story-context';
 import { storyMovedAlongRoute } from './story-people';
 import { validateStoryBindings } from './story-bindings';
+import { actionResultLabel } from './action-result';
 import { applyIncidentConsequences, civilianOutcomeViews } from './incident-consequences';
 import { applyExternalSupportEffects, completionEvidence, COMPLETION_DISPOSITIONS, hasCompletionConditions, MAX_EXTERNAL_RESPONSE_MINUTES } from './external-support';
 // Operation engine: start, cancel, decide, closeDebrief. The run record is the
@@ -926,6 +927,7 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
         }
       } else if (run.stage !== stage) stageNote = `Moved on to ${scenario.stages[run.stage as StageId].label}.`;
     }
+    const resultLabel = actionResultLabel(action, scenario.version, band);
     if (scenario.version >= 3) resolution.committed = {
       objectiveDelta: round1(run.objective - before.objective),
       civilianSafetyDelta: round1(run.civilianSafety - before.civilianSafety),
@@ -939,7 +941,7 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
         ...(run.stage !== 'debrief' ? [`Next: ${currentStoryPrompt(scenario, run)}`] : []),
       ],
       endingTitle: run.endingId ? scenario.endings[run.endingId]?.title ?? run.endingId : null,
-      ...(scenario.version >= 5 && action.resultLabels?.[band] ? { resultLabel: action.resultLabels[band] } : {}),
+      ...(resultLabel ? { resultLabel } : {}),
       ...(scenario.version >= 5 && openingChanges.size ? { openingChanges: [...openingChanges].map(([openingId, state]) => ({ openingId, state })) } : {}),
       ...(externalSupportEvents ? { externalSupport: externalSupportEvents } : {}),
       ...(incidentConsequences ? { officerCasualties: incidentConsequences.records } : {}),

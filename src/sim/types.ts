@@ -734,7 +734,7 @@ export interface DecisionView {
 }
 
 export interface ActionView {
-  /** Explicitly authored common event across effort bands, never inferred from prose. */
+  /** Common event across effort bands: authored explicitly or proven by identical v6 effect tables. */
   eventResult?: string;
   likelihood: Record<OutcomeBand, number>;
   suppliesRequired: { label: string; qty: number }[];
