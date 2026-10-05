@@ -381,6 +381,8 @@ export interface StoryPersonBinding {
   transitions: { when: Condition; to: StoryAnchor | { kind: 'offscene'; label: string }; observed: boolean; label?: string }[];
 }
 export interface StoryInstance {
+  /** V6 coherent situation selected before presentation; all module effects share these bindings. */
+  episode?: { variantId: string; modules: string[]; publicContext: string[] };
   archetypeId: string;
   version: number;
   episodeId: string;

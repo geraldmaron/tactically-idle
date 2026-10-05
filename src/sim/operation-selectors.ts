@@ -1,4 +1,5 @@
 import { actionEquipmentRequirements, capabilityRuleEffect, effectiveSupplies, normalizedActionConsumption, operatorQualified, planningEquipmentContext } from './equipment-requirements';
+import { availableStageContinuations, legacyActionPresentation, legacyStageNavigation } from './compatibility/legacy-choices';
 import { currentStoryPrompt } from './story-context';
 import { hydrateStoryAction, storyActionTarget, storyPublicScenario } from './story-people';
 // Operation selectors consumed by the UI. Everything here is derived from game
@@ -19,6 +20,7 @@ import type {
   SpaceView,
   SquadId,
   StageId,
+  StageContinuationView,
 } from './types';
 import type { ActionDefinition, FactDefinition, ScenarioDefinition } from './scenario-types';
 import { scenarioActions } from './scenario-types';
@@ -212,7 +214,7 @@ function verifyActionsFor(s: ScenarioDefinition, factId: Id, run: OperationRun |
     if (run && state && run.status === 'active' && run.stage === a.stage && !run.history.some((h) => h.stage === a.stage && h.actionId === a.id)) {
       availableNow = run.squadIds.some((sq) => evaluateAction({ state, run, scenario: s, action: a, built, acting: [sq], support: defaultSupport(run, a, [sq]) }).eligible);
     }
-    out.push({ actionId: a.id, title: a.title, stage: a.stage, availableNow });
+    out.push({ actionId: a.id, title: legacyActionPresentation(s, a, built).title, stage: a.stage, availableNow });
   }
   return out;
 }
@@ -276,6 +278,7 @@ function visibleTargets(state: GameState, run: OperationRun, s: ScenarioDefiniti
   const out = new Map<Id, Id[]>();
   if (run.status !== 'active' || run.stage === 'debrief') return out;
   for (const a of s.stages[run.stage].actions) {
+    if (legacyStageNavigation(s, a)) continue;
     if (run.history.some((h) => h.stage === run.stage && h.actionId === a.id)) continue;
     if (isTargetHidden(a, run)) continue;
     const followsPerson = s.version >= 5 && !!a.storyTargetPersonId;
@@ -445,10 +448,17 @@ export function actionViews(state: GameState, _now: number, focusSquadId: SquadI
   const s = getScenario(run.scenarioId);
   if (!s) return [];
   const built = builtFor(run.locationFamilyId, run.locationSeed, run.flags);
-  return s.stages[run.stage].actions.filter((a) => conditionHolds(a.visibleWhen, run)).map((a) => {
+  return s.stages[run.stage].actions.filter((a) => !legacyStageNavigation(s, a) && conditionHolds(a.visibleWhen, run)).map((a) => {
     const { ev, alternates } = evaluateDefault(state, run, s, built, a, focusSquadId);
-    return toView(state, run, a, ev, alternates);
+    return toView(state, run, { ...a, ...legacyActionPresentation(s, a, built) }, ev, alternates);
   });
+}
+
+/** UI navigation has no skill check, squad selection or simulated consequences. */
+export function stageContinuations(state: GameState): StageContinuationView[] {
+  const run = state.activeRun;
+  const scenario = run ? getScenario(run.scenarioId) : null;
+  return run && scenario ? availableStageContinuations(scenario, run) : [];
 }
 
 /** Recompute one action for an explicit acting/supporting squad choice. */
@@ -463,10 +473,10 @@ export function previewAction(
   if (!run || run.status !== 'active' || run.stage === 'debrief') return null;
   const s = getScenario(run.scenarioId);
   const a = s?.stages[run.stage].actions.find((x) => x.id === actionId);
-  if (!s || !a || !conditionHolds(a.visibleWhen, run)) return null;
+  if (!s || !a || legacyStageNavigation(s, a) || !conditionHolds(a.visibleWhen, run)) return null;
   const built = builtFor(run.locationFamilyId, run.locationSeed, run.flags);
   const ev = evaluateAction({ state, run, scenario: s, action: a, built, acting: actingSquadIds, support: supportSquadIds });
-  return toView(state, run, a, ev, []);
+  return toView(state, run, { ...a, ...legacyActionPresentation(s, a, built) }, ev, []);
 }
 
 // ---------------------------------------------------------------- prep and debrief

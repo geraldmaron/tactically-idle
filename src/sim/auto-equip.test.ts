@@ -93,7 +93,7 @@ describe('auto-equip owned inventory', () => {
     expect(plan.loadouts.A?.trauma_kit).toBe(1);
     expect(plan.loadouts.B?.trauma_kit).toBeUndefined();
     expect(plan.loadouts.A?.throw_phone).toBeUndefined();
-    expect(plan.rationale.A?.join(' ')).toMatch(/Trauma kit.*Ortiz/);
+    expect(plan.rationale.A?.join(' ')).toMatch(/Trauma kit.*Alpha/);
     expect(plan.warnings.join(' ')).toMatch(/Bravo.*Trauma kit/);
     assertActualUnits(s, plan);
   });
@@ -117,10 +117,10 @@ describe('auto-equip owned inventory', () => {
     const plan = autoLoadout(s, scenarioId, ['A', 'B'], NOW);
     expect(plan.loadouts.A?.camera_drone).toBeUndefined();
     expect(plan.loadouts.B?.camera_drone).toBe(1);
-    expect(plan.rationale.B?.join(' ')).toMatch(/Camera drone.*Lindqvist/);
+    expect(plan.rationale.B?.join(' ')).toMatch(/Camera drone.*Bravo/);
     expect(plan.loadouts.A?.thermal_imager).toBe(1);
     expect(plan.loadouts.B?.thermal_imager).toBeUndefined();
-    expect(plan.rationale.A?.join(' ')).toMatch(/Thermal imager.*Vale/);
+    expect(plan.rationale.A?.join(' ')).toMatch(/Thermal imager.*Alpha/);
     assertActualUnits(s, plan);
   });
 
@@ -260,6 +260,20 @@ describe('manual choices, repeat clicks, and current stock', () => {
       fact.person = { label: 'Secret target', at: { x: -999, y: -999 } };
     }
     expect(autoLoadout(s, scenarioId, ['A'], NOW)).toEqual(first);
+  });
+
+  it('keeps future story titles, private prerequisites and officer recommendations out of inventory explanations', () => {
+    const action = thermal({ title: 'Find the hidden witness behind the boiler', requires: {
+      allTags: ['thermal'], facts: [{ factId: 'secret_witness', in: ['confirmed'], reason: 'The hidden witness must name the suspect first' }],
+    } });
+    const scenarioId = scenarioWith([action]);
+    const full = autoLoadout(makeState({ inventory: { thermal_imager: 1 } }), scenarioId, ['A'], NOW);
+    const empty = autoLoadout(onlyUnits(makeState(), []), scenarioId, ['A'], NOW);
+    const text = [...Object.values(full.rationale).flat(), ...full.warnings, ...empty.warnings].join(' ');
+    expect(text).toContain('Thermal imager');
+    expect(text).toContain('owned stock');
+    expect(text).toContain('required checks');
+    for (const secret of ['hidden witness', 'boiler', 'suspect', 'Vale', 'Chen', 'Ortiz']) expect(text).not.toContain(secret);
   });
 
   it('returns an actionable contact loadout and preserves the practice no-reservation behavior', () => {

@@ -17,10 +17,10 @@ const V4_DECISION_EXERCISES: typeof V3_DECISION_EXERCISES = [
 ];
 
 /** All issued practice IDs stay readable with their exact original content. */
-export const LEGACY_DECISION_EXERCISES = [...V3_DECISION_EXERCISES, ...V4_DECISION_EXERCISES];
+
 
 /** Six authored v5 stories are available immediately, including in existing campaigns. */
-export const DECISION_EXERCISES: typeof V3_DECISION_EXERCISES = [
+const V5_DECISION_EXERCISES: typeof V3_DECISION_EXERCISES = [
   { id:'exercise_welfare_v5', code:'DR-10', title:'The Second Knock', summary:'Ada has already spoken to officers. Establish what the second report actually describes and what she needs now.', spec:{ type:'welfare_check',familyId:'cedar_close',buildingSeed:7,seed:0,tier:1,contentVersion:5 } },
   { id:'exercise_assistance_v5', code:'DR-11', title:'Still on the Clock', summary:'Rosa wants her dizziness checked, but she is still holding the shop keys. Find out what accepting help means to her.', spec:{ type:'medical_complication',familyId:'market_row',buildingSeed:7,seed:1,tier:1,contentVersion:5 } },
   { id:'exercise_protective_v5', code:'DR-12', title:'Leave the Camera Off', summary:'Mina offered to come outside, then stepped back. Hear the agreement she actually wants and follow through on it.', spec:{ type:'barricaded',familyId:'cedar_close',buildingSeed:7,seed:1,tier:1,contentVersion:5 } },
@@ -28,3 +28,11 @@ export const DECISION_EXERCISES: typeof V3_DECISION_EXERCISES = [
   { id:'exercise_hostage_v5', code:'DR-14', title:'One Last Signature', summary:'Ben only needed a signature. His release changes the conversation with Mara, who is still being held inside.', spec:{ type:'hostage_crisis',familyId:'market_row',buildingSeed:7,seed:5,tier:2,contentVersion:5 } },
   { id:'exercise_protected_rescue_v5', code:'DR-15', title:'My Chair Comes Too', summary:'Jun says the proposed rescue has missed something essential. Hear what must come too before choosing the move.', spec:{ type:'protected_rescue',familyId:'juniper_court_v1',buildingSeed:7,seed:0,tier:2,contentVersion:5 } },
 ];
+
+/** Old exercise IDs remain readable, including any active saved exercise. */
+export const LEGACY_DECISION_EXERCISES = [...V3_DECISION_EXERCISES, ...V4_DECISION_EXERCISES, ...V5_DECISION_EXERCISES];
+/** Current generated circumstances can be tried without replacing a live campaign. */
+export const DECISION_EXERCISES = V5_DECISION_EXERCISES.map((exercise, index) => ({
+  ...exercise, id: exercise.id.replace('_v5', '_v6'), code: `DR-${16 + index}`,
+  spec: { ...exercise.spec, contentVersion: 6 },
+}));

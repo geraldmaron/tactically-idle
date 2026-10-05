@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { dispatch } from './game';
 import { createInitialState } from './department';
+import { establishedDepartment } from './department-test-fixtures';
 import { ECONOMY_TUNING, HOUR_MS, ratesAt } from './economy';
 import { deployability } from './officer';
 import { recoveryInfo } from './department-selectors';
@@ -216,7 +217,7 @@ describe('time safety', () => {
 
 describe('recovery', () => {
   it('an officer at stress 85 cannot deploy until the displayed deployableAt', () => {
-    let s = createInitialState(T0);
+    let s = establishedDepartment(T0);
     s.officers.off_vale.stress = 85; // Alpha is on patrol: 1/h
     expect(deployability(s.officers.off_vale, T0).ok).toBe(false);
     const info = recoveryInfo(s, 'off_vale', T0);
@@ -230,14 +231,14 @@ describe('recovery', () => {
     s = ok(s, { type: 'tick' }, at + TICK);
     expect(deployability(s.officers.off_vale, at + TICK).ok).toBe(true);
     // One settlement lands in the same place.
-    const jump = createInitialState(T0);
+    const jump = establishedDepartment(T0);
     jump.officers.off_vale.stress = 85;
     expect(deployability(ok(jump, { type: 'tick' }, at + TICK).officers.off_vale, at + TICK).ok).toBe(true);
     expect(deployability(ok(jump, { type: 'tick' }, at - TICK).officers.off_vale, at - TICK).ok).toBe(false);
   });
 
   it('squad duty sets the rate: rest > standby > patrol; peer support multiplies', () => {
-    const s = createInitialState(T0);
+    const s = establishedDepartment(T0);
     for (const o of Object.values(s.officers)) o.stress = 70;
     s.squads[0].duty = 'rest';
     const bravo = s.squads[1]; // standby
@@ -249,7 +250,7 @@ describe('recovery', () => {
     expect(next.officers.off_okafor.stress).toBeCloseTo(70 - 3 * 0.88, 6); // age 57: recovers 12% slower
     expect(next.officers.off_park.stress).toBeCloseTo(70 - 6, 6);
 
-    let p = createInitialState(T0);
+    let p = establishedDepartment(T0);
     p = ok(p, { type: 'unlockNode', nodeId: 'wellbeing_peer_support' }, T0);
     for (const o of Object.values(p.officers)) o.stress = 70;
     p = ok(p, { type: 'tick' }, T0 + HOUR_MS);

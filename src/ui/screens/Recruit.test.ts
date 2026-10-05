@@ -56,7 +56,10 @@ describe('recruitment role selection', () => {
     expect(html.match(/aria-checked="true"/g)).toHaveLength(1);
     expect(html.match(/tabindex="0"/g)).toHaveLength(1);
     for (const label of ['Any', 'Communication', 'Entry', 'Medical', 'Observation', 'Leadership']) expect(html).toContain(`>${label}</button>`);
-    for (const c of state.candidates) expect(html).toContain(`${c.officer.firstName} ${c.officer.surname}`);
+    for (const c of state.candidates) {
+      const name = `${c.officer.firstName} ${c.officer.surname}`;
+      expect(html).toContain(renderToStaticMarkup(createElement('strong', { className: 'cand-name' }, name)));
+    }
     expect(html).not.toContain('Hire…');
   });
 

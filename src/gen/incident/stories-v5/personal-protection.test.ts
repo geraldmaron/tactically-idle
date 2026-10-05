@@ -13,7 +13,7 @@ import { currentStoryPrompt } from '../../../sim/story-context';
 import { scenarioActions, type IncidentSpec, type ScenarioDefinition } from '../../../sim/scenario-types';
 import { apply, makeState, NOW, startCmd, unitId } from '../../../sim/test-fixtures';
 import type { GameState, OutcomeBand } from '../../../sim/types';
-import { generateIncident, incidentId } from '../index';
+import { generateIncident, INCIDENT_CONTENT_VERSION, incidentId } from '../index';
 import { withArmedStory } from './armed';
 import { withRescueStory } from './rescue';
 
@@ -173,8 +173,8 @@ describe('After the Noise v5', () => {
 
   it('reloads the same natural progress and freezes the committed turn', () => {
     const s = find('noise', { pause: true, stand_down: true }); let state = play(running(s), 'noise', ['hear_eli', 'agreed_pause', 'check_stand_down', 'reach_eli'], null);
-    const committed = structuredClone(state.activeRun!.history); const saved = deserialize(serialize(state, NOW)); expect(saved).not.toBeNull(); expect(saved!.activeRun).toEqual(state.activeRun);
-    const continued = decide(saved!, id('noise', 'bring_eli_out'), null); state = decide(state, id('noise', 'bring_eli_out'), null); expect(continued).toEqual(state); expect(continued.activeRun!.history.slice(0, 4)).toEqual(committed);
+    const committed = structuredClone(state.activeRun!.history); const saved = deserialize(serialize(state, NOW)); expect(saved).not.toBeNull(); expect(saved).toEqual({ ...state, contentVersion: INCIDENT_CONTENT_VERSION });
+    const continued = decide(saved!, id('noise', 'bring_eli_out'), null); state = decide(state, id('noise', 'bring_eli_out'), null); expect(continued).toEqual({ ...state, contentVersion: INCIDENT_CONTENT_VERSION }); expect(continued.activeRun!.history.slice(0, 4)).toEqual(committed);
   });
 });
 
@@ -282,7 +282,7 @@ describe('My Chair Comes Too v5', () => {
       candidate = play(candidate, 'chair', ['reach_and_hear', 'check_chair_route', 'check_reserved_vehicle', 'reach_pickup_vehicle', 'vehicle_move'], null);
       if (candidate.activeRun!.flags.includes(id('chair', 'vehicle_setback'))) { state = candidate; break; }
     }
-    expect(state).toBeDefined(); const restored = deserialize(serialize(state!, NOW)); expect(restored).not.toBeNull(); expect(restored!.activeRun).toEqual(state!.activeRun);
-    expect(decide(restored!, id('chair', 'prepare_different_assistance'), null)).toEqual(decide(state!, id('chair', 'prepare_different_assistance'), null)); refused(restored!, id('chair', 'vehicle_move'));
+    expect(state).toBeDefined(); const restored = deserialize(serialize(state!, NOW)); expect(restored).not.toBeNull(); expect(restored).toEqual({ ...state!, contentVersion: INCIDENT_CONTENT_VERSION });
+    expect(decide(restored!, id('chair', 'prepare_different_assistance'), null)).toEqual({ ...decide(state!, id('chair', 'prepare_different_assistance'), null), contentVersion: INCIDENT_CONTENT_VERSION }); refused(restored!, id('chair', 'vehicle_move'));
   });
 });

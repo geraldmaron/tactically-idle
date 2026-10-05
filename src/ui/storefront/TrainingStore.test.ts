@@ -2,7 +2,7 @@ import { createElement, type ComponentProps, type MouseEvent, type ReactElement,
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { COURSES } from '../../content/courses';
-import { createInitialState } from '../../sim/department';
+import { establishedDepartment } from '../../sim/department-test-fixtures';
 import { dispatch } from '../../sim/game';
 import { HOUR_MS } from '../../sim/economy';
 import { DEFAULT_NAV, NavContext, type NavApi } from '../components/nav';
@@ -10,10 +10,10 @@ import { TrainingEnrolmentActions, TrainingEnrolmentReceipt, TrainingOfficerCard
 import { trainingCandidates } from './training-officers';
 
 const NOW = Date.UTC(2026, 9, 3, 12);
-let state = createInitialState(NOW, 1);
+let state = establishedDepartment(NOW, 1);
 vi.mock('../store', () => ({ useGame: () => state, getState: () => state }));
 vi.mock('../components/toast', () => ({ useToast: () => ({ act: vi.fn(), notify: vi.fn() }) }));
-beforeEach(() => { state = createInitialState(NOW, 1); });
+beforeEach(() => { state = establishedDepartment(NOW, 1); });
 
 function markup(child: ReactNode, nav: Partial<NavApi> = {}) {
   return renderToStaticMarkup(createElement(NavContext.Provider, { value: { ...DEFAULT_NAV, ...nav } }, child));

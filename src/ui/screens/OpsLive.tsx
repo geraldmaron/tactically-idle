@@ -7,6 +7,7 @@ import {
   lastResolution,
   previewAction,
   spaceViews,
+  stageContinuations,
   stageProgress,
 } from '../../sim/operation-selectors';
 import type { Id, SquadId } from '../../sim/types';
@@ -27,6 +28,12 @@ interface Override {
   support: SquadId[];
 }
 
+interface ActionSelection {
+  runId: Id;
+  stage: string;
+  actionId: Id;
+}
+
 export function OpsLive() {
   const g = useGame();
   const now = Date.now();
@@ -34,7 +41,7 @@ export function OpsLive() {
   const run = g.activeRun!;
 
   const [focusId, setFocusId] = useState<SquadId | null>(null);
-  const [selActionId, setSelActionId] = useState<Id | null>(null);
+  const [selection, setSelection] = useState<ActionSelection | null>(null);
   const [activeOfficer, setActiveOfficer] = useState<Id | null>(null);
   const [selSpace, setSelSpace] = useState<Id | null>(null);
   const [panel, setPanel] = useState<'none' | 'action' | 'room' | 'support'>('none');
@@ -50,9 +57,14 @@ export function OpsLive() {
   const focus = deployed.find((s) => s.id === focusId) ?? deployed[0] ?? null;
   const spaces = spaceViews(g);
   const progress = stageProgress(g);
+  const continuations = stageContinuations(g);
   const decisions = decisionViews(g);
-  const actions = actionViews(g, now, focus?.id ?? null);
-  const base = actions.find((a) => a.id === selActionId) ?? actions.find((a) => a.eligible) ?? actions[0] ?? null;
+  // Forecast the visibly focused squad without assigning supporting squads.
+  // A decision remains unselected until the player opens it for review.
+  const actions = actionViews(g, now, focus?.id ?? null).map((action) =>
+    previewAction(g, now, action.id, focus ? [focus.id] : [], []) ?? action);
+  const selectedId = selection?.runId === run.id && selection.stage === run.stage ? selection.actionId : null;
+  const base = actions.find((a) => a.id === selectedId) ?? null;
   const ov = override && base && override.actionId === base.id ? override : null;
   const view = base && ov ? (previewAction(g, now, base.id, ov.acting, ov.support) ?? base) : base;
   const acting = ov?.acting ?? view?.actingSquadIds ?? [];
@@ -60,7 +72,7 @@ export function OpsLive() {
   const resupply = view && !view.eligible ? planActionResupply(g, now, view.id, acting, support) : null;
   const alternatives = view && !view.eligible ? deployed
     .filter((s) => !acting.includes(s.id))
-    .map((s) => actionViews(g, now, s.id).find((a) => a.id === view.id))
+    .map((s) => previewAction(g, now, view.id, [s.id], support.filter((id) => id !== s.id)))
     .filter((a): a is NonNullable<typeof a> => !!a?.eligible) : [];
 
   const officers = focus ? focus.officerIds.map((id) => g.officers[id]).filter((o) => !!o) : [];
@@ -89,15 +101,20 @@ export function OpsLive() {
 
   if (!built) return <div className="page"><p className="dim">Operation location unavailable.</p></div>;
 
+  const pickAction = (id: Id) => {
+    if (view?.id === id || !actions.some((action) => action.id === id)) return;
+    setSelection({ runId: run.id, stage: run.stage, actionId: id });
+    setOverride({ actionId: id, acting: focus ? [focus.id] : [], support: [] });
+    setActiveOfficer(null);
+  };
+
   const selectAction = (id: Id) => {
     setActionFromSupport(false);
     if (view?.id === id) {
       setPanel(panel === 'action' ? 'none' : 'action');
       return;
     }
-    setSelActionId(id);
-    setOverride(null);
-    setActiveOfficer(null);
+    pickAction(id);
     setPanel('action');
   };
 
@@ -115,13 +132,13 @@ export function OpsLive() {
   const confirm = () => {
     const currentRun = getState().activeRun;
     // A second tap from the same rendered choice must not commit another decision.
-    if (!view || currentRun?.id !== run.id || currentRun.revision !== run.revision || currentRun.status !== 'active') return;
+    if (!view?.eligible || panel !== 'action' || currentRun?.id !== run.id || currentRun.stage !== run.stage || currentRun.revision !== run.revision || currentRun.status !== 'active') return;
     const res = act({ type: 'decide', actionId: view.id, actingSquadIds: acting, supportSquadIds: support });
     if (!res.ok) return;
     const r = lastResolution(getState());
     setPanel('none');
     setOverride(null);
-    setSelActionId(null);
+    setSelection(null);
     setActiveOfficer(null);
     if (r) {
       const ids = new Set(spaces.map((s) => s.id));
@@ -146,13 +163,23 @@ export function OpsLive() {
       focusSquadId={focus?.id ?? null}
       onFocusSquad={(id) => {
         setFocusId(id);
-        setOverride(null);
         setActiveOfficer(null);
       }}
       officers={officers}
       actions={actions}
       selectedAction={view}
       onSelectAction={selectAction}
+      continuations={continuations}
+      onContinueStage={(actionId) => {
+        const currentRun = getState().activeRun;
+        const continuation = continuations.find((entry) => entry.actionId === actionId);
+        if (!continuation || currentRun?.id !== run.id || currentRun.stage !== run.stage || currentRun.revision !== continuation.revision || currentRun.status !== 'active') return;
+        if (!act({ type: 'continueStage', actionId, revision: continuation.revision }).ok) return;
+        setPanel('none');
+        setSelection(null);
+        setOverride(null);
+        setActiveOfficer(null);
+      }}
       activeOfficerId={activeOfficerId}
       onSelectOfficer={setActiveOfficer}
       selectedSpaceId={selSpace}
@@ -178,9 +205,7 @@ export function OpsLive() {
       feedback={<OperationFeedback officers={g.officers} decisions={decisions} practice={run.practice} explicitCompletion={(scenario?.version ?? 0) >= 4} onOpenLog={() => setPanel('none')} />}
       supportContext={scenario && <><IncidentPeopleStatus scenario={scenario} run={run} state={g} /><SupportContext scenario={scenario} run={run} actions={actions} open={panel === 'support'} onOpen={() => setPanel('support')} onClose={() => setPanel('none')} onPickAction={(id) => {
         setActionFromSupport(true);
-        setSelActionId(id);
-        setOverride(null);
-        setActiveOfficer(null);
+        pickAction(id);
         setPanel('action');
       }} /></>}
     >
@@ -190,11 +215,7 @@ export function OpsLive() {
         onClose={() => setPanel('none')}
         view={view}
         all={actions}
-        onPick={(id) => {
-          setSelActionId(id);
-          setOverride(null);
-          setActiveOfficer(null);
-        }}
+        onPick={pickAction}
         squads={deployed}
         acting={acting}
         support={support}
@@ -205,7 +226,8 @@ export function OpsLive() {
         resupply={resupply}
         resupplyMinutes={(run.resupplies ?? []).reduce((sum, delivery) => sum + delivery.minutes, 0)}
         onResupply={() => {
-          if (!view || !resupply?.ok) return;
+          const currentRun = getState().activeRun;
+          if (!view || panel !== 'action' || !resupply?.ok || currentRun?.id !== run.id || currentRun.stage !== run.stage || currentRun.revision !== run.revision || currentRun.status !== 'active') return;
           act({ type: 'resupplyAction', actionId: view.id, actingSquadIds: acting, supportSquadIds: support }, `Equipment delivered · +${resupply.minutes} min. Review the action, then confirm.`);
         }}
         alternatives={alternatives}
@@ -224,8 +246,7 @@ export function OpsLive() {
         actions={actions}
         onPickAction={(id) => {
           setActionFromSupport(false);
-          setSelActionId(id);
-          setOverride(null);
+          pickAction(id);
           setPanel('action');
         }}
       />

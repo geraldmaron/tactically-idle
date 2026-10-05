@@ -2,7 +2,7 @@
 // operation engine can be exercised without the department simulation.
 import type { CertId, Command, DebriefResult, GameState, HandlerResult, Id, ItemUnit, Officer, Ratings, Role, SquadId, StageId, TraitId } from './types';
 import { OPERATION_HANDLERS } from './operation';
-import { actionViews, pendingDebrief } from './operation-selectors';
+import { actionViews, pendingDebrief, stageContinuations } from './operation-selectors';
 import { CALENDAR } from './calendar';
 import { getBuilt } from './resolution';
 import { defaultStagingFor, centroidOf } from './spatial-factors';
@@ -311,8 +311,18 @@ export function playPolicy(state: GameState, policy: Policy, focus: SquadId | nu
     if (!run || run.status !== 'active') break;
     const views = actionViews(s, NOW, focus);
     const prefs = policy[run.stage as StageId] ?? [];
+    const continuations = stageContinuations(s);
+    const requestedContinuation = continuations.find(entry => prefs[0] === entry.actionId);
     let pick = prefs.map((id) => views.find((v) => v.id === id)).find((v) => v && v.eligible);
     if (!pick) pick = views.find((v) => v.eligible);
+    const continuation = requestedContinuation ?? (!pick ? continuations[0] : undefined);
+    if (continuation) {
+      const result = apply(s, { type: 'continueStage', actionId: continuation.actionId, revision: continuation.revision });
+      if (!result.result.ok) throw new Error(`continue ${continuation.actionId} refused: ${result.result.reason}`);
+      steps.push(continuation.actionId);
+      s = result.state;
+      continue;
+    }
     if (!pick) throw new Error(`no eligible action at ${run.stage}`);
     const r = apply(s, { type: 'decide', actionId: pick.id, actingSquadIds: pick.actingSquadIds, supportSquadIds: pick.supportSquadIds });
     if (!r.result.ok) throw new Error(`decide ${pick.id} refused: ${r.result.reason}`);

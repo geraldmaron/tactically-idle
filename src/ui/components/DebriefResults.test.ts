@@ -1,7 +1,7 @@
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
-import { createInitialState } from '../../sim/department';
+import { establishedDepartment } from '../../sim/department-test-fixtures';
 import type { DebriefResult, DecisionView } from '../../sim/types';
 import { SavedDebriefContents } from '../screens/OpsDebrief';
 import { DebriefConsequences, DebriefSummary, OfficerResults, visibleDebriefConsequences } from './DebriefResults';
@@ -14,7 +14,7 @@ const result: DebriefResult = {
   informationPreserved: [], resources: [], unitWear: [], trustDelta: -2, fundingReward: 400, devPointReward: 1,
   causes: ['The team verified access before the handover.'],
 };
-const state = createInitialState(Date.UTC(2026, 9, 3), 1);
+const state = establishedDepartment(Date.UTC(2026, 9, 3), 1);
 const decision: DecisionView = {
   revision: 1, actionId: 'rescue', title: 'Provide aid', stageLabel: 'Resolve', band: 'mixed',
   explanation: ['Medical cover was ready.'], consequences: ['Access was established.', 'A resident was injured during the delay.'],
@@ -47,7 +47,7 @@ describe('scannable debrief results', () => {
   it('shows meaningful XP and stress changes with portraits and exact text alternatives', () => {
     const html = renderToStaticMarkup(createElement(OfficerResults, { debrief: result, officers: state.officers }));
     expect(html).toContain('+29 XP');
-    expect(html).toContain('File portrait of');
+    expect(html).toContain('File portrait of Mei Chen');
     expect(html).toContain('before 12.5, change +11');
     expect(html).toContain('Stress 23.5 of 100');
     expect(html).toContain('+11');

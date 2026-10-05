@@ -13,7 +13,7 @@ import { currentStoryPrompt } from '../../../sim/story-context';
 import { scenarioActions, type IncidentSpec, type ScenarioDefinition } from '../../../sim/scenario-types';
 import { apply, makeState, NOW, startCmd, unitId } from '../../../sim/test-fixtures';
 import type { GameState, OutcomeBand } from '../../../sim/types';
-import { generateIncident, incidentId } from '../index';
+import { generateIncident, INCIDENT_CONTENT_VERSION, incidentId } from '../index';
 import { withWelfareStory } from './welfare';
 import { withAssistanceStory } from './assistance';
 import { withProtectiveStory } from './protective';
@@ -100,8 +100,8 @@ describe('Three distinct human response stories', () => {
     const first = kind === 'welfare' ? 'trace_sources_assess' : kind === 'assistance' ? 'request_crew_early' : 'ask_cal_first';
     const second = kind === 'welfare' ? 'check_ada_now' : kind === 'assistance' ? 'hear_rosa_adapt' : 'relay_mina_adapt';
     state = natural(state, first); const restored = deserialize(serialize(state, NOW));
-    expect(restored).not.toBeNull(); expect(restored!.activeRun).toEqual(state.activeRun);
-    expect(natural(restored!, second)).toEqual(natural(state, second)); refused(restored!, first);
+    expect(restored).not.toBeNull(); expect(restored).toEqual({ ...state, contentVersion: INCIDENT_CONTENT_VERSION });
+    expect(natural(restored!, second)).toEqual({ ...natural(state, second), contentVersion: INCIDENT_CONTENT_VERSION }); refused(restored!, first);
   });
 });
 

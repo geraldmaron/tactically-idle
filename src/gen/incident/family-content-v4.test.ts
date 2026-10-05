@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { DECISION_EXERCISES, LEGACY_DECISION_EXERCISES } from '../../content/scenarios/decision-exercises';
 import { createInitialState } from '../../sim/department';
 import { buildLocation } from '../../sim/location';
-import { actionViews, briefing, pendingDebrief, spaceViews } from '../../sim/operation-selectors';
+import { actionViews, briefing, pendingDebrief, spaceViews, stageContinuations } from '../../sim/operation-selectors';
 import { matchedEffects, validateScenario } from '../../sim/operation';
 import { bandFor, builtFor, evaluateAction, openingFlag } from '../../sim/resolution';
 import { hashSeed, next } from '../../sim/rng';
@@ -97,9 +97,9 @@ describe('version-four varied responsibilities', () => {
       expect(() => generateIncident(spec)).toThrow('Invalid incident specification');
     }
   });
-  it('retains issued v3 and v4 practice IDs while exposing the v5 stories', () => {
+  it('retains issued v3 and v4 practice IDs while exposing the current stories', () => {
     for (const exercise of LEGACY_DECISION_EXERCISES) expect(getScenario(exercise.id)?.version).toBe(exercise.spec.contentVersion);
-    for (const exercise of DECISION_EXERCISES) expect(getScenario(exercise.id)?.version).toBe(5);
+    for (const exercise of DECISION_EXERCISES) expect(getScenario(exercise.id)?.version).toBe(exercise.spec.contentVersion);
   });
   it.each(['welfare_check', 'medical_complication', 'barricaded'] as const)('%s hides truth from briefing, branch visibility, support ETA and evaluation', type => {
     const state = running(specFor(type)); const s = getScenario(state.activeRun!.scenarioId)!; const facts = structuredClone(s.facts);
@@ -217,7 +217,16 @@ describe('version-four varied responsibilities', () => {
       for (let step = 0; step < 30 && state.activeRun?.status === 'active'; step++) {
         const choices = actionViews(state, NOW, 'A');
         expect(choices.length, `${type}:${seed}:${policy}:${state.activeRun!.stage} ${choices.map(a => a.id)}`).toBeLessThanOrEqual(5);
-        const eligible = choices.filter(a => a.eligible); expect(eligible.length, `${type}:${seed}:${state.activeRun!.stage}`).toBeGreaterThan(0);
+        const eligible = choices.filter(a => a.eligible);
+        const continuation = stageContinuations(state)[0];
+        if (!eligible.length && continuation) {
+          const result = apply(state, { type: 'continueStage', actionId: continuation.actionId, revision: continuation.revision });
+          expect(result.result).toEqual({ ok: true });
+          state = deserialize(serialize(result.state, NOW))!;
+          expect(state).not.toBeNull();
+          continue;
+        }
+        expect(eligible.length, `${type}:${seed}:${state.activeRun!.stage}`).toBeGreaterThan(0);
         const a = eligible[policy === 0 ? 0 : policy === 1 ? eligible.length - 1 : (seed + step) % eligible.length];
         const result = apply(state, { type: 'decide', actionId: a.id, actingSquadIds: ['A'], supportSquadIds: [] });
         expect(result.result).toEqual({ ok: true }); state = result.state;

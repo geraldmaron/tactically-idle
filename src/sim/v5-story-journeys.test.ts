@@ -13,6 +13,7 @@ import { apply, makeState, NOW, startCmd, unitId } from './test-fixtures';
 describe('finite story journeys preserve progress and end honestly', () => {
   it.each(INCIDENT_TYPES_V5)('$type survives natural choices, sparse equipment and save/reload', info => {
     const conclusions = new Set<string>();
+    let completed = 0;
     for (const equipped of [false, true]) for (let seed = 0; seed < 8; seed++) {
       const familyId = info.families[seed % info.families.length];
       const scenarioId = incidentId({ type: info.type, familyId, buildingSeed: 7, seed, tier: 2, contentVersion: 5 });
@@ -32,7 +33,7 @@ describe('finite story journeys preserve progress and end honestly', () => {
         const before = structuredClone(state.activeRun!.history);
         const options = actionViews(state, NOW, 'A').filter(view => view.eligible);
         expect(options.length, `${scenarioId} step ${step}: no way to continue or record a partial`).toBeGreaterThan(0);
-        const onward = options.filter(view => !/withdraw|record.*pending|record.*partial|record.*unfinished/i.test(view.id + ' ' + view.title));
+        const onward = options.filter(view => !/partial|withdraw|record.*pending|record.*unfinished/i.test(view.id + ' ' + view.title));
         const choices = onward.length ? onward : options;
         const chosen = choices[(seed + step) % choices.length];
         const next = apply(state, { type: 'decide', actionId: chosen.id, actingSquadIds: chosen.actingSquadIds, supportSquadIds: chosen.supportSquadIds });
@@ -52,10 +53,13 @@ describe('finite story journeys preserve progress and end honestly', () => {
       const report = computeDebrief(state, state.activeRun!)!;
       expect(report).not.toBeNull();
       conclusions.add(report.disposition ?? 'unknown');
+      if (report.completionAchieved) completed++;
+      expect(state.activeRun!.history.length).toBeGreaterThanOrEqual(2);
       if (report.completionAchieved) expect(['resolved', 'care_accepted', 'followup_agreed']).toContain(report.disposition);
       const closed = apply(state, { type: 'closeDebrief' }); expect(closed.result).toEqual({ ok: true });
       const duplicateClose = apply(closed.state, { type: 'closeDebrief' }); expect(duplicateClose.result.ok).toBe(false); expect(duplicateClose.state).toBe(closed.state);
     }
     expect(conclusions.size).toBeGreaterThan(0);
+    expect(completed, `${info.type}: at least one sampled policy must complete its duties`).toBeGreaterThan(0);
   });
 });

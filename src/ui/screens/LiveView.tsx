@@ -14,6 +14,7 @@ import type {
   SquadId,
   SquadTask,
   StageId,
+  StageContinuationView,
 } from '../../sim/types';
 import type { StageProgress } from '../../sim/operation-selectors';
 import type { EnvironmentDefinition } from '../../sim/scenario-types';
@@ -55,6 +56,9 @@ export interface LiveViewProps {
   actions: ActionView[];
   selectedAction: ActionView | null;
   onSelectAction: (id: Id) => void;
+  /** Free menu progression stays separate from tactical decisions and their forecasts. */
+  continuations?: StageContinuationView[];
+  onContinueStage?: (actionId: Id) => void;
   activeOfficerId: Id | null;
   onSelectOfficer: (id: Id) => void;
   selectedSpaceId: Id | null;
@@ -268,6 +272,12 @@ export function LiveView(p: LiveViewProps) {
         )}
         {p.actions.length > 5 && <Button block className="operation-more-choices" onClick={() => setExpandedStage(expanded ? null : p.progress.stage)} aria-expanded={expanded}>{expanded ? 'Show fewer choices' : `Show all ${p.actions.length} choices`}</Button>}
       </div>
+      {!!p.continuations?.length && p.onContinueStage && <section className="call operation-continuations" aria-label="Next stage">
+        {p.continuations.map((continuation) => <div key={continuation.actionId}>
+          <p className="dim">{continuation.description}</p>
+          <Button variant="ghost" block onClick={() => p.onContinueStage?.(continuation.actionId)}>{continuation.label}</Button>
+        </div>)}
+      </section>}
       {p.children}
     </div>
   );
@@ -492,6 +502,7 @@ export function ActionSheet(p: ActionSheetProps) {
                       <ul className="action-resolution-items">
                         {p.resupply.items.map((item) => <li key={item.unitId}>Squad {item.squadId}: {item.name} · {item.serial}</li>)}
                       </ul>
+                      <p className="action-resolution-note dim">Only the listed equipment is delivered to your chosen squads from owned stock. Your decision and squad choices stay selected for review.</p>
                       <p className="action-resolution-note dim">Available while staged outside, before your first decision. Delivery takes {p.resupply.minutes} minutes, raises pressure and commits this operation. You can no longer cancel after delivery.</p>
                       {p.onResupply && <div className="action-resolution-actions"><Button onClick={p.onResupply}>Equip {resupplyNames.map((item) => `${item.qty > 1 ? `${item.qty} × ` : ''}${item.name}`).join(' + ')} · +{p.resupply.minutes} min</Button></div>}
                     </>

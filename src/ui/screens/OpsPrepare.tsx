@@ -200,7 +200,7 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
    * picks reserve stock first; a single-squad request leaves the others alone.
    */
   const runAuto = (only?: SquadId) => {
-    if (chosen.length === 0) return;
+    if (practice || chosen.length === 0 || (only && !chosen.includes(only))) return;
     let res: AutoLoadout;
     try {
       res = autoLoadout(g, scenarioId, chosen, Date.now(), {
@@ -318,7 +318,7 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
             <div className="brief">
               <h3 className="brief-h tone-neutral">
                 <Icon name="cloud" size={16} />
-                Environment
+                Scene conditions
               </h3>
               <EnvChips env={intel.environment} />
             </div>
@@ -380,9 +380,9 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
               })}
             </div>
             <Button block icon="wand" disabled={chosen.length === 0 || practice} onClick={() => runAuto()}>
-              Auto-equip {chosen.length > 1 ? 'all squads' : chosen.length === 1 ? `squad ${chosen[0]}` : 'all'}
+              Auto-equip {chosen.length === 1 ? `squad ${chosen[0]}` : 'selected squads'}
             </Button>
-            <p className="dim autohint">{practice ? 'Practice uses virtual gear; owned stock is not reserved.' : <>{chosen.length === 0 ? 'Choose squads first. ' : ''}One radio per officer is assigned automatically. Auto-equip fills untouched optional gear choices from stock and keeps your quantities, including zero. No gear is bought.</>}</p>
+            <p className="dim autohint">{practice ? 'Practice uses virtual gear; owned stock is not reserved.' : <>{chosen.length === 0 ? 'Choose squads first. ' : ''}Auto-equip manages squad inventory from owned stock. Your quantities, including zero, stay as set. You choose and confirm every operation decision. One radio per officer is included; no gear is bought.</>}</p>
             {autoUndo && <Button size="sm" onClick={undoAuto}>Undo auto-equip</Button>}
             {autoWarnings.length > 0 && (
               <div className="autowarn" aria-live="polite">
@@ -416,14 +416,14 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
               <span className="squad-badge">{sid}</span>
               <strong>{squad.name}</strong>
               <Button size="sm" icon="wand" className="prepsquad-auto" disabled={practice} onClick={() => runAuto(sid)} aria-label={`Auto-equip squad ${sid}`}>
-                Auto
+                Auto-equip squad {sid}
               </Button>
             </div>
             {note && (
               <div className="autonote">
                 <span className="autonote-h">
                   <Icon name="wand" size={14} />
-                  Auto-equip plan
+                  Squad inventory
                   {note.edited && (
                     <Chip tone="amber" icon="edit">
                       You changed this
@@ -608,9 +608,9 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
       {!!preparation?.equipment.length && <details className="prep-equipment-options">
         <summary>Optional equipment · {preparation.equipment.length} {preparation.equipment.length === 1 ? 'option' : 'options'} to review</summary>
         <p>These bundles open up more choices. You can deploy without them; each decision will show its requirements when it becomes relevant.</p>
-        <ul>{preparation.equipment.map(({ key, label, actionTitles, fix }) => <li key={key}>
+        <ul>{preparation.equipment.map(({ key, label, fix }) => <li key={key}>
           <strong>{label}</strong>
-          <p className="dim">For {actionTitles[0]}{actionTitles.length > 1 ? ` and ${actionTitles.length - 1} other ${actionTitles.length === 2 ? 'choice' : 'choices'}` : ''}.</p>
+          <p className="dim">Optional equipment for squad {fix.sid}. Scene requirements are checked when you choose an action.</p>
           {fix.plan.issue ? <p>{fix.plan.issue}</p> : <Button size="sm" icon="box" onClick={() => equipPreparationFix(fix)}>Equip {fix.plan.label} on squad {fix.sid}</Button>}
         </li>)}</ul>
       </details>}

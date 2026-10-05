@@ -29,15 +29,15 @@ function issuedV4(pending: boolean): GameState {
   expect(stopped.result).toEqual({ ok: true }); expect(stopped.state.activeRun!.status).toBe('debrief'); return stopped.state;
 }
 
-describe('v5 rollout without resetting a campaign', () => {
-  it('starts new campaigns with named v5 stories and deterministic distinct boards', () => {
-    expect(INCIDENT_CONTENT_VERSION).toBe(5);
+describe('current rollout without resetting issued campaigns', () => {
+  it('starts new campaigns with current stories and deterministic distinct boards', () => {
+    expect(INCIDENT_CONTENT_VERSION).toBe(6);
     for (const seed of [1, 7, 41, 812]) {
       const state = createInitialState(NOW, seed); expect(state).toEqual(createInitialState(NOW, seed));
-      expect(state.contentVersion).toBe(5); expect(state.incidents).toHaveLength(INCIDENT_TUNING.initialCount);
+      expect(state.contentVersion).toBe(INCIDENT_CONTENT_VERSION); expect(state.incidents).toHaveLength(INCIDENT_TUNING.initialCount);
       expect(new Set(state.incidents.map(card => card.type)).size).toBe(state.incidents.length);
       for (const card of state.incidents) {
-        expect(parseIncidentId(card.id)?.contentVersion).toBe(5);
+        expect(parseIncidentId(card.id)?.contentVersion).toBe(INCIDENT_CONTENT_VERSION);
         expect(getScenario(card.id)?.title).toBe(getScenario(card.id)?.variantLabel);
       }
     }
@@ -89,17 +89,17 @@ describe('v5 rollout without resetting a campaign', () => {
   it.each([false, true])('promotes future draws while preserving an issued v4 run pending=%s and every campaign resource', pending => {
     const issued = issuedV4(pending); const definition = structuredClone(getScenario(issued.activeRun!.scenarioId));
     const restored = deserialize(serialize(issued, NOW))!; expect(restored).not.toBeNull();
-    expect(restored).toEqual({ ...issued, contentVersion: 5 });
+    expect(restored).toEqual({ ...issued, contentVersion: INCIDENT_CONTENT_VERSION });
     expect(getScenario(restored.activeRun!.scenarioId)).toEqual(definition);
     expect(restored.incidents.every(card => parseIncidentId(card.id)?.contentVersion === 4)).toBe(true);
     const oldIds = new Set(restored.incidents.map(card => card.id)); const active = structuredClone(restored.activeRun);
     const resources = { officers: structuredClone(restored.officers), units: structuredClone(restored.units), reservations: structuredClone(restored.reservations), funding: restored.department.funding, points: restored.department.devPoints };
     applyIncidentsDue(restored, NOW, nextIncidentAt(restored)!);
     const added = restored.incidents.filter(card => !oldIds.has(card.id)); expect(added.length).toBeGreaterThan(0);
-    expect(added.every(card => parseIncidentId(card.id)?.contentVersion === 5)).toBe(true);
+    expect(added.every(card => parseIncidentId(card.id)?.contentVersion === INCIDENT_CONTENT_VERSION)).toBe(true);
     expect(restored.activeRun).toEqual(active); expect(restored.officers).toEqual(resources.officers); expect(restored.units).toEqual(resources.units); expect(restored.reservations).toEqual(resources.reservations);
     expect(restored.department.funding).toBe(resources.funding); expect(restored.department.devPoints).toBe(resources.points);
     expect(deserialize(serialize(restored, NOW))).toEqual(restored);
-    for (const card of added) expect(generateIncident(parseIncidentId(card.id)!).version).toBe(5);
+    for (const card of added) expect(generateIncident(parseIncidentId(card.id)!).version).toBe(INCIDENT_CONTENT_VERSION);
   });
 });

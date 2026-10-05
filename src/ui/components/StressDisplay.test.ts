@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { StressDisplay, StressGuide } from './StressDisplay';
 import { DecisionCard } from '../screens/OperationFeedback';
 import type { DecisionView } from '../../sim/types';
-import { createInitialState } from '../../sim/department';
+import { establishedDepartment } from '../../sim/department-test-fixtures';
 
 const render = (props: Parameters<typeof StressDisplay>[0]) => renderToStaticMarkup(createElement(StressDisplay, props));
 describe('stress as a condition reading', () => {
@@ -37,7 +37,7 @@ describe('stress as a condition reading', () => {
 describe('decision stress history', () => {
   const d: DecisionView = { revision: 1, actionId: 'test', title: 'Talk to the person', stageLabel: 'Check the report', band: 'favorable', timeCost: 3, objectiveDelta: 5, civilianSafetyDelta: 0, pressureDelta: 1, actualStressDeltas: true, stressDeltas: [{ officerId: 'off_chen', label: 'Chen', delta: 2, stressBefore: 29, stressAfter: 31 }], supplies: [], knowledgeChanges: [], contributors: [], consequences: [], explanation: ['The person spoke to the team.'], endingTitle: null };
   it('keeps saved readings even when the current officer later changes condition', () => {
-    const a = createInitialState(0, 1).officers, b = structuredClone(a);
+    const a = establishedDepartment(0, 1).officers, b = structuredClone(a);
     b.off_chen.stress = 99;
     const show = (officers: typeof a) => renderToStaticMarkup(createElement(DecisionCard, { decision: d, officers }));
     expect(show(a)).toBe(show(b));
@@ -46,7 +46,7 @@ describe('decision stress history', () => {
   });
   it('does not reconstruct missing old levels from current condition', () => {
     const old = { ...d, stressDeltas: [{ officerId: 'off_chen', label: 'Chen', delta: 2 }] };
-    const html = renderToStaticMarkup(createElement(DecisionCard, { decision: old, officers: createInitialState(0, 1).officers }));
+    const html = renderToStaticMarkup(createElement(DecisionCard, { decision: old, officers: establishedDepartment(0, 1).officers }));
     expect(html).toContain('+2 stress');
     expect(html).toContain('Only the stress change was saved');
     expect(html).not.toContain('stress-scale');

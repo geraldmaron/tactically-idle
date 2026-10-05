@@ -321,14 +321,19 @@ describe('squads', () => {
     s.officers.off_vale.stress = 85;
     const r = squadReadiness(s, 'A', T0);
     expect(r).toMatchObject({ ready: 3, total: 4, deployable: true });
-    expect(r.issues.some((i) => /^Vale: mandatory recovery ~\d+h/.test(i))).toBe(true);
+    expect(r.issues.some((i) => i.startsWith(`${s.officers.off_vale.surname}: mandatory recovery ~`) && /\d+h/.test(i))).toBe(true);
     s = ok(s, { type: 'createSquad', name: 'Charlie' }, T0);
     expect(squadReadiness(s, 'C', T0)).toMatchObject({ ready: 0, total: 0, deployable: false });
   });
 
   it('rosterOfficers sorts by squad then surname', () => {
-    const names = rosterOfficers(createInitialState(T0)).map((o) => o.surname);
-    expect(names).toEqual(['Brooks', 'Chen', 'Ortiz', 'Vale', 'Lindqvist', 'Okafor', 'Park', 'Reyes']);
+    const state = createInitialState(T0);
+    const sorted = rosterOfficers(state);
+    expect(sorted.map((o) => o.squadId)).toEqual(['A', 'A', 'A', 'A', 'B', 'B', 'B', 'B']);
+    for (const squad of ['A', 'B']) {
+      const names = sorted.filter((o) => o.squadId === squad).map((o) => o.surname);
+      expect(names).toEqual([...names].sort((a, b) => a.localeCompare(b)));
+    }
   });
 });
 

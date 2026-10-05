@@ -1,4 +1,5 @@
 import { reserveSupportVehicle, supportStartCheck } from './support-vehicles';
+import { availableStageContinuations, legacyStageNavigation } from './compatibility/legacy-choices';
 import { currentStoryPrompt } from './story-context';
 import { storyMovedAlongRoute } from './story-people';
 import { validateStoryBindings } from './story-bindings';
@@ -547,6 +548,7 @@ export function evaluateDefault(state: GameState, run: OperationRun, scenario: S
 }
 
 function anyEligible(state: GameState, run: OperationRun, scenario: ScenarioDefinition, built: BuiltLocation): boolean {
+  if (availableStageContinuations(scenario, run).length) return true;
   for (const a of scenario.stages[run.stage as StageId].actions) {
     if (run.history.some((h) => h.stage === run.stage && h.actionId === a.id)) continue;
     for (const sq of run.squadIds) {
@@ -717,6 +719,15 @@ function debriefCauses(scenario: ScenarioDefinition, run: OperationRun, steps: S
 
 const fail = (reason: string): HandlerResult => ({ ok: false, reason });
 
+function continueStage(run: OperationRun, scenario: ScenarioDefinition, actionId: Id, revision: number): HandlerResult {
+  if (run.revision !== revision) return fail('The choices have changed; review the current stage');
+  const continuation = availableStageContinuations(scenario, run).find(entry => entry.actionId === actionId);
+  if (!continuation) return fail('That stage continuation is not available');
+  run.stageContinuations = [{ version: 1, actionId, revision, fromStage: continuation.fromStage, toStage: continuation.toStage }];
+  run.stage = continuation.toStage;
+  return { ok: true };
+}
+
 export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
   startOperation(draft, cmd, ctx) {
     if (!cmd.practice) {
@@ -767,6 +778,13 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     return { ok: true };
   },
 
+  continueStage(draft, cmd) {
+    const run = draft.activeRun;
+    if (!run) return fail('No operation in progress');
+    const scenario = getScenario(run.scenarioId);
+    return scenario ? continueStage(run, scenario, cmd.actionId, cmd.revision) : fail('Unknown scenario');
+  },
+
   decide(draft, cmd) {
     const run = draft.activeRun;
     if (!run) return fail('No operation in progress');
@@ -776,6 +794,8 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     const stage = run.stage;
     const action = scenario.stages[stage].actions.find((a) => a.id === cmd.actionId);
     if (!action) return fail('That option is not available at this stage');
+    // Older UI callers use decide; they receive the same free navigation semantics.
+    if (legacyStageNavigation(scenario, action)) return continueStage(run, scenario, action.id, run.revision);
     if (cmd.actingSquadIds.some((s) => cmd.supportSquadIds.includes(s))) return fail('A squad cannot both act and support');
     const built = builtFor(run.locationFamilyId, run.locationSeed, run.flags);
     const input = { state: draft, run, scenario, action, built, acting: cmd.actingSquadIds, support: cmd.supportSquadIds };

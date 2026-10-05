@@ -4479,3 +4479,9 @@ button.ocard {
   .store-detail-art { flex-direction: column; align-items: flex-start; gap: 6px; }
   .store-card-foot > .btn { width: 100%; }
 }
+
+.scene-condition-details { margin-top: 10px; }
+.scene-condition-details > summary { min-height: 44px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: var(--muted, #b5c2d7); font-size: 14px; }
+.scene-condition-details > summary::before { content: '›'; font-size: 20px; }
+.scene-condition-details[open] > summary::before { transform: rotate(90deg); }
+.scene-condition-details > summary:focus-visible { outline: 2px solid var(--amber, #f3b432); outline-offset: 2px; }

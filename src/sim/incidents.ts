@@ -88,9 +88,10 @@ function drawCard(d: GameState, at: number): IncidentCard | null {
     ? parseIncidentId(run.scenarioId) ?? DECISION_EXERCISES.find(exercise => exercise.id === run.scenarioId)?.spec
     : null;
   const avoidTypes = d.contentVersion >= 5
-    ? [...board(d).flatMap(card => { const spec = parseIncidentId(card.id); return spec?.contentVersion === 5 ? [spec.type] : []; }), ...(activeStory ? [activeStory.type] : [])]
+    ? [...board(d).flatMap(card => { const spec = parseIncidentId(card.id); return spec && spec.contentVersion >= 5 ? [spec.type] : []; }), ...(activeStory ? [activeStory.type] : [])]
     : undefined;
-  const drawn = drawIncidentSpec(d.rngState, { level: dep.level, trust: dep.trust, contentVersion: d.contentVersion, avoidFamilies: [...board(d).map((c) => c.familyId), ...(run ? [run.locationFamilyId] : [])], ...(avoidTypes ? { avoidTypes } : {}) });
+  const recentTypes = d.contentVersion >= 6 ? d.debriefs.filter(report => !report.practice).slice(0, 2).flatMap(report => { const spec = parseIncidentId(report.scenarioId); return spec ? [spec.type] : []; }) : undefined;
+  const drawn = drawIncidentSpec(d.rngState, { level: dep.level, trust: dep.trust, contentVersion: d.contentVersion, avoidFamilies: [...board(d).map((c) => c.familyId), ...(run ? [run.locationFamilyId] : [])], ...(avoidTypes ? { avoidTypes } : {}), ...(recentTypes ? { recentTypes } : {}) });
   const spec = { ...drawn.spec, tier: Math.min(5, Math.max(1, Math.round(drawn.spec.tier))) };
   const life = drawBetween(drawn.state, INCIDENT_TUNING.minLifetimeMs, INCIDENT_TUNING.maxLifetimeMs);
   d.rngState = life.state;
