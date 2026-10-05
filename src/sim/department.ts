@@ -46,9 +46,10 @@ export const DEPARTMENT_HANDLERS: HandlerMap<DepartmentCommandType> = {
 };
 
 export function createInitialState(now: number, campaignSeed = 12345): GameState {
+  const officers = startingOfficers(now, campaignSeed);
   const state: GameState = {
     saveVersion: CURRENT_SAVE_VERSION,
-    personnel: createPersonnel(campaignSeed),
+    personnel: createPersonnel(campaignSeed, officers),
     contentVersion: INCIDENT_CONTENT_VERSION,
     department: {
       name: 'Westhaven Department',
@@ -67,7 +68,7 @@ export function createInitialState(now: number, campaignSeed = 12345): GameState
       // Game day 0 (1 Jan 2026) is the moment the department is created.
       calendarEpoch: now,
     },
-    officers: startingOfficers(now, campaignSeed),
+    officers,
     squads: startingSquads(),
     candidates: [],
     units: {},
