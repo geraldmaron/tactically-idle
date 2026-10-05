@@ -50,3 +50,5 @@ Recent completed incident types are avoided when alternatives exist, after prote
 ## Validation limits
 
 See the release verification record for final test counts, adversarial exploration bounds and any remaining browser checks. Forced-band diagnostics deliberately exercise rare outcomes; natural-stream save tests separately establish reproducibility. A finite set of seeded runs does not prove every possible campaign or every future combination.
+
+The final local product checkpoint `bf65313` passes 1,590 tests across 104 files, typecheck, artwork checks and the Pages-base build. The [adversarial route audit](verification/campaign-choice-audit.md) records 126,943 engine transitions, all 398 current action-by-variant occurrences in all attainable bands, legacy save checks and actual route cuts. Those are bounded diagnostics with explicit scope, not an exhaustive claim. The branch’s updated mobile screens still need the hosted browser check before release completion.
