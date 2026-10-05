@@ -2,7 +2,7 @@
 
 Portrait mobile department-management game with an idle economy and short branching operations on a data-driven blueprint. Design: [PLAN.md](PLAN.md). Location/operation contract: [docs/operation-model.md](docs/operation-model.md).
 
-This is the browser side of the plan's device spike. No native engine has been chosen, and nothing here has run on a phone.
+This is the browser application. Hosted phone-sized browser journeys have been checked; native device hardware and a native engine have not been validated.
 
 ## Run
 
@@ -26,7 +26,9 @@ npm run build
 
 Use **Saves / New** below the header for ten local campaign slots, New Game, loading, named copies, and backup import/export. The active slot autosaves; starting or loading another campaign saves the current one first. Existing single-slot saves migrate into slot 1 and keep their original recovery data. See [local campaigns](docs/local-campaigns.md).
 
-In an incident briefing, **Auto-equip** fills untouched loadout choices from usable stock, keeps manual quantities, and explains shortages. See [auto-equip](docs/auto-equip.md).
+In an incident briefing, **Auto-equip** fills untouched loadout choices from usable stock, keeps manual quantities, and explains shortages. It never chooses or commits a story decision. See [auto-equip](docs/auto-equip.md).
+
+New campaigns sample officers from the full 100-person catalog. Current calls use coherent scene variants with shared blueprint bindings. Existing campaign identities, issued calls and committed history are preserved. See [campaign and choice variety](docs/campaign-choice-variety.md).
 
 Radios load automatically at one per deployed officer. Gear offers an equipment-manager upgrade with discounted repairs, slower wear and explicitly enabled maintenance budgets. Blocked action details can request a timed stores delivery while squads remain staged outside. See [field readiness](docs/field-readiness.md). Maps support drag, pinch, wheel, keyboard navigation and Fit; the isolated [responsive harness](docs/responsive-layout.md) exercises real viewport widths.
 
@@ -45,7 +47,7 @@ Dev-only state handle in the browser console: `window.__ti.getState()`, `__ti.se
 | `src/ui/blueprint/`, `src/ui/portraits/` | SVG blueprint rendered from location data; painted and procedural portraits |
 | `src/ui/screens/` | HQ, Squad, Ops (board, prepare, live, debrief), Develop, Gear |
 
-## Status against the plan (2026-10-01)
+## Historical first-playable status (2026-10-01)
 
 **Works and was observed on the real UI** (headless Chrome at 390×844 and 320×568; captures in [docs/captures](docs/captures)):
 

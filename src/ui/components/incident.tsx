@@ -185,18 +185,16 @@ export function environmentChips(env: EnvironmentDefinition): EnvChip[] {
   return out;
 }
 
+/** Lead with conditions that change a plan; routine absences stay available in details. */
+export function relevantEnvironmentChips(env: EnvironmentDefinition): EnvChip[] {
+  const keys = new Set(['time', ...(env.weather !== 'clear' ? ['weather'] : []), ...(env.power !== 'on' ? ['power'] : []), ...(env.clutter > 0 ? ['clutter'] : []), ...(env.communication !== 'normal' ? ['comm'] : []), ...(env.crowd > 0 ? ['crowd'] : []), ...(env.keyholder ? ['key'] : []), ...(env.plansOnFile ? ['plans'] : []), ...(env.alarm !== 'none' ? ['alarm'] : []), ...(env.cctv ? ['cctv'] : []), ...env.hazards.map(h => `hazard-${h}`)]);
+  return environmentChips(env).filter(chip => keys.has(chip.key));
+}
 export function EnvChips({ env }: { env: EnvironmentDefinition }) {
-  return (
-    <ul className="envchips" aria-label="Environment">
-      {environmentChips(env).map((c) => (
-        <li key={c.key}>
-          <Chip tone={c.tone} icon={c.icon} title={c.title}>
-            {c.label}
-          </Chip>
-        </li>
-      ))}
-    </ul>
-  );
+  const important = relevantEnvironmentChips(env);
+  const rest = environmentChips(env).filter(chip => !important.some(shown => shown.key === chip.key));
+  const list = (chips: EnvChip[], label: string) => <ul className="envchips" aria-label={label}>{chips.map(c => <li key={c.key}><Chip tone={c.tone} icon={c.icon} title={c.title}>{c.label}</Chip></li>)}</ul>;
+  return <>{list(important, 'Scene conditions')}{rest.length > 0 && <details className="scene-condition-details"><summary>Other reported conditions</summary>{list(rest, 'Other reported conditions')}</details>}</>;
 }
 
 // ---------------------------------------------------------------- calm countdown

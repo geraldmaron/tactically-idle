@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { dispatch } from './game';
-import { createInitialState } from './department';
+import { establishedDepartment as createInitialState } from './department-test-fixtures';
 import { ECONOMY_TUNING, HOUR_MS, ratesAt, recoveryRate } from './economy';
 import { CALENDAR, experienceBand, formatGameDate, gameDay } from './calendar';
 import {

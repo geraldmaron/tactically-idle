@@ -30,3 +30,19 @@ recapture, copy it to `src/sim/capture-release-fixtures.test.ts` in a checkout o
 the baseline commit, update its output directory, and run that single Vitest
 test. Do not regenerate fixtures against the release implementation under test.
 The normal regression suite needs only the checked-in JSON files.
+
+`legacy-navigation-runs.json` separately captures issued v3 and v4 welfare runs
+with an already committed, scored navigation choice, immediately before the free
+stage-continuation change. It preserves their run records, officer strain and
+replayed totals. `capture-legacy-navigation.test.ts.txt` records the capture
+script; do not regenerate against the implementation under test. The regression
+checks that loading and continuing these records retains their old costs,
+sampled outcomes and history, while future navigation is free.
+
+`published-v5-scenario-hashes.json` was captured from the immutable local release
+commit `7eecc294d6f32651bc3693781c4b03362fd7207a` (the published PR22 tree).
+It covers 48 complete v5 definitions across every supported family and seeds 0, 1 and 7.
+The fingerprints use the existing `hashSeed` over recursively key-sorted JSON,
+so different object construction order does not masquerade as changed content.
+The complete values, including narrative, graphs, truth and bindings, are retained
+in the comparison; regenerate only against that historical release.

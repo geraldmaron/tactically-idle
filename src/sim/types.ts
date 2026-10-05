@@ -630,6 +630,8 @@ export interface OperationRun {
   /** 0..100 civilian safety. */
   civilianSafety: number;
   history: DecisionResolution[];
+  /** Free compatibility navigation; separate from scored decisions and RNG samples. */
+  stageContinuations?: StageContinuationRecord[];
   /** Pre-decision deliveries at exterior staging; distinct from tactical outcomes. */
   resupplies?: { minutes: number; supportUnitId?: Id; allocations: { squadId: SquadId; unitIds: Id[] }[] }[];
   revision: number;
@@ -642,6 +644,19 @@ export interface OperationRun {
   /** Player knowledge: where each person was last observed, and at which run revision. */
   lastSeen?: Record<Id, { spaceId: Id; at: Vec; revision: number }>;
   startedAt: number;
+}
+
+export interface StageContinuationRecord {
+  version: 1;
+  actionId: Id;
+  revision: number;
+  fromStage: 'adapt';
+  toStage: 'resolve';
+}
+
+export interface StageContinuationView extends Omit<StageContinuationRecord, 'version'> {
+  label: string;
+  description: string;
 }
 
 export interface DebriefResult {
@@ -905,6 +920,7 @@ export type Command =
   | { type: 'cancelOperation' }
   | { type: 'resupplyAction'; actionId: Id; actingSquadIds: SquadId[]; supportSquadIds: SquadId[] }
   | { type: 'decide'; actionId: Id; actingSquadIds: SquadId[]; supportSquadIds: SquadId[] }
+  | { type: 'continueStage'; actionId: Id; revision: number }
   | { type: 'closeDebrief' };
 
 export type CommandType = Command['type'];
@@ -956,7 +972,7 @@ export type DepartmentCommandType =
   | 'offerRetention'
   | 'markIncidentsSeen';
 
-export type OperationCommandType = 'startOperation' | 'cancelOperation' | 'decide' | 'closeDebrief';
+export type OperationCommandType = 'startOperation' | 'cancelOperation' | 'decide' | 'continueStage' | 'closeDebrief';
 
 export interface SaveEnvelope {
   saveVersion: number;

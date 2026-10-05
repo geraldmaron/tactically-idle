@@ -6,13 +6,14 @@ import { dispatch } from './game';
 import { fillCandidates, recruitmentStatus } from './roster';
 import { deserialize, serialize, SAVE_KEY } from './save';
 import { restoreCampaign } from './session';
+import { establishedDepartment } from './department-test-fixtures';
 import { type Officer } from './types';
 
 const T0 = Date.UTC(2026, 0, 1);
 const HOUR = 3_600_000;
 
 describe('authored people', () => {
-  it('has exactly 100 distinct adults and portrait destinations, with eight established starters', () => {
+  it('has exactly 100 distinct adults and portrait destinations, including eight legacy identities', () => {
     expect(PERSONAS).toHaveLength(100);
     for (const key of ['id', 'portrait'] as const) expect(new Set(PERSONAS.map((p) => p[key])).size).toBe(100);
     expect(new Set(PERSONAS.map((p) => `${p.firstName} ${p.surname}`)).size).toBe(100);
@@ -46,8 +47,8 @@ describe('campaign identities and succession', () => {
   it('reproduces a supplied seed and varies builds between campaigns', () => {
     expect(createInitialState(T0, 120)).toEqual(createInitialState(T0, 120));
     const a = createInitialState(T0, 120), b = createInitialState(T0, 121);
-    expect(a.officers.off_chen.identityId).toBe(b.officers.off_chen.identityId);
-    expect(a.officers.off_chen.portrait).toBe(b.officers.off_chen.portrait);
+    expect(a.officers.off_chen.identityId).not.toBe(b.officers.off_chen.identityId);
+    expect(a.officers.off_chen.portrait).not.toBe(b.officers.off_chen.portrait);
     expect(a.officers.off_chen.ratings).not.toEqual(b.officers.off_chen.ratings);
   });
   it('keeps only three candidates, with stable first-seen builds and no active duplicates', () => {
@@ -151,7 +152,7 @@ describe('campaign identities and succession', () => {
     expect(deserialize(serialize(s, T0))).toEqual(s);
   });
   it('migrates v3 without rerolling legacy people, while reserving departed starter identities', () => {
-    const old = createInitialState(T0, 13);
+    const old = establishedDepartment(T0, 13);
     delete old.personnel;
     for (const o of Object.values(old.officers)) delete o.identityId;
     old.officers.off_chen.portrait = 'chen';

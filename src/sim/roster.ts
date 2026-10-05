@@ -174,7 +174,7 @@ export function recruitmentStatus(state: GameState, now: number) {
   let available = 0;
   const roles = new Set<Role>();
   for (const person of PERSONAS) {
-    if (person.legacyOfficerId || employed.has(person.id)) continue;
+    if (employed.has(person.id)) continue;
     const build = state.personnel?.builds[person.id];
     if (!build) { unseen++; available++; roles.add(roleForPersona(state.personnel?.campaignSeed ?? 12345, person.id)); }
     else if (day < mandatoryRetirementDay(build)) { available++; roles.add(build.role); }

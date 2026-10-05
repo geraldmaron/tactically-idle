@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 import type { ActionView, DebriefResult, DecisionView } from '../../sim/types';
 import { apply, makeState, NOW, setRun, startRun } from '../../sim/test-fixtures';
-import { actionViews, currentBuilt, decisionViews, pendingDebrief, previewAction, spaceViews, stageProgress } from '../../sim/operation-selectors';
+import { actionViews, currentBuilt, decisionViews, pendingDebrief, previewAction, spaceViews, stageContinuations, stageProgress } from '../../sim/operation-selectors';
 import { planActionResupply } from '../../sim/equipment-resupply';
 import { ActionSheet, LiveView, revealStageStep, StageSteps, type LiveViewProps } from './LiveView';
 import { DecisionCard, OperationFeedback, OperationLogContents, OutcomeForecast } from './OperationFeedback';
@@ -75,12 +75,31 @@ it('collapses repeated forecasts only when the author explicitly declares a comm
 function sheet(view: ActionView, all = [view]) {
   return createElement(ActionSheet, { open: true, onClose: noop, view, all, onPick: noop, squads: makeState().squads, acting: ['A'], support: [], onToggleActing: noop, onToggleSupport: noop, targetLabel: null, onConfirm: noop });
 }
-function liveProps(actions: ActionView[], selectedAction = actions[0]): LiveViewProps {
+function liveProps(actions: ActionView[], selectedAction: ActionView | null = actions[0]): LiveViewProps {
   const g = startRun(makeState(), 'ms_occupancy', ['A']);
   return { g, now: NOW, title: 'Operation test', subtitle: 'RESIDENTIAL', practice: false, progress: { ...stageProgress(g), prompt: 'How will you verify the report before committing?' }, built: currentBuilt(g)!, spaces: spaceViews(g), squadTasks: g.activeRun!.squadTasks, deployedSquads: [g.squads[0]], focusSquadId: 'A', onFocusSquad: noop, officers: [], actions, selectedAction, onSelectAction: noop, activeOfficerId: null, onSelectOfficer: noop, selectedSpaceId: null, onSelectSpace: noop, highlightSpaceIds: [], floor: 0, onFloorChange: noop, environment: null, lastChange: null, showRooms: true, onToggleRooms: noop, clock: 0, pressure: 15, canCancel: true, onCancel: noop, onOpenDetails: noop, detailsOpen: false };
 }
 
 describe('reviewing a decision', () => {
+  it('shows every initial option without highlighting a decision the player has not chosen', () => {
+    const html = render(createElement(LiveView, liveProps([action(), action({ id: 'wait', title: 'Wait for an update' })], null)));
+    expect(html).toContain('Prepare medical access');
+    expect(html).toContain('Wait for an update');
+    expect(html).not.toContain('callbtn-on');
+    expect(html).not.toContain('Review decision');
+    expect(html).not.toContain('Confirm:');
+  });
+
+  it('renders free stage navigation outside decision cards without odds, squads or confirmation', () => {
+    const props = liveProps([], null);
+    const html = render(createElement(LiveView, { ...props, onContinueStage: noop, continuations: [{ actionId: 'continue', fromStage: 'adapt', toStage: 'resolve', revision: 1, label: 'Continue to response choices', description: 'Leaves the remaining preparation options behind. No operation time passes.' }] }));
+    const continuation = html.split('aria-label="Next stage"')[1];
+    expect(continuation).toContain('Continue to response choices');
+    expect(continuation).toContain('No operation time passes');
+    expect(continuation).toContain('Leaves the remaining preparation options behind');
+    for (const excluded of ['callbtn', 'chance', 'Confirm:', 'Squad taking action', 'supplies']) expect(continuation).not.toContain(excluded);
+  });
+
   it('hides unsupported squad controls while preserving the acting-squad choice', () => {
     const g = startRun(makeState(), 'ms_occupancy', ['A', 'B']);
     const view = previewAction(g, NOW, 'ms_contact_hall', ['A'], [])!;
@@ -301,8 +320,11 @@ describe('persistent decision results', () => {
     const scenario = generateIncident({ type: 'welfare_check', familyId: 'cedar_close', buildingSeed: 7, seed: 3, tier: 1, contentVersion: 3 });
     state = startRun(makeState(), scenario.id, ['A'], { practice: true });
     for (let step = 0; step < 12 && state.activeRun?.status === 'active'; step++) {
-      const chosen = actionViews(state, NOW, 'A').find((view) => view.eligible)!;
-      const result = apply(state, { type: 'decide', actionId: chosen.id, actingSquadIds: chosen.actingSquadIds, supportSquadIds: chosen.supportSquadIds });
+      const chosen = actionViews(state, NOW, 'A').find((view) => view.eligible);
+      const continuation = stageContinuations(state)[0];
+      const result = apply(state, chosen
+        ? { type: 'decide', actionId: chosen.id, actingSquadIds: chosen.actingSquadIds, supportSquadIds: chosen.supportSquadIds }
+        : { type: 'continueStage', actionId: continuation.actionId, revision: continuation.revision });
       expect(result.result.ok).toBe(true);
       state = result.state;
     }

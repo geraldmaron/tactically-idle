@@ -64,8 +64,8 @@ describe('issued version-two identity', () => {
 
 describe('bounded version-three families', () => {
   it('validates deterministic authored references, all outcome metadata, and integrated power', () => {
-    expect(INCIDENT_CONTENT_VERSION).toBe(5);
-    expect(parseIncidentId(incidentId({ ...specFor('welfare_check'), contentVersion: 6 }))).toBeNull();
+    expect(INCIDENT_CONTENT_VERSION).toBe(6);
+    expect(parseIncidentId(incidentId({ ...specFor('welfare_check'), contentVersion: INCIDENT_CONTENT_VERSION + 1 }))).toBeNull();
     for (const kind of INCIDENT_TYPES_V2) for (const family of kind.families) for (const seed of [0, 1, 7, 42]) {
       const spec = { ...specFor(kind.type, seed, family), buildingSeed: seed };
       const s = generateIncident(spec);

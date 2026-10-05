@@ -13,7 +13,7 @@ import { currentStoryPrompt } from '../../../sim/story-context';
 import { scenarioActions, type IncidentSpec, type ScenarioDefinition } from '../../../sim/scenario-types';
 import { apply, makeState, NOW, startCmd, unitId } from '../../../sim/test-fixtures';
 import type { GameState, OutcomeBand } from '../../../sim/types';
-import { generateIncident, incidentId } from '../index';
+import { generateIncident, INCIDENT_CONTENT_VERSION, incidentId } from '../index';
 import { withSignatureStory } from './signature';
 
 const built = buildLocation('market_row', 7);
@@ -296,8 +296,8 @@ describe('One Last Signature v5', () => {
     expect(state).toBeDefined();
     const restored = deserialize(serialize(state!, NOW));
     expect(restored).not.toBeNull();
-    expect(restored!.activeRun).toEqual(state!.activeRun);
-    expect(natural(restored!, 'clarify_recording')).toEqual(natural(state!, 'clarify_recording'));
+    expect(restored).toEqual({ ...state!, contentVersion: INCIDENT_CONTENT_VERSION });
+    expect(natural(restored!, 'clarify_recording')).toEqual({ ...natural(state!, 'clarify_recording'), contentVersion: INCIDENT_CONTENT_VERSION });
     refused(restored!, 'record_account');
   });
 

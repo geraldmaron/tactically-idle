@@ -1,0 +1,661 @@
+[
+  {
+    "run": {
+      "id": "run_22",
+      "scenarioId": "gen:welfare_check:cedar_close:7:7:2:3",
+      "scenarioVersion": 3,
+      "sourceIncident": {
+        "id": "gen:welfare_check:cedar_close:7:7:2:3",
+        "type": "welfare_check",
+        "familyId": "cedar_close",
+        "tier": 2,
+        "arrivedAt": 1800000000000,
+        "expiresAt": 1800003600000,
+        "seen": true
+      },
+      "locationFamilyId": "cedar_close",
+      "locationSeed": 7,
+      "contentVersion": 5,
+      "rngState": 4226371455,
+      "practice": false,
+      "squadIds": [
+        "A"
+      ],
+      "squadTasks": [
+        {
+          "squadId": "A",
+          "positionId": "front_yard",
+          "task": "Choose how to finish the call",
+          "stagingId": "sp_d_front_front_yard",
+          "at": {
+            "x": 19.5,
+            "y": 46.5
+          }
+        }
+      ],
+      "reservationIds": [
+        "res_23",
+        "res_24",
+        "res_25",
+        "res_26"
+      ],
+      "supportUnitIds": [],
+      "supportPositionId": "front_yard",
+      "stage": "resolve",
+      "knowledge": {
+        "f_person": "reported",
+        "f_context": "reported"
+      },
+      "flags": [
+        "used:v3_welfare_contact",
+        "welfare_contact_problem",
+        "used:v3_welfare_proceed"
+      ],
+      "clock": 5.5,
+      "pressure": 18.5,
+      "objective": 0,
+      "civilianSafety": 100,
+      "history": [
+        {
+          "revision": 0,
+          "stage": "assess",
+          "actionId": "v3_welfare_contact",
+          "actingSquadIds": [
+            "A"
+          ],
+          "supportSquadIds": [],
+          "officerIds": [
+            "off_chen",
+            "off_ortiz",
+            "off_brooks",
+            "off_vale"
+          ],
+          "targetId": "bedroom_w",
+          "inputs": [
+            {
+              "label": "Base difficulty",
+              "value": -40,
+              "source": "difficulty"
+            },
+            {
+              "label": "Otieno: communication 82, composure 68",
+              "value": 42.8,
+              "source": "rating",
+              "ref": "off_chen"
+            },
+            {
+              "label": "Otieno: calm voice on the line",
+              "value": 6,
+              "source": "trait",
+              "ref": "off_chen"
+            },
+            {
+              "label": "Otieno: age 56, +6% strain",
+              "value": 0,
+              "source": "condition",
+              "ref": "off_chen"
+            },
+            {
+              "label": "Aung: communication 57, composure 62",
+              "value": 11.3,
+              "source": "rating",
+              "ref": "off_ortiz"
+            },
+            {
+              "label": "Chaiyaporn: communication 47, composure 67",
+              "value": 5.8,
+              "source": "rating",
+              "ref": "off_brooks"
+            },
+            {
+              "label": "Chaiyaporn: strain (18)",
+              "value": -0.1,
+              "source": "condition",
+              "ref": "off_brooks"
+            },
+            {
+              "label": "Mensah: communication 44, composure 56",
+              "value": 2.6,
+              "source": "rating",
+              "ref": "off_vale"
+            },
+            {
+              "label": "Mensah: strain (22)",
+              "value": -0.1,
+              "source": "condition",
+              "ref": "off_vale"
+            }
+          ],
+          "score": 68.3,
+          "difficulty": 40,
+          "sample": 0.0035076576750725508,
+          "band": "adverse",
+          "timeCost": 4.5,
+          "stressDeltas": {
+            "off_chen": 5,
+            "off_brooks": 3.5,
+            "off_ortiz": 4.7,
+            "off_vale": 4.8
+          },
+          "stressLevels": {
+            "off_chen": {
+              "stressBefore": 12,
+              "stressAfter": 17
+            },
+            "off_brooks": {
+              "stressBefore": 18,
+              "stressAfter": 21.5
+            },
+            "off_ortiz": {
+              "stressBefore": 8,
+              "stressAfter": 12.7
+            },
+            "off_vale": {
+              "stressBefore": 22,
+              "stressAfter": 26.8
+            }
+          },
+          "itemsConsumed": [],
+          "unitsUsed": [],
+          "knowledgeChanges": [],
+          "explanation": [
+            "Talk to the person did not go as hoped (Squad A).",
+            "There was no clear answer. The team still needs another way to check the report.",
+            "Helped most: Otieno: communication 82, composure 68 (+42.8).",
+            "Took 4.5 min.",
+            "Most strain: Otieno (+5).",
+            "Moved on to Plan your response."
+          ],
+          "committed": {
+            "objectiveDelta": 0,
+            "civilianSafetyDelta": 0,
+            "pressureDelta": 6,
+            "consequences": [
+              "There was no clear answer. The team still needs another way to check the report.",
+              "Next: Check the reports, agree on help, or arrange a visit. Each step takes time."
+            ],
+            "endingTitle": null
+          }
+        },
+        {
+          "revision": 1,
+          "stage": "adapt",
+          "actionId": "v3_welfare_proceed",
+          "actingSquadIds": [
+            "A"
+          ],
+          "supportSquadIds": [],
+          "officerIds": [
+            "off_chen",
+            "off_brooks",
+            "off_ortiz",
+            "off_vale"
+          ],
+          "targetId": "bedroom_w",
+          "inputs": [
+            {
+              "label": "Base difficulty",
+              "value": -40,
+              "source": "difficulty"
+            },
+            {
+              "label": "Otieno: coordination 66, composure 68",
+              "value": 36.8,
+              "source": "rating",
+              "ref": "off_chen"
+            },
+            {
+              "label": "Otieno: strain (17)",
+              "value": -0.5,
+              "source": "condition",
+              "ref": "off_chen"
+            },
+            {
+              "label": "Otieno: age 56, +6% strain",
+              "value": 0,
+              "source": "condition",
+              "ref": "off_chen"
+            },
+            {
+              "label": "Chaiyaporn: coordination 60, composure 67",
+              "value": 12.2,
+              "source": "rating",
+              "ref": "off_brooks"
+            },
+            {
+              "label": "Chaiyaporn: strain (22)",
+              "value": -0.5,
+              "source": "condition",
+              "ref": "off_brooks"
+            },
+            {
+              "label": "Aung: coordination 56, composure 62",
+              "value": 6.5,
+              "source": "rating",
+              "ref": "off_ortiz"
+            },
+            {
+              "label": "Mensah: coordination 66, composure 56",
+              "value": 3.4,
+              "source": "rating",
+              "ref": "off_vale"
+            },
+            {
+              "label": "Mensah: strain (27)",
+              "value": -0.3,
+              "source": "condition",
+              "ref": "off_vale"
+            }
+          ],
+          "score": 57.6,
+          "difficulty": 40,
+          "sample": 0.8150065126828849,
+          "band": "favorable",
+          "timeCost": 1,
+          "stressDeltas": {
+            "off_chen": 0,
+            "off_brooks": 0,
+            "off_ortiz": 0,
+            "off_vale": 0
+          },
+          "stressLevels": {
+            "off_chen": {
+              "stressBefore": 17,
+              "stressAfter": 17
+            },
+            "off_brooks": {
+              "stressBefore": 21.5,
+              "stressAfter": 21.5
+            },
+            "off_ortiz": {
+              "stressBefore": 12.7,
+              "stressAfter": 12.7
+            },
+            "off_vale": {
+              "stressBefore": 26.8,
+              "stressAfter": 26.8
+            }
+          },
+          "itemsConsumed": [],
+          "unitsUsed": [],
+          "knowledgeChanges": [],
+          "explanation": [
+            "Choose how to finish the call went well (Squad A).",
+            "The team reviewed what it knew and what still needed checking before the final choice.",
+            "Helped most: Otieno: coordination 66, composure 68 (+36.8).",
+            "Took 1 min.",
+            "Moved on to Finish the call."
+          ],
+          "committed": {
+            "objectiveDelta": 0,
+            "civilianSafetyDelta": 0,
+            "pressureDelta": 0.5,
+            "consequences": [
+              "The team reviewed what it knew and what still needed checking before the final choice.",
+              "Next: Help the person, confirm their plan, ask specialists to take over, or leave the call unresolved."
+            ],
+            "endingTitle": null
+          }
+        }
+      ],
+      "revision": 2,
+      "status": "active",
+      "endingId": null,
+      "settled": false,
+      "startedAt": 1800000000000
+    },
+    "stress": {
+      "off_chen": 17,
+      "off_brooks": 21.5,
+      "off_ortiz": 12.7,
+      "off_vale": 26.8,
+      "off_okafor": 15,
+      "off_lindqvist": 5,
+      "off_reyes": 45,
+      "off_park": 25
+    },
+    "trace": {
+      "knowledge": {
+        "f_person": "reported",
+        "f_context": "reported"
+      },
+      "flags": [
+        "used:v3_welfare_contact",
+        "welfare_contact_problem",
+        "used:v3_welfare_proceed"
+      ],
+      "pressure": 18.5,
+      "objective": 0,
+      "civilianSafety": 100,
+      "clock": 5.5
+    }
+  },
+  {
+    "run": {
+      "id": "run_22",
+      "scenarioId": "gen:welfare_check:cedar_close:7:7:2:4",
+      "scenarioVersion": 4,
+      "sourceIncident": {
+        "id": "gen:welfare_check:cedar_close:7:7:2:4",
+        "type": "welfare_check",
+        "familyId": "cedar_close",
+        "tier": 2,
+        "arrivedAt": 1800000000000,
+        "expiresAt": 1800003600000,
+        "seen": true
+      },
+      "locationFamilyId": "cedar_close",
+      "locationSeed": 7,
+      "contentVersion": 5,
+      "rngState": 28574026,
+      "practice": false,
+      "squadIds": [
+        "A"
+      ],
+      "squadTasks": [
+        {
+          "squadId": "A",
+          "positionId": "front_yard",
+          "task": "Choose the next response",
+          "stagingId": "sp_d_front_front_yard",
+          "at": {
+            "x": 19.5,
+            "y": 46.5
+          }
+        }
+      ],
+      "reservationIds": [
+        "res_23",
+        "res_24",
+        "res_25",
+        "res_26"
+      ],
+      "supportUnitIds": [],
+      "supportPositionId": "front_yard",
+      "stage": "resolve",
+      "knowledge": {
+        "f_person": "reported",
+        "f_care_needed": "reported",
+        "f_immediate_danger": "reported",
+        "f_adjacent_safety": "reported"
+      },
+      "flags": [
+        "used:v4_source",
+        "v4_source_checked",
+        "used:v4_proceed"
+      ],
+      "externalSupport": {},
+      "clock": 4,
+      "pressure": 9.5,
+      "objective": 0,
+      "civilianSafety": 100,
+      "history": [
+        {
+          "revision": 0,
+          "stage": "assess",
+          "actionId": "v4_source",
+          "actingSquadIds": [
+            "A"
+          ],
+          "supportSquadIds": [],
+          "officerIds": [
+            "off_chen",
+            "off_brooks",
+            "off_vale",
+            "off_ortiz"
+          ],
+          "targetId": "living",
+          "inputs": [
+            {
+              "label": "Base difficulty",
+              "value": -39,
+              "source": "difficulty"
+            },
+            {
+              "label": "Otieno: coordination 66, composure 68",
+              "value": 36.8,
+              "source": "rating",
+              "ref": "off_chen"
+            },
+            {
+              "label": "Otieno: age 56, +6% strain",
+              "value": 0,
+              "source": "condition",
+              "ref": "off_chen"
+            },
+            {
+              "label": "Chaiyaporn: coordination 60, composure 67",
+              "value": 12.2,
+              "source": "rating",
+              "ref": "off_brooks"
+            },
+            {
+              "label": "Chaiyaporn: strain (18)",
+              "value": -0.2,
+              "source": "condition",
+              "ref": "off_brooks"
+            },
+            {
+              "label": "Mensah: coordination 66, composure 56",
+              "value": 6.8,
+              "source": "rating",
+              "ref": "off_vale"
+            },
+            {
+              "label": "Mensah: strain (22)",
+              "value": -0.3,
+              "source": "condition",
+              "ref": "off_vale"
+            },
+            {
+              "label": "Aung: coordination 56, composure 62",
+              "value": 3.2,
+              "source": "rating",
+              "ref": "off_ortiz"
+            }
+          ],
+          "score": 58.5,
+          "difficulty": 39,
+          "sample": 0.8574619418941438,
+          "band": "favorable",
+          "timeCost": 3,
+          "stressDeltas": {
+            "off_chen": 2.3,
+            "off_brooks": 2.2,
+            "off_ortiz": 2.2,
+            "off_vale": 2.2
+          },
+          "stressLevels": {
+            "off_chen": {
+              "stressBefore": 12,
+              "stressAfter": 14.3
+            },
+            "off_brooks": {
+              "stressBefore": 18,
+              "stressAfter": 20.2
+            },
+            "off_ortiz": {
+              "stressBefore": 8,
+              "stressAfter": 10.2
+            },
+            "off_vale": {
+              "stressBefore": 22,
+              "stressAfter": 24.2
+            }
+          },
+          "itemsConsumed": [],
+          "unitsUsed": [],
+          "knowledgeChanges": [],
+          "explanation": [
+            "Check the dispatch account went well (Squad A).",
+            "The team separated direct observations from assumptions and recorded the event timing.",
+            "Helped most: Otieno: coordination 66, composure 68 (+36.8).",
+            "Took 3 min.",
+            "Most strain: Otieno (+2.3).",
+            "Moved on to Prepare the next step."
+          ],
+          "committed": {
+            "objectiveDelta": 0,
+            "civilianSafetyDelta": 0,
+            "pressureDelta": -0.9,
+            "consequences": [
+              "The team separated direct observations from assumptions and recorded the event timing.",
+              "Next: Reconcile the original call with an independent account"
+            ],
+            "endingTitle": null,
+            "externalSupport": [],
+            "officerCasualties": []
+          }
+        },
+        {
+          "revision": 1,
+          "stage": "adapt",
+          "actionId": "v4_proceed",
+          "actingSquadIds": [
+            "A"
+          ],
+          "supportSquadIds": [],
+          "officerIds": [
+            "off_chen",
+            "off_brooks",
+            "off_ortiz",
+            "off_vale"
+          ],
+          "targetId": "living",
+          "inputs": [
+            {
+              "label": "Base difficulty",
+              "value": -39,
+              "source": "difficulty"
+            },
+            {
+              "label": "Otieno: coordination 66, composure 68",
+              "value": 36.8,
+              "source": "rating",
+              "ref": "off_chen"
+            },
+            {
+              "label": "Otieno: age 56, +6% strain",
+              "value": 0,
+              "source": "condition",
+              "ref": "off_chen"
+            },
+            {
+              "label": "Chaiyaporn: coordination 60, composure 67",
+              "value": 12.2,
+              "source": "rating",
+              "ref": "off_brooks"
+            },
+            {
+              "label": "Chaiyaporn: strain (20)",
+              "value": -0.4,
+              "source": "condition",
+              "ref": "off_brooks"
+            },
+            {
+              "label": "Aung: coordination 56, composure 62",
+              "value": 6.5,
+              "source": "rating",
+              "ref": "off_ortiz"
+            },
+            {
+              "label": "Mensah: coordination 66, composure 56",
+              "value": 3.4,
+              "source": "rating",
+              "ref": "off_vale"
+            },
+            {
+              "label": "Mensah: strain (24)",
+              "value": -0.2,
+              "source": "condition",
+              "ref": "off_vale"
+            }
+          ],
+          "score": 58.3,
+          "difficulty": 39,
+          "sample": 0.4033281474839896,
+          "band": "favorable",
+          "timeCost": 1,
+          "stressDeltas": {
+            "off_chen": 0,
+            "off_brooks": 0,
+            "off_ortiz": 0,
+            "off_vale": 0
+          },
+          "stressLevels": {
+            "off_chen": {
+              "stressBefore": 14.3,
+              "stressAfter": 14.3
+            },
+            "off_brooks": {
+              "stressBefore": 20.2,
+              "stressAfter": 20.2
+            },
+            "off_ortiz": {
+              "stressBefore": 10.2,
+              "stressAfter": 10.2
+            },
+            "off_vale": {
+              "stressBefore": 24.2,
+              "stressAfter": 24.2
+            }
+          },
+          "itemsConsumed": [],
+          "unitsUsed": [],
+          "knowledgeChanges": [],
+          "explanation": [
+            "Choose the next response went well (Squad A).",
+            "The team reviewed the remaining safety, agreement and care duties before choosing the next response.",
+            "Helped most: Otieno: coordination 66, composure 68 (+36.8).",
+            "Took 1 min.",
+            "Moved on to Follow through."
+          ],
+          "committed": {
+            "objectiveDelta": 0,
+            "civilianSafetyDelta": 0,
+            "pressureDelta": 0.4,
+            "consequences": [
+              "The team reviewed the remaining safety, agreement and care duties before choosing the next response.",
+              "Next: Carry out the plan, confirm accepted care or honestly record what remains unfinished. A setback leaves the incident with your team."
+            ],
+            "endingTitle": null,
+            "externalSupport": [],
+            "officerCasualties": []
+          }
+        }
+      ],
+      "revision": 2,
+      "status": "active",
+      "endingId": null,
+      "settled": false,
+      "startedAt": 1800000000000
+    },
+    "stress": {
+      "off_chen": 14.3,
+      "off_brooks": 20.2,
+      "off_ortiz": 10.2,
+      "off_vale": 24.2,
+      "off_okafor": 15,
+      "off_lindqvist": 5,
+      "off_reyes": 45,
+      "off_park": 25
+    },
+    "trace": {
+      "knowledge": {
+        "f_person": "reported",
+        "f_care_needed": "reported",
+        "f_immediate_danger": "reported",
+        "f_adjacent_safety": "reported"
+      },
+      "flags": [
+        "used:v4_source",
+        "v4_source_checked",
+        "used:v4_proceed"
+      ],
+      "pressure": 9.5,
+      "objective": 0,
+      "civilianSafety": 100,
+      "clock": 4
+    }
+  }
+]

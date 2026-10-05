@@ -1,6 +1,6 @@
 import type { Candidate, CertId, Id, Officer, RatingKey, Ratings, Role, TraitId } from '../sim/types';
 import { hashSeed, next } from '../sim/rng';
-import { PERSONAS, type Persona } from './personas';
+import { shuffledPersonas, type Persona } from './personas';
 import { CAREER_TUNING } from '../sim/career';
 
 export const RECRUIT_TUNING = {
@@ -146,15 +146,15 @@ export function generateBatch(
 ): Candidate[] {
   const seed = gen.campaignSeed ?? 12345;
   const excluded = new Set(gen.unavailable ?? []);
-  const eligible = PERSONAS.filter((p) => !p.legacyOfficerId && !excluded.has(p.id)
+  const eligible = shuffledPersonas(seed, 'recruitment').filter((p) => !excluded.has(p.id)
     && !takenNames.has(fullNameKey(p.firstName, p.surname))
     && (!gen.builds?.[p.id] || (day - gen.builds[p.id].bornDay) / 365 < CAREER_TUNING.retireAge));
   const introduced = eligible.filter((p) => gen.builds?.[p.id]);
   // Keep a small local recruitment market. New distinct people arrive as hiring and
   // retirement open room, rather than ageing the entire unseen reserve on day zero.
-  const reserve = eligible.filter((p) => !gen.builds?.[p.id]).sort((a, b) =>
-    (Number(a.id.slice(-3)) > 24 ? 1 : 0) - (Number(b.id.slice(-3)) > 24 ? 1 : 0) || hashSeed(`${seed}:arrival:${a.id}`) - hashSeed(`${seed}:arrival:${b.id}`));
-  // The core cohort (009–024) establishes the world first; this never depends on image download state.
+  const reserve = eligible.filter((p) => !gen.builds?.[p.id]);
+  // Every remaining authored identity can enter the opening local market, whether
+  // its portrait is ready or it was a starter in an older version of the game.
   const available = [...introduced, ...reserve.slice(0, Math.max(0, 12 - introduced.length))];
   const out: Candidate[] = [];
   const used = [...existingRoles];

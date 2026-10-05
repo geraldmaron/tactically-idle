@@ -1,4 +1,4 @@
-import { STARTER_PERSONAS } from './personas';
+import { shuffledPersonas } from './personas';
 import { hashSeed, next } from '../sim/rng';
 import type { CertId, Id, Officer, Ratings, Role, Squad, SquadId, TraitId } from '../sim/types';
 
@@ -62,24 +62,30 @@ const YEAR = 365;
 
 /**
  * Starting roster. Game day 0 is `now` (createInitialState sets calendarEpoch = now),
- * so birth and service-start days are simply negative year counts. Ages are spread
- * 24..57 with matching service: Park is a rookie, Okafor a veteran nearing 60.
+ * so birth and service-start days are simply negative year counts. The eight
+ * balanced gameplay seats draw identities from the entire cast without replacement.
+ * Historical seat IDs remain opaque command/squad keys; identityId owns the person.
  */
 export function startingOfficers(now: number, campaignSeed = 12345): Record<Id, Officer> {
   const out: Record<Id, Officer> = {};
-  for (const s of SEEDS) {
-    const person = STARTER_PERSONAS.find((p) => p.legacyOfficerId === s.id)!;
-    let roll = hashSeed(`${campaignSeed}:starter:${person.id}`);
+  const people = shuffledPersonas(campaignSeed, 'starters');
+  for (const [index, s] of SEEDS.entries()) {
+    const person = people[index];
+    let roll = hashSeed(`${campaignSeed >>> 0}:starter:${person.id}`);
     const ratings = { ...s.ratings };
     for (const key of Object.keys(ratings) as (keyof Ratings)[]) {
       const draw = next(roll); roll = draw.state;
       ratings[key] = Math.max(15, Math.min(95, ratings[key] + Math.round(draw.value * 8) - 4));
     }
+    // Experience belongs to the opening profile, but cannot predate adulthood.
+    // Scale its history for younger entrants instead of copying a veteran's career.
+    const service = Math.min(s.service, Math.max(0, person.ageAtStart - 21));
+    const operations = Math.round(s.operations * service / s.service);
     const officer: Officer & { xpBanked: number } = {
       id: s.id,
       identityId: person.id,
-      firstName: s.firstName,
-      surname: s.surname,
+      firstName: person.firstName,
+      surname: person.surname,
       role: s.role,
       portrait: person.portrait,
       ratings,
@@ -91,10 +97,10 @@ export function startingOfficers(now: number, campaignSeed = 12345): Record<Id, 
       injury: null,
       squadId: s.squadId,
       assignment: null,
-      hiredAt: now - s.tenureDays * DAY,
-      bornDay: -Math.round(s.age * YEAR),
-      serviceStartDay: -Math.round(s.service * YEAR),
-      career: { operations: s.operations, favorable: Math.round(s.operations * 0.55), adverse: Math.round(s.operations * 0.12) },
+      hiredAt: now - Math.min(s.tenureDays, service * YEAR) * DAY,
+      bornDay: -Math.round(person.ageAtStart * YEAR),
+      serviceStartDay: 0 - Math.round(service * YEAR),
+      career: { operations, favorable: Math.round(operations * 0.55), adverse: Math.round(operations * 0.12) },
       retirement: null,
       // Hidden bookkeeping (see sim/career.ts OfficerExt): starting xp is already banked, so
       // nobody's ratings jump on the first tick.

@@ -4,7 +4,7 @@ import { createInitialState } from './department';
 import { boardSummary } from './department-selectors';
 import { HOUR_MS } from './economy';
 import { INCIDENT_TUNING, TIER_REWARD_MULTIPLIERS, nextIncidentAt, takeIncident, tierRewardMultiplier } from './incidents';
-import { drawIncidentSpec, incidentId, parseIncidentId } from '../gen/incident';
+import { drawIncidentSpec, incidentId, parseIncidentId, INCIDENT_CONTENT_VERSION } from '../gen/incident';
 import type { Command, GameState, IncidentCard, OperationRun } from './types';
 import type { IncidentSpec } from './scenario-types';
 
@@ -81,7 +81,7 @@ describe('initial board', () => {
   it('passes department level, trust and content version to the generator', () => {
     createInitialState(T0);
     expect(draw).toHaveBeenCalled();
-    for (const call of draw.mock.calls) expect(call[1]).toMatchObject({ level: 3, trust: 78, contentVersion: 5 });
+    for (const call of draw.mock.calls) expect(call[1]).toMatchObject({ level: 3, trust: 78, contentVersion: INCIDENT_CONTENT_VERSION });
   });
 
   it('is deterministic and leaves the starting candidates unchanged by the board', () => {

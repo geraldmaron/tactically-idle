@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { SCENARIO_ORDER } from '../content/scenarios';
 import { DECISION_EXERCISES, LEGACY_DECISION_EXERCISES } from '../content/scenarios/decision-exercises';
-import { generateIncident } from '../gen/incident';
+import { generateIncident, INCIDENT_CONTENT_VERSION } from '../gen/incident';
 import { createInitialState } from './department';
 import { actionViews, decisionViews, pendingDebrief } from './operation-selectors';
 import { getScenario } from './scenario-registry';
@@ -18,18 +18,18 @@ describe('immediately discoverable decision exercises', () => {
     expect(new Set(DECISION_EXERCISES.map((exercise) => exercise.spec.familyId)).size).toBe(3);
     for (const exercise of DECISION_EXERCISES) {
       expect(entries.find((entry) => entry.card.id === exercise.id)?.kind).toBe('exercise');
-      expect(getScenario(exercise.id)).toMatchObject({ practiceOnly:true,version:5,id:exercise.id });
+      expect(getScenario(exercise.id)).toMatchObject({ practiceOnly:true,version:INCIDENT_CONTENT_VERSION,id:exercise.id });
       const generated = generateIncident(exercise.spec);
       expect(getScenario(exercise.id)?.title).toBe(generated.title);
       expect(getScenario(exercise.id)?.summary).toBe(generated.summary);
       expect(getScenario(exercise.id)?.variantLabel).toBe(generated.variantLabel);
-      expect(exercise.title).toBe(generated.title);
     }
   });
-  it('keeps all issued v3 and v4 exercises in the legacy lookup without advertising them as new entries', () => {
-    expect(LEGACY_DECISION_EXERCISES).toHaveLength(9);
+  it('keeps all issued v3 through v5 exercises in the legacy lookup without advertising them as new entries', () => {
+    expect(LEGACY_DECISION_EXERCISES).toHaveLength(15);
     for (const entry of LEGACY_DECISION_EXERCISES) {
-      expect(getScenario(entry.id)).toMatchObject({ id: entry.id, version: entry.spec.contentVersion, title: entry.title, summary: entry.summary, variantLabel: 'Decision exercise', practiceOnly: true });
+      const text = entry.spec.contentVersion >= 5 ? generateIncident(entry.spec) : { title: entry.title, summary: entry.summary, variantLabel: 'Decision exercise' };
+      expect(getScenario(entry.id)).toMatchObject({ id: entry.id, version: entry.spec.contentVersion, title: text.title, summary: text.summary, variantLabel: text.variantLabel, practiceOnly: true });
       expect(SCENARIO_ORDER).not.toContain(entry.id);
     }
   });

@@ -145,7 +145,7 @@ export function autoLoadout(state: GameState, scenarioId: Id, squadIds: SquadId[
   if (!scenario) warn('scenario', 'Unknown operation: automatic equipment suggestions are unavailable.');
   const eligible = chosen.filter((sid) => officers[sid]);
   const built = scenario ? getBuilt(scenario.locationFamilyId, scenario.locationSeed) : null;
-  type Candidate = { sid: SquadId; action: ActionDefinition; lead: Officer; score: number; context: PublicEquipmentContext };
+  type Candidate = { sid: SquadId; action: ActionDefinition; score: number; context: PublicEquipmentContext };
   const candidates: Candidate[] = [];
   if (scenario && built) for (const action of scenarioActions(scenario)) {
     const requirements = actionEquipmentRequirements(action);
@@ -157,7 +157,7 @@ export function autoLoadout(state: GameState, scenarioId: Id, squadIds: SquadId[
       const roster = qualifiedOfficers(state, [sid], action);
       if (!roster.length || requirements.certs.some((cert) => !roster.some((o) => o.certs.includes(cert)))) continue;
       const lead = orderActionParticipants(roster, action)[0];
-      candidates.push({ sid, action, lead, score: participantAptitude(lead, action), context });
+      candidates.push({ sid, action, score: participantAptitude(lead, action), context });
     }
   }
   candidates.sort((a, b) => b.score - a.score || a.sid.localeCompare(b.sid) || a.action.id.localeCompare(b.action.id));
@@ -216,23 +216,23 @@ export function autoLoadout(state: GameState, scenarioId: Id, squadIds: SquadId[
   };
   // Allocate complete required bundles for every feasible action before bonus gear.
   for (const candidate of candidates) {
-    const { sid, action, lead } = candidate;
+    const { sid, action } = candidate;
     const req = actionEquipmentRequirements(action);
     const preliminary = bundleFor(candidate, []);
-    if (preliminary.missing.length) { warn(`stock:${sid}:${action.id}`, `${label(sid)}: no additional usable ${preliminary.missing.join(' / ')} for ${action.title.toLowerCase()}.`); continue; }
+    if (preliminary.missing.length) { warn(`stock:${sid}:${action.id}`, `${label(sid)}: no additional usable ${preliminary.missing.join(' / ')} in owned stock. Current choices kept.`); continue; }
     const all = [...picks[sid]!, ...preliminary.additions.map((p) => p.unit)];
     const itemIds = req.groups.map((g) => all.find((u) => g.itemIds.includes(u.itemId))?.itemId).filter((id): id is Id => !!id);
     const bundle = bundleFor(candidate, itemIds);
-    if (bundle.missing.length) { warn(`stock:${sid}:${action.id}`, `${label(sid)}: no additional usable ${bundle.missing.join(' / ')} for ${action.title.toLowerCase()}.`); continue; }
-    for (const { unit } of bundle.additions) { add(sid, unit); result.rationale[sid]!.push(`${ITEMS[unit.itemId].name} → ${label(sid)}: supports ${lead.surname} for ${action.title.toLowerCase()}.`); }
+    if (bundle.missing.length) { warn(`stock:${sid}:${action.id}`, `${label(sid)}: no additional usable ${bundle.missing.join(' / ')} in owned stock. Current choices kept.`); continue; }
+    for (const { unit } of bundle.additions) { add(sid, unit); result.rationale[sid]!.push(`${ITEMS[unit.itemId].name} → ${label(sid)}: added from owned stock for this squad’s equipment requirements.`); }
     demands.set(sid, budgetFor(candidate, itemIds).current);
     supported.push(candidate);
     const prerequisites = [...(action.requires.facts ?? []).map((f) => f.reason), ...(action.requires.flags ?? []).map((f) => f.reason)];
     for (const itemId of itemIds) for (const cap of ITEMS[itemId].capabilities ?? []) if (action.capabilities?.rules.includes(cap)) prerequisites.push(...capabilityRuleEffect(ITEMS[itemId], cap, candidate.context).prerequisites);
-    if (prerequisites.length) result.rationale[sid]!.push(`${action.title}: ${[...new Set(prerequisites)].join('; ')}.`);
+    if (prerequisites.length) result.rationale[sid]!.push('Equipment use still depends on the scene, required checks and your decision.');
   }
   for (const candidate of supported) {
-    const { sid, action, lead } = candidate;
+    const { sid, action } = candidate;
     const groups = new Set(pool.flatMap((u) => effects(candidate, u).map((e) => e.group)));
     for (const group of groups) {
       const compareGroup = (a: EquipmentPick, b: EquipmentPick) => {
@@ -249,7 +249,7 @@ export function autoLoadout(state: GameState, scenarioId: Id, squadIds: SquadId[
         if (!bundle.missing.length) {
           for (const pick of bundle.additions) add(sid, pick.unit);
           demands.set(sid, budgetFor(candidate, itemIds).current);
-        } else warn(`optional-supply:${sid}:${action.id}:${group}`, `${label(sid)}: ${bundle.missing.join(' / ')} shortage for another ${action.title.toLowerCase()} use.`);
+        } else warn(`optional-supply:${sid}:${action.id}:${group}`, `${label(sid)}: ${bundle.missing.join(' / ')} shortage for further equipment uses. Current choices kept.`);
         continue;
       }
       for (const { unit } of matching) {
@@ -261,13 +261,16 @@ export function autoLoadout(state: GameState, scenarioId: Id, squadIds: SquadId[
         for (const pick of bundle.additions) add(sid, pick.unit);
         demands.set(sid, budgetFor(candidate, itemIds).current);
         const effect = effects(candidate, unit).find((e) => e.group === group)!;
-        result.rationale[sid]!.push(`${ITEMS[unit.itemId].name} → ${label(sid)}: supports ${lead.surname} for ${action.title.toLowerCase()} (${effect.value > 0 ? `+${Math.round(effect.value * 10) / 10} points` : 'route aid'}${effect.minutes ? `, ${effect.minutes > 0 ? '+' : ''}${effect.minutes} game min` : ''}).${effect.prerequisites.length ? ` ${effect.prerequisites.join('; ')}.` : ''}`);
+        result.rationale[sid]!.push(`${ITEMS[unit.itemId].name} → ${label(sid)}: equipment benefit when applicable (${effect.value > 0 ? `+${Math.round(effect.value * 10) / 10} points` : 'route aid'}${effect.minutes ? `, ${effect.minutes > 0 ? '+' : ''}${effect.minutes} game min` : ''}).${effect.prerequisites.length ? ' Check the scene requirements before use.' : ''}`);
         break;
       }
     }
   }
 
-  for (const sid of targets) result.units[sid] = picks[sid]!.map((u) => u.id);
-  result.warnings = [...warnings.values()];
+  for (const sid of targets) {
+    result.units[sid] = picks[sid]!.map((u) => u.id);
+    result.rationale[sid] = [...new Set(result.rationale[sid])];
+  }
+  result.warnings = [...new Set(warnings.values())];
   return result;
 }

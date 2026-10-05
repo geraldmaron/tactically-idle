@@ -15,6 +15,7 @@ import { parseIncidentId, INCIDENT_CONTENT_VERSION, SUPPORTED_INCIDENT_CONTENT_V
 import { legacyItemDefinition, retireLegacyBatteries } from './compatibility/retirement';
 import { maxDevelopmentTier } from './development-tiers';
 import { normalizeSquadArrangementState } from './squad-optimizer';
+import { validStageContinuations } from './compatibility/legacy-choices';
 
 export const SAVE_KEY = 'tactically-idle/save';
 
@@ -140,6 +141,7 @@ function validRun(r: unknown): boolean {
   const scenario = getScenario(r.scenarioId as string);
   return !!scenario && scenario.locationFamilyId === r.locationFamilyId && Number.isSafeInteger(r.locationSeed)
     && (r.locationSeed as number) >= 0
+    && validStageContinuations(r as unknown as OperationRun, scenario)
     && validExternalSupportState(r as unknown as OperationRun, scenario)
     && (scenario.version < 4 || (r.scenarioVersion === scenario.version && r.locationSeed === scenario.locationSeed
       && Number.isSafeInteger(r.revision) && r.revision === r.history.length

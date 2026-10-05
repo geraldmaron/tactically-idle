@@ -1,4 +1,5 @@
 import entries from './personas.json';
+import { hashSeed, next } from '../sim/rng';
 
 /** Authored identity and visual direction only. Never use culture, appearance or pronouns in gameplay formulas. */
 export interface Persona {
@@ -16,6 +17,19 @@ export interface Persona {
 export const PERSONAS = entries as Persona[];
 export const PERSONA_BY_ID: Readonly<Record<string, Persona>> = Object.fromEntries(PERSONAS.map((p) => [p.id, p]));
 export const STARTER_PERSONAS = PERSONAS.filter((p) => p.legacyOfficerId);
+
+/** A campaign-local draw without replacement; no identity, art or demographic is preferred. */
+export function shuffledPersonas(campaignSeed: number, purpose: 'starters' | 'recruitment'): Persona[] {
+  const people = [...PERSONAS];
+  let rng = hashSeed(`${campaignSeed >>> 0}:people:${purpose}`);
+  for (let i = people.length - 1; i > 0; i--) {
+    const draw = next(rng);
+    rng = draw.state;
+    const j = Math.floor(draw.value * (i + 1));
+    [people[i], people[j]] = [people[j], people[i]];
+  }
+  return people;
+}
 
 /** Written as ordinary biographical prose rather than identity labels. */
 export function personaNote(identityId?: string): string | null {

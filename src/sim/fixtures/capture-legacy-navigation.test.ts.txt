@@ -1,0 +1,23 @@
+import { it } from 'vitest';
+import { writeFileSync } from 'node:fs';
+import { createInitialState } from './department';
+import { getScenario } from './scenario-registry';
+import { apply, NOW, startRun } from './test-fixtures';
+import { getBuilt } from './resolution';
+import { traceRun } from './operation';
+it('capture', () => {
+  const snapshots = [3, 4].map(version => {
+    const scenarioId = `gen:welfare_check:cedar_close:7:7:2:${version}`;
+    const scenario = getScenario(scenarioId)!;
+    let state = createInitialState(NOW, 41);
+    state.incidents = [{id: scenarioId, type: 'welfare_check', familyId: 'cedar_close', tier:2, arrivedAt:NOW, expiresAt:NOW+3600000, seen:true}];
+    state = startRun(state, scenarioId, ['A'], {positions:{A:getBuilt('cedar_close',7).location.entries[0]},loadouts:{A:{}}});
+    for (const actionId of version === 3 ? ['v3_welfare_contact','v3_welfare_proceed'] : ['v4_source','v4_proceed']) {
+      const result=apply(state,{type:'decide',actionId,actingSquadIds:['A'],supportSquadIds:[]});
+      if (!result.result.ok) throw new Error(result.result.reason);
+      state=result.state;
+    }
+    return {run:state.activeRun, stress:Object.fromEntries(Object.entries(state.officers).map(([id,o])=>[id,o.stress])), trace:traceRun(scenario,state.activeRun!).end};
+  });
+  writeFileSync('/tmp/legacy-navigation-runs.json',JSON.stringify(snapshots,null,2)+'\n');
+});
