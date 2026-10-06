@@ -175,9 +175,22 @@ This turns the catalog into a long arc rather than a menu.
 - **First drop:** `fall_at_home`, `water_leak` and `lost_child`.
 - **v10 frozen:** 210 definitions.
 
-**Findings to act on:**
-- Department level never rises today, so unlocks rely on certifications and equipment, and nothing asks for more than level 3. Level progression is a separate design gap.
-- The distinctness metric shows the 24 v9 compiled-framework recipes collapse to 6 decision fingerprints. They are recorded as known debt; new recipes must be distinct.
-- Protected rescue is rare even when unlocked (about 4 in 600 draws).
-- Practice results don't update casebook best results; only live calls do.
+**Findings to act on** (four of five addressed in content v12 and save v7, below):
+- ~~Department level never rises today, so unlocks rely on certifications and equipment, and nothing asks for more than level 3. Level progression is a separate design gap.~~
+- ~~The distinctness metric shows the 24 v9 compiled-framework recipes collapse to 6 decision fingerprints. They are recorded as known debt; new recipes must be distinct.~~
+- ~~Protected rescue is rare even when unlocked (about 4 in 600 draws).~~
+- ~~Practice results don't update casebook best results; only live calls do.~~
+- The shared placement sentence can read awkwardly with some room names ("in the shop floor"). That fix needs a version gate.
+
+## Delivered in content v12 and save v7 (2026-10-06)
+
+- **v11 frozen:** 258 definitions (`issued-v11-fingerprints.json`, also in the cross-engine suite).
+- **Department level progression** (`src/sim/department-level.ts`). Each closed live call earns service: 2 + tier for completing the agreed step, 1 + half the tier otherwise, 1 for a failed response, none for practice. Level L needs 5 × L × (L − 1) service in total (10, 30, 60, 100, ...), up to level 10. New campaigns start at level 1. The unlock curve follows §5: shops and medical calls at 2, business and the first protective response at 3, armed incidents and protected rescue at 4 (with certification), hostage crises at 5. Save v7 keeps each older campaign's level and lifts it to the level of any framework it had met or could already be sent to, so the update takes no kind of call away. The top-bar level sheet shows service toward the next level and what it opens; debriefs show service earned and any level reached.
+- **Decision depth for every typed framework** (`src/content/framework-depth-v12.ts`, see the content pipeline). Calls can act on the first report instead of checking it, a real gamble on the hidden truth. Every call can close slowly but surely beside the step that fits. All 33 typed recipes are distinct (the v9 eight were 24 recipes in 6 shapes), and a new choices gate holds every stage of every typed recipe, on every building type, to at least two choices the player can take.
+- **Framework-first board draws.** A framework's odds no longer depend on how many building types it fits. An unlocked specialist framework has three slots to an everyday call's four: protected rescue rose from 1.3% to about 4.4% of draws with everything unlocked (`draw-v12.test.ts`).
+- **Practice counts toward casebook best results** on situations already met live, marked "(practice)". Practice never discovers a recipe, and a building type met only in practice isn't listed as visited. Results fold when each debrief closes.
+- **Fixed in passing:** before v12, `false_intruder` situation 2 on some `_g2` houses reached resolve with no step the player could take, because furniture blocked the walk out. v12 refuses such buildings at hosting.
+- **Hand-authored stories get second choices too** (`decisions-v8/choices-v12.ts`). Every stage of the six stories now opens with at least two choices the player can take, on the gated building types. Two furnished-layout routing faults that stranded players with no usable step (a squad at a window staging point; a crew meeting point outside a wrapped front lot) are fixed in the engine.
+
+**Still open:**
 - The shared placement sentence can read awkwardly with some room names ("in the shop floor"). That fix needs a version gate.
