@@ -112,8 +112,8 @@ class G1Plan extends RoomPlan {
     const objects = [...this.placed, ...items].map(c => c.object), fresh = items.map(c => c.object), found = new Map<number, Vec[]>();
     for (let i = 1; i < this.anchors.length; i++) {
       const known = this.routes.get(i);
-      if (known && known.slice(1).every((p, j) => roomSegmentClear(this.room, fresh, known[j], p, this.routeClearance))) continue;
-      const path = findRoomPath(this.room, objects, this.anchors[0], this.anchors[i], this.routeClearance);
+      if (known && known.slice(1).every((p, j) => roomSegmentClear(this.room, fresh, known[j], p, this.routeClearance, this.routeClearance, this.loc.geometry))) continue;
+      const path = findRoomPath(this.room, objects, this.anchors[0], this.anchors[i], this.routeClearance, this.loc.geometry);
       if (!path) return false;
       found.set(i, path);
     }
