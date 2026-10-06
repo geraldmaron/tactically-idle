@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { createInitialState } from './department';
 import { getScenario } from './scenario-registry';
 import { actionViews, previewAction, stageContinuations } from './operation-selectors';
-import { traceRun } from './operation';
+import { computeDebrief, traceRun } from './operation';
+import { responseFailurePlan } from './response-failure';
 import { getBuilt, bandFor, evaluateAction } from './resolution';
 import { next } from './rng';
 import { deserialize, serialize } from './save';
@@ -54,13 +55,48 @@ describe('free navigation for issued calls', () => {
     expect(repeated.state).toBe(after);
     expect(decide(before, navigation)).toEqual(after);
 
-    const choice = actionViews(after, NOW, 'A').find(action => action.eligible)!;
+    const choice = actionViews(after, NOW, 'A').find(action => action.eligible);
     const resumed = deserialize(serialize(after, NOW))!;
+    if (!choice) {
+      // Proceeding without preparation can exhaust an issued response; free navigation must not invent an ending.
+      expect(after.activeRun!.status).toBe('active');
+      const plan = responseFailurePlan(after);
+      expect(plan).not.toBeNull();
+      const command = { type: 'endFailedResponse' as const, runId: plan!.runId, revision: plan!.revision };
+      const failed = apply(after, command);
+      expect(failed.result).toEqual({ ok: true });
+      expect(apply(resumed, command)).toEqual(failed);
+      const expectedFailure = structuredClone(after);
+      const { runId: _runId, consequence: _consequence, ...record } = plan!;
+      Object.assign(expectedFailure.activeRun!, { stage: 'debrief', status: 'debrief', endingId: 'handed_over', responseFailure: record });
+      expect(failed.state).toEqual(expectedFailure);
+      expect(computeDebrief(failed.state, failed.state.activeRun!)).toMatchObject({ completionAchieved: false, fundingReward: 0, devPointReward: 0 });
+      expect(deserialize(serialize(failed.state, NOW))?.activeRun).toEqual(failed.state.activeRun);
+      return;
+    }
     const nextState = decide(after, choice.id);
     expect(decide(resumed, choice.id)).toEqual(nextState);
     expect(nextState.activeRun!.history.at(-1)!.sample).toBe(next(run.rngState).value);
     expect(nextState.activeRun!.history.at(-1)!.timeCost).toBeGreaterThan(0);
     expect(deserialize(serialize(nextState, NOW))).not.toBeNull();
+  });
+
+  it('retains the sampled historical withdrawal after free navigation without restoring its menu card', () => {
+    const before = decide(running(3, 'barricaded'), 'v3_protect_contact');
+    const continued = apply(before, { type: 'continueStage', actionId: 'v3_protect_proceed', revision: before.activeRun!.revision });
+    expect(continued.result).toEqual({ ok: true });
+    const state = continued.state;
+    const actionId = 'v3_protect_withdraw';
+    expect(actionViews(state, NOW, 'A').some(action => action.id === actionId)).toBe(false);
+    expect(previewAction(state, NOW, actionId, ['A'], [])?.eligible).toBe(true);
+    const finished = decide(state, actionId);
+    const expected = next(before.activeRun!.rngState);
+    expect(finished.activeRun!.history.at(-1)!.sample).toBe(expected.value);
+    expect(finished.activeRun!.rngState).toBe(expected.state);
+    expect(finished.activeRun!.history.at(-1)!.timeCost).toBeGreaterThan(0);
+    expect(finished.activeRun!.history.slice(0, before.activeRun!.history.length)).toEqual(before.activeRun!.history);
+    expect(finished.activeRun!.responseFailure).toBeUndefined();
+    expect(deserialize(serialize(finished, NOW))?.activeRun).toEqual(finished.activeRun);
   });
 
   it('does not advance requested care, alter squads or require fit officers', () => {

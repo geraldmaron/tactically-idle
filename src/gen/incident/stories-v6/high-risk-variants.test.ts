@@ -1,7 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { buildLocation } from '../../../sim/location';
-import { actionViews } from '../../../sim/operation-selectors';
+import { actionViews, previewAction } from '../../../sim/operation-selectors';
 import { computeDebrief, validateScenario } from '../../../sim/operation';
+import { planActionResupply } from '../../../sim/equipment-resupply';
+import { responseFailurePlan } from '../../../sim/response-failure';
 import { initializePersonnel } from '../../../sim/personnel';
 import { bandFor, builtFor, evaluateAction, openingFlag } from '../../../sim/resolution';
 import { next } from '../../../sim/rng';
@@ -140,6 +142,8 @@ describe('v6 high-risk episodes change actual decisions', () => {
       expect(jun.position && !('kind' in jun.position) && jun.position.spaceId).toBe(target);
       expect(chair.position).toEqual(jun.position);
       expect(state.activeRun!.flags).toContain('v5_chair_jun_safe');
+      expect(actionViews(state, NOW, 'A').some(action => action.id === 'v5_chair_civilian_partial')).toBe(false);
+      expect(previewAction(state, NOW, 'v5_chair_civilian_partial', ['A'], [])?.eligible).toBe(true);
       state = decide(state, 'v5_chair_civilian_partial');
       expect(state.activeRun!.status).toBe('debrief');
     }
@@ -239,14 +243,17 @@ describe('v6 high-risk episodes change actual decisions', () => {
     expect(notes(state)).toContain('eight minutes to arrange Jun’s requested conversation');
   });
 
-  it.each(families)('%s always has an honest low-resource exit after saved progress', (type, familyId) => {
+  it.each(families)('%s preserves issued low-resource withdrawal results while hiding the current exit card', (type, familyId) => {
     for (const variant of [0, 1, 2]) {
       const { s } = fixture(type, variant, 1, familyId);
       let state = running(s);
       const first = actionViews(state, NOW, 'A').find(view => view.eligible && !view.id.includes('withdraw'))!;
       state = decide(state, first.id, null);
-      const leave = actionViews(state, NOW, 'A').find(view => view.eligible && view.id.includes('withdraw'))!;
+      expect(actionViews(state, NOW, 'A').some(view => view.id.includes('withdraw'))).toBe(false);
+      const leave = scenarioActions(s).find(action => action.stage === state.activeRun!.stage && action.id.includes('withdraw'))!;
+      expect(previewAction(state, NOW, leave.id, ['A'], [])?.eligible).toBe(true);
       state = decide(state, leave.id, null);
+      expect(state.activeRun!.responseFailure).toBeUndefined();
       const report = computeDebrief(state, state.activeRun!)!;
       expect(report.completionAchieved).toBe(false);
       expect(report.disposition).toBe('relief_partial');
@@ -258,15 +265,52 @@ describe('v6 high-risk episodes change actual decisions', () => {
       const { s } = fixture(type, variant, seed, familyId);
       let state = running(s);
       for (let step = 0; state.activeRun!.status === 'active' && step < 40; step++) {
-        const options = actionViews(state, NOW, 'A').filter(view => view.eligible);
-        expect(options.length).toBeGreaterThan(0);
+        const visible = actionViews(state, NOW, 'A');
+        const options = visible.filter(view => view.eligible);
+        if (!options.length) {
+          const delivery = visible.find(view => planActionResupply(state, NOW, view.id, view.actingSquadIds, view.supportSquadIds).ok);
+          if (delivery) {
+            expect(responseFailurePlan(state)).toBeNull();
+            const supplied = apply(state, { type: 'resupplyAction', actionId: delivery.id, actingSquadIds: delivery.actingSquadIds, supportSquadIds: delivery.supportSquadIds });
+            expect(supplied.result).toEqual({ ok: true });
+            const restored = deserialize(serialize(supplied.state, NOW));
+            expect(restored?.activeRun).toEqual(supplied.state.activeRun);
+            expect(restored!.activeRun!.history).toEqual(state.activeRun!.history);
+            state = restored!;
+            continue;
+          }
+          const plan = responseFailurePlan(state);
+          expect(plan, `${type}:${variant}:${seed}: exhausted response requires an honest failure`).not.toBeNull();
+          const before = structuredClone(state);
+          const failed = apply(state, { type: 'endFailedResponse', runId: plan!.runId, revision: plan!.revision });
+          expect(failed.result).toEqual({ ok: true });
+          const { runId: _runId, consequence: _consequence, ...record } = plan!;
+          Object.assign(before.activeRun!, { stage: 'debrief', status: 'debrief', endingId: 'handed_over', responseFailure: record });
+          expect(failed.state).toEqual(before);
+          const restored = deserialize(serialize(failed.state, NOW));
+          expect(restored?.activeRun).toEqual(failed.state.activeRun);
+          state = restored!;
+          break;
+        }
         const onward = options.filter(view => !/withdraw|partial|record.*pending|record.*unfinished/i.test(view.id + ' ' + view.title));
         const choices = onward.length ? onward : options;
         const chosen = choices[(seed + step) % choices.length];
         state = decide(state, chosen.id, null);
       }
       expect(state.activeRun!.status).toBe('debrief');
-      expect(computeDebrief(state, state.activeRun!)).not.toBeNull();
+      const report = computeDebrief(state, state.activeRun!);
+      expect(report).not.toBeNull();
+      if (state.activeRun!.responseFailure) {
+        expect(report).toMatchObject({ completionAchieved: false, disposition: 'unresolved', fundingReward: 0, devPointReward: 0, trustDelta: -2 });
+        expect(report!.officerCondition.every(officer => officer.xpGained === 0)).toBe(true);
+      }
+      const closed = apply(state, { type: 'closeDebrief' });
+      expect(closed.result).toEqual({ ok: true });
+      if (state.activeRun!.responseFailure) {
+        expect(closed.state.department.funding).toBe(state.department.funding);
+        expect(closed.state.department.devPoints).toBe(state.department.devPoints);
+      }
+      expect(deserialize(serialize(closed.state, NOW))?.debriefs).toEqual(closed.state.debriefs);
     }
   });
 });

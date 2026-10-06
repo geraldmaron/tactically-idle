@@ -10,6 +10,8 @@ Hands-on care uses the patient's current public location. The acting medic follo
 
 The UI distinguishes acting squads, explicit support and squads remaining at their current positions. A one-actor decision switches from A to B with one tap; joint choices respect the actual maximum. Preparation tabs retain quantities, explicit zeroes, serials, staging and shared-stock limits.
 
+Choosing a completed civilian plan does not silently abandon another person's unfinished care. Version8 keeps that chosen outcome pending while the call remains active, then closes it when later committed care satisfies the original completion requirements. Earlier issued outcomes remain unchanged. A genuinely unusable response still requires an explicit failed-response report.
+
 ## Verification status
 
 Work-in-progress checkpoint: typecheck and focused decision, squad and care regressions pass. Independent bounded simulation has exercised all six families with one and two squads, including low stock, care delays, failure and save/reload. Final full aggregate, additional adversarial routes and changed-build hosted phone checks are still required. No claim of physical-device testing.

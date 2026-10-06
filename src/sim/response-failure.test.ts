@@ -75,5 +75,8 @@ describe('guarded failed responses', () => {
     const forged = structuredClone(state);
     forged.activeRun!.responseFailure = { version: 1, revision: 0, atClock: 0, reasonKind: 'no_viable_approach', title: 'Failure', reason: 'No', remainingTasks: ['Still open'] };
     expect(deserialize(serialize(forged, NOW))).toBeNull();
+    const pending = structuredClone(state);
+    pending.activeRun!.flags.push('completion_pending:missing-ending');
+    expect(deserialize(serialize(pending, NOW))).toBeNull();
   });
 });

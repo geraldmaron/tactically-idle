@@ -99,7 +99,14 @@ export function responseFailurePlan(state: GameState): ResponseFailurePlan | nul
   };
 }
 
-export function validResponseFailure(run: OperationRun): boolean {
+export function validResponseFailure(run: OperationRun, scenario: ScenarioDefinition): boolean {
+  const pending = run.flags.filter(flag => flag.startsWith('completion_pending:'));
+  if (pending.length) {
+    const id = pending[0].slice('completion_pending:'.length);
+    if (scenario.version < 8 || pending.length !== 1 || run.status !== 'active' || run.stage !== 'resolve'
+      || !['resolved', 'care_accepted', 'followup_agreed'].includes(scenario.endings[id]?.disposition ?? '')
+      || !run.history.some(decision => scenario.stages[decision.stage].actions.find(action => action.id === decision.actionId)?.outcomes[decision.band].some(effect => effect.ending === id))) return false;
+  }
   const record = run.responseFailure;
   if (record === undefined) return true;
   return !!record && record.version === 1 && record.revision === run.revision && record.atClock === run.clock

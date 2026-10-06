@@ -149,7 +149,7 @@ function validRun(r: unknown): boolean {
   return !!scenario && scenario.locationFamilyId === r.locationFamilyId && Number.isSafeInteger(r.locationSeed)
     && (r.locationSeed as number) >= 0
     && validStageContinuations(r as unknown as OperationRun, scenario)
-    && validResponseFailure(r as unknown as OperationRun)
+    && validResponseFailure(r as unknown as OperationRun, scenario)
     && validExternalSupportState(r as unknown as OperationRun, scenario)
     && (scenario.version < 4 || (r.scenarioVersion === scenario.version && r.locationSeed === scenario.locationSeed
       && Number.isSafeInteger(r.revision) && r.revision === r.history.length

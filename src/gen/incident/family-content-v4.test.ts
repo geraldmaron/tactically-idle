@@ -7,6 +7,8 @@ import { matchedEffects, validateScenario } from '../../sim/operation';
 import { bandFor, builtFor, evaluateAction, openingFlag } from '../../sim/resolution';
 import { hashSeed, next } from '../../sim/rng';
 import { externalSupportStatus, externalSupportViews } from '../../sim/external-support';
+import { planActionResupply } from '../../sim/equipment-resupply';
+import { responseFailurePlan } from '../../sim/response-failure';
 import { getScenario } from '../../sim/scenario-registry';
 import { scenarioActions, type IncidentSpec } from '../../sim/scenario-types';
 import { apply, makeState, NOW, setRun, startRun } from '../../sim/test-fixtures';
@@ -164,18 +166,19 @@ describe('version-four varied responsibilities', () => {
     const again = apply(state, { type: 'decide', actionId: 'v4_await_care', actingSquadIds: ['A'], supportSquadIds: [] });
     expect(again.result.ok).toBe(false); expect(again.state).toBe(state);
   });
-  it('keeps unavailable care honest even with intact safety', () => {
+  it('preserves the issued unavailable-care partial without advertising its exit or claiming care', () => {
     const spec = findSpec('medical_complication', s => truth(s, 'f_care_needed') && !truth(s, 'f_immediate_danger') && s.externalServices!.every(x => !x.available));
     let state = play(running(spec), ['v4_source', 'v4_verify', 'v4_proceed', 'v4_care_plan']);
     expect(evaluate(state, 'v4_await_care').eligible).toBe(false);
     expect(evaluate(state, 'v4_transfer_care').eligible).toBe(false);
     state = setRun(state, { pressure: 0 });
     state.activeRun!.civilianSafety = 100;
+    expect(actionViews(state, NOW, 'A').some(action => action.id === 'v4_record_care_pending')).toBe(false);
     state = decide(state, 'v4_record_care_pending');
     expect(pendingDebrief(state)).toMatchObject({ completionAchieved: false, disposition: 'relief_partial', objective: { score: 30 }, civilianSafety: { score: 100 } });
     expect(pendingDebrief(state)!.devPointReward).toBeLessThan(generateIncident(spec).rewards.devPoints);
   });
-  it('refuses acceptance through a blocked physical access route and preserves an honest ending', () => {
+  it('refuses care through blocked access and preserves the issued partial result without its exit card', () => {
     const spec = findSpec('medical_complication', s => truth(s, 'f_care_needed') && !truth(s, 'f_immediate_danger') && s.externalServices!.some(x => x.available));
     let state = play(running(spec), ['v4_source', 'v4_verify', 'v4_agreement', 'v4_proceed', 'v4_care_plan']);
     const s = getScenario(state.activeRun!.scenarioId)!; const access = scenarioActions(s).find(a => a.id === 'v4_care_access')!;
@@ -183,6 +186,7 @@ describe('version-four varied responsibilities', () => {
     state = setRun(state, { flags: [openingFlag(opening, 'blocked')] });
     expect(evaluate(state, access.id).eligible).toBe(false);
     expect(evaluate(state, 'v4_transfer_care').eligible).toBe(false);
+    expect(actionViews(state, NOW, 'A').some(action => action.id === 'v4_record_care_pending')).toBe(false);
     state = decide(state, 'v4_record_care_pending');
     expect(pendingDebrief(state)!.completionAchieved).toBe(false);
   });
@@ -226,7 +230,33 @@ describe('version-four varied responsibilities', () => {
           expect(state).not.toBeNull();
           continue;
         }
-        expect(eligible.length, `${type}:${seed}:${state.activeRun!.stage}`).toBeGreaterThan(0);
+        if (!eligible.length) {
+          const delivery = choices.find(a => planActionResupply(state, NOW, a.id, a.actingSquadIds, a.supportSquadIds).ok);
+          if (delivery) {
+            expect(responseFailurePlan(state)).toBeNull();
+            const supplied = apply(state, { type: 'resupplyAction', actionId: delivery.id, actingSquadIds: delivery.actingSquadIds, supportSquadIds: delivery.supportSquadIds });
+            expect(supplied.result).toEqual({ ok: true });
+            const restored = deserialize(serialize(supplied.state, NOW));
+            expect(restored?.activeRun).toEqual(supplied.state.activeRun);
+            expect(restored!.activeRun!.history).toEqual(state.activeRun!.history);
+            state = restored!;
+            continue;
+          }
+          const plan = responseFailurePlan(state);
+          expect(plan, `${type}:${seed}:${policy}: no action, continuation or resupply remains`).not.toBeNull();
+          const before = structuredClone(state);
+          const result = apply(state, { type: 'endFailedResponse', runId: plan!.runId, revision: plan!.revision });
+          expect(result.result).toEqual({ ok: true });
+          const { runId: _runId, consequence: _consequence, ...record } = plan!;
+          Object.assign(before.activeRun!, { stage: 'debrief', status: 'debrief', endingId: 'handed_over', responseFailure: record });
+          expect(result.state).toEqual(before);
+          const restored = deserialize(serialize(result.state, NOW));
+          expect(restored?.activeRun).toEqual(result.state.activeRun);
+          state = restored!;
+          expect(pendingDebrief(state)).toMatchObject({ completionAchieved: false, disposition: 'unresolved', fundingReward: 0, devPointReward: 0, trustDelta: -2 });
+          expect(pendingDebrief(state)!.officerCondition.every(officer => officer.xpGained === 0)).toBe(true);
+          break;
+        }
         const a = eligible[policy === 0 ? 0 : policy === 1 ? eligible.length - 1 : (seed + step) % eligible.length];
         const result = apply(state, { type: 'decide', actionId: a.id, actingSquadIds: ['A'], supportSquadIds: [] });
         expect(result.result).toEqual({ ok: true }); state = result.state;
@@ -234,6 +264,13 @@ describe('version-four varied responsibilities', () => {
       }
       expect(state.activeRun!.status, `${type}:${seed}:${policy}`).toBe('debrief');
       expect(new Set(state.activeRun!.history.map(d => d.actionId)).size).toBe(state.activeRun!.history.length);
+      const closed = apply(state, { type: 'closeDebrief' });
+      expect(closed.result).toEqual({ ok: true });
+      if (state.activeRun!.responseFailure) {
+        expect(closed.state.department.funding).toBe(state.department.funding);
+        expect(closed.state.department.devPoints).toBe(state.department.devPoints);
+      }
+      expect(deserialize(serialize(closed.state, NOW))?.debriefs).toEqual(closed.state.debriefs);
     }
     expect(encountered.size).toBe(9);
   }, 30_000);

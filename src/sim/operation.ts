@@ -635,7 +635,7 @@ export function computeDebrief(state: GameState, run: OperationRun): DebriefResu
   if (!scenario || !run.endingId) return null;
   const authoredEnding = scenario.endings[run.endingId];
   const ending = run.responseFailure && authoredEnding ? { ...authoredEnding, title: run.responseFailure.title,
-    summary: `Command received the failed-response report. ${run.responseFailure.reason} No rescue, medical acceptance or replacement team is implied.`, strain: 0, trustAdjust: -2,
+    summary: `${run.responseFailure.reason} ${run.responseFailure.remainingTasks.join(' ')}`, strain: 0, trustAdjust: -2,
     disposition: 'unresolved' as const, completion: undefined, remainingTasks: run.responseFailure.remainingTasks } : authoredEnding;
   if (!ending) return null;
   const { steps } = traceRun(scenario, run);
@@ -824,6 +824,7 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     if (!plan) return fail('A usable response or equipment delivery remains. Review the available choices.');
     const { runId: _runId, consequence: _consequence, ...record } = plan;
     run.responseFailure = record;
+    run.flags = run.flags.filter(flag => !flag.startsWith('completion_pending:'));
     run.stage = 'debrief'; run.status = 'debrief'; run.endingId = FALLBACK_ENDING;
     return { ok: true };
   },
@@ -961,14 +962,24 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
 
     // stage transition (the committed decision is already in history)
     let stageNote: string | null = null;
-    if (ending) {
-      const declared = scenario.endings[ending];
+    const pendingPrefix = 'completion_pending:';
+    const intendedEnding = ending ?? (scenario.version >= 8 ? run.flags.find(flag => flag.startsWith(pendingPrefix) && !!scenario.endings[flag.slice(pendingPrefix.length)])?.slice(pendingPrefix.length) : null);
+    if (intendedEnding) {
+      const declared = scenario.endings[intendedEnding];
       const completion = scenario.version >= 4 && declared ? completionEvidence(scenario, run, declared) : undefined;
-      const finalEnding = completion && ['resolved', 'care_accepted', 'followup_agreed'].includes(declared.disposition ?? '') && !completion.completionAchieved ? FALLBACK_ENDING : ending;
-      run.stage = 'debrief';
-      run.status = 'debrief';
-      run.endingId = finalEnding;
-      stageNote = `Ending: ${scenario.endings[finalEnding]?.title ?? finalEnding}.`;
+      const incomplete = completion && ['resolved', 'care_accepted', 'followup_agreed'].includes(declared.disposition ?? '') && !completion.completionAchieved;
+      if (scenario.version >= 8 && incomplete) {
+        run.flags = [...run.flags.filter(flag => !flag.startsWith(pendingPrefix)), `${pendingPrefix}${intendedEnding}`];
+        run.stage = 'resolve';
+        stageNote = 'The completed step is retained. Outstanding care and scene duties keep the call open.';
+      } else {
+        run.flags = run.flags.filter(flag => !flag.startsWith(pendingPrefix));
+        const finalEnding = incomplete ? FALLBACK_ENDING : intendedEnding;
+        run.stage = 'debrief';
+        run.status = 'debrief';
+        run.endingId = finalEnding;
+        stageNote = `Ending: ${scenario.endings[finalEnding]?.title ?? finalEnding}.`;
+      }
     } else {
       if (nextStage) run.stage = nextStage;
       if (scenario.version < 8 && run.stage === stage && !anyEligible(draft, run, scenario, builtFor(run.locationFamilyId, run.locationSeed, run.flags))) {

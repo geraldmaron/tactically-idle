@@ -8,6 +8,7 @@ import { bandFor, builtFor, evaluateAction, openingFlag } from '../../../sim/res
 import { next } from '../../../sim/rng';
 import { deserialize, serialize } from '../../../sim/save';
 import { scenarioActions, type IncidentType, type ScenarioDefinition } from '../../../sim/scenario-types';
+import { currentStoryRoute } from '../../../sim/story-bindings';
 import { storyPeoplePublic, storyPropsPublic } from '../../../sim/story-people';
 import { apply, makeUnit, NOW, startCmd } from '../../../sim/test-fixtures';
 import type { GameState, OutcomeBand, SquadId } from '../../../sim/types';
@@ -118,6 +119,108 @@ describe('V8 concrete commitments', () => {
     const restored = deserialize(serialize(finished, NOW));
     expect(restored, 'post-injury save').not.toBeNull();
     expect(restored?.activeRun).toEqual(finished.activeRun);
+  });
+
+  it('Jun can replace an obstructed selected pickup with the actual alternate chair route and finish there', () => {
+    const s = pick('protected_rescue', s => has(s, 'v8_chair_change_to_quiet_route') && !fact(s, 'v5_chair_f_care_needed').truth);
+    const routes = s.story!.bindings.routes;
+    const originalRoute = routes.v6_public_exit, alternateRoute = routes.v6_quiet_exit;
+    const built = buildLocation(s.locationFamilyId, s.locationSeed);
+    const blockedIds = built.location.openings.filter(o => o.a === originalRoute.toSpaceId || o.b === originalRoute.toSpaceId).map(o => o.id);
+    expect(blockedIds.length).toBeGreaterThan(0);
+    let before: GameState | undefined, inspected: GameState | undefined, atAlternate: GameState | undefined;
+    for (let seed = 1; seed < 100; seed++) {
+      let candidate = start(s, false, seed);
+      for (const id of ['v5_chair_reach_and_hear', 'v5_chair_check_public_chair_route', 'v5_chair_prepare_assistance']) candidate = natural(candidate, s, id);
+      expect(ev(candidate, s, 'v5_chair_reach_public_assistance').eligible).toBe(true);
+      // A current physical obstruction is an explicit regression fixture, not
+      // a sampled story truth or an invented alternate destination.
+      candidate.activeRun!.flags.push(...blockedIds.map(id => openingFlag(id, 'blocked')));
+      const changed = natural(candidate, s, 'v8_chair_change_to_quiet_route');
+      const moved = natural(changed, s, 'v5_chair_reach_quiet_assistance');
+      if (bandFor(ev(moved, s, 'v5_chair_assisted_move').margin, next(moved.activeRun!.rngState).value) === 'favorable') {
+        before = candidate; inspected = changed; atAlternate = moved; break;
+      }
+    }
+    expect(before).toBeDefined(); expect(inspected).toBeDefined(); expect(atAlternate).toBeDefined();
+    before = before!; inspected = inspected!; atAlternate = atAlternate!;
+    const current = builtFor(s.locationFamilyId, s.locationSeed, before.activeRun!.flags);
+    expect(currentStoryRoute(s, current, 'v6_public_exit')).toBeNull();
+    expect(currentStoryRoute(s, current, 'v6_quiet_exit')).not.toBeNull();
+    expect(ev(before, s, 'v5_chair_reach_public_assistance').eligible).toBe(false);
+    const refused = apply(before, { type: 'decide', actionId: 'v5_chair_reach_public_assistance', actingSquadIds: ['A'], supportSquadIds: [] });
+    expect(refused.result.ok).toBe(false); expect(refused.state).toBe(before);
+    expect(people(inspected, s).find(p => p.id === 'jun')!.position).toEqual(people(before, s).find(p => p.id === 'jun')!.position);
+    expect(inspected.activeRun!.squadTasks[0].positionId).toBe(before.activeRun!.squadTasks[0].positionId);
+    expect(inspected.activeRun!.flags).toContain('v5_chair_quiet_destination');
+    expect(inspected.activeRun!.flags).toContain('v5_chair_assistance_ready');
+    expect(inspected.activeRun!.flags).not.toContain('v5_chair_public_destination');
+    expect(inspected.activeRun!.flags).not.toContain('v5_chair_vehicle_ready');
+    expect(inspected.activeRun!.flags).not.toContain('v5_chair_at_pickup');
+    expect(inspected.activeRun!.clock - before.activeRun!.clock).toBeCloseTo(inspected.activeRun!.history.at(-1)!.timeCost);
+    expect(inspected.activeRun!.history.at(-1)!.timeCost).toBeGreaterThanOrEqual(10);
+    expect(people(atAlternate, s).find(p => p.id === 'jun')!.position).toMatchObject({ spaceId: alternateRoute.toSpaceId });
+    expect(atAlternate.activeRun!.squadTasks[0].positionId).toBe(alternateRoute.toSpaceId);
+    expect(atAlternate.activeRun!.flags).not.toContain('v5_chair_jun_safe');
+    const movement = ev(inspected, s, 'v5_chair_reach_quiet_assistance');
+    expect(movement.storyMovementMinutes).toBeGreaterThan(0);
+    const sealed = structuredClone(before);
+    sealed.activeRun!.flags.push(...built.location.openings.filter(o => o.a === alternateRoute.toSpaceId || o.b === alternateRoute.toSpaceId).map(o => openingFlag(o.id, 'blocked')));
+    expect(ev(sealed, s, 'v8_chair_change_to_quiet_route').eligible).toBe(false);
+    const noWayOut = apply(sealed, { type: 'decide', actionId: 'v8_chair_change_to_quiet_route', actingSquadIds: ['A'], supportSquadIds: [] });
+    expect(noWayOut.result.ok).toBe(false); expect(noWayOut.state).toBe(sealed);
+    let done = natural(atAlternate, s, 'v5_chair_assisted_move');
+    done = natural(done, s, 'v5_chair_civilian_next_step');
+    expect(computeDebrief(done, done.activeRun!)!.completionAchieved).toBe(true);
+    expect(people(done, s).find(p => p.id === 'jun')!.position).toMatchObject({ spaceId: alternateRoute.toSpaceId });
+    for (const snapshot of [before, inspected, atAlternate, done]) {
+      const restored = deserialize(serialize(snapshot, NOW));
+      expect(restored, `reload after ${snapshot.activeRun!.history.at(-1)!.actionId}`).not.toBeNull();
+      expect(restored!.activeRun).toEqual(snapshot.activeRun);
+      expect(restored!.activeRun!.flags).toEqual(expect.arrayContaining(blockedIds.map(id => openingFlag(id, 'blocked'))));
+    }
+  });
+
+  it.each(['favorable', 'mixed', 'adverse'] as const)('Ada’s %s current check includes acknowledgement only when the old question was repeated', band => {
+    const s = pick('welfare_check', s => s.story!.episode!.variantId === 'duplicated_alert' && !fact(s, 'v5_welfare_care_needed').truth);
+    const currentCheck = 'v5_welfare_check_ada_now';
+    const prepare = (direct: boolean): GameState => {
+      for (let seed = 1; seed < 500; seed++) {
+        let candidate = start(s, false, seed);
+        const steps = direct ? ['v5_welfare_ask_about_return', 'v5_welfare_trace_sources_adapt'] : ['v5_welfare_trace_sources_assess'];
+        for (const id of steps) candidate = natural(candidate, s, id);
+        const evaluation = ev(candidate, s, currentCheck);
+        if (evaluation.eligible && bandFor(evaluation.margin, next(candidate.activeRun!.rngState).value) === band) return candidate;
+      }
+      throw new Error(`No natural ${band} ${direct ? 'direct' : 'source'}-first fixture`);
+    };
+    const sourceFirst = prepare(false), repeated = prepare(true);
+    expect(repeated.activeRun!.flags).not.toContain('v5_welfare_contact_ready');
+    expect(repeated.activeRun!.flags).not.toContain('v5_welfare_repair_made');
+    expect(actionViews(repeated, NOW, 'A').find(a => a.id === currentCheck)?.eligible).toBe(true);
+    expect(has(s, 'v5_welfare_acknowledge_repeat')).toBe(false);
+    const directDone = natural(repeated, s, currentCheck), sourceDone = natural(sourceFirst, s, currentCheck);
+    expect(directDone.activeRun!.history.at(-1)!.band).toBe(band);
+    expect(sourceDone.activeRun!.history.at(-1)!.band).toBe(band);
+    expect(directDone.activeRun!.history.at(-1)!.timeCost - sourceDone.activeRun!.history.at(-1)!.timeCost).toBeCloseTo(2);
+    expect(directDone.activeRun!.flags).toContain('v5_welfare_repair_made');
+    expect(sourceDone.activeRun!.flags).not.toContain('v5_welfare_repair_made');
+    expect(notes(directDone)).toContain('acknowledges the repeated question');
+    expect(notes(directDone)).toContain('limited to');
+    for (const [beforeCheck, afterCheck] of [[repeated, directDone], [sourceFirst, sourceDone]]) {
+      expect(afterCheck.activeRun!.squadTasks[0].positionId).toBe(beforeCheck.activeRun!.squadTasks[0].positionId);
+      expect(people(afterCheck, s).find(p => p.id === 'ada')!.position).toMatchObject({ spaceId: s.story!.bindings.rooms.scene.spaceId });
+      expect(afterCheck.activeRun!.flags.includes('v5_welfare_current_checked')).toBe(band !== 'adverse');
+      expect(afterCheck.activeRun!.status).toBe(band === 'adverse' ? 'active' : 'debrief');
+      expect(afterCheck.activeRun!.externalSupport).toEqual({});
+      if (band !== 'adverse') expect(computeDebrief(afterCheck, afterCheck.activeRun!)!.completionAchieved).toBe(true);
+      else expect(afterCheck.activeRun!.flags).toContain('v5_welfare_ada_declined');
+      for (const snapshot of [beforeCheck, afterCheck]) {
+        const restored = deserialize(serialize(snapshot, NOW));
+        expect(restored).not.toBeNull();
+        expect(restored!.activeRun).toEqual(snapshot.activeRun);
+      }
+    }
   });
 
   it('dispatch’s prepared introduction has a later two-minute benefit, while patrol-first stays quicker for the initial check', () => {

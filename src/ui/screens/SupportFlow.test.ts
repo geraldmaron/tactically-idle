@@ -3,6 +3,7 @@ import { apply, makeState, NOW, setRun, startRun, unitId } from '../../sim/test-
 import { getScenario } from '../../sim/scenario-registry';
 import { RESUPPLY_HANDLERS } from '../../sim/equipment-resupply';
 import { generateIncident } from '../../gen/incident';
+import { previewAction } from '../../sim/operation-selectors';
 import { OpsLive } from './OpsLive';
 
 const hooks = vi.hoisted(() => ({ values: [] as unknown[], cursor: 0 }));
@@ -12,7 +13,7 @@ vi.mock('react', async (importOriginal) => ({
   useEffect: () => {},
   useState: (initial: unknown) => {
     const index = hooks.cursor++;
-    if (!(index in hooks.values)) hooks.values[index] = initial;
+    if (!(index in hooks.values)) hooks.values[index] = typeof initial === 'function' ? initial() : initial;
     return [hooks.values[index], (next: unknown) => { hooks.values[index] = typeof next === 'function' ? next(hooks.values[index]) : next; }];
   },
 }));
@@ -125,20 +126,30 @@ describe('player decisions and inventory are separate', () => {
     expect(state.activeRun!.history).toEqual([]);
   });
 
-  it('preserves explicit decision and squad choices through rerenders, focus browsing and same-option reviews', () => {
+  it('keeps the explicit decision while focus changes its actor, and preserves those roles on same-option reviews', () => {
     state = setRun(startRun(makeState(), 'ms_occupancy', ['A', 'B']), { stage: 'resolve' });
+    const before = structuredClone(state);
     const first = render();
     const supported = first.props.actions.find((action: { support: unknown }) => action.support);
     expect(supported.supportSquadIds).toEqual([]);
     first.props.onSelectAction(supported.id);
     expect(render().props.children[0].props.support).toEqual([]);
     render().props.children[0].props.onToggleSupport('B');
+    expect(render().props.children[0].props.acting).toEqual(['A']);
+    expect(render().props.children[0].props.support).toEqual(['B']);
     render().props.onFocusSquad('B');
     render().props.children[0].props.onPick(supported.id);
     const unchanged = render();
     expect(unchanged.props.selectedAction.id).toBe(supported.id);
-    expect(unchanged.props.children[0].props.acting).toEqual(['A']);
-    expect(unchanged.props.children[0].props.support).toEqual(['B']);
+    expect(unchanged.props.focusSquadId).toBe('B');
+    expect(unchanged.props.children[0].props.acting).toEqual(['B']);
+    expect(unchanged.props.children[0].props.support).toEqual([]);
+    expect(unchanged.props.selectedAction).toEqual(previewAction(state, NOW, supported.id, ['B'], []));
+    unchanged.props.children[0].props.onToggleSupport('A');
+    render().props.children[0].props.onPick(supported.id);
+    expect(render().props.children[0].props.acting).toEqual(['B']);
+    expect(render().props.children[0].props.support).toEqual(['A']);
+    expect(state).toEqual(before);
     expect(act).not.toHaveBeenCalled();
     state = setRun(state, { stage: 'adapt' });
     expect(render().props.selectedAction).toBeNull();
@@ -148,6 +159,18 @@ describe('player decisions and inventory are separate', () => {
     state = startRun(makeState(), 'ms_occupancy', ['A', 'B'], { loadouts: { A: {}, B: {} } });
     render().props.onSelectAction('ms_contact_hall');
     render().props.onFocusSquad('B');
+    const blocked = render().props.children[0].props;
+    expect(blocked.acting).toEqual(['B']);
+    expect(blocked.resupply.ok).toBe(false);
+    expect(blocked.resupply.reason).toContain('crisis negotiator');
+    const beforeRefusal = structuredClone(state);
+    blocked.onResupply();
+    blocked.onConfirm();
+    expect(state).toEqual(beforeRefusal);
+    expect(act).not.toHaveBeenCalled();
+    // Bravo's missing qualification cannot be delivered from stores. Choose the
+    // qualified squad explicitly; the same decision stays open for review.
+    render().props.onFocusSquad('A');
     const review = render();
     const sheet = review.props.children[0].props;
     expect(sheet.resupply.ok).toBe(true);
@@ -161,6 +184,7 @@ describe('player decisions and inventory are separate', () => {
     expect(state.department.funding).toBe(before.department.funding);
     expect(state.activeRun!.clock).toBe(before.activeRun!.clock + sheet.resupply.minutes);
     expect(state.reservations.filter((reservation) => expectedUnits.includes(reservation.unitId)).map((reservation) => reservation.squadId)).toEqual(['A']);
+    expect(state.reservations.filter(reservation => reservation.squadId === 'B')).toEqual(before.reservations.filter(reservation => reservation.squadId === 'B'));
     expect(expectedUnits).toEqual([unitId('throw_phone')]);
     const delivered = structuredClone(state);
     sheet.onResupply();
@@ -172,6 +196,7 @@ describe('player decisions and inventory are separate', () => {
     expect(after.props.children[0].props.support).toEqual([]);
     expect(after.props.children[0].props.resupply).toBeNull();
     expect(after.props.canCancel).toBe(false);
+    after.props.children[0].props.onConfirm();
     after.props.children[0].props.onConfirm();
     expect(act.mock.calls.map(([command]) => command.type)).toEqual(['resupplyAction', 'decide']);
     expect(state.activeRun!.history).toHaveLength(1);

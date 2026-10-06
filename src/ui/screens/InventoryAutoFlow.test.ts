@@ -4,7 +4,9 @@ import { makeState, NOW, unitId } from '../../sim/test-fixtures';
 import { OpsPrepare } from './OpsPrepare';
 import { SupportPreparation } from './SupportPreparation';
 import { Button, Stepper } from '../components/ui';
+import { ChoiceRail } from '../components/ChoiceRail';
 import type { StartOperationCommand } from '../../sim/operation-selectors';
+import type { SquadId } from '../../sim/types';
 
 const hooks = vi.hoisted(() => ({ values: [] as unknown[], cursor: 0 }));
 vi.mock('react', async (importOriginal) => ({
@@ -14,7 +16,7 @@ vi.mock('react', async (importOriginal) => ({
   useRef: () => ({ current: null }),
   useState: (initial: unknown) => {
     const index = hooks.cursor++;
-    if (!(index in hooks.values)) hooks.values[index] = initial;
+    if (!(index in hooks.values)) hooks.values[index] = typeof initial === 'function' ? initial() : initial;
     return [hooks.values[index], (next: unknown) => { hooks.values[index] = typeof next === 'function' ? next(hooks.values[index]) : next; }];
   },
 }));
@@ -37,6 +39,12 @@ const find = (root: ReactNode, test: (element: Element) => boolean) => {
 };
 const squad = (sid: string) => find(render(), (element) => element.props['aria-label'] === `Squad ${sid} setup`);
 const toggleSquad = (sid: string) => find(render(), (element) => element.type === 'button' && element.key === sid && element.props.className?.startsWith('pickcard')).props.onClick();
+const selectSetup = (sid: SquadId) => {
+  const rail = find(render(), (element) => element.type === ChoiceRail && element.props.label === 'Squad setup');
+  rail.props.onChange(sid);
+  expect(find(render(), (element) => element.type === ChoiceRail && element.props.label === 'Squad setup').props.value).toBe(sid);
+  expect(squad(sid).props.role).toBe('tabpanel');
+};
 const quantity = (sid: string, label: string) => find(squad(sid), (element) => element.type === Stepper && element.props.label === label).props;
 const auto = (sid: string) => find(squad(sid), (element) => element.type === Button && element.props['aria-label'] === `Auto-equip squad ${sid}`).props;
 const command = (): StartOperationCommand => find(render(), (element) => element.type === SupportPreparation).props.cmd;
@@ -54,9 +62,14 @@ describe('Auto-equip squad inventory controls', () => {
   it('only updates the requested squad inventory and keeps manual zeros, exact units, positions and support choices', () => {
     toggleSquad('A');
     toggleSquad('B');
+    expect(squad('B')).toBeDefined();
+    expect(nodes(render()).some(element => element.props['aria-label'] === 'Squad A setup')).toBe(false);
+    selectSetup('A');
     quantity('A', 'Throw phone').onChange(0);
     quantity('A', 'Trauma kit').onChange(1);
+    selectSetup('B');
     quantity('B', 'Throw phone').onChange(1);
+    selectSetup('A');
     find(squad('A'), (element) => element.type === 'select').props.onChange({ target: { value: 'side_yard_e' } });
     find(render(), (element) => element.type === SupportPreparation).props.onSelect(unitId('support_van'));
     const before = structuredClone(command());
@@ -77,6 +90,11 @@ describe('Auto-equip squad inventory controls', () => {
     expect(new Set(units).size).toBe(units.length);
     expect(state).toEqual(stateBefore);
     expect(act).not.toHaveBeenCalled();
+    selectSetup('B');
+    expect(quantity('B', 'Throw phone').value).toBe(1);
+    selectSetup('A');
+    expect(quantity('A', 'Throw phone').value).toBe(0);
+    expect(command()).toEqual(after);
     undo();
     expect(command()).toEqual(before);
     expect(state).toEqual(stateBefore);
@@ -116,6 +134,7 @@ describe('Auto-equip squad inventory controls', () => {
     toggleSquad('A');
     toggleSquad('B');
     quantity('B', 'Throw phone').onChange(1);
+    selectSetup('A');
     auto('A').onClick();
     const cmd = command();
     for (const id of [unitId('thermal_imager'), unitId('loud_hailer'), unitId('throw_phone')]) expect(cmd.units!.A).not.toContain(id);

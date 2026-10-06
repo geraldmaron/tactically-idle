@@ -103,12 +103,13 @@ describe('fixed outcome presentation', () => {
 });
 
 describe('v6 operation result integration', () => {
-  it('ends the real welfare partial response neutrally without claiming completion or rerolling', () => {
+  it('replays the issued welfare partial neutrally while hiding its current card', () => {
     const scenario = welfare();
     const action = scenario.stages.assess.actions.find(a => a.id.endsWith('assess_partial'))!;
     const state = started(scenario);
     adverseSeed(state, scenario, action);
-    expect(actionViews(state, NOW, 'A').find(a => a.id === action.id)?.eventResult).toBe('Response ended');
+    expect(actionViews(state, NOW, 'A').some(a => a.id === action.id)).toBe(false);
+    // Historical commands retain their authored result even though this exit is retired from the menu.
     expect(previewAction(state, NOW, action.id, ['A'], [])?.eventResult).toBe('Response ended');
     const expected = next(state.activeRun!.rngState);
     const finished = commit(state, action);
