@@ -9,6 +9,7 @@ import { bestSignal, nearestOpening, stagingPointById, type Channel } from './sp
 import { LOCATION_TUNING, pointInPolygon } from './location';
 import { DOORS, STAIR_MINUTES } from '../content/materials';
 import { findRoomPath, roomPointClear, roomSegmentClear } from './furniture-path';
+import { distanceFor, type Distance } from './geometry';
 
 export const SPATIAL_TUNING = {
   /** Transmission at which a signal reads as fully clear (quality 1). */
@@ -28,7 +29,8 @@ export const SPATIAL_TUNING = {
 };
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
-const dist = (a: Vec, b: Vec) => Math.hypot(a.x - b.x, a.y - b.y);
+/** The location's point distance (geometry.ts): Math.hypot for locations issued before `_g2`. */
+const distOf = (built: BuiltLocation): Distance => distanceFor(built.location.geometry);
 const mid = (a: Vec, b: Vec): Vec => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
 const lower = (s: string) => s.charAt(0).toLowerCase() + s.slice(1);
 
@@ -138,7 +140,7 @@ export function standingCandidates(built: BuiltLocation, targetId: Id, mode: 'ou
 export function defaultStagingFor(built: BuiltLocation, spaceId: Id): StagingPoint | null {
   const here = built.derived.stagingPoints.filter((s) => s.spaceId === spaceId);
   if (here.length === 0) return null;
-  const c = centroidOf(built, spaceId);
+  const c = centroidOf(built, spaceId), dist = distOf(built);
   const byDist = (a: StagingPoint, b: StagingPoint) => dist(a.at, c) - dist(b.at, c) || a.id.localeCompare(b.id);
   const doors = here.filter((s) => s.kind === 'door' || s.kind === 'doorway').sort(byDist);
   return doors[0] ?? [...here].sort(byDist)[0];
@@ -232,10 +234,10 @@ function rings(item: ItemDefinition, at: Vec): MapOverlay[] {
   ];
 }
 
-/** Range of an item against a point (hailer, imager, drone). */
+/** Range of an item against a point (hailer, imager, drone). No location here: always the legacy Math.hypot. */
 export function rangeToPoint(item: ItemDefinition, from: Vec, target: Vec): RangeResult {
   if (!item.range) return { ok: true, factor: 1, reason: null, label: '', overlays: [] };
-  const d = dist(from, target);
+  const d = distanceFor(undefined)(from, target);
   const { effective, max } = item.range;
   const overlays = rings(item, from);
   if (d > max) {
@@ -252,7 +254,7 @@ const OPENING_WORD: Record<Opening['type'], string> = { door: 'door', doorway: '
 export function rangeThroughOpening(built: BuiltLocation, item: ItemDefinition, from: Vec, targetSpace: Id): RangeResult {
   if (!item.range) return { ok: true, factor: 1, reason: null, label: '', overlays: [] };
   const { effective, max } = item.range;
-  const overlays = rings(item, from);
+  const overlays = rings(item, from), dist = distOf(built);
   let best: { o: Opening; d: number } | null = null;
   for (const o of built.location.openings) {
     if (o.a !== targetSpace && o.b !== targetSpace) continue;
@@ -317,7 +319,7 @@ function forceFor(o: Opening, tool: { effectiveness: number } | null, keyed = fa
  */
 export function routeBetween(built: BuiltLocation, fromSpace: Id, fromAt: Vec, toSpace: Id, toAt: Vec, tool: { effectiveness: number } | null, keyed = false): Route {
   if (built.location.id.endsWith('__furnished_v7')) return furnishedRouteBetween(built, fromSpace, fromAt, toSpace, toAt, tool, keyed);
-  const T = LOCATION_TUNING;
+  const T = LOCATION_TUNING, dist = distOf(built);
   const openings = new Map(built.location.openings.map((o) => [o.id, o]));
   const edgeCost = (e: { cost: number; openingId: Id }) => {
     const o = openings.get(e.openingId);
@@ -359,7 +361,7 @@ export function routeBetween(built: BuiltLocation, fromSpace: Id, fromAt: Vec, t
  * older location versions retain their exact original route geometry and cost. */
 export function routeAlongOpenings(built: BuiltLocation, fromAt: Vec, toAt: Vec, chain: Id[], tool: { effectiveness: number } | null, keyed = false, clearance = 1): Route {
   if (built.location.id.endsWith('__furnished_v7')) return furnishedRouteAlongOpenings(built, fromAt, toAt, chain, tool, keyed, Math.max(0, clearance));
-  const T = LOCATION_TUNING;
+  const T = LOCATION_TUNING, dist = distOf(built);
   const openings = new Map(built.location.openings.map(opening => [opening.id, opening]));
   const points: Vec[] = [fromAt];
   let minutes = 0;
@@ -385,8 +387,8 @@ export function routeAlongOpenings(built: BuiltLocation, fromAt: Vec, toAt: Vec,
 // Furnished v7 uses opening-side states, since two routes into one room may have
 // different walk costs (or be separated by furniture). Older saved families keep
 // their original room graph, exact points, and rounding above.
-const pathFeet = (points: readonly Vec[]) => points.slice(1).reduce((total, point, i) => total + dist(points[i], point), 0);
-const joinPoints = (first: Vec[], next: Vec[]) => [...first, ...next.filter((point, i) => i > 0 || !first.length || dist(first[first.length - 1], point) > 1e-8)];
+const pathFeet = (dist: Distance, points: readonly Vec[]) => points.slice(1).reduce((total, point, i) => total + dist(points[i], point), 0);
+const joinPoints = (dist: Distance, first: Vec[], next: Vec[]) => [...first, ...next.filter((point, i) => i > 0 || !first.length || dist(first[first.length - 1], point) > 1e-8)];
 
 function furnishedNavigationSpace(built: BuiltLocation, spaceId: Id): Room | null {
   const room = built.location.rooms.find(candidate => candidate.id === spaceId);
@@ -397,7 +399,7 @@ function furnishedNavigationSpace(built: BuiltLocation, spaceId: Id): Room | nul
 
 function furnishedLocalPath(built: BuiltLocation, spaceId: Id, from: Vec, to: Vec, clearance = 1): Vec[] | null {
   const space = furnishedNavigationSpace(built, spaceId);
-  return space ? findRoomPath(space, built.location.objects, from, to, clearance) : null;
+  return space ? findRoomPath(space, built.location.objects, from, to, clearance, built.location.geometry) : null;
 }
 
 interface FurnishedCrossing { into: Id; from: Vec; to: Vec; points: Vec[]; minutes: number; forced: ForcedDoor | null }
@@ -405,7 +407,7 @@ interface FurnishedCrossing { into: Id; from: Vec; to: Vec; points: Vec[]; minut
 function furnishedCrossing(built: BuiltLocation, opening: Opening, fromSpace: Id, tool: { effectiveness: number } | null, keyed: boolean, clearance = 1): FurnishedCrossing | null {
   if (opening.state === 'blocked' || (opening.a !== fromSpace && opening.b !== fromSpace)) return null;
   const into = opening.a === fromSpace ? opening.b : opening.a;
-  const midpoint = mid(opening.from, opening.to);
+  const midpoint = mid(opening.from, opening.to), dist = distOf(built), geometry = built.location.geometry;
   const approach = (spaceId: Id): Vec | null => {
     if (opening.type === 'stair') return spaceId === opening.a ? opening.from : opening.to;
     const staging = built.derived.stagingPoints.find(point => point.openingId === opening.id && point.spaceId === spaceId);
@@ -418,7 +420,7 @@ function furnishedCrossing(built: BuiltLocation, opening: Opening, fromSpace: Id
     const normal = { x: -(opening.to.y - opening.from.y) / width, y: (opening.to.x - opening.from.x) / width };
     for (const offset of [Math.max(1.5, clearance), clearance]) for (const sign of [1, -1]) {
       const point = { x: midpoint.x + normal.x * offset * sign, y: midpoint.y + normal.y * offset * sign };
-      if (roomPointClear(space, built.location.objects, point, clearance)) return point;
+      if (roomPointClear(space, built.location.objects, point, clearance, geometry)) return point;
     }
     return null;
   };
@@ -430,33 +432,33 @@ function furnishedCrossing(built: BuiltLocation, opening: Opening, fromSpace: Id
     if (dist(opening.from, opening.to) < clearance * 2 - 1e-7) return null;
     for (const [spaceId, at] of [[fromSpace, from], [into, to]] as const) {
       const space = furnishedNavigationSpace(built, spaceId);
-      if (!space || !roomSegmentClear(space, built.location.objects, at, midpoint, clearance, 0)) return null;
+      if (!space || !roomSegmentClear(space, built.location.objects, at, midpoint, clearance, 0, geometry)) return null;
     }
   }
   const points = opening.type === 'stair' ? [from, to] : [from, midpoint, to];
   const forced = opening.state === 'locked' ? forceFor(opening, tool, keyed) : null;
-  return { into, from, to, points, forced, minutes: pathFeet(points) / LOCATION_TUNING.feetPerMinute + (opening.type === 'stair' ? STAIR_MINUTES : LOCATION_TUNING.openingMinutes) + (forced?.minutes ?? 0) };
+  return { into, from, to, points, forced, minutes: pathFeet(dist, points) / LOCATION_TUNING.feetPerMinute + (opening.type === 'stair' ? STAIR_MINUTES : LOCATION_TUNING.openingMinutes) + (forced?.minutes ?? 0) };
 }
 
 interface FurnishedState { spaceId: Id; at: Vec; minutes: number; forceMinutes: number; forced: ForcedDoor[]; points: Vec[]; lastOpeningId: Id | null }
 
-function furnishedFinish(state: FurnishedState, tail: Vec[]): Route {
-  return { reachable: true, minutes: round1(state.minutes + pathFeet(tail) / LOCATION_TUNING.feetPerMinute), forceMinutes: round1(state.forceMinutes), forced: state.forced, points: joinPoints(state.points, tail), lastOpeningId: state.lastOpeningId };
+function furnishedFinish(dist: Distance, state: FurnishedState, tail: Vec[]): Route {
+  return { reachable: true, minutes: round1(state.minutes + pathFeet(dist, tail) / LOCATION_TUNING.feetPerMinute), forceMinutes: round1(state.forceMinutes), forced: state.forced, points: joinPoints(dist, state.points, tail), lastOpeningId: state.lastOpeningId };
 }
 
-function furnishedAdvance(state: FurnishedState, path: Vec[], crossing: FurnishedCrossing, openingId: Id): FurnishedState {
+function furnishedAdvance(dist: Distance, state: FurnishedState, path: Vec[], crossing: FurnishedCrossing, openingId: Id): FurnishedState {
   return {
     spaceId: crossing.into, at: crossing.to,
-    minutes: state.minutes + pathFeet(path) / LOCATION_TUNING.feetPerMinute + crossing.minutes,
+    minutes: state.minutes + pathFeet(dist, path) / LOCATION_TUNING.feetPerMinute + crossing.minutes,
     forceMinutes: state.forceMinutes + (crossing.forced?.minutes ?? 0),
     forced: crossing.forced ? [...state.forced, crossing.forced] : state.forced,
-    points: joinPoints(joinPoints(state.points, path), crossing.points), lastOpeningId: openingId,
+    points: joinPoints(dist, joinPoints(dist, state.points, path), crossing.points), lastOpeningId: openingId,
   };
 }
 
 function furnishedRouteBetween(built: BuiltLocation, fromSpace: Id, fromAt: Vec, toSpace: Id, toAt: Vec, tool: { effectiveness: number } | null, keyed: boolean): Route {
   const states = new Map<string, FurnishedState>([['start', { spaceId: fromSpace, at: fromAt, minutes: 0, forceMinutes: 0, forced: [], points: [fromAt], lastOpeningId: null }]]);
-  const open = new Set(['start']);
+  const open = new Set(['start']), dist = distOf(built);
   const openings = new Map(built.location.openings.map(opening => [opening.id, opening]));
   let best: { state: FurnishedState; tail: Vec[]; minutes: number } | null = null;
   while (open.size) {
@@ -467,7 +469,7 @@ function furnishedRouteBetween(built: BuiltLocation, fromSpace: Id, fromAt: Vec,
     if (state.spaceId === toSpace) {
       const tail = furnishedLocalPath(built, toSpace, state.at, toAt);
       if (tail) {
-        const minutes = state.minutes + pathFeet(tail) / LOCATION_TUNING.feetPerMinute;
+        const minutes = state.minutes + pathFeet(dist, tail) / LOCATION_TUNING.feetPerMinute;
         if (!best || minutes < best.minutes) best = { state, tail, minutes };
       }
     }
@@ -478,7 +480,7 @@ function furnishedRouteBetween(built: BuiltLocation, fromSpace: Id, fromAt: Vec,
       if (!crossing) continue;
       const path = furnishedLocalPath(built, state.spaceId, state.at, crossing.from);
       if (!path) continue;
-      const next = furnishedAdvance(state, path, crossing, opening.id);
+      const next = furnishedAdvance(dist, state, path, crossing, opening.id);
       const nextKey = JSON.stringify([crossing.into, opening.id]);
       if (next.minutes < (states.get(nextKey)?.minutes ?? Infinity) - 1e-9) {
         states.set(nextKey, next);
@@ -486,11 +488,11 @@ function furnishedRouteBetween(built: BuiltLocation, fromSpace: Id, fromAt: Vec,
       }
     }
   }
-  return best ? furnishedFinish(best.state, best.tail) : UNREACHABLE;
+  return best ? furnishedFinish(dist, best.state, best.tail) : UNREACHABLE;
 }
 
 function furnishedRouteAlongOpenings(built: BuiltLocation, fromAt: Vec, toAt: Vec, chain: Id[], tool: { effectiveness: number } | null, keyed: boolean, clearance: number): Route {
-  const openings = new Map(built.location.openings.map(opening => [opening.id, opening]));
+  const openings = new Map(built.location.openings.map(opening => [opening.id, opening])), dist = distOf(built);
   const spaces = [...built.location.rooms, ...built.location.zones];
   const first = chain.length ? openings.get(chain[0]) : undefined;
   const starts = spaces.filter(space => (!first || space.id === first.a || space.id === first.b) && pointInPolygon(fromAt, space.polygon));
@@ -503,13 +505,13 @@ function furnishedRouteAlongOpenings(built: BuiltLocation, fromAt: Vec, toAt: Ve
       const crossing = opening && furnishedCrossing(built, opening, state.spaceId, tool, keyed, clearance);
       const path = crossing && furnishedLocalPath(built, state.spaceId, state.at, crossing.from, clearance);
       if (!crossing || !path) { valid = false; break; }
-      state = furnishedAdvance(state, path, crossing, openingId);
+      state = furnishedAdvance(dist, state, path, crossing, openingId);
     }
     const endSpace = spaces.find(space => space.id === state.spaceId);
     if (!valid || !endSpace || !pointInPolygon(toAt, endSpace.polygon)) continue;
     const tail = furnishedLocalPath(built, state.spaceId, state.at, toAt, clearance);
     if (!tail) continue;
-    const route = furnishedFinish(state, tail);
+    const route = furnishedFinish(dist, state, tail);
     if (route.minutes < best.minutes) best = route;
   }
   return best;

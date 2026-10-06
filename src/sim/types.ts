@@ -136,6 +136,26 @@ export interface MapNote {
   decorative: true;
 }
 
+/**
+ * Distance math a location is measured with (src/sim/geometry.ts). Absent: `Math.hypot`, which
+ * ECMA-262 lets engines approximate; every location issued before `_g2` keeps it so its derived
+ * costs, staging points and furnishing stay byte-identical. `'exact'`: `Math.sqrt(dx*dx + dy*dy)`,
+ * built from IEEE-754 operations that every engine rounds the same way.
+ */
+export type GeometryVersion = 'exact';
+
+/** How a unit inside a larger building is reached from the street (multi-unit residential). */
+export interface LocationAccess {
+  /** Floor of the unit's front door: 0 ground, 1 second floor, 2 third, 3 fourth (American numbering in text). */
+  unitLevel: 0 | 1 | 2 | 3;
+  /** The building has an elevator serving the unit's floor. */
+  lift: boolean;
+  /** A wheelchair can get from the street to the unit's front door without steps. */
+  stepFree: boolean;
+  /** Player-facing line, also carried as a map note, e.g. 'Third-floor unit; the building has an elevator'. */
+  note: string;
+}
+
 export interface LocationDefinition {
   id: Id;
   familyId: Id;
@@ -143,6 +163,10 @@ export interface LocationDefinition {
   seed: number;
   name: string;
   setting: 'residential' | 'business' | 'apartment';
+  /** Distance math version; see GeometryVersion. Absent on every location issued before `_g2`. */
+  geometry?: GeometryVersion;
+  /** Unit floor and step-free route for a unit in a multi-unit building (`apartment_unit_g2`). */
+  access?: LocationAccess;
   units: 'ft';
   /** Drawing extents (lot), feet. */
   bounds: { w: number; h: number };
@@ -894,6 +918,32 @@ export interface IncidentCard {
   arrivedAt: number;
   expiresAt: number;
   seen: boolean;
+  /** Content v11+: the first card of a framework this campaign has ever been sent (save v6). */
+  newKind?: boolean;
+}
+
+/** Best result on a live call of one recipe. Ranked by completion, then objective, then safety. */
+export interface CasebookBest {
+  completed: boolean;
+  objective: number;
+  safety: number;
+  /** Debrief objective label, for example 'Resolved' or 'Partial progress'. */
+  label: string;
+}
+
+/** One recipe met on a live call: framework, situation, pacing and the building type used. */
+export interface CasebookRecipe {
+  /** Department clock time when a squad was first dispatched to this recipe. */
+  firstAt: number;
+  best?: CasebookBest;
+}
+
+/** Added in save v6. What the campaign has met, for the casebook and unseen-first draws. */
+export interface CasebookState {
+  /** Frameworks that have arrived on the board (content v11+ draws, plus migrated history), first arrival first. */
+  frameworksSeen: string[];
+  /** Recipes dispatched on live calls, keyed `type/buildingType/variant/pacing` (content v10+ only). */
+  recipes: Record<string, CasebookRecipe>;
 }
 
 /** Persisted campaign identities and first-seen builds. No departed officer can be recycled. */
@@ -911,6 +961,8 @@ export interface GameState {
   squadArrangement?: SquadArrangementState;
   /** Added in save v4. Optional only for historical test fixtures and migration inputs. */
   personnel?: PersonnelState;
+  /** Added in save v6. Optional only for historical test fixtures and migration inputs; created on the first board draw. */
+  casebook?: CasebookState;
   saveVersion: number;
   contentVersion: number;
   department: Department;

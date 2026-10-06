@@ -1,4 +1,5 @@
 import { ADDITIONAL_FRAMEWORK_BY_TYPE } from '../../content/incident-frameworks-v9';
+import type { IncidentFramework } from '../../content/incident-frameworks-v9';
 import { scenarioRecipe } from '../../content/scenario-recipes';
 import type { ActionDefinition, FactDefinition, ScenarioDefinition, StageDefinition } from '../../sim/scenario-types';
 import type { BuiltLocation, StageId } from '../../sim/types';
@@ -9,8 +10,10 @@ import { placeFrameworkPerson, roomPhrase } from './placement-v10';
 /** Compile coherent reports into ordinary engine actions, facts, geometry and endings.
  * No special completion or UI bypass: the real dispatcher owns every outcome.
  */
-export function withAdditionalFramework(input: ScenarioDefinition, built: BuiltLocation): ScenarioDefinition {
-  const spec = input.incident!, framework = ADDITIONAL_FRAMEWORK_BY_TYPE[spec.type];
+export function withAdditionalFramework(input: ScenarioDefinition, built: BuiltLocation, override?: IncidentFramework): ScenarioDefinition {
+  // `override` lets authoring gates compile a draft package (or a deliberate reskin) for the
+  // spec's framework slot without registering it; the game always uses the registry.
+  const spec = input.incident!, framework = override ?? ADDITIONAL_FRAMEWORK_BY_TYPE[spec.type];
   if (!framework) throw new Error(`No framework for ${spec.type}`);
   const recipe = scenarioRecipe(spec), variant = recipe.variant;
   const s = structuredClone(input), prefix = `v9_${spec.type}_`;
@@ -122,7 +125,69 @@ export function withAdditionalFramework(input: ScenarioDefinition, built: BuiltL
     s.stages.adapt.actions.unshift(followup);
     s.briefing.known.push('The first report left something out. Check an independent source before deciding the disputed point.');
   }
+  applyDecisionExtensions(s, framework, { prefix, personId, evidence, heard, prepared, completed, first, second, resolutions, tier: spec.tier });
   for (const action of Object.values(s.stages).flatMap(stage => stage.actions)) for (const effects of Object.values(action.outcomes)) effects.push({ setFlags: [`used:${action.id}`] });
   const errors = validateStoryBindings(s, built); if (errors.length) throw new Error(errors.join('\n'));
   return s;
+}
+
+/** Optional v11+ decision structure from typed framework data. Each extension adds real
+ * engine actions with their own costs; a framework without them is left untouched, so the
+ * eight issued v9 frameworks compile byte for byte as before. */
+function applyDecisionExtensions(s: ScenarioDefinition, framework: IncidentFramework, ids: {
+  prefix: string; personId: string; evidence: string; heard: string; prepared: string; completed: string;
+  first: ActionDefinition; second: ActionDefinition; resolutions: ActionDefinition[]; tier: number;
+}): void {
+  const { prefix, personId, evidence, heard, prepared, completed } = ids;
+  // The resolve stage holds this same array; extensions add to the stage, so keep a copy
+  // of the two resolutions in [confirmed, disproved] order before anything is inserted.
+  const resolutions = [...ids.resolutions];
+  const statusIndex = (status: 'confirmed' | 'disproved') => status === 'confirmed' ? 0 : 1;
+  const base = (id: string, stage: StageId, title: string, summary: string): ActionDefinition => ({
+    id: prefix + id, stage, title, summary, task: title, icon: 'perimeter', targetId: ids.first.targetId,
+    requires: { notFlags: [{ flag: `used:${prefix + id}`, reason: 'This step is already recorded' }] },
+    check: { kind: 'coordination', ratings: [{ key: 'coordination', weight: 1 }], difficulty: 28 + ids.tier * 3 },
+    approach: 'none', observes: [], workload: { base: 3, perSqFt: 0 }, stressBase: 1, outcomes: { favorable: [], mixed: [], adverse: [] }, consequenceLevel: 'low',
+  });
+  if (framework.precaution) {
+    // Act early under uncertainty, or check first and risk a slower late step.
+    const p = framework.precaution, secured = prefix + 'secured', needed = resolutions[statusIndex(p.requiredFor)];
+    const early = base('precaution', 'assess', p.title, p.summary);
+    early.requires.notFlags!.push({ flag: secured, reason: 'This is already done' });
+    for (const band of ['favorable', 'mixed', 'adverse'] as const) early.outcomes[band] = [{ setFlags: [secured], objective: 5, text: p.result + (band === 'adverse' ? ' It takes longer than expected.' : ''), ...(band === 'adverse' ? { extraMinutes: 2 } : {}) }];
+    early.outcomePreview = { favorable: p.result, mixed: p.result, adverse: 'The same step, done with a delay.' };
+    s.stages.assess.actions.push(early);
+    needed.requires.flags = [...(needed.requires.flags ?? []), { flag: secured, reason: p.lateTitle }];
+    const late = base('late_precaution', 'resolve', p.lateTitle, p.lateSummary);
+    late.workload.base = 6; late.requires.notFlags!.push({ flag: secured, reason: 'This is already done' });
+    late.visibleWhen = { facts: [{ factId: evidence, in: [p.requiredFor] }], notFlags: [secured] };
+    // Resolve-stage steps must say they stay in resolve (the engine's scenario validator).
+    for (const band of ['favorable', 'mixed'] as const) late.outcomes[band] = [{ stage: 'resolve', setFlags: [secured], objective: 5, extraMinutes: band === 'mixed' ? 3 : 2, text: p.result }];
+    late.outcomes.adverse = [{ stage: 'resolve', extraMinutes: 2, text: 'It does not work this time. The step it was needed for cannot go ahead.' }];
+    late.outcomePreview = { favorable: p.result, mixed: 'The same step, done with a longer delay.', adverse: 'It does not work, and the step that needed it cannot go ahead.' };
+    s.stages.resolve.actions.unshift(late);
+  }
+  if (framework.corroborate) {
+    // Both accounts before this resolution: a missed one becomes a follow-up here.
+    const c = framework.corroborate, needed = resolutions[statusIndex(c.for)];
+    needed.requires.flags = [...(needed.requires.flags ?? []), { flag: heard, reason: 'First hear the people involved' }, { flag: prepared, reason: 'First check the independent source' }];
+    for (const [flag, template, key] of [[heard, ids.first, 'corroborate_person'], [prepared, ids.second, 'corroborate_source']] as const) {
+      const follow = structuredClone(template);
+      follow.id = prefix + key; follow.stage = 'resolve'; follow.summary = c.summary;
+      follow.requires = { notFlags: [{ flag: `used:${follow.id}`, reason: 'This step is already recorded' }, { flag, reason: 'Already heard' }] };
+      follow.visibleWhen = { facts: [{ factId: evidence, in: [c.for] }], notFlags: [flag] };
+      for (const effects of Object.values(follow.outcomes)) for (const effect of effects) effect.stage = 'resolve';
+      s.stages.resolve.actions.unshift(follow);
+    }
+  }
+  if (framework.waitFor) {
+    // A dependable but slow close that does not rely on the checked answer.
+    const w = framework.waitFor, wait = base('wait', 'resolve', w.title, w.summary);
+    wait.icon = 'wait'; wait.storyTargetPersonId = personId; wait.workload.base = 9; wait.check.difficulty = 15 + ids.tier * 2;
+    wait.requires.facts = [{ factId: evidence, in: ['confirmed', 'disproved'], reason: 'First check the disputed point' }];
+    for (const band of ['favorable', 'mixed', 'adverse'] as const) wait.outcomes[band] = [{ setFlags: [completed], objective: 45, ending: 'resolved_waited', text: w.result, ...(band === 'favorable' ? {} : { extraMinutes: band === 'mixed' ? 2 : 4 }) }];
+    wait.outcomePreview = { favorable: w.result, mixed: 'The same, after a longer wait.', adverse: 'The same, after a much longer wait.' };
+    s.stages.resolve.actions.push(wait);
+    s.endings.resolved_waited = { id: 'resolved_waited', title: w.title, summary: w.result, trustAdjust: 0, strain: 0, disposition: 'followup_agreed', completion: { flags: [completed] } };
+  }
 }

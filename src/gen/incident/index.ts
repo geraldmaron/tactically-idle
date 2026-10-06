@@ -11,6 +11,7 @@ import { withAdditionalFramework } from './frameworks-v9';
 import { ADDITIONAL_FRAMEWORK_BY_TYPE } from '../../content/incident-frameworks-v9';
 import { SCENARIO_TYPES_V9 } from '../../content/scenario-recipes';
 import { SCENARIO_TYPES_V10 } from '../../content/scenario-types-v10';
+import { SCENARIO_TYPES_V11 } from '../../content/scenario-types-v11';
 import { furnishedFamilyIdV7 } from '../building/furnishing-v7';
 import type { ActionDefinition, IncidentSpec, IncidentType, ScenarioDefinition } from '../../sim/scenario-types';
 import type { BuiltLocation, Room, StageId, Vec } from '../../sim/types';
@@ -19,7 +20,7 @@ import { hashSeed, next, pick } from '../../sim/rng';
 import { tierRewardMultiplier } from '../../sim/incidents';
 import { MS_OCCUPANCY } from '../../content/scenarios/ms-occupancy';
 import { MS_URGENT } from '../../content/scenarios/ms-urgent';
-import { ALL_BUILDING_FAMILIES, BUILDING_FAMILIES, PROCEDURAL_FAMILIES } from '../building';
+import { ALL_BUILDING_FAMILIES, BUILDING_FAMILIES, isProceduralFamily } from '../building';
 import { RESIDENTIAL_LAYOUT_NOTES } from '../../content/locations/residential-v1';
 
 export interface IncidentTypeInfo {
@@ -32,7 +33,7 @@ const homes = BUILDING_FAMILIES.filter((family) => family.setting !== 'business'
 const allFamilies = BUILDING_FAMILIES.map((f) => f.id);
 /** v10 adds generated building types; earlier versions keep the authored list. */
 const familiesFor = (contentVersion: number) => contentVersion >= 10 ? ALL_BUILDING_FAMILIES.map((f) => f.id) : allFamilies;
-const typesV9Plus = (contentVersion: number) => contentVersion >= 10 ? SCENARIO_TYPES_V10 : SCENARIO_TYPES_V9;
+const typesV9Plus = (contentVersion: number) => contentVersion >= 11 ? SCENARIO_TYPES_V11 : contentVersion >= 10 ? SCENARIO_TYPES_V10 : SCENARIO_TYPES_V9;
 // A bounded, playable neighbourhood catalog. Other schema types remain readable
 // in legacy Maple seed IDs, but are not advertised as new generated templates.
 export const INCIDENT_TYPES: IncidentTypeInfo[] = [
@@ -42,10 +43,10 @@ export const INCIDENT_TYPES: IncidentTypeInfo[] = [
   { type: 'burglary', label: 'Alarm response', families: ['market_row'], squads: [1, 3] },
   { type: 'false_intruder', label: 'Uncertain occupancy', families: homes, squads: [1, 2] },
 ];
-/** Future calls use v10; issued v1–v9 seed tuples retain their original content. */
-export const INCIDENT_CONTENT_VERSION = 10;
+/** Future calls use v11; issued v1–v10 seed tuples retain their original content. */
+export const INCIDENT_CONTENT_VERSION = 11;
 /** Highest incident content version this build can read. */
-export const SUPPORTED_INCIDENT_CONTENT_VERSION = 10;
+export const SUPPORTED_INCIDENT_CONTENT_VERSION = 11;
 export const INCIDENT_TYPES_V2: IncidentTypeInfo[] = [
   ...INCIDENT_TYPES,
   { type: 'barricaded', label: 'Reported barricade', families: homes, squads: [1, 3] },
@@ -67,7 +68,9 @@ export const INCIDENT_TYPES_V5: IncidentTypeInfo[] = [
   { type: 'protected_rescue', label: 'Protected rescue', families: ['juniper_court_v1', 'willow_terrace_v1', 'harbour_court'], squads: [1, 3] },
 ];
 const legacyTypes: IncidentType[] = ['domestic', 'person_in_crisis', 'barricaded', 'business_robbery', 'holding', 'missing_vulnerable', 'vacant_occupancy'];
-const validTypes = new Set([...INCIDENT_TYPES_V4.map((x) => x.type), ...legacyTypes]);
+// Frameworks first shipped in v11 or later drops are valid only from their own version.
+const laterTypes = new Set<IncidentType>(SCENARIO_TYPES_V11.map((x) => x.type).filter((type) => !SCENARIO_TYPES_V10.some((x) => x.type === type)));
+const validTypes = new Set([...INCIDENT_TYPES_V4.map((x) => x.type), ...legacyTypes, ...laterTypes]);
 
 /** The saved ID carries the entire deterministic seed tuple. */
 export function incidentId(spec: IncidentSpec): string {
@@ -77,6 +80,7 @@ export function parseIncidentId(id: string): IncidentSpec | null {
   const m = /^gen:([a-z_]+):([a-z0-9_]+):(\d+):(\d+):(\d+):(\d+)$/.exec(id);
   if (!m || !validTypes.has(m[1] as IncidentType)) return null;
   const [buildingSeed, seed, tier, contentVersion] = m.slice(3).map(Number);
+  if (laterTypes.has(m[1] as IncidentType) && contentVersion < 11) return null;
   if (![buildingSeed, seed, tier, contentVersion].every(Number.isSafeInteger) || tier < 1 || tier > 5 || contentVersion < 1 || contentVersion > SUPPORTED_INCIDENT_CONTENT_VERSION) return null;
   if (HIGH_RISK_TYPES_V4.includes(m[1] as IncidentType) && (contentVersion < 4 || m[2] === 'maple_street')) return null;
   if (contentVersion >= 5 && !(contentVersion >= 9 ? typesV9Plus(contentVersion) : INCIDENT_TYPES_V5).some(type => type.type === m[1] && type.families.includes(m[2]))) return null;
@@ -112,7 +116,7 @@ function occupantPoint(room: Room, built: BuiltLocation, seed: number): Vec {
  * reads. Deterministic, so the same ID always resolves to the same building. */
 export const HOSTING_SEEDS = 12;
 export function generateIncident(spec: IncidentSpec): ScenarioDefinition {
-  if (spec.contentVersion < 10 || !PROCEDURAL_FAMILIES.some(family => family.id === spec.familyId)) return generateIncidentAt(spec);
+  if (spec.contentVersion < 10 || !isProceduralFamily(spec.familyId)) return generateIncidentAt(spec);
   const places: Pick<IncidentSpec, 'familyId' | 'buildingSeed'>[] = [{ familyId: spec.familyId, buildingSeed: spec.buildingSeed }];
   for (let attempt = 1; attempt < HOSTING_SEEDS; attempt++) places.push({ familyId: spec.familyId, buildingSeed: hashSeed(`${spec.buildingSeed}:${spec.seed}:host-v10:${attempt}`) });
   const authored = SCENARIO_TYPES_V9.find(info => info.type === spec.type)?.families ?? [];
@@ -426,10 +430,13 @@ function withVersionTwoCapabilities(s: ScenarioDefinition, built: BuiltLocation)
   return s;
 }
 
-/** Prefer unused v5 story types, then unused compatible locations, without extra RNG draws. */
+/** Prefer unused v5 story types, then unused compatible locations, without extra RNG draws.
+ * From v11 the pool is limited to the frameworks the department has unlocked
+ * (`unlockedTypes`, ignored when it would leave nothing) and each framework's slots are
+ * multiplied by `typeWeights` (unseen-first). Neither consumes PRNG draws. */
 export function drawIncidentSpec(
   rngState: number,
-  ctx: { level: number; trust: number; contentVersion: number; avoidFamilies?: readonly string[]; avoidTypes?: readonly IncidentType[]; recentTypes?: readonly IncidentType[] },
+  ctx: { level: number; trust: number; contentVersion: number; avoidFamilies?: readonly string[]; avoidTypes?: readonly IncidentType[]; recentTypes?: readonly IncidentType[]; unlockedTypes?: readonly IncidentType[]; typeWeights?: Partial<Record<IncidentType, number>> },
 ): { spec: IncidentSpec; state: number } {
   // Four slots for each everyday call, one for each specialist report. Keep the
   // v1 array and number of PRNG draws exactly unchanged for saved campaigns.
@@ -442,6 +449,10 @@ export function drawIncidentSpec(
     : ctx.contentVersion >= 2
     ? [...INCIDENT_TYPES.flatMap((type) => [type, type, type, type]), ...INCIDENT_TYPES_V2.slice(INCIDENT_TYPES.length)]
     : INCIDENT_TYPES;
+  if (ctx.contentVersion >= 11 && ctx.unlockedTypes) {
+    const open = pool.filter(type => ctx.unlockedTypes!.includes(type.type));
+    if (open.length) pool = open;
+  }
   if (ctx.contentVersion >= 5) {
     const unused = pool.filter(type => !ctx.avoidTypes?.includes(type.type));
     if (unused.length) pool = unused;
@@ -449,6 +460,10 @@ export function drawIncidentSpec(
       const lessRecent = pool.filter(type => !ctx.recentTypes?.includes(type.type));
       if (lessRecent.length) pool = lessRecent;
     }
+  }
+  if (ctx.contentVersion >= 11 && ctx.typeWeights) {
+    const weights = ctx.typeWeights;
+    pool = pool.flatMap(type => Array.from({ length: Math.min(8, Math.max(1, Math.round(weights[type.type] ?? 1))) }, () => type));
   }
   // Restrict v5 family selection to remaining stories before preferring a fresh
   // location. Otherwise a fresh home could repeat a story while a shop story is unused.

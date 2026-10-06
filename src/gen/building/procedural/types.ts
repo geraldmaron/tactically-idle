@@ -150,6 +150,9 @@ export interface FamilySpec extends FamilyInfo {
   plan(rng: Rand, why?: (reason: string) => void): { plan: Plan; lot: LotSpec; ext: ExteriorSpec } | null;
   /** Name shown on the incident card. */
   name(rng: Rand): string;
+  /** A unit inside a larger building (shared stair and corridor): the floor of its front door, read
+   * from the accepted plan. From `_g2` on, generate.ts draws `access` (elevator, step-free route) for it. */
+  unitLevel?(loc: LocationDefinition): 0 | 1 | 2 | 3;
 }
 
 /** Exterior layout options, interpreted by exterior.ts. */

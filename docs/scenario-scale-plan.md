@@ -1,6 +1,6 @@
 # Scenario scale plan: hundreds of operations, and how players meet them
 
-**Status:** Approved 2026-10-06 with the owner decisions below; implementation in progress. Builds on [procedural-locations.md](procedural-locations.md) (content v10) and [scenario-generation-v9.md](scenario-generation-v9.md).
+**Status:** Approved 2026-10-06 with the owner decisions below. Phases A–C and the first content drop shipped in content v11 (see "Delivered"). Builds on [procedural-locations.md](procedural-locations.md) (content v10) and [scenario-generation-v9.md](scenario-generation-v9.md).
 
 ## Brief
 
@@ -165,3 +165,19 @@ This turns the catalog into a long arc rather than a menu.
 2. **The casebook replaces the library** outright.
 3. **Featured operation: yes.** A date-seeded call that is the same for every player that day, with an optional local best result.
 4. **Smaller, more frequent drops:** about 3–5 new frameworks per content version, not 10–20. Phase D acceptance scales accordingly.
+
+## Delivered in content v11 (2026-10-06)
+
+- **Setting modules** (`docs/setting-modules.md`): the armed incident plays an office late worker, a warehouse night picker and a motel night clerk, as well as the original till count.
+- **`_g2` buildings:** exact geometry (`geometry: 'exact'`), apartment access metadata (128 of 200 units step-free), and the wheelchair rescue in step-free apartments. v11 draws use `_g2`; `_g1` stays frozen for v10. A cross-engine CI job recomputes 917 fingerprints under JavaScriptCore; all match V8.
+- **Player arc:** capability unlocks (`src/content/unlocks.ts`), the casebook replacing the library, "New kind of call" badges, unseen-first draws, and a date-seeded featured operation (save version 6).
+- **Content pipeline** (`docs/content-pipeline.md`): prose, safety and spoiler lint, the distinctness metric, playability gates, and the story sheet (`/story.html?type=<framework>`).
+- **First drop:** `fall_at_home`, `water_leak` and `lost_child`.
+- **v10 frozen:** 210 definitions.
+
+**Findings to act on:**
+- Department level never rises today, so unlocks rely on certifications and equipment, and nothing asks for more than level 3. Level progression is a separate design gap.
+- The distinctness metric shows the 24 v9 compiled-framework recipes collapse to 6 decision fingerprints. They are recorded as known debt; new recipes must be distinct.
+- Protected rescue is rare even when unlocked (about 4 in 600 draws).
+- Practice results don't update casebook best results; only live calls do.
+- The shared placement sentence can read awkwardly with some room names ("in the shop floor"). That fix needs a version gate.

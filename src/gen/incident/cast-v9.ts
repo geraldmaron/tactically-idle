@@ -25,6 +25,10 @@ export const SCENARIO_CAST: Partial<Record<IncidentType, readonly CastSlot[]>> =
   active_armed_incident: [{ id: 'eli', authoredName: 'Eli Tran', pronouns: 'he' }, { id: 'grant', authoredName: 'Grant', pronouns: 'he' }],
   hostage_crisis: [{ id: 'ben', authoredName: 'Ben Flores', pronouns: 'he' }, { id: 'mara', authoredName: 'Mara Holt', pronouns: 'she' }, { id: 'lewis', authoredName: 'Lewis', pronouns: 'he' }],
   protected_rescue: [{ id: 'jun', authoredName: 'Jun Park', pronouns: 'they' }],
+  // Content v11 frameworks. Authored prose uses these pronouns; the prose lint checks it.
+  fall_at_home: [{ id: 'ruth', authoredName: 'Ruth Okafor', pronouns: 'she' }],
+  water_leak: [{ id: 'owen', authoredName: 'Owen Hale', pronouns: 'he' }],
+  lost_child: [{ id: 'theo', authoredName: 'Theo Marsh', pronouns: 'they' }],
 };
 export interface CastIdentity { firstName: string; surname: string; pronouns: CastSlot['pronouns'] }
 

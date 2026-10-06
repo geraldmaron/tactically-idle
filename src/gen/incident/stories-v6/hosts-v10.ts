@@ -26,7 +26,10 @@ export function storyArrivalsV10(built: BuiltLocation, type: IncidentType): stri
   return built.location.entries.filter(id => {
     const tags = zones.get(id)?.tags ?? [];
     if (tags.includes('balcony')) return false;
-    // Jun leaves with the wheelchair to a vehicle pickup: only a ground-level exterior qualifies.
+    // Jun leaves with the wheelchair to a vehicle pickup: only a ground-level exterior qualifies,
+    // except that a building recording step-free access (`_g2` apartments: a ground-floor unit
+    // or an elevator) makes its shared corridor the step-free way to the street door.
+    if (type === 'protected_rescue' && built.location.access?.stepFree && tags.includes('corridor')) return true;
     return type !== 'protected_rescue' || !tags.some(tag => INDOOR_EXTERIOR_TAGS.includes(tag));
   });
 }
@@ -50,7 +53,10 @@ export function storyRoomV10(built: BuiltLocation, type: IncidentType, base: Sto
     const selector: StoryRoomSelector = { floor: 0, types: ['living'], reachableFromSpaceId: arrival, profile: 'chair' };
     const zones = new Map(built.location.zones.map(zone => [zone.id, zone]));
     const openings = new Map(built.location.openings.map(opening => [opening.id, opening]));
-    const stepFree = (room: Room) => !(findStoryRoute(built, room.id, arrival, 'chair') ?? []).some(id => {
+    // A generated building that records step-free access (`_g2` apartments: ground-floor
+    // unit or an elevator) makes its shared corridor and stairwell part of a usable route.
+    const commonAccess = built.location.access?.stepFree === true;
+    const stepFree = (room: Room) => commonAccess || !(findStoryRoute(built, room.id, arrival, 'chair') ?? []).some(id => {
       const opening = openings.get(id)!;
       return [opening.a, opening.b].some(space => zones.get(space)?.tags.some(tag => INDOOR_EXTERIOR_TAGS.includes(tag)));
     });

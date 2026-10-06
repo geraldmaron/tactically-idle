@@ -11,7 +11,7 @@ import { relativeTime } from '../format';
 import { boardEntries, boardNote, incidentsOf, practiceEntries } from './helpers';
 import type { BoardEntry, PracticeEntry } from './helpers';
 import { DECISION_EXERCISES } from '../../content/scenarios/decision-exercises';
-import { ScenarioLibrary } from './ScenarioLibrary';
+import { Casebook, FeaturedOperationCard } from './Casebook';
 import { IncidentBriefContext } from './SupportContext';
 
 /**
@@ -58,7 +58,9 @@ export function OpsBoard({ onPrepare }: { onPrepare: (id: Id) => void }) {
         )}
       </Section>
 
-      <ScenarioLibrary onPrepare={onPrepare} />
+      <FeaturedOperationCard state={g} now={now} onPrepare={onPrepare} />
+
+      <Casebook state={g} onPrepare={onPrepare} />
 
       {featured.length > 0 && <Section title="Decision practice" icon="flag" hint="Practice current calls with virtual gear and no lasting consequences. These exercises are always available.">
         <div className="stack">{featured.map((entry) => <PracticeCardView key={entry.card.id} entry={entry} onPrepare={onPrepare} />)}</div>
@@ -200,6 +202,7 @@ function IncidentCardView({ entry, now, isNew, onPrepare }: { entry: BoardEntry;
         </span>
       )}
       <CardBody card={card} scenario={scenario} familyId={scenario?.locationFamilyId ?? spec?.familyId ?? incident.familyId} type={spec?.type ?? incident.type} tier={spec?.tier ?? incident.tier}>
+        {incident.newKind && <span className="opboard-newkind"><Chip tone="amber" icon="star">New kind of call</Chip></span>}
         <TimeLeft expiresAt={incident.expiresAt} now={now} />
         <Eligibility card={card} />
         <Button variant="primary" block onClick={() => onPrepare(card.id)}>

@@ -15,18 +15,55 @@ included. The plan itself holds no room furniture: one furniture system, `furnis
 furnishes every building the player sees. It runs v7's solver (`RoomPlan` in `../furnishing-v7.ts`)
 with its own catalog (`../furnishing-definitions-g1.ts`); authored buildings keep `furnishLocationV7`.
 
-The game reaches these generators as nine public building types, `<family>_g1`
-(`PROCEDURAL_FAMILIES` in `../index.ts`), and their furnished forms `<family>_g1__furnished_v7`.
+The game reaches these generators as public building types `<family>_<generation>` and their
+furnished forms `<family>_<generation>__furnished_v7`: nine `_g1` types (`PROCEDURAL_FAMILIES` in
+`../index.ts`) and nine `_g2` types (`PROCEDURAL_FAMILIES_G2`). `generatePair` reads the generation
+from the id (`generation.ts`; a bare spec id means `_g1`).
 
-## Frozen output: `_g1` never changes after release
+## Generations
+
+| | `_g1` | `_g2` |
+| --- | --- | --- |
+| Draw stream | ``hashSeed(`${family}:${seed}`)`` | the same stream |
+| Distance math in the shared helpers | `Math.hypot` (no `geometry` field) | `geometry: 'exact'`: `Math.sqrt(dx*dx + dy*dy)` (`src/sim/geometry.ts`) |
+| Location `version` (plain form) | 1 | 2 |
+| `access` | none | `apartment_unit_g2`: unit floor, elevator, step-free route, note |
+| Fingerprints | `../procedural-g1-fingerprints.json` | `../procedural-g2-fingerprints.json` |
+
+`_g2` sets `geometry: 'exact'` on the drawn plan before acceptance (`generate.ts` `finishPlan`), so
+`deriveLocation`, `validateLocation`, `furnishLocationG1` (v7's `RoomPlan`), `validateFurnishingsG1`
+and the furnished squad router all measure that building with exact arithmetic, and the furnished form
+inherits the field. Furnishing choices hash the public id, so a `_g2` seed often accepts a different
+draw from the stream than `_g1` did; treat `_g2` as its own content, not a re-measured `_g1`.
+
+**Access (`access.ts`).** A family with `unitLevel` (only `apartment_unit`; it is the one type with a
+shared stair and corridor) gets `access` from `_g2` on. The unit's floor comes from its name ('Unit 3B'
+is on the third floor, level 2). One draw from its own stream, ``Rand(`${family}:access:${seed}`)``,
+decides the elevator (35/40/55/75% by level 0-3). Ground-floor units are step-free; upper units only
+with an elevator. Players see `access.note` ('Third-floor unit; the building has an elevator') as map
+note `n_access` on the common corridor, and an elevator relabels the stairwell zone 'Stairs and
+elevator' and tags it `lift`.
+
+## Frozen output: a released generation never changes
 
 Issued incidents and saves rebuild a building from `(familyId, seed)` alone, so the output of a
-released generation is part of the save format. `../procedural-g1-fingerprints.json` holds SHA-256
-fingerprints of `generateBuilding` for each `_g1` type, plain and furnished, and
-`../procedural-g1-fingerprints.test.ts` checks them. Any change that alters these outputs, in this
-directory, in `furnishing-g1.ts`, `furnishing-definitions-g1.ts`, `furnishing-v7.ts`, or in the validators and geometry they call, must ship as new `_g2`
-types alongside `_g1` (bump `GENERATION` for the new types and keep the old code path for `_g1`).
-Never re-baseline the `_g1` fingerprints after release.
+released generation is part of the save format. `../procedural-g1-fingerprints.json` and
+`../procedural-g2-fingerprints.json` hold SHA-256 fingerprints of `generateBuilding` for each type,
+plain and furnished (seeds 0, 1, 7, 42, 1000, 4294967295), and the matching `.test.ts` files check
+them. Any change that alters these outputs, in this directory, in `furnishing-g1.ts`,
+`furnishing-definitions-g1.ts`, `furnishing-v7.ts`, or in the validators and geometry they call,
+must ship as a new generation alongside the old ones. Never re-baseline a released generation.
+
+**The `_g3` rule.** To change generated output:
+1. Add `'g3'` to `Generation` and `GENERATIONS` in `generation.ts`, and its `PLAN_VERSION` in `generate.ts`.
+2. Gate every behavior change on the generation (`finishPlan`, a `FamilySpec` hook, or a field on the
+   location such as `geometry`), so `_g1` and `_g2` take exactly today's code path. A shared helper
+   in `src/sim` changes only behind a location field that older locations do not carry.
+3. Export `PROCEDURAL_FAMILIES_G3` from `../index.ts`, add it to `ALL_BUILDING_FAMILIES`, and add
+   `../procedural-g3-fingerprints.json` with its test (same seeds), captured under Node.
+4. Run the `_g1` and `_g2` fingerprint tests, the issued-incident suites and
+   `bun scripts/cross-engine-fingerprints.ts`; add the new JSON to that script.
+5. Only a new content version may draw the new types; issued versions keep their lists.
 
 ## Engine-independent arithmetic
 
@@ -36,6 +73,14 @@ generator uses none of them; `Math.sqrt` is correctly rounded (§21.3.2.33) and 
 `geom.ts` `norm`. Annealing in `fill.ts` uses a rational stand-in for `exp`, and no sort comparator
 draws random numbers (engines compare in different orders). `../procedural-math.test.ts` greps this
 directory and fails on any approximated call outside comments.
+
+The shared helpers the generator calls (`src/sim/location.ts`, `furniture-path.ts`,
+`location-validate.ts`, `spatial-factors.ts` routing, `../furnishing-v7.ts`) still use `Math.hypot`
+for `_g1` and authored locations, whose outputs are frozen; `_g2` locations take the exact path.
+`../exact-geometry.test.ts` spies on every approximated `Math` function while a `_g2` building of each
+type is generated, validated, furnished and routed, and requires zero calls.
+`scripts/cross-engine-fingerprints.ts` recomputes the building and incident fingerprint suites under
+Bun (JavaScriptCore) and compares them with the JSON captured under Node (CI: `cross-engine.yml`).
 
 Families: `bungalow`, `two_storey_house`, `semi_detached`, `apartment_unit`, `corner_store_flat`,
 `small_office`, `bar_restaurant`, `warehouse`, `motel_row` (see `families/*.ts`, one `FamilySpec` each).
@@ -61,7 +106,7 @@ Rooms are `<key>` or `<key>_<n>` (largest first): `living`, `kitchen`, `hall`, `
 `manager_1..`, `kitchenette`, `server`, `corridor`, `bar`, `cold_store`, `break_room`, `locker_room`, `floor`
 (warehouse), `mezz_office_1..`, `unit_1..` (motel rooms). Openings: `d_<a>_<b>` door, `dw_<a>_<b>` cased
 opening, `d_front` / `d_back` / `d_side` / `d_flat` / `d_dock` / `d_balcony` / `d_<unit>` exterior doors,
-`st_stair_0_stair_1`, `w_<room>_<n>` windows, `p_<zoneA>_<zoneB>` yard paths. Yard objects: `o_fence_<n>`, `o_shrub<n>`, `o_tree<n>`, `o_steps`, `o_patio_table<n>`, `o_planter<n>`; room furniture is `furnishLocationG1`'s (`g1_<room>_<catalog key>_<n>`, e.g. `g1_floor_pallet_rack_2`).
+`st_stair_0_stair_1`, `w_<room>_<n>` windows, `p_<zoneA>_<zoneB>` yard paths. Yard objects: `o_fence_<n>`, `o_shrub<n>`, `o_tree<n>`, `o_steps`, `o_patio_table<n>`, `o_planter<n>`; room furniture is `furnishLocationG1`'s (`g1_<room>_<catalog key>_<n>`, e.g. `g1_floor_pallet_rack_2`; the prefix names the catalog, so `_g2` buildings use it too). Notes: `n_access` (`_g2` apartments).
 Zones: `front_yard`, `back_yard`, `side_yard_w/e`, `porch`, `back_step`, `driveway`, `street`, `side_street`,
 `alley`, `forecourt`, `parking`, `patio`, `walkway`, `loading_bay`, `corridor`, `stairwell`, `balcony`,
 `neighbor_w/e` (a party-wall neighbor; no path, no entry).
@@ -82,7 +127,7 @@ have doors that can hold a barricade. `junction` is a hall with three or more op
 joined by a cased opening; `interior` a room with no outside wall.
 
 Zone tags: `street` `exposed` `cover` `fence` `alley` `vehicles` `neighbor` `party_wall` `no_entry` `corridor`
-`common` `stairwell` `balcony` `loading_bay` `walkway` `patio`.
+`common` `stairwell` `balcony` `loading_bay` `walkway` `patio`, and from `_g2` `lift` (a stairwell with an elevator).
 Object tags: `blocks_space` `blocks_sight` `concealment` `cover` `valuables` `hazard` `storage` `appliance`
 `boiler` `safe` `server` `shower` `bar` `equipment`. Objects whose tags are non-empty are `mechanical`.
 No `car`, `bin` or `gate` object type exists in `ObjectType`, so cars and bins appear as map notes
@@ -127,7 +172,10 @@ BUILDING_SVG=/tmp/sheets BUILDING_FAMILY=corner_store_flat BUILDING_SEEDS=0-5 BU
 BUILDING_STATS=bungalow BUILDING_N=200 npx vitest run src/gen/building/procedural/stats.dev.test.ts --silent=false
 # distinctness, floors, shapes, plausibility scores
 BUILDING_SUMMARY=all BUILDING_N=500 npx vitest run src/gen/building/procedural/summary.dev.test.ts --silent=false
-# per public type: validity, distinct room topologies, average and p95 ms per building
+# per public type (g1 and g2): validity, topologies, loop share, average and p95 ms per building, and
+# squad reachability on the furnished form (BUILDING_QUALITY_REACH=0 skips the routing)
 BUILDING_QUALITY=200 npx vitest run src/gen/building/procedural-quality.dev.test.ts --silent=false
+# fingerprint suites on JavaScriptCore against the JSON captured under V8
+bun scripts/cross-engine-fingerprints.ts
 ```
 

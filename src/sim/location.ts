@@ -15,6 +15,7 @@ import { MAPLE_STREET } from '../content/locations/maple-street';
 import { STAIR_MINUTES } from '../content/materials';
 import { applyVariations } from './location-variation';
 import { validateLocation } from './location-validate';
+import { distanceFor } from './geometry';
 import { generateBuilding, isGeneratedFamily } from '../gen/building';
 
 /** Abstract location tuning. Game abstractions, not real-world movement rates. */
@@ -157,7 +158,6 @@ export function stairEnds(o: Opening, floors: Map<Id, number>): StairEnds | null
   return fa < fb ? { low: A, high: B } : { low: B, high: A };
 }
 
-const dist = (a: Vec, b: Vec) => Math.hypot(a.x - b.x, a.y - b.y);
 const mid = (a: Vec, b: Vec): Vec => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
 
 /** Distance a staging point sits from its opening, along the wall normal. */
@@ -193,6 +193,7 @@ export function deriveStagingPoints(loc: LocationDefinition): StagingPoint[] {
   const zoneIds = new Set(loc.zones.map((z) => z.id));
   for (const z of loc.zones) polys.set(z.id, z.polygon);
   const floors = floorMap(loc);
+  const dist = distanceFor(loc.geometry);
   const out: StagingPoint[] = [];
   for (const o of loc.openings) {
     if (o.type === 'stair') {
@@ -228,6 +229,7 @@ export function deriveStagingPoints(loc: LocationDefinition): StagingPoint[] {
  */
 export function deriveLocation(loc: LocationDefinition): DerivedLocation {
   const T = LOCATION_TUNING;
+  const dist = distanceFor(loc.geometry);
   const spaces: Record<Id, DerivedRoom> = {};
   const all = [
     ...loc.rooms.map((r) => ({ id: r.id, polygon: r.polygon, zone: false, floor: r.floor ?? 0 })),

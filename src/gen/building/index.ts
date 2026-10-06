@@ -6,7 +6,8 @@ import { MAPLE_STREET } from '../../content/locations/maple-street';
 import { baseFamilyIdV7, furnishedFamilyIdV7, furnishLocationV7, FURNISHING_V7_SUFFIX } from './furnishing-v7';
 export { furnishedFamilyIdV7, baseFamilyIdV7 } from './furnishing-v7';
 import { FAMILIES as PROCEDURAL_SPECS } from './procedural/families';
-import { GENERATION, generatePair as generateProceduralPair } from './procedural/generate';
+import { generatePair as generateProceduralPair } from './procedural/generate';
+import { GENERATION, publicFamilyId, type Generation } from './procedural/generation';
 
 export interface BuildingFamilyInfo {
   id: string;
@@ -35,12 +36,20 @@ export const GENERATED_LOCATION_FAMILIES = [...NEIGHBOURHOOD_FAMILIES, ...RESIDE
  * procedural-g1-fingerprints.test.ts holds the outputs. Kept out of BUILDING_FAMILIES so
  * v1-v9 incident family lists stay unchanged. */
 export const PROCEDURAL_GENERATION = GENERATION;
-export const PROCEDURAL_FAMILIES: BuildingFamilyInfo[] = PROCEDURAL_SPECS.map((spec) => ({
-  id: `${spec.id}_${PROCEDURAL_GENERATION}`, label: spec.label, setting: spec.setting, floors: spec.floors, blurb: spec.blurb,
+const proceduralFamilies = (generation: Generation): BuildingFamilyInfo[] => PROCEDURAL_SPECS.map((spec) => ({
+  id: publicFamilyId(spec.id, generation), label: spec.label, setting: spec.setting, floors: spec.floors, blurb: spec.blurb,
 }));
-const proceduralSpecId = (familyId: string) => PROCEDURAL_FAMILIES.some((f) => f.id === familyId) ? familyId.slice(0, -(PROCEDURAL_GENERATION.length + 1)) : null;
+export const PROCEDURAL_FAMILIES: BuildingFamilyInfo[] = proceduralFamilies('g1');
+/** Second generation (`<type>_g2`): the same draw streams measured with exact geometry
+ * (`geometry: 'exact'`), and apartments with `access` (unit floor, elevator, step-free route); see
+ * procedural/generation.ts. Frozen once released like `_g1`; procedural-g2-fingerprints.test.ts
+ * holds the outputs. Not in any v1-v10 family list. */
+export const PROCEDURAL_FAMILIES_G2: BuildingFamilyInfo[] = proceduralFamilies('g2');
+const PROCEDURAL_IDS = new Set([...PROCEDURAL_FAMILIES, ...PROCEDURAL_FAMILIES_G2].map((f) => f.id));
+/** True for every generated building type, of any generation (`_g1`, `_g2`, …). */
+export const isProceduralFamily = (familyId: string): boolean => PROCEDURAL_IDS.has(familyId);
 /** Every building type a player can be sent to, authored and generated. */
-export const ALL_BUILDING_FAMILIES: BuildingFamilyInfo[] = [...BUILDING_FAMILIES, ...PROCEDURAL_FAMILIES];
+export const ALL_BUILDING_FAMILIES: BuildingFamilyInfo[] = [...BUILDING_FAMILIES, ...PROCEDURAL_FAMILIES, ...PROCEDURAL_FAMILIES_G2];
 const proceduralCache = new Map<string, LocationDefinition>();
 // Selectors rebuild a location several times per render. Cache only the new
 // expensive furnishing solve, bounded in memory, and never expose cached data
@@ -57,13 +66,12 @@ export function generateBuilding(familyId: string, seed: number): LocationDefini
   const baseId = furnished ? baseFamilyIdV7(familyId) : familyId;
   if (!Number.isSafeInteger(seed) || seed < 0) throw new Error('Building seed must be a non-negative integer');
   const key = `${familyId}:${seed}`;
-  const specId = proceduralSpecId(baseId);
-  if (specId) {
+  if (PROCEDURAL_IDS.has(baseId)) {
     // Generation runs a bounded search per seed that already furnishes each candidate with
     // furnishLocationG1 to accept it; selectors rebuild locations several times per render,
     // so both forms of the accepted building are cached.
     if (!proceduralCache.has(key)) {
-      const pair = generateProceduralPair(specId, seed);
+      const pair = generateProceduralPair(baseId, seed);
       for (const [k, loc] of [[`${baseId}:${seed}`, pair.plain], [`${furnishedFamilyIdV7(baseId)}:${seed}`, pair.furnished]] as const) {
         if (proceduralCache.size >= 128) proceduralCache.delete(proceduralCache.keys().next().value!);
         proceduralCache.set(k, loc);

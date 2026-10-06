@@ -2,11 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { deriveLocation } from '../../sim/location';
 import { routeBetween } from '../../sim/spatial-factors';
 import type { BuiltLocation, LocationDefinition, Room } from '../../sim/types';
-import { PROCEDURAL_FAMILIES, generateBuilding } from './index';
+import { PROCEDURAL_FAMILIES, PROCEDURAL_FAMILIES_G2, generateBuilding } from './index';
 import { indoorOrphans, plausibilityReport } from './procedural/plausibility';
 
 /**
- * Interior connectivity and loops of the generated building types, unfurnished, 200 seeds each.
+ * Interior connectivity and loops of the generated building types (`_g1` and `_g2`), unfurnished, 200 seeds each.
  *
  * 1. From the front-door room (behind `d_front`) every room is reachable through interior openings
  *    alone (doors, cased openings, the stair), never through a yard. The only rooms excused are the
@@ -23,12 +23,12 @@ const SEEDS = 200;
 const LOOP_MIN = 0.4;
 const LOOP_MAX = 0.75;
 
-/** Separate units, stated here independently of procedural/units.ts so a policy change has to touch both. */
+/** Separate units by family (any generation), stated here independently of procedural/units.ts so a policy change has to touch both. */
 const EXEMPT: Record<string, (room: Room) => boolean> = {
   // Guest rooms open onto the walkway; each ensuite opens off its room.
-  motel_row_g1: (r) => /^unit_\d+$/.test(r.id) || (/^bath_\d+$/.test(r.id) && r.tags.includes('ensuite')),
+  motel_row: (r) => /^unit_\d+$/.test(r.id) || (/^bath_\d+$/.test(r.id) && r.tags.includes('ensuite')),
   // The apartment upstairs and its street-door hall, stair and an optional closet.
-  corner_store_flat_g1: (r) => (r.floor ?? 0) === 1 || r.id === 'hall' || r.id === 'stair_0' || /^storage_\d+$/.test(r.id),
+  corner_store_flat: (r) => (r.floor ?? 0) === 1 || r.id === 'hall' || r.id === 'stair_0' || /^storage_\d+$/.test(r.id),
 };
 
 const roomGraph = (loc: LocationDefinition) => {
@@ -63,9 +63,9 @@ function cycleRank(loc: LocationDefinition): number {
 }
 
 describe('generated building connectivity (unfurnished, 200 seeds per type)', () => {
-  for (const family of PROCEDURAL_FAMILIES) {
+  for (const family of [...PROCEDURAL_FAMILIES, ...PROCEDURAL_FAMILIES_G2]) {
     it(`${family.id}: every room indoors from the front door, routable from every entry, loops in 40-75% of plans`, () => {
-      const exempt = EXEMPT[family.id] ?? (() => false);
+      const exempt = EXEMPT[family.id.replace(/_g\d+$/, '')] ?? (() => false);
       const problems: string[] = [];
       let big = 0;
       let looped = 0;

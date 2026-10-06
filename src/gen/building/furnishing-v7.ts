@@ -1,6 +1,7 @@
 import type { LocationDefinition, Opening, PlacedObject, Polygon, Room, Vec } from '../../sim/types';
 import { hashSeed } from '../../sim/rng';
 import { findRoomPath, footprintRect } from '../../sim/furniture-path';
+import { hypotFor } from '../../sim/geometry';
 import { FURNITURE_V7, type FurnishingTypeV7, type ObjectDefinition } from './furnishing-definitions-v7';
 
 export type Side = NonNullable<PlacedObject['placement']>['back'];
@@ -102,7 +103,7 @@ export function furnishingDoorApproaches(loc: LocationDefinition, room: Room): V
 export function furnishingOpeningClearances(loc: LocationDefinition, room: Room): Rect[] {
   return loc.openings.filter(o => o.a === room.id || o.b === room.id).map(o => {
     if (o.type === 'stair') { const p = o.a === room.id ? o.from : o.to; return { x: p.x - 1.5, y: p.y - 1.5, w: 3, h: 3 }; }
-    const n = inward(room, o), width = Math.hypot(o.from.x - o.to.x, o.from.y - o.to.y);
+    const n = inward(room, o), width = hypotFor(loc.geometry)(o.from.x - o.to.x, o.from.y - o.to.y);
     const depth = o.type === 'window' ? 0.65 : Math.max(3, o.swing?.into === room.id ? width : 0);
     const b = box([o.from, o.to, { x: o.from.x + n.x * depth, y: o.from.y + n.y * depth }, { x: o.to.x + n.x * depth, y: o.to.y + n.y * depth }]);
     return inflate(b, o.type === 'window' ? 0.05 : 0.3);
@@ -152,7 +153,7 @@ export class RoomPlan {
     const c = centroid(this.room);
     if (inside(c, this.room.polygon)) anchors.push(c);
     anchors.push(...this.extraAnchors);
-    if (anchors.length > 1 && anchors.slice(1).some(to => !findRoomPath(this.room, objects, anchors[0], to, this.routeClearance))) return false;
+    if (anchors.length > 1 && anchors.slice(1).some(to => !findRoomPath(this.room, objects, anchors[0], to, this.routeClearance, this.loc.geometry))) return false;
     for (const item of items) {
       item.object.id = `${this.catalog.idPrefix}_${this.room.id}_${item.key}_${this.placed.filter(p => p.key === item.key).length + 1}`;
       this.placed.push(item);
@@ -327,7 +328,7 @@ export function validateFurnishings(loc: LocationDefinition, accessOf: (object: 
     const approaches = furnishingDoorApproaches(loc, room);
     const c = centroid(room); if (inside(c, room.polygon)) approaches.push(c);
     approaches.push(...more.anchors);
-    for (const target of approaches.slice(1)) if (!findRoomPath(room, objects, approaches[0], target, room.type === 'living' ? 1.5 : 1)) errors.push(`${room.id}: no clear interior route`);
+    for (const target of approaches.slice(1)) if (!findRoomPath(room, objects, approaches[0], target, room.type === 'living' ? 1.5 : 1, loc.geometry)) errors.push(`${room.id}: no clear interior route`);
   }
   return errors;
 }

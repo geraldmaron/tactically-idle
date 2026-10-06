@@ -35,7 +35,7 @@ function find(family: Family, truths: Record<string, boolean> = {}, available = 
 function running(s: ScenarioDefinition, gear: string[] = [], vehicle = false): GameState {
   const inventory = Object.fromEntries(gear.map(item => [item, item === 'trauma_kit' ? 5 : 1]));
   if (vehicle) inventory.armored_rescue_vehicle = 1;
-  const state = makeState({ inventory }); state.saveVersion = 5; state.contentVersion = 5; initializePersonnel(state);
+  const state = makeState({ inventory }); state.saveVersion = 6; state.contentVersion = 5; initializePersonnel(state);
   const certs = Object.values(COURSES).flatMap(course => course.grants.cert ? [course.grants.cert] : []);
   for (const officer of Object.values(state.officers)) officer.certs = [...new Set(certs)];
   const spec = s.incident!;

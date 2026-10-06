@@ -56,6 +56,8 @@ export const APARTMENT: FamilySpec = {
     throughOk: ['utility'],
   },
   name: (rng) => `${rng.pick(APT_STREETS)}, Unit ${rng.int(1, 4)}${rng.pick(['A', 'B', 'C', 'D', 'E', 'F'])}`,
+  // 'Unit 3B' is on the third floor (American numbering), so its front door is two floors up.
+  unitLevel: (loc) => (Math.min(4, Math.max(1, Number(/\bUnit (\d)/.exec(loc.name)?.[1] ?? 1))) - 1) as 0 | 1 | 2 | 3,
   plan(rng: Rand, why0) {
     const maisonette = rng.chance(0.14);
     const beds = rng.weighted([[1, 45], [2, 40], [3, 15]] as const);

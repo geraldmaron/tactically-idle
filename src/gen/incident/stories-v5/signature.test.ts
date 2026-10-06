@@ -32,7 +32,7 @@ function find(truths: Record<string, boolean> = {}, available = true): ScenarioD
 }
 function running(s: ScenarioDefinition, gear: string[] = []): GameState {
   const state = makeState({ inventory: Object.fromEntries(gear.map(item => [item, item === 'trauma_kit' ? 5 : 1])) });
-  state.saveVersion = 5; state.contentVersion = 5; initializePersonnel(state);
+  state.saveVersion = 6; state.contentVersion = 5; initializePersonnel(state);
   const certs = Object.values(COURSES).flatMap(course => course.grants.cert ? [course.grants.cert] : []);
   for (const officer of Object.values(state.officers)) officer.certs = [...new Set(certs)];
   state.incidents = [{ id: s.id, type: 'hostage_crisis', familyId: 'market_row', tier: 2, arrivedAt: NOW, expiresAt: NOW + 3_600_000, seen: false }];

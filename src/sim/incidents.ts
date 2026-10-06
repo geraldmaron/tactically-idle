@@ -11,6 +11,13 @@ import type { Department, GameState, HandlerResult, Id, IncidentCard } from './t
 import { next } from './rng';
 import { drawIncidentSpec, incidentId, parseIncidentId } from '../gen/incident';
 import { DECISION_EXERCISES, LEGACY_DECISION_EXERCISES } from '../content/scenarios/decision-exercises';
+import { SCENARIO_TYPES_V11 } from '../content/scenario-types-v11';
+import { unlockedTypes } from '../content/unlocks';
+import { noveltyWeights, recordArrival, recordDispatch } from './casebook';
+import type { IncidentType } from './scenario-types';
+
+/** Content v11 gates board draws by capability and weights unseen frameworks first. */
+export const PLAYER_ARC_CONTENT_VERSION = 11;
 
 const HOUR = 3_600_000;
 const MINUTE = 60_000;
@@ -73,6 +80,7 @@ export function takeIncident(d: GameState, id: Id): IncidentCard | null {
   const i = cards.findIndex((c) => c.id === id);
   if (i < 0) return null;
   const [card] = cards.splice(i, 1);
+  if (d.contentVersion >= PLAYER_ARC_CONTENT_VERSION) recordDispatch(d, id, d.department.clockHighWater);
   return card;
 }
 
@@ -91,7 +99,8 @@ function drawCard(d: GameState, at: number): IncidentCard | null {
     ? [...board(d).flatMap(card => { const spec = parseIncidentId(card.id); return spec && spec.contentVersion >= 5 ? [spec.type] : []; }), ...(activeStory ? [activeStory.type] : [])]
     : undefined;
   const recentTypes = d.contentVersion >= 6 ? d.debriefs.filter(report => !report.practice).slice(0, 2).flatMap(report => { const spec = parseIncidentId(report.scenarioId); return spec ? [spec.type] : []; }) : undefined;
-  const drawn = drawIncidentSpec(d.rngState, { level: dep.level, trust: dep.trust, contentVersion: d.contentVersion, avoidFamilies: [...board(d).map((c) => c.familyId), ...(run ? [activeStory?.familyId ?? run.locationFamilyId] : [])], ...(avoidTypes ? { avoidTypes } : {}), ...(recentTypes ? { recentTypes } : {}) });
+  const arc = d.contentVersion >= PLAYER_ARC_CONTENT_VERSION ? playerArcContext(d) : {};
+  const drawn = drawIncidentSpec(d.rngState, { level: dep.level, trust: dep.trust, contentVersion: d.contentVersion, avoidFamilies: [...board(d).map((c) => c.familyId), ...(run ? [activeStory?.familyId ?? run.locationFamilyId] : [])], ...(avoidTypes ? { avoidTypes } : {}), ...(recentTypes ? { recentTypes } : {}), ...arc });
   const spec = { ...drawn.spec, tier: Math.min(5, Math.max(1, Math.round(drawn.spec.tier))) };
   const life = drawBetween(drawn.state, INCIDENT_TUNING.minLifetimeMs, INCIDENT_TUNING.maxLifetimeMs);
   d.rngState = life.state;
@@ -107,8 +116,16 @@ function drawCard(d: GameState, at: number): IncidentCard | null {
     expiresAt: at + life.ms,
     seen: false,
   };
+  if (d.contentVersion >= PLAYER_ARC_CONTENT_VERSION && recordArrival(d, spec.type)) card.newKind = true;
   cards.unshift(card); // newest first
   return card;
+}
+
+/** Unlocked frameworks and unseen-first weights for a v11+ draw. Reads state only. */
+export function playerArcContext(d: GameState): { unlockedTypes: IncidentType[]; typeWeights: Partial<Record<IncidentType, number>> } {
+  const types = SCENARIO_TYPES_V11.map((info) => info.type);
+  const open = unlockedTypes(d, types);
+  return { unlockedTypes: open, typeWeights: noveltyWeights(d, open) };
 }
 
 /** Draw the gap to the following arrival and store the new schedule. */
