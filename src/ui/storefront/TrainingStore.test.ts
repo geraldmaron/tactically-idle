@@ -143,7 +143,7 @@ describe('course-first Training presentation', () => {
     const enrolment = { officerName: 'Mei Chen', startedAt: NOW, endsAt: NOW + 10 * HOUR_MS };
     const html = markup(createElement(TrainingEnrolmentReceipt, { course, enrolment, now: enrolment.endsAt }));
     expect(html).toContain('Mei Chen');
-    expect(html).toContain('Drone operator licence');
+    expect(html).toContain('Drone operator license');
     expect(html).toContain('No longer on the roster');
     expect(html).toContain('Earn Drone operator');
     expect(html).toContain('+50 XP');

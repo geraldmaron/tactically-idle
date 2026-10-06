@@ -1,0 +1,11 @@
+.scenario-library-card { gap: 12px; }
+.scenario-library-card > h3,
+.scenario-library-card > p { margin: 0; }
+.scenario-library-nav {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 8px;
+}
+.scenario-library-nav > .btn { min-width: 0; padding-inline: 8px; }
+.scenario-library-nav > [role="status"] { white-space: nowrap; font-size: 14px; }

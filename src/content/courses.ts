@@ -35,7 +35,7 @@ export const COURSES: Record<Id, Course> = {
   },
   drone_course: {
     id: 'drone_course',
-    name: 'Drone operator licence',
+    name: 'Drone operator license',
     hours: 10,
     cost: 2200,
     requiresNode: 'intel_drone',

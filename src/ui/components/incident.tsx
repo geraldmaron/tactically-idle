@@ -3,6 +3,7 @@
 // own INCIDENT_TYPES / BUILDING_FAMILIES win when they provide a label.
 import { useEffect, useState } from 'react';
 import type { Armament, EnvironmentDefinition } from '../../sim/scenario-types';
+import { SCENARIO_TYPES_V9 } from '../../content/scenario-recipes';
 import { INCIDENT_TYPES_V4 } from '../../gen/incident';
 import { BUILDING_FAMILIES } from '../../gen/building';
 import { Chip } from './ui';
@@ -38,7 +39,7 @@ function titleCase(id: string): string {
 export function incidentMeta(type: string | null | undefined): { label: string; icon: IconName } {
   if (!type) return { label: 'Operation', icon: 'pin' };
   const fb = INCIDENT_FALLBACK[type];
-  const gen = INCIDENT_TYPES_V4.find((t) => t.type === type);
+  const gen = [...SCENARIO_TYPES_V9, ...INCIDENT_TYPES_V4].find((t) => t.type === type);
   return { label: gen?.label ?? fb?.label ?? titleCase(type), icon: fb?.icon ?? 'pin' };
 }
 
@@ -47,8 +48,8 @@ export function familyBlurb(familyId: string | null | undefined): string | null 
   // The persistence key identifies a furniture version, not a player-facing place.
   familyId = familyId.replace(/__furnished_v7$/, '');
   const f = BUILDING_FAMILIES.find((x) => x.id === familyId);
-  if (f) return f.blurb;
-  return familyId === 'maple_street' ? 'Single-storey house' : titleCase(familyId);
+  if (f) return f.blurb.replaceAll('storey', 'story');
+  return familyId === 'maple_street' ? 'Single-story house' : titleCase(familyId);
 }
 
 export function settingIcon(setting: 'residential' | 'business' | 'apartment' | string): IconName {

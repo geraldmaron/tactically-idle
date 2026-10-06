@@ -27,8 +27,8 @@ describe('immediately discoverable decision exercises', () => {
       expect(getScenario(exercise.id)?.variantLabel).toBe(generated.variantLabel);
     }
   });
-  it('keeps all issued v3 through v7 exercises in the legacy lookup without advertising them as new entries', () => {
-    expect(LEGACY_DECISION_EXERCISES).toHaveLength(27);
+  it('keeps all issued v3 through v8 exercises in the legacy lookup without advertising them as new entries', () => {
+    expect(LEGACY_DECISION_EXERCISES).toHaveLength(33);
     for (const entry of LEGACY_DECISION_EXERCISES) {
       const text = entry.spec.contentVersion >= 5 ? generateIncident(entry.spec) : { title: entry.title, summary: entry.summary, variantLabel: 'Decision exercise' };
       expect(getScenario(entry.id)).toMatchObject({ id: entry.id, version: entry.spec.contentVersion, title: text.title, summary: text.summary, variantLabel: text.variantLabel, practiceOnly: true });

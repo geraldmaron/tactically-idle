@@ -308,7 +308,7 @@ export function OpsLive() {
             <Button
               variant="danger"
               onClick={() => {
-                if (act({ type: 'cancelOperation' }, 'Operation cancelled. Gear released.').ok) setConfirmCancel(false);
+                if (act({ type: 'cancelOperation' }, 'Operation canceled. Gear released.').ok) setConfirmCancel(false);
               }}
             >
               Cancel operation

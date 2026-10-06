@@ -620,7 +620,7 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
         {check.ok && visibleWarnings.length === 0 && (
           <p className="note note-mint">
             <Icon name="check" size={16} />
-            {preparation && practice ? 'Ready to practise.' : 'Ready to deploy.'}
+            {preparation && practice ? 'Ready to practice.' : 'Ready to deploy.'}
           </p>
         )}
       </div>

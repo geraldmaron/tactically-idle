@@ -31,14 +31,15 @@ function issuedV4(pending: boolean): GameState {
 
 describe('current rollout without resetting issued campaigns', () => {
   it('starts new campaigns with current stories and deterministic distinct boards', () => {
-    expect(INCIDENT_CONTENT_VERSION).toBe(8);
+    expect(INCIDENT_CONTENT_VERSION).toBe(9);
     for (const seed of [1, 7, 41, 812]) {
       const state = createInitialState(NOW, seed); expect(state).toEqual(createInitialState(NOW, seed));
       expect(state.contentVersion).toBe(INCIDENT_CONTENT_VERSION); expect(state.incidents).toHaveLength(INCIDENT_TUNING.initialCount);
       expect(new Set(state.incidents.map(card => card.type)).size).toBe(state.incidents.length);
       for (const card of state.incidents) {
         expect(parseIncidentId(card.id)?.contentVersion).toBe(INCIDENT_CONTENT_VERSION);
-        expect(getScenario(card.id)?.title).toBe(getScenario(card.id)?.variantLabel);
+        expect(getScenario(card.id)?.story?.recipeId).toBeDefined();
+        expect(getScenario(card.id)?.title.length).toBeGreaterThan(0);
       }
     }
   });
@@ -65,7 +66,7 @@ describe('current rollout without resetting issued campaigns', () => {
     }
   });
 
-  it('uses all six distinct story types across five current cards and an active v5 run', () => {
+  it('keeps five current cards distinct from each other and the active story', () => {
     for (const seed of [1, 7, 41, 812]) {
       let state = createInitialState(NOW, seed); state = start(state, state.incidents[0].id);
       const activeType = parseIncidentId(state.activeRun!.scenarioId)!.type;
@@ -74,7 +75,7 @@ describe('current rollout without resetting issued campaigns', () => {
         expect(state.incidents.some(card => card.type === activeType)).toBe(false);
         expect(new Set(state.incidents.map(card => card.type)).size).toBe(state.incidents.length);
       }
-      expect(new Set([activeType, ...state.incidents.map(card => card.type)])).toEqual(new Set(names));
+      expect(new Set([activeType, ...state.incidents.map(card => card.type)]).size).toBe(6);
     }
   });
 

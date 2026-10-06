@@ -45,7 +45,7 @@ export function TestStore() {
     </select></label>
     <details className="test-store-controls"><summary>Simulation controls</summary>
       <label className="test-store-field">Next purchase outcome<select value={outcome} disabled={disabled} onChange={(e) => setOutcome(e.target.value as MockOutcome)}>
-        <option value="success">Success</option><option value="pending">Pending approval</option><option value="cancel">Cancelled</option><option value="fail">Failed</option><option value="completion_failure">Credit succeeds; completion fails</option>
+        <option value="success">Success</option><option value="pending">Pending approval</option><option value="cancel">Canceled</option><option value="fail">Failed</option><option value="completion_failure">Credit succeeds; completion fails</option>
       </select></label>
       <p>Pending purchases grant nothing until you resolve them in history. A completion retry cannot grant the same credit twice.</p>
     </details>

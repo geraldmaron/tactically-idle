@@ -39,8 +39,13 @@ const V7_DECISION_EXERCISES = V5_DECISION_EXERCISES.map((exercise, index) => ({
   ...exercise, id: exercise.id.replace('_v5', '_v7'), code: `DR-${22 + index}`,
   spec: { ...exercise.spec, contentVersion: 7 },
 }));
-export const LEGACY_DECISION_EXERCISES = [...V3_DECISION_EXERCISES, ...V4_DECISION_EXERCISES, ...V5_DECISION_EXERCISES, ...V6_DECISION_EXERCISES, ...V7_DECISION_EXERCISES];
-export const DECISION_EXERCISES = V5_DECISION_EXERCISES.map((exercise, index) => ({
+const V8_DECISION_EXERCISES = V5_DECISION_EXERCISES.map((exercise, index) => ({
   ...exercise, id: exercise.id.replace('_v5', '_v8'), code: `DR-${28 + index}`,
   spec: { ...exercise.spec, contentVersion: 8 },
+}));
+
+export const LEGACY_DECISION_EXERCISES = [...V3_DECISION_EXERCISES, ...V4_DECISION_EXERCISES, ...V5_DECISION_EXERCISES, ...V6_DECISION_EXERCISES, ...V7_DECISION_EXERCISES, ...V8_DECISION_EXERCISES];
+export const DECISION_EXERCISES = V5_DECISION_EXERCISES.map((exercise, index) => ({
+  ...exercise, id: exercise.id.replace('_v5', '_v9'), code: `DR-${34 + index}`,
+  spec: { ...exercise.spec, contentVersion: 9 },
 }));
