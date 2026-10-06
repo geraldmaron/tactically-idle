@@ -36,6 +36,19 @@ export interface IncidentFramework {
    * disputed point, so they are never shown before the call is resolved. */
   variants: readonly [string, string, string];
   truth: readonly [boolean, boolean, boolean];
+  /** Optional decision structure (content v11 and later; see docs/content-pipeline.md).
+   * Absent fields compile exactly as before, so issued v9 and v10 calls are unchanged. */
+  /** An early step the people on scene can take before anything is checked. The
+   * resolution for `requiredFor` needs it: taking it early always costs time, while
+   * leaving it costs a slower late step that can fall through when it turns out needed. */
+  precaution?: { title: string; summary: string; result: string; requiredFor: 'confirmed' | 'disproved'; lateTitle: string; lateSummary: string };
+  /** A third, slower way to close the call that works whatever the check found, such as
+   * waiting with the person until a relative arrives. It cannot fall through, but it
+   * takes longer and earns less trust than acting on what was checked. */
+  waitFor?: { title: string; summary: string; result: string };
+  /** The resolution for this answer needs both accounts heard first, for example before
+   * handing a child to an adult. A missed account becomes a follow-up step. */
+  corroborate?: { for: 'confirmed' | 'disproved'; summary: string };
 }
 export const ADDITIONAL_FRAMEWORKS: readonly IncidentFramework[] = [
   { type: 'missing_vulnerable', title: 'The Usual Way Home', personId: 'alex', name: 'Alex Morgan', role: 'Adult reported missing',
@@ -126,5 +139,52 @@ export const ADDITIONAL_FRAMEWORKS: readonly IncidentFramework[] = [
     resolutions: ['Preserve the report and witness contacts', 'Record the mismatch and close the report'],
     results: ['The loss record and both statements go to detectives for follow-up. Nobody has been identified yet.', 'Both accounts and the till record are kept on file. The report is corrected without calling either witness a liar.'],
     moveOn: 'neither', variants: ['A corroborated current loss with no suspect identification', 'An earlier disagreement conflated with a loss', 'A delayed till record supports part of the witness account'], truth: [true, false, true] },
+  // Content v11, first pipeline drop (docs/content-pipeline.md). These appear only in
+  // SCENARIO_TYPES_V11; issued v9 and v10 catalogs never list them.
+  { type: 'fall_at_home', title: 'A Fall at Home', personId: 'ruth', name: 'Ruth Okafor', role: 'Older adult who fell at home',
+    dispatch: 'Ruth’s daughter called after Ruth told her on the phone that she had fallen. Find out how Ruth is and what she wants before anyone decides on an ambulance.',
+    opening: 'Ruth Okafor, who is in her eighties, fell at home and can’t get up on her own. Her daughter is worried and wants an ambulance. Ruth told her she is fine. Nobody on scene has checked yet.',
+    question: 'Is Ruth hurt, and what help does she want?', factLabel: 'Ruth is hurt',
+    approaches: ['Hear the daughter’s account on the phone', 'Check the personal alarm company’s log'],
+    approachResults: ['The daughter separates what Ruth told her from what she is afraid of.', 'The alarm company’s log shows whether Ruth called them and what she told the operator.'],
+    verify: 'Ask Ruth how she is and what she wants', claim: 'Ruth is hurt and wants an ambulance crew to check her.',
+    confirmed: 'Ruth admits she is in more pain than she let on and agrees an ambulance crew should check her.', disproved: 'Ruth is shaken but not hurt. She wants help getting up and someone to call her daughter.',
+    resolutions: ['Stay with Ruth until the ambulance crew arrives', 'Help Ruth into her chair and call her daughter'],
+    results: ['The team stays with Ruth until the ambulance crew arrives and takes over. Her daughter is told.', 'Ruth is back in her chair and talking to her daughter on the phone. Her daughter will come over this evening.'],
+    moveOn: 'neither', variants: ['A slip with no injury, embarrassing but harmless', 'A sore wrist played down on the phone', 'The alarm log shows a longer time on the floor than Ruth admits'], truth: [false, true, true],
+    waitFor: { title: 'Wait with Ruth until her daughter arrives',
+      summary: 'Stay until Ruth’s daughter gets here, and call any help Ruth agrees to. It takes much longer, but it does not depend on the next step going right.',
+      result: 'Ruth’s daughter arrives and takes over from the team, with any help Ruth agreed to already on its way.' } },
+  { type: 'water_leak', title: 'Water Through the Ceiling', personId: 'owen', name: 'Owen Hale', role: 'Building manager',
+    dispatch: 'A tenant reported water coming through the ceiling, and the building manager wants to enter the unit above. Check what is happening before anyone goes into a home without the tenant.',
+    opening: 'Water is coming through the ceiling, and the building manager, Owen Hale, says it is from the unit above. The tenant upstairs hasn’t answered the door or the phone. Nobody has checked where the water is coming from.',
+    question: 'Is the leak still running, and does someone need to enter the unit above?', factLabel: 'Leak still running',
+    approaches: ['Hear Owen’s account of the leak', 'Ask the tenant who called what they saw'],
+    approachResults: ['Owen explains when the water started and what the lease lets him do in an emergency.', 'The tenant who called separates what they saw dripping from what they guessed about the cause.'],
+    verify: 'Check the ceiling and the upstairs door with Owen', claim: 'Water is still coming through, and it can’t wait for the tenant upstairs.',
+    confirmed: 'Water is still coming through, and the tenant upstairs still can’t be reached. The lease lets Owen enter for an emergency repair.', disproved: 'The dripping has stopped. The tenant upstairs calls back and will be home within the hour to let the plumber in.',
+    resolutions: ['Stand by while Owen enters to stop the leak', 'Arrange for the tenant to let the plumber in'],
+    results: ['Owen goes in with the team as witnesses and stops the leak. He leaves a note for the tenant, and the repair is on record.', 'The tenant will meet the plumber when they get home. Owen records the damage downstairs, and nobody enters the unit.'],
+    moveOn: 'neither', variants: ['A supply pipe still running in the empty unit above', 'An overflow that stopped when the upstairs tenant came home', 'An old stain mistaken for a new leak, with the tenant already reachable'], truth: [true, false, false],
+    precaution: { title: 'Ask Owen to turn off the water to the floor above',
+      summary: 'Stops any leak now, but leaves other tenants without water while you check. It takes a few minutes even if the leak has already stopped.',
+      result: 'Owen turns off the water to the floor above. The other tenants are told it will be back on soon.', requiredFor: 'confirmed',
+      lateTitle: 'Have Owen turn off the water above now', lateSummary: 'The leak is still running. Turning the water off now takes longer, and it may not work on the first try.' } },
+  { type: 'lost_child', title: 'Lost and Found', personId: 'theo', name: 'Theo Marsh', role: 'Child separated from family',
+    dispatch: 'Staff found a young child on their own, and a man at the entrance says he is the child’s uncle. Confirm who Theo came with before handing Theo to anyone.',
+    opening: 'Staff found Theo Marsh, about seven years old, on their own and upset. A man at the front entrance says he is Theo’s uncle and has been looking for Theo. Nobody has checked that yet.',
+    question: 'Who did Theo come with, and is the man at the entrance that person?', factLabel: 'Man at the entrance is family',
+    approaches: ['Ask Theo who they came with', 'Ask staff what they saw when Theo arrived'],
+    approachResults: ['Theo calms down enough to say who they came with and what that person looks like.', 'Staff describe who Theo arrived with and where they last saw that person.'],
+    verify: 'Check with Theo whether they know the man', claim: 'The man at the entrance is the uncle Theo came with.',
+    confirmed: 'Theo describes their uncle, and the description matches the man at the entrance. Staff confirm they came in together.', disproved: 'Theo doesn’t know the man, who explains he offered to help look for Theo’s family. Theo’s mom is on her way back inside.',
+    resolutions: ['Walk Theo out to their uncle', 'Keep Theo at the desk until their mom arrives'],
+    results: ['Theo is back with their uncle at the entrance. Staff note the time and the uncle’s name.', 'Theo waits at the desk with a staff member until their mom comes back inside. The man is thanked for his help.'],
+    moveOn: 'confirmed', variants: ['A mom returning from the car while a helpful stranger waits at the door', 'The uncle Theo came with, waiting where staff can see him', 'A helpful stranger, with the first report missing that Theo came in with their mom'], truth: [false, true, false],
+    precaution: { title: 'Ask staff to watch the doors for Theo’s family',
+      summary: 'If the man is not family, Theo’s family still needs spotting. Watching the doors now ties up staff for a few minutes even if it turns out not to matter.',
+      result: 'Staff take a door each and watch for anyone looking for a child.', requiredFor: 'disproved',
+      lateTitle: 'Ask staff to watch the doors now', lateSummary: 'Theo’s family still needs spotting. Setting staff on the doors now takes longer, and it may not work on the first try.' },
+    corroborate: { for: 'confirmed', summary: 'Before handing Theo to anyone, hear from both Theo and staff. This takes a few more minutes.' } },
 ];
 export const ADDITIONAL_FRAMEWORK_BY_TYPE = Object.fromEntries(ADDITIONAL_FRAMEWORKS.map(value => [value.type, value])) as Partial<Record<IncidentType, IncidentFramework>>;

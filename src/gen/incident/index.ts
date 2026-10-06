@@ -68,7 +68,9 @@ export const INCIDENT_TYPES_V5: IncidentTypeInfo[] = [
   { type: 'protected_rescue', label: 'Protected rescue', families: ['juniper_court_v1', 'willow_terrace_v1', 'harbour_court'], squads: [1, 3] },
 ];
 const legacyTypes: IncidentType[] = ['domestic', 'person_in_crisis', 'barricaded', 'business_robbery', 'holding', 'missing_vulnerable', 'vacant_occupancy'];
-const validTypes = new Set([...INCIDENT_TYPES_V4.map((x) => x.type), ...legacyTypes]);
+// Frameworks first shipped in v11 or later drops are valid only from their own version.
+const laterTypes = new Set<IncidentType>(SCENARIO_TYPES_V11.map((x) => x.type).filter((type) => !SCENARIO_TYPES_V10.some((x) => x.type === type)));
+const validTypes = new Set([...INCIDENT_TYPES_V4.map((x) => x.type), ...legacyTypes, ...laterTypes]);
 
 /** The saved ID carries the entire deterministic seed tuple. */
 export function incidentId(spec: IncidentSpec): string {
@@ -78,6 +80,7 @@ export function parseIncidentId(id: string): IncidentSpec | null {
   const m = /^gen:([a-z_]+):([a-z0-9_]+):(\d+):(\d+):(\d+):(\d+)$/.exec(id);
   if (!m || !validTypes.has(m[1] as IncidentType)) return null;
   const [buildingSeed, seed, tier, contentVersion] = m.slice(3).map(Number);
+  if (laterTypes.has(m[1] as IncidentType) && contentVersion < 11) return null;
   if (![buildingSeed, seed, tier, contentVersion].every(Number.isSafeInteger) || tier < 1 || tier > 5 || contentVersion < 1 || contentVersion > SUPPORTED_INCIDENT_CONTENT_VERSION) return null;
   if (HIGH_RISK_TYPES_V4.includes(m[1] as IncidentType) && (contentVersion < 4 || m[2] === 'maple_street')) return null;
   if (contentVersion >= 5 && !(contentVersion >= 9 ? typesV9Plus(contentVersion) : INCIDENT_TYPES_V5).some(type => type.type === m[1] && type.families.includes(m[2]))) return null;

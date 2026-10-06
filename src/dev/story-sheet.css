@@ -1,0 +1,30 @@
+/* Dev story sheet (/story.html): human review of typed framework packages. */
+body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--font-ui, system-ui, sans-serif); }
+.ss-page { padding: 16px; max-width: 1600px; }
+.ss-page h1 { font-family: var(--font-display, sans-serif); font-size: 22px; margin: 0 0 10px; }
+.ss-page h2 { font-family: var(--font-display, sans-serif); font-size: 18px; margin: 22px 0 6px; }
+.ss-page h3 { font-size: 14px; margin: 12px 0 4px; color: var(--text-dim); }
+.ss-controls { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 10px; }
+.ss-controls label { display: grid; gap: 4px; font-size: 13px; color: var(--text-dim); }
+.ss-controls select, .ss-controls input { min-height: 36px; padding: 4px 8px; color: var(--text); background: var(--panel); border: 1px solid var(--line); border-radius: 6px; font: inherit; }
+.ss-gates { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 4px 14px 12px; }
+.ss-note { color: var(--amber); font-family: var(--font-ui, sans-serif); font-weight: 500; }
+.ss-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; align-items: start; }
+/* Each call is a 320 px reading column, the narrowest phone the game supports. */
+.ss-call { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 8px 12px 12px; font-size: 13.5px; line-height: 1.4; max-width: 360px; }
+.ss-call.ss-bad { border-color: var(--danger); border-width: 2px; }
+.ss-call h4 { margin: 2px 0; font-size: 13px; color: var(--text-dim); }
+.ss-call h5 { margin: 10px 0 3px; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.ss-call ul, .ss-call ol { margin: 2px 0; padding-left: 18px; }
+.ss-call li { margin: 3px 0; }
+.ss-meta code, .ss-issues code { font-size: 11px; color: var(--muted); }
+.ss-dispatch { color: var(--amber); }
+.ss-q { font-style: italic; }
+.ss-stage { margin: 4px 0; }
+.ss-stage-label { display: inline-block; min-width: 52px; font-size: 11px; text-transform: uppercase; color: var(--mint); }
+.ss-tag { display: inline-block; padding: 0 6px; border: 1px solid var(--line-strong); border-radius: 4px; font-size: 11px; color: var(--text-dim); }
+.ss-dim { color: var(--muted); }
+.ss-ok { color: var(--mint); margin: 2px 0; }
+.ss-err { color: var(--danger); }
+.ss-issues { margin: 2px 0; padding-left: 18px; color: var(--warn); }
+.ss-issues q { display: block; color: var(--text-dim); }
