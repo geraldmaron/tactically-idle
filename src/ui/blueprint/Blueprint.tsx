@@ -233,7 +233,8 @@ export function Blueprint({ built: allBuilt, spaces: allSpaces, squadTasks: allS
           </g>
 
           <DimensionLines dims={dims} />
-          <NorthArrow x={north.x} y={north.y} />
+          {/* Floor tabs carry the north arrow on multi-floor plans; a second one would crowd the sheet corner. */}
+          {count < 2 && <NorthArrow x={north.x} y={north.y} />}
 
           {layout.notes.map((n) => (
             <NoteMark key={n.id} n={n} />

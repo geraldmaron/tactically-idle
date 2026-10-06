@@ -14,6 +14,11 @@ export function floorCount(loc: LocationDefinition): 1 | 2 {
 export const FLOOR_NAMES = ['GROUND', 'UPPER'] as const;
 export const floorWord = (f: number): string => (f === 0 ? 'Ground floor' : 'Upper floor');
 
+/** ' (upper floor)' for a space upstairs in a two-floor building, so text lists name the floor the map tab shows. */
+export function floorSuffix(loc: LocationDefinition, id: string): string {
+  return floorCount(loc) > 1 && spaceFloor(loc, id) >= 1 ? ' (upper floor)' : '';
+}
+
 /** Floor of a room or zone id (zones and unknown ids are ground). */
 export function spaceFloor(loc: LocationDefinition, id: string): number {
   const r = loc.rooms.find((x) => x.id === id);

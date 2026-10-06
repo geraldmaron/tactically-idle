@@ -6,6 +6,7 @@ import type { DebriefResult, DecisionView, KnowledgeStatus } from '../../sim/typ
 import type { PersonDefinition } from '../../sim/scenario-types';
 import { getScenario } from '../../sim/scenario-registry';
 import { spaceName } from '../../sim/resolution';
+import { floorSuffix } from '../blueprint/floors';
 import { armamentLabel } from '../components/incident';
 import { BeforeAfter, Button, Card, Chip, SubHead } from '../components/ui';
 import { DebriefConsequences, DebriefSummary, OfficerResults, type DebriefOfficers } from '../components/DebriefResults';
@@ -211,7 +212,7 @@ function Reality({ d }: { d: DebriefResult }) {
               <li key={p.id}>
                 <Icon name={ROLE_ICON[p.role]} size={16} />
                 <span>
-                  <strong>{p.label || ROLE_WORD[p.role]}</strong> <span className="dim">in {spaceName(built, p.spaceId)}</span>
+                  <strong>{p.label || ROLE_WORD[p.role]}</strong> <span className="dim">in {spaceName(built, p.spaceId)}{floorSuffix(built.location, p.spaceId)}</span>
                   {p.threat && (
                     <span className="realpeople-threat">
                       {armamentLabel(p.threat.armament)}

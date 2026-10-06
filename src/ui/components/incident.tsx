@@ -2,10 +2,12 @@
 // environment chips, and a calm countdown. Content tables here are display fallbacks; the generators'
 // own INCIDENT_TYPES / BUILDING_FAMILIES win when they provide a label.
 import { useEffect, useState } from 'react';
-import type { Armament, EnvironmentDefinition } from '../../sim/scenario-types';
+import type { Armament, EnvironmentDefinition, ScenarioDefinition } from '../../sim/scenario-types';
 import { SCENARIO_TYPES_V9 } from '../../content/scenario-recipes';
 import { INCIDENT_TYPES_V4 } from '../../gen/incident';
 import { ALL_BUILDING_FAMILIES } from '../../gen/building';
+import { getBuilt } from '../../sim/resolution';
+import { floorCount } from '../blueprint/floors';
 import { Chip } from './ui';
 import { Icon } from '../icons';
 import type { IconName } from '../icons';
@@ -43,13 +45,40 @@ export function incidentMeta(type: string | null | undefined): { label: string; 
   return { label: gen?.label ?? fb?.label ?? titleCase(type), icon: fb?.icon ?? 'pin' };
 }
 
+/** Building content is authored in British English; player-facing copy is American. */
+function americanBuildingWords(text: string): string {
+  return text.replaceAll('storey', 'story').replace(/\ba flat\b/g, 'an apartment').replace(/\bflat\b/g, 'apartment').replace(/\bshop\b/g, 'store');
+}
+
 export function familyBlurb(familyId: string | null | undefined): string | null {
   if (!familyId) return null;
   // The persistence key identifies a furniture version, not a player-facing place.
   familyId = familyId.replace(/__furnished_v7$/, '');
   const f = ALL_BUILDING_FAMILIES.find((x) => x.id === familyId);
-  if (f) return f.blurb.replaceAll('storey', 'story');
+  if (f) return americanBuildingWords(f.blurb);
   return familyId === 'maple_street' ? 'Single-story house' : titleCase(familyId);
+}
+
+/** Short name of a building type for pickers, e.g. 'Cedar Close' or 'Two-story house'. */
+export function familyLabel(familyId: string): string {
+  const f = ALL_BUILDING_FAMILIES.find((x) => x.id === familyId.replace(/__furnished_v7$/, ''));
+  return f ? americanBuildingWords(f.label) : titleCase(familyId);
+}
+
+/** Floors of the building a scenario actually uses. A v10 call may be hosted on a different
+ * layout than the one drawn, so this reads the scenario's location, never the incident spec. */
+export function scenarioFloorCount(scenario: ScenarioDefinition | null | undefined): number {
+  if (!scenario) return 1;
+  try {
+    return floorCount(getBuilt(scenario.locationFamilyId, scenario.locationSeed).location);
+  } catch {
+    return 1;
+  }
+}
+
+/** Only multi-floor buildings get a chip: on a phone the floor tabs are easy to miss. */
+export function FloorsChip({ floors }: { floors: number }) {
+  return floors > 1 ? <Chip icon="layers" title="Use the floor tabs on the map to see each floor">{floors} floors</Chip> : null;
 }
 
 export function settingIcon(setting: 'residential' | 'business' | 'apartment' | string): IconName {

@@ -9,3 +9,13 @@
 }
 .scenario-library-nav > .btn { min-width: 0; padding-inline: 8px; }
 .scenario-library-nav > [role="status"] { white-space: nowrap; font-size: 14px; }
+.scenario-library-card > .scenario-library-where {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 14px;
+}
+.scenario-library-where > span { min-width: 0; overflow-wrap: anywhere; }
+.scenario-library-card .field select { width: 100%; }

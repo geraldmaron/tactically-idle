@@ -4,11 +4,11 @@ import { describe, expect, it } from 'vitest';
 import { MAPLE_STREET } from '../../content/locations/maple-street';
 import { TWO_FLOOR_FIXTURE } from '../../content/locations/two-floor-fixture';
 import { VALID_TINY } from '../../content/locations/test-fixtures';
-import { BUILDING_FAMILIES, generateBuilding } from '../../gen/building';
+import { BUILDING_FAMILIES, PROCEDURAL_FAMILIES, furnishedFamilyIdV7, generateBuilding } from '../../gen/building';
 import { deriveLocation } from '../../sim/location';
 import type { BuiltLocation, LocationDefinition, SpaceView } from '../../sim/types';
 import { Blueprint } from './Blueprint';
-import { floorScene } from './floors';
+import { floorBadges, floorCount, floorScene } from './floors';
 import { computeFrame } from './frame';
 import { bboxOf, distToPolygonEdges, pointInPolygon, rectsOverlapArea } from './geometry';
 import { CARRIED_H, CARRIED_W, computeLayout, type LabelItem } from './layout';
@@ -100,6 +100,46 @@ describe('annotations refer to actual geometry', () => {
         for (const x of [r.x, r.x + r.w]) for (const y of [r.y, r.y + r.h]) expect(pointInPolygon({ x, y }, poly), `${family} seed ${seed}: ${label.id}`).toBe(true);
       }
     }
+  });
+
+  // Generated buildings bring long rows (motels), deep sheds (warehouses), chamfered corners and
+  // upper floors. Check every type, as the game furnishes it, one floor at a time as the map draws it.
+  it.each(PROCEDURAL_FAMILIES.map((family) => family.id))('fits room names and knowledge text on each floor of generated %s', (family) => {
+    for (const seed of [0, 3, 21]) {
+      const loc = generateBuilding(furnishedFamilyIdV7(family), seed);
+      const built = build(loc);
+      for (let floor = 0; floor < floorCount(loc); floor++) {
+        const scene = floorScene(built, views(loc), [], [], floor);
+        const rooms = scene.built.location.rooms;
+        expect(rooms.length, `${family} seed ${seed} floor ${floor}`).toBeGreaterThan(0);
+        const target = scene.spaces.find((s) => rooms.some((r) => r.id === s.id && ['bedroom', 'office', 'living', 'storage'].includes(r.type)))!;
+        target.marker = { text: 'Movement?', tone: 'amber', subtext: 'per caller' };
+        const layout = computeLayout(scene.built, scene.spaces, [], null, computeFrame(scene.built, [], scene.spaces));
+        expect(layout.markers).toHaveLength(1);
+        expect(layout.roomLabels.map((l) => l.id).sort()).toEqual(rooms.map((r) => r.id).sort());
+        for (const label of layout.roomLabels) {
+          const r = labelBox(label);
+          const where = `${family} seed ${seed} floor ${floor}: ${label.id}`;
+          expect(rectsOverlapArea(layout.markers[0].box, r), where).toBe(0);
+          const poly = rooms.find((room) => room.id === label.id)!.polygon;
+          for (const x of [r.x, r.x + r.w]) for (const y of [r.y, r.y + r.h]) expect(pointInPolygon({ x, y }, poly), where).toBe(true);
+        }
+      }
+    }
+  });
+
+  it('counts people reported upstairs in a generated house on the upper floor tab, not the ground', () => {
+    const loc = generateBuilding(furnishedFamilyIdV7('two_storey_house_g1'), 3);
+    expect(floorCount(loc)).toBe(2);
+    const spaces = views(loc);
+    const upper = loc.rooms.find((r) => (r.floor ?? 0) === 1 && r.type === 'bedroom')!;
+    const box = bboxOf(upper.polygon);
+    spaces.find((s) => s.id === upper.id)!.people = [{ id: 'resident', at: { x: box.x + box.w / 2, y: box.y + box.h / 2 }, label: 'Resident', status: 'reported' }];
+    expect(floorBadges(loc, spaces).map((b) => b.people)).toEqual([0, 1]);
+    const built = build(loc);
+    expect(markup(built, spaces, 0)).not.toContain('data-space-label="' + upper.id + '"');
+    expect(markup(built, spaces, 1)).toContain('data-space-label="' + upper.id + '"');
+    expect(markup(built, spaces, 0)).toContain('Upper floor, 1 known person');
   });
 
   it('does not invent a target for a general note and reaches the actual named fence', () => {
