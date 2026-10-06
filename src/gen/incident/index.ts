@@ -11,6 +11,7 @@ import { withAdditionalFramework } from './frameworks-v9';
 import { ADDITIONAL_FRAMEWORK_BY_TYPE } from '../../content/incident-frameworks-v9';
 import { SCENARIO_TYPES_V9 } from '../../content/scenario-recipes';
 import { SCENARIO_TYPES_V10 } from '../../content/scenario-types-v10';
+import { SCENARIO_TYPES_V11 } from '../../content/scenario-types-v11';
 import { furnishedFamilyIdV7 } from '../building/furnishing-v7';
 import type { ActionDefinition, IncidentSpec, IncidentType, ScenarioDefinition } from '../../sim/scenario-types';
 import type { BuiltLocation, Room, StageId, Vec } from '../../sim/types';
@@ -32,7 +33,7 @@ const homes = BUILDING_FAMILIES.filter((family) => family.setting !== 'business'
 const allFamilies = BUILDING_FAMILIES.map((f) => f.id);
 /** v10 adds generated building types; earlier versions keep the authored list. */
 const familiesFor = (contentVersion: number) => contentVersion >= 10 ? ALL_BUILDING_FAMILIES.map((f) => f.id) : allFamilies;
-const typesV9Plus = (contentVersion: number) => contentVersion >= 10 ? SCENARIO_TYPES_V10 : SCENARIO_TYPES_V9;
+const typesV9Plus = (contentVersion: number) => contentVersion >= 11 ? SCENARIO_TYPES_V11 : contentVersion >= 10 ? SCENARIO_TYPES_V10 : SCENARIO_TYPES_V9;
 // A bounded, playable neighbourhood catalog. Other schema types remain readable
 // in legacy Maple seed IDs, but are not advertised as new generated templates.
 export const INCIDENT_TYPES: IncidentTypeInfo[] = [
@@ -42,10 +43,10 @@ export const INCIDENT_TYPES: IncidentTypeInfo[] = [
   { type: 'burglary', label: 'Alarm response', families: ['market_row'], squads: [1, 3] },
   { type: 'false_intruder', label: 'Uncertain occupancy', families: homes, squads: [1, 2] },
 ];
-/** Future calls use v10; issued v1–v9 seed tuples retain their original content. */
-export const INCIDENT_CONTENT_VERSION = 10;
+/** Future calls use v11; issued v1–v10 seed tuples retain their original content. */
+export const INCIDENT_CONTENT_VERSION = 11;
 /** Highest incident content version this build can read. */
-export const SUPPORTED_INCIDENT_CONTENT_VERSION = 10;
+export const SUPPORTED_INCIDENT_CONTENT_VERSION = 11;
 export const INCIDENT_TYPES_V2: IncidentTypeInfo[] = [
   ...INCIDENT_TYPES,
   { type: 'barricaded', label: 'Reported barricade', families: homes, squads: [1, 3] },

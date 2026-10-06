@@ -7,8 +7,8 @@ import { routeBetween } from '../../sim/spatial-factors';
 import { drawIncidentSpec, generateIncident, incidentId, parseIncidentId, INCIDENT_CONTENT_VERSION } from './index';
 
 describe('content v10 generated locations', () => {
-  it('is the current content version and lists every generated building type somewhere', () => {
-    expect(INCIDENT_CONTENT_VERSION).toBe(10);
+  it('remains readable after later versions and lists every generated building type somewhere', () => {
+    expect(INCIDENT_CONTENT_VERSION).toBeGreaterThanOrEqual(10);
     const used = new Set(Object.values(GENERATED_FAMILIES_V10).flat());
     for (const family of PROCEDURAL_FAMILIES) expect(used.has(family.id), family.id).toBe(true);
   });
