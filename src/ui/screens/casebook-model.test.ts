@@ -1,3 +1,4 @@
+import { SCENARIO_TYPES_V11 } from '../../content/scenario-types-v11';
 import { describe, expect, it } from 'vitest';
 import { scenarioRecipe, scenarioSituationsV10, specForSituationV10 } from '../../content/scenario-recipes';
 import { SCENARIO_TYPES_V10 } from '../../content/scenario-types-v10';
@@ -69,12 +70,12 @@ describe('casebook rows and the featured operation', () => {
     const rows = casebookRows(state);
     const rescue = rows.find((row) => row.type === 'protected_rescue')!;
     expect(rescue).toEqual({ type: 'protected_rescue', label: 'Protected rescue', settings: ['homes'], families: rescue.families, situationsTotal: 3, status: 'locked', missing: ['An officer certified in Vehicle operations'] });
-    expect(rows.filter((row) => row.status === 'unfound')).toHaveLength(13);
+    expect(rows.filter((row) => row.status === 'unfound')).toHaveLength(SCENARIO_TYPES_V11.length - 1);
     for (const row of rows) expect(Object.keys(row).sort()).toEqual(row.status === 'locked' ? ['families', 'label', 'missing', 'settings', 'situationsTotal', 'status', 'type'] : ['families', 'label', 'settings', 'situationsTotal', 'status', 'type']);
     const html = renderToStaticMarkup(createElement(Casebook, { state, onPrepare: () => {} }));
     expect(html).toContain('Not yet dispatched to your department');
     expect(html).toContain('An officer certified in Vehicle operations');
-    expect(html).toContain('0 of 14</strong> kinds of call found');
+    expect(html).toContain(`0 of ${SCENARIO_TYPES_V11.length}</strong> kinds of call found`);
     const rescueTitles = scenarioSituationsV10('protected_rescue').map((situation) => practiceScenarioV10('protected_rescue', 'harbour_court', situation, 7).scenario!.title);
     for (const title of rescueTitles) expect(html).not.toContain(title);
   });

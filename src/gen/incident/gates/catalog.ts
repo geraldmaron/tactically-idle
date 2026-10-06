@@ -4,7 +4,7 @@ import { scenarioRecipe } from '../../../content/scenario-recipes';
 import type { ScenarioCharacteristic } from '../../../content/scenario-recipes';
 import { SCENARIO_TYPES_V11 } from '../../../content/scenario-types-v11';
 import { SCENARIO_TYPES_V10 } from '../../../content/scenario-types-v10';
-import { PROCEDURAL_FAMILIES } from '../../building';
+import { isProceduralFamily } from '../../building';
 import type { IncidentSpec, IncidentType } from '../../../sim/scenario-types';
 import { INCIDENT_CONTENT_VERSION } from '../index';
 
@@ -22,7 +22,7 @@ export interface GateFramework {
   since: number;
 }
 
-export const isGeneratedFamily = (familyId: string) => PROCEDURAL_FAMILIES.some(family => family.id === familyId);
+export const isGeneratedFamily = (familyId: string) => isProceduralFamily(familyId);
 
 /** Every typed framework in the current catalog, in registry order. */
 export function gateFrameworks(): GateFramework[] {
