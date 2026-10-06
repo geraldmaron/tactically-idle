@@ -129,6 +129,17 @@ describe('external support responsibility lifecycle', () => {
     expect(actionViews(state, NOW, 'A').find((entry) => entry.id === 'accept_medical')!.eligible).toBe(true);
   });
 
+  it.each([0.3, 3.7])('preserves an exact fractional receiver wait of %s minutes in every preview', (remaining) => {
+    const state = decide(started(), 'request_medical');
+    const run = state.activeRun!;
+    run.clock = Math.round((run.externalSupport!.medical.availableAt! - remaining) * 10) / 10;
+    const before = structuredClone(state);
+    const view = actionViews(state, NOW, 'A').find(a => a.id === 'wait_medical')!;
+    expect(view).toMatchObject({ timeCost: remaining, timeRange: { min: remaining, max: remaining } });
+    expect(state).toEqual(before);
+    expect(decide(state, 'wait_medical').activeRun!.history.at(-1)!.timeCost).toBe(remaining);
+  });
+
   it('keeps unavailable support honest and cannot wait for or accept it', () => {
     let state = decide(started(), 'request_unavailable');
     expect(state.activeRun!.externalSupport!.unavailable).toMatchObject({ availableAt: null, acceptedAt: null });

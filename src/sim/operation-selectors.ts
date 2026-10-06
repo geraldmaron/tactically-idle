@@ -388,23 +388,35 @@ function expectedSupplies(action: ActionDefinition, ev: Evaluation): ActionView[
   return [...used].map(([label, qty]) => ({ label, qty }));
 }
 
-/** Never select a hidden truth branch for a preview; include its possible delay in the bounds. */
-function durationRange(action: ActionDefinition, ev: Evaluation, run: OperationRun): ActionView['timeRange'] {
-  if (run.scenarioVersion >= 4 && action.awaitSupport) return { min: ev.timeBase, max: ev.timeBase };
+/** Plan for the route and publicly known costs. Hidden branches affect bounds only. */
+function durationPreview(action: ActionDefinition, ev: Evaluation, run: OperationRun): Pick<ActionView, 'timeCost' | 'timeRange'> {
+  if (run.scenarioVersion >= 4 && action.awaitSupport) {
+    return { timeCost: ev.timeBase, timeRange: { min: ev.timeBase, max: ev.timeBase } };
+  }
+  const round = (n: number) => Math.round(Math.max(0.5, n) * 10) / 10;
+  const probability = { favorable: ev.pFavorable, mixed: Math.max(0, 1 - ev.pFavorable - ev.pAdverse), adverse: ev.pAdverse };
+  let expected = 0;
   const limits = (['favorable', 'mixed', 'adverse'] as const).flatMap((band) => {
     const base = ev.timeBase * ({ favorable: 1, mixed: 1.2, adverse: 1.5 } as const)[band];
     let min = base - (ev.storyMovementMinutes ?? 0) * ({ favorable: 1, mixed: 1.2, adverse: 1.5 } as const)[band];
     let max = base;
+    let planned = base;
     for (const effect of action.outcomes[band]) {
       if (!conditionHolds(effect.when, run)) continue;
       const extra = effect.extraMinutes ?? 0;
       if (effect.truth?.length) { min += Math.min(0, extra); max += Math.max(0, extra); }
-      else { min += extra; max += extra; }
+      else { min += extra; max += extra; planned += extra; }
     }
+    // Extra time is added after the band multiplier, just as on commit. Keep the
+    // planned movement; whether an outcome actually uses it remains uncertain.
+    expected += round(planned) * probability[band];
     return [min, max];
   });
-  const round = (n: number) => Math.round(Math.max(0.5, n) * 10) / 10;
-  return { min: round(Math.min(...limits)), max: round(Math.max(...limits)) };
+  const timeRange = { min: round(Math.min(...limits)), max: round(Math.max(...limits)) };
+  // Whole-minute estimates are easier to scan, but must never contradict an
+  // exact fractional duration or the displayed range.
+  const estimate = run.scenarioVersion < 3 ? ev.timeExpected : expected;
+  return { timeCost: Math.min(timeRange.max, Math.max(timeRange.min, Math.round(estimate))), timeRange };
 }
 
 /** Legacy authored content has no hidden outcome branches; include possibilities without testing truth. */
@@ -447,8 +459,7 @@ function toView(state: GameState, run: OperationRun, a: ActionDefinition, ev: Ev
     consequenceLevel: a.consequenceLevel ?? legacyConsequenceLevel(a),
     outcomePreview: { ...(a.outcomePreview ?? legacyOutcomePreview(a)) },
     suppliesRequired: expectedSupplies(a, ev),
-    timeRange: durationRange(a, ev, run),
-    timeCost: Math.max(1, Math.round(ev.timeExpected)),
+    ...durationPreview(a, ev, run),
     contributors: ev.contributors,
     uncertainty: ev.uncertainty,
     details: ev.details,
