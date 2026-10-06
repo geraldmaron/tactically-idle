@@ -114,6 +114,18 @@ export function LiveView(p: LiveViewProps) {
       </div>
 
       <div className="live-map">
+        <div className="map-hud map-status" aria-label="Operation time and pressure">
+          <span className="hud-pill">
+            <Icon name="clock" size={14} />
+            {opMinutes(p.clock)}
+          </span>
+          <span className="hud-pill" title="Situation pressure">
+            <span className="pmeter" role="img" aria-label={`Pressure ${Math.round(p.pressure)} of 100`}>
+              <i style={{ width: `${Math.max(4, Math.min(100, p.pressure))}%` }} />
+            </span>
+            <span>{pressureWord(p.pressure)}</span>
+          </span>
+        </div>
         <div className="live-map-inner">
           {p.showRooms ? (
             <RoomList built={p.built} spaces={p.spaces} selectedSpaceId={p.selectedSpaceId} onSelectSpace={p.onSelectSpace} />
@@ -133,19 +145,7 @@ export function LiveView(p: LiveViewProps) {
             />
           )}
         </div>
-        <div className="map-hud map-hud-tl" aria-label="Operation time and pressure">
-          <span className="hud-pill">
-            <Icon name="clock" size={14} />
-            {opMinutes(p.clock)}
-          </span>
-          <span className="hud-pill" title="Situation pressure">
-            <span className="pmeter" role="img" aria-label={`Pressure ${Math.round(p.pressure)} of 100`}>
-              <i style={{ width: `${Math.max(4, Math.min(100, p.pressure))}%` }} />
-            </span>
-            <span>{pressureWord(p.pressure)}</span>
-          </span>
-        </div>
-        <div className="map-hud map-hud-br">
+        <div className="map-hud map-actions" role="group" aria-label="Map display">
           {!p.showRooms && (
             <button type="button" className="hud-btn" onClick={() => setMaterials((v) => !v)} aria-pressed={materials}>
               <Icon name="layers" size={16} />

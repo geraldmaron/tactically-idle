@@ -90,6 +90,7 @@ describe('bound story people project existing committed state', () => {
     const currentFact = spaceViews(state).find(space => space.id === outside.spaceId)!.facts.find(fact => fact.id === 'where_alex')!;
     expect(currentFact.claim).toBe('Alex is in Front.');
     expect(currentFact.note).toBe('Alex is outside with the team.');
+    expect(currentFact.source).toBe('Observed during this operation');
     run.flags.push('ben_released');
     expect(markers(state)).toHaveLength(2);
     expect(new Set(markers(state).map(marker => marker.id)).size).toBe(2);
