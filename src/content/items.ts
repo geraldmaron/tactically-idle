@@ -280,7 +280,7 @@ export const ITEMS: Record<string, ItemDefinition> = {
     "tags": [
         "response_sidearm"
     ],
-    "description": "Supports trained officers on calls that include a protective response.",
+    "description": "Supports trained officers when a call offers firearm use. That choice can cause serious injury or death even when its protection task succeeds.",
     "helpsWith": ["Requires an officer trained for entry team duty and a suitable response option.", "Game bonus: +3 to that action score."],
     "counters": ["Gives no bonus on routine calls or during conversations. Only the best suitable response weapon counts; extra weapons do not add bonuses."],
     "wear": {
@@ -309,7 +309,7 @@ export const ITEMS: Record<string, ItemDefinition> = {
     "tags": [
         "response_carbine"
     ],
-    "description": "Supports trained officers on high-risk calls that include a protective response.",
+    "description": "Supports trained officers when a high-risk call offers firearm use. Task success and injury or death are separate outcomes.",
     "helpsWith": ["Requires an officer trained for entry team duty and a suitable response option.", "Game bonus: +6 to that action score."],
     "counters": ["Adds 1 minute to the action. Gives no bonus on routine calls. Only the best suitable response weapon counts."],
     "wear": {
@@ -338,7 +338,7 @@ export const ITEMS: Record<string, ItemDefinition> = {
     "tags": [
         "response_shotgun"
     ],
-    "description": "Supports trained officers when a call offers a protective response, with a larger game bonus in tight spaces.",
+    "description": "Supports trained officers when a call offers firearm use, with context-dependent game effects. Serious injury or death remains possible.",
     "helpsWith": ["Requires an officer trained for entry team duty.", "Game bonus: +5 to the response action score in tight spaces, or +2 in an open area."],
     "counters": ["Adds 1 minute. Cannot open doors or use other ammunition types in this game. Only the best suitable response weapon counts."],
     "wear": {
@@ -398,7 +398,7 @@ export const ITEMS: Record<string, ItemDefinition> = {
     ],
     "description": "Offers a less-lethal response when the call allows it. Requires a trained officer and a matching cartridge.",
     "helpsWith": ["Uses one device cartridge each time the action is taken.", "Game bonus: +4 to that action score."],
-    "counters": ["Requires less-lethal training and a clear view. Cannot be used until the person and safety of the nearby area are checked. Injury is still possible."],
+    "counters": ["Requires less-lethal training and a clear view. Cannot be used until the person and safety of the nearby area are checked. Explicit force choices have much lower lethal risk than firearms, but serious injury and death remain possible."],
     "wear": {
         "perUse": 5,
         "perDay": 0.05,
@@ -437,7 +437,7 @@ export const ITEMS: Record<string, ItemDefinition> = {
     ],
     "description": "Offers another less-lethal response when the call allows it. Requires advanced training and matching launcher supplies.",
     "helpsWith": ["Uses one launcher supply each time the action is taken.", "Game bonus: +5 to that action score."],
-    "counters": ["Requires advanced less-lethal training and a clear view. Adds 1 minute to set up. Cannot be used until the person and safety of the nearby area are checked. Injury is still possible."],
+    "counters": ["Requires advanced less-lethal training and a clear view. Adds 1 minute to set up. Cannot be used until the person and safety of the nearby area are checked. Explicit force choices have much lower lethal risk than firearms, but serious injury and death remain possible."],
     "wear": {
         "perUse": 5,
         "perDay": 0.05,

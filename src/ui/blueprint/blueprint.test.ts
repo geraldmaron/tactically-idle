@@ -11,7 +11,7 @@ import { Blueprint } from './Blueprint';
 import { floorScene } from './floors';
 import { computeFrame } from './frame';
 import { bboxOf, distToPolygonEdges, pointInPolygon, rectsOverlapArea } from './geometry';
-import { computeLayout, type LabelItem } from './layout';
+import { CARRIED_H, CARRIED_W, computeLayout, type LabelItem } from './layout';
 import { PlanLabel } from './labels';
 import { placeOverlays } from './overlays';
 import { unitsPerPixel } from './useViewport';
@@ -233,7 +233,7 @@ describe('public people and carried items', () => {
     expect(person.at).toEqual(at);
     expect(person.carried).toHaveLength(3);
     for (const item of person.carried) {
-      for (const dx of [-.56, .56]) for (const dy of [-.675, .675]) expect(pointInPolygon({ x: item.at.x + dx, y: item.at.y + dy }, room.polygon)).toBe(true);
+      for (const dx of [-CARRIED_W / 2, CARRIED_W / 2]) for (const dy of [-CARRIED_H / 2, CARRIED_H / 2]) expect(pointInPolygon({ x: item.at.x + dx, y: item.at.y + dy }, room.polygon)).toBe(true);
     }
   });
 
@@ -265,5 +265,5 @@ it.each([false, true])('keeps possessions off all actors regardless of person it
   const layout = computeLayout(built, spaces, [], null);
   const carried = layout.people.find((p) => p.id === 'holder')!.carried;
   expect(carried).toHaveLength(1);
-  for (const item of carried) for (const person of people) expect(rectsOverlapArea({ x: item.at.x - .56, y: item.at.y - .675, w: 1.12, h: 1.35 }, { x: person.at.x - 1.9, y: person.at.y - 1.9, w: 3.8, h: 3.8 })).toBe(0);
+  for (const item of carried) for (const person of people) expect(rectsOverlapArea({ x: item.at.x - CARRIED_W / 2, y: item.at.y - CARRIED_H / 2, w: CARRIED_W, h: CARRIED_H }, { x: person.at.x - 1.9, y: person.at.y - 1.9, w: 3.8, h: 3.8 })).toBe(0);
 });

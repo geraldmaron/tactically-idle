@@ -91,6 +91,8 @@ export interface RatingWeight {
 }
 
 export interface ActionRequirements {
+  /** V7 conversations can involve people other than the physical action target. */
+  responsivePeople?: Id[];
   /** Story props bind to existing map objects or an explicit person's carried item. */
   storyProps?: { propId: Id; holderPersonId?: Id; reason: string }[];
   /** 'requested' includes a service that has arrived, but excludes an accepted handover. */
@@ -221,7 +223,9 @@ export interface ActionDefinition {
   /** Full archetype route rechecked against current openings at action evaluation. */
   storyRoute?: string;
   /** Person routes use bound endpoints; squad routes start at each squad's actual current position. */
-  storyRouteActor?: 'person' | 'squad' | 'external_support';
+  storyRouteActor?: 'person' | 'squad' | 'external_support' | 'inspection';
+  /** V7: inspect this person's planned observed arrival, without moving them. */
+  storyRouteInspection?: { personId: Id; arrivalFlag: string };
   /** V4 dispatch/care administration can remain possible when every deployed officer is hurt. */
   commandOnly?: boolean;
   /** Wait exactly the remaining response time of a bounded, authored service. */
@@ -391,6 +395,8 @@ export interface StoryPropBinding {
   label: string;
   kind: 'carried' | 'mapped';
   holderPersonId?: Id;
+  /** Holder named by the report, independent of the actual hidden holder. */
+  reportedHolderPersonId?: Id;
   objectId?: Id;
   /** Conditions refer only to committed observations, not hidden truth. */
   knownWhen?: Condition;

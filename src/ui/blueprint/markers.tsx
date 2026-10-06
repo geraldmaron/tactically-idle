@@ -2,7 +2,7 @@
 import { add, perp, polyPath, r2, scale, seeded, smoothPath, sub, unit, type Rect } from './geometry';
 import type { PublicCarriedItem, Vec } from '../../sim/types';
 import type { FrontItem, MarkerItem, NoteItem, PersonItem, PersonKindKey, SquadItem } from './layout';
-import { FONT } from './layout';
+import { CARRIED_SCALE, FONT } from './layout';
 
 const toneVar = (tone: 'amber' | 'mint') => (tone === 'amber' ? 'var(--marker-amber)' : 'var(--marker-mint)');
 
@@ -191,7 +191,7 @@ export function PersonGlyph({ p }: { p: PersonItem }) {
       <path d={p.condition === 'deceased' ? 'M-.2 -.2 L.2 .2 M.2 -.2 L-.2 .2' : 'M-.26 0 H.26 M0 -.26 V.26'} />
     </g>}
     {p.carried.length > 0 && <path className="bp-carried-link" d={`M${r2(linkStart.x)} ${r2(linkStart.y)} L${r2(p.carried[0].at.x)} ${r2(p.carried[0].at.y)}`} />}
-    {p.carried.map((item) => <g key={item.id} transform={`translate(${r2(item.at.x)} ${r2(item.at.y)})`} className={`bp-carried bp-carried-${item.status}`} data-carried={item.id} data-holder={p.id} data-item-status={item.status}>
+    {p.carried.map((item) => <g key={item.id} transform={`translate(${r2(item.at.x)} ${r2(item.at.y)}) scale(${CARRIED_SCALE})`} className={`bp-carried bp-carried-${item.status}`} data-carried={item.id} data-holder={p.id} data-item-status={item.status}>
       <title>{`${item.label} · ${item.status}`}</title>
       <rect x="-.55" y="-.65" width="1.1" height="1.3" rx=".16" className="bp-carried-back" />
       <CarriedGlyph glyph={item.glyph} />

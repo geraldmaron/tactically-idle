@@ -141,6 +141,10 @@ export function syncPersonCasualtyFlags(run: Pick<OperationRun, 'flags' | 'perso
 /** These are committed injuries, never hidden medical facts or predictions. */
 export function personCasualtyActionIssue(run: Pick<OperationRun, 'personCasualties'>, scenario: ScenarioDefinition, action: ActionDefinition): string | null {
   if (scenario.version < 7) return null;
+  for (const id of action.requires.responsivePeople ?? []) {
+    const participant = run.personCasualties?.[id];
+    if (participant) return participant.severity === 'fatal' ? `${participant.label} has died and cannot take part in this exchange` : `${participant.label} needs recorded medical care; this ordinary conversation no longer applies`;
+  }
   const care = action.personCare;
   const person = run.personCasualties?.[care?.personId ?? action.forceProfile?.personId ?? action.storyTargetPersonId ?? ''];
   if (care) {

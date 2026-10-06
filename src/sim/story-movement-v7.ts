@@ -13,7 +13,8 @@ export interface PublicMovementLeg {
 
 /** Planned physical legs use only the person's current public position and
  * observed destination transitions this action can actually commit. Looking at
- * all public possibilities does not inspect the sampled band or hidden truth. */
+ * all public possibilities does not inspect the sampled band or hidden truth.
+ * Explicit inspections select a planned observed arrival without committing it. */
 export function publicStoryMovementLegs(scenario: ScenarioDefinition, built: BuiltLocation,
   run: Pick<OperationRun, 'knowledge' | 'flags' | 'pressure'>, action: ActionDefinition): PublicMovementLeg[] | null {
   if (scenario.version < 7 || !action.storyRoute) return null;
@@ -26,6 +27,8 @@ export function publicStoryMovementLegs(scenario: ScenarioDefinition, built: Bui
       to: target && !('kind' in target) && target.spaceId === binding.toSpaceId ? target.at : centroidOf(built, binding.toSpaceId) }];
   }
   if (action.storyRouteActor === 'squad') return null;
+  const inspection = action.storyRouteActor === 'inspection' ? action.storyRouteInspection : undefined;
+  if (action.storyRouteActor === 'inspection' && !inspection) return null;
   const possible = Object.values(action.outcomes).map(effects => {
     const flags = new Set(run.flags), set = new Set<string>(), cleared = new Set<string>();
     const knowledge = { ...run.knowledge };
@@ -39,14 +42,18 @@ export function publicStoryMovementLegs(scenario: ScenarioDefinition, built: Bui
   });
   const legs: PublicMovementLeg[] = [];
   for (const person of people) {
+    if (inspection && person.id !== inspection.personId) continue;
     if (!person.position || 'kind' in person.position || person.position.spaceId !== binding.fromSpaceId) continue;
     const definition = Object.values(scenario.story!.bindings.people).find(p => p.id === person.id)!;
     for (const transition of definition.transitions) {
       if (!transition.observed || 'kind' in transition.to || transition.to.spaceId !== binding.toSpaceId) continue;
       const destination: StoryAnchor = transition.to;
-      if (!possible.some(next => conditionHolds(transition.when, next.state)
+      const matches = inspection ? (transition.when.flags ?? []).includes(inspection.arrivalFlag)
+        && possible.some(next => conditionHolds(transition.when, { ...next.state, flags: [...next.state.flags, inspection.arrivalFlag] }))
+        : possible.some(next => conditionHolds(transition.when, next.state)
         && ((transition.when.flags ?? []).some(flag => next.set.has(flag))
-          || (transition.when.notFlags ?? []).some(flag => next.cleared.has(flag))))) continue;
+          || (transition.when.notFlags ?? []).some(flag => next.cleared.has(flag))));
+      if (!matches) continue;
       if (legs.some(leg => leg.personId === person.id && leg.to.x === destination.at.x && leg.to.y === destination.at.y)) continue;
       legs.push({ personId: person.id, label: person.label, from: person.position.at, to: destination.at });
     }

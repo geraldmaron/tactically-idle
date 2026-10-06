@@ -104,14 +104,14 @@ export function storyPropsKnown(scenario: ScenarioDefinition, built: BuiltLocati
   return Object.values(scenario.story?.bindings.props ?? {}).flatMap(raw => {
     const prop = publicPropBinding(scenario, raw);
     if (!prop || !conditionHolds(prop.knownWhen, run)) return [];
-    const status = prop.confirmedWhen && conditionHolds(prop.confirmedWhen, run) ? 'confirmed' as const : 'reported' as const;
+    let status: 'reported' | 'confirmed' = prop.confirmedWhen && conditionHolds(prop.confirmedWhen, run) ? 'confirmed' : 'reported';
     if (prop.kind === 'mapped') {
       const object = built.location.objects.find(o => o.id === prop.objectId);
       return object ? [{ id: prop.id, label: prop.label, glyph: prop.glyph ?? 'item', status,
         position: { spaceId: object.in, at: { x: object.x + object.w / 2, y: object.y + object.h / 2 } } }] : [];
     }
-    let holderPersonId = prop.holderPersonId;
-    for (const transition of prop.transitions ?? []) if (transition.observed && conditionHolds(transition.when, run)) holderPersonId = transition.holderPersonId;
+    let holderPersonId = status === 'confirmed' ? prop.holderPersonId : prop.reportedHolderPersonId;
+    for (const transition of prop.transitions ?? []) if (transition.observed && conditionHolds(transition.when, run)) { holderPersonId = transition.holderPersonId; status = 'confirmed'; }
     const position = people.find(person => person.id === holderPersonId)?.position ?? null;
     return position ? [{ id: prop.id, label: prop.label, glyph: prop.glyph ?? 'item', status, ...(holderPersonId ? { holderPersonId } : {}), position }] : [];
   });

@@ -44,6 +44,8 @@ export function incidentMeta(type: string | null | undefined): { label: string; 
 
 export function familyBlurb(familyId: string | null | undefined): string | null {
   if (!familyId) return null;
+  // The persistence key identifies a furniture version, not a player-facing place.
+  familyId = familyId.replace(/__furnished_v7$/, '');
   const f = BUILDING_FAMILIES.find((x) => x.id === familyId);
   if (f) return f.blurb;
   return familyId === 'maple_street' ? 'Single-storey house' : titleCase(familyId);

@@ -1,12 +1,15 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { SCENARIOS } from '../content/scenarios';
 import { buildLocation } from './location';
-import { evaluateAction } from './resolution';
+import { builtFor, evaluateAction, openingFlag } from './resolution';
 import { centroidOf, routeAlongOpenings } from './spatial-factors';
 import { publicStoryMovementLegs } from './story-movement-v7';
 import { currentStoryRoute } from './story-bindings';
-import { makeState, startRun } from './test-fixtures';
+import { apply, makeState, startRun } from './test-fixtures';
+import { storyPeoplePublic } from './story-people';
 import type { ActionDefinition, ScenarioDefinition } from './scenario-types';
+import { scenarioActions } from './scenario-types';
+import { generateIncident, INCIDENT_TYPES_V5 } from '../gen/incident';
 
 const fixtureId = 'test_furnished_person_movement';
 const built = buildLocation('juniper_court_v1__furnished_v7', 0);
@@ -89,4 +92,65 @@ describe('public version-seven movement endpoints', () => {
     scenario.version = 6;
     expect(publicStoryMovementLegs(scenario, built, run, action)).toBeNull();
   });
+
+  it('inspects the planned chair route without moving the person, forcing doors or charging movement time', () => {
+    const { scenario, state, run, action } = fixture();
+    action.storyRouteActor = 'inspection';
+    action.storyRouteInspection = { personId: 'jun', arrivalFlag: 'jun_outside' };
+    action.workload.base = 5;
+    action.outcomes = { favorable: [{ setFlags: ['route_checked'] }], mixed: [{ setFlags: ['route_checked'] }], adverse: [{ setFlags: ['route_checked'] }] };
+    // Another observed arrival in the same zone must not replace the named plan.
+    scenario.story!.bindings.people.jun.transitions.push({ when: { flags: ['jun_safe'] }, to: { spaceId: 'court', at: { x: 30, y: 38 } }, observed: true });
+    run.flags.push(...built.location.openings.filter(o => o.type === 'door').map(o => openingFlag(o.id, 'locked')));
+    const locked = builtFor(scenario.locationFamilyId, scenario.locationSeed, run.flags);
+    const before = storyPeoplePublic(scenario, locked, run);
+    const evaluation = evaluateAction({ scenario, state, run, action, built: locked, acting: ['A'], support: [] });
+    const withoutInspection = { ...action }; delete withoutInspection.storyRoute; delete withoutInspection.storyRouteInspection;
+    const ordinary = evaluateAction({ scenario, state, run, action: withoutInspection, built: locked, acting: ['A'], support: [] });
+    expect(evaluation.eligible, evaluation.reason ?? '').toBe(true);
+    expect(evaluation.timeBase).toBe(ordinary.timeBase);
+    expect(evaluation.travelMinutes).toBe(ordinary.travelMinutes);
+    expect(evaluation.uses).toEqual(ordinary.uses);
+    expect(evaluation.storyMovementMinutes).toBeUndefined();
+    expect(evaluation.storyOpenedIds).toBeUndefined();
+    expect(evaluation.overlays).toContainEqual(expect.objectContaining({ kind: 'path', label: 'Jun: planned chair route', points: expect.arrayContaining([outside.at]) }));
+    const result = apply(state, { type: 'decide', actionId: action.id, actingSquadIds: ['A'], supportSquadIds: [] });
+    expect(result.result).toEqual({ ok: true });
+    expect(result.state.activeRun!.flags).toContain('route_checked');
+    expect(result.state.activeRun!.flags).not.toContain('jun_outside');
+    expect(result.state.activeRun!.history.at(-1)!.committed?.openingChanges ?? []).toEqual([]);
+    expect(storyPeoplePublic(scenario, locked, result.state.activeRun!)).toEqual(before);
+    for (const opening of locked.location.openings.filter(o => o.type === 'door')) expect(result.state.activeRun!.flags).toContain(openingFlag(opening.id, 'locked'));
+  });
+
+  it('inspection refuses hidden destinations and the same physical clearance failures as a real chair move', () => {
+    const { scenario, state, run, action } = fixture();
+    action.storyRouteActor = 'inspection'; action.storyRouteInspection = { personId: 'jun', arrivalFlag: 'jun_outside' };
+    action.outcomes = { favorable: [{ setFlags: ['route_checked'] }], mixed: [], adverse: [] };
+    scenario.story!.bindings.people.jun.transitions[0].to = { spaceId: 'court', at: centroidOf(built, 'court') };
+    const evaluation = evaluateAction({ scenario, state, run, action, built, acting: ['A'], support: [] });
+    expect(evaluation.eligible).toBe(false);
+    expect(evaluation.reason).toContain('clear space for the chair');
+    scenario.story!.bindings.people.jun.transitions[0].observed = false;
+    expect(publicStoryMovementLegs(scenario, built, run, action)).toBeNull();
+  });
+
+  it('resolves authored person-movement actions to public story destinations in new episodes', () => {
+    for (const info of INCIDENT_TYPES_V5) for (const familyId of info.families) for (const seed of [0, 1, 7, 42, 127]) {
+      const scenario = generateIncident({ type: info.type, familyId, buildingSeed: seed, seed, tier: 2, contentVersion: 7 });
+      const location = buildLocation(scenario.locationFamilyId, scenario.locationSeed);
+      for (const action of scenarioActions(scenario).filter(a => a.storyRoute && a.storyRouteActor === 'person')) {
+        const run = { knowledge: Object.fromEntries(scenario.facts.map(f => [f.id, 'confirmed' as const])),
+          flags: [...new Set([...(action.visibleWhen?.flags ?? []), ...(action.requires.flags ?? []).map(f => f.flag)])], pressure: 20 };
+        const legs = publicStoryMovementLegs(scenario, location, run, action);
+        expect(legs, `${familyId}:${seed}:${action.id}`).not.toBeNull();
+        const route = currentStoryRoute(scenario, location, action.storyRoute!);
+        if (route) for (const leg of legs ?? []) {
+          const clearance = scenario.story!.bindings.routes[action.storyRoute!].profile === 'chair' ? 1.5 : 1;
+          expect(routeAlongOpenings(location, leg.from, leg.to, route, null, false, clearance).reachable,
+            `${familyId}:${seed}:${action.id}:${leg.personId} physical route`).toBe(true);
+        }
+      }
+    }
+  }, 30_000);
 });

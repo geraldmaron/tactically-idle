@@ -527,6 +527,7 @@ export function evaluateAction(input: EvalInput): Evaluation {
   }
   const publicTarget = followsPerson ? { publicTargetId: target ? action.targetId : null } : {};
   const followsRoute = scenario.version >= 5 && !!action.storyRoute;
+  const inspectsRoute = scenario.version >= 7 && followsRoute && action.storyRouteActor === 'inspection';
   const followsSquadRoute = followsRoute && action.storyRouteActor === 'squad';
   const routeBinding = followsRoute ? scenario.story?.bindings.routes[action.storyRoute!] : undefined;
   const squadStoryRoutes = followsSquadRoute && routeBinding ? new Map([...new Set(input.acting)].map(squad => [
@@ -1091,7 +1092,7 @@ export function evaluateAction(input: EvalInput): Evaluation {
       arrivals.push({ squadId: sq, spaceId: rule.coverSpaceId, role: 'support', stagingId: coverStand?.stagingId ?? null, at: standAt });
     });
   }
-  for (const o of req.openings ?? []) {
+  for (const o of inspectsRoute ? [] : req.openings ?? []) {
     const st = location.openings.find((x) => x.id === o.openingId)?.state;
     if (st === 'locked') {
       const tool = o.lockedTag ? actingHas(o.lockedTag) || supportHas(o.lockedTag) : false;
@@ -1127,30 +1128,35 @@ export function evaluateAction(input: EvalInput): Evaluation {
     const tool = tools[0];
     const routeClearance = scenario.version >= 7 && binding.profile === 'chair' ? 1.5 : 1;
     const publicLegs = scenario.version >= 7 ? publicStoryMovementLegs(scenario, built, run, action) : null;
-    if (scenario.version >= 7 && !publicLegs) return blank('Account for the moving person and their destination before this move');
+    if (scenario.version >= 7 && !publicLegs) return blank(inspectsRoute ? 'Account for the person and the planned destination before checking this route' : 'Account for the moving person and their destination before this move');
     const legs = publicLegs ?? [{ label: 'Movement', from: centroidOf(built, binding.fromSpaceId), to: centroidOf(built, binding.toSpaceId) }];
     const movementRoutes = legs.map(leg => routeAlongOpenings(built, leg.from, leg.to, storyRoute, tool ? { effectiveness: effOf(tool.unit) } : null, !!action.keyholder && !!scenario.environment?.keyholder, routeClearance));
     if (scenario.version >= 7 && movementRoutes.some(route => !route.reachable)) return blank(binding.profile === 'chair' ? 'The mapped route does not leave enough clear space for the chair' : 'Furniture or the room layout blocks this movement route');
     const route = movementRoutes.reduce((longest, next) => next.minutes > longest.minutes ? next : longest);
-    const alreadyForced = new Set(travelledRoutes.flatMap(path => path.forced.map(door => door.openingId)));
-    storySquadOpenedIds = [...alreadyForced];
-    for (const door of route.forced) {
-      if (alreadyForced.has(door.openingId)) continue;
-      if (door.withTool && tool) {
-        storyToolUses.push({ squadId: tool.squad, itemId: tool.unit.itemId, unitId: tool.unit.id, qty: 1, consumable: false });
-        contributors.push({ label: `${ITEMS[tool.unit.itemId]?.name ?? 'Entry tool'}: opens the ${door.label.toLowerCase()} in ${door.minutes} min`, value: 0, source: 'equipment', ref: tool.unit.itemId });
-      } else contributors.push({ label: `Locked ${door.label.toLowerCase()}: ${door.minutes} min to open the movement route`, value: 0, source: 'space', ref: door.openingId });
+    if (inspectsRoute) {
+      for (const [i, planned] of movementRoutes.entries()) overlays.push({ kind: 'path', points: planned.points, label: `${legs[i].label}: planned ${binding.profile === 'chair' ? 'chair ' : ''}route` });
+      details.push(`Check the planned route to ${spaceName(built, binding.toSpaceId)}. The person stays in place; this check does not open doors.`);
+    } else {
+      const alreadyForced = new Set(travelledRoutes.flatMap(path => path.forced.map(door => door.openingId)));
+      storySquadOpenedIds = [...alreadyForced];
+      for (const door of route.forced) {
+        if (alreadyForced.has(door.openingId)) continue;
+        if (door.withTool && tool) {
+          storyToolUses.push({ squadId: tool.squad, itemId: tool.unit.itemId, unitId: tool.unit.id, qty: 1, consumable: false });
+          contributors.push({ label: `${ITEMS[tool.unit.itemId]?.name ?? 'Entry tool'}: opens the ${door.label.toLowerCase()} in ${door.minutes} min`, value: 0, source: 'equipment', ref: tool.unit.itemId });
+        } else contributors.push({ label: `Locked ${door.label.toLowerCase()}: ${door.minutes} min to open the movement route`, value: 0, source: 'space', ref: door.openingId });
+      }
+      travelledRoutes.push(...movementRoutes);
+      const locks = new Map<Id, number>();
+      for (const path of travelledRoutes) for (const door of path.forced) locks.set(door.openingId, Math.max(locks.get(door.openingId) ?? 0, door.minutes));
+      // Squads and the story person move in parallel. Each physical lock is charged once.
+      const routeTravel = round1(Math.max(0, ...travelledRoutes.map(path => path.minutes - path.forceMinutes)) + [...locks.values()].reduce((sum, minutes) => sum + minutes, 0));
+      storyMovementMinutes = round1(Math.max(0, routeTravel - travel));
+      travel = routeTravel;
+      storyOpenedIds = [...locks.keys()];
+      for (const [i, movement] of movementRoutes.entries()) overlays.push({ kind: 'path', points: movement.points, label: scenario.version >= 7 ? `${legs[i].label} movement, ${round1(movement.minutes)} min` : `Movement route, ${round1(movement.minutes)} min` });
+      details.push(`The movement route runs from ${spaceName(built, binding.fromSpaceId)} to ${spaceName(built, binding.toSpaceId)}.`);
     }
-    travelledRoutes.push(...movementRoutes);
-    const locks = new Map<Id, number>();
-    for (const path of travelledRoutes) for (const door of path.forced) locks.set(door.openingId, Math.max(locks.get(door.openingId) ?? 0, door.minutes));
-    // Squads and the story person move in parallel. Each physical lock is charged once.
-    const routeTravel = round1(Math.max(0, ...travelledRoutes.map(path => path.minutes - path.forceMinutes)) + [...locks.values()].reduce((sum, minutes) => sum + minutes, 0));
-    storyMovementMinutes = round1(Math.max(0, routeTravel - travel));
-    travel = routeTravel;
-    storyOpenedIds = [...locks.keys()];
-    for (const [i, movement] of movementRoutes.entries()) overlays.push({ kind: 'path', points: movement.points, label: scenario.version >= 7 ? `${legs[i].label} movement, ${round1(movement.minutes)} min` : `Movement route, ${round1(movement.minutes)} min` });
-    details.push(`The movement route runs from ${spaceName(built, binding.fromSpaceId)} to ${spaceName(built, binding.toSpaceId)}.`);
   }
   if (travel >= 0.5) {
     contributors.push({ label: `Travel: ${round1(travel)} min`, value: -round1(travel * T.travelScore), source: 'space' });

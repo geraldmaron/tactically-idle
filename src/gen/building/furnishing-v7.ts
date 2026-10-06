@@ -152,7 +152,21 @@ class RoomPlan {
       const horizontal = wall.from.y === wall.to.y;
       const min = Math.min(horizontal ? wall.from.x : wall.from.y, horizontal ? wall.to.x : wall.to.y) + 0.5 + objectWidth / 2;
       const max = Math.max(horizontal ? wall.from.x : wall.from.y, horizontal ? wall.to.x : wall.to.y) - 0.5 - objectWidth / 2;
-      for (let offset = min; offset <= max + 1e-6; offset += 0.5) {
+      const offsets: number[] = [];
+      for (let offset = min; offset <= max + 1e-6; offset += 0.5) offsets.push(offset);
+      // Always try both ends. A fractional fixture width can otherwise miss a
+      // perfectly usable corner by less than the half-foot candidate interval.
+      if (max >= min && !offsets.some(offset => Math.abs(offset - max) < 1e-6)) offsets.push(max);
+      // Door/window approaches need not lie on the sampling grid. Their actual
+      // ends (and the ends of placed bodies/service fronts) are useful exact
+      // anchors, especially for a full bath in a compact eight-foot room.
+      const limits = [...this.keepClear, ...this.placed.flatMap(p => [inflate(footprintRect(p.object), 0.15), ...(p.access ? [p.access] : [])])];
+      for (const limit of limits) {
+        const start = horizontal ? limit.x : limit.y, length = horizontal ? limit.w : limit.h;
+        for (const offset of [start - objectWidth / 2, start + length + objectWidth / 2])
+          if (offset >= min - 1e-6 && offset <= max + 1e-6 && !offsets.some(n => Math.abs(n - offset) < 1e-6)) offsets.push(offset);
+      }
+      for (const offset of offsets) {
         const n = FRONT[wall.back], distance = wall.inset + d.depth / 2;
         const p = horizontal ? { x: offset, y: wall.from.y + n.y * distance } : { x: wall.from.x + n.x * distance, y: offset };
         const c = candidate(objectAt(type, this.room, p, wall.back, 'wall', group, objectWidth));
@@ -208,11 +222,28 @@ class RoomPlan {
       }
     candidates.sort((a, b) => this.rank(a[0].object) - this.rank(b[0].object)).some(group => this.accept(group));
   }
+  bathroom(): void {
+    // These authored homes have a full bathroom, not a half-bath. Solve the
+    // major bathing fixture first; a convenient basin must not silently remove
+    // the home's only bath. Backtracking is bounded by real wall candidates.
+    const start = this.placed.length;
+    for (const tub of this.wallCandidates('tub')) {
+      if (!this.accept([tub])) continue;
+      for (const toilet of this.wallCandidates('toilet')) {
+        if (!this.accept([toilet])) continue;
+        if (this.addWall('vanity')) return;
+        this.placed.length = start + 1;
+      }
+      this.placed.length = start;
+    }
+    // An unsupported custom room still fails safely without overlapping bodies.
+    this.addWall('toilet'); this.addWall('vanity');
+  }
   furnish(): PlacedObject[] {
     switch (this.room.type) {
       case 'living': this.living(); if (/dining/i.test(this.room.label)) this.dining(); this.addWall('shelf'); break;
       case 'bedroom': this.addWall('bed'); this.addWall('wardrobe'); if (this.loc.seed % 3 === 0) this.addWall('dresser'); break;
-      case 'bathroom': this.addWall('toilet'); this.addWall('vanity'); this.addWall('tub'); break;
+      case 'bathroom': this.bathroom(); break;
       case 'kitchen': this.addWall('sink'); this.addWall('stove'); this.addWall('fridge'); this.addWall('counter'); this.dining(); break;
       case 'office': this.addWall('desk'); this.addWall('shelf'); break;
       case 'retail': this.addWall('register'); this.addWall('counter'); this.addWall('shelf'); this.addWall('shelf'); break;

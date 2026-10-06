@@ -479,9 +479,17 @@ it('shows all possessions and their own certainty in the selected-person inspect
 });
 
 it('keeps saved subject deaths in a debrief even when a newer active call exists', () => {
-  const d: DebriefResult = { runId: 'archived_force', scenarioId: 'ms_occupancy', endingId: 'closed', endingTitle: 'Closed', practice: false, objective: { score: 100, label: 'Complete' }, civilianSafety: { score: 50, label: 'Consequences' }, officerCondition: [], informationPreserved: [], resources: [], trustDelta: 0, fundingReward: 0, devPointReward: 0, causes: [], personCasualties: [{ personId: 'mara', personRole: 'subject', label: 'Mara Bell', severity: 'fatal', at: 8, care: 'deceased', causeRevision: 2 }] };
+  const d: DebriefResult = { runId: 'archived_force', scenarioId: 'ms_occupancy', endingId: 'closed', endingTitle: 'Closed', practice: false, objective: { score: 100, label: 'Complete' }, civilianSafety: { score: 50, label: 'Consequences' }, officerCondition: [], informationPreserved: [], resources: [], unitWear: [], trustDelta: 0, fundingReward: 0, devPointReward: 0, causes: [], personCasualties: [{ personId: 'mara', personRole: 'subject', label: 'Mara Bell', severity: 'fatal', at: 8, care: 'deceased', causeRevision: 2 }] };
   const html = render(createElement(SavedDebriefContents, { debrief: d, officers: {} }));
   expect(html).toContain('data-person-casualty="mara"');
   expect(html).toContain('Mara Bell');
   expect(html).toContain('Deceased');
+});
+
+
+it.each(['reported', 'confirmed'] as const)('uses a public %s weapon item without a contradictory armament-unknown claim', (status) => {
+  const html = render(createElement(PersonRow, { m: { id: 'mara', at: { x: 2, y: 2 }, label: 'Mara Bell', kind: 'subject', status: 'confirmed', carried: [{ id: 'firearm', glyph: 'weapon', label: 'Firearm', status }] } }));
+  expect(html).toContain('Firearm');
+  expect(html).toContain(status === 'reported' ? 'Reported item · unverified' : 'Confirmed item');
+  expect(html).not.toContain('Armament not known');
 });

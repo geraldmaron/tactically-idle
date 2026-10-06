@@ -21,6 +21,10 @@ export const FONT = {
 
 /** Squad token radius when it stands at an exact staging point (smaller than the room-centroid badge). */
 export const TOKEN_R = 1.15;
+/** Readable at phone fit scale while still small enough to attach beside a person. */
+export const CARRIED_SCALE = 1.55;
+export const CARRIED_W = 1.12 * CARRIED_SCALE;
+export const CARRIED_H = 1.35 * CARRIED_SCALE;
 
 // rough glyph-width factors (em) per face
 const W_COND = 0.6;
@@ -210,13 +214,13 @@ function placePersonText(at: Vec, gap: number, w: number, h: number, baseline: n
 function placeCarriedItems(at: Vec, items: PublicCarriedItem[], poly: Polygon, frame: Rect, obstacles: Rect[]): PersonItem['carried'] {
   for (let count = Math.min(3, items.length); count > 0; count--) {
     const cands: Vec[][] = [
-      Array.from({ length: count }, (_, i) => ({ x: at.x + 2.75 + i * 1.15, y: at.y + .2 })),
-      Array.from({ length: count }, (_, i) => ({ x: at.x - 2.75 - i * 1.15, y: at.y + .2 })),
-      ...[-1, 1].map((side) => Array.from({ length: count }, (_, i) => ({ x: at.x + (i - (count - 1) / 2) * 1.15, y: at.y + side * 2.9 }))),
-      ...[-1, 1].map((side) => Array.from({ length: count }, (_, i) => ({ x: at.x + side * 2.75, y: at.y + (i - (count - 1) / 2) * 1.4 }))),
+      Array.from({ length: count }, (_, i) => ({ x: at.x + 3.3 + i * 1.85, y: at.y + .2 })),
+      Array.from({ length: count }, (_, i) => ({ x: at.x - 3.3 - i * 1.85, y: at.y + .2 })),
+      ...[-1, 1].map((side) => Array.from({ length: count }, (_, i) => ({ x: at.x + (i - (count - 1) / 2) * 1.85, y: at.y + side * 3.45 }))),
+      ...[-1, 1].map((side) => Array.from({ length: count }, (_, i) => ({ x: at.x + side * 3.3, y: at.y + (i - (count - 1) / 2) * 2.2 }))),
     ];
     const valid = cands.map((points, index) => {
-      const boxes = points.map((p) => textRect(p.x, p.y, 1.12, 1.35));
+      const boxes = points.map((p) => textRect(p.x, p.y, CARRIED_W, CARRIED_H));
       const fits = boxes.every((box) => boxInside(box, poly, .15) && areaOutside(box, frame) < 0.000001);
       const connected = points.every((p) => [0, .25, .5, .75, 1].every((t) => pointInPolygon({ x: at.x + (p.x - at.x) * t, y: at.y + (p.y - at.y) * t }, poly)));
       const overlap = boxes.reduce((total, box) => total + obstacles.reduce((n, obstacle) => n + rectsOverlapArea(box, obstacle), 0), 0);
@@ -280,7 +284,7 @@ export function computeLayout(built: BuiltLocation, spaces: SpaceView[], squadTa
       const kind = personKind(pm.kind);
       const carried = pm.status === 'disproved' ? [] : placeCarriedItems(pm.at, pm.carried ?? [], polys.get(sv.id)?.poly ?? rectPolygon(frame), frame, placed);
       peopleDrawn.push({ id: pm.id, status: pm.status, at: pm.at, kind, armament: pm.armament ?? null, labelText: (pm.label ?? '').trim(), poly: polys.get(sv.id)?.poly ?? rectPolygon(frame), carried, condition: pm.condition });
-      for (const item of carried) add_(textRect(item.at.x, item.at.y, 1.15, 1.4));
+      for (const item of carried) add_(textRect(item.at.x, item.at.y, CARRIED_W + .05, CARRIED_H + .05));
     }
   }
 

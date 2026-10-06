@@ -44,7 +44,7 @@ describe('version-seven room furnishing', () => {
         const items = loc.objects.filter(o => o.in === room.id);
         if (room.type === 'bedroom') expect(items.some(o => o.type === 'bed'), `${id}:${seed}:${room.id} bed`).toBe(true);
         if (room.type === 'living') expect(items.some(o => o.type === 'sofa'), `${id}:${seed}:${room.id} sofa`).toBe(true);
-        if (room.type === 'bathroom') expect(items.some(o => o.type === 'toilet'), `${id}:${seed}:${room.id} toilet`).toBe(true);
+        if (room.type === 'bathroom') for (const type of ['tub', 'toilet', 'vanity']) expect(items.some(o => o.type === type), `${id}:${seed}:${room.id} ${type}`).toBe(true);
         if (room.type === 'kitchen') for (const type of ['sink', 'stove', 'fridge']) expect(items.some(o => o.type === type), `${id}:${seed}:${room.id} ${type}`).toBe(true);
         if (room.type === 'retail') expect(items.some(o => o.type === 'register'), `${id}:${seed}:${room.id} register`).toBe(true);
         if (room.type === 'hall' || room.type === 'stair') expect(items).toEqual([]);
@@ -69,12 +69,14 @@ describe('version-seven room furnishing', () => {
   it('has repeatable seed variation with genuine living-room TV/seating groups', () => {
     let tvCount = 0;
     for (const family of families) {
+      let familyTVs = 0;
       const signatures = new Set<string>();
       for (let seed = 0; seed < 12; seed++) {
         const loc = generateBuilding(furnishedFamilyIdV7(family.id), seed);
         signatures.add(JSON.stringify(loc.objects));
         for (const tv of loc.objects.filter(o => o.type === 'tv')) {
           tvCount++;
+          familyTVs++;
           expect(loc.rooms.find(r => r.id === tv.in)?.type).toBe('living');
           const sofa = loc.objects.find(o => o.type === 'sofa' && o.placement?.group === tv.placement?.group)!;
           const table = loc.objects.find(o => o.type === 'coffee_table' && o.placement?.group === tv.placement?.group)!;
@@ -92,6 +94,8 @@ describe('version-seven room furnishing', () => {
         }
       }
       expect(signatures.size).toBeGreaterThan(5);
+      if (BUILDING_FAMILIES.some(f => f.id === family.id && f.setting !== 'business'))
+        expect(familyTVs, `${family.id}: advertised homes must exercise the TV group`).toBeGreaterThan(0);
     }
     expect(tvCount).toBeGreaterThan(30);
   }, 30_000);

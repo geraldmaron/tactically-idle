@@ -8,7 +8,7 @@ import { centroidOf, routeAlongOpenings, routeBetween, standingOf } from './spat
 import type { ActionDefinition, FactDefinition, ScenarioDefinition, StoryAnchor } from './scenario-types';
 import { deserialize, serialize } from './save';
 import { initializePersonnel } from './personnel';
-import { storyPeopleActual, storyPeoplePublic, storyPropsActual, storyPropsPublic } from './story-people';
+import { storyPeopleActual, storyPeoplePublic, storyPropsActual, storyPropsPublic, storyPropsKnown } from './story-people';
 import { apply, makeState, NOW, startRun } from './test-fixtures';
 import type { GameState, KnowledgeStatus } from './types';
 
@@ -307,5 +307,34 @@ describe('bound story people project existing committed state', () => {
     expect(moved.result).toEqual({ ok: true });
     expect(builtFor(scenario.locationFamilyId, scenario.locationSeed, moved.state.activeRun!.flags).location.openings.find(opening => opening.id === exit.id)!.state).toBe('closed');
     expect(moved.state.activeRun!.history.at(-1)!.committed!.openingChanges).toEqual([{ openingId: exit.id, state: 'closed' }]);
+  });
+});
+
+describe('carried-item public evidence', () => {
+  it('hides possessions until an explicit report and never follows a hidden handoff', () => {
+    const { scenario, state } = fixture(); const run = state.activeRun!;
+    scenario.version = 7;
+    const prop = scenario.story!.bindings.props.phone;
+    prop.knownWhen = { flags: ['phone_reported'] };
+    prop.confirmedWhen = { flags: ['phone_seen'] };
+    prop.reportedHolderPersonId = 'alex'; prop.glyph = 'phone';
+    prop.transitions = [{ when: { flags: ['secret_handoff'] }, holderPersonId: 'ben', observed: false }, { when: { flags: ['phone_returned'] }, holderPersonId: 'ben', observed: true }];
+    expect(storyPropsKnown(scenario, built, run)).toEqual([]);
+    run.flags.push('phone_reported');
+    const report = storyPropsKnown(scenario, built, run);
+    expect(report).toHaveLength(1); expect(report[0]).toMatchObject({ holderPersonId: 'alex', status: 'reported' });
+    prop.holderPersonId = 'ben'; run.flags.push('secret_handoff');
+    expect(storyPropsActual(scenario, built, run)[0].holderPersonId).toBe('ben');
+    expect(storyPropsKnown(scenario, built, run)).toEqual(report);
+    run.flags.push('phone_returned');
+    expect(storyPropsKnown(scenario, built, run)).toEqual([expect.objectContaining({ holderPersonId: 'ben', status: 'confirmed', position: secondRoom })]);
+    run.flags.push('ben_released');
+    expect(storyPropsKnown(scenario, built, run)[0].position).toEqual(secondOutside);
+  });
+  it('does not infer items or unarmed status from a confirmed person', () => {
+    const { scenario, state } = fixture();
+    expect(storyPropsKnown(scenario, built, state.activeRun!)).toEqual([]);
+    const views = markers(state);
+    expect(views.every(person => person.carried === undefined && person.armament === undefined)).toBe(true);
   });
 });

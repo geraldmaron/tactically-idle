@@ -797,7 +797,8 @@ export function PersonRow({ m }: { m: SpaceView['people'][number] }) {
   const confirmed = m.status === 'confirmed';
   if (m.status === 'unknown') return null;
   if (m.status === 'disproved') return <li className="person"><strong>{m.label || 'Person report'}</strong><p>Report ruled out</p></li>;
-  const armed = m.armament === 'unknown' ? null : m.armament ?? null;
+  const hasWeapon = m.carried?.some((item) => item.glyph === 'weapon');
+  const armed = hasWeapon || m.armament === 'unknown' ? null : m.armament ?? null;
   const isSubject = m.kind === 'subject' || m.kind === 'unknown' || m.kind === undefined;
   return (
     <li className="person">
@@ -816,7 +817,7 @@ export function PersonRow({ m }: { m: SpaceView['people'][number] }) {
           </span>
         </p>
       ) : (
-        isSubject && (
+        isSubject && !hasWeapon && (
           <p className="person-arm person-arm-unk">
             <Icon name="question" size={14} />
             <span>Armament not known</span>

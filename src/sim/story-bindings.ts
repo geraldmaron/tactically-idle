@@ -174,6 +174,7 @@ export function validateStoryBindings(scenario: ScenarioDefinition, built: Built
   const personIds = new Set(people.map(person => person.id));
   for (const fact of scenario.facts) if (fact.storyPersonId && !personIds.has(fact.storyPersonId)) errors.push(`${scenario.id}: story fact ${fact.id} references unknown subject ${fact.storyPersonId}`);
   const actions = Object.values(scenario.stages).flatMap(stage => stage.actions);
+  for (const action of actions) for (const id of action.requires.responsivePeople ?? []) if (!personIds.has(id)) error(`action ${action.id} needs an unknown responsive person ${id}`);
   const effects = actions.flatMap(action => Object.values(action.outcomes).flat());
   const flags = new Set(['casualty:officers', 'casualty:untreated', 'casualty:awaiting_transport', 'casualty:evacuated',
     ...(scenario.version >= 7 ? ['casualty:people', 'casualty:person_fatality', 'casualty:person_needs_care', ...people.flatMap(person => [
@@ -248,6 +249,7 @@ export function validateStoryBindings(scenario: ScenarioDefinition, built: Built
       if (prop.holderPersonId || prop.transitions?.length) error(`mapped prop ${prop.id} cannot declare carried holders`);
     } else if (prop.kind === 'carried') {
       if (!prop.holderPersonId || !personIds.has(prop.holderPersonId)) error(`prop ${prop.id} references an unknown holder ${prop.holderPersonId}`);
+      if (prop.reportedHolderPersonId !== undefined && !personIds.has(prop.reportedHolderPersonId)) error(`prop ${prop.id} references an unknown reported holder ${prop.reportedHolderPersonId}`);
       if (prop.objectId) error(`carried prop ${prop.id} cannot declare a mapped object`);
     } else error(`prop ${prop.id} has an invalid kind`);
     for (const transition of prop.transitions ?? []) {

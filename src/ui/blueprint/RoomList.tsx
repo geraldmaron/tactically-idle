@@ -29,8 +29,9 @@ export function personDescription(person: PersonMark): string {
   if (person.status === 'disproved') return `${person.label || 'Person report'}: report ruled out`;
   const parts = [person.label || 'Person', person.status === 'reported' ? 'reported, approximate position' : 'position confirmed'];
   if (person.condition) parts.push(person.condition);
-  if (person.armament && person.armament !== 'unknown') parts.push(`${armamentText(person.armament, 'confirmed')?.toLowerCase()} (${person.status})`);
-  else parts.push('armament not known');
+  const hasWeapon = person.carried?.some((item) => item.glyph === 'weapon');
+  if (!hasWeapon && person.armament && person.armament !== 'unknown') parts.push(`${armamentText(person.armament, 'confirmed')?.toLowerCase()} (${person.status})`);
+  else if (!hasWeapon) parts.push('armament not known');
   for (const item of person.carried ?? []) parts.push(`${item.label} (${item.status})`);
   return parts.join(' · ');
 }

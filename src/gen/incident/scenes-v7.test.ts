@@ -1,4 +1,3 @@
-import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import frozen from '../../sim/fixtures/v6-scene-baseline.json';
 import type { IncidentSpec } from '../../sim/scenario-types';
@@ -7,15 +6,20 @@ import { buildLocation } from '../../sim/location';
 import { validateScenario } from '../../sim/operation';
 import { scenarioActions } from '../../sim/scenario-types';
 
-const digest = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex');
+const digest = async (value: unknown) => Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify(value))))).map(byte => byte.toString(16).padStart(2, '0')).join('');
 describe('versioned coherent scenes', () => {
-  it('preserves 96 published v6 incident and building fingerprints', () => {
+  it('does not present an outside witness as an armed subject', () => {
+    const scenario = generateIncident({ type: 'barricaded', familyId: 'cedar_close', buildingSeed: 7, seed: 1, tier: 1, contentVersion: 7 });
+    expect(scenario.story!.bindings.people.cal.publicKind).toBe('civilian');
+    expect(Object.values(scenario.story!.bindings.people).every(person => person.publicKind === 'civilian')).toBe(true);
+  });
+  it('preserves 96 published v6 incident and building fingerprints', async () => {
     for (const baseline of frozen) {
       const spec = baseline.spec as IncidentSpec;
-      expect(digest(generateIncident(spec)), JSON.stringify(spec)).toBe(baseline.scenario);
-      expect(digest(buildLocation(spec.familyId, spec.buildingSeed)), JSON.stringify(spec)).toBe(baseline.location);
+      expect(await digest(generateIncident(spec)), JSON.stringify(spec)).toBe(baseline.scenario);
+      expect(await digest(buildLocation(spec.familyId, spec.buildingSeed)), JSON.stringify(spec)).toBe(baseline.location);
     }
-  });
+  }, 30000);
   it('validates v7 episodes against their actual furnished layouts', () => {
     for (const type of INCIDENT_TYPES_V5) for (const familyId of type.families) for (const seed of [0, 1, 7]) {
       const spec: IncidentSpec = { type: type.type, familyId, buildingSeed: seed, seed: seed * 13 + 7, tier: 2, contentVersion: 7 };
