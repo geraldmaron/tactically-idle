@@ -35,8 +35,6 @@ export interface RoomSeed {
   /** Inclusion probability for optional rooms. */
   prob: number;
   tags: string[];
-  /** Furnishing kit name (furnish.ts). */
-  kit: string;
   windows: WindowKind;
   /** A bath carved from the far end of this room (an ensuite). */
   ensuite?: RoomSeed;

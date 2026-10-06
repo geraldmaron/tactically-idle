@@ -6,14 +6,15 @@ import type { Rand } from './rand';
 import { GEN_VERSION, type FamilySpec, type PRoom } from './types';
 import { placeWindows } from './windows';
 import { buildZones } from './zones';
-import { furnish } from './furnish';
 import { exteriorObjects } from './exterior';
 
 /**
- * One generation attempt. Returns null as soon as any stage cannot complete; the caller
- * retries with the next draw from the same stream.
+ * One generation attempt, unfurnished: rooms hold no objects (the game's furnishing solver,
+ * furnishLocationV7, places them; generate.ts accepts a draw only once that solve is clean).
+ * Returns null as soon as any stage cannot complete; the caller retries with the next draw
+ * from the same stream. `familyId` is the public building type id the location carries.
  */
-export function buildAttempt(spec: FamilySpec, seed: number, rng: Rand, why?: (reason: string) => void): LocationDefinition | null {
+export function buildAttempt(spec: FamilySpec, familyId: string, seed: number, rng: Rand, why?: (reason: string) => void): LocationDefinition | null {
   const no = (reason: string): null => {
     why?.(reason);
     return null;
@@ -81,25 +82,24 @@ export function buildAttempt(spec: FamilySpec, seed: number, rng: Rand, why?: (r
   openings.push(...windows);
 
   const objects: PlacedObject[] = [];
-  if (!furnish(rooms, openings, interior.swings, objects, spec, rng)) return no('furnish');
   const notes: MapNote[] = [];
   const entries = exteriorObjects(plan, lot, ext, zoneSet, openings, extDoors, objects, notes, rng);
   if (!entries) return no('entries');
 
   const overrides = [...interior.overrides];
   for (const side of plan.partyWalls) {
-    const zone = zoneSet.zones.find((z) => zoneSet.classOf.get(z.id) === (side === 'w' ? 'neighbour_w' : 'neighbour_e'));
+    const zone = zoneSet.zones.find((z) => zoneSet.classOf.get(z.id) === (side === 'w' ? 'neighbor_w' : 'neighbor_e'));
     if (!zone) continue;
     const mat = rng.weighted([['brick', 6], ['concrete', 4]] as const);
     for (const r of rooms) if (sharedSegments(r.poly, zone.polygon, 1).length > 0) overrides.push({ a: r.id, b: zone.id, material: mat });
   }
 
-  tagRooms(rooms, openings, runs, objects);
+  tagRooms(rooms, openings, runs);
   const outRooms: Room[] = rooms.map((r) => ({ id: r.id, label: r.label, type: r.seed.type, floor: r.floor, polygon: r.poly, tags: r.tags }));
   const zones: ExteriorZone[] = zoneSet.zones;
   const loc: LocationDefinition = {
-    id: `${spec.id}_${seed}`,
-    familyId: spec.id,
+    id: familyId,
+    familyId,
     version: GEN_VERSION,
     seed,
     name: spec.name(rng),
@@ -134,8 +134,8 @@ function tidy<T>(value: T): T {
   return value;
 }
 
-/** Derived room tags: floor, orientation, circulation role, windowless, doors to the outside, what the furniture holds. */
-function tagRooms(rooms: PRoom[], openings: Opening[], runs: Run[], objects: PlacedObject[]): void {
+/** Derived room tags: floor, orientation, circulation role, windowless, doors to the outside. Furniture tags come later (generate.ts). */
+function tagRooms(rooms: PRoom[], openings: Opening[], runs: Run[]): void {
   const two = rooms.some((r) => r.floor === 1);
   for (const r of rooms) {
     const tags = new Set(r.tags);
@@ -153,10 +153,6 @@ function tagRooms(rooms: PRoom[], openings: Opening[], runs: Run[], objects: Pla
     const w = Math.min(r.rect.x1 - r.rect.x0, r.rect.y1 - r.rect.y0);
     if (w <= 7 || r.seed.cls === 'circ') tags.add('narrow');
     if (openings.some((o) => o.a === r.id && o.id.startsWith('d_') && !rooms.some((q) => q.id === o.b) && o.type !== 'window')) tags.add('exterior_door');
-    for (const o of objects) {
-      if (o.in !== r.id) continue;
-      for (const t of ['valuables', 'hazard', 'concealment', 'cover']) if (o.tags.includes(t)) tags.add(t);
-    }
     r.tags = [...tags];
   }
 }

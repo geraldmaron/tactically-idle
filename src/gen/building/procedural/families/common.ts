@@ -14,7 +14,7 @@ export const HOME_WINDOWS: Record<string, WindowStyle> & { default: WindowStyle 
   landing: { glazing: [['double', 7], ['single', 3]], covering: [['none', 6], ['blinds', 2], ['curtains', 2]] },
 };
 
-export const STREET_NAMES = ['Maple Street', 'Alder Court', 'Birch Lane', 'Cedar Avenue', 'Dunmore Road', 'Elm Terrace', 'Fairview Drive', 'Garnet Street', 'Harlow Close', 'Ivy Way', 'Juniper Road', 'Kestrel Lane', 'Linden Avenue', 'Mercer Street', 'Norwood Drive', 'Orchard Row', 'Pennant Street', 'Quarry Road', 'Rowan Court', 'Sycamore Avenue', 'Thistle Lane', 'Upland Road', 'Vesper Street', 'Willow Close'];
+export const STREET_NAMES = ['Maple Street', 'Alder Court', 'Birch Lane', 'Cedar Avenue', 'Dunmore Road', 'Elm Terrace', 'Fairview Drive', 'Garnet Street', 'Harlow Circle', 'Ivy Way', 'Juniper Road', 'Kestrel Lane', 'Linden Avenue', 'Mercer Street', 'Norwood Drive', 'Orchard Row', 'Pennant Street', 'Quarry Road', 'Rowan Court', 'Sycamore Avenue', 'Thistle Lane', 'Upland Road', 'Vesper Street', 'Willow Circle'];
 
 /** Record why a draw was abandoned (for acceptance diagnostics) and return null. */
 export function no(why: ((reason: string) => void) | undefined, reason: string): null {

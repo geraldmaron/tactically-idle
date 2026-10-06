@@ -1,5 +1,5 @@
 import type { LocationDefinition, Opening, PlacedObject, Room } from '../../../sim/types';
-import { type Rect, R, overlapArea, polyArea, polyBBox } from './geom';
+import { type Rect, R, norm, overlapArea, polyArea, polyBBox } from './geom';
 import { swingBox } from './openings';
 
 export interface PlausibilityReport {
@@ -94,8 +94,14 @@ function openZones(loc: LocationDefinition): Set<string> {
   return reach;
 }
 
-export function plausibilityReport(loc: LocationDefinition): PlausibilityReport {
+/**
+ * Score a plan. With `furniture` false only the structure is judged (rooms, openings, routes,
+ * stairs), which is a necessary condition for the full report and needs no furnishing solve.
+ */
+export function plausibilityReport(loc: LocationDefinition, furniture = true): PlausibilityReport {
   const notes: string[] = [];
+  // Public ids carry the generation (`bungalow_g1`); the programme is keyed by the family.
+  const family = loc.familyId.replace(/_g\d+$/, '');
   const metrics: Record<string, number> = {};
   let score = 100;
   const fail = (msg: string) => {
@@ -137,7 +143,7 @@ export function plausibilityReport(loc: LocationDefinition): PlausibilityReport 
   // Programme.
   const counts: Record<string, number> = {};
   for (const r of loc.rooms) counts[stem(r.id)] = (counts[stem(r.id)] ?? 0) + 1;
-  for (const [k, n] of Object.entries(PROGRAMME[loc.familyId] ?? {})) if ((counts[k] ?? 0) < n) fail(`needs ${n} x ${k}, has ${counts[k] ?? 0}`);
+  for (const [k, n] of Object.entries(PROGRAMME[family] ?? {})) if ((counts[k] ?? 0) < n) fail(`needs ${n} x ${k}, has ${counts[k] ?? 0}`);
 
   // Windows.
   const wins = new Map<string, Opening[]>();
@@ -158,18 +164,18 @@ export function plausibilityReport(loc: LocationDefinition): PlausibilityReport 
   for (const r of loc.rooms) if ((roomOpenings.get(r.id) ?? []).length === 0) fail(`${r.id} has no way in`);
   const ext = loc.openings.filter((o) => (o.type === 'door' || o.type === 'sliding') && (roomIds.has(o.a) !== roomIds.has(o.b)));
   metrics.exteriorDoors = ext.length;
-  const maxExt = loc.familyId === 'motel_row' ? 9 : loc.familyId === 'warehouse' ? 6 : 3;
+  const maxExt = family === 'motel_row' ? 9 : family === 'warehouse' ? 6 : 3;
   if (ext.length < 1 || ext.length > maxExt) fail(`${ext.length} exterior doors`);
   if (loc.entries.length < 1 || loc.entries.length > 3) fail(`${loc.entries.length} entry zones`);
   for (const o of loc.openings) {
     if (o.type === 'door' || o.type === 'doorway' || o.type === 'sliding') {
-      const width = Math.hypot(o.to.x - o.from.x, o.to.y - o.from.y);
+      const width = norm(o.to.x - o.from.x, o.to.y - o.from.y);
       const exterior = roomIds.has(o.a) !== roomIds.has(o.b);
       if (o.type === 'door' && width < (exterior ? 3 : 2.5) - 1e-9) fail(`${o.id} is ${width} ft wide`);
       if (o.type === 'doorway' && roomIds.has(o.a) && roomIds.has(o.b) && width < 3 - 1e-9) fail(`${o.id} is ${width} ft wide`);
       const rs = [o.a, o.b].map((id) => byId.get(id)).filter((r): r is Room => Boolean(r));
       for (const r of rs) {
-        const near = Math.min(...r.polygon.map((p) => Math.min(Math.hypot(p.x - o.from.x, p.y - o.from.y), Math.hypot(p.x - o.to.x, p.y - o.to.y))));
+        const near = Math.min(...r.polygon.map((p) => Math.min(norm(p.x - o.from.x, p.y - o.from.y), norm(p.x - o.to.x, p.y - o.to.y))));
         if (near < 0.45) fail(`${o.id} sits in a corner of ${r.id}`);
       }
     }
@@ -257,13 +263,16 @@ export function plausibilityReport(loc: LocationDefinition): PlausibilityReport 
     }
   }
 
-  // Furniture essentials.
+  if (!furniture) return { score: Math.max(0, score), pass: score >= PASS_SCORE && !notes.some((n) => n.startsWith('FAIL')), metrics, notes };
+
+  // Furniture essentials: the solver may leave out a piece that does not fit, so a bedroom with
+  // no bed or a kitchen with no cooker is a plan the furniture cannot live in.
   for (const r of loc.rooms) {
     const k = stem(r.id);
     const kinds = new Set((objsBySpace.get(r.id) ?? []).map((o) => o.type));
     if (k === 'bedroom' && !kinds.has('bed')) fail(`${r.id} has no bed`);
     if ((k === 'bath' || k === 'wc') && !kinds.has('toilet')) fail(`${r.id} has no toilet`);
-    if (k === 'kitchen' && loc.familyId !== 'bar_restaurant' && !(kinds.has('stove') && kinds.has('sink') && kinds.has('fridge'))) fail(`${r.id} lacks an appliance`);
+    if (k === 'kitchen' && family !== 'bar_restaurant' && !(kinds.has('stove') && kinds.has('sink') && kinds.has('fridge'))) fail(`${r.id} lacks an appliance`);
     if (k === 'living' && !kinds.has('sofa')) dock(`${r.id} has no sofa`, 6);
   }
   // Free floor: how much of each furnished room stays walkable.
@@ -306,7 +315,7 @@ function inside(p: { x: number; y: number }, poly: { x: number; y: number }[]): 
 function segOverlap(p: Opening, q: Opening): number {
   const dx = p.to.x - p.from.x;
   const dy = p.to.y - p.from.y;
-  const L = Math.hypot(dx, dy);
+  const L = norm(dx, dy);
   if (L < 1e-9) return 0;
   const ux = dx / L;
   const uy = dy / L;

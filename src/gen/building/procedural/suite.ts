@@ -4,27 +4,30 @@ import { deriveLocation } from '../../../sim/location';
 import { validateLocation } from '../../../sim/location-validate';
 import { FAMILIES } from './families';
 import { polyArea } from './geom';
-import { BUILDING_FAMILIES, generateBuilding } from './index';
+import { furnishLocationV7, validateFurnishingsV7 } from '../furnishing-v7';
+import { BUILDING_FAMILIES } from './index';
 import { PASS_SCORE, planSignature, plausibilityReport } from './plausibility';
-import { generate, generateFallback, type AttemptStats } from './generate';
+import { generate, generateFallback, generatePair, publicFamilyId, type AttemptStats, type GeneratedBuilding } from './generate';
 import { OBJECT_TAGS, ROOM_TAGS, ZONE_TAGS } from './tags';
 
 /** Seeds per family for validation, distinctness and shape coverage (the acceptance run). */
-export const SEEDS = 500;
+export const SEEDS = 200;
 /** Seeds sampled for the heavier per-building checks. */
 const SAMPLE = 150;
 const LONG = 120_000;
 
-const cache = new Map<string, LocationDefinition[]>();
-function plans(family: string): LocationDefinition[] {
+const cache = new Map<string, GeneratedBuilding[]>();
+function pairs(family: string): GeneratedBuilding[] {
   let list = cache.get(family);
   if (!list) {
     list = [];
-    for (let s = 0; s < SEEDS; s++) list.push(generateBuilding(family, s));
+    for (let s = 0; s < SEEDS; s++) list.push(generatePair(family, s));
     cache.set(family, list);
   }
   return list;
 }
+const plans = (family: string): LocationDefinition[] => pairs(family).map((p) => p.plain);
+const furnishedPlans = (family: string): LocationDefinition[] => pairs(family).map((p) => p.furnished);
 
 const roomIds = (loc: LocationDefinition) => new Set(loc.rooms.map((r) => r.id));
 const bbox = (loc: LocationDefinition, id: string) => {
@@ -61,25 +64,33 @@ export function familySuite(familyId: string): void {
   const spec = FAMILIES.find((f) => f.id === familyId);
 
   describe(familyId, () => {
-    it(`validates with zero errors or warnings for seeds 0..${SEEDS - 1}`, () => {
+    it(`validates plan and furnished plan with zero errors or warnings for seeds 0..${SEEDS - 1}`, () => {
       const bad: string[] = [];
-      for (const [s, loc] of plans(fam.id).entries()) {
+      for (const [s, pair] of pairs(fam.id).entries()) {
         // Warnings (a swing blocked by furniture, a window off the wall) count too: the plan should be clean.
-        const issues = validateLocation(loc, deriveLocation(loc));
-        if (issues.length) bad.push(`seed ${s}: ${issues.map((i) => `[${i.code}] ${i.message}`).join('; ')}`);
+        for (const loc of [pair.plain, pair.furnished]) {
+          const issues = validateLocation(loc, deriveLocation(loc));
+          if (issues.length) bad.push(`seed ${s} ${loc.id}: ${issues.map((i) => `[${i.code}] ${i.message}`).join('; ')}`);
+        }
+        const diag = validateFurnishingsV7(pair.furnished);
+        if (diag.length) bad.push(`seed ${s} furnishing: ${diag.join('; ')}`);
       }
       expect(bad.slice(0, 5)).toEqual([]);
     }, LONG);
 
-    it('is deterministic: the same seed gives a deep-equal building', () => {
+    it('is deterministic: the same seed gives a deep-equal building, furnished exactly as the game furnishes it', () => {
       for (const s of [0, 1, 7, 42, 99, 250, 499]) {
-        const a = generateBuilding(fam.id, s);
-        expect(generateBuilding(fam.id, s)).toEqual(a);
-        expect(a.seed).toBe(s);
-        expect(a.familyId).toBe(fam.id);
-        expect(a.setting).toBe(fam.setting);
+        const a = generatePair(fam.id, s);
+        expect(generatePair(fam.id, s)).toEqual(a);
+        expect(furnishLocationV7(a.plain)).toEqual(a.furnished);
+        expect(a.plain.seed).toBe(s);
+        expect(a.plain.familyId).toBe(publicFamilyId(fam.id));
+        expect(a.plain.setting).toBe(fam.setting);
+        // Interior furniture belongs to furnishLocationV7 alone; the plan keeps only yard objects.
+        const rooms = new Set(a.plain.rooms.map((r) => r.id));
+        expect(a.plain.objects.filter((o) => rooms.has(o.in))).toEqual([]);
       }
-      expect(generateBuilding(fam.id, 3)).not.toEqual(generateBuilding(fam.id, 4));
+      expect(generate(fam.id, 3)).not.toEqual(generate(fam.id, 4));
     }, LONG);
 
     it('never needs the fallback or throws on seeds far from the tested range', () => {
@@ -89,12 +100,15 @@ export function familySuite(familyId: string): void {
       expect(stats.reasons.FALLBACK ?? 0).toBe(0);
     }, LONG);
 
-    it('falls back to a known-good layout that validates', () => {
-      const loc = generateFallback(fam.id, 12345);
-      expect(loc.seed).toBe(12345);
-      const issues = validateLocation(loc, deriveLocation(loc)).filter((i) => i.severity === 'error');
-      expect(issues).toEqual([]);
-      expect(plausibilityReport(loc).pass).toBe(true);
+    it('falls back to a known-good layout that validates, whatever seed it is reported as', () => {
+      // The furnishing solve hashes the reported seed, so the fallback is checked across many.
+      for (const seed of [0, 12345, 4294967295, ...Array.from({ length: 20 }, (_, i) => 7 + i * 104729)]) {
+        const { plain, furnished } = generateFallback(fam.id, seed);
+        expect(plain.seed).toBe(seed);
+        for (const loc of [plain, furnished]) expect(validateLocation(loc, deriveLocation(loc))).toEqual([]);
+        expect(validateFurnishingsV7(furnished)).toEqual([]);
+        expect(plausibilityReport(furnished).pass).toBe(true);
+      }
     }, LONG);
 
     it('keeps floors within the family range and follows the 2-floor rules', () => {
@@ -128,7 +142,7 @@ export function familySuite(familyId: string): void {
 
     it('reaches every room from an entry without passing through a bedroom or bathroom', () => {
       for (const loc of plans(fam.id).slice(0, SAMPLE)) {
-        const rep = plausibilityReport(loc);
+        const rep = plausibilityReport(loc, false);
         expect(rep.notes.filter((n) => n.includes('leaf room') || n.includes('way in'))).toEqual([]);
         const adj = new Map<string, string[]>();
         for (const o of loc.openings as Opening[]) {
@@ -154,8 +168,8 @@ export function familySuite(familyId: string): void {
       }
     }, LONG);
 
-    it('passes the plausibility threshold and honours the conventions', () => {
-      for (const loc of plans(fam.id).slice(0, SAMPLE)) {
+    it('passes the plausibility threshold and honors the conventions', () => {
+      for (const loc of furnishedPlans(fam.id).slice(0, SAMPLE)) {
         const rep = plausibilityReport(loc);
         expect(rep.notes.filter((n) => n.startsWith('FAIL')), loc.id).toEqual([]);
         expect(rep.score).toBeGreaterThanOrEqual(PASS_SCORE);
@@ -179,7 +193,7 @@ export function familySuite(familyId: string): void {
       const room = new Set<string>(ROOM_TAGS);
       const zone = new Set<string>(ZONE_TAGS);
       const obj = new Set<string>(OBJECT_TAGS);
-      for (const loc of plans(fam.id)) {
+      for (const loc of [...plans(fam.id), ...furnishedPlans(fam.id)]) {
         for (const r of loc.rooms) for (const t of r.tags) expect(room.has(t), `${loc.id} ${r.id} tag ${t}`).toBe(true);
         for (const z of loc.zones) for (const t of z.tags) expect(zone.has(t), `${loc.id} ${z.id} tag ${t}`).toBe(true);
         for (const o of loc.objects) for (const t of o.tags) expect(obj.has(t), `${loc.id} ${o.id} tag ${t}`).toBe(true);

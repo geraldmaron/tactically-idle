@@ -7,16 +7,16 @@ import type { ExteriorSpec, FamilySpec, LotSpec, Plan, RoomSeed } from '../types
 import { D } from '../programme';
 import { no, tagWhy } from './common';
 
-const NAMES = ['The Rusty Anchor', "Mulligan's Tavern", 'Blue Heron Grill', 'The Golden Fleece', 'Casa Lupita', "Dino's Pizzeria", 'The Wheatsheaf', 'Harbour Lights Bar', "Mama Chen's Kitchen", 'The Fox and Pheasant'];
+const NAMES = ['The Rusty Anchor', "Mulligan's Tavern", 'Blue Heron Grill', 'The Golden Fleece', 'Casa Lupita', "Dino's Pizzeria", 'The Wheatsheaf', 'Harbor Lights Bar', "Mama Chen's Kitchen", 'The Fox and Pheasant'];
 
-const CORRIDOR = seed('corridor', 'hall', { area: 60, min: 24, max: 300, minW: 4, aspect: 99, cls: 'circ', tags: ['circulation', 'narrow'], windows: 'none', kit: 'hall', label: 'Back corridor' });
-const BAR = seed('bar', 'retail', { area: 650, min: 300, max: 1400, minW: 14, aspect: 3, front: 1, cls: 'pub', cap: true, required: true, tags: ['public', 'customer', 'bar', 'dining'], windows: 'storefront', kit: 'bar_floor', label: 'Bar and dining' });
-const KITCHEN = seed('kitchen', 'kitchen', { area: 230, min: 110, max: 560, minW: 9, aspect: 3, cls: 'pub', cap: true, required: true, tags: ['staff', 'cooking', 'water', 'hazard', 'service'], windows: 'small', kit: 'commercial_kitchen', label: 'Kitchen' });
-const COLD = seed('cold_store', 'storage', { area: 70, min: 36, max: 140, minW: 6, cls: 'leaf', tags: ['staff', 'storage', 'cold', 'service'], windows: 'none', kit: 'cold_store', label: 'Cold store' });
-const OFFICE = seed('backoffice', 'office', { area: 85, min: 55, max: 150, minW: 7, cls: 'leaf', tags: ['staff', 'private', 'office', 'lockable', 'valuables'], windows: 'small', kit: 'backoffice', label: 'Office' });
-const DRY = seed('storage', 'storage', { area: 70, min: 36, max: 170, minW: 5.5, tags: ['service', 'storage'], windows: 'none', kit: 'storage', label: 'Dry store' });
-const STAFF = seed('break_room', 'utility', { area: 75, min: 50, max: 140, minW: 7, cls: 'leaf', tags: ['staff', 'service'], windows: 'small', kit: 'storage', label: 'Staff room' });
-const wcSeed = (): RoomSeed => D.wc(34, { required: true, min: 24, max: 70, tags: ['water', 'lockable', 'wc', 'public'] });
+const CORRIDOR = seed('corridor', 'hall', { area: 60, min: 24, max: 300, minW: 4, aspect: 99, cls: 'circ', tags: ['circulation', 'narrow'], windows: 'none', label: 'Back corridor' });
+const BAR = seed('bar', 'retail', { area: 650, min: 300, max: 1400, minW: 14, aspect: 3, front: 1, cls: 'pub', cap: true, required: true, tags: ['public', 'customer', 'bar', 'dining'], windows: 'storefront', label: 'Bar and dining' });
+const KITCHEN = seed('kitchen', 'kitchen', { area: 230, min: 110, max: 560, minW: 9, aspect: 3, cls: 'pub', cap: true, required: true, tags: ['staff', 'cooking', 'water', 'hazard', 'service'], windows: 'small', label: 'Kitchen' });
+const COLD = seed('cold_store', 'storage', { area: 70, min: 36, max: 140, minW: 6, cls: 'leaf', tags: ['staff', 'storage', 'cold', 'service'], windows: 'none', label: 'Walk-in cooler' });
+const OFFICE = seed('backoffice', 'office', { area: 85, min: 55, max: 150, minW: 7, cls: 'leaf', tags: ['staff', 'private', 'office', 'lockable', 'valuables'], windows: 'small', label: 'Office' });
+const DRY = seed('storage', 'storage', { area: 70, min: 36, max: 170, minW: 5.5, tags: ['service', 'storage'], windows: 'none', label: 'Dry storage' });
+const STAFF = seed('break_room', 'utility', { area: 75, min: 50, max: 140, minW: 7, cls: 'leaf', tags: ['staff', 'service'], windows: 'small', label: 'Break room' });
+const wcSeed = (): RoomSeed => D.wc(34, { required: true, min: 24, max: 70, tags: ['water', 'lockable', 'wc', 'public'], label: 'Restroom' });
 
 /**
  * Bar floor across the front; behind it a back corridor with the toilets on one side and the

@@ -10,26 +10,26 @@ import { LANDING, planTwoFloors } from './twofloor';
 const FIRMS = ['Harlow', 'Brightwater', 'Pinnacle', 'Cobalt', 'Meridian', 'Summit', 'Granger', 'Foxley', 'Lindqvist'];
 const TRADES = ['Insurance', 'Accounting', 'Legal', 'Logistics', 'Consulting', 'Realty', 'Engineering', 'Design'];
 
-const CORRIDOR = seed('corridor', 'hall', { area: 80, min: 30, max: 500, minW: 4, aspect: 99, cls: 'circ', tags: ['circulation', 'narrow'], windows: 'none', kit: 'hall', label: 'Corridor' });
+const CORRIDOR = seed('corridor', 'hall', { area: 80, min: 30, max: 500, minW: 4, aspect: 99, cls: 'circ', tags: ['circulation', 'narrow'], windows: 'none', label: 'Corridor' });
 
 const office = (key: string, area: number, o: object = {}) =>
-  seed(key, 'office', { area, min: Math.round(area * 0.7), max: Math.round(area * 1.7), minW: 9, aspect: 2.4, hall: true, tags: ['staff', 'work', 'lockable'], kit: key, ...o });
+  seed(key, 'office', { area, min: Math.round(area * 0.7), max: Math.round(area * 1.7), minW: 9, aspect: 2.4, hall: true, tags: ['staff', 'work', 'lockable'], ...o });
 
 function groundPool(rng: Rand, upper: boolean): RoomSeed[] {
   const rooms: RoomSeed[] = [
-    seed('open_office', 'office', { area: rng.snapped(320, 460), min: 200, max: 760, minW: 14, aspect: 2.6, front: 0.5, cls: 'pub', cap: true, required: true, tags: ['staff', 'work', 'open'], windows: 'large', kit: 'open_office', label: 'Open office' }),
+    seed('open_office', 'office', { area: rng.snapped(320, 460), min: 200, max: 760, minW: 14, aspect: 2.6, front: 0.5, cls: 'pub', cap: true, required: true, tags: ['staff', 'work', 'open'], windows: 'large', label: 'Open office' }),
     office('meeting', rng.snapped(130, 190), { cls: 'leaf', hall: false, required: true, tags: ['staff', 'meeting', 'lockable'], label: 'Meeting room' }),
     office('meeting', rng.snapped(110, 150), { cls: 'leaf', hall: false, prob: 0.45, tags: ['staff', 'meeting', 'lockable'], label: 'Meeting room' }),
     office('manager', rng.snapped(110, 150), { cls: 'leaf', required: true, tags: ['private', 'office', 'lockable', 'valuables'], label: 'Manager office' }),
     office('manager', rng.snapped(100, 130), { cls: 'leaf', prob: 0.35, tags: ['private', 'office', 'lockable', 'valuables'], label: 'Office' }),
-    seed('kitchenette', 'kitchen', { area: rng.snapped(70, 100), min: 50, max: 150, minW: 7, hall: true, tags: ['staff', 'cooking', 'water'], windows: 'small', kit: 'kitchenette', label: 'Kitchenette' }),
-    D.wc(rng.snapped(34, 46), { required: true, tags: ['water', 'lockable', 'wc', 'staff'] }),
-    D.wc(rng.snapped(30, 40), { prob: 0.35, tags: ['water', 'lockable', 'wc', 'staff'] }),
-    seed('server', 'storage', { area: 40, min: 28, max: 90, minW: 5.5, hall: true, tags: ['service', 'server', 'valuables', 'hazard'], windows: 'none', kit: 'server', prob: 0.5, label: 'Server room' }),
-    seed('storage', 'storage', { area: 45, min: 28, max: 100, minW: 5.5, hall: true, tags: ['service', 'storage'], windows: 'none', kit: 'storage', prob: 0.4 }),
+    seed('kitchenette', 'kitchen', { area: rng.snapped(70, 100), min: 50, max: 150, minW: 7, hall: true, tags: ['staff', 'cooking', 'water'], windows: 'small', label: 'Kitchenette' }),
+    D.wc(rng.snapped(34, 46), { required: true, tags: ['water', 'lockable', 'wc', 'staff'], label: 'Restroom' }),
+    D.wc(rng.snapped(30, 40), { prob: 0.35, tags: ['water', 'lockable', 'wc', 'staff'], label: 'Restroom' }),
+    seed('server', 'storage', { area: 40, min: 28, max: 90, minW: 5.5, hall: true, tags: ['service', 'server', 'valuables', 'hazard'], windows: 'none', prob: 0.5, label: 'Server room' }),
+    seed('storage', 'storage', { area: 45, min: 28, max: 100, minW: 5.5, hall: true, tags: ['service', 'storage'], windows: 'none', prob: 0.4 }),
   ];
   if (!upper)
-    rooms.unshift(seed('reception', 'office', { area: rng.snapped(140, 220), min: 100, max: 300, minW: 10, aspect: 2.4, front: 1, cls: 'pub', cap: true, required: true, tags: ['public', 'reception', 'customer'], windows: 'large', kit: 'reception', label: 'Reception' }));
+    rooms.unshift(seed('reception', 'office', { area: rng.snapped(140, 220), min: 100, max: 300, minW: 10, aspect: 2.4, front: 1, cls: 'pub', cap: true, required: true, tags: ['public', 'reception', 'customer'], windows: 'large', label: 'Reception' }));
   return rooms;
 }
 

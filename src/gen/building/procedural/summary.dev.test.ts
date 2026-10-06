@@ -1,5 +1,5 @@
 import { describe, it } from 'vitest';
-import { generate, type AttemptStats } from './generate';
+import { generatePair, type AttemptStats } from './generate';
 import { BUILDING_FAMILIES } from './index';
 import { planSignature, plausibilityReport } from './plausibility';
 import { shapeOf } from './suite';
@@ -22,14 +22,14 @@ describe.skipIf(!which)('generation summary', () => {
       let low = 100;
       const t0 = performance.now();
       for (let s = 0; s < n; s++) {
-        const loc = generate(f.id, s, stats);
+        const { plain: loc, furnished } = generatePair(f.id, s, stats);
         floors[loc.floors ?? 1] = (floors[loc.floors ?? 1] ?? 0) + 1;
         const sh = shapeOf(loc);
         shapes[sh] = (shapes[sh] ?? 0) + 1;
         sigs.add(planSignature(loc));
         // Topology only: room stems and which stems touch, no dimensions.
         topo.add(planSignature(loc).split('|').slice(0, 2).join('|') + `|${sh}|${loc.floors ?? 1}`);
-        const rep = plausibilityReport(loc);
+        const rep = plausibilityReport(furnished);
         score += rep.score;
         low = Math.min(low, rep.score);
       }

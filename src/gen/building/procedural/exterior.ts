@@ -1,5 +1,5 @@
 import type { MapNote, Opening, PlacedObject } from '../../../sim/types';
-import { type Rect, R, distToPoly, inflate, lerp, overlapArea, polyBBox, rectInsidePoly, rectsOverlap, vec } from './geom';
+import { type Rect, R, distToPoly, norm, inflate, lerp, overlapArea, polyBBox, rectInsidePoly, rectsOverlap, vec } from './geom';
 import type { PendingExterior } from './openings';
 import type { Rand } from './rand';
 import type { ExteriorSpec, LotSpec, Plan } from './types';
@@ -159,7 +159,7 @@ export function exteriorObjects(
       const p = vec(x, y);
       if (zs.at(p) !== z.id) continue;
       if (taken.some((t) => overlapArea(inflate(t, 1.2), R(x - 2, y - 0.6, x + 2, y + 0.6)) > 0)) continue;
-      if (notes.some((n) => Math.hypot(n.at.x - x, n.at.y - y) < 4)) continue;
+      if (notes.some((n) => norm(n.at.x - x, n.at.y - y) < 4)) continue;
       notes.push({ id, text, at: p, decorative: true });
       return;
     }
@@ -170,9 +170,9 @@ export function exteriorObjects(
   const gate = zs.paths.find((p) => ['west', 'east'].includes(cls(p.b)) && cls(p.a) === 'front');
   if (ext.fences && gate && rng.chance(0.7)) putNote('n_gate', 'Side gate', gate.b, 'any');
   const bins = zs.zones.find((z) => cls(z.id) === 'alley') ?? zs.zones.find((z) => cls(z.id) === 'back');
-  if (bins && ext.kind !== 'apartment' && rng.chance(0.7)) putNote('n_bins', 'Bins', bins.id, 'any');
+  if (bins && ext.kind !== 'apartment' && rng.chance(0.7)) putNote('n_bins', 'Trash cans', bins.id, 'any');
   const cars = zs.zones.find((z) => cls(z.id) === 'parking' || cls(z.id) === 'driveway');
-  if (cars) putNote('n_cars', cls(cars.id) === 'driveway' ? 'Car in drive' : 'Parked cars', cars.id, 'any');
+  if (cars) putNote('n_cars', cls(cars.id) === 'driveway' ? 'Car in driveway' : 'Parked cars', cars.id, 'any');
 
   // Entries: where the front and any back or side door open out.
   const entries: string[] = [];

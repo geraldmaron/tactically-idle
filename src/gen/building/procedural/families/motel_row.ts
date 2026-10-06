@@ -9,13 +9,13 @@ import { FOYER, LANDING, planTwoFloors } from './twofloor';
 
 const NAMES = ['Starlite Motel', 'Roadside Inn', 'Pine Ridge Lodge', 'Desert Rose Motel', 'Bluebird Motor Court', 'Lakeview Motel', 'The Hitching Post', 'Maple Leaf Motor Inn'];
 
-const UNIT = seed('unit', 'bedroom', { area: 190, min: 130, max: 260, minW: 10, aspect: 2.2, cls: 'leaf', tags: ['sleeping', 'private', 'lockable', 'guest'], windows: 'normal', kit: 'motel_unit', label: 'Room' });
-const BATH = seed('bath', 'bathroom', { area: 70, min: 40, max: 100, minW: 6, aspect: 2.3, cls: 'leaf', tags: ['private', 'water', 'lockable', 'ensuite'], windows: 'small', kit: 'bath', label: 'Ensuite' });
-const RECEPTION = seed('reception', 'office', { area: 220, min: 130, max: 330, minW: 10, aspect: 2.5, front: 1, cls: 'pub', cap: true, required: true, tags: ['public', 'reception', 'customer', 'office'], windows: 'large', kit: 'motel_office', label: 'Office' });
-const BACKOFFICE = seed('backoffice', 'office', { area: 100, min: 60, max: 180, minW: 7, aspect: 2.6, front: 0.2, cls: 'pub', cap: true, tags: ['staff', 'private', 'office', 'lockable', 'valuables'], windows: 'small', kit: 'backoffice', label: 'Back office' });
-const BREAKFAST = seed('dining', 'living', { area: 120, min: 80, max: 200, minW: 8, aspect: 2.4, front: 0.5, cls: 'pub', cap: true, tags: ['public', 'dining', 'customer'], windows: 'normal', kit: 'dining', label: 'Breakfast room' });
-const ICE = seed('storage', 'storage', { area: 50, min: 30, max: 90, minW: 5.5, cls: 'leaf', tags: ['service', 'storage'], windows: 'none', kit: 'storage', label: 'Linen store' });
-const UTILITY = seed('utility', 'utility', { area: 70, min: 40, max: 130, minW: 6, aspect: 2.8, front: 0.2, cls: 'leaf', tags: ['service', 'utility', 'laundry'], windows: 'small', kit: 'utility', label: 'Laundry' });
+const UNIT = seed('unit', 'bedroom', { area: 190, min: 130, max: 260, minW: 10, aspect: 2.2, cls: 'leaf', tags: ['sleeping', 'private', 'lockable', 'guest'], windows: 'normal', label: 'Room' });
+const BATH = seed('bath', 'bathroom', { area: 70, min: 40, max: 100, minW: 6, aspect: 2.3, cls: 'leaf', tags: ['private', 'water', 'lockable', 'ensuite'], windows: 'small', label: 'Bathroom' });
+const RECEPTION = seed('reception', 'office', { area: 220, min: 130, max: 330, minW: 10, aspect: 2.5, front: 1, cls: 'pub', cap: true, required: true, tags: ['public', 'reception', 'customer', 'office'], windows: 'large', label: 'Office' });
+const BACKOFFICE = seed('backoffice', 'office', { area: 100, min: 60, max: 180, minW: 7, aspect: 2.6, front: 0.2, cls: 'pub', cap: true, tags: ['staff', 'private', 'office', 'lockable', 'valuables'], windows: 'small', label: 'Back office' });
+const BREAKFAST = seed('dining', 'living', { area: 120, min: 80, max: 200, minW: 8, aspect: 2.4, front: 0.5, cls: 'pub', cap: true, tags: ['public', 'dining', 'customer'], windows: 'normal', label: 'Breakfast room' });
+const ICE = seed('storage', 'storage', { area: 50, min: 30, max: 90, minW: 5.5, cls: 'leaf', tags: ['service', 'storage'], windows: 'none', label: 'Linen closet' });
+const UTILITY = seed('utility', 'utility', { area: 70, min: 40, max: 130, minW: 6, aspect: 2.8, front: 0.2, cls: 'leaf', tags: ['service', 'utility', 'laundry'], windows: 'small', label: 'Laundry' });
 
 function flatPool(rng: Rand): RoomSeed[] {
   return [

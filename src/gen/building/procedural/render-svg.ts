@@ -1,4 +1,5 @@
 import type { LocationDefinition, Opening, Vec } from '../../../sim/types';
+import { norm } from './geom';
 
 // Developer drawing of a generated plan, for eyeballing plausibility. Not used by the game.
 
@@ -40,7 +41,7 @@ function door(o: Opening, loc: LocationDefinition): string {
   if (o.swing && into) {
     const hinge = o.swing.hinge === 'from' ? o.from : o.to;
     const free = o.swing.hinge === 'from' ? o.to : o.from;
-    const r = Math.hypot(dx, dy);
+    const r = norm(dx, dy);
     const ux = (free.x - hinge.x) / r;
     const uy = (free.y - hinge.y) / r;
     let nx = -uy;

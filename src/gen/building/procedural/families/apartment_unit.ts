@@ -6,7 +6,7 @@ import type { ExteriorSpec, FamilySpec, LotSpec, Plan, RoomSeed } from '../types
 import { HOME_WINDOWS, no, poolArea, tagWhy } from './common';
 import { FOYER, LANDING, planTwoFloors } from './twofloor';
 
-const APT_STREETS = ['Mercer Court', 'Harbour Heights', 'Alder Gardens', 'Kestrel House', 'Linden Place', 'The Birches', 'Orchard Mews', 'Willow Court', 'Garnet Tower', 'Cedar Park Flats'];
+const APT_STREETS = ['Mercer Court', 'Harbor Heights', 'Alder Gardens', 'Kestrel House', 'Linden Place', 'The Birches', 'Orchard Commons', 'Willow Court', 'Garnet Tower', 'Cedar Park Apartments'];
 
 /** An apartment's rooms: living and bedrooms on the facade, kitchen and bath inside. */
 function flatPool(rng: Rand, windowless: boolean, beds: number): RoomSeed[] {
@@ -31,7 +31,7 @@ export const APARTMENT: FamilySpec = {
   label: 'Apartment',
   setting: 'apartment',
   floors: [1, 2],
-  blurb: 'Apartment in a block',
+  blurb: 'Apartment in a building',
   shapes: ['rect'],
   fallbackSeed: 0,
   frontSides: ['n'],

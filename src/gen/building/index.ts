@@ -3,17 +3,17 @@ import { NEIGHBOURHOOD_FAMILIES } from '../../content/locations/neighbourhood';
 import { RESIDENTIAL_FAMILIES_V1 } from '../../content/locations/residential-v1';
 import { applyVariations } from '../../sim/location-variation';
 import { MAPLE_STREET } from '../../content/locations/maple-street';
-import { baseFamilyIdV7, furnishLocationV7, FURNISHING_V7_SUFFIX } from './furnishing-v7';
+import { baseFamilyIdV7, furnishedFamilyIdV7, furnishLocationV7, FURNISHING_V7_SUFFIX } from './furnishing-v7';
 export { furnishedFamilyIdV7, baseFamilyIdV7 } from './furnishing-v7';
 import { FAMILIES as PROCEDURAL_SPECS } from './procedural/families';
-import { generate as generateProceduralPlan } from './procedural/generate';
+import { GENERATION, generatePair as generateProceduralPair } from './procedural/generate';
 
 export interface BuildingFamilyInfo {
   id: string;
   label: string;
   setting: LocationDefinition['setting'];
   floors: [min: number, max: number];
-  /** Short line for incident cards, e.g. 'Two-storey house'. */
+  /** Short line for incident cards, e.g. 'Two-story house'. */
   blurb: string;
 }
 
@@ -31,9 +31,10 @@ export const GENERATED_LOCATION_FAMILIES = [...NEIGHBOURHOOD_FAMILIES, ...RESIDE
 /** Procedurally generated building types, first generation. The `_g1` suffix is part of
  * the content identity: a change to the generator, its shared geometry or furnishing
  * that alters any output for these IDs must ship as `_g2` families instead, because
- * issued incidents regenerate their building from (familyId, seed) alone. Kept out of
- * BUILDING_FAMILIES so v1-v9 incident family lists stay unchanged. */
-export const PROCEDURAL_GENERATION = 'g1';
+ * issued incidents regenerate their building from (familyId, seed) alone.
+ * procedural-g1-fingerprints.test.ts holds the outputs. Kept out of BUILDING_FAMILIES so
+ * v1-v9 incident family lists stay unchanged. */
+export const PROCEDURAL_GENERATION = GENERATION;
 export const PROCEDURAL_FAMILIES: BuildingFamilyInfo[] = PROCEDURAL_SPECS.map((spec) => ({
   id: `${spec.id}_${PROCEDURAL_GENERATION}`, label: spec.label, setting: spec.setting, floors: spec.floors, blurb: spec.blurb,
 }));
@@ -58,13 +59,15 @@ export function generateBuilding(familyId: string, seed: number): LocationDefini
   const key = `${familyId}:${seed}`;
   const specId = proceduralSpecId(baseId);
   if (specId) {
-    // Generation runs a bounded search per seed; selectors rebuild locations several
-    // times per render, so both the plan and its furnished form are cached.
+    // Generation runs a bounded search per seed that already furnishes each candidate with
+    // furnishLocationV7 to accept it; selectors rebuild locations several times per render,
+    // so both forms of the accepted building are cached.
     if (!proceduralCache.has(key)) {
-      const plan = generateProceduralPlan(specId, seed);
-      const location = { ...plan, id: baseId, familyId: baseId };
-      if (proceduralCache.size >= 128) proceduralCache.delete(proceduralCache.keys().next().value!);
-      proceduralCache.set(key, furnished ? furnishLocationV7(location) : location);
+      const pair = generateProceduralPair(specId, seed);
+      for (const [k, loc] of [[`${baseId}:${seed}`, pair.plain], [`${furnishedFamilyIdV7(baseId)}:${seed}`, pair.furnished]] as const) {
+        if (proceduralCache.size >= 128) proceduralCache.delete(proceduralCache.keys().next().value!);
+        proceduralCache.set(k, loc);
+      }
     }
     return structuredClone(proceduralCache.get(key)!);
   }

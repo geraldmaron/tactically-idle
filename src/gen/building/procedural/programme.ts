@@ -13,7 +13,6 @@ interface SeedOpts {
   required?: boolean;
   prob?: number;
   tags?: string[];
-  kit?: string;
   windows?: WindowKind;
   label?: string;
   cls?: RoomClass;
@@ -39,7 +38,6 @@ export function seed(key: string, type: RoomType, o: SeedOpts): RoomSeed {
     required: o.required ?? false,
     prob: o.prob ?? 1,
     tags: o.tags ?? [],
-    kit: o.kit ?? key,
     windows: o.windows ?? 'normal',
     ...(o.ensuite ? { ensuite: o.ensuite } : {}),
   };
@@ -58,17 +56,17 @@ export const D = {
   bath: (area = 55, o: Partial<SeedOpts> = {}) =>
     seed('bath', 'bathroom', { area, min: 40, max: 95, minW: 6, aspect: 2.3, front: 0.3, hall: true, tags: ['private', 'water', 'lockable'], windows: 'small', ...o }),
   ensuite: (area = 42) =>
-    seed('bath', 'bathroom', { area, min: 36, max: 70, minW: 6, tags: ['private', 'water', 'lockable', 'ensuite'], windows: 'small', label: 'Ensuite' }),
+    seed('bath', 'bathroom', { area, min: 36, max: 70, minW: 6, tags: ['private', 'water', 'lockable', 'ensuite'], windows: 'small', label: 'Primary bath' }),
   wc: (area = 30, o: Partial<SeedOpts> = {}) =>
-    seed('wc', 'bathroom', { area, min: 18, max: 60, minW: 4.5, aspect: 2.9, front: 0.5, hall: true, tags: ['water', 'lockable', 'wc'], windows: 'small', label: 'WC', ...o }),
+    seed('wc', 'bathroom', { area, min: 18, max: 60, minW: 4.5, aspect: 2.9, front: 0.5, hall: true, tags: ['water', 'lockable', 'wc'], windows: 'small', label: 'Half bath', ...o }),
   utility: (area = 48, o: Partial<SeedOpts> = {}) =>
     seed('utility', 'utility', { area, min: 32, max: 90, minW: 5.5, front: 0.3, tags: ['service', 'utility'], windows: 'small', ...o }),
   storage: (area = 36, o: Partial<SeedOpts> = {}) =>
     seed('storage', 'storage', { area, min: 24, max: 80, minW: 5, front: 0.3, tags: ['service', 'storage'], windows: 'none', ...o }),
   study: (area = 100, o: Partial<SeedOpts> = {}) =>
-    seed('office', 'office', { area, min: 72, max: 170, minW: 8, front: 0.5, hall: true, tags: ['private', 'work', 'lockable'], label: 'Study', kit: 'study', ...o }),
+    seed('office', 'office', { area, min: 72, max: 170, minW: 8, front: 0.5, hall: true, tags: ['private', 'work', 'lockable'], label: 'Study', ...o }),
   hall: (o: Partial<SeedOpts> = {}) =>
-    seed('hall', 'hall', { area: 40, min: 12, max: 400, minW: 3.5, aspect: 99, front: 0.5, cls: 'circ', tags: ['circulation', 'narrow'], windows: 'none', kit: 'hall', ...o }),
+    seed('hall', 'hall', { area: 40, min: 12, max: 400, minW: 3.5, aspect: 99, front: 0.5, cls: 'circ', tags: ['circulation', 'narrow'], windows: 'none', ...o }),
 };
 
 /** Baths for a dwelling: a required bath, then either an ensuite on the first bedroom or a second bath. */

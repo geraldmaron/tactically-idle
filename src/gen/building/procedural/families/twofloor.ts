@@ -6,9 +6,9 @@ import type { Rand } from '../rand';
 import { CLOSET, seed } from '../programme';
 import type { PRoom, RoomSeed } from '../types';
 
-export const STAIR = seed('stair', 'stair', { area: 70, min: 40, max: 130, minW: 6, aspect: 2.6, cls: 'circ', tags: ['stairs', 'circulation'], windows: 'none', kit: 'stair', label: 'Stairs' });
-export const LANDING = seed('landing', 'hall', { area: 40, min: 12, max: 160, minW: 3.5, aspect: 99, cls: 'circ', tags: ['circulation', 'narrow'], windows: 'small', kit: 'landing', label: 'Landing' });
-export const FOYER = seed('hall', 'hall', { area: 40, min: 12, max: 160, minW: 3.5, aspect: 99, cls: 'circ', tags: ['circulation', 'narrow'], windows: 'none', kit: 'hall', label: 'Hall' });
+export const STAIR = seed('stair', 'stair', { area: 70, min: 40, max: 130, minW: 6, aspect: 2.6, cls: 'circ', tags: ['stairs', 'circulation'], windows: 'none', label: 'Stairs' });
+export const LANDING = seed('landing', 'hall', { area: 40, min: 12, max: 160, minW: 3.5, aspect: 99, cls: 'circ', tags: ['circulation', 'narrow'], windows: 'small', label: 'Landing' });
+export const FOYER = seed('hall', 'hall', { area: 40, min: 12, max: 160, minW: 3.5, aspect: 99, cls: 'circ', tags: ['circulation', 'narrow'], windows: 'none', label: 'Hall' });
 
 export interface TwoFloorOpts {
   /** Ground and upper floor rectangles (lot coordinates); the upper floor lies inside the ground floor. */
