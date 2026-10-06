@@ -14,9 +14,9 @@ import type { CasebookFilter, CasebookRow, FoundRow } from './casebook-model';
 import { isUnlocked } from '../../content/unlocks';
 
 const situationName = (situation: ScenarioSituation) => `Situation ${situation.variant + 1}${situation.characteristic === 'deliberate_answers' ? ' · slower answers' : ''}`;
-const bestText = (best: CasebookBest | undefined) => best ? best.label : 'No result yet';
+const bestText = (best: CasebookBest | undefined) => best ? `${best.label}${best.practice ? ' (practice)' : ''}` : 'No result yet';
 
-/** One row per framework: what was found, the best live result and where. Locked and
+/** One row per framework: what was found, the best result (live or practice) and where. Locked and
  * undiscovered rows show requirements and counts, never call content. */
 export function Casebook({ state, onPrepare }: { state: GameState; onPrepare: (id: string) => void }) {
   const rows = useMemo(() => casebookRows(state), [state.casebook, state.debriefs, state.department.level, state.officers, state.units]);
@@ -24,7 +24,7 @@ export function Casebook({ state, onPrepare }: { state: GameState; onPrepare: (i
   const [filter, setFilter] = useState<CasebookFilter>({ type: 'all', setting: 'all', status: 'all' });
   const [open, setOpen] = useState<IncidentType | null>(null);
   const shown = filterRows(rows, filter);
-  return <Section title="Casebook" icon="book" hint="Calls your department has taken. Replay any situation you have found as practice on a fresh building, with virtual gear and no rewards or consequences.">
+  return <Section title="Casebook" icon="book" hint="Calls your department has taken. Replay any situation you have found as practice on a fresh building, with virtual gear and no rewards or consequences. A better practice result counts as your best.">
     <Card className="casebook-card">
       <p className="casebook-totals" role="status">
         <strong>{totals.frameworksFound} of {totals.frameworks}</strong> kinds of call found · <strong>{totals.situationsFound} of {totals.situations}</strong> situations

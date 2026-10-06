@@ -117,19 +117,21 @@ export function casebookRows(state: Pick<GameState, 'casebook' | 'debriefs' | 'd
     const variants = [...new Set(mine.map((entry) => entry.ref.variant))].sort((a, b) => a - b);
     const situations = variants.map((variant): CasebookSituation => {
       const here = mine.filter((entry) => entry.ref.variant === variant);
-      const pacings = order.filter((s) => s.variant === variant && here.some((entry) => entry.ref.characteristic === s.characteristic));
+      // Practice adds to the best result only; pacings and buildings are what live calls met.
+      const met = here.filter((entry) => !entry.practiceOnly);
+      const pacings = order.filter((s) => s.variant === variant && met.some((entry) => entry.ref.characteristic === s.characteristic));
       let best: CasebookBest | undefined;
       for (const entry of here) if (entry.best && betterBest(entry.best, best)) best = entry.best;
       return {
         variant,
-        pacings: pacings.length ? pacings : [{ variant: variant as ScenarioSituation['variant'], characteristic: here[0].ref.characteristic }],
+        pacings: pacings.length ? pacings : [{ variant: variant as ScenarioSituation['variant'], characteristic: (met[0] ?? here[0]).ref.characteristic }],
         ...(best ? { best } : {}),
-        buildings: [...new Set(here.map((entry) => entry.ref.familyId))],
+        buildings: [...new Set(met.map((entry) => entry.ref.familyId))],
       };
     });
     let best: CasebookBest | undefined;
     for (const situation of situations) if (situation.best && betterBest(situation.best, best)) best = situation.best;
-    return { ...base, status: 'found', situations, ...(best ? { best } : {}), buildings: [...new Set(mine.map((entry: { ref: RecipeRef }) => entry.ref.familyId))], missing };
+    return { ...base, status: 'found', situations, ...(best ? { best } : {}), buildings: [...new Set(mine.filter((entry) => !entry.practiceOnly).map((entry: { ref: RecipeRef }) => entry.ref.familyId))], missing };
   });
 }
 

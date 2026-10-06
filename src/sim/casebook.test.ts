@@ -3,7 +3,7 @@ import { dispatch } from './game';
 import { createInitialState } from './department';
 import { HOUR_MS } from './economy';
 import { playerArcContext, takeIncident } from './incidents';
-import { casebookRecipes, noveltyWeights, recipeOfScenario, situationCount } from './casebook';
+import { casebookRecipes, foldDebriefs, noveltyWeights, recipeOfScenario, situationCount } from './casebook';
 import { deserialize, serialize } from './save';
 import { drawIncidentSpec, incidentId } from '../gen/incident';
 import { specForSituationV10 } from '../content/scenario-recipes';
@@ -155,7 +155,7 @@ describe('casebook record', () => {
     const ref = recipeOfScenario(id)!;
     expect(ref).toMatchObject({ type: 'domestic', variant: 1, characteristic: 'ordinary' });
     expect(Object.keys(s.casebook!.recipes)).toEqual([ref.key]);
-    s.debriefs = [debrief(id, false, 40, false), debrief(id, true, 100, true)];
+    s.debriefs = [debrief(id, false, 40, false)];
     expect(casebookRecipes(s).get(ref.key)!.best).toEqual({ completed: false, objective: 40, safety: 90, label: 'Partial progress' });
     s.debriefs = [debrief(id, false, 30, true), ...s.debriefs];
     const second = card(s, 'welfare_check', 'harbour_court', 0);
@@ -163,6 +163,33 @@ describe('casebook record', () => {
     expect(s.casebook!.recipes[ref.key].best).toEqual({ completed: true, objective: 30, safety: 90, label: 'Resolved' });
     s.debriefs = [];
     expect(casebookRecipes(s).get(ref.key)!.best!.completed).toBe(true);
+  });
+
+  it('counts a better practice result on a situation already met live, and never discovers by practice', () => {
+    const s = createInitialState(T0, 31);
+    const id = card(s, 'domestic', 'cedar_close', 1);
+    takeIncident(s, id);
+    const ref = recipeOfScenario(id)!;
+    s.debriefs = [debrief(id, true, 100, true), debrief(id, false, 40, false)];
+    expect(casebookRecipes(s).get(ref.key)!.best).toEqual({ completed: true, objective: 100, safety: 90, label: 'Resolved', practice: true });
+    // The same situation practiced on another building type: the best counts, but the
+    // building is marked practice-only, so it is not listed as visited.
+    const elsewhere = incidentId({ ...specForSituationV10('domestic', 'harbour_court', { variant: 1, characteristic: 'ordinary' }, 9), contentVersion: 11 });
+    const otherRef = recipeOfScenario(elsewhere)!;
+    expect(otherRef.key).not.toBe(ref.key);
+    // A framework or situation never met live stays undiscovered, whatever practice scored.
+    const unmet = incidentId({ ...specForSituationV10('domestic', 'cedar_close', { variant: 0, characteristic: 'ordinary' }, 9), contentVersion: 11 });
+    const neverSent = incidentId({ ...specForSituationV10('disturbance', 'cedar_close', { variant: 0, characteristic: 'ordinary' }, 9), contentVersion: 11 });
+    s.debriefs = [debrief(elsewhere, true, 90, true), debrief(unmet, true, 100, true), debrief(neverSent, true, 100, true), ...s.debriefs];
+    foldDebriefs(s, T0 + HOUR_MS);
+    expect(s.casebook!.recipes[otherRef.key]).toEqual({ firstAt: T0 + HOUR_MS, practiceOnly: true, best: { completed: true, objective: 90, safety: 90, label: 'Resolved', practice: true } });
+    expect(s.casebook!.recipes[recipeOfScenario(unmet)!.key]).toBeUndefined();
+    expect(s.casebook!.recipes[recipeOfScenario(neverSent)!.key]).toBeUndefined();
+    // A live dispatch to that building type later makes it a visited building.
+    s.incidents.unshift({ id: elsewhere, type: 'domestic', familyId: 'harbour_court', tier: 2, arrivedAt: T0, expiresAt: T0 + HOUR_MS, seen: true });
+    takeIncident(s, elsewhere);
+    expect(s.casebook!.recipes[otherRef.key].practiceOnly).toBeUndefined();
+    expect(deserialize(serialize(s, T0))!.casebook).toEqual(s.casebook);
   });
 
   it('migrates a v5 save from its board and live debriefs, and round-trips v6', () => {

@@ -34,7 +34,8 @@ import type {
 import type { ActionDefinition, OutcomeEffect, ScenarioDefinition } from './scenario-types';
 import { scenarioActions } from './scenario-types';
 import { getScenario } from './scenario-registry';
-import { INCIDENT_TUNING, takeIncident } from './incidents';
+import { INCIDENT_TUNING, PLAYER_ARC_CONTENT_VERSION, takeIncident } from './incidents';
+import { foldDebriefs } from './casebook';
 import { ITEMS } from '../content/items';
 import { legacyItemDefinition } from './compatibility/retirement';
 import { hashSeed, next } from './rng';
@@ -1052,8 +1053,10 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     run.settled = true;
     run.status = 'closed';
     draft.debriefs = [result, ...draft.debriefs].slice(0, 10);
+    // Fold now, not only at the next dispatch: the state keeps ten debriefs, and a run of
+    // practice could otherwise push a best result out before it is recorded.
+    if (draft.contentVersion >= PLAYER_ARC_CONTENT_VERSION) foldDebriefs(draft, draft.department.clockHighWater);
     draft.activeRun = null;
-    void scenario;
     return { ok: true };
   },
 };

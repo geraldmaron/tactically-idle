@@ -288,7 +288,8 @@ function validCasebook(c: unknown): boolean {
   if (c === undefined) return true;
   if (!isObj(c) || !isStrings(c.frameworksSeen) || new Set(c.frameworksSeen).size !== c.frameworksSeen.length || !isObj(c.recipes)) return false;
   return Object.entries(c.recipes).every(([key, entry]) => !!parseRecipeKey(key) && isObj(entry) && isNum(entry.firstAt)
-    && (entry.best === undefined || (isObj(entry.best) && isBool(entry.best.completed) && numbers(entry.best, ['objective', 'safety']) && isStr(entry.best.label))));
+    && (entry.practiceOnly === undefined || entry.practiceOnly === true)
+    && (entry.best === undefined || (isObj(entry.best) && isBool(entry.best.completed) && numbers(entry.best, ['objective', 'safety']) && isStr(entry.best.label) && (entry.best.practice === undefined || entry.best.practice === true))));
 }
 
 /** Basic structural validation: enough that the UI and sim cannot crash on a loaded state. */

@@ -23,7 +23,7 @@ export function DebriefSummary({ debrief: d }: { debrief: DebriefResult }) {
         <span className="result-score-outcome">{result.label}</span>
       </section>)}
     </div>}
-    {d.practice ? <p className="result-practice"><Icon name="info" size={18} /><span><strong>Practice complete</strong>No lasting changes to officers, supplies or reputation. No rewards earned.</span></p> : <section className="result-rewards" aria-label="Rewards">
+    {d.practice ? <p className="result-practice"><Icon name="info" size={18} /><span><strong>Practice complete</strong>No lasting changes to officers, supplies or reputation. No rewards earned. A better result still counts as your casebook best.</span></p> : <section className="result-rewards" aria-label="Rewards">
       <span className="result-score-label"><Icon name="cash" size={16} />Rewards</span>
       <div className="chips">
         {d.fundingReward !== 0 && <Chip tone={d.fundingReward < 0 ? 'danger' : 'mint'} icon="cash">{signedMoney(d.fundingReward)} funding</Chip>}
