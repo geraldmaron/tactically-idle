@@ -4,7 +4,7 @@ import { deriveLocation } from '../../../sim/location';
 import { validateLocation } from '../../../sim/location-validate';
 import { FAMILIES } from './families';
 import { polyArea } from './geom';
-import { furnishLocationV7, validateFurnishingsV7 } from '../furnishing-v7';
+import { furnishingShortfallsG1, furnishLocationG1, validateFurnishingsG1 } from '../furnishing-g1';
 import { BUILDING_FAMILIES } from './index';
 import { PASS_SCORE, planSignature, plausibilityReport } from './plausibility';
 import { generate, generateFallback, generatePair, publicFamilyId, type AttemptStats, type GeneratedBuilding } from './generate';
@@ -72,8 +72,10 @@ export function familySuite(familyId: string): void {
           const issues = validateLocation(loc, deriveLocation(loc));
           if (issues.length) bad.push(`seed ${s} ${loc.id}: ${issues.map((i) => `[${i.code}] ${i.message}`).join('; ')}`);
         }
-        const diag = validateFurnishingsV7(pair.furnished);
+        const diag = validateFurnishingsG1(pair.furnished);
         if (diag.length) bad.push(`seed ${s} furnishing: ${diag.join('; ')}`);
+        const short = furnishingShortfallsG1(pair.furnished);
+        if (short.length) bad.push(`seed ${s} kit: ${short.join('; ')}`);
       }
       expect(bad.slice(0, 5)).toEqual([]);
     }, LONG);
@@ -82,11 +84,11 @@ export function familySuite(familyId: string): void {
       for (const s of [0, 1, 7, 42, 99, 250, 499]) {
         const a = generatePair(fam.id, s);
         expect(generatePair(fam.id, s)).toEqual(a);
-        expect(furnishLocationV7(a.plain)).toEqual(a.furnished);
+        expect(furnishLocationG1(a.plain)).toEqual(a.furnished);
         expect(a.plain.seed).toBe(s);
         expect(a.plain.familyId).toBe(publicFamilyId(fam.id));
         expect(a.plain.setting).toBe(fam.setting);
-        // Interior furniture belongs to furnishLocationV7 alone; the plan keeps only yard objects.
+        // Interior furniture belongs to furnishLocationG1 alone; the plan keeps only yard objects.
         const rooms = new Set(a.plain.rooms.map((r) => r.id));
         expect(a.plain.objects.filter((o) => rooms.has(o.in))).toEqual([]);
       }
@@ -106,7 +108,8 @@ export function familySuite(familyId: string): void {
         const { plain, furnished } = generateFallback(fam.id, seed);
         expect(plain.seed).toBe(seed);
         for (const loc of [plain, furnished]) expect(validateLocation(loc, deriveLocation(loc))).toEqual([]);
-        expect(validateFurnishingsV7(furnished)).toEqual([]);
+        expect(validateFurnishingsG1(furnished)).toEqual([]);
+        expect(furnishingShortfallsG1(furnished)).toEqual([]);
         expect(plausibilityReport(furnished).pass).toBe(true);
       }
     }, LONG);

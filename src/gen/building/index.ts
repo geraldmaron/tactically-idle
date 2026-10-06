@@ -60,7 +60,7 @@ export function generateBuilding(familyId: string, seed: number): LocationDefini
   const specId = proceduralSpecId(baseId);
   if (specId) {
     // Generation runs a bounded search per seed that already furnishes each candidate with
-    // furnishLocationV7 to accept it; selectors rebuild locations several times per render,
+    // furnishLocationG1 to accept it; selectors rebuild locations several times per render,
     // so both forms of the accepted building are cached.
     if (!proceduralCache.has(key)) {
       const pair = generateProceduralPair(specId, seed);
