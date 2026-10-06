@@ -106,8 +106,10 @@ export function attachStoryBindings(s: ScenarioDefinition, built: BuiltLocation)
     for (const action of actions) for (const effects of Object.values(action.outcomes)) for (const effect of effects) if (effect.reveal?.includes('v5_noise_f_eli')) effect.reveal.push('story_grant_location');
     move('eli', p + 'eli_safe');
     const register = findStoryObject(built, { spaceId: target, type: 'register' }, seed);
-    if (!register) throw new Error('Eli’s shop scene requires an actual register');
-    story.bindings.props.register = { id: 'register', label: 'Shop register', kind: 'mapped', objectId: register.id };
+    // v11 setting modules choose the scene room; only the retail module needs (and
+    // selects for) a register. Offices, warehouses and motels have no till to map.
+    if (!register && spec.contentVersion < 11) throw new Error('Eli’s shop scene requires an actual register');
+    if (register) story.bindings.props.register = { id: 'register', label: 'Shop register', kind: 'mapped', objectId: register.id };
     bindRoute(ids('reach_eli', 'urgent_response'), 'entry');
     bindRoute(ids('bring_eli_out'), 'exit', true);
     personTarget(ids('reach_eli', 'civilian_aid', 'civilian_transfer', 'civilian_agreement', 'civilian_next_step'), 'eli');
