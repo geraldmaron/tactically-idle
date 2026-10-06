@@ -45,11 +45,12 @@ export const INCIDENT_TYPES: IncidentTypeInfo[] = [
   { type: 'false_intruder', label: 'Uncertain occupancy', families: homes, squads: [1, 2] },
 ];
 /** Future calls use v12; issued v1–v11 seed tuples retain their original content. v12 keeps
- * the v11 catalog and adds decision depth to every typed framework (frameworks-v9.ts). */
+ * the v11 catalog and adds decision depth to every typed framework (frameworks-v9.ts) and a
+ * framework-first board draw (drawIncidentSpec). */
 export const INCIDENT_CONTENT_VERSION = 12;
 /** Highest incident content version this build can read. */
 export const SUPPORTED_INCIDENT_CONTENT_VERSION = 12;
-/** First content version with the v12 decision structures. */
+/** First content version with framework-first draws and the v12 decision structures. */
 export const DECISION_DEPTH_CONTENT_VERSION = FRAMEWORK_DEPTH_CONTENT_VERSION;
 export const INCIDENT_TYPES_V2: IncidentTypeInfo[] = [
   ...INCIDENT_TYPES,
@@ -442,10 +443,12 @@ export function drawIncidentSpec(
   rngState: number,
   ctx: { level: number; trust: number; contentVersion: number; avoidFamilies?: readonly string[]; avoidTypes?: readonly IncidentType[]; recentTypes?: readonly IncidentType[]; unlockedTypes?: readonly IncidentType[]; typeWeights?: Partial<Record<IncidentType, number>> },
 ): { spec: IncidentSpec; state: number } {
-  // Four slots for each everyday call, one for each specialist report. Keep the
-  // v1 array and number of PRNG draws exactly unchanged for saved campaigns.
+  // Four slots for each everyday call, one for each specialist report (three from v12, so
+  // an unlocked specialist call comes about one draw in 23). Keep the v1 array and number of
+  // PRNG draws exactly unchanged for saved campaigns.
+  const specialistSlots = ctx.contentVersion >= DECISION_DEPTH_CONTENT_VERSION ? 3 : 1;
   let pool = ctx.contentVersion >= 9
-    ? typesV9Plus(ctx.contentVersion).flatMap(info => ['active_armed_incident', 'hostage_crisis', 'protected_rescue'].includes(info.type) ? [info] : [info, info, info, info])
+    ? typesV9Plus(ctx.contentVersion).flatMap(info => ['active_armed_incident', 'hostage_crisis', 'protected_rescue'].includes(info.type) ? Array.from({ length: specialistSlots }, () => info) : [info, info, info, info])
     : ctx.contentVersion >= 5
     ? INCIDENT_TYPES_V5
     : ctx.contentVersion >= 4
@@ -469,18 +472,32 @@ export function drawIncidentSpec(
     const weights = ctx.typeWeights;
     pool = pool.flatMap(type => Array.from({ length: Math.min(8, Math.max(1, Math.round(weights[type.type] ?? 1))) }, () => type));
   }
-  // Restrict v5 family selection to remaining stories before preferring a fresh
-  // location. Otherwise a fresh home could repeat a story while a shop story is unused.
   const known = familiesFor(ctx.contentVersion);
-  const families = ctx.contentVersion >= 5 ? known.filter(id => pool.some(type => type.families.includes(id))) : known;
-  const fresh = families.filter(id => !ctx.avoidFamilies?.includes(id));
-  const family = pick(rngState, fresh.length ? fresh : families);
-  const incident = pick(family.state, pool.filter((x) => x.families.includes(family.value)));
-  const building = next(incident.state);
+  let familyId: string, info: IncidentTypeInfo, drawn: number;
+  if (ctx.contentVersion >= DECISION_DEPTH_CONTENT_VERSION) {
+    // v12: framework first, then one of its buildings (a fresh one when it can). Drawing a
+    // building first made a framework's odds depend on how many building types it fits, so a
+    // specialist call on a few types (protected rescue) came about 4 times in 600 draws even
+    // when unlocked. Same two PRNG draws as before.
+    const type = pick(rngState, pool);
+    const own = known.filter(id => type.value.families.includes(id));
+    const fresh = own.filter(id => !ctx.avoidFamilies?.includes(id));
+    const family = pick(type.state, fresh.length ? fresh : own);
+    [info, familyId, drawn] = [type.value, family.value, family.state];
+  } else {
+    // Restrict v5 family selection to remaining stories before preferring a fresh
+    // location. Otherwise a fresh home could repeat a story while a shop story is unused.
+    const families = ctx.contentVersion >= 5 ? known.filter(id => pool.some(type => type.families.includes(id))) : known;
+    const fresh = families.filter(id => !ctx.avoidFamilies?.includes(id));
+    const family = pick(rngState, fresh.length ? fresh : families);
+    const type = pick(family.state, pool.filter((x) => x.families.includes(family.value)));
+    [info, familyId, drawn] = [type.value, family.value, type.state];
+  }
+  const building = next(drawn);
   const seed = next(building.state);
   const tier = next(seed.state);
   const cap = Math.max(1, Math.min(5, 1 + Math.floor(ctx.level / 2), ctx.trust < 40 ? 2 : 5));
-  const spec: IncidentSpec = { type: incident.value.type, familyId: family.value, buildingSeed: Math.floor(building.value * 0x100000000), seed: Math.floor(seed.value * 0x100000000), tier: 1 + Math.floor(tier.value * cap), contentVersion: ctx.contentVersion };
+  const spec: IncidentSpec = { type: info.type, familyId, buildingSeed: Math.floor(building.value * 0x100000000), seed: Math.floor(seed.value * 0x100000000), tier: 1 + Math.floor(tier.value * cap), contentVersion: ctx.contentVersion };
   return { spec, state: tier.state };
 }
 
