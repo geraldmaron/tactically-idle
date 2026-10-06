@@ -6,6 +6,8 @@ import { initializePersonnel } from './personnel';
 import { buildLocation } from './location';
 import { actionViews } from './operation-selectors';
 import { computeDebrief, validateScenario } from './operation';
+import { planActionResupply } from './equipment-resupply';
+import { responseFailurePlan } from './response-failure';
 import { getScenario } from './scenario-registry';
 import { deserialize, serialize } from './save';
 import { apply, makeState, NOW, startCmd, unitId } from './test-fixtures';
@@ -31,8 +33,35 @@ describe('finite story journeys preserve progress and end honestly', () => {
       expect(start.result, scenarioId).toEqual({ ok: true }); state = start.state;
       for (let step = 0; state.activeRun!.status === 'active' && step < 45; step++) {
         const before = structuredClone(state.activeRun!.history);
-        const options = actionViews(state, NOW, 'A').filter(view => view.eligible);
-        expect(options.length, `${scenarioId} step ${step}: no way to continue or record a partial`).toBeGreaterThan(0);
+        const visible = actionViews(state, NOW, 'A');
+        const options = visible.filter(view => view.eligible);
+        if (!options.length) {
+          // A missing item is recoverable when stores can deliver it; only a genuine dead end may fail.
+          const delivery = visible.find(view => planActionResupply(state, NOW, view.id, view.actingSquadIds, view.supportSquadIds).ok);
+          if (delivery) {
+            expect(responseFailurePlan(state)).toBeNull();
+            const supplied = apply(state, { type: 'resupplyAction', actionId: delivery.id, actingSquadIds: delivery.actingSquadIds, supportSquadIds: delivery.supportSquadIds });
+            expect(supplied.result).toEqual({ ok: true });
+            const restored = deserialize(serialize(supplied.state, NOW));
+            expect(restored?.activeRun).toEqual(supplied.state.activeRun);
+            expect(restored!.activeRun!.history).toEqual(before);
+            state = restored!;
+            continue;
+          }
+          const plan = responseFailurePlan(state);
+          expect(plan, `${scenarioId} step ${step}: exhausted response needs an explicit failure report`).not.toBeNull();
+          const beforeFailure = structuredClone(state);
+          const failed = apply(state, { type: 'endFailedResponse', runId: plan!.runId, revision: plan!.revision });
+          expect(failed.result).toEqual({ ok: true });
+          const { runId: _runId, consequence: _consequence, ...record } = plan!;
+          Object.assign(beforeFailure.activeRun!, { stage: 'debrief', status: 'debrief', endingId: 'handed_over', responseFailure: record });
+          // Reporting failure cannot invent time, RNG, progress, accepted care, or squad movement.
+          expect(failed.state).toEqual(beforeFailure);
+          const restored = deserialize(serialize(failed.state, NOW));
+          expect(restored?.activeRun).toEqual(failed.state.activeRun);
+          state = restored!;
+          break;
+        }
         const onward = options.filter(view => !/partial|withdraw|record.*pending|record.*unfinished/i.test(view.id + ' ' + view.title));
         const choices = onward.length ? onward : options;
         const chosen = choices[(seed + step) % choices.length];
@@ -54,9 +83,20 @@ describe('finite story journeys preserve progress and end honestly', () => {
       expect(report).not.toBeNull();
       conclusions.add(report.disposition ?? 'unknown');
       if (report.completionAchieved) completed++;
-      expect(state.activeRun!.history.length).toBeGreaterThanOrEqual(2);
+      expect(state.activeRun!.history.length).toBeGreaterThanOrEqual(state.activeRun!.responseFailure ? 1 : 2);
       if (report.completionAchieved) expect(['resolved', 'care_accepted', 'followup_agreed']).toContain(report.disposition);
+      if (state.activeRun!.responseFailure) {
+        expect(report).toMatchObject({ completionAchieved: false, disposition: 'unresolved', fundingReward: 0, devPointReward: 0, trustDelta: -2 });
+        expect(report.officerCondition.every(officer => officer.xpGained === 0)).toBe(true);
+        expect(report.remainingTasks!.length).toBeGreaterThan(0);
+      }
       const closed = apply(state, { type: 'closeDebrief' }); expect(closed.result).toEqual({ ok: true });
+      if (state.activeRun!.responseFailure) {
+        expect(closed.state.department.funding).toBe(state.department.funding);
+        expect(closed.state.department.devPoints).toBe(state.department.devPoints);
+        expect(closed.state.department.trust).toBe(state.department.trust - 2);
+      }
+      expect(deserialize(serialize(closed.state, NOW))?.debriefs).toEqual(closed.state.debriefs);
       const duplicateClose = apply(closed.state, { type: 'closeDebrief' }); expect(duplicateClose.result.ok).toBe(false); expect(duplicateClose.state).toBe(closed.state);
     }
     expect(conclusions.size).toBeGreaterThan(0);

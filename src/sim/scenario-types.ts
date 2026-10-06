@@ -405,6 +405,11 @@ export interface StoryPropBinding {
   transitions?: { when: Condition; holderPersonId?: Id; observed?: boolean }[];
 }
 export interface StoryInstance {
+  /** V9 catalog recipe and public, mechanically supported characteristics. */
+  recipeId?: string;
+  characteristics?: { id: string; personId?: Id; label: string; source: string }[];
+  /** V9 cast recipe output. Cosmetic only; never a source of gameplay modifiers. */
+  cast?: Record<string, { firstName: string; surname: string; pronouns: 'she' | 'he' | 'they' }>;
   /** V6 coherent situation selected before presentation; all module effects share these bindings. */
   episode?: { variantId: string; modules: string[]; publicContext: string[] };
   archetypeId: string;

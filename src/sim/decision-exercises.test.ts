@@ -9,6 +9,8 @@ import { buildLocation } from './location';
 import { apply, NOW, startCmd } from './test-fixtures';
 import { deserialize, serialize } from './save';
 import { practiceEntries } from '../ui/screens/helpers';
+import { responseFailurePlan } from './response-failure';
+import { visibleDecisions } from '../ui/screens/liveModels';
 
 describe('immediately discoverable decision exercises', () => {
   it('keeps tutorials first and exposes six distinct decision exercises in existing campaigns', () => {
@@ -25,8 +27,8 @@ describe('immediately discoverable decision exercises', () => {
       expect(getScenario(exercise.id)?.variantLabel).toBe(generated.variantLabel);
     }
   });
-  it('keeps all issued v3 through v6 exercises in the legacy lookup without advertising them as new entries', () => {
-    expect(LEGACY_DECISION_EXERCISES).toHaveLength(21);
+  it('keeps all issued v3 through v8 exercises in the legacy lookup without advertising them as new entries', () => {
+    expect(LEGACY_DECISION_EXERCISES).toHaveLength(33);
     for (const entry of LEGACY_DECISION_EXERCISES) {
       const text = entry.spec.contentVersion >= 5 ? generateIncident(entry.spec) : { title: entry.title, summary: entry.summary, variantLabel: 'Decision exercise' };
       expect(getScenario(entry.id)).toMatchObject({ id: entry.id, version: entry.spec.contentVersion, title: text.title, summary: text.summary, variantLabel: text.variantLabel, practiceOnly: true });
@@ -38,11 +40,19 @@ describe('immediately discoverable decision exercises', () => {
     const entry = buildLocation(scenario.locationFamilyId, scenario.locationSeed).location.entries[0];
     const started = apply(original, startCmd(exercise.id, ['A'], { practice:true, positions:{ A:entry }, loadouts:{ A:{} } }));
     expect(started.result).toEqual({ ok:true }); let state = started.state;
-    const initial = actionViews(state, NOW, 'A'); expect(initial.length).toBeGreaterThanOrEqual(3); expect(initial.length).toBeLessThanOrEqual(5);
+    const initial = actionViews(state, NOW, 'A'); expect(initial.length).toBeGreaterThan(0); expect(initial.length).toBeLessThanOrEqual(5);
+    expect(initial.some(action => /End with the progress|Hand over to specialists/.test(action.title))).toBe(false);
     for (let i = 0; i < 32 && state.activeRun?.status === 'active'; i++) {
       const actions = actionViews(state, NOW, 'A');
-      expect(actions.length).toBeLessThanOrEqual(5);
-      const action = actions.find((candidate) => candidate.eligible); expect(action).toBeDefined();
+      expect(visibleDecisions(actions, null, false).length).toBeLessThanOrEqual(5);
+      const action = actions.find((candidate) => candidate.eligible);
+      if (!action) {
+        const plan = responseFailurePlan(state); expect(plan).not.toBeNull();
+        const failed = apply(state, { type: 'endFailedResponse', runId: plan!.runId, revision: plan!.revision });
+        expect(failed.result).toEqual({ ok: true }); state = failed.state;
+        expect(deserialize(serialize(state, NOW))?.activeRun).toEqual(state.activeRun);
+        break;
+      }
       const next = apply(state, { type:'decide', actionId:action!.id, actingSquadIds:action!.actingSquadIds, supportSquadIds:action!.supportSquadIds });
       expect(next.result).toEqual({ ok:true }); state = next.state;
       const roundtrip = deserialize(serialize(state, NOW)); expect(roundtrip).not.toBeNull(); state = roundtrip!;

@@ -1,5 +1,6 @@
 import { actionEquipmentRequirements, capabilityRuleEffect, effectiveSupplies, normalizedActionConsumption, operatorQualified, planningEquipmentContext } from './equipment-requirements';
 import { availableStageContinuations, legacyActionPresentation, legacyStageNavigation } from './compatibility/legacy-choices';
+import { isGenericResponseExit } from './response-failure';
 import { currentStoryPrompt } from './story-context';
 import { hydrateStoryAction, storyActionTarget, storyPublicScenario, storyPropsKnown } from './story-people';
 // Operation selectors consumed by the UI. Everything here is derived from game
@@ -462,7 +463,7 @@ export function actionViews(state: GameState, _now: number, focusSquadId: SquadI
   const s = getScenario(run.scenarioId);
   if (!s) return [];
   const built = builtFor(run.locationFamilyId, run.locationSeed, run.flags);
-  return s.stages[run.stage].actions.filter((a) => !legacyStageNavigation(s, a) && conditionHolds(a.visibleWhen, run)).map((a) => {
+  return s.stages[run.stage].actions.filter((a) => !legacyStageNavigation(s, a) && !isGenericResponseExit(s, a) && conditionHolds(a.visibleWhen, run)).map((a) => {
     const { ev, alternates } = evaluateDefault(state, run, s, built, a, focusSquadId);
     return toView(state, run, { ...a, ...legacyActionPresentation(s, a, built) }, ev, alternates);
   });

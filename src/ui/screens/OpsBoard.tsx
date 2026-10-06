@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { send, useGame } from '../store';
 import type { GameState, Id } from '../../sim/types';
@@ -11,6 +11,7 @@ import { relativeTime } from '../format';
 import { boardEntries, boardNote, incidentsOf, practiceEntries } from './helpers';
 import type { BoardEntry, PracticeEntry } from './helpers';
 import { DECISION_EXERCISES } from '../../content/scenarios/decision-exercises';
+import { ScenarioLibrary } from './ScenarioLibrary';
 import { IncidentBriefContext } from './SupportContext';
 
 /**
@@ -57,14 +58,16 @@ export function OpsBoard({ onPrepare }: { onPrepare: (id: Id) => void }) {
         )}
       </Section>
 
-      {featured.length > 0 && <Section title="Decision practice" icon="flag" hint="Practise current calls with virtual gear and no lasting consequences. These exercises are always available.">
+      <ScenarioLibrary onPrepare={onPrepare} />
+
+      {featured.length > 0 && <Section title="Decision practice" icon="flag" hint="Practice current calls with virtual gear and no lasting consequences. These exercises are always available.">
         <div className="stack">{featured.map((entry) => <PracticeCardView key={entry.card.id} entry={entry} onPrepare={onPrepare} />)}</div>
       </Section>}
 
       <Section title="Standing and practice" icon="flag" hint="Equipment exercises, standing assignments and past incidents. Exercises and replays use virtual gear with no rewards or consequences.">
         {otherPractice.length === 0 ? (
           <Card>
-            <EmptyState icon="flag" title="Nothing to practise yet">
+            <EmptyState icon="flag" title="Nothing to practice yet">
               Finished incidents appear here so you can replay them with a different squad or kit.
             </EmptyState>
           </Card>
@@ -82,11 +85,10 @@ export function OpsBoard({ onPrepare }: { onPrepare: (id: Id) => void }) {
 
 /**
  * Remembers which incidents were unseen when the board was opened, then marks them seen. The NEW badge
- * therefore stays for this visit and is gone on the next. Guarded: the command may not exist yet.
+ * therefore stays for this visit and is gone on the next.
  */
 function useFreshIncidents(g: GameState): Set<Id> {
   const [fresh, setFresh] = useState<Set<Id>>(() => new Set(incidentsOf(g).filter((i) => !i.seen).map((i) => i.id)));
-  const tried = useRef(0);
   const unseen = incidentsOf(g).filter((i) => !i.seen);
   const key = unseen.map((i) => i.id).join('|');
   useEffect(() => {
@@ -96,13 +98,7 @@ function useFreshIncidents(g: GameState): Set<Id> {
       unseen.forEach((i) => next.add(i.id));
       return next.size === prev.size ? prev : next;
     });
-    if (tried.current >= 3) return;
-    tried.current++;
-    try {
-      send({ type: 'markIncidentsSeen' });
-    } catch {
-      /* the department handler has not landed yet; the board still works */
-    }
+    send({ type: 'markIncidentsSeen' });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
   return fresh;

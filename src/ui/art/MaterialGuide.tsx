@@ -12,7 +12,7 @@ export function MaterialGuide() {
   return (
     <details className="material-guide">
       <summary>Construction reference</summary>
-      <p className="dim">Field samples for recognizing wall materials. Use the plan’s labelled symbols for tactical information.</p>
+      <p className="dim">Field samples for recognizing wall materials. Use the plan’s labeled symbols for tactical information.</p>
       <div className="material-guide-grid">
         {materials.map((id) => (
           <figure key={id}>

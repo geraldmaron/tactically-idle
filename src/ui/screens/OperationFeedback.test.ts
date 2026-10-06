@@ -83,7 +83,10 @@ function liveProps(actions: ActionView[], selectedAction: ActionView | null = ac
 it('shows the v6 welfare partial ending without a success percentage or favorable result claim', () => {
   const scenario = generateIncident({ type: 'welfare_check', familyId: 'cedar_close', buildingSeed: 7, seed: 2, tier: 1, contentVersion: 6 });
   const g = startRun(makeState(), scenario.id, ['A'], { practice: true, positions: { A: 'front_yard' }, loadouts: { A: {} } });
-  const view = actionViews(g, NOW, 'A').find(a => a.id.endsWith('assess_partial'))!;
+  expect(actionViews(g, NOW, 'A').some(a => a.id.endsWith('assess_partial'))).toBe(false);
+  // The retired card is hidden, but an already-issued historical decision keeps its exact presentation.
+  const legacyId = scenario.stages.assess.actions.find(a => a.id.endsWith('assess_partial'))!.id;
+  const view = previewAction(g, NOW, legacyId, ['A'], [])!;
   expect(view.eventResult).toBe('Response ended');
   const card = render(createElement(LiveView, liveProps([view])));
   expect(card).toContain('End with the progress made');

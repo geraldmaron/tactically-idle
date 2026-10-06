@@ -535,9 +535,12 @@ describe('overlays', () => {
       expect(v.overlays.some((o) => o.kind === 'line')).toBe(true);
       expect(v.overlays.some((o) => o.kind === 'path')).toBe(true);
     }
-    const resolve = actionViews(setRun(s, { stage: 'resolve' }), NOW, 'A');
+    const resolving = setRun(s, { stage: 'resolve' });
+    const resolve = actionViews(resolving, NOW, 'A');
     expect(resolve.find((x) => x.id === 'ms_controlled_entry')!.overlays.some((o) => o.kind === 'path')).toBe(true);
-    expect(resolve.find((x) => x.id === 'ms_handover')!.overlays).toEqual([]);
+    expect(resolve.some((x) => x.id === 'ms_handover')).toBe(false);
+    // The frozen no-movement action is still previewable for historical compatibility.
+    expect(previewAction(resolving, NOW, 'ms_handover', ['A'], [])!.overlays).toEqual([]);
   });
 
   it('tone thresholds and quality follow the stated cut-offs', () => {

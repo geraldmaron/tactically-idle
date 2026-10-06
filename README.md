@@ -74,4 +74,8 @@ Dev-only state handle in the browser console: `window.__ti.getState()`, `__ti.se
 
 ## Re-running the UI checks
 
-`scripts/play-loop.mjs` and `scripts/play-two-squads-320.mjs` drive the running dev server with installed Google Chrome via `playwright-core`. That package is not a project dependency, so install it outside the repo or with `npm i --no-save playwright-core`, then run `node scripts/play-loop.mjs 390x844`. Screenshots land in the working directory.
+Use a supported Node release (CI uses Node 24; local verification used Node 22). Run `npm ci`, then start the server with `npm run dev -- --host 127.0.0.1 --port 5174`. In another terminal, run `npm run test:e2e`.
+
+The existing Playwright driver now covers one recipe from every framework at 390×844 with one squad and 320×568 with two squads. It uses the real UI and isolated browser contexts. `playwright-core` is a declared development dependency; Google Chrome must be installed. Set `CHROME_PATH` for another Chrome executable or `TI_BASE_URL` for another server address. Set `TI_CAPTURE_DIR` and `TI_E2E_REPORT` to save screenshots and the JSON journey report. `node scripts/play-two-squads-320.mjs` runs only the smaller two-squad pass using the same driver.
+
+The version 9 library contains **100 distinct recipes across 14 story frameworks**. See [scenario generation and verification](docs/scenario-generation-v9.md) for the implementation plan, replay limits, compatibility rules, and current evidence.

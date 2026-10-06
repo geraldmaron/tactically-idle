@@ -6,7 +6,7 @@ import type { VariationChoice } from '../../sim/location-variation';
 import { deriveLocation } from '../../sim/location';
 import { validateLocation } from '../../sim/location-validate';
 import { validateScenario } from '../../sim/operation';
-import { briefing, builtForScenario, actionViews, pendingDebrief, scenarioCards, spaceViews } from '../../sim/operation-selectors';
+import { briefing, builtForScenario, actionViews, pendingDebrief, previewAction, scenarioCards, spaceViews } from '../../sim/operation-selectors';
 import { getScenario } from '../../sim/scenario-registry';
 import { createInitialState } from '../../sim/department';
 import { dispatch } from '../../sim/game';
@@ -155,17 +155,24 @@ describe('generated incidents', () => {
     expect(ticked.state.incidents.find((c) => c.id === card.id)).toEqual(card);
   });
 
-  it('keeps the specialist handover path reachable without equipment in every template', () => {
+  it('preserves the issued equipment-free handover path without offering its retired card', () => {
     for (const spec of specs(3)) {
       const id = incidentId(spec);
       const entry = builtForScenario(id).location.entries[0];
       let state = apply(createInitialState(NOW), startCmd(id, ['A'], { positions: { A: entry }, loadouts: { A: {} }, practice: true })).state;
       for (const actionId of ['gen_contact', 'gen_coordinate', 'gen_handover']) {
-        const choice = actionViews(state, NOW, 'A').find((a) => a.id === actionId)!;
+        const visible = actionViews(state, NOW, 'A').find((a) => a.id === actionId);
+        if (actionId === 'gen_handover') expect(visible).toBeUndefined();
+        const choice = actionId === 'gen_handover' ? previewAction(state, NOW, actionId, ['A'], [])! : visible!;
         expect(choice?.eligible, `${id} ${actionId}`).toBe(true);
-        state = apply(state, { type: 'decide', actionId, actingSquadIds: choice.actingSquadIds, supportSquadIds: choice.supportSquadIds }).state;
+        const result = apply(state, { type: 'decide', actionId, actingSquadIds: choice.actingSquadIds, supportSquadIds: choice.supportSquadIds });
+        expect(result.result).toEqual({ ok: true });
+        const restored = deserialize(serialize(result.state, NOW));
+        expect(restored?.activeRun).toEqual(result.state.activeRun);
+        state = restored!;
       }
       expect(state.activeRun?.endingId).toBe('handed_over');
+      expect(state.activeRun?.responseFailure).toBeUndefined();
     }
   });
 

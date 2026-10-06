@@ -8,6 +8,7 @@ import { computeDebrief } from '../../sim/operation';
 import { actionViews, briefing, spaceViews } from '../../sim/operation-selectors';
 import { bandFor, builtFor, evaluateAction, openingFlag } from '../../sim/resolution';
 import { forceSeverity } from '../../sim/force-risk';
+import { responseFailurePlan } from '../../sim/response-failure';
 import { storyPeoplePublic, storyPropsPublic } from '../../sim/story-people';
 import { hashSeed, next } from '../../sim/rng';
 import { deserialize, serialize } from '../../sim/save';
@@ -101,9 +102,20 @@ function forceFixture(path: ForcePath, band: OutcomeBand, harm: ForceOutcome['se
   throw new Error(`No natural RNG fixture found for ${path.label}/${band}/${harm}`);
 }
 
+function failResponse(state: GameState): GameState {
+  const plan = responseFailurePlan(state);
+  expect(plan, 'an exhausted issued response has an honest failure path').not.toBeNull();
+  const ended = apply(state, { type: 'endFailedResponse', runId: plan!.runId, revision: plan!.revision });
+  expect(ended.result).toEqual({ ok: true });
+  const restored = deserialize(serialize(ended.state, NOW));
+  expect(restored?.activeRun).toEqual(ended.state.activeRun);
+  return restored!;
+}
+
 function finishPartial(state: GameState, s: ScenarioDefinition) {
-  const partial = actionViews(state, NOW, 'A').find(a => a.eligible && /withdraw|partial/.test(a.id));
-  expect(partial, `${s.id}: a recorded partial exit remains available`).toBeDefined();
+  // Explicit compatibility coverage for already-issued v7 records; the current UI hides these cards.
+  const partial = scenarioActions(s).find(a => a.stage === state.activeRun!.stage && /withdraw|partial/.test(a.id) && evaluate(state, s, a.id).eligible);
+  expect(partial, `${s.id}: frozen v7 exit remains replayable`).toBeDefined();
   state = choose(state, s, partial!.id);
   expect(state.activeRun!.status).toBe('debrief');
   const report = computeDebrief(state, state.activeRun!)!;
@@ -153,6 +165,7 @@ describe('generated v7 scene journeys', () => {
       let checked = false;
       for (let step = 0; step < 40 && state.activeRun!.status === 'active'; step++) {
         const options = actionViews(state, NOW, 'A').filter(a => a.eligible);
+        if (!options.length) { state = failResponse(state); break; }
         const chosen = options.find(a => /officer_(aid|request|wait|evacuate)/.test(a.id))
           ?? options.find(a => a.id === `v7_check_${path.personId}`)
           ?? options.find(a => a.id === `v7_request_${path.personId}`)
@@ -274,6 +287,7 @@ describe('generated v7 scene journeys', () => {
       let state = start(s, seed + 91, false);
       for (let step = 0; step < 45 && state.activeRun!.status === 'active'; step++) {
         const options = actionViews(state, NOW, 'A').filter(a => a.eligible);
+        if (!options.length) { state = failResponse(state); break; }
         expect(options.length, `${s.id}: no current choice`).toBeGreaterThan(0);
         const onward = options.filter(a => !/withdraw|partial/.test(a.id));
         const choices = onward.length ? onward : options;

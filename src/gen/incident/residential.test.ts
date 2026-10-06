@@ -3,7 +3,7 @@ import { ASH_GROVE, JUNIPER_COURT, RESIDENTIAL_FAMILIES_V1 } from '../../content
 import { createInitialState } from '../../sim/department';
 import { buildLocation, deriveLocation, pointInPolygon } from '../../sim/location';
 import { applyChoices } from '../../sim/location-variation';
-import { actionViews, builtForScenario } from '../../sim/operation-selectors';
+import { actionViews, builtForScenario, previewAction } from '../../sim/operation-selectors';
 import { deserialize, serialize } from '../../sim/save';
 import { signalBetween } from '../../sim/spatial';
 import { routeBetween } from '../../sim/spatial-factors';
@@ -102,7 +102,7 @@ describe('residential incident fairness and persistence', () => {
     expect([...occupied].sort()).toEqual(family.base.rooms.filter((room) => ['bedroom', 'bathroom', 'living'].includes(room.type)).map((room) => room.id).sort());
   });
 
-  it.each(RESIDENTIAL_FAMILIES_V1)('$id supports both equipment-free action paths from every entrance at low, mid and high tiers', (family) => {
+  it.each(RESIDENTIAL_FAMILIES_V1)('$id preserves both issued equipment-free paths at every entrance and tier while hiding the retired handover', (family) => {
     for (const seed of [0, 7, 63]) for (const type of INCIDENT_TYPES.filter((type) => type.families.includes(family.id))) {
       const scenario = generateIncident({ type: type.type, familyId: family.id, buildingSeed: seed, seed, tier: seed === 0 ? 1 : seed === 7 ? 3 : 5, contentVersion: 1 });
       for (const entry of family.base.entries) for (const path of [
@@ -114,7 +114,10 @@ describe('residential incident fairness and persistence', () => {
         expect(start.result, `${scenario.id} at ${entry}`).toEqual({ ok: true });
         state = start.state;
         for (const actionId of path) {
-          const choice = actionViews(state, NOW, 'A').find((choice) => choice.id === actionId)!;
+          const visible = actionViews(state, NOW, 'A').find((choice) => choice.id === actionId);
+          if (actionId === 'gen_handover') expect(visible).toBeUndefined();
+          // Direct replay preserves the issued v1 contract; current players do not see this exit.
+          const choice = actionId === 'gen_handover' ? previewAction(state, NOW, actionId, ['A'], [])! : visible!;
           expect(choice?.eligible, `${scenario.id} at ${entry}: ${actionId}: ${choice?.reason}`).toBe(true);
           const decision = apply(state, { type: 'decide', actionId, actingSquadIds: choice.actingSquadIds, supportSquadIds: choice.supportSquadIds });
           expect(decision.result).toEqual({ ok: true });
@@ -124,6 +127,7 @@ describe('residential incident fairness and persistence', () => {
           state = restored;
         }
         expect(state.activeRun?.status).toBe('debrief');
+        expect(state.activeRun?.responseFailure).toBeUndefined();
         if (path[2] === 'gen_handover') expect(state.activeRun?.endingId).toBe('handed_over');
       }
     }

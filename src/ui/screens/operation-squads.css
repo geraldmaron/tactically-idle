@@ -1,0 +1,20 @@
+.live-squad-rail.operation-squad-focus { padding: 8px var(--gutter); margin: 0; }
+.operation-squad-focus .choice-rail { margin: 0; }
+.operation-squad-hint { margin: 5px 0 8px; color: var(--text-dim); font-size: 12px; line-height: 1.45; }
+.squad-tab-detail { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; }
+.squad-tab-detail small { color: var(--text-dim); font-size: 11px; line-height: 1.2; }
+.action-squad-assignment { padding: 12px; border: 1px solid var(--line-strong); border-radius: 10px; background: var(--panel); }
+.assignment-choices { display: flex; flex-wrap: wrap; gap: 6px; }
+.assignment-choice { display: flex; flex: 1 1 115px; align-items: flex-start; flex-direction: column; justify-content: center; gap: 3px; padding: 9px 11px; text-align: left; }
+.assignment-choice strong { font-size: 13px; }
+.assignment-choice small { color: var(--text-dim); font-size: 11px; line-height: 1.35; }
+.assignment-choice:disabled { opacity: .55; cursor: default; }
+.operation-squad-participants { margin: 3px 0; font-size: 12px; line-height: 1.45; }
+.prep-squad-workspace { min-width: 0; }
+.prep-squad-workspace > .choice-rail { margin-bottom: 10px; }
+.prep-deployment-summary { margin: 0 0 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; list-style: none; display: grid; gap: 7px; font-size: 12px; color: var(--text-dim); }
+.prep-deployment-summary li { min-width: 0; overflow-wrap: anywhere; }
+.prep-deployment-summary strong { color: var(--text); }
+.call.operation-failed-response { margin: 14px var(--gutter) 20px; padding: 12px; border: 1px solid var(--danger); border-radius: 10px; background: var(--panel); }
+.operation-failed-response h3 { margin: 0 0 8px; font-size: 16px; }
+.operation-failed-response p { margin: 8px 0; font-size: 13px; line-height: 1.45; }

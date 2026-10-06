@@ -77,12 +77,9 @@ describe('operation surface scroll transitions', () => {
 
     screen.scrollTop = 1100;
     hooks.state.activeRun = null;
-    const returnedPreparation = render();
-    expect(returnedPreparation.type).toBe(OpsPrepare);
-    expect(screen.scrollTop).toBe(0);
-    screen.scrollTop = 1500;
-    returnedPreparation.props.onCancel();
+    // Closing results must return to the library, not the stale preparation.
     expect(render().type).toBe(OpsBoard);
+    expect(hooks.prep).toBeNull();
     expect(screen.scrollTop).toBe(0);
   });
 
