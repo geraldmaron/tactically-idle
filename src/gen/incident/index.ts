@@ -9,6 +9,7 @@ import { withVersionEightDecisions } from './decisions-v8';
 import { withVersionNineCast } from './cast-v9';
 import { withAdditionalFramework } from './frameworks-v9';
 import { ADDITIONAL_FRAMEWORK_BY_TYPE } from '../../content/incident-frameworks-v9';
+import { FRAMEWORK_DEPTH_CONTENT_VERSION } from '../../content/framework-depth-v12';
 import { SCENARIO_TYPES_V9 } from '../../content/scenario-recipes';
 import { SCENARIO_TYPES_V10 } from '../../content/scenario-types-v10';
 import { SCENARIO_TYPES_V11 } from '../../content/scenario-types-v11';
@@ -43,10 +44,13 @@ export const INCIDENT_TYPES: IncidentTypeInfo[] = [
   { type: 'burglary', label: 'Alarm response', families: ['market_row'], squads: [1, 3] },
   { type: 'false_intruder', label: 'Uncertain occupancy', families: homes, squads: [1, 2] },
 ];
-/** Future calls use v11; issued v1–v10 seed tuples retain their original content. */
-export const INCIDENT_CONTENT_VERSION = 11;
+/** Future calls use v12; issued v1–v11 seed tuples retain their original content. v12 keeps
+ * the v11 catalog and adds decision depth to every typed framework (frameworks-v9.ts). */
+export const INCIDENT_CONTENT_VERSION = 12;
 /** Highest incident content version this build can read. */
-export const SUPPORTED_INCIDENT_CONTENT_VERSION = 11;
+export const SUPPORTED_INCIDENT_CONTENT_VERSION = 12;
+/** First content version with the v12 decision structures. */
+export const DECISION_DEPTH_CONTENT_VERSION = FRAMEWORK_DEPTH_CONTENT_VERSION;
 export const INCIDENT_TYPES_V2: IncidentTypeInfo[] = [
   ...INCIDENT_TYPES,
   { type: 'barricaded', label: 'Reported barricade', families: homes, squads: [1, 3] },

@@ -62,10 +62,11 @@ export function startPractice(scenarioId: string, campaignSeed = 719): GameState
 }
 
 export interface Move { kind: 'decide' | 'continue' | 'fail'; actionId: string; band?: OutcomeBand }
-/** Every move the engine allows from here, with each reachable band of each eligible action. */
-export function availableMoves(state: GameState): Move[] {
+/** Every move the engine allows from here, with each reachable band of each eligible action.
+ * Pass the state's views when already computed; evaluating them is the expensive part. */
+export function availableMoves(state: GameState, views: ActionView[] = actionViews(state, NOW, 'A')): Move[] {
   const moves: Move[] = [];
-  for (const view of actionViews(state, NOW, 'A').filter(view => view.eligible))
+  for (const view of views.filter(view => view.eligible))
     for (const band of ['favorable', 'mixed', 'adverse'] as const) if (sampleFor(view, band) !== null) moves.push({ kind: 'decide', actionId: view.id, band });
   for (const continuation of stageContinuations(state)) moves.push({ kind: 'continue', actionId: continuation.actionId });
   if (!moves.length && responseFailurePlan(state)) moves.push({ kind: 'fail', actionId: 'response_failure' });
@@ -74,7 +75,7 @@ export function availableMoves(state: GameState): Move[] {
 
 /** Apply one move through the dispatcher. Returns null when the engine refuses it or the
  * sampled band differs from the one aimed at. */
-export function applyMove(state: GameState, move: Move): GameState | null {
+export function applyMove(state: GameState, move: Move, views?: ActionView[]): GameState | null {
   if (move.kind === 'continue') {
     const continuation = stageContinuations(state).find(entry => entry.actionId === move.actionId);
     const result = continuation && apply(state, { type: 'continueStage', actionId: continuation.actionId, revision: continuation.revision });
@@ -85,7 +86,7 @@ export function applyMove(state: GameState, move: Move): GameState | null {
     const result = plan && apply(state, { type: 'endFailedResponse', runId: plan.runId, revision: plan.revision });
     return result?.result.ok ? result.state : null;
   }
-  const view = actionViews(state, NOW, 'A').find(entry => entry.id === move.actionId && entry.eligible);
+  const view = (views ?? actionViews(state, NOW, 'A')).find(entry => entry.id === move.actionId && entry.eligible);
   const sample = view && sampleFor(view, move.band!);
   if (!view || sample === null || sample === undefined) return null;
   const aimed = structuredClone(state);

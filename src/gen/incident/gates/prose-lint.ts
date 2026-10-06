@@ -160,7 +160,7 @@ function safetyIssues(pre: ProseText[], post: ProseText[]): ProseIssue[] {
 
 /** Strings that fix the situation's answer; none may be readable before the check. */
 export function spoilerStrings(framework: IncidentFramework): string[] {
-  const whole = [...framework.variants, framework.confirmed, framework.disproved, ...framework.results, framework.waitFor?.result].filter((text): text is string => !!text);
+  const whole = [...framework.variants, framework.confirmed, framework.disproved, ...framework.results, framework.waitFor?.result, framework.actOnReport?.wrong].filter((text): text is string => !!text);
   const parts = whole.flatMap(sentences).filter(sentence => sentence.split(/\s+/).length >= 4);
   return [...new Set([...whole, ...parts])];
 }
@@ -225,6 +225,8 @@ export function lintFrameworkData(framework: IncidentFramework): ProseIssue[] {
       { where: 'precaution.favorable[0]', text: framework.precaution.result }, { where: 'late_precaution.title', text: framework.precaution.lateTitle }, { where: 'late_precaution.summary', text: framework.precaution.lateSummary }] : []),
     ...(framework.waitFor ? [{ where: 'wait.title', text: framework.waitFor.title }, { where: 'wait.summary', text: framework.waitFor.summary }, { where: 'ending resolved_waited.summary', text: framework.waitFor.result }] : []),
     ...(framework.corroborate ? [{ where: 'corroborate.summary', text: framework.corroborate.summary }] : []),
+    ...(framework.actOnReport ? [{ where: 'act_on_report.title', text: framework.actOnReport.title }, { where: 'act_on_report.summary', text: framework.actOnReport.summary },
+      { where: 'act_on_report.favorable[1]', text: framework.actOnReport.wrong }] : []),
   ].map(entry => ({ where: entry.where, text: worst(entry.text) }));
   for (const { where, text } of texts) {
     for (const term of britishTerms(text)) issues.push({ rule: 'american', where, text, detail: `"${term}" is British spelling or usage` });

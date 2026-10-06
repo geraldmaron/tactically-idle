@@ -102,11 +102,13 @@ export function journey(id: string, mode: 'complete' | 'fail', seeds = 6000): Jo
 }
 
 /** The journeys a framework must pass on one building type: each situation completes, and
- * each situation's failed response closes honestly as unfinished. */
-export function frameworkJourneys(type: IncidentType, familyId: string, variants: readonly Variant[] = [0, 1, 2]): JourneyResult[] {
+ * (unless `fail` is false) each situation's failed response closes honestly as unfinished.
+ * From v12 every typed call has a close that cannot fall through, so a failed response needs
+ * both in-person checks to come back inconclusive; finding one takes thousands of seeds. */
+export function frameworkJourneys(type: IncidentType, familyId: string, variants: readonly Variant[] = [0, 1, 2], fail = true): JourneyResult[] {
   return variants.flatMap(variant => {
     const id = incidentId(specForSituation(type, familyId, variant));
     if (!getScenario(id)) return [{ id, campaignSeed: null, steps: [], endingId: null, completed: false, saveRoundTrips: 0, problems: ['does not generate'] }];
-    return [journey(id, 'complete'), journey(id, 'fail')];
+    return [journey(id, 'complete'), ...(fail ? [journey(id, 'fail', 20000)] : [])];
   });
 }

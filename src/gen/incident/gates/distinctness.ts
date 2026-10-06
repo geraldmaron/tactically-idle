@@ -2,7 +2,8 @@ import { getScenario } from '../../../sim/scenario-registry';
 import type { ActionDefinition, ScenarioDefinition } from '../../../sim/scenario-types';
 import { hashSeed } from '../../../sim/rng';
 import type { GameState } from '../../../sim/types';
-import { applyMove, availableMoves, startPractice, withDraftScenario } from './engine-driver';
+import { applyMove, availableMoves, NOW, startPractice, withDraftScenario } from './engine-driver';
+import { actionViews } from '../../../sim/operation-selectors';
 import type { Move } from './engine-driver';
 
 /** Distinctness gate (docs/scenario-scale-plan.md §4). A recipe's fingerprint is the set of
@@ -56,8 +57,9 @@ function explore(s: ScenarioDefinition, start: GameState): { paths: string[]; tr
     if (hit) return hit;
     if (depth > 40) { truncated = true; return ['...']; }
     const out = new Set<string>();
-    for (const move of availableMoves(state)) {
-      const after = applyMove(state, move);
+    const views = actionViews(state, NOW, 'A');
+    for (const move of availableMoves(state, views)) {
+      const after = applyMove(state, move, views);
       if (!after) continue;
       const step = stepToken(s, state, after, move);
       for (const rest of walk(after, depth + 1)) {

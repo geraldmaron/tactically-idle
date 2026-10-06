@@ -19,11 +19,12 @@ describe('content gate: binding and squad reachability on generated buildings', 
 
 describe('content gate: real dispatch journeys with save and reload', () => {
   it.each(FRAMEWORKS.map(entry => ({ type: entry.framework.type, entry })))('$type completes every situation and fails honestly', ({ entry }) => {
-    // One authored or first-listed building, and one generated building where listed.
+    // Completion on one authored or first-listed building and one generated building where
+    // listed; the rare failed response (v12) on the first, where each candidate run is cheap.
     const families = [...new Set([entry.families[0], entry.generated[0]].filter((id): id is string => !!id))];
-    for (const familyId of families) for (const result of frameworkJourneys(entry.framework.type, familyId)) {
+    for (const familyId of families) for (const result of frameworkJourneys(entry.framework.type, familyId, undefined, familyId === families[0])) {
       expect(result.problems, `${result.id}: ${result.steps.join(' > ')}`).toEqual([]);
       expect(result.saveRoundTrips).toBe(result.steps.length);
     }
-  }, 120000);
+  }, 240000);
 });
