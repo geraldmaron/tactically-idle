@@ -3,6 +3,7 @@ import type { BuiltLocation, StageId } from '../../../sim/types';
 import { hashSeed } from '../../../sim/rng';
 import { findStoryRoute } from '../../../sim/story-bindings';
 import { withHighRiskVersionFourChoices } from '../high-risk-v4';
+import { hostsByLocation } from '../stories-v6/hosts-v10';
 import { actionHR, civilianCareHR, enterCareHR, factHR, finalizeHR, HR_BANDS, injuryHR, officerCareHR, partialHR, previewHR, reqFact, reqFlag, sameHR, visibleHR, type HighRiskContext } from '../high-risk-common-v4';
 
 /** Authoring uses the same current doorway, exterior-path and access-profile rules as live play. */
@@ -86,7 +87,10 @@ const EPISODES = [
 ] as const;
 
 export function withArmedStory(input: ScenarioDefinition, built: BuiltLocation): ScenarioDefinition {
-  if (input.incident?.type !== 'active_armed_incident' || built.location.familyId !== 'market_row') throw new Error('After the Noise needs the Market Row shop');
+  // Before v10 the episode was bound to Market Row by name. v10 needs what the story uses:
+  // a business whose scene room holds a register (Eli's tills, bound in attachStoryBindings).
+  const hosted = hostsByLocation(input);
+  if (input.incident?.type !== 'active_armed_incident' || (hosted ? built.location.setting !== 'business' : built.location.familyId !== 'market_row')) throw new Error(hosted ? 'After the Noise needs a business with a register' : 'After the Noise needs the Market Row shop');
   const s = withHighRiskVersionFourChoices(structuredClone(input), built);
   const episode = EPISODES[hashSeed(`${input.incident.seed}:noise-v5`) % EPISODES.length];
   const ctx: HighRiskContext = { scenario: s, built, targetId: input.facts[0].spaceId, exteriorId: built.location.entries[0], difficulty: 31 + input.incident.tier * 3 };
