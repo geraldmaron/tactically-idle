@@ -594,7 +594,7 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
               {scenario?.practiceOnly
                 ? `${scenario.version >= 4 ? 'This decision exercise' : 'This equipment exercise'} is practice only. Virtual gear and supplies are provided; no funding, owned stock, stress, trust or rewards change.`
                 : replay
-                ? 'This incident is already closed, so it replays as practice: no rewards and no consequences.'
+                ? 'This scenario is not a live call, so it runs as practice: no rewards and no consequences.'
                 : 'Uses virtual gear: no owned equipment is reserved or worn. No rewards or consequences; stress, supplies and trust are untouched.'}
             </span>
           </span>

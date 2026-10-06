@@ -156,3 +156,24 @@ Verification record
 - Diff reviewed: answered: see the diff review paragraph ("Full tracked diff and new source files were reviewed against the brief").
 - Residual risk: listed in the residual-risk paragraph, with the checks or work that would resolve each gap.
 - Commit-and-PR: full staged diff reviewed as one scenario-library release; no credentials or real user data found; dedicated branch `codex/scenario-templates-v9`; imperative subject and rationale body; local commit explicitly requested by the user; no push or new pull request requested.
+
+## Review pass before merge (2026-10-06)
+
+A play-through review of the generated text and the rendered board, library, live call and debrief found five problems in the eight new frameworks. v9 had not been issued to players, so the content was corrected in place; v6–v8 fingerprints are unchanged.
+
+| Finding | Player impact | Change |
+| --- | --- | --- |
+| Situation labels named the answer. Each situation fixes the truth of the disputed point, and the label appeared as a board chip and on the library card ("An old sighting mistaken for the current location"). | The investigation was decided before dispatch. | Cards show the framework title. The library numbers situations. Situation notes stay authoring-only and the ending explains what was found. |
+| Opening choices weren't a real decision. Both approaches had the same effect, and the independent source was strictly better. | One option was always correct. | The first account now helps the final agreed step (+6) and the independent source helps the disputed-point check (+6, one extra minute). Situation 3 still requires the independent source, so starting with the people involved costs a follow-up but earns both bonuses. |
+| Player prose read like guardrails: "no fictional intruder is recorded", "no completion or movement is claimed", "this says nothing about cooperation or danger". | The scenes read as compliance notes rather than calls. | Rewritten in plain, in-world language that still says what is left for follow-up. A test rejects the meta phrasing. |
+| The central question repeated up to six times on one screen: unknown, responsibility, objective, fact label, stage prompt and action summary. | The repetition was noise and hid the useful details. | Each framework now has a short fact label and a dispatch reason. Objectives and responsibilities are short duties. Action summaries state the trade-off. |
+| Pacing was promised for every conversation with the person but applied only to the targeted check. | The briefed time cost didn't match the estimates. | Pacing now applies to every conversation that names the person, and a test enforces it. |
+
+Also fixed: library cards for the original six frameworks showed the title twice. Practice launched from the library said "This incident is already closed". A second check that failed said "The first check is inconclusive".
+
+Not changed, and left for follow-up:
+- The original six frameworks' v8 decision prose carries the same guardrail phrasing in a few outcomes ("no medical need or accepted care has been assumed"). It is fingerprint-frozen as issued content.
+- Library practice codes read `CALL 0000` because the code is derived from small seeds.
+- The eight new frameworks still share one three-step structure.
+
+Verification on Node 24.19 (the CI version): `npm run verify` passed 2,178 tests in 121 files with typecheck, artwork validation and build. `npm run test:e2e` against the dev server passed all 28 journeys at 390×844 and 320×568. A manual 320px pass confirmed the board chips, library card, live decision costs (the pacing adds two minutes to the named conversation) and the debrief, with no horizontal overflow.

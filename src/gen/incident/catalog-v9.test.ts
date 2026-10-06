@@ -144,3 +144,42 @@ describe('complete catalog journeys through real dispatch and save boundaries', 
     expect(apply(closed.state,{type:'closeDebrief'}).result.ok).toBe(false);
   }, 30000);
 });
+
+describe('version 9 framework presentation', () => {
+  const additional = SCENARIO_RECIPES_V9.filter(recipe => ADDITIONAL_FRAMEWORK_BY_TYPE[recipe.type]);
+  const preResolution = (s: ReturnType<typeof generateIncident>) => [s.title, s.variantLabel, s.summary, s.briefing.dispatchReason ?? '', ...s.briefing.known, ...s.briefing.unknown,
+    ...(s.briefing.teamResponsibilities ?? []), ...s.objectives.map(o => o.label), ...s.facts.map(f => f.label),
+    ...[...s.stages.assess.actions, ...s.stages.adapt.actions].flatMap(a => [a.title, a.summary])].join('\n');
+
+  it.each(additional)('$id never names the situation that fixes the disputed answer before it is checked', recipe => {
+    const s = generateIncident(specForRecipe(recipe)), framework = ADDITIONAL_FRAMEWORK_BY_TYPE[recipe.type]!;
+    expect(s.variantLabel).toBe(s.title);
+    for (const note of framework.variants) expect(preResolution(s), recipe.id).not.toContain(note);
+    expect(s.briefing.dispatchReason).toBeTruthy();
+  });
+  it.each(additional)('$id offers a real trade-off between the first account and the independent source', recipe => {
+    const s = generateIncident(specForRecipe(recipe)), prefix = `v9_${recipe.type}_`;
+    const [first, second] = s.stages.assess.actions;
+    expect(first.outcomes.favorable[0].setFlags).toContain(`${prefix}heard`);
+    expect(second.outcomes.favorable[0].setFlags).toContain(`${prefix}prepared`);
+    expect(s.stages.adapt.actions.find(a => a.id === `${prefix}verify`)!.modifiers!.map(m => m.when.flags)).toContainEqual([`${prefix}prepared`]);
+    for (const resolution of s.stages.resolve.actions) expect(resolution.modifiers!.map(m => m.when.flags)).toContainEqual([`${prefix}heard`]);
+  });
+  it('applies briefed conversation pacing to every conversation that names the person', () => {
+    for (const recipe of additional.filter(r => r.characteristic === 'deliberate_answers')) {
+      const s = generateIncident(specForRecipe(recipe)), first = s.story!.cast![ADDITIONAL_FRAMEWORK_BY_TYPE[recipe.type]!.personId].firstName;
+      const talks = scenarioActions(s).filter(a => a.check.kind === 'contact' && new RegExp(`\\b${first}\\b`).test(a.title));
+      expect(talks.length, recipe.id).toBeGreaterThan(0);
+      for (const talk of talks) expect(talk.summary, `${recipe.id} ${talk.id}`).toContain('Allow extra time');
+    }
+  });
+  it('keeps player prose in-world instead of listing what the story declines to claim', () => {
+    const meta = /\b(invented|is claimed|are claimed|is implied|says nothing about|fictional)\b/i;
+    for (const recipe of additional) {
+      const s = generateIncident(specForRecipe(recipe));
+      const prose = [preResolution(s), ...s.stages.resolve.actions.flatMap(a => [a.title, a.summary, ...Object.values(a.outcomePreview ?? {})]),
+        ...scenarioActions(s).flatMap(a => Object.values(a.outcomes).flat().map(e => e.text ?? '')), ...Object.values(s.endings).flatMap(e => [e.title, e.summary])].join('\n');
+      expect(prose, recipe.id).not.toMatch(meta);
+    }
+  });
+});

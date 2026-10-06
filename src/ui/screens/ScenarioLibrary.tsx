@@ -22,9 +22,12 @@ export function ScenarioLibrary({ onPrepare }: { onPrepare: (id: string) => void
         </select>
       </label>
       {scenario ? <>
-        <h3>{scenario.title}</h3><p>{scenario.variantLabel}</p><p className="dim">{familyBlurb(recipe.familyId)}</p>
+        {/* Situation labels can reveal the answer the player is meant to check, so the
+            card names the situation by number and leaves the outcome to the debrief. */}
+        <h3>{scenario.title}</h3>
+        <p className="dim">{familyBlurb(recipe.familyId)} · Situation {recipe.variant + 1} of 3</p>
         <p>{scenario.summary}</p>
-        <p>{recipe.characteristic === 'deliberate_answers' ? 'The reported speaker needs extra time to consider questions.' : 'Standard conversation pacing.'}</p>
+        <p className="dim">{recipe.characteristic === 'deliberate_answers' ? 'Pacing: one person thinks before answering, so their conversations take longer.' : 'Pacing: standard conversations.'}</p>
         <div className="scenario-library-nav">
           <Button disabled={index === 0} onClick={() => setIndex(index - 1)} aria-label="Previous scenario">Previous</Button>
           <span role="status" aria-live="polite">{index + 1} of {recipes.length}</span>
