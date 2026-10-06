@@ -50,8 +50,8 @@ describe('published v4 saves upgraded to integrated power and tiered development
     const before = raw.state as GameState;
     const loaded = deserialize(activeV4Text)!;
     expect(loaded).not.toBeNull();
-    expect(loaded.saveVersion).toBe(5);
-    expect(CURRENT_SAVE_VERSION).toBe(5);
+    expect(loaded.saveVersion).toBe(6);
+    expect(CURRENT_SAVE_VERSION).toBe(6);
     expect(loaded.contentVersion).toBe(INCIDENT_CONTENT_VERSION);
     expect(batteries(loaded)).toEqual([]);
     expect(loaded.department.funding).toBe(before.department.funding + 160);
@@ -180,7 +180,8 @@ describe('v1 stack migration against frozen legacy output', () => {
     expect(loaded).not.toBeNull();
     expect(loaded).toEqual({
       ...baseline,
-      saveVersion: 5,
+      saveVersion: 6,
+      casebook: { frameworksSeen: [...new Set([...baseline.incidents].reverse().map((card) => card.type))], recipes: {} },
       contentVersion: INCIDENT_CONTENT_VERSION,
       department: { ...baseline.department, funding: baseline.department.funding + 200, developmentTiers: { personnel_academy: 1 } },
       units: Object.fromEntries(Object.entries(baseline.units).filter(([, unit]) => unit.itemId !== 'battery_pack')),
