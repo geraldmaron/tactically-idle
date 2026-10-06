@@ -2,6 +2,7 @@ import type { BuiltLocation } from '../../../sim/types';
 import type { ScenarioDefinition } from '../../../sim/scenario-types';
 import { isGenericResponseExit } from '../../../sim/response-failure';
 import { withConcreteCommitmentsV8 } from './commitments';
+import { withLocationTextV10 } from '../stories-v6/hosts-v10';
 
 /** A versioned decision graph; issued earlier graphs and committed history stay frozen. */
 export function withVersionEightDecisions(input: ScenarioDefinition, built: BuiltLocation): ScenarioDefinition {
@@ -11,5 +12,6 @@ export function withVersionEightDecisions(input: ScenarioDefinition, built: Buil
   for (const stage of Object.values(scenario.stages)) {
     stage.actions = stage.actions.filter(action => !isGenericResponseExit(scenario, action));
   }
-  return scenario;
+  // Last authored layer: v10 rebinds building-specific display prose to the real location.
+  return withLocationTextV10(scenario, built);
 }

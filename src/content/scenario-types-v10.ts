@@ -24,6 +24,19 @@ export const GENERATED_FAMILIES_V10: Partial<Record<IncidentType, readonly strin
   vacant_occupancy: GENERATED_HOMES,
   burglary: GENERATED_BUSINESSES,
   business_robbery: GENERATED_BUSINESSES,
+  // The six authored stories read their needs from the built location on v10 (see
+  // stories-v6/hosts-v10.ts). A type is listed where at least 30% of building seeds host
+  // the story at the drawn seed; most host every seed.
+  welfare_check: GENERATED_HOMES,
+  barricaded: GENERATED_HOMES,
+  medical_complication: GENERATED_BUSINESSES,
+  hostage_crisis: GENERATED_BUSINESSES,
+  // Eli is counting the tills: only buildings with a register in a reachable room.
+  active_armed_incident: ['corner_store_flat_g1', 'bar_restaurant_g1'],
+  // Jun's wheelchair needs a step-free route from a ground-floor living space to a
+  // ground-level pickup; generated flats reach the street only through a shared
+  // corridor or stairwell whose level and lift access are not modelled.
+  protected_rescue: GENERATED_HOMES.filter(id => id !== 'apartment_unit_g1'),
 };
 
 export const SCENARIO_TYPES_V10: { type: IncidentType; label: string; families: string[]; squads: [number, number]; count: number }[] =

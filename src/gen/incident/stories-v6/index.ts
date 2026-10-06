@@ -13,16 +13,31 @@ import { bindEpisodeCast, planEpisode, type AppliedEpisodeModule } from './episo
 import { applyWelfareVariation } from './welfare-variants';
 import { applyHighRiskVariation } from './high-risk-variants';
 import { applyCarePrivacyVariation } from './care-privacy-variants';
+import { hostsByLocation, storyArrivalsV10, storyRoomV10, withStoryArrival } from './hosts-v10';
 
 /** Compatible role/room selection precedes prose and mechanics. V1–V5 stay frozen. */
 export function withVersionSixStory(input: ScenarioDefinition, built: BuiltLocation): ScenarioDefinition {
+  if (!hostsByLocation(input)) return episodeAt(input, built);
+  // v10 binds the episode to whichever entry of the actual building can hold it, in
+  // entry order; the location's first entry still wins whenever it can.
+  let failure: unknown = new Error('No exterior arrival can host this episode');
+  for (const arrival of storyArrivalsV10(built, input.incident!.type)) {
+    try { return episodeAt(input, withStoryArrival(built, arrival)); } catch (error) { failure = error; }
+  }
+  throw failure;
+}
+
+function episodeAt(input: ScenarioDefinition, built: BuiltLocation): ScenarioDefinition {
   const spec = input.incident!;
   const plan = planEpisode(spec, built);
   const recipe = STORY_ARCHETYPES[spec.type];
   if (!recipe) throw new Error('No episode binding recipe');
   const personRoom = spec.type === 'welfare_check' || spec.type === 'barricaded';
-  const room = selectStoryRoom(built, { ...recipe.room, ...(personRoom ? { types: ['living', 'bedroom'] as const } : {}), reachableFromSpaceId: built.location.entries[0] }, hashSeed(`${spec.seed}:${spec.buildingSeed}:${recipe.id}`));
-  if (!room || recipe.requiredRoomId && room.id !== recipe.requiredRoomId) throw new Error('No compatible room for this episode');
+  const roomSeed = hashSeed(`${spec.seed}:${spec.buildingSeed}:${recipe.id}`);
+  // v10 replaces the authored room identity (requiredRoomId) with requirements on the real rooms.
+  const room = hostsByLocation(input) ? storyRoomV10(built, spec.type, recipe.room, roomSeed)
+    : selectStoryRoom(built, { ...recipe.room, ...(personRoom ? { types: ['living', 'bedroom'] as const } : {}), reachableFromSpaceId: built.location.entries[0] }, roomSeed);
+  if (!room || !hostsByLocation(input) && recipe.requiredRoomId && room.id !== recipe.requiredRoomId) throw new Error('No compatible room for this episode');
   const shell = structuredClone(input);
   shell.facts[0].spaceId = room.id;
   delete shell.facts[0].person;
