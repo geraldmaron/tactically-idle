@@ -28,7 +28,15 @@ export const rcx = (r: Rect) => (r.x0 + r.x1) / 2;
 export const rcy = (r: Rect) => (r.y0 + r.y1) / 2;
 export const vec = (x: number, y: number): Vec => ({ x, y });
 export const lerp = (a: Vec, b: Vec, t: number): Vec => ({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t });
-export const dist = (a: Vec, b: Vec) => Math.hypot(a.x - b.x, a.y - b.y);
+/**
+ * Euclidean length. Saves rebuild a building from (familyId, seed) on whatever engine the player
+ * runs, so the generator uses only arithmetic that ECMAScript fixes bit for bit. Math.hypot, exp,
+ * log, pow, `**` and the trig functions are implementation-approximated (ECMA-262 §21.3.2);
+ * Math.sqrt is not: §21.3.2.33 returns 𝔽(√n), the correctly rounded root. procedural-math.test.ts
+ * holds the generator to this.
+ */
+export const norm = (dx: number, dy: number) => Math.sqrt(dx * dx + dy * dy);
+export const dist = (a: Vec, b: Vec) => norm(a.x - b.x, a.y - b.y);
 export const segLen = (s: Seg) => dist(s.a, s.b);
 
 export function inflate(r: Rect, d: number): Rect {
@@ -97,7 +105,7 @@ function distToSegment(p: Vec, a: Vec, b: Vec): number {
   const dy = b.y - a.y;
   const len2 = dx * dx + dy * dy;
   const t = len2 === 0 ? 0 : Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / len2));
-  return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy));
+  return norm(p.x - (a.x + t * dx), p.y - (a.y + t * dy));
 }
 
 export function distToPoly(p: Vec, poly: Vec[]): number {

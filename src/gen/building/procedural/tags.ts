@@ -13,6 +13,6 @@ export const ROOM_TAGS = [
   'valuables', 'hazard', 'concealment', 'cover',
 ] as const;
 
-export const ZONE_TAGS = ['street', 'exposed', 'cover', 'fence', 'alley', 'vehicles', 'neighbour', 'party_wall', 'no_entry', 'corridor', 'common', 'stairwell', 'balcony', 'loading_bay', 'walkway', 'patio'] as const;
+export const ZONE_TAGS = ['street', 'exposed', 'cover', 'fence', 'alley', 'vehicles', 'neighbor', 'party_wall', 'no_entry', 'corridor', 'common', 'stairwell', 'balcony', 'loading_bay', 'walkway', 'patio'] as const;
 
 export const OBJECT_TAGS = ['blocks_space', 'blocks_sight', 'concealment', 'cover', 'valuables', 'hazard', 'storage', 'appliance', 'boiler', 'safe', 'server', 'shower', 'bar', 'equipment'] as const;

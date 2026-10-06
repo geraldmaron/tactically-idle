@@ -9,10 +9,10 @@ import { planTwoFloors } from './twofloor';
 /** A narrow two-storey unit sharing one side wall with its neighbour; only this unit is drawn. */
 export const SEMI: FamilySpec = {
   id: 'semi_detached',
-  label: 'Semi-detached house',
+  label: 'Duplex',
   setting: 'residential',
   floors: [2, 2],
-  blurb: 'Semi-detached house',
+  blurb: 'One half of a side-by-side duplex',
   shapes: ['rect', 'L'],
   fallbackSeed: 0,
   policy: {

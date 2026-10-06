@@ -29,7 +29,7 @@ export const BUNGALOW: FamilySpec = {
   label: 'Bungalow',
   setting: 'residential',
   floors: [1, 1],
-  blurb: 'Single-storey house',
+  blurb: 'Single-story house',
   shapes: ['rect', 'L', 'T'],
   fallbackSeed: 0,
   policy: {

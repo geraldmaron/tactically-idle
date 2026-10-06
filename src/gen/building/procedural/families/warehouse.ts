@@ -7,31 +7,31 @@ import { no, tagWhy } from './common';
 import { planTwoFloors } from './twofloor';
 
 const OWNERS = ['Ridgeway', 'Carmody', 'Northgate', 'Halvorsen', 'Bellamy', 'Ironbridge', 'Oakhurst', 'Tidewater'];
-const TRADES = ['Freight', 'Supply', 'Fabrication', 'Distribution', 'Storage', 'Auto Parts', 'Joinery', 'Wholesale'];
+const TRADES = ['Freight', 'Supply', 'Fabrication', 'Distribution', 'Storage', 'Auto Parts', 'Millwork', 'Wholesale'];
 
-const FLOOR = seed('floor', 'storage', { area: 1400, min: 500, max: 4000, minW: 20, aspect: 3, front: 0.3, cls: 'pub', cap: true, required: true, tags: ['open', 'warehouse', 'storage', 'high_capacity'], windows: 'high', kit: 'warehouse_floor', label: 'Warehouse floor' });
-const CORRIDOR = seed('corridor', 'hall', { area: 60, min: 24, max: 300, minW: 4, aspect: 99, cls: 'circ', tags: ['circulation', 'narrow'], windows: 'none', kit: 'hall', label: 'Corridor' });
-const LANDING = seed('landing', 'hall', { area: 40, min: 12, max: 160, minW: 3.5, aspect: 99, cls: 'circ', tags: ['circulation', 'narrow'], windows: 'small', kit: 'landing', label: 'Landing' });
+const FLOOR = seed('floor', 'storage', { area: 1400, min: 500, max: 4000, minW: 20, aspect: 3, front: 0.3, cls: 'pub', cap: true, required: true, tags: ['open', 'warehouse', 'storage', 'high_capacity'], windows: 'high', label: 'Warehouse floor' });
+const CORRIDOR = seed('corridor', 'hall', { area: 60, min: 24, max: 300, minW: 4, aspect: 99, cls: 'circ', tags: ['circulation', 'narrow'], windows: 'none', label: 'Corridor' });
+const LANDING = seed('landing', 'hall', { area: 40, min: 12, max: 160, minW: 3.5, aspect: 99, cls: 'circ', tags: ['circulation', 'narrow'], windows: 'small', label: 'Landing' });
 
 function blockPool(rng: Rand): RoomSeed[] {
   return [
-    seed('reception', 'office', { area: rng.snapped(110, 160), min: 80, max: 260, minW: 9, aspect: 2.5, front: 1, cls: 'pub', cap: true, required: true, tags: ['public', 'reception', 'customer', 'office'], windows: 'large', kit: 'reception', label: 'Front office' }),
-    seed('manager', 'office', { area: rng.snapped(90, 120), min: 64, max: 170, minW: 8, aspect: 2.4, front: 0.5, cls: 'leaf', hall: true, prob: 0.7, tags: ['staff', 'private', 'office', 'lockable', 'valuables'], windows: 'normal', kit: 'manager', label: 'Manager office' }),
-    D.wc(rng.snapped(34, 46), { required: true, tags: ['water', 'lockable', 'wc', 'staff'] }),
-    D.wc(rng.snapped(30, 40), { prob: 0.4, tags: ['water', 'lockable', 'wc', 'staff'] }),
-    seed('break_room', 'kitchen', { area: rng.snapped(80, 110), min: 56, max: 170, minW: 8, hall: true, front: 0.4, cls: 'leaf', prob: 0.8, tags: ['staff', 'cooking', 'water'], windows: 'small', kit: 'kitchenette', label: 'Break room' }),
-    seed('storage', 'storage', { area: 60, min: 30, max: 120, minW: 5.5, hall: true, tags: ['service', 'storage'], windows: 'none', kit: 'storage', prob: 0.4 }),
-    seed('storage', 'storage', { area: 70, min: 36, max: 130, minW: 6, hall: true, tags: ['service', 'storage', 'valuables'], windows: 'none', kit: 'stockroom', prob: 0.3, label: 'Tool crib' }),
-    seed('locker_room', 'utility', { area: 70, min: 44, max: 130, minW: 6, hall: true, cls: 'leaf', tags: ['staff', 'service'], windows: 'small', kit: 'storage', prob: 0.35, label: 'Locker room' }),
-    seed('server', 'storage', { area: 36, min: 26, max: 80, minW: 5.5, hall: true, tags: ['service', 'server', 'valuables', 'hazard'], windows: 'none', kit: 'server', prob: 0.25, label: 'Server room' }),
+    seed('reception', 'office', { area: rng.snapped(110, 160), min: 80, max: 260, minW: 9, aspect: 2.5, front: 1, cls: 'pub', cap: true, required: true, tags: ['public', 'reception', 'customer', 'office'], windows: 'large', label: 'Front office' }),
+    seed('manager', 'office', { area: rng.snapped(90, 120), min: 64, max: 170, minW: 8, aspect: 2.4, front: 0.5, cls: 'leaf', hall: true, prob: 0.7, tags: ['staff', 'private', 'office', 'lockable', 'valuables'], windows: 'normal', label: 'Manager office' }),
+    D.wc(rng.snapped(34, 46), { required: true, tags: ['water', 'lockable', 'wc', 'staff'], label: 'Restroom' }),
+    D.wc(rng.snapped(30, 40), { prob: 0.4, tags: ['water', 'lockable', 'wc', 'staff'], label: 'Restroom' }),
+    seed('break_room', 'kitchen', { area: rng.snapped(80, 110), min: 56, max: 170, minW: 8, hall: true, front: 0.4, cls: 'leaf', prob: 0.8, tags: ['staff', 'cooking', 'water'], windows: 'small', label: 'Break room' }),
+    seed('storage', 'storage', { area: 60, min: 30, max: 120, minW: 5.5, hall: true, tags: ['service', 'storage'], windows: 'none', prob: 0.4 }),
+    seed('storage', 'storage', { area: 70, min: 36, max: 130, minW: 6, hall: true, tags: ['service', 'storage', 'valuables'], windows: 'none', prob: 0.3, label: 'Tool crib' }),
+    seed('locker_room', 'utility', { area: 70, min: 44, max: 130, minW: 6, hall: true, cls: 'leaf', tags: ['staff', 'service'], windows: 'small', prob: 0.35, label: 'Locker room' }),
+    seed('server', 'storage', { area: 36, min: 26, max: 80, minW: 5.5, hall: true, tags: ['service', 'server', 'valuables', 'hazard'], windows: 'none', prob: 0.25, label: 'Server room' }),
   ];
 }
 
 function mezzPool(rng: Rand): RoomSeed[] {
   return [
-    seed('mezz_office', 'office', { area: rng.snapped(130, 190), min: 90, max: 280, minW: 9, aspect: 2.5, hall: true, required: true, cls: 'leaf', tags: ['staff', 'work', 'office', 'lockable'], windows: 'large', kit: 'manager', label: 'Mezzanine office' }),
-    seed('mezz_office', 'office', { area: rng.snapped(100, 140), min: 70, max: 200, minW: 9, aspect: 2.5, hall: true, prob: 0.55, cls: 'leaf', tags: ['staff', 'work', 'office', 'lockable'], windows: 'normal', kit: 'manager', label: 'Mezzanine office' }),
-    seed('storage', 'storage', { area: 60, min: 30, max: 130, minW: 5.5, hall: true, tags: ['service', 'storage'], windows: 'none', kit: 'storage', prob: 0.5 }),
+    seed('mezz_office', 'office', { area: rng.snapped(130, 190), min: 90, max: 280, minW: 9, aspect: 2.5, hall: true, required: true, cls: 'leaf', tags: ['staff', 'work', 'office', 'lockable'], windows: 'large', label: 'Mezzanine office' }),
+    seed('mezz_office', 'office', { area: rng.snapped(100, 140), min: 70, max: 200, minW: 9, aspect: 2.5, hall: true, prob: 0.55, cls: 'leaf', tags: ['staff', 'work', 'office', 'lockable'], windows: 'normal', label: 'Mezzanine office' }),
+    seed('storage', 'storage', { area: 60, min: 30, max: 130, minW: 5.5, hall: true, tags: ['service', 'storage'], windows: 'none', prob: 0.5 }),
   ];
 }
 

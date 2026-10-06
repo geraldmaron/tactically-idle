@@ -11,11 +11,11 @@ const KINDS = ['Corner Store', 'Market', 'Convenience', 'Grocery', 'Mini Mart'];
 
 function groundPool(rng: Rand): RoomSeed[] {
   return [
-    seed('shop', 'retail', { area: rng.snapped(320, 480), min: 220, max: 720, minW: 12, aspect: 2.6, front: 1, cls: 'pub', cap: true, required: true, tags: ['public', 'shop', 'customer'], windows: 'storefront', kit: 'shop', label: 'Shop floor' }),
-    seed('stockroom', 'storage', { area: rng.snapped(130, 190), min: 80, max: 300, minW: 7, aspect: 2.8, front: 0.1, cls: 'pub', cap: true, required: true, tags: ['service', 'staff', 'storage', 'stock'], windows: 'none', kit: 'stockroom', label: 'Stockroom' }),
-    seed('backoffice', 'office', { area: rng.snapped(70, 95), min: 55, max: 150, minW: 7, front: 0.15, cls: 'leaf', tags: ['staff', 'private', 'office', 'lockable', 'valuables'], windows: 'small', kit: 'backoffice', prob: 0.8, label: 'Back office' }),
-    D.wc(rng.snapped(26, 34), { required: true, hall: false, tags: ['water', 'lockable', 'wc', 'staff'] }),
-    seed('storage', 'storage', { area: 40, min: 26, max: 90, minW: 5, tags: ['service', 'storage'], windows: 'none', prob: 0.2, kit: 'storage' }),
+    seed('shop', 'retail', { area: rng.snapped(320, 480), min: 220, max: 720, minW: 12, aspect: 2.6, front: 1, cls: 'pub', cap: true, required: true, tags: ['public', 'shop', 'customer'], windows: 'storefront', label: 'Sales floor' }),
+    seed('stockroom', 'storage', { area: rng.snapped(130, 190), min: 80, max: 300, minW: 7, aspect: 2.8, front: 0.1, cls: 'pub', cap: true, required: true, tags: ['service', 'staff', 'storage', 'stock'], windows: 'none', label: 'Stockroom' }),
+    seed('backoffice', 'office', { area: rng.snapped(70, 95), min: 55, max: 150, minW: 7, front: 0.15, cls: 'leaf', tags: ['staff', 'private', 'office', 'lockable', 'valuables'], windows: 'small', prob: 0.8, label: 'Back office' }),
+    D.wc(rng.snapped(26, 34), { required: true, hall: false, tags: ['water', 'lockable', 'wc', 'staff'], label: 'Restroom' }),
+    seed('storage', 'storage', { area: 40, min: 26, max: 90, minW: 5, tags: ['service', 'storage'], windows: 'none', prob: 0.2 }),
   ];
 }
 
@@ -33,10 +33,10 @@ function flatPool(rng: Rand): RoomSeed[] {
 
 export const CORNER_STORE: FamilySpec = {
   id: 'corner_store_flat',
-  label: 'Corner store with flat',
+  label: 'Corner store with apartment',
   setting: 'business',
   floors: [2, 2],
-  blurb: 'Corner store with a flat above',
+  blurb: 'Corner store with an apartment above',
   shapes: ['rect', 'L', 'chamfer'],
   fallbackSeed: 0,
   policy: {

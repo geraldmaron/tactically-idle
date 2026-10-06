@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { generateBuilding } from './index';
+import { generatePair } from './index';
 import { contactSheet } from './render-svg';
 
 // Developer aid, skipped unless BUILDING_SVG is set:
@@ -14,7 +14,7 @@ describe.skipIf(!dir)('render plans', () => {
     const list = env.BUILDING_SEEDLIST ? env.BUILDING_SEEDLIST.split(',').map(Number) : null;
     const cols = Number(env.BUILDING_COLS ?? 3);
     const locs = [];
-    for (const s of list ?? Array.from({ length: b - a + 1 }, (_, i) => a + i)) locs.push(generateBuilding(family, s));
+    for (const s of list ?? Array.from({ length: b - a + 1 }, (_, i) => a + i)) locs.push(generatePair(family, s).furnished);
     await expect(contactSheet(locs, cols, Number(env.BUILDING_SCALE ?? 6))).toMatchFileSnapshot(`${dir}/${family}.svg`);
   });
 });

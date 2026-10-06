@@ -1,6 +1,6 @@
 import type { ExteriorZone, Opening, ZoneKind } from '../../../sim/types';
 import type { PendingExterior } from './openings';
-import { GRID, type Vec, EPS, lerp, pointInPoly, polyBBox, sharedSegments, segLen, snap, traceCells, vec } from './geom';
+import { GRID, type Vec, EPS, norm, lerp, pointInPoly, polyBBox, sharedSegments, segLen, snap, traceCells, vec } from './geom';
 import type { Rand } from './rand';
 import type { ExteriorSpec, LotSpec, Plan } from './types';
 
@@ -9,7 +9,7 @@ interface ZoneDef {
   label: string;
   kind: ZoneKind;
   tags: string[];
-  /** No walkable path joins this zone to its neighbours. */
+  /** No walkable path joins this zone to its neighbors. */
   isolated?: boolean;
 }
 
@@ -17,10 +17,10 @@ const FRONT_LABEL: Record<ExteriorSpec['kind'], string> = {
   house: 'Front yard',
   semi: 'Front yard',
   shop: 'Sidewalk',
-  bar: 'Forecourt',
-  office: 'Forecourt',
+  bar: 'Front lot',
+  office: 'Front lot',
   warehouse: 'Yard',
-  motel: 'Forecourt',
+  motel: 'Front lot',
   apartment: 'Frontage',
 };
 
@@ -38,8 +38,8 @@ function defs(kind: ExteriorSpec['kind']): Record<string, ZoneDef> {
     back_step: { id: 'back_step', label: 'Back step', kind: 'porch', tags: [] },
     driveway: { id: 'driveway', label: 'Driveway', kind: 'parking', tags: ['vehicles'] },
     parking: { id: 'parking', label: 'Parking', kind: 'parking', tags: ['vehicles', 'exposed'] },
-    neighbour_w: { id: 'neighbour_w', label: 'Neighbour', kind: 'yard', tags: ['neighbour', 'party_wall', 'no_entry'], isolated: true },
-    neighbour_e: { id: 'neighbour_e', label: 'Neighbour', kind: 'yard', tags: ['neighbour', 'party_wall', 'no_entry'], isolated: true },
+    neighbor_w: { id: 'neighbor_w', label: 'Neighbor', kind: 'yard', tags: ['neighbor', 'party_wall', 'no_entry'], isolated: true },
+    neighbor_e: { id: 'neighbor_e', label: 'Neighbor', kind: 'yard', tags: ['neighbor', 'party_wall', 'no_entry'], isolated: true },
     corridor: { id: 'corridor', label: 'Common corridor', kind: 'porch', tags: ['corridor', 'common'] },
     stairwell: { id: 'stairwell', label: 'Stairwell', kind: 'porch', tags: ['stairwell', 'common'] },
     balcony: { id: 'balcony', label: 'Balcony', kind: 'porch', tags: ['balcony', 'exposed'], isolated: true },
@@ -64,7 +64,7 @@ function insertBetween(poly: Vec[], p: Vec, q: Vec, apex: Vec): Vec[] | null {
   for (let i = 0; i < n; i++) {
     const a = poly[i];
     const b = poly[(i + 1) % n];
-    const len = Math.hypot(b.x - a.x, b.y - a.y);
+    const len = norm(b.x - a.x, b.y - a.y);
     if (len < EPS) continue;
     const ux = (b.x - a.x) / len;
     const uy = (b.y - a.y) / len;
@@ -72,10 +72,10 @@ function insertBetween(poly: Vec[], p: Vec, q: Vec, apex: Vec): Vec[] | null {
     const off = (v: Vec) => Math.abs((v.x - a.x) * -uy + (v.y - a.y) * ux);
     if (off(p) > 1e-6 || off(q) > 1e-6 || t(p) < -1e-6 || t(q) < -1e-6 || t(p) > len + 1e-6 || t(q) > len + 1e-6) continue;
     const [first, second] = t(p) <= t(q) ? [p, q] : [q, p];
-    const ins = [first, apex, second].filter((v, k, arr) => k === 0 || Math.hypot(v.x - arr[k - 1].x, v.y - arr[k - 1].y) > EPS);
-    const base = poly.slice(0, i + 1).filter((v) => Math.hypot(v.x - first.x, v.y - first.y) > EPS || v === a);
+    const ins = [first, apex, second].filter((v, k, arr) => k === 0 || norm(v.x - arr[k - 1].x, v.y - arr[k - 1].y) > EPS);
+    const base = poly.slice(0, i + 1).filter((v) => norm(v.x - first.x, v.y - first.y) > EPS || v === a);
     const rest = poly.slice(i + 1);
-    const res = [...base, ...ins, ...rest].filter((v, k, arr) => k === 0 || Math.hypot(v.x - arr[k - 1].x, v.y - arr[k - 1].y) > EPS);
+    const res = [...base, ...ins, ...rest].filter((v, k, arr) => k === 0 || norm(v.x - arr[k - 1].x, v.y - arr[k - 1].y) > EPS);
     return res;
   }
   return null;
@@ -179,7 +179,7 @@ export function buildZones(plan: Plan, lot: LotSpec, ext: ExteriorSpec, doors: P
   }
   for (const side of ext.neighbours) {
     const west = side === 'w';
-    paint(west ? 'neighbour_w' : 'neighbour_e', (x, y) => y >= bb.y0 && y < bb.y1 && (west ? x < bb.x0 && x >= bb.x0 - 6 : x >= bb.x1 && x < bb.x1 + 6), ['west', 'east']);
+    paint(west ? 'neighbor_w' : 'neighbor_e', (x, y) => y >= bb.y0 && y < bb.y1 && (west ? x < bb.x0 && x >= bb.x0 - 6 : x >= bb.x1 && x < bb.x1 + 6), ['west', 'east']);
   }
   if (ext.corridor) {
     const stairW = rng.snapped(8, 11);
@@ -308,7 +308,7 @@ export function buildZones(plan: Plan, lot: LotSpec, ext: ExteriorSpec, doors: P
     const prev = plan.footprintSq[(idx0 + n - 1) % n];
     const next = plan.footprintSq[(idx0 + 1) % n];
     const toward = (to: Vec) => {
-      const d = Math.hypot(to.x - corner.x, to.y - corner.y);
+      const d = norm(to.x - corner.x, to.y - corner.y);
       return vec(corner.x + ((to.x - corner.x) / d) * leg, corner.y + ((to.y - corner.y) / d) * leg);
     };
     const p1 = toward(prev);
@@ -335,7 +335,7 @@ export function buildZones(plan: Plan, lot: LotSpec, ext: ExteriorSpec, doors: P
 
   const zoneAt = (p: Vec): string | null => zones.find((z) => pointInPoly(p, z.polygon))?.id ?? null;
 
-  // Walkable paths between neighbouring zones, drawn like Maple Street's zone-to-zone doorways.
+  // Walkable paths between neighboring zones, drawn like Maple Street's zone-to-zone doorways.
   const paths: Opening[] = [];
   for (let a = 0; a < zones.length; a++)
     for (let b = a + 1; b < zones.length; b++) {

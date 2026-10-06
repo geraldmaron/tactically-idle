@@ -35,7 +35,9 @@ function pieceCost(p: Piece, items: Item[], filler = false): number {
   const A = rarea(p.rect);
   const sum = items.reduce((a, it) => a + itemArea(it), 0);
   const s = A / sum;
-  cost += 4 * Math.abs(Math.log(s));
+  // |s - 1/s| / 2 tracks |ln s| near 1 and is symmetric in s and 1/s, using only exact
+  // arithmetic (Math.log is implementation-approximated; see geom.ts norm).
+  cost += 2 * Math.abs(s - 1 / s);
   if (s < 0.62) cost += 30 * (0.62 - s) + 4;
   if (s > 1.7) cost += 12 * (s - 1.7) + 3;
   const { t, len } = pieceThickness(p);
@@ -114,10 +116,13 @@ export function assignRooms(pieces: Piece[], seeds: RoomSeed[], rng: Rand, fille
   // Greedy start: biggest rooms first, each into the piece that costs least to add to.
   const greedy = (): number[] => {
     const w = seeds.map(() => -1);
+    // Jitter is drawn once per seed, before sorting: a comparator that draws would consume a
+    // different number of draws, in a different order, under each engine's sort algorithm.
     const order = seeds
       .map((sd, i) => ({ sd, i }))
       .filter(({ sd }) => sd.required || rng.chance(sd.prob))
-      .sort((p, q) => q.sd.area - p.sd.area + (rng.float() - 0.5) * 40);
+      .map((p) => ({ ...p, k: p.sd.area + (rng.float() - 0.5) * 40 }))
+      .sort((p, q) => q.k - p.k || p.i - q.i);
     for (const { i } of order) {
       let bestP = 0;
       let bestC = Infinity;
@@ -161,7 +166,10 @@ export function assignRooms(pieces: Piece[], seeds: RoomSeed[], rng: Rand, fille
         next[i] = next[i] >= 0 ? -1 : rng.int(0, pieces.length - 1);
       }
       const c = total(next);
-      if (c <= cur || rng.float() < Math.exp((cur - c) / temp)) {
+      // Metropolis acceptance with exp(-d) replaced by 1 / (1 + d + d²/2 + d³/6): the same
+      // shape (1 at d = 0, falling monotonically) from exact arithmetic alone.
+      const d = (c - cur) / temp;
+      if (c <= cur || rng.float() * (1 + d * (1 + d * (0.5 + d / 6))) < 1) {
         where.splice(0, n, ...next);
         cur = c;
         if (c < best) {

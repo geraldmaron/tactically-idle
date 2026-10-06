@@ -1,6 +1,6 @@
 import type { Glazing, Opening, WindowCovering } from '../../../sim/types';
 import type { Run } from './assemble';
-import { type Seg, type Vec, EPS, lerp, segLen, snap, vec } from './geom';
+import { type Seg, type Vec, EPS, norm, lerp, segLen, snap, vec } from './geom';
 import type { Rand } from './rand';
 import type { PRoom, Policy, WindowKind } from './types';
 import type { ZoneSet } from './zones';
@@ -39,13 +39,13 @@ function spansFor(room: PRoom, runs: Run[], zones: ZoneSet, doors: Opening[], ma
       const p = lerp(run.seg.a, run.seg.b, t / len);
       const probe = vec(p.x + run.normal.x * 0.5, p.y + run.normal.y * 0.5);
       let z = zones.at(probe);
-      if (z && /^(neighbour|corridor|stairwell)/.test(zones.classOf.get(z) ?? '')) z = null;
+      if (z && /^(neighbor|corridor|stairwell)/.test(zones.classOf.get(z) ?? '')) z = null;
       let blocked = false;
       for (const d of doors) {
         if (d.a !== room.id && d.b !== room.id) continue;
         const dm = lerp(d.from, d.to, 0.5);
         const half = segLen({ a: d.from, b: d.to }) / 2;
-        if (Math.hypot(dm.x - p.x, dm.y - p.y) < half + marginDoor) blocked = true;
+        if (norm(dm.x - p.x, dm.y - p.y) < half + marginDoor) blocked = true;
       }
       const zz = blocked ? null : z;
       if (zz !== curZone) {
@@ -94,7 +94,7 @@ export function placeWindows(rooms: PRoom[], runs: Run[], zones: ZoneSet, doors:
     const spans = spansFor(room, runs, zones, doors, 1.0).filter((s) => s.len >= RANGE[kind][0] + 1.5 || (kind === 'small' && s.len >= 3));
     if (spans.length === 0) continue;
     const total = spans.reduce((a, s) => a + s.len, 0);
-    const street = spans.filter((s) => runs.some((r) => r.room === room.id && r.side !== 'n' && Math.hypot(r.seg.a.x - s.seg.a.x, r.seg.a.y - s.seg.a.y) < 0.01 + r.len));
+    const street = spans.filter((s) => runs.some((r) => r.room === room.id && r.side !== 'n' && norm(r.seg.a.x - s.seg.a.x, r.seg.a.y - s.seg.a.y) < 0.01 + r.len));
     void street;
     const want = countFor(kind, total, rng, kind === 'storefront');
     // remaining free intervals per span, as [t0, t1] in feet from span start

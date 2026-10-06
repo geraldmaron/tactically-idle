@@ -1,4 +1,4 @@
-import { chamferPolygon, outwardNormal, polyArea, rarea, rectPoly, sharedSegments, type Seg, type Vec } from './geom';
+import { chamferPolygon, norm, outwardNormal, polyArea, rarea, rectPoly, sharedSegments, type Seg, type Vec } from './geom';
 import type { PRoom, Plan } from './types';
 
 /** Keys that are numbered even when a building has only one of them. */
@@ -93,7 +93,7 @@ export function exteriorRuns(plan: Plan): Run[] {
     if (!outline) continue;
     for (const seg of sharedSegments(r.poly, outline, 0.5)) {
       const normal = outwardNormal(seg, r.poly);
-      runs.push({ room: r.id, floor: r.floor, seg, normal, side: sideOf(normal), len: Math.hypot(seg.b.x - seg.a.x, seg.b.y - seg.a.y) });
+      runs.push({ room: r.id, floor: r.floor, seg, normal, side: sideOf(normal), len: norm(seg.b.x - seg.a.x, seg.b.y - seg.a.y) });
     }
   }
   return runs;
@@ -110,7 +110,7 @@ export function roomPairs(plan: Plan): Pair[] {
       if (a.floor !== b.floor) continue;
       const segs = sharedSegments(a.poly, b.poly, 1);
       if (segs.length === 0) continue;
-      out.push({ a: a.id, b: b.id, segs, len: segs.reduce((s, g) => s + Math.hypot(g.b.x - g.a.x, g.b.y - g.a.y), 0) });
+      out.push({ a: a.id, b: b.id, segs, len: segs.reduce((s, g) => s + norm(g.b.x - g.a.x, g.b.y - g.a.y), 0) });
     }
   return out;
 }

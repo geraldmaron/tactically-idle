@@ -33,10 +33,10 @@ export function upperPool(rng: Rand): RoomSeed[] {
 
 export const TWO_STOREY: FamilySpec = {
   id: 'two_storey_house',
-  label: 'Two-storey house',
+  label: 'Two-story house',
   setting: 'residential',
   floors: [2, 2],
-  blurb: 'Two-storey house',
+  blurb: 'Two-story house',
   shapes: ['rect', 'L'],
   fallbackSeed: 0,
   policy: {

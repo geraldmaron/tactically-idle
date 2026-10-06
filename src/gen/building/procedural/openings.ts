@@ -1,6 +1,6 @@
 import type { Opening, DoorMaterial, WallMaterial } from '../../../sim/types';
 import type { Pair, Run } from './assemble';
-import { type Rect, type Seg, type Vec, EPS, R, lerp, pointInPoly, segLen, snap, vec } from './geom';
+import { type Rect, type Seg, type Vec, EPS, R, norm, lerp, pointInPoly, segLen, snap, vec } from './geom';
 import type { Rand } from './rand';
 import type { PRoom, Policy } from './types';
 
@@ -284,7 +284,7 @@ export function chooseExterior(
       if (!placed) continue;
       // Keep clear of doors already cut into the same room's wall.
       const pm = lerp(placed.from, placed.to, 0.5);
-      if (out.some((o) => o.room === room.id && Math.hypot(lerp(o.from, o.to, 0.5).x - pm.x, lerp(o.from, o.to, 0.5).y - pm.y) < (Math.hypot(o.to.x - o.from.x, o.to.y - o.from.y) + width) / 2 + 1.5)) continue;
+      if (out.some((o) => o.room === room.id && norm(lerp(o.from, o.to, 0.5).x - pm.x, lerp(o.from, o.to, 0.5).y - pm.y) < (norm(o.to.x - o.from.x, o.to.y - o.from.y) + width) / 2 + 1.5)) continue;
       const material = pickMaterial(rng, dp.material);
       out.push({
         id: kind === 'front' ? 'd_front' : `d_${kind}`,

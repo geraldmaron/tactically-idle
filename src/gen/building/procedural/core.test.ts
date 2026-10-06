@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { R, chamferPolygon, decomposeRects, polyArea, sharedSegments, traceCells, unionPolygon } from './geom';
+import { R, chamferPolygon, norm, decomposeRects, polyArea, sharedSegments, traceCells, unionPolygon } from './geom';
 import { Rand } from './rand';
 import { distribute } from './slice';
 import { planStrip } from './strips';
@@ -23,7 +23,7 @@ describe('geometry', () => {
     const b = unionPolygon([R(10, 2, 18, 12)]) as { x: number; y: number }[];
     const segs = sharedSegments(a, b, 1);
     expect(segs).toHaveLength(1);
-    expect(Math.hypot(segs[0].b.x - segs[0].a.x, segs[0].b.y - segs[0].a.y)).toBe(6);
+    expect(norm(segs[0].b.x - segs[0].a.x, segs[0].b.y - segs[0].a.y)).toBe(6);
   });
 
   it('cuts a corner with a 45 degree edge', () => {
