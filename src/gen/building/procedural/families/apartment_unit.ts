@@ -51,7 +51,9 @@ export const APARTMENT: FamilySpec = {
     openPairs: [['living', 'kitchen', 0.75], ['hall', 'living', 0.5], ['hall', 'kitchen', 0.5]],
     pairWeights: { 'bedroom|living': 2.4 },
     windowStyle: HOME_WINDOWS,
-    loops: 1,
+    loops: 2,
+    loopsMin: 1,
+    throughOk: ['utility'],
   },
   name: (rng) => `${rng.pick(APT_STREETS)}, Unit ${rng.int(1, 4)}${rng.pick(['A', 'B', 'C', 'D', 'E', 'F'])}`,
   plan(rng: Rand, why0) {

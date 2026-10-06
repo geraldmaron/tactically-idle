@@ -151,7 +151,23 @@ export function buildZones(plan: Plan, lot: LotSpec, ext: ExteriorSpec, doors: P
         }
       }
     }
-    const cls = ext.voidClass === 'courtyard' && !south ? idx('patio') : south ? FRONT : north ? BACK : west ? WEST : east ? EAST : BACK;
+    // A sliver (a wing stepped in by a foot) joins the yard along its long side: as part of the rear
+    // yard it was a 1 ft dead end the router cannot enter, and a back door could open into it.
+    let ci0 = nI;
+    let ci1 = 0;
+    let cj0 = nJ;
+    let cj1 = 0;
+    for (const k of comp) {
+      ci0 = Math.min(ci0, k % nI);
+      ci1 = Math.max(ci1, (k % nI) + 1);
+      cj0 = Math.min(cj0, Math.floor(k / nI));
+      cj1 = Math.max(cj1, Math.floor(k / nI) + 1);
+    }
+    const cw = (ci1 - ci0) * GRID;
+    const ch = (cj1 - cj0) * GRID;
+    const sliverX = cw < 3 && ch > cw && (west || east);
+    const sliverY = ch < 3 && cw > ch && (south || north);
+    const cls = sliverX ? (west ? WEST : EAST) : sliverY ? (south ? FRONT : BACK) : ext.voidClass === 'courtyard' && !south ? idx('patio') : south ? FRONT : north ? BACK : west ? WEST : east ? EAST : BACK;
     for (const k of comp) grid[k] = cls;
   }
 
@@ -190,13 +206,18 @@ export function buildZones(plan: Plan, lot: LotSpec, ext: ExteriorSpec, doors: P
     paint('stairwell', (x, y) => y >= bb.y0 - 5 && y < bb.y0 && (west ? x < x0 && x >= x0 - stairW : x >= x1 && x < x1 + stairW), ['back']);
   }
   if (ext.bay) {
-    const d = rng.snapped(10, 14);
+    const drawn = rng.snapped(10, 14);
+    // As with steps: leave 3 ft of yard beyond the bay or take the yard's full depth, never a sliver.
+    const avail = ext.bay === 'n' ? bb.y0 : ext.bay === 'e' ? lot.w - bb.x1 : bb.x0;
+    const d = avail - drawn >= 3 ? drawn : avail - 3 >= 10 ? snap(avail - 3) : avail;
     if (ext.bay === 'n') paint('bay', (x, y) => y >= bb.y0 - d && y < bb.y0 && x >= bb.x0 && x < bb.x1, ['back']);
     else if (ext.bay === 'e') paint('bay', (x, y) => x >= bb.x1 && x < bb.x1 + d && y >= bb.y0 && y < bb.y1, ['east']);
     else paint('bay', (x, y) => x < bb.x0 && x >= bb.x0 - d && y >= bb.y0 && y < bb.y1, ['west']);
   }
   if (ext.parking) {
-    paint('parking', (x, y) => y >= bb.y1 + 2 && (ext.kind === 'motel' || ext.kind === 'bar' || ext.kind === 'office' || ext.kind === 'warehouse') && x >= bb.x0 - 2 && x < bb.x1 + 2, ['front']);
+    // A 5 ft apron between the facade and the parked cars: the squad router keeps 1 ft off every zone
+    // edge, so a 2 ft strip left no standing room outside the front door.
+    paint('parking', (x, y) => y >= bb.y1 + 5 && (ext.kind === 'motel' || ext.kind === 'bar' || ext.kind === 'office' || ext.kind === 'warehouse') && x >= bb.x0 - 2 && x < bb.x1 + 2, ['front']);
   }
   if (ext.kind === 'motel') {
     const wk = ext.walkway ?? { x0: bb.x0, y0: bb.y1, x1: bb.x1, y1: bb.y1 + 5 };
@@ -206,6 +227,30 @@ export function buildZones(plan: Plan, lot: LotSpec, ext: ExteriorSpec, doors: P
     const side = rng.chance(0.5);
     paint('patio', (x, y) => y >= bb.y1 && y < bb.y1 + 7 && (side ? x >= bb.x0 && x < bb.x0 + 14 : x >= bb.x1 - 14 && x < bb.x1), ['front']);
   }
+  const STEP_OVER = ['front', 'back', 'west', 'east', 'driveway'];
+  /**
+   * Side of a porch or step: from `edge`, walk outward (`dir`) along the wall up to 3 ft. If the
+   * building, the lot edge or a different zone class comes first, the step takes that strip too: a
+   * yard sliver under 3 ft beside a step has no walking line for the router, and a zone link landing
+   * in it (bungalow notches) was unusable. `alongX`: the door is on a north or south wall; the band
+   * [b0, b1) is the step's depth.
+   */
+  const sideReach = (edge: number, dir: -1 | 1, b0: number, b1: number, alongX: boolean): number => {
+    const cellAt = (u: number, v: number) => (alongX ? Math.floor(v / GRID) * nI + Math.floor(u / GRID) : Math.floor(u / GRID) * nI + Math.floor(v / GRID));
+    const max = alongX ? lot.w : lot.h;
+    const firstU = edge + dir * (GRID / 2);
+    if (firstU < 0 || firstU > max) return edge;
+    const yardCls = grid[cellAt(firstU, b0 + GRID / 2)];
+    for (let g = 0; g < 3 - EPS; g += GRID) {
+      const u = edge + dir * (g + GRID / 2);
+      if (u < 0 || u > max) return edge + dir * g;
+      for (let v = b0 + GRID / 2; v < b1; v += GRID) {
+        const k = cellAt(u, v);
+        if (building[k] === 1 || grid[k] !== yardCls) return edge + dir * g;
+      }
+    }
+    return edge;
+  };
   for (const d of doors) {
     if (d.kind === 'balcony') {
       const bx0 = Math.min(d.from.x, d.to.x) - 1;
@@ -219,17 +264,27 @@ export function buildZones(plan: Plan, lot: LotSpec, ext: ExteriorSpec, doors: P
     const hi = Math.max(d.from.x, d.to.x);
     const ylo = Math.min(d.from.y, d.to.y);
     const yhi = Math.max(d.from.y, d.to.y);
-    const dpt = rng.snapped(3.5, 5);
+    const drawn = rng.snapped(3.5, 5);
+    // A step or porch either leaves 3 ft of yard beyond it (two 1 ft router margins and a walking
+    // line) or runs to the lot edge and splits the yard cleanly; a 1 ft neck behind it sealed the yard.
+    const avail = Math.abs(d.normal.y) > 0.9 ? (d.normal.y > 0 ? lot.h - mid.y : mid.y) : d.normal.x > 0 ? lot.w - mid.x : mid.x;
+    const dpt = avail - drawn >= 3 ? drawn : avail - 3 >= 3.5 ? snap(avail - 3) : avail;
     if (Math.abs(d.normal.y) > 0.9 && !(ext.kind === 'shop' || ext.kind === 'bar' || ext.kind === 'office' || ext.kind === 'warehouse' || ext.kind === 'motel' || ext.kind === 'apartment')) {
       const south = d.normal.y > 0;
       const name = d.kind === 'front' ? 'porch' : 'back_step';
       if (d.kind === 'front' && !ext.porch) continue;
       if (d.kind !== 'front' && !rng.chance(0.55)) continue;
       const w = d.kind === 'front' ? 1.5 : 1;
-      paint(name, (x, y) => x >= lo - w && x < hi + w && (south ? y >= mid.y && y < mid.y + dpt : y < mid.y && y >= mid.y - dpt), ['front', 'back', 'west', 'east', 'driveway']);
+      const [b0, b1] = south ? [mid.y, mid.y + dpt] : [mid.y - dpt, mid.y];
+      const x0 = sideReach(lo - w, -1, b0, b1, true);
+      const x1 = sideReach(hi + w, 1, b0, b1, true);
+      paint(name, (x, y) => x >= x0 && x < x1 && y >= b0 && y < b1, STEP_OVER);
     } else if (Math.abs(d.normal.x) > 0.9 && d.kind !== 'front' && (ext.kind === 'house' || ext.kind === 'semi') && rng.chance(0.55)) {
       const east = d.normal.x > 0;
-      paint('back_step', (x, y) => y >= ylo - 1 && y < yhi + 1 && (east ? x >= mid.x && x < mid.x + dpt : x < mid.x && x >= mid.x - dpt), ['front', 'back', 'west', 'east', 'driveway']);
+      const [b0, b1] = east ? [mid.x, mid.x + dpt] : [mid.x - dpt, mid.x];
+      const y0 = sideReach(ylo - 1, -1, b0, b1, false);
+      const y1 = sideReach(yhi + 1, 1, b0, b1, false);
+      paint('back_step', (x, y) => y >= y0 && y < y1 && x >= b0 && x < b1, STEP_OVER);
     }
   }
 

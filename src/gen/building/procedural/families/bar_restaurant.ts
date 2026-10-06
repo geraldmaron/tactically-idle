@@ -49,7 +49,8 @@ export const BAR_RESTAURANT: FamilySpec = {
       bar: { glazing: [['security', 3], ['double', 7]], covering: [['none', 5], ['blinds', 3], ['curtains', 2]] },
       wc: { glazing: [['single', 6], ['double', 4]], covering: [['blinds', 8], ['none', 2]] },
     },
-    loops: 1,
+    loops: 2,
+    throughOk: ['break_room', 'storage'],
   },
   name: (rng) => rng.pick(NAMES),
   plan(rng: Rand, why0) {
@@ -127,7 +128,7 @@ export const BAR_RESTAURANT: FamilySpec = {
     const neighbours: ('e' | 'w')[] = sideStreet === 'e' ? ['w'] : sideStreet === 'w' ? ['e'] : ['w', 'e'];
     const chamfer = sideStreet !== null && rng.chance(0.55);
     const cornerPt = sideStreet === 'e' ? vec(left + W, alley + Dp) : vec(left, alley + Dp);
-    const plan: Plan = { floors: 1, footprint, rooms, partyWalls: neighbours, ...(chamfer ? { chamfer: { corner: cornerPt, leg: rng.snapped(4, 6) } } : {}) };
+    const plan: Plan = { floors: 1, footprint, rooms, partyWalls: neighbours, ...(chamfer ? { chamfer: { corner: cornerPt, leg: rng.snapped(4.5, 6) } } : {}) };
     const ext: ExteriorSpec = { kind: 'bar', streetDepth, alleyDepth: alley, driveway: null, sideStreet, porch: false, fences: false, parking: false, notes: [], neighbours, corridor: false, bay: null, voidClass: 'back' };
     return { plan, lot, ext };
   },

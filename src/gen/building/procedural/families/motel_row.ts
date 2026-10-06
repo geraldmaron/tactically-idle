@@ -56,7 +56,9 @@ export const MOTEL_ROW: FamilySpec = {
     openPairs: [['reception', 'backoffice', 0.2], ['hall', 'reception', 0.4]],
     pairWeights: { 'backoffice|reception': 0.8, 'backoffice|utility': 0.9, 'reception|utility': 2.8 },
     windowStyle: { ...HOME_WINDOWS, unit: { glazing: [['double', 7], ['single', 3]], covering: [['curtains', 7], ['blinds', 3]] }, reception: { glazing: [['double', 6], ['security', 4]], covering: [['none', 6], ['blinds', 4]] } },
-    loops: 0,
+    loops: 1,
+    loopsMin: 1,
+    throughOk: ['utility'],
   },
   name: (rng) => rng.pick(NAMES),
   plan(rng: Rand, why0) {

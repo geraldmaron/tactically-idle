@@ -28,4 +28,4 @@ export function isGeneratedFamily(familyId: string): boolean {
   return BUILDING_FAMILIES.some((f) => f.id === familyId);
 }
 
-export { plausibilityReport } from './plausibility';
+export { indoorOrphans, plausibilityReport } from './plausibility';

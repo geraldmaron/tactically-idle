@@ -105,7 +105,8 @@ export const CORNER_STORE: FamilySpec = {
       rooms,
       stair: { lower: 'stair_0', upper: 'stair_1' },
       partyWalls: parties,
-      ...(chamfer ? { chamfer: { corner, leg: rng.snapped(4, 6) } } : {}),
+      // At least 4.5 ft: a door on the cut corner needs its 1.5 ft staging point 1 ft clear of both legs.
+      ...(chamfer ? { chamfer: { corner, leg: rng.snapped(4.5, 6) } } : {}),
     };
     const ext: ExteriorSpec = { kind: 'shop', streetDepth, alleyDepth: alley, driveway: null, sideStreet: cornerLot ? openSide : null, porch: false, fences: false, parking: false, notes: [], neighbours: parties, corridor: false, bay: null, voidClass: 'back' };
     return { plan, lot, ext };

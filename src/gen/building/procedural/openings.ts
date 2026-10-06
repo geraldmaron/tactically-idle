@@ -73,6 +73,8 @@ export interface Edge {
   a: PRoom;
   b: PRoom;
   pair: Pair;
+  /** A loop door beyond the spanning tree: dropped (not fatal) when no door fits the wall. */
+  loop?: boolean;
 }
 
 const pairKey = (a: PRoom, b: PRoom) => [a.seed.key, b.seed.key].sort().join('|');
@@ -93,12 +95,24 @@ function edgeWeight(a: PRoom, b: PRoom, policy: Policy): number | null {
   return 3.5;
 }
 
+/** Separate units on this floor (units.ts): their entry rooms, each with its own exterior door, and member keys. */
+export interface FloorUnits {
+  entries: string[];
+  members: Set<string>;
+}
+
 /**
- * Spanning tree over room adjacency that never routes through a leaf room (except a bedroom
- * to its own ensuite), plus up to `loops` extra doors between through rooms. Null when some
- * room cannot be reached.
+ * Spanning tree over room adjacency grown from one root (the front-door room, or the stair head
+ * upstairs) that never routes through a leaf room (except a bedroom to its own ensuite). Rooms of a
+ * separate unit are grown afterwards from the unit's own entry and only over its member keys, so
+ * nothing of the main premises can hang off a side door. Then loop doors (see `loopOk`). Null when
+ * some room cannot be reached.
+ *
+ * Seeding the tree from every exterior-door room (as g1 first did) grew a forest: rooms behind a back
+ * door were never joined indoors to the front, and both validators accepted it because the yard
+ * counted as a route.
  */
-export function connectRooms(rooms: PRoom[], pairs: Pair[], roots: string[], policy: Policy, rng: Rand, why?: (reason: string) => void): Edge[] | null {
+export function connectRooms(rooms: PRoom[], pairs: Pair[], root: string, units: FloorUnits, policy: Policy, rng: Rand, why?: (reason: string) => void): Edge[] | null {
   const byId = new Map(rooms.map((r) => [r.id, r]));
   const cands: (Edge & { w: number })[] = [];
   for (const p of pairs) {
@@ -110,44 +124,59 @@ export function connectRooms(rooms: PRoom[], pairs: Pair[], roots: string[], pol
     if (!p.segs.some((s) => segLen(s) >= 3.5)) continue;
     cands.push({ a, b, pair: p, w: w + rng.range(0, 0.4) });
   }
-  const seen = new Set(roots.filter((r) => byId.has(r)));
-  if (seen.size === 0) return null;
+  if (!byId.has(root)) return null;
+  const seen = new Set([root]);
   const tree: Edge[] = [];
   const used = new Set<(typeof cands)[number]>();
   const relay = (from: PRoom, to: PRoom) => from.seed.cls !== 'leaf' || to.ensuiteOf === from.id;
-  while (seen.size < rooms.length) {
-    let best: (typeof cands)[number] | null = null;
-    let toRoom: PRoom | null = null;
-    for (const c of cands) {
-      const aIn = seen.has(c.a.id);
-      const bIn = seen.has(c.b.id);
-      if (aIn === bIn) continue;
-      const from = aIn ? c.a : c.b;
-      const to = aIn ? c.b : c.a;
-      if (!relay(from, to)) continue;
-      if (!best || c.w < best.w) {
-        best = c;
-        toRoom = to;
+  const unitEntry = new Set(units.entries.filter((id) => byId.has(id) && id !== root));
+  /** Grow the tree (cheapest edge first) over rooms `may` admits until no admissible edge leaves it. */
+  const grow = (may: (to: PRoom) => boolean) => {
+    for (;;) {
+      let best: (typeof cands)[number] | null = null;
+      let toRoom: PRoom | null = null;
+      for (const c of cands) {
+        const aIn = seen.has(c.a.id);
+        const bIn = seen.has(c.b.id);
+        if (aIn === bIn) continue;
+        const from = aIn ? c.a : c.b;
+        const to = aIn ? c.b : c.a;
+        if (!relay(from, to) || !may(to)) continue;
+        if (!best || c.w < best.w) {
+          best = c;
+          toRoom = to;
+        }
       }
+      if (!best || !toRoom) return;
+      seen.add(toRoom.id);
+      used.add(best);
+      tree.push({ a: best.a, b: best.b, pair: best.pair });
     }
-    if (!best || !toRoom) {
-      why?.(`unreached ${rooms.filter((r) => !seen.has(r.id)).map((r) => r.id).join(',')}`);
-      return null;
-    }
-    seen.add(toRoom.id);
-    used.add(best);
-    tree.push({ a: best.a, b: best.b, pair: best.pair });
+  };
+  // Main premises first, everything but the unit entries; a unit member the main side reaches
+  // (a closet off the stockroom) simply belongs to it.
+  grow((to) => !unitEntry.has(to.id));
+  if (unitEntry.size > 0) {
+    for (const id of unitEntry) seen.add(id);
+    grow((to) => units.members.has(to.seed.key) || to.ensuiteOf !== undefined);
   }
-  let extra = rng.int(0, policy.loops);
+  if (seen.size < rooms.length) {
+    why?.(`unreached ${rooms.filter((r) => !seen.has(r.id)).map((r) => r.id).join(',')}`);
+    return null;
+  }
+  // Loops: a second way between rooms people already walk through. Leaf rooms stay single-door
+  // unless the family lists them in `throughOk` (a utility between kitchen and hall, a meeting room
+  // off both corridor and open office); bedrooms, baths and ensuites never take a second door.
+  const loopOk = (r: PRoom) => r.seed.key !== 'stair' && !r.ensuiteOf && (r.seed.cls !== 'leaf' || (policy.throughOk ?? []).includes(r.seed.key));
+  let extra = rng.int(policy.loopsMin ?? 0, policy.loops);
   for (const c of rng.shuffle(cands)) {
     if (extra <= 0) break;
-    if (used.has(c)) continue;
-    const ca = c.a.seed.cls;
-    const cb = c.b.seed.cls;
-    if (ca === 'leaf' || cb === 'leaf' || c.a.seed.key === 'stair' || c.b.seed.key === 'stair') continue;
-    if (ca === 'circ' && cb === 'circ') continue;
+    if (used.has(c) || !loopOk(c.a) || !loopOk(c.b)) continue;
+    if (c.a.seed.cls === 'circ' && c.b.seed.cls === 'circ') continue;
+    // Two leaf rooms joined to each other make a private suite, not a route.
+    if (c.a.seed.cls === 'leaf' && c.b.seed.cls === 'leaf') continue;
     used.add(c);
-    tree.push({ a: c.a, b: c.b, pair: c.pair });
+    tree.push({ a: c.a, b: c.b, pair: c.pair, loop: true });
     extra--;
   }
   return tree;
@@ -209,6 +238,8 @@ export function makeInteriorOpenings(edges: Edge[], policy: Policy, rng: Rand, f
       if (placed) break;
     }
     if (!placed) {
+      // A loop is a bonus route; losing one leaves the tree, which already reaches every room.
+      if (e.loop) continue;
       why?.(`door_fail ${a.seed.key}-${b.seed.key} len ${segs.map((q) => segLen(q)).join('/')} w ${usedWidth}`);
       return false;
     }

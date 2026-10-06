@@ -96,8 +96,12 @@ export interface Policy {
   /** Room keys that sit behind glass partitions on walls they share with public rooms. */
   glass?: string[];
   windowStyle: Record<string, WindowStyle> & { default: WindowStyle };
-  /** Maximum extra loop doors. */
+  /** Maximum extra loop doors (each is tried; one whose wall has no room for a door is dropped). */
   loops: number;
+  /** Minimum loop doors to try (default 0). */
+  loopsMin?: number;
+  /** Leaf room keys that may take a second, loop door (never in the spanning tree, never bedrooms or baths). */
+  throughOk?: string[];
 }
 
 export interface FamilyInfo {

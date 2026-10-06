@@ -1,6 +1,7 @@
 import type { LocationDefinition, Opening, PlacedObject, Room } from '../../../sim/types';
 import { type Rect, R, norm, overlapArea, polyArea, polyBBox } from './geom';
 import { swingBox } from './openings';
+import { unitsOf } from './units';
 
 export interface PlausibilityReport {
   /** 0..100, higher is more plausible. */
@@ -233,6 +234,7 @@ export function plausibilityReport(loc: LocationDefinition, furniture = true): P
     }
   }
   for (const r of loc.rooms) if (!seen.has(r.id)) fail(`${r.id} is reachable only through a leaf room`);
+  for (const id of indoorOrphans(loc)) fail(`${id} is not reachable indoors from the front door`);
 
   // Wet rooms and bedrooms open off sensible neighbours.
   for (const r of loc.rooms) {
@@ -295,6 +297,47 @@ export function plausibilityReport(loc: LocationDefinition, furniture = true): P
   }
   metrics.worstFreeFloor = Math.round(worst * 100) / 100;
   return { score: Math.max(0, score), pass: score >= PASS_SCORE && !notes.some((n) => n.startsWith('FAIL')), metrics, notes };
+}
+
+/**
+ * Rooms that cannot be reached from the front-door room through interior openings (doors, cased
+ * openings, the stair) without passing through a leaf room, and that do not belong to one of the
+ * family's declared separate units (units.ts). The outside is not a route: the entry-zone check above
+ * is satisfied by any room with its own yard door, which is how kitchens and offices reachable only
+ * from the back yard used to pass. The front-door room is the room behind `d_front`.
+ */
+export function indoorOrphans(loc: LocationDefinition): string[] {
+  const byId = new Map(loc.rooms.map((r) => [r.id, r]));
+  const front = loc.openings.find((o) => o.id === 'd_front');
+  const frontRoom = front ? (byId.has(front.a) ? front.a : front.b) : undefined;
+  if (!frontRoom || !byId.has(frontRoom)) return ['d_front'];
+  const graph = roomGraph(loc);
+  const reach = (root: string, admit: (id: string) => boolean): Set<string> => {
+    const seen = new Set([root]);
+    const stack = [root];
+    while (stack.length) {
+      const id = stack.pop() as string;
+      const k = stem(id);
+      for (const n of graph.get(id) ?? []) {
+        const ens = (byId.get(n)?.tags ?? []).includes('ensuite') && (k === 'bedroom' || k === 'unit');
+        if ((LEAF.has(k) && !ens && id !== root) || seen.has(n) || !admit(n)) continue;
+        seen.add(n);
+        stack.push(n);
+      }
+    }
+    return seen;
+  };
+  const main = reach(frontRoom, () => true);
+  const roomIds = new Set(byId.keys());
+  const outsideDoor = new Set(loc.openings.filter((o) => o.type !== 'window' && o.type !== 'stair' && roomIds.has(o.a) !== roomIds.has(o.b)).map((o) => (roomIds.has(o.a) ? o.a : o.b)));
+  const inUnit = new Set<string>();
+  for (const u of unitsOf(loc.familyId))
+    for (const r of loc.rooms) {
+      if (stem(r.id) !== u.entry || !outsideDoor.has(r.id) || main.has(r.id)) continue;
+      const member = (id: string) => main.has(id) || u.members.includes(stem(id)) || (byId.get(id)?.tags ?? []).includes('ensuite') || (u.upstairs && (byId.get(id)?.floor ?? 0) > 0);
+      for (const id of reach(r.id, member)) inUnit.add(id);
+    }
+  return loc.rooms.filter((r) => !main.has(r.id) && !inUnit.has(r.id)).map((r) => r.id);
 }
 
 function hit(r: Rect, x: number, y: number, pad = 0.6): boolean {

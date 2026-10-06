@@ -52,7 +52,8 @@ export const TWO_STOREY: FamilySpec = {
     intDoor: { material: 'hollow_core', width: [2.5, 3] },
     openPairs: [['living', 'kitchen', 0.5], ['living', 'dining', 0.9], ['kitchen', 'dining', 0.95], ['hall', 'living', 0.5], ['hall', 'dining', 0.4]],
     windowStyle: HOME_WINDOWS,
-    loops: 1,
+    loops: 2,
+    throughOk: ['utility'],
   },
   name: (rng) => `${rng.int(12, 480)} ${rng.pick(STREET_NAMES)}`,
   plan(rng: Rand, why) {
