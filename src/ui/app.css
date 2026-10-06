@@ -2137,7 +2137,9 @@ button.ocard {
 
 .live-map {
   position: relative;
-  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 auto;
   min-height: 240px;
   margin: 0 6px;
   overflow: hidden;
@@ -2146,23 +2148,23 @@ button.ocard {
   box-shadow: 0 6px 22px rgba(0, 0, 0, 0.5);
 }
 .live-map-inner {
-  position: absolute;
-  inset: 0;
+  position: relative;
+  min-width: 0;
 }
 .map-hud {
-  position: absolute;
-  z-index: 4;
   display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
   gap: 6px;
   align-items: center;
+  padding: 6px 8px;
 }
-.map-hud-tl {
-  top: 8px;
-  left: 8px;
+.map-status {
+  border-bottom: 1px solid var(--line);
 }
-.map-hud-br {
-  bottom: 8px;
-  right: 8px;
+.map-actions {
+  justify-content: flex-end;
+  border-top: 1px solid var(--line);
 }
 .hud-pill {
   display: inline-flex;
@@ -2622,8 +2624,8 @@ button.ocard {
   letter-spacing: 0.04em;
 }
 .live-map-inner > .bp-roomlist {
-  padding-top: 44px;
-  height: 100%;
+  padding: 8px;
+  height: 300px;
   overflow-y: auto;
   margin: 0;
 }
@@ -4326,9 +4328,6 @@ button.ocard {
 .app .bp-multifloor .bp-canvas {
   top: 52px;
 }
-.app .live-map .bp-multifloor .bp-canvas {
-  top: 90px;
-}
 .app .bp-tabwrap, .app .bp-tabs, .app .bp-tab {
   min-width: 0;
 }
@@ -4356,22 +4355,48 @@ button.ocard {
 .app .bp-roomlist-btn {
   grid-template-columns: minmax(0, 1fr) minmax(0, auto);
 }
-.map-hud {
-  max-width: calc(100% - 16px);
-  flex-wrap: wrap;
+/* Every live-map control gets its own flow area. The SVG's measured viewport
+   contains only drawing, so fit/pan/zoom never place room hit targets under UI. */
+.app .live-map-inner > .bp-root {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-rows: auto 300px auto auto;
+  height: auto;
+  aspect-ratio: auto !important;
 }
-.live-map-inner > .bp-roomlist {
-  padding-bottom: 60px;
+.app .live-map .bp-root > .bp-canvas {
+  position: relative;
+  inset: auto;
+  grid-area: 2 / 1 / 3 / -1;
+  min-width: 0;
+  min-height: 0;
+}
+.app .live-map .bp-floor-controls {
+  position: static;
+  grid-area: 1 / 1 / 2 / -1;
+}
+.app .live-map .bp-zoomctl {
+  position: static;
+  grid-area: 3 / 1;
+  align-self: center;
+  padding: 4px 0 4px 4px;
+}
+.app .live-map .bp-nav-help {
+  position: static;
+  grid-area: 3 / 2;
+  align-self: center;
+  max-width: none;
+  margin: 4px 8px 4px 4px;
+  text-align: left;
+}
+.app .live-map .bp-key {
+  position: static;
+  grid-area: 4 / 1 / 5 / -1;
+  max-width: none;
+  max-height: 160px;
+  margin: 0 8px 8px;
 }
 @container game (max-width: 380px) {
-  /* Zoom buttons and Materials/Rooms need separate rows at phone widths. */
-  .live-map .bp-zoomctl {
-    bottom: 60px;
-  }
-  .live-map .bp-key {
-    bottom: 106px;
-    max-height: calc(100% - 118px);
-  }
   .unit-facts {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }

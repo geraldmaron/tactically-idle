@@ -144,6 +144,7 @@ export function storyPublicScenario(scenario: ScenarioDefinition, built: BuiltLo
       ...(moved && person.status === 'confirmed' ? {
         label: `${person.label}'s location`,
         claim: `${person.label} is in ${place}.`,
+        source: 'Observed during this operation',
         note: person.locationLabel ?? `${person.label}'s current location has been observed.`,
         resolved: { ...fact.resolved, confirmed: person.locationLabel ?? `${person.label} is in ${place}.` },
         markers: { ...fact.markers, confirmed: person.label.toUpperCase() },
