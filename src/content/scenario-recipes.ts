@@ -49,13 +49,20 @@ export const SCENARIO_RECIPES_V9: readonly ScenarioRecipe[] = SCENARIO_TYPES_V9.
   }
   return chosen;
 });
+const V9_TYPES = new Set(SCENARIO_TYPES_V9.map(info => info.type));
+/** A framework's situations in draw order. v9 frameworks keep the order of their frozen
+ * v9 recipes; a framework added in v11 or later has every situation with both pacings. */
+function situationsFor(type: IncidentType): ScenarioRecipe[] {
+  if (!V9_TYPES.has(type)) return ([0, 1, 2] as const).flatMap(variant => (['deliberate_answers', 'ordinary'] as const).map(characteristic => recipe(type, '', variant, characteristic)));
+  return SCENARIO_RECIPES_V9.filter(recipe => recipe.type === type)
+    .filter((recipe, index, all) => all.findIndex(other => other.variant === recipe.variant && other.characteristic === recipe.characteristic) === index)
+    .sort((a, b) => a.variant - b.variant || (a.characteristic < b.characteristic ? -1 : 1));
+}
 export function scenarioRecipe(spec: IncidentSpec): ScenarioRecipe {
   if (spec.contentVersion >= 10) {
     // v10 decouples the situation from the building: any reviewed situation and
     // pacing of this framework can occur in whichever building the call was drawn to.
-    const situations = SCENARIO_RECIPES_V9.filter(recipe => recipe.type === spec.type)
-      .filter((recipe, index, all) => all.findIndex(other => other.variant === recipe.variant && other.characteristic === recipe.characteristic) === index)
-      .sort((a, b) => a.variant - b.variant || (a.characteristic < b.characteristic ? -1 : 1));
+    const situations = situationsFor(spec.type);
     if (!situations.length) throw new Error(`No recipe for ${spec.type}`);
     // Keyed by the call seed alone: when a generated building seed cannot host the
     // story and generation moves the call to another seed, the situation must not change.
@@ -78,10 +85,7 @@ export type ScenarioSituation = Pick<ScenarioRecipe, 'variant' | 'characteristic
 /** The situations (variant and pacing) a v10 call of this framework can present, in
  * the order scenarioRecipe draws from, so authoring and QA tools can browse them. */
 export function scenarioSituationsV10(type: IncidentType): ScenarioSituation[] {
-  return SCENARIO_RECIPES_V9.filter(recipe => recipe.type === type)
-    .filter((recipe, index, all) => all.findIndex(other => other.variant === recipe.variant && other.characteristic === recipe.characteristic) === index)
-    .sort((a, b) => a.variant - b.variant || (a.characteristic < b.characteristic ? -1 : 1))
-    .map(({ variant, characteristic }) => ({ variant, characteristic }));
+  return situationsFor(type).map(({ variant, characteristic }) => ({ variant, characteristic }));
 }
 /** v10 counterpart of specForRecipe: a seed that presents this framework's situation on
  * the chosen building type and building seed, found through the public generator. */

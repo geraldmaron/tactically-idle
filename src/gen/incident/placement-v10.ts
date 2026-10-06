@@ -49,6 +49,16 @@ export const PLACEMENT_AFFINITIES_V10: Partial<Record<IncidentType, PlacementAff
     upstairs: .5, tags: { valuables: 1.5 } },
   // A shop witness: on the trading floor, or waiting in a staff or office area.
   business_robbery: { kinds: { shop: 5, bar: 5, reception: 4, office: 3, staff: 3, dining: 2, stock: 2, open_office: 2, meeting: 2, warehouse: 2 }, tags: { valuables: 1.25 } },
+  // Content v11. An older adult who fell where people often do at home: a hall, kitchen,
+  // bathroom or beside the bed. The daughter relays what Ruth said by phone, so the room
+  // she names is sometimes wrong.
+  fall_at_home: { kinds: { hall: 4, kitchen: 4, bath: 3, bedroom: 3, living: 3, landing: 2, dining: 1, utility: 1, wc: 1 }, upstairs: .6, misreport: 20 },
+  // The building manager waits where the water is coming in: a service, storage or shared
+  // room, a kitchen or bathroom. Never a tenant's bedroom, a guest room or a private flat.
+  water_leak: { kinds: { utility: 5, storage: 4, stock: 4, bath: 3, kitchen: 3, staff: 3, hall: 2, landing: 2, office: 2, reception: 2, open_office: 2, meeting: 1, shop: 1, bar: 1, wc: 1 }, misreport: 15 },
+  // Staff keep a lost child somewhere visible and public: the counter, the reception desk
+  // or the shop floor, sometimes the office. The child can wander, so reports can be off.
+  lost_child: { kinds: { reception: 5, shop: 5, bar: 3, dining: 3, office: 2, staff: 1, hall: 1 }, upstairs: .3, misreport: 25 },
 };
 
 const WORK_TAGS = ['staff', 'office', 'work', 'meeting', 'server'];

@@ -447,7 +447,11 @@ export type IncidentType =
   | 'vacant_occupancy'
   | 'active_armed_incident'
   | 'hostage_crisis'
-  | 'protected_rescue';
+  | 'protected_rescue'
+  // Content v11 drop: ordinary calls compiled from typed framework data.
+  | 'fall_at_home'
+  | 'water_leak'
+  | 'lost_child';
 
 /** Deterministic seed tuple for a generated incident. */
 export interface IncidentSpec {
