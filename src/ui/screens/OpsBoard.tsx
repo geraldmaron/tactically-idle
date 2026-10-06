@@ -198,7 +198,7 @@ function IncidentCardView({ entry, now, isNew, onPrepare }: { entry: BoardEntry;
           NEW
         </span>
       )}
-      <CardBody card={card} scenario={scenario} familyId={spec?.familyId ?? scenario?.locationFamilyId ?? incident.familyId} type={spec?.type ?? incident.type} tier={spec?.tier ?? incident.tier}>
+      <CardBody card={card} scenario={scenario} familyId={scenario?.locationFamilyId ?? spec?.familyId ?? incident.familyId} type={spec?.type ?? incident.type} tier={spec?.tier ?? incident.tier}>
         <TimeLeft expiresAt={incident.expiresAt} now={now} />
         <Eligibility card={card} />
         <Button variant="primary" block onClick={() => onPrepare(card.id)}>

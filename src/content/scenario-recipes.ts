@@ -50,6 +50,16 @@ export const SCENARIO_RECIPES_V9: readonly ScenarioRecipe[] = SCENARIO_TYPES_V9.
   return chosen;
 });
 export function scenarioRecipe(spec: IncidentSpec): ScenarioRecipe {
+  if (spec.contentVersion >= 10) {
+    // v10 decouples the situation from the building: any reviewed situation and
+    // pacing of this framework can occur in whichever building the call was drawn to.
+    const situations = SCENARIO_RECIPES_V9.filter(recipe => recipe.type === spec.type)
+      .filter((recipe, index, all) => all.findIndex(other => other.variant === recipe.variant && other.characteristic === recipe.characteristic) === index)
+      .sort((a, b) => a.variant - b.variant || (a.characteristic < b.characteristic ? -1 : 1));
+    if (!situations.length) throw new Error(`No recipe for ${spec.type}`);
+    const picked = situations[hashSeed(`${spec.seed}:${spec.buildingSeed}:recipe-v10`) % situations.length];
+    return recipe(spec.type, spec.familyId, picked.variant, picked.characteristic);
+  }
   const candidates = SCENARIO_RECIPES_V9.filter(recipe => recipe.type === spec.type && recipe.familyId === spec.familyId);
   if (!candidates.length) throw new Error(`No recipe for ${spec.type}/${spec.familyId}`);
   return candidates[hashSeed(`${spec.seed}:${spec.buildingSeed}:recipe-v9`) % candidates.length];

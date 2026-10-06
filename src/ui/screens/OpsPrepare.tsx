@@ -265,7 +265,7 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
   const deploy = () => act(cmd, practice ? 'Practice started' : 'Squads deployed');
 
   const incidentType = scenario?.incident?.type ?? null;
-  const familyId = scenario?.incident?.familyId ?? scenario?.locationFamilyId ?? null;
+  const familyId = scenario?.locationFamilyId ?? scenario?.incident?.familyId ?? null;
   const kicker = [incidentType ? incidentMeta(incidentType).label : null, familyBlurb(familyId)].filter(Boolean).join(' · ');
   const knownRest = brief.known.filter((k) => !intel.covered.has(k));
 

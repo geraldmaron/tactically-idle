@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import type { Armament, EnvironmentDefinition } from '../../sim/scenario-types';
 import { SCENARIO_TYPES_V9 } from '../../content/scenario-recipes';
 import { INCIDENT_TYPES_V4 } from '../../gen/incident';
-import { BUILDING_FAMILIES } from '../../gen/building';
+import { ALL_BUILDING_FAMILIES } from '../../gen/building';
 import { Chip } from './ui';
 import { Icon } from '../icons';
 import type { IconName } from '../icons';
@@ -47,7 +47,7 @@ export function familyBlurb(familyId: string | null | undefined): string | null 
   if (!familyId) return null;
   // The persistence key identifies a furniture version, not a player-facing place.
   familyId = familyId.replace(/__furnished_v7$/, '');
-  const f = BUILDING_FAMILIES.find((x) => x.id === familyId);
+  const f = ALL_BUILDING_FAMILIES.find((x) => x.id === familyId);
   if (f) return f.blurb.replaceAll('storey', 'story');
   return familyId === 'maple_street' ? 'Single-story house' : titleCase(familyId);
 }
