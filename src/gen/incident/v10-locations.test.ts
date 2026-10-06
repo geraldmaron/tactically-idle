@@ -34,3 +34,18 @@ describe('content v10 generated locations', () => {
     expect(generated).toBeGreaterThan(40);
   }, 120000);
 });
+
+describe('v10 hosting keeps the drawn situation', () => {
+  it('plays the situation the drawn ID implies even when the building seed moves', async () => {
+    const { scenarioRecipe } = await import('../../content/scenario-recipes');
+    let moved = 0;
+    for (const type of ['burglary', 'business_robbery', 'welfare_check', 'missing_vulnerable'] as const) for (const familyId of PROCEDURAL_FAMILIES.map(f => f.id)) for (let buildingSeed = 0; buildingSeed < 16; buildingSeed++) {
+      const spec = { type, familyId, buildingSeed, seed: buildingSeed * 31 + 5, tier: 2, contentVersion: 10 };
+      if (!parseIncidentId(incidentId(spec))) continue;
+      const s = generateIncident(spec), drawn = scenarioRecipe(spec), played = s.story!.recipeId!.split('/');
+      if (s.locationSeed !== buildingSeed || !s.locationFamilyId.startsWith(familyId)) moved++;
+      expect([Number(played[2]), played[3]], `${type} ${familyId} ${buildingSeed}`).toEqual([drawn.variant, drawn.characteristic]);
+    }
+    expect(moved).toBeGreaterThan(0);
+  }, 300000);
+});
