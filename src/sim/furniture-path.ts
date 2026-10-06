@@ -1,12 +1,12 @@
 // Room-local navigation for furnished generation. No random draws or location
 // mutation: the furnishing validator and route overlay use the same geometry.
-import type { PlacedObject, Room, Vec } from './types';
+import type { GeometryVersion, PlacedObject, Room, Vec } from './types';
+import { distanceFor, hypotFor, type Distance } from './geometry';
 
 export interface FootprintRect { x: number; y: number; w: number; h: number }
 
 const EPS = 1e-7;
 const MAX_VERTICES = 256;
-const length = (a: Vec, b: Vec) => Math.hypot(a.x - b.x, a.y - b.y);
 const cross = (a: Vec, b: Vec) => a.x * b.y - a.y * b.x;
 const sub = (a: Vec, b: Vec): Vec => ({ x: a.x - b.x, y: a.y - b.y });
 
@@ -19,18 +19,19 @@ export function footprintRect(object: PlacedObject): FootprintRect {
   return { x: object.x, y: object.y, w: object.w, h: object.h };
 }
 
-function pointEdgeDistance(p: Vec, a: Vec, b: Vec): number {
+// `length` is the location's distance (geometry.ts): Math.hypot for locations issued before `_g2`.
+function pointEdgeDistance(p: Vec, a: Vec, b: Vec, length: Distance): number {
   const d = sub(b, a);
   const denominator = d.x * d.x + d.y * d.y;
   const t = denominator ? Math.max(0, Math.min(1, ((p.x - a.x) * d.x + (p.y - a.y) * d.y) / denominator)) : 0;
   return length(p, { x: a.x + d.x * t, y: a.y + d.y * t });
 }
 
-function inside(p: Vec, polygon: readonly Vec[]): boolean {
+function inside(p: Vec, polygon: readonly Vec[], length: Distance): boolean {
   let result = false;
   for (let i = 0; i < polygon.length; i++) {
     const a = polygon[i], b = polygon[(i + 1) % polygon.length];
-    if (pointEdgeDistance(p, a, b) <= EPS) return true;
+    if (pointEdgeDistance(p, a, b, length) <= EPS) return true;
     if (a.y > p.y !== b.y > p.y && p.x < a.x + (b.x - a.x) * (p.y - a.y) / (b.y - a.y)) result = !result;
   }
   return result;
@@ -44,9 +45,9 @@ function intersectionTime(a: Vec, b: Vec, c: Vec, d: Vec): number | null {
   return t >= -EPS && t <= 1 + EPS && u >= -EPS && u <= 1 + EPS ? Math.max(0, Math.min(1, t)) : null;
 }
 
-function edgeDistance(a: Vec, b: Vec, c: Vec, d: Vec): number {
+function edgeDistance(a: Vec, b: Vec, c: Vec, d: Vec, length: Distance): number {
   if (intersectionTime(a, b, c, d) !== null) return 0;
-  return Math.min(pointEdgeDistance(a, c, d), pointEdgeDistance(b, c, d), pointEdgeDistance(c, a, b), pointEdgeDistance(d, a, b));
+  return Math.min(pointEdgeDistance(a, c, d, length), pointEdgeDistance(b, c, d, length), pointEdgeDistance(c, a, b, length), pointEdgeDistance(d, a, b, length));
 }
 
 function interiorHit(a: Vec, b: Vec, rect: FootprintRect): boolean {
@@ -74,24 +75,24 @@ function obstacles(room: Room, objects: readonly PlacedObject[], clearance: numb
   });
 }
 
-function clearPoint(room: Room, rects: readonly FootprintRect[], point: Vec, wallClearance: number): boolean {
-  if (!Number.isFinite(point.x) || !Number.isFinite(point.y) || !inside(point, room.polygon)) return false;
+function clearPoint(room: Room, rects: readonly FootprintRect[], point: Vec, wallClearance: number, length: Distance): boolean {
+  if (!Number.isFinite(point.x) || !Number.isFinite(point.y) || !inside(point, room.polygon, length)) return false;
   if (rects.some(rect => interiorHit(point, point, rect))) return false;
-  return room.polygon.every((a, i) => pointEdgeDistance(point, a, room.polygon[(i + 1) % room.polygon.length]) + EPS >= wallClearance);
+  return room.polygon.every((a, i) => pointEdgeDistance(point, a, room.polygon[(i + 1) % room.polygon.length], length) + EPS >= wallClearance);
 }
 
-/** A circular agent fits inside the room and outside every solid footprint. */
-export function roomPointClear(room: Room, objects: readonly PlacedObject[], point: Vec, clearance = 1): boolean {
-  return clearPoint(room, obstacles(room, objects, Math.max(0, clearance)), point, Math.max(0, clearance));
+/** A circular agent fits inside the room and outside every solid footprint. `geometry` is the location's (geometry.ts). */
+export function roomPointClear(room: Room, objects: readonly PlacedObject[], point: Vec, clearance = 1, geometry?: GeometryVersion): boolean {
+  return clearPoint(room, obstacles(room, objects, Math.max(0, clearance)), point, Math.max(0, clearance), distanceFor(geometry));
 }
 
-function clearSegment(room: Room, rects: readonly FootprintRect[], a: Vec, b: Vec, wallClearance: number): boolean {
-  if (!clearPoint(room, rects, a, wallClearance) || !clearPoint(room, rects, b, wallClearance)) return false;
+function clearSegment(room: Room, rects: readonly FootprintRect[], a: Vec, b: Vec, wallClearance: number, length: Distance): boolean {
+  if (!clearPoint(room, rects, a, wallClearance, length) || !clearPoint(room, rects, b, wallClearance, length)) return false;
   if (rects.some(rect => interiorHit(a, b, rect))) return false;
   const cuts = [0, 1];
   for (let i = 0; i < room.polygon.length; i++) {
     const c = room.polygon[i], d = room.polygon[(i + 1) % room.polygon.length];
-    if (edgeDistance(a, b, c, d) + EPS < wallClearance) return false;
+    if (edgeDistance(a, b, c, d, length) + EPS < wallClearance) return false;
     const t = intersectionTime(a, b, c, d);
     if (t !== null) cuts.push(t);
   }
@@ -100,28 +101,30 @@ function clearSegment(room: Room, rects: readonly FootprintRect[], a: Vec, b: Ve
   cuts.sort((x, y) => x - y);
   return cuts.slice(1).every((end, i) => {
     const t = (cuts[i] + end) / 2;
-    return inside({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t }, room.polygon);
+    return inside({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t }, room.polygon, length);
   });
 }
 
 /** Wall clearance may be zero only for the short normal approach to an opening. */
-export function roomSegmentClear(room: Room, objects: readonly PlacedObject[], from: Vec, to: Vec, clearance = 1, wallClearance = clearance): boolean {
-  return clearSegment(room, obstacles(room, objects, Math.max(0, clearance)), from, to, Math.max(0, wallClearance));
+export function roomSegmentClear(room: Room, objects: readonly PlacedObject[], from: Vec, to: Vec, clearance = 1, wallClearance = clearance, geometry?: GeometryVersion): boolean {
+  return clearSegment(room, obstacles(room, objects, Math.max(0, clearance)), from, to, Math.max(0, wallClearance), distanceFor(geometry));
 }
 
 /**
  * A bounded visibility graph around expanded furniture and inset room corners.
  * Solid footprints get conservative square clearance; walls get radial clearance.
- * Returns null for invalid endpoints, a sealed passage, or excessive geometry.
+ * Returns null for invalid endpoints, a sealed passage, or excessive geometry. `geometry` is the
+ * location's distance math (geometry.ts); omitted, it is the legacy Math.hypot.
  */
-export function findRoomPath(room: Room, objects: readonly PlacedObject[], from: Vec, to: Vec, clearance = 1): Vec[] | null {
+export function findRoomPath(room: Room, objects: readonly PlacedObject[], from: Vec, to: Vec, clearance = 1, geometry?: GeometryVersion): Vec[] | null {
+  const length = distanceFor(geometry), hypot = hypotFor(geometry);
   const margin = Math.max(0, clearance);
   const rects = obstacles(room, objects, margin);
-  if (!clearPoint(room, rects, from, margin) || !clearPoint(room, rects, to, margin)) return null;
-  if (clearSegment(room, rects, from, to, margin)) return [from, to];
+  if (!clearPoint(room, rects, from, margin, length) || !clearPoint(room, rects, to, margin, length)) return null;
+  if (clearSegment(room, rects, from, to, margin, length)) return [from, to];
   const vertices: Vec[] = [from, to];
   const add = (point: Vec) => {
-    if (clearPoint(room, rects, point, margin) && !vertices.some(p => length(p, point) < EPS)) vertices.push(point);
+    if (clearPoint(room, rects, point, margin, length) && !vertices.some(p => length(p, point) < EPS)) vertices.push(point);
   };
   for (const rect of rects) {
     for (const x of [rect.x, rect.x + rect.w]) for (const y of [rect.y, rect.y + rect.h]) add({ x, y });
@@ -132,7 +135,7 @@ export function findRoomPath(room: Room, objects: readonly PlacedObject[], from:
   const sign = area >= 0 ? 1 : -1;
   for (let i = 0; i < room.polygon.length; i++) {
     const p = room.polygon[i], previous = room.polygon[(i + room.polygon.length - 1) % room.polygon.length], next = room.polygon[(i + 1) % room.polygon.length];
-    const a = sub(p, previous), b = sub(next, p), al = Math.hypot(a.x, a.y), bl = Math.hypot(b.x, b.y);
+    const a = sub(p, previous), b = sub(next, p), al = hypot(a.x, a.y), bl = hypot(b.x, b.y);
     if (!al || !bl) continue;
     const u = { x: a.x / al, y: a.y / al }, v = { x: b.x / bl, y: b.y / bl };
     const offsetA = { x: p.x - u.y * margin * sign, y: p.y + u.x * margin * sign };
@@ -159,7 +162,7 @@ export function findRoomPath(room: Room, objects: readonly PlacedObject[], from:
     for (let i = 0; i < vertices.length; i++) {
       if (done.has(i)) continue;
       const cost = costs[current] + length(vertices[current], vertices[i]);
-      if (cost + EPS < costs[i] && clearSegment(room, rects, vertices[current], vertices[i], margin)) {
+      if (cost + EPS < costs[i] && clearSegment(room, rects, vertices[current], vertices[i], margin, length)) {
         costs[i] = cost;
         previous[i] = current;
       }

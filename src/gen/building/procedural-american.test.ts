@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { AMERICAN_ENGLISH } from '../../content/american-english';
-import { PROCEDURAL_FAMILIES, generateBuilding } from './index';
+import { PROCEDURAL_FAMILIES, PROCEDURAL_FAMILIES_G2, generateBuilding } from './index';
 
 // Player-visible text of generated buildings is American English. The game's spelling bridge
 // supplies the words; the extras are building vocabulary it does not cover.
@@ -21,7 +21,7 @@ describe('American English in generated buildings', () => {
 
   it('labels every family, room, zone and note in American English for 50 seeds of each type', () => {
     const bad: string[] = [];
-    for (const family of PROCEDURAL_FAMILIES) {
+    for (const family of [...PROCEDURAL_FAMILIES, ...PROCEDURAL_FAMILIES_G2]) {
       for (const text of [family.label, family.blurb]) if (britishIn(text)) bad.push(`${family.id}: ${text}`);
       for (let seed = 0; seed < 50; seed++) {
         const loc = generateBuilding(`${family.id}__furnished_v7`, seed);

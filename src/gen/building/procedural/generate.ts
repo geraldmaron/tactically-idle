@@ -1,4 +1,6 @@
 import type { LocationDefinition } from '../../../sim/types';
+import { applyAccess, drawUnitAccess } from './access';
+import { GENERATION, GENERATIONS, publicFamilyId, type Generation } from './generation';
 import { deriveLocation } from '../../../sim/location';
 import { validateLocation } from '../../../sim/location-validate';
 import { routeBetween } from '../../../sim/spatial-factors';
@@ -7,15 +9,15 @@ import { buildAttempt } from './build';
 import { FAMILIES } from './families';
 import { plausibilityReport } from './plausibility';
 import { Rand } from './rand';
-import type { FamilySpec } from './types';
+import { GEN_VERSION, type FamilySpec } from './types';
 
 /** Attempts per draw stream before falling back to the family's known-good seed. */
 export const MAX_ATTEMPTS = 80;
 /** The fallback stream is reached rarely, so it may search longer: its furnishing depends on the reported seed. */
 export const FALLBACK_ATTEMPTS = 120;
-/** Generator generation. Part of every public building type id (`bungalow_g1`); see README.md before changing output. */
-export const GENERATION = 'g1';
-export const publicFamilyId = (specId: string): string => `${specId}_${GENERATION}`;
+export { GENERATION, GENERATIONS, LATEST_GENERATION, publicFamilyId, type Generation } from './generation';
+/** Location `version` per generation (the furnished form is always 7). */
+const PLAN_VERSION: Record<Generation, number> = { g1: GEN_VERSION, g2: 2 };
 
 export interface AttemptStats {
   attempts: number;
@@ -113,9 +115,20 @@ function reject(notes: string[], bump: (reason: string) => void): null {
   return null;
 }
 
-function search(spec: FamilySpec, geoSeed: number, reportSeed: number, attempts: number, stats?: AttemptStats): GeneratedBuilding | null {
+/** What a generation adds to a drawn plan before acceptance, so validation and furnishing see it.
+ * g1 returns the plan untouched. The access draw has its own stream, keyed by the reported seed. */
+function finishPlan(spec: FamilySpec, generation: Generation, loc: LocationDefinition, reportSeed: number): LocationDefinition {
+  if (generation === 'g1') return loc;
+  loc.version = PLAN_VERSION[generation];
+  loc.geometry = 'exact';
+  if (spec.unitLevel) applyAccess(loc, drawUnitAccess(spec.unitLevel(loc), new Rand(`${spec.id}:access:${reportSeed}`)));
+  return loc;
+}
+
+function search(spec: FamilySpec, generation: Generation, geoSeed: number, reportSeed: number, attempts: number, stats?: AttemptStats): GeneratedBuilding | null {
+  // Every generation walks the family's one draw stream; later generations differ in how a draw is measured and finished.
   const rng = new Rand(`${spec.id}:${geoSeed}`);
-  const familyId = publicFamilyId(spec.id);
+  const familyId = publicFamilyId(spec.id, generation);
   const bump = (r: string) => {
     if (stats) stats.reasons[r] = (stats.reasons[r] ?? 0) + 1;
   };
@@ -125,7 +138,7 @@ function search(spec: FamilySpec, geoSeed: number, reportSeed: number, attempts:
     try {
       const loc = buildAttempt(spec, familyId, reportSeed, rng, stats ? bump : undefined);
       if (!loc) continue;
-      const done = accept(loc, bump);
+      const done = accept(finishPlan(spec, generation, loc, reportSeed), bump);
       if (done) return done;
     } catch {
       bump('exception');
@@ -134,19 +147,29 @@ function search(spec: FamilySpec, geoSeed: number, reportSeed: number, attempts:
   return null;
 }
 
-const specOf = (familyId: string): FamilySpec | undefined => FAMILIES.find((f) => f.id === familyId || publicFamilyId(f.id) === familyId);
+/** The family and generation a spec id (`bungalow`, generation g1) or public id (`bungalow_g2`) names. */
+export function resolveFamily(familyId: string): { spec: FamilySpec; generation: Generation } | undefined {
+  for (const spec of FAMILIES) {
+    if (spec.id === familyId) return { spec, generation: GENERATION };
+    const generation = GENERATIONS.find((g) => publicFamilyId(spec.id, g) === familyId);
+    if (generation) return { spec, generation };
+  }
+  return undefined;
+}
 
 /**
  * Deterministic: the draw stream is seeded from hashSeed(`${specId}:${seed}`). `familyId` is a
- * spec id (`bungalow`) or its public id (`bungalow_g1`); the result always carries the public id.
+ * spec id (`bungalow`, meaning `bungalow_g1`) or a public id (`bungalow_g1`, `bungalow_g2`), which
+ * selects the generation; the result always carries the public id.
  */
 export function generatePair(familyId: string, seed: number, stats?: AttemptStats): GeneratedBuilding {
-  const spec = specOf(familyId);
-  if (!spec) throw new Error(`No generator for ${familyId} (seed ${seed})`);
-  const found = search(spec, seed, seed, MAX_ATTEMPTS, stats);
+  const resolved = resolveFamily(familyId);
+  if (!resolved) throw new Error(`No generator for ${familyId} (seed ${seed})`);
+  const { spec, generation } = resolved;
+  const found = search(spec, generation, seed, seed, MAX_ATTEMPTS, stats);
   if (found) return found;
   if (stats) stats.reasons.FALLBACK = (stats.reasons.FALLBACK ?? 0) + 1;
-  const fallback = search(spec, spec.fallbackSeed, seed, FALLBACK_ATTEMPTS, stats);
+  const fallback = search(spec, generation, spec.fallbackSeed, seed, FALLBACK_ATTEMPTS, stats);
   if (fallback) return fallback;
   throw new Error(`No valid ${familyId} building for seed ${seed}`);
 }
@@ -157,9 +180,9 @@ export function generate(familyId: string, seed: number, stats?: AttemptStats): 
 
 /** The family's known-good layout stream, reported as `seed`. Exposed so tests can prove the fallback valid. */
 export function generateFallback(familyId: string, seed: number): GeneratedBuilding {
-  const spec = specOf(familyId);
-  if (!spec) throw new Error(`No generator for ${familyId}`);
-  const found = search(spec, spec.fallbackSeed, seed, FALLBACK_ATTEMPTS);
+  const resolved = resolveFamily(familyId);
+  if (!resolved) throw new Error(`No generator for ${familyId}`);
+  const found = search(resolved.spec, resolved.generation, resolved.spec.fallbackSeed, seed, FALLBACK_ATTEMPTS);
   if (!found) throw new Error(`Fallback for ${familyId} is not valid`);
   return found;
 }

@@ -136,6 +136,26 @@ export interface MapNote {
   decorative: true;
 }
 
+/**
+ * Distance math a location is measured with (src/sim/geometry.ts). Absent: `Math.hypot`, which
+ * ECMA-262 lets engines approximate; every location issued before `_g2` keeps it so its derived
+ * costs, staging points and furnishing stay byte-identical. `'exact'`: `Math.sqrt(dx*dx + dy*dy)`,
+ * built from IEEE-754 operations that every engine rounds the same way.
+ */
+export type GeometryVersion = 'exact';
+
+/** How a unit inside a larger building is reached from the street (multi-unit residential). */
+export interface LocationAccess {
+  /** Floor of the unit's front door: 0 ground, 1 second floor, 2 third, 3 fourth (American numbering in text). */
+  unitLevel: 0 | 1 | 2 | 3;
+  /** The building has an elevator serving the unit's floor. */
+  lift: boolean;
+  /** A wheelchair can get from the street to the unit's front door without steps. */
+  stepFree: boolean;
+  /** Player-facing line, also carried as a map note, e.g. 'Third-floor unit; the building has an elevator'. */
+  note: string;
+}
+
 export interface LocationDefinition {
   id: Id;
   familyId: Id;
@@ -143,6 +163,10 @@ export interface LocationDefinition {
   seed: number;
   name: string;
   setting: 'residential' | 'business' | 'apartment';
+  /** Distance math version; see GeometryVersion. Absent on every location issued before `_g2`. */
+  geometry?: GeometryVersion;
+  /** Unit floor and step-free route for a unit in a multi-unit building (`apartment_unit_g2`). */
+  access?: LocationAccess;
   units: 'ft';
   /** Drawing extents (lot), feet. */
   bounds: { w: number; h: number };

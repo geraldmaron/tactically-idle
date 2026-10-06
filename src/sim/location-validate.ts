@@ -10,6 +10,7 @@ import type {
   Vec,
 } from './types';
 import { floorMap, polygonArea, polygonBBox, polygonOverlapArea } from './location';
+import { hypotFor, type Hypot } from './geometry';
 
 // Structural checks that make a layout playable. Geometry here is sampled on a
 // 0.25 ft grid rather than clipped exactly, so it stays correct for any polygon
@@ -37,21 +38,22 @@ function pointInPolygon(p: Pt, poly: Polygon): boolean {
   return inside;
 }
 
-function distToSegment(p: Pt, a: Pt, b: Pt): number {
+// `hypot` is the location's vector length (geometry.ts): Math.hypot for locations issued before `_g2`.
+function distToSegment(p: Pt, a: Pt, b: Pt, hypot: Hypot): number {
   const dx = b.x - a.x;
   const dy = b.y - a.y;
   const len2 = dx * dx + dy * dy;
   const t = len2 === 0 ? 0 : Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / len2));
-  return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy));
+  return hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy));
 }
 
-function distToBoundary(p: Pt, poly: Polygon): number {
+function distToBoundary(p: Pt, poly: Polygon, hypot: Hypot): number {
   let best = Infinity;
-  for (let i = 0; i < poly.length; i++) best = Math.min(best, distToSegment(p, poly[i], poly[(i + 1) % poly.length]));
+  for (let i = 0; i < poly.length; i++) best = Math.min(best, distToSegment(p, poly[i], poly[(i + 1) % poly.length], hypot));
   return best;
 }
 
-const insideOrOn = (p: Pt, poly: Polygon) => pointInPolygon(p, poly) || distToBoundary(p, poly) <= TOL;
+const insideOrOn = (p: Pt, poly: Polygon, hypot: Hypot) => pointInPolygon(p, poly) || distToBoundary(p, poly, hypot) <= TOL;
 
 function orient(a: Pt, b: Pt, c: Pt): number {
   return (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
@@ -115,24 +117,25 @@ function objectRect(o: PlacedObject): { x0: number; y0: number; x1: number; y1: 
   return { x0: cx - w / 2, y0: cy - h / 2, x1: cx + w / 2, y1: cy + h / 2 };
 }
 
-const segLength = (o: Opening) => Math.hypot(o.to.x - o.from.x, o.to.y - o.from.y);
+const segLength = (o: Opening, hypot: Hypot) => hypot(o.to.x - o.from.x, o.to.y - o.from.y);
 
-function pointsAlong(a: Pt, b: Pt): Pt[] {
-  const n = Math.max(1, Math.ceil(Math.hypot(b.x - a.x, b.y - a.y) / STEP));
+function pointsAlong(a: Pt, b: Pt, hypot: Hypot): Pt[] {
+  const n = Math.max(1, Math.ceil(hypot(b.x - a.x, b.y - a.y) / STEP));
   return Array.from({ length: n + 1 }, (_, i) => ({ x: a.x + ((b.x - a.x) * i) / n, y: a.y + ((b.y - a.y) * i) / n }));
 }
 
 /** Two outlines share a wall when at least one foot of A's boundary lies on B's boundary. */
-function sharesWall(a: Polygon, b: Polygon): boolean {
+function sharesWall(a: Polygon, b: Polygon, hypot: Hypot): boolean {
   let n = 0;
   for (let i = 0; i < a.length; i++)
-    for (const p of pointsAlong(a[i], a[(i + 1) % a.length])) if (distToBoundary(p, b) <= TOL) n++;
+    for (const p of pointsAlong(a[i], a[(i + 1) % a.length], hypot)) if (distToBoundary(p, b, hypot) <= TOL) n++;
   return n * STEP >= 1;
 }
 
 // ---------------------------------------------------------------- validation
 
 export function validateLocation(loc: LocationDefinition, derived: DerivedLocation): ValidationIssue[] {
+  const hypot = hypotFor(loc.geometry);
   const issues: ValidationIssue[] = [];
   const err = (code: string, message: string, ref?: Id) => issues.push({ severity: 'error', code, message, ref });
   const warn = (code: string, message: string, ref?: Id) => issues.push({ severity: 'warning', code, message, ref });
@@ -260,7 +263,7 @@ export function validateLocation(loc: LocationDefinition, derived: DerivedLocati
         const overlap = polygonOverlapArea(ra.polygon, rb.polygon);
         if (overlap < MIN_STAIR_OVERLAP)
           err('stair_misaligned', `${o.id}: ${o.a} and ${o.b} overlap by ${overlap.toFixed(2)} sq ft in plan (need ${MIN_STAIR_OVERLAP}); the stairwell is not aligned`, o.id);
-        else if (!insideOrOn(o.from, ra.polygon) || !insideOrOn(o.to, rb.polygon))
+        else if (!insideOrOn(o.from, ra.polygon, hypot) || !insideOrOn(o.to, rb.polygon, hypot))
           err('stair_misaligned', `${o.id}: foot or head is not inside its stair room (from must lie in ${o.a}, to in ${o.b})`, o.id);
       }
       continue;
@@ -289,13 +292,13 @@ export function validateLocation(loc: LocationDefinition, derived: DerivedLocati
       // A floor-1 window faces the outdoors from the upper outline, which may sit inside
       // the ground footprint, so only its room's wall is checked, not the zone's edge.
       const upperWindow = o.type === 'window' && expected >= 1 && (aRoom !== bRoom);
-      const off = pointsAlong(o.from, o.to).some((p) =>
-        upperWindow ? distToBoundary(p, aRoom ? A : B) > TOL : distToBoundary(p, A) > TOL || distToBoundary(p, B) > TOL,
+      const off = pointsAlong(o.from, o.to, hypot).some((p) =>
+        upperWindow ? distToBoundary(p, aRoom ? A : B, hypot) > TOL : distToBoundary(p, A, hypot) > TOL || distToBoundary(p, B, hypot) > TOL,
       );
       if (off) err('opening_not_on_wall', `${o.id} does not lie on a wall shared by ${o.a} and ${o.b}`, o.id);
     }
-    if ((o.type === 'door' || o.type === 'doorway') && segLength(o) < MIN_DOOR_WIDTH)
-      err('opening_too_narrow', `${o.id} is ${segLength(o).toFixed(2)} ft wide (minimum ${MIN_DOOR_WIDTH})`, o.id);
+    if ((o.type === 'door' || o.type === 'doorway') && segLength(o, hypot) < MIN_DOOR_WIDTH)
+      err('opening_too_narrow', `${o.id} is ${segLength(o, hypot).toFixed(2)} ft wide (minimum ${MIN_DOOR_WIDTH})`, o.id);
     if (o.swing && o.swing.into !== o.a && o.swing.into !== o.b)
       err('swing_invalid', `${o.id} swings into ${o.swing.into}, which it does not join`, o.id);
     if (o.type === 'door' && !o.material) err('door_missing_material', `${o.id} is a door with no leaf material`, o.id);
@@ -305,7 +308,7 @@ export function validateLocation(loc: LocationDefinition, derived: DerivedLocati
       const outline = expected === 0 ? loc.footprint : expected === 1 ? loc.upperFootprint : undefined;
       const outlineId = expected === 0 ? 'footprint' : 'upperFootprint';
       const m = { x: (o.from.x + o.to.x) / 2, y: (o.from.y + o.to.y) / 2 };
-      if (outline && !badPolys.has(outlineId) && distToBoundary(m, outline) > TOL)
+      if (outline && !badPolys.has(outlineId) && distToBoundary(m, outline, hypot) > TOL)
         warn('window_not_on_footprint', `${o.id} is not on the ${expected === 0 ? '' : 'upper-floor '}exterior wall`, o.id);
     }
   }
@@ -320,7 +323,7 @@ export function validateLocation(loc: LocationDefinition, derived: DerivedLocati
       continue;
     }
     if (badPolys.has(ov.a) || badPolys.has(ov.b)) continue;
-    if (!sharesWall(A, B)) err('override_not_adjacent', `Material override names ${ov.a} and ${ov.b}, which share no wall`, ref);
+    if (!sharesWall(A, B, hypot)) err('override_not_adjacent', `Material override names ${ov.a} and ${ov.b}, which share no wall`, ref);
   }
 
   // Staging points are derived; one that cannot sit inside its space is a warning.
@@ -344,7 +347,7 @@ export function validateLocation(loc: LocationDefinition, derived: DerivedLocati
     if (badPolys.has(o.in)) continue;
     const r = objectRect(o);
     for (const p of rectPoints(r.x0, r.y0, r.x1, r.y1))
-      if (!insideOrOn(p, space)) {
+      if (!insideOrOn(p, space, hypot)) {
         err('object_outside_space', `${o.id} extends outside ${o.in}`, o.id);
         break;
       }
@@ -357,7 +360,7 @@ export function validateLocation(loc: LocationDefinition, derived: DerivedLocati
     if (!into || (o.swing.into !== o.a && o.swing.into !== o.b)) continue;
     const hinge = o.swing.hinge === 'from' ? o.from : o.to;
     const free = o.swing.hinge === 'from' ? o.to : o.from;
-    const r = segLength(o);
+    const r = segLength(o, hypot);
     if (r === 0) continue;
     const u = { x: (free.x - hinge.x) / r, y: (free.y - hinge.y) / r };
     const mid = { x: (o.from.x + o.to.x) / 2, y: (o.from.y + o.to.y) / 2 };
@@ -369,7 +372,7 @@ export function validateLocation(loc: LocationDefinition, derived: DerivedLocati
       const hit = [...rectPoints(rect.x0, rect.y0, rect.x1, rect.y1)].some((p) => {
         const dx = p.x - hinge.x;
         const dy = p.y - hinge.y;
-        return Math.hypot(dx, dy) <= r && dx * u.x + dy * u.y > TOL && dx * n.x + dy * n.y > TOL;
+        return hypot(dx, dy) <= r && dx * u.x + dy * u.y > TOL && dx * n.x + dy * n.y > TOL;
       });
       if (hit) warn('swing_blocked', `${o.id} swing arc overlaps ${obj.id}`, o.id);
     }
