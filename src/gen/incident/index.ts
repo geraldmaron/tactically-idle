@@ -20,7 +20,7 @@ import { hashSeed, next, pick } from '../../sim/rng';
 import { tierRewardMultiplier } from '../../sim/incidents';
 import { MS_OCCUPANCY } from '../../content/scenarios/ms-occupancy';
 import { MS_URGENT } from '../../content/scenarios/ms-urgent';
-import { ALL_BUILDING_FAMILIES, BUILDING_FAMILIES, PROCEDURAL_FAMILIES } from '../building';
+import { ALL_BUILDING_FAMILIES, BUILDING_FAMILIES, isProceduralFamily } from '../building';
 import { RESIDENTIAL_LAYOUT_NOTES } from '../../content/locations/residential-v1';
 
 export interface IncidentTypeInfo {
@@ -113,7 +113,7 @@ function occupantPoint(room: Room, built: BuiltLocation, seed: number): Vec {
  * reads. Deterministic, so the same ID always resolves to the same building. */
 export const HOSTING_SEEDS = 12;
 export function generateIncident(spec: IncidentSpec): ScenarioDefinition {
-  if (spec.contentVersion < 10 || !PROCEDURAL_FAMILIES.some(family => family.id === spec.familyId)) return generateIncidentAt(spec);
+  if (spec.contentVersion < 10 || !isProceduralFamily(spec.familyId)) return generateIncidentAt(spec);
   const places: Pick<IncidentSpec, 'familyId' | 'buildingSeed'>[] = [{ familyId: spec.familyId, buildingSeed: spec.buildingSeed }];
   for (let attempt = 1; attempt < HOSTING_SEEDS; attempt++) places.push({ familyId: spec.familyId, buildingSeed: hashSeed(`${spec.buildingSeed}:${spec.seed}:host-v10:${attempt}`) });
   const authored = SCENARIO_TYPES_V9.find(info => info.type === spec.type)?.families ?? [];

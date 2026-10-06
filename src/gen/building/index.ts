@@ -46,6 +46,8 @@ export const PROCEDURAL_FAMILIES: BuildingFamilyInfo[] = proceduralFamilies('g1'
  * holds the outputs. Not in any v1-v10 family list. */
 export const PROCEDURAL_FAMILIES_G2: BuildingFamilyInfo[] = proceduralFamilies('g2');
 const PROCEDURAL_IDS = new Set([...PROCEDURAL_FAMILIES, ...PROCEDURAL_FAMILIES_G2].map((f) => f.id));
+/** True for every generated building type, of any generation (`_g1`, `_g2`, …). */
+export const isProceduralFamily = (familyId: string): boolean => PROCEDURAL_IDS.has(familyId);
 /** Every building type a player can be sent to, authored and generated. */
 export const ALL_BUILDING_FAMILIES: BuildingFamilyInfo[] = [...BUILDING_FAMILIES, ...PROCEDURAL_FAMILIES, ...PROCEDURAL_FAMILIES_G2];
 const proceduralCache = new Map<string, LocationDefinition>();

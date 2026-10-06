@@ -57,7 +57,7 @@ describe('casebook practice on v10 recipes', () => {
 describe('casebook rows and the featured operation', () => {
   const T0 = Date.UTC(2026, 9, 6, 15, 0, 0);
   const takeDomestic = (state: ReturnType<typeof createInitialState>) => {
-    const spec = { ...specForSituationV10('domestic', 'two_storey_house_g1', { variant: 1, characteristic: 'ordinary' }, 9), contentVersion: 11 };
+    const spec = { ...specForSituationV10('domestic', 'two_storey_house_g2', { variant: 1, characteristic: 'ordinary' }, 9), contentVersion: 11 };
     const id = incidentId(spec);
     state.incidents.unshift({ id, type: 'domestic', familyId: spec.familyId, tier: spec.tier, arrivedAt: T0, expiresAt: T0 + 3_600_000, seen: true });
     takeIncident(state, id);
@@ -84,7 +84,7 @@ describe('casebook rows and the featured operation', () => {
     takeDomestic(state);
     const rows = casebookRows(state);
     const domestic = rows.find((row) => row.type === 'domestic')!;
-    expect(domestic).toMatchObject({ status: 'found', situationsTotal: 3, buildings: ['two_storey_house_g1'], situations: [{ variant: 1, pacings: [{ variant: 1, characteristic: 'ordinary' }] }] });
+    expect(domestic).toMatchObject({ status: 'found', situationsTotal: 3, buildings: ['two_storey_house_g2'], situations: [{ variant: 1, pacings: [{ variant: 1, characteristic: 'ordinary' }] }] });
     expect(casebookTotals(rows)).toMatchObject({ frameworksFound: 1, situationsFound: 1, locked: 1 });
     expect(filterRows(rows, { type: 'all', setting: 'businesses', status: 'all' }).every((row) => row.settings.includes('businesses'))).toBe(true);
     expect(filterRows(rows, { type: 'all', setting: 'all', status: 'found' }).map((row) => row.type)).toEqual(['domestic']);

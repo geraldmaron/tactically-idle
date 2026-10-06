@@ -16,8 +16,10 @@ import { hashSeed } from '../../sim/rng';
 import { generateIncident, incidentId, parseIncidentId } from './index';
 import { settingModuleOf, settingTokens } from './stories-v6/setting-modules-v11';
 
+/** v11 draws use the second building generation; v10 keeps `_g1`. */
+const forVersion = (familyId: string, contentVersion: number) => contentVersion >= 11 && familyId.endsWith('_g1') ? `${familyId.slice(0, -3)}_g2` : familyId;
 const armed = (familyId: string, buildingSeed: number, contentVersion = 11): IncidentSpec =>
-  ({ type: 'active_armed_incident', familyId, buildingSeed, seed: buildingSeed * 13 + 1, tier: 3, contentVersion });
+  ({ type: 'active_armed_incident', familyId: forVersion(familyId, contentVersion), buildingSeed, seed: buildingSeed * 13 + 1, tier: 3, contentVersion });
 const EXPECTED: Record<string, string> = {
   corner_store_flat_g1: 'armed_retail_till_count', bar_restaurant_g1: 'armed_retail_till_count', market_row: 'armed_retail_till_count',
   small_office_g1: 'armed_office_late_worker', warehouse_g1: 'armed_warehouse_night_picker', motel_row_g1: 'armed_motel_night_clerk',
@@ -48,7 +50,8 @@ describe('setting module selection', () => {
     }
   }, 120000);
   it('keeps the retail module on the v10 room and text', () => {
-    for (const familyId of ['corner_store_flat_g1', 'bar_restaurant_g1']) for (const seed of [3, 8, 21]) {
+    // Market Row is the retail building that is identical in v10 and v11.
+    for (const familyId of ['market_row']) for (const seed of [3, 8, 21]) {
       const v10 = generateIncident(armed(familyId, seed, 10)), v11 = generateIncident(armed(familyId, seed));
       expect(v11.story!.bindings.rooms.scene, `${familyId} ${seed}`).toEqual(v10.story!.bindings.rooms.scene);
       expect(v11.story!.bindings.people, `${familyId} ${seed}`).toEqual(v10.story!.bindings.people);

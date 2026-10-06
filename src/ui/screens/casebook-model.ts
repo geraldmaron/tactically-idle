@@ -7,7 +7,7 @@ import { SCENARIO_TYPES_V11 } from '../../content/scenario-types-v11';
 import { ITEMS } from '../../content/items';
 import { isUnlocked, missingRequirements, unlockRule } from '../../content/unlocks';
 import type { MissingRequirement } from '../../content/unlocks';
-import { ALL_BUILDING_FAMILIES, PROCEDURAL_FAMILIES, baseFamilyIdV7 } from '../../gen/building';
+import { ALL_BUILDING_FAMILIES, baseFamilyIdV7, isProceduralFamily } from '../../gen/building';
 import { incidentId } from '../../gen/incident';
 import { casebookRecipes, betterBest, situationCount } from '../../sim/casebook';
 import type { RecipeRef } from '../../sim/casebook';
@@ -21,7 +21,7 @@ import { familyBlurb, familyLabel } from '../components/incident';
 /** Layouts tried per practice choice before showing whatever building the generator chose. */
 const NATIVE_SEED_TRIES = 16;
 
-export const isGeneratedBuilding = (familyId: string) => PROCEDURAL_FAMILIES.some((family) => family.id === familyId);
+export const isGeneratedBuilding = (familyId: string) => isProceduralFamily(familyId);
 
 /** Picker text for a building type. Generated types name their floors, because the number
  * of floors changes how a squad searches and is only visible on the map's floor tabs. */
