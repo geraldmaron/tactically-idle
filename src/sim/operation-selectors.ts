@@ -1,7 +1,7 @@
 import { actionEquipmentRequirements, capabilityRuleEffect, effectiveSupplies, normalizedActionConsumption, operatorQualified, planningEquipmentContext } from './equipment-requirements';
 import { availableStageContinuations, legacyActionPresentation, legacyStageNavigation } from './compatibility/legacy-choices';
 import { currentStoryPrompt } from './story-context';
-import { hydrateStoryAction, storyActionTarget, storyPublicScenario } from './story-people';
+import { hydrateStoryAction, storyActionTarget, storyPublicScenario, storyPropsKnown } from './story-people';
 // Operation selectors consumed by the UI. Everything here is derived from game
 // state and content; nothing mutates. Export names and signatures are a contract.
 import type {
@@ -241,13 +241,20 @@ function factViewsFor(s: ScenarioDefinition, spaceId: Id, built: BuiltLocation, 
 }
 
 /** People drawn on the map only at the knowledge level held: reported = approximate with '?', confirmed = exact. */
-function peopleFor(s: ScenarioDefinition, spaceId: Id, built: BuiltLocation, knowledge: Record<Id, KnowledgeStatus>): PersonMark[] {
+function peopleFor(s: ScenarioDefinition, spaceId: Id, built: BuiltLocation, knowledge: Record<Id, KnowledgeStatus>, run: OperationRun | null): PersonMark[] {
   const out: PersonMark[] = [];
+  const props = storyPropsKnown(s, built, run ?? { knowledge, flags: [], pressure: s.pressure.start });
   for (const f of s.facts.filter((x) => x.spaceId === spaceId && x.person)) {
     const status = knowledge[f.id] ?? f.initial;
     const person = f.person!;
-    if (status === 'reported') out.push({ id: `person_${f.id}`, at: approxPoint(built, f), label: `${person.label}?`, status });
-    else if (status === 'confirmed' && person.at) out.push({ id: `person_${f.id}`, at: person.at, label: person.label, status });
+    const bound = Object.values(s.story?.bindings.people ?? {}).find(p => p.locationFactId === f.id);
+    const carried = props.filter(prop => prop.holderPersonId === bound?.id && prop.position && !('kind' in prop.position))
+      .map(prop => ({ id: prop.id, label: prop.label, glyph: prop.glyph ?? 'item' as const, status: prop.status ?? 'reported' as const }));
+    const condition = bound && run?.flags.includes(`person_harm:${bound.id}:fatal`) ? 'deceased' as const
+      : bound && ['wounded', 'serious'].some(severity => run?.flags.includes(`person_harm:${bound.id}:${severity}`)) ? 'injured' as const : undefined;
+    const common = { id: `person_${f.id}`, label: person.label, kind: bound?.publicKind ?? 'civilian', ...(carried.length ? { carried } : {}), ...(condition ? { condition } : {}) };
+    if (status === 'reported') out.push({ ...common, at: approxPoint(built, f), status });
+    else if (status === 'confirmed' && person.at) out.push({ ...common, at: person.at, status });
   }
   return out;
 }
@@ -261,14 +268,18 @@ function buildSpaceViews(s: ScenarioDefinition, built: BuiltLocation, knowledge:
   return ids.map((id) => {
     const sources = s.facts.filter((f) => f.spaceId === id).map((fact) => ({ fact, status: knowledge[fact.id] ?? fact.initial }));
     const { status, marker } = markerFor(sources);
+    const people = peopleFor(s, id, built, knowledge, run);
+    // A visible person already states reported/observed. Avoid a second generic
+    // CHECK NEEDED circle pointing at the same claim; room details keep all facts.
+    const repeatedPersonMarker = people.length > 0 && marker && /^(CHECK NEEDED|CHECKED|PERSON\??|PERSON LOCATED|OCCUPIED)$/i.test(marker.text);
     return {
       id,
       label: spaceName(built, id),
       status,
-      marker,
+      marker: repeatedPersonMarker ? null : marker,
       squadsHere: run ? run.squadTasks.filter((t) => t.positionId === id).map((t) => t.squadId) : [],
       facts: factViewsFor(s, id, built, knowledge, run, state),
-      people: peopleFor(s, id, built, knowledge),
+      people,
       actionIds: actions.get(id) ?? [],
     };
   });
@@ -416,6 +427,7 @@ function toView(state: GameState, run: OperationRun, a: ActionDefinition, ev: Ev
   if (reason && alternates.length > 0) reason = `${reason}. ${alternates.map(squadLabel).join(' and ')} can.`;
   return {
     ...(eventResult ? { eventResult } : {}),
+    ...(ev.forceRisk ? { forceRisk: { ...ev.forceRisk } } : {}),
     id: a.id,
     stage: a.stage,
     title: a.title,

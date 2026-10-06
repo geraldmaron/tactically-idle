@@ -68,26 +68,30 @@ describe('campaign identities and succession', () => {
     expect(seen.size).toBeLessThanOrEqual(12);
     expect(seen.size).toBeGreaterThan(3);
   });
-  it('targeted searches can draw the requested role from outside the twelve-person local market', () => {
-    const s = createInitialState(T0, 1);
-    for (let i = 0; i < 20; i++) {
-      fillCandidates(s, T0 + i * 4 * HOUR, 'recon');
-      expect(s.candidates.some((c) => c.officer.role === 'recon')).toBe(true);
+  it('keeps mixed-role recruitment and stable saved builds across 100 campaign seeds', () => {
+    const roles = new Set<string>();
+    for (let seed = 0; seed < 100; seed++) {
+      const s = createInitialState(T0, seed);
+      const currentPeople = structuredClone(s.personnel!.builds);
+      const loaded = deserialize(serialize(s, T0))!;
+      fillCandidates(s, T0 + 4 * HOUR);
+      fillCandidates(loaded, T0 + 4 * HOUR);
+      expect(loaded).toEqual(s);
+      expect(new Set(s.candidates.map((candidate) => candidate.officer.role)).size).toBeGreaterThanOrEqual(2);
+      for (const [id, officer] of Object.entries(currentPeople)) expect(s.personnel!.builds[id]).toEqual(officer);
+      for (const candidate of s.candidates) roles.add(candidate.officer.role);
     }
+    expect([...roles].sort()).toEqual(['breach', 'comms', 'lead', 'medic', 'recon']);
+  });
+  it('treats a stale targeted refresh as an ordinary empty pool when the reserve is exhausted', () => {
     const exhausted = createInitialState(T0, 1);
     exhausted.personnel!.employedIdentityIds = PERSONAS.map((p) => p.id);
     exhausted.candidates = [];
-    const result = dispatch(exhausted, { type: 'refreshCandidates', targetRole: 'recon' }, { now: T0 });
-    expect(result.result).toEqual({ ok: false, reason: 'No recon candidates remain available in this campaign' });
-  });
-  it('finds all five targeted roles across 100 campaign seeds', () => {
-    for (let seed = 0; seed < 100; seed++) {
-      const s = createInitialState(T0, seed);
-      for (const role of ['comms', 'breach', 'medic', 'recon', 'lead'] as const) {
-        fillCandidates(s, T0, role);
-        expect(s.candidates.some((c) => c.officer.role === role), `seed ${seed}, role ${role}`).toBe(true);
-      }
-    }
+    const legacyCommand = { type: 'refreshCandidates', targetRole: 'recon' } as const;
+    const result = dispatch(exhausted, legacyCommand, { now: T0 });
+    expect(result.result).toEqual({ ok: true });
+    expect(result.state.candidates).toEqual([]);
+    expect(recruitmentStatus(result.state, T0).exhausted).toBe(true);
   });
   it('can hire all 92 reserve people across successive careers without resurrecting anyone', () => {
     for (const seed of [0, 1, 52]) {

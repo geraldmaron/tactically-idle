@@ -4,6 +4,8 @@ import { withVersionFourChoices } from './choices-v4';
 import { withHighRiskVersionFourChoices } from './high-risk-v4';
 import { withVersionFiveStory } from './stories-v5';
 import { withVersionSixStory } from './stories-v6';
+import { withVersionSevenScene } from './scenes-v7';
+import { furnishedFamilyIdV7 } from '../building/furnishing-v7';
 import type { ActionDefinition, IncidentSpec, IncidentType, ScenarioDefinition } from '../../sim/scenario-types';
 import type { BuiltLocation, Room, StageId, Vec } from '../../sim/types';
 import { buildLocation, pointInPolygon, polygonBBox } from '../../sim/location';
@@ -32,9 +34,9 @@ export const INCIDENT_TYPES: IncidentTypeInfo[] = [
   { type: 'false_intruder', label: 'Uncertain occupancy', families: homes, squads: [1, 2] },
 ];
 /** Future calls use v6; issued v1–v5 seed tuples retain their original content. */
-export const INCIDENT_CONTENT_VERSION = 6;
+export const INCIDENT_CONTENT_VERSION = 7;
 /** Highest incident content version this build can read. */
-export const SUPPORTED_INCIDENT_CONTENT_VERSION = 6;
+export const SUPPORTED_INCIDENT_CONTENT_VERSION = 7;
 export const INCIDENT_TYPES_V2: IncidentTypeInfo[] = [
   ...INCIDENT_TYPES,
   { type: 'barricaded', label: 'Reported barricade', families: homes, squads: [1, 3] },
@@ -101,7 +103,8 @@ export function generateIncident(spec: IncidentSpec): ScenarioDefinition {
     if (spec.contentVersion === 1) restoreLegacyMaplePowerSnapshot(old);
     return { ...old, id: incidentId(spec), locationSeed: spec.buildingSeed, incident: { ...spec } };
   }
-  const built = buildLocation(spec.familyId, spec.buildingSeed);
+  const locationFamilyId = spec.contentVersion >= 7 ? furnishedFamilyIdV7(spec.familyId) : spec.familyId;
+  const built = buildLocation(locationFamilyId, spec.buildingSeed);
   if (built.issues.some((i) => i.severity === 'error')) throw new Error('Incident location is invalid');
   const { location } = built;
   const urgent = spec.type === 'medical_complication';
@@ -208,7 +211,7 @@ export function generateIncident(spec: IncidentSpec): ScenarioDefinition {
   const multiplier = tierRewardMultiplier(spec.tier);
   const scenario: ScenarioDefinition = {
     id: incidentId(spec), version: 1, code: `CALL ${String(spec.seed % 10000).padStart(4, '0')}`,
-    title: location.name, setting: location.setting, locationFamilyId: spec.familyId, locationSeed: spec.buildingSeed,
+    title: location.name, setting: location.setting, locationFamilyId, locationSeed: spec.buildingSeed,
     summary: report, variantLabel: kind.label, pressureLabel: urgent ? 'Medical time pressure' : 'Time to verify',
     squadRange: { min: 1, max: Math.min(kind.squads[1], business ? 3 : 2) },
     briefing: { known: [report, layoutNote], unknown: ['The caller’s report has not been checked by the team.', urgent ? 'How quickly the person needs help.' : 'Why the person has not explained what happened.'] },
@@ -234,6 +237,7 @@ export function generateIncident(spec: IncidentSpec): ScenarioDefinition {
     rewards: { funding: Math.round((business ? 2100 : 1700) * multiplier), devPoints: Math.round(2 * multiplier), trust: Math.round(4 * multiplier), xp: Math.round(30 * multiplier) },
     incident: { ...spec },
   };
+  if (spec.contentVersion === 7) return withVersionSevenScene(withVersionSixStory(scenario, built), built);
   if (spec.contentVersion === 6) return withVersionSixStory(scenario, built);
   if (spec.contentVersion === 5) return withVersionFiveStory(scenario, built);
   if (spec.contentVersion === 4) return HIGH_RISK_TYPES_V4.includes(spec.type) ? withHighRiskVersionFourChoices(scenario, built) : withVersionFourChoices(scenario, built);

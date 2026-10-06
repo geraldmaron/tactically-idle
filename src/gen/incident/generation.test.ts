@@ -77,7 +77,7 @@ describe('generated incidents', () => {
     for (const seed of [1, 12345, 9876, 4294967295]) {
       const state = createInitialState(NOW, seed);
       expect(new Set(state.incidents.map((c) => c.familyId)).size).toBe(3);
-      for (const card of state.incidents) expect(getScenario(card.id)?.locationFamilyId).toBe(card.familyId);
+      for (const card of state.incidents) expect(getScenario(card.id)?.locationFamilyId).toBe(`${card.familyId}__furnished_v7`);
       expect(scenarioCards(state, NOW).filter((c) => c.id.startsWith('gen:'))).toHaveLength(3);
     }
   });

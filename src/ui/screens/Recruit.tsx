@@ -3,13 +3,12 @@ import { personaNote } from '../../content/personas';
 import { useRef, useState } from 'react';
 import { useGame } from '../store';
 import { projectHire, sortedCandidates, type Projection } from '../../sim/department-selectors';
-import type { Candidate, Id, Role } from '../../sim/types';
+import type { Candidate, Id } from '../../sim/types';
 import { Button, Card, Chip, EmptyState, KV, Section } from '../components/ui';
 import { useToast } from '../components/toast';
-import { CERT_ICON, CERT_LABEL, RATING_META, ROLES, ROLE_META, TRAIT_INFO } from '../components/labels';
+import { CERT_ICON, CERT_LABEL, RATING_META, ROLE_META, TRAIT_INFO } from '../components/labels';
 import { CareerMini } from '../components/Career';
 import { Portrait } from '../portraits/Portrait';
-import { ChoiceRail } from '../components/ChoiceRail';
 import { agePortraitProps } from './helpers';
 import { Icon } from '../icons';
 import { money, perHour, rate, relativeTime } from '../format';
@@ -35,7 +34,6 @@ export function dismissHireReceipt(receipts: HireReceipt[], candidateId: Id): Hi
 
 export function Recruit() {
   const g = useGame();
-  const [target, setTarget] = useState<Role | null>(null);
   const [hireFor, setHireFor] = useState<Id | null>(null);
   const [receipts, setReceipts] = useState<HireReceipt[]>([]);
   const candidates = [...receipts].sort((a, b) => a.index - b.index).reduce(candidatesWithHireReceipt, sortedCandidates(g));
@@ -52,7 +50,7 @@ export function Recruit() {
       hint={`Roster ${roster}/${g.department.rosterCap}${full ? ' (full: dismiss or expand capacity to hire)' : ''}. Hiring adds the wage to every hour.`}
     >
       <Card>
-        <RecruitRefresh target={target} onTargetChange={setTarget} />
+        <RecruitRefresh />
       </Card>
       {candidates.length === 0 ? (
         <Card>
@@ -76,16 +74,10 @@ export function Recruit() {
   );
 }
 
-export function RecruitRefresh({ target, onTargetChange }: { target: Role | null; onTargetChange: (role: Role | null) => void }) {
+export function RecruitRefresh() {
   const { act } = useToast();
   return <div className="recruit-refresh">
-    <strong className="recruit-refresh-title">Role for next refresh</strong>
-    <ChoiceRail<Role | 'any'> value={target ?? 'any'} onChange={(role) => onTargetChange(role === 'any' ? null : role)} label="Role for next candidate refresh" grow options={[
-      { value: 'any', label: 'Any' },
-      ...ROLES.map((role) => ({ value: role, label: ROLE_META[role].label })),
-    ]} />
-    <p className="recruit-refresh-hint">Choose the role to target when you refresh candidates.</p>
-    <Button size="sm" icon="refresh" onClick={() => act(target ? { type: 'refreshCandidates', targetRole: target } : { type: 'refreshCandidates' })}>
+    <Button size="sm" icon="refresh" onClick={() => act({ type: 'refreshCandidates' })}>
       Refresh candidates
     </Button>
   </div>;

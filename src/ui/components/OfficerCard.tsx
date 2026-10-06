@@ -39,7 +39,6 @@ export function OfficerCard({ officer, now, variant = 'strip', selected, onClick
   const status = statusKey ? STATUS_META[statusKey] : null;
   const role = ROLE_META[officer.role];
   const size = Math.max(40, w);
-  const crop = variant === 'roster' ? Math.min(Math.round(size * 1.04), 124) : Math.round(size * 1.04);
   const Tag = onClick ? 'button' : 'div';
   return (
     <Tag
@@ -49,7 +48,7 @@ export function OfficerCard({ officer, now, variant = 'strip', selected, onClick
       aria-pressed={onClick && selected !== undefined ? selected : undefined}
       aria-label={`${officer.firstName} ${officer.surname}, ${role.label}, ${incidentInjury ? `injured: ${incidentInjury}, out of action` : injured ? 'injured' : BAND_SHORT[band]}`}
     >
-      <span className="ocard-art" ref={ref} style={{ height: crop }}>
+      <span className="ocard-art" ref={ref} style={variant === 'roster' ? { aspectRatio: '1 / 1.04', maxHeight: 124 } : { height: Math.round(size * 1.04) }}>
         <Portrait officer={officer} size={size} {...agePortraitProps(g, officer, now)} />
         {chip && <span className="ocard-chip">{chip}</span>}
         {status && statusKey && (

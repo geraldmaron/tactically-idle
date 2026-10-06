@@ -65,7 +65,8 @@ describe('plain-language equipment and programs', () => {
       expect(copy).toMatch(/less-lethal training/);
       expect(copy).toMatch(/clear view/);
       expect(copy).toMatch(/person and safety of the nearby area are checked/);
-      expect(copy).toContain('Injury is still possible');
+      expect(copy).toContain('serious injury and death remain possible');
+      expect(copy).toContain('much lower lethal risk than firearms');
       expect(copy).toMatch(/Uses one (?:device cartridge|launcher supply) each time/);
     }
   });

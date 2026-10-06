@@ -7,6 +7,7 @@ import { highRiskAllowed } from './officer';
 import { observationDifficulty } from './environment';
 import { centroidOf, standingCandidates } from './spatial-factors';
 import { signalBetween } from './spatial';
+import { forceItemMatches } from './force-risk';
 
 export const isIntegratedPowerTag = (tag: string) => tag === 'battery';
 export const effectiveTags = (tags: string[] = []) => tags.filter((tag) => !isIntegratedPowerTag(tag));
@@ -23,7 +24,11 @@ export function actionEquipmentRequirements(action: ActionDefinition) {
   const any = effectiveTags(action.requires.anyTags);
   // A retired power alternative was automatically supplied by its parent device.
   if (any.length && !action.requires.anyTags?.some(isIntegratedPowerTag)) groups.push(group(any));
-  for (const capability of action.capabilities?.required ?? []) groups.push({ capability, tags: [], itemIds: Object.values(ITEMS).filter((i) => !i.supportOnly && i.capabilities?.includes(capability) && (capability !== 'permitted_door_access' || (action.capabilities?.accessMethod === 'charge' ? i.id === 'door_charge' : i.id !== 'door_charge'))).map((i) => i.id), label: capability.replaceAll('_', ' ') });
+  for (const capability of action.capabilities?.required ?? []) groups.push({ capability, tags: [], itemIds: Object.values(ITEMS).filter((i) => !i.supportOnly && i.capabilities?.includes(capability)
+    && (action.forceProfile?.kind !== 'firearm' || capability !== 'authorized_response' || forceItemMatches('firearm', i.id))
+    && (capability !== 'permitted_door_access' || (action.capabilities?.accessMethod === 'charge' ? i.id === 'door_charge' : i.id !== 'door_charge'))).map((i) => i.id), label: capability.replaceAll('_', ' ') });
+  if (action.forceProfile && !groups.some(group => group.itemIds.length && group.itemIds.every(id => forceItemMatches(action.forceProfile!.kind, id))))
+    groups.push({ tags: [], itemIds: Object.keys(ITEMS).filter(id => forceItemMatches(action.forceProfile!.kind, id)), label: action.forceProfile.kind.replaceAll('_', ' ') + ' equipment' });
   return { groups, consumes: normalizedActionConsumption(action), certs: action.requires.certs ?? [], minSquads: Math.max(action.requires.minSquads?.count ?? 1, (action.capabilities?.required ?? []).some((cap) => ['specialist_support', 'weak_radio_link', 'scene_coordination'].includes(cap)) ? 2 : 1) };
 }
 export function qualifiedOfficers(state: GameState, squads: SquadId[], action: ActionDefinition): Officer[] {

@@ -173,3 +173,12 @@
 
 /* Portraits keep enough width for full skill names, and the strip scrolls on phones. */
 .strip { grid-auto-columns: minmax(112px, calc((100% - 24px) / 4)); }
+
+/* Force checks and physical harm are independent recorded results. */
+.decision-force { border-top-color: var(--line-strong); }
+.force-risk, .force-result { padding: 10px; margin: 10px 0; border-left: 3px solid var(--warn); background: var(--bg); line-height: 1.45; overflow-wrap: anywhere; }
+.force-risk h4, .force-result h4 { margin: 0 0 5px; font-size: 13px; color: var(--text-dim); }
+.force-risk p, .force-result p { margin: 5px 0 0; font-size: 13px; }
+.force-result-fatal, .force-result-serious { border-left-color: var(--danger); }
+.force-result-fatal strong, .force-result-serious strong { color: var(--danger); }
+.force-result-none { border-left-color: var(--line-strong); }

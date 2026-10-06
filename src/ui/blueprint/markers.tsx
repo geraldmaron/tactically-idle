@@ -1,8 +1,8 @@
 // Hand-drawn annotation layer: marker loops, arrows, glyphs, the FRONT highlighter, notes, squad tokens.
 import { add, perp, polyPath, r2, scale, seeded, smoothPath, sub, unit, type Rect } from './geometry';
-import type { Vec } from '../../sim/types';
+import type { PublicCarriedItem, Vec } from '../../sim/types';
 import type { FrontItem, MarkerItem, NoteItem, PersonItem, PersonKindKey, SquadItem } from './layout';
-import { FONT } from './layout';
+import { CARRIED_SCALE, FONT } from './layout';
 
 const toneVar = (tone: 'amber' | 'mint') => (tone === 'amber' ? 'var(--marker-amber)' : 'var(--marker-mint)');
 
@@ -138,132 +138,71 @@ function wobbleRing(cx: number, cy: number, r: number, key: string): string {
 }
 
 // ------------------------------------------------------------------ people pictograms
-// Simple marker-style pictograms in a ~2.4 ft box centred on (0,0). Shapes differ by kind so the kind never
-// rests on colour: subject = figure in a diamond, civilian = bare figure, child = small figure, patient = lying
-// figure with a cross, dog = four-legged side view, unknown = dashed figure with '?'.
-
+// Silhouettes show a person even when their identity or role is still only reported.
+// Only an explicit deceased condition changes a human's posture.
 function Figure({ k = 1, dy = 0 }: { k?: number; dy?: number }) {
-  return (
-    <g transform={`translate(0 ${dy}) scale(${k})`}>
-      <circle cx="0" cy="-0.62" r="0.52" />
-      <path d="M-0.98 0.98 C-0.98 0.2 -0.58 -0.08 0 -0.08 C0.58 -0.08 0.98 0.2 0.98 0.98 Z" />
-    </g>
-  );
+  return <g transform={`translate(0 ${dy}) scale(${k})`} data-silhouette="person">
+    <circle cx="0" cy="-1.03" r="0.42" />
+    <path d="M-0.36 -0.48 Q0 -0.62 0.36 -0.48 L0.55 0.32 L0.33 0.45 L0.43 1.4 L0.06 1.4 L0 0.56 L-0.06 1.4 L-0.43 1.4 L-0.33 0.45 L-0.55 0.32 Z" />
+    <path d="M-0.35 -0.37 L-0.76 0.37 M0.35 -0.37 L0.76 0.37" className="bp-pg-line" />
+  </g>;
 }
 
 export function KindGlyph({ kind }: { kind: PersonKindKey | null }) {
-  switch (kind) {
-    case 'subject':
-      return (
-        <g>
-          <Figure k={0.82} dy={0.05} />
-          <path d="M0 -1.5 L1.5 0 L0 1.5 L-1.5 0 Z" className="bp-pg-line" />
-        </g>
-      );
-    case 'child':
-      return <Figure k={0.68} dy={0.34} />;
-    case 'patient':
-      return (
-        <g>
-          <circle cx="-0.95" cy="0.1" r="0.46" />
-          <rect x="-0.42" y="-0.38" width="1.7" height="0.9" rx="0.4" />
-          <path d="M0.55 -1.0 V-0.5 M0.3 -0.75 H0.8" className="bp-pg-line" />
-        </g>
-      );
-    case 'dog':
-      return (
-        <g>
-          <rect x="-1.0" y="-0.42" width="1.75" height="0.78" rx="0.38" />
-          <circle cx="1.0" cy="-0.56" r="0.4" />
-          <path d="M1.3 -0.5 L1.75 -0.36" className="bp-pg-line" />
-          <path d="M0.9 -0.9 L1.05 -1.2 L1.22 -0.88" />
-          <path d="M-1.0 -0.3 Q-1.45 -0.8 -1.55 -0.95 M-0.7 0.35 V0.95 M-0.2 0.35 V0.95 M0.35 0.35 V0.95 M0.65 0.35 V0.95" className="bp-pg-line" />
-        </g>
-      );
-    case 'unknown':
-      return (
-        <g>
-          <Figure k={0.9} />
-          <text y="0.58" textAnchor="middle" className="bp-pg-q">
-            ?
-          </text>
-        </g>
-      );
-    default:
-      return <Figure />;
+  if (kind === 'dog') return <g data-silhouette="dog">
+    <rect x="-1" y="-0.42" width="1.75" height="0.78" rx="0.38" />
+    <circle cx="1" cy="-0.56" r="0.4" />
+    <path d="M1.3 -0.5 L1.75 -0.36 M-1 -0.3 Q-1.45 -0.8 -1.55 -0.95 M-0.7 0.35 V0.95 M-0.2 0.35 V0.95 M0.35 0.35 V0.95 M0.65 0.35 V0.95" className="bp-pg-line" />
+    <path d="M0.9 -0.9 L1.05 -1.2 L1.22 -0.88" />
+  </g>;
+  return <Figure k={kind === 'child' ? 0.76 : 1} dy={kind === 'child' ? 0.3 : 0} />;
+}
+
+/** A compact schematic icon; the inspector carries the full public item name and certainty. */
+export function CarriedGlyph({ glyph }: { glyph: PublicCarriedItem['glyph'] }) {
+  switch (glyph) {
+    case 'phone': return <><rect x="-.3" y="-.5" width=".6" height="1" rx=".1" /><path d="M-.12 .3 H.12" /></>;
+    case 'document': return <><path d="M-.37 -.5 H.16 L.4 -.25 V.5 H-.37 Z M.16 -.5 V-.25 H.4 M-.2 0 H.23 M-.2 .22 H.23" /></>;
+    case 'keys': return <><circle cx="-.18" cy="-.24" r=".25" /><path d="M0 -.04 L.4 .4 M.25 .25 L.4 .1 M.36 .36 L.52 .2" /></>;
+    case 'wheelchair': return <><circle cx="-.03" cy="-.45" r=".13" /><path d="M-.04 -.23 V.13 H.35 L.51 .45 M-.05 -.12 H.3" /><path d="M-.2 .03 A.34 .34 0 1 0 .22 .35" /></>;
+    case 'weapon': return <path d="M-.5 -.22 H.5 V.01 H-.03 L-.13 .43 H-.4 L-.3 .01 H-.5 Z" />;
+    case 'tool': return <path d="M-.28 -.5 A.24 .24 0 0 0 -.01 -.16 L.4 .35 L.23 .5 L-.2 -.02 A.24 .24 0 0 0 -.46 -.34 L-.27 -.19 L-.1 -.34 Z" />;
+    default: return <><rect x="-.4" y="-.35" width=".8" height=".75" rx=".08" /><path d="M-.2 -.35 V-.5 H.2 V-.35" /></>;
   }
 }
 
-/**
- * People the player's knowledge allows on the map.
- *  reported  = dashed amber ring with a '?'; a known kind is drawn inside it as a dashed outline. A report
- *              whose label says 'last seen' is faded and captioned 'last seen'.
- *  confirmed = mint pictogram by kind, with its label.
- *  disproved = small mint cross and 'clear'.
- * An armament chip is drawn only when the data names one.
- */
+/** Render only public PersonItems. Unknown people are filtered by the layout. */
 export function PersonGlyph({ p }: { p: PersonItem }) {
   const { x, y } = p.at;
-  const chip = p.chip && (
-    <g className={`bp-chip bp-chip-${p.status}`}>
-      <rect x={r2(p.chip.x)} y={r2(p.chip.y)} width={r2(p.chip.w)} height={r2(p.chip.h)} rx="0.35" className="bp-chip-box" />
-      <text x={r2(p.chip.x + p.chip.w / 2)} y={r2(p.chip.y + p.chip.h * 0.7)} textAnchor="middle" className="bp-chip-text">
-        {p.chip.text}
-      </text>
+  if (p.status === 'disproved') return <g className="bp-person bp-person-clear" data-person={p.id} pointerEvents="none" aria-hidden="true">
+    <path d={`M${r2(x - .55)} ${r2(y - .55)} L${r2(x + .55)} ${r2(y + .55)} M${r2(x + .55)} ${r2(y - .55)} L${r2(x - .55)} ${r2(y + .55)}`} className="bp-person-x" />
+    {p.label && <text x={r2(p.label.x)} y={r2(p.label.y)} textAnchor={p.label.anchor} className="bp-person-label bp-person-label-sm">{p.label.text}</text>}
+  </g>;
+  const reported = p.status === 'reported';
+  const linkStart = p.carried.length ? add(p.at, scale(unit(sub(p.carried[0].at, p.at)), 1)) : p.at;
+  return <g className={`bp-person bp-person-${p.status}${p.stale ? ' bp-person-stale' : ''}`} data-person={p.id} data-kind={p.kind ?? ''} data-condition={p.condition} pointerEvents="none" aria-hidden="true">
+    {reported && <path d={wobbleRing(x, y, 1.75, `${p.id}:ring`)} className="bp-person-ring" />}
+    <g transform={`translate(${r2(x)} ${r2(y)})${p.condition === 'deceased' ? ' rotate(90)' : ''}`} className={`bp-pg bp-pg-${reported ? 'rep' : 'conf'}`}>
+      <KindGlyph kind={p.kind} />
     </g>
-  );
-  if (p.status === 'reported') {
-    return (
-      <g className={`bp-person bp-person-reported${p.stale ? ' bp-person-stale' : ''}`} data-person={p.id} data-kind={p.kind ?? ''} pointerEvents="none" aria-hidden="true">
-        <path d={wobbleRing(x, y, 1.75, `${p.id}:ring`)} className="bp-person-ring" />
-        {p.kind ? (
-          <>
-            <g transform={`translate(${r2(x)} ${r2(y + 0.1)}) scale(0.74)`} className="bp-pg bp-pg-rep">
-              <KindGlyph kind={p.kind} />
-            </g>
-            <text x={r2(x + 1.45)} y={r2(y - 0.95)} textAnchor="middle" className="bp-person-q bp-person-q-sm">
-              ?
-            </text>
-          </>
-        ) : (
-          <text x={r2(x)} y={r2(y + 0.72)} textAnchor="middle" className="bp-person-q">
-            ?
-          </text>
-        )}
-        {p.caption && (
-          <text x={r2(p.caption.x)} y={r2(p.caption.y)} className="bp-person-caption" textAnchor={p.caption.anchor}>
-            {p.caption.text}
-          </text>
-        )}
-        {chip}
-      </g>
-    );
-  }
-  if (p.status === 'confirmed') {
-    return (
-      <g className="bp-person bp-person-confirmed" data-person={p.id} data-kind={p.kind ?? ''} pointerEvents="none" aria-hidden="true">
-        <g transform={`translate(${r2(x)} ${r2(y)}) scale(1.12)`} className="bp-pg bp-pg-conf">
-          <KindGlyph kind={p.kind} />
-        </g>
-        {p.label && (
-          <text x={r2(p.label.x)} y={r2(p.label.y)} textAnchor={p.label.anchor} className="bp-person-label">
-            {p.label.text}
-          </text>
-        )}
-        {chip}
-      </g>
-    );
-  }
-  return (
-    <g className="bp-person bp-person-clear" data-person={p.id} pointerEvents="none" aria-hidden="true">
-      <path d={`M${r2(x - 0.55)} ${r2(y - 0.55)} L${r2(x + 0.55)} ${r2(y + 0.55)} M${r2(x + 0.55)} ${r2(y - 0.55)} L${r2(x - 0.55)} ${r2(y + 0.55)}`} className="bp-person-x" />
-      {p.label && (
-        <text x={r2(p.label.x)} y={r2(p.label.y)} textAnchor={p.label.anchor} className="bp-person-label bp-person-label-sm">
-          {p.label.text}
-        </text>
-      )}
-    </g>
-  );
+    {p.condition && <g transform={`translate(${r2(x - 1.3)} ${r2(y + 1.15)})`} className="bp-person-condition">
+      <title>{p.condition === 'deceased' ? 'Deceased' : 'Injured'}</title>
+      <circle r=".52" />
+      <path d={p.condition === 'deceased' ? 'M-.2 -.2 L.2 .2 M.2 -.2 L-.2 .2' : 'M-.26 0 H.26 M0 -.26 V.26'} />
+    </g>}
+    {p.carried.length > 0 && <path className="bp-carried-link" d={`M${r2(linkStart.x)} ${r2(linkStart.y)} L${r2(p.carried[0].at.x)} ${r2(p.carried[0].at.y)}`} />}
+    {p.carried.map((item) => <g key={item.id} transform={`translate(${r2(item.at.x)} ${r2(item.at.y)}) scale(${CARRIED_SCALE})`} className={`bp-carried bp-carried-${item.status}`} data-carried={item.id} data-holder={p.id} data-item-status={item.status}>
+      <title>{`${item.label} · ${item.status}`}</title>
+      <rect x="-.55" y="-.65" width="1.1" height="1.3" rx=".16" className="bp-carried-back" />
+      <CarriedGlyph glyph={item.glyph} />
+    </g>)}
+    {p.label && <text x={r2(p.label.x)} y={r2(p.label.y)} textAnchor={p.label.anchor} className="bp-person-label">{p.label.text}</text>}
+    {p.caption && <text x={r2(p.caption.x)} y={r2(p.caption.y)} textAnchor={p.caption.anchor} className="bp-person-caption">{p.caption.text}</text>}
+    {p.chip && <g className={`bp-chip bp-chip-${p.status}`}>
+      <rect x={r2(p.chip.x)} y={r2(p.chip.y)} width={r2(p.chip.w)} height={r2(p.chip.h)} rx=".35" className="bp-chip-box" />
+      <text x={r2(p.chip.x + p.chip.w / 2)} y={r2(p.chip.y + p.chip.h * .7)} textAnchor="middle" className="bp-chip-text">{p.chip.text}</text>
+    </g>}
+  </g>;
 }
 
 /** One member of the crowd outside: a tiny neutral figure. */

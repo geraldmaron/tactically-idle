@@ -11,10 +11,11 @@ import { Blueprint } from './Blueprint';
 import { floorScene } from './floors';
 import { computeFrame } from './frame';
 import { bboxOf, distToPolygonEdges, pointInPolygon, rectsOverlapArea } from './geometry';
-import { computeLayout, type LabelItem } from './layout';
+import { CARRIED_H, CARRIED_W, computeLayout, type LabelItem } from './layout';
 import { PlanLabel } from './labels';
 import { placeOverlays } from './overlays';
 import { unitsPerPixel } from './useViewport';
+import { RoomList } from './RoomList';
 
 const build = (location: LocationDefinition): BuiltLocation => ({ location, derived: deriveLocation(location), issues: [] });
 const views = (loc: LocationDefinition): SpaceView[] => [...loc.rooms, ...loc.zones].map((s) => ({ id: s.id, label: s.label, status: 'none', marker: null, squadsHere: [], facts: [], people: [], actionIds: [] }));
@@ -172,4 +173,97 @@ describe('floor isolation and map interaction geometry', () => {
     expect(unitsPerPixel(view, 200, 400)).toBe(0.25);
     expect(unitsPerPixel({ ...view, w: 25, h: 25 }, 400, 200)).toBe(0.125);
   });
+});
+
+describe('public people and carried items', () => {
+  it('draws a recognisable reported person without a guessed role or weapon', () => {
+    const built = build({ ...MAPLE_STREET.base, objects: [] });
+    const spaces = views(built.location);
+    const living = spaces.find((s) => s.id === 'living')!;
+    living.people = [{ id: 'report', at: built.derived.spaces.living.centroid, label: 'Person reported', status: 'reported' }];
+    const layout = computeLayout(built, spaces, [], null);
+    expect(layout.people[0].caption?.text).toBe('Reported');
+    expect(layout.people[0].chip).toBeNull();
+    const html = markup(built, spaces);
+    expect(html).toContain('data-silhouette="person"');
+    expect(html).not.toContain('bp-person-q');
+    expect(html).toContain('reported, approximate position');
+    expect(html).toContain('armament not known');
+    expect(html).not.toContain('UNARMED');
+  });
+
+  it('retains item certainty independently of a confirmed holder and lists all public items', () => {
+    const built = build({ ...MAPLE_STREET.base, objects: [] });
+    const spaces = views(built.location);
+    const living = spaces.find((s) => s.id === 'living')!;
+    living.people = [{ id: 'mara', at: built.derived.spaces.living.centroid, label: 'Mara Bell', status: 'confirmed', carried: [
+      { id: 'phone', label: 'Cracked phone', glyph: 'phone', status: 'reported' },
+      { id: 'slip', label: 'Delivery slip', glyph: 'document', status: 'confirmed' },
+      { id: 'keys', label: 'House keys', glyph: 'keys', status: 'confirmed' },
+      { id: 'bag', label: 'Canvas bag', glyph: 'item', status: 'reported' },
+    ] }];
+    const html = markup(built, spaces);
+    expect(html).toContain('bp-carried-reported" data-carried="phone" data-holder="mara"');
+    expect(html).toContain('Cracked phone (reported)');
+    expect(html).toContain('Canvas bag (reported)');
+    expect(html.match(/data-carried=/g)).toHaveLength(3);
+    expect(html).toContain('Mara Bell');
+    const textMap = renderToStaticMarkup(createElement(RoomList, { built, spaces, selectedSpaceId: null }));
+    expect(textMap).toContain('Mara Bell · position confirmed');
+    expect(textMap).toContain('Cracked phone (reported)');
+    expect(textMap).toContain('Canvas bag (reported)');
+  });
+
+  it.each(['north', 'east', 'south', 'west'] as const)('keeps carried icons in their holder’s room near the %s wall', (edge) => {
+    const built = build({ ...MAPLE_STREET.base, objects: [] });
+    const spaces = views(built.location);
+    const room = built.location.rooms.find((r) => r.id === 'living')!;
+    const bounds = bboxOf(room.polygon);
+    const at = { x: bounds.x + bounds.w / 2, y: bounds.y + bounds.h / 2 };
+    if (edge === 'north') at.y = bounds.y + 1;
+    if (edge === 'south') at.y = bounds.y + bounds.h - 1;
+    if (edge === 'east') at.x = bounds.x + bounds.w - 1;
+    if (edge === 'west') at.x = bounds.x + 1;
+    spaces.find((s) => s.id === 'living')!.people = [{ id: 'holder', at, label: 'Mara', status: 'confirmed', carried: [
+      { id: 'phone', label: 'Phone', glyph: 'phone', status: 'confirmed' },
+      { id: 'paper', label: 'Paper', glyph: 'document', status: 'reported' },
+      { id: 'keys', label: 'Keys', glyph: 'keys', status: 'confirmed' },
+    ] }];
+    const person = computeLayout(built, spaces, [], null).people[0];
+    expect(person.at).toEqual(at);
+    expect(person.carried).toHaveLength(3);
+    for (const item of person.carried) {
+      for (const dx of [-CARRIED_W / 2, CARRIED_W / 2]) for (const dy of [-CARRIED_H / 2, CARRIED_H / 2]) expect(pointInPolygon({ x: item.at.x + dx, y: item.at.y + dy }, room.polygon)).toBe(true);
+    }
+  });
+
+  it('does not invent a prone patient or reveal unknown people and uses explicit deceased condition', () => {
+    const built = build({ ...MAPLE_STREET.base, objects: [] });
+    const spaces = views(built.location);
+    const living = spaces.find((s) => s.id === 'living')!;
+    const at = built.derived.spaces.living.centroid;
+    living.people = [{ id: 'patient', at, label: 'Patient', kind: 'patient', status: 'confirmed' }, { id: 'hidden', at, label: 'Hidden name', status: 'unknown' }];
+    expect(markup(built, spaces)).not.toContain('Hidden name');
+    expect(markup(built, spaces)).not.toMatch(/transform="[^"<>]*rotate\(90\)" class="bp-pg/);
+    living.people[0].condition = 'deceased';
+    const html = markup(built, spaces);
+    expect(html).toContain('data-condition="deceased"');
+    expect(html).toContain('rotate(90)');
+    expect(html).toContain('deceased');
+  });
+});
+
+
+it.each([false, true])('keeps possessions off all actors regardless of person iteration order (%s)', (reverse) => {
+  const built = build({ ...MAPLE_STREET.base, objects: [] });
+  const spaces = views(built.location);
+  const people: SpaceView['people'] = [
+    { id: 'holder', at: { x: 16, y: 25 }, label: 'Mara', status: 'confirmed', carried: [{ id: 'phone', label: 'Phone', glyph: 'phone', status: 'reported' }] },
+    { id: 'other', at: { x: 18.8, y: 25 }, label: 'Ben', status: 'confirmed' },
+  ];
+  spaces.find((s) => s.id === 'living')!.people = reverse ? [...people].reverse() : people;
+  const layout = computeLayout(built, spaces, [], null);
+  const carried = layout.people.find((p) => p.id === 'holder')!.carried;
+  expect(carried).toHaveLength(1);
+  for (const item of carried) for (const person of people) expect(rectsOverlapArea({ x: item.at.x - CARRIED_W / 2, y: item.at.y - CARRIED_H / 2, w: CARRIED_W, h: CARRIED_H }, { x: person.at.x - 1.9, y: person.at.y - 1.9, w: 3.8, h: 3.8 })).toBe(0);
 });

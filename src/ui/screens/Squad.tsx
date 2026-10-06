@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { getState, useGame } from '../store';
 import { squadReadiness } from '../../sim/department-selectors';
 import type { Id, Officer, Squad, SquadId } from '../../sim/types';
@@ -23,17 +23,13 @@ const DEFAULT_NAMES = ['Alpha', 'Bravo', 'Charlie', 'Delta'];
 export function SquadScreen() {
   const g = useGame();
   const nav = useNav();
-  const [sel, setSel] = useState<SquadId | null>(g.squads[0]?.id ?? null);
+  const setSel = (squadId: SquadId) => nav.updateSquadView({ type: 'select', squadId });
   const [officerId, setOfficerId] = useState<Id | null>(null);
   const [creating, setCreating] = useState(false);
   const [arranging, setArranging] = useState(false);
   const { notify } = useToast();
   const full = g.squads.length >= SQUAD_IDS.length;
-  const active = g.squads.find((s) => s.id === sel) ?? g.squads[0];
-
-  useEffect(() => {
-    if (!active && g.squads[0]) setSel(g.squads[0].id);
-  }, [active, g.squads]);
+  const active = g.squads.find((s) => s.id === nav.squadView.selectedId) ?? g.squads[0];
 
   const unassigned = officerList(g).filter((o) => o.squadId === null);
 
@@ -67,8 +63,8 @@ export function SquadScreen() {
       </div>
       {creating && <CreateSquad count={g.squads.length} onDone={(id) => { setCreating(false); if (id) setSel(id); }} />}
 
-      <div id="selected-squad-panel" role="tabpanel" aria-label={active ? `Squad ${active.id}, ${active.name}` : 'Squads'}>{active ? (
-        <SquadPanel squad={active} onOpen={setOfficerId} />
+      <div id="selected-squad-panel" role="tabpanel" aria-labelledby={active ? `selected-squad-panel-tab-${active.id}` : undefined} aria-label={active ? undefined : 'Squads'} tabIndex={0}>{active ? (
+        <SquadPanel key={active.id} squad={active} onOpen={setOfficerId} />
       ) : (
         <Card>
           <EmptyState icon="people" title="No squads yet">
@@ -128,14 +124,27 @@ function CreateSquad({ count, onDone }: { count: number; onDone: (id?: SquadId) 
   );
 }
 
-function SquadPanel({ squad, onOpen }: { squad: Squad; onOpen: (id: Id) => void }) {
+export function SquadPanel({ squad, onOpen }: { squad: Squad; onOpen: (id: Id) => void }) {
   const g = useGame();
+  const nav = useNav();
   const { act } = useToast();
   const now = Date.now();
   const r = squadReadiness(g, squad.id, now);
-  const [renaming, setRenaming] = useState(false);
-  const [name, setName] = useState(squad.name);
-  useEffect(() => setName(squad.name), [squad.name]);
+  const name = nav.squadView.renameDrafts[squad.id];
+  const renaming = name !== undefined;
+  const renameInput = useRef<HTMLInputElement>(null);
+  const renameButton = useRef<HTMLButtonElement>(null);
+  const requestedFocus = useRef<'input' | 'button' | null>(null);
+  useLayoutEffect(() => {
+    // Only an explicit edit/save/cancel moves focus. Returning to a squad keeps it on the tab.
+    const target = requestedFocus.current === 'input' ? renameInput.current : requestedFocus.current === 'button' ? renameButton.current : null;
+    target?.focus({ preventScroll: true });
+    requestedFocus.current = null;
+  }, [renaming]);
+  const finishRename = () => {
+    requestedFocus.current = 'button';
+    nav.updateSquadView({ type: 'finishRename', squadId: squad.id });
+  };
   const members = squad.officerIds.map((id) => g.officers[id]).filter((o): o is Officer => !!o);
   const leader = squad.leaderId ? g.officers[squad.leaderId] : undefined;
   const slots = Math.max(4, members.length);
@@ -148,15 +157,17 @@ function SquadPanel({ squad, onOpen }: { squad: Squad; onOpen: (id: Id) => void 
         {renaming ? (
           <form
             className="rename"
+            onKeyDown={(event) => { if (event.key === 'Escape') { event.preventDefault(); finishRename(); } }}
             onSubmit={(e) => {
               e.preventDefault();
-              if (act({ type: 'renameSquad', squadId: squad.id, name: name.trim() }, 'Squad renamed').ok) setRenaming(false);
+              if (act({ type: 'renameSquad', squadId: squad.id, name: name.trim() }, 'Squad renamed').ok) finishRename();
             }}
           >
-            <input aria-label="Squad name" value={name} maxLength={20} autoFocus onChange={(e) => setName(e.target.value)} />
+            <input ref={renameInput} aria-label={`Squad ${squad.id} name`} value={name} maxLength={20} onChange={(e) => nav.updateSquadView({ type: 'rename', squadId: squad.id, name: e.target.value })} />
             <Button type="submit" size="sm" variant="primary">
               Save
             </Button>
+            <Button size="sm" variant="ghost" onClick={finishRename}>Cancel</Button>
           </form>
         ) : (
           <>
@@ -167,7 +178,10 @@ function SquadPanel({ squad, onOpen }: { squad: Squad; onOpen: (id: Id) => void 
                 {leader ? ` · led by ${leader.surname}` : ''}
               </span>
             </div>
-            <button type="button" className="icon-btn" aria-label={`Rename ${squad.name}`} onClick={() => setRenaming(true)}>
+            <button ref={renameButton} type="button" className="icon-btn" aria-label={`Rename ${squad.name}`} onClick={() => {
+              requestedFocus.current = 'input';
+              nav.updateSquadView({ type: 'rename', squadId: squad.id, name: squad.name });
+            }}>
               <Icon name="edit" size={18} />
             </button>
           </>

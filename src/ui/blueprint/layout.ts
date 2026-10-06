@@ -1,6 +1,6 @@
 // Label, marker, token and note placement. Pure; operates on feet. Placement searches avoid furniture
 // and previously placed text so annotations stay legible without hand tuning per location.
-import type { BuiltLocation, Id, LocationDefinition, Polygon, SpaceView, SquadId, SquadTask, Vec } from '../../sim/types';
+import type { BuiltLocation, Id, LocationDefinition, Polygon, PublicCarriedItem, SpaceView, SquadId, SquadTask, Vec } from '../../sim/types';
 import { add, areaOutside, bboxOf, clipPolyToRect, distToPolygonEdges, distToSegment, hash32, inflate, isRectilinearBox, len, mid, mulberry32, perp, pointInPolygon, poleOfInaccessibility, rectsOverlapArea, scale, sub, unit, type Rect } from './geometry';
 import { isFloorLayer, objectRect } from './furniture';
 import { isPath } from './walls';
@@ -21,6 +21,10 @@ export const FONT = {
 
 /** Squad token radius when it stands at an exact staging point (smaller than the room-centroid badge). */
 export const TOKEN_R = 1.15;
+/** Readable at phone fit scale while still small enough to attach beside a person. */
+export const CARRIED_SCALE = 1.55;
+export const CARRIED_W = 1.12 * CARRIED_SCALE;
+export const CARRIED_H = 1.35 * CARRIED_SCALE;
 
 // rough glyph-width factors (em) per face
 const W_COND = 0.6;
@@ -97,9 +101,11 @@ export interface PersonItem {
   id: Id;
   status: 'reported' | 'confirmed' | 'disproved';
   at: Vec;
-  /** Pictogram. null = the data gave no kind: the plain figure (confirmed) or a bare '?' ring (reported). */
+  /** A neutral human silhouette is used when no public kind is known. */
   kind: PersonKindKey | null;
   label: { text: string; x: number; y: number; anchor: 'start' | 'middle' | 'end' } | null;
+  carried: (PublicCarriedItem & { at: Vec })[];
+  condition?: 'injured' | 'deceased';
   /** Armament chip, exactly what the data says (never inferred). */
   chip: { text: string; x: number; y: number; w: number; h: number } | null;
   /** A 'reported' person whose label says 'last seen': drawn faded with a 'last seen' caption. */
@@ -193,6 +199,38 @@ function placeBeside(at: Vec, gap: number, w: number, h: number, firstBaseline: 
   return best!;
 }
 
+/** Person text stays in the person's public room; the inspector keeps the full wording. */
+function placePersonText(at: Vec, gap: number, w: number, h: number, baseline: number, poly: Polygon, obstacles: Rect[]): TextPlace | null {
+  const near = placeBeside(at, gap, w, h, baseline, inflate(bboxOf(poly), -.25), obstacles);
+  if (boxInside(near.rect, poly, .25) && obstacles.every((r) => rectsOverlapArea(near.rect, r) < .000001)) return near;
+  const spot = findSpot(poly, w, h, at, obstacles, .25, obstacles);
+  if (!spot.fits || len(sub(spot.center, at)) > 8) return null;
+  return { x: spot.center.x, y: spot.center.y - h / 2 + baseline, anchor: 'middle', rect: textRect(spot.center.x, spot.center.y, w, h), score: 0 };
+}
+
+/** A possession is attached to its holder and stays in the same space. Try compact groups
+ * beside/above/below the silhouette. If a very tight space cannot fit them, the inspector
+ * still lists every item; never move an icon into a neighbouring room. */
+function placeCarriedItems(at: Vec, items: PublicCarriedItem[], poly: Polygon, frame: Rect, obstacles: Rect[]): PersonItem['carried'] {
+  for (let count = Math.min(3, items.length); count > 0; count--) {
+    const cands: Vec[][] = [
+      Array.from({ length: count }, (_, i) => ({ x: at.x + 3.3 + i * 1.85, y: at.y + .2 })),
+      Array.from({ length: count }, (_, i) => ({ x: at.x - 3.3 - i * 1.85, y: at.y + .2 })),
+      ...[-1, 1].map((side) => Array.from({ length: count }, (_, i) => ({ x: at.x + (i - (count - 1) / 2) * 1.85, y: at.y + side * 3.45 }))),
+      ...[-1, 1].map((side) => Array.from({ length: count }, (_, i) => ({ x: at.x + side * 3.3, y: at.y + (i - (count - 1) / 2) * 2.2 }))),
+    ];
+    const valid = cands.map((points, index) => {
+      const boxes = points.map((p) => textRect(p.x, p.y, CARRIED_W, CARRIED_H));
+      const fits = boxes.every((box) => boxInside(box, poly, .15) && areaOutside(box, frame) < 0.000001);
+      const connected = points.every((p) => [0, .25, .5, .75, 1].every((t) => pointInPolygon({ x: at.x + (p.x - at.x) * t, y: at.y + (p.y - at.y) * t }, poly)));
+      const overlap = boxes.reduce((total, box) => total + obstacles.reduce((n, obstacle) => n + rectsOverlapArea(box, obstacle), 0), 0);
+      return { points, fits: fits && connected && overlap < .000001, score: index };
+    }).filter((c) => c.fits).sort((a, b) => a.score - b.score);
+    if (valid[0]) return items.slice(0, count).map((item, i) => ({ ...item, at: valid[0].points[i] }));
+  }
+  return [];
+}
+
 export interface LayoutOptions {
   /** Environment crowd level: 0 none, 1 some, 2 crowd. */
   crowd?: 0 | 1 | 2;
@@ -232,14 +270,21 @@ export function computeLayout(built: BuiltLocation, spaces: SpaceView[], squadTa
 
   // ---- fixed glyphs first: squads that stand at a staging point and people marks claim their spot, text dodges them
   for (const t of squadTasks) if (t.at) add_({ x: t.at.x - TOKEN_R - 0.15, y: t.at.y - TOKEN_R - 0.15, w: TOKEN_R * 2 + 0.3, h: TOKEN_R * 2 + 0.3 });
-  const peopleDrawn: { id: Id; status: PersonItem['status']; at: Vec; kind: PersonKindKey | null; armament: string | null; labelText: string }[] = [];
+  // Reserve every visible actor before placing any possessions: actor iteration order
+  // must not put the first person's item over a later person's silhouette.
+  for (const sv of spaces) for (const pm of sv.people ?? []) {
+    if (pm.status !== 'reported' && pm.status !== 'confirmed') continue;
+    const r = pm.status === 'reported' ? 2.1 : 1.9;
+    add_({ x: pm.at.x - r, y: pm.at.y - r, w: r * 2, h: r * 2 });
+  }
+  const peopleDrawn: { id: Id; status: PersonItem['status']; at: Vec; kind: PersonKindKey | null; armament: string | null; labelText: string; poly: Polygon; carried: PersonItem['carried']; condition: PersonItem['condition'] }[] = [];
   for (const sv of spaces) {
     for (const pm of sv.people ?? []) {
       if (pm.status !== 'reported' && pm.status !== 'confirmed' && pm.status !== 'disproved') continue; // 'unknown' is never drawn
       const kind = personKind(pm.kind);
-      peopleDrawn.push({ id: pm.id, status: pm.status, at: pm.at, kind, armament: pm.armament ?? null, labelText: (pm.label ?? '').trim() });
-      const r = pm.status === 'reported' ? 2.1 : kind === 'dog' ? 1.7 : 1.5;
-      add_({ x: pm.at.x - r, y: pm.at.y - r, w: r * 2, h: r * 2 });
+      const carried = pm.status === 'disproved' ? [] : placeCarriedItems(pm.at, pm.carried ?? [], polys.get(sv.id)?.poly ?? rectPolygon(frame), frame, placed);
+      peopleDrawn.push({ id: pm.id, status: pm.status, at: pm.at, kind, armament: pm.armament ?? null, labelText: (pm.label ?? '').trim(), poly: polys.get(sv.id)?.poly ?? rectPolygon(frame), carried, condition: pm.condition });
+      for (const item of carried) add_(textRect(item.at.x, item.at.y, CARRIED_W + .05, CARRIED_H + .05));
     }
   }
 
@@ -507,33 +552,31 @@ export function computeLayout(built: BuiltLocation, spaces: SpaceView[], squadTa
     let caption: PersonItem['caption'] = null;
     const stale = pd.status === 'reported' && /last\s*seen/i.test(pd.labelText);
     if (pd.status === 'confirmed' || pd.status === 'disproved') {
-      const text = pd.status === 'disproved' ? 'clear' : pd.labelText;
+      const text = pd.status === 'disproved' ? 'clear' : shortPersonLabel(pd.labelText);
       if (text) {
         const size = FONT.person;
         const w = text.length * W_MARKER * size * 0.95 + 0.4;
         const gap = pd.status === 'disproved' ? 1.05 : 1.65;
-        const place = placeBeside(pd.at, gap, w, size * 1.15, size * 0.88, frame, placed);
-        label = { text, x: place.x, y: place.y, anchor: place.anchor };
-        add_(place.rect);
+        const place = placePersonText(pd.at, gap, w, size * 1.15, size * 0.88, pd.poly, placed);
+        if (place) { label = { text, x: place.x, y: place.y, anchor: place.anchor }; add_(place.rect); }
       }
     }
-    if (stale) {
-      const w = 'last seen'.length * W_MARKER * FONT.sub * 0.95 + 0.4;
+    if (pd.status === 'reported') {
+      const text = stale ? 'Last seen' : 'Reported';
+      const w = text.length * W_MARKER * FONT.sub * 0.95 + 0.4;
       const h = FONT.sub * 1.15;
-      const place = placeBeside(pd.at, 2.0, w, h, FONT.sub * 0.88, frame, placed);
-      caption = { text: 'last seen', x: place.x, y: place.y, anchor: place.anchor };
-      add_(place.rect);
+      const place = placePersonText(pd.at, 2.0, w, h, FONT.sub * 0.88, pd.poly, placed);
+      if (place) { caption = { text, x: place.x, y: place.y, anchor: place.anchor }; add_(place.rect); }
     }
-    const chipText = pd.status === 'disproved' ? null : armamentText(pd.armament, pd.status);
+    const chipText = pd.status === 'disproved' || pd.carried.some((item) => item.glyph === 'weapon') ? null : armamentText(pd.armament, pd.status);
     if (chipText) {
       const size = FONT.chip;
       const w = chipText.length * W_MARKER * size * 0.98 + 1.1;
       const h = size * 1.55;
-      const place = placeBeside(pd.at, 1.9, w, h, 0, frame, placed);
-      chip = { text: chipText, x: place.rect.x, y: place.rect.y, w, h };
-      add_(place.rect);
+      const place = placePersonText(pd.at, 1.9, w, h, 0, pd.poly, placed);
+      if (place) { chip = { text: chipText, x: place.rect.x, y: place.rect.y, w, h }; add_(place.rect); }
     }
-    people.push({ id: pd.id, status: pd.status, at: pd.at, kind: pd.kind, label, chip, stale, caption });
+    people.push({ id: pd.id, status: pd.status, at: pd.at, kind: pd.kind, label, chip, stale, caption, carried: pd.carried, condition: pd.condition });
   }
 
   // ---- crowd outside (ground floor): a handful of small figures in the street zone, dodging everything placed
@@ -607,6 +650,10 @@ export function personKind(kind: string | undefined): PersonKindKey | null {
   return KIND_ALIAS[kind.toLowerCase().trim()] ?? 'unknown';
 }
 
+function shortPersonLabel(label: string): string {
+  return label.length > 24 ? `${label.slice(0, 23).trimEnd()}…` : label;
+}
+
 const ARMAMENT_TEXT: Record<string, string> = { none: 'UNARMED', blunt: 'BLUNT', edged: 'EDGED', handgun: 'HANDGUN', long_gun: 'LONG GUN', unknown: 'WEAPON?' };
 
 /**
@@ -615,7 +662,7 @@ const ARMAMENT_TEXT: Record<string, string> = { none: 'UNARMED', blunt: 'BLUNT',
  */
 export function armamentText(armament: string | null | undefined, status: 'reported' | 'confirmed' | 'disproved'): string | null {
   const a = (armament ?? '').trim();
-  if (!a) return null;
+  if (!a || a.toLowerCase() === 'unknown') return null;
   let t = ARMAMENT_TEXT[a.toLowerCase()] ?? a.replace(/_/g, ' ').toUpperCase();
   if (status === 'reported' && !t.endsWith('?')) t += '?';
   return t;

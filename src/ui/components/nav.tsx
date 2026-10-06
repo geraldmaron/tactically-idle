@@ -1,6 +1,7 @@
-import { createContext, useContext, useEffect, useId, useRef, useState } from 'react';
+import { createContext, useContext, useEffect, useId, useReducer, useRef, useState } from 'react';
 import type { CertId, Id } from '../../sim/types';
 import { DEFAULT_EQUIPMENT_QUERY, type EquipmentQuery } from '../storefront/store-query';
+import { INITIAL_SQUAD_VIEW, updateSquadView, type SquadView, type SquadViewAction } from './squad-view';
 
 export type Tab = 'hq' | 'squad' | 'ops' | 'develop' | 'gear';
 export type GearSection = 'inventory' | 'equipment';
@@ -103,6 +104,8 @@ export interface NavApi extends PlayerRoute {
   setEquipmentQuantity: (itemId: Id, quantity: string) => void;
   trainingDraft: TrainingDraft;
   setTrainingDraft: (draft: TrainingDraft) => void;
+  squadView: SquadView;
+  updateSquadView: (action: SquadViewAction) => void;
 }
 const noop = () => {};
 export const DEFAULT_NAV: NavApi = {
@@ -110,6 +113,7 @@ export const DEFAULT_NAV: NavApi = {
   closeEquipment: noop, openTraining: noop, openDevelopment: noop, returnToEquipment: noop,
   equipmentQuery: DEFAULT_EQUIPMENT_QUERY, setEquipmentQuery: noop, equipmentQuantities: {}, setEquipmentQuantity: noop,
   trainingDraft: { officerId: '', search: '' }, setTrainingDraft: noop,
+  squadView: INITIAL_SQUAD_VIEW, updateSquadView: noop,
 };
 export const NavContext = createContext<NavApi>(DEFAULT_NAV);
 export const useNav = () => useContext(NavContext);
@@ -120,6 +124,7 @@ export function usePlayerNavigation(): NavApi {
   const [equipmentQuery, setEquipmentQuery] = useState<EquipmentQuery>(DEFAULT_EQUIPMENT_QUERY);
   const [equipmentQuantities, setEquipmentQuantities] = useState<Record<Id, string>>({});
   const [trainingDraft, setTrainingDraft] = useState<TrainingDraft>({ officerId: '', search: '' });
+  const [squadView, dispatchSquadView] = useReducer(updateSquadView, INITIAL_SQUAD_VIEW);
   const controller = useRef<ReturnType<typeof createPlayerNavigation> | null>(null);
   if (!controller.current && typeof window !== 'undefined') controller.current = createPlayerNavigation(window.history, owner, setRoute);
   useEffect(() => {
@@ -132,6 +137,6 @@ export function usePlayerNavigation(): NavApi {
     ...DEFAULT_NAV, ...route, ...controller.current,
     equipmentQuery, setEquipmentQuery, equipmentQuantities,
     setEquipmentQuantity: (id, quantity) => setEquipmentQuantities((previous) => ({ ...previous, [id]: quantity })),
-    trainingDraft, setTrainingDraft,
+    trainingDraft, setTrainingDraft, squadView, updateSquadView: dispatchSquadView,
   };
 }

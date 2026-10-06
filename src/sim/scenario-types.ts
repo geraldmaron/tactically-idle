@@ -91,6 +91,8 @@ export interface RatingWeight {
 }
 
 export interface ActionRequirements {
+  /** V7 conversations can involve people other than the physical action target. */
+  responsivePeople?: Id[];
   /** Story props bind to existing map objects or an explicit person's carried item. */
   storyProps?: { propId: Id; holderPersonId?: Id; reason: string }[];
   /** 'requested' includes a service that has arrived, but excludes an accepted handover. */
@@ -212,12 +214,18 @@ export interface ActionCapabilities {
 }
 
 export interface ActionDefinition {
+  /** V7: an actual, explicit force use. Carried equipment never opts an action in. */
+  forceProfile?: { kind: 'firearm' | 'less_lethal_device' | 'less_lethal_impact'; personId: Id; personRole: 'subject' | 'civilian'; officerExposure?: boolean };
+  /** V7: field care or a medical receiver accepting an already injured person. */
+  personCare?: { personId: Id; kind: 'stabilize' | 'accept'; serviceId?: Id };
   /** Optional bound person target; current public position drives spatial evaluation. */
   storyTargetPersonId?: Id;
   /** Full archetype route rechecked against current openings at action evaluation. */
   storyRoute?: string;
   /** Person routes use bound endpoints; squad routes start at each squad's actual current position. */
-  storyRouteActor?: 'person' | 'squad' | 'external_support';
+  storyRouteActor?: 'person' | 'squad' | 'external_support' | 'inspection';
+  /** V7: inspect this person's planned observed arrival, without moving them. */
+  storyRouteInspection?: { personId: Id; arrivalFlag: string };
   /** V4 dispatch/care administration can remain possible when every deployed officer is hurt. */
   commandOnly?: boolean;
   /** Wait exactly the remaining response time of a bounded, authored service. */
@@ -378,7 +386,23 @@ export interface StoryPersonBinding {
   locationFactId: Id;
   initial: StoryAnchor;
   reported?: StoryAnchor;
+  /** Public role, never inferred from a name, culture or hidden character data. */
+  publicKind?: 'person' | 'subject' | 'civilian' | 'patient';
   transitions: { when: Condition; to: StoryAnchor | { kind: 'offscene'; label: string }; observed: boolean; label?: string }[];
+}
+export interface StoryPropBinding {
+  id: Id;
+  label: string;
+  kind: 'carried' | 'mapped';
+  holderPersonId?: Id;
+  /** Holder named by the report, independent of the actual hidden holder. */
+  reportedHolderPersonId?: Id;
+  objectId?: Id;
+  /** Conditions refer only to committed observations, not hidden truth. */
+  knownWhen?: Condition;
+  confirmedWhen?: Condition;
+  glyph?: 'phone' | 'document' | 'keys' | 'wheelchair' | 'weapon' | 'tool' | 'item';
+  transitions?: { when: Condition; holderPersonId?: Id; observed?: boolean }[];
 }
 export interface StoryInstance {
   /** V6 coherent situation selected before presentation; all module effects share these bindings. */
@@ -392,7 +416,7 @@ export interface StoryInstance {
     exterior: Record<string, { spaceId: Id }>;
     routes: Record<string, { fromSpaceId: Id; toSpaceId: Id; openingIds: Id[]; profile: 'walking' | 'chair' }>;
     people: Record<string, StoryPersonBinding>;
-    props: Record<string, { id: Id; label: string; kind: 'carried' | 'mapped'; holderPersonId?: Id; objectId?: Id; transitions?: { when: Condition; holderPersonId: Id }[] }>;
+    props: Record<string, StoryPropBinding>;
   };
 }
 

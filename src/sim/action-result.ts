@@ -20,7 +20,7 @@ function sameStructure(left: unknown, right: unknown): boolean {
 function inferredResultLabel(action: ActionDefinition, scenarioVersion: number): string | undefined {
   // V1–V5 definitions, previews and historical records keep their established behavior.
   // Equal prose alone is insufficient: time, harm, flags and every branch must also match.
-  if (scenarioVersion !== 6 || !action.outcomes.favorable.length
+  if (scenarioVersion < 6 || action.forceProfile || action.personCare?.kind === 'stabilize' || !action.outcomes.favorable.length
     || !sameStructure(action.outcomes.favorable, action.outcomes.mixed)
     || !sameStructure(action.outcomes.favorable, action.outcomes.adverse)) return undefined;
   const alwaysEnds = action.outcomes.favorable.some(effect => effect.ending && !effect.when && !effect.truth?.length);

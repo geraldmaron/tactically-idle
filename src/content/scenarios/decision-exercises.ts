@@ -30,9 +30,13 @@ const V5_DECISION_EXERCISES: typeof V3_DECISION_EXERCISES = [
 ];
 
 /** Old exercise IDs remain readable, including any active saved exercise. */
-export const LEGACY_DECISION_EXERCISES = [...V3_DECISION_EXERCISES, ...V4_DECISION_EXERCISES, ...V5_DECISION_EXERCISES];
-/** Current generated circumstances can be tried without replacing a live campaign. */
-export const DECISION_EXERCISES = V5_DECISION_EXERCISES.map((exercise, index) => ({
+const V6_DECISION_EXERCISES = V5_DECISION_EXERCISES.map((exercise, index) => ({
   ...exercise, id: exercise.id.replace('_v5', '_v6'), code: `DR-${16 + index}`,
   spec: { ...exercise.spec, contentVersion: 6 },
+}));
+export const LEGACY_DECISION_EXERCISES = [...V3_DECISION_EXERCISES, ...V4_DECISION_EXERCISES, ...V5_DECISION_EXERCISES, ...V6_DECISION_EXERCISES];
+/** Current generated circumstances can be tried without replacing a live campaign. */
+export const DECISION_EXERCISES = V5_DECISION_EXERCISES.map((exercise, index) => ({
+  ...exercise, id: exercise.id.replace('_v5', '_v7'), code: `DR-${22 + index}`,
+  spec: { ...exercise.spec, contentVersion: 7 },
 }));

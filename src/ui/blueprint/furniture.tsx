@@ -68,6 +68,13 @@ export interface Oriented {
 
 export function orientObject(o: PlacedObject, loc: LocationDefinition): Oriented {
   const rect = objectRect(o);
+  // New layouts solve orientation and clearance together. Do not reverse their
+  // seat backs afterward using a nearest-wall guess; legacy symbols keep it.
+  if (o.placement) {
+    const back = o.placement.back;
+    return { back, rect, lw: back === 'N' || back === 'S' ? rect.w : rect.h,
+      lh: back === 'N' || back === 'S' ? rect.h : rect.w, rot: ROT[back] };
+  }
   const kind = BACKED[o.type];
   if (!kind) return { back: 'N', rect, lw: rect.w, lh: rect.h, rot: 0 };
 
@@ -541,7 +548,7 @@ export function ObjectSymbol({ o, loc, uid }: { o: PlacedObject; loc: LocationDe
   const cx = rect.x + rect.w / 2;
   const cy = rect.y + rect.h / 2;
   const transform = `translate(${r2(cx)} ${r2(cy)}) rotate(${rot}) translate(${r2(-lw / 2)} ${r2(-lh / 2)})`;
-  const hasBack = BACKED[o.type] !== undefined;
+  const hasBack = o.placement !== undefined || BACKED[o.type] !== undefined;
   const w = hasBack ? lw : rect.w;
   const h = hasBack ? lh : rect.h;
   const tf = hasBack ? transform : `translate(${r2(rect.x)} ${r2(rect.y)})`;

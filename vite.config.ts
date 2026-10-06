@@ -6,5 +6,7 @@ export default defineConfig({
   build: {
     rollupOptions: { input: { app: 'index.html', harness: 'harness.html' } },
   },
-  test: { environment: 'node', include: ['src/**/*.test.ts'] },
+  // Geometry/route sweeps are CPU-heavy. Bound concurrency so ordinary 5s tests
+  // don't time out merely because another file is exploring hundreds of layouts.
+  test: { environment: 'node', include: ['src/**/*.test.ts'], maxWorkers: 2 },
 });

@@ -1,6 +1,7 @@
 import type { Condition, ScenarioDefinition, StoryAnchor, StoryInstance } from './scenario-types';
 import type { BuiltLocation, ExteriorZone, Id, LocationDefinition, ObjectType, Opening, PlacedObject, Polygon, Room, RoomType, Vec, ZoneKind } from './types';
 import { floorMap, openingFloor, pointInPolygon, polygonBBox, polygonCentroid } from './location';
+import { findRoomPath } from './furniture-path';
 
 export type StoryRouteProfile = StoryInstance['bindings']['routes'][string]['profile'];
 export interface StoryObjectSelector { spaceId?: Id; type?: ObjectType; tags?: readonly string[] }
@@ -99,10 +100,13 @@ function pointFree(built: BuiltLocation, spaceId: Id, at: Vec, margin = 0): bool
 }
 
 /** Deterministic occupied-space placement; null is an explicit unsupported binding, never a fake point. */
-export function storyPoint(built: BuiltLocation, spaceId: Id, seed: number, occupied: readonly StoryAnchor[] = []): Vec | null {
+export function storyPoint(built: BuiltLocation, spaceId: Id, seed: number, occupied: readonly StoryAnchor[] = [], requestedClearance?: number): Vec | null {
   const location = space(built, spaceId);
   if (!location) return null;
   const bounds = polygonBBox(location.polygon);
+  const navigationRoom: Room = 'type' in location ? location : { ...location, type: 'hall', floor: 0 };
+  const clearance = requestedClearance ?? (built.location.version >= 7 ? 1 : .2);
+  const access = built.location.version >= 7 ? built.derived.stagingPoints.find(p => p.spaceId === spaceId && built.location.openings.some(o => o.id === p.openingId && o.type !== 'window' && o.state !== 'blocked'))?.at : undefined;
   const candidates = [polygonCentroid(location.polygon)];
   // Half-foot cells cover the game's rooms, while a cap keeps malformed huge geometry bounded.
   const step = Math.max(0.5, Math.sqrt(bounds.w * bounds.h / 20000));
@@ -111,8 +115,9 @@ export function storyPoint(built: BuiltLocation, spaceId: Id, seed: number, occu
   const start = hash(`${seed}:${spaceId}`) % candidates.length;
   for (let i = 0; i < candidates.length; i++) {
     const candidate = candidates[(start + i) % candidates.length];
-    if (pointFree(built, spaceId, candidate, 0.2)
-      && !occupied.some(anchor => anchor.spaceId === spaceId && Math.hypot(candidate.x - anchor.at.x, candidate.y - anchor.at.y) < 1.5)) return { ...candidate };
+    if (pointFree(built, spaceId, candidate, clearance)
+      && !occupied.some(anchor => anchor.spaceId === spaceId && Math.hypot(candidate.x - anchor.at.x, candidate.y - anchor.at.y) < 1.5)
+      && (!access || findRoomPath(navigationRoom, built.location.objects, access, candidate, clearance))) return { ...candidate };
   }
   return null;
 }
@@ -169,8 +174,13 @@ export function validateStoryBindings(scenario: ScenarioDefinition, built: Built
   const personIds = new Set(people.map(person => person.id));
   for (const fact of scenario.facts) if (fact.storyPersonId && !personIds.has(fact.storyPersonId)) errors.push(`${scenario.id}: story fact ${fact.id} references unknown subject ${fact.storyPersonId}`);
   const actions = Object.values(scenario.stages).flatMap(stage => stage.actions);
+  for (const action of actions) for (const id of action.requires.responsivePeople ?? []) if (!personIds.has(id)) error(`action ${action.id} needs an unknown responsive person ${id}`);
   const effects = actions.flatMap(action => Object.values(action.outcomes).flat());
   const flags = new Set(['casualty:officers', 'casualty:untreated', 'casualty:awaiting_transport', 'casualty:evacuated',
+    ...(scenario.version >= 7 ? ['casualty:people', 'casualty:person_fatality', 'casualty:person_needs_care', ...people.flatMap(person => [
+      ...['wounded', 'serious', 'fatal'].map(severity => `person_harm:${person.id}:${severity}`),
+      ...['needed', 'stabilized', 'accepted', 'deceased'].map(care => `person_care:${person.id}:${care}`),
+    ])] : []),
     ...effects.flatMap(effect => [...effect.setFlags ?? [], ...effect.clearFlags ?? []]),
     ...built.location.openings.flatMap(opening => ['open', 'closed', 'locked', 'blocked'].map(state => `opening:${opening.id}=${state}`))]);
   const requiredFact = (id: Id, context: string) => { if (!facts.has(id)) error(`${context} references unknown fact ${id}`); };
@@ -239,12 +249,15 @@ export function validateStoryBindings(scenario: ScenarioDefinition, built: Built
       if (prop.holderPersonId || prop.transitions?.length) error(`mapped prop ${prop.id} cannot declare carried holders`);
     } else if (prop.kind === 'carried') {
       if (!prop.holderPersonId || !personIds.has(prop.holderPersonId)) error(`prop ${prop.id} references an unknown holder ${prop.holderPersonId}`);
+      if (prop.reportedHolderPersonId !== undefined && !personIds.has(prop.reportedHolderPersonId)) error(`prop ${prop.id} references an unknown reported holder ${prop.reportedHolderPersonId}`);
       if (prop.objectId) error(`carried prop ${prop.id} cannot declare a mapped object`);
     } else error(`prop ${prop.id} has an invalid kind`);
     for (const transition of prop.transitions ?? []) {
       condition(transition.when, `prop ${prop.id} transition`);
-      if (!personIds.has(transition.holderPersonId)) error(`prop ${prop.id} transition references an unknown holder ${transition.holderPersonId}`);
+      if (transition.holderPersonId !== undefined && !personIds.has(transition.holderPersonId)) error(`prop ${prop.id} transition references an unknown holder ${transition.holderPersonId}`);
     }
+    condition(prop.knownWhen, `prop ${prop.id} knowledge`);
+    condition(prop.confirmedWhen, `prop ${prop.id} confirmation`);
   }
   for (const [role, route] of Object.entries(bindings.routes)) {
     let at = route.fromSpaceId;

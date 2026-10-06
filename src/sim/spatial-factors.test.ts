@@ -468,17 +468,18 @@ describe('facts, markers and people on the map', () => {
     // unknown: nothing about the resident, and the exact point is nowhere in the view model
     expect(bed(s).people).toEqual([]);
     expect(JSON.stringify(spaceViews(s))).not.toContain('42.5');
-    // reported: an approximate point with a question mark, not the true position
+    // Reported keeps an explicit certainty state and approximate position.
     const reported = bed(setRun(s, { knowledge: { f_occ_e: 'reported' } }));
     expect(reported.people).toHaveLength(1);
-    expect(reported.people[0].label).toBe('Resident?');
+    expect(reported.people[0].label).toBe('Resident');
+    expect(reported.people[0].status).toBe('reported');
     expect(reported.people[0].at).not.toEqual(RESIDENT);
     expect(JSON.stringify(reported)).not.toContain('"x":42.5');
     // confirmed: the exact point
     const conf = bed(setRun(s, { knowledge: { f_occ_e: 'confirmed' } }));
-    expect(conf.people).toEqual([{ id: 'person_f_occ_e', at: RESIDENT, label: 'Resident', status: 'confirmed' }]);
+    expect(conf.people).toEqual([{ id: 'person_f_occ_e', at: RESIDENT, label: 'Resident', kind: 'civilian', status: 'confirmed' }]);
     // the kitchen claim is drawn where it was reported, then disappears once disproved
-    expect(kitchen(s).people).toEqual([{ id: 'person_f_second', at: { x: 33.5, y: 26.7 }, label: 'Movement?', status: 'reported' }]);
+    expect(kitchen(s).people).toEqual([{ id: 'person_f_second', at: { x: 33.5, y: 26.7 }, label: 'Movement', kind: 'civilian', status: 'reported' }]);
     expect(kitchen(setRun(s, { knowledge: { f_second: 'disproved' } })).people).toEqual([]);
   });
 

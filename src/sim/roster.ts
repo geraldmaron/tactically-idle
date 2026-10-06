@@ -7,7 +7,6 @@ import type {
   HandlerResult,
   Id,
   Officer,
-  Role,
   Squad,
   SquadDuty,
   SquadId,
@@ -15,7 +14,7 @@ import type {
 import { SQUAD_IDS } from './types';
 import type { Projection } from './department-selectors';
 import { ITEMS } from '../content/items';
-import { fullNameKey, generateBatch, roleForPersona, RECRUIT_TUNING, type RecruitGen } from '../content/recruits';
+import { fullNameKey, generateBatch, RECRUIT_TUNING, type RecruitGen } from '../content/recruits';
 import { candidatePoolSize, formatDuration, hasEffect, isNodeUnlocked, money, ratesAt, simNow, squadDeployed } from './economy';
 import { fullName } from './officer';
 import { gameDay } from './calendar';
@@ -172,18 +171,17 @@ export function recruitmentStatus(state: GameState, now: number) {
   const day = gameDay(state, now);
   let unseen = 0;
   let available = 0;
-  const roles = new Set<Role>();
   for (const person of PERSONAS) {
     if (employed.has(person.id)) continue;
     const build = state.personnel?.builds[person.id];
-    if (!build) { unseen++; available++; roles.add(roleForPersona(state.personnel?.campaignSeed ?? 12345, person.id)); }
-    else if (day < mandatoryRetirementDay(build)) { available++; roles.add(build.role); }
+    if (!build) { unseen++; available++; }
+    else if (day < mandatoryRetirementDay(build)) available++;
   }
-  return { total: PERSONAS.length, unseen, available, roles: [...roles], exhausted: available === 0 };
+  return { total: PERSONAS.length, unseen, available, exhausted: available === 0 };
 }
 
 /** Fill the pool up to its size with deterministic candidates; shortlisted ones stay. */
-export function fillCandidates(d: GameState, now: number, targetRole?: Role): void {
+export function fillCandidates(d: GameState, now: number): void {
   const kept = d.candidates.filter((c) => c.shortlisted && gameDay(d, now) < mandatoryRetirementDay(c.officer));
   const size = candidatePoolSize(d, RECRUIT_TUNING.basePool);
   const personnel = initializePersonnel(d);
@@ -191,18 +189,17 @@ export function fillCandidates(d: GameState, now: number, targetRole?: Role): vo
   const taken = new Set<string>();
   for (const o of Object.values(d.officers)) taken.add(fullNameKey(o.firstName, o.surname));
   for (const c of kept) taken.add(fullNameKey(c.officer.firstName, c.officer.surname));
-  const fresh = generateBatch(gen, now, Math.max(0, size - kept.length), kept.map((c) => c.officer.role), taken, targetRole, gameDay(d, now));
+  const fresh = generateBatch(gen, now, Math.max(0, size - kept.length), kept.map((c) => c.officer.role), taken, gameDay(d, now));
   d.candidates = [...kept, ...fresh];
   d.rngState = gen.rng;
   d.nextId = gen.nextId;
   (d.department as DepartmentExt).candidateRefreshedAt = now;
 }
 
-function refreshCandidates(d: GameState, targetRole?: Role): HandlerResult {
+function refreshCandidates(d: GameState): HandlerResult {
   const check = refreshCheck(d);
   if (!check.ok) return refusal(check.reason ?? 'Cannot search for candidates');
-  if (targetRole && !recruitmentStatus(d, simNow(d)).roles.includes(targetRole)) return refusal(`No ${targetRole} candidates remain available in this campaign`);
-  fillCandidates(d, simNow(d), targetRole);
+  fillCandidates(d, simNow(d));
   return OK;
 }
 

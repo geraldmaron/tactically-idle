@@ -1,6 +1,7 @@
 import type { GameState, OperationRun, SaveEnvelope } from './types';
 import { COMPLETION_DISPOSITIONS, validExternalSupportState } from './external-support';
-import { validCasualtyRecord, validIncidentConsequences } from './incident-consequences';
+import { validCasualtyRecord, validIncidentConsequences, validPersonCasualtyRecord, validPersonConsequences } from './incident-consequences';
+import { validForceOutcome } from './force-risk';
 import { SQUAD_IDS as SQUAD_ID_LIST } from './types';
 import { CAREER_SEEDS } from '../content/officers';
 import { ITEMS } from '../content/items';
@@ -90,6 +91,9 @@ function validDecision(d: unknown): boolean {
       && (d.committed.resultLabel === undefined || (isStr(d.committed.resultLabel) && d.committed.resultLabel.length > 0 && d.committed.resultLabel.length <= 100))
       && (d.committed.openingChanges === undefined || isList(d.committed.openingChanges, (change) => isObj(change) && isStr(change.openingId) && oneOf(change.state, ['open', 'closed', 'locked', 'blocked'])))
       && (d.committed.externalSupport === undefined || isList(d.committed.externalSupport, (event) => isObj(event) && isStr(event.serviceId) && oneOf(event.kind, ['requested', 'accepted']) && isNum(event.at) && event.at >= 0))
+      && (d.committed.forceOutcome === undefined || validForceOutcome(d.committed.forceOutcome))
+      && (d.committed.personCasualties === undefined || isList(d.committed.personCasualties, validPersonCasualtyRecord))
+      && (d.committed.protectionUsed === undefined || isObj(d.committed.protectionUsed) && strings(d.committed.protectionUsed, ['itemId', 'unitId']))
       && (d.committed.officerCasualties === undefined || isList(d.committed.officerCasualties, validCasualtyRecord))));
 }
 
@@ -97,6 +101,8 @@ function validDecisionView(d: unknown): boolean {
   return isObj(d) && strings(d, ['actionId', 'title', 'stageLabel']) && numbers(d, ['revision', 'timeCost', 'objectiveDelta', 'civilianSafetyDelta', 'pressureDelta'])
     && oneOf(d.band, ['favorable', 'mixed', 'adverse']) && isBool(d.actualStressDeltas) && isStrings(d.explanation) && isStrings(d.consequences)
     && (d.officerCasualties === undefined || isList(d.officerCasualties, validCasualtyRecord))
+    && (d.forceOutcome === undefined || validForceOutcome(d.forceOutcome))
+    && (d.personCasualties === undefined || isList(d.personCasualties, validPersonCasualtyRecord))
     && (d.endingTitle === null || isStr(d.endingTitle))
     && (d.resultLabel === undefined || (isStr(d.resultLabel) && d.resultLabel.length > 0 && d.resultLabel.length <= 100))
     && isList(d.stressDeltas, (x) => isObj(x) && strings(x, ['officerId', 'label']) && isNum(x.delta)
@@ -162,7 +168,8 @@ function validDebrief(d: unknown): boolean {
     && isList(d.unitWear, (u) => isObj(u) && strings(u, ['unitId', 'itemId', 'serial']) && numbers(u, ['before', 'after']))
     && (d.endingSummary === undefined || isStr(d.endingSummary)) && (d.decisions === undefined || isList(d.decisions, validDecisionView))
     && (d.officerCasualties === undefined || isList(d.officerCasualties, validCasualtyRecord))
-    && (d.civilianOutcomes === undefined || isList(d.civilianOutcomes, person => isObj(person) && strings(person, ['id', 'label']) && oneOf(person.status, ['unaccounted', 'needs_help', 'safe', 'injured_needs_care', 'care_accepted', 'accounted_elsewhere'])))
+    && (d.personCasualties === undefined || isList(d.personCasualties, validPersonCasualtyRecord))
+    && (d.civilianOutcomes === undefined || isList(d.civilianOutcomes, person => isObj(person) && strings(person, ['id', 'label']) && oneOf(person.status, ['unaccounted', 'needs_help', 'safe', 'injured_needs_care', 'care_accepted', 'accounted_elsewhere', 'deceased'])))
     && (d.disposition === undefined || oneOf(d.disposition, COMPLETION_DISPOSITIONS))
     && (d.completionAchieved === undefined || isBool(d.completionAchieved))
     && (d.remainingTasks === undefined || isStrings(d.remainingTasks))
@@ -287,6 +294,7 @@ function validState(s: unknown, historical = false): s is GameState {
   if (s.report !== null && !validReport(s.report)) return false;
   if (s.activeRun !== null && !validRun(s.activeRun)) return false;
   if (s.activeRun !== null && !validIncidentConsequences(s.activeRun as unknown as OperationRun, getScenario((s.activeRun as unknown as OperationRun).scenarioId)!, s.officers as GameState['officers'], s.squads as GameState['squads'], (s.department as GameState['department']).clockHighWater)) return false;
+  if (s.activeRun !== null && !validPersonConsequences(s.activeRun as unknown as OperationRun, getScenario((s.activeRun as unknown as OperationRun).scenarioId)!, s as unknown as GameState)) return false;
   if (!isList(s.debriefs, validDebrief)) return false;
   const people = s.personnel;
   if (!isObj(people) || !isNum(people.campaignSeed) || !Number.isInteger(people.campaignSeed) || people.campaignSeed < 0 || people.campaignSeed > 0xffffffff || !isNum(people.catalogVersion)) return false;

@@ -12,8 +12,6 @@ export const ROLE_META: Record<Role, { label: string; icon: IconName }> = {
   lead: { label: 'Leadership', icon: 'flag' },
 };
 
-export const ROLES: Role[] = ['comms', 'breach', 'medic', 'recon', 'lead'];
-
 export const RATING_META: { key: RatingKey; label: string; short: string; icon: IconName }[] = [
   { key: 'shooting', label: 'Shooting proficiency', short: 'Shooting', icon: 'bullseye' },
   { key: 'composure', label: 'Composure', short: 'Composure', icon: 'pulse' },

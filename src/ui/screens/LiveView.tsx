@@ -163,14 +163,18 @@ export function LiveView(p: LiveViewProps) {
         <span className="legend-pad" />
         <span className="legend-items">
           <span>
-            <Icon name="question" size={18} className="lg-q" />
-            Unknown
+            <Icon name="user" size={18} className="lg-q legend-reported-person" />
+            Reported
           </span>
           <span>
-            <Icon name="check" size={18} className="lg-ok" />
+            <Icon name="user" size={18} className="lg-ok" />
             Confirmed
           </span>
         </span>
+        <details className="legend-help">
+          <summary aria-label="Map key and inspection help">Key</summary>
+          <p>Dashed amber people are reports at approximate positions. Mint people have a confirmed position. Small item symbols stay beside their holder; amber items are still reported, even when the person is confirmed. An absent weapon symbol does not mean unarmed. Tap a room or use Rooms to inspect names, conditions and items.</p>
+        </details>
         <span className="legend-end">
           {p.canCancel && (
             <button type="button" className="linkbtn" onClick={p.onCancel} aria-label="Cancel operation">
@@ -639,7 +643,7 @@ export function RoomSheet(p: RoomSheetProps) {
   const type = s ? (loc.rooms.find((r) => r.id === s.id)?.type ?? loc.zones.find((z) => z.id === s.id)?.kind) : undefined;
   const construction = s ? describeConstruction(p.built, s.id) : [];
   const facts = s?.facts ?? [];
-  const people = s?.people ?? [];
+  const people = (s?.people ?? []).filter((person) => person.status !== 'unknown');
   // Verify actions are listed under their fact, so the plain action list leaves them out.
   const inFacts = new Set(facts.flatMap((f) => f.verifyActions.map((v) => v.actionId)));
   const targeting = s ? p.actions.filter((a) => (s.actionIds.includes(a.id) || a.targetId === s.id) && !inFacts.has(a.id)) : [];
@@ -788,19 +792,23 @@ const KIND_META: Record<string, { icon: IconName; word: string }> = {
  * One person on the map, only as far as the player knows. Armament is shown as a report or a confirmation,
  * never as truth; a subject with no armament information says so rather than implying unarmed.
  */
-function PersonRow({ m }: { m: SpaceView['people'][number] }) {
+export function PersonRow({ m }: { m: SpaceView['people'][number] }) {
   const meta = KIND_META[m.kind ?? 'unknown'] ?? KIND_META.unknown;
   const confirmed = m.status === 'confirmed';
-  const armed = m.armament ?? null;
+  if (m.status === 'unknown') return null;
+  if (m.status === 'disproved') return <li className="person"><strong>{m.label || 'Person report'}</strong><p>Report ruled out</p></li>;
+  const hasWeapon = m.carried?.some((item) => item.glyph === 'weapon');
+  const armed = hasWeapon || m.armament === 'unknown' ? null : m.armament ?? null;
   const isSubject = m.kind === 'subject' || m.kind === 'unknown' || m.kind === undefined;
   return (
     <li className="person">
       <div className="person-top">
-        <Icon name={confirmed ? meta.icon : 'question'} size={16} />
+        <Icon name={meta.icon === 'question' ? 'user' : meta.icon} size={16} />
         <strong>{m.label}</strong>
         <StatusChip status={m.status} />
         <span className="dim">{confirmed ? 'Position confirmed' : 'Approximate position'}</span>
       </div>
+      {m.condition && <p className={`person-condition person-condition-${m.condition}`}><Icon name={m.condition === 'deceased' ? 'x' : 'bandage'} size={14} />{m.condition === 'deceased' ? 'Deceased' : 'Injured'}</p>}
       {armed ? (
         <p className={`person-arm${armed === 'none' ? ' person-arm-ok' : ''}`}>
           <Icon name={armed === 'none' ? 'checkcircle' : 'warning'} size={14} />
@@ -809,13 +817,14 @@ function PersonRow({ m }: { m: SpaceView['people'][number] }) {
           </span>
         </p>
       ) : (
-        isSubject && (
+        isSubject && !hasWeapon && (
           <p className="person-arm person-arm-unk">
             <Icon name="question" size={14} />
             <span>Armament not known</span>
           </p>
         )
       )}
+      {(m.carried?.length ?? 0) > 0 && <ul className="person-carried" aria-label={`Items with ${m.label || 'this person'}`}>{m.carried!.map((item) => <li key={item.id}><strong>{item.label}</strong><span>{item.status === 'confirmed' ? 'Confirmed item' : 'Reported item · unverified'}</span></li>)}</ul>}
     </li>
   );
 }

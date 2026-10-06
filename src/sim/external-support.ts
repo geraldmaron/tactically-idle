@@ -1,7 +1,8 @@
 import type { ActionDefinition, Condition, EndingDefinition, ExternalServiceDefinition, OutcomeEffect, ScenarioDefinition } from './scenario-types';
-import type { CompletionDisposition, DebriefResult, ExternalSupportEvent, ExternalSupportState, OfficerCasualtyRecord, OperationRun } from './types';
+import type { CompletionDisposition, DebriefResult, ExternalSupportEvent, ExternalSupportState, OfficerCasualtyRecord, OperationRun, PersonCasualtyRecord } from './types';
 import { next } from './rng';
-import { syncCasualtyFlags } from './incident-consequences';
+import { syncCasualtyFlags, syncPersonCasualtyFlags } from './incident-consequences';
+import { protectedOfficerEffects } from './force-risk';
 
 type SupportRun = Pick<OperationRun, 'clock' | 'externalSupport'>;
 type PublicRun = Pick<OperationRun, 'knowledge' | 'flags' | 'pressure'>;
@@ -111,20 +112,28 @@ export function hasCompletionConditions(ending: EndingDefinition): boolean {
   return !!c && !!(c.acceptedServiceId || c.facts?.length || c.flags?.length || c.notFlags?.length || c.pressureAtLeast !== undefined || c.pressureBelow !== undefined);
 }
 
-export function completionEvidence(scenario: ScenarioDefinition, run: SupportRun & PublicRun, ending: EndingDefinition): Pick<DebriefResult, 'disposition' | 'completionAchieved' | 'receivingService' | 'remainingTasks'> {
+export function completionEvidence(scenario: ScenarioDefinition, run: SupportRun & PublicRun & Pick<OperationRun, 'personCasualties' | 'officerCasualties'>, ending: EndingDefinition): Pick<DebriefResult, 'disposition' | 'completionAchieved' | 'receivingService' | 'remainingTasks'> {
   const serviceId = ending.completion?.acceptedServiceId;
   const service = scenario.externalServices?.find((entry) => entry.id === serviceId);
   const state = serviceId ? run.externalSupport?.[serviceId] : undefined;
   const receiverAccepted = !!service && externalSupportStatus(run, service) === 'accepted' && state?.acceptedAt != null;
   const disposition = ending.disposition ?? 'unresolved';
+  const outstandingHarm = scenario.version >= 7 ? [
+    ...Object.values(run.personCasualties ?? {}).filter(person => person.care !== 'accepted').map(person => person.severity === 'fatal'
+      ? `${person.label} died; the fatality and remaining scene responsibilities need formal follow-up.`
+      : `${person.label} is injured and still needs an accepting medical crew.`),
+    ...Object.values(run.officerCasualties ?? {}).filter(person => person.care !== 'evacuated').map(() => 'An injured officer still needs medical transport.'),
+  ] : [];
   const completionAchieved = FULL_DISPOSITIONS.includes(disposition) && hasCompletionConditions(ending)
     && conditionsHold(ending.completion, run)
+    && outstandingHarm.length === 0
     && (!serviceId || receiverAccepted) && (disposition !== 'care_accepted' || receiverAccepted);
   return {
     disposition: FULL_DISPOSITIONS.includes(disposition) && !completionAchieved ? 'unresolved' : disposition,
     completionAchieved,
     ...(receiverAccepted ? { receivingService: { id: service!.id, label: service!.label, kind: service!.kind, acceptedAt: state!.acceptedAt! } } : {}),
     remainingTasks: completionAchieved ? [] : [
+      ...outstandingHarm,
       ...ending.remainingTasks ?? [],
       ...(serviceId && !receiverAccepted ? [`${service?.label ?? 'The receiving service'} has not accepted responsibility.`] : []),
       ...(!ending.remainingTasks?.length && !serviceId ? ['Incident responsibilities remain unfinished.'] : []),
@@ -138,13 +147,15 @@ export function validExternalSupportState(run: OperationRun, scenario: ScenarioD
   if (!run.externalSupport || typeof run.externalSupport !== 'object' || Array.isArray(run.externalSupport)) return false;
   const expected: Record<string, ExternalSupportState> = {};
   const casualties: Record<string, OfficerCasualtyRecord> = {};
+  const personCasualties: Record<string, PersonCasualtyRecord> = {};
   let clock = (run.resupplies ?? []).reduce((sum, delivery) => round1(sum + delivery.minutes), 0);
   const publicState: PublicRun = { knowledge: Object.fromEntries(scenario.facts.map((fact) => [fact.id, fact.initial])), flags: [], pressure: scenario.pressure.start };
   for (const delivery of run.resupplies ?? []) publicState.pressure = round1(Math.max(0, Math.min(100, publicState.pressure + scenario.pressure.perMinute * delivery.minutes)));
   const decisions = new Set<string>();
   if (!Number.isSafeInteger(run.rngState) || run.rngState < 0 || run.rngState > 0xffffffff) return false;
   // Mulberry32 advances by a fixed uint32 increment. Check the whole saved sample sequence.
-  let rngState = (run.rngState - Math.imul(run.history.length, 0x6d2b79f5)) >>> 0;
+  const forceDraws = scenario.version >= 7 ? run.history.filter(decision => decision.committed?.forceOutcome).length : 0;
+  let rngState = (run.rngState - Math.imul(run.history.length + forceDraws, 0x6d2b79f5)) >>> 0;
   for (const decision of run.history) {
     if (!Number.isFinite(decision.timeCost) || decision.timeCost <= 0) return false;
     const beforeClock = clock;
@@ -159,6 +170,11 @@ export function validExternalSupportState(run: OperationRun, scenario: ScenarioD
     const sample = next(rngState);
     if (sample.value !== decision.sample) return false;
     rngState = sample.state;
+    if (scenario.version >= 7 && action.forceProfile) {
+      const force = next(rngState);
+      if (decision.committed?.forceOutcome?.sample !== force.value) return false;
+      rngState = force.state;
+    } else if (decision.committed?.forceOutcome) return false;
     if (externalSupportActionIssue({ ...publicState, clock: beforeClock, externalSupport: expected }, scenario, action)) return false;
     if (action.awaitSupport && decision.timeCost !== remainingSupportWait({ clock: beforeClock, externalSupport: expected }, scenario, action.awaitSupport)) return false;
     const effects = action.outcomes[decision.band].filter((effect) => conditionsHold(effect.when, publicState)
@@ -201,7 +217,7 @@ export function validExternalSupportState(run: OperationRun, scenario: ScenarioD
       casualties[id] = { ...event };
       return true;
     };
-    for (const effect of effects) {
+    for (const effect of protectedOfficerEffects(effects, scenario.version >= 7 ? decision.committed?.protectionUsed : undefined)) {
       if (effect.officerHarm) {
         const id = decision.officerIds.find(candidate => !casualties[candidate]);
         if (id && !acceptCasualty(id, 'needed', effect.officerHarm.severity, effect.officerHarm.label)) return false;
@@ -218,6 +234,12 @@ export function validExternalSupportState(run: OperationRun, scenario: ScenarioD
     const casualtyState = { flags: publicState.flags, officerCasualties: casualties };
     syncCasualtyFlags(casualtyState);
     publicState.flags = casualtyState.flags;
+    if (scenario.version >= 7) {
+      for (const person of decision.committed?.personCasualties ?? []) personCasualties[person.personId] = { ...person };
+      const peopleState = { flags: publicState.flags, personCasualties };
+      syncPersonCasualtyFlags(peopleState, scenario);
+      publicState.flags = peopleState.flags;
+    }
     for (const change of decision.knowledgeChanges) publicState.knowledge[change.factId] = change.status;
     publicState.pressure = round1(publicState.pressure + decision.committed!.pressureDelta);
   }

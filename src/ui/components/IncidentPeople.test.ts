@@ -7,7 +7,7 @@ import { actionViews, briefing, currentBuilt, spaceViews, stageProgress } from '
 import { highRiskAllowed } from '../../sim/officer';
 import { makeState, NOW, startRun } from '../../sim/test-fixtures';
 import { DebriefSummary, OfficerResults } from './DebriefResults';
-import { CivilianOutcomeList, IncidentPeopleStatus, OfficerInjuryResult } from './IncidentPeople';
+import { CivilianOutcomeList, IncidentPeopleStatus, OfficerInjuryResult, PersonCasualtyList } from './IncidentPeople';
 import { LiveView } from '../screens/LiveView';
 
 let state = makeState();
@@ -111,4 +111,35 @@ describe('individual civilian and officer outcomes', () => {
     expect(html).toContain('>Out of action<');
     expect(state.officers.off_chen.injury).toBeNull();
   });
+});
+
+it('renders death from its recorded status without interpreting it as accepted care', () => {
+  const html = renderToStaticMarkup(createElement(CivilianOutcomeList, { outcomes: [{ id: 'resident', label: 'Resident', status: 'deceased' }] }));
+  expect(html).toContain('Deceased');
+  expect(html).not.toContain('Care accepted');
+  expect(html).not.toContain('>Safe<');
+});
+
+
+it('keeps a recorded death terminal in the person casualty display even with a stale accepted-care field', () => {
+  const html = renderToStaticMarkup(createElement(PersonCasualtyList, { casualties: [{ personId: 'mara', personRole: 'subject', label: 'Mara Bell', severity: 'fatal', at: 8, care: 'accepted', causeRevision: 2 }] }));
+  expect(html).toContain('Mara Bell');
+  expect(html).toContain('data-person-status="deceased"');
+  expect(html).toContain('Deceased');
+  expect(html).not.toContain('Care accepted');
+});
+
+it('records accepted care without presenting an injured person as uninjured', () => {
+  const html = renderToStaticMarkup(createElement(PersonCasualtyList, { casualties: [{ personId: 'mara', personRole: 'subject', label: 'Mara Bell', severity: 'serious', at: 8, care: 'accepted', causeRevision: 2 }] }));
+  expect(html).toContain('data-person-status="care_accepted"');
+  expect(html).toContain('Serious injury · Care accepted');
+  expect(html).not.toContain('>Safe<');
+});
+
+it('shows a casualty outside authored civilian outcomes regardless of the casualty role', () => {
+  state = startRun(state, 'exercise_welfare_v4', ['A'], { practice: true });
+  state.activeRun!.personCasualties = { visitor: { personId: 'visitor', personRole: 'civilian', label: 'Visitor', severity: 'wounded', at: 8, care: 'needed', causeRevision: 2 } };
+  const html = renderToStaticMarkup(createElement(IncidentPeopleStatus, { scenario: getScenario(state.activeRun!.scenarioId)!, run: state.activeRun!, state }));
+  expect(html).toContain('data-person-casualty="visitor"');
+  expect(html).toContain('Wounded · Needs care');
 });

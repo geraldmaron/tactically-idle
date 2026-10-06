@@ -16,11 +16,13 @@ import type { IconName } from '../icons';
 import { signed } from '../format';
 import { OperationLogContents } from './OperationFeedback';
 import { Sheet } from '../components/Sheet';
+import { PersonCasualtyList } from '../components/IncidentPeople';
 
 /** A saved debrief is self-contained; it never borrows history from a newer active run. */
 export function SavedDebriefContents({ debrief: d, officers }: { debrief: DebriefResult; officers: DebriefOfficers }) {
   return <div className="saved-debrief-content">
     <DebriefSummary debrief={d} />
+    <PersonCasualtyList casualties={(d.personCasualties ?? []).filter((person) => !(d.civilianOutcomes ?? []).some((civilian) => civilian.id === person.personId))} />
     {d.endingSummary && <p className="debrief-narrative">{d.endingSummary}</p>}
     <DebriefConsequences debrief={d} />
     <OfficerResults debrief={d} officers={officers} />
@@ -51,6 +53,7 @@ export function OpsDebrief() {
       <h2 className="debrief-title">{d.endingTitle}</h2>
     </div>
     <DebriefSummary debrief={d} />
+    <PersonCasualtyList casualties={(d.personCasualties ?? []).filter((person) => !(d.civilianOutcomes ?? []).some((civilian) => civilian.id === person.personId))} />
     {d.endingSummary && <p className="debrief-narrative">{d.endingSummary}</p>}
     <DebriefConsequences debrief={d} decisions={decisions} />
     <OfficerResults debrief={d} officers={g.officers} />

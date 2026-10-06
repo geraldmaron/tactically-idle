@@ -7,6 +7,7 @@ import { StressDisplay, StressGuide } from '../components/StressDisplay';
 import { opMinutes, signed } from '../format';
 import { outcomePercentages } from './liveModels';
 import './operation-feedback.css';
+import { ITEMS } from '../../content/items';
 
 export const RESULT_LABEL: Record<OutcomeBand, string> = { favorable: 'Went well', mixed: 'Had complications', adverse: 'Went badly' };
 export const FORECAST_LABEL: Record<OutcomeBand, string> = { favorable: 'Goes well', mixed: 'Complications', adverse: 'Goes badly' };
@@ -21,9 +22,14 @@ export function OutcomeForecast({ action }: { action: ActionView }) {
   return (
     <section className="outcome-forecast" aria-label="Possible outcomes">
       <div className="outcome-forecast-heading">
-        <h3>{commonEvent ? 'Expected event' : 'What could happen'}</h3>
+        <h3>{action.forceRisk ? 'Task outcome' : commonEvent ? 'Expected event' : 'What could happen'}</h3>
         <span className={`consequence-level consequence-${action.consequenceLevel}`}>Possible harm: {CONSEQUENCE_LABEL[action.consequenceLevel].toLowerCase()}</span>
       </div>
+      {action.forceRisk && <section className="force-risk" aria-label="Risk from force">
+        <h4>{ITEMS[action.forceRisk.itemId]?.name ?? 'Selected equipment'} · {action.forceRisk.personLabel}</h4>
+        <p>{action.forceRisk.summary}</p>
+        <p>These game chances describe the task. Harm is resolved separately: a successful task can still cause serious injury or death.</p>
+      </section>}
       {commonEvent ? <p>{action.outcomePreview.favorable}</p> : <>
       <p className="operation-note">{action.eventResult ? 'The event is established. These checks describe how the step unfolds and its costs.' : action.eligible ? 'Chances depend on your team and what you know. Even when a choice goes well, there may be more work to do.' : 'Check what is missing to see the chances for this choice.'} Possible harm describes how badly things could go.</p>
       <ul className="outcome-options">
@@ -45,11 +51,16 @@ export function DecisionCard({ decision: d, full = false, officers = {}, explici
   const next = d.consequences.filter((line) => line.startsWith('Next: '));
   const fallback = narrative.length === 0 ? d.explanation.find((line) => line.trim()) : undefined;
   return (
-    <article className={`decision-card decision-${d.resultLabel ? 'event' : d.band}`} aria-label={`${d.title}: ${d.resultLabel ?? RESULT_LABEL[d.band]}`}>
+    <article className={`decision-card decision-${d.forceOutcome ? 'force' : d.resultLabel ? 'event' : d.band}`} aria-label={`${d.title}: ${d.forceOutcome ? 'task and harm recorded' : d.resultLabel ?? RESULT_LABEL[d.band]}`}>
       <header className="decision-heading">
         <div><span className="decision-stage">{d.stageLabel}</span><h3>{d.title}</h3></div>
-        <Chip tone={d.resultLabel ? 'neutral' : RESULT_TONE[d.band]}>{d.resultLabel ?? RESULT_LABEL[d.band]}</Chip>
+        <Chip tone={d.forceOutcome || d.resultLabel ? 'neutral' : RESULT_TONE[d.band]}>{d.forceOutcome ? `Task check: ${RESULT_LABEL[d.band].toLowerCase()}` : d.resultLabel ?? RESULT_LABEL[d.band]}</Chip>
       </header>
+      {d.forceOutcome && <section className={`force-result force-result-${d.forceOutcome.severity}`} aria-label="Recorded harm">
+        <h4>Recorded harm</h4>
+        <strong>{d.forceOutcome.personLabel}: {({ none: 'No injury recorded', wounded: 'Wounded', serious: 'Serious injury', fatal: 'Deceased' } as const)[d.forceOutcome.severity]}</strong>
+        <p>{ITEMS[d.forceOutcome.itemId]?.name ?? 'Selected equipment'} used. This result is separate from the task check.</p>
+      </section>}
       {narrative.length > 0 ? <ul className="decision-narrative">{narrative.map((line, index) => <li key={index}>{line}</li>)}</ul> : fallback ? <p className="decision-lead">{fallback}</p> : null}
       <DecisionChanges decision={d} complete={full} explicitCompletion={explicitCompletion} />
       <DecisionEffects decision={d} complete={full} />

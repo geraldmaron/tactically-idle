@@ -121,6 +121,8 @@ export interface PlacedObject {
   w: number;
   h: number;
   rotation: 0 | 90 | 180 | 270;
+  /** Versioned furnishing plans supply the authoritative symbol orientation. */
+  placement?: { back: 'N' | 'E' | 'S' | 'W'; anchor: 'wall' | 'group'; group?: string };
   /** false = drawn only; true = consumed by a named rule (usable space, scenario fact). */
   mechanical: boolean;
   tags: string[];
@@ -567,6 +569,9 @@ export interface DecisionResolution {
     /** Exact external responsibility events, saved once at commit in v4. */
     externalSupport?: ExternalSupportEvent[];
     officerCasualties?: OfficerCasualtyRecord[];
+    forceOutcome?: ForceOutcome;
+    personCasualties?: PersonCasualtyRecord[];
+    protectionUsed?: { itemId: Id; unitId: Id };
     /** V5 opening changes resolved against the route actually used, in committed order. */
     openingChanges?: { openingId: Id; state: OpeningState }[];
   };
@@ -621,6 +626,7 @@ export interface OperationRun {
   /** External care/response services; distinct from deployed squad support and vehicles. */
   externalSupport?: Record<Id, ExternalSupportState>;
   officerCasualties?: Record<Id, OfficerCasualtyRecord>;
+  personCasualties?: Record<Id, PersonCasualtyRecord>;
   /** Operation minutes elapsed. */
   clock: number;
   /** 0..100 situation pressure. */
@@ -673,6 +679,7 @@ export interface DebriefResult {
   receivingService?: { id: Id; label: string; kind: string; acceptedAt: number };
   officerCasualties?: OfficerCasualtyRecord[];
   civilianOutcomes?: CivilianOutcomeView[];
+  personCasualties?: PersonCasualtyRecord[];
   /** Detached complete decision log; absent from previously closed legacy debriefs. */
   decisions?: DecisionView[];
   practice: boolean;
@@ -704,7 +711,34 @@ export interface OfficerCasualtyRecord {
 export interface CivilianOutcomeView {
   id: Id;
   label: string;
-  status: 'unaccounted' | 'needs_help' | 'safe' | 'injured_needs_care' | 'care_accepted' | 'accounted_elsewhere';
+  status: 'unaccounted' | 'needs_help' | 'safe' | 'injured_needs_care' | 'care_accepted' | 'accounted_elsewhere' | 'deceased';
+}
+
+/** Fictional game balance; no real-world probability or medical prediction. */
+export interface ForceRiskPreview {
+  profile: 'firearm' | 'less_lethal_device' | 'less_lethal_impact';
+  itemId: Id;
+  unitId: Id;
+  personId: Id;
+  personRole: 'subject' | 'civilian';
+  personLabel: string;
+  lethalRisk: 'substantial' | 'low_but_present';
+  summary: string;
+}
+export interface ForceOutcome extends ForceRiskPreview {
+  version: 1;
+  /** A separate saved draw after the effort draw, only for explicit V7 force use. */
+  sample: number;
+  severity: 'none' | 'wounded' | 'serious' | 'fatal';
+}
+export interface PersonCasualtyRecord {
+  personId: Id;
+  personRole: 'subject' | 'civilian';
+  label: string;
+  severity: 'wounded' | 'serious' | 'fatal';
+  at: number;
+  care: 'needed' | 'stabilized' | 'accepted' | 'deceased';
+  causeRevision: number;
 }
 
 // ---------------------------------------------------------------- view models consumed by the UI
@@ -718,6 +752,8 @@ export interface DecisionView {
   resultLabel?: string;
   /** Present for current committed records; absence keeps legacy prose fallback. */
   officerCasualties?: OfficerCasualtyRecord[];
+  forceOutcome?: ForceOutcome;
+  personCasualties?: PersonCasualtyRecord[];
   explanation: string[];
   timeCost: number;
   objectiveDelta: number;
@@ -734,6 +770,7 @@ export interface DecisionView {
 }
 
 export interface ActionView {
+  forceRisk?: ForceRiskPreview;
   /** Common event across effort bands: authored explicitly or proven by identical v6 effect tables. */
   eventResult?: string;
   likelihood: Record<OutcomeBand, number>;
@@ -804,6 +841,16 @@ export interface PersonMark {
   armament?: string | null;
   label: string;
   status: KnowledgeStatus;
+  /** Known possessions follow this person's public location, not their hidden position. */
+  carried?: PublicCarriedItem[];
+  condition?: 'injured' | 'deceased';
+}
+
+export interface PublicCarriedItem {
+  id: Id;
+  label: string;
+  glyph: 'phone' | 'document' | 'keys' | 'wheelchair' | 'weapon' | 'tool' | 'item';
+  status: 'reported' | 'confirmed';
 }
 
 export interface SpaceView {
@@ -881,7 +928,7 @@ export type Command =
   | { type: 'hire'; candidateId: Id }
   | { type: 'dismiss'; officerId: Id }
   | { type: 'shortlist'; candidateId: Id; on: boolean }
-  | { type: 'refreshCandidates'; targetRole?: Role }
+  | { type: 'refreshCandidates' }
   | { type: 'startCourse'; officerId: Id; courseId: Id }
   | { type: 'unlockNode'; nodeId: Id; expectedTier?: number }
   | { type: 'buyItem'; itemId: Id; qty: number }
