@@ -16,7 +16,7 @@ import { OverlayLayer, placeOverlays } from './overlays';
 import { OpeningsLayer } from './openings';
 import { PaperBack, PaperDefs, PaperFront, ids } from './paper';
 import { computeWalls } from './walls';
-import { statusWord } from './RoomList';
+import { personDescription, statusWord } from './RoomList';
 import { useViewport } from './useViewport';
 import { useBlueprintNavigation } from './useBlueprintNavigation';
 import { floorBadges, floorCount, floorGeometry, floorKnowledge, floorWord } from './floors';
@@ -73,7 +73,7 @@ export function Blueprint({ built: allBuilt, spaces: allSpaces, squadTasks: allS
 
   // Layout depends on what the player knows; key it on the fields it reads so store churn does not re-run the search.
   const sig = JSON.stringify([
-    spaces.map((s) => [s.id, s.label, s.marker?.text ?? null, s.marker?.tone ?? null, s.marker?.subtext ?? null, (s.people ?? []).map((p) => [p.id, p.at, p.status, p.label, p.kind, p.armament])]),
+    spaces.map((s) => [s.id, s.label, s.marker?.text ?? null, s.marker?.tone ?? null, s.marker?.subtext ?? null, (s.people ?? []).map((p) => [p.id, p.at, p.status, p.label, p.kind, p.armament, p.carried, p.condition])]),
     squadTasks,
     focusSquadId,
   ]);
@@ -136,9 +136,8 @@ export function Blueprint({ built: allBuilt, spaces: allSpaces, squadTasks: allS
     if (v?.squadsHere.length) parts.push(`Squad ${v.squadsHere.join(', ')} here`);
     if (v?.marker) parts.push(v.marker.subtext ? `${v.marker.text} ${v.marker.subtext}` : v.marker.text);
     for (const p of v?.people ?? []) {
-      if (p.status === 'reported') parts.push('reported person, position approximate');
-      else if (p.status === 'confirmed') parts.push(`${p.label} confirmed`);
-      else if (p.status === 'disproved') parts.push('checked and clear');
+      const description = personDescription(p);
+      if (description) parts.push(description);
     }
     return parts.join(', ');
   };
@@ -305,7 +304,7 @@ export function Blueprint({ built: allBuilt, spaces: allSpaces, squadTasks: allS
 
       {showMaterials && <MaterialLegend uid={uid} use={keyUse} />}
 
-      <p className="bp-nav-help" id={`${uid}-navigation-help`}>Drag to pan · Pinch or scroll to zoom<span className="bp-sr-only">. Keyboard: + and − to zoom, arrow keys to pan, Home to fit the map. Tab to a room and press Enter to select it.</span></p>
+      <p className="bp-nav-help" id={`${uid}-navigation-help`}>Tap a room to inspect · Drag to pan · Pinch to zoom<span className="bp-sr-only">. Keyboard: + and − to zoom, arrow keys to pan, Home to fit the map. Tab to a room and press Enter to inspect its people and carried items. Use the Rooms list for a text alternative. Scroll to zoom. Double-tap a room to zoom in or fit the map.</span></p>
 
       <div className="bp-zoomctl" role="group" aria-label="Map zoom">
         <button type="button" className="bp-zbtn" aria-label="Zoom in" title="Zoom in (+)" onClick={() => { lastTap.current = null; zoomBy(1.6); }} disabled={zoom >= 3.95}>

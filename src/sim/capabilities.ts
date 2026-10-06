@@ -13,11 +13,14 @@ import { capabilityRuleEffect, effectiveSupplies, operatorQualified } from './eq
 import { resolveSubject, standingOf } from './spatial-factors';
 import { practiceSupportUnit } from './support-vehicles';
 import { signalBetween } from './spatial';
+import { forceItemMatches } from './force-risk';
 
 export interface CapabilityInput {
   state: GameState; run: OperationRun; scenario: ScenarioDefinition; action: ActionDefinition; built: BuiltLocation;
   acting: SquadId[]; support: SquadId[]; units: Partial<Record<SquadId, ItemUnit[]>>;
   existingUses?: Use[];
+  /** V7 actual selected seats, so an absent cert holder cannot operate used gear. */
+  participantIds?: Id[];
   /** Best planned public sightline, after moving to the authored vantage. */
   visibility?: number;
   /** Score actually lost from radio links, never a guessed universal buff. */
@@ -76,6 +79,8 @@ export function evaluateCapabilities(input: CapabilityInput): CapabilityResult {
     seen.add(unit.id);
     const item = ITEMS[unit.itemId];
     if (!item) continue;
+    // An explicit V7 force choice cannot also use an unrelated carried weapon.
+    if (scenario.version >= 7 && action.forceProfile && ['response', 'less_lethal'].includes(item.category ?? '') && !forceItemMatches(action.forceProfile.kind, item.id)) continue;
     const effectiveness = unitEffectiveness(unit, item);
     if (effectiveness <= 0 || (unit.expiresAt !== null && unit.expiresAt <= state.department.clockHighWater)) continue;
     if (item.supportOnly && vehicle?.id !== unit.id) continue;
@@ -83,7 +88,9 @@ export function evaluateCapabilities(input: CapabilityInput): CapabilityResult {
     for (const cap of item.capabilities ?? []) {
       if (!rules.has(cap)) continue;
       const requiredCerts = item.requiresCerts ?? [];
-      const qualified = (item.supportOnly ? run.squadIds : [squadId]).some((sid) => operatorQualified(state, sid, action, item));
+      const qualified = (item.supportOnly ? run.squadIds : [squadId]).some((sid) => operatorQualified(state, sid, action, item)
+        && (scenario.version < 7 || item.supportOnly || input.participantIds === undefined || state.squads.find(squad => squad.id === sid)?.officerIds.some(id => input.participantIds!.includes(id)
+          && requiredCerts.every(cert => state.officers[id]?.certs.includes(cert)))));
       const missing = requiredCerts.length && !qualified ? requiredCerts : [];
       let reason = missing.length ? `Needs qualified operator: ${missing.map((c) => c.replaceAll('_', ' ')).join(', ')}` : null;
       const effect = capabilityRuleEffect(item, cap, { action, scenario, built, knowledge: run.knowledge, sight,
@@ -114,7 +121,9 @@ export function evaluateCapabilities(input: CapabilityInput): CapabilityResult {
       const replacement: Use[] = [];
       let complete = true;
       for (const need of effectiveSupplies(pick.item)) {
-        const pool = available.filter(({ unit }) => unit.itemId === need.itemId && unitEffectiveness(unit, ITEMS[unit.itemId]) > 0 && !usedSupplies.has(unit.id) && !supplyClaimed.has(unit.id) && !replacement.some((u) => u.unitId === unit.id));
+        const pool = available.filter(({ unit }) => unit.itemId === need.itemId && unitEffectiveness(unit, ITEMS[unit.itemId]) > 0
+          && (scenario.version < 7 || unit.expiresAt === null || unit.expiresAt > state.department.clockHighWater)
+          && !usedSupplies.has(unit.id) && !supplyClaimed.has(unit.id) && !replacement.some((u) => u.unitId === unit.id));
         if (pool.length < need.qty) { complete = false; break; }
         for (const p of pool.slice(0, need.qty)) replacement.push({ itemId: p.unit.itemId, unitId: p.unit.id, squadId: p.squadId, qty: 1, consumable: true });
       }

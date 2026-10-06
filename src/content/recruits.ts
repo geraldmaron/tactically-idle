@@ -13,8 +13,6 @@ export const RECRUIT_TUNING = {
   /** Free candidate search cooldown. */
   refreshCooldownMs: 4 * 3_600_000,
   rookiePenalty: 8,
-  /** Chance that a non-targeted slot also takes the targeted role. */
-  targetBiasChance: 0.35,
   /** Newcomers can be any adult age. Prior service is rolled separately. */
   rookieService: [0, 1.2] as [number, number],
   /** Experience adds this much wage per 3 years of prior service (capped), and this much signing fee per year. */
@@ -142,7 +140,7 @@ function candidateFor(gen: RecruitGen, now: number, person: Persona, day: number
 
 /** A small hiring window onto the authored cast; build assignment is fixed for the campaign. */
 export function generateBatch(
-  gen: RecruitGen, now: number, count: number, existingRoles: Role[], takenNames: Set<string>, targetRole?: Role, day = 0,
+  gen: RecruitGen, now: number, count: number, existingRoles: Role[], takenNames: Set<string>, day = 0,
 ): Candidate[] {
   const seed = gen.campaignSeed ?? 12345;
   const excluded = new Set(gen.unavailable ?? []);
@@ -159,15 +157,8 @@ export function generateBatch(
   const out: Candidate[] = [];
   const used = [...existingRoles];
   const roleOf = (p: Persona) => gen.builds?.[p.id]?.role ?? roleForPersona(seed, p.id);
-  // Target the entire eligible reserve, not just the current local cohort. A role
-  // search can introduce one new specialist without rerolling an existing person.
-  if (targetRole && !available.some((p) => roleOf(p) === targetRole)) {
-    const specialist = reserve.find((p) => roleOf(p) === targetRole);
-    if (specialist) available.push(specialist);
-  }
   while (out.length < count && available.length) {
-    const target = targetRole && (out.length === 0 || roll(gen) < RECRUIT_TUNING.targetBiasChance);
-    let pool = target ? available.filter((p) => roleOf(p) === targetRole) : available.filter((p) => !used.includes(roleOf(p)));
+    let pool = available.filter((p) => !used.includes(roleOf(p)));
     if (!pool.length) pool = available;
     const person = pool[rollInt(gen, pool.length)];
     available.splice(available.indexOf(person), 1);

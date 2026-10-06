@@ -4,7 +4,8 @@ import { currentStoryPrompt } from './story-context';
 import { storyMovedAlongRoute } from './story-people';
 import { validateStoryBindings } from './story-bindings';
 import { actionResultLabel } from './action-result';
-import { applyIncidentConsequences, civilianOutcomeViews } from './incident-consequences';
+import { applyIncidentConsequences, applyPersonConsequences, civilianOutcomeViews, syncCasualtyFlags, syncPersonCasualtyFlags } from './incident-consequences';
+import { protectedOfficerEffects, resolveForceRisk } from './force-risk';
 import { applyExternalSupportEffects, completionEvidence, COMPLETION_DISPOSITIONS, hasCompletionConditions, MAX_EXTERNAL_RESPONSE_MINUTES } from './external-support';
 // Operation engine: start, cancel, decide, closeDebrief. The run record is the
 // save: every committed decision stores its sample and result, so resuming never
@@ -123,6 +124,16 @@ export function validateScenario(s: ScenarioDefinition, built: BuiltLocation): s
       if (seen.has(a.id)) errs.push(`${s.id}: duplicate action id ${a.id}`);
       seen.add(a.id);
       if (a.stage !== stage) errs.push(`${a.id}: declared stage ${a.stage} but listed under ${stage}`);
+      if (a.forceProfile || a.personCare) {
+        const personId = a.forceProfile?.personId ?? a.personCare?.personId;
+        if (s.version < 7 || !Object.values(s.story?.bindings.people ?? {}).some(person => person.id === personId)) errs.push(`${a.id}: force or care needs a V7 bound person`);
+        if (a.forceProfile && (a.check.kind !== 'execution' || a.commandOnly || a.storyTargetPersonId !== a.forceProfile.personId || !['firearm', 'less_lethal_device', 'less_lethal_impact'].includes(a.forceProfile.kind) || !['subject', 'civilian'].includes(a.forceProfile.personRole))) errs.push(`${a.id}: force must explicitly identify its execution target and profile`);
+        if (a.forceProfile && !a.capabilities?.required?.some(capability => a.forceProfile!.kind === 'firearm'
+          ? capability === 'authorized_response' || capability === 'specialist_support' : capability === a.forceProfile!.kind)) errs.push(`${a.id}: force needs an explicit matching required equipment capability`);
+        if (a.personCare?.kind === 'stabilize' && (!a.requires.certs?.includes('advanced_first_aid') || !a.consumes?.some(use => use.tag === 'medkit' && use.qty >= 1))) errs.push(`${a.id}: person care needs a qualified first aider and trauma kit`);
+        if (a.personCare?.kind === 'accept' && !s.externalServices?.some(service => service.id === a.personCare?.serviceId && service.kind === 'medical')) errs.push(`${a.id}: injured people need a medical receiving service`);
+      }
+      if (s.version >= 7 && a.consumes?.some(use => !Number.isSafeInteger(use.qty) || use.qty <= 0)) errs.push(`${a.id}: consumption must request positive whole units`);
       if (s.version >= 4) {
         if (a.commandOnly && (a.approach !== 'none' || a.consumes?.length || a.check.kind === 'execution' || Object.values(a.outcomes).flat().some(effect => effect.officerHarm))) errs.push(`${a.id}: command decisions cannot perform field work or cause injury`);
         for (const requirement of a.requires.externalSupport ?? []) if (!serviceIds.has(requirement.serviceId)) errs.push(`${a.id}: unknown required service ${requirement.serviceId}`);
@@ -460,7 +471,7 @@ export interface StepTrace {
 
 /** Re-derive each committed decision's deltas from stored bands. Deterministic. */
 export function traceRun(scenario: ScenarioDefinition, run: OperationRun): { steps: StepTrace[]; end: Pick<OperationRun, 'knowledge' | 'flags' | 'pressure' | 'objective' | 'civilianSafety' | 'clock'> } {
-  const sim = { knowledge: initialKnowledge(scenario), flags: [] as string[], pressure: scenario.pressure.start, objective: 0, civilianSafety: 100, clock: 0 };
+  const sim: Pick<OperationRun, 'knowledge' | 'flags' | 'pressure' | 'objective' | 'civilianSafety' | 'clock' | 'personCasualties' | 'officerCasualties'> = { knowledge: initialKnowledge(scenario), flags: [], pressure: scenario.pressure.start, objective: 0, civilianSafety: 100, clock: 0 };
   const actions = new Map(scenarioActions(scenario).map((a) => [a.id, a]));
   const steps: StepTrace[] = [];
   for (const resupply of run.resupplies ?? []) advanceTime(sim, scenario, resupply.minutes);
@@ -476,6 +487,11 @@ export function traceRun(scenario: ScenarioDefinition, run: OperationRun): { ste
     // Saved v3 deltas are authoritative, including clamping. Older histories retain
     // the original replay through their versioned content and stored outcome bands.
     if (h.committed) {
+      if (scenario.version >= 7) {
+        for (const person of h.committed.personCasualties ?? []) { sim.personCasualties ??= {}; sim.personCasualties[person.personId] = { ...person }; }
+        for (const officer of h.committed.officerCasualties ?? []) { sim.officerCasualties ??= {}; sim.officerCasualties[officer.officerId] = { ...officer }; }
+        syncCasualtyFlags(sim); syncPersonCasualtyFlags(sim, scenario);
+      }
       if (scenario.version >= 5 && h.committed.openingChanges) applyEffects(sim, [{ openings: h.committed.openingChanges }]);
       sim.objective = round1(clamp(obj0 + h.committed.objectiveDelta, 0, 100));
       sim.civilianSafety = round1(clamp(civ0 + h.committed.civilianSafetyDelta, 0, 100));
@@ -525,6 +541,8 @@ export function decisionViewsFor(state: GameState, run: OperationRun, scenario: 
       contributors: record.inputs.map((input) => ({ ...input })),
       consequences: committed ? [...committed.consequences] : step.effects.map((effect) => effect.text).filter((text): text is string => !!text),
       ...(committed?.officerCasualties !== undefined ? { officerCasualties: committed.officerCasualties.map(person => ({ ...person })) } : {}),
+      ...(committed?.forceOutcome ? { forceOutcome: { ...committed.forceOutcome } } : {}),
+      ...(committed?.personCasualties ? { personCasualties: committed.personCasualties.map(person => ({ ...person })) } : {}),
       endingTitle: committed ? committed.endingTitle : (ending ? scenario.endings[ending]?.title ?? ending : null),
     };
   });
@@ -580,7 +598,7 @@ function explain(
 ): string[] {
   const out: string[] = [];
   const who = ev.acting.map(squadLabel).join(' + ') + (ev.support.length ? ` with ${ev.support.map(squadLabel).join(' + ')}` : '');
-  out.push(`${ev.action.title} ${BAND_WORD[band]} (${who}).`);
+  out.push(ev.forceRisk ? `${ev.action.title}: the task effort ${BAND_WORD[band]} (${who}); harm is recorded separately.` : `${ev.action.title} ${BAND_WORD[band]} (${who}).`);
   out.push(...texts);
   const body = ev.contributors.filter((c) => c.source !== 'difficulty' && c.value !== 0);
   const best = [...body].sort((a, b) => b.value - a.value)[0];
@@ -657,6 +675,13 @@ export function computeDebrief(state: GameState, run: OperationRun): DebriefResu
   const fundingReward = run.practice ? 0 : Math.round(scenario.rewards.funding * (0.4 + 0.6 * factor));
   const devPointReward = run.practice ? 0 : factor >= 0.6 && (!completion || completion.completionAchieved) ? scenario.rewards.devPoints : factor >= 0.4 ? Math.floor(scenario.rewards.devPoints / 2) : 0;
   const causes = debriefCauses(scenario, run, steps);
+  const peopleOutcomes = scenario.version >= 4 ? civilianOutcomeViews(scenario, run) : [];
+  const casualtySafety = scenario.version >= 7
+    ? Object.values(run.personCasualties ?? {}).some(person => person.severity === 'fatal') ? 'Fatality recorded'
+      : Object.keys(run.personCasualties ?? {}).length || Object.keys(run.officerCasualties ?? {}).length || peopleOutcomes.some(person => person.status === 'injured_needs_care') ? 'Injuries recorded'
+      : !completion?.completionAchieved && run.civilianSafety >= 90 ? 'Care and safety duties remain' : undefined
+    : undefined;
+  if (scenario.version >= 7) for (const person of Object.values(run.personCasualties ?? {}).reverse()) causes.unshift(`${person.label}: ${person.severity === 'fatal' ? 'fatality recorded' : `${person.severity === 'serious' ? 'serious injury' : 'injury'}; ${person.care === 'accepted' ? 'medical crew accepted care' : 'medical responsibility remains'}`}.`);
   if (scenario.version >= 3 && !run.practice) {
     const closingStrain = officerCondition.map((officer) => ({ ...officer, delta: round1(officer.stressAfter - (state.officers[officer.officerId]?.stress ?? officer.stressAfter)) })).filter((officer) => officer.delta !== 0);
     if (closingStrain.length) causes.unshift(`Ending adjustment at close: ${closingStrain.map((officer) => `${state.officers[officer.officerId]?.surname ?? officer.officerId} ${officer.delta > 0 ? '+' : ''}${officer.delta} strain`).join('; ')}.`);
@@ -671,9 +696,10 @@ export function computeDebrief(state: GameState, run: OperationRun): DebriefResu
     ...(scenario.version >= 3 ? { endingSummary: ending.summary } : {}),
     ...completion,
     ...(scenario.version >= 4 ? { officerCasualties: Object.values(run.officerCasualties ?? {}).map(person => ({ ...person })), civilianOutcomes: civilianOutcomeViews(scenario, run) } : {}),
+    ...(scenario.version >= 7 ? { personCasualties: Object.values(run.personCasualties ?? {}).map(person => ({ ...person })) } : {}),
     practice: run.practice,
     objective: { score: Math.round(run.objective), label: completion ? ({ resolved: 'Resolved', care_accepted: 'Care accepted', followup_agreed: 'Follow-up agreed', relief_partial: 'Partial progress', unresolved: 'Unresolved' } as const)[completion.disposition!] : objectiveLabel(run.objective) },
-    civilianSafety: { score: Math.round(run.civilianSafety), label: civilianLabel(run.civilianSafety) },
+    civilianSafety: { score: Math.round(run.civilianSafety), label: casualtySafety ?? civilianLabel(run.civilianSafety) },
     officerCondition,
     informationPreserved: scenario.facts.map((f) => ({ factId: f.id, label: f.label, status: run.knowledge[f.id] ?? f.initial })),
     resources,
@@ -808,6 +834,14 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     run.rngState = r.state;
     const sample = r.value;
     const band = bandFor(ev.margin, sample);
+    // V1–V6 retain their exact one-draw sequence. Only a matched V7 actual
+    // force use draws severity, once, independently from effort success.
+    let forceOutcome;
+    if (scenario.version >= 7 && ev.forceRisk) {
+      const harm = next(run.rngState);
+      run.rngState = harm.state;
+      forceOutcome = resolveForceRisk(ev.forceRisk, harm.value);
+    }
 
     let matched = matchedEffects(action, band, run, scenario);
     let personMoved = false;
@@ -838,7 +872,8 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
       openingChanges.set(openingId, 'open');
     }
     const externalSupportEvents = scenario.version >= 4 ? applyExternalSupportEffects(run, scenario, matched) : undefined;
-    const incidentConsequences = scenario.version >= 4 ? applyIncidentConsequences(draft, run, scenario, matched, ev.participantIds) : undefined;
+    const incidentConsequences = scenario.version >= 4 ? applyIncidentConsequences(draft, run, scenario, protectedOfficerEffects(matched, ev.protectionUsed), ev.participantIds) : undefined;
+    const personConsequences = scenario.version >= 7 ? applyPersonConsequences(run, scenario, action, band, matched, forceOutcome) : undefined;
 
     // positions, staging points and task labels
     for (const arr of ev.arrivals) {
@@ -868,7 +903,7 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
 
     const used: Record<Id, number> = {};
     const unitsUsed: Id[] = [];
-    if (!run.practice)
+    if (!run.practice || scenario.version >= 7)
       for (const u of ev.uses) {
         if (!storyRouteUsed && ev.storyMovementOnlyUnitIds?.includes(u.unitId)) continue;
         used[u.itemId] = (used[u.itemId] ?? 0) + u.qty;
@@ -877,7 +912,10 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     const consumed = Object.entries(used).map(([itemId, qty]) => ({ itemId, qty }));
 
     const knowledgeChanges = changes;
-    const texts = [...matched.map((e) => e.text).filter((x): x is string => Boolean(x)), ...incidentConsequences?.text ?? []];
+    const protectedWound = ev.protectionUsed && matched.some(effect => effect.officerHarm?.severity === 'serious');
+    const texts = [...matched.map((e) => e.text).filter((x): x is string => Boolean(x)),
+      ...(protectedWound ? [`${ITEMS[ev.protectionUsed!.itemId].name} limited the officer's serious injury to a wound. Care and transport are still needed.`] : []),
+      ...incidentConsequences?.text ?? [], ...personConsequences?.text ?? []];
     const resolution: DecisionResolution = {
       revision: run.revision,
       stage,
@@ -945,6 +983,9 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
       ...(scenario.version >= 5 && openingChanges.size ? { openingChanges: [...openingChanges].map(([openingId, state]) => ({ openingId, state })) } : {}),
       ...(externalSupportEvents ? { externalSupport: externalSupportEvents } : {}),
       ...(incidentConsequences ? { officerCasualties: incidentConsequences.records } : {}),
+      ...(forceOutcome ? { forceOutcome } : {}),
+      ...(personConsequences ? { personCasualties: personConsequences.records } : {}),
+      ...(ev.protectionUsed ? { protectionUsed: { ...ev.protectionUsed } } : {}),
     };
     resolution.explanation = explain(draft, scenario, ev, band, texts, timeCost, t.civilianLoss, knowledgeChanges, consumed, strain, stageNote, run.practice);
     return { ok: true };

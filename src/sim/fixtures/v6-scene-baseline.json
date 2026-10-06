@@ -1,0 +1,1154 @@
+[
+  {
+    "spec": {
+      "type": "welfare_check",
+      "familyId": "cedar_close",
+      "buildingSeed": 0,
+      "seed": 7,
+      "tier": 1,
+      "contentVersion": 6
+    },
+    "scenario": "a96ef4669d09c7574297e2da1468a754617e1fcdd25a38f5dc4c4c14c08d96f4",
+    "location": "7f060489c02f72dae895896b9ee9671231cce9cc9606bf536b200481da30d247"
+  },
+  {
+    "spec": {
+      "type": "welfare_check",
+      "familyId": "cedar_close",
+      "buildingSeed": 1,
+      "seed": 20,
+      "tier": 2,
+      "contentVersion": 6
+    },
+    "scenario": "dae20c52c64afd14351df83ea4478a770356dbcc291c2ae00df121d2f51aa237",
+    "location": "03a541cca65e5f65011ce4fe0968f646b6055359290290dc43796913a08dd026"
+  },
+  {
+    "spec": {
+      "type": "welfare_check",
+      "familyId": "cedar_close",
+      "buildingSeed": 2,
+      "seed": 33,
+      "tier": 3,
+      "contentVersion": 6
+    },
+    "scenario": "f168b1106e46844b96e884011d83665f5ac628ebc2a1c927c2b2a9ffe7e414a0",
+    "location": "cbad30195a8285029332717f57997d2dc0dd64104c6ea3ecbef49a7d447cad71"
+  },
+  {
+    "spec": {
+      "type": "welfare_check",
+      "familyId": "cedar_close",
+      "buildingSeed": 3,
+      "seed": 46,
+      "tier": 4,
+      "contentVersion": 6
+    },
+    "scenario": "8dd3ad08835337aba2f2fdfb8cc7acb0f1ca50b10f650f56ad28f2ad571cae94",
+    "location": "35b1a1ba9be317525b62c450e4b744035518e121793062a1bd311a3f7598fea4"
+  },
+  {
+    "spec": {
+      "type": "welfare_check",
+      "familyId": "cedar_close",
+      "buildingSeed": 7,
+      "seed": 98,
+      "tier": 3,
+      "contentVersion": 6
+    },
+    "scenario": "e8f74c91e34b539ff50ec16d4c2fbb519fd8afff22050837d825bd2e7f32930c",
+    "location": "169e7325ca346aa7384b20216346917eeb7181831ac2d6e5b1998336071a906a"
+  },
+  {
+    "spec": {
+      "type": "welfare_check",
+      "familyId": "cedar_close",
+      "buildingSeed": 19,
+      "seed": 254,
+      "tier": 5,
+      "contentVersion": 6
+    },
+    "scenario": "a2342f5795fd47cd6305a12ac6ca448d5b4b246d6e2f1d0fbd90cd37daafcb56",
+    "location": "4fcd4dc2b79380b357625aa4e87758056a54f1378a83aa2205f6e82f57834abd"
+  },
+  {
+    "spec": {
+      "type": "welfare_check",
+      "familyId": "harbour_court",
+      "buildingSeed": 0,
+      "seed": 7,
+      "tier": 1,
+      "contentVersion": 6
+    },
+    "scenario": "c4690da554e22e4e1511bfb20ed4297e48eb501cd9678af092dd1832a6ad7533",
+    "location": "d215ed1904cf77678c317d183e3461096676b83c29e2149028aa58127e23237a"
+  },
+  {
+    "spec": {
+      "type": "welfare_check",
+      "familyId": "harbour_court",
+      "buildingSeed": 1,
+      "seed": 20,
+      "tier": 2,
+      "contentVersion": 6
+    },
+    "scenario": "bcc4dd67558effc5822d0eb41355b7bc554b3555a92f8e94c0fdfdf3aee158ef",
+    "location": "493a9c21480b5b5ef17a953ee0fe6c62e84fe38bdb353f70d22087788caf4313"
+  },
+  {
+    "spec": {
+      "type": "welfare_check",
+      "familyId": "harbour_court",
+      "buildingSeed": 2,
+      "seed": 33,
+      "tier": 3,
+      "contentVersion": 6
+    },
+    "scenario": "eb382b689f6e2e96b1ac4ecedfd10082dde3087146d98bcc7afaa2ae08130035",
+    "location": "7ad9dfc4038cb6680382a8ce65deb677a14a77f54a3ee568609e832f6d7d70ef"
+  },
+  {
+    "spec": {
+      "type": "welfare_check",
+      "familyId": "harbour_court",
+      "buildingSeed": 3,
+      "seed": 46,
+      "tier": 4,
+      "contentVersion": 6
+    },
+    "scenario": "e5c145391a4e15382d0764cccd431bbfe00c6fe1c9b6df64c2df0f0ed5f97c06",
+    "location": "356927901c3f6e7a06898d7a0428845ddcbb35dc32fc964a04791c69bac7a6f5"
+  },
+  {
+    "spec": {
+      "type": "welfare_check",
+      "familyId": "harbour_court",
+      "buildingSeed": 7,
+      "seed": 98,
+      "tier": 3,
+      "contentVersion": 6
+    },
+    "scenario": "78ac12561599763b34c11639abb1d26bdd47a098314d0952cd81ae61775f04ac",
+    "location": "21068f18d01d35fb9e5ad519dd835e980d133c89c61b3b2b22b90f519f7a139e"
+  },
+  {
+    "spec": {
+      "type": "welfare_check",
+      "familyId": "harbour_court",
+      "buildingSeed": 19,
+      "seed": 254,
+      "tier": 5,
+      "contentVersion": 6
+    },
+    "scenario": "f3b8c3c608dfa27478c4d6088ef616581492b9cfcb41e315200e9991d18281f3",
+    "location": "d03137ec184ec38246ccc734e06b9e97d1d7819e94e4a7dbc1c9f9d7e64a422e"
+  },
+  {
+    "spec": {
+      "type": "welfare_check",
+      "familyId": "willow_terrace_v1",
+      "buildingSeed": 0,
+      "seed": 7,
+      "tier": 1,
+      "contentVersion": 6
+    },
+    "scenario": "e295864962d39fa03da13da5b0a41cdeeeb8c23d5947317cbe32a0828e6b185f",
+    "location": "0861b1d4a017b044d229bfef94b24d391056faad5a34a7febfd8abfd7399c89a"
+  },
+  {
+    "spec": {
+      "type": "welfare_check",
+      "familyId": "willow_terrace_v1",
+      "buildingSeed": 1,
+      "seed": 20,
+      "tier": 2,
+      "contentVersion": 6
+    },
+    "scenario": "87d5aa0e851180f237bdedff76d5b8fee18daef66458cfe8f650d60d2fbade57",
+    "location": "7ea821f85bb867506b4b025e5b204abceff4c505a5e98f93d71f87020d9dbf4e"
+  },
+  {
+    "spec": {
+      "type": "welfare_check",
+      "familyId": "willow_terrace_v1",
+      "buildingSeed": 2,
+      "seed": 33,
+      "tier": 3,
+      "contentVersion": 6
+    },
+    "scenario": "134dd0c67cd5c20b7a593435a179c1126e729130ba385f4a5c817a5d1f2a5b1b",
+    "location": "746beaf3c172502316e05c0a47ad3ece1394e5a0df8861567b01f838ca8a0c25"
+  },
+  {
+    "spec": {
+      "type": "welfare_check",
+      "familyId": "willow_terrace_v1",
+      "buildingSeed": 3,
+      "seed": 46,
+      "tier": 4,
+      "contentVersion": 6
+    },
+    "scenario": "335352afd8965c3bacce84c56853ccc2d1fef13e1a55bfbaf06fa01f0120cfa9",
+    "location": "7f9e1bfab5cceccfacc0599c584313c5b4fcdb61f940b886df42cfd2933064a9"
+  },
+  {
+    "spec": {
+      "type": "welfare_check",
+      "familyId": "willow_terrace_v1",
+      "buildingSeed": 7,
+      "seed": 98,
+      "tier": 3,
+      "contentVersion": 6
+    },
+    "scenario": "67ce1138a10e8b13b5259ba1ffc1d4249944616de999b5651bf74f9ccf9402ec",
+    "location": "339df553f41f907f9e13fcd408f253c422ce610d2c3357ddb80f51a17c7ee460"
+  },
+  {
+    "spec": {
+      "type": "welfare_check",
+      "familyId": "willow_terrace_v1",
+      "buildingSeed": 19,
+      "seed": 254,
+      "tier": 5,
+      "contentVersion": 6
+    },
+    "scenario": "09c0d80ce645a815a258e161b08790b855b8919a0e2b31076df13d508231df54",
+    "location": "bdab47ef04b195638655df1b05e24b06ff12bd0c1ce4fe5fd0b5a3f02ab9741f"
+  },
+  {
+    "spec": {
+      "type": "welfare_check",
+      "familyId": "ash_grove_v1",
+      "buildingSeed": 0,
+      "seed": 7,
+      "tier": 1,
+      "contentVersion": 6
+    },
+    "scenario": "8c44261de01c6fd5111e5f8208c1a0c853f99cb428d708e430326f56c2d17161",
+    "location": "599d4267ccd71575a25baa949dcd58f3f8f8a44a8d77fec6cb518aa45592e26f"
+  },
+  {
+    "spec": {
+      "type": "welfare_check",
+      "familyId": "ash_grove_v1",
+      "buildingSeed": 1,
+      "seed": 20,
+      "tier": 2,
+      "contentVersion": 6
+    },
+    "scenario": "4896511ad4e5317e7d128d91c871bf6ec963c2de2fc1b1fedc300495dbc8ebc6",
+    "location": "60326adfdce3382fcd7ca518e692528e3df2f62c7a9d1ce3313e5ebeab9a4e3b"
+  },
+  {
+    "spec": {
+      "type": "welfare_check",
+      "familyId": "ash_grove_v1",
+      "buildingSeed": 2,
+      "seed": 33,
+      "tier": 3,
+      "contentVersion": 6
+    },
+    "scenario": "7cd9ab4bccaa77cd41e6c3d0111f37fe1d55cfb14bca314e9a69b50f84f32bb9",
+    "location": "b2cca7c77975d88597cef8a6feea3874686a923c9a7b8c32f891221125d00ad3"
+  },
+  {
+    "spec": {
+      "type": "welfare_check",
+      "familyId": "ash_grove_v1",
+      "buildingSeed": 3,
+      "seed": 46,
+      "tier": 4,
+      "contentVersion": 6
+    },
+    "scenario": "8302fe98153877384c99458655ded3bcdb35d87b99f8eb019831d78ebfcecf2a",
+    "location": "05ecec80a24c13cb94e6a14a4796af3facd5f7f0011f218f2b7b69ba95a83725"
+  },
+  {
+    "spec": {
+      "type": "welfare_check",
+      "familyId": "ash_grove_v1",
+      "buildingSeed": 7,
+      "seed": 98,
+      "tier": 3,
+      "contentVersion": 6
+    },
+    "scenario": "004df71e338e5fe6d260b652baa590742e1a4f4376390fedeaedde9846d5471f",
+    "location": "df0717bc291bff43988f0d56bd7e6def9307a957f84b861564a0ed53a0f83b41"
+  },
+  {
+    "spec": {
+      "type": "welfare_check",
+      "familyId": "ash_grove_v1",
+      "buildingSeed": 19,
+      "seed": 254,
+      "tier": 5,
+      "contentVersion": 6
+    },
+    "scenario": "19bbbc38226c5be2cb69818c1cd5275836f59d0e30a8f0293010599c4dbcb7f2",
+    "location": "d7981c97da9aab4f63e7e57b3ef6c05500629cb1ce3ad2193f029cb5b887bcdf"
+  },
+  {
+    "spec": {
+      "type": "welfare_check",
+      "familyId": "juniper_court_v1",
+      "buildingSeed": 0,
+      "seed": 7,
+      "tier": 1,
+      "contentVersion": 6
+    },
+    "scenario": "0a872ae72a7a751e29bc4e54403c89a873de017abde9e193e96bb6014ee12fee",
+    "location": "516a1e41bcb3916df17fc82e74da56d2b2f850eae831e624b02026b1a8d30db2"
+  },
+  {
+    "spec": {
+      "type": "welfare_check",
+      "familyId": "juniper_court_v1",
+      "buildingSeed": 1,
+      "seed": 20,
+      "tier": 2,
+      "contentVersion": 6
+    },
+    "scenario": "b8a9918340a887b274d516684e4da69e1ac94271b449fe72b3dabd2251b0cccc",
+    "location": "3e016f7e6537f1c21970c8cfb236e6c065d7edca1303a0d5da46f7800c228da6"
+  },
+  {
+    "spec": {
+      "type": "welfare_check",
+      "familyId": "juniper_court_v1",
+      "buildingSeed": 2,
+      "seed": 33,
+      "tier": 3,
+      "contentVersion": 6
+    },
+    "scenario": "af84715b38230e5230fc277959a0e4b632080f092d3efcdcd7c66932c43c2f6a",
+    "location": "19dc89e59c70eb558f0407d5a786dec908fc1f7c5144b9d4ef026714fa688b65"
+  },
+  {
+    "spec": {
+      "type": "welfare_check",
+      "familyId": "juniper_court_v1",
+      "buildingSeed": 3,
+      "seed": 46,
+      "tier": 4,
+      "contentVersion": 6
+    },
+    "scenario": "82fbba4f3c92c5e717ae896dc3f6e13bbc11fc451a360b5bec29df59aca708bf",
+    "location": "1a9c3681d7a678fab6b266293ca8fc467a0497c4d3b7af5b7cf2aa90c183ec70"
+  },
+  {
+    "spec": {
+      "type": "welfare_check",
+      "familyId": "juniper_court_v1",
+      "buildingSeed": 7,
+      "seed": 98,
+      "tier": 3,
+      "contentVersion": 6
+    },
+    "scenario": "16d76126747acb9e58ecfc9755ca539adb58ec418d3650bb50d7dcfe3a64c915",
+    "location": "7541b8a5e10e8231923cb1e0d243faed105645486ef6476d79c5aa00376cd6be"
+  },
+  {
+    "spec": {
+      "type": "welfare_check",
+      "familyId": "juniper_court_v1",
+      "buildingSeed": 19,
+      "seed": 254,
+      "tier": 5,
+      "contentVersion": 6
+    },
+    "scenario": "5506f8842eabe0cc7e741e355e55bb96270de449c230f4b9cc33e12e36e31167",
+    "location": "7918a82886ecc23d6d05c4cf4e221725cd609a153a90d75913dcfff99abd6142"
+  },
+  {
+    "spec": {
+      "type": "medical_complication",
+      "familyId": "market_row",
+      "buildingSeed": 0,
+      "seed": 7,
+      "tier": 1,
+      "contentVersion": 6
+    },
+    "scenario": "b80d16c3dfc969f8492f65922fb71d27d627893884c94ca75d832e93aba5424b",
+    "location": "b18c0dccc5791c49703d8cbcd7c3fcf96922d027b8161f8dc0fe88fed520310d"
+  },
+  {
+    "spec": {
+      "type": "medical_complication",
+      "familyId": "market_row",
+      "buildingSeed": 1,
+      "seed": 20,
+      "tier": 2,
+      "contentVersion": 6
+    },
+    "scenario": "7dd91732f6ebf82b0ff25b101804cb735852c9d314be9368ca8f166f7a1235c2",
+    "location": "73b2c649839eaaf3e62ec047b5d71ce82ba7e76e7d6191e89fc5d8498da81c30"
+  },
+  {
+    "spec": {
+      "type": "medical_complication",
+      "familyId": "market_row",
+      "buildingSeed": 2,
+      "seed": 33,
+      "tier": 3,
+      "contentVersion": 6
+    },
+    "scenario": "5c7ab8b867a3c89cd54d3c8f8cb9267ebc491b825c11216c3e121b1252893d2c",
+    "location": "bf9e9e463dbd312d6579ed2703538c259ff06f21e1b05c707faee22fc7096b47"
+  },
+  {
+    "spec": {
+      "type": "medical_complication",
+      "familyId": "market_row",
+      "buildingSeed": 3,
+      "seed": 46,
+      "tier": 4,
+      "contentVersion": 6
+    },
+    "scenario": "07ba720eaaddceb4e7e6318126f6792e323ff96aed53f288d466997fcea2672e",
+    "location": "c184a6b95593fd7d935c31242e6ac083c21b72ba2cb6086cc5a5bbe84d13081f"
+  },
+  {
+    "spec": {
+      "type": "medical_complication",
+      "familyId": "market_row",
+      "buildingSeed": 7,
+      "seed": 98,
+      "tier": 3,
+      "contentVersion": 6
+    },
+    "scenario": "f312d7ded0bb60a2ccec757dbb0e188b8fa7e4d091cfa4c5a704caeb83d39967",
+    "location": "3d395d7ea64279265a04990f0beceeafd483f730243b1000e31d578f50b387c0"
+  },
+  {
+    "spec": {
+      "type": "medical_complication",
+      "familyId": "market_row",
+      "buildingSeed": 19,
+      "seed": 254,
+      "tier": 5,
+      "contentVersion": 6
+    },
+    "scenario": "cd51561e5bf0a2c8056c7715af6c61784107df17aed90b4619c5b4ac76a8a21e",
+    "location": "ed56b9155be3bc346250a0e9d662e991b5cf10bd77b0cb7b24c911eca48150eb"
+  },
+  {
+    "spec": {
+      "type": "barricaded",
+      "familyId": "cedar_close",
+      "buildingSeed": 0,
+      "seed": 7,
+      "tier": 1,
+      "contentVersion": 6
+    },
+    "scenario": "ec09fdd0285b7aa39c50bc47bb47d186edefb1e8e43a704d81b3a0999d1b1beb",
+    "location": "7f060489c02f72dae895896b9ee9671231cce9cc9606bf536b200481da30d247"
+  },
+  {
+    "spec": {
+      "type": "barricaded",
+      "familyId": "cedar_close",
+      "buildingSeed": 1,
+      "seed": 20,
+      "tier": 2,
+      "contentVersion": 6
+    },
+    "scenario": "1efb72d7b314b8d7acd9c950b598a912a9ad3ddd9e1bd416a0939668b3f7e81c",
+    "location": "03a541cca65e5f65011ce4fe0968f646b6055359290290dc43796913a08dd026"
+  },
+  {
+    "spec": {
+      "type": "barricaded",
+      "familyId": "cedar_close",
+      "buildingSeed": 2,
+      "seed": 33,
+      "tier": 3,
+      "contentVersion": 6
+    },
+    "scenario": "a8d96685d9fb3cba12a116d682207702be9aaa44f4283b32e3dd0b6749549d56",
+    "location": "cbad30195a8285029332717f57997d2dc0dd64104c6ea3ecbef49a7d447cad71"
+  },
+  {
+    "spec": {
+      "type": "barricaded",
+      "familyId": "cedar_close",
+      "buildingSeed": 3,
+      "seed": 46,
+      "tier": 4,
+      "contentVersion": 6
+    },
+    "scenario": "28c27cb264e43218f083946faab8a0f10b8e0965ad4c45b56e0b2ca8656e79de",
+    "location": "35b1a1ba9be317525b62c450e4b744035518e121793062a1bd311a3f7598fea4"
+  },
+  {
+    "spec": {
+      "type": "barricaded",
+      "familyId": "cedar_close",
+      "buildingSeed": 7,
+      "seed": 98,
+      "tier": 3,
+      "contentVersion": 6
+    },
+    "scenario": "62764858ec6ce7e22fc6f54b79cdfbd68a45a999f72cb72be7cfcc96cb1de911",
+    "location": "169e7325ca346aa7384b20216346917eeb7181831ac2d6e5b1998336071a906a"
+  },
+  {
+    "spec": {
+      "type": "barricaded",
+      "familyId": "cedar_close",
+      "buildingSeed": 19,
+      "seed": 254,
+      "tier": 5,
+      "contentVersion": 6
+    },
+    "scenario": "62ce9dd4a416f480cde80a6272095503757a4d516894694bb12f8633f7cc40c9",
+    "location": "4fcd4dc2b79380b357625aa4e87758056a54f1378a83aa2205f6e82f57834abd"
+  },
+  {
+    "spec": {
+      "type": "barricaded",
+      "familyId": "harbour_court",
+      "buildingSeed": 0,
+      "seed": 7,
+      "tier": 1,
+      "contentVersion": 6
+    },
+    "scenario": "d19c917373d8ac0aa5b15ef97e566aed20d8f58125e8013cdb6cca45dbf5cba5",
+    "location": "d215ed1904cf77678c317d183e3461096676b83c29e2149028aa58127e23237a"
+  },
+  {
+    "spec": {
+      "type": "barricaded",
+      "familyId": "harbour_court",
+      "buildingSeed": 1,
+      "seed": 20,
+      "tier": 2,
+      "contentVersion": 6
+    },
+    "scenario": "fb3c9d2dfc830cc193d226f82927369d416c791b256b2790dd45d40f49877c2f",
+    "location": "493a9c21480b5b5ef17a953ee0fe6c62e84fe38bdb353f70d22087788caf4313"
+  },
+  {
+    "spec": {
+      "type": "barricaded",
+      "familyId": "harbour_court",
+      "buildingSeed": 2,
+      "seed": 33,
+      "tier": 3,
+      "contentVersion": 6
+    },
+    "scenario": "5499f6823e0ee14af77e0a3a7a55bef07db105f132fe57b1a98b2f397973eb0a",
+    "location": "7ad9dfc4038cb6680382a8ce65deb677a14a77f54a3ee568609e832f6d7d70ef"
+  },
+  {
+    "spec": {
+      "type": "barricaded",
+      "familyId": "harbour_court",
+      "buildingSeed": 3,
+      "seed": 46,
+      "tier": 4,
+      "contentVersion": 6
+    },
+    "scenario": "fd1a79de8e66c5e9bfdcb6351090b620be330f6c32ee561a74d595d25c3656f5",
+    "location": "356927901c3f6e7a06898d7a0428845ddcbb35dc32fc964a04791c69bac7a6f5"
+  },
+  {
+    "spec": {
+      "type": "barricaded",
+      "familyId": "harbour_court",
+      "buildingSeed": 7,
+      "seed": 98,
+      "tier": 3,
+      "contentVersion": 6
+    },
+    "scenario": "a2c109cd9879ce358524091cf1672f5e50674b27e06c792dfd3310f2e7b46ffc",
+    "location": "21068f18d01d35fb9e5ad519dd835e980d133c89c61b3b2b22b90f519f7a139e"
+  },
+  {
+    "spec": {
+      "type": "barricaded",
+      "familyId": "harbour_court",
+      "buildingSeed": 19,
+      "seed": 254,
+      "tier": 5,
+      "contentVersion": 6
+    },
+    "scenario": "5d56d8caef795d3eeac60f180050b1334ed2e326f78801de313e0d51ed55cafd",
+    "location": "d03137ec184ec38246ccc734e06b9e97d1d7819e94e4a7dbc1c9f9d7e64a422e"
+  },
+  {
+    "spec": {
+      "type": "barricaded",
+      "familyId": "willow_terrace_v1",
+      "buildingSeed": 0,
+      "seed": 7,
+      "tier": 1,
+      "contentVersion": 6
+    },
+    "scenario": "6bc157bcd2557541cc96db5a14b14df1f4fd2c813186d9bdee8995c9104afb39",
+    "location": "0861b1d4a017b044d229bfef94b24d391056faad5a34a7febfd8abfd7399c89a"
+  },
+  {
+    "spec": {
+      "type": "barricaded",
+      "familyId": "willow_terrace_v1",
+      "buildingSeed": 1,
+      "seed": 20,
+      "tier": 2,
+      "contentVersion": 6
+    },
+    "scenario": "082690171d96df7c1bbec5283b8fa15c908796eec75f25d776bd951da747dc10",
+    "location": "7ea821f85bb867506b4b025e5b204abceff4c505a5e98f93d71f87020d9dbf4e"
+  },
+  {
+    "spec": {
+      "type": "barricaded",
+      "familyId": "willow_terrace_v1",
+      "buildingSeed": 2,
+      "seed": 33,
+      "tier": 3,
+      "contentVersion": 6
+    },
+    "scenario": "2e418cd19a7ce8334749d261c23079be1a67363382403c8ef8b568fe9440990f",
+    "location": "746beaf3c172502316e05c0a47ad3ece1394e5a0df8861567b01f838ca8a0c25"
+  },
+  {
+    "spec": {
+      "type": "barricaded",
+      "familyId": "willow_terrace_v1",
+      "buildingSeed": 3,
+      "seed": 46,
+      "tier": 4,
+      "contentVersion": 6
+    },
+    "scenario": "d19194cd225661ac8e634e89a3f4e1e67fea5a9ea10b262a7314c2bae7ffed4b",
+    "location": "7f9e1bfab5cceccfacc0599c584313c5b4fcdb61f940b886df42cfd2933064a9"
+  },
+  {
+    "spec": {
+      "type": "barricaded",
+      "familyId": "willow_terrace_v1",
+      "buildingSeed": 7,
+      "seed": 98,
+      "tier": 3,
+      "contentVersion": 6
+    },
+    "scenario": "9a76fac17aad6566e00ddefed6087088fdf3c20aaa7a8f79ecb3cb5a93c98382",
+    "location": "339df553f41f907f9e13fcd408f253c422ce610d2c3357ddb80f51a17c7ee460"
+  },
+  {
+    "spec": {
+      "type": "barricaded",
+      "familyId": "willow_terrace_v1",
+      "buildingSeed": 19,
+      "seed": 254,
+      "tier": 5,
+      "contentVersion": 6
+    },
+    "scenario": "b899955487d2044a272e05fd1c4de5d82fb5173f062f4f732d48c93e98f78cb5",
+    "location": "bdab47ef04b195638655df1b05e24b06ff12bd0c1ce4fe5fd0b5a3f02ab9741f"
+  },
+  {
+    "spec": {
+      "type": "barricaded",
+      "familyId": "ash_grove_v1",
+      "buildingSeed": 0,
+      "seed": 7,
+      "tier": 1,
+      "contentVersion": 6
+    },
+    "scenario": "56dfe09917629c91d06d97ba9b4045dfe58c225489477c4ca0c1a1b2473dae36",
+    "location": "599d4267ccd71575a25baa949dcd58f3f8f8a44a8d77fec6cb518aa45592e26f"
+  },
+  {
+    "spec": {
+      "type": "barricaded",
+      "familyId": "ash_grove_v1",
+      "buildingSeed": 1,
+      "seed": 20,
+      "tier": 2,
+      "contentVersion": 6
+    },
+    "scenario": "68bb1d5a708e9b43b3f26ddf15d45a4c1f52c426621edd74c56b1c167361c118",
+    "location": "60326adfdce3382fcd7ca518e692528e3df2f62c7a9d1ce3313e5ebeab9a4e3b"
+  },
+  {
+    "spec": {
+      "type": "barricaded",
+      "familyId": "ash_grove_v1",
+      "buildingSeed": 2,
+      "seed": 33,
+      "tier": 3,
+      "contentVersion": 6
+    },
+    "scenario": "7f50b7e1f2cd1b97d6bcc6ddf22ec1f50d7872d245c9f49511e4c59a181da87c",
+    "location": "b2cca7c77975d88597cef8a6feea3874686a923c9a7b8c32f891221125d00ad3"
+  },
+  {
+    "spec": {
+      "type": "barricaded",
+      "familyId": "ash_grove_v1",
+      "buildingSeed": 3,
+      "seed": 46,
+      "tier": 4,
+      "contentVersion": 6
+    },
+    "scenario": "c254ad05f9a5c7ee025deb7c23728c5d619110a7bca65d97efe165ecc4e2e916",
+    "location": "05ecec80a24c13cb94e6a14a4796af3facd5f7f0011f218f2b7b69ba95a83725"
+  },
+  {
+    "spec": {
+      "type": "barricaded",
+      "familyId": "ash_grove_v1",
+      "buildingSeed": 7,
+      "seed": 98,
+      "tier": 3,
+      "contentVersion": 6
+    },
+    "scenario": "880677ea29e247f52f80b4c397a637c04f53b8e477604aed65e38d8e987e7cc3",
+    "location": "df0717bc291bff43988f0d56bd7e6def9307a957f84b861564a0ed53a0f83b41"
+  },
+  {
+    "spec": {
+      "type": "barricaded",
+      "familyId": "ash_grove_v1",
+      "buildingSeed": 19,
+      "seed": 254,
+      "tier": 5,
+      "contentVersion": 6
+    },
+    "scenario": "d66935bdaf24f1a2129d2c1efc879d3ef02e50ba0c6714a813dd5e513b49d35e",
+    "location": "d7981c97da9aab4f63e7e57b3ef6c05500629cb1ce3ad2193f029cb5b887bcdf"
+  },
+  {
+    "spec": {
+      "type": "barricaded",
+      "familyId": "juniper_court_v1",
+      "buildingSeed": 0,
+      "seed": 7,
+      "tier": 1,
+      "contentVersion": 6
+    },
+    "scenario": "e6101eda1b183e8aeec64d9b5727487cf35d9983b31d827920d1616bc4efeab0",
+    "location": "516a1e41bcb3916df17fc82e74da56d2b2f850eae831e624b02026b1a8d30db2"
+  },
+  {
+    "spec": {
+      "type": "barricaded",
+      "familyId": "juniper_court_v1",
+      "buildingSeed": 1,
+      "seed": 20,
+      "tier": 2,
+      "contentVersion": 6
+    },
+    "scenario": "4b020a72b00eef4a2f4c019530da66a4d5ac187f1cb8ad082e31ab052253179e",
+    "location": "3e016f7e6537f1c21970c8cfb236e6c065d7edca1303a0d5da46f7800c228da6"
+  },
+  {
+    "spec": {
+      "type": "barricaded",
+      "familyId": "juniper_court_v1",
+      "buildingSeed": 2,
+      "seed": 33,
+      "tier": 3,
+      "contentVersion": 6
+    },
+    "scenario": "d1824c42553f59d3769f6678a1f7a5c198b0456ad484db9b311ce024d2b07406",
+    "location": "19dc89e59c70eb558f0407d5a786dec908fc1f7c5144b9d4ef026714fa688b65"
+  },
+  {
+    "spec": {
+      "type": "barricaded",
+      "familyId": "juniper_court_v1",
+      "buildingSeed": 3,
+      "seed": 46,
+      "tier": 4,
+      "contentVersion": 6
+    },
+    "scenario": "74d3d9ccd76263ecf25276c13a6d2b7bd7455e61af80efd8a43788e4c4bae8bb",
+    "location": "1a9c3681d7a678fab6b266293ca8fc467a0497c4d3b7af5b7cf2aa90c183ec70"
+  },
+  {
+    "spec": {
+      "type": "barricaded",
+      "familyId": "juniper_court_v1",
+      "buildingSeed": 7,
+      "seed": 98,
+      "tier": 3,
+      "contentVersion": 6
+    },
+    "scenario": "00337d0aa6a23de27e93850c316ca1c21d8b60d1b8e45648560ed9652465e2f8",
+    "location": "7541b8a5e10e8231923cb1e0d243faed105645486ef6476d79c5aa00376cd6be"
+  },
+  {
+    "spec": {
+      "type": "barricaded",
+      "familyId": "juniper_court_v1",
+      "buildingSeed": 19,
+      "seed": 254,
+      "tier": 5,
+      "contentVersion": 6
+    },
+    "scenario": "74bd8d0a920e6cca995de71408fe5dc30b224aa9962c175e428cbbe8fa0e68ea",
+    "location": "7918a82886ecc23d6d05c4cf4e221725cd609a153a90d75913dcfff99abd6142"
+  },
+  {
+    "spec": {
+      "type": "active_armed_incident",
+      "familyId": "market_row",
+      "buildingSeed": 0,
+      "seed": 7,
+      "tier": 1,
+      "contentVersion": 6
+    },
+    "scenario": "e0c2be5b20868862b4910e76e5185342babd058d7e30f03cf14b8f75eba01de0",
+    "location": "b18c0dccc5791c49703d8cbcd7c3fcf96922d027b8161f8dc0fe88fed520310d"
+  },
+  {
+    "spec": {
+      "type": "active_armed_incident",
+      "familyId": "market_row",
+      "buildingSeed": 1,
+      "seed": 20,
+      "tier": 2,
+      "contentVersion": 6
+    },
+    "scenario": "9c127950ed694df21d1f76c8fba92573e5980c54906868c4faa9301daf0afde0",
+    "location": "73b2c649839eaaf3e62ec047b5d71ce82ba7e76e7d6191e89fc5d8498da81c30"
+  },
+  {
+    "spec": {
+      "type": "active_armed_incident",
+      "familyId": "market_row",
+      "buildingSeed": 2,
+      "seed": 33,
+      "tier": 3,
+      "contentVersion": 6
+    },
+    "scenario": "85f5e2fad398d21fd224ad7af054acf4caead89e14c60413d38fd57607678624",
+    "location": "bf9e9e463dbd312d6579ed2703538c259ff06f21e1b05c707faee22fc7096b47"
+  },
+  {
+    "spec": {
+      "type": "active_armed_incident",
+      "familyId": "market_row",
+      "buildingSeed": 3,
+      "seed": 46,
+      "tier": 4,
+      "contentVersion": 6
+    },
+    "scenario": "64906c850bf593a2a31a7af308b595ced002d6747e75a4b94194db3d6d4d271c",
+    "location": "c184a6b95593fd7d935c31242e6ac083c21b72ba2cb6086cc5a5bbe84d13081f"
+  },
+  {
+    "spec": {
+      "type": "active_armed_incident",
+      "familyId": "market_row",
+      "buildingSeed": 7,
+      "seed": 98,
+      "tier": 3,
+      "contentVersion": 6
+    },
+    "scenario": "3bc3a939604fe795b1ab75f69c7a35606f00d2c5b431304d609858225129efe9",
+    "location": "3d395d7ea64279265a04990f0beceeafd483f730243b1000e31d578f50b387c0"
+  },
+  {
+    "spec": {
+      "type": "active_armed_incident",
+      "familyId": "market_row",
+      "buildingSeed": 19,
+      "seed": 254,
+      "tier": 5,
+      "contentVersion": 6
+    },
+    "scenario": "37a5ec687e1d14d3950e552fd948fb34cb5537c7f3f4b74cc842e2620afc0194",
+    "location": "ed56b9155be3bc346250a0e9d662e991b5cf10bd77b0cb7b24c911eca48150eb"
+  },
+  {
+    "spec": {
+      "type": "hostage_crisis",
+      "familyId": "market_row",
+      "buildingSeed": 0,
+      "seed": 7,
+      "tier": 1,
+      "contentVersion": 6
+    },
+    "scenario": "daa94797d054edbbb813bafb12c3043e6472139109259d8d5ad68962b4ee3361",
+    "location": "b18c0dccc5791c49703d8cbcd7c3fcf96922d027b8161f8dc0fe88fed520310d"
+  },
+  {
+    "spec": {
+      "type": "hostage_crisis",
+      "familyId": "market_row",
+      "buildingSeed": 1,
+      "seed": 20,
+      "tier": 2,
+      "contentVersion": 6
+    },
+    "scenario": "d23f539f57288294b5fc7c0668a5fef19ed685886ffa4f5602d8ea643599b7d3",
+    "location": "73b2c649839eaaf3e62ec047b5d71ce82ba7e76e7d6191e89fc5d8498da81c30"
+  },
+  {
+    "spec": {
+      "type": "hostage_crisis",
+      "familyId": "market_row",
+      "buildingSeed": 2,
+      "seed": 33,
+      "tier": 3,
+      "contentVersion": 6
+    },
+    "scenario": "0bd85d57698bd9252885e1834e84ee69613b4808777232534da2ec484ce1fa09",
+    "location": "bf9e9e463dbd312d6579ed2703538c259ff06f21e1b05c707faee22fc7096b47"
+  },
+  {
+    "spec": {
+      "type": "hostage_crisis",
+      "familyId": "market_row",
+      "buildingSeed": 3,
+      "seed": 46,
+      "tier": 4,
+      "contentVersion": 6
+    },
+    "scenario": "dbc73ef8e0c876fe2588678be284f41f85708af14c6c21c170334851cededce2",
+    "location": "c184a6b95593fd7d935c31242e6ac083c21b72ba2cb6086cc5a5bbe84d13081f"
+  },
+  {
+    "spec": {
+      "type": "hostage_crisis",
+      "familyId": "market_row",
+      "buildingSeed": 7,
+      "seed": 98,
+      "tier": 3,
+      "contentVersion": 6
+    },
+    "scenario": "2a5a6614a5bd3ab97a969d04978c5bf2051b8ef6b2164ec687481c2e09f93786",
+    "location": "3d395d7ea64279265a04990f0beceeafd483f730243b1000e31d578f50b387c0"
+  },
+  {
+    "spec": {
+      "type": "hostage_crisis",
+      "familyId": "market_row",
+      "buildingSeed": 19,
+      "seed": 254,
+      "tier": 5,
+      "contentVersion": 6
+    },
+    "scenario": "7750dac22c5e81e6123b4cafca804d06292ec8fca6fbdd9fd46eb41500c934a7",
+    "location": "ed56b9155be3bc346250a0e9d662e991b5cf10bd77b0cb7b24c911eca48150eb"
+  },
+  {
+    "spec": {
+      "type": "protected_rescue",
+      "familyId": "juniper_court_v1",
+      "buildingSeed": 0,
+      "seed": 7,
+      "tier": 1,
+      "contentVersion": 6
+    },
+    "scenario": "96eb63b02ccda4f2d1662c85a782e8f0920a250e45d5de63452c45398b3ab5d4",
+    "location": "516a1e41bcb3916df17fc82e74da56d2b2f850eae831e624b02026b1a8d30db2"
+  },
+  {
+    "spec": {
+      "type": "protected_rescue",
+      "familyId": "juniper_court_v1",
+      "buildingSeed": 1,
+      "seed": 20,
+      "tier": 2,
+      "contentVersion": 6
+    },
+    "scenario": "5efd5de2f650b2faea2915c962dddb68f3af38e8f6817845b6ab40b38899689b",
+    "location": "3e016f7e6537f1c21970c8cfb236e6c065d7edca1303a0d5da46f7800c228da6"
+  },
+  {
+    "spec": {
+      "type": "protected_rescue",
+      "familyId": "juniper_court_v1",
+      "buildingSeed": 2,
+      "seed": 33,
+      "tier": 3,
+      "contentVersion": 6
+    },
+    "scenario": "756ba509860527c97cf85ac98f27edbae1134430b4cd745b3bf66d697e1a704c",
+    "location": "19dc89e59c70eb558f0407d5a786dec908fc1f7c5144b9d4ef026714fa688b65"
+  },
+  {
+    "spec": {
+      "type": "protected_rescue",
+      "familyId": "juniper_court_v1",
+      "buildingSeed": 3,
+      "seed": 46,
+      "tier": 4,
+      "contentVersion": 6
+    },
+    "scenario": "12e19529191889e7e1368e62742f31470fe732a8a43950054e12cdfcfc7a08c3",
+    "location": "1a9c3681d7a678fab6b266293ca8fc467a0497c4d3b7af5b7cf2aa90c183ec70"
+  },
+  {
+    "spec": {
+      "type": "protected_rescue",
+      "familyId": "juniper_court_v1",
+      "buildingSeed": 7,
+      "seed": 98,
+      "tier": 3,
+      "contentVersion": 6
+    },
+    "scenario": "452e1bddfb05cb0cee4ab2c0da54d728c2c827f478b49c5e42cc2f2c7ac1aac3",
+    "location": "7541b8a5e10e8231923cb1e0d243faed105645486ef6476d79c5aa00376cd6be"
+  },
+  {
+    "spec": {
+      "type": "protected_rescue",
+      "familyId": "juniper_court_v1",
+      "buildingSeed": 19,
+      "seed": 254,
+      "tier": 5,
+      "contentVersion": 6
+    },
+    "scenario": "87debb82fc1568d4df50786f044986bc07ab940e5effc4aff5aa98a87bfba190",
+    "location": "7918a82886ecc23d6d05c4cf4e221725cd609a153a90d75913dcfff99abd6142"
+  },
+  {
+    "spec": {
+      "type": "protected_rescue",
+      "familyId": "willow_terrace_v1",
+      "buildingSeed": 0,
+      "seed": 7,
+      "tier": 1,
+      "contentVersion": 6
+    },
+    "scenario": "a438fe03581f8dc00a5e90cb3b4271f77f65708998a78e3101f25df059e38ec1",
+    "location": "0861b1d4a017b044d229bfef94b24d391056faad5a34a7febfd8abfd7399c89a"
+  },
+  {
+    "spec": {
+      "type": "protected_rescue",
+      "familyId": "willow_terrace_v1",
+      "buildingSeed": 1,
+      "seed": 20,
+      "tier": 2,
+      "contentVersion": 6
+    },
+    "scenario": "6b57b864cac17c167f3cdb249262bb252c5218032266382c9d979a4a4867c980",
+    "location": "7ea821f85bb867506b4b025e5b204abceff4c505a5e98f93d71f87020d9dbf4e"
+  },
+  {
+    "spec": {
+      "type": "protected_rescue",
+      "familyId": "willow_terrace_v1",
+      "buildingSeed": 2,
+      "seed": 33,
+      "tier": 3,
+      "contentVersion": 6
+    },
+    "scenario": "b398db3f6711ea531a75653e7daabede7f990b35336af371bc846c11c44e4b30",
+    "location": "746beaf3c172502316e05c0a47ad3ece1394e5a0df8861567b01f838ca8a0c25"
+  },
+  {
+    "spec": {
+      "type": "protected_rescue",
+      "familyId": "willow_terrace_v1",
+      "buildingSeed": 3,
+      "seed": 46,
+      "tier": 4,
+      "contentVersion": 6
+    },
+    "scenario": "799810c96b87218b43f21e3d0a954b25b7518e0a766c4da071d0a17f65cb2c3e",
+    "location": "7f9e1bfab5cceccfacc0599c584313c5b4fcdb61f940b886df42cfd2933064a9"
+  },
+  {
+    "spec": {
+      "type": "protected_rescue",
+      "familyId": "willow_terrace_v1",
+      "buildingSeed": 7,
+      "seed": 98,
+      "tier": 3,
+      "contentVersion": 6
+    },
+    "scenario": "a0fabd26ec4f5400118a5f84d5142082672f15ede9912527b30da2d920472633",
+    "location": "339df553f41f907f9e13fcd408f253c422ce610d2c3357ddb80f51a17c7ee460"
+  },
+  {
+    "spec": {
+      "type": "protected_rescue",
+      "familyId": "willow_terrace_v1",
+      "buildingSeed": 19,
+      "seed": 254,
+      "tier": 5,
+      "contentVersion": 6
+    },
+    "scenario": "0954703de77ecff7ed78d7a331a013e9e2ae0d6625fd13febf264c5ce308ed53",
+    "location": "bdab47ef04b195638655df1b05e24b06ff12bd0c1ce4fe5fd0b5a3f02ab9741f"
+  },
+  {
+    "spec": {
+      "type": "protected_rescue",
+      "familyId": "harbour_court",
+      "buildingSeed": 0,
+      "seed": 7,
+      "tier": 1,
+      "contentVersion": 6
+    },
+    "scenario": "46e93d3a590a52103e73b7a72c1fc10fc5587adb10dc521c883aca196f05a965",
+    "location": "d215ed1904cf77678c317d183e3461096676b83c29e2149028aa58127e23237a"
+  },
+  {
+    "spec": {
+      "type": "protected_rescue",
+      "familyId": "harbour_court",
+      "buildingSeed": 1,
+      "seed": 20,
+      "tier": 2,
+      "contentVersion": 6
+    },
+    "scenario": "28f64b91dea032cd85a6f6953d0f625b985d972067ca432bd56d62efc7653f1d",
+    "location": "493a9c21480b5b5ef17a953ee0fe6c62e84fe38bdb353f70d22087788caf4313"
+  },
+  {
+    "spec": {
+      "type": "protected_rescue",
+      "familyId": "harbour_court",
+      "buildingSeed": 2,
+      "seed": 33,
+      "tier": 3,
+      "contentVersion": 6
+    },
+    "scenario": "a5cdeff6d3e38dae0816a2f4d11c90831f0582b8b0a92b65b6133cc56af3e878",
+    "location": "7ad9dfc4038cb6680382a8ce65deb677a14a77f54a3ee568609e832f6d7d70ef"
+  },
+  {
+    "spec": {
+      "type": "protected_rescue",
+      "familyId": "harbour_court",
+      "buildingSeed": 3,
+      "seed": 46,
+      "tier": 4,
+      "contentVersion": 6
+    },
+    "scenario": "10ee0dd6d7feb2db1c90b02603da44c2498814bcfda4e9103b9a42dc9b2f691c",
+    "location": "356927901c3f6e7a06898d7a0428845ddcbb35dc32fc964a04791c69bac7a6f5"
+  },
+  {
+    "spec": {
+      "type": "protected_rescue",
+      "familyId": "harbour_court",
+      "buildingSeed": 7,
+      "seed": 98,
+      "tier": 3,
+      "contentVersion": 6
+    },
+    "scenario": "0f2baa9401df6411f1f004f1bf1985016de41b01a7024d22d88df4c15beb68c6",
+    "location": "21068f18d01d35fb9e5ad519dd835e980d133c89c61b3b2b22b90f519f7a139e"
+  },
+  {
+    "spec": {
+      "type": "protected_rescue",
+      "familyId": "harbour_court",
+      "buildingSeed": 19,
+      "seed": 254,
+      "tier": 5,
+      "contentVersion": 6
+    },
+    "scenario": "8aa74c029343450a48911c5bc173cdb6ae35257bc9392af3579f9c49a3ee4c2d",
+    "location": "d03137ec184ec38246ccc734e06b9e97d1d7819e94e4a7dbc1c9f9d7e64a422e"
+  }
+]

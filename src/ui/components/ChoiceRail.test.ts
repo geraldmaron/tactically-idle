@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createElement, type ComponentProps, type KeyboardEvent, type MouseEvent, type ReactElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { ChoiceRail, railKeyboardValue } from './ChoiceRail';
+import { ChoiceRail, railKeyboardValue, revealRailSelection } from './ChoiceRail';
 
 // Capture the rendered buttons to exercise their actual handlers in the node test environment.
 function railButtons(props: Parameters<typeof ChoiceRail<string>>[0]) {
@@ -81,6 +81,22 @@ describe('single-row choice navigation', () => {
     expect(html).toContain('role="navigation"');
     expect(html).toContain('aria-current="page"');
     expect(html).not.toContain('role="radio"');
+  });
+  it('connects each squad tab to its panel with a stable label id', () => {
+    const html = renderToStaticMarkup(createElement(ChoiceRail, { value: 'A', options: [{ value: 'A', label: 'Alpha' }, { value: 'B', label: 'Bravo' }], onChange: () => {}, label: 'Squads', kind: 'tabs', panelId: 'squad-panel' }));
+    expect(html).toContain('id="squad-panel-tab-A" aria-selected="true" aria-controls="squad-panel" tabindex="0"');
+    expect(html).toContain('id="squad-panel-tab-B" aria-selected="false" aria-controls="squad-panel" tabindex="-1"');
+  });
+  it.each([
+    { left: 80, right: 150, expected: 76 },
+    { left: 330, right: 420, expected: 124 },
+    { left: 160, right: 270, expected: 100 },
+  ])('reveals clipped selection horizontally without moving the page ($left–$right)', ({ left, right, expected }) => {
+    const strip = { scrollLeft: 100, scrollTop: 27, getBoundingClientRect: () => ({ left: 100, right: 400 }) };
+    const node = { getBoundingClientRect: () => ({ left, right }) };
+    revealRailSelection(strip as HTMLDivElement, node as HTMLButtonElement);
+    expect(strip.scrollLeft).toBe(expected);
+    expect(strip.scrollTop).toBe(27);
   });
   it('keeps a keyboard entry when the selected option becomes unavailable', () => {
     const html = renderToStaticMarkup(createElement(ChoiceRail, { value: 'busy', options, onChange: () => {}, label: 'Options' }));

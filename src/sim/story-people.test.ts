@@ -77,7 +77,7 @@ describe('bound story people project existing committed state', () => {
     const { scenario, state } = fixture('reported');
     const run = state.activeRun!;
     expect(storyPeopleActual(scenario, run)[0].position).toEqual(inside);
-    expect(markers(state).find(marker => marker.id === 'person_where_alex')).toMatchObject({ spaceId: otherOutside.spaceId, at: otherOutside.at, label: 'Alex?', status: 'reported' });
+    expect(markers(state).find(marker => marker.id === 'person_where_alex')).toMatchObject({ spaceId: otherOutside.spaceId, at: otherOutside.at, label: 'Alex', status: 'reported' });
     run.knowledge.where_alex = 'confirmed';
     expect(markers(state).find(marker => marker.id === 'person_where_alex')).toMatchObject({ spaceId: inside.spaceId, at: inside.at, label: 'Alex' });
     run.flags.push('alex_released');

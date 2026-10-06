@@ -33,9 +33,13 @@
   white-space: nowrap;
   overflow-wrap: normal;
   word-break: normal;
+  transition: background-color 120ms ease-out, border-color 120ms ease-out, color 120ms ease-out;
 }
 .choice-rail-grow .choice-rail-item { flex-grow: 1; }
 .choice-rail-selected { color: var(--amber); background: rgba(243, 180, 50, .08); border-color: var(--amber); }
-.choice-rail-item:focus-visible { outline: 2px solid var(--amber); outline-offset: -3px; }
+.choice-rail-item:focus-visible { outline: 2px solid var(--text); outline-offset: 1px; }
 .choice-rail-item:disabled { opacity: .5; cursor: default; }
 .choice-rail-count { min-width: 1.35em; padding: 2px 4px; border-radius: 4px; color: var(--text-dim); background: rgba(255,255,255,.06); font-size: 12px; }
+@media (prefers-reduced-motion: reduce) {
+  .choice-rail-item { transition: none; }
+}

@@ -1,6 +1,7 @@
 // Accessible text alternative to the spatial blueprint.
-import type { BuiltLocation, Id, KnowledgeStatus, SpaceView } from '../../sim/types';
+import type { BuiltLocation, Id, KnowledgeStatus, PersonMark, SpaceView } from '../../sim/types';
 import './blueprint.css';
+import { armamentText } from './layout';
 
 export interface RoomListProps {
   spaces: SpaceView[];
@@ -20,6 +21,18 @@ const STATUS: Record<KnowledgeStatus | 'none', { word: string; glyph: string }> 
 
 export function statusWord(s: SpaceView['status']): string {
   return STATUS[s].word;
+}
+
+/** The same public facts are available on touch, keyboard and the text map. */
+export function personDescription(person: PersonMark): string {
+  if (person.status === 'unknown') return '';
+  if (person.status === 'disproved') return `${person.label || 'Person report'}: report ruled out`;
+  const parts = [person.label || 'Person', person.status === 'reported' ? 'reported, approximate position' : 'position confirmed'];
+  if (person.condition) parts.push(person.condition);
+  if (person.armament && person.armament !== 'unknown') parts.push(`${armamentText(person.armament, 'confirmed')?.toLowerCase()} (${person.status})`);
+  else parts.push('armament not known');
+  for (const item of person.carried ?? []) parts.push(`${item.label} (${item.status})`);
+  return parts.join(' · ');
 }
 
 export function RoomList({ spaces, built, selectedSpaceId, onSelectSpace, className }: RoomListProps) {
@@ -55,6 +68,7 @@ export function RoomList({ spaces, built, selectedSpaceId, onSelectSpace, classN
                 {s.squadsHere.length ? `Squad${s.squadsHere.length > 1 ? 's' : ''} ${s.squadsHere.join(', ')}` : 'No squads'}
                 {s.marker ? ` · Note: ${s.marker.text}${s.marker.subtext ? ` (${s.marker.subtext})` : ''}` : ''}
               </span>
+              {s.people.filter((person) => person.status !== 'unknown').map((person) => <span className="bp-roomlist-person" key={person.id}>{personDescription(person)}</span>)}
             </button>
           </li>
         );

@@ -4,9 +4,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createInitialState } from '../../sim/department';
 import { dispatch } from '../../sim/game';
 import { projectHire } from '../../sim/department-selectors';
-import type { Command, Role } from '../../sim/types';
-import { ChoiceRail } from '../components/ChoiceRail';
+import type { Command } from '../../sim/types';
 import { Button } from '../components/ui';
+import { CERT_LABEL, ROLE_META } from '../components/labels';
 import { money, perHour, rate } from '../format';
 import { CandidateCard, candidatesWithHireReceipt, dismissHireReceipt, Recruit, RecruitRefresh, type HireReceipt } from './Recruit';
 
@@ -20,7 +20,7 @@ const act = vi.fn((command: Command, _message?: string) => {
 vi.mock('../store', () => ({ useGame: () => state }));
 vi.mock('../components/toast', () => ({ useToast: () => ({ act }) }));
 
-type CapturedElement = ReactElement<{ children?: ReactNode; onClick?: (event: MouseEvent<HTMLButtonElement>) => void; onChange?: (role: Role | 'any') => void; disabled?: boolean }>;
+type CapturedElement = ReactElement<{ children?: ReactNode; onClick?: (event: MouseEvent<HTMLButtonElement>) => void; disabled?: boolean }>;
 function elements(node: ReactNode): CapturedElement[] {
   if (!isValidElement<CapturedElement['props']>(node)) return [];
   return [node, ...Children.toArray(node.props.children).flatMap(elements)];
@@ -46,38 +46,30 @@ beforeEach(() => {
   act.mockClear();
 });
 
-describe('recruitment role selection', () => {
-  it('uses one accessible choice rail with six complete labels and next-refresh context', () => {
+describe('ordinary recruitment refresh', () => {
+  it('offers a single refresh action while keeping candidate roles and qualifications', () => {
     const html = renderToStaticMarkup(createElement(Recruit));
-    expect(html).toContain('Role for next refresh');
-    expect(html).toContain('Choose the role to target when you refresh candidates.');
-    expect(html).toContain('class="choice-rail choice-rail-grow" role="radiogroup" aria-label="Role for next candidate refresh"');
-    expect(html.match(/role="radio"/g)).toHaveLength(6);
-    expect(html.match(/aria-checked="true"/g)).toHaveLength(1);
-    expect(html.match(/tabindex="0"/g)).toHaveLength(1);
-    for (const label of ['Any', 'Communication', 'Entry', 'Medical', 'Observation', 'Leadership']) expect(html).toContain(`>${label}</button>`);
+    expect(html).toContain('Refresh candidates');
+    expect(html).not.toContain('Role for next');
+    expect(html).not.toContain('role to target');
+    expect(html).not.toContain('role="radiogroup"');
     for (const c of state.candidates) {
       const name = `${c.officer.firstName} ${c.officer.surname}`;
       expect(html).toContain(renderToStaticMarkup(createElement('strong', { className: 'cand-name' }, name)));
+      expect(html).toContain(ROLE_META[c.officer.role].label);
+      for (const cert of c.officer.certs) expect(html).toContain(CERT_LABEL[cert]);
     }
     expect(html).not.toContain('Hire…');
   });
 
-  it.each([null, 'medic'] as const)('only refreshes the candidate pool after the explicit refresh action (%s)', (target) => {
-    const onTargetChange = vi.fn();
+  it('only refreshes the candidate pool after the explicit refresh action', () => {
     const before = structuredClone(state);
-    const { tree } = capture(() => RecruitRefresh({ target, onTargetChange }));
-    const rail = elements(tree).find((element) => element.type === ChoiceRail)!;
-    rail.props.onChange?.('recon');
-    expect(onTargetChange).toHaveBeenLastCalledWith('recon');
-    rail.props.onChange?.('any');
-    expect(onTargetChange).toHaveBeenLastCalledWith(null);
+    const { tree } = capture(() => RecruitRefresh());
     expect(act).not.toHaveBeenCalled();
     expect(state).toEqual(before);
 
     button(tree, 'Refresh candidates').props.onClick?.({ detail: 0 } as MouseEvent<HTMLButtonElement>);
-    expect(act).toHaveBeenCalledExactlyOnceWith(target ? { type: 'refreshCandidates', targetRole: target } : { type: 'refreshCandidates' });
-    if (target) expect(state.candidates.some((c) => c.officer.role === target)).toBe(true);
+    expect(act).toHaveBeenCalledExactlyOnceWith({ type: 'refreshCandidates' });
   });
 });
 

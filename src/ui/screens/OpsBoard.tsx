@@ -151,10 +151,8 @@ function CardBody({ card, scenario, familyId, type, tier, children }: { card: Sc
       <p className="opboard-summary">{card.summary}</p>
       {scenario && <IncidentBriefContext scenario={scenario} compact />}
       <div className="chips">
-        <Chip icon="question" tone="amber">
-          {card.variantLabel}
-        </Chip>
-        <Chip icon="clock">{card.pressureLabel}</Chip>
+        {card.variantLabel !== card.title && <Chip>{card.variantLabel}</Chip>}
+        {(!scenario || scenario.version < 4) && <Chip icon="clock">{card.pressureLabel}</Chip>}
         <Chip icon="people">{card.squadRange.min === card.squadRange.max ? `${card.squadRange.min} squad` : `${card.squadRange.min}–${card.squadRange.max} squads`}</Chip>
       </div>
       {children}

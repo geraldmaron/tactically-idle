@@ -212,6 +212,10 @@ export interface ActionCapabilities {
 }
 
 export interface ActionDefinition {
+  /** V7: an actual, explicit force use. Carried equipment never opts an action in. */
+  forceProfile?: { kind: 'firearm' | 'less_lethal_device' | 'less_lethal_impact'; personId: Id; personRole: 'subject' | 'civilian'; officerExposure?: boolean };
+  /** V7: field care or a medical receiver accepting an already injured person. */
+  personCare?: { personId: Id; kind: 'stabilize' | 'accept'; serviceId?: Id };
   /** Optional bound person target; current public position drives spatial evaluation. */
   storyTargetPersonId?: Id;
   /** Full archetype route rechecked against current openings at action evaluation. */
@@ -378,7 +382,21 @@ export interface StoryPersonBinding {
   locationFactId: Id;
   initial: StoryAnchor;
   reported?: StoryAnchor;
+  /** Public role, never inferred from a name, culture or hidden character data. */
+  publicKind?: 'person' | 'subject' | 'civilian' | 'patient';
   transitions: { when: Condition; to: StoryAnchor | { kind: 'offscene'; label: string }; observed: boolean; label?: string }[];
+}
+export interface StoryPropBinding {
+  id: Id;
+  label: string;
+  kind: 'carried' | 'mapped';
+  holderPersonId?: Id;
+  objectId?: Id;
+  /** Conditions refer only to committed observations, not hidden truth. */
+  knownWhen?: Condition;
+  confirmedWhen?: Condition;
+  glyph?: 'phone' | 'document' | 'keys' | 'wheelchair' | 'weapon' | 'tool' | 'item';
+  transitions?: { when: Condition; holderPersonId?: Id; observed?: boolean }[];
 }
 export interface StoryInstance {
   /** V6 coherent situation selected before presentation; all module effects share these bindings. */
@@ -392,7 +410,7 @@ export interface StoryInstance {
     exterior: Record<string, { spaceId: Id }>;
     routes: Record<string, { fromSpaceId: Id; toSpaceId: Id; openingIds: Id[]; profile: 'walking' | 'chair' }>;
     people: Record<string, StoryPersonBinding>;
-    props: Record<string, { id: Id; label: string; kind: 'carried' | 'mapped'; holderPersonId?: Id; objectId?: Id; transitions?: { when: Condition; holderPersonId: Id }[] }>;
+    props: Record<string, StoryPropBinding>;
   };
 }
 

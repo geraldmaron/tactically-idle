@@ -5,7 +5,7 @@ import type { ActionView, DebriefResult, DecisionView } from '../../sim/types';
 import { apply, makeState, NOW, setRun, startRun } from '../../sim/test-fixtures';
 import { actionViews, currentBuilt, decisionViews, pendingDebrief, previewAction, spaceViews, stageContinuations, stageProgress } from '../../sim/operation-selectors';
 import { planActionResupply } from '../../sim/equipment-resupply';
-import { ActionSheet, LiveView, revealStageStep, StageSteps, type LiveViewProps } from './LiveView';
+import { ActionSheet, LiveView, PersonRow, revealStageStep, StageSteps, type LiveViewProps } from './LiveView';
 import { DecisionCard, OperationFeedback, OperationLogContents, OutcomeForecast } from './OperationFeedback';
 import { OpsDebrief, SavedDebriefContents, SavedDebriefReview } from './OpsDebrief';
 import { Debriefs } from './HQ';
@@ -441,4 +441,47 @@ describe('operation stage rail', () => {
     revealStageStep(strip, step);
     expect(strip.scrollLeft).toBe(after);
   });
+});
+
+describe('force forecast and recorded harm', () => {
+  const forceRisk = { profile: 'less_lethal_device' as const, itemId: 'conducted_energy_device', unitId: 'issued-device', personId: 'mara', personRole: 'subject' as const, personLabel: 'Mara Bell', lethalRisk: 'low_but_present' as const, summary: 'Serious injury or death remains possible.' };
+  it('separates task chances from qualitative harm without exposing a numeric injury model', () => {
+    const html = render(createElement(OutcomeForecast, { action: action({ forceRisk }) }));
+    expect(html).toContain('Task outcome');
+    expect(html).toContain('Risk from force');
+    expect(html).toContain('Serious injury or death remains possible.');
+    expect(html).toContain('Harm is resolved separately');
+    expect(html).not.toContain('issued-device');
+    expect(html).not.toContain('low_but_present');
+  });
+  it.each(['none', 'wounded', 'serious', 'fatal'] as const)('shows saved %s harm separately even when the task went well', (severity) => {
+    const forceOutcome = { ...forceRisk, version: 1 as const, sample: .9876543, severity };
+    const html = defaultResult(render(createElement(DecisionCard, { decision: decision({ band: 'favorable', forceOutcome }) })));
+    expect(html).toContain('Task check: went well');
+    expect(html).toContain('Recorded harm');
+    expect(html).toContain(({ none: 'No injury recorded', wounded: 'Wounded', serious: 'Serious injury', fatal: 'Deceased' } as const)[severity]);
+    expect(html).not.toContain('decision-favorable');
+    expect(html).not.toContain('0.9876543');
+  });
+});
+
+
+it('shows all possessions and their own certainty in the selected-person inspector', () => {
+  const html = render(createElement(PersonRow, { m: { id: 'mara', at: { x: 2, y: 2 }, label: 'Mara Bell', kind: 'subject', status: 'confirmed', armament: 'unknown', condition: 'injured', carried: [{ id: 'phone', glyph: 'phone', label: 'Cracked phone', status: 'reported' }, { id: 'keys', glyph: 'keys', label: 'House keys', status: 'confirmed' }] } }));
+  expect(html).toContain('Position confirmed');
+  expect(html).toContain('Cracked phone');
+  expect(html).toContain('Reported item · unverified');
+  expect(html).toContain('House keys');
+  expect(html).toContain('Confirmed item');
+  expect(html).toContain('Armament not known');
+  expect(html).toContain('Injured');
+  expect(html).not.toContain('Unarmed');
+});
+
+it('keeps saved subject deaths in a debrief even when a newer active call exists', () => {
+  const d: DebriefResult = { runId: 'archived_force', scenarioId: 'ms_occupancy', endingId: 'closed', endingTitle: 'Closed', practice: false, objective: { score: 100, label: 'Complete' }, civilianSafety: { score: 50, label: 'Consequences' }, officerCondition: [], informationPreserved: [], resources: [], trustDelta: 0, fundingReward: 0, devPointReward: 0, causes: [], personCasualties: [{ personId: 'mara', personRole: 'subject', label: 'Mara Bell', severity: 'fatal', at: 8, care: 'deceased', causeRevision: 2 }] };
+  const html = render(createElement(SavedDebriefContents, { debrief: d, officers: {} }));
+  expect(html).toContain('data-person-casualty="mara"');
+  expect(html).toContain('Mara Bell');
+  expect(html).toContain('Deceased');
 });

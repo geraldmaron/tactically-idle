@@ -1,10 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 
-/** Track an element's content width in CSS px. Returns [ref, width]. */
+/** Measure before paint so newly mounted cards never flash their fallback portrait size. */
 export function useWidth<T extends HTMLElement>(fallback = 0): [React.RefObject<T | null>, number] {
   const ref = useRef<T | null>(null);
   const [w, setW] = useState(fallback);
-  useEffect(() => {
+  useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
     const read = () => setW(Math.floor(el.getBoundingClientRect().width));

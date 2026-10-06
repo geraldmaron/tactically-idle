@@ -23,3 +23,6 @@
 
 .ocard-casualty { border-color: var(--warn); }
 .ocard-casualty .ocard-note { display: block; color: var(--warn); font-weight: 600; white-space: normal; overflow-wrap: anywhere; }
+
+.incident-people-list [data-person-status="deceased"] span, .incident-people-list [data-person-status="deceased"] > .icon { color: var(--danger); }
+.incident-person-casualties { margin-top: 9px; }

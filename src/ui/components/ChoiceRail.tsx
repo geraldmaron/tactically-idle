@@ -1,4 +1,4 @@
-import { useEffect, useRef, type KeyboardEvent, type ReactNode } from 'react';
+import { useLayoutEffect, useRef, type KeyboardEvent, type ReactNode } from 'react';
 import './choice-rail.css';
 
 export interface RailOption<T extends string> {
@@ -21,13 +21,10 @@ export function ChoiceRail<T extends string>({ value, options, onChange, label, 
   const buttons = useRef(new Map<T, HTMLButtonElement>());
   const rail = useRef<HTMLDivElement>(null);
   const tabStop = options.some((option) => option.value === value && !option.disabled) ? value : options.find((option) => !option.disabled)?.value;
-  useEffect(() => {
+  useLayoutEffect(() => {
     const node = buttons.current.get(value), strip = rail.current;
     if (!node || !strip) return;
-    // Reveal only within the horizontal rail; never move the surrounding screen.
-    const box = node.getBoundingClientRect(), viewport = strip.getBoundingClientRect();
-    if (box.left < viewport.left + 4) strip.scrollLeft += box.left - viewport.left - 4;
-    else if (box.right > viewport.right - 4) strip.scrollLeft += box.right - viewport.right + 4;
+    revealRailSelection(strip, node);
   }, [value]);
   const select = (next: T) => {
     if (next !== value) onChange(next);
@@ -44,6 +41,7 @@ export function ChoiceRail<T extends string>({ value, options, onChange, label, 
       ref={(node) => { if (node) buttons.current.set(option.value, node); else buttons.current.delete(option.value); }}
       className={`choice-rail-item${value === option.value ? ' choice-rail-selected' : ''}`}
       role={kind === 'tabs' ? 'tab' : kind === 'filter' ? 'radio' : undefined}
+      id={kind === 'tabs' && panelId ? `${panelId}-tab-${option.value}` : undefined}
       aria-label={option.accessibleLabel}
       aria-selected={kind === 'tabs' ? value === option.value : undefined}
       aria-checked={kind === 'filter' ? value === option.value : undefined}
@@ -53,6 +51,13 @@ export function ChoiceRail<T extends string>({ value, options, onChange, label, 
       disabled={option.disabled}
       onClick={() => select(option.value)} onKeyDown={(event) => move(event, option.value)}>{option.label}</button>)}
   </div>;
+}
+
+/** Reveal only within the horizontal rail; never scroll the page or animate activation. */
+export function revealRailSelection(strip: HTMLDivElement, node: HTMLButtonElement): void {
+  const box = node.getBoundingClientRect(), viewport = strip.getBoundingClientRect();
+  if (box.left < viewport.left + 4) strip.scrollLeft += box.left - viewport.left - 4;
+  else if (box.right > viewport.right - 4) strip.scrollLeft += box.right - viewport.right + 4;
 }
 
 /** Keyboard order follows visible option order and skips unavailable choices. */

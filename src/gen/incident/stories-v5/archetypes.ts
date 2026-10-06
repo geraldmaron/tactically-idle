@@ -44,7 +44,7 @@ export function attachStoryBindings(s: ScenarioDefinition, built: BuiltLocation)
     bindings: { rooms: { scene: { spaceId: target } }, exterior: { arrival: { spaceId: outside } }, routes: {}, people: {}, props: {} } };
   const used: StoryAnchor[] = [];
   const point = (spaceId: string): StoryAnchor => {
-    const at = storyPoint(built, spaceId, seed + used.length, used);
+    const at = storyPoint(built, spaceId, seed + used.length, used, built.location.version >= 7 && spec.type === 'protected_rescue' ? 1.5 : undefined);
     if (!at) throw new Error(`No valid person anchor in ${spaceId}`);
     const anchor = { spaceId, at }; used.push(anchor); return anchor;
   };

@@ -2,6 +2,7 @@ import type { ActionDefinition, ScenarioDefinition, StoryAnchor, StoryPersonBind
 import type { BuiltLocation, Id, KnowledgeStatus, OperationRun } from './types';
 import { conditionHolds, spaceName } from './resolution';
 import { approxPoint } from './spatial-factors';
+import { publicPropBinding } from './story-prop-knowledge';
 
 type StoryState = Pick<OperationRun, 'knowledge' | 'flags' | 'pressure'>;
 export type StoryPosition = StoryAnchor | { kind: 'offscene'; label: string };
@@ -67,6 +68,8 @@ export interface StoryPropPosition {
   label: string;
   holderPersonId?: Id;
   position: StoryPosition | null;
+  glyph?: import('./types').PublicCarriedItem['glyph'];
+  status?: 'reported' | 'confirmed';
 }
 
 function storyProps(scenario: ScenarioDefinition, built: BuiltLocation, run: StoryState, people: (StoryActualPerson | StoryPublicPerson)[]): StoryPropPosition[] {
@@ -89,7 +92,29 @@ export function storyPropsActual(scenario: ScenarioDefinition, built: BuiltLocat
 
 /** Carried props follow the holder's public position, never their hidden physical position. */
 export function storyPropsPublic(scenario: ScenarioDefinition, built: BuiltLocation, run: StoryState): StoryPropPosition[] {
-  return storyProps(scenario, built, run, storyPeoplePublic(scenario, built, run));
+  // Issued v5/v6 action eligibility used this historical possession projection.
+  // Keep that contract; new views use storyPropsKnown and v7 uses explicit evidence.
+  if (scenario.version < 7) return storyProps(scenario, built, run, storyPeoplePublic(scenario, built, run));
+  return storyPropsKnown(scenario, built, run);
+}
+
+/** Strict public evidence for rendering, including already-issued stories. */
+export function storyPropsKnown(scenario: ScenarioDefinition, built: BuiltLocation, run: StoryState): StoryPropPosition[] {
+  const people = storyPeoplePublic(scenario, built, run);
+  return Object.values(scenario.story?.bindings.props ?? {}).flatMap(raw => {
+    const prop = publicPropBinding(scenario, raw);
+    if (!prop || !conditionHolds(prop.knownWhen, run)) return [];
+    const status = prop.confirmedWhen && conditionHolds(prop.confirmedWhen, run) ? 'confirmed' as const : 'reported' as const;
+    if (prop.kind === 'mapped') {
+      const object = built.location.objects.find(o => o.id === prop.objectId);
+      return object ? [{ id: prop.id, label: prop.label, glyph: prop.glyph ?? 'item', status,
+        position: { spaceId: object.in, at: { x: object.x + object.w / 2, y: object.y + object.h / 2 } } }] : [];
+    }
+    let holderPersonId = prop.holderPersonId;
+    for (const transition of prop.transitions ?? []) if (transition.observed && conditionHolds(transition.when, run)) holderPersonId = transition.holderPersonId;
+    const position = people.find(person => person.id === holderPersonId)?.position ?? null;
+    return position ? [{ id: prop.id, label: prop.label, glyph: prop.glyph ?? 'item', status, ...(holderPersonId ? { holderPersonId } : {}), position }] : [];
+  });
 }
 
 /** A transient view of location facts shared by room inspection, map markers and spatial checks. */

@@ -1083,3 +1083,39 @@
 .live-map:has(.bp-multifloor) {
   min-height: 380px;
 }
+
+/* Public people and possessions: certainty belongs to each mark independently. */
+.bp-pg { stroke: #0b2a72; stroke-width: .12px; stroke-linejoin: round; }
+.bp-pg-conf { fill: var(--marker-mint); color: var(--marker-mint); }
+.bp-pg-rep { fill: var(--marker-amber); color: var(--marker-amber); }
+.bp-pg-line { fill: none; stroke: currentColor; stroke-width: .3px; stroke-linecap: round; stroke-linejoin: round; }
+.bp-person-stale .bp-person-ring { stroke-opacity: .65; }
+.bp-person-condition circle { fill: #123c92; stroke: #ffc3b9; stroke-width: .13px; }
+.bp-person-condition path { fill: none; stroke: #ffc3b9; stroke-width: .18px; stroke-linecap: round; }
+.bp-person[data-condition="deceased"] .bp-pg { fill: #cbd2d8; color: #cbd2d8; }
+.bp-carried { fill: none; stroke-width: .13px; stroke-linecap: round; stroke-linejoin: round; }
+.bp-carried-confirmed { stroke: var(--marker-mint); }
+.bp-carried-reported { stroke: var(--marker-amber); }
+.bp-carried .bp-carried-back { fill: #123c92; stroke-width: .07px; }
+.bp-carried-reported .bp-carried-back { stroke-dasharray: .18 .12; }
+.bp-carried-more { font: 700 1px var(--font-cond); fill: var(--chalk); paint-order: stroke; stroke: #123c92; stroke-width: .35px; }
+.bp-chip-box { fill: #123c92; stroke: currentColor; stroke-width: .09px; }
+.bp-chip-confirmed { color: var(--marker-mint); }
+.bp-chip-reported { color: var(--marker-amber); }
+.bp-chip-text { font: 600 1.1px var(--font-cond); fill: currentColor; letter-spacing: .02em; }
+.bp-roomlist-person { display: block; grid-column: 1 / -1; font-size: 13px; line-height: 1.45; white-space: normal; color: var(--text); }
+.legend-reported-person { border: 1px dashed currentColor; border-radius: 50%; padding: 2px; box-sizing: content-box; }
+.legend-help { font-size: 12px; }
+.legend-help[open] { flex-basis: 100%; order: 3; }
+.legend-help summary { min-height: 44px; min-width: 44px; display: flex; align-items: center; cursor: pointer; color: var(--text-dim); }
+.legend-help summary::before { content: '+'; margin-right: 6px; }
+.legend-help[open] summary::before { content: '−'; }
+.legend-help p { margin: 0 0 10px; line-height: 1.5; }
+.person-condition { display: flex; align-items: center; gap: 6px; margin: 2px 0 2px 24px; color: var(--warn); }
+.person-condition-deceased { color: var(--danger); }
+.person-carried { list-style: none; margin: 4px 0 0 24px; padding: 0; }
+.person-carried li { display: flex; flex-wrap: wrap; gap: 3px 8px; font-size: 13px; }
+.person-carried li strong { font-family: inherit; font-size: 13px; }
+.person-carried li span { color: var(--text-dim); }
+
+.bp-carried-link { fill: none; stroke: var(--chalk); stroke-opacity: .75; stroke-width: .1px; }

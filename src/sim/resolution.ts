@@ -1,10 +1,12 @@
 import { actionEquipmentRequirements, effectiveTags, normalizedActionConsumption, operatorQualified, orderActionParticipants } from './equipment-requirements';
-import { casualtyActionIssue, incidentOfficerUnavailable } from './incident-consequences';
+import { casualtyActionIssue, incidentOfficerUnavailable, personCasualtyActionIssue } from './incident-consequences';
+import { selectedForceRisk, selectedProtection } from './force-risk';
 import { externalSupportActionIssue, remainingSupportWait } from './external-support';
 import { evaluateCapabilities } from './capabilities';
 import { getScenario } from './scenario-registry';
 import { hydrateStoryAction, storyActionTarget, storyPropsPublic, storyPublicScenario } from './story-people';
 import { currentStoryRoute, findStoryRoute } from './story-bindings';
+import { publicStoryMovementLegs } from './story-movement-v7';
 // Operation resolution: eligibility, contributors, score, probability and strain.
 // Pure functions of (state, run, scenario, action, squads). No randomness is drawn
 // here; the engine draws exactly one saved sample per committed decision and
@@ -21,6 +23,7 @@ import { currentStoryRoute, findStoryRoute } from './story-bindings';
 import type {
   BuiltLocation,
   Contributor,
+  ForceRiskPreview,
   GameState,
   Id,
   ItemDefinition,
@@ -281,9 +284,10 @@ export function practiceUnits(state: GameState, allEquipment = false): ItemUnit[
 
 /** Units a squad still holds in a run: its reservations minus consumables already used by committed decisions. */
 export function availableUnits(state: GameState, run: OperationRun, sq: SquadId): ItemUnit[] {
-  if (run.practice) return practiceUnits(state, getScenario(run.scenarioId)?.practiceOnly === true);
   const spent = new Set(run.history.flatMap((h) => h.unitsUsed));
-  return squadUnits(state, run.id, sq).filter((u) => ITEMS[u.itemId] && !(ITEMS[u.itemId].kind === 'consumable' && spent.has(u.id)));
+  if (run.practice) return practiceUnits(state, getScenario(run.scenarioId)?.practiceOnly === true).filter(unit => run.scenarioVersion < 7 || ITEMS[unit.itemId].kind !== 'consumable' || !spent.has(unit.id));
+  return squadUnits(state, run.id, sq).filter((u) => ITEMS[u.itemId] && !(ITEMS[u.itemId].kind === 'consumable' && spent.has(u.id))
+    && (run.scenarioVersion < 7 || u.expiresAt === null || u.expiresAt > state.department.clockHighWater));
 }
 
 const effOf = (u: ItemUnit) => {
@@ -367,6 +371,8 @@ export interface Arrival {
 }
 
 export interface Evaluation {
+  forceRisk?: ForceRiskPreview;
+  protectionUsed?: { itemId: Id; unitId: Id };
   action: ActionDefinition;
   /** Present only for opted-in story person targets; null means no known on-scene target. */
   publicTargetId?: Id | null;
@@ -590,6 +596,10 @@ export function evaluateAction(input: EvalInput): Evaluation {
     const casualtyIssue = casualtyActionIssue(run, scenario, action);
     if (casualtyIssue) return blank(casualtyIssue);
   }
+  if (scenario.version >= 7) {
+    const personIssue = personCasualtyActionIssue(run, scenario, action);
+    if (personIssue) return blank(personIssue);
+  }
   if (acting.length === 0) return blank('Choose an acting squad');
   for (const sq of [...acting, ...support]) if (!run.squadIds.includes(sq)) return blank(`${squadLabel(sq)} is not deployed`);
   if (scenario.version >= 4) for (const sq of [...acting, ...support]) {
@@ -602,7 +612,10 @@ export function evaluateAction(input: EvalInput): Evaluation {
   if (action.support && support.length > action.support.maxSquads) return blank(`At most ${action.support.maxSquads} support squad${action.support.maxSquads === 1 ? '' : 's'}`);
 
   const units: Record<SquadId, ItemUnit[]> = {} as Record<SquadId, ItemUnit[]>;
-  for (const sq of [...acting, ...support, ...run.squadIds]) units[sq] ??= input.unitOverride?.[sq] ?? availableUnits(state, run, sq).map((unit) => run.practice ? unit : ({ ...unit, condition: projectedCondition(state, unit, state.department.clockHighWater) }));
+  for (const sq of [...acting, ...support, ...run.squadIds]) {
+    units[sq] ??= input.unitOverride?.[sq] ?? availableUnits(state, run, sq).map((unit) => run.practice ? unit : ({ ...unit, condition: projectedCondition(state, unit, state.department.clockHighWater) }));
+    if (scenario.version >= 7) units[sq] = units[sq].filter(unit => unit.expiresAt === null || unit.expiresAt > state.department.clockHighWater);
+  }
   const taskOf = (sq: SquadId) => run.squadTasks.find((t) => t.squadId === sq) ?? { squadId: sq, positionId: '', task: '', stagingId: null, at: null };
   const actingTags = new Set<string>();
   for (const sq of acting) for (const t of tagsOf(units[sq].filter((u) => ITEMS[u.itemId] && operatorQualified(state, sq, action, ITEMS[u.itemId])))) actingTags.add(t);
@@ -1112,7 +1125,13 @@ export function evaluateAction(input: EvalInput): Evaluation {
       return unit ? [{ squad, unit }] : [];
     }).sort((a, b) => effOf(b.unit) - effOf(a.unit) || a.unit.id.localeCompare(b.unit.id));
     const tool = tools[0];
-    const route = routeAlongOpenings(built, centroidOf(built, binding.fromSpaceId), centroidOf(built, binding.toSpaceId), storyRoute, tool ? { effectiveness: effOf(tool.unit) } : null, !!action.keyholder && !!scenario.environment?.keyholder);
+    const routeClearance = scenario.version >= 7 && binding.profile === 'chair' ? 1.5 : 1;
+    const publicLegs = scenario.version >= 7 ? publicStoryMovementLegs(scenario, built, run, action) : null;
+    if (scenario.version >= 7 && !publicLegs) return blank('Account for the moving person and their destination before this move');
+    const legs = publicLegs ?? [{ label: 'Movement', from: centroidOf(built, binding.fromSpaceId), to: centroidOf(built, binding.toSpaceId) }];
+    const movementRoutes = legs.map(leg => routeAlongOpenings(built, leg.from, leg.to, storyRoute, tool ? { effectiveness: effOf(tool.unit) } : null, !!action.keyholder && !!scenario.environment?.keyholder, routeClearance));
+    if (scenario.version >= 7 && movementRoutes.some(route => !route.reachable)) return blank(binding.profile === 'chair' ? 'The mapped route does not leave enough clear space for the chair' : 'Furniture or the room layout blocks this movement route');
+    const route = movementRoutes.reduce((longest, next) => next.minutes > longest.minutes ? next : longest);
     const alreadyForced = new Set(travelledRoutes.flatMap(path => path.forced.map(door => door.openingId)));
     storySquadOpenedIds = [...alreadyForced];
     for (const door of route.forced) {
@@ -1122,7 +1141,7 @@ export function evaluateAction(input: EvalInput): Evaluation {
         contributors.push({ label: `${ITEMS[tool.unit.itemId]?.name ?? 'Entry tool'}: opens the ${door.label.toLowerCase()} in ${door.minutes} min`, value: 0, source: 'equipment', ref: tool.unit.itemId });
       } else contributors.push({ label: `Locked ${door.label.toLowerCase()}: ${door.minutes} min to open the movement route`, value: 0, source: 'space', ref: door.openingId });
     }
-    travelledRoutes.push(route);
+    travelledRoutes.push(...movementRoutes);
     const locks = new Map<Id, number>();
     for (const path of travelledRoutes) for (const door of path.forced) locks.set(door.openingId, Math.max(locks.get(door.openingId) ?? 0, door.minutes));
     // Squads and the story person move in parallel. Each physical lock is charged once.
@@ -1130,7 +1149,7 @@ export function evaluateAction(input: EvalInput): Evaluation {
     storyMovementMinutes = round1(Math.max(0, routeTravel - travel));
     travel = routeTravel;
     storyOpenedIds = [...locks.keys()];
-    overlays.push({ kind: 'path', points: route.points, label: `Movement route, ${round1(route.minutes)} min` });
+    for (const [i, movement] of movementRoutes.entries()) overlays.push({ kind: 'path', points: movement.points, label: scenario.version >= 7 ? `${legs[i].label} movement, ${round1(movement.minutes)} min` : `Movement route, ${round1(movement.minutes)} min` });
     details.push(`The movement route runs from ${spaceName(built, binding.fromSpaceId)} to ${spaceName(built, binding.toSpaceId)}.`);
   }
   if (travel >= 0.5) {
@@ -1143,6 +1162,7 @@ export function evaluateAction(input: EvalInput): Evaluation {
 
   // Contextual catalog rules are opt-in, leaving v1 action behavior unchanged.
   const capability = evaluateCapabilities({ state, run, scenario, action, built, acting, support, units, existingUses: consumption ?? [], radioDeficit,
+    participantIds: participants.map(officer => officer.id),
     visibility: Math.max(0, ...plans.map((p) => {
       const target = resolveSubject(scenario, built, run.knowledge, action.targetId, action.spatial?.subjectFactId);
       return signalBetween(built, p.stand.at, target.at, 'visual').transmission;
@@ -1200,9 +1220,17 @@ export function evaluateAction(input: EvalInput): Evaluation {
     allUses.push(u);
   }
 
+  const forceRisk = selectedForceRisk(scenario, action, allUses);
+  if (scenario.version >= 7 && action.forceProfile && !forceRisk) reasons.push('This force choice needs its matching serviceable equipment, qualified operator and complete supplies');
+  if (forceRisk) details.push(forceRisk.summary, 'Task success and harm are resolved separately. Carrying equipment alone causes no harm roll.');
+  const protectionUsed = selectedProtection(scenario, action, allUses);
+  if (protectionUsed) details.push(`${ITEMS[protectionUsed.itemId].name}: limits an authored serious officer injury to a wound; injury and medical transport may still be needed.`);
+
   const reason = reasons[0] ?? null;
   return {
     action,
+    ...(forceRisk ? { forceRisk } : {}),
+    ...(protectionUsed ? { protectionUsed } : {}),
     ...publicTarget,
     ...(storyOpenedIds ? { storyOpenedIds, storySquadOpenedIds, storyMovementMinutes, storyMovementOnlyUnitIds } : {}),
     acting,

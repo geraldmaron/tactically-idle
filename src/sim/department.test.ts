@@ -191,11 +191,14 @@ describe('candidates', () => {
     expect(s.department.funding).toBeCloseTo(before + 4 * 620, 3);
   });
 
-  it('targetRole guarantees that role and is deterministic from rngState', () => {
-    const a = ok(createInitialState(T0), { type: 'refreshCandidates', targetRole: 'medic' }, T0);
-    const b = ok(createInitialState(T0), { type: 'refreshCandidates', targetRole: 'medic' }, T0);
-    expect(a.candidates).toEqual(b.candidates);
-    expect(a.candidates.some((c) => c.officer.role === 'medic')).toBe(true);
+  it('ignores stale role-target fields and runs the same deterministic ordinary refresh', () => {
+    const start = createInitialState(T0);
+    const expected = ok(start, { type: 'refreshCandidates' }, T0);
+    for (const targetRole of ['comms', 'breach', 'medic', 'recon', 'lead', 'obsolete']) {
+      // Old open clients can send extra fields; they must neither bias nor refuse the search.
+      const legacyCommand = { type: 'refreshCandidates', targetRole } as const;
+      expect(ok(start, legacyCommand, T0)).toEqual(expected);
+    }
   });
 
   it('candidates show wage, signing cost, ratings, traits, certs and expiry', () => {
