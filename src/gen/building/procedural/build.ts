@@ -1,7 +1,8 @@
 import type { ExteriorZone, LocationDefinition, MapNote, Opening, PlacedObject, Room } from '../../../sim/types';
 import { exteriorRuns, finalizeRooms, roomPairs, type Run } from './assemble';
 import { distToPoly, lerp, sharedSegments, vec, type Rect } from './geom';
-import { type InteriorResult, chooseExterior, connectRooms, makeInteriorOpenings } from './openings';
+import { type FloorUnits, type InteriorResult, chooseExterior, connectRooms, makeInteriorOpenings } from './openings';
+import { unitsOf } from './units';
 import type { Rand } from './rand';
 import { GEN_VERSION, type FamilySpec, type PRoom } from './types';
 import { placeWindows } from './windows';
@@ -35,12 +36,22 @@ export function buildAttempt(spec: FamilySpec, familyId: string, seed: number, r
   const extDoors = chooseExterior(rooms, usable, policy, rng, interior.swings, frontSides, spec.backSides);
   if (!extDoors) return no('exterior_door');
 
+  // One root per floor: the front-door room downstairs, the stair head upstairs. Side and back doors
+  // open into rooms the tree must reach indoors; only a family's declared separate units (units.ts)
+  // grow from their own doors.
+  const unitRules = unitsOf(spec.id);
+  const keyOf = (id: string) => rooms.find((r) => r.id === id)?.seed.key;
   for (const f of [0, 1]) {
     const onFloor = rooms.filter((r) => r.floor === f);
     if (onFloor.length === 0) continue;
     const fp = pairs.filter((p) => onFloor.some((r) => r.id === p.a));
-    const roots = f === 0 ? extDoors.map((d) => d.room) : onFloor.filter((r) => r.seed.key === 'stair').map((r) => r.id);
-    const edges = connectRooms(onFloor, fp, roots, policy, rng, why);
+    const root = f === 0 ? extDoors[0].room : onFloor.find((r) => r.seed.key === 'stair')?.id;
+    if (!root) return no('connect_root');
+    const units: FloorUnits =
+      f === 0
+        ? { entries: extDoors.filter((d) => unitRules.some((u) => u.entry === keyOf(d.room))).map((d) => d.room), members: new Set(unitRules.flatMap((u) => u.members)) }
+        : { entries: [], members: new Set() };
+    const edges = connectRooms(onFloor, fp, root, units, policy, rng, why);
     if (!edges) return no('connect');
     if (!makeInteriorOpenings(edges, policy, rng, f, interior, why)) return no('interior_door');
   }

@@ -11,7 +11,8 @@ function pool(rng: Rand): RoomSeed[] {
   const master = baths.ensuite ? D.bedroom(150, { ensuite: baths.ensuite, required: true }) : D.bedroom(150, { required: true });
   return [
     D.living(rng.snapped(190, 250)),
-    D.kitchen(rng.snapped(120, 170)),
+    // The kitchen opens off the hall as well as the living room where the plan allows: a ring for squads.
+    D.kitchen(rng.snapped(120, 170), { hall: true }),
     master,
     D.bedroom(rng.snapped(110, 140), { required: true }),
     D.bedroom(rng.snapped(100, 130), { prob: 0.55, required: false }),
@@ -44,7 +45,9 @@ export const BUNGALOW: FamilySpec = {
     intDoor: { material: 'hollow_core', width: [2.5, 3] },
     openPairs: [['living', 'kitchen', 0.7], ['living', 'dining', 0.9], ['kitchen', 'dining', 0.9], ['hall', 'living', 0.45], ['hall', 'dining', 0.4]],
     windowStyle: HOME_WINDOWS,
-    loops: 1,
+    loops: 2,
+    loopsMin: 1,
+    throughOk: ['utility'],
   },
   name: (rng) => `${rng.int(12, 480)} ${rng.pick(STREET_NAMES)}`,
   plan(rng: Rand, why0) {

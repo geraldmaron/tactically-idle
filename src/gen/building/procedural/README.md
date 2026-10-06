@@ -40,7 +40,7 @@ Families: `bungalow`, `two_storey_house`, `semi_detached`, `apartment_unit`, `co
 
 `footprint.ts` (shapes) → `strips.ts` / `partition.ts` / `fill.ts` (hall strip, pieces, room assignment and
 slicing; `families/twofloor.ts` adds the aligned stair) → `assemble.ts` (ids, outlines, chamfer) →
-`openings.ts` (spanning tree + loops, doors, exterior doors) → `zones.ts` + `windows.ts` + `exterior.ts` (yards,
+`openings.ts` (exterior doors, one spanning tree per floor + loops, interior doors; `units.ts` separate units) → `zones.ts` + `windows.ts` + `exterior.ts` (yards,
 paths, fences, yard objects, notes, entries) → `generate.ts` (`furnishLocationV7`, `plausibility.ts`,
 `validateFurnishingsV7`, `validateLocation`; retry, fall back). `programme.ts` holds the room seeds, `types.ts` the family contract.
 
@@ -88,6 +88,24 @@ No `car`, `bin` or `gate` object type exists in `ObjectType`, so cars and bins a
 
 - Every room is reachable from an entry without passing through a bedroom or bathroom (an ensuite is reached
   from its bedroom); baths and WCs never open off a kitchen or dining room; bedrooms and living rooms have a window.
+- Indoors first: on each floor every room is reachable from the front-door room (behind `d_front`; upstairs,
+  the stair head) through interior openings alone. The outside is never a route. `openings.ts` grows one
+  spanning tree per floor from that root; back and side doors open into rooms the tree already reaches.
+  The only exception is a separate unit with its own street door, declared per family in `units.ts`
+  (motel guest rooms; the corner store's upstairs apartment with its street-door hall). `plausibility.ts`
+  `indoorOrphans` FAILs any draw that breaks this, and `../procedural-connectivity.test.ts` checks it
+  independently over 200 seeds per type, together with the game's router from every entry zone.
+- Loops: after the tree, `loopsMin`..`loops` extra doors between rooms people walk through (never stairs,
+  ensuites, two halls, or two leaf rooms); leaf rooms take a second door only when the family lists them in
+  `throughOk` (a utility between kitchen and hall, a meeting room off corridor and open office, a break
+  room onto the warehouse floor). A loop door that does not fit is dropped. Plans with 6+ rooms have a loop
+  in 46-59% of draws (authored families 37-62%); the connectivity test holds every type to 40-75%.
+- Exterior zones are walkable for the furnished squad router, which keeps 1 ft off zone edges and objects:
+  fences sit on the lot line, yard objects are islands 3 ft clear of zone edges and of each other, a porch,
+  step or loading bay leaves 3 ft of yard beyond and beside it or takes the strip, a 1 ft sliver beside a
+  stepped wing joins the side yard, the apron in front of parking is 5 ft deep, a chamfer leg is at least
+  4.5 ft, and an entry zone always faces the building through a door or window (it needs a staging point).
+  `../procedural-routing.test.ts` routes every entry zone to every room on the furnished form, 50 seeds.
 - Rooms: shorter side at least 6 ft (WC 4.5, hall and landing 3.5), aspect at most 3 (halls, stairs and
   corridors exempt), halls 3.5 to 5 ft wide in homes. Doors 2.5 ft inside, 3 ft outside, away from corners,
   swings clear of each other and of furniture.

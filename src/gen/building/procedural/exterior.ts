@@ -5,6 +5,15 @@ import type { Rand } from './rand';
 import type { ExteriorSpec, LotSpec, Plan } from './types';
 import type { ZoneSet } from './zones';
 
+/**
+ * Fence centerline distance from the lot edge. The squad router (furniture-path.ts) keeps 1 ft off
+ * zone edges and 1 ft off every object, so a fence 1.5 ft in left a 3.5 ft side passage with no walking
+ * line at all; on the lot line it costs only half a foot more than the lot edge itself.
+ */
+const FENCE_AT = 0.3;
+/** Clear margin round a yard object (see `spot`). */
+const ISLAND = 3;
+
 function object(id: string, type: PlacedObject['type'], inSpace: string, r: Rect, tags: string[] = [], blocks = false): PlacedObject {
   const t = blocks ? [...tags, 'blocks_space'] : tags;
   return { id, type, in: inSpace, x: r.x0, y: r.y0, w: r.x1 - r.x0, h: r.y1 - r.y0, rotation: 0, mechanical: t.length > 0 && type !== 'fence', tags: t };
@@ -32,20 +41,23 @@ export function exteriorObjects(
   const clearOfDoors = (r: Rect, d: number) => doorBoxes.every(({ mid }) => mid.x < r.x0 - d || mid.x > r.x1 + d || mid.y < r.y0 - d || mid.y > r.y1 + d);
   const free = (r: Rect, gap = 0.5) => taken.every((t) => !rectsOverlap(inflate(t, gap), r));
   const fpPoly = plan.footprintSq ?? plan.footprint;
+  /** Objects the router walks round (fences hug the lot line and are covered by the zone-edge margin). */
+  const solid: Rect[] = [];
   const addObj = (o: PlacedObject) => {
     objects.push(o);
     taken.push(R(o.x, o.y, o.x + o.w, o.y + o.h));
+    if (o.type !== 'fence' && o.type !== 'steps') solid.push(R(o.x, o.y, o.x + o.w, o.y + o.h));
   };
 
   // Fences along the lot edge, split where the zone changes.
   const fenceOk = new Set(['front', 'back', 'west', 'east']);
   if (ext.fences) {
     const lines: { vertical: boolean; at: number; lo: number; hi: number }[] = [
-      { vertical: true, at: 1.5, lo: 0, hi: lot.h },
-      { vertical: true, at: lot.w - 1.5, lo: 0, hi: lot.h },
-      { vertical: false, at: 1.5, lo: 0, hi: lot.w },
+      { vertical: true, at: FENCE_AT, lo: 0, hi: lot.h },
+      { vertical: true, at: lot.w - FENCE_AT, lo: 0, hi: lot.h },
+      { vertical: false, at: FENCE_AT, lo: 0, hi: lot.w },
     ];
-    if (ext.kind === 'warehouse') lines.push({ vertical: false, at: lot.h - 1.5, lo: 0, hi: lot.w });
+    if (ext.kind === 'warehouse') lines.push({ vertical: false, at: lot.h - FENCE_AT, lo: 0, hi: lot.w });
     let n = 0;
     for (const ln of lines) {
       let cur: { zone: string; start: number } | null = null;
@@ -92,7 +104,11 @@ export function exteriorObjects(
       const x = rng.snapped(bb.x0 + 0.5, bb.x1 - w - 0.5);
       const y = rng.snapped(bb.y0 + 0.5, bb.y1 - h - 0.5);
       const r = R(x, y, x + w, y + h);
-      if (!rectInsidePoly(r, z.polygon) || !free(r, 0.5) || !clearOfDoors(r, doorGap)) continue;
+      // Yard objects are islands: 3 ft from every zone edge (building walls, lot line, neighbouring
+      // zones) and from other solid objects. The squad router keeps 1 ft off walls and objects, so a
+      // 3 ft gap always leaves a walking line round the island; a shrub in a 5 ft apron or a tree
+      // beside a gate sealed the yard instead.
+      if (!rectInsidePoly(inflate(r, ISLAND), z.polygon) || !solid.every((t) => !rectsOverlap(inflate(t, ISLAND), r)) || !clearOfDoors(r, doorGap)) continue;
       const c = vec((x + x + w) / 2, (y + y + h) / 2);
       if (distToPoly(c, fpPoly) < wall + Math.min(w, h) / 2) continue;
       if (zs.at(c) !== zid) continue;
@@ -175,7 +191,11 @@ export function exteriorObjects(
   if (cars) putNote('n_cars', cls(cars.id) === 'driveway' ? 'Car in driveway' : 'Parked cars', cars.id, 'any');
 
   // Entries: where the front and any back or side door open out.
+  // A squad starts at a staging point of its entry zone, and the game derives those only from doors
+  // and windows (location.ts deriveStagingPoints), so an entry zone must face the building through one.
+  // The street or a common stairwell with no opening onto it would leave the squad nowhere to stand.
   const entries: string[] = [];
+  const faces = (zid: string) => openings.some((o) => o.type !== 'stair' && ((o.a === zid && !zoneById.has(o.b)) || (o.b === zid && !zoneById.has(o.a))));
   const addEntry = (zid: string) => {
     const z = zoneById.get(zid);
     if (!z) return;
@@ -183,7 +203,7 @@ export function exteriorObjects(
     if (cls(z.id) === 'porch' || cls(z.id) === 'back_step') {
       const link = zs.paths.find((p) => (p.a === z.id || p.b === z.id) && !['porch', 'back_step'].includes(cls(p.a === z.id ? p.b : p.a)));
       const other = link ? zoneById.get(link.a === z.id ? link.b : link.a) : undefined;
-      if (other) target = other;
+      if (other && faces(other.id)) target = other;
     }
     if (!entries.includes(target.id)) entries.push(target.id);
   };
@@ -194,9 +214,9 @@ export function exteriorObjects(
   }
   if (ext.kind === 'apartment') {
     const stair = zs.zones.find((z) => cls(z.id) === 'stairwell');
-    if (stair && !entries.includes(stair.id)) entries.push(stair.id);
+    if (stair && !entries.includes(stair.id) && faces(stair.id)) entries.push(stair.id);
   }
   const street = zs.zones.find((z) => cls(z.id) === 'street');
-  if (street && !entries.includes(street.id) && entries.length < 3 && ext.kind !== 'house' && ext.kind !== 'semi') entries.unshift(street.id);
+  if (street && !entries.includes(street.id) && faces(street.id) && entries.length < 3 && ext.kind !== 'house' && ext.kind !== 'semi') entries.unshift(street.id);
   return entries.length > 0 ? entries.slice(0, 3) : null;
 }

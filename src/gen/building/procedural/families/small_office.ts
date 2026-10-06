@@ -61,7 +61,8 @@ export const SMALL_OFFICE: FamilySpec = {
       reception: { glazing: [['double', 6], ['security', 4]], covering: [['none', 6], ['blinds', 4]] },
       wc: { glazing: [['single', 6], ['double', 4]], covering: [['blinds', 8], ['none', 2]] },
     },
-    loops: 1,
+    loops: 2,
+    throughOk: ['meeting', 'kitchenette'],
   },
   name: (rng) => `${rng.pick(FIRMS)} ${rng.pick(TRADES)}`,
   plan(rng: Rand, why0) {

@@ -66,7 +66,8 @@ export const WAREHOUSE: FamilySpec = {
       floor: { glazing: [['single', 6], ['double', 3], ['security', 1]], covering: [['none', 10]] },
       wc: { glazing: [['single', 6], ['double', 4]], covering: [['blinds', 8], ['none', 2]] },
     },
-    loops: 0,
+    loops: 2,
+    throughOk: ['break_room', 'locker_room'],
   },
   name: (rng) => `${rng.pick(OWNERS)} ${rng.pick(TRADES)}`,
   plan(rng: Rand, why0) {
