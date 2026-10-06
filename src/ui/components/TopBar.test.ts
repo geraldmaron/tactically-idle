@@ -97,13 +97,26 @@ describe('department status explanations', () => {
     expect(html).toContain('Completed operations can raise or lower public trust.');
   });
 
-  it('shows the recorded department level without inventing advancement requirements', () => {
+  it('shows service toward the next level and what that level opens', () => {
     const state = makeState();
-    state.department.level = 7;
+    state.department.level = 3;
+    state.department.service = 40;
     const html = render(createElement(DepartmentStatHelp, { g: state, topic: 'level' }));
-    expect(html).toContain('Level 7');
-    expect(html).toContain('separate from public trust and an individual officer');
-    expect(html).not.toMatch(/XP needed|next level|role="progressbar"/i);
+    expect(html).toContain('Level 3');
+    expect(html).toContain('<strong>10 of 30</strong> service toward level 4');
+    expect(html).toContain('Level 4 opens active armed incident (with a certified officer and the right equipment), protected rescue (with a certified officer).');
+    expect(html).toContain('Practice earns none.');
+    expect(html).toContain('separate from public trust and from an officer');
+  });
+
+  it('reads an older department without a service record from the level it holds', () => {
+    const state = makeState();
+    state.department.level = 10;
+    delete state.department.service;
+    const html = render(createElement(DepartmentStatHelp, { g: state, topic: 'level' }));
+    expect(html).toContain('Level 10');
+    expect(html).toContain('at the top level');
+    expect(html).not.toMatch(/service toward level/);
   });
 });
 

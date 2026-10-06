@@ -1,4 +1,5 @@
 import type { IncidentType } from '../sim/scenario-types';
+import { SCENARIO_TYPES_V11 } from './scenario-types-v11';
 import type { CertId, GameState, Id } from '../sim/types';
 
 /** What a department needs before a framework is dispatched to it (content v11 and later).
@@ -14,10 +15,13 @@ export interface UnlockRule {
 /** New or unknown frameworks are ordinary calls until a drop gives them a rule. */
 export const DEFAULT_UNLOCK: UnlockRule = { level: 1 };
 
-/** Department level does not progress yet (every campaign is level 3), so no rule asks
- * for more than level 3: a higher level would hide a framework for good. Specialist
- * calls are gated by certification and equipment instead. When level progression lands,
- * raise the high-risk levels here (the scale plan proposes 4 to 5). */
+/** The arc from scale plan §5. Levels are earned on live calls (sim/department-level.ts):
+ * - Levels 1-2: ordinary calls on homes, then shops (an alarm, a medical call).
+ * - Level 3: business calls and the first protective response.
+ * - Levels 4-5, with certification or equipment: armed incidents and protected rescue at 4,
+ *   hostage crises at 5.
+ * Saves from before levels were earned are lifted to the level of every framework they had
+ * already met or could already be sent to (save v7), so an update never takes a call away. */
 export const UNLOCK_RULES: Partial<Record<IncidentType, UnlockRule>> = {
   // Ordinary calls on homes: from the first day.
   welfare_check: { level: 1 },
@@ -27,16 +31,17 @@ export const UNLOCK_RULES: Partial<Record<IncidentType, UnlockRule>> = {
   disturbance: { level: 1 },
   false_intruder: { level: 1 },
   vacant_occupancy: { level: 1 },
+  // Shops and urgent help.
+  burglary: { level: 2 },
+  medical_complication: { level: 2 },
   // Business settings.
-  burglary: { level: 3 },
   business_robbery: { level: 3 },
-  medical_complication: { level: 3 },
   // The first protective response needs someone trained to talk a situation down.
   barricaded: { level: 3, anyCert: ['crisis_negotiation', 'deescalation'] },
   // Specialist calls.
-  active_armed_incident: { level: 3, anyCert: ['entry_team', 'less_lethal'], anyItem: ['ballistic_shield', 'light_protection', 'rescue_shield'] },
-  hostage_crisis: { level: 3, anyCert: ['crisis_negotiation'] },
-  protected_rescue: { level: 3, anyCert: ['vehicle_operations'] },
+  active_armed_incident: { level: 4, anyCert: ['entry_team', 'less_lethal'], anyItem: ['ballistic_shield', 'light_protection', 'rescue_shield'] },
+  protected_rescue: { level: 4, anyCert: ['vehicle_operations'] },
+  hostage_crisis: { level: 5, anyCert: ['crisis_negotiation'] },
 };
 
 export function unlockRule(type: IncidentType): UnlockRule {
@@ -81,4 +86,16 @@ export function unlockedTypes(state: UnlockState, types: readonly IncidentType[]
   const pool = plain.length ? plain : [...types];
   const lowest = Math.min(...pool.map((type) => unlockRule(type).level));
   return pool.filter((type) => unlockRule(type).level === lowest);
+}
+
+/** Player-facing names of the frameworks that first become possible at exactly `level`,
+ * with the capability each also needs. Names only, never call content. */
+export function frameworksOpeningAt(level: number): string[] {
+  return SCENARIO_TYPES_V11.flatMap((info) => {
+    const rule = unlockRule(info.type);
+    if (rule.level !== level) return [];
+    const parts = [rule.anyCert?.length ? 'a certified officer' : '', rule.anyItem?.length ? 'the right equipment' : ''].filter(Boolean);
+    const needs = parts.length ? ` (with ${parts.join(' and ')})` : '';
+    return [`${info.label.toLowerCase()}${needs}`];
+  });
 }

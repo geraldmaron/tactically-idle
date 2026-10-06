@@ -35,7 +35,9 @@ export async function playCasebook(page, { baseURL = 'http://127.0.0.1:5174', wi
   assert.ok(await locked.count() > 0, 'a new department has a locked framework');
   const lockedText = await locked.first().innerText();
   assert.match(lockedText, /Not yet dispatched to your department/);
-  assert.match(lockedText, /An officer certified in \w/);
+  assert.match(lockedText, /Department level \d|An officer certified in \w/);
+  // A new department starts at level 1, so the specialist rows also name the level they need.
+  assert.match(await row('protected_rescue').innerText(), /Department level 4[\s\S]*An officer certified in \w/);
   assert.equal(await locked.first().locator('h3, button, .casebook-where').count(), 0, 'locked rows carry no call content or practice');
   const before0 = await state();
   assert.equal(Object.keys(before0.casebook?.recipes ?? {}).length, 0, 'nothing discovered yet');
@@ -182,11 +184,13 @@ export async function playCasebook(page, { baseURL = 'http://127.0.0.1:5174', wi
       assert.equal(after.department.funding, before.department.funding);
       assert.equal(after.debriefs[0].fundingReward, 0); assert.equal(after.debriefs[0].devPointReward, 0);
       // Practice can improve a best result (marked as practice) and add a building type met only
-      // in practice, but never discovers a framework or a situation.
+      // in practice, but never discovers a framework or a situation, and pays no service.
       assert.deepEqual(after.casebook.frameworksSeen, before.casebook.frameworksSeen, `${label}: practice discovers no framework`);
       const situations = (book) => new Set(Object.entries(book.recipes).filter(([, entry]) => !entry.practiceOnly).map(([key]) => key.split('/').filter((_, i) => i !== 1 && i !== 3).join('/')));
       assert.deepEqual(situations(after.casebook), situations(before.casebook), `${label}: practice discovers no situation`);
       for (const [key, entry] of Object.entries(after.casebook.recipes)) if (!before.casebook.recipes[key]) assert.equal(entry.practiceOnly, true, `${label}: ${key} is marked practice-only`);
+      assert.equal(after.department.service, before.department.service, `${label}: practice earns no service`);
+      assert.equal(after.debriefs[0].serviceEarned, undefined);
       Object.assign(result, { type, familyId });
       if (result.floors === 2) upperChecked++;
     }

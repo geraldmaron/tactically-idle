@@ -169,7 +169,7 @@ describe('campaign identities and succession', () => {
     expect(migrated).not.toBeNull();
     expect(migrated.officers.off_chen).toEqual({ ...chen, identityId: 'person_001' });
     expect(migrated.personnel!.employedIdentityIds).toContain('person_007');
-    expect(migrated.saveVersion).toBe(6);
+    expect(migrated.saveVersion).toBe(7);
   });
   it('persists a brand-new campaign before the first tick and preserves unreadable save data', () => {
     const data = new Map<string, string>();

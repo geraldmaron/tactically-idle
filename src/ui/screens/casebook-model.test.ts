@@ -1,3 +1,4 @@
+import { unlockRule } from '../../content/unlocks';
 import { SCENARIO_TYPES_V11 } from '../../content/scenario-types-v11';
 import { describe, expect, it } from 'vitest';
 import { scenarioRecipe, scenarioSituationsV10, specForSituationV10 } from '../../content/scenario-recipes';
@@ -69,12 +70,15 @@ describe('casebook rows and the featured operation', () => {
     const state = createInitialState(T0, 3);
     const rows = casebookRows(state);
     const rescue = rows.find((row) => row.type === 'protected_rescue')!;
-    expect(rescue).toEqual({ type: 'protected_rescue', label: 'Protected rescue', settings: ['homes'], families: rescue.families, situationsTotal: 3, status: 'locked', missing: ['An officer certified in Vehicle operations'] });
-    expect(rows.filter((row) => row.status === 'unfound')).toHaveLength(SCENARIO_TYPES_V11.length - 1);
+    expect(rescue).toEqual({ type: 'protected_rescue', label: 'Protected rescue', settings: ['homes'], families: rescue.families, situationsTotal: 3, status: 'locked', missing: ['Department level 4', 'An officer certified in Vehicle operations'] });
+    // A new department is level 1: only the level-1 frameworks are dispatched yet.
+    const levelOne = SCENARIO_TYPES_V11.filter((info) => unlockRule(info.type).level === 1).map((info) => info.type);
+    expect(rows.filter((row) => row.status === 'unfound').map((row) => row.type)).toEqual(levelOne);
     for (const row of rows) expect(Object.keys(row).sort()).toEqual(row.status === 'locked' ? ['families', 'label', 'missing', 'settings', 'situationsTotal', 'status', 'type'] : ['families', 'label', 'settings', 'situationsTotal', 'status', 'type']);
     const html = renderToStaticMarkup(createElement(Casebook, { state, onPrepare: () => {} }));
     expect(html).toContain('Not yet dispatched to your department');
     expect(html).toContain('An officer certified in Vehicle operations');
+    expect(html).toContain('Department level 4');
     expect(html).toContain(`0 of ${SCENARIO_TYPES_V11.length}</strong> kinds of call found`);
     const rescueTitles = scenarioSituationsV10('protected_rescue').map((situation) => practiceScenarioV10('protected_rescue', 'harbour_court', situation, 7).scenario!.title);
     for (const title of rescueTitles) expect(html).not.toContain(title);
@@ -86,10 +90,11 @@ describe('casebook rows and the featured operation', () => {
     const rows = casebookRows(state);
     const domestic = rows.find((row) => row.type === 'domestic')!;
     expect(domestic).toMatchObject({ status: 'found', situationsTotal: 3, buildings: ['two_storey_house_g2'], situations: [{ variant: 1, pacings: [{ variant: 1, characteristic: 'ordinary' }] }] });
-    expect(casebookTotals(rows)).toMatchObject({ frameworksFound: 1, situationsFound: 1, locked: 1 });
+    const locked = SCENARIO_TYPES_V11.filter((info) => unlockRule(info.type).level > 1).map((info) => info.type);
+    expect(casebookTotals(rows)).toMatchObject({ frameworksFound: 1, situationsFound: 1, locked: locked.length });
     expect(filterRows(rows, { type: 'all', setting: 'businesses', status: 'all' }).every((row) => row.settings.includes('businesses'))).toBe(true);
     expect(filterRows(rows, { type: 'all', setting: 'all', status: 'found' }).map((row) => row.type)).toEqual(['domestic']);
-    expect(filterRows(rows, { type: 'all', setting: 'all', status: 'locked' }).map((row) => row.type)).toEqual(['protected_rescue']);
+    expect(filterRows(rows, { type: 'all', setting: 'all', status: 'locked' }).map((row) => row.type)).toEqual(locked);
     const html = renderToStaticMarkup(createElement(Casebook, { state, onPrepare: () => {} }));
     expect(html).toContain('1 of 3');
     expect(html).toContain('2 more situations to find');

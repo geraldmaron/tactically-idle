@@ -486,6 +486,9 @@ export interface Department {
   /** Standing, 0..100. Not spendable. */
   trust: number;
   level: number;
+  /** Total service earned on live calls (save v7; see department-level.ts). Absent in older
+   * saves, which count from the threshold of the level they hold. */
+  service?: number;
   rosterCap: number;
   trainingSlots: number;
   unlockedNodes: Id[];
@@ -730,6 +733,10 @@ export interface DebriefResult {
   trustDelta: number;
   fundingReward: number;
   devPointReward: number;
+  /** Department service this call earned (save v7; absent before and on practice). */
+  serviceEarned?: number;
+  /** The department level this call took the department to, when it rose. */
+  levelReached?: number;
   /** Material causes, most significant first. */
   causes: string[];
 }

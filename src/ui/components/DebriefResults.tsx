@@ -29,7 +29,9 @@ export function DebriefSummary({ debrief: d }: { debrief: DebriefResult }) {
         {d.fundingReward !== 0 && <Chip tone={d.fundingReward < 0 ? 'danger' : 'mint'} icon="cash">{signedMoney(d.fundingReward)} funding</Chip>}
         {d.trustDelta !== 0 && <Chip tone={d.trustDelta < 0 ? 'danger' : 'mint'} icon="shield">{signed(d.trustDelta, 1)} trust</Chip>}
         {d.devPointReward !== 0 && <Chip tone={d.devPointReward < 0 ? 'danger' : 'amber'} icon="chart">{signed(d.devPointReward)} dev point{Math.abs(d.devPointReward) === 1 ? '' : 's'}</Chip>}
-        {d.fundingReward === 0 && d.trustDelta === 0 && d.devPointReward === 0 && <span className="dim">No funding, trust or development-point change.</span>}
+        {!!d.serviceEarned && <Chip tone="mint" icon="medal">{signed(d.serviceEarned)} service</Chip>}
+        {d.levelReached !== undefined && <Chip tone="amber" icon="medal">Department level {d.levelReached}</Chip>}
+        {d.fundingReward === 0 && d.trustDelta === 0 && d.devPointReward === 0 && !d.serviceEarned && <span className="dim">No funding, trust or development-point change.</span>}
       </div>
     </section>}
   </Card>;

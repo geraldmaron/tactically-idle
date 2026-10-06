@@ -36,6 +36,7 @@ import { scenarioActions } from './scenario-types';
 import { getScenario } from './scenario-registry';
 import { INCIDENT_TUNING, PLAYER_ARC_CONTENT_VERSION, takeIncident } from './incidents';
 import { foldDebriefs } from './casebook';
+import { addService, departmentService, levelForService, serviceEarned } from './department-level';
 import { ITEMS } from '../content/items';
 import { legacyItemDefinition } from './compatibility/retirement';
 import { hashSeed, next } from './rng';
@@ -679,6 +680,11 @@ export function computeDebrief(state: GameState, run: OperationRun): DebriefResu
   const trustDelta = run.practice ? 0 : scenario.version >= 3 ? clamp(state.department.trust + proposedTrust, 0, 100) - state.department.trust : proposedTrust;
   const fundingReward = run.practice || run.responseFailure ? 0 : Math.round(scenario.rewards.funding * (0.4 + 0.6 * factor));
   const devPointReward = run.practice || run.responseFailure ? 0 : factor >= 0.6 && (!completion || completion.completionAchieved) ? scenario.rewards.devPoints : factor >= 0.4 ? Math.floor(scenario.rewards.devPoints / 2) : 0;
+  // Department service (save v7), shown on the debrief before it closes and added at close.
+  const service = !run.practice && state.contentVersion >= PLAYER_ARC_CONTENT_VERSION
+    ? serviceEarned({ practice: false, completed: completion?.completionAchieved ?? factor >= CAREER_FAVORABLE_AT, failed: !!run.responseFailure }, scenario.incident?.tier ?? 1)
+    : null;
+  const levelAfter = service === null ? state.department.level : Math.max(state.department.level, levelForService(departmentService(state.department) + service));
   const causes = debriefCauses(scenario, run, steps);
   const peopleOutcomes = scenario.version >= 4 ? civilianOutcomeViews(scenario, run) : [];
   const casualtySafety = scenario.version >= 7
@@ -713,6 +719,8 @@ export function computeDebrief(state: GameState, run: OperationRun): DebriefResu
     trustDelta,
     fundingReward,
     devPointReward,
+    ...(service !== null ? { serviceEarned: service } : {}),
+    ...(levelAfter > state.department.level ? { levelReached: levelAfter } : {}),
     causes: causes.slice(0, 7),
   };
 }
@@ -1040,6 +1048,7 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
       draft.department.funding += result.fundingReward;
       draft.department.devPoints += result.devPointReward;
       draft.department.trust = clamp(draft.department.trust + result.trustDelta, 0, 100);
+      if (result.serviceEarned !== undefined) addService(draft.department, result.serviceEarned);
       for (const oc of result.officerCondition) {
         const o = draft.officers[oc.officerId];
         if (!o) continue;

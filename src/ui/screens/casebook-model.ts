@@ -15,6 +15,7 @@ import { hashSeed } from '../../sim/rng';
 import { getScenario } from '../../sim/scenario-registry';
 import type { IncidentSpec, IncidentType, ScenarioDefinition } from '../../sim/scenario-types';
 import type { CasebookBest, GameState } from '../../sim/types';
+import { START_LEVEL } from '../../sim/department-level';
 import { CERT_LABEL } from '../components/labels';
 import { familyBlurb, familyLabel } from '../components/incident';
 
@@ -169,10 +170,10 @@ export function localDateKey(now: number): string {
 }
 
 /** Frameworks the featured operation draws from: the issued v10 catalog, limited to those
- * every department is sent from its first day (a plain level rule no campaign is below),
- * so the call is the same for everyone and never shows a locked framework's content. */
+ * every department is sent from its first day (a plain rule at the starting level), so the
+ * call is the same for everyone and never shows a locked framework's content. */
 export const FEATURED_TYPES: readonly IncidentType[] = SCENARIO_TYPES_V10
-  .filter((info) => { const rule = unlockRule(info.type); return !rule.anyCert?.length && !rule.anyItem?.length && rule.level <= 3; })
+  .filter((info) => { const rule = unlockRule(info.type); return !rule.anyCert?.length && !rule.anyItem?.length && rule.level <= START_LEVEL; })
   .map((info) => info.type);
 
 export interface FeaturedOperation {

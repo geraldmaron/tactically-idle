@@ -6,6 +6,9 @@ import type { GameState } from '../../sim/types';
 import { Icon } from '../icons';
 import { money, moneyFull, pad2, rate } from '../format';
 import { Sheet } from './Sheet';
+import { Meter } from './ui';
+import { levelProgress } from '../../sim/department-level';
+import { frameworksOpeningAt } from '../../content/unlocks';
 import './topbar-help.css';
 
 export type DepartmentStat = 'funding' | 'income' | 'trust' | 'level';
@@ -124,10 +127,20 @@ export function DepartmentStatHelp({ g, topic }: { g: GameState; topic: Departme
     <p>Public confidence in your department, on a scale from 0 to 100. Higher means more trust.</p>
     <p>Completed operations can raise or lower public trust.</p>
   </div>;
-  if (topic === 'level') return <div className="department-stat-help">
-    <p className="department-stat-value">Level {g.department.level}</p>
-    <p>The level recorded for your department in this campaign. It’s separate from public trust and an individual officer’s experience.</p>
-  </div>;
+  if (topic === 'level') {
+    const p = levelProgress(g.department);
+    const opens = frameworksOpeningAt(p.level + 1);
+    return <div className="department-stat-help">
+      <p className="department-stat-value">Level {p.level}</p>
+      <p>Your department earns service on every live call. Completing the agreed step on a harder call earns the most. Practice earns none.</p>
+      {p.next === null ? <p>Your department is at the top level.</p> : <>
+        <p><strong>{p.service - p.floor} of {p.next - p.floor}</strong> service toward level {p.level + 1}.</p>
+        <Meter value={(100 * (p.service - p.floor)) / (p.next - p.floor)} tone="mid" label="Service toward the next level" valueText={`${p.service - p.floor} of ${p.next - p.floor}`} />
+        {opens.length > 0 && <p>Level {p.level + 1} opens {opens.join(', ')}.</p>}
+      </>}
+      <p>Higher levels also bring harder calls, which pay more. Level is separate from public trust and from an officer’s experience.</p>
+    </div>;
+  }
   const perRealHour = (value: number) => `${moneyFull(value)} / real hour`;
   return <div className="department-stat-help">
     <p className={`department-stat-value${b.net < 0 ? ' tone-danger' : ' tone-mint'}`}>{b.net > 0 ? '+' : ''}{moneyFull(b.net)} <span>per real hour</span></p>
