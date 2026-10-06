@@ -3,6 +3,7 @@ import { SCENARIO_TYPES_V10, GENERATED_FAMILIES_V10 } from '../../content/scenar
 import { PROCEDURAL_FAMILIES, baseFamilyIdV7 } from '../building';
 import { buildLocation } from '../../sim/location';
 import { validateStoryBindings } from '../../sim/story-bindings';
+import { routeBetween } from '../../sim/spatial-factors';
 import { drawIncidentSpec, generateIncident, incidentId, parseIncidentId, INCIDENT_CONTENT_VERSION } from './index';
 
 describe('content v10 generated locations', () => {
@@ -47,5 +48,34 @@ describe('v10 hosting keeps the drawn situation', () => {
       expect([Number(played[2]), played[3]], `${type} ${familyId} ${buildingSeed}`).toEqual([drawn.variant, drawn.characteristic]);
     }
     expect(moved).toBeGreaterThan(0);
+  }, 300000);
+});
+
+describe('v10 generated buildings are playable by squads', () => {
+  /** The game's own squad router is the judge: every room of a furnished generated
+   * building, on every floor, and every story person's start room must be reachable
+   * from every entry. Authored buildings meet this; generated ones must too. */
+  it.each(PROCEDURAL_FAMILIES.map(f => f.id))('%s: every room is reachable by squads from every entry, furnished', familyId => {
+    for (let seed = 1; seed <= 12; seed++) {
+      const built = buildLocation(`${familyId}__furnished_v7`, seed);
+      for (const entry of built.location.entries) for (const room of built.location.rooms) {
+        // Squads move to staging points (resolution.ts), so a room counts as reachable
+        // when any of its staging points is.
+        const stands = built.derived.stagingPoints.filter(point => point.spaceId === room.id);
+        const starts = built.derived.stagingPoints.filter(point => point.spaceId === entry);
+        const reachable = starts.some(start => stands.some(point => routeBetween(built, entry, start.at, room.id, point.at, null).reachable));
+        expect(reachable, `${familyId} seed ${seed}: ${entry} -> ${room.id} (floor ${room.floor}, ${stands.length} stands)`).toBe(true);
+      }
+    }
+  }, 120000);
+  it('story people start where squads can reach them', () => {
+    for (const info of SCENARIO_TYPES_V10) for (const familyId of info.families.filter(f => PROCEDURAL_FAMILIES.some(p => p.id === f))) for (const buildingSeed of [2, 9]) {
+      const s = generateIncident({ type: info.type, familyId, buildingSeed, seed: buildingSeed * 17 + 1, tier: 2, contentVersion: 10 });
+      const built = buildLocation(s.locationFamilyId, s.locationSeed), entry = built.location.entries[0];
+      for (const person of Object.values(s.story?.bindings.people ?? {})) {
+        const reachable = built.derived.stagingPoints.filter(point => point.spaceId === entry).some(start => routeBetween(built, entry, start.at, person.initial.spaceId, person.initial.at, null).reachable);
+        expect(reachable, `${info.type} ${familyId} ${buildingSeed}: ${person.id} in ${person.initial.spaceId}`).toBe(true);
+      }
+    }
   }, 300000);
 });
