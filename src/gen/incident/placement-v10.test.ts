@@ -17,7 +17,8 @@ import type { BuiltLocation, Room } from '../../sim/types';
 import { generateIncident } from './index';
 import { PLACEMENT_AFFINITIES_V10, placeFrameworkPerson, placementKind, roomPhrase } from './placement-v10';
 
-const TYPES = Object.keys(GENERATED_FAMILIES_V10) as IncidentType[];
+// Role-to-room placement covers the eight compiled frameworks; the six authored stories keep their own scene rules.
+const TYPES = (Object.keys(GENERATED_FAMILIES_V10) as IncidentType[]).filter(type => ADDITIONAL_FRAMEWORK_BY_TYPE[type]);
 const spec = (type: IncidentType, familyId: string, i: number): IncidentSpec =>
   ({ type, familyId, buildingSeed: hashSeed(`${familyId}:${i}:placement-test`), seed: hashSeed(`${type}:${i}:placement-call`), tier: 2, contentVersion: 10 });
 const person = (s: ScenarioDefinition) => Object.values(s.story!.bindings.people)[0];
