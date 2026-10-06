@@ -14,6 +14,7 @@ import { applyWelfareVariation } from './welfare-variants';
 import { applyHighRiskVariation } from './high-risk-variants';
 import { applyCarePrivacyVariation } from './care-privacy-variants';
 import { hostsByLocation, storyArrivalsV10, storyRoomV10, withStoryArrival } from './hosts-v10';
+import { placeSettingRolesV11, selectSettingV11, settingModulesFor, SETTING_MODULE_MARK } from './setting-modules-v11';
 
 /** Compatible role/room selection precedes prose and mechanics. V1–V5 stay frozen. */
 export function withVersionSixStory(input: ScenarioDefinition, built: BuiltLocation): ScenarioDefinition {
@@ -34,8 +35,12 @@ function episodeAt(input: ScenarioDefinition, built: BuiltLocation): ScenarioDef
   if (!recipe) throw new Error('No episode binding recipe');
   const personRoom = spec.type === 'welfare_check' || spec.type === 'barricaded';
   const roomSeed = hashSeed(`${spec.seed}:${spec.buildingSeed}:${recipe.id}`);
+  // v11 frameworks with setting modules take their rooms from the module that fits the
+  // building (the retail module restates v10's register selector, so retail picks the same room).
+  const setting = settingModulesFor(spec) ? selectSettingV11(spec, built, built.location.entries[0], roomSeed) : null;
+  if (settingModulesFor(spec) && !setting) throw new Error('No setting module fits this building');
   // v10 replaces the authored room identity (requiredRoomId) with requirements on the real rooms.
-  const room = hostsByLocation(input) ? storyRoomV10(built, spec.type, recipe.room, roomSeed)
+  const room = setting ? setting.rooms[setting.module.scene] : hostsByLocation(input) ? storyRoomV10(built, spec.type, recipe.room, roomSeed)
     : selectStoryRoom(built, { ...recipe.room, ...(personRoom ? { types: ['living', 'bedroom'] as const } : {}), reachableFromSpaceId: built.location.entries[0] }, roomSeed);
   if (!room || !hostsByLocation(input) && recipe.requiredRoomId && room.id !== recipe.requiredRoomId) throw new Error('No compatible room for this episode');
   const shell = structuredClone(input);
@@ -43,11 +48,14 @@ function episodeAt(input: ScenarioDefinition, built: BuiltLocation): ScenarioDef
   delete shell.facts[0].person;
   const author = spec.type === 'welfare_check' ? withWelfareStory : spec.type === 'medical_complication' ? withAssistanceStory : spec.type === 'barricaded' ? withProtectiveStory : spec.type === 'active_armed_incident' ? withArmedStory : spec.type === 'hostage_crisis' ? withSignatureStory : withRescueStory;
   let s = attachStoryBindings(author(shell, built), built);
+  // Before variants and reported-location text, so every later layer sees the module's rooms.
+  if (setting) placeSettingRolesV11(s, built, setting);
   s.version = 6;
   s.environment = plan.environment;
   const module: AppliedEpisodeModule = spec.type === 'welfare_check' ? applyWelfareVariation(s, plan.variant)
     : spec.type === 'medical_complication' || spec.type === 'barricaded' ? applyCarePrivacyVariation(s, built, plan.variant)
       : applyHighRiskVariation(s, built, plan.variant);
+  if (setting) module.modules.push(`${SETTING_MODULE_MARK}${setting.module.id}`);
   // These old confirm-again beats have no reachable state after the v6 follow-through.
   const spent = new Set(['v5_welfare_correct_and_close', 'v5_sig_check_civilian_needs']);
   for (const stage of Object.values(s.stages)) stage.actions = stage.actions.filter(action => !spent.has(action.id));

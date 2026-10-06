@@ -48,11 +48,16 @@ export function bindEpisodeCast(s: ScenarioDefinition, replacements: Record<stri
  * selectors are never interpolated. Legacy v6–v8 retain their original binder.
  */
 export function bindScenarioText(input: ScenarioDefinition, replacements: Record<string, string>): ScenarioDefinition {
-  const s = structuredClone(input);
   const keys = Object.keys(replacements).sort((a, b) => b.length - a.length);
   const escape = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const pattern = new RegExp(`\\b(?:${keys.map(escape).join('|')})\\b`, 'g');
-  const text = (value: string) => keys.length ? value.replace(pattern, match => replacements[match]) : value;
+  return mapScenarioText(input, value => keys.length ? value.replace(pattern, match => replacements[match]) : value);
+}
+
+/** The same display-field traversal with any text function (v11 setting modules replace
+ * whole authored sentences, which word-boundary matching cannot end on punctuation). */
+export function mapScenarioText(input: ScenarioDefinition, text: (value: string) => string): ScenarioDefinition {
+  const s = structuredClone(input);
   const fields = <T extends object>(value: T, names: readonly (keyof T)[]) => {
     for (const key of names) if (typeof value[key] === 'string') value[key] = text(value[key] as string) as T[keyof T];
   };
