@@ -1,6 +1,6 @@
 # Phase 3: generated structures, incidents and threats
 
-**Status:** Implementation brief, 2026-10-02. Builds on [phase2-simulation.md](phase2-simulation.md) and [operation-model.md](operation-model.md). Distributions and weights below are **proposed game tuning**, not sourced statistics; each lives in one named table so it can be retuned or replaced with researched figures.
+**Status:** Implementation brief, 2026-10-02. Update 2026-10-06: generated buildings and role-based placement shipped as content v10; see [procedural-locations.md](procedural-locations.md). Builds on [phase2-simulation.md](phase2-simulation.md) and [operation-model.md](operation-model.md). Distributions and weights below are **proposed game tuning**, not sourced statistics; each lives in one named table so it can be retuned or replaced with researched figures.
 
 ## Owner intent (restated)
 

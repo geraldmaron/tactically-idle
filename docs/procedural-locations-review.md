@@ -237,3 +237,9 @@ kill %1
 plausibility ranges, issue count, rooms reachable only via outside, and a per-seed row. Re-run after any
 generator or furnishing change; a fixed build should show `detached` empty for every non-motel family and
 no `FAIL` entries under `plausibilityFails`.
+
+## Re-review after fixes (2026-10-06)
+
+Fixes merged since the first review: one indoor spanning tree per floor with explicit separate units and an orphan-room plausibility failure; interior loops (46–59% of plans with 6+ rooms); walkable yards; `furnishLocationG1` with per-room-kind kits and minimums; squad reachability gates.
+
+Re-captured sheets for seeds 1–24 of every type report 0 validation issues. Inspected bungalow, two-story house (upper floor), duplex, small office, bar or restaurant and warehouse: rooms join indoors, bedrooms have beds, WCs have no tubs, bars have tables and stool-lined counters, warehouse floors have racking, and office floors have desks and meeting tables. Remaining notes are soft warnings (areas slightly outside programme ranges, long corridors). Verdict: **ship** for all nine types, with the follow-ups listed in [procedural-locations.md](procedural-locations.md).
