@@ -36,7 +36,10 @@ import type { IntelLine } from './intel';
 import { handCarriedLoadout, SupportPreparation } from './SupportPreparation';
 import { IncidentBriefContext } from './SupportContext';
 import { preparationOptions } from './preparation-options';
+import { ChoiceRail } from '../components/ChoiceRail';
+import { toggleDeploymentSquad } from './operation-squads';
 import './preparation-options.css';
+import './operation-squads.css';
 
 export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel: () => void }) {
   const pageRef = useRef<HTMLDivElement>(null);
@@ -57,6 +60,8 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
   const replay = isReplayOnly(g, scenarioId);
 
   const [chosen, setChosen] = useState<SquadId[]>([]);
+  const [setupSquad, setSetupSquad] = useState<SquadId | null>(null);
+  const visibleSquad = setupSquad && chosen.includes(setupSquad) ? setupSquad : chosen[0] ?? null;
   const brief = useMemo(() => briefing(scenarioId, g, chosen), [scenarioId, g, chosen]);
   const [positions, setPositions] = useState<Partial<Record<SquadId, Id>>>({});
   const [optionalLoadouts, setLoadouts] = useState<Loadouts>({});
@@ -85,7 +90,7 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
     return next;
   }, [optionalLoadouts, chosen, radioPlan]);
 
-  const range = card?.squadRange ?? { min: 1, max: 4 };
+  const range = card?.squadRange ?? scenario?.squadRange ?? { min: 1, max: 3 };
   const defaultEntry = brief.entries[0]?.id;
   const floors = built.location.floors ?? 1;
   // Renderer props that may not be declared yet (floor tabs, environment overlay). Spread so this compiles either way.
@@ -163,7 +168,9 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
 
   const toggleSquad = (id: SquadId) => {
     setAutoUndo(null);
-    setChosen((c) => (c.includes(id) ? c.filter((x) => x !== id) : [...c, id].sort()));
+    const next = toggleDeploymentSquad(chosen, id, Math.min(range.max, 3));
+    setChosen(next);
+    if (next.includes(id)) setSetupSquad(id);
   };
 
   /** Quantity of an item already allocated to every chosen squad except `except`. */
@@ -245,6 +252,7 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
     setAutoUndo(null);
     setLoadouts((current) => ({ ...current, [fix.sid]: fix.plan.loadout }));
     setExplicit((current) => ({ ...current, [fix.sid]: fix.plan.explicit }));
+    setSetupSquad(fix.sid);
     touch(fix.sid);
     notify(`Equipped ${fix.plan.label} on squad ${fix.sid} from stock`, { tone: 'ok' });
   };
@@ -361,7 +369,7 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
                 const r = squadReadiness(g, s.id, now);
                 const on = chosen.includes(s.id);
                 return (
-                  <button key={s.id} type="button" className={`pickcard${on ? ' pickcard-on' : ''}`} aria-pressed={on} onClick={() => toggleSquad(s.id)}>
+                  <button key={s.id} type="button" className={`pickcard${on ? ' pickcard-on' : ''}`} aria-pressed={on} disabled={!on && range.max > 1 && chosen.length >= Math.min(range.max, 3)} onClick={() => toggleSquad(s.id)}>
                     <span className="squad-badge">{s.id}</span>
                     <span className="pickcard-main">
                       <strong>{s.name}</strong>
@@ -398,7 +406,18 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
         )}
       </Section>
 
-      {chosen.map((sid) => {
+      {chosen.length > 0 && <div className="prep-squad-workspace">
+        <ul className="prep-deployment-summary" aria-label="Selected squads and equipment">
+          {chosen.map(sid => {
+            const extra = Object.entries(loadouts[sid] ?? {}).filter(([item]) => item !== STANDARD_RADIO).reduce((total, [, qty]) => total + qty, 0);
+            const entry = brief.entries.find(entry => entry.id === (positions[sid] ?? defaultEntry));
+            return <li key={sid}><strong>Squad {sid} · {g.squads.find(squad => squad.id === sid)?.name}</strong><br />{entry?.label ?? 'Choose position'} · {practice ? 'Virtual practice gear' : `${loadouts[sid]?.[STANDARD_RADIO] ?? 0} radios + ${extra} extra item${extra === 1 ? '' : 's'}`}</li>;
+          })}
+        </ul>
+        {chosen.length > 1 && <><ChoiceRail value={visibleSquad!} kind="tabs" label="Squad setup" panelId="squad-setup-panel" onChange={setSetupSquad}
+          options={chosen.map(sid => ({ value: sid, label: `${sid} · ${g.squads.find(squad => squad.id === sid)?.name}`, accessibleLabel: `Set up squad ${sid}` }))} />
+          <p className="operation-squad-hint">Set up each squad here. Switching tabs keeps positions, quantities and exact equipment choices. All squads share your stock.</p></>}
+      {(visibleSquad ? [visibleSquad] : []).map((sid) => {
         const squad = g.squads.find((s) => s.id === sid)!;
         const hasPreset = Object.values(handCarriedLoadout(squad.loadoutPreset)).some((q) => q > 0);
         const visible = store.filter((o: StoreOption) => !o.item.supportOnly
@@ -411,7 +430,7 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
           .flat()
           .filter((u) => unitStateOf(u.condition, ITEMS[u.itemId].wear) !== 'Good' && unitStateOf(u.condition, ITEMS[u.itemId].wear) !== 'Worn');
         return (
-          <section key={sid} className="card prepsquad" aria-label={`Squad ${sid} setup`}>
+          <section key={sid} id="squad-setup-panel" role={chosen.length > 1 ? 'tabpanel' : undefined} aria-labelledby={chosen.length > 1 ? `squad-setup-panel-tab-${sid}` : undefined} className="card prepsquad" aria-label={`Squad ${sid} setup`}>
             <div className="prepsquad-head">
               <span className="squad-badge">{sid}</span>
               <strong>{squad.name}</strong>
@@ -472,7 +491,7 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
                   Staging point
                 </span>
                 <div className="stagelist" role="radiogroup" aria-labelledby={`stage-${sid}`}>
-                  <StageOption on={chosenPoint === null} icon="pin" title="No preference" sub="Squad holds the zone as a whole" onPick={() => setStaging((st) => omit(st, sid))} />
+                  <StageOption on={chosenPoint === null} icon="pin" title="No preference" sub="Use this zone’s default staging point" onPick={() => setStaging((st) => omit(st, sid))} />
                   {stageLabels(built, points).map(({ point, title, sub, icon }) => (
                     <StageOption key={point.id} on={chosenPoint === point.id} icon={icon} title={title} sub={sub} onPick={() => setStaging((st) => ({ ...st, [sid]: point.id }))} />
                   ))}
@@ -504,7 +523,7 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
                         <span className="lo-main">
                           <strong>{o.item.name}</strong>
                           <span className="lo-sub">
-                            <span className="dim">{standard ? practice ? `${qty} virtual radios · one per officer` : `${units.length}/${qty} ready · one per officer · automatic` : practice ? 'Virtual practice gear' : `${free} ready`}</span>
+                            <span className="dim">{standard ? practice ? `${qty} virtual radios · one per officer` : `${units.length}/${qty} ready · one per officer · automatic` : practice ? 'Virtual practice gear' : `${free} available to this squad${allocated(o.item.id, sid) ? ` · ${allocated(o.item.id, sid)} with other squads` : ''}`}</span>
                             {useful && !standard && (
                               <Chip tone="amber" icon="check">
                                 Useful
@@ -561,6 +580,7 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
           </section>
         );
       })}
+      </div>}
 
       <SupportPreparation state={g} now={now} cmd={cmd} built={built} onSelect={practice ? setPracticeSupport : setLiveSupport} />
 

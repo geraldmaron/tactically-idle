@@ -7,6 +7,7 @@ import { getScenario } from './scenario-registry';
 import { hydrateStoryAction, storyActionTarget, storyPropsPublic, storyPublicScenario } from './story-people';
 import { currentStoryRoute, findStoryRoute } from './story-bindings';
 import { publicStoryMovementLegs } from './story-movement-v7';
+import { joinCareRoutes, physicalCare } from './physical-care';
 // Operation resolution: eligibility, contributors, score, probability and strain.
 // Pure functions of (state, run, scenario, action, squads). No randomness is drawn
 // here; the engine draws exactly one saved sample per committed decision and
@@ -517,6 +518,8 @@ interface Plan {
 export function evaluateAction(input: EvalInput): Evaluation {
   const { state, built } = input;
   let { run, scenario, action } = input;
+  const care = physicalCare(scenario, built, run, action, state);
+  action = care.action;
   const followsPerson = scenario.version >= 5 && !!action.storyTargetPersonId;
   const target = followsPerson ? storyActionTarget(scenario, action, built, run) : null;
   if (target) {
@@ -589,6 +592,7 @@ export function evaluateAction(input: EvalInput): Evaluation {
   // ---- squad validity
   if (run.history.some((h) => h.stage === action.stage && h.actionId === action.id)) return blank('Already tried this stage');
   if (!conditionHolds(action.visibleWhen, run)) return blank('That option does not fit the current situation');
+  if (care.issue) return blank(care.issue);
   if (followsPerson && !target) return blank('The person has no known location at the scene');
   if (followsRoute && !storyRoute) return blank('There is no usable route for this move');
   if (scenario.version >= 4) {
@@ -682,7 +686,8 @@ export function evaluateAction(input: EvalInput): Evaluation {
   }
   for (const t of req.allTags ?? []) if (!actingHas(t)) reasons.push(`No ${tagNames([t])} in ${listSquads(acting)}'s loadout`);
 
-  const consumption = planConsumption(state, action, acting, support, units);
+  // A remote supporting squad cannot donate a kit to a medic at the patient.
+  const consumption = planConsumption(state, action, acting, care.fieldTarget ? [] : support, units);
   if (consumption === null) {
     for (const c of normalizedActionConsumption(action)) {
       if (!actingHas(c.tag) && !supportHas(c.tag)) {
@@ -707,6 +712,7 @@ export function evaluateAction(input: EvalInput): Evaluation {
   // ---- seat order: cert holders lead, then by effective aptitude
   const ordered = orderActionParticipants(pool, action);
   const participants = ordered.slice(0, Math.max(0, cap));
+  if (care.fieldTarget && !participants.some(officer => officer.certs.includes('advanced_first_aid'))) reasons.push('A qualified first aider must participate at the patient’s location');
   const benched = ordered.slice(participants.length);
   if (participants.length === 0 && !(scenario.version >= 4 && action.commandOnly)) {
     const sidelined = excluded[0];
@@ -848,6 +854,10 @@ export function evaluateAction(input: EvalInput): Evaluation {
     const tool = bestOf(units[sq], 'entry_tool');
     const toolArg = tool ? { effectiveness: effOf(tool) } : null;
     const routeTo = (spaceId: Id, at: Vec): Route => {
+      if (care.escort) return joinCareRoutes([
+        routeBetween(built, task.positionId, start.at, care.escort.start.spaceId, care.escort.start.at, toolArg),
+        routeBetween(built, care.escort.start.spaceId, care.escort.start.at, spaceId, at, toolArg),
+      ]);
       if (!followsSquadRoute || !routeBinding) return routeBetween(built, task.positionId, start.at, spaceId, at, toolArg);
       const openings = spaceId === action.targetId ? squadStoryRoutes?.get(sq) : findStoryRoute(built, task.positionId, spaceId, routeBinding.profile);
       return openings ? routeAlongOpenings(built, start.at, at, openings, toolArg)
@@ -857,6 +867,12 @@ export function evaluateAction(input: EvalInput): Evaluation {
     // candidate standing points
     let cands: { stand: Standing; zone: Id | null }[] = [];
     if (action.approach === 'none') cands = [{ stand: start, zone: null }];
+    else if (action.approach === 'path' && care.fieldTarget?.at) {
+      cands = [{ stand: { stagingId: null, at: care.fieldTarget.at, spaceId: care.fieldTarget.spaceId, openingId: null, kind: 'ground' }, zone: null }];
+    }
+    else if (action.approach === 'path' && care.escort?.target.at) {
+      cands = [{ stand: { stagingId: null, at: care.escort.target.at, spaceId: care.escort.target.spaceId, openingId: null, kind: 'ground' }, zone: null }];
+    }
     else if (action.approach === 'path' && target?.position && !('kind' in target.position)) {
       cands = [{ stand: { stagingId: null, at: target.position.at, spaceId: target.position.spaceId, openingId: null, kind: 'ground' }, zone: null }];
     }
@@ -1115,6 +1131,20 @@ export function evaluateAction(input: EvalInput): Evaluation {
   let storyOpenedIds: Id[] | undefined;
   let storySquadOpenedIds: Id[] | undefined;
   let storyMovementMinutes: number | undefined;
+  if (care.fieldTarget || care.escort) {
+    // Deduplicate the same physical lock across acting squads and persist it once.
+    const locks = new Map<Id, number>();
+    for (const route of travelledRoutes) for (const door of route.forced) locks.set(door.openingId, Math.max(locks.get(door.openingId) ?? 0, door.minutes));
+    travel = round1(Math.max(0, ...travelledRoutes.map(route => route.minutes - route.forceMinutes)) + [...locks.values()].reduce((sum, minutes) => sum + minutes, 0));
+    storyOpenedIds = storySquadOpenedIds = [...locks.keys()];
+    if (care.escort) details.push('The acting squad meets the medical crew outside and escorts it to the patient’s current known location.');
+  }
+  if (care.crewRoutes.length) {
+    const crewTravel = round1(care.crewRoutes.reduce((sum, route) => sum + route.minutes, 0));
+    travel = Math.max(travel, crewTravel);
+    for (const route of care.crewRoutes) if (route.points.length > 1) overlays.push({ kind: 'path', points: route.points, label: `Medical crew route, ${round1(route.minutes)} min` });
+    details.push(`The medical crew follows the patient’s known location; ${crewTravel} min of movement.`);
+  }
   if (followsSquadRoute) {
     // The ordinary squad plans already contain every actual passage and within-room movement.
     storySquadOpenedIds = [...new Set(travelledRoutes.flatMap(route => route.forced.map(door => door.openingId)))];

@@ -3,11 +3,16 @@ import type { CivilianOutcomeView, ForceOutcome, GameState, Id, OfficerCasualtyR
 import { protectedOfficerEffects, selectedForceRisk, selectedProtection, validForceOutcome } from './force-risk';
 import { ITEMS } from '../content/items';
 import type { Use } from './resolution';
+import { officerNeedingFieldCare } from './physical-care';
 
 /** Game recovery balance, in real hours; these are not medical predictions. */
 export const INJURY_RECOVERY_HOURS = { wounded: 2, serious: 8 } as const;
 const HOUR = 3_600_000;
 const CASUALTY_FLAGS = ['casualty:officers', 'casualty:untreated', 'casualty:awaiting_transport', 'casualty:evacuated'];
+
+function casualtySnapshot(person: OfficerCasualtyRecord): OfficerCasualtyRecord {
+  return { ...person, ...(person.position ? { position: { spaceId: person.position.spaceId, at: { ...person.position.at } } } : {}) };
+}
 
 export function incidentOfficerUnavailable(state: GameState, run: OperationRun, officerId: Id): boolean {
   if (run.scenarioVersion < 4) return false;
@@ -64,7 +69,7 @@ export function casualtyActionIssue(run: OperationRun, scenario: ScenarioDefinit
 }
 
 /** Applied once from matched effects. The existing action sample chooses the outcome band. */
-export function applyIncidentConsequences(state: GameState, run: OperationRun, scenario: ScenarioDefinition, effects: OutcomeEffect[], participantIds: Id[]): { records: OfficerCasualtyRecord[]; text: string[] } {
+export function applyIncidentConsequences(state: GameState, run: OperationRun, scenario: ScenarioDefinition, effects: OutcomeEffect[], participantIds: Id[], positions?: Record<Id, NonNullable<OfficerCasualtyRecord['position']>>): { records: OfficerCasualtyRecord[]; text: string[] } {
   const records: OfficerCasualtyRecord[] = [];
   const text: string[] = [];
   for (const effect of effects) {
@@ -74,23 +79,24 @@ export function applyIncidentConsequences(state: GameState, run: OperationRun, s
         const officer = state.officers[id];
         const { severity, label } = effect.officerHarm;
         const recoveryUntil = Math.max(officer.injury?.until ?? 0, state.department.clockHighWater + INJURY_RECOVERY_HOURS[severity] * HOUR);
-        const record: OfficerCasualtyRecord = { officerId: id, severity, label, at: run.clock, care: 'needed', recoveryUntil };
+        const position = scenario.version >= 7 ? positions?.[id] : undefined;
+        const record: OfficerCasualtyRecord = { officerId: id, severity, label, at: run.clock, care: 'needed', recoveryUntil,
+          ...(position ? { position: { spaceId: position.spaceId, at: { ...position.at } } } : {}) };
         run.officerCasualties ??= {};
         run.officerCasualties[id] = record;
         if (!run.practice) officer.injury = { label, until: recoveryUntil };
-        records.push({ ...record });
+        records.push(casualtySnapshot(record));
         text.push(`${officer.firstName} ${officer.surname} was ${severity === 'serious' ? 'seriously wounded' : 'wounded'} and is out of action. Medical care and transport are still needed.`);
       }
     }
     if (effect.officerCare === 'stabilize') {
-      const person = Object.values(run.officerCasualties ?? {}).filter(candidate => candidate.care === 'needed')
-        .sort((a, b) => Number(b.severity === 'serious') - Number(a.severity === 'serious') || a.at - b.at || a.officerId.localeCompare(b.officerId))[0];
+      const person = officerNeedingFieldCare(run);
       if (person) {
         person.care = 'stabilized';
         person.recoveryUntil = Math.min(person.recoveryUntil, Math.max(state.department.clockHighWater, Math.round(state.department.clockHighWater + (person.recoveryUntil - state.department.clockHighWater) * 0.8)));
         const officer = state.officers[person.officerId];
         if (!run.practice && officer) officer.injury = { label: person.label, until: person.recoveryUntil };
-        records.push({ ...person });
+        records.push(casualtySnapshot(person));
         text.push(`${officer?.firstName ?? ''} ${officer?.surname ?? person.officerId} received field care. They remain out of action and still need transport.`.trim());
       }
     }
@@ -98,7 +104,7 @@ export function applyIncidentConsequences(state: GameState, run: OperationRun, s
       const receiver = scenario.externalServices?.find(service => service.kind === 'medical' && effect.acceptSupport?.includes(service.id) && run.externalSupport?.[service.id]?.acceptedAt !== null && run.externalSupport?.[service.id]?.acceptedAt !== undefined);
       if (receiver) for (const person of Object.values(run.officerCasualties ?? {}).filter(candidate => candidate.care !== 'evacuated')) {
         person.care = 'evacuated';
-        records.push({ ...person });
+        records.push(casualtySnapshot(person));
         const officer = state.officers[person.officerId];
         text.push(`${receiver.label} accepted ${officer ? `${officer.firstName} ${officer.surname}` : person.officerId} for care. They remain unavailable for the rest of this operation.`);
       }
@@ -115,7 +121,13 @@ export function validCasualtyRecord(value: unknown): value is OfficerCasualtyRec
     && typeof person.label === 'string' && person.label.trim().length > 0
     && Number.isFinite(person.at) && person.at >= 0
     && ['needed', 'stabilized', 'evacuated'].includes(person.care)
+    && (person.position === undefined || !!person.position && typeof person.position.spaceId === 'string' && person.position.spaceId.length > 0
+      && !!person.position.at && Number.isFinite(person.position.at.x) && Number.isFinite(person.position.at.y))
     && Number.isFinite(person.recoveryUntil) && person.recoveryUntil >= 0;
+}
+
+function sameCasualtyPosition(a: OfficerCasualtyRecord, b: OfficerCasualtyRecord): boolean {
+  return a.position?.spaceId === b.position?.spaceId && a.position?.at.x === b.position?.at.x && a.position?.at.y === b.position?.at.y;
 }
 
 const PERSON_CASUALTY_FLAGS = ['casualty:people', 'casualty:person_fatality', 'casualty:person_needs_care'];
@@ -301,7 +313,7 @@ export function validIncidentConsequences(run: OperationRun, scenario: ScenarioD
         const harm = possible.find(effect => effect.officerHarm?.severity === event.severity && effect.officerHarm.label === event.label)?.officerHarm;
         if (!harm || event.at !== clock || event.care !== 'needed' || !decision.officerIds.includes(event.officerId)) return false;
       } else {
-        if (event.at !== before.at || event.severity !== before.severity || event.label !== before.label) return false;
+        if (event.at !== before.at || event.severity !== before.severity || event.label !== before.label || !sameCasualtyPosition(event, before)) return false;
         if (event.care === 'stabilized') {
           if (before.care !== 'needed' || !possible.some(effect => effect.officerCare === 'stabilize') || !decision.itemsConsumed.some(use => use.itemId === 'trauma_kit' && use.qty >= 1) && !run.practice) return false;
           if (event.recoveryUntil > before.recoveryUntil) return false;
@@ -316,7 +328,7 @@ export function validIncidentConsequences(run: OperationRun, scenario: ScenarioD
   if (Object.keys(expected).length !== Object.keys(run.officerCasualties).length) return false;
   for (const [id, person] of Object.entries(expected)) {
     const actual = run.officerCasualties[id];
-    if (!actual || (Object.keys(person) as (keyof OfficerCasualtyRecord)[]).some(key => actual[key] !== person[key])) return false;
+    if (!actual || !validCasualtyRecord(actual) || !sameCasualtyPosition(actual, person) || (Object.keys(person) as (keyof OfficerCasualtyRecord)[]).some(key => key !== 'position' && actual[key] !== person[key])) return false;
     if (!run.practice && person.recoveryUntil > now && (!officers[id]?.injury || officers[id].injury!.label !== person.label || officers[id].injury!.until !== person.recoveryUntil)) return false;
   }
   const flags = casualtyFlags(expected);

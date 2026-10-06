@@ -1,4 +1,5 @@
 import { reserveSupportVehicle, supportStartCheck } from './support-vehicles';
+import { isGenericResponseExit, responseFailurePlan } from './response-failure';
 import { availableStageContinuations, legacyStageNavigation } from './compatibility/legacy-choices';
 import { currentStoryPrompt } from './story-context';
 import { storyMovedAlongRoute } from './story-people';
@@ -119,7 +120,7 @@ export function validateScenario(s: ScenarioDefinition, built: BuiltLocation): s
       continue;
     }
     const always = st.actions.some((a) => !a.requires.certs && !a.requires.anyTags && !a.requires.allTags && !a.requires.minSquads && !a.requires.facts && !a.requires.flags && !a.requires.openings && !a.consumes);
-    if (!always) errs.push(`${s.id}: stage ${stage} has no always-available action`);
+    if (!always && s.version < 8) errs.push(`${s.id}: stage ${stage} has no always-available action`);
     for (const a of st.actions) {
       if (seen.has(a.id)) errs.push(`${s.id}: duplicate action id ${a.id}`);
       seen.add(a.id);
@@ -632,7 +633,10 @@ export function outcomeFactor(run: Pick<OperationRun, 'objective' | 'civilianSaf
 export function computeDebrief(state: GameState, run: OperationRun): DebriefResult | null {
   const scenario = getScenario(run.scenarioId);
   if (!scenario || !run.endingId) return null;
-  const ending = scenario.endings[run.endingId];
+  const authoredEnding = scenario.endings[run.endingId];
+  const ending = run.responseFailure && authoredEnding ? { ...authoredEnding, title: run.responseFailure.title,
+    summary: `Command received the failed-response report. ${run.responseFailure.reason} No rescue, medical acceptance or replacement team is implied.`, strain: 0, trustAdjust: -2,
+    disposition: 'unresolved' as const, completion: undefined, remainingTasks: run.responseFailure.remainingTasks } : authoredEnding;
   if (!ending) return null;
   const { steps } = traceRun(scenario, run);
   const completion = scenario.version >= 4 ? completionEvidence(scenario, run, ending) : undefined;
@@ -657,7 +661,7 @@ export function computeDebrief(state: GameState, run: OperationRun): DebriefResu
       const after = clamp(round1(o.stress + ending.strain), 0, 100);
       const before = clamp(round1(o.stress - (delta[id] ?? 0)), 0, 100);
       const share = Math.min(1, 0.4 + 0.3 * (participation[id] ?? 0));
-      const xp = Math.round(scenario.rewards.xp * share * (0.5 + 0.5 * factor));
+      const xp = run.responseFailure ? 0 : Math.round(scenario.rewards.xp * share * (0.5 + 0.5 * factor));
       officerCondition.push({ officerId: id, stressBefore: before, stressAfter: after, xpGained: xp });
     }
   }
@@ -670,10 +674,10 @@ export function computeDebrief(state: GameState, run: OperationRun): DebriefResu
     ({ resources, unitWear } = settleRun(probe, run.id, unitsUsedTotals(run), 0));
   }
 
-  const proposedTrust = run.practice ? 0 : Math.round(scenario.rewards.trust * (2 * factor - 1)) + ending.trustAdjust;
+  const proposedTrust = run.practice ? 0 : run.responseFailure ? -2 : Math.round(scenario.rewards.trust * (2 * factor - 1)) + ending.trustAdjust;
   const trustDelta = run.practice ? 0 : scenario.version >= 3 ? clamp(state.department.trust + proposedTrust, 0, 100) - state.department.trust : proposedTrust;
-  const fundingReward = run.practice ? 0 : Math.round(scenario.rewards.funding * (0.4 + 0.6 * factor));
-  const devPointReward = run.practice ? 0 : factor >= 0.6 && (!completion || completion.completionAchieved) ? scenario.rewards.devPoints : factor >= 0.4 ? Math.floor(scenario.rewards.devPoints / 2) : 0;
+  const fundingReward = run.practice || run.responseFailure ? 0 : Math.round(scenario.rewards.funding * (0.4 + 0.6 * factor));
+  const devPointReward = run.practice || run.responseFailure ? 0 : factor >= 0.6 && (!completion || completion.completionAchieved) ? scenario.rewards.devPoints : factor >= 0.4 ? Math.floor(scenario.rewards.devPoints / 2) : 0;
   const causes = debriefCauses(scenario, run, steps);
   const peopleOutcomes = scenario.version >= 4 ? civilianOutcomeViews(scenario, run) : [];
   const casualtySafety = scenario.version >= 7
@@ -693,8 +697,9 @@ export function computeDebrief(state: GameState, run: OperationRun): DebriefResu
     endingId: run.endingId,
     endingTitle: ending.title,
     decisions: decisionViewsFor(state, run, scenario, steps),
-    ...(scenario.version >= 3 ? { endingSummary: ending.summary } : {}),
+    ...(scenario.version >= 3 || run.responseFailure ? { endingSummary: ending.summary } : {}),
     ...completion,
+    ...(run.responseFailure ? { disposition: 'unresolved' as const, completionAchieved: false, remainingTasks: run.responseFailure.remainingTasks } : {}),
     ...(scenario.version >= 4 ? { officerCasualties: Object.values(run.officerCasualties ?? {}).map(person => ({ ...person })), civilianOutcomes: civilianOutcomeViews(scenario, run) } : {}),
     ...(scenario.version >= 7 ? { personCasualties: Object.values(run.personCasualties ?? {}).map(person => ({ ...person })) } : {}),
     practice: run.practice,
@@ -812,6 +817,17 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     return scenario ? continueStage(run, scenario, cmd.actionId, cmd.revision) : fail('Unknown scenario');
   },
 
+  endFailedResponse(draft, cmd) {
+    const run = draft.activeRun;
+    if (!run || run.id !== cmd.runId || run.revision !== cmd.revision) return fail('The response has changed; review its current options');
+    const plan = responseFailurePlan(draft);
+    if (!plan) return fail('A usable response or equipment delivery remains. Review the available choices.');
+    const { runId: _runId, consequence: _consequence, ...record } = plan;
+    run.responseFailure = record;
+    run.stage = 'debrief'; run.status = 'debrief'; run.endingId = FALLBACK_ENDING;
+    return { ok: true };
+  },
+
   decide(draft, cmd) {
     const run = draft.activeRun;
     if (!run) return fail('No operation in progress');
@@ -821,6 +837,7 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     const stage = run.stage;
     const action = scenario.stages[stage].actions.find((a) => a.id === cmd.actionId);
     if (!action) return fail('That option is not available at this stage');
+    if (scenario.version >= 8 && isGenericResponseExit(scenario, action)) return fail('This generic exit is retired. Continue the scene, or review the failed-response report if no usable plan remains.');
     // Older UI callers use decide; they receive the same free navigation semantics.
     if (legacyStageNavigation(scenario, action)) return continueStage(run, scenario, action.id, run.revision);
     if (cmd.actingSquadIds.some((s) => cmd.supportSquadIds.includes(s))) return fail('A squad cannot both act and support');
@@ -872,7 +889,9 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
       openingChanges.set(openingId, 'open');
     }
     const externalSupportEvents = scenario.version >= 4 ? applyExternalSupportEffects(run, scenario, matched) : undefined;
-    const incidentConsequences = scenario.version >= 4 ? applyIncidentConsequences(draft, run, scenario, protectedOfficerEffects(matched, ev.protectionUsed), ev.participantIds) : undefined;
+    const casualtyPositions = scenario.version >= 7 ? Object.fromEntries(ev.arrivals.flatMap(arrival =>
+      (draft.squads.find(squad => squad.id === arrival.squadId)?.officerIds ?? []).map(id => [id, { spaceId: arrival.spaceId, at: arrival.at }]))): undefined;
+    const incidentConsequences = scenario.version >= 4 ? applyIncidentConsequences(draft, run, scenario, protectedOfficerEffects(matched, ev.protectionUsed), ev.participantIds, casualtyPositions) : undefined;
     const personConsequences = scenario.version >= 7 ? applyPersonConsequences(run, scenario, action, band, matched, forceOutcome) : undefined;
 
     // positions, staging points and task labels
@@ -952,7 +971,7 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
       stageNote = `Ending: ${scenario.endings[finalEnding]?.title ?? finalEnding}.`;
     } else {
       if (nextStage) run.stage = nextStage;
-      if (run.stage === stage && !anyEligible(draft, run, scenario, builtFor(run.locationFamilyId, run.locationSeed, run.flags))) {
+      if (scenario.version < 8 && run.stage === stage && !anyEligible(draft, run, scenario, builtFor(run.locationFamilyId, run.locationSeed, run.flags))) {
         const idx = STAGES.indexOf(stage);
         if (idx < STAGES.length - 1) {
           run.stage = STAGES[idx + 1];

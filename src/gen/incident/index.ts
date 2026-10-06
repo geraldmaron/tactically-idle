@@ -5,6 +5,7 @@ import { withHighRiskVersionFourChoices } from './high-risk-v4';
 import { withVersionFiveStory } from './stories-v5';
 import { withVersionSixStory } from './stories-v6';
 import { withVersionSevenScene } from './scenes-v7';
+import { withVersionEightDecisions } from './decisions-v8';
 import { furnishedFamilyIdV7 } from '../building/furnishing-v7';
 import type { ActionDefinition, IncidentSpec, IncidentType, ScenarioDefinition } from '../../sim/scenario-types';
 import type { BuiltLocation, Room, StageId, Vec } from '../../sim/types';
@@ -34,9 +35,9 @@ export const INCIDENT_TYPES: IncidentTypeInfo[] = [
   { type: 'false_intruder', label: 'Uncertain occupancy', families: homes, squads: [1, 2] },
 ];
 /** Future calls use v6; issued v1–v5 seed tuples retain their original content. */
-export const INCIDENT_CONTENT_VERSION = 7;
+export const INCIDENT_CONTENT_VERSION = 8;
 /** Highest incident content version this build can read. */
-export const SUPPORTED_INCIDENT_CONTENT_VERSION = 7;
+export const SUPPORTED_INCIDENT_CONTENT_VERSION = 8;
 export const INCIDENT_TYPES_V2: IncidentTypeInfo[] = [
   ...INCIDENT_TYPES,
   { type: 'barricaded', label: 'Reported barricade', families: homes, squads: [1, 3] },
@@ -237,6 +238,7 @@ export function generateIncident(spec: IncidentSpec): ScenarioDefinition {
     rewards: { funding: Math.round((business ? 2100 : 1700) * multiplier), devPoints: Math.round(2 * multiplier), trust: Math.round(4 * multiplier), xp: Math.round(30 * multiplier) },
     incident: { ...spec },
   };
+  if (spec.contentVersion === 8) return withVersionEightDecisions(withVersionSevenScene(withVersionSixStory(scenario, built), built), built);
   if (spec.contentVersion === 7) return withVersionSevenScene(withVersionSixStory(scenario, built), built);
   if (spec.contentVersion === 6) return withVersionSixStory(scenario, built);
   if (spec.contentVersion === 5) return withVersionFiveStory(scenario, built);

@@ -638,6 +638,8 @@ export interface OperationRun {
   history: DecisionResolution[];
   /** Free compatibility navigation; separate from scored decisions and RNG samples. */
   stageContinuations?: StageContinuationRecord[];
+  /** Explicit failed-response report; never adds progress, an invented receiver or a random roll. */
+  responseFailure?: ResponseFailureRecord;
   /** Pre-decision deliveries at exterior staging; distinct from tactical outcomes. */
   resupplies?: { minutes: number; supportUnitId?: Id; allocations: { squadId: SquadId; unitIds: Id[] }[] }[];
   revision: number;
@@ -658,6 +660,17 @@ export interface StageContinuationRecord {
   revision: number;
   fromStage: 'adapt';
   toStage: 'resolve';
+}
+
+export interface ResponseFailureRecord {
+  version: 1;
+  revision: number;
+  atClock: number;
+  reasonKind: 'team_unavailable' | 'no_viable_approach';
+  title: string;
+  reason: string;
+  remainingTasks: string[];
+  progressRetained?: string[];
 }
 
 export interface StageContinuationView extends Omit<StageContinuationRecord, 'version'> {
@@ -699,6 +712,8 @@ export interface DebriefResult {
 
 export interface OfficerCasualtyRecord {
   officerId: Id;
+  /** V7+ injuries freeze the officer's actual location when hurt. Older records omit it. */
+  position?: { spaceId: Id; at: Vec };
   severity: 'wounded' | 'serious';
   label: string;
   /** Operation minute when this injury occurred. */
@@ -965,6 +980,7 @@ export type Command =
       practice: boolean;
     }
   | { type: 'cancelOperation' }
+  | { type: 'endFailedResponse'; runId: Id; revision: number }
   | { type: 'resupplyAction'; actionId: Id; actingSquadIds: SquadId[]; supportSquadIds: SquadId[] }
   | { type: 'decide'; actionId: Id; actingSquadIds: SquadId[]; supportSquadIds: SquadId[] }
   | { type: 'continueStage'; actionId: Id; revision: number }
@@ -1019,7 +1035,7 @@ export type DepartmentCommandType =
   | 'offerRetention'
   | 'markIncidentsSeen';
 
-export type OperationCommandType = 'startOperation' | 'cancelOperation' | 'decide' | 'continueStage' | 'closeDebrief';
+export type OperationCommandType = 'startOperation' | 'cancelOperation' | 'endFailedResponse' | 'decide' | 'continueStage' | 'closeDebrief';
 
 export interface SaveEnvelope {
   saveVersion: number;

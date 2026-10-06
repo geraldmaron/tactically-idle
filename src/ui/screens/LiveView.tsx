@@ -35,6 +35,7 @@ import type { IconName } from '../icons';
 import { feetInches, opMinutes, signed, sqft } from '../format';
 import { CONSEQUENCE_LABEL, OutcomeForecast } from './OperationFeedback';
 import { outcomePercentages, visibleDecisions } from './liveModels';
+import './operation-squads.css';
 
 // Presentational live-operation screen. OpsLive.tsx feeds it from the selectors.
 
@@ -52,6 +53,7 @@ export interface LiveViewProps {
   deployedSquads: Squad[];
   focusSquadId: SquadId | null;
   onFocusSquad: (id: SquadId) => void;
+  unavailableSquadIds?: SquadId[];
   officers: Officer[];
   actions: ActionView[];
   selectedAction: ActionView | null;
@@ -81,6 +83,8 @@ export interface LiveViewProps {
   feedback?: ReactNode;
   /** Named external services stay beside the next decision, separate from squad support. */
   supportContext?: ReactNode;
+  /** A response that can no longer progress is handled outside ordinary story choices. */
+  failedResponse?: ReactNode;
   /** Overlay sheets (action detail, room sheet, cancel confirm) rendered by the container. */
   children?: ReactNode;
 }
@@ -185,12 +189,19 @@ export function LiveView(p: LiveViewProps) {
       </div>
 
       {multi && (
-        <div className="live-squad-rail"><ChoiceRail value={focus?.id ?? p.deployedSquads[0].id} kind="tabs" label="Deployed squads" panelId="deployed-officer-strip" onChange={p.onFocusSquad} options={p.deployedSquads.map((s) => {
+        <div className="live-squad-rail operation-squad-focus">
+          <p className="picker-label">Squad for next decision</p>
+          <ChoiceRail value={focus?.id ?? p.deployedSquads[0].id} kind="tabs" label="Squad for next decision" panelId="deployed-officer-strip" onChange={p.onFocusSquad} options={p.deployedSquads.map((s) => {
             // In the field, readiness means members still fit for high-risk work (not deploy eligibility).
             const fit = s.officerIds.filter((id) => p.g.officers[id] && highRiskAllowed(p.g.officers[id]) && (!p.g.activeRun || !incidentOfficerUnavailable(p.g, p.g.activeRun, id))).length;
-            return { value: s.id, accessibleLabel: `Squad ${s.id}, ${s.name}, ${fit} of ${s.officerIds.length} fit`,
-              label: <><b>{s.id}</b><span className="squad-tab-name">{s.name}</span><span className="choice-rail-count">{fit}/{s.officerIds.length} fit</span></> };
-          })} /></div>
+            const task = p.squadTasks.find(task => task.squadId === s.id);
+            const location = p.spaces.find(space => space.id === task?.positionId)?.label ?? task?.positionId;
+            const unavailable = p.unavailableSquadIds?.includes(s.id) && s.id !== focus?.id;
+            return { value: s.id, disabled: unavailable, accessibleLabel: `Squad ${s.id}, ${s.name}, ${fit} of ${s.officerIds.length} fit${location ? `, at ${location}` : ''}${unavailable ? ', unavailable for this decision' : ''}`,
+              label: <><b>{s.id}</b><span className="squad-tab-detail"><span className="squad-tab-name">{s.name}</span>{location && <small>{location}</small>}</span><span className="choice-rail-count">{fit}/{s.officerIds.length} fit</span></> };
+          })} />
+          <p className="operation-squad-hint">{sel ? `Reviewing with ${sel.actingSquadIds.map(id => `Squad ${id}`).join(' + ')}. Switching here changes the acting squad.` : 'Choose who acts, then review a decision. Supporting squads are selected in the review.'}</p>
+        </div>
       )}
 
       <div className="strip" id="deployed-officer-strip" role={multi ? 'tabpanel' : undefined} aria-label={focus ? `${focus.name} officers` : 'Officers'}>
@@ -282,6 +293,7 @@ export function LiveView(p: LiveViewProps) {
           <Button variant="ghost" block onClick={() => p.onContinueStage?.(continuation.actionId)}>{continuation.label}</Button>
         </div>)}
       </section>}
+      {p.failedResponse}
       {p.children}
     </div>
   );
@@ -440,6 +452,13 @@ export interface ActionSheetProps {
   support: SquadId[];
   onToggleActing: (id: SquadId) => void;
   onToggleSupport: (id: SquadId) => void;
+  /** Limits and roles come from the actual authored action, not a guessed selection count. */
+  maxActing?: number;
+  squadPositions?: Partial<Record<SquadId, string>>;
+  unavailableActors?: SquadId[];
+  unavailableSupport?: SquadId[];
+  participantNames?: string[];
+  supportTask?: string | null;
   targetLabel: string | null;
   onConfirm: () => void;
   resupply?: ActionResupplyPlan | null;
@@ -454,6 +473,7 @@ export function ActionSheet(p: ActionSheetProps) {
   const availableAlternative = p.all.find((action) => action.id !== v?.id && action.eligible);
   const names = (ids: SquadId[]) => ids.map((id) => p.squads.find((s) => s.id === id)?.name ?? id);
   const squadText = p.acting.length === 0 ? 'No squad' : p.acting.length === 1 ? `Squad ${p.acting[0]}` : `Squads ${p.acting.join(' + ')}`;
+  const supportingText = p.support.length ? ` · Support: ${p.support.join(' + ')}` : '';
   const resupplyNames = p.resupply?.items.reduce((list, item) => {
     const row = list.find((entry) => entry.id === item.itemId);
     if (row) row.qty += 1;
@@ -471,7 +491,7 @@ export function ActionSheet(p: ActionSheetProps) {
       footer={
         v && (
           <div className="operation-commit">
-            <p className="operation-commit-meta">{squadText} · Est. {opMinutes(v.timeCost)}{v.suppliesRequired.length ? ` · ${v.suppliesRequired.reduce((total, item) => total + item.qty, 0)} supplies` : ' · No supplies'}</p>
+            <p className="operation-commit-meta">Acting: {squadText}{supportingText} · Est. {opMinutes(v.timeCost)}{v.suppliesRequired.length ? ` · ${v.suppliesRequired.reduce((total, item) => total + item.qty, 0)} supplies` : ' · No supplies'}</p>
             <Button variant="primary" block disabled={!v.eligible || p.acting.length === 0} onClick={p.onConfirm}>
               Confirm: {v.title}
             </Button>
@@ -482,6 +502,7 @@ export function ActionSheet(p: ActionSheetProps) {
       {v && (
         <div className="adetail">
           {p.onBackToSupport && <Button variant="ghost" onClick={p.onBackToSupport}>Back to care &amp; support</Button>}
+          {p.squads.length > 1 && <ActionSquadAssignment {...p} view={v} />}
           {v.summary !== v.outcomePreview.favorable && <p className="operation-action-summary">{v.summary}</p>}
           <div className="chips">
             <Chip icon="clock">Estimated time: {opMinutes(v.timeCost)}</Chip>
@@ -527,39 +548,6 @@ export function ActionSheet(p: ActionSheetProps) {
           {!v.eligible && availableAlternative && <div className="action-resolution-actions"><Button onClick={() => p.onPick(availableAlternative.id)}>Available now: {availableAlternative.title}</Button></div>}
           {!!p.resupplyMinutes && <p className="dim adetail-note">Stores deliveries: {p.resupplyMinutes} operation minutes. Equipment is reserved for this run.</p>}
           <OutcomeForecast action={v} />
-          {p.squads.length > 1 && (
-            <div className="pickers">
-              <div className="picker">
-                <span className="picker-label">
-                  <Icon name="people" size={14} />
-                  Squad taking action
-                </span>
-                <div className="chips">
-                  {p.squads.map((s) => (
-                    <button key={s.id} type="button" className={`pill${p.acting.includes(s.id) ? ' pill-on' : ''}`} aria-pressed={p.acting.includes(s.id)} onClick={() => p.onToggleActing(s.id)}>
-                      {s.id} · {s.name}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              {v.support && v.support.maxSquads > 0 && <div className="picker">
-                <span className="picker-label">
-                  <Icon name="handover" size={14} />
-                  Supporting squad ({v.support.minSquads > 0 ? `${v.support.minSquads} required` : 'optional'})
-                </span>
-                <div className="chips">
-                  {p.squads
-                    .filter((s) => !p.acting.includes(s.id))
-                    .map((s) => (
-                      <button key={s.id} type="button" className={`pill${p.support.includes(s.id) ? ' pill-on' : ''}`} aria-pressed={p.support.includes(s.id)} onClick={() => p.onToggleSupport(s.id)}>
-                        {s.id} · {s.name}
-                      </button>
-                    ))}
-                  {p.squads.every((s) => p.acting.includes(s.id)) && <span className="dim">No other squad to support.</span>}
-                </div>
-              </div>}
-            </div>
-          )}
           {p.all.length > 1 && <details className="operation-switcher"><summary>Compare another decision ({p.all.length})</summary>
             <div className="switcher" role="group" aria-label="Decisions">
               {p.all.map((a) => (
@@ -622,6 +610,50 @@ export function ActionSheet(p: ActionSheetProps) {
       )}
     </Sheet>
   );
+}
+
+/** Role choices precede costs/forecasts so the displayed commitment is easy to change. */
+export function ActionSquadAssignment(p: ActionSheetProps & { view: ActionView }) {
+  const maxActing = p.maxActing ?? 1;
+  const remaining = p.squads.filter(squad => !p.acting.includes(squad.id) && !p.support.includes(squad.id));
+  return <section className="pickers action-squad-assignment" aria-label="Squads for this decision">
+    <div className="picker">
+      <span className="picker-label"><Icon name="people" size={14} />Squad{maxActing > 1 ? 's' : ''} taking action</span>
+      <p className="operation-squad-hint">{maxActing === 1 ? 'Choose one squad. Selecting another replaces the current squad.' : `Choose up to ${maxActing} squads to act together.`}</p>
+      <div className="assignment-choices" role="group" aria-label="Acting squads">
+        {p.squads.map(squad => {
+          const selected = p.acting.includes(squad.id);
+          const unavailable = p.unavailableActors?.includes(squad.id);
+          const full = maxActing > 1 && p.acting.length >= maxActing;
+          return <button key={squad.id} type="button" className={`pill assignment-choice${selected ? ' pill-on' : ''}`} aria-pressed={selected}
+            disabled={!selected && (unavailable || full)} onClick={() => p.onToggleActing(squad.id)}>
+            <strong>{squad.id} · {squad.name}{selected ? ' · Acting' : ''}</strong>
+            {p.squadPositions?.[squad.id] && <small>At {p.squadPositions[squad.id]}</small>}
+            {unavailable && <small>All officers out of action</small>}
+          </button>;
+        })}
+      </div>
+    </div>
+    {!!p.view.support?.maxSquads && <div className="picker">
+      <span className="picker-label"><Icon name="handover" size={14} />Supporting squad ({p.view.support.minSquads > 0 ? `${p.view.support.minSquads} required` : 'optional'})</span>
+      {p.supportTask && <p className="operation-squad-hint">Support role: {p.supportTask}. Up to {p.view.support.maxSquads} squad{p.view.support.maxSquads === 1 ? '' : 's'}.</p>}
+      <div className="assignment-choices" role="group" aria-label="Supporting squads">
+        {p.squads.filter(squad => !p.acting.includes(squad.id)).map(squad => {
+          const selected = p.support.includes(squad.id);
+          const unavailable = p.unavailableSupport?.includes(squad.id);
+          return <button key={squad.id} type="button" className={`pill assignment-choice${selected ? ' pill-on' : ''}`} aria-pressed={selected}
+            disabled={!selected && (unavailable || p.support.length >= p.view.support!.maxSquads)} onClick={() => p.onToggleSupport(squad.id)}>
+            <strong>{squad.id} · {squad.name}{selected ? ' · Supporting' : ''}</strong>
+            {p.squadPositions?.[squad.id] && <small>At {p.squadPositions[squad.id]}</small>}
+            {unavailable && <small>All officers out of action</small>}
+          </button>;
+        })}
+        {p.squads.every(squad => p.acting.includes(squad.id)) && <span className="dim">No other squad to support.</span>}
+      </div>
+    </div>}
+    {p.participantNames && <p className="operation-squad-participants"><strong>Acting officers:</strong> {p.participantNames.length ? p.participantNames.join(', ') : 'No field participants'}</p>}
+    {remaining.length > 0 && <p className="operation-squad-hint">{remaining.map(squad => `Squad ${squad.id} remains${p.squadPositions?.[squad.id] ? ` at ${p.squadPositions[squad.id]}` : ' in position'}`).join('. ')}. All deployed squads still face time and strain.</p>}
+  </section>;
 }
 
 // ---------------------------------------------------------------- room sheet

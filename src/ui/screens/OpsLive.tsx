@@ -21,6 +21,9 @@ import { planActionResupply } from '../../sim/equipment-resupply';
 import { OperationFeedback, RESULT_LABEL } from './OperationFeedback';
 import { SupportContext } from './SupportContext';
 import { IncidentPeopleStatus } from '../components/IncidentPeople';
+import { incidentOfficerUnavailable } from '../../sim/incident-consequences';
+import { focusActingSquad, toggleActingSquad, toggleSupportingSquad } from './operation-squads';
+import { responseFailurePlan } from '../../sim/response-failure';
 
 interface Override {
   actionId: Id;
@@ -40,7 +43,7 @@ export function OpsLive() {
   const { act, notify } = useToast();
   const run = g.activeRun!;
 
-  const [focusId, setFocusId] = useState<SquadId | null>(null);
+  const [focusId, setFocusId] = useState<SquadId | null>(() => run.history.at(-1)?.actingSquadIds[0] ?? null);
   const [selection, setSelection] = useState<ActionSelection | null>(null);
   const [activeOfficer, setActiveOfficer] = useState<Id | null>(null);
   const [selSpace, setSelSpace] = useState<Id | null>(null);
@@ -50,6 +53,7 @@ export function OpsLive() {
   const [override, setOverride] = useState<Override | null>(null);
   const [lastChange, setLastChange] = useState<{ revision: number; spaceIds: Id[] } | null>(null);
   const [confirmCancel, setConfirmCancel] = useState(false);
+  const [confirmFailure, setConfirmFailure] = useState<{ runId: Id; revision: number } | null>(null);
   const [floor, setFloor] = useState(0);
 
   const built = currentBuilt(g);
@@ -59,6 +63,7 @@ export function OpsLive() {
   const progress = stageProgress(g);
   const continuations = stageContinuations(g);
   const decisions = decisionViews(g);
+  const failurePlan = responseFailurePlan(g);
   // Forecast the visibly focused squad without assigning supporting squads.
   // A decision remains unselected until the player opens it for review.
   const actions = actionViews(g, now, focus?.id ?? null).map((action) =>
@@ -81,6 +86,10 @@ export function OpsLive() {
 
   const card = cardFor(g, run.scenarioId, now);
   const scenario = useMemo(() => getScenario(run.scenarioId), [run.scenarioId]);
+  const actionRule = run.stage === 'debrief' ? undefined : scenario?.stages[run.stage].actions.find(action => action.id === view?.id);
+  const maxActing = actionRule?.maxActing ?? 1;
+  const availableMembers = (id: SquadId) => deployed.find(squad => squad.id === id)?.officerIds.filter(officerId => !!g.officers[officerId] && !incidentOfficerUnavailable(g, run, officerId)) ?? [];
+  const actorUnavailable = (id: SquadId) => !actionRule?.commandOnly && availableMembers(id).length === 0;
   const environment = scenario?.environment ?? null;
   const floors = built?.location.floors ?? 1;
   /** Floor a room or zone sits on (exterior zones are ground). */
@@ -120,13 +129,15 @@ export function OpsLive() {
 
   const toggleActing = (id: SquadId) => {
     if (!view) return;
-    const nextActing = acting.includes(id) ? acting.filter((x) => x !== id) : [...acting, id];
-    if (nextActing.length === 0) return;
-    setOverride({ actionId: view.id, acting: nextActing, support: support.filter((x) => !nextActing.includes(x)) });
+    if (!acting.includes(id) && actorUnavailable(id)) return;
+    const next = toggleActingSquad({ acting, support }, id, maxActing);
+    setOverride({ actionId: view.id, ...next });
+    setFocusId(next.acting.includes(id) ? id : next.acting[0]);
+    setActiveOfficer(null);
   };
   const toggleSupport = (id: SquadId) => {
-    if (!view?.support || acting.includes(id)) return;
-    setOverride({ actionId: view.id, acting, support: support.includes(id) ? support.filter((x) => x !== id) : [...support, id] });
+    if (!view?.support || (!support.includes(id) && availableMembers(id).length === 0)) return;
+    setOverride({ actionId: view.id, ...toggleSupportingSquad({ acting, support }, id, view.support.maxSquads) });
   };
 
   const confirm = () => {
@@ -161,9 +172,12 @@ export function OpsLive() {
       squadTasks={run.squadTasks}
       deployedSquads={deployed}
       focusSquadId={focus?.id ?? null}
+      unavailableSquadIds={view ? deployed.filter(squad => actorUnavailable(squad.id)).map(squad => squad.id) : []}
       onFocusSquad={(id) => {
+        if (view && actorUnavailable(id)) return;
         setFocusId(id);
         setActiveOfficer(null);
+        if (view) setOverride({ actionId: view.id, ...focusActingSquad({ acting, support }, id) });
       }}
       officers={officers}
       actions={actions}
@@ -208,6 +222,12 @@ export function OpsLive() {
         pickAction(id);
         setPanel('action');
       }} /></>}
+      failedResponse={failurePlan && <section className="call operation-failed-response" aria-label="Failed response">
+        <h3>{failurePlan.title}</h3>
+        <p>{failurePlan.reason}</p>
+        <p className="dim">Review the people and duties still unresolved before ending this response.</p>
+        <Button variant="danger" block onClick={() => { setPanel('none'); setConfirmFailure({ runId: failurePlan.runId, revision: failurePlan.revision }); }}>Review failed response</Button>
+      </section>}
     >
       <ActionSheet
         open={panel === 'action'}
@@ -221,6 +241,12 @@ export function OpsLive() {
         support={support}
         onToggleActing={toggleActing}
         onToggleSupport={toggleSupport}
+        maxActing={maxActing}
+        squadPositions={Object.fromEntries(run.squadTasks.map(task => [task.squadId, spaceById.get(task.positionId)?.label ?? task.positionId]))}
+        unavailableActors={deployed.filter(squad => actorUnavailable(squad.id)).map(squad => squad.id)}
+        unavailableSupport={deployed.filter(squad => availableMembers(squad.id).length === 0).map(squad => squad.id)}
+        participantNames={view?.officerIds.map(id => g.officers[id]).filter(officer => !!officer).map(officer => `${officer.firstName} ${officer.surname}`) ?? []}
+        supportTask={actionRule?.support ? `${actionRule.support.label} at ${spaceById.get(actionRule.support.coverSpaceId)?.label ?? actionRule.support.coverSpaceId}` : null}
         targetLabel={targetLabel}
         onConfirm={confirm}
         resupply={resupply}
@@ -250,6 +276,28 @@ export function OpsLive() {
           setPanel('action');
         }}
       />
+      <Sheet
+        open={!!failurePlan && confirmFailure?.runId === failurePlan.runId && confirmFailure.revision === failurePlan.revision}
+        onClose={() => setConfirmFailure(null)}
+        title={failurePlan?.title ?? 'Failed response'}
+        footer={<div className="row-actions">
+          <Button onClick={() => setConfirmFailure(null)}>Keep reviewing</Button>
+          <Button variant="danger" onClick={() => {
+            const current = getState().activeRun;
+            if (!failurePlan || confirmFailure?.runId !== failurePlan.runId || confirmFailure.revision !== failurePlan.revision || current?.id !== failurePlan.runId || current.revision !== failurePlan.revision || current.status !== 'active') return;
+            if (act({ type: 'endFailedResponse', runId: failurePlan.runId, revision: failurePlan.revision }).ok) setConfirmFailure(null);
+          }}>Confirm failed response</Button>
+        </div>}
+      >
+        {failurePlan && <>
+          <p>{failurePlan.reason}</p>
+          {!!failurePlan.progressRetained?.length && <><h3>Progress retained</h3><ul className="bullets">{failurePlan.progressRetained.map(item => <li key={item}>{item}</li>)}</ul></>}
+          <h3>Still unresolved</h3>
+          <ul className="bullets">{failurePlan.remainingTasks.map(task => <li key={task}>{task}</li>)}</ul>
+          <p>{failurePlan.consequence}</p>
+          <p className="note note-warn">{run.practice ? 'Practice: no lasting changes to funding, development points, officer experience or trust.' : 'No incident funding, development points or completion experience. Department trust falls by 2.'}</p>
+        </>}
+      </Sheet>
       <Sheet
         open={confirmCancel}
         onClose={() => setConfirmCancel(false)}

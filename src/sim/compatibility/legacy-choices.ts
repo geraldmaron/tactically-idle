@@ -1,5 +1,6 @@
 import type { ActionDefinition, ScenarioDefinition } from '../scenario-types';
 import type { BuiltLocation, OperationRun, StageContinuationView } from '../types';
+import { legacyCommitmentPresentation } from '../../gen/incident/decisions-v8/commitments';
 
 // Issued content stays byte-for-byte stable. Only these reviewed menu actions
 // can use the free navigation path; similar wording never grants an exemption.
@@ -60,6 +61,7 @@ export function validStageContinuations(run: OperationRun, scenario: ScenarioDef
 
 /** Public presentation only: no invented identities, hidden truth or changed outcomes. */
 export function legacyActionPresentation(scenario: ScenarioDefinition, action: ActionDefinition, built: BuiltLocation): Pick<ActionDefinition, 'title' | 'summary' | 'outcomePreview'> {
+  if (scenario.version >= 5 && scenario.version <= 7) return legacyCommitmentPresentation(scenario, action, built) ?? action;
   if (scenario.version !== 3 || scenario.incident?.contentVersion !== 3) return action;
   const target = [...built.location.rooms, ...built.location.zones].find(space => space.id === action.targetId)?.label.toLowerCase();
   const labels: Record<string, Pick<ActionDefinition, 'title' | 'summary' | 'outcomePreview'>> = {
