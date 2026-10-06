@@ -1,0 +1,84 @@
+.casebook-card { gap: 10px; }
+.casebook-card p,
+.featured-card p,
+.featured-card h3,
+.casebook-practice h3,
+.casebook-practice p { margin: 0; }
+.casebook-totals { font-size: 14px; color: var(--muted); overflow-wrap: anywhere; }
+.casebook-totals strong { color: var(--text); }
+.casebook-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 8px;
+}
+.casebook-filters .field select,
+.casebook-practice .field select { width: 100%; }
+.casebook-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.casebook-row {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+.casebook-row > .btn { align-self: flex-start; margin-top: 4px; }
+.casebook-locked { border-style: dashed; }
+.casebook-row-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+.casebook-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.casebook-name > .icon { flex: 0 0 auto; }
+.casebook-line { font-size: 14px; overflow-wrap: anywhere; }
+.casebook-needs { margin: 0; padding-left: 18px; font-size: 14px; color: var(--muted); }
+.casebook-practice {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 6px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+.casebook-where {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 14px;
+}
+.casebook-where > span { min-width: 0; overflow-wrap: anywhere; }
+.casebook-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 8px;
+}
+.casebook-actions > .btn { min-width: 0; }
+.featured-card { gap: 8px; }
+.featured-best {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.featured-best > .icon { flex: 0 0 auto; }
+.opboard-newkind { align-self: flex-start; }

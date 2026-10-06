@@ -18,11 +18,12 @@ import { maxDevelopmentTier } from './development-tiers';
 import { normalizeSquadArrangementState } from './squad-optimizer';
 import { validStageContinuations } from './compatibility/legacy-choices';
 import { validResponseFailure } from './response-failure';
+import { emptyCasebook, foldDebriefs, parseRecipeKey, recipeOfScenario } from './casebook';
 
 export const SAVE_KEY = 'tactically-idle/save';
 
 /** Version written by this build. Older versions pass through migrate(). */
-export const CURRENT_SAVE_VERSION = 5;
+export const CURRENT_SAVE_VERSION = 6;
 
 export interface SaveStorage {
   getItem(key: string): string | null;
@@ -115,6 +116,7 @@ function validDecisionView(d: unknown): boolean {
 
 function validIncident(c: unknown): c is Record<string, unknown> {
   if (!isObj(c) || !strings(c, ['id', 'type', 'familyId']) || !numbers(c, ['tier', 'arrivedAt', 'expiresAt']) || !isBool(c.seen)) return false;
+  if (c.newKind !== undefined && !isBool(c.newKind)) return false;
   const spec = parseIncidentId(c.id as string);
   return !!spec && spec.type === c.type && spec.familyId === c.familyId && spec.tier === c.tier;
 }
@@ -281,6 +283,14 @@ function validIncidents(s: Record<string, unknown>): boolean {
   return dep.nextIncidentAt === undefined || isNum(dep.nextIncidentAt);
 }
 
+/** Version 6: the casebook. Optional so hand-built states load; created on the first board draw. */
+function validCasebook(c: unknown): boolean {
+  if (c === undefined) return true;
+  if (!isObj(c) || !isStrings(c.frameworksSeen) || new Set(c.frameworksSeen).size !== c.frameworksSeen.length || !isObj(c.recipes)) return false;
+  return Object.entries(c.recipes).every(([key, entry]) => !!parseRecipeKey(key) && isObj(entry) && isNum(entry.firstAt)
+    && (entry.best === undefined || (isObj(entry.best) && isBool(entry.best.completed) && numbers(entry.best, ['objective', 'safety']) && isStr(entry.best.label))));
+}
+
 /** Basic structural validation: enough that the UI and sim cannot crash on a loaded state. */
 function validState(s: unknown, historical = false): s is GameState {
   if (!validBase(s, true, historical)) return false;
@@ -293,6 +303,7 @@ function validState(s: unknown, historical = false): s is GameState {
   const receipt = s.equipmentPowerUpgrade;
   if (receipt !== undefined && (!isObj(receipt) || !Number.isSafeInteger(receipt.retiredUnits) || (receipt.retiredUnits as number) < 1 || !Number.isSafeInteger(receipt.refundedFunding) || (receipt.refundedFunding as number) < 0 || (receipt.refundedFunding as number) > (receipt.retiredUnits as number) * 40 || (receipt.refundedFunding as number) % 40 !== 0)) return false;
   if (!validIncidents(s)) return false;
+  if (!validCasebook(s.casebook)) return false;
   if (s.report !== null && !validReport(s.report)) return false;
   if (s.activeRun !== null && !validRun(s.activeRun)) return false;
   if (s.activeRun !== null && !validIncidentConsequences(s.activeRun as unknown as OperationRun, getScenario((s.activeRun as unknown as OperationRun).scenarioId)!, s.officers as GameState['officers'], s.squads as GameState['squads'], (s.department as GameState['department']).clockHighWater)) return false;
@@ -395,6 +406,29 @@ function migrateV1toV2(env: SaveEnvelope): SaveEnvelope {
   return { ...env, saveVersion: 2, state: draft };
 }
 
+// ---------------------------------------------------------------- v5 -> v6
+
+/**
+ * v5 -> v6. The campaign gains a casebook built from what it already holds: frameworks
+ * on the board or in live debriefs count as seen (no card is badged retroactively), and
+ * each content v10+ live debrief adds its recipe with that best result. The board, an
+ * active run and the PRNG are untouched.
+ */
+function migrateV5toV6(env: SaveEnvelope): SaveEnvelope {
+  const draft = structuredClone(env.state) as GameState;
+  const at = Number.isFinite(env.savedAt) ? env.savedAt : draft.department.clockHighWater;
+  const book = emptyCasebook();
+  draft.casebook = book;
+  const seen = (type: string) => { if (!book.frameworksSeen.includes(type)) book.frameworksSeen.push(type); };
+  for (const report of [...(draft.debriefs ?? [])].reverse()) {
+    if (!report.practice) { const ref = recipeOfScenario(report.scenarioId); if (ref) seen(ref.type); }
+  }
+  for (const card of [...(draft.incidents ?? [])].reverse()) seen(card.type);
+  foldDebriefs(draft, at);
+  draft.saveVersion = 6;
+  return { ...env, saveVersion: 6, state: draft };
+}
+
 // ---------------------------------------------------------------- v2 -> v3
 
 /**
@@ -447,6 +481,9 @@ export function migrate(envelope: SaveEnvelope): SaveEnvelope | null {
           env = { ...env, saveVersion: 5, state };
           break;
         }
+        case 5:
+          env = migrateV5toV6(env);
+          break;
         default:
           return null;
       }

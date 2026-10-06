@@ -894,6 +894,32 @@ export interface IncidentCard {
   arrivedAt: number;
   expiresAt: number;
   seen: boolean;
+  /** Content v11+: the first card of a framework this campaign has ever been sent (save v6). */
+  newKind?: boolean;
+}
+
+/** Best result on a live call of one recipe. Ranked by completion, then objective, then safety. */
+export interface CasebookBest {
+  completed: boolean;
+  objective: number;
+  safety: number;
+  /** Debrief objective label, for example 'Resolved' or 'Partial progress'. */
+  label: string;
+}
+
+/** One recipe met on a live call: framework, situation, pacing and the building type used. */
+export interface CasebookRecipe {
+  /** Department clock time when a squad was first dispatched to this recipe. */
+  firstAt: number;
+  best?: CasebookBest;
+}
+
+/** Added in save v6. What the campaign has met, for the casebook and unseen-first draws. */
+export interface CasebookState {
+  /** Frameworks that have arrived on the board (content v11+ draws, plus migrated history), first arrival first. */
+  frameworksSeen: string[];
+  /** Recipes dispatched on live calls, keyed `type/buildingType/variant/pacing` (content v10+ only). */
+  recipes: Record<string, CasebookRecipe>;
 }
 
 /** Persisted campaign identities and first-seen builds. No departed officer can be recycled. */
@@ -911,6 +937,8 @@ export interface GameState {
   squadArrangement?: SquadArrangementState;
   /** Added in save v4. Optional only for historical test fixtures and migration inputs. */
   personnel?: PersonnelState;
+  /** Added in save v6. Optional only for historical test fixtures and migration inputs; created on the first board draw. */
+  casebook?: CasebookState;
   saveVersion: number;
   contentVersion: number;
   department: Department;

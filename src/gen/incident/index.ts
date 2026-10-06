@@ -427,10 +427,13 @@ function withVersionTwoCapabilities(s: ScenarioDefinition, built: BuiltLocation)
   return s;
 }
 
-/** Prefer unused v5 story types, then unused compatible locations, without extra RNG draws. */
+/** Prefer unused v5 story types, then unused compatible locations, without extra RNG draws.
+ * From v11 the pool is limited to the frameworks the department has unlocked
+ * (`unlockedTypes`, ignored when it would leave nothing) and each framework's slots are
+ * multiplied by `typeWeights` (unseen-first). Neither consumes PRNG draws. */
 export function drawIncidentSpec(
   rngState: number,
-  ctx: { level: number; trust: number; contentVersion: number; avoidFamilies?: readonly string[]; avoidTypes?: readonly IncidentType[]; recentTypes?: readonly IncidentType[] },
+  ctx: { level: number; trust: number; contentVersion: number; avoidFamilies?: readonly string[]; avoidTypes?: readonly IncidentType[]; recentTypes?: readonly IncidentType[]; unlockedTypes?: readonly IncidentType[]; typeWeights?: Partial<Record<IncidentType, number>> },
 ): { spec: IncidentSpec; state: number } {
   // Four slots for each everyday call, one for each specialist report. Keep the
   // v1 array and number of PRNG draws exactly unchanged for saved campaigns.
@@ -443,6 +446,10 @@ export function drawIncidentSpec(
     : ctx.contentVersion >= 2
     ? [...INCIDENT_TYPES.flatMap((type) => [type, type, type, type]), ...INCIDENT_TYPES_V2.slice(INCIDENT_TYPES.length)]
     : INCIDENT_TYPES;
+  if (ctx.contentVersion >= 11 && ctx.unlockedTypes) {
+    const open = pool.filter(type => ctx.unlockedTypes!.includes(type.type));
+    if (open.length) pool = open;
+  }
   if (ctx.contentVersion >= 5) {
     const unused = pool.filter(type => !ctx.avoidTypes?.includes(type.type));
     if (unused.length) pool = unused;
@@ -450,6 +457,10 @@ export function drawIncidentSpec(
       const lessRecent = pool.filter(type => !ctx.recentTypes?.includes(type.type));
       if (lessRecent.length) pool = lessRecent;
     }
+  }
+  if (ctx.contentVersion >= 11 && ctx.typeWeights) {
+    const weights = ctx.typeWeights;
+    pool = pool.flatMap(type => Array.from({ length: Math.min(8, Math.max(1, Math.round(weights[type.type] ?? 1))) }, () => type));
   }
   // Restrict v5 family selection to remaining stories before preferring a fresh
   // location. Otherwise a fresh home could repeat a story while a shop story is unused.
