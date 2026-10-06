@@ -402,6 +402,24 @@ function furnishedLocalPath(built: BuiltLocation, spaceId: Id, from: Vec, to: Ve
   return space ? findRoomPath(space, built.location.objects, from, to, clearance, built.location.geometry) : null;
 }
 
+/** The point itself when clear, else the first clear point on growing square rings of up to
+ * 2.5 ft, in a fixed order. No trigonometry, so every engine agrees. */
+function nearestClearPoint(built: BuiltLocation, spaceId: Id, point: Vec, clearance = 1): Vec | null {
+  const space = furnishedNavigationSpace(built, spaceId);
+  if (!space) return null;
+  const objects = built.location.objects, geometry = built.location.geometry;
+  if (roomPointClear(space, objects, point, clearance, geometry)) return point;
+  const steps = Math.ceil((clearance + 1.5) / 0.25);
+  for (let k = 1; k <= steps; k++) {
+    const r = k * 0.25;
+    for (const [dx, dy] of [[0, 1], [1, 0], [0, -1], [-1, 0], [1, 1], [1, -1], [-1, -1], [-1, 1]] as const) {
+      const candidate = { x: point.x + dx * r, y: point.y + dy * r };
+      if (roomPointClear(space, objects, candidate, clearance, geometry)) return candidate;
+    }
+  }
+  return null;
+}
+
 interface FurnishedCrossing { into: Id; from: Vec; to: Vec; points: Vec[]; minutes: number; forced: ForcedDoor | null }
 
 function furnishedCrossing(built: BuiltLocation, opening: Opening, fromSpace: Id, tool: { effectiveness: number } | null, keyed: boolean, clearance = 1): FurnishedCrossing | null {
@@ -457,6 +475,19 @@ function furnishedAdvance(dist: Distance, state: FurnishedState, path: Vec[], cr
 }
 
 function furnishedRouteBetween(built: BuiltLocation, fromSpace: Id, fromAt: Vec, toSpace: Id, toAt: Vec, tool: { effectiveness: number } | null, keyed: boolean): Route {
+  const direct = furnishedSearch(built, fromSpace, fromAt, toSpace, toAt, tool, keyed);
+  if (direct.reachable) return direct;
+  // A squad holding a window or door staging point, or aiming at one, can stand within a step
+  // of the clearance a route needs; furnished `_g2` layouts stranded squads this way. Squad
+  // routes start and end at the nearest clear point a step away instead. Person and chair moves
+  // (routeAlongOpenings) keep the strict check, and routes that work already are unchanged.
+  const start = nearestClearPoint(built, fromSpace, fromAt), end = nearestClearPoint(built, toSpace, toAt);
+  if (!start || !end || (start === fromAt && end === toAt)) return direct;
+  const route = furnishedSearch(built, fromSpace, start, toSpace, end, tool, keyed);
+  return route.reachable ? { ...route, points: [...(start === fromAt ? [] : [fromAt]), ...route.points, ...(end === toAt ? [] : [toAt])] } : direct;
+}
+
+function furnishedSearch(built: BuiltLocation, fromSpace: Id, fromAt: Vec, toSpace: Id, toAt: Vec, tool: { effectiveness: number } | null, keyed: boolean): Route {
   const states = new Map<string, FurnishedState>([['start', { spaceId: fromSpace, at: fromAt, minutes: 0, forceMinutes: 0, forced: [], points: [fromAt], lastOpeningId: null }]]);
   const open = new Set(['start']), dist = distOf(built);
   const openings = new Map(built.location.openings.map(opening => [opening.id, opening]));
