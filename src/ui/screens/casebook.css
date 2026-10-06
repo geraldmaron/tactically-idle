@@ -82,3 +82,5 @@
 }
 .featured-best > .icon { flex: 0 0 auto; }
 .opboard-newkind { align-self: flex-start; }
+/* Keep the situation count on one line on 320px phones; the name wraps instead. */
+.casebook-row-head > .chip { flex: none; white-space: nowrap; }
