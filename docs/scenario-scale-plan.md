@@ -1,6 +1,6 @@
 # Scenario scale plan: hundreds of operations, and how players meet them
 
-**Status:** Proposal, 2026-10-06. Builds on [procedural-locations.md](procedural-locations.md) (content v10) and [scenario-generation-v9.md](scenario-generation-v9.md).
+**Status:** Approved 2026-10-06 with the owner decisions below; implementation in progress. Builds on [procedural-locations.md](procedural-locations.md) (content v10) and [scenario-generation-v9.md](scenario-generation-v9.md).
 
 ## Brief
 
@@ -159,9 +159,9 @@ This turns the catalog into a long arc rather than a menu.
 3. **Unlocks hide content players never reach** [minor]. *Control:* progression is level- and capability-based on a curve tested with simulated campaigns. Practice in the casebook stays available for anything discovered.
 4. **Best alternative: fewer, deeper hand-authored stories.** These have higher quality per call, but they can't meet the stated scale or the replay value of generated places. The plan keeps hand-authored depth for the high-risk frameworks and uses the pipeline for ordinary calls.
 
-## Open decisions for the owner
+## Owner decisions (2026-10-06)
 
-1. Should unlocks gate by capability (certifications and equipment) as proposed, or by level only?
-2. Should the casebook replace the library outright, or sit beside it during the transition?
-3. Featured operation: include it, or keep the game strictly self-paced?
-4. Pipeline cadence: a release every 10–20 frameworks, or smaller, more frequent drops?
+1. **Unlocks gate by capability:** department certifications, equipment and level, as proposed in §5.
+2. **The casebook replaces the library** outright.
+3. **Featured operation: yes.** A date-seeded call that is the same for every player that day, with an optional local best result.
+4. **Smaller, more frequent drops:** about 3–5 new frameworks per content version, not 10–20. Phase D acceptance scales accordingly.
