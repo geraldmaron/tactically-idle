@@ -4,6 +4,7 @@ import type { ActionDefinition, FactDefinition, ScenarioDefinition, StageDefinit
 import type { BuiltLocation, StageId } from '../../sim/types';
 import { findStoryRoute, selectStoryRoom, storyPoint, validateStoryBindings } from '../../sim/story-bindings';
 import { hashSeed } from '../../sim/rng';
+import { placeFrameworkPerson, roomPhrase } from './placement-v10';
 
 /** Compile coherent reports into ordinary engine actions, facts, geometry and endings.
  * No special completion or UI bypass: the real dispatcher owns every outcome.
@@ -15,25 +16,40 @@ export function withAdditionalFramework(input: ScenarioDefinition, built: BuiltL
   const s = structuredClone(input), prefix = `v9_${spec.type}_`;
   const name = framework.name.split(' ')[0], personId = framework.personId;
   const outside = built.location.entries[0];
-  const room = selectStoryRoom(built, { floor: 0, types: built.location.setting === 'business' ? ['office', 'storage'] : ['living', 'bedroom'], reachableFromSpaceId: outside }, hashSeed(`${spec.seed}:scene-v9`));
+  const timeOfDay = spec.type === 'person_in_crisis' || spec.type === 'burglary' ? 'night' : 'day';
+  // v10 places the person by role-to-room affinity over the whole building, upstairs
+  // included, and some first reports name a plausible wrong room. v1-v9 keep their
+  // original ground-floor selection exactly, so issued calls regenerate unchanged.
+  const placed = spec.contentVersion >= 10 ? placeFrameworkPerson(built, { type: spec.type, variant, seed: spec.seed, buildingSeed: spec.buildingSeed, timeOfDay, arrivalId: outside }) : null;
+  if (spec.contentVersion >= 10 && !placed) throw new Error(`No compatible room for ${recipe.id}`);
+  const room = placed?.room ?? selectStoryRoom(built, { floor: 0, types: built.location.setting === 'business' ? ['office', 'storage'] : ['living', 'bedroom'], reachableFromSpaceId: outside }, hashSeed(`${spec.seed}:scene-v9`));
   if (!room) throw new Error(`No compatible room for ${recipe.id}`);
-  const at = storyPoint(built, room.id, spec.seed), exitAt = storyPoint(built, outside, spec.seed);
-  const route = findStoryRoute(built, room.id, outside, 'walking');
+  // Generated street frontages are often too tight for the 1 ft room clearance. Outside,
+  // v10 accepts half a foot rather than discarding an otherwise playable building.
+  const at = placed?.at ?? storyPoint(built, room.id, spec.seed), exitAt = storyPoint(built, outside, spec.seed) ?? (placed ? storyPoint(built, outside, spec.seed, [], .5) : null);
+  const route = placed?.route ?? findStoryRoute(built, room.id, outside, 'walking');
   if (!at || !exitAt || !route) throw new Error(`No physical route for ${recipe.id}`);
+  // Everything public (briefing, claim, map marker, where actions aim) uses the reported
+  // room; only checking the person in person reveals the actual one (story-people.ts).
+  const reportedRoom = placed?.reported.room ?? room, reportedAt = placed?.reported.at ?? built.derived.spaces[room.id].centroid;
+  const here = placed ? roomPhrase(built, reportedRoom) : `the ${room.label.toLowerCase()}`;
   const personFact = prefix + 'person', evidence = prefix + 'evidence', accounted = prefix + 'accounted', prepared = prefix + 'prepared', heard = prefix + 'heard', completed = prefix + 'completed';
   // Each situation fixes the answer to the disputed point, so its label would spoil
   // the check. Cards show the framework title; the ending explains what was found.
   s.version = 9; s.title = framework.title; s.variantLabel = framework.title; s.summary = framework.opening;
-  s.briefing = { dispatchReason: framework.dispatch, known: [framework.opening, `Dispatch places ${name} in the ${room.label.toLowerCase()} at ${built.location.name}.`], unknown: [framework.question],
+  s.briefing = { dispatchReason: framework.dispatch, known: [framework.opening, `Dispatch places ${name} in ${here} at ${built.location.name}.`], unknown: [framework.question],
     teamResponsibilities: ['Check the disputed point before acting on it.', 'Act only on what the people involved agree to.'] };
   s.pressure = { start: 5, perMinute: .1, threshold: 95, civilianPerMinute: 0 }; s.pressureLabel = 'Time to check accounts';
-  s.environment = { timeOfDay: spec.type === 'person_in_crisis' || spec.type === 'burglary' ? 'night' : 'day', weather: 'clear', power: 'on', clutter: 0, hazards: [], communication: 'normal', crowd: 0, keyholder: spec.type === 'burglary', plansOnFile: false, alarm: spec.type === 'burglary' ? 'triggered' : 'none', cctv: false };
-  const fact = (id: string, label: string, claim: string, truth: boolean, initial: FactDefinition['initial']): FactDefinition => ({
-    id, label, claim, truth, initial, spaceId: room.id, showWhenUnknown: false, markers: { reported: 'REPORTED', confirmed: 'CHECKED', disproved: 'CORRECTED' },
+  s.environment = { timeOfDay, weather: 'clear', power: 'on', clutter: 0, hazards: [], communication: 'normal', crowd: 0, keyholder: spec.type === 'burglary', plansOnFile: false, alarm: spec.type === 'burglary' ? 'triggered' : 'none', cctv: false };
+  const fact = (id: string, label: string, claim: string, truth: boolean, initial: FactDefinition['initial'], spaceId = room.id): FactDefinition => ({
+    id, label, claim, truth, initial, spaceId, showWhenUnknown: false, markers: { reported: 'REPORTED', confirmed: 'CHECKED', disproved: 'CORRECTED' },
     source: initial === 'reported' ? 'Dispatch report' : null, note: 'Check the account before choosing a response.', uncertainty: framework.question,
   });
   s.facts = [
-    { ...fact(personFact, framework.name, `${name} is reported in the ${room.label.toLowerCase()}.`, true, 'reported'), storyPersonId: personId, person: { label: framework.name, at, reportedAt: built.derived.spaces[room.id].centroid }, resolved: { confirmed: `${name} is accounted for.`, disproved: 'The location report needs correction.' } },
+    { ...fact(personFact, framework.name, `${name} is reported in ${here}.`, true, 'reported', reportedRoom.id), storyPersonId: personId,
+      // A wrong-room report has no exact point inside the reported room; the binding's
+      // initial anchor holds the actual position until the person is checked.
+      person: placed?.misreported ? { label: framework.name, reportedAt } : { label: framework.name, at, reportedAt }, resolved: { confirmed: `${name} is accounted for.`, disproved: 'The location report needs correction.' } },
     { ...fact(evidence, framework.factLabel, framework.claim, framework.truth[variant], 'unknown'), resolved: { confirmed: framework.confirmed, disproved: framework.disproved } },
   ];
   s.objectives = [{ id: accounted, label: 'Hear the first account' }, { id: evidence, label: 'Check the disputed point' }, { id: completed, label: 'Carry out the agreed next step' }];
@@ -42,9 +58,9 @@ export function withAdditionalFramework(input: ScenarioDefinition, built: BuiltL
   s.story = { archetypeId: spec.type, version: 3, episodeId: `${recipe.id}:${spec.seed}`, seed: spec.seed,
     episode: { variantId: `${spec.type}:${variant}`, modules: [spec.type, `report_variant_${variant}`], publicContext: [] },
     bindings: { rooms: { scene: { spaceId: room.id } }, exterior: { arrival: { spaceId: outside } }, routes: { exit: { fromSpaceId: room.id, toSpaceId: outside, openingIds: route, profile: 'walking' } },
-      people: { [personId]: { id: personId, label: framework.name, publicKind: 'civilian', locationFactId: personFact, initial: { spaceId: room.id, at }, reported: { spaceId: room.id, at: built.derived.spaces[room.id].centroid }, transitions: [] } }, props: {} } };
+      people: { [personId]: { id: personId, label: framework.name, publicKind: 'civilian', locationFactId: personFact, initial: { spaceId: room.id, at }, reported: { spaceId: reportedRoom.id, at: reportedAt }, transitions: [] } }, props: {} } };
   const make = (key: string, stage: StageId, title: string, kind: ActionDefinition['check']['kind']): ActionDefinition => ({
-    id: prefix + key, stage, title, summary: title, task: title, icon: kind === 'observation' ? 'search' : 'radio', targetId: room.id,
+    id: prefix + key, stage, title, summary: title, task: title, icon: kind === 'observation' ? 'search' : 'radio', targetId: reportedRoom.id,
     requires: { notFlags: [{ flag: `used:${prefix + key}`, reason: 'This step is already recorded' }] }, check: { kind, ratings: [{ key: kind === 'observation' ? 'awareness' : kind === 'coordination' ? 'coordination' : 'communication', weight: 1 }], difficulty: 28 + spec.tier * 3 },
     approach: 'none', observes: [], workload: { base: 3, perSqFt: 0 }, stressBase: 1,
     outcomes: { favorable: [], mixed: [], adverse: [] }, consequenceLevel: 'low',
@@ -59,15 +75,17 @@ export function withAdditionalFramework(input: ScenarioDefinition, built: BuiltL
   second.summary = 'Start with an independent source. It makes the later check more reliable but takes one extra minute.'; second.workload.base = 4;
   const verify = make('verify', 'adapt', framework.verify, 'contact');
   verify.summary = 'Check the disputed point in person. The answer decides which next step you can offer.';
-  verify.approach = 'path'; verify.observes = [room.id]; verify.storyTargetPersonId = personId;
+  const observes = placed?.misreported ? [reportedRoom.id, room.id] : [room.id];
+  verify.approach = 'path'; verify.observes = observes; verify.storyTargetPersonId = personId;
   verify.requires.flags = [{ flag: accounted, reason: 'Hear an account before checking the disputed point' }];
   verify.modifiers = [{ label: 'Independent source checked', when: { flags: [prepared] }, source: 'preparation', value: 6 }];
-  for (const band of ['favorable', 'mixed'] as const) verify.outcomes[band] = [{ reveal: [personFact, evidence], objective: 25, stage: 'resolve', text: `The team reaches ${name} and checks the disputed point.` }];
+  const reached = placed?.misreported ? `${name} is not in ${here}. The team finds ${name} in ${roomPhrase(built, room)} and checks the disputed point.` : `The team reaches ${name} and checks the disputed point.`;
+  for (const band of ['favorable', 'mixed'] as const) verify.outcomes[band] = [{ reveal: [personFact, evidence], objective: 25, stage: 'resolve', text: reached }];
   verify.outcomes.adverse = [{ extraMinutes: 2, text: 'The first check is inconclusive. Arrange a second check.' }];
   const retry = make('second_check', 'adapt', `Arrange a second check with ${name}`, 'contact');
   retry.requires.flags = [{ flag: `used:${verify.id}`, reason: 'First try the direct evidence check' }];
   retry.summary = 'Take longer to bring everyone together. If this check is also inconclusive, the question stays open.';
-  retry.approach = 'path'; retry.observes = [room.id]; retry.workload.base = 6;
+  retry.approach = 'path'; retry.observes = [...observes]; retry.workload.base = 6;
   retry.modifiers = structuredClone(verify.modifiers);
   retry.outcomes = structuredClone(verify.outcomes);
   retry.outcomes.adverse = [{ extraMinutes: 2, text: 'The second check is also inconclusive. The question stays open.' }];
