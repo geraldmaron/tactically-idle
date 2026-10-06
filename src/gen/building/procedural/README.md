@@ -1,15 +1,19 @@
 # Procedural building generator
 
 `generatePair(familyId, seed)` returns a validated `LocationDefinition` (`plain`) and the same plan
-after the game's furniture solver, `furnishLocationV7` (`furnished`); `generateBuilding` returns the
+after the generated-building furniture solver, `furnishLocationG1` (`furnished`, `../furnishing-g1.ts`); `generateBuilding` returns the
 plain one. Same `(familyId, seed)` gives a deep-equal building. Randomness is `src/sim/rng.ts` only,
 seeded from `hashSeed(`${familyId}:${seed}`)`; each draw that fails a stage is dropped and the next one
 is taken from the same stream (40 draws), then the family's known-good `fallbackSeed` stream (120 draws,
 since its furnishing hashes the reported seed). A draw is accepted only when the plan passes the
-structural `plausibilityReport`, `furnishLocationV7(plan)` passes the full report (a bed in every
-bedroom, a toilet in every bath, free floor) and `validateFurnishingsV7`, and both forms have zero
-`validateLocation` issues, warnings included. The plan itself holds no room furniture: one furniture
-system, `furnishLocationV7`, furnishes every building the player sees.
+structural `plausibilityReport`, `furnishLocationG1(plan)` passes the full report (a bed in every
+bedroom, a toilet in every bath, free floor), `validateFurnishingsG1` (v7's clearance, anchoring and
+route checks, plus every door, doorway and stair approach clear and joined, so furniture never cuts a
+squad route) and `furnishingShortfallsG1` (each room kind's essentials: no tub in a half bath, seats at
+the bar, racking on a warehouse floor), and both forms have zero `validateLocation` issues, warnings
+included. The plan itself holds no room furniture: one furniture system, `furnishLocationG1`,
+furnishes every building the player sees. It runs v7's solver (`RoomPlan` in `../furnishing-v7.ts`)
+with its own catalog (`../furnishing-definitions-g1.ts`); authored buildings keep `furnishLocationV7`.
 
 The game reaches these generators as nine public building types, `<family>_g1`
 (`PROCEDURAL_FAMILIES` in `../index.ts`), and their furnished forms `<family>_g1__furnished_v7`.
@@ -20,7 +24,7 @@ Issued incidents and saves rebuild a building from `(familyId, seed)` alone, so 
 released generation is part of the save format. `../procedural-g1-fingerprints.json` holds SHA-256
 fingerprints of `generateBuilding` for each `_g1` type, plain and furnished, and
 `../procedural-g1-fingerprints.test.ts` checks them. Any change that alters these outputs, in this
-directory, in `furnishing-v7.ts`, or in the validators and geometry they call, must ship as new `_g2`
+directory, in `furnishing-g1.ts`, `furnishing-definitions-g1.ts`, `furnishing-v7.ts`, or in the validators and geometry they call, must ship as new `_g2`
 types alongside `_g1` (bump `GENERATION` for the new types and keep the old code path for `_g1`).
 Never re-baseline the `_g1` fingerprints after release.
 
@@ -41,8 +45,8 @@ Families: `bungalow`, `two_storey_house`, `semi_detached`, `apartment_unit`, `co
 `footprint.ts` (shapes) → `strips.ts` / `partition.ts` / `fill.ts` (hall strip, pieces, room assignment and
 slicing; `families/twofloor.ts` adds the aligned stair) → `assemble.ts` (ids, outlines, chamfer) →
 `openings.ts` (exterior doors, one spanning tree per floor + loops, interior doors; `units.ts` separate units) → `zones.ts` + `windows.ts` + `exterior.ts` (yards,
-paths, fences, yard objects, notes, entries) → `generate.ts` (`furnishLocationV7`, `plausibility.ts`,
-`validateFurnishingsV7`, `validateLocation`; retry, fall back). `programme.ts` holds the room seeds, `types.ts` the family contract.
+paths, fences, yard objects, notes, entries) → `generate.ts` (`furnishLocationG1`, `plausibility.ts`,
+`validateFurnishingsG1`, `furnishingShortfallsG1`, `validateLocation`; retry, fall back). `programme.ts` holds the room seeds, `types.ts` the family contract.
 
 Conventions match Maple Street: feet, y down, street at the south, lot `bounds`, wall-centerline room
 polygons (clockwise), zones that tile the lot around the building, zone-to-zone `doorway` paths, doors with
@@ -57,7 +61,7 @@ Rooms are `<key>` or `<key>_<n>` (largest first): `living`, `kitchen`, `hall`, `
 `manager_1..`, `kitchenette`, `server`, `corridor`, `bar`, `cold_store`, `break_room`, `locker_room`, `floor`
 (warehouse), `mezz_office_1..`, `unit_1..` (motel rooms). Openings: `d_<a>_<b>` door, `dw_<a>_<b>` cased
 opening, `d_front` / `d_back` / `d_side` / `d_flat` / `d_dock` / `d_balcony` / `d_<unit>` exterior doors,
-`st_stair_0_stair_1`, `w_<room>_<n>` windows, `p_<zoneA>_<zoneB>` yard paths. Yard objects: `o_fence_<n>`, `o_shrub<n>`, `o_tree<n>`, `o_steps`, `o_patio_table<n>`, `o_planter<n>`; room furniture is `furnishLocationV7`'s (`v7_<room>_<type>_<n>`).
+`st_stair_0_stair_1`, `w_<room>_<n>` windows, `p_<zoneA>_<zoneB>` yard paths. Yard objects: `o_fence_<n>`, `o_shrub<n>`, `o_tree<n>`, `o_steps`, `o_patio_table<n>`, `o_planter<n>`; room furniture is `furnishLocationG1`'s (`g1_<room>_<catalog key>_<n>`, e.g. `g1_floor_pallet_rack_2`).
 Zones: `front_yard`, `back_yard`, `side_yard_w/e`, `porch`, `back_step`, `driveway`, `street`, `side_street`,
 `alley`, `forecourt`, `parking`, `patio`, `walkway`, `loading_bay`, `corridor`, `stairwell`, `balcony`,
 `neighbor_w/e` (a party-wall neighbor; no path, no entry).
@@ -71,7 +75,7 @@ Room tags, by what they say:
 | Use | `sleeping` `living` `dining` `cooking` `water` `wc` `work` `office` `meeting` `reception` `shop` `bar` `storage` `stock` `utility` `laundry` `server` `cold` `guest` `ensuite` `warehouse` `stairs` `circulation` |
 | Privacy | `public` `private` `service` `staff` `customer` `residential` `lockable` |
 | Position | `narrow` `junction` `open` `interior` `windowless` `street_facing` `rear_facing` `chamfer` `ground` `upstairs` `exterior_door` `high_capacity` |
-| Derived from furniture (`furnishLocationV7`'s pieces, added to both forms) | `valuables` `hazard` `concealment` `cover` |
+| Derived from furniture (`furnishLocationG1`'s pieces, added to both forms) | `valuables` `hazard` `concealment` `cover` |
 
 `upstairs` is on every floor-1 room (and `ground` on floor-0 rooms of two-floor buildings). `lockable` rooms
 have doors that can hold a barricade. `junction` is a hall with three or more openings; `open` a room

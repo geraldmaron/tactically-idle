@@ -2,14 +2,14 @@ import { describe, expect, it } from 'vitest';
 import type { LocationDefinition } from '../../sim/types';
 import { deriveLocation } from '../../sim/location';
 import { validateLocation } from '../../sim/location-validate';
-import { validateFurnishingsV7 } from './furnishing-v7';
+import { validateFurnishingsG1 } from './furnishing-g1';
 import { PROCEDURAL_FAMILIES } from './index';
 import { generatePair } from './procedural/generate';
 
 // Developer aid, skipped unless BUILDING_QUALITY is set (number of seeds per type, e.g. 200):
 //   BUILDING_QUALITY=200 npx vitest run src/gen/building/procedural-quality.dev.test.ts --silent=false
 // Per `_g1` type: validity of plan and furnished plan, distinct room topologies, and cold
-// generation time per building (search, furnishLocationV7 and validation included).
+// generation time per building (search, furnishLocationG1 and validation included).
 const env = import.meta.env as Record<string, string | undefined>;
 const n = Number(env.BUILDING_QUALITY ?? 0);
 
@@ -33,7 +33,7 @@ describe.skipIf(!n)('procedural building quality', () => {
         const { plain, furnished } = generatePair(family.id, seed);
         times.push(performance.now() - t0);
         const errors = [plain, furnished].flatMap((loc) => validateLocation(loc, deriveLocation(loc)).filter((i) => i.severity === 'error'));
-        if (errors.length || validateFurnishingsV7(furnished).length) invalid++;
+        if (errors.length || validateFurnishingsG1(furnished).length) invalid++;
         topologies.add(topology(plain));
       }
       times.sort((a, b) => a - b);

@@ -3,30 +3,40 @@ import { hashSeed } from '../../sim/rng';
 import { findRoomPath, footprintRect } from '../../sim/furniture-path';
 import { FURNITURE_V7, type FurnishingTypeV7, type ObjectDefinition } from './furnishing-definitions-v7';
 
-type Side = NonNullable<PlacedObject['placement']>['back'];
-interface Rect { x: number; y: number; w: number; h: number }
+export type Side = NonNullable<PlacedObject['placement']>['back'];
+export interface Rect { x: number; y: number; w: number; h: number }
 interface Wall { from: Vec; to: Vec; back: Side; inset: number }
-interface Candidate { object: PlacedObject; access: Rect | null }
-const ROT = { N: 0, E: 90, S: 180, W: 270 } as const;
-const FRONT: Record<Side, Vec> = { N: { x: 0, y: 1 }, E: { x: -1, y: 0 }, S: { x: 0, y: -1 }, W: { x: 1, y: 0 } };
-const OPPOSITE: Record<Side, Side> = { N: 'S', S: 'N', E: 'W', W: 'E' };
+/** `key` names the catalog entry; v7 keys equal their object type. */
+export interface Candidate { object: PlacedObject; access: Rect | null; key: string }
+/** What a RoomPlan furnishes from. The solver mechanics (wall anchoring, clearances, door
+ * swings, opening approaches, obstacle-aware routes) are shared; a later furnishing generation
+ * supplies its own catalog, id prefix and hash salt, so the frozen v7 output cannot move. */
+export interface FurnishingCatalog {
+  defs: Readonly<Record<string, ObjectDefinition>>;
+  idPrefix: string;
+  rankSalt: string;
+}
+export const CATALOG_V7: FurnishingCatalog = { defs: FURNITURE_V7, idPrefix: 'v7', rankSalt: 'furnishing:7' };
+export const ROT = { N: 0, E: 90, S: 180, W: 270 } as const;
+export const FRONT: Record<Side, Vec> = { N: { x: 0, y: 1 }, E: { x: -1, y: 0 }, S: { x: 0, y: -1 }, W: { x: 1, y: 0 } };
+export const OPPOSITE: Record<Side, Side> = { N: 'S', S: 'N', E: 'W', W: 'E' };
 export const FURNISHING_V7_SUFFIX = '__furnished_v7';
 export const furnishedFamilyIdV7 = (familyId: string): string => familyId.endsWith(FURNISHING_V7_SUFFIX) ? familyId : `${familyId}${FURNISHING_V7_SUFFIX}`;
 export const baseFamilyIdV7 = (familyId: string): string => familyId.endsWith(FURNISHING_V7_SUFFIX) ? familyId.slice(0, -FURNISHING_V7_SUFFIX.length) : familyId;
 
 const round = (x: number) => Math.round(x * 1000) / 1000;
-const centre = (r: Rect): Vec => ({ x: r.x + r.w / 2, y: r.y + r.h / 2 });
-const box = (points: readonly Vec[]): Rect => {
+export const centre = (r: Rect): Vec => ({ x: r.x + r.w / 2, y: r.y + r.h / 2 });
+export const box = (points: readonly Vec[]): Rect => {
   const x = Math.min(...points.map(p => p.x)), y = Math.min(...points.map(p => p.y));
   return { x, y, w: Math.max(...points.map(p => p.x)) - x, h: Math.max(...points.map(p => p.y)) - y };
 };
 const corners = (r: Rect): Vec[] => [{ x: r.x, y: r.y }, { x: r.x + r.w, y: r.y }, { x: r.x + r.w, y: r.y + r.h }, { x: r.x, y: r.y + r.h }];
-const inflate = (r: Rect, n: number): Rect => ({ x: r.x - n, y: r.y - n, w: r.w + n * 2, h: r.h + n * 2 });
+export const inflate = (r: Rect, n: number): Rect => ({ x: r.x - n, y: r.y - n, w: r.w + n * 2, h: r.h + n * 2 });
 export function furnitureOverlaps(a: Rect, b: Rect, margin = 0): boolean {
   return a.x < b.x + b.w + margin - 1e-6 && a.x + a.w > b.x - margin + 1e-6
     && a.y < b.y + b.h + margin - 1e-6 && a.y + a.h > b.y - margin + 1e-6;
 }
-function inside(p: Vec, polygon: Polygon): boolean {
+export function inside(p: Vec, polygon: Polygon): boolean {
   let yes = false;
   for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
     const a = polygon[i], b = polygon[j];
@@ -48,7 +58,7 @@ export function furnitureInsideRoom(rect: Rect, room: Room): boolean {
   }
   return true;
 }
-function walls(loc: LocationDefinition, room: Room): Wall[] {
+export function walls(loc: LocationDefinition, room: Room): Wall[] {
   return room.polygon.flatMap((from, i) => {
     const to = room.polygon[(i + 1) % room.polygon.length];
     if (from.x !== to.x && from.y !== to.y) return [];
@@ -60,22 +70,23 @@ function walls(loc: LocationDefinition, room: Room): Wall[] {
     return [{ from, to, back, inset: Math.max(loc.wallThickness.exterior, loc.wallThickness.interior) / 2 + 0.12 }];
   });
 }
-function objectAt(type: FurnishingTypeV7, room: Room, at: Vec, back: Side, anchor: 'wall' | 'group', group?: string, width?: number): PlacedObject {
-  const d = FURNITURE_V7[type];
-  const w = width ?? d.width;
-  return { id: '', type, in: room.id, x: round(at.x - w / 2), y: round(at.y - d.depth / 2), w, h: d.depth,
+function objectAt(d: ObjectDefinition, room: Room, at: Vec, back: Side, anchor: 'wall' | 'group', group?: string, width?: number, depth?: number): PlacedObject {
+  const w = width ?? d.width, h = depth ?? d.depth;
+  return { id: '', type: d.type, in: room.id, x: round(at.x - w / 2), y: round(at.y - h / 2), w, h,
     rotation: ROT[back], placement: { back, anchor, ...(group ? { group } : {}) }, mechanical: true, tags: [...d.tags] };
 }
-export function furnitureAccessRect(object: PlacedObject): Rect | null {
-  const definition: ObjectDefinition | undefined = FURNITURE_V7[object.type as FurnishingTypeV7];
-  if (!definition?.access || !object.placement) return null;
-  const r = footprintRect(object), depth = definition.access, back = object.placement.back;
+/** The service front `depth` feet deep before a placed object's front face; null for none. */
+export function accessRectAt(object: PlacedObject, depth: number | undefined): Rect | null {
+  if (!depth || !object.placement) return null;
+  const r = footprintRect(object), back = object.placement.back;
   if (back === 'N') return { x: r.x, y: r.y + r.h, w: r.w, h: depth };
   if (back === 'S') return { x: r.x, y: r.y - depth, w: r.w, h: depth };
   if (back === 'W') return { x: r.x + r.w, y: r.y, w: depth, h: r.h };
   return { x: r.x - depth, y: r.y, w: depth, h: r.h };
 }
-function candidate(object: PlacedObject): Candidate { return { object, access: furnitureAccessRect(object) }; }
+export function furnitureAccessRect(object: PlacedObject): Rect | null {
+  return accessRectAt(object, (FURNITURE_V7[object.type as FurnishingTypeV7] as ObjectDefinition | undefined)?.access);
+}
 function inward(room: Room, o: Opening): Vec {
   const m = { x: (o.from.x + o.to.x) / 2, y: (o.from.y + o.to.y) / 2 };
   const n = o.from.x === o.to.x ? { x: 1, y: 0 } : { x: 0, y: 1 };
@@ -97,7 +108,7 @@ export function furnishingOpeningClearances(loc: LocationDefinition, room: Room)
     return inflate(b, o.type === 'window' ? 0.05 : 0.3);
   });
 }
-function centroid(room: Room): Vec {
+export function centroid(room: Room): Vec {
   let area = 0, x = 0, y = 0;
   for (let i = 0; i < room.polygon.length; i++) {
     const a = room.polygon[i], b = room.polygon[(i + 1) % room.polygon.length], cross = a.x * b.y - b.x * a.y;
@@ -105,12 +116,14 @@ function centroid(room: Room): Vec {
   }
   return { x: x / (3 * area), y: y / (3 * area) };
 }
-class RoomPlan {
+export class RoomPlan {
   readonly placed: Candidate[] = [];
   readonly keepClear: Rect[];
   readonly wallList: Wall[];
   readonly routeClearance: number;
-  constructor(readonly loc: LocationDefinition, readonly room: Room) {
+  /** Points that must stay mutually reachable besides the door approaches and the centroid. */
+  readonly extraAnchors: Vec[] = [];
+  constructor(readonly loc: LocationDefinition, readonly room: Room, readonly catalog: FurnishingCatalog = CATALOG_V7) {
     // Rescue stories originate in living rooms. Preserve a three-foot interior
     // envelope there; narrow door leaves still reject a chair at route time.
     this.routeClearance = room.type === 'living' ? 1.5 : 1;
@@ -138,15 +151,21 @@ class RoomPlan {
     const anchors = furnishingDoorApproaches(this.loc, this.room);
     const c = centroid(this.room);
     if (inside(c, this.room.polygon)) anchors.push(c);
+    anchors.push(...this.extraAnchors);
     if (anchors.length > 1 && anchors.slice(1).some(to => !findRoomPath(this.room, objects, anchors[0], to, this.routeClearance))) return false;
     for (const item of items) {
-      item.object.id = `v7_${this.room.id}_${item.object.type}_${this.placed.filter(p => p.object.type === item.object.type).length + 1}`;
+      item.object.id = `${this.catalog.idPrefix}_${this.room.id}_${item.key}_${this.placed.filter(p => p.key === item.key).length + 1}`;
       this.placed.push(item);
     }
     return true;
   }
-  wallCandidates(type: FurnishingTypeV7, group?: string, width?: number): Candidate[] {
-    const d = FURNITURE_V7[type], list: Candidate[] = [];
+  def(key: string): ObjectDefinition { return this.catalog.defs[key]; }
+  candidate(key: string, at: Vec, back: Side, anchor: 'wall' | 'group', group?: string, width?: number, depth?: number): Candidate {
+    const d = this.def(key), object = objectAt(d, this.room, at, back, anchor, group, width, depth);
+    return { object, access: accessRectAt(object, d.access), key };
+  }
+  wallCandidates(type: string, group?: string, width?: number): Candidate[] {
+    const d = this.def(type), list: Candidate[] = [];
     const objectWidth = width ?? d.width;
     for (const wall of this.wallList) {
       const horizontal = wall.from.y === wall.to.y;
@@ -169,17 +188,17 @@ class RoomPlan {
       for (const offset of offsets) {
         const n = FRONT[wall.back], distance = wall.inset + d.depth / 2;
         const p = horizontal ? { x: offset, y: wall.from.y + n.y * distance } : { x: wall.from.x + n.x * distance, y: offset };
-        const c = candidate(objectAt(type, this.room, p, wall.back, 'wall', group, objectWidth));
+        const c = this.candidate(type, p, wall.back, 'wall', group, objectWidth);
         if (this.valid([c])) list.push(c);
       }
     }
     // A separate stable hash per room/object keeps variation independent of
     // iteration in the incident RNG and of React render timing.
-    return list.sort((a, b) => this.rank(a.object) - this.rank(b.object));
+    return list.sort((a, b) => this.rank(a.object, a.key) - this.rank(b.object, b.key));
   }
-  rank(o: PlacedObject): number { return hashSeed(`furnishing:7:${this.loc.familyId}:${this.loc.seed}:${o.in}:${o.type}:${o.x}:${o.y}:${o.rotation}`); }
-  addWall(type: FurnishingTypeV7): boolean {
-    for (const width of type === 'bed' ? [5.5, 4, 3.5] : [undefined]) {
+  rank(o: PlacedObject, key: string = o.type): number { return hashSeed(`${this.catalog.rankSalt}:${this.loc.familyId}:${this.loc.seed}:${o.in}:${key}:${o.x}:${o.y}:${o.rotation}`); }
+  addWall(type: string, widths: readonly (number | undefined)[] = type === 'bed' ? [5.5, 4, 3.5] : [undefined]): boolean {
+    for (const width of widths) {
       if (this.wallCandidates(type, undefined, width).some(c => this.accept([c]))) return true;
     }
     return false;
@@ -190,7 +209,7 @@ class RoomPlan {
     for (const withTV of [true, false]) for (const sofa of sofas) {
       const at = centre(footprintRect(sofa.object)), back = sofa.object.placement!.back, n = FRONT[back];
       const coffeeAt = { x: at.x + n.x * 4, y: at.y + n.y * 4 }; // 1.5 ft knee/leg gap.
-      const table = candidate(objectAt('coffee_table', this.room, coffeeAt, back, 'group', group));
+      const table = this.candidate('coffee_table', coffeeAt, back, 'group', group);
       if (!this.valid([sofa, table])) continue;
       if (!withTV) { if (this.accept([sofa, table])) return; continue; }
       const televisions = this.wallCandidates('tv', group).filter(tv => {
@@ -209,9 +228,9 @@ class RoomPlan {
     const candidates: Candidate[][] = [];
     for (const back of ['N', 'E'] as const) for (let x = bounds.x + 4; x < bounds.x + bounds.w - 3; x += 1)
       for (let y = bounds.y + 4; y < bounds.y + bounds.h - 3; y += 1) {
-        const table = candidate(objectAt('dining_table', this.room, { x, y }, back, 'group', group));
-        const n = FRONT[back], offset = FURNITURE_V7.dining_table.depth / 2 + 0.4 + FURNITURE_V7.chair.depth / 2;
-        const chairs = [-1, 1].map(sign => candidate(objectAt('chair', this.room, { x: x + n.x * offset * sign, y: y + n.y * offset * sign }, sign < 0 ? back : OPPOSITE[back], 'group', group)));
+        const table = this.candidate('dining_table', { x, y }, back, 'group', group);
+        const n = FRONT[back], offset = this.def('dining_table').depth / 2 + 0.4 + this.def('chair').depth / 2;
+        const chairs = [-1, 1].map(sign => this.candidate('chair', { x: x + n.x * offset * sign, y: y + n.y * offset * sign }, sign < 0 ? back : OPPOSITE[back], 'group', group));
         // In addition to the tucked-in chair gap, reserve 2 ft behind each chair.
         for (const chair of chairs) {
           const r = footprintRect(chair.object), b = chair.object.placement!.back;
@@ -220,7 +239,7 @@ class RoomPlan {
         }
         if (this.valid([table, ...chairs])) candidates.push([table, ...chairs]);
       }
-    candidates.sort((a, b) => this.rank(a[0].object) - this.rank(b[0].object)).some(group => this.accept(group));
+    candidates.sort((a, b) => this.rank(a[0].object, a[0].key) - this.rank(b[0].object, b[0].key)).some(group => this.accept(group));
   }
   bathroom(): void {
     // These authored homes have a full bathroom, not a half-bath. Solve the
@@ -270,9 +289,17 @@ export function furnishLocationV7(base: LocationDefinition): LocationDefinition 
  * location validator: no overlaps, solid-wall clearance, opening approaches,
  * service fronts and real obstacle-aware connections within every room. */
 export function validateFurnishingsV7(loc: LocationDefinition): string[] {
+  return validateFurnishings(loc, furnitureAccessRect);
+}
+/** The v7 checks over any catalog: `accessOf` gives each object's service front, and `extra`
+ * adds per-room keep-clear areas and points (beyond door approaches and the centroid) that
+ * must stay connected. */
+export function validateFurnishings(loc: LocationDefinition, accessOf: (object: PlacedObject) => Rect | null,
+  extra: (room: Room) => { clear: Rect[]; anchors: Vec[] } = () => ({ clear: [], anchors: [] })): string[] {
   const errors: string[] = [];
   for (const room of loc.rooms) {
-    const objects = loc.objects.filter(o => o.in === room.id), clearances = furnishingOpeningClearances(loc, room);
+    const more = extra(room);
+    const objects = loc.objects.filter(o => o.in === room.id), clearances = [...furnishingOpeningClearances(loc, room), ...more.clear];
     for (const [i, object] of objects.entries()) {
       const rect = footprintRect(object);
       if (!furnitureInsideRoom(inflate(rect, 0.08), room)) errors.push(`${object.id}: outside usable room`);
@@ -293,12 +320,13 @@ export function validateFurnishingsV7(loc: LocationDefinition): string[] {
         });
         if (!anchored) errors.push(`${object.id}: back is not anchored to its real wall`);
       }
-      const access = furnitureAccessRect(object);
+      const access = accessOf(object);
       if (access && (!furnitureInsideRoom(access, room) || objects.some(o => o !== object && furnitureOverlaps(access, footprintRect(o))))) errors.push(`${object.id}: access blocked`);
       for (const other of objects.slice(i + 1)) if (furnitureOverlaps(rect, footprintRect(other), 0.14)) errors.push(`${object.id}: overlaps ${other.id}`);
     }
     const approaches = furnishingDoorApproaches(loc, room);
     const c = centroid(room); if (inside(c, room.polygon)) approaches.push(c);
+    approaches.push(...more.anchors);
     for (const target of approaches.slice(1)) if (!findRoomPath(room, objects, approaches[0], target, room.type === 'living' ? 1.5 : 1)) errors.push(`${room.id}: no clear interior route`);
   }
   return errors;
