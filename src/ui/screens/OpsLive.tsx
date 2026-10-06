@@ -24,6 +24,7 @@ import { IncidentPeopleStatus } from '../components/IncidentPeople';
 import { incidentOfficerUnavailable } from '../../sim/incident-consequences';
 import { focusActingSquad, toggleActingSquad, toggleSupportingSquad } from './operation-squads';
 import { responseFailurePlan } from '../../sim/response-failure';
+import { floorCount } from '../blueprint/floors';
 
 interface Override {
   actionId: Id;
@@ -91,7 +92,7 @@ export function OpsLive() {
   const availableMembers = (id: SquadId) => deployed.find(squad => squad.id === id)?.officerIds.filter(officerId => !!g.officers[officerId] && !incidentOfficerUnavailable(g, run, officerId)) ?? [];
   const actorUnavailable = (id: SquadId) => !actionRule?.commandOnly && availableMembers(id).length === 0;
   const environment = scenario?.environment ?? null;
-  const floors = built?.location.floors ?? 1;
+  const floors = built ? floorCount(built.location) : 1;
   /** Floor a room or zone sits on (exterior zones are ground). */
   const floorOf = (id: Id | null): number | null => {
     if (!id || !built) return null;

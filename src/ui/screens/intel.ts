@@ -3,6 +3,7 @@
 import type { BuiltLocation, Id, KnowledgeStatus } from '../../sim/types';
 import type { EnvironmentDefinition, FactDefinition, ScenarioDefinition } from '../../sim/scenario-types';
 import { spaceName } from '../../sim/resolution';
+import { floorSuffix } from '../blueprint/floors';
 
 export interface IntelLine {
   id: Id;
@@ -34,7 +35,7 @@ function isWeaponFact(f: FactDefinition): boolean {
 }
 
 function line(f: FactDefinition, built: BuiltLocation, label?: string): IntelLine {
-  return { id: f.id, label: label ?? f.person?.label ?? f.label, claim: f.claim, source: f.source, status: f.initial, where: spaceName(built, f.spaceId) };
+  return { id: f.id, label: label ?? f.person?.label ?? f.label, claim: f.claim, source: f.source, status: f.initial, where: spaceName(built, f.spaceId) + floorSuffix(built.location, f.spaceId) };
 }
 
 export function buildIntel(s: ScenarioDefinition | null, built: BuiltLocation): Intel {

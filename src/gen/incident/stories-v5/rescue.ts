@@ -4,6 +4,7 @@ import { hashSeed } from '../../../sim/rng';
 import { withHighRiskVersionFourChoices } from '../high-risk-v4';
 import { actionHR, enterCareHR, partialHR, previewHR, reqFact, reqFlag, sameHR, visibleHR, injuryHR, type HighRiskContext } from '../high-risk-common-v4';
 import { finishPersonalStory, personalCare, personalFact, personalOfficerCare, storyDoorRoute, storyOpenings } from './armed';
+import { hostsByLocation } from '../stories-v6/hosts-v10';
 
 // Each bundle describes the whole access situation, not independently sampled motives.
 const EPISODES = [
@@ -14,12 +15,17 @@ const EPISODES = [
 const FAMILIES = ['juniper_court_v1', 'willow_terrace_v1', 'harbour_court'];
 
 export function withRescueStory(input: ScenarioDefinition, built: BuiltLocation): ScenarioDefinition {
-  if (input.incident?.type !== 'protected_rescue' || !FAMILIES.includes(built.location.familyId)) throw new Error('My Chair Comes Too needs a supported ground-floor home');
+  // Before v10 Jun lived in three named homes. v10 needs what Jun's move uses: a home whose
+  // ground-floor living space has a chair-compatible route to the pickup, chosen by the v6
+  // room requirements and checked again by the chair_exit route binding.
+  const hosted = hostsByLocation(input);
+  if (input.incident?.type !== 'protected_rescue' || (hosted ? built.location.setting === 'business' : !FAMILIES.includes(built.location.familyId))) throw new Error('My Chair Comes Too needs a supported ground-floor home');
   const s = withHighRiskVersionFourChoices(structuredClone(input), built);
   const episode = EPISODES[hashSeed(`${input.incident.seed}:chair-v5`) % EPISODES.length];
   // Jun is deliberately in the existing ground-floor living room. A randomly
   // selected bedroom is not permission to invent a chair-compatible route.
-  const target = built.location.rooms.find(r => r.id === 'living' && (r.floor ?? 0) === 0)!;
+  const target = hosted ? built.location.rooms.find(r => r.id === input.facts[0].spaceId && r.type === 'living' && (r.floor ?? 0) === 0)!
+    : built.location.rooms.find(r => r.id === 'living' && (r.floor ?? 0) === 0)!;
   if (!target) throw new Error('This Jun episode needs the existing ground-floor living room');
   const ctx: HighRiskContext = { scenario: s, built, targetId: target.id, exteriorId: built.location.entries[0], difficulty: 31 + input.incident.tier * 3 };
   const route = storyDoorRoute(built, target.id, ctx.exteriorId, true);

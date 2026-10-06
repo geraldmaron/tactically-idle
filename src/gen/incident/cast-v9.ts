@@ -59,7 +59,7 @@ export function withVersionNineCast(input: ScenarioDefinition): ScenarioDefiniti
     replacements[slot.authoredName.split(' ')[0]] = name.firstName;
   }
   const scenario = bindScenarioText(bindScenarioText(source, AMERICAN_ENGLISH), replacements);
-  scenario.version = 9;
+  scenario.version = Math.max(9, spec.contentVersion);
   scenario.story!.cast = cast;
   // Short-only authored names still have a full public identity in the inspector.
   for (const [id, person] of Object.entries(scenario.story!.bindings.people)) {

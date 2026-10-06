@@ -31,7 +31,7 @@ function issuedV4(pending: boolean): GameState {
 
 describe('current rollout without resetting issued campaigns', () => {
   it('starts new campaigns with current stories and deterministic distinct boards', () => {
-    expect(INCIDENT_CONTENT_VERSION).toBe(9);
+    expect(INCIDENT_CONTENT_VERSION).toBe(10);
     for (const seed of [1, 7, 41, 812]) {
       const state = createInitialState(NOW, seed); expect(state).toEqual(createInitialState(NOW, seed));
       expect(state.contentVersion).toBe(INCIDENT_CONTENT_VERSION); expect(state.incidents).toHaveLength(INCIDENT_TUNING.initialCount);

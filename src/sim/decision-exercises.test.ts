@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { SCENARIO_ORDER } from '../content/scenarios';
 import { DECISION_EXERCISES, LEGACY_DECISION_EXERCISES } from '../content/scenarios/decision-exercises';
-import { generateIncident, INCIDENT_CONTENT_VERSION } from '../gen/incident';
+import { generateIncident } from '../gen/incident';
 import { createInitialState } from './department';
 import { actionViews, decisionViews, pendingDebrief } from './operation-selectors';
 import { getScenario } from './scenario-registry';
@@ -20,7 +20,7 @@ describe('immediately discoverable decision exercises', () => {
     expect(new Set(DECISION_EXERCISES.map((exercise) => exercise.spec.familyId)).size).toBe(3);
     for (const exercise of DECISION_EXERCISES) {
       expect(entries.find((entry) => entry.card.id === exercise.id)?.kind).toBe('exercise');
-      expect(getScenario(exercise.id)).toMatchObject({ practiceOnly:true,version:INCIDENT_CONTENT_VERSION,id:exercise.id });
+      expect(getScenario(exercise.id)).toMatchObject({ practiceOnly:true,version:exercise.spec.contentVersion,id:exercise.id });
       const generated = generateIncident(exercise.spec);
       expect(getScenario(exercise.id)?.title).toBe(generated.title);
       expect(getScenario(exercise.id)?.summary).toBe(generated.summary);

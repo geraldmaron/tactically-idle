@@ -10,6 +10,7 @@ import { withVersionNineCast } from './cast-v9';
 import { withAdditionalFramework } from './frameworks-v9';
 import { ADDITIONAL_FRAMEWORK_BY_TYPE } from '../../content/incident-frameworks-v9';
 import { SCENARIO_TYPES_V9 } from '../../content/scenario-recipes';
+import { SCENARIO_TYPES_V10 } from '../../content/scenario-types-v10';
 import { furnishedFamilyIdV7 } from '../building/furnishing-v7';
 import type { ActionDefinition, IncidentSpec, IncidentType, ScenarioDefinition } from '../../sim/scenario-types';
 import type { BuiltLocation, Room, StageId, Vec } from '../../sim/types';
@@ -18,7 +19,7 @@ import { hashSeed, next, pick } from '../../sim/rng';
 import { tierRewardMultiplier } from '../../sim/incidents';
 import { MS_OCCUPANCY } from '../../content/scenarios/ms-occupancy';
 import { MS_URGENT } from '../../content/scenarios/ms-urgent';
-import { BUILDING_FAMILIES } from '../building';
+import { ALL_BUILDING_FAMILIES, BUILDING_FAMILIES, PROCEDURAL_FAMILIES } from '../building';
 import { RESIDENTIAL_LAYOUT_NOTES } from '../../content/locations/residential-v1';
 
 export interface IncidentTypeInfo {
@@ -29,6 +30,9 @@ export interface IncidentTypeInfo {
 }
 const homes = BUILDING_FAMILIES.filter((family) => family.setting !== 'business').map((family) => family.id);
 const allFamilies = BUILDING_FAMILIES.map((f) => f.id);
+/** v10 adds generated building types; earlier versions keep the authored list. */
+const familiesFor = (contentVersion: number) => contentVersion >= 10 ? ALL_BUILDING_FAMILIES.map((f) => f.id) : allFamilies;
+const typesV9Plus = (contentVersion: number) => contentVersion >= 10 ? SCENARIO_TYPES_V10 : SCENARIO_TYPES_V9;
 // A bounded, playable neighbourhood catalog. Other schema types remain readable
 // in legacy Maple seed IDs, but are not advertised as new generated templates.
 export const INCIDENT_TYPES: IncidentTypeInfo[] = [
@@ -38,10 +42,10 @@ export const INCIDENT_TYPES: IncidentTypeInfo[] = [
   { type: 'burglary', label: 'Alarm response', families: ['market_row'], squads: [1, 3] },
   { type: 'false_intruder', label: 'Uncertain occupancy', families: homes, squads: [1, 2] },
 ];
-/** Future calls use v9; issued v1–v8 seed tuples retain their original content. */
-export const INCIDENT_CONTENT_VERSION = 9;
+/** Future calls use v10; issued v1–v9 seed tuples retain their original content. */
+export const INCIDENT_CONTENT_VERSION = 10;
 /** Highest incident content version this build can read. */
-export const SUPPORTED_INCIDENT_CONTENT_VERSION = 9;
+export const SUPPORTED_INCIDENT_CONTENT_VERSION = 10;
 export const INCIDENT_TYPES_V2: IncidentTypeInfo[] = [
   ...INCIDENT_TYPES,
   { type: 'barricaded', label: 'Reported barricade', families: homes, squads: [1, 3] },
@@ -75,8 +79,8 @@ export function parseIncidentId(id: string): IncidentSpec | null {
   const [buildingSeed, seed, tier, contentVersion] = m.slice(3).map(Number);
   if (![buildingSeed, seed, tier, contentVersion].every(Number.isSafeInteger) || tier < 1 || tier > 5 || contentVersion < 1 || contentVersion > SUPPORTED_INCIDENT_CONTENT_VERSION) return null;
   if (HIGH_RISK_TYPES_V4.includes(m[1] as IncidentType) && (contentVersion < 4 || m[2] === 'maple_street')) return null;
-  if (contentVersion >= 5 && !(contentVersion >= 9 ? SCENARIO_TYPES_V9 : INCIDENT_TYPES_V5).some(type => type.type === m[1] && type.families.includes(m[2]))) return null;
-  if (m[2] !== 'maple_street' && !allFamilies.includes(m[2])) return null;
+  if (contentVersion >= 5 && !(contentVersion >= 9 ? typesV9Plus(contentVersion) : INCIDENT_TYPES_V5).some(type => type.type === m[1] && type.families.includes(m[2]))) return null;
+  if (m[2] !== 'maple_street' && !familiesFor(contentVersion).includes(m[2])) return null;
   return { type: m[1] as IncidentType, familyId: m[2], buildingSeed, seed, tier, contentVersion };
 }
 
@@ -99,7 +103,32 @@ function occupantPoint(room: Room, built: BuiltLocation, seed: number): Vec {
   throw new Error(`No usable occupant position in ${room.id}`);
 }
 
+/** Generated buildings vary in rooms, routes and floors, so not every building seed can
+ * host every story. A v10 call on a generated building is resolved lazily, when its
+ * definition is first needed: the drawn seed, then further seeds of the same building
+ * type from a hash stream, then the framework's authored locations. The incident ID
+ * stays exactly as drawn (board draws and saves are unchanged); the definition records
+ * the building actually used in locationFamilyId/locationSeed, which every run and map
+ * reads. Deterministic, so the same ID always resolves to the same building. */
+export const HOSTING_SEEDS = 12;
 export function generateIncident(spec: IncidentSpec): ScenarioDefinition {
+  if (spec.contentVersion < 10 || !PROCEDURAL_FAMILIES.some(family => family.id === spec.familyId)) return generateIncidentAt(spec);
+  const places: Pick<IncidentSpec, 'familyId' | 'buildingSeed'>[] = [{ familyId: spec.familyId, buildingSeed: spec.buildingSeed }];
+  for (let attempt = 1; attempt < HOSTING_SEEDS; attempt++) places.push({ familyId: spec.familyId, buildingSeed: hashSeed(`${spec.buildingSeed}:${spec.seed}:host-v10:${attempt}`) });
+  const authored = SCENARIO_TYPES_V9.find(info => info.type === spec.type)?.families ?? [];
+  const start = authored.length ? hashSeed(`${spec.seed}:host-v10:authored`) % authored.length : 0;
+  for (let k = 0; k < authored.length; k++) places.push({ familyId: authored[(start + k) % authored.length], buildingSeed: spec.buildingSeed });
+  let failure: unknown = new Error('Unsupported incident and building combination');
+  for (const place of places) {
+    try {
+      const hosted = generateIncidentAt({ ...spec, ...place });
+      return place === places[0] ? hosted : { ...hosted, id: incidentId(spec), incident: { ...spec } };
+    } catch (error) { failure = error; }
+  }
+  throw failure;
+}
+
+function generateIncidentAt(spec: IncidentSpec): ScenarioDefinition {
   if (!parseIncidentId(incidentId(spec))) throw new Error('Invalid incident specification');
   // Keep legacy actions and fact IDs stable. Previously saved Maple board specs
   // now resolve, while authored tutorial/practice scenarios remain untouched.
@@ -116,7 +145,7 @@ export function generateIncident(spec: IncidentSpec): ScenarioDefinition {
   const business = location.setting === 'business';
   const alarm = spec.type === 'burglary';
   const uncertain = spec.type === 'false_intruder';
-  const kind = (spec.contentVersion >= 9 ? SCENARIO_TYPES_V9 : spec.contentVersion >= 5 ? INCIDENT_TYPES_V5 : spec.contentVersion >= 4 ? INCIDENT_TYPES_V4 : spec.contentVersion >= 2 ? INCIDENT_TYPES_V2 : INCIDENT_TYPES).find((x) => x.type === spec.type);
+  const kind = (spec.contentVersion >= 9 ? typesV9Plus(spec.contentVersion) : spec.contentVersion >= 5 ? INCIDENT_TYPES_V5 : spec.contentVersion >= 4 ? INCIDENT_TYPES_V4 : spec.contentVersion >= 2 ? INCIDENT_TYPES_V2 : INCIDENT_TYPES).find((x) => x.type === spec.type);
   if (!kind || !kind.families.includes(spec.familyId)) throw new Error('Unsupported incident and building combination');
   const candidates = location.rooms.filter((r) => business ? ['office', 'storage'].includes(r.type) : urgent ? ['bedroom', 'bathroom', 'living'].includes(r.type) : ['bedroom', 'living'].includes(r.type));
   const chosen = pick(hashSeed(incidentId(spec)), candidates);
@@ -242,7 +271,7 @@ export function generateIncident(spec: IncidentSpec): ScenarioDefinition {
     rewards: { funding: Math.round((business ? 2100 : 1700) * multiplier), devPoints: Math.round(2 * multiplier), trust: Math.round(4 * multiplier), xp: Math.round(30 * multiplier) },
     incident: { ...spec },
   };
-  if (spec.contentVersion === 9) return withVersionNineCast(ADDITIONAL_FRAMEWORK_BY_TYPE[spec.type] ? withAdditionalFramework(scenario, built) : withVersionEightDecisions(withVersionSevenScene(withVersionSixStory(scenario, built), built), built));
+  if (spec.contentVersion >= 9) return withVersionNineCast(ADDITIONAL_FRAMEWORK_BY_TYPE[spec.type] ? withAdditionalFramework(scenario, built) : withVersionEightDecisions(withVersionSevenScene(withVersionSixStory(scenario, built), built), built));
   if (spec.contentVersion === 8) return withVersionEightDecisions(withVersionSevenScene(withVersionSixStory(scenario, built), built), built);
   if (spec.contentVersion === 7) return withVersionSevenScene(withVersionSixStory(scenario, built), built);
   if (spec.contentVersion === 6) return withVersionSixStory(scenario, built);
@@ -405,7 +434,7 @@ export function drawIncidentSpec(
   // Four slots for each everyday call, one for each specialist report. Keep the
   // v1 array and number of PRNG draws exactly unchanged for saved campaigns.
   let pool = ctx.contentVersion >= 9
-    ? SCENARIO_TYPES_V9.flatMap(info => ['active_armed_incident', 'hostage_crisis', 'protected_rescue'].includes(info.type) ? [info] : [info, info, info, info])
+    ? typesV9Plus(ctx.contentVersion).flatMap(info => ['active_armed_incident', 'hostage_crisis', 'protected_rescue'].includes(info.type) ? [info] : [info, info, info, info])
     : ctx.contentVersion >= 5
     ? INCIDENT_TYPES_V5
     : ctx.contentVersion >= 4
@@ -423,7 +452,8 @@ export function drawIncidentSpec(
   }
   // Restrict v5 family selection to remaining stories before preferring a fresh
   // location. Otherwise a fresh home could repeat a story while a shop story is unused.
-  const families = ctx.contentVersion >= 5 ? allFamilies.filter(id => pool.some(type => type.families.includes(id))) : allFamilies;
+  const known = familiesFor(ctx.contentVersion);
+  const families = ctx.contentVersion >= 5 ? known.filter(id => pool.some(type => type.families.includes(id))) : known;
   const fresh = families.filter(id => !ctx.avoidFamilies?.includes(id));
   const family = pick(rngState, fresh.length ? fresh : families);
   const incident = pick(family.state, pool.filter((x) => x.families.includes(family.value)));
@@ -431,8 +461,7 @@ export function drawIncidentSpec(
   const seed = next(building.state);
   const tier = next(seed.state);
   const cap = Math.max(1, Math.min(5, 1 + Math.floor(ctx.level / 2), ctx.trust < 40 ? 2 : 5));
-  return {
-    spec: { type: incident.value.type, familyId: family.value, buildingSeed: Math.floor(building.value * 0x100000000), seed: Math.floor(seed.value * 0x100000000), tier: 1 + Math.floor(tier.value * cap), contentVersion: ctx.contentVersion },
-    state: tier.state,
-  };
+  const spec: IncidentSpec = { type: incident.value.type, familyId: family.value, buildingSeed: Math.floor(building.value * 0x100000000), seed: Math.floor(seed.value * 0x100000000), tier: 1 + Math.floor(tier.value * cap), contentVersion: ctx.contentVersion };
+  return { spec, state: tier.state };
 }
+

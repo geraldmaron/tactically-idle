@@ -5,7 +5,7 @@ import type { GameState, Id } from '../../sim/types';
 import type { ScenarioCard } from '../../sim/operation-selectors';
 import type { ScenarioDefinition } from '../../sim/scenario-types';
 import { Button, Card, Chip, EmptyState, Section } from '../components/ui';
-import { DifficultyChip, TierChevrons, TimeLeft, familyBlurb, incidentMeta, settingIcon, useNow } from '../components/incident';
+import { DifficultyChip, FloorsChip, TierChevrons, TimeLeft, familyBlurb, incidentMeta, scenarioFloorCount, settingIcon, useNow } from '../components/incident';
 import { Icon } from '../icons';
 import { relativeTime } from '../format';
 import { boardEntries, boardNote, incidentsOf, practiceEntries } from './helpers';
@@ -148,6 +148,7 @@ function CardBody({ card, scenario, familyId, type, tier, children }: { card: Sc
       {scenario && <IncidentBriefContext scenario={scenario} compact />}
       <div className="chips">
         {card.variantLabel !== card.title && <Chip>{card.variantLabel}</Chip>}
+        <FloorsChip floors={scenarioFloorCount(scenario)} />
         {(!scenario || scenario.version < 4) && <Chip icon="clock">{card.pressureLabel}</Chip>}
         <Chip icon="people">{card.squadRange.min === card.squadRange.max ? `${card.squadRange.min} squad` : `${card.squadRange.min}–${card.squadRange.max} squads`}</Chip>
       </div>
@@ -198,7 +199,7 @@ function IncidentCardView({ entry, now, isNew, onPrepare }: { entry: BoardEntry;
           NEW
         </span>
       )}
-      <CardBody card={card} scenario={scenario} familyId={spec?.familyId ?? scenario?.locationFamilyId ?? incident.familyId} type={spec?.type ?? incident.type} tier={spec?.tier ?? incident.tier}>
+      <CardBody card={card} scenario={scenario} familyId={scenario?.locationFamilyId ?? spec?.familyId ?? incident.familyId} type={spec?.type ?? incident.type} tier={spec?.tier ?? incident.tier}>
         <TimeLeft expiresAt={incident.expiresAt} now={now} />
         <Eligibility card={card} />
         <Button variant="primary" block onClick={() => onPrepare(card.id)}>
@@ -214,7 +215,7 @@ export function PracticeCardView({ entry, onPrepare }: { entry: PracticeEntry; o
   const spec = scenario?.incident;
   return (
     <Card className="opboard">
-      <CardBody card={card} scenario={scenario} familyId={spec?.familyId ?? scenario?.locationFamilyId ?? null} type={spec?.type ?? null} tier={spec?.tier ?? null}>
+      <CardBody card={card} scenario={scenario} familyId={scenario?.locationFamilyId ?? spec?.familyId ?? null} type={spec?.type ?? null} tier={spec?.tier ?? null}>
         {kind !== 'standing' ? (
           <p className="note note-amber">
             <Icon name={kind === 'exercise' ? 'flag' : 'refresh'} size={16} />

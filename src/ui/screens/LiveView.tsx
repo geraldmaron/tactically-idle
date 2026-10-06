@@ -21,6 +21,7 @@ import type { EnvironmentDefinition } from '../../sim/scenario-types';
 import type { ActionResupplyPlan } from '../../sim/equipment-resupply';
 import { Blueprint } from '../blueprint/Blueprint';
 import { RoomList } from '../blueprint/RoomList';
+import { floorCount } from '../blueprint/floors';
 import { OfficerCard } from '../components/OfficerCard';
 import { Sheet } from '../components/Sheet';
 import { Button, Chip, SubHead } from '../components/ui';
@@ -693,7 +694,7 @@ export function RoomSheet(p: RoomSheetProps) {
             {type && (
               <Chip icon={roomIcon(type)}>{ROOM_TYPE_LABEL[type] ?? type}</Chip>
             )}
-            {(loc.floors ?? 1) > 1 && <Chip icon="layers">{floorName(d?.floor ?? loc.rooms.find((r) => r.id === s.id)?.floor ?? 0)}</Chip>}
+            {floorCount(loc) > 1 && <Chip icon="layers">{floorName(d?.floor ?? loc.rooms.find((r) => r.id === s.id)?.floor ?? 0)}</Chip>}
             <StatusChip status={s.status} />
           </span>
         ) : undefined

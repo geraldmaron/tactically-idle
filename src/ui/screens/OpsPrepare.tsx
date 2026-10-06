@@ -20,6 +20,7 @@ import type { AutoLoadout } from '../../sim/auto-equip';
 import { getScenario } from '../../sim/scenario-registry';
 import type { Id, ItemUnit, KnowledgeStatus, SquadId, StagingPoint } from '../../sim/types';
 import { Blueprint } from '../blueprint/Blueprint';
+import { floorCount } from '../blueprint/floors';
 import { Button, Card, Chip, Section, Stepper, SubHead } from '../components/ui';
 import { DifficultyChip, EnvChips, familyBlurb, incidentMeta } from '../components/incident';
 import { useToast } from '../components/toast';
@@ -92,7 +93,7 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
 
   const range = card?.squadRange ?? scenario?.squadRange ?? { min: 1, max: 3 };
   const defaultEntry = brief.entries[0]?.id;
-  const floors = built.location.floors ?? 1;
+  const floors = floorCount(built.location);
   // Renderer props that may not be declared yet (floor tabs, environment overlay). Spread so this compiles either way.
   const blueprintExtras = { floor: Math.min(floor, floors - 1), onFloorChange: setFloor, environment: intel.environment ?? undefined };
 
@@ -265,8 +266,8 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
   const deploy = () => act(cmd, practice ? 'Practice started' : 'Squads deployed');
 
   const incidentType = scenario?.incident?.type ?? null;
-  const familyId = scenario?.incident?.familyId ?? scenario?.locationFamilyId ?? null;
-  const kicker = [incidentType ? incidentMeta(incidentType).label : null, familyBlurb(familyId)].filter(Boolean).join(' · ');
+  const familyId = scenario?.locationFamilyId ?? scenario?.incident?.familyId ?? null;
+  const kicker = [incidentType ? incidentMeta(incidentType).label : null, familyBlurb(familyId), floors > 1 ? `${floors}\u00a0floors` : null].filter(Boolean).join(' · ');
   const knownRest = brief.known.filter((k) => !intel.covered.has(k));
 
   return (
