@@ -7,14 +7,14 @@ import { conditionHolds } from './resolution';
 import { getScenario } from './scenario-registry';
 import { deserialize, serialize } from './save';
 import { storyPeoplePublic, storyPropsPublic } from './story-people';
-import { apply, makeState, NOW, startRun } from './test-fixtures';
+import { apply, makeState, NOW, startWithKit } from './test-fixtures';
 
 describe('generated story bindings keep every named person on one current map location', () => {
   it('moves Ben and Mara separately after their actual committed release actions', () => {
     const scenario = getScenario(incidentId({ type: 'hostage_crisis', familyId: 'market_row', buildingSeed: 7, seed: 0, tier: 2, contentVersion: 5 }))!;
     const built = buildLocation(scenario.locationFamilyId, scenario.locationSeed);
     const base = makeState(); base.saveVersion = 5; base.contentVersion = 5; initializePersonnel(base);
-    let state = startRun(base, scenario.id, ['A'], { practice: true, positions: { A: built.location.entries[0] } });
+    let state = startWithKit(base, scenario.id, ['A'], { positions: { A: built.location.entries[0] } });
     const decide = (name: string) => {
       const action = actionViews(state, NOW, 'A').find(action => action.id === `v5_sig_${name}`)!;
       expect(action?.eligible, `${name}: ${action?.reason}`).toBe(true);
@@ -52,7 +52,7 @@ describe('generated story bindings keep every named person on one current map lo
       expect(scenario?.story, `${info.type}:${seed} has no archetype bindings`).toBeDefined();
       const built = buildLocation(familyId, 7);
       const base = makeState(); base.saveVersion = 5; base.contentVersion = 5; initializePersonnel(base);
-      const started = startRun(base, scenario.id, ['A'], { practice: true, positions: { A: built.location.entries[0] } });
+      const started = startWithKit(base, scenario.id, ['A'], { positions: { A: built.location.entries[0] } });
       const people = Object.values(scenario.story!.bindings.people);
       expect(people.length).toBeGreaterThan(0);
       for (const person of people) for (const transition of person.transitions.filter(transition => transition.observed)) {

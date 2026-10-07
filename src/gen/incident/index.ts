@@ -140,7 +140,7 @@ export function generateIncident(spec: IncidentSpec): ScenarioDefinition {
 function generateIncidentAt(spec: IncidentSpec): ScenarioDefinition {
   if (!parseIncidentId(incidentId(spec))) throw new Error('Invalid incident specification');
   // Keep legacy actions and fact IDs stable. Previously saved Maple board specs
-  // now resolve, while authored tutorial/practice scenarios remain untouched.
+  // now resolve, while the authored Maple Street scenarios remain untouched.
   if (spec.familyId === 'maple_street') {
     const old = structuredClone(spec.type === 'medical_complication' ? MS_URGENT : MS_OCCUPANCY);
     if (spec.contentVersion === 1) restoreLegacyMaplePowerSnapshot(old);

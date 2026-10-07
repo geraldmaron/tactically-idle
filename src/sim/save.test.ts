@@ -9,6 +9,7 @@ import { boardSummary, careerInfo } from './department-selectors';
 import type { Command, GameState } from './types';
 import { actionViews, briefing } from './operation-selectors';
 import { playPolicy, startCmd } from './test-fixtures';
+import activeV4Text from './fixtures/release-v4-active.json?raw';
 
 const T0 = Date.UTC(2026, 0, 5, 12, 0, 0);
 
@@ -247,15 +248,15 @@ function v1Envelope() {
 
 describe('migration from version 1', () => {
   it('writes the current version', () => {
-    expect(CURRENT_SAVE_VERSION).toBe(7);
-    expect(createInitialState(T0).saveVersion).toBe(7);
+    expect(CURRENT_SAVE_VERSION).toBe(9);
+    expect(createInitialState(T0).saveVersion).toBe(9);
   });
 
   it('turns stacks into units, adds the calendar and careers, and releases the in-flight run', () => {
     const text = JSON.stringify(v1Envelope());
     const s = deserialize(text)!;
     expect(s).not.toBeNull();
-    expect(s.saveVersion).toBe(7);
+    expect(s.saveVersion).toBe(9);
     expect((s as any).inventory).toBeUndefined();
 
     // Same stock, now as individual units.
@@ -307,7 +308,7 @@ describe('migration from version 1', () => {
 
   it('migrate() converts a v1 envelope and refuses a malformed one without throwing', () => {
     const env = v1Envelope() as any;
-    expect(migrate(env)?.saveVersion).toBe(7);
+    expect(migrate(env)?.saveVersion).toBe(9);
     expect(migrate({ ...v1Envelope(), state: { ...v1Envelope().state, inventory: null } } as any)).toBeNull();
   });
 
@@ -355,7 +356,7 @@ describe('migration from version 2 to 3', () => {
     const a = deserialize(JSON.stringify(v2Envelope()))!;
     const b = deserialize(JSON.stringify(v2Envelope()))!;
     expect(a).not.toBeNull();
-    expect(a.saveVersion).toBe(7);
+    expect(a.saveVersion).toBe(9);
     expect(a).toEqual(b);
     expect(a.incidents).toHaveLength(3);
     for (const c of a.incidents) {
@@ -384,8 +385,8 @@ describe('migration from version 2 to 3', () => {
 
   it('migrate() reports the current version, and the result round-trips and settles', () => {
     const m = migrate(v2Envelope() as any)!;
-    expect(m.saveVersion).toBe(7);
-    expect(m.state.saveVersion).toBe(7);
+    expect(m.saveVersion).toBe(9);
+    expect(m.state.saveVersion).toBe(9);
     const s = deserialize(JSON.stringify(v2Envelope()))!;
     expect(deserialize(serialize(s, T0))).toEqual(s);
     // Away for 15 hours: the migrated cards expire and the board keeps going.
@@ -404,7 +405,7 @@ describe('migration from version 2 to 3', () => {
 describe('migration chains from version 1 to 3', () => {
   it('a v1 save arrives at the current version with a board and the v2 conversions applied', () => {
     const s = deserialize(JSON.stringify(v1Envelope()))!;
-    expect(s.saveVersion).toBe(7);
+    expect(s.saveVersion).toBe(9);
     expect(s.incidents).toHaveLength(3);
     expect(s.incidents.every((c) => c.arrivedAt === T0 && !c.seen)).toBe(true);
     expect(Object.keys(s.units).length).toBeGreaterThan(0);
@@ -452,5 +453,89 @@ describe('version 3 validation and squad D', () => {
     const loaded = deserialize(serialize(s, T0 + 3 * HOUR_MS))!;
     const end = T0 + 30 * HOUR_MS;
     expect(ok(loaded, { type: 'tick' }, end).incidents).toEqual(ok(s, { type: 'tick' }, end).incidents);
+  });
+});
+
+describe('save v8 retires legacy practice records', () => {
+  const recipe = { live: 'domestic/cedar_close/1/ordinary', practiceOnly: 'domestic/harbour_court/1/ordinary' };
+  const report = (runId: string, practice: boolean) => ({ runId, scenarioId: 'ms_occupancy', endingId: 'handed_over', endingTitle: 'Handed over', practice,
+    objective: { score: 50, label: 'Partial' }, civilianSafety: { score: 100, label: 'Safe' }, officerCondition: [], informationPreserved: [],
+    resources: [], unitWear: [], trustDelta: 0, fundingReward: 0, devPointReward: 0, causes: [] });
+
+  /** A v7 save as the last build with practice wrote it: a practice run already past its first
+   * decision (so it could no longer be cancelled), a practice debrief beside a live one, and
+   * practice marks in the casebook. Practice runs never reserved owned stock. */
+  function v7WithPractice() {
+    let s = createInitialState(T0);
+    const entry = briefing('ms_occupancy').entries[0].id;
+    s = ok(s, startCmd('ms_occupancy', ['A'], { positions: { A: entry }, loadouts: { A: {} } }), T0);
+    const first = actionViews(s, T0, 'A').find((action) => action.eligible)!;
+    s = ok(s, { type: 'decide', actionId: first.id, actingSquadIds: first.actingSquadIds, supportSquadIds: first.supportSquadIds }, T0);
+    const raw = JSON.parse(serialize(s, T0));
+    for (const reservation of raw.state.reservations) raw.state.units[reservation.unitId].status = 'ready';
+    raw.state.reservations = [];
+    raw.state.activeRun.reservationIds = [];
+    raw.state.activeRun.practice = true;
+    raw.state.debriefs = [report('run_practice', true), report('run_live', false)];
+    raw.state.casebook.frameworksSeen = [...new Set([...raw.state.casebook.frameworksSeen, 'domestic'])];
+    raw.state.casebook.recipes = {
+      [recipe.live]: { firstAt: T0, best: { completed: true, objective: 90, safety: 90, label: 'Resolved', practice: true } },
+      [recipe.practiceOnly]: { firstAt: T0, practiceOnly: true, best: { completed: true, objective: 80, safety: 90, label: 'Resolved', practice: true } },
+    };
+    raw.saveVersion = 7; raw.state.saveVersion = 7;
+    return raw;
+  }
+
+  it('ends an active practice run as cancelled: officers free, squads deployable, nothing rewarded', () => {
+    const raw = v7WithPractice();
+    const loaded = deserialize(JSON.stringify(raw))!;
+    expect(loaded).not.toBeNull();
+    expect(loaded.saveVersion).toBe(9);
+    expect(loaded.activeRun).toBeNull();
+    expect(loaded.reservations).toEqual([]);
+    expect(Object.values(loaded.officers).map((officer) => officer.assignment)).toEqual(Object.values(loaded.officers).map(() => null));
+    expect(loaded.officers).toEqual(Object.fromEntries(Object.entries(raw.state.officers as GameState['officers']).map(([id, officer]) => [id, { ...officer, assignment: null }])));
+    expect(loaded.units).toEqual(raw.state.units);
+    expect(loaded.department).toEqual(raw.state.department);
+    expect(loaded.incidents).toEqual(raw.state.incidents);
+    expect(loaded.rngState).toBe(raw.state.rngState);
+    const entry = briefing('ms_occupancy').entries[0].id;
+    expect(dispatch(loaded, startCmd('ms_occupancy', ['A'], { positions: { A: entry }, loadouts: { A: {} } }), { now: T0 }).result).toEqual({ ok: true });
+    expect(deserialize(serialize(loaded, T0))).toEqual(loaded);
+  });
+
+  it('drops practice debriefs and practice-only casebook entries, and unmarks practice bests', () => {
+    const loaded = deserialize(JSON.stringify(v7WithPractice()))!;
+    expect(loaded.debriefs.map((d) => d.runId)).toEqual(['run_live']);
+    expect(loaded.debriefs[0]).not.toHaveProperty('practice');
+    expect(loaded.casebook!.recipes).toEqual({ [recipe.live]: { firstAt: T0, best: { completed: true, objective: 90, safety: 90, label: 'Resolved' } } });
+  });
+
+  it('keeps a live run and its saved decisions, minus only the retired flag', () => {
+    let s = createInitialState(T0);
+    const entry = briefing('ms_occupancy').entries[0].id;
+    s = ok(s, startCmd('ms_occupancy', ['A'], { positions: { A: entry }, loadouts: { A: {} } }), T0);
+    const first = actionViews(s, T0, 'A').find((action) => action.eligible)!;
+    s = ok(s, { type: 'decide', actionId: first.id, actingSquadIds: first.actingSquadIds, supportSquadIds: first.supportSquadIds }, T0);
+    const raw = JSON.parse(serialize(s, T0));
+    raw.state.activeRun.practice = false;
+    raw.saveVersion = 7; raw.state.saveVersion = 7;
+    const loaded = deserialize(JSON.stringify(raw))!;
+    expect(loaded.activeRun).toEqual(s.activeRun);
+    expect(loaded.reservations).toEqual(s.reservations);
+    expect(loaded.officers).toEqual(s.officers);
+  });
+
+  it('ends a v4 practice run on a retired exercise before the v4 shape is checked', () => {
+    const raw = JSON.parse(activeV4Text);
+    raw.state.activeRun.practice = true;
+    raw.state.activeRun.scenarioId = 'exercise_welfare_v4';
+    const loaded = deserialize(JSON.stringify(raw))!;
+    expect(loaded).not.toBeNull();
+    expect(loaded.saveVersion).toBe(9);
+    expect(loaded.activeRun).toBeNull();
+    expect(loaded.reservations).toEqual([]);
+    expect(Object.values(loaded.officers).every((officer) => officer.assignment === null)).toBe(true);
+    expect(Object.values(loaded.units).some((unit) => unit.status === 'reserved')).toBe(false);
   });
 });

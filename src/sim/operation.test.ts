@@ -45,10 +45,9 @@ const swapChenForReyes = (s: GameState): GameState => {
 };
 
 describe('scenario content and selectors', () => {
-  it('preserves the original scenario order and adds equipment practice cards', () => {
+  it('lists the two standing assignments in their original order', () => {
     const cards = scenarioCards(makeState(), NOW);
-    expect(cards.slice(0, 5).map((c) => c.code)).toEqual(['OP 0141', 'OP 0142', 'PRACTICE 03', 'PRACTICE 04', 'PRACTICE 05']);
-    expect(cards.slice(2, 5).map((c) => c.id)).toEqual(['practice_signals_v2', 'practice_response_v2', 'practice_rescue_v2']);
+    expect(cards.map((c) => c.code)).toEqual(['OP 0141', 'OP 0142']);
     expect(cards[0].variantLabel).toBe('Uncertain occupancy');
     expect(cards[1].variantLabel).toBe('Time pressure');
     expect(cards[0].eligibleSquadIds).toEqual(['A', 'B']);
@@ -577,48 +576,10 @@ describe('recovery (acceptance 10)', () => {
     expect(apply(s, startCmd('ms_occupancy', ['B'])).result.ok).toBe(true);
   });
 
-  it('practice is allowed and grants nothing', () => {
-    const s = tired();
-    s.officers.off_vale.stress = 40;
-    const before = structuredClone(s);
-    const start = startRun(s, 'ms_occupancy', ['A'], { practice: true });
-    expect(start.reservations).toEqual([]);
-    expect(start.units[unitId('throw_phone')].status).toBe('ready');
-    expect(start.activeRun!.practice).toBe(true);
-    // Practice assumes one of each owned item, so contact is available without a loadout.
-    expect(view(start, 'ms_contact').eligible).toBe(true);
-    const done = playPolicy(start, { assess: ['ms_contact'], adapt: ['ms_perimeter_watch'], resolve: ['ms_controlled_entry', 'ms_negotiated_exit'] });
-    expect(done.debrief.practice).toBe(true);
-    expect(done.debrief.fundingReward).toBe(0);
-    expect(done.debrief.devPointReward).toBe(0);
-    expect(done.debrief.trustDelta).toBe(0);
-    expect(done.debrief.officerCondition.every((o) => o.xpGained === 0 && o.stressBefore === o.stressAfter)).toBe(true);
-    expect(done.debrief.resources).toEqual([]);
-    expect(done.debrief.causes[0]).toMatch(/Practice run/);
-    expect(done.state.department).toEqual(before.department);
-    expect(done.state.units).toEqual(before.units);
-    for (const [id, o] of Object.entries(done.state.officers)) {
-      expect(o.stress).toBe(before.officers[id].stress);
-      expect(o.xp).toBe(before.officers[id].xp);
-      expect(o.assignment).toBeNull();
-    }
-    expect(done.state.activeRun).toBeNull();
-    const run = start.activeRun!;
-    expect(run.history).toEqual([]);
-  });
-
-  it('practice decisions record no strain and no item use', () => {
-    const s = startRun(tired(), 'ms_occupancy', ['A'], { practice: true });
-    const r = decideView(s, 'ms_contact').state.activeRun!;
-    expect(r.history[0].stressDeltas).toEqual({});
-    expect(r.history[0].itemsConsumed).toEqual([]);
-    expect(r.history[0].explanation.join(' ')).toMatch(/Practice run/);
-  });
-
-  it('practice does not hijack an officer who is in training', () => {
+  it('does not take an officer who is in training', () => {
     const s = makeState();
     s.officers.off_park.assignment = { kind: 'training', courseId: 'c1', startedAt: NOW, endsAt: NOW + 1000 };
-    const r = apply(s, startCmd('ms_occupancy', ['B'], { practice: true }));
+    const r = apply(s, startCmd('ms_occupancy', ['B']));
     expect(r.result.ok).toBe(false);
     expect(s.officers.off_park.assignment?.kind).toBe('training');
   });

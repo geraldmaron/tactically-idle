@@ -7,8 +7,8 @@ import type { StartOperationCommand } from '../../sim/operation-selectors';
 import { makeState, NOW, unitId } from '../../sim/test-fixtures';
 import { handCarriedLoadout, supportChoices, SupportPreparation } from './SupportPreparation';
 
-function command(scenarioId = 'ms_occupancy', practice = false): StartOperationCommand {
-  return { type: 'startOperation', scenarioId, squadIds: ['A'], positions: { A: briefing(scenarioId).entries[0].id }, loadouts: {}, practice };
+function command(scenarioId = 'ms_occupancy'): StartOperationCommand {
+  return { type: 'startOperation', scenarioId, squadIds: ['A'], positions: { A: briefing(scenarioId).entries[0].id }, loadouts: {} };
 }
 
 function supportedState() {
@@ -57,28 +57,11 @@ describe('operation support preparation', () => {
     expect(supportChoices(state, NOW, cmd, ITEMS.support_van)[0].issues).toEqual(['Support vehicle needs accessible exterior staging with the lead squad']);
   });
 
-  it('offers one fresh virtual support choice per vehicle in an equipment exercise without buying stock', () => {
+  it('offers only owned units: no vehicle without stock, and none for hand-carried items', () => {
     const state = makeState();
     state.officers.off_vale.certs.push('vehicle_operations');
-    const before = structuredClone(state);
-    const cmd = command('practice_rescue_v2', true);
-    const choices = supportChoices(state, NOW, cmd, ITEMS.armored_rescue_vehicle);
-    expect(choices).toEqual([{ id: 'practice_armored_rescue_vehicle', unit: null, condition: 100, issues: [] }]);
-    expect(supportChoices(state, NOW, command('ms_occupancy', true), ITEMS.armored_rescue_vehicle)).toEqual([]);
-    expect(supportChoices(state, NOW, cmd, ITEMS.radio_kit)).toEqual([]);
-    expect(state).toEqual(before);
-  });
-
-  it('requires a selected certified operator for virtual support too', () => {
-    const choices = supportChoices(makeState(), NOW, command('practice_rescue_v2', true), ITEMS.support_van);
-    expect(choices[0].issues.join(' ')).toMatch(/deployed officer.*vehicle operations/);
-  });
-
-  it('uses owned or unlocked vehicle eligibility for ordinary practice', () => {
-    const state = makeState({ unlockedNodes: ['logistics_field_support'] });
-    state.officers.off_vale.certs.push('vehicle_operations');
-    expect(supportChoices(state, NOW, command('ms_occupancy', true), ITEMS.support_van)[0].id).toBe('practice_support_van');
-    expect(supportChoices(supportedState(), NOW, command('ms_occupancy', true), ITEMS.armored_rescue_vehicle)[0].id).toBe('practice_armored_rescue_vehicle');
+    expect(supportChoices(state, NOW, command(), ITEMS.armored_rescue_vehicle)).toEqual([]);
+    expect(supportChoices(supportedState(), NOW, command(), ITEMS.radio_kit)).toEqual([]);
   });
 
   it('explains stock, funding and qualification separately without a purchase control', () => {

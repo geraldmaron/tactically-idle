@@ -1105,12 +1105,6 @@
 .bp-chip-text { font: 600 1.1px var(--font-cond); fill: currentColor; letter-spacing: .02em; }
 .bp-roomlist-person { display: block; grid-column: 1 / -1; font-size: 13px; line-height: 1.45; white-space: normal; color: var(--text); }
 .legend-reported-person { border: 1px dashed currentColor; border-radius: 50%; padding: 2px; box-sizing: content-box; }
-.legend-help { font-size: 12px; }
-.legend-help[open] { flex-basis: 100%; order: 3; }
-.legend-help summary { min-height: 44px; min-width: 44px; display: flex; align-items: center; cursor: pointer; color: var(--text-dim); }
-.legend-help summary::before { content: '+'; margin-right: 6px; }
-.legend-help[open] summary::before { content: '−'; }
-.legend-help p { margin: 0 0 10px; line-height: 1.5; }
 .person-condition { display: flex; align-items: center; gap: 6px; margin: 2px 0 2px 24px; color: var(--warn); }
 .person-condition-deceased { color: var(--danger); }
 .person-carried { list-style: none; margin: 4px 0 0 24px; padding: 0; }

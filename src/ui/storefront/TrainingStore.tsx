@@ -4,17 +4,21 @@ import { DEV_NODES } from '../../content/dev-tree';
 import { courseOptions } from '../../sim/department-selectors';
 import { fullName } from '../../sim/officer';
 import type { CertId, Course, Id, Officer } from '../../sim/types';
-import { CERT_LABEL, RATING_META, ROLE_META } from '../components/labels';
+import { CERT_ICON, CERT_LABEL, RATING_META, ROLE_META } from '../components/labels';
+import { StressDisplay } from '../components/StressDisplay';
+import { Icon, type IconName } from '../icons';
 import { useToast } from '../components/toast';
-import { Button, Chip, EmptyState, Meter } from '../components/ui';
+import { Button, Chip, EmptyState, RatingBars } from '../components/ui';
 import { Sheet } from '../components/Sheet';
 import { Portrait } from '../portraits/Portrait';
 import { duration, moneyFull as money } from '../format';
+import { assetUrl } from '../art/assetUrl';
 import { getState, useGame } from '../store';
 import { useNav, type TrainingDraft, type TrainingFocus } from '../components/nav';
 import { trainingCandidates, trainingOfficerCondition, trainingRatingGain, trainingRatingKeys, trainingStrongestRatings, type TrainingCandidate } from './training-officers';
 import { createTrainingChooserNavigation, type TrainingChoice, type TrainingEnrolment } from './training-chooser-navigation';
 import './training-store.css';
+import '../screens/squad-visual.css';
 
 /** Apply a deep link once; returning from Develop keeps the officer and search the player edited. */
 export function trainingDraftForRequest(draft: TrainingDraft, focus: TrainingFocus, request: number): TrainingDraft {
@@ -117,38 +121,50 @@ export function TrainingStore({ requestedCert, requestedOfficer, requestedCourse
     }
     else submitting.current = false;
   };
+  const freePlaces = Math.max(0, game.department.trainingSlots - inTraining);
   return <div ref={root} className="store-training">
-    <h2 className="section-title training-heading" tabIndex={-1}>Training</h2>
-    <p className="dim training-intro">Choose a course, compare officers, then confirm enrolment. Gains arrive when training finishes.</p>
-    <div className="chips"><Chip icon="mortarboard">{inTraining}/{game.department.trainingSlots} training slots used</Chip></div>
+    <div className="training-top">
+      <h2 className="section-title training-heading" tabIndex={-1}>Training</h2>
+      <TrainingPlaces used={inTraining} total={game.department.trainingSlots} />
+    </div>
+    <p className="dim training-intro">Pick a course, then compare officers. Gains arrive when training finishes.</p>
     {officer && <section className="training-selected-officer" aria-label="Officer to train" data-training-officer-id={officer.id}>
-      <div className="training-person">
-        <Portrait officer={officer} size={52} className="training-portrait" />
-        <div className="training-person-name"><span className="kicker">Officer to train</span><strong>{fullName(officer)}</strong><span className="dim">{ROLE_META[officer.role].label} · {trainingOfficerCondition(officer, game.department.clockHighWater)}</span><span className="dim">Stress {Math.round(officer.stress)}/100</span></div>
-      </div>
-      <p className="training-strengths">Highest ratings: {trainingStrongestRatings(officer).map((rating) => `${rating.short} ${officer.ratings[rating.key]}`).join(' · ')}</p>
-      <div className="training-selected-foot"><span className="dim">Choose a course to compare officers</span><Button size="sm" variant="ghost" onClick={() => setOfficerId('')} aria-label={`Clear ${fullName(officer)} as the officer to train`}>Clear</Button></div>
+      <Portrait officer={officer} size={44} className="training-portrait" />
+      <div className="training-person-name"><strong>{fullName(officer)}</strong><span className="dim">{ROLE_META[officer.role].label} · {trainingOfficerCondition(officer, game.department.clockHighWater)}</span><span className="training-strengths">Highest ratings: {trainingStrongestRatings(officer).map((rating) => `${rating.short} ${officer.ratings[rating.key]}`).join(' · ')}</span></div>
+      <StressDisplay value={officer.stress} compact />
+      <Button size="sm" variant="ghost" icon="x" className="training-clear" onClick={() => setOfficerId('')} aria-label={`Clear ${fullName(officer)} as the officer to train`} />
     </section>}
-    <div className="store-filter-row">
-      <label className="field"><span className="field-label">Search courses</span><input type="search" placeholder="Course or certification" value={search} onChange={(event) => setSearch(event.target.value)} /></label>
+    <div className="training-search">
+      <label className="field"><span className="field-label sr-only">Search courses</span><Icon name="search" size={16} /><input type="search" placeholder="Course or certification" value={search} onChange={(event) => setSearch(event.target.value)} /></label>
+      <span className="training-count" role="status">{options.length} of {Object.keys(COURSES).length}</span>
     </div>
     {search && <Button size="sm" variant="ghost" onClick={() => setSearch('')}>Show all training</Button>}
-    <p className="dim" role="status">{options.length} of {Object.keys(COURSES).length} courses</p>
     {!officers.length && <EmptyState icon="people" title="No officers to train">Recruit an officer before starting a course.</EmptyState>}
-    <div className="store-grid">{options.map(({ course, available, reason }) => {
+    <div className="course-grid">{options.map(({ course, available, reason }) => {
       const locked = !!course.requiresNode && !game.department.unlockedNodes.includes(course.requiresNode);
       const rating = course.grants.rating;
       const cert = course.grants.cert;
-      return <article className={`store-card training-course${courseId === course.id ? ' training-course-highlight' : ''}`} key={course.id} data-course-id={course.id} tabIndex={courseId === course.id ? -1 : undefined}>
-        <div className="store-card-heading"><div><span className="kicker">{cert ? 'Certification' : 'Skills course'}</span><h3>{course.name}</h3></div><Chip icon="clock">{course.hours}h</Chip></div>
-        <p className="training-course-gain">{cert ? `Earn ${CERT_LABEL[cert]}` : rating ? `+${rating.delta} ${RATING_META.find((meta) => meta.key === rating.key)?.label ?? rating.key} · enrol below ${COURSE_RATING_CEILING}` : ''}</p>
-        <p className="training-xp">+{courseXpGain(course.hours)} XP on completion</p>
-        {officer && <div className="training-course-personal"><span className="dim">For {officer.firstName}</span><TrainingGain course={course} officer={officer} /></div>}
-        {!!course.requiresCerts?.length && <p className="dim">Prior qualification: {course.requiresCerts.map((required) => CERT_LABEL[required]).join(' + ')}.</p>}
-        {reason && <p className="reason">{reason}</p>}
-        {officer && available && <p className="training-eligible">{officer.firstName} can enrol</p>}
-        {locked && <Button size="sm" variant="ghost" onClick={() => openDevelopment(course.requiresNode!)}>View development program</Button>}
-        <div className="store-card-foot"><strong>{money(course.cost)} <span className="dim">funding</span></strong><Button size="sm" variant="primary" disabled={!officers.length} aria-label={`Choose officer for ${course.name}`} onClick={() => openChooser(course.id)}>Choose officer</Button></div>
+      const ratingMeta = rating ? RATING_META.find((meta) => meta.key === rating.key) : undefined;
+      return <article className={`course-tile training-course${courseId === course.id ? ' training-course-highlight' : ''}${locked ? ' course-tile-locked' : ''}${officer && available ? ' course-tile-ready' : ''}`} key={course.id} data-course-id={course.id} tabIndex={courseId === course.id ? -1 : undefined} aria-label={course.name}>
+        <div className="course-tile-top">
+          <CourseEmblem course={course} locked={locked} />
+          <p className="course-tile-meta"><span><Icon name="clock" size={13} />{course.hours}h</span><span><Icon name="cash" size={13} />{money(course.cost)}</span></p>
+        </div>
+        <h3>{course.name}</h3>
+        <div className="course-tile-gains">
+          {cert ? <Chip tone="mint" icon={CERT_ICON[cert]}>Earn {CERT_LABEL[cert]}</Chip> : rating ? <Chip tone="mint" icon={ratingMeta?.icon}>+{rating.delta} {ratingMeta?.label ?? rating.key}</Chip> : null}
+          <Chip icon="trend">+{courseXpGain(course.hours)} XP</Chip>
+        </div>
+        {rating && <p className="course-tile-note">Enrol below {COURSE_RATING_CEILING}</p>}
+        {officer && <div className="training-course-personal"><span className="dim">For {officer.firstName}</span><TrainingGain course={course} officer={officer} compact /></div>}
+        {!!course.requiresCerts?.length && <p className="course-tile-note">Needs {course.requiresCerts.map((required) => CERT_LABEL[required]).join(' + ')}</p>}
+        {/* A full department is shown once by the places pips, not repeated on every tile. */}
+        {reason && reason !== 'No free training slot' && <p className="reason">{reason}</p>}
+        {officer && available && <p className="training-eligible"><Icon name="check" size={13} />{officer.firstName} can enrol</p>}
+        <div className="course-tile-foot">
+          {locked && <Button size="sm" variant="ghost" icon="unlock" className="course-tile-develop" onClick={() => openDevelopment(course.requiresNode!)} aria-label={`View development program for ${course.name}`} title="View development program" />}
+          <Button size="sm" variant={locked ? 'secondary' : 'primary'} disabled={!officers.length} aria-label={`Choose officer for ${course.name}`} onClick={() => openChooser(course.id)}>Choose officer</Button>
+        </div>
         {feedback?.courseId === course.id && <p role="status">{feedback.text}</p>}
       </article>;
     })}</div>
@@ -165,10 +181,23 @@ export function TrainingStore({ requestedCert, requestedOfficer, requestedCourse
       </div> : reviewing ? <div className="training-review">
         <h3 ref={reviewHeading} className="training-review-heading" tabIndex={-1}>Confirm {fullName(reviewing.officer)}</h3>
         <TrainingOfficerCard candidate={reviewing} now={game.department.clockHighWater} selected />
-        <div className="training-confirm-details"><p>{game.department.funding >= selectedCourse.cost ? `Funding: ${money(game.department.funding)} → ${money(game.department.funding - selectedCourse.cost)}` : `Funding: ${money(game.department.funding)} of ${money(selectedCourse.cost)} needed`}</p><p>{Math.max(0, game.department.trainingSlots - inTraining)} training {game.department.trainingSlots - inTraining === 1 ? 'slot' : 'slots'} free</p><p className="dim">Away from squad duties for {selectedCourse.hours} real hours. Grants arrive on completion; XP may also improve a rating.</p></div>
+        <div className="training-confirm-details">
+          <p className="training-confirm-line"><Icon name="cash" size={14} />{game.department.funding >= selectedCourse.cost ? <>Funding {money(game.department.funding)} <span aria-hidden="true">→</span><span className="sr-only"> to </span> {money(game.department.funding - selectedCourse.cost)}</> : `Funding ${money(game.department.funding)} of ${money(selectedCourse.cost)} needed`}</p>
+          <p className="training-confirm-line"><Icon name="mortarboard" size={14} />{freePlaces} training {freePlaces === 1 ? 'place' : 'places'} free <TrainingPlaces used={inTraining} total={game.department.trainingSlots} bare /></p>
+          <p className="training-confirm-line"><Icon name="clock" size={14} />Away from squad duties for {selectedCourse.hours} real hours</p>
+          <p className="dim">Grants arrive on completion. XP may also improve a rating.</p>
+        </div>
         {feedback?.courseId === selectedCourse.id && <p className="reason" role="status">{feedback.text}</p>}
       </div> : <div className="training-candidates">
-        <div className="training-comparison-intro"><p>{selectedCourse.grants.cert ? `Certification on completion: ${CERT_LABEL[selectedCourse.grants.cert]}.` : `Compare current ratings and direct course gains. Enrol below ${COURSE_RATING_CEILING}.`} Gains arrive on completion; XP may also improve a rating.</p><p className="dim" role="status">{eligible} can enrol · {candidates.length - eligible} unavailable · Stress: lower is better</p></div>
+        <div className="training-comparison-intro">
+          <div className="course-tile-gains">
+            {selectedCourse.grants.cert ? <Chip tone="mint" icon={CERT_ICON[selectedCourse.grants.cert]}>Earn {CERT_LABEL[selectedCourse.grants.cert]}</Chip> : selectedCourse.grants.rating ? <Chip tone="mint" icon={RATING_META.find((meta) => meta.key === selectedCourse.grants.rating!.key)?.icon}>+{selectedCourse.grants.rating.delta} {RATING_META.find((meta) => meta.key === selectedCourse.grants.rating!.key)?.label}</Chip> : null}
+            <Chip icon="trend">+{courseXpGain(selectedCourse.hours)} XP</Chip>
+            <TrainingPlaces used={inTraining} total={game.department.trainingSlots} />
+          </div>
+          <p>{selectedCourse.grants.cert ? 'Bars show current ratings that matter for this work.' : `Bars show the gain on completion. Enrol below ${COURSE_RATING_CEILING}.`}</p>
+          <p className="dim" role="status">{eligible} can enrol · {candidates.length - eligible} unavailable</p>
+        </div>
         {selectedCourse.requiresNode && !game.department.unlockedNodes.includes(selectedCourse.requiresNode) && <div className="training-program-lock"><p className="reason">Requires {DEV_NODES[selectedCourse.requiresNode]?.name ?? selectedCourse.requiresNode}</p><Button size="sm" onClick={() => openDevelopment(selectedCourse.requiresNode!)}>View development program</Button></div>}
         {!candidates.length && <EmptyState icon="people" title="No officers to train">Recruit an officer before starting a course.</EmptyState>}
         {candidates.map((candidate) => <TrainingOfficerCard key={candidate.officer.id} candidate={candidate} now={game.department.clockHighWater} selected={candidate.officer.id === officerId} onSelect={() => {
@@ -204,6 +233,28 @@ export function TrainingEnrolmentReceipt({ course, enrolment, officer, now }: { 
   </div>;
 }
 
+const EMBLEMS = import.meta.glob<{ readyIds?: string[] }>('/public/art/emblems/manifest.json', { eager: true, import: 'default' });
+const EMBLEM_IDS = new Set(Object.values(EMBLEMS)[0]?.readyIds ?? []);
+
+/** Course art when the emblem set lists it as ready; otherwise the certificate or skill icon. */
+export function CourseEmblem({ course, locked = false }: { course: Course; locked?: boolean }) {
+  const [failed, setFailed] = useState(false);
+  const icon: IconName = course.grants.cert ? CERT_ICON[course.grants.cert] : RATING_META.find((meta) => meta.key === course.grants.rating?.key)?.icon ?? 'mortarboard';
+  return <span className={`node-medallion course-emblem${locked ? ' node-medallion-locked' : ''}`} aria-hidden="true">
+    {EMBLEM_IDS.has(course.id) && !failed ? <img src={assetUrl(`art/emblems/${course.id}.webp`)} alt="" width={40} height={40} onError={() => setFailed(true)} /> : <Icon name={icon} size={22} />}
+    {locked && <span className="node-medallion-badge node-badge-locked"><Icon name="lock" size={10} /></span>}
+  </span>;
+}
+
+/** Training places as pips: filled places are officers already in a course. */
+export function TrainingPlaces({ used, total, bare = false }: { used: number; total: number; bare?: boolean }) {
+  const pips = <span className="training-pips" aria-hidden="true">{Array.from({ length: Math.max(total, used) }, (_, index) => <i key={index} className={index < used ? 'on' : ''} />)}</span>;
+  if (bare) return pips;
+  return <span className="training-places" role="img" aria-label={`${used} of ${total} training places in use`}>
+    <Icon name="mortarboard" size={14} />{pips}<b>{used}/{total}</b>
+  </span>;
+}
+
 function TrainingGain({ course, officer, compact = false }: { course: Course; officer: Officer; compact?: boolean }) {
   const gain = trainingRatingGain(course, officer);
   const cert = course.grants.cert;
@@ -218,15 +269,18 @@ function TrainingGain({ course, officer, compact = false }: { course: Course; of
 /** Comparison and confirmation share the same live eligibility and gain presentation. */
 export function TrainingOfficerCard({ candidate: { officer, option }, now, selected, onSelect }: { candidate: TrainingCandidate; now: number; selected?: boolean; onSelect?: () => void }) {
   const keys = trainingRatingKeys(option.course);
-  return <article className={`training-officer-card${selected ? ' training-officer-selected' : ''}`} data-training-candidate={officer.id} tabIndex={-1} aria-label={`${fullName(officer)}, ${option.available ? 'can enrol' : 'unavailable'}`}>
-    <div className="training-person"><Portrait officer={officer} size={52} className="training-portrait" /><div className="training-person-name"><strong>{fullName(officer)}</strong><span className="dim">{ROLE_META[officer.role].label}{officer.squadId ? ` · Squad ${officer.squadId}` : ' · Unassigned'}</span><span className="training-condition">{trainingOfficerCondition(officer, now)} · Stress {Math.round(officer.stress)}/100</span></div>{selected && <span className="training-selected-label">Selected</span>}</div>
-    <div className="training-rating-list" aria-label="Current relevant ratings">{keys.map((key) => {
-      const meta = RATING_META.find((rating) => rating.key === key)!;
-      return <div className="training-rating" key={key}><div><span title={meta.label}>{meta.short}</span><strong>{officer.ratings[key]}</strong></div><Meter value={officer.ratings[key]} label={meta.label} /></div>;
-    })}</div>
-    <div className="training-benefits" aria-label="On completion"><TrainingGain course={option.course} officer={officer} compact /><span className="training-xp">+{courseXpGain(option.course.hours)} XP</span></div>
+  const gain = trainingRatingGain(option.course, officer);
+  return <article className={`training-officer-card${selected ? ' training-officer-selected' : ''}${option.available ? '' : ' training-officer-unavailable'}`} data-training-candidate={officer.id} tabIndex={-1} aria-label={`${fullName(officer)}, ${option.available ? 'can enrol' : 'unavailable'}`}>
+    <div className="training-person">
+      <Portrait officer={officer} size={44} className="training-portrait" />
+      <div className="training-person-name"><strong>{fullName(officer)}</strong><span className="dim"><Icon name={ROLE_META[officer.role].icon} size={12} /> {ROLE_META[officer.role].label}{officer.squadId ? ` · Squad ${officer.squadId}` : ' · Unassigned'}</span><span className="training-condition">{trainingOfficerCondition(officer, now)}</span></div>
+      <StressDisplay value={officer.stress} compact />
+      {onSelect && <Button size="sm" variant={option.available ? 'primary' : 'secondary'} disabled={!option.available} onClick={onSelect} aria-label={`Select ${fullName(officer)} for ${option.course.name}`} className="training-select">Select</Button>}
+      {selected && !onSelect && <span className="training-selected-label">Selected</span>}
+    </div>
+    <RatingBars ratings={officer.ratings} only={keys} dense gains={gain && gain.delta ? { [gain.key]: gain.after } : undefined} label="Current relevant ratings" />
+    {!gain?.delta && <div className="training-benefits" aria-label="On completion"><TrainingGain course={option.course} officer={officer} compact /><span className="training-xp">+{courseXpGain(option.course.hours)} XP</span></div>}
     {!!option.course.requiresCerts?.length && <p className="training-prerequisite">Prior qualification: {option.course.requiresCerts.map((cert) => `${CERT_LABEL[cert]} (${officer.certs.includes(cert) ? 'held' : 'needed'})`).join(' · ')}</p>}
     {option.reason ? <p className="reason">{option.reason}</p> : !onSelect && <p className="training-eligible">Can enrol</p>}
-    {onSelect && <Button block size="sm" variant={option.available ? 'primary' : 'secondary'} disabled={!option.available} onClick={onSelect} aria-label={`Select ${fullName(officer)} for ${option.course.name}`}>Select {officer.firstName}</Button>}
   </article>;
 }

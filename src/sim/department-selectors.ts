@@ -57,6 +57,8 @@ export interface Budget {
   wages: number;
   operating: number;
   supplies: number;
+  /** Command Staff salaries while on duty. */
+  staff: number;
   net: number;
   devPointsPerHour: number;
   /** Extra wages per hour from service anniversaries landing in the next 30 game days. */

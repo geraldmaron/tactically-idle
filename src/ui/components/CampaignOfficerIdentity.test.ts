@@ -44,8 +44,8 @@ describe('sampled campaign identities in roster presentation', () => {
         expect(currentPortraitKey({ ...officer, identityId: undefined })).toBeNull();
       }
     }
-    expect(ready).toBeGreaterThan(0);
-    expect(fallback).toBeGreaterThan(0);
+    expect(ready).toBe(Object.keys(state.officers).length);
+    expect(fallback).toBe(0);
   });
 
   it.each([2, 3, 4, 5])('preserves an explicit identity during v%i loading even when its seat has a legacy name', (version) => {

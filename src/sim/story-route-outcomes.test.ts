@@ -8,7 +8,7 @@ import { getScenario } from './scenario-registry';
 import { scenarioActions, type ScenarioDefinition } from './scenario-types';
 import { deserialize, serialize } from './save';
 import { currentStoryRoute } from './story-bindings';
-import { apply, makeState, NOW, startRun } from './test-fixtures';
+import { apply, makeState, NOW, startRun, withCallOnBoard } from './test-fixtures';
 import type { GameState } from './types';
 
 const scenario = (seed: number) => getScenario(incidentId({ type: 'medical_complication', familyId: 'market_row', buildingSeed: 7, seed, tier: 2, contentVersion: 5 }))!;
@@ -25,7 +25,7 @@ function commit(state: GameState, name: string): GameState {
 /** Choose one initial stream, then leave every saved draw untouched. */
 function favorableJourney(scenario: ScenarioDefinition, names: string[], beforeLast: (state: GameState) => void): { before: GameState; after: GameState } {
   const base = makeState(); base.saveVersion = 5; base.contentVersion = 5; initializePersonnel(base);
-  const initial = startRun(base, scenario.id, ['A'], { practice: true, positions: { A: buildLocation(scenario.locationFamilyId, scenario.locationSeed).location.entries[0] }, loadouts: { A: { trauma_kit: 3 } } });
+  const initial = startRun(withCallOnBoard(base, scenario.id), scenario.id, ['A'], { positions: { A: buildLocation(scenario.locationFamilyId, scenario.locationSeed).location.entries[0] }, loadouts: { A: { trauma_kit: 3 } } });
   for (let seed = 1; seed < 1000; seed++) {
     let state = structuredClone(initial); state.activeRun!.rngState = seed;
     let failed = false;

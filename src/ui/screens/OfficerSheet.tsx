@@ -1,3 +1,4 @@
+import './squad-visual.css';
 import { personaNote } from '../../content/personas';
 import { useState } from 'react';
 import { useGame } from '../store';
@@ -7,13 +8,14 @@ import type { Id, Officer, SquadId } from '../../sim/types';
 import { Sheet } from '../components/Sheet';
 import { useNav } from '../components/nav';
 import { COURSES } from '../../content/courses';
-import { Button, Chip, ExperienceChip, KV, Meter, ReadinessBar, OfficerStatusChip, SubHead } from '../components/ui';
+import { Button, Chip, ExperienceChip, KV, OfficerStatusChip, RatingBars, SubHead } from '../components/ui';
 import { RetirementChip, useCareerSnapshot } from '../components/Career';
 import { OfficerProgress } from '../components/OfficerProgress';
-import { StressGuide } from '../components/StressDisplay';
+import { StressDisplay, StressGuide } from '../components/StressDisplay';
 import { useToast } from '../components/toast';
 import type { StatusKey } from '../components/labels';
-import { BAND_SHORT, CERT_ICON, CERT_LABEL, RATING_META, ROLE_META, TRAIT_INFO, bandOf, ratingTone } from '../components/labels';
+import { CERT_ICON, CERT_LABEL, ROLE_META, TRAIT_INFO } from '../components/labels';
+import { officerStatus } from './squad-model';
 import { Portrait } from '../portraits/Portrait';
 import { agePortraitProps } from './helpers';
 import { Icon } from '../icons';
@@ -27,8 +29,7 @@ export function OfficerSheet({ officerId, onClose }: { officerId: Id | null; onC
       open={!!o}
       onClose={onClose}
       title={o ? `${o.firstName} ${o.surname}` : ''}
-      subtitle={o ? `${ROLE_META[o.role].label} · ${perHour(o.wage)} wage` : undefined}
-    >
+          >
       {o && <OfficerBody o={o} onClose={onClose} />}
     </Sheet>
   );
@@ -42,97 +43,89 @@ function OfficerBody({ o, onClose }: { o: Officer; onClose: () => void }) {
   const nav = useNav();
   const squad = o.squadId ? g.squads.find((s) => s.id === o.squadId) : undefined;
   const isLeader = squad?.leaderId === o.id;
-  const band = bandOf(o);
   const injured = !!o.injury && o.injury.until > now;
   const career = useCareerSnapshot(o);
-  const statusKey: StatusKey = injured ? 'injured' : o.assignment?.kind === 'training' ? 'training' : o.assignment?.kind === 'operation' ? 'deployed' : band;
+  const statusKey: StatusKey = officerStatus(o, now);
+  const statusText = injured ? `Injured: ${o.injury!.label}` : o.assignment?.kind === 'training' ? `Training · ${relativeTime(o.assignment.endsAt, now)}` : o.assignment?.kind === 'operation' ? 'On operation' : undefined;
+  const persona = personaNote(o.identityId);
 
   return (
     <div className="osheet">
-      <div className="osheet-top">
+      <div className="osheet-hero">
         <div className="osheet-portrait">
-          <Portrait officer={o} size={84} {...agePortraitProps(g, o, now)} />
+          <Portrait officer={o} size={92} {...agePortraitProps(g, o, now)} />
+          {isLeader && <span className="osheet-leader" title="Squad leader"><Icon name="star" size={13} /></span>}
         </div>
         <div className="osheet-id">
           <div className="chips">
             <Chip icon={ROLE_META[o.role].icon}>{ROLE_META[o.role].label}</Chip>
-            {squad ? <Chip tone="blue" icon={isLeader ? 'star' : 'people'}>{squad.name}{isLeader ? ' · leader' : ''}</Chip> : <Chip icon="user">Unassigned</Chip>}
-          </div>
-          <div className="chips">
-            <OfficerStatusChip status={statusKey} />
+            {squad ? <Chip tone="blue" icon={isLeader ? 'star' : 'people'}>{squad.id} · {squad.name}{isLeader ? ' · leader' : ''}</Chip> : <Chip icon="user">Unassigned</Chip>}
+            <OfficerStatusChip status={statusKey}>{statusText}</OfficerStatusChip>
             <ExperienceChip band={career.band} />
             {career.retirement && <RetirementChip date={career.retirement.date} inDays={career.retirement.inDays} compact />}
           </div>
-          <KV icon="cash" k="Wage" v={perHour(o.wage)} />
+          <p className="osheet-facts">
+            <span><Icon name="cash" size={13} />{perHour(o.wage)}</span>
+            <span><Icon name="cake" size={13} />Age {career.age}</span>
+            <span><Icon name="medal" size={13} />{yearsText(career.service)}</span>
+          </p>
+        </div>
+      </div>
+      {persona && <p className="dim persona-note">{persona}</p>}
+
+      <div className="osheet-gauges">
+        <OfficerProgress officer={o} day={gameDay(g, Math.max(now, g.department.clockHighWater))} />
+        <div className="osheet-stress">
+          <StressDisplay value={o.stress} />
+          {info.blocker ? (
+            <p className="osheet-avail tone-warn"><Icon name="lock" size={14} />{info.blocker}{info.deployableAt !== null && <span> · ready {relativeTime(info.deployableAt, now)}</span>}</p>
+          ) : (
+            <p className="osheet-avail tone-mint"><Icon name="check" size={14} />Ready for a call</p>
+          )}
         </div>
       </div>
 
-      <OfficerProgress officer={o} day={gameDay(g, Math.max(now, g.department.clockHighWater))} />
-      {personaNote(o.identityId) && <p className="dim persona-note">{personaNote(o.identityId)}</p>}
+      <SubHead icon="gauge">Skills</SubHead>
+      <RatingBars ratings={o.ratings} label="Skills out of 100" />
 
-      <SubHead icon="gauge">Skills · out of 100</SubHead>
-      <ul className="ratings">
-        {RATING_META.map((r) => (
-          <li key={r.key} className="rating">
-            <span className="rating-label">
-              <Icon name={r.icon} size={16} />
-              {r.label}
-            </span>
-            <Meter value={o.ratings[r.key]} tone={ratingTone(o.ratings[r.key])} label={r.label} />
-            <span className="rating-val">{Math.round(o.ratings[r.key])}</span>
-          </li>
-        ))}
-      </ul>
-
-      <CareerSection o={o} />
-
-      <SubHead icon="medal">Qualifications</SubHead>
-      {o.certs.length === 0 ? (
-        <p className="dim">None yet. Courses grant certifications on completion.</p>
-      ) : (
-        <div className="chips">
+      {(o.certs.length > 0 || o.traits.length > 0) && <>
+        <SubHead icon="medal">Qualifications and traits</SubHead>
+        {o.certs.length > 0 && <div className="chips">
           {o.certs.map((c) => (
             <Chip key={c} tone="mint" icon={CERT_ICON[c]}>
               {CERT_LABEL[c]}
             </Chip>
           ))}
-        </div>
-      )}
-
-      <SubHead icon="star">Traits</SubHead>
-      {o.traits.length === 0 ? (
-        <p className="dim">No traits.</p>
-      ) : (
-        <ul className="traits">
+        </div>}
+        {o.traits.length > 0 && <ul className="traits">
           {o.traits.map((t) => (
             <li key={t}>
               <strong>
-                <Icon name={TRAIT_INFO[t].icon} size={16} />
+                <Icon name={TRAIT_INFO[t].icon} size={14} />
                 {TRAIT_INFO[t].label}
               </strong>
               <span>{TRAIT_INFO[t].condition}</span>
             </li>
           ))}
-        </ul>
-      )}
+        </ul>}
+      </>}
+      {o.certs.length === 0 && <p className="dim osheet-none">No qualifications yet. Courses grant them on completion.</p>}
 
-      <SubHead icon="pulse">Condition</SubHead>
-      <div className="cond">
-        <ReadinessBar stress={o.stress} withText />
-        <StressGuide />
-        <KV icon="info" k="Status" v={injured ? `Injured: ${o.injury!.label}` : BAND_SHORT[band]} />
-        {info.blocker ? (
-          <p className="note note-warn">
-            <Icon name="lock" size={16} />
-            {info.blocker}
-          </p>
-        ) : (
-          <p className="note note-mint">
-            <Icon name="check" size={16} />
-            Ready for a call.
-          </p>
-        )}
-        {info.deployableAt !== null && <KV icon="clock" k="Ready again" v={relativeTime(info.deployableAt, now)} />}
+      <SubHead icon="people">Squad</SubHead>
+      <SquadControls o={o} />
+
+      <div className="osheet-actions">
+        <Button icon="mortarboard" onClick={() => { onClose(); nav.openTraining({ officerId: o.id }); }}>Train {o.surname}</Button>
+        {o.assignment?.kind === 'training' && <Button onClick={() => {
+          const courseId = o.assignment?.kind === 'training' ? o.assignment.courseId : undefined;
+          onClose(); nav.openTraining({ officerId: o.id, courseId });
+        }}>View {COURSES[o.assignment.courseId]?.name ?? 'current course'}</Button>}
+      </div>
+
+      <CareerSection o={o} />
+
+      <details className="osheet-more">
+        <summary>Recovery and stress</summary>
         {info.factors.length > 0 && (
           <ul className="factors">
             {info.factors.map((f, i) => (
@@ -140,45 +133,25 @@ function OfficerBody({ o, onClose }: { o: Officer; onClose: () => void }) {
             ))}
           </ul>
         )}
-        <KV
-          icon="pin"
-          k="Assignment"
-          v={
-            o.assignment?.kind === 'training'
-              ? `Training, ${relativeTime(o.assignment.endsAt, now)}`
-              : o.assignment?.kind === 'operation'
-                ? 'On operation'
-                : 'Available'
-          }
-        />
+        <StressGuide />
+      </details>
+
+      <div className="osheet-dismiss">
+        {!confirmDismiss ? (
+          <Button variant="danger" size="sm" icon="trash" onClick={() => setConfirmDismiss(true)}>
+            Dismiss {o.surname}…
+          </Button>
+        ) : (
+          <DismissConfirm
+            officer={o}
+            onCancel={() => setConfirmDismiss(false)}
+            onDone={() => {
+              setConfirmDismiss(false);
+              onClose();
+            }}
+          />
+        )}
       </div>
-
-      <SubHead icon="people">Squad</SubHead>
-      <SquadControls o={o} />
-
-      <SubHead icon="mortarboard">Training</SubHead>
-      <p className="dim">Choose a certification or skills course in Training. This officer will be selected for you.</p>
-      <Button icon="mortarboard" onClick={() => { onClose(); nav.openTraining({ officerId: o.id }); }}>Train {o.surname}</Button>
-      {o.assignment?.kind === 'training' && <Button onClick={() => {
-        const courseId = o.assignment?.kind === 'training' ? o.assignment.courseId : undefined;
-        onClose(); nav.openTraining({ officerId: o.id, courseId });
-      }}>View {COURSES[o.assignment.courseId]?.name ?? 'current course'}</Button>}
-
-      <SubHead icon="trash">Dismiss</SubHead>
-      {!confirmDismiss ? (
-        <Button variant="danger" size="sm" onClick={() => setConfirmDismiss(true)}>
-          Dismiss {o.surname}…
-        </Button>
-      ) : (
-        <DismissConfirm
-          officer={o}
-          onCancel={() => setConfirmDismiss(false)}
-          onDone={() => {
-            setConfirmDismiss(false);
-            onClose();
-          }}
-        />
-      )}
     </div>
   );
 }
@@ -257,32 +230,62 @@ function CareerSection({ o }: { o: Officer }) {
   const [confirm, setConfirm] = useState(false);
   const ret = info?.retirement ?? (snap.retirement ? { ...snap.retirement, canRetain: false, retainReason: null, retainCost: null } : null);
   const retainable = !!ret && ret.canRetain;
+  const effects = info?.effects.filter((effect) => !effect.startsWith('Needs ') || !effect.includes('xp per rating point')) ?? [];
+  const outlook = info?.outlook && !(ret && info.outlook.includes(ret.date)) ? info.outlook : null;
   return (
-    <>
-      <SubHead icon="calendar">Career</SubHead>
-      <div className="career">
-        <div className="chips">
-          <Chip icon="cake">Age {Math.floor(info?.age ?? snap.age)}</Chip>
-          <Chip icon="medal">{yearsText(info?.serviceYears ?? snap.service)} service</Chip>
-          <ExperienceChip band={info?.experience ?? snap.band} />
+    <div className="career">
+      {ret && (
+        <div className="note note-warn career-retire">
+          <Icon name="retire" size={16} />
+          <span>
+            Retiring on {ret.date}, {ret.inDays === 1 ? '1 day' : `${ret.inDays} days`} left. {sentence(ret.reason)} They leave the roster and any squad on that day.
+          </span>
         </div>
+      )}
+      {ret && retainable && !confirm && (
+        <Button size="sm" variant="primary" icon="handover" onClick={() => setConfirm(true)}>
+          Offer retention{ret.retainCost ? ` · ${ret.retainCost}` : ''}
+        </Button>
+      )}
+      {ret && !retainable && ret.retainReason && (
+        <p className="dim career-outlook">
+          <Icon name="lock" size={14} />
+          {ret.retainReason}
+        </p>
+      )}
+      {ret && retainable && confirm && (
+        <div className="confirm">
+          <p>
+            Offer {o.surname} a raise to stay on? {ret.retainCost ? `Cost: ${ret.retainCost}. ` : ''}This can be done once, and the officer may still decline.
+          </p>
+          <div className="row-actions">
+            <Button size="sm" onClick={() => setConfirm(false)}>
+              Not now
+            </Button>
+            <Button
+              size="sm"
+              variant="primary"
+              icon="check"
+              onClick={() => {
+                if (act({ type: 'offerRetention', officerId: o.id }, `Retention offered to ${o.surname}`).ok) setConfirm(false);
+              }}
+            >
+              Confirm offer
+            </Button>
+          </div>
+        </div>
+      )}
+      {(info || effects.length > 0 || outlook) && <details className="osheet-more">
+        <summary>Career</summary>
         {info && (
           <p className="career-dates dim">
             <Icon name="calendar" size={13} />
             Born {info.born} · joined service {info.serviceStart}
           </p>
         )}
-        {ret && (
-          <div className="note note-warn career-retire">
-            <Icon name="retire" size={16} />
-            <span>
-              Retiring on {ret.date}, {ret.inDays === 1 ? '1 day' : `${ret.inDays} days`} left. {sentence(ret.reason)} They leave the roster and any squad on that day.
-            </span>
-          </div>
-        )}
-        {info && info.effects.length > 0 && (
+        {effects.length > 0 && (
           <ul className="career-effects">
-            {info.effects.filter((effect) => !effect.startsWith('Needs ') || !effect.includes('xp per rating point')).map((e, i) => (
+            {effects.map((e, i) => (
               <li key={i}>
                 <Icon name="chevronRight" size={13} />
                 {e}
@@ -290,47 +293,14 @@ function CareerSection({ o }: { o: Officer }) {
             ))}
           </ul>
         )}
-        {info?.outlook && !(ret && info.outlook.includes(ret.date)) && (
+        {outlook && (
           <p className="career-outlook">
             <Icon name="flag" size={14} />
-            {info.outlook}
+            {outlook}
           </p>
         )}
-        {ret && retainable && !confirm && (
-          <Button size="sm" variant="primary" icon="handover" onClick={() => setConfirm(true)}>
-            Offer retention{ret.retainCost ? ` · ${ret.retainCost}` : ''}
-          </Button>
-        )}
-        {ret && !retainable && ret.retainReason && (
-          <p className="dim career-outlook">
-            <Icon name="lock" size={14} />
-            {ret.retainReason}
-          </p>
-        )}
-        {ret && retainable && confirm && (
-          <div className="confirm">
-            <p>
-              Offer {o.surname} a raise to stay on? {ret.retainCost ? `Cost: ${ret.retainCost}. ` : ''}This can be done once, and the officer may still decline.
-            </p>
-            <div className="row-actions">
-              <Button size="sm" onClick={() => setConfirm(false)}>
-                Not now
-              </Button>
-              <Button
-                size="sm"
-                variant="primary"
-                icon="check"
-                onClick={() => {
-                  if (act({ type: 'offerRetention', officerId: o.id }, `Retention offered to ${o.surname}`).ok) setConfirm(false);
-                }}
-              >
-                Confirm offer
-              </Button>
-            </div>
-          </div>
-        )}
-      </div>
-    </>
+      </details>}
+    </div>
   );
 }
 

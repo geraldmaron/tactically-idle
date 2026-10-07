@@ -25,6 +25,6 @@ Every required committed beat must change evidence, a meaningful commitment, a p
 
 ## Compatibility and checks
 
-Issued scenario IDs encode their content version. Versions 1–4 remain frozen, including the older decision exercises. Loading a campaign changes only the version used for future draws; it does not replace the board, reset an operation or consume its RNG. New decision exercises offer direct access without a new campaign.
+Issued scenario IDs encode their content version. Versions 1–4 remain frozen (the decision exercises built on them were removed with practice on 2026-10-06). Loading a campaign changes only the version used for future draws; it does not replace the board, reset an operation or consume its RNG. New decision exercises offer direct access without a new campaign.
 
 Checks include exact published-v4 fingerprints, complete journeys with save/reload after each beat, repeated-action/reward refusal, real prop and person projections, all-exits-blocked and alternate-route cases, and deterministic generated bindings over every supported layout. Before release, run `npm run verify` and review the actual hosted 320/390px story and blueprint journeys.

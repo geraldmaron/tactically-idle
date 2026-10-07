@@ -13,7 +13,7 @@ import { unitEffectiveness } from '../../sim/inventory';
 import { standardRadioPlan, STANDARD_RADIO } from '../../sim/standard-kit';
 import { projectedCondition } from '../../sim/equipment';
 import { stagingPointsIn } from '../../sim/spatial';
-import { practiceUnits, spaceName } from '../../sim/resolution';
+import { spaceName } from '../../sim/resolution';
 import { ITEMS } from '../../content/items';
 import { autoEquipReadyUnits, autoLoadout } from '../../sim/auto-equip';
 import type { AutoLoadout } from '../../sim/auto-equip';
@@ -23,12 +23,15 @@ import { Blueprint } from '../blueprint/Blueprint';
 import { floorCount } from '../blueprint/floors';
 import { Button, Card, Chip, Section, Stepper, SubHead } from '../components/ui';
 import { DifficultyChip, EnvChips, familyBlurb, incidentMeta } from '../components/incident';
+import { personInitials } from '../components/IncidentPeople';
+import { Portrait } from '../portraits/Portrait';
+import { GearArt } from '../art/GearArt';
 import { useToast } from '../components/toast';
 import { UNIT_STATE_META, unitStateOf } from '../components/labels';
-import { Icon, itemIcon } from '../icons';
+import { Icon } from '../icons';
 import type { IconName } from '../icons';
 import { moneyFull, pct } from '../format';
-import { cardFor, hasNodeEffect, isReplayOnly } from './helpers';
+import { cardFor, hasNodeEffect } from './helpers';
 import { planAuto, preparationEquipmentFix } from './autoPlan';
 import { scenarioActions } from '../../sim/scenario-types';
 import type { AutoNote, Explicit, Loadouts } from './autoPlan';
@@ -41,6 +44,7 @@ import { ChoiceRail } from '../components/ChoiceRail';
 import { toggleDeploymentSquad } from './operation-squads';
 import './preparation-options.css';
 import './operation-squads.css';
+import './ops-visual.css';
 
 export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel: () => void }) {
   const pageRef = useRef<HTMLDivElement>(null);
@@ -58,7 +62,6 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
   const intel = useMemo(() => buildIntel(scenario, built), [scenario, built]);
   const store = storeOptions(g);
   const presets = hasNodeEffect(g, 'loadoutPresets');
-  const replay = isReplayOnly(g, scenarioId);
 
   const [chosen, setChosen] = useState<SquadId[]>([]);
   const [setupSquad, setSetupSquad] = useState<SquadId | null>(null);
@@ -76,15 +79,10 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
     warnings: string[];
   } | null>(null);
   const [staging, setStaging] = useState<Partial<Record<SquadId, Id>>>({});
-  const [requestedPractice, setPractice] = useState(false);
-  const practice = replay || requestedPractice;
-  const [liveSupport, setLiveSupport] = useState<Id | null>(null);
-  const [practiceSupport, setPracticeSupport] = useState<Id | null>(null);
-  const supportUnitId = practice ? practiceSupport : liveSupport;
+  const [supportUnitId, setSupportUnitId] = useState<Id | null>(null);
   const [floor, setFloor] = useState(0);
 
   const radioPlan = useMemo(() => standardRadioPlan(g, chosen, now), [g, chosen, now]);
-  const virtualItems = useMemo(() => new Set(practiceUnits(g, scenario?.practiceOnly === true).map((unit) => unit.itemId)), [g, scenario]);
   const loadouts = useMemo<Loadouts>(() => {
     const next = { ...optionalLoadouts };
     for (const sid of chosen) next[sid] = { ...handCarriedLoadout(next[sid] ?? {}), ...radioPlan.loadouts[sid] };
@@ -162,9 +160,8 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
       ...(Object.keys(units).length > 0 ? { units } : {}),
       ...(Object.keys(stage).length > 0 ? { staging: stage } : {}),
       ...(supportUnitId ? { supportUnitIds: [supportUnitId] } : {}),
-      practice,
     };
-  }, [chosen, positions, loadouts, picks, staging, supportUnitId, practice, scenarioId, defaultEntry, built]);
+  }, [chosen, positions, loadouts, picks, staging, supportUnitId, scenarioId, defaultEntry, built]);
   const check = prepCheck(g, now, cmd);
 
   const toggleSquad = (id: SquadId) => {
@@ -208,7 +205,7 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
    * picks reserve stock first; a single-squad request leaves the others alone.
    */
   const runAuto = (only?: SquadId) => {
-    if (practice || chosen.length === 0 || (only && !chosen.includes(only))) return;
+    if (chosen.length === 0 || (only && !chosen.includes(only))) return;
     let res: AutoLoadout;
     try {
       res = autoLoadout(g, scenarioId, chosen, Date.now(), {
@@ -244,7 +241,7 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
   };
 
   const preparationFix = (warning: string) => {
-    if (practice || !scenario) return null;
+    if (!scenario) return null;
     return preparationEquipmentFix({ warning, actions: scenarioActions(scenario), state: g, now, chosen, loadouts, picks });
   };
 
@@ -259,16 +256,25 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
   };
 
   const preparation = scenario && scenario.version >= 4 ? preparationOptions({
-    actions: scenarioActions(scenario), warnings: check.warnings, practice, state: g, now, chosen, loadouts, picks,
+    actions: scenarioActions(scenario), warnings: check.warnings, state: g, now, chosen, loadouts, picks,
   }) : null;
   const visibleWarnings = preparation?.warnings ?? check.warnings;
 
-  const deploy = () => act(cmd, practice ? 'Practice started' : 'Squads deployed');
+  const deploy = () => act(cmd, 'Squads deployed');
 
   const incidentType = scenario?.incident?.type ?? null;
   const familyId = scenario?.locationFamilyId ?? scenario?.incident?.familyId ?? null;
   const kicker = [incidentType ? incidentMeta(incidentType).label : null, familyBlurb(familyId), floors > 1 ? `${floors}\u00a0floors` : null].filter(Boolean).join(' · ');
   const knownRest = brief.known.filter((k) => !intel.covered.has(k));
+
+  const squadName = (sid: SquadId) => g.squads.find((squad) => squad.id === sid)?.name ?? sid;
+  const footStatus: { text: string; tone: 'mint' | 'amber' | 'warn'; icon: IconName } = chosen.length === 0
+    ? { text: 'Choose a squad to deploy', tone: 'amber', icon: 'people' }
+    : check.issues.length > 0
+      ? { text: check.issues.length === 1 && check.issues[0].length <= 48 ? check.issues[0] : `${check.issues.length} ${check.issues.length === 1 ? 'thing' : 'things'} to fix before deploying`, tone: 'warn', icon: 'lock' }
+      : visibleWarnings.length > 0
+        ? { text: `Ready · ${visibleWarnings.length} ${visibleWarnings.length === 1 ? 'warning' : 'warnings'} to review`, tone: 'amber', icon: 'warning' }
+        : { text: `Ready · ${chosen.map((sid) => `Squad ${sid}`).join(' + ')}`, tone: 'mint', icon: 'check' };
 
   return (
     <div className="page prepare" ref={pageRef}>
@@ -278,9 +284,12 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
           Operations
         </button>
         <div className="prep-title">
-          <span className="opboard-code">{card?.code ?? 'OP'}</span>
-          <h2 className="live-name">{(card?.title ?? scenarioId.replace(/_/g, ' ')).toUpperCase()}</h2>
-          {kicker && <p className="prep-kicker">{kicker}</p>}
+          <span className="prep-title-badge" aria-hidden="true"><Icon name={incidentType ? incidentMeta(incidentType).icon : 'pin'} size={22} /></span>
+          <span className="prep-title-text">
+            <span className="opboard-code">{card?.code ?? 'OP'}</span>
+            <h2 className="live-name">{(card?.title ?? scenarioId.replace(/_/g, ' ')).toUpperCase()}</h2>
+            {kicker && <p className="prep-kicker">{kicker}</p>}
+          </span>
         </div>
       </div>
 
@@ -288,77 +297,93 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
         <Blueprint built={built} spaces={spaces} squadTasks={[]} selectedSpaceId={null} focusSquadId={null} {...blueprintExtras} />
       </div>
 
-      <Section title="Briefing" icon="intel" hint="What dispatch has told you. Reports can be wrong until a squad confirms them.">
-        <Card>
-          {scenario && <IncidentBriefContext scenario={scenario} />}
-          <BriefList icon="check" tone="mint" title="Known" items={knownRest} empty="Nothing confirmed yet." />
-          <BriefList icon="question" tone="amber" title="Unknown" items={brief.unknown} empty="No open questions." />
-          <div className="brief">
-            <h3 className="brief-h tone-neutral">
-              <Icon name="people" size={16} />
-              People
-            </h3>
-            {intel.people.length === 0 ? (
-              <p className="dim">{scenario && scenario.version >= 4 ? 'No individual person details are listed here. Check the dispatch account.' : 'Nobody reported. Occupancy is unverified.'}</p>
-            ) : (
-              <ul className="intel">
-                {intel.people.map((p) => (
-                  <IntelRow key={p.id} line={p} icon="user" />
-                ))}
-              </ul>
-            )}
-          </div>
-          <div className="brief">
-            <h3 className="brief-h tone-warn">
-              <Icon name="warning" size={16} />
-              Threat information
-            </h3>
-            {intel.threats.length === 0 ? (
-              <p className="dim">{scenario && scenario.version >= 4 ? 'No separate weapon details are listed. Check the dispatch account.' : 'No weapon reported. That does not mean none is present.'}</p>
-            ) : (
-              <ul className="intel">
-                {intel.threats.map((t) => (
-                  <IntelRow key={t.id} line={t} icon="warning" lead="Armament" />
-                ))}
-              </ul>
-            )}
-          </div>
-          {intel.environment && (
+      <Section title="Briefing" icon="intel">
+        <Card className="prep-brief">
+          <ul className="prep-brief-stats" aria-label="Briefing at a glance">
+            <li data-tone="mint"><Icon name="check" size={16} /><strong>{knownRest.length}</strong><span>Known</span></li>
+            <li data-tone="amber"><Icon name="question" size={16} /><strong>{brief.unknown.length}</strong><span>Open</span></li>
+            <li data-tone="neutral"><Icon name="people" size={16} /><strong>{intel.people.length}</strong><span>People</span></li>
+            <li data-tone={intel.threats.length ? 'warn' : 'neutral'}><Icon name="warning" size={16} /><strong>{intel.threats.length}</strong><span>Threats</span></li>
+          </ul>
+          {(intel.difficulty || intel.environment) && <div className="prep-brief-chips">
+            {intel.difficulty && <div className="chips"><DifficultyChip band={intel.difficulty.band} /></div>}
+            {intel.environment && <EnvChips env={intel.environment} />}
+          </div>}
+          <BriefList icon="flag" tone="neutral" title="Objectives" items={brief.objectives} empty="No objectives listed." />
+          {brief.unknown.length > 0 && <BriefList icon="question" tone="amber" title="Open questions" items={brief.unknown} empty="No open questions." />}
+          {intel.people.length > 0 && <div className="brief">
+            <h3 className="brief-h tone-neutral"><Icon name="people" size={16} />People</h3>
+            <ul className="incident-people-list prep-people">
+              {intel.people.map((p) => {
+                const c = confidence(p.status);
+                return <li key={p.id} className="person-tile" data-tone={p.status === 'confirmed' ? 'ok' : p.status === 'disproved' ? 'danger' : 'pending'}>
+                  <span className="person-avatar" aria-hidden="true">{personInitials(p.label)}</span>
+                  <div className="person-text">
+                    <strong>{p.label}</strong>
+                    <span className="person-status"><Icon name={c.icon} size={13} />{c.label}{p.where ? ` · ${p.where}` : ''}</span>
+                  </div>
+                </li>;
+              })}
+            </ul>
+          </div>}
+          {intel.threats.length > 0 && <div className="brief">
+            <h3 className="brief-h tone-warn"><Icon name="warning" size={16} />Threat information</h3>
+            <ul className="intel">
+              {intel.threats.map((t) => (
+                <IntelRow key={t.id} line={t} icon="warning" lead="Armament" />
+              ))}
+            </ul>
+          </div>}
+          <details className="prep-brief-more">
+            <summary><Icon name="intel" size={14} />Full briefing</summary>
+            {scenario && <IncidentBriefContext scenario={scenario} />}
+            <BriefList icon="check" tone="mint" title="Known" items={knownRest} empty="Nothing confirmed yet." />
             <div className="brief">
               <h3 className="brief-h tone-neutral">
-                <Icon name="cloud" size={16} />
-                Scene conditions
+                <Icon name="people" size={16} />
+                People reports
               </h3>
-              <EnvChips env={intel.environment} />
-            </div>
-          )}
-          {intel.difficulty && (
-            <div className="brief">
-              <h3 className="brief-h tone-neutral">
-                <Icon name="mountain" size={16} />
-                Difficulty
-              </h3>
-              <div className="chips">
-                <DifficultyChip band={intel.difficulty.band} />
-              </div>
-              {intel.difficulty.drivers.length > 0 && (
-                <ul className="drivers">
-                  {intel.difficulty.drivers.slice(0, 3).map((d, i) => (
-                    <li key={i}>
-                      <Icon name="gauge" size={14} />
-                      {d}
-                    </li>
+              {intel.people.length === 0 ? (
+                <p className="dim">{scenario && scenario.version >= 4 ? 'No individual person details are listed here. Check the dispatch account.' : 'Nobody reported. Occupancy is unverified.'}</p>
+              ) : (
+                <ul className="intel">
+                  {intel.people.map((p) => (
+                    <IntelRow key={p.id} line={p} icon="user" />
                   ))}
                 </ul>
               )}
-              <p className="dim">Conditional on what is known. New information can raise or lower it.</p>
             </div>
-          )}
-          <BriefList icon="flag" tone="neutral" title="Objectives" items={brief.objectives} empty="No objectives listed." />
+            {intel.threats.length === 0 && <div className="brief">
+              <h3 className="brief-h tone-warn">
+                <Icon name="warning" size={16} />
+                Threat information
+              </h3>
+              <p className="dim">{scenario && scenario.version >= 4 ? 'No separate weapon details are listed. Check the dispatch account.' : 'No weapon reported. That does not mean none is present.'}</p>
+            </div>}
+            {intel.difficulty && (
+              <div className="brief">
+                <h3 className="brief-h tone-neutral">
+                  <Icon name="mountain" size={16} />
+                  Difficulty
+                </h3>
+                {intel.difficulty.drivers.length > 0 && (
+                  <ul className="drivers">
+                    {intel.difficulty.drivers.slice(0, 3).map((d, i) => (
+                      <li key={i}>
+                        <Icon name="gauge" size={14} />
+                        {d}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <p className="dim">Based on what is known. New information can raise or lower it.</p>
+              </div>
+            )}
+          </details>
         </Card>
       </Section>
 
-      <Section title="Squads" icon="people" hint={`This operation takes ${range.min === range.max ? range.min : `${range.min} to ${range.max}`} squad${range.max > 1 ? 's' : ''}.`}>
+      <Section title="Squads" icon="people" hint={`Takes ${range.min === range.max ? range.min : `${range.min} to ${range.max}`} squad${range.max > 1 ? 's' : ''}. Tap to choose.`}>
         {g.squads.length === 0 ? (
           <Card>
             <p className="dim">Create a squad on the Squad tab first.</p>
@@ -369,30 +394,40 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
               {g.squads.map((s) => {
                 const r = squadReadiness(g, s.id, now);
                 const on = chosen.includes(s.id);
+                const members = s.officerIds.map((id) => g.officers[id]).filter((officer) => !!officer);
                 return (
-                  <button key={s.id} type="button" className={`pickcard${on ? ' pickcard-on' : ''}`} aria-pressed={on} disabled={!on && range.max > 1 && chosen.length >= Math.min(range.max, 3)} onClick={() => toggleSquad(s.id)}>
-                    <span className="squad-badge">{s.id}</span>
-                    <span className="pickcard-main">
-                      <strong>{s.name}</strong>
-                      <span className={r.deployable ? 'tone-mint' : 'tone-warn'}>
-                        {r.ready}/{r.total} ready{r.deployable ? '' : ' · not deployable'}
-                      </span>
-                      {r.issues.slice(0, 1).map((i, k) => (
-                        <span key={k} className="dim">
-                          {i}
-                        </span>
-                      ))}
+                  <button key={s.id} type="button" className={`pickcard${on ? ' pickcard-on' : ''}${r.deployable ? '' : ' pickcard-blocked'}`} aria-pressed={on}
+                    aria-label={`Squad ${s.id}, ${s.name}, ${r.ready} of ${r.total} ready${r.deployable ? '' : ', not deployable'}${r.issues[0] ? `, ${r.issues[0]}` : ''}`}
+                    disabled={!on && range.max > 1 && chosen.length >= Math.min(range.max, 3)} onClick={() => toggleSquad(s.id)}>
+                    <span className="pickcard-top">
+                      <span className="squad-badge">{s.id}</span>
+                      <strong className="pickcard-name">{s.name}</strong>
+                      <span className="pickcard-check">{on && <Icon name="check" size={16} />}</span>
                     </span>
-                    <span className="pickcard-check">{on && <Icon name="check" size={18} />}</span>
+                    <span className="pickcard-faces" aria-hidden="true">
+                      {members.slice(0, 4).map((officer) => <span key={officer.id} className="pickcard-face"><Portrait officer={officer} size={30} /></span>)}
+                      {members.length > 4 && <b>+{members.length - 4}</b>}
+                    </span>
+                    <span className="pickcard-ready" aria-hidden="true">
+                      <span className="pickcard-bar">{Array.from({ length: r.total }, (_, i) => <i key={i} className={i < r.ready ? 'on' : undefined} />)}</span>
+                      <span className={r.deployable ? 'tone-mint' : 'tone-warn'}>{r.ready}/{r.total} ready</span>
+                    </span>
+                    {r.issues.slice(0, 1).map((i, k) => (
+                      <span key={k} className="pickcard-issue">
+                        {i}
+                      </span>
+                    ))}
                   </button>
                 );
               })}
             </div>
-            <Button block icon="wand" disabled={chosen.length === 0 || practice} onClick={() => runAuto()}>
-              Auto-equip {chosen.length === 1 ? `squad ${chosen[0]}` : 'selected squads'}
-            </Button>
-            <p className="dim autohint">{practice ? 'Practice uses virtual gear; owned stock is not reserved.' : <>{chosen.length === 0 ? 'Choose squads first. ' : ''}Auto-equip manages squad inventory from owned stock. Your quantities, including zero, stay as set. You choose and confirm every operation decision. One radio per officer is included; no gear is bought.</>}</p>
-            {autoUndo && <Button size="sm" onClick={undoAuto}>Undo auto-equip</Button>}
+            <div className="prep-auto">
+              <Button block icon="wand" disabled={chosen.length === 0} onClick={() => runAuto()}>
+                Auto-equip {chosen.length === 1 ? `squad ${chosen[0]}` : 'selected squads'}
+              </Button>
+              {autoUndo && <Button size="sm" onClick={undoAuto}>Undo auto-equip</Button>}
+            </div>
+            <p className="dim autohint">{chosen.length === 0 ? 'Choose squads first. ' : ''}Fills gear from owned stock and keeps quantities you set. One radio per officer is included. Nothing is bought.</p>
             {autoWarnings.length > 0 && (
               <div className="autowarn" aria-live="polite">
                 {autoWarnings.map((w, i) => (
@@ -408,21 +443,18 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
       </Section>
 
       {chosen.length > 0 && <div className="prep-squad-workspace">
-        <ul className="prep-deployment-summary" aria-label="Selected squads and equipment">
-          {chosen.map(sid => {
+        {chosen.length > 1 && <>
+        <ChoiceRail value={visibleSquad!} kind="tabs" label="Squad setup" panelId="squad-setup-panel" onChange={setSetupSquad}
+          options={chosen.map(sid => {
             const extra = Object.entries(loadouts[sid] ?? {}).filter(([item]) => item !== STANDARD_RADIO).reduce((total, [, qty]) => total + qty, 0);
             const entry = brief.entries.find(entry => entry.id === (positions[sid] ?? defaultEntry));
-            return <li key={sid}><strong>Squad {sid} · {g.squads.find(squad => squad.id === sid)?.name}</strong><br />{entry?.label ?? 'Choose position'} · {practice ? 'Virtual practice gear' : `${loadouts[sid]?.[STANDARD_RADIO] ?? 0} radios + ${extra} extra item${extra === 1 ? '' : 's'}`}</li>;
-          })}
-        </ul>
-        {chosen.length > 1 && <><ChoiceRail value={visibleSquad!} kind="tabs" label="Squad setup" panelId="squad-setup-panel" onChange={setSetupSquad}
-          options={chosen.map(sid => ({ value: sid, label: `${sid} · ${g.squads.find(squad => squad.id === sid)?.name}`, accessibleLabel: `Set up squad ${sid}` }))} />
-          <p className="operation-squad-hint">Set up each squad here. Switching tabs keeps positions, quantities and exact equipment choices. All squads share your stock.</p></>}
+            return { value: sid, label: <><b>{sid}</b><span className="squad-tab-detail"><span className="squad-tab-name">{squadName(sid)}</span><small>{entry?.label ?? 'Choose position'} · {extra} extra</small></span></>, accessibleLabel: `Set up squad ${sid}, ${squadName(sid)}, ${entry?.label ?? 'no position'}, ${loadouts[sid]?.[STANDARD_RADIO] ?? 0} radios and ${extra} extra items` };
+          })} />
+          <p className="operation-squad-hint">Switching tabs keeps each squad's setup. All squads share your stock.</p></>}
       {(visibleSquad ? [visibleSquad] : []).map((sid) => {
         const squad = g.squads.find((s) => s.id === sid)!;
         const hasPreset = Object.values(handCarriedLoadout(squad.loadoutPreset)).some((q) => q > 0);
         const visible = store.filter((o: StoreOption) => !o.item.supportOnly
-          && (!practice || virtualItems.has(o.item.id))
           && (o.item.id === STANDARD_RADIO || o.owned > 0 || brief.usefulItemIds.includes(o.item.id)));
         const points = pointsFor(sid);
         const chosenPoint = cmd.staging?.[sid] ?? null;
@@ -435,21 +467,21 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
             <div className="prepsquad-head">
               <span className="squad-badge">{sid}</span>
               <strong>{squad.name}</strong>
-              <Button size="sm" icon="wand" className="prepsquad-auto" disabled={practice} onClick={() => runAuto(sid)} aria-label={`Auto-equip squad ${sid}`}>
-                Auto-equip squad {sid}
+              <Button size="sm" icon="wand" className="prepsquad-auto" onClick={() => runAuto(sid)} aria-label={`Auto-equip squad ${sid}`}>
+                Auto-equip
               </Button>
             </div>
             {note && (
-              <div className="autonote">
-                <span className="autonote-h">
+              <details className="autonote">
+                <summary className="autonote-h">
                   <Icon name="wand" size={14} />
-                  Squad inventory
+                  Auto-equip notes · {note.lines.length || 'none'}
                   {note.edited && (
                     <Chip tone="amber" icon="edit">
                       You changed this
                     </Chip>
                   )}
-                </span>
+                </summary>
                 {note.lines.length > 0 ? (
                   <ul>
                     {note.lines.map((l, i) => (
@@ -459,7 +491,7 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
                 ) : (
                   <p className="dim">Current choices kept. No extra gear added.</p>
                 )}
-              </div>
+              </details>
             )}
             <label className="field">
               <span className="field-label">
@@ -492,7 +524,7 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
                   Staging point
                 </span>
                 <div className="stagelist" role="radiogroup" aria-labelledby={`stage-${sid}`}>
-                  <StageOption on={chosenPoint === null} icon="pin" title="No preference" sub="Use this zone’s default staging point" onPick={() => setStaging((st) => omit(st, sid))} />
+                  <StageOption on={chosenPoint === null} icon="pin" title="Default" sub="This zone's usual point" onPick={() => setStaging((st) => omit(st, sid))} />
                   {stageLabels(built, points).map(({ point, title, sub, icon }) => (
                     <StageOption key={point.id} on={chosenPoint === point.id} icon={icon} title={title} sub={sub} onPick={() => setStaging((st) => ({ ...st, [sid]: point.id }))} />
                   ))}
@@ -501,7 +533,7 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
             )}
             <div className="prepsquad-lo">
               <SubHead icon="box">Loadout</SubHead>
-              {hasPreset && presets.unlocked && !practice && (
+              {hasPreset && presets.unlocked && (
                 <Button size="sm" onClick={() => applyPreset(sid)}>
                   Apply preset
                 </Button>
@@ -510,58 +542,57 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
             {visible.length === 0 ? (
               <p className="dim">No equipment in stock. Buy gear on the Gear tab.</p>
             ) : (
-              <ul className="loadout">
+              <ul className="loadout prep-items">
                 {visible.map((o) => {
                   const free = Math.max(0, readyOf(o.item.id) - allocated(o.item.id, sid));
+                  const others = allocated(o.item.id, sid);
                   const qty = loadouts[sid]?.[o.item.id] ?? 0;
                   const useful = brief.usefulItemIds.includes(o.item.id);
                   const units = picks[sid]?.[o.item.id] ?? [];
                   const standard = o.item.id === STANDARD_RADIO;
                   return (
-                    <li key={o.item.id} className={`lo lo-wrap${useful ? ' lo-useful' : ''}`}>
-                      <div className="lo-line">
-                        <Icon name={itemIcon(o.item.id)} size={22} />
-                        <span className="lo-main">
-                          <strong>{o.item.name}</strong>
-                          <span className="lo-sub">
-                            <span className="dim">{standard ? practice ? `${qty} virtual radios · one per officer` : `${units.length}/${qty} ready · one per officer · automatic` : practice ? 'Virtual practice gear' : `${free} available to this squad${allocated(o.item.id, sid) ? ` · ${allocated(o.item.id, sid)} with other squads` : ''}`}</span>
-                            {useful && !standard && (
-                              <Chip tone="amber" icon="check">
-                                Useful
-                              </Chip>
-                            )}
-                          </span>
+                    <li key={o.item.id} className={`lo prep-item${useful ? ' lo-useful' : ''}${standard ? ' prep-item-standard' : ''}${qty > 0 ? ' prep-item-on' : ''}`}>
+                      <span className="prep-item-art" aria-hidden="true">
+                        <GearArt itemId={o.item.id} size={34} />
+                        {qty > 0 && <b className="prep-item-qty">×{qty}</b>}
+                      </span>
+                      <span className="prep-item-main">
+                        <strong>{o.item.name}</strong>
+                        <span className="prep-item-sub">
+                          {standard ? `${units.length}/${qty} ready · one each` : `${free} free${others ? ` · ${others} with other squads` : ''}`}
+                          {useful && !standard && <span className="prep-item-useful"><Icon name="star" size={11} />Useful</span>}
                         </span>
-                        {standard ? <Chip tone={practice || units.length === qty ? 'mint' : 'amber'}>{practice ? 'Virtual kit' : 'Standard kit'}</Chip>
-                          : !practice && <Stepper label={o.item.name} value={qty} max={Math.max(qty, free)} onChange={(n) => setQty(sid, o.item.id, Math.min(n, Math.max(qty, free)))} />}
-                      </div>
-                      {standard && !practice && units.length < qty && <div className="lo-sub">
+                      </span>
+                      <span className="prep-item-ctl">
+                        {standard ? <Chip tone={units.length === qty ? 'mint' : 'amber'} icon="radio">Standard kit</Chip>
+                          : <Stepper label={o.item.name} value={qty} max={Math.max(qty, free)} onChange={(n) => setQty(sid, o.item.id, Math.min(n, Math.max(qty, free)))} />}
+                      </span>
+                      {standard && units.length < qty && <div className="prep-item-buy">
                         <Button size="sm" icon="plus" disabled={g.department.funding < radioPlan.shortage * o.item.cost}
                           onClick={() => act({ type: 'buyItem', itemId: STANDARD_RADIO, qty: radioPlan.shortage }, `Bought ${radioPlan.shortage} standard radio${radioPlan.shortage === 1 ? '' : 's'}`)}>
                           Buy {radioPlan.shortage} radio{radioPlan.shortage === 1 ? '' : 's'} · {moneyFull(radioPlan.shortage * o.item.cost)}
                         </Button>
                         {g.department.funding < radioPlan.shortage * o.item.cost && <span className="dim">Needs {moneyFull(radioPlan.shortage * o.item.cost - g.department.funding)} more funding, or deploy fewer officers.</span>}
                       </div>}
-                      {!practice && (units.length > 0 || standard) && (
+                      {(units.length > 0 || (standard && units.length < qty) || units.length < qty) && (
                         <ul className="lo-units" aria-label={`Units taking ${o.item.name}`}>
                           {units.map((u) => {
                             const condition = projectedCondition(g, u, Math.max(now, g.department.clockHighWater));
                             const state = unitStateOf(condition, o.item.wear);
                             const meta = UNIT_STATE_META[state];
                             return (
-                              <li key={u.id} className={`lo-unit lo-unit-${meta.tone}`}>
-                                <Icon name={meta.icon} size={13} />
+                              <li key={u.id} className={`lo-unit lo-unit-${meta.tone}`} title={`${u.serial} · ${Math.round(condition)}% · ${state}`}>
+                                <Icon name={meta.icon} size={12} />
                                 <b>{u.serial}</b>
                                 <span>
-                                  {Math.round(condition)}% · {state}
-                                  {meta.tone === 'bad' ? ` · ${pct(unitEffectiveness({ ...u, condition }, o.item))} effect` : ''}
+                                  {Math.round(condition)}%{meta.tone === 'bad' ? ` · ${state} · ${pct(unitEffectiveness({ ...u, condition }, o.item))} effect` : ''}
                                 </span>
                               </li>
                             );
                           })}
                           {units.length < qty && (
-                            <li className="lo-unit lo-unit-bad">
-                              <Icon name="warning" size={13} />
+                            <li className="lo-unit lo-unit-bad lo-unit-missing">
+                              <Icon name="warning" size={12} />
                               <span>{qty - units.length} {standard ? 'standard radios missing. Buy or service radios on the Gear tab, or choose fewer officers.' : `units missing; only ${units.length} of ${qty} ready.`}</span>
                             </li>
                           )}
@@ -572,10 +603,10 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
                 })}
               </ul>
             )}
-            {!practice && unreliable.length > 0 && (
+            {unreliable.length > 0 && (
               <p className="note note-amber">
                 <Icon name="warning" size={16} />
-                {unreliable.map((u) => u.serial).join(', ')} {unreliable.length === 1 ? 'is' : 'are'} unreliable: reduced effect and a chance of malfunction. Service {unreliable.length === 1 ? 'it' : 'them'} on the Gear tab or take a better unit.
+                {unreliable.map((u) => u.serial).join(', ')} {unreliable.length === 1 ? 'is' : 'are'} unreliable, with reduced effect and a chance to fail. Service {unreliable.length === 1 ? 'it' : 'them'} on the Gear tab or take a better unit.
               </p>
             )}
           </section>
@@ -583,26 +614,19 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
       })}
       </div>}
 
-      <SupportPreparation state={g} now={now} cmd={cmd} built={built} onSelect={practice ? setPracticeSupport : setLiveSupport} />
+      <SupportPreparation state={g} now={now} cmd={cmd} built={built} onSelect={setSupportUnitId} />
 
-      <Section title="Mode" icon="flag">
-        <label className="toggle">
-          <input type="checkbox" checked={practice} disabled={replay} onChange={(e) => setPractice(e.target.checked)} />
-          <span className="toggle-ui" aria-hidden="true" />
-          <span className="toggle-text">
-            <strong>Practice run</strong>
-            <span className="dim">
-              {scenario?.practiceOnly
-                ? `${scenario.version >= 4 ? 'This decision exercise' : 'This equipment exercise'} is practice only. Virtual gear and supplies are provided; no funding, owned stock, stress, trust or rewards change.`
-                : replay
-                ? 'This scenario is not a live call, so it runs as practice: no rewards and no consequences.'
-                : 'Uses virtual gear: no owned equipment is reserved or worn. No rewards or consequences; stress, supplies and trust are untouched.'}
-            </span>
-          </span>
-        </label>
-      </Section>
+      {!!preparation?.equipment.length && <details className="prep-equipment-options">
+        <summary>Optional equipment · {preparation.equipment.length} {preparation.equipment.length === 1 ? 'option' : 'options'} to review</summary>
+        <p>These bundles open up more choices. You can deploy without them; each decision shows its needs when it comes up.</p>
+        <ul>{preparation.equipment.map(({ key, label, fix }) => <li key={key}>
+          <strong>{label}</strong>
+          <p className="dim">Optional equipment for squad {fix.sid}. Scene requirements are checked when you choose an action.</p>
+          {fix.plan.issue ? <p>{fix.plan.issue}</p> : <Button size="sm" icon="box" onClick={() => equipPreparationFix(fix)}>Equip {fix.plan.label} on squad {fix.sid}</Button>}
+        </li>)}</ul>
+      </details>}
 
-      <div className="prepcheck" aria-live="polite">
+      {(check.issues.length > 0 || visibleWarnings.length > 0) && <div className="prepcheck" aria-live="polite">
         {check.issues.map((i, k) => (
           <p key={`i${k}`} className="note note-warn">
             <Icon name="lock" size={16} />
@@ -611,35 +635,20 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
         ))}
         {visibleWarnings.map((w, k) => {
           const fix = preparationFix(w);
-          return <div key={`w${k}`}>
+          return <div key={`w${k}`} className="prepcheck-warning">
             <p className="note note-amber"><Icon name="warning" size={16} />{w}</p>
             {fix?.plan.issue && <p className="dim">{fix.plan.issue}</p>}
             {!!fix?.plan.prerequisites.length && <p className="dim">Also needed: {fix.plan.prerequisites.join('; ')}.</p>}
             {fix && !fix.plan.issue && fix.plan.added > 0 && <Button size="sm" icon="box" onClick={() => equipPreparationFix(fix)}>Equip {fix.plan.label} on squad {fix.sid}</Button>}
           </div>;
         })}
-        {check.ok && visibleWarnings.length === 0 && (
-          <p className="note note-mint">
-            <Icon name="check" size={16} />
-            {preparation && practice ? 'Ready to practice.' : 'Ready to deploy.'}
-          </p>
-        )}
-      </div>
-
-      {!!preparation?.equipment.length && <details className="prep-equipment-options">
-        <summary>Optional equipment · {preparation.equipment.length} {preparation.equipment.length === 1 ? 'option' : 'options'} to review</summary>
-        <p>These bundles open up more choices. You can deploy without them; each decision will show its requirements when it becomes relevant.</p>
-        <ul>{preparation.equipment.map(({ key, label, fix }) => <li key={key}>
-          <strong>{label}</strong>
-          <p className="dim">Optional equipment for squad {fix.sid}. Scene requirements are checked when you choose an action.</p>
-          {fix.plan.issue ? <p>{fix.plan.issue}</p> : <Button size="sm" icon="box" onClick={() => equipPreparationFix(fix)}>Equip {fix.plan.label} on squad {fix.sid}</Button>}
-        </li>)}</ul>
-      </details>}
+      </div>}
 
       <div className="stickyfoot prepfoot">
+        <p className={`prepfoot-status tone-${footStatus.tone}`}><Icon name={footStatus.icon} size={15} /><span>{footStatus.text}</span></p>
         <Button onClick={onCancel}>Cancel</Button>
         <Button variant="primary" disabled={!check.ok} onClick={deploy}>
-          {practice ? 'Start practice' : 'Deploy'}
+          Deploy
         </Button>
       </div>
     </div>

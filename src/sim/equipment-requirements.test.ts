@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { ITEMS } from '../content/items';
 import { SCENARIOS } from '../content/scenarios';
 import { autoLoadout } from './auto-equip';
-import { makeState, NOW, unitId, apply, startCmd, makeUnit } from './test-fixtures';
+import { makeState, NOW, unitId, apply, startCmd, makeUnit, withCallOnBoard } from './test-fixtures';
 import { getScenario } from './scenario-registry';
 import { evaluateAction, getBuilt } from './resolution';
 import { actionEquipmentRequirements, requiredEquipmentBundle, missionConsumptionBudget } from './equipment-requirements';
@@ -79,7 +79,7 @@ describe('shared mission equipment requirements', () => {
   it('gives unqualified manual throw phones no score or wear use', () => {
     const state = stock(); const scenario = getScenario('gen:welfare_check:cedar_close:0:1:1:2')!;
     const built = getBuilt(scenario.locationFamilyId, scenario.locationSeed);
-    const started = apply(state, startCmd(scenario.id, ['B'], { practice: true, positions: { B: built.location.entries[0] }, loadouts: { B: {} } }));
+    const started = apply(withCallOnBoard(state, scenario.id), startCmd(scenario.id, ['B'], { positions: { B: built.location.entries[0] }, loadouts: { B: {} } }));
     expect(started.result.ok).toBe(true);
     const ev = evaluateAction({ state: started.state, run: started.state.activeRun!, scenario, built, action: scenario.stages.assess.actions.find((a) => a.id === 'gen_contact')!, acting: ['B'], support: [], unitOverride: { B: [state.units[unitId('throw_phone')]] } as any });
     expect(ev.contributors.filter((c) => c.ref === 'throw_phone')).toEqual([]);

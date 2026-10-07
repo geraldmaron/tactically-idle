@@ -2,7 +2,8 @@ import { createElement, type ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 import type { ActionView, DebriefResult, DecisionView } from '../../sim/types';
-import { apply, makeState, NOW, setRun, startRun } from '../../sim/test-fixtures';
+import { apply, makeState, NOW, setRun, startRun, withCallOnBoard } from '../../sim/test-fixtures';
+import { registerCapabilityFixtures } from '../../sim/fixtures/capability-scenarios';
 import { actionViews, currentBuilt, decisionViews, pendingDebrief, previewAction, spaceViews, stageContinuations, stageProgress } from '../../sim/operation-selectors';
 import { planActionResupply } from '../../sim/equipment-resupply';
 import { ActionSheet, LiveView, PersonRow, revealStageStep, StageSteps, type LiveViewProps } from './LiveView';
@@ -77,12 +78,12 @@ function sheet(view: ActionView, all = [view]) {
 }
 function liveProps(actions: ActionView[], selectedAction: ActionView | null = actions[0]): LiveViewProps {
   const g = startRun(makeState(), 'ms_occupancy', ['A']);
-  return { g, now: NOW, title: 'Operation test', subtitle: 'RESIDENTIAL', practice: false, progress: { ...stageProgress(g), prompt: 'How will you verify the report before committing?' }, built: currentBuilt(g)!, spaces: spaceViews(g), squadTasks: g.activeRun!.squadTasks, deployedSquads: [g.squads[0]], focusSquadId: 'A', onFocusSquad: noop, officers: [], actions, selectedAction, onSelectAction: noop, activeOfficerId: null, onSelectOfficer: noop, selectedSpaceId: null, onSelectSpace: noop, highlightSpaceIds: [], floor: 0, onFloorChange: noop, environment: null, lastChange: null, showRooms: true, onToggleRooms: noop, clock: 0, pressure: 15, canCancel: true, onCancel: noop, onOpenDetails: noop, detailsOpen: false };
+  return { g, now: NOW, title: 'Operation test', subtitle: 'RESIDENTIAL', progress: { ...stageProgress(g), prompt: 'How will you verify the report before committing?' }, built: currentBuilt(g)!, spaces: spaceViews(g), squadTasks: g.activeRun!.squadTasks, deployedSquads: [g.squads[0]], focusSquadId: 'A', onFocusSquad: noop, officers: [], actions, selectedAction, onSelectAction: noop, activeOfficerId: null, onSelectOfficer: noop, selectedSpaceId: null, onSelectSpace: noop, highlightSpaceIds: [], floor: 0, onFloorChange: noop, environment: null, lastChange: null, showRooms: true, onToggleRooms: noop, clock: 0, pressure: 15, canCancel: true, onCancel: noop, onOpenDetails: noop, detailsOpen: false };
 }
 
 it('shows the v6 welfare partial ending without a success percentage or favorable result claim', () => {
   const scenario = generateIncident({ type: 'welfare_check', familyId: 'cedar_close', buildingSeed: 7, seed: 2, tier: 1, contentVersion: 6 });
-  const g = startRun(makeState(), scenario.id, ['A'], { practice: true, positions: { A: 'front_yard' }, loadouts: { A: {} } });
+  const g = startRun(withCallOnBoard(makeState(), scenario.id), scenario.id, ['A'], { positions: { A: 'front_yard' }, loadouts: { A: {} } });
   expect(actionViews(g, NOW, 'A').some(a => a.id.endsWith('assess_partial'))).toBe(false);
   // The retired card is hidden, but an already-issued historical decision keeps its exact presentation.
   const legacyId = scenario.stages.assess.actions.find(a => a.id.endsWith('assess_partial'))!.id;
@@ -154,10 +155,11 @@ describe('reviewing a decision', () => {
   });
 
   it('keeps qualified specialist support visible even while another requirement is missing', () => {
-    const g = setRun(startRun(makeState(), 'practice_response_v2', ['A', 'B'], {
-      practice: true, positions: { A: 'front_yard', B: 'front_yard' }, loadouts: { A: {}, B: {} },
+    registerCapabilityFixtures();
+    const g = setRun(startRun(makeState(), 'capability_response_v2', ['A', 'B'], {
+      positions: { A: 'front_yard', B: 'front_yard' }, loadouts: { A: {}, B: {} },
     }), { stage: 'adapt' });
-    const view = previewAction(g, NOW, 'practice_specialist_clear', ['A'], ['B'])!;
+    const view = previewAction(g, NOW, 'capability_specialist_clear', ['A'], ['B'])!;
     expect(view.support).toEqual({ minSquads: 1, maxSquads: 1 });
     expect(render(sheet(view))).toContain('Supporting squad (1 required)');
   });
@@ -251,7 +253,7 @@ describe('reviewing a decision', () => {
 
 describe('persistent decision results', () => {
   it('keeps actual changes and specific consequences visible after the toast is gone', () => {
-    const html = render(createElement(OperationFeedback, { decisions: [decision()], practice: false }));
+    const html = render(createElement(OperationFeedback, { decisions: [decision()] }));
     for (const expected of ['Last decision', 'Had complications', 'The patient received aid, but the route is still unresolved.', '+8 min', 'Call progress', '+12', 'Civilian safety', '-4', 'Pressure', '+5', 'Officer stress', '+1.5 stress', '1 × Trauma supplies', 'Patient condition: Confirmed', 'Decision log (1)']) expect(html).toContain(expected);
     expect(html).toContain('aria-haspopup="dialog"');
     expect(html).toContain('aria-expanded="false"');
@@ -260,7 +262,7 @@ describe('persistent decision results', () => {
 
   it('retains every decision, explanation, officer and contributor in the full log', () => {
     const last = decision({ revision: 2, title: 'Preserve access', band: 'favorable', endingTitle: 'Assistance completed' });
-    const html = render(createElement(OperationLogContents, { decisions: [decision(), last], practice: false }));
+    const html = render(createElement(OperationLogContents, { decisions: [decision(), last] }));
     expect(html).toContain('2 decisions, in order');
     expect(html.indexOf('Decision 1')).toBeLessThan(html.indexOf('Decision 2'));
     for (const expected of ['Ortiz', '+3 stress', 'Chen', '+1.5 stress', 'The delay leaves the squad with less time.', 'Pressure reduced the margin.', 'Ortiz medical rating', 'Operation ended:', 'Assistance completed']) expect(html).toContain(expected);
@@ -313,8 +315,8 @@ describe('persistent decision results', () => {
     const saved = decision({ objectiveDelta: 0, civilianSafetyDelta: 0, pressureDelta: 0, stressDeltas: [{ officerId: 'off_chen', label: 'Chen', delta: 0, stressBefore: 80, stressAfter: 80 }], supplies: [], knowledgeChanges: [], explanation: ['The room is empty.', 'Helped most: Chen: coordination 65, composure 67 (+36.2).', 'Most strain: Chen (+0).'], consequences: ['The room is empty.'] });
     const visible = defaultResult(render(createElement(DecisionCard, { decision: saved })));
     expect(visible).not.toContain('Stress on the team');
-    const log = render(createElement(OperationLogContents, { decisions: [saved], practice: true, explicitCompletion: true }));
-    expect(log).toContain('Practice results do not change your department.');
+    const log = render(createElement(OperationLogContents, { decisions: [saved], explicitCompletion: true }));
+    expect(log).toContain('Each choice records the time, supplies and changes it caused.');
     expect(log).toContain('<details class="decision-causes decision-record" open="">');
     for (const line of saved.explanation) expect(log).toContain(line);
     for (const expected of ['Call progress', 'Civilian safety', 'Pressure', 'before 80, change 0', 'Needs rest', 'No knowledge changes recorded.', 'Supplies used', 'None', 'Ortiz medical rating: +12 points']) expect(log).toContain(expected);
@@ -339,12 +341,12 @@ describe('persistent decision results', () => {
   });
 
   it('shows no empty feedback panel before the first decision', () => {
-    expect(render(createElement(OperationFeedback, { decisions: [], practice: false }))).toBe('');
+    expect(render(createElement(OperationFeedback, { decisions: [] }))).toBe('');
   });
 
   it('renders the ending summary and preserves the saved log in the real debrief', () => {
     const scenario = generateIncident({ type: 'welfare_check', familyId: 'cedar_close', buildingSeed: 7, seed: 3, tier: 1, contentVersion: 3 });
-    state = startRun(makeState(), scenario.id, ['A'], { practice: true });
+    state = startRun(withCallOnBoard(makeState(), scenario.id), scenario.id, ['A']);
     for (let step = 0; step < 12 && state.activeRun?.status === 'active'; step++) {
       const chosen = actionViews(state, NOW, 'A').find((view) => view.eligible);
       const continuation = stageContinuations(state)[0];
@@ -380,7 +382,7 @@ describe('persistent decision results', () => {
 });
 
 describe('saved result review', () => {
-  const saved: DebriefResult = { runId: 'run_older', scenarioId: 'ms_occupancy', endingId: 'old', endingTitle: 'Assistance completed', practice: false, objective: { score: 75, label: 'Completed' }, civilianSafety: { score: 88, label: 'Safe' }, officerCondition: [], informationPreserved: [], resources: [{ itemId: 'battery_pack', used: 1, returned: 0 }], unitWear: [], trustDelta: 2, fundingReward: 100, devPointReward: 1, causes: ['The squad verified the report.'] };
+  const saved: DebriefResult = { runId: 'run_older', scenarioId: 'ms_occupancy', endingId: 'old', endingTitle: 'Assistance completed', objective: { score: 75, label: 'Completed' }, civilianSafety: { score: 88, label: 'Safe' }, officerCondition: [], informationPreserved: [], resources: [{ itemId: 'battery_pack', used: 1, returned: 0 }], unitWear: [], trustDelta: 2, fundingReward: 100, devPointReward: 1, causes: ['The squad verified the report.'] };
   it('shows old saved totals and causes without inventing a per-decision log', () => {
     const html = render(createElement(SavedDebriefContents, { debrief: saved, officers: {} }));
     expect(html).toContain('75/100');
@@ -482,7 +484,7 @@ it('shows all possessions and their own certainty in the selected-person inspect
 });
 
 it('keeps saved subject deaths in a debrief even when a newer active call exists', () => {
-  const d: DebriefResult = { runId: 'archived_force', scenarioId: 'ms_occupancy', endingId: 'closed', endingTitle: 'Closed', practice: false, objective: { score: 100, label: 'Complete' }, civilianSafety: { score: 50, label: 'Consequences' }, officerCondition: [], informationPreserved: [], resources: [], unitWear: [], trustDelta: 0, fundingReward: 0, devPointReward: 0, causes: [], personCasualties: [{ personId: 'mara', personRole: 'subject', label: 'Mara Bell', severity: 'fatal', at: 8, care: 'deceased', causeRevision: 2 }] };
+  const d: DebriefResult = { runId: 'archived_force', scenarioId: 'ms_occupancy', endingId: 'closed', endingTitle: 'Closed', objective: { score: 100, label: 'Complete' }, civilianSafety: { score: 50, label: 'Consequences' }, officerCondition: [], informationPreserved: [], resources: [], unitWear: [], trustDelta: 0, fundingReward: 0, devPointReward: 0, causes: [], personCasualties: [{ personId: 'mara', personRole: 'subject', label: 'Mara Bell', severity: 'fatal', at: 8, care: 'deceased', causeRevision: 2 }] };
   const html = render(createElement(SavedDebriefContents, { debrief: d, officers: {} }));
   expect(html).toContain('data-person-casualty="mara"');
   expect(html).toContain('Mara Bell');

@@ -11,7 +11,7 @@ import type { BuiltLocation, GameState, Id, Vec } from '../../../sim/types';
 import { generateIncident, incidentId } from '../index';
 import { GATE_CONTENT_VERSION, specForSituation } from './catalog';
 import type { Variant } from './catalog';
-import { applyNaturalMove, firstMove, NOW, startPractice } from './engine-driver';
+import { applyNaturalMove, firstMove, NOW, startGateRun } from './engine-driver';
 
 /** Playability gate (docs/content-pipeline.md): binding, squad reachability and real
  * dispatch journeys with a save and reload after every step. */
@@ -64,7 +64,7 @@ export interface JourneyResult { id: string; campaignSeed: number | null; steps:
  * reload after every step that must restore the run exactly. */
 function playOnce(id: string, campaignSeed: number, checkSaves: boolean): JourneyResult {
   const result: JourneyResult = { id, campaignSeed, steps: [], endingId: null, completed: false, saveRoundTrips: 0, problems: [] };
-  let state: GameState = startPractice(id, campaignSeed);
+  let state: GameState = startGateRun(id, campaignSeed);
   for (let step = 0; step < 40 && state.activeRun!.status === 'active'; step++) {
     const move = firstMove(state);
     if (!move) { result.problems.push(`stuck at ${state.activeRun!.stage} with no move`); break; }
@@ -81,7 +81,6 @@ function playOnce(id: string, campaignSeed: number, checkSaves: boolean): Journe
   if (run.status !== 'debrief') result.problems.push(`ended in status ${run.status}, not debrief`);
   const debrief = pendingDebrief(state);
   result.endingId = run.endingId; result.completed = !!debrief?.completionAchieved;
-  if (debrief && (debrief.fundingReward !== 0 || debrief.devPointReward !== 0)) result.problems.push('practice paid a reward');
   return result;
 }
 

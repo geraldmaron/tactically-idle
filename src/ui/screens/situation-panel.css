@@ -1,0 +1,17 @@
+/* The call's situation under the live title: the summary always reads; the briefing opens in place. */
+.situation { min-width: 0; margin: 0 var(--gutter) 8px; padding: 8px 10px 6px; border-left: 3px solid var(--amber); border-radius: 0 var(--radius) var(--radius) 0; background: rgba(243, 180, 50, 0.06); overflow-wrap: anywhere; }
+.situation-summary { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; margin: 0; font-size: 14px; line-height: 1.4; color: var(--text); }
+.situation-open .situation-summary { display: block; }
+.situation-toggle { display: inline-flex; align-items: center; gap: 5px; min-height: 36px; padding: 4px 0; border: 0; background: transparent; color: var(--amber-2); font-family: var(--font-cond); font-size: 13px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; }
+.situation-toggle:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; border-radius: 3px; }
+.situation-body { display: grid; gap: 10px; padding: 2px 0 8px; font-size: 13.5px; line-height: 1.45; color: var(--text-dim); }
+.situation-body h3 { margin: 0 0 3px; font-family: var(--font-cond); font-size: 12.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text); }
+.situation-body p { margin: 0; }
+.situation-body ul { margin: 0; padding-left: 18px; }
+.situation-body li + li { margin-top: 3px; }
+.situation-facts { padding-left: 0 !important; list-style: none; }
+.situation-facts li { display: flex; justify-content: space-between; gap: 10px; }
+.situation-facts strong { flex-shrink: 0; font-weight: 600; }
+.situation-facts [data-status="confirmed"] strong { color: var(--mint); }
+.situation-facts [data-status="reported"] strong { color: var(--amber-2); }
+.situation-facts [data-status="disproved"] strong { color: var(--muted); }

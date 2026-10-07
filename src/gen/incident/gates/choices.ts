@@ -1,6 +1,6 @@
 import { actionViews, stageContinuations } from '../../../sim/operation-selectors';
 import type { ActionView, GameState } from '../../../sim/types';
-import { applyMove, availableMoves, NOW, startPractice } from './engine-driver';
+import { applyMove, availableMoves, NOW, startGateRun } from './engine-driver';
 
 /** Choices gate (content v12). A stage that opens with a single button is not a decision: in
  * v11 most typed calls ran "pick one of two approaches, press the only button, press the only
@@ -40,6 +40,6 @@ export function thinStages(scenarioId: string): ThinStage[] {
       walk(after, after.activeRun!.stage !== run.stage, `${path}${path ? ' > ' : ''}${move.actionId}:${move.band ?? move.kind}`, depth + 1);
     }
   };
-  walk(startPractice(scenarioId), true, '', 0);
+  walk(startGateRun(scenarioId), true, '', 0);
   return [...out.values()];
 }

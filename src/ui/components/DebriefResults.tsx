@@ -3,7 +3,9 @@ import { Portrait } from '../portraits/Portrait';
 import { Icon } from '../icons';
 import { opMinutes, signed, signedMoney } from '../format';
 import { Card, Chip, Meter, SubHead } from './ui';
-import { StressDisplay } from './StressDisplay';
+import { STRESS_LABEL, StressDisplay, changeText } from './StressDisplay';
+import { stressBand } from '../../sim/officer';
+import type { ReactNode } from 'react';
 import { CivilianOutcomeList, OfficerInjuryResult } from './IncidentPeople';
 import './debrief-results.css';
 
@@ -12,20 +14,29 @@ export type DebriefOfficers = Record<string, Pick<Officer, 'surname' | 'firstNam
 type Condition = DebriefResult['officerCondition'][number];
 const scoreTone = (value: number) => value >= 70 ? 'hi' : value >= 40 ? 'mid' : 'lo';
 
+/** A score as a filled ring: mint from 80, amber from 50, danger below. The number or icon sits inside. */
+export function ScoreRing({ value, size = 34, children }: { value: number; size?: number; children?: ReactNode }) {
+  const v = Math.max(0, Math.min(100, value));
+  const tone = v >= 80 ? 'var(--mint)' : v >= 50 ? 'var(--amber)' : 'var(--danger)';
+  return <span className="score-ring" aria-hidden="true" style={{ width: size, height: size, background: `conic-gradient(${tone} ${v * 3.6}deg, rgba(255,255,255,.1) 0deg)` }}><span className="score-ring-core" style={{ width: size - 8, height: size - 8 }}>{children}</span></span>;
+}
+
 export function DebriefSummary({ debrief: d }: { debrief: DebriefResult }) {
   return <Card className="result-summary">
     {d.disposition && <CompletionResult debrief={d} />}
     {d.civilianOutcomes?.length ? <section className="result-civilian-outcomes"><span className="result-score-label"><Icon name="civilian" size={16} />People at the call</span><CivilianOutcomeList outcomes={d.civilianOutcomes} /></section> : <div className={`result-scores${d.disposition ? ' result-scores-explicit' : ''}`}>
-      {(d.disposition ? [{ label: 'Civilian safety', icon: 'civilian', result: d.civilianSafety }] as const : [{ label: 'Call progress', icon: 'flag', result: d.objective }, { label: 'Civilian safety', icon: 'civilian', result: d.civilianSafety }] as const).map(({ label, icon, result }) => <section className="result-score" key={label} aria-label={`${label} ${Math.round(result.score)}/100`}>
-        <span className="result-score-label"><Icon name={icon} size={16} />{label}</span>
-        <strong className="result-score-value">{Math.round(result.score)}<span>/100</span></strong>
-        <Meter value={result.score} tone={scoreTone(result.score)} label={label} valueText={`${Math.round(result.score)} of 100; ${result.label}`} />
-        <span className="result-score-outcome">{result.label}</span>
+      {(d.disposition ? [{ label: 'Civilian safety', icon: 'civilian', result: d.civilianSafety }] as const : [{ label: 'Call progress', icon: 'flag', result: d.objective }, { label: 'Civilian safety', icon: 'civilian', result: d.civilianSafety }] as const).map(({ label, icon, result }) => <section className={`result-score result-score-${scoreTone(result.score)}`} key={label} aria-label={`${label} ${Math.round(result.score)}/100`}>
+        <ScoreRing value={result.score} size={58}><strong className="result-score-value">{Math.round(result.score)}</strong></ScoreRing>
+        <span className="result-score-text">
+          <span className="result-score-label"><Icon name={icon} size={14} />{label}</span>
+          <span className="result-score-outcome">{result.label}</span>
+          <Meter value={result.score} tone={scoreTone(result.score)} label={label} valueText={`${Math.round(result.score)} of 100; ${result.label}`} />
+        </span>
       </section>)}
     </div>}
-    {d.practice ? <p className="result-practice"><Icon name="info" size={18} /><span><strong>Practice complete</strong>No lasting changes to officers, supplies or reputation. No rewards earned. A better result still counts as your casebook best.</span></p> : <section className="result-rewards" aria-label="Rewards">
+    <section className="result-rewards" aria-label="Rewards">
       <span className="result-score-label"><Icon name="cash" size={16} />Rewards</span>
-      <div className="chips">
+      <div className="chips result-reward-chips">
         {d.fundingReward !== 0 && <Chip tone={d.fundingReward < 0 ? 'danger' : 'mint'} icon="cash">{signedMoney(d.fundingReward)} funding</Chip>}
         {d.trustDelta !== 0 && <Chip tone={d.trustDelta < 0 ? 'danger' : 'mint'} icon="shield">{signed(d.trustDelta, 1)} trust</Chip>}
         {d.devPointReward !== 0 && <Chip tone={d.devPointReward < 0 ? 'danger' : 'amber'} icon="chart">{signed(d.devPointReward)} dev point{Math.abs(d.devPointReward) === 1 ? '' : 's'}</Chip>}
@@ -33,7 +44,7 @@ export function DebriefSummary({ debrief: d }: { debrief: DebriefResult }) {
         {d.levelReached !== undefined && <Chip tone="amber" icon="medal">Department level {d.levelReached}</Chip>}
         {d.fundingReward === 0 && d.trustDelta === 0 && d.devPointReward === 0 && !d.serviceEarned && <span className="dim">No funding, trust or development-point change.</span>}
       </div>
-    </section>}
+    </section>
   </Card>;
 }
 
@@ -66,20 +77,30 @@ export function ResultPortrait({ officerId, officers, size = 48 }: { officerId: 
   return <span className="result-officer-fallback" role="img" aria-label={officer ? `${officer.firstName} ${officer.surname}; no photo on file` : `Officer ${officerId}; identity no longer on file`} style={{ width: size, height: Math.round(size * 1.04) }}><span aria-hidden="true">{initials}</span></span>;
 }
 
-function OfficerChange({ condition: c, officers, practice, casualty }: { condition: Condition; officers: DebriefOfficers; practice: boolean; casualty?: NonNullable<DebriefResult['officerCasualties']>[number] }) {
+function OfficerChange({ condition: c, officers, casualty }: { condition: Condition; officers: DebriefOfficers; casualty?: NonNullable<DebriefResult['officerCasualties']>[number] }) {
   const officer = officers[c.officerId];
   const label = officer ? `${officer.firstName} ${officer.surname}` : 'Former officer';
   const delta = c.stressAfter - c.stressBefore;
-  return <li className="result-officer" data-officer-result={c.officerId}>
-    <ResultPortrait officerId={c.officerId} officers={officers} />
+  const change = changeText(c.stressBefore, c.stressAfter);
+  const before = stressBand(Math.max(0, Math.min(100, c.stressBefore))), after = stressBand(Math.max(0, Math.min(100, c.stressAfter)));
+  return <li className={`result-officer${casualty ? ' result-officer-hurt' : ''}`} data-officer-result={c.officerId}>
+    <ResultPortrait officerId={c.officerId} officers={officers} size={44} />
     <div className="result-officer-body">
       <div className="result-officer-heading">
         <div><strong>{label}</strong>{!officer && <span className="result-officer-id">{c.officerId}</span>}</div>
-        {!practice && c.xpGained !== 0 && <span className={c.xpGained > 0 ? 'result-xp' : 'result-xp tone-danger'}>{signed(c.xpGained, 1)} XP</span>}
+        {c.xpGained !== 0 && <span className={c.xpGained > 0 ? 'result-xp' : 'result-xp tone-danger'}>{signed(c.xpGained, 1)} XP</span>}
       </div>
-      {casualty && <OfficerInjuryResult casualty={casualty} practice={practice} />}
-      <StressDisplay value={c.stressAfter} before={delta !== 0 ? c.stressBefore : undefined} />
-      {delta === 0 && <span className="result-stress-unchanged">Stress unchanged</span>}
+      {casualty && <OfficerInjuryResult casualty={casualty} />}
+      <div className="result-stress-row">
+        <StressDisplay value={c.stressAfter} before={delta !== 0 ? c.stressBefore : undefined} compact />
+        {delta !== 0 && <strong className={`result-stress-delta ${change.direction > 0 ? 'tone-warn' : change.direction < 0 ? 'tone-mint' : ''}`}>{change.text}</strong>}
+        {delta === 0 && <span className="result-stress-unchanged">Stress unchanged</span>}
+      </div>
+      <span className="result-stress-track" aria-hidden="true">
+        <i className={`stress-fill-${after}`} style={{ width: `${Math.max(2, Math.min(100, c.stressAfter))}%` }} />
+        {delta !== 0 && <b style={{ left: `${Math.max(0, Math.min(100, c.stressBefore))}%` }} />}
+      </span>
+      {before !== after && <span className="result-stress-crossing">Now {STRESS_LABEL[after].toLowerCase()}</span>}
     </div>
   </li>;
 }
@@ -87,16 +108,16 @@ function OfficerChange({ condition: c, officers, practice, casualty }: { conditi
 export function OfficerResults({ debrief: d, officers }: { debrief: DebriefResult; officers: DebriefOfficers }) {
   const casualties = new Map((d.officerCasualties ?? []).map((casualty) => [casualty.officerId, casualty]));
   const extraCasualties = (d.officerCasualties ?? []).filter((casualty) => !d.officerCondition.some((condition) => condition.officerId === casualty.officerId));
-  const changed = d.officerCondition.filter((c) => casualties.has(c.officerId) || (!d.practice && (c.xpGained !== 0 || c.stressAfter !== c.stressBefore)));
+  const changed = d.officerCondition.filter((c) => casualties.has(c.officerId) || c.xpGained !== 0 || c.stressAfter !== c.stressBefore);
   const unchanged = d.officerCondition.filter((c) => !changed.includes(c));
-  const xp = d.practice ? 0 : d.officerCondition.reduce((total, c) => total + c.xpGained, 0);
+  const xp = d.officerCondition.reduce((total, c) => total + c.xpGained, 0);
   return <Card className="result-officers">
-    <div className="result-section-heading"><SubHead icon="people">Officer {d.practice ? 'condition' : 'changes'}</SubHead>{xp !== 0 && <span className="result-xp">{signed(xp, 1)} XP total</span>}</div>
-    {changed.length > 0 && <ul className="result-officer-list">{changed.map((c) => <OfficerChange key={c.officerId} condition={c} officers={officers} practice={d.practice} casualty={casualties.get(c.officerId)} />)}</ul>}
-    {extraCasualties.length > 0 && <ul className="result-officer-list">{extraCasualties.map((casualty) => <li className="result-officer" key={casualty.officerId}><ResultPortrait officerId={casualty.officerId} officers={officers} /><div className="result-officer-body"><strong>{officers[casualty.officerId] ? `${officers[casualty.officerId].firstName} ${officers[casualty.officerId].surname}` : 'Former officer'}</strong><OfficerInjuryResult casualty={casualty} practice={d.practice} /></div></li>)}</ul>}
+    <div className="result-section-heading"><SubHead icon="people">Officer changes</SubHead>{xp !== 0 && <span className="result-xp">{signed(xp, 1)} XP total</span>}</div>
+    {changed.length > 0 && <ul className="result-officer-list">{changed.map((c) => <OfficerChange key={c.officerId} condition={c} officers={officers} casualty={casualties.get(c.officerId)} />)}</ul>}
+    {extraCasualties.length > 0 && <ul className="result-officer-list">{extraCasualties.map((casualty) => <li className="result-officer" key={casualty.officerId}><ResultPortrait officerId={casualty.officerId} officers={officers} /><div className="result-officer-body"><strong>{officers[casualty.officerId] ? `${officers[casualty.officerId].firstName} ${officers[casualty.officerId].surname}` : 'Former officer'}</strong><OfficerInjuryResult casualty={casualty} /></div></li>)}</ul>}
     {unchanged.length > 0 && <details className="result-disclosure result-unchanged">
       <summary><span className="result-unchanged-summary"><span className="result-portrait-stack" aria-hidden="true">{unchanged.slice(0, 3).map((c) => <ResultPortrait key={c.officerId} officerId={c.officerId} officers={officers} size={28} />)}</span><span>{unchanged.length} officer{unchanged.length === 1 ? '' : 's'} · unchanged<span className="result-summary-hint">View condition</span></span></span></summary>
-      <ul className="result-officer-list">{unchanged.map((c) => <OfficerChange key={c.officerId} condition={c} officers={officers} practice={d.practice} casualty={casualties.get(c.officerId)} />)}</ul>
+      <ul className="result-officer-list">{unchanged.map((c) => <OfficerChange key={c.officerId} condition={c} officers={officers} casualty={casualties.get(c.officerId)} />)}</ul>
     </details>}
     {d.officerCondition.length === 0 && extraCasualties.length === 0 && <p className="result-empty dim">No officers deployed.</p>}
   </Card>;

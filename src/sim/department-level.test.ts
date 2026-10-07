@@ -22,12 +22,11 @@ describe('department level from service', () => {
     for (let service = 0; service < 600; service++) expect(serviceForLevel(levelForService(service))).toBeLessThanOrEqual(service);
   });
 
-  it('pays more for completing harder calls, a little for any live call, and nothing for practice', () => {
-    expect(serviceEarned({ practice: true, completed: true, failed: false }, 5)).toBe(0);
-    expect(serviceEarned({ practice: false, completed: true, failed: false }, 1)).toBe(3);
-    expect(serviceEarned({ practice: false, completed: true, failed: false }, 5)).toBe(7);
-    expect(serviceEarned({ practice: false, completed: false, failed: false }, 4)).toBe(3);
-    expect(serviceEarned({ practice: false, completed: false, failed: true }, 5)).toBe(1);
+  it('pays more for completing harder calls and a little for any call', () => {
+    expect(serviceEarned({ completed: true, failed: false }, 1)).toBe(3);
+    expect(serviceEarned({ completed: true, failed: false }, 5)).toBe(7);
+    expect(serviceEarned({ completed: false, failed: false }, 4)).toBe(3);
+    expect(serviceEarned({ completed: false, failed: true }, 5)).toBe(1);
   });
 
   it('starts new campaigns at level 1 and reads older departments from the level they hold', () => {
@@ -47,7 +46,10 @@ describe('department level from service', () => {
 
   it('names what the next level opens, by framework label only', () => {
     expect([...frameworksOpeningAt(2)].sort()).toEqual(['alarm and keyholder response', 'medical assistance']);
-    expect(frameworksOpeningAt(4).some(line => line.startsWith('active armed incident (with a certified officer and the right equipment)'))).toBe(true);
+    // Tactical calls open from level 1, each with the capability it needs.
+    expect(frameworksOpeningAt(1)).toContain('active armed incident (with a certified officer and the right equipment)');
+    expect(frameworksOpeningAt(3)).toEqual(['robbery witness reconciliation']);
+    expect(frameworksOpeningAt(4)).toEqual([]);
     expect(frameworksOpeningAt(99)).toEqual([]);
   });
 });
@@ -61,7 +63,7 @@ describe('earning service on a live call', () => {
     before.incidents = [{ id, type: 'domestic', familyId: 'cedar_close', tier: s.incident!.tier, arrivedAt: NOW, expiresAt: NOW + 3_600_000, seen: false }];
     const entry = buildLocation(s.locationFamilyId, s.locationSeed).location.entries[0];
     let state = apply(before, startCmd(id, ['A'], { positions: { A: entry }, loadouts: { A: {} } })).state;
-    expect(state.activeRun?.practice).toBe(false);
+    expect(state.activeRun?.scenarioId).toBe(id);
     for (let i = 0; i < 30 && state.activeRun?.status === 'active'; i++) {
       const move = firstMove(state);
       const next = move && applyNaturalMove(state, move);
@@ -77,7 +79,6 @@ describe('earning service on a live call', () => {
   it('adds the service the debrief reports, and records a level reached', () => {
     const { before, after } = playLive(17);
     const report = after.debriefs[0];
-    expect(report.practice).toBe(false);
     expect(report.serviceEarned).toBeGreaterThan(0);
     expect(after.department.service).toBe((before.department.service ?? 0) + report.serviceEarned!);
     expect(after.department.level).toBe(levelForService(after.department.service!));
@@ -95,7 +96,7 @@ describe('save v7 migration', () => {
     for (const officer of Object.values(s.officers)) officer.certs = officer.certs.filter(cert => cert !== 'crisis_negotiation');
     s.saveVersion = 6;
     const migrated = deserialize(serialize(s, NOW))!;
-    expect(migrated.saveVersion).toBe(7);
+    expect(migrated.saveVersion).toBe(9);
     // Armed incidents were met (level 4). Hostage crises need a negotiator nobody holds, so
     // they wait for level 5 like any campaign's.
     expect(migrated.department.level).toBe(4);
@@ -109,5 +110,18 @@ describe('save v7 migration', () => {
     plain.casebook = { frameworksSeen: ['domestic'], recipes: {} };
     for (const officer of Object.values(plain.officers)) officer.certs = [];
     expect(deserialize(serialize(plain, NOW))!.department.level).toBe(3);
+  });
+
+  it('lifts by the level table v7 shipped with, not the current unlock arc', () => {
+    // Hostage crises were level 5 in save v7 and open at level 1 today: a v6 campaign that
+    // had met one still migrates to level 5.
+    const s = createInitialState(NOW, 3);
+    s.department.level = 3;
+    delete s.department.service;
+    s.casebook = { frameworksSeen: ['domestic', 'hostage_crisis'], recipes: {} };
+    s.saveVersion = 6;
+    const migrated = deserialize(serialize(s, NOW))!;
+    expect(migrated.department.level).toBe(5);
+    expect(migrated.department.service).toBe(serviceForLevel(5));
   });
 });

@@ -47,7 +47,7 @@ export interface ScenarioCard {
   /** e.g. 'Low time pressure' */
   pressureLabel: string;
   eligibleSquadIds: SquadId[];
-  /** Why the scenario cannot be deployed for real right now (practice may still be possible). */
+  /** Why the scenario cannot be deployed right now. */
   issues: string[];
 }
 

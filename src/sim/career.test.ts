@@ -41,13 +41,12 @@ function turnsSixtyIn(s: GameState, officerId: string, days: number): void {
 }
 
 /** A debrief the officer took part in, as the operation module records them. */
-function debrief(runId: string, officerIds: string[], objective: number, safety: number, practice = false): DebriefResult {
+function debrief(runId: string, officerIds: string[], objective: number, safety: number): DebriefResult {
   return {
     runId,
     scenarioId: 's',
     endingId: 'e',
     endingTitle: 'e',
-    practice,
     objective: { score: objective, label: '' },
     civilianSafety: { score: safety, label: '' },
     officerCondition: officerIds.map((officerId) => ({ officerId, stressBefore: 0, stressAfter: 0, xpGained: 0 })),
@@ -432,11 +431,8 @@ describe('burnout', () => {
     const next = tick(three, 2);
     expect(next.officers.off_brooks.retirement).toMatchObject({ reason: 'burnout' });
     expect(events(next, 'retirement_announced', 'off_brooks')[0].detail).toMatch(/3 adverse operations in the last 5/);
-    // Officers who were not on those operations are untouched, and practice runs do not count.
+    // Officers who were not on those operations are untouched.
     expect(next.officers.off_chen.retirement).toBeNull();
-    const practice = createInitialState(T0);
-    practice.debriefs = [debrief('p3', ['off_brooks'], 10, 10, true), debrief('p2', ['off_brooks'], 10, 10, true), debrief('p1', ['off_brooks'], 10, 10, true)];
-    expect(tick(practice, 2).officers.off_brooks.retirement).toBeNull();
   });
 
   it('operation outcomes are counted into the career once, however often it settles', () => {

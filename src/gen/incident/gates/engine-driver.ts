@@ -7,7 +7,7 @@ import { responseFailurePlan } from '../../../sim/response-failure';
 import { next } from '../../../sim/rng';
 import { getScenario } from '../../../sim/scenario-registry';
 import type { ScenarioDefinition } from '../../../sim/scenario-types';
-import { apply, NOW, startCmd } from '../../../sim/test-fixtures';
+import { apply, NOW, startCmd, stockKit } from '../../../sim/test-fixtures';
 import type { ActionView, GameState, OutcomeBand } from '../../../sim/types';
 
 /** Drives the real operation engine for the content gates.
@@ -49,14 +49,17 @@ export function sampleFor(view: ActionView, band: OutcomeBand): number | null {
   return T.setbackChance + core * ((lo + hi) / 2);
 }
 
-/** Start a practice run of `scenarioId` with one squad at the first entry. */
-export function startPractice(scenarioId: string, campaignSeed = 719): GameState {
+/** Start a live run of `scenarioId` with one squad at the first entry. A generated call is
+ * the only card on a new campaign's board, and squad A carries one fresh owned unit of every
+ * item the department can field (stockKit), so no choice is closed for want of gear. */
+export function startGateRun(scenarioId: string, campaignSeed = 719): GameState {
   const s = getScenario(scenarioId);
   if (!s) throw new Error(`Unknown scenario ${scenarioId}`);
   const before = createInitialState(NOW, campaignSeed);
   if (s.incident) before.incidents = [{ id: s.id, type: s.incident.type, familyId: s.incident.familyId, tier: s.incident.tier, arrivedAt: NOW, expiresAt: NOW + 3600000, seen: false }];
+  const kit = stockKit(before, ['A']);
   const entry = buildLocation(s.locationFamilyId, s.locationSeed).location.entries[0];
-  const started = apply(before, startCmd(s.id, ['A'], { positions: { A: entry }, practice: true }));
+  const started = apply(kit.state, startCmd(s.id, ['A'], { positions: { A: entry }, loadouts: kit.loadouts, units: kit.units }));
   if (!started.result.ok) throw new Error(`Could not start ${scenarioId}: ${started.result.reason}`);
   return started.state;
 }

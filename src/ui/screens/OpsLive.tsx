@@ -18,7 +18,8 @@ import { getScenario } from '../../sim/scenario-registry';
 import { ActionSheet, LiveView, RoomSheet } from './LiveView';
 import { cardFor } from './helpers';
 import { planActionResupply } from '../../sim/equipment-resupply';
-import { OperationFeedback, RESULT_LABEL } from './OperationFeedback';
+import { LastDecisionPeek, OperationFeedback, RESULT_LABEL } from './OperationFeedback';
+import { SituationPanel } from './SituationPanel';
 import { SupportContext } from './SupportContext';
 import { IncidentPeopleStatus } from '../components/IncidentPeople';
 import { incidentOfficerUnavailable } from '../../sim/incident-consequences';
@@ -36,6 +37,11 @@ interface ActionSelection {
   runId: Id;
   stage: string;
   actionId: Id;
+}
+
+/** Scroll the saved result into view without moving focus away from the player's place. */
+function revealLastDecision() {
+  document.querySelector('.operation-feedback')?.scrollIntoView({ block: 'start', behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
 }
 
 export function OpsLive() {
@@ -156,7 +162,9 @@ export function OpsLive() {
       const ids = new Set(spaces.map((s) => s.id));
       const spaceIds = [r.targetId, ...r.knowledgeChanges.map((k) => k.factId)].filter((x): x is Id => !!x && ids.has(x));
       setLastChange({ revision: r.revision, spaceIds });
-      notify(r.committed?.resultLabel ?? RESULT_LABEL[r.band], { tone: r.committed?.resultLabel ? 'info' : r.band === 'adverse' ? 'error' : r.band === 'favorable' ? 'ok' : 'amber', lines: ['See Last decision for the outcome, changes and causes.'] });
+      // When the decision ends the call the debrief already shows the result; there is nothing to reveal.
+      const ended = getState().activeRun?.stage === 'debrief';
+      notify(r.committed?.resultLabel ?? RESULT_LABEL[r.band], { tone: r.committed?.resultLabel ? 'info' : r.band === 'adverse' ? 'error' : r.band === 'favorable' ? 'ok' : 'amber', ...(ended ? {} : { lines: ['Tap to see what happened and what changed.'], onSelect: revealLastDecision }) });
     }
   };
 
@@ -166,7 +174,6 @@ export function OpsLive() {
       now={now}
       title={title}
       subtitle={subtitle}
-      practice={run.practice}
       progress={progress}
       built={built}
       spaces={spaces}
@@ -217,7 +224,9 @@ export function OpsLive() {
       onCancel={() => setConfirmCancel(true)}
       onOpenDetails={() => { setActionFromSupport(false); setPanel(panel === 'action' ? 'none' : 'action'); }}
       detailsOpen={panel === 'action'}
-      feedback={<OperationFeedback officers={g.officers} decisions={decisions} practice={run.practice} explicitCompletion={(scenario?.version ?? 0) >= 4} onOpenLog={() => setPanel('none')} />}
+      lastDecision={<LastDecisionPeek decisions={decisions} onReveal={revealLastDecision} />}
+      feedback={<OperationFeedback officers={g.officers} decisions={decisions} explicitCompletion={(scenario?.version ?? 0) >= 4} onOpenLog={() => setPanel('none')} />}
+      situation={scenario && <SituationPanel scenario={scenario} run={run} />}
       supportContext={scenario && <><IncidentPeopleStatus scenario={scenario} run={run} state={g} /><SupportContext scenario={scenario} run={run} actions={actions} open={panel === 'support'} onOpen={() => setPanel('support')} onClose={() => setPanel('none')} onPickAction={(id) => {
         setActionFromSupport(true);
         pickAction(id);
@@ -296,7 +305,7 @@ export function OpsLive() {
           <h3>Still unresolved</h3>
           <ul className="bullets">{failurePlan.remainingTasks.map(task => <li key={task}>{task}</li>)}</ul>
           <p>{failurePlan.consequence}</p>
-          <p className="note note-warn">{run.practice ? 'Practice: no lasting changes to funding, development points, officer experience or trust.' : 'No incident funding, development points or completion experience. Department trust falls by 2.'}</p>
+          <p className="note note-warn">No incident funding, development points or completion experience. Department trust falls by 2.</p>
         </>}
       </Sheet>
       <Sheet

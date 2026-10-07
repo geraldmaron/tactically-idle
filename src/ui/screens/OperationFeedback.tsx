@@ -3,17 +3,27 @@ import type { ActionView, DecisionView, KnowledgeStatus, OutcomeBand, RiskBand }
 import { Button, Chip } from '../components/ui';
 import { Sheet } from '../components/Sheet';
 import { ResultPortrait, type DebriefOfficers } from '../components/DebriefResults';
-import { StressDisplay, StressGuide } from '../components/StressDisplay';
+import { STRESS_LABEL, StressDisplay, StressGuide, changeText } from '../components/StressDisplay';
+import { stressBand } from '../../sim/officer';
 import { opMinutes, signed } from '../format';
 import { outcomePercentages } from './liveModels';
 import './operation-feedback.css';
 import { ITEMS } from '../../content/items';
+import { Icon } from '../icons';
 
 export const RESULT_LABEL: Record<OutcomeBand, string> = { favorable: 'Went well', mixed: 'Had complications', adverse: 'Went badly' };
 export const FORECAST_LABEL: Record<OutcomeBand, string> = { favorable: 'Goes well', mixed: 'Complications', adverse: 'Goes badly' };
 export const CONSEQUENCE_LABEL: Record<RiskBand, string> = { low: 'Low', moderate: 'Moderate', high: 'High', severe: 'Severe' };
 const RESULT_TONE = { favorable: 'mint', mixed: 'amber', adverse: 'danger' } as const;
 const KNOWLEDGE_LABEL: Record<KnowledgeStatus, string> = { unknown: 'Unknown', reported: 'Reported, unconfirmed', confirmed: 'Confirmed', disproved: 'Ruled out' };
+
+/** The three outcome chances as one segmented bar. The words carry the numbers; the bar is the shape. */
+export function OddsBar({ likelihood, mini = false }: { likelihood: ActionView['likelihood']; mini?: boolean }) {
+  const p = outcomePercentages(likelihood);
+  return <span className={`odds-bar${mini ? ' odds-bar-mini' : ''}`} role="img" aria-label={`${p.favorable}% goes well, ${p.mixed}% complications, ${p.adverse}% goes badly`}>
+    {(['favorable', 'mixed', 'adverse'] as const).map((band) => p[band] > 0 && <i key={band} className={`odds-${band}`} style={{ flexGrow: p[band] }}>{!mini && p[band] >= 12 ? `${p[band]}%` : null}</i>)}
+  </span>;
+}
 
 /** Public forecasts only. The engine owns the odds and the authored consequence descriptions. */
 export function OutcomeForecast({ action }: { action: ActionView }) {
@@ -25,13 +35,13 @@ export function OutcomeForecast({ action }: { action: ActionView }) {
         <h3>{action.forceRisk ? 'Task outcome' : commonEvent ? 'Expected event' : 'What could happen'}</h3>
         <span className={`consequence-level consequence-${action.consequenceLevel}`}>Possible harm: {CONSEQUENCE_LABEL[action.consequenceLevel].toLowerCase()}</span>
       </div>
+      {!commonEvent && action.eligible && !action.eventResult && <OddsBar likelihood={action.likelihood} />}
       {action.forceRisk && <section className="force-risk" aria-label="Risk from force">
         <h4>{ITEMS[action.forceRisk.itemId]?.name ?? 'Selected equipment'} · {action.forceRisk.personLabel}</h4>
         <p>{action.forceRisk.summary}</p>
         <p>These game chances describe the task. Harm is resolved separately: a successful task can still cause serious injury or death.</p>
       </section>}
       {commonEvent ? <p>{action.outcomePreview.favorable}</p> : <>
-      <p className="operation-note">{action.eventResult ? 'The event is established. These checks describe how the step unfolds and its costs.' : action.eligible ? 'Chances depend on your team and what you know. Even when a choice goes well, there may be more work to do.' : 'Check what is missing to see the chances for this choice.'} Possible harm describes how badly things could go.</p>
       <ul className="outcome-options">
         {(['favorable', 'mixed', 'adverse'] as const).map((band) => (
           <li key={band} className={`outcome-option outcome-${band}`}>
@@ -40,6 +50,7 @@ export function OutcomeForecast({ action }: { action: ActionView }) {
           </li>
         ))}
       </ul>
+      <p className="operation-note outcome-forecast-note">{action.eventResult ? 'The event is established. These checks describe how the step unfolds and its costs.' : action.eligible ? 'Chances depend on your team and what you know. Even when a choice goes well, there may be more work to do.' : 'Check what is missing to see the chances for this choice.'} Possible harm describes how badly things could go.</p>
       </>}
     </section>
   );
@@ -64,7 +75,7 @@ export function DecisionCard({ decision: d, full = false, officers = {}, explici
       {narrative.length > 0 ? <ul className="decision-narrative">{narrative.map((line, index) => <li key={index}>{line}</li>)}</ul> : fallback ? <p className="decision-lead">{fallback}</p> : null}
       <DecisionChanges decision={d} complete={full} explicitCompletion={explicitCompletion} />
       <DecisionEffects decision={d} complete={full} />
-      <DecisionStress decision={d} officers={officers} complete={full} />
+      {full ? <DecisionStress decision={d} officers={officers} complete /> : <DecisionStressChips decision={d} officers={officers} />}
       {next.length > 0 && <div className="decision-next">{next.map((line, index) => <p key={index}>{line}</p>)}</div>}
       {d.endingTitle && <p className="decision-next"><strong>Operation ended:</strong> {d.endingTitle}</p>}
       <details className="decision-causes decision-record" open={full}>
@@ -112,17 +123,30 @@ function DecisionEffects({ decision: d, complete = false }: { decision: Decision
   </div>;
 }
 
-export function OperationLogContents({ decisions, practice, officers = {}, explicitCompletion = false }: { decisions: DecisionView[]; practice: boolean; officers?: DebriefOfficers; explicitCompletion?: boolean }) {
+export function OperationLogContents({ decisions, officers = {}, explicitCompletion = false }: { decisions: DecisionView[]; officers?: DebriefOfficers; explicitCompletion?: boolean }) {
   return (
     <div className="operation-log-content">
-      <p className="operation-note">{decisions.length} decision{decisions.length === 1 ? '' : 's'}, in order. {practice ? 'Practice results do not change your department.' : 'Each choice records the time, supplies and changes it caused.'}</p>
+      <p className="operation-note">{decisions.length} decision{decisions.length === 1 ? '' : 's'}, in order. Each choice records the time, supplies and changes it caused.</p>
       <ol className="operation-log-list">{decisions.map((decision, index) => <li key={decision.revision}><span className="decision-number">Decision {index + 1}</span><DecisionCard decision={decision} officers={officers} explicitCompletion={explicitCompletion} full /></li>)}</ol>
     </div>
   );
 }
 
+/** One line above the next decision naming the last result; tapping it shows the full record below. */
+export function LastDecisionPeek({ decisions, onReveal }: { decisions: DecisionView[]; onReveal: () => void }) {
+  const last = decisions.at(-1);
+  if (!last) return null;
+  const label = last.forceOutcome ? 'Task and harm recorded' : last.resultLabel ?? RESULT_LABEL[last.band];
+  const tone = last.forceOutcome || last.resultLabel ? 'event' : last.band;
+  return <button type="button" className={`last-peek last-peek-${tone}`} onClick={onReveal}>
+    <span className="last-peek-dot" aria-hidden="true" />
+    <span className="last-peek-text"><small>Last decision · {label}</small><strong>{last.title}</strong></span>
+    <span className="last-peek-go">What changed<Icon name="chevronDown" size={14} /></span>
+  </button>;
+}
+
 /** The history comes from the saved run, so closing a sheet or reloading cannot discard it. */
-export function OperationFeedback({ decisions, practice, ended = false, onOpenLog, officers = {}, explicitCompletion = false }: { decisions: DecisionView[]; practice: boolean; ended?: boolean; onOpenLog?: () => void; officers?: DebriefOfficers; explicitCompletion?: boolean }) {
+export function OperationFeedback({ decisions, ended = false, onOpenLog, officers = {}, explicitCompletion = false }: { decisions: DecisionView[]; ended?: boolean; onOpenLog?: () => void; officers?: DebriefOfficers; explicitCompletion?: boolean }) {
   const [open, setOpen] = useState(false);
   const last = decisions.at(-1);
   if (!last) return null;
@@ -131,7 +155,7 @@ export function OperationFeedback({ decisions, practice, ended = false, onOpenLo
       <div className="operation-feedback-heading"><h2>Last decision</h2><Button variant="ghost" size="sm" className="operation-log-trigger" onClick={() => { onOpenLog?.(); setOpen(true); }} aria-haspopup="dialog" aria-expanded={open}>Decision log ({decisions.length})</Button></div>
       <DecisionCard key={last.revision} decision={last} officers={officers} explicitCompletion={explicitCompletion} />
       <Sheet open={open} onClose={() => setOpen(false)} title="Decision log" className="operation-log-sheet" footer={<Button block onClick={() => setOpen(false)}>{ended ? 'Return to debrief' : 'Return to operation'}</Button>}>
-        <OperationLogContents decisions={decisions} practice={practice} officers={officers} explicitCompletion={explicitCompletion} />
+        <OperationLogContents decisions={decisions} officers={officers} explicitCompletion={explicitCompletion} />
       </Sheet>
     </section>
   );
@@ -157,5 +181,30 @@ function DecisionStress({ decision: d, officers, complete = false }: { decision:
     {d.actualStressDeltas && changed.some((row) => row.stressAfter === undefined) && <p className="decision-legacy-note">Only the stress change was saved for this older decision.</p>}
     {!d.actualStressDeltas && <p className="decision-legacy-note">Older record: strain may differ from the applied change.</p>}
     {changed.some((row) => row.stressAfter !== undefined) && <StressGuide />}
+  </section>;
+}
+
+/** Live summary: one compact chip per officer whose stress changed, so the next decision stays
+ * close. A crossed stress range is called out; the gauges stay in the details and the log. */
+function DecisionStressChips({ decision: d, officers }: { decision: DecisionView; officers: DebriefOfficers }) {
+  const changed = d.stressDeltas.filter((row) => row.delta !== 0);
+  if (!changed.length) return null;
+  return <section className="decision-stress decision-stress-compact" aria-label={d.actualStressDeltas ? 'Officer stress' : 'Recorded strain'}>
+    <h4>{d.actualStressDeltas ? 'Stress on the team' : 'Recorded strain'}</h4>
+    <ul className="decision-stress-chips">{changed.map((row) => {
+      const person = officers[row.officerId];
+      const known = row.stressBefore !== undefined && row.stressAfter !== undefined;
+      // A saved change without readings stays exact; there is no reading to round it against.
+      const change = known ? changeText(row.stressBefore!, row.stressAfter!) : { text: `${signed(row.delta, 1)} ${d.actualStressDeltas ? 'stress' : 'recorded strain'}`, direction: Math.sign(row.delta) };
+      const crossed = known && stressBand(row.stressBefore!) !== stressBand(row.stressAfter!) ? STRESS_LABEL[stressBand(row.stressAfter!)] : null;
+      return <li key={row.officerId} data-crossed={crossed ? 'yes' : undefined}>
+        <ResultPortrait officerId={row.officerId} officers={officers} size={28} />
+        <span className="decision-stress-chip-name">{person?.surname ?? row.label}</span>
+        <strong className={change.direction > 0 ? 'tone-warn' : change.direction < 0 ? 'tone-mint' : ''}>{change.text}</strong>
+        {crossed && <span className="decision-stress-crossing">Now {crossed.toLowerCase()}</span>}
+      </li>;
+    })}</ul>
+    {d.actualStressDeltas && changed.some((row) => row.stressAfter === undefined) && <p className="decision-legacy-note">Only the stress change was saved for this older decision.</p>}
+    {!d.actualStressDeltas && <p className="decision-legacy-note">Older record: strain may differ from the applied change.</p>}
   </section>;
 }

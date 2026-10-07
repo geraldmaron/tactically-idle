@@ -94,8 +94,7 @@ export function responseFailurePlan(state: GameState): ResponseFailurePlan | nul
   return {
     version: 1, runId: run.id, revision: run.revision, atClock: run.clock,
     reasonKind: allUnavailable ? 'team_unavailable' : 'no_viable_approach', title, reason, remainingTasks, progressRetained,
-    consequence: run.practice ? 'Ends this practice as an unsuccessful response. No lasting department changes.'
-      : 'Ends this response without an incident funding bonus, development points or completion experience. Public trust falls by 2. Used supplies, wear, injuries and unfinished duties remain recorded.',
+    consequence: 'Ends this response without an incident funding bonus, development points or completion experience. Public trust falls by 2. Used supplies, wear, injuries and unfinished duties remain recorded.',
   };
 }
 

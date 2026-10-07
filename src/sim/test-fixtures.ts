@@ -5,6 +5,9 @@ import { OPERATION_HANDLERS } from './operation';
 import { actionViews, pendingDebrief, stageContinuations } from './operation-selectors';
 import { CALENDAR } from './calendar';
 import { getBuilt } from './resolution';
+import { getScenario } from './scenario-registry';
+import type { IncidentSpec } from './scenario-types';
+import { incidentId } from '../gen/incident';
 import { defaultStagingFor, centroidOf } from './spatial-factors';
 import { ITEMS } from '../content/items';
 
@@ -215,7 +218,6 @@ export function startCmd(
   scenarioId: Id,
   squadIds: SquadId[],
   over: {
-    practice?: boolean;
     loadouts?: Partial<Record<SquadId, Record<Id, number>>>;
     positions?: Partial<Record<SquadId, Id>>;
     staging?: Partial<Record<SquadId, Id>>;
@@ -228,7 +230,68 @@ export function startCmd(
     loadouts[s] = over.loadouts?.[s] ?? { ...DEFAULT_LOADOUTS[s] };
     positions[s] = over.positions?.[s] ?? DEFAULT_POSITIONS[s];
   }
-  return { type: 'startOperation', scenarioId, squadIds, positions, loadouts, practice: over.practice ?? false, ...(over.units ? { units: over.units } : {}), ...(over.staging ? { staging: over.staging } : {}) };
+  return { type: 'startOperation', scenarioId, squadIds, positions, loadouts, ...(over.units ? { units: over.units } : {}), ...(over.staging ? { staging: over.staging } : {}) };
+}
+
+/** Fixed generated calls the tests reuse as examples of each content version. */
+export const TEST_CALLS = {
+  welfareV3: { type: 'welfare_check', familyId: 'cedar_close', buildingSeed: 0, seed: 11, tier: 1, contentVersion: 3 },
+  welfareV4: { type: 'welfare_check', familyId: 'cedar_close', buildingSeed: 0, seed: 11, tier: 1, contentVersion: 4 },
+  activeArmedV4: { type: 'active_armed_incident', familyId: 'cedar_close', buildingSeed: 7, seed: 7, tier: 2, contentVersion: 4 },
+  hostageV4: { type: 'hostage_crisis', familyId: 'market_row', buildingSeed: 7, seed: 7, tier: 2, contentVersion: 4 },
+  protectedRescueV4: { type: 'protected_rescue', familyId: 'cedar_close', buildingSeed: 7, seed: 0, tier: 2, contentVersion: 4 },
+} satisfies Record<string, IncidentSpec>;
+export const testCallId = (name: keyof typeof TEST_CALLS): Id => incidentId(TEST_CALLS[name]);
+
+/** Put a generated call on the board so a live start can take it. Authored scenarios and
+ * calls already on the board are left as they are. */
+export function withCallOnBoard(state: GameState, scenarioId: Id, now = NOW): GameState {
+  const incident = getScenario(scenarioId)?.incident;
+  if (!incident || state.incidents.some((card) => card.id === scenarioId)) return state;
+  const s = structuredClone(state);
+  s.incidents = [...s.incidents, { id: scenarioId, type: incident.type, familyId: incident.familyId, tier: incident.tier, arrivedAt: now, expiresAt: now + 3_600_000, seen: false }];
+  return s;
+}
+
+/** Every item the department can field: owned or unlocked, apart from exterior vehicles. */
+export function fieldableItems(state: GameState): Id[] {
+  return Object.keys(ITEMS).filter((id) => {
+    const def = ITEMS[id];
+    if (def.supportOnly) return false;
+    const owned = Object.values(state.units).some((u) => u.itemId === id && u.status !== 'scrapped');
+    return owned || !def.requiresNode || state.department.unlockedNodes.includes(def.requiresNode);
+  });
+}
+
+/**
+ * Give each squad one fresh, owned unit of every listed item (ids `kit_<squad>_<item>`),
+ * picked into its loadout. Units are built directly, never through createUnit, so the
+ * department random stream, and with it every run's dice, is unchanged.
+ */
+export function stockKit(state: GameState, squadIds: SquadId[], itemIds: Id[] = fieldableItems(state), now = NOW): {
+  state: GameState; loadouts: Partial<Record<SquadId, Record<Id, number>>>; units: Partial<Record<SquadId, Id[]>>;
+} {
+  const s = structuredClone(state);
+  const loadouts: Partial<Record<SquadId, Record<Id, number>>> = {};
+  const units: Partial<Record<SquadId, Id[]>> = {};
+  for (const sid of squadIds) {
+    loadouts[sid] = {};
+    units[sid] = [];
+    for (const itemId of itemIds) {
+      const shelf = ITEMS[itemId]?.wear.shelfLifeDays;
+      const id = `kit_${sid}_${itemId}`;
+      s.units[id] = { id, itemId, serial: `KIT-${sid}-${itemId}`, condition: 100, acquiredAt: now, uses: 0, status: 'ready', serviceUntil: null, wearRate: 1, expiresAt: shelf != null ? now + shelf * CALENDAR.gameDayMs : null, lastWearAt: now };
+      loadouts[sid]![itemId] = 1;
+      units[sid]!.push(id);
+    }
+  }
+  return { state: s, loadouts, units };
+}
+
+/** Start a live run carrying `stockKit` equipment, with the call put on the board first. */
+export function startWithKit(state: GameState, scenarioId: Id, squadIds: SquadId[], over: Omit<Parameters<typeof startCmd>[2], 'loadouts' | 'units'> = {}, itemIds?: Id[]): GameState {
+  const kit = stockKit(withCallOnBoard(state, scenarioId), squadIds, itemIds ?? fieldableItems(state));
+  return startRun(kit.state, scenarioId, squadIds, { ...over, loadouts: kit.loadouts, units: kit.units });
 }
 
 /** Run one operation handler as a transaction (like dispatch, without the department tick). */

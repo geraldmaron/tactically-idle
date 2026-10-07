@@ -87,11 +87,9 @@ describe('automatic standard radios', () => {
     expect(cancelled.state.units).toEqual(state.units);
   });
 
-  it('does not invent physical radios for practice or migrate legacy active reservations', () => {
+  it('never invents physical radios and does not migrate legacy active reservations', () => {
     const empty = makeState({ inventory: { radio_kit: 0 } });
-    const practice = startRun(empty, 'ms_occupancy', ['A', 'B'], { practice: true });
-    expect(practice.reservations).toEqual([]);
-    expect(practice.units).toEqual(empty.units);
+    expect(apply(empty, startCmd('ms_occupancy', ['A'])).result).toMatchObject({ ok: false, reason: expect.stringContaining('Standard radios') });
     const legacy = startRun(createInitialState(NOW), 'ms_occupancy', ['A'], { loadouts: { A: {} } });
     const kept = legacy.reservations.find((r) => r.itemId === 'radio_kit')!;
     for (const r of legacy.reservations) if (r.itemId === 'radio_kit' && r !== kept) legacy.units[r.unitId].status = 'ready';

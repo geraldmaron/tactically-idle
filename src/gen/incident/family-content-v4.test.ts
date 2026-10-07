@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { DECISION_EXERCISES, LEGACY_DECISION_EXERCISES } from '../../content/scenarios/decision-exercises';
 import { createInitialState } from '../../sim/department';
 import { buildLocation } from '../../sim/location';
 import { actionViews, briefing, pendingDebrief, spaceViews, stageContinuations } from '../../sim/operation-selectors';
@@ -98,10 +97,6 @@ describe('version-four varied responsibilities', () => {
       expect(parseIncidentId(incidentId(spec))).toBeNull();
       expect(() => generateIncident(spec)).toThrow('Invalid incident specification');
     }
-  });
-  it('retains issued v3 and v4 practice IDs while exposing the current stories', () => {
-    for (const exercise of LEGACY_DECISION_EXERCISES) expect(getScenario(exercise.id)?.version).toBe(exercise.spec.contentVersion);
-    for (const exercise of DECISION_EXERCISES) expect(getScenario(exercise.id)?.version).toBe(exercise.spec.contentVersion);
   });
   it.each(['welfare_check', 'medical_complication', 'barricaded'] as const)('%s hides truth from briefing, branch visibility, support ETA and evaluation', type => {
     const state = running(specFor(type)); const s = getScenario(state.activeRun!.scenarioId)!; const facts = structuredClone(s.facts);

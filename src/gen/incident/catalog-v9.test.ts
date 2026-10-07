@@ -12,7 +12,7 @@ import { validateStoryBindings } from '../../sim/story-bindings';
 import { createInitialState } from '../../sim/department';
 import { actionViews, pendingDebrief, stageContinuations } from '../../sim/operation-selectors';
 import { responseFailurePlan } from '../../sim/response-failure';
-import { apply, NOW, startCmd } from '../../sim/test-fixtures';
+import { apply, NOW, startCmd, stockKit } from '../../sim/test-fixtures';
 import { serialize, deserialize } from '../../sim/save';
 import { scenarioActions } from '../../sim/scenario-types';
 
@@ -117,7 +117,8 @@ describe('complete catalog journeys through real dispatch and save boundaries', 
     const before = createInitialState(NOW, 719);
     before.incidents = [{ id:s.id, type:spec.type, familyId:spec.familyId, tier:spec.tier, arrivedAt:NOW, expiresAt:NOW+3600000, seen:false }];
     const entry = buildLocation(s.locationFamilyId, s.locationSeed).location.entries[0];
-    const start = apply(before, startCmd(s.id, ['A'], { positions:{A:entry}, loadouts:{A:{}}, practice:true }));
+    const kit = stockKit(before, ['A']);
+    const start = apply(kit.state, startCmd(s.id, ['A'], { positions:{A:entry}, loadouts:kit.loadouts, units:kit.units }));
     expect(start.result, s.id).toEqual({ok:true}); let state = start.state;
     for (let step=0; step<60 && state.activeRun!.status === 'active'; step++) {
       const choices = actionViews(state, NOW, 'A').filter(a => a.eligible);
@@ -137,10 +138,9 @@ describe('complete catalog journeys through real dispatch and save boundaries', 
     }
     expect(state.activeRun!.status,recipe.id).toBe('debrief');
     const report = pendingDebrief(state)!; expect(report).not.toBeNull();
-    expect(report.fundingReward).toBe(0); expect(report.devPointReward).toBe(0);
     if (ADDITIONAL_FRAMEWORK_BY_TYPE[spec.type] && report.completionAchieved) expect(state.activeRun!.flags).toContain(`v9_${spec.type}_completed`);
     const closed = apply(state,{type:'closeDebrief'}); expect(closed.result).toEqual({ok:true});
-    expect(closed.state.units).toEqual(before.units); expect(closed.state.department.trust).toBe(before.department.trust);
+    expect(closed.state.department.funding).toBe(state.department.funding + report.fundingReward);
     expect(apply(closed.state,{type:'closeDebrief'}).result.ok).toBe(false);
   }, 30000);
 });

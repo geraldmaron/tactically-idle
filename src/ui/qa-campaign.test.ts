@@ -58,7 +58,7 @@ describe('bounded equipped QA campaign', () => {
   it('uses real owned units, reservations and decisions for a field deployment', () => {
     const equipped = createQaCampaign(now, 'equipped');
     const vehicle = Object.values(equipped.units).find((unit) => unit.itemId === 'armored_rescue_vehicle')!;
-    const started = dispatch(equipped, { type: 'startOperation', scenarioId: 'ms_occupancy', squadIds: ['A'], positions: { A: briefing('ms_occupancy').entries[0].id }, loadouts: { A: { radio_kit: 1, throw_phone: 1, impact_launcher: 1, impact_supply: 2, trauma_kit: 2 } }, supportUnitIds: [vehicle.id], practice: false }, { now });
+    const started = dispatch(equipped, { type: 'startOperation', scenarioId: 'ms_occupancy', squadIds: ['A'], positions: { A: briefing('ms_occupancy').entries[0].id }, loadouts: { A: { radio_kit: 1, throw_phone: 1, impact_launcher: 1, impact_supply: 2, trauma_kit: 2 } }, supportUnitIds: [vehicle.id] }, { now });
     expect(started.result.ok).toBe(true);
     expect(started.state.activeRun!.supportUnitIds).toContain(vehicle.id);
     expect(started.state.reservations.length).toBeGreaterThan(0);

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { planAuto, planPreparationEquipment, preparationEquipmentFix } from './autoPlan';
 import { makeState, NOW, unitId } from '../../sim/test-fixtures';
 import { SCENARIOS } from '../../content/scenarios';
+import { CAPABILITY_FIXTURES } from '../../sim/fixtures/capability-scenarios';
 import { CALENDAR } from '../../sim/calendar';
 import type { ActionDefinition } from '../../sim/scenario-types';
 import type { AutoLoadout } from '../../sim/auto-equip';
@@ -166,7 +167,7 @@ describe('contextual preparation equipment', () => {
 
 
 describe('preparation warning equipment repair', () => {
-  const specialist = structuredClone(SCENARIOS.practice_response_v2.stages.adapt.actions.find((action) => action.id === 'practice_specialist_clear')!);
+  const specialist = structuredClone(CAPABILITY_FIXTURES.find((scenario) => scenario.id === 'capability_response_v2')!.stages.adapt.actions.find((action) => action.id === 'capability_specialist_clear')!);
   const warning = `${specialist.title}: Needs usable equipment for specialist support`;
   it('offers a capability-only full bundle on a later qualified squad and preserves manual choices', () => {
     const state = makeState({ inventory: { precision_support: 1 } });

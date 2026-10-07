@@ -345,8 +345,6 @@ export interface ScenarioRewards {
 export interface ScenarioDefinition {
   id: Id;
   version: number;
-  /** Authored equipment exercises cannot be deployed as live incidents. */
-  practiceOnly?: boolean;
   /** e.g. 'OP 0141' */
   code: string;
   title: string;

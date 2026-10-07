@@ -59,13 +59,13 @@ function definition(): ScenarioDefinition {
     },
   };
 }
-function started(loadout: Record<string, number>, practice = false): GameState {
+function started(loadout: Record<string, number>): GameState {
   const state = createInitialState(NOW, 99);
   state.department.unlockedNodes = Object.keys(DEV_NODES);
   state.department.developmentTiers = Object.fromEntries(Object.keys(DEV_NODES).map(id => [id, 1]));
   for (const officer of Object.values(state.officers)) officer.certs = [...new Set([...officer.certs, 'entry_team', 'less_lethal', 'advanced_less_lethal', 'advanced_first_aid'] as const)];
   for (const [itemId, qty] of Object.entries(loadout)) for (let i = 1; i <= qty; i++) { const unit = makeUnit(itemId, 900 + i); state.units[unit.id] = unit; }
-  return startRun(state, ID, ['A'], { practice, loadouts: { A: loadout } });
+  return startRun(state, ID, ['A'], { loadouts: { A: loadout } });
 }
 function choose(state: GameState, actionId: string): GameState {
   const result = apply(state, { type: 'decide', actionId, actingSquadIds: ['A'], supportSquadIds: [] });
@@ -200,11 +200,11 @@ describe('bounded independent V7 force severity', () => {
     after = choose(after, 'finish'); expect(computeDebrief(after, after.activeRun!)!.completionAchieved).toBe(true);
     expect(computeDebrief(after, after.activeRun!)!.civilianSafety.label).toBe('Injuries recorded');
   });
-  it('simulated casualties and supplies never change real officers or stock', () => {
-    const before = started({ conducted_energy_device: 1, energy_cartridge: 1 }, true); before.activeRun!.rngState = seedFor(0, 0.004);
+  it('records the owned supply a force decision uses', () => {
+    const before = started({ conducted_energy_device: 1, energy_cartridge: 1 }); before.activeRun!.rngState = seedFor(0, 0.004);
     const after = choose(before, 'less_lethal_device');
-    expect(after.units).toEqual(before.units); expect(after.officers).toEqual(before.officers); expect(after.reservations).toEqual(before.reservations);
-    expect(after.activeRun!.history[0].unitsUsed).toContain('practice_energy_cartridge');
+    const cartridge = before.reservations.find(reservation => reservation.itemId === 'energy_cartridge')!.unitId;
+    expect(after.activeRun!.history[0].unitsUsed).toContain(cartridge);
     expect(deserialize(serialize(after, NOW))?.activeRun).toEqual(after.activeRun);
   });
   it('preserves a mixed protection, force and care history through every reload and the closed debrief', () => {

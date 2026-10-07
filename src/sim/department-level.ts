@@ -1,7 +1,7 @@
 // Department level: earned through service on live calls (save v7). Each closed live call
-// adds service; the level rises when total service reaches the next threshold. Practice
-// earns nothing. The level gates which kinds of call are dispatched (content/unlocks.ts)
-// and caps the tier of new calls (drawIncidentSpec).
+// adds service; the level rises when total service reaches the next threshold. The level
+// gates which kinds of call are dispatched (content/unlocks.ts) and caps the tier of new
+// calls (drawIncidentSpec).
 //
 // Saves before v7 hold a level with no service record. Their service is read as the
 // threshold of the level they hold, so progress starts from there and no level is lost.
@@ -31,8 +31,7 @@ export function departmentService(dep: Pick<Department, 'level' | 'service'>): n
 
 /** Service one closed live call earns. Completing the agreed step at a higher tier earns the
  * most; a call that ends without it still earns a little, because the team still served. */
-export function serviceEarned(outcome: { practice: boolean; completed: boolean; failed: boolean }, tier: number): number {
-  if (outcome.practice) return 0;
+export function serviceEarned(outcome: { completed: boolean; failed: boolean }, tier: number): number {
   const t = Math.min(5, Math.max(1, Math.round(Number.isFinite(tier) ? tier : 1)));
   if (outcome.failed) return 1;
   return outcome.completed ? 2 + t : 1 + Math.floor(t / 2);

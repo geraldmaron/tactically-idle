@@ -131,10 +131,11 @@ describe('rendered player destinations and persistent drafts', () => {
     expect(html).toContain('aria-label="Gear sections"');
     expect(html).toMatch(/>Inventory <span class="choice-rail-count">/);
     expect(html).toMatch(/>Equipment <span class="choice-rail-count">/);
-    expect(html.indexOf('class="gear-grid"')).toBeLessThan(html.indexOf('class="gear-maintenance"'));
+    expect(html.indexOf('class="inv-grid"')).toBeLessThan(html.indexOf('class="gear-maintenance"'));
     expect(html).toContain('<details class="gear-maintenance">');
     expect(html).toContain('Unlock in Develop');
-    expect(html).toContain('Restock ·');
+    // Inventory is an item grid; restocking lives in each item's sheet.
+    expect(html).toMatch(/class="inv-tile"[^>]* aria-label="[^"]+: \d+ owned, \d+ ready/);
     expect(html).toContain('At each clock hour');
     expect(html).not.toContain('after each operation');
     expect(html).not.toContain('Buy 1 ·');

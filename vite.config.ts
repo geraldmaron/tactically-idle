@@ -3,6 +3,8 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
+  // Preview tooling assigns a free port through PORT; plain `npm run dev` keeps 5173.
+  server: { port: Number(process.env.PORT) || 5173, strictPort: !!process.env.PORT },
   build: {
     rollupOptions: { input: { app: 'index.html', harness: 'harness.html', locations: 'locations.html', story: 'story.html' } },
   },

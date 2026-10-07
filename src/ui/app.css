@@ -951,7 +951,7 @@ input.num {
 
 .toasts {
   position: absolute;
-  top: 58px;
+  bottom: calc(var(--nav-h) + env(safe-area-inset-bottom) + 10px);
   left: 12px;
   right: 12px;
   z-index: 40;
@@ -1013,7 +1013,7 @@ input.num {
 @keyframes toast-in {
   from {
     opacity: 0;
-    transform: translateY(-8px);
+    transform: translateY(8px);
   }
 }
 
@@ -1787,7 +1787,7 @@ button.ocard {
   margin: 0;
   font-family: var(--font-display);
   font-weight: 600;
-  font-size: 26px;
+  font-size: 22px;
   letter-spacing: 0.02em;
   text-transform: uppercase;
   line-height: 1.05;
@@ -1797,6 +1797,13 @@ button.ocard {
   font-size: 15px;
   line-height: 1.4;
   color: var(--text-dim);
+}
+.opboard-facts {
+  align-items: center;
+  gap: 6px 8px;
+}
+.opboard-facts .timeleft {
+  font-size: 13px;
 }
 .opboard-elig {
   display: flex;
@@ -2060,9 +2067,11 @@ button.ocard {
   outline: 2px solid var(--amber);
   outline-offset: 2px;
 }
+/* Equal columns: every stage fits the row and long names wrap to two lines instead of scrolling off. */
 .step {
   position: relative;
-  flex: 1 0 auto;
+  flex: 1 1 0;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -2118,13 +2127,20 @@ button.ocard {
   background: var(--amber);
 }
 .step-label {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  max-width: 100%;
+  overflow: hidden;
   font-family: var(--font-cond);
   font-weight: 600;
-  font-size: 13px;
-  letter-spacing: 0.06em;
+  font-size: 12px;
+  line-height: 1.2;
+  letter-spacing: 0.05em;
+  text-align: center;
   color: #7d8da6;
-  padding-inline: 12px;
-  white-space: nowrap;
+  padding-inline: 4px;
+  white-space: normal;
   overflow-wrap: normal;
   word-break: normal;
 }
@@ -2221,35 +2237,54 @@ button.ocard {
   color: var(--text-dim);
 }
 
-.legend {
-  flex: 0 0 auto;
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: 0 8px;
-  align-items: center;
-  min-height: 34px;
-  padding: 4px var(--gutter);
-  font-size: 14.5px;
+/* Map key: a quiet control at the start of the map's action row that opens into the full row. */
+.map-key {
+  margin-right: auto;
+}
+.map-key[open] {
+  flex-basis: 100%;
+  order: 3;
+}
+.map-key summary {
+  list-style: none;
+}
+.map-key summary::-webkit-details-marker {
+  display: none;
+}
+.map-key-body {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgba(8, 13, 24, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  font-size: 13px;
+  line-height: 1.45;
   color: var(--text-dim);
 }
-.legend-items {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px 16px;
-  flex-wrap: wrap;
+.map-key-body p {
+  margin: 0;
 }
-.legend-items > span {
+.map-key-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  color: var(--text);
+}
+.map-key-items > span {
   display: inline-flex;
   align-items: center;
   gap: 8px;
 }
-.legend-end {
-  justify-self: end;
+.live-cancel {
+  min-height: 32px;
   margin-left: auto;
+  padding: 2px 0;
+  font-size: 12.5px;
 }
-.legend-pad {
-  display: none;
+.live-cancel::after {
+  inset: -6px -8px;
 }
 .linkbtn {
   position: relative;
@@ -3035,9 +3070,6 @@ button.ocard {
   }
   .callbtn-sum {
     font-size: 12.5px;
-  }
-  .legend-items {
-    gap: 16px;
   }
 }
 @media (max-height: 700px) {
@@ -3906,6 +3938,33 @@ button.ocard {
   color: var(--muted);
 }
 
+.opboard-count {
+  margin: 0 0 10px;
+  font-size: 14px;
+  color: var(--text-dim);
+}
+.opboard-count strong {
+  color: var(--amber-2);
+  font-weight: 600;
+}
+.opboard-divider {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 6px 0 0;
+  padding-top: 12px;
+  border-top: 1px dashed var(--line-strong);
+  font-family: var(--font-cond);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  color: var(--text-dim);
+}
+.opboard-divider .icon {
+  flex-shrink: 0;
+  color: var(--amber);
+}
+
 /* briefing intel */
 .prep-kicker {
   margin: 2px 0 0;
@@ -4219,6 +4278,8 @@ button.ocard {
 .campaign-bar strong { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .campaign-bar small { font-size: 10px; color: var(--text-dim); }
 .campaign-bar button { flex: 0 0 auto; min-height: var(--touch); padding: 4px 9px; border: 1px solid var(--line-strong); background: var(--panel); border-radius: 6px; color: var(--text); font: 600 13px var(--font-cond); cursor: pointer; }
+.campaign-bar > .campaign-bar-actions { display: flex; flex: 0 0 auto; align-items: center; gap: 8px; }
+.campaign-bar-dev { display: inline-flex; align-items: center; min-height: var(--touch); padding: 4px 9px; border: 1px dashed var(--amber); border-radius: 6px; color: var(--amber-2); font: 600 13px var(--font-cond); letter-spacing: 0.04em; text-decoration: none; }
 .campaign-warning small { color: var(--amber); }
 .save-manager .sheet-body { padding-top: 8px; }
 .save-explainer { margin: 0 0 12px; font-size: 13px; line-height: 1.45; }

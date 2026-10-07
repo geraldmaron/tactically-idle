@@ -7,7 +7,7 @@ import { actionViews, builtForScenario, previewAction } from '../../sim/operatio
 import { deserialize, serialize } from '../../sim/save';
 import { signalBetween } from '../../sim/spatial';
 import { routeBetween } from '../../sim/spatial-factors';
-import { apply, NOW, startCmd } from '../../sim/test-fixtures';
+import { apply, NOW, startCmd, withCallOnBoard } from '../../sim/test-fixtures';
 import type { BuiltLocation, Vec } from '../../sim/types';
 import { drawIncidentSpec, generateIncident, INCIDENT_TYPES } from './index';
 
@@ -109,8 +109,8 @@ describe('residential incident fairness and persistence', () => {
         ['gen_observe', 'gen_verify', 'gen_resolve'],
         ['gen_contact', 'gen_coordinate', 'gen_handover'],
       ]) {
-        let state = createInitialState(NOW);
-        const start = apply(state, startCmd(scenario.id, ['A'], { positions: { A: entry }, loadouts: { A: {} }, practice: true }));
+        let state = withCallOnBoard(createInitialState(NOW), scenario.id);
+        const start = apply(state, startCmd(scenario.id, ['A'], { positions: { A: entry }, loadouts: { A: {} } }));
         expect(start.result, `${scenario.id} at ${entry}`).toEqual({ ok: true });
         state = start.state;
         for (const actionId of path) {

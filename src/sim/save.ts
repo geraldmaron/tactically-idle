@@ -18,15 +18,17 @@ import { maxDevelopmentTier } from './development-tiers';
 import { normalizeSquadArrangementState } from './squad-optimizer';
 import { validStageContinuations } from './compatibility/legacy-choices';
 import { validResponseFailure } from './response-failure';
+import { abandonRun } from './operation';
 import { emptyCasebook, foldDebriefs, parseRecipeKey, recipeOfScenario } from './casebook';
 import { MAX_LEVEL, serviceForLevel } from './department-level';
-import { isUnlocked, unlockRule } from '../content/unlocks';
+import { isUnlocked } from '../content/unlocks';
 import { SCENARIO_TYPES_V11 } from '../content/scenario-types-v11';
+import { createCommandStaff, validCommandStaff } from './command-staff';
 
 export const SAVE_KEY = 'tactically-idle/save';
 
 /** Version written by this build. Older versions pass through migrate(). */
-export const CURRENT_SAVE_VERSION = 7;
+export const CURRENT_SAVE_VERSION = 9;
 
 export interface SaveStorage {
   getItem(key: string): string | null;
@@ -127,7 +129,7 @@ function validIncident(c: unknown): c is Record<string, unknown> {
 function validRun(r: unknown): boolean {
   if (!isObj(r) || !strings(r, ['id', 'scenarioId', 'locationFamilyId'])
     || !numbers(r, ['scenarioVersion', 'locationSeed', 'contentVersion', 'rngState', 'clock', 'pressure', 'objective', 'civilianSafety', 'revision', 'startedAt'])
-    || !isBool(r.practice) || !isBool(r.settled) || !oneOf(r.stage, [...STAGES, 'debrief'])
+    || !isBool(r.settled) || !oneOf(r.stage, [...STAGES, 'debrief'])
     || !oneOf(r.status, ['active', 'debrief', 'closed']) || !(r.endingId === null || isStr(r.endingId))
     || !isList(r.squadIds, (id) => oneOf(id, SQUAD_IDS)) || r.squadIds.length === 0
     || new Set(r.squadIds).size !== r.squadIds.length || !isStrings(r.reservationIds) || !isStrings(r.flags)
@@ -166,7 +168,7 @@ function validRun(r: unknown): boolean {
 }
 
 function validDebrief(d: unknown): boolean {
-  return isObj(d) && strings(d, ['runId', 'scenarioId', 'endingId', 'endingTitle']) && isBool(d.practice)
+  return isObj(d) && strings(d, ['runId', 'scenarioId', 'endingId', 'endingTitle'])
     && numbers(d, ['trustDelta', 'fundingReward', 'devPointReward']) && isStrings(d.causes)
     && [d.objective, d.civilianSafety].every((v) => isObj(v) && isNum(v.score) && isStr(v.label))
     && isList(d.officerCondition, (o) => isObj(o) && isStr(o.officerId) && numbers(o, ['stressBefore', 'stressAfter', 'xpGained']))
@@ -294,8 +296,7 @@ function validCasebook(c: unknown): boolean {
   if (c === undefined) return true;
   if (!isObj(c) || !isStrings(c.frameworksSeen) || new Set(c.frameworksSeen).size !== c.frameworksSeen.length || !isObj(c.recipes)) return false;
   return Object.entries(c.recipes).every(([key, entry]) => !!parseRecipeKey(key) && isObj(entry) && isNum(entry.firstAt)
-    && (entry.practiceOnly === undefined || entry.practiceOnly === true)
-    && (entry.best === undefined || (isObj(entry.best) && isBool(entry.best.completed) && numbers(entry.best, ['objective', 'safety']) && isStr(entry.best.label) && (entry.best.practice === undefined || entry.best.practice === true))));
+    && (entry.best === undefined || (isObj(entry.best) && isBool(entry.best.completed) && numbers(entry.best, ['objective', 'safety']) && isStr(entry.best.label))));
 }
 
 /** Basic structural validation: enough that the UI and sim cannot crash on a loaded state. */
@@ -311,6 +312,7 @@ function validState(s: unknown, historical = false): s is GameState {
   if (receipt !== undefined && (!isObj(receipt) || !Number.isSafeInteger(receipt.retiredUnits) || (receipt.retiredUnits as number) < 1 || !Number.isSafeInteger(receipt.refundedFunding) || (receipt.refundedFunding as number) < 0 || (receipt.refundedFunding as number) > (receipt.retiredUnits as number) * 40 || (receipt.refundedFunding as number) % 40 !== 0)) return false;
   if (!validIncidents(s)) return false;
   if (!validCasebook(s.casebook)) return false;
+  if (!validCommandStaff(s.commandStaff)) return false;
   if (s.report !== null && !validReport(s.report)) return false;
   if (s.activeRun !== null && !validRun(s.activeRun)) return false;
   if (s.activeRun !== null && !validIncidentConsequences(s.activeRun as unknown as OperationRun, getScenario((s.activeRun as unknown as OperationRun).scenarioId)!, s.officers as GameState['officers'], s.squads as GameState['squads'], (s.department as GameState['department']).clockHighWater)) return false;
@@ -419,16 +421,19 @@ function migrateV1toV2(env: SaveEnvelope): SaveEnvelope {
  * v5 -> v6. The campaign gains a casebook built from what it already holds: frameworks
  * on the board or in live debriefs count as seen (no card is badged retroactively), and
  * each content v10+ live debrief adds its recipe with that best result. The board, an
- * active run and the PRNG are untouched.
+ * active live run and the PRNG are untouched.
  */
 function migrateV5toV6(env: SaveEnvelope): SaveEnvelope {
   const draft = structuredClone(env.state) as GameState;
   const at = Number.isFinite(env.savedAt) ? env.savedAt : draft.department.clockHighWater;
+  // The casebook records live calls only, so legacy practice records leave first.
+  retireLegacyPractice(draft, at);
   const book = emptyCasebook();
   draft.casebook = book;
   const seen = (type: string) => { if (!book.frameworksSeen.includes(type)) book.frameworksSeen.push(type); };
   for (const report of [...(draft.debriefs ?? [])].reverse()) {
-    if (!report.practice) { const ref = recipeOfScenario(report.scenarioId); if (ref) seen(ref.type); }
+    const ref = recipeOfScenario(report.scenarioId);
+    if (ref) seen(ref.type);
   }
   for (const card of [...(draft.incidents ?? [])].reverse()) seen(card.type);
   foldDebriefs(draft, at);
@@ -438,10 +443,18 @@ function migrateV5toV6(env: SaveEnvelope): SaveEnvelope {
 
 // ---------------------------------------------------------------- v6 -> v7
 
+/** Framework levels as save v7 shipped them (content/unlocks.ts at that release). The v6 -> v7
+ * lift reads this frozen table, never the live rules, so later changes to the unlock arc
+ * cannot change how an old save migrates. Frameworks not listed were level 1. */
+const V7_UNLOCK_LEVELS: Readonly<Record<string, number>> = {
+  burglary: 2, medical_complication: 2, business_robbery: 3, barricaded: 3,
+  active_armed_incident: 4, protected_rescue: 4, hostage_crisis: 5,
+};
+
 /**
  * v6 -> v7. Department level is now earned through service on live calls, and the
  * specialist frameworks ask for more than the level 3 every earlier campaign held. The
- * department keeps its level and is lifted to the level of any framework it has already
+ * department keeps its level and is lifted to the v7 level of any framework it has already
  * met or could already be sent to (its certifications and equipment qualify), so the
  * update takes no kind of call away. Service starts at that level's threshold.
  */
@@ -450,11 +463,62 @@ function migrateV6toV7(env: SaveEnvelope): SaveEnvelope {
   const seen = new Set(draft.casebook?.frameworksSeen ?? []);
   const anyLevel = { ...draft, department: { ...draft.department, level: MAX_LEVEL } };
   let level = draft.department.level;
-  for (const { type } of SCENARIO_TYPES_V11) if (seen.has(type) || isUnlocked(anyLevel, type)) level = Math.max(level, unlockRule(type).level);
+  for (const { type } of SCENARIO_TYPES_V11) if (seen.has(type) || isUnlocked(anyLevel, type)) level = Math.max(level, V7_UNLOCK_LEVELS[type] ?? 1);
   draft.department.level = level;
   draft.department.service = serviceForLevel(level);
   draft.saveVersion = 7;
   return { ...env, saveVersion: 7, state: draft };
+}
+
+// ---------------------------------------------------------------- v7 -> v8
+
+/**
+ * Practice was removed on 2026-10-06: every operation is a live call. Older saves can hold
+ * practice records, which never changed the department, so this removes them:
+ * - an active practice run ends as if cancelled (no rewards; abandonRun releases its
+ *   officers and any reservation, exactly as cancelOperation does);
+ * - practice debriefs leave the debrief list;
+ * - casebook recipes met only in practice are removed, and best results lose their
+ *   practice mark;
+ * - the `practice` field leaves the active run and every remaining debrief.
+ * Idempotent and safe on any v2+ state (the casebook arrives in v6). The v4 and v5 steps
+ * also run it, before they read runs and debriefs with the current validators and casebook.
+ */
+function retireLegacyPractice(draft: GameState, now: number): void {
+  type Legacy = { practice?: boolean };
+  const run = draft.activeRun as (OperationRun & Legacy) | null;
+  if (run?.practice) abandonRun(draft, run, now);
+  else if (run) delete run.practice;
+  draft.debriefs = (draft.debriefs ?? []).filter((report) => !(report as Legacy).practice);
+  for (const report of draft.debriefs) delete (report as Legacy).practice;
+  const recipes = (draft.casebook?.recipes ?? {}) as Record<string, { practiceOnly?: true; best?: Legacy }>;
+  for (const [key, entry] of Object.entries(recipes)) {
+    if (entry.practiceOnly) delete recipes[key];
+    else if (entry.best) delete entry.best.practice;
+  }
+}
+
+/** v7 -> v8. See retireLegacyPractice. The board, the PRNG and every live record are untouched. */
+function migrateV7toV8(env: SaveEnvelope): SaveEnvelope {
+  const draft = structuredClone(env.state) as GameState;
+  retireLegacyPractice(draft, Number.isFinite(env.savedAt) ? env.savedAt : draft.department.clockHighWater);
+  draft.saveVersion = 8;
+  return { ...env, saveVersion: 8, state: draft };
+}
+
+// ---------------------------------------------------------------- v8 -> v9
+
+/**
+ * v8 -> v9. Command Staff arrives with default policies and empty logs. Managers are hired
+ * through new Develop nodes, so an older save starts with the Watch Commander and Training
+ * Sergeant not hired; a department that already owns the equipment manager keeps it as the
+ * Quartermaster with its service budget unchanged.
+ */
+function migrateV8toV9(env: SaveEnvelope): SaveEnvelope {
+  const draft = structuredClone(env.state) as GameState;
+  draft.commandStaff = createCommandStaff();
+  draft.saveVersion = 9;
+  return { ...env, saveVersion: 9, state: draft };
 }
 
 // ---------------------------------------------------------------- v2 -> v3
@@ -499,8 +563,11 @@ export function migrate(envelope: SaveEnvelope): SaveEnvelope | null {
           break;
         }
         case 4: {
-          if (!validState(env.state, true)) return null;
+          // A v4 practice run can name a retired exercise, which no longer resolves; it ends
+          // here (see retireLegacyPractice) so the v4 shape can be checked.
           const state = structuredClone(env.state);
+          retireLegacyPractice(state, Number.isFinite(env.savedAt) ? env.savedAt : state.department.clockHighWater);
+          if (!validState(state, true)) return null;
           state.department.unlockedNodes = [...new Set(state.department.unlockedNodes)];
           state.department.developmentTiers = Object.fromEntries(state.department.unlockedNodes.map((id) => [id, 1]));
           const retired = retireLegacyBatteries(state);
@@ -514,6 +581,12 @@ export function migrate(envelope: SaveEnvelope): SaveEnvelope | null {
           break;
         case 6:
           env = migrateV6toV7(env);
+          break;
+        case 7:
+          env = migrateV7toV8(env);
+          break;
+        case 8:
+          env = migrateV8toV9(env);
           break;
         default:
           return null;

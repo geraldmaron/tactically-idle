@@ -46,3 +46,8 @@ The fingerprints use the existing `hashSeed` over recursively key-sorted JSON,
 so different object construction order does not masquerade as changed content.
 The complete values, including narrative, graphs, truth and bindings, are retained
 in the comparison; regenerate only against that historical release.
+
+`capability-scenarios.ts` is not a frozen capture. It holds three small test-only scenarios
+that put every equipment capability rule in front of the real engine. They were player-facing
+equipment exercises until 2026-10-06 and are no longer in the shipped catalog; tests that start
+them call `registerCapabilityFixtures()` and play them as live runs with owned units.

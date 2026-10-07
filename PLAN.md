@@ -231,7 +231,7 @@ Proposed starting bands: Ready 0–29; Strained 30–59; Overloaded 60–79; Man
 
 Keep recovery eligibility explicit: show when an officer is expected to be deployable and what improves recovery. Medical injuries are a separate, less frequent source of absence. Standard mode excludes permanent officer death in the first playable.
 
-Give the starting roster enough depth for rotation. If no suitable squad can deploy, provide management work and consequence-free practice, plus a clearly available basic reserve/recovery route. Never make a paid skip the required solution to an adverse result. Replaying practice grants no resources or roster progression.
+Give the starting roster enough depth for rotation. If no suitable squad can deploy, provide management work and consequence-free practice, plus a clearly available basic reserve/recovery route. Never make a paid skip the required solution to an adverse result. Replaying practice grants no resources or roster progression. *Update 2026-10-06: practice was removed and every operation is live; the remaining routes are management work and the reserve/recovery route.*
 
 ## First playable scope and priorities
 

@@ -1,14 +1,12 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import { getState, useGame } from '../store';
-import { squadReadiness } from '../../sim/department-selectors';
+import { recoveryInfo, squadReadiness } from '../../sim/department-selectors';
 import type { Id, Officer, Squad, SquadId } from '../../sim/types';
-import { Button, Card, Chip, EmptyState, Section, OfficerStatusChip } from '../components/ui';
+import { Button, Card, Chip, EmptyState, OfficerStatusChip } from '../components/ui';
 import { OfficerCard } from '../components/OfficerCard';
-import { CareerMini } from '../components/Career';
 import { useToast } from '../components/toast';
-import { DUTY_META } from '../components/labels';
+import { DUTY_META, RATING_META, ROLE_META, ratingTone } from '../components/labels';
 import { Icon } from '../icons';
-import { fullName } from '../../sim/officer';
 import { SQUAD_IDS } from '../../sim/types';
 import { OfficerSheet } from './OfficerSheet';
 import { Recruit } from './Recruit';
@@ -17,6 +15,10 @@ import { useNav } from '../components/nav';
 import { TrainingStore } from '../storefront/TrainingStore';
 import { SquadOptimizer } from './SquadOptimizer';
 import { ChoiceRail } from '../components/ChoiceRail';
+import { Portrait } from '../portraits/Portrait';
+import { StressDisplay } from '../components/StressDisplay';
+import { ROSTER_FILTER_LABEL, ROSTER_SORT_LABEL, filterRoster, squadCoverage, sortRoster, type RosterFilter, type RosterSort } from './squad-model';
+import './squad-visual.css';
 
 const DEFAULT_NAMES = ['Alpha', 'Bravo', 'Charlie', 'Delta'];
 
@@ -39,7 +41,6 @@ export function SquadScreen() {
         { value: 'roster', label: 'Roster' }, { value: 'training', label: 'Training' },
       ]} />
       {nav.squadSection === 'training' ? <TrainingStore /> : <>
-      <div className="squad-arrangement-entry"><Button onClick={() => { setOfficerId(null); setArranging(true); }} disabled={g.squads.length === 0}>Arrange squads</Button></div>
       <div className="squad-navigation">
         <ChoiceRail value={active?.id ?? 'A'} kind="tabs" label="Squads" panelId="selected-squad-panel" onChange={setSel} options={g.squads.map((s) => ({
           value: s.id, accessibleLabel: `Squad ${s.id}, ${s.name}`, label: <><b>{s.id}</b><span className="squad-tab-name">{s.name}</span></>,
@@ -60,6 +61,9 @@ export function SquadScreen() {
         >
           <Icon name="plus" size={18} />
         </button>
+        <button type="button" className="squad-add-control squad-arrange-control" aria-label="Arrange squads" disabled={g.squads.length === 0} onClick={() => { setOfficerId(null); setArranging(true); }}>
+          <Icon name="nodes" size={16} /><span>Arrange</span>
+        </button>
       </div>
       {creating && <CreateSquad count={g.squads.length} onDone={(id) => { setCreating(false); if (id) setSel(id); }} />}
 
@@ -73,19 +77,15 @@ export function SquadScreen() {
         </Card>
       )}</div>
 
-      <Section title="Unassigned officers" icon="user" hint="Not in any squad. They do not patrol or deploy until assigned.">
-        {unassigned.length === 0 ? (
-          <Card>
-            <EmptyState icon="user" title="Everyone is in a squad" />
-          </Card>
-        ) : (
-          <div className="ogrid">
-            {unassigned.map((o) => (
-              <UnassignedCard key={o.id} o={o} squads={g.squads} onOpen={() => setOfficerId(o.id)} />
-            ))}
-          </div>
-        )}
-      </Section>
+      {unassigned.length > 0 && <section className="squad-bench" aria-labelledby="squad-bench-h">
+        <h2 id="squad-bench-h" className="squad-block-title"><Icon name="user" size={16} />Unassigned <span className="squad-block-count">{unassigned.length}</span></h2>
+        <p className="squad-block-hint">Off duty until assigned to a squad.</p>
+        <ul className="bench-list">
+          {unassigned.map((o) => <BenchRow key={o.id} o={o} squads={g.squads} onOpen={() => setOfficerId(o.id)} />)}
+        </ul>
+      </section>}
+
+      <RosterGrid onOpen={setOfficerId} />
 
       <Recruit />
       <OfficerSheet officerId={officerId} onClose={() => setOfficerId(null)} />
@@ -149,6 +149,8 @@ export function SquadPanel({ squad, onOpen }: { squad: Squad; onOpen: (id: Id) =
   const leader = squad.leaderId ? g.officers[squad.leaderId] : undefined;
   const slots = Math.max(4, members.length);
   const deployed = g.activeRun?.squadIds.includes(squad.id) && g.activeRun.status !== 'closed';
+  const duty = DUTY_META[squad.duty];
+  const total = r.total || members.length;
 
   return (
     <section className="card squadpanel" aria-label={`Squad ${squad.id}`}>
@@ -173,11 +175,15 @@ export function SquadPanel({ squad, onOpen }: { squad: Squad; onOpen: (id: Id) =
           <>
             <div className="squadpanel-name">
               <strong>{squad.name}</strong>
-              <span>
-                {r.ready}/{r.total || members.length} ready · {DUTY_META[squad.duty].label}
-                {leader ? ` · led by ${leader.surname}` : ''}
+              <span className="squadpanel-facts">
+                <span className="squadpanel-duty"><Icon name={duty.icon} size={13} />{duty.label}</span>
+                {leader && <span className="squadpanel-lead"><Icon name="star" size={12} />{leader.surname}</span>}
               </span>
             </div>
+            <span className="squad-ready" role="img" aria-label={`${r.ready} of ${total} ready`}>
+              <span className="squad-ready-pips" aria-hidden="true">{members.map((o) => <i key={o.id} className={recoveryInfo(g, o.id, Math.max(now, g.department.clockHighWater)).blocker === null ? 'on' : ''} />)}</span>
+              <b>{r.ready}/{total}</b>
+            </span>
             <button ref={renameButton} type="button" className="icon-btn" aria-label={`Rename ${squad.name}`} onClick={() => {
               requestedFocus.current = 'input';
               nav.updateSquadView({ type: 'rename', squadId: squad.id, name: squad.name });
@@ -187,7 +193,7 @@ export function SquadPanel({ squad, onOpen }: { squad: Squad; onOpen: (id: Id) =
           </>
         )}
       </div>
-      <div className="chips">
+      <div className="chips squadpanel-state">
         {deployed ? <OfficerStatusChip status="deployed" /> : r.deployable ? <Chip tone="mint" icon="checkcircle">Deployable</Chip> : <Chip tone="warn" icon="warning">Not deployable</Chip>}
         {r.issues.slice(0, 2).map((i, k) => (
           <Chip key={k} tone="warn">
@@ -195,43 +201,105 @@ export function SquadPanel({ squad, onOpen }: { squad: Squad; onOpen: (id: Id) =
           </Chip>
         ))}
       </div>
-      <div className="ogrid ogrid-roster">
+      <div className="ogrid ogrid-tiles">
         {Array.from({ length: slots }).map((_, i) => {
           const o = members[i];
           return o ? (
-            <OfficerCard key={o.id} officer={o} now={now} variant="roster" leader={o.id === squad.leaderId} onClick={() => onOpen(o.id)} footer={
-                <>
-                  <span className="ocard-sub">{fullName(o)}</span>
-                  <CareerMini officer={o} />
-                </>
-              }
-            />
+            <OfficerCard key={o.id} officer={o} now={now} variant="tile" leader={o.id === squad.leaderId} onClick={() => onOpen(o.id)} />
           ) : (
-            <div key={`empty-${i}`} className="oslot" aria-label="Open slot">
-              <Icon name="plus" size={20} />
-              <span>Open slot</span>
-              <span className="dim">Assign from below</span>
+            <div key={`empty-${i}`} className="oslot oslot-tile" role="img" aria-label="Open slot">
+              <Icon name="plus" size={18} />
+              <span>Open</span>
             </div>
           );
         })}
       </div>
+      <SquadCoverageStrip members={members} />
     </section>
   );
 }
 
-function UnassignedCard({ o, squads, onOpen }: { o: Officer; squads: Squad[]; onOpen: () => void }) {
-  const { act } = useToast();
-  const now = Date.now();
+/** Roles held and the best rating in the squad for each skill, as shapes. */
+export function SquadCoverageStrip({ members }: { members: Officer[] }) {
+  const coverage = squadCoverage(members);
+  if (!members.length) return null;
   return (
-    <div className="ucard">
-      <OfficerCard officer={o} now={now} variant="roster" onClick={onOpen} footer={<CareerMini officer={o} />} />
-      <div className="ucard-actions">
-        {squads.map((s) => (
-          <Button key={s.id} size="sm" aria-label={`Add ${o.surname} to squad ${s.id}`} onClick={() => act({ type: 'assignToSquad', officerId: o.id, squadId: s.id })}>
-            + {s.id}
-          </Button>
+    <div className="squad-coverage">
+      <div className="squad-coverage-group"><span className="squad-coverage-label" aria-hidden="true">Roles</span><ul className="squad-roles" aria-label="Roles in this squad">
+        {coverage.roles.map(({ role, count }) => (
+          <li key={role} className={count ? 'on' : ''} title={ROLE_META[role].label} aria-label={`${ROLE_META[role].label}: ${count ? count : 'none'}`}>
+            <Icon name={ROLE_META[role].icon} size={15} />
+            {count > 1 && <b aria-hidden="true">{count}</b>}
+          </li>
         ))}
-      </div>
+      </ul></div>
+      <div className="squad-coverage-group"><span className="squad-coverage-label" aria-hidden="true">Best skill</span><ul className="squad-best" aria-label="Best rating in the squad for each skill">
+        {coverage.best.map(({ key, value }) => {
+          const meta = RATING_META.find((entry) => entry.key === key)!;
+          return (
+            <li key={key} aria-label={`${meta.label} best ${value}`} title={meta.label}>
+              <Icon name={meta.icon} size={12} />
+              <span className={`squad-best-bar meter-${ratingTone(value)}`} aria-hidden="true"><i style={{ height: `${Math.max(6, value)}%` }} /></span>
+              <b aria-hidden="true">{value}</b>
+            </li>
+          );
+        })}
+      </ul></div>
     </div>
+  );
+}
+
+function BenchRow({ o, squads, onOpen }: { o: Officer; squads: Squad[]; onOpen: () => void }) {
+  const { act } = useToast();
+  return (
+    <li className="bench-row">
+      <button type="button" className="bench-open" onClick={onOpen} aria-label={`${o.firstName} ${o.surname}, ${ROLE_META[o.role].label}. Open file`}>
+        <span className="bench-face"><Portrait officer={o} size={40} /></span>
+        <span className="bench-name">
+          <strong>{o.surname}</strong>
+          <span><Icon name={ROLE_META[o.role].icon} size={12} />{ROLE_META[o.role].short}</span>
+        </span>
+        <StressDisplay value={o.stress} compact />
+      </button>
+      <span className="bench-assign">
+        {squads.map((s) => (
+          <button key={s.id} type="button" className="bench-add" aria-label={`Add ${o.surname} to squad ${s.id}`} onClick={() => act({ type: 'assignToSquad', officerId: o.id, squadId: s.id })}>
+            <Icon name="plus" size={12} />{s.id}
+          </button>
+        ))}
+      </span>
+    </li>
+  );
+}
+
+/** Every officer in one dense grid, with squad letters, so the whole department reads at a glance. */
+function RosterGrid({ onOpen }: { onOpen: (id: Id) => void }) {
+  const g = useGame();
+  const now = Date.now();
+  const [filter, setFilter] = useState<RosterFilter>('all');
+  const [sort, setSort] = useState<RosterSort>('squad');
+  const officers = officerList(g);
+  const shown = sortRoster(filterRoster(officers, filter, now), sort);
+  const leaders = new Set(g.squads.map((squad) => squad.leaderId).filter(Boolean));
+  const count = (value: RosterFilter) => filterRoster(officers, value, now).length;
+  return (
+    <section className="squad-roster" aria-labelledby="squad-roster-h">
+      <div className="squad-roster-head">
+        <h2 id="squad-roster-h" className="squad-block-title"><Icon name="people" size={16} />Roster <span className="squad-block-count">{officers.length}/{g.department.rosterCap}</span></h2>
+        <label className="squad-sort">
+          <span className="sr-only">Sort roster</span>
+          <Icon name="list" size={14} />
+          <select value={sort} onChange={(event) => setSort(event.target.value as RosterSort)}>
+            {(Object.keys(ROSTER_SORT_LABEL) as RosterSort[]).map((value) => <option key={value} value={value}>{ROSTER_SORT_LABEL[value]}</option>)}
+          </select>
+        </label>
+      </div>
+      <ChoiceRail value={filter} label="Show officers" grow onChange={setFilter} options={(Object.keys(ROSTER_FILTER_LABEL) as RosterFilter[]).map((value) => ({
+        value, accessibleLabel: `${ROSTER_FILTER_LABEL[value]}, ${count(value)}`, label: <>{ROSTER_FILTER_LABEL[value]}<span className="choice-rail-count">{count(value)}</span></>,
+      }))} />
+      {shown.length === 0 ? <p className="squad-block-hint">No officers here.</p> : <div className="ogrid ogrid-tiles">
+        {shown.map((o) => <OfficerCard key={o.id} officer={o} now={now} variant="tile" squadId={o.squadId} leader={leaders.has(o.id)} onClick={() => onOpen(o.id)} />)}
+      </div>}
+    </section>
   );
 }

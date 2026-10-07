@@ -141,9 +141,9 @@ export function debriefBand(d: Pick<DebriefResult, 'objective' | 'civilianSafety
   return 'mixed';
 }
 
-/** Real (non-practice) debriefs an officer took part in, newest first. */
+/** Debriefs an officer took part in, newest first. */
 function officerDebriefs(state: GameState, officerId: Id): DebriefResult[] {
-  return state.debriefs.filter((db) => !db.practice && db.officerCondition.some((c) => c.officerId === officerId));
+  return state.debriefs.filter((db) => db.officerCondition.some((c) => c.officerId === officerId));
 }
 
 /** Adverse outcomes among the officer's last `burnoutWindow` operations still on record. */

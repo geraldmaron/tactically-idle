@@ -2,9 +2,7 @@
 // A recipe is framework × situation (variant and pacing) × the building type the call
 // actually used. It is recorded when a squad is dispatched (takeIncident), so it never
 // spoils a call that only sat on the board. Best results come from debriefs, folded when
-// each debrief closes and again at every dispatch. Practice counts toward the best result
-// of a situation already met on a live call, so practice never discovers anything; a
-// building type met only in practice is marked so it is not listed as visited.
+// each debrief closes and again at every dispatch.
 //
 // This module must not import economy.ts or incidents.ts.
 import type { CasebookBest, CasebookState, DebriefResult, GameState, Id } from './types';
@@ -63,7 +61,7 @@ export function recipeOfScenario(scenarioId: Id): RecipeRef | null {
 }
 
 export function bestOfDebrief(report: DebriefResult): CasebookBest {
-  return { completed: report.completionAchieved === true, objective: report.objective.score, safety: report.civilianSafety.score, label: report.objective.label, ...(report.practice ? { practice: true } : {}) };
+  return { completed: report.completionAchieved === true, objective: report.objective.score, safety: report.civilianSafety.score, label: report.objective.label };
 }
 
 /** True when `a` is a better result than `b`. */
@@ -74,38 +72,24 @@ export function betterBest(a: CasebookBest, b: CasebookBest | undefined): boolea
   return a.safety > b.safety;
 }
 
-const situationOf = (ref: Pick<RecipeRef, 'type' | 'variant'>) => `${ref.type}/${ref.variant}`;
-
-/** Situations (framework and variant) met on a live call: in the book or in a live debrief. */
-function liveSituations(book: CasebookState | undefined, debriefs: readonly DebriefResult[]): Set<string> {
-  const out = new Set<string>();
-  for (const [key, entry] of Object.entries(book?.recipes ?? {})) { const ref = parseRecipeKey(key); if (ref && !entry.practiceOnly) out.add(situationOf(ref)); }
-  for (const report of debriefs) { if (report.practice) continue; const ref = recipeOfScenario(report.scenarioId); if (ref) out.add(situationOf(ref)); }
-  return out;
-}
-
-/** Debriefs folded into a copy-free view: recipe key -> best, and whether only practice met
- * that building type. Practice on a situation not yet met live is ignored. */
-function debriefBests(book: CasebookState | undefined, debriefs: readonly DebriefResult[]): Map<string, { best: CasebookBest; practiceOnly: boolean }> {
-  const live = liveSituations(book, debriefs), out = new Map<string, { best: CasebookBest; practiceOnly: boolean }>();
+/** Debriefs folded into a copy-free view: recipe key -> best. */
+function debriefBests(debriefs: readonly DebriefResult[]): Map<string, CasebookBest> {
+  const out = new Map<string, CasebookBest>();
   for (const report of debriefs) {
     const ref = recipeOfScenario(report.scenarioId);
-    if (!ref || (report.practice && !live.has(situationOf(ref)))) continue;
+    if (!ref) continue;
     const best = bestOfDebrief(report), seen = out.get(ref.key);
-    const practiceOnly = (seen?.practiceOnly ?? true) && !!report.practice;
-    out.set(ref.key, { best: betterBest(best, seen?.best) ? best : seen!.best, practiceOnly });
+    out.set(ref.key, betterBest(best, seen) ? best : seen!);
   }
   return out;
 }
 
-/** Record the best results of the current debriefs, practice included. Idempotent. Adds a
- * recipe that only a debrief knows about (migrated history, or practice on a new building
- * type for a situation already met), dated `at`. */
+/** Record the best results of the current debriefs. Idempotent. Adds a recipe that only a
+ * debrief knows about (migrated history), dated `at`. */
 export function foldDebriefs(d: GameState, at: number): void {
   const book = ensureCasebook(d);
-  for (const [key, { best, practiceOnly }] of debriefBests(book, d.debriefs ?? [])) {
-    const entry = book.recipes[key] ??= { firstAt: at, ...(practiceOnly ? { practiceOnly: true as const } : {}) };
-    if (!practiceOnly) delete entry.practiceOnly;
+  for (const [key, best] of debriefBests(d.debriefs ?? [])) {
+    const entry = book.recipes[key] ??= { firstAt: at };
     if (betterBest(best, entry.best)) entry.best = best;
   }
 }
@@ -117,7 +101,6 @@ export function recordDispatch(d: GameState, scenarioId: Id, at: number): void {
   if (!ref) return;
   const book = ensureCasebook(d);
   book.recipes[ref.key] ??= { firstAt: at };
-  delete book.recipes[ref.key].practiceOnly;
   if (!book.frameworksSeen.includes(ref.type)) book.frameworksSeen.push(ref.type);
 }
 
@@ -130,17 +113,16 @@ export function recordArrival(d: GameState, type: string): boolean {
 }
 
 /** Discovered recipes with their best results, including debriefs not folded yet. Read-only. */
-export function casebookRecipes(state: Pick<GameState, 'casebook' | 'debriefs'>): Map<string, { ref: RecipeRef; firstAt: number; best?: CasebookBest; practiceOnly?: true }> {
-  const out = new Map<string, { ref: RecipeRef; firstAt: number; best?: CasebookBest; practiceOnly?: true }>();
+export function casebookRecipes(state: Pick<GameState, 'casebook' | 'debriefs'>): Map<string, { ref: RecipeRef; firstAt: number; best?: CasebookBest }> {
+  const out = new Map<string, { ref: RecipeRef; firstAt: number; best?: CasebookBest }>();
   for (const [key, entry] of Object.entries(state.casebook?.recipes ?? {})) {
     const ref = parseRecipeKey(key);
-    if (ref) out.set(key, { ref, firstAt: entry.firstAt, ...(entry.best ? { best: entry.best } : {}), ...(entry.practiceOnly ? { practiceOnly: true as const } : {}) });
+    if (ref) out.set(key, { ref, firstAt: entry.firstAt, ...(entry.best ? { best: entry.best } : {}) });
   }
-  for (const [key, { best, practiceOnly }] of debriefBests(state.casebook, state.debriefs ?? [])) {
+  for (const [key, best] of debriefBests(state.debriefs ?? [])) {
     const ref = parseRecipeKey(key);
     if (!ref) continue;
-    const entry = out.get(key) ?? { ref, firstAt: 0, ...(practiceOnly ? { practiceOnly: true as const } : {}) };
-    if (!practiceOnly) delete entry.practiceOnly;
+    const entry = out.get(key) ?? { ref, firstAt: 0 };
     if (betterBest(best, entry.best)) entry.best = best;
     out.set(key, entry);
   }

@@ -276,17 +276,13 @@ describe('manual choices, repeat clicks, and current stock', () => {
     for (const secret of ['hidden witness', 'boiler', 'suspect', 'Vale', 'Chen', 'Ortiz']) expect(text).not.toContain(secret);
   });
 
-  it('returns an actionable contact loadout and preserves the practice no-reservation behavior', () => {
+  it('returns an actionable contact loadout that reserves exactly the planned units', () => {
     const s = makeState();
     const plan = autoLoadout(s, 'ms_occupancy', ['A', 'B'], NOW);
     const live = apply(s, startCmd('ms_occupancy', ['A', 'B'], plan));
     expect(live.result).toEqual({ ok: true });
     expect(live.state.reservations.map((r) => r.unitId).sort()).toEqual(Object.values(plan.units).flat().sort());
     expect(actionViews(live.state, NOW, 'A').find((a) => a.id === 'ms_contact')?.eligible).toBe(true);
-    const practice = apply(s, startCmd('ms_occupancy', ['A', 'B'], { ...plan, practice: true }));
-    expect(practice.result).toEqual({ ok: true });
-    expect(practice.state.reservations).toEqual([]);
-    expect(practice.state.units).toEqual(s.units);
-    expect(practice.state.department.funding).toBe(s.department.funding);
+    expect(live.state.department.funding).toBe(s.department.funding);
   });
 });

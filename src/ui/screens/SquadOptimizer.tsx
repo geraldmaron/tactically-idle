@@ -14,6 +14,7 @@ import { Button, Chip } from '../components/ui';
 import { DUTY_META } from '../components/labels';
 import { useToast } from '../components/toast';
 import { Portrait } from '../portraits/Portrait';
+import { Icon } from '../icons';
 import { getCampaignSnapshot, getState, useCampaigns, useGame } from '../store';
 import { officerList } from './helpers';
 import './squad-optimizer.css';
@@ -92,7 +93,7 @@ function SquadOptimizerSession({ open, onClose, campaignId, session }: { open: b
     if (result.ok) { setPreview(null); setMessage('Previous squad rosters and leaders restored.'); }
   };
 
-  return <Sheet open={open} onClose={close} title="Arrange squads" subtitle="Review a suggested balance before moving anyone" className="squad-optimizer" footer={
+  return <Sheet open={open} onClose={close} title="Arrange squads" subtitle="Nothing moves until you apply" className="squad-optimizer" footer={
     <div className="arrangement-actions">
       <Button variant="ghost" onClick={close}>Cancel</Button>
       <Button onClick={makePreview} disabled={selectedIds.length === 0}>{preview ? 'Preview again' : 'Preview arrangement'}</Button>
@@ -100,10 +101,10 @@ function SquadOptimizerSession({ open, onClose, campaignId, session }: { open: b
     </div>
   }>
     <div className="arrangement-intro">
-      <p>Build squads with a useful mix of skills, qualifications and officers fit for duty.</p>
-      <p className="dim">Keeps squad duties and existing headcounts; opted-in unassigned officers can fill vacancies. Injured, training, deployed and recovering officers stay in place, as do entire deployed squads. Every proposed move is shown before you apply it.</p>
+      <p>Balances skills, qualifications and fitness across squads.</p>
       <details className="arrangement-method">
         <summary>How suggestions work</summary>
+        <p className="dim">Keeps squad duties and existing headcounts; opted-in unassigned officers can fill vacancies. Injured, training, deployed and recovering officers stay in place, as do entire deployed squads.</p>
         <p className="dim">Looks for useful skills, qualifications and officers fit for duty across your squads. It favors fewer moves when choices are otherwise similar. This is a suggestion; another arrangement may work better.</p>
         <p className="dim">Each skill score shows the strongest available officer after stress is taken into account. A score of 50 or more counts as covered for this suggestion; it does not guarantee a good result. Officers with stress 60 or higher sit out high-risk work.</p>
       </details>
@@ -113,17 +114,17 @@ function SquadOptimizerSession({ open, onClose, campaignId, session }: { open: b
       <legend>Arrangement options</legend>
       <label className="arrangement-check">
         <input type="checkbox" checked={options.includeUnassigned} onChange={(event) => updateOptions({ includeUnassigned: event.target.checked })} />
-        <span><strong>Include unassigned officers</strong><small>Fill open squad places with available officers. Existing members keep their places unless swapped.</small></span>
+        <span><strong>Include unassigned officers</strong><small>Fill open places with available officers.</small></span>
       </label>
       <label className="arrangement-check">
         <input type="checkbox" checked={options.preserveLeaders} onChange={(event) => updateOptions({ preserveLeaders: event.target.checked })} />
-        <span><strong>Preserve current leaders</strong><small>Keep each current leader in their squad and leadership role.</small></span>
+        <span><strong>Preserve current leaders</strong><small>Leaders keep their squad and role.</small></span>
       </label>
     </fieldset>
 
     <fieldset className="arrangement-options">
       <legend>Participating squads</legend>
-      <p className="dim">Select squads to balance. A squad lock keeps its whole roster and leader in place.</p>
+      <p className="dim">A locked squad keeps its roster and leader.</p>
       <div className="arrangement-squad-options">
         {state.squads.map((squad) => {
           const deployed = squadDeployed(state, squad.id);
@@ -131,9 +132,9 @@ function SquadOptimizerSession({ open, onClose, campaignId, session }: { open: b
           return <div key={squad.id} className="arrangement-squad-option">
             <label className="arrangement-check">
               <input type="checkbox" aria-label={`Include squad ${squad.id}, ${squad.name}`} checked={selectedIds.includes(squad.id)} disabled={deployed} onChange={(event) => updateOptions({ squadIds: event.target.checked ? [...options.squadIds.filter((id) => id !== squad.id), squad.id] : options.squadIds.filter((id) => id !== squad.id) })} />
-              <span><strong>{squadName(state, squad.id)}</strong><small>{squad.officerIds.length} officers · {DUTY_META[squad.duty].label}{deployed ? ' · Deployed, stays fixed' : locked ? ' · Locked, stays fixed' : ''}</small></span>
+              <span><strong>{squadName(state, squad.id)}</strong><FaceStack state={state} ids={squad.officerIds} leaderId={squad.leaderId} /><small>{squad.officerIds.length} officers · {DUTY_META[squad.duty].label}{deployed ? ' · Deployed, stays fixed' : locked ? ' · Locked, stays fixed' : ''}</small></span>
             </label>
-            <Button aria-label={`${locked ? 'Unlock' : 'Lock'} squad ${squad.id}, ${squad.name}`} aria-pressed={locked} onClick={() => act({ type: 'setSquadArrangementLock', target: { kind: 'squad', squadId: squad.id }, locked: !locked })}>{locked ? 'Unlock squad' : 'Lock squad'}</Button>
+            <Button aria-label={`${locked ? 'Unlock' : 'Lock'} squad ${squad.id}, ${squad.name}`} aria-pressed={locked} onClick={() => act({ type: 'setSquadArrangementLock', target: { kind: 'squad', squadId: squad.id }, locked: !locked })}><Icon name={locked ? 'lock' : 'unlock'} size={16} />{locked ? 'Locked' : 'Lock'}</Button>
           </div>;
         })}
       </div>
@@ -156,8 +157,7 @@ function SquadOptimizerSession({ open, onClose, campaignId, session }: { open: b
     </details>
 
     <section className="arrangement-undo" aria-label="Last arrangement">
-      <h3>Last arrangement</h3>
-      <p className="dim">{saved.undo ? 'The last applied arrangement is saved. Undo restores its previous rosters and leaders when it is still safe to do so.' : 'Apply an arrangement to save an undo point here.'}</p>
+      <p className="dim">{saved.undo ? 'Undo restores the previous rosters and leaders while it is still safe.' : 'Applying an arrangement saves an undo point.'}</p>
       <Button disabled={!saved.undo || !undoCheck?.ok} onClick={undo}>Undo last arrangement</Button>
       {saved.undo && undoCheck && !undoCheck.ok && <p className="tone-amber" role="status">{undoCheck.reason}</p>}
     </section>
@@ -180,7 +180,7 @@ export function SquadArrangementReview({ state, preview, stale = false }: { stat
     <div className="arrangement-review-heading"><h3>Arrangement preview</h3><Chip tone={stale ? 'warn' : 'neutral'}>{stale ? 'Needs a new preview' : 'Not applied'}</Chip></div>
     {stale && <p className="arrangement-message tone-amber" role="alert">The roster, readiness or locks changed since this preview. Review a new preview before applying.</p>}
     {preview.reason && <p className="arrangement-message" role="status">{preview.reason}</p>}
-    <p className="dim">{preview.moves.length} proposed officer {preview.moves.length === 1 ? 'move' : 'moves'} · {leaderChanges.length} leader {leaderChanges.length === 1 ? 'change' : 'changes'}. Fresh means a deployable officer with stress below 30. Counts refer to officers; mission deployment requirements still apply.</p>
+    <p className="dim">{preview.moves.length} proposed officer {preview.moves.length === 1 ? 'move' : 'moves'} · {leaderChanges.length} leader {leaderChanges.length === 1 ? 'change' : 'changes'}. Fresh means deployable with stress below 30.</p>
     <div className="arrangement-comparisons">
       {preview.before.map((before) => {
         const after = preview.after.find((entry) => entry.squadId === before.squadId) ?? before;
@@ -205,8 +205,7 @@ export function SquadArrangementReview({ state, preview, stale = false }: { stat
       <h4>Proposed moves</h4>
       {preview.moves.length === 0 ? <p className="dim">No officer moves are proposed.</p> : <ol>
         {preview.moves.map((move) => <li key={move.officerId}>
-          <strong>{officerName(state, move.officerId)}</strong>
-          <p>{squadName(state, move.from)} → {squadName(state, move.to)}</p>
+          <div className="arrangement-move-head">{state.officers[move.officerId] && <Portrait officer={state.officers[move.officerId]} size={34} />}<span><strong>{officerName(state, move.officerId)}</strong><span className="arrangement-move-path"><b>{move.from ?? <Icon name="user" size={12} />}</b><Icon name="arrowRight" size={13} /><b>{move.to ?? <Icon name="user" size={12} />}</b><span className="sr-only">{squadName(state, move.from)} → {squadName(state, move.to)}</span></span></span></div>
           <ul>{move.reasons.map((reason, index) => <li key={index}>{reason}</li>)}</ul>
           <p className={move.dutyImpact ? 'tone-amber' : 'dim'}><strong>Duty impact:</strong> {move.dutyImpact ?? 'No change to this officer’s duty.'}</p>
         </li>)}
@@ -227,22 +226,27 @@ export function SquadArrangementReview({ state, preview, stale = false }: { stat
   </>;
 }
 
+function FaceStack({ state, ids, leaderId }: { state: GameState; ids: Id[]; leaderId: Id | null }) {
+  if (!ids.length) return null;
+  return <span className="arrangement-faces" aria-hidden="true">{ids.map((id) => state.officers[id] && <span key={id} className={`arrangement-face${id === leaderId ? ' arrangement-face-lead' : ''}`}><Portrait officer={state.officers[id]} size={26} /></span>)}</span>;
+}
+
 function SquadSummary({ state, summary, label }: { state: GameState; summary: SquadArrangementPreview['before'][number]; label: string }) {
   return <div className="arrangement-summary">
     <h5>{label}</h5>
     <div className="arrangement-counts">
-      <span><b>{summary.officerIds.length}</b> officers</span><span><b>{summary.fresh}</b> fresh</span><span><b>{summary.deployable}</b> deployable</span><span><b>{summary.unavailable}</b> unavailable</span>
+      <span><b>{summary.officerIds.length}</b> officers</span><span className="tone-mint"><b>{summary.fresh}</b> fresh</span><span><b>{summary.deployable}</b> deployable</span><span className={summary.unavailable ? 'tone-warn' : ''}><b>{summary.unavailable}</b> unavailable</span>
     </div>
-    <p><strong>Leader:</strong> {officerName(state, summary.leaderId)}</p>
     <ul className="arrangement-roster">
       {summary.officerIds.map((id) => {
         const officer = state.officers[id];
-        return <li key={id}>{officer && <Portrait officer={officer} size={30} />}<span>{officer ? fullName(officer) : 'Officer no longer on roster'}{summary.leaderId === id && <small>Leader</small>}</span></li>;
+        return <li key={id} className={summary.leaderId === id ? 'arrangement-roster-lead' : ''}>{officer && <Portrait officer={officer} size={30} />}<span>{officer ? fullName(officer) : 'Officer no longer on roster'}{summary.leaderId === id && <small><Icon name="star" size={11} /> Leader</small>}</span></li>;
       })}
       {summary.officerIds.length === 0 && <li className="dim">No assigned officers</li>}
     </ul>
-    <p><strong>Coverage:</strong> {summary.coverage.join(' · ') || 'None'}</p>
-    <p className={summary.gaps.length ? 'tone-amber' : 'dim'}><strong>Gaps:</strong> {summary.gaps.join(' · ') || 'None identified'}</p>
+    <p className="sr-only"><strong>Leader:</strong> {officerName(state, summary.leaderId)}</p>
+    <p className="arrangement-tags"><strong>Coverage:</strong> {summary.coverage.length ? summary.coverage.map((entry) => <span key={entry} className="chip chip-mint">{entry}</span>) : 'None'}</p>
+    <p className={`arrangement-tags${summary.gaps.length ? ' tone-amber' : ' dim'}`}><strong>Gaps:</strong> {summary.gaps.length ? summary.gaps.map((entry) => <span key={entry} className="chip chip-warn">{entry}</span>) : 'None identified'}</p>
     <p className="dim"><strong>Mentoring:</strong> {summary.mentoring.join(' · ') || 'No pairing identified'}</p>
   </div>;
 }

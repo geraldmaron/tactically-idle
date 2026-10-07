@@ -16,7 +16,7 @@ export function incidentsOf(g: GameState): IncidentCard[] {
   return (g as { incidents?: IncidentCard[] }).incidents ?? [];
 }
 
-/** A card for a scenario the selectors did not list (a generated incident, or a past one replayed). */
+/** A card for a scenario the selectors did not list (a generated incident, or a past one). */
 function synthCard(g: GameState, s: ScenarioDefinition, now: number): ScenarioCard {
   const eligible: SquadId[] = [];
   const why: string[] = [];
@@ -61,7 +61,7 @@ export function allCards(g: GameState, now: number): ScenarioCard[] {
   return [...extra, ...base];
 }
 
-/** One scenario's card, listed or not (past incidents replay from the debrief log). */
+/** One scenario's card, listed or not (a call leaves the board once a squad is dispatched). */
 export function cardFor(g: GameState, id: Id, now: number): ScenarioCard | undefined {
   const hit = allCards(g, now).find((c) => c.id === id);
   if (hit) return hit;
@@ -75,11 +75,10 @@ export interface BoardEntry {
   scenario: ScenarioDefinition | null;
 }
 
-export interface PracticeEntry {
+/** An authored standing assignment (the Maple Street calls): always available, always live. */
+export interface StandingEntry {
   card: ScenarioCard;
   scenario: ScenarioDefinition | null;
-  /** Standing assignments allow real runs; exercises and past incidents require practice. */
-  kind: 'standing' | 'exercise' | 'replay';
 }
 
 /** Live incidents, newest first. */
@@ -89,37 +88,37 @@ export function boardEntries(g: GameState, now: number): BoardEntry[] {
   for (const inc of incidentsOf(g)) {
     const card = cards.find((c) => c.id === inc.id);
     const scenario = getScenario(inc.id);
-    if (card && !scenario?.practiceOnly) out.push({ card, incident: inc, scenario });
+    if (card) out.push({ card, incident: inc, scenario });
   }
   return out;
 }
 
-/** Authored assignments, then past incidents that are no longer on the board. */
-export function practiceEntries(g: GameState, now: number): PracticeEntry[] {
+/** Authored standing assignments, in catalog order. */
+export function standingEntries(g: GameState, now: number): StandingEntry[] {
   const cards = allCards(g, now);
-  const onBoard = new Set(incidentsOf(g).map((i) => i.id));
-  const out: PracticeEntry[] = [];
+  const out: StandingEntry[] = [];
   for (const id of SCENARIO_ORDER) {
     const card = cards.find((c) => c.id === id);
-    const scenario = getScenario(id);
-    if (card) out.push({ card, scenario, kind: scenario?.practiceOnly ? 'exercise' : 'standing' });
-  }
-  const seen = new Set<Id>(SCENARIO_ORDER);
-  for (const d of g.debriefs ?? []) {
-    if (seen.has(d.scenarioId) || onBoard.has(d.scenarioId)) continue;
-    seen.add(d.scenarioId);
-    const s = getScenario(d.scenarioId);
-    if (s) out.push({ card: synthCard(g, s, now), scenario: s, kind: 'replay' });
-    if (out.length >= SCENARIO_ORDER.length + 5) break;
+    if (card) out.push({ card, scenario: getScenario(id) });
   }
   return out;
 }
 
-/** Authored exercises and closed incidents can only be launched as practice. */
-export function isReplayOnly(g: GameState, id: Id): boolean {
-  if (getScenario(id)?.practiceOnly) return true;
-  if (SCENARIO_ORDER.includes(id)) return false;
-  return !incidentsOf(g).some((i) => i.id === id);
+/** The board never offers more than this many operations at once. */
+export const BOARD_LIMIT = 5;
+
+export interface BoardPlan {
+  live: BoardEntry[];
+  standing: StandingEntry[];
+  /** Standing assignments left out because the board is full. */
+  waiting: number;
+}
+
+/** Live incidents take places first; standing assignments fill any open places, in order. */
+export function boardPlan(live: BoardEntry[], standing: StandingEntry[]): BoardPlan {
+  const shownLive = live.slice(0, BOARD_LIMIT);
+  const shown = standing.slice(0, BOARD_LIMIT - shownLive.length);
+  return { live: shownLive, standing: shown, waiting: standing.length - shown.length };
 }
 
 // ---------------------------------------------------------------- board summary (department selector, optional)

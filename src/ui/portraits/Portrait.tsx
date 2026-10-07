@@ -40,7 +40,8 @@ export function Portrait({ officer, size = 80, className, age }: PortraitProps) 
       {failed ? (
         <div role="img" aria-label={`Personnel file for ${name}; no photo on file`} style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: size * .06, color: '#b8c8dc', fontSize: size * .3, letterSpacing: '.06em', backgroundImage: 'linear-gradient(rgba(158,184,212,.055) 1px, transparent 1px), linear-gradient(90deg, rgba(158,184,212,.055) 1px, transparent 1px)', backgroundSize: `${size / 6}px ${size / 6}px`, border: '1px solid rgba(158,184,212,.18)', boxSizing: 'border-box' }}>
           <span aria-hidden="true" style={{ fontFamily: 'var(--font-display, sans-serif)', lineHeight: 1.2 }}>{officer.firstName.slice(0, 1)}{officer.surname.slice(0, 1)}</span>
-          {size >= 54 && <span aria-hidden="true" style={{ fontSize: Math.max(6, size * .085), letterSpacing: '.04em', lineHeight: 1.35, textAlign: 'center', opacity: .7 }}>NO PHOTO<br />ON FILE</span>}
+          {/* The caption is only legible on large cards; small ones keep the initials and the accessible label. */}
+          {size >= 100 && <span aria-hidden="true" style={{ fontSize: Math.max(6, size * .085), letterSpacing: '.04em', lineHeight: 1.35, textAlign: 'center', opacity: .7 }}>NO PHOTO<br />ON FILE</span>}
         </div>
       ) : (
         <img key={key} src={portraitSource(key)} alt={`File portrait of ${name}`} width={size} height={Math.round(size * 1.04)} draggable={false} onError={() => setFailedKey(key)} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top', display: 'block' }} />

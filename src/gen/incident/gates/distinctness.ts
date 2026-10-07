@@ -2,7 +2,7 @@ import { getScenario } from '../../../sim/scenario-registry';
 import type { ActionDefinition, ScenarioDefinition } from '../../../sim/scenario-types';
 import { hashSeed } from '../../../sim/rng';
 import type { GameState } from '../../../sim/types';
-import { applyMove, availableMoves, NOW, startPractice, withDraftScenario } from './engine-driver';
+import { applyMove, availableMoves, NOW, startGateRun, withDraftScenario } from './engine-driver';
 import { actionViews } from '../../../sim/operation-selectors';
 import type { Move } from './engine-driver';
 
@@ -94,7 +94,7 @@ export function fingerprintDraft(s: ScenarioDefinition, key: string): RecipeFing
   return withDraftScenario(s, id => fingerprintResolved({ ...s, id }, id, key));
 }
 function fingerprintResolved(s: ScenarioDefinition, id: string, key: string): RecipeFingerprint {
-  const { paths, truncated } = explore(s, startPractice(id));
+  const { paths, truncated } = explore(s, startGateRun(id));
   return { key, paths, truncated, hash: hashSeed(paths.join('\n')).toString(16).padStart(8, '0') };
 }
 

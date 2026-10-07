@@ -4,11 +4,11 @@ The physical catalog has 27 active items: eight retained IDs/prices and 19 addit
 
 `content/capabilities.ts` owns public capability descriptions. `sim/capabilities.ts` evaluates opt-in action rules from visible geometry, declared action context, known facts, officer qualifications and exact physical units. Response classes, protection, observation aids and vehicles use best-of groups. Clear radio links get no relay bonus, lighting only cancels existing darkness penalties, and unknown adjacent safety blocks an intervention without exposing hidden truth. A supported door is required for access; glazing, walls, floors and blocked routes cannot be bypassed. Less-lethal interventions retain adverse outcomes and viable communication alternatives.
 
-Every consumed stock unit is traced once. Refusals do not consume stock or RNG; committed adverse outcomes consume their declared supplies. Practice gives simulated stock and leaves real inventory unchanged. Supplies expire and cannot be serviced. Reusable gear and vehicles use the existing exact-unit wear and equipment-manager servicing lifecycle.
+Every consumed stock unit is traced once. Refusals do not consume stock or RNG; committed adverse outcomes consume their declared supplies. Supplies expire and cannot be serviced. Reusable gear and vehicles use the existing exact-unit wear and equipment-manager servicing lifecycle.
 
 One explicitly selected support vehicle is reserved separately from all hand-carried squad loadouts. Auto-equip never selects vehicles. It remains at accessible exterior staging with a qualified vehicle operator. The support van reduces pre-decision delivery from three to two operation minutes, including pressure and debrief wear. Armored rescue and command vehicles only contribute on their declared exterior tasks and charge setup time; they provide no interior coverage.
 
-Three zero-reward practice exercises cover signals, protective response, and patient access/rescue. The generated v2 pool introduces two specialist archetypes, `barricaded` and `business_robbery`, while weighting each everyday archetype four times. Communication, verified information and handover remain useful routes.
+Three zero-reward capability fixtures cover signals, protective response, and patient access/rescue. Since practice was removed on 2026-10-06 they are test-only (`src/sim/fixtures/capability-scenarios.ts`) and played as live runs with owned units. The generated v2 pool introduces two specialist archetypes, `barricaded` and `business_robbery`, while weighting each everyday archetype four times. Communication, verified information and handover remain useful routes.
 
 ## Version boundary
 

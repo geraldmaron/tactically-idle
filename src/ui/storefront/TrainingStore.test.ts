@@ -26,11 +26,13 @@ describe('course-first Training presentation', () => {
     expect(html).not.toContain('Enrol officer');
     expect([...html.matchAll(/data-course-id=/g)]).toHaveLength(Object.keys(COURSES).length);
     expect(html).toContain('Choose officer for Communication refresher');
-    expect(html).toContain('+3 Communication · enrol below 85');
+    expect(html).toContain('+3 Communication');
+    expect(html).toContain('Enrol below 85');
     expect(html).toContain('$600');
     expect(html).toContain('4h');
-    expect(html).toContain('+20 XP on completion');
-    expect(html).toContain('+50 XP on completion');
+    expect(html).toContain('+20 XP');
+    expect(html).toContain('+50 XP');
+    expect(html).toContain('0 of 1 training places in use');
     expect(html).toContain('Earn Drone operator');
   });
 
@@ -42,21 +44,23 @@ describe('course-first Training presentation', () => {
     expect(html).toContain('Highest ratings:');
     expect(html).toContain('Stress');
     expect(html).not.toContain('Readiness');
-    expect(html).toContain('Direct course gain');
+    expect(html).toContain('For Mei');
     expect(html).toContain('Communication: 84 → 87');
-    expect(html).toContain('+3 on completion');
     expect(html).not.toContain('data-course-id="drone_course"');
   });
 
   it('shows unavailable officers with actual ratings and reasons, without an enabled Select', () => {
     state.officers.off_chen.assignment = { kind: 'operation', runId: 'run-1' };
     state.officers.off_chen.injury = { label: 'Shoulder strain', until: NOW + 1000 };
+    state.officers.off_chen.ratings.communication = 70;
     const candidate = trainingCandidates(state, 'communication_refresher').find(({ officer }) => officer.id === 'off_chen')!;
     const html = markup(createElement(TrainingOfficerCard, { candidate, now: NOW, onSelect: vi.fn() }));
     expect(html).toContain('data-training-candidate="off_chen"');
     expect(html).toContain('data-portrait=');
     expect(html).toContain('Deployed · Injured: Shoulder strain');
     expect(html).toContain('Current relevant ratings');
+    // Relevant ratings are bars; an unavailable officer still sees the projected course gain.
+    expect(html).toContain('Communication 70 of 100, 73 after');
     expect(html).toContain('Mei Chen is deployed');
     expect(html).toContain('disabled=""');
     expect(html).toContain('Select Mei Chen for Communication refresher');

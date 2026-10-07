@@ -412,7 +412,7 @@ describe('officer experience and age', () => {
     expect(rookie.strain / run(prep({ age: 24, service: 3 })).strain).toBeGreaterThan(1.1);
   });
 
-  it('closing a real debrief advances every deployed officer’s career counters once; practice does not', () => {
+  it('closing a debrief advances every deployed officer’s career counters once', () => {
     const start = startRun(makeState(), 'ms_occupancy', ['A']);
     const done = playPolicy(start, { assess: ['ms_gather'], adapt: ['ms_preserve_time'], resolve: ['ms_handover'] });
     for (const id of ['off_chen', 'off_brooks', 'off_ortiz', 'off_vale']) {
@@ -421,8 +421,6 @@ describe('officer experience and age', () => {
       expect(c.favorable + c.adverse).toBeLessThanOrEqual(1);
     }
     expect(done.state.officers.off_okafor.career.operations).toBe(0);
-    const practice = playPolicy(startRun(makeState(), 'ms_occupancy', ['A'], { practice: true }), { assess: ['ms_gather'], adapt: ['ms_preserve_time'], resolve: ['ms_handover'] });
-    expect(practice.state.officers.off_chen.career.operations).toBe(0);
   });
 });
 

@@ -21,7 +21,7 @@ describe('auto-equip local campaign integration', () => {
     expect(plan.added).toBeGreaterThan(0);
     expect(state).toEqual(unchanged);
     const positions = { A: briefing(scenarioId).entries[0].id, B: briefing(scenarioId).entries[0].id };
-    expect(saves.send({ type: 'startOperation', scenarioId, squadIds: ['A'], positions, loadouts: plan.loadouts, units: plan.units, practice: false }, NOW).ok).toBe(true);
+    expect(saves.send({ type: 'startOperation', scenarioId, squadIds: ['A'], positions, loadouts: plan.loadouts, units: plan.units }, NOW).ok).toBe(true);
     const reserved = saves.getSnapshot().state.reservations;
     expect(reserved.map((r) => r.unitId).sort()).toEqual(Object.values(plan.units).flat().sort());
     expect(new Set(reserved.map((r) => r.unitId)).size).toBe(reserved.length);
@@ -47,7 +47,7 @@ describe('auto-equip local campaign integration', () => {
     expect(Object.values(before.units).filter((unit) => unit.itemId === 'radio_kit')).toHaveLength(6);
     const scenarioId = SCENARIO_ORDER[0];
     const positions = { A: briefing(scenarioId).entries[0].id, B: briefing(scenarioId).entries[0].id };
-    const command = { type: 'startOperation' as const, scenarioId, squadIds: ['A' as const, 'B' as const], positions, loadouts: {}, practice: false };
+    const command = { type: 'startOperation' as const, scenarioId, squadIds: ['A' as const, 'B' as const], positions, loadouts: {} };
     expect(saves.send(command, NOW)).toMatchObject({ ok: false, reason: expect.stringContaining('2 short') });
     expect(saves.getSnapshot().state.department.funding).toBe(before.department.funding);
     expect(saves.send({ type: 'buyItem', itemId: 'radio_kit', qty: 2 }, NOW).ok).toBe(true);

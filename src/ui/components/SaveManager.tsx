@@ -18,7 +18,11 @@ export function CampaignBar({ onOpen }: { onOpen: () => void }) {
   const slot = saved.activeSlotId ? saved.slots[saved.activeSlotId - 1] : null;
   return <div className={`campaign-bar${saved.issue ? ' campaign-warning' : ''}`}>
     <span><strong>{isResponsivePreview ? 'TEST · ' : ''}{slot ? `Slot ${saved.activeSlotId} · ${slot.name}` : 'Unsaved campaign'}</strong><small>{isResponsivePreview ? 'Temporary test saves · lost on reload' : saved.issue ? 'Saving needs attention' : saved.dirty ? slot ? 'Saving locally…' : 'Not saved yet' : 'Autosaved on this device'}</small></span>
-    <button type="button" onClick={onOpen} aria-label="Open local saves and new game">Saves / New</button>
+    <span className="campaign-bar-actions">
+      {/* Development builds only: the Scenario Lab (story.html) browses every call, its options, odds and branches. */}
+      {import.meta.env.DEV && <a className="campaign-bar-dev" href={`${import.meta.env.BASE_URL}story.html`} target="_blank" rel="noreferrer">Lab</a>}
+      <button type="button" onClick={onOpen} aria-label="Open local saves and new game">Saves / New</button>
+    </span>
   </div>;
 }
 

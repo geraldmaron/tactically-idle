@@ -3,13 +3,13 @@ import { storeOptions } from '../../sim/department-selectors';
 import { projectedCondition } from '../../sim/equipment';
 import { readyUnits } from '../../sim/inventory';
 import type { StartOperationCommand } from '../../sim/operation-selectors';
-import { getScenario } from '../../sim/scenario-registry';
-import { practiceSupportUnit, supportStartCheck } from '../../sim/support-vehicles';
+import { supportStartCheck } from '../../sim/support-vehicles';
 import type { BuiltLocation, GameState, Id, ItemDefinition, ItemUnit } from '../../sim/types';
 import { Button, Card, Chip, Section } from '../components/ui';
 import { unitStateOf } from '../components/labels';
 import { moneyFull } from '../format';
-import { Icon, itemIcon } from '../icons';
+import { Icon } from '../icons';
+import { GearArtFrame } from '../art/GearArt';
 import './preparation-support.css';
 
 /** Support assets never enter a squad's backpack, including old saved presets. */
@@ -19,7 +19,7 @@ export function handCarriedLoadout(loadout: Record<Id, number>): Record<Id, numb
 
 export interface SupportChoice {
   id: Id;
-  unit: ItemUnit | null;
+  unit: ItemUnit;
   condition: number;
   issues: string[];
 }
@@ -27,13 +27,6 @@ export interface SupportChoice {
 /** Exact selectable units; the engine supplies every deployment blocker. */
 export function supportChoices(state: GameState, now: number, cmd: StartOperationCommand, item: ItemDefinition): SupportChoice[] {
   if (!item.supportOnly) return [];
-  if (cmd.practice) {
-    const fixture = getScenario(cmd.scenarioId)?.practiceOnly;
-    const owned = Object.values(state.units).some((unit) => unit.itemId === item.id && unit.status !== 'scrapped');
-    if (!fixture && item.requiresNode && !state.department.unlockedNodes.includes(item.requiresNode) && !owned) return [];
-    const id = practiceSupportUnit(item.id)!.id;
-    return [{ id, unit: null, condition: 100, issues: supportStartCheck(state, now, { ...cmd, supportUnitIds: [id] }) }];
-  }
   const selected = cmd.supportUnitIds?.[0];
   const units = Object.values(state.units).filter((unit) => unit.itemId === item.id && (unit.status !== 'scrapped' || unit.id === selected));
   return units.map((unit) => ({
@@ -60,23 +53,27 @@ export function SupportPreparation({ state, now, cmd, built, onSelect }: {
     .flatMap((squad) => squad.officerIds.map((id) => state.officers[id]))
     .filter((officer) => officer?.certs.includes('vehicle_operations'));
   const selectedIssues = selectedId ? supportStartCheck(state, now, cmd) : [];
-  return <Section title="Operation support" icon="pin" hint="Optional: bring one support vehicle. It stays outside the building. A selected squad needs an officer trained in vehicle operations.">
+  const readyTotal = options.reduce((total, option) => total + readyUnits(state, option.item.id, now).length, 0);
+  return <Section title="Operation support" icon="pin" hint="Optional. One support vehicle waits outside the building.">
     <Card className="prep-support-summary">
       <div className="prep-support-heading">
         <Chip tone={selectedId ? 'amber' : 'neutral'}>{selectedId ? '1 support vehicle selected' : 'No support vehicle selected'}</Chip>
+        <span className="prep-support-ready">{readyTotal} ready</span>
         {selectedId && <Button size="sm" onClick={() => onSelect(null)}>Clear support</Button>}
       </div>
+      {selectedIssues.map((issue) => <p key={issue} className="note note-warn"><Icon name="warning" size={16} />{issue}</p>)}
+    </Card>
+    <details className="prep-support-more" open={!!selectedId || readyTotal > 0 || undefined}>
+    <summary><Icon name="list" size={14} />Vehicles and requirements · {options.length}</summary>
+    <div className="prep-support-facts">
       <p className={operators.length ? 'tone-mint' : 'tone-amber'}>{operators.length
         ? `Vehicle operations: ${operators.map((officer) => `${officer.firstName} ${officer.surname}`).join(', ')}`
         : 'Choose a squad with an officer trained in vehicle operations, or open Squad → Training.'}</p>
       <p className="dim">{stage
         ? `Exterior staging: ${stage.label}, following squad ${leadSquad}’s starting position.${stage.tags.includes('vehicle_inaccessible') ? ' This staging area cannot take a vehicle.' : ''}`
         : 'Choose a squad and an outside starting position the vehicle can reach.'}</p>
-      <p className="dim">{cmd.practice
-        ? 'Practice support is virtual: no funding, owned stock or condition is used. Your selected squads still need a certified operator.'
-        : `Available funding: ${moneyFull(state.department.funding)}. Select an owned unit below; purchase vehicles on the Gear tab.`}</p>
-      {selectedIssues.map((issue) => <p key={issue} className="note note-warn"><Icon name="warning" size={16} />{issue}</p>)}
-    </Card>
+      <p className="dim">Available funding: {moneyFull(state.department.funding)}. Select an owned unit below; purchase vehicles on the Gear tab.</p>
+    </div>
     <div className="prep-support-list">
       {options.map((option) => {
         const { item } = option;
@@ -86,29 +83,29 @@ export function SupportPreparation({ state, now, cmd, built, onSelect }: {
         const available = choices.filter((choice) => choice.issues.length === 0);
         const conditions = [...new Set(choices.flatMap((choice) => choice.issues))];
         return <Card key={item.id} className={`prep-support-card${selection ? ' prep-support-selected' : ''}`}>
-          <div className="prep-support-heading"><Icon name={itemIcon(item.id)} size={22} /><strong>{item.name}</strong>{selection && <Chip tone="amber" icon="check">Selected</Chip>}</div>
+          <div className="prep-support-heading"><GearArtFrame itemId={item.id} size={30} /><strong>{item.name}</strong>{selection && <Chip tone="amber" icon="check">Selected</Chip>}</div>
           <p>{item.description}</p>
           {item.counters?.map((counter) => <p key={counter} className="dim">{counter}</p>)}
           <p className="dim">{option.owned} owned · {ready} ready · {moneyFull(item.cost)} purchase price</p>
-          {!cmd.practice && ready === 0 && <p className="note note-amber"><Icon name="box" size={16} />{option.owned === 0 ? 'No owned stock. Purchase on Gear before selecting live support.' : 'No ready stock. Check reservations, condition and service on Gear.'}</p>}
-          {!cmd.practice && option.reason && <p className="dim">Purchase: {option.reason}.</p>}
-          {!cmd.practice && state.department.funding < item.cost && <p className="dim">A new purchase needs {moneyFull(item.cost - state.department.funding)} more funding.</p>}
-          {cmd.practice && choices.length === 0 && <p className="note note-amber"><Icon name="lock" size={16} />Unlock or own this vehicle to use it in ordinary practice. Equipment exercises provide their own virtual support.</p>}
+          {ready === 0 && <p className="note note-amber"><Icon name="box" size={16} />{option.owned === 0 ? 'No owned stock. Purchase on Gear before selecting support.' : 'No ready stock. Check reservations, condition and service on Gear.'}</p>}
+          {option.reason && <p className="dim">Purchase: {option.reason}.</p>}
+          {state.department.funding < item.cost && <p className="dim">A new purchase needs {moneyFull(item.cost - state.department.funding)} more funding.</p>}
           {conditions.length > 0 && available.length === 0 && !selection && <ul className="prep-support-issues">{conditions.map((issue) => <li key={issue}>{issue}</li>)}</ul>}
           <label className="field">
             <span className="field-label">{item.name} support unit</span>
             <select aria-label={`${item.name} support unit`} value={selection?.id ?? ''} disabled={available.length === 0 && !selection} onChange={(event) => onSelect(event.target.value || null)}>
               <option value="">{available.length > 0 ? 'Choose this support vehicle' : 'No deployable unit'}</option>
               {choices.map((choice) => <option key={choice.id} value={choice.id} disabled={choice.issues.length > 0}>
-                {choice.unit ? `${choice.unit.serial} · ${Math.round(choice.condition)}% · ${unitStateOf(choice.condition, item.wear)}` : 'Virtual vehicle · 100% condition'}{choice.issues.length > 0 ? ' · unavailable' : ''}
+                {`${choice.unit.serial} · ${Math.round(choice.condition)}% · ${unitStateOf(choice.condition, item.wear)}`}{choice.issues.length > 0 ? ' · unavailable' : ''}
               </option>)}
             </select>
           </label>
           {selection && <p className={selection.issues.length ? 'tone-warn' : 'tone-mint'}>
-            {selection.unit ? `${selection.unit.serial}: ${Math.round(selection.condition)}% condition · ${unitStateOf(selection.condition, item.wear)}` : 'Virtual support selected at 100% condition'}
+            {`${selection.unit.serial}: ${Math.round(selection.condition)}% condition · ${unitStateOf(selection.condition, item.wear)}`}
           </p>}
         </Card>;
       })}
     </div>
+    </details>
   </Section>;
 }

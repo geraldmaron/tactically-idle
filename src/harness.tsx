@@ -176,7 +176,7 @@ function Column({ title, width, seed, materials = false, overlay = 'none' }: { t
 function PortraitGrid() {
   const count = Number(new URLSearchParams(window.location.search).get('n') ?? 24);
   return (
-    <section className="h-col" style={{ width: 358 }}>
+    <section className="h-col" style={{ width: 358, maxWidth: '100%' }}>
       <h2>Personnel files · authored identities</h2>
       <p>File portraits stay attached to the same person. Missing photographs use a personnel-file card.</p>
       <div className="h-grid">
@@ -302,7 +302,8 @@ const css = `
 .h-preset { align-items: end; }
 .h-preset label { display: grid; gap: 5px; font-size: 14px; }
 .h-preset select { min-height: 44px; padding: 8px; color: var(--text); background: var(--panel); border: 1px solid var(--line); border-radius: 6px; font: inherit; }
-.h-grid { display: grid; grid-template-columns: repeat(4, 80px); gap: 14px 10px; margin-bottom: 14px; }
+.h-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: 14px 10px; margin-bottom: 14px; }
+.h-grid .h-fig > div { margin-inline: auto; }
 .h-big { display: flex; flex-wrap: wrap; gap: 12px; width: 760px; }
 .h-fig { margin: 0; font: 11px var(--font-ui); color: var(--muted); text-align: center; }
 .h-fig figcaption { margin-top: 3px; }

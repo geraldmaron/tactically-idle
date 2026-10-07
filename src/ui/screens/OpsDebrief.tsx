@@ -18,6 +18,7 @@ import { signed } from '../format';
 import { OperationLogContents } from './OperationFeedback';
 import { Sheet } from '../components/Sheet';
 import { PersonCasualtyList } from '../components/IncidentPeople';
+import './ops-visual.css';
 
 /** A saved debrief is self-contained; it never borrows history from a newer active run. */
 export function SavedDebriefContents({ debrief: d, officers }: { debrief: DebriefResult; officers: DebriefOfficers }) {
@@ -48,14 +49,16 @@ export function OpsDebrief() {
     <Button variant="primary" block onClick={close}>Close</Button>
   </Card></div>;
   const decisions = d.decisions ?? decisionViews(g);
+  const worst = d.disposition ? d.civilianSafety.score : Math.min(d.objective.score, d.civilianSafety.score);
+  const tone = worst >= 80 ? 'good' : worst >= 50 ? 'mixed' : 'poor';
   return <div className="debrief-layout"><div className="page debrief">
-    <div className="debrief-hero">
-      <span className="kicker">{d.practice ? 'PRACTICE DEBRIEF' : 'DEBRIEF'}</span>
+    <div className={`debrief-hero debrief-hero-${tone}`}>
+      <span className="kicker">DEBRIEF</span>
       <h2 className="debrief-title">{d.endingTitle}</h2>
+      {d.endingSummary && <p className="debrief-narrative">{d.endingSummary}</p>}
     </div>
     <DebriefSummary debrief={d} />
     <PersonCasualtyList casualties={(d.personCasualties ?? []).filter((person) => !(d.civilianOutcomes ?? []).some((civilian) => civilian.id === person.personId))} />
-    {d.endingSummary && <p className="debrief-narrative">{d.endingSummary}</p>}
     <DebriefConsequences debrief={d} decisions={decisions} />
     <OfficerResults debrief={d} officers={g.officers} />
     <DebriefEvidence debrief={d} decisions={decisions} officers={g.officers} />
@@ -69,10 +72,10 @@ function DebriefEvidence({ debrief: d, decisions, officers }: { debrief: Debrief
     <SubHead icon="list">Review the operation</SubHead>
     {d.causes.length > 0 && <details className="result-disclosure"><summary>Why this outcome · {d.causes.length} reasons</summary><ol className="causes">{d.causes.map((cause, index) => <li key={index}>{cause}</li>)}</ol></details>}
     <details className="result-disclosure"><summary>Decision log{decisions.length > 0 ? ` (${decisions.length})` : ''}</summary>
-      {decisions.length ? <OperationLogContents decisions={decisions} practice={d.practice} officers={officers} explicitCompletion={!!d.disposition} /> : <p className="operation-note">No per-decision log is stored for this operation. The saved result and causes are shown above.</p>}
+      {decisions.length ? <OperationLogContents decisions={decisions} officers={officers} explicitCompletion={!!d.disposition} /> : <p className="operation-note">No per-decision log is stored for this operation. The saved result and causes are shown above.</p>}
     </details>
     <details className="result-disclosure"><summary>Information &amp; reality</summary><Information d={d} /><Reality d={d} /></details>
-    {!d.practice && <details className="result-disclosure"><summary>Supplies &amp; equipment{used > 0 || worn > 0 ? ` · ${used} used · ${worn} worn` : ' · unchanged'}</summary><Supplies d={d} /></details>}
+    <details className="result-disclosure"><summary>Supplies &amp; equipment{used > 0 || worn > 0 ? ` · ${used} used · ${worn} worn` : ' · unchanged'}</summary><Supplies d={d} /></details>
   </Card>;
 }
 

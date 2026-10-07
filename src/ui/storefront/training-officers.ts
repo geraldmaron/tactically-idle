@@ -46,8 +46,9 @@ export function trainingOfficerCondition(officer: Officer, now: number): string 
   return conditions.join(' · ');
 }
 
-export function trainingStrongestRatings(officer: Officer) {
-  return [...RATING_META].sort((a, b) => officer.ratings[b.key] - officer.ratings[a.key]).slice(0, 2);
+/** Highest ratings first; ties keep the usual skill order. */
+export function trainingStrongestRatings(officer: Pick<Officer, 'ratings'>, count = 2) {
+  return [...RATING_META].sort((a, b) => officer.ratings[b.key] - officer.ratings[a.key]).slice(0, count);
 }
 
 export interface TrainingCandidate {

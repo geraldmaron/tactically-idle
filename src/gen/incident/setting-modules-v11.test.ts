@@ -9,7 +9,7 @@ import { routeBetween } from '../../sim/spatial-factors';
 import { createInitialState } from '../../sim/department';
 import { actionViews, pendingDebrief, stageContinuations } from '../../sim/operation-selectors';
 import { responseFailurePlan } from '../../sim/response-failure';
-import { apply, NOW, startCmd } from '../../sim/test-fixtures';
+import { apply, NOW, startCmd, stockKit } from '../../sim/test-fixtures';
 import { serialize, deserialize } from '../../sim/save';
 import { scenarioActions, type IncidentSpec, type ScenarioDefinition } from '../../sim/scenario-types';
 import { hashSeed } from '../../sim/rng';
@@ -149,7 +149,8 @@ describe('setting module playability', () => {
     const before = createInitialState(NOW, 719);
     before.incidents = [{ id: s.id, type: spec.type, familyId: spec.familyId, tier: spec.tier, arrivedAt: NOW, expiresAt: NOW + 3600000, seen: false }];
     const entry = s.story!.bindings.exterior.arrival.spaceId;
-    const start = apply(before, startCmd(s.id, ['A'], { positions: { A: entry }, loadouts: { A: {} }, practice: true }));
+    const kit = stockKit(before, ['A']);
+    const start = apply(kit.state, startCmd(s.id, ['A'], { positions: { A: entry }, loadouts: kit.loadouts, units: kit.units }));
     expect(start.result, s.id).toEqual({ ok: true });
     let state = start.state;
     for (let step = 0; step < 60 && state.activeRun!.status === 'active'; step++) {
@@ -175,6 +176,7 @@ describe('setting module playability', () => {
     expect(pendingDebrief(state)).not.toBeNull();
     const closed = apply(state, { type: 'closeDebrief' });
     expect(closed.result).toEqual({ ok: true });
-    expect(closed.state.units).toEqual(before.units);
+    expect(closed.state.department.funding).toBe(state.department.funding + pendingDebrief(state)!.fundingReward);
+    expect(apply(closed.state, { type: 'closeDebrief' }).result.ok).toBe(false);
   }, 60000);
 });

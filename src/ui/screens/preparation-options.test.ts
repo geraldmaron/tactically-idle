@@ -3,16 +3,17 @@ import { createQaCampaign } from '../qa-campaign';
 import { getScenario } from '../../sim/scenario-registry';
 import { scenarioActions, type ActionDefinition } from '../../sim/scenario-types';
 import { preparationOptions } from './preparation-options';
+import { testCallId } from '../../sim/test-fixtures';
 import type { ItemUnit } from '../../sim/types';
 
 const now = Date.UTC(2026, 9, 3, 22);
 function fixture() {
   const state = createQaCampaign(now, 'equipped');
-  const scenario = getScenario('exercise_active_armed_v4')!;
-  return { state, now, actions: scenarioActions(scenario), chosen: ['A' as const], loadouts: { A: {} }, picks: {}, warnings: [], practice: false };
+  const scenario = getScenario(testCallId('activeArmedV4'))!;
+  return { state, now, actions: scenarioActions(scenario), chosen: ['A' as const], loadouts: { A: {} }, picks: {}, warnings: [] };
 }
 function capabilityChoice(): ActionDefinition {
-  return { ...getScenario('exercise_active_armed_v4')!.stages.assess.actions[0], id: 'optional_device', title: 'Use the checked device option', requires: {},
+  return { ...getScenario(testCallId('activeArmedV4'))!.stages.assess.actions[0], id: 'optional_device', title: 'Use the checked device option', requires: {},
     capabilities: { rules: ['less_lethal_device'], required: ['less_lethal_device'], responseContext: 'open', safetyFactIds: ['checked_safety'], subjectFactIds: ['checked_subject'] }, consumes: [],
   };
 }
@@ -69,8 +70,8 @@ describe('v4 preparation options', () => {
     expect(result.equipment[0].fix.plan.added).toBe(0);
   });
 
-  it('uses virtual practice gear without creating misleading owned-equipment repair warnings', () => {
+  it('offers nothing until a squad is chosen, and never repeats future-state warnings', () => {
     const args = fixture();
-    expect(preparationOptions({ ...args, practice: true, warnings: args.actions.map((action) => `${action.title}: Future state is not ready`) })).toEqual({ warnings: [], equipment: [] });
+    expect(preparationOptions({ ...args, chosen: [], warnings: args.actions.map((action) => `${action.title}: Future state is not ready`) })).toEqual({ warnings: [], equipment: [] });
   });
 });

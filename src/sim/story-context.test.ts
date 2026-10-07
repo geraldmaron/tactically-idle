@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { currentStoryPrompt } from './story-context';
 import { getScenario } from './scenario-registry';
+import { testCallId } from './test-fixtures';
 import type { OperationRun } from './types';
 
 describe('story dilemmas follow public committed state', () => {
   const run: Pick<OperationRun, 'stage' | 'endingId' | 'knowledge' | 'flags' | 'pressure'> = { stage: 'resolve', endingId: null, knowledge: {}, flags: [], pressure: 20 };
   const episode = () => {
-    const scenario = structuredClone(getScenario('exercise_hostage_v4')!);
+    const scenario = structuredClone(getScenario(testCallId('hostageV4'))!);
     scenario.version = 5;
     scenario.stages.resolve.contextPrompts = [
       { when: { flags: ['casualty:awaiting_transport'] }, prompt: 'An injured officer needs transport. The people inside still need help.' },

@@ -1,5 +1,7 @@
 # Scenario generation v9: implementation and review
 
+> **Update 2026-10-06:** practice, decision exercises and library replay were removed; every operation is now a live call (see the README). This record keeps its original description of them as history.
+
 ## Optimized brief
 
 Deliver 100 distinct, playable scenario recipes using the existing incident engine. Broaden the story framework set, bind people and scene details coherently to seeded layouts, and make future content additions straightforward. Preserve issued scenarios and saved decisions. Give players a readable library and an explicit fresh-variation control. Use American English in new scenario prose and current interface copy, preserving proper names. Prove the result through geometry validation, real dispatch/save journeys, and the rendered interface.

@@ -43,7 +43,6 @@ export function planActionResupply(
   const minutes = vehicle?.itemId === 'support_van' ? 2 : RESUPPLY_MINUTES;
   const result = (needed: boolean, reason: string | null): ActionResupplyPlan => ({ needed, ok: false, reason, minutes, allocations: [], items: [] });
   if (!run || run.status !== 'active' || run.stage === 'debrief') return result(false, 'No active operation to equip');
-  if (run.practice) return result(false, 'Practice already provides its available equipment');
   const scenario = getScenario(run.scenarioId);
   const action = scenario?.stages[run.stage].actions.find((a) => a.id === actionId);
   if (!scenario || !action) return result(false, 'That option is not available at this stage');

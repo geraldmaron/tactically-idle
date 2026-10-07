@@ -1,5 +1,7 @@
 # Incident content version 4
 
+> **Update 2026-10-06:** practice, decision exercises and library replay were removed; every operation is now a live call (see the README). This record keeps its original description of them as history.
+
 New generated calls use v4. Issued v1–v3 IDs and generated definitions retain their original builders. The three legacy decision-exercise IDs remain readable; six v4 exercises are listed in practice. No issued card is silently regenerated with the new content.
 
 ## Three base decision families, nine public premises

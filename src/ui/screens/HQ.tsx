@@ -21,6 +21,8 @@ import { duration, money, perHour, plural, rate, signedMoney } from '../format';
 import { fullName } from '../../sim/officer';
 import { scenarioTitle } from './helpers';
 import { SavedDebriefReview } from './OpsDebrief';
+import { ScoreRing } from '../components/DebriefResults';
+import { CommandStaff } from '../components/CommandStaff';
 
 export function HQ() {
   const g = useGame();
@@ -44,23 +46,69 @@ export function HQ() {
         <span className="hq-eyebrow">Department headquarters</span><h2>{g.department.name}</h2>
         <p>{formatGameDate(gameDay(g, Math.max(now, g.department.clockHighWater)))}{campaign ? ` · ${campaign.name}` : ''}</p>
         <div className="chips"><Chip icon="medal">Level {g.department.level}</Chip><Chip icon="people">Public trust {Math.round(g.department.trust)} / 100</Chip></div>
-        <div className="hq-personnel-strip" aria-label="Department personnel">{Object.values(g.officers).slice(0, 5).map((officer) => <Portrait key={officer.id} officer={officer} size={43} />)}<span>{overview.totalOfficers} officers<br /><b>{overview.fresh} fresh for duty</b></span></div>
+        <HeaderBudget g={g} b={b} />
+        <RosterSummary g={g} overview={overview} />
       </header>
       {g.activeRun && <ActiveOpCard g={g} now={now} />}
       {g.equipmentPowerUpgrade && <Card className="hq-power-receipt"><strong>Power supplies are now included</strong><p>Your {g.equipmentPowerUpgrade.retiredUnits} separate battery units were retired. Unused stock was credited {money(g.equipmentPowerUpgrade.refundedFunding)} to department funding. Equipment no longer needs separate batteries.</p><Button size="sm" onClick={() => act({ type:'acknowledgePowerUpgrade' })}>Got it</Button></Card>}
       {g.report && <section className="hq-report-summary"><div><strong>Shift report ready</strong><p>{signedMoney(g.report.net)} net funding · {g.report.completedCourses.length} courses completed</p></div><Button size="sm" onClick={() => setReportOpen(true)}>Review report</Button></section>}
+      <CommandStaff />
       <section className="hq-status-grid" aria-label="Department overview">
-        <button onClick={() => nav.setSquadSection('roster')}><span>Officers ready for a call</span><strong>{overview.deployable}<small> / {overview.totalOfficers}</small></strong><small>{overview.fresh} fresh · {overview.strained} strained · {overview.unavailable} unavailable</small></button>
         <button onClick={() => nav.setSquadSection('roster')}><span>Staffed squads</span><strong>{overview.staffedSquads}<small> / {g.squads.length}</small></strong><small>{overview.squads.filter((squad) => squad.deployed).length} on operation</small></button>
         <button onClick={() => nav.openTraining()}><span>Training places</span><strong>{overview.training}<small> / {overview.trainingSlots}</small></strong><small>Officers currently in courses</small></button>
         <button onClick={() => nav.go('ops')}><span>Live incidents</span><strong>{overview.board.count}</strong><small>{overview.board.newCount} unseen · {overview.board.expiringSoon} closing soon</small></button>
       </section>
       {!!attention.length && <section className="hq-attention"><h2 className="section-title">Needs attention</h2>{attention.slice(0, 3).map((item) => <div key={item.text}><span>{item.text}</span><Button size="sm" onClick={() => nav.go(item.tab)}>{item.action}</Button></div>)}</section>}
       <DutySection squads={g.squads} g={g} />
-      <details className="hq-budget"><summary><span>Department budget</span><strong>{money(g.department.funding)}</strong><small>{rate(b.net)} at current duties</small></summary><BudgetCard b={b} /></details>
       <Debriefs key={`${saved.campaignId ?? 'unsaved'}:${saved.session}`} g={g} now={now} />
       <Sheet open={reportOpen && !!g.report} onClose={() => setReportOpen(false)} title="Shift report">{g.report && <ShiftReportCard report={g.report} g={g} />}</Sheet>
     </div>
+  );
+}
+
+/** Money at a glance in the department header: funding, net per hour and DP per hour. The full
+ * hourly breakdown opens in place, so the budget is never a scroll away. */
+function HeaderBudget({ g, b }: { g: GameState; b: Budget }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="hq-money">
+      <button type="button" className="hq-money-row" aria-expanded={open} onClick={() => setOpen((value) => !value)} aria-label={`Funding ${money(g.department.funding)}, ${rate(b.net)} net, ${b.devPointsPerHour.toFixed(1)} development points per hour. ${open ? 'Hide' : 'Show'} hourly budget`}>
+        <span className="hq-money-stat"><small>Funding</small><strong className="hq-money-funding">{money(g.department.funding)}</strong></span>
+        <span className="hq-money-stat"><small>Net</small><strong className={b.net < 0 ? 'tone-danger' : 'tone-mint'}>{rate(b.net)}</strong></span>
+        <span className="hq-money-stat"><small>Dev points</small><strong>{b.devPointsPerHour.toFixed(1)}/h</strong></span>
+        <Icon name={open ? 'chevronUp' : 'chevronDown'} size={16} className="hq-money-toggle" />
+      </button>
+      {open && <BudgetCard b={b} />}
+    </div>
+  );
+}
+
+/** Roster readiness that scales to a full headcount: one bar across every officer by state, a
+ * stacked face group, and each squad's fit count. Tapping opens the roster. */
+function RosterSummary({ g, overview }: { g: GameState; overview: ReturnType<typeof hqOverview> }) {
+  const nav = useNav();
+  const officers = Object.values(g.officers);
+  const total = Math.max(1, overview.totalOfficers);
+  const deployed = officers.filter((officer) => officer.squadId && squadDeployed(g, officer.squadId)).length;
+  const resting = Math.max(0, overview.unavailable - deployed - overview.training);
+  const segments = [
+    { key: 'fresh', label: 'Fresh', value: overview.fresh },
+    { key: 'strained', label: 'Strained', value: overview.strained },
+    { key: 'training', label: 'Training', value: overview.training },
+    { key: 'deployed', label: 'On operation', value: deployed },
+    { key: 'resting', label: 'Resting or injured', value: resting },
+  ].filter((segment) => segment.value > 0);
+  const faces = officers.slice(0, 6);
+  return (
+    <button type="button" className="hq-roster" onClick={() => nav.setSquadSection('roster')} aria-label={`${overview.totalOfficers} officers: ${segments.map((segment) => `${segment.value} ${segment.label.toLowerCase()}`).join(', ')}. Open roster`}>
+      <span className="hq-roster-top">
+        <span className="hq-roster-faces" aria-hidden="true">{faces.map((officer) => <span key={officer.id} className="hq-roster-face"><Portrait officer={officer} size={28} /></span>)}{officers.length > faces.length && <span className="hq-roster-more">+{officers.length - faces.length}</span>}</span>
+        <span className="hq-roster-count"><strong>{overview.deployable}</strong>/{overview.totalOfficers} ready</span>
+      </span>
+      <span className="hq-roster-bar" aria-hidden="true">{segments.map((segment) => <i key={segment.key} data-state={segment.key} style={{ flexGrow: segment.value / total }} />)}</span>
+      <span className="hq-roster-legend" aria-hidden="true">{segments.map((segment) => <span key={segment.key} data-state={segment.key}><i />{segment.value} {segment.label}</span>)}</span>
+      <span className="hq-roster-squads" aria-hidden="true">{overview.squads.filter((squad) => squad.total > 0).map((squad) => <span key={squad.squadId} className={squad.deployed ? 'hq-squad-out' : ''}><b>{squad.squadId}</b>{squad.deployed ? 'Out' : `${squad.fresh}/${squad.total}`}</span>)}</span>
+    </button>
   );
 }
 
@@ -228,7 +276,7 @@ function ActiveOpCard({ g, now }: { g: GameState; now: number }) {
         <Icon name="pin" size={26} />
       </span>
       <span className="opcard-main">
-        <span className="opcard-kicker">{run.practice ? 'Practice operation' : 'Operation'}{debrief ? ' · debrief ready' : ' · live'}</span>
+        <span className="opcard-kicker">Operation{debrief ? ' · debrief ready' : ' · live'}</span>
         <span className="opcard-title">{scenarioTitle(g, run.scenarioId, now).toUpperCase()}</span>
         <span className="opcard-sub">
           {plural(run.squadIds.length, 'squad')} deployed · {run.stage === 'debrief' ? 'Debrief' : `Stage: ${run.stage}`}
@@ -250,6 +298,7 @@ function BudgetCard({ b }: { b: Budget }) {
         <KV icon="people" k="Officer wages" v={`-${perHour(b.wages)}`} />
         <KV icon="gear" k="Facilities" v={`-${perHour(b.operating)}`} />
         <KV icon="box" k="Routine supplies" v={`-${perHour(b.supplies)}`} />
+        {b.staff > 0 && <KV icon="people" k="Command staff" v={`-${perHour(b.staff)}`} />}
         <KV icon="cash" k="Net" v={rate(b.net)} tone={b.net < 0 ? 'danger' : 'mint'} strong />
         <KV icon="chart" k="Development points" v={`${b.devPointsPerHour.toFixed(1)}/h`} />
       </Card>
@@ -330,23 +379,7 @@ export function Debriefs({ g, now }: { g: GameState; now: number }) {
       ) : (
         <div className="stack">
           {(expanded ? g.debriefs : g.debriefs.slice(0, 5)).map((d) => (
-            <Card key={d.runId} className="debrief-row">
-              <div className="debrief-row-head">
-                <strong>{d.endingTitle}</strong>
-                {d.practice ? <Chip>Practice</Chip> : <Chip tone="mint">{signedMoney(d.fundingReward)}</Chip>}
-              </div>
-              <span className="debrief-row-sub">
-                {scenarioTitle(g, d.scenarioId, now)} · objective {d.objective.label} · civilians {d.civilianSafety.label}
-              </span>
-              {!d.practice && (
-                <span className="debrief-row-sub">
-                  Trust {d.trustDelta >= 0 ? '+' : ''}
-                  {d.trustDelta} · {d.devPointReward} dev point{d.devPointReward === 1 ? '' : 's'}
-                </span>
-              )}
-              {d.causes[0] && <span className="debrief-row-cause">{d.causes[0]}</span>}
-              <Button size="sm" onClick={() => setSelectedId(d.runId)} aria-haspopup="dialog" aria-expanded={selectedId === d.runId} aria-label={`Review result: ${d.endingTitle}`}>Review result</Button>
-            </Card>
+            <DebriefTile key={d.runId} g={g} d={d} now={now} open={selectedId === d.runId} onOpen={() => setSelectedId(d.runId)} />
           ))}
           {g.debriefs.length > 5 && <Button onClick={() => setExpanded((value) => !value)} aria-expanded={expanded}>{expanded ? 'Show recent five' : `Show all ${g.debriefs.length} saved results`}</Button>}
         </div>
@@ -355,3 +388,32 @@ export function Debriefs({ g, now }: { g: GameState; now: number }) {
     </Section>
   );
 }
+
+/** Result as a glance: tone stripe, two score rings, who went, and rewards as icon chips. The ending
+ * title stays the headline; the full record opens on tap. */
+function DebriefTile({ g, d, now, open, onOpen }: { g: GameState; d: GameState['debriefs'][number]; now: number; open: boolean; onOpen: () => void }) {
+  const worst = Math.min(d.objective.score, d.civilianSafety.score);
+  const tone = worst >= 80 ? 'good' : worst >= 50 ? 'mixed' : 'poor';
+  const team = d.officerCondition.map((row) => g.officers[row.officerId]).filter((officer): officer is NonNullable<typeof officer> => !!officer).slice(0, 4);
+  return (
+    <button type="button" className={`debrief-tile debrief-tile-${tone}`} onClick={onOpen} aria-haspopup="dialog" aria-expanded={open} aria-label={`Review result: ${d.endingTitle}`}>
+      <span className="debrief-rings" aria-hidden="true">
+        <ScoreRing value={d.objective.score}><Icon name="flag" size={14} /></ScoreRing>
+        <ScoreRing value={d.civilianSafety.score}><Icon name="civilian" size={14} /></ScoreRing>
+      </span>
+      <span className="debrief-tile-main">
+        <span className="debrief-tile-kicker">{scenarioTitle(g, d.scenarioId, now)}</span>
+        <strong className="debrief-tile-title">{d.endingTitle}</strong>
+        <span className="debrief-tile-sub">Objective {d.objective.label.toLowerCase()} · Civilians {d.civilianSafety.label.toLowerCase()}</span>
+        <span className="debrief-tile-foot">
+          {team.length > 0 && <span className="debrief-team" aria-hidden="true">{team.map((officer) => <span key={officer.id} className="debrief-team-face"><Portrait officer={officer} size={24} /></span>)}</span>}
+          <span className="debrief-reward tone-mint"><Icon name="cash" size={13} />{signedMoney(d.fundingReward)}</span>
+          <span className={`debrief-reward ${d.trustDelta >= 0 ? '' : 'tone-danger'}`}><Icon name="shield" size={13} />{d.trustDelta >= 0 ? '+' : ''}{d.trustDelta}</span>
+          {d.devPointReward > 0 && <span className="debrief-reward"><Icon name="chart" size={13} />+{d.devPointReward} DP</span>}
+        </span>
+      </span>
+      <Icon name="chevronRight" size={16} className="debrief-tile-go" />
+    </button>
+  );
+}
+

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { apply, makeState, NOW, setRun, startRun, unitId } from '../../sim/test-fixtures';
+import { apply, makeState, NOW, setRun, startRun, unitId, withCallOnBoard } from '../../sim/test-fixtures';
 import { getScenario } from '../../sim/scenario-registry';
 import { RESUPPLY_HANDLERS } from '../../sim/equipment-resupply';
 import { generateIncident } from '../../gen/incident';
@@ -96,7 +96,7 @@ describe('support review panel transitions and repeated confirmations', () => {
 describe('player decisions and inventory are separate', () => {
   it('opens legacy response choices without a decision, simulation costs or duplicate transitions', () => {
     const scenario = generateIncident({ type: 'welfare_check', familyId: 'cedar_close', buildingSeed: 7, seed: 3, tier: 1, contentVersion: 3 });
-    const assessed = apply(startRun(makeState(), scenario.id, ['A'], { practice: true }), { type: 'decide', actionId: 'v3_welfare_contact', actingSquadIds: ['A'], supportSquadIds: [] });
+    const assessed = apply(startRun(withCallOnBoard(makeState(), scenario.id), scenario.id, ['A']), { type: 'decide', actionId: 'v3_welfare_contact', actingSquadIds: ['A'], supportSquadIds: [] });
     expect(assessed.result.ok).toBe(true);
     state = assessed.state;
     const screen = render();

@@ -2,7 +2,7 @@
 
 ## New departments and recruitment
 
-A new campaign samples eight identities without replacement from the full 100-person catalog. Its small three-person recruit pool samples the remaining cast. The initial market no longer favors the 16 additional people with ready portraits. Existing photo availability remains explicit; a person without a portrait uses their own personnel-file card.
+A new campaign samples eight identities without replacement from the full 100-person catalog. Its small three-person recruit pool samples the remaining cast. The initial market no longer favors the 16 additional people who had ready portraits when this selection rule was introduced. All 100 catalog identities now have file portraits; unmatched historical people and image-loading failures still use personnel-file cards.
 
 The seed reproduces identities and builds within a campaign. Saved officers, careers, hired/departed identity history and other campaign slots retain their existing people. Opening role, qualification and wage balance remains in eight gameplay seats, independent of names, culture or appearance. Those opaque seat IDs are not a person's identity; `identityId` owns that link. Ages and service histories follow the selected person, and service cannot start before adulthood.
 

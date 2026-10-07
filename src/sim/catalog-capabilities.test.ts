@@ -9,15 +9,17 @@ import { courseCheck, DEVELOP_HANDLERS, itemCheck } from './develop';
 import { buildLocation } from './location';
 import { getScenario } from './scenario-registry';
 import { makeState, makeUnit, NOW, startRun } from './test-fixtures';
+import { registerCapabilityFixtures } from './fixtures/capability-scenarios';
 import { autoLoadout } from './auto-equip';
 import { serialize, deserialize } from './save';
 import type { CapabilityId, CertId } from './types';
 
+registerCapabilityFixtures();
 const newCerts: CertId[] = ['less_lethal', 'advanced_less_lethal', 'deescalation', 'vehicle_operations', 'precision_support', 'controlled_access'];
 function context(itemId: string, cap: CapabilityId): CapabilityInput {
   const state = startRun(makeState(), 'ms_occupancy', ['A', 'B'], { loadouts: { A: {}, B: {} } });
   Object.values(state.officers).forEach((o) => { o.certs = [...o.certs, ...newCerts, 'drone_operator', 'advanced_first_aid', 'entry_team']; });
-  const scenario = structuredClone(getScenario('practice_rescue_v2')!);
+  const scenario = structuredClone(getScenario('capability_rescue_v2')!);
   const built = structuredClone(buildLocation('market_row', 0));
   const run = state.activeRun!;
   run.supportPositionId = 'forecourt';
@@ -186,7 +188,7 @@ describe('context, material and safety consequences', () => {
   it('auto-equip never packs vehicles, reserves no serial twice and adds matching action supplies', () => {
     const state = makeState({ inventory: Object.fromEntries(Object.keys(ITEMS).map((id) => [id, 3])) });
     Object.values(state.officers).forEach((o) => { o.certs.push(...newCerts); });
-    const plan = autoLoadout(state, 'practice_response_v2', ['A', 'B'], NOW);
+    const plan = autoLoadout(state, 'capability_response_v2', ['A', 'B'], NOW);
     const ids = Object.values(plan.units).flat();
     expect(new Set(ids).size).toBe(ids.length);
     expect(ids.some((id) => ITEMS[state.units[id].itemId].supportOnly)).toBe(false);

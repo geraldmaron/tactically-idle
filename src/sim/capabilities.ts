@@ -11,7 +11,6 @@ import { projectedCondition } from './equipment';
 import { observationDifficulty } from './environment';
 import { capabilityRuleEffect, effectiveSupplies, operatorQualified } from './equipment-requirements';
 import { resolveSubject, standingOf } from './spatial-factors';
-import { practiceSupportUnit } from './support-vehicles';
 import { signalBetween } from './spatial';
 import { forceItemMatches } from './force-risk';
 
@@ -47,8 +46,8 @@ export function capabilityVisibility(input: Pick<CapabilityInput, 'built' | 'run
 /** A qualified driver anywhere in the deployed team may operate the exterior asset. */
 export function supportVehicle(state: GameState, run: OperationRun): ItemUnit | null {
   const id = run.supportUnitIds?.[0];
-  const unit = id && run.practice && id.startsWith('practice_') ? practiceSupportUnit(id.slice('practice_'.length)) : id ? state.units[id] : undefined;
-  if (!unit || !ITEMS[unit.itemId]?.supportOnly || (!run.practice && !state.reservations.some((r) => r.runId === run.id && r.unitId === id))) return null;
+  const unit = id ? state.units[id] : undefined;
+  if (!unit || !ITEMS[unit.itemId]?.supportOnly || !state.reservations.some((r) => r.runId === run.id && r.unitId === id)) return null;
   const def = ITEMS[unit.itemId];
   const now = state.department.clockHighWater;
   if ((unit.expiresAt !== null && unit.expiresAt <= now) || unitEffectiveness({ ...unit, condition: projectedCondition(state, unit, now) }, def) <= 0) return null;

@@ -9,7 +9,7 @@ import { getScenario } from './scenario-registry';
 import { scenarioActions, type ActionDefinition, type ScenarioDefinition } from './scenario-types';
 import { deserialize, serialize } from './save';
 import { standingOf } from './spatial-factors';
-import { apply, makeState, NOW, startRun } from './test-fixtures';
+import { apply, makeState, NOW, startRun, withCallOnBoard } from './test-fixtures';
 import type { GameState } from './types';
 
 const named = (s: ScenarioDefinition, name: string) => scenarioActions(s).find(action => action.id === `v5_noise_${name}`)!;
@@ -28,7 +28,7 @@ function fixture() {
   const base = makeState({ inventory: { service_sidearm: 1 } }); base.saveVersion = 5; base.contentVersion = 5; initializePersonnel(base);
   const certs = Object.values(COURSES).flatMap(course => course.grants.cert ? [course.grants.cert] : []);
   for (const officer of Object.values(base.officers)) officer.certs = [...new Set(certs)];
-  const initial = startRun(base, scenario.id, ['A'], { practice: true, positions: { A: buildLocation(scenario.locationFamilyId, scenario.locationSeed).location.entries[0] }, loadouts: { A: { service_sidearm: 1 } } });
+  const initial = startRun(withCallOnBoard(base, scenario.id), scenario.id, ['A'], { positions: { A: buildLocation(scenario.locationFamilyId, scenario.locationSeed).location.entries[0] }, loadouts: { A: { service_sidearm: 1 } } });
   // One initial RNG stream keeps this actual journey valid across save/reload.
   for (let seed = 1; seed < 500; seed++) {
     let state = structuredClone(initial); state.activeRun!.rngState = seed;

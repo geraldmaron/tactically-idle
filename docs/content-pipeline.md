@@ -61,6 +61,8 @@ From v12 the compiler also refuses a building where a call that walks the person
 
 One agent per framework, each in its own worktree. Fill the brackets and hand over this whole section.
 
+Before drafting, the agent reads the writing skills in `.agents/skills/` (order and scope in `.agents/skills/README.md`): `swat-call-design` for the call's shape, `swat-call-prose` for every player-visible string, `swat-officer-stories` for officer text. The story sheet review below uses `swat-writing-review` as its second reader, extending the reviewer checklist.
+
 > **Task.** Write one framework package for Tactically Idle content version [N]: [purpose in one sentence, for example "an older adult has fallen at home and a relative is worried"].
 >
 > **Decision verbs.** The team can [verbs, for example: hear the relative, check the alarm log, ask the person, wait for family]. The disputed point is [the claim that each situation fixes as true or false].
@@ -179,7 +181,7 @@ The explorers evaluate each state's action views once and reuse them for every m
 
 - **Binding and reach.** The gate generates 50 buildings per listed generated type at the current version. Each call must generate, pass `validateStoryBindings`, and have the person's start and reported spots reachable by squads from the entry staging points (`routeBetween`, as in `v10-locations.test.ts`).
 - **Hosting.** A generated type is listed only where at least 30% of building seeds host the call at the drawn seed. Calls on other seeds move to another seed of the same type.
-- **Journeys.** For each situation, one run must complete the agreed step and one must close through the failed-response report. From v12 every typed call has a close that can't fall through, so a failed response needs both in-person checks to come back inconclusive. The failed-response journeys therefore run on the first listed building, where each candidate run is cheap, and search up to 20,000 campaign seeds. Runs use the engine's own dice, from campaign seeds tried in order. The run found is replayed with `serialize`/`deserialize` after every step, and the restored run must match exactly. Practice pays no reward.
+- **Journeys.** For each situation, one run must complete the agreed step and one must close through the failed-response report. From v12 every typed call has a close that can't fall through, so a failed response needs both in-person checks to come back inconclusive. The failed-response journeys therefore run on the first listed building, where each candidate run is cheap, and search up to 20,000 campaign seeds. Runs use the engine's own dice, from campaign seeds tried in order. The run found is replayed with `serialize`/`deserialize` after every step, and the restored run must match exactly. Gate runs are live calls (practice was removed on 2026-10-06): `startGateRun` gives squad A one fresh, owned unit of every item the department can field, so no choice closes for want of gear, and strain, injuries and supplies apply as they would for a player.
 
 The distinctness explorer chooses the dice before each decision. Such runs are never saved, because the save validator rightly rejects a sample stream that has been tampered with. Journeys never choose dice, which is why they search campaign seeds instead.
 

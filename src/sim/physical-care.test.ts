@@ -3,7 +3,7 @@ import { SCENARIOS } from '../content/scenarios';
 import { incidentId } from '../gen/incident';
 import { getScenario } from './scenario-registry';
 import { initializePersonnel } from './personnel';
-import { apply, makeState, NOW, startRun } from './test-fixtures';
+import { apply, makeState, NOW, startRun, startWithKit } from './test-fixtures';
 import { builtFor, evaluateAction, openingFlag } from './resolution';
 import { storyPoint } from './story-bindings';
 import { storyPeoplePublic } from './story-people';
@@ -82,7 +82,7 @@ describe('physical care follows public patients and actual acting squads', () =>
     const scenario = getScenario(incidentId({ type: 'protected_rescue', familyId: 'juniper_court_v1', buildingSeed: 7, seed: 1, tier: 2, contentVersion: 7 }))!;
     const initial = makeState(); initial.saveVersion = 5; initial.contentVersion = 7; initializePersonnel(initial);
     const built = builtFor(scenario.locationFamilyId, scenario.locationSeed, []);
-    const state = startRun(initial, scenario.id, ['A', 'B'], { practice: true, positions: { A: built.location.entries[0], B: built.location.entries.at(-1)! } });
+    const state = startWithKit(initial, scenario.id, ['A', 'B'], { positions: { A: built.location.entries[0], B: built.location.entries.at(-1)! } });
     const run = state.activeRun!; run.stage = 'resolve';
     run.flags.push(...['jun_heard', 'jun_reached', 'at_pickup', 'jun_safe', 'chair_safe', 'people_safe', 'primary_complete', 'care_mode', 'care_checked', 'care_required'].map(flag => `v5_chair_${flag}`));
     const task = run.squadTasks.find(task => task.squadId === 'B')!;

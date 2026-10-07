@@ -36,12 +36,12 @@ function fixture(): ScenarioDefinition {
   return scenario;
 }
 
-function started(practice = false): GameState {
+function started(): GameState {
   const state = makeState();
   state.saveVersion = CURRENT_SAVE_VERSION;
   state.contentVersion = 3;
   initializePersonnel(state);
-  return startRun(state, ID, ['A'], { practice });
+  return startRun(state, ID, ['A']);
 }
 
 function decide(state: GameState): GameState {
@@ -100,19 +100,6 @@ describe('decision-time stress snapshots', () => {
     expect(closed.state.officers.off_chen.stress).toBeLessThan(stressBeforeClose + 5);
     expect(closed.state.debriefs[0].decisions).toEqual(views);
     expect(deserialize(serialize(closed.state, NOW + HOUR_MS))!.debriefs[0].decisions).toEqual(views);
-  });
-
-  it('leaves practice officers unchanged and records no stress rows', () => {
-    const state = started(true);
-    state.officers.off_chen.stress = 47;
-    const resolved = decide(decide(decide(state)));
-    expect(resolved.officers).toEqual(state.officers);
-    for (const record of resolved.activeRun!.history) {
-      expect(record.stressDeltas).toEqual({});
-      expect(record.stressLevels).toEqual({});
-    }
-    expect(decisionViews(resolved).every((view) => view.stressDeltas.length === 0)).toBe(true);
-    expect(deserialize(serialize(resolved, NOW))!.activeRun).toEqual(resolved.activeRun);
   });
 
   it.each([1, 2])('captures new legacy scenario decisions without changing stored requested strain (v%s)', (version) => {

@@ -10,7 +10,7 @@ import { validateScenario } from '../../sim/operation';
 import { createInitialState } from '../../sim/department';
 import { actionViews, pendingDebrief, stageContinuations } from '../../sim/operation-selectors';
 import { responseFailurePlan } from '../../sim/response-failure';
-import { apply, NOW, startCmd } from '../../sim/test-fixtures';
+import { apply, NOW, startCmd, stockKit } from '../../sim/test-fixtures';
 import { hashSeed } from '../../sim/rng';
 import type { IncidentSpec, IncidentType, ScenarioDefinition } from '../../sim/scenario-types';
 import type { BuiltLocation, Room } from '../../sim/types';
@@ -150,7 +150,8 @@ describe('v10 wrong-room reports', () => {
     const s = misreported, built = hosted(s), p = person(s), inc = s.incident!;
     const state0 = createInitialState(NOW, 719);
     state0.incidents = [{ id: s.id, type: inc.type, familyId: inc.familyId, tier: inc.tier, arrivedAt: NOW, expiresAt: NOW + 3600000, seen: false }];
-    const start = apply(state0, startCmd(s.id, ['A'], { positions: { A: built.location.entries[0] }, loadouts: { A: {} }, practice: true }));
+    const kit = stockKit(state0, ['A']);
+    const start = apply(kit.state, startCmd(s.id, ['A'], { positions: { A: built.location.entries[0] }, loadouts: kit.loadouts, units: kit.units }));
     expect(start.result).toEqual({ ok: true });
     let state = start.state, sawReported = false, sawActual = false;
     for (let step = 0; step < 60 && state.activeRun!.status === 'active'; step++) {

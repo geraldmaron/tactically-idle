@@ -273,3 +273,21 @@ export function TimeLeft({ expiresAt, now }: { expiresAt: number; now: number })
     </span>
   );
 }
+
+/** Time left as a draining bar plus the countdown. The bar is the share of the call's open window
+ * still remaining; the words carry the exact time, so the bar is never the only signal. */
+export function TimeLeftBar({ arrivedAt, expiresAt, now }: { arrivedAt: number; expiresAt: number; now: number }) {
+  const left = expiresAt - now;
+  const span = Math.max(1, expiresAt - arrivedAt);
+  const share = Math.max(0, Math.min(1, left / span));
+  const soon = left > 0 && left < 15 * 60000;
+  return (
+    <span className={`timebar${soon ? ' timebar-soon' : ''}${left <= 0 ? ' timebar-gone' : ''}`}>
+      <span className="timebar-track" aria-hidden="true"><i style={{ width: `${Math.round(share * 100)}%` }} /></span>
+      <span className="timebar-text">
+        <Icon name="hourglass" size={13} />
+        {left <= 0 ? 'Closed: another unit took it' : <><b>{countdown(left)}</b>{soon ? ' left · closing soon' : ' left'}</>}
+      </span>
+    </span>
+  );
+}

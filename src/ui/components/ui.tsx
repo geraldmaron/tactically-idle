@@ -1,7 +1,8 @@
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
 import { Icon } from '../icons';
 import type { IconName } from '../icons';
-import { EXPERIENCE_META, STATUS_META } from './labels';
+import { EXPERIENCE_META, RATING_META, STATUS_META, ratingTone } from './labels';
+import type { RatingKey } from '../../sim/types';
 import type { StatusKey } from './labels';
 import type { ExperienceBand } from '../../sim/calendar';
 import { EXPERIENCE_LABEL } from '../../sim/calendar';
@@ -111,17 +112,56 @@ export function Meter({
   tone,
   label,
   valueText,
+  after,
 }: {
   value: number;
   tone?: 'hi' | 'mid' | 'lo';
   label?: string;
   valueText?: string;
+  /** A projected value above `value`, drawn as a lighter extension of the bar (for example a course gain). */
+  after?: number;
 }) {
   const v = Math.max(0, Math.min(100, value));
+  const a = after === undefined ? v : Math.max(v, Math.min(100, after));
   return (
-    <div className="meter" role="img" aria-label={`${label ?? 'Value'} ${valueText ?? `${Math.round(v)} of 100`}`}>
+    <div className="meter" role="img" aria-label={`${label ?? 'Value'} ${valueText ?? `${Math.round(v)} of 100${a > v ? `, ${Math.round(a)} after` : ''}`}`}>
       <div className={`meter-fill meter-${tone ?? 'hi'}`} style={{ width: `${v}%` }} />
+      {a > v && <div className="meter-gain" style={{ left: `${v}%`, width: `${a - v}%` }} />}
     </div>
+  );
+}
+
+/** Ratings as labelled bars. `gains` overlays a projected after-value; `only` limits the skills shown. */
+export function RatingBars({ ratings, only, gains, dense = false, label = 'Ratings' }: {
+  ratings: Record<RatingKey, number>;
+  only?: RatingKey[];
+  gains?: Partial<Record<RatingKey, number>>;
+  /** Short labels and thinner bars for cards; the sheet uses full labels. */
+  dense?: boolean;
+  label?: string;
+}) {
+  const metas = only ? only.map((key) => RATING_META.find((meta) => meta.key === key)!) : RATING_META;
+  return (
+    <ul className={`rating-bars${dense ? ' rating-bars-dense' : ''}`} aria-label={label}>
+      {metas.map((meta) => {
+        const value = Math.round(ratings[meta.key]);
+        const after = gains?.[meta.key];
+        const rising = after !== undefined && after > value;
+        return (
+          <li key={meta.key} className="rating-bar">
+            <span className="rating-bar-label" title={meta.label}>
+              <Icon name={meta.icon} size={dense ? 12 : 14} />
+              <span>{dense ? meta.short : meta.label}</span>
+            </span>
+            <span className={`rating-bar-value${rising ? ' tone-mint' : ''}`}>
+              {value}
+              {rising && <><span aria-hidden="true">→</span><span className="sr-only"> to </span>{Math.round(after)}</>}
+            </span>
+            <Meter value={value} after={after} tone={ratingTone(value)} label={meta.label} />
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 

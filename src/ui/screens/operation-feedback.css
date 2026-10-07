@@ -171,8 +171,10 @@
 /* Full skill names stay readable in the selected officer’s contribution badge. */
 .capchip { white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; }
 
-/* Portraits keep enough width for full skill names, and the strip scrolls on phones. */
-.strip { grid-auto-columns: minmax(112px, calc((100% - 24px) / 4)); }
+/* A full squad always fits the screen: four equal columns, no sideways scroll or cut-off card.
+   Chips use short skill words; the decision review lists the full contributions. */
+.strip { grid-auto-flow: row; grid-template-columns: repeat(4, minmax(0, 1fr)); grid-auto-columns: auto; overflow: visible; }
+.capchip b { font-weight: 700; }
 
 /* Force checks and physical harm are independent recorded results. */
 .decision-force { border-top-color: var(--line-strong); }
@@ -182,3 +184,23 @@
 .force-result-fatal, .force-result-serious { border-left-color: var(--danger); }
 .force-result-fatal strong, .force-result-serious strong { color: var(--danger); }
 .force-result-none { border-left-color: var(--line-strong); }
+
+/* Live stress summary: one row of chips instead of a gauge per officer. */
+.decision-stress-compact h4 { margin: 0 0 6px; }
+.decision-stress-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.decision-stress-chips li { display: inline-flex; align-items: center; gap: 6px; min-width: 0; max-width: 100%; padding: 3px 9px 3px 3px; border: 1px solid var(--line); border-radius: 999px; background: var(--bg); font-size: 13px; line-height: 1.2; }
+.decision-stress-chips li[data-crossed] { border-color: var(--warn); }
+.decision-stress-chips .result-officer-portrait, .decision-stress-chips .result-officer-fallback { flex-shrink: 0; border-radius: 50%; overflow: hidden; }
+.decision-stress-chips .result-officer-fallback { font-size: 11px; }
+.decision-stress-chip-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-dim); }
+.decision-stress-chips strong { font-variant-numeric: tabular-nums; font-weight: 700; white-space: nowrap; }
+.decision-stress-crossing { color: var(--warn); font-weight: 600; white-space: nowrap; }
+
+/* Unavailable choices: slim, reviewable rows under one label, after the choices the team can take. */
+.call-locked-label { grid-column: 1 / -1; display: flex; align-items: center; gap: 5px; margin: 4px 0 -2px; font-family: var(--font-cond); font-size: 13px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.call-locked-label .icon { flex-shrink: 0; }
+.operation-choices .callbtn-off { min-height: 44px; align-items: center; padding: 7px 12px; background: transparent; }
+.operation-choices .callbtn-off .callbtn-icon { margin-top: 0; color: var(--muted); }
+.operation-choices .callbtn-off .callbtn-title { font-size: 15px; color: var(--text-dim); }
+.operation-choices .callbtn-off .callbtn-sum { font-size: 13px; }
+.operation-choices .callbtn-off .callbtn-sum .icon { display: none; }

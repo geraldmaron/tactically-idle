@@ -6,7 +6,7 @@ import { validateStoryBindings } from '../../sim/story-bindings';
 import { createInitialState } from '../../sim/department';
 import { actionViews, pendingDebrief, stageContinuations } from '../../sim/operation-selectors';
 import { responseFailurePlan } from '../../sim/response-failure';
-import { apply, NOW, startCmd } from '../../sim/test-fixtures';
+import { apply, NOW, startCmd, stockKit } from '../../sim/test-fixtures';
 import { serialize, deserialize } from '../../sim/save';
 import type { IncidentSpec, IncidentType, ScenarioDefinition } from '../../sim/scenario-types';
 import { generateIncident } from './index';
@@ -66,7 +66,7 @@ describe('v10 authored stories on generated buildings', () => {
       const state = createInitialState(NOW, 719);
       state.incidents = [{ id: s.id, type, familyId, tier: spec.tier, arrivedAt: NOW, expiresAt: NOW + 3600000, seen: false }];
       const entry = built.location.entries[0];
-      expect(apply(state, startCmd(s.id, ['A'], { positions: { A: entry }, loadouts: { A: {} }, practice: true })).result, s.id).toEqual({ ok: true });
+      expect(apply(state, startCmd(s.id, ['A'], { positions: { A: entry }, loadouts: { A: {} } })).result, s.id).toEqual({ ok: true });
     }
     // The listing threshold: at least 30% of building seeds host the story themselves.
     expect(hosted, `${type} on ${familyId}`).toBeGreaterThanOrEqual(3);
@@ -81,7 +81,8 @@ describe('v10 authored story journeys on generated buildings', () => {
     const before = createInitialState(NOW, 719);
     before.incidents = [{ id: s.id, type, familyId, tier: spec.tier, arrivedAt: NOW, expiresAt: NOW + 3600000, seen: false }];
     const entry = buildLocation(s.locationFamilyId, s.locationSeed).location.entries[0];
-    const start = apply(before, startCmd(s.id, ['A'], { positions: { A: entry }, loadouts: { A: {} }, practice: true }));
+    const kit = stockKit(before, ['A']);
+    const start = apply(kit.state, startCmd(s.id, ['A'], { positions: { A: entry }, loadouts: kit.loadouts, units: kit.units }));
     expect(start.result, s.id).toEqual({ ok: true }); let state = start.state;
     for (let step = 0; step < 60 && state.activeRun!.status === 'active'; step++) {
       const choices = actionViews(state, NOW, 'A').filter(a => a.eligible);
@@ -102,7 +103,7 @@ describe('v10 authored story journeys on generated buildings', () => {
     expect(state.activeRun!.status, s.id).toBe('debrief');
     expect(pendingDebrief(state)).not.toBeNull();
     const closed = apply(state, { type: 'closeDebrief' }); expect(closed.result).toEqual({ ok: true });
-    expect(closed.state.units).toEqual(before.units);
+    expect(closed.state.department.funding).toBe(state.department.funding + pendingDebrief(state)!.fundingReward);
     expect(apply(closed.state, { type: 'closeDebrief' }).result.ok).toBe(false);
   }, 60000);
 });

@@ -1,8 +1,9 @@
 .officer-progress {
-  display: grid;
-  gap: 9px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
   min-width: 0;
-  padding: 14px;
+  padding: 10px;
   border: 1px solid rgba(90, 207, 166, .32);
   border-radius: var(--radius);
   background: linear-gradient(125deg, rgba(90, 207, 166, .09), var(--panel));

@@ -53,7 +53,6 @@ import {
   getBuilt,
   openingFlag,
   openingOverrides,
-  practiceUnits,
   spaceName,
   squadLabel,
   strainFor,
@@ -221,10 +220,9 @@ export function checkStart(state: GameState, now: number, cmd: StartCmd): StartC
     issues.push(`Unknown operation ${cmd.scenarioId}`);
     return { issues, warnings, scenario, built };
   }
-  if (scenario.incident && !cmd.practice && !state.incidents?.some((c) => c.id === scenario.id && c.expiresAt > Math.max(now, state.department.clockHighWater))) {
-    issues.push('This incident is no longer on the board. Replay it in practice.');
+  if (scenario.incident && !state.incidents?.some((c) => c.id === scenario.id && c.expiresAt > Math.max(now, state.department.clockHighWater))) {
+    issues.push('This incident is no longer on the board.');
   }
-  if (scenario.practiceOnly && !cmd.practice) issues.push('This training exercise is practice only');
   issues.push(...supportStartCheck(state, now, cmd));
   const ids = cmd.squadIds;
   if (ids.length < 1) issues.push('Choose at least one squad');
@@ -250,13 +248,8 @@ export function checkStart(state: GameState, now: number, cmd: StartCmd): StartC
       const prev = seenOfficers.get(oid);
       if (prev) issues.push(`${fullName(o)} is in both ${squadLabel(prev)} and ${squadLabel(sid)}`);
       seenOfficers.set(oid, sid);
-      if (cmd.practice) {
-        if (o.assignment?.kind === 'training') issues.push(`${squadLabel(sid)}: ${o.surname} is in training`);
-        else if (o.assignment?.kind === 'operation') issues.push(`${squadLabel(sid)}: ${o.surname} is already deployed`);
-      } else {
-        const d = deployability(o, now);
-        if (!d.ok) issues.push(`${squadLabel(sid)}: ${d.reason}`);
-      }
+      const d = deployability(o, now);
+      if (!d.ok) issues.push(`${squadLabel(sid)}: ${d.reason}`);
     }
   }
 
@@ -281,16 +274,14 @@ export function checkStart(state: GameState, now: number, cmd: StartCmd): StartC
     for (const sid of Object.keys(cmd.staging ?? {}) as SquadId[]) if (!ids.includes(sid)) issues.push(`Staging given for ${squadLabel(sid)}, which is not deployed`);
   }
 
-  if (!cmd.practice) {
-    const standard = withStandardRadios(state, ids, cmd.loadouts, cmd.units, now);
-    if (standard.issue) issues.push(standard.issue);
-    cmd = { ...cmd, loadouts: standard.loadouts, units: standard.units };
-    for (const sid of Object.keys(cmd.units ?? {}) as SquadId[]) if (!ids.includes(sid)) issues.push(`Equipment given for ${squadLabel(sid)}, which is not deployed`);
-    for (const sid of Object.keys(cmd.loadouts) as SquadId[]) if (!ids.includes(sid)) issues.push(`Loadout given for ${squadLabel(sid)}, which is not deployed`);
-    const probe = structuredClone(state);
-    const r = reserveLoadouts(probe, 'probe', cmd.loadouts, cmd.units, now);
-    if (!r.ok && !standard.issue) issues.push(r.reason);
-  }
+  const standard = withStandardRadios(state, ids, cmd.loadouts, cmd.units, now);
+  if (standard.issue) issues.push(standard.issue);
+  cmd = { ...cmd, loadouts: standard.loadouts, units: standard.units };
+  for (const sid of Object.keys(cmd.units ?? {}) as SquadId[]) if (!ids.includes(sid)) issues.push(`Equipment given for ${squadLabel(sid)}, which is not deployed`);
+  for (const sid of Object.keys(cmd.loadouts) as SquadId[]) if (!ids.includes(sid)) issues.push(`Loadout given for ${squadLabel(sid)}, which is not deployed`);
+  const probe = structuredClone(state);
+  const r = reserveLoadouts(probe, 'probe', cmd.loadouts, cmd.units, now);
+  if (!r.ok && !standard.issue) issues.push(r.reason);
 
   if (issues.length === 0 && built) warnings.push(...startWarnings(state, now, scenario, built, cmd));
   return { issues, warnings, scenario, built };
@@ -300,8 +291,8 @@ function startWarnings(state: GameState, now: number, scenario: ScenarioDefiniti
   const out: string[] = [];
   const probe = structuredClone(state);
   const unitOverride = {} as Record<SquadId, ItemUnit[]>;
-  if (!cmd.practice) reserveLoadouts(probe, 'preview', cmd.loadouts, cmd.units, now);
-  for (const sid of cmd.squadIds) unitOverride[sid] = cmd.practice ? practiceUnits(state) : squadUnits(probe, 'preview', sid);
+  reserveLoadouts(probe, 'preview', cmd.loadouts, cmd.units, now);
+  for (const sid of cmd.squadIds) unitOverride[sid] = squadUnits(probe, 'preview', sid);
   const run = makeRun(state, built, scenario, cmd, 'preview', 0, 0);
   for (const a of scenarioActions(scenario)) {
     const perm: OperationRun = { ...run, knowledge: { ...run.knowledge }, flags: [...run.flags] };
@@ -315,7 +306,7 @@ function startWarnings(state: GameState, now: number, scenario: ScenarioDefiniti
       out.push(`${a.title}: ${best.reason}`);
     }
   }
-  if (cmd.squadIds.length > 1 && !cmd.practice) {
+  if (cmd.squadIds.length > 1) {
     for (const sid of cmd.squadIds) {
       const hasKit = unitOverride[sid].some((u) => ITEMS[u.itemId]?.tags.includes('comms_kit'));
       if (!hasKit) out.push(`${squadLabel(sid)} has no radio kit: coordination with other squads will be slower`);
@@ -349,14 +340,13 @@ function makeRun(state: GameState, built: BuiltLocation, scenario: ScenarioDefin
     id: runId,
     scenarioId: scenario.id,
     scenarioVersion: scenario.version,
-    ...(!cmd.practice && state.incidents?.some((c) => c.id === scenario.id)
+    ...(state.incidents?.some((c) => c.id === scenario.id)
       ? { sourceIncident: structuredClone(state.incidents.find((c) => c.id === scenario.id)!) }
       : {}),
     locationFamilyId: scenario.locationFamilyId,
     locationSeed: scenario.locationSeed,
     contentVersion: state.contentVersion,
     rngState,
-    practice: cmd.practice,
     squadIds: [...cmd.squadIds],
     squadTasks: cmd.squadIds.map((sid) => {
       const st = resolveStart(built, cmd, sid);
@@ -597,7 +587,6 @@ function explain(
   consumed: { itemId: Id; qty: number }[],
   strain: Record<Id, number>,
   stageNote: string | null,
-  practice: boolean,
 ): string[] {
   const out: string[] = [];
   const who = ev.acting.map(squadLabel).join(' + ') + (ev.support.length ? ` with ${ev.support.map(squadLabel).join(' + ')}` : '');
@@ -617,7 +606,6 @@ function explain(
   for (const c of consumed) out.push(`Used ${c.qty} ${ITEMS[c.itemId]?.name.toLowerCase() ?? c.itemId}.`);
   const top = Object.entries(strain).sort((a, b) => b[1] - a[1])[0];
   if (top && top[1] >= 1) out.push(`Most strain: ${state.officers[top[0]]?.surname ?? top[0]} (+${top[1]}).`);
-  if (practice) out.push('Practice run: nothing is recorded to the department.');
   if (stageNote) out.push(stageNote);
   return out;
 }
@@ -656,10 +644,6 @@ export function computeDebrief(state: GameState, run: OperationRun): DebriefResu
     for (const id of state.squads.find((s) => s.id === sq)?.officerIds ?? []) {
       const o = state.officers[id];
       if (!o) continue;
-      if (run.practice) {
-        officerCondition.push({ officerId: id, stressBefore: o.stress, stressAfter: o.stress, xpGained: 0 });
-        continue;
-      }
       const after = clamp(round1(o.stress + ending.strain), 0, 100);
       const before = clamp(round1(o.stress - (delta[id] ?? 0)), 0, 100);
       const share = Math.min(1, 0.4 + 0.3 * (participation[id] ?? 0));
@@ -669,20 +653,15 @@ export function computeDebrief(state: GameState, run: OperationRun): DebriefResu
   }
 
   // resources: settle on a throwaway clone so preview and commit agree.
-  let resources: DebriefResult['resources'] = [];
-  let unitWear: DebriefResult['unitWear'] = [];
-  if (!run.practice) {
-    const probe = structuredClone(state);
-    ({ resources, unitWear } = settleRun(probe, run.id, unitsUsedTotals(run), 0));
-  }
+  const { resources, unitWear } = settleRun(structuredClone(state), run.id, unitsUsedTotals(run), 0);
 
-  const proposedTrust = run.practice ? 0 : run.responseFailure ? -2 : Math.round(scenario.rewards.trust * (2 * factor - 1)) + ending.trustAdjust;
-  const trustDelta = run.practice ? 0 : scenario.version >= 3 ? clamp(state.department.trust + proposedTrust, 0, 100) - state.department.trust : proposedTrust;
-  const fundingReward = run.practice || run.responseFailure ? 0 : Math.round(scenario.rewards.funding * (0.4 + 0.6 * factor));
-  const devPointReward = run.practice || run.responseFailure ? 0 : factor >= 0.6 && (!completion || completion.completionAchieved) ? scenario.rewards.devPoints : factor >= 0.4 ? Math.floor(scenario.rewards.devPoints / 2) : 0;
+  const proposedTrust = run.responseFailure ? -2 : Math.round(scenario.rewards.trust * (2 * factor - 1)) + ending.trustAdjust;
+  const trustDelta = scenario.version >= 3 ? clamp(state.department.trust + proposedTrust, 0, 100) - state.department.trust : proposedTrust;
+  const fundingReward = run.responseFailure ? 0 : Math.round(scenario.rewards.funding * (0.4 + 0.6 * factor));
+  const devPointReward = run.responseFailure ? 0 : factor >= 0.6 && (!completion || completion.completionAchieved) ? scenario.rewards.devPoints : factor >= 0.4 ? Math.floor(scenario.rewards.devPoints / 2) : 0;
   // Department service (save v7), shown on the debrief before it closes and added at close.
-  const service = !run.practice && state.contentVersion >= PLAYER_ARC_CONTENT_VERSION
-    ? serviceEarned({ practice: false, completed: completion?.completionAchieved ?? factor >= CAREER_FAVORABLE_AT, failed: !!run.responseFailure }, scenario.incident?.tier ?? 1)
+  const service = state.contentVersion >= PLAYER_ARC_CONTENT_VERSION
+    ? serviceEarned({ completed: completion?.completionAchieved ?? factor >= CAREER_FAVORABLE_AT, failed: !!run.responseFailure }, scenario.incident?.tier ?? 1)
     : null;
   const levelAfter = service === null ? state.department.level : Math.max(state.department.level, levelForService(departmentService(state.department) + service));
   const causes = debriefCauses(scenario, run, steps);
@@ -693,7 +672,7 @@ export function computeDebrief(state: GameState, run: OperationRun): DebriefResu
       : !completion?.completionAchieved && run.civilianSafety >= 90 ? 'Care and safety duties remain' : undefined
     : undefined;
   if (scenario.version >= 7) for (const person of Object.values(run.personCasualties ?? {}).reverse()) causes.unshift(`${person.label}: ${person.severity === 'fatal' ? 'fatality recorded' : `${person.severity === 'serious' ? 'serious injury' : 'injury'}; ${person.care === 'accepted' ? 'medical crew accepted care' : 'medical responsibility remains'}`}.`);
-  if (scenario.version >= 3 && !run.practice) {
+  if (scenario.version >= 3) {
     const closingStrain = officerCondition.map((officer) => ({ ...officer, delta: round1(officer.stressAfter - (state.officers[officer.officerId]?.stress ?? officer.stressAfter)) })).filter((officer) => officer.delta !== 0);
     if (closingStrain.length) causes.unshift(`Ending adjustment at close: ${closingStrain.map((officer) => `${state.officers[officer.officerId]?.surname ?? officer.officerId} ${officer.delta > 0 ? '+' : ''}${officer.delta} strain`).join('; ')}.`);
   }
@@ -709,7 +688,6 @@ export function computeDebrief(state: GameState, run: OperationRun): DebriefResu
     ...(run.responseFailure ? { disposition: 'unresolved' as const, completionAchieved: false, remainingTasks: run.responseFailure.remainingTasks } : {}),
     ...(scenario.version >= 4 ? { officerCasualties: Object.values(run.officerCasualties ?? {}).map(person => ({ ...person })), civilianOutcomes: civilianOutcomeViews(scenario, run) } : {}),
     ...(scenario.version >= 7 ? { personCasualties: Object.values(run.personCasualties ?? {}).map(person => ({ ...person })) } : {}),
-    practice: run.practice,
     objective: { score: Math.round(run.objective), label: completion ? ({ resolved: 'Resolved', care_accepted: 'Care accepted', followup_agreed: 'Follow-up agreed', relief_partial: 'Partial progress', unresolved: 'Unresolved' } as const)[completion.disposition!] : objectiveLabel(run.objective) },
     civilianSafety: { score: Math.round(run.civilianSafety), label: casualtySafety ?? civilianLabel(run.civilianSafety) },
     officerCondition,
@@ -750,7 +728,7 @@ function debriefCauses(scenario: ScenarioDefinition, run: OperationRun, steps: S
   const sorted = scored.sort((a, b) => b.w - a.w).map((s) => s.text);
   const unresolved = scenario.facts.filter((f) => ['unknown', 'reported'].includes(run.knowledge[f.id] ?? f.initial));
   for (const f of unresolved) sorted.push(`Never confirmed: ${f.label.toLowerCase()}.`);
-  const head: string[] = run.practice ? ['Practice run: nothing here is recorded to the department.'] : [];
+  const head: string[] = [];
   const resupplyMinutes = (run.resupplies ?? []).reduce((sum, delivery) => sum + delivery.minutes, 0);
   if (resupplyMinutes > 0) head.push(`Equipment resupply took ${resupplyMinutes} min before the first decision; time pressure continued while squads waited.`);
   return [...head, ...sorted].slice(0, 7);
@@ -771,10 +749,8 @@ function continueStage(run: OperationRun, scenario: ScenarioDefinition, actionId
 
 export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
   startOperation(draft, cmd, ctx) {
-    if (!cmd.practice) {
-      const standard = withStandardRadios(draft, cmd.squadIds, cmd.loadouts, cmd.units, ctx.now);
-      cmd = { ...cmd, loadouts: standard.loadouts, units: standard.units };
-    }
+    const standard = withStandardRadios(draft, cmd.squadIds, cmd.loadouts, cmd.units, ctx.now);
+    cmd = { ...cmd, loadouts: standard.loadouts, units: standard.units };
     const chk = checkStart(draft, ctx.now, cmd);
     if (chk.issues.length > 0 || !chk.scenario) return fail(chk.issues[0] ?? 'Cannot start this operation');
     const scenario = chk.scenario;
@@ -785,12 +761,10 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     const rngState = (hashSeed(`${scenario.id}:${scenario.locationSeed}`) ^ Math.floor(d.value * 4294967296)) >>> 0;
     const run = makeRun(draft, chk.built!, scenario, cmd, runId, rngState, ctx.now);
 
-    if (!cmd.practice) {
-      const before = draft.reservations.length;
-      const r = reserveLoadouts(draft, runId, cmd.loadouts, cmd.units, ctx.now);
-      if (!r.ok) return r;
-      run.reservationIds = draft.reservations.slice(before).map((x) => x.id);
-    }
+    const before = draft.reservations.length;
+    const r = reserveLoadouts(draft, runId, cmd.loadouts, cmd.units, ctx.now);
+    if (!r.ok) return r;
+    run.reservationIds = draft.reservations.slice(before).map((x) => x.id);
     reserveSupportVehicle(draft, run);
     for (const sid of cmd.squadIds) {
       for (const oid of draft.squads.find((s) => s.id === sid)?.officerIds ?? []) {
@@ -799,7 +773,7 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
       }
     }
     draft.activeRun = run;
-    if (!cmd.practice) takeIncident(draft, scenario.id);
+    takeIncident(draft, scenario.id);
     return { ok: true };
   },
 
@@ -809,13 +783,7 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     if (run.status !== 'active') return fail('The operation is already over');
     if (run.history.length > 0) return fail('Cannot cancel after the first decision');
     if (run.resupplies?.length) return fail('Cannot cancel after equipment resupply; operation time has already advanced');
-    releaseRun(draft, run.id);
-    clearAssignments(draft, run);
-    if (run.sourceIncident && run.sourceIncident.expiresAt > Math.max(ctx.now, draft.department.clockHighWater)) {
-      // Give the player's cancelled call priority if idle arrivals filled the board.
-      draft.incidents = [run.sourceIncident, ...draft.incidents.filter((c) => c.id !== run.scenarioId)].slice(0, INCIDENT_TUNING.boardMax);
-    }
-    draft.activeRun = null;
+    abandonRun(draft, run, ctx.now);
     return { ok: true };
   },
 
@@ -886,7 +854,7 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     const movementTime = storyRouteUsed ? 0 : ev.storyMovementMinutes ?? 0;
     const proposedTime = (ev.timeBase - movementTime) * ({ favorable: 1, mixed: 1.2, adverse: 1.5 } as Record<OutcomeBand, number>)[band] + extra;
     const timeCost = round1(scenario.version >= 4 && action.awaitSupport ? ev.timeBase : scenario.version >= 3 ? Math.max(0.5, proposedTime) : proposedTime);
-    const strain = run.practice ? {} : strainFor(input, ev, band);
+    const strain = strainFor(input, ev, band);
 
     const t = advanceTime(run, scenario, timeCost);
     if (scenario.version >= 3) t.civilianLoss = round1(before.civilianSafety - run.civilianSafety);
@@ -932,12 +900,11 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
 
     const used: Record<Id, number> = {};
     const unitsUsed: Id[] = [];
-    if (!run.practice || scenario.version >= 7)
-      for (const u of ev.uses) {
-        if (!storyRouteUsed && ev.storyMovementOnlyUnitIds?.includes(u.unitId)) continue;
-        used[u.itemId] = (used[u.itemId] ?? 0) + u.qty;
-        unitsUsed.push(u.unitId);
-      }
+    for (const u of ev.uses) {
+      if (!storyRouteUsed && ev.storyMovementOnlyUnitIds?.includes(u.unitId)) continue;
+      used[u.itemId] = (used[u.itemId] ?? 0) + u.qty;
+      unitsUsed.push(u.unitId);
+    }
     const consumed = Object.entries(used).map(([itemId, qty]) => ({ itemId, qty }));
 
     const knowledgeChanges = changes;
@@ -1026,7 +993,7 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
       ...(personConsequences ? { personCasualties: personConsequences.records } : {}),
       ...(ev.protectionUsed ? { protectionUsed: { ...ev.protectionUsed } } : {}),
     };
-    resolution.explanation = explain(draft, scenario, ev, band, texts, timeCost, t.civilianLoss, knowledgeChanges, consumed, strain, stageNote, run.practice);
+    resolution.explanation = explain(draft, scenario, ev, band, texts, timeCost, t.civilianLoss, knowledgeChanges, consumed, strain, stageNote);
     return { ok: true };
   },
 
@@ -1039,31 +1006,29 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     if (!result) return fail('Debrief unavailable');
     const scenario = getScenario(run.scenarioId);
 
-    if (!run.practice) {
-      const settled = settleRun(draft, run.id, unitsUsedTotals(run), ctx.now);
-      result.resources = settled.resources;
-      result.unitWear = settled.unitWear;
-      const factor = outcomeFactor(run);
-      const verdict: 'favorable' | 'adverse' | null = factor >= CAREER_FAVORABLE_AT && (scenario!.version < 4 || result.completionAchieved) ? 'favorable' : factor < CAREER_ADVERSE_BELOW ? 'adverse' : null;
-      draft.department.funding += result.fundingReward;
-      draft.department.devPoints += result.devPointReward;
-      draft.department.trust = clamp(draft.department.trust + result.trustDelta, 0, 100);
-      if (result.serviceEarned !== undefined) addService(draft.department, result.serviceEarned);
-      for (const oc of result.officerCondition) {
-        const o = draft.officers[oc.officerId];
-        if (!o) continue;
-        o.xp += oc.xpGained;
-        o.stress = oc.stressAfter;
-        o.career.operations += 1;
-        if (verdict) o.career[verdict] += 1;
-      }
+    const settled = settleRun(draft, run.id, unitsUsedTotals(run), ctx.now);
+    result.resources = settled.resources;
+    result.unitWear = settled.unitWear;
+    const factor = outcomeFactor(run);
+    const verdict: 'favorable' | 'adverse' | null = factor >= CAREER_FAVORABLE_AT && (scenario!.version < 4 || result.completionAchieved) ? 'favorable' : factor < CAREER_ADVERSE_BELOW ? 'adverse' : null;
+    draft.department.funding += result.fundingReward;
+    draft.department.devPoints += result.devPointReward;
+    draft.department.trust = clamp(draft.department.trust + result.trustDelta, 0, 100);
+    if (result.serviceEarned !== undefined) addService(draft.department, result.serviceEarned);
+    for (const oc of result.officerCondition) {
+      const o = draft.officers[oc.officerId];
+      if (!o) continue;
+      o.xp += oc.xpGained;
+      o.stress = oc.stressAfter;
+      o.career.operations += 1;
+      if (verdict) o.career[verdict] += 1;
     }
     clearAssignments(draft, run);
     run.settled = true;
     run.status = 'closed';
     draft.debriefs = [result, ...draft.debriefs].slice(0, 10);
-    // Fold now, not only at the next dispatch: the state keeps ten debriefs, and a run of
-    // practice could otherwise push a best result out before it is recorded.
+    // Fold now, not only at the next dispatch: the state keeps ten debriefs, so a later run
+    // could otherwise push a best result out before it is recorded.
     if (draft.contentVersion >= PLAYER_ARC_CONTENT_VERSION) foldDebriefs(draft, draft.department.clockHighWater);
     draft.activeRun = null;
     return { ok: true };
@@ -1074,6 +1039,19 @@ function clearAssignments(draft: GameState, run: OperationRun): void {
   for (const o of Object.values(draft.officers)) {
     if (o.assignment?.kind === 'operation' && o.assignment.runId === run.id) o.assignment = null;
   }
+}
+
+/** End a run without settling it: no rewards, its reservations and officers are released,
+ * and its card returns to the board while it is still current. cancelOperation uses it, and
+ * so does the save migration that ends runs a newer build can no longer continue. */
+export function abandonRun(draft: GameState, run: OperationRun, now: number): void {
+  releaseRun(draft, run.id);
+  clearAssignments(draft, run);
+  if (run.sourceIncident && run.sourceIncident.expiresAt > Math.max(now, draft.department.clockHighWater)) {
+    // Give the player's cancelled call priority if idle arrivals filled the board.
+    draft.incidents = [run.sourceIncident, ...draft.incidents.filter((c) => c.id !== run.scenarioId)].slice(0, INCIDENT_TUNING.boardMax);
+  }
+  draft.activeRun = null;
 }
 
 export { openingOverrides };

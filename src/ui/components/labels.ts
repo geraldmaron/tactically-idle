@@ -4,12 +4,13 @@ import type { StressBand } from '../../sim/officer';
 import { stressBand } from '../../sim/officer';
 import type { IconName } from '../icons';
 
-export const ROLE_META: Record<Role, { label: string; icon: IconName }> = {
-  comms: { label: 'Communication', icon: 'chat' },
-  breach: { label: 'Entry', icon: 'shield' },
-  medic: { label: 'Medical', icon: 'medic' },
-  recon: { label: 'Observation', icon: 'binoculars' },
-  lead: { label: 'Leadership', icon: 'flag' },
+/** `short` fits a quarter-width portrait card in the live strip; everything else uses `label`. */
+export const ROLE_META: Record<Role, { label: string; short: string; icon: IconName }> = {
+  comms: { label: 'Communication', short: 'Comms', icon: 'chat' },
+  breach: { label: 'Entry', short: 'Entry', icon: 'shield' },
+  medic: { label: 'Medical', short: 'Medical', icon: 'medic' },
+  recon: { label: 'Observation', short: 'Recon', icon: 'binoculars' },
+  lead: { label: 'Leadership', short: 'Lead', icon: 'flag' },
 };
 
 export const RATING_META: { key: RatingKey; label: string; short: string; icon: IconName }[] = [
@@ -55,7 +56,7 @@ export const TRAIT_INFO: Record<TraitId, { label: string; condition: string; ico
   mentor: { label: 'Mentor', condition: 'Supports a trainee on the same task.', icon: 'mortarboard' },
   impatient: { label: 'Impatient', condition: 'Better under urgent conditions; worse during long waits.', icon: 'bolt' },
   calm_voice: { label: 'Calm voice', condition: 'Helps contact and negotiation tasks.', icon: 'soundwave' },
-  rookie: { label: 'Rookie', condition: 'Less experienced; grows faster with practice.', icon: 'sprout' },
+  rookie: { label: 'Rookie', condition: 'Less experienced; grows faster with experience.', icon: 'sprout' },
 };
 
 export const BRANCH_META: Record<DevBranch, { label: string; icon: IconName; blurb: string }> = {

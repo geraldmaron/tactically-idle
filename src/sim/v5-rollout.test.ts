@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { DECISION_EXERCISES } from '../content/scenarios/decision-exercises';
 import { drawIncidentSpec, generateIncident, INCIDENT_CONTENT_VERSION, INCIDENT_TYPES_V5, incidentId, parseIncidentId } from '../gen/incident';
 import { createInitialState } from './department';
 import { applyIncidentsDue, INCIDENT_TUNING, nextIncidentAt, seedIncidentBoard } from './incidents';
@@ -7,13 +6,13 @@ import { buildLocation } from './location';
 import { next } from './rng';
 import { deserialize, serialize } from './save';
 import { getScenario } from './scenario-registry';
-import { apply, NOW, startCmd } from './test-fixtures';
+import { apply, NOW, startCmd, withCallOnBoard } from './test-fixtures';
 import type { GameState } from './types';
 
-function start(state: GameState, scenarioId: string, practice = false): GameState {
+function start(state: GameState, scenarioId: string): GameState {
   const scenario = getScenario(scenarioId)!;
   const entry = buildLocation(scenario.locationFamilyId, scenario.locationSeed).location.entries[0];
-  const result = apply(state, startCmd(scenarioId, ['A'], { practice, positions: { A: entry }, loadouts: { A: {} } }));
+  const result = apply(withCallOnBoard(state, scenarioId), startCmd(scenarioId, ['A'], { positions: { A: entry }, loadouts: { A: {} } }));
   expect(result.result).toEqual({ ok: true }); return result.state;
 }
 const names = INCIDENT_TYPES_V5.map(story => story.type);
@@ -79,9 +78,9 @@ describe('current rollout without resetting issued campaigns', () => {
     }
   });
 
-  it('also avoids the named story in an active v5 exercise when subsequent board slots are filled', () => {
-    const exercise = DECISION_EXERCISES.find(entry => entry.spec.type === 'hostage_crisis')!;
-    const original = createInitialState(NOW, 31); const state = start(original, exercise.id, true);
+  it('also avoids the named story of an active issued v5 call when subsequent board slots are filled', () => {
+    const id = incidentId({ type: 'hostage_crisis', familyId: 'market_row', buildingSeed: 7, seed: 5, tier: 2, contentVersion: 5 });
+    const original = createInitialState(NOW, 31); const state = start(original, id);
     seedIncidentBoard(state, NOW, 5);
     expect(state.incidents).toHaveLength(5); expect(state.incidents.every(card => card.type !== 'hostage_crisis')).toBe(true);
     expect(new Set(state.incidents.map(card => card.type)).size).toBe(5);

@@ -6,9 +6,9 @@ type Fix = NonNullable<ReturnType<typeof preparationEquipmentFix>>;
 export interface PreparationEquipmentOption { key: string; label: string; actionTitles: string[]; fix: Fix }
 
 /** V4 preparation is about deployability and physical choices, not hypothetical future run state. */
-export function preparationOptions(args: Omit<Parameters<typeof preparationEquipmentFix>[0], 'warning'> & { warnings: string[]; practice: boolean }): { warnings: string[]; equipment: PreparationEquipmentOption[] } {
+export function preparationOptions(args: Omit<Parameters<typeof preparationEquipmentFix>[0], 'warning'> & { warnings: string[] }): { warnings: string[]; equipment: PreparationEquipmentOption[] } {
   const warnings = [...new Set(args.warnings.filter((warning) => !args.actions.some((action) => warning.startsWith(`${action.title}:`))))];
-  if (args.practice || !args.chosen.length) return { warnings, equipment: [] };
+  if (!args.chosen.length) return { warnings, equipment: [] };
   const groups = new Map<string, PreparationEquipmentOption>();
   for (const action of args.actions) {
     // Physical metadata, including capability-only bundles, owns this suggestion.

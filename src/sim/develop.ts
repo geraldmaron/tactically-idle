@@ -9,6 +9,7 @@ import { HOUR_MS, isNodeUnlocked, money, ratesAt, simNow } from './economy';
 import { fullName } from './officer';
 import { createUnit } from './equipment';
 import { quoteDevelopment } from './development-tiers';
+import { MANAGERS } from './command-staff';
 
 export const DEVELOP_TUNING = {
   maxPurchase: 99,
@@ -41,6 +42,8 @@ export function describeEffect(e: NodeEffect): string {
       return `${Math.round((1 - e.repairMultiplier) * 100)}% cheaper repairs, ${Math.round((1 - e.wearMultiplier) * 100)}% slower reusable-gear wear, ${e.maxConcurrentServices} automatic service jobs`;
     case 'candidatePool':
       return `+${e.delta} recruit candidate in the pool`;
+    case 'commandStaff':
+      return `Hires ${MANAGERS[e.managerId].title} ${MANAGERS[e.managerId].name}: automates ${MANAGERS[e.managerId].loop.toLowerCase()}`;
   }
 }
 
@@ -88,8 +91,11 @@ export interface CourseCheck {
   reason: string | null;
 }
 
-/** General availability, plus officer-specific reasons when an officer is given. */
-export function courseCheck(state: GameState, course: Course, officer: Officer | null): CourseCheck {
+/**
+ * General availability, plus officer-specific reasons when an officer is given. `at` is the
+ * moment checked (default: the settled clock); settlement passes its own event time.
+ */
+export function courseCheck(state: GameState, course: Course, officer: Officer | null, at: number = simNow(state)): CourseCheck {
   const no = (reason: string): CourseCheck => ({ ok: false, reason });
   if (course.requiresNode && !isNodeUnlocked(state, course.requiresNode)) {
     return no(`Requires ${DEV_NODES[course.requiresNode]?.name ?? course.requiresNode}`);
@@ -111,7 +117,7 @@ export function courseCheck(state: GameState, course: Course, officer: Officer |
   }
   if (officer) {
     // Training takes the officer off patrol income; refuse if that would push the budget into deficit.
-    const t = simNow(state);
+    const t = at;
     const trial: GameState = {
       ...state,
       officers: {

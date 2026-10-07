@@ -4,15 +4,16 @@ import { useRef, useState } from 'react';
 import { useGame } from '../store';
 import { projectHire, sortedCandidates, type Projection } from '../../sim/department-selectors';
 import type { Candidate, Id } from '../../sim/types';
-import { Button, Card, Chip, EmptyState, KV, Section } from '../components/ui';
+import { Button, Card, Chip, EmptyState, ExperienceChip, KV, RatingBars, Section } from '../components/ui';
 import { useToast } from '../components/toast';
-import { CERT_ICON, CERT_LABEL, RATING_META, ROLE_META, TRAIT_INFO } from '../components/labels';
-import { CareerMini } from '../components/Career';
+import { CERT_ICON, CERT_LABEL, ROLE_META, TRAIT_INFO } from '../components/labels';
+import { RetirementChip, useCareerSnapshot } from '../components/Career';
 import { Portrait } from '../portraits/Portrait';
 import { agePortraitProps } from './helpers';
 import { Icon } from '../icons';
-import { money, perHour, rate, relativeTime } from '../format';
+import { money, perHour, rate, relativeTime, yearsText } from '../format';
 import './recruit.css';
+import './squad-visual.css';
 
 export interface HireReceipt { candidate: Candidate; projection: Projection; index: number }
 
@@ -47,11 +48,9 @@ export function Recruit() {
       title="Recruit"
       icon="user"
       id="recruit-h"
-      hint={`Roster ${roster}/${g.department.rosterCap}${full ? ' (full: dismiss or expand capacity to hire)' : ''}. Hiring adds the wage to every hour.`}
+      action={<RecruitRefresh />}
+      hint={full ? `Roster full at ${roster}/${g.department.rosterCap}. Dismiss someone or expand capacity to hire.` : `Roster ${roster}/${g.department.rosterCap}. Each hire adds their wage every hour.`}
     >
-      <Card>
-        <RecruitRefresh />
-      </Card>
       {candidates.length === 0 ? (
         <Card>
           <EmptyState icon="people" title={recruitment.exhausted ? "Recruitment reserve exhausted" : "No candidates right now"}>
@@ -59,7 +58,7 @@ export function Recruit() {
           </EmptyState>
         </Card>
       ) : (
-        <div className="stack">
+        <div className="cand-list">
           {candidates.map((c, index) => {
             const receipt = receipts.find((entry) => entry.candidate.id === c.id);
             return <CandidateCard key={c.id} c={c} now={now} open={hireFor === c.id || !!receipt}
@@ -92,25 +91,32 @@ export function CandidateCard({ c, now, open, onToggle, onHired, receipt, onDone
   const o = c.officer;
   const proj = receipt ?? (open ? projectHire(g, c.id) : null);
   const reviewId = `hire-review-${c.id}`;
+  const career = useCareerSnapshot(o);
   return (
     <div ref={slot} className="recruit-candidate-slot" style={receipt && receiptHeight ? { minHeight: receiptHeight } : undefined}>
     <Card className={`cand${receipt ? ' cand-hired' : ''}`}>
       <div className="cand-top">
         <div className="cand-portrait">
-          <Portrait officer={o} size={58} {...agePortraitProps(g, o, now)} />
+          <Portrait officer={o} size={56} {...agePortraitProps(g, o, now)} />
         </div>
         <div className="cand-id">
           <strong className="cand-name">
             {o.firstName} {o.surname}
           </strong>
+          <span className="cand-facts">
+            <span><Icon name={ROLE_META[o.role].icon} size={13} />{ROLE_META[o.role].label}</span>
+            <span><Icon name="cake" size={13} />Age {career.age}</span>
+            <span title="Prior service"><Icon name="medal" size={13} />{yearsText(career.service)} prior</span>
+          </span>
           <span className="chips">
-            <Chip icon={ROLE_META[o.role].icon}>{ROLE_META[o.role].label}</Chip>
             <Chip tone="amber" icon="cash">{perHour(o.wage)}</Chip>
+            <ExperienceChip band={career.band} />
+            {career.retirement && <RetirementChip date={career.retirement.date} inDays={career.retirement.inDays} compact />}
           </span>
         </div>
         <button
           type="button"
-          className={`icon-btn${c.shortlisted ? ' icon-btn-on' : ''}`}
+          className={`icon-btn cand-shortlist${c.shortlisted ? ' icon-btn-on' : ''}`}
           aria-pressed={c.shortlisted}
           disabled={!!receipt}
           aria-label={c.shortlisted ? `Remove ${o.surname} from shortlist` : `Shortlist ${o.surname}`}
@@ -119,19 +125,7 @@ export function CandidateCard({ c, now, open, onToggle, onHired, receipt, onDone
           <Icon name="bookmark" size={20} />
         </button>
       </div>
-      {personaNote(o.identityId) && <p className="dim persona-note">{personaNote(o.identityId)}</p>}
-      <CareerMini officer={o} prior />
-      <ul className="miniratings">
-        {RATING_META.map((r) => (
-          <li key={r.key}>
-            <span>
-              <Icon name={r.icon} size={12} />
-              {r.short}
-            </span>
-            <b>{Math.round(o.ratings[r.key])}</b>
-          </li>
-        ))}
-      </ul>
+      <RatingBars ratings={o.ratings} dense label={`${o.firstName} ${o.surname} ratings`} />
       {(o.certs.length > 0 || o.traits.length > 0) && (
         <div className="chips">
           {o.certs.map((x) => (
@@ -146,6 +140,7 @@ export function CandidateCard({ c, now, open, onToggle, onHired, receipt, onDone
           ))}
         </div>
       )}
+      {personaNote(o.identityId) && <p className="dim persona-note">{personaNote(o.identityId)}</p>}
       <div className="cand-foot">
         <span className="dim cand-meta">
           <Icon name="cash" size={13} />

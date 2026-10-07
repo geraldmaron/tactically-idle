@@ -4,83 +4,65 @@ import { send, useGame } from '../store';
 import type { GameState, Id } from '../../sim/types';
 import type { ScenarioCard } from '../../sim/operation-selectors';
 import type { ScenarioDefinition } from '../../sim/scenario-types';
-import { Button, Card, Chip, EmptyState, Section } from '../components/ui';
-import { DifficultyChip, FloorsChip, TierChevrons, TimeLeft, familyBlurb, incidentMeta, scenarioFloorCount, settingIcon, useNow } from '../components/incident';
+import { Button, Card, Chip, Section } from '../components/ui';
+import { DifficultyChip, FloorsChip, TierChevrons, TimeLeftBar, familyBlurb, incidentMeta, scenarioFloorCount, settingIcon, useNow } from '../components/incident';
 import { Icon } from '../icons';
 import { relativeTime } from '../format';
-import { boardEntries, boardNote, incidentsOf, practiceEntries } from './helpers';
-import type { BoardEntry, PracticeEntry } from './helpers';
-import { DECISION_EXERCISES } from '../../content/scenarios/decision-exercises';
-import { Casebook, FeaturedOperationCard } from './Casebook';
-import { IncidentBriefContext } from './SupportContext';
+import { BOARD_LIMIT, boardEntries, boardNote, boardPlan, incidentsOf, standingEntries } from './helpers';
+import type { BoardEntry, StandingEntry } from './helpers';
+import { Casebook } from './Casebook';
+import './ops-visual.css';
 
 /**
- * Ops board: live incidents (arrive over time, close if nobody takes them), then standing assignments
- * and practice replays. Viewing the board marks incidents seen; the NEW badge is kept for this visit.
+ * Ops board: one list of at most BOARD_LIMIT operations. Live incidents (arrive over time, close if
+ * nobody takes them) take places first; the standing assignments fill any open places. The casebook
+ * stays below as the record of calls taken. Viewing the board marks incidents seen; the NEW badge is
+ * kept for this visit.
  */
 export function OpsBoard({ onPrepare }: { onPrepare: (id: Id) => void }) {
   const g = useGame();
   const now = useNow(1000);
   const entries = boardEntries(g, now).filter((e) => e.incident.expiresAt > now);
-  const practice = practiceEntries(g, now);
-  const featuredIds = new Set(DECISION_EXERCISES.map((exercise) => exercise.id));
-  const featured = practice.filter((entry) => featuredIds.has(entry.card.id));
-  const otherPractice = practice.filter((entry) => !featuredIds.has(entry.card.id));
+  const plan = boardPlan(entries, standingEntries(g, now));
   const note = boardNote(g, now);
   const fresh = useFreshIncidents(g);
   const arrival = note.line ?? (note.nextAt ? `Next call expected ${relativeTime(note.nextAt, now)}` : null);
+  const shown = plan.live.length + plan.standing.length;
+  const squadCount = g.squads.filter((squad) => squad.officerIds.length > 0).length;
 
   return (
-    <div className="page">
-      <Section
-        title="Incident board"
-        icon="pin"
-        hint="Calls come in over time while the department is on duty. A call nobody takes is handed to another unit; nothing is lost."
-      >
-        {entries.length === 0 ? (
-          <Card>
-            <EmptyState icon="hourglass" title="No open incidents">
-              New incidents arrive over time and stay open for a while. Check back soon, or run a practice scenario below.
-            </EmptyState>
-          </Card>
-        ) : (
-          <div className="stack">
-            {entries.map((e) => (
-              <IncidentCardView key={e.card.id} entry={e} now={now} isNew={fresh.has(e.card.id)} onPrepare={onPrepare} />
-            ))}
-          </div>
-        )}
+    <div className="page opboard-page">
+      <Section title="Available now" icon="pin" hint="Live calls come first. Standing assignments fill any open place. A call nobody takes goes to another unit.">
+        <div className="opboard-count" role="status">
+          <span className="opboard-slots" aria-hidden="true">
+            {Array.from({ length: BOARD_LIMIT }, (_, i) => <i key={i} data-slot={i < plan.live.length ? 'live' : i < shown ? 'standing' : 'open'} />)}
+          </span>
+          <span><strong>{shown} of {BOARD_LIMIT}</strong> places · {plan.live.length === 0 ? 'No open incidents' : `${plan.live.length} live ${plan.live.length === 1 ? 'call' : 'calls'}`}</span>
+        </div>
+        <div className="stack opboard-list">
+          {plan.live.map((e) => (
+            <IncidentCardView key={e.card.id} entry={e} now={now} isNew={fresh.has(e.card.id)} squadCount={squadCount} onPrepare={onPrepare} />
+          ))}
+          {plan.standing.length > 0 && (
+            <p className="opboard-divider"><Icon name="flag" size={14} />Standing assignments</p>
+          )}
+          {plan.standing.map((entry) => <StandingCardView key={entry.card.id} entry={entry} squadCount={squadCount} onPrepare={onPrepare} />)}
+        </div>
         {arrival && (
           <p className="arrival">
             <Icon name="clock" size={15} />
             {arrival}
           </p>
         )}
-      </Section>
-
-      <FeaturedOperationCard state={g} now={now} onPrepare={onPrepare} />
-
-      <Casebook state={g} onPrepare={onPrepare} />
-
-      {featured.length > 0 && <Section title="Decision practice" icon="flag" hint="Practice current calls with virtual gear and no lasting consequences. These exercises are always available.">
-        <div className="stack">{featured.map((entry) => <PracticeCardView key={entry.card.id} entry={entry} onPrepare={onPrepare} />)}</div>
-      </Section>}
-
-      <Section title="Standing and practice" icon="flag" hint="Equipment exercises, standing assignments and past incidents. Exercises and replays use virtual gear with no rewards or consequences.">
-        {otherPractice.length === 0 ? (
-          <Card>
-            <EmptyState icon="flag" title="Nothing to practice yet">
-              Finished incidents appear here so you can replay them with a different squad or kit.
-            </EmptyState>
-          </Card>
-        ) : (
-          <div className="stack">
-            {otherPractice.map((p) => (
-              <PracticeCardView key={p.card.id} entry={p} onPrepare={onPrepare} />
-            ))}
-          </div>
+        {plan.waiting > 0 && (
+          <p className="arrival">
+            <Icon name="hourglass" size={15} />
+            {plan.waiting} more standing {plan.waiting === 1 ? 'assignment joins' : 'assignments join'} the board as places open.
+          </p>
         )}
       </Section>
+
+      <Casebook state={g} />
     </div>
   );
 }
@@ -106,76 +88,64 @@ function useFreshIncidents(g: GameState): Set<Id> {
   return fresh;
 }
 
-function CardBody({ card, scenario, familyId, type, tier, children }: { card: ScenarioCard; scenario: ScenarioDefinition | null; familyId: string | null; type: string | null; tier: number | null; children?: ReactNode }) {
+/** A compact call tile: a type badge with tier pips, the title and place, a two-line summary, a fact
+ * row and a footer with the time left and Prepare. The full brief lives on the Prepare screen. */
+function CallTile({ card, scenario, familyId, type, tier, isNew = false, facts, footer, warning }: { card: ScenarioCard; scenario: ScenarioDefinition | null; familyId: string | null; type: string | null; tier: number | null; isNew?: boolean; facts?: ReactNode; footer: ReactNode; warning?: ReactNode }) {
   const meta = incidentMeta(type);
   const blurb = familyBlurb(familyId);
   const diff = scenario?.difficulty;
+  const floors = scenarioFloorCount(scenario);
   return (
-    <>
-      <div className="opboard-head">
-        <span className="opboard-kind">
-          <Icon name={type ? meta.icon : settingIcon(card.setting)} size={18} />
-          {type ? meta.label : card.setting.toUpperCase()}
+    <Card className={`opboard optile${isNew ? ' opboard-new' : ''}`}>
+      <div className="optile-top">
+        <span className={`optile-badge optile-band-${diff?.band ?? 'none'}`}>
+          <Icon name={type ? meta.icon : settingIcon(card.setting)} size={24} />
+          {tier !== null && <TierChevrons tier={tier} />}
         </span>
-        <span className="opboard-code">{card.code}</span>
-      </div>
-      <h3 className="opboard-title">{card.title}</h3>
-      {blurb && (
-        <p className="opboard-where">
-          <Icon name={settingIcon(card.setting)} size={14} />
-          {blurb}
-        </p>
-      )}
-      {(tier !== null || diff) && (
-        <div className="opboard-tier">
-          {tier !== null && (
-            <span className="tierline">
-              <TierChevrons tier={tier} />
-              <span className="dim">Tier {tier}</span>
-            </span>
+        <div className="optile-main">
+          <div className="opboard-head">
+            <span className="opboard-kind">{type ? meta.label : card.setting.toUpperCase()}</span>
+            <span className="opboard-code">{card.code}</span>
+            {isNew && (
+              <span className="newbadge">
+                <Icon name="bell" size={12} />
+                NEW
+              </span>
+            )}
+          </div>
+          <h3 className="opboard-title">{card.title}</h3>
+          {blurb && (
+            <p className="opboard-where">
+              <Icon name={settingIcon(card.setting)} size={13} />
+              <span>{blurb}</span>
+            </p>
           )}
-          {diff && <DifficultyChip band={diff.band} />}
         </div>
-      )}
-      {diff && diff.drivers.length > 0 && (
-        <p className="opboard-drivers">
-          <Icon name="gauge" size={14} />
-          <span>
-            Driven by: {diff.drivers.slice(0, 3).join(', ')}
-            <span className="dim"> (from what is known)</span>
-          </span>
-        </p>
-      )}
-      <p className="opboard-summary">{card.summary}</p>
-      {scenario && <IncidentBriefContext scenario={scenario} compact />}
-      <div className="chips">
-        {card.variantLabel !== card.title && <Chip>{card.variantLabel}</Chip>}
-        <FloorsChip floors={scenarioFloorCount(scenario)} />
-        {(!scenario || scenario.version < 4) && <Chip icon="clock">{card.pressureLabel}</Chip>}
-        <Chip icon="people">{card.squadRange.min === card.squadRange.max ? `${card.squadRange.min} squad` : `${card.squadRange.min}–${card.squadRange.max} squads`}</Chip>
       </div>
-      {children}
-    </>
+      <p className="opboard-summary">{card.summary}</p>
+      <div className="chips opboard-facts">
+        {diff && <DifficultyChip band={diff.band} />}
+        <Chip icon="people">{card.squadRange.min === card.squadRange.max ? `${card.squadRange.min} squad` : `${card.squadRange.min}–${card.squadRange.max} squads`}</Chip>
+        <FloorsChip floors={floors} />
+        {card.variantLabel !== card.title && <Chip>{card.variantLabel}</Chip>}
+        {(!scenario || scenario.version < 4) && <Chip icon="clock">{card.pressureLabel}</Chip>}
+        {facts}
+      </div>
+      {warning}
+      <div className="optile-foot">{footer}</div>
+    </Card>
   );
 }
 
-function Eligibility({ card }: { card: ScenarioCard }) {
+/** Eligibility only earns space when something is wrong; every squad ready is the normal case. */
+function Eligibility({ card, squadCount }: { card: ScenarioCard; squadCount: number }) {
+  if (card.issues.length === 0 && card.eligibleSquadIds.length > 0 && card.eligibleSquadIds.length >= squadCount) return null;
   return (
-    <>
-      <div className="opboard-elig">
-        <span className="dim">
-          <Icon name="people" size={14} /> Eligible squads
-        </span>
-        {card.eligibleSquadIds.length === 0 ? (
-          <Chip tone="warn">None ready</Chip>
-        ) : (
-          card.eligibleSquadIds.map((id) => (
-            <Chip key={id} tone="mint" icon="check">
-              {id}
-            </Chip>
-          ))
-        )}
-      </div>
+    <div className="opboard-elig">
+      <span className="opboard-elig-squads">
+        <Icon name="people" size={14} />
+        {card.eligibleSquadIds.length === 0 ? <Chip tone="warn">None ready</Chip> : card.eligibleSquadIds.map((id) => <Chip key={id} tone="mint" icon="check">{id}</Chip>)}
+      </span>
       {card.issues.length > 0 && (
         <ul className="issues">
           {card.issues.map((i, k) => (
@@ -186,51 +156,33 @@ function Eligibility({ card }: { card: ScenarioCard }) {
           ))}
         </ul>
       )}
-    </>
+    </div>
   );
 }
 
-function IncidentCardView({ entry, now, isNew, onPrepare }: { entry: BoardEntry; now: number; isNew: boolean; onPrepare: (id: Id) => void }) {
+function IncidentCardView({ entry, now, isNew, squadCount, onPrepare }: { entry: BoardEntry; now: number; isNew: boolean; squadCount: number; onPrepare: (id: Id) => void }) {
   const { card, incident, scenario } = entry;
   const spec = scenario?.incident;
   return (
-    <Card className={`opboard${isNew ? ' opboard-new' : ''}`}>
-      {isNew && (
-        <span className="newbadge">
-          <Icon name="bell" size={12} />
-          NEW
-        </span>
-      )}
-      <CardBody card={card} scenario={scenario} familyId={scenario?.locationFamilyId ?? spec?.familyId ?? incident.familyId} type={spec?.type ?? incident.type} tier={spec?.tier ?? incident.tier}>
-        {incident.newKind && <span className="opboard-newkind"><Chip tone="amber" icon="star">New kind of call</Chip></span>}
-        <TimeLeft expiresAt={incident.expiresAt} now={now} />
-        <Eligibility card={card} />
-        <Button variant="primary" block onClick={() => onPrepare(card.id)}>
-          Prepare
-        </Button>
-      </CardBody>
-    </Card>
+    <CallTile card={card} scenario={scenario} isNew={isNew} familyId={scenario?.locationFamilyId ?? spec?.familyId ?? incident.familyId} type={spec?.type ?? incident.type} tier={spec?.tier ?? incident.tier}
+      facts={incident.newKind && <Chip tone="amber" icon="star">New kind of call</Chip>}
+      warning={<Eligibility card={card} squadCount={squadCount} />}
+      footer={<>
+        <TimeLeftBar arrivedAt={incident.arrivedAt} expiresAt={incident.expiresAt} now={now} />
+        <Button variant="primary" className="optile-go" onClick={() => onPrepare(card.id)}>Prepare</Button>
+      </>} />
   );
 }
 
-export function PracticeCardView({ entry, onPrepare }: { entry: PracticeEntry; onPrepare: (id: Id) => void }) {
-  const { card, scenario, kind } = entry;
+export function StandingCardView({ entry, onPrepare, squadCount = Infinity }: { entry: StandingEntry; onPrepare: (id: Id) => void; squadCount?: number }) {
+  const { card, scenario } = entry;
   const spec = scenario?.incident;
   return (
-    <Card className="opboard">
-      <CardBody card={card} scenario={scenario} familyId={scenario?.locationFamilyId ?? spec?.familyId ?? null} type={spec?.type ?? null} tier={spec?.tier ?? null}>
-        {kind !== 'standing' ? (
-          <p className="note note-amber">
-            <Icon name={kind === 'exercise' ? 'flag' : 'refresh'} size={16} />
-            {kind === 'exercise' ? 'Exercise: practice only, with virtual gear and no rewards.' : 'Past incident: replays as practice only.'}
-          </p>
-        ) : (
-          <Eligibility card={card} />
-        )}
-        <Button variant={kind === 'standing' ? 'primary' : 'secondary'} block onClick={() => onPrepare(card.id)}>
-          {kind === 'exercise' ? 'Prepare practice' : kind === 'replay' ? 'Replay as practice' : 'Prepare'}
-        </Button>
-      </CardBody>
-    </Card>
+    <CallTile card={card} scenario={scenario} familyId={scenario?.locationFamilyId ?? spec?.familyId ?? null} type={spec?.type ?? null} tier={spec?.tier ?? null}
+      warning={<Eligibility card={card} squadCount={squadCount} />}
+      footer={<>
+        <span className="optile-standing"><Icon name="flag" size={13} />Always open</span>
+        <Button variant="primary" className="optile-go" onClick={() => onPrepare(card.id)}>Prepare</Button>
+      </>} />
   );
 }

@@ -1,7 +1,7 @@
 import { Children, createElement, isValidElement, type ReactElement, type ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { apply, makeState, NOW, setRun, startRun } from '../../sim/test-fixtures';
+import { apply, makeState, NOW, setRun, startRun, testCallId, withCallOnBoard } from '../../sim/test-fixtures';
 import { previewAction } from '../../sim/operation-selectors';
 import { getScenario } from '../../sim/scenario-registry';
 import { scenarioActions } from '../../sim/scenario-types';
@@ -107,8 +107,8 @@ describe('multi-squad review and commitment', () => {
   });
 
   it('keeps a fully injured squad out of field roles while preserving command-only emergency choices', () => {
-    const scenario = getScenario('exercise_active_armed_v4')!;
-    hooks.state = startRun(hooks.state!, scenario.id, ['A', 'B'], { practice: true, positions: { A: 'front_yard', B: 'front_yard' }, loadouts: { A: {}, B: {} } });
+    const scenario = getScenario(testCallId('activeArmedV4'))!;
+    hooks.state = startRun(withCallOnBoard(hooks.state!, scenario.id), scenario.id, ['A', 'B'], { positions: { A: 'front_yard', B: 'front_yard' }, loadouts: { A: {}, B: {} } });
     for (const id of hooks.state.squads[1].officerIds) hooks.state.officers[id].injury = { label: 'Wounded', until: NOW + 100000 };
     const fieldAction = live().view.actions.find(view => !scenarioActions(scenario).find(action => action.id === view.id)?.commandOnly)!;
     live().view.onSelectAction(fieldAction.id);
@@ -141,7 +141,7 @@ describe('multi-squad review and commitment', () => {
   });
 
   it('keeps failure outside story choices, reviews unresolved duties, and rejects stale or repeated confirmation', () => {
-    hooks.state = startRun(hooks.state!, 'exercise_active_armed_v4', ['A', 'B'], { practice: true, positions: { A: 'front_yard', B: 'front_yard' }, loadouts: { A: {}, B: {} } });
+    hooks.state = startRun(withCallOnBoard(hooks.state!, testCallId('activeArmedV4')), testCallId('activeArmedV4'), ['A', 'B'], { positions: { A: 'front_yard', B: 'front_yard' }, loadouts: { A: {}, B: {} } });
     expect(live().view.failedResponse).toBeNull();
     for (const squad of hooks.state.squads.filter(squad => ['A', 'B'].includes(squad.id))) for (const id of squad.officerIds) hooks.state.officers[id].injury = { label: 'Wounded', until: NOW + 100000 };
     const panel = () => descendants(live().view.failedResponse);
@@ -155,7 +155,7 @@ describe('multi-squad review and commitment', () => {
     expect(original.props.open).toBe(true);
     const details = renderToStaticMarkup(createElement('div', null, original.props.children));
     expect(details).toContain('Still unresolved');
-    expect(details).toContain('Practice: no lasting changes');
+    expect(details).toContain('Department trust falls by 2.');
     hooks.state.activeRun!.revision++;
     expect(confirmation().props.open).toBe(false);
     submit(original)();

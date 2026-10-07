@@ -137,7 +137,7 @@ Each template declares its geometry requirements, the facts it can change, its c
 
 ### Incident board
 
-New incidents arrive over time from a seeded schedule (the idle loop) and expire if ignored. Expiry is shown and never punishing. The board shows 3–5 cards with building family, incident type, tier and squad range. Practice can replay any past incident seed.
+New incidents arrive over time from a seeded schedule (the idle loop) and expire if ignored. Expiry is shown and never punishing. The board shows 3–5 cards with building family, incident type, tier and squad range. (Practice replay of past incidents was removed on 2026-10-06.)
 
 ## 3. Squads: up to 4
 

@@ -8,7 +8,7 @@ import { DebriefConsequences, DebriefSummary, OfficerResults, visibleDebriefCons
 
 const result: DebriefResult = {
   runId: 'saved_original', scenarioId: 'legacy_missing_scenario', endingId: 'done', endingTitle: 'Operation complete',
-  endingSummary: 'The handover is complete.', practice: false,
+  endingSummary: 'The handover is complete.',
   objective: { score: 75, label: 'Largely resolved' }, civilianSafety: { score: 68, label: 'Safety was strained' },
   officerCondition: [{ officerId: 'off_chen', stressBefore: 12.5, stressAfter: 23.5, xpGained: 29 }],
   informationPreserved: [], resources: [], unitWear: [], trustDelta: -2, fundingReward: 400, devPointReward: 1,
@@ -29,13 +29,10 @@ describe('scannable debrief results', () => {
     expect(html).not.toContain('<details');
   });
 
-  it('replaces repeated practice zero-change rows with one collapsed condition group', () => {
-    const practice = { ...result, practice: true, officerCondition: Object.values(state.officers).map((o) => ({ officerId: o.id, stressBefore: o.stress, stressAfter: o.stress, xpGained: 0 })) };
-    const summary = renderToStaticMarkup(createElement(DebriefSummary, { debrief: practice }));
-    const html = renderToStaticMarkup(createElement(OfficerResults, { debrief: practice, officers: state.officers }));
-    expect(summary).toContain('No lasting changes to officers, supplies or reputation. No rewards earned.');
-    expect(summary).not.toContain('+$400');
-    expect(html).toContain(`${practice.officerCondition.length} officers · unchanged`);
+  it('replaces repeated zero-change rows with one collapsed condition group', () => {
+    const quiet = { ...result, officerCondition: Object.values(state.officers).map((o) => ({ officerId: o.id, stressBefore: o.stress, stressAfter: o.stress, xpGained: 0 })) };
+    const html = renderToStaticMarkup(createElement(OfficerResults, { debrief: quiet, officers: state.officers }));
+    expect(html).toContain(`${quiet.officerCondition.length} officers · unchanged`);
     expect(html.match(/<details/g)).toHaveLength(1);
     expect(html).not.toContain('<details open');
     expect(html).not.toContain('+0');

@@ -1,23 +1,26 @@
 import { describe, expect, it } from 'vitest';
-import { LEGACY_DECISION_EXERCISES } from '../content/scenarios/decision-exercises';
 import { COURSES } from '../content/courses';
+import { ITEMS } from '../content/items';
 import { computeDebrief } from './operation';
 import { actionViews } from './operation-selectors';
 import { getScenario } from './scenario-registry';
 import { buildLocation } from './location';
-import { apply, makeState, NOW, startCmd } from './test-fixtures';
+import { apply, makeState, makeUnit, NOW, startCmd, stockKit, testCallId, withCallOnBoard } from './test-fixtures';
 import type { GameState } from './types';
 
-const RESCUE = 'exercise_protected_rescue_v4';
+const RESCUE = testCallId('protectedRescueV4');
 function startComparison(vehicle: boolean): GameState {
-  const state = makeState();
+  const state = withCallOnBoard(makeState(), RESCUE);
   const certs = Object.values(COURSES).flatMap(course => course.grants.cert ? [course.grants.cert] : []);
   for (const officer of Object.values(state.officers)) officer.certs = [...new Set(certs)];
+  const truck = makeUnit('armored_rescue_vehicle', 1);
+  if (vehicle) state.units[truck.id] = truck;
+  const kit = stockKit(state, ['A'], Object.keys(ITEMS).filter(id => !ITEMS[id].supportOnly));
   const scenario = getScenario(RESCUE)!;
   const entry = buildLocation(scenario.locationFamilyId, scenario.locationSeed).location.entries[0];
-  const cmd = { ...startCmd(RESCUE, ['A'], { practice: true, positions: { A: entry }, loadouts: { A: {} } }),
-    ...(vehicle ? { supportUnitIds: ['practice_armored_rescue_vehicle'] } : {}) };
-  const result = apply(state, cmd);
+  const cmd = { ...startCmd(RESCUE, ['A'], { positions: { A: entry }, loadouts: kit.loadouts, units: kit.units }),
+    ...(vehicle ? { supportUnitIds: [truck.id] } : {}) };
+  const result = apply(kit.state, cmd);
   expect(result.result).toEqual({ ok: true });
   // One fixed initial sample sequence for the entire teaching path, never per-step rerolls.
   result.state.activeRun!.rngState = 1;
@@ -31,10 +34,8 @@ function decide(state: GameState, id: string): GameState {
   return result.state;
 }
 
-describe('protected-rescue comparison exercise', () => {
-  it('registers a fixed teaching scene with both suitable routes and available care crews', () => {
-    const exercise = LEGACY_DECISION_EXERCISES.find(entry => entry.id === RESCUE)!;
-    expect(exercise.spec.seed).toBe(0);
+describe('protected-rescue v4 comparison paths', () => {
+  it('generates a fixed scene with both suitable routes and available care crews', () => {
     const scenario = getScenario(RESCUE)!;
     for (const id of ['f_resident', 'f_exterior_pickup', 'f_assisted_route']) {
       expect(scenario.facts.find(fact => fact.id === id)?.truth, id).toBe(true);
@@ -54,6 +55,6 @@ describe('protected-rescue comparison exercise', () => {
     expect(state.activeRun!.flags).not.toContain('hr_injury_pause');
     state = decide(state, 'hr_check_civilian_needs');
     state = decide(state, 'hr_civilian_next_step');
-    expect(computeDebrief(state, state.activeRun!)!).toMatchObject({ practice: true, completionAchieved: true, disposition: 'followup_agreed', fundingReward: 0, devPointReward: 0 });
+    expect(computeDebrief(state, state.activeRun!)!).toMatchObject({ completionAchieved: true, disposition: 'followup_agreed' });
   });
 });

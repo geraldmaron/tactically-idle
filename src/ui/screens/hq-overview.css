@@ -4,3 +4,61 @@
 .hq-status-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }.hq-status-grid button { display:flex; flex-direction:column; align-items:flex-start; min-width:0; min-height:110px; gap:6px; padding:13px; border:1px solid var(--line); border-radius:10px; background:var(--panel); text-align:left; overflow-wrap:anywhere; }.hq-status-grid button>span { font-family:var(--font-cond); font-size:15px; }.hq-status-grid strong { font:28px var(--font-display); color:var(--chalk); }.hq-status-grid strong small { font-size:16px; color:var(--muted); }.hq-status-grid button>small { color:var(--text-dim); font-size:11px; line-height:1.3; }
 .hq-attention { display:grid; gap:8px; }.hq-attention>div,.hq-report-summary { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px; padding:12px; border:1px solid var(--line); border-radius:8px; background:var(--panel); }.hq-attention>div>span { flex:1 1 150px; font-size:13px; }.hq-report-summary p { margin:5px 0 0; font-size:12px; color:var(--text-dim); }.hq-report-summary>div { min-width:0; flex:1 1 180px; }
 .hq-budget { border:1px solid var(--line); border-radius:10px; padding:14px; background:var(--panel); }.hq-budget>summary { display:flex; flex-wrap:wrap; align-items:baseline; gap:8px; cursor:pointer; min-height:44px; }.hq-budget>summary>span { flex:1 1 160px; font-family:var(--font-display); text-transform:uppercase; }.hq-budget>summary>strong { font-family:var(--font-display); color:var(--amber); font-size:23px; }.hq-budget>summary>small { width:100%; color:var(--text-dim); }.hq-budget[open]>summary { margin-bottom:12px; }.hq-power-receipt p { font-size:13px; line-height:1.45; }
+
+/* Recent debriefs: a result reads at a glance from rings, tone and faces before any words. */
+.debrief-tile { position: relative; display: flex; align-items: center; gap: 12px; width: 100%; min-width: 0; padding: 10px 12px 10px 14px; border: 1px solid var(--line); border-radius: var(--radius); background: linear-gradient(180deg, var(--panel-2), var(--panel)); color: var(--text); font: inherit; text-align: left; cursor: pointer; overflow: hidden; }
+.debrief-tile::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--muted); }
+.debrief-tile-good::before { background: var(--mint); }
+.debrief-tile-mixed::before { background: var(--amber); }
+.debrief-tile-poor::before { background: var(--danger); }
+.debrief-tile:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+.debrief-rings { display: grid; gap: 6px; flex-shrink: 0; }
+.score-ring { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; }
+.score-ring-core { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--panel); color: var(--text-dim); }
+.debrief-tile-main { display: grid; gap: 3px; min-width: 0; flex: 1 1 auto; }
+.debrief-tile-kicker { display: flex; align-items: center; gap: 6px; min-width: 0; font-family: var(--font-cond); font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--amber-2); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.debrief-tile-title { font-family: var(--font-display); font-size: 17px; font-weight: 600; line-height: 1.15; letter-spacing: 0.02em; text-transform: uppercase; overflow-wrap: anywhere; }
+.debrief-tile-sub { font-size: 12.5px; color: var(--text-dim); }
+.debrief-tile-foot { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px; margin-top: 2px; }
+.debrief-team { display: inline-flex; }
+.debrief-team-face { display: block; width: 24px; height: 24px; border-radius: 50%; overflow: hidden; border: 2px solid var(--panel); }
+.debrief-team-face + .debrief-team-face { margin-left: -7px; }
+.debrief-reward { display: inline-flex; align-items: center; gap: 3px; font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.debrief-tile-go { flex-shrink: 0; color: var(--muted); }
+
+/* Department header: money and roster readiness at a glance. */
+.hq-money { margin-top: 14px; border: 1px solid var(--line); border-radius: 8px; background: rgba(8, 13, 24, 0.45); }
+.hq-money-row { display: flex; align-items: center; gap: 4px; width: 100%; min-height: 52px; padding: 6px 10px; border: 0; background: transparent; color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+.hq-money-stat { display: grid; flex: 1 1 0; min-width: 0; }
+.hq-money-stat small { font-family: var(--font-cond); font-size: 11.5px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.hq-money-stat strong { font-family: var(--font-display); font-size: 18px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.hq-money-funding { color: var(--amber-2); font-size: 21px !important; }
+.hq-money-toggle { flex-shrink: 0; color: var(--muted); }
+.hq-money .section { margin: 0; padding: 0 10px 10px; }
+.hq-roster { display: grid; gap: 7px; width: 100%; margin-top: 10px; padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: rgba(8, 13, 24, 0.45); color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+.hq-roster:focus-visible, .hq-money-row:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+.hq-roster-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.hq-roster-faces { display: inline-flex; align-items: center; }
+.hq-roster-face { display: block; width: 28px; height: 28px; border-radius: 50%; overflow: hidden; border: 2px solid var(--panel-2); }
+.hq-roster-face + .hq-roster-face { margin-left: -8px; }
+.hq-roster-more { margin-left: 4px; font-family: var(--font-cond); font-size: 13px; font-weight: 700; color: var(--text-dim); }
+.hq-roster-count { font-size: 13px; color: var(--text-dim); white-space: nowrap; }
+.hq-roster-count strong { font-family: var(--font-display); font-size: 20px; color: var(--mint); }
+.hq-roster-bar { display: flex; gap: 2px; height: 8px; border-radius: 4px; overflow: hidden; background: var(--line); }
+.hq-roster-bar i, .hq-roster-legend i { background: var(--muted); }
+.hq-roster-bar i { flex-basis: 0; min-width: 4px; }
+.hq-roster [data-state="fresh"] i, .hq-roster-bar [data-state="fresh"] { background: var(--mint); }
+.hq-roster [data-state="strained"] i, .hq-roster-bar [data-state="strained"] { background: var(--amber); }
+.hq-roster [data-state="training"] i, .hq-roster-bar [data-state="training"] { background: #6ea8ff; }
+.hq-roster [data-state="deployed"] i, .hq-roster-bar [data-state="deployed"] { background: #b58cff; }
+.hq-roster [data-state="resting"] i, .hq-roster-bar [data-state="resting"] { background: var(--danger); }
+.hq-roster-legend { display: flex; flex-wrap: wrap; gap: 3px 12px; font-size: 12px; color: var(--text-dim); }
+.hq-roster-legend span { display: inline-flex; align-items: center; gap: 5px; }
+.hq-roster-legend i { width: 8px; height: 8px; border-radius: 2px; }
+.hq-roster-squads { display: flex; flex-wrap: wrap; gap: 6px; }
+.hq-roster-squads span { display: inline-flex; align-items: center; gap: 5px; padding: 2px 8px 2px 2px; border-radius: 999px; border: 1px solid var(--line-strong); font-size: 12px; font-variant-numeric: tabular-nums; color: var(--text-dim); }
+.hq-roster-squads b { display: grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: var(--amber); color: var(--amber-ink); font-family: var(--font-display); font-size: 12px; }
+.hq-roster-squads .hq-squad-out b { background: #b58cff; }
+/* Inside the header the money row already titles the breakdown; show only the lines. */
+.hq-money .section-head, .hq-money .section-hint { display: none; }
+.hq-money .card { padding: 4px 0 0; border: 0; border-top: 1px solid var(--line); border-radius: 0; background: transparent; }

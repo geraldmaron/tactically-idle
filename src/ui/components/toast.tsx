@@ -11,10 +11,12 @@ interface ToastItem {
   tone: ToastTone;
   title: string;
   lines: string[];
+  /** Tapping the toast runs this before dismissing it, e.g. to reveal the result it announces. */
+  onSelect?: () => void;
 }
 
 interface ToastApi {
-  notify: (title: string, opts?: { tone?: ToastTone; lines?: string[] }) => void;
+  notify: (title: string, opts?: { tone?: ToastTone; lines?: string[]; onSelect?: () => void }) => void;
   /** Send a command; a refusal shows its reason in a toast. */
   act: (cmd: Command, okMessage?: string) => HandlerResult;
 }
@@ -29,8 +31,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
   const notify = useCallback<ToastApi['notify']>((title, opts) => {
     const id = idRef.current++;
-    // Latest only: stacked toasts bury the mission header and blueprint.
-    setItems([{ id, tone: opts?.tone ?? 'info', title, lines: opts?.lines ?? [] }]);
+    // Latest only, above the bottom navigation: stacked or top toasts bury the mission header and blueprint.
+    setItems([{ id, tone: opts?.tone ?? 'info', title, lines: opts?.lines ?? [], onSelect: opts?.onSelect }]);
   }, []);
 
   const act = useCallback<ToastApi['act']>(
@@ -65,7 +67,7 @@ function ToastView({ item, onDone }: { item: ToastItem; onDone: (id: number) => 
   }, [item, onDone]);
   const icon = item.tone === 'ok' ? 'check' : item.tone === 'error' ? 'warning' : 'info';
   return (
-    <button type="button" className={`toast toast-${item.tone}`} onClick={() => onDone(item.id)}>
+    <button type="button" className={`toast toast-${item.tone}`} onClick={() => { item.onSelect?.(); onDone(item.id); }}>
       <Icon name={icon} size={18} />
       <span className="toast-body">
         <strong>{item.title}</strong>

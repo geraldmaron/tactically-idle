@@ -99,13 +99,12 @@ describe('department status explanations', () => {
 
   it('shows service toward the next level and what that level opens', () => {
     const state = makeState();
-    state.department.level = 3;
-    state.department.service = 40;
+    state.department.level = 2;
+    state.department.service = 15;
     const html = render(createElement(DepartmentStatHelp, { g: state, topic: 'level' }));
-    expect(html).toContain('Level 3');
-    expect(html).toContain('<strong>10 of 30</strong> service toward level 4');
-    expect(html).toContain('Level 4 opens active armed incident (with a certified officer and the right equipment), protected rescue (with a certified officer).');
-    expect(html).toContain('Practice earns none.');
+    expect(html).toContain('Level 2');
+    expect(html).toContain('<strong>5 of 20</strong> service toward level 3');
+    expect(html).toContain('Level 3 opens robbery witness reconciliation.');
     expect(html).toContain('separate from public trust and from an officer');
   });
 

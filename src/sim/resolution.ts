@@ -3,7 +3,6 @@ import { casualtyActionIssue, incidentOfficerUnavailable, personCasualtyActionIs
 import { selectedForceRisk, selectedProtection } from './force-risk';
 import { externalSupportActionIssue, remainingSupportWait } from './external-support';
 import { evaluateCapabilities } from './capabilities';
-import { getScenario } from './scenario-registry';
 import { hydrateStoryAction, storyActionTarget, storyPropsPublic, storyPublicScenario } from './story-people';
 import { currentStoryRoute, findStoryRoute } from './story-bindings';
 import { publicStoryMovementLegs } from './story-movement-v7';
@@ -265,28 +264,9 @@ export function riskBand(pFavorable: number): RiskBand {
 
 // ---------------------------------------------------------------- units
 
-function itemUnlocked(state: GameState, itemId: Id): boolean {
-  const def = ITEMS[itemId];
-  if (!def) return false;
-  const owned = Object.values(state.units).some((u) => u.itemId === itemId && u.status !== 'scrapped');
-  return !def.requiresNode || state.department.unlockedNodes.includes(def.requiresNode) || owned;
-}
-
-/** Practice assumes one fresh unit of every item the department owns or has unlocked. Never wears. */
-export function practiceUnits(state: GameState, allEquipment = false): ItemUnit[] {
-  const out: ItemUnit[] = [];
-  for (const id of Object.keys(ITEMS)) {
-    const owned = Object.values(state.units).some((u) => u.itemId === id && u.status !== 'scrapped');
-    if (!ITEMS[id].supportOnly && (allEquipment || owned || itemUnlocked(state, id)))
-      out.push({ id: `practice_${id}`, itemId: id, serial: 'PRACTICE', condition: 100, acquiredAt: 0, uses: 0, status: 'reserved', serviceUntil: null, wearRate: 1, expiresAt: null, lastWearAt: 0 });
-  }
-  return out;
-}
-
 /** Units a squad still holds in a run: its reservations minus consumables already used by committed decisions. */
 export function availableUnits(state: GameState, run: OperationRun, sq: SquadId): ItemUnit[] {
   const spent = new Set(run.history.flatMap((h) => h.unitsUsed));
-  if (run.practice) return practiceUnits(state, getScenario(run.scenarioId)?.practiceOnly === true).filter(unit => run.scenarioVersion < 7 || ITEMS[unit.itemId].kind !== 'consumable' || !spent.has(unit.id));
   return squadUnits(state, run.id, sq).filter((u) => ITEMS[u.itemId] && !(ITEMS[u.itemId].kind === 'consumable' && spent.has(u.id))
     && (run.scenarioVersion < 7 || u.expiresAt === null || u.expiresAt > state.department.clockHighWater));
 }
@@ -618,7 +598,7 @@ export function evaluateAction(input: EvalInput): Evaluation {
 
   const units: Record<SquadId, ItemUnit[]> = {} as Record<SquadId, ItemUnit[]>;
   for (const sq of [...acting, ...support, ...run.squadIds]) {
-    units[sq] ??= input.unitOverride?.[sq] ?? availableUnits(state, run, sq).map((unit) => run.practice ? unit : ({ ...unit, condition: projectedCondition(state, unit, state.department.clockHighWater) }));
+    units[sq] ??= input.unitOverride?.[sq] ?? availableUnits(state, run, sq).map((unit) => ({ ...unit, condition: projectedCondition(state, unit, state.department.clockHighWater) }));
     if (scenario.version >= 7) units[sq] = units[sq].filter(unit => unit.expiresAt === null || unit.expiresAt > state.department.clockHighWater);
   }
   const taskOf = (sq: SquadId) => run.squadTasks.find((t) => t.squadId === sq) ?? { squadId: sq, positionId: '', task: '', stagingId: null, at: null };

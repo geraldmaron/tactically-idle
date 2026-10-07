@@ -5,6 +5,12 @@ import { getScenario } from './scenario-registry';
 import { getBuilt } from './resolution';
 import { hashSeed } from './rng';
 
+/** The captured records carried a `practice: false` flag, removed with practice on 2026-10-06.
+ * Putting it back where it stood shows every other byte of the run and settlement unchanged. */
+function withRetiredFlag<T extends object>(record: T, beforeKey: string): T {
+  return Object.fromEntries(Object.entries(record).flatMap(([key, value]) => key === beforeKey ? [['practice', false], [key, value]] : [[key, value]])) as T;
+}
+
 function completedRun(scenarioId: string, seed: number) {
   const scenario = getScenario(scenarioId)!;
   const initial = makeState({ rngState: seed });
@@ -22,15 +28,15 @@ function completedRun(scenarioId: string, seed: number) {
     expect(result.result).toEqual({ ok: true });
     state = result.state;
   }
-  const run = state.activeRun ? {
+  const run = state.activeRun ? withRetiredFlag({
     ...state.activeRun,
     history: state.activeRun.history.map(({ stressLevels: _stressLevels, ...decision }) => decision),
-  } : null;
+  }, 'squadIds') : null;
   const closed = apply(state, { type: 'closeDebrief' });
   expect(closed.result).toEqual({ ok: true });
   const result = closed.state;
   const { decisions: _decisions, ...debrief } = result.debriefs[0];
-  return { run, officers: result.officers, units: result.units, reservations: result.reservations, department: result.department, rngState: result.rngState, debrief };
+  return { run, officers: result.officers, units: result.units, reservations: result.reservations, department: result.department, rngState: result.rngState, debrief: withRetiredFlag(debrief, 'objective') };
 }
 
 // Captured from unchanged management baseline 5325b00, then compared field-for-field.

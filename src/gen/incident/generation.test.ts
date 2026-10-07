@@ -9,9 +9,8 @@ import { validateScenario } from '../../sim/operation';
 import { briefing, builtForScenario, actionViews, pendingDebrief, previewAction, scenarioCards, spaceViews } from '../../sim/operation-selectors';
 import { getScenario } from '../../sim/scenario-registry';
 import { createInitialState } from '../../sim/department';
-import { dispatch } from '../../sim/game';
 import { deserialize, serialize } from '../../sim/save';
-import { startCmd, apply, NOW } from '../../sim/test-fixtures';
+import { startCmd, apply, NOW, withCallOnBoard } from '../../sim/test-fixtures';
 import { INCIDENT_TYPES, drawIncidentSpec, generateIncident, incidentId, parseIncidentId } from './index';
 import { BUILDING_FAMILIES, GENERATED_LOCATION_FAMILIES } from '../building';
 import type { IncidentSpec } from '../../sim/scenario-types';
@@ -124,8 +123,7 @@ describe('generated incidents', () => {
       const closed = apply(state, { type: 'closeDebrief' });
       expect(closed.result).toEqual({ ok: true });
       const replay = startCmd(scenario.id, ['A'], { positions: { A: entry }, loadouts: { A: {} } });
-      expect(apply(closed.state, replay).result).toEqual({ ok: false, reason: 'This incident is no longer on the board. Replay it in practice.' });
-      expect(apply(closed.state, { ...replay, practice: true }).result).toEqual({ ok: true });
+      expect(apply(closed.state, replay).result).toEqual({ ok: false, reason: 'This incident is no longer on the board.' });
     }
   });
 
@@ -145,21 +143,13 @@ describe('generated incidents', () => {
     expect(expired.state.incidents.some((c) => c.id === card.id)).toBe(false);
   });
 
-  it('does not consume a live board card when it is played in practice', () => {
-    const initial = createInitialState(NOW);
-    const card = initial.incidents[0];
-    const entry = builtForScenario(card.id).location.entries[0];
-    const running = apply(initial, startCmd(card.id, ['A'], { positions: { A: entry }, loadouts: { A: {} }, practice: true })).state;
-    const ticked = dispatch(running, { type: 'tick' }, { now: NOW + 1000 });
-    expect(ticked.result).toEqual({ ok: true });
-    expect(ticked.state.incidents.find((c) => c.id === card.id)).toEqual(card);
-  });
-
   it('preserves the issued equipment-free handover path without offering its retired card', () => {
     for (const spec of specs(3)) {
       const id = incidentId(spec);
       const entry = builtForScenario(id).location.entries[0];
-      let state = apply(createInitialState(NOW), startCmd(id, ['A'], { positions: { A: entry }, loadouts: { A: {} }, practice: true })).state;
+      const started = apply(withCallOnBoard(createInitialState(NOW), id), startCmd(id, ['A'], { positions: { A: entry }, loadouts: { A: {} } }));
+      expect(started.result, id).toEqual({ ok: true });
+      let state = started.state;
       for (const actionId of ['gen_contact', 'gen_coordinate', 'gen_handover']) {
         const visible = actionViews(state, NOW, 'A').find((a) => a.id === actionId);
         if (actionId === 'gen_handover') expect(visible).toBeUndefined();

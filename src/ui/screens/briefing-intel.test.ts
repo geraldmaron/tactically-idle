@@ -5,7 +5,7 @@ import { generateIncident } from '../../gen/incident';
 import { buildLocation } from '../../sim/location';
 import { getScenario } from '../../sim/scenario-registry';
 import type { IncidentSpec } from '../../sim/scenario-types';
-import { makeState, NOW } from '../../sim/test-fixtures';
+import { makeState, NOW, testCallId } from '../../sim/test-fixtures';
 import { buildIntel } from './intel';
 import { OpsPrepare } from './OpsPrepare';
 
@@ -16,13 +16,13 @@ vi.mock('../blueprint/Blueprint', () => ({ Blueprint: () => createElement('div',
 const spec = (type: IncidentSpec['type'], seed = 7, contentVersion = 4): IncidentSpec => ({ type, familyId: 'cedar_close', buildingSeed: 7, seed, tier: 2, contentVersion });
 
 const cases = [
-  ['active_armed_incident', 'exercise_active_armed_v4', ['f_resident']],
-  ['hostage_crisis', 'exercise_hostage_v4', ['f_first_person', 'f_second_person']],
-  ['protected_rescue', 'exercise_protected_rescue_v4', ['f_resident']],
+  ['active_armed_incident', testCallId('activeArmedV4'), ['f_resident']],
+  ['hostage_crisis', testCallId('hostageV4'), ['f_first_person', 'f_second_person']],
+  ['protected_rescue', testCallId('protectedRescueV4'), ['f_resident']],
 ] as const;
 
 describe('public high-risk preparation intel', () => {
-  it.each(cases)('%s lists the individually reported civilians at dispatch', (type, _exercise, ids) => {
+  it.each(cases)('%s lists the individually reported civilians at dispatch', (type, _id, ids) => {
     const scenario = generateIncident(spec(type));
     const built = buildLocation(scenario.locationFamilyId, scenario.locationSeed);
     const intel = buildIntel(scenario, built);
@@ -55,11 +55,11 @@ describe('public high-risk preparation intel', () => {
     expect(buildIntel(altered, built).people.some(person => person.id === hiddenPerson.id)).toBe(false);
   });
 
-  it.each(cases)('%s renders consistent People and Threat sections without requiring care for everyone', (_type, exercise) => {
+  it.each(cases)('%s renders consistent People and Threat sections without requiring care for everyone', (_type, id) => {
     vi.spyOn(Date, 'now').mockReturnValue(NOW);
     try {
-      const scenario = getScenario(exercise)!;
-      const html = renderToStaticMarkup(createElement(OpsPrepare, { scenarioId: exercise, onCancel: () => {} }));
+      const scenario = getScenario(id)!;
+      const html = renderToStaticMarkup(createElement(OpsPrepare, { scenarioId: id, onCancel: () => {} }));
       const peopleSection = html.slice(html.indexOf('People</h3>'), html.indexOf('Threat information</h3>'));
       for (const person of scenario.civilianOutcomes!) expect(peopleSection).toContain(person.label);
       expect(html).not.toContain('Nobody reported');

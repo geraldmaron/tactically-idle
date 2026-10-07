@@ -1,15 +1,33 @@
-// Human review entry point for typed framework packages: /story.html. For one framework, every
-// situation's briefing, choices and endings bound to six sampled buildings, next to the
-// automated gate results (docs/content-pipeline.md, "Human review"). Dev-only page; not linked
-// from the game and not part of the app entry.
+// Dev story sheet: /story.html. Not linked from the game and not part of the app entry.
+// Two views of the incident content the game can draw now (docs/content-pipeline.md, "Human review"):
 //
-//   /story.html?type=water_leak            one framework (default: the newest drop)
-//   optional: &pacing=deliberate_answers   the other pacing; &seed=40 shifts the sampled buildings
-//             &journeys=1                  also play real dispatch journeys (slower)
+// Scenario lab (default, ?view=lab): every type in the current catalog, hand-authored stories
+// and typed framework packages alike. One generated call at a time: briefing, people, services,
+// pressure, rewards and the plan; every option by stage with the engine's odds for a reference
+// squad (flat odds flagged); endings with the paths that reach them; and a step-through run where
+// each option is committed through the real dispatcher with a chosen or natural result.
+//
+//   /story.html?type=hostage_crisis&family=market_row&seed=7&variant=1&tier=2
+//   optional: &pacing=deliberate_answers   the other pacing of the situation
+//             &call=123                    exact call seed (cast and room); the situation follows it
+//             &id=gen:…                    any issued incident ID, at its own content version
+//             &kit=full                    squad A carries every item, not only day-one gear
+//             &path=a~favorable,b~adverse  step-through moves (~mixed, ~roll, ~continue, ~fail)
+//
+// Gate review (?view=gates): human review of the typed framework packages only. For one
+// framework, every situation's briefing, choices and endings bound to six sampled buildings,
+// next to the automated gate results.
+//
+//   /story.html?view=gates&type=water_leak   one framework (default: the newest drop)
+//   optional: &pacing=deliberate_answers     the other pacing; &seed=40 shifts the sampled buildings
+//             &journeys=1                    also play real dispatch journeys (slower; implies view=gates)
 import { StrictMode, useEffect, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import '../ui/theme.css';
 import './story-sheet.css';
+import './scenario-lab/scenario-lab.css';
+import { ScenarioLab } from './scenario-lab/ScenarioLab';
+import type { Navigate } from './scenario-lab/ScenarioLab';
 import type { ScenarioCharacteristic } from '../content/scenario-recipes';
 import type { ScenarioDefinition } from '../sim/scenario-types';
 import { hashSeed } from '../sim/rng';
@@ -147,7 +165,7 @@ function Journeys({ entry }: { entry: GateFramework }) {
   );
 }
 
-function Sheet() {
+function GateReview() {
   const query = new URLSearchParams(window.location.search);
   const type = query.get('type') ?? FRAMEWORKS.filter(entry => entry.since >= 11).at(-1)?.framework.type ?? FRAMEWORKS[0].framework.type;
   const entry = FRAMEWORKS.find(candidate => candidate.framework.type === type) ?? FRAMEWORKS[0];
@@ -162,7 +180,7 @@ function Sheet() {
   return (
     <div className="ss-page">
       <header>
-        <h1>Story sheet · {f.title}</h1>
+        <h1>Gate review · {f.title}</h1>
         <div className="ss-controls">
           <label>Framework
             <select value={f.type} onChange={event => go({ type: event.target.value })}>
@@ -203,10 +221,48 @@ function Sheet() {
   );
 }
 
+/** The URL is the page state: controls push a new entry, the step-through replaces it. */
+function useQuery(): [URLSearchParams, Navigate] {
+  const [search, setSearch] = useState(window.location.search);
+  useEffect(() => {
+    const onPop = () => setSearch(window.location.search);
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
+  const navigate: Navigate = (next, mode = 'push') => {
+    // Keep IDs and step paths readable in a shared link (':', ',' and '~' need no escaping in a query).
+    const url = `${window.location.pathname}?${new URLSearchParams(next).toString().replace(/%3A/g, ':').replace(/%2C/g, ',').replace(/%7E/g, '~')}`;
+    if (mode === 'replace') window.history.replaceState(null, '', url); else window.history.pushState(null, '', url);
+    setSearch(window.location.search);
+  };
+  return [new URLSearchParams(search), navigate];
+}
+
+function StorySheet() {
+  const [query, navigate] = useQuery();
+  // Links from before the lab (…&journeys=1) still open the gate review.
+  const view = query.get('view') === 'gates' || (!query.get('view') && query.has('journeys')) ? 'gates' : 'lab';
+  useEffect(() => { requestAnimationFrame(() => { document.body.dataset.ready = '1'; }); }, []);
+  const type = query.get('type');
+  const toGates = () => navigate({ view: 'gates', ...(type && FRAMEWORKS.some(entry => entry.framework.type === type) ? { type } : {}) });
+  const toLab = () => navigate({ view: 'lab', ...(type ? { type } : {}) });
+  return (
+    <>
+      <nav className="sl-tabs" aria-label="Story sheet views">
+        <span className="sl-brand">Story sheet</span>
+        <button type="button" aria-pressed={view === 'lab'} onClick={toLab}>Scenario lab</button>
+        <button type="button" aria-pressed={view === 'gates'} onClick={toGates}>Gate review · typed packages</button>
+        {view === 'lab' && <span className="sl-jump"><a href="#controls">call</a><a href="#scenario">briefing</a><a href="#options">options</a><a href="#endings">endings</a><a href="#run">step-through</a></span>}
+      </nav>
+      {view === 'gates' ? <GateReview key={query.toString()} /> : <div className="sl-page"><ScenarioLab query={query} navigate={navigate} /></div>}
+    </>
+  );
+}
+
 const host = document.getElementById('root')! as HTMLElement & { __root?: ReturnType<typeof createRoot> };
 host.__root ??= createRoot(host);
 host.__root.render(
   <StrictMode>
-    <Sheet />
+    <StorySheet />
   </StrictMode>,
 );

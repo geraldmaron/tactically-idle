@@ -11,6 +11,7 @@ import { INCIDENT_HANDLERS, seedIncidentBoard } from './incidents';
 import { setMaintenanceBudget } from './equipment-manager';
 import { START_LEVEL } from './department-level';
 import { INCIDENT_CONTENT_VERSION } from '../gen/incident';
+import { COMMAND_STAFF_HANDLERS, createCommandStaff } from './command-staff';
 
 export const DEPARTMENT_HANDLERS: HandlerMap<DepartmentCommandType> = {
   tick: (d, _cmd, ctx) => {
@@ -44,6 +45,8 @@ export const DEPARTMENT_HANDLERS: HandlerMap<DepartmentCommandType> = {
   scrapUnit: (d, c) => EQUIPMENT_HANDLERS.scrapUnit(d, c.unitId),
   offerRetention: (d, c) => ROSTER_HANDLERS.offerRetention(d, c.officerId),
   markIncidentsSeen: (d) => INCIDENT_HANDLERS.markIncidentsSeen(d),
+  setManagerEnabled: (d, c) => COMMAND_STAFF_HANDLERS.setManagerEnabled(d, c.managerId, c.enabled),
+  setManagerPolicy: (d, c) => COMMAND_STAFF_HANDLERS.setManagerPolicy(d, c.patch),
 };
 
 export function createInitialState(now: number, campaignSeed = 12345): GameState {
@@ -79,6 +82,7 @@ export function createInitialState(now: number, campaignSeed = 12345): GameState
     incidents: [],
     debriefs: [],
     report: null,
+    commandStaff: createCommandStaff(),
     nextId: 1,
     rngState: campaignSeed >>> 0,
   };

@@ -13,10 +13,15 @@ import { dispatch } from '../../sim/game';
 const officer = { id: 'off_test', identityId: 'missing_test_person', firstName: 'Sam', surname: 'West', portrait: '/art/portraits/person_100.webp', role: 'lead' as const };
 describe('honest portrait and art rendering', () => {
   it('renders a deliberate personnel file without making a broken-image request', () => {
-    const html = renderToStaticMarkup(createElement(Portrait, { officer, size: 80, age: 45 }));
+    const html = renderToStaticMarkup(createElement(Portrait, { officer, size: 120, age: 45 }));
     expect(html).toContain('NO PHOTO');
     expect(html).toContain('ON FILE');
     expect(html).toContain('Sam West; no photo on file');
+    // Strip-sized cards keep the initials and the accessible label; a 7px caption is not legible.
+    const small = renderToStaticMarkup(createElement(Portrait, { officer, size: 80 }));
+    expect(small).toContain('Sam West; no photo on file');
+    expect(small).toContain('>SW<');
+    expect(small).not.toContain('NO PHOTO');
     expect(html).not.toContain('<img');
     expect(html).not.toContain('legacy-procedural');
   });
@@ -52,7 +57,7 @@ describe('honest portrait and art rendering', () => {
       { ...officer, identityId: undefined, id: 'off_chen', portrait: 'chen' },
     ]) {
       const html = renderToStaticMarkup(createElement(Portrait, { officer: saved }));
-      expect(html).toContain('NO PHOTO');
+      expect(html).toContain('no photo on file');
       expect(html).not.toContain('<img');
       expect(html).not.toContain('<svg');
     }

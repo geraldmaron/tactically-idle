@@ -19,6 +19,7 @@ import { Icon, itemIcon } from '../icons';
 import type { IconName } from '../icons';
 import { gameDays, money, pct, relativeTime } from '../format';
 import { hasNodeEffect } from './helpers';
+import './gear-visual.css';
 
 export function GearScreen() {
   const g = useGame();
@@ -38,22 +39,22 @@ export function GearScreen() {
       ]} />
       {surface === 'equipment' && <EquipmentStore active />}
       <div className="gear-inventory" hidden={surface !== 'inventory'}>
-      <Section title="Inventory" icon="box" hint="Every item is a set of individual units that wear at their own pace. Tap a tile to see each unit, service it or scrap it.">
+      <Section title="Inventory" icon="box" hint="Tap an item to see each unit, restock, service or scrap.">
         {owned.length === 0 ? (
           <Card>
             <EmptyState icon="box" title="No owned equipment">Browse Equipment to inspect capabilities and buy stock.</EmptyState><Button onClick={() => setSurface('equipment')}>Browse Equipment</Button>
           </Card>
         ) : (
-          <div className="gear-grid">
+          <div className="inv-grid">
             {owned.map((o) => (
-              <GearTile key={o.item.id} o={o} onOpen={() => setUnitsFor(o.item.id)} onRestock={() => { setUnitsFor(null); nav.openEquipment({ itemId: o.item.id }); }} />
+              <InventoryTile key={o.item.id} o={o} onOpen={() => setUnitsFor(o.item.id)} />
             ))}
           </div>
         )}
       </Section>
 
       <Button block onClick={() => setSurface('equipment')}>Browse Equipment</Button>
-      <UnitSheet itemId={unitsFor} onClose={() => setUnitsFor(null)} />
+      <UnitSheet itemId={unitsFor} onClose={() => setUnitsFor(null)} onRestock={(itemId) => { setUnitsFor(null); nav.openEquipment({ itemId }); }} />
       <details className="gear-maintenance"><summary>Maintenance &amp; loadouts<span className="dim">Service budgets, presets and hourly restock rules</span></summary><div className="gear-maintenance-body">
       <EquipmentManager />
       <MaterialGuide />
@@ -128,59 +129,28 @@ function EquipmentManager() {
             {budget > 0 && <Button onClick={() => act({ type: 'setMaintenanceBudget', perHour: 0 }, 'Automatic service paused. Existing repairs will finish.')}>Pause automatic service</Button>}
           </div>
           <p className="dim">The ceiling includes the repair discount. No purchases are made. Pausing stops new repairs; current repairs finish normally. Automatic spending stops after 24 hours without orders.</p>
+          <div className="row-actions"><Button size="sm" icon="people" onClick={() => nav.go('hq')}>Quartermaster activity on HQ</Button></div>
       </Card>
     </Section>
   );
 }
 
-function GearTile({ o, onOpen, onRestock }: { o: StoreOption; onOpen: () => void; onRestock: () => void }) {
-  const hasUnits = o.owned > 0;
+/** Game-style inventory tile: the art carries identity, one big count says how many, and a
+ * condition strip plus an alert pip say whether it needs attention. Detail lives in the sheet. */
+function InventoryTile({ o, onOpen }: { o: StoreOption; onOpen: () => void }) {
   const tone = o.meanCondition === null ? 'neutral' : conditionTone(o.meanCondition, o.item.wear);
+  const alert = o.ready === 0 ? 'None ready' : o.unreliable > 0 ? `${o.unreliable} unreliable` : o.expired > 0 ? `${o.expired} expired` : null;
+  const condition = o.meanCondition === null ? null : Math.round(o.meanCondition);
   return (
-    <article className="gear">
-      {hasUnits && (
-        <button type="button" className="gear-open" onClick={onOpen} aria-label={`${o.item.name}: view ${o.owned} unit${o.owned === 1 ? '' : 's'}`} />
-      )}
-      <div className="gear-hit">
-        <span className="gear-row">
-          <GearArtFrame itemId={o.item.id} />
-          <span className="gear-main">
-            <span className="gear-top">
-              <strong>{o.item.name}</strong>
-              <Chip icon={o.item.kind === 'consumable' ? 'battery' : o.item.kind === 'equipment' ? 'wrench' : 'gear'}>{o.item.kind === 'consumable' ? 'Supply' : o.item.kind === 'equipment' ? 'Gear' : 'Facility'}</Chip>
-            </span>
-            <span className="gear-desc">{o.item.description}</span>
-          </span>
-        </span>
-        <dl className="counts">
-          <Count icon="box" label="Owned" value={o.owned} />
-          <Count icon="checkcircle" label="Ready" value={o.ready} tone={o.ready > 0 ? 'mint' : undefined} />
-          <Count icon="lock" label="Reserved" value={o.reserved} />
-          <Count icon="wrench" label="In service" value={o.inService} />
-          <Count icon="warning" label="Unreliable" value={o.unreliable} tone={o.unreliable > 0 ? 'warn' : undefined} />
-        </dl>
-        {hasUnits && (
-          <span className="gear-cond">
-            <span className="gear-cond-label">
-              <Icon name="gauge" size={14} />
-              Mean condition {o.meanCondition === null ? 'n/a' : `${Math.round(o.meanCondition)}%`}
-              {o.expired > 0 && <b className="tone-danger"> · {o.expired} expired</b>}
-            </span>
-            {o.meanCondition !== null && <UnitBar value={o.meanCondition} tone={tone} label={tone === 'good' ? 'Good' : tone === 'worn' ? 'Worn' : 'Low'} />}
-            <span className="gear-more">
-              Units
-              <Icon name="chevronRight" size={14} />
-            </span>
-          </span>
-        )}
-      </div>
-      <div className="gear-buy">
-        <Button size="sm" variant="primary" icon="plus" onClick={onRestock}>
-          Restock · {money(o.item.cost)} each
-        </Button>
-        {!o.canBuy && o.reason && <span className="reason">{o.reason}</span>}
-      </div>
-    </article>
+    <button type="button" className={`inv-tile${alert ? ' inv-tile-alert' : ''}`} onClick={onOpen} title={o.item.name}
+      aria-label={`${o.item.name}: ${o.owned} owned, ${o.ready} ready${o.reserved + o.inService > 0 ? `, ${o.reserved + o.inService} busy` : ''}${condition === null ? '' : `, condition ${condition}%`}${alert ? `, ${alert}` : ''}`}>
+      <span className="inv-art"><GearArtFrame itemId={o.item.id} size={42} /></span>
+      <span className="inv-count" aria-hidden="true">×{o.owned}</span>
+      {alert && <span className="inv-alert" aria-hidden="true"><Icon name="warning" size={12} /></span>}
+      <span className="inv-name">{o.item.name}</span>
+      <span className="inv-ready" aria-hidden="true"><Icon name="checkcircle" size={11} />{o.ready}{o.reserved + o.inService > 0 ? <span className="dim"> +{o.reserved + o.inService}</span> : null}</span>
+      {condition !== null && <span className={`inv-cond inv-cond-${tone}`} aria-hidden="true"><i style={{ width: `${Math.max(4, condition)}%` }} /></span>}
+    </button>
   );
 }
 
@@ -198,7 +168,7 @@ function Count({ icon, label, value, tone }: { icon: IconName; label: string; va
 
 // ---------------------------------------------------------------- unit sheet
 
-function UnitSheet({ itemId, onClose }: { itemId: Id | null; onClose: () => void }) {
+function UnitSheet({ itemId, onClose, onRestock }: { itemId: Id | null; onClose: () => void; onRestock: (itemId: Id) => void }) {
   const g = useGame();
   const item = itemId ? ITEMS[itemId] : undefined;
   const opt = itemId ? storeOptions(g).find((o) => o.item.id === itemId) : undefined;
@@ -218,6 +188,17 @@ function UnitSheet({ itemId, onClose }: { itemId: Id | null; onClose: () => void
     >
       {item && <>
         <div className="gear-dossier"><GearArtFrame itemId={item.id} size={104} /><p className="dim">{item.description}</p></div>
+        {opt && <dl className="counts">
+          <Count icon="box" label="Owned" value={opt.owned} />
+          <Count icon="checkcircle" label="Ready" value={opt.ready} tone={opt.ready > 0 ? 'mint' : undefined} />
+          <Count icon="lock" label="Reserved" value={opt.reserved} />
+          <Count icon="wrench" label="In service" value={opt.inService} />
+          <Count icon="warning" label="Unreliable" value={opt.unreliable} tone={opt.unreliable > 0 ? 'warn' : undefined} />
+        </dl>}
+        {opt && <div className="gear-buy">
+          <Button variant="primary" icon="plus" block onClick={() => onRestock(item.id)}>Restock · {money(item.cost)} each</Button>
+          {!opt.canBuy && opt.reason && <span className="reason">{opt.reason}</span>}
+        </div>}
         <UnitList itemId={item.id} />
       </>}
     </Sheet>

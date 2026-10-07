@@ -84,7 +84,7 @@ export function applyIncidentConsequences(state: GameState, run: OperationRun, s
           ...(position ? { position: { spaceId: position.spaceId, at: { ...position.at } } } : {}) };
         run.officerCasualties ??= {};
         run.officerCasualties[id] = record;
-        if (!run.practice) officer.injury = { label, until: recoveryUntil };
+        officer.injury = { label, until: recoveryUntil };
         records.push(casualtySnapshot(record));
         text.push(`${officer.firstName} ${officer.surname} was ${severity === 'serious' ? 'seriously wounded' : 'wounded'} and is out of action. Medical care and transport are still needed.`);
       }
@@ -95,7 +95,7 @@ export function applyIncidentConsequences(state: GameState, run: OperationRun, s
         person.care = 'stabilized';
         person.recoveryUntil = Math.min(person.recoveryUntil, Math.max(state.department.clockHighWater, Math.round(state.department.clockHighWater + (person.recoveryUntil - state.department.clockHighWater) * 0.8)));
         const officer = state.officers[person.officerId];
-        if (!run.practice && officer) officer.injury = { label: person.label, until: person.recoveryUntil };
+        if (officer) officer.injury = { label: person.label, until: person.recoveryUntil };
         records.push(casualtySnapshot(person));
         text.push(`${officer?.firstName ?? ''} ${officer?.surname ?? person.officerId} received field care. They remain out of action and still need transport.`.trim());
       }
@@ -246,11 +246,11 @@ export function validPersonConsequences(run: OperationRun, scenario: ScenarioDef
     if (new Set(decision.unitsUsed).size !== decision.unitsUsed.length) return false;
     const uses: Use[] = [];
     for (const unitId of decision.unitsUsed) {
-      const itemId = run.practice && unitId.startsWith('practice_') ? unitId.slice('practice_'.length) : state.units[unitId]?.itemId;
+      const itemId = state.units[unitId]?.itemId;
       const item = itemId ? ITEMS[itemId] : undefined;
       const reservation = state.reservations.find(reservation => reservation.runId === run.id && reservation.unitId === unitId);
-      if (!item || !run.practice && !reservation || item.kind === 'consumable' && spent.has(unitId)) return false;
-      const squadId = reservation?.squadId ?? decision.actingSquadIds[0];
+      if (!item || !reservation || item.kind === 'consumable' && spent.has(unitId)) return false;
+      const squadId = reservation.squadId;
       if (!decision.actingSquadIds.includes(squadId) && !decision.supportSquadIds.includes(squadId) && !item.supportOnly) return false;
       uses.push({ unitId, itemId: item.id, qty: 1, consumable: item.kind === 'consumable', squadId });
       if (item.kind === 'consumable') spent.add(unitId);
@@ -315,7 +315,7 @@ export function validIncidentConsequences(run: OperationRun, scenario: ScenarioD
       } else {
         if (event.at !== before.at || event.severity !== before.severity || event.label !== before.label || !sameCasualtyPosition(event, before)) return false;
         if (event.care === 'stabilized') {
-          if (before.care !== 'needed' || !possible.some(effect => effect.officerCare === 'stabilize') || !decision.itemsConsumed.some(use => use.itemId === 'trauma_kit' && use.qty >= 1) && !run.practice) return false;
+          if (before.care !== 'needed' || !possible.some(effect => effect.officerCare === 'stabilize') || !decision.itemsConsumed.some(use => use.itemId === 'trauma_kit' && use.qty >= 1)) return false;
           if (event.recoveryUntil > before.recoveryUntil) return false;
         } else if (event.care === 'evacuated') {
           if (before.care === 'evacuated' || !possible.some(effect => effect.officerCare === 'evacuate') || event.recoveryUntil !== before.recoveryUntil) return false;
@@ -329,7 +329,7 @@ export function validIncidentConsequences(run: OperationRun, scenario: ScenarioD
   for (const [id, person] of Object.entries(expected)) {
     const actual = run.officerCasualties[id];
     if (!actual || !validCasualtyRecord(actual) || !sameCasualtyPosition(actual, person) || (Object.keys(person) as (keyof OfficerCasualtyRecord)[]).some(key => key !== 'position' && actual[key] !== person[key])) return false;
-    if (!run.practice && person.recoveryUntil > now && (!officers[id]?.injury || officers[id].injury!.label !== person.label || officers[id].injury!.until !== person.recoveryUntil)) return false;
+    if (person.recoveryUntil > now && (!officers[id]?.injury || officers[id].injury!.label !== person.label || officers[id].injury!.until !== person.recoveryUntil)) return false;
   }
   const flags = casualtyFlags(expected);
   return CASUALTY_FLAGS.every(flag => run.flags.includes(flag) === flags.includes(flag));
