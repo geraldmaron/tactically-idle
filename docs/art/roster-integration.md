@@ -25,7 +25,7 @@ This is a finite cast, not an immortal or unlimited population system. There is 
 
 ## Portraits and brand
 
-Production portraits are `public/art/portraits/person_NNN.webp`, 512×532. Only `readyIds` in the checked-in manifest render as photos. Missing art is a deliberate navy personnel-file card with initials and “NO PHOTO ON FILE.” An image-loading failure uses the same treatment, never a borrowed or newly invented face.
+Production portraits are `public/art/portraits/person_NNN.webp`, 512×532. All 100 catalog identities have individual portraits. Only `readyIds` in the checked-in manifest render as photos. Missing art is a deliberate navy personnel-file card with initials and “NO PHOTO ON FILE.” An image-loading failure uses the same treatment, never a borrowed or newly invented face.
 
 The photograph is the person's file portrait, not a claim that their face is dynamically repainted every birthday. Current career age is preserved in the portrait tooltip and career UI. Full headwear must fit the crop. No changing rank, role insignia, specialist equipment or text is baked into officer portraits.
 
