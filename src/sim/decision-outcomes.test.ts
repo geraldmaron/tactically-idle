@@ -4,7 +4,7 @@ import type { ActionDefinition, OutcomeEffect, ScenarioDefinition } from './scen
 import type { GameState, KnowledgeStatus, OutcomeBand, StageId } from './types';
 import { advanceTime, matchedEffects, traceRun, validateScenario } from './operation';
 import { actionViews, decisionViews, lastDecisionView, pendingDebrief, previewAction, spaceViews, stageProgress } from './operation-selectors';
-import { builtFor, evaluateAction } from './resolution';
+import { bandFor, builtFor, evaluateAction } from './resolution';
 import { next } from './rng';
 import { initializePersonnel } from './personnel';
 import { CURRENT_SAVE_VERSION, deserialize, serialize } from './save';
@@ -124,7 +124,9 @@ describe('committed v3 decisions', () => {
 
   it('does not let time-saving effects reverse operation time', () => {
     SCENARIOS[ID].stages.assess.actions = [action('too_fast', 'assess', [{ stage: 'resolve', extraMinutes: -100 }])];
-    const state = decide(started(), 'too_fast');
+    const initial = started();
+    expect(previewAction(initial, NOW, 'too_fast', ['A'], [])).toMatchObject({ timeCost: 0.5, timeRange: { min: 0.5, max: 0.5 } });
+    const state = decide(initial, 'too_fast');
     expect(state.activeRun!.clock).toBe(0.5);
     expect(lastDecisionView(state)!.timeCost).toBe(0.5);
   });
@@ -159,6 +161,64 @@ describe('committed v3 decisions', () => {
 });
 
 describe('public previews and committed truth', () => {
+  it('includes the known eight-minute privacy delay in both the headline and range', () => {
+    const scenario = SCENARIOS[ID];
+    scenario.stages.assess.actions = [action('delay', 'assess', [
+      { stage: 'resolve' },
+      { when: { flags: ['public_destination'] }, extraMinutes: 8 },
+    ], { workload: { base: 2, perSqFt: 0 } }), action('prepare', 'assess', [{ setFlags: ['public_destination'] }])];
+    const quiet = started(), publicPickup = structuredClone(quiet);
+    publicPickup.activeRun!.flags.push('public_destination');
+    const before = structuredClone(publicPickup);
+    const ordinary = previewAction(quiet, NOW, 'delay', ['A'], [])!;
+    const delayed = previewAction(publicPickup, NOW, 'delay', ['A'], [])!;
+    expect(delayed.timeCost).toBe(ordinary.timeCost + 8);
+    expect(delayed.timeRange).toEqual({ min: ordinary.timeRange.min + 8, max: ordinary.timeRange.max + 8 });
+    expect(delayed.timeCost).toBeGreaterThanOrEqual(10);
+    expect(actionViews(publicPickup, NOW, 'A').find(a => a.id === 'delay')).toMatchObject({ timeCost: delayed.timeCost, timeRange: delayed.timeRange });
+    expect(publicPickup).toEqual(before);
+    const loaded = deserialize(serialize(publicPickup, NOW))!;
+    expect(loaded).not.toBeNull();
+    expect(previewAction(loaded, NOW, 'delay', ['A'], [])).toEqual(delayed);
+    const normalResult = decide(quiet, 'delay').activeRun!;
+    const delayedResult = decide(loaded, 'delay').activeRun!;
+    expect(delayedResult.history.at(-1)!.timeCost - normalResult.history.at(-1)!.timeCost).toBe(8);
+    expect(delayedResult.rngState).toBe(normalResult.rngState);
+  });
+
+  it('weights different public delays by the actual band probabilities after applying each multiplier', () => {
+    const probe = action('band_delay', 'assess', [{ stage: 'resolve' }], { workload: { base: 2, perSqFt: 0 }, check: { kind: 'coordination', difficulty: 85, ratings: [{ key: 'coordination', weight: 1 }] } });
+    for (const [i, band] of bands.entries()) probe.outcomes[band].push({ extraMinutes: [0, 4, 10][i] });
+    SCENARIOS[ID].stages.assess.actions = [probe];
+    const state = started(), run = state.activeRun!;
+    const ev = evaluateAction({ state, run, scenario: SCENARIOS[ID], action: probe, built: builtFor(run.locationFamilyId, run.locationSeed, run.flags), acting: ['A'], support: [] });
+    const view = previewAction(state, NOW, probe.id, ['A'], [])!;
+    const costs = bands.map(band => {
+      const input = structuredClone(state);
+      let seed = 1;
+      while (seed < 100_000 && bandFor(ev.margin, next(seed).value) !== band) seed++;
+      expect(seed).toBeLessThan(100_000);
+      input.activeRun!.rngState = seed;
+      const result = decide(input, probe.id).activeRun!.history.at(-1)!;
+      expect(result.band).toBe(band);
+      return result.timeCost;
+    });
+    expect(view.timeRange).toEqual({ min: Math.min(...costs), max: Math.max(...costs) });
+    expect(view.timeCost).toBe(Math.round(costs[0] * ev.pFavorable + costs[1] * (1 - ev.pFavorable - ev.pAdverse) + costs[2] * ev.pAdverse));
+  });
+
+  it('uses pre-decision public conditions for time, not flags set earlier in the same outcome', () => {
+    SCENARIOS[ID].stages.assess.actions = [action('prepare_now', 'assess', [
+      { setFlags: ['prepared_here'], stage: 'resolve' },
+      { when: { flags: ['prepared_here'] }, extraMinutes: 8 },
+    ], { workload: { base: 2, perSqFt: 0 } })];
+    const state = started();
+    const view = previewAction(state, NOW, 'prepare_now', ['A'], [])!;
+    expect(view.timeRange).toEqual({ min: 2, max: 3 });
+    expect(view.timeCost).toBeLessThanOrEqual(3);
+    expect(decide(state, 'prepare_now').activeRun!.history.at(-1)!.timeCost).toBeLessThanOrEqual(3);
+  });
+
   function installProbe(status: KnowledgeStatus, truth: boolean) {
     const scenario = SCENARIOS[ID];
     scenario.facts[0].initial = status;
@@ -187,6 +247,12 @@ describe('public previews and committed truth', () => {
     expect(JSON.stringify(before)).not.toMatch(/PRIVATE BRANCH/);
     expect(before.actions[0].consequenceLevel).toBe('severe');
     expect(before.actions[0].likelihood.favorable + before.actions[0].likelihood.mixed + before.actions[0].likelihood.adverse).toBeCloseTo(1);
+    const withoutHiddenExtras = structuredClone(SCENARIOS[ID].stages.assess.actions[0].outcomes);
+    for (const effects of Object.values(SCENARIOS[ID].stages.assess.actions[0].outcomes)) {
+      for (const effect of effects) if (effect.truth?.length) delete effect.extraMinutes;
+    }
+    expect(previewAction(trueState, NOW, 'probe', ['A'], [])!.timeCost).toBe(before.explicit!.timeCost);
+    SCENARIOS[ID].stages.assess.actions[0].outcomes = withoutHiddenExtras;
     const fact = before.spaces.flatMap((space) => space.facts).find((fact) => fact.id === FACT)!;
     expect(fact.verifyActions).toContainEqual({ actionId: 'probe', title: 'probe', stage: 'assess', availableNow: true });
     expect(fact.verifyActions.some((action) => action.actionId === 'hidden')).toBe(false);

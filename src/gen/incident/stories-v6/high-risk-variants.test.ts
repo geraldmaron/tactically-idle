@@ -149,6 +149,22 @@ describe('v6 high-risk episodes change actual decisions', () => {
     }
   });
 
+  it.each([false, true])('quotes the real rescue privacy cost for the selected destination (quiet=%s)', quiet => {
+    const { s } = find('protected_rescue', 0, { f_care_needed: false });
+    let state = play(running(s), [
+      'v5_chair_reach_and_hear', `v5_chair_check_${quiet ? 'quiet' : 'public'}_chair_route`,
+      'v5_chair_prepare_assistance', `v5_chair_reach_${quiet ? 'quiet' : 'public'}_assistance`, 'v5_chair_assisted_move',
+    ]);
+    const preview = previewAction(state, NOW, 'v5_chair_civilian_next_step', ['A'], [])!;
+    expect(preview.eligible, preview.reason ?? '').toBe(true);
+    expect(preview.timeRange).toEqual(quiet ? { min: 2, max: 3 } : { min: 10, max: 11 });
+    expect(preview.timeCost).toBeGreaterThanOrEqual(preview.timeRange.min);
+    expect(preview.timeCost).toBeLessThanOrEqual(preview.timeRange.max);
+    state = decide(state, 'v5_chair_civilian_next_step');
+    expect(state.activeRun!.history.at(-1)!.timeCost).toBe(quiet ? 2 : 10);
+    expect(computeDebrief(state, state.activeRun!)!.completionAchieved).toBe(true);
+  });
+
   it('checks every selected route edge again and cannot commit a blocked destination', () => {
     for (const type of ['active_armed_incident', 'protected_rescue'] as const) {
       const f = type === 'active_armed_incident' ? find(type, 0, { f_pause: true, f_stand_down: true }) : fixture(type, 0);
