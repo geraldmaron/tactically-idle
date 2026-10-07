@@ -486,6 +486,9 @@ export interface Department {
   /** Standing, 0..100. Not spendable. */
   trust: number;
   level: number;
+  /** Total service earned on live calls (save v7; see department-level.ts). Absent in older
+   * saves, which count from the threshold of the level they hold. */
+  service?: number;
   rosterCap: number;
   trainingSlots: number;
   unlockedNodes: Id[];
@@ -730,6 +733,10 @@ export interface DebriefResult {
   trustDelta: number;
   fundingReward: number;
   devPointReward: number;
+  /** Department service this call earned (save v7; absent before and on practice). */
+  serviceEarned?: number;
+  /** The department level this call took the department to, when it rose. */
+  levelReached?: number;
   /** Material causes, most significant first. */
   causes: string[];
 }
@@ -929,6 +936,8 @@ export interface CasebookBest {
   safety: number;
   /** Debrief objective label, for example 'Resolved' or 'Partial progress'. */
   label: string;
+  /** Set when the result came from a practice run. */
+  practice?: true;
 }
 
 /** One recipe met on a live call: framework, situation, pacing and the building type used. */
@@ -936,6 +945,8 @@ export interface CasebookRecipe {
   /** Department clock time when a squad was first dispatched to this recipe. */
   firstAt: number;
   best?: CasebookBest;
+  /** This building type was met only in practice, on a situation already met live. */
+  practiceOnly?: true;
 }
 
 /** Added in save v6. What the campaign has met, for the casebook and unseen-first draws. */

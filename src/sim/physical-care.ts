@@ -1,7 +1,8 @@
 import type { ActionDefinition, ScenarioDefinition, StoryAnchor } from './scenario-types';
-import type { BuiltLocation, GameState, OfficerCasualtyRecord, OperationRun } from './types';
+import type { BuiltLocation, GameState, Id, OfficerCasualtyRecord, OperationRun, Vec } from './types';
 import { storyPeoplePublic } from './story-people';
 import { centroidOf, routeBetween, type Route } from './spatial-factors';
+import { pointInPolygon } from './location';
 
 export interface CarePosition { spaceId: string; at?: StoryAnchor['at'] }
 export interface PhysicalCare {
@@ -110,7 +111,7 @@ export function physicalCare(scenario: ScenarioDefinition, built: BuiltLocation,
   const startId = exterior(routeStart || undefined) ? routeStart! : exterior(authored.targetId) ? authored.targetId
     : exterior(run.supportPositionId) ? run.supportPositionId! : built.location.entries[0];
   if (!startId) return unknown();
-  const start: StoryAnchor = { spaceId: startId, at: centroidOf(built, startId) };
+  const start: StoryAnchor = { spaceId: startId, at: meetingPoint(built, startId) };
   if (!authored.commandOnly && authored.approach === 'path' && patients.length === 1) {
     // An authored escort is actual squad work: meet the crew, then accompany it.
     // Its healthy officers may open doors with their own carried access equipment.
@@ -135,4 +136,16 @@ export function physicalCare(scenario: ScenarioDefinition, built: BuiltLocation,
   // The actual crew makes this journey. The selected command squad stays where it is.
   result.action = { ...authored, approach: 'none', storyRoute: undefined, storyRouteActor: undefined };
   return result;
+}
+
+/** Where the squad meets a crew in an exterior zone: its centroid. On furnished layouts a
+ * wrapped zone (a front lot around a parking bay) can have its centroid outside the zone,
+ * which no squad can walk to; use the zone's first staging point there instead. Other
+ * layouts keep the centroid, so their timings are unchanged. */
+function meetingPoint(built: BuiltLocation, zoneId: Id): Vec {
+  const centre = centroidOf(built, zoneId);
+  const zone = built.location.zones.find(candidate => candidate.id === zoneId);
+  if (!built.location.id.endsWith('__furnished_v7') || !zone || pointInPolygon(centre, zone.polygon)) return centre;
+  const staging = built.derived.stagingPoints.filter(point => point.spaceId === zoneId).sort((a, b) => a.id.localeCompare(b.id))[0];
+  return staging?.at ?? centre;
 }

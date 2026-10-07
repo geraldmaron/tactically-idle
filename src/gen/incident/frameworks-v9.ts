@@ -1,5 +1,6 @@
-import { ADDITIONAL_FRAMEWORK_BY_TYPE } from '../../content/incident-frameworks-v9';
 import type { IncidentFramework } from '../../content/incident-frameworks-v9';
+import { FRAMEWORK_DEPTH_CONTENT_VERSION, frameworkAt } from '../../content/framework-depth-v12';
+import { routeAlongOpenings } from '../../sim/spatial-factors';
 import { scenarioRecipe } from '../../content/scenario-recipes';
 import type { ActionDefinition, FactDefinition, ScenarioDefinition, StageDefinition } from '../../sim/scenario-types';
 import type { BuiltLocation, StageId } from '../../sim/types';
@@ -13,7 +14,8 @@ import { placeFrameworkPerson, roomPhrase } from './placement-v10';
 export function withAdditionalFramework(input: ScenarioDefinition, built: BuiltLocation, override?: IncidentFramework): ScenarioDefinition {
   // `override` lets authoring gates compile a draft package (or a deliberate reskin) for the
   // spec's framework slot without registering it; the game always uses the registry.
-  const spec = input.incident!, framework = override ?? ADDITIONAL_FRAMEWORK_BY_TYPE[spec.type];
+  // From v12 the package carries its decision depth (content/framework-depth-v12.ts).
+  const spec = input.incident!, framework = override ?? frameworkAt(spec.type, spec.contentVersion);
   if (!framework) throw new Error(`No framework for ${spec.type}`);
   const recipe = scenarioRecipe(spec), variant = recipe.variant;
   const s = structuredClone(input), prefix = `v9_${spec.type}_`;
@@ -32,6 +34,11 @@ export function withAdditionalFramework(input: ScenarioDefinition, built: BuiltL
   const at = placed?.at ?? storyPoint(built, room.id, spec.seed), exitAt = storyPoint(built, outside, spec.seed) ?? (placed ? storyPoint(built, outside, spec.seed, [], .5) : null);
   const route = placed?.route ?? findStoryRoute(built, room.id, outside, 'walking');
   if (!at || !exitAt || !route) throw new Error(`No physical route for ${recipe.id}`);
+  // v12: a call that walks the person out needs that walk clear of furniture, as the engine
+  // checks it. Before v12 some generated layouts hosted a walk-out step the engine then
+  // refused, leaving no way to finish; lazy hosting now moves such a call to another seed.
+  if (spec.contentVersion >= FRAMEWORK_DEPTH_CONTENT_VERSION && framework.moveOn !== 'neither' && !routeAlongOpenings(built, at, exitAt, route, null).reachable)
+    throw new Error(`Exit route blocked for ${recipe.id}`);
   // Everything public (briefing, claim, map marker, where actions aim) uses the reported
   // room; only checking the person in person reveals the actual one (story-people.ts).
   const reportedRoom = placed?.reported.room ?? room, reportedAt = placed?.reported.at ?? built.derived.spaces[room.id].centroid;
@@ -125,7 +132,7 @@ export function withAdditionalFramework(input: ScenarioDefinition, built: BuiltL
     s.stages.adapt.actions.unshift(followup);
     s.briefing.known.push('The first report left something out. Check an independent source before deciding the disputed point.');
   }
-  applyDecisionExtensions(s, framework, { prefix, personId, evidence, heard, prepared, completed, first, second, resolutions, tier: spec.tier });
+  applyDecisionExtensions(s, framework, { prefix, personId, personFact, evidence, accounted, heard, prepared, completed, first, second, resolutions, tier: spec.tier });
   for (const action of Object.values(s.stages).flatMap(stage => stage.actions)) for (const effects of Object.values(action.outcomes)) effects.push({ setFlags: [`used:${action.id}`] });
   const errors = validateStoryBindings(s, built); if (errors.length) throw new Error(errors.join('\n'));
   return s;
@@ -135,10 +142,10 @@ export function withAdditionalFramework(input: ScenarioDefinition, built: BuiltL
  * engine actions with their own costs; a framework without them is left untouched, so the
  * eight issued v9 frameworks compile byte for byte as before. */
 function applyDecisionExtensions(s: ScenarioDefinition, framework: IncidentFramework, ids: {
-  prefix: string; personId: string; evidence: string; heard: string; prepared: string; completed: string;
+  prefix: string; personId: string; personFact: string; evidence: string; accounted: string; heard: string; prepared: string; completed: string;
   first: ActionDefinition; second: ActionDefinition; resolutions: ActionDefinition[]; tier: number;
 }): void {
-  const { prefix, personId, evidence, heard, prepared, completed } = ids;
+  const { prefix, personId, personFact, evidence, accounted, heard, prepared, completed } = ids;
   // The resolve stage holds this same array; extensions add to the stage, so keep a copy
   // of the two resolutions in [confirmed, disproved] order before anything is inserted.
   const resolutions = [...ids.resolutions];
@@ -179,6 +186,30 @@ function applyDecisionExtensions(s: ScenarioDefinition, framework: IncidentFrame
       for (const effects of Object.values(follow.outcomes)) for (const effect of effects) effect.stage = 'resolve';
       s.stages.resolve.actions.unshift(follow);
     }
+  }
+  if (framework.actOnReport) {
+    // Skip the check and carry out the step that fits the first report. Hidden truth is read
+    // only when the step commits: right, the call closes a step early at a little trust;
+    // wrong, the team backs out, the call loses ground, and the step that fits is still to do.
+    const a = framework.actOnReport, index = statusIndex(a.assume), fits = resolutions[index], reveal = [personFact, evidence];
+    const act = base('act_on_report', 'adapt', a.title, a.summary);
+    act.icon = 'door'; act.storyTargetPersonId = personId; act.approach = 'path';
+    act.check = { kind: 'contact', ratings: [{ key: 'communication', weight: 0.6 }, { key: 'coordination', weight: 0.4 }], difficulty: 28 + ids.tier * 3 };
+    if (fits.storyRoute) { act.storyRoute = fits.storyRoute; act.storyRouteActor = fits.storyRouteActor; act.targetId = fits.targetId; }
+    act.requires.flags = [{ flag: accounted, reason: 'Hear an account before acting on the report' }];
+    // An alternative to checking, not an escape once checking has started: after the first
+    // in-person check the team is committed, and an inconclusive check can still fail the call.
+    act.visibleWhen = { facts: [{ factId: evidence, in: ['unknown'] }], notFlags: [`used:${prefix}verify`] };
+    act.modifiers = [{ label: 'Heard the people involved first', when: { flags: [heard] }, source: 'preparation', value: 6 }];
+    const right = { factId: evidence, is: a.assume === 'confirmed' }, wrong = { factId: evidence, is: a.assume !== 'confirmed' };
+    for (const band of ['favorable', 'mixed'] as const) act.outcomes[band] = [
+      { truth: [right], reveal, setFlags: [completed], objective: 90, ending: 'acted_on_report', text: framework.results[index], ...(band === 'mixed' ? { extraMinutes: 2 } : {}) },
+      { truth: [wrong], reveal, objective: -10, pressure: 12, extraMinutes: 3, stage: 'resolve', text: a.wrong },
+    ];
+    act.outcomes.adverse = [{ reveal, pressure: 6, extraMinutes: 3, stage: 'resolve', text: 'The step stalls partway, and the team stops to talk it through. What it learned on the way decides the next step.' }];
+    act.outcomePreview = { favorable: 'Done a step sooner if the report is right. If it is wrong, the team has to back out and the call loses ground.', mixed: 'The same, with a delay.', adverse: 'The step stalls partway, and the team has to stop and start again.' };
+    s.stages.adapt.actions.push(act);
+    s.endings.acted_on_report = { id: 'acted_on_report', title: framework.resolutions[index], summary: framework.results[index], trustAdjust: 0, strain: -1, disposition: 'followup_agreed', completion: { flags: [completed] } };
   }
   if (framework.waitFor) {
     // A dependable but slow close that does not rely on the checked answer.

@@ -19,11 +19,14 @@ import { normalizeSquadArrangementState } from './squad-optimizer';
 import { validStageContinuations } from './compatibility/legacy-choices';
 import { validResponseFailure } from './response-failure';
 import { emptyCasebook, foldDebriefs, parseRecipeKey, recipeOfScenario } from './casebook';
+import { MAX_LEVEL, serviceForLevel } from './department-level';
+import { isUnlocked, unlockRule } from '../content/unlocks';
+import { SCENARIO_TYPES_V11 } from '../content/scenario-types-v11';
 
 export const SAVE_KEY = 'tactically-idle/save';
 
 /** Version written by this build. Older versions pass through migrate(). */
-export const CURRENT_SAVE_VERSION = 6;
+export const CURRENT_SAVE_VERSION = 7;
 
 export interface SaveStorage {
   getItem(key: string): string | null;
@@ -175,6 +178,8 @@ function validDebrief(d: unknown): boolean {
     && (d.personCasualties === undefined || isList(d.personCasualties, validPersonCasualtyRecord))
     && (d.civilianOutcomes === undefined || isList(d.civilianOutcomes, person => isObj(person) && strings(person, ['id', 'label']) && oneOf(person.status, ['unaccounted', 'needs_help', 'safe', 'injured_needs_care', 'care_accepted', 'accounted_elsewhere', 'deceased'])))
     && (d.disposition === undefined || oneOf(d.disposition, COMPLETION_DISPOSITIONS))
+    && (d.serviceEarned === undefined || (Number.isSafeInteger(d.serviceEarned) && (d.serviceEarned as number) >= 0))
+    && (d.levelReached === undefined || Number.isSafeInteger(d.levelReached))
     && (d.completionAchieved === undefined || isBool(d.completionAchieved))
     && (d.remainingTasks === undefined || isStrings(d.remainingTasks))
     && (d.receivingService === undefined || (isObj(d.receivingService) && strings(d.receivingService, ['id', 'label', 'kind']) && isNum(d.receivingService.acceptedAt) && d.receivingService.acceptedAt >= 0))
@@ -235,6 +240,7 @@ function validBase(s: unknown, v2: boolean, historical = false): s is Record<str
   if (!isStrings(dep.unlockedNodes) || !dep.unlockedNodes.every((id) => Object.hasOwn(DEV_NODES, id))
     || !isList(dep.restockRules, (r) => isObj(r) && isStr(r.itemId) && !!(historical ? legacyItemDefinition(r.itemId) : Object.hasOwn(ITEMS, r.itemId)) && numbers(r, ['target', 'budgetCeiling']))) return false;
   if (dep.candidateRefreshedAt !== undefined && !isNum(dep.candidateRefreshedAt)) return false;
+  if (dep.service !== undefined && (!Number.isSafeInteger(dep.service) || (dep.service as number) < 0)) return false;
   if (dep.maintenanceBudgetPerHour !== undefined && (!isNum(dep.maintenanceBudgetPerHour) || !Number.isInteger(dep.maintenanceBudgetPerHour) || dep.maintenanceBudgetPerHour < 0 || dep.maintenanceBudgetPerHour > 500)) return false;
   if (!isObj(s.officers)) return false;
   const officers = s.officers as Record<string, unknown>;
@@ -288,7 +294,8 @@ function validCasebook(c: unknown): boolean {
   if (c === undefined) return true;
   if (!isObj(c) || !isStrings(c.frameworksSeen) || new Set(c.frameworksSeen).size !== c.frameworksSeen.length || !isObj(c.recipes)) return false;
   return Object.entries(c.recipes).every(([key, entry]) => !!parseRecipeKey(key) && isObj(entry) && isNum(entry.firstAt)
-    && (entry.best === undefined || (isObj(entry.best) && isBool(entry.best.completed) && numbers(entry.best, ['objective', 'safety']) && isStr(entry.best.label))));
+    && (entry.practiceOnly === undefined || entry.practiceOnly === true)
+    && (entry.best === undefined || (isObj(entry.best) && isBool(entry.best.completed) && numbers(entry.best, ['objective', 'safety']) && isStr(entry.best.label) && (entry.best.practice === undefined || entry.best.practice === true))));
 }
 
 /** Basic structural validation: enough that the UI and sim cannot crash on a loaded state. */
@@ -429,6 +436,27 @@ function migrateV5toV6(env: SaveEnvelope): SaveEnvelope {
   return { ...env, saveVersion: 6, state: draft };
 }
 
+// ---------------------------------------------------------------- v6 -> v7
+
+/**
+ * v6 -> v7. Department level is now earned through service on live calls, and the
+ * specialist frameworks ask for more than the level 3 every earlier campaign held. The
+ * department keeps its level and is lifted to the level of any framework it has already
+ * met or could already be sent to (its certifications and equipment qualify), so the
+ * update takes no kind of call away. Service starts at that level's threshold.
+ */
+function migrateV6toV7(env: SaveEnvelope): SaveEnvelope {
+  const draft = structuredClone(env.state) as GameState;
+  const seen = new Set(draft.casebook?.frameworksSeen ?? []);
+  const anyLevel = { ...draft, department: { ...draft.department, level: MAX_LEVEL } };
+  let level = draft.department.level;
+  for (const { type } of SCENARIO_TYPES_V11) if (seen.has(type) || isUnlocked(anyLevel, type)) level = Math.max(level, unlockRule(type).level);
+  draft.department.level = level;
+  draft.department.service = serviceForLevel(level);
+  draft.saveVersion = 7;
+  return { ...env, saveVersion: 7, state: draft };
+}
+
 // ---------------------------------------------------------------- v2 -> v3
 
 /**
@@ -483,6 +511,9 @@ export function migrate(envelope: SaveEnvelope): SaveEnvelope | null {
         }
         case 5:
           env = migrateV5toV6(env);
+          break;
+        case 6:
+          env = migrateV6toV7(env);
           break;
         default:
           return null;

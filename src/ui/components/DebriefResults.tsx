@@ -23,13 +23,15 @@ export function DebriefSummary({ debrief: d }: { debrief: DebriefResult }) {
         <span className="result-score-outcome">{result.label}</span>
       </section>)}
     </div>}
-    {d.practice ? <p className="result-practice"><Icon name="info" size={18} /><span><strong>Practice complete</strong>No lasting changes to officers, supplies or reputation. No rewards earned.</span></p> : <section className="result-rewards" aria-label="Rewards">
+    {d.practice ? <p className="result-practice"><Icon name="info" size={18} /><span><strong>Practice complete</strong>No lasting changes to officers, supplies or reputation. No rewards earned. A better result still counts as your casebook best.</span></p> : <section className="result-rewards" aria-label="Rewards">
       <span className="result-score-label"><Icon name="cash" size={16} />Rewards</span>
       <div className="chips">
         {d.fundingReward !== 0 && <Chip tone={d.fundingReward < 0 ? 'danger' : 'mint'} icon="cash">{signedMoney(d.fundingReward)} funding</Chip>}
         {d.trustDelta !== 0 && <Chip tone={d.trustDelta < 0 ? 'danger' : 'mint'} icon="shield">{signed(d.trustDelta, 1)} trust</Chip>}
         {d.devPointReward !== 0 && <Chip tone={d.devPointReward < 0 ? 'danger' : 'amber'} icon="chart">{signed(d.devPointReward)} dev point{Math.abs(d.devPointReward) === 1 ? '' : 's'}</Chip>}
-        {d.fundingReward === 0 && d.trustDelta === 0 && d.devPointReward === 0 && <span className="dim">No funding, trust or development-point change.</span>}
+        {!!d.serviceEarned && <Chip tone="mint" icon="medal">{signed(d.serviceEarned)} service</Chip>}
+        {d.levelReached !== undefined && <Chip tone="amber" icon="medal">Department level {d.levelReached}</Chip>}
+        {d.fundingReward === 0 && d.trustDelta === 0 && d.devPointReward === 0 && !d.serviceEarned && <span className="dim">No funding, trust or development-point change.</span>}
       </div>
     </section>}
   </Card>;

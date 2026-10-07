@@ -3,7 +3,7 @@ import { dispatch } from './game';
 import { createInitialState } from './department';
 import { HOUR_MS } from './economy';
 import { playerArcContext, takeIncident } from './incidents';
-import { casebookRecipes, noveltyWeights, recipeOfScenario, situationCount } from './casebook';
+import { casebookRecipes, foldDebriefs, noveltyWeights, recipeOfScenario, situationCount } from './casebook';
 import { deserialize, serialize } from './save';
 import { drawIncidentSpec, incidentId } from '../gen/incident';
 import { specForSituationV10 } from '../content/scenario-recipes';
@@ -42,16 +42,26 @@ function debrief(scenarioId: string, practice: boolean, objective: number, compl
 }
 
 describe('capability unlocks', () => {
-  it('opens ordinary and business calls to a new department and names what protected rescue needs', () => {
+  it('opens ordinary calls on homes to a new department, then more as its level rises', () => {
     const s = createInitialState(T0);
+    expect(s.department.level).toBe(1);
+    const open = (level: number) => { s.department.level = level; return ALL.filter((type) => isUnlocked(s, type)); };
+    expect(open(1)).toEqual(ALL.filter((type) => unlockRule(type).level === 1));
+    expect(open(1)).not.toContain('burglary');
+    expect(open(2)).toEqual(expect.arrayContaining(['burglary', 'medical_complication']));
+    expect(open(3)).toEqual(expect.arrayContaining(['business_robbery', 'barricaded']));
+    expect(open(3)).not.toContain('active_armed_incident');
+    expect(open(4)).toEqual(expect.arrayContaining(['active_armed_incident']));
     expect(missingRequirements(s, 'protected_rescue')).toEqual({ anyCert: ['vehicle_operations'] });
-    for (const type of ALL.filter((t) => t !== 'protected_rescue')) expect(isUnlocked(s, type), type).toBe(true);
     s.officers.off_park.certs.push('vehicle_operations');
     expect(isUnlocked(s, 'protected_rescue')).toBe(true);
+    expect(open(4)).not.toContain('hostage_crisis');
+    expect(open(5)).toEqual(ALL);
   });
 
   it('gates specialist calls on certification and equipment, and unknown frameworks on level', () => {
     const s = createInitialState(T0);
+    s.department.level = 10;
     for (const officer of Object.values(s.officers)) officer.certs = officer.certs.filter((cert) => cert !== 'entry_team' && cert !== 'crisis_negotiation');
     expect(missingRequirements(s, 'active_armed_incident')).toEqual({ anyCert: ['entry_team', 'less_lethal'] });
     expect(missingRequirements(s, 'hostage_crisis')).toEqual({ anyCert: ['crisis_negotiation'] });
@@ -60,8 +70,8 @@ describe('capability unlocks', () => {
     for (const unit of Object.values(s.units)) if (unit.itemId === 'ballistic_shield') unit.status = 'scrapped';
     expect(missingRequirements(s, 'active_armed_incident')).toEqual({ anyItem: ['ballistic_shield', 'light_protection', 'rescue_shield'] });
     expect(unlockRule('holding' as IncidentType)).toBe(DEFAULT_UNLOCK);
-    s.department.level = 2;
-    expect(missingRequirements(s, 'burglary')).toEqual({ level: 3 });
+    s.department.level = 1;
+    expect(missingRequirements(s, 'burglary')).toEqual({ level: 2 });
   });
 
   it('never strands a department with nothing unlocked', () => {
@@ -79,6 +89,7 @@ describe('v11 board draws', () => {
     const locked = createInitialState(T0, 777);
     expect(boardTypes(locked, 24 * 6).has('protected_rescue')).toBe(false);
     const open = createInitialState(T0, 777);
+    open.department.level = 4;
     open.officers.off_park.certs.push('vehicle_operations');
     const drawn = (s: GameState) => new Set(Array.from({ length: 3000 }, (_, rng) => drawIncidentSpec(rng + 1, { level: 3, trust: 78, contentVersion: 11, ...playerArcContext(s) }).spec.type));
     expect(drawn(locked).has('protected_rescue')).toBe(false);
@@ -155,7 +166,7 @@ describe('casebook record', () => {
     const ref = recipeOfScenario(id)!;
     expect(ref).toMatchObject({ type: 'domestic', variant: 1, characteristic: 'ordinary' });
     expect(Object.keys(s.casebook!.recipes)).toEqual([ref.key]);
-    s.debriefs = [debrief(id, false, 40, false), debrief(id, true, 100, true)];
+    s.debriefs = [debrief(id, false, 40, false)];
     expect(casebookRecipes(s).get(ref.key)!.best).toEqual({ completed: false, objective: 40, safety: 90, label: 'Partial progress' });
     s.debriefs = [debrief(id, false, 30, true), ...s.debriefs];
     const second = card(s, 'welfare_check', 'harbour_court', 0);
@@ -163,6 +174,33 @@ describe('casebook record', () => {
     expect(s.casebook!.recipes[ref.key].best).toEqual({ completed: true, objective: 30, safety: 90, label: 'Resolved' });
     s.debriefs = [];
     expect(casebookRecipes(s).get(ref.key)!.best!.completed).toBe(true);
+  });
+
+  it('counts a better practice result on a situation already met live, and never discovers by practice', () => {
+    const s = createInitialState(T0, 31);
+    const id = card(s, 'domestic', 'cedar_close', 1);
+    takeIncident(s, id);
+    const ref = recipeOfScenario(id)!;
+    s.debriefs = [debrief(id, true, 100, true), debrief(id, false, 40, false)];
+    expect(casebookRecipes(s).get(ref.key)!.best).toEqual({ completed: true, objective: 100, safety: 90, label: 'Resolved', practice: true });
+    // The same situation practiced on another building type: the best counts, but the
+    // building is marked practice-only, so it is not listed as visited.
+    const elsewhere = incidentId({ ...specForSituationV10('domestic', 'harbour_court', { variant: 1, characteristic: 'ordinary' }, 9), contentVersion: 11 });
+    const otherRef = recipeOfScenario(elsewhere)!;
+    expect(otherRef.key).not.toBe(ref.key);
+    // A framework or situation never met live stays undiscovered, whatever practice scored.
+    const unmet = incidentId({ ...specForSituationV10('domestic', 'cedar_close', { variant: 0, characteristic: 'ordinary' }, 9), contentVersion: 11 });
+    const neverSent = incidentId({ ...specForSituationV10('disturbance', 'cedar_close', { variant: 0, characteristic: 'ordinary' }, 9), contentVersion: 11 });
+    s.debriefs = [debrief(elsewhere, true, 90, true), debrief(unmet, true, 100, true), debrief(neverSent, true, 100, true), ...s.debriefs];
+    foldDebriefs(s, T0 + HOUR_MS);
+    expect(s.casebook!.recipes[otherRef.key]).toEqual({ firstAt: T0 + HOUR_MS, practiceOnly: true, best: { completed: true, objective: 90, safety: 90, label: 'Resolved', practice: true } });
+    expect(s.casebook!.recipes[recipeOfScenario(unmet)!.key]).toBeUndefined();
+    expect(s.casebook!.recipes[recipeOfScenario(neverSent)!.key]).toBeUndefined();
+    // A live dispatch to that building type later makes it a visited building.
+    s.incidents.unshift({ id: elsewhere, type: 'domestic', familyId: 'harbour_court', tier: 2, arrivedAt: T0, expiresAt: T0 + HOUR_MS, seen: true });
+    takeIncident(s, elsewhere);
+    expect(s.casebook!.recipes[otherRef.key].practiceOnly).toBeUndefined();
+    expect(deserialize(serialize(s, T0))!.casebook).toEqual(s.casebook);
   });
 
   it('migrates a v5 save from its board and live debriefs, and round-trips v6', () => {
@@ -174,7 +212,7 @@ describe('casebook record', () => {
     s.saveVersion = 5;
     const migrated = deserialize(serialize(s, T0))!;
     expect(migrated).not.toBeNull();
-    expect(migrated.saveVersion).toBe(6);
+    expect(migrated.saveVersion).toBe(7);
     expect(migrated.incidents.some((c) => c.newKind)).toBe(false);
     const ref = recipeOfScenario(live)!;
     expect(migrated.casebook!.frameworksSeen).toEqual([...new Set(['disturbance', ...[...s.incidents].reverse().map((c) => c.type)])]);

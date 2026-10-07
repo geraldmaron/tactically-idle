@@ -9,6 +9,8 @@ import { gateFrameworks, specForSituation, VARIANTS } from './gates/catalog';
 import { collisions, fingerprintById, fingerprintDraft, firstDifference } from './gates/distinctness';
 import type { RecipeFingerprint } from './gates/distinctness';
 import { lintFrameworkData, lintScenario, pronounIssues } from './gates/prose-lint';
+import { thinStages } from './gates/choices';
+import { isProceduralFamily } from '../building';
 
 /** Content gates for every typed framework (docs/content-pipeline.md). A new package must
  * pass all of them before a human reviews it on the story sheet (story.html). */
@@ -59,8 +61,13 @@ describe('content gate: distinctness', () => {
   const all = [...prints, ...authored];
 
   it('explores every path without truncation', () => {
-    for (const print of all) expect(print.truncated, print.key).toBe(false);
+    for (const print of prints) expect(print.truncated, print.key).toBe(false);
     for (const print of prints) expect(print.paths.length, print.key).toBeGreaterThan(4);
+    // From v12 the hand-authored stories offer a second choice at every stage, and the number
+    // of orderings grows past the cap in the largest ones (barricade has over 100,000). A
+    // capped fingerprint is still deterministic, which is all collision checks against new
+    // packages need; typed frameworks above stay exact. This list records which ones cap.
+    expect(authored.filter(print => print.truncated).map(print => print.key)).toEqual(['barricaded/0', 'barricaded/1', 'barricaded/2', 'hostage_crisis/0', 'hostage_crisis/2', 'protected_rescue/1', 'protected_rescue/2']);
   });
   it('every recipe added in v11 or later differs from every other recipe in a decision or an ending', () => {
     const fresh = new Set(NEW.flatMap(entry => VARIANTS.map(variant => `${entry.framework.type}/${variant}`)));
@@ -68,17 +75,13 @@ describe('content gate: distinctness', () => {
     expect(collisions(all).filter(pair => fresh.has(pair.a) || fresh.has(pair.b))).toEqual([]);
   });
   it('records the existing recipes that play identically (known debt, never re-baseline silently)', () => {
-    // Issued v9/v10 content is frozen, so these stay until a new version deepens them.
-    // A new entry here means new content collided; a missing one means a fix landed.
+    // In v9-v11 the eight v9 frameworks collapsed to six shapes (24 recipes, 6 fingerprints);
+    // v12 decision depth makes every typed recipe distinct. What remains is a hand-authored
+    // story. A new entry here means new content collided; a missing one means a fix landed.
     const groups = new Map<string, string[]>();
     for (const print of all) groups.set(print.hash, [...groups.get(print.hash) ?? [], print.key]);
     const shared = [...groups.values()].filter(keys => keys.length > 1).map(keys => keys.sort().join(' = ')).sort();
     expect(shared).toEqual([
-      'burglary/0 = business_robbery/0 = disturbance/0 = false_intruder/0 = vacant_occupancy/0',
-      'burglary/1 = business_robbery/1 = disturbance/1 = domestic/1 = missing_vulnerable/1 = person_in_crisis/1 = vacant_occupancy/1',
-      'burglary/2 = business_robbery/2 = disturbance/2 = false_intruder/2 = vacant_occupancy/2',
-      'domestic/0 = missing_vulnerable/0 = person_in_crisis/0',
-      'domestic/2 = missing_vulnerable/2 = person_in_crisis/2',
       'welfare_check/1 = welfare_check/2',
     ]);
   });
@@ -93,7 +96,8 @@ describe('content gate: distinctness', () => {
   }, 60000);
 
   it('rejects a deliberate reskin: new prose on an existing decision structure', () => {
-    const original = ADDITIONAL_FRAMEWORK_BY_TYPE.burglary!;
+    // The package as it compiles at the gated version, decision depth included.
+    const original = gateFrameworks().find(entry => entry.framework.type === 'burglary')!.framework;
     const reskin: IncidentFramework = { ...original, title: 'The Gym After Hours', personId: 'casey', name: 'Casey Bell', role: 'Gym manager',
       dispatch: 'A door sensor at the gym tripped overnight. Check it with the manager before calling it a break-in.',
       opening: 'The gym’s door sensor tripped after closing, and Casey Bell, the manager, is here. A sensor on its own doesn’t mean anyone got in.',
@@ -111,15 +115,51 @@ describe('content gate: distinctness', () => {
     const print = fingerprintDraft(draft, 'gym_reskin/0');
     const clashes = collisions([...all, print]).filter(pair => pair.a === 'gym_reskin/0' || pair.b === 'gym_reskin/0');
     expect(clashes.map(pair => pair.a === 'gym_reskin/0' ? pair.b : pair.a)).toContain('burglary/0');
-    // Adding an early step is a real decision, but this one copies Water Through the
-    // Ceiling's structure exactly (early step needed when the claim holds), so it fails too.
+    // Changing which report the team can act on is a real decision, but this one copies
+    // Water Through the Ceiling's structure exactly (act on the report that the claim holds,
+    // early step needed when it does), so it fails too.
     const built = buildLocation(issued.locationFamilyId, issued.locationSeed);
     const precaution = { title: 'Ask Casey to lock the other doors', summary: 'Secures the building now, but takes a few minutes.', result: 'Casey locks the other doors.',
       lateTitle: 'Have Casey lock the other doors now', lateSummary: 'It takes longer now.' };
-    const copied = fingerprintDraft(withAdditionalFramework(issued, built, { ...reskin, precaution: { ...precaution, requiredFor: 'confirmed' } }), 'gym_copied/0');
+    const actsOnAlarm = { ...reskin.actOnReport!, assume: 'confirmed' as const };
+    const copied = fingerprintDraft(withAdditionalFramework(issued, built, { ...reskin, actOnReport: actsOnAlarm, precaution: { ...precaution, requiredFor: 'confirmed' } }), 'gym_copied/0');
     expect(collisions([...all, copied]).filter(pair => pair.b === 'gym_copied/0').map(pair => pair.a)).toEqual(['water_leak/0']);
-    // Needed only when the claim is wrong, it is a decision no existing recipe has.
-    const deeper = fingerprintDraft(withAdditionalFramework(issued, built, { ...reskin, precaution: { ...precaution, requiredFor: 'disproved' } }), 'gym_deeper/0');
+    // Early step needed when the claim is wrong, and both accounts needed before acting on
+    // it when it holds: a decision no existing recipe has.
+    const deeper = fingerprintDraft(withAdditionalFramework(issued, built, { ...reskin, actOnReport: actsOnAlarm, precaution: { ...precaution, requiredFor: 'disproved' },
+      corroborate: { for: 'confirmed', summary: 'Before recording the marks, hear Casey and patrol. This takes a few more minutes.' } }), 'gym_deeper/0');
     expect(collisions([...all, deeper]).filter(pair => pair.a === 'gym_deeper/0' || pair.b === 'gym_deeper/0')).toEqual([]);
   });
+});
+
+describe('content gate: choices', () => {
+  // A stage that opens with one button the player can press is not a decision.
+  it.each(FRAMEWORKS.map(entry => ({ type: entry.framework.type, entry })))('$type opens every stage with at least two choices, on every building type', ({ entry }) => {
+    for (const familyId of entry.families) for (const variant of VARIANTS) {
+      const thin = thinStages(incidentId(specForSituation(entry.framework.type, familyId, variant)));
+      expect(thin.map(stage => `${stage.stage} [${stage.choices.join(', ')}] after ${stage.path}`), `${familyId}/${variant}`).toEqual([]);
+    }
+  }, 300000);
+
+  it('catches the single-button stages the typed frameworks had before v12', () => {
+    for (const type of ['burglary', 'water_leak'] as const) {
+      const issued = { ...specForSituation(type, FRAMEWORKS.find(entry => entry.framework.type === type)!.families[0], 0), contentVersion: 11 };
+      expect(thinStages(incidentId(issued)).length, type).toBeGreaterThan(0);
+    }
+    // The issued v11 hostage call opened with a single choice.
+    const hostage = { ...specForSituation('hostage_crisis', 'market_row', 0), contentVersion: 11 };
+    expect(thinStages(incidentId(hostage)).some(stage => stage.path === 'start')).toBe(true);
+  });
+
+  // The six hand-authored stories have their own structures; v12 gives each thin stage a
+  // second real choice (decisions-v8/choices-v12.ts). Their decision graphs are larger, so
+  // the suite checks one authored and one generated building type for each.
+  const AUTHORED = SCENARIO_TYPES_V11.filter(info => !ADDITIONAL_FRAMEWORK_BY_TYPE[info.type]);
+  it.each(AUTHORED.map(info => ({ type: info.type, info })))('$type (hand-authored) opens every stage with at least two choices', ({ info }) => {
+    const families = [...new Set([info.families[0], info.families.find(isProceduralFamily)].filter((id): id is string => !!id))];
+    for (const familyId of families) for (const variant of VARIANTS) {
+      const thin = thinStages(incidentId(specForSituation(info.type, familyId, variant)));
+      expect(thin.map(stage => `${stage.stage} [${stage.choices.join(', ')}] after ${stage.path}`), `${familyId}/${variant}`).toEqual([]);
+    }
+  }, 600000);
 });

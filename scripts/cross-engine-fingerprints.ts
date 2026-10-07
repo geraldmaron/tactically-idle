@@ -6,7 +6,7 @@
 //   bun scripts/cross-engine-fingerprints.ts --stride 4 # every fourth entry of each suite
 //
 // Suites: `_g1` and `_g2` generated buildings (plain and furnished), published v4 definitions,
-// issued v6-v8 (authored buildings with v7 furnishing from content v7), v9 and v10 incidents.
+// issued v6-v8 (authored buildings with v7 furnishing from content v7), v9, v10 and v11 incidents.
 // Exits 1 on any mismatch and lists it. A mismatch in a frozen suite is a finding to report; never
 // re-baseline frozen JSON to make this pass.
 //
@@ -74,6 +74,7 @@ const SUITES: Suite[] = [
     ({ type, familyId, seed, buildingSeed, tier, contentVersion }) => ({ type, familyId, seed, buildingSeed, tier, contentVersion })),
   incidentSuite('issued v9', 'src/gen/incident/issued-v9-fingerprints.json'),
   incidentSuite('issued v10', 'src/gen/incident/issued-v10-fingerprints.json'),
+  incidentSuite('issued v11', 'src/gen/incident/issued-v11-fingerprints.json'),
 ];
 
 const engine = typeof (globalThis as { Bun?: { version: string } }).Bun !== 'undefined' ? `Bun ${(globalThis as unknown as { Bun: { version: string } }).Bun.version} (JavaScriptCore)` : `Node ${process.version} (V8)`;

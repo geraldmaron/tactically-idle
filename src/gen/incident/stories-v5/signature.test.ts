@@ -8,7 +8,7 @@ import { initializePersonnel } from '../../../sim/personnel';
 import { bandFor, builtFor, evaluateAction, openingFlag } from '../../../sim/resolution';
 import { next } from '../../../sim/rng';
 import { getScenario } from '../../../sim/scenario-registry';
-import { deserialize, serialize } from '../../../sim/save';
+import { CURRENT_SAVE_VERSION, deserialize, serialize } from '../../../sim/save';
 import { currentStoryPrompt } from '../../../sim/story-context';
 import { scenarioActions, type IncidentSpec, type ScenarioDefinition } from '../../../sim/scenario-types';
 import { apply, makeState, NOW, startCmd, unitId } from '../../../sim/test-fixtures';
@@ -32,7 +32,7 @@ function find(truths: Record<string, boolean> = {}, available = true): ScenarioD
 }
 function running(s: ScenarioDefinition, gear: string[] = []): GameState {
   const state = makeState({ inventory: Object.fromEntries(gear.map(item => [item, item === 'trauma_kit' ? 5 : 1])) });
-  state.saveVersion = 6; state.contentVersion = 5; initializePersonnel(state);
+  state.saveVersion = CURRENT_SAVE_VERSION; state.contentVersion = 5; initializePersonnel(state);
   const certs = Object.values(COURSES).flatMap(course => course.grants.cert ? [course.grants.cert] : []);
   for (const officer of Object.values(state.officers)) officer.certs = [...new Set(certs)];
   state.incidents = [{ id: s.id, type: 'hostage_crisis', familyId: 'market_row', tier: 2, arrivedAt: NOW, expiresAt: NOW + 3_600_000, seen: false }];

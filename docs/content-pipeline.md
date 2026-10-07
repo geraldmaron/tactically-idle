@@ -33,8 +33,29 @@ Each recipe must differ from every other in a decision or an ending (see "Distin
 - **`precaution`** (v11): an early step in the first stage, such as turning off the water or putting staff on the doors. The resolution for `requiredFor` needs it. Taking it early always costs time. Leaving it costs a slower late step that can fail and leave the call unfinished.
 - **`waitFor`** (v11): a third, slower close that works whatever the check found, such as waiting with the person until a relative arrives. It cannot fall through, but it takes longer and earns no trust.
 - **`corroborate`** (v11): the resolution for one answer needs both accounts heard first, such as before handing a child to an adult. A missed account becomes a follow-up step.
+- **`actOnReport`** (v12): skip the check and carry out the step that fits the first report (`assume`). The outcome is decided by the hidden truth only when the step commits. If the report was right, the call closes a step early: less squad strain, and one less trust (`acted_on_report` ending). If it was wrong, the team backs out (`wrong` text, read only afterwards), the call loses ground and pressure rises, and the step that fits the truth is still to do. Keep it on the side that does **not** walk the person out: the engine can't escort someone whose location the team hasn't confirmed, so a moving act is refused whenever the first report names the wrong room.
 
-Extensions only touch the paths they apply to. `corroborate` alone affects one answer, so the other answer still needs something distinct. Run the gate rather than reasoning about it.
+Extensions only touch the paths they apply to. `corroborate` alone affects one answer, so the other answer still needs something distinct. A recipe's decisions differ on each side of the truth, so make each framework differ from every other on **both** sides: `precaution` changes both, `corroborate` and `moveOn` change one, and `actOnReport.assume` changes which side is the gamble's good one. Run the gate rather than reasoning about it.
+
+### Decision depth (content v12)
+
+Issued packages are never edited in place, so v12 adds structure in `src/content/framework-depth-v12.ts`, applied by `frameworkAt(type, contentVersion)` from v12 on. Calls before v12 compile exactly as issued (`issued-v11.test.ts` and earlier). Every typed framework gets `actOnReport` and, where it lacks one, `waitFor`. The eight v9 frameworks also get the combination of `precaution` and `corroborate` that makes them distinct:
+
+| Framework | Act on report | Precaution | Corroborate | Walks out |
+| --- | --- | --- | --- | --- |
+| missing_vulnerable | disproved | disproved | disproved | confirmed |
+| person_in_crisis | disproved | confirmed | disproved | confirmed |
+| domestic | disproved | none | disproved | confirmed |
+| burglary | disproved | confirmed | none | none |
+| business_robbery | confirmed | none | confirmed | none |
+| vacant_occupancy | disproved | disproved | confirmed | none |
+| disturbance | confirmed | none | disproved | none |
+| false_intruder | confirmed | disproved | none | disproved |
+| fall_at_home | disproved | none | none | none |
+| water_leak | confirmed | (v11) confirmed | none | none |
+| lost_child | confirmed | (v11) disproved | (v11) confirmed | confirmed |
+
+From v12 the compiler also refuses a building where a call that walks the person out finds that walk blocked by furniture, as the engine checks it. Lazy hosting moves the call to another seed. Before v12, `false_intruder` situation 2 on some `_g2` houses had no step the player could take at resolve.
 
 ## Agent brief template
 
@@ -75,6 +96,7 @@ All gates run on every typed framework, existing and new, at the current content
 | Prose lint | `src/gen/incident/gates/prose-lint.ts` | `content-gates.test.ts` |
 | Distinctness | `src/gen/incident/gates/distinctness.ts` | `content-gates.test.ts` |
 | Binding, reach, hosting, journeys | `src/gen/incident/gates/playability.ts` | `content-playability.test.ts` |
+| Choices | `src/gen/incident/gates/choices.ts` | `content-gates.test.ts` |
 
 ```sh
 npx vitest run src/gen/incident/content-gates.test.ts src/gen/incident/content-playability.test.ts
@@ -116,7 +138,7 @@ stage : action family : outcome class  >  …  >  end:<ending>/<disposition>
 
 The fingerprint is the sorted set of paths. Two recipes collide when their sets are equal. Every recipe added in v11 or later must collide with nothing, including the six hand-authored stories. The test proves the gate rejects a deliberate reskin: the alarm framework rewritten as a gym story collides with `burglary/0`. Adding a precaution that copies Water Through the Ceiling's structure collides with `water_leak/0`. Only a precaution needed when the claim is wrong is new.
 
-**Findings in the issued catalog (known debt).** The eight v9 frameworks share one compiled structure. Their 24 recipes produce 6 distinct fingerprints:
+**Findings in the issued catalog.** Through v11 the eight v9 frameworks shared one compiled structure, and their 24 recipes produced 6 distinct fingerprints (below). v12 decision depth makes all 33 typed recipes distinct. The gate now records only `welfare_check/1 = welfare_check/2`, a hand-authored story.
 
 | Plays identically | Shape |
 | --- | --- |
@@ -127,17 +149,37 @@ The fingerprint is the sorted set of paths. Two recipes collide when their sets 
 | domestic, missing_vulnerable, person_in_crisis (situation 3) | the same, after the independent source |
 | welfare_check situations 2 and 3 | hand-authored story; identical with one squad and the standard loadout |
 
-Only `false_intruder` situation 2 is unique among the 24. These recipes are issued and frozen, so the test records the groups instead of deleting anything. A new collision fails the test, and a fix needs the list updated. Deepening them belongs in a later content version.
+Only `false_intruder` situation 2 was unique among the 24. The issued v9–v11 calls are frozen and still play this way. New draws use v12.
 
 **Limits.**
 - Exploration uses one squad with the standard loadout. Two- and three-squad actions in the hand-authored stories aren't explored, so their fingerprints understate them.
 - The distinctness test fingerprints on one building per framework. A second test confirms the new frameworks' fingerprints don't change with the building, cast or placement.
 
+### Choices
+
+A stage that opens with one button the player can press is not a decision. The gate plays every reachable path through the real engine, as distinctness does, and fails when the run starts, or enters a stage, with fewer than two choices the player can take. Steps the player can see but can't take yet don't count. It runs on every listed building type for every situation.
+
+- Before v12, every typed recipe had such stages: pick one of two approaches, then press the only button, then press the only button. The test proves the gate catches this on issued v11 calls.
+- The six hand-authored stories had them too; the issued v11 hostage crisis opened with one. From v12, `src/gen/incident/decisions-v8/choices-v12.ts` gives each such stage a second choice built from the story's own flags, facts and services. Each one changes time, risk, what is recorded or how the call ends, following v8's rule against relabelled duplicates. A preparation step only counts if it changes the odds of a step whose outcome depends on the roll; a bonus on a step that always succeeds is not a choice. The gate checks these stories on one authored and one generated building type each, because their decision graphs are larger.
+
+| Story | Thin stage in v11 | Second choice from v12 |
+| --- | --- | --- |
+| Hostage crisis | Opening; Ben's release; the final exchange; a lost line under threat | Let Lewis state his demand first; ask for Mara's release with Ben's; ask for Mara before any recording; have patrol retry the relay |
+| Armed incident | Before the pause; after it | Talk Eli down out of sight first (eases the urgent response and an unannounced approach); go in on the silence without the stand-down check (decided by hidden truth) |
+| Protected rescue | After hearing Jun; after reaching Jun; the final move | Wait with Jun for a quiet spell first (patrol learns the gunfire's pattern); wait at staging for one |
+| Medical | Before the conversation; waiting for or meeting the crew | Send the medic first; ask Rosa how the dizziness is (eases pressure that otherwise costs her safety) |
+| Welfare check | Before the current check; after asking again | Leave Ada in peace with a card (a partial ending); have dispatch match the timestamps |
+| Barricade | Agreeing the exit; meeting her; repairing the agreement; route unchecked; care after talking at home | Offer the private conversation where Mina is; check the doorway yourselves; agree she sees her own doctor |
+
+Two routing faults on furnished `_g2` layouts left some of these calls with no usable step at all, before v12 too. Both are fixed in the engine, only where the old code failed: a squad holding a window or door staging point within the 1 ft clearance now paths from the nearest clear point a step away (`furnishedLocalPath`), and a crew meeting point whose zone centroid falls outside a wrapped zone uses the zone's first staging point (`physical-care.ts`).
+
+The explorers evaluate each state's action views once and reuse them for every move and outcome band, which cut the largest barricade exploration from 37 minutes to under a minute.
+
 ### Playability
 
 - **Binding and reach.** The gate generates 50 buildings per listed generated type at the current version. Each call must generate, pass `validateStoryBindings`, and have the person's start and reported spots reachable by squads from the entry staging points (`routeBetween`, as in `v10-locations.test.ts`).
 - **Hosting.** A generated type is listed only where at least 30% of building seeds host the call at the drawn seed. Calls on other seeds move to another seed of the same type.
-- **Journeys.** For each situation, one run must complete the agreed step and one must close through the failed-response report. Runs use the engine's own dice, from campaign seeds tried in order. The run found is replayed with `serialize`/`deserialize` after every step, and the restored run must match exactly. Practice pays no reward.
+- **Journeys.** For each situation, one run must complete the agreed step and one must close through the failed-response report. From v12 every typed call has a close that can't fall through, so a failed response needs both in-person checks to come back inconclusive. The failed-response journeys therefore run on the first listed building, where each candidate run is cheap, and search up to 20,000 campaign seeds. Runs use the engine's own dice, from campaign seeds tried in order. The run found is replayed with `serialize`/`deserialize` after every step, and the restored run must match exactly. Practice pays no reward.
 
 The distinctness explorer chooses the dice before each decision. Such runs are never saved, because the save validator rightly rejects a sample stream that has been tampered with. Journeys never choose dice, which is why they search campaign seeds instead.
 
@@ -167,7 +209,7 @@ Record **approve**, **edit** (as a data change to the package, then rerun the ga
 
 - A package ships by joining the next content version's catalog (`NEW_FRAMEWORKS_V11` for v11). Older versions' lists never change, so issued v1–v10 IDs regenerate byte for byte (`issued-v9.test.ts`, `issued-v10.test.ts`, `catalog-v9.test.ts`).
 - A new framework type is valid only from the version that introduces it. `parseIncidentId` rejects it in older IDs.
-- Once a version is issued, capture its fingerprints as v10 did (`issued-v10-fingerprints.json`). After that, a package is never edited in place. Fixes ship as a new framework or a new optional structure in the next version.
+- Once a version is issued, capture its fingerprints as v10 and v11 did (`issued-v10-fingerprints.json`, `issued-v11-fingerprints.json`). After that, a package is never edited in place. Fixes ship as a new framework or a new optional structure in the next version (v12 decision depth is the worked example).
 - Compiler extensions must be output-neutral for every existing package. The issued fingerprint suites check this.
 
 ## First drop (content v11)
@@ -187,5 +229,5 @@ Two generic changes were needed outside the framework files, both output-neutral
 ## Open issues
 
 - The v10 placement line can read awkwardly with some room labels ("in the shop floor", "in the living / dining"). It is shared, issued compiler output, so a fix ships with a version gate in a later drop.
-- The eight v9 frameworks collapse to six decision shapes (above). They need deepening in a later version, for example with the v11 structures.
+
 - The scenario library (`ScenarioLibrary.tsx`) still lists the v10 catalog. The v11 frameworks reach players through board draws until the casebook replaces the library (scale plan §5).

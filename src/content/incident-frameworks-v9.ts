@@ -49,6 +49,11 @@ export interface IncidentFramework {
   /** The resolution for this answer needs both accounts heard first, for example before
    * handing a child to an adult. A missed account becomes a follow-up step. */
   corroborate?: { for: 'confirmed' | 'disproved'; summary: string };
+  /** (content v12) Skip the check and carry out the step that fits the first report. It saves
+   * the squad a step and its strain when the report is right, at a little trust. When the
+   * report is wrong the team backs out (`wrong`, read only after it happens), the call loses
+   * ground, and the step that fits what is true is still to do. */
+  actOnReport?: { title: string; summary: string; assume: 'confirmed' | 'disproved'; wrong: string };
 }
 export const ADDITIONAL_FRAMEWORKS: readonly IncidentFramework[] = [
   { type: 'missing_vulnerable', title: 'The Usual Way Home', personId: 'alex', name: 'Alex Morgan', role: 'Adult reported missing',

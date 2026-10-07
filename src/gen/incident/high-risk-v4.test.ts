@@ -9,7 +9,7 @@ import { bandFor, builtFor, evaluateAction, openingFlag } from '../../sim/resolu
 import { next } from '../../sim/rng';
 import { getScenario } from '../../sim/scenario-registry';
 import { scenarioActions, type IncidentSpec } from '../../sim/scenario-types';
-import { deserialize, serialize } from '../../sim/save';
+import { CURRENT_SAVE_VERSION, deserialize, serialize } from '../../sim/save';
 import { apply, makeState, NOW, setRun, startCmd, unitId } from '../../sim/test-fixtures';
 import type { GameState, OutcomeBand } from '../../sim/types';
 import { generateIncident, INCIDENT_CONTENT_VERSION, incidentId } from './index';
@@ -31,7 +31,7 @@ function running(spec: IncidentSpec, equipment: string[] = [], options: { vehicl
   const inventory = Object.fromEntries(equipment.map(id => [id, id === 'trauma_kit' ? 5 : 1]));
   if (options.vehicle) inventory.armored_rescue_vehicle = 1;
   const state = makeState({ inventory });
-  state.saveVersion = 6; state.contentVersion = 4; initializePersonnel(state);
+  state.saveVersion = CURRENT_SAVE_VERSION; state.contentVersion = 4; initializePersonnel(state);
   if (options.certs !== false) {
     const certs = Object.values(COURSES).flatMap(course => course.grants.cert ? [course.grants.cert] : []);
     for (const officer of Object.values(state.officers)) officer.certs = [...new Set(certs)];

@@ -81,7 +81,7 @@ describe('initial board', () => {
   it('passes department level, trust and content version to the generator', () => {
     createInitialState(T0);
     expect(draw).toHaveBeenCalled();
-    for (const call of draw.mock.calls) expect(call[1]).toMatchObject({ level: 3, trust: 78, contentVersion: INCIDENT_CONTENT_VERSION });
+    for (const call of draw.mock.calls) expect(call[1]).toMatchObject({ level: 1, trust: 78, contentVersion: INCIDENT_CONTENT_VERSION });
   });
 
   it('is deterministic and leaves the starting candidates unchanged by the board', () => {
@@ -245,7 +245,7 @@ describe('tier gating', () => {
     calls.length = 0;
     s = ok(s, { type: 'tick' }, T0 + 3 * HOUR_MS);
     expect(calls.length).toBeGreaterThan(0);
-    expect(calls.every((c) => c.level === 3 && c.trust === 78)).toBe(true);
+    expect(calls.every((c) => c.level === 1 && c.trust === 78)).toBe(true);
     s.department.level = 6;
     s.department.trust = 40;
     s.incidents = []; // room on the board, so arrivals are drawn

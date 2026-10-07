@@ -66,7 +66,14 @@ describe('v4 release preserves issued legacy responsibilities and rewards', () =
       expect(first.units).toEqual(before.units);
       expect(first.reservations).toEqual(before.reservations);
       expect(deserialize(serialize(first, NOW))).toEqual(first);
-      if (debrief) expect(computeDebrief(first, first.activeRun!)).toEqual(debrief);
+      if (debrief) {
+        // Rewards and responsibilities are unchanged; at the current content version the call
+        // also earns department service (save v7).
+        const { serviceEarned, levelReached, ...loaded } = computeDebrief(first, first.activeRun!)!;
+        expect(loaded).toEqual(debrief);
+        expect(serviceEarned).toBeGreaterThan(0);
+        void levelReached;
+      }
     }
   });
 
@@ -85,7 +92,10 @@ describe('v4 release preserves issued legacy responsibilities and rewards', () =
     expect(result.result).toEqual({ ok: true });
     expect(result.state.department.funding - loaded.department.funding).toBe(report.fundingReward);
     expect(result.state.department.devPoints - loaded.department.devPoints).toBe(report.devPointReward);
-    expect(result.state.debriefs[0]).toEqual(report);
+    // Loading lifts the campaign to the current content version, so the closed call also earns
+    // department service (save v7); the debrief saved is the one the loaded campaign shows.
+    expect(result.state.debriefs[0]).toEqual(computeDebrief(loaded, loaded.activeRun!));
+    expect(result.state.debriefs[0]).toEqual({ ...report, serviceEarned: result.state.debriefs[0].serviceEarned });
     const again = apply(result.state, { type: 'closeDebrief' });
     expect(again.result.ok).toBe(false);
     expect(again.state).toBe(result.state);

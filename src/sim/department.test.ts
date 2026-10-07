@@ -40,7 +40,7 @@ function refused(state: GameState, cmd: Command, now: number): string {
 describe('starting state', () => {
   const s = createInitialState(T0);
   it('matches the fixed contract other agents rely on', () => {
-    expect(s.department).toMatchObject({ name: 'Westhaven Department', funding: 12400, devPoints: 3, trust: 78, level: 3, rosterCap: 12, trainingSlots: 1 });
+    expect(s.department).toMatchObject({ name: 'Westhaven Department', funding: 12400, devPoints: 3, trust: 78, level: 1, service: 0, rosterCap: 12, trainingSlots: 1 });
     expect(Object.keys(s.officers).sort()).toEqual(
       ['off_brooks', 'off_chen', 'off_lindqvist', 'off_okafor', 'off_ortiz', 'off_park', 'off_reyes', 'off_vale'].sort(),
     );

@@ -9,6 +9,7 @@ import { CURRENT_SAVE_VERSION } from './save';
 import { createPersonnel } from './personnel';
 import { INCIDENT_HANDLERS, seedIncidentBoard } from './incidents';
 import { setMaintenanceBudget } from './equipment-manager';
+import { START_LEVEL } from './department-level';
 import { INCIDENT_CONTENT_VERSION } from '../gen/incident';
 
 export const DEPARTMENT_HANDLERS: HandlerMap<DepartmentCommandType> = {
@@ -56,7 +57,8 @@ export function createInitialState(now: number, campaignSeed = 12345): GameState
       funding: 12400,
       devPoints: 3,
       trust: 78,
-      level: 3,
+      level: START_LEVEL,
+      service: 0,
       rosterCap: 12,
       trainingSlots: 1,
       unlockedNodes: [],
