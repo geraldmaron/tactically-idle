@@ -2,6 +2,8 @@ node_modules
 dist
 .playwright-mcp
 *.log
-.claude/
+.claude/*
+!.claude/skills/
 .DS_Store
 *.tsbuildinfo
+__pycache__/

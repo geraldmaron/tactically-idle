@@ -1,0 +1,79 @@
+# Game words for Tactically Idle call prose.
+# Join this file to written-voice's allow-words.txt at run time. Never use it
+# alone, because the checker's allow flag replaces the default list.
+# Before each run, append the current call's cast names, lowercased.
+# One word per line, lowercase. Add real words freely. A misspelled name is a
+# bug, never an entry here.
+
+# Team, roles and radio
+ems
+callout
+comms
+recon
+medic
+medics
+paramedic
+paramedics
+dispatcher
+dispatchers
+keyholder
+walkie
+handover
+debriefs
+casebook
+playtest
+standoff
+
+# Places and things on scene
+stairwell
+rooftop
+countertop
+driveway
+carport
+backpack
+doorbell
+intercom
+cellphone
+voicemail
+wheelchair
+checkpoint
+storeroom
+postcards
+shopfronts
+
+# People and actions
+mom
+moms
+onlookers
+passersby
+overheard
+partway
+withdrew
+handwritten
+cooperative
+timeline
+livestream
+spokesperson
+
+# Building and setting names in the catalog, read 2026-10-06
+harbour
+market
+cedar
+maple
+orchard
+commons
+
+# Officer traits, roles and stress bands
+impatient
+observant
+rookie
+overloaded
+strained
+
+# Persona and texture words the dictionary lacks
+ponytail
+watercolor
+wildflowers
+playlists
+soundtracks
+jigsaw
