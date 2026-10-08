@@ -172,3 +172,33 @@ tr.sl-unreached td:first-child b { color: var(--warn); }
   .sl-controls select { width: 100%; }
   .sl-odds-bar { width: 72px; }
 }
+
+/* Incident lab (docs/incident-domain-model.md, M1) */
+.sl-labtabs { position: sticky; top: 49px; z-index: 4; display: flex; flex-wrap: wrap; gap: 6px; padding: 6px 0; background: var(--bg); }
+.sl-labtabs button { min-height: 32px; padding: 4px 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); color: var(--text-dim); cursor: pointer; font: inherit; font-size: 13px; }
+.sl-labtabs button[aria-pressed="true"], .sl-toolbar button[aria-pressed="true"] { background: var(--panel-3); color: var(--text); border-color: var(--amber); }
+.sl-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 8px 18px; }
+.sl-mono { font-family: ui-monospace, monospace; font-size: 11.5px; color: var(--text-dim); overflow-wrap: anywhere; }
+.sl-table tr.sl-current td { background: var(--panel-3); }
+.sl-table tr.sl-total td { font-weight: 600; border-top: 1px solid var(--line-strong); }
+.sl-chip.ok { background: #1f4d3a; color: var(--marker-mint); }
+.sl-chip.mid { background: #4a3d1a; color: var(--amber-2); }
+.sl-chip.bad { background: #4d1f24; color: #ffb3b3; }
+.sl-chip.warn { background: #4a3d1a; color: var(--amber-2); }
+.sl-map ul.sl-legend { margin-top: 8px; columns: 2 260px; }
+.sl-graph { display: block; }
+.sl-graph-col { fill: var(--muted); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; }
+.sl-graph-node { cursor: pointer; }
+.sl-graph-node rect { fill: var(--panel-2); stroke: var(--line-strong); }
+.sl-graph-node rect.sel { stroke: var(--amber); stroke-width: 2; }
+.sl-graph-node.end rect { fill: var(--panel-3); }
+.sl-graph-node rect.disp-resolved { stroke: var(--mint); }
+.sl-graph-node rect.disp-relief_partial { stroke: var(--amber); }
+.sl-graph-node rect.disp-unresolved { stroke: var(--danger); }
+.sl-graph-id { fill: var(--text); font-size: 12px; font-family: ui-monospace, monospace; }
+.sl-graph-sub { fill: var(--muted); font-size: 11px; }
+.sl-node-detail { margin-top: 10px; }
+.sl-outcome-line { padding: 3px 0; border-bottom: 1px dashed var(--line); }
+.sl-outcome-line:last-child { border-bottom: 0; }
+.sl-writing td { vertical-align: top; }
+.sl-writing tr.flagged td { background: rgba(255, 90, 90, .06); }

@@ -305,7 +305,7 @@ export function endingSources(s: ScenarioDefinition): Record<string, EndingSourc
       if (!effect.ending) continue;
       const entry = byEnding.get(effect.ending) ?? { bands: new Set<OutcomeBand>(), conditional: false };
       entry.bands.add(band);
-      entry.conditional ||= !!(effect.when || effect.truth?.length);
+      entry.conditional ||= !!(effect.when || effect.truth?.length || effect.clocks?.length);
       byEnding.set(effect.ending, entry);
     }
     const retiredExit = isGenericResponseExit(s, action);
@@ -383,4 +383,34 @@ export function createExplorer(id: string, kit: Kit, cap = 6000) {
     return { ...result, endings: { ...result.endings }, flat: [...result.flat] };
   };
   return { step };
+}
+
+// ---------------------------------------------------------------- call-tree nodes
+
+/** The shallowest engine state where a call-tree node is the current decision (its `at:` flag is
+ * set, or the call has not started for the root), found breadth first through the engine. Null
+ * when this squad and kit can't reach it within the walk cap. */
+export function nodeEntry(id: string, kit: Kit, nodeId: string, root: string): StageEntry | null {
+  const start = startLabRun(id, kit);
+  const isAt = (state: GameState) => {
+    const flags = state.activeRun!.flags;
+    return nodeId === root ? !flags.includes('tree:started') : flags.includes(`at:${nodeId}`);
+  };
+  const queue: { state: GameState; path: LabMove[] }[] = [{ state: start, path: [] }];
+  const seen = new Set([stateKey(start)]);
+  for (let n = 0; queue.length && n < STAGE_WALK_CAP; n++) {
+    const { state, path } = queue.shift()!;
+    const run = state.activeRun!;
+    if (run.status !== 'active' || run.stage === 'debrief') continue;
+    const views = viewsOf(state);
+    if (isAt(state)) return { state, views, path };
+    for (const move of availableMoves(state, views)) {
+      if (move.kind === 'fail') continue;
+      const after = applyMove(state, move, views);
+      if (!after || seen.has(stateKey(after))) continue;
+      seen.add(stateKey(after));
+      queue.push({ state: after, path: [...path, toLab(move)] });
+    }
+  }
+  return null;
 }

@@ -277,9 +277,10 @@ export function LiveView(p: LiveViewProps) {
                         a.summary
                       )}
                     </span>
+                    {a.eligible && a.authority?.allowed && <span className="callbtn-command"><Icon name="radio" size={12} />{a.authority.reason}</span>}
                     {a.eligible && <span className="callbtn-forecast">
                       {!a.eventResult && <OddsBar likelihood={a.likelihood} mini />}
-                      <span className="callbtn-forecast-text">~{opMinutes(a.timeCost)} · {!a.eventResult ? `${outcomePercentages(a.likelihood).favorable}% chance to go well · ` : ''}<span className={`callbtn-harm callbtn-harm-${a.consequenceLevel}`}>possible harm: {CONSEQUENCE_LABEL[a.consequenceLevel].toLowerCase()}</span></span>
+                      <span className="callbtn-forecast-text">{a.timeLabel ?? `~${opMinutes(a.timeCost)}`} · {!a.eventResult ? `${outcomePercentages(a.likelihood).favorable}% chance to go well · ` : ''}<span className={`callbtn-harm callbtn-harm-${a.consequenceLevel}`}>possible harm: {CONSEQUENCE_LABEL[a.consequenceLevel].toLowerCase()}</span></span>
                     </span>}
                   </span>
                 </button>
@@ -533,7 +534,7 @@ export function ActionSheet(p: ActionSheetProps) {
       footer={
         v && (
           <div className="operation-commit">
-            <p className="operation-commit-meta">Acting: {squadText}{supportingText} · Est. {opMinutes(v.timeCost)}{v.suppliesRequired.length ? ` · ${v.suppliesRequired.reduce((total, item) => total + item.qty, 0)} supplies` : ' · No supplies'}</p>
+            <p className="operation-commit-meta">Acting: {squadText}{supportingText} · Est. {v.timeLabel ?? opMinutes(v.timeCost)}{v.suppliesRequired.length ? ` · ${v.suppliesRequired.reduce((total, item) => total + item.qty, 0)} supplies` : ' · No supplies'}</p>
             <Button variant="primary" block disabled={!v.eligible || p.acting.length === 0} onClick={p.onConfirm}>
               Confirm: {v.title}
             </Button>
@@ -546,12 +547,13 @@ export function ActionSheet(p: ActionSheetProps) {
           {p.onBackToSupport && <Button variant="ghost" onClick={p.onBackToSupport}>Back to care &amp; support</Button>}
           {p.squads.length > 1 && <ActionSquadAssignment {...p} view={v} />}
           {v.summary !== v.outcomePreview.favorable && <p className="operation-action-summary">{v.summary}</p>}
+          {v.eligible && v.authority?.allowed && <p className="operation-command-line"><Icon name="radio" size={14} />{v.authority.reason}</p>}
           <div className="chips action-glance">
-            <Chip icon="clock">Estimated time: {opMinutes(v.timeCost)}</Chip>
+            <Chip icon="clock">Estimated time: {v.timeLabel ?? opMinutes(v.timeCost)}</Chip>
             {p.targetLabel && <Chip icon="pin">{p.targetLabel}</Chip>}
             {names(p.support).length > 0 && <Chip tone="blue" icon="handover">Support: {names(p.support).join(', ')}</Chip>}
           </div>
-          {v.timeRange && <p className="operation-note operation-time-range">{v.timeRange.min === v.timeRange.max ? `${opMinutes(v.timeRange.min)} for any outcome.` : `${v.timeRange.min}–${opMinutes(v.timeRange.max)} depending on the result.`}</p>}
+          {v.timeRange && !v.timeLabel && <p className="operation-note operation-time-range">{v.timeRange.min === v.timeRange.max ? `${opMinutes(v.timeRange.min)} for any outcome.` : `${v.timeRange.min}–${opMinutes(v.timeRange.max)} depending on the result.`}</p>}
           <OutcomeForecast action={v} />
           <dl className="operation-costs">
             <div><dt>Requirements</dt><dd className="chips">{requirementParts(v.requirementLine).map((part) => <Chip key={part} tone={v.eligible ? 'mint' : 'neutral'} icon={v.eligible ? 'check' : 'list'}>{part}</Chip>)}</dd></div>

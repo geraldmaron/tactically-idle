@@ -12,7 +12,8 @@
     "check:art": "node scripts/validate-art.mjs",
     "verify": "npm run typecheck && npm test && npm run check:art && npm run build",
     "test:e2e": "node scripts/play-loop.mjs",
-    "capture:locations": "node scripts/capture-locations.mjs"
+    "capture:locations": "node scripts/capture-locations.mjs",
+    "check:strings": "bun scripts/check-strings.ts"
   },
   "dependencies": {
     "react": "^19.3.0",

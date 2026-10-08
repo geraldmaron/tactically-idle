@@ -136,6 +136,12 @@
 .operation-choices .callbtn-off.callbtn-on .callbtn-forecast { color: var(--text-dim); }
 .operation-more-choices { margin-top: 10px; min-height: 44px; white-space: normal; }
 .operation-action-summary { margin: 0 0 3px; font-size: 15px; line-height: 1.4; }
+/* What command approved (sim/authorization.ts), under the summary on the card and the sheet. */
+.callbtn-command, .operation-command-line { display: flex; align-items: flex-start; gap: 5px; color: var(--mint); }
+.callbtn-command .icon, .operation-command-line .icon { flex-shrink: 0; margin-top: 2px; }
+.callbtn-command { font-size: 12px; line-height: 1.35; }
+.callbtn-on .callbtn-command { color: var(--amber-ink); }
+.operation-command-line { margin: 0 0 6px; font-size: 14px; line-height: 1.4; }
 .operation-costs { display: grid; gap: 8px; margin: 5px 0 9px; }
 .operation-costs > div { display: grid; grid-template-columns: minmax(0, 1fr); gap: 2px; }
 .operation-costs dt { font-size: 12px; font-weight: 600; color: var(--text-dim); }

@@ -101,6 +101,7 @@ function validDecision(d: unknown): boolean {
       && (d.committed.forceOutcome === undefined || validForceOutcome(d.committed.forceOutcome))
       && (d.committed.personCasualties === undefined || isList(d.committed.personCasualties, validPersonCasualtyRecord))
       && (d.committed.protectionUsed === undefined || isObj(d.committed.protectionUsed) && strings(d.committed.protectionUsed, ['itemId', 'unitId']))
+      && (d.committed.drawn === undefined || isList(d.committed.drawn, (r) => isObj(r) && oneOf(r.model, ['incoming_fire', 'team_force', 'cascade']) && strings(r, ['personId', 'key']) && (r.reason === undefined || isStr(r.reason))))
       && (d.committed.officerCasualties === undefined || isList(d.committed.officerCasualties, validCasualtyRecord))));
 }
 
@@ -142,6 +143,13 @@ function validRun(r: unknown): boolean {
     if (positions !== undefined && (!isObj(positions) || !Object.values(positions).every((p) => isObj(p)
       && isStr(p.spaceId) && validPoint(p.at) && (key !== 'lastSeen' || isNum(p.revision))))) return false;
   }
+  // v13 clocks and subject meters (sim/clocks.ts, sim/meters.ts).
+  const within = (n: unknown) => isNum(n) && n >= 0 && n <= 100;
+  if (r.clocks !== undefined && (!isObj(r.clocks) || !Object.values(r.clocks).every((c) => isObj(c) && within(c.value) && Number.isSafeInteger(c.cued) && (c.cued as number) >= 0))) return false;
+  if (r.meters !== undefined && (!isObj(r.meters) || !Object.values(r.meters).every((m) => isObj(m) && within(m.agitation) && within(m.rapport)
+    && isObj(m.moved) && Object.values(m.moved).every((v) => isObj(v) && numbers(v, ['agitation', 'rapport']))))) return false;
+  if (r.commitments !== undefined && (!isObj(r.commitments) || !Object.values(r.commitments).every((c) => isObj(c) && strings(c, ['personId', 'kind'])
+    && numbers(c, ['madeAt', 'revision']) && oneOf(c.status, ['open', 'kept', 'broken'])))) return false;
   if (r.supportUnitIds !== undefined && (!isStrings(r.supportUnitIds) || r.supportUnitIds.length > 1)) return false;
   if (r.supportPositionId !== undefined && !isStr(r.supportPositionId)) return false;
   if (r.sourceIncident !== undefined && (!validIncident(r.sourceIncident) || r.sourceIncident.id !== r.scenarioId)) return false;
@@ -179,6 +187,8 @@ function validDebrief(d: unknown): boolean {
     && (d.officerCasualties === undefined || isList(d.officerCasualties, validCasualtyRecord))
     && (d.personCasualties === undefined || isList(d.personCasualties, validPersonCasualtyRecord))
     && (d.civilianOutcomes === undefined || isList(d.civilianOutcomes, person => isObj(person) && strings(person, ['id', 'label']) && oneOf(person.status, ['unaccounted', 'needs_help', 'safe', 'injured_needs_care', 'care_accepted', 'accounted_elsewhere', 'deceased'])))
+    && (d.scoreLines === undefined || isList(d.scoreLines, line => isObj(line) && strings(line, ['key', 'text']) && numbers(line, ['trust', 'strain'])))
+    && (d.forceLines === undefined || isList(d.forceLines, line => isObj(line) && isStr(line.text) && (line.reason === undefined || isStr(line.reason))))
     && (d.disposition === undefined || oneOf(d.disposition, COMPLETION_DISPOSITIONS))
     && (d.serviceEarned === undefined || (Number.isSafeInteger(d.serviceEarned) && (d.serviceEarned as number) >= 0))
     && (d.levelReached === undefined || Number.isSafeInteger(d.levelReached))

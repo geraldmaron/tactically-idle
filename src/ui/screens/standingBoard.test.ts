@@ -1,11 +1,10 @@
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { SCENARIO_ORDER } from '../../content/scenarios';
 import { briefing } from '../../sim/operation-selectors';
 import { registerCapabilityFixtures } from '../../sim/fixtures/capability-scenarios';
 import { makeState, NOW } from '../../sim/test-fixtures';
-import { BOARD_LIMIT, boardEntries, boardPlan, standingEntries } from './helpers';
+import { BOARD_LIMIT, boardEntries, boardPlan } from './helpers';
 import { OpsPrepare } from './OpsPrepare';
 import { OpsBoard } from './OpsBoard';
 
@@ -16,38 +15,26 @@ vi.mock('../blueprint/Blueprint', () => ({ Blueprint: () => createElement('div',
 
 afterEach(() => vi.restoreAllMocks());
 
-describe('the ops board: live calls first, standing assignments fill open places', () => {
-  it('lists the standing assignments as live operations when no incident is open', () => {
+describe('the ops board: tactical call-outs only', () => {
+  it('shows no standing assignments and says so when no call-out is live', () => {
     const incidents = state.incidents;
     state.incidents = [];
     try {
       const html = renderToStaticMarkup(createElement(OpsBoard, { onPrepare: () => {} }));
-      expect(html).toContain('No open incidents');
-      expect(html).toContain('Standing assignments');
-      expect(html).not.toContain('featured-card');
-      const launches = html.match(/>Prepare<\/button>/g) ?? [];
-      expect(launches.length).toBe(SCENARIO_ORDER.length);
-      expect(html).not.toContain('join the board as places open');
+      expect(html).toContain('No call-outs right now');
+      expect(html).not.toContain('Standing assignments');
+      expect(html).not.toContain('>Prepare</button>');
       expect(boardEntries(state, NOW)).toEqual([]);
     } finally { state.incidents = incidents; }
   });
 
-  it('never offers more than five operations, and only standing assignments wait for a place', () => {
-    const standing = standingEntries(state, NOW);
-    expect(standing.map((entry) => entry.card.id)).toEqual(SCENARIO_ORDER);
-    const live = (n: number) => Array.from({ length: n }, (_, i) => ({ card: { ...standing[0].card, id: `live_${i}` }, incident: {} as never, scenario: null }));
-    expect(boardPlan([], standing)).toEqual({ live: [], standing, waiting: 0 });
-    const four = boardPlan(live(4), standing);
-    expect(four.live.length + four.standing.length).toBe(BOARD_LIMIT);
-    expect(four.standing.map((entry) => entry.card.id)).toEqual([SCENARIO_ORDER[0]]);
-    expect(four.waiting).toBe(SCENARIO_ORDER.length - 1);
-    const full = boardPlan(live(7), standing);
-    expect(full.live).toHaveLength(BOARD_LIMIT);
-    expect(full.standing).toEqual([]);
-    expect(full.waiting).toBe(SCENARIO_ORDER.length);
+  it('never offers more than five call-outs', () => {
+    const live = (n: number) => Array.from({ length: n }, (_, i) => ({ card: { id: `live_${i}` }, incident: {}, scenario: null }) as never);
+    expect(boardPlan(live(3))).toHaveLength(3);
+    expect(boardPlan(live(7))).toHaveLength(BOARD_LIMIT);
   });
 
-  it('prepares a standing assignment as an ordinary deployment', () => {
+  it('still prepares an authored scenario as an ordinary deployment', () => {
     vi.spyOn(Date, 'now').mockReturnValue(NOW);
     const html = renderToStaticMarkup(createElement(OpsPrepare, { scenarioId: 'ms_occupancy', onCancel: () => {} }));
     expect(html).toMatch(/>Deploy<\/button>/);

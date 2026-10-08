@@ -3,6 +3,9 @@ import type { CompletionDisposition, DebriefResult, ExternalSupportEvent, Extern
 import { next } from './rng';
 import { syncCasualtyFlags, syncPersonCasualtyFlags } from './incident-consequences';
 import { protectedOfficerEffects } from './force-risk';
+import { advanceClocks, clockConditionsHold, clockOutEffects, forkMinutes, initialClocks } from './clocks';
+import { applyMoves, initialMeters, meterConditionsHold } from './meters';
+import { applyCommitments } from './commitments';
 
 type SupportRun = Pick<OperationRun, 'clock' | 'externalSupport'>;
 type PublicRun = Pick<OperationRun, 'knowledge' | 'flags' | 'pressure'>;
@@ -128,8 +131,12 @@ export function completionEvidence(scenario: ScenarioDefinition, run: SupportRun
     && conditionsHold(ending.completion, run)
     && outstandingHarm.length === 0
     && (!serviceId || receiverAccepted) && (disposition !== 'care_accepted' || receiverAccepted);
+  // A call tree (v13) whose authored step was completed but left someone hurt, killed or awaiting
+  // transport ends partial, not unresolved: the step happened, and the harm is the unfinished part.
+  const harmOnly = scenario.version >= 13 && FULL_DISPOSITIONS.includes(disposition) && hasCompletionConditions(ending)
+    && conditionsHold(ending.completion, run) && outstandingHarm.length > 0 && (!serviceId || receiverAccepted);
   return {
-    disposition: FULL_DISPOSITIONS.includes(disposition) && !completionAchieved ? 'unresolved' : disposition,
+    disposition: FULL_DISPOSITIONS.includes(disposition) && !completionAchieved ? harmOnly ? 'relief_partial' : 'unresolved' : disposition,
     completionAchieved,
     ...(receiverAccepted ? { receivingService: { id: service!.id, label: service!.label, kind: service!.kind, acceptedAt: state!.acceptedAt! } } : {}),
     remainingTasks: completionAchieved ? [] : [
@@ -139,6 +146,20 @@ export function completionEvidence(scenario: ScenarioDefinition, run: SupportRun
       ...(!ending.remainingTasks?.length && !serviceId ? ['Incident responsibilities remain unfinished.'] : []),
     ],
   };
+}
+
+/** A committed v13 decision's effects as the engine applied them (sim/drawn-effects.ts): each
+ * drawn effect becomes its base and the variant its saved record names, in order. `unused` counts
+ * records no drawn effect took. The engine's commit, traceRun and the save replay all read this. */
+export function savedDrawnEffects(matched: readonly OutcomeEffect[], records: readonly { key: string }[] | undefined): { effects: OutcomeEffect[]; unused: number } {
+  const queue = [...records ?? []];
+  const effects = matched.flatMap((effect): OutcomeEffect[] => {
+    if (!effect.drawn) return [effect];
+    const record = queue.shift();
+    const { drawn: _drawn, variants, ...rest } = effect;
+    return [rest, ...(record ? variants?.[record.key] ?? [] : [])];
+  });
+  return { effects, unused: queue.length };
 }
 
 /** Legacy saves omit these fields. V4 timers are reconstructed solely from committed events. */
@@ -151,11 +172,26 @@ export function validExternalSupportState(run: OperationRun, scenario: ScenarioD
   let clock = (run.resupplies ?? []).reduce((sum, delivery) => round1(sum + delivery.minutes), 0);
   const publicState: PublicRun = { knowledge: Object.fromEntries(scenario.facts.map((fact) => [fact.id, fact.initial])), flags: [], pressure: scenario.pressure.start };
   for (const delivery of run.resupplies ?? []) publicState.pressure = round1(Math.max(0, Math.min(100, publicState.pressure + scenario.pressure.perMinute * delivery.minutes)));
+  // v13: clock forks read the clocks as the engine ran them, and cues set marks (sim/clocks.ts).
+  const timed = { clocks: initialClocks(scenario), flags: publicState.flags };
+  /** Runs the clocks and sets their cue marks; returns the clocks as they were before. */
+  const passTime = (minutes: number) => {
+    timed.flags = publicState.flags;
+    const before = timed.clocks;
+    for (const cue of advanceClocks(timed, scenario, minutes)) for (const flag of cue.setFlags ?? []) if (!publicState.flags.includes(flag)) publicState.flags.push(flag);
+    return before;
+  };
+  // v13: meter branches read the subjects' meters at the start of each decision; outcomes and
+  // commitments move them after it (sim/meters.ts, sim/commitments.ts).
+  const moved: Pick<OperationRun, 'meters'> & Partial<Pick<OperationRun, 'commitments'>> = { meters: initialMeters(scenario) };
+  if (scenario.version >= 13) for (const delivery of run.resupplies ?? []) passTime(delivery.minutes);
   const decisions = new Set<string>();
   if (!Number.isSafeInteger(run.rngState) || run.rngState < 0 || run.rngState > 0xffffffff) return false;
   // Mulberry32 advances by a fixed uint32 increment. Check the whole saved sample sequence.
   const forceDraws = scenario.version >= 7 ? run.history.filter(decision => decision.committed?.forceOutcome).length : 0;
-  let rngState = (run.rngState - Math.imul(run.history.length + forceDraws, 0x6d2b79f5)) >>> 0;
+  // v13 drawn consequences (sim/drawn-effects.ts) take one saved sample each, after the decision's own.
+  const drawnDraws = scenario.version >= 13 ? run.history.reduce((sum, decision) => sum + (decision.committed?.drawn?.length ?? 0), 0) : 0;
+  let rngState = (run.rngState - Math.imul(run.history.length + forceDraws + drawnDraws, 0x6d2b79f5)) >>> 0;
   for (const decision of run.history) {
     if (!Number.isFinite(decision.timeCost) || decision.timeCost <= 0) return false;
     const beforeClock = clock;
@@ -175,10 +211,17 @@ export function validExternalSupportState(run: OperationRun, scenario: ScenarioD
       if (decision.committed?.forceOutcome?.sample !== force.value) return false;
       rngState = force.state;
     } else if (decision.committed?.forceOutcome) return false;
+    if (scenario.version >= 13) for (let i = 0; i < (decision.committed?.drawn?.length ?? 0); i++) rngState = next(rngState).state;
     if (externalSupportActionIssue({ ...publicState, clock: beforeClock, externalSupport: expected }, scenario, action)) return false;
     if (action.awaitSupport && decision.timeCost !== remainingSupportWait({ clock: beforeClock, externalSupport: expected }, scenario, action.awaitSupport)) return false;
-    const effects = action.outcomes[decision.band].filter((effect) => conditionsHold(effect.when, publicState)
-      && (effect.truth ?? []).every((truth) => scenario.facts.find((fact) => fact.id === truth.factId)?.truth === truth.is));
+    const matched = action.outcomes[decision.band].filter((effect) => conditionsHold(effect.when, publicState)
+      && (effect.truth ?? []).every((truth) => scenario.facts.find((fact) => fact.id === truth.factId)?.truth === truth.is)
+      && (scenario.version < 13 || clockConditionsHold(effect.clocks, scenario, { clocks: timed.clocks, flags: publicState.flags }, forkMinutes(action, decision.band, effect))
+        && meterConditionsHold(effect.meters, moved)));
+    // v13 drawn consequences apply the variant each saved record names, in order.
+    const saved = savedDrawnEffects(matched, decision.committed?.drawn);
+    const effects = scenario.version < 13 ? matched : saved.effects;
+    if (scenario.version >= 13 && saved.unused) return false;
     const expectedEvents = effects.flatMap((effect) => [
       ...(effect.requestSupport ?? []).map((serviceId) => ({ kind: 'requested', serviceId })),
       ...(effect.acceptSupport ?? []).map((serviceId) => ({ kind: 'accepted', serviceId })),
@@ -197,6 +240,8 @@ export function validExternalSupportState(run: OperationRun, scenario: ScenarioD
         state.acceptedAt = clock;
       } else return false;
     }
+    // The engine runs the clocks on the flags from before this decision's effects.
+    const clocksBefore = scenario.version >= 13 ? passTime(decision.timeCost) : undefined;
     for (const effect of effects) {
       for (const flag of effect.setFlags ?? []) if (!publicState.flags.includes(flag)) publicState.flags.push(flag);
       for (const flag of effect.clearFlags ?? []) publicState.flags = publicState.flags.filter((entry) => entry !== flag);
@@ -204,6 +249,16 @@ export function validExternalSupportState(run: OperationRun, scenario: ScenarioD
         publicState.flags = publicState.flags.filter((entry) => !entry.startsWith(`opening:${opening.openingId}=`));
         publicState.flags.push(`opening:${opening.openingId}=${opening.state}`);
       }
+    }
+    if (scenario.version >= 13) {
+      // A clock that ran out where no fork read it sets its mark (sim/clocks.ts); then the
+      // outcome's events and the commitments it kept or broke move the meters, as the commit does.
+      for (const out of clockOutEffects(scenario, clocksBefore, timed.clocks, publicState, effects))
+        for (const flag of out.setFlags ?? []) if (!publicState.flags.includes(flag)) publicState.flags.push(flag);
+      applyMoves(moved, scenario, effects);
+      const view = { flags: publicState.flags, clock, revision: decision.revision, meters: moved.meters, commitments: moved.commitments };
+      applyCommitments(view, scenario, action, decision.band, effects, decision.committed?.drawn ?? [], decision.revision);
+      moved.meters = view.meters; moved.commitments = view.commitments;
     }
     if (scenario.version >= 5) for (const opening of decision.committed?.openingChanges ?? []) {
       publicState.flags = publicState.flags.filter(entry => !entry.startsWith(`opening:${opening.openingId}=`));

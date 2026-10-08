@@ -11,6 +11,8 @@ import { isGenericResponseExit, responseFailurePlan } from '../../sim/response-f
 import { civilianOutcomeViews } from '../../sim/incident-consequences';
 import { externalSupportStatus } from '../../sim/external-support';
 import { conditionHolds } from '../../sim/resolution';
+import { clockViews } from '../../sim/clocks';
+import { stanceOf } from '../../sim/meters';
 import { Blueprint } from '../../ui/blueprint/Blueprint';
 import { applyLabMove, BANDS, decodePath, encodePath, flatness, startLabRun, viewsOf } from './model';
 import type { Kit, LabMove } from './model';
@@ -210,6 +212,24 @@ export function StepThrough({ id, s, kit, path, onPath }: { id: string; s: Scena
             </div>
           )}
           <p className="sl-dim">{selectedView ? `Map shows ${selectedView.title}: target and spatial overlays.` : 'Click an option to draw its target and overlays.'}</p>
+          {(s.clocks?.length ?? 0) > 0 && (
+            <>
+              <h3>Clocks</h3>
+              <ul className="sl-kv">{clockViews(s, run).map(clock => (
+                <li key={clock.id}><span>{clock.label}</span> <b className={clock.out ? 'sl-t-adverse' : clock.low ? 'sl-t-mixed' : ''}>{clock.value}{clock.out ? ' out' : clock.low ? ' low' : ''}{clock.stopped ? ' (stopped)' : ''}</b>
+                  <span className="sl-dim">{clock.latest ? ` heard: ${clock.latest}` : ' no cue yet'}</span></li>
+              ))}</ul>
+            </>
+          )}
+          {run.meters && Object.keys(run.meters).length > 0 && (
+            <>
+              <h3>Subjects</h3>
+              <ul className="sl-kv">{Object.entries(run.meters).map(([id, meters]) => (
+                <li key={id}><span>{s.incidentPeople?.find(person => person.id === id)?.label ?? id}</span> <b>{stanceOf(meters)}</b>
+                  <span className="sl-dim"> agitation {meters.agitation}, rapport {meters.rapport}{Object.keys(meters.moved).length ? ` · ${Object.entries(meters.moved).map(([event, moved]) => `${event} ${signed(moved!.agitation)}/${signed(moved!.rapport)}`).join(', ')}` : ''}</span></li>
+              ))}</ul>
+            </>
+          )}
           <h3>Knowledge</h3>
           <ul className="sl-kv">
             {s.facts.map(fact => (

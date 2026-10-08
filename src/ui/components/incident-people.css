@@ -27,6 +27,8 @@
 .person-status > .icon { flex-shrink: 0; margin-top: 2px; }
 .person-tile[data-tone="pending"] .person-status { color: var(--amber-2); }
 .incident-wounded-list { margin-top: 8px; }
+.incident-subject-list, .incident-clock-list { margin-top: 8px; }
+.person-note { color: var(--text-dim); font-weight: 400; }
 .incident-people-head + .incident-wounded-list { margin-top: 0; }
 .result-civilian-outcomes { display: grid; gap: 10px; border-top: 1px solid var(--line); padding-top: 12px; }
 .result-officer-injury { display: grid; gap: 5px; padding: 9px; border-left: 2px solid var(--warn); background: var(--bg); font-size: 13px; line-height: 1.4; }

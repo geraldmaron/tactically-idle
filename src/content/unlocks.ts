@@ -44,9 +44,12 @@ export const UNLOCK_RULES: Partial<Record<IncidentType, UnlockRule>> = {
   hostage_crisis: { level: 1, anyCert: ['crisis_negotiation'] },
 };
 
-/** No longer dispatched as new live calls: a tactical team would never be sent to them. Their ids
- * stay valid everywhere else, so issued cards, saved runs, debriefs and casebook finds still load. */
-export const RETIRED_FROM_DISPATCH: ReadonlySet<IncidentType> = new Set<IncidentType>(['water_leak', 'disturbance']);
+/** A tactical team is sent only where the call earns it: a person armed or able to reach a
+ * weapon, a stated threat or crime, a position of advantage, and a refusal to come out. Since
+ * 2026-10-07 only these frameworks are dispatched; every patrol, welfare and medical framework is
+ * retired from the board. Their ids stay valid, so anything already issued still loads. */
+export const TACTICAL_FRAMEWORKS: ReadonlySet<IncidentType> = new Set<IncidentType>(['barricaded', 'active_armed_incident', 'hostage_crisis', 'protected_rescue']);
+export const RETIRED_FROM_DISPATCH: ReadonlySet<IncidentType> = new Set<IncidentType>(SCENARIO_TYPES_V11.map(info => info.type).filter(type => !TACTICAL_FRAMEWORKS.has(type)));
 
 export function unlockRule(type: IncidentType): UnlockRule {
   return UNLOCK_RULES[type] ?? DEFAULT_UNLOCK;

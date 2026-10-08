@@ -45,10 +45,11 @@ describe('department level from service', () => {
   });
 
   it('names what the next level opens, by framework label only', () => {
-    expect([...frameworksOpeningAt(2)].sort()).toEqual(['alarm and keyholder response', 'medical assistance']);
-    // Tactical calls open from level 1, each with the capability it needs.
+    // Only tactical calls are dispatched, and all of them open from level 1 with the capability
+    // each needs, so no later level names a new kind of call.
     expect(frameworksOpeningAt(1)).toContain('active armed incident (with a certified officer and the right equipment)');
-    expect(frameworksOpeningAt(3)).toEqual(['robbery witness reconciliation']);
+    expect(frameworksOpeningAt(2)).toEqual([]);
+    expect(frameworksOpeningAt(3)).toEqual([]);
     expect(frameworksOpeningAt(4)).toEqual([]);
     expect(frameworksOpeningAt(99)).toEqual([]);
   });

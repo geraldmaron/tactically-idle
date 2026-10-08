@@ -10,7 +10,12 @@ export const FORCE_RISK_V1 = {
   firearm: { fatal: 0.22, serious: 0.48, wounded: 0.75 },
   less_lethal_device: { fatal: 0.004, serious: 0.055, wounded: 0.30 },
   less_lethal_impact: { fatal: 0.009, serious: 0.085, wounded: 0.39 },
+  /** V13 drawn force only (sim/drawn-effects.ts): officers take the person by hand. Never fatal in
+   * this model. 4% are seriously hurt going down, 26% hurt, 70% unhurt: a little below the
+   * device's serious share, with a similar share of lesser injuries. */
+  hands: { fatal: 0, serious: 0.04, wounded: 0.30 },
 } as const;
+export type ForceRiskProfile = keyof typeof FORCE_RISK_V1;
 
 export function forceItemMatches(profile: ForceRiskPreview['profile'], itemId: Id): boolean {
   const item = ITEMS[itemId];
@@ -36,7 +41,7 @@ export function selectedForceRisk(scenario: ScenarioDefinition, action: ActionDe
   };
 }
 
-export function forceSeverity(profile: ForceRiskPreview['profile'], sample: number): ForceOutcome['severity'] {
+export function forceSeverity(profile: ForceRiskProfile, sample: number): ForceOutcome['severity'] {
   const risk = FORCE_RISK_V1[profile];
   return sample < risk.fatal ? 'fatal' : sample < risk.serious ? 'serious' : sample < risk.wounded ? 'wounded' : 'none';
 }

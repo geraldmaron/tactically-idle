@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { drawIncidentSpec, generateIncident, INCIDENT_CONTENT_VERSION, INCIDENT_TYPES_V5, incidentId, parseIncidentId } from '../gen/incident';
 import { createInitialState } from './department';
-import { applyIncidentsDue, INCIDENT_TUNING, nextIncidentAt, seedIncidentBoard } from './incidents';
+import { applyIncidentsDue, INCIDENT_TUNING, nextIncidentAt, playerArcContext, seedIncidentBoard } from './incidents';
 import { buildLocation } from './location';
 import { next } from './rng';
 import { deserialize, serialize } from './save';
@@ -30,10 +30,12 @@ function issuedV4(pending: boolean): GameState {
 
 describe('current rollout without resetting issued campaigns', () => {
   it('starts new campaigns with current stories and deterministic distinct boards', () => {
-    expect(INCIDENT_CONTENT_VERSION).toBe(12);
+    expect(INCIDENT_CONTENT_VERSION).toBe(13);
     for (const seed of [1, 7, 41, 812]) {
       const state = createInitialState(NOW, seed); expect(state).toEqual(createInitialState(NOW, seed));
-      expect(state.contentVersion).toBe(INCIDENT_CONTENT_VERSION); expect(state.incidents).toHaveLength(INCIDENT_TUNING.initialCount);
+      // One live call per kind of call: the opening board holds as many kinds as are unlocked, up to the initial count.
+      expect(state.contentVersion).toBe(INCIDENT_CONTENT_VERSION);
+      expect(state.incidents).toHaveLength(Math.min(INCIDENT_TUNING.initialCount, playerArcContext(state).unlockedTypes.length));
       expect(new Set(state.incidents.map(card => card.type)).size).toBe(state.incidents.length);
       for (const card of state.incidents) {
         expect(parseIncidentId(card.id)?.contentVersion).toBe(INCIDENT_CONTENT_VERSION);
@@ -65,25 +67,26 @@ describe('current rollout without resetting issued campaigns', () => {
     }
   });
 
-  it('keeps five current cards distinct from each other and the active story', () => {
+  it('keeps every live card a different kind of call from the others and from the active run', () => {
     for (const seed of [1, 7, 41, 812]) {
       let state = createInitialState(NOW, seed); state = start(state, state.incidents[0].id);
       const activeType = parseIncidentId(state.activeRun!.scenarioId)!.type;
-      while (state.incidents.length < INCIDENT_TUNING.boardMax) {
+      for (let arrival = 0; arrival < 12; arrival++) {
         const at = nextIncidentAt(state)!; applyIncidentsDue(state, state.department.lastSettledAt, at);
         expect(state.incidents.some(card => card.type === activeType)).toBe(false);
         expect(new Set(state.incidents.map(card => card.type)).size).toBe(state.incidents.length);
       }
-      expect(new Set([activeType, ...state.incidents.map(card => card.type)]).size).toBe(6);
+      expect(state.incidents.length).toBeLessThanOrEqual(playerArcContext(state).unlockedTypes.length - 1);
     }
   });
 
-  it('also avoids the named story of an active issued v5 call when subsequent board slots are filled', () => {
+  it('also avoids the kind of call of an active issued v5 run when the board is filled', () => {
     const id = incidentId({ type: 'hostage_crisis', familyId: 'market_row', buildingSeed: 7, seed: 5, tier: 2, contentVersion: 5 });
     const original = createInitialState(NOW, 31); const state = start(original, id);
     seedIncidentBoard(state, NOW, 5);
-    expect(state.incidents).toHaveLength(5); expect(state.incidents.every(card => card.type !== 'hostage_crisis')).toBe(true);
-    expect(new Set(state.incidents.map(card => card.type)).size).toBe(5);
+    expect(state.incidents.length).toBeGreaterThan(0);
+    expect(state.incidents.every(card => card.type !== 'hostage_crisis')).toBe(true);
+    expect(new Set(state.incidents.map(card => card.type)).size).toBe(state.incidents.length);
   });
 
   it.each([false, true])('promotes future draws while preserving an issued v4 run pending=%s and every campaign resource', pending => {

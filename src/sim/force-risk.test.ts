@@ -86,9 +86,11 @@ describe('bounded independent V7 force severity', () => {
   it('validates authored metadata and maintains lower but strictly nonzero less-lethal tails', () => {
     expect(validateScenario(SCENARIOS[ID], getBuilt(SCENARIOS[ID].locationFamilyId, SCENARIOS[ID].locationSeed))).toEqual([]);
     const rank = { fatal: 3, serious: 2, wounded: 1, none: 0 };
-    for (const profile of Object.keys(FORCE_RISK_V1) as ForceRiskPreview['profile'][]) {
+    for (const profile of Object.keys(FORCE_RISK_V1) as (keyof typeof FORCE_RISK_V1)[]) {
       const thresholds = FORCE_RISK_V1[profile];
-      expect(thresholds.fatal).toBeGreaterThan(0); expect(thresholds.fatal).toBeLessThan(thresholds.serious); expect(thresholds.serious).toBeLessThan(thresholds.wounded); expect(thresholds.wounded).toBeLessThan(1);
+      // Taking a person by hand (v13 drawn force) is the one profile that is never fatal.
+      if (profile === 'hands') expect(thresholds.fatal).toBe(0); else expect(thresholds.fatal).toBeGreaterThan(0);
+      expect(thresholds.fatal).toBeLessThan(thresholds.serious); expect(thresholds.serious).toBeLessThan(thresholds.wounded); expect(thresholds.wounded).toBeLessThan(1);
       for (let i = 0; i < 10000; i++) {
         const sample = i / 10000;
         if (i) expect(rank[forceSeverity(profile, sample)]).toBeLessThanOrEqual(rank[forceSeverity(profile, (i - 1) / 10000)]);
@@ -97,6 +99,8 @@ describe('bounded independent V7 force severity', () => {
     }
     expect(FORCE_RISK_V1.less_lethal_device.fatal).toBeLessThan(FORCE_RISK_V1.firearm.fatal / 10);
     expect(FORCE_RISK_V1.less_lethal_impact.fatal).toBeLessThan(FORCE_RISK_V1.firearm.fatal / 10);
+    expect(FORCE_RISK_V1.hands.serious).toBeLessThan(FORCE_RISK_V1.less_lethal_device.serious);
+    expect(forceSeverity('hands', 0)).toBe('serious');
   });
   it('commits success and a fatality independently, saving one exact causal unit and a second deterministic sample', () => {
     const before = started({ service_sidearm: 1 }); before.activeRun!.rngState = seedFor(0, 0.22, true);

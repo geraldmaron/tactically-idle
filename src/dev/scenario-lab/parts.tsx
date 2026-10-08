@@ -91,6 +91,7 @@ export function OptionCard({ action, view, s, status, flatWith, open, buttons, s
         {action.tempo && action.tempo !== 'normal' ? <> · {action.tempo}</> : null} · approach {action.approach}
       </p>
       <p className="sl-summary">{view?.summary ?? action.summary}</p>
+      {view?.authority && <p className={view.authority.allowed ? 'sl-dim' : 'sl-err'} title={`Authorization rule ${view.authority.rule} (sim/authorization.ts)`}>{view.authority.reason}</p>}
       {view && <p className="sl-req">{view.requirementLine}{view.suppliesRequired.length ? ` · uses ${view.suppliesRequired.map(x => `${x.qty} ${x.label}`).join(', ')}` : ''}</p>}
       {view && !view.eligible && view.reason && <p className="sl-reason">{view.reason}</p>}
       {buttons && <div className="sl-buttons" onClick={event => event.stopPropagation()}>{buttons}</div>}

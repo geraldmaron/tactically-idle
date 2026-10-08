@@ -7,7 +7,6 @@
 .opboard-slots { display: inline-flex; gap: 3px; flex-shrink: 0; }
 .opboard-slots i { width: 14px; height: 6px; border-radius: 2px; background: var(--line); }
 .opboard-slots i[data-slot='live'] { background: var(--amber); }
-.opboard-slots i[data-slot='standing'] { background: #6ea8ff; }
 .opboard-list { gap: 10px; }
 .card.optile { gap: 7px; padding: 10px 11px 10px; overflow: visible; }
 .optile-top { display: flex; align-items: flex-start; gap: 10px; min-width: 0; }
@@ -44,7 +43,6 @@
 .opboard-elig { display: grid; gap: 4px; padding: 6px 8px; border-radius: 6px; border: 1px dashed rgba(255, 159, 67, 0.5); background: rgba(255, 159, 67, 0.06); }
 .opboard-elig-squads { display: flex; align-items: center; flex-wrap: wrap; gap: 5px; color: var(--muted); }
 .opboard-elig .issues { margin: 0; font-size: 12.5px; }
-.opboard-page .opboard-divider { margin: 4px 0 0; padding-top: 10px; }
 
 /* ------------------------------------------------------------ casebook: progress tiles */
 .casebook-card { gap: 8px; }

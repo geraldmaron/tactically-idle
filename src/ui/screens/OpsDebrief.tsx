@@ -9,7 +9,7 @@ import { spaceName } from '../../sim/resolution';
 import { floorSuffix } from '../blueprint/floors';
 import { armamentLabel } from '../components/incident';
 import { BeforeAfter, Button, Card, Chip, SubHead } from '../components/ui';
-import { DebriefConsequences, DebriefSummary, OfficerResults, type DebriefOfficers } from '../components/DebriefResults';
+import { DebriefConsequences, DebriefScore, DebriefSummary, OfficerResults, type DebriefOfficers } from '../components/DebriefResults';
 import { useToast } from '../components/toast';
 import { ITEMS } from '../../content/items';
 import { Icon, itemIcon } from '../icons';
@@ -24,6 +24,7 @@ import './ops-visual.css';
 export function SavedDebriefContents({ debrief: d, officers }: { debrief: DebriefResult; officers: DebriefOfficers }) {
   return <div className="saved-debrief-content">
     <DebriefSummary debrief={d} />
+    <DebriefScore debrief={d} />
     <PersonCasualtyList casualties={(d.personCasualties ?? []).filter((person) => !(d.civilianOutcomes ?? []).some((civilian) => civilian.id === person.personId))} />
     {d.endingSummary && <p className="debrief-narrative">{d.endingSummary}</p>}
     <DebriefConsequences debrief={d} />
@@ -58,6 +59,7 @@ export function OpsDebrief() {
       {d.endingSummary && <p className="debrief-narrative">{d.endingSummary}</p>}
     </div>
     <DebriefSummary debrief={d} />
+    <DebriefScore debrief={d} />
     <PersonCasualtyList casualties={(d.personCasualties ?? []).filter((person) => !(d.civilianOutcomes ?? []).some((civilian) => civilian.id === person.personId))} />
     <DebriefConsequences debrief={d} decisions={decisions} />
     <OfficerResults debrief={d} officers={g.officers} />

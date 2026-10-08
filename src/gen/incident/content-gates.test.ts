@@ -67,7 +67,8 @@ describe('content gate: distinctness', () => {
     // of orderings grows past the cap in the largest ones (barricade has over 100,000). A
     // capped fingerprint is still deterministic, which is all collision checks against new
     // packages need; typed frameworks above stay exact. This list records which ones cap.
-    expect(authored.filter(print => print.truncated).map(print => print.key)).toEqual(['barricaded/0', 'barricaded/1', 'barricaded/2', 'hostage_crisis/0', 'hostage_crisis/2', 'protected_rescue/1', 'protected_rescue/2']);
+    // From v13 every dispatched tactical call is a call tree, whose paths are bounded, so none caps.
+    expect(authored.filter(print => print.truncated).map(print => print.key)).toEqual([]);
   });
   it('every recipe added in v11 or later differs from every other recipe in a decision or an ending', () => {
     const fresh = new Set(NEW.flatMap(entry => VARIANTS.map(variant => `${entry.framework.type}/${variant}`)));

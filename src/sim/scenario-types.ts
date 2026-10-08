@@ -174,6 +174,27 @@ export interface SupportRule {
 export interface OutcomeEffect {
   /** Fictional person-level injury; selected from actual participants, without an extra random draw. */
   officerHarm?: { severity: 'wounded' | 'serious'; label: string };
+  /** V13: an authored injury or death of a bound person (civilian or subject), recorded like a
+   * force outcome so the debrief and safety score carry it. Content puts it only on outcomes that
+   * end the call, because the engine then refuses ordinary choices involving that person. */
+  personHarm?: { personId: Id; severity: 'wounded' | 'serious' | 'fatal' }[];
+  /** V13: a consequence the engine draws when the decision commits (sim/drawn-effects.ts): who is
+   * hit when a subject fires at the team, or what the team's force does to a person. The chosen
+   * variant's effects apply as if authored; saves accept anything a variant can produce. */
+  drawn?: DrawnModel;
+  /** The effects for each result `drawn` can give, keyed as the model names them. */
+  variants?: Record<string, OutcomeEffect[]>;
+  /** V13: engine-only branches on a clock (sim/clocks.ts), read when the decision commits, at the
+   * end of this choice's own minutes. A clock this call doesn't have never runs low or out. */
+  clocks?: ClockCondition[];
+  /** V13: engine-only branches on a subject's meters as they stand at the start of the decision
+   * (sim/meters.ts): escalation the hidden truth didn't call for, from someone past breaking point. */
+  meters?: MeterCondition[];
+  /** V13: what this outcome does to a subject's agitation and rapport (sim/meters.ts). */
+  moves?: { personId: Id; event: MeterEvent }[];
+  /** V13: command commits to something a subject asked for (sim/commitments.ts). Kept or broken
+   * by what the team does to that person afterwards; breaking one costs rapport and trust. */
+  promise?: { id: Id; personId: Id; kind: ConcessionKind | 'promise' };
   officerCare?: 'stabilize' | 'evacuate';
   requestSupport?: Id[];
   acceptSupport?: Id[];
@@ -220,6 +241,11 @@ export interface ActionDefinition {
   personCare?: { personId: Id; kind: 'stabilize' | 'accept'; serviceId?: Id };
   /** Optional bound person target; current public position drives spatial evaluation. */
   storyTargetPersonId?: Id;
+  /** V13: the person a conversation is with, when it is with someone (sim/meters.ts). */
+  talksTo?: Id;
+  /** V13: what this choice asks command for (sim/authorization.ts). Unauthorized, it is locked
+   * with the generated reason; authorized, the card carries the generated command line. */
+  authority?: AuthorityRequest;
   /** Full archetype route rechecked against current openings at action evaluation. */
   storyRoute?: string;
   /** Person routes use bound endpoints; squad routes start at each squad's actual current position. */
@@ -252,6 +278,9 @@ export interface ActionDefinition {
   requires: ActionRequirements;
   check: { kind: CheckKind; ratings: RatingWeight[]; difficulty: number };
   tempo?: Tempo;
+  /** A long hold's span ('Hours', 'All night'), shown in place of estimated minutes. The clock
+   * still advances by minutes, so pressure and civilian safety stay fair to the wait (v13). */
+  timeLabel?: string;
   /** Time: base + perSqFt * area of the spaces (default the target) + travel. */
   workload: { base: number; perSqFt: number; areaSpaces?: Id[] };
   /**
@@ -342,6 +371,104 @@ export interface ScenarioRewards {
   xp: number;
 }
 
+/** What a drawn effect asks the engine to settle: incoming fire from a subject, the team's force on
+ * a person, or whether a group follows its leader (`on`) when the leader gives up. A cascade takes
+ * one saved sample; each member's draw comes from a stream it seeds (sim/drawn-effects.ts). */
+export type DrawnModel = { model: 'incoming_fire'; from: Id } | { model: 'team_force'; on: Id } | { model: 'cascade'; on: Id; members: Id[] };
+
+/** A v13 clock (docs/incident-domain-model.md §3, sim/clocks.ts): something that runs down on the
+ * operation's minutes, at a rate the situation sets. */
+export interface ClockDef {
+  id: Id;
+  /** Bound plain label ("Ana’s spare tank"). */
+  label: string;
+  kind: 'medical' | 'structural' | 'battery' | 'supply' | 'deadline' | 'light' | 'crowd' | 'intoxication';
+  /** The person whose clock it is: it stops once they are out of the building. */
+  owner?: Id;
+  /** 0 to 100 at the start of the call. */
+  start: number;
+  ratePerMin: number;
+  /** The team can know how fast it runs before it shows (a gauge, a battery percentage). */
+  rateKnown: boolean;
+  /** Highest first. Each fires once as the clock passes it: a line the team hears, and optionally a
+   * mark (public state) and the settling of the fact this clock stands for. */
+  cues: { at: number; text: string; mark?: string; reveal?: boolean }[];
+  /** The fact whose claim this clock answers ("will the door hold"). */
+  factId?: Id;
+  /** Once this clock is low, command won't wait for talking to work: it completes "Command
+   * approves it because …" ("{owner.first} can’t wait any longer"), bound. */
+  urgent?: string;
+  /** What running out does where no fork reads it (sim/clocks.ts clockOutEffects): when it runs out
+   * during a decision and the owner is still inside after that decision's own outcome, the engine
+   * records `harm` to the owner (unless the outcome already hurt them) and sets `mark`, so the
+   * record and the prompts that read the mark agree. */
+  onOut?: { harm?: 'wounded' | 'serious'; mark?: string };
+}
+export interface ClockCondition { clockId: Id; state: 'low' | 'out'; is: boolean }
+/** How a subject sounds to the team (sim/meters.ts stanceOf). 'unheard' until the first event. */
+export type MeterStance = 'unheard' | 'calm' | 'tense' | 'volatile' | 'breaking' | 'yielding';
+/** A branch on a subject's meters at the start of a decision (sim/meters.ts meterConditionsHold):
+ * the stance is one of `stance` and the agitation is at least `agitationAtLeast` (each when given).
+ * `is: false` negates the test. Someone with no meters never matches, so `is: false` holds for them. */
+export interface MeterCondition { personId: Id; stance?: MeterStance[]; agitationAtLeast?: number; is: boolean }
+
+/** V13 authorization (docs/incident-domain-model.md §7, sim/authorization.ts). What command can
+ * give a subject. The first group is allowed; the second never is. */
+export type ConcessionKind = 'food' | 'water' | 'phone' | 'statement' | 'message' | 'third_party' | 'surrender_terms'
+  | 'weapon' | 'transport' | 'officer_swap' | 'family';
+export const CONCESSIONS_ALLOWED: readonly ConcessionKind[] = ['food', 'water', 'phone', 'statement', 'message', 'third_party', 'surrender_terms'];
+/** What a choice asks command for. Entry: the team goes in. Concession: the team gives a subject
+ * something (and every concession is a commitment, D5). Deadly force is not a choice: it is ruled
+ * at the moment a drawn force outcome commits (sim/drawn-effects.ts). */
+export type AuthorityRequest = { kind: 'entry' } | { kind: 'concession'; item: ConcessionKind };
+/** The rule that fired and the command line it generates ("Command approves it because …"), bound
+ * for this call. `allowed: false` locks the choice with `reason`. */
+export interface AuthorityResult { allowed: boolean; rule: string; reason: string }
+/** What counts as a threat to life the team has seen: a fact the team believes (reported or
+ * confirmed), or a mark. `because` completes "Command approves it because …", bound. */
+export interface ThreatEvidence { factId?: Id; flag?: string; because: string }
+
+/** Standard events that move a subject's meters (sim/meters.ts). */
+export type MeterEvent = 'heard' | 'contact' | 'honest' | 'provoked' | 'team_seen' | 'shots' | 'released' | 'promise_kept' | 'promise_broken';
+export interface SubjectMeters { agitation: number; rapport: number }
+
+/** One person of a v13 incident instance (gen/incident/instance.ts), compiled for the engine. Who
+ * they are (pronouns, names) is never here: no mechanic reads identity. */
+export interface IncidentPersonDef {
+  /** The story-bound person id (the tree role). */
+  id: Id;
+  kind: 'subject' | 'hostage' | 'victim' | 'trapped' | 'bystander' | 'reporting_party' | 'animal';
+  /** Bound plain label for contributor lines ("Ana Ruiz"). */
+  label: string;
+  minor: boolean;
+  spaceId: Id;
+  at: Vec;
+  threat?: ThreatProfile;
+  /** Facts whose status is what the team knows of this person's weapon and temper. Unknown until
+   * the fact is reported or confirmed; the odds use what the team knows. */
+  armamentFactId?: Id;
+  dispositionFactId?: Id;
+  /** Furniture between this person and the door the team comes through (spatial-factors.ts). */
+  cover?: { objectId: Id; label: string; grade: 'hard' | 'concealment' };
+  /** Truth, read only when a drawn effect resolves (incoming fire, team force). */
+  weapon?: { kind: 'handgun' | 'long_gun' | 'shotgun' | 'edged' | 'blunt' | 'improvised' | 'unknown'; real: 'real' | 'replica' | 'unknown' };
+  proficiency?: 'untrained' | 'some' | 'trained';
+  /** Feet from this person to the door the team comes through. */
+  doorFt?: number;
+  /** Never killed on the card: a minor, or a subject the self-harm screen covers (E4.5). */
+  noFatal?: boolean;
+  /** A subject's agitation and rapport at the start of the call, and how far events move them. */
+  meters?: SubjectMeters;
+  volatility?: 'steady' | 'shifting' | 'volatile';
+  /** Someone in a group (a counted template slot): which group (the slot), their role in it, and
+   * how strongly the leader holds them, 0 to 1 (the leader carries 1). Read when the leader gives
+   * up (sim/drawn-effects.ts CASCADE_V1). */
+  group?: { id: Id; role: 'leader' | 'follower' | 'lookout' | 'lone'; influence: number };
+  /** A held person: who holds them, and why (§1). Instrumental: leverage for a demand. Expressive:
+   * the holder's grievance is with them. Incidental: they were there when it started. */
+  hold?: { by: Id; kind: 'instrumental' | 'expressive' | 'incidental' };
+}
+
 export interface ScenarioDefinition {
   id: Id;
   version: number;
@@ -360,6 +487,12 @@ export interface ScenarioDefinition {
   briefing: { known: string[]; unknown: string[]; dispatchReason?: string; teamResponsibilities?: string[] };
   /** V5 archetype bindings share the generated world with narrative, actions and map views. */
   story?: StoryInstance;
+  /** v13: the incident instance's people as the engine reads them (sim/incident-factors.ts). */
+  incidentPeople?: IncidentPersonDef[];
+  /** V13: what runs down on the operation's minutes in this call (sim/clocks.ts). */
+  clocks?: ClockDef[];
+  /** V13: what counts as a seen threat to life in this call (sim/authorization.ts). */
+  threats?: ThreatEvidence[];
   externalServices?: ExternalServiceDefinition[];
   civilianOutcomes?: { id: Id; label: string; factId: Id; safeFlag: string; injuredFlag: string; careFlag: string }[];
   facts: FactDefinition[];

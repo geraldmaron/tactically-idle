@@ -4,6 +4,8 @@ import { selectedForceRisk, selectedProtection } from './force-risk';
 import { externalSupportActionIssue, remainingSupportWait } from './external-support';
 import { evaluateCapabilities } from './capabilities';
 import { hydrateStoryAction, storyActionTarget, storyPropsPublic, storyPublicScenario } from './story-people';
+import { incidentFactors } from './incident-factors';
+import { authorize } from './authorization';
 import { currentStoryRoute, findStoryRoute } from './story-bindings';
 import { publicStoryMovementLegs } from './story-movement-v7';
 import { joinCareRoutes, physicalCare } from './physical-care';
@@ -39,7 +41,7 @@ import type {
   SquadId,
   Vec,
 } from './types';
-import type { ActionDefinition, CheckKind, Condition, EquipmentEffect, ScenarioDefinition } from './scenario-types';
+import type { ActionDefinition, AuthorityResult, CheckKind, Condition, EquipmentEffect, ScenarioDefinition } from './scenario-types';
 import { buildLocation, deriveLocation } from './location';
 import { highRiskAllowed } from './officer';
 import { squadUnits, unitEffectiveness } from './inventory';
@@ -353,6 +355,8 @@ export interface Arrival {
 
 export interface Evaluation {
   forceRisk?: ForceRiskPreview;
+  /** V13: what command says to the choice's request (sim/authorization.ts). Refused, the choice is locked with its line. */
+  authority?: AuthorityResult;
   protectionUsed?: { itemId: Id; unitId: Id };
   action: ActionDefinition;
   /** Present only for opted-in story person targets; null means no known on-scene target. */
@@ -608,6 +612,9 @@ export function evaluateAction(input: EvalInput): Evaluation {
   const actingHas = (tag: string) => actingTags.has(tag);
 
   // ---- requirement gates, in reading order
+  // v13: command's answer comes first, from what the team believes now (sim/authorization.ts).
+  const authority = scenario.version >= 13 && action.authority ? authorize(scenario, run, action.authority) : undefined;
+  if (authority && !authority.allowed) reasons.push(authority.reason);
   const req = { ...action.requires, allTags: effectiveTags(action.requires.allTags), anyTags: action.requires.anyTags?.some((t) => t === 'battery') ? [] : effectiveTags(action.requires.anyTags) };
   if (req.minSquads && acting.length + support.length < req.minSquads.count) reasons.push(req.minSquads.reason);
   for (const f of req.facts ?? []) if (!f.in.includes(run.knowledge[f.factId] ?? 'unknown')) reasons.push(f.reason);
@@ -723,6 +730,14 @@ export function evaluateAction(input: EvalInput): Evaluation {
     } else {
       modContribs.push({ label: m.label, value: m.value, source: m.source });
     }
+  }
+  // v13: the people in the incident and where they stand (sim/incident-factors.ts).
+  const incident = incidentFactors(scenario, built, run, action, participants);
+  if (incident) {
+    difficulty += incident.add;
+    diffContribs.push(...incident.difficulty);
+    modContribs.push(...incident.score);
+    details.push(...incident.details);
   }
 
   // ---- officer contributions
@@ -1246,6 +1261,7 @@ export function evaluateAction(input: EvalInput): Evaluation {
   return {
     action,
     ...(forceRisk ? { forceRisk } : {}),
+    ...(authority ? { authority } : {}),
     ...(protectionUsed ? { protectionUsed } : {}),
     ...publicTarget,
     ...(storyOpenedIds ? { storyOpenedIds, storySquadOpenedIds, storyMovementMinutes, storyMovementOnlyUnitIds } : {}),

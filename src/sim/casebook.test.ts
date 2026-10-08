@@ -89,7 +89,9 @@ describe('capability unlocks', () => {
     s.department.level = 0;
     const open = unlockedTypes(s, ALL);
     expect(open.length).toBeGreaterThan(0);
-    expect(open.every((type) => unlockRule(type).level === 1 && !unlockRule(type).anyCert)).toBe(true);
+    // Every dispatched framework is tactical and needs a capability, so the fallback offers the
+    // lowest-level ones rather than nothing.
+    expect(open.every((type) => unlockRule(type).level === 1)).toBe(true);
     expect(playerArcContext(s).unlockedTypes).toEqual(open);
   });
 });

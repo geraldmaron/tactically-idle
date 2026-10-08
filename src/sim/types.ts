@@ -602,6 +602,9 @@ export interface DecisionResolution {
     forceOutcome?: ForceOutcome;
     personCasualties?: PersonCasualtyRecord[];
     protectionUsed?: { itemId: Id; unitId: Id };
+    /** V13 drawn consequences settled at this commit (sim/drawn-effects.ts): who fired or who
+     * force was used on, the result key ('serious', 'firearm:wounded'), and the rule's reason. */
+    drawn?: { model: 'incoming_fire' | 'team_force' | 'cascade'; personId: Id; key: string; reason?: string }[];
     /** V5 opening changes resolved against the route actually used, in committed order. */
     openingChanges?: { openingId: Id; state: OpeningState }[];
   };
@@ -658,6 +661,14 @@ export interface OperationRun {
   personCasualties?: Record<Id, PersonCasualtyRecord>;
   /** Operation minutes elapsed. */
   clock: number;
+  /** V13 clocks (sim/clocks.ts): what is left of each, and how many of its cues have fired. */
+  clocks?: Record<Id, { value: number; cued: number }>;
+  /** V13 commitments (sim/commitments.ts): what command promised a person, and whether the team
+   * kept it. */
+  commitments?: Record<Id, { personId: Id; kind: string; madeAt: number; revision: number; status: 'open' | 'kept' | 'broken' }>;
+  /** V13 subject meters (sim/meters.ts): agitation and rapport now, and how far each kind of
+   * event has moved them this call. */
+  meters?: Record<Id, { agitation: number; rapport: number; moved: Partial<Record<string, { agitation: number; rapport: number }>> }>;
   /** 0..100 situation pressure. */
   pressure: number;
   /** 0..100 progress toward the objective. */
@@ -722,6 +733,12 @@ export interface DebriefResult {
   officerCasualties?: OfficerCasualtyRecord[];
   civilianOutcomes?: CivilianOutcomeView[];
   personCasualties?: PersonCasualtyRecord[];
+  /** V13 (sim/outcome-score.ts): what the call was scored on, each line with the trust and strain it
+   * moved. The call's result comes first; the trust lines add up to the trust change before the
+   * department's 0 to 100 clamp, and the strain lines to the strain at close. */
+  scoreLines?: { key: string; text: string; trust: number; strain: number }[];
+  /** V13: each use of force by the team, on whom, what it did, and the rule's reason. */
+  forceLines?: { text: string; reason?: string }[];
   /** Detached complete decision log; absent from previously closed legacy debriefs. */
   decisions?: DecisionView[];
   objective: { score: number; label: string };
@@ -818,6 +835,9 @@ export interface DecisionView {
 
 export interface ActionView {
   forceRisk?: ForceRiskPreview;
+  /** V13: what command says to the choice's request (sim/authorization.ts). Allowed, the card shows
+   * the line under the summary; refused, the choice is locked and `reason` is the same line. */
+  authority?: import('./scenario-types').AuthorityResult;
   /** Common event across effort bands: authored explicitly or proven by identical v6 effect tables. */
   eventResult?: string;
   likelihood: Record<OutcomeBand, number>;
@@ -826,6 +846,8 @@ export interface ActionView {
   consequenceLevel: RiskBand;
   /** Conservative public duration bounds, including possible outcome delays. */
   timeRange: { min: number; max: number };
+  /** A long hold's span, shown in place of minutes ('Hours', 'All night'). */
+  timeLabel?: string;
   id: Id;
   stage: StageId;
   title: string;

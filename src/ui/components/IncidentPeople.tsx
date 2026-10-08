@@ -1,6 +1,9 @@
 import type { CivilianOutcomeView, GameState, OfficerCasualtyRecord, OperationRun, PersonCasualtyRecord } from '../../sim/types';
 import type { ScenarioDefinition } from '../../sim/scenario-types';
 import { civilianOutcomeViews } from '../../sim/incident-consequences';
+import { clockViews } from '../../sim/clocks';
+import { stanceOf } from '../../sim/meters';
+import type { Stance } from '../../sim/meters';
 import type { ReactNode } from 'react';
 import { Icon } from '../icons';
 import type { IconName } from '../icons';
@@ -50,6 +53,16 @@ const PERSON_ICON: Record<PersonStatus, IconName> = {
   deceased: 'x',
 };
 
+/** How a subject sounds to the team, once the team has heard from them (sim/meters.ts). */
+export const STANCE_LABEL: Record<Exclude<Stance, 'unheard'>, string> = {
+  calm: 'Calm',
+  tense: 'Tense',
+  volatile: 'Agitated',
+  breaking: 'Near breaking point',
+  yielding: 'Open to talking',
+};
+const STANCE_TONE: Record<Exclude<Stance, 'unheard'>, PersonTone> = { calm: 'ok', yielding: 'ok', tense: 'pending', volatile: 'warn', breaking: 'danger' };
+
 /** Two initials from a name, or the first two letters of a single-word label such as "Resident". */
 export function personInitials(label: string): string {
   const words = label.replace(/[^\p{L}\s'-]/gu, ' ').trim().split(/\s+/).filter(Boolean);
@@ -90,7 +103,15 @@ export function IncidentPeopleStatus({ scenario, run, state }: { scenario: Scena
   const civilians = civilianOutcomeViews(scenario, run);
   const officers = Object.values(run.officerCasualties ?? {});
   const additionalCasualties = Object.values(run.personCasualties ?? {}).filter((person) => !civilians.some((civilian) => civilian.id === person.personId));
-  if (!civilians.length && !officers.length && !additionalCasualties.length) return null;
+  // Subjects the team has heard from, and clocks the team has heard a cue from: nothing earlier,
+  // so the panel never shows what the team can't know yet.
+  const subjects = Object.entries(run.meters ?? {}).flatMap(([id, meters]) => {
+    const stance = stanceOf(meters);
+    const person = scenario.incidentPeople?.find((entry) => entry.id === id);
+    return stance === 'unheard' || !person || run.flags.includes(`out:${id}`) ? [] : [{ id, label: person.label, stance }];
+  });
+  const clocks = clockViews(scenario, run).filter((clock) => clock.latest && !clock.stopped);
+  if (!civilians.length && !officers.length && !additionalCasualties.length && !subjects.length && !clocks.length) return null;
   const located = civilians.filter((person) => person.status !== 'unaccounted').length;
   const needCare = civilians.filter((person) => PERSON_TONE[person.status] === 'warn').length;
   return <section className="incident-people-status" aria-label="People at this call">
@@ -103,6 +124,12 @@ export function IncidentPeopleStatus({ scenario, run, state }: { scenario: Scena
     </div>}
     {civilians.length > 0 && <CivilianOutcomeList outcomes={civilians} />}
     <PersonCasualtyList casualties={additionalCasualties} />
+    {subjects.length > 0 && <ul className="incident-people-list incident-subject-list" aria-label="Subjects">{subjects.map((subject) =>
+      <PersonTile key={subject.id} label={subject.label} status={STANCE_LABEL[subject.stance]} tone={STANCE_TONE[subject.stance]} icon="ear" data={{ 'data-subject-stance': subject.stance }} />)}</ul>}
+    {clocks.length > 0 && <ul className="incident-people-list incident-clock-list" aria-label="Running down">{clocks.map((clock) =>
+      <PersonTile key={clock.id} label={clock.label} status={clock.out ? 'Out' : 'Running low'} tone={clock.out ? 'danger' : 'warn'} icon="hourglass" avatar={<Icon name="hourglass" size={18} />} data={{ 'data-clock': clock.id }}>
+        <span className="person-note">{clock.latest}</span>
+      </PersonTile>)}</ul>}
     {officers.length > 0 && <ul className="incident-people-list incident-wounded-list" aria-label="Officers out of action">{officers.map((casualty) => {
       const officer = state.officers[casualty.officerId];
       return <PersonTile key={casualty.officerId} label={`${officer ? `${officer.firstName} ${officer.surname}` : 'Officer'} · out of action`} status={`${casualty.severity === 'serious' ? 'Serious injury · ' : ''}${casualty.label} · ${CASUALTY_CARE_LABEL[casualty.care]}`} tone="warn" icon="bandage"

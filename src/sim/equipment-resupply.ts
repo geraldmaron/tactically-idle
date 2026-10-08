@@ -6,7 +6,7 @@ import { ITEMS } from '../content/items';
 import type { GameState, HandlerMap, Id, ItemUnit, SquadId } from './types';
 import { projectedCondition } from './equipment';
 import { readyUnits, reserveLoadouts, unitEffectiveness } from './inventory';
-import { advanceTime } from './operation';
+import { advanceTime, applyClockCues } from './operation';
 import { availableUnits, builtFor, CERT_LABEL, evaluateAction } from './resolution';
 import { actionEquipmentRequirements, operatorQualified, qualifiedOfficers, requiredEquipmentBundle } from './equipment-requirements';
 import { getScenario } from './scenario-registry';
@@ -151,7 +151,8 @@ export const RESUPPLY_HANDLERS: HandlerMap<'resupplyAction'> = {
     const reserved = reserveLoadouts(draft, run.id, {}, explicit, ctx.now);
     if (!reserved.ok) return reserved;
     run.reservationIds.push(...draft.reservations.slice(before).map((r) => r.id));
-    advanceTime(run, getScenario(run.scenarioId)!, plan.minutes);
+    const scenario = getScenario(run.scenarioId)!;
+    applyClockCues(run, scenario, advanceTime(run, scenario, plan.minutes).cues);
     const vehicle = supportVehicle(draft, run);
     (run.resupplies ??= []).push({ minutes: plan.minutes, allocations: plan.allocations, ...(vehicle?.itemId === 'support_van' ? { supportUnitId: vehicle.id } : {}) });
     run.revision += 1;

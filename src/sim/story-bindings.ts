@@ -1,4 +1,5 @@
 import type { Condition, ScenarioDefinition, StoryAnchor, StoryInstance } from './scenario-types';
+import { withVariants } from './drawn-effects';
 import type { BuiltLocation, ExteriorZone, Id, LocationDefinition, ObjectType, Opening, PlacedObject, Polygon, Room, RoomType, Vec, ZoneKind } from './types';
 import { floorMap, openingFloor, pointInPolygon, polygonBBox, polygonCentroid } from './location';
 import { findRoomPath } from './furniture-path';
@@ -175,7 +176,8 @@ export function validateStoryBindings(scenario: ScenarioDefinition, built: Built
   for (const fact of scenario.facts) if (fact.storyPersonId && !personIds.has(fact.storyPersonId)) errors.push(`${scenario.id}: story fact ${fact.id} references unknown subject ${fact.storyPersonId}`);
   const actions = Object.values(scenario.stages).flatMap(stage => stage.actions);
   for (const action of actions) for (const id of action.requires.responsivePeople ?? []) if (!personIds.has(id)) error(`action ${action.id} needs an unknown responsive person ${id}`);
-  const effects = actions.flatMap(action => Object.values(action.outcomes).flat());
+  // Drawn consequences (v13) set flags in their variants too.
+  const effects = withVariants(actions.flatMap(action => Object.values(action.outcomes).flat()));
   const flags = new Set(['casualty:officers', 'casualty:untreated', 'casualty:awaiting_transport', 'casualty:evacuated',
     ...(scenario.version >= 7 ? ['casualty:people', 'casualty:person_fatality', 'casualty:person_needs_care', ...people.flatMap(person => [
       ...['wounded', 'serious', 'fatal'].map(severity => `person_harm:${person.id}:${severity}`),

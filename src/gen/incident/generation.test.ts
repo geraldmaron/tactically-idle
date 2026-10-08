@@ -75,9 +75,11 @@ describe('generated incidents', () => {
   it('starts a different location on each initial board card', () => {
     for (const seed of [1, 12345, 9876, 4294967295]) {
       const state = createInitialState(NOW, seed);
-      expect(new Set(state.incidents.map((c) => c.familyId)).size).toBe(3);
+      const cards = state.incidents.length;
+      expect(cards).toBeGreaterThan(1);
+      expect(new Set(state.incidents.map((c) => c.familyId)).size).toBe(cards);
       for (const card of state.incidents) expect(getScenario(card.id)?.locationFamilyId).toBe(`${card.familyId}__furnished_v7`);
-      expect(scenarioCards(state, NOW).filter((c) => c.id.startsWith('gen:'))).toHaveLength(3);
+      expect(scenarioCards(state, NOW).filter((c) => c.id.startsWith('gen:'))).toHaveLength(cards);
     }
   });
 

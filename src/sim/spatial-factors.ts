@@ -3,12 +3,12 @@
 // Every function is pure and returns player-language labels plus map overlays, so a
 // contributor and the overlay that explains it always come from the same numbers.
 // Game abstractions, not tactical instruction.
-import type { BuiltLocation, Id, KnowledgeStatus, ItemDefinition, MapOverlay, Opening, Room, StagingPoint, Vec } from './types';
+import type { BuiltLocation, Id, KnowledgeStatus, ItemDefinition, MapOverlay, Opening, PlacedObject, Room, StagingPoint, Vec } from './types';
 import type { FactDefinition, ScenarioDefinition } from './scenario-types';
 import { bestSignal, nearestOpening, stagingPointById, type Channel } from './spatial';
 import { LOCATION_TUNING, pointInPolygon } from './location';
 import { DOORS, STAIR_MINUTES } from '../content/materials';
-import { findRoomPath, roomPointClear, roomSegmentClear } from './furniture-path';
+import { findRoomPath, footprintRect, roomPointClear, roomSegmentClear } from './furniture-path';
 import { distanceFor, type Distance } from './geometry';
 
 export const SPATIAL_TUNING = {
@@ -26,7 +26,46 @@ export const SPATIAL_TUNING = {
   entryStrainCap: 0.4,
   /** Voice carries between squads without radios only this far, feet. */
   voiceLinkFt: 30,
+  /** Difficulty an entry gains when an armed person has hard cover (an appliance, a counter) or
+   * concealment (a sofa, a desk) between them and the door the team comes through. */
+  coverHard: 6,
+  coverConcealment: 3,
+  /** Cover counts only near the person: within this share of the line from them to the door. */
+  coverReach: 0.6,
 };
+
+/** What a piece of furniture does for someone behind it. Game abstraction: hard cover stops the
+ * team reaching them cleanly, concealment only hides them. Unlisted furniture does neither. */
+export const COVER_GRADE: Partial<Record<PlacedObject['type'], 'hard' | 'concealment'>> = {
+  counter: 'hard', fridge: 'hard', stove: 'hard', tub: 'hard', dresser: 'hard', wardrobe: 'hard',
+  sofa: 'concealment', bed: 'concealment', desk: 'concealment', shelf: 'concealment', dining_table: 'concealment', armchair: 'concealment', vanity: 'concealment', register: 'concealment',
+};
+
+/** The best furniture between a person and a point (the door the team enters by), in their own
+ * room and near them: hard cover first, then concealment, nearest first. */
+export function coverOnLine(built: BuiltLocation, spaceId: Id, from: Vec, to: Vec): { object: PlacedObject; grade: 'hard' | 'concealment' } | null {
+  let best: { object: PlacedObject; grade: 'hard' | 'concealment'; t: number } | null = null;
+  for (const object of built.location.objects) {
+    const grade = COVER_GRADE[object.type];
+    if (!grade || object.in !== spaceId) continue;
+    const t = segmentEntersRect(from, to, footprintRect(object));
+    if (t === null || t > SPATIAL_TUNING.coverReach) continue;
+    if (!best || (grade === 'hard' && best.grade !== 'hard') || (grade === best.grade && t < best.t)) best = { object, grade, t };
+  }
+  return best && { object: best.object, grade: best.grade };
+}
+
+/** Where along a segment (0 at `a`, 1 at `b`) it first enters an axis-aligned rectangle, or null. */
+function segmentEntersRect(a: Vec, b: Vec, r: { x: number; y: number; w: number; h: number }): number | null {
+  let t0 = 0, t1 = 1;
+  const dx = b.x - a.x, dy = b.y - a.y;
+  for (const [p, q] of [[-dx, a.x - r.x], [dx, r.x + r.w - a.x], [-dy, a.y - r.y], [dy, r.y + r.h - a.y]] as const) {
+    if (p === 0) { if (q < 0) return null; continue; }
+    const t = q / p;
+    if (p < 0) { if (t > t1) return null; if (t > t0) t0 = t; } else { if (t < t0) return null; if (t < t1) t1 = t; }
+  }
+  return t0;
+}
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
 /** The location's point distance (geometry.ts): Math.hypot for locations issued before `_g2`. */

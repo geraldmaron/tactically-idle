@@ -97,14 +97,15 @@ describe('department status explanations', () => {
     expect(html).toContain('Completed operations can raise or lower public trust.');
   });
 
-  it('shows service toward the next level and what that level opens', () => {
+  it('shows service toward the next level, with no new kind of call to name', () => {
     const state = makeState();
     state.department.level = 2;
     state.department.service = 15;
     const html = render(createElement(DepartmentStatHelp, { g: state, topic: 'level' }));
     expect(html).toContain('Level 2');
     expect(html).toContain('<strong>5 of 20</strong> service toward level 3');
-    expect(html).toContain('Level 3 opens robbery witness reconciliation.');
+    // Every dispatched kind of call opens at level 1, so a later level names none.
+    expect(html).not.toContain('Level 3 opens');
     expect(html).toContain('separate from public trust and from an officer');
   });
 

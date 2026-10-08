@@ -352,19 +352,22 @@ function v2Envelope(savedAt = T0 + 5 * HOUR_MS) {
 }
 
 describe('migration from version 2 to 3', () => {
-  it('adds a deterministic three-card board arriving at the save time, plus a schedule', () => {
+  it('adds a deterministic board, one call per kind, arriving at the save time, plus a schedule', () => {
     const a = deserialize(JSON.stringify(v2Envelope()))!;
     const b = deserialize(JSON.stringify(v2Envelope()))!;
     expect(a).not.toBeNull();
     expect(a.saveVersion).toBe(9);
     expect(a).toEqual(b);
-    expect(a.incidents).toHaveLength(3);
+    const seeded = a.incidents.length;
+    expect(seeded).toBeGreaterThan(0);
+    expect(seeded).toBeLessThanOrEqual(3);
+    expect(new Set(a.incidents.map((c) => c.type)).size).toBe(seeded);
     for (const c of a.incidents) {
       expect(c).toMatchObject({ arrivedAt: T0 + 5 * HOUR_MS, seen: false });
       expect(c.expiresAt).toBeGreaterThan(c.arrivedAt);
     }
-    expect(new Set(a.incidents.map((c) => c.id)).size).toBe(3);
-    expect(boardSummary(a, T0 + 5 * HOUR_MS)).toMatchObject({ count: 3, newCount: 3 });
+    expect(new Set(a.incidents.map((c) => c.id)).size).toBe(seeded);
+    expect(boardSummary(a, T0 + 5 * HOUR_MS)).toMatchObject({ count: seeded, newCount: seeded });
     expect(boardSummary(a, T0 + 5 * HOUR_MS).nextArrivalAt).toBeGreaterThan(T0 + 5 * HOUR_MS);
     // Everything else is carried over untouched.
     const fresh = createInitialState(T0);
@@ -406,7 +409,8 @@ describe('migration chains from version 1 to 3', () => {
   it('a v1 save arrives at the current version with a board and the v2 conversions applied', () => {
     const s = deserialize(JSON.stringify(v1Envelope()))!;
     expect(s.saveVersion).toBe(9);
-    expect(s.incidents).toHaveLength(3);
+    expect(s.incidents.length).toBeGreaterThan(0);
+    expect(new Set(s.incidents.map((c) => c.type)).size).toBe(s.incidents.length);
     expect(s.incidents.every((c) => c.arrivedAt === T0 && !c.seen)).toBe(true);
     expect(Object.keys(s.units).length).toBeGreaterThan(0);
     expect(Number.isFinite(s.officers.off_chen.bornDay)).toBe(true);

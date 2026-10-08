@@ -8,6 +8,7 @@
 //
 // This module must not import economy.ts (economy imports it).
 import type { Department, GameState, HandlerResult, Id, IncidentCard } from './types';
+import { CALL_TREE_CONTENT_VERSION } from '../content/call-trees';
 import { next } from './rng';
 import { drawIncidentSpec, incidentId, parseIncidentId } from '../gen/incident';
 import { SCENARIO_TYPES_V11 } from '../content/scenario-types-v11';
@@ -104,6 +105,9 @@ function drawCard(d: GameState, at: number): IncidentCard | null {
   const id = incidentId(spec);
   const cards = board(d);
   if (cards.some((c) => c.id === id) || d.activeRun?.scenarioId === id) return null;
+  // From v13 the board holds one live call per kind of call, never the kind in progress, so a
+  // department with two kinds unlocked sees at most two call-outs instead of the same call twice.
+  if (d.contentVersion >= CALL_TREE_CONTENT_VERSION && (cards.some((c) => c.type === spec.type) || activeStory?.type === spec.type)) return null;
   const card: IncidentCard = {
     id,
     type: spec.type,

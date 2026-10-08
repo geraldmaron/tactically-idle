@@ -329,7 +329,8 @@ function tag(s: Subject): string {
   return s.armSource === 'confirmed' ? '' : s.armSource === 'reported' ? ' (as reported)' : ' (assumed)';
 }
 
-const expected = (basis: Basis, src: 'confirmed' | 'reported' | 'assumed' | 'unknown', label: string): string => (basis === 'belief' && src !== 'confirmed' ? `Expected: ${lower(label)}` : label);
+// Labels start with a person's name (v13 incident people), so the case is kept.
+const expected = (basis: Basis, src: 'confirmed' | 'reported' | 'assumed' | 'unknown', label: string): string => (basis === 'belief' && src !== 'confirmed' ? `Expected: ${label}` : label);
 
 /**
  * Contributors for the threat around an action. `relevant` are the subjects in range of

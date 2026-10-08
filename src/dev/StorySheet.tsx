@@ -252,8 +252,7 @@ function StorySheet() {
         <span className="sl-brand">Story sheet</span>
         <button type="button" aria-pressed={view === 'lab'} onClick={toLab}>Scenario lab</button>
         <button type="button" aria-pressed={view === 'gates'} onClick={toGates}>Gate review · typed packages</button>
-        {view === 'lab' && <span className="sl-jump"><a href="#controls">call</a><a href="#scenario">briefing</a><a href="#options">options</a><a href="#endings">endings</a><a href="#run">step-through</a></span>}
-      </nav>
+              </nav>
       {view === 'gates' ? <GateReview key={query.toString()} /> : <div className="sl-page"><ScenarioLab query={query} navigate={navigate} /></div>}
     </>
   );

@@ -402,7 +402,8 @@ def main():
     seen = collections.defaultdict(set)
     grams = collections.defaultdict(set)
     for r in rows:
-        key = (r["where"], r["situation"])
+        # One field is one string, however many situation rows carry it: a field never repeats itself.
+        key = (r["where"], "")
         for s in sentences(r["text"]):
             if len(s.split()) >= 4:
                 seen[s].add(key)
@@ -459,6 +460,8 @@ def main():
             gy = {" ".join(ty[i:i + 3]) for i in range(len(ty) - 2)}
             shared = [g for g in gx & gy if not all(w in STOP or w in cast for w in g.split())]
             pair = (x["where"], x["situation"], y["where"], y["situation"])
+            if x["where"] == y["where"] and x["text"] == y["text"]:
+                continue  # the same field's row for another situation, not a second string
             if shared and pair not in seen_pairs:
                 seen_pairs.add(pair)
                 flag("path-echo", y, f"repeats '{shared[0]}' from {x['where']}, read back to back")

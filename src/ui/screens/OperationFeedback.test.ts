@@ -10,7 +10,8 @@ import { ActionSheet, LiveView, PersonRow, revealStageStep, StageSteps, type Liv
 import { DecisionCard, OperationFeedback, OperationLogContents, OutcomeForecast } from './OperationFeedback';
 import { OpsDebrief, SavedDebriefContents, SavedDebriefReview } from './OpsDebrief';
 import { Debriefs } from './HQ';
-import { generateIncident } from '../../gen/incident';
+import { drawIncidentSpec, generateIncident } from '../../gen/incident';
+import { startGateRun } from '../../gen/incident/gates/engine-driver';
 import { outcomePercentages, visibleDecisions } from './liveModels';
 
 let state = makeState();
@@ -491,6 +492,38 @@ it('keeps saved subject deaths in a debrief even when a newer active call exists
   expect(html).toContain('Deceased');
 });
 
+
+describe('command’s answer on a choice (sim/authorization.ts)', () => {
+  const approved = { allowed: true, rule: 'entry:threat', reason: 'Command approves it because Ash fired at the lock.' };
+  const refused = { allowed: false, rule: 'entry:none', reason: 'Command won’t approve it until someone sees a threat to life.' };
+  it('shows an approval under the summary on the card and in the sheet', () => {
+    const view = action({ authority: approved });
+    for (const html of [render(createElement(LiveView, liveProps([view], null))), render(sheet(view))]) {
+      expect(html).toContain('Keep access open while preparing aid.');
+      expect(html).toContain(approved.reason);
+    }
+    expect(render(createElement(LiveView, liveProps([view], null)))).toContain('callbtn-command');
+    expect(render(sheet(view))).toContain('operation-command-line');
+  });
+  it('locks a refused choice with command’s line where the lock reason goes', () => {
+    const view = action({ authority: refused, eligible: false, reason: refused.reason, summary: refused.reason });
+    const card = render(createElement(LiveView, liveProps([view], null)));
+    expect(card).toContain(refused.reason);
+    expect(card).not.toContain('callbtn-command');
+    const opened = render(sheet(view));
+    expect(opened).toContain('note note-warn');
+    expect(opened).not.toContain('operation-command-line');
+  });
+  it('carries a real call’s approval from the engine to the card', () => {
+    const s = generateIncident(drawIncidentSpec(1312, { level: 10, trust: 90, contentVersion: 13, unlockedTypes: ['active_armed_incident'] }).spec);
+    const views = actionViews(startGateRun(s.id, 719), NOW, 'A');
+    const entry = views.find(view => view.authority?.allowed);
+    expect(entry, 'an approved entry at the first decision of the armed call').toBeDefined();
+    const html = render(createElement(LiveView, liveProps(views, null)));
+    expect(html).toContain(entry!.authority!.reason);
+    expect(entry!.authority!.reason).toMatch(/^Command approves it because .+\.$/);
+  });
+});
 
 it.each(['reported', 'confirmed'] as const)('uses a public %s weapon item without a contradictory armament-unknown claim', (status) => {
   const html = render(createElement(PersonRow, { m: { id: 'mara', at: { x: 2, y: 2 }, label: 'Mara Bell', kind: 'subject', status: 'confirmed', carried: [{ id: 'firearm', glyph: 'weapon', label: 'Firearm', status }] } }));

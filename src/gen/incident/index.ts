@@ -8,11 +8,16 @@ import { withVersionSevenScene } from './scenes-v7';
 import { withVersionEightDecisions } from './decisions-v8';
 import { withVersionNineCast } from './cast-v9';
 import { withAdditionalFramework } from './frameworks-v9';
+import { withCallTree } from './trees-v13/compile';
+import { callTreeAt } from '../../content/call-trees';
+import { templateAt } from '../../content/incidents';
+import { compileIncident } from './instance';
 import { ADDITIONAL_FRAMEWORK_BY_TYPE } from '../../content/incident-frameworks-v9';
 import { FRAMEWORK_DEPTH_CONTENT_VERSION } from '../../content/framework-depth-v12';
 import { SCENARIO_TYPES_V9 } from '../../content/scenario-recipes';
 import { SCENARIO_TYPES_V10 } from '../../content/scenario-types-v10';
 import { SCENARIO_TYPES_V11 } from '../../content/scenario-types-v11';
+import { SCENARIO_TYPES_V13 } from '../../content/scenario-types-v13';
 import { furnishedFamilyIdV7 } from '../building/furnishing-v7';
 import type { ActionDefinition, IncidentSpec, IncidentType, ScenarioDefinition } from '../../sim/scenario-types';
 import type { BuiltLocation, Room, StageId, Vec } from '../../sim/types';
@@ -34,7 +39,7 @@ const homes = BUILDING_FAMILIES.filter((family) => family.setting !== 'business'
 const allFamilies = BUILDING_FAMILIES.map((f) => f.id);
 /** v10 adds generated building types; earlier versions keep the authored list. */
 const familiesFor = (contentVersion: number) => contentVersion >= 10 ? ALL_BUILDING_FAMILIES.map((f) => f.id) : allFamilies;
-const typesV9Plus = (contentVersion: number) => contentVersion >= 11 ? SCENARIO_TYPES_V11 : contentVersion >= 10 ? SCENARIO_TYPES_V10 : SCENARIO_TYPES_V9;
+const typesV9Plus = (contentVersion: number) => contentVersion >= 13 ? SCENARIO_TYPES_V13 : contentVersion >= 11 ? SCENARIO_TYPES_V11 : contentVersion >= 10 ? SCENARIO_TYPES_V10 : SCENARIO_TYPES_V9;
 // A bounded, playable neighbourhood catalog. Other schema types remain readable
 // in legacy Maple seed IDs, but are not advertised as new generated templates.
 export const INCIDENT_TYPES: IncidentTypeInfo[] = [
@@ -47,9 +52,9 @@ export const INCIDENT_TYPES: IncidentTypeInfo[] = [
 /** Future calls use v12; issued v1–v11 seed tuples retain their original content. v12 keeps
  * the v11 catalog and adds decision depth to every typed framework (frameworks-v9.ts) and a
  * framework-first board draw (drawIncidentSpec). */
-export const INCIDENT_CONTENT_VERSION = 12;
+export const INCIDENT_CONTENT_VERSION = 13;
 /** Highest incident content version this build can read. */
-export const SUPPORTED_INCIDENT_CONTENT_VERSION = 12;
+export const SUPPORTED_INCIDENT_CONTENT_VERSION = 13;
 /** First content version with framework-first draws and the v12 decision structures. */
 export const DECISION_DEPTH_CONTENT_VERSION = FRAMEWORK_DEPTH_CONTENT_VERSION;
 export const INCIDENT_TYPES_V2: IncidentTypeInfo[] = [
@@ -280,6 +285,11 @@ function generateIncidentAt(spec: IncidentSpec): ScenarioDefinition {
     rewards: { funding: Math.round((business ? 2100 : 1700) * multiplier), devPoints: Math.round(2 * multiplier), trust: Math.round(4 * multiplier), xp: Math.round(30 * multiplier) },
     incident: { ...spec },
   };
+  // Call trees compile from an incident instance: the template's people on this building.
+  const template = templateAt(spec.type, spec.contentVersion);
+  if (template) return compileIncident(scenario, built, template);
+  const tree = callTreeAt(spec.type, spec.contentVersion);
+  if (tree) return withCallTree(scenario, built, tree);
   if (spec.contentVersion >= 9) return withVersionNineCast(ADDITIONAL_FRAMEWORK_BY_TYPE[spec.type] ? withAdditionalFramework(scenario, built) : withVersionEightDecisions(withVersionSevenScene(withVersionSixStory(scenario, built), built), built));
   if (spec.contentVersion === 8) return withVersionEightDecisions(withVersionSevenScene(withVersionSixStory(scenario, built), built), built);
   if (spec.contentVersion === 7) return withVersionSevenScene(withVersionSixStory(scenario, built), built);

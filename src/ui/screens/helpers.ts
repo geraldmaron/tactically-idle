@@ -5,7 +5,6 @@ import { nodeOptions, squadReadiness } from '../../sim/department-selectors';
 import { scenarioCards } from '../../sim/operation-selectors';
 import type { ScenarioCard } from '../../sim/operation-selectors';
 import { getScenario } from '../../sim/scenario-registry';
-import { SCENARIO_ORDER } from '../../content/scenarios';
 import { ageYears, gameDay } from '../../sim/calendar';
 import { RATING_META } from '../components/labels';
 
@@ -75,12 +74,6 @@ export interface BoardEntry {
   scenario: ScenarioDefinition | null;
 }
 
-/** An authored standing assignment (the Maple Street calls): always available, always live. */
-export interface StandingEntry {
-  card: ScenarioCard;
-  scenario: ScenarioDefinition | null;
-}
-
 /** Live incidents, newest first. */
 export function boardEntries(g: GameState, now: number): BoardEntry[] {
   const cards = allCards(g, now);
@@ -93,32 +86,12 @@ export function boardEntries(g: GameState, now: number): BoardEntry[] {
   return out;
 }
 
-/** Authored standing assignments, in catalog order. */
-export function standingEntries(g: GameState, now: number): StandingEntry[] {
-  const cards = allCards(g, now);
-  const out: StandingEntry[] = [];
-  for (const id of SCENARIO_ORDER) {
-    const card = cards.find((c) => c.id === id);
-    if (card) out.push({ card, scenario: getScenario(id) });
-  }
-  return out;
-}
-
 /** The board never offers more than this many operations at once. */
 export const BOARD_LIMIT = 5;
 
-export interface BoardPlan {
-  live: BoardEntry[];
-  standing: StandingEntry[];
-  /** Standing assignments left out because the board is full. */
-  waiting: number;
-}
-
-/** Live incidents take places first; standing assignments fill any open places, in order. */
-export function boardPlan(live: BoardEntry[], standing: StandingEntry[]): BoardPlan {
-  const shownLive = live.slice(0, BOARD_LIMIT);
-  const shown = standing.slice(0, BOARD_LIMIT - shownLive.length);
-  return { live: shownLive, standing: shown, waiting: standing.length - shown.length };
+/** Live call-outs, newest first, capped at the board limit. */
+export function boardPlan(live: BoardEntry[]): BoardEntry[] {
+  return live.slice(0, BOARD_LIMIT);
 }
 
 // ---------------------------------------------------------------- board summary (department selector, optional)

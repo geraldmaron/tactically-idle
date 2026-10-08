@@ -48,6 +48,32 @@ export function DebriefSummary({ debrief: d }: { debrief: DebriefResult }) {
   </Card>;
 }
 
+/** V13: what the call was scored on, line by line (the trust lines add up to the trust change before
+ * the department's 0 to 100 clamp), and the force the team used, on whom, and why. */
+export function DebriefScore({ debrief: d }: { debrief: DebriefResult }) {
+  if (!d.scoreLines?.length && !d.forceLines?.length) return null;
+  return <Card className="result-score-lines">
+    {!!d.scoreLines?.length && <section aria-label="How the call was scored">
+      <SubHead icon="gauge">How the call was scored</SubHead>
+      <ul className="score-lines">{d.scoreLines.map((line) => <li key={line.key} className={`score-line${line.key === 'result' ? ' score-line-result' : ''}`} data-score-line={line.key}>
+        <span className="score-line-text">{line.text}</span>
+        <span className="score-line-values">
+          {line.trust !== 0 && <span className={line.trust < 0 ? 'tone-danger' : 'tone-mint'}>{signed(line.trust, 1)} trust</span>}
+          {line.strain !== 0 && <span className={line.strain > 0 ? 'tone-warn' : 'tone-mint'}>{signed(line.strain, 1)} strain</span>}
+          {line.trust === 0 && line.strain === 0 && <span className="tone-neutral">No change</span>}
+        </span>
+      </li>)}</ul>
+    </section>}
+    {!!d.forceLines?.length && <section aria-label="Force used">
+      <SubHead icon="shield">Force used</SubHead>
+      <ul className="force-lines">{d.forceLines.map((line, index) => <li key={index}>
+        <span>{line.text}</span>
+        {line.reason && <span className="force-line-reason"><span className="force-line-why">Why</span>{line.reason}</span>}
+      </li>)}</ul>
+    </section>}
+  </Card>;
+}
+
 /** Saved completion evidence wins over numeric progress and later scenario content. */
 export function completionLabel(d: DebriefResult): string {
   if (!d.disposition) return d.objective.label;

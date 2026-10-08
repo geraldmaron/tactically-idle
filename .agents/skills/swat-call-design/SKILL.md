@@ -57,6 +57,7 @@ this file. No gate in this file depends on a skill outside this folder.
 
 | Lane | Writer owns | Compiler or engine owns | Where (search symbol) |
 |---|---|---|---|
+| Call tree (v13, the lane for every tactical call) | The whole `CallTree`: roles, facts, situations, nodes, choices, per-band outcomes and routes, turn groups, endings | Node flags, exclusivity, pruning per call, role binding, placement, routes, rewards by tier. See `docs/call-trees-v13.md` | `src/content/call-trees/` (`CALL_TREES`), compiled by `withCallTree` |
 | Typed framework package | The `IncidentFramework` fields, through the three situations and the v11 and v12 extensions | Stage labels, stage two and three prompts, responsibilities, approach and check summaries, adverse texts, the placement line, the situation 3 line, the unfinished ending, pressure | `src/content/incident-frameworks-v9.ts` (`ADDITIONAL_FRAMEWORKS`), compiled by `withAdditionalFramework` |
 | Hand-authored story | The whole `ScenarioDefinition`, people, facts, actions, pressure, services and endings | The build chain in engine-map.md section 1, name binding and spelling. The prose lint does not run here | `STORY_ARCHETYPES`, `planEpisode`, variant modules, `withSecondChoicesV12` |
 | Setting module | Per-setting prose for an existing story | Every action, flag and ending | `SettingModule`, `ArmedIncidentProse` |
@@ -192,8 +193,21 @@ by eye against this file's two prose rules and the stock phrases you can name.
   option can end the call, or move a person's state toward an ending, on its favorable band.
 - One stage per call is a hold, where the question is whether to act yet.
 - Every stage opens mid-problem. Cut the hallway.
-- Branches rejoin at shared stages, and tracked state carries the difference. In the typed lane
+- Branches rejoin at shared stages, and tracked state carries the difference. In a call tree, a
+  `mark` carries it: a `promptIf` names the earlier choice, and an `onlyIf` choice exists only on
+  that branch. The gate fails a node whose choices all lead to the same future. In the typed lane
   that needs R8, and the turn lives in writer fields such as `approachResults` and `confirmed`.
+- Taking a choice leaves its node (call trees). A choice that should leave its siblings open is
+  an ordering, never a choice; route it to a new node that says what changed.
+- A held ending names who is still inside. When a person can be inside or out on the paths that
+  reach it, split the outcome by `when: { safe | notSafe }` into two endings
+  (`hostage-signature.ts`, `held` and `held_both`).
+- A subject who shoots at the team moves the call to a decision node (`fired_on`: go in harder,
+  or hold and call him), never straight to a held ending.
+- A preview names the worst result its band can produce in any situation, and promises nothing
+  a hidden truth can take away. Read each preview once per situation before it ships.
+- A hold the results measure in hours sets `span` ('Hours', 'All night') so the card doesn't
+  show a minute count the text contradicts.
 
 Stage exits (hand-authored). List every action and band that sets `stage` or `ending` in row F.
 Walk the orders where the player takes the transition action first and the gating action last,

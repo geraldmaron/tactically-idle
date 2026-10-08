@@ -28,6 +28,11 @@ export function pick<T>(state: number, items: readonly T[]): { value: T; state: 
 }
 
 /** Stable 32-bit hash for deriving seeds from strings. */
+/** An index in 0..n-1 from a hashSeed value, read from its high bits. FNV-1a's low bit is only the
+ * parity of the key's characters, so `hash % n` with an even n reaches half the options for keys
+ * that differ in one place (only half the surnames, a turn tied to pacing). */
+export const hashIndex = (hash: number, n: number): number => Math.min(n - 1, Math.floor(hash / 4294967296 * n));
+
 export function hashSeed(text: string): number {
   let h = 2166136261 >>> 0;
   for (let i = 0; i < text.length; i++) {

@@ -358,10 +358,10 @@ function requirementLine(a: ActionDefinition): string {
   return line.charAt(0).toUpperCase() + line.slice(1);
 }
 
-function summaryFor(a: ActionDefinition, ev: Evaluation, state: GameState): string {
+function summaryFor(a: ActionDefinition, ev: Evaluation, state: GameState, scenarioVersion: number): string {
   if (!ev.eligible) return (ev.reason ?? 'Unavailable').split(' — ')[0];
   const lead = ev.leadId ? state.officers[ev.leadId]?.surname : undefined;
-  return a.summary.replace(/Uses a battery pack/gi, 'Uses integrated equipment power').replace('{lead}', lead ?? 'Squad');
+  return a.summary.replace(/Uses a battery pack/gi, 'Uses integrated equipment power').replace(scenarioVersion >= 13 ? /\{lead\}/g : '{lead}', lead ?? 'Squad');
 }
 
 function expectedSupplies(action: ActionDefinition, ev: Evaluation): ActionView['suppliesRequired'] {
@@ -429,11 +429,12 @@ function toView(state: GameState, run: OperationRun, a: ActionDefinition, ev: Ev
   return {
     ...(eventResult ? { eventResult } : {}),
     ...(ev.forceRisk ? { forceRisk: { ...ev.forceRisk } } : {}),
+    ...(ev.authority ? { authority: { ...ev.authority } } : {}),
     id: a.id,
     stage: a.stage,
     title: a.title,
     icon: a.icon,
-    summary: reason ? summaryFor(a, { ...ev, reason }, state) : summaryFor(a, ev, state),
+    summary: reason ? summaryFor(a, { ...ev, reason }, state, run.scenarioVersion) : summaryFor(a, ev, state, run.scenarioVersion),
     requirementLine: requirementLine(a),
     actingSquadIds: ev.acting,
     supportSquadIds: ev.support,
@@ -449,6 +450,7 @@ function toView(state: GameState, run: OperationRun, a: ActionDefinition, ev: Ev
     suppliesRequired: expectedSupplies(a, ev),
     timeRange: durationRange(a, ev, run),
     timeCost: Math.max(1, Math.round(ev.timeExpected)),
+    ...(a.timeLabel ? { timeLabel: a.timeLabel } : {}),
     contributors: ev.contributors,
     uncertainty: ev.uncertainty,
     details: ev.details,

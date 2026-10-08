@@ -310,6 +310,27 @@ also holds the words to use, avoid and swap.
 
 ## 8. Binding and variants
 
+**Call trees (v13): identity is drawn, so the text never assumes one.** Every
+person's pronouns (he, she, they) and, where the text names it, age are drawn
+per call from one distribution for every kind of person
+(`src/content/incidents/types.ts`). A subject is as likely to be a woman as a
+hostage is, and a minor can be the one with the weapon where the call supports
+it. Write tokens, never the word:
+
+| Write | Binds to |
+| --- | --- |
+| `{taker.he}` `{taker.him}` `{taker.his}` `{taker.hers}` `{taker.himself}` | he/she/they, him/her/them, his/her/their, his/hers/theirs, himself/herself/themselves; a capital first letter (`{taker.He}`) capitalizes |
+| `{taker~keeps\|keep}` | the he/she form, or the singular-they form. Every present-tense verb whose subject is a pronoun token needs one, including compound and listed verbs ("{taker.He} {taker~takes\|take} the cash and {taker~goes\|go} back") |
+| `{child^son\|daughter\|child}` | a gendered noun, in he, she, they order (`{shooter^man\|woman\|person}`, `{ex^father\|mother\|parent}`) |
+| `{child.age}` | the drawn age in years, only where the template draws one |
+
+Prefer a name or a role noun ("the shooter across the street") over a gendered
+noun. When two people in one string share a pronoun in some draw, name the
+second one. The gates in `trees-v13/call-trees.test.ts` fail any literal
+gendered word, and bind every string with each role as he, she and they to
+catch agreement slips. No mechanic may read pronouns or names; a test compiles
+each call under all three and requires identical mechanics.
+
 The binder replaces the authored full and first name as whole, case-sensitive
 words (search bindScenarioText), so never open a sentence with a word equal to
 a cast first name. Measure budgets after binding with the longest pool names.

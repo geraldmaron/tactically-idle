@@ -74,6 +74,7 @@ export function mapScenarioText(input: ScenarioDefinition, text: (value: string)
   for (const o of s.objectives) fields(o, ['label']);
   for (const c of s.civilianOutcomes ?? []) fields(c, ['label']);
   for (const service of s.externalServices ?? []) fields(service, ['label', 'description']);
+  for (const threat of s.threats ?? []) fields(threat, ['because']);
   if (s.difficulty) s.difficulty.drivers = s.difficulty.drivers.map(text);
   for (const stage of Object.values(s.stages)) {
     fields(stage, ['label', 'prompt']);
@@ -89,7 +90,8 @@ export function mapScenarioText(input: ScenarioDefinition, text: (value: string)
       if (a.certBonus) fields(a.certBonus, ['label']);
       if (a.support) fields(a.support, ['label', 'task']);
       if (a.spatial) fields(a.spatial, ['noun']);
-      for (const effect of Object.values(a.outcomes).flat()) {
+      // Drawn consequences (v13) carry their own effects per result: bind those too.
+      for (const effect of Object.values(a.outcomes).flat().flatMap(entry => [entry, ...Object.values(entry.variants ?? {}).flat()])) {
         fields(effect, ['text']); if (effect.officerHarm) fields(effect.officerHarm, ['label']);
       }
     }

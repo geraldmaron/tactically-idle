@@ -48,10 +48,10 @@ describe('casebook situations on v10 recipes', () => {
 
 describe('casebook rows', () => {
   const T0 = Date.UTC(2026, 9, 6, 15, 0, 0);
-  const takeDomestic = (state: ReturnType<typeof createInitialState>) => {
-    const spec = { ...specForSituationV10('domestic', 'two_storey_house_g2', { variant: 1, characteristic: 'ordinary' }, 9), contentVersion: 11 };
+  const takeBarricade = (state: ReturnType<typeof createInitialState>) => {
+    const spec = { ...specForSituationV10('barricaded', 'two_storey_house_g2', { variant: 1, characteristic: 'ordinary' }, 9), contentVersion: 11 };
     const id = incidentId(spec);
-    state.incidents.unshift({ id, type: 'domestic', familyId: spec.familyId, tier: spec.tier, arrivedAt: T0, expiresAt: T0 + 3_600_000, seen: true });
+    state.incidents.unshift({ id, type: 'barricaded', familyId: spec.familyId, tier: spec.tier, arrivedAt: T0, expiresAt: T0 + 3_600_000, seen: true });
     takeIncident(state, id);
     return id;
   };
@@ -72,8 +72,9 @@ describe('casebook rows', () => {
     const html = renderToStaticMarkup(createElement(Casebook, { state }));
     expect(html).toContain('Not yet dispatched to your department');
     expect(html).toContain('An officer certified in Vehicle operations');
-    expect(html).toContain('Department level 2');
-    expect(html).not.toContain('Department level 4');
+    // Every dispatched kind of call opens at level 1; locks name capabilities, never a level.
+    expect(html).toContain('Service sidearm, Compact carbine or Response shotgun in stock');
+    expect(html).not.toContain('Department level');
     expect(html).toContain(`0 of ${dispatchable.length}</strong> kinds of call found`);
     const rescueTitles = scenarioSituationsV10('protected_rescue').map((situation) => hostedCall('protected_rescue', 'harbour_court', situation)!.title);
     for (const title of rescueTitles) expect(html).not.toContain(title);
@@ -81,14 +82,14 @@ describe('casebook rows', () => {
 
   it('lists a dispatched recipe with its situation count, best result and building type, and filters rows', () => {
     const state = createInitialState(T0, 3);
-    takeDomestic(state);
+    takeBarricade(state);
     const rows = casebookRows(state);
-    const domestic = rows.find((row) => row.type === 'domestic')!;
-    expect(domestic).toMatchObject({ status: 'found', situationsTotal: 3, buildings: ['two_storey_house_g2'], situations: [{ variant: 1, pacings: [{ variant: 1, characteristic: 'ordinary' }] }] });
+    const barricade = rows.find((row) => row.type === 'barricaded')!;
+    expect(barricade).toMatchObject({ status: 'found', situationsTotal: 3, buildings: ['two_storey_house_g2'], situations: [{ variant: 1, pacings: [{ variant: 1, characteristic: 'ordinary' }] }] });
     const locked = SCENARIO_TYPES_V11.map((info) => info.type).filter((type) => !RETIRED_FROM_DISPATCH.has(type) && (unlockRule(type).level > 1 || type === 'protected_rescue' || type === 'active_armed_incident'));
     expect(casebookTotals(rows)).toMatchObject({ frameworksFound: 1, situationsFound: 1, locked: locked.length });
     expect(filterRows(rows, { type: 'all', setting: 'businesses', status: 'all' }).every((row) => row.settings.includes('businesses'))).toBe(true);
-    expect(filterRows(rows, { type: 'all', setting: 'all', status: 'found' }).map((row) => row.type)).toEqual(['domestic']);
+    expect(filterRows(rows, { type: 'all', setting: 'all', status: 'found' }).map((row) => row.type)).toEqual(['barricaded']);
     expect(filterRows(rows, { type: 'all', setting: 'all', status: 'locked' }).map((row) => row.type)).toEqual(locked);
     const html = renderToStaticMarkup(createElement(Casebook, { state }));
     expect(html).toContain('1 of 3');

@@ -115,6 +115,8 @@ export function effectParts(e: OutcomeEffect, s: ScenarioDefinition): { when: st
   if (e.storyExitState) chips.push(`exit ${e.storyExitState}`);
   if (e.officerHarm) chips.push(`officer ${e.officerHarm.severity}: ${e.officerHarm.label}`);
   if (e.officerCare) chips.push(`officer care ${e.officerCare}`);
-  const when = [...conditionText(e.when, s), ...(e.truth ?? []).map(t => `truth: ${factLabel(s, t.factId)} is ${t.is ? 'true' : 'false'}`)];
+  for (const m of e.moves ?? []) chips.push(`${m.personId} ${m.event}`);
+  const when = [...conditionText(e.when, s), ...(e.truth ?? []).map(t => `truth: ${factLabel(s, t.factId)} is ${t.is ? 'true' : 'false'}`),
+    ...(e.clocks ?? []).map(c => `clock: ${s.clocks?.find(clock => clock.id === c.clockId)?.label ?? c.clockId} ${c.is ? '' : 'not '}${c.state} by the end of this choice`)];
   return { when, chips, text: e.text ?? null };
 }

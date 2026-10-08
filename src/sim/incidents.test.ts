@@ -3,7 +3,7 @@ import { dispatch } from './game';
 import { createInitialState } from './department';
 import { boardSummary } from './department-selectors';
 import { HOUR_MS } from './economy';
-import { INCIDENT_TUNING, TIER_REWARD_MULTIPLIERS, nextIncidentAt, takeIncident, tierRewardMultiplier } from './incidents';
+import { INCIDENT_TUNING, TIER_REWARD_MULTIPLIERS, nextIncidentAt, playerArcContext, takeIncident, tierRewardMultiplier } from './incidents';
 import { drawIncidentSpec, incidentId, parseIncidentId, INCIDENT_CONTENT_VERSION } from '../gen/incident';
 import type { Command, GameState, IncidentCard, OperationRun } from './types';
 import type { IncidentSpec } from './scenario-types';
@@ -14,12 +14,19 @@ vi.mock('../gen/incident', async (importOriginal) => {
   const m = await importOriginal<typeof import('../gen/incident')>();
   return { ...m, drawIncidentSpec: vi.fn(m.drawIncidentSpec) };
 });
+import { SCENARIO_TYPES_V11 } from '../content/scenario-types-v11';
 const draw = vi.mocked(drawIncidentSpec);
 const realDraw = draw.getMockImplementation()!;
 
+// These tests cover board timing (arrivals, expiry, the five-card cap). From v13 the board holds
+// one live call per kind, and only four kinds are tactical, so the default wrapper lets the real
+// generator draw from every type: the timing rules then run without the per-kind rule binding.
+// The per-kind rule has its own test below.
+const EVERY_TYPE = SCENARIO_TYPES_V11.map((info) => info.type);
+const everyKind: typeof realDraw = (rng, ctx) => realDraw(rng, { ...ctx, unlockedTypes: EVERY_TYPE });
 beforeEach(() => {
   draw.mockReset();
-  draw.mockImplementation(realDraw);
+  draw.mockImplementation(everyKind);
 });
 
 const T0 = Date.UTC(2026, 0, 5, 12, 0, 0);
@@ -234,6 +241,20 @@ describe('arrivals and expiry are event-ordered', () => {
   });
 });
 
+describe('one live call per kind of call (v13)', () => {
+  it('never shows two calls of the same kind, nor the kind in progress, with the real tactical roster', () => {
+    draw.mockImplementation(realDraw);
+    let s = createInitialState(T0);
+    const unlocked = playerArcContext(s).unlockedTypes;
+    expect(s.incidents.length).toBe(Math.min(INCIDENT_TUNING.initialCount, unlocked.length));
+    for (const t of every(T0, T0 + 48 * HOUR_MS, HOUR_MS)) {
+      s = ok(s, { type: 'tick' }, t);
+      expect(new Set(s.incidents.map((c) => c.type)).size).toBe(s.incidents.length);
+      expect(s.incidents.length).toBeLessThanOrEqual(unlocked.length);
+    }
+  });
+});
+
 describe('tier gating', () => {
   it('passes the live level and trust of each arrival to the generator', () => {
     const calls: { level: number; trust: number }[] = [];
@@ -257,9 +278,10 @@ describe('tier gating', () => {
 
   it('cards carry the generator tier, clamped to 1..5', () => {
     const tiers = [4, 9, 0, 3, 2];
+    const types = ['barricaded', 'welfare_check', 'medical_complication', 'domestic', 'burglary'] as const;
     let i = 0;
     draw.mockImplementation((rng) => ({
-      spec: { type: 'barricaded', familyId: 'maple_street', buildingSeed: i, seed: i, tier: tiers[i++ % tiers.length], contentVersion: 1 },
+      spec: { type: types[i % types.length], familyId: 'maple_street', buildingSeed: i, seed: i, tier: tiers[i++ % tiers.length], contentVersion: 1 },
       state: rng,
     }));
     const s = createInitialState(T0);

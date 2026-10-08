@@ -5,10 +5,11 @@ moves. Before trusting any line here, re-read the symbol it names. When this fil
 disagree, the code wins and this file is stale. Every path below comes with a symbol to search
 for if the file has moved.
 
-## 1. The four lanes
+## 1. The lanes
 
 | Lane | Files (search symbol) | What a writer adds |
 |---|---|---|
+| Call tree (content v13; every tactical call) | `src/content/call-trees/` (`CallTree`, `CALL_TREES`), compiled by `src/gen/incident/trees-v13/compile.ts` (`withCallTree`); gates in `trees-v13/call-trees.test.ts` | One `CallTree`: roles with `{role}` tokens, facts, three situations, nodes and choices with per-band routes, turn groups, endings, and the building types its scene fits. See `docs/call-trees-v13.md` |
 | Typed framework package | `src/content/incident-frameworks-v9.ts` (`ADDITIONAL_FRAMEWORKS`, `IncidentFramework`), compiled by `src/gen/incident/frameworks-v9.ts` (`withAdditionalFramework`) | One appended `IncidentFramework` entry, plus the type id, cast slot, placement affinity and catalog entry listed in `docs/content-pipeline.md` |
 | Hand-authored story | `src/gen/incident/stories-v5/` (`withVersionFiveStory`, `STORY_ARCHETYPES`), variants in `stories-v6/`, second choices in `decisions-v8/choices-v12.ts` (`withSecondChoicesV12`) | A full `ScenarioDefinition` graph (`src/sim/scenario-types.ts`) |
 | Setting module | `src/content/setting-modules.ts` (`SettingModule`), `src/content/setting-modules-armed.ts` (`ArmedIncidentProse`), compiler `stories-v6/setting-modules-v11.ts` (`SETTING_MODULES_V11`) | Per-setting prose and room roles for an existing story. Never actions, flags or endings |
@@ -16,6 +17,59 @@ for if the file has moved.
 
 Today the setting-module lane is used only by the armed incident ("After the Noise"), in
 retail, office, warehouse and motel buildings.
+
+### Call tree state the engine runs (v13, read 2026-10-07)
+
+Search the symbol if the file moved. The design brief is `docs/incident-domain-model.md`.
+
+- **Clocks** (`Clock` in `src/content/incidents/types.ts`, engine `src/sim/clocks.ts`). A
+  template situation sets a clock's start and rate (drawn per call within `rateSpread`). The
+  operation's minutes run it. Each cue, highest first, fires once as it passes: a result line,
+  an optional `mark` and an optional `reveal` of the clock's fact. A cue whose mark is already
+  set, or whose fact is already settled, stays silent. A clock stops once its `owner` is out.
+- **Clock forks.** A tree outcome writes `if: { clock: 'door', out: true }` (it has run out)
+  or `if: { clock: 'oxygen', low: true }` (its first cue has fired), read at the end of the
+  choice's own minutes for its band plus the outcome's `minutes`. A clock never runs out before
+  the team heard one of its cues in an earlier decision; design the cue as the warning. A clock
+  the situation doesn't have is never low or out. Gates: both sides of a fork in each band, a
+  reveal cue's text equals the fact's line for the situation's truth, cue marks are read.
+- **Rate facts vs events.** Keep "will the door hold" as a fact (asking reveals the rate) and
+  write "the door gives" as a clock fork. A `story: true` clock (the barricade battery) is
+  modelled for the lab and left to the tree's own outcomes.
+- **Meters** (`src/sim/meters.ts`, `METERS_V1`). Subjects carry agitation and rapport. A tree
+  outcome writes `moves: { taker: 'provoked' }` (events: heard, contact, honest, provoked,
+  team_seen, shots, released), scaled by the subject's drawn volatility. Every later contact
+  check with that subject shows what moved since the call began as two contributors. Do not
+  add mood modifiers ("He hung up on you"); write the event. Marks stay for facts the team
+  learned and for prompts that need them.
+- **Authority** (`src/sim/authorization.ts`, slice 4). An entry or concession choice declares
+  `authority: 'entry' | { concede }`. The engine locks it until a threat to life is seen
+  (`TreeFact.threat`, `CallTree.threatMarks`) or an `urgent` clock is low, and the card shows the
+  generated command line. Never write "Command approves it because" in a summary or prompt.
+  Concessions never offered: weapon, transport, officer swap, family. A `promise` on an outcome is
+  a commitment: an entry or force while it is open breaks it.
+- **Scoring** (`src/sim/outcome-score.ts`). Endings carry title, summary and disposition only;
+  trust and strain are scored from people's end states. Review belongs in the debrief.
+- **Groups** (slice 5). A template slot with a count range binds its first person to the key role
+  (the leader) and the rest to a counted tree role (`CallTree.groups`, e.g. `others`). Tokens:
+  `{others}` (names), `{others.first}` (the member nearest the team), `{others.n}`, pronoun forms
+  (plural when two or more), `{others#stands|stand}` after the names, `{others~stands|stand}`
+  after a pronoun, `{others^…}` only under `count: { max: 1 }`. Put group lines behind
+  `TreeState.count: { role, min?, max? }`; the compiler drops what a call's size can't reach, and
+  everything without a count must read right in a lone call. `out`/`safe`/`harm`/`moves` on a
+  group mean every member; `fire`/`force`/`talksTo` on a group mean the member nearest the door.
+- **Cascade.** `cascade: { leader, group, next: { all, some, none } }` where the leader gives up:
+  each member follows by influence, rapport and agitation, and a standard line names who did.
+- **Meter branches.** `if: { meter: 'taker', stance: 'breaking' }` (or `agitationAtLeast`, and
+  `is: false` to negate), read at the start of the decision. "The truth decides, or a subject past
+  breaking point does it anyway" is three outcomes: truth true; truth false and breaking; truth
+  false and not breaking. Every truth × meter × clock combination needs exactly one routed
+  outcome per band (the coverage gate, `trees-v13/coverage.test.ts`).
+- **Clocks running out.** `Clock.onOut: { harm, mark }` records harm to the owner still inside when
+  the clock runs out where no fork reads it, and sets the mark for prompts. Both sides of a clock
+  fork must carry the same `minutes`.
+- **Incident class.** An expressive hold makes a victim incident: waiting costs and provoking the
+  holder costs more (`INCIDENT_CLASS_V1` in `src/sim/incident-factors.ts`).
 
 ### The hand-authored build chain
 
@@ -243,6 +297,11 @@ What the player can take at each typed stage (v12, observed in the burglary call
 - A new framework type is valid only from the version that introduces it.
 
 ## 5. Binding
+
+- Call trees (v13) bind role tokens, never names: `{role}` (full name), `{role.first}`, `{role.last}`,
+  `{place}` (the building name), and `{lead}` left for the engine in choice summaries. Names come
+  from `content/call-trees/civilian-names.ts`, disjoint from the officer catalog. The rest of this
+  section covers the older lanes.
 
 - `withVersionNineCast` draws names by pronoun set and replaces the authored full name and
   first name as whole words, case-sensitive. Use the authored name verbatim.
