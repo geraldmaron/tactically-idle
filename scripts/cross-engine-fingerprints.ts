@@ -10,12 +10,14 @@
 // Exits 1 on any mismatch and lists it. A mismatch in a frozen suite is a finding to report; never
 // re-baseline frozen JSON to make this pass.
 //
+// The six v4 decision-exercise entries were dropped on the owner's ruling (2026-10-08): practice and
+// its exercises left the game in 721536c, so those IDs no longer resolve to a scenario.
+//
 // Bun runs the TypeScript sources directly. The building index is imported before the generator
 // modules: they form an import cycle that only resolves from that end.
 import { readFileSync } from 'node:fs';
 import { generateBuilding } from '../src/gen/building/index';
 import { generateIncident, parseIncidentId, INCIDENT_TYPES_V4 } from '../src/gen/incident/index';
-import { getScenario } from '../src/sim/scenario-registry';
 import { hashSeed } from '../src/sim/rng';
 import type { IncidentSpec } from '../src/sim/scenario-types';
 
@@ -53,13 +55,12 @@ const incidentSuite = (name: string, path: string, capturedOrder?: (spec: Incide
 });
 
 // v4 was captured with hashSeed over the JSON (v4-story-compatibility.test.ts), keyed type/family/seed at building seed 7.
-const v4 = json('src/gen/incident/v4-published-fingerprints.json') as { definitions: Record<string, number>; exercises: Record<string, number> };
+const v4 = json('src/gen/incident/v4-published-fingerprints.json') as { definitions: Record<string, number> };
 const v4Types = new Set(INCIDENT_TYPES_V4.map((t) => t.type));
 const v4Suite: Suite = {
-  name: 'published v4 definitions and exercises',
-  entries: [...Object.entries(v4.definitions), ...Object.entries(v4.exercises).map(([id, n]) => [`exercise:${id}`, n] as [string, number])],
+  name: 'published v4 definitions',
+  entries: Object.entries(v4.definitions),
   compute: async (key) => {
-    if (key.startsWith('exercise:')) return hashSeed(JSON.stringify(getScenario(key.slice('exercise:'.length))));
     const [type, familyId, seed] = key.split('/');
     if (!v4Types.has(type as IncidentSpec['type'])) throw new Error(`unknown v4 type ${type}`);
     return hashSeed(JSON.stringify(generateIncident({ type: type as IncidentSpec['type'], familyId, buildingSeed: 7, seed: Number(seed), tier: 2, contentVersion: 4 })));
