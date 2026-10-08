@@ -7,15 +7,19 @@ import { EquipmentStore } from '../storefront/EquipmentStore';
 import { ChoiceRail } from '../components/ChoiceRail';
 import { storeOptions, unitViews } from '../../sim/department-selectors';
 import type { StoreOption, UnitView } from '../../sim/department-selectors';
-import type { GameState, Id, RestockRule, Squad } from '../../sim/types';
+import type { GameState, Id, Squad } from '../../sim/types';
 import { CALENDAR } from '../../sim/calendar';
 import { ITEMS } from '../../content/items';
-import { EQUIPMENT_MANAGER, equipmentManagerBenefits, equipmentWearMultiplier, hasEquipmentManager, maintenanceBudget } from '../../sim/equipment-manager-policy';
+import { equipmentManagerBenefits, equipmentWearMultiplier, maintenanceBudget } from '../../sim/equipment-manager-policy';
+import { managerView } from '../../sim/command-staff';
+import { ManagerPortrait } from '../art/ManagerArt';
+import { ManagerSheet } from '../components/CommandStaff';
+import { RestockRuleEditor } from '../storefront/RestockRuleEditor';
 import { Button, Card, Chip, EmptyState, Section, Stepper, UnitBar } from '../components/ui';
 import { Sheet } from '../components/Sheet';
 import { useToast } from '../components/toast';
 import { UNIT_STATE_META, conditionTone } from '../components/labels';
-import { Icon, itemIcon } from '../icons';
+import { Icon } from '../icons';
 import type { IconName } from '../icons';
 import { gameDays, money, pct, relativeTime } from '../format';
 import { hasNodeEffect } from './helpers';
@@ -39,25 +43,39 @@ export function GearScreen() {
       ]} />
       {surface === 'equipment' && <EquipmentStore active />}
       <div className="gear-inventory" hidden={surface !== 'inventory'}>
-      <Section title="Inventory" icon="box" hint="Tap an item to see each unit, restock, service or scrap.">
+      <Section title="Inventory" icon="box" hint="Tap an item for its units, restock and service.">
         {owned.length === 0 ? (
           <Card>
             <EmptyState icon="box" title="No owned equipment">Browse Equipment to inspect capabilities and buy stock.</EmptyState><Button onClick={() => setSurface('equipment')}>Browse Equipment</Button>
           </Card>
-        ) : (
+        ) : (<>
+          <InventorySummary owned={owned} />
           <div className="inv-grid">
             {owned.map((o) => (
               <InventoryTile key={o.item.id} o={o} onOpen={() => setUnitsFor(o.item.id)} />
             ))}
+            <button type="button" className="inv-tile inv-tile-add" onClick={() => setSurface('equipment')}>
+              <span className="inv-add-icon" aria-hidden="true"><Icon name="plus" size={22} /></span>
+              <span className="inv-name">Buy equipment</span>
+            </button>
           </div>
-        )}
+        </>)}
       </Section>
 
-      <Button block onClick={() => setSurface('equipment')}>Browse Equipment</Button>
       <UnitSheet itemId={unitsFor} onClose={() => setUnitsFor(null)} onRestock={(itemId) => { setUnitsFor(null); nav.openEquipment({ itemId }); }} />
-      <details className="gear-maintenance"><summary>Maintenance &amp; loadouts<span className="dim">Service budgets, presets and hourly restock rules</span></summary><div className="gear-maintenance-body">
-      <EquipmentManager />
-      <MaterialGuide />
+      <details className="gear-maintenance"><summary>Maintenance &amp; loadouts<span className="dim">Quartermaster, restock rules and squad presets</span></summary><div className="gear-maintenance-body">
+      <QuartermasterCard />
+
+      <Section title="Restock rules" icon="refresh" hint="At each clock hour, refill held stock up to the target (excluding expired units) within each rule’s spending ceiling. Rules never take funding below zero and stop after 24 hours without orders.">
+        {!restock.unlocked ? (
+          <p className="note note-warn">
+            <Icon name="lock" size={16} />
+            {restock.reason}
+          </p>
+        ) : (
+          <RuleList g={g} onOpen={(itemId) => owned.some((o) => o.item.id === itemId) ? setUnitsFor(itemId) : nav.openEquipment({ itemId })} />
+        )}
+      </Section>
 
       <Section title="Loadout presets" icon="list" hint="Save specialist gear choices here and apply them on preparation. Radios are standard kit: one per deployed officer is loaded automatically.">
         {!presets.unlocked ? (
@@ -77,61 +95,80 @@ export function GearScreen() {
           </div>
         )}
       </Section>
-
-      <Section title="Restock rules" icon="refresh" hint="At each clock hour, refill held stock up to the target (excluding expired units) within each rule’s spending ceiling. Rules never take funding below zero and stop after 24 hours without orders.">
-        {!restock.unlocked ? (
-          <p className="note note-warn">
-            <Icon name="lock" size={16} />
-            {restock.reason}
-          </p>
-        ) : (
-          <div className="stack">
-            {opts
-              .filter((o) => o.item.kind !== 'infrastructure')
-              .map((o) => (
-                <RuleRow key={o.item.id} o={o} g={g} />
-              ))}
-          </div>
-        )}
-      </Section>
+      <MaterialGuide />
       </div></details>
       </div>
     </div>
   );
 }
 
-function EquipmentManager() {
-  const g = useGame();
-  const { act } = useToast();
-  const hired = hasEquipmentManager(g);
-  const benefits = equipmentManagerBenefits(g);
-  const nav = useNav();
-  const budget = maintenanceBudget(g);
-  const [draft, setDraft] = useState(budget || 200);
-  if (!hired) return <Card className="equipment-manager-locked">
-    <span><strong>Equipment manager</strong><span className="dim">Unlock service and wear benefits.</span></span>
-    <Button size="sm" onClick={() => nav.openDevelopment(EQUIPMENT_MANAGER.nodeId)}>Unlock in Develop</Button>
-  </Card>;
+/** Three numbers as shapes above the grid: units ready, units busy, items needing attention. */
+function InventorySummary({ owned }: { owned: StoreOption[] }) {
+  const ready = owned.reduce((n, o) => n + o.ready, 0);
+  const busy = owned.reduce((n, o) => n + o.reserved + o.inService, 0);
+  const attention = owned.filter((o) => inventoryAlert(o)).length;
   return (
-    <Section title="Equipment manager" icon="wrench" hint={`Tier ${benefits.tier}: ${Math.round((1 - benefits.repairMultiplier) * 100)}% cheaper servicing and ${Math.round((1 - benefits.wearMultiplier) * 100)}% less wear on reusable equipment.`}>
-      <Card>
+    <div className="inv-summary">
+      <span className="inv-stat inv-stat-ready"><Icon name="checkcircle" size={14} /><b>{ready}</b> ready</span>
+      <span className="inv-stat"><Icon name="wait" size={14} /><b>{busy}</b> busy</span>
+      <span className={`inv-stat${attention ? ' inv-stat-warn' : ''}`}><Icon name="warning" size={14} /><b>{attention}</b> {attention === 1 ? 'needs' : 'need'} attention</span>
+    </div>
+  );
+}
 
-          <p><strong>{budget ? `Automatic service: up to ${money(budget)}/hour` : 'Automatic service paused'}</strong></p>
-          <p className="dim">Checks at the next clock hour, services worn idle gear below {EQUIPMENT_MANAGER.serviceBelow}% condition, and keeps {money(EQUIPMENT_MANAGER.fundingReserve)} in reserve. The manager starts a job only while fewer than {benefits.maxConcurrentServices} repairs are underway, counting manual jobs. You can order additional manual repairs separately. Working radios are kept ready for assigned officers; spare radios allow routine servicing.</p>
-          <label className="field">
-            <span className="field-label">Hourly service spending ceiling</span>
-            <select value={draft} onChange={(e) => setDraft(Number(e.target.value))}>
-              {[...new Set([50, 100, 200, 300, 500, budget || 200])].sort((a, b) => a - b).map((n) => <option key={n} value={n}>{money(n)}/hour maximum</option>)}
-            </select>
-          </label>
-          <div className="row-actions">
-            <Button variant="primary" disabled={budget === draft} onClick={() => act({ type: 'setMaintenanceBudget', perHour: draft }, `Automatic service budget set to ${money(draft)}/hour`)}>{budget ? 'Update ceiling' : 'Enable automatic service'}</Button>
-            {budget > 0 && <Button onClick={() => act({ type: 'setMaintenanceBudget', perHour: 0 }, 'Automatic service paused. Existing repairs will finish.')}>Pause automatic service</Button>}
-          </div>
-          <p className="dim">The ceiling includes the repair discount. No purchases are made. Pausing stops new repairs; current repairs finish normally. Automatic spending stops after 24 hours without orders.</p>
-          <div className="row-actions"><Button size="sm" icon="people" onClick={() => nav.go('hq')}>Quartermaster activity on HQ</Button></div>
-      </Card>
-    </Section>
+function inventoryAlert(o: StoreOption): string | null {
+  return o.ready === 0 ? 'None ready' : o.unreliable > 0 ? `${o.unreliable} unreliable` : o.expired > 0 ? `${o.expired} expired` : null;
+}
+
+/** The Quartermaster is a Command Staff manager: the same face and sheet as on HQ, so the service
+ * budget lives in one place. The card shows tier benefits as chips and the latest action. */
+function QuartermasterCard() {
+  const g = useGame();
+  const [open, setOpen] = useState(false);
+  const view = managerView(g, 'quartermaster');
+  const benefits = equipmentManagerBenefits(g);
+  const budget = maintenanceBudget(g);
+  const latest = view.log[0];
+  const line = !view.hired ? view.activity : budget ? `Services up to ${money(budget)}/hour` : 'Automatic service off';
+  return (
+    <>
+      <button type="button" className={`qm-card qm-card-${view.status}`} onClick={() => setOpen(true)} aria-haspopup="dialog">
+        <ManagerPortrait id="quartermaster" size={52} hired={view.hired} />
+        <span className="qm-main">
+          <span className="qm-title"><strong>{view.profile.title}</strong><span className={`staff-pill staff-pill-${view.status}`}>{view.status === 'on' ? 'On' : view.status === 'off' ? 'Off' : 'Not hired'}</span></span>
+          <span className="qm-line">{line}</span>
+          {view.hired && (
+            <span className="chips qm-chips">
+              <Chip icon="star">Tier {benefits.tier}</Chip>
+              <Chip tone="mint" icon="wrench">{Math.round((1 - benefits.repairMultiplier) * 100)}% cheaper service</Chip>
+              <Chip tone="mint" icon="gauge">{Math.round((1 - benefits.wearMultiplier) * 100)}% less wear</Chip>
+            </span>
+          )}
+          {latest && <span className="qm-log dim">{latest.text}</span>}
+        </span>
+        <Icon name="gear" size={18} />
+      </button>
+      {open && <ManagerSheet id="quartermaster" g={g} now={Date.now()} inGear onClose={() => setOpen(false)} />}
+    </>
+  );
+}
+
+/** Active restock rules as compact rows. Rules are set in each item's sheet. */
+function RuleList({ g, onOpen }: { g: GameState; onOpen: (itemId: Id) => void }) {
+  const rules = g.department.restockRules.filter((rule) => ITEMS[rule.itemId]);
+  if (!rules.length) return <p className="dim rule-empty">No rules yet. Open any item and set <strong>Keep at least</strong> to add one.</p>;
+  return (
+    <ul className="rule-list">
+      {rules.map((rule) => (
+        <li key={rule.itemId}>
+          <button type="button" onClick={() => onOpen(rule.itemId)} aria-label={`${ITEMS[rule.itemId].name}: keep at least ${rule.target}, spend up to ${money(rule.budgetCeiling)}. Edit`}>
+            <GearArtFrame itemId={rule.itemId} size={26} />
+            <span className="rule-list-main"><strong>{ITEMS[rule.itemId].name}</strong><span className="dim">Keep {rule.target} · up to {money(rule.budgetCeiling)}</span></span>
+            <Icon name="edit" size={15} />
+          </button>
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -139,7 +176,7 @@ function EquipmentManager() {
  * condition strip plus an alert pip say whether it needs attention. Detail lives in the sheet. */
 function InventoryTile({ o, onOpen }: { o: StoreOption; onOpen: () => void }) {
   const tone = o.meanCondition === null ? 'neutral' : conditionTone(o.meanCondition, o.item.wear);
-  const alert = o.ready === 0 ? 'None ready' : o.unreliable > 0 ? `${o.unreliable} unreliable` : o.expired > 0 ? `${o.expired} expired` : null;
+  const alert = inventoryAlert(o);
   const condition = o.meanCondition === null ? null : Math.round(o.meanCondition);
   return (
     <button type="button" className={`inv-tile${alert ? ' inv-tile-alert' : ''}`} onClick={onOpen} title={o.item.name}
@@ -154,24 +191,35 @@ function InventoryTile({ o, onOpen }: { o: StoreOption; onOpen: () => void }) {
   );
 }
 
-function Count({ icon, label, value, tone }: { icon: IconName; label: string; value: number; tone?: 'mint' | 'warn' }) {
+// ---------------------------------------------------------------- unit sheet
+
+/** Stock as one segmented bar: ready, unreliable, reserved, in service and expired. */
+function StockBar({ o }: { o: StoreOption }) {
+  const parts = [
+    { key: 'ready', label: 'Ready', n: o.ready - o.unreliable },
+    { key: 'unreliable', label: 'Unreliable', n: o.unreliable },
+    { key: 'reserved', label: 'Reserved', n: o.reserved },
+    { key: 'service', label: 'In service', n: o.inService },
+    { key: 'expired', label: 'Expired', n: o.expired },
+  ].filter((part) => part.n > 0);
+  const total = Math.max(1, parts.reduce((n, part) => n + part.n, 0));
   return (
-    <div>
-      <dt>
-        <Icon name={icon} size={12} />
-        {label}
-      </dt>
-      <dd className={tone ? `tone-${tone}` : ''}>{value}</dd>
+    <div className="stock">
+      <span className="stock-bar" role="img" aria-label={`${o.owned} owned: ${parts.map((part) => `${part.n} ${part.label.toLowerCase()}`).join(', ') || 'none'}`}>
+        {parts.map((part) => <i key={part.key} className={`stock-${part.key}`} style={{ width: `${(part.n / total) * 100}%` }} />)}
+      </span>
+      <span className="stock-legend" aria-hidden="true">
+        {parts.map((part) => <span key={part.key}><i className={`stock-${part.key}`} />{part.n} {part.label.toLowerCase()}</span>)}
+      </span>
     </div>
   );
 }
-
-// ---------------------------------------------------------------- unit sheet
 
 function UnitSheet({ itemId, onClose, onRestock }: { itemId: Id | null; onClose: () => void; onRestock: (itemId: Id) => void }) {
   const g = useGame();
   const item = itemId ? ITEMS[itemId] : undefined;
   const opt = itemId ? storeOptions(g).find((o) => o.item.id === itemId) : undefined;
+  const restock = hasNodeEffect(g, 'restockRules');
   return (
     <Sheet
       open={!!item}
@@ -181,24 +229,19 @@ function UnitSheet({ itemId, onClose, onRestock }: { itemId: Id | null; onClose:
         item && opt ? (
           <span className="chips">
             <Chip icon="box">{opt.owned} owned</Chip>
+            <Chip tone={opt.ready ? 'mint' : 'warn'} icon="checkcircle">{opt.ready} ready</Chip>
             {opt.meanCondition !== null && <Chip icon="gauge">Mean {Math.round(opt.meanCondition)}%</Chip>}
           </span>
         ) : undefined
       }
     >
       {item && <>
-        <div className="gear-dossier"><GearArtFrame itemId={item.id} size={104} /><p className="dim">{item.description}</p></div>
-        {opt && <dl className="counts">
-          <Count icon="box" label="Owned" value={opt.owned} />
-          <Count icon="checkcircle" label="Ready" value={opt.ready} tone={opt.ready > 0 ? 'mint' : undefined} />
-          <Count icon="lock" label="Reserved" value={opt.reserved} />
-          <Count icon="wrench" label="In service" value={opt.inService} />
-          <Count icon="warning" label="Unreliable" value={opt.unreliable} tone={opt.unreliable > 0 ? 'warn' : undefined} />
-        </dl>}
+        <div className="gear-dossier"><GearArtFrame itemId={item.id} size={84} /><div className="gear-dossier-main"><p className="dim">{item.description}</p>{opt && <StockBar o={opt} />}</div></div>
         {opt && <div className="gear-buy">
           <Button variant="primary" icon="plus" block onClick={() => onRestock(item.id)}>Restock · {money(item.cost)} each</Button>
           {!opt.canBuy && opt.reason && <span className="reason">{opt.reason}</span>}
         </div>}
+        {restock.unlocked && item.kind !== 'infrastructure' && <RestockRuleEditor itemId={item.id} />}
         <UnitList itemId={item.id} />
       </>}
     </Sheet>
@@ -213,10 +256,11 @@ function UnitList({ itemId }: { itemId: Id }) {
   const w = item.wear;
   const wearMultiplier = equipmentWearMultiplier(g, item);
   return (
-    <div className="units">
+    <section className="units" aria-label="Units">
+      <h3 className="units-head">Units <span className="dim">Tap a unit to service or scrap</span></h3>
       <p className="dim units-note">
-        <Icon name="info" size={14} />
-        Each unit wears on its own. Base wear is {Math.round(w.perUse * wearMultiplier * 100) / 100} per use and {Math.round(w.perDay * wearMultiplier * 1000) / 1000} per game day, adjusted by the unit's wear rate; below {w.unreliableBelow} it turns unreliable, at {w.failAt} or lower it needs service.{wearMultiplier < 1 && ' Equipment manager wear reduction is included.'}
+        <Icon name="info" size={13} />
+        Wears {Math.round(w.perUse * wearMultiplier * 100) / 100} per use and {Math.round(w.perDay * wearMultiplier * 1000) / 1000} per game day, adjusted by each unit's wear rate. Unreliable below {w.unreliableBelow}; needs service at {w.failAt} or lower.{wearMultiplier < 1 && ' Quartermaster wear reduction included.'}
       </p>
       {views.length === 0 ? (
         <EmptyState icon="box" title="No units to show">
@@ -229,10 +273,11 @@ function UnitList({ itemId }: { itemId: Id }) {
           ))}
         </ul>
       )}
-    </div>
+    </section>
   );
 }
 
+/** One unit as a compact row (serial, condition, state). Facts and actions open beneath it. */
 function UnitRow({ v, now }: { v: UnitView; now: number }) {
   const { act, notify } = useToast();
   const [pending, setPending] = useState<'service' | 'scrap' | null>(null);
@@ -250,96 +295,76 @@ function UnitRow({ v, now }: { v: UnitView; now: number }) {
     }
     setPending(kind);
   };
+  const busyLine = v.serviceUntil !== null ? `back ${relativeTime(v.serviceUntil, now)}` : v.expiresAt !== null && v.expiresAt <= now ? 'expired' : null;
   return (
     <li className={`unit unit-${meta.tone}`}>
-      <div className="unit-top">
-        <strong className="unit-serial">{u.serial}</strong>
-        <Chip tone={meta.tone === 'good' ? 'mint' : meta.tone === 'worn' ? 'amber' : meta.tone === 'bad' ? 'danger' : 'neutral'} icon={meta.icon}>
-          {v.stateLabel}
-        </Chip>
-      </div>
-      <div className="unit-cond">
-        <UnitBar value={u.condition} tone={meta.tone} label={v.stateLabel} />
-        <span className="unit-pct">{Math.round(u.condition)}%</span>
-      </div>
-      <dl className="unit-facts">
-        <div>
-          <dt>
-            <Icon name="bolt" size={12} />
-            Effectiveness
-          </dt>
-          <dd>{pct(v.effectiveness)}</dd>
-        </div>
-        <div>
-          <dt>
-            <Icon name="refresh" size={12} />
-            Uses
-          </dt>
-          <dd>{u.uses}</dd>
-        </div>
-        <div>
-          <dt>
-            <Icon name="calendar" size={12} />
-            Age
-          </dt>
-          <dd>{gameDays(ageDays)}</dd>
-        </div>
-        <div>
-          <dt>
-            <Icon name="warning" size={12} />
-            Unreliable in
-          </dt>
-          <dd>{v.daysToUnreliable === null ? 'n/a' : v.daysToUnreliable <= 0 ? 'now' : `~${gameDays(v.daysToUnreliable)}`}</dd>
-        </div>
-      </dl>
-      {v.expiresAt !== null && (
-        <p className={`unit-line${v.expiresAt <= now ? ' tone-danger' : ''}`}>
-          <Icon name="wait" size={13} />
-          {v.expiresAt <= now ? 'Expired' : `Expires in ${gameDays((v.expiresAt - now) / CALENDAR.gameDayMs)}`}
-        </p>
-      )}
-      {v.serviceUntil !== null && (
-        <p className="unit-line">
-          <Icon name="wrench" size={13} />
-          In service, back {relativeTime(v.serviceUntil, now)}
-        </p>
-      )}
-      {pending === null ? (
-        <div className="row-actions unit-actions">
-          {canServiceAtAll && (
-            <Button size="sm" icon="wrench" aria-disabled={!v.canService} className={v.canService ? '' : 'btn-soft-off'} onClick={() => tryOpen('service')}>
-              Service · {money(v.serviceCost)} · {w.serviceHours}h
-            </Button>
+      <details>
+        <summary className="unit-row">
+          <strong className="unit-serial">{u.serial}</strong>
+          <span className="unit-cond">
+            <UnitBar value={u.condition} tone={meta.tone} label={v.stateLabel} />
+          </span>
+          <span className="unit-pct">{Math.round(u.condition)}%</span>
+          <span className={`unit-state unit-state-${meta.tone}`} title={v.stateLabel}><Icon name={meta.icon} size={13} /><span className="unit-state-text">{v.stateLabel}</span></span>
+          {busyLine && <span className="unit-busy dim">{busyLine}</span>}
+        </summary>
+        <div className="unit-body">
+          <dl className="unit-facts">
+            <div><dt><Icon name="bolt" size={12} />Effect</dt><dd>{pct(v.effectiveness)}</dd></div>
+            <div><dt><Icon name="refresh" size={12} />Uses</dt><dd>{u.uses}</dd></div>
+            <div><dt><Icon name="calendar" size={12} />Age</dt><dd>{gameDays(ageDays)}</dd></div>
+            <div><dt><Icon name="warning" size={12} />Unreliable</dt><dd>{v.daysToUnreliable === null ? 'n/a' : v.daysToUnreliable <= 0 ? 'now' : `~${gameDays(v.daysToUnreliable)}`}</dd></div>
+          </dl>
+          {v.expiresAt !== null && (
+            <p className={`unit-line${v.expiresAt <= now ? ' tone-danger' : ''}`}>
+              <Icon name="wait" size={13} />
+              {v.expiresAt <= now ? 'Expired' : `Expires in ${gameDays((v.expiresAt - now) / CALENDAR.gameDayMs)}`}
+            </p>
           )}
-          <Button size="sm" variant="ghost" icon="trash" aria-disabled={!v.canScrap} className={v.canScrap ? '' : 'btn-soft-off'} onClick={() => tryOpen('scrap')}>
-            Scrap
-          </Button>
+          {v.serviceUntil !== null && (
+            <p className="unit-line">
+              <Icon name="wrench" size={13} />
+              In service, back {relativeTime(v.serviceUntil, now)}
+            </p>
+          )}
+          {pending === null ? (
+            <div className="row-actions unit-actions">
+              {canServiceAtAll && (
+                <Button size="sm" icon="wrench" aria-disabled={!v.canService} className={v.canService ? '' : 'btn-soft-off'} onClick={() => tryOpen('service')}>
+                  Service · {money(v.serviceCost)} · {w.serviceHours}h
+                </Button>
+              )}
+              <Button size="sm" variant="ghost" icon="trash" aria-disabled={!v.canScrap} className={v.canScrap ? '' : 'btn-soft-off'} onClick={() => tryOpen('scrap')}>
+                Scrap
+              </Button>
+            </div>
+          ) : (
+            <div className="confirm unit-confirm">
+              <p>
+                {pending === 'service'
+                  ? `Service ${u.serial}? It costs ${money(v.serviceCost)} and is away for ${w.serviceHours}h, then returns at up to ${w.restoreTo}% condition.`
+                  : `Scrap ${u.serial}? It is removed from the department and cannot be recovered.`}
+              </p>
+              <div className="row-actions">
+                <Button size="sm" onClick={() => setPending(null)}>
+                  Keep
+                </Button>
+                <Button
+                  size="sm"
+                  variant={pending === 'scrap' ? 'danger' : 'primary'}
+                  icon={pending === 'scrap' ? 'trash' : 'wrench'}
+                  onClick={() => {
+                    const res = act(pending === 'service' ? { type: 'serviceUnit', unitId: u.id } : { type: 'scrapUnit', unitId: u.id }, pending === 'service' ? `${u.serial} sent for service` : `${u.serial} scrapped`);
+                    if (res.ok) setPending(null);
+                  }}
+                >
+                  {pending === 'service' ? 'Confirm service' : 'Confirm scrap'}
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
-      ) : (
-        <div className="confirm unit-confirm">
-          <p>
-            {pending === 'service'
-              ? `Service ${u.serial}? It costs ${money(v.serviceCost)} and is away for ${w.serviceHours}h, then returns at up to ${w.restoreTo}% condition.`
-              : `Scrap ${u.serial}? It is removed from the department and cannot be recovered.`}
-          </p>
-          <div className="row-actions">
-            <Button size="sm" onClick={() => setPending(null)}>
-              Keep
-            </Button>
-            <Button
-              size="sm"
-              variant={pending === 'scrap' ? 'danger' : 'primary'}
-              icon={pending === 'scrap' ? 'trash' : 'wrench'}
-              onClick={() => {
-                const res = act(pending === 'service' ? { type: 'serviceUnit', unitId: u.id } : { type: 'scrapUnit', unitId: u.id }, pending === 'service' ? `${u.serial} sent for service` : `${u.serial} scrapped`);
-                if (res.ok) setPending(null);
-              }}
-            >
-              {pending === 'service' ? 'Confirm service' : 'Confirm scrap'}
-            </Button>
-          </div>
-        </div>
-      )}
+      </details>
     </li>
   );
 }
@@ -362,7 +387,7 @@ function PresetEditor({ squad, opts }: { squad: Squad; opts: StoreOption[] }) {
         <ul className="loadout">
           {rows.map((o) => (
             <li key={o.item.id} className="lo">
-              <Icon name={itemIcon(o.item.id)} size={22} />
+              <GearArtFrame itemId={o.item.id} size={26} />
               <span className="lo-main">
                 <strong>{o.item.name}</strong>
                 <span className="dim">{o.owned} owned</span>
@@ -381,49 +406,4 @@ function PresetEditor({ squad, opts }: { squad: Squad; opts: StoreOption[] }) {
 
 function normalize(r: Record<Id, number>): Record<Id, number> {
   return Object.fromEntries(Object.entries(r).filter(([, q]) => q > 0).sort(([a], [b]) => a.localeCompare(b)));
-}
-
-function RuleRow({ o, g }: { o: StoreOption; g: GameState }) {
-  const { act } = useToast();
-  const existing = g.department.restockRules.find((r) => r.itemId === o.item.id);
-  const [target, setTarget] = useState(existing?.target ?? 1);
-  const [ceiling, setCeiling] = useState(existing?.budgetCeiling ?? o.item.cost * 2);
-  useEffect(() => {
-    if (existing) {
-      setTarget(existing.target);
-      setCeiling(existing.budgetCeiling);
-    }
-  }, [existing]);
-  const rule: RestockRule = { itemId: o.item.id, target, budgetCeiling: Math.max(0, Math.round(ceiling)) };
-  const same = !!existing && existing.target === rule.target && existing.budgetCeiling === rule.budgetCeiling;
-  return (
-    <Card className="rule">
-      <div className="rule-top">
-        <Icon name={itemIcon(o.item.id)} size={22} />
-        <strong>{o.item.name}</strong>
-        <span className="dim">{o.owned} owned</span>
-        {existing && <Chip tone="mint">Rule on</Chip>}
-      </div>
-      <div className="rule-controls">
-        <div className="rule-field">
-          <span>Keep at least</span>
-          <Stepper label={`${o.item.name} target`} value={target} max={20} onChange={setTarget} />
-        </div>
-        <label className="rule-field">
-          <span>Spend up to ($)</span>
-          <input className="num" inputMode="numeric" type="number" min={0} step={50} value={ceiling} onChange={(e) => setCeiling(Number(e.target.value) || 0)} />
-        </label>
-      </div>
-      <div className="row-actions">
-        {existing && (
-          <Button size="sm" variant="ghost" onClick={() => act({ type: 'setRestockRule', rule: { itemId: o.item.id, remove: true } }, 'Rule removed')}>
-            Remove
-          </Button>
-        )}
-        <Button size="sm" variant="primary" disabled={same} onClick={() => act({ type: 'setRestockRule', rule }, 'Rule saved')}>
-          {existing ? 'Update rule' : 'Add rule'}
-        </Button>
-      </div>
-    </Card>
-  );
 }

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { COURSES } from '../../content/courses';
 import { COMMAND_STAFF, commandStaffOf, managerView, managerViews, type ManagerId, type ManagerView } from '../../sim/command-staff';
 import { isNodeUnlocked, squadDeployed } from '../../sim/economy';
-import { EQUIPMENT_MANAGER, maintenanceBudget } from '../../sim/equipment-manager-policy';
+import { EQUIPMENT_MANAGER, equipmentManagerBenefits, maintenanceBudget } from '../../sim/equipment-manager-policy';
 import type { GameState, SquadId } from '../../sim/types';
 import { ManagerPortrait } from '../art/ManagerArt';
 import { money, moneyFull, perHour, relativeTime } from '../format';
@@ -60,7 +60,7 @@ function Switch({ on, label, onChange }: { on: boolean; label: string; onChange:
   </button>;
 }
 
-export function ManagerSheet({ id, g, now, onClose }: { id: ManagerId; g: GameState; now: number; onClose: () => void }) {
+export function ManagerSheet({ id, g, now, onClose, inGear = false }: { id: ManagerId; g: GameState; now: number; onClose: () => void; inGear?: boolean }) {
   const view = managerView(g, id);
   const { profile } = view;
   const { act } = useToast();
@@ -84,7 +84,7 @@ export function ManagerSheet({ id, g, now, onClose }: { id: ManagerId; g: GameSt
         </div>
         {id === 'watch_commander' && <WatchCommanderPolicy g={g} />}
         {id === 'training_sergeant' && <TrainingSergeantPolicy g={g} />}
-        {id === 'quartermaster' && <QuartermasterPolicy g={g} onOpenGear={() => { onClose(); nav.setGearSection('inventory'); }} />}
+        {id === 'quartermaster' && <QuartermasterPolicy g={g} onOpenGear={inGear ? undefined : () => { onClose(); nav.setGearSection('inventory'); }} />}
       </>}
       <section className="staff-log" aria-label={`${profile.title} activity log`}>
         <h3>Activity log</h3>
@@ -158,11 +158,13 @@ function TrainingSergeantPolicy({ g }: { g: GameState }) {
   </div>;
 }
 
-function QuartermasterPolicy({ g, onOpenGear }: { g: GameState; onOpenGear: () => void }) {
+function QuartermasterPolicy({ g, onOpenGear }: { g: GameState; onOpenGear?: () => void }) {
   const { act } = useToast();
   const current = maintenanceBudget(g) || commandStaffOf(g).quartermaster.resumeBudget;
   const options = [...new Set([50, 100, 200, 300, 500, current])].sort((a, b) => a - b);
+  const benefits = equipmentManagerBenefits(g);
   return <div className="staff-policy">
+    <p className="staff-benefits">Tier {benefits.tier}: {Math.round((1 - benefits.repairMultiplier) * 100)}% cheaper servicing and {Math.round((1 - benefits.wearMultiplier) * 100)}% less wear on reusable equipment. Starts a job only while fewer than {benefits.maxConcurrentServices} repairs are underway, counting manual jobs.</p>
     <label className="field">
       <span className="field-label">Hourly service spending ceiling</span>
       <select value={current} onChange={(event) => act({ type: 'setManagerPolicy', patch: { managerId: 'quartermaster', budgetPerHour: Number(event.target.value) } }, `Service ceiling ${money(Number(event.target.value))}/hour`)}>
@@ -170,6 +172,6 @@ function QuartermasterPolicy({ g, onOpenGear }: { g: GameState; onOpenGear: () =
       </select>
     </label>
     <p className="dim">Services idle gear below {EQUIPMENT_MANAGER.serviceBelow}% condition and keeps {moneyFull(EQUIPMENT_MANAGER.fundingReserve)} in reserve. Restock rules set: {g.department.restockRules.length || 'none'}.</p>
-    <Button size="sm" onClick={onOpenGear}>Open Gear maintenance</Button>
+    {onOpenGear && <Button size="sm" onClick={onOpenGear}>Open Gear maintenance</Button>}
   </div>;
 }

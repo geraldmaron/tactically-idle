@@ -7,6 +7,7 @@ import { ITEMS } from '../content/items';
 import { createPlayerNavigation, DEFAULT_NAV, NavContext, PLAYER_NAV_HISTORY_KEY, type NavApi, type PlayerRoute } from './components/nav';
 import { BottomNav } from './components/BottomNav';
 import { GearScreen } from './screens/Gear';
+import { ManagerSheet } from './components/CommandStaff';
 import { SquadScreen } from './screens/Squad';
 import { OfficerSheet } from './screens/OfficerSheet';
 import { EquipmentStore } from './storefront/EquipmentStore';
@@ -133,7 +134,8 @@ describe('rendered player destinations and persistent drafts', () => {
     expect(html).toMatch(/>Equipment <span class="choice-rail-count">/);
     expect(html.indexOf('class="inv-grid"')).toBeLessThan(html.indexOf('class="gear-maintenance"'));
     expect(html).toContain('<details class="gear-maintenance">');
-    expect(html).toContain('Unlock in Develop');
+    expect(html).toContain('class="qm-card qm-card-not_hired"');
+    expect(html).toContain('Hire in Develop');
     // Inventory is an item grid; restocking lives in each item's sheet.
     expect(html).toMatch(/class="inv-tile"[^>]* aria-label="[^"]+: \d+ owned, \d+ ready/);
     expect(html).toContain('At each clock hour');
@@ -148,11 +150,18 @@ describe('rendered player destinations and persistent drafts', () => {
     state.department.unlockedNodes.push('logistics_equipment_manager');
     state.department.developmentTiers.logistics_equipment_manager = 3;
     const html = markup(createElement(GearScreen));
-    expect(html).toContain('Tier 3: 45% cheaper servicing and 40% less wear');
-    expect(html).toContain('fewer than 4 repairs');
-    expect(html).toContain('Hourly service spending ceiling');
-    expect(html).toContain('Enable automatic service');
-    expect(html).not.toContain('Unlock in Develop');
+    expect(html).toContain('class="qm-card qm-card-off"');
+    expect(html).toContain('Tier 3</span>');
+    expect(html).toContain('45% cheaper service</span>');
+    expect(html).toContain('40% less wear</span>');
+    expect(html).not.toContain('Hire in Develop');
+    // The budget control lives once, in the Quartermaster's Command Staff sheet.
+    const sheet = markup(createElement(ManagerSheet, { id: 'quartermaster', g: state, now: NOW, onClose: () => {}, inGear: true }));
+    expect(sheet).toContain('Tier 3: 45% cheaper servicing and 40% less wear');
+    expect(sheet).toContain('fewer than 4 repairs');
+    expect(sheet).toContain('Hourly service spending ceiling');
+    expect(sheet).toContain('role="switch"');
+    expect(sheet).not.toContain('Open Gear maintenance');
   });
 
   it('uses the same blueprint art frame and distinguishes purchase locks from readiness', () => {
@@ -162,7 +171,7 @@ describe('rendered player destinations and persistent drafts', () => {
     expect(equipment).toContain('class="gear-art-frame"');
     expect(equipment).toContain('Purchase locked');
     expect(equipment).toContain('Purchase unlocked');
-    expect(equipment).toContain(' ready</span>');
+    expect(equipment).toMatch(/class="inv-tile store-tile[^"]*"[^>]* aria-label="[^"]+ \d+ owned, \d+ ready/);
     expect(equipment).not.toContain('>Locked</span>');
   });
 
