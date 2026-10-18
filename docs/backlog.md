@@ -63,6 +63,18 @@ window route is reachable (the same check the compiler runs, moved into the exit
 window choice is pruned where it isn't, every barricade family hosts, and a regression test covers
 a furniture-blocked window.
 
+### moves-skip-pruned: Moves on pruned choices don't compile
+Tags: job=command; journeys=choices-branch; probes=none (compile correctness); lane=engine
+Needs: start=none; integrate=none; ship=none
+
+R-B3 bug found by the calls lane building the barricade. `withCallTree` numbers moves over every
+choice of the reachable nodes (`src/gen/incident/trees-v13/compile.ts`), including choices pruned
+by `onlyIf` and outcomes pruned by `when`, while `actionFor` compiles only the possible ones. A
+pruned choice's move becomes a story transition whose flag no effect sets, and validation throws
+("references undeclared flag moved:subject:21"; e.g. gen:barricaded:cedar_close:7:2:2:13). Done: the
+moves loop uses the same `possible` filters as `actionFor`, with a regression test on a fixture
+tree whose pruned choice carries a move.
+
 ### clock-forks-read-travel: Clock forks read the decision's full time
 Tags: job=command; journeys=chance-not-script; probes=none (clock timing, not odds); lane=engine
 Needs: start=none; integrate=none; ship=none
@@ -104,7 +116,7 @@ which the sheet did not re-read.
 
 ### barricade-model-first: Write the barricade call model-first
 Tags: job=command; journeys=answer-a-call, choices-branch; probes=blueprint-building, blueprint-locked; lane=calls
-Needs: start=none; integrate=exit-via-reachable; ship=none
+Needs: start=none; integrate=exit-via-reachable, moves-skip-pruned; ship=none
 
 As the hostage call was: template, design sheet in `docs/calls/`, tree, separate review. The old
 tree has 2 `team` moves out of about 37 choices (armed 13, hostage 8, rescue 8), and a different
