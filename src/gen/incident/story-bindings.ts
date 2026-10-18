@@ -164,7 +164,8 @@ export function findStoryRoute(built: BuiltLocation, fromSpaceId: Id, toSpaceId:
     const zones = new Set(built.location.zones.map(zone => zone.id));
     const inside = zones.has(exit.a) ? exit.b : exit.a, outside = inside === exit.a ? exit.b : exit.a;
     if (zones.has(inside) || !zones.has(outside)) return null;
-    const before = findStoryRoute(built, fromSpaceId, inside, profile), after = findStoryRoute(built, outside, toSpaceId, profile);
+    // Once out, they stay out: the way on to the destination crosses only open ground between exterior zones.
+    const before = findStoryRoute(built, fromSpaceId, inside, profile), after = exteriorRoute(built, outside, toSpaceId, profile);
     return before && after ? [...before, exit.id, ...after] : null;
   }
   if (!space(built, fromSpaceId) || !space(built, toSpaceId) || !['walking', 'chair'].includes(profile)) return null;
@@ -176,6 +177,27 @@ export function findStoryRoute(built: BuiltLocation, fromSpaceId: Id, toSpaceId:
     const current = queue[i];
     if (current.id === toSpaceId) return current.route;
     for (const opening of openings) {
+      const next = opening.a === current.id ? opening.b : opening.b === current.id ? opening.a : undefined;
+      if (next === undefined || seen.has(next)) continue;
+      seen.add(next);
+      queue.push({ id: next, route: [...current.route, opening.id] });
+    }
+  }
+  return null;
+}
+
+/** The shortest way between two exterior zones that never enters the building: only openings both
+ * of whose sides are exterior zones. */
+function exteriorRoute(built: BuiltLocation, fromZoneId: Id, toZoneId: Id, profile: StoryRouteProfile): Id[] | null {
+  const zones = new Set(built.location.zones.map(zone => zone.id));
+  if (!zones.has(fromZoneId) || !zones.has(toZoneId)) return null;
+  const links = built.location.openings.filter(opening => zones.has(opening.a) && zones.has(opening.b) && usableOpening(built, opening, profile)).sort(byId);
+  const queue: { id: Id; route: Id[] }[] = [{ id: fromZoneId, route: [] }];
+  const seen = new Set([fromZoneId]);
+  for (let i = 0; i < queue.length; i++) {
+    const current = queue[i];
+    if (current.id === toZoneId) return current.route;
+    for (const opening of links) {
       const next = opening.a === current.id ? opening.b : opening.b === current.id ? opening.a : undefined;
       if (next === undefined || seen.has(next)) continue;
       seen.add(next);

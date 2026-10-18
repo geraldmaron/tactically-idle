@@ -506,12 +506,16 @@ export function evaluateAction(input: EvalInput): Evaluation {
   const storyRoute = followsSquadRoute
     ? squadStoryRoutes && [...squadStoryRoutes.values()].every(route => route !== null) ? [...new Set([...squadStoryRoutes.values()].flatMap(route => route!))] : null
     : followsRoute ? currentStoryRoute(scenario, built, action.storyRoute!) : null;
-  if (storyRoute) action = { ...action, requires: { ...action.requires, openings: storyRoute.map(openingId => ({
-    openingId,
-    blockedReason: 'The route for this move is blocked.',
-    lockedTag: 'entry_tool',
-    lockedNote: 'Locked route: opening it adds time to this move.',
-  })) } };
+  const windowIds = new Set(built.location.openings.filter(opening => opening.type === 'window').map(opening => opening.id));
+  if (storyRoute) action = { ...action, requires: { ...action.requires, openings: storyRoute.map(openingId => windowIds.has(openingId)
+    // A window on the route is a person's own way out (R-B2): they unlatch it from inside, so no tool and no force.
+    ? { openingId, blockedReason: 'The window for this move is blocked.', lockedNote: 'Latched window: it opens from inside.' }
+    : {
+      openingId,
+      blockedReason: 'The route for this move is blocked.',
+      lockedTag: 'entry_tool',
+      lockedNote: 'Locked route: opening it adds time to this move.',
+    }) } };
   const T = RESOLUTION_TUNING;
   const E = EXPERIENCE_TUNING;
   const kind = action.check.kind;

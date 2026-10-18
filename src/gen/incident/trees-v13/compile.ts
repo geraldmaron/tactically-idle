@@ -658,7 +658,9 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
   // R-B2: a walk-out by a chosen way is offered only where that way exists (TreeState.exitVia).
   for (const node of authored.nodes) {
     for (const state of [...(node.promptIf ?? []).map(entry => entry.when), ...node.choices.flatMap(choice => [choice.onlyIf, ...BANDS.flatMap(band => choice.outcomes[band].map(outcome => outcome.when))])])
-      if (state?.exitVia && placed.exits?.[state.exitVia.role] === undefined)
+      if (state?.exitVia && state.exitVia.via !== 'window')
+        throw new Error(`${authored.type}: ${node.id} reads ${state.exitVia.role}'s way out by the ${state.exitVia.via}, which waits for rescue's R-R5; only 'window' is built`);
+      else if (state?.exitVia && placed.exits?.[state.exitVia.role] === undefined)
         throw new Error(`${authored.type}: ${node.id} reads ${state.exitVia.role}'s way out, but ${state.exitVia.role} starts outside the building`);
     for (const choice of node.choices) {
       if (!choice.walksVia) continue;

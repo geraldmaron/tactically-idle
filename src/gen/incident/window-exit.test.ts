@@ -95,6 +95,40 @@ describe('out through their own window (R-B2)', () => {
     });
   });
 
+  it('once out of the window they stay out: the rest of the way never re-enters the building', () => {
+    // Reproduced by the adversarial review: semi_detached_g2 seed 1, the wc window, with the side-yard
+    // link blocked, went back in through the back door and out the front.
+    const built = buildLocation('semi_detached_g2', 1);
+    const zones = new Set(built.location.zones.map(zone => zone.id));
+    const room = built.location.rooms.find(entry => windowExit(built, entry.id))!;
+    const exit = windowExit(built, room.id)!;
+    const outdoors = (route: string[] | null) => route === null || route.slice(route.indexOf(exit.id) + 1).every(id => {
+      const opening = built.location.openings.find(entry => entry.id === id)!;
+      return zones.has(opening.a) && zones.has(opening.b);
+    });
+    expect(outdoors(findStoryRoute(built, room.id, built.location.entries[0], 'walking', exit.id))).toBe(true);
+    for (const link of built.location.openings.filter(opening => zones.has(opening.a) && zones.has(opening.b))) {
+      const cut = structuredClone(built);
+      cut.location.openings.find(opening => opening.id === link.id)!.state = 'blocked';
+      expect(outdoors(findStoryRoute(cut, room.id, cut.location.entries[0], 'walking', exit.id)), `with ${link.id} blocked`).toBe(true);
+    }
+  });
+
+  it('a latched window opens from inside: no force, and a squad’s tool changes nothing', () => {
+    const route = flat.s.story!.bindings.routes[walkOut(flat.s)!.storyRoute!];
+    const time = (state: 'closed' | 'locked', tool: { effectiveness: number } | null) => {
+      const built = structuredClone(flat.built);
+      built.location.openings.find(opening => opening.id === route.exitOpeningId)!.state = state;
+      const from = flat.s.story!.bindings.people.child.initial.at, to = flat.s.story!.bindings.people.child.transitions[0]?.to;
+      return routeAlongOpenings(built, from, to && !('kind' in to) ? to.at : from, route.openingIds, tool);
+    };
+    const closed = time('closed', null), locked = time('locked', null), tooled = time('locked', { effectiveness: 1 });
+    expect(locked.reachable).toBe(true);
+    expect(locked.forced).toEqual([]);
+    expect(locked.minutes).toBe(closed.minutes);
+    expect(tooled.minutes).toBe(closed.minutes);
+  });
+
   it('a window is never a way through for any other route', () => {
     const exit = windowExit(flat.built, flat.s.story!.bindings.people.child.initial.spaceId)!;
     for (const [name, route] of Object.entries(flat.s.story!.bindings.routes)) if (!route.exitOpeningId)
@@ -122,5 +156,9 @@ describe('out through their own window (R-B2)', () => {
     const outside = variant();
     outside.tree.nodes.find(node => node.id === outside.tree.root)!.promptIf = [{ when: { exitVia: { role: 'ex', via: 'window' } }, prompt: 'x' }, ...outside.tree.nodes.find(node => node.id === outside.tree.root)!.promptIf ?? []];
     expect(() => call(outside, 'bungalow_g2', true)).toThrow(/starts outside the building/);
+    // A front or back condition anywhere (a prompt here), not only on a walk-out, waits for R-R5.
+    const back = variant();
+    back.tree.nodes.find(node => node.id === back.tree.root)!.promptIf = [{ when: { exitVia: { role: 'child', via: 'back' } }, prompt: 'x' }, ...back.tree.nodes.find(node => node.id === back.tree.root)!.promptIf ?? []];
+    expect(() => call(back, 'bungalow_g2', true)).toThrow(/by the back, which waits for rescue's R-R5/);
   });
 });

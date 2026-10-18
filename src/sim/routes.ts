@@ -119,7 +119,8 @@ export function routeAlongOpenings(built: BuiltLocation, fromAt: Vec, toAt: Vec,
     if (!o || o.state === 'blocked') return UNREACHABLE;
     points.push(mid(o.from, o.to));
     minutes += T.openingMinutes + windowClimbMinutes(o);
-    if (o.state === 'locked') {
+    // A latched window is opened from inside by the person climbing out (R-B2): never forced, no tool.
+    if (o.state === 'locked' && o.type !== 'window') {
       const f = forceFor(o, tool, keyed);
       forced.push(f);
       forceMinutes += f.minutes;
@@ -201,7 +202,8 @@ function furnishedCrossing(built: BuiltLocation, opening: Opening, fromSpace: Id
     }
   }
   const points = opening.type === 'stair' ? [from, to] : [from, midpoint, to];
-  const forced = opening.state === 'locked' ? forceFor(opening, tool, keyed) : null;
+  // A latched window is opened from inside by the person climbing out (R-B2): never forced, no tool.
+  const forced = opening.state === 'locked' && opening.type !== 'window' ? forceFor(opening, tool, keyed) : null;
   return { into, from, to, points, forced, minutes: pathFeet(dist, points) / LOCATION_TUNING.feetPerMinute + (opening.type === 'stair' ? STAIR_MINUTES : LOCATION_TUNING.openingMinutes) + (forced?.minutes ?? 0) };
 }
 
