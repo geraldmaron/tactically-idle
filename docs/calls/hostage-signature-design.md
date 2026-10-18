@@ -962,7 +962,7 @@ The two follow-ups from the clock routing, with the lead's decision to drop the 
   the collapse at the shot; five fixes: falls shown as they happen, courier positions agreeing with
   `held_both_down`), then approve with one note (an unanchored "them"), applied.
 - Remaining, engine: a clock fork reads the clock at `workload.base × bandTime` (`forkMinutes`,
-  `sim/clocks.ts:53`), while the commit also spends travel and movement minutes. In 2,364 situation-2
-  plays (197 calls × 4 styles × 3 seeds) one run ended at `held_inside` with the owner hurt because
+  `sim/clocks.ts:53`), while the commit also spends travel and movement minutes. In 3,152 situation-2
+  plays (197 calls × 4 styles × 4 seeds) one run ended at `held_inside` with the owner hurt because
   `threat.step_back` mixed took 12.5 real minutes; the same run does so on main. Request: fork reads
   use the decision's real minutes.
