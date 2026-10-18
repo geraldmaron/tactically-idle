@@ -1,4 +1,5 @@
 import { actionEquipmentRequirements, effectiveTags, normalizedActionConsumption, operatorQualified, orderActionParticipants } from './equipment-requirements';
+import { LAST_SEEN_LINES } from '../content/incidents/lines';
 import { casualtyActionIssue, incidentOfficerUnavailable, personCasualtyActionIssue } from './incident-consequences';
 import { selectedProtection } from './force-risk';
 import { externalSupportActionIssue, remainingSupportWait } from './external-support';
@@ -493,7 +494,7 @@ export function evaluateAction(input: EvalInput): Evaluation {
   const target = followsPerson ? storyActionTarget(scenario, action, built, run) : null;
   if (target) {
     action = hydrateStoryAction(action, target, built);
-    const publicView = storyPublicScenario(scenario, built, run);
+    const publicView = storyPublicScenario(scenario, built, run, LAST_SEEN_LINES);
     scenario = publicView.scenario;
     run = { ...run, knowledge: publicView.knowledge };
   }

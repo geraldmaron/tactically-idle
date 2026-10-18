@@ -17,9 +17,11 @@ import { validExternalSupportState } from '../../sim/external-support';
 import type { ScenarioDefinition } from '../../sim/scenario-types';
 import { getScenario } from '../../sim/scenario-registry';
 import { sightings } from '../../sim/sightings';
-import { LAST_SEEN_LINES, observingAction, sightingFlags, storyPeopleActual, storyPeoplePublic, storyPublicScenario } from '../../sim/story-people';
+import { observingAction, sightingFlags, storyPeopleActual, storyPeoplePublic, storyPublicScenario } from '../../sim/story-people';
+import { LAST_SEEN_LINES } from '../../content/incidents/lines';
+import { spaceLabel } from '../../sim/spatial-factors';
 import { NOW } from '../../sim/test-fixtures';
-import { actionViews } from '../../sim/operation-selectors';
+import { actionViews, spaceViews } from '../../sim/operation-selectors';
 import type { GameState } from '../../sim/types';
 import { applyMove, applyNaturalMove, startGateRun, withDraftScenario } from './gates/engine-driver';
 import { generateIncident } from './index';
@@ -85,7 +87,7 @@ describe('truth and belief after a hidden move', () => {
   it('truth is the hall; nothing public changes until the team looks, so an unseen move tells the player nothing', () => {
     expect(storyPeopleActual(found.s, moved).find(person => person.id === 'subject')!.position).toEqual(hall());
     expect(storyPeoplePublic(found.s, found.built, moved)).toEqual(storyPeoplePublic(found.s, found.built, run([])));
-    expect(storyPublicScenario(found.s, found.built, moved)).toEqual(storyPublicScenario(found.s, found.built, run([])));
+    expect(storyPublicScenario(found.s, found.built, moved, LAST_SEEN_LINES)).toEqual(storyPublicScenario(found.s, found.built, run([]), LAST_SEEN_LINES));
   });
 
   it('a look into the room the team last saw them in, now empty, shows it as where they were last seen, with no reporter credited', () => {
@@ -95,10 +97,25 @@ describe('truth and belief after a hidden move', () => {
     const lost = run([movedFlag('subject', 1), lostFlag('subject')]);
     const believed = storyPeoplePublic(found.s, found.built, lost).find(person => person.id === 'subject')!;
     expect(believed).toMatchObject({ status: 'reported', stale: true, position: found.s.story!.bindings.people.subject.initial });
-    const fact = storyPublicScenario(found.s, found.built, lost).scenario.facts.find(entry => entry.id === subject().locationFactId)!;
+    const fact = storyPublicScenario(found.s, found.built, lost, LAST_SEEN_LINES).scenario.facts.find(entry => entry.id === subject().locationFactId)!;
     expect(fact.markerSource).toBeUndefined();
     expect(fact.source).toBe(LAST_SEEN_LINES.source);
-    expect(fact.claim).toMatch(/was last seen in/);
+    // Bound as the calls lane's lines say: the first name, and the room as prose ("the kitchen").
+    const room = spaceLabel(found.built, found.s.story!.bindings.people.subject.initial.spaceId);
+    expect(fact.claim).toBe(`${subject().label} was last seen in the ${room.toLowerCase()}.`);
+    expect(fact.claim).not.toContain(`in ${room}.`);
+    expect(subject().label).not.toContain(' ');
+    // The map marker and the room's fact panel show the same bound words.
+    const views = withDraftScenario(found.s, id => {
+      const state = startGateRun(id);
+      state.activeRun!.flags = [...state.activeRun!.flags, ...lost.flags];
+      state.activeRun!.knowledge = { ...state.activeRun!.knowledge, ...lost.knowledge };
+      return spaceViews(state);
+    });
+    const space = views.find(view => view.id === found.s.story!.bindings.people.subject.initial.spaceId)!;
+    expect(space.marker).toMatchObject({ text: LAST_SEEN_LINES.marker });
+    expect(space.marker?.subtext).toBeUndefined();
+    expect(space.facts.find(view => view.id === subject().locationFactId)).toMatchObject({ claim: fact.claim, source: LAST_SEEN_LINES.source, status: 'reported' });
     // Seeing them anywhere settles it.
     expect(withFlag(lost.flags, seenFlag('subject', 1))).not.toContain(lostFlag('subject'));
   });
@@ -147,7 +164,7 @@ describe('an unseen move changes nothing belief reads', () => {
         expect(scenarioWithPeopleNow(s, built, after, 'belief'), `seed ${seed} ${status}`).toBe(s);
         expect(movedPersonAt(s, built, after, person, 'belief'), `seed ${seed} ${status}`).toBeNull();
         expect(readForceThreat(scenarioWithPeopleNow(s, built, after, 'belief'), after, person)).toEqual(readForceThreat(s, before, person));
-        expect(storyPublicScenario(s, built, after)).toEqual(storyPublicScenario(s, built, before));
+        expect(storyPublicScenario(s, built, after, LAST_SEEN_LINES)).toEqual(storyPublicScenario(s, built, before, LAST_SEEN_LINES));
       }
     }
   });
@@ -218,6 +235,14 @@ describe('a clock cue can move someone', () => {
     expect(transitions[0]).toMatchObject({ when: { flags: [movedFlag('subject', key)] }, observed: false });
     expect(transitions[1]).toMatchObject({ when: { flags: [seenFlag('subject', key)] }, observed: true });
     expect(s.clocks![0].cues[0]).toMatchObject({ mark: 'in_hall', setFlags: [movedFlag('subject', key)] });
+  });
+});
+
+describe('cue flags are the compiler’s alone', () => {
+  it('an authored cue that sets flags directly is rejected', () => {
+    const bad = { ...CLOCK, cues: [{ ...CLOCK.cues[0], setFlags: [movedFlag('subject', 1)] }] };
+    const t = { ...variant({ move: {} }), situations: BARRICADE.situations.map(situation => ({ ...situation, clocks: [bad as unknown as typeof CLOCK] })) };
+    expect(() => call(t, 'bungalow_g2', 1, true)).toThrow(/sets flags directly/);
   });
 });
 
@@ -344,6 +369,73 @@ describe('what the team sees never depends on hidden state', () => {
     };
     expect(seenBy(after)).toEqual(seenBy(before));
     expect(seenBy(before).observes).toEqual(enter.observes);
+  });
+});
+
+describe('in real play, with a save and reload after every decision', () => {
+  // Natural dice on the default seed: call_him (3.6 min), then honest_no (3.0 min). A clock from 100
+  // at 2 a minute passes 95 in the first decision and 90 in the second.
+  const CHILD = { room: 'child' } as const;
+  const clockAt = (at: number) => ({ ...CLOCK, start: 100, ratePerMin: 2, cues: [{ ...CLOCK.cues[0], at, moveTo: { subject: CHILD } }] });
+  const template = (opts: { first?: TreeMoveTo; second?: TreeMoveTo | { to: typeof HALL; seen?: true }; cueAt?: number; watch?: boolean }): IncidentTemplate => {
+    const t = variant({ move: opts.first ?? {}, edit: tree => {
+      const line = tree.nodes.find(node => node.id === 'on_the_line')!.choices.find(choice => choice.id === 'honest_no')!;
+      if (opts.watch) line.team = { to: { watch: HALL }, signal: { channel: 'visual', to: 'subject' } };
+      if (opts.second) for (const band of ['favorable', 'mixed', 'adverse'] as const) for (const outcome of line.outcomes[band]) if (outcome.next) outcome.moveTo = opts.second as TreeMoveTo;
+    } });
+    return opts.cueAt === undefined ? t : { ...t, situations: BARRICADE.situations.map(situation => ({ ...situation, clocks: [clockAt(opts.cueAt!)] })) };
+  };
+  /** Plays call_him then honest_no; after each, a save must reload to the same people, and the
+   * decision replay and the waits validator must agree with the live run. */
+  const play = (t: IncidentTemplate) => {
+    const { s } = call(t, 'bungalow_g2', 1, true)!;
+    return withDraftScenario(s, id => {
+      const scenario = getScenario(id)!;
+      const after: GameState[] = [];
+      let state = startGateRun(id);
+      for (const [node, choice] of [['window', 'call_him'], ['on_the_line', 'honest_no']] as const) {
+        state = applyNaturalMove(state, { kind: 'decide', actionId: choiceActionId('barricaded', node, choice) })!;
+        expect(state, `${node}.${choice}`).not.toBeNull();
+        const run = state.activeRun!;
+        const copy = structuredClone(state);
+        copy.incidents = [];
+        delete copy.activeRun!.sourceIncident;
+        const back = deserialize(serialize(copy, NOW));
+        expect(back, `the save after ${choice} loads`).not.toBeNull();
+        expect(storyPeopleActual(scenario, back!.activeRun!)).toEqual(storyPeopleActual(scenario, run));
+        const moves = (flags: string[]) => flags.filter(flag => /^(moved|seen|lost):subject/.test(flag)).sort();
+        expect(moves(traceRun(scenario, run).end.flags), `replay after ${choice}`).toEqual(moves(run.flags));
+        expect(validExternalSupportState(run, scenario), `waits replay after ${choice}`).toBe(true);
+        after.push(state);
+      }
+      const where = (state: GameState) => storyPeopleActual(scenario, state.activeRun!).find(person => person.id === 'subject')!.position as { spaceId: string };
+      const childRoom = scenario.story!.bindings.people.child.initial.spaceId;
+      const hallRoom = (scenario.story!.bindings.people.subject.transitions.find(entry => !entry.observed)!.to as { spaceId: string }).spaceId;
+      return { after, where, childRoom, hallRoom };
+    });
+  };
+
+  it('a cue move, then an outcome move: they end where the outcome took them', () => {
+    const { after, where, hallRoom, childRoom } = play(template({ cueAt: 95, second: { subject: HALL } }));
+    expect(where(after[0]).spaceId, 'the cue fired in the first decision').toBe(childRoom);
+    expect(where(after[1]).spaceId).toBe(hallRoom);
+  });
+
+  it('an outcome move, then a cue move: they end where the cue took them', () => {
+    const { after, where, hallRoom, childRoom } = play(template({ first: { subject: HALL }, cueAt: 90 }));
+    expect(where(after[0]).spaceId, 'the cue had not fired yet').toBe(hallRoom);
+    expect(where(after[1]).spaceId).toBe(childRoom);
+  });
+
+  it('two outcome moves of one person: they end where the second took them', () => {
+    const { after, where, hallRoom, childRoom } = play(template({ first: { subject: HALL }, second: { subject: CHILD } }));
+    expect(where(after[0]).spaceId).toBe(hallRoom);
+    expect(where(after[1]).spaceId).toBe(childRoom);
+  });
+
+  it('a hidden move, then a look that sees them there: the re-sighting survives a mid-call save', () => {
+    const { after } = play(template({ first: { subject: HALL }, watch: true }));
+    expect(after[1].activeRun!.flags.some(flag => flag.startsWith('seen:subject:'))).toBe(true);
   });
 });
 

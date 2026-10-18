@@ -22,12 +22,9 @@ export interface StoryPublicPerson extends Omit<StoryActualPerson, 'position'> {
   stale?: true;
 }
 
-/** Public words for a person the team saw and who has since moved out of sight (R-B3). */
-export const LAST_SEEN_LINES = {
-  source: 'Last seen by the team',
-  claim: (person: string, place: string) => `${person} was last seen in ${place}.`,
-  marker: (person: string) => `${person.toUpperCase()}?`,
-};
+/** The public words for a place the team last saw someone (content/incidents/lines.ts LAST_SEEN_LINES,
+ * the calls lane's): passed in by the scenario-side callers, so this module holds no strings. */
+export interface LastSeenWords { source: string; claim: string; marker: string }
 
 const SEEN_PREFIX = seenFlag('', 0).split(':')[0] + ':';
 const MOVED_PREFIX = movedFlag('', 0).split(':')[0] + ':';
@@ -156,7 +153,7 @@ export function storyPropsKnown(scenario: ScenarioDefinition, built: BuiltLocati
 }
 
 /** A transient view of location facts shared by room inspection, map markers and spatial checks. */
-export function storyPublicScenario(scenario: ScenarioDefinition, built: BuiltLocation, run: StoryState): { scenario: ScenarioDefinition; knowledge: Record<Id, KnowledgeStatus> } {
+export function storyPublicScenario(scenario: ScenarioDefinition, built: BuiltLocation, run: StoryState, lastSeen: LastSeenWords): { scenario: ScenarioDefinition; knowledge: Record<Id, KnowledgeStatus> } {
   const people = storyPeoplePublic(scenario, built, run);
   if (!people.length) return { scenario, knowledge: run.knowledge };
   const byFact = new Map(people.map(person => [person.locationFactId, person]));
@@ -175,11 +172,13 @@ export function storyPublicScenario(scenario: ScenarioDefinition, built: BuiltLo
     if ('kind' in person.position) return [];
     if (person.stale) {
       // Where the team last saw them, in its own words: no reporter is credited with the team's sighting.
-      const place = spaceLabel(built, person.position.spaceId);
+      // {person} is the first name, as other person claims bind it; {place} is the room as prose.
+      const first = scenario.incidentPeople?.find(entry => entry.id === person.id)?.label ?? person.label;
+      const place = `the ${spaceLabel(built, person.position.spaceId).toLowerCase()}`;
       const { markerSource: _source, ...rest } = fact;
       return [{ ...rest, spaceId: person.position.spaceId, person: { label: person.label, reportedAt: person.position.at },
-        label: `${person.label}'s location`, claim: LAST_SEEN_LINES.claim(person.label, place), source: LAST_SEEN_LINES.source, note: null,
-        markers: { ...fact.markers, reported: LAST_SEEN_LINES.marker(person.label) } }];
+        label: `${person.label}'s location`, claim: lastSeen.claim.replace('{person}', first).replace('{place}', place), source: lastSeen.source, note: null,
+        markers: { ...fact.markers, reported: lastSeen.marker } }];
     }
     const moved = person.position.spaceId !== fact.spaceId || person.locationLabel !== undefined;
     const place = spaceLabel(built, person.position.spaceId);

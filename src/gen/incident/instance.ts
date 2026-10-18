@@ -243,8 +243,12 @@ function clocksFor(instance: IncidentInstance, bind: (text: string) => string, f
     return {
       id: clock.id, label: bind(clock.label), kind: clock.kind, ...(clock.owner ? { owner: clock.owner } : {}),
       start: clock.start, ratePerMin: clock.ratePerMin, rateKnown: clock.rateKnown,
-      cues: clock.cues.map((cue, index) => ({ at: cue.at, text: bind(cue.text), ...(cue.mark ? { mark: cue.mark } : {}), ...(cue.reveal ? { reveal: true } : {}),
-        ...(cue.moveTo ? { setFlags: cueMoveFlags(clock.id, index, cue.moveTo) } : {}) })),
+      cues: clock.cues.map((cue, index) => {
+        // Cue flags are the compiler's (a cue's moves): authored content never sets them directly.
+        if ('setFlags' in cue || 'clearFlags' in cue) throw new Error(`Clock ${clock.id}: cue ${index + 1} sets flags directly; author a moveTo or a mark instead`);
+        return { at: cue.at, text: bind(cue.text), ...(cue.mark ? { mark: cue.mark } : {}), ...(cue.reveal ? { reveal: true } : {}),
+        ...(cue.moveTo ? { setFlags: cueMoveFlags(clock.id, index, cue.moveTo) } : {}) };
+      }),
       ...(factId && factIds.has(factId) ? { factId } : {}),
       ...(clock.urgent ? { urgent: bind(clock.urgent) } : {}),
       ...(clock.onOut ? { onOut: { ...(clock.onOut.harm ? { harm: clock.onOut.harm } : {}), ...(clock.onOut.mark ? { mark: clock.onOut.mark } : {}),
