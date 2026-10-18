@@ -136,19 +136,32 @@ lane's.
 | 2 turn | `turn_list` · `turn_hall` · `turn_text` (drawn) | the list on the box flap · the hall the mover's route runs through · the mover's battery and nerve | per turn: a move against a question (see below) | the subject nearer the back bedroom | turn group, marks, clock |
 | 2 | `on_the_line` | the subject is talking | tell them the sale stands · ask who else is in the house · let them talk about the house | boxes clock | meters, truth `knows_mover` |
 | 2 | `seen` | the subject saw the team at the glass | pull back from the glass · hold the glass and call | boxes clock | `team_seen`, fire |
-| 3 commit | `talking` | the subject on the line | take down the list (statement concession) · walk the mover out with an escort (escort move, support) · ask the subject to let the mover leave · hold past dark (Hours) | boxes clock; the mover in the closet | concession, escort, support, clock fork |
+| 3 commit | `talking` | the subject on the line | take down the list (statement concession) · walk the mover out with an escort (escort move, support) · [window] bring the mover out the bedroom window (`walksBy` window, R-B2; offered only where the mover's room is on the ground floor with an exterior window) · ask the subject to let the mover leave · hold past dark (Hours) | boxes clock; the mover in the closet | concession, escort, window exit, support, clock fork |
 | 3 | `mover_out` | the mover is out | talk the subject out the front · take down the list · hold the perimeter all night | the subject alone with the weapon | concession, span |
 | 3 | `threat` | the subject at the back bedroom door with the weapon | call them back to the front from the glass (vantage, voice) · send the team in (entry, support) · pull the team out of sight | the mover behind that door | authority entry, force, fire |
 | 3 | `fired_on` | a shot at the team | go in harder (entry) · hold at the cars and call | the mover in reach | authority entry, fire |
 | 3 | `found` | the clock ran out: the subject opened the back bedroom door | talk to both through the window (vantage, voice) · go in (entry, only if threat believed) · give them the room (hold) | the mover in the room with the subject | clock `onOut`, truth `comes_out` |
 
-Stage 2 turns, each a move against a question:
+Stage 2 turns, each a move against a question. Revised after the Codex review (finding 5): each
+option now has its own payoff and a cost a routed outcome charges, and the "nerve clock" is gone
+(there is one clock, `boxes`).
 
-| Turn | Prompt fact | Move option | Question option | What it reprices |
+| Turn | Prompt fact | Move option (payoff / cost) | Question option (payoff / cost) | What it reprices |
 |---|---|---|---|---|
-| `turn_list` | the sibling says the subject wrote a list on a box flap, the parent's things they want kept | send the team to the porch for the flap the subject threw out (vantage scene) | ask the subject on the phone what is on the list | the list concession in stage 3 (mark `has_list`, +8 on take_list) |
-| `turn_hall` | through the side window the team sees the hall: the subject stops at the back bedroom door each pass | put the team at the side window to watch the hall (vantage, visual, observes the hall) | time a call to pull the subject to the front | the escort in stage 3 (mark `hall_timed`, +6 on walk_out) |
-| `turn_text` | the mover texts that their battery is going and they want to run for it | text the mover to stay in the closet (no move) | send the team to the back bedroom window to talk the mover through it (vantage, voice) | whether the mover runs on their own (clock on the mover's nerve, mark `mover_steady`) |
+| `turn_list` | the sibling says the subject wrote a list on a box flap, the parent's things they want kept, and threw it off the porch | fetch the flap from the porch (vantage scene): `has_list` on favorable and mixed, no word to the subject / 5 minutes in sight of the front window; adverse is `team_seen` and, at breaking, `fire` | ask the subject on the phone what is on it (TALK): `heard`, rapport, `has_list` on favorable only / mixed and adverse are `provoked`, since the list is the sale | `take_list` (+8 with the flap in hand, +4 with the subject's own account, through two marks `has_list` and `list_told`) |
+| `turn_hall` | the side window shows the hall: the subject stops at the back bedroom door each pass | watch the hall from the side window (vantage, visual, observes the scene room and the hall once R-B3 gives the hall an anchor): the subject's position confirmed (intel-odds), `hall_watched` / 6 minutes, `team_seen` on adverse | time a call to pull the subject to the front (phone, 2 minutes): `hall_timed` on favorable / adverse leaves the subject in the hall and costs the clock 4 points (`minutes`) | `walk_out` (+6 `hall_watched`, +4 `hall_timed`; only one can be set, since the turn node is left) |
+| `turn_text` | the mover texts that the battery is going and they want to run for the back door | text the mover to stay in the closet (no move, 1 minute): `mover_steady` / on mixed the battery dies and the team loses the mover (`mover_dark`, −4 on `walk_out`, and the mover's position falls back to reported) | go to the mover's window and talk them through it (vantage on the mover's room, voice): `mover_steady` and the squad already at the back, so `walk_out` and `out_window` travel less / adverse with `knows_mover` true is the escalation (the subject hears the window) | the escort's odds and its travel |
+
+Stage 2 dominance grid (the turns):
+
+| Option | Odds | Minutes | Who pays on adverse | Charged by | Payoff only it produces |
+|---|---|---|---|---|---|
+| fetch the flap | mid (QUIET) | 5 | the team (seen, fire at breaking) | `turn_list.flap.adverse` | the full list with no provocation |
+| ask about the list | mid (TALK) | 3 | the mover (the subject worked up) | `turn_list.ask.mixed/adverse` `provoked` | rapport, the only `heard` in the turn |
+| watch the hall | mid (QUIET, visual) | 6 | the team (seen) | `turn_hall.watch.adverse` | the confirmed position, the bigger escort bonus |
+| time a call | mid (TALK) | 2 | the mover (clock −4) | `turn_hall.time_call.adverse` `minutes` | speed |
+| stay put | best (QUIET) | 1 | the mover (contact lost) | `turn_text.stay.mixed` `mover_dark` | the cheapest minutes |
+| talk through the window | mid (QUIET, voice) | 4 | the mover (escalation where known) | `turn_text.window.adverse` | the squad placed at the back for stage 3 |
 
 Dominance grid (four rules from dilemma-patterns.md), the stages where a tie is likeliest. Odds
 are designed directions, not measured; balance measures them.
@@ -171,12 +184,32 @@ Force and entry gates (E12.5). Every entry declares `authority: 'entry'`.
 
 | Action | Situation | Visible when | Threat that authorizes | Command line |
 |---|---|---|---|---|
-| `threat.go_in`, `fired_on.go_in` | all | at `threat` / `fired_on` only | mark `at_the_door` ("{subject.first} took the weapon to the door {mover.first} is behind") | generated |
-| `found.go_in` | s3 | at `found` only, and only once `at_the_door` is set | same | generated |
+| `threat.go_in` | all | at `threat` only | mark `at_the_door`, set only by an outcome whose own text shows the weapon raised at the bedroom door ("{subject.first} took the weapon to the door {mover.first} is behind") | generated |
+| `fired_on.go_in` | all | at `fired_on` only | mark `shot_at`, set by the outcome that carries `fire` whether or not an officer is hit ("{subject.first} fired at the team") | generated |
+| `found.go_in` | s3 only in practice (`comes_out` false) | at `found` only, and only once `at_the_door` is set | `at_the_door` | generated |
+
+Every force or entry producing choice, by situation (designed; the coverage walk confirms):
+
+| Choice | s1 | s2 | s3 |
+|---|---|---|---|
+| `porch.glass` adverse `fire` | at breaking only | at breaking only | at volatile or breaking |
+| `seen.hold_glass` adverse `fire` | at breaking only | at breaking only | yes |
+| `threat.go_in` force | reachable only through the breaking escalation | yes | yes |
+| `fired_on.go_in` force | after a shot | after a shot | after a shot |
+| `found.go_in` force | not reachable (`comes_out` true walks the mover out) | not reachable | yes |
+
+Revised after the Codex review (finding 3). The first sheet let a missed shot reach `fired_on`
+with entry refused, because the engine sets `fire.mark` only on a hit; `shot_at` is now an
+ordinary outcome mark beside `fire`. It also set `at_the_door` on every escalation where the
+subject knew about the mover, which knowing plus carrying a weapon does not earn. Now the
+escalation with `knows_mover` true shows the weapon raised at the door in its text before it sets
+the mark; the escalation at breaking without `knows_mover` sends the subject to that room calm
+(`found`, mark `found_mover`, no authority) unless the meter is breaking and the text shows the
+weapon raised.
 
 The weapon at the front window is why the team is here, not a reason to go in: it is not a
-threat mark. The clock never authorizes entry here (E12.4): its running out moves the call to
-`found`, where entry still needs the threat mark.
+threat mark. The clock never authorizes entry (E12.4): its running out moves the call to
+`found`, where entry still needs `at_the_door`.
 
 Second squad. Two choices carry a support rule (request R-B4): `talking.walk_out` (the second
 squad holds the front window to keep the subject's attention while the first escorts the mover
@@ -197,34 +230,56 @@ the phone first buys the list.
 Escalation, the shape the hostage call uses:
 
 ```
-{ if: knows_mover true }                                    -> threat (reveal knows_mover, mark at_the_door)
-{ if: [knows_mover false, subject stance breaking] }        -> threat (mark at_the_door: the subject goes to that room anyway, and finds the closet)
+{ if: knows_mover true }                                    -> threat (reveal knows_mover; text shows the weapon raised at the bedroom door; mark at_the_door)
+{ if: [knows_mover false, subject stance breaking] }        -> found (the subject goes to that room anyway and opens the closet; mark found_mover; no authority)
 { if: [knows_mover false, subject stance not breaking] }    -> stays in play (reveal knows_mover)
 ```
+
+At `found`, a further adverse with the subject breaking is the one path where `at_the_door` is set
+without `knows_mover` true at the start, and its text shows the weapon raised.
 
 The boxes clock (owner `mover`, so it stops once the mover is out). Kind `deadline`, start 60,
 rate 1.0 a minute, spread 0.3, rate unknown. Cue at 45, about 15 minutes in: "Through the side
 window, the team sees {subject.first} set a box down outside the back bedroom door." (mark
-`in_hall`). Runs out at about 46 to 86 minutes. The long choices (`let_talk`, `past_dark`,
-`all_night`) fork on it: out and `comes_out` true goes to `found` with the subject walking the
-mover to the back door themselves; out and `comes_out` false goes to `threat`. Everywhere else
-`onOut: { mark: 'found_mover' }` records it and the prompts of the nodes it can lead into read the
-mark. The short choices that can run it out leave the call where it was until R-G4
-(`onOut.next`) lands; that gap is counted in the walk, as the hostage call counts it.
+`in_hall`). Runs out at about 46 to 86 minutes.
+
+Clock routing, revised after the Codex review (finding 4). R-G4 (`onOut.next`) is a blocking
+prerequisite for this tree, not an optional gap: without it a short choice can run the clock out
+and leave the player on a turn or `on_the_line` with release and escort choices that the text has
+made false. With R-G4 the clock's `onOut` is `{ mark: 'found_mover', next: { node: 'found' } }`,
+and precedence is:
+
+1. The decision's own outcome ends the call: the ending stands; `onOut` adds only its mark.
+2. The decision's own outcome made the mover safe: the clock has stopped (its owner is out); no
+   `onOut`.
+3. Otherwise `onOut.next` moves the call to `found`, after the outcome's text, which the
+   `found.prompt` follows ("While the team waited on that, {subject.first} opened the back bedroom
+   door.").
+
+The long choices (`let_talk`, `past_dark`, `all_night`) still fork on `{ clock: 'boxes', out: true }`
+so their own text can narrate it; the routed outcome is the same `found`. `found` is the only node
+that reads `found_mover` for routing, and `found`'s choices are the only ones offered after it, so
+no release or escort choice survives the expiry. Readers of `found_mover` for text: `found.prompt`,
+the held endings (`held_found`) and the debrief task line.
 
 Mood is written as `moves`: heard (let_talk, the list), contact (pick-ups), provoked (the sale
 stands, the team at the glass when seen, the entry), team_seen (glass, hall window), released
-(the subject lets the mover go). Marks: `in_hall`, `found_mover`, `has_list`, `hall_timed`,
-`mover_steady`, `at_the_door`, `list_promised`, `seen_glass`. Each has a reader:
+(the subject lets the mover go). Marks (12): `in_hall`, `found_mover`, `has_list`, `list_told`,
+`hall_watched`, `hall_timed`, `mover_steady`, `mover_dark`, `at_the_door`, `shot_at`,
+`list_promised`, `seen_glass`. Each has a reader:
 
 | Mark | Set by | Read by |
 |---|---|---|
 | `in_hall` | clock cue | `talking.promptIf`, `walk_out` modifier (−6) |
-| `found_mover` | clock onOut | `talking`, `mover_out`, `threat` promptIf |
-| `has_list` | `turn_list` choices | `take_list` modifier (+8), `talking.promptIf` |
-| `hall_timed` | `turn_hall.time_call` | `walk_out` modifier (+6) |
-| `mover_steady` | `back_step`, `turn_text.stay_put` | `walk_out` modifier (+4), `found.promptIf` |
-| `at_the_door` | escalation | threat mark; `go_in` visibility |
+| `found_mover` | clock onOut, breaking escalation | `found.prompt`, `held_found` routing |
+| `has_list` | `turn_list.flap`, `turn_list.ask` favorable | `take_list` modifier (+8), `talking.promptIf` |
+| `list_told` | `turn_list.ask` favorable | `take_list` modifier (+4) |
+| `hall_watched` | `turn_hall.watch` | `walk_out` modifier (+6) |
+| `hall_timed` | `turn_hall.time_call` favorable | `walk_out` modifier (+4) |
+| `mover_steady` | `back_step`, `turn_text` choices | `walk_out` modifier (+4), `found.promptIf` |
+| `mover_dark` | `turn_text.stay` mixed | `walk_out` modifier (−4), `talking.promptIf` |
+| `at_the_door` | escalation with the weapon shown raised | threat mark; `threat.go_in`, `found.go_in` |
+| `shot_at` | every outcome with `fire` | threat mark; `fired_on.go_in` |
 | `list_promised` | `take_list` favorable (promise) | `mover_out.talk_out`, endings |
 | `seen_glass` | `glass` adverse | `seen.promptIf`, `talking.promptIf` |
 
@@ -270,30 +325,50 @@ beyond any path; it never stands in for the clock.
 |---|---|---|---|
 | `knows_mover` | false | true | true |
 | `comes_out` (walks out for the list) | true | true | false |
-| subject volatility | steady | shifting | volatile, hostile |
-| demand | the list (statement, concedable) | same | nothing left to give (person: the house; never concedable) |
+| subject volatility (drawn per call, same distribution in every situation) | steady 40, shifting 40, volatile 20 | same | same |
+| demand (public, the same in every situation) | the list (statement, concedable) | same | same; `comes_out` false means the list is taken and the subject still stays |
 | turn (drawn per call) | list / hall / text | same | same |
 | boxes clock rate | 0.7 to 1.3 a minute | same | same |
 | proficiency (drawn) | untrained 30, some 50, trained 20 | same | same |
 
-Building axes (drawn by the board, independent of situation). These are what make the
-`blueprint-building` probe move, and each needs the request named:
+Building axes (drawn by the board, independent of situation). Revised after the Codex review
+(findings 1 and 7): the first table claimed the route already moved the odds, which is false for
+a one-subject call (below), and tested bathroom windows for a mover placed in a bedroom.
 
 | Axis | Today | With the request |
 |---|---|---|
-| route from the mover's room: through the scene room or around it | yes, `findStoryRoute` already picks it per building; `incidentFactors` weights subjects on the route's rooms | same |
-| the mover's room on the upper floor (two-floor families) | no, placement is ground floor only | R-B1 |
-| a way out through the mover's room window | no, routes never use windows | R-B2 |
-| distance from the subject to the mover's door | no, the subject never leaves the scene room in the engine | R-B3 |
+| route from the mover's room through the scene room or around it (seeds 1 to 3: through the living room on cedar_close, harbour_court, ash_grove_v1's first bedroom, bungalow_g2 seed 1, two_storey_house_g2 and semi_detached_g2 seeds 1 and 3; around it on willow_terrace_v1, juniper_court_v1, bungalow_g2 seeds 2 and 3) | changes travel and, on mixed and adverse, civilian loss (`civilianRiskLoss`, `threat.ts:446`, reads truth positions and adjacency); never the favorable odds, because `incidentFactors` uses the route only to sort subjects and a lone subject always takes the full seat | R-B5 |
+| the mover's bedroom upstairs | no: placement is ground floor only, so on `two_storey_house_g2` and `semi_detached_g2` (every bedroom upstairs, seeds 1 to 3) the mover falls through to a ground-floor bathroom | R-B1 |
+| a way out through the mover's own window | no: routes never use windows. Seed 1 of every single-floor family has a ground-floor bedroom with an exterior window; with R-B1 the two-floor families' bedrooms are upstairs, so the window exit exists on one building and not the next | R-B2, with R-B1 |
+| where the subject stands (the hall, the bedroom door) | no: the subject never leaves the scene room in the engine, and no team move can target the hall | R-B3 |
+
+How the two blueprint probes are meant to move, stated as a plan to measure, not a claim. Both
+sample at tier 3, 3 calls per tree (`wiring.ts`).
+
+- `blueprint-building` (opening choices only, favorable odds, floor 0.18). Of `porch`'s three
+  choices, `glass` and `back_step` are vantage moves: the vantage zone, the signal's carry and the
+  sightline into the room come from the building, so their odds can differ on another building
+  today. `call` is a phone call and should not respond. Expected: 2 of 3 barricade opening
+  choices respond (the old tree's opening has no team move at all). Measured separately for travel
+  (`buildingTravelChanges`), since travel moving is not odds moving.
+- `blueprint-locked` (every point, favorable odds, floor 0.27). Responds on choices that cross a
+  door: the escort (`walk_out`), the entries, the hall watch once it is inside. Vantage moves go
+  around the outside and should not respond; the window exit (R-B2) crosses a window, not a door.
+  Expected: the stage 3 choices that cross doors respond; counted at tree time.
 
 Correlated hidden axes: `knows_mover` and `comes_out` set the situation together. Cheapest reveals:
 `knows_mover` by `who_else` (3 minutes, TALK, provokes on adverse) and by any adverse result that
 escalates; `comes_out` by `take_list` and every release. The front window confirms where the
 subject is and what they hold (intel), never what they know.
 
-Situation leaks to watch at review (the hostage review's B9): volatility is volatile only in s3,
-where `comes_out` is false. The design draws volatility per situation on purpose here, since a
-returning player who reads "volatile" still has to find `knows_mover`; the reviewer decides.
+Situation leaks, revised after the Codex review (finding 6). The first sheet drew volatility per
+situation (volatile only in s3) and claimed s3 still hid `knows_mover`, which was false: s3 fixes
+both truths, and `sim/meters.ts` scales every event by volatility (0.6, 1, 1.5), which shows in the
+conversation contributors, so a returning player could read the situation off the numbers. Now
+volatility and the subject's disposition are drawn per call from one distribution in every
+situation (the template's `volatility` is a `Dist`, `incidents/types.ts:185`, so this is data, not a
+request), and the public demand is the same in all three. What still differs by situation before
+a reveal: nothing public by design; the reviewer audits the compiled cards across situations.
 
 ## M. Ethics screen
 
@@ -357,39 +432,50 @@ Extends:         new
 
 ```
 Engineering request R-B2
-Need:            a walk-out through a ground-floor window of the person's own room, offered only
-                 on buildings where that room has one (ash_grove_v1, juniper_court_v1, bungalow_g2,
-                 two_storey_house_g2 and semi_detached_g2 bathrooms do; cedar_close, harbour_court,
-                 willow_terrace_v1 and apartment_unit_g2 do not, seed 1)
+Need:            a walk-out through an exterior window of the person's own room, offered only on
+                 buildings where that room is on the ground floor and has a usable one (the mover's
+                 bedroom on single-floor families; never the upstairs bedrooms R-B1 places)
 Current limit:   story-bindings.ts usableOpening returns false for every window (line 127), so
-                 findStoryRoute never leaves by one, and no TreeState condition reads the building
+                 findStoryRoute never leaves by one, and no TreeState condition reads the building.
+                 Checked on seed 1 of the nine families: every single-floor family has a
+                 ground-floor bedroom with an exterior window; two_storey_house_g2 and
+                 semi_detached_g2 have bedrooms only upstairs
 Build links:     content/call-trees/types.ts TreeChoice.walks and TreeState; story-bindings.ts
                  findStoryRoute; compile.ts routes per role
-Proposed field:  TreeChoice.walksBy?: 'window' (route from the walker's room out its own exterior
-                 window, ground floor only, with a time and strain cost by window size), and
-                 TreeState.window?: string[] (the role's room has an exterior window); a choice
-                 with walksBy 'window' must carry onlyIf window; default absent, existing calls
-                 unchanged
+Proposed field:  TreeChoice.walksBy?: 'window' (route from the walker's room out its own window,
+                 with time and strain by window width and sill), and TreeState.window?: string[]
+                 that holds only when the role's room is on floor 0, has an exterior window whose
+                 state is not blocked, and the window is wide enough to climb; a choice with walksBy
+                 'window' must carry onlyIf window (a gate); default absent, existing calls unchanged
 Content version: v13
-Blocks:          rows F (a back-window option in talking), L
-Extends:         new
+Blocks:          row F (`talking.out_window`), row L
+Extends:         new; needs R-B1 to be a building fork on two-floor families
 ```
 
 ```
 Engineering request R-B3
-Need:            an outcome that moves a subject to another role's room (the subject reaching the
-                 back bedroom door), so the map, the routes and the odds agree with the text
+Need:            the subject's position to follow the story: set down a box in the hall, stand at
+                 the bedroom door, open it; and the team to watch or enter the hall
 Current limit:   TreeOutcome has no field that moves a person; PersonDefinition.moves exists but is
                  truth-only and keyed by stage, and v13 never authors it; incidentSubjects reads
-                 person.spaceId, the starting room (incident-factors.ts:63)
-Build links:     content/call-trees/types.ts TreeOutcome; sim/operation.ts commit; the location
-                 half of intel-odds (odds read where the team last saw the person)
-Proposed field:  TreeOutcome.moveTo?: Record<string, 'scene' | { room: string }> (role to room),
-                 applied to truth on commit; the team learns it only by a sighting or the
-                 outcome's text; default absent
+                 person.spaceId, the starting room (incident-factors.ts:63). Clock cues set a mark
+                 only. TreeTeam targets resolve only 'scene' or a role's room (compile.ts roomFor,
+                 line 749), so no choice can watch or enter the hall, a room nobody starts in
+Build links:     content/call-trees/types.ts TreeOutcome, TreeTeam, TreeState;
+                 content/incidents/types.ts Clock.cues; sim/operation.ts commit; the existing
+                 story-person transition model (sim/story-movement.ts) for observed and hidden legs
+Proposed field:  a building-bound place reference, TreePlace = 'scene' | { room: role } |
+                 { route: role, step: number } (the step-th room on that role's walking route out:
+                 step 1 from a bedroom is the hall on 26 of 27 family-seed pairs checked, seeds 1
+                 to 3; apartment_unit_g2 seed 1 goes through the living room first, so text names
+                 the place by the token, never as "the hall") | { doorOf: role }
+                 (the doorway of that role's room, on its route side); TreeOutcome.moveTo?:
+                 Record<role, TreePlace> and Clock.cues[].moveTo?: Record<role, TreePlace>, applied to
+                 truth on commit or cue, shown on the map only once a sighting or the line says so;
+                 TreeTeam.to accepts TreePlace; default absent
 Content version: v13
-Blocks:          rows F (`threat`, `found`), H (escalation), L (distance axis)
-Extends:         new; pairs with intel-odds
+Blocks:          rows F (`turn_hall`, `threat`, `found`), H (clock cue), L
+Extends:         new; pairs with intel-odds (odds read where the team last saw the person)
 ```
 
 ```
@@ -411,6 +497,26 @@ Blocks:          row F (second squad), backlog second-squad
 Extends:         new
 ```
 
+```
+Engineering request R-B5
+Need:            with one subject, how close the work brings the team or a civilian to that subject
+                 to change the favorable odds (an escort past the room the subject is in is harder
+                 than one round the back of the house)
+Current limit:   incidentFactors (incident-factors.ts:86-90) builds `near` from the rooms the
+                 choice touches and uses it only to sort subjects before threatFx seats them; a lone
+                 subject is always first and takes the full seat weight, so the route, the room and
+                 R-B3's moves cannot change the favorable odds. civilianRiskLoss (threat.ts:446)
+                 already uses adjacency, but only on mixed and adverse
+Build links:     sim/incident-factors.ts incidentFactors; sim/threat.ts threatFx seat weights;
+                 tuning (a labelled contributor, versioned)
+Proposed field:  an exposure contributor, from the believed position (intel-odds): full when the
+                 choice's rooms include or adjoin the subject's believed room, a reduced share when
+                 not, labelled ("{subject} is in the room next to the route"); no new tree field
+Content version: engine tuning, new table version
+Blocks:          row L (route axis), the blueprint-building share on later choices
+Extends:         new; could sit inside intel-odds
+```
+
 Second-squad meaning, settled for the lead's decision: support choices, not two squads acting at
 once. The strongest case against: a barricade's best real play is exactly two squads doing two
 things at the same moment (one talking at the front, one bringing the mover out the back), and a
@@ -425,8 +531,8 @@ squad. Verdict: accepted with controls, pending the lead.
 
 Reused, not new:
 
-- R-G4 (`onOut.next`, hostage sheet): the boxes clock running out in a short choice should move
-  the call to `found`. Without it, the tree forks only the long choices.
+- R-G4 (`onOut.next`, hostage sheet): **blocking for this tree** (row H). The boxes clock running
+  out in any decision moves the call to `found`, with the precedence in row H.
 - R9 (pacing line, the lead's): the call screens under E4 like the hostage.
 - R7 (prose-lint compound loophole): see O1 below.
 
@@ -470,17 +576,19 @@ Call design record
 - Dilemma per stage (row F): 1 contact vs sight vs reaching the trapped person; 2 a move against a
   question per turn; 3 concession vs moving the mover vs time vs entry; checklist by read clean on
   the design, lines 2, 8, 9 and 10 need strings and are the prose and review lanes'
-- Dominance grid (row F): filled for stages 1 and 3; phantom costs 0 by design (each cost has a
+- Dominance grid (row F): filled for stages 1, 2 (the turns) and 3; phantom costs 0 by design (each cost has a
   charging outcome named); minutes rule pass; payoff column filled
 - Action rows (row F): 9 nodes plus 3 turns, about 30 choices designed; helpers to reuse from the
   hostage tree (escalate, heldEnd); no layer reversed
 - Force and entry gates (row F): 3 entry choices, visible at threat, fired_on, found; authorized by
-  mark at_the_door; the clock never authorizes
+  at_the_door (set only where the text shows the weapon raised at the door) or shot_at (set on
+  every fire outcome, hit or miss); force-producing choices listed by situation; the clock never
+  authorizes
 - Stage exits and context prompts (row F): not walked: no tree yet; coverage gate at tree time
 - Turn (row G): planted in known[0], revealed in the drawn turn prompt, reprices stage 1
 - Consequence matrix (row H): escalation shape and clock forks designed; per-cell matrix at prose
   time, walked by the coverage gate
-- Flags set, readers (row H): 8 marks, 8 with a reader, dead 0 by design
+- Flags set, readers (row H): 12 marks, 12 with a reader, dead 0 by design
 - Objective (rows H, I): not set: no tree yet
 - Effects (row H): TreeOutcome keys only, plus R-B3 moveTo if it lands; OR scan 0
 - Services (rows H, I): none (the medic is the squad's own)
@@ -490,7 +598,7 @@ Call design record
 - Lever and minutes (row K): boxes clock out at about 46 to 86 minutes; pressure threshold at
   minute 260, unused
 - Variants (row L): situation axes knows_mover, comes_out, volatility, demand; building axes need
-  R-B1, R-B2, R-B3; correlated reveals listed; leak noted for review
+  R-B1, R-B2, R-B3, R-B5; correlated reveals listed; volatility and demand drawn the same in every situation (Codex finding 6)
 - Call-tree gates: not run: no tree yet
 - Ethics screen (row M): E1, E2, E6 to E10, E12 clear by design; E3 pending; E4 applies; E11 custody
   waits on O4
@@ -498,10 +606,29 @@ Call design record
 - Crisis checks (row M): E4.5 vs E2.1 checked; content note and support line drafted; pending O2, R5
 - Concessions (row M): take_list (statement), no held person a party
 - Officer slots (row N): none reserved
-- Requests and owner decisions (row O): needs gear-by-action, intel-odds; new R-B1 to R-B4; reuses
-  R-G4, R9, R7; O1 weapon words, apartments
+- Requests and owner decisions (row O): needs gear-by-action, intel-odds; new R-B1 to R-B5; R-G4 blocking; reuses
+  R9, R7; O1 weapon words, apartments
 - Tells on hook and premise: written-voice checker not run on the placeholders (they are not ship
   text); checked by eye for dashes and colons
 - Handoff: this sheet, then Codex adversarial review, then the lead, then swat-call-prose once the
   engine work lands
 ```
+
+## Codex adversarial review (2026-10-18)
+
+Reviewed commit 9eaeeba, scope `docs/calls/barricade-design.md` only, Codex default model, static
+review (no engine dry run exists for a design). Verdict: needs-attention. Each finding, its verdict
+and what this revision did:
+
+| # | Finding | Verdict | Control |
+|---|---|---|---|
+| 1 | A lone subject takes the full seat, so moving them or the route changes no favorable odds; blueprint-building samples openings only | accepted | R-B5 filed; building axes table corrected; probe plan names which opening choices should move and measures travel separately |
+| 2 | R-B3 can't name the hall, a doorway, or move someone on a clock cue; TreeTeam can't target the hall | accepted | R-B3 rewritten with `TreePlace` (route steps, doorways), cue moves, team targets; route step checked on 27 family-seed pairs |
+| 3 | A missed shot reaches `fired_on` with entry refused; `at_the_door` set on knowledge alone | accepted | `shot_at` mark on every fire outcome; `at_the_door` only where the text shows the weapon raised; force table by situation |
+| 4 | Without R-G4, a short choice runs the clock out and leaves release choices live | accepted | R-G4 made blocking; precedence written in row H |
+| 5 | Stage 2 turns had no counter-costs; the nerve clock was undefined | accepted | turns rewritten with charged costs and exclusive payoffs; stage 2 grid added; nerve clock removed |
+| 6 | Situation-specific volatility exposes both truths through meter numbers | accepted | volatility, disposition and demand drawn the same in every situation (data only) |
+| 7 | R-B2 cited bathroom windows for a bedroom mover, checked no floor, and had no choice in row F | accepted | R-B2 rewritten for ground-floor bedroom windows with a usable-window predicate; `talking.out_window` added |
+
+Still open, by design: the per-cell consequence matrix and every walk wait for the tree, which
+waits on the engine work in row O.
