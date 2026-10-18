@@ -32,18 +32,14 @@ const SEEN_PREFIX = seenFlag('', 0).split(':')[0] + ':';
 const MOVED_PREFIX = movedFlag('', 0).split(':')[0] + ':';
 const isSeenTwin = (transition: StoryPersonBinding['transitions'][number]) => (transition.when.flags ?? []).some(flag => flag.startsWith(SEEN_PREFIX));
 
-/** A compiled move is a hidden transition followed by its observed twin (the same place, once the
- * team has seen them there: `seen:` flag). The index of the latest move that holds and whose twin
- * doesn't, or -1. */
+/** A compiled move is a hidden transition followed by its observed twin (the same place, where the
+ * team last saw them: `seen:` flag). The index of the current move when the team hasn't seen them
+ * there, and they haven't since left the building, or -1. */
 function unseenMove(person: StoryPersonBinding, run: StoryState): number {
-  let latest = -1;
-  person.transitions.forEach((transition, i) => {
-    if (!conditionHolds(transition.when, run)) return;
-    const twin = person.transitions[i + 1];
-    if (!transition.observed && twin?.observed && isSeenTwin(twin)) latest = i;
-    else if (transition.observed) latest = -1;
-  });
-  return latest;
+  // The engine keeps one current move per person (withFlag), so at most one move transition holds.
+  return person.transitions.findIndex((transition, i) => !transition.observed && isSeenTwin(person.transitions[i + 1] ?? transition)
+    && conditionHolds(transition.when, run) && !conditionHolds(person.transitions[i + 1].when, run)
+    && !person.transitions.slice(i + 2).some(later => !isSeenTwin(later) && later.observed && conditionHolds(later.when, run)));
 }
 
 /** The flags a sighting sets to see a person where their latest unseen move took them, or none. */
@@ -62,7 +58,8 @@ function bindings(scenario: ScenarioDefinition): StoryPersonBinding[] {
 export function storyPeopleActual(scenario: ScenarioDefinition, run: StoryState): StoryActualPerson[] {
   return bindings(scenario).map(person => {
     let position: StoryPosition = person.initial;
-    for (const transition of person.transitions) if (conditionHolds(transition.when, run)) position = transition.to;
+    // Where the team last saw someone (a seen twin, R-B3) is belief, never where they are.
+    for (const transition of person.transitions) if (!isSeenTwin(transition) && conditionHolds(transition.when, run)) position = transition.to;
     return { id: person.id, label: person.label, locationFactId: person.locationFactId, position };
   });
 }
@@ -222,8 +219,8 @@ export function hydrateStoryAction(action: ActionDefinition, target: StoryPublic
   };
 }
 
-/** Whether a compiled move of this person holds (R-B3): a transition keyed on a move flag, or on a
- * clock cue's mark for a cue's move. Leaving the building is not a move. */
+/** Whether a compiled move of this person holds (R-B3): a transition keyed on a move flag (an
+ * outcome's or a clock cue's). Leaving the building is not a move. */
 export function moveHolds(person: StoryPersonBinding, run: StoryState): boolean {
-  return person.transitions.some(transition => (transition.when.flags ?? []).some(flag => flag.startsWith(MOVED_PREFIX) || flag.startsWith('mark:')) && conditionHolds(transition.when, run));
+  return person.transitions.some(transition => (transition.when.flags ?? []).some(flag => flag.startsWith(MOVED_PREFIX)) && conditionHolds(transition.when, run));
 }

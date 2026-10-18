@@ -398,7 +398,10 @@ export interface ClockDef {
   rateKnown: boolean;
   /** Highest first. Each fires once as the clock passes it: a line the team hears, and optionally a
    * mark (public state) and the settling of the fact this clock stands for. */
-  cues: { at: number; text: string; mark?: string; reveal?: boolean }[];
+  cues: { at: number; text: string; mark?: string; reveal?: boolean;
+    /** Flags the cue sets besides its mark: the move flags of a cue that moves someone (R-B3,
+     * compiled from Clock.cues[].moveTo). Absent on every other cue. */
+    setFlags?: string[] }[];
   /** The fact whose claim this clock answers ("will the door hold"). */
   factId?: Id;
   /** Once this clock is low, command won't wait for talking to work: it completes "Command

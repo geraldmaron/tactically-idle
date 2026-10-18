@@ -9,6 +9,7 @@ import { scenarioRecipe, scenarioSituations } from '../../content/scenario-recip
 import type { ScenarioCharacteristic } from '../../content/scenario-recipes';
 import type { AgeBand, Clock, Conditions, Dist, GroupRole, IncidentClass, IncidentPerson, IncidentTemplate, PersonSpec, Placement, Pronouns, ScaleClass, Weapon, WeaponKind } from '../../content/incidents/types';
 import { ageBandOf, IDENTITY_DEFAULT, WEAPON_ARMAMENT } from '../../content/incidents/types';
+import { cueMoveKey, movedFlag, seenFlag } from '../../sim/conditions';
 import { templateAt } from '../../content/incidents';
 import { hashIndex, hashSeed } from '../../sim/rng';
 import { nearestOpening } from '../../sim/spatial';
@@ -95,12 +96,15 @@ function membersOf(template: IncidentTemplate, counts: ReadonlyMap<string, numbe
 }
 
 /** The moves the clocks the engine runs make as their cues pass (R-B3), keyed by each cue's mark. */
-export function clockMovesOf(clocks: readonly Clock[]): { mark: string; moveTo: TreeMoveTo }[] {
-  return clocks.filter(clock => !clock.story).flatMap(clock => clock.cues.flatMap(cue => {
-    if (!cue.moveTo) return [];
-    if (!cue.mark) throw new Error(`Clock ${clock.id}: a cue that moves people needs a mark, which keys the move`);
-    return [{ mark: cue.mark, moveTo: cue.moveTo }];
-  }));
+export function clockMovesOf(clocks: readonly Clock[]): { clockId: string; index: number; moveTo: TreeMoveTo }[] {
+  return clocks.filter(clock => !clock.story).flatMap(clock => clock.cues.flatMap((cue, index) => cue.moveTo ? [{ clockId: clock.id, index, moveTo: cue.moveTo }] : []));
+}
+
+/** The flags a cue's moves set (R-B3), named as compile names them: each person's move, and their
+ * seen flag too when the cue's line says where they went. */
+function cueMoveFlags(clockId: string, index: number, moveTo: TreeMoveTo): string[] {
+  return Object.entries(moveTo).flatMap(([role, entry]) => [movedFlag(role, cueMoveKey(clockId, index)),
+    ...typeof entry === 'object' && 'to' in entry && entry.seen ? [seenFlag(role, cueMoveKey(clockId, index))] : []]);
 }
 
 /** Where the clocks the engine runs send the call when they run out (Clock.onOut.next). */
@@ -239,7 +243,8 @@ function clocksFor(instance: IncidentInstance, bind: (text: string) => string, f
     return {
       id: clock.id, label: bind(clock.label), kind: clock.kind, ...(clock.owner ? { owner: clock.owner } : {}),
       start: clock.start, ratePerMin: clock.ratePerMin, rateKnown: clock.rateKnown,
-      cues: clock.cues.map(cue => ({ at: cue.at, text: bind(cue.text), ...(cue.mark ? { mark: cue.mark } : {}), ...(cue.reveal ? { reveal: true } : {}) })),
+      cues: clock.cues.map((cue, index) => ({ at: cue.at, text: bind(cue.text), ...(cue.mark ? { mark: cue.mark } : {}), ...(cue.reveal ? { reveal: true } : {}),
+        ...(cue.moveTo ? { setFlags: cueMoveFlags(clock.id, index, cue.moveTo) } : {}) })),
       ...(factId && factIds.has(factId) ? { factId } : {}),
       ...(clock.urgent ? { urgent: bind(clock.urgent) } : {}),
       ...(clock.onOut ? { onOut: { ...(clock.onOut.harm ? { harm: clock.onOut.harm } : {}), ...(clock.onOut.mark ? { mark: clock.onOut.mark } : {}),

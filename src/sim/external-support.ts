@@ -1,4 +1,6 @@
 import type { ActionDefinition, Condition, EndingDefinition, ExternalServiceDefinition, OutcomeEffect, ScenarioDefinition } from './scenario-types';
+import { withFlag } from './conditions';
+import { sightings } from './sightings';
 import type { CompletionDisposition, DebriefResult, ExternalSupportEvent, ExternalSupportState, OfficerCasualtyRecord, OperationRun, PersonCasualtyRecord } from './types';
 import { next } from './rng';
 import { syncCasualtyFlags, syncPersonCasualtyFlags } from './incident-consequences';
@@ -178,7 +180,7 @@ export function validExternalSupportState(run: OperationRun, scenario: ScenarioD
   const passTime = (minutes: number) => {
     timed.flags = publicState.flags;
     const before = timed.clocks;
-    for (const cue of advanceClocks(timed, scenario, minutes)) for (const flag of cue.setFlags ?? []) if (!publicState.flags.includes(flag)) publicState.flags.push(flag);
+    for (const cue of advanceClocks(timed, scenario, minutes)) for (const flag of cue.setFlags ?? []) publicState.flags = withFlag(publicState.flags, flag);
     return before;
   };
   // v13: meter branches read the subjects' meters at the start of each decision; outcomes and
@@ -242,8 +244,10 @@ export function validExternalSupportState(run: OperationRun, scenario: ScenarioD
     }
     // The engine runs the clocks on the flags from before this decision's effects.
     const clocksBefore = passTime(decision.timeCost);
-    for (const effect of effects) {
-      for (const flag of effect.setFlags ?? []) if (!publicState.flags.includes(flag)) publicState.flags.push(flag);
+    // Who the team saw, read before the outcome moves anyone, as the commit reads it (R-B3).
+    const seen = sightings(scenario, publicState, action, decision.band, effects);
+    for (const effect of [...effects, ...seen ? [seen] : []]) {
+      for (const flag of effect.setFlags ?? []) publicState.flags = withFlag(publicState.flags, flag);
       for (const flag of effect.clearFlags ?? []) publicState.flags = publicState.flags.filter((entry) => entry !== flag);
       for (const opening of effect.openings ?? []) {
         publicState.flags = publicState.flags.filter((entry) => !entry.startsWith(`opening:${opening.openingId}=`));
@@ -254,7 +258,7 @@ export function validExternalSupportState(run: OperationRun, scenario: ScenarioD
       // A clock that ran out where no fork read it sets its mark (sim/clocks.ts); then the
       // outcome's events and the commitments it kept or broke move the meters, as the commit does.
       for (const out of clockOutEffects(scenario, clocksBefore, timed.clocks, publicState, effects)) {
-        for (const flag of out.setFlags ?? []) if (!publicState.flags.includes(flag)) publicState.flags.push(flag);
+        for (const flag of out.setFlags ?? []) publicState.flags = withFlag(publicState.flags, flag);
         // A route clears the node the call was at (R-G4).
         for (const flag of out.clearFlags ?? []) publicState.flags = publicState.flags.filter((entry) => entry !== flag);
       }

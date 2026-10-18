@@ -8,7 +8,7 @@ import type { CallTree, TreeMoveTo } from '../../content/call-trees/types';
 import type { IncidentTemplate } from '../../content/incidents/types';
 import { INCIDENT_TEMPLATES } from '../../content/incidents';
 import { readForceThreat } from '../../sim/authorization';
-import { movedFlag, seenFlag } from '../../sim/conditions';
+import { cueMoveKey, movedFlag, seenFlag, withFlag } from '../../sim/conditions';
 import { buildLocation } from '../../sim/location';
 import { traceRun } from '../../sim/operation';
 import { movedPersonAt, scenarioWithPeopleNow } from '../../sim/resolution';
@@ -16,10 +16,10 @@ import { deserialize, serialize } from '../../sim/save';
 import type { ScenarioDefinition } from '../../sim/scenario-types';
 import { getScenario } from '../../sim/scenario-registry';
 import { sightings } from '../../sim/sightings';
-import { LAST_SEEN_LINES, storyPeopleActual, storyPeoplePublic, storyPublicScenario } from '../../sim/story-people';
+import { LAST_SEEN_LINES, sightingFlags, storyPeopleActual, storyPeoplePublic, storyPublicScenario } from '../../sim/story-people';
 import { NOW } from '../../sim/test-fixtures';
 import type { GameState } from '../../sim/types';
-import { applyNaturalMove, startGateRun, withDraftScenario } from './gates/engine-driver';
+import { applyMove, applyNaturalMove, startGateRun, withDraftScenario } from './gates/engine-driver';
 import { generateIncident } from './index';
 import { compileIncident, hostedSpec } from './instance';
 import { choiceActionId } from './trees-v13/compile';
@@ -59,19 +59,21 @@ describe('a move compiles into the person’s story (R-B3)', () => {
     expect(found, 'a bungalow hosts the moving call').not.toBeNull();
     const transitions = found.s.story!.bindings.people.subject.transitions;
     expect(transitions[0]).toMatchObject({ when: { flags: [movedFlag('subject', 1)] }, observed: false });
-    expect(transitions[1]).toMatchObject({ when: { flags: [movedFlag('subject', 1), seenFlag('subject', 1)] }, observed: true, to: transitions[0].to });
+    expect(transitions[1]).toMatchObject({ when: { flags: [seenFlag('subject', 1)] }, observed: true, to: transitions[0].to });
     expect(transitions.at(-1)!.when.flags).toEqual(['out:subject']);
     expect(found.built.location.rooms.find(room => room.id === hall().spaceId)!.type).toBe('hall');
     const opening = Object.values(found.s.stages).flatMap(stage => stage.actions).find(action => action.id === choiceActionId('barricaded', 'window', 'call_him'))!;
     expect(opening.outcomes.favorable.some(effect => effect.setFlags?.includes(movedFlag('subject', 1)))).toBe(true);
   });
 
-  it('seen: one observed transition, no twin', () => {
+  it('seen: the same pair, and the outcome sets the seen flag with the move', () => {
     const seen = call(variant({ move: { subject: { to: HALL, seen: true } } }), 'bungalow_g2')!;
     const transitions = seen.s.story!.bindings.people.subject.transitions;
-    // One move per outcome that moves them (the opening call's three bands): each observed at once.
-    expect(transitions.slice(0, -1)).toEqual([1, 2, 3].map(n => expect.objectContaining({ when: { flags: [movedFlag('subject', n)] }, observed: true })));
+    // One move per outcome that moves them (the opening call's three bands).
+    expect(transitions.slice(0, -1).map(entry => entry.when.flags)).toEqual([1, 2, 3].flatMap(n => [[movedFlag('subject', n)], [seenFlag('subject', n)]]));
     expect(transitions.at(-1)!.when.flags).toEqual(['out:subject']);
+    const opening = Object.values(seen.s.stages).flatMap(stage => stage.actions).find(action => action.id === choiceActionId('barricaded', 'window', 'call_him'))!;
+    expect(opening.outcomes.favorable.some(effect => effect.setFlags?.includes(movedFlag('subject', 1)) && effect.setFlags.includes(seenFlag('subject', 1)))).toBe(true);
   });
 });
 
@@ -155,28 +157,81 @@ describe('a route step names what it must be, and a building where it isn’t ca
   }, 120000);
 });
 
-describe('a clock cue can move someone, keyed by its mark', () => {
-  it('compiles the cue’s move into a hidden transition on the cue’s mark, with its twin', () => {
-    const clock = { id: 'boxes', label: 'The boxes', kind: 'deadline' as const, start: 60, ratePerMin: 1, rateKnown: false,
-      cues: [{ at: 45, text: 'A box goes down outside the back bedroom.', mark: 'in_hall', moveTo: { subject: HALL } }] };
-    const cue = { ...variant({ move: {} }), situations: BARRICADE.situations.map(situation => ({ ...situation, clocks: [clock] })) };
-    const s = call(cue, 'bungalow_g2', 1, true)!.s;
+const CLOCK = { id: 'boxes', label: 'The boxes', kind: 'deadline' as const, start: 60, ratePerMin: 1, rateKnown: false,
+  cues: [{ at: 45, text: 'A box goes down by the back bedroom.', mark: 'in_hall', moveTo: { subject: 'scene' as const } }] };
+const withCue = (template: IncidentTemplate): IncidentTemplate => ({ ...template, situations: BARRICADE.situations.map(situation => ({ ...situation, clocks: [CLOCK] })) });
+
+describe('a clock cue can move someone', () => {
+  it('compiles the cue’s move into the same pair, and the compiled cue sets its move flag', () => {
+    const { s } = call(withCue(variant({ move: {} })), 'bungalow_g2', 1, true)!;
+    const key = cueMoveKey('boxes', 0);
     const transitions = s.story!.bindings.people.subject.transitions;
-    expect(transitions[0]).toMatchObject({ when: { flags: ['mark:in_hall'] }, observed: false });
-    expect(transitions[1]).toMatchObject({ when: { flags: ['mark:in_hall', seenFlag('subject', 1)] }, observed: true });
-    expect(storyPeopleActual(s, { flags: ['mark:in_hall'], knowledge: {}, pressure: 0 }).find(person => person.id === 'subject')!.position).toEqual(transitions[0].to);
+    expect(transitions[0]).toMatchObject({ when: { flags: [movedFlag('subject', key)] }, observed: false });
+    expect(transitions[1]).toMatchObject({ when: { flags: [seenFlag('subject', key)] }, observed: true });
+    expect(s.clocks![0].cues[0]).toMatchObject({ mark: 'in_hall', setFlags: [movedFlag('subject', key)] });
+  });
+});
+
+describe('the latest move wins, whatever order the call compiled them in', () => {
+  // The review's reproduction: a cue moves the subject, then an action moves them on (and the reverse).
+  const { s } = call(withCue(variant()), 'bungalow_g2', 1, true)!;
+  const cue = movedFlag('subject', cueMoveKey('boxes', 0)), action = movedFlag('subject', 1);
+  const where = (flags: string[]) => storyPeopleActual(s, { flags, knowledge: {}, pressure: 0 }).find(person => person.id === 'subject')!.position;
+  const place = (flag: string) => s.story!.bindings.people.subject.transitions.find(entry => entry.when.flags?.[0] === flag)!.to;
+  const after = (...flags: string[]) => flags.reduce<string[]>((set, flag) => withFlag(set, flag), []);
+
+  it('a cue, then an action: they are where the action took them', () => {
+    expect(where(after(cue, action))).toEqual(place(action));
+  });
+  it('an action, then a cue: they are where the cue took them', () => {
+    expect(where(after(action, cue))).toEqual(place(cue));
+  });
+  it('one current move and one place last seen per person', () => {
+    expect(after(action, cue, seenFlag('subject', 1), seenFlag('subject', 2))).toEqual([cue, seenFlag('subject', 2)]);
+  });
+  it('seen in the hall, then moved out of sight: the team holds the hall as last seen', () => {
+    const flags = after(action, seenFlag('subject', 1), cue);
+    const believed = storyPeoplePublic(s, buildLocation(s.locationFamilyId, s.locationSeed), { flags, knowledge: { [s.incidentPeople!.find(person => person.id === 'subject')!.locationFactId!]: 'confirmed' }, pressure: 0 })
+      .find(person => person.id === 'subject')!;
+    expect(believed).toMatchObject({ status: 'reported', stale: true, position: place(action) });
+    expect(sightingFlags(s, { flags, knowledge: {}, pressure: 0 }, 'subject')).toEqual([seenFlag('subject', cueMoveKey('boxes', 0))]);
+  });
+});
+
+describe('the decision replay keeps a re-sighting and a later move', () => {
+  it('move, look (seen), move again: traceRun ends where the live run does at every step', () => {
+    const t = variant({ edit: tree => {
+      const line = tree.nodes.find(node => node.id === 'on_the_line')!.choices.find(choice => choice.id === 'honest_no')!;
+      line.team = { to: { watch: HALL }, signal: { channel: 'visual', to: 'subject' } };
+      const walk = tree.nodes.find(node => node.id === 'son_inside')!.choices.find(choice => choice.id === 'past_dark')!;
+      for (const outcome of walk.outcomes.favorable) if (outcome.next) outcome.moveTo = { subject: 'scene' };
+    } });
+    const s = call(t, 'bungalow_g2', 1, true)!.s;
+    withDraftScenario(s, id => {
+      const steps: [string, string][] = [['window', 'call_him'], ['on_the_line', 'honest_no'], ['son_inside', 'past_dark']];
+      let state: GameState | null = startGateRun(id);
+      for (const [index, [node, choice]] of steps.entries()) {
+        state = applyMove(state!, { kind: 'decide', actionId: choiceActionId('barricaded', node, choice), band: 'favorable' });
+        expect(state, `${node}.${choice}`).not.toBeNull();
+        const live = state!.activeRun!, replayed = traceRun(getScenario(id)!, live).end;
+        const moves = (flags: string[]) => flags.filter(flag => /^(moved|seen):subject:/.test(flag)).sort();
+        expect(moves(replayed.flags), `after ${node}.${choice}`).toEqual(moves(live.flags));
+        if (index === 1) expect(live.flags).toContain(seenFlag('subject', 1));
+        // Moved again out of sight: the new move is current, and the hall stays where the team last saw them.
+        if (index === 2) expect(moves(live.flags)).toEqual([movedFlag('subject', 4), seenFlag('subject', 1)].sort());
+      }
+    });
   });
 });
 
 describe('moves are checked when the call compiles', () => {
-  it('rejects a start-room fact on someone who moves, a walker who moves, a group, someone outside, and a cue move with no mark', () => {
+  it('rejects a start-room fact on someone who moves, a walker who moves, and someone outside', () => {
     const upstairs = variant({ edit: tree => { tree.nodes[0].promptIf = [{ when: { upstairs: ['subject'] }, prompt: 'x' }, ...tree.nodes[0].promptIf ?? []]; } });
     expect(() => call(upstairs, 'bungalow_g2', 1, true)).toThrow(/reads where subject started/);
     const walker = variant({ move: { child: HALL } });
     expect(() => call(walker, 'bungalow_g2', 1, true)).toThrow(/moves in this call and also walks out/);
     expect(() => call(variant({ move: { ex: 'scene' } }), 'bungalow_g2', 1, true)).toThrow(/starts outside the building/);
-    const cue = { ...variant(), situations: BARRICADE.situations.map(situation => ({ ...situation, clocks: [{ id: 'x', label: 'x', kind: 'deadline' as const, start: 50, ratePerMin: 1, rateKnown: false, cues: [{ at: 25, text: 'x', moveTo: { subject: 'scene' as const } }] }] })) };
-    expect(() => call(cue, 'bungalow_g2', 1, true)).toThrow(/needs a mark/);
+
   });
 });
 

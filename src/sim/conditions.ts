@@ -18,5 +18,16 @@ export function conditionHolds(c: Condition | undefined, run: Pick<OperationRun,
 /** A compiled move (R-B3, compile.ts): the flag that moves `role` (its `n`-th move), and the flag a
  * sighting sets once the team sees them where that move took them (story-people, sightings). One
  * definition, so a renamed flag can't silently stop re-sighting. */
-export const movedFlag = (role: string, n: number) => `moved:${role}:${n}`;
-export const seenFlag = (role: string, n: number) => `seen:${role}:${n}`;
+export const movedFlag = (role: string, key: number | string) => `moved:${role}:${key}`;
+export const seenFlag = (role: string, key: number | string) => `seen:${role}:${key}`;
+/** The key of a clock cue's move (Clock.cues[].moveTo), named the same by compile and the instance. */
+export const cueMoveKey = (clockId: string, cueIndex: number) => `cue.${clockId}.${cueIndex}`;
+
+/** `flags` with `flag` set. A person has one current move and one place last seen (R-B3): setting
+ * either replaces that person's earlier one, so the latest move wins whatever order the call compiled
+ * them in. Every engine path that sets flags goes through this. */
+export function withFlag(flags: string[], flag: string): string[] {
+  const kind = /^(moved|seen):([^:]+):/.exec(flag);
+  const kept = kind ? flags.filter(entry => !entry.startsWith(`${kind[1]}:${kind[2]}:`) || entry === flag) : flags;
+  return kept.includes(flag) ? kept : [...kept, flag];
+}

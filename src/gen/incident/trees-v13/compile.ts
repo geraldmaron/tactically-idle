@@ -7,7 +7,7 @@ import { tierRewardMultiplier } from '../../../content/incidents/rewards';
 import type { ActionDefinition, ClockCondition, Condition, FactDefinition, IncidentSpec, MeterCondition, MeterStance, OutcomeEffect, ScenarioDefinition, StageDefinition, StoryAnchor, StoryPersonBinding } from '../../../sim/scenario-types';
 import { squadsPutToWork } from '../../../sim/scenario-types';
 import { findStoryRoute, selectStoryRoom, storyPoint, validateStoryBindings, windowExit } from '../story-bindings';
-import { movedFlag, seenFlag } from '../../../sim/conditions';
+import { cueMoveKey, movedFlag, seenFlag } from '../../../sim/conditions';
 import { routeAlongOpenings } from '../../../sim/routes';
 import { sightFromStreet, vantageZones, type StreetVantage } from '../../../sim/sightlines';
 import type { BuiltLocation, OutcomeBand, StageId, Vec } from '../../../sim/types';
@@ -640,7 +640,7 @@ export function textBinder(tree: CallTree, built: BuiltLocation, placed: PlacedC
 /** `clockNexts`: where this call's clocks send it when they run out (Clock.onOut.next), so a node
  * or ending reached only that way is kept. `clockMarks`: marks this call's clocks can set by themselves (cues, running out), so a prompt or
  * choice that reads one is kept even when no outcome sets it. */
-export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, authored: CallTree, placed: PlacedCast = placeCast(authored, built, input.incident!), clockMarks: readonly string[] = [], clockNexts: readonly TreeNext[] = [], clockMoves: readonly { mark: string; moveTo: TreeMoveTo }[] = []): ScenarioDefinition {
+export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, authored: CallTree, placed: PlacedCast = placeCast(authored, built, input.incident!), clockMarks: readonly string[] = [], clockNexts: readonly TreeNext[] = [], clockMoves: readonly { clockId: string; index: number; moveTo: TreeMoveTo }[] = []): ScenarioDefinition {
   const spec = input.incident!;
   const { recipe, situation, outside, room, roomOf, routes, routeName, anchors, cast } = placed;
   // Counted roles (groups): their size is fixed for this call, so count conditions settle here and
@@ -801,26 +801,31 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
   const transitionsOf = new Map<string, StoryPersonBinding['transitions']>();
   const moveCount = new Map<string, number>();
   const standing: StoryAnchor[] = Object.entries(anchors).map(([role, anchor]) => ({ spaceId: roomOf[role], at: anchor.inside }));
-  const addMove = (role: string, entry: TreeMoveTo[string], key: string, flag: string | null): string[] => {
-    if (groups[role]) throw new Error(`${tree.type}: ${key} moves the group ${role}; moves are for one person`);
-    if (roomOf[role] === undefined || roomOf[role] === outside) throw new Error(`${tree.type}: ${key} moves ${role}, who starts outside the building`);
+  // Each move: a hidden transition keyed on its move flag (where they are), and a twin keyed on its
+  // seen flag (where the team last saw them). The engine keeps one of each per person (withFlag), so
+  // the latest move wins; a seen move sets both, a sighting sets the seen flag (sightings.ts).
+  const addMove = (role: string, entry: TreeMoveTo[string], where: string, key: number | string): string[] => {
+    if (groups[role]) throw new Error(`${tree.type}: ${where} moves the group ${role}; moves are for one person`);
+    if (roomOf[role] === undefined || roomOf[role] === outside) throw new Error(`${tree.type}: ${where} moves ${role}, who starts outside the building`);
     const place = typeof entry === 'object' && 'to' in entry ? entry.to : entry, seen = typeof entry === 'object' && 'to' in entry && entry.seen;
     const list = transitionsOf.get(role) ?? transitionsOf.set(role, []).get(role)!;
-    const n = (moveCount.get(role) ?? 0) + 1;
-    moveCount.set(role, n);
-    const spaceId = spaceOfPlace(place, `${key} moves ${role} to`);
+    const spaceId = spaceOfPlace(place, `${where} moves ${role} to`);
     const door = typeof place === 'object' && 'doorOf' in place ? doorStanding(place.doorOf, spaceId) : null;
-    const at = door ?? storyPoint(built, spaceId, hashSeed(`${spec.seed}:${role}:move-${n}`), standing);
+    const at = door ?? storyPoint(built, spaceId, hashSeed(`${spec.seed}:${role}:move-${key}`), standing);
     if (!at) throw new Error(`${tree.type}: no room to stand in ${spaceId} for ${role}'s move`);
     standing.push({ spaceId, at });
-    const moved = flag ?? movedFlag(role, n), to = { spaceId, at: { ...at } };
-    if (seen) list.push({ when: { flags: [moved] }, observed: true, to });
-    else list.push({ when: { flags: [moved] }, observed: false, to }, { when: { flags: [moved, seenFlag(role, n)] }, observed: true, to });
-    return flag ? [] : [moved];
+    const to = { spaceId, at: { ...at } };
+    list.push({ when: { flags: [movedFlag(role, key)] }, observed: false, to }, { when: { flags: [seenFlag(role, key)] }, observed: true, to });
+    return [movedFlag(role, key), ...seen ? [seenFlag(role, key)] : []];
   };
   for (const node of nodes) for (const choice of node.choices) for (const band of BANDS) for (const outcome of choice.outcomes[band])
-    if (outcome.moveTo) moves.set(outcome, Object.entries(outcome.moveTo).flatMap(([role, entry]) => addMove(role, entry, `${node.id}.${choice.id}`, null)));
-  for (const cue of clockMoves) for (const [role, entry] of Object.entries(cue.moveTo)) addMove(role, entry, `clock cue ${cue.mark}`, markFlag(cue.mark));
+    if (outcome.moveTo) moves.set(outcome, Object.entries(outcome.moveTo).flatMap(([role, entry]) => {
+      const n = (moveCount.get(role) ?? 0) + 1;
+      moveCount.set(role, n);
+      return addMove(role, entry, `${node.id}.${choice.id}`, n);
+    }));
+  // A clock cue's moves: its flags ride on the compiled cue (instance.ts), named the same here.
+  const cueFlags = clockMoves.flatMap(cue => Object.entries(cue.moveTo).flatMap(([role, entry]) => addMove(role, entry, `clock ${cue.clockId} cue ${cue.index + 1}`, cueMoveKey(cue.clockId, cue.index))));
   // A moved person's start-room facts and way out no longer describe them.
   for (const role of transitionsOf.keys()) {
     for (const node of authored.nodes) for (const state of [...(node.promptIf ?? []).map(entry => entry.when), ...node.choices.flatMap(choice => [choice.onlyIf, ...BANDS.flatMap(band => choice.outcomes[band].map(outcome => outcome.when))])])
@@ -1105,7 +1110,7 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
   }]));
 
   const bound = mapScenarioText(s, textBinder(tree, built, placed));
-  const errors = validateStoryBindings(bound, built, clockMarks.map(markFlag));
+  const errors = validateStoryBindings(bound, built, [...clockMarks.map(markFlag), ...cueFlags]);
   if (errors.length) throw new Error(errors.join('\n'));
   return bound;
 }

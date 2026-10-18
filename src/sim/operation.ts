@@ -63,7 +63,7 @@ import {
   strainFor,
   type Evaluation,
 } from './resolution';
-import { conditionHolds } from './conditions';
+import { conditionHolds, withFlag } from './conditions';
 import { departmentUpkeep } from './equipment-manager-policy';
 import { vantageZones } from './sightlines';
 import { sightings } from './sightings';
@@ -475,7 +475,7 @@ function applyEffects(
         changes.push({ factId: k.factId, status: k.status });
       }
     }
-    for (const f of e.setFlags ?? []) if (!run.flags.includes(f)) run.flags.push(f);
+    for (const f of e.setFlags ?? []) run.flags = withFlag(run.flags, f);
     for (const f of e.clearFlags ?? []) run.flags = run.flags.filter((x) => x !== f);
     for (const o of e.openings ?? []) {
       run.flags = run.flags.filter((x) => !x.startsWith(`opening:${o.openingId}=`));
@@ -527,7 +527,11 @@ export function traceRun(scenario: ScenarioDefinition, run: OperationRun): { ste
     // v13: the drawn variants the commit applied, its clock outs, and the meters and commitments
     // it moved, in the commit's order, so later meter and clock branches match what the engine saw.
     const applied = savedDrawnEffects(matched, h.committed?.drawn).effects;
+    // Who the team saw, read before the outcome moves anyone, as the commit reads it (sim/sightings.ts):
+    // its seen flags keep a re-sighting in the replay (R-B3).
+    const seen = a ? sightings(scenario, sim, a, h.band, applied) : null;
     applyEffects(sim, applied);
+    if (seen) applyEffects(sim, [seen]);
     applyClockCues(sim, scenario, timed.cues);
     {
       applyEffects(sim, clockOutEffects(scenario, clocksBefore, sim.clocks, sim, applied));
