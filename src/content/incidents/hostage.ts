@@ -84,7 +84,9 @@ export const HOSTAGE_TEMPLATE: IncidentTemplate = {
       clocks: [{ id: 'owner_condition', label: '{owner.first}’s condition', kind: 'medical', owner: 'owner', start: 60, ratePerMin: 1.2, rateSpread: 0.25, rateKnown: false, factKey: 'owner_faint',
         urgent: '{owner.first} is down on the tiles behind the counter and can’t wait',
         cues: [{ at: 55, text: 'Through the glass, the team sees {owner.first} get down from the stool and sit on the tiles.', mark: 'owner_unwell' }],
-        onOut: { harm: 'serious', mark: 'owner_down' } }] },
+        // Running out where no fork reads it moves the call to owner_down (R-G4): an ending the decision
+        // reached stands, and an owner already out keeps the mark but moves nothing (sim/clocks.ts).
+        onOut: { harm: 'serious', mark: 'owner_down', next: { node: 'owner_down' } } }] },
     { index: 2, people: {
       taker: { ...TAKER, volatility: 'volatile', threat: { disposition: 'hostile', intent: 'barricade', awareness: 'aware', readiness: 'brandished' },
         demands: [{ kind: 'statement', text: '{owner.His} signature on a statement clearing {taker.him}, and nothing less', concedable: false }] },
