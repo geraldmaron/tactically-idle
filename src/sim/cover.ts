@@ -32,7 +32,7 @@ export function coverOnLine(built: BuiltLocation, spaceId: Id, from: Vec, to: Ve
 }
 
 /** Where along a segment (0 at `a`, 1 at `b`) it first enters an axis-aligned rectangle, or null. */
-function segmentEntersRect(a: Vec, b: Vec, r: { x: number; y: number; w: number; h: number }): number | null {
+export function segmentEntersRect(a: Vec, b: Vec, r: { x: number; y: number; w: number; h: number }): number | null {
   let t0 = 0, t1 = 1;
   const dx = b.x - a.x, dy = b.y - a.y;
   for (const [p, q] of [[-dx, a.x - r.x], [dx, r.x + r.w - a.x], [-dy, a.y - r.y], [dy, r.y + r.h - a.y]] as const) {

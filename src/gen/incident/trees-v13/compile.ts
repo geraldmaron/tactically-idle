@@ -7,6 +7,7 @@ import type { ActionDefinition, ClockCondition, Condition, FactDefinition, Incid
 import { squadsPutToWork } from '../../../sim/scenario-types';
 import { findStoryRoute, selectStoryRoom, storyPoint, validateStoryBindings } from '../story-bindings';
 import { routeAlongOpenings } from '../../../sim/routes';
+import { sightFromStreet, vantageZones, type StreetVantage } from '../../../sim/sightlines';
 import type { BuiltLocation, OutcomeBand, StageId, Vec } from '../../../sim/types';
 import { mapScenarioText } from '../scenario-text';
 import { asRole, CASCADE_LINES, countWord, FIRE_LINES, FORCE_LINES, listOf } from '../../../content/incidents/lines';
@@ -25,6 +26,12 @@ const endFlag = (ending: string) => `end:${ending}`;
 const personFactId = (role: string) => `p_${role}`;
 export const treeFactId = (key: string) => `f_${key}`;
 export const choiceActionId = (type: string, node: string, choice: string) => `t13_${type}_${node}_${choice}`;
+
+/** What a team move (TreeTeam) costs and earns, baked into every compiled call like the default
+ * difficulty. `clearPerSqFt`: minutes per square foot to clear a room the team moves into (a
+ * 200 sq ft shop floor is a minute). `signalWeight`: score points for a fully clear voice or
+ * sightline from where the squad stands, scaled by how well it carries through the building. */
+export const TEAM_MOVES = { clearPerSqFt: 0.005, signalWeight: { voice: 6, visual: 6 } } as const;
 
 export interface CastIdentity { firstName: string; surname: string; pronouns: 'he' | 'she' | 'they'; age?: number }
 /** Drawn identity per role (instance.ts): pronouns and, where the text names it, age. */
@@ -332,6 +339,9 @@ export interface PlacedCast {
   /** Each counted role's members ('others' → ['others_1', 'others_2']), nearest the door first.
    * Every member is in roomOf, anchors and cast like a key role. */
   groups: Record<string, string[]>;
+  /** Where each offsite role watches from, when the template places them (instance.ts): what a
+   * sightline fact draws its line from. */
+  vantages?: Record<string, StreetVantage>;
 }
 
 /** The door the team comes through into a room: the middle of the first opening on its walking
@@ -435,6 +445,26 @@ export function placeCast(tree: CallTree, built: BuiltLocation, spec: IncidentSp
   return { recipe, situation, outside, room, roomOf, routes, routeName, anchors, cast, groups };
 }
 
+/** The first opening on a route out that joins a room to the outside: the door it leaves the
+ * building by. */
+export function doorOut(built: BuiltLocation, openingIds: readonly string[]) {
+  const zones = new Set(built.location.zones.map(zone => zone.id));
+  return openingIds.map(id => built.location.openings.find(opening => opening.id === id)!).find(opening => zones.has(opening.a) !== zones.has(opening.b));
+}
+
+/** A sightline fact on this building (TreeFact.sightline): whether the offsite role's vantage
+ * sees the door the target role's way out leaves the building by. */
+export function sightlineHolds(tree: CallTree, built: BuiltLocation, placed: PlacedCast, key: string): boolean {
+  const { from, to } = tree.facts[key].sightline!;
+  const at = placed.vantages?.[from];
+  if (!at) throw new Error(`${tree.type}: the sightline ${key} is drawn from ${from}, whom the template gives no vantage`);
+  const route = placed.routes[placed.routeName(to)];
+  if (!route) throw new Error(`${tree.type}: the sightline ${key} looks at the way out of ${to}, who has none`);
+  const door = doorOut(built, route.openingIds);
+  if (!door) throw new Error(`${tree.type}: the way out of ${to} never leaves the building`);
+  return sightFromStreet(built, placed.outside, at, door.id).clear;
+}
+
 /** The engine id of a counted role's nth member (1-based): 'others_1'. */
 export const memberId = (group: string, n: number) => `${group}_${n}`;
 
@@ -504,6 +534,7 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
   const difficulty = (tree.difficulty?.base ?? 31) + spec.tier * (tree.difficulty?.perTier ?? 3);
   const truthOf = (key: string): boolean => {
     const fact = tree.facts[key];
+    if (fact?.sightline) return sightlineHolds(tree, built, placed, key);
     const value = fact?.truth ?? situation.truth[key];
     if (value === undefined) throw new Error(`Fact ${key} has no truth in situation ${recipe.variant}`);
     return value;
@@ -705,11 +736,51 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
       ...(outcome.civilian ? { civilian: outcome.civilian } : {}),
       ...(outcome.pressure ? { pressure: outcome.pressure } : {}),
       ...(outcome.minutes ? { extraMinutes: outcome.minutes } : {}),
+      ...(outcome.back ? { fallBack: true as const } : {}),
       ...(next ? 'node' in next ? { stage: nextStage } : { ending: next.ending } : {}),
       ...drawnFor(node, outcome),
       text: outcome.text,
     };
     return [effect];
+  };
+
+  /** The room a team move names: the scene, or the room a role starts in (a group: its member
+   * nearest the door). */
+  const roomFor = (node: TreeNode, choice: TreeChoice, target: string) => {
+    if (target === 'scene') return room.id;
+    const id = roomOf[oneOf(target, 'a team move to')];
+    if (!id || id === outside) throw new Error(`${node.id}.${choice.id}: the team moves to ${target}, who is not inside`);
+    return id;
+  };
+  /** A choice's physical intent as the engine runs it (TreeTeam): the approach, the room it acts on,
+   * an entry's exposure, a signal and where the squad ends. */
+  const movement = (node: TreeNode, choice: TreeChoice): Pick<ActionDefinition, 'approach' | 'targetId' | 'workload' | 'entry' | 'spatial' | 'endsAt'> => {
+    const team = choice.team, walker = choice.walks;
+    const workload = { base: choice.minutes + (deliberate && choice.talksTo === deliberate.id ? 2 : 0), perSqFt: 0 };
+    const to = team?.to;
+    if (to === 'escort' && !walker) throw new Error(`${node.id}.${choice.id}: an escort needs someone who walks out`);
+    if (walker && to !== undefined && to !== 'escort') throw new Error(`${node.id}.${choice.id}: someone who walks out comes out with the team or alone, so the team escorts or stays`);
+    const entry = team?.entry ? { entry: { subjectFactId: personFactId(oneOf(team.entry, 'an entry on')) } } : {};
+    const signal = team?.signal ? { spatial: { channel: team.signal.channel === 'voice' ? 'sound' as const : 'visual' as const, subjectFactId: personFactId(oneOf(team.signal.to, 'a signal to')),
+      weight: TEAM_MOVES.signalWeight[team.signal.channel], noun: team.signal.channel === 'voice' ? 'Voice' : 'Sightline' } } : {};
+    if (walker) return to === 'escort'
+      ? { approach: 'path', targetId: outside, workload, endsAt: { spaceId: outside, at: { ...anchors[walker].outside } } }
+      : { approach: 'none', targetId: outside, workload };
+    if (to === undefined) return { approach: 'none', targetId: room.id, workload, ...entry, ...signal };
+    if (typeof to === 'object' && 'vantage' in to) {
+      // A room with a window or door onto the outside is watched through it. An inside room (a
+      // stockroom, a hallway) is reached through the building from the door its way out uses.
+      const watched = roomFor(node, choice, to.vantage);
+      if (vantageZones(built.location, watched).length) return { approach: 'window', targetId: watched, workload, ...entry, ...signal };
+      const way = findStoryRoute(built, watched, outside, 'walking');
+      const door = way ? doorOut(built, way) : undefined;
+      const front = door && (built.location.zones.some(zone => zone.id === door.a) ? door.b : door.a);
+      if (!door || !front) throw new Error(`${node.id}.${choice.id}: no way out of ${watched} to watch it from`);
+      return { approach: 'window', targetId: front, workload, ...entry,
+        ...(signal.spatial ? { spatial: { ...signal.spatial, openingId: door.id } } : {}) };
+    }
+    const targetId = roomFor(node, choice, to === 'scene' ? 'scene' : (to as { room: string }).room);
+    return { approach: 'path', targetId, workload: { ...workload, perSqFt: TEAM_MOVES.clearPerSqFt }, ...entry, ...signal };
   };
 
   const actionFor = (node: TreeNode, choice: TreeChoice): ActionDefinition => {
@@ -720,15 +791,14 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
     const talksTo = choice.talksTo ? oneOf(choice.talksTo, 'a conversation with') : undefined;
     const action: ActionDefinition = {
       id: choiceActionId(tree.type, node.id, choice.id), stage: node.stage, title: choice.title, summary: choice.summary, task: choice.title, icon: choice.icon,
-      targetId: walker ? outside : room.id,
+      ...movement(node, choice),
       requires: {
         ...(choice.requires ?? {}),
         ...(node.id === tree.root ? { notFlags: [{ flag: TREE_STARTED, reason: 'This decision is behind you' }] } : { flags: [{ flag: nodeFlag(node.id), reason: 'This decision is no longer open' }] }),
       },
       visibleWhen,
       check: { kind: choice.check.kind, ratings: choice.check.ratings.map(rating => ({ ...rating })), difficulty: difficulty + (choice.check.difficulty ?? 0) },
-      workload: { base: choice.minutes + (deliberate && choice.talksTo === deliberate.id ? 2 : 0), perSqFt: 0 },
-      approach: walker ? 'path' : 'none', observes: [], stressBase: choice.stress ?? 1,
+      observes: [], stressBase: choice.stress ?? 1,
       outcomePreview: { ...choice.preview },
       consequenceLevel: choice.consequenceLevel ?? 'low',
       ...(choice.tempo ? { tempo: choice.tempo } : {}),

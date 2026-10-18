@@ -59,7 +59,9 @@ describe('incident templates', () => {
         const built = buildLocation(s.locationFamilyId, s.locationSeed);
         const spec = { ...s.incident!, familyId: s.locationFamilyId.split('__')[0], buildingSeed: s.locationSeed };
         const as = (pronouns: 'he' | 'she' | 'they'): CastDraw => Object.fromEntries(template.tree.roles.map(role => [role.id, { pronouns, age: 14 }]));
-        const compiled = (['he', 'she', 'they'] as const).map(pronouns => mechanics(withCallTree({ ...s, incident: spec }, built, template.tree, placeCast(template.tree, built, spec, as(pronouns)))));
+        // The template places offsite people (a sightline's vantage); the cast draw never moves them.
+        const vantages = drawInstance(template, built, spec).placed.vantages;
+        const compiled = (['he', 'she', 'they'] as const).map(pronouns => mechanics(withCallTree({ ...s, incident: spec }, built, template.tree, { ...placeCast(template.tree, built, spec, as(pronouns)), ...(vantages ? { vantages } : {}) })));
         expect(compiled[1], template.type).toEqual(compiled[0]);
         expect(compiled[2], template.type).toEqual(compiled[0]);
       }

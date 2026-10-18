@@ -9,6 +9,8 @@ import { CALL_TREES } from '../content/call-trees';
 import { startGateRun } from '../gen/incident/gates/engine-driver';
 import { drawCalls, playToEnd } from '../gen/incident/trees-v13/balance';
 import { getScenario } from '../sim/scenario-registry';
+import { generateIncident } from '../gen/incident';
+import { hashSeed } from '../sim/rng';
 import { buildLocation } from '../sim/location';
 import { openingFlag } from '../sim/resolution';
 import { actionViews } from '../sim/operation-selectors';
@@ -20,9 +22,9 @@ export interface Probe {
   id: string;
   system: System;
   input: string;
-  /** Changes one input on a sampled decision point. `restart` re-starts the same call with other
-   * options; probes that use it are measured on openings only. */
-  perturb: (state: GameState, restart: (opts?: Parameters<typeof startGateRun>[2]) => GameState) => GameState;
+  /** Changes one input on a sampled decision point. `restart` re-starts the call (by default the
+   * same one) with other options; probes that use it are measured on openings only. */
+  perturb: (state: GameState, restart: (opts?: Parameters<typeof startGateRun>[2], scenarioId?: string) => GameState) => GameState;
   openingOnly?: boolean;
   /** Which way a responsive choice's favorable chance must move. */
   direction: 'up' | 'down' | 'any';
@@ -41,6 +43,24 @@ const RATING_KEYS: readonly RatingKey[] = ['shooting', 'composure', 'communicati
 const squadOfficers = (state: GameState) => state.squads.find(squad => squad.id === 'A')!.officerIds.map(id => state.officers[id]);
 const edit = (state: GameState, fn: (draft: GameState) => void) => { const draft = structuredClone(state); fn(draft); return draft; };
 
+/** The same call (type, situation, turns, pacing, cast) hosted on another building of its type:
+ * the drawn spec with another building seed. Null when no other seed gives a different building. */
+export function onAnotherBuilding(scenarioId: string): string | null {
+  const s = getScenario(scenarioId)!;
+  for (let k = 1; k <= 8; k++) {
+    try {
+      const other = generateIncident({ ...s.incident!, buildingSeed: hashSeed(`${s.incident!.buildingSeed}:another-building:${k}`) });
+      if (other.locationSeed !== s.locationSeed || other.locationFamilyId !== s.locationFamilyId) return other.id;
+    } catch { /* this seed can't host the call; try the next */ }
+  }
+  return null;
+}
+
+/** Measured 2026-10-18 (6 of 33 opening choices); floors only rise. */
+const MIN_BUILDING_SHARE = 0.18;
+/** Share of opening choices whose travel changes on another building, measured 2026-10-18 (6 of 33). */
+export const MIN_BUILDING_TRAVEL_SHARE = 0.18;
+
 export const WIRING: readonly Probe[] = [
   {
     id: 'officer-ratings', system: 'officer', input: 'Officer ratings (every rating of squad A at 95 instead of 60)', direction: 'up', status: 'live', minShare: 1, everyTree: true,
@@ -58,13 +78,18 @@ export const WIRING: readonly Probe[] = [
     evidence: 'Equipment bonuses apply only where a choice declares them (src/gen/incident/trees-v13/compile.ts)',
   },
   {
-    id: 'blueprint-locked', system: 'blueprint', input: 'Door and window states (every opening locked)', direction: 'any', status: 'live', minShare: 0.13,
+    id: 'blueprint-locked', system: 'blueprint', input: 'Door and window states (every opening locked)', direction: 'any', status: 'live', minShare: 0.27,
     perturb: state => edit(state, draft => {
       const run = draft.activeRun!;
       const built = buildLocation(run.locationFamilyId, run.locationSeed);
       run.flags = [...run.flags, ...built.location.openings.map(opening => openingFlag(opening.id, 'locked'))];
     }),
-    evidence: 'v13 choices compile with `approach: none`, so routes, entries and openings mostly never reach the roll (src/gen/incident/trees-v13/compile.ts). Raise minShare as entries are wired.',
+    evidence: 'A choice that moves the team (TreeTeam: into a room, to a vantage, an escort) or walks someone out routes through the building, so a locked door costs force time or the entry tool (src/gen/incident/trees-v13/compile.ts). Phone calls, waits and a voice through a door that was already shut never respond, and should not.',
+  },
+  {
+    id: 'blueprint-building', system: 'blueprint', input: 'The building (the same call on another building of its type)', direction: 'any', status: 'live', minShare: MIN_BUILDING_SHARE, openingOnly: true,
+    perturb: (state, restart) => restart(undefined, onAnotherBuilding(state.activeRun!.scenarioId) ?? state.activeRun!.scenarioId),
+    evidence: 'Routes, doors, room sizes, how far the subject stands from a door and what a sightline reads all come from the generated building (src/sim/resolution.ts), and a sightline fact is settled by it (src/sim/spatial-factors.ts sightFromStreet).',
   },
   {
     id: 'subject-armament', system: 'subject', input: 'The subject\'s weapon (the reported weapon disproved)', direction: 'up', status: 'live', minShare: 0.81,
@@ -120,7 +145,7 @@ export function measureWiring(probes: readonly Probe[] = WIRING, points: readonl
     let flips = 0;
     for (const point of points.filter(p => !probe.openingOnly || p.opening)) {
       const base = baseline(point.state);
-      const restart = (opts?: Parameters<typeof startGateRun>[2]) => baseline(startGateRun(point.scenarioId, 719, opts));
+      const restart = (opts?: Parameters<typeof startGateRun>[2], scenarioId = point.scenarioId) => baseline(startGateRun(scenarioId, 719, opts));
       const before = odds(base), after = odds(probe.perturb(base, restart));
       const tree = (byTree[point.type] ??= { choices: 0, moved: 0 });
       for (const [id, b] of before) {
@@ -164,4 +189,24 @@ export function taskWeightViolations(points: readonly Point[] = samplePoints()):
     }
   }
   return { checked, violations };
+}
+
+/** On the opening of each sampled call, how many eligible choices take a different time moving
+ * through the building when the same call is hosted on another building (onAnotherBuilding). */
+export function buildingTravelChanges(points: readonly Point[] = samplePoints()): { checked: number; changed: number; byTree: Record<string, number> } {
+  let checked = 0, changed = 0;
+  const byTree: Record<string, number> = {};
+  for (const point of points.filter(p => p.opening)) {
+    const other = onAnotherBuilding(point.scenarioId);
+    if (!other) continue;
+    const travel = (state: GameState) => new Map(actionViews(baseline(state), NOW, 'A').filter(view => view.eligible).map(view => [view.id, view.travelMinutes]));
+    const before = travel(point.state), after = travel(startGateRun(other, 719));
+    for (const [id, minutes] of before) {
+      const next = after.get(id);
+      if (next === undefined) continue;
+      checked++;
+      if (Math.abs(next - minutes) > 0.05) { changed++; byTree[point.type] = (byTree[point.type] ?? 0) + 1; }
+    }
+  }
+  return { checked, changed, byTree };
 }

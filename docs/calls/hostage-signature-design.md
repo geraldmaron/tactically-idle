@@ -352,6 +352,11 @@ None reserved; `{lead}` does the risky part in every stage's summaries.
 
 None blocks this call; each is a shape the data could not hold, worked around in content as noted.
 
+Applied 2026-10-18 (team moves, `TreeTeam`): the three `go_in` choices go into the scene with an
+entry on the taker; `team_alley` and `team_glass` go to a vantage on the scene, `team_glass` with a
+sightline to the taker; `talk_down`, `alley_talk` and `out_back` talk to the taker by voice from a
+vantage. Walk-outs without an escort leave the squad where it stands. No prose changed.
+
 ```
 Engineering request R-G1
 Need:            a group member's own weapon in text and in belief (the team learns who holds what)

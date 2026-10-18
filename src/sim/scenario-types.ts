@@ -184,6 +184,9 @@ export interface OutcomeEffect {
   drawn?: DrawnModel;
   /** The effects for each result `drawn` can give, keyed as the model names them. */
   variants?: Record<string, OutcomeEffect[]>;
+  /** V13: the acting squads fall back. They end this decision where they started it, not where
+   * the action took them (the team is driven back from the doorway). */
+  fallBack?: true;
   /** V13: engine-only branches on a clock (sim/clocks.ts), read when the decision commits, at the
    * end of this choice's own minutes. A clock this call doesn't have never runs low or out. */
   clocks?: ClockCondition[];
@@ -306,6 +309,9 @@ export interface ActionDefinition {
   observes?: Id[];
   /** Locked doors on the route open with the keyholder: no force time. Needs environment.keyholder. */
   keyholder?: boolean;
+  /** Where the acting squads stand once the decision commits, when that is not where they act
+   * (an escort works at the person and ends outside with them). Default: where they act. */
+  endsAt?: { spaceId: Id; at: Vec };
   /**
    * Perimeter / coverage action: each acting squad claims a DIFFERENT exterior side (a zone with a
    * way into the building). Squads beyond the number of sides add nothing. Use with approach 'window'

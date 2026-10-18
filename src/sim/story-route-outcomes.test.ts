@@ -10,7 +10,7 @@ import { deserialize, serialize } from './save';
 import { NOW } from './test-fixtures';
 
 const steps: PlayStep[] = [];
-for (const tree of Object.values(CALL_TREES)) playCalls(tree!, 'patient', drawCalls(tree!, 2, 6), (_result, path) => steps.push(...path));
+for (const tree of Object.values(CALL_TREES)) playCalls(tree!, 'random', drawCalls(tree!, 2, 6), (_result, path) => steps.push(...path));
 const movements = steps.filter(step => scenarioActions(getScenario(step.before.activeRun!.scenarioId)!).find(a => a.id === step.choice.id)?.storyRoute);
 
 describe('current call-tree movement routes', () => {

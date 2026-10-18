@@ -10,28 +10,28 @@ syntax tree (`src/dev/import-graph.ts`, with the parser Vite ships), and a dynam
 
 | Layer | Modules | Lines | May import | Owns |
 | --- | --- | --- | --- | --- |
-| kernel | 8 | 2213 | nothing | Shared records, ids, seeded randomness, geometry and the tuning registry. No game rules. |
-| world | 49 | 8196 | kernel | Blueprints: authored and procedural buildings, rooms, openings, furniture, routes and sightlines. |
-| catalog | 28 | 5132 | kernel, world | Authored data: officers, personas, items, courses, unlocks, call templates and call trees. |
-| scenario | 9 | 2289 | kernel, world, catalog | Turns a drawn call into a playable definition: cast, placement on the blueprint, compiled tree. |
-| engine | 54 | 12284 | kernel, world, catalog, scenario, commerce | Game rules and state: department, economy, operations, resolution, outcomes, saves. |
+| kernel | 8 | 2221 | nothing | Shared records, ids, seeded randomness, geometry and the tuning registry. No game rules. |
+| world | 50 | 8290 | kernel | Blueprints: authored and procedural buildings, rooms, openings, furniture, routes and sightlines. |
+| catalog | 28 | 5186 | kernel, world | Authored data: officers, personas, items, courses, unlocks, call templates and call trees. |
+| scenario | 9 | 2371 | kernel, world, catalog | Turns a drawn call into a playable definition: cast, placement on the blueprint, compiled tree. |
+| engine | 54 | 12300 | kernel, world, catalog, scenario, commerce | Game rules and state: department, economy, operations, resolution, outcomes, saves. |
 | commerce | 4 | 198 | kernel | Point packs and the purchase ledger. |
-| qa | 26 | 3894 | kernel, world, catalog, scenario, engine, commerce | Content gates, balance measurement, fixtures and test support. Never loaded by the game. |
+| qa | 26 | 3944 | kernel, world, catalog, scenario, engine, commerce | Content gates, balance measurement, fixtures and test support. Never loaded by the game. |
 | ui | 105 | 15619 | kernel, world, catalog, scenario, engine, commerce | Player screens, the blueprint renderer, portraits and the store that dispatches commands. |
-| lab | 97 | 16949 | kernel, world, catalog, scenario, engine, commerce, qa, ui | The dev-only Scenario Lab and dev sheets. Reads everything, never ships. |
+| lab | 97 | 16952 | kernel, world, catalog, scenario, engine, commerce, qa, ui | The dev-only Scenario Lab and dev sheets. Reads everything, never ships. |
 | shell | 3 | 372 | kernel, world, catalog, engine, ui, lab | Entry points that choose which app to mount. |
 
 ## Systems
 
 | System | Modules | Lines | Job |
 | --- | --- | --- | --- |
-| blueprint | 79 | 13685 | Where things are: buildings, rooms, doors and windows, furniture, routes, cover and sightlines. |
+| blueprint | 80 | 13794 | Where things are: buildings, rooms, doors and windows, furniture, routes, cover and sightlines. |
 | subject | 6 | 1152 | Who is on scene: subjects, hostages, victims, bystanders and animals, their holds, weapons, temper (agitation and rapport) and positions. |
 | officer | 13 | 1903 | Who the player sends: ratings, traits, stress, injuries, certifications, careers and squads. |
 | item | 6 | 1322 | What they carry: the item catalog, ratings and capabilities, force risk, inventory and wear. |
-| scenario | 56 | 12102 | What happens: call trees, placement on the blueprint, choices, chance per choice, branches and clocks, and the call-time logistics (loadouts, resupply, outside support) that read the items. |
+| scenario | 56 | 12244 | What happens: call trees, placement on the blueprint, choices, chance per choice, branches and clocks, and the call-time logistics (loadouts, resupply, outside support) that read the items. |
 | metric | 28 | 4105 | What it meant: outcome scoring, harm, debriefs, department reputation, money and progression, and the Command Staff who run the department. |
-| platform | 195 | 32877 | Everything that serves the systems above: records, randomness, saves, the store, screens and tooling. |
+| platform | 195 | 32933 | Everything that serves the systems above: records, randomness, saves, the store, screens and tooling. |
 
 ## System dependency chain
 
@@ -44,7 +44,7 @@ flowchart LR
   metric -->|29| officer
   metric -->|10| scenario
   metric -->|1| subject
-  scenario -->|24| blueprint
+  scenario -->|29| blueprint
   scenario -->|29| item
   scenario -->|18| metric
   scenario -->|10| officer
@@ -64,7 +64,8 @@ Each input a system feeds into a choice's chance, and whether the engine actuall
 | officer | Officer ratings (every rating of squad A at 95 instead of 60) | 119 of 119 | 100% | `aptitude` weights each rating per task (src/sim/resolution.ts); the task-weight test checks each choice reads only its own ratings |
 | officer | Officer strain (squad A at stress 90) | 104 of 104 | 100% | `conditionFraction` takes strain off each rating (src/sim/officer.ts) |
 | item | Carried equipment (squad A deploys with nothing) | 3 of 30 | 10% | Equipment bonuses apply only where a choice declares them (src/gen/incident/trees-v13/compile.ts) |
-| blueprint | Door and window states (every opening locked) | 16 of 119 | 13% | v13 choices compile with `approach: none`, so routes, entries and openings mostly never reach the roll (src/gen/incident/trees-v13/compile.ts). Raise minShare as entries are wired. |
+| blueprint | Door and window states (every opening locked) | 33 of 119 | 27% | A choice that moves the team (TreeTeam: into a room, to a vantage, an escort) or walks someone out routes through the building, so a locked door costs force time or the entry tool (src/gen/incident/trees-v13/compile.ts). Phone calls, waits and a voice through a door that was already shut never respond, and should not. |
+| blueprint | The building (the same call on another building of its type) | 6 of 33 | 18% | Routes, doors, room sizes, how far the subject stands from a door and what a sightline reads all come from the generated building (src/sim/resolution.ts), and a sightline fact is settled by it (src/sim/spatial-factors.ts sightFromStreet). |
 | subject | The subject's weapon (the reported weapon disproved) | 91 of 111 | 81% | `incidentSubjects` reads armament knowledge into `threatFx` (src/sim/incident-factors.ts). The rescue tree has no armed person on scene, so it never responds. |
 | scenario | Time pressure on the call (pressure 95) | 119 of 119 | 100% | Pressure penalty scaled by composure (src/sim/resolution.ts) |
 
@@ -86,4 +87,4 @@ Each input a system feeds into a choice's chance, and whether the engine actuall
 None.
 
 
-Cross-layer runtime imports in total: 629.
+Cross-layer runtime imports in total: 635.

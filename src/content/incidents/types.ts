@@ -8,6 +8,7 @@
 // read yet is listed in WIRED as false, and the lab says so beside it.
 import type { Armament, Disposition, IncidentType, Intent, PoliceAwareness, Readiness } from '../../sim/scenario-types';
 import type { Id, RoomType, Vec } from '../../sim/types';
+import type { StreetVantage } from '../../sim/sightlines';
 import type { CallTree } from '../call-trees/types';
 
 // ---------------------------------------------------------------- people (§1)
@@ -191,8 +192,9 @@ export interface PersonSpec {
   animal?: AnimalTraits;
   /** What the team knows of this person at the start of the call. Unlisted keys are unknown. */
   knowledge?: Partial<Record<KnowledgeKey, Belief>>;
-  /** Lines of sight the story relies on before milestone 2 computes them from the building. */
-  sightlines?: { to: string; clear: boolean }[];
+  /** Where an offsite person watches from, across the street (sim/spatial-factors.ts
+   * StreetVantage). A tree fact with a `sightline` from this person draws its line from here. */
+  vantage?: StreetVantage;
   /** A slot whose people form a group (a counted slot): how each member past the key roles is drawn
    * into it. The first key role leads (or is 'lone' when the call draws nobody else). */
   group?: GroupSpec;
@@ -271,7 +273,8 @@ export interface IncidentPerson {
   meters: Partial<Meters>;
   animal?: AnimalTraits;
   knowledge: Partial<Record<KnowledgeKey, Belief>>;
-  sightlines: { to: string; clear: boolean }[];
+  /** An offsite person's vantage on the plan (PersonSpec.vantage), in building feet. */
+  vantage?: Vec;
 }
 
 /** Which instance fields the engine reads today. Milestone 2 turns the rest on. */
@@ -286,5 +289,8 @@ export const WIRED: Record<string, boolean> = {
   // M2 slice 5 (sim/drawn-effects.ts CASCADE_V1): a member's influence decides whether they follow
   // a leader who gives up. The role (follower, lookout) is drawn and shown, not yet read.
   group: true,
-  hold: false, conditions: false, record: false,
+  // The drawn conditions are the engine's environment (instance.ts compileIncident), and an
+  // offsite person's vantage settles a sightline fact on each building (compile.ts).
+  conditions: true, vantage: true,
+  hold: false, record: false,
 };

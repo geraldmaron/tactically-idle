@@ -16,7 +16,13 @@ const tank = (start: number, ratePerMin: number, rateKnown: boolean, rateSpread?
   // Once the gauge is in the red, command won't wait for the shooting to stop (sim/authorization.ts).
   urgent: '{resident.first}’s spare tank is in the red',
   cues:[{ at: 30, text: '{resident.first} taps the tank’s gauge. The needle sits in the red.', mark: 'running_low' }, { at: 0, text: 'The hiss from {resident.first}’s spare tank stops.', mark: 'tank_empty' }] });
-const shooterSees = (clear: boolean) => ({ sightlines: [{ to: 'the front door', clear }] });
+/** Which window across the street the shooter fires from: `alongFt` along the street from the
+ * middle of the resident's frontage, 45 feet past the front edge of the lot. Whether it sees the
+ * front door is the building's call (sim/spatial-factors.ts sightFromStreet): standing back from
+ * the glass, the shooter sees 25 degrees either side of straight ahead, and the yard's trees and
+ * hedges and the house's own walls can still hide the door. Measured over 80 drawn calls
+ * (2026-10-18): straight across sees the door in 77; thirty feet down the street, in 9. */
+const shooterAt = (alongFt: number) => ({ vantage: { acrossFt: 45, alongFt, fieldDeg: 25 } });
 
 export const RESCUE_TEMPLATE: IncidentTemplate = {
   type: 'protected_rescue',
@@ -44,9 +50,9 @@ export const RESCUE_TEMPLATE: IncidentTemplate = {
   ],
   conditions: { timeOfDay: 'dusk', power: 'off', weather: 'clear', crowd: 0 },
   situations: [
-    { index: 0, people: { shooter: shooterSees(false) }, clocks: [tank(100, 0.2, true)] },
-    { index: 1, people: { shooter: shooterSees(true) }, clocks: [tank(100, 0.2, true)] },
-    { index: 2, people: { shooter: shooterSees(true) }, clocks: [tank(40, 1, false, 0.2)] },
+    { index: 0, people: { shooter: shooterAt(30) }, clocks: [tank(100, 0.2, true)] },
+    { index: 1, people: { shooter: shooterAt(0) }, clocks: [tank(100, 0.2, true)] },
+    { index: 2, people: { shooter: shooterAt(0) }, clocks: [tank(40, 1, false, 0.2)] },
   ],
   complications: [],
 };

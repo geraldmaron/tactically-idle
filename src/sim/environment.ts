@@ -7,7 +7,7 @@ import type { BuiltLocation, Contributor, Id, Officer } from './types';
 import type { EnvironmentDefinition } from './scenario-types';
 import { tunable } from './tuning';
 
-/** Tunable (sim/tuning.ts). Only `observationDifficulty` is read in play: the functions that read the
+/** Tunable (sim/tuning.ts). `light`, `weatherSound` and `weatherVisual` (signalCarry) and `observationDifficulty` are read in play: the functions that read the
  * rest have no callers, and some fields are read nowhere. TUNING_META marks them unused. */
 export const ENV_TUNING = tunable('ENV_TUNING', {
   /** Visual multiplier on sightlines (1 = bright daylight with the lights on). */
@@ -56,6 +56,21 @@ export function lightFactor(env: EnvironmentDefinition | null): number {
   else if (env.timeOfDay === 'dusk') f *= ENV_TUNING.light.dusk;
   if (env.power === 'off') f *= ENV_TUNING.light.powerOff;
   return f;
+}
+
+/** How far the scene's conditions carry a signal the squad works by (sim/resolution.ts): a
+ * sightline reads by the light (dusk, night, the power out) and, from outside, through the
+ * weather; a voice from outside carries through the weather. 1 when nothing gets in the way.
+ * Heat and radio carry regardless. */
+export function signalCarry(env: EnvironmentDefinition | null, channel: 'sound' | 'thermal' | 'radio' | 'visual', outdoors: boolean): { factor: number; label: string | null } {
+  if (!env || channel === 'thermal' || channel === 'radio') return { factor: 1, label: null };
+  if (channel === 'visual') {
+    const light = lightFactor(env), weather = outdoors ? ENV_TUNING.weatherVisual[env.weather] : 1;
+    const why = [lightReason(env), weather < 1 ? env.weather : null].filter(Boolean).join(' and ');
+    return { factor: light * weather, label: light * weather < 1 ? `Hard to see (${why})` : null };
+  }
+  const weather = outdoors ? ENV_TUNING.weatherSound[env.weather] : 1;
+  return { factor: weather, label: weather < 1 ? `The ${env.weather} drowns out a voice from outside` : null };
 }
 
 /** Why the lighting is poor, in player language. Null in good light. */

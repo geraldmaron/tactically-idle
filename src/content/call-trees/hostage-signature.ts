@@ -179,7 +179,7 @@ export const HOSTAGE_SIGNATURE: CallTree = {
         { when: GROUP, prompt: '{courier.first} says {taker.first} kept eyeing the alley, and {others} kept eyeing {taker.first}.' },
       ],
       choices: [
-        { id: 'team_alley', title: 'Cover the alley door', icon: 'perimeter', check: check(MOVE), minutes: 4, consequenceLevel: 'moderate',
+        { id: 'team_alley', title: 'Cover the alley door', icon: 'perimeter', team: { to: { vantage: 'scene' } }, check: check(MOVE), minutes: 4, consequenceLevel: 'moderate',
           summary: '{lead} leads your squad down the alley, close enough to stop {taker.first} leaving with {owner.first}. Boots on gravel carry inside.',
           preview: { favorable: 'You reach the rear unheard, with {taker.first} still on the line.', mixed: 'You get there, but {taker.first} heard you coming and says so.', adverse: 'The crunch of gravel could send {taker.first} back to {owner.first} with {taker.his} handgun raised.' },
           outcomes: {
@@ -306,7 +306,7 @@ export const HOSTAGE_SIGNATURE: CallTree = {
             mixed: [{ text: '{courier.first} picks up {courier.his} bag and goes. {taker.first} says no more favors after this one, and {owner.first} stays until {owner.he} {owner~signs|sign}.', safe: ['courier'], mark: ['sign_demand'], moves: { taker: 'released' }, next: { node: 'standoff' }, objective: 20 }],
             adverse: [{ text: '{taker.first} says {courier.first} stays because the team asked. {courier.first} sits back down.', moves: { taker: 'provoked' }, next: { node: 'standoff' }, pressure: 8 }],
           } },
-        { id: 'team_glass', title: 'Move up to the glass', icon: 'perimeter', check: check(MOVE), minutes: 3, consequenceLevel: 'moderate', onlyIf: LONE,
+        { id: 'team_glass', title: 'Move up to the glass', icon: 'perimeter', team: { to: { vantage: 'scene' }, signal: { channel: 'visual', to: 'taker' } }, check: check(MOVE), minutes: 3, consequenceLevel: 'moderate', onlyIf: LONE,
           summary: '{lead} brings your squad to the front windows, in plain sight of {taker.first}. Seeing you there could end the talking.',
           preview: { favorable: 'Once {taker.first} sees you, the phone gets answered.', mixed: '{taker.first} answers but moves {owner.first} out of view.', adverse: '{taker.first} retreats from the window and may drag {owner.first} along, handgun drawn.' },
           outcomes: {
@@ -548,7 +548,7 @@ export const HOSTAGE_SIGNATURE: CallTree = {
               quiet: '{taker.He} {taker~hangs|hang} up and {taker~lets|let} the next three calls ring.',
               extra: { moves: { taker: 'provoked' }, pressure: 10 } }),
           } },
-        { id: 'alley_talk', title: 'Talk at the alley door', icon: 'radio', talksTo: 'taker', check: check(TALK, -6), minutes: 5, stress: 4, consequenceLevel: 'high', onlyIf: { marks: ['team_close'] },
+        { id: 'alley_talk', title: 'Talk at the alley door', icon: 'radio', team: { to: { vantage: 'scene' }, signal: { channel: 'voice', to: 'taker' } }, talksTo: 'taker', check: check(TALK, -6), minutes: 5, stress: 4, consequenceLevel: 'high', onlyIf: { marks: ['team_close'] },
           summary: '{lead} talks with {taker.first} through the gap at the back. Only the door frame shields the officer from the handgun.',
           preview: { favorable: '{taker.first} talks face to face and makes a call on {owner.first}.', mixed: '{taker.first} comes close, then backs off with {taker.his} handgun up.', adverse: 'A shot could come through the opening and hit whoever is at the gap.' },
           outcomes: {
@@ -704,7 +704,7 @@ export const HOSTAGE_SIGNATURE: CallTree = {
         { when: { marks: ['team_close'] }, prompt: '{owner.first} is staring at what {taker.first} is holding. Your squad is a few steps away.' },
       ],
       choices: [
-        { id: 'talk_down', title: 'Talk {taker.him} down', icon: 'radio', talksTo: 'taker', check: check(TALK, 6), minutes: 3, stress: 4, consequenceLevel: 'high', onlyIf: { notMarks: ['owner_down'] },
+        { id: 'talk_down', title: 'Talk {taker.him} down', icon: 'radio', team: { to: { vantage: 'scene' }, signal: { channel: 'voice', to: 'taker' } }, talksTo: 'taker', check: check(TALK, 6), minutes: 3, stress: 4, consequenceLevel: 'high', onlyIf: { notMarks: ['owner_down'] },
           modifiers: [{ label: 'You know how that day went', mark: 'knows_story', value: 6 }],
           summary: '{lead} calls to {taker.first} from the glass, in plain view and in line with the handgun.',
           preview: { favorable: 'The handgun is set down, and {owner.first} walks out ahead of {taker.first}.', mixed: '{owner.first} gets out, and {taker.first} stays armed.', adverse: 'Whoever stands at the glass may be hit if {taker.first} fires.' },
@@ -719,7 +719,7 @@ export const HOSTAGE_SIGNATURE: CallTree = {
             ],
             adverse: [{ text: 'A shot goes through the window as {taker.first} spins around. {owner.first} is still inside.', fire: { from: 'taker' }, moves: { taker: 'shots', others: 'shots' }, next: { node: 'fired_on' }, pressure: 10 }],
           } },
-        { id: 'go_in', title: 'Send the team in', icon: 'shield', check: check(ENTER, 8), minutes: 2, stress: 6, tempo: 'urgent', consequenceLevel: 'severe',
+        { id: 'go_in', title: 'Send the team in', icon: 'shield', team: { to: 'scene', entry: 'taker' }, check: check(ENTER, 8), minutes: 2, stress: 6, tempo: 'urgent', consequenceLevel: 'severe',
           requires: { certs: ['entry_team'] }, authority: 'entry', equipment: [{ tag: 'shield', value: 6, label: 'Shield up front' }],
           modifiers: [{ label: 'Your squad is already close', mark: 'team_close', value: 8 }, { label: 'Spare key in hand', mark: 'spare_key', value: 8 }, { label: 'Front door unbolted', mark: 'door_open', value: 6 }],
           summary: '{owner.first} could be badly hurt or die when the door opens. {lead} keeps {taker.first} busy at the window.',
@@ -771,7 +771,7 @@ export const HOSTAGE_SIGNATURE: CallTree = {
         { when: { notSafe: ['courier'] }, prompt: 'Since the shot, neither {owner.first} nor {courier.first} has come out.' },
       ],
       choices: [
-        { id: 'go_in', title: 'Go in now', icon: 'shield', check: check(ENTER, 12), minutes: 2, stress: 6, tempo: 'urgent', consequenceLevel: 'severe',
+        { id: 'go_in', title: 'Go in now', icon: 'shield', team: { to: 'scene', entry: 'taker' }, check: check(ENTER, 12), minutes: 2, stress: 6, tempo: 'urgent', consequenceLevel: 'severe',
           requires: { certs: ['entry_team'] }, authority: 'entry', equipment: [{ tag: 'shield', value: 6, label: 'Shield up front' }],
           modifiers: [{ label: 'Officers are already at the door', mark: 'team_close', value: 8 }, { label: 'The landlord’s key works', mark: 'spare_key', value: 8 }, { label: 'The bolt is open', mark: 'door_open', value: 6 }],
           summary: 'Your squad goes in at someone who just fired. {owner.first} could die, and an officer could be hit.',
@@ -832,7 +832,7 @@ export const HOSTAGE_SIGNATURE: CallTree = {
               { when: { notSafe: ['courier'] }, text: 'Nobody has gotten {courier.first} out either.', next: { ending: 'held_both_down' } },
             ],
           } },
-        { id: 'go_in', title: 'Go in for {owner.first}', icon: 'shield', check: check(ENTER, 4), minutes: 2, stress: 6, tempo: 'urgent', consequenceLevel: 'severe',
+        { id: 'go_in', title: 'Go in for {owner.first}', icon: 'shield', team: { to: 'scene', entry: 'taker' }, check: check(ENTER, 4), minutes: 2, stress: 6, tempo: 'urgent', consequenceLevel: 'severe',
           requires: { certs: ['entry_team'] }, authority: 'entry', equipment: [{ tag: 'shield', value: 6, label: 'Shield up front' }],
           modifiers: [{ label: 'A key to the front', mark: 'spare_key', value: 8 }, { label: 'The front is unbolted', mark: 'door_open', value: 6 }],
           summary: '{lead} takes your squad in for {owner.first}. {taker.first} is armed, and anyone at that counter can be hurt.',
@@ -869,7 +869,7 @@ export const HOSTAGE_SIGNATURE: CallTree = {
             mixed: [{ text: '{taker.first} stands inside the glass for twenty minutes, then steps out past a row of phones at the tape. Two officers walk {taker.him} to the car.', ...surrender('everyone_out'), objective: 25, minutes: 15 }],
             adverse: [{ text: '{taker.first} isn’t walking out in front of everyone, {taker.he} {taker~says|say}, and sits back down at the register.', next: { ending: 'taker_held' }, objective: 5 }],
           } },
-        { id: 'out_back', title: 'Bring {taker.him} out the back', icon: 'door', talksTo: 'taker', check: check(TALK, -4), minutes: 5, onlyIf: { marks: ['wants_back'] }, authority: { concede: 'surrender_terms' },
+        { id: 'out_back', title: 'Bring {taker.him} out the back', icon: 'door', team: { to: { vantage: 'scene' }, signal: { channel: 'voice', to: 'taker' } }, talksTo: 'taker', check: check(TALK, -4), minutes: 5, onlyIf: { marks: ['wants_back'] }, authority: { concede: 'surrender_terms' },
           modifiers: [{ label: 'The handgun is still in reach', mark: 'still_armed', value: -8 }],
           summary: '{lead} brings {taker.first} out the rear, away from any camera. The alley leaves little room for a change of mind.',
           preview: { favorable: '{taker.first} steps into the alley with nothing in {taker.his} hands.', mixed: '{taker.first} hesitates at the rear, then comes out.', adverse: '{taker.first} stops in the back doorway and goes back inside.' },

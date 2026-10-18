@@ -78,7 +78,7 @@ export const OWNERSHIP: readonly { glob: string; layer: Layer; system: System }[
   { glob: '/src/sim/location*.ts', layer: 'world', system: 'blueprint' },
   { glob: '/src/sim/furniture-path.ts', layer: 'world', system: 'blueprint' },
   { glob: '/src/sim/spatial.ts', layer: 'world', system: 'blueprint' },
-  { glob: '/src/sim/{routes,cover}.ts', layer: 'world', system: 'blueprint' },
+  { glob: '/src/sim/{routes,cover,sightlines}.ts', layer: 'world', system: 'blueprint' },
   // catalog
   { glob: '/src/content/call-trees/**', layer: 'catalog', system: 'scenario' },
   { glob: '/src/content/incidents/**', layer: 'catalog', system: 'scenario' },

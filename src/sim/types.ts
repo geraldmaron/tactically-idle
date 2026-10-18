@@ -854,6 +854,8 @@ export interface ActionView {
   risk: RiskBand;
   /** Estimated operation minutes. */
   timeCost: number;
+  /** Of those, minutes moving through the building (routes, locked doors, a person walking out). */
+  travelMinutes: number;
   contributors: Contributor[];
   /** What remains unknown, in player language. */
   uncertainty: string[];

@@ -25,13 +25,16 @@ export const WEIGHTS: readonly Weight[] = ['death', 'hurt', 'unresolved', 'costl
 /** `points`: what the call's score lines add up to (sim/outcome-score.ts), when it reached an ending. */
 export interface CallResult { weight: Weight; ending: string; minutes: number; officersHurt: number; peopleHurt: number; deaths: number; decisions: number; points?: number }
 
-function pick(views: ActionView[], policy: Policy, roll: number): ActionView {
+/** Patient and fast pick by the minutes a choice is written to take (its own work), not by the
+ * operation time the card shows: that includes the walk through the building, so on a big
+ * building an entry outlasts a phone call and "the longest choice" would stop meaning a wait. */
+function pick(views: ActionView[], policy: Policy, roll: number, minutes: (view: ActionView) => number): ActionView {
   const eligible = views.filter(view => view.eligible);
   if (policy === 'random') return eligible[Math.floor(roll * eligible.length) % eligible.length];
   const by = (score: (view: ActionView) => number) => [...eligible].sort((a, b) => score(b) - score(a) || a.id.localeCompare(b.id))[0];
   if (policy === 'best_odds') return by(view => view.likelihood.favorable);
-  if (policy === 'patient') return by(view => view.timeCost);
-  return by(view => -view.timeCost);
+  if (policy === 'patient') return by(minutes);
+  return by(view => -minutes(view));
 }
 
 /** Classify a finished run by how the call scored (sim/outcome-score.ts): partly resolved or still
@@ -96,7 +99,9 @@ export function playToEnd(scenarioId: string, policy: Policy, seed: number, opts
     const views = actionViews(state, NOW, 'A');
     if (!views.some(view => view.eligible)) break;
     roll = (Math.imul(roll, 1664525) + 1013904223) >>> 0;
-    const choice = step === 0 && opts.firstChoice !== undefined ? views.find(view => view.id === opts.firstChoice && view.eligible) : pick(views, policy, roll / 4294967296);
+    const actions = getScenario(run.scenarioId)!.stages[run.stage].actions;
+    const minutes = (view: ActionView) => actions.find(action => action.id === view.id)?.workload.base ?? view.timeCost;
+    const choice = step === 0 && opts.firstChoice !== undefined ? views.find(view => view.id === opts.firstChoice && view.eligible) : pick(views, policy, roll / 4294967296, minutes);
     if (!choice) break;
     const after = applyNaturalMove(state, { kind: 'decide', actionId: choice.id });
     if (!after) break;
