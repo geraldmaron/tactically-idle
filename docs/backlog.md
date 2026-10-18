@@ -155,6 +155,16 @@ N15 and N16 count-conditioned briefing lines and ending addenda. R-G1 shipped wi
 `clock-runout-routing`; N6, N7, N9 and N21 are in `hostage-gate-requests`. Done: each request works in
 the hostage call and the call's fingerprints are recaptured deliberately.
 
+### hostage-owner-down-cleanup: Hostage owner_down readers and held endings
+Tags: job=command; journeys=answer-a-call; probes=none (text and routing); lane=calls
+Needs: start=clock-runout-routing; integrate=none; ship=none
+
+Two follow-ups from the hostage clock route (#56). The `owner_down` mark is still read by nodes
+outside `owner_down` that the clock route now makes dead; the writing review asked for them to be
+reshaped before more is added. Held endings under clock rule 1 (the decision's own outcome ended the
+call) still record the owner hurt with no line saying so, so the debrief can show harm the text
+never mentioned. Done: no dead readers, and every recorded harm has a line the player reads.
+
 ### hostage-review-leftovers: Hostage review leftover B9
 Tags: job=command; journeys=answer-a-call; probes=none (prose); lane=deferred
 Needs: start=none (waits on the owner's ruling, design question 10); integrate=none; ship=none
