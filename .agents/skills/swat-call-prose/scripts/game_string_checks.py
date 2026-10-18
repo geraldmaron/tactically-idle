@@ -314,7 +314,7 @@ def main():
                 result_tense[tenses.pop()] += 1
         if surface in PROSE_SURFACES and sentences(unquoted(text)) and all(is_fragment(s) for s in sentences(unquoted(text))):
             fragment_only.append(row)
-        for c in cast:
+        for c in sorted(cast):
             n = len(re.findall(r",\s+" + re.escape(c) + r"\s+(says|said|tells|told|decides|decided)\b", low))
             if n:
                 speech_tags[c] += n
@@ -437,10 +437,11 @@ def main():
     for p, chain in paths.items():
         per = collections.Counter()
         for r in chain:
-            for w in set(toks(r["text"])):
+            for w in sorted(set(toks(r["text"]))):
                 if w not in STOP and w not in PATH_STOP and w not in cast and w not in call_nouns and len(w) > 3:
                     per[w] += 1
-        for w, n in per.most_common():
+        # Ties break alphabetically, so two runs print the same lines in the same order.
+        for w, n in sorted(per.items(), key=lambda kv: (-kv[1], kv[0])):
             if n < 2:
                 break
             flag("path-repeat", None, f"path {p}: '{w}' in {n} strings; an image recurs only if it changes state")
@@ -458,7 +459,8 @@ def main():
             tx, ty = toks(x["text"]), toks(y["text"])
             gx = {" ".join(tx[i:i + 3]) for i in range(len(tx) - 2)}
             gy = {" ".join(ty[i:i + 3]) for i in range(len(ty) - 2)}
-            shared = [g for g in gx & gy if not all(w in STOP or w in cast for w in g.split())]
+            # Sorted, so the quoted run is the same on every run, not the set's hash order.
+            shared = sorted(g for g in gx & gy if not all(w in STOP or w in cast for w in g.split()))
             pair = (x["where"], x["situation"], y["where"], y["situation"])
             if x["where"] == y["where"] and x["text"] == y["text"]:
                 continue  # the same field's row for another situation, not a second string
