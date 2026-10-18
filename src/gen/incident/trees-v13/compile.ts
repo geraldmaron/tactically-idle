@@ -6,7 +6,7 @@ import { hashIndex, hashSeed } from '../../../sim/rng';
 import { tierRewardMultiplier } from '../../../content/incidents/rewards';
 import type { ActionDefinition, ClockCondition, Condition, FactDefinition, IncidentSpec, MeterCondition, MeterStance, OutcomeEffect, ScenarioDefinition, StageDefinition, StoryPersonBinding } from '../../../sim/scenario-types';
 import { squadsPutToWork } from '../../../sim/scenario-types';
-import { findStoryRoute, selectStoryRoom, storyPoint, validateStoryBindings } from '../story-bindings';
+import { findStoryRoute, selectStoryRoom, storyPoint, validateStoryBindings, windowExit } from '../story-bindings';
 import { routeAlongOpenings } from '../../../sim/routes';
 import { sightFromStreet, vantageZones, type StreetVantage } from '../../../sim/sightlines';
 import type { BuiltLocation, OutcomeBand, StageId, Vec } from '../../../sim/types';
@@ -219,6 +219,10 @@ export function armedRevealErrors(authored: CallTree, nodes: readonly TreeNode[]
 export const armedKey = (group: string) => `${group}:armed`;
 /** The key in a call's compile-time facts for whether a role starts above the ground floor (1) or not (0). */
 export const upstairsKey = (role: string) => `${role}:upstairs`;
+/** The key in a call's compile-time facts for whether a role has that way out of its room (1) or not (0). */
+export const exitKey = (role: string, via: 'window' | 'front' | 'back') => `${role}:via:${via}`;
+/** The story route a walker takes out by that way (TreeChoice.walksVia). */
+export const viaRouteName = (role: string, via: 'window' | 'front' | 'back') => `exit_${role}_${via}`;
 
 /** Whether a state's compile-time conditions hold for this call's compile-time facts (callCounts):
  * its group sizes (`count`), how many members hold something (`armed`, armedKey) and which roles
@@ -230,6 +234,7 @@ export function countHolds(state: TreeState | undefined, counts: Record<string, 
   if (armed !== undefined && armed < (state!.armed!.min ?? 1)) return false;
   if ((state?.upstairs ?? []).some(role => counts[upstairsKey(role)] === 0)) return false;
   if ((state?.notUpstairs ?? []).some(role => counts[upstairsKey(role)] === 1)) return false;
+  if (state?.exitVia && counts[exitKey(state.exitVia.role, state.exitVia.via)] === 0) return false;
   if (!state?.count) return true;
   const n = counts[state.count.role] ?? 0;
   return n >= (state.count.min ?? 0) && n <= (state.count.max ?? Infinity);
@@ -246,10 +251,12 @@ export function treeForCounts(tree: CallTree, counts: Record<string, number>): C
   for (const state of states) if (state?.armed && !groups[state.armed.role]) throw new Error(`${tree.type}: an armed condition on ${state.armed.role}, which is not a group`);
   for (const state of states) for (const role of [...state?.upstairs ?? [], ...state?.notUpstairs ?? []])
     if (!tree.roles.some(entry => entry.id === role) && !groups[role]) throw new Error(`${tree.type}: an upstairs condition on ${role}, which is not a role or group`);
-  if (!states.some(state => state?.count || state?.armed || state?.upstairs || state?.notUpstairs)) return tree;
-  const strip = <T extends { count?: unknown; armed?: unknown; upstairs?: unknown; notUpstairs?: unknown }>(state: T | undefined): T | undefined => {
-    if (!state?.count && !state?.armed && !state?.upstairs && !state?.notUpstairs) return state;
-    const { count: _count, armed: _armed, upstairs: _upstairs, notUpstairs: _notUpstairs, ...rest } = state;
+  for (const state of states) if (state?.exitVia && !tree.roles.some(entry => entry.id === state.exitVia!.role))
+    throw new Error(`${tree.type}: a way-out condition on ${state.exitVia.role}, which is not a role`);
+  if (!states.some(state => state?.count || state?.armed || state?.upstairs || state?.notUpstairs || state?.exitVia)) return tree;
+  const strip = <T extends { count?: unknown; armed?: unknown; upstairs?: unknown; notUpstairs?: unknown; exitVia?: unknown }>(state: T | undefined): T | undefined => {
+    if (!state?.count && !state?.armed && !state?.upstairs && !state?.notUpstairs && !state?.exitVia) return state;
+    const { count: _count, armed: _armed, upstairs: _upstairs, notUpstairs: _notUpstairs, exitVia: _exitVia, ...rest } = state;
     return Object.keys(rest).length ? rest as T : undefined;
   };
   return { ...tree, nodes: tree.nodes.map(node => ({ ...node,
@@ -409,6 +416,8 @@ export function prunePlan(tree: CallTree, counts: Record<string, number>, clockM
       if (low !== undefined) return `needs ${name('role', low)} upstairs; this call has them on the ground floor`;
       const high = (state?.notUpstairs ?? []).find(role => counts[upstairsKey(role)] === 1);
       if (high !== undefined) return `needs ${name('role', high)} on the ground floor; this call has them upstairs`;
+      if (state?.exitVia && counts[exitKey(state.exitVia.role, state.exitVia.via)] === 0)
+        return `needs a way out by the ${state.exitVia.via} for ${name('role', state.exitVia.role)}; this building has none`;
       if (!countHolds(state, counts)) {
         const { role, min, max } = state!.count!, n = counts[role] ?? 0, who = name('role', role);
         const need = min !== undefined && max !== undefined ? min === max ? `${who} = ${min}` : `${who} ${min} to ${max}` : min !== undefined ? `${who} ≥ ${min}` : `${who} ≤ ${max}`;
@@ -431,7 +440,7 @@ export interface PlacedCast {
   outside: string;
   room: NonNullable<ReturnType<typeof selectStoryRoom>>;
   roomOf: Record<string, string>;
-  routes: Record<string, { fromSpaceId: string; toSpaceId: string; openingIds: string[]; profile: 'walking' | 'chair' }>;
+  routes: Record<string, { fromSpaceId: string; toSpaceId: string; openingIds: string[]; profile: 'walking' | 'chair'; exitOpeningId?: string }>;
   routeName: (role: string) => string;
   anchors: Record<string, { inside: Vec; outside: Vec }>;
   cast: Record<string, CastIdentity>;
@@ -447,6 +456,9 @@ export interface PlacedCast {
   /** Per role placed inside, whether its starting room is above the ground floor (placeCast), for
    * `TreeState.upstairs` and `notUpstairs`. */
   upstairs?: Record<string, boolean>;
+  /** Per role placed inside, which ways out of its starting room this building gives (placeCast,
+   * R-B2), for `TreeState.exitVia`. */
+  exits?: Record<string, { window: boolean }>;
 }
 
 /** The door the team comes through into a room: the middle of the first opening on its walking
@@ -492,7 +504,7 @@ export function placeCast(tree: CallTree, built: BuiltLocation, spec: IncidentSp
     usedRooms.add(own.id); roomOf[role.id] = own.id;
   }
   // A walking route out for every room someone starts in; the scene's is 'exit'.
-  const routes: Record<string, { fromSpaceId: string; toSpaceId: string; openingIds: string[]; profile: 'walking' | 'chair' }> = {};
+  const routes: Record<string, { fromSpaceId: string; toSpaceId: string; openingIds: string[]; profile: 'walking' | 'chair'; exitOpeningId?: string }> = {};
   const chair = (role: string) => tree.roles.find(entry => entry.id === role)?.mobility === 'chair';
   const routeName = (role: string) => chair(role) ? `exit_${role}` : roomOf[role] === room.id ? 'exit' : `exit_${role}`;
   const onSite = tree.roles.filter(role => role.place !== 'offsite');
@@ -502,6 +514,17 @@ export function placeCast(tree: CallTree, built: BuiltLocation, spec: IncidentSp
     const openingIds = findStoryRoute(built, roomOf[role.id], outside, profile);
     if (!openingIds) throw new Error(`No ${profile} route out for ${role.id} in ${tree.type}`);
     routes[routeName(role.id)] = { fromSpaceId: roomOf[role.id], toSpaceId: outside, openingIds, profile };
+  }
+  // R-B2: which roles placed inside have a window to climb out of, and that way out for every role a
+  // choice walks by it (viaRouteName). A chair user never climbs.
+  const exits: Record<string, { window: boolean }> = {};
+  const viaWindow = new Set(tree.nodes.flatMap(node => node.choices.flatMap(choice => choice.walks && choice.walksVia === 'window' ? [choice.walks] : [])));
+  for (const role of onSite) {
+    if (roomOf[role.id] === undefined || roomOf[role.id] === outside) continue;
+    const exit = chair(role.id) ? null : windowExit(built, roomOf[role.id]);
+    const openingIds = exit ? findStoryRoute(built, roomOf[role.id], outside, 'walking', exit.id) : null;
+    exits[role.id] = { window: !!openingIds };
+    if (openingIds && viaWindow.has(role.id)) routes[viaRouteName(role.id, 'window')] = { fromSpaceId: roomOf[role.id], toSpaceId: outside, openingIds, profile: 'walking', exitOpeningId: exit!.id };
   }
   if (!routes.exit) {
     const openingIds = findStoryRoute(built, room.id, outside, 'walking');
@@ -560,7 +583,7 @@ export function placeCast(tree: CallTree, built: BuiltLocation, spec: IncidentSp
     ...Object.entries(tree.groups ?? {}).filter(([, def]) => roomOf[def.leader] !== undefined && roomOf[def.leader] !== outside)
       .map(([group, def]) => [group, above(roomOf[def.leader])]),
   ]);
-  return { recipe, situation, outside, room, roomOf, routes, routeName, anchors, cast, groups, upstairs };
+  return { recipe, situation, outside, room, roomOf, routes, routeName, anchors, cast, groups, upstairs, exits };
 }
 
 /** The first opening on a route out that joins a room to the outside: the door it leaves the
@@ -592,12 +615,14 @@ export const memberCounts = (placed: Pick<PlacedCast, 'groups'>): Record<string,
 
 /** A call's compile-time facts, which every compile-time condition reads (countHolds): its group
  * sizes, per group how many members hold a weapon a look would see (`armedKey`), and per role placed
- * inside whether its room is upstairs (`upstairsKey`, 1 or 0). Named for counts, it holds facts
+ * inside whether its room is upstairs (`upstairsKey`, 1 or 0) and whether it has a window to climb
+ * out of (`exitKey`, 1 or 0). Named for counts, it holds facts
  * about the building and the drawn cast too. */
-export const callCounts = (placed: Pick<PlacedCast, 'groups' | 'armed' | 'upstairs'>): Record<string, number> => ({
+export const callCounts = (placed: Pick<PlacedCast, 'groups' | 'armed' | 'upstairs' | 'exits'>): Record<string, number> => ({
   ...memberCounts(placed),
   ...Object.fromEntries(Object.entries(placed.armed ?? {}).map(([group, n]) => [armedKey(group), n])),
   ...Object.fromEntries(Object.entries(placed.upstairs ?? {}).map(([role, up]) => [upstairsKey(role), up ? 1 : 0])),
+  ...Object.fromEntries(Object.entries(placed.exits ?? {}).map(([role, ways]) => [exitKey(role, 'window'), ways.window ? 1 : 0])),
 });
 
 /** How this call's text binds: the drawn names, pronouns and ages, the building's name for
@@ -630,7 +655,21 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
     ...BANDS.flatMap(band => choice.outcomes[band].map(outcome => outcome.when))])])
     for (const role of [...state?.upstairs ?? [], ...state?.notUpstairs ?? []]) if (placed.upstairs?.[role] === undefined)
       throw new Error(`${authored.type}: ${node.id} reads whether ${role} is upstairs, but ${role} starts outside the building`);
-  const tree = treeForCounts(authored, callCounts({ groups, armed: placed.armed, upstairs: placed.upstairs }));
+  // R-B2: a walk-out by a chosen way is offered only where that way exists (TreeState.exitVia).
+  for (const node of authored.nodes) {
+    for (const state of [...(node.promptIf ?? []).map(entry => entry.when), ...node.choices.flatMap(choice => [choice.onlyIf, ...BANDS.flatMap(band => choice.outcomes[band].map(outcome => outcome.when))])])
+      if (state?.exitVia && placed.exits?.[state.exitVia.role] === undefined)
+        throw new Error(`${authored.type}: ${node.id} reads ${state.exitVia.role}'s way out, but ${state.exitVia.role} starts outside the building`);
+    for (const choice of node.choices) {
+      if (!choice.walksVia) continue;
+      const where = `${authored.type}: ${node.id}.${choice.id}`;
+      if (!choice.walks) throw new Error(`${where}: walksVia needs someone who walks out`);
+      if (choice.walksVia !== 'window') throw new Error(`${where}: walksVia '${choice.walksVia}' waits for rescue's R-R5 (front and back doors); only 'window' is built`);
+      if (choice.onlyIf?.exitVia?.role !== choice.walks || choice.onlyIf.exitVia.via !== choice.walksVia)
+        throw new Error(`${where}: walksVia '${choice.walksVia}' must carry onlyIf: { exitVia: { role: '${choice.walks}', via: '${choice.walksVia}' } }`);
+    }
+  }
+  const tree = treeForCounts(authored, callCounts({ groups, armed: placed.armed, upstairs: placed.upstairs, exits: placed.exits }));
   const everyone = (roles: readonly string[] | undefined) => (roles ?? []).flatMap(role => groups[role] ?? [role]);
   /** A group where one person is meant (who fires, who force is used on, who is talked to): its
    * first member, nearest the door. A call with no members never offers that line. */
@@ -645,19 +684,22 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
   // Everyone on the map: the roles, then each group's members, who take their leader's kind.
   const present = [...onSite.map(role => ({ id: role.id, label: role.label, kind: role.kind })),
     ...Object.entries(groups).flatMap(([group, ids]) => ids.map(id => ({ id, label: tree.groups![group].label, kind: tree.roles.find(role => role.id === tree.groups![group].leader)!.kind })))];
-  const nodes = reachableNodes(tree, spec.seed, callCounts({ groups, armed: placed.armed, upstairs: placed.upstairs }), clockNexts);
+  const nodes = reachableNodes(tree, spec.seed, callCounts({ groups, armed: placed.armed, upstairs: placed.upstairs, exits: placed.exits }), clockNexts);
   // Anyone a choice in this call walks out needs that walk clear of furniture, as the engine
   // checks it; otherwise hosting moves the call to another building seed (the v12 rule).
   for (const node of nodes) for (const choice of node.choices) if (choice.walks && groups[choice.walks]) throw new Error(`${node.id}.${choice.id}: only a key role walks out, never the group ${choice.walks}`);
-  for (const walker of new Set(nodes.flatMap(node => node.choices.flatMap(choice => choice.walks ? [choice.walks] : [])))) {
-    const route = routes[routeName(walker)];
+  const walkRoute = (choice: TreeChoice) => choice.walksVia ? viaRouteName(choice.walks!, choice.walksVia) : routeName(choice.walks!);
+  const walks = new Map(nodes.flatMap(node => node.choices.flatMap(choice => choice.walks ? [[walkRoute(choice), choice.walks] as const] : [])));
+  for (const [name, walker] of walks) {
+    const route = routes[name];
+    if (!route) throw new Error(`No ${name} route for ${walker} in ${tree.type}`);
     if (!routeAlongOpenings(built, anchors[walker].inside, anchors[walker].outside, route.openingIds, null, false, route.profile === 'chair' ? 1.5 : 1).reachable)
       throw new Error(`Walk out blocked for ${walker} in ${tree.type}`);
   }
   // Marks and releases this call can actually set (prunePlan). A condition that needs one it can
   // never set is never true here (drop it); one that needs it absent is always true (strip that
   // part). The tree's count conditions are already settled, so `possible` reads marks and safety.
-  const plan = prunePlan(tree, callCounts({ groups, armed: placed.armed, upstairs: placed.upstairs }), clockMarks, spec.seed, clockNexts);
+  const plan = prunePlan(tree, callCounts({ groups, armed: placed.armed, upstairs: placed.upstairs, exits: placed.exits }), clockMarks, spec.seed, clockNexts);
   const settable = { marks: plan.settableMarks, safe: plan.settableSafe };
   const possible = plan.possible;
   const trim = (state: TreeState | undefined): TreeState | undefined => state && {
@@ -944,7 +986,7 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
       ...(choice.span ? { timeLabel: choice.span } : {}),
       ...gearFor(choice),
       ...(modifiers.length ? { modifiers: modifiers.map(m => ({ label: m.label, when: { flags: [markFlag(m.mark)] }, source: m.value < 0 ? 'difficulty' as const : 'preparation' as const, value: Math.abs(m.value) })) } : {}),
-      ...(walker ? { storyRoute: routeName(walker), storyRouteActor: 'person' as const, storyTargetPersonId: walker } : talksTo ? { storyTargetPersonId: talksTo } : {}),
+      ...(walker ? { storyRoute: walkRoute(choice), storyRouteActor: 'person' as const, storyTargetPersonId: walker } : talksTo ? { storyTargetPersonId: talksTo } : {}),
       ...(talksTo ? { talksTo } : {}),
       ...(choice.authority ? { authority: choice.authority === 'entry' ? { kind: 'entry' as const } : { kind: 'concession' as const, item: choice.authority.concede } } : {}),
       // A resolve-stage step always says it stays in resolve unless it ends the call; the engine

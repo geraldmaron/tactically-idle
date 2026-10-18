@@ -98,6 +98,14 @@ export function routeBetween(built: BuiltLocation, fromSpace: Id, fromAt: Vec, t
 /** Price a connected route with the ordinary traversal/material rules. Furnished
  * v7 also validates physical clearance (1 ft walking, 1.5 ft for chair transport);
  * older location versions retain their exact original route geometry and cost. */
+/** Minutes to climb out through a window (R-B2): LOCATION_TUNING.windowMinutes at an easy width,
+ * longer in proportion as it narrows. Zero for any other opening. */
+export function windowClimbMinutes(opening: Opening): number {
+  if (opening.type !== 'window') return 0;
+  const T = LOCATION_TUNING, width = Math.hypot(opening.to.x - opening.from.x, opening.to.y - opening.from.y);
+  return T.windowMinutes * Math.max(1, T.windowEasyWidth / Math.max(width, 1e-6));
+}
+
 export function routeAlongOpenings(built: BuiltLocation, fromAt: Vec, toAt: Vec, chain: Id[], tool: EntryTool, keyed = false, clearance = 1): Route {
   if (built.location.id.endsWith('__furnished_v7')) return furnishedRouteAlongOpenings(built, fromAt, toAt, chain, tool, keyed, Math.max(0, clearance));
   const T = LOCATION_TUNING, dist = distOf(built);
@@ -110,7 +118,7 @@ export function routeAlongOpenings(built: BuiltLocation, fromAt: Vec, toAt: Vec,
     const o = openings.get(oid);
     if (!o || o.state === 'blocked') return UNREACHABLE;
     points.push(mid(o.from, o.to));
-    minutes += T.openingMinutes;
+    minutes += T.openingMinutes + windowClimbMinutes(o);
     if (o.state === 'locked') {
       const f = forceFor(o, tool, keyed);
       forced.push(f);
@@ -276,6 +284,7 @@ function furnishedRouteAlongOpenings(built: BuiltLocation, fromAt: Vec, toAt: Ve
       const path = crossing && furnishedLocalPath(built, state.spaceId, state.at, crossing.from, clearance);
       if (!crossing || !path) { valid = false; break; }
       state = furnishedAdvance(dist, state, path, crossing, openingId);
+      if (opening.type === 'window') state = { ...state, minutes: state.minutes + windowClimbMinutes(opening) };
     }
     const endSpace = spaces.find(space => space.id === state.spaceId);
     if (!valid || !endSpace || !pointInPolygon(toAt, endSpace.polygon)) continue;

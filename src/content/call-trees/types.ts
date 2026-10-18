@@ -51,6 +51,10 @@ export interface TreeState {
    * `notUpstairs`: roles whose room is on the ground floor. A group means its leader's room. */
   upstairs?: string[];
   notUpstairs?: string[];
+  /** Holds where `role` has that way out of their starting room in this call (R-B2, R-R5), settled
+   * when it compiles from the building like `count`: 'window' needs an exterior window of their
+   * ground-floor room wide enough to climb. A `walksVia` choice carries it. */
+  exitVia?: { role: string; via: 'window' | 'front' | 'back' };
 }
 
 /** A counted role: the people a template slot draws past its key roles (content/incidents/types.ts
@@ -234,6 +238,11 @@ export interface TreeChoice {
    * only, never a group. Without `team: { to: 'escort' }` they come out on their own and the squad
    * stays where it is. */
   walks?: string;
+  /** Which way out the walker goes (R-B2, shared with rescue's R-R5): 'window', their own room's
+   * exterior window on the ground floor; 'front' or 'back', an exterior door (rescue builds these;
+   * until then they are a compile error). Without it, the shortest way out. The choice must carry
+   * `onlyIf: { exitVia: { role: walks, via } }`, so it is offered only where that way exists. */
+  walksVia?: 'window' | 'front' | 'back';
   /** Where the team physically goes for this choice, on the generated building. Without it the
    * squad acts from where it stands (a phone call, a wait, a word over the hailer from the cars). */
   team?: TreeTeam;

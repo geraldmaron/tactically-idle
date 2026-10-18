@@ -10,7 +10,7 @@ import type { ScenarioDefinition } from '../../sim/scenario-types';
 import { generateIncident } from './index';
 import { specForSituation } from './gates/catalog';
 import { compileIncident, drawInstance, hostedSpec } from './instance';
-import { callCounts, countHolds, treeForCounts, upstairsKey } from './trees-v13/compile';
+import { callCounts, countHolds, exitKey, treeForCounts, upstairsKey } from './trees-v13/compile';
 
 const BARRICADE = INCIDENT_TEMPLATES.barricaded!;
 const UP = 'The child is upstairs, above the living room.', DOWN = 'The child is on the ground floor.';
@@ -105,7 +105,8 @@ describe('a person can start upstairs (R-B1)', () => {
 
 describe('a compiled call in play always knows its compile-time facts', () => {
   // The missing-key-holds default is for the lab and the string sweeps only: every call the game
-  // compiles must carry each group's armed count and each placed role's and group's floor.
+  // compiles must carry each group's armed count, each placed role's and group's floor, and each
+  // placed role's window way out.
   for (const template of Object.values(INCIDENT_TEMPLATES)) if (template)
     it(`${template.type}: every family it lists, every situation`, () => {
       let checked = 0;
@@ -122,8 +123,10 @@ describe('a compiled call in play always knows its compile-time facts', () => {
           if (placed.roomOf[def.leader] !== undefined && placed.roomOf[def.leader] !== placed.outside)
             expect(facts[upstairsKey(group)], `${s.id} ${group}:upstairs`).toBeTypeOf('number');
         }
-        for (const role of template.tree.roles) if (placed.roomOf[role.id] !== undefined && placed.roomOf[role.id] !== placed.outside)
+        for (const role of template.tree.roles) if (placed.roomOf[role.id] !== undefined && placed.roomOf[role.id] !== placed.outside) {
           expect(facts[upstairsKey(role.id)], `${s.id} ${role.id}:upstairs`).toBeTypeOf('number');
+          expect(facts[exitKey(role.id, 'window')], `${s.id} ${role.id}:via:window`).toBeTypeOf('number');
+        }
         checked++;
       }
       expect(checked).toBeGreaterThan(0);
