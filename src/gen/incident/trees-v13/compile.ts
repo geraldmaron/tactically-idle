@@ -1,4 +1,5 @@
 import type { CallTree, TreeChoice, TreeIf, TreeMove, TreeNext, TreeNode, TreeOutcome, TreeState } from '../../../content/call-trees/types';
+import type { IncidentTemplate } from '../../../content/incidents/types';
 import { CIVILIAN_FIRST_NAMES, CIVILIAN_SURNAMES } from '../../../content/call-trees/civilian-names';
 import { scenarioRecipe } from '../../../content/scenario-recipes';
 import { hashIndex, hashSeed } from '../../../sim/rng';
@@ -290,6 +291,14 @@ export function clockRoute(tree: CallTree, to: TreeNext, seed: number): Pick<Out
   return 'node' in next
     ? { setFlags: [TREE_STARTED, nodeFlag(next.node)], clearFlags: others, stage: target!.stage }
     : { setFlags: [TREE_STARTED, endFlag(next.ending)], clearFlags: others, ending: next.ending };
+}
+
+/** Where any situation's clocks can send the call when they run out (Clock.onOut.next), once each:
+ * what the static checks (strings, lint, the graph) count as reachable from every node. A clock the
+ * story runs by itself never routes. */
+export function templateClockNexts(template: Pick<IncidentTemplate, 'situations'>): TreeNext[] {
+  const all = template.situations.flatMap(situation => (situation.clocks ?? []).filter(clock => !clock.story).flatMap(clock => clock.onOut?.next ? [clock.onOut.next] : []));
+  return [...new Map(all.map(next => [JSON.stringify(next), next])).values()];
 }
 
 /** Everywhere an outcome can send the call: its `next`, every severity of a force outcome, and the

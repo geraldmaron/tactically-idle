@@ -2,12 +2,12 @@
 // (.agents/skills/swat-call-prose/scripts/game_string_checks.py, columns in its
 // references/string-checks.md). The checker stays the one implementation of the house rules: the
 // CLI (scripts/check-strings.ts) and the Scenario Lab both send it these rows.
-import type { CallTree, TreeIf, TreeOutcome } from '../../../content/call-trees/types';
+import type { CallTree, TreeIf, TreeNext, TreeOutcome } from '../../../content/call-trees/types';
 import type { IncidentTemplate } from '../../../content/incidents/types';
 import type { OutcomeBand } from '../../../sim/types';
 import { CIVILIAN_FIRST_NAMES, CIVILIAN_SURNAMES } from '../../../content/call-trees/civilian-names';
 import { INCIDENT_TEMPLATES } from '../../../content/incidents';
-import { reachableWithin, treeForCounts } from './compile';
+import { reachableWithin, templateClockNexts, treeForCounts } from './compile';
 import type { CastIdentity } from './compile';
 
 export interface StringRow {
@@ -38,12 +38,13 @@ function situationsFor(tree: CallTree, outcome: TreeOutcome): string[] {
 /** The call's strings, each passed through `bind` (names, pronouns and rooms of one instance).
  * With `counts` (each group's size in that instance), only the strings a call of that size can
  * show: count conditions settled, and endings only a cascade result it can't have would reach left
- * out. Without, every string. */
-export function callStringRows(authored: CallTree, bind: (text: string) => string, counts?: Record<string, number>): StringRow[] {
+ * out. Without, every string. `clockNexts` (templateClockNexts) are where the template's clocks send
+ * the call when they run out: what only a clock reaches is a string a call can show. */
+export function callStringRows(authored: CallTree, bind: (text: string) => string, counts?: Record<string, number>, clockNexts: readonly TreeNext[] = []): StringRow[] {
   const tree = counts ? treeForCounts(authored, counts) : authored;
   // With group sizes known, only what a call of that size can reach: from the root, through every
-  // turn a call can draw, along the cascade results it can have.
-  const { nodes, endings } = counts ? reachableWithin(tree, counts) : { nodes: null, endings: null };
+  // turn a call can draw, along the cascade results it can have, and where a clock sends it.
+  const { nodes, endings } = counts ? reachableWithin(tree, counts, clockNexts) : { nodes: null, endings: null };
   const rows: StringRow[] = [];
   const add = (where: string, surface: string, text: string | undefined, extra: Partial<StringRow> = {}, situation = 'all') => {
     if (text) rows.push({ situation, where, surface, text: bind(text), ...extra });
@@ -132,7 +133,7 @@ export function parseFindings(stdout: string, rows: readonly StringRow[]): { fin
  * and the longest surname, singular they, age 17, every group at the largest size its slot allows,
  * every room "sales floor" (the scene "storage room") and the place "The Fox and Pheasant". */
 export function longestNamesCast(template: IncidentTemplate): { cast: Record<string, CastIdentity>; groups: Record<string, string[]>;
-  rooms: Record<string, string>; place: string; counts: Record<string, number> } {
+  rooms: Record<string, string>; place: string; counts: Record<string, number>; clockNexts: TreeNext[] } {
   const longest = (names: readonly string[]) => names.reduce((a, b) => (b.length > a.length ? b : a));
   const first = longest(CIVILIAN_FIRST_NAMES.they), surname = longest(CIVILIAN_SURNAMES);
   // A group binds at the largest size its slot allows, every member with the longest names.
@@ -145,5 +146,5 @@ export function longestNamesCast(template: IncidentTemplate): { cast: Record<str
   const cast = Object.fromEntries(ids.map(id => [id, { firstName: first, surname, pronouns: 'they' as const, age: 17 }]));
   const rooms = { scene: 'storage room', ...Object.fromEntries([...ids, ...Object.keys(groups)].map(id => [id, 'sales floor'])) };
   const counts = Object.fromEntries(Object.entries(groups).map(([group, members]) => [group, members.length]));
-  return { cast, groups, rooms, place: 'The Fox and Pheasant', counts };
+  return { cast, groups, rooms, place: 'The Fox and Pheasant', counts, clockNexts: templateClockNexts(template) };
 }

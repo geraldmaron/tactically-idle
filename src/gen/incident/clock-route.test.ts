@@ -15,7 +15,10 @@ import type { GameState } from '../../sim/types';
 import { applyNaturalMove, startGateRun, withDraftScenario } from './gates/engine-driver';
 import { generateIncident } from './index';
 import { compileIncident, drawInstance, hostedSpec } from './instance';
-import { choiceActionId, clockRoute, memberCounts } from './trees-v13/compile';
+import { bindRoleTokens, choiceActionId, clockRoute, memberCounts, templateClockNexts } from './trees-v13/compile';
+import { callGraph, truthReach } from './trees-v13/graph';
+import { lintTree, requirementTree, templateClockRoutes } from './trees-v13/dependencies';
+import { callStringRows, longestNamesCast } from './trees-v13/strings';
 import { GROUP_TEMPLATE, GROUP_TREE } from './trees-v13/group-fixture';
 
 const same = (text: string) => ({ favorable: text, mixed: text, adverse: text });
@@ -114,5 +117,34 @@ describe('a clock that runs out moves the call (R-G4)', () => {
       expect(back!.activeRun!.stage).toBe(state.activeRun!.stage);
       expect(offered(back!)).toEqual(offered(state));
     });
+  });
+});
+
+describe('the static checks see what only a clock reaches', () => {
+  const t = template(), without = template(null as unknown as Clock['onOut']);
+  const PROMPT = 'While the team waited on that, the courier ran for the door.';
+
+  it('graph: the node is in the call and truthReach reaches it, only with the clock', () => {
+    const graph = callGraph(t.tree, { counts: { others: 0 }, seed: 1, situation: 0, clockNexts: templateClockNexts(t) });
+    expect(graph.vertices.find(vertex => vertex.id === 'node:bolted')?.inCall).toBe(true);
+    expect(graph.choices.find(choice => choice.node === 'bolted')?.inCall).toBe(true);
+    expect(truthReach(graph, t.tree).has('node:bolted')).toBe(true);
+    const bare = callGraph(without.tree, { counts: { others: 0 }, seed: 1, situation: 0 });
+    expect(bare.vertices.find(vertex => vertex.id === 'node:bolted')?.inCall).toBe(false);
+  });
+
+  it('lint: no unreachable_node for it, and its requirement is the clock running out', () => {
+    expect(lintTree(t).filter(finding => finding.code === 'unreachable_node')).toEqual([]);
+    expect(lintTree(without).some(finding => finding.code === 'unreachable_node' && finding.node === 'bolted')).toBe(true);
+    expect(requirementTree(t.tree, { node: 'bolted' }, templateClockRoutes(t))).toEqual({ any: [{ all: [{ leaf: { kind: 'clock', clock: 'nerve', when: 'out', is: true } }] }] });
+  });
+
+  it('check:strings: a string only a clock reaches is bound and checked', () => {
+    const { cast, groups, rooms, place, counts, clockNexts } = longestNamesCast(t);
+    expect(clockNexts).toEqual([{ node: 'bolted' }]);
+    const bind = (text: string) => bindRoleTokens(text, cast, place, rooms, groups);
+    const has = (rows: ReturnType<typeof callStringRows>) => rows.some(row => row.where.includes('bolted') && row.text === PROMPT);
+    expect(has(callStringRows(t.tree, bind, counts, clockNexts))).toBe(true);
+    expect(has(callStringRows(t.tree, bind, counts))).toBe(false);
   });
 });
