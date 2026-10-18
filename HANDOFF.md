@@ -13,9 +13,9 @@ The coordinating session, on `main`. Merged so far: #36 (coordination rules), #3
 
 | Lane | Branch | In flight | Declared touches |
 |---|---|---|---|
-| engine | `claude/engine-clock-runout-routing` | `clock-runout-routing`: built, threading clock targets through graph.ts, dependencies.ts and strings.ts; rebasing onto main. Then the armed leaf for `lab-armed-counts`, `barricade-engine-requests`, `second-squad` | `src/content/incidents/types.ts`, `src/sim/scenario-types.ts` (interface, approved), `compile.ts`, `instance.ts`, `graph.ts`, `dependencies.ts`, `strings.ts`, `clocks.ts`, `operation.ts`, `external-support.ts`, tests |
-| calls | to be cut from main | The armed-gated hostage line (merges after `lab-armed-counts`), then `manager-names-disjoint` | to be declared |
-| tooling | to be cut from main | `lab-armed-counts` (the lab parts now, the Why leaf after the engine adds it), then `hostage-gate-requests` | to be declared |
+| engine | `claude/engine-clock-runout-routing` | `clock-runout-routing`: built, rebasing onto main to open its PR. Then the armed leaf (`{ kind: 'armed'; role; min? }`) for `lab-armed-counts`, `barricade-engine-requests`, `second-squad` | as in its PR |
+| calls | `claude/calls-hostage-armed-line` | The hostage armed line, as a design change (team_glass opened to group calls), with design gates first. Merges after `lab-armed-counts`. Then `manager-names-disjoint` | `hostage-signature.ts`, `docs/calls/hostage-signature-design.md` |
+| tooling | `claude/lab-armed-counts` | `lab-armed-counts`: approved. Then `clock-edges-in-tooling` after the engine clock PR merges, then `hostage-gate-requests` | `src/dev/lab/model/session.ts`, `why.ts`, `script.ts`, maybe `surfaces/script/index.tsx`, new `armed-counts.test.ts` |
 | interface | `feat/manager-art` | `manager-art`: approved; emblems first, portraits after the briefs; at most 45 image generations | `public/art/managers/`, `public/art/emblems/`, `scripts/validate-art.mjs`, `src/ui/screens/Develop.tsx`, `development.css`; `docs/art/manager-emblem-expansion/` under the lock below |
 
 ## Locks outside normal ownership
