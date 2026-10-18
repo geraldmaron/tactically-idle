@@ -66,8 +66,8 @@ the variants that can occur, and tell the calls lane so it can drop the workarou
 Tags: job=command; journeys=choices-branch; probes=blueprint-building; lane=engine
 Needs: start=none; integrate=none; ship=none
 
-Requests R-B1 to R-B3 in `docs/calls/barricade-design.md`. R-B1 shipped in #51; the last-seen
-wording R-B3 needs shipped in #55. R-B1: a role can start on an upper
+Requests R-B1 to R-B3 in `docs/calls/barricade-design.md`. R-B1 shipped in #51 and R-B2 in #59;
+the last-seen wording R-B3 needs shipped in #55. R-B1: a role can start on an upper
 floor (every role is placed on floor 0 today, `src/gen/incident/trees-v13/compile.ts`). R-B2: a
 person can leave by their own ground-floor window where the building has one (`usableOpening`
 rejects every window, `src/gen/incident/story-bindings.ts`). R-B3: an outcome or a clock cue can
