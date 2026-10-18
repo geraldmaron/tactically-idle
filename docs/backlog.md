@@ -75,7 +75,10 @@ Needs: start=none; integrate=none; ship=none
 From the hostage armed line's writing review: `TreeState.armed` takes `min` only, so after a look
 into the room an unarmed group gets no line at all, which the review flags as a fake-choice risk
 (the look pays nothing visible). Done: `TreeState.armed` takes `max` (including `max: 0`), under the
-same compile-time reveal rule, with a test, so the hostage call can say the hands were empty.
+same compile-time reveal rule, with a test, so the hostage call can say the hands were empty. In
+the same item: `armedRevealErrors` also checks variants the compiler prunes, which forced the
+hostage call to set `saw_inside` on the lone-only `team_glass` as a workaround (#48). Check only
+the variants that can occur, and tell the calls lane so it can drop the workaround.
 
 ### clock-runout-routing: A clock that runs out moves the call
 Tags: job=command; journeys=choices-branch; probes=none (routing, not odds); lane=engine
