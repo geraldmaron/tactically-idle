@@ -38,7 +38,7 @@
 - **Tuning.** Armed base 34, giving 38% clean, 9% with a death, and officers hurt in 36% of fast-style calls.
 - **Tests.** `sim/drawn-effects.test.ts` covers the model rules, plus real armed and barricade calls played fast with every save validated after every decision.
 - **Not yet:**
-  - The rescue's shooter is offsite and has no position, so its gunfire stays authored until sightlines exist.
+  - The rescue's shooter is offsite and has no position, so its gunfire stays authored until sightlines exist. (2026-10-18: the shooter now has a window on the plan, and whether it sees the front door is computed per building; the gunfire itself is still authored.)
   - Less-lethal use doesn't spend cartridges yet.
   - The debrief doesn't say which force was used or why. The reason is computed (`teamForceProfile`) but not shown.
 

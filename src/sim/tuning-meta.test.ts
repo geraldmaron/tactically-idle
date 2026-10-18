@@ -65,11 +65,14 @@ describe('TUNING_META', () => {
     const dead = TUNING_META.filter(meta => meta.mode === 'dead').map(meta => meta.path);
     for (const path of ['RECRUIT_TUNING.rookieService', 'AUTHORIZATION_V1.entry.rules', 'THREAT_TUNING.harmRate', 'THREAT_TUNING.barricadeRate', 'THREAT_TUNING.barricadeSlow',
       'THREAT_TUNING.strainExecution', 'THREAT_TUNING.strainOther', 'THREAT_TUNING.strainCap', 'THREAT_TUNING.civilian.execution', 'THREAT_TUNING.mixedShare',
-      'ENV_TUNING.light.night', 'ENV_TUNING.weatherSound.rain', 'ENV_TUNING.crowd.outside', 'ENV_TUNING.keyholderScore', 'ENV_TUNING.fire.score'])
+      'ENV_TUNING.crowd.outside', 'ENV_TUNING.keyholderScore', 'ENV_TUNING.fire.score'])
       expect(dead, path).toContain(path);
-    // Of ENV_TUNING, only the dark's observation difficulty is read.
+    // Of ENV_TUNING, the light and the weather a signal carries through (environment.ts signalCarry)
+    // and the dark's observation difficulty are read.
     expect(TUNING_META.filter(meta => meta.path.startsWith('ENV_TUNING.') && meta.mode !== 'dead').map(meta => meta.path))
-      .toEqual(['ENV_TUNING.observationDifficulty.dusk', 'ENV_TUNING.observationDifficulty.night', 'ENV_TUNING.observationDifficulty.powerOff']);
+      .toEqual(['ENV_TUNING.light.dusk', 'ENV_TUNING.light.night', 'ENV_TUNING.light.powerOff',
+        'ENV_TUNING.observationDifficulty.dusk', 'ENV_TUNING.observationDifficulty.night', 'ENV_TUNING.observationDifficulty.powerOff',
+        ...['clear', 'rain', 'wind', 'fog', 'snow'].map(weather => `ENV_TUNING.weatherSound.${weather}`), ...['clear', 'rain', 'wind', 'fog', 'snow'].map(weather => `ENV_TUNING.weatherVisual.${weather}`)]);
   });
 
   it('marks every field the registry refuses as generation or structural, and lists of names as read-only', () => {

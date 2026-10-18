@@ -93,8 +93,14 @@ export interface TreeFact {
   public?: boolean;
   /** Who reported a public fact ('Responding patrol'). */
   source?: string;
-  /** A fixed truth for every situation. Otherwise every situation sets it. */
+  /** A fixed truth for every situation. Otherwise every situation sets it, or the building does
+   * (`sightline`). */
   truth?: boolean;
+  /** The building settles this truth, not the situation: whether `from` (an offsite role, placed
+   * by the template's `vantage`) can see the door `to`'s way out leaves the building by (compile.ts,
+   * sim/spatial-factors.ts sightToOpening). Situations leave it out; it holds on one building and
+   * not the next. */
+  sightline?: { from: string; to: string };
   /** Once the team believes this claim (reported or confirmed), it is a threat to life the team
    * has seen (sim/authorization.ts). The phrase completes "Command approves it because …". */
   threat?: string;
@@ -190,6 +196,9 @@ export interface TreeOutcome {
   pressure?: number;
   /** Extra operation minutes on top of the choice's own minutes. */
   minutes?: number;
+  /** The team falls back: on this path the squad ends the choice where it started it, not where
+   * the choice's `team` was taking it. Write it on every outcome whose text sends the team back. */
+  back?: true;
 }
 
 export interface TreeChoice {
@@ -207,8 +216,12 @@ export interface TreeChoice {
    * minutes. A group is its first member (`{others.first}`): put the choice behind a count. */
   talksTo?: string;
   /** Role who walks out along the exit route; the engine checks the doors on the way. A key role
-   * only, never a group. */
+   * only, never a group. Without `team: { to: 'escort' }` they come out on their own and the squad
+   * stays where it is. */
   walks?: string;
+  /** Where the team physically goes for this choice, on the generated building. Without it the
+   * squad acts from where it stands (a phone call, a wait, a word over the hailer from the cars). */
+  team?: TreeTeam;
   /** Offered only in this public state. */
   onlyIf?: TreeState;
   requires?: Pick<ActionRequirements, 'certs' | 'anyTags' | 'allTags' | 'minSquads'>;
@@ -226,6 +239,30 @@ export interface TreeChoice {
   modifiers?: { label: string; mark: string; value: number }[];
   /** Per band, the outcomes that may apply. With `if`, exactly one applies on every truth. */
   outcomes: Record<OutcomeBand, TreeOutcome[]>;
+}
+
+/** A choice's physical intent (compile.ts turns it into the engine's approach). The squad moves
+ * through the generated building, so every door on its route counts: a locked one costs time to
+ * force or the entry tool, a blocked one refuses the move. Where it ends is where it stands for the
+ * next decision, so a choice that narrates the team inside leaves it inside.
+ *
+ * - `to: 'scene'` or `{ room: role }`: into that room (the role's starting room), by the walking
+ *   route from wherever the squad stands. Clearing the room takes longer the bigger it is.
+ * - `to: { vantage: 'scene' | role }`: to a spot outside with an opening onto that room (the front
+ *   glass, the back step).
+ * - `to: 'escort'`: with `walks` only. The squad goes in to the person and comes out with them, and
+ *   ends outside where they do.
+ *
+ * `entry`: the role the team moves in on. How far that person stands from the nearest door of their
+ * room adds time, strain and risk to the entry.
+ * `signal`: the squad works on someone from where it stands, by voice through the walls and
+ * openings or by sight through them (`to` the role). The building decides how well it carries, and
+ * the light and the weather decide how well a sightline reads. */
+export interface TreeTeam {
+  /** Absent: the squad stays where it stands and works from there (a hailer from the cars). */
+  to?: 'scene' | 'escort' | { room: string } | { vantage: 'scene' | string };
+  entry?: string;
+  signal?: { channel: 'voice' | 'visual'; to: string };
 }
 
 export interface TreeNode {

@@ -65,6 +65,23 @@ Search the symbol if the file moved. The design brief is `docs/incident-domain-m
 - **Clocks running out.** `Clock.onOut: { harm, mark }` records harm to the owner still inside when
   the clock runs out where no fork reads it, and sets the mark for prompts. Both sides of a clock
   fork must carry the same `minutes`.
+- **Team moves** (`TreeTeam` in `src/content/call-trees/types.ts`, compiled by `movement` in
+  `compile.ts`, read 2026-10-18). Every choice that puts officers somewhere declares it:
+  `team: { to: 'scene' | { room: role } }` for an entry or a move inside, `{ vantage: 'scene' |
+  role }` for the front glass or the back step, `'escort'` with `walks` when officers go in and come
+  out with the person. `entry: role` charges that person's distance from the door; `signal:
+  { channel: 'voice' | 'visual', to: role }` reads the building, light and weather between the squad
+  and that person. The squad's committed position follows the move, so a choice that narrates the
+  team inside must declare it, and an outcome that sends the team back writes `back: true`. A phone
+  call, a wait or a word from the cars declares nothing (or only a `signal` from where it stands).
+  Sheet rows name the room, vantage or escort per choice, never "approach: none" for a choice whose
+  text moves the team.
+- **Sightline facts.** `TreeFact.sightline: { from, to }` lets the building settle a hidden truth:
+  whether an offsite role's window (template `vantage`, `StreetVantage`) sees the door `to`'s way
+  out uses. Situations leave the fact out and place the window instead; its `disproved` line must be
+  true whatever is in the way (the window frame, a tree, the house's own wall).
+- **Conditions.** The template's drawn `conditions` are the compiled call's `environment`: dusk,
+  night and the power out dim every sightline, and rain, wind or fog muffle a voice from outside.
 - **Incident class.** An expressive hold makes a victim incident: waiting costs and provoking the
   holder costs more (`INCIDENT_CLASS_V1` in `src/sim/incident-factors.ts`).
 

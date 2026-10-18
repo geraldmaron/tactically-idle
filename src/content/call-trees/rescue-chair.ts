@@ -3,8 +3,9 @@ import type { CallTree, TreeChoice, TreeOutcome } from './types';
 // My Chair Comes Too, as a call tree. A resident who uses a wheelchair is in a house across the
 // street from a man firing from an upstairs window. A neighbor told dispatch the resident "won't
 // leave"; the truth is they won't leave without their chair. The power on the block is out.
-// Hidden truth: whether the man can see their front door (sees_door) and whether their oxygen
-// runs short without power (oxygen_low). In one situation moving now is right, in one waiting is
+// Hidden truth: whether the man can see their front door (sees_door, which the building settles
+// from his window: content/incidents/rescue.ts) and whether their oxygen runs short without power
+// (oxygen_low). In one situation moving now is right, in one waiting is
 // right, and in one both cost something and only cover or courage gets them out. The short tank is
 // a clock (content/incidents/rescue.ts): waits read its gauge, and the longest wait reads it empty.
 //
@@ -84,15 +85,17 @@ export const RESCUE_CHAIR: CallTree = {
       // Reported from the first minute. The only choice that asks for entry is carrying the resident
       // out against what they asked (carry), and this is command's reason for it.
       threat: 'rounds are hitting this side of the street' },
-    sees_door: { label: '{shooter.His} view of the front door', claim: 'Whether the shooter across the street can see {resident.first}’s front door.',
-      confirmed: '{shooter.He} can see the front door from {shooter.his} window. Anything that moves there is in {shooter.his} view.', disproved: 'A tree blocks {shooter.his} view of the front door.' },
+    // The building settles it: the line from {shooter.his} window to the front door, past the
+    // yard's trees and hedges and the house's own walls (content/incidents/rescue.ts places the window).
+    sees_door: { label: '{shooter.His} view of the front door', claim: 'Whether the shooter across the street can see {resident.first}’s front door.', sightline: { from: 'shooter', to: 'resident' },
+      confirmed: '{shooter.He} can see the front door from {shooter.his} window. Anything that moves there is in {shooter.his} view.', disproved: '{shooter.His} window looks past the front door, not at it.' },
     oxygen_low: { label: '{resident.first}’s oxygen', claim: 'How long {resident.first}’s oxygen lasts without power.',
       confirmed: '{resident.first} says the concentrator stopped with the power, and the spare tank has about forty minutes.', disproved: '{resident.first} says the spare tank is full and good for hours.' },
   },
   situations: [
-    { note: '{shooter.He} can’t see the door, and the tank is full. Moving now is safe; waiting only costs time.', truth: { sees_door: false, oxygen_low: false } },
-    { note: '{shooter.He} can see the door, and the tank is full. Waiting is right; the door is where people get hurt.', truth: { sees_door: true, oxygen_low: false } },
-    { note: '{shooter.He} can see the door, and the tank is running out. Neither waiting nor walking out is free.', truth: { sees_door: true, oxygen_low: true } },
+    { note: '{shooter.He} fires from a window down the street, which on most houses can’t see the door, and the tank is full. Moving now is usually safe; waiting only costs time.', truth: { oxygen_low: false } },
+    { note: '{shooter.He} fires from the window straight across, which sees the door unless a tree is in the way, and the tank is full. Waiting is right; the door is where people get hurt.', truth: { oxygen_low: false } },
+    { note: '{shooter.He} fires from the window straight across, and the tank is running out. Neither waiting nor walking out is free.', truth: { oxygen_low: true } },
   ],
   turns: { waiting: ['lights_on', 'quiet_window', 'neighbor_runs'] },
   difficulty: { base: 40, perTier: 2 },
@@ -116,7 +119,7 @@ export const RESCUE_CHAIR: CallTree = {
             ],
             adverse: [{ text: '{resident.first} doesn’t pick up. Two officers cross to the door to reach {resident.him}, and a round goes through the hedge as they get there.', mark: ['seen_crossing'], next: { node: 'at_the_door' }, pressure: 6 }],
           } },
-        { id: 'go_get', title: 'Send two officers to {resident.his} door', icon: 'door', check: check(RUSH, 4), minutes: 3, stress: 4, consequenceLevel: 'high',
+        { id: 'go_get', title: 'Send two officers to {resident.his} door', icon: 'door', team: { to: 'scene' }, check: check(RUSH, 4), minutes: 3, stress: 4, consequenceLevel: 'high',
           summary: '{lead} and one other officer cross to the front door before anyone asks {resident.first} anything. You reach {resident.him} fast, and the officers cross the open ground first.',
           preview: { favorable: 'The officers reach the front door before the next shot.', mixed: 'The officers reach the door with a shot through the hedge beside them.', adverse: 'An officer goes down crossing the open ground, hurt.' },
           outcomes: {
@@ -141,7 +144,7 @@ export const RESCUE_CHAIR: CallTree = {
       prompt: '{resident.first} will leave with the chair and only with the chair. The front door is the only way it fits.',
       promptIf: [{ when: { marks: ['stung'] }, prompt: '{resident.first} has said it four times now. {resident.He} {resident~leaves|leave} with the chair, by the front door, or not at all.' }],
       choices: [
-        { id: 'their_way', title: 'Bring {resident.him} out {resident.his} way', icon: 'door', walks: 'resident', check: check(MOVE, 6), minutes: 4, consequenceLevel: 'high',
+        { id: 'their_way', title: 'Bring {resident.him} out {resident.his} way', icon: 'door', team: { to: 'escort' }, walks: 'resident', check: check(MOVE, 6), minutes: 4, consequenceLevel: 'high',
           summary: '{lead} wheels {resident.first} out the front, chair and all, the way {resident.he} asked. It is slow over the step, and the doorway may be in {shooter.his} view the whole time.',
           preview: { favorable: '{resident.first} is across the street in {resident.his} chair.', mixed: '{resident.first} gets across, but the step costs a long minute in the open.', adverse: '{resident.first} is hurt in the doorway, by a fall or by {shooter.his} fire.' },
           outcomes: {
@@ -184,7 +187,7 @@ export const RESCUE_CHAIR: CallTree = {
       prompt: 'Two officers are inside. {resident.first} won’t move without the chair, and nobody has asked why.',
       promptIf: [{ when: { marks: ['seen_crossing'] }, prompt: 'The officers are inside, and {shooter.he} saw them cross. {resident.first} won’t move without the chair.' }],
       choices: [
-        { id: 'carry', title: 'Carry {resident.him} out and leave the chair', icon: 'door', walks: 'resident', check: check(RUSH, 2), minutes: 2, consequenceLevel: 'high', authority: 'entry',
+        { id: 'carry', title: 'Carry {resident.him} out and leave the chair', icon: 'door', team: { to: 'escort' }, walks: 'resident', check: check(RUSH, 2), minutes: 2, consequenceLevel: 'high', authority: 'entry',
           summary: 'Two officers lift {resident.first} from the chair and run for the cars, the one thing {resident.first} asked nobody to do.',
           preview: { favorable: '{resident.first} is across the street, carried, without the chair.', mixed: '{resident.first} is across, and is hurt in the lift.', adverse: '{resident.He} {resident~goes|go} down together in the open, and {resident.first} is hurt.' },
           outcomes: {
@@ -218,7 +221,7 @@ export const RESCUE_CHAIR: CallTree = {
             mixed: [{ text: 'The switch is behind the coat rack. It takes {resident.first} two minutes, and a round hits the street while it is on.', next: { node: 'crossing' }, pressure: 6 }],
             adverse: [{ text: '{resident.first} can’t reach the switch from the chair. The doorway stays lit.', mark: ['lit_door'], next: { node: 'crossing' }, pressure: 8 }],
           } },
-        { id: 'go_while_power', title: 'Go now, before {shooter.he} {shooter~notices|notice} the light', icon: 'door', walks: 'resident', check: check(MOVE, 8), minutes: 4, consequenceLevel: 'severe',
+        { id: 'go_while_power', title: 'Go now, before {shooter.he} {shooter~notices|notice} the light', icon: 'door', team: { to: 'escort' }, walks: 'resident', check: check(MOVE, 8), minutes: 4, consequenceLevel: 'severe',
           summary: 'You move before {shooter.he} {shooter~looks|look} at the newly lit doorway. If {shooter.he} {shooter~is|are} already looking, the chair goes out under the brightest light on the street.',
           preview: { favorable: '{resident.first} is across before {shooter.he} {shooter~looks|look}.', mixed: '{resident.first} is across, after a long moment under the light.', adverse: 'It goes wrong under the light. {resident.first} can be hurt or killed.' },
           outcomes: {
@@ -232,7 +235,7 @@ export const RESCUE_CHAIR: CallTree = {
     { id: 'quiet_window', stage: 'adapt',
       prompt: 'The shooting has stopped. Nobody can see the shooter in the window anymore.',
       choices: [
-        { id: 'go_in_quiet', title: 'Use the quiet and go now', icon: 'door', walks: 'resident', check: check(MOVE, 4), minutes: 4, consequenceLevel: 'high',
+        { id: 'go_in_quiet', title: 'Use the quiet and go now', icon: 'door', team: { to: 'escort' }, walks: 'resident', check: check(MOVE, 4), minutes: 4, consequenceLevel: 'high',
           summary: '{lead} moves {resident.first} out while it is quiet. Quiet can mean {shooter.he} {shooter~is|are} gone, or reloading, or watching.',
           preview: { favorable: '{resident.first} is across while it is still quiet.', mixed: '{resident.first} is across, and the shooting starts again behind {resident.him}.', adverse: 'The shooting starts again while the chair is in the open, and {resident.first} is hurt.' },
           outcomes: {
@@ -286,7 +289,7 @@ export const RESCUE_CHAIR: CallTree = {
         { when: { marks: ['lit_door'] }, prompt: 'The porch light is still on. {resident.first} is in the lit doorway, in the chair.' },
       ],
       choices: [
-        { id: 'cross_now', title: 'Cross now, chair and all', icon: 'door', walks: 'resident', check: check(MOVE, 6), minutes: 3, consequenceLevel: 'severe',
+        { id: 'cross_now', title: 'Cross now, chair and all', icon: 'door', team: { to: 'escort' }, walks: 'resident', check: check(MOVE, 6), minutes: 3, consequenceLevel: 'severe',
           modifiers: [{ label: 'The vehicle screens the door', mark: 'screened', value: 14 }, { label: 'Patrol can see where {shooter.he} {shooter~is|are}', mark: 'eyes_on', value: 6 }, { label: 'The doorway is lit', mark: 'lit_door', value: -10 }, { label: '{resident.first} told you how {resident.he} {resident~wants|want} to go', mark: 'chair_matters', value: 4 }],
           summary: 'The team wheels {resident.first} across the street at a run. It is the way {resident.he} asked to go, and the chair is slow on the curb.',
           preview: { favorable: '{resident.first} is across the street in the chair.', mixed: '{resident.first} is across, after a bad moment at the curb.', adverse: 'It goes wrong in the street. {resident.first} can be hurt or killed.' },
@@ -302,7 +305,7 @@ export const RESCUE_CHAIR: CallTree = {
               { if: { fact: 'sees_door', is: false }, text: 'The chair tips at the curb, and {resident.first} falls into the gutter. No shot comes. The team gets {resident.him} across, hurt.', reveal: ['sees_door'], safe: ['resident'], harm: { resident: 'wounded' }, next: { ending: 'resident_hurt' }, objective: 24 },
             ],
           } },
-        { id: 'cross_carried', title: 'Carry {resident.him} across fast, chair after', icon: 'door', walks: 'resident', check: check(RUSH, 2), minutes: 2, consequenceLevel: 'high',
+        { id: 'cross_carried', title: 'Carry {resident.him} across fast, chair after', icon: 'door', team: { to: 'escort' }, walks: 'resident', check: check(RUSH, 2), minutes: 2, consequenceLevel: 'high',
           modifiers: [{ label: 'The vehicle screens the door', mark: 'screened', value: 10 }],
           summary: 'Two officers carry {resident.first} and a third brings the empty chair. Faster across the open, and {resident.first} is lifted out of {resident.his} own chair to do it.',
           preview: { favorable: '{resident.first} is across, carried, and the chair comes after.', mixed: '{resident.first} is across, hurt in the lift.', adverse: 'Someone goes down in the street. An officer or {resident.first} is hurt.' },
@@ -341,7 +344,7 @@ export const RESCUE_CHAIR: CallTree = {
         { when: { marks: ['running_low'] }, prompt: '{resident.first} is in the hallway, breathing hard. The spare tank is nearly empty, and the street is still open to {shooter.his} window.' },
       ],
       choices: [
-        { id: 'go_for_breath', title: 'Stop waiting and cross now', icon: 'door', walks: 'resident', check: check(MOVE, 6), minutes: 3, consequenceLevel: 'severe',
+        { id: 'go_for_breath', title: 'Stop waiting and cross now', icon: 'door', team: { to: 'escort' }, walks: 'resident', check: check(MOVE, 6), minutes: 3, consequenceLevel: 'severe',
           modifiers: [{ label: 'The vehicle screens the door', mark: 'screened', value: 14 }],
           summary: 'You cross with {resident.first} in the chair. The street is no safer than it was, and the tank won’t last forever.',
           preview: { favorable: '{resident.first} is across and on the ambulance’s oxygen.', mixed: '{resident.first} is across, after a hard moment at the curb.', adverse: 'It goes wrong in the street, and {resident.first} can be hurt or killed.' },

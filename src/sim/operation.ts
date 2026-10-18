@@ -62,9 +62,9 @@ import {
   spaceName,
   squadLabel,
   strainFor,
-  vantageZones,
   type Evaluation,
 } from './resolution';
+import { vantageZones } from './spatial-factors';
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
 const clamp = (n: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, n));
@@ -916,13 +916,19 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     const incidentConsequences = applyIncidentConsequences(draft, run, scenario, protectedOfficerEffects(matched, ev.protectionUsed), ev.participantIds, casualtyPositions);
     const personConsequences = applyPersonConsequences(run, scenario, action, band, [...matched, ...outs]);
 
-    // positions, staging points and task labels
+    // positions, staging points and task labels. A band that drives the team back leaves the
+    // acting squads where they started; an action that ends elsewhere (an escort out) puts them there.
+    const fellBack = matched.some(effect => effect.fallBack);
     for (const arr of ev.arrivals) {
       const task = run.squadTasks.find((x) => x.squadId === arr.squadId);
       if (!task) continue;
-      task.positionId = arr.spaceId;
-      task.stagingId = arr.stagingId;
-      task.at = arr.at;
+      const acting = arr.role === 'acting';
+      if (!(acting && fellBack)) {
+        const end = acting && action.endsAt;
+        task.positionId = end ? end.spaceId : arr.spaceId;
+        task.stagingId = end ? null : arr.stagingId;
+        task.at = end ? { ...end.at } : arr.at;
+      }
       task.task = arr.role === 'support' ? (action.support?.task ?? 'Support') : action.task;
     }
     for (const sq of ev.acting) {

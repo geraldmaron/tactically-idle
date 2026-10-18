@@ -9,28 +9,28 @@ A module may import its own layer and the layers it lists. Type-only imports do 
 
 | Layer | Modules | Lines | May import | Owns |
 | --- | --- | --- | --- | --- |
-| kernel | 6 | 2167 | nothing | Shared records, ids, seeded randomness, geometry and the tuning registry. No game rules. |
+| kernel | 6 | 2175 | nothing | Shared records, ids, seeded randomness, geometry and the tuning registry. No game rules. |
 | world | 47 | 7862 | kernel | Blueprints: authored and procedural buildings, rooms, openings, furniture, routes and sightlines. |
-| catalog | 26 | 5096 | kernel, world | Authored data: officers, personas, items, courses, unlocks, call templates and call trees. |
-| scenario | 9 | 2141 | kernel, world, catalog | Turns a drawn call into a playable definition: cast, placement on the blueprint, compiled tree. |
-| engine | 54 | 12902 | kernel, world, catalog, scenario, commerce | Game rules and state: department, economy, operations, resolution, outcomes, saves. |
+| catalog | 26 | 5150 | kernel, world | Authored data: officers, personas, items, courses, unlocks, call templates and call trees. |
+| scenario | 9 | 2221 | kernel, world, catalog | Turns a drawn call into a playable definition: cast, placement on the blueprint, compiled tree. |
+| engine | 54 | 13002 | kernel, world, catalog, scenario, commerce | Game rules and state: department, economy, operations, resolution, outcomes, saves. |
 | commerce | 4 | 198 | kernel | Point packs and the purchase ledger. |
-| qa | 24 | 3698 | kernel, world, catalog, scenario, engine, commerce | Content gates, balance measurement, fixtures and test support. Never loaded by the game. |
+| qa | 24 | 3748 | kernel, world, catalog, scenario, engine, commerce | Content gates, balance measurement, fixtures and test support. Never loaded by the game. |
 | ui | 105 | 15621 | kernel, world, catalog, scenario, engine, commerce | Player screens, the blueprint renderer, portraits and the store that dispatches commands. |
-| lab | 97 | 16948 | kernel, world, catalog, scenario, engine, commerce, qa, ui | The dev-only Scenario Lab and dev sheets. Reads everything, never ships. |
+| lab | 97 | 16951 | kernel, world, catalog, scenario, engine, commerce, qa, ui | The dev-only Scenario Lab and dev sheets. Reads everything, never ships. |
 | shell | 3 | 372 | kernel, world, catalog, engine, ui, lab | Entry points that choose which app to mount. |
 
 ## Systems
 
 | System | Modules | Lines | Job |
 | --- | --- | --- | --- |
-| blueprint | 78 | 13966 | Where things are: buildings, rooms, doors and windows, furniture, routes, cover and sightlines. |
+| blueprint | 78 | 14065 | Where things are: buildings, rooms, doors and windows, furniture, routes, cover and sightlines. |
 | subject | 7 | 1499 | Who is on scene: subjects, hostages, victims, bystanders and animals, their holds, weapons, temper and positions. |
 | officer | 14 | 2567 | Who the player sends: ratings, traits, stress, injuries, certifications, careers and squads. |
 | item | 23 | 3371 | What they carry: the item catalog, ratings and capabilities, inventory, wear, loadouts and resupply. |
-| scenario | 46 | 10832 | What happens: call trees, choices, chance per choice, branches, clocks and meters during a call. |
+| scenario | 46 | 10978 | What happens: call trees, choices, chance per choice, branches, clocks and meters during a call. |
 | metric | 15 | 2628 | What it meant: outcome scoring, harm, debriefs, department reputation, money and progression. |
-| platform | 192 | 32142 | Everything that serves the systems above: records, randomness, saves, the store, screens and tooling. |
+| platform | 192 | 32192 | Everything that serves the systems above: records, randomness, saves, the store, screens and tooling. |
 
 ## System dependency chain
 
@@ -52,7 +52,7 @@ flowchart LR
   officer -->|3| item
   officer -.->|6 reversed| metric
   officer -.->|2 reversed| scenario
-  scenario -->|16| blueprint
+  scenario -->|19| blueprint
   scenario -->|15| item
   scenario -->|9| metric
   scenario -->|4| officer
@@ -84,7 +84,8 @@ Each input a system feeds into a choice's chance, and whether the engine actuall
 | officer | Officer ratings (every rating of squad A at 95 instead of 60) | 119 of 119 | 100% | `aptitude` weights each rating per task (src/sim/resolution.ts); the task-weight test checks each choice reads only its own ratings |
 | officer | Officer strain (squad A at stress 90) | 104 of 104 | 100% | `conditionFraction` takes strain off each rating |
 | item | Carried equipment (squad A deploys with nothing) | 3 of 30 | 10% | Equipment bonuses apply only where a choice declares them (src/gen/incident/trees-v13/compile.ts) |
-| blueprint | Door and window states (every opening locked) | 16 of 119 | 13% | v13 choices compile with `approach: none`, so routes, entries and openings mostly never reach the roll (src/gen/incident/trees-v13/compile.ts). Raise minShare as entries are wired. |
+| blueprint | Door and window states (every opening locked) | 33 of 119 | 27% | A choice that moves the team (TreeTeam: into a room, to a vantage, an escort) or walks someone out routes through the building, so a locked door costs force time or the entry tool (src/gen/incident/trees-v13/compile.ts). Phone calls, waits and a voice through a door that was already shut never respond, and should not. |
+| blueprint | The building (the same call on another building of its type) | 6 of 33 | 18% | Routes, doors, room sizes, how far the subject stands from a door and what a sightline reads all come from the generated building (src/sim/resolution.ts), and a sightline fact is settled by it (src/sim/spatial-factors.ts sightFromStreet). |
 | subject | The subject's weapon (the reported weapon disproved) | 91 of 111 | 81% | `incidentSubjects` reads armament knowledge into `threatFx` (src/sim/incident-factors.ts). The rescue tree has no armed person on scene, so it never responds. |
 | scenario | Time pressure on the call (pressure 95) | 119 of 119 | 100% | Pressure penalty scaled by composure (src/sim/resolution.ts) |
 
@@ -117,4 +118,4 @@ Imports that break the layer rules today. Each must shrink to zero.
 | `/src/gen/incident/trees-v13/path-key.ts -> /src/sim/meters.ts` | Meter stances are scenario model kept in the engine module. |
 | `/src/content/recruits.ts -> /src/sim/career.ts` | Recruit generation reads career tuning from the engine; move CAREER_TUNING to the catalog or kernel. |
 
-Cross-layer runtime imports in total: 591.
+Cross-layer runtime imports in total: 593.

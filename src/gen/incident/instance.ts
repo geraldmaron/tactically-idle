@@ -11,7 +11,7 @@ import { ageBandOf, IDENTITY_DEFAULT, WEAPON_ARMAMENT } from '../../content/inci
 import { templateAt } from '../../content/incidents';
 import { hashIndex, hashSeed } from '../../sim/rng';
 import { nearestOpening } from '../../sim/spatial';
-import { coverOnLine } from '../../sim/spatial-factors';
+import { coverOnLine, streetVantage } from '../../sim/spatial-factors';
 import type { ClockDef, IncidentPersonDef, IncidentSpec, ScenarioDefinition } from '../../sim/scenario-types';
 import type { BuiltLocation, Id, Vec } from '../../sim/types';
 
@@ -163,7 +163,7 @@ export function drawInstance(template: IncidentTemplate, built: BuiltLocation, s
         meters: { ...p.meters },
         ...(p.animal ? { animal: { ...p.animal } } : {}),
         knowledge: structuredClone(p.knowledge ?? {}),
-        sightlines: (p.sightlines ?? []).map(line => ({ ...line })),
+        ...(p.offsite && p.vantage ? { vantage: streetVantage(built, placed.outside, p.vantage).at } : {}),
       });
     }
   }
@@ -190,6 +190,12 @@ export function drawInstance(template: IncidentTemplate, built: BuiltLocation, s
     crowd: draw(template.conditions.crowd, `${spec.seed}:crowd:m1`),
   };
   const sceneRoom = rooms.get(placed.room.id)!;
+  // The compiler draws sightline facts from where offsite people watch (compile.ts).
+  const vantages = Object.fromEntries(template.cast.flatMap(slot => slot.keyRoles.flatMap(role => {
+    const p = specOf(slot, role);
+    return p.offsite && p.vantage ? [[role, { ...p.vantage }]] : [];
+  })));
+  if (Object.keys(vantages).length) placed.vantages = vantages;
   return {
     type: template.type, spec: { ...spec }, situation: situationIndex, pacing: placed.recipe.characteristic, turns,
     location: { familyId: spec.familyId, seed: spec.buildingSeed, setting: built.location.setting, outsideSpaceId: placed.outside, sceneSpaceId: placed.room.id, sceneRoomType: sceneRoom.type },
@@ -267,7 +273,11 @@ export function compileIncident(scenario: ScenarioDefinition, built: BuiltLocati
   const compiled = withCallTree(scenario, built, template.tree, instance.placed, clockMarksOf(instance.clocks));
   const factIds = new Set(compiled.facts.map(fact => fact.id));
   const clocks = clocksFor(instance, textBinder(template.tree, built, instance.placed), factIds);
-  return { ...compiled, incidentPeople: incidentPeopleFor(instance, built, factIds), ...(clocks.length ? { clocks } : {}) };
+  // The call's drawn conditions are the scene the engine runs: the light a sightline reads by, the
+  // weather a voice carries through, the crowd at the tape.
+  const { timeOfDay, power, weather, crowd } = instance.conditions;
+  const environment = { ...compiled.environment!, timeOfDay, power, weather, crowd };
+  return { ...compiled, environment, incidentPeople: incidentPeopleFor(instance, built, factIds), ...(clocks.length ? { clocks } : {}) };
 }
 
 /** The instance behind a generated call-tree scenario, on the building it was compiled for. */

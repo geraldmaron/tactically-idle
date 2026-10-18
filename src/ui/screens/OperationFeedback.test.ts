@@ -26,7 +26,7 @@ const defaultResult = (html: string) => html.split('<details class="decision-cau
 const action = (patch: Partial<ActionView> = {}): ActionView => ({
   id: 'treat', stage: 'adapt', title: 'Prepare medical access', icon: 'medic', summary: 'Keep access open while preparing aid.', requirementLine: 'Qualified medic + trauma supplies',
   actingSquadIds: ['A'], supportSquadIds: [], support: null, officerIds: ['off_ortiz'], targetId: null, eligible: true, reason: null, risk: 'low',
-  timeCost: 5, timeRange: { min: 4, max: 8 }, likelihood: { favorable: .73, mixed: .19, adverse: .08 }, consequenceLevel: 'high',
+  timeCost: 5, travelMinutes: 0, timeRange: { min: 4, max: 8 }, likelihood: { favorable: .73, mixed: .19, adverse: .08 }, consequenceLevel: 'high',
   outcomePreview: { favorable: 'Prepare aid without losing access.', mixed: 'Aid takes longer and pressure rises.', adverse: 'Medical access remains unresolved.' }, suppliesRequired: [{ label: 'Trauma supplies', qty: 1 }],
   contributors: [], uncertainty: ['Patient condition is unconfirmed.'], details: [], overlays: [], ...patch,
 });

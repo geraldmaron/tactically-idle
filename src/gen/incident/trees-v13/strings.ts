@@ -27,7 +27,8 @@ const BANDS: readonly OutcomeBand[] = ['favorable', 'mixed', 'adverse'];
 /** Which situations an outcome's hidden-truth condition holds in. A clock condition depends on
  * time as well as the situation, so only fact conditions narrow the rows. */
 function situationsFor(tree: CallTree, outcome: TreeOutcome): string[] {
-  const conditions = ([] as TreeIf[]).concat(outcome.if ?? []).flatMap(c => 'fact' in c ? [c] : []);
+  // A fact the building settles (a sightline) can go either way in every situation.
+  const conditions = ([] as TreeIf[]).concat(outcome.if ?? []).flatMap(c => 'fact' in c && !tree.facts[c.fact]?.sightline ? [c] : []);
   if (!conditions.length) return ['all'];
   const holds = tree.situations.map((situation, index) => conditions.every(c => (tree.facts[c.fact]?.truth ?? situation.truth[c.fact]) === c.is) ? `s${index + 1}` : null)
     .filter((entry): entry is string => !!entry);

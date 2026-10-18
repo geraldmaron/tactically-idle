@@ -126,8 +126,9 @@ describe('call trees: authoring rules', () => {
       expect(nodeById.get(tree.root)?.stage).toBe('assess');
       expect(tree.endings.handed_over?.disposition).toBe('unresolved');
       for (const node of tree.nodes) expect(new Set(node.choices.map(choice => choice.id)).size, node.id).toBe(node.choices.length);
+      // A sightline fact is the building's to settle, never a situation's.
       for (const [key, fact] of Object.entries(tree.facts)) if (fact.truth === undefined)
-        for (const situation of tree.situations) expect(typeof situation.truth[key], `${key} in ${situation.note}`).toBe('boolean');
+        for (const situation of tree.situations) expect(typeof situation.truth[key], `${key} in ${situation.note}`).toBe(fact.sightline ? 'undefined' : 'boolean');
       for (const role of tree.roles) expect(role.id, 'role ids are roles in lower snake case, never names').toMatch(/^[a-z][a-z_]*$/);
     });
 

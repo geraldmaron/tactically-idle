@@ -26,8 +26,10 @@ const ifHeKnows = (threat: string, quiet: TreeOutcome, pressure = 10): TreeOutco
   { if: { fact: 'knows_son', is: false }, ...quiet, reveal: ['knows_son'] },
 ];
 
-/** Going in on the threat. After a shot at the team it is harder, and the outcomes are the same. */
-const goIn = (difficulty: number): TreeChoice => ({ id: 'go_in', title: 'Send the team in', icon: 'shield', check: check(ENTER, difficulty), minutes: 2, stress: 6, tempo: 'urgent', consequenceLevel: 'severe',
+/** Going in on the threat. After a shot at the team it is harder, and the outcomes are the same.
+ * The walk in, clearing the bathroom and how far {subject.first} stands from the door now cost
+ * about three points on the engine's own terms (2026-10-18), so the authored difficulty gave them back. */
+const goIn = (difficulty: number): TreeChoice => ({ id: 'go_in', title: 'Send the team in', icon: 'shield', team: { to: { room: 'child' }, entry: 'subject' }, check: check(ENTER, difficulty), minutes: 2, stress: 6, tempo: 'urgent', consequenceLevel: 'severe',
     requires: { certs: ['entry_team'] }, authority: 'entry', equipment: [{ tag: 'shield', value: 6, label: 'Shield up front' }],
     summary: 'Anyone in that hallway can be badly hurt, {child.first} included. The team goes in while {subject.first} stands at the bathroom door.',
     preview: { favorable: 'The team reaches {child.first} and gets {child.him} out.', mixed: 'The team gets {child.first} out, and {subject.first} is hurt when they take the rifle.', adverse: 'The team gets {child.first} out late, and someone in that hallway is badly hurt.' },
@@ -325,7 +327,7 @@ export const BARRICADE_ORDER: CallTree = {
     { id: 'threat', stage: 'resolve',
       prompt: '{subject.first} is at the bathroom door with the rifle, and {child.first} is behind it.',
       choices: [
-        { id: 'call_back', title: 'Call {subject.him} back to the front', icon: 'radio', talksTo: 'subject', check: check(TALK, 8), minutes: 2, stress: 4, consequenceLevel: 'high',
+        { id: 'call_back', title: 'Call {subject.him} back to the front', icon: 'radio', team: { to: { vantage: 'scene' }, signal: { channel: 'voice', to: 'subject' } }, talksTo: 'subject', check: check(TALK, 8), minutes: 2, stress: 4, consequenceLevel: 'high',
           summary: '{lead} calls {subject.first} from the front step, close enough to be heard through the house. If {subject.he} {subject~turns|turn}, {lead} is the one in front of {subject.him}.',
           preview: { favorable: '{subject.first} steps back from the door, and {child.first} walks out.', mixed: '{child.first} gets out, and {subject.first} keeps the rifle.', adverse: '{subject.first} fires at the front door, and the officer on the step may be hit.' },
           outcomes: {
@@ -333,7 +335,7 @@ export const BARRICADE_ORDER: CallTree = {
             mixed: [{ text: '{child.first} gets out while {subject.first} shouts at the officer on the step. {subject.first} keeps the rifle in {subject.his} hands.', safe: ['child'], moves: { subject: 'provoked' }, next: { node: 'son_out' }, objective: 32 }],
             adverse: [{ text: '{subject.first} fires at the front door and stays at the bathroom door.', fire: { from: 'subject' }, next: { node: 'fired_on' }, pressure: 10 }],
           } },
-        goIn(8),
+        goIn(5),
         { id: 'step_away', title: 'Pull the team out of {subject.his} sight', icon: 'wait', check: check(HOLD, -2), minutes: 8,
           summary: 'Everyone steps back so {subject.first} has no one to aim at. Nobody is close enough to help {child.first} if {subject.first} opens that door.',
           preview: { favorable: '{subject.first} goes back to the front room, and {child.first} walks out.', mixed: '{subject.first} goes back to the front room, and {child.first} stays put.', adverse: '{subject.first} stays at the bathroom door. If {subject.he} {subject~goes|go} in to {child.first}, nobody is close enough to stop {subject.him}.' },
@@ -349,7 +351,7 @@ export const BARRICADE_ORDER: CallTree = {
     { id: 'fired_on', stage: 'resolve',
       prompt: '{subject.first} fired through the front door. {child.first} is still in the bathroom.',
       choices: [
-        goIn(12),
+        goIn(9),
         { id: 'hold_cars', title: 'Hold at the cars and call {subject.him}', icon: 'wait', talksTo: 'subject', check: check(HOLD), minutes: 10,
           summary: 'The team holds at the cars and regroups. {child.first} stays behind the door with someone who has just fired.',
           preview: { favorable: '{subject.first} backs off, and {child.first} walks out.', mixed: '{subject.first} picks up and stays at the bathroom door.', adverse: '{subject.first} won’t pick up, and stays at the bathroom door.' },

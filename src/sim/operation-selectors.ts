@@ -448,6 +448,7 @@ function toView(state: GameState, run: OperationRun, a: ActionDefinition, ev: Ev
     suppliesRequired: expectedSupplies(a, ev),
     timeRange: durationRange(a, ev, run),
     timeCost: Math.max(1, Math.round(ev.timeExpected)),
+    travelMinutes: ev.travelMinutes,
     ...(a.timeLabel ? { timeLabel: a.timeLabel } : {}),
     contributors: ev.contributors,
     uncertainty: ev.uncertainty,

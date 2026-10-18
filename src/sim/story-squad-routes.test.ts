@@ -9,7 +9,7 @@ import { NOW } from './test-fixtures';
 import { standingOf } from './spatial-factors';
 
 const steps: PlayStep[] = [];
-for (const tree of Object.values(CALL_TREES)) playCalls(tree!, 'patient', drawCalls(tree!, 2, 4), (_result, path) => steps.push(...path));
+for (const tree of Object.values(CALL_TREES)) playCalls(tree!, 'random', drawCalls(tree!, 2, 4), (_result, path) => steps.push(...path));
 const movements = steps.filter(step => scenarioActions(getScenario(step.before.activeRun!.scenarioId)!).find(a => a.id === step.choice.id)?.approach === 'path');
 
 describe('squad movement on current call trees', () => {

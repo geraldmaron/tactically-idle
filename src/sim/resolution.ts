@@ -46,6 +46,8 @@ import { highRiskAllowed } from './officer';
 import { squadUnits, unitEffectiveness } from './inventory';
 import { ageYears, experienceBand, gameDay } from './calendar';
 import { signalBetween } from './spatial';
+import { signalCarry } from './environment';
+import { vantageZones } from './spatial-factors';
 import {
   assessSignal,
   centroidOf,
@@ -236,17 +238,6 @@ export function builtFor(familyId: Id, seed: number, flags: string[]): BuiltLoca
     overrideCache.set(key, b);
   }
   return b;
-}
-
-/** Exterior zones with an opening (window, door) onto the space. */
-export function vantageZones(location: LocationDefinition, spaceId: Id): Id[] {
-  const zones = new Set(location.zones.map((z) => z.id));
-  const out = new Set<Id>();
-  for (const o of location.openings) {
-    if (o.a === spaceId && zones.has(o.b)) out.add(o.b);
-    if (o.b === spaceId && zones.has(o.a)) out.add(o.a);
-  }
-  return [...out];
 }
 
 export function spaceName(built: BuiltLocation, id: Id): string {
@@ -944,7 +935,10 @@ export function evaluateAction(input: EvalInput): Evaluation {
       const moving = action.approach !== 'none';
       const route = moving ? routeTo(c.stand.spaceId, c.stand.at) : null;
       if (route && !route.reachable) continue;
-      const signal = spec && subject ? assessSignal(built, c.stand.at, subject.at, spec.channel, spec.noun) : null;
+      const raw = spec && subject ? assessSignal(built, c.stand.at, subject.at, spec.channel, spec.noun) : null;
+      // The scene's light and weather carry the signal as far as the building lets it (environment.ts).
+      const carry = raw && spec ? signalCarry(scenario.environment ?? null, spec.channel, location.zones.some(zone => zone.id === c.stand.spaceId)) : null;
+      const signal = raw && carry?.label ? { ...raw, quality: raw.quality * carry.factor, label: `${raw.label}. ${carry.label}` } : raw;
       const { picks, blocked } = picksAt(sq, c.stand.at);
       const pickedTags = new Set(picks.map((p) => p.eq.tag));
       const carriedAny = anyTags.filter((t) => tagsOf(units[sq]).has(t));
