@@ -16,6 +16,7 @@ import { clockRows, endedSummary, keysSet, notOfferedHere, personTruth, truthStr
 import type { ChoiceXray } from '../../model/xray';
 import { BAND_WORDS, cx, FlagGlyph, Glyph, KeyChip, PeopleGlyph, RouteChip, Tag, WeightGlyph } from '../../viz';
 import type { PeopleKind } from '../../viz';
+import { CompareRail } from './CompareRail';
 import { FullNote } from './FullNote';
 import type { Leads } from './FullNote';
 import { WhyPanel } from './WhyPanel';
@@ -188,6 +189,11 @@ export function XrayRail(p: {
           <span className="lab-xray-title">This moment</span>
           {where && <span className="lab-moment-where">{where.kind === 'node' ? where.title : 'Call ended'}</span>}
           <span className="lab-moment-prov" title="Odds and routes from one exact engine state, for this squad">{header}</span>
+          <button type="button" className={cx('lab-toggle', url.vs && 'lab-toggle-on')} aria-pressed={!!url.vs} disabled={p.session.squad.kind === 'game'}
+            title={p.session.squad.kind === 'game' ? 'A call from the game keeps its own draw' : 'The same picks under a second instance, side by side'}
+            onClick={() => navigate({ vs: url.vs ? null : { kit: url.call?.kit === 'full' ? 'day1' : 'full' } }, 'replace')}>
+            <span>Compare</span><i className="lab-toggle-dot" aria-hidden="true" />
+          </button>
         </header>
         {ended ? (
           <div className="lab-ended">
@@ -228,6 +234,7 @@ export function XrayRail(p: {
           </>
         )}
       </section>
+      {url.vs && p.session.squad.kind !== 'game' && <CompareRail session={p.session} frame={p.frame} deps={p.deps} vs={url.vs} />}
       <StatePanels session={p.session} frame={p.frame} deps={p.deps} tape={url.truth} />
     </div>
   );

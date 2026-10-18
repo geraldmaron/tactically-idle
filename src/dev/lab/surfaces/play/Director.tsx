@@ -53,7 +53,7 @@ function Row({ label, children, hint }: { label: string; children: ReactNode; hi
   return <div className="lab-dir-row"><span className="lab-dir-label">{label}{hint && <span className="lab-dir-hint">{hint}</span>}</span>{children}</div>;
 }
 
-function SeedInput({ label, value, onCommit }: { label: string; value: number | null; onCommit(seed: number): void }) {
+export function SeedInput({ label, value, onCommit }: { label: string; value: number | null; onCommit(seed: number): void }) {
   const [text, setText] = useState(value === null ? '' : String(value));
   useEffect(() => setText(value === null ? '' : String(value)), [value]);
   const commit = () => { const n = Math.floor(Number(text)); if (text.trim() !== '' && Number.isFinite(n) && n >= 0 && n !== value) onCommit(n); };

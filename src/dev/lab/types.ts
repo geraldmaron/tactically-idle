@@ -17,6 +17,10 @@ export type Selection =
   | { kind: 'band'; node: string; choice: string; band: OutcomeBand } | { kind: 'ending'; ending: string }
   | { kind: 'key'; key: string } | { kind: 'string'; row: string } | { kind: 'field'; path: string } | { kind: 'finding'; id: string };
 
+/** Instance B for the compare view (`vs`): the draw fields that differ from the call in focus. The
+ * situation is left out on purpose; "Compare situations" on the path rail covers it. */
+export interface CompareDraw { family?: string; seed?: number; tier?: number; kit?: Kit; squad?: number; certs?: string[] }
+
 /** The call draw in focus: every LabParams field but the path, which LabUrl keeps on its own. */
 export type LabCall = Omit<LabParams, 'path'>;
 
@@ -30,6 +34,8 @@ export interface LabUrl {
   flow: { mode: 'reach' | 'structure' | 'state'; color: 'band' | 'fate'; pruned: boolean; expanded: string[] };
   vision: Vision | null; tuning: { group: string; advanced: boolean }; filter: string;
   notes: boolean; frame: 'player' | null; labAlias: boolean;
+  /** Instance B of the compare view, or null when it is closed. */
+  vs: CompareDraw | null;
 }
 
 export interface ReviewNote {

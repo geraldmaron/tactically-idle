@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { callKey, defaultCall, GATE_RETIRED_NOTICE, labUrlToSearch, noTreeNotice, OLD_LAB_NOTICE, parseLabUrl, parseSelection, playerSearch, selectionText } from './url';
+import { callKey, defaultCall, GATE_RETIRED_NOTICE, labUrlToSearch, noTreeNotice, OLD_LAB_NOTICE, parseLabUrl, parseSelection, parseVs, playerSearch, selectionText, vsText } from './url';
 import type { LabUrl, Selection } from './types';
 
 const HOSTAGE = 'type=hostage_crisis&family=market_row&seed=7&tier=2&variant=1';
@@ -301,5 +301,31 @@ describe('callKey', () => {
   });
   it('is "none" with no call', () => {
     expect(callKey(parse('').url)).toBe('none');
+  });
+});
+
+describe('compare instance B (vs)', () => {
+  it('reads each draw field and writes the same link back', () => {
+    const search = `?${HOSTAGE}&vs=family:market_row,seed:9,tier:3,kit:full,squad:42,certs:vehicle_operations~crisis_negotiation`;
+    const { url, rewritten } = parse(search);
+    expect(url.vs).toEqual({ family: 'market_row', seed: 9, tier: 3, kit: 'full', squad: 42, certs: ['vehicle_operations', 'crisis_negotiation'] });
+    expect(rewritten).toBe(false);
+    expect(labUrlToSearch(url)).toBe(search);
+  });
+
+  it('opens with nothing changed as vs=on, and is absent when closed', () => {
+    expect(parse(`?${HOSTAGE}&vs=on`).url.vs).toEqual({});
+    expect(canonical(`?${HOSTAGE}&vs=on`)).toBe(`?${HOSTAGE}&vs=on`);
+    expect(parse(`?${HOSTAGE}`).url.vs).toBeNull();
+  });
+
+  it('drops unknown fields and bad values, and needs a call', () => {
+    expect(parseVs('kit:gold,tier:9,colour:red,seed:x')).toEqual({ tier: 5 });
+    expect(vsText({ kit: 'day1', tier: 2 })).toBe('tier:2,kit:day1');
+    expect(parse('?vs=kit:full').url.vs).toBeNull();
+  });
+
+  it('leaves the true-device page out of the comparison', () => {
+    expect(playerSearch(parse(`?${HOSTAGE}&vs=kit:full`).url)).not.toContain('vs=');
   });
 });

@@ -422,3 +422,20 @@
 /* The page inside the iframe: the game alone, full window. */
 .lab-player { min-height: 100vh; }
 .lab-player-error { display: grid; place-items: center; padding: 24px; color: var(--text-dim); font: 400 15px/22px var(--font-ui); }
+
+/* Compare (lab-compare): instance B beside A under "This moment". */
+.lab-cmp { display: grid; gap: 0; padding: 0 0 var(--lab-s3); border-bottom: 1px solid var(--line); }
+.lab-cmp-close { margin-left: auto; }
+.lab-cmp-draw { display: flex; flex-wrap: wrap; gap: var(--lab-s2) var(--lab-s3); padding: 0 var(--lab-s4) var(--lab-s3); }
+.lab-cmp-field { display: grid; gap: 2px; color: var(--muted); font: var(--lab-type-micro); }
+.lab-cmp-grants { display: inline-flex; align-items: center; gap: 6px; min-height: var(--lab-control); color: var(--text-dim); font: var(--lab-type-row); }
+.lab-cmp-cols, .lab-cmp-row { display: grid; grid-template-columns: 22px minmax(0, 1fr) 46px 46px 44px 52px; align-items: baseline; gap: 4px var(--lab-s2); }
+.lab-cmp-cols { padding: 0 var(--lab-s4) 4px; color: var(--muted); font: var(--lab-type-micro); }
+.lab-cmp-list { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; }
+.lab-cmp-row { padding: 4px var(--lab-s4); font: var(--lab-type-row); }
+.lab-cmp-title { min-width: 0; color: var(--text); overflow-wrap: anywhere; }
+.lab-cmp-cell { font-family: var(--font-cond); font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; }
+.lab-cmp-locked { display: inline-flex; align-items: center; justify-content: flex-end; gap: 3px; color: var(--muted); font-weight: 500; }
+.lab-cmp-why { grid-column: 2 / -1; display: flex; flex-wrap: wrap; gap: 4px 6px; font: var(--lab-type-micro); }
+.lab-cmp-note { margin: var(--lab-s2) var(--lab-s4) 0; font: var(--lab-type-row); }
+.lab-cmp-diverge { display: flex; gap: 6px; align-items: baseline; color: var(--amber); }
