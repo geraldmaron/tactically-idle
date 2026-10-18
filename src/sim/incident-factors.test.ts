@@ -185,3 +185,78 @@ describe('incident factors: the incident class', () => {
     expect(calmVictim.p).toBe(calmHostage.p);
   });
 });
+
+describe('intel-odds: what the team has confirmed, and how close the work comes', () => {
+  const armed = calls('active_armed_incident', 12);
+  const s = armed[0];
+  const subject = s.incidentPeople!.find(person => person.threat)!;
+
+  it('a weapon held only on report costs more than the same weapon confirmed, and says so', () => {
+    const reported = odds(s, '_shots_go_now', (_, knowledge) => { knowledge[subject.armamentFactId!] = 'reported'; });
+    const confirmed = odds(s, '_shots_go_now', (_, knowledge) => { knowledge[subject.armamentFactId!] = 'confirmed'; });
+    expect(confirmed.p).toBeGreaterThan(reported.p);
+    expect(reported.labels.some(label => label.endsWith('’s weapon is reported, not yet seen'))).toBe(true);
+    expect(confirmed.labels.some(label => label.includes('not yet seen'))).toBe(false);
+  });
+
+  it('the unconfirmed cost never scales with readiness', () => {
+    const contributors = (readiness: 'carried' | 'brandished') => {
+      const state = startGateRun(s.id, 719);
+      const scenario = structuredClone(s);
+      const run = structuredClone(state.activeRun!);
+      run.knowledge[subject.armamentFactId!] = 'reported';
+      scenario.incidentPeople!.find(person => person.id === subject.id)!.threat!.readiness = readiness;
+      const action = Object.values(scenario.stages).flatMap(stage => stage.actions).find(entry => entry.id.endsWith('_shots_go_now'))!;
+      return incidentFactors(scenario, buildLocation(scenario.locationFamilyId, scenario.locationSeed), run, action, [])!.difficulty.find(c => c.label.includes('not yet seen'))!.value;
+    };
+    expect(contributors('carried')).toBeLessThan(0);
+    expect(contributors('carried')).toBe(contributors('brandished'));
+  });
+
+  it('an entry goes better once the team has seen where the armed person is', () => {
+    const reported = odds(s, '_shots_go_now', (_, knowledge) => { knowledge[subject.locationFactId!] = 'reported'; });
+    const seen = odds(s, '_shots_go_now', (_, knowledge) => { knowledge[subject.locationFactId!] = 'confirmed'; });
+    expect(seen.p).toBeGreaterThan(reported.p);
+    expect(seen.labels).toContain(`The team has seen where ${subject.label} is`);
+    expect(reported.labels).not.toContain(`The team has seen where ${subject.label} is`);
+  });
+
+  it('a look from outside into an armed person’s room costs, and an entry into it does not pay that cost', () => {
+    const look = odds(s, '_shots_go_now', scenario => {
+      const action = Object.values(scenario.stages).flatMap(stage => stage.actions).find(entry => entry.id.endsWith('_shots_go_now'))!;
+      action.approach = 'window';
+    });
+    expect(look.labels).toContain(`${subject.label} may see the team watching`);
+    expect(odds(s, '_shots_go_now').labels).not.toContain(`${subject.label} may see the team watching`);
+  });
+});
+
+describe('intel-odds: with one subject, how close a move comes to them (R-B5)', () => {
+  const lone = calls('hostage_crisis', 30).find(s => s.incidentPeople!.filter(person => person.threat).length === 1)!;
+  const built = buildLocation(lone.locationFamilyId, lone.locationSeed);
+  const taker = lone.incidentPeople!.find(person => person.threat)!;
+  const walk = Object.values(lone.stages).flatMap(stage => stage.actions).find(entry => entry.id.endsWith('_offer_take_courier'))!;
+  const route = lone.story!.bindings.routes[walk.storyRoute!];
+  const byId = new Map(built.location.openings.map(opening => [opening.id, opening]));
+  const touched = new Set([route.fromSpaceId, ...route.openingIds.flatMap(id => [byId.get(id)!.a, byId.get(id)!.b])]);
+  const adjacent = (a: string, b: string) => (built.derived.adjacency[a] ?? []).some(edge => edge.to === b) || (built.derived.adjacency[b] ?? []).some(edge => edge.to === a);
+  const away = built.location.rooms.find(room => !touched.has(room.id) && ![...touched].some(id => adjacent(id, room.id)));
+  const move = (spaceId: string) => (scenario: ScenarioDefinition) => { scenario.incidentPeople!.find(person => person.id === taker.id)!.spaceId = spaceId; };
+
+  it('a walk-out past the subject’s room meets the full seat; one that keeps away meets less', () => {
+    expect(lone, 'a hostage call with the taker alone').toBeDefined();
+    expect(away, 'a room neither on nor next to the courier’s way out').toBeDefined();
+    const near = odds(lone, '_offer_take_courier', move(route.fromSpaceId));
+    const far = odds(lone, '_offer_take_courier', move(away!.id));
+    expect(far.p).toBeGreaterThan(near.p);
+    expect(near.labels.some(label => label.endsWith('in a room this work reaches'))).toBe(true);
+    expect(far.labels.some(label => label.endsWith('away from the rooms this work reaches'))).toBe(true);
+  });
+
+  it('a phone call, which moves nobody, is never weighed by it', () => {
+    const near = odds(lone, '_offer_hear_him', move(route.fromSpaceId));
+    const far = odds(lone, '_offer_hear_him', move(away!.id));
+    expect(far.labels.some(label => label.includes('this work reaches'))).toBe(false);
+    expect(near.labels.some(label => label.includes('this work reaches'))).toBe(false);
+  });
+});

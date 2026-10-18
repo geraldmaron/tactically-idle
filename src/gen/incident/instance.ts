@@ -197,6 +197,10 @@ export function drawInstance(template: IncidentTemplate, built: BuiltLocation, s
     return p.offsite && p.vantage ? [[role, { ...p.vantage }]] : [];
   })));
   if (Object.keys(vantages).length) placed.vantages = vantages;
+  // TreeState.armed: per group, the members holding a weapon a look into their room would see.
+  const armed = Object.fromEntries(Object.keys(tree.groups ?? {}).map(group => [group, people.filter(person => person.countedRole === group
+    && person.threat?.readiness !== 'concealed' && person.weapons.some(weapon => weapon.where !== 'elsewhere' && weapon.visible !== false)).length]));
+  if (Object.keys(armed).length) placed.armed = armed;
   return {
     type: template.type, spec: { ...spec }, situation: situationIndex, pacing: placed.recipe.characteristic, turns,
     location: { familyId: spec.familyId, seed: spec.buildingSeed, setting: built.location.setting, outsideSpaceId: placed.outside, sceneSpaceId: placed.room.id, sceneRoomType: sceneRoom.type },

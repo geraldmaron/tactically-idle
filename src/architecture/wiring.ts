@@ -100,6 +100,18 @@ export const WIRING: readonly Probe[] = [
     evidence: '`incidentSubjects` reads armament knowledge into `threatFx` (src/sim/incident-factors.ts). The rescue tree has no armed person on scene, so it never responds.',
   },
   {
+    id: 'intel-confirmed', system: 'subject', input: 'What the team has confirmed (every person\'s weapon and location settled to the truth)', direction: 'up', status: 'live', minShare: 0.8,
+    perturb: state => edit(state, draft => {
+      const scenario = getScenario(draft.activeRun!.scenarioId)!;
+      const facts = new Map(scenario.facts.map(fact => [fact.id, fact]));
+      for (const person of scenario.incidentPeople ?? []) for (const id of [person.armamentFactId, person.locationFactId]) {
+        const fact = id ? facts.get(id) : undefined;
+        if (fact) draft.activeRun!.knowledge[fact.id] = fact.truth ? 'confirmed' : 'disproved';
+      }
+    }),
+    evidence: 'A weapon held only on report costs a share of the threat on top (THREAT_TUNING.unconfirmed, src/sim/threat.ts), and an entry or a look into a room goes better once the team has seen where the armed person in it is (INTEL_V1.knownPosition, src/sim/incident-factors.ts). Confirming either takes the cost off or adds the credit.',
+  },
+  {
     id: 'metric-pressure', system: 'scenario', input: 'Time pressure on the call (pressure 95)', direction: 'down', status: 'live', minShare: 1, everyTree: true,
     perturb: state => edit(state, draft => { draft.activeRun!.pressure = 95; }),
     evidence: 'Pressure penalty scaled by composure (src/sim/resolution.ts)',
