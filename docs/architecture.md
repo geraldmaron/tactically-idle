@@ -18,7 +18,7 @@ syntax tree (`src/dev/import-graph.ts`, with the parser Vite ships), and a dynam
 | commerce | 4 | 198 | kernel | Point packs and the purchase ledger. |
 | qa | 26 | 3977 | kernel, world, catalog, scenario, engine, commerce | Content gates, balance measurement, fixtures and test support. Never loaded by the game. |
 | ui | 106 | 15826 | kernel, world, catalog, scenario, engine, commerce | Player screens, the blueprint renderer, portraits and the store that dispatches commands. |
-| lab | 97 | 16951 | kernel, world, catalog, scenario, engine, commerce, qa, ui | The dev-only Scenario Lab and dev sheets. Reads everything, never ships. |
+| lab | 99 | 17215 | kernel, world, catalog, scenario, engine, commerce, qa, ui | The dev-only Scenario Lab and dev sheets. Reads everything, never ships. |
 | shell | 3 | 372 | kernel, world, catalog, engine, ui, lab | Entry points that choose which app to mount. |
 
 ## Systems
@@ -31,7 +31,7 @@ syntax tree (`src/dev/import-graph.ts`, with the parser Vite ships), and a dynam
 | item | 6 | 1322 | What they carry: the item catalog, ratings and capabilities, force risk, inventory and wear. |
 | scenario | 57 | 12314 | What happens: call trees, placement on the blueprint, choices, chance per choice, branches and clocks, and the call-time logistics (loadouts, resupply, outside support) that read the items. |
 | metric | 28 | 4105 | What it meant: outcome scoring, harm, debriefs, department reputation, money and progression, and the Command Staff who run the department. |
-| platform | 195 | 33043 | Everything that serves the systems above: records, randomness, saves, the store, screens and tooling. |
+| platform | 197 | 33307 | Everything that serves the systems above: records, randomness, saves, the store, screens and tooling. |
 
 ## System dependency chain
 
