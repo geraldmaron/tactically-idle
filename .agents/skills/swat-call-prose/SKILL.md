@@ -94,7 +94,7 @@ wins. The full table, clamps, field reuse and tense rules are in [references/sur
 | Surface | Field | Hard limit | House target | Shape |
 |---|---|---|---|---|
 | Card title | title | 34 chars | 1 to 3 words | a place, object or person |
-| Card hook | summary | none | 130 chars bound, first sentence 14 words | person and want in five words, then the danger |
+| Card hook | summary | none | 100 chars bound, first sentence 14 words | person and want in five words, then the danger |
 | Pressure label | pressureLabel | none | 2 to 4 words | whose safety, then what runs out |
 | Dispatch reason | dispatchReason | 240 | 2 sentences | who called, what they want the team for |
 | Known, unknown | known[], unknown[] | 260 | 12 words | source, claim, how they know |

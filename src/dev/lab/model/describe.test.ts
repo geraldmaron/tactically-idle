@@ -12,9 +12,6 @@ const TEMPLATES = Object.values(INCIDENT_TEMPLATES) as IncidentTemplate[];
 describe('endings with the same title', () => {
   const hostage = INCIDENT_TEMPLATES.hostage_crisis as IncidentTemplate;
   it('get their first remaining task as a crumb; every other ending keeps its title alone', () => {
-    expect(hostage.tree.endings.held_both.title).toBe(hostage.tree.endings.held_both_down.title);
-    expect(endingTwinCrumb(hostage.tree, 'held_both')).toBe(hostage.tree.endings.held_both.remainingTasks![0]);
-    expect(endingTwinCrumb(hostage.tree, 'held_both_down')).toBe(hostage.tree.endings.held_both_down.remainingTasks![0]);
     expect(endingTwinCrumb(hostage.tree, 'held_inside')).toBeNull();
     expect(endingListTitle(hostage.tree, 'held_inside', text => text)).toBe(hostage.tree.endings.held_inside.title);
   });

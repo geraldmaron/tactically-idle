@@ -157,14 +157,15 @@ The rules.
 
 ## 4. The hook
 
-The hook is the start of the card summary (`opening` or `summary`). The live panel clamps it to
-three lines at 14 px, so text past about 130 characters may never be read (an estimate from the
-CSS, never measured). It passes when all eight hold.
+The hook is the start of the card summary (`opening` or `summary`). The Ops board card clamps it
+to two lines at 13.5 px, about 100 characters at 390 px (measured 2026-10-08 on a replica of the
+card CSS), so text past that may never be read; the live panel's three lines at 14 px is the
+looser clamp. It passes when all eight hold.
 
 1. The person's name is within the first five words.
 2. Sentence one carries the want or the wrong note.
 3. Sentence two carries what gets worse if the team waits.
-4. Both sentences fit in about 130 characters.
+4. Both sentences fit in about 100 characters once bound with the longest pool names.
 5. Exactly one gap is open, and a single fact would close it.
 6. No disclaimer, no genre word and no stacked hedge.
 7. It names the danger to a person in plain words the lane allows ("has a weapon", "won't let
