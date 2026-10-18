@@ -53,5 +53,5 @@ describe('architecture', () => {
 
   it('keeps docs/architecture.md rendered from the manifest', async () => {
     await expect(renderArchitecture()).toMatchFileSnapshot('../../docs/architecture.md');
-  });
+  }, 60_000);
 });

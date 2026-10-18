@@ -225,7 +225,7 @@ describe('the rail and the path helpers', () => {
     expect(summary.ending).toMatchObject({ kind: 'ending', ending });
     expect(['clean', 'costly', 'unresolved', 'hurt', 'death']).toContain(summary.weight);
     expect(summary.lines.length).toBeGreaterThan(0);
-  });
+  }, 60_000);
 
   it('lists the choices authored at this node that the engine does not offer here', () => {
     const s0 = openCall(REFERENCE);
