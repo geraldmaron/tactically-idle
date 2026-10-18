@@ -77,10 +77,7 @@ describe('commitments: the rule', () => {
     expect(step(r, concession, 'mixed', [], [], ['out:taker'])).toEqual([{ id: 'concession:write', status: 'kept' }]);
   });
 
-  it('do nothing before v13, and give the same result every time', () => {
-    const old = run();
-    expect(applyCommitments(old, { ...scenario, version: 12 }, concession, 'favorable', [], [], 0)).toEqual([]);
-    expect(old.commitments).toBeUndefined();
+  it('give the same result every time', () => {
     const a = run(), b = run();
     for (const r of [a, b]) { step(r, concession); step(r, entry); }
     expect(a).toEqual(b);

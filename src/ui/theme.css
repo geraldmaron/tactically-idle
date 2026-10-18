@@ -28,6 +28,12 @@
   --marker-mint: #4fe3a1;
   --marker-orange: #ff8a2a;
   --tape: rgba(214, 198, 160, 0.82);
+  /* people in call text, by public kind (src/ui/people/people.css); each pairs with a second cue */
+  --people-subject: #b99cff;
+  --people-civilian: #ffa6da;
+  --people-person: #8d9cb4;
+  --people-officer: #9cc4ff;
+  --people-withheld: var(--text);
 
   --font-display: 'Oswald', 'Barlow Condensed', 'Arial Narrow', sans-serif;
   --font-cond: 'Barlow Condensed', 'Arial Narrow', sans-serif;

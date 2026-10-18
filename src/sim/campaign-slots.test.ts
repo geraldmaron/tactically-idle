@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { CampaignSlots, SLOT_COUNT, SLOTS_KEY } from './campaign-slots';
 import { createInitialState } from './department';
-import { SAVE_KEY, serialize } from './save';
+import { serialize } from './save';
 import { withSaveLock } from './save-lock';
 
 const T0 = Date.UTC(2026, 9, 2);
@@ -14,17 +14,7 @@ function memory() {
 }
 
 describe('ten local campaign slots', () => {
-  it('migrates the existing autosave into slot one without changing people or deleting its recovery source', () => {
-    const storage = memory(); const state = createInitialState(T0, 71);
-    state.candidates[0].shortlisted = true;
-    const original = serialize(state, T0); storage.setItem(SAVE_KEY, original);
-    const saves = new CampaignSlots(storage, T0, () => 55);
-    expect(saves.getSnapshot().state).toEqual(state);
-    expect(saves.getSnapshot().activeSlotId).toBe(1);
-    expect(saves.getSnapshot().slots.filter(Boolean)).toHaveLength(1);
-    expect(storage.getItem(SAVE_KEY)).toBe(original);
-    expect(new CampaignSlots(storage, T0, () => 999).getSnapshot().state).toEqual(state);
-  });
+
   it('stores the first campaign immediately and keeps seeds independent after new game, load and reload', () => {
     const storage = memory(); let seed = 100;
     const saves = new CampaignSlots(storage, T0, () => seed++);
@@ -103,15 +93,21 @@ describe('ten local campaign slots', () => {
     expect(saves.getSnapshot().issue).toBeNull();
     expect(saves.getSnapshot().dirty).toBe(false);
   });
-  it('leaves unreadable legacy data intact and retains a corrupt slot without loading or overwriting it', () => {
-    const storage = memory(); storage.setItem(SAVE_KEY, 'old broken bytes');
-    const saves = new CampaignSlots(storage, T0, () => 7);
-    expect(storage.getItem(SAVE_KEY)).toBe('old broken bytes');
-    expect(saves.getSnapshot().slots[0]?.valid).toBe(false);
-    expect(saves.getSnapshot().activeSlotId).toBe(2);
-    expect(saves.load(1, T0).ok).toBe(false);
-    expect(saves.getSnapshot().slots[0]?.valid).toBe(false);
-    expect(JSON.parse(storage.getItem(SLOTS_KEY)!).slots[0].data).toBe('old broken bytes');
+  it('rejects an old campaign in its slot with a readable message and preserves its bytes', () => {
+    const storage = memory();
+    new CampaignSlots(storage, T0, () => 7);
+    const library = JSON.parse(storage.getItem(SLOTS_KEY)!);
+    const envelope = JSON.parse(library.slots[0].data);
+    envelope.contentVersion = envelope.state.contentVersion = 12;
+    library.slots[0].data = JSON.stringify(envelope);
+    const original = JSON.stringify(library); storage.setItem(SLOTS_KEY, original);
+    const restored = new CampaignSlots(storage, T0);
+    expect(restored.getSnapshot().slots[0]?.valid).toBe(false);
+    expect(restored.getSnapshot().activeSlotId).toBeNull();
+    expect(restored.getSnapshot().issue).toContain('different game version');
+    expect(restored.load(1, T0, true)).toMatchObject({ ok: false, reason: expect.stringContaining('Start a new campaign') });
+    expect(storage.getItem(SLOTS_KEY)).toBe(original);
+    expect(restored.importGame(2, 'Old', library.slots[0].data, T0)).toMatchObject({ ok: false, reason: expect.stringContaining('different game version') });
   });
   it('never overwrites an unreadable library, even during automatic ticks', () => {
     const storage = memory(); storage.setItem(SLOTS_KEY, '{broken');

@@ -13,6 +13,7 @@ import type { BuiltLocation, Contributor, Id, Officer, OperationRun } from './ty
 import { relevantSubjects, threatFx, type Subject } from './threat';
 import { SPATIAL_TUNING } from './spatial-factors';
 import { meterContributors } from './meters';
+import { tunable } from './tuning';
 
 export interface IncidentFx { difficulty: Contributor[]; add: number; score: Contributor[]; details: string[] }
 
@@ -30,10 +31,10 @@ const round1 = (n: number) => Math.round(n * 10) / 10;
  * - `agitation`: scale on the "is more worked up now" contributor a conversation with the holder
  *   carries (sim/meters.ts), when the team's provocations have raised it. Its label says why. */
 export type IncidentClassKey = 'hostage' | 'victim';
-export const INCIDENT_CLASS_V1 = {
+export const INCIDENT_CLASS_V1 = tunable('INCIDENT_CLASS_V1', {
   hostage: { waiting: 0, agitation: 1 },
   victim: { waiting: -3, agitation: 1.5 },
-} satisfies Record<IncidentClassKey, { waiting: number; agitation: number }>;
+} satisfies Record<IncidentClassKey, { waiting: number; agitation: number }>);
 
 /** The class the people still held make, and who makes it so: the person held over a grievance
  * (else the first held) and the person holding them. Null when nobody is held inside. */
@@ -73,7 +74,7 @@ function rooms(scenario: ScenarioDefinition, built: BuiltLocation, action: Actio
 }
 
 export function incidentFactors(scenario: ScenarioDefinition, built: BuiltLocation, run: OperationRun, action: ActionDefinition, participants: Officer[]): IncidentFx | null {
-  if (scenario.version < 13 || !scenario.incidentPeople?.length) return null;
+  if (!scenario.incidentPeople?.length) return null;
   const all = incidentSubjects(scenario, run);
   if (!all.length) return null;
   // One building, one incident: every subject inside bears on everything the team does, weighted

@@ -1,7 +1,7 @@
 import portraitManifest from '../../../public/art/portraits/manifest.json';
 import { useState } from 'react';
 import type { Officer } from '../../sim/types';
-import { PERSONA_BY_ID, STARTER_PERSONAS } from '../../content/personas';
+import { PERSONA_BY_ID } from '../../content/personas';
 import { assetUrl } from '../art/assetUrl';
 
 export interface PortraitProps {
@@ -18,9 +18,7 @@ export function portraitSource(key: string): string {
 
 /** Upgrade presentation without rewriting a saved person or borrowing someone else's face. */
 export function currentPortraitKey(officer: PortraitProps['officer']): string | null {
-  const person = officer.identityId
-    ? PERSONA_BY_ID[officer.identityId]
-    : STARTER_PERSONAS.find((p) => p.legacyOfficerId === officer.id);
+  const person = officer.identityId ? PERSONA_BY_ID[officer.identityId] : undefined;
   if (!person || person.firstName !== officer.firstName || person.surname !== officer.surname
     || !portraitManifest.readyIds.includes(person.id)) return null;
   return person.portrait;

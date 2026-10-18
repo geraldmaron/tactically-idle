@@ -122,7 +122,7 @@ describe('capability dependency (acceptance 3)', () => {
     const s = startRun(swapChenForReyes(makeState()), 'ms_occupancy', ['A']);
     const v = view(s, 'ms_contact');
     expect(v.eligible).toBe(false);
-    expect(v.reason).toBe('Needs a crisis negotiator — Squad A has none');
+    expect(v.reason).toBe('Needs a crisis negotiator. Squad A has none');
     expect(v.summary).toBe('Needs a crisis negotiator');
     expect(apply(s, { type: 'decide', actionId: 'ms_contact', actingSquadIds: ['A'], supportSquadIds: [] }).result.ok).toBe(false);
   });
@@ -151,7 +151,7 @@ describe('capability dependency (acceptance 3)', () => {
     const s = startRun(makeState(), 'ms_occupancy', ['A', 'B']);
     const v = view(s, 'ms_contact', 'B');
     expect(v.eligible).toBe(false);
-    expect(v.reason).toBe('Needs a crisis negotiator — Squad B has none. Squad A can.');
+    expect(v.reason).toBe('Needs a crisis negotiator. Squad B has none. Squad A can.');
     expect(view(s, 'ms_contact', 'A').eligible).toBe(true);
     // No focus: the best eligible deployed squad is chosen.
     expect(view(s, 'ms_contact', null).actingSquadIds).toEqual(['A']);
@@ -191,7 +191,7 @@ describe('wrong initial report (urgent scenario)', () => {
     const aid = view(s, 'mu_targeted_aid');
     expect(aid.eligible).toBe(false);
     expect(aid.targetId).toBeNull();
-    expect(aid.reason).toBe("The patient's location is not known yet");
+    expect(aid.reason).toBe('Account for the patient’s current location before providing physical care');
     expect(spaceViews(s).find((v) => v.id === 'bedroom_e')!.actionIds).toEqual([]);
     const views = actionViews(s0(), NOW, 'A');
     expect(views.some((v) => v.targetId === 'bedroom_e')).toBe(false);
@@ -221,6 +221,7 @@ describe('wrong initial report (urgent scenario)', () => {
     expect(after.activeRun!.squadTasks[0]).toMatchObject({ positionId: 'front_yard', stagingId: 'sp_w_kitchen_s_front_yard' });
     // Now the aid action targets the real room and is eligible.
     const resolve = setRun(after, { stage: 'resolve' });
+    resolve.officers.off_ortiz.injury = null;
     expect(view(resolve, 'mu_targeted_aid')).toMatchObject({ eligible: true, targetId: 'bedroom_e' });
   });
 });
@@ -499,7 +500,7 @@ describe('integrity (acceptance 11)', () => {
     expect(r.stage).toBe('assess');
   });
 
-  it('a stage that runs out of options moves on instead of dead-ending', () => {
+  it('a stage with exhausted options waits for an explicit failed-response report', () => {
     // With no phone or hailer both contact options are ineligible, so one adverse gather leaves nothing to try.
     const loadouts = { A: { radio_kit: 1, trauma_kit: 1 } };
     let hit: GameState | null = null;
@@ -510,8 +511,9 @@ describe('integrity (acceptance 11)', () => {
     }
     expect(hit).not.toBeNull();
     const run = hit!.activeRun!;
-    expect(run.stage).toBe('adapt');
-    expect(run.history[0].explanation.join(' ')).toMatch(/moved on/);
+    expect(run.stage).toBe('assess');
+    expect(run.status).toBe('active');
+    expect(run.history).toHaveLength(1);
   });
 
   it('a JSON round trip mid-run then deciding gives the same result as deciding directly (no reroll)', () => {

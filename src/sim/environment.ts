@@ -3,11 +3,13 @@
 // `ScenarioDefinition.environment` and watch exactly one contributor move. Game
 // abstractions: lighting, sound carry, clutter, hazards, language, bystanders and access
 // aids change risk, strain, time and options. Nothing here is a procedure.
-import type { BuiltLocation, Contributor, Id, Officer, OperationRun } from './types';
-import type { ActionDefinition, EnvironmentDefinition, ScenarioDefinition } from './scenario-types';
-import { HAZARD_FLAG } from './scenario-types';
+import type { BuiltLocation, Contributor, Id, Officer } from './types';
+import type { EnvironmentDefinition } from './scenario-types';
+import { tunable } from './tuning';
 
-export const ENV_TUNING = {
+/** Tunable (sim/tuning.ts). Only `observationDifficulty` is read in play: the functions that read the
+ * rest have no callers, and some fields are read nowhere. TUNING_META marks them unused. */
+export const ENV_TUNING = tunable('ENV_TUNING', {
   /** Visual multiplier on sightlines (1 = bright daylight with the lights on). */
   light: { dusk: 0.85, night: 0.6, powerOff: 0.7 },
   /** Added observation difficulty for squads that cannot read heat. */
@@ -42,18 +44,9 @@ export const ENV_TUNING = {
     outside: -2.5,
   },
   keyholderScore: 2,
-};
+});
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
-
-export function environmentOf(s: Pick<ScenarioDefinition, 'environment'>): EnvironmentDefinition | null {
-  return s.environment ?? null;
-}
-
-/** True when the space is an exterior zone. */
-export function isOutside(built: BuiltLocation, spaceId: Id): boolean {
-  return built.location.zones.some((z) => z.id === spaceId);
-}
 
 /** Visual multiplier for sightlines from the lighting alone: 1 when nothing dims the scene. */
 export function lightFactor(env: EnvironmentDefinition | null): number {
@@ -66,7 +59,7 @@ export function lightFactor(env: EnvironmentDefinition | null): number {
 }
 
 /** Why the lighting is poor, in player language. Null in good light. */
-export function lightReason(env: EnvironmentDefinition | null): string | null {
+function lightReason(env: EnvironmentDefinition | null): string | null {
   if (!env) return null;
   const parts: string[] = [];
   if (env.timeOfDay === 'night') parts.push('night');
@@ -109,37 +102,6 @@ export function environmentStrain(env: EnvironmentDefinition | null): { mult: nu
 /** Floor of a space (zones are 0). */
 export function floorOfSpace(built: BuiltLocation, id: Id): number {
   return built.derived.spaces[id]?.floor ?? built.location.rooms.find((r) => r.id === id)?.floor ?? 0;
-}
-
-/** Reasons the environment makes an action unavailable. */
-export function environmentGates(
-  scenario: Pick<ScenarioDefinition, 'environment'>,
-  run: Pick<OperationRun, 'flags'>,
-  action: ActionDefinition,
-  built: BuiltLocation,
-): string[] {
-  const env = scenario.environment ?? null;
-  const out: string[] = [];
-  for (const need of action.requires.env ?? []) {
-    if (need === 'cctv') {
-      if (!env?.cctv) out.push('There is no camera system at this address');
-      else if (env.power === 'off') out.push('The cameras are down: the power is out');
-    } else if (need === 'keyholder' && !env?.keyholder) out.push('No keyholder has been reached');
-  }
-  if (action.keyholder && !env?.keyholder) out.push('No keyholder has been reached');
-  if (env) {
-    if (env.hazards.includes('gas') && action.check.kind === 'execution' && action.tempo === 'urgent' && !action.hazardReason && !run.flags.includes(HAZARD_FLAG.gas))
-      out.push('Gas smell reported: no rushed entry without a reason');
-    if (
-      env.hazards.includes('structural') &&
-      action.approach === 'path' &&
-      floorOfSpace(built, action.targetId) >= 1 &&
-      !action.hazardReason &&
-      !run.flags.includes(HAZARD_FLAG.structural)
-    )
-      out.push('The upper floor is reported unsafe: nobody goes up until it is checked');
-  }
-  return out;
 }
 
 /** Calm-voice partial mitigation and the future 'language' trait, in one place. */

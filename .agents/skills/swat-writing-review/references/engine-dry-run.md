@@ -51,8 +51,8 @@ one value engineering cannot guess.
 ## 2. The score on the fastest and slowest path
 
 A run starts at objective 0 and civilian safety 100. `outcomeFactor` in src/sim/operation.ts
-scores it as 0.55 times objective plus 0.45 times civilian safety, over 100. Shipped stories set
-`objective: 100` on the completing effect (see src/gen/incident/stories-v5 for the pattern).
+scores it as 0.55 times objective plus 0.45 times civilian safety, over 100. The retired hand-authored stories set
+`objective: 100` on the completing effect. Check how the call trees in src/content/call-trees/ move `objective` before relying on that.
 
 1. For each ending, take the fastest and slowest path from the static walk.
 2. Sum every objective and civilian safety delta on that path, including pressure losses after

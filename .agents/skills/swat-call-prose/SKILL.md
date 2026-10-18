@@ -11,7 +11,7 @@ description: >-
   every string inside its budget after binding, zero em dashes with colons
   only in fixed formats, a named and distinct cost in every option, the threat
   object always named, one address for the player, no 4-word run repeated
-  across variants, the punch-up passes, and the game string checks and content
+  across variants, the punch-up passes, and the game string checks and call-tree
   gates run. Produces filled fields and a prose record. Not for deciding what
   happens in a call, officer text, or judging a batch. Stand down for docs and
   code comments.
@@ -26,10 +26,10 @@ This skill writes every line a player reads during a Tactically Idle call. The
 player gives each screen a few seconds, and the owner counts the writing as the
 game's main draw, so every string has to land on first read at phone width.
 
-The bar already ships in the hand-authored armed story. "The gunfire stops. Eli
+The bar is a line from the retired hand-authored armed story. "The gunfire stops. Eli
 does not come out." A sound, an absence and a named person, in eight words
-(its weapon word is legal only in the unlinted lane, see section 7). The floor
-this skill replaces is the compiler's shared adapt prompt, "Check the disputed
+(its weapon word is one the prose lint can miss, see section 7). The floor
+this skill replaces is the retired compiler's shared adapt prompt, "Check the disputed
 point in person." It names no person, no place and no cost.
 
 One test sits under every rule below. Each line names something a person on
@@ -49,8 +49,6 @@ Stand down and route the work when any of these holds.
    alone.
 5. The string is UI chrome a component owns ("Still needed"), unless the owner
    asks.
-6. The string sits in an issued content version. Write its replacement for a
-   new version layer instead (section 2).
 
 Tie-breaker. If the change alters who is in the call, what happens, which
 choices exist or how it ends, it is design. A dominated option, a filler
@@ -78,29 +76,25 @@ working words ("her say", consent, rapport) are never printed. Show the act,
 
 | Lane | You write | The engine writes |
 |---|---|---|
-| Typed framework package | the IncidentFramework fields and v11 or later depth fields | adapt and resolve prompts, team responsibilities, approach summaries, markers, the placement line, the unfinished ending, mixed and adverse previews on resolutions |
-| Hand-authored story | the whole ScenarioDefinition | binding, spelling bridge, pacing lines |
-| Setting module | per-setting opening, briefing, prompts, action text, endings | everything outside the module |
-| Version-gated override | replacement text for one later version only | the issued text, which never changes |
+| Call tree | the whole `CallTree` text: summary, briefing, node prompts, choice titles, summaries and previews, outcome text, endings | role binding, the standard consequence lines in `src/content/incidents/lines.ts`, the generated command line on entry and concession choices, the deliberate-answers briefing line |
 
-Search INCIDENT_CONTENT_VERSION for the current version (12 on 2026-10-06),
-and ask the owner before touching the newest version's text. Never edit an
-issued entry, because the fingerprint suites hash whole calls. Draft the
-replacement for a version-gated layer (the framework-depth-v12.ts pattern),
-tag it "needs version layer" and send the field request to design.
+Content has one current version, and calls are edited in place. Old saves are
+rejected, not migrated, and no text is held back for a later version. The tripwire is
+`src/gen/incident/trees-v13/compiled-fingerprints.json`. When your edit changes
+a compiled call on purpose, the fingerprints need a deliberate recapture, and
+the record says so. Never recapture to silence a change you did not intend.
 
 ## 3. The surface map and coverage
 
 Every string gets a surface tag and an engine field path before it gets
-words, and a row with no engine field is cut. Lint ceilings come from
-LENGTH_BUDGETS in src/gen/incident/gates/prose-lint.ts (search it if moved),
-and the code wins. The full table, clamps, typed-lane reuse and tense rules
-are in [references/surface-budgets.md](references/surface-budgets.md).
+words, and a row with no engine field is cut. Ceilings come from
+BUDGETS in scripts/game_string_checks.py (search it if moved), and the code
+wins. The full table, clamps, field reuse and tense rules are in [references/surface-budgets.md](references/surface-budgets.md).
 
 | Surface | Field | Hard limit | House target | Shape |
 |---|---|---|---|---|
 | Card title | title | 34 chars | 1 to 3 words | a place, object or person |
-| Card hook | summary (typed opening) | none | 130 chars bound, first sentence 14 words | person and want in five words, then the danger |
+| Card hook | summary | none | 130 chars bound, first sentence 14 words | person and want in five words, then the danger |
 | Pressure label | pressureLabel | none | 2 to 4 words | whose safety, then what runs out |
 | Dispatch reason | dispatchReason | 240 | 2 sentences | who called, what they want the team for |
 | Known, unknown | known[], unknown[] | 260 | 12 words | source, claim, how they know |
@@ -120,7 +114,8 @@ without text is a fix before handoff, never a gap in the record.
 
 ## 4. Line rules
 
-Lines marked (repo) were read on 2026-10-06. After lines are never data.
+Lines marked (repo) were read on 2026-10-06, some in layers since retired. After
+lines are never data.
 
 1. **Concrete over mood.** Before (repo) "There was no answer and the attempt
    raised tension." After "The TV inside goes off mid-ring."
@@ -144,10 +139,10 @@ Lines marked (repo) were read on 2026-10-06. After lines are never data.
 6. **Every option costs something the player values.** Time, safety, trust,
    evidence or strain. Before "Proceed with caution". After "Wait for the
    shield".
-7. **Variants differ by fact.** Before (repo, ten frameworks) "It takes much
+7. **Variants differ by fact.** Before (the retired v12 framework layer, ten calls) "It takes much
    longer, but it does not depend on the next step going right." After "Sit
    with Ruth until her daughter gets here."
-8. **Harm is plain, brief and inside the lane lists.** Before "Blood on the
+8. **Harm is plain, brief and inside the lint lists.** Before "Blood on the
    kitchen floor." After "He can’t put weight on the left leg."
 9. **Punctuation.** Periods do a dash's work. Before "The door’s locked [em
    dash] and someone’s moving inside." After "The door’s locked. Someone is
@@ -277,8 +272,8 @@ The lists, positions and paired examples are in
 
 Officers. The player hired these people, so at least one summary per stage
 names {lead} doing the risky part ("{lead} keeps her talking while she lies
-on the tile."), and it still reads with "Squad" in its place. Hand-authored
-calls carry three or more. Apply the voice markers swat-officer-stories
+on the tile."), and it still reads with "Squad" in its place. A call tree
+carries three or more. Apply the voice markers swat-officer-stories
 publishes in ../swat-officer-stories/references/profile-patterns.md, neutral
 when none are on file. {lead} is the only officer token today, so
 marker-driven lines are design only. Fill callback slots only from that
@@ -286,10 +281,10 @@ skill's ledger-backed templates, in slots swat-call-design reserved.
 
 ## 7. Tension inside the lint, and the ethics line
 
-The typed lane's lint bans graphic injury, weapon specifics and procedure
-(UNSAFE_DETAIL), unchecked accusations, settled guilt and meta phrasing. Read
-the live lists in prose-lint.ts. A word that slips past a pattern is a gap,
-never a license, and hand-authored text gets the lists by hand.
+The prose lint (`npm run check:strings` runs it on every call) bans graphic
+injury, weapon specifics and procedure (UNSAFE_DETAIL), unchecked accusations,
+settled guilt and meta phrasing. Read the live lists in prose-lint.ts. A word
+that slips past a pattern is a gap, never a license.
 
 Report regex results verbatim, with the lane enforcing now, the lane that
 would enforce if the lint were extended, and a lint-safe fallback, as
@@ -332,12 +327,13 @@ catch agreement slips. No mechanic may read pronouns or names; a test compiles
 each call under all three and requires identical mechanics.
 
 The binder replaces the authored full and first name as whole, case-sensitive
-words (search bindScenarioText), so never open a sentence with a word equal to
+words (search bindRoleTokens in trees-v13/compile.ts), so never open a sentence with a word equal to
 a cast first name. Measure budgets after binding with the longest pool names.
 Other hazards are in vocabulary-and-lint.md under Binding hazards.
 
-A template carries structure, never a fixed flavor sentence (search "It takes
-much longer" in framework-depth-v12.ts for the case to avoid). Variants differ by fact (the room, the
+A template carries structure, never a fixed flavor sentence (the retired v12 framework
+layer repeated "It takes much longer, but it does not depend on the next step going
+right." ten times, the case to avoid). Variants differ by fact (the room, the
 prop, the time, the person's own words), and situation variants change the
 punchline clause, not just the opening. No run of four or more words repeats
 across variants or across one call's outcomes, except a name, a fixed compiler
@@ -389,10 +385,13 @@ Run all seven, in order, on the whole call after the draft is complete.
    proof until the read confirms them.
 5. Run written-voice's checker on the text file the script wrote when that
    skill is installed, and say so when it is not.
-6. Run `npx vitest run content-gates content-playability issued catalog-v9`,
+6. Run `npx vitest run src/gen/incident/trees-v13` and `npm run check:strings`,
    then `npm run verify` before a pull request.
-7. Open `/story.html?type=<type>` from `npm run dev` at phone width
-   (docs/content-pipeline.md, search "story.html").
+7. Open `/lab?type=<type>` from `npm run lab` and read the call on Play
+   (the game's own screens at 390px) and Script (every line in every
+   variant). Script's Run checks sends the lines to this checker with real
+   casts (docs/scenario-lab.md; docs/content-pipeline.md, search "Human
+   review").
 
 If you cannot run python3, the tests or the dev server, say so, use the perl
 fallback or check by eye, and record each gap. Never claim an unrun pass.
@@ -400,12 +399,12 @@ fallback or check by eye, and record each gap. Never claim an unrun pass.
 ## What enforces this file
 
 Nothing in this file is machine-enforced by this file. The repo's prose-lint
-enforces lengths, spelling, meta phrasing, names and the unsafe, accusation
-and settled lists, on typed packages only. The content gates enforce
-structure, not wording. The vendored script enforces nothing until someone
+enforces spelling, meta phrasing and the unsafe, accusation and settled lists,
+and `npm run check:strings` runs it with this skill's checker on every bound
+call. The call-tree gates enforce structure, not wording. The vendored script enforces nothing until someone
 runs it, and its syntax, pronoun and tense checks are heuristics that miss
-cases. Severity, antecedents, continuity, cost collisions, tone and the
-hand-authored lane are enforced only by the record and swat-writing-review.
+cases. Severity, antecedents, continuity, cost collisions and tone
+are enforced only by the record and swat-writing-review.
 
 ## Closing gates and prose record
 
@@ -427,8 +426,8 @@ Close each gate before handing off, with observed counts on each line.
 8. One address, one result tense, no sheet terms, policy voice, feelings,
    narrator attitude, inversions or bare threat pronouns. Roles in position,
    the contact device consistent.
-9. {lead} doing the risky part in each stage, 3 or more hand-authored.
-10. Script, read aloud, gates and issued suites run, or each recorded as not
+9. {lead} doing the risky part in each stage, 3 or more in the call.
+10. Script, read aloud and gates run, or each recorded as not
     run. Each tell family's 0 names its method.
 11. Seven punch-up passes done, ending written last. Until every line below
     is filled, the first line reads DRAFT.
@@ -453,7 +452,7 @@ Call prose record
 - Ethics line: answered | rules applied <E numbers> from <sibling rulebook | inline minimum>
 - Gates: answered | <command> exit <code> | not run <reason>
 - Punch-up: answered | seven passes done, ending written last
-- Version: answered | strings land in v<N>, issued text untouched, needs version layer <fields | none>
+- Version: answered | strings land in v<N>, edited in place, compiled fingerprints recapture needed <yes, why | no>
 - Handoff: ready for swat-writing-review | structural notes sent to swat-call-design <list | none>
 ```
 

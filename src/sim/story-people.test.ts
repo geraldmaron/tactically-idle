@@ -1,3 +1,5 @@
+import { bandFor } from './resolution';
+import { next } from './rng';
 import { afterEach, describe, expect, it } from 'vitest';
 import { SCENARIOS } from '../content/scenarios';
 import { buildLocation, pointInPolygon } from './location';
@@ -7,7 +9,6 @@ import { currentStoryRoute } from './story-bindings';
 import { centroidOf, routeAlongOpenings, routeBetween, standingOf } from './spatial-factors';
 import type { ActionDefinition, FactDefinition, ScenarioDefinition, StoryAnchor } from './scenario-types';
 import { deserialize, serialize } from './save';
-import { initializePersonnel } from './personnel';
 import { storyPeopleActual, storyPeoplePublic, storyPropsActual, storyPropsPublic, storyPropsKnown } from './story-people';
 import { apply, makeState, NOW, startRun } from './test-fixtures';
 import type { GameState, KnowledgeStatus } from './types';
@@ -32,7 +33,7 @@ function fact(id: string, label: string, position: StoryAnchor, status: Knowledg
 function fixture(status: KnowledgeStatus = 'confirmed'): { scenario: ScenarioDefinition; state: GameState; care: ActionDefinition } {
   const scenario = structuredClone(SCENARIOS.ms_occupancy);
   scenario.id = fixtureId;
-  scenario.version = 5;
+  scenario.version = 13;
   scenario.facts = [fact('where_alex', 'Alex', inside, status), fact('where_ben', 'Ben', secondRoom, 'confirmed')];
   scenario.story = {
     archetypeId: 'two_people', version: 1, episodeId: 'test', seed: 0,
@@ -48,7 +49,7 @@ function fixture(status: KnowledgeStatus = 'confirmed'): { scenario: ScenarioDef
           { when: { flags: ['ben_released'] }, to: secondOutside, observed: true },
         ] },
       },
-      props: { phone: { id: 'phone', label: 'Phone', kind: 'carried', holderPersonId: 'alex', transitions: [{ when: { flags: ['phone_returned'] }, holderPersonId: 'ben' }] } },
+      props: { phone: { id: 'phone', label: 'Phone', kind: 'carried', holderPersonId: 'alex', reportedHolderPersonId: 'alex', knownWhen: {}, confirmedWhen: { facts: [{ factId: 'where_alex', in: ['confirmed'] }] }, transitions: [{ when: { flags: ['phone_returned'] }, holderPersonId: 'ben', observed: true }] } },
     },
   };
   const care: ActionDefinition = {
@@ -59,10 +60,9 @@ function fixture(status: KnowledgeStatus = 'confirmed'): { scenario: ScenarioDef
   };
   scenario.stages.assess.actions = [care];
   let state = startRun(makeState(), 'ms_occupancy', ['A']);
-  state.saveVersion = 5; state.contentVersion = 5; initializePersonnel(state);
-  state = structuredClone(state);
+  state.saveVersion = 9; state.contentVersion = 13; state = structuredClone(state);
   state.activeRun!.scenarioId = fixtureId;
-  state.activeRun!.scenarioVersion = 5;
+  state.activeRun!.scenarioVersion = 13;
   state.activeRun!.externalSupport = {};
   state.activeRun!.knowledge = Object.fromEntries(scenario.facts.map(fact => [fact.id, fact.initial]));
   SCENARIOS[fixtureId] = scenario;
@@ -196,26 +196,12 @@ describe('bound story people project existing committed state', () => {
     expect(loaded.activeRun!.rngState).toBe(before.activeRun!.rngState);
   });
 
-  it('does not activate story projections or targeting for v1–v4 content', () => {
-    const { scenario, state, care } = fixture();
-    for (const version of [1, 2, 3, 4]) {
-      scenario.version = version; state.activeRun!.scenarioVersion = version;
-      const withMetadata = { spaces: spaceViews(state), evaluation: evaluate(scenario, state, care) };
-      const legacy = { ...scenario, story: undefined };
-      const oldAction = { ...care, storyTargetPersonId: undefined };
-      SCENARIOS[fixtureId] = legacy;
-      expect(spaceViews(state)).toEqual(withMetadata.spaces);
-      // Compare calculation and projections; the authored action object itself preserves metadata.
-      const { action: _with, ...evWith } = withMetadata.evaluation;
-      const { action: _without, ...evWithout } = evaluate(legacy, state, oldAction);
-      expect(evWithout).toEqual(evWith);
-      SCENARIOS[fixtureId] = scenario;
-    }
-  });
+
 
   it('prices a locked person route with ordinary material costs and opens only traversed locks on commit', () => {
     const { scenario, state, care } = fixture();
     care.approach = 'none'; care.spatial = undefined; care.storyRoute = 'exit';
+    for (const band of ['favorable', 'mixed', 'adverse'] as const) care.outcomes[band] = [{ setFlags: ['alex_released'] }];
     scenario.story!.bindings.routes.exit = { fromSpaceId: inside.spaceId, toSpaceId: outside.spaceId, openingIds: [], profile: 'walking' };
     const run = state.activeRun!;
     run.flags.push(...built.location.openings.map(opening => openingFlag(opening.id, 'open')));
@@ -231,6 +217,12 @@ describe('bound story people project existing committed state', () => {
     expect(locked.timeBase - open.timeBase).toBeCloseTo(expectedRoute.forceMinutes, 1);
     expect(locked.storyOpenedIds).toContain(lockedId);
     expect(run.flags.at(-1)).toBe(openingFlag(lockedId, 'locked'));
+    care.outcomes.adverse = [];
+    care.outcomes.favorable = [{ setFlags: ['alex_released'] }];
+    for (let seed = 1; seed < 10000; seed++) {
+      const ev = evaluate(scenario, state, care);
+      if (bandFor(ev.margin, next(seed).value) === 'adverse') { state.activeRun!.rngState = seed; break; }
+    }
     const declined = apply(state, { type: 'decide', actionId: care.id, actingSquadIds: ['A'], supportSquadIds: [] });
     expect(declined.result).toEqual({ ok: true });
     expect(builtFor(scenario.locationFamilyId, scenario.locationSeed, declined.state.activeRun!.flags).location.openings.find(opening => opening.id === lockedId)!.state).toBe('locked');
@@ -247,6 +239,7 @@ describe('bound story people project existing committed state', () => {
   it('uses a complete alternative route and refuses a fully blocked route without mutation', () => {
     const { scenario, state, care } = fixture();
     care.approach = 'none'; care.storyRoute = 'exit';
+    for (const band of ['favorable', 'mixed', 'adverse'] as const) care.outcomes[band] = [{ setFlags: ['alex_released'] }];
     scenario.story!.bindings.routes.exit = { fromSpaceId: inside.spaceId, toSpaceId: outside.spaceId, openingIds: [], profile: 'walking' };
     const run = state.activeRun!;
     run.flags.push(...built.location.openings.map(opening => openingFlag(opening.id, 'open')));
@@ -266,6 +259,7 @@ describe('bound story people project existing committed state', () => {
   it('charges a shared lock once when the acting squad and released person both use it', () => {
     const { scenario, state, care } = fixture();
     care.spatial = undefined; care.storyRoute = 'exit';
+    for (const band of ['favorable', 'mixed', 'adverse'] as const) care.outcomes[band] = [{ setFlags: ['alex_released'] }];
     scenario.story!.bindings.routes.exit = { fromSpaceId: inside.spaceId, toSpaceId: outside.spaceId, openingIds: [], profile: 'walking' };
     state.activeRun!.flags.push(...built.location.openings.map(opening => openingFlag(opening.id, 'open')));
     const openBuilt = builtFor(scenario.locationFamilyId, scenario.locationSeed, state.activeRun!.flags);
@@ -292,6 +286,7 @@ describe('bound story people project existing committed state', () => {
   it('applies route exit state only after an actual person move and preserves explicit outcome changes', () => {
     const { scenario, state, care } = fixture();
     care.approach = 'none'; care.spatial = undefined; care.storyRoute = 'exit';
+    for (const band of ['favorable', 'mixed', 'adverse'] as const) care.outcomes[band] = [{ setFlags: ['alex_released'] }];
     scenario.story!.bindings.routes.exit = { fromSpaceId: inside.spaceId, toSpaceId: outside.spaceId, openingIds: [], profile: 'walking' };
     state.activeRun!.flags.push(...built.location.openings.map(opening => openingFlag(opening.id, 'open')));
     const current = builtFor(scenario.locationFamilyId, scenario.locationSeed, state.activeRun!.flags);
@@ -299,6 +294,12 @@ describe('bound story people project existing committed state', () => {
     const exit = [...route].reverse().map(id => current.location.openings.find(opening => opening.id === id)!).find(opening =>
       current.location.rooms.some(room => [opening.a, opening.b].includes(room.id)) && current.location.zones.some(zone => [opening.a, opening.b].includes(zone.id)))!;
     for (const band of ['favorable', 'mixed', 'adverse'] as const) care.outcomes[band] = [{ storyExitState: 'locked' }];
+    care.outcomes.adverse = [];
+    care.outcomes.favorable = [{ setFlags: ['alex_released'] }];
+    for (let seed = 1; seed < 10000; seed++) {
+      const ev = evaluate(scenario, state, care);
+      if (bandFor(ev.margin, next(seed).value) === 'adverse') { state.activeRun!.rngState = seed; break; }
+    }
     const declined = apply(state, { type: 'decide', actionId: care.id, actingSquadIds: ['A'], supportSquadIds: [] });
     expect(declined.result).toEqual({ ok: true });
     expect(builtFor(scenario.locationFamilyId, scenario.locationSeed, declined.state.activeRun!.flags).location.openings.find(opening => opening.id === exit.id)!.state).toBe('open');
@@ -334,6 +335,7 @@ describe('carried-item public evidence', () => {
   });
   it('does not infer items or unarmed status from a confirmed person', () => {
     const { scenario, state } = fixture();
+    delete scenario.story!.bindings.props.phone.knownWhen;
     expect(storyPropsKnown(scenario, built, state.activeRun!)).toEqual([]);
     const views = markers(state);
     expect(views.every(person => person.carried === undefined && person.armament === undefined)).toBe(true);

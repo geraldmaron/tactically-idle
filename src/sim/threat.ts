@@ -9,17 +9,21 @@
 // Threats are game abstractions: category, readiness, disposition, intent, awareness.
 // They change difficulty, strain, options and civilian safety. No ballistic model, no
 // wound detail, no procedure. A successful use of force is never the better outcome.
-import type { BuiltLocation, Contributor, Id, KnowledgeStatus, Officer, OperationRun, StageId, Vec } from './types';
+import type { BuiltLocation, Contributor, Id, KnowledgeStatus, Officer, OperationRun, Vec } from './types';
 import type { ActionDefinition, Armament, CheckKind, Disposition, EnvironmentDefinition, FactDefinition, Intent, PersonDefinition, PersonRole, PoliceAwareness, Readiness, ScenarioDefinition, ThreatProfile } from './scenario-types';
 import { FACT_PREFIX, PERSON_FLAG } from './scenario-types';
 import { signalBetweenFloors } from './spatial';
-import { centroidOf, SPATIAL_TUNING, spaceLabel } from './spatial-factors';
+import { centroidOf, SPATIAL_TUNING } from './spatial-factors';
 import { difficultyContributor, ENV_TUNING, floorOfSpace } from './environment';
+import { tunable } from './tuning';
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
 const lower = (s: string) => s.charAt(0).toLowerCase() + s.slice(1);
 
-export const THREAT_TUNING = {
+/** Tunable (sim/tuning.ts). Only threatFx reads this table in play (through incident-factors.ts):
+ * the civilian, harm-rate and barricade-rate fields feed functions nothing calls, and the strain
+ * fields and barricadeSlow set ThreatFx fields IncidentFx drops. TUNING_META marks them unused. */
+export const THREAT_TUNING = tunable('THREAT_TUNING', {
   /** 0..1 weight of an armament category. */
   armament: { none: 0, blunt: 0.35, edged: 0.55, handgun: 0.8, long_gun: 1, unknown: 0.6 } as Record<Armament, number>,
   /** Multiplier by readiness. */
@@ -57,9 +61,9 @@ export const THREAT_TUNING = {
   /** Civilian safety lost per minute of waiting, by intent. */
   harmWaitCivilian: { harm_self: 0.5, harm_others: 0.8 },
   barricadeRate: 0.6,
-};
+});
 
-export const ARMAMENT_PHRASE: Record<Armament, string> = {
+const ARMAMENT_PHRASE: Record<Armament, string> = {
   none: 'no weapon',
   blunt: 'a blunt weapon',
   edged: 'a blade',
@@ -81,21 +85,21 @@ const DISPOSITION_PHRASE: Record<Disposition, string> = {
 export const ARMAMENT_LABEL = ARMAMENT_NAME;
 
 const CIVILIAN_ROLES: PersonRole[] = ['resident', 'child', 'elderly', 'staff', 'customer', 'held_person', 'patient'];
-export const isCivilianRole = (r: PersonRole) => CIVILIAN_ROLES.includes(r);
+const isCivilianRole = (r: PersonRole) => CIVILIAN_ROLES.includes(r);
 
 // ---------------------------------------------------------------- flags
 
-export const STALE_FLAG = (personId: Id) => `stale:${personId}`;
+const STALE_FLAG = (personId: Id) => `stale:${personId}`;
 
 /** Contained, evacuated or gone: no longer a threat contributor and no longer moves. */
-export function isNeutralised(flags: string[], personId: Id): boolean {
+function isNeutralised(flags: string[], personId: Id): boolean {
   return flags.includes(PERSON_FLAG.contained(personId)) || flags.includes(PERSON_FLAG.evacuated(personId)) || flags.includes(PERSON_FLAG.escaped(personId));
 }
 /** Stays where they are: neutralised or with police. */
-export function isFixed(flags: string[], personId: Id): boolean {
+function isFixed(flags: string[], personId: Id): boolean {
   return isNeutralised(flags, personId) || flags.includes(PERSON_FLAG.withPolice(personId));
 }
-export function isAlarmTriggered(env: EnvironmentDefinition | null, flags: string[]): boolean {
+function isAlarmTriggered(env: EnvironmentDefinition | null, flags: string[]): boolean {
   return env?.alarm === 'triggered' || flags.includes('alarm:triggered');
 }
 
@@ -114,7 +118,7 @@ function factIndex(s: ScenarioDefinition): Map<Id, FactDefinition> {
 }
 
 /** Facts of a person whose id carries the prefix (FACT_PREFIX.location etc.). */
-export function personFacts(s: ScenarioDefinition, p: PersonDefinition, prefix: string): FactDefinition[] {
+function personFacts(s: ScenarioDefinition, p: PersonDefinition, prefix: string): FactDefinition[] {
   const idx = factIndex(s);
   return p.factIds.filter((id) => id.startsWith(prefix)).map((id) => idx.get(id)).filter((f): f is FactDefinition => Boolean(f));
 }
@@ -122,14 +126,14 @@ export function personFacts(s: ScenarioDefinition, p: PersonDefinition, prefix: 
 const statusOf = (run: Pick<OperationRun, 'knowledge'>, f: FactDefinition): KnowledgeStatus => run.knowledge[f.id] ?? f.initial;
 
 /** Where everyone really is at the start. */
-export function initialPeople(s: ScenarioDefinition): Record<Id, { spaceId: Id; at: Vec }> {
+function initialPeople(s: ScenarioDefinition): Record<Id, { spaceId: Id; at: Vec }> {
   const out: Record<Id, { spaceId: Id; at: Vec }> = {};
   for (const p of s.people ?? []) out[p.id] = { spaceId: p.spaceId, at: { ...p.at } };
   return out;
 }
 
 /** People the player already sees at the start (their location fact starts confirmed). */
-export function initialLastSeen(s: ScenarioDefinition): Record<Id, { spaceId: Id; at: Vec; revision: number }> {
+function initialLastSeen(s: ScenarioDefinition): Record<Id, { spaceId: Id; at: Vec; revision: number }> {
   const out: Record<Id, { spaceId: Id; at: Vec; revision: number }> = {};
   for (const p of s.people ?? []) {
     if (personFacts(s, p, FACT_PREFIX.location).some((f) => f.initial === 'confirmed')) out[p.id] = { spaceId: p.spaceId, at: { ...p.at }, revision: 0 };
@@ -138,7 +142,7 @@ export function initialLastSeen(s: ScenarioDefinition): Record<Id, { spaceId: Id
 }
 
 /** True positions with a fallback for runs saved before people existed. */
-export function truthPeople(run: Pick<OperationRun, 'people'>, s: ScenarioDefinition): Record<Id, { spaceId: Id; at: Vec }> {
+function truthPeople(run: Pick<OperationRun, 'people'>, s: ScenarioDefinition): Record<Id, { spaceId: Id; at: Vec }> {
   return run.people ?? initialPeople(s);
 }
 
@@ -152,7 +156,7 @@ export interface BelievedPosition {
 }
 
 /** Where the player believes a person is. Never reads truth. */
-export function believedPosition(s: ScenarioDefinition, built: BuiltLocation, p: PersonDefinition, run: Dyn): BelievedPosition | null {
+function believedPosition(s: ScenarioDefinition, built: BuiltLocation, p: PersonDefinition, run: Dyn): BelievedPosition | null {
   const seen = (run.lastSeen ?? (run.people ? undefined : initialLastSeen(s)))?.[p.id];
   if (seen) return { spaceId: seen.spaceId, at: seen.at, basis: run.flags.includes(STALE_FLAG(p.id)) ? 'last_seen' : 'confirmed' };
   const locs = personFacts(s, p, FACT_PREFIX.location);
@@ -174,7 +178,7 @@ export interface BeliefProfile {
 const IMPLICIT_DOG: ThreatProfile = { armament: 'blunt', readiness: 'brandished', disposition: 'agitated', intent: 'harm_others', awareness: 'aware' };
 
 /** The threat profile the engine uses for a person (a dangerous dog has an implicit one). */
-export function profileOf(p: PersonDefinition): ThreatProfile | null {
+function profileOf(p: PersonDefinition): ThreatProfile | null {
   return p.threat ?? (p.role === 'dangerous_dog' ? IMPLICIT_DOG : null);
 }
 
@@ -183,7 +187,7 @@ function upgradeAwareness(a: PoliceAwareness): PoliceAwareness {
 }
 
 /** What the player believes about a person's threat. Unknown fields stay undefined (no assumption). */
-export function believedProfile(s: ScenarioDefinition, p: PersonDefinition, run: Dyn, pos: BelievedPosition | null): BeliefProfile | null {
+function believedProfile(s: ScenarioDefinition, p: PersonDefinition, run: Dyn, pos: BelievedPosition | null): BeliefProfile | null {
   const t = profileOf(p);
   if (!t) return null;
   const alarm = isAlarmTriggered(s.environment ?? null, run.flags);
@@ -249,7 +253,7 @@ export interface Subject {
 export type Basis = 'truth' | 'belief';
 
 /** Everyone carrying a threat profile who is not neutralised, from the truth or from the player's knowledge. */
-export function subjectsFor(basis: Basis, s: ScenarioDefinition, built: BuiltLocation, run: Dyn): Subject[] {
+function subjectsFor(basis: Basis, s: ScenarioDefinition, built: BuiltLocation, run: Dyn): Subject[] {
   const out: Subject[] = [];
   const people = truthPeople(run, s);
   const alarm = isAlarmTriggered(s.environment ?? null, run.flags);
@@ -284,7 +288,7 @@ export function subjectsFor(basis: Basis, s: ScenarioDefinition, built: BuiltLoc
 }
 
 /** Threat level 0..1 of one subject. */
-export function threatLevel(s: Pick<Subject, 'armament' | 'readiness'>): number {
+function threatLevel(s: Pick<Subject, 'armament' | 'readiness'>): number {
   return THREAT_TUNING.armament[s.armament] * THREAT_TUNING.readiness[s.readiness];
 }
 
@@ -322,8 +326,6 @@ export interface ThreatFx {
   timeMult: number;
   details: string[];
 }
-
-export const NO_THREAT_FX: ThreatFx = { difficulty: [], difficultyAdd: 0, score: [], scoreSum: 0, strainMult: 1, timeMult: 1, details: [] };
 
 function tag(s: Subject): string {
   return s.armSource === 'confirmed' ? '' : s.armSource === 'reported' ? ' (as reported)' : ' (assumed)';
@@ -475,7 +477,7 @@ export interface PressureDynamics {
   notes: string[];
 }
 
-export const NEUTRAL_DYNAMICS: PressureDynamics = { rateMult: 1, civilianMult: 1, waitingCivilianPerMin: 0, notes: [] };
+const NEUTRAL_DYNAMICS: PressureDynamics = { rateMult: 1, civilianMult: 1, waitingCivilianPerMin: 0, notes: [] };
 
 /** How the incident itself moves pressure and civilian safety while time passes. */
 export function pressureDynamics(s: ScenarioDefinition, flags: string[], action: Pick<ActionDefinition, 'tempo'> | null): PressureDynamics {
@@ -518,155 +520,9 @@ export interface MoveRecord {
   facts: { factId: Id; status: KnowledgeStatus }[];
 }
 
-/**
- * After a decision moves the run into `stage`, people who are not contained, with police
- * or gone take their scripted move for that stage. An unobserved move makes what the
- * player knew stale: confirmed location facts go back to 'reported' ("last seen in the
- * bedroom"), `lastSeen` keeps the old point and the person is flagged `stale:<id>`.
- * A watched person (`watched:<id>`) is followed: lastSeen moves with them and the room
- * they left is ruled out. Mutates `sim`; the replay in traceRun uses the same function.
- */
-export function movePeople(sim: Dyn, s: ScenarioDefinition, stage: StageId): MoveRecord[] {
-  if (!s.people?.length) return [];
-  sim.people ??= initialPeople(s);
-  const moves: MoveRecord[] = [];
-  for (const p of s.people) {
-    const mv = p.moves?.[stage];
-    if (!mv || isFixed(sim.flags, p.id)) continue;
-    const cur = sim.people[p.id] ?? { spaceId: p.spaceId, at: p.at };
-    if (cur.spaceId === mv.spaceId && cur.at.x === mv.at.x && cur.at.y === mv.at.y) continue;
-    sim.people[p.id] = { spaceId: mv.spaceId, at: { ...mv.at } };
-    const rec: MoveRecord = { personId: p.id, from: cur.spaceId, to: mv.spaceId, reason: mv.reason, facts: [] };
-    const locs = personFacts(s, p, FACT_PREFIX.location);
-    if (sim.flags.includes(PERSON_FLAG.watched(p.id))) {
-      if (sim.lastSeen) sim.lastSeen[p.id] = { spaceId: mv.spaceId, at: { ...mv.at }, revision: sim.revision ?? 0 };
-      for (const f of locs) {
-        if (statusOf(sim, f) === 'confirmed' && f.spaceId !== mv.spaceId) {
-          sim.knowledge[f.id] = 'disproved';
-          rec.facts.push({ factId: f.id, status: 'disproved' });
-        }
-      }
-    } else {
-      const known = Boolean(sim.lastSeen?.[p.id]) || locs.some((f) => statusOf(sim, f) === 'confirmed');
-      if (known && !sim.flags.includes(STALE_FLAG(p.id))) sim.flags.push(STALE_FLAG(p.id));
-      for (const f of locs) {
-        if (statusOf(sim, f) === 'confirmed' && f.spaceId !== mv.spaceId) {
-          sim.knowledge[f.id] = 'reported';
-          rec.facts.push({ factId: f.id, status: 'reported' });
-        }
-      }
-    }
-    moves.push(rec);
-  }
-  return moves;
-}
-
-/** The spaces an action lets the squad see into. */
-export function observedSpaces(a: ActionDefinition): Id[] {
-  if (a.observes) return a.observes;
-  return a.approach !== 'none' || a.spatial ? [a.targetId] : [];
-}
-
-const SEES_KINDS: CheckKind[] = ['observation', 'execution', 'medical'];
-
-/**
- * A favourable observation settles what is actually in the space: people present update
- * `lastSeen` (and clear staleness), and their location, armament (unless concealed, and
- * only for sight, not voice) and demeanour facts resolve. People absent rule the location
- * facts of that space out. Mutates `sim`; returns the knowledge changes.
- */
-export function observeSpaces(sim: Dyn, s: ScenarioDefinition, spaces: Id[], band: 'favorable' | 'mixed' | 'adverse', kind: CheckKind): { factId: Id; status: KnowledgeStatus }[] {
-  const changes: { factId: Id; status: KnowledgeStatus }[] = [];
-  if (!s.people?.length || band !== 'favorable' || spaces.length === 0) return changes;
-  sim.people ??= initialPeople(s);
-  const sight = SEES_KINDS.includes(kind);
-  const set = (f: FactDefinition, status: KnowledgeStatus) => {
-    const cur = statusOf(sim, f);
-    if (cur === status || cur === 'confirmed' || cur === 'disproved') return;
-    sim.knowledge[f.id] = status;
-    changes.push({ factId: f.id, status });
-  };
-  for (const p of s.people) {
-    if (sim.flags.includes(PERSON_FLAG.evacuated(p.id)) || sim.flags.includes(PERSON_FLAG.escaped(p.id))) continue;
-    const at = sim.people[p.id] ?? { spaceId: p.spaceId, at: p.at };
-    const locs = personFacts(s, p, FACT_PREFIX.location);
-    if (!spaces.includes(at.spaceId)) {
-      for (const f of locs) if (spaces.includes(f.spaceId)) set(f, 'disproved');
-      continue;
-    }
-    if (sim.lastSeen) sim.lastSeen[p.id] = { spaceId: at.spaceId, at: { ...at.at }, revision: sim.revision ?? 0 };
-    sim.flags = sim.flags.filter((x) => x !== STALE_FLAG(p.id));
-    for (const f of locs) if (f.spaceId === at.spaceId) set(f, 'confirmed');
-    for (const f of personFacts(s, p, FACT_PREFIX.condition)) set(f, f.truth ? 'confirmed' : 'disproved');
-    const t = profileOf(p);
-    const hidden = t && t.armament !== 'none' && t.readiness === 'concealed';
-    if (sight && !hidden) for (const f of personFacts(s, p, FACT_PREFIX.armament)) set(f, f.truth ? 'confirmed' : 'disproved');
-  }
-  return changes;
-}
-
-/**
- * Keep lastSeen honest when an outcome (not an observation) settled a location fact:
- * a person confirmed in a space they really are in is "seen" there now.
- */
-export function syncSeen(sim: Dyn, s: ScenarioDefinition): void {
-  if (!s.people?.length || !sim.lastSeen) return;
-  sim.people ??= initialPeople(s);
-  for (const p of s.people) {
-    const at = sim.people[p.id] ?? { spaceId: p.spaceId, at: p.at };
-    const confirmedHere = personFacts(s, p, FACT_PREFIX.location).some((f) => statusOf(sim, f) === 'confirmed' && f.spaceId === at.spaceId);
-    const seen = sim.lastSeen[p.id];
-    if (confirmedHere && (!seen || seen.spaceId !== at.spaceId)) {
-      sim.lastSeen[p.id] = { spaceId: at.spaceId, at: { ...at.at }, revision: sim.revision ?? 0 };
-      sim.flags = sim.flags.filter((x) => x !== STALE_FLAG(p.id));
-    }
-  }
-}
-
 // ---------------------------------------------------------------- truth versus report
 
-/** Debrief lines for what the truth did that the reports did not say. */
-export function surprisesFor(s: ScenarioDefinition, built: BuiltLocation, truth: Subject[], belief: Subject[]): string[] {
-  const out: string[] = [];
-  const room = (id: Id) => spaceLabel(built, id).toLowerCase();
-  const bel = new Map(belief.map((b) => [b.personId, b]));
-  for (const t of truth) {
-    if (threatLevel(t) <= 0 && t.role !== 'dangerous_dog') continue;
-    const b = bel.get(t.personId);
-    if (!b) {
-      out.push(`${t.label} was close by and nobody had reported them.`);
-      continue;
-    }
-    if (b.armament !== t.armament || (b.armSource !== 'confirmed' && t.readiness !== b.readiness && t.armament !== 'none')) {
-      if (b.armSource === 'assumed' || b.armament === 'unknown') out.push(`${t.label}: armament was ${ARMAMENT_NAME[t.armament]}; it had not been known.`);
-      else out.push(`${t.label}: armament was ${ARMAMENT_NAME[t.armament]}, not ${ARMAMENT_NAME[b.armament]} as reported.`);
-    }
-    if (b.disposition && t.disposition && b.disposition !== t.disposition) out.push(`${t.label} was ${DISPOSITION_PHRASE[t.disposition!]}, not ${DISPOSITION_PHRASE[b.disposition]} as reported.`);
-    if (b.spaceId !== t.spaceId) out.push(`${t.label} was in the ${room(t.spaceId)}, not the ${room(b.spaceId)}.`);
-  }
-  for (const b of belief) {
-    if (!truth.some((t) => t.personId === b.personId)) continue;
-  }
-  void s;
-  return out;
-}
-
-export const SURPRISE_PREFIX = 'Different from the reports: ';
-
 // ---------------------------------------------------------------- map marks and briefing helpers
-
-const KIND_OF: Record<PersonRole, string> = {
-  subject: 'subject',
-  resident: 'civilian',
-  child: 'child',
-  elderly: 'civilian',
-  staff: 'civilian',
-  customer: 'civilian',
-  held_person: 'civilian',
-  patient: 'patient',
-  dog: 'dog',
-  dangerous_dog: 'dog',
-};
 
 export interface PersonMarkData {
   id: Id;
@@ -678,59 +534,6 @@ export interface PersonMarkData {
   status: KnowledgeStatus;
   kind?: string;
   armament?: string | null;
-}
-
-/**
- * People as the player knows them. Seen and not since gone: exact point, 'confirmed'.
- * Stale: the last-seen point, 'reported' with "(last seen)?". Only reported: an approximate
- * point with '?'. Role glyph (`kind`) and armament only once the matching facts are confirmed.
- */
-export function personMarks(s: ScenarioDefinition, built: BuiltLocation, run: Dyn): PersonMarkData[] {
-  const out: PersonMarkData[] = [];
-  for (const p of s.people ?? []) {
-    if (run.flags.includes(PERSON_FLAG.evacuated(p.id)) || run.flags.includes(PERSON_FLAG.escaped(p.id))) continue;
-    const pos = believedPosition(s, built, p, run);
-    if (!pos) continue;
-    const floor = floorOfSpace(built, pos.spaceId);
-    const base = { id: `person_${p.id}`, personId: p.id, spaceId: pos.spaceId, at: pos.at, floor };
-    if (pos.basis === 'reported') {
-      const rep = personFacts(s, p, FACT_PREFIX.location).find((f) => f.spaceId === pos.spaceId && statusOf(run, f) === 'reported');
-      out.push({ ...base, label: `${rep?.person?.label ?? p.label}?`, status: 'reported' });
-      continue;
-    }
-    const armKnown = personFacts(s, p, FACT_PREFIX.armament).some((f) => ['confirmed', 'disproved'].includes(statusOf(run, f)));
-    const t = profileOf(p);
-    const mark: PersonMarkData = {
-      ...base,
-      label: pos.basis === 'last_seen' ? `${p.label} (last seen)?` : p.label,
-      status: pos.basis === 'confirmed' ? 'confirmed' : 'reported',
-      kind: pos.basis === 'confirmed' ? KIND_OF[p.role] : undefined,
-    };
-    if (armKnown && t && pos.basis === 'confirmed') mark.armament = t.armament;
-    out.push(mark);
-  }
-  return out;
-}
-
-/** Player-language lines for the briefing's people and threats, only from what is known. */
-export function knownPeopleLines(s: ScenarioDefinition, built: BuiltLocation, run: Dyn): { people: string[]; threats: string[] } {
-  const people: string[] = [];
-  const threats: string[] = [];
-  const subjects = new Map(subjectsFor('belief', s, built, run).map((x) => [x.personId, x]));
-  for (const p of s.people ?? []) {
-    const pos = believedPosition(s, built, p, run);
-    if (!pos) continue;
-    const where = spaceLabel(built, pos.spaceId).toLowerCase();
-    const how = pos.basis === 'confirmed' ? '' : pos.basis === 'last_seen' ? ' (last seen)' : ' (reported)';
-    people.push(`${p.label} in the ${where}${how}`);
-    const sub = subjects.get(p.id);
-    if (!sub) continue;
-    const arm = sub.armSource === 'assumed' ? 'armament unknown' : sub.armament === 'none' ? 'reported unarmed' : `${ARMAMENT_PHRASE[sub.armament]}, ${READINESS_PHRASE[sub.readiness]}`;
-    const dem = sub.disposition ? `, ${DISPOSITION_PHRASE[sub.disposition]}` : '';
-    const src = sub.armSource === 'reported' ? ' (as reported)' : '';
-    threats.push(`${sub.label}: ${arm}${dem}${src}`);
-  }
-  return { people, threats };
 }
 
 export { ENV_TUNING };

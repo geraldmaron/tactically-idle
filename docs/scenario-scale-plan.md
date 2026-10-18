@@ -1,6 +1,6 @@
 # Scenario scale plan: hundreds of operations, and how players meet them
 
-**Status:** Approved 2026-10-06 with the owner decisions below. Phases A–C and the first content drop shipped in content v11 (see "Delivered"). Builds on [procedural-locations.md](procedural-locations.md) (content v10) and [scenario-generation-v9.md](scenario-generation-v9.md).
+**Status:** Approved 2026-10-06 with the owner decisions below. Phases A–C and the first content drop shipped in content v11 (see "Delivered"). Builds on [procedural-locations.md](procedural-locations.md) (content v10) and [content-pipeline.md](content-pipeline.md).
 
 ## Brief
 
@@ -103,7 +103,7 @@ Agents write **data, not code paths**. One content package per framework, valida
      - Labels must not reveal the situation's truth.
      - Reading level, length budgets for 320 px, name-binding coverage, and pronoun agreement.
    - **Safety:** non-graphic language, no real procedures or weapons detail, and allegations kept distinct from facts.
-4. **Human review: a story sheet.** A `locations.html`-style page shows each recipe's briefing, choices and endings bound to 6 sampled buildings. The reviewer approves, edits or rejects; edits go back as data.
+4. **Human review: a story sheet.** A `locations.html`-style page shows each recipe's briefing, choices and endings bound to 6 sampled buildings. The reviewer approves, edits or rejects; edits go back as data. (Built as `/story.html`; replaced on 2026-10-09 by the Scenario Lab at `/lab`, [scenario-lab.md](scenario-lab.md).)
 5. **Freeze.** Approved packages join the next content version with fingerprints. The library and casebook pick them up automatically.
 
 **Throughput:** one agent run drafts a framework package with 3–5 situations and 1–4 setting modules. With gates, 10–20 frameworks per release cycle is realistic, which is 100–300 recipes per release.
@@ -168,10 +168,9 @@ This turns the catalog into a long arc rather than a menu.
 
 ## Delivered in content v11 (2026-10-06)
 
-- **Setting modules** (`docs/setting-modules.md`): the armed incident plays an office late worker, a warehouse night picker and a motel night clerk, as well as the original till count.
 - **`_g2` buildings:** exact geometry (`geometry: 'exact'`), apartment access metadata (128 of 200 units step-free), and the wheelchair rescue in step-free apartments. v11 draws use `_g2`; `_g1` stays frozen for v10. A cross-engine CI job recomputes 917 fingerprints under JavaScriptCore; all match V8.
 - **Player arc:** capability unlocks (`src/content/unlocks.ts`), the casebook replacing the library, "New kind of call" badges, unseen-first draws, and a date-seeded featured operation (save version 6).
-- **Content pipeline** (`docs/content-pipeline.md`): prose, safety and spoiler lint, the distinctness metric, playability gates, and the story sheet (`/story.html?type=<framework>`).
+- **Content pipeline** (`docs/content-pipeline.md`): prose, safety and spoiler lint, the distinctness metric, playability gates, and the story sheet (`/story.html?type=<framework>`, retired on 2026-10-09; old links redirect to the Scenario Lab at `/lab` in dev, which covers the v13 call trees, [scenario-lab.md](scenario-lab.md)).
 - **First drop:** `fall_at_home`, `water_leak` and `lost_child`.
 - **v10 frozen:** 210 definitions.
 
@@ -186,7 +185,6 @@ This turns the catalog into a long arc rather than a menu.
 
 - **v11 frozen:** 258 definitions (`issued-v11-fingerprints.json`, also in the cross-engine suite).
 - **Department level progression** (`src/sim/department-level.ts`). Each closed live call earns service: 2 + tier for completing the agreed step, 1 + half the tier otherwise, 1 for a failed response, none for practice. Level L needs 5 × L × (L − 1) service in total (10, 30, 60, 100, ...), up to level 10. New campaigns start at level 1. The unlock curve follows §5: shops and medical calls at 2, business and the first protective response at 3, armed incidents and protected rescue at 4 (with certification), hostage crises at 5. Save v7 keeps each older campaign's level and lifts it to the level of any framework it had met or could already be sent to, so the update takes no kind of call away. The top-bar level sheet shows service toward the next level and what it opens; debriefs show service earned and any level reached.
-- **Decision depth for every typed framework** (`src/content/framework-depth-v12.ts`, see the content pipeline). Calls can act on the first report instead of checking it, a real gamble on the hidden truth. Every call can close slowly but surely beside the step that fits. All 33 typed recipes are distinct (the v9 eight were 24 recipes in 6 shapes), and a new choices gate holds every stage of every typed recipe, on every building type, to at least two choices the player can take.
 - **Framework-first board draws.** A framework's odds no longer depend on how many building types it fits. An unlocked specialist framework has three slots to an everyday call's four: protected rescue rose from 1.3% to about 4.4% of draws with everything unlocked (`draw-v12.test.ts`).
 - **Practice counts toward casebook best results** on situations already met live, marked "(practice)". Practice never discovers a recipe, and a building type met only in practice isn't listed as visited. Results fold when each debrief closes.
 - **Update 2026-10-06: practice removed.** Every operation is now a live call. Practice runs, decision exercises, casebook replay and the featured operation are gone; the casebook is the record of calls taken, and the Ops board fills open places with the two standing assignments. Save v8 ends a saved practice run as cancelled, drops practice debriefs and practice-only casebook entries, and unmarks practice best results.

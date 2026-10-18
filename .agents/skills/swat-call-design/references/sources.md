@@ -6,22 +6,25 @@ recorded and did not re-open them, so open a source yourself before quoting it o
 number. Secondary and summary-only sources are marked. Nothing that could not be opened is
 cited anywhere in this skill.
 
-## Repo sources (read while writing this skill, 2026-10-06)
+## Repo sources (revised 2026-10-18 for the single call-tree version)
+
+The first version of this skill (2026-10-06) read the typed package layer, the v12 depth
+layer, the hand-authored stories and their compiler files. All of those were deleted on
+2026-10-17. Where this skill still quotes them, the quote is dated evidence and cites no path.
 
 | Source (search symbol) | Supports |
 |---|---|
-| `src/content/incident-frameworks-v9.ts` (`IncidentFramework`) | Writer-owned typed fields, the burglary and false_intruder text quoted in the worked sheets |
-| `src/gen/incident/frameworks-v9.ts` (`withAdditionalFramework`) | Compiler-owned strings, field reuse, fixed pressure, what each stage offers |
-| `src/content/framework-depth-v12.ts` (`frameworkAt`) | The v12 layer, add-only behavior, the repeated `waitFor` sentence |
-| `src/gen/incident/index.ts` (`INCIDENT_CONTENT_VERSION`) | Version 12 on 2026-10-06 |
-| `src/gen/incident/gates/prose-lint.ts` (`LENGTH_BUDGETS`, `UNSAFE_DETAIL`) | Budgets, word lists, the pacing name rule |
-| `src/gen/incident/characteristics-v9.ts` (`applyRecipeCharacteristic`) | Deliberate-answers pacing |
-| `src/sim/scenario-types.ts` (`ScenarioDefinition`, `EndingDefinition`) | Hand-authored fields, dispositions, the trust comment |
+| `src/content/call-trees/types.ts` (`CallTree`, `TreeChoice`, `TreeOutcome`) | Writer-owned fields, pressure model, difficulty default, `onlyIf`, `promptIf`, `authority`, `walks`, `talksTo` |
+| `src/gen/incident/trees-v13/compile.ts` (`withCallTree`, `bindRoleTokens`) | What the compiler adds, binding, the deliberate-answers line, difficulty |
+| `src/gen/incident/instance.ts` (`drawInstance`) | The cast draw |
+| `src/gen/incident/trees-v13/call-trees.test.ts` | The call-tree gates |
+| `src/gen/incident/trees-v13/compiled-fingerprints.json` | The only tripwire |
+| `src/gen/incident/gates/prose-lint.ts` (`UNSAFE_DETAIL`) | Word lists |
+| `src/sim/scenario-types.ts` (`ScenarioDefinition`, `EndingDefinition`) | Compiled fields, dispositions, the trust comment |
 | `src/ui/screens/situation-panel.css` (`situation-summary`) | The three-line clamp at 14 px |
-| `src/gen/incident/stories-v5/` (`signature.ts`, `armed.ts`) | The strong repo lines and injury labels |
-| `docs/content-pipeline.md` | Agent brief template, decision structures, gates, freeze rule |
-| `docs/setting-modules.md`, `docs/story-archetypes.md`, `docs/character-driven-stories.md` | Lanes and existing content requirements |
-| Compiled calls from `generateIncident` (burglary and false_intruder, v12, three situations) | Worked sheet B |
+| `src/content/call-trees/hostage-signature.ts` (and the other call trees) | Held and held_both endings, release steps |
+| `docs/content-pipeline.md`, `docs/call-trees-v13.md` | Agent brief template, gates, review, fingerprint policy |
+| The retired typed burglary and false_intruder calls at v12, compiled 2026-10-06 | Worked sheet B (dated evidence, no path) |
 
 ## Screen craft
 

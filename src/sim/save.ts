@@ -1,33 +1,22 @@
+import { parseRecipeKey } from './casebook';
+import { validCommandStaff } from './command-staff';
 import type { GameState, OperationRun, SaveEnvelope } from './types';
 import { COMPLETION_DISPOSITIONS, validExternalSupportState } from './external-support';
 import { validCasualtyRecord, validIncidentConsequences, validPersonCasualtyRecord, validPersonConsequences } from './incident-consequences';
 import { validForceOutcome } from './force-risk';
 import { SQUAD_IDS as SQUAD_ID_LIST } from './types';
-import { CAREER_SEEDS } from '../content/officers';
 import { ITEMS } from '../content/items';
 import { COURSES } from '../content/courses';
 import { DEV_NODES } from '../content/dev-tree';
-import { createUnit } from './equipment';
-import { seedIncidentBoard } from './incidents';
-import { hashSeed } from './rng';
-import { initializePersonnel } from './personnel';
 import { getScenario } from './scenario-registry';
-import { parseIncidentId, INCIDENT_CONTENT_VERSION, SUPPORTED_INCIDENT_CONTENT_VERSION } from '../gen/incident';
-import { legacyItemDefinition, retireLegacyBatteries } from './compatibility/retirement';
+import { parseIncidentId, INCIDENT_CONTENT_VERSION } from '../gen/incident';
 import { maxDevelopmentTier } from './development-tiers';
 import { normalizeSquadArrangementState } from './squad-optimizer';
-import { validStageContinuations } from './compatibility/legacy-choices';
 import { validResponseFailure } from './response-failure';
-import { abandonRun } from './operation';
-import { emptyCasebook, foldDebriefs, parseRecipeKey, recipeOfScenario } from './casebook';
-import { MAX_LEVEL, serviceForLevel } from './department-level';
-import { isUnlocked } from '../content/unlocks';
-import { SCENARIO_TYPES_V11 } from '../content/scenario-types-v11';
-import { createCommandStaff, validCommandStaff } from './command-staff';
 
 export const SAVE_KEY = 'tactically-idle/save';
 
-/** Version written by this build. Older versions pass through migrate(). */
+/** Version written by this build. Other versions are rejected. */
 export const CURRENT_SAVE_VERSION = 9;
 
 export interface SaveStorage {
@@ -163,16 +152,15 @@ function validRun(r: unknown): boolean {
   const scenario = getScenario(r.scenarioId as string);
   return !!scenario && scenario.locationFamilyId === r.locationFamilyId && Number.isSafeInteger(r.locationSeed)
     && (r.locationSeed as number) >= 0
-    && validStageContinuations(r as unknown as OperationRun, scenario)
     && validResponseFailure(r as unknown as OperationRun, scenario)
     && validExternalSupportState(r as unknown as OperationRun, scenario)
-    && (scenario.version < 4 || (r.scenarioVersion === scenario.version && r.locationSeed === scenario.locationSeed
-      && Number.isSafeInteger(r.revision) && r.revision === r.history.length
+    && (r.contentVersion === INCIDENT_CONTENT_VERSION && r.scenarioVersion === scenario.version && r.locationSeed === scenario.locationSeed
+      && Number.isSafeInteger(r.revision) && r.revision === r.history.length + ((r.resupplies as unknown[] | undefined)?.length ?? 0)
       && (r.clock as number) >= 0 && (r.objective as number) >= 0 && (r.objective as number) <= 100
       && (r.civilianSafety as number) >= 0 && (r.civilianSafety as number) <= 100
       && (r.pressure as number) >= 0 && (r.pressure as number) <= 100
-      && r.history.every((entry, index) => (entry as Record<string, unknown>).revision === index)
-      && (r.status === 'active' ? r.stage !== 'debrief' && r.endingId === null : r.stage === 'debrief' && isStr(r.endingId) && !!scenario.endings[r.endingId])));
+      && r.history.every((entry, index) => (entry as Record<string, unknown>).revision === index + ((r.resupplies as unknown[] | undefined)?.length ?? 0))
+      && (r.status === 'active' ? r.stage !== 'debrief' && r.endingId === null : r.stage === 'debrief' && isStr(r.endingId) && !!scenario.endings[r.endingId]));
 }
 
 function validDebrief(d: unknown): boolean {
@@ -200,8 +188,8 @@ function validDebrief(d: unknown): boolean {
       && (d.disposition !== 'care_accepted' || d.receivingService !== undefined)));
 }
 
-/** Fields every version has. `v2` adds the career fields introduced in version 2. */
-function validOfficer(o: unknown, key: string, v2: boolean): boolean {
+/** Current officer shape, including career and assignment records. */
+function validOfficer(o: unknown, key: string): boolean {
   if (!isObj(o)) return false;
   if (o.identityId !== undefined && !isStr(o.identityId)) return false;
   if (o.id !== key || !isStr(o.firstName) || !isStr(o.surname) || !oneOf(o.role, ROLES) || !isStr(o.portrait)) return false;
@@ -216,7 +204,6 @@ function validOfficer(o: unknown, key: string, v2: boolean): boolean {
     const op = isObj(a) && a.kind === 'operation' && isStr(a.runId);
     if (!training && !op) return false;
   }
-  if (!v2) return true;
   if ((o.xpBanked !== undefined && !isNum(o.xpBanked))
     || (o.highStressSince !== undefined && o.highStressSince !== null && !isNum(o.highStressSince))
     || (o.lastRunCounted !== undefined && o.lastRunCounted !== null && !isStr(o.lastRunCounted))) return false;
@@ -231,9 +218,9 @@ function validOfficer(o: unknown, key: string, v2: boolean): boolean {
   return true;
 }
 
-function validUnit(u: unknown, key: string, historical = false): boolean {
+function validUnit(u: unknown, key: string): boolean {
   if (!isObj(u)) return false;
-  if (u.id !== key || !isStr(u.itemId) || !(historical ? legacyItemDefinition(u.itemId) : Object.hasOwn(ITEMS, u.itemId)) || !isStr(u.serial)) return false;
+  if (u.id !== key || !isStr(u.itemId) || !Object.hasOwn(ITEMS, u.itemId) || !isStr(u.serial)) return false;
   if (!['condition', 'acquiredAt', 'uses', 'wearRate', 'lastWearAt'].every((f) => isNum(u[f]))) return false;
   if (!isStr(u.status) || !UNIT_STATUSES.includes(u.status)) return false;
   if (u.serviceUntil !== null && !isNum(u.serviceUntil)) return false;
@@ -242,21 +229,21 @@ function validUnit(u: unknown, key: string, historical = false): boolean {
 }
 
 /** Structural checks shared by every version. */
-function validBase(s: unknown, v2: boolean, historical = false): s is Record<string, unknown> {
+function validBase(s: unknown): s is Record<string, unknown> {
   if (!isObj(s)) return false;
   const dep = s.department;
   if (!isObj(dep)) return false;
   const depNums = ['funding', 'devPoints', 'trust', 'level', 'rosterCap', 'trainingSlots', 'lastSettledAt', 'lastInteractionAt', 'clockHighWater'];
   if (!isStr(dep.name) || !depNums.every((k) => isNum(dep[k]))) return false;
-  if (v2 && !isNum(dep.calendarEpoch)) return false;
+  if (!isNum(dep.calendarEpoch)) return false;
   if (!isStrings(dep.unlockedNodes) || !dep.unlockedNodes.every((id) => Object.hasOwn(DEV_NODES, id))
-    || !isList(dep.restockRules, (r) => isObj(r) && isStr(r.itemId) && !!(historical ? legacyItemDefinition(r.itemId) : Object.hasOwn(ITEMS, r.itemId)) && numbers(r, ['target', 'budgetCeiling']))) return false;
+    || !isList(dep.restockRules, (r) => isObj(r) && isStr(r.itemId) && Object.hasOwn(ITEMS, r.itemId) && numbers(r, ['target', 'budgetCeiling']))) return false;
   if (dep.candidateRefreshedAt !== undefined && !isNum(dep.candidateRefreshedAt)) return false;
   if (dep.service !== undefined && (!Number.isSafeInteger(dep.service) || (dep.service as number) < 0)) return false;
   if (dep.maintenanceBudgetPerHour !== undefined && (!isNum(dep.maintenanceBudgetPerHour) || !Number.isInteger(dep.maintenanceBudgetPerHour) || dep.maintenanceBudgetPerHour < 0 || dep.maintenanceBudgetPerHour > 500)) return false;
   if (!isObj(s.officers)) return false;
   const officers = s.officers as Record<string, unknown>;
-  if (!Object.entries(officers).every(([k, o]) => validOfficer(o, k, v2))) return false;
+  if (!Object.entries(officers).every(([k, o]) => validOfficer(o, k))) return false;
   if (!Array.isArray(s.squads)) return false;
   const seen = new Set<string>();
   for (const sq of s.squads as unknown[]) {
@@ -269,7 +256,7 @@ function validBase(s: unknown, v2: boolean, historical = false): s is Record<str
   if (!Array.isArray(s.candidates)) return false;
   for (const c of s.candidates as unknown[]) {
     if (!isObj(c) || !isStr(c.id) || !isNum(c.signingCost) || !isNum(c.expiresAt) || typeof c.shortlisted !== 'boolean') return false;
-    if (!validOfficer(c.officer, (c.officer as { id?: string } | null)?.id ?? '', v2)) return false;
+    if (!validOfficer(c.officer, (c.officer as { id?: string } | null)?.id ?? '')) return false;
   }
   if (!Array.isArray(s.reservations) || !Array.isArray(s.debriefs)) return false;
   if (s.activeRun !== null && !isObj(s.activeRun)) return false;
@@ -277,19 +264,7 @@ function validBase(s: unknown, v2: boolean, historical = false): s is Record<str
   return isNum(s.nextId) && isNum(s.rngState) && isNum(s.saveVersion) && isNum(s.contentVersion);
 }
 
-/** Version 1: items were stacks with owned / reserved / maintenance counts. */
-function validV1(s: unknown): boolean {
-  if (!validBase(s, false, true)) return false;
-  if (!isObj(s.inventory)) return false;
-  for (const [k, st] of Object.entries(s.inventory as Record<string, unknown>)) {
-    if (!isObj(st) || st.itemId !== k) return false;
-    if (!['owned', 'reserved', 'maintenance', 'uses'].every((f) => isNum(st[f]))) return false;
-    if (st.maintenanceUntil !== null && !isNum(st.maintenanceUntil)) return false;
-  }
-  return true;
-}
-
-/** Version 3: the incident board and its optional arrival schedule. */
+/** The incident board and its arrival schedule. */
 function validIncidents(s: Record<string, unknown>): boolean {
   if (!Array.isArray(s.incidents)) return false;
   const ids = new Set<string>();
@@ -301,7 +276,7 @@ function validIncidents(s: Record<string, unknown>): boolean {
   return dep.nextIncidentAt === undefined || isNum(dep.nextIncidentAt);
 }
 
-/** Version 6: the casebook. Optional so hand-built states load; created on the first board draw. */
+/** The current casebook, created on the first board draw. */
 function validCasebook(c: unknown): boolean {
   if (c === undefined) return true;
   if (!isObj(c) || !isStrings(c.frameworksSeen) || new Set(c.frameworksSeen).size !== c.frameworksSeen.length || !isObj(c.recipes)) return false;
@@ -310,16 +285,14 @@ function validCasebook(c: unknown): boolean {
 }
 
 /** Basic structural validation: enough that the UI and sim cannot crash on a loaded state. */
-function validState(s: unknown, historical = false): s is GameState {
-  if (!validBase(s, true, historical)) return false;
+function validState(s: unknown): s is GameState {
+  if (!validBase(s)) return false;
   const dep = s.department as Record<string, unknown>;
-  if (!historical) {
+  {
     if (!isObj(dep.developmentTiers) || !isStrings(dep.unlockedNodes) || new Set(dep.unlockedNodes).size !== dep.unlockedNodes.length) return false;
     if (!Object.entries(dep.developmentTiers).every(([id, tier]) => Object.hasOwn(DEV_NODES, id) && Number.isInteger(tier) && (tier as number) >= 1 && (tier as number) <= maxDevelopmentTier(DEV_NODES[id]) && (dep.unlockedNodes as string[]).includes(id))) return false;
     if (!dep.unlockedNodes.every((id) => Object.hasOwn(dep.developmentTiers as object, id))) return false;
   }
-  const receipt = s.equipmentPowerUpgrade;
-  if (receipt !== undefined && (!isObj(receipt) || !Number.isSafeInteger(receipt.retiredUnits) || (receipt.retiredUnits as number) < 1 || !Number.isSafeInteger(receipt.refundedFunding) || (receipt.refundedFunding as number) < 0 || (receipt.refundedFunding as number) > (receipt.retiredUnits as number) * 40 || (receipt.refundedFunding as number) % 40 !== 0)) return false;
   if (!validIncidents(s)) return false;
   if (!validCasebook(s.casebook)) return false;
   if (!validCommandStaff(s.commandStaff)) return false;
@@ -332,13 +305,13 @@ function validState(s: unknown, historical = false): s is GameState {
   if (!isObj(people) || !isNum(people.campaignSeed) || !Number.isInteger(people.campaignSeed) || people.campaignSeed < 0 || people.campaignSeed > 0xffffffff || !isNum(people.catalogVersion)) return false;
   if (!Array.isArray(people.employedIdentityIds) || !people.employedIdentityIds.every(isStr) || new Set(people.employedIdentityIds).size !== people.employedIdentityIds.length || !isObj(people.builds)) return false;
   for (const [identityId, officer] of Object.entries(people.builds)) {
-    if (!isObj(officer) || officer.identityId !== identityId || !isStr(officer.id) || !validOfficer(officer, officer.id, true)) return false;
+    if (!isObj(officer) || officer.identityId !== identityId || !isStr(officer.id) || !validOfficer(officer, officer.id)) return false;
   }
   const activePeople = [...Object.values(s.officers as Record<string, { identityId?: string }>), ...(s.candidates as { officer: { identityId?: string } }[]).map((c) => c.officer)].map((o) => o.identityId).filter(Boolean);
   if (new Set(activePeople).size !== activePeople.length) return false;
   if (!isObj(s.units)) return false;
   const units = s.units as Record<string, unknown>;
-  if (!Object.entries(units).every(([k, u]) => validUnit(u, k, historical))) return false;
+  if (!Object.entries(units).every(([k, u]) => validUnit(u, k))) return false;
   for (const r of s.reservations as unknown[]) {
     if (!isObj(r) || !isStr(r.id) || !isStr(r.runId) || !isStr(r.itemId) || !isStr(r.unitId) || !oneOf(r.squadId, SQUAD_IDS)) return false;
     if (!Object.hasOwn(units, r.unitId)) return false;
@@ -346,287 +319,16 @@ function validState(s: unknown, historical = false): s is GameState {
   return true;
 }
 
-// ---------------------------------------------------------------- v1 -> v2
-
-/** Hash-based but stable career defaults for an officer the seed table does not know. */
-function defaultCareer(id: string, hiredAt: number): { age: number; service: number; operations: number } {
-  const h = hashSeed(`${id}:${hiredAt}`);
-  const age = 24 + (h % 20);
-  const service = Math.max(0.5, Math.min(age - 22, 1 + ((h >>> 8) % 12)));
-  return { age, service, operations: Math.floor(service * 4) };
-}
-
-function migrateOfficer(o: Record<string, unknown>): void {
-  const seed = CAREER_SEEDS[o.id as string] ?? defaultCareer(o.id as string, o.hiredAt as number);
-  // The migrated calendar starts now (day 0), so birth and service dates are negative year counts.
-  o.bornDay = -Math.round(seed.age * 365);
-  o.serviceStartDay = -Math.round(seed.service * 365);
-  o.career = { operations: seed.operations, favorable: Math.round(seed.operations * 0.55), adverse: Math.round(seed.operations * 0.12) };
-  o.retirement = null;
-  o.xpBanked = o.xp; // existing xp predates xp-to-rating growth; nobody gets a retroactive jump
-}
-
-/**
- * v1 -> v2. Stacks become individual units (deterministic wear rates and modest
- * age-based condition), the calendar starts now, officers gain career fields.
- * An in-flight operation is dropped: its reservations and officer assignments are
- * released and the units return ready, because a v1 run lacks the spatial records
- * the v2 engine resolves against.
- */
-function migrateV1toV2(env: SaveEnvelope): SaveEnvelope {
-  const raw = structuredClone(env.state) as unknown as Record<string, unknown> & {
-    inventory: Record<string, { itemId: string; owned: number; reserved: number; maintenance: number; uses: number; maintenanceUntil: number | null }>;
-  };
-  const dep = raw.department as unknown as Record<string, unknown>;
-  const now = dep.clockHighWater as number;
-  dep.calendarEpoch = now;
-
-  const draft = raw as unknown as GameState & { inventory?: unknown };
-  draft.units = {};
-  let index = 0;
-  for (const stack of Object.values(raw.inventory)) {
-    const def = legacyItemDefinition(stack.itemId);
-    if (!def) continue;
-    const owned = Math.max(0, Math.floor(stack.owned));
-    for (let i = 0; i < owned; i++, index++) {
-      const ageDays = 20 + (index % 6) * 14;
-      const uses = Math.floor(stack.uses / Math.max(1, owned)) + (i < stack.uses % Math.max(1, owned) ? 1 : 0);
-      const unit = createUnit(draft, stack.itemId, now, { ageDays, uses }, def);
-      if (def.kind === 'equipment') unit.condition = Math.max(30, Math.round((unit.condition - def.wear.perUse * unit.wearRate * uses) * 100) / 100);
-      // Units that were in maintenance carry on with that servicing.
-      if (i >= owned - Math.max(0, Math.floor(stack.maintenance)) && def.kind === 'equipment') {
-        unit.status = 'service';
-        unit.serviceUntil = stack.maintenanceUntil ?? now + def.wear.serviceHours * 3_600_000;
-      }
-    }
-  }
-  delete draft.inventory;
-
-  if (draft.activeRun || draft.reservations.length > 0) {
-    for (const o of Object.values(draft.officers)) {
-      if (o.assignment?.kind === 'operation') o.assignment = null;
-    }
-    draft.reservations = [];
-    draft.activeRun = null;
-  }
-
-  for (const o of Object.values(draft.officers)) migrateOfficer(o as unknown as Record<string, unknown>);
-  for (const c of draft.candidates) migrateOfficer(c.officer as unknown as Record<string, unknown>);
-  for (const db of draft.debriefs) {
-    const x = db as unknown as Record<string, unknown>;
-    if (!Array.isArray(x.unitWear)) x.unitWear = [];
-  }
-  if (draft.report) {
-    const r = draft.report as unknown as Record<string, unknown>;
-    if (!Array.isArray(r.equipment)) r.equipment = [];
-    if (!Array.isArray(r.personnel)) r.personnel = [];
-  }
-  draft.saveVersion = 2;
-  return { ...env, saveVersion: 2, state: draft };
-}
-
-// ---------------------------------------------------------------- v5 -> v6
-
-/**
- * v5 -> v6. The campaign gains a casebook built from what it already holds: frameworks
- * on the board or in live debriefs count as seen (no card is badged retroactively), and
- * each content v10+ live debrief adds its recipe with that best result. The board, an
- * active live run and the PRNG are untouched.
- */
-function migrateV5toV6(env: SaveEnvelope): SaveEnvelope {
-  const draft = structuredClone(env.state) as GameState;
-  const at = Number.isFinite(env.savedAt) ? env.savedAt : draft.department.clockHighWater;
-  // The casebook records live calls only, so legacy practice records leave first.
-  retireLegacyPractice(draft, at);
-  const book = emptyCasebook();
-  draft.casebook = book;
-  const seen = (type: string) => { if (!book.frameworksSeen.includes(type)) book.frameworksSeen.push(type); };
-  for (const report of [...(draft.debriefs ?? [])].reverse()) {
-    const ref = recipeOfScenario(report.scenarioId);
-    if (ref) seen(ref.type);
-  }
-  for (const card of [...(draft.incidents ?? [])].reverse()) seen(card.type);
-  foldDebriefs(draft, at);
-  draft.saveVersion = 6;
-  return { ...env, saveVersion: 6, state: draft };
-}
-
-// ---------------------------------------------------------------- v6 -> v7
-
-/** Framework levels as save v7 shipped them (content/unlocks.ts at that release). The v6 -> v7
- * lift reads this frozen table, never the live rules, so later changes to the unlock arc
- * cannot change how an old save migrates. Frameworks not listed were level 1. */
-const V7_UNLOCK_LEVELS: Readonly<Record<string, number>> = {
-  burglary: 2, medical_complication: 2, business_robbery: 3, barricaded: 3,
-  active_armed_incident: 4, protected_rescue: 4, hostage_crisis: 5,
-};
-
-/**
- * v6 -> v7. Department level is now earned through service on live calls, and the
- * specialist frameworks ask for more than the level 3 every earlier campaign held. The
- * department keeps its level and is lifted to the v7 level of any framework it has already
- * met or could already be sent to (its certifications and equipment qualify), so the
- * update takes no kind of call away. Service starts at that level's threshold.
- */
-function migrateV6toV7(env: SaveEnvelope): SaveEnvelope {
-  const draft = structuredClone(env.state) as GameState;
-  const seen = new Set(draft.casebook?.frameworksSeen ?? []);
-  const anyLevel = { ...draft, department: { ...draft.department, level: MAX_LEVEL } };
-  let level = draft.department.level;
-  for (const { type } of SCENARIO_TYPES_V11) if (seen.has(type) || isUnlocked(anyLevel, type)) level = Math.max(level, V7_UNLOCK_LEVELS[type] ?? 1);
-  draft.department.level = level;
-  draft.department.service = serviceForLevel(level);
-  draft.saveVersion = 7;
-  return { ...env, saveVersion: 7, state: draft };
-}
-
-// ---------------------------------------------------------------- v7 -> v8
-
-/**
- * Practice was removed on 2026-10-06: every operation is a live call. Older saves can hold
- * practice records, which never changed the department, so this removes them:
- * - an active practice run ends as if cancelled (no rewards; abandonRun releases its
- *   officers and any reservation, exactly as cancelOperation does);
- * - practice debriefs leave the debrief list;
- * - casebook recipes met only in practice are removed, and best results lose their
- *   practice mark;
- * - the `practice` field leaves the active run and every remaining debrief.
- * Idempotent and safe on any v2+ state (the casebook arrives in v6). The v4 and v5 steps
- * also run it, before they read runs and debriefs with the current validators and casebook.
- */
-function retireLegacyPractice(draft: GameState, now: number): void {
-  type Legacy = { practice?: boolean };
-  const run = draft.activeRun as (OperationRun & Legacy) | null;
-  if (run?.practice) abandonRun(draft, run, now);
-  else if (run) delete run.practice;
-  draft.debriefs = (draft.debriefs ?? []).filter((report) => !(report as Legacy).practice);
-  for (const report of draft.debriefs) delete (report as Legacy).practice;
-  const recipes = (draft.casebook?.recipes ?? {}) as Record<string, { practiceOnly?: true; best?: Legacy }>;
-  for (const [key, entry] of Object.entries(recipes)) {
-    if (entry.practiceOnly) delete recipes[key];
-    else if (entry.best) delete entry.best.practice;
-  }
-}
-
-/** v7 -> v8. See retireLegacyPractice. The board, the PRNG and every live record are untouched. */
-function migrateV7toV8(env: SaveEnvelope): SaveEnvelope {
-  const draft = structuredClone(env.state) as GameState;
-  retireLegacyPractice(draft, Number.isFinite(env.savedAt) ? env.savedAt : draft.department.clockHighWater);
-  draft.saveVersion = 8;
-  return { ...env, saveVersion: 8, state: draft };
-}
-
-// ---------------------------------------------------------------- v8 -> v9
-
-/**
- * v8 -> v9. Command Staff arrives with default policies and empty logs. Managers are hired
- * through new Develop nodes, so an older save starts with the Watch Commander and Training
- * Sergeant not hired; a department that already owns the equipment manager keeps it as the
- * Quartermaster with its service budget unchanged.
- */
-function migrateV8toV9(env: SaveEnvelope): SaveEnvelope {
-  const draft = structuredClone(env.state) as GameState;
-  draft.commandStaff = createCommandStaff();
-  draft.saveVersion = 9;
-  return { ...env, saveVersion: 9, state: draft };
-}
-
-// ---------------------------------------------------------------- v2 -> v3
-
-/**
- * v2 -> v3. Squad 'D' becomes valid (nothing to convert) and the department gains an
- * incident board: three cards arriving at the save time, drawn deterministically from
- * the save's rngState mixed with savedAt, plus the arrival schedule. Settlement then
- * carries on from the save time, expiring and arriving cards for the time away.
- */
-function migrateV2toV3(env: SaveEnvelope): SaveEnvelope {
-  const draft = structuredClone(env.state) as GameState;
-  const at = Number.isFinite(env.savedAt) ? env.savedAt : draft.department.clockHighWater;
-  draft.rngState = ((draft.rngState >>> 0) ^ hashSeed(`incidents:${at}`)) >>> 0;
-  seedIncidentBoard(draft, at);
-  draft.saveVersion = 3;
-  return { ...env, saveVersion: 3, state: draft };
-}
-
-/**
- * Bring an older envelope up to CURRENT_SAVE_VERSION, one version at a time.
- * Returns null for unknown (newer) versions and for input it cannot convert.
- * Callers that load from storage should validate the result (deserialize does).
- */
-export function migrate(envelope: SaveEnvelope): SaveEnvelope | null {
-  let env = envelope;
-  if (!Number.isInteger(env.saveVersion) || env.saveVersion < 1 || env.saveVersion > CURRENT_SAVE_VERSION) return null;
-  try {
-    while (env.saveVersion < CURRENT_SAVE_VERSION) {
-      switch (env.saveVersion) {
-        case 1:
-          env = migrateV1toV2(env);
-          break;
-        case 2:
-          env = migrateV2toV3(env);
-          break;
-        case 3: {
-          const state = structuredClone(env.state);
-          initializePersonnel(state);
-          state.saveVersion = 4;
-          env = { ...env, saveVersion: 4, state };
-          break;
-        }
-        case 4: {
-          // A v4 practice run can name a retired exercise, which no longer resolves; it ends
-          // here (see retireLegacyPractice) so the v4 shape can be checked.
-          const state = structuredClone(env.state);
-          retireLegacyPractice(state, Number.isFinite(env.savedAt) ? env.savedAt : state.department.clockHighWater);
-          if (!validState(state, true)) return null;
-          state.department.unlockedNodes = [...new Set(state.department.unlockedNodes)];
-          state.department.developmentTiers = Object.fromEntries(state.department.unlockedNodes.map((id) => [id, 1]));
-          const retired = retireLegacyBatteries(state);
-          if (retired.removed) state.equipmentPowerUpgrade = { retiredUnits: retired.removed, refundedFunding: retired.refunded };
-          state.saveVersion = 5;
-          env = { ...env, saveVersion: 5, state };
-          break;
-        }
-        case 5:
-          env = migrateV5toV6(env);
-          break;
-        case 6:
-          env = migrateV6toV7(env);
-          break;
-        case 7:
-          env = migrateV7toV8(env);
-          break;
-        case 8:
-          env = migrateV8toV9(env);
-          break;
-        default:
-          return null;
-      }
-    }
-  } catch {
-    return null;
-  }
-  // New draws use the current content version. Issued incident IDs encode their own content version;
-  // never rewrite the board, an active run, its RNG, or its scenario fields.
-  const contentVersion = Math.max(INCIDENT_CONTENT_VERSION, env.state.contentVersion);
-  env = { ...env, contentVersion, state: { ...env.state, contentVersion, saveVersion: env.saveVersion } };
-  return env;
-}
-
+/** Load only the current envelope and state; historical saves are intentionally unsupported. */
 export function deserialize(text: string): GameState | null {
-  let raw: unknown;
   try {
-    raw = JSON.parse(text);
-  } catch {
-    return null;
-  }
-  if (!isObj(raw) || !isNum(raw.saveVersion) || !isNum(raw.contentVersion) || !isNum(raw.savedAt) || !isObj(raw.state)) return null;
-  if (![raw.contentVersion, raw.state.contentVersion].every((v) => Number.isInteger(v) && (v as number) >= 1 && (v as number) <= SUPPORTED_INCIDENT_CONTENT_VERSION)) return null;
-  // Older versions are checked against their own shape before they are migrated.
-  if (raw.saveVersion === 1 && !validV1(raw.state)) return null;
-  const migrated = migrate(raw as unknown as SaveEnvelope);
-  if (!migrated || !validState(migrated.state)) return null;
-  normalizeSquadArrangementState(migrated.state);
-  return migrated.state;
+    const raw: unknown = JSON.parse(text);
+    if (!isObj(raw) || raw.saveVersion !== CURRENT_SAVE_VERSION || raw.contentVersion !== INCIDENT_CONTENT_VERSION
+      || !isNum(raw.savedAt) || !isObj(raw.state) || raw.state.saveVersion !== CURRENT_SAVE_VERSION
+      || raw.state.contentVersion !== INCIDENT_CONTENT_VERSION || !validState(raw.state)) return null;
+    normalizeSquadArrangementState(raw.state);
+    return raw.state;
+  } catch { return null; }
 }
 
 export function saveGame(state: GameState, now: number, storage: SaveStorage = localStorage): void {

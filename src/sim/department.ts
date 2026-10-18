@@ -22,7 +22,6 @@ export const DEPARTMENT_HANDLERS: HandlerMap<DepartmentCommandType> = {
     d.report = null;
     return { ok: true };
   },
-  acknowledgePowerUpgrade: (d) => { delete d.equipmentPowerUpgrade; return { ok: true }; },
   hire: (d, c) => ROSTER_HANDLERS.hire(d, c.candidateId),
   dismiss: (d, c) => ROSTER_HANDLERS.dismiss(d, c.officerId),
   shortlist: (d, c) => ROSTER_HANDLERS.shortlist(d, c.candidateId, c.on),

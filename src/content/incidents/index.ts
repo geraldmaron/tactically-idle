@@ -15,8 +15,8 @@ export const INCIDENT_TEMPLATES: Partial<Record<IncidentType, IncidentTemplate>>
 };
 
 /** The template a call of this type and content version is drawn from, when it is a call tree. */
-export function templateAt(type: IncidentType, contentVersion: number): IncidentTemplate | undefined {
-  const tree = callTreeAt(type, contentVersion);
+export function templateAt(type: IncidentType): IncidentTemplate | undefined {
+  const tree = callTreeAt(type);
   const template = INCIDENT_TEMPLATES[type];
   return tree && template?.tree === tree ? template : undefined;
 }

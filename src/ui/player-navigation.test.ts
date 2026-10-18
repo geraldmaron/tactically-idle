@@ -148,6 +148,7 @@ describe('rendered player destinations and persistent drafts', () => {
 
   it('renders tier-specific maintenance benefits while preserving budget controls', () => {
     state.department.unlockedNodes.push('logistics_equipment_manager');
+    for (const id of state.department.unlockedNodes) state.department.developmentTiers[id] ??= 1;
     state.department.developmentTiers.logistics_equipment_manager = 3;
     const html = markup(createElement(GearScreen));
     expect(html).toContain('class="qm-card qm-card-off"');

@@ -9,7 +9,7 @@ import { centroidOf, standingCandidates } from './spatial-factors';
 import { signalBetween } from './spatial';
 import { forceItemMatches } from './force-risk';
 
-export const isIntegratedPowerTag = (tag: string) => tag === 'battery';
+const isIntegratedPowerTag = (tag: string) => tag === 'battery';
 export const effectiveTags = (tags: string[] = []) => tags.filter((tag) => !isIntegratedPowerTag(tag));
 export const effectiveSupplies = (item: ItemDefinition) => (item.supplies ?? []).filter((need) => need.itemId !== 'battery_pack');
 export function normalizedActionConsumption(action: ActionDefinition): { tag: string; qty: number }[] {
@@ -33,7 +33,7 @@ export function actionEquipmentRequirements(action: ActionDefinition) {
 }
 export function qualifiedOfficers(state: GameState, squads: SquadId[], action: ActionDefinition): Officer[] {
   return [...new Set(squads.flatMap((sid) => state.squads.find((s) => s.id === sid)?.officerIds ?? []))].map((id) => state.officers[id]).filter((o): o is Officer => !!o
-    && !(state.activeRun?.scenarioVersion && state.activeRun.scenarioVersion >= 4 && (state.activeRun.officerCasualties?.[o.id] || o.injury && o.injury.until > state.department.clockHighWater))
+    && !(state.activeRun && (state.activeRun.officerCasualties?.[o.id] || o.injury && o.injury.until > state.department.clockHighWater))
     && (action.check.kind !== 'execution' || highRiskAllowed(o)));
 }
 export function operatorQualified(state: GameState, squadId: SquadId, action: ActionDefinition, item: ItemDefinition): boolean {

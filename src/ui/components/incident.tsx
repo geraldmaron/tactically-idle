@@ -3,8 +3,7 @@
 // own INCIDENT_TYPES / BUILDING_FAMILIES win when they provide a label.
 import { useEffect, useState } from 'react';
 import type { Armament, EnvironmentDefinition, ScenarioDefinition } from '../../sim/scenario-types';
-import { SCENARIO_TYPES_V9 } from '../../content/scenario-recipes';
-import { INCIDENT_TYPES_V4 } from '../../gen/incident';
+import { SCENARIO_TYPES } from '../../content/scenario-types';
 import { ALL_BUILDING_FAMILIES } from '../../gen/building';
 import { getBuilt } from '../../sim/resolution';
 import { floorCount } from '../blueprint/floors';
@@ -17,18 +16,7 @@ type Tone = 'neutral' | 'amber' | 'mint' | 'danger' | 'warn' | 'blue';
 // ---------------------------------------------------------------- incident types and buildings
 
 const INCIDENT_FALLBACK: Record<string, { label: string; icon: IconName }> = {
-  welfare_check: { label: 'Welfare check', icon: 'heart' },
-  domestic: { label: 'Domestic disturbance', icon: 'house' },
-  person_in_crisis: { label: 'Person in crisis', icon: 'pulse' },
   barricaded: { label: 'Barricaded subject', icon: 'steeldoor' },
-  burglary: { label: 'Burglary in progress', icon: 'unlock' },
-  business_robbery: { label: 'Business robbery', icon: 'store' },
-  holding: { label: 'Holding situation', icon: 'lock' },
-  medical_complication: { label: 'Medical emergency', icon: 'medic' },
-  disturbance: { label: 'Disturbance', icon: 'soundwave' },
-  missing_vulnerable: { label: 'Missing person', icon: 'binoculars' },
-  false_intruder: { label: 'Reported intruder', icon: 'question' },
-  vacant_occupancy: { label: 'Vacant property', icon: 'eye' },
   active_armed_incident: { label: 'Active armed incident', icon: 'shield' },
   hostage_crisis: { label: 'Hostage crisis', icon: 'lock' },
   protected_rescue: { label: 'Protected rescue', icon: 'medic' },
@@ -41,7 +29,7 @@ function titleCase(id: string): string {
 export function incidentMeta(type: string | null | undefined): { label: string; icon: IconName } {
   if (!type) return { label: 'Operation', icon: 'pin' };
   const fb = INCIDENT_FALLBACK[type];
-  const gen = [...SCENARIO_TYPES_V9, ...INCIDENT_TYPES_V4].find((t) => t.type === type);
+  const gen = SCENARIO_TYPES.find((t) => t.type === type);
   return { label: gen?.label ?? fb?.label ?? titleCase(type), icon: fb?.icon ?? 'pin' };
 }
 
@@ -56,7 +44,7 @@ export function familyBlurb(familyId: string | null | undefined): string | null 
   familyId = familyId.replace(/__furnished_v7$/, '');
   const f = ALL_BUILDING_FAMILIES.find((x) => x.id === familyId);
   if (f) return americanBuildingWords(f.blurb);
-  return familyId === 'maple_street' ? 'Single-story house' : titleCase(familyId);
+  return titleCase(familyId);
 }
 
 /** Short name of a building type for pickers, e.g. 'Cedar Close' or 'Two-story house'. */

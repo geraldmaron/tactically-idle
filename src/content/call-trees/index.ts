@@ -7,8 +7,7 @@ import type { CallTree } from './types';
 
 export type { CallTree } from './types';
 
-/** Content version 13: calls authored as trees (docs/call-trees-v13.md). From this version a
- * type listed here generates from its tree; other types keep their earlier generators. */
+/** The current call-tree content stamp used in incident IDs and saves. */
 export const CALL_TREE_CONTENT_VERSION = 13;
 
 export const CALL_TREES: Partial<Record<IncidentType, CallTree>> = {
@@ -18,6 +17,6 @@ export const CALL_TREES: Partial<Record<IncidentType, CallTree>> = {
   protected_rescue: RESCUE_CHAIR,
 };
 
-export function callTreeAt(type: IncidentType, contentVersion: number): CallTree | undefined {
-  return contentVersion >= CALL_TREE_CONTENT_VERSION ? CALL_TREES[type] : undefined;
+export function callTreeAt(type: IncidentType): CallTree | undefined {
+  return CALL_TREES[type];
 }

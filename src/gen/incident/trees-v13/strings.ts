@@ -3,9 +3,12 @@
 // references/string-checks.md). The checker stays the one implementation of the house rules: the
 // CLI (scripts/check-strings.ts) and the Scenario Lab both send it these rows.
 import type { CallTree, TreeIf, TreeOutcome } from '../../../content/call-trees/types';
+import type { IncidentTemplate } from '../../../content/incidents/types';
 import type { OutcomeBand } from '../../../sim/types';
+import { CIVILIAN_FIRST_NAMES, CIVILIAN_SURNAMES } from '../../../content/call-trees/civilian-names';
 import { INCIDENT_TEMPLATES } from '../../../content/incidents';
 import { reachableWithin, treeForCounts } from './compile';
+import type { CastIdentity } from './compile';
 
 export interface StringRow {
   /** s1, s2, s3 (the tree's situations, one-based) or all. */
@@ -121,4 +124,25 @@ export function parseFindings(stdout: string, rows: readonly StringRow[]): { fin
     else if (line.trim()) summary.push(line.trim());
   }
   return { findings, summary };
+}
+
+/** The worst case for the length budgets, shared by the CLI (scripts/check-strings.ts) and the
+ * Scenario Lab's Script: every person bound with the longest first name in the singular-they pool
+ * and the longest surname, singular they, age 17, every group at the largest size its slot allows,
+ * every room "sales floor" (the scene "storage room") and the place "The Fox and Pheasant". */
+export function longestNamesCast(template: IncidentTemplate): { cast: Record<string, CastIdentity>; groups: Record<string, string[]>;
+  rooms: Record<string, string>; place: string; counts: Record<string, number> } {
+  const longest = (names: readonly string[]) => names.reduce((a, b) => (b.length > a.length ? b : a));
+  const first = longest(CIVILIAN_FIRST_NAMES.they), surname = longest(CIVILIAN_SURNAMES);
+  // A group binds at the largest size its slot allows, every member with the longest names.
+  const groups = Object.fromEntries(Object.entries(template.tree.groups ?? {}).map(([group, spec]) => {
+    const slot = template.cast.find(entry => entry.id === spec.slot);
+    const size = slot ? Math.max(0, slot.count.max - slot.keyRoles.length) : 0;
+    return [group, Array.from({ length: size }, (_, i) => `${group}_${i + 1}`)];
+  }));
+  const ids = [...template.tree.roles.map(role => role.id), ...Object.values(groups).flat()];
+  const cast = Object.fromEntries(ids.map(id => [id, { firstName: first, surname, pronouns: 'they' as const, age: 17 }]));
+  const rooms = { scene: 'storage room', ...Object.fromEntries([...ids, ...Object.keys(groups)].map(id => [id, 'sales floor'])) };
+  const counts = Object.fromEntries(Object.entries(groups).map(([group, members]) => [group, members.length]));
+  return { cast, groups, rooms, place: 'The Fox and Pheasant', counts };
 }

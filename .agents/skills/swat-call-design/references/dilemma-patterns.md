@@ -4,8 +4,8 @@ This file holds the canonical fake-choice checklist and 14 dilemma patterns that
 three-stage calls. swat-call-design and swat-writing-review each repeat the checklist word for
 word. If a copy drifts, this one wins, and review files the drift as a consistency finding.
 
-Every worked line below fits `LENGTH_BUDGETS` and the typed-lane word lists (checked against a
-copy of the lint patterns on 2026-10-06, not the gate). All of it is illustrative. Never copy a
+Every worked line below fits the budgets in swat-call-prose and the word lists in `prose-lint.ts` (checked by
+eye against them on 2026-10-06, not by running `npm run check:strings`). All of it is illustrative. Never copy a
 line into data.
 
 ## The canonical checklist
@@ -112,7 +112,7 @@ weak dilemma.
 
 - Goods. Care for a child who may be in danger, against fairness to a man who may be his
   father.
-- Lever and lane. `actOnReport` (typed, v12 on). `truth` branches (hand-authored).
+- Lever and lane. A choice taken before the check, with `if` outcomes on the fact and a `reveal`.
 - Stage and turn. Stage 2. The check shows the report was wrong.
 - Prompt. "A shopper says a man walked a crying child out of the toy aisle. Staff say the boy
   came in with his dad."
@@ -128,8 +128,8 @@ weak dilemma.
 ### 2. The door against the person behind it
 
 - Goods. Care for the person inside, against liberty (their home, their say).
-- Lever and lane. Opening states and `storyExitState` (hand-authored). In typed calls,
-  resolution text plus a `precaution`.
+- Lever and lane. Choices that fork on the person's answer (`if` on a fact), one routed to an
+  entry node behind `authority: 'entry'`, one to a hold.
 - Stage and turn. Stage 3. The person answers and refuses entry, or does not answer.
 - Prompt. "Smoke from a pan is curling under the door. Nobody inside has answered in four
   minutes."
@@ -145,7 +145,8 @@ weak dilemma.
 
 - Goods. Loyalty and respect for the person involved, against fairness through a neutral
   record.
-- Lever and lane. `approaches` (typed, built in) and `corroborate` (typed, v11 on).
+- Lever and lane. Two stage 1 choices that reveal different facts, and a follow-up choice behind
+  `onlyIf` when the sources disagree.
 - Stage and turn. Stage 1. The independent source disagrees with the first account.
 - Prompt. "The night manager says it’s the back sensor again. Patrol hasn’t looked at the back
   yet."
@@ -153,14 +154,13 @@ weak dilemma.
   else’s.
 - B. "Pull the alarm log first." One extra minute. He waits outside and says so.
 - Adverse for B. "He stops answering questions and asks why nobody believes him."
-- Trap and repair. In typed calls the compiler writes these costs, so designers forget them.
-  Add a `precaution` or file R1. In hand-authored calls, write each cost.
+- Trap and repair. The standard consequence lines come from the compiler, so designers forget the
+  cost the choice itself carries. Write each cost in the choice `summary` and `preview`.
 
 ### 4. Wait for the right resource against act now with less
 
 - Goods. Care now, against care done right.
-- Lever and lane. `externalServices` with `arrivalMinutes` and `awaitSupport` (hand-authored).
-  `waitFor` (typed).
+- Lever and lane. A hold choice with `minutes` or `span`, and a clock for the arrival.
 - Stage and turn. Stage 2 or 3. The arrival time changes, or the person's patience does.
 - Prompt. "The crew is 14 minutes out. He is cold and wants to get up off the bathroom floor."
 - A. "Help him up now." He is warm sooner. If something is hurt, you find out halfway up.
@@ -174,7 +174,7 @@ weak dilemma.
 ### 5. Keep talking against act while you can (the hold)
 
 - Goods. Care through rapport, against care through a window that may close.
-- Lever and lane. `contextPrompts`, `truth` branches and the pressure block (hand-authored).
+- Lever and lane. `promptIf`, `if` outcomes on a fact and the tree's pressure model.
 - Stage and turn. Stage 2. The person goes quiet.
 - Prompt. "He has stopped answering. The line is still open, and the TV inside has gone quiet."
 - A. "Say nothing and wait." He may fill the silence. If he doesn’t, the quiet is spent.
@@ -186,8 +186,7 @@ weak dilemma.
 ### 6. The person's choice against their safety
 
 - Goods. Liberty (her home, her call), against care.
-- Lever and lane. Two endings with `followup_agreed` and `care_accepted` (both lanes).
-  `waitFor` (typed).
+- Lever and lane. Two endings with `followup_agreed` and `care_accepted`, and a hold choice.
 - Stage and turn. Stage 3. The person refuses the help the team came to give.
 - Prompt. "She says she is fine and wants everyone gone. Her son says she hasn’t eaten in two
   days."
@@ -202,7 +201,7 @@ weak dilemma.
 
 - Goods. Loyalty (keep your word to him), against authority (promise only what command
   approves, E12).
-- Lever and lane. Commitments in the v8 decisions layer and negotiation flags (hand-authored).
+- Lever and lane. An outcome `promise` and `authority: { concede }`.
 - Limits (E12, concessions). Every offer names command's approval and offers only what the
   team itself can do, such as writing his account down and passing it on. Never a third
   party's process (a board, a court), and never a held person asked to sign or bargain.
@@ -219,7 +218,8 @@ weak dilemma.
 ### 8. Release one now against the agreement that covers everyone
 
 - Goods. Care for one person now, against fairness to everyone still inside.
-- Lever and lane. Release steps and their flags (hand-authored), as in One Last Signature.
+- Lever and lane. Release steps as `out` and `safe` on outcomes with a `promise`, as in
+  `hostage-signature.ts`.
 - Stage and turn. Stage 2. Once one person leaves, the one left behind changes the math.
 - Prompt. "He will let the courier go now if the owner stays. The courier is at the door with
   his bag."
@@ -232,7 +232,7 @@ weak dilemma.
 ### 9. Care for the subject against protecting a bystander
 
 - Goods. Care for one person, against care for another.
-- Lever and lane. Two `civilianOutcomes` and requirements on public position (hand-authored).
+- Lever and lane. `safe` and `harm` on outcomes for two people, and `onlyIf` on public position.
 - Stage and turn. Stage 3. A bystander moves into the scene.
 - Prompt. "His neighbor is on the landing with her phone up. He won’t come down while she’s
   there."
@@ -245,7 +245,7 @@ weak dilemma.
 ### 10. The tired officer against the right officer
 
 - Goods. Care for the team, against the best chance for the person.
-- Lever and lane. Certification requirements and stress (hand-authored). The briefing
+- Lever and lane. Choice `requires` (certs, tags) and `stress`. The briefing
   recommendation slot is design only until R4.
 - Stage and turn. Stage 1 or 3. The cost surfaces on the roster after the call.
 - Prompt. "One officer on the squad has talked someone through a door before. She has been on
@@ -259,7 +259,7 @@ weak dilemma.
 ### 11. Act on the report against confirming it
 
 - Goods. Fairness to the person the report describes, against care for the caller's fear.
-- Lever and lane. `actOnReport` (typed, v12 on).
+- Lever and lane. A choice taken before the check, with `if` outcomes on the fact.
 - Stage and turn. Stage 2. The owner calls back.
 - Prompt. "A neighbor reports a stranger letting himself in next door. He says he’s the owner’s
   nephew and has a key."
@@ -274,8 +274,8 @@ weak dilemma.
 ### 12. The negotiator's clock against command's clock
 
 - Goods. Care through time, against authority and the needs of people outside the call.
-- Lever and lane. A pressure block with a stated reason, plus the recommendation slot
-  (hand-authored).
+- Lever and lane. A clock or `CallTree.pressure` with a stated reason, plus the recommendation
+  slot.
 - Stage and turn. Stage 2. The outside clock moves.
 - Prompt. "The negotiator wants another hour. The street has been shut since noon, and the
   school lets out at 3."
@@ -297,7 +297,7 @@ weak dilemma.
 ### 13. Dignity against the crowd at the tape
 
 - Goods. Sanctity (her dignity), against speed and the chance she changes her mind.
-- Lever and lane. Exit route choice with `storyRoute` (hand-authored). `moveOn` (typed).
+- Lever and lane. An exit route choice with `walks` (the engine checks the doors on the way).
 - Stage and turn. Stage 3. The person agrees to come out.
 - Prompt. "She has agreed to come out. Thirty people are at the tape with their phones up."
 - A. "Walk her out the front now." Quick. Her face is on thirty phones before she reaches the
@@ -310,8 +310,8 @@ weak dilemma.
 ### 14. Finish against follow up
 
 - Goods. Fairness to the next call waiting, against care for the person this one left behind.
-- Lever and lane. `remainingTasks` and the `resolved` or `followup_agreed` dispositions
-  (hand-authored). `waitFor` (typed).
+- Lever and lane. `remainingTasks` on the ending and the `resolved` or `followup_agreed`
+  dispositions, with a hold choice.
 - Stage and turn. Stage 3 and the ending. Something left undone surfaces.
 - Prompt. "The leak is stopped. The tenant upstairs still doesn’t know anyone has been in her
   flat."

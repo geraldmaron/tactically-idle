@@ -6,9 +6,10 @@
 // worked up they are. Names and pronouns never enter.
 import type { Contributor, Id, OperationRun } from './types';
 import type { IncidentPersonDef, MeterCondition, MeterEvent, MeterStance, OutcomeEffect, ScenarioDefinition, SubjectMeters } from './scenario-types';
+import { tunable } from './tuning';
 
-/** Versioned fictional balance. Deltas are for a shifting subject; volatility scales them. */
-export const METERS_V1 = {
+/** Versioned fictional balance. Deltas are for a shifting subject; volatility scales them. Tunable (sim/tuning.ts). */
+export const METERS_V1 = tunable('METERS_V1', {
   events: {
     /** The team let them say their piece. */
     heard: { agitation: -6, rapport: 10 },
@@ -34,13 +35,18 @@ export const METERS_V1 = {
   odds: { rapport: 0.3, agitation: 0.25 },
   /** A change smaller than this is not worth a line on the card. */
   minContribution: 1,
-};
+  /** How a subject sounds once the team has moved them (stanceOf), checked in this order: breaking at
+   * agitation `breakingAgitation` or more; yielding at rapport `yieldingRapport` or more with agitation
+   * below `yieldingAgitationBelow`; volatile at agitation `volatileAgitation` or more; tense at
+   * `tenseAgitation` or more; else calm. The trees' escalation branches read stances. */
+  stance: { breakingAgitation: 80, yieldingRapport: 50, yieldingAgitationBelow: 50, volatileAgitation: 60, tenseAgitation: 30 },
+});
 
 const clamp = (n: number) => Math.max(0, Math.min(100, n));
 const round1 = (n: number) => Math.round(n * 10) / 10;
 
 export function initialMeters(scenario: ScenarioDefinition): OperationRun['meters'] {
-  if (scenario.version < 13) return undefined;
+
   const subjects = (scenario.incidentPeople ?? []).filter(person => person.meters);
   if (!subjects.length) return undefined;
   return Object.fromEntries(subjects.map(person => [person.id, { ...person.meters!, moved: {} }]));
@@ -69,11 +75,12 @@ export function applyMoves(run: Pick<OperationRun, 'meters'>, scenario: Scenario
 export type Stance = MeterStance;
 export type RunMeters = NonNullable<OperationRun['meters']>[Id];
 export function stanceOf(meters: RunMeters): Stance {
+  const S = METERS_V1.stance;
   if (!Object.keys(meters.moved).length) return 'unheard';
-  if (meters.agitation >= 80) return 'breaking';
-  if (meters.rapport >= 50 && meters.agitation < 50) return 'yielding';
-  if (meters.agitation >= 60) return 'volatile';
-  if (meters.agitation >= 30) return 'tense';
+  if (meters.agitation >= S.breakingAgitation) return 'breaking';
+  if (meters.rapport >= S.yieldingRapport && meters.agitation < S.yieldingAgitationBelow) return 'yielding';
+  if (meters.agitation >= S.volatileAgitation) return 'volatile';
+  if (meters.agitation >= S.tenseAgitation) return 'tense';
   return 'calm';
 }
 

@@ -12,7 +12,7 @@ import { getScenario } from '../../../sim/scenario-registry';
 import type { OutcomeEffect, ScenarioDefinition } from '../../../sim/scenario-types';
 import { apply } from '../../../sim/test-fixtures';
 import type { ActionView, GameState, OutcomeBand } from '../../../sim/types';
-import { applyMove, availableMoves, NOW, sampleFor, startGateRun, withDraftScenario } from '../gates/engine-driver';
+import { applyMove, NOW, sampleFor, startGateRun, withDraftScenario } from '../gates/engine-driver';
 import { GATE_CONTENT_VERSION } from '../gates/catalog';
 import { drawIncidentSpec, generateIncident } from '../index';
 import { choiceActionId, memberCounts } from './compile';
@@ -69,7 +69,7 @@ function startsFor(tree: CallTree): Start[] {
   const starts: Start[] = [];
   let state = 2024;
   for (let i = 0; i < 2000 && [...targets].some(([target, n]) => (count.get(target) ?? 0) < n); i++) {
-    const drawn = drawIncidentSpec(state, { level: 10, trust: 90, contentVersion: GATE_CONTENT_VERSION, unlockedTypes: [tree.type] });
+    const drawn = drawIncidentSpec(state, { level: 10, trust: 90, unlockedTypes: [tree.type] });
     state = drawn.state;
     const s = generateIncident(drawn.spec);
     const picked = scenarioRecipe(s.incident!);
@@ -229,7 +229,6 @@ function walk(tree: CallTree, starts: Start[] = startsFor(tree), around: (start:
           if (matched.some(effect => effect.drawn)) for (const rngState of drawnSteers(state, view, band, sample, matched, scenario)) if (push(applySteered(state, view, band, rngState))) drawnWalked++;
         }
       }
-      for (const move of availableMoves(state, views)) if (move.kind === 'continue') push(applyMove(state, move, views));
     }
   });
   return { gaps: [...gaps], starts: starts.length, states, commits, drawnWalked, ended, ms: Date.now() - t0, drawnSeen };

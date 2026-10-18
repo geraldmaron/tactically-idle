@@ -563,26 +563,7 @@ export function scenarioActions(s: ScenarioDefinition): ActionDefinition[] {
 // ---------------------------------------------------------------- phase 3: generated incidents
 // See docs/phase3-generation.md. Distributions live in src/gen/incident/tables.ts.
 
-export type IncidentType =
-  | 'welfare_check'
-  | 'domestic'
-  | 'person_in_crisis'
-  | 'barricaded'
-  | 'burglary'
-  | 'business_robbery'
-  | 'holding'
-  | 'medical_complication'
-  | 'disturbance'
-  | 'missing_vulnerable'
-  | 'false_intruder'
-  | 'vacant_occupancy'
-  | 'active_armed_incident'
-  | 'hostage_crisis'
-  | 'protected_rescue'
-  // Content v11 drop: ordinary calls compiled from typed framework data.
-  | 'fall_at_home'
-  | 'water_leak'
-  | 'lost_child';
+export type IncidentType = 'barricaded' | 'active_armed_incident' | 'hostage_crisis' | 'protected_rescue';
 
 /** Deterministic seed tuple for a generated incident. */
 export interface IncidentSpec {

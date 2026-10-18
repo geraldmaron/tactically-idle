@@ -11,37 +11,29 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { generateBuilding } from '../src/gen/building/index';
 import { INCIDENT_TEMPLATES } from '../src/content/incidents';
-import { CIVILIAN_FIRST_NAMES, CIVILIAN_SURNAMES } from '../src/content/call-trees/civilian-names';
 import { bindRoleTokens } from '../src/gen/incident/trees-v13/compile';
-import { callStringRows, toTsv } from '../src/gen/incident/trees-v13/strings';
+import { callStringRows, longestNamesCast, toTsv } from '../src/gen/incident/trees-v13/strings';
 
 void generateBuilding;
 const ROOT = new URL('../', import.meta.url).pathname;
 const CHECKER = join(ROOT, '.agents/skills/swat-call-prose/scripts/game_string_checks.py');
 const LINT = join(ROOT, 'src/gen/incident/gates/prose-lint.ts');
-const longest = (names: readonly string[]) => names.reduce((a, b) => (b.length > a.length ? b : a));
-const first = longest(CIVILIAN_FIRST_NAMES.they), surname = longest(CIVILIAN_SURNAMES);
 
 const only = process.argv.slice(2);
 const dir = mkdtempSync(join(tmpdir(), 'ti-strings-'));
 let failed = false;
 for (const template of Object.values(INCIDENT_TEMPLATES)) {
   if (!template || (only.length && !only.includes(template.type))) continue;
-  // A group binds at the largest size its slot allows, every member with the longest names.
-  const groups = Object.fromEntries(Object.entries(template.tree.groups ?? {}).map(([group, spec]) => {
-    const slot = template.cast.find(entry => entry.id === spec.slot);
-    const size = slot ? Math.max(0, slot.count.max - slot.keyRoles.length) : 0;
-    return [group, Array.from({ length: size }, (_, i) => `${group}_${i + 1}`)];
-  }));
-  const ids = [...template.tree.roles.map(role => role.id), ...Object.values(groups).flat()];
-  const cast = Object.fromEntries(ids.map(id => [id, { firstName: first, surname, pronouns: 'they' as const, age: 17 }]));
-  const rooms = { scene: 'storage room', ...Object.fromEntries([...ids, ...Object.keys(groups)].map(id => [id, 'sales floor'])) };
-  const counts = Object.fromEntries(Object.entries(groups).map(([group, members]) => [group, members.length]));
-  const rows = callStringRows(template.tree, text => bindRoleTokens(text, cast, 'The Fox and Pheasant', rooms, groups), Object.keys(counts).length ? counts : undefined);
+  // The worst case for the budgets (strings.ts longestNamesCast, shared with the Scenario Lab):
+  // groups at their largest size, every person with the longest names.
+  const { cast, groups, rooms, place, counts } = longestNamesCast(template);
+  const { firstName: first, surname } = Object.values(cast)[0];
+  const rows = callStringRows(template.tree, text => bindRoleTokens(text, cast, place, rooms, groups), Object.keys(counts).length ? counts : undefined);
   const path = join(dir, `${template.type}.tsv`);
   writeFileSync(path, toTsv(rows));
   // The place's own words are a name too, never a repeated run or an opener.
-  const run = spawnSync('python3', [CHECKER, path, '--lint-source', LINT, '--cast', first, surname, 'Fox', 'Pheasant'], { encoding: 'utf8' });
+  const placeWords = place.split(' ').filter(word => word !== 'The' && /^[A-Z]/.test(word));
+  const run = spawnSync('python3', [CHECKER, path, '--lint-source', LINT, '--cast', first, surname, ...placeWords], { encoding: 'utf8' });
   console.log(`\n=== ${template.type} (${rows.length} strings) exit ${run.status}`);
   process.stdout.write(run.stdout);
   if (run.stderr) process.stderr.write(run.stderr);

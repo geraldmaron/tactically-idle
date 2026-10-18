@@ -10,8 +10,11 @@ import { LOCATION_TUNING, pointInPolygon } from './location';
 import { DOORS, STAIR_MINUTES } from '../content/materials';
 import { findRoomPath, footprintRect, roomPointClear, roomSegmentClear } from './furniture-path';
 import { distanceFor, type Distance } from './geometry';
+import { tunable } from './tuning';
 
-export const SPATIAL_TUNING = {
+/** Tunable (sim/tuning.ts), except `coverReach`: generation reads it (coverOnLine, from
+ * gen/incident/instance.ts) and bakes the result into issued calls, so it is deny-listed. */
+export const SPATIAL_TUNING = tunable('SPATIAL_TUNING', {
   /** Transmission at which a signal reads as fully clear (quality 1). */
   clearFull: 0.6,
   /** Overlay tone cut-offs on raw transmission. */
@@ -32,11 +35,11 @@ export const SPATIAL_TUNING = {
   coverConcealment: 3,
   /** Cover counts only near the person: within this share of the line from them to the door. */
   coverReach: 0.6,
-};
+}, { deny: [{ path: 'coverReach', kind: 'generation', reason: 'Baked into generated calls. Change the content and deliberately recapture current fingerprints.' }] });
 
 /** What a piece of furniture does for someone behind it. Game abstraction: hard cover stops the
  * team reaching them cleanly, concealment only hides them. Unlisted furniture does neither. */
-export const COVER_GRADE: Partial<Record<PlacedObject['type'], 'hard' | 'concealment'>> = {
+const COVER_GRADE: Partial<Record<PlacedObject['type'], 'hard' | 'concealment'>> = {
   counter: 'hard', fridge: 'hard', stove: 'hard', tub: 'hard', dresser: 'hard', wardrobe: 'hard',
   sofa: 'concealment', bed: 'concealment', desk: 'concealment', shelf: 'concealment', dining_table: 'concealment', armchair: 'concealment', vanity: 'concealment', register: 'concealment',
 };
@@ -93,7 +96,7 @@ const WORDS: Record<string, [string, string, string, string]> = {
   radio: ['strong', 'reduced', 'weak', 'barely there'],
 };
 
-export function signalWord(channel: Channel, transmission: number): string {
+function signalWord(channel: Channel, transmission: number): string {
   const w = WORDS[channel] ?? WORDS.sound;
   return transmission >= 0.6 ? w[0] : transmission >= 0.25 ? w[1] : transmission >= 0.1 ? w[2] : w[3];
 }

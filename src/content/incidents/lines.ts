@@ -57,6 +57,7 @@ export const FORCE_LINES = {
 // person force was used on, `{near}` the person or the team within reach, `{cover}` the furniture.
 // A reason is one threat sentence, then for anything short of deadly force one tool sentence.
 export const FORCE_REASONS = {
+  no_firearm: 'No one on the team was carrying a firearm they are qualified to use.',
   /** Deadly force: an imminent threat to life an officer can see (AUTHORIZATION_V1.deadlyForce). */
   deadly: {
     gun: '{person} is holding {weapon}.',

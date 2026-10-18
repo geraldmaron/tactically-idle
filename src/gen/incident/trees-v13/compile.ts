@@ -7,21 +7,21 @@ import type { ActionDefinition, ClockCondition, Condition, FactDefinition, Incid
 import { findStoryRoute, selectStoryRoom, storyPoint, validateStoryBindings } from '../../../sim/story-bindings';
 import { routeAlongOpenings } from '../../../sim/spatial-factors';
 import type { BuiltLocation, OutcomeBand, StageId, Vec } from '../../../sim/types';
-import { mapScenarioText } from '../stories-v6/episode-plan';
+import { mapScenarioText } from '../scenario-text';
 import { asRole, CASCADE_LINES, countWord, FIRE_LINES, FORCE_LINES, listOf } from '../../../content/incidents/lines';
 import { cascadeCombos, cascadeKey, cascadeResult, withVariants } from '../../../sim/drawn-effects';
 
 const STAGES: readonly StageId[] = ['assess', 'adapt', 'resolve'];
 const BANDS: readonly OutcomeBand[] = ['favorable', 'mixed', 'adverse'];
 export const TREE_STARTED = 'tree:started';
-export const nodeFlag = (node: string) => `at:${node}`;
-export const markFlag = (mark: string) => `mark:${mark}`;
+const nodeFlag = (node: string) => `at:${node}`;
+const markFlag = (mark: string) => `mark:${mark}`;
 export const safeFlag = (role: string) => `safe:${role}`;
-export const outFlag = (role: string) => `out:${role}`;
+const outFlag = (role: string) => `out:${role}`;
 const hurtFlag = (role: string) => `hurt:${role}`;
 const careFlag = (role: string) => `care:${role}`;
 const endFlag = (ending: string) => `end:${ending}`;
-export const personFactId = (role: string) => `p_${role}`;
+const personFactId = (role: string) => `p_${role}`;
 export const treeFactId = (key: string) => `f_${key}`;
 export const choiceActionId = (type: string, node: string, choice: string) => `t13_${type}_${node}_${choice}`;
 
@@ -69,52 +69,92 @@ const PRONOUN_FORMS: Record<string, Record<'he' | 'she' | 'they', string>> = {
 };
 /** Engine tokens the binder leaves in place: `{lead}` becomes the lead officer's surname at play time. */
 const ENGINE_TOKENS = new Set(['lead']);
+/** A piece of bound text. Names carry the role (cast id) that produced them, and `group` when that
+ * person is a member of a counted role; everything else (pronouns, verb forms, places, rooms,
+ * counts, the text between tokens) is plain. */
+export interface BoundPart { text: string; role?: string; group?: string }
+
+/** TOKEN's own scanner, so a caller's `TOKEN.lastIndex` never shifts where binding starts. */
+const TOKEN_SCAN = new RegExp(TOKEN.source, TOKEN.flags);
+
+/** One token's bound parts; throws on an unknown token, as binding always has. */
+function bindToken(token: RegExpMatchArray, text: string, cast: Record<string, CastIdentity>, place: string, rooms: Record<string, string>, groups: Record<string, readonly string[]>): BoundPart[] {
+  const [match, role, part, singular, plural, heForm, sheForm, theyForm, oneForm, manyForm] = token as unknown as [string, string, ...(string | undefined)[]];
+  const bare = !part && singular === undefined && heForm === undefined && oneForm === undefined;
+  if (ENGINE_TOKENS.has(role) && bare) return [{ text: match }];
+  if (role === 'place' && bare && place) return [{ text: place }];
+  if (role === 'scene' && bare && rooms.scene) return [{ text: rooms.scene }];
+  if (part === 'room' && rooms[role]) return [{ text: rooms[role] }];
+  if (groups[role]) {
+    const ids = groups[role];
+    const members = ids.map(id => cast[id]);
+    if (!members.length || members.some(member => !member)) throw new Error(`No members of ${role} in this call for ${match} in "${text}"`);
+    // After the names, the verb agrees with how many: one name is singular, whoever it is.
+    if (oneForm !== undefined) return [{ text: members.length === 1 ? oneForm : manyForm! }];
+    // After a pronoun, one member reads as that person; two or more as plural they.
+    const one = members.length === 1 ? members[0].pronouns : null;
+    if (singular !== undefined) return [{ text: one === 'he' || one === 'she' ? singular : plural! }];
+    if (heForm !== undefined) {
+      if (!one) throw new Error(`A gendered word for ${members.length} members of ${role}: ${match} in "${text}" needs a count condition with max 1`);
+      return [{ text: one === 'he' ? heForm : one === 'she' ? sheForm! : theyForm! }];
+    }
+    if (part === 'n') return [{ text: countWord(members.length) }];
+    if (part === 'first') return [{ text: members[0].firstName, role: ids[0], group: role }];
+    if (part === 'last') return [{ text: members[0].surname, role: ids[0], group: role }];
+    if (part && PRONOUN_FORMS[part.toLowerCase()]) {
+      const word = PRONOUN_FORMS[part.toLowerCase()][one ?? 'they'];
+      return [{ text: part[0] === part[0].toUpperCase() ? word[0].toUpperCase() + word.slice(1) : word }];
+    }
+    if (part) throw new Error(`Unknown group token ${match} in "${text}"`);
+    // listOf stays the one rule for joining names: it joins numbered markers, and each marker
+    // becomes that member's name.
+    return listOf(ids.map((_, i) => `\u0000${i}\u0000`)).split(/\u0000(\d+)\u0000/)
+      .map((piece, i) => i % 2 ? { text: members[Number(piece)].firstName, role: ids[Number(piece)], group: role } : { text: piece });
+  }
+  const who = cast[role];
+  if (!who || part === 'room' || part === 'n') throw new Error(`Unknown token ${match} in "${text}"`);
+  // One person's name is one name: the singular form.
+  if (oneForm !== undefined) return [{ text: oneForm }];
+  if (singular !== undefined) return [{ text: who.pronouns === 'they' ? plural! : singular }];
+  if (heForm !== undefined) return [{ text: who.pronouns === 'he' ? heForm : who.pronouns === 'she' ? sheForm! : theyForm! }];
+  if (part === 'age') { if (who.age === undefined) throw new Error(`No age drawn for ${role} in "${text}"`); return [{ text: String(who.age) }]; }
+  if (part && PRONOUN_FORMS[part.toLowerCase()]) {
+    const word = PRONOUN_FORMS[part.toLowerCase()][who.pronouns];
+    return [{ text: part[0] === part[0].toUpperCase() ? word[0].toUpperCase() + word.slice(1) : word }];
+  }
+  // A member written by id ({others_1.first}, compiler text only) still belongs to their group.
+  const group = Object.keys(groups).find(id => groups[id].includes(role));
+  const name = part === 'first' ? who.firstName : part === 'last' ? who.surname : `${who.firstName} ${who.surname}`;
+  return [group ? { text: name, role, group } : { text: name, role }];
+}
+
+/** Bind a string as bindRoleTokens does, keeping which person each name came from: the oracle for
+ * the people-name matcher (src/ui/people/lexicon.ts) and the lab's Script. Adjacent plain parts are
+ * merged and empty parts dropped, so joining the texts gives exactly bindRoleTokens' output. */
+export function bindRoleSegments(text: string, cast: Record<string, CastIdentity>, place = '', rooms: Record<string, string> = {}, groups: Record<string, readonly string[]> = {}): BoundPart[] {
+  const parts: BoundPart[] = [];
+  const add = (next: BoundPart) => {
+    if (!next.text) return;
+    const last = parts[parts.length - 1];
+    if (last && !last.role && !next.role) last.text += next.text;
+    else parts.push({ ...next });
+  };
+  let at = 0;
+  for (const token of text.matchAll(TOKEN_SCAN)) {
+    add({ text: text.slice(at, token.index) });
+    for (const part of bindToken(token, text, cast, place, rooms, groups)) add(part);
+    at = token.index! + token[0].length;
+  }
+  add({ text: text.slice(at) });
+  return parts;
+}
+
 /** Replace role tokens, `{place}`, `{scene}` and `{role.room}`; an unknown token is an authoring
  * error, never silent text. `groups` maps each counted role to its members' ids, in order: a group
  * token in a call with no members is an error too, because count conditions keep that text out of
  * lone calls. */
 export function bindRoleTokens(text: string, cast: Record<string, CastIdentity>, place = '', rooms: Record<string, string> = {}, groups: Record<string, readonly string[]> = {}): string {
-  return text.replace(TOKEN, (match: string, role: string, part?: string, singular?: string, plural?: string, heForm?: string, sheForm?: string, theyForm?: string, oneForm?: string, manyForm?: string) => {
-    const bare = !part && singular === undefined && heForm === undefined && oneForm === undefined;
-    if (ENGINE_TOKENS.has(role) && bare) return match;
-    if (role === 'place' && bare && place) return place;
-    if (role === 'scene' && bare && rooms.scene) return rooms.scene;
-    if (part === 'room' && rooms[role]) return rooms[role];
-    if (groups[role]) {
-      const members = groups[role].map(id => cast[id]);
-      if (!members.length || members.some(member => !member)) throw new Error(`No members of ${role} in this call for ${match} in "${text}"`);
-      // After the names, the verb agrees with how many: one name is singular, whoever it is.
-      if (oneForm !== undefined) return members.length === 1 ? oneForm : manyForm!;
-      // After a pronoun, one member reads as that person; two or more as plural they.
-      const one = members.length === 1 ? members[0].pronouns : null;
-      if (singular !== undefined) return one === 'he' || one === 'she' ? singular : plural!;
-      if (heForm !== undefined) {
-        if (!one) throw new Error(`A gendered word for ${members.length} members of ${role}: ${match} in "${text}" needs a count condition with max 1`);
-        return one === 'he' ? heForm : one === 'she' ? sheForm! : theyForm!;
-      }
-      if (part === 'n') return countWord(members.length);
-      if (part === 'first') return members[0].firstName;
-      if (part === 'last') return members[0].surname;
-      if (part && PRONOUN_FORMS[part.toLowerCase()]) {
-        const word = PRONOUN_FORMS[part.toLowerCase()][one ?? 'they'];
-        return part[0] === part[0].toUpperCase() ? word[0].toUpperCase() + word.slice(1) : word;
-      }
-      if (part) throw new Error(`Unknown group token ${match} in "${text}"`);
-      return listOf(members.map(member => member.firstName));
-    }
-    const who = cast[role];
-    if (!who || part === 'room' || part === 'n') throw new Error(`Unknown token ${match} in "${text}"`);
-    // One person's name is one name: the singular form.
-    if (oneForm !== undefined) return oneForm;
-    if (singular !== undefined) return who.pronouns === 'they' ? plural! : singular;
-    if (heForm !== undefined) return who.pronouns === 'he' ? heForm : who.pronouns === 'she' ? sheForm! : theyForm!;
-    if (part === 'age') { if (who.age === undefined) throw new Error(`No age drawn for ${role} in "${text}"`); return String(who.age); }
-    if (part && PRONOUN_FORMS[part.toLowerCase()]) {
-      const word = PRONOUN_FORMS[part.toLowerCase()][who.pronouns];
-      return part[0] === part[0].toUpperCase() ? word[0].toUpperCase() + word.slice(1) : word;
-    }
-    return part === 'first' ? who.firstName : part === 'last' ? who.surname : `${who.firstName} ${who.surname}`;
-  });
+  return bindRoleSegments(text, cast, place, rooms, groups).map(part => part.text).join('');
 }
 
 /** Public state as an engine condition. A group in `safe` means every member is safe, in `notSafe`
@@ -216,6 +256,63 @@ export function reachableNodes(tree: CallTree, seed: number, counts?: Record<str
     }
   }
   return tree.nodes.filter(node => seen.has(node.id));
+}
+
+/** Which marks and safe flags a call can set, and so which conditions can ever hold in it: the
+ * compiler's own pruning. A choice, outcome or prompt variant whose `marks` or `safe` need one this
+ * call can never set is dropped; a `notMarks` or `notSafe` on one is always true. */
+export interface PrunePlan {
+  settableMarks: ReadonlySet<string>;
+  settableSafe: ReadonlySet<string>;
+  /** Whether a state can ever hold in this call: its count condition (for an authored state) and
+   * every mark and safe flag it needs. */
+  possible(state: TreeState | undefined): boolean;
+  /** Why it never can, as a plain sentence, or null when it can. `name` gives a mark, role or group
+   * its label (ids by default). */
+  why(state: TreeState | undefined, name?: (kind: 'mark' | 'role', id: string) => string): string | null;
+}
+
+/** The settable-mark fixpoint for a call with these group sizes (`counts`) and these clock marks
+ * (cues and running out, which count as settable). With `seed`, over the nodes that call can reach
+ * after its turn draws (what withCallTree compiles); without, over every turn any call can draw.
+ * An outcome's own marks count, and so does the mark its `fire` sets when an officer is hit: a
+ * drawn result, but one the call can produce. Marks set only by choices that need a mark nobody
+ * sets don't count either: repeat until nothing more drops out. */
+export function prunePlan(tree: CallTree, counts: Record<string, number>, clockMarks: readonly string[] = [], seed?: number): PrunePlan {
+  const counted = treeForCounts(tree, counts);
+  const reach = seed === undefined ? reachableWithin(counted, counts).nodes : null;
+  const nodes = reach ? counted.nodes.filter(node => reach.has(node.id)) : reachableNodes(counted, seed!, counts);
+  const choices = nodes.flatMap(node => node.choices);
+  const settableFrom = (live: TreeChoice[]) => {
+    const outcomes = live.flatMap(choice => BANDS.flatMap(band => choice.outcomes[band]));
+    const marks = outcomes.flatMap(outcome => [...outcome.mark ?? [], ...outcome.fire?.mark ? [outcome.fire.mark] : []]);
+    return { marks: new Set([...marks, ...clockMarks]), safe: new Set(outcomes.flatMap(outcome => outcome.safe ?? [])) };
+  };
+  let settable = settableFrom(choices);
+  const holds = (state: TreeState | undefined) => (state?.marks ?? []).every(mark => settable.marks.has(mark)) && (state?.safe ?? []).every(role => settable.safe.has(role));
+  for (let live = choices; ;) {
+    const next = choices.filter(choice => holds(choice.onlyIf));
+    if (next.length === live.length) break;
+    live = next;
+    settable = settableFrom(live);
+  }
+  const { marks, safe } = settable;
+  const possible = (state: TreeState | undefined) => countHolds(state, counts) && holds(state);
+  return {
+    settableMarks: marks, settableSafe: safe, possible,
+    why(state, name = (_kind, id) => id) {
+      if (possible(state)) return null;
+      if (!countHolds(state, counts)) {
+        const { role, min, max } = state!.count!, n = counts[role] ?? 0, who = name('role', role);
+        const need = min !== undefined && max !== undefined ? min === max ? `${who} = ${min}` : `${who} ${min} to ${max}` : min !== undefined ? `${who} ≥ ${min}` : `${who} ≤ ${max}`;
+        return `needs ${need}; this call has ${n}`;
+      }
+      const mark = state!.marks?.find(id => !marks.has(id));
+      if (mark !== undefined) return `${name('mark', mark)} can never be set in this call`;
+      const role = state!.safe?.find(id => !safe.has(id));
+      return `${name('role', role!)} is never brought out safe in this call`;
+    },
+  };
 }
 
 /** Compile a call tree onto the generated building. Every decision is an ordinary engine action;
@@ -391,23 +488,12 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
     if (!routeAlongOpenings(built, anchors[walker].inside, anchors[walker].outside, route.openingIds, null, false, route.profile === 'chair' ? 1.5 : 1).reachable)
       throw new Error(`Walk out blocked for ${walker} in ${tree.type}`);
   }
-  // Marks and releases this call can actually set. A condition that needs one it can never set
-  // is never true here (drop it); one that needs it absent is always true (strip that part).
-  // A choice that needs such a mark never shows, so its own marks don't count either: repeat
-  // until nothing more drops out.
-  const choices = nodes.flatMap(node => node.choices);
-  const settableFrom = (live: TreeChoice[]) => {
-    const outcomes = live.flatMap(choice => BANDS.flatMap(band => choice.outcomes[band]));
-    return { marks: new Set([...outcomes.flatMap(outcome => outcome.mark ?? []), ...clockMarks]), safe: new Set(outcomes.flatMap(outcome => outcome.safe ?? [])) };
-  };
-  let settable = settableFrom(choices);
-  const possible = (state: TreeState | undefined) => (state?.marks ?? []).every(mark => settable.marks.has(mark)) && (state?.safe ?? []).every(role => settable.safe.has(role));
-  for (let live = choices; ;) {
-    const next = choices.filter(choice => possible(choice.onlyIf));
-    if (next.length === live.length) break;
-    live = next;
-    settable = settableFrom(live);
-  }
+  // Marks and releases this call can actually set (prunePlan). A condition that needs one it can
+  // never set is never true here (drop it); one that needs it absent is always true (strip that
+  // part). The tree's count conditions are already settled, so `possible` reads marks and safety.
+  const plan = prunePlan(tree, memberCounts({ groups }), clockMarks, spec.seed);
+  const settable = { marks: plan.settableMarks, safe: plan.settableSafe };
+  const possible = plan.possible;
   const trim = (state: TreeState | undefined): TreeState | undefined => state && {
     marks: state.marks, safe: state.safe,
     notMarks: state.notMarks?.filter(mark => settable.marks.has(mark)), notSafe: state.notSafe?.filter(role => settable.safe.has(role)),

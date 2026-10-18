@@ -1,8 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { generateIncident } from '../gen/incident';
+import { SCENARIOS } from '../content/scenarios';
 import { actionEventResult, actionResultLabel } from './action-result';
-import { actionViews, decisionViews, pendingDebrief, previewAction } from './operation-selectors';
-import { initializePersonnel } from './personnel';
+import { decisionViews, previewAction } from './operation-selectors';
 import { bandFor, builtFor, evaluateAction } from './resolution';
 import { hashSeed, next } from './rng';
 import { CURRENT_SAVE_VERSION, deserialize, serialize } from './save';
@@ -17,9 +16,18 @@ vi.mock('./scenario-registry', async original => {
 });
 afterEach(() => overrides.clear());
 const bands: OutcomeBand[] = ['favorable', 'mixed', 'adverse'];
-const welfare = () => generateIncident({ type: 'welfare_check', familyId: 'cedar_close', buildingSeed: 7, seed: 2, tier: 1, contentVersion: 6 });
+const welfare = () => {
+  const scenario = structuredClone(SCENARIOS.ms_occupancy);
+  scenario.id = 'current_result_fixture';
+  const source = structuredClone(scenario.stages.assess.actions[0]);
+  source.id = 'test_ask_about_return'; source.approach = 'none'; source.requires = {}; source.observes = [];
+  const effects: OutcomeEffect[] = [{ text: 'The same checked result.', objective: 1 }];
+  source.outcomes = Object.fromEntries(bands.map(band => [band, structuredClone(effects)])) as ActionDefinition['outcomes'];
+  scenario.stages.assess.actions = [source];
+  return scenario;
+};
 function fixed(effects: OutcomeEffect[]): ActionDefinition {
-  const action = structuredClone(welfare().stages.assess.actions.find(a => a.id.endsWith('assess_partial'))!);
+  const action = structuredClone(welfare().stages.assess.actions.find(a => a.id.endsWith('ask_about_return'))!);
   action.outcomes = { favorable: structuredClone(effects), mixed: structuredClone(effects), adverse: structuredClone(effects) };
   return action;
 }
@@ -27,9 +35,7 @@ function started(scenario: ScenarioDefinition): GameState {
   overrides.set(scenario.id, scenario);
   const state = makeState();
   state.saveVersion = CURRENT_SAVE_VERSION;
-  state.contentVersion = 6;
-  initializePersonnel(state);
-  state.incidents = [{ id: scenario.id, type: scenario.incident!.type, familyId: scenario.locationFamilyId, tier: 1, arrivedAt: NOW, expiresAt: NOW + 3_600_000, seen: false }];
+  state.contentVersion = 13;
   const entry = builtFor(scenario.locationFamilyId, scenario.locationSeed, []).location.entries[0];
   return startRun(state, scenario.id, ['A'], { positions: { A: entry }, loadouts: { A: { trauma_kit: 2 } } });
 }
@@ -50,27 +56,23 @@ function commit(state: GameState, action: ActionDefinition): GameState {
 }
 
 describe('fixed outcome presentation', () => {
-  it('infers neutral labels only for v6, without changing the authored action', () => {
+  it('infers neutral labels for a fixed current event, without changing the authored action', () => {
     const action = fixed([{ ending: 'unfinished', text: 'Work remains open.' }]);
     const before = structuredClone(action);
-    expect(actionEventResult(action, 6)).toBe('Response ended');
-    for (const band of bands) expect(actionResultLabel(action, 6, band)).toBe('Response ended');
-    for (const version of [1, 2, 3, 4, 5]) {
-      expect(actionEventResult(action, version)).toBeUndefined();
-      for (const band of bands) expect(actionResultLabel(action, version, band)).toBeUndefined();
-    }
+    expect(actionEventResult(action)).toBe('Response ended');
+    for (const band of bands) expect(actionResultLabel(action, band)).toBe('Response ended');
     expect(action).toEqual(before);
   });
 
-  it('keeps common and band-specific authored v5/v6 labels authoritative', () => {
+  it('keeps common and band-specific authored current labels authoritative', () => {
     const action = fixed([{ ending: 'finished' }]);
-    for (const version of [5, 6]) {
+    {
       action.resultLabels = { favorable: 'Care accepted', mixed: 'Care accepted', adverse: 'Care accepted' };
-      expect(actionEventResult(action, version)).toBe('Care accepted');
-      expect(actionResultLabel(action, version, 'adverse')).toBe('Care accepted');
+      expect(actionEventResult(action)).toBe('Care accepted');
+      expect(actionResultLabel(action, 'adverse')).toBe('Care accepted');
       action.resultLabels.adverse = 'Care still needed';
-      expect(actionEventResult(action, version)).toBeUndefined();
-      expect(actionResultLabel(action, version, 'adverse')).toBe('Care still needed');
+      expect(actionEventResult(action)).toBeUndefined();
+      expect(actionResultLabel(action, 'adverse')).toBe('Care still needed');
     }
   });
 
@@ -83,8 +85,8 @@ describe('fixed outcome presentation', () => {
   ])('does not infer a fixed event when any adverse effect differs: %j', difference => {
     const action = fixed([{ text: 'The same public words.' }]);
     action.outcomes.adverse[0] = { ...action.outcomes.adverse[0], ...difference };
-    expect(actionEventResult(action, 6)).toBeUndefined();
-    expect(actionResultLabel(action, 6, 'adverse')).toBeUndefined();
+    expect(actionEventResult(action)).toBeUndefined();
+    expect(actionResultLabel(action, 'adverse')).toBeUndefined();
   });
 
   it('compares hidden branches structurally without choosing or revealing a branch', () => {
@@ -94,38 +96,15 @@ describe('fixed outcome presentation', () => {
     ];
     const action = fixed(effects);
     action.outcomes.mixed[0] = { text: effects[0].text, ending: effects[0].ending, truth: effects[0].truth, when: effects[0].when };
-    expect(actionEventResult(action, 6)).toBe('Result recorded');
+    expect(actionEventResult(action)).toBe('Result recorded');
     // Conditions and effect ordering remain significant, even if current state would skip them.
     action.outcomes.adverse.reverse();
-    expect(actionEventResult(action, 6)).toBeUndefined();
-    expect(actionEventResult(fixed([]), 6)).toBeUndefined();
+    expect(actionEventResult(action)).toBeUndefined();
+    expect(actionEventResult(fixed([]))).toBeUndefined();
   });
 });
 
-describe('v6 operation result integration', () => {
-  it('replays the issued welfare partial neutrally while hiding its current card', () => {
-    const scenario = welfare();
-    const action = scenario.stages.assess.actions.find(a => a.id.endsWith('assess_partial'))!;
-    const state = started(scenario);
-    adverseSeed(state, scenario, action);
-    expect(actionViews(state, NOW, 'A').some(a => a.id === action.id)).toBe(false);
-    // Historical commands retain their authored result even though this exit is retired from the menu.
-    expect(previewAction(state, NOW, action.id, ['A'], [])?.eventResult).toBe('Response ended');
-    const expected = next(state.activeRun!.rngState);
-    const finished = commit(state, action);
-    const record = finished.activeRun!.history[0];
-    expect(record).toMatchObject({ sample: expected.value, band: 'adverse', committed: { resultLabel: 'Response ended' } });
-    expect(finished.activeRun!.rngState).toBe(expected.state);
-    expect(decisionViews(finished)[0].resultLabel).toBe('Response ended');
-    expect(pendingDebrief(finished)).toMatchObject({ completionAchieved: false, disposition: 'relief_partial' });
-    expect(deserialize(serialize(finished, NOW))?.activeRun).toEqual(finished.activeRun);
-    const historical = structuredClone(finished);
-    delete historical.activeRun!.history[0].committed!.resultLabel;
-    const original = structuredClone(historical);
-    expect(decisionViews(historical)[0].resultLabel).toBeUndefined();
-    expect(historical).toEqual(original);
-  });
-
+describe('current operation result integration', () => {
   it('preserves the complete effort result, supplies, stress and RNG for identical hidden-branch tables', () => {
     const scenario = welfare();
     const action = scenarioActions(scenario).find(a => a.id.endsWith('ask_about_return'))!;
@@ -170,7 +149,7 @@ describe('v6 operation result integration', () => {
     expect(view.likelihood.adverse).toBeGreaterThan(0);
     const finished = commit(state, action);
     const result = decisionViews(finished)[0];
-    expect(result.resultLabel).toBeUndefined();
+    expect(result.resultLabel).toBe('An officer was badly hurt');
     expect(result.band).toBe('adverse');
     expect(result.officerCasualties).toHaveLength(1);
     expect(result.consequences.join(' ')).toContain('seriously wounded');

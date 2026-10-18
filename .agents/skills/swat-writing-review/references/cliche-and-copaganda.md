@@ -92,7 +92,7 @@ plain. Before (illustrative) "Looks like your evening just got cancelled." After
 floor. Step back to the wall." Rule inline 2.
 
 **C4. Gore as stakes.** Looks like wounds, fluids or bodies carrying the tension. Runner adds
-gore words to the typed lint's unsafe list, which is in `UNSAFE_DETAIL` in prose-lint.ts. Before
+gore words to the lint's unsafe list, which is `UNSAFE_DETAIL` in prose-lint.ts. Before
 (illustrative) "It soaks the carpet where he fell." After "The medic kneels by him and asks his
 name. He answers." Rule inline 7.
 
@@ -141,13 +141,13 @@ These are the tells this game's own text falls into, most found in shipped lines
 
 **G1. Process narration.** Looks like engine or form words in a prompt, summary or result.
 Runner catches "disputed point", "agreed step", "qualified", "verified", "assigned". Before
-(repo, compiler stage prompt in src/gen/incident/frameworks-v9.ts) "Check the disputed point in
+(repo, the retired v9 compiler's stage prompt) "Check the disputed point in
 person." After "Taylor holds out a phone with the resident’s number on it. The neighbor wants
-Taylor out first." Rule G1. Compiler-owned lines route to engineering for an override field.
+Taylor out first." Rule G1. A call tree writes its own prompts, so this routes to swat-call-prose; a line the compiler adds routes to engineering.
 
 **G2. A disclaimer as the hook.** Looks like a card that says what the call does not prove.
-Runner catches "doesn’t mean" and "doesn’t prove" near the start. Before (repo, burglary opening
-in src/content/incident-frameworks-v9.ts) "An alarm on its own doesn’t mean someone broke in,
+Runner catches "doesn’t mean" and "doesn’t prove" near the start. Before (repo, the retired v9 burglary
+opening) "An alarm on its own doesn’t mean someone broke in,
 took anything or is still inside." After "Casey Bell, the keyholder, wants to open up and count
 the stock. The back door sensor tripped at 9:40 and hasn’t reset." Rule cold read.
 
@@ -183,14 +183,14 @@ nervous about the stairwell." After "Okafor asks for the stairwell light before 
 the behavior, and let the officer's voice markers carry it.
 
 **G9. The dash and colon habit.** Looks like an em dash, an en dash, a spaced hyphen or a colon
-joining clauses in game text. batch_counts.py catches all four by code point. Before (repo,
-false_intruder act-on-report wrong text in src/content/framework-depth-v12.ts) "The resident
+joining clauses in game text. batch_counts.py catches all four by code point. Before (repo, the retired v12
+false_intruder act-on-report wrong text) "The resident
 calls back: the key was for another day." After "The resident calls back. The key was for
 another day."
 
 **G10. Stock urgency and mood words.** Looks like urgency stated instead of shown. Runner catches
 a short list. The full stock phrase list belongs to ../swat-call-prose/references/string-checks.md.
-Before (repo, src/content/scenarios/ms-urgent.ts) "The caller says kitchen. Every minute counts."
+Before (repo, a retired Maple Street scenario) "The caller says kitchen. Every minute counts."
 After "The caller says kitchen. He stopped answering her two minutes ago."
 
 **G11. Implied custody or recovery.** Looks like an outcome the step never produced, said
@@ -231,7 +231,7 @@ limit", "Unhurt, Lewis is outside"). Runner catches the common shapes. Before (p
 2026-10-07) "Folded in his pocket, Lewis keeps it while patrol stays with him." which dangles,
 since Lewis is not folded. After "Lewis keeps the page folded in his pocket. Patrol stays with
 him." Read in sequence across one call, this is the loudest machine tell in a file, and more than
-two on one path is fix before freeze. The cause is usually an over-used opener count fixed the
+two on one path is fix before ship. The cause is usually an over-used opener count fixed the
 wrong way. Fix a name-heavy opener count by giving another person or object the sentence (the
 negotiator, the phone, the door), never by inverting the clause. A plain subject, verb, object
 sentence that starts with a name is normal English.
@@ -248,8 +248,8 @@ finding.
 
 ## The target, from the repo
 
-Two hand-authored lines show the register every pattern above falls short of. Both were read in
-src/gen/incident/stories-v5 on 2026-10-06. "Ben told the dispatcher" followed by his own words,
+Two lines from the retired hand-authored stories show the register every pattern above falls
+short of. Both were read on 2026-10-06. "Ben told the dispatcher" followed by his own words,
 "I only needed one signature." And "The gunfire stops. Eli does not come out." Each names what a
 person on scene could hear or see, carries no adjective doing the work, and leaves one question.
 

@@ -9,11 +9,11 @@ import type { ItemUnit } from '../../sim/types';
 const now = Date.UTC(2026, 9, 3, 22);
 function fixture() {
   const state = createQaCampaign(now, 'equipped');
-  const scenario = getScenario(testCallId('activeArmedV4'))!;
+  const scenario = getScenario(testCallId('armed'))!;
   return { state, now, actions: scenarioActions(scenario), chosen: ['A' as const], loadouts: { A: {} }, picks: {}, warnings: [] };
 }
 function capabilityChoice(): ActionDefinition {
-  return { ...getScenario(testCallId('activeArmedV4'))!.stages.assess.actions[0], id: 'optional_device', title: 'Use the checked device option', requires: {},
+  return { ...getScenario(testCallId('armed'))!.stages.assess.actions[0], id: 'optional_device', title: 'Use the checked device option', requires: {},
     capabilities: { rules: ['less_lethal_device'], required: ['less_lethal_device'], responseContext: 'open', safetyFactIds: ['checked_safety'], subjectFactIds: ['checked_subject'] }, consumes: [],
   };
 }

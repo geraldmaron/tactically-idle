@@ -1,3 +1,5 @@
+import { SCENARIOS } from '../../content/scenarios';
+import { buildLocation } from '../../sim/location';
 import { Children, createElement, isValidElement, type ReactElement, type ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -107,8 +109,8 @@ describe('multi-squad review and commitment', () => {
   });
 
   it('keeps a fully injured squad out of field roles while preserving command-only emergency choices', () => {
-    const scenario = getScenario(testCallId('activeArmedV4'))!;
-    hooks.state = startRun(withCallOnBoard(hooks.state!, scenario.id), scenario.id, ['A', 'B'], { positions: { A: 'front_yard', B: 'front_yard' }, loadouts: { A: {}, B: {} } });
+    const scenario = getScenario(testCallId('armed'))!;
+    hooks.state = startRun(withCallOnBoard(hooks.state!, scenario.id), scenario.id, ['A', 'B'], { positions: { A: buildLocation(getScenario(testCallId('armed'))!.locationFamilyId, getScenario(testCallId('armed'))!.locationSeed).location.entries[0], B: buildLocation(getScenario(testCallId('armed'))!.locationFamilyId, getScenario(testCallId('armed'))!.locationSeed).location.entries[0] }, loadouts: { A: {}, B: {} } });
     for (const id of hooks.state.squads[1].officerIds) hooks.state.officers[id].injury = { label: 'Wounded', until: NOW + 100000 };
     const fieldAction = live().view.actions.find(view => !scenarioActions(scenario).find(action => action.id === view.id)?.commandOnly)!;
     live().view.onSelectAction(fieldAction.id);
@@ -117,9 +119,11 @@ describe('multi-squad review and commitment', () => {
     expect(live().sheet.acting).toEqual(['A']);
     live().view.onFocusSquad('B');
     expect(live().view.focusSquadId).toBe('A');
-    const commandDefinition = scenarioActions(scenario).find(action => action.commandOnly && action.id.includes('officer_request'))!;
+    const isolated = structuredClone(scenario); isolated.id = 'command_ui_fixture';
+    const commandDefinition = { ...isolated.stages.assess.actions[0], id: 'test_officer_request', commandOnly: true, storyTargetPersonId: undefined, storyRoute: undefined, approach: 'none' as const, authority: undefined, requires: {}, visibleWhen: undefined, outcomes: { favorable: [{ text: 'Request recorded.' }], mixed: [{ text: 'Request recorded.' }], adverse: [{ text: 'Request recorded.' }] } };
+    isolated.stages.assess.actions.push(commandDefinition);
+    SCENARIOS[isolated.id] = isolated; hooks.state.activeRun!.scenarioId = isolated.id;
     hooks.state.activeRun!.stage = commandDefinition.stage;
-    hooks.state.activeRun!.flags = [...hooks.state.activeRun!.flags.filter(flag => !commandDefinition.visibleWhen?.notFlags?.includes(flag)), ...commandDefinition.visibleWhen?.flags ?? []];
     const command = live().view.actions.find(view => view.id === commandDefinition.id)!;
     expect(command).toBeDefined();
     live().view.onSelectAction(command.id);
@@ -141,7 +145,7 @@ describe('multi-squad review and commitment', () => {
   });
 
   it('keeps failure outside story choices, reviews unresolved duties, and rejects stale or repeated confirmation', () => {
-    hooks.state = startRun(withCallOnBoard(hooks.state!, testCallId('activeArmedV4')), testCallId('activeArmedV4'), ['A', 'B'], { positions: { A: 'front_yard', B: 'front_yard' }, loadouts: { A: {}, B: {} } });
+    hooks.state = startRun(withCallOnBoard(hooks.state!, testCallId('armed')), testCallId('armed'), ['A', 'B'], { positions: { A: buildLocation(getScenario(testCallId('armed'))!.locationFamilyId, getScenario(testCallId('armed'))!.locationSeed).location.entries[0], B: buildLocation(getScenario(testCallId('armed'))!.locationFamilyId, getScenario(testCallId('armed'))!.locationSeed).location.entries[0] }, loadouts: { A: {}, B: {} } });
     expect(live().view.failedResponse).toBeNull();
     for (const squad of hooks.state.squads.filter(squad => ['A', 'B'].includes(squad.id))) for (const id of squad.officerIds) hooks.state.officers[id].injury = { label: 'Wounded', until: NOW + 100000 };
     const panel = () => descendants(live().view.failedResponse);

@@ -1,9 +1,8 @@
-import { Fragment, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import type {
   ActionView,
   BuiltLocation,
-  Contributor,
   FactView,
   GameState,
   Id,
@@ -14,7 +13,6 @@ import type {
   SquadId,
   SquadTask,
   StageId,
-  StageContinuationView,
 } from '../../sim/types';
 import type { StageProgress } from '../../sim/operation-selectors';
 import type { EnvironmentDefinition } from '../../sim/scenario-types';
@@ -35,7 +33,10 @@ import { Icon, actionIcon, materialIcon, roomIcon } from '../icons';
 import type { IconName } from '../icons';
 import { feetInches, opMinutes, signed, sqft } from '../format';
 import { CONSEQUENCE_LABEL, OddsBar, OutcomeForecast } from './OperationFeedback';
-import { outcomePercentages, visibleDecisions } from './liveModels';
+import { DecisionList } from './DecisionList';
+import { CONTRIBUTOR_GROUPS } from './contributor-groups';
+import { GamePeopleProvider, PeopleText } from '../people/PeopleText';
+import type { Lexicon } from '../people/lexicon';
 import './operation-squads.css';
 import './ops-visual.css';
 
@@ -60,8 +61,6 @@ export interface LiveViewProps {
   selectedAction: ActionView | null;
   onSelectAction: (id: Id) => void;
   /** Free menu progression stays separate from tactical decisions and their forecasts. */
-  continuations?: StageContinuationView[];
-  onContinueStage?: (actionId: Id) => void;
   activeOfficerId: Id | null;
   onSelectOfficer: (id: Id) => void;
   selectedSpaceId: Id | null;
@@ -92,6 +91,9 @@ export interface LiveViewProps {
   failedResponse?: ReactNode;
   /** Overlay sheets (action detail, room sheet, cancel confirm) rendered by the container. */
   children?: ReactNode;
+  /** The game's people lexicon for this call: names are colored while "Color names by role" is on.
+   * Left out (the Scenario Lab), the surrounding PeopleProvider decides. */
+  people?: Lexicon | null;
 }
 
 export function LiveView(p: LiveViewProps) {
@@ -102,11 +104,10 @@ export function LiveView(p: LiveViewProps) {
   const [expandedStage, setExpandedStage] = useState<string | null>(null);
   const expanded = expandedStage === p.progress.stage;
   const available = p.actions.map((action) => action.id === sel?.id ? sel : action);
-  const decisions = visibleDecisions(available, sel?.id ?? null, expanded);
   // Renderer props that may not be declared yet (floor tabs, environment overlay). Spread so this compiles either way.
   const blueprintExtras = { floor: p.floor, onFloorChange: p.onFloorChange, environment: p.environment ?? undefined };
 
-  return (
+  const screen = (
     <div className="live">
       <div className="live-title">
         <div className="live-id">
@@ -245,58 +246,9 @@ export function LiveView(p: LiveViewProps) {
             </button>
           )}
         </div>
-        {p.progress.prompt && <p className="operation-stage-prompt">{p.progress.prompt}</p>}
-        {p.actions.length > 0 && <p className="operation-choice-count">{available.filter((action) => action.eligible).length} available{available.some((action) => !action.eligible) ? ` · ${available.filter((action) => !action.eligible).length} unavailable` : ''}. Tap one to review costs and odds.</p>}
-        {p.actions.length === 0 ? (
-          <p className="call-empty">No decisions available right now.</p>
-        ) : (
-          <div className="call-grid">
-            {decisions.map((a, index) => {
-              const on = sel?.id === a.id;
-              // Available choices lead as full cards; unavailable ones follow as slim rows that stay reviewable.
-              const firstLocked = !a.eligible && (index === 0 || decisions[index - 1].eligible);
-              return (
-                <Fragment key={a.id}>
-                {firstLocked && <p className="call-locked-label"><Icon name="lock" size={13} />Unavailable now</p>}
-                <button
-                  type="button"
-                  className={`callbtn${on ? ' callbtn-on' : ''}${a.eligible ? '' : ' callbtn-off'}`}
-                  aria-pressed={on}
-                  aria-label={`Review ${a.title}${a.eligible ? '' : ': requirements unmet'}`}
-                  onClick={() => p.onSelectAction(a.id)}
-                >
-                  <Icon name={a.eligible ? actionIcon(a.icon) : 'lock'} size={!a.eligible ? 16 : p.actions.length > 2 ? 24 : 30} className="callbtn-icon" />
-                  <span className="callbtn-text">
-                    <span className="callbtn-title">{a.title}</span>
-                    <span className="callbtn-sum">
-                      {!a.eligible && a.reason ? (
-                        <>
-                          <Icon name="lock" size={11} /> {a.reason}
-                        </>
-                      ) : (
-                        a.summary
-                      )}
-                    </span>
-                    {a.eligible && a.authority?.allowed && <span className="callbtn-command"><Icon name="radio" size={12} />{a.authority.reason}</span>}
-                    {a.eligible && <span className="callbtn-forecast">
-                      {!a.eventResult && <OddsBar likelihood={a.likelihood} mini />}
-                      <span className="callbtn-forecast-text">{a.timeLabel ?? `~${opMinutes(a.timeCost)}`} · {!a.eventResult ? `${outcomePercentages(a.likelihood).favorable}% chance to go well · ` : ''}<span className={`callbtn-harm callbtn-harm-${a.consequenceLevel}`}>possible harm: {CONSEQUENCE_LABEL[a.consequenceLevel].toLowerCase()}</span></span>
-                    </span>}
-                  </span>
-                </button>
-                </Fragment>
-              );
-            })}
-          </div>
-        )}
-        {p.actions.length > 5 && <Button block className="operation-more-choices" onClick={() => setExpandedStage(expanded ? null : p.progress.stage)} aria-expanded={expanded}>{expanded ? 'Show fewer choices' : `Show all ${p.actions.length} choices`}</Button>}
+        <DecisionList prompt={p.progress.prompt} actions={available} selectedId={sel?.id ?? null} expanded={expanded} onSelect={p.onSelectAction} onExpand={() => setExpandedStage(expanded ? null : p.progress.stage)} />
       </div>
-      {!!p.continuations?.length && p.onContinueStage && <section className="call operation-continuations" aria-label="Next stage">
-        {p.continuations.map((continuation) => <div key={continuation.actionId}>
-          <p className="dim">{continuation.description}</p>
-          <Button variant="ghost" block onClick={() => p.onContinueStage?.(continuation.actionId)}>{continuation.label}</Button>
-        </div>)}
-      </section>}
+
       {p.failedResponse}
       {p.feedback}
       {p.supportContext}
@@ -304,6 +256,7 @@ export function LiveView(p: LiveViewProps) {
       {p.children}
     </div>
   );
+  return p.people === undefined ? screen : <GamePeopleProvider lexicon={p.people}>{screen}</GamePeopleProvider>;
 }
 
 /** A floating shortcut back to the decisions, shown only while they sit below the visible area. */
@@ -463,20 +416,6 @@ export function StatusChip({ status }: { status: SpaceView['status'] }) {
 
 // ---------------------------------------------------------------- action detail sheet
 
-/** One group per contributor source, in the order a player reads them: who, what they carry, where, then the situation. */
-const GROUPS: { source: Contributor['source']; label: string; icon: IconName }[] = [
-  { source: 'rating', label: 'Officer ratings', icon: 'gauge' },
-  { source: 'condition', label: 'Officer condition', icon: 'pulse' },
-  { source: 'trait', label: 'Traits', icon: 'star' },
-  { source: 'equipment', label: 'Equipment', icon: 'wrench' },
-  { source: 'space', label: 'Space and position', icon: 'blueprint' },
-  { source: 'support', label: 'Support', icon: 'handover' },
-  { source: 'preparation', label: 'Preparation', icon: 'list' },
-  { source: 'familiarity', label: 'Familiarity', icon: 'book' },
-  { source: 'pressure', label: 'Pressure', icon: 'flame' },
-  { source: 'difficulty', label: 'Difficulty', icon: 'mountain' },
-];
-
 export interface ActionSheetProps {
   /** Support-origin reviews keep the contextual modal route and a clear Back action. */
   onBackToSupport?: () => void;
@@ -546,7 +485,7 @@ export function ActionSheet(p: ActionSheetProps) {
         <div className="adetail">
           {p.onBackToSupport && <Button variant="ghost" onClick={p.onBackToSupport}>Back to care &amp; support</Button>}
           {p.squads.length > 1 && <ActionSquadAssignment {...p} view={v} />}
-          {v.summary !== v.outcomePreview.favorable && <p className="operation-action-summary">{v.summary}</p>}
+          {v.summary !== v.outcomePreview.favorable && <p className="operation-action-summary"><PeopleText text={v.summary} /></p>}
           {v.eligible && v.authority?.allowed && <p className="operation-command-line"><Icon name="radio" size={14} />{v.authority.reason}</p>}
           <div className="chips action-glance">
             <Chip icon="clock">Estimated time: {v.timeLabel ?? opMinutes(v.timeCost)}</Chip>
@@ -609,12 +548,12 @@ export function ActionSheet(p: ActionSheetProps) {
           {v.contributors.length === 0 ? (
             <p className="dim">No contributors listed.</p>
           ) : (
-            GROUPS.map((gr) => {
-              const rows = v.contributors.filter((c) => c.source === gr.source);
+            CONTRIBUTOR_GROUPS.map((gr) => {
+              const rows = v.contributors.filter((c) => gr.sources.includes(c.source));
               if (rows.length === 0) return null;
               const total = rows.reduce((n, c) => n + c.value, 0);
               return (
-                <div key={gr.source} className="cgroup">
+                <div key={gr.id} className="cgroup">
                   <h4>
                     <Icon name={gr.icon} size={15} />
                     <span>{gr.label}</span>

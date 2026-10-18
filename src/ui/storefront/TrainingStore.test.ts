@@ -68,6 +68,7 @@ describe('course-first Training presentation', () => {
 
   it('distinguishes an existing certificate from a missing prerequisite', () => {
     state.department.unlockedNodes.push('personnel_negotiation', 'field_specialist_response');
+    for (const id of state.department.unlockedNodes) state.department.developmentTiers[id] ??= 1;
     const certified = trainingCandidates(state, 'crisis_negotiation_course').find(({ officer }) => officer.id === 'off_chen')!;
     const certifiedHtml = markup(createElement(TrainingOfficerCard, { candidate: certified, now: NOW, onSelect: vi.fn() }));
     expect(certifiedHtml).toContain('Already certified: Crisis negotiation');

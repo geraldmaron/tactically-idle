@@ -130,7 +130,7 @@ needs request R13 in officer-data-proposal.md. That request copies the existing 
 the decision record at commit and never invents a parallel flag.
 
 Count before you key. Before an arc hangs on a predicate, count the reachable actions that match it
-across the catalog (frameworks plus hand-authored stories) and write the count on the sheet. If no
+across the catalog (every call tree in src/content/call-trees/) and write the count on the sheet. If no
 one has counted, write "count not run" and say the arc may never fire. A predicate that matches
 almost nothing is the wrong trigger, and comms or medic seats may never reach an entry step at all.
 

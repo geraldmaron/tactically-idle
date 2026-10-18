@@ -58,10 +58,10 @@ describe('department level from service', () => {
 describe('earning service on a live call', () => {
   /** Play a live v12 call to its debrief with the run's own dice, as a player would. */
   function playLive(seed: number): { before: GameState; after: GameState } {
-    const id = incidentId(specForSituation('domestic', 'cedar_close', 1));
+    const id = incidentId(specForSituation('barricaded', 'cedar_close', 1));
     const s = getScenario(id)!;
     const before = createInitialState(NOW, seed);
-    before.incidents = [{ id, type: 'domestic', familyId: 'cedar_close', tier: s.incident!.tier, arrivedAt: NOW, expiresAt: NOW + 3_600_000, seen: false }];
+    before.incidents = [{ id, type: 'barricaded', familyId: 'cedar_close', tier: s.incident!.tier, arrivedAt: NOW, expiresAt: NOW + 3_600_000, seen: false }];
     const entry = buildLocation(s.locationFamilyId, s.locationSeed).location.entries[0];
     let state = apply(before, startCmd(id, ['A'], { positions: { A: entry }, loadouts: { A: {} } })).state;
     expect(state.activeRun?.scenarioId).toBe(id);
@@ -85,44 +85,5 @@ describe('earning service on a live call', () => {
     expect(after.department.level).toBe(levelForService(after.department.service!));
     expect(report.levelReached === undefined).toBe(after.department.level === before.department.level);
     expect(deserialize(serialize(after, NOW))).toEqual(after);
-  });
-});
-
-describe('save v7 migration', () => {
-  it('keeps every framework an older campaign met or could already be sent to', () => {
-    const s = createInitialState(NOW, 3);
-    s.department.level = 3;
-    delete s.department.service;
-    s.casebook = { frameworksSeen: ['domestic', 'active_armed_incident'], recipes: {} };
-    for (const officer of Object.values(s.officers)) officer.certs = officer.certs.filter(cert => cert !== 'crisis_negotiation');
-    s.saveVersion = 6;
-    const migrated = deserialize(serialize(s, NOW))!;
-    expect(migrated.saveVersion).toBe(9);
-    // Armed incidents were met (level 4). Hostage crises need a negotiator nobody holds, so
-    // they wait for level 5 like any campaign's.
-    expect(migrated.department.level).toBe(4);
-    expect(migrated.department.service).toBe(serviceForLevel(4));
-    // With a negotiator on the roster, the department could already be sent hostage calls.
-    const negotiator = structuredClone(s);
-    Object.values(negotiator.officers)[0].certs.push('crisis_negotiation');
-    expect(deserialize(serialize(negotiator, NOW))!.department.level).toBe(5);
-    // Nothing met and nothing specialist possible: the level is kept as it was.
-    const plain = structuredClone(s);
-    plain.casebook = { frameworksSeen: ['domestic'], recipes: {} };
-    for (const officer of Object.values(plain.officers)) officer.certs = [];
-    expect(deserialize(serialize(plain, NOW))!.department.level).toBe(3);
-  });
-
-  it('lifts by the level table v7 shipped with, not the current unlock arc', () => {
-    // Hostage crises were level 5 in save v7 and open at level 1 today: a v6 campaign that
-    // had met one still migrates to level 5.
-    const s = createInitialState(NOW, 3);
-    s.department.level = 3;
-    delete s.department.service;
-    s.casebook = { frameworksSeen: ['domestic', 'hostage_crisis'], recipes: {} };
-    s.saveVersion = 6;
-    const migrated = deserialize(serialize(s, NOW))!;
-    expect(migrated.department.level).toBe(5);
-    expect(migrated.department.service).toBe(serviceForLevel(5));
   });
 });

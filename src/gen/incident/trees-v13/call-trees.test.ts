@@ -3,12 +3,12 @@ import { CALL_TREES, CALL_TREE_CONTENT_VERSION } from '../../../content/call-tre
 import { CIVILIAN_FIRST_NAMES, CIVILIAN_SURNAMES } from '../../../content/call-trees/civilian-names';
 import personas from '../../../content/personas.json';
 import type { CallTree, TreeChoice, TreeNext, TreeOutcome } from '../../../content/call-trees/types';
-import { RETIRED_FROM_DISPATCH, TACTICAL_FRAMEWORKS } from '../../../content/unlocks';
-import { SCENARIO_TYPES_V11 } from '../../../content/scenario-types-v11';
+import { TACTICAL_FRAMEWORKS } from '../../../content/unlocks';
+import { SCENARIO_TYPES } from '../../../content/scenario-types';
 import { buildLocation } from '../../../sim/location';
 import { validateScenario } from '../../../sim/operation';
 import { actionViews } from '../../../sim/operation-selectors';
-import type { GameState, OutcomeBand } from '../../../sim/types';
+import type { OutcomeBand } from '../../../sim/types';
 import { applyMove, availableMoves, NOW, startGateRun } from '../gates/engine-driver';
 import { drawIncidentSpec, generateIncident, INCIDENT_CONTENT_VERSION } from '../index';
 import { specForSituation } from '../gates/catalog';
@@ -19,6 +19,8 @@ import type { IncidentTemplate } from '../../../content/incidents/types';
 import type { TreeIf } from '../../../content/call-trees/types';
 import { CONCESSIONS_ALLOWED } from '../../../sim/scenario-types';
 import { GROUP_TEMPLATE, GROUP_TREE } from './group-fixture';
+import { dependencyIndex } from './dependencies';
+import { pathStateKey } from './path-key';
 
 const BANDS: readonly OutcomeBand[] = ['favorable', 'mixed', 'adverse'];
 const TREES = Object.values(CALL_TREES) as CallTree[];
@@ -111,7 +113,7 @@ describe('call trees: civilian names', () => {
 
 describe('call trees: authoring rules', () => {
   it('dispatches only tactical frameworks, and every tree is one of them', () => {
-    expect(SCENARIO_TYPES_V11.map(info => info.type).filter(type => !RETIRED_FROM_DISPATCH.has(type)).sort()).toEqual([...TACTICAL_FRAMEWORKS].sort());
+    expect(SCENARIO_TYPES.map(info => info.type).sort()).toEqual([...TACTICAL_FRAMEWORKS].sort());
     for (const tree of TREES) expect(TACTICAL_FRAMEWORKS.has(tree.type), tree.type).toBe(true);
     expect(INCIDENT_CONTENT_VERSION).toBeGreaterThanOrEqual(CALL_TREE_CONTENT_VERSION);
   });
@@ -160,17 +162,11 @@ describe('call trees: authoring rules', () => {
     });
 
     it('reads every mark it sets, and sets every mark it reads', () => {
-      // A clock's cues set marks too (content/incidents).
-      const cueMarks = (INCIDENT_TEMPLATES[tree.type]?.situations ?? []).flatMap(situation => (situation.clocks ?? []).flatMap(clock => clock.cues.flatMap(cue => cue.mark ? [cue.mark] : [])));
-      const set = new Set([...tree.nodes.flatMap(node => node.choices.flatMap(choice => outcomesOf(choice).flatMap(marksOf))), ...cueMarks]);
-      // Authorization reads threat marks (sim/authorization.ts).
-      const read = new Set([...Object.keys(tree.threatMarks ?? {}), ...tree.nodes.flatMap(node => [
-        ...(node.promptIf ?? []).flatMap(entry => [...entry.when.marks ?? [], ...entry.when.notMarks ?? []]),
-        ...node.choices.flatMap(choice => [...choice.onlyIf?.marks ?? [], ...choice.onlyIf?.notMarks ?? [], ...(choice.modifiers ?? []).map(m => m.mark),
-          ...outcomesOf(choice).flatMap(outcome => [...outcome.when?.marks ?? [], ...outcome.when?.notMarks ?? []])]),
-      ])]);
-      expect([...set].filter(mark => !read.has(mark)), 'marks nobody reads').toEqual([]);
-      expect([...read].filter(mark => !set.has(mark)), 'marks nobody sets').toEqual([]);
+      // The shared index (dependencies.ts): outcomes, a drawn hit, a clock's cues and a clock running
+      // out set marks; prompts, choices, modifiers, outcomes and command's threat marks read them.
+      const marks = [...dependencyIndex(templateOf(tree)!).keys.values()].filter(entry => entry.key.startsWith('mark:'));
+      expect(marks.filter(entry => !entry.readers.length).map(entry => entry.key), 'marks nobody reads').toEqual([]);
+      expect(marks.filter(entry => !entry.writers.length).map(entry => entry.key), 'marks nobody sets').toEqual([]);
     });
 
     // Authorization (docs/incident-domain-model.md §7, sim/authorization.ts). These are the data
@@ -324,7 +320,7 @@ describe('call trees: generated calls', () => {
     let state = 2024, made = 0;
     const turnsSeen = new Set<string>();
     for (let i = 0; i < 60; i++) {
-      const drawn = drawIncidentSpec(state, { level: 10, trust: 90, contentVersion: INCIDENT_CONTENT_VERSION, unlockedTypes: [tree.type] });
+      const drawn = drawIncidentSpec(state, { level: 10, trust: 90, unlockedTypes: [tree.type] });
       state = drawn.state;
       const s = generateIncident(drawn.spec);
       made++;
@@ -354,12 +350,11 @@ describe('call trees: generated calls', () => {
 });
 
 describe('call trees: every path through the engine', () => {
-  // Clock states that can change a fork (how many cues fired, and whether it ran out) are part of
-  // where the call is, so the walk explores both sides of a time branch.
-  const key = (state: GameState) => { const run = state.activeRun!; return JSON.stringify([run.stage, run.status, [...run.flags].sort(), Object.entries(run.knowledge).sort(),
-    Object.entries(run.clocks ?? {}).map(([id, clock]) => [id, clock.cued, clock.value <= 0, Math.floor(clock.value / 10)]).sort()]); };
+  // Clock states and subjects' stances can change a fork, so they are part of where the call is
+  // (pathStateKey): the walk explores both sides of a time or meter branch.
+  const key = pathStateKey;
   for (const tree of TREES) it(`${tree.type}: a pick never leaves its siblings, no dead ends, one node at a time`, () => {
-    const family = SCENARIO_TYPES_V11.find(info => info.type === tree.type)!.families[0];
+    const family = SCENARIO_TYPES.find(info => info.type === tree.type)!.families[0];
     let leftovers = 0, deadEnds = 0, twoNodes = 0, ended = 0;
     // Authority (sim/authorization.ts): a choice the call offers must be authorized somewhere it is offered.
     const offered = new Set<string>(), authorized = new Set<string>();

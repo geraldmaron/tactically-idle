@@ -6,7 +6,8 @@ on its own in any harness with python3. It covers the rules nothing in the
 repo enforces yet (dashes, colons, stock lines, repeats, budgets, band
 coverage, address, clock form, officer presence) and the tell checks game
 strings need (cadence, opener share, rule-of-three, a stock lexicon). It also
-runs the typed lint's word lists over any lane. This skill runs it on one call
+runs the prose lint's word lists. `npm run check:strings` runs it on every call
+template, and this skill runs it on one call
 and swat-writing-review on whole batches, from this one copy. Without python3,
 use section 7 and record the gap.
 
@@ -91,8 +92,8 @@ ngram, path-echo, address-mix, clock-mix, stock-spoken, unsafe, accusation,
 settled, meta, inversion, fronted (above 1 per call), nothing-alone,
 fragments, fragment-open, mechanic, vague-preview, ending-status,
 role-position, threat-it, tape-subject and aphorism. Opener share and cadence
-are reported, never blocking. In the hand-authored lane, unsafe, accusation
-and settled are fixed or flagged to the owner instead.
+are reported, never blocking. An unsafe, accusation or settled hit the owner
+has accepted is flagged to the owner instead of fixed.
 
 ## 3. Optional, written-voice's checker
 
@@ -133,7 +134,7 @@ The vendored script already covers the tells game strings need.
 | address-mix | 0 | "you" in prompts, summaries and previews, the team or a role in results and endings |
 | clock-mix | 0 | one written form per hour in narration |
 | cost-template | 0 | "may" once per stage in summaries, one bare speed word per call |
-| lead uses | 3 or more, hand-authored | at least one summary per stage names {lead} doing the risky part |
+| lead uses | 3 or more per call (`--hand-authored` is the flag, and `npm run check:strings` does not pass it, so count by hand) | at least one summary per stage names {lead} doing the risky part |
 | opener share | reported. No word over 20%, names and pronouns 35% or less | change the subject, never the word order. Let another person, an object or a sound act. If the share is still high, report it and leave it. A natural 22% beats a contorted 18% |
 | cadence | reported, variation 0.55 or more | vary by merging or splitting sentences, never by fragments or inversion. Explain FLAT in the record |
 | inversion, fronted | 0 inversions, at most 1 fronted clause per call | "Out comes Ben" becomes "Ben comes out". "Angry to be called, Lewis says" becomes "Lewis says ten more minutes and hangs up". Force, harm and surrender lines always run subject then verb |
@@ -199,12 +200,13 @@ Read these by eye and count them in the record.
 ## 6. Repo commands after the checks
 
 ```
-npx vitest run content-gates content-playability issued catalog-v9
+npx vitest run src/gen/incident/trees-v13
+npm run check:strings
 npm run verify
 ```
 
-The first runs the content gates and issued fingerprint suites by file name.
-The second runs everything and goes before any pull request. Record each
+The first runs the call-tree gates. The second binds every template and runs
+this checker and the prose lint on it. The third runs everything and goes before any pull request. Record each
 command with its exit code.
 
 ## 7. Fallback without python3
@@ -225,5 +227,5 @@ string by eye and record each check as "checked by eye".
 ## 8. Batch use by review
 
 swat-writing-review runs the script over a whole version's strings with
-`--min-repeat 3` to find template echo across frameworks, and states the
+`--min-repeat 3` to find template echo across calls, and states the
 sample size. Its thresholds are house targets, not research findings.

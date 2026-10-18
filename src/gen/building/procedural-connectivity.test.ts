@@ -2,11 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { deriveLocation } from '../../sim/location';
 import { routeBetween } from '../../sim/spatial-factors';
 import type { BuiltLocation, LocationDefinition, Room } from '../../sim/types';
-import { PROCEDURAL_FAMILIES, PROCEDURAL_FAMILIES_G2, generateBuilding } from './index';
+import { PROCEDURAL_FAMILIES, generateBuilding } from './index';
 import { indoorOrphans, plausibilityReport } from './procedural/plausibility';
 
 /**
- * Interior connectivity and loops of the generated building types (`_g1` and `_g2`), unfurnished, 200 seeds each.
+ * Interior connectivity and loops of the generated building types (`_g2` and `_g2`), unfurnished, 200 seeds each.
  *
  * 1. From the front-door room (behind `d_front`) every room is reachable through interior openings
  *    alone (doors, cased openings, the stair), never through a yard. The only rooms excused are the
@@ -63,7 +63,7 @@ function cycleRank(loc: LocationDefinition): number {
 }
 
 describe('generated building connectivity (unfurnished, 200 seeds per type)', () => {
-  for (const family of [...PROCEDURAL_FAMILIES, ...PROCEDURAL_FAMILIES_G2]) {
+  for (const family of PROCEDURAL_FAMILIES) {
     it(`${family.id}: every room indoors from the front door, routable from every entry, loops in 40-75% of plans`, () => {
       const exempt = EXEMPT[family.id.replace(/_g\d+$/, '')] ?? (() => false);
       const problems: string[] = [];
@@ -113,7 +113,7 @@ describe('generated building connectivity (unfurnished, 200 seeds per type)', ()
     // Find a draw whose back or side door opens into a room other than the front-door room, then cut
     // that room's interior doors: it is still reachable from its yard, which used to pass both checks.
     for (let seed = 1; seed < 60; seed++) {
-      const loc = structuredClone(generateBuilding('bungalow_g1', seed));
+      const loc = structuredClone(generateBuilding('bungalow_g2', seed));
       const ids = new Set(loc.rooms.map((r) => r.id));
       const front = loc.openings.find((o) => o.id === 'd_front');
       const side = loc.openings.find((o) => (o.id === 'd_back' || o.id === 'd_side') && o.a !== front?.a && ids.has(o.a));

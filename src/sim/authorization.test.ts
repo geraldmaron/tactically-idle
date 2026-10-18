@@ -113,7 +113,7 @@ function calls(type: IncidentType, n: number, seed = 1312): ScenarioDefinition[]
   const out: ScenarioDefinition[] = [];
   let state = seed;
   for (let i = 0; i < n; i++) {
-    const drawn = drawIncidentSpec(state, { level: 10, trust: 90, contentVersion: 13, unlockedTypes: [type] });
+    const drawn = drawIncidentSpec(state, { level: 10, trust: 90, unlockedTypes: [type] });
     state = drawn.state;
     out.push(generateIncident(drawn.spec));
   }
@@ -129,7 +129,7 @@ describe('authorization in evaluation', () => {
     const state = startGateRun(s.id, 719);
     const r = structuredClone(state.activeRun!);
     const scenarioCopy = structuredClone(s);
-    const action = Object.values(scenarioCopy.stages).flatMap(stage => stage.actions).find(entry => entry.id === actionId)!;
+    const action = Object.values(scenarioCopy.stages).flatMap(stage => stage.actions).find(action => action.id === actionId)!;
     const visible = action.visibleWhen;
     r.flags = [...new Set([...r.flags, ...visible?.flags ?? []])].filter(flag => !(visible?.notFlags ?? []).includes(flag));
     for (const fact of visible?.facts ?? []) if (!fact.in.includes(r.knowledge[fact.factId] ?? 'unknown')) r.knowledge[fact.factId] = fact.in[0];
@@ -186,14 +186,14 @@ describe('authorization in evaluation', () => {
     expect(lines, 'bound threat and clock phrases').toBeGreaterThan(0);
   }, 120000);
 
-  it('puts command’s answer on the player’s choice, and leaves earlier versions alone', () => {
+  it('puts command’s answer on the player’s choice, on current calls', () => {
     let seen = 0;
     for (const s of all) {
       const state = startGateRun(s.id, 719);
       const scenarioNow = getScenario(state.activeRun!.scenarioId)!;
       const stageActions = scenarioNow.stages[state.activeRun!.stage as StageId].actions;
       for (const view of actionViews(state, NOW, 'A')) {
-        const action = stageActions.find(entry => entry.id === view.id);
+        const action = stageActions.find(action => action.id === view.id);
         if (!action?.authority) { expect(view.authority).toBeUndefined(); continue; }
         expect(view.authority, view.id).toBeDefined();
         if (!view.authority!.allowed) {
@@ -205,9 +205,5 @@ describe('authorization in evaluation', () => {
       }
     }
     expect(seen, 'choices asking command for something at the start of a call').toBeGreaterThan(0);
-    // Version 12 and earlier never read `authority`.
-    const s = all.find(entry => Object.values(entry.stages).some(stage => stage.actions.some(action => action.authority)))!;
-    const action = Object.values(s.stages).flatMap(stage => stage.actions).find(entry => entry.authority)!;
-    expect(evaluate(s, action.id, scenario => { scenario.version = 12; }).authority).toBeUndefined();
   }, 120000);
 });

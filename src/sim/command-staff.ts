@@ -50,7 +50,7 @@ export interface TrainingSergeantPolicy {
   reserve: number;
 }
 
-/** Added in save v9. Optional on GameState only for hand-built fixtures and migration inputs. */
+/** Current command staff. Optional on GameState for isolated fixtures. */
 export interface CommandStaffState {
   watch_commander: {
     enabled: boolean;
@@ -431,7 +431,7 @@ const isObj = (value: unknown): value is Record<string, unknown> => !!value && t
 const validLog = (value: unknown): boolean => Array.isArray(value) && value.length <= COMMAND_STAFF.logLimit
   && value.every((entry) => isObj(entry) && typeof entry.at === 'number' && Number.isFinite(entry.at) && typeof entry.text === 'string');
 
-/** Structural check for a loaded save. Absent is valid (hand-built states); old saves migrate to defaults. */
+/** Structural check for a loaded save. Absent is valid for isolated hand-built states. */
 export function validCommandStaff(value: unknown): boolean {
   if (value === undefined) return true;
   if (!isObj(value)) return false;

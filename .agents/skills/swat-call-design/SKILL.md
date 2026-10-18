@@ -2,19 +2,18 @@
 name: swat-call-design
 description: >-
   Use when designing a new Tactically Idle call or reshaping the structure of
-  an existing one before final wording exists, whether a typed package, hand-
-  authored story, setting module or version-gated override. Covers the lane
-  and freeze check, the named person and private logic, the two-line hook,
-  three stages as approach, turn and commit with a real dilemma at each, the
-  consequence and ending map, pressure levers the data can carry, the ethics
-  screen and a variant plan that differs by fact. Mandatory gates are lane and
-  freeze status, the eight hook tests, the fake-choice checklist and a
-  dominance grid on every stage, no dead flags, a band by situation
-  consequence matrix, ending reachability, one planted turn, every adverse
-  result traced to a visible cue, force gated on a visible threat to life, the
-  ethics screen, and engineering requests for shapes the data cannot hold.
-  Produces a call design sheet and a design record. Not for wording, officer
-  bios or arcs, or judging finished content.
+  an existing one before final wording exists. Covers the lane and version
+  check, the named person and private logic, the two-line hook, three stages as
+  approach, turn and commit with a real dilemma at each, the consequence and
+  ending map, pressure levers the data can carry, the ethics screen and a
+  variant plan that differs by fact. Mandatory gates are the lane and version
+  check, the eight hook tests, the fake-choice checklist and a dominance grid
+  on every stage, no dead flags, a band by situation consequence matrix,
+  ending reachability, one planted turn, every adverse result traced to a
+  visible cue, force gated on a visible threat to life, the ethics screen, and
+  engineering requests for shapes the data cannot hold. Produces a call design
+  sheet and a design record. Not for wording, officer bios or arcs, or judging
+  finished content.
 license: Proprietary
 metadata:
   version: 0.3.0
@@ -23,10 +22,10 @@ metadata:
 # SWAT call design
 
 This skill turns a call idea into a design sheet the engine can carry, before any final line is
-written. It exists because of a line every typed call shows today. After the player picks an
-approach, stage two says "Check the disputed point in person." Nobody in that sentence wants
-anything, nothing gets worse if the team waits, and no rewrite rescues it. Those are structural
-faults, and prose cannot repair them later.
+written. It exists because of a line the retired typed calls showed. After the player picked an
+approach, stage two said "Check the disputed point in person." Nobody in that sentence wanted
+anything, nothing got worse if the team waited, and no rewrite could rescue it. Those are
+structural faults, and prose cannot repair them later.
 
 The player gives a call seconds, and the writing is the main reason they come back. So every
 beat they meet in about ninety seconds has to sit in a named field, pulled by a lever the data
@@ -58,45 +57,42 @@ this file. No gate in this file depends on a skill outside this folder.
 | Lane | Writer owns | Compiler or engine owns | Where (search symbol) |
 |---|---|---|---|
 | Call tree (v13, the lane for every tactical call) | The whole `CallTree`: roles, facts, situations, nodes, choices, per-band outcomes and routes, turn groups, endings | Node flags, exclusivity, pruning per call, role binding, placement, routes, rewards by tier. See `docs/call-trees-v13.md` | `src/content/call-trees/` (`CALL_TREES`), compiled by `withCallTree` |
-| Typed framework package | The `IncidentFramework` fields, through the three situations and the v11 and v12 extensions | Stage labels, stage two and three prompts, responsibilities, approach and check summaries, adverse texts, the placement line, the situation 3 line, the unfinished ending, pressure | `src/content/incident-frameworks-v9.ts` (`ADDITIONAL_FRAMEWORKS`), compiled by `withAdditionalFramework` |
-| Hand-authored story | The whole `ScenarioDefinition`, people, facts, actions, pressure, services and endings | The build chain in engine-map.md section 1, name binding and spelling. The prose lint does not run here | `STORY_ARCHETYPES`, `planEpisode`, variant modules, `withSecondChoicesV12` |
-| Setting module | Per-setting prose for an existing story | Every action, flag and ending | `SettingModule`, `ArmedIncidentProse` |
-| Version-gated override | New optional structure or text from a new content version | Every issued version, frozen byte for byte | `src/content/framework-depth-v12.ts` (`frameworkAt`) |
 
-The freeze check. Read `INCIDENT_CONTENT_VERSION` in `src/gen/incident/index.ts` (12 on
-2026-10-06; read it again). A version with an `issued-v*.test.ts` suite beside that file is
-frozen and ships changes in a new layer. If the target has no suite, ask the owner whether it is
-open and record the answer. `frameworkAt` adds only missing fields, so replacing an issued field
-needs request R2. Details are in engine-map.md section 4.
+The version check. Content has one current version, the call trees (`CALL_TREE_CONTENT_VERSION`
+in `src/content/call-trees/index.ts`). Old saves are rejected, not migrated, and no content layer is locked:
+edit a call in place. The compiled fingerprints in `src/gen/incident/trees-v13/compiled-fingerprints.json`
+are tripwires, so when your change alters a compiled call on purpose, recapture them and say why in
+the record. Details are in engine-map.md section 4.
 
 Then read the contract for your lane from the source. [references/engine-map.md](references/engine-map.md)
 lists it as read, including what a requirement can test, every `OutcomeEffect` field, the threat
 enums, the `validateScenario` rules, the score and the build chain. If a path moved, search for
-`ScenarioDefinition`, `IncidentFramework` or `INCIDENT_CONTENT_VERSION`. If you cannot read the
+`CallTree`, `ScenarioDefinition` or `CALL_TREE_CONTENT_VERSION`. If you cannot read the
 source, say so, put UNVERIFIED in the sheet's first line, and work from engine-map.md. Any
 contract item you did not check makes the contract-read line partial, never answered.
 
-Before adding a structural action (withdraw, care, handover), search the high-risk helpers
-(`partialHR`) and the v6 to v12 layers for a helper or a deliberate removal. Reuse it, or name
-the layer you reverse and why.
+Before adding a structural action (withdraw, care, handover), search
+`src/gen/incident/trees-v13/compile.ts` and the existing call trees in `src/content/call-trees/`
+for the shape it already has. Reuse it, or name what you change and why.
 
-The compiler reuses writer fields. `opening` is the card summary and the first briefing line.
-`question` is the stage one prompt, the briefing unknown and an unfinished call's remaining
-task. `results[i]` is the choice summary, the favorable preview and the ending summary.
+The compiler reuses writer fields. A tree's `summary` is the card hook, `briefing` feeds the
+briefing, a node's `prompt` is the stage prompt, and a choice's `summary` and `preview` land on
+the choice card before the result text reads as the record. Design each field for every place
+it lands.
 
 ## 2. The player's ninety seconds, in seconds and taps
 
 Times are house estimates to tune in playtest, not measurements.
 
-| Beat | Time | What the player is doing | Typed lane fields | Hand-authored fields |
-|---|---|---|---|---|
-| Card | about 3 s | Feels a curiosity gap. Who, and what is wrong? | `title`, `opening` | `title`, `summary`, `pressureLabel` |
-| Briefing | 10 s or less | Sorts sourced knowns from one live unknown | `dispatch`, `opening`, `question` | `briefing`, facts |
-| Stage 1, approach | about 15 s | Trades information against speed. The turn is planted here | `approaches`, `approachResults`, `precaution` | `stages.assess`, `contextPrompts` |
-| Stage 2, turn | about 15 s | Meets one discovery that reprices stage 1 | `verify`, `claim`, `confirmed`, `disproved`, `actOnReport` | `stages.adapt`, `truth`, `reveal` |
-| Stage 3, commit | about 20 s | Makes the hardest trade, on a menu earlier choices shaped | `resolutions`, `results`, `corroborate`, `waitFor` | `stages.resolve`, requirements |
-| Ending | about 8 s | Remembers the peak and the end. A person's state | `results`, `waitFor.result` | `endings` |
-| Debrief | about 10 s | Reads the record, then one open loop | fact texts | `remainingTasks`, `civilianOutcomes` |
+| Beat | Time | What the player is doing | Call tree fields |
+|---|---|---|---|
+| Card | about 3 s | Feels a curiosity gap. Who, and what is wrong? | `title`, `summary`, `pressureLabel` |
+| Briefing | 10 s or less | Sorts sourced knowns from one live unknown | `briefing` (`dispatchReason`, `known`, `unknown`, `responsibilities`), facts |
+| Stage 1, approach | about 15 s | Trades information against speed. The turn is planted here | root node `prompt`, `promptIf`, choices |
+| Stage 2, turn | about 15 s | Meets one discovery that reprices stage 1 | the node a `turns` group draws, outcome `reveal` and `mark` |
+| Stage 3, commit | about 20 s | Makes the hardest trade, on a menu earlier choices shaped | later nodes, `onlyIf` choices, `modifiers` |
+| Ending | about 8 s | Remembers the peak and the end. A person's state | `endings`, outcome text |
+| Debrief | about 10 s | Reads the record, then one open loop | fact texts, `remainingTasks` |
 
 - Briefing. At most 4 known lines and 1 unknown, counting dispatch reason, responsibilities and
   any line the recipe appends (the `deliberate_answers` line, engine-map.md section 5). The fact
@@ -143,7 +139,7 @@ The rules.
 - Threat comes only from behavior, such as a weapon, a threat or a history with this victim.
   Never from identity, accent, diagnosis or address (E3).
 - The subject's life always counts, even when they are why everyone is there (E9).
-- Callers and bystanders get a role and how they know. In the typed lane they stay unnamed.
+- Callers and bystanders get a role and how they know. In a call tree they stay unnamed.
 - Everyone believes they are justified. The private logic is never printed as an explanation.
   One earned detail may surface as the favorable result of a hold or in the best ending. That
   is the iceberg tip, and only a choice reaches it.
@@ -195,8 +191,7 @@ by eye against this file's two prose rules and the stock phrases you can name.
 - Every stage opens mid-problem. Cut the hallway.
 - Branches rejoin at shared stages, and tracked state carries the difference. In a call tree, a
   `mark` carries it: a `promptIf` names the earlier choice, and an `onlyIf` choice exists only on
-  that branch. The gate fails a node whose choices all lead to the same future. In the typed lane
-  that needs R8, and the turn lives in writer fields such as `approachResults` and `confirmed`.
+  that branch. The gate fails a node whose choices all lead to the same future.
 - Taking a choice leaves its node (call trees). A choice that should leave its siblings open is
   an ordering, never a choice; route it to a new node that says what changed.
 - A held ending names who is still inside. When a person can be inside or out on the paths that
@@ -209,7 +204,7 @@ by eye against this file's two prose rules and the stock phrases you can name.
 - A hold the results measure in hours sets `span` ('Hours', 'All night') so the card doesn't
   show a minute count the text contradicts.
 
-Stage exits (hand-authored). List every action and band that sets `stage` or `ending` in row F.
+Stage exits. List every action and band that sets `stage` or `ending` in row F.
 Walk the orders where the player takes the transition action first and the gating action last,
 on the adverse band. Any order with no visible exit blocks the design. Write each context prompt
 as an exact `Condition` in array order, because the first match wins, and walk which one each
@@ -308,9 +303,10 @@ choice by design (E2).
 
 ## 8. Pressure the data can carry
 
-Typed frameworks hard-code pressure (start 5, 0.1 a minute, threshold 95), so no typed call has
-a clock, and no line may promise one. Pick a lever the lane supports, or file R3. The levers and
-their mechanics are in engine-map.md section 7.
+A call tree sets its own pressure model (`CallTree.pressure`: start, per minute, threshold) and
+may run clocks, so a clock is available, but a line may promise only the clock the tree really
+has. Pick a lever the data supports, or file a request. The levers and their mechanics are in
+engine-map.md section 7.
 
 - A clock needs a reason nobody can stop, stated in the call. It speeds a decision and never
   excuses abuse (E10).
@@ -337,8 +333,8 @@ Variants differ by fact, never by wording. Plan them as fact axes in design-shee
   situations with the same truth cannot get different text from a truth branch.
 - Prose-only variants collide in the distinctness gate. Differ on both sides of the truth.
 
-The gate, from the repo root. `npx vitest run content-gates content-playability` (checked with
-`vitest list` on 2026-10-06). If you cannot run it, record "not run" with the reason.
+The gate, from the repo root. `npx vitest run src/gen/incident/trees-v13` (the choices gate fails a
+node whose choices share one future). If you cannot run it, record "not run" with the reason.
 
 ## 10. Ethics screen
 
@@ -378,7 +374,7 @@ Engineering request
 Need:            <what the call must do that the data cannot express>
 Current limit:   <symbol, and the observed behavior>
 Build links:     <which of the chain in engine-map.md section 1 it touches>
-Proposed field:  <optional field on <type>>, default <value>, issued output byte-identical
+Proposed field:  <optional field on <type>>, default <value>, existing compiled calls unchanged or fingerprints recaptured on purpose
 Content version: v<N>
 Blocks:          <sheet rows>
 Extends:         <R1 to R10 | new>
@@ -398,8 +394,8 @@ template"), as mapped in design-sheet.md.
 ## What enforces this file
 
 Nothing in this file is machine-enforced by this file. The repo gates enforce path
-distinctness, two takeable choices per stage, playability, `validateScenario`, and the prose
-lint on typed packages only. Hook quality, dominance, phantom costs, dead flags, the objective
+distinctness, two takeable choices per node, generation on every hosting building,
+`validateScenario`, and the prose lint through `npm run check:strings`. Hook quality, dominance, phantom costs, dead flags, the objective
 map, tap counts, the full matrix, ending reachability, the force gates and the ethics screen
 are enforced only by the record below and by swat-writing-review reading it. A record with a
 slot left blank is a draft.
@@ -412,7 +408,7 @@ the lettered rows in design-sheet.md.
 
 ```
 Call design record
-- Lane and version (row A): answered | <lane>, content v<N>, suites read <files>, owner asked <yes, answer | no, why>
+- Lane and version (row A): answered | call tree, content v<N>, compiled fingerprints recapture needed <yes, why | no>
 - Contract read (row A): answered | partial, <items not checked> | not done: <reason>, sheet UNVERIFIED
 - Person and hook (rows B to D): <name> wants <want>; hook "<text>" <n> chars; tests 1 to 8 pass; names <n>; gap <fact>
 - Hook person in stage 3 (row C): yes, as <stake | payoff> in <field> | no, hook rewritten
@@ -420,14 +416,14 @@ Call design record
 - Call-out earned (row B): "<quoted briefing line>" for armed, threat, advantage, refusal | changed to <call type>
 - Self-harm risk (row B): none | present, <signs>, E4 applied
 - Iceberg tip (row B): <detail> in <field>, reached only through <choice>
-- People binding (row C): <n> people, threat enums checked, transitions <n>, civilian outcome lines <n> | typed lane
+- People binding (row C): <n> people, threat enums checked, transitions <n>, civilian outcome lines <n>
 - Geography (row C): advantage line "<text>"; roles placed <n>; in line of sight <n, each with cost on <option>>
 - Briefing and taps (row E): <n> lines incl. appended, <s> s; turn fact in known[<0|1>]; taps common/longest s1 <a/b>, s2 <a/b>, s3 <a/b>
 - Dilemma per stage (row F): 1 <good vs good>, 2 <...>, 3 <...>; checklist 1 to 10 clean; options exclusive
 - Dominance grid (row F): per stage and variant <none beaten>; phantom costs 0; costs quoted <n>; minutes rule <pass>; payoff column filled
-- Action rows (row F): <n> rows, incomplete 0; helpers searched <symbols>; layers reversed <none | which, why>
+- Action rows (row F): <n> rows, incomplete 0; helpers searched <symbols>; behavior reversed <none | which, why>
 - Force and entry gates (row F): <n> actions; visibleWhen per situation listed; threat lines quoted; self-directed situations with force visible 0
-- Stage exits and context prompts (row F): <n> orders, dead ends 0; <n> prompts with exact Conditions, shadowed 0 | typed lane
+- Stage exits and context prompts (row F): <n> orders, dead ends 0; <n> prompts with exact Conditions, shadowed 0
 - Turn (row G): planted in <field> ("<fragment>"), revealed in <field>, reprices <choice>
 - Consequence matrix (row H): <n> actions, <n> cells, empty 0, mixed-equals-favorable-plus-time 0, cues traced
 - Flags set, readers (row H): <n> flags, <n> with a reader, dead 0
@@ -438,7 +434,7 @@ Call design record
 - Endings and loop (rows I, J): best <who walks out, what stays unfinished>; partial <remainingTasks>; loop <thread>
 - Lever and minutes (row K): <levers>; threshold reached between commits <a> and <b> | request <R> filed
 - Variants (row L): axes <list>; correlated <cheapest reveal | none>; visibility reveals <n, each paired>; strings marked
-- Distinctness gate: <command> exit <code> | not run: <reason>
+- Call-tree gates: `npx vitest run src/gen/incident/trees-v13` exit <code> | not run: <reason>
 - Ethics screen (row M): E1 to E10, E12.1 to E12.5 <clear | finding, per line>; E4 <applies | screened, reason>
 - E3 tally (row M): clear, <seeds, subject-role distribution> | pending batch tally
 - Crisis checks (row M): E4.5 vs E2.1 checked; content note "<draft>"; support line "<draft>"; pending O2, R5 | E4 screened

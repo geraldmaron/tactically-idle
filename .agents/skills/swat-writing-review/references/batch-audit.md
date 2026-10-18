@@ -1,17 +1,21 @@
 # Batch audit
 
-One player sees one call. The batch shows the sentence in ten frameworks, the surname on a
+One player sees one call. The batch shows the sentence in ten calls, the surname on a
 civilian and an officer in the same call, and the shift with two crisis calls. Run it for any
-framework-level or version-level review. Every threshold is a house target to tune in playtest,
+review of several calls or generated variants. Every threshold is a house target to tune in playtest,
 never a research finding, and every count states its sample size.
 
 ## 1. Collect the batch
 
-1. Look for an exporter first, in package.json and the scripts folder. None of the npm scripts
-   exported strings on 2026-10-06.
-2. If none exists, collect from the story sheet. For each type, read each situation at two or
-   more building seeds and both pacings, copy the page text and tag each string with its field.
-   The sheet's option ids (such as `v9_false_intruder_hear_person`) make good field tags.
+1. Look for an exporter first, in package.json and the scripts folder. `npm run check:strings`
+   (scripts/check-strings.ts) builds every call's string rows with `callStringRows` in
+   src/gen/incident/trees-v13/strings.ts and checks them one call at a time, but it writes no
+   batch file, so it cannot find a sentence repeated across calls.
+2. For a cross-call file, collect from the Scenario Lab's Script surface (`/lab?type=<type>&tab=script`,
+   docs/scenario-lab.md). For each type, read each situation at two or more building seeds and
+   both pacings, step the cast carousel, copy the column text and tag each string with its field.
+   Script's line inspector shows each line's field path (such as
+   `offer.take_courier.preview.mixed`), which makes a good tag.
 3. Keep any collector script in scratch space and never commit it without the owner's say. If it
    proves useful, file an engineering request for a real strings export.
 4. If you cannot collect two situations for every type, say so and put the sample size in every row.
@@ -177,19 +181,20 @@ block and add `path=P<n>` to its heading line.
 
 | Section | House target | Finding when over |
 | --- | --- | --- |
-| Repeated sentences | 0 flavor sentences in 3+ places | fix before freeze, route swat-call-prose, or engineering when the sentence is compiler-owned |
-| TEMPLATE ECHO | 0 | fix before freeze. One sentence across types means a template carries flavor |
+| Repeated sentences | 0 flavor sentences in 3+ places | fix before ship, route swat-call-prose, or engineering when the sentence is compiler-owned |
+| TEMPLATE ECHO | 0 | fix before ship. One sentence across types means a template carries flavor |
 | Same string in two fields | 0, except fields the compiler copies by design | note to engineering when the compiler copies, line finding otherwise |
-| Phrases of 3+ words in 2+ strings of one path | 0 outside fixed formats and names | fix before freeze, route swat-call-prose |
-| Openers at 3% or more | none in narration | fix before freeze, route swat-call-prose. A common opener points to a template or a subject name doing every sentence's work |
-| Inverted or fronted openers (pattern G15) | 0 locative inversions, at most 2 fronted modifiers per path | fix before freeze, route swat-call-prose. Count with the cliche runner. A rise here after an opener fix means the opener was fixed the wrong way |
-| Near-synonym pairs | 0 across situations or types | fix before freeze. Variants should differ by fact, not synonym |
-| Dashes, colons, roster surnames | 0 dashes, colons only in clock times and stat rows, 0 surnames | G9 fixes are fix before freeze. A surname is a block when that officer is on the call |
+| Phrases of 3+ words in 2+ strings of one path | 0 outside fixed formats and names | fix before ship, route swat-call-prose |
+| Openers at 3% or more | none in narration | fix before ship, route swat-call-prose. A common opener points to a template or a subject name doing every sentence's work |
+| Inverted or fronted openers (pattern G15) | 0 locative inversions, at most 2 fronted modifiers per path | fix before ship, route swat-call-prose. Count with the cliche runner. A rise here after an opener fix means the opener was fixed the wrong way |
+| Near-synonym pairs | 0 across situations or types | fix before ship. Variants should differ by fact, not synonym |
+| Dashes, colons, roster surnames | 0 dashes, colons only in clock times and stat rows, 0 surnames | G9 fixes are fix before ship. A surname is a block when that officer is on the call |
 
-Observed on 2026-10-06, to re-check. The waitFor sentence "It takes much longer, but it does not
-depend on the next step going right." sat in 10 places across 10 types in
-src/content/framework-depth-v12.ts. The act-on-report wrong text for false_intruder carried a
-colon. Typed calls filled the card and the first known line from the same `opening` field.
+Observed on 2026-10-06 in the retired typed calls, as dated evidence. The waitFor sentence "It
+takes much longer, but it does not depend on the next step going right." sat in 10 places across
+10 types in the v12 depth layer. The act-on-report wrong text for false_intruder carried a colon.
+Typed calls filled the card and the first known line from the same `opening` field. Call trees
+write each of these themselves, so the same checks now find a repeat the writer made.
 
 Also run the per-call checks in ../swat-call-prose/references/string-checks.md. If that file is
 missing, this script stands in, and stock phrases are checked by eye against cliche-and-copaganda.md.
@@ -204,12 +209,12 @@ each hit, since some first names are also common words.
 import json, re, sys
 
 export, repo = sys.argv[1], (sys.argv[2] if len(sys.argv) > 2 else ".")
-src = open(f"{repo}/src/content/scenario-names.ts", encoding="utf-8").read()
-start = src.index("export const SCENARIO_FIRST_NAMES")
-end = src.index("export const SCENARIO_SURNAMES")
-pool_first = set(re.findall(r'"([^"]+)"', src[start:end])) - {"she", "he", "they"}
+src = open(f"{repo}/src/content/call-trees/civilian-names.ts", encoding="utf-8").read()
+end = src.index("export const CIVILIAN_SURNAMES")
+head = src[:end]
+pool_first = set(re.findall(r"'([^']+)'", head[head.index("export const CIVILIAN_FIRST_NAMES"):]))
 tail = src[end:]
-pool_sur = set(re.findall(r'"([^"]+)"', tail[:tail.index("]")]))
+pool_sur = set(re.findall(r"'([^']+)'", tail[:tail.index("];")]))
 roster = json.load(open(f"{repo}/src/content/personas.json", encoding="utf-8"))
 roster_sur = {p["surname"] for p in roster}
 print(f"pool first names {len(pool_first)}, pool surnames {len(pool_sur)}, "
@@ -234,9 +239,11 @@ for para in open(export, encoding="utf-8").read().split("\n\n"):
             print(f"pool first name outside the cast | {meta.get('type')} s{meta.get('situation')} {field} | {word}")
 ```
 
-Observed on 2026-10-06. All 100 roster surnames were in the 100-name scenario surname pool, and
-the cast draw's surname pick hashed into that pool with no roster filter. Any call can put a
-civilian beside an officer with the same surname, which is an engineering request.
+Since 2026-10-17 the civilian pools in src/content/call-trees/civilian-names.ts are disjoint from
+the officer catalog, and a test in src/gen/incident/trees-v13/call-trees.test.ts ("share no first
+name or surname with any officer") holds them apart. The script's first line should therefore
+report 0 roster surnames in the pool. A nonzero count means the gate was bypassed. (On 2026-10-06
+the retired scenario pool held all 100 roster surnames.)
 
 Also check by reading. Cast names that are common words ("Grant", "Rose", "Will") break binding
 when a sentence opens with that word, because binding replaces whole capitalized words. Pronouns
@@ -259,100 +266,66 @@ Skew tally <scope>, sample <n> calls (judge only at 30 or more)
 | setting <building type> | | | | | | | |
 ```
 
-**Name source by role.** Civilian names are drawn from first names and surnames taken from the
-persona catalog, so a player reads each name as carrying that persona's background. This tally
-measures what the names signal, never who a character is, and it never labels a character. Draw
-at least 30 seeds per armed, blamed or harmed slot. When the catalog's groups are about 1% each,
-30 seeds judge nothing, so draw 300.
+**Pronoun draw by role.** Call-tree names are drawn by pronoun set only, from pools that carry no
+persona background (civilian-names.ts says identity never determines a role, danger, cooperation
+or any score). The retired cast code drew names from the persona catalog, so a name signaled a
+background, and the tally it needed (5 groups over twice their expected count in the hostage
+subject slot on 2026-10-06) no longer applies. What can still skew is the pronoun draw per role.
+Draw at least 300 calls per type before judging a role.
 
-Step 1, draw. On 2026-10-06 the draw was `drawScenarioCast` in src/gen/incident/cast-v9.ts
-(search the symbol if it moved). Save this as src/zz-cast-draw.test.ts, run
-`npx vitest run src/zz-cast-draw.test.ts --silent=false | grep '^DRAW' > draws.txt`, then delete
-the file. Never commit it. Change `type`, `family` and `seeds` for each call in scope.
+Step 1, draw. The cast draw is `drawInstance` in src/gen/incident/instance.ts, reached through
+`generateIncident` and `instanceOf` (search the symbols if they moved). Save this in scratch space
+outside the repo as cast-draw.ts, replace `<repo>` with the repo root, run
+`bun cast-draw.ts | grep '^DRAW' > draws.txt` from the repo root, and never commit it. Change
+`type` for each call in scope.
 
 ```ts
-import { it } from 'vitest';
-import { drawScenarioCast } from './gen/incident/cast-v9';
+import { buildLocation } from '<repo>/src/sim/location';
+import { drawIncidentSpec, generateIncident } from '<repo>/src/gen/incident/index';
+import { instanceOf } from '<repo>/src/gen/incident/instance';
 
-it('prints cast draws', () => {
-  const type = 'hostage_crisis', family = 'cedar_close', seeds = 300;
-  for (let seed = 1; seed <= seeds; seed++) {
-    const cast = drawScenarioCast({ type, familyId: family, buildingSeed: seed, seed, tier: 2, contentVersion: 12 });
-    for (const [slot, p] of Object.entries(cast)) console.log(`DRAW ${type} ${slot} ${p.pronouns} ${seed} | ${p.firstName} ${p.surname}`);
-  }
-});
+const type = 'hostage_crisis', calls = 300;
+let state = 1;
+for (let i = 0; i < calls; i++) {
+  const drawn = drawIncidentSpec(state, { level: 10, trust: 90, unlockedTypes: [type as never] });
+  state = drawn.state;
+  const s = generateIncident(drawn.spec);
+  const instance = instanceOf(s, buildLocation(s.locationFamilyId, s.locationSeed))!;
+  for (const p of instance.people.filter(entry => entry.roleKey && entry.name))
+    console.log(`DRAW ${type} ${p.roleKey} ${p.pronouns} ${i} | ${p.name!.first} ${p.name!.surname}`);
+}
 ```
 
-Step 2, tally. Save as role_skew.py and run `python3 role_skew.py draws.txt <repo root>`. It maps
-each drawn name part to the background of the persona it came from (the text before the first
-semicolon of `culture` in src/content/personas.json), computes the share each group would get
-from a uniform draw of that slot's pronoun pool and the surname pool, and prints every group
-seen at more than twice its expected count. Groups expected fewer than 5 times are not judged.
+Step 2, tally. Save as role_skew.py and run `python3 role_skew.py draws.txt`. It compares each
+role's pronoun counts with the share that pronoun set has across all roles of the type, and
+prints OVER 2x where a count is above twice its expectation (judged only when 5 or more were
+expected). Counted-role members (others_1, others_2) are pooled.
 
 ```python
-import collections, json, re, sys
-
-draws, repo = sys.argv[1], (sys.argv[2] if len(sys.argv) > 2 else ".")
-people = json.load(open(f"{repo}/src/content/personas.json", encoding="utf-8"))
-group = lambda p: p.get("culture", "unknown").split(";")[0].strip()
-first_src, sur_src = collections.defaultdict(set), collections.defaultdict(set)
-for p in people:
-    first_src[p["firstName"]].add(group(p))
-    sur_src[p["surname"]].add(group(p))
-src = open(f"{repo}/src/content/scenario-names.ts", encoding="utf-8").read()
-start, end = src.index("SCENARIO_FIRST_NAMES"), src.index("SCENARIO_SURNAMES")
-firsts = {k: re.findall(r'"([^"]+)"', b) for k, b in re.findall(r'"(\w+)":\s*\[(.*?)\]', src[start:end], re.S)}
-tail = src[end:]
-surnames = re.findall(r'"([^"]+)"', tail[:tail.index("]")])
-
-def baseline(names, lookup):
-    share = collections.Counter()
-    for n in names:
-        gs = lookup.get(n, {"no persona match"})
-        for g in gs:
-            share[g] += 1 / (len(names) * len(gs))
-    return share
+import collections, re, sys
 
 LINE = re.compile(r"^DRAW (\S+) (\S+) (\S+) (\d+) \| (.+)$")
-seen, meta = collections.defaultdict(collections.Counter), {}
-for line in open(draws, encoding="utf-8"):
+by_role, overall = collections.defaultdict(collections.Counter), collections.Counter()
+for line in open(sys.argv[1], encoding="utf-8"):
     m = LINE.match(line.strip())
     if not m:
         continue
-    kind, slot, pron, seed, name = m.groups()
-    key = f"{kind} {slot}"
-    meta.setdefault(key, [pron, set()])[1].add(seed)
-    first, sur = name.rsplit(" ", 1)
-    for part, lookup in ((first, first_src), (sur, sur_src)):
-        gs = lookup.get(part, {"no persona match"})
-        for g in gs:
-            seen[key][g] += 1 / len(gs)
-
-for key, counts in sorted(seen.items()):
-    pron, seeds = meta[key]
-    expect = baseline(firsts.get(pron, []), first_src) + baseline(surnames, sur_src)
-    judged = over = 0
-    print(f"-- {key} ({pron}), {len(seeds)} seeds")
-    for g, share in expect.most_common():
-        e = share * len(seeds)
-        if e < 5:
-            continue
-        judged += 1
-        if counts[g] > 2 * e:
-            over += 1
-            print(f"OVER 2x | {g} | {counts[g]:.0f} seen, {e:.1f} expected")
-    print(f"groups judged {judged}, over 2x {over}")
+    kind, role, pron, _seed, _name = m.groups()
+    by_role[f"{kind} {re.sub(r'_[0-9]+$', '', role)}"][pron] += 1
+    overall[pron] += 1
+total = sum(overall.values())
+for role, counts in sorted(by_role.items()):
+    n = sum(counts.values())
+    for pron, seen in counts.items():
+        expected = overall[pron] / total * n
+        flag = "OVER 2x" if expected >= 5 and seen > 2 * expected else "ok"
+        print(f"{flag} | {role} | {pron} | {seen} seen, {expected:.1f} expected from all roles | {n} draws")
 ```
 
-Observed on 2026-10-06, one family (cedar_close), seeds 1 to 300, to re-check. The hostage
-subject slot showed 5 groups over twice their expected count (Black American, Afro-Brazilian,
-Haitian, Egyptian and Cambodian Khmer backgrounds, 16 to 27 seen against 6 to 10 expected), and
-the two other slots showed 4 each. Every slot skewing means the draw itself is not uniform at
-this sample, which is an engineering finding. The subject slot's counts and lines still go to a
-human with route owner, because that is the slot a player reads as the threat.
+Observed on 2026-10-18 for hostage_crisis, 300 calls, 1081 draws: every role within its
+expected share, no OVER 2x line.
 
 If you cannot run the draw, say so and record "tally not run | <reason>" in the Ethics line.
-If the slot shows a portrait or appearance text, tally the stated appearance the same way.
 
 House target. No group's share in an armed, blamed or harmed slot runs above twice its expected
 share. Over target goes to a human reviewer with route owner, to swat-call-design for the cast
@@ -432,7 +405,7 @@ Batch audit <scope>, sample <calls> calls and <strings> strings, from <sheet URL
 | Inverted or fronted openers (G15) | | 0 inversions, at most 2 fronted per path | |
 | Template echo across types | | 0 flavor sentences | |
 | Near-synonym variants | | 0 pairs | |
-| Roster surnames in civilian casts | | 0 against the visible roster | |
+| Roster surnames in civilian casts | | 0 against the visible roster (the name gate should hold this at 0) | |
 | Pool first names outside the cast | | 0 | |
 | Identity-by-role skew | | no group over 2x its expected share in armed, blamed or harmed roles | |
 | Crisis calls per shift | | at most 1 | |

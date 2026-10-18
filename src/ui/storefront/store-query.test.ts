@@ -47,6 +47,7 @@ describe('store catalog queries', () => {
     expect(locked).toMatchObject({ unlocked: false, affordable: true, owned: 0, ready: 0 });
     expect(locked.qualified).toBeGreaterThan(0);
     state.department.unlockedNodes.push('intel_drone');
+    for (const id of state.department.unlockedNodes) state.department.developmentTiers[id] ??= 1;
     const available = catalogEntries(state).find((row) => row.item.id === 'camera_drone')!;
     expect(available).toMatchObject({ unlocked: true, affordable: true, canBuy: true, ready: 0 });
   });

@@ -30,8 +30,8 @@ Each path is paired with a symbol to search for if the file moved. The code wins
 | src/sim/save.ts | `CURRENT_SAVE_VERSION` | save version 9 and the hardcoded trait list |
 | src/sim/personnel.test.ts | `uses pronouns in ordinary notes` | the pronoun-opener test and build independence from identity |
 | src/ui/screens/HQ.tsx | `PERSONNEL_EVENT` | the shift report prints the full name before each detail |
-| src/content/scenario-names.ts | `SCENARIO_SURNAMES` | the civilian surname pool equals the roster's 100 surnames |
-| src/gen/incident/high-risk-common-v4.ts | `injuryHR` | the injury labels in hand-authored stories |
+| src/content/call-trees/civilian-names.ts | `CIVILIAN_SURNAMES` | the civilian pools are disjoint from the roster (the 2026-10-06 scenario pool had equaled the roster's 100 surnames) |
+| src/content/call-trees/types.ts | `officer`, `fire` | how a call tree records an injured officer; the retired hand-authored stories had written injury labels by hand |
 | docs/art/roster-integration.md | `Identity contract` | who owns persona identity fields, no death mechanic |
 
 ## 2. Character and attachment in games

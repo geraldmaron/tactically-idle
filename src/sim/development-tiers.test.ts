@@ -4,7 +4,7 @@ import { ITEMS } from '../content/items';
 import { createInitialState } from './department';
 import { DEVELOP_HANDLERS } from './develop';
 import { nodeOptions } from './department-selectors';
-import { developmentTier, developmentTierDefinition, effectiveDevelopmentEffects, maxDevelopmentTier, quoteDevelopment } from './development-tiers';
+import { developmentTierDefinition, maxDevelopmentTier, quoteDevelopment } from './development-tiers';
 import { HOUR_MS, ratesAt, recoveryMultiplier, unlockedEffects } from './economy';
 import { createUnit, serviceCheck } from './equipment';
 import { equipmentManagerBenefits, equipmentServiceCost, equipmentWearMultiplier, maintenanceBudget } from './equipment-manager-policy';
@@ -82,22 +82,13 @@ describe('development tiers', () => {
     expect(state.department.rosterCap).toBe(12);
   });
 
-  it('reads legacy capacity entitlements without replaying tier I on upgrade', () => {
-    let state = funded();
-    state.department.unlockedNodes = ['personnel_academy', 'personnel_academy'];
-    state.department.trainingSlots = 2;
-    expect(developmentTier(state, 'personnel_academy')).toBe(1);
-    state = apply(state, { type: 'unlockNode', nodeId: 'personnel_academy', expectedTier: 2 });
-    expect(state.department.trainingSlots).toBe(3);
-    expect(effectiveDevelopmentEffects(state).filter((effect) => effect.kind === 'trainingSlots')).toEqual([{ kind: 'trainingSlots', delta: 2 }]);
-  });
-
   it('replaces income and recovery totals without multiplying or duplicating prior tiers', () => {
     let state = funded();
     for (let tier = 1; tier <= 3; tier++) {
       state = apply(state, { type: 'unlockNode', nodeId: 'intel_records', expectedTier: tier });
       state = apply(state, { type: 'unlockNode', nodeId: 'wellbeing_peer_support', expectedTier: tier });
       state.department.unlockedNodes.push('intel_records', 'wellbeing_peer_support');
+      for (const id of state.department.unlockedNodes) state.department.developmentTiers[id] ??= 1;
       expect(ratesAt(state, NOW).nodeIncome).toBe([60, 120, 200][tier - 1]);
       expect(recoveryMultiplier(state)).toBe([1.5, 1.75, 2][tier - 1]);
       expect(unlockedEffects(state).filter((effect) => effect.kind === 'income')).toHaveLength(1);
@@ -146,6 +137,7 @@ describe('development tiers', () => {
     const repairMultiplier = [0.75, 0.65, 0.55][tier - 1];
     const wearMultiplier = [0.8, 0.7, 0.6][tier - 1];
     state.department.unlockedNodes.push('logistics_equipment_manager');
+    for (const id of state.department.unlockedNodes) state.department.developmentTiers[id] ??= 1;
     expect(equipmentManagerBenefits(state)).toEqual({ tier, repairMultiplier, wearMultiplier, maxConcurrentServices: tier + 1 });
     expect(equipmentWearMultiplier(state, ITEMS.radio_kit)).toBe(wearMultiplier);
     expect(equipmentWearMultiplier(state, ITEMS.trauma_kit)).toBe(1);

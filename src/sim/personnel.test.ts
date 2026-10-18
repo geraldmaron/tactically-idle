@@ -6,7 +6,7 @@ import { dispatch } from './game';
 import { fillCandidates, recruitmentStatus } from './roster';
 import { deserialize, serialize, SAVE_KEY } from './save';
 import { restoreCampaign } from './session';
-import { establishedDepartment } from './department-test-fixtures';
+
 import { type Officer } from './types';
 
 const T0 = Date.UTC(2026, 0, 1);
@@ -155,22 +155,7 @@ describe('campaign identities and succession', () => {
     fillCandidates(s, T0 + 8 * HOUR);
     expect(deserialize(serialize(s, T0))).toEqual(s);
   });
-  it('migrates v3 without rerolling legacy people, while reserving departed starter identities', () => {
-    const old = establishedDepartment(T0, 13);
-    delete old.personnel;
-    for (const o of Object.values(old.officers)) delete o.identityId;
-    old.officers.off_chen.portrait = 'chen';
-    old.candidates = [];
-    delete old.officers.off_reyes;
-    old.squads[1].officerIds = old.squads[1].officerIds.filter((id) => id !== 'off_reyes');
-    old.saveVersion = 3;
-    const chen = structuredClone(old.officers.off_chen);
-    const migrated = deserialize(serialize(old, T0))!;
-    expect(migrated).not.toBeNull();
-    expect(migrated.officers.off_chen).toEqual({ ...chen, identityId: 'person_001' });
-    expect(migrated.personnel!.employedIdentityIds).toContain('person_007');
-    expect(migrated.saveVersion).toBe(9);
-  });
+
   it('persists a brand-new campaign before the first tick and preserves unreadable save data', () => {
     const data = new Map<string, string>();
     const storage = { getItem: (key: string) => data.get(key) ?? null, setItem: (key: string, value: string) => { data.set(key, value); } };

@@ -12,29 +12,10 @@ route checks, plus every door, doorway and stair approach clear and joined, so f
 squad route) and `furnishingShortfallsG1` (each room kind's essentials: no tub in a half bath, seats at
 the bar, racking on a warehouse floor), and both forms have zero `validateLocation` issues, warnings
 included. The plan itself holds no room furniture: one furniture system, `furnishLocationG1`,
-furnishes every building the player sees. It runs v7's solver (`RoomPlan` in `../furnishing-v7.ts`)
-with its own catalog (`../furnishing-definitions-g1.ts`); authored buildings keep `furnishLocationV7`.
+furnishes every building the player sees. It runs v7's solver (`RoomPlan` in `../furnishing.ts`)
+with its own catalog (`../furnishing-definitions-g1.ts`); authored buildings keep `furnishLocation`.
 
-The game reaches these generators as public building types `<family>_<generation>` and their
-furnished forms `<family>_<generation>__furnished_v7`: nine `_g1` types (`PROCEDURAL_FAMILIES` in
-`../index.ts`) and nine `_g2` types (`PROCEDURAL_FAMILIES_G2`). `generatePair` reads the generation
-from the id (`generation.ts`; a bare spec id means `_g1`).
-
-## Generations
-
-| | `_g1` | `_g2` |
-| --- | --- | --- |
-| Draw stream | ``hashSeed(`${family}:${seed}`)`` | the same stream |
-| Distance math in the shared helpers | `Math.hypot` (no `geometry` field) | `geometry: 'exact'`: `Math.sqrt(dx*dx + dy*dy)` (`src/sim/geometry.ts`) |
-| Location `version` (plain form) | 1 | 2 |
-| `access` | none | `apartment_unit_g2`: unit floor, elevator, step-free route, note |
-| Fingerprints | `../procedural-g1-fingerprints.json` | `../procedural-g2-fingerprints.json` |
-
-`_g2` sets `geometry: 'exact'` on the drawn plan before acceptance (`generate.ts` `finishPlan`), so
-`deriveLocation`, `validateLocation`, `furnishLocationG1` (v7's `RoomPlan`), `validateFurnishingsG1`
-and the furnished squad router all measure that building with exact arithmetic, and the furnished form
-inherits the field. Furnishing choices hash the public id, so a `_g2` seed often accepts a different
-draw from the stream than `_g1` did; treat `_g2` as its own content, not a re-measured `_g1`.
+The game uses the current `_g2` building types and their furnished forms. Bare family IDs resolve to `_g2`. The generator measures exact geometry before acceptance and records apartment access metadata. The `_g1` building generation has been removed.
 
 **Access (`access.ts`).** A family with `unitLevel` (only `apartment_unit`; it is the one type with a
 shared stair and corridor) gets `access` from `_g2` on. The unit's floor comes from its name ('Unit 3B'
@@ -44,26 +25,9 @@ with an elevator. Players see `access.note` ('Third-floor unit; the building has
 note `n_access` on the common corridor, and an elevator relabels the stairwell zone 'Stairs and
 elevator' and tags it `lift`.
 
-## Frozen output: a released generation never changes
+## Current regression fingerprints
 
-Issued incidents and saves rebuild a building from `(familyId, seed)` alone, so the output of a
-released generation is part of the save format. `../procedural-g1-fingerprints.json` and
-`../procedural-g2-fingerprints.json` hold SHA-256 fingerprints of `generateBuilding` for each type,
-plain and furnished (seeds 0, 1, 7, 42, 1000, 4294967295), and the matching `.test.ts` files check
-them. Any change that alters these outputs, in this directory, in `furnishing-g1.ts`,
-`furnishing-definitions-g1.ts`, `furnishing-v7.ts`, or in the validators and geometry they call,
-must ship as a new generation alongside the old ones. Never re-baseline a released generation.
-
-**The `_g3` rule.** To change generated output:
-1. Add `'g3'` to `Generation` and `GENERATIONS` in `generation.ts`, and its `PLAN_VERSION` in `generate.ts`.
-2. Gate every behavior change on the generation (`finishPlan`, a `FamilySpec` hook, or a field on the
-   location such as `geometry`), so `_g1` and `_g2` take exactly today's code path. A shared helper
-   in `src/sim` changes only behind a location field that older locations do not carry.
-3. Export `PROCEDURAL_FAMILIES_G3` from `../index.ts`, add it to `ALL_BUILDING_FAMILIES`, and add
-   `../procedural-g3-fingerprints.json` with its test (same seeds), captured under Node.
-4. Run the `_g1` and `_g2` fingerprint tests, the issued-incident suites and
-   `bun scripts/cross-engine-fingerprints.ts`; add the new JSON to that script.
-5. Only a new content version may draw the new types; issued versions keep their lists.
+`../procedural-g2-fingerprints.json` records plain and furnished output for the current generation. These are regression tripwires and can be deliberately recaptured when the generator changes. Old saves are rejected rather than regenerated with old code.
 
 ## Engine-independent arithmetic
 
@@ -75,8 +39,8 @@ draws random numbers (engines compare in different orders). `../procedural-math.
 directory and fails on any approximated call outside comments.
 
 The shared helpers the generator calls (`src/sim/location.ts`, `furniture-path.ts`,
-`location-validate.ts`, `spatial-factors.ts` routing, `../furnishing-v7.ts`) still use `Math.hypot`
-for `_g1` and authored locations, whose outputs are frozen; `_g2` locations take the exact path.
+`location-validate.ts`, `spatial-factors.ts` routing, `../furnishing.ts`) still use `Math.hypot`
+for authored locations without exact geometry metadata. Current procedural locations take the exact path.
 `../exact-geometry.test.ts` spies on every approximated `Math` function while a `_g2` building of each
 type is generated, validated, furnished and routed, and requires zero calls.
 `scripts/cross-engine-fingerprints.ts` recomputes the building and incident fingerprint suites under
@@ -172,10 +136,9 @@ BUILDING_SVG=/tmp/sheets BUILDING_FAMILY=corner_store_flat BUILDING_SEEDS=0-5 BU
 BUILDING_STATS=bungalow BUILDING_N=200 npx vitest run src/gen/building/procedural/stats.dev.test.ts --silent=false
 # distinctness, floors, shapes, plausibility scores
 BUILDING_SUMMARY=all BUILDING_N=500 npx vitest run src/gen/building/procedural/summary.dev.test.ts --silent=false
-# per public type (g1 and g2): validity, topologies, loop share, average and p95 ms per building, and
+# per current public type: validity, topologies, loop share, average and p95 ms per building, and
 # squad reachability on the furnished form (BUILDING_QUALITY_REACH=0 skips the routing)
 BUILDING_QUALITY=200 npx vitest run src/gen/building/procedural-quality.dev.test.ts --silent=false
 # fingerprint suites on JavaScriptCore against the JSON captured under V8
 bun scripts/cross-engine-fingerprints.ts
 ```
-

@@ -9,21 +9,16 @@ author. Re-check any figure before quoting it to a player or a stakeholder.
 
 | Source | What it supports here |
 | --- | --- |
-| docs/content-pipeline.md, "Reviewer checklist", "Human review" and "Freeze rule" | The five checklist items mapped in review-rubric.md, approve, edit or reject in the pull request, edits returned as data, the freeze rule |
-| /story.html on the dev server (lab view) | The URL parameters it wrote, the path explorer summary, flat-odds notes, reference squad line, absence of a verdict field |
-| src/gen/incident/frameworks-v9.ts | Compiler-owned stage prompts, responsibilities, approach summaries, adverse previews, the act-on-report ending built from the confirmed resolution, card and first known line both from `opening` |
-| src/content/incident-frameworks-v9.ts | The burglary and false_intruder package text quoted in examples |
-| src/content/framework-depth-v12.ts | The waitFor sentence in 10 places across 10 types, the colon in the false_intruder wrong text |
-| src/gen/incident/gates/prose-lint.ts | `LENGTH_BUDGETS`, `UNSAFE_DETAIL`, `META_PHRASING`, `EXTRA_BRITISH`, and the gap that it runs on typed packages only |
-| src/gen/incident/index.ts | `INCIDENT_CONTENT_VERSION` was 12 |
-| src/gen/incident/ (file listing) | Issued fingerprint files through v11, gate files prose-lint, distinctness, choices, playability, catalog and engine-driver |
-| src/content/personas.json, scenario-names.ts, american-english.ts | 27 of 100 notes using "enjoys", the "pavement" note, all 100 roster surnames in the 100-name pool |
-| src/gen/incident/cast-v9.ts | The surname pick hashing into the pool with no roster filter |
-| src/gen/incident/stories-v5/armed.ts and signature.ts | The target lines and the bureaucratic summary quoted in examples |
-| src/content/scenarios/ms-urgent.ts and ms-occupancy.ts | The stock urgency and narrated mechanic prompts quoted in examples |
+| docs/content-pipeline.md, "Human review" and "Current fingerprint policy" | The review checklist mapped in review-rubric.md, approve, edit or reject in the pull request, edits returned as data, the deliberate fingerprint recapture |
+| /story.html on the dev server (lab view), replaced on 2026-10-09 by the Scenario Lab at /lab (docs/scenario-lab.md) | The URL parameters it wrote, the path explorer summary, flat-odds notes, reference squad line, absence of a verdict field. The lab that replaced it has a call verdict, saves notes to docs/calls/notes/<type>.json and exports findings in SKILL.md section 11's row shape |
+| src/content/call-trees/civilian-names.ts and the name gate in src/gen/incident/trees-v13/call-trees.test.ts | The civilian name pools are disjoint from the officer catalog, so the roster-surname collision found on 2026-10-06 in the retired cast code can no longer happen |
+| src/gen/incident/gates/prose-lint.ts | `UNSAFE_DETAIL`, `META_PHRASING` and the other word lists |
+| scripts/check-strings.ts | `npm run check:strings`: every call bound with the longest names and sent to the string checker, one call at a time |
+| src/content/personas.json | 27 of 100 notes using "enjoys", the "pavement" note |
+| src/gen/incident/trees-v13/compiled-fingerprints.json | The only tripwire, recaptured deliberately |
+| The retired typed package, v12 depth, cast, hand-authored story and Maple Street scenario files, read 2026-10-06 | The target lines, the bureaucratic summary, the repeated waitFor sentence and the stock urgency prompts quoted in examples, as dated evidence. They were deleted on 2026-10-17 and no path is cited |
 | package.json scripts | `npm test`, `npm run verify` and no strings exporter |
-| npx vitest run src/gen/incident/content-gates.test.ts | 46 tests passed, exit 0, on the working tree that day |
-| written-voice skill (SKILL.md, references/verification-record.md, scripts/voice-check.py) | The composition rule (shape owner writes the record, others add one line), the Tells checked slot, the checker's CLI and that `--allow` replaces its list |
+| written-voice skill (SKILL.md, references/verification-record.md and its voice-check script) | The composition rule (shape owner writes the record, others add one line), the Tells checked slot, the checker's CLI and that `--allow` replaces its list |
 
 ## Choice, consequence and structure
 

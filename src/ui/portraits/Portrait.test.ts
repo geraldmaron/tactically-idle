@@ -6,9 +6,8 @@ import { GearArt } from '../art/GearArt';
 import { assetUrl } from '../art/assetUrl';
 import { PERSONAS } from '../../content/personas';
 import portraitManifest from '../../../public/art/portraits/manifest.json';
-import { createInitialState } from '../../sim/department';
-import { deserialize, serialize } from '../../sim/save';
-import { dispatch } from '../../sim/game';
+
+
 
 const officer = { id: 'off_test', identityId: 'missing_test_person', firstName: 'Sam', surname: 'West', portrait: '/art/portraits/person_100.webp', role: 'lead' as const };
 describe('honest portrait and art rendering', () => {
@@ -62,43 +61,12 @@ describe('honest portrait and art rendering', () => {
       expect(html).not.toContain('<svg');
     }
   });
-  it('upgrades exact legacy starter identities without needing to rewrite the save first', () => {
+  it('requires an explicit current identity instead of inferring a person from an old seat', () => {
     for (const person of PERSONAS.filter((p) => p.legacyOfficerId)) {
-      expect(currentPortraitKey({ ...officer, ...person, identityId: undefined, id: person.legacyOfficerId!, portrait: 'proc:old' })).toBe(person.portrait);
+      expect(currentPortraitKey({ ...officer, ...person, identityId: undefined, id: person.legacyOfficerId!, portrait: 'proc:old' })).toBeNull();
     }
   });
-  it.each([3, 4])('keeps a v%i legacy recruit, shortlist and hire unchanged while replacing its procedural rendering', (version) => {
-    const now = Date.UTC(2026, 9, 2);
-    const saved = createInitialState(now, 18);
-    saved.saveVersion = version;
-    if (version === 3) {
-      delete saved.personnel;
-      for (const o of Object.values(saved.officers)) delete o.identityId;
-    }
-    const candidate = saved.candidates[0];
-    delete candidate.officer.identityId;
-    candidate.officer.id = 'off_old_recruit';
-    candidate.officer.firstName = 'Sam';
-    candidate.officer.surname = 'West';
-    candidate.officer.portrait = 'proc:1234';
-    candidate.shortlisted = true;
-    const original = structuredClone(candidate);
-    const migrated = deserialize(serialize(saved, now))!;
-    expect(migrated).not.toBeNull();
-    expect(migrated.candidates[0]).toEqual(original);
-    expect(migrated.rngState).toBe(saved.rngState);
-    expect(currentPortraitKey(migrated.candidates[0].officer)).toBeNull();
-    const hired = dispatch(migrated, { type: 'hire', candidateId: original.id }, { now });
-    expect(hired.result.ok).toBe(true);
-    const person = hired.state.officers[original.officer.id];
-    expect(person).toEqual({ ...original.officer, hiredAt: now });
-    const reloaded = deserialize(serialize(hired.state, now))!;
-    expect(reloaded.officers[person.id]).toEqual(person);
-    const html = renderToStaticMarkup(createElement(Portrait, { officer: reloaded.officers[person.id] }));
-    expect(html).toContain('Personnel file for Sam West; no photo on file');
-    expect(html).not.toContain('<svg');
-    expect(html).not.toContain('<img');
-  });
+
   it('retains semantic icons if an equipment image is not available', () => {
     const html = renderToStaticMarkup(createElement(GearArt, { itemId: 'unknown_item' }));
     expect(html).toContain('<svg');

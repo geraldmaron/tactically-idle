@@ -14,7 +14,7 @@ vi.mock('../gen/incident', async (importOriginal) => {
   const m = await importOriginal<typeof import('../gen/incident')>();
   return { ...m, drawIncidentSpec: vi.fn(m.drawIncidentSpec) };
 });
-import { SCENARIO_TYPES_V11 } from '../content/scenario-types-v11';
+import { SCENARIO_TYPES } from '../content/scenario-types';
 const draw = vi.mocked(drawIncidentSpec);
 const realDraw = draw.getMockImplementation()!;
 
@@ -22,7 +22,7 @@ const realDraw = draw.getMockImplementation()!;
 // one live call per kind, and only four kinds are tactical, so the default wrapper lets the real
 // generator draw from every type: the timing rules then run without the per-kind rule binding.
 // The per-kind rule has its own test below.
-const EVERY_TYPE = SCENARIO_TYPES_V11.map((info) => info.type);
+const EVERY_TYPE = SCENARIO_TYPES.map((info) => info.type);
 const everyKind: typeof realDraw = (rng, ctx) => realDraw(rng, { ...ctx, unlockedTypes: EVERY_TYPE });
 beforeEach(() => {
   draw.mockReset();
@@ -85,10 +85,10 @@ describe('initial board', () => {
     expect(at - T0).toBeLessThanOrEqual(INCIDENT_TUNING.maxIntervalMs);
   });
 
-  it('passes department level, trust and content version to the generator', () => {
+  it('passes department level and trust to the current generator', () => {
     createInitialState(T0);
     expect(draw).toHaveBeenCalled();
-    for (const call of draw.mock.calls) expect(call[1]).toMatchObject({ level: 1, trust: 78, contentVersion: INCIDENT_CONTENT_VERSION });
+    for (const call of draw.mock.calls) expect(call[1]).toMatchObject({ level: 1, trust: 78 });
   });
 
   it('is deterministic and leaves the starting candidates unchanged by the board', () => {
@@ -191,7 +191,7 @@ describe('arrivals and expiry are event-ordered', () => {
       s = ok(s, { type: 'tick' }, t);
       max = Math.max(max, s.incidents.length);
     }
-    expect(max).toBe(INCIDENT_TUNING.boardMax);
+    expect(max).toBe(Math.min(INCIDENT_TUNING.boardMax, EVERY_TYPE.length));
   });
 
   it('expires silently: no report line, no trust or funding penalty, and the card is gone at its time', () => {
@@ -214,7 +214,7 @@ describe('arrivals and expiry are event-ordered', () => {
   });
 
   it('skips an arrival whose id is already on the board', () => {
-    const spec: IncidentSpec = { type: 'welfare_check', familyId: 'maple_street', buildingSeed: 1, seed: 2, tier: 1, contentVersion: 1 };
+    const spec: IncidentSpec = { type: 'barricaded', familyId: 'market_row', buildingSeed: 1, seed: 2, tier: 1, contentVersion: 13 };
     draw.mockImplementation((rng) => ({ spec, state: rng }));
     const s = ok(createInitialState(T0), { type: 'tick' }, T0 + 5 * HOUR_MS);
     expect(s.incidents.filter((c) => c.id === incidentId(spec))).toHaveLength(1);
@@ -231,7 +231,7 @@ describe('arrivals and expiry are event-ordered', () => {
   });
 
   it('an arrival never re-adds the active run scenario', () => {
-    const spec: IncidentSpec = { type: 'burglary', familyId: 'maple_street', buildingSeed: 3, seed: 4, tier: 2, contentVersion: 1 };
+    const spec: IncidentSpec = { type: 'active_armed_incident', familyId: 'market_row', buildingSeed: 3, seed: 4, tier: 2, contentVersion: 13 };
     draw.mockImplementation((rng) => ({ spec, state: rng }));
     const s0 = createInitialState(T0);
     s0.incidents = [];
@@ -260,7 +260,7 @@ describe('tier gating', () => {
     const calls: { level: number; trust: number }[] = [];
     draw.mockImplementation((rng, ctx) => {
       calls.push({ level: ctx.level, trust: ctx.trust });
-      return { spec: { type: 'burglary', familyId: 'maple_street', buildingSeed: 0, seed: rng, tier: 1, contentVersion: ctx.contentVersion }, state: rng };
+      return { spec: { type: 'active_armed_incident', familyId: 'market_row', buildingSeed: 0, seed: rng, tier: 1, contentVersion: INCIDENT_CONTENT_VERSION }, state: rng };
     });
     let s = createInitialState(T0);
     calls.length = 0;
@@ -278,15 +278,15 @@ describe('tier gating', () => {
 
   it('cards carry the generator tier, clamped to 1..5', () => {
     const tiers = [4, 9, 0, 3, 2];
-    const types = ['barricaded', 'welfare_check', 'medical_complication', 'domestic', 'burglary'] as const;
+    const types = ['barricaded', 'active_armed_incident', 'hostage_crisis', 'protected_rescue'] as const;
     let i = 0;
     draw.mockImplementation((rng) => ({
-      spec: { type: types[i % types.length], familyId: 'maple_street', buildingSeed: i, seed: i, tier: tiers[i++ % tiers.length], contentVersion: 1 },
+      spec: { type: types[i % types.length], familyId: 'market_row', buildingSeed: i, seed: i, tier: tiers[i++ % tiers.length], contentVersion: 13 },
       state: rng,
     }));
     const s = createInitialState(T0);
     expect(s.incidents.map((c) => c.tier).sort()).toEqual([1, 4, 5]);
-    for (const c of s.incidents) expect(c.id.endsWith(`:${c.tier}:1`)).toBe(true);
+    for (const c of s.incidents) expect(c.id.endsWith(`:${c.tier}:13`)).toBe(true);
   });
 
   it('reward multiplier rises with tier and clamps', () => {
@@ -338,12 +338,10 @@ describe('board commands and selectors', () => {
   });
 
   it('boardSummary gives no next arrival while the board is full', () => {
-    let s = createInitialState(T0);
-    for (let i = 0; i < 20 && s.incidents.length < INCIDENT_TUNING.boardMax; i++) s = ok(s, { type: 'tick' }, T0 + (i + 1) * 30 * MIN);
-    expect(s.incidents).toHaveLength(INCIDENT_TUNING.boardMax);
+    const s = createInitialState(T0);
+    s.incidents = Array.from({ length: INCIDENT_TUNING.boardMax }, (_, i) => ({ ...s.incidents[0], id: `cap-fixture-${i}` }));
     expect(boardSummary(s, s.department.clockHighWater).nextArrivalAt).toBeNull();
   });
-
   it('a state without a schedule or board (older fixtures) still settles', () => {
     const s0 = createInitialState(T0) as unknown as { incidents?: unknown; department: object };
     delete s0.incidents;

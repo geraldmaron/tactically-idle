@@ -14,15 +14,13 @@ export function developmentTierDefinition(node: DevelopmentNode, tier: number): 
   return node.tiers?.[tier - 1] ?? { cost: node.cost, effects: node.effects };
 }
 
-/** Read legacy entitlements as tier I; never add duplicate benefits. */
+/** Current purchases record their explicit tier. */
 export function developmentTier(state: GameState, nodeId: Id): number {
   const node = Object.hasOwn(DEV_NODES, nodeId) ? DEV_NODES[nodeId] : undefined;
   if (!node) return 0;
-  const saved = state.department.developmentTiers?.[nodeId];
-  const entitlement = state.department.unlockedNodes.includes(nodeId) ? 1 : 0;
+  const saved = state.department.developmentTiers[nodeId];
   return typeof saved === 'number' && Number.isInteger(saved) && saved > 0
-    ? Math.max(entitlement, Math.min(saved, maxDevelopmentTier(node)))
-    : entitlement;
+    ? Math.min(saved, maxDevelopmentTier(node)) : 0;
 }
 
 export function effectiveDevelopmentEffects(state: GameState): NodeEffect[] {
@@ -47,7 +45,7 @@ const fundingLabel = (amount: number) => `$${Math.round(amount).toLocaleString('
 
 /**
  * Omit expectedTier only for a read-only preview. Purchase callers pass their
- * displayed target (legacy commands default to I), so stale clicks never buy II.
+ * displayed target (commands default to I), so stale clicks never buy II.
  */
 export function quoteDevelopment(state: GameState, nodeId: Id, expectedTier?: number): DevelopmentQuote {
   const node = Object.hasOwn(DEV_NODES, nodeId) ? DEV_NODES[nodeId] : null;

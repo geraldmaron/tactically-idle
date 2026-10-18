@@ -41,7 +41,7 @@ wrong, and onlookers at the tape [AU1][AU4].
   entry goes to review." When row B marks self-harm risk present, E4.5 overrides this shape.
 - E2.2 Every death has weight (house, all calls). Any death that can occur on any path is
   written as its weight on a named person present, in one sentence, and is read by a human
-  before freeze.
+  before ship.
 - E2.3 The clean near-miss (house). When entry meets a weapon in hand, the moment carries its
   real weight. Officers carry strain (an ending's `strain`, or `officerCare`), restraint is
   named as the officers' choice (E14), and no civilian or medic gesture defuses a drawn weapon.
@@ -109,16 +109,16 @@ be remembered. E4 also applies as a screen whenever weapon access meets a loss e
   marks them pending O2 and R5. The content-note line, and the debrief support line ("If this
   call brought something up for you, in the US you can call or text 988. Elsewhere, contact
   local emergency or crisis services."). A crisis call's record is incomplete without both, and
-  their absence is fix before freeze, never a note.
+  their absence is fix before ship, never a note.
 - E4.8 Mental illness is not the explanation. About 96 percent of violence is not committed by
   people with severe mental illness [AU10]. Name other factors such as drinking, loss or missed
   treatment. Never diagnose someone because what they did was shocking.
 - E4.9 Language. Avoid "committed suicide", "successful" or "failed attempt", "jumper", "cry
   for help", and "suicide by cop" as a label in player text [AU8][AU2]. Show what the person
   says instead.
-- E4.10 Inside the lint. The typed lane bans the words suicide and overdose. Write what the
-  person said and did ("He told his sister he won’t be here tomorrow"). Use in the
-  hand-authored lane is an owner decision (O1).
+- E4.10 Inside the lint. The prose lint bans the words suicide and overdose. Write what the
+  person said and did ("He told his sister he won’t be here tomorrow"). Use where the lint
+  does not reach is an owner decision (O1).
 
 Most crisis calls involve no hostage. They are driven by emotion, not bargaining, such as
 partner disputes, custody fights, intoxication or suicide [AU3]. In older national data, people
@@ -150,15 +150,14 @@ The usual demand is to be left alone [AU3].
   she can't get up, and the cold is getting worse." Capacity and immediate danger are the
   reasons. Impatience never is. A re-entry after a withdrawal carries its own command line.
   For an armed or barricaded subject, E12.5 decides when the option may be visible at all.
-- A repo line that does this well, in the v12 depth layer. "If the leak has stopped, the team
+- A line that did this well in the retired v12 framework layer. "If the leak has stopped, the team
   has entered a home it didn’t need to and has to explain why."
 
 ### E7. No gore
 
 Injuries are brief and plain, seen through what the medic does. Stakes come from who is at
-risk, never from wounds [TV1]. The typed lane bans clinical words outright (see engine-map.md
-section 6). Hand-authored labels such as "Wounded during the urgent response at Market Row"
-show the plain register.
+risk, never from wounds [TV1]. The prose lint bans clinical words outright (see engine-map.md
+section 6). Plain labels such as "Wounded during the urgent response" show the register.
 
 ### E8. Composites only
 
@@ -328,15 +327,15 @@ Each pattern breaks the rule beside it.
 
 ## Open owner decisions
 
-- O1. Clinical words. The typed lint bans plain words such as bleeding and gun, while
-  hand-authored stories use "handgun", "gunfire" and "Wounded". Which words the armed and
-  hand-authored lanes may use is the owner's call. Until then, flag every such line. The list
+- O1. Clinical words. The prose lint bans plain words such as bleeding and gun, while armed
+  call trees use "handgun", "gunfire" and "wounded" in their data. Which words armed calls
+  may use in player text is the owner's call. Until then, flag every such line. The list
   sent to the owner names the exact strings with their field paths, never only the words, and
   separates force and death register lines (titles such as "Go in with weapons up") from
   single words.
 - O2. A support line. Where it appears, what it says outside the US, and whether a content note
   precedes crisis calls. No surface exists (R5).
-- O3. Whether the newest content version is still open for prose changes.
+- O3. Retired. Content has one current version and edits in place, so no version is closed to prose changes.
 - O4. Custody. What an ending may say about a person who surrendered after an alleged crime.
   E11.1 holds the neutral line until then.
 

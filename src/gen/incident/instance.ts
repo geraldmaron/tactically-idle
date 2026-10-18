@@ -4,7 +4,7 @@
 // scenario can never disagree about who is where.
 import type { CastDraw, CastIdentity, PlacedCast } from './trees-v13/compile';
 import { doorInto, memberId, placeCast, resolveNext, textBinder, treeFactId, withCallTree } from './trees-v13/compile';
-import { scenarioRecipe, scenarioSituationsV10 } from '../../content/scenario-recipes';
+import { scenarioRecipe, scenarioSituations } from '../../content/scenario-recipes';
 import type { ScenarioCharacteristic } from '../../content/scenario-recipes';
 import type { AgeBand, Clock, Conditions, Dist, GroupRole, IncidentClass, IncidentPerson, IncidentTemplate, PersonSpec, Placement, Pronouns, ScaleClass, Weapon, WeaponKind } from '../../content/incidents/types';
 import { ageBandOf, IDENTITY_DEFAULT, WEAPON_ARMAMENT } from '../../content/incidents/types';
@@ -55,7 +55,7 @@ function personSpec(base: PersonSpec, override: Partial<PersonSpec> | undefined)
 
 /** Where someone stands, from the building alone. 'cover' and 'shielded' arrive with the furniture
  * cover data of milestone 2. */
-export function placementOf(built: BuiltLocation, spaceId: Id, at: Vec, floor: number): Placement {
+function placementOf(built: BuiltLocation, spaceId: Id, at: Vec, floor: number): Placement {
   if (floor > 0) return 'upstairs';
   const door = nearestOpening(built, spaceId, at, ['door', 'doorway', 'sliding']);
   if (door && door.distance <= 5) return 'doorway';
@@ -66,23 +66,48 @@ export function placementOf(built: BuiltLocation, spaceId: Id, at: Vec, floor: n
 
 const ARMAMENT_ORDER = ['none', 'blunt', 'edged', 'unknown', 'handgun', 'long_gun'] as const;
 
-/** One call from a template on this building. Throws when the building can't host it, exactly as
- * the compiler does, so hosting moves the call to another seed. */
-export function drawInstance(template: IncidentTemplate, built: BuiltLocation, spec: IncidentSpec): IncidentInstance {
-  const tree = template.tree;
-  const situationIndex = scenarioRecipe(spec).variant;
-  const model = template.situations.find(entry => entry.index === situationIndex);
-  // Everyone a slot draws past its key roles is a member of the tree's counted role for that slot
-  // (CallTree.groups): 'others_1', 'others_2'. A situation can set them as a group ('others').
-  const groupOfSlot = new Map(Object.entries(tree.groups ?? {}).map(([group, def]) => [def.slot, group]));
-  const counts = new Map(template.cast.map(slot => [slot.id, slot.count.min === slot.count.max ? slot.count.min
+/** How many people each cast slot draws for this call, from the call seed alone. */
+function slotCounts(template: IncidentTemplate, spec: IncidentSpec): Map<string, number> {
+  return new Map(template.cast.map(slot => [slot.id, slot.count.min === slot.count.max ? slot.count.min
     : slot.count.min + pickIndex(slot.count.weights ?? Array.from({ length: slot.count.max - slot.count.min + 1 }, () => 1), `${spec.seed}:${slot.id}:count-m1`)]));
+}
+
+/** Each counted role's member count for this call (`{ others: 2 }`), drawn from the call seed as
+ * drawInstance draws it: what the compiler's count conditions, cascades and turns read. Needs no
+ * building, so the lab and the seed search can read a call's group sizes before generating it. */
+export function drawMemberCounts(template: IncidentTemplate, spec: IncidentSpec): Record<string, number> {
+  return membersOf(template, slotCounts(template, spec));
+}
+
+/** Everyone a slot draws past its key roles is a member of the tree's counted role for that slot
+ * (CallTree.groups): 'others_1', 'others_2'. */
+function membersOf(template: IncidentTemplate, counts: ReadonlyMap<string, number>): Record<string, number> {
+  const groupOfSlot = new Map(Object.entries(template.tree.groups ?? {}).map(([group, def]) => [def.slot, group]));
   const members: Record<string, number> = {};
   for (const slot of template.cast) {
     const group = groupOfSlot.get(slot.id);
     if (slot.count.max > slot.keyRoles.length && !group) throw new Error(`${template.type}: slot ${slot.id} can draw people past its key roles, and the tree names no group for them`);
     if (group) members[group] = Math.max(0, counts.get(slot.id)! - slot.keyRoles.length);
   }
+  return members;
+}
+
+/** Marks a call's clocks can set by themselves (cues, running out): settable for the compiler's
+ * pruning even when no outcome sets them. A clock the story still runs by itself sets none. */
+export function clockMarksOf(clocks: readonly Clock[]): string[] {
+  return clocks.filter(clock => !clock.story).flatMap(clock => [...clock.cues.flatMap(cue => cue.mark ? [cue.mark] : []), ...clock.onOut?.mark ? [clock.onOut.mark] : []]);
+}
+
+/** One call from a template on this building. Throws when the building can't host it, exactly as
+ * the compiler does, so hosting moves the call to another seed. */
+export function drawInstance(template: IncidentTemplate, built: BuiltLocation, spec: IncidentSpec): IncidentInstance {
+  const tree = template.tree;
+  const situationIndex = scenarioRecipe(spec).variant;
+  const model = template.situations.find(entry => entry.index === situationIndex);
+  // A situation can set a group's members together ('others').
+  const groupOfSlot = new Map(Object.entries(tree.groups ?? {}).map(([group, def]) => [def.slot, group]));
+  const counts = slotCounts(template, spec);
+  const members = membersOf(template, counts);
   const engineIds = (slot: IncidentTemplate['cast'][number]) => Array.from({ length: counts.get(slot.id)! }, (_, i) =>
     i < slot.keyRoles.length ? { id: slot.keyRoles[i] } : { id: memberId(groupOfSlot.get(slot.id)!, i - slot.keyRoles.length + 1), group: groupOfSlot.get(slot.id)! });
   const specOf = (slot: IncidentTemplate['cast'][number], roleKey: string, group?: string) =>
@@ -183,7 +208,7 @@ function drawClock(clock: Clock, seed: number): Clock {
 
 /** The instance's clocks as the engine runs them (sim/clocks.ts), text bound for this call. A clock
  * the story still runs by itself stays in the instance for the lab, and out of the engine. */
-export function clocksFor(instance: IncidentInstance, bind: (text: string) => string, factIds: ReadonlySet<string>): ClockDef[] {
+function clocksFor(instance: IncidentInstance, bind: (text: string) => string, factIds: ReadonlySet<string>): ClockDef[] {
   return instance.clocks.filter(clock => !clock.story).map(clock => {
     const factId = clock.factKey ? treeFactId(clock.factKey) : undefined;
     return {
@@ -239,8 +264,7 @@ export function incidentPeopleFor(instance: IncidentInstance, built: BuiltLocati
  * (placeCast), the tree compiled onto them, and the people and clocks the engine reads. */
 export function compileIncident(scenario: ScenarioDefinition, built: BuiltLocation, template: IncidentTemplate): ScenarioDefinition {
   const instance = drawInstance(template, built, scenario.incident!);
-  const clockMarks = instance.clocks.filter(clock => !clock.story).flatMap(clock => [...clock.cues.flatMap(cue => cue.mark ? [cue.mark] : []), ...clock.onOut?.mark ? [clock.onOut.mark] : []]);
-  const compiled = withCallTree(scenario, built, template.tree, instance.placed, clockMarks);
+  const compiled = withCallTree(scenario, built, template.tree, instance.placed, clockMarksOf(instance.clocks));
   const factIds = new Set(compiled.facts.map(fact => fact.id));
   const clocks = clocksFor(instance, textBinder(template.tree, built, instance.placed), factIds);
   return { ...compiled, incidentPeople: incidentPeopleFor(instance, built, factIds), ...(clocks.length ? { clocks } : {}) };
@@ -248,7 +272,7 @@ export function compileIncident(scenario: ScenarioDefinition, built: BuiltLocati
 
 /** The instance behind a generated call-tree scenario, on the building it was compiled for. */
 export function instanceOf(s: ScenarioDefinition, built: BuiltLocation): IncidentInstance | null {
-  const template = s.incident ? templateAt(s.incident.type, s.incident.contentVersion) : undefined;
+  const template = s.incident ? templateAt(s.incident.type) : undefined;
   return template && s.incident ? drawInstance(template, built, hostedSpec(s)) : null;
 }
 
@@ -295,7 +319,7 @@ const MINORS: readonly AgeBand[] = ['infant', 'child', 'teen'];
 /** The class is derived from the people, never labelled (§1): an expressive hold makes it a victim
  * incident, any other hold a hostage incident, a seeking subject an active threat, a subject who
  * is outside the building a rescue, and anything else a barricade. */
-export function incidentClassOf(people: readonly IncidentPerson[]): IncidentClass {
+function incidentClassOf(people: readonly IncidentPerson[]): IncidentClass {
   if (people.some(person => person.hold?.kind === 'expressive')) return 'victim';
   if (people.some(person => person.hold)) return 'hostage';
   const subjects = people.filter(person => person.kind === 'subject');
@@ -304,7 +328,7 @@ export function incidentClassOf(people: readonly IncidentPerson[]): IncidentClas
   return 'barricade';
 }
 
-export const scaleClassOf = (subjects: number): ScaleClass => subjects <= 1 ? 'lone' : subjects === 2 ? 'pair' : subjects <= 4 ? 'small_group' : 'group';
+const scaleClassOf = (subjects: number): ScaleClass => subjects <= 1 ? 'lone' : subjects === 2 ? 'pair' : subjects <= 4 ? 'small_group' : 'group';
 
 export function aggregates(instance: IncidentInstance): Aggregates {
   const people = instance.people;
@@ -359,7 +383,7 @@ export interface TemplateCount {
 export function countTemplate(template: IncidentTemplate): TemplateCount {
   const turnDraws = Object.values(template.tree.turns ?? {}).reduce((product, group) => product * group.length, 1);
   const setups = template.tree.situations.length * turnDraws;
-  const pacingVariants = new Set(scenarioSituationsV10(template.type).map(situation => situation.characteristic)).size;
+  const pacingVariants = new Set(scenarioSituations(template.type).map(situation => situation.characteristic)).size;
   const castShapes = template.cast.reduce((product, slot) => product * (slot.count.max - slot.count.min + 1), 1);
   const complicationSets = 1 + template.complications.length;
   return {

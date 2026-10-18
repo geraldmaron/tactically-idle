@@ -1,7 +1,11 @@
-# Worked review, false_intruder at content v12
+# Worked review, the retired false_intruder typed call at content v12 (history)
 
-A full pass on one shipped call, written from reads on 2026-10-06. Every quoted line was read
-on the story sheet or in source that day. Text and odds may have changed since. Re-read the call
+A full pass on one call, written from reads on 2026-10-06. The call, the typed package layer
+it came from, its story sheet and its fingerprint suites were deleted on 2026-10-17, so the
+field paths, request names and routes below are dated evidence of how a pass reads and cannot
+be regenerated. Today the same findings would be fixes to the call tree itself, with no
+engineering request for text the compiler no longer owns. Every quoted line was read on the
+story sheet or in source that day. Text and odds may have changed since. Re-read the call
 before reusing any quote, and never copy a proposed fix into data without the owning skill's
 pass. The author of this example also read the source first, so it is a declared self-read, and
 the record says so.
@@ -14,20 +18,25 @@ Review scope
 - Situations and pacings: 1 and 2, ordinary only
 - Seeds and buildings: building seed 7, cedar_close (authored) only
 - Officer text: none
-- Content version: v12 from INCIDENT_CONTENT_VERSION
-- Issued fingerprint files present: issued-v9, issued-v10, issued-v11 (no v12 file)
+- Content version: v12 (the version then; today CALL_TREE_CONTENT_VERSION)
+- Compiled fingerprints: not applicable then (today: state whether a fix needs a deliberate recapture)
 - Reachable paths: situation 2 explorer, 102 states, 3 of 5 endings reached
 - Records received: design none, prose none, officer none (shipped before these skills existed)
 - Reader: self-read declared, source read before the sheet
 ```
 
-Freeze line. The package entry is from v9 and is issued, so its own fields (opening, results,
-approach results) change only through a new version-gated layer. The v12 depth layer
-(src/content/framework-depth-v12.ts) has no fingerprint file, so whether its lines can still
-change in v12 is the owner's call. Compiler strings in src/gen/incident/frameworks-v9.ts change
-only through an engineering override field.
+Version line. On 2026-10-06 the package entry was from v9 and its fingerprints were locked, so
+its own fields (opening, results, approach results) could change only through a new override
+layer, and the v12 depth layer had no fingerprint file, so whether its lines could still change
+was the owner's call. That rule is gone: content has one version and the call is edited in
+place. Today this section records which compiled calls a fix changes, so the fingerprints are
+recaptured on purpose.
 
 ## Read surface
+
+Read on the story sheet, which was retired on 2026-10-09. Its links now redirect to the Scenario
+Lab at `/lab`, which covers only the four call trees, so they land on its Calls page with a notice.
+The example stays as it was read; a review today records `/lab` URLs.
 
 - Situation 1 at `/story.html?type=false_intruder` (opened on situation 1, ordinary pacing,
   call 0000, cast Riya Boateng).
@@ -130,7 +139,7 @@ Inline minimum walked (the rulebook did not exist yet). 1, 2, 6, 7, 8, 9 and 10 
 applicable. 3 needs a human. The premise turns on a neighbor reporting a stranger who does not
 look like they belong. The text states no identity, which is right, but the cast draw decides
 who plays the stranger. The step that was missed here is the count. With generation runnable, the
-reviewer should have drawn the visitor slot over 300 seeds with the role-skew snippet in
+reviewer should have drawn the visitor slot over 300 seeds with the pronoun-draw snippet in
 batch-audit.md section 5 and sent a human the counts and lines, not a request to read a sample.
 
 ## Batch counts
@@ -148,26 +157,27 @@ Sample of 2 calls for this type, plus source counts across the v12 depth layer.
 ## Engine gates
 
 ```
-npx vitest run src/gen/incident/content-gates.test.ts
+npx vitest run on the content gates suite   (since deleted)
 Test Files 1 passed (1), Tests 46 passed (46), Duration 381.69s, exit 0
 ```
 
-That ran on the working tree as it stood on 2026-10-06. `npm test` and `npm run verify` were not
-run for this example, so a real verdict here could not be approve.
+That ran on the working tree as it stood on 2026-10-06. Today the commands are
+`npx vitest run src/gen/incident/trees-v13` and `npm run check:strings`. `npm test` and
+`npm run verify` were not run for this example, so a real verdict here could not be approve.
 
 ## Findings
 
 ```
-[block] false_intruder, s1, cedar_close seed 7 | endings.acted_on_report.title and .summary (compiled) | sees 'Close the report with the resident’s confirmation' / 'The visit is confirmed and the intruder report is corrected. Riya stays as the resident’s guest.' after 'Take Riya at their word and close the report' | rule H7 | fix as request 'optional actOnReport ending title and summary, defaulting to today's output for issued versions' then data 'Report closed on Taylor’s word' / 'Taylor stays as the resident’s guest. Nobody has spoken to the resident, so the report rests on Taylor’s word.' | route engineering, then swat-call-prose
-[fix before freeze] false_intruder, all situations | framework.opening (card summary) | sees 'Having a key doesn’t prove the visit is welcome, and a neighbor not recognizing someone doesn’t prove it isn’t.' | rule cold read, G2, G3 | fix as request 'version-gated opening override for issued packages' then data 'Taylor Brooks says they’re expected. The neighbor who called it in is still on the step, and the resident is away.' | route engineering, then swat-call-prose
-[fix before freeze] false_intruder, all situations | compiled briefing.known[0] | sees the card repeated word for word | rule batch same string in two fields | fix as request 'stop copying opening into known' then data 'The neighbor saw Taylor open the front door with a key at about 4:15 and has never seen them before.' | route engineering, then swat-call-prose
-[fix before freeze] false_intruder, all situations | compiled stages.adapt.prompt and stages.resolve.prompt | sees 'Check the disputed point in person.' / 'Act on what you checked and what the people involved agreed to.' | rule G1 | fix as request 'per-framework stage prompts in a version-gated layer' then data 'Taylor holds out a phone with the resident’s number on it. The neighbor wants Taylor out first.' / 'The neighbor is still on the step, and Taylor is asking whether they can stay.' | route engineering, then swat-call-prose
-[fix before freeze] false_intruder, all situations | compiled assess summaries for hear_person and check_source | sees two process summaries at 92.9 favorable each | rule test odds, G1 | fix as request 'per-framework approach summaries' then data 'Hear Taylor out at the door. Quick, and the neighbor sees the team take Taylor’s side first.' / 'Ask the neighbor what they saw. A minute longer, and Taylor waits in the hall while you do.' | route engineering, then swat-call-prose
-[fix before freeze] false_intruder, all situations | compiled resolution outcomePreview.adverse | sees 'The step falls through and stays unfinished.' | rule test odds | fix as request 'per-resolution adverse previews' then data 'The resident can’t be reached again. Taylor stays in the hall and the report stays open.' | route engineering, then swat-call-prose
-[fix before freeze] ten typed frameworks, v12 | FRAMEWORK_DEPTH_V12.<type>.waitFor.summary | sees 'It takes much longer, but it does not depend on the next step going right.' in 10 places | rule batch repeats | fix as data, for false_intruder, 'Stay with Taylor until the resident gets home to speak for the visit. Slow, and the neighbor watches the whole time, but nobody leaves on a guess.' and one line per other type | route swat-call-prose, in v12 if the owner says it is open
-[fix before freeze] false_intruder, s2 | FRAMEWORK_DEPTH_V12.false_intruder.actOnReport.wrong | sees 'The resident calls back: the key was for another day.' | rule G9 | fix as data 'The resident calls back. The key was for another day. The team reopens the report and works out with Taylor what happens now.' | route swat-call-prose, in v12 if open
-[note] false_intruder, all situations | results[1] and waitFor.result | sees 'Nothing was taken and nobody is arrested.' / 'The report is corrected, and nothing was taken.' | rule H1 | fix as data 'Taylor waits outside by agreement, and the resident will sort out the key.' | route swat-call-prose, next version (issued entry)
-[note] false_intruder, all situations | approachResults[0] | sees 'Taylor explains the invitation in a way you can check, and is treated as a visitor, not a suspect.' | rule G1 | fix as data 'Taylor shows the message inviting them over and gives the resident’s number.' | route swat-call-prose, next version
+[block] false_intruder, s1, cedar_close seed 7 | endings.acted_on_report.title and .summary (compiled) | sees 'Close the report with the resident’s confirmation' / 'The visit is confirmed and the intruder report is corrected. Riya stays as the resident’s guest.' after 'Take Riya at their word and close the report' | rule H7 | fix as request 'optional actOnReport ending title and summary' then data 'Report closed on Taylor’s word' / 'Taylor stays as the resident’s guest. Nobody has spoken to the resident, so the report rests on Taylor’s word.' | route engineering, then swat-call-prose
+[fix before ship] false_intruder, all situations | framework.opening (card summary) | sees 'Having a key doesn’t prove the visit is welcome, and a neighbor not recognizing someone doesn’t prove it isn’t.' | rule cold read, G2, G3 | fix as request 'opening override field' then data 'Taylor Brooks says they’re expected. The neighbor who called it in is still on the step, and the resident is away.' | route engineering, then swat-call-prose
+[fix before ship] false_intruder, all situations | compiled briefing.known[0] | sees the card repeated word for word | rule batch same string in two fields | fix as request 'stop copying opening into known' then data 'The neighbor saw Taylor open the front door with a key at about 4:15 and has never seen them before.' | route engineering, then swat-call-prose
+[fix before ship] false_intruder, all situations | compiled stages.adapt.prompt and stages.resolve.prompt | sees 'Check the disputed point in person.' / 'Act on what you checked and what the people involved agreed to.' | rule G1 | fix as request 'per-framework stage prompts in an override layer' then data 'Taylor holds out a phone with the resident’s number on it. The neighbor wants Taylor out first.' / 'The neighbor is still on the step, and Taylor is asking whether they can stay.' | route engineering, then swat-call-prose
+[fix before ship] false_intruder, all situations | compiled assess summaries for hear_person and check_source | sees two process summaries at 92.9 favorable each | rule test odds, G1 | fix as request 'per-framework approach summaries' then data 'Hear Taylor out at the door. Quick, and the neighbor sees the team take Taylor’s side first.' / 'Ask the neighbor what they saw. A minute longer, and Taylor waits in the hall while you do.' | route engineering, then swat-call-prose
+[fix before ship] false_intruder, all situations | compiled resolution outcomePreview.adverse | sees 'The step falls through and stays unfinished.' | rule test odds | fix as request 'per-resolution adverse previews' then data 'The resident can’t be reached again. Taylor stays in the hall and the report stays open.' | route engineering, then swat-call-prose
+[fix before ship] ten typed packages, v12 | FRAMEWORK_DEPTH_V12.<type>.waitFor.summary | sees 'It takes much longer, but it does not depend on the next step going right.' in 10 places | rule batch repeats | fix as data, for false_intruder, 'Stay with Taylor until the resident gets home to speak for the visit. Slow, and the neighbor watches the whole time, but nobody leaves on a guess.' and one line per other type | route swat-call-prose
+[fix before ship] false_intruder, s2 | FRAMEWORK_DEPTH_V12.false_intruder.actOnReport.wrong | sees 'The resident calls back: the key was for another day.' | rule G9 | fix as data 'The resident calls back. The key was for another day. The team reopens the report and works out with Taylor what happens now.' | route swat-call-prose, in v12 if open
+[note] false_intruder, all situations | results[1] and waitFor.result | sees 'Nothing was taken and nobody is arrested.' / 'The report is corrected, and nothing was taken.' | rule H1 | fix as data 'Taylor waits outside by agreement, and the resident will sort out the key.' | route swat-call-prose, the v9 entry
+[note] false_intruder, all situations | approachResults[0] | sees 'Taylor explains the invitation in a way you can check, and is treated as a visitor, not a suspect.' | rule G1 | fix as data 'Taylor shows the message inviting them over and gives the resident’s number.' | route swat-call-prose
 [note] false_intruder, premise | cast draw for the visitor slot | sees a stranger-at-the-door premise with identity left to the draw | rule inline 3 | fix as data none until the visitor slot is tallied over 300 seeds (batch-audit.md section 5), then the counts and lines go to a human | route owner
 [note] false_intruder, s2 | explorer summary | sees 22 of 46 decision points with one option | rule fake-choice 5 (to check) | fix as data none yet, confirm whether these are forced follow-ups or thin stages | route swat-call-design
 [note] all calls | src/gen/incident/gates/prose-lint.ts and the cast surname draw | sees no check on dashes, colons, stock phrases, cross-framework repeats or hand-authored text, and a surname pool that holds every roster surname | rule standing lint gap, batch roster surnames | fix as request 'extend prose-lint, exclude roster surnames from civilian casts' | route engineering
@@ -182,7 +192,7 @@ can appear on.
 ## Verdict
 
 ```
-Verdict false_intruder v12 | edit | block 1, unverified, self-read | fix before freeze 7 | note 5 | ships in next version (v12 depth-layer lines may ship in v12 if the owner says it is open)
+Verdict false_intruder v12 | edit | block 1, unverified, self-read | fix before ship 7 | note 5 | fingerprints recapture not applicable then
 ```
 
 ## Record
@@ -200,9 +210,9 @@ Writing review record
 - Ethics: answered | rules triggered inline 3, rulebook missing, inline used, activation not applicable (patrol call), tally not run | missed, should have run, routed to human 1
 - Officer read: not applicable | no officer text in scope
 - Batch audit: answered | sample 2 calls plus source counts, repeats 1 sentence in 10 places, collisions 0, skew not judged under 30 calls, crisis cap not applicable
-- Engine gates: answered | npx vitest run src/gen/incident/content-gates.test.ts exit 0, 46 passed | npm test and npm run verify not run, example only
+- Engine gates: answered | the content gates suite (since deleted) exit 0, 46 passed | npm test and npm run verify not run, example only
 - Tells checked: not run | the example quotes shipped strings and was not exported for the checker
-- Findings: 1 block, 7 fix before freeze, 5 note, routed to engineering, swat-call-prose, swat-call-design, owner
-- Owner decisions surfaced: whether v12 is open, human read of the cast draw
+- Findings: 1 block, 7 fix before ship, 5 note, routed to engineering, swat-call-prose, swat-call-design, owner
+- Owner decisions surfaced: human read of the cast draw
 - Verdicts: approve 0, edit 1, reject 0, recorded at not recorded (worked example, no pull request)
 ```

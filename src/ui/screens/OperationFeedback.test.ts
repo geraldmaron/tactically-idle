@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { ActionView, DebriefResult, DecisionView } from '../../sim/types';
 import { apply, makeState, NOW, setRun, startRun, withCallOnBoard } from '../../sim/test-fixtures';
 import { registerCapabilityFixtures } from '../../sim/fixtures/capability-scenarios';
-import { actionViews, currentBuilt, decisionViews, pendingDebrief, previewAction, spaceViews, stageContinuations, stageProgress } from '../../sim/operation-selectors';
+import { actionViews, currentBuilt, decisionViews, pendingDebrief, previewAction, spaceViews, stageProgress } from '../../sim/operation-selectors';
 import { planActionResupply } from '../../sim/equipment-resupply';
 import { ActionSheet, LiveView, PersonRow, revealStageStep, StageSteps, type LiveViewProps } from './LiveView';
 import { DecisionCard, OperationFeedback, OperationLogContents, OutcomeForecast } from './OperationFeedback';
@@ -82,31 +82,7 @@ function liveProps(actions: ActionView[], selectedAction: ActionView | null = ac
   return { g, now: NOW, title: 'Operation test', subtitle: 'RESIDENTIAL', progress: { ...stageProgress(g), prompt: 'How will you verify the report before committing?' }, built: currentBuilt(g)!, spaces: spaceViews(g), squadTasks: g.activeRun!.squadTasks, deployedSquads: [g.squads[0]], focusSquadId: 'A', onFocusSquad: noop, officers: [], actions, selectedAction, onSelectAction: noop, activeOfficerId: null, onSelectOfficer: noop, selectedSpaceId: null, onSelectSpace: noop, highlightSpaceIds: [], floor: 0, onFloorChange: noop, environment: null, lastChange: null, showRooms: true, onToggleRooms: noop, clock: 0, pressure: 15, canCancel: true, onCancel: noop, onOpenDetails: noop, detailsOpen: false };
 }
 
-it('shows the v6 welfare partial ending without a success percentage or favorable result claim', () => {
-  const scenario = generateIncident({ type: 'welfare_check', familyId: 'cedar_close', buildingSeed: 7, seed: 2, tier: 1, contentVersion: 6 });
-  const g = startRun(withCallOnBoard(makeState(), scenario.id), scenario.id, ['A'], { positions: { A: 'front_yard' }, loadouts: { A: {} } });
-  expect(actionViews(g, NOW, 'A').some(a => a.id.endsWith('assess_partial'))).toBe(false);
-  // The retired card is hidden, but an already-issued historical decision keeps its exact presentation.
-  const legacyId = scenario.stages.assess.actions.find(a => a.id.endsWith('assess_partial'))!.id;
-  const view = previewAction(g, NOW, legacyId, ['A'], [])!;
-  expect(view.eventResult).toBe('Response ended');
-  const card = render(createElement(LiveView, liveProps([view])));
-  expect(card).toContain('End with the progress made');
-  expect(card).not.toContain('chance to go well');
-  const forecast = render(createElement(OutcomeForecast, { action: view }));
-  expect(forecast).toContain('Expected event');
-  expect(forecast).not.toContain('% chance');
-  expect(forecast).toContain('Possible harm');
-  const committed = apply(g, { type: 'decide', actionId: view.id, actingSquadIds: ['A'], supportSquadIds: [] });
-  expect(committed.result).toEqual({ ok: true });
-  const recorded = decisionViews(committed.state)[0];
-  const html = render(createElement(DecisionCard, { decision: recorded }));
-  expect(defaultResult(html)).toContain('Response ended');
-  expect(defaultResult(html)).toContain('Time');
-  expect(defaultResult(html)).not.toMatch(/Went well|Went badly|Had complications/);
-  expect(html).toContain(`Recorded check: ${recorded.band}`);
-  expect(pendingDebrief(committed.state)?.completionAchieved).toBe(false);
-});
+
 
 describe('reviewing a decision', () => {
   it('shows every initial option without highlighting a decision the player has not chosen', () => {
@@ -118,15 +94,6 @@ describe('reviewing a decision', () => {
     expect(html).not.toContain('Confirm:');
   });
 
-  it('renders free stage navigation outside decision cards without odds, squads or confirmation', () => {
-    const props = liveProps([], null);
-    const html = render(createElement(LiveView, { ...props, onContinueStage: noop, continuations: [{ actionId: 'continue', fromStage: 'adapt', toStage: 'resolve', revision: 1, label: 'Continue to response choices', description: 'Leaves the remaining preparation options behind. No operation time passes.' }] }));
-    const continuation = html.split('aria-label="Next stage"')[1];
-    expect(continuation).toContain('Continue to response choices');
-    expect(continuation).toContain('No operation time passes');
-    expect(continuation).toContain('Leaves the remaining preparation options behind');
-    for (const excluded of ['callbtn', 'chance', 'Confirm:', 'Squad taking action', 'supplies']) expect(continuation).not.toContain(excluded);
-  });
 
   it('hides unsupported squad controls while preserving the acting-squad choice', () => {
     const g = startRun(makeState(), 'ms_occupancy', ['A', 'B']);
@@ -197,10 +164,10 @@ describe('reviewing a decision', () => {
   });
 
   it('keeps locked actions inspectable, explains the blocker and offers an available alternative', () => {
-    const locked = action({ eligible: false, reason: 'Needs a qualified medic — Squad A has none' });
+    const locked = action({ eligible: false, reason: 'Needs a qualified medic. Squad A has none' });
     const alternative = action({ id: 'wait', title: 'Reassess the report', suppliesRequired: [] });
     const html = render(sheet(locked, [locked, alternative]));
-    expect(html).toContain('Needs a qualified medic — Squad A has none');
+    expect(html).toContain('Needs a qualified medic. Squad A has none');
     expect(html).toContain('Available now: Reassess the report');
     expect(html).toMatch(/<button[^>]+disabled=""[^>]*>Confirm: Prepare medical access/);
     expect(html).toContain('Check what is missing to see the chances for this choice.');
@@ -346,14 +313,12 @@ describe('persistent decision results', () => {
   });
 
   it('renders the ending summary and preserves the saved log in the real debrief', () => {
-    const scenario = generateIncident({ type: 'welfare_check', familyId: 'cedar_close', buildingSeed: 7, seed: 3, tier: 1, contentVersion: 3 });
+    const scenario = generateIncident({ type: 'barricaded', familyId: 'cedar_close', buildingSeed: 7, seed: 3, tier: 1, contentVersion: 13 });
     state = startRun(withCallOnBoard(makeState(), scenario.id), scenario.id, ['A']);
     for (let step = 0; step < 12 && state.activeRun?.status === 'active'; step++) {
       const chosen = actionViews(state, NOW, 'A').find((view) => view.eligible);
-      const continuation = stageContinuations(state)[0];
-      const result = apply(state, chosen
-        ? { type: 'decide', actionId: chosen.id, actingSquadIds: chosen.actingSquadIds, supportSquadIds: chosen.supportSquadIds }
-        : { type: 'continueStage', actionId: continuation.actionId, revision: continuation.revision });
+      expect(chosen).toBeDefined();
+      const result = apply(state, { type: 'decide', actionId: chosen!.id, actingSquadIds: chosen!.actingSquadIds, supportSquadIds: chosen!.supportSquadIds });
       expect(result.result.ok).toBe(true);
       state = result.state;
     }
@@ -362,7 +327,7 @@ describe('persistent decision results', () => {
     const html = render(createElement(OpsDebrief));
     expect(html).toContain(debrief.endingTitle);
     expect(debrief.endingSummary).toBeTruthy();
-    expect(html).toContain(debrief.endingSummary);
+    expect(html.replace(/<[^>]*>/g, '')).toContain(debrief.endingSummary);
     expect(html).toContain(`Decision log (${decisionViews(state).length})`);
     expect(html).toContain('Close debrief');
     expect(html).not.toContain('Battery pack');
@@ -372,7 +337,7 @@ describe('persistent decision results', () => {
     const saved = closed.state.debriefs[0];
     expect(saved.decisions).toHaveLength(debrief.decisions!.length);
     const review = render(createElement(SavedDebriefReview, { debrief: saved, officers: closed.state.officers, onClose: noop }));
-    expect(review).toContain(saved.endingSummary);
+    expect(review.replace(/<[^>]*>/g, '')).toContain(saved.endingSummary);
     expect(review).toContain(`${saved.decisions!.length} decisions`);
     expect(review).toContain('Return to HQ');
     expect(review).toContain('role="dialog"');
@@ -515,7 +480,7 @@ describe('command’s answer on a choice (sim/authorization.ts)', () => {
     expect(opened).not.toContain('operation-command-line');
   });
   it('carries a real call’s approval from the engine to the card', () => {
-    const s = generateIncident(drawIncidentSpec(1312, { level: 10, trust: 90, contentVersion: 13, unlockedTypes: ['active_armed_incident'] }).spec);
+    const s = generateIncident(drawIncidentSpec(1312, { level: 10, trust: 90, unlockedTypes: ['active_armed_incident'] }).spec);
     const views = actionViews(startGateRun(s.id, 719), NOW, 'A');
     const entry = views.find(view => view.authority?.allowed);
     expect(entry, 'an approved entry at the first decision of the armed call').toBeDefined();

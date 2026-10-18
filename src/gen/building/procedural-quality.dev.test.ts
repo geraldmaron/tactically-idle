@@ -4,12 +4,12 @@ import { deriveLocation } from '../../sim/location';
 import { validateLocation } from '../../sim/location-validate';
 import { routeBetween } from '../../sim/spatial-factors';
 import { validateFurnishingsG1 } from './furnishing-g1';
-import { PROCEDURAL_FAMILIES, PROCEDURAL_FAMILIES_G2 } from './index';
+import { PROCEDURAL_FAMILIES } from './index';
 import { generatePair } from './procedural/generate';
 
 // Developer aid, skipped unless BUILDING_QUALITY is set (number of seeds per type, e.g. 200):
 //   BUILDING_QUALITY=200 npx vitest run src/gen/building/procedural-quality.dev.test.ts --silent=false
-// Per `_g1` and `_g2` type: validity of plan and furnished plan, distinct room topologies, share of
+// Per `_g2` and `_g2` type: validity of plan and furnished plan, distinct room topologies, share of
 // 6+ room plans with an interior loop, cold generation time per building (search, furnishLocationG1
 // and validation included), and squad reachability on the furnished form: from some staging point
 // of every entry zone to some staging point of every room, routed as squads move (as in
@@ -55,7 +55,7 @@ describe.skipIf(!n)('procedural building quality', () => {
   it(`reports validity, topology and time over ${n} seeds per type`, () => {
     const lines: string[] = [];
     let invalid = 0;
-    for (const family of [...PROCEDURAL_FAMILIES, ...PROCEDURAL_FAMILIES_G2]) {
+    for (const family of PROCEDURAL_FAMILIES) {
       const times: number[] = [];
       const topologies = new Set<string>();
       let bad = 0, big = 0, looped = 0, misses = 0, missed = 0;

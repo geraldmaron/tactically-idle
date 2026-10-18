@@ -78,23 +78,6 @@ describe('independent commerce safety review regressions', () => {
     expect(new CampaignSlots(storage, T0).getSnapshot().developmentBudget.testDP).toBe(3);
   });
 
-  it('keeps a migrated campaign UUID stable across failed migration and the first successful wallet write', () => {
-    const storage = storageFixture();
-    const state = createInitialState(T0, 17);
-    const original = JSON.stringify({ version: 1, activeSlotId: 1, slots: [{ name: 'Legacy', createdAt: T0, savedAt: T0, data: serialize(state, T0) }, ...Array(9).fill(null)] });
-    storage.setItem(SLOTS_KEY, original);
-    storage.setQuota(true);
-    const campaigns = new CampaignSlots(storage, T0, () => 18);
-    const campaignId = campaigns.getSnapshot().campaignId;
-    expect(storage.getItem(SLOTS_KEY)).toBe(original);
-    storage.setQuota(false);
-    credit(campaigns);
-    expect(campaigns.allocatePurchase(campaignId!, 3000, T0).ok).toBe(true);
-    const reloaded = new CampaignSlots(storage, T0, () => 19);
-    expect(reloaded.getSnapshot().campaignId).toBe(campaignId);
-    expect(reloaded.getSnapshot().state).toEqual(state);
-    expect(reloaded.getSnapshot().developmentBudget.testDP).toBe(3);
-  });
 
   it('does not let overwrite, copy, import, or normal recovery export inherit spendable test DP', () => {
     const storage = storageFixture();
@@ -139,7 +122,10 @@ describe('independent commerce safety review regressions', () => {
     const state = createInitialState(T0, 17);
     state.department.devPoints = earned;
     state.department.funding = 10000;
-    storage.setItem(SAVE_KEY, serialize(state, T0));
+    new CampaignSlots(storage, T0, () => 19);
+    const library = JSON.parse(storage.getItem(SLOTS_KEY)!);
+    library.slots[0].data = serialize(state, T0);
+    storage.setItem(SLOTS_KEY, JSON.stringify(library));
     const campaigns = new CampaignSlots(storage, T0, () => 18);
     credit(campaigns);
     campaigns.allocatePurchase(campaigns.getSnapshot().campaignId!, 3000, T0);
@@ -162,7 +148,10 @@ describe('independent commerce safety review regressions', () => {
     const state = createInitialState(T0, 17);
     state.department.devPoints = 0.123456;
     state.department.funding = 10000;
-    storage.setItem(SAVE_KEY, serialize(state, T0));
+    new CampaignSlots(storage, T0, () => 19);
+    const library = JSON.parse(storage.getItem(SLOTS_KEY)!);
+    library.slots[0].data = serialize(state, T0);
+    storage.setItem(SLOTS_KEY, JSON.stringify(library));
     const campaigns = new CampaignSlots(storage, T0, () => 18);
     credit(campaigns);
     campaigns.allocatePurchase(campaigns.getSnapshot().campaignId!, 3000, T0);
@@ -209,7 +198,10 @@ describe('independent commerce safety review regressions', () => {
     const state = createInitialState(T0, 17);
     state.department.devPoints = 0;
     state.department.funding = 10000;
-    storage.setItem(SAVE_KEY, serialize(state, T0));
+    new CampaignSlots(storage, T0, () => 19);
+    const library = JSON.parse(storage.getItem(SLOTS_KEY)!);
+    library.slots[0].data = serialize(state, T0);
+    storage.setItem(SLOTS_KEY, JSON.stringify(library));
     const campaigns = new CampaignSlots(storage, T0, () => 18);
     const firstKey = credit(campaigns, 'refund-first');
     campaigns.allocatePurchase(campaigns.getSnapshot().campaignId!, 3000, T0);

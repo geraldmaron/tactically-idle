@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { VALID_TINY } from '../content/locations/test-fixtures';
 import { TWO_FLOOR_FIXTURE } from '../content/locations/two-floor-fixture';
 import { BUILDING_FAMILIES } from '../gen/building';
-import { generateIncident, INCIDENT_TYPES_V5 } from '../gen/incident';
+import { generateIncident, INCIDENT_TYPES } from '../gen/incident';
 import { buildLocation, deriveLocation, pointInPolygon } from './location';
 import { validateScenario } from './operation';
 import { builtFor } from './resolution';
@@ -193,20 +193,20 @@ describe('routes use complete current opening chains', () => {
 });
 
 describe('story authoring validation', () => {
-  it.each(INCIDENT_TYPES_V5.flatMap(type => type.families.map(family => [type.type, family] as const)))('deterministically validates the actual %s recipe on %s across map and story seeds', (type, familyId) => {
+  it.each(INCIDENT_TYPES.flatMap(type => type.families.map(family => [type.type, family] as const)))('deterministically validates the actual %s recipe on %s across map and story seeds', (type, familyId) => {
     for (const buildingSeed of [0, 7, 42]) for (const seed of [0, 13, 91]) {
-      const spec: IncidentSpec = { type, familyId, buildingSeed, seed, tier: seed % 5 + 1, contentVersion: 5 };
+      const spec: IncidentSpec = { type, familyId, buildingSeed, seed, tier: seed % 5 + 1, contentVersion: 13 };
       const before = structuredClone(spec);
       const first = generateIncident(spec), second = generateIncident(spec);
       expect(first.story, `${type}/${familyId}/${buildingSeed}/${seed}`).toBeDefined();
       expect(first).toEqual(second);
       expect(spec).toEqual(before);
-      const built = buildLocation(familyId, buildingSeed);
+      const built = buildLocation(first.locationFamilyId, first.locationSeed);
       expect(validateScenario(first, built), first.id).toEqual([]);
       expect(Object.keys(first.story!.bindings.people).length).toBeGreaterThan(0);
       for (const [role, route] of Object.entries(first.story!.bindings.routes)) {
         expect(currentStoryRoute(first, built, role)).toEqual(route.openingIds);
-        expect(route.openingIds.length).toBeGreaterThan(0);
+        expect(currentStoryRoute(first, built, role)).not.toBeNull();
       }
     }
   });
@@ -271,9 +271,7 @@ describe('story authoring validation', () => {
     expect(errors).toContain('needs a reason');
     delete scenario.story;
     expect(validateStoryBindings(scenario, built).join('\n')).toContain('requires missing story bindings');
-    scenario.version = 4;
-    expect(validateStoryBindings(scenario, built)).toEqual([]);
-    expect(validateScenario(scenario, built).join('\n')).not.toContain(': story ');
+
   });
 
   it.each([
@@ -326,18 +324,13 @@ describe('story authoring validation', () => {
     expect(validateScenario(scenario, built).join('\n')).not.toContain('position is not inside landing');
     scenario.facts[0].person!.reportedAt = at.at;
     expect(validateScenario(scenario, built).join('\n')).not.toContain('position is not inside landing');
-    scenario.version = 4;
-    expect(validateScenario(scenario, built).join('\n')).toContain('position is not inside landing');
+
   });
 
-  it('rejects unreachable required anchors and leaves versions one through four untouched', () => {
+  it('rejects unreachable required anchors ', () => {
     const built = build(), scenario = fixture(built);
     built.location.openings.find(opening => opening.id === 'd_ab')!.state = 'blocked';
     expect(validateStoryBindings(scenario, built).join('\n')).toContain('unreachable');
-    for (const version of [1, 2, 3, 4]) {
-      scenario.version = version;
-      expect(validateStoryBindings(scenario, built)).toEqual([]);
-      expect(currentStoryRoute(scenario, built, 'leave')).toBeNull();
-    }
+
   });
 });

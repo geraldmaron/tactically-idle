@@ -17,10 +17,9 @@ function sameStructure(left: unknown, right: unknown): boolean {
     && keys.every(key => Object.hasOwn(b, key) && sameStructure(a[key], b[key]));
 }
 
-function inferredResultLabel(action: ActionDefinition, scenarioVersion: number): string | undefined {
-  // V1–V5 definitions, previews and historical records keep their established behavior.
+function inferredResultLabel(action: ActionDefinition): string | undefined {
   // Equal prose alone is insufficient: time, harm, flags and every branch must also match.
-  if (scenarioVersion < 6 || action.forceProfile || action.personCare?.kind === 'stabilize' || !action.outcomes.favorable.length
+  if (action.forceProfile || action.personCare?.kind === 'stabilize' || !action.outcomes.favorable.length
     || !sameStructure(action.outcomes.favorable, action.outcomes.mixed)
     || !sameStructure(action.outcomes.favorable, action.outcomes.adverse)) return undefined;
   const alwaysEnds = action.outcomes.favorable.some(effect => effect.ending && !effect.when && !effect.truth?.length);
@@ -29,11 +28,11 @@ function inferredResultLabel(action: ActionDefinition, scenarioVersion: number):
 }
 
 /** A common event hides success odds; real effort odds, time, strain and harm stay intact. */
-export function actionEventResult(action: ActionDefinition, scenarioVersion: number): string | undefined {
-  if (scenarioVersion >= 5 && action.resultLabels) {
+export function actionEventResult(action: ActionDefinition): string | undefined {
+  if (action.resultLabels) {
     return new Set(Object.values(action.resultLabels)).size === 1 ? action.resultLabels.favorable : undefined;
   }
-  return inferredResultLabel(action, scenarioVersion);
+  return inferredResultLabel(action);
 }
 
 /** V13: when someone is hurt or killed in a decision, its result says so, whatever the band. A
@@ -51,8 +50,8 @@ export function harmResultLabel(people: readonly PersonCasualtyRecord[], officer
   return undefined;
 }
 
-/** Saved only on new commits. Never reinterpret or relabel a historical decision. */
-export function actionResultLabel(action: ActionDefinition, scenarioVersion: number, band: OutcomeBand): string | undefined {
-  if (scenarioVersion >= 5 && action.resultLabels) return action.resultLabels[band];
-  return inferredResultLabel(action, scenarioVersion);
+/** A committed result uses its authored label or the fixed-event inference. */
+export function actionResultLabel(action: ActionDefinition, band: OutcomeBand): string | undefined {
+  if (action.resultLabels) return action.resultLabels[band];
+  return inferredResultLabel(action);
 }

@@ -1,6 +1,7 @@
 # Call design sheet
 
-The literal sheet, what each row feeds, how it fills the agent brief, and two worked sheets.
+The literal sheet, what each row feeds, how it fills the agent brief, and two worked sheets
+(both from the retired typed lane, kept as craft examples).
 Copy the template, fill it top to bottom, and keep DRAFT in the first line until the record at
 the bottom is complete. Every sample line on a sheet is a placeholder that swat-call-prose
 replaces. Both worked sheets are illustrative. Never copy a sentence from them into data,
@@ -13,8 +14,9 @@ DRAFT | UNVERIFIED (delete each word when it stops being true)
 Call design sheet: <working title>
 
 A. Lane and version
-   Lane: <typed package | hand-authored story | setting module | version-gated override>
-   Target content version: v<N>; newest issued suite: v<M>; owner asked if v<N> is open: <answer>
+   Lane: call tree (the only lane)
+   Content version: v<N> (CALL_TREE_CONTENT_VERSION); compiled fingerprints need a deliberate
+   recapture: <yes, because <the compiled call that changes on purpose> | no>
    Type id: <snake_case>; building types: <ids>; rooms by use: <uses>
 
 B. Premise
@@ -23,7 +25,7 @@ B. Premise
    Wrong note:          <...>
    Worse if they wait:  <...>
    Why a tactical team: "<quoted briefing line>" for each of armed, threat, advantage, refusal
-                        (empty fails the record; typed welfare calls write "not a call-out")
+                        (empty fails the record; a welfare call writes "not a call-out")
    Self-harm risk:      <none | present, because <signs>>  (every armed or weapon-reaching person)
    Private logic:       <...>  never printed as an explanation
    Iceberg tip:         <one detail> in <field>, reached only through <choice>
@@ -36,7 +38,7 @@ C. Person cards (one per person on scene; callers get role and how they know)
    one callback lands through the subject's own act and one through absence, and no
    secondary character carries more than two. Any one callback motif appears at most twice
    on a single path.
-   People binding (hand-authored), one line per person per situation, enum spellings from
+   People binding, one line per person per situation, enum spellings from
    engine-map.md section 2:
    | Person id | Situation | role | mobility | spaceId | threat {armament, readiness, disposition, intent, awareness} | reported | factIds |
    Transitions, one per move: | Person id | when | to (anchor or offscene label) | observed |
@@ -127,20 +129,20 @@ P. Call design record (SKILL.md closing section)
 
 ## 2. What each row feeds, and what checks it
 
-| Row | Feeds (typed lane) | Feeds (hand-authored) | Checked by |
-|---|---|---|---|
-| A | catalog entry, type id, placement | archetype recipe | Record "Lane and version", issued suites |
-| B, C | `name`, `role`, cast slot pronouns, `variants` | facts, `people` (`PersonDefinition`), cast | Record "Person and hook", "Call-out earned", "People binding", ethics E3, E4, E8, E9, E12.1 |
-| D | `opening` | `summary` | Hook test, record "Person and hook" |
-| E | every field, by beat | every field, by beat | Review's cold read |
-| F | `approaches`, `precaution`, `verify`, `actOnReport`, `resolutions`, `waitFor`, `corroborate` | stages, actions, requirements | Choices gate, `validateScenario`, checklist, record "Dilemma per stage", "Dominance grid", "Stage exits walked" |
-| G | `approachResults`, `claim`, `confirmed`, `disproved`, `actOnReport.wrong` | `contextPrompts`, `truth`, `reveal` | Record "Turn" |
-| H | `results`, previews (compiler-owned in part) | outcomes, `outcomePreview` | Record "Cue trace", spoiler lint |
-| I, J | `results`, `waitFor.result` | `endings`, `completion`, `remainingTasks`, `civilianOutcomes` | Record "Ending reachability", "Ending triggers", "Endings and loop", E11 |
-| K | extension fields | pressure, services, tempo | Record "Lever" |
-| L | `truth`, `variants`, `moveOn` | episode variants | Distinctness gate, record "Variants" |
-| M | all text | all text | Record "Ethics screen", review pass five |
-| N | none yet (R4) | none yet (R4) | swat-officer-stories |
+| Row | Feeds (`CallTree`) | Checked by |
+|---|---|---|
+| A | `type`, `families`, `scene` | Record "Lane and version", compiled fingerprints |
+| B, C | `roles`, `groups`, `facts`, `situations` | Record "Person and hook", "Call-out earned", "People binding", ethics E3, E4, E8, E9, E12.1 |
+| D | `summary` | Hook test, record "Person and hook" |
+| E | every field, by beat | Review's cold read |
+| F | `nodes`, `choices`, `onlyIf`, `authority`, `requires`, `check` | Call-tree gates, `validateScenario`, checklist, record "Dilemma per stage", "Dominance grid", "Stage exits walked" |
+| G | `facts`, `situations`, `promptIf`, outcome `reveal` and `mark` | Record "Turn" |
+| H | `outcomes` per band, `preview` | Record "Cue trace", prose lint |
+| I, J | `endings`, `remainingTasks`, outcome `safe`, `harm`, `out` | Record "Ending reachability", "Ending triggers", "Endings and loop", E11 |
+| K | `pressure`, clocks, `modifiers`, `tempo`, `promise` | Record "Lever" |
+| L | `situations`, `turns`, fact truth | Call-tree gates (distinct futures per choice), record "Variants" |
+| M | all text | Record "Ethics screen", review pass five |
+| N | none yet (R4) | swat-officer-stories |
 
 ## 3. Filling the agent brief
 
@@ -149,7 +151,7 @@ bracket from the sheet, and paste the sheet beneath the brief.
 
 | Bracket in the brief | Sheet row |
 |---|---|
-| content version [N] | A, target version |
+| content version [N] | A, content version |
 | [purpose in one sentence] | B, person and want plus worse if they wait |
 | [verbs] | F, every choice title as a verb |
 | [the claim that each situation fixes] | G, the claim, and L, truth per situation |
@@ -180,18 +182,21 @@ The hook person rule. Ben opens the hook, so he still matters in stage 3, as the
 payoff. If he leaves in stage 1, his line ("I only needed one signature") is saved for the
 ending, and the subject or the person at risk takes the second sentence.
 
-## 5. Worked sheet A, a new welfare call (illustrative)
+## 5. Worked sheet A, a new welfare call (illustrative, retired typed lane)
 
-Read against the v12 compiler on 2026-10-06. Not built, so nothing here has passed a gate. Its
-record predates version 0.3.0 of the skill. The lines added since (flags and readers, force
-gates, context prompts, services, geography, objective) do not apply to a typed welfare call
-with no force, flags or services, and a real sheet still writes each one as not applicable.
+Written on 2026-10-06 against the typed-package layer that was deleted on 2026-10-17. Its field
+names (`approaches`, `precaution`, `actOnReport`, `waitFor`, `corroborate`) and its R1 and R8
+requests have no call tree equivalent: in a call tree the same beats are nodes, `onlyIf`
+choices and `if` outcomes. It stays as a craft example of a hook, a dilemma per stage, a
+dominance grid and a record. Not built, so nothing here has passed a gate. Its record predates
+version 0.3.0 of the skill, and a real sheet writes every newer line, as not applicable where it
+does not apply.
 
 ```
 DRAFT (illustrative)
 Call design sheet: The Same Song
 
-A. Lane: typed package. Target: next open version (owner to confirm). Type id: song_on_repeat.
+A. Lane: typed package (retired). Type id: song_on_repeat.
    Building types: apartment_unit_g1, semi_detached_g1 (the caller hears through a shared wall).
    Rooms by use: living, kitchen. No room is ever named in writer fields; the placement line owns it.
 
@@ -241,7 +246,7 @@ L. | Truth | true | false | false |
    | Time | down since teatime | asleep since 8 | asleep since 8; hall phone off the hook since 3 |
    | Her words | "Don’t you break my door." | "I was asleep, for heaven’s sake." | same post-check text as 2 |
    | Who called | neighbor through the wall | same | same; first report missed the phone |
-   truth[2] is false, against the 9 of 11 typed frameworks where it is true.
+   truth[2] is false, against the 9 of 11 typed packages (since retired) where it was true.
    Intensity: medium. Never in the same shift as fall_at_home.
    Distinctness, argued: closest are water_leak (same precaution side, gamble side and truth;
    differs by corroborate) and disturbance (same gamble and corroborate; differs by precaution).
@@ -260,8 +265,8 @@ O. Engineering requests: none required. R1 would let stage 3 previews show the a
    and R8 would let stage 3 name the crew call.
 
 P. Call design record (illustrative; stays DRAFT because nothing was built or run)
-- Lane and version (row A): answered | typed package, next version, suites read issued-v9 to v11, owner asked about open version no, illustrative sheet
-- Contract read (row A): answered | IncidentFramework, withAdditionalFramework, frameworkAt, LENGTH_BUDGETS, read 2026-10-06
+- Lane and version (row A): answered | typed package (retired), illustrative sheet
+- Contract read (row A): answered | the retired typed-package contract, read 2026-10-06
 - Person and hook (rows B to D): answered | Iris Mendel, 81, lives alone, wants her evening; hook "Iris Mendel’s radio has played one song..." 130 chars; gap floor or asleep
 - Dilemma per stage (row F): answered | 1 readiness vs a crew another call needs, 2 speed vs her say over her door, 3 care now vs her stated wish; checklist, swap, tone clean
 - Turn (row G): answered | planted in dispatch ("she has the only spare key") and the niece result ("changed her lock in spring"), revealed in confirmed, reprices the stage 2 gamble
@@ -286,8 +291,8 @@ P. Call design record (illustrative; stays DRAFT because nothing was built or ru
 - Handoff: sheet in this file, next swat-call-prose
 ```
 
-Draft package fields, all within `LENGTH_BUDGETS` and the lane word lists (checked with a copy
-of the lint patterns on 2026-10-06, not the gate itself).
+Draft package fields, written within the budgets and word lists of the time (checked by eye on
+2026-10-06, not by a gate).
 
 | Field | Placeholder text |
 |---|---|
@@ -313,28 +318,29 @@ Three engine facts this sheet had to respect, each found by reading the compiler
    assume a crew was called.
 3. The placement line names the room, so no writer field does.
 
-## 6. Worked sheet B, the shipped burglary call at v12
+## 6. Worked sheet B, the retired burglary call at v12 (history)
 
-Built from the compiled call on 2026-10-06. `generateIncident` output for `burglary` at content
-v12, situations 1 to 3 on `market_row`, the same output the story sheet renders. Read
-`/story.html?type=burglary` before relying on this. Names were bound (Riya Liu, Balpreet
-Williams and Nour Beaulieu), so the authored name Casey is used below.
+Built from the compiled typed burglary call on 2026-10-06 (`generateIncident` output at content
+v12, situations 1 to 3 on `market_row`). The call, its story sheet (retired 2026-10-09) and the
+typed lane (deleted 2026-10-17) no longer exist, so the quotes cannot be regenerated. They stay
+as dated evidence of what a weak hook and compiler narration look like. Names were bound (Riya
+Liu, Balpreet Williams and Nour Beaulieu), so the authored name Casey is used below.
 
 What the player sees, quoted.
 
 | Beat | Observed text (v12) | Finding | Owner |
 |---|---|---|---|
-| Card | "An alarm went off after closing, and Casey Bell, the keyholder, has arrived. An alarm on its own doesn’t mean someone broke in, took anything or is still inside." | Disclaimer hook, name at word 8, no want | `opening`, issued, so R2 |
-| Stage 1 | "Start with the people involved. Knowing what they want makes the agreed next step more likely to go smoothly." | Nobody here wants anything | compiler, R1 |
-| Stage 2 | "Check the disputed point in person." | Process narration | compiler, R1 |
-| Stage 2 gamble | "Casey thinks it’s a sensor fault. Logging it now spares the squad a check. If someone did get in, the call has to be reopened, and marks at the door may be disturbed." | A real dilemma with a named cost. Keep | depth layer |
-| Stage 1 precaution | "If someone did force a way in, any marks need to stay untouched. Keeping everyone back slows the check by a few minutes, even if it turns out to be a fault." | Real cost. Keep | depth layer |
-| Stage 3 wait | "It takes much longer, but it does not depend on the next step going right." | The same sentence 11 times in the content files | depth layer; v12 if open, else R2 |
-| Endings | "Log the sensor fault with Casey" titles both the checked ending and the acted-on-report ending | The player cannot tell from the title whether they checked | compiler, R1 |
-| Briefing, situation 3 | "The first report left something out. Check an independent source before deciding the disputed point." | Shown only in situation 3, where the claim holds, as it does in 9 of 11 typed frameworks | truth is issued; balance it in new frameworks |
+| Card | "An alarm went off after closing, and Casey Bell, the keyholder, has arrived. An alarm on its own doesn’t mean someone broke in, took anything or is still inside." | Disclaimer hook, name at word 8, no want | the retired `opening` field |
+| Stage 1 | "Start with the people involved. Knowing what they want makes the agreed next step more likely to go smoothly." | Nobody here wants anything | compiler string |
+| Stage 2 | "Check the disputed point in person." | Process narration | compiler string |
+| Stage 2 gamble | "Casey thinks it’s a sensor fault. Logging it now spares the squad a check. If someone did get in, the call has to be reopened, and marks at the door may be disturbed." | A real dilemma with a named cost. Keep | the retired v12 depth layer |
+| Stage 1 precaution | "If someone did force a way in, any marks need to stay untouched. Keeping everyone back slows the check by a few minutes, even if it turns out to be a fault." | Real cost. Keep | the retired v12 depth layer |
+| Stage 3 wait | "It takes much longer, but it does not depend on the next step going right." | The same sentence 11 times in the retired content files | the retired v12 depth layer |
+| Endings | "Log the sensor fault with Casey" titles both the checked ending and the acted-on-report ending | The player cannot tell from the title whether they checked | compiler string |
+| Briefing, situation 3 | "The first report left something out. Check an independent source before deciding the disputed point." | Shown only in situation 3, where the claim holds, as it did in 9 of 11 typed packages | balance truth patterns across calls |
 | Pressure | "Time to check accounts" | No clock exists, and none is promised. Fine | compiler |
 
-The redesign, for a v13 layer (illustrative).
+The redesign (illustrative; the field letters are the sheet rows, and the typed field names and R-codes in it are historical).
 
 ```
 B. Person: Casey Bell, 58, the keyholder who opens up every morning; wants the alarm logged
@@ -345,35 +351,34 @@ B. Person: Casey Bell, 58, the keyholder who opens up every morning; wants the a
    may surface as a fact after the check; her fear of the questions never prints.
    Closing fact: fresh split frame at the back door, or a sensor hanging by one screw.
 
-D. Hook (opening, R2): "Casey Bell wants the alarm logged as a fault, the third this month.
+D. Hook: "Casey Bell wants the alarm logged as a fault, the third this month.
    Her cleaners are already back inside, walking past the back door." (133 characters)
 
-G. Planted in approachResults (R2):
+G. Planted in the stage 1 results:
    Casey: "Casey says the back sensor has tripped on its own twice this month. She hasn’t
    opened the back door since spring."
    Patrol: "Patrol saw scuffs on the back step but can’t say how old they are. The alarm log
    shows the back door tripped first."
-   Revealed (R2): confirmed "The back door’s frame is split at the lock. Nobody is inside,
+   Revealed: confirmed "The back door’s frame is split at the lock. Nobody is inside,
    and nothing shows who did it. Casey says the lock has stuck since spring."
    disproved "The back door is sound and locked. The sensor above it hangs by one screw.
    Casey says she has asked the landlord twice."
    Reprices: the gamble "Log a sensor fault on Casey’s word" and the precaution.
 
-I. results (R2): "The split frame is recorded and left for investigators. Casey stays with the
+I. results: "The split frame is recorded and left for investigators. Casey stays with the
    building until a locksmith comes." / "The alarm company logs the loose sensor. Casey locks
    up and goes home, with an engineer booked for the morning."
 J. Open loop: the locksmith at 7, or the engineer in the morning.
-F. Stage 2 prompt (R1): "Casey is at the front with her keys out. Patrol is waiting at the back step."
+F. Stage 2 prompt: "Casey is at the front with her keys out. Patrol is waiting at the back step."
 M. E11 checked: no line says who did it, and the split frame is damage, never a break-in, until
    someone checks. E3 clear. E6 n/a (nobody forces anything).
 ```
 
 The split, as the record would carry it.
 
-- Writer-owned package fields that need R2 because burglary is issued. `opening`,
-  `approachResults`, `confirmed`, `disproved`, `results`.
-- Depth-layer fields that change in place only if the owner says v12 is still open, otherwise
-  R2. The `waitFor` summary.
-- Compiler strings, R1. Stage 2 and 3 prompts, the approach summaries, the acted-on-report
-  ending title.
-- Left alone. The truth pattern (issued), the precaution and the gamble (already real).
+- Writer-owned fields to rewrite: the hook, the stage 1 results, the two reveal lines and the
+  results.
+- Depth fields to rewrite: the wait summary.
+- Compiler strings to replace: the stage 2 and 3 prompts, the approach summaries and the
+  acted-on-report ending title.
+- Left alone: the precaution and the gamble, which were already real dilemmas.

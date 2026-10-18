@@ -45,10 +45,13 @@ ship in v13 if the owner confirms it.
 
 ## 2. Read surface
 
-- Lab, s1: `http://localhost:57444/story.html?type=hostage_crisis&variant=0` (market_row seed 7,
+- Read on the old lab page (`/story.html`, retired on 2026-10-09). The links below are today's
+  Scenario Lab equivalents (`npm run lab`, [scenario-lab.md](../scenario-lab.md)); the old links
+  redirect there in dev. The names are the ones drawn on the day of the read.
+- Lab, s1: `/lab?type=hostage_crisis&family=market_row&seed=7&tier=2&variant=0` (market_row seed 7,
   lone; Iolanthe, Zofia Crowther, Esteban).
-- Lab, s2 step-through at 390px:
-  `http://localhost:57444/story.html?view=lab&type=hostage_crisis&family=market_row&seed=7&tier=2&variant=1&tab=run`
+- Lab, s2 step-through at 390px (Play today):
+  `/lab?type=hostage_crisis&family=market_row&seed=7&tier=2&variant=1`
   (lone; Marek, Aiyana Szabo, Gabriela). Played two paths (L1 and L2 in section 4).
 - Lab, s2 slow pacing with one other: the same URL plus `&pacing=deliberate_answers` (Zoltan,
   Farid, Darya, Reuben).
@@ -483,7 +486,7 @@ Verdict hostage_crisis "One Last Signature" v13 | edit | block 9 | fix before fr
 Writing review record
 - Scope: answered | hostage_crisis s1 to s3, ordinary and deliberate_answers, 0 to 2 others, v13, 38-start crossed walk
 - Reader: answered | separate; the cold read was not fully cold (source read first)
-- Read surface: answered | lab /story.html?type=hostage_crisis&variant=0 and ...&variant=1&tab=run (and &pacing=deliberate_answers) at 390px; game Ops board at 390px, read only | unseen in game: live panel clamp, decision log, debrief layout, map markers in play (no disposable campaign; playing would change the user's save); s3 not opened in the lab
+- Read surface: answered | lab /story.html?type=hostage_crisis&variant=0 and ...&variant=1&tab=run (and &pacing=deliberate_answers) at 390px, now /lab?type=hostage_crisis&variant=0 and ...&variant=1 (section 2); game Ops board at 390px, read only | unseen in game: live panel clamp, decision log, debrief layout, map markers in play (no disposable campaign; playing would change the user's save); s3 not opened in the lab
 - Cold read: answered | 2 cards (lab s1, game board); blanks: worse-if-they-wait weak, and on the board the handgun at long names; restated facts 2 (dispatch), 0 in the first stage prompt
 - Path and choice read: answered | crossed walk 38 starts, 133,335 states, 0 gaps; 2 lab paths played, 10 engine paths scored, 3 path blocks exported
 - Choice table: answered | claims 16 checked, 9 falsified, 2 stale; dominated 0 strict, 1 near (N10); takeable pairs 0; time-only bands 3; commit taps max 5; cells missing 0; placeholders 1 rendered ({lead}); untraced adverse 0

@@ -294,12 +294,12 @@ export type Assignment =
 
 export interface Officer {
   id: Id;
-  /** Stable authored person; absent on legacy procedurally generated officers. */
+  /** Stable authored person; optional for isolated officer fixtures. */
   identityId?: string;
   firstName: string;
   surname: string;
   role: Role;
-  /** Authored portrait path, or a preserved legacy portrait key. */
+  /** Authored portrait path. */
   portrait: string;
   ratings: Ratings;
   certs: CertId[];
@@ -676,8 +676,6 @@ export interface OperationRun {
   /** 0..100 civilian safety. */
   civilianSafety: number;
   history: DecisionResolution[];
-  /** Free compatibility navigation; separate from scored decisions and RNG samples. */
-  stageContinuations?: StageContinuationRecord[];
   /** Explicit failed-response report; never adds progress, an invented receiver or a random roll. */
   responseFailure?: ResponseFailureRecord;
   /** Pre-decision deliveries at exterior staging; distinct from tactical outcomes. */
@@ -694,14 +692,6 @@ export interface OperationRun {
   startedAt: number;
 }
 
-export interface StageContinuationRecord {
-  version: 1;
-  actionId: Id;
-  revision: number;
-  fromStage: 'adapt';
-  toStage: 'resolve';
-}
-
 export interface ResponseFailureRecord {
   version: 1;
   revision: number;
@@ -711,11 +701,6 @@ export interface ResponseFailureRecord {
   reason: string;
   remainingTasks: string[];
   progressRetained?: string[];
-}
-
-export interface StageContinuationView extends Omit<StageContinuationRecord, 'version'> {
-  label: string;
-  description: string;
 }
 
 export interface DebriefResult {
@@ -739,7 +724,7 @@ export interface DebriefResult {
   scoreLines?: { key: string; text: string; trust: number; strain: number }[];
   /** V13: each use of force by the team, on whom, what it did, and the rule's reason. */
   forceLines?: { text: string; reason?: string }[];
-  /** Detached complete decision log; absent from previously closed legacy debriefs. */
+  /** Detached complete decision log; optional for isolated debrief fixtures. */
   decisions?: DecisionView[];
   objective: { score: number; label: string };
   civilianSafety: { score: number; label: string };
@@ -814,7 +799,7 @@ export interface DecisionView {
   stageLabel: string;
   band: OutcomeBand;
   resultLabel?: string;
-  /** Present for current committed records; absence keeps legacy prose fallback. */
+  /** Present for committed records; isolated fixtures can derive the result label. */
   officerCasualties?: OfficerCasualtyRecord[];
   forceOutcome?: ForceOutcome;
   personCasualties?: PersonCasualtyRecord[];
@@ -970,7 +955,7 @@ export interface CasebookRecipe {
 
 /** Added in save v6. What the campaign has met, for the casebook and unseen-first draws. */
 export interface CasebookState {
-  /** Frameworks that have arrived on the board (content v11+ draws, plus migrated history), first arrival first. */
+  /** Frameworks that have arrived on the board, first arrival first. */
   frameworksSeen: string[];
   /** Recipes dispatched on live calls, keyed `type/buildingType/variant/pacing` (content v10+ only). */
   recipes: Record<string, CasebookRecipe>;
@@ -989,11 +974,11 @@ export interface PersonnelState {
 export interface GameState {
   /** Saved arrangement protections and a mapping-only undo point. */
   squadArrangement?: SquadArrangementState;
-  /** Added in save v4. Optional only for historical test fixtures and migration inputs. */
+  /** Campaign personnel. Optional for isolated simulation fixtures. */
   personnel?: PersonnelState;
-  /** Added in save v6. Optional only for historical test fixtures and migration inputs; created on the first board draw. */
+  /** Casebook, created on the first board draw. Optional for isolated simulation fixtures. */
   casebook?: CasebookState;
-  /** Added in save v9. Optional only for historical test fixtures and migration inputs; read through commandStaffOf. */
+  /** Command staff, read through commandStaffOf. Optional for isolated simulation fixtures. */
   commandStaff?: CommandStaffState;
   saveVersion: number;
   contentVersion: number;
@@ -1012,7 +997,6 @@ export interface GameState {
   /** Unacknowledged shift report from the last settlement with meaningful elapsed time. */
   report: ShiftReport | null;
   /** One-time receipt for retired standalone power supplies. */
-  equipmentPowerUpgrade?: { retiredUnits: number; refundedFunding: number };
   /** Monotonic counter for new ids. */
   nextId: number;
   /** Department-level PRNG state for recruit generation. */
@@ -1023,7 +1007,6 @@ export type Command =
   // department (src/sim/department.ts)
   | { type: 'tick' }
   | { type: 'acknowledgeReport' }
-  | { type: 'acknowledgePowerUpgrade' }
   | { type: 'hire'; candidateId: Id }
   | { type: 'dismiss'; officerId: Id }
   | { type: 'shortlist'; candidateId: Id; on: boolean }
@@ -1069,7 +1052,6 @@ export type Command =
   | { type: 'endFailedResponse'; runId: Id; revision: number }
   | { type: 'resupplyAction'; actionId: Id; actingSquadIds: SquadId[]; supportSquadIds: SquadId[] }
   | { type: 'decide'; actionId: Id; actingSquadIds: SquadId[]; supportSquadIds: SquadId[] }
-  | { type: 'continueStage'; actionId: Id; revision: number }
   | { type: 'closeDebrief' };
 
 export type CommandType = Command['type'];
@@ -1098,7 +1080,6 @@ export type DepartmentCommandType =
   | 'setMaintenanceBudget'
   | 'tick'
   | 'acknowledgeReport'
-  | 'acknowledgePowerUpgrade'
   | 'hire'
   | 'dismiss'
   | 'shortlist'
@@ -1123,7 +1104,7 @@ export type DepartmentCommandType =
   | 'setManagerEnabled'
   | 'setManagerPolicy';
 
-export type OperationCommandType = 'startOperation' | 'cancelOperation' | 'endFailedResponse' | 'decide' | 'continueStage' | 'closeDebrief';
+export type OperationCommandType = 'startOperation' | 'cancelOperation' | 'endFailedResponse' | 'decide' | 'closeDebrief';
 
 export interface SaveEnvelope {
   saveVersion: number;

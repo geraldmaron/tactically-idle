@@ -6,7 +6,7 @@ import { AUTHORIZATION_V1 } from './authorization';
 import { CASCADE_V1, cascadeChance, cascadeCombos, cascadeKey, cascadeResult, cascadeSamples, cascadeStates, drawnKeys, incomingFireOdds, incomingFireSeverity, teamForceProfile, teamForceSeverity } from './drawn-effects';
 import { validIncidentConsequences, validPersonConsequences } from './incident-consequences';
 import { actionViews } from './operation-selectors';
-import { availableUnits } from './resolution';
+import { makeUnit, NOW as UNIT_NOW } from './test-fixtures';
 import { getScenario } from './scenario-registry';
 import type { IncidentPersonDef, ScenarioDefinition } from './scenario-types';
 import type { GameState } from './types';
@@ -37,9 +37,9 @@ describe('incoming fire (INCOMING_FIRE_V1)', () => {
 
 describe('team force (TEAM_FORCE_V1)', () => {
   // A department with every item and every cert, so only the person and the place decide.
-  const state = { officers: { o1: { certs: ['less_lethal', 'advanced_less_lethal', 'entry_team'] } } } as unknown as GameState;
+  const state = { department: { clockHighWater: UNIT_NOW, developmentTiers: {} }, officers: { o1: { certs: ['less_lethal', 'advanced_less_lethal', 'entry_team'] } } } as unknown as GameState;
   const run = {} as GameState['activeRun'] & object;
-  const units = () => [{ id: 'u1', itemId: 'impact_launcher' }, { id: 'u2', itemId: 'conducted_energy_device' }] as ReturnType<typeof availableUnits>;
+  const units = () => [makeUnit('impact_launcher', 1), makeUnit('conducted_energy_device', 2), makeUnit('service_sidearm', 3)];
   const scenario = (people: IncidentPersonDef[]) => ({ incidentPeople: people } as ScenarioDefinition);
   const pick = (people: IncidentPersonDef[], knowledge: Record<string, string> = {}, flags: string[] = []) =>
     teamForceProfile(state, { knowledge, flags } as unknown as typeof run, scenario(people), ['A'], ['o1'], 'shooter', units);
@@ -82,9 +82,9 @@ describe('team force (TEAM_FORCE_V1)', () => {
     expect(choose([{ ...empty, cover: { objectId: 'o', label: 'counter', grade: 'hard' } }])).toBe('hands');
     const child: IncidentPersonDef = { id: 'kid', kind: 'victim', label: 'Sam', minor: true, spaceId: 'r1', at: { x: 13, y: 10 } };
     expect(choose([empty, child])).toBe('hands');
-    expect(teamForceProfile({ officers: { o1: { certs: [] } } } as unknown as GameState, run, scenario([empty]), ['A'], ['o1'], 'shooter', units).profile).toBe('hands');
+    expect(teamForceProfile({ department: { clockHighWater: UNIT_NOW, developmentTiers: {} }, officers: { o1: { certs: [] } } } as unknown as GameState, run, scenario([empty]), ['A'], ['o1'], 'shooter', units).profile).toBe('hands');
     // Out of the launcher's range only the device remains, and it reaches 15 feet.
-    const deviceOnly = () => [{ id: 'u2', itemId: 'conducted_energy_device' }] as ReturnType<typeof availableUnits>;
+    const deviceOnly = () => [makeUnit('conducted_energy_device', 2)];
     expect(teamForceProfile(state, run, scenario([{ ...empty, doorFt: 12 }]), ['A'], ['o1'], 'shooter', deviceOnly).profile).toBe('less_lethal_device');
     expect(teamForceProfile(state, run, scenario([{ ...empty, doorFt: 20 }]), ['A'], ['o1'], 'shooter', deviceOnly).profile).toBe('hands');
   });
@@ -96,7 +96,7 @@ describe('team force (TEAM_FORCE_V1)', () => {
       unseen: pick([shooter({ armamentFactId: 'f_gun' })], { f_gun: 'unknown' }),
       outOfReach: pick([knife]),
       cover: pick([{ ...empty, cover: { objectId: 'o', label: 'counter', grade: 'hard' } }]),
-      none: teamForceProfile({ officers: { o1: { certs: [] } } } as unknown as GameState, run, scenario([empty]), ['A'], ['o1'], 'shooter', units),
+      none: teamForceProfile({ department: { clockHighWater: UNIT_NOW, developmentTiers: {} }, officers: { o1: { certs: [] } } } as unknown as GameState, run, scenario([empty]), ['A'], ['o1'], 'shooter', units),
     };
     expect(reasons.gun).toMatchObject({ rule: 'firearm:gun', reason: 'Ash is holding a handgun.' });
     expect(reasons.reach).toMatchObject({ rule: 'firearm:reach', reason: 'Ash has a weapon in hand, a few steps from the team.' });
@@ -106,6 +106,13 @@ describe('team force (TEAM_FORCE_V1)', () => {
     expect(reasons.none).toMatchObject({ rule: 'hands:none_carried', reason: 'Ash has nothing in hand. The team has no less-lethal tool it can use.' });
     const lines = [...Object.values(FORCE_REASONS.deadly), ...Object.values(FORCE_REASONS.threat), ...Object.values(FORCE_REASONS.tool)];
     for (const line of lines) expect(line, 'colon or dash').not.toMatch(/[:–—]| - /);
+  });
+
+  it('falls through to a qualified less-lethal tool when the deadly threat has no carried firearm', () => {
+    const choice = teamForceProfile(state, { knowledge: {}, flags: [] } as unknown as typeof run,
+      scenario([shooter()]), ['A'], ['o1'], 'shooter', () => units().filter(unit => unit.itemId !== 'service_sidearm'));
+    expect(choice.profile).toBe('less_lethal_impact');
+    expect(choice.reason).toContain(FORCE_REASONS.no_firearm);
   });
 
   it('never kills a minor, a subject the self-harm screen covers, or anyone taken by hand', () => {
@@ -190,7 +197,7 @@ describe('drawn consequences in play', () => {
     for (const type of ['active_armed_incident', 'barricaded'] as const) {
       let rng = 2718;
       for (let i = 0; i < 12; i++) {
-        const drawn = drawIncidentSpec(rng, { level: 10, trust: 90, contentVersion: 13, unlockedTypes: [type] });
+        const drawn = drawIncidentSpec(rng, { level: 10, trust: 90, unlockedTypes: [type] });
         rng = drawn.state;
         const s = generateIncident(drawn.spec);
         let state: GameState | null = startGateRun(s.id, 300 + i);

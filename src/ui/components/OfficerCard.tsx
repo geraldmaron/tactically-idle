@@ -1,8 +1,9 @@
+import { useContext } from 'react';
 import type { ReactNode } from 'react';
 import type { Officer, SquadId } from '../../sim/types';
 import { Portrait } from '../portraits/Portrait';
-import { useGame } from '../store';
 import { agePortraitProps } from '../screens/helpers';
+import { DepartmentContext } from './department-context';
 import { Icon } from '../icons';
 import { useWidth } from './hooks';
 import { CERT_ICON, CERT_LABEL, ROLE_META, bandOf, BAND_SHORT, STATUS_META } from './labels';
@@ -32,7 +33,9 @@ export interface OfficerCardProps {
 
 /** Portrait card from the approved reference: portrait, SURNAME, role icon + label, readiness bar. */
 export function OfficerCard({ officer, now, variant = 'strip', selected, onClick, chip, footer, leader, note, incidentInjury, squadId }: OfficerCardProps) {
-  const g = useGame();
+  // The department dates the portrait's age; without one (outside the game) the portrait is unaged.
+  const department = useContext(DepartmentContext);
+  const age = department ? agePortraitProps({ department }, officer, now) : {};
   const [ref, w] = useWidth<HTMLSpanElement>(80);
   const band = bandOf(officer);
   const injured = !!incidentInjury || (!!officer.injury && officer.injury.until > now);
@@ -55,7 +58,7 @@ export function OfficerCard({ officer, now, variant = 'strip', selected, onClick
         aria-label={`${officer.firstName} ${officer.surname}, ${role.label}, ${statusText}, stress ${Math.floor(officer.stress + 1e-9)}${squadId ? `, squad ${squadId}` : ''}${leader ? ', squad leader' : ''}${officer.certs.length ? `, ${officer.certs.map((cert) => CERT_LABEL[cert]).join(', ')}` : ''}`}
       >
         <span className="ocard-art" ref={ref} style={{ aspectRatio: '1 / 1.04' }}>
-          <Portrait officer={officer} size={size} {...agePortraitProps(g, officer, now)} />
+          <Portrait officer={officer} size={size} {...age} />
           {squadId && <span className="ocard-squad" aria-hidden="true">{squadId}</span>}
           {status && statusKey && (
             <span className={`ocard-state ocard-state-${status.tone}`} aria-hidden="true" title={status.label}>
@@ -83,7 +86,7 @@ export function OfficerCard({ officer, now, variant = 'strip', selected, onClick
       aria-label={`${officer.firstName} ${officer.surname}, ${role.label}, ${incidentInjury ? `injured: ${incidentInjury}, out of action` : injured ? 'injured' : BAND_SHORT[band]}`}
     >
       <span className="ocard-art" ref={ref} style={variant === 'roster' ? { aspectRatio: '1 / 1.04', maxHeight: 124 } : { height: Math.round(size * 1.04) }}>
-        <Portrait officer={officer} size={size} {...agePortraitProps(g, officer, now)} />
+        <Portrait officer={officer} size={size} {...age} />
         {chip && <span className="ocard-chip">{chip}</span>}
         {status && statusKey && (
           <span className={`ocard-status band-${injured ? 'recovery' : statusKey === 'training' || statusKey === 'deployed' ? 'strained' : statusKey}`}>

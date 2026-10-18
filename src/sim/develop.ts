@@ -10,10 +10,12 @@ import { fullName } from './officer';
 import { createUnit } from './equipment';
 import { quoteDevelopment } from './development-tiers';
 import { MANAGERS } from './command-staff';
+import { tunable } from './tuning';
 
-export const DEVELOP_TUNING = {
+/** Tunable (sim/tuning.ts). */
+export const DEVELOP_TUNING = tunable('DEVELOP_TUNING', {
   maxPurchase: 99,
-};
+});
 
 const refusal = (reason: string): HandlerResult => ({ ok: false, reason });
 const OK: HandlerResult = { ok: true };
@@ -70,7 +72,7 @@ function unlockNode(d: GameState, nodeId: Id, expectedTier = 1): HandlerResult {
   dep.developmentTiers ??= {};
   dep.developmentTiers[node!.id] = targetTier!;
   if (!dep.unlockedNodes.includes(node!.id)) dep.unlockedNodes.push(node!.id);
-  // Persist only the difference: migration never replays purchased capacities.
+  // Persist only the difference: upgrading never replays purchased capacities.
   for (const kind of ['rosterCap', 'trainingSlots'] as const) {
     const total = (list: NodeEffect[]) => list.reduce((sum, effect) => sum + (effect.kind === kind ? effect.delta : 0), 0);
     const difference = total(effects) - total(currentEffects);
@@ -82,7 +84,7 @@ function unlockNode(d: GameState, nodeId: Id, expectedTier = 1): HandlerResult {
 
 // ---------------------------------------------------------------- courses
 
-export function trainingCount(state: GameState): number {
+function trainingCount(state: GameState): number {
   return Object.values(state.officers).filter((o) => o.assignment?.kind === 'training').length;
 }
 

@@ -16,7 +16,7 @@ function calls(type: IncidentType, n: number, seed = 5150): ScenarioDefinition[]
   const out: ScenarioDefinition[] = [];
   let state = seed;
   for (let i = 0; i < n; i++) {
-    const drawn = drawIncidentSpec(state, { level: 10, trust: 90, contentVersion: 13, unlockedTypes: [type] });
+    const drawn = drawIncidentSpec(state, { level: 10, trust: 90, unlockedTypes: [type] });
     state = drawn.state;
     out.push(generateIncident(drawn.spec));
   }

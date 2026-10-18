@@ -5,19 +5,21 @@ owns it. swat-call-design, swat-writing-review and swat-officer-stories point
 here instead of keeping their own copies. If you change a number, change it
 here and nowhere else.
 
-Values were read from the repo on 2026-10-06. The lint ceilings come from
-LENGTH_BUDGETS in src/gen/incident/gates/prose-lint.ts, the clamps from the UI
-stylesheets, and the field wiring from src/gen/incident/frameworks-v9.ts. If a
-file moved, search for LENGTH_BUDGETS, line-clamp or "Response unfinished".
-When the code and this file disagree, the code wins, and this file gets a
-dated correction.
+Values were read from the repo on 2026-10-06 and revised on 2026-10-18 for the
+call trees. The checker ceilings come from BUDGETS in
+scripts/game_string_checks.py (which `npm run check:strings` runs on every
+call), the clamps from the UI stylesheets, and the field wiring from
+src/gen/incident/trees-v13/compile.ts. If a file moved, search for BUDGETS,
+line-clamp or `withCallTree`. Source field names below are the compiled
+ScenarioDefinition fields. The call tree field that feeds each is in
+swat-call-design SKILL.md section 2. When the code and this file disagree, the
+code wins, and this file gets a dated correction.
 
 ## How to read the columns
 
-- **Lint ceiling** is a hard character limit the typed-package lint enforces.
-  "none" means the lint sets no length for that field, but every linted
-  sentence still stops at 34 words. Hand-authored stories are not linted, and
-  the house holds them to the same ceilings by hand.
+- **Lint ceiling** is a hard character limit the string checker enforces.
+  "none" means the checker sets no length for that field, but every linted
+  sentence still stops at 34 words.
 - **House target** is tighter on purpose, for a player who gives each screen
   seconds. It is a design choice tuned in playtest, not a measurement. A string
   over its house target is allowed only with a reason in the prose record.
@@ -30,17 +32,17 @@ dated correction.
 |---|---|---|---|---|---|---|
 | 1 | Card title | title | 34 | 1 to 3 words | a place, object or person, never a genre | 22px, wraps to 2 lines |
 | 2 | Card chips | variantLabel, difficulty drivers | none | 1 to 3 words | shown only when it differs from the title | one line |
-| 3 | Card hook | summary (typed lane uses opening) | none | about 130 chars, first sentence 14 words | person and want in the first five words, one gap, what gets worse | live panel clamps to 3 lines at 14px |
-| 4 | Pressure label | pressureLabel | none | 2 to 4 words | whose safety, then what runs out ("Mara’s time inside"). An institution's schedule fails unless the hook ties it to a person's safety | compiler-owned in the typed lane |
-| 5 | Dispatch reason | dispatchReason (typed dispatch) | 240 | 2 sentences | who called and what they want the team for | full, under "Why your team was sent" |
+| 3 | Card hook | summary | none | about 130 chars, first sentence 14 words | person and want in the first five words, one gap, what gets worse | live panel clamps to 3 lines at 14px |
+| 4 | Pressure label | pressureLabel | none | 2 to 4 words | whose safety, then what runs out ("Mara’s time inside"). An institution's schedule fails unless the hook ties it to a person's safety | written in the call tree's briefing |
+| 5 | Dispatch reason | dispatchReason | 240 | 2 sentences | who called and what they want the team for | full, under "Why your team was sent" |
 | 6 | Known line | known[] | 260 | 3 lines of about 12 words | source, claim, how they know | full |
-| 7 | Unknown line | unknown[] (typed question) | 260 | 2 lines of about 12 words | one question a single fact closes | full |
-| 8 | Team job | teamResponsibilities[] | 260 | 10 words | verb first, names the person | compiler-owned in the typed lane |
-| 9 | Fact label | label (typed factLabel) | 40 | 3 to 5 words | the claim as a noun phrase | one line in the fact panel |
+| 7 | Unknown line | unknown[] | 260 | 2 lines of about 12 words | one question a single fact closes | full |
+| 8 | Team job | teamResponsibilities[] | 260 | 10 words | verb first, names the person | written in the call tree's briefing |
+| 9 | Fact label | label | 40 | 3 to 5 words | the claim as a noun phrase | one line in the fact panel |
 | 10 | Fact claim | claim | none | 20 words | what is claimed, stated plainly | debrief prints Told or Not reported before it |
 | 11 | Fact note and uncertainty | note, uncertainty | none | 12 words | who says it and how they know | fact panel |
-| 12 | Fact results | resolved.confirmed and disproved (typed confirmed, disproved) | none | 20 words | who found what, where | after the check only |
-| 13 | Map marker | markers.unknown, reported, confirmed, disproved | none, house 10 chars counted | 1 word | the claim or the checked fact in neutral words (ARMED?, NO JOB), never a person's name and never a motive (GRUDGE fails) | compiler-owned in the typed lane |
+| 12 | Fact results | resolved.confirmed and disproved | none | 20 words | who found what, where | after the check only |
+| 13 | Map marker | markers.unknown, reported, confirmed, disproved | none, house 10 chars counted | 1 word | the claim or the checked fact in neutral words (ARMED?, NO JOB), never a person's name and never a motive (GRUDGE fails) | written in the call tree's briefing |
 | 14 | Map task | action task | hard house limit 12 chars including spaces, counted, not estimated | 1 to 3 words | where the team goes | uppercase on the map, sized by character count in src/ui/blueprint/layout.ts |
 | 15 | Stage label | stage.label | none | 1 to 2 words, about 24 chars | the position or the problem | uppercase 12px, clamped to 2 lines |
 | 16 | Stage prompt | prompt | 120 | 2 sentences, 18 words | the new fact, then the pressure | about 3 lines at 16px |
@@ -72,37 +74,30 @@ about 20 and 40 words, so the targets are 18 and 35.
 Sentence targets for every surface above. Average 8 to 14 words, none over 22
 (house), none over 34 (lint). One and two word sentences are fine.
 
-## Typed lane, one string on several surfaces
+## Call trees, one string on several surfaces
 
 The compiler reuses some writer fields on more than one surface. Write each so
-it works everywhere it appears. Read in src/gen/incident/frameworks-v9.ts on
-2026-10-06.
+it works everywhere it appears (`withCallTree`, `trees-v13/compile.ts`).
 
 | Field you write | Where the player reads it | Write it as |
 |---|---|---|
-| opening | card hook (summary) and the first known line | a hook that is also a sourced fact, naming the person |
-| question | first unknown line, the assess stage prompt, Still needed on the unfinished ending | a question that also reads as a task |
-| approaches[i] | assess choice titles, with a compiler summary under them | verb first, and name the person in approach 0 or verify |
-| verify | adapt choice title | verb first, names the person |
-| resolutions[i] | resolve choice title and the ending title | a verb phrase that still works as a title afterward |
-| results[i] (typed package field only) | resolve choice forecast, its favorable and mixed outcome text, the ending summary | present tense, so it reads as forecast and as record. Other results in the same typed call match it |
-| waitFor.title and result | choice title and the waited ending's title and summary | same rule as resolutions and results |
-| actOnReport.wrong | read only after the gamble fails | the backing out, said plainly, then what is still to do |
+| CallTree summary | the card hook | a hook that names the person and the gap |
+| briefing.unknown | the briefing's unknown line | a question one fact closes |
+| node prompt | the stage prompt, and `promptIf` replaces it in a public state | the new fact, then the pressure |
+| choice summary and preview | the choice card, before the result reads as the record | the act and its cost, true in every situation |
+| outcome text | the result line | who did what, then what changed |
+| ending title and summary | the debrief | a person in the title, one lasting detail |
 
-Compiler-owned strings in the typed lane, which a writer changes only through a
-version-gated layer. The adapt prompt and the verify summary ("Check the
-disputed point in person."), the resolve prompt, both team responsibilities,
-the approach summaries, the placement line ("Dispatch places <name> in
-<room> at <building>."), the markers REPORTED, CHECKED and CORRECTED, the
-pressure label, the mixed and adverse previews on resolutions, and the
-unfinished ending ("Response unfinished").
+Compiler-owned strings a writer changes only by an engineering request: the
+standard consequence lines in `src/content/incidents/lines.ts`, the generated
+command line on entry and concession choices, and the deliberate-answers
+briefing line.
 
 ## Result tense
 
 Result lines hold one tense across a call and never switch inside a string.
-The typed lane is present, because results[i] doubles as a forecast. The
-repo's hand-authored stories also run present (stories-v5, read 2026-10-07).
-A hand-authored call may choose past, and the record names the choice.
+Call trees run present, as the retired framework and story layers did. A call
+may choose past, and the record names the choice.
 Prompts, summaries and previews are present. Ending summaries may close in
 past. No repo contract fixing a past tense for outcome text was found on
 2026-10-07, so if one appears, it wins and this section gets a dated note.

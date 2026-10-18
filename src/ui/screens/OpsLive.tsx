@@ -1,43 +1,20 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { getState, useGame } from '../store';
-import {
-  actionViews,
-  currentBuilt,
-  decisionViews,
-  lastResolution,
-  previewAction,
-  spaceViews,
-  stageContinuations,
-  stageProgress,
-} from '../../sim/operation-selectors';
+import { decisionViews, lastResolution } from '../../sim/operation-selectors';
 import type { Id, SquadId } from '../../sim/types';
 import { useToast } from '../components/toast';
 import { Sheet } from '../components/Sheet';
 import { Button } from '../components/ui';
-import { getScenario } from '../../sim/scenario-registry';
+import { OpenInLab } from '../components/OpenInLab';
 import { ActionSheet, LiveView, RoomSheet } from './LiveView';
-import { cardFor } from './helpers';
-import { planActionResupply } from '../../sim/equipment-resupply';
 import { LastDecisionPeek, OperationFeedback, RESULT_LABEL } from './OperationFeedback';
 import { SituationPanel } from './SituationPanel';
 import { SupportContext } from './SupportContext';
 import { IncidentPeopleStatus } from '../components/IncidentPeople';
-import { incidentOfficerUnavailable } from '../../sim/incident-consequences';
 import { focusActingSquad, toggleActingSquad, toggleSupportingSquad } from './operation-squads';
 import { responseFailurePlan } from '../../sim/response-failure';
-import { floorCount } from '../blueprint/floors';
-
-interface Override {
-  actionId: Id;
-  acting: SquadId[];
-  support: SquadId[];
-}
-
-interface ActionSelection {
-  runId: Id;
-  stage: string;
-  actionId: Id;
-}
+import { liveScreen, type ActionSelection, type Override } from './live-model';
+import { lexiconFor } from '../people/lexicon';
 
 /** Scroll the saved result into view without moving focus away from the player's place. */
 function revealLastDecision() {
@@ -63,62 +40,26 @@ export function OpsLive() {
   const [confirmFailure, setConfirmFailure] = useState<{ runId: Id; revision: number } | null>(null);
   const [floor, setFloor] = useState(0);
 
-  const built = currentBuilt(g);
-  const deployed = g.squads.filter((s) => run.squadIds.includes(s.id));
-  const focus = deployed.find((s) => s.id === focusId) ?? deployed[0] ?? null;
-  const spaces = spaceViews(g);
-  const progress = stageProgress(g);
-  const continuations = stageContinuations(g);
+  // One selector block for the game and the Scenario Lab (live-model.ts).
+  const screen = liveScreen(g, now, { focusId, selection, override, floor, activeOfficer, selectedSpaceId: selSpace, lastChange, showRooms, detailsOpen: panel === 'action' });
   const decisions = decisionViews(g);
   const failurePlan = responseFailurePlan(g);
-  // Forecast the visibly focused squad without assigning supporting squads.
-  // A decision remains unselected until the player opens it for review.
-  const actions = actionViews(g, now, focus?.id ?? null).map((action) =>
-    previewAction(g, now, action.id, focus ? [focus.id] : [], []) ?? action);
-  const selectedId = selection?.runId === run.id && selection.stage === run.stage ? selection.actionId : null;
-  const base = actions.find((a) => a.id === selectedId) ?? null;
-  const ov = override && base && override.actionId === base.id ? override : null;
-  const view = base && ov ? (previewAction(g, now, base.id, ov.acting, ov.support) ?? base) : base;
-  const acting = ov?.acting ?? view?.actingSquadIds ?? [];
-  const support = ov?.support ?? view?.supportSquadIds ?? [];
-  const resupply = view && !view.eligible ? planActionResupply(g, now, view.id, acting, support) : null;
-  const alternatives = view && !view.eligible ? deployed
-    .filter((s) => !acting.includes(s.id))
-    .map((s) => previewAction(g, now, view.id, [s.id], support.filter((id) => id !== s.id)))
-    .filter((a): a is NonNullable<typeof a> => !!a?.eligible) : [];
-
-  const officers = focus ? focus.officerIds.map((id) => g.officers[id]).filter((o) => !!o) : [];
-  const defaultOfficer = view?.officerIds.find((id) => focus?.officerIds.includes(id)) ?? officers[0]?.id ?? null;
-  const activeOfficerId = activeOfficer && officers.some((o) => o.id === activeOfficer) ? activeOfficer : defaultOfficer;
-
-  const card = cardFor(g, run.scenarioId, now);
-  const scenario = useMemo(() => getScenario(run.scenarioId), [run.scenarioId]);
-  const actionRule = run.stage === 'debrief' ? undefined : scenario?.stages[run.stage].actions.find(action => action.id === view?.id);
-  const maxActing = actionRule?.maxActing ?? 1;
-  const availableMembers = (id: SquadId) => deployed.find(squad => squad.id === id)?.officerIds.filter(officerId => !!g.officers[officerId] && !incidentOfficerUnavailable(g, run, officerId)) ?? [];
-  const actorUnavailable = (id: SquadId) => !actionRule?.commandOnly && availableMembers(id).length === 0;
-  const environment = scenario?.environment ?? null;
-  const floors = built ? floorCount(built.location) : 1;
-  /** Floor a room or zone sits on (exterior zones are ground). */
-  const floorOf = (id: Id | null): number | null => {
-    if (!id || !built) return null;
-    return built.derived.spaces[id]?.floor ?? built.location.rooms.find((r) => r.id === id)?.floor ?? 0;
-  };
   // Follow the selected action: when its target is on another floor, show that floor.
-  const targetFloor = floorOf(view?.targetId ?? null);
+  const targetFloor = screen?.review.targetFloor ?? null;
   useEffect(() => {
     if (targetFloor !== null) setFloor(targetFloor);
-  }, [view?.id, targetFloor]);
-  const title = (card?.title ?? built?.location.name ?? run.scenarioId.replace(/_/g, ' ')).toUpperCase();
-  const subtitle = `${(card?.setting ?? built?.location.setting ?? '').toUpperCase()} / ${card?.code ?? 'OP'}`;
+  }, [screen?.review.view?.id, targetFloor]);
 
-  const spaceById = new Map(spaces.map((s) => [s.id, s]));
-  const targetLabel = view?.targetId ? (spaceById.get(view.targetId)?.label ?? built?.location.rooms.find((r) => r.id === view.targetId)?.label ?? null) : null;
-
-  if (!built) return <div className="page"><p className="dim">Operation location unavailable.</p></div>;
+  if (!screen) return <div className="page"><p className="dim">Operation location unavailable.</p></div>;
+  const { model, review } = screen;
+  const { deployed, focus, view, acting, support, actionRule, maxActing, resupply, alternatives, scenario, spaceById, targetLabel, availableMembers, actorUnavailable, floorOf } = review;
+  const actions = model.actions;
+  const spaces = model.spaces;
+  // The deployed officers, by squad, for the names in this call's text.
+  const people = scenario ? lexiconFor(scenario, run, deployed.flatMap((squad) => squad.officerIds.flatMap((id) => g.officers[id] ? [{ ...g.officers[id], squad: squad.id }] : []))) : null;
 
   const pickAction = (id: Id) => {
-    if (view?.id === id || !actions.some((action) => action.id === id)) return;
+    if (view?.id === id || !actions.some((action) => action.id === id) || run.stage === 'debrief') return;
     setSelection({ runId: run.id, stage: run.stage, actionId: id });
     setOverride({ actionId: id, acting: focus ? [focus.id] : [], support: [] });
     setActiveOfficer(null);
@@ -170,60 +111,26 @@ export function OpsLive() {
 
   return (
     <LiveView
-      g={g}
-      now={now}
-      title={title}
-      subtitle={subtitle}
-      progress={progress}
-      built={built}
-      spaces={spaces}
-      squadTasks={run.squadTasks}
-      deployedSquads={deployed}
-      focusSquadId={focus?.id ?? null}
-      unavailableSquadIds={view ? deployed.filter(squad => actorUnavailable(squad.id)).map(squad => squad.id) : []}
+      {...model}
+      people={people}
       onFocusSquad={(id) => {
         if (view && actorUnavailable(id)) return;
         setFocusId(id);
         setActiveOfficer(null);
         if (view) setOverride({ actionId: view.id, ...focusActingSquad({ acting, support }, id) });
       }}
-      officers={officers}
-      actions={actions}
-      selectedAction={view}
       onSelectAction={selectAction}
-      continuations={continuations}
-      onContinueStage={(actionId) => {
-        const currentRun = getState().activeRun;
-        const continuation = continuations.find((entry) => entry.actionId === actionId);
-        if (!continuation || currentRun?.id !== run.id || currentRun.stage !== run.stage || currentRun.revision !== continuation.revision || currentRun.status !== 'active') return;
-        if (!act({ type: 'continueStage', actionId, revision: continuation.revision }).ok) return;
-        setPanel('none');
-        setSelection(null);
-        setOverride(null);
-        setActiveOfficer(null);
-      }}
-      activeOfficerId={activeOfficerId}
       onSelectOfficer={setActiveOfficer}
-      selectedSpaceId={selSpace}
       onSelectSpace={(id) => {
         setSelSpace(id);
         setPanel('room');
         const f = floorOf(id);
         if (f !== null) setFloor(f);
       }}
-      floor={Math.min(floor, Math.max(0, floors - 1))}
       onFloorChange={setFloor}
-      environment={environment}
-      highlightSpaceIds={view?.targetId ? [view.targetId] : []}
-      lastChange={lastChange}
-      showRooms={showRooms}
       onToggleRooms={() => setShowRooms((v) => !v)}
-      clock={run.clock}
-      pressure={run.pressure}
-      canCancel={run.history.length === 0 && !run.resupplies?.length}
       onCancel={() => setConfirmCancel(true)}
       onOpenDetails={() => { setActionFromSupport(false); setPanel(panel === 'action' ? 'none' : 'action'); }}
-      detailsOpen={panel === 'action'}
       lastDecision={<LastDecisionPeek decisions={decisions} onReveal={revealLastDecision} />}
       feedback={<OperationFeedback officers={g.officers} decisions={decisions} explicitCompletion={(scenario?.version ?? 0) >= 4} onOpenLog={() => setPanel('none')} />}
       situation={scenario && <SituationPanel scenario={scenario} run={run} />}
@@ -277,7 +184,7 @@ export function OpsLive() {
         open={panel === 'room'}
         onClose={() => setPanel('none')}
         space={selSpace ? (spaceById.get(selSpace) ?? null) : null}
-        built={built}
+        built={model.built}
         squads={deployed}
         actions={actions}
         onPickAction={(id) => {
@@ -328,6 +235,7 @@ export function OpsLive() {
       >
         <p>No decisions have been made yet, so squads return unchanged and reserved equipment is released.</p>
       </Sheet>
+      {import.meta.env.DEV && <OpenInLab getState={() => g} />}
     </LiveView>
   );
 }

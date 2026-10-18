@@ -11,9 +11,11 @@ import { clockViews } from './clocks';
 import { CONCESSIONS_ALLOWED } from './scenario-types';
 import type { Armament, AuthorityRequest, AuthorityResult, ClockDef, ConcessionKind, IncidentPersonDef, ScenarioDefinition, ThreatEvidence } from './scenario-types';
 import type { KnowledgeStatus, OperationRun } from './types';
+import { tunable } from './tuning';
 
-/** Versioned rules of engagement and policy. */
-export const AUTHORIZATION_V1 = {
+/** Versioned rules of engagement and policy. Tunable (sim/tuning.ts) only in `deadlyForce.reachFt`:
+ * the lists name statuses, concession kinds and weapon kinds the content and the save rely on. */
+export const AUTHORIZATION_V1 = tunable('AUTHORIZATION_V1', {
   /** The team believes a claim once it is reported or confirmed. Unknown and disproved claims don't count. */
   believed: ['reported', 'confirmed'] as readonly KnowledgeStatus[],
   entry: {
@@ -39,14 +41,19 @@ export const AUTHORIZATION_V1 = {
      * and to any held person, victim or bystander in the same room who is still inside. */
     reachFt: 10,
   },
-};
+}, { deny: [
+  { path: 'believed', kind: 'structural', reason: 'Knowledge statuses the rules act on, not a number.' },
+  { path: 'concessions', kind: 'structural', reason: 'Concession kinds are content (ConcessionKind and the command lines for each).' },
+  { path: 'deadlyForce.guns', kind: 'structural', reason: 'A list of weapon kinds, not a number.' },
+  { path: 'deadlyForce.inReach', kind: 'structural', reason: 'A list of weapon kinds, not a number.' },
+] });
 
 type Beliefs = Pick<OperationRun, 'knowledge' | 'flags'>;
 
 const believes = (run: Beliefs, factId: string) => AUTHORIZATION_V1.believed.includes(run.knowledge?.[factId] ?? 'unknown');
 
 /** The threat to life the team has seen, strongest evidence first, or nothing. */
-export function seenThreat(scenario: ScenarioDefinition, run: Beliefs): ThreatEvidence | undefined {
+function seenThreat(scenario: ScenarioDefinition, run: Beliefs): ThreatEvidence | undefined {
   const strength = (threat: ThreatEvidence) => Math.max(
     threat.flag && run.flags?.includes(threat.flag) ? 3 : 0,
     threat.factId ? ({ confirmed: 2, reported: 1 } as Partial<Record<KnowledgeStatus, number>>)[run.knowledge?.[threat.factId] ?? 'unknown'] ?? 0 : 0,
@@ -60,7 +67,7 @@ export function seenThreat(scenario: ScenarioDefinition, run: Beliefs): ThreatEv
 }
 
 /** A clock that won't wait for talking: urgent, its first cue heard, its owner still inside. */
-export function urgentClock(scenario: ScenarioDefinition, run: Pick<OperationRun, 'clocks' | 'flags'>): ClockDef | undefined {
+function urgentClock(scenario: ScenarioDefinition, run: Pick<OperationRun, 'clocks' | 'flags'>): ClockDef | undefined {
   const views = clockViews(scenario, run);
   return scenario.clocks?.find(def => def.urgent && views.some(view => view.id === def.id && view.low && !view.stopped));
 }

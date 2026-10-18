@@ -20,17 +20,19 @@ import { fullName } from './officer';
 import { gameDay } from './calendar';
 import { PERSONAS } from '../content/personas';
 import { applyRetention, retentionCheck, mandatoryRetirementDay } from './career';
-import { initializePersonnel, markEmployed } from './personnel';
+import { markEmployed } from './personnel';
 import { applySquadArrangement, setSquadArrangementLock, undoSquadArrangement } from './squad-optimizer';
+import { tunable } from './tuning';
 
-export const ROSTER_TUNING = {
+/** Tunable (sim/tuning.ts), except `maxSquads`: the squad slots are SQUAD_IDS, so it only names them. */
+export const ROSTER_TUNING = tunable('ROSTER_TUNING', {
   /** Owner decision (2026-10-02): up to four squads. */
   maxSquads: SQUAD_IDS.length,
   squadSize: 4,
   nameMax: 20,
   /** Severance, in hours of wage. */
   severanceHours: 8,
-};
+}, { deny: [{ path: 'maxSquads', kind: 'structural', reason: 'The squad slots are SQUAD_IDS (types.ts); this only names how many there are.' }] });
 
 const DUTIES: SquadDuty[] = ['patrol', 'standby', 'rest'];
 
@@ -40,15 +42,15 @@ type DepartmentExt = Department & { candidateRefreshedAt?: number };
 const refusal = (reason: string): HandlerResult => ({ ok: false, reason });
 const OK: HandlerResult = { ok: true };
 
-export function rosterSize(state: GameState): number {
+function rosterSize(state: GameState): number {
   return Object.keys(state.officers).length;
 }
 
-export function severanceFor(o: Officer): number {
+function severanceFor(o: Officer): number {
   return o.wage * ROSTER_TUNING.severanceHours;
 }
 
-export function lastRefreshAt(state: GameState): number {
+function lastRefreshAt(state: GameState): number {
   return (state.department as DepartmentExt).candidateRefreshedAt ?? Number.NEGATIVE_INFINITY;
 }
 
@@ -152,7 +154,7 @@ function shortlist(d: GameState, candidateId: Id, on: boolean): HandlerResult {
   return OK;
 }
 
-export function refreshCheck(state: GameState): { ok: boolean; reason: string | null; availableAt: number } {
+function refreshCheck(state: GameState): { ok: boolean; reason: string | null; availableAt: number } {
   const availableAt = lastRefreshAt(state) + RECRUIT_TUNING.refreshCooldownMs;
   const t = simNow(state);
   if (t < availableAt) {
@@ -184,7 +186,7 @@ export function recruitmentStatus(state: GameState, now: number) {
 export function fillCandidates(d: GameState, now: number): void {
   const kept = d.candidates.filter((c) => c.shortlisted && gameDay(d, now) < mandatoryRetirementDay(c.officer));
   const size = candidatePoolSize(d, RECRUIT_TUNING.basePool);
-  const personnel = initializePersonnel(d);
+  const personnel = d.personnel!;
   const gen: RecruitGen = { rng: d.rngState, nextId: d.nextId, campaignSeed: personnel.campaignSeed, builds: personnel.builds, unavailable: personnel.employedIdentityIds };
   const taken = new Set<string>();
   for (const o of Object.values(d.officers)) taken.add(fullNameKey(o.firstName, o.surname));

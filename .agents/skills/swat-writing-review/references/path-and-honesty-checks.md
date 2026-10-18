@@ -14,7 +14,7 @@ order, in seconds. A fact said twice spends seconds and teaches the player to sk
 1. Write each surface's facts as a short list, in reading order.
 2. For each fact on a later surface, mark it new, changed (the clock moved, a person moved, a
    number changed) or restated.
-3. A restated fact is a finding. In the first stage prompt it is fix before freeze. On the
+3. A restated fact is a finding. In the first stage prompt it is fix before ship. On the
    dispatch line or a known line it is a note unless it repeats the card word for word.
 
 Observed (proof draft, hostage). Card "Lewis wants Mara Holt's signature by 6", dispatch "He says
@@ -46,7 +46,7 @@ because it read the summary, not the table.
 For each action, put the favorable, mixed and adverse texts side by side. If the mixed text is
 the favorable text with a delay ("Lewis tells you, after a long pause."), the middle outcome,
 which players see most, only moves a clock. That is fake-choice 5 for the band. It is fix before
-freeze, and a block when the deliverable claims otherwise. A mixed band changes contact, trust,
+ship, and a block when the deliverable claims otherwise. A mixed band changes contact, trust,
 evidence, a person's position or a resource.
 
 ## 4. Options that can be taken together (pass two)
@@ -77,7 +77,7 @@ option, because the swap test was run and the dominance table was not.
 
 Count the longest tap sequence in each stage, and mark taps with only one sensible choice (a
 care chore such as "Hand Mara to the crew"). More than three taps in the commit stage, or any
-chore tap at the commit beat, is fix before freeze routed to swat-call-design. The commit beat
+chore tap at the commit beat, is fix before ship routed to swat-call-design. The commit beat
 holds the peak decision, and chores bury it. Observed (proof draft, hostage). Stage 3 ran up to
 11 taps, three of them chores.
 

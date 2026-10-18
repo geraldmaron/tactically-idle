@@ -156,13 +156,13 @@ export function findStoryRoute(built: BuiltLocation, fromSpaceId: Id, toSpaceId:
 
 /** Recompute from the current builtFor result, so later opening flags cannot leave a stale route. */
 export function currentStoryRoute(scenario: ScenarioDefinition, built: BuiltLocation, routeRole: string): Id[] | null {
-  const route = scenario.version >= 5 ? scenario.story?.bindings.routes[routeRole] : undefined;
+  const route = scenario.story?.bindings.routes[routeRole];
   return route ? findStoryRoute(built, route.fromSpaceId, route.toSpaceId, route.profile) : null;
 }
 
 /** Authoring validation only. Legacy scenarios keep their original validator and behavior. */
 export function validateStoryBindings(scenario: ScenarioDefinition, built: BuiltLocation): string[] {
-  if (scenario.version < 5) return [];
+
   if (!scenario.story) return Object.values(scenario.stages).flatMap(stage => stage.actions)
     .filter(action => action.storyRoute || action.storyTargetPersonId || action.requires.storyProps?.length)
     .map(action => `${scenario.id}: story action ${action.id} requires missing story bindings`);
@@ -179,10 +179,10 @@ export function validateStoryBindings(scenario: ScenarioDefinition, built: Built
   // Drawn consequences (v13) set flags in their variants too.
   const effects = withVariants(actions.flatMap(action => Object.values(action.outcomes).flat()));
   const flags = new Set(['casualty:officers', 'casualty:untreated', 'casualty:awaiting_transport', 'casualty:evacuated',
-    ...(scenario.version >= 7 ? ['casualty:people', 'casualty:person_fatality', 'casualty:person_needs_care', ...people.flatMap(person => [
+    ...(['casualty:people', 'casualty:person_fatality', 'casualty:person_needs_care', ...people.flatMap(person => [
       ...['wounded', 'serious', 'fatal'].map(severity => `person_harm:${person.id}:${severity}`),
       ...['needed', 'stabilized', 'accepted', 'deceased'].map(care => `person_care:${person.id}:${care}`),
-    ])] : []),
+    ])]),
     ...effects.flatMap(effect => [...effect.setFlags ?? [], ...effect.clearFlags ?? []]),
     ...built.location.openings.flatMap(opening => ['open', 'closed', 'locked', 'blocked'].map(state => `opening:${opening.id}=${state}`))]);
   const requiredFact = (id: Id, context: string) => { if (!facts.has(id)) error(`${context} references unknown fact ${id}`); };

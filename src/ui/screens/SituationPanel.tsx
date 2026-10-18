@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { KnowledgeStatus, OperationRun } from '../../sim/types';
 import type { ScenarioDefinition } from '../../sim/scenario-types';
 import { Icon } from '../icons';
+import { PeopleText } from '../people/PeopleText';
 import './situation-panel.css';
 
 const STATUS_LABEL: Partial<Record<KnowledgeStatus, string>> = { reported: 'Reported', confirmed: 'Confirmed', disproved: 'Ruled out' };
@@ -17,7 +18,7 @@ export function SituationPanel({ scenario, run }: { scenario: ScenarioDefinition
   const hasMore = !!dispatchReason || !!teamResponsibilities?.length || unknown.length > 0 || established.length > 0;
   return (
     <section className={`situation${open ? ' situation-open' : ''}`} aria-label="Situation">
-      <p className="situation-summary">{scenario.summary}</p>
+      <p className="situation-summary"><PeopleText text={scenario.summary} /></p>
       {hasMore && (
         <button type="button" className="situation-toggle" aria-expanded={open} onClick={() => setOpen((value) => !value)}>
           <Icon name="intel" size={14} />
@@ -27,9 +28,9 @@ export function SituationPanel({ scenario, run }: { scenario: ScenarioDefinition
       )}
       {open && (
         <div className="situation-body">
-          {dispatchReason && <div><h3>Why your team was sent</h3><p>{dispatchReason}</p></div>}
-          {!!teamResponsibilities?.length && <div><h3>Your team’s job</h3><ul>{teamResponsibilities.map((task) => <li key={task}>{task}</li>)}</ul></div>}
-          {unknown.length > 0 && <div><h3>Open at dispatch</h3><ul>{unknown.map((question) => <li key={question}>{question}</li>)}</ul></div>}
+          {dispatchReason && <div><h3>Why your team was sent</h3><p><PeopleText text={dispatchReason} /></p></div>}
+          {!!teamResponsibilities?.length && <div><h3>Your team’s job</h3><ul>{teamResponsibilities.map((task) => <li key={task}><PeopleText text={task} /></li>)}</ul></div>}
+          {unknown.length > 0 && <div><h3>Open at dispatch</h3><ul>{unknown.map((question) => <li key={question}><PeopleText text={question} /></li>)}</ul></div>}
           {established.length > 0 && (
             <div>
               <h3>Established on this call</h3>

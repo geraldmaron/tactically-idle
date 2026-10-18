@@ -12,8 +12,10 @@ import type { DebriefResult, GameState, Id, Officer, RatingKey, Role, ShiftRepor
 import { CALENDAR, EXPERIENCE_LABEL, ageYears, experienceBand, formatGameDate, gameDay, msForGameDay, serviceYears, type ExperienceBand } from './calendar';
 import { next, hashSeed } from './rng';
 import { fullName } from './officer';
+import { tunable } from './tuning';
 
-export const CAREER_TUNING = {
+/** Tunable (sim/tuning.ts). */
+export const CAREER_TUNING = tunable('CAREER_TUNING', {
   /** Mandatory retirement age. */
   retireAge: 60,
   /** Retirements are announced this many game days ahead. */
@@ -44,18 +46,21 @@ export const CAREER_TUNING = {
   /** xp -> rating growth: every 100 xp is +1 to the officer's main rating, scaled by the learning multiplier. */
   xpPerPoint: 100,
   xpRatingCeiling: 90,
-  /** Debrief outcome score thresholds (0.55 objective + 0.45 safety). */
+  /** A run's outcome factor blends objective and civilian safety by `debriefWeights` (debriefBand,
+   * and operation.ts outcomeFactor for calls before v13). Careers count it favorable at `favorableAt`
+   * or more and adverse below `adverseBelow`; v13 calls use the scored factor (sim/outcome-score.ts). */
   favorableAt: 0.6,
   adverseBelow: 0.4,
-};
+  debriefWeights: { objective: 0.55, civilianSafety: 0.45 },
+}, { guard: next => next.favorableAt < next.adverseBelow ? 'favorableAt stays at or above adverseBelow.' : null });
 
-/** Experience band -> how fast xp becomes rating growth. */
-export const LEARNING_MULTIPLIER: Record<ExperienceBand, number> = {
+/** Experience band -> how fast xp becomes rating growth. Tunable (sim/tuning.ts). */
+export const LEARNING_MULTIPLIER: Record<ExperienceBand, number> = tunable('LEARNING_MULTIPLIER', {
   rookie: 1.3,
   developing: 1.0,
   seasoned: 0.85,
   veteran: 0.7,
-};
+});
 
 /** The rating an officer's xp improves, by role. */
 export const ROLE_MAIN_RATING: Record<Role, RatingKey> = {
@@ -135,7 +140,8 @@ export function xpProgress(o: Officer, day: number): number {
 export type DebriefBand = 'favorable' | 'mixed' | 'adverse';
 
 export function debriefBand(d: Pick<DebriefResult, 'objective' | 'civilianSafety'>): DebriefBand {
-  const f = (0.55 * d.objective.score + 0.45 * d.civilianSafety.score) / 100;
+  const W = CAREER_TUNING.debriefWeights;
+  const f = (W.objective * d.objective.score + W.civilianSafety * d.civilianSafety.score) / 100;
   if (f >= CAREER_TUNING.favorableAt) return 'favorable';
   if (f < CAREER_TUNING.adverseBelow) return 'adverse';
   return 'mixed';

@@ -29,42 +29,16 @@ export function officerNeedingFieldCare(run: Pick<OperationRun, 'officerCasualti
     .sort((a, b) => Number(b.severity === 'serious') - Number(a.severity === 'serious') || a.at - b.at || a.officerId.localeCompare(b.officerId))[0];
 }
 
-/** New injuries freeze their actual position. Old records may establish a room,
- * but never gain an invented exact position or follow their now-moving squad. */
-export function officerCarePosition(run: OperationRun, scenario: ScenarioDefinition, person: OfficerCasualtyRecord, state?: GameState): CarePosition | null {
-  if (person.position) return person.position;
-  const injuryIndex = run.history.findIndex(decision => decision.committed?.officerCasualties?.some(event => event.officerId === person.officerId && event.care === 'needed'));
-  const decision = run.history[injuryIndex];
-  const action = decision && scenario.stages[decision.stage]?.actions.find(action => action.id === decision.actionId);
-  if (!decision || !action) return null;
-  if (decision.targetId && action.approach === 'path') return { spaceId: decision.targetId };
-  const squadId = state?.squads.find(squad => squad.officerIds.includes(person.officerId))?.id
-    ?? (decision.actingSquadIds.length === 1 ? decision.actingSquadIds[0] : undefined);
-  if (!squadId || !decision.actingSquadIds.includes(squadId)) return null;
-  if (action.approach === 'none') for (let index = injuryIndex - 1; index >= 0; index--) {
-    const prior = run.history[index], definition = scenario.stages[prior.stage]?.actions.find(action => action.id === prior.actionId);
-    if (!definition) return null;
-    if (prior.supportSquadIds.includes(squadId) && definition.support) return { spaceId: definition.support.coverSpaceId };
-    if (!prior.actingSquadIds.includes(squadId) || definition.approach === 'none') continue;
-    if (definition.approach === 'path' && prior.targetId) return { spaceId: prior.targetId };
-    // A window action does not record which exterior vantage was actually used.
-    break;
-  }
-  const unchanged = run.history.slice(injuryIndex + 1).every(later => {
-    if (later.supportSquadIds.includes(squadId)) return false;
-    if (!later.actingSquadIds.includes(squadId)) return true;
-    const definition = scenario.stages[later.stage]?.actions.find(action => action.id === later.actionId);
-    return definition?.commandOnly && definition.approach === 'none';
-  });
-  const task = unchanged ? run.squadTasks.find(task => task.squadId === squadId) : undefined;
-  return task ? { spaceId: task.positionId } : null;
+/** Field care uses the position recorded when the injury occurred. */
+export function officerCarePosition(person: OfficerCasualtyRecord): CarePosition | null {
+  return person.position ?? null;
 }
 
 /** Only public locations and committed injury records participate. This is a
  * transient evaluation rule, leaving issued scenarios and prior decisions intact. */
-export function physicalCare(scenario: ScenarioDefinition, built: BuiltLocation, run: OperationRun, authored: ActionDefinition, state?: GameState): PhysicalCare {
+export function physicalCare(scenario: ScenarioDefinition, built: BuiltLocation, run: OperationRun, authored: ActionDefinition, _state?: GameState): PhysicalCare {
   const result: PhysicalCare = { action: authored, crewRoutes: [] };
-  if (scenario.version < 7) return result;
+
   const effects = Object.values(authored.outcomes).flat();
   const officerAid = effects.some(effect => effect.officerCare === 'stabilize');
   const officerEvacuation = effects.some(effect => effect.officerCare === 'evacuate');
@@ -83,7 +57,7 @@ export function physicalCare(scenario: ScenarioDefinition, built: BuiltLocation,
     const officer = officerAid ? officerNeedingFieldCare(run) : undefined;
     // No matching injury is handled by the existing casualty gate.
     if (officerAid && !officer) return result;
-    const position = officer ? officerCarePosition(run, scenario, officer, state) : targetId ? publicPosition(targetId) : null;
+    const position = officer ? officerCarePosition(officer) : targetId ? publicPosition(targetId) : null;
     if (!position) return unknown();
     result.fieldTarget = position;
     result.action = { ...authored, targetId: officerAid ? position.spaceId : authored.targetId, approach: 'path',
@@ -95,7 +69,7 @@ export function physicalCare(scenario: ScenarioDefinition, built: BuiltLocation,
 
   const patients: CarePosition[] = [];
   if (officerEvacuation) for (const person of Object.values(run.officerCasualties ?? {}).filter(person => person.care !== 'evacuated')) {
-    const position = officerCarePosition(run, scenario, person, state);
+    const position = officerCarePosition(person);
     if (!position) return unknown();
     patients.push(position);
   }

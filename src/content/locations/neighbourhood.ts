@@ -1,8 +1,7 @@
 import type { LocationDefinition, LocationFamily, Opening, PlacedObject, Polygon, Room, Vec } from '../../sim/types';
 
 // A small authored neighbourhood, with different circulation, access and furniture.
-// Seeded changes move real partitions or add a connecting door; addresses never
-// disguise copies of Maple Street. Keep these version-1 layouts stable for saves.
+// Seeded changes move real partitions or add a connecting door.
 const point = (x: number, y: number): Vec => ({ x, y });
 const rect = (x: number, y: number, right: number, bottom: number): Polygon =>
   [point(x, y), point(right, y), point(right, bottom), point(x, bottom)];

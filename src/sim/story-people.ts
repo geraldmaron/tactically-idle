@@ -2,7 +2,6 @@ import type { ActionDefinition, ScenarioDefinition, StoryAnchor, StoryPersonBind
 import type { BuiltLocation, Id, KnowledgeStatus, OperationRun } from './types';
 import { conditionHolds, spaceName } from './resolution';
 import { approxPoint } from './spatial-factors';
-import { publicPropBinding } from './story-prop-knowledge';
 
 type StoryState = Pick<OperationRun, 'knowledge' | 'flags' | 'pressure'>;
 export type StoryPosition = StoryAnchor | { kind: 'offscene'; label: string };
@@ -20,7 +19,7 @@ export interface StoryPublicPerson extends Omit<StoryActualPerson, 'position'> {
 }
 
 function bindings(scenario: ScenarioDefinition): StoryPersonBinding[] {
-  return scenario.version >= 5 ? Object.values(scenario.story?.bindings.people ?? {}) : [];
+  return Object.values(scenario.story?.bindings.people ?? {});
 }
 
 /** Ordered authored transitions read existing committed state; they add no mutable simulation. */
@@ -34,7 +33,7 @@ export function storyPeopleActual(scenario: ScenarioDefinition, run: StoryState)
 
 /** Whether this decision actually moved a bound person along its authored route. */
 export function storyMovedAlongRoute(scenario: ScenarioDefinition, action: ActionDefinition, before: StoryState, after: StoryState): boolean {
-  const route = action.storyRoute && scenario.version >= 5 ? scenario.story?.bindings.routes[action.storyRoute] : null;
+  const route = action.storyRoute ? scenario.story?.bindings.routes[action.storyRoute] : null;
   if (!route) return false;
   const prior = storyPeopleActual(scenario, before);
   return storyPeopleActual(scenario, after).some(person => {
@@ -73,7 +72,7 @@ export interface StoryPropPosition {
 }
 
 function storyProps(scenario: ScenarioDefinition, built: BuiltLocation, run: StoryState, people: (StoryActualPerson | StoryPublicPerson)[]): StoryPropPosition[] {
-  if (scenario.version < 5 || !scenario.story) return [];
+  if (!scenario.story) return [];
   return Object.values(scenario.story.bindings.props).map(prop => {
     if (prop.kind === 'mapped') {
       const object = built.location.objects.find(entry => entry.id === prop.objectId);
@@ -94,7 +93,7 @@ export function storyPropsActual(scenario: ScenarioDefinition, built: BuiltLocat
 export function storyPropsPublic(scenario: ScenarioDefinition, built: BuiltLocation, run: StoryState): StoryPropPosition[] {
   // Issued v5/v6 action eligibility used this historical possession projection.
   // Keep that contract; new views use storyPropsKnown and v7 uses explicit evidence.
-  if (scenario.version < 7) return storyProps(scenario, built, run, storyPeoplePublic(scenario, built, run));
+
   return storyPropsKnown(scenario, built, run);
 }
 
@@ -102,7 +101,7 @@ export function storyPropsPublic(scenario: ScenarioDefinition, built: BuiltLocat
 export function storyPropsKnown(scenario: ScenarioDefinition, built: BuiltLocation, run: StoryState): StoryPropPosition[] {
   const people = storyPeoplePublic(scenario, built, run);
   return Object.values(scenario.story?.bindings.props ?? {}).flatMap(raw => {
-    const prop = publicPropBinding(scenario, raw);
+    const prop = raw.knownWhen !== undefined ? raw : null;
     if (!prop || !conditionHolds(prop.knownWhen, run)) return [];
     let status: 'reported' | 'confirmed' = prop.confirmedWhen && conditionHolds(prop.confirmedWhen, run) ? 'confirmed' : 'reported';
     if (prop.kind === 'mapped') {
@@ -155,7 +154,7 @@ export function storyPublicScenario(scenario: ScenarioDefinition, built: BuiltLo
 }
 
 export function storyActionTarget(scenario: ScenarioDefinition, action: ActionDefinition, built: BuiltLocation, run: StoryState): StoryPublicPerson | null {
-  if (scenario.version < 5 || !action.storyTargetPersonId) return null;
+  if (!action.storyTargetPersonId) return null;
   return storyPeoplePublic(scenario, built, run).find(person => person.id === action.storyTargetPersonId && person.position && !('kind' in person.position)) ?? null;
 }
 

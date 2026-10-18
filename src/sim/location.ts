@@ -11,7 +11,6 @@ import type {
   StagingPoint,
   Vec,
 } from './types';
-import { MAPLE_STREET } from '../content/locations/maple-street';
 import { STAIR_MINUTES } from '../content/materials';
 import { applyVariations } from './location-variation';
 import { validateLocation } from './location-validate';
@@ -33,7 +32,6 @@ export const LOCATION_TUNING = {
 };
 
 export const LOCATION_FAMILIES: Record<Id, LocationFamily> = {
-  [MAPLE_STREET.id]: MAPLE_STREET,
 };
 
 export function polygonArea(p: Polygon): number {
@@ -111,11 +109,6 @@ export function floorCount(loc: LocationDefinition): number {
   return loc.rooms.reduce((m, r) => Math.max(m, (r.floor ?? 0) + 1), 1);
 }
 
-/** Exterior outline of a floor (0 = footprint, 1 = upperFootprint), if it has one. */
-export function footprintOf(loc: LocationDefinition, floor: number): Polygon | undefined {
-  return floor === 0 ? loc.footprint : floor === 1 ? loc.upperFootprint : undefined;
-}
-
 /** Floor of every room and zone by id (zones are always floor 0). */
 export function floorMap(loc: LocationDefinition): Map<Id, number> {
   const m = new Map<Id, number>();
@@ -161,7 +154,7 @@ export function stairEnds(o: Opening, floors: Map<Id, number>): StairEnds | null
 const mid = (a: Vec, b: Vec): Vec => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
 
 /** Distance a staging point sits from its opening, along the wall normal. */
-export const STAGING_OFFSET_FT = 1.5;
+const STAGING_OFFSET_FT = 1.5;
 /** Fallback offsets tried (largest first) when a space is too narrow for the full offset. */
 const STAGING_FALLBACKS = [STAGING_OFFSET_FT, 1, 0.75, 0.5];
 

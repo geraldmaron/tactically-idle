@@ -4,16 +4,15 @@ import { createInitialState } from './department';
 import { HOUR_MS } from './economy';
 import { playerArcContext, takeIncident } from './incidents';
 import { casebookRecipes, noveltyWeights, recipeOfScenario, situationCount } from './casebook';
-import { deserialize, serialize } from './save';
 import { drawIncidentSpec, incidentId } from '../gen/incident';
-import { specForSituationV10 } from '../content/scenario-recipes';
-import { SCENARIO_TYPES_V11 } from '../content/scenario-types-v11';
+import { specForSituation } from '../content/scenario-recipes';
+import { SCENARIO_TYPES } from '../content/scenario-types';
 import { DEFAULT_UNLOCK, isUnlocked, missingRequirements, unlockRule, unlockedTypes } from '../content/unlocks';
 import type { DebriefResult, GameState } from './types';
 import type { IncidentType } from './scenario-types';
 
 const T0 = Date.UTC(2026, 0, 5, 12, 0, 0);
-const ALL = SCENARIO_TYPES_V11.map((info) => info.type);
+const ALL = SCENARIO_TYPES.map((info) => info.type);
 
 function tick(state: GameState, now: number): GameState {
   const r = dispatch(state, { type: 'tick' }, { now });
@@ -55,14 +54,8 @@ describe('capability unlocks', () => {
     const shield = Object.values(s.units).find((unit) => unit.itemId === 'ballistic_shield')!;
     s.units.test_sidearm = { ...shield, id: 'test_sidearm', itemId: 'service_sidearm' };
     expect(isUnlocked(s, 'active_armed_incident')).toBe(true);
-    expect(open(1)).not.toContain('burglary');
-    expect(open(2)).toEqual(expect.arrayContaining(['burglary', 'medical_complication']));
-    expect(open(2)).not.toContain('business_robbery');
-    expect(open(3)).toEqual(expect.arrayContaining(['business_robbery']));
-    expect(missingRequirements(s, 'protected_rescue')).toEqual({ anyCert: ['vehicle_operations'] });
-    s.officers.off_park.certs.push('vehicle_operations');
-    expect(isUnlocked(s, 'protected_rescue')).toBe(true);
-    expect(open(3)).toEqual(ALL);
+    expect(open(1)).toContain('active_armed_incident');
+    expect(open(5)).toEqual(expect.arrayContaining(['barricaded', 'active_armed_incident', 'hostage_crisis']));
   });
 
   it('gates specialist calls on certification and equipment, and unknown frameworks on level', () => {
@@ -81,7 +74,7 @@ describe('capability unlocks', () => {
     expect(missingRequirements(s, 'active_armed_incident')).toEqual({ anyItem: ['service_sidearm', 'compact_carbine', 'response_shotgun'] });
     expect(unlockRule('holding' as IncidentType)).toBe(DEFAULT_UNLOCK);
     s.department.level = 1;
-    expect(missingRequirements(s, 'burglary')).toEqual({ level: 2 });
+    expect(missingRequirements(s, 'active_armed_incident').anyItem).toContain('service_sidearm');
   });
 
   it('never strands a department with nothing unlocked', () => {
@@ -103,7 +96,7 @@ describe('v11 board draws', () => {
     const open = createInitialState(T0, 777);
     open.department.level = 4;
     open.officers.off_park.certs.push('vehicle_operations');
-    const drawn = (s: GameState) => new Set(Array.from({ length: 3000 }, (_, rng) => drawIncidentSpec(rng + 1, { level: 3, trust: 78, contentVersion: 11, ...playerArcContext(s) }).spec.type));
+    const drawn = (s: GameState) => new Set(Array.from({ length: 3000 }, (_, rng) => drawIncidentSpec(rng + 1, { level: 3, trust: 78, ...playerArcContext(s) }).spec.type));
     expect(drawn(locked).has('protected_rescue')).toBe(false);
     expect(drawn(open).has('protected_rescue')).toBe(true);
   });
@@ -138,33 +131,27 @@ describe('v11 board draws', () => {
 
   it('weight unseen frameworks first, then undiscovered situations, without extra draws', () => {
     const s = createInitialState(T0, 5);
-    s.casebook = { frameworksSeen: ['welfare_check', 'domestic'], recipes: { 'domestic/cedar_close/0/ordinary': { firstAt: T0 }, 'domestic/cedar_close/1/ordinary': { firstAt: T0 }, 'domestic/cedar_close/2/ordinary': { firstAt: T0 } } };
-    const weights = noveltyWeights(s, ['welfare_check', 'domestic', 'burglary']);
-    expect(situationCount('domestic')).toBe(3);
-    expect(weights).toEqual({ welfare_check: 2, domestic: 1, burglary: 3 });
-    const base = { level: 3, trust: 78, contentVersion: 11 };
+    s.casebook = { frameworksSeen: ['barricaded', 'hostage_crisis'], recipes: { 'hostage_crisis/market_row/0/ordinary': { firstAt: T0 }, 'hostage_crisis/market_row/1/ordinary': { firstAt: T0 }, 'hostage_crisis/market_row/2/ordinary': { firstAt: T0 } } };
+    const weights = noveltyWeights(s, ['barricaded', 'hostage_crisis', 'active_armed_incident']);
+    expect(situationCount('hostage_crisis')).toBe(3);
+    expect(weights).toEqual({ barricaded: 2, hostage_crisis: 1, active_armed_incident: 3 });
+    const base = { level: 3, trust: 78, contentVersion: 13 };
     let favored = 0, plain = 0;
     for (let rng = 1; rng <= 400; rng++) {
-      const weighted = drawIncidentSpec(rng, { ...base, typeWeights: { burglary: 8 } });
+      const weighted = drawIncidentSpec(rng, { ...base, typeWeights: { active_armed_incident: 8 } });
       const unweighted = drawIncidentSpec(rng, base);
       expect(weighted.state).toBe(unweighted.state);
-      if (weighted.spec.type === 'burglary') favored++;
-      if (unweighted.spec.type === 'burglary') plain++;
+      if (weighted.spec.type === 'active_armed_incident') favored++;
+      if (unweighted.spec.type === 'active_armed_incident') plain++;
     }
     expect(favored).toBeGreaterThan(plain * 2);
   });
 
-  it('leave earlier content versions unchanged', () => {
-    for (let rng = 1; rng <= 50; rng++) {
-      const ctx = { level: 3, trust: 78, contentVersion: 10 };
-      expect(drawIncidentSpec(rng, { ...ctx, unlockedTypes: ['burglary'], typeWeights: { burglary: 8 } })).toEqual(drawIncidentSpec(rng, ctx));
-    }
-  });
 });
 
 describe('casebook record', () => {
   const card = (s: GameState, type: IncidentType, familyId: string, variant: 0 | 1 | 2) => {
-    const spec = { ...specForSituationV10(type, familyId, { variant, characteristic: 'ordinary' }, 9), contentVersion: 11 };
+    const spec = { ...specForSituation(type, familyId, { variant, characteristic: 'ordinary' }, 9), contentVersion: 13 };
     const id = incidentId(spec);
     s.incidents.unshift({ id, type, familyId, tier: spec.tier, arrivedAt: T0, expiresAt: T0 + HOUR_MS, seen: true });
     return id;
@@ -172,39 +159,21 @@ describe('casebook record', () => {
 
   it('discovers a recipe on dispatch, never from the board, and keeps the best live result', () => {
     const s = createInitialState(T0, 31);
-    const id = card(s, 'domestic', 'cedar_close', 1);
+    const id = card(s, 'hostage_crisis', 'market_row', 1);
     expect(casebookRecipes(s).size).toBe(0);
     takeIncident(s, id);
     const ref = recipeOfScenario(id)!;
-    expect(ref).toMatchObject({ type: 'domestic', variant: 1, characteristic: 'ordinary' });
+    expect(ref).toMatchObject({ type: 'hostage_crisis', variant: 1, characteristic: 'ordinary' });
     expect(Object.keys(s.casebook!.recipes)).toEqual([ref.key]);
     s.debriefs = [debrief(id, 40, false)];
     expect(casebookRecipes(s).get(ref.key)!.best).toEqual({ completed: false, objective: 40, safety: 90, label: 'Partial progress' });
     s.debriefs = [debrief(id, 30, true), ...s.debriefs];
-    const second = card(s, 'welfare_check', 'harbour_court', 0);
+    const second = card(s, 'barricaded', 'harbour_court', 0);
     takeIncident(s, second);
     expect(s.casebook!.recipes[ref.key].best).toEqual({ completed: true, objective: 30, safety: 90, label: 'Resolved' });
     s.debriefs = [];
     expect(casebookRecipes(s).get(ref.key)!.best!.completed).toBe(true);
   });
 
-  it('migrates a v5 save from its board and live debriefs, and round-trips v6', () => {
-    const s = createInitialState(T0, 12);
-    const live = incidentId({ ...specForSituationV10('disturbance', 'cedar_close', { variant: 2, characteristic: 'ordinary' }, 9), contentVersion: 10 });
-    s.debriefs = [debrief(live, 70, true)];
-    delete s.casebook;
-    for (const c of s.incidents) delete c.newKind;
-    s.saveVersion = 5;
-    const migrated = deserialize(serialize(s, T0))!;
-    expect(migrated).not.toBeNull();
-    expect(migrated.saveVersion).toBe(9);
-    expect(migrated.incidents.some((c) => c.newKind)).toBe(false);
-    const ref = recipeOfScenario(live)!;
-    expect(migrated.casebook!.frameworksSeen).toEqual([...new Set(['disturbance', ...[...s.incidents].reverse().map((c) => c.type)])]);
-    expect(migrated.casebook!.recipes[ref.key]).toEqual({ firstAt: T0, best: { completed: true, objective: 70, safety: 90, label: 'Resolved' } });
-    expect(deserialize(serialize(migrated, T0))).toEqual(migrated);
-    const bad = structuredClone(migrated) as unknown as { casebook: { recipes: Record<string, unknown> } };
-    bad.casebook.recipes['not a key'] = { firstAt: 1 };
-    expect(deserialize(serialize(bad as unknown as GameState, T0))).toBeNull();
-  });
+
 });

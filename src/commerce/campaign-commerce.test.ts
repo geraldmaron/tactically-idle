@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { CampaignSlots, SLOTS_KEY } from '../sim/campaign-slots';
 import { createInitialState } from '../sim/department';
-import { deserialize, SAVE_KEY, serialize } from '../sim/save';
+import { deserialize, serialize } from '../sim/save';
 import { availableTestMilli, campaignTestMilli } from './ledger';
 const T0 = Date.UTC(2026, 9, 3);
 function setup(earned = 0) {
@@ -10,7 +10,10 @@ function setup(earned = 0) {
     if (quota) throw new DOMException('Quota', 'QuotaExceededError'); entries.set(key, value);
   } };
   const state = createInitialState(T0, 19); state.department.devPoints = earned;
-  storage.setItem(SAVE_KEY, serialize(state, T0));
+  new CampaignSlots(storage, T0, () => 19);
+  const library = JSON.parse(storage.getItem(SLOTS_KEY)!);
+  library.slots[0].data = serialize(state, T0);
+  storage.setItem(SLOTS_KEY, JSON.stringify(library));
   const bank = new CampaignSlots(storage, T0, () => 20);
   return { bank, storage, entries, setQuota: (on: boolean) => { quota = on; } };
 }
@@ -19,16 +22,6 @@ function credit(bank: CampaignSlots, id = 'request') {
   const key = `mock:apple:${id}`; expect(bank.resolvePurchase(key, 'success', T0).ok).toBe(true); return key;
 }
 describe('campaign-isolated test DP and atomic development spending', () => {
-  it('migrates all v1 slots with stable distinct UUIDs, retaining campaign contents and deleted save', () => {
-    const { storage, bank } = setup(); bank.saveAs(2, 'Copy', T0); bank.delete(1, T0, true);
-    const v1 = JSON.parse(bank.exportRecovery()!); storage.setItem(SLOTS_KEY, JSON.stringify(v1));
-    const migrated = new CampaignSlots(storage, T0);
-    const v2 = JSON.parse(storage.getItem(SLOTS_KEY)!);
-    expect(v2.version).toBe(2); expect(v2.commerce.transactions).toEqual([]);
-    expect(v2.slots[1].data).toBe(v1.slots[1].data); expect(v2.deleted.slot.data).toBe(v1.deleted.slot.data);
-    expect(v2.slots[1].campaignId).not.toBe(v2.deleted.slot.campaignId);
-    expect(new CampaignSlots(storage, T0).getSnapshot().campaignId).toBe(migrated.getSnapshot().campaignId);
-  });
   it.each([0, 0.123456, 0.9999, 1, 1.9999999, 2, 3])('spends earned first with %s earned DP and never stores purchased balance in GameState', (earned) => {
     const { bank, storage } = setup(earned); credit(bank);
     const campaignId = bank.getSnapshot().campaignId!;

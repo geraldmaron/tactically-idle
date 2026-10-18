@@ -4,8 +4,8 @@ import { dispatch } from './game';
 import { HOUR_MS, ratesAt } from './economy';
 import { createUnit } from './equipment';
 import { maintenanceBudget } from './equipment-manager-policy';
-import { COMMAND_STAFF, commandStaffOf, createCommandStaff, managerHired, managerOn, managerView } from './command-staff';
-import { CURRENT_SAVE_VERSION, deserialize, serialize } from './save';
+import { COMMAND_STAFF, commandStaffOf, managerHired, managerOn, managerView } from './command-staff';
+import { deserialize, serialize } from './save';
 import { DEV_NODES } from '../content/dev-tree';
 import { fullName } from './officer';
 import type { Command, GameState } from './types';
@@ -229,21 +229,7 @@ describe('Training Sergeant', () => {
 });
 
 describe('Command Staff saves', () => {
-  it('migrates a v8 save to v9 with managers not hired and the equipment manager kept as Quartermaster', () => {
-    const v8 = ok(createInitialState(T0), { type: 'unlockNode', nodeId: 'logistics_equipment_manager' });
-    const legacy = ok(v8, { type: 'setMaintenanceBudget', perHour: 300 });
-    delete legacy.commandStaff;
-    legacy.saveVersion = 8;
-    const migrated = deserialize(JSON.stringify({ saveVersion: 8, contentVersion: legacy.contentVersion, savedAt: T0, state: legacy }))!;
-    expect(migrated).not.toBeNull();
-    expect(migrated.saveVersion).toBe(CURRENT_SAVE_VERSION);
-    expect(CURRENT_SAVE_VERSION).toBe(9);
-    expect(migrated.commandStaff).toEqual(createCommandStaff());
-    expect(managerHired(migrated, 'watch_commander')).toBe(false);
-    expect(managerHired(migrated, 'training_sergeant')).toBe(false);
-    expect(managerView(migrated, 'quartermaster').status).toBe('on');
-    expect(maintenanceBudget(migrated)).toBe(300);
-  });
+
 
   it('round-trips policies and logs, and rejects malformed staff records', () => {
     let s = ok(withWatchCommander(), { type: 'setManagerPolicy', patch: { managerId: 'watch_commander', restAt: 45, optOut: ['B'] } });

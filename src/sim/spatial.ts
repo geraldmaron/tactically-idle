@@ -51,12 +51,12 @@ export interface SignalResult {
 }
 
 /** Multiplier a sight-blocking object applies to visual and thermal. */
-export const OBJECT_BLOCK = 0.1;
+const OBJECT_BLOCK = 0.1;
 /** Tags that make an object block sight and heat. */
-export const SIGHT_BLOCK_TAGS = ['blocks_sight', 'concealment'];
+const SIGHT_BLOCK_TAGS = ['blocks_sight', 'concealment'];
 
 /** Abstract height of one storey, feet; adds to the path length between floors. */
-export const STOREY_HEIGHT_FT = 9;
+const STOREY_HEIGHT_FT = 9;
 
 const EPS_END = 1e-4;
 const EPS_MERGE = 1e-3;

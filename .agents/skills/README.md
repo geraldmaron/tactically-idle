@@ -24,10 +24,10 @@ the `SKILL.md` in full before starting, as the repo-root `AGENTS.md` says.
    (python3 only), the content tests, then `npm run verify`.
 4. **Review** with `swat-writing-review`, read by someone other than the writer. It routes each
    finding back to the skill that owns the fix and never edits the package itself.
-5. **Freeze** under the rule in `docs/content-pipeline.md`.
+5. **Ship** as `docs/content-pipeline.md` describes: Scenario Lab review, then a deliberate recapture of the compiled fingerprints if a compiled call changed on purpose.
 
 Small edits can start at the step that owns them. A one-word fix to a choice title is prose work,
-and it still goes through review before freeze.
+and it still goes through review before ship.
 
 ## Rules that hold in every skill
 
@@ -39,8 +39,7 @@ and it still goes through review before freeze.
 ## How these relate to written-voice
 
 `written-voice` is a general house-voice skill installed per user, outside this repo. It owns
-plain prose, the claims discipline and the tell checker (`scripts/voice-check.py` inside that
-skill). These four skills sit on top of it and add only game rules. None of them restates its
+plain prose, the claims discipline and the tell checker (the written-voice skill's voice-check script). These four skills sit on top of it and add only game rules. None of them restates its
 catalog.
 
 They still work without it. `swat-call-prose` carries its own string checker, so the hard rules

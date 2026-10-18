@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MAPLE_STREET } from '../content/locations/maple-street';
+import { MAPLE_STREET } from './fixtures/maple-street';
 import { DOORS, STAIR_MINUTES } from '../content/materials';
 import { BUILDING_FAMILIES, generateBuilding } from '../gen/building';
 import { findRoomPath, footprintRect, roomPointClear, roomSegmentClear } from './furniture-path';
@@ -163,7 +163,7 @@ describe('versioned furnished routes', () => {
 
   it('keeps every generated entry connected to room centres without cutting through exterior obstacles or walls', () => {
     const errors: string[] = [];
-    for (const familyId of [...BUILDING_FAMILIES.map(family => family.id), 'maple_street']) for (const seed of [0, 7, 42]) {
+    for (const familyId of BUILDING_FAMILIES.map(family => family.id)) for (const seed of [0, 7, 42]) {
       const location = generateBuilding(`${familyId}__furnished_v7`, seed);
       const built = { location, derived: deriveLocation(location), issues: [] };
       const spaces = [...location.rooms, ...location.zones.map(zone => ({ ...zone, type: 'hall' as const, floor: 0 }))];

@@ -1,5 +1,4 @@
 import { actionEquipmentRequirements, capabilityRuleEffect, effectiveSupplies, normalizedActionConsumption, operatorQualified, planningEquipmentContext } from './equipment-requirements';
-import { availableStageContinuations, legacyActionPresentation, legacyStageNavigation } from './compatibility/legacy-choices';
 import { isGenericResponseExit } from './response-failure';
 import { currentStoryPrompt } from './story-context';
 import { hydrateStoryAction, storyActionTarget, storyPublicScenario, storyPropsKnown } from './story-people';
@@ -17,11 +16,11 @@ import type {
   Id,
   KnowledgeStatus,
   OperationRun,
+  OutcomeBand,
   PersonMark,
   SpaceView,
   SquadId,
   StageId,
-  StageContinuationView,
 } from './types';
 import type { ActionDefinition, FactDefinition, ScenarioDefinition } from './scenario-types';
 import { scenarioActions } from './scenario-types';
@@ -29,8 +28,9 @@ import { SCENARIO_ORDER } from '../content/scenarios';
 import { getScenario } from './scenario-registry';
 import { ITEMS } from '../content/items';
 import { deployability } from './officer';
-import { builtFor, CERT_LABEL, conditionHolds, evaluateAction, getBuilt, squadLabel, spaceName, tagNames, type Evaluation } from './resolution';
-import { checkStart, computeDebrief, defaultSupport, evaluateDefault, decisionViewsFor } from './operation';
+import { availableUnits, builtFor, CERT_LABEL, conditionHolds, evaluateAction, getBuilt, RESOLUTION_TUNING, squadLabel, spaceName, tagNames, type Evaluation } from './resolution';
+import { checkStart, computeDebrief, defaultSupport, evaluateDefault, decisionViewsFor, matchedEffects, matchedOutcomeIndices } from './operation';
+import { drawnDistribution, type DrawnDistribution } from './drawn-effects';
 import { approxPoint } from './spatial-factors';
 import { actionEventResult } from './action-result';
 
@@ -173,7 +173,7 @@ export function briefing(scenarioId: Id, state?: GameState, squadIds?: SquadId[]
 
 export function builtForScenario(scenarioId: Id): BuiltLocation {
   const s = getScenario(scenarioId);
-  return s ? getBuilt(s.locationFamilyId, s.locationSeed) : getBuilt('maple_street', 0);
+  return s ? getBuilt(s.locationFamilyId, s.locationSeed) : getBuilt('cedar_close', 0);
 }
 
 /** The active run's location including opening states changed during play. */
@@ -216,7 +216,7 @@ function verifyActionsFor(s: ScenarioDefinition, factId: Id, run: OperationRun |
     if (run && state && run.status === 'active' && run.stage === a.stage && !run.history.some((h) => h.stage === a.stage && h.actionId === a.id)) {
       availableNow = run.squadIds.some((sq) => evaluateAction({ state, run, scenario: s, action: a, built, acting: [sq], support: defaultSupport(run, a, [sq]) }).eligible);
     }
-    out.push({ actionId: a.id, title: legacyActionPresentation(s, a, built).title, stage: a.stage, availableNow });
+    out.push({ actionId: a.id, title: a.title, stage: a.stage, availableNow });
   }
   return out;
 }
@@ -291,10 +291,9 @@ function visibleTargets(state: GameState, run: OperationRun, s: ScenarioDefiniti
   const out = new Map<Id, Id[]>();
   if (run.status !== 'active' || run.stage === 'debrief') return out;
   for (const a of s.stages[run.stage].actions) {
-    if (legacyStageNavigation(s, a)) continue;
     if (run.history.some((h) => h.stage === run.stage && h.actionId === a.id)) continue;
     if (isTargetHidden(a, run)) continue;
-    const followsPerson = s.version >= 5 && !!a.storyTargetPersonId;
+    const followsPerson = !!a.storyTargetPersonId;
     const person = followsPerson ? storyActionTarget(s, a, built, run) : null;
     if (followsPerson && !person) continue;
     const targetId = person ? hydrateStoryAction(a, person, built).targetId : a.targetId;
@@ -358,10 +357,10 @@ function requirementLine(a: ActionDefinition): string {
   return line.charAt(0).toUpperCase() + line.slice(1);
 }
 
-function summaryFor(a: ActionDefinition, ev: Evaluation, state: GameState, scenarioVersion: number): string {
-  if (!ev.eligible) return (ev.reason ?? 'Unavailable').split(' — ')[0];
+function summaryFor(a: ActionDefinition, ev: Evaluation, state: GameState): string {
+  if (!ev.eligible) return ev.reasonShort ?? ev.reason ?? 'Unavailable';
   const lead = ev.leadId ? state.officers[ev.leadId]?.surname : undefined;
-  return a.summary.replace(/Uses a battery pack/gi, 'Uses integrated equipment power').replace(scenarioVersion >= 13 ? /\{lead\}/g : '{lead}', lead ?? 'Squad');
+  return a.summary.replace(/\{lead\}/g, lead ?? 'Squad');
 }
 
 function expectedSupplies(action: ActionDefinition, ev: Evaluation): ActionView['suppliesRequired'] {
@@ -390,10 +389,10 @@ function expectedSupplies(action: ActionDefinition, ev: Evaluation): ActionView[
 
 /** Never select a hidden truth branch for a preview; include its possible delay in the bounds. */
 function durationRange(action: ActionDefinition, ev: Evaluation, run: OperationRun): ActionView['timeRange'] {
-  if (run.scenarioVersion >= 4 && action.awaitSupport) return { min: ev.timeBase, max: ev.timeBase };
+  if (action.awaitSupport) return { min: ev.timeBase, max: ev.timeBase };
   const limits = (['favorable', 'mixed', 'adverse'] as const).flatMap((band) => {
-    const base = ev.timeBase * ({ favorable: 1, mixed: 1.2, adverse: 1.5 } as const)[band];
-    let min = base - (ev.storyMovementMinutes ?? 0) * ({ favorable: 1, mixed: 1.2, adverse: 1.5 } as const)[band];
+    const base = ev.timeBase * RESOLUTION_TUNING.bandTime[band];
+    let min = base - (ev.storyMovementMinutes ?? 0) * RESOLUTION_TUNING.bandTime[band];
     let max = base;
     for (const effect of action.outcomes[band]) {
       if (!conditionHolds(effect.when, run)) continue;
@@ -408,7 +407,7 @@ function durationRange(action: ActionDefinition, ev: Evaluation, run: OperationR
 }
 
 /** Legacy authored content has no hidden outcome branches; include possibilities without testing truth. */
-function legacyOutcomePreview(_action: ActionDefinition): ActionView['outcomePreview'] {
+function defaultOutcomePreview(_action: ActionDefinition): ActionView['outcomePreview'] {
   return {
     favorable: 'The intended step can advance the operation. The result will record any newly verified facts and costs.',
     mixed: 'The step may only partly work, take longer, or leave gaps for the next decision.',
@@ -416,25 +415,24 @@ function legacyOutcomePreview(_action: ActionDefinition): ActionView['outcomePre
   };
 }
 
-function legacyConsequenceLevel(action: ActionDefinition): ActionView['consequenceLevel'] {
+function inferredConsequenceLevel(action: ActionDefinition): ActionView['consequenceLevel'] {
   const safetyLoss = Math.max(0, ...Object.values(action.outcomes).flat().map((effect) => -(effect.civilian ?? 0)));
   return safetyLoss >= 18 ? 'severe' : safetyLoss >= 10 ? 'high' : safetyLoss > 0 || action.stressBase >= 5 ? 'moderate' : 'low';
 }
 
 function toView(state: GameState, run: OperationRun, a: ActionDefinition, ev: Evaluation, alternates: SquadId[]): ActionView {
   const hidden = isTargetHidden(a, run);
-  const eventResult = actionEventResult(a, run.scenarioVersion);
+  const eventResult = actionEventResult(a);
   let reason = ev.reason;
   if (reason && alternates.length > 0) reason = `${reason}. ${alternates.map(squadLabel).join(' and ')} can.`;
   return {
     ...(eventResult ? { eventResult } : {}),
-    ...(ev.forceRisk ? { forceRisk: { ...ev.forceRisk } } : {}),
     ...(ev.authority ? { authority: { ...ev.authority } } : {}),
     id: a.id,
     stage: a.stage,
     title: a.title,
     icon: a.icon,
-    summary: reason ? summaryFor(a, { ...ev, reason }, state, run.scenarioVersion) : summaryFor(a, ev, state, run.scenarioVersion),
+    summary: reason ? summaryFor(a, { ...ev, reason }, state) : summaryFor(a, ev, state),
     requirementLine: requirementLine(a),
     actingSquadIds: ev.acting,
     supportSquadIds: ev.support,
@@ -445,8 +443,8 @@ function toView(state: GameState, run: OperationRun, a: ActionDefinition, ev: Ev
     reason,
     risk: ev.risk,
     likelihood: { favorable: ev.pFavorable, mixed: Math.max(0, 1 - ev.pFavorable - ev.pAdverse), adverse: ev.pAdverse },
-    consequenceLevel: a.consequenceLevel ?? legacyConsequenceLevel(a),
-    outcomePreview: { ...(a.outcomePreview ?? legacyOutcomePreview(a)) },
+    consequenceLevel: a.consequenceLevel ?? inferredConsequenceLevel(a),
+    outcomePreview: { ...(a.outcomePreview ?? defaultOutcomePreview(a)) },
     suppliesRequired: expectedSupplies(a, ev),
     timeRange: durationRange(a, ev, run),
     timeCost: Math.max(1, Math.round(ev.timeExpected)),
@@ -465,18 +463,14 @@ export function actionViews(state: GameState, _now: number, focusSquadId: SquadI
   const s = getScenario(run.scenarioId);
   if (!s) return [];
   const built = builtFor(run.locationFamilyId, run.locationSeed, run.flags);
-  return s.stages[run.stage].actions.filter((a) => !legacyStageNavigation(s, a) && !isGenericResponseExit(s, a) && conditionHolds(a.visibleWhen, run)).map((a) => {
+  return s.stages[run.stage].actions.filter((a) => !isGenericResponseExit(s, a) && conditionHolds(a.visibleWhen, run)).map((a) => {
     const { ev, alternates } = evaluateDefault(state, run, s, built, a, focusSquadId);
-    return toView(state, run, { ...a, ...legacyActionPresentation(s, a, built) }, ev, alternates);
+    return toView(state, run, a, ev, alternates);
   });
 }
 
 /** UI navigation has no skill check, squad selection or simulated consequences. */
-export function stageContinuations(state: GameState): StageContinuationView[] {
-  const run = state.activeRun;
-  const scenario = run ? getScenario(run.scenarioId) : null;
-  return run && scenario ? availableStageContinuations(scenario, run) : [];
-}
+
 
 /** Recompute one action for an explicit acting/supporting squad choice. */
 export function previewAction(
@@ -490,10 +484,10 @@ export function previewAction(
   if (!run || run.status !== 'active' || run.stage === 'debrief') return null;
   const s = getScenario(run.scenarioId);
   const a = s?.stages[run.stage].actions.find((x) => x.id === actionId);
-  if (!s || !a || legacyStageNavigation(s, a) || !conditionHolds(a.visibleWhen, run)) return null;
+  if (!s || !a || !conditionHolds(a.visibleWhen, run)) return null;
   const built = builtFor(run.locationFamilyId, run.locationSeed, run.flags);
   const ev = evaluateAction({ state, run, scenario: s, action: a, built, acting: actingSquadIds, support: supportSquadIds });
-  return toView(state, run, { ...a, ...legacyActionPresentation(s, a, built) }, ev, []);
+  return toView(state, run, a, ev, []);
 }
 
 // ---------------------------------------------------------------- prep and debrief
@@ -515,12 +509,26 @@ export function lastResolution(state: GameState): DecisionResolution | null {
   return state.activeRun?.history.at(-1) ?? null;
 }
 
-/** Developer trace of a resolution's inputs, for tuning views. */
-export function resolutionTrace(res: DecisionResolution): string[] {
-  return res.inputs.map((c) => `${c.label}: ${c.value}`);
+/** For each drawn effect decide() would settle if this action came out `band` now, every result it
+ * can settle on and its chance: the same plans resolveDrawn samples (sim/drawn-effects.ts). `effect`
+ * is the outcome's index in the band's authored list. The squads are `acting` with the default
+ * support, or the game's default pick (the best eligible squad) when not given. Engine only: the
+ * player never sees these odds. Empty when no call is running or the action isn't at this stage. */
+export function drawnDistributionAt(state: GameState, actionId: string, band: OutcomeBand, acting?: SquadId[]): DrawnDistribution[] {
+  const run = state.activeRun;
+  if (!run || run.status !== 'active' || run.stage === 'debrief') return [];
+  const scenario = getScenario(run.scenarioId);
+  const action = scenario?.stages[run.stage].actions.find((a) => a.id === actionId);
+  if (!scenario || !action) return [];
+  const built = builtFor(run.locationFamilyId, run.locationSeed, run.flags);
+  const ev = acting ? evaluateAction({ state, run, scenario, action, built, acting, support: defaultSupport(run, action, acting) })
+    : evaluateDefault(state, run, scenario, built, action, null).ev;
+  const indices = matchedOutcomeIndices(action, band, run, scenario);
+  return drawnDistribution(matchedEffects(action, band, run, scenario), { state, run, scenario, acting: ev.acting, participantIds: ev.participantIds, unitsOf: availableUnits })
+    .map((entry) => ({ ...entry, effect: indices[entry.effect] }));
 }
 
-/** Complete durable decision log. Uses committed deltas; legacy saves replay their versioned content. */
+/** Complete durable decision log using committed deltas. */
 export function decisionViews(state: GameState): DecisionView[] {
   const run = state.activeRun;
   const scenario = run ? getScenario(run.scenarioId) : null;

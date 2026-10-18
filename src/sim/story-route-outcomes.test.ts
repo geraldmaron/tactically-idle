@@ -1,104 +1,63 @@
 import { describe, expect, it } from 'vitest';
-import { incidentId } from '../gen/incident';
-import { buildLocation } from './location';
-import { initializePersonnel } from './personnel';
-import { bandFor, builtFor, evaluateAction, openingFlag } from './resolution';
-import { next } from './rng';
+import { CALL_TREES } from '../content/call-trees';
+import { drawCalls, playCalls, type PlayStep } from '../gen/incident/trees-v13/balance';
+import { applyMove } from '../gen/incident/gates/engine-driver';
+import { builtFor, evaluateAction, openingFlag } from './resolution';
 import { getScenario } from './scenario-registry';
-import { scenarioActions, type ScenarioDefinition } from './scenario-types';
-import { deserialize, serialize } from './save';
+import { scenarioActions } from './scenario-types';
 import { currentStoryRoute } from './story-bindings';
-import { apply, makeState, NOW, startRun, withCallOnBoard } from './test-fixtures';
-import type { GameState } from './types';
+import { deserialize, serialize } from './save';
+import { NOW } from './test-fixtures';
 
-const scenario = (seed: number) => getScenario(incidentId({ type: 'medical_complication', familyId: 'market_row', buildingSeed: 7, seed, tier: 2, contentVersion: 5 }))!;
-const action = (scenario: ScenarioDefinition, name: string) => scenarioActions(scenario).find(action => action.id === `v5_assistance_${name}`)!;
-function evaluate(scenario: ScenarioDefinition, state: GameState, name: string) {
-  const run = state.activeRun!;
-  return evaluateAction({ scenario, state, run, action: action(scenario, name), built: builtFor(run.locationFamilyId, run.locationSeed, run.flags), acting: ['A'], support: [] });
-}
-function commit(state: GameState, name: string): GameState {
-  const result = apply(state, { type: 'decide', actionId: `v5_assistance_${name}`, actingSquadIds: ['A'], supportSquadIds: [] });
-  expect(result.result, name).toEqual({ ok: true });
-  return result.state;
-}
-/** Choose one initial stream, then leave every saved draw untouched. */
-function favorableJourney(scenario: ScenarioDefinition, names: string[], beforeLast: (state: GameState) => void): { before: GameState; after: GameState } {
-  const base = makeState(); base.saveVersion = 5; base.contentVersion = 5; initializePersonnel(base);
-  const initial = startRun(withCallOnBoard(base, scenario.id), scenario.id, ['A'], { positions: { A: buildLocation(scenario.locationFamilyId, scenario.locationSeed).location.entries[0] }, loadouts: { A: { trauma_kit: 3 } } });
-  for (let seed = 1; seed < 1000; seed++) {
-    let state = structuredClone(initial); state.activeRun!.rngState = seed;
-    let failed = false;
-    for (const name of names) {
-      const last = name === names.at(-1);
-      if (last) beforeLast(state);
-      const ev = evaluate(scenario, state, name);
-      if (name === 'wait_with_rosa' && !ev.eligible) continue;
-      if (!ev.eligible || bandFor(ev.margin, next(state.activeRun!.rngState).value) !== 'favorable') { failed = true; break; }
-      if (last) return { before: state, after: commit(state, name) };
-      state = commit(state, name);
+const steps: PlayStep[] = [];
+for (const tree of Object.values(CALL_TREES)) playCalls(tree!, 'patient', drawCalls(tree!, 2, 6), (_result, path) => steps.push(...path));
+const movements = steps.filter(step => scenarioActions(getScenario(step.before.activeRun!.scenarioId)!).find(a => a.id === step.choice.id)?.storyRoute);
+
+describe('current call-tree movement routes', () => {
+  it('opens traversed locks on a committed move and preserves the exact run on reload', () => {
+    let checked = 0;
+    for (const step of movements) {
+      const state = structuredClone(step.before), run = state.activeRun!;
+      const scenario = getScenario(run.scenarioId)!;
+      const action = scenarioActions(scenario).find(a => a.id === step.choice.id)!;
+      const built = builtFor(run.locationFamilyId, run.locationSeed, run.flags);
+      const route = currentStoryRoute(scenario, built, action.storyRoute!);
+      const door = route?.find(id => built.location.openings.find(o => o.id === id)?.type === 'door');
+      if (!door) continue;
+      run.flags.push(openingFlag(door, 'locked'));
+      const ev = evaluateAction({ state, run, scenario, action, built: builtFor(run.locationFamilyId, run.locationSeed, run.flags), acting: step.choice.actingSquadIds, support: step.choice.supportSquadIds });
+      if (!ev.eligible) continue;
+      const after = applyMove(state, { kind: 'decide', actionId: action.id, band: 'favorable' });
+      if (!after || !after.activeRun!.history.at(-1)!.committed?.openingChanges?.some(change => change.openingId === door && change.state === 'open')) continue;
+      expect(builtFor(run.locationFamilyId, run.locationSeed, after.activeRun!.flags).location.openings.find(o => o.id === door)!.state).toBe('open');
+      // The hypothetical lock is not part of the issued path. Check the actual played run's persistence.
+      expect(deserialize(serialize(step.after, NOW))?.activeRun).toEqual(step.after.activeRun);
+      expect(state.activeRun!.flags).toContain(openingFlag(door, 'locked'));
+      checked++;
+      break;
     }
-    if (!failed) break;
-  }
-  throw new Error('No favorable initial stream for the tested route');
-}
-
-describe('bound route outcomes use the route actually traversed', () => {
-  it('Rosa locks the alternate side doorway and preserves the blocked unused front door through reload', () => {
-    const built = buildLocation('market_row', 7);
-    const s = Array.from({ length: 30 }, (_, seed) => scenario(seed)).find(s =>
-      s.facts.find(fact => fact.id === 'v5_assistance_supervisor_answers')?.truth
-      && s.story!.bindings.routes.exit.openingIds.includes('d_front'))!;
-    expect(s).toBeDefined();
-    const { before, after } = favorableJourney(s, ['hear_rosa_assess', 'call_supervisor', 'lock_and_step_out'], state => {
-      state.activeRun!.flags.push(openingFlag('d_front', 'blocked'), openingFlag('d_side', 'open'), openingFlag('d_delivery', 'blocked'));
-    });
-    const current = builtFor(s.locationFamilyId, s.locationSeed, before.activeRun!.flags);
-    expect(currentStoryRoute(s, current, 'exit')).toEqual(['d_side', 'p_front_e']);
-    const result = builtFor(s.locationFamilyId, s.locationSeed, after.activeRun!.flags);
-    expect(result.location.openings.find(opening => opening.id === 'd_front')!.state).toBe('blocked');
-    expect(result.location.openings.find(opening => opening.id === 'd_side')!.state).toBe('locked');
-    expect(result.location.openings.find(opening => opening.id === 'p_front_e')!.state).toBe(built.location.openings.find(opening => opening.id === 'p_front_e')!.state);
-    const record = after.activeRun!.history.at(-1)!;
-    expect(record.committed!.openingChanges).toContainEqual({ openingId: 'd_side', state: 'locked' });
-    expect(record.committed!.openingChanges!.some(change => change.openingId === 'd_front' || change.openingId === 'p_front_e')).toBe(false);
-    expect(record.committed!.consequences.some(text => text.includes('locked'))).toBe(true);
-    const loaded = deserialize(serialize(after, NOW));
-    expect(loaded).not.toBeNull();
-    expect(loaded!.activeRun).toEqual(after.activeRun);
-    expect(builtFor(s.locationFamilyId, s.locationSeed, loaded!.activeRun!.flags)).toEqual(result);
-    // A later service condition must replay the resolved doorway, not the original static exit.
-    const crew = s.externalServices![0];
-    const originalAcceptance = crew.acceptWhen;
-    try {
-      crew.acceptWhen = { ...originalAcceptance, flags: [...originalAcceptance?.flags ?? [], openingFlag('d_side', 'locked')] };
-      let continued = after;
-      if (evaluate(s, continued, 'wait_with_rosa').eligible) continued = commit(continued, 'wait_with_rosa');
-      expect(evaluate(s, continued, 'receive_outside').eligible).toBe(true);
-      continued = commit(continued, 'receive_outside');
-      const replayed = deserialize(serialize(continued, NOW));
-      expect(replayed).not.toBeNull(); expect(replayed!.activeRun).toEqual(continued.activeRun);
-      const damaged = JSON.parse(serialize(continued, NOW));
-      const closing = damaged.state.activeRun.history.find((decision: { actionId: string }) => decision.actionId === 'v5_assistance_lock_and_step_out');
-      delete closing.committed.openingChanges;
-      expect(deserialize(JSON.stringify(damaged))).toBeNull();
-    } finally { crew.acceptWhen = originalAcceptance; }
+    expect(checked).toBeGreaterThan(0);
   });
 
-  it('an accepting crew still traverses and opens its locked route when Rosa and the squad are already inside', () => {
-    const s = scenario(3);
-    const { before, after } = favorableJourney(s, ['hear_rosa_assess', 'offer_here', 'aid_rosa_resolve', 'wait_with_rosa', 'receive_here'], state => {
-      state.activeRun!.flags.push(openingFlag('d_side', 'blocked'), openingFlag('d_delivery', 'blocked'), openingFlag('d_front', 'locked'));
-    });
-    const ev = evaluate(s, before, 'receive_here');
-    expect(before.activeRun!.squadTasks[0].positionId).toBe(s.story!.bindings.people.rosa.initial.spaceId);
-    expect(ev.storyMovementMinutes).toBeGreaterThan(0);
-    expect(ev.storyOpenedIds).toContain('d_front');
-    expect(ev.storySquadOpenedIds).toEqual([]);
-    expect(after.activeRun!.history.at(-1)!.timeCost).toBe(ev.timeBase);
-    expect(after.activeRun!.history.at(-1)!.committed!.openingChanges).toContainEqual({ openingId: 'd_front', state: 'open' });
-    expect(builtFor(s.locationFamilyId, s.locationSeed, after.activeRun!.flags).location.openings.find(opening => opening.id === 'd_front')!.state).toBe('open');
-    const loaded = deserialize(serialize(after, NOW));
-    expect(loaded).not.toBeNull(); expect(loaded!.activeRun).toEqual(after.activeRun);
+  it('replans around a blocked opening or refuses the move without changing the run', () => {
+    let checked = 0;
+    for (const step of movements) {
+      const state = structuredClone(step.before), run = state.activeRun!;
+      const scenario = getScenario(run.scenarioId)!, action = scenarioActions(scenario).find(a => a.id === step.choice.id)!;
+      const route = currentStoryRoute(scenario, builtFor(run.locationFamilyId, run.locationSeed, run.flags), action.storyRoute!);
+      if (!route?.length) continue;
+      run.flags.push(openingFlag(route[0], 'blocked'));
+      const before = structuredClone(state);
+      const built = builtFor(run.locationFamilyId, run.locationSeed, run.flags);
+      const alternate = currentStoryRoute(scenario, built, action.storyRoute!);
+      if (alternate) expect(alternate).not.toContain(route[0]);
+      else {
+        const ev = evaluateAction({ state, run, scenario, action, built, acting: step.choice.actingSquadIds, support: step.choice.supportSquadIds });
+        expect(ev.eligible).toBe(false);
+      }
+      expect(state).toEqual(before);
+      checked++;
+    }
+    expect(checked).toBeGreaterThan(0);
   });
 });

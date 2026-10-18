@@ -3,7 +3,7 @@ name: swat-writing-review
 description: >-
   Use when Tactically Idle call text, a batch of generated variants or a set
   of officer text is written and through its automated gates but not yet
-  frozen, and someone must decide whether it ships or asks whether the game
+  shipped, and someone must decide whether it ships or asks whether the game
   prose is good enough. Covers a cold read for the seconds test, a path read
   in player order at phone width, a table read of every spoken line, choice,
   consequence and spoiler audits, an ethics and copaganda audit, and a batch
@@ -51,7 +51,6 @@ Stand down, and say so in one sentence, when any of these holds.
 - The change is compiler, gate or UI code. That needs a code review.
 - The text is docs, plans, commit messages or PR prose. Use written-voice alone.
 - Nothing player-visible changed, such as a balance number or a byte-identical refactor.
-- The content is issued and no new version is planned. Record a backlog note, never a verdict.
 
 Scaled use. A single rewritten string gets pass one (cold read) and pass three (table read)
 only, and the record marks every other gate "not applicable, single string". Standing down
@@ -59,7 +58,7 @@ never skips the cliche runner and the written-voice checker on drafted strings. 
 choice feels fake" comes here to diagnose, then goes to swat-call-design to fix. "This hook is
 weak" goes straight to swat-call-prose unless someone asks whether it ships.
 
-## 1. Scope, inputs and the freeze line
+## 1. Scope, inputs and the content version
 
 Gate 1 and gate 2. Write this block before reading a single call.
 
@@ -69,41 +68,45 @@ Review scope
 - Situations and pacings: <1 to 3>, <ordinary | deliberate_answers | both>
 - Seeds and buildings: <call seeds>, <building families>
 - Officer text: <persona ids or arc ids | none>
-- Content version: v<N> from INCIDENT_CONTENT_VERSION
-- Issued fingerprint files present: <issued-vN list>
-- Reachable paths: <n from the sheet's path explorer | static walk because nothing is built>
+- Content version: v<N> from CALL_TREE_CONTENT_VERSION in src/content/call-trees/index.ts
+- Compiled fingerprints: <will need a deliberate recapture because <the compiled call that changes on purpose> | unchanged>
+- Reachable paths: <endings reachable and shortest paths from the lab's Outcomes | static walk because nothing is built>
 - Records received: design <where | none>, prose <where | none>, officer <where | none>
 - Reader: <separate | self-read declared, drafted by me, cold read kept cold by <how>>
 ```
 
-1. Review runs after the automated gates are green and before fingerprints are captured. If a
-   gate is red, stop and hand the package back.
-2. Read `INCIDENT_CONTENT_VERSION` in src/gen/incident/index.ts and list the
-   issued-v*-fingerprints.json files beside it (search the symbol if the file moved). A version
-   with a fingerprint file is frozen, and its findings become work for the next version.
-3. Whether the newest version is still open is the owner's call. Ask, never assume.
-4. The review edits nothing, neither data nor issued text.
-5. Read the design, prose and officer records first. A slot marked "not run" is a gap you now
-   check by hand. A missing record is a fix before freeze finding, routed to its skill. A record
+1. Review runs after the automated gates are green and before the compiled fingerprints are
+   recaptured. If a gate is red, stop and hand the package back.
+2. Read `CALL_TREE_CONTENT_VERSION` in src/content/call-trees/index.ts. Content has one current
+   version and nothing is locked, so every finding is work on the current calls. Name which
+   compiled calls the findings would change, because
+   src/gen/incident/trees-v13/compiled-fingerprints.json needs a deliberate recapture when a fix
+   lands.
+3. The review edits nothing, neither data nor the fingerprint file.
+4. Read the design, prose and officer records first. A slot marked "not run" is a gap you now
+   check by hand. A missing record is a fix before ship finding, routed to its skill. A record
    line that says "complete" or "answered" is a claim you test, never a fact you inherit.
    A prose record whose Tells checked or cliche runner line says "not run" is a fix before
-   freeze finding routed to swat-call-prose, and you run both yourself before reading on.
-6. Fresh reader. If one agent drafts and reviews, declare the self-read and follow the limits
+   ship finding routed to swat-call-prose, and you run both yourself before reading on.
+5. Fresh reader. If one agent drafts and reviews, declare the self-read and follow the limits
    in section 11. The self-read steps are in references/table-read-protocol.md section 4.
 
 ## 2. Set up the read
 
 Gate 3. Read the text where the player meets it.
 
-1. Run `npm run dev` and open `/story.html?type=<type>` on the dev server. Use the selectors
-   the page in front of you offers, and record the URL of every read.
+1. Run `npm run lab` and open `/lab?type=<type>` (docs/scenario-lab.md). Set the draw in the
+   Play surface's Director, and record the URL of every read: it holds the whole draw and the
+   path, so another reader lands on the same step.
 2. Read every situation, both pacings when the cast has a deliberate_answers member, and at
    least two building families.
-3. Run the sheet's path explorer ("Explore every path" on 2026-10-06) and copy its summary
-   line into the path log. When nothing is built, run the static walk instead (section 4).
-4. Open the running game at a 390px viewport and play one path to an ending. The sheet does
-   not show clamps, chips or hidden summaries the way the game does. The list of what each
-   surface hides is in references/table-read-protocol.md.
+3. Copy the Outcomes line (endings written and reachable in this call) and each ending's
+   shortest path into the path log. When nothing is built, run the static walk instead
+   (section 4).
+4. Play one path to an ending on Play, whose frame is the game's own screens at 390px. Script
+   shows every line but not the game's clamps, chips or hidden summaries, and the frame has no
+   campaign bar or bottom navigation. The list of what each surface hides is in
+   references/table-read-protocol.md.
 5. Capability honesty. If you cannot start the server, render the page or set a viewport, say
    so in one sentence, export the strings in player order and list the surfaces you could not
    see. An exported read is a stated gap, never a silent substitute.
@@ -126,7 +129,7 @@ Cold read <call>, situation <n>, seed <s>
 - Gap that pulls: <the one unknown I want closed | none>
 ```
 
-A blank in any of the first four slots is a block on a new call and fix before freeze on an
+A blank in any of the first four slots is a block on a new call and fix before ship on an
 existing one. Route it to swat-call-design when the data holds no person, want or pressure, and
 to swat-call-prose when the data has them and the line buries them. Also check these.
 
@@ -135,9 +138,9 @@ to swat-call-prose when the data has them and the line buries them. Also check t
    danger. Paperwork stakes on an armed call fail the At risk slot.
 2. Restatement. Read card, dispatch, known lines and the first stage prompt in order. Each new
    surface adds a fact or a change (the clock closer, a person moved). A fact restated without a
-   change is a finding, and fix before freeze when it sits in the first stage prompt. On typed
-   calls the compiler fills the card and the first known line from `opening` (observed
-   2026-10-06), so that repeat routes to engineering. Method and an observed case are in
+   change is a finding, and fix before ship when it sits in the first stage prompt. In the retired
+   typed calls the compiler filled the card and the first known line from one field (observed
+   2026-10-06). In a call tree the writer owns both, so a repeat routes to swat-call-prose. Method and an observed case are in
    references/path-and-honesty-checks.md section 1.
 3. Exactly one gap remains that a single fact would close. A failing card from a shipped call,
    with its finding row, is in references/review-example.md.
@@ -286,13 +289,13 @@ and 13.
 
 ## 8. The batch audit
 
-Gate 9. Required for any framework-level or version-level review. Collection and counters are
+Gate 9. Required for any review of several calls or generated variants. Collection and counters are
 in references/batch-audit.md, and the dash, colon, stock phrase and repeat checks are in
 ../swat-call-prose/references/string-checks.md. Run written-voice's checker on the plain-text
 export with the joined allow list that file describes. If written-voice is not installed or
 python3 is missing, say so and record the Tells checked line as not run. State the sample size
 on every count. Every threshold in that table is a house target, not a research finding. A count over
-its target is at least fix before freeze, and section 11 says who may downgrade it.
+its target is at least fix before ship, and section 11 says who may downgrade it.
 
 Fill the batch table in references/batch-audit.md section 9, one row per check with its count,
 house target and finding row.
@@ -308,21 +311,25 @@ each as a scored line with a quoted line as evidence. Any "no" blocks approval.
 
 Gate 10.
 
-1. Run `npm test` for any review, and `npm run verify` before a freeze (on 2026-10-06 it ran
-   typecheck, test, `check:art` and build).
+1. Run `npx vitest run src/gen/incident/trees-v13` and `npm run check:strings` for any review,
+   and `npm run verify` before ship (package.json runs typecheck, test, `check:art`, build and
+   `scripts/check-no-lab.mjs`).
 2. Record the command, exit code, summary line and every failing test name. Never claim a pass
    without that output in front of you.
-3. A failing issued fingerprint test is a block whatever else is true, because issued text changed.
+3. A failing compiled-fingerprints test means a compiled call changed. If the change was not
+   intended it is a block. If it was intended it is a recapture, and the record says which
+   calls and why.
 4. If you cannot run the tests, say so and record "not run" with the reason. The verdict cannot
    then be approve.
-5. File the standing lint finding once per review until engineering ships the check.
+5. File the standing gap once per review until engineering ships the check. `npm run check:strings`
+   checks each call on its own, so a sentence repeated across calls is caught only by the batch audit.
 6. Engine dry-run, for every call not yet built. Apply each validateScenario rule to the action
    rows, check person values against the engine's types, score each ending on its fastest and
    slowest path, and name the context prompt each way into a stage shows. Any failed rule is a
    block. The steps are in references/engine-dry-run.md.
 
 ```
-[note] all typed and hand-authored calls | src/gen/incident/gates/prose-lint.ts | sees no machine check on dashes, colons, stock phrases, cross-framework repeats or hand-authored stories | rule standing lint gap | fix as request 'extend prose-lint with these checks and run it on hand-authored stories' | route engineering
+[note] all calls | scripts/check-strings.ts | sees each call checked alone, with no machine check for a sentence repeated across calls | rule standing lint gap | fix as request 'run the string checker with --min-repeat over every call at once' | route engineering
 ```
 
 ## 11. Findings, the notes session and the verdict
@@ -341,11 +348,15 @@ references/cliche-and-copaganda.md, `batch <check>`, `budget <surface>`, `office
 
 - block. Shipping would mislead, harm or break. A fake decision at a stage, an untraced adverse
   result, a leak, a dead end, a missing result cell, a placeholder, a red line, an invented
-  outcome, a failing issued fingerprint test.
-- fix before freeze. The player would feel it. A blank cold read slot on an existing call, a
+  outcome, a compiled-fingerprints failure nobody intended.
+- fix before ship. The player would feel it. A blank cold read slot on an existing call, a
   restated fact in the first stage prompt, a mood-label choice, a sermon ending, a repeated
   flavor sentence, a count over a batch threshold, a voice break.
 - note. Polish, or a pattern to watch across the next batch.
+
+The Scenario Lab's review drawer writes rows in the shape above, with these severities. Anchor
+a note to a choice, band, line, ending or key, and Export findings gives the verdict line and one
+row per note. Notes save to docs/calls/notes/<type>.json, which the next reader can open.
 
 Self-read limits. A finding that exceeds a numeric threshold in references/batch-audit.md cannot
 be downgraded by the author of the strings, whatever the reason given. Only a separate reader
@@ -364,30 +375,31 @@ you re-read only the passes the fix touched, and each row records its outcome.
 
 Verdict rules.
 
-- approve. Zero block and zero fix before freeze findings remain, and the reader was separate.
-- edit. No reject condition holds, and every block and fix before freeze finding has a fix as
+- approve. Zero block and zero fix before ship findings remain, and the reader was separate.
+- edit. No reject condition holds, and every block and fix before ship finding has a fix as
   data or a filed request with an owner. A self-read verdict is never better than edit.
 - reject. A stage's decision is not real, a red line is crossed, the truth leaks through
   structure, or a blocker has no data fix. It goes back to swat-call-design.
 
 ```
-Verdict <call or story id> v<N> | <approve | edit | reject> | block <n | unverified, self-read> | fix before freeze <n> | note <n> | ships in <v<N> | next version>
+Verdict <call or story id> v<N> | <approve | edit | reject> | block <n | unverified, self-read> | fix before ship <n> | note <n> | fingerprints recapture <yes | no>
 ```
 
-Record the verdict in the pull request, as docs/content-pipeline.md asks.
+Set it as the lab drawer's call verdict and record it in the pull request, as
+docs/content-pipeline.md asks.
 
 ## What enforces this file
 
 Nothing in this file is machine-enforced by this file. The repo gates enforce what their tests
-cover, which is length ceilings, the lane word lists, four-word spoilers, distinct decision
-paths, two takeable choices per stage, playability and issued fingerprints. The reads, the
+cover, which is the call-tree structure gates, role-token and pronoun agreement, the string
+checker's budgets and word lists, and the compiled fingerprints. The reads, the
 audits, the choice table, the routing and the verdict are enforced only by the record below and
 by the owner's sign-off. The authoring skills' closing gates are self-checks. This review is the
 second reader, and its record is the evidence the reading happened.
 
 ## Closing gates and review record
 
-1. Scope and version named, issued text untouched.
+1. Scope and version named, fingerprint recapture status stated.
 2. Separate reader, or a self-read declared with its limits applied.
 3. Read surface named, with unseen surfaces listed when the read was exported text.
 4. Cold read and restatement check written for every card and briefing.
@@ -409,7 +421,7 @@ done | <reason>" in its slot and is never deleted.
 Writing review record (DRAFT until every slot is filled)
 - Scope: answered | <calls, types, seeds, pacings>, v<N>, <n> reachable paths
 - Reader: answered | separate | self-read declared, <how the cold read was kept cold>, limits applied
-- Read surface: answered | story sheet <URLs> and game at 390px | exported text because <why>, unseen <surfaces>
+- Read surface: answered | lab <URLs> on Play and Script, game at 390px | exported text because <why>, unseen <surfaces>
 - Cold read: answered | <n> cards, blanks <list | none>, restated facts <n>
 - Path and choice read: answered | paths <n> | static walk <states>, dead ends <n>, cheaper reveals <n>
 - Choice table: answered | claims <n checked, n falsified>, dominated <n>, takeable pairs <n>, time-only bands <n>, commit taps <max>, cells missing <n>, placeholders <n>, untraced adverse <n>
@@ -420,8 +432,8 @@ Writing review record (DRAFT until every slot is filled)
 - Batch audit: answered | sample <n>, repeats <n>, openers over target <n>, collisions <n>, crisis cap <held | broken> | not applicable | <why>
 - Engine gates: answered | <command> exit <code>, <summary line> | not run | <reason>
 - Engine dry-run: answered | rules failed <n>, invalid values <n>, best ending scores <n%> against worst <n%>, prompts unwritten or shadowed <n> | not applicable, built and loaded by tests
-- Tells checked: answered | voice-check ran on exported strings with joined allow list | not run | <reason>
-- Findings: <n> block, <n> fix before freeze, <n> note, routed to <skills, engineering, owner>
+- Tells checked: answered | the written-voice skill's voice-check script ran on exported strings with joined allow list | not run | <reason>
+- Findings: <n> block, <n> fix before ship, <n> note, routed to <skills, engineering, owner>
 - Owner decisions surfaced: <list | none>
 - Verdicts: approve <n>, edit <n>, reject <n>, recorded at <pull request>
 ```
@@ -435,7 +447,7 @@ This review owns the record's shape.
 - references/path-and-honesty-checks.md. Open in passes one, two, four and five for the tables.
 - references/engine-dry-run.md. Open before the verdict on any call that is not yet built.
 - references/table-read-protocol.md. Open when you set up the read or read voices.
-- references/batch-audit.md. Open for any framework-level or version-level review.
+- references/batch-audit.md. Open for any review of several calls or generated variants.
 - references/cliche-and-copaganda.md. Open in pass five and whenever a line feels familiar.
 - references/review-example.md. Open before your first review to see every pass on a shipped call.
 - references/sources.md. Open when you need the evidence behind a rule.

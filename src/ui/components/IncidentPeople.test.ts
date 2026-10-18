@@ -13,7 +13,7 @@ import { LiveView } from '../screens/LiveView';
 let state = makeState();
 vi.mock('../store', () => ({ useGame: () => state }));
 const noop = () => {};
-const WELFARE = testCallId('welfareV4');
+const WELFARE = testCallId('barricade');
 const casualty = (officerId = 'off_chen'): OfficerCasualtyRecord => ({ officerId, severity: 'wounded', label: 'Shoulder wound', at: 9, care: 'needed', recoveryUntil: NOW + 2 * 60 * 60 * 1000 });
 const result = (): DebriefResult => ({
   runId: 'saved_injury', scenarioId: 'ms_occupancy', endingId: 'partial', endingTitle: 'Partial protection',

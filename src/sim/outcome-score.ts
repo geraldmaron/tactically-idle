@@ -13,12 +13,13 @@ import { civilianOutcomeViews } from './incident-consequences';
 import { scenarioActions } from './scenario-types';
 import type { IncidentPersonDef, OutcomeEffect, ScenarioDefinition } from './scenario-types';
 import type { CompletionDisposition, Id, OperationRun } from './types';
+import { tunable } from './tuning';
 
 /** Where a person is when the call ends. `fled` is not reachable yet (containment, §5). */
 export type EndState = 'safe' | 'released' | 'hurt' | 'killed' | 'inside' | 'in_hand' | 'fled';
 /** Who a person is to the call, in priority-of-life order. */
 export type LifeGroup = 'held' | 'trapped' | 'bystander' | 'officer' | 'subject';
-export const LIFE_ORDER: readonly LifeGroup[] = ['held', 'trapped', 'bystander', 'officer', 'subject'];
+const LIFE_ORDER: readonly LifeGroup[] = ['held', 'trapped', 'bystander', 'officer', 'subject'];
 export type HurtSeverity = 'wounded' | 'serious';
 
 export interface PersonEnd {
@@ -43,8 +44,8 @@ type Pair = readonly [trust: number, strain: number];
  * `everyoneOut` credit, shared by the civilians who come out safe or are let go. A civilian who is
  * hurt, killed or still inside gets no share and costs their own weight on top, so losing a civilian
  * always costs more than the same harm to an officer, and an officer more than a subject, however
- * many civilians the call has. */
-export const OUTCOME_SCORE_V1 = {
+ * many civilians the call has. Tunable (sim/tuning.ts). */
+export const OUTCOME_SCORE_V1 = tunable('OUTCOME_SCORE_V1', {
   everyoneOut: [3, -2] as Pair,
   civilian: {
     held: { inside: [-1, 1.5], wounded: [-1.5, 1], serious: [-2.5, 1.5], killed: [-5, 6] },
@@ -70,9 +71,9 @@ export const OUTCOME_SCORE_V1 = {
    * brings): `base`, plus `perPoint` for each trust point the lines add up to, plus `objective` for
    * how far the call got (run.objective, 0 to 100) against the middle. Clamped 0 to 1, and to
    * `unfinishedMax` when the call is not resolved: unfinished work never earns full settlement
-   * (operation.ts INCOMPLETE_SERVICE_FACTOR_MAX). */
+   * (operation.ts reads the same cap for calls before v13). */
   factor: { base: 0.7, perPoint: 0.04, objective: 0.2, unfinishedMax: 0.65 },
-};
+});
 
 export type ForceProfileKey = 'firearm' | 'less_lethal_device' | 'less_lethal_impact' | 'hands';
 export type ForceSeverityKey = 'none' | 'wounded' | 'serious' | 'fatal';
@@ -148,7 +149,7 @@ export function endStates(scenario: ScenarioDefinition, run: ScoreRun, opts: Sco
 }
 
 /** Every use of force by the team on the call, in order. */
-export function forceUses(scenario: ScenarioDefinition, run: Pick<OperationRun, 'history'>): ForceUse[] {
+function forceUses(scenario: ScenarioDefinition, run: Pick<OperationRun, 'history'>): ForceUse[] {
   return run.history.flatMap(decision => (decision.committed?.drawn ?? []).filter(record => record.model === 'team_force').map(record => {
     const [profile, severity] = record.key.split(':') as [ForceProfileKey, ForceSeverityKey];
     return { personId: record.personId, label: personLabel(scenario, record.personId), profile, severity, ...(record.reason ? { reason: record.reason } : {}), revision: decision.revision };
@@ -156,7 +157,7 @@ export function forceUses(scenario: ScenarioDefinition, run: Pick<OperationRun, 
 }
 
 /** How many times the team went in on command's authority. */
-export function entriesTaken(scenario: ScenarioDefinition, run: Pick<OperationRun, 'history'>): number {
+function entriesTaken(scenario: ScenarioDefinition, run: Pick<OperationRun, 'history'>): number {
   const actions = new Map(scenarioActions(scenario).map(action => [action.id, action]));
   return run.history.filter(decision => actions.get(decision.actionId)?.authority?.kind === 'entry').length;
 }
@@ -172,7 +173,7 @@ export interface ScoreInputs {
   ranOut: boolean;
 }
 
-export function scoreInputs(scenario: ScenarioDefinition, run: ScoreRun, opts: ScoreOptions = {}): ScoreInputs {
+function scoreInputs(scenario: ScenarioDefinition, run: ScoreRun, opts: ScoreOptions = {}): ScoreInputs {
   return {
     people: endStates(scenario, run, opts),
     force: forceUses(scenario, run),

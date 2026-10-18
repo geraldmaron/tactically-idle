@@ -18,10 +18,12 @@ import { applyIncidentsDue, nextIncidentEventTime } from './incidents';
 import { runEquipmentMaintenance } from './equipment-manager';
 import { maintenanceBudget } from './equipment-manager-policy';
 import { commandStaffActive, commandStaffSalaries, logQuartermaster, runCommandStaff } from './command-staff';
+import { tunable } from './tuning';
 
 export const HOUR_MS = 3_600_000;
 
-export const ECONOMY_TUNING = {
+/** Tunable (sim/tuning.ts). */
+export const ECONOMY_TUNING = tunable('ECONOMY_TUNING', {
   /** Income and recurring costs accrue only this long after the last player command. */
   capMs: 24 * HOUR_MS,
   /** Department allocation per hour (funding). */
@@ -40,7 +42,7 @@ export const ECONOMY_TUNING = {
   reportMinMs: 15 * 60_000,
   /** Restock rules run on this absolute-clock grid, so tick size cannot change results. */
   restockIntervalMs: HOUR_MS,
-};
+});
 
 // ---------------------------------------------------------------- formatting helpers
 

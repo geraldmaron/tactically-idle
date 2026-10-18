@@ -218,32 +218,34 @@ PY
 
 ## 7. Name collisions
 
-As read on 2026-10-06, the civilian surname pool holds the same 100 surnames as the persona
-catalog, and 98 civilian first names all come from it too. The cast draw does not exclude anyone
-on the roster. So a civilian can share a deployed officer's surname on the same call.
+Since 2026-10-17 the civilian name pools in `src/content/call-trees/civilian-names.ts` are
+disjoint from the persona catalog, and a test in `src/gen/incident/trees-v13/call-trees.test.ts`
+("share no first name or surname with any officer") holds them apart. On 2026-10-06 the retired
+scenario pool held all 100 roster surnames, so a civilian could share a deployed officer's
+surname. That can no longer happen for a call tree, but check it rather than assume it.
 
 ```
 python3 - <<'PY'
 import json, re
 roster = {p['surname'] for p in json.load(open('src/content/personas.json'))}
-src = open('src/content/scenario-names.ts', encoding='utf-8').read()
-pool = set(re.findall(r'"([^"]+)"', src[src.index('SCENARIO_SURNAMES'):]))
+src = open('src/content/call-trees/civilian-names.ts', encoding='utf-8').read()
+pool = set(re.findall(r"'([^']+)'", src[src.index('CIVILIAN_SURNAMES'):]))
 print('roster surnames also in the civilian pool', len(roster & pool), 'of', len(roster))
 PY
 ```
 
-For a review batch, list each call's bound civilian names and its deployed squads, then flag any
-match.
+A nonzero count means the gate was bypassed or the pools were edited. For a review batch, list
+each call's bound civilian names and its deployed squads, and flag any match.
 
 ```
 Collision log
 | Call and seed | Civilian full name | Deployed officer with that surname | Route |
 |---|---|---|---|
-| <type, seed> | <name> | <officer> | engineering request R9 |
+| <type, seed> | <name> | <officer> | engineering |
 ```
 
-The writing fix is to name civilians by role in every officer line. The real fix is the R9 request
-in officer-data-proposal.md.
+If one turns up, the writing fix is to name civilians by role in every officer line, and the
+real fix is to repair the pool.
 
 ## 8. Contradiction diff
 
@@ -275,7 +277,7 @@ If the skill folder moved, point the script at wherever profile-patterns.md now 
 
 ## 9. Spelling by hand
 
-Persona notes are not read by the prose lint, which covers typed call packages only. Spell-check
+Persona notes are not read by the prose lint, which covers call strings only. Spell-check
 them by hand against American spelling. As read, the notes for person_070 and person_090 say
 "cataloguing", which American spelling writes as "cataloging".
 

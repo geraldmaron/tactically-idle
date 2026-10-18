@@ -2,8 +2,11 @@ import type { Candidate, CertId, Id, Officer, RatingKey, Ratings, Role, TraitId 
 import { hashSeed, next } from '../sim/rng';
 import { shuffledPersonas, type Persona } from './personas';
 import { CAREER_TUNING } from '../sim/career';
+import { tunable } from '../sim/tuning';
 
-export const RECRUIT_TUNING = {
+/** Tunable (sim/tuning.ts). A candidate's cost, wage, ratings and expiry are set when the candidate
+ * is drawn, so those fields reach new candidates only. `rookieService` is read nowhere. */
+export const RECRUIT_TUNING = tunable('RECRUIT_TUNING', {
   /** Candidates in the pool before any development node adds more. */
   basePool: 3,
   /** How long an unshortlisted candidate stays available. */
@@ -19,7 +22,7 @@ export const RECRUIT_TUNING = {
   wagePerThreeYears: 1,
   wageExperienceCap: 6,
   signingPerServiceYear: 25,
-};
+});
 
 export const ROLES: Role[] = ['comms', 'breach', 'medic', 'recon', 'lead'];
 

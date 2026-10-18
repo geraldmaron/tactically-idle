@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { CampaignSlots, SLOTS_KEY } from '../sim/campaign-slots';
 import { createInitialState } from '../sim/department';
-import { SAVE_KEY, serialize } from '../sim/save';
+import { serialize } from '../sim/save';
 import { availableTestMilli, validTestWallet } from './ledger';
 import { developmentSpendPlan } from './development-spend';
 const NOW = Date.UTC(2026, 9, 3);
@@ -9,7 +9,10 @@ function setup(earned = 0) {
   const data = new Map<string, string>(); let full = false;
   const storage = { getItem: (key: string) => data.get(key) ?? null, setItem: (key: string, value: string) => { if (full) throw new DOMException('Full', 'QuotaExceededError'); data.set(key, value); } };
   const state = createInitialState(NOW, 41); state.department.devPoints = earned;
-  storage.setItem(SAVE_KEY, serialize(state, NOW));
+  new CampaignSlots(storage, NOW, () => 19);
+  const library = JSON.parse(storage.getItem(SLOTS_KEY)!);
+  library.slots[0].data = serialize(state, NOW);
+  storage.setItem(SLOTS_KEY, JSON.stringify(library));
   return { bank: new CampaignSlots(storage, NOW), storage, data, quota: (value: boolean) => { full = value; } };
 }
 describe('free player packs and preserved local balances', () => {

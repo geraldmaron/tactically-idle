@@ -13,10 +13,10 @@ or reject, written so the cost of each is visible.
    their own file and never feed a formula, a trait or a story pool.
 2. New officer fields are optional and JSON-safe, the same pattern the career module already uses
    for its hidden bookkeeping, so a save without them loads unchanged.
-3. Every new field has a default that leaves current saves, current officer text and every issued
-   incident fingerprint byte-identical. The mechanism is separation. Officer text renders at display
+3. Every new field has a default that leaves current saves, current officer text and every compiled
+   call fingerprint byte-identical. The mechanism is separation. Officer text renders at display
    time from the read-only view and never enters a `ScenarioDefinition` field, so nothing that the
-   issued fingerprints hash or the prose lint scans ever varies with the roster.
+   compiled fingerprints hash or the prose lint scans ever varies with the roster.
 4. Calls read officer story data through a read-only view. No call branch may depend on it.
 
 ## 2. The officer story file
@@ -94,8 +94,8 @@ interface OfficerHooksView {
 ```
 
 Callbacks render in a UI component beside the briefing, fed by `OfficerHooksView` at display time.
-They never go into `ScenarioDefinition` fields (`known`, `dispatchReason`, `summary`), so issued
-fingerprints and the distinctness gate are untouched. Name the component in request R15.
+They never go into `ScenarioDefinition` fields (`known`, `dispatchReason`, `summary`), so the compiled
+fingerprints and the call-tree gates are untouched. Name the component in request R15.
 
 A call may show a callback beside its briefing or in its debrief and may voice an officer's in-call
 line with these markers. It may not gate a choice, change an outcome or read a hook in a condition.
@@ -147,8 +147,8 @@ Engineering request
 | R6 | name printed once in the shift report | name printed before a detail that opens with it | details drop the leading name | none | clean personnel lines |
 | R7 | steady visible to the player | no contributor line | `{Surname}: steady, less strain while facts are open` | none | steady arcs reading as fair |
 | R8 | mentor credited | rookie line omits the mentor | `{Rookie}: rookie, steadied by {Mentor}` | none | mentored ledger callbacks |
-| R9 | civilians never share a deployed officer's surname | cast draw ignores the roster | exclude deployed surnames from the draw, in a new content version | content | collision findings |
-| R10 | officer text checked by machine | prose lint reads typed packages only | the lint in section 6 | none | the lines gate passing on evidence |
+| R9 | civilians never share a deployed officer's surname | done for call trees: civilian-names.ts is disjoint from the roster and a test holds it | none | none | collision findings |
+| R10 | officer text checked by machine | prose lint reads call strings only | the lint in section 6 | none | the lines gate passing on evidence |
 | R11 | a timed or per-officer stand-down | `SquadDuty` 'rest' is squad-wide with no timer and nothing ends it | a per-officer rest flag with an end day and a clearing rule, default absent | save | any fork that takes one officer off calls for a set time |
 | R12 | a telegraph the player has seen | no seen state on any officer note | `leaning.seenDay`, set when the shift report or sheet showing it is opened, default absent | save | every lock, which waits for the seen flag plus one operation |
 | R13 | scoped arcs can read the step type | `DecisionView` lacks the action's `check.kind`, `tempo` and `entry` | copy those existing `ScenarioAction` fields into the decision record at commit, optional, never a parallel flag | save | every scoped strain row and the restraint check |
@@ -156,5 +156,4 @@ Engineering request
 | R15 | callbacks beside the briefing | no slot outside `ScenarioDefinition` fields | a briefing callback component fed by `OfficerHooksView` at display time | none | every briefing callback |
 
 R6 to R8 change player-visible strings built in code, so they need a test update and an owner
-sign-off. R9 changes cast binding, so it lands only in a new content version and never touches
-issued output.
+sign-off. R9 is already met by the disjoint civilian pools.

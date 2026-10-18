@@ -238,7 +238,7 @@ Rules for applying markers.
 2. Read each speaker's lines in a row to hear drift, then read the scene in
    order.
 3. Count words against the radio and speech targets.
-4. Run the lane lists over quotes as well as narration.
+4. Run the lint lists over quotes as well as narration.
 5. For every action line, say who does it and where they stand, and check a
    person in that role could do it from there.
 6. Record kept-on-purpose fragments (a caller's repeated fear) in the Tells

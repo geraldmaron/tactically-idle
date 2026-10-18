@@ -2,22 +2,13 @@ import type { ActionDefinition, ScenarioDefinition } from './scenario-types';
 import type { GameState, OperationRun, ResponseFailureRecord, SquadId } from './types';
 import { getScenario } from './scenario-registry';
 import { builtFor, conditionHolds, evaluateAction } from './resolution';
-import { availableStageContinuations } from './compatibility/legacy-choices';
 import { civilianOutcomeViews, incidentOfficerUnavailable } from './incident-consequences';
 import { planActionResupply } from './equipment-resupply';
 import { externalSupportStatus } from './external-support';
 
-// These old menu exits claim a handover or award progress merely for stopping.
-// Definitions and committed history stay frozen; new orders use a guarded failure report.
-const LEGACY_EXIT_IDS = new Set([
-  'ms_handover', 'mu_handover', 'gen_handover',
-  'v3_welfare_handover', 'v3_welfare_withdraw', 'assist_informed_handover', 'assist_withdraw',
-  'v3_protect_handover', 'v3_protect_withdraw', 'v4_record_unresolved', 'v4_record_care_pending',
-]);
 export function isGenericResponseExit(scenario: ScenarioDefinition, action: ActionDefinition): boolean {
-  if (scenario.version <= 7 && LEGACY_EXIT_IDS.has(action.id)) return true;
   if (action.title === 'End with the progress made' || action.title === 'Withdraw and record unfinished duties') return true;
-  return scenario.version >= 4 && action.commandOnly === true
+  return action.commandOnly === true
     && Object.values(action.outcomes).every(effects => effects.some(effect => effect.ending
       && ['relief_partial', 'unresolved'].includes(scenario.endings[effect.ending]?.disposition ?? '')))
     && !Object.values(action.outcomes).flat().some(effect => effect.acceptSupport?.length || effect.officerCare);
@@ -36,7 +27,7 @@ export function responseFailurePlan(state: GameState): ResponseFailurePlan | nul
   const run = state.activeRun;
   if (!run || run.status !== 'active' || run.stage === 'debrief') return null;
   const scenario = getScenario(run.scenarioId);
-  if (!scenario || availableStageContinuations(scenario, run).length) return null;
+  if (!scenario) return null;
   const allUnavailable = run.squadIds.every(id => (state.squads.find(squad => squad.id === id)?.officerIds ?? [])
     .every(officerId => incidentOfficerUnavailable(state, run, officerId)));
   const reasons: string[] = [];
@@ -66,7 +57,7 @@ export function responseFailurePlan(state: GameState): ResponseFailurePlan | nul
   const remainingTasks: string[] = [];
   for (const person of people) (['safe', 'care_accepted', 'accounted_elsewhere'].includes(person.status) ? progressRetained : remainingTasks)
     .push(`${person.label}: ${statusText[person.status] ?? person.status.replaceAll('_', ' ')}.`);
-  const careRole = ({ welfare_check: 'ada', medical_complication: 'rosa', barricaded: 'mina', active_armed_incident: 'eli', hostage_crisis: 'mara', protected_rescue: 'jun' } as Record<string, string>)[scenario.incident?.type ?? ''];
+  const careRole = ({ barricaded: 'mina', active_armed_incident: 'eli', hostage_crisis: 'mara', protected_rescue: 'jun' } as Record<string, string>)[scenario.incident?.type ?? ''];
   const carePerson = scenario.civilianOutcomes?.find(person => person.id === careRole);
   const careFact = scenario.facts.find(fact => fact.id === 'f_care_needed' || /_(care_needed|assessment_needed)$/.test(fact.id));
   const reportedCarePending = !!carePerson && !run.flags.includes(carePerson.careFlag)
@@ -102,7 +93,7 @@ export function validResponseFailure(run: OperationRun, scenario: ScenarioDefini
   const pending = run.flags.filter(flag => flag.startsWith('completion_pending:'));
   if (pending.length) {
     const id = pending[0].slice('completion_pending:'.length);
-    if (scenario.version < 8 || pending.length !== 1 || run.status !== 'active' || run.stage !== 'resolve'
+    if (pending.length !== 1 || run.status !== 'active' || run.stage !== 'resolve'
       || !['resolved', 'care_accepted', 'followup_agreed'].includes(scenario.endings[id]?.disposition ?? '')
       || !run.history.some(decision => scenario.stages[decision.stage].actions.find(action => action.id === decision.actionId)?.outcomes[decision.band].some(effect => effect.ending === id))) return false;
   }

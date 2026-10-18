@@ -8,10 +8,12 @@ import { ITEMS } from '../content/items';
 import { CALENDAR } from './calendar';
 import { next } from './rng';
 import { equipmentServiceCost, equipmentWearMultiplier } from './equipment-manager-policy';
+import { tunable } from './tuning';
 
 const REAL_HOUR_MS = 3_600_000;
 
-export const EQUIPMENT_TUNING = {
+/** Tunable (sim/tuning.ts). A unit's wear rate is drawn and stored when it is made. */
+export const EQUIPMENT_TUNING = tunable('EQUIPMENT_TUNING', {
   /** Per-unit manufacturing variance on wear. */
   wearRateMin: 0.8,
   wearRateMax: 1.25,
@@ -19,10 +21,10 @@ export const EQUIPMENT_TUNING = {
   salvageRate: 0.05,
   /** At or above this a working unit reads "Good"; below it (but above unreliableBelow) "Worn". */
   goodAtOrAbove: 75,
-};
+}, { guard: next => next.wearRateMin <= 0 || next.wearRateMin > next.wearRateMax ? 'Wear rates need 0 < wearRateMin ≤ wearRateMax.' : null });
 
 /** Serial prefix per item: 'RH-0142'. The number comes from the department id counter, so it never repeats. */
-export const SERIAL_PREFIX: Record<Id, string> = {
+const SERIAL_PREFIX: Record<Id, string> = {
   radio_kit: 'RH',
   loud_hailer: 'LH',
   throw_phone: 'TP',
@@ -116,7 +118,7 @@ export function createStartingUnits(d: GameState, now: number): void {
 // ---------------------------------------------------------------- queries
 
 /** Units the department still holds: not scrapped, not expired. */
-export function ownedUnits(state: GameState, itemId: Id): ItemUnit[] {
+function ownedUnits(state: GameState, itemId: Id): ItemUnit[] {
   return Object.values(state.units).filter((u) => u.itemId === itemId && u.status !== 'scrapped' && u.status !== 'expired');
 }
 

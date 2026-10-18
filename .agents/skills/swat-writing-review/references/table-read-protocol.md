@@ -6,21 +6,27 @@ Sections 5 to 10 are the reading itself. Section 11 covers officer text.
 
 ## 1. Set up the rendered read
 
-1. Run `npm run dev`. Open `/story.html?type=<type>` on the dev server.
-2. On 2026-10-06 the page opened in a lab view with selectors for the incident type, building,
-   seeds, situation with pacing, tier and kit. It rewrote its URL with `view`, `type`, `family`,
-   `seed`, `tier` and `variant`. The pipeline doc lists `seed`, `pacing` and `journeys`. Trust
-   the page you have, and write each read's URL into the record so another reader can open the
-   same call.
+1. Run `npm run lab`. Open `/lab?type=<type>` on the dev server (docs/scenario-lab.md).
+2. The page opens on Play. The Director on the left sets building and seed, situation, turn,
+   group size, pacing, tier, squad and kit; the frame in the middle is the game's own screens;
+   the X-ray rail on the right holds the hidden truth and each choice's routes. The URL holds
+   the whole draw (`type`, `family`, `seed`, `variant`, `pacing`, `tier`, `call`) and the moves
+   played (`path`). Write each read's URL into the record so another reader can open the same
+   call at the same step. Script (`tab=script`) lists every line in player order.
 3. Read situations 1, 2 and 3. If the cast has a deliberate_answers member, read both pacings.
    Read at least two building families, one authored and one generated.
-4. Note the reference squad line (on 2026-10-06 it read "Reference squad A" followed by four
-   surnames). You need those surnames for the name collision check.
+4. Note the squad. The call strip's squad chip reads "Squad A (719)" and the Director lists its
+   four officers (on 2026-10-09 Singh, Aung, Vann and Moretti). You need those surnames for the
+   name collision check.
 
-## 2. Know what the sheet does not show
+## 2. Know what each lab surface does not show
 
-The sheet shows the text and the engine's odds. It does not reproduce the game's clamps. Check
-these in the running game at a 390px viewport, or approximate them from exported text and say so.
+Play's frame is the game's own components at 390 or 430px, so the clamps below show there as in
+the game, but it has no campaign bar or bottom navigation, and the game's short-screen rules
+follow the lab window, not the frame (a chip warns when they are on). Script shows every line in
+a 390px column with the game's text styles, not inside the game's components, so it shows no
+clamps, hidden summaries or chips. Check these on Play or in the running game at a 390px viewport, or
+approximate them from exported text and say so.
 Values come from the engine contract read for this skill set. Re-check them if the UI changed.
 
 | Surface | What hides or cuts text | How to approximate without the game |
@@ -64,7 +70,7 @@ What a self-read cannot do, whatever the care taken.
   self-read", and hold the verdict at edit until a second reader or a played build confirms it.
   A proof round on 2026-10-06 signed off a dominant option and an ordering stage as "clear" on a
   self-read.
-- Downgrade a measured count. A count over a batch-audit threshold stays fix before freeze. The
+- Downgrade a measured count. A count over a batch-audit threshold stays fix before ship. The
   author's reason for keeping it goes in the row for the second reader to judge.
 - Self-certify ethics. Every ethics and officer-ethics "yes" carries a quoted line as evidence.
 
@@ -83,16 +89,18 @@ those.
 
 ## 6. The path log
 
-1. Run the sheet's path explorer and copy its summary line (states, endings reached, decision
-   points, single-option points, flat points).
+1. Open Outcomes and copy its endings line (written, reachable in this call) and each ending's
+   shortest path. Flow in Reach mode shows how often runs take each route, and once runs are
+   cached the Calls findings and Flow's pins list flat odds, endings no run reached and stuck
+   runs.
 2. List each explored path in order, with the band at each step.
-3. For each stage, force one adverse result in the step-through (on 2026-10-06 the step-through
-   had Favorable, Mixed, Adverse and Roll buttons per option) and read where it leads.
+3. For each stage, force one adverse result on Play (select the row and press `B`, or Goes
+   badly in its note; `W` goes well, `C` complications, `R` rolls) and read where it leads.
 4. For each offered option, write the reason-to-pick line. Write it before reading the odds.
 5. For each mixed and adverse result, fill a cue trace row.
 
-Endings the explorer reports as "not reached with this squad and kit" still get read from the
-endings table. Note which squad or kit would reach them.
+Endings Outcomes shows under "Not in this call", or at 0 runs, still get read (Script lists
+every ending). Note which draw, squad or kit would reach them (Find a draw with it, Grant cert).
 
 ## 7. Situations side by side
 
@@ -143,7 +151,7 @@ scene in order. Checks by kind of speaker follow.
 - Team humor. Inside the team only, exact, never on a victim or a subject. None under threat.
 - Attribution. "Said" or the UI's speaker format. No fancier verb, no adverb on said.
 - Regional voice. Word choice only, never phonetic spelling.
-- Narration in typed calls. Approach results, claims and results are read as narration. Listen
+- Narration in call text. Prompts, previews, results and fact lines are read as narration. Listen
   for engine words (disputed point, agreed step, recorded need, assigned, qualified, verified)
   and for a mechanic narrated as a mechanic.
 

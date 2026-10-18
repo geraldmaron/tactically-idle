@@ -33,6 +33,7 @@ describe('equipment manager', () => {
     expect(dispatch(next, { type: 'unlockNode', nodeId: 'logistics_equipment_manager' }, { now: T0 }).result.ok).toBe(false);
     expect(equipmentServiceCost(next, ITEMS.radio_kit)).toBe(45);
     next.department.unlockedNodes.push('logistics_equipment_manager');
+    for (const id of next.department.unlockedNodes) next.department.developmentTiers[id] ??= 1;
     expect(equipmentServiceCost(next, ITEMS.radio_kit)).toBe(45);
     expect(equipmentWearMultiplier(next, ITEMS.radio_kit)).toBe(0.8);
     expect(equipmentWearMultiplier(next, ITEMS.trauma_kit)).toBe(1);

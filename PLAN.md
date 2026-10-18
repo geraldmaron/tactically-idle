@@ -25,7 +25,7 @@ The largest unresolved product question is whether short decision-based operatio
 7. The attached detailed blue-paper operations mockup is the accepted visual reference. [cite: user requests and approval in this chat]
 8. Location, room size, officer shooting proficiency, composure, and presented options must materially affect operations. Every generated blueprint needs corresponding game information. [cite: user's follow-up on meaningful blueprints]
 9. The department can own up to **four** unique persistent squads and send one or more squads to an operation. [cite: user's squad-count instruction, raised from three to four on 2026-10-02]
-10. Structures are varied and generated (non-rectangular footprints, at most two floors), with varied occupants, threats, placements and difficulty per run, and an auto-equip option. Specification: [phase 3 brief](docs/phase3-generation.md). [cite: user's 2026-10-02 instruction]
+10. Structures are varied and generated (non-rectangular footprints, at most two floors), with varied occupants, threats, placements and difficulty per run, and an auto-equip option. Specification: [procedural locations](docs/procedural-locations.md). [cite: user's 2026-10-02 instruction]
 
 ### Constraints
 

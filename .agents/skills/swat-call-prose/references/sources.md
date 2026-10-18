@@ -17,23 +17,21 @@ short phrase.
 
 ## Repo files (read)
 
+The 2026-10-06 pass also read the typed package, v12 depth, hand-authored story and characteristics files and the v3 plain-language test. All were deleted on 2026-10-17. Quotes from them stay in before-after-rewrites.md as dated evidence.
+
 | File, with a search string if it moved | Supports |
 |---|---|
-| src/gen/incident/gates/prose-lint.ts, search LENGTH_BUDGETS | lint ceilings, word lists, spoiler rule, name and pronoun rules |
-| src/gen/incident/frameworks-v9.ts, search "Response unfinished" | compiler-owned strings and the one-field-many-surfaces wiring |
-| src/content/incident-frameworks-v9.ts, search "An alarm on its own" | the IncidentFramework fields and the weak openings |
-| src/content/framework-depth-v12.ts, search "It takes much longer" | the waitFor sentence repeated ten times |
-| src/gen/incident/stories-v5/armed.ts, search "The gunfire stops" | the bar line and two weak lines |
-| src/gen/incident/stories-v5/signature.ts, search "one signature" | the second bar line and care written as inventory |
-| src/gen/incident/characteristics-v9.ts, search "two extra minutes" | the narrated pacing line and the appended summary sentence |
-| src/gen/incident/stories-v6/episode-plan.ts, search bindScenarioText | whole-word, case-sensitive name binding |
+| src/gen/incident/gates/prose-lint.ts, search UNSAFE_DETAIL | word lists, spoiler rule, name and pronoun rules |
+| scripts/game_string_checks.py in this skill, search BUDGETS | the string budgets and checks |
+| src/gen/incident/trees-v13/compile.ts, search withCallTree | field wiring, binding (bindRoleTokens) and the deliberate-answers line |
+| src/content/incidents/lines.ts | the standard consequence lines |
+| scripts/check-strings.ts | how `npm run check:strings` binds and checks every call |
 | src/sim/operation-selectors.ts, search "{lead}" | {lead} becomes the surname, or "Squad" |
-| src/gen/incident/plain-language-v3.test.ts, search "qualified" | the plain-language bans |
-| src/gen/incident/index.ts, search INCIDENT_CONTENT_VERSION | the current content version, 12 on the date read |
+| src/content/call-trees/index.ts, search CALL_TREE_CONTENT_VERSION | the current content version |
 | src/ui/screens/situation-panel.css and src/ui/app.css, search line-clamp | the 3-line, 2-line and stage label clamps |
 | src/ui/screens/LiveView.tsx, search outcomePreview.favorable | the summary hidden when it equals the favorable preview |
 | src/ui/components/labels.ts, search TRAIT_INFO | the trait condition sentences |
-| docs/content-pipeline.md, search "Agent brief template" | the agent brief prose rules, the story sheet, the freeze rule |
+| docs/content-pipeline.md, search "Agent brief template" | the agent brief prose rules, the human review (the Scenario Lab) and the fingerprint policy |
 
 ## The written-voice skill (read)
 
@@ -41,7 +39,7 @@ short phrase.
 |---|---|
 | written-voice SKILL.md | the house voice this skill defers to and never restates |
 | written-voice references/verification-record.md | the composition rule, where the shape owner writes the record |
-| written-voice scripts/voice-check.py | the checker, its allow flag replacing the default list, its two-dash allowance, its paragraph targets |
+| the written-voice skill's voice-check script | the checker, its allow flag replacing the default list, its two-dash allowance, its paragraph targets |
 
 ## Line craft (opened by the research pass)
 

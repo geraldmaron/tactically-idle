@@ -1,3 +1,4 @@
+import { responseFailurePlan } from './response-failure';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { SCENARIOS } from '../content/scenarios';
 import { createInitialState } from './department';
@@ -91,7 +92,12 @@ describe('injury changes the team, care choices and saved aftermath', () => {
     expect(state.activeRun!.flags).toContain('casualty:evacuated');
     expect(state.activeRun!.flags).not.toContain('casualty:awaiting_transport');
     expect(deserialize(serialize(state, NOW))?.activeRun).toEqual(state.activeRun);
-    const ended = choose(state, 'end');
+    for (const officer of Object.values(state.officers)) officer.injury = { label: 'Unavailable', until: NOW + 100000 };
+    const plan = responseFailurePlan(state)!;
+    expect(plan).not.toBeNull();
+    const failed = apply(state, { type: 'endFailedResponse', runId: plan.runId, revision: plan.revision });
+    expect(failed.result).toEqual({ ok: true });
+    const ended = failed.state;
     const report = computeDebrief(ended, ended.activeRun!)!;
     expect(report.officerCasualties).toEqual([state.activeRun!.officerCasualties!.off_brooks]);
     const closed = apply(ended, { type: 'closeDebrief' });

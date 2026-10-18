@@ -44,13 +44,13 @@ function stagingFor(built: BuiltLocation, openingId: Id, spaceId: Id): { id: Id 
 /** Player-knowledge views for the sample: every space known by name, several with annotations and people. */
 function sampleSpaces(built: BuiltLocation, withPeople = true): SpaceView[] {
   const loc = built.location;
-  const here: Record<Id, SpaceView['squadsHere']> = { porch: ['A'], side_yard_e: ['B'] };
+  const here: Record<Id, SpaceView['squadsHere']> = { front_yard: ['A'], rear_lane: ['B'] };
   const people: Record<Id, PersonMark[]> = withPeople
     ? {
         // reported: approximate position, never a name
-        kitchen: [{ id: 'p_kitchen', at: { x: 41, y: 22 }, label: 'Second person', status: 'reported' }],
+        kitchen: [{ id: 'p_kitchen', at: { x: 28, y: 26 }, label: 'Second person', status: 'reported' }],
         // confirmed: a position and a label
-        living: [{ id: 'p_living', at: { x: 14, y: 25.5 }, label: 'Resident', status: 'confirmed' }],
+        living: [{ id: 'p_living', at: { x: 14, y: 38 }, label: 'Resident', status: 'confirmed' }],
         // disproved: checked and empty
         bedroom_w: [{ id: 'p_bedw', at: { x: 14, y: 11 }, label: 'Nobody', status: 'disproved' }],
       }
@@ -65,19 +65,19 @@ function sampleSpaces(built: BuiltLocation, withPeople = true): SpaceView[] {
 }
 
 function sampleTasks(built: BuiltLocation): SquadTask[] {
-  const a = stagingFor(built, 'd_front', 'porch');
-  const b = stagingFor(built, 'd_back', 'side_yard_e');
+  const a = stagingFor(built, 'd_front', 'front_yard');
+  const b = stagingFor(built, 'd_rear', 'rear_lane');
   return [
-    { squadId: 'A', positionId: 'porch', task: 'Front door', stagingId: a.id, at: a.at },
-    { squadId: 'B', positionId: 'side_yard_e', task: 'Back door', stagingId: b.id, at: b.at },
+    { squadId: 'A', positionId: 'front_yard', task: 'Front door', stagingId: a.id, at: a.at },
+    { squadId: 'B', positionId: 'rear_lane', task: 'Back door', stagingId: b.id, at: b.at },
   ];
 }
 
 type OverlayMode = 'none' | 'blocked' | 'clear' | 'range' | 'path' | 'all';
 
 function sampleOverlays(built: BuiltLocation, mode: OverlayMode): MapOverlay[] {
-  const b = stagingFor(built, 'd_back', 'side_yard_e').at;
-  const a = stagingFor(built, 'd_front', 'porch').at;
+  const b = stagingFor(built, 'd_rear', 'rear_lane').at;
+  const a = stagingFor(built, 'd_front', 'front_yard').at;
   const blocked: MapOverlay = { kind: 'line', from: { x: 22, y: 17.6 }, to: { x: 35, y: 13.4 }, tone: 'blocked', label: 'Wall blocks sight' };
   const clear: MapOverlay = { kind: 'line', from: { x: 22, y: 16.4 }, to: { x: 16.5, y: 25 }, tone: 'clear', label: 'Hall door open' };
   const partial: MapOverlay = { kind: 'line', from: b, to: { x: 36, y: 21 }, tone: 'partial', label: 'Through glass door' };
@@ -104,11 +104,11 @@ function sampleOverlays(built: BuiltLocation, mode: OverlayMode): MapOverlay[] {
 
 function Column({ title, width, seed, materials = false, overlay = 'none' }: { title: string; width: number; seed: number; materials?: boolean; overlay?: OverlayMode }) {
   const built = useMemo(() => {
-    const b = buildLocation('maple_street', seed);
+    const b = buildLocation('cedar_close', seed);
     // ?door=blocked|locked|open|closed overrides the back door state to eyeball each glyph
     const state = new URLSearchParams(window.location.search).get('door');
     if (state) {
-      const o = b.location.openings.find((x) => x.id === 'd_back');
+      const o = b.location.openings.find((x) => x.id === 'd_rear');
       if (o) o.state = state as typeof o.state;
     }
     // ?nostaging=1 empties derived.stagingPoints to prove the renderer falls back to opening midpoints
@@ -116,7 +116,7 @@ function Column({ title, width, seed, materials = false, overlay = 'none' }: { t
     // ?variety=1 swaps in every material so each pattern, door leaf and glazing can be eyeballed together
     if (new URLSearchParams(window.location.search).get('variety')) {
       const L = b.location;
-      L.materials = { exterior: 'brick', interior: 'wood_frame', overrides: [{ a: 'bath', b: 'bedroom_e', material: 'plaster' }, { a: 'hall', b: 'living', material: 'concrete' }, { a: 'living', b: 'kitchen', material: 'drywall' }, { a: 'bedroom_w', b: 'side_yard_w', material: 'concrete' }] };
+      L.materials = { exterior: 'brick', interior: 'wood_frame', overrides: [{ a: 'bath', b: 'bedroom_e', material: 'plaster' }, { a: 'hall', b: 'living', material: 'concrete' }, { a: 'living', b: 'kitchen', material: 'drywall' }, { a: 'bedroom_w', b: 'west_path', material: 'concrete' }] };
       const set = (id: string, patch: Partial<(typeof L.openings)[number]>) => Object.assign(L.openings.find((x) => x.id === id) ?? {}, patch);
       set('d_hall_bath', { material: 'steel' });
       set('d_hall_bedw', { material: 'glass', state: 'open' });
@@ -251,7 +251,7 @@ function ResponsiveGame() {
 }
 
 function Harness() {
-  const built = useMemo(() => buildLocation('maple_street', 0), []);
+  const built = useMemo(() => buildLocation('cedar_close', 0), []);
   const spaces = useMemo(() => sampleSpaces(built), [built]);
   const [sel, setSel] = useState<Id | null>(null);
   // ?only=map&w=760&seed=0 shows one large map; ?only=portraits shows just the portrait grid.
@@ -262,7 +262,7 @@ function Harness() {
     const w = Number(q.get('w') ?? 760);
     return (
       <div className="h-page">
-        <Column title={`Maple Street at ${w} px`} width={w} seed={Number(q.get('seed') ?? 0)} materials={q.get('materials') === '1'} overlay={(q.get('ov') ?? 'none') as OverlayMode} />
+        <Column title={`Cedar Close at ${w} px`} width={w} seed={Number(q.get('seed') ?? 0)} materials={q.get('materials') === '1'} overlay={(q.get('ov') ?? 'none') as OverlayMode} />
       </div>
     );
   }
@@ -277,9 +277,9 @@ function Harness() {
     <div className="h-page">
       <h1>Blueprint harness</h1>
       <div className="h-row">
-        <Column title="Maple Street, seed 0, 358 px (overlays)" width={358} seed={0} overlay="all" />
-        <Column title="Maple Street, seed 7, 358 px (materials key)" width={358} seed={7} materials />
-        <Column title="Maple Street, seed 0, 288 px" width={288} seed={0} materials overlay="blocked" />
+        <Column title="Cedar Close, seed 0, 358 px (overlays)" width={358} seed={0} overlay="all" />
+        <Column title="Cedar Close, seed 7, 358 px (materials key)" width={358} seed={7} materials />
+        <Column title="Cedar Close, seed 0, 288 px" width={288} seed={0} materials overlay="blocked" />
         <section className="h-col" style={{ width: 358 }}>
           <h2>RoomList (text alternative)</h2>
           <RoomList spaces={spaces} built={built} selectedSpaceId={sel} onSelectSpace={setSel} />

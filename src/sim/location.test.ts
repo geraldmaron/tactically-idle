@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MAPLE_STREET } from '../content/locations/maple-street';
+import { MAPLE_STREET } from './fixtures/maple-street';
 import { INVALID_FIXTURES, VALID_TINY } from '../content/locations/test-fixtures';
 import { CHAMFER_FIXTURE } from '../content/locations/chamfer-fixture';
 import { TWO_FLOOR_FIXTURE } from '../content/locations/two-floor-fixture';

@@ -1,13 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { PROCEDURAL_FAMILIES_G2, generateBuilding } from './index';
+import { PROCEDURAL_FAMILIES, generateBuilding } from './index';
 import fingerprints from './procedural-g2-fingerprints.json';
 
-/** `_g2` building types regenerate from (familyId, seed) alone, so their output is frozen
- * once released, like `_g1`. A change that alters any of these must ship as new `_g3` types;
- * never re-baseline (see procedural/README.md). Same seeds as the `_g1` suite. */
+/** Current building regression tripwires. Recapture deliberately when generation changes. */
 const digest = async (value: unknown) => [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify(value))))].map(n => n.toString(16).padStart(2, '0')).join('');
 export const G2_FINGERPRINT_SEEDS = [0, 1, 7, 42, 1000, 4294967295];
-export const G2_FINGERPRINT_IDS = PROCEDURAL_FAMILIES_G2.flatMap(family => [family.id, `${family.id}__furnished_v7`]);
+export const G2_FINGERPRINT_IDS = PROCEDURAL_FAMILIES.flatMap(family => [family.id, `${family.id}__furnished_v7`]);
 
 describe('procedural _g2 buildings', () => {
   it('regenerate every captured building byte for byte, plain and furnished', async () => {

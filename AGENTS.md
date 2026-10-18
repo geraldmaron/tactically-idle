@@ -9,6 +9,7 @@ Design lives in `PLAN.md`; the location and operation contract in `docs/operatio
 ```bash
 npm install
 npm run dev        # http://localhost:5173 at a phone-sized viewport (390x844 target)
+npm run lab        # Scenario Lab at /lab (dev only; docs/scenario-lab.md)
 npm test           # vitest
 npm run verify     # typecheck, tests, art validation, build
 ```
@@ -21,10 +22,12 @@ incidents and their gates, and `src/ui/` the screens and blueprint renderer.
 
 ## Conventions
 
+- Architecture rules, odds wiring and player journeys live in `src/architecture/` and its tests enforce them. Change the manifest when the architecture changes, then re-render `docs/architecture.md` with `npx vitest run src/architecture -u`.
 - Content changes follow `docs/content-pipeline.md`: agent brief, typed package, automated
-  gates, story sheet review, freeze in the next content version.
-- Issued calls and saved campaigns must keep regenerating identically. Version-gate changes to
-  issued text instead of editing it in place.
+  gates, review in the Scenario Lab (`/lab`, notes in `docs/calls/notes/`), and deliberate recapture
+  of the current compiled fingerprints when content changes.
+- Content has one current version. Old saves are rejected, not migrated. The v13 compiled
+  fingerprints are regression tripwires, recaptured deliberately when content changes.
 
 ## CI validation
 

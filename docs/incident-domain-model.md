@@ -55,7 +55,7 @@
   - Every contact check with the subject (`action.talksTo`, or every subject inside when the check talks to nobody) shows what moved since the call began as two contributors: "is talking to you more or less" and "is more worked up now" or "is steadier now".
   - The mood modifiers (`stung`, `heard`, `talking`, `told_no`, `limit_told`) were replaced by events on 38 outcomes. Marks stay where prompts or choices read them as facts (`stung` in the hostage "hung up" prompts, `talking`).
 - **Player view.** "People at this call" shows a subject's stance once the team has heard from them, and a clock once one of its cues has fired, so it never shows what the team can't know.
-- **Lab.** The instance panel shows each clock's drawn rate, when it runs out, each cue's minute, mark and reveal, and subject meters. The step-through shows live clocks and meters. Coverage counts both sides of a clock fork where the situation's clock can reach it.
+- **Lab.** The instance panel shows each clock's drawn rate, when it runs out, each cue's minute, mark and reveal, and subject meters. The step-through shows live clocks and meters. (Since the 2026-10-09 rebuild, Play's Clocks and People tabs show them; [scenario-lab.md](scenario-lab.md).) Coverage counts both sides of a clock fork where the situation's clock can reach it.
 - **Gates.** `sim/clocks.test.ts` (model rules, the same choice before and after the cue, a holding door never giving, the cue said once, saves). `sim/meters.test.ts` (volatility, clamping, contributors, odds after heard vs provoked, other people's conversations untouched). Call-tree gates for clock forks, reveal cues and cue marks; the path walk tells clock states apart. Clock labels and cues join the string gates and `check:strings` rows.
 - **Balance (tier 2, random style):** hostage 32% clean, harm 5%, deaths 1.7%; barricade 30% clean, harm 12%; armed 38% clean, harm 35%, deaths 10%; rescue 47% clean, harm 32%, deaths 5%. Waiting out an unwell owner now costs them in 12% of patient calls.
 - **Not yet:**
@@ -134,18 +134,18 @@
 - **Model and templates.** `src/content/incidents/` (types, one template per dispatched call). The templates describe only what each call's text establishes; nothing is invented to fill a field.
 - **Generator.** `src/gen/incident/instance.ts`: `drawInstance`, `aggregates`, `signature`, `countTemplate`, `instanceOf`. Generation runs through instances, and `placeCast` (`trees-v13/compile.ts`) is the one place people are put on the building. The refactor was proven byte-identical on 92 compiled calls before any content changed (`compiled-fingerprints.test.ts`). The guard was then re-captured for the deliberate identity change below.
 - **Identity.** Pronouns and ages are drawn per person (`IDENTITY_DEFAULT`). All four calls' prose was converted to pronoun, agreement and gendered-noun tokens. Gates fail any literal gendered word in calls or templates, bind every string with each role as he, she and they, and require identical mechanics whoever is drawn.
-- **Scenario Lab** (`/story.html`, rebuilt). It has a catalog with counts, a draw bar, the instance (people with truth beside what the team knows, aggregates, clocks, conditions, and which fields the engine reads yet), the map, the story graph, real choice cards at any decision, a step-through on the engine, writing, balance in a worker, and review notes exported as markdown.
-- **String checks.** The swat-call-prose Python checker stays the one implementation: it is written to work inside the skill on any harness, so porting it would make a second copy. `npm run check:strings` and the lab's Writing tab (through a dev-server endpoint in `vite.config.ts`) both send it rows from `trees-v13/strings.ts`, bound with real casts. The Writing tab can bind everyone as he, she or they to find sentences that turn ambiguous when two people share pronouns.
+- **Scenario Lab** (then at `/story.html`, rebuilt; rebuilt again on 2026-10-09 at `/lab`, see [scenario-lab.md](scenario-lab.md)). In M1 it had a catalog with counts, a draw bar, the instance (people with truth beside what the team knows, aggregates, clocks, conditions, and which fields the engine reads yet), the map, the story graph, real choice cards at any decision, a step-through on the engine, writing, balance in a worker, and review notes exported as markdown.
+- **String checks.** The swat-call-prose Python checker stays the one implementation: it is written to work inside the skill on any harness, so porting it would make a second copy. `npm run check:strings` and the lab (the Writing tab then, Script's Run checks now, through a dev-server endpoint in `vite.config.ts`) both send it rows from `trees-v13/strings.ts`, bound with real casts. The lab can bind everyone as he, she or they (Script's Pronouns control) to find sentences that turn ambiguous when two people share pronouns.
 
 **M1 findings carried into M2 and the writing pass:**
 - **String checker backlog.** The checker reports blocking findings on all four calls, mostly repeated 4-word runs and path echoes, plus a few unsafe-detail hits. It also flags the "goes to review" ending line that the call-design ethics rule (E2.1) requires; the two skills disagree, which needs an owner call. Its path-echo rule splits accented names.
-- **Shared pronouns.** 389 sentences carry a pronoun and two or more people. They are grammatical in every draw (gated), and most read fine because one person is named, but some turn ambiguous when two people share pronouns. They need a read in the lab with "read everyone as".
+- **Shared pronouns.** 389 sentences carry a pronoun and two or more people. They are grammatical in every draw (gated), and most read fine because one person is named, but some turn ambiguous when two people share pronouns. They need a read in the lab with everyone bound the same way (Script's Pronouns control).
 
 **Changes during M1 (owner direction, 2026-10-07):**
 - **Identity is drawn per person, never by role.** Pronouns (he, she, they) come from one distribution for every kind of person (`IDENTITY_DEFAULT`), so a subject is as likely to be a woman as a hostage is. Age comes from the template where the story supports it, and minors can be subjects. No mechanic reads pronouns or names. Prose uses pronoun, agreement and gendered-noun tokens, and a gate forbids literal gendered words in call text.
 - **Who the subject is can be unknown.** `kind` is a belief like any other (§4). Several people can be inside with the subject unidentified and possibly armed; force is never authorized on an unidentified person, and mistaking a held person for the subject is a possible result once milestone 2 resolves it.
 - **Minors are never killed**, whatever their kind, subjects included.
-- **Paths.** The model lives in `src/content/incidents/` (`src/content/scenarios/` already holds two legacy hand-authored scenarios). The writing checks extend the existing TypeScript linter in `src/gen/incident/gates/` instead of adding a new module.
+- **Paths.** The model lives in `src/content/incidents/` (retired Maple scenarios are simulation fixtures). The writing checks extend the existing TypeScript linter in `src/gen/incident/gates/` instead of adding a new module.
 
 ## Context
 
@@ -362,7 +362,7 @@ Every attribute is `{ truth, belief: { value, status: 'confirmed' | 'reported' |
     - it is contraindicated with a child or held person within N ft, an elevated position, or a shielded hold;
     - the backstop is checked.
   - Ineligible less-lethal leaves only firearm or no-force options.
-- **Incoming fire** is a new model (`src/sim/incoming-risk.ts`, mirroring `force-risk.ts`). When an outcome resolves to an exchange of fire, the model draws officer and bystander harm from:
+- **Incoming fire** is a new model (`src/sim/drawn-effects.ts`, mirroring `force-risk.ts`). When an outcome resolves to an exchange of fire, the model draws officer and bystander harm from:
   - proficiency;
   - weapon kind and range;
   - distance and cover;
@@ -450,7 +450,7 @@ Each verb has a standard engine mapping, a standard set of inputs it reads (§1 
 
 ### §12 Templates, instances and the count
 
-- `ScenarioTemplate` per call type (data in `src/content/scenarios/<type>.ts`) holds:
+- `ScenarioTemplate` per call type (data in `src/content/incidents/`) holds:
   - location rules (families, scene room types, capacity);
   - cast slots (kind, count range by scale class, attribute distributions);
   - condition distributions;
@@ -508,10 +508,10 @@ Each verb has a standard engine mapping, a standard set of inputs it reads (§1 
 Each ends with `npm run verify` passing. Start each in a fresh session with this plan as the brief.
 
 **M1. Domain model, generator, and the Scenario Lab (no engine behaviour change)**
-- Types for §1 to §5, §11 and §12 in `src/content/scenarios/types.ts`.
+- Types for §1 to §5, §11 and §12 in `src/content/incidents/types.ts`.
 - The generator in `src/gen/incident/instance.ts` (`drawInstance`, `aggregates`, `signature`, `countInstances`).
 - The four current calls expressed as templates that reproduce today's casts, with a snapshot test so the compiled scenarios are unchanged.
-- The lab rebuilt on instances (`src/dev/scenario-lab/`, same `/story.html` entry):
+- The lab rebuilt on instances (`src/dev/lab/` at `/lab`, [scenario-lab.md](scenario-lab.md)):
   - catalog with honest counts;
   - instance inspector (people table with truth vs belief, aggregates, clocks, meters);
   - map (`src/ui/blueprint/Blueprint.tsx`);
@@ -521,7 +521,7 @@ Each ends with `npm run verify` passing. Start each in a fresh session with this
   - writing panel;
   - balance worker;
   - review notes.
-- The writing checks move to `src/dev/writing-checks.ts` with `npm run check:strings`, and a parity test against `.agents/skills/swat-call-prose/scripts/game_string_checks.py` before the Python is retired.
+- The writing checks: planned as a TypeScript port (not implemented) with a parity test before the Python was retired. Not done, by decision (see "M1 as delivered"): the skill's Python checker (`.agents/skills/swat-call-prose/scripts/game_string_checks.py`) stays the one implementation, and `npm run check:strings` (`scripts/check-strings.ts`) and the lab's Script checks send it rows from `trees-v13/strings.ts`.
 
 **M2. Resolution pipeline**
 - Emit `people` and the environment.
@@ -574,11 +574,11 @@ A premise is kept only where it earns its place. The old tree is retired once it
 ## Verification
 
 - **M1.** Snapshot equality for the four calls.
-  - `/story.html` in the browser pane (`preview_start` "tactically-idle"): every template steps to an ending.
+  - `/story.html` (`/lab` since 2026-10-09) in the browser pane (`preview_start` "tactically-idle"): every template steps to an ending.
   - The catalog count equals the CLI count.
-  - The balance worker equals `measure` (`src/gen/incident/trees-v13/balance.ts`).
+  - The balance worker equals `measure` (`src/gen/incident/trees-v13/balance.ts`); today `__lab.measure` and `runners.test.ts` check it.
   - No console errors.
-  - `check:strings` parity.
+  - `check:strings` runs the skill's checker (no port, so no parity test).
 - **M2.** `npx vitest run src/gen/incident/trees-v13` plus the new pipeline gates: coverage, agreement, authorization, sensitivity (cover vs no cover, 1 vs 3 subjects, trained vs untrained) and balance. In the lab, the same building shows labeled odds deltas.
 - **M3 to M6.** Every stress-test case passes as a test. The combinatorial and invariant gates are green. The published count matches the lab.
 

@@ -1,11 +1,12 @@
 # Vocabulary and the lint
 
 Which words to use, which to avoid, and how to keep tension inside the word
-lists the typed-package lint enforces. The live lists are in
+lists the prose lint enforces. The live lists are in
 src/gen/incident/gates/prose-lint.ts (search UNSAFE_DETAIL, ACCUSATION,
-SETTLED, META_PHRASING, EXTRA_BRITISH) and the plain-language bans are in
-plain-language-v3.test.ts (search "qualified"). Read them before a session of
-writing. When this file and the code disagree, the code wins. These notes were
+SETTLED, META_PHRASING), the British-to-American list is in
+scripts/game_string_checks.py, and `npm run check:strings` runs both on every
+call. The plain-language bans below were a test in the deleted v3 suite and
+stay as house style. Read the lists before a session of writing. When this file and the code disagree, the code wins. These notes were
 read on 2026-10-06.
 
 ## Use
@@ -45,19 +46,18 @@ read on 2026-10-06.
 | off the board, costs time, takes longer, extra minutes | a mechanic said as a mechanic | who waits or what does not happen ("Nobody from this squad takes another call until Alex decides") |
 | dead air, ring after ring, then nothing, sat in the truck a long time | stock thriller beats | the specific sound or act this call has |
 
-## The lane word lists
+## The word lists
 
 | List | What it catches | Applies where | How to keep the tension |
 |---|---|---|---|
-| UNSAFE_DETAIL | injury, weapon, death, restraint and medical procedure words | every typed-lane field, before and after the check | write the decision and its cost, see the table below |
+| UNSAFE_DETAIL | injury, weapon, death, restraint and medical procedure words | every call string, before and after the check | write the decision and its cost, see the table below |
 | ACCUSATION | theft, break-in, burglar, assault, threaten, suspect, intruder, trespass and kin | any pre-check sentence without a hedge or a negation | put the source in the same sentence, "the neighbor says", "reported" |
 | SETTLED | arrest, charged with, convicted, guilty, caught the | anywhere, unless negated | "Nobody is arrested." or say who takes over |
 | META_PHRASING | this scenario, the player, fictional, is claimed, in-game | everywhere | stay in the world and say what happened |
 | AMERICAN_ENGLISH and EXTRA_BRITISH | mum, whilst, queue, torch, rang, pavement, car park, flatmate | everywhere | mom, while, line, flashlight, called, sidewalk, parking lot, roommate |
-| Plain-language bans | qualified, accompanied, verified, context-gated, checked account, follow-through, resolution plan, explicitly, context | titles, summaries and stage prompts | say what the person did |
+| Plain-language bans (house style) | qualified, accompanied, verified, context-gated, checked account, follow-through, resolution plan, explicitly, context | titles, summaries and stage prompts | say what the person did |
 
-The plain-language test runs on the welfare, medical and barricade calls only.
-Treat it as house style everywhere anyway.
+No test enforces these now. Treat them as house style in every call.
 
 ## American word choice
 
@@ -163,10 +163,10 @@ case was open across his knees, and he did not lift what was in it."
 ## Reporting lint results
 
 For every flagged word, report the regex result verbatim, "matches
-UNSAFE_DETAIL" or "matches none", and name the lane the lint covers (typed
-packages only, as of 2026-10-06). For a hand-authored hit, also name the lane
-that would start enforcing it if the lint is extended (the hand-authored
-lane), and write the lint-safe fallback beside it, so the owner can choose
+UNSAFE_DETAIL" or "matches none", and name what enforces it now (the
+prose lint through `npm run check:strings`). For a word the lint passes but a
+rule would catch, also name the check that would enforce it if the lint is
+extended, and write the lint-safe fallback beside it, so the owner can choose
 either without another writing pass. A word outside every regex is an owner
 policy question, not a lint collision, and the record says which.
 
@@ -174,18 +174,15 @@ The UNSAFE_DETAIL source comment allows "weapon" only in a negative report.
 Treat every affirmative weapon mention ("patrol saw a weapon in his hand") as
 an owner decision even though the regex passes it. The same holds for subject
 death lines ("may die", "died at the scene") under E7 and E9. If the call
-needs the lint extended to the hand-authored lane, mark each string that
-would fail under it. All of these go on the record's Lint policy collisions
+needs the lint extended, mark each string that would fail under it. All of these go on the record's Lint policy collisions
 line, which never blocks handoff on its own.
 
 ## Gaps are not licenses
 
 The weapon pattern matches whole words, so compound words such as "handgun"
-and "gunfire" pass it. Hand-authored stories already use both, because the lint
-does not run on them. In the typed lane, avoid any word that slips past a
-pattern while carrying the banned meaning. In the hand-authored lane, apply
-the same lists by hand and flag every exception to the owner in the prose
-record. A lint that misses a word is a finding for engineering, never a way
+and "gunfire" pass it, and the call trees already use both in places. Avoid any
+word that slips past a pattern while carrying the banned meaning, and flag
+every exception to the owner in the prose record. A lint that misses a word is a finding for engineering, never a way
 around the rule.
 
 ## Open owner decisions
@@ -193,8 +190,8 @@ around the rule.
 Two questions belong to the owner, so a writer flags them and never settles
 them alone.
 
-1. Whether armed and hand-authored calls may use plain clinical words the
-   typed lint bans ("bleeding from the arm", "not breathing").
+1. Whether armed calls may use plain clinical words the
+   prose lint bans ("bleeding from the arm", "not breathing").
 2. Where a crisis support line appears, if anywhere. 988 is a US-only line,
    and no surface for it exists today.
 
@@ -204,10 +201,10 @@ them alone.
   words. A cast first name that is also an ordinary word (Grant, Will, Mark,
   Faith, Hope, Bill) renames any sentence that starts with that word.
 - {lead} becomes the lead officer's surname, or "Squad" when there is none.
-- Slow-answer pacing appends a sentence to conversation summaries.
+- Slow-answer pacing adds a briefing known line and two minutes to talks with that role.
 - No pool first name may appear outside the cast, so leave dispatchers, patrol
   and neighbors unnamed.
-- The eight v9 frameworks use singular they for the person.
+- Pronouns are drawn per person, so write tokens (see SKILL.md section 8).
 - The lint measures every string with the longest drawable names bound in.
 
 ## Procedural details, written as decisions

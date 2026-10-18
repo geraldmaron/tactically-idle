@@ -1,6 +1,6 @@
 # Procedural locations (content v10)
 
-**Status:** 2026-10-06. Delivers the building and placement half of [phase3-generation.md](phase3-generation.md), which `main` had only shipped as six authored layouts with small parametric variation.
+**Status:** 2026-10-06. Delivers the building and placement half of [procedural-locations.md](procedural-locations.md), which `main` had only shipped as six authored layouts with small parametric variation.
 
 ## Why
 
@@ -17,10 +17,10 @@ The Phase 3 owner intent is that buildings and placements vary between games ("B
 ## What shipped
 
 1. **Nine generated building types**, `src/gen/building/procedural/`: bungalow, two-story house, duplex, apartment, corner store with apartment, small office, bar or restaurant, warehouse and motel row. Public IDs carry a generation suffix (`bungalow_g1`). Pipeline: footprint → partition → one indoor spanning tree per floor plus loops → yards, windows and exterior → furnishing → plausibility and validation, with a bounded retry and a known-good fallback.
-2. **One furnishing solver.** `furnishLocationG1` (`src/gen/building/furnishing-g1.ts`) runs the v7 solver with a catalog for every generated room kind: racking rows, bar tables and stools, office desks, motel units, toilets without tubs in WCs. The v7 catalog and every authored output are unchanged.
-3. **Content v10.** `INCIDENT_CONTENT_VERSION = 10`. `src/content/scenario-types-v10.ts` lists which generated types each framework can use. The situation (variant and pacing) depends on the call seed only. A call drawn to a generated building is resolved lazily when its definition is first needed: further seeds of that type from a hash stream, then the framework's authored buildings. The incident ID stays as drawn, so board draws and saves are unchanged, and maps read `locationFamilyId`/`locationSeed`.
-4. **Role-based placement** (`src/gen/incident/placement-v10.ts`). The eight compiled frameworks choose start rooms by room use across all floors, with a squad route required. Some first reports name a plausible wrong room, which the check corrects.
-5. **Authored stories on generated buildings** (`src/gen/incident/stories-v6/hosts-v10.ts`). Family-identity checks became requirements on the real building: a register for the armed story, a ground-floor chair route for the rescue, an arrival entry that can hold people. Building names in prose come from the location.
+2. **One furnishing solver.** `furnishLocationG1` (`src/gen/building/furnishing-g1.ts`) runs the shared furnishing solver with a catalog for every generated room kind: racking rows, bar tables and stools, office desks, motel units, toilets without tubs in WCs. Current furnishing data lives in `src/gen/building/furnishing-definitions.ts`.
+3. **Current catalog.** `src/content/scenario-types.ts` lists the supported building types for current calls.
+4. **Instance placement.** `src/gen/incident/instance.ts` draws people and delegates role placement to `src/gen/incident/trees-v13/compile.ts`; templates live in `src/content/incidents/`.
+5. **Building requirements.** Current call trees declare the geometry and routes their scene needs; building claims must hold on every accepted layout.
 6. **UI.** The library picks a building (fixed or generated) and a situation. Cards show floor counts, briefings name upper-floor rooms, and floor tabs work at 320 px.
 7. **Tooling.** `npm run capture:locations` renders contact sheets of any family with the real blueprint component (`locations.html`). The review is in [procedural-locations-review.md](procedural-locations-review.md).
 
@@ -46,3 +46,7 @@ The Phase 3 owner intent is that buildings and placements vary between games ("B
 - Bar restrooms are sometimes reached through the kitchen corridor. The corner store's separate apartment door is often missing.
 - Medical-care fallback starts the receiving crew from the first entry rather than the story's arrival.
 - Long footprints (motels, warehouses) render small at 320 px until zoomed.
+
+Furniture stays inside usable room polygons, clears openings and other furniture, preserves required interior routes and derives variation from stable seeds rather than rendering randomness.
+
+Generate and validate seeded data before rendering it, use bounded retries and a known-valid fallback, and keep threat effects abstract, grounded and non-graphic.

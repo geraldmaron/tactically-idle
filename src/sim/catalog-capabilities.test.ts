@@ -76,6 +76,7 @@ describe('bounded catalog and common gates', () => {
   it('buying each new program never grants a cert; prerequisite certification is checked separately', () => {
     const state = makeState(); state.department.devPoints = 100; state.department.funding = 100000;
     state.department.unlockedNodes = ['field_entry_course', 'field_response_program'];
+    for (const id of state.department.unlockedNodes) state.department.developmentTiers[id] ??= 1;
     const before = structuredClone(state.officers);
     for (const id of ['field_less_lethal', 'field_specialist_response', 'field_controlled_access', 'logistics_field_support', 'logistics_armored_support']) expect(DEVELOP_HANDLERS.unlockNode(state, id).ok).toBe(true);
     expect(state.officers).toEqual(before);
@@ -87,6 +88,7 @@ describe('bounded catalog and common gates', () => {
   });
   it('rejects invalid purchase quantities in both preview and command and permits one vehicle per purchase', () => {
     const state = makeState(); state.department.funding = 100000; state.department.unlockedNodes = Object.keys(DEV_NODES);
+    for (const id of state.department.unlockedNodes) state.department.developmentTiers[id] ??= 1;
     for (const qty of [0, -1, .5, NaN, Infinity, 100]) {
       expect(itemCheck(state, ITEMS.trauma_kit, qty).ok).toBe(false);
       expect(DEVELOP_HANDLERS.buyItem(state, 'trauma_kit', qty).ok).toBe(false);
@@ -95,7 +97,7 @@ describe('bounded catalog and common gates', () => {
     expect(itemCheck(state, ITEMS.support_van, 1).ok).toBe(true);
   });
   it('new certifications and stock survive serialization with future content enabled', () => {
-    const state = makeState(); state.saveVersion = 3;
+    const state = makeState(); state.saveVersion = 9;
     state.officers.off_chen.certs.push(...newCerts);
     state.units.new_device = { ...makeUnit('conducted_energy_device', 1), id: 'new_device' };
     const restored = deserialize(serialize(state, NOW));

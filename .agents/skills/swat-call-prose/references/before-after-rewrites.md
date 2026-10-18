@@ -1,19 +1,23 @@
 # Before and after rewrites
 
 Fifty-four pairs, each tagged with the tell it fixes, the field it sits in and
-the lane that can ship the fix. Use them to see the move, then make your own
+who owns the fix. Use them to see the move, then make your own
 line from your call's facts. Never paste an after line into data. The repeat
 check in string-checks.md will catch a copied sentence across variants.
 
 How to read a pair.
 
-- **Repo** marks a before line read in the repo on 2026-10-06. The file is
-  named by its basename and a search string, so you can find it if it moved.
-  Quote a repo line only after reading it yourself.
-- **Fix lane** is one of three. Writer-owned means a writer can change the
-  field in a version that is still open. Version layer means the text is
-  compiler-owned or already issued, so the fix waits for a version-gated field
-  from engineering. Illustrative means a detector pattern, not a repo line.
+- **Repo** marks a before line read in the repo on 2026-10-06, in a layer that
+  was deleted on 2026-10-17 (the typed package data and compiler, the v12
+  depth layer, the hand-authored stories, the Maple Street scenarios). The
+  layer is named, and no path is cited because none exists now. These lines
+  are dated evidence of the tell, not text to search for.
+- **Fix lane** is one of three. Edit in place means a call tree owns the
+  string and a writer changes it directly (content has one version and
+  nothing is issued). Compiler-owned means the string comes from the
+  compiler, such as the standard lines in `src/content/incidents/lines.ts`,
+  so the fix is an engineering request. Illustrative means a detector pattern,
+  not a repo line.
 - Every after line fits its surface budget in surface-budgets.md and avoids
   the lane word lists in vocabulary-and-lint.md.
 - A dash or colon that is the fault is shown as [em dash] or [colon], so this
@@ -21,112 +25,112 @@ How to read a pair.
 
 ## The bar, two strong repo lines
 
-1. Armed story, armed.ts, search "The gunfire stops". "The gunfire stops. Eli
+1. Retired hand-authored armed story. "The gunfire stops. Eli
    does not come out. On the still-open call, he begins counting the tills
    again." A sound, an absence and a habit, no adjectives. Two cautions before
-   imitating it. "Gunfire" passes the typed lint only through a gap in its
+   imitating it. "Gunfire" passes the prose lint only through a gap in its
    weapon pattern, and "tills" reads British next to "registers".
-2. Hostage story, signature.ts, search "one signature". "Ben told the
+2. Retired hand-authored hostage story. "Ben told the
    dispatcher[colon] “I only needed one signature.”" The want, in his own
    words, in five words. One fix keeps every word and drops the colon. "Ben
    told the dispatcher, “I only needed one signature.”"
 
-## Weak repo lines, compiler-owned and issued
+## Weak repo lines, from the retired compiler and framework layers
 
 ### 1. Process narration in a shared prompt
-- Repo. frameworks-v9.ts, search "in person". Adapt stage prompt on every typed call.
-- Fix lane. Version layer, per-framework stage prompts.
+- Repo (retired v9 compiler). Adapt stage prompt on every typed call (retired).
+- Fix lane. Edit in place; a call tree writes its own text.
 - Before. "Check the disputed point in person."
 - After, for burglary. "Casey has the keys and wants to open by 7. The alarm named the rear door first."
 
 ### 2. Process narration at the commit stage
-- Repo. frameworks-v9.ts, search "Act on what you checked". Resolve stage prompt on every typed call.
-- Fix lane. Version layer.
+- Repo (retired v9 compiler). Resolve stage prompt on every typed call.
+- Fix lane. Edit in place; a call tree writes its own text.
 - Before. "Act on what you checked and what the people involved agreed to."
 - After, for fall_at_home. "Ruth has told you what she wants. Her daughter is on the phone, twenty minutes out."
 
 ### 3. A duty with no person in it
-- Repo. frameworks-v9.ts, search "before acting on it". Team responsibility on every typed call.
-- Fix lane. Version layer.
+- Repo (retired v9 compiler). Team responsibility on every typed call.
+- Fix lane. Edit in place; a call tree writes its own text.
 - Before. "Check the disputed point before acting on it."
 - After, for false_intruder. "Hear Taylor and the neighbor before anyone treats Taylor as an intruder."
 
 ### 4. An ending that names nobody
-- Repo. frameworks-v9.ts, search "Response unfinished". Unfinished ending on every typed call.
-- Fix lane. Version layer.
+- Repo (retired v9 compiler). Unfinished ending on every typed call.
+- Fix lane. Edit in place; a call tree writes its own text.
 - Before. Title "Response unfinished". Summary "The team could not carry out an agreed next step. The call stays open for follow-up."
 - After, for fall_at_home. Title "Ruth’s call stays open". Summary "Ruth agreed to a plan the team could not finish. Someone has to go back to her."
 
 ### 5. A disclaimer used as the hook
-- Repo. incident-frameworks-v9.ts, search "An alarm on its own". Burglary opening, which is also the card hook.
-- Fix lane. Version layer, because v9 text is issued.
+- Repo (retired v9 framework data). Burglary opening, which is also the card hook.
+- Fix lane. Edit in place; a call tree writes its own text.
 - Before. "An alarm went off after closing, and Casey Bell, the keyholder, has arrived. An alarm on its own doesn’t mean someone broke in, took anything or is still inside."
 - After. "Casey Bell wants to go in and check the register alone. The alarm tripped at 1:40, and nobody has looked inside since."
 
 ### 6. Hedges stacked on hedges
-- Repo. incident-frameworks-v9.ts, search "Having a key". False_intruder opening.
-- Fix lane. Version layer.
+- Repo (retired v9 framework data). False_intruder opening.
+- Fix lane. Edit in place; a call tree writes its own text.
 - Before. "A neighbor saw Taylor Brooks let themselves in with a key and called it in. Taylor says the resident is expecting them. Having a key doesn’t prove the visit is welcome, and a neighbor not recognizing someone doesn’t prove it isn’t."
 - After. "A neighbor watched Taylor Brooks use a key on the side door and called it in. Taylor says the resident is expecting them today."
 
 ### 7. One sentence in ten frameworks
-- Repo. framework-depth-v12.ts, search "It takes much longer". The waitFor summary.
-- Fix lane. Writer-owned if v12 is still open, which is the owner's call. Otherwise a version layer.
+- Repo (retired v12 framework layer). The waitFor summary.
+- Fix lane. Edit in place; a call tree writes its own text.
 - Before. "It takes much longer, but it does not depend on the next step going right."
 - After, fall_at_home. "Sit with Ruth until her daughter gets here. Nobody else answers the radio until she does."
 - After, missing_vulnerable. "Stay while Alex and the friend talk it through. Nobody from this squad takes another call until Alex decides."
 - After, domestic. "Stay in the hallway until both adults settle tonight themselves. It could take an hour, and patrol stays with you."
 
 ### 8. Tactics written as procurement
-- Repo. armed.ts, search "deployed qualified team". Urgent response summary.
-- Fix lane. Version layer, and the owner decides the armed-call word policy.
+- Repo (retired armed story). Urgent response summary.
+- Fix lane. Edit in place; a call tree writes its own text.
 - Before. "Use the deployed qualified team and its assigned serviceable equipment against the verified immediate danger."
 - After. "Go in now with the team on scene. Eli is closest to the noise, and an officer may be hurt reaching him."
 
 ### 9. Engine words in a prompt
-- Repo. armed.ts, search "actually connected route". Context prompt.
-- Fix lane. Version layer.
+- Repo (retired armed story). Context prompt.
+- Fix lane. Edit in place; a call tree writes its own text.
 - Before. "Grant’s stand-down is verified. Eli is still inside; use an actually connected route to reach him."
 - After. "Grant is sitting on the floor, hands empty. Eli is still behind the counter, and only the side door reaches him."
 
 ### 10. A mechanic narrated as a mechanic
-- Repo. characteristics-v9.ts, search "two extra minutes". Known line the binder adds for slow answerers.
-- Fix lane. Version layer, because the binder owns it.
+- Repo (retired v9 pacing code). Known line the binder adds for slow answerers.
+- Fix lane. Compiler-owned: the binder writes it in `compile.ts`.
 - Before. "Dispatch says Ruth likes to think before answering. Each conversation with Ruth takes two extra minutes."
 - After. "Dispatch says Ruth takes her time answering and hates being hurried."
 
 ### 11. Care written as inventory
-- Repo. signature.ts, search "trauma kit for Mara". First aid summary.
-- Fix lane. Version layer.
+- Repo (retired hostage story). First aid summary.
+- Fix lane. Edit in place; a call tree writes its own text.
 - Before. "A qualified participating medic uses one assigned trauma kit for Mara’s immediate need."
 - After. "The medic checks Mara where she sits. She still needs the ambulance crew to look at her."
 
 ## More repo lines
 
 ### 12. Stock urgency
-- Repo. ms-urgent.ts, search "Every minute counts". Stage prompt.
+- Repo (retired Maple Street scenario). Stage prompt.
 - Before. "The caller says kitchen. Every minute counts."
 - After. "The caller says kitchen. She hasn’t heard him since she dialed."
 
 ### 13. Exposition about the decision
-- Repo. ms-occupancy.ts, search "Reports disagree". Stage prompt.
+- Repo (retired Maple Street scenario). Stage prompt.
 - Before. "Reports disagree. Verify them, or save time and accept the doubt."
 - After. "The caller says one man. The landlord says the unit has been empty since March."
 
 ### 14. Mood as an outcome
-- Repo. ms-occupancy.ts, search "raised tension". Adverse result.
+- Repo (retired Maple Street scenario). Adverse result.
 - Before. "There was no answer and standing at the door raised tension."
 - After. "Nobody answers. A chain slides across on the inside."
 
 ### 15. A person with no role or way of knowing
-- Repo. framework-depth-v12.ts, search "sensor fault". actOnReport summary.
-- Fix lane. Writer-owned if v12 is still open.
+- Repo (retired v12 framework layer). actOnReport summary.
+- Fix lane. Edit in place; a call tree writes its own text.
 - Before. "Casey thinks it’s a sensor fault."
 - After. "Casey has closed this shop for six years and says it’s the back sensor again."
 
 ### 16. A colon doing a period's job
-- Repo. framework-depth-v12.ts, search "calls back". actOnReport wrong text.
-- Fix lane. Writer-owned if v12 is still open.
+- Repo (retired v12 framework layer). actOnReport wrong text.
+- Fix lane. Edit in place; a call tree writes its own text.
 - Before. "The resident calls back[colon] the key was for another day."
 - After. "The resident calls back. The key was for another day."
 

@@ -46,7 +46,7 @@ function contact(id: string, stage: StageId, target: string, effect: OutcomeEffe
 
 function exercise(id: string, title: string, timeOfDay: 'day' | 'night', familyId: string, target: string, facts: FactDefinition[]): ScenarioDefinition {
   return {
-    id, version: 2, code: `FIXTURE ${id === 'capability_signals_v2' ? '03' : id === 'capability_response_v2' ? '04' : '05'}`,
+    id, version: 13, code: `FIXTURE ${id === 'capability_signals_v2' ? '03' : id === 'capability_response_v2' ? '04' : '05'}`,
     title, setting: familyId === 'market_row' ? 'business' : 'residential', locationFamilyId: familyId, locationSeed: 0,
     summary: 'A fictional equipment exercise. Compare the useful context, the limits and the communication alternative.',
     variantLabel: 'Equipment fixture', pressureLabel: 'Exercise pressure', squadRange: { min: 1, max: 3 },
@@ -63,8 +63,8 @@ function exercise(id: string, title: string, timeOfDay: 'day' | 'night', familyI
       resolve: { id: 'resolve', label: 'Choose a safe finish', prompt: 'Equipment is optional. Communication and handover remain viable.', actions: [contact(`${id}_peaceful`, 'resolve', target, { ending: 'completed', civilian: 2 }), action(`${id}_handover`, 'resolve', 'Hand over the exercise safely', target, { ending: 'handed_over' })] },
     },
     endings: {
-      completed: { id: 'completed', title: 'Exercise completed', summary: 'Review the score, time and safety explanations to compare options.', trustAdjust: 0, strain: 0 },
-      handed_over: { id: 'handed_over', title: 'Safe handover', summary: 'The team passed on what it knew without forcing an uncertain outcome.', trustAdjust: 0, strain: 0 },
+      completed: { id: 'completed', disposition: 'resolved', completion: { pressureAtLeast: 0 }, title: 'Exercise completed', summary: 'Review the score, time and safety explanations to compare options.', trustAdjust: 0, strain: 0 },
+      handed_over: { id: 'handed_over', disposition: 'unresolved', title: 'Safe handover', summary: 'The team passed on what it knew without forcing an uncertain outcome.', trustAdjust: 0, strain: 0 },
     },
     rewards: { funding: 0, devPoints: 0, trust: 0, xp: 0 },
   };

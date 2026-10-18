@@ -5,7 +5,7 @@ what it does, why it works with a source tag from [sources.md](sources.md), a pa
 written for this game, the stage and field it lands in, and how it goes wrong.
 
 Makers and works are named only as the source of a technique, never as a voice to imitate.
-Nothing here quotes a source beyond a short phrase. Every pattern line fits the typed-lane word
+Nothing here quotes a source beyond a short phrase. Every pattern line fits the call-tree word
 lists and budgets (checked against a copy of the lint patterns on 2026-10-06), and every one is
 illustrative. Never paste a pattern line into data. Write the call's own.
 
@@ -55,8 +55,8 @@ illustrative. Never paste a pattern line into data. Write the call's own.
 - Does. Ties the deadline to something outside anyone's control.
 - Works because. A real deadline turns each decision into a trade [TV7].
 - Pattern. "Shift change is at 6. Forty workers will walk through that lobby."
-- Lands in. The hand-authored pressure block and `pressureLabel`. Typed calls need R3.
-- Goes wrong. A clock with no cause, or any clock promised on a typed call.
+- Lands in. `CallTree.pressure`, a clock and `pressureLabel`.
+- Goes wrong. A clock with no cause, or any clock promised that the tree does not run.
 
 ### T6. Stretch the wait, release in one line
 
@@ -196,7 +196,7 @@ illustrative. Never paste a pattern line into data. Write the call's own.
 - Works because. It keeps authoring finite while choices still matter, as long as the rejoin
   remembers [IF1][IF3].
 - Pattern. "The crew you called at the start is two minutes out."
-- Lands in. Stage 3 prompts and `contextPrompts`. Typed calls need R8.
+- Lands in. Stage 3 node prompts and `promptIf`.
 - Goes wrong. The rejoin forgets the choice (checklist line 7).
 
 ### T21. Escalating commitment

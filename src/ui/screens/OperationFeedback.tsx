@@ -10,6 +10,7 @@ import { outcomePercentages } from './liveModels';
 import './operation-feedback.css';
 import { ITEMS } from '../../content/items';
 import { Icon } from '../icons';
+import { PeopleText } from '../people/PeopleText';
 
 export const RESULT_LABEL: Record<OutcomeBand, string> = { favorable: 'Went well', mixed: 'Had complications', adverse: 'Went badly' };
 export const FORECAST_LABEL: Record<OutcomeBand, string> = { favorable: 'Goes well', mixed: 'Complications', adverse: 'Goes badly' };
@@ -41,12 +42,12 @@ export function OutcomeForecast({ action }: { action: ActionView }) {
         <p>{action.forceRisk.summary}</p>
         <p>These game chances describe the task. Harm is resolved separately: a successful task can still cause serious injury or death.</p>
       </section>}
-      {commonEvent ? <p>{action.outcomePreview.favorable}</p> : <>
+      {commonEvent ? <p><PeopleText text={action.outcomePreview.favorable} /></p> : <>
       <ul className="outcome-options">
         {(['favorable', 'mixed', 'adverse'] as const).map((band) => (
           <li key={band} className={`outcome-option outcome-${band}`}>
             <div><strong>{action.eventResult ? ({ favorable: 'Smoothly', mixed: 'With delays', adverse: 'With difficulty' } as const)[band] : FORECAST_LABEL[band]}</strong>{action.eligible && <span>{percentages[band]}% chance</span>}</div>
-            <p>{action.outcomePreview[band]}</p>
+            <p><PeopleText text={action.outcomePreview[band]} /></p>
           </li>
         ))}
       </ul>
@@ -72,11 +73,11 @@ export function DecisionCard({ decision: d, full = false, officers = {}, explici
         <strong>{d.forceOutcome.personLabel}: {({ none: 'No injury recorded', wounded: 'Wounded', serious: 'Serious injury', fatal: 'Deceased' } as const)[d.forceOutcome.severity]}</strong>
         <p>{ITEMS[d.forceOutcome.itemId]?.name ?? 'Selected equipment'} used. This result is separate from the task check.</p>
       </section>}
-      {narrative.length > 0 ? <ul className="decision-narrative">{narrative.map((line, index) => <li key={index}>{line}</li>)}</ul> : fallback ? <p className="decision-lead">{fallback}</p> : null}
+      {narrative.length > 0 ? <ul className="decision-narrative">{narrative.map((line, index) => <li key={index}><PeopleText text={line} /></li>)}</ul> : fallback ? <p className="decision-lead"><PeopleText text={fallback} /></p> : null}
       <DecisionChanges decision={d} complete={full} explicitCompletion={explicitCompletion} />
       <DecisionEffects decision={d} complete={full} />
       {full ? <DecisionStress decision={d} officers={officers} complete /> : <DecisionStressChips decision={d} officers={officers} />}
-      {next.length > 0 && <div className="decision-next">{next.map((line, index) => <p key={index}>{line}</p>)}</div>}
+      {next.length > 0 && <div className="decision-next">{next.map((line, index) => <p key={index}><PeopleText text={line} /></p>)}</div>}
       {d.endingTitle && <p className="decision-next"><strong>Operation ended:</strong> {d.endingTitle}</p>}
       <details className="decision-causes decision-record" open={full}>
         <summary>Details and reasons</summary>

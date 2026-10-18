@@ -1,3 +1,4 @@
+import { useToast } from '../components/toast';
 import { useState } from 'react';
 import { useCampaigns, useGame } from '../store';
 import { squadReadiness } from '../../sim/department-selectors';
@@ -11,7 +12,6 @@ import { COURSES } from '../../content/courses';
 import type { Budget } from '../../sim/department-selectors';
 import type { GameState, ShiftReport, SquadDuty, Squad } from '../../sim/types';
 import { Button, Card, Chip, EmptyState, KV, Section, Segmented } from '../components/ui';
-import { useToast } from '../components/toast';
 import { useNav } from '../components/nav';
 import { DUTIES, DUTY_META } from '../components/labels';
 import { Icon, itemIcon } from '../icons';
@@ -28,7 +28,6 @@ export function HQ() {
   const g = useGame();
   const saved = useCampaigns();
   const nav = useNav();
-  const { act } = useToast();
   const [reportOpen, setReportOpen] = useState(false);
   const now = Date.now();
   const overview = hqOverview(g, now);
@@ -50,7 +49,6 @@ export function HQ() {
         <RosterSummary g={g} overview={overview} />
       </header>
       {g.activeRun && <ActiveOpCard g={g} now={now} />}
-      {g.equipmentPowerUpgrade && <Card className="hq-power-receipt"><strong>Power supplies are now included</strong><p>Your {g.equipmentPowerUpgrade.retiredUnits} separate battery units were retired. Unused stock was credited {money(g.equipmentPowerUpgrade.refundedFunding)} to department funding. Equipment no longer needs separate batteries.</p><Button size="sm" onClick={() => act({ type:'acknowledgePowerUpgrade' })}>Got it</Button></Card>}
       {g.report && <section className="hq-report-summary"><div><strong>Shift report ready</strong><p>{signedMoney(g.report.net)} net funding · {g.report.completedCourses.length} courses completed</p></div><Button size="sm" onClick={() => setReportOpen(true)}>Review report</Button></section>}
       <CommandStaff />
       <section className="hq-status-grid" aria-label="Department overview">
@@ -416,4 +414,3 @@ function DebriefTile({ g, d, now, open, onOpen }: { g: GameState; d: GameState['
     </button>
   );
 }
-

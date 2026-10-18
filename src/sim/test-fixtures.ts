@@ -1,8 +1,9 @@
+import { createPersonnel } from './personnel';
 // Test GameState builder for operation tests. Independent of department.ts so the
 // operation engine can be exercised without the department simulation.
 import type { CertId, Command, DebriefResult, GameState, HandlerResult, Id, ItemUnit, Officer, Ratings, Role, SquadId, StageId, TraitId } from './types';
 import { OPERATION_HANDLERS } from './operation';
-import { actionViews, pendingDebrief, stageContinuations } from './operation-selectors';
+import { actionViews, pendingDebrief } from './operation-selectors';
 import { CALENDAR } from './calendar';
 import { getBuilt } from './resolution';
 import { getScenario } from './scenario-registry';
@@ -13,7 +14,7 @@ import { ITEMS } from '../content/items';
 
 export const NOW = 1_800_000_000_000;
 /** Game day of NOW in fixtures (about 32.9 years after game day 0). */
-export const DAY0 = 12_000;
+const DAY0 = 12_000;
 const YEAR = CALENDAR.daysPerYear;
 
 const rate = (shooting: number, composure: number, communication: number, awareness: number, medical: number, coordination: number): Ratings => ({
@@ -34,7 +35,7 @@ export interface CareerSpec {
   ops?: number;
 }
 
-export function makeOfficer(
+function makeOfficer(
   id: Id,
   firstName: string,
   surname: string,
@@ -92,7 +93,7 @@ export function rosterOfficers(): Officer[] {
   ];
 }
 
-export function squadCOfficers(): Officer[] {
+function squadCOfficers(): Officer[] {
   return [
     makeOfficer('off_holt', 'Rae', 'Holt', 'breach', 'holt', rate(70, 62, 52, 56, 42, 64), ['entry_team'], [], 'C', { age: 36, service: 9 }),
     makeOfficer('off_dray', 'Kit', 'Dray', 'comms', 'dray', rate(50, 60, 66, 58, 45, 60), [], [], 'C', { age: 31, service: 5 }),
@@ -173,8 +174,9 @@ export function makeState(opts: FixtureOptions = {}): GameState {
   ];
   if (opts.squadC) squads.push({ id: 'C', name: 'Charlie', officerIds: ['off_holt', 'off_dray', 'off_ng', 'off_ibarra'], leaderId: 'off_holt', duty: 'standby', loadoutPreset: {} });
   return {
-    saveVersion: 1,
-    contentVersion: 1,
+    personnel: createPersonnel(opts.rngState ?? 12345, officers),
+    saveVersion: 9,
+    contentVersion: 13,
     department: {
       name: 'Westhaven Department',
       funding: 12400,
@@ -205,14 +207,14 @@ export function makeState(opts: FixtureOptions = {}): GameState {
   };
 }
 
-export const DEFAULT_LOADOUTS: Record<SquadId, Record<Id, number>> = {
+const DEFAULT_LOADOUTS: Record<SquadId, Record<Id, number>> = {
   A: { radio_kit: 1, throw_phone: 1, ballistic_shield: 1, trauma_kit: 2 },
   B: { radio_kit: 1, loud_hailer: 1, door_ram: 1, ballistic_shield: 1, trauma_kit: 2 },
   C: { radio_kit: 1, loud_hailer: 1, trauma_kit: 1 },
   D: { radio_kit: 1, trauma_kit: 1 },
 };
 
-export const DEFAULT_POSITIONS: Record<SquadId, Id> = { A: 'front_yard', B: 'side_yard_e', C: 'front_yard', D: 'front_yard' };
+const DEFAULT_POSITIONS: Record<SquadId, Id> = { A: 'front_yard', B: 'side_yard_e', C: 'front_yard', D: 'front_yard' };
 
 export function startCmd(
   scenarioId: Id,
@@ -233,13 +235,12 @@ export function startCmd(
   return { type: 'startOperation', scenarioId, squadIds, positions, loadouts, ...(over.units ? { units: over.units } : {}), ...(over.staging ? { staging: over.staging } : {}) };
 }
 
-/** Fixed generated calls the tests reuse as examples of each content version. */
-export const TEST_CALLS = {
-  welfareV3: { type: 'welfare_check', familyId: 'cedar_close', buildingSeed: 0, seed: 11, tier: 1, contentVersion: 3 },
-  welfareV4: { type: 'welfare_check', familyId: 'cedar_close', buildingSeed: 0, seed: 11, tier: 1, contentVersion: 4 },
-  activeArmedV4: { type: 'active_armed_incident', familyId: 'cedar_close', buildingSeed: 7, seed: 7, tier: 2, contentVersion: 4 },
-  hostageV4: { type: 'hostage_crisis', familyId: 'market_row', buildingSeed: 7, seed: 7, tier: 2, contentVersion: 4 },
-  protectedRescueV4: { type: 'protected_rescue', familyId: 'cedar_close', buildingSeed: 7, seed: 0, tier: 2, contentVersion: 4 },
+/** Current generated tactical calls reused by engine and interface tests. */
+const TEST_CALLS = {
+  barricade: { type: 'barricaded', familyId: 'cedar_close', buildingSeed: 0, seed: 11, tier: 1, contentVersion: 13 },
+  armed: { type: 'active_armed_incident', familyId: 'market_row', buildingSeed: 7, seed: 7, tier: 2, contentVersion: 13 },
+  hostage: { type: 'hostage_crisis', familyId: 'market_row', buildingSeed: 7, seed: 7, tier: 2, contentVersion: 13 },
+  rescue: { type: 'protected_rescue', familyId: 'juniper_court_v1', buildingSeed: 7, seed: 0, tier: 2, contentVersion: 13 },
 } satisfies Record<string, IncidentSpec>;
 export const testCallId = (name: keyof typeof TEST_CALLS): Id => incidentId(TEST_CALLS[name]);
 
@@ -254,7 +255,7 @@ export function withCallOnBoard(state: GameState, scenarioId: Id, now = NOW): Ga
 }
 
 /** Every item the department can field: owned or unlocked, apart from exterior vehicles. */
-export function fieldableItems(state: GameState): Id[] {
+function fieldableItems(state: GameState): Id[] {
   return Object.keys(ITEMS).filter((id) => {
     const def = ITEMS[id];
     if (def.supportOnly) return false;
@@ -308,21 +309,21 @@ export function startRun(state: GameState, scenarioId: Id, squadIds: SquadId[], 
   return r.state;
 }
 
-/** Model a pre-standard-kit active save; never used by the deployment path. */
-export function withLegacyRadios(state: GameState, quantities: Partial<Record<SquadId, number>>): GameState {
-  const legacy = structuredClone(state);
+/** Override reserved radio quantities to exercise equipment-shortage rules. */
+export function withReservedRadios(state: GameState, quantities: Partial<Record<SquadId, number>>): GameState {
+  const modified = structuredClone(state);
   const retained: Partial<Record<SquadId, number>> = {};
-  legacy.reservations = legacy.reservations.filter((reservation) => {
+  modified.reservations = modified.reservations.filter((reservation) => {
     const limit = quantities[reservation.squadId];
     if (reservation.itemId !== 'radio_kit' || limit === undefined) return true;
     const count = retained[reservation.squadId] ?? 0;
     retained[reservation.squadId] = count + 1;
     if (count < limit) return true;
-    legacy.units[reservation.unitId].status = 'ready';
+    modified.units[reservation.unitId].status = 'ready';
     return false;
   });
-  if (legacy.activeRun) legacy.activeRun.reservationIds = legacy.reservations.map((r) => r.id);
-  return legacy;
+  if (modified.activeRun) modified.activeRun.reservationIds = modified.reservations.map((r) => r.id);
+  return modified;
 }
 
 type Status = 'unknown' | 'reported' | 'confirmed' | 'disproved';
@@ -374,18 +375,8 @@ export function playPolicy(state: GameState, policy: Policy, focus: SquadId | nu
     if (!run || run.status !== 'active') break;
     const views = actionViews(s, NOW, focus);
     const prefs = policy[run.stage as StageId] ?? [];
-    const continuations = stageContinuations(s);
-    const requestedContinuation = continuations.find(entry => prefs[0] === entry.actionId);
     let pick = prefs.map((id) => views.find((v) => v.id === id)).find((v) => v && v.eligible);
     if (!pick) pick = views.find((v) => v.eligible);
-    const continuation = requestedContinuation ?? (!pick ? continuations[0] : undefined);
-    if (continuation) {
-      const result = apply(s, { type: 'continueStage', actionId: continuation.actionId, revision: continuation.revision });
-      if (!result.result.ok) throw new Error(`continue ${continuation.actionId} refused: ${result.result.reason}`);
-      steps.push(continuation.actionId);
-      s = result.state;
-      continue;
-    }
     if (!pick) throw new Error(`no eligible action at ${run.stage}`);
     const r = apply(s, { type: 'decide', actionId: pick.id, actingSquadIds: pick.actingSquadIds, supportSquadIds: pick.supportSquadIds });
     if (!r.result.ok) throw new Error(`decide ${pick.id} refused: ${r.result.reason}`);

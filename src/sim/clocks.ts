@@ -14,19 +14,21 @@
 // record and the text then agree: the debrief and the score see the harm like any authored harm.
 import type { ActionDefinition, ClockCondition, ClockDef, OutcomeEffect, ScenarioDefinition } from './scenario-types';
 import type { Id, OperationRun, OutcomeBand } from './types';
+import { RESOLUTION_TUNING } from './resolution';
+import { tunable } from './tuning';
 
-export const CLOCK_RULES_V1 = {
+/** Tunable (sim/tuning.ts). A choice's minutes per band are RESOLUTION_TUNING.bandTime, the one table
+ * the commit, the preview and the clock lookahead (forkMinutes) all read. */
+export const CLOCK_RULES_V1 = tunable('CLOCK_RULES_V1', {
   /** Where a clock stops in a decision that would run it out before any cue was heard. */
   floor: 1,
-  /** How long a choice takes for its band, as the commit applies it (RESOLUTION_TUNING.bandTime). */
-  bandTime: { favorable: 1, mixed: 1.2, adverse: 1.5 } as Record<OutcomeBand, number>,
-};
+});
 
 export type ClockState = NonNullable<OperationRun['clocks']>[Id];
 const round1 = (n: number) => Math.round(n * 10) / 10;
 
 export function initialClocks(scenario: ScenarioDefinition): OperationRun['clocks'] {
-  if (scenario.version < 13 || !scenario.clocks?.length) return undefined;
+  if (!scenario.clocks?.length) return undefined;
   return Object.fromEntries(scenario.clocks.map(def => [def.id, { value: def.start, cued: def.cues.filter(cue => def.start <= cue.at).length }]));
 }
 
@@ -42,14 +44,14 @@ export function stepClock(def: ClockDef, state: ClockState, minutes: number, fla
 }
 
 export interface ClockRead { value: number; low: boolean; out: boolean }
-export function readClock(def: ClockDef | undefined, state: ClockState | undefined): ClockRead {
+function readClock(def: ClockDef | undefined, state: ClockState | undefined): ClockRead {
   if (!def || !state) return { value: 100, low: false, out: false };
   return { value: state.value, low: state.cued > 0, out: state.value <= 0 };
 }
 
 /** The minutes a clock fork looks ahead: the choice's own minutes for its band, plus the outcome's. */
 export function forkMinutes(action: ActionDefinition, band: OutcomeBand, effect: OutcomeEffect): number {
-  return action.workload.base * CLOCK_RULES_V1.bandTime[band] + (effect.extraMinutes ?? 0);
+  return action.workload.base * RESOLUTION_TUNING.bandTime[band] + (effect.extraMinutes ?? 0);
 }
 
 /** Whether an outcome's clock conditions hold at the end of its own minutes. */
@@ -102,7 +104,7 @@ export function cueEffects(fired: OutcomeEffect[], scenario: ScenarioDefinition,
 
 /** Clocks that ran out between two states of the run: above zero before, out after. A clock whose
  * owner was already out at the start did not run (stepClock), so it never runs out here. */
-export function clocksRunOut(scenario: ScenarioDefinition, before: OperationRun['clocks'], after: OperationRun['clocks']): ClockDef[] {
+function clocksRunOut(scenario: ScenarioDefinition, before: OperationRun['clocks'], after: OperationRun['clocks']): ClockDef[] {
   return (scenario.clocks ?? []).filter(def => (before?.[def.id]?.value ?? 0) > 0 && (after?.[def.id]?.value ?? 1) <= 0);
 }
 

@@ -9,6 +9,8 @@ import { Icon } from '../icons';
 import type { IconName } from '../icons';
 import { Portrait } from '../portraits/Portrait';
 import { opMinutes } from '../format';
+import { PeopleGlyph, usePeopleEntry } from '../people/PeopleText';
+import { peopleLabel } from '../people/lexicon';
 import './incident-people.css';
 
 type CivilianOutcome = CivilianOutcomeView;
@@ -71,11 +73,14 @@ export function personInitials(label: string): string {
   return (words[0][0] + words[words.length - 1][0]).toUpperCase();
 }
 
-function PersonTile({ label, status, tone, icon, avatar, data, children }: { label: string; status: string; tone: PersonTone; icon: IconName; avatar?: ReactNode; data: Record<string, string>; children?: ReactNode }) {
+/** `personId` finds the person's public kind while names are colored: a ring around the avatar in
+ * the kind's color, and the kind's glyph before the name. */
+function PersonTile({ label, status, tone, icon, avatar, data, personId, children }: { label: string; status: string; tone: PersonTone; icon: IconName; avatar?: ReactNode; data: Record<string, string>; personId?: string; children?: ReactNode }) {
+  const who = usePeopleEntry(personId);
   return <li className="person-tile" data-tone={tone} {...data}>
-    <span className="person-avatar" aria-hidden="true">{avatar ?? personInitials(label)}</span>
+    <span className="person-avatar" aria-hidden="true" data-kind={who?.kind} title={who ? peopleLabel(who.kind, who.squad) : undefined}>{avatar ?? personInitials(label)}</span>
     <div className="person-text">
-      <strong>{label}</strong>
+      <strong>{who && <PeopleGlyph kind={who.kind} tone />}{label}</strong>
       <span className="person-status"><Icon name={icon} size={13} />{status}</span>
       {children}
     </div>
@@ -84,7 +89,7 @@ function PersonTile({ label, status, tone, icon, avatar, data, children }: { lab
 
 export function CivilianOutcomeList({ outcomes }: { outcomes: CivilianOutcome[] }) {
   return <ul className="incident-people-list" aria-label="Civilian outcomes">{outcomes.map((person) =>
-    <PersonTile key={person.id} label={person.label} status={CIVILIAN_OUTCOME_LABEL[person.status]} tone={PERSON_TONE[person.status]} icon={PERSON_ICON[person.status]} data={{ 'data-person-status': person.status }} />)}</ul>;
+    <PersonTile key={person.id} personId={person.id} label={person.label} status={CIVILIAN_OUTCOME_LABEL[person.status]} tone={PERSON_TONE[person.status]} icon={PERSON_ICON[person.status]} data={{ 'data-person-status': person.status }} />)}</ul>;
 }
 
 /** A saved fatality remains deceased even if an older care field says otherwise. */
@@ -94,7 +99,7 @@ export function PersonCasualtyList({ casualties }: { casualties: PersonCasualtyR
     const fatal = person.severity === 'fatal' || person.care === 'deceased';
     const status: PersonStatus = fatal ? 'deceased' : person.care === 'accepted' ? 'care_accepted' : 'injured_needs_care';
     const line = fatal ? 'Deceased' : `${person.severity === 'serious' ? 'Serious injury' : 'Wounded'} · ${person.care === 'stabilized' ? 'Stabilized' : person.care === 'accepted' ? 'Care accepted' : 'Needs care'}`;
-    return <PersonTile key={person.personId} label={person.label} status={line} tone={fatal ? 'danger' : 'warn'} icon={fatal ? 'x' : 'bandage'} data={{ 'data-person-casualty': person.personId, 'data-person-status': status }} />;
+    return <PersonTile key={person.personId} personId={person.personId} label={person.label} status={line} tone={fatal ? 'danger' : 'warn'} icon={fatal ? 'x' : 'bandage'} data={{ 'data-person-casualty': person.personId, 'data-person-status': status }} />;
   })}</ul>;
 }
 
@@ -125,14 +130,14 @@ export function IncidentPeopleStatus({ scenario, run, state }: { scenario: Scena
     {civilians.length > 0 && <CivilianOutcomeList outcomes={civilians} />}
     <PersonCasualtyList casualties={additionalCasualties} />
     {subjects.length > 0 && <ul className="incident-people-list incident-subject-list" aria-label="Subjects">{subjects.map((subject) =>
-      <PersonTile key={subject.id} label={subject.label} status={STANCE_LABEL[subject.stance]} tone={STANCE_TONE[subject.stance]} icon="ear" data={{ 'data-subject-stance': subject.stance }} />)}</ul>}
+      <PersonTile key={subject.id} personId={subject.id} label={subject.label} status={STANCE_LABEL[subject.stance]} tone={STANCE_TONE[subject.stance]} icon="ear" data={{ 'data-subject-stance': subject.stance }} />)}</ul>}
     {clocks.length > 0 && <ul className="incident-people-list incident-clock-list" aria-label="Running down">{clocks.map((clock) =>
       <PersonTile key={clock.id} label={clock.label} status={clock.out ? 'Out' : 'Running low'} tone={clock.out ? 'danger' : 'warn'} icon="hourglass" avatar={<Icon name="hourglass" size={18} />} data={{ 'data-clock': clock.id }}>
         <span className="person-note">{clock.latest}</span>
       </PersonTile>)}</ul>}
     {officers.length > 0 && <ul className="incident-people-list incident-wounded-list" aria-label="Officers out of action">{officers.map((casualty) => {
       const officer = state.officers[casualty.officerId];
-      return <PersonTile key={casualty.officerId} label={`${officer ? `${officer.firstName} ${officer.surname}` : 'Officer'} · out of action`} status={`${casualty.severity === 'serious' ? 'Serious injury · ' : ''}${casualty.label} · ${CASUALTY_CARE_LABEL[casualty.care]}`} tone="warn" icon="bandage"
+      return <PersonTile key={casualty.officerId} personId={casualty.officerId} label={`${officer ? `${officer.firstName} ${officer.surname}` : 'Officer'} · out of action`} status={`${casualty.severity === 'serious' ? 'Serious injury · ' : ''}${casualty.label} · ${CASUALTY_CARE_LABEL[casualty.care]}`} tone="warn" icon="bandage"
         avatar={officer ? <Portrait officer={officer} size={36} /> : undefined} data={{ 'data-officer-casualty': casualty.officerId }} />;
     })}</ul>}
   </section>;

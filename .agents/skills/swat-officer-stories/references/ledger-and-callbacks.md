@@ -91,7 +91,7 @@ Callback intent
    choice label or a stage prompt. Choices stay about the dilemma.
 2. Briefing callbacks render in a UI component beside the briefing, fed by `OfficerHooksView` at
    display time. They never go into `ScenarioDefinition` fields (`known`, `dispatchReason`,
-   `summary`), so issued fingerprints and the distinctness gate are untouched. The component is
+   `summary`), so the compiled fingerprints and the call-tree gates are untouched. The component is
    request R15.
 3. No branch depends on a callback. The call plays the same without it.
 4. The same ledger entry is not reused for one officer within 5 operations (proposal).

@@ -4,7 +4,7 @@ import { createInitialState } from './department';
 import { createPersonnel } from './personnel';
 import { fillCandidates } from './roster';
 
-/** Fixed established careers for tests of specific anniversaries and legacy migration. */
+/** Fixed established careers for tests of specific anniversaries. */
 export function establishedDepartment(now: number, campaignSeed = 12345) {
   const state = createInitialState(now, campaignSeed);
   for (const person of STARTER_PERSONAS) {

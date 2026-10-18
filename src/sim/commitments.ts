@@ -35,7 +35,7 @@ const isOut = (run: Pick<OperationRun, 'flags'>, personId: Id) => run.flags.incl
  * commitments that changed status, in order. */
 export function applyCommitments(run: CommitmentRun, scenario: ScenarioDefinition, action: ActionDefinition, band: OutcomeBand,
   effects: readonly OutcomeEffect[], drawn: readonly DrawnRecord[], revision: number): { id: Id; status: 'kept' | 'broken' }[] {
-  if (scenario.version < 13) return [];
+
   for (const made of commitmentsMade(action, band, effects)) {
     if (run.commitments?.[made.id]) continue;
     run.commitments = { ...run.commitments, [made.id]: { personId: made.personId, kind: made.kind, madeAt: run.clock, revision, status: 'open' } };

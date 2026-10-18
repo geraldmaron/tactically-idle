@@ -1,16 +1,17 @@
 import { useEffect, useState } from 'react';
-import type { ReactNode } from 'react';
 import { send, useGame } from '../store';
 import type { GameState, Id } from '../../sim/types';
 import type { ScenarioCard } from '../../sim/operation-selectors';
-import type { ScenarioDefinition } from '../../sim/scenario-types';
-import { Button, Card, Chip, Section } from '../components/ui';
-import { DifficultyChip, FloorsChip, TierChevrons, TimeLeftBar, familyBlurb, incidentMeta, scenarioFloorCount, settingIcon, useNow } from '../components/incident';
+import { Button, Chip, Section } from '../components/ui';
+import { TimeLeftBar, useNow } from '../components/incident';
 import { Icon } from '../icons';
 import { relativeTime } from '../format';
 import { BOARD_LIMIT, boardEntries, boardNote, boardPlan, incidentsOf } from './helpers';
 import type { BoardEntry } from './helpers';
 import { Casebook } from './Casebook';
+import { CallTile } from './CallTile';
+import { GamePeopleProvider } from '../people/PeopleText';
+import { lexiconFor } from '../people/lexicon';
 import './ops-visual.css';
 
 /**
@@ -77,55 +78,6 @@ function useFreshIncidents(g: GameState): Set<Id> {
   return fresh;
 }
 
-/** A compact call tile: a type badge with tier pips, the title and place, a two-line summary, a fact
- * row and a footer with the time left and Prepare. The full brief lives on the Prepare screen. */
-function CallTile({ card, scenario, familyId, type, tier, isNew = false, facts, footer, warning }: { card: ScenarioCard; scenario: ScenarioDefinition | null; familyId: string | null; type: string | null; tier: number | null; isNew?: boolean; facts?: ReactNode; footer: ReactNode; warning?: ReactNode }) {
-  const meta = incidentMeta(type);
-  const blurb = familyBlurb(familyId);
-  const diff = scenario?.difficulty;
-  const floors = scenarioFloorCount(scenario);
-  return (
-    <Card className={`opboard optile${isNew ? ' opboard-new' : ''}`}>
-      <div className="optile-top">
-        <span className={`optile-badge optile-band-${diff?.band ?? 'none'}`}>
-          <Icon name={type ? meta.icon : settingIcon(card.setting)} size={24} />
-          {tier !== null && <TierChevrons tier={tier} />}
-        </span>
-        <div className="optile-main">
-          <div className="opboard-head">
-            <span className="opboard-kind">{type ? meta.label : card.setting.toUpperCase()}</span>
-            <span className="opboard-code">{card.code}</span>
-            {isNew && (
-              <span className="newbadge">
-                <Icon name="bell" size={12} />
-                NEW
-              </span>
-            )}
-          </div>
-          <h3 className="opboard-title">{card.title}</h3>
-          {blurb && (
-            <p className="opboard-where">
-              <Icon name={settingIcon(card.setting)} size={13} />
-              <span>{blurb}</span>
-            </p>
-          )}
-        </div>
-      </div>
-      <p className="opboard-summary">{card.summary}</p>
-      <div className="chips opboard-facts">
-        {diff && <DifficultyChip band={diff.band} />}
-        <Chip icon="people">{card.squadRange.min === card.squadRange.max ? `${card.squadRange.min} squad` : `${card.squadRange.min}–${card.squadRange.max} squads`}</Chip>
-        <FloorsChip floors={floors} />
-        {card.variantLabel !== card.title && <Chip>{card.variantLabel}</Chip>}
-        {(!scenario || scenario.version < 4) && <Chip icon="clock">{card.pressureLabel}</Chip>}
-        {facts}
-      </div>
-      {warning}
-      <div className="optile-foot">{footer}</div>
-    </Card>
-  );
-}
-
 /** Eligibility only earns space when something is wrong; every squad ready is the normal case. */
 function Eligibility({ card, squadCount }: { card: ScenarioCard; squadCount: number }) {
   if (card.issues.length === 0 && card.eligibleSquadIds.length > 0 && card.eligibleSquadIds.length >= squadCount) return null;
@@ -152,14 +104,17 @@ function Eligibility({ card, squadCount }: { card: ScenarioCard; squadCount: num
 function IncidentCardView({ entry, now, isNew, squadCount, onPrepare }: { entry: BoardEntry; now: number; isNew: boolean; squadCount: number; onPrepare: (id: Id) => void }) {
   const { card, incident, scenario } = entry;
   const spec = scenario?.incident;
+  // Each card names its own call's people; nobody is deployed yet.
   return (
-    <CallTile card={card} scenario={scenario} isNew={isNew} familyId={scenario?.locationFamilyId ?? spec?.familyId ?? incident.familyId} type={spec?.type ?? incident.type} tier={spec?.tier ?? incident.tier}
-      facts={incident.newKind && <Chip tone="amber" icon="star">New kind of call</Chip>}
-      warning={<Eligibility card={card} squadCount={squadCount} />}
-      footer={<>
-        <TimeLeftBar arrivedAt={incident.arrivedAt} expiresAt={incident.expiresAt} now={now} />
-        <Button variant="primary" className="optile-go" onClick={() => onPrepare(card.id)}>Prepare</Button>
-      </>} />
+    <GamePeopleProvider lexicon={scenario ? lexiconFor(scenario, null, []) : null}>
+      <CallTile card={card} scenario={scenario} isNew={isNew} familyId={scenario?.locationFamilyId ?? spec?.familyId ?? incident.familyId} type={spec?.type ?? incident.type} tier={spec?.tier ?? incident.tier}
+        facts={incident.newKind && <Chip tone="amber" icon="star">New kind of call</Chip>}
+        warning={<Eligibility card={card} squadCount={squadCount} />}
+        footer={<>
+          <TimeLeftBar arrivedAt={incident.arrivedAt} expiresAt={incident.expiresAt} now={now} />
+          <Button variant="primary" className="optile-go" onClick={() => onPrepare(card.id)}>Prepare</Button>
+        </>} />
+    </GamePeopleProvider>
   );
 }
 

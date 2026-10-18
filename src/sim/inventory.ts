@@ -148,29 +148,3 @@ export function squadUnits(state: GameState, runId: Id, squadId: SquadId): ItemU
   const ids = state.reservations.filter((r) => r.runId === runId && r.squadId === squadId).map((r) => r.unitId);
   return ids.map((id) => state.units[id]).filter((u): u is ItemUnit => Boolean(u) && !ITEMS[u.itemId]?.supportOnly);
 }
-
-/** Capability tags carried by one squad, counting only units that still work. */
-export function squadTags(state: GameState, runId: Id, squadId: SquadId): Set<string> {
-  const tags = new Set<string>();
-  for (const u of squadUnits(state, runId, squadId)) {
-    const def = ITEMS[u.itemId];
-    if (def && unitEffectiveness(u, def) > 0) for (const t of def.tags) tags.add(t);
-  }
-  return tags;
-}
-
-/** Best working unit carrying a tag for a squad (highest effectiveness), for contributors and wear. */
-export function bestUnitWithTag(state: GameState, runId: Id, squadId: SquadId, tag: string): ItemUnit | null {
-  let best: ItemUnit | null = null;
-  let bestEff = 0;
-  for (const u of squadUnits(state, runId, squadId)) {
-    const def = ITEMS[u.itemId];
-    if (!def?.tags.includes(tag)) continue;
-    const eff = unitEffectiveness(u, def);
-    if (eff > bestEff) {
-      best = u;
-      bestEff = eff;
-    }
-  }
-  return best;
-}

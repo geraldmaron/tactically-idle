@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { AIR_FALLOFF_PER_FT, DOORS, GLAZING, WALLS } from '../content/materials';
-import { MAPLE_STREET } from '../content/locations/maple-street';
+import { MAPLE_STREET } from './fixtures/maple-street';
 import { buildLocation, deriveLocation, pointInPolygon } from './location';
 import { validateLocation } from './location-validate';
 import {

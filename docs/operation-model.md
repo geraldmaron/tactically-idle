@@ -110,3 +110,17 @@ Initial generation is controlled variation over authored layouts. Broader proced
 - Same seed and content version: identical location and scenario binding. An intentional decision change can branch the run without changing the underlying building unexpectedly.
 
 **Review:** The implementer supplies fixture results and actual-screen captures. The owner reviews decision comprehension and fidelity to the approved image. None of these checks is claimed complete by this specification.
+
+The deployed team retains responsibility until the named receiving service accepts care; requesting help or seeing it arrive never completes the call.
+
+A chosen civilian outcome remains pending while another person needs care, and completes only when its recorded completion requirements hold.
+
+Only an explicit force action with a matching serviceable unit, qualified participant and complete supplies draws harm; task success, human harm and completion remain separate saved results.
+
+First aid does not replace professional transfer, and a safety score neither invents casualties nor proves everyone is accounted for.
+
+Recorded injury or death governs later dialogue, care eligibility and endings, and care or a later safe flag cannot reverse death.
+
+Target actions from public position rather than hidden truth, bind physical moves to explicit routes, and never imply an off-scene journey merely by removing a marker.
+
+Geometry, materials and positions share one source of truth across rendering, eligibility and resolution; each mechanical variable has a named contributor and an isolated input-change check.

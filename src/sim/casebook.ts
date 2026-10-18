@@ -1,3 +1,4 @@
+import { SCENARIO_TYPES } from '../content/scenario-types';
 // Casebook: which recipes a campaign has met on live calls and its best result on each.
 // A recipe is framework × situation (variant and pacing) × the building type the call
 // actually used. It is recorded when a squad is dispatched (takeIncident), so it never
@@ -8,13 +9,12 @@
 import type { CasebookBest, CasebookState, DebriefResult, GameState, Id } from './types';
 import type { IncidentType } from './scenario-types';
 import { parseIncidentId } from '../gen/incident';
-import { baseFamilyIdV7 } from '../gen/building';
-import { scenarioRecipe, scenarioSituationsV10 } from '../content/scenario-recipes';
+import { baseFamilyId } from '../gen/building';
+import { scenarioRecipe, scenarioSituations } from '../content/scenario-recipes';
 import type { ScenarioCharacteristic } from '../content/scenario-recipes';
 import { getScenario } from './scenario-registry';
 
 /** Recipes are counted from content v10, when situations decoupled from buildings. */
-export const CASEBOOK_MIN_CONTENT_VERSION = 10;
 
 export interface RecipeRef {
   key: string;
@@ -24,28 +24,28 @@ export interface RecipeRef {
   characteristic: ScenarioCharacteristic;
 }
 
-export function emptyCasebook(): CasebookState {
+function emptyCasebook(): CasebookState {
   return { frameworksSeen: [], recipes: {} };
 }
 
 /** The persisted casebook, created on first use. */
-export function ensureCasebook(d: GameState): CasebookState {
+function ensureCasebook(d: GameState): CasebookState {
   if (!d.casebook) d.casebook = emptyCasebook();
   return d.casebook;
 }
 
-export const recipeKey = (type: string, familyId: string, variant: number, characteristic: string) => `${type}/${familyId}/${variant}/${characteristic}`;
+const recipeKey = (type: string, familyId: string, variant: number, characteristic: string) => `${type}/${familyId}/${variant}/${characteristic}`;
 
 export function parseRecipeKey(key: string): RecipeRef | null {
   const [type, familyId, variant, characteristic] = key.split('/');
-  if (!type || !familyId || !/^\d$/.test(variant ?? '') || (characteristic !== 'ordinary' && characteristic !== 'deliberate_answers')) return null;
+  if (!SCENARIO_TYPES.some(info => info.type === type && info.families.includes(familyId)) || !/^[0-2]$/.test(variant ?? '') || (characteristic !== 'ordinary' && characteristic !== 'deliberate_answers')) return null;
   return { key, type: type as IncidentType, familyId, variant: Number(variant), characteristic };
 }
 
 /** The recipe a v10+ generated call presents, with the building type it actually used. */
 export function recipeOfScenario(scenarioId: Id): RecipeRef | null {
   const spec = parseIncidentId(scenarioId);
-  if (!spec || spec.contentVersion < CASEBOOK_MIN_CONTENT_VERSION) return null;
+  if (!spec) return null;
   let variant = 0;
   let characteristic: ScenarioCharacteristic = 'ordinary';
   try {
@@ -56,11 +56,11 @@ export function recipeOfScenario(scenarioId: Id): RecipeRef | null {
     // A framework without authored situations has one situation.
   }
   const used = getScenario(scenarioId)?.locationFamilyId;
-  const familyId = used ? baseFamilyIdV7(used) : spec.familyId;
+  const familyId = used ? baseFamilyId(used) : spec.familyId;
   return { key: recipeKey(spec.type, familyId, variant, characteristic), type: spec.type, familyId, variant, characteristic };
 }
 
-export function bestOfDebrief(report: DebriefResult): CasebookBest {
+function bestOfDebrief(report: DebriefResult): CasebookBest {
   return { completed: report.completionAchieved === true, objective: report.objective.score, safety: report.civilianSafety.score, label: report.objective.label };
 }
 
@@ -85,7 +85,7 @@ function debriefBests(debriefs: readonly DebriefResult[]): Map<string, CasebookB
 }
 
 /** Record the best results of the current debriefs. Idempotent. Adds a recipe that only a
- * debrief knows about (migrated history), dated `at`. */
+ * debrief knows about, dated `at`. */
 export function foldDebriefs(d: GameState, at: number): void {
   const book = ensureCasebook(d);
   for (const [key, best] of debriefBests(d.debriefs ?? [])) {
@@ -131,7 +131,7 @@ export function casebookRecipes(state: Pick<GameState, 'casebook' | 'debriefs'>)
 
 /** Situations (variants) a framework can present; pacing does not count as a new situation. */
 export function situationCount(type: IncidentType): number {
-  return Math.max(1, new Set(scenarioSituationsV10(type).map((situation) => situation.variant)).size);
+  return Math.max(1, new Set(scenarioSituations(type).map((situation) => situation.variant)).size);
 }
 
 /** Unseen-first draw weights: a framework never sent counts three times, one with

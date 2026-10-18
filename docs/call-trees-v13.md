@@ -101,7 +101,7 @@ Target per call for the average player: about a third clean, a third resolved at
 
 Re-measured after the second-reader pass (same day). The day-one calls (hostage, barricade) mostly fail as stalemates, someone still inside; the barricade no longer kills anyone, and its weight is the son left behind the door, the son hurt in an entry, and the officer shot on the step. The calls a department unlocks later carry more harm. Rushing an armed man hurts officers in about half of calls (fast style: 45 to 56%); waiting him out when her door is splitting is what kills her. Each tree sets its own `difficulty` from these runs, never by feel.
 
-To re-measure after a content change, run the simulator from a script (see `measure` in `balance.ts`) or the gate.
+To re-measure after a content change, run the simulator from a script (see `measure` in `balance.ts`), the gate, or Outcomes in the Scenario Lab.
 
 ## Second-reader pass
 
@@ -116,8 +116,8 @@ Still owed (owner calls): a human read of each death (`owner_killed`, `worker_ki
 
 ## Tools
 
-- **Scenario Lab** (`/story.html`, Lab link in dev): rebuilt on incident instances in 2026-10-07 (docs/incident-domain-model.md, M1). The story graph shows every node by stage and where each band goes, with this call's turn draws solid; the Choices tab shows the real cards at any decision.
-- The engine walk used for the table above is the gate test's last block; the Lab's "Explore every path" does the same interactively.
+- **Scenario Lab** (`npm run lab`, `/lab?type=<type>`, Lab link in the campaign bar and Open in lab on a live call in dev; guide in [scenario-lab.md](scenario-lab.md)): rebuilt on 2026-10-09 around the real game screens. Play steps any call on the engine with the hidden truth, odds and routes beside the frame; Flow draws every node by stage with this call's turn draws and how often runs take each route; Outcomes gives ending shares by play style and the CI gate; Dependencies lints the marks; Script reads every line in every variant; Tuning changes the game's numbers. Old `/story.html` links redirect to `/lab` in dev.
+- The engine walk used for the table above is the gate test's last block. In the lab, Outcomes with population "This type" and 60 calls equals `measure` for the same style, and Play here finds the shortest path to any node or ending.
 
 ## Next
 
