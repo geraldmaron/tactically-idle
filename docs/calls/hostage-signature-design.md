@@ -858,8 +858,10 @@ hold, fast prefers ask_again's equal minutes), so they are unchanged. Not a desi
   the cue. The cue itself is unchanged: rewording it touches the owner-condition cue that B9 is
   about, so it is left for the owner's ruling, with the fix named there (an audible or reported
   symptom while the owner is hidden). Lone calls had the same contradiction before this change.
-- Separate reader (swat-writing-review, fresh subagents), three reads: the first two as recorded
-  above for the first version; the third on the split: edit, one fix before ship (the summary named
+- Separate reader (swat-writing-review, fresh subagents), three reads. The first two were on the first version (team_glass opened to groups):
+  edit, then edit, six fixes before ship in all (the group list in "One of {others}", a doubled
+  "from", the courier missing from the prompt, the coworkers' `team_seen`, the owner behind the
+  shelves, the courier in the shelves line). The third was on the split: edit, one fix before ship (the summary named
   the watchers but no consequence, now "One shout could drop the blinds") and three notes (the
   combined prompts, removed; the `standoff` line's "phone has gone quiet" false after a talking
   result, now "{taker.first} won’t talk terms anymore"; the empty-hands case, the filed request).
