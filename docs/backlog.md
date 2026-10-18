@@ -247,7 +247,10 @@ Tags: job=command; journeys=answer-a-call; probes=none (tooling); lane=tooling
 Needs: start=none; integrate=barricade-model-first, rescue-model-first, armed-model-first; ship=none
 
 It exits 1 today only on the barricade, armed and rescue trees, which the model-first calls
-replace. Done: `npm run verify` and pull-request CI run it, and it passes.
+replace. Its output isn't deterministic either: two runs on the same commit (main, 2026-10-18) list
+the same findings by kind, scope and field path, but in a different order and quoting a different
+repeated phrase. Done: the output is byte-identical across runs (stable order, a deterministic choice
+of quoted phrase), `npm run verify` and pull-request CI run it, and it passes.
 
 ## Player experience
 
