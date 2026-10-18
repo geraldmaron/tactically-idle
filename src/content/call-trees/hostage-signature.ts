@@ -716,7 +716,7 @@ export const HOSTAGE_SIGNATURE: CallTree = {
             mixed: heldEnd({ text: 'Officers fall back and close the block. Inside, {taker.first} hasn’t let {owner.first} go.', objective: 5 },
               '{courier.first} is in there too, by the entrance.', '{owner.first} tips sideways from the stool onto the tiles.'),
             adverse: heldEnd({ text: 'The team gives up the windows and holds the cross street.', objective: 5 },
-              '{courier.first} is stuck inside with them.', 'Behind the till, {owner.first} lies where {owner.he} fell.'),
+              '{courier.first} is stuck inside with {taker.first}.', 'Behind the till, {owner.first} lies where {owner.he} fell.'),
           } },
       ] },
     { id: 'threat', stage: 'resolve',
