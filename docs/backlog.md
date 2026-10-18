@@ -30,7 +30,7 @@ building can fire on the team and on civilians through the drawn incoming-fire r
 sightline from the generated building, and R-R1 to R-R3 work in the rescue call.
 
 ### second-squad: A second squad can act
-Tags: job=build; journeys=new:joint-operation; probes=none (squad count is not a probe input yet); lane=engine
+Tags: job=build; journeys=joint-operation; probes=none (squad count is not a probe input yet); lane=engine
 Needs: start=none; integrate=none; ship=barricade-model-first (a call authors the choices)
 
 Every v13 choice puts one squad to work (`squadsPutToWork`), and evaluation always supplies one
