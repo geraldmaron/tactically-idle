@@ -1,7 +1,7 @@
 // Every input the manifest says reaches the roll must move the odds the right way, and every known
 // gap must still be a gap: wiring one fails this test until its entry in wiring.ts is promoted.
 import { describe, expect, it } from 'vitest';
-import { buildingTravelChanges, measureWiring, MIN_BUILDING_TRAVEL_SHARE, samplePoints, taskWeightViolations, WIRING } from './wiring';
+import { buildingTravelChanges, measureWiring, MIN_BUILDING_TRAVEL_SHARE, MIN_SIGHTING_SHARE, samplePoints, sightingsWiring, taskWeightViolations, WIRING } from './wiring';
 
 const points = samplePoints();
 const results = measureWiring(WIRING, points);
@@ -33,6 +33,13 @@ describe('what moves the odds', () => {
     const { checked, changed, byTree } = buildingTravelChanges(points);
     expect(checked).toBeGreaterThan(0);
     expect(changed / checked, JSON.stringify(byTree)).toBeGreaterThanOrEqual(MIN_BUILDING_TRAVEL_SHARE);
+  });
+
+  it('subject: a choice that sees into a room learns where the people in it are, and no other choice does', () => {
+    const { choices, moved, wrong, byTree } = sightingsWiring(points);
+    expect(choices).toBeGreaterThan(0);
+    expect(moved / choices, JSON.stringify(byTree)).toBeGreaterThanOrEqual(MIN_SIGHTING_SHARE);
+    expect(wrong).toEqual([]);
   });
 
   it('officer: each choice reads the ratings its task weights, and only those', () => {
