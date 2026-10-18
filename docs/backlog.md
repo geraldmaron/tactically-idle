@@ -280,13 +280,6 @@ The manager portraits fix how each manager looks (she, he, they in the art brief
 `ManagerProfile` has no pronoun field. Done: `pronouns` on `ManagerProfile`, set from the briefs,
 before any shift report or log line refers to a manager by pronoun.
 
-### manager-art: Manager portraits and emblems
-Tags: job=build; journeys=none (art); probes=none (art); lane=interface
-Needs: start=none; integrate=none; ship=none
-
-Watch Commander, Quartermaster and Training Sergeant portraits, and course and branch emblems,
-passing `npm run check:art`.
-
 ### onboarding: A first call that teaches the loop
 Tags: job=command; journeys=answer-a-call; probes=none (teaching flow); lane=deferred
 Needs: start=barricade-model-first (needs validation: choosing and guaranteeing a teaching call may need generation work); integrate=none; ship=none
