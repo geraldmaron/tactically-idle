@@ -80,6 +80,17 @@ describe('a person can start upstairs (R-B1)', () => {
     expect(() => treeForCounts({ ...tree, nodes: tree.nodes.map((node, i) => i ? node : { ...node, promptIf: [{ when: { upstairs: ['nobody'] }, prompt: 'x' }] }) }, {})).toThrow(/not a role or group/);
   });
 
+  it('rejects a floor condition on a group led from outside the building, even with no members', () => {
+    for (const key of ['upstairs', 'notUpstairs'] as const) {
+      const t = structuredClone(variant('ground'));
+      const ex = t.tree.roles.find(role => role.kind === 'bystander')!;
+      const slot = t.cast.find(entry => entry.keyRoles.includes(ex.id))!;
+      t.tree.groups = { ...t.tree.groups, crowd: { slot: slot.id, leader: ex.id, label: 'neighbor' } };
+      t.tree.nodes.find(node => node.id === t.tree.root)!.promptIf!.unshift({ when: { [key]: ['crowd'] }, prompt: 'x' });
+      expect(() => call(t, 'bungalow_g2', true)).toThrow(/starts outside the building/);
+    }
+  });
+
   it('rejects a floor condition on a role who starts outside the building', () => {
     const outside = variant('ground');
     const ex = outside.tree.roles.find(role => role.place === 'outside' || role.kind === 'bystander')!;
@@ -105,9 +116,11 @@ describe('a compiled call in play always knows its compile-time facts', () => {
         situations.add(variant);
         const placed = drawInstance(template, buildLocation(s.locationFamilyId, s.locationSeed), hostedSpec(s)).placed;
         const facts = callCounts(placed);
-        for (const group of Object.keys(template.tree.groups ?? {})) {
+        for (const [group, def] of Object.entries(template.tree.groups ?? {})) {
           expect(facts[`${group}:armed`], `${s.id} ${group}:armed`).toBeTypeOf('number');
-          expect(facts[upstairsKey(group)], `${s.id} ${group}:upstairs`).toBeTypeOf('number');
+          // A group led from inside has a floor; one led from outside has none, and compile rejects a floor condition on it.
+          if (placed.roomOf[def.leader] !== undefined && placed.roomOf[def.leader] !== placed.outside)
+            expect(facts[upstairsKey(group)], `${s.id} ${group}:upstairs`).toBeTypeOf('number');
         }
         for (const role of template.tree.roles) if (placed.roomOf[role.id] !== undefined && placed.roomOf[role.id] !== placed.outside)
           expect(facts[upstairsKey(role.id)], `${s.id} ${role.id}:upstairs`).toBeTypeOf('number');

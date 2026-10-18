@@ -555,8 +555,10 @@ export function placeCast(tree: CallTree, built: BuiltLocation, spec: IncidentSp
   const above = (spaceId: string | undefined) => spaceId !== undefined && spaceId !== outside && (floorOf.get(spaceId) ?? 0) > 0;
   const upstairs = Object.fromEntries([
     ...tree.roles.filter(role => roomOf[role.id] !== undefined && roomOf[role.id] !== outside).map(role => [role.id, above(roomOf[role.id])]),
-    // A group means its leader's room, where its members start.
-    ...Object.entries(tree.groups ?? {}).map(([group, def]) => [group, above(roomOf[def.leader])]),
+    // A group means its leader's room, where its members start: only when the leader is inside,
+    // so a floor condition on a group led from outside or offsite is rejected like the leader's own.
+    ...Object.entries(tree.groups ?? {}).filter(([, def]) => roomOf[def.leader] !== undefined && roomOf[def.leader] !== outside)
+      .map(([group, def]) => [group, above(roomOf[def.leader])]),
   ]);
   return { recipe, situation, outside, room, roomOf, routes, routeName, anchors, cast, groups, upstairs };
 }
