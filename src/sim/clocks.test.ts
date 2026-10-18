@@ -196,3 +196,42 @@ describe('clocks: running out where no fork reads it', () => {
     });
   });
 });
+
+describe('clocks: running out moves the call (R-G4, barricade row H precedence)', () => {
+  const route = { setFlags: ['tree:started', 'at:found'], clearFlags: ['at:open', 'at:talk', 'at:final'], stage: 'resolve' as StageId };
+  const boxes: ClockDef = { id: 'boxes', label: 'The boxes', kind: 'deadline', owner: 'mover', start: 20, ratePerMin: 1, rateKnown: false,
+    cues: [{ at: 10, text: 'A box goes down by the door.', mark: 'in_hall' }], onOut: { mark: 'found_mover', route } };
+  const s = scenarioWith([boxes]);
+  const before = { boxes: { value: 4, cued: 1 } }, after = { boxes: { value: 0, cued: 1 } };
+
+  it('moves the call after the outcome, and sets the mark', () => {
+    expect(clockOutEffects(s, before, after, { flags: ['at:talk'], stage: 'adapt' }, [{ setFlags: ['at:talk'], stage: 'adapt' }]))
+      .toEqual([{ setFlags: ['mark:found_mover', 'tree:started', 'at:found'], clearFlags: route.clearFlags, stage: 'resolve' }]);
+  });
+
+  it('1: an outcome that ends the call stands; the clock only sets its mark', () => {
+    expect(clockOutEffects(s, before, after, { flags: [], stage: 'adapt' }, [{ ending: 'walked_out' }])).toEqual([{ setFlags: ['mark:found_mover'] }]);
+  });
+
+  it('2: once the owner is out or safe the clock has stopped, so it moves nothing (the mark stays)', () => {
+    for (const flag of ['safe:mover', 'out:mover'])
+      expect(clockOutEffects(s, before, after, { flags: [flag], stage: 'adapt' }, [])).toEqual([{ setFlags: ['mark:found_mover'] }]);
+  });
+
+  it('3: it never sends the call back a stage', () => {
+    const early = scenarioWith([{ ...boxes, onOut: { route: { ...route, stage: 'adapt' } } }]);
+    expect(clockOutEffects(early, before, after, { flags: [], stage: 'adapt' }, [{ stage: 'resolve' }])).toEqual([]);
+    expect(clockOutEffects(early, before, after, { flags: [], stage: 'assess' }, [])).toHaveLength(1);
+  });
+
+  it('when two clocks run out in one decision, the first that routes wins', () => {
+    const second: ClockDef = { ...boxes, id: 'second', onOut: { route: { ...route, setFlags: ['tree:started', 'at:other'] } } };
+    const outs = clockOutEffects(scenarioWith([boxes, second]), { ...before, second: before.boxes }, { ...after, second: after.boxes }, { flags: [], stage: 'adapt' }, []);
+    expect(outs.filter(effect => effect.stage)).toHaveLength(1);
+    expect(outs[0].setFlags).toContain('at:found');
+  });
+
+  it('a clock that did not run out in this decision moves nothing', () => {
+    expect(clockOutEffects(s, after, after, { flags: [], stage: 'adapt' }, [])).toEqual([]);
+  });
+});
