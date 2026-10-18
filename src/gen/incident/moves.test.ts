@@ -325,6 +325,28 @@ describe('an interior vantage that watches a person follows them too', () => {
   });
 });
 
+describe('what the team sees never depends on hidden state', () => {
+  it('entering the child’s room while talking to the subject: the same rooms seen and the same knowledge, with or without an unseen move', () => {
+    // The review's reproduction (bungalow_g2 seed 1): only the look at the followed person's own room follows them.
+    const t = variant({ edit: tree => {
+      const root = tree.nodes.find(node => node.id === tree.root)!;
+      root.choices[1].team = { to: { room: 'child' } };
+      root.choices[1].talksTo = 'subject';
+    } });
+    const found3 = call(t, 'bungalow_g2', 1, true)!;
+    const s = found3.s;
+    const enter = s.stages.assess.actions.find(action => action.id === choiceActionId('barricaded', 'window', t.tree.nodes[0].choices[1].id))!;
+    const knowledge = { [s.incidentPeople!.find(person => person.id === 'subject')!.locationFactId!]: 'confirmed' as const };
+    const before = { flags: [] as string[], knowledge, pressure: 0 }, after = { ...before, flags: [movedFlag('subject', 1)] };
+    const seenBy = (state: typeof before) => {
+      const look = observingAction(s, found3.built, state, enter);
+      return { observes: look.observes, knowledge: sightings(s, state, look, 'favorable', [])?.knowledge ?? [] };
+    };
+    expect(seenBy(after)).toEqual(seenBy(before));
+    expect(seenBy(before).observes).toEqual(enter.observes);
+  });
+});
+
 describe('the decision replay keeps a re-sighting and a later move', () => {
   it('move, look (seen), move again: traceRun ends where the live run does at every step', () => {
     const t = variant({ edit: tree => {

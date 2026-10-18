@@ -218,8 +218,6 @@ export function hydrateStoryAction(action: ActionDefinition, target: StoryPublic
     ...(action.spatial ? { spatial: { ...action.spatial, subjectFactId: target.locationFactId, ...(moved ? { openingId: undefined } : {}) } } : {}),
     ...(action.entry ? { entry: { ...action.entry, subjectFactId: target.locationFactId } } : {}),
     ...(action.capacityBound ? { capacityBound: relocate(action.capacityBound) } : {}),
-    // What the team looks into goes where it goes (R-B3): a look follows the person it follows.
-    ...(action.observes ? { observes: relocate(action.observes) } : {}),
     ...(action.workload.areaSpaces ? { workload: { ...action.workload, areaSpaces: relocate(action.workload.areaSpaces) } } : {}),
   };
 }
@@ -240,20 +238,16 @@ export function lastSeenRoom(scenario: ScenarioDefinition, run: StoryState, pers
   return run.knowledge[person.locationFactId] === 'confirmed' ? person.initial.spaceId : null;
 }
 
-/** The action as the team carries it out, for what it sees (R-B3): a choice that follows a person
- * goes where the team believes they are (hydrateStoryAction, as evaluateAction does), and its look
- * with it. The commit and both replays read sightings through this. While no move of that person
- * holds, the authored action already points there, and the building is never built. */
+/** The action as the team carries it out, for what it sees (R-B3). A choice that follows a person
+ * and looks into that person's starting room looks where the team believes they are now (the same
+ * public target evaluateAction aims it at), whether or not anything moved: what the team sees never
+ * depends on hidden state. Any other look stays where it was authored. The commit and both replays
+ * read sightings through this. */
 export function observingAction(scenario: ScenarioDefinition, built: BuiltLocation | (() => BuiltLocation), run: StoryState, action: ActionDefinition): ActionDefinition {
   const person = action.storyTargetPersonId ? scenario.story?.bindings.people[action.storyTargetPersonId] : undefined;
-  if (!person || !moveHolds(person, run)) return action;
-  const building = typeof built === 'function' ? built() : built;
-  const target = storyActionTarget(scenario, action, building, run);
+  if (!person || !action.observes?.includes(person.initial.spaceId)) return action;
+  const target = storyActionTarget(scenario, action, typeof built === 'function' ? built() : built, run);
   if (!target?.position || 'kind' in target.position) return action;
   const believed = target.position.spaceId;
-  // The look is at the person: the room it was authored on (their starting room, or the action's own
-  // target) becomes where the team believes they are, even when it watches from another room.
-  const follows = (id: Id) => id === person.initial.spaceId || id === action.targetId;
-  const hydrated = hydrateStoryAction(action, target, building);
-  return action.observes ? { ...hydrated, observes: [...new Set(action.observes.map(id => follows(id) ? believed : id))] } : hydrated;
+  return { ...action, observes: [...new Set(action.observes.map(id => id === person.initial.spaceId ? believed : id))] };
 }

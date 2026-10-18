@@ -186,6 +186,9 @@ export function validExternalSupportState(run: OperationRun, scenario: ScenarioD
     const before = timed.clocks;
     return { before, cues: advanceClocks(timed, scenario, minutes) };
   };
+  // Built once, and only if a look follows a person (observingAction).
+  let built: ReturnType<typeof buildLocation> | undefined;
+  const building = () => built ??= buildLocation(scenario.locationFamilyId, scenario.locationSeed);
   const applyCues = (cues: OutcomeEffect[]) => { for (const cue of cues) for (const flag of cue.setFlags ?? []) publicState.flags = withFlag(publicState.flags, flag); };
   // v13: meter branches read the subjects' meters at the start of each decision; outcomes and
   // commitments move them after it (sim/meters.ts, sim/commitments.ts).
@@ -249,7 +252,7 @@ export function validExternalSupportState(run: OperationRun, scenario: ScenarioD
     // The engine runs the clocks on the flags from before this decision's effects.
     const { before: clocksBefore, cues } = passTime(decision.timeCost);
     // Who the team saw, read before the outcome moves anyone and applied before it, as the commit does (R-B3).
-    const seen = sightings(scenario, publicState, observingAction(scenario, () => buildLocation(scenario.locationFamilyId, scenario.locationSeed), publicState, action), decision.band, effects);
+    const seen = sightings(scenario, publicState, observingAction(scenario, building, publicState, action), decision.band, effects);
     for (const effect of [...seen ? [seen] : [], ...effects]) {
       for (const flag of effect.setFlags ?? []) publicState.flags = withFlag(publicState.flags, flag);
       for (const flag of effect.clearFlags ?? []) publicState.flags = publicState.flags.filter((entry) => entry !== flag);
