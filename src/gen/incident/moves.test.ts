@@ -17,7 +17,7 @@ import { validExternalSupportState } from '../../sim/external-support';
 import type { ScenarioDefinition } from '../../sim/scenario-types';
 import { getScenario } from '../../sim/scenario-registry';
 import { sightings } from '../../sim/sightings';
-import { LAST_SEEN_LINES, sightingFlags, storyPeopleActual, storyPeoplePublic, storyPublicScenario } from '../../sim/story-people';
+import { LAST_SEEN_LINES, observingAction, sightingFlags, storyPeopleActual, storyPeoplePublic, storyPublicScenario } from '../../sim/story-people';
 import { NOW } from '../../sim/test-fixtures';
 import { actionViews } from '../../sim/operation-selectors';
 import type { GameState } from '../../sim/types';
@@ -284,6 +284,22 @@ describe('within one decision, the commit’s order', () => {
       delete copy.activeRun!.sourceIncident;
       expect(deserialize(serialize(copy, NOW)), 'the save loads').not.toBeNull();
     });
+  });
+});
+
+describe('a look that follows a person goes where the team believes they are', () => {
+  it('seen in the hall, then back to the start unseen: a look authored for the start room looks in the hall, and reveals nothing about the start', () => {
+    // The review's reproduction: the action is relocated by belief, so its look must be too.
+    const { s } = call(withCue(variant()), 'bungalow_g2', 1, true)!;
+    const built = buildLocation(s.locationFamilyId, s.locationSeed);
+    const flags = [movedFlag('subject', 1), seenFlag('subject', 1)].reduce<string[]>((set, flag) => withFlag(set, flag), []);
+    const back = withFlag(flags, movedFlag('subject', cueMoveKey('boxes', 0)));
+    const state = { flags: back, knowledge: { [s.incidentPeople!.find(person => person.id === 'subject')!.locationFactId!]: 'confirmed' as const }, pressure: 0 };
+    const start = s.story!.bindings.people.subject.initial.spaceId, hallRoom = (s.story!.bindings.people.subject.transitions[0].to as { spaceId: string }).spaceId;
+    const authored = { ...Object.values(s.stages).flatMap(stage => stage.actions)[0], storyTargetPersonId: 'subject', targetId: start, observes: [start] };
+    const look = observingAction(s, built, state, authored);
+    expect(look.observes).toEqual([hallRoom]);
+    expect(sightings(s, state, look, 'favorable', [])?.setFlags).toEqual([lostFlag('subject')]);
   });
 });
 

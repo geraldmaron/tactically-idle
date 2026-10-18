@@ -1,7 +1,7 @@
 import { reserveSupportVehicle, supportStartCheck } from './support-vehicles';
 import { isGenericResponseExit, responseFailurePlan } from './response-failure';
 import { currentStoryPrompt } from './story-context';
-import { storyMovedAlongRoute } from './story-people';
+import { observingAction, storyMovedAlongRoute } from './story-people';
 import { validateStoryBindings } from '../gen/incident/story-bindings';
 import { actionResultLabel, harmResultLabel } from './action-result';
 import { applyIncidentConsequences, applyPersonConsequences, civilianOutcomeViews, syncCasualtyFlags, syncPersonCasualtyFlags } from './incident-consequences';
@@ -529,7 +529,7 @@ export function traceRun(scenario: ScenarioDefinition, run: OperationRun): { ste
     const applied = savedDrawnEffects(matched, h.committed?.drawn).effects;
     // Who the team saw, read before the outcome moves anyone, as the commit reads it (sim/sightings.ts):
     // its seen flags keep a re-sighting in the replay (R-B3).
-    const seen = a ? sightings(scenario, sim, a, h.band, applied) : null;
+    const seen = a ? sightings(scenario, sim, observingAction(scenario, () => getBuilt(scenario.locationFamilyId, scenario.locationSeed), sim, a), h.band, applied) : null;
     if (seen) applyEffects(sim, [seen]);
     applyEffects(sim, applied);
     applyClockCues(sim, scenario, timed.cues);
@@ -902,7 +902,7 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     // Who the team sees, read before the outcome moves anyone (sim/sightings.ts).
     // It lands before the outcome's own effects, so a move the outcome makes (seen or not) is the
     // latest word on where they are (R-B3).
-    const seen = sightings(scenario, run, action, band, matched);
+    const seen = sightings(scenario, run, observingAction(scenario, built, run, action), band, matched);
     const seenChanges = seen ? applyEffects(run, [seen]).changes : [];
     const { changes: outcomeChanges, stage: outcomeStage, ending: outcomeEnding } = applyEffects(run, matched);
     const changes = [...seenChanges, ...outcomeChanges];

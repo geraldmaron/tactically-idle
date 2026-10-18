@@ -1,6 +1,8 @@
 import type { ActionDefinition, Condition, EndingDefinition, ExternalServiceDefinition, OutcomeEffect, ScenarioDefinition } from './scenario-types';
 import { withFlag } from './conditions';
 import { sightings } from './sightings';
+import { observingAction } from './story-people';
+import { buildLocation } from './location';
 import type { CompletionDisposition, DebriefResult, ExternalSupportEvent, ExternalSupportState, OfficerCasualtyRecord, OperationRun, PersonCasualtyRecord } from './types';
 import { next } from './rng';
 import { syncCasualtyFlags, syncPersonCasualtyFlags } from './incident-consequences';
@@ -247,7 +249,7 @@ export function validExternalSupportState(run: OperationRun, scenario: ScenarioD
     // The engine runs the clocks on the flags from before this decision's effects.
     const { before: clocksBefore, cues } = passTime(decision.timeCost);
     // Who the team saw, read before the outcome moves anyone and applied before it, as the commit does (R-B3).
-    const seen = sightings(scenario, publicState, action, decision.band, effects);
+    const seen = sightings(scenario, publicState, observingAction(scenario, () => buildLocation(scenario.locationFamilyId, scenario.locationSeed), publicState, action), decision.band, effects);
     for (const effect of [...seen ? [seen] : [], ...effects]) {
       for (const flag of effect.setFlags ?? []) publicState.flags = withFlag(publicState.flags, flag);
       for (const flag of effect.clearFlags ?? []) publicState.flags = publicState.flags.filter((entry) => entry !== flag);
