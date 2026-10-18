@@ -1,11 +1,12 @@
 // Every source path a doc or skill cites must exist, so the writing pipeline and the design docs
 // can't point agents at deleted modules. Dated records (captures, verification runs, research and
-// review notes) are history and keep the paths they had.
+// review notes) are history and keep the paths they had. HANDOFF.md is left out: it lists the files
+// lanes are changing on their branches, which may not exist on main yet.
 import { describe, expect, it } from 'vitest';
 import { JOBS, JOURNEYS } from './journeys';
 import { WIRING } from './wiring';
 
-const DOCS = import.meta.glob(['/AGENTS.md', '/README.md', '/PLAN.md', '/COORDINATION.md', '/HANDOFF.md', '/docs/*.md', '/docs/calls/*.md', '/.agents/skills/**/*.md'], { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
+const DOCS = import.meta.glob(['/AGENTS.md', '/README.md', '/PLAN.md', '/COORDINATION.md', '/docs/*.md', '/docs/calls/*.md', '/.agents/skills/**/*.md'], { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
 const FILES = new Set(Object.keys(import.meta.glob(['/src/**/*', '/scripts/**/*', '/public/**/*', '/.agents/skills/**/*', '/docs/**/*', '/*.md', '/*.html'])));
 // Vite leaves the importing file out of its own glob.
 FILES.add('/src/architecture/references.test.ts');
