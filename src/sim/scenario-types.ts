@@ -566,7 +566,10 @@ export interface StoryInstance {
   bindings: {
     rooms: Record<string, { spaceId: Id }>;
     exterior: Record<string, { spaceId: Id }>;
-    routes: Record<string, { fromSpaceId: Id; toSpaceId: Id; openingIds: Id[]; profile: 'walking' | 'chair' }>;
+    /** `exitOpeningId`: the exterior opening the route must leave by (a person's own window, R-B2;
+     * a front or back door, R-R5), kept when the route is recomputed at resolution: blocked, the
+     * route is refused, never sent another way. Absent: the shortest way out. */
+    routes: Record<string, { fromSpaceId: Id; toSpaceId: Id; openingIds: Id[]; profile: 'walking' | 'chair'; exitOpeningId?: Id }>;
     people: Record<string, StoryPersonBinding>;
     props: Record<string, StoryPropBinding>;
   };

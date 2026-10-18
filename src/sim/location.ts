@@ -25,6 +25,12 @@ export const LOCATION_TUNING = {
   openingMinutes: 0.5,
   /** Extra minutes to pass a locked opening. */
   lockedMinutes: 3,
+  /** Extra minutes to climb out through a window (R-B2), at a window of `windowEasyWidth` feet or
+   * wider; a narrower one takes proportionally longer. */
+  windowMinutes: 2,
+  windowEasyWidth: 3,
+  /** Narrowest window, in feet, a person can climb out of. */
+  windowMinWidth: 2,
   /** Usable square feet per useful participant. */
   sqftPerParticipant: 40,
   maxRoomCapacity: 6,

@@ -506,12 +506,16 @@ export function evaluateAction(input: EvalInput): Evaluation {
   const storyRoute = followsSquadRoute
     ? squadStoryRoutes && [...squadStoryRoutes.values()].every(route => route !== null) ? [...new Set([...squadStoryRoutes.values()].flatMap(route => route!))] : null
     : followsRoute ? currentStoryRoute(scenario, built, action.storyRoute!) : null;
-  if (storyRoute) action = { ...action, requires: { ...action.requires, openings: storyRoute.map(openingId => ({
-    openingId,
-    blockedReason: 'The route for this move is blocked.',
-    lockedTag: 'entry_tool',
-    lockedNote: 'Locked route: opening it adds time to this move.',
-  })) } };
+  const windowIds = new Set(built.location.openings.filter(opening => opening.type === 'window').map(opening => opening.id));
+  if (storyRoute) action = { ...action, requires: { ...action.requires, openings: storyRoute.map(openingId => windowIds.has(openingId)
+    // A window on the route is a person's own way out (R-B2): they unlatch it from inside, so no tool and no force.
+    ? { openingId, blockedReason: 'The window for this move is blocked.', lockedNote: 'Latched window: it opens from inside.' }
+    : {
+      openingId,
+      blockedReason: 'The route for this move is blocked.',
+      lockedTag: 'entry_tool',
+      lockedNote: 'Locked route: opening it adds time to this move.',
+    }) } };
   const T = RESOLUTION_TUNING;
   const E = EXPERIENCE_TUNING;
   const kind = action.check.kind;
@@ -563,6 +567,9 @@ export function evaluateAction(input: EvalInput): Evaluation {
   if (!conditionHolds(action.visibleWhen, run)) return blank('That option does not fit the current situation');
   if (care.issue) return blank(care.issue);
   if (followsPerson && !target) return blank('The person has no known location at the scene');
+  // A way out by a chosen exit (R-B2, R-R5) is refused, never rerouted, when that exit is blocked: say so plainly.
+  const exit = routeBinding?.exitOpeningId ? location.openings.find(opening => opening.id === routeBinding.exitOpeningId) : undefined;
+  if (followsRoute && !storyRoute && exit?.state === 'blocked') return blank(`The ${exit.type === 'window' ? 'window' : 'door'} on this way out is blocked`);
   if (followsRoute && !storyRoute) return blank('There is no usable route for this move');
   {
     const supportIssue = externalSupportActionIssue(run, scenario, action);

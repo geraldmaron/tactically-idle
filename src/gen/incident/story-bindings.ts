@@ -1,7 +1,7 @@
 import type { Condition, ScenarioDefinition, StoryAnchor, StoryInstance } from '../../sim/scenario-types';
 import { withVariants } from './drawn-model';
 import type { BuiltLocation, ExteriorZone, Id, LocationDefinition, ObjectType, Opening, PlacedObject, Polygon, Room, RoomType, Vec, ZoneKind } from '../../sim/types';
-import { floorMap, openingFloor, pointInPolygon, polygonBBox, polygonCentroid } from '../../sim/location';
+import { floorMap, LOCATION_TUNING, openingFloor, pointInPolygon, polygonBBox, polygonCentroid } from '../../sim/location';
 import { findRoomPath } from '../../sim/furniture-path';
 
 export type StoryRouteProfile = StoryInstance['bindings']['routes'][string]['profile'];
@@ -126,8 +126,24 @@ export function storyPoint(built: BuiltLocation, spaceId: Id, seed: number, occu
   return null;
 }
 
-function usableOpening(built: BuiltLocation, opening: Opening, profile: StoryRouteProfile): boolean {
-  if (opening.state === 'blocked' || opening.type === 'window' || !space(built, opening.a) || !space(built, opening.b)) return false;
+/** The window a walker in `roomId` can climb out of (R-B2): an exterior window of that room, on the
+ * ground floor, not blocked, at least LOCATION_TUNING.windowMinWidth wide; the widest, then by id.
+ * Null where the room has none, so a walk-out by the window isn't offered there. */
+export function windowExit(built: BuiltLocation, roomId: Id): Opening | null {
+  const room = built.location.rooms.find(entry => entry.id === roomId);
+  if (!room || room.floor !== 0) return null;
+  const zones = new Set(built.location.zones.map(zone => zone.id));
+  const width = (opening: Opening) => Math.hypot(opening.to.x - opening.from.x, opening.to.y - opening.from.y);
+  return built.location.openings.filter(opening => opening.type === 'window' && opening.state !== 'blocked'
+    && ((opening.a === roomId && zones.has(opening.b)) || (opening.b === roomId && zones.has(opening.a)))
+    && width(opening) >= LOCATION_TUNING.windowMinWidth)
+    .sort((x, y) => width(y) - width(x) || byId(x, y))[0] ?? null;
+}
+
+function usableOpening(built: BuiltLocation, opening: Opening, profile: StoryRouteProfile, exitOpeningId?: Id): boolean {
+  // A window is a way out only as the declared exit of a walking route (R-B2), never a way through.
+  if (opening.type === 'window') return profile === 'walking' && opening.id === exitOpeningId && opening.state !== 'blocked' && !!space(built, opening.a) && !!space(built, opening.b);
+  if (opening.state === 'blocked' || !space(built, opening.a) || !space(built, opening.b)) return false;
   const floors = floorMap(built.location);
   const a = floors.get(opening.a)!, b = floors.get(opening.b)!;
   if (opening.type === 'stair') return profile === 'walking' && a !== b
@@ -137,8 +153,21 @@ function usableOpening(built: BuiltLocation, opening: Opening, profile: StoryRou
   return profile === 'walking' || (profile === 'chair' && a === 0 && Math.hypot(opening.to.x - opening.from.x, opening.to.y - opening.from.y) >= 3);
 }
 
-/** Complete shortest edge-count path, with stable ID tie-breaking. Locked doors remain engine work. */
-export function findStoryRoute(built: BuiltLocation, fromSpaceId: Id, toSpaceId: Id, profile: StoryRouteProfile): Id[] | null {
+/** Complete shortest edge-count path, with stable ID tie-breaking. Locked doors remain engine work.
+ * With `exitOpeningId` (R-B2, R-R5), the route must leave the building by that exterior opening:
+ * the shortest way to its inside, through it, then the shortest way on outside. A missing, blocked
+ * or unusable exit gives no route, never another way out. */
+export function findStoryRoute(built: BuiltLocation, fromSpaceId: Id, toSpaceId: Id, profile: StoryRouteProfile, exitOpeningId?: Id): Id[] | null {
+  if (exitOpeningId !== undefined) {
+    const exit = built.location.openings.find(opening => opening.id === exitOpeningId);
+    if (!exit || !usableOpening(built, exit, profile, exitOpeningId)) return null;
+    const zones = new Set(built.location.zones.map(zone => zone.id));
+    const inside = zones.has(exit.a) ? exit.b : exit.a, outside = inside === exit.a ? exit.b : exit.a;
+    if (zones.has(inside) || !zones.has(outside)) return null;
+    // Once out, they stay out: the way on to the destination crosses only open ground between exterior zones.
+    const before = findStoryRoute(built, fromSpaceId, inside, profile), after = exteriorRoute(built, outside, toSpaceId, profile);
+    return before && after ? [...before, exit.id, ...after] : null;
+  }
   if (!space(built, fromSpaceId) || !space(built, toSpaceId) || !['walking', 'chair'].includes(profile)) return null;
   if (profile === 'chair' && [fromSpaceId, toSpaceId].some(id => (floorMap(built.location).get(id) ?? 0) !== 0)) return null;
   const openings = built.location.openings.filter(opening => usableOpening(built, opening, profile)).sort(byId);
@@ -157,10 +186,31 @@ export function findStoryRoute(built: BuiltLocation, fromSpaceId: Id, toSpaceId:
   return null;
 }
 
+/** The shortest way between two exterior zones that never enters the building: only openings both
+ * of whose sides are exterior zones. */
+function exteriorRoute(built: BuiltLocation, fromZoneId: Id, toZoneId: Id, profile: StoryRouteProfile): Id[] | null {
+  const zones = new Set(built.location.zones.map(zone => zone.id));
+  if (!zones.has(fromZoneId) || !zones.has(toZoneId)) return null;
+  const links = built.location.openings.filter(opening => zones.has(opening.a) && zones.has(opening.b) && usableOpening(built, opening, profile)).sort(byId);
+  const queue: { id: Id; route: Id[] }[] = [{ id: fromZoneId, route: [] }];
+  const seen = new Set([fromZoneId]);
+  for (let i = 0; i < queue.length; i++) {
+    const current = queue[i];
+    if (current.id === toZoneId) return current.route;
+    for (const opening of links) {
+      const next = opening.a === current.id ? opening.b : opening.b === current.id ? opening.a : undefined;
+      if (next === undefined || seen.has(next)) continue;
+      seen.add(next);
+      queue.push({ id: next, route: [...current.route, opening.id] });
+    }
+  }
+  return null;
+}
+
 /** Recompute from the current builtFor result, so later opening flags cannot leave a stale route. */
 export function currentStoryRoute(scenario: ScenarioDefinition, built: BuiltLocation, routeRole: string): Id[] | null {
   const route = scenario.story?.bindings.routes[routeRole];
-  return route ? findStoryRoute(built, route.fromSpaceId, route.toSpaceId, route.profile) : null;
+  return route ? findStoryRoute(built, route.fromSpaceId, route.toSpaceId, route.profile, route.exitOpeningId) : null;
 }
 
 /** Authoring validation only. Legacy scenarios keep their original validator and behavior. */
@@ -274,13 +324,14 @@ export function validateStoryBindings(scenario: ScenarioDefinition, built: Built
       if (seen.has(openingId)) error(`route ${role} repeats opening ${openingId}`);
       seen.add(openingId);
       if (!opening) { error(`route ${role} references unknown opening ${openingId}`); continue; }
-      if (!usableOpening(built, opening, route.profile)) error(`route ${role} opening ${openingId} is blocked or incompatible with ${route.profile}`);
+      if (!usableOpening(built, opening, route.profile, route.exitOpeningId)) error(`route ${role} opening ${openingId} is blocked or incompatible with ${route.profile}`);
       if (opening.a === at) at = opening.b;
       else if (opening.b === at) at = opening.a;
       else error(`route ${role} opening ${openingId} is not contiguous from ${at}`);
     }
     if (at !== route.toSpaceId) error(`route ${role} does not reach ${route.toSpaceId}`);
-    if (findStoryRoute(built, route.fromSpaceId, route.toSpaceId, route.profile) === null) error(`route ${role} is unreachable`);
+    if (route.exitOpeningId !== undefined && route.openingIds.length && !route.openingIds.includes(route.exitOpeningId)) error(`route ${role} doesn't leave by its exit ${route.exitOpeningId}`);
+    if (findStoryRoute(built, route.fromSpaceId, route.toSpaceId, route.profile, route.exitOpeningId) === null) error(`route ${role} is unreachable`);
   }
   for (const stage of Object.values(scenario.stages)) {
     for (const prompt of stage.contextPrompts ?? []) condition(prompt.when, `stage ${stage.id} prompt`);
