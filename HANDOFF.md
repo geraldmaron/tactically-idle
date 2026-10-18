@@ -14,7 +14,7 @@ The coordinating session, on `main`. Merged so far: #36 (coordination rules), #3
 | Lane | Branch | In flight | Declared touches |
 |---|---|---|---|
 | engine | `claude/engine-intel-odds` (#45) | `intel-odds`: ready; the lead integrates it with tooling's explore.test.ts fix. Next `clock-runout-routing`, `barricade-engine-requests`, `second-squad` | as declared in #45 |
-| calls | none | Writing three manager appearance briefs (sent to the lead as text). Then the armed-gated hostage line after `intel-odds` merges | none |
+| calls | none | Manager briefs delivered. Next, once `intel-odds` merges: the armed-gated hostage line, then `manager-names-disjoint` | none |
 | tooling | `claude/tooling-explore-intel-odds` (from #45's head) | Fixing explore.test.ts for #45. Then `hostage-gate-requests` | `src/dev/lab/model/explore.test.ts`; maybe `session.ts`, `why.ts` |
 | interface | `feat/manager-art` | `manager-art`: approved; emblems first, portraits after the briefs; at most 45 image generations | `public/art/managers/`, `public/art/emblems/`, `scripts/validate-art.mjs`, `src/ui/screens/Develop.tsx`, `development.css`; `docs/art/manager-emblem-expansion/` under the lock below |
 

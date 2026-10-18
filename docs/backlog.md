@@ -236,6 +236,24 @@ replace. Done: `npm run verify` and pull-request CI run it, and it passes.
 
 ## Player experience
 
+### manager-names-disjoint: Manager names stay out of call casts
+Tags: job=command; journeys=answer-a-call; probes=none (names); lane=calls
+Needs: start=intel-odds (both change hostage fingerprints, so they merge in order); integrate=none; ship=none
+
+The civilian pool (`src/content/call-trees/civilian-names.ts`) is kept disjoint from the officer
+catalog, but not from the Command Staff managers: "Navarro" is in `CIVILIAN_SURNAMES`, so a subject
+can be drawn as "<first> Navarro" while Sam Navarro sits on the HQ screen. Done: the disjointness
+test also covers the names in `MANAGERS` (`src/sim/command-staff.ts`), 'Navarro' leaves the pool,
+and the changed fingerprints are recaptured. The calls lane holds a lock on that test for this item.
+
+### manager-pronouns: Managers carry their pronouns as data
+Tags: job=build; journeys=none (no manager text uses a pronoun yet); probes=none (data); lane=engine
+Needs: start=none; integrate=none; ship=none
+
+The manager portraits fix how each manager looks (she, he, they in the art briefs), but
+`ManagerProfile` has no pronoun field. Done: `pronouns` on `ManagerProfile`, set from the briefs,
+before any shift report or log line refers to a manager by pronoun.
+
 ### manager-art: Manager portraits and emblems
 Tags: job=build; journeys=none (art); probes=none (art); lane=interface
 Needs: start=none; integrate=none; ship=none
