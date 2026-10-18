@@ -16,25 +16,6 @@ measures the odds wiring; its floors rise as these items land.
 
 ## Now: the odds and the blueprint
 
-### intel-odds: What the team learns changes the odds
-Tags: job=command; journeys=chance-not-script, team-moves-odds; probes=subject-armament, intel-confirmed; lane=engine
-Needs: start=none; integrate=none; ship=none
-
-Team moves settle what the squad sees (`src/sim/sightings.ts`), but knowing barely matters: a
-weapon counts the same reported or confirmed, so confirming one changes only the wording, and a
-confirmed location moves no odds. A group member has no armament fact at all, so the odds read
-their real weapon as known (hostage request R-G1, `src/sim/incident-factors.ts`,
-`src/gen/incident/instance.ts`). Done: confirmed intel moves the favorable chance on the choices
-it bears on, group members' weapons are beliefs like the subject's, call text can name a member's
-weapon through a condition on it (R-G1's `TreeState.armed`, shown working in the hostage call), a
-wiring probe measures it, gathering intel is a real choice with a cost in time or exposure, and with one subject how close the
-work comes to where the team believes they are moves the favorable odds (barricade request R-B5:
-nearness only sorts subjects today, `src/sim/incident-factors.ts`).
-
-Engine work merged in #45 (intel-confirmed probe 97 of 117, subject-armament floor 0.83, member
-weapons as beliefs through `armamentClaim`); the lab reads armed conditions as the compiled call
-does (#49). Still to ship: the calls lane's armed-gated hostage line (#48).
-
 ### offsite-fire: Gunfire from outside the building uses the incoming-fire model
 Tags: job=command; journeys=chance-not-script; probes=none (adds a drawn harm result, not a favorable-chance input); lane=engine
 Needs: start=none (the rescue design sheet states the request); integrate=none; ship=none
@@ -63,10 +44,11 @@ squad.
 
 ### camera-drone: A call that uses the camera drone
 Tags: job=build; journeys=team-moves-odds; probes=none (covered by intel-confirmed once it exists); lane=engine
-Needs: start=intel-odds; integrate=none; ship=none (a calls-lane tree authors the choice)
+Needs: start=none; integrate=none; ship=none (a calls-lane tree authors the choice)
 
 It's in the catalog (`src/content/items.ts`) and no call uses it. Done: a choice watches a room
-through it, using the sightings step, and what it sees moves the odds through `intel-odds`.
+through it, using the sightings step, and what it sees moves the odds through the intel rules
+(`intel-confirmed` probe).
 
 ### armed-max: Text can say a look found empty hands
 Tags: job=command; journeys=chance-not-script; probes=none (text condition); lane=engine
@@ -127,7 +109,7 @@ which the sheet did not re-read.
 
 ### barricade-model-first: Write the barricade call model-first
 Tags: job=command; journeys=answer-a-call, choices-branch; probes=blueprint-building, blueprint-locked; lane=calls
-Needs: start=none; integrate=intel-odds, clock-runout-routing, barricade-engine-requests; ship=none
+Needs: start=none; integrate=clock-runout-routing, barricade-engine-requests; ship=none
 
 As the hostage call was: template, design sheet in `docs/calls/`, tree, separate review. The old
 tree has 2 `team` moves out of about 37 choices (armed 13, hostage 8, rescue 8), and a different
@@ -148,7 +130,7 @@ and review; and the old `rescue-chair` tree is retired.
 
 ### armed-model-first: Write the armed-incident call model-first
 Tags: job=command; journeys=answer-a-call, choices-branch; probes=subject-armament; lane=calls
-Needs: start=barricade-model-first; integrate=intel-odds; ship=none
+Needs: start=barricade-model-first; integrate=none; ship=none
 
 Same pipeline. Done: `npm run check:strings` passes on it, it passes coverage, balance and review,
 and the old `armed-noise` tree is retired.
