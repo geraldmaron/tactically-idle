@@ -92,15 +92,15 @@ export const WIRING: readonly Probe[] = [
     evidence: 'Routes, doors, room sizes, how far the subject stands from a door and what a sightline reads all come from the generated building (src/sim/resolution.ts), and a sightline fact is settled by it (src/sim/spatial-factors.ts sightFromStreet).',
   },
   {
-    id: 'subject-armament', system: 'subject', input: 'The subject\'s weapon (the reported weapon disproved)', direction: 'up', status: 'live', minShare: 0.81,
+    id: 'subject-armament', system: 'subject', input: 'The subject\'s weapon (the reported weapon disproved)', direction: 'up', status: 'live', minShare: 0.83,
     perturb: state => edit(state, draft => {
       const scenario = getScenario(draft.activeRun!.scenarioId)!;
       for (const person of scenario.incidentPeople ?? []) if (person.armamentFactId) draft.activeRun!.knowledge[person.armamentFactId] = 'disproved';
     }),
-    evidence: '`incidentSubjects` reads armament knowledge into `threatFx` (src/sim/incident-factors.ts). The rescue tree has no armed person on scene, so it never responds.',
+    evidence: '`incidentSubjects` reads armament knowledge into `threatFx` (src/sim/incident-factors.ts), group members included: their weapon fact claims anything at all, so disproving it reads them unarmed (`armamentClaim`). The rescue tree has no armed person on scene, so it never responds.',
   },
   {
-    id: 'intel-confirmed', system: 'subject', input: 'What the team has confirmed (every person\'s weapon and location settled to the truth)', direction: 'up', status: 'live', minShare: 0.8,
+    id: 'intel-confirmed', system: 'subject', input: 'What the team has confirmed (every person\'s weapon and location settled to the truth)', direction: 'up', status: 'live', minShare: 0.82,
     perturb: state => edit(state, draft => {
       const scenario = getScenario(draft.activeRun!.scenarioId)!;
       const facts = new Map(scenario.facts.map(fact => [fact.id, fact]));
@@ -109,7 +109,7 @@ export const WIRING: readonly Probe[] = [
         if (fact) draft.activeRun!.knowledge[fact.id] = fact.truth ? 'confirmed' : 'disproved';
       }
     }),
-    evidence: 'A weapon held only on report costs a share of the threat on top (THREAT_TUNING.unconfirmed, src/sim/threat.ts), and an entry or a look into a room goes better once the team has seen where the armed person in it is (INTEL_V1.knownPosition, src/sim/incident-factors.ts). Confirming either takes the cost off or adds the credit.',
+    evidence: 'A weapon held only on report costs a share of the threat on top (THREAT_TUNING.unconfirmed, src/sim/threat.ts), and an entry or a look into a room goes better once the team has seen where the armed person in it is (INTEL_V1.knownPosition, src/sim/incident-factors.ts). Confirming either takes the cost off or adds the credit. Measured 2026-10-18: 97 of 117 sampled choices.',
   },
   {
     id: 'metric-pressure', system: 'scenario', input: 'Time pressure on the call (pressure 95)', direction: 'down', status: 'live', minShare: 1, everyTree: true,
