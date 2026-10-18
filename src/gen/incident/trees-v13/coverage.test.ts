@@ -18,7 +18,7 @@ import { GATE_CONTENT_VERSION } from '../gates/catalog';
 import { drawIncidentSpec, generateIncident } from '../index';
 import { choiceActionId, memberCounts } from './compile';
 import { GROUP_TEMPLATE, GROUP_TREE } from './group-fixture';
-import { compileIncident, drawInstance, hostedSpec } from '../instance';
+import { compileIncident, drawInstance, hostedSpec, instanceOf } from '../instance';
 import { buildLocation } from '../../../sim/location';
 
 // The coverage gate (docs/incident-domain-model.md §8, M2 slice 5): resolve, then narrate. Every
@@ -26,6 +26,12 @@ import { buildLocation } from '../../../sim/location';
 // whatever the models settled. It walks:
 // - every situation of each call with both pacings and every node of each turn group, two calls per
 //   turn node for the clock rates, drawn the way the board draws them (building type, tier, seed);
+// - every combination of situation, turn node and group size the board's draw produces (hostage
+//   review N6), with pacing met once per situation. COVERAGE_FULL=1 crosses pacing too, which
+//   deliberate answers make matter where a clock that runs out routes the call (its talk minutes
+//   run the clock down). That walk takes about twice as long (575 s against 317 s, measured
+//   2026-10-18), so the default run skips it; run it before shipping a call whose clocks route:
+//     COVERAGE_FULL=1 npx vitest run src/gen/incident/trees-v13/coverage.test.ts
 // - every eligible choice at every reachable state, with every band that can occur at its odds;
 // - every result of a drawn consequence (incoming fire, team force, a group's cascade): checked for
 //   routing and text statically at each commit, and walked by steering the engine's own dice into
@@ -54,10 +60,23 @@ const REPORT_ONLY = new Set<string>();
 
 interface Start { label: string; scenarioId: string }
 
-/** Generated calls, drawn the way the board draws them, until every situation has met every
- * pacing once and every turn node `SEEDS_PER_START` times. Pacing and turn node are not crossed:
- * the turn draw and the situation draw share the call seed's hash parity (hashSeed is FNV-1a), so a
- * two-node turn group follows the pacing and some crossings never occur. */
+/** The start search stops once this many board draws in a row bring no new combination of
+ * situation, pacing, turn and group size (and every per-node target is met). Measured 2026-10-18 over
+ * 3000 draws: the last new combination came at draw 386 (hostage, 54 combinations), 103 (barricade,
+ * 18), 80 (armed, 12) and 62 (rescue, 18). */
+const QUIET_DRAWS = 300;
+/** A hard stop for the search, so a template that keeps producing combinations can't run on. */
+const MAX_DRAWS = 3000;
+/** COVERAGE_FULL=1: cross pacing with situation, turn and group size as well (see the header). */
+const FULL = (import.meta.env as Record<string, string | undefined>).COVERAGE_FULL === '1';
+
+/** Generated calls, drawn the way the board draws them. Each combination of situation, the turn
+ * nodes the call drew and its group sizes that the board's draw produces gets a start, and of
+ * pacing too with COVERAGE_FULL (hostage review N6: the gate's starts crossed none of these, so a
+ * situation was never walked with a group).
+ * On top, every situation still meets every pacing once and every turn node `SEEDS_PER_START` times
+ * where a clock runs. Not every combination exists: the turn draw and the situation draw share the
+ * call seed's hash parity (hashSeed is FNV-1a), so a two-node turn group follows the pacing. */
 function startsFor(tree: CallTree): Start[] {
   const groups = Object.values(tree.turns ?? {});
   const clocked = (variant: number) => (INCIDENT_TEMPLATES[tree.type]?.situations[variant]?.clocks ?? []).some(clock => !clock.story);
@@ -67,18 +86,28 @@ function startsFor(tree: CallTree): Start[] {
     for (const node of groups.flat()) targets.set(`${variant}/${node}`, clocked(variant) ? SEEDS_PER_START : 1);
   }
   const count = new Map<string, number>();
+  const combos = new Set<string>();
   const starts: Start[] = [];
   let state = 2024;
-  for (let i = 0; i < 2000 && [...targets].some(([target, n]) => (count.get(target) ?? 0) < n); i++) {
+  let quiet = 0;
+  const met = () => [...targets].every(([target, n]) => (count.get(target) ?? 0) >= n);
+  for (let i = 0; i < MAX_DRAWS && !(quiet >= QUIET_DRAWS && met()); i++) {
+    quiet++;
     const drawn = drawIncidentSpec(state, { level: 10, trust: 90, unlockedTypes: [tree.type] });
     state = drawn.state;
     const s = generateIncident(drawn.spec);
     const picked = scenarioRecipe(s.incident!);
     const modules = s.story?.episode?.modules ?? [];
-    const keys = [`${picked.variant}/${picked.characteristic}`, ...groups.flat().filter(node => modules.includes(node)).map(node => `${picked.variant}/${node}`)];
-    if (!keys.some(key => (count.get(key) ?? 0) < (targets.get(key) ?? 0))) continue;
+    const nodes = groups.flat().filter(node => modules.includes(node));
+    const sizes = tree.groups ? Object.entries(memberCounts(instanceOf(s, buildLocation(s.locationFamilyId, s.locationSeed))!.placed)).sort().map(([group, n]) => `${group}=${n}`) : [];
+    const combo = [picked.variant, ...FULL ? [picked.characteristic] : [], ...nodes, ...sizes].join(' ');
+    const keys = [`${picked.variant}/${picked.characteristic}`, ...nodes.map(node => `${picked.variant}/${node}`)];
+    const wanted = keys.some(key => (count.get(key) ?? 0) < (targets.get(key) ?? 0));
+    if (!wanted && combos.has(combo)) continue;
+    if (!combos.has(combo)) quiet = 0;
+    combos.add(combo);
     for (const key of keys) count.set(key, (count.get(key) ?? 0) + 1);
-    starts.push({ label: `situation ${keys.join(' ')} on ${s.incident!.familyId} tier ${s.incident!.tier} seed ${s.incident!.seed}`, scenarioId: s.id });
+    starts.push({ label: `situation ${combo} on ${s.incident!.familyId} tier ${s.incident!.tier} seed ${s.incident!.seed}`, scenarioId: s.id });
   }
   const missing = [...targets].filter(([target, n]) => (count.get(target) ?? 0) < n).map(([target]) => target);
   if (missing.length) throw new Error(`${tree.type}: no call drawn for ${missing.join(', ')}`);
@@ -255,7 +284,7 @@ function groupStarts(): { start: Start; scenario: ScenarioDefinition }[] {
 }
 
 describe('call trees: coverage of every reachable state (resolve, then narrate)', () => {
-  for (const tree of TREES) it(`${tree.type}: one routed outcome with text at every commit, and no dead end`, () => {
+  for (const tree of TREES) it(`${tree.type}: one routed outcome with text at every commit, and no dead end${FULL ? ' (full cross)' : ''}`, () => {
     const coverage = walk(tree);
     console.info(`${tree.type} coverage: ${coverage.starts} starts, ${coverage.states} states, ${coverage.commits} commits, ${coverage.drawnWalked} drawn results walked, ${coverage.ended} endings, ${coverage.gaps.length} gaps, ${coverage.ms} ms`);
     expect(coverage.ended).toBeGreaterThan(0);
@@ -264,7 +293,7 @@ describe('call trees: coverage of every reachable state (resolve, then narrate)'
       return;
     }
     expect(coverage.gaps).toEqual([]);
-  }, 600000);
+  }, FULL ? 1_200_000 : 600000);
 
   it('the group fixture with 0 to 3 others: every cascade result routes once, with text', () => {
     const calls = groupStarts();
