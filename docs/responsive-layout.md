@@ -77,3 +77,11 @@ The production app/harness bundles compile for both `/` and `/tactically-idle/`.
 ## Keyboard viewport correction
 
 The reported iPhone New Game screenshot showed focus magnification, a clipped right edge and actions hidden by the software keyboard. Editable text controls now use at least 16px, save forms do not autofocus or request contact autofill, and sheets observe their overlay's intersection with the VisualViewport. When a keyboard or magnified/short viewport cannot fit a pinned header and footer, the whole sheet scrolls so every control stays reachable. Browser zoom remains enabled. Geometry and observer cleanup have 13 focused tests; physical iPhone keyboard behavior still requires device confirmation.
+
+## Small rooms and map size, 2026-10-18
+
+The live and Prepare maps size their drawing box from the plan's shape: height is the map width times the sheet's height-to-width ratio, between 180px and the smaller of 440px and 60% (live) or 58% (Prepare) of the viewport height. The zoom row sits below the drawing on both screens. Maps under 340px wide draw a compact sheet with a 1.5 ft margin and no dimension rows or north arrow; zone and room labels still stay whole.
+
+A tap on a room drawn under 44px on its short side lists that room with every room whose outline is within 22px of the tap (Which room?). A tap inside a room at least 44px across, or on an exterior zone, always selects it. Keyboard and screen-reader activation select the named room directly. A quick second tap zooms to the rooms offered. The Next decision shortcut stays hidden while it would sit over the live map.
+
+Measured over every building family (seeds 1 to 12, every floor), rooms under 44px: live 320 43% to 33%, live 390 41% to 23%, Prepare 320 39% to 35%, Prepare 390 24% unchanged. Long plans (sheet wider than 1.4:1) now fill 90 to 100% of their box, from 48 to 74%. Rooms still under 44px are reached through the chooser or the Rooms list. Wide plans don't draw larger at 390, because the width already limits their scale; rotating them would, and is not done. A tall plan's live map can reach about 400px at 390x844, which moves the decisions further down.
