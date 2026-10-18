@@ -251,7 +251,9 @@ It exits 1 today only on the barricade, armed and rescue trees, which the model-
 replace. Its output isn't deterministic either: two runs on the same commit (main, 2026-10-18) list
 the same findings by kind, scope and field path, but in a different order and quoting a different
 repeated phrase. Done: the output is byte-identical across runs (stable order, a deterministic choice
-of quoted phrase), `npm run verify` and pull-request CI run it, and it passes.
+of quoted phrase), `npm run verify` and pull-request CI run it, and it passes. The checker itself
+is deterministic since #57; the `check:strings` wrapper's own ordering is in
+`hostage-gate-requests`.
 
 ## Player experience
 
