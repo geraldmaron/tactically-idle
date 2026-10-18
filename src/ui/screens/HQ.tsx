@@ -51,11 +51,14 @@ export function HQ() {
       {g.activeRun && <ActiveOpCard g={g} now={now} />}
       {g.report && <section className="hq-report-summary"><div><strong>Shift report ready</strong><p>{signedMoney(g.report.net)} net funding · {g.report.completedCourses.length} courses completed</p></div><Button size="sm" onClick={() => setReportOpen(true)}>Review report</Button></section>}
       <CommandStaff />
-      <section className="hq-status-grid" aria-label="Department overview">
-        <button onClick={() => nav.setSquadSection('roster')}><span>Staffed squads</span><strong>{overview.staffedSquads}<small> / {g.squads.length}</small></strong><small>{overview.squads.filter((squad) => squad.deployed).length} on operation</small></button>
-        <button onClick={() => nav.openTraining()}><span>Training places</span><strong>{overview.training}<small> / {overview.trainingSlots}</small></strong><small>Officers currently in courses</small></button>
-        <button onClick={() => nav.go('ops')}><span>Live incidents</span><strong>{overview.board.count}</strong><small>{overview.board.newCount} unseen · {overview.board.expiringSoon} closing soon</small></button>
-      </section>
+      <HqStatTiles
+        squads={{ staffed: overview.staffedSquads, total: g.squads.length, deployed: overview.squads.filter((squad) => squad.deployed).length }}
+        training={{ inCourses: overview.training, places: overview.trainingSlots }}
+        board={overview.board}
+        onSquads={() => nav.setSquadSection('roster')}
+        onTraining={() => nav.openTraining()}
+        onCalls={() => nav.go('ops')}
+      />
       {!!attention.length && <section className="hq-attention"><h2 className="section-title">Needs attention</h2>{attention.slice(0, 3).map((item) => <div key={item.text}><span>{item.text}</span><Button size="sm" onClick={() => nav.go(item.tab)}>{item.action}</Button></div>)}</section>}
       <DutySection squads={g.squads} g={g} />
       <Debriefs key={`${saved.campaignId ?? 'unsaved'}:${saved.session}`} g={g} now={now} />
@@ -107,6 +110,55 @@ function RosterSummary({ g, overview }: { g: GameState; overview: ReturnType<typ
       <span className="hq-roster-legend" aria-hidden="true">{segments.map((segment) => <span key={segment.key} data-state={segment.key}><i />{segment.value} {segment.label}</span>)}</span>
       <span className="hq-roster-squads" aria-hidden="true">{overview.squads.filter((squad) => squad.total > 0).map((squad) => <span key={squad.squadId} className={squad.deployed ? 'hq-squad-out' : ''}><b>{squad.squadId}</b>{squad.deployed ? 'Out' : `${squad.fresh}/${squad.total}`}</span>)}</span>
     </button>
+  );
+}
+
+interface TileSegment { key: string; value: number }
+
+/** A capacity bar in the roster bar's style: one segment per state, the rest of the capacity left empty. */
+function CapacityBar({ segments, capacity, label }: { segments: TileSegment[]; capacity: number; label: string }) {
+  const shown = segments.filter((segment) => segment.value > 0);
+  const empty = Math.max(0, capacity - shown.reduce((n, segment) => n + segment.value, 0));
+  return (
+    <span className="hq-roster-bar hq-tile-bar" role="img" aria-label={label}>
+      {shown.map((segment) => <i key={segment.key} data-state={segment.key} style={{ flexGrow: segment.value }} />)}
+      {empty > 0 && <i data-state="empty" style={{ flexGrow: empty }} />}
+    </span>
+  );
+}
+
+/** Squads, training places and calls as icon tiles: a count against capacity, a bar, one short line. Each opens its screen. */
+export function HqStatTiles({ squads, training, board, onSquads, onTraining, onCalls }: {
+  squads: { staffed: number; total: number; deployed: number };
+  training: { inCourses: number; places: number };
+  board: { count: number; newCount: number; expiringSoon: number; max: number };
+  onSquads: () => void;
+  onTraining: () => void;
+  onCalls: () => void;
+}) {
+  const home = Math.max(0, squads.staffed - squads.deployed);
+  const settled = Math.max(0, board.count - board.expiringSoon);
+  return (
+    <section className="hq-status-grid" aria-label="Department overview">
+      <button type="button" className="hq-tile" onClick={onSquads}>
+        <span className="hq-tile-head"><Icon name="people" size={16} />Squads</span>
+        <strong>{squads.staffed}<small>/{squads.total}</small></strong>
+        <CapacityBar segments={[{ key: 'deployed', value: squads.deployed }, { key: 'fresh', value: home }]} capacity={squads.total} label={`${squads.staffed} of ${squads.total} squads staffed, ${squads.deployed} on an operation`} />
+        <small>{squads.deployed ? `${squads.deployed} out` : 'All home'}</small>
+      </button>
+      <button type="button" className="hq-tile" onClick={onTraining}>
+        <span className="hq-tile-head"><Icon name="mortarboard" size={16} />Training</span>
+        <strong>{training.inCourses}<small>/{training.places}</small></strong>
+        <CapacityBar segments={[{ key: 'training', value: training.inCourses }]} capacity={training.places} label={`${training.inCourses} of ${training.places} training places in use`} />
+        <small>{training.inCourses ? 'In courses' : 'Places free'}</small>
+      </button>
+      <button type="button" className="hq-tile" onClick={onCalls}>
+        <span className="hq-tile-head"><Icon name="pin" size={16} />Calls</span>
+        <strong>{board.count}<small>/{board.max}</small></strong>
+        <CapacityBar segments={[{ key: 'strained', value: board.expiringSoon }, { key: 'live', value: settled }]} capacity={board.max} label={`${board.count} of ${board.max} calls on the board, ${board.newCount} unseen, ${board.expiringSoon} closing soon`} />
+        <small>{board.expiringSoon ? `${board.expiringSoon} closing` : `${board.newCount} new`}</small>
+      </button>
+    </section>
   );
 }
 
