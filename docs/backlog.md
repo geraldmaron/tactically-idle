@@ -50,6 +50,17 @@ It's in the catalog (`src/content/items.ts`) and no call uses it. Done: a choice
 through it, using the sightings step, and what it sees moves the odds through the intel rules
 (`intel-confirmed` probe).
 
+### clock-forks-read-travel: Clock forks read the decision's full time
+Tags: job=command; journeys=chance-not-script; probes=none (clock timing, not odds); lane=engine
+Needs: start=none; integrate=none; ship=none
+
+`forkMinutes` (`src/sim/clocks.ts`) looks ahead by the choice's base minutes and the outcome's extra
+minutes, but not travel through the building or forcing a door, which the clock itself advances by.
+So a fork can read a clock as still running when the decision has run it out. The calls lane saw it
+once in 3,152 hostage situation-2 plays (#62), and main does the same. Done: a fork reads the same
+minutes the clock advances by, with a test where travel alone carries a clock past zero inside the
+decision.
+
 ### armed-max: Text can say a look found empty hands
 Tags: job=command; journeys=chance-not-script; probes=none (text condition); lane=engine
 Needs: start=none; integrate=none; ship=none
