@@ -13,7 +13,7 @@ import { hashIndex, hashSeed } from '../../sim/rng';
 import { nearestOpening } from '../../sim/spatial';
 import { coverOnLine } from '../../sim/cover';
 import { streetVantage } from '../../sim/sightlines';
-import type { ClockDef, IncidentPersonDef, IncidentSpec, ScenarioDefinition } from '../../sim/scenario-types';
+import type { ClockDef, FactDefinition, IncidentPersonDef, IncidentSpec, ScenarioDefinition } from '../../sim/scenario-types';
 import type { BuiltLocation, Id, Vec } from '../../sim/types';
 
 export interface IncidentInstance {
@@ -197,6 +197,9 @@ export function drawInstance(template: IncidentTemplate, built: BuiltLocation, s
     return p.offsite && p.vantage ? [[role, { ...p.vantage }]] : [];
   })));
   if (Object.keys(vantages).length) placed.vantages = vantages;
+  // TreeState.armed: per group, the members holding a weapon a look into their room would see.
+  const armed = Object.fromEntries(Object.keys(tree.groups ?? {}).map(group => [group, people.filter(person => person.countedRole === group && seenArmed(person)).length]));
+  if (Object.keys(armed).length) placed.armed = armed;
   return {
     type: template.type, spec: { ...spec }, situation: situationIndex, pacing: placed.recipe.characteristic, turns,
     location: { familyId: spec.familyId, seed: spec.buildingSeed, setting: built.location.setting, outsideSpaceId: placed.outside, sceneSpaceId: placed.room.id, sceneRoomType: sceneRoom.type },
@@ -229,6 +232,31 @@ function clocksFor(instance: IncidentInstance, bind: (text: string) => string, f
   });
 }
 
+/** Whether a look into this person's room would see them holding something: a weapon with them
+ * and in view, not kept out of sight. TreeState.armed counts these, and a group member's weapon
+ * fact is true exactly when this holds. */
+function seenArmed(person: IncidentPerson): boolean {
+  return person.threat?.readiness !== 'concealed' && person.weapons.some(weapon => weapon.where !== 'elsewhere' && weapon.visible !== false);
+}
+
+/** The fact id for what a group member holds (they have no report of their own to learn it by). */
+export const memberWeaponFactId = (roleKey: string) => `w_${roleKey}`;
+
+/** A group member's weapon as a belief, like the subject's (R-G1): one fact per member with a threat
+ * profile, claiming they hold anything at all, unknown until the team sees or hears otherwise. Its
+ * truth is what a look would see (seenArmed), so a sighting settles it (sim/sightings.ts). */
+export function memberWeaponFacts(instance: IncidentInstance): FactDefinition[] {
+  return instance.people.filter(person => person.countedRole && person.threat && person.position.kind === 'inside').map(person => {
+    const name = person.name?.first ?? person.label;
+    const { spaceId } = person.position as Extract<IncidentPerson['position'], { kind: 'inside' }>;
+    return {
+      id: memberWeaponFactId(person.roleKey!), label: `What ${name} is holding`, spaceId, truth: seenArmed(person), initial: 'unknown', showWhenUnknown: false,
+      markers: {}, claim: `${name} has something in hand.`, source: null, note: null,
+      resolved: { confirmed: `${name} has something in hand.`, disproved: `${name}’s hands are empty.` }, uncertainty: `Whether ${name} is holding anything`,
+    };
+  });
+}
+
 /** The instance's people as the engine reads them (sim/incident-factors.ts): the threat profile,
  * the facts that tell the team about it, the furniture between each person and the door into their
  * room, their group and who holds them. Key roles and group members alike; offsite people (another
@@ -248,12 +276,14 @@ export function incidentPeopleFor(instance: IncidentInstance, built: BuiltLocati
       if (doorAt) doorFt = Math.round(Math.hypot(at.x - doorAt.x, at.y - doorAt.y) * 10) / 10;
     }
     const weapon = person.weapons.find(entry => entry.where !== 'elsewhere');
-    const armamentFactId = fact(person.knowledge.weapons?.learnedBy), dispositionFactId = fact(person.knowledge.disposition?.learnedBy);
+    // A group member has no report of their own: their weapon is learned by a fact of its own.
+    const memberFact = person.countedRole && person.threat ? fact(memberWeaponFactId(person.roleKey)) : undefined;
+    const armamentFactId = memberFact ?? fact(person.knowledge.weapons?.learnedBy), dispositionFactId = fact(person.knowledge.disposition?.learnedBy);
     const locationFactId = fact(personFactId(person.roleKey));
     out.push({
       id: person.roleKey, kind: person.kind, label: person.name?.first ?? person.label, minor: MINORS.includes(person.age), spaceId, at: { ...at },
       ...(person.threat ? { threat: { ...person.threat } } : {}),
-      ...(armamentFactId ? { armamentFactId } : {}), ...(dispositionFactId ? { dispositionFactId } : {}), ...(locationFactId ? { locationFactId } : {}),
+      ...(armamentFactId ? { armamentFactId } : {}), ...(memberFact ? { armamentClaim: 'any' as const } : {}), ...(dispositionFactId ? { dispositionFactId } : {}), ...(locationFactId ? { locationFactId } : {}),
       ...(cover ? { cover } : {}),
       ...(weapon ? { weapon: { kind: weapon.kind, real: weapon.real } } : {}),
       ...(person.proficiency ? { proficiency: person.proficiency } : {}),
@@ -272,7 +302,8 @@ export function incidentPeopleFor(instance: IncidentInstance, built: BuiltLocati
  * (placeCast), the tree compiled onto them, and the people and clocks the engine reads. */
 export function compileIncident(scenario: ScenarioDefinition, built: BuiltLocation, template: IncidentTemplate): ScenarioDefinition {
   const instance = drawInstance(template, built, scenario.incident!);
-  const compiled = withCallTree(scenario, built, template.tree, instance.placed, clockMarksOf(instance.clocks));
+  const tree = withCallTree(scenario, built, template.tree, instance.placed, clockMarksOf(instance.clocks));
+  const compiled = { ...tree, facts: [...tree.facts, ...memberWeaponFacts(instance)] };
   const factIds = new Set(compiled.facts.map(fact => fact.id));
   const clocks = clocksFor(instance, textBinder(template.tree, built, instance.placed), factIds);
   // The call's drawn conditions are the scene the engine runs: the light a sightline reads by, the

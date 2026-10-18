@@ -61,6 +61,10 @@ export const THREAT_TUNING = tunable('THREAT_TUNING', {
   /** Civilian safety lost per minute of waiting, by intent. */
   harmWaitCivilian: { harm_self: 0.5, harm_others: 0.8 },
   barricadeRate: 0.6,
+  /** A weapon the team holds only on report: a share of the work's full-threat difficulty, scaled
+   * by the reported armament but never by readiness (readiness already scales the threat line), so
+   * confirming the weapon by sight or word takes it off. Belief basis only (intel-odds). */
+  unconfirmed: 0.25,
 });
 
 const ARMAMENT_PHRASE: Record<Armament, string> = {
@@ -340,7 +344,10 @@ const expected = (basis: Basis, src: 'confirmed' | 'reported' | 'assumed' | 'unk
  * The same function serves the displayed estimate (basis 'belief') and the resolution
  * (basis 'truth'), so both come from one set of rules.
  */
-export function threatFx(basis: Basis, relevant: Subject[], all: Subject[], action: ActionDefinition, participants: Officer[]): ThreatFx {
+export function threatFx(basis: Basis, relevant: Subject[], all: Subject[], action: ActionDefinition, participants: Officer[],
+  /** Per subject, the share of their weapon's seat this work meets and why (intel-odds, R-B5):
+   * a choice whose rooms keep away from a lone subject meets less of them. Default: the full seat. */
+  reach?: ReadonlyMap<Id, { share: number; note: string }>): ThreatFx {
   const T = THREAT_TUNING;
   const kind = action.check.kind;
   const isEntry = kind === 'execution' || Boolean(action.entry);
@@ -356,7 +363,8 @@ export function threatFx(basis: Basis, relevant: Subject[], all: Subject[], acti
   byThreat.forEach((s, i) => {
     const lvl = threatLevel(s);
     if (lvl <= 0) return;
-    const w = seatWeight(i);
+    const where = reach?.get(s.personId);
+    const w = seatWeight(i) * (where?.share ?? 1);
     const add = round1(T.difficulty[kind] * lvl * w);
     if (add < 0.5) return;
     seated += lvl * w;
@@ -365,9 +373,15 @@ export function threatFx(basis: Basis, relevant: Subject[], all: Subject[], acti
         ? `${s.label}: an aggressive animal`
         : s.armSource === 'assumed'
           ? `${s.label}: armament unknown, assuming caution`
-          : `${s.label} with ${ARMAMENT_PHRASE[s.armament]}, ${READINESS_PHRASE[s.readiness]}${tag(s)}`;
+          : `${s.label} with ${ARMAMENT_PHRASE[s.armament]}, ${READINESS_PHRASE[s.readiness]}${tag(s)}${where?.note ? `, ${where.note}` : ''}`;
     fx.difficulty.push(difficultyContributor(expected(basis, s.armSource, what), add));
     fx.difficultyAdd += add;
+    // Not knowing for sure what they hold costs on top: confirming the weapon removes it.
+    const unsure = basis === 'belief' && s.armSource === 'reported' && s.role !== 'dangerous_dog' ? round1(T.difficulty[kind] * T.unconfirmed * T.armament[s.armament] * w) : 0;
+    if (unsure >= 0.5) {
+      fx.difficulty.push(difficultyContributor(`${s.label}’s weapon is reported, not yet seen`, unsure));
+      fx.difficultyAdd += unsure;
+    }
   });
   if (seated > 0) fx.strainMult = Math.min(T.strainCap, 1 + (kind === 'execution' ? T.strainExecution : T.strainOther) * seated);
   if (fx.difficultyAdd > 0) fx.details.push(`${relevant.filter((s) => threatLevel(s) > 0).length === 1 ? 'A subject nearby raises' : 'Subjects nearby raise'} the risk of this work.`);

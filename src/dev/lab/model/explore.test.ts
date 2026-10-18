@@ -207,10 +207,19 @@ describe('no path, in words', () => {
   });
 
   it('counts the natural results too narrow to force in a walk that has them', () => {
-    // Measured 2026-10-09: the hostage default call has three states with a mixed window under 1%.
-    const walked = explore(open('type=hostage_crisis').frames[0].state, null);
-    expect(walked.truncated).toBe(false);
-    expect(walked.unforced).toBeGreaterThan(0);
+    // Which hostage draws reach a state with a mixed window under 1% moves whenever odds inputs
+    // change (intel-odds took the default draw's three away), so the test looks for one rather than
+    // pinning a draw. Measured 2026-10-18: 14 of the 15 hostage draws (situation x tier) have such
+    // states, among them situation 1 at tier 3, the second draw tried here.
+    const draws = [0, 1, 2].flatMap(variant => [2, 3, 1, 4, 5].map(tier => `type=hostage_crisis&variant=${variant}&tier=${tier}`));
+    let walked: ReturnType<typeof explore> | null = null;
+    for (const draw of draws) {
+      walked = explore(open(draw).frames[0].state, null);
+      if (walked.unforced) break;
+    }
+    expect(walked!.truncated).toBe(false);
+    expect(walked!.unforced).toBeGreaterThan(0);
+    // The rescue call never reaches such a state in its default draw.
     expect(explore(open('type=protected_rescue').frames[0].state, null).unforced).toBe(0);
-  }, 60000);
+  }, 120000);
 });

@@ -175,8 +175,55 @@ export function stateCondition(state: TreeState | undefined, groups: Record<stri
   return { ...(flags.length ? { flags } : {}), ...(notFlags.length ? { notFlags } : {}) };
 }
 
-/** Whether a state's count condition holds for this call's group sizes. */
+/** Where `TreeState.armed` would let text show what the team hasn't seen (R-G1). The condition
+ * reads the drawn cast, so each state that carries it must also list in `marks` a mark that only a
+ * look sets: every outcome that sets it, in the nodes this call compiles, is a favorable result of
+ * a choice that observes the group's room (`lookInto`), the result on which sightings settle what
+ * the members hold. A mark a clock sets, a shot sets (`fire.mark`), or nothing in this call sets
+ * doesn't count. Returns one message per leaking state. */
+export function armedRevealErrors(authored: CallTree, nodes: readonly TreeNode[], lookInto: (node: TreeNode, choice: TreeChoice) => readonly string[],
+  groupRoom: (group: string) => string | undefined, clockMarks: readonly string[] = []): string[] {
+  // A band where any outcome sends the team back never gets the look (sim/sightings.ts), so a mark
+  // it sets is no reveal even when its own outcome stays.
+  type Setter = { node: TreeNode; choice: TreeChoice; band: OutcomeBand } | 'other';
+  const setters = new Map<string, Setter[]>();
+  const add = (mark: string, setter: Setter) => (setters.get(mark) ?? setters.set(mark, []).get(mark)!).push(setter);
+  for (const node of nodes) for (const choice of node.choices) for (const band of BANDS) for (const outcome of choice.outcomes[band]) {
+    for (const mark of outcome.mark ?? []) add(mark, { node, choice, band });
+    if (outcome.fire?.mark) add(outcome.fire.mark, 'other');
+  }
+  for (const mark of clockMarks) add(mark, 'other');
+  const onlyByLook = (mark: string, room: string | undefined) => {
+    const list = setters.get(mark) ?? [];
+    return list.length > 0 && room !== undefined && list.every(setter => setter !== 'other' && setter.band === 'favorable'
+      && !setter.choice.outcomes[setter.band].some(outcome => outcome.back) && lookInto(setter.node, setter.choice).includes(room));
+  };
+  const errors: string[] = [];
+  const check = (where: string, state: TreeState | undefined) => {
+    if (!state?.armed) return;
+    if (!(state.marks ?? []).some(mark => onlyByLook(mark, groupRoom(state.armed!.role))))
+      errors.push(`${authored.type}: ${where} reads what ${state.armed.role} hold before the team has seen it; add a mark only a favorable look into their room sets`);
+  };
+  for (const node of authored.nodes) {
+    for (const [i, entry] of (node.promptIf ?? []).entries()) check(`${node.id} prompt variant ${i + 1}`, entry.when);
+    for (const choice of node.choices) {
+      check(`${node.id}.${choice.id}`, choice.onlyIf);
+      for (const band of BANDS) for (const [i, outcome] of choice.outcomes[band].entries()) check(`${node.id}.${choice.id} ${band} outcome ${i + 1}`, outcome.when);
+    }
+  }
+  return errors;
+}
+
+/** The key in a call's counts for how many of a group's members hold a weapon a look would see. */
+export const armedKey = (group: string) => `${group}:armed`;
+
+/** Whether a state's count and armed conditions hold for this call's group sizes and the weapons
+ * its members drew (`armedKey`). Counts with no armed entry for the group don't know what its
+ * members hold, so an armed condition holds there: the lab and the string checks see every line,
+ * and a compiled call, which always passes them (callCounts), keeps only its own. */
 export function countHolds(state: TreeState | undefined, counts: Record<string, number>): boolean {
+  const armed = state?.armed ? counts[armedKey(state.armed.role)] : undefined;
+  if (armed !== undefined && armed < (state!.armed!.min ?? 1)) return false;
   if (!state?.count) return true;
   const n = counts[state.count.role] ?? 0;
   return n >= (state.count.min ?? 0) && n <= (state.count.max ?? Infinity);
@@ -190,10 +237,11 @@ export function treeForCounts(tree: CallTree, counts: Record<string, number>): C
   const states = tree.nodes.flatMap(node => [...(node.promptIf ?? []).map(entry => entry.when), ...node.choices.flatMap(choice => [choice.onlyIf,
     ...BANDS.flatMap(band => choice.outcomes[band].map(outcome => outcome.when))])]);
   for (const state of states) if (state?.count && !groups[state.count.role]) throw new Error(`${tree.type}: a count condition on ${state.count.role}, which is not a group`);
-  if (!states.some(state => state?.count)) return tree;
-  const strip = <T extends { count?: unknown }>(state: T | undefined): T | undefined => {
-    if (!state?.count) return state;
-    const { count: _count, ...rest } = state;
+  for (const state of states) if (state?.armed && !groups[state.armed.role]) throw new Error(`${tree.type}: an armed condition on ${state.armed.role}, which is not a group`);
+  if (!states.some(state => state?.count || state?.armed)) return tree;
+  const strip = <T extends { count?: unknown; armed?: unknown }>(state: T | undefined): T | undefined => {
+    if (!state?.count && !state?.armed) return state;
+    const { count: _count, armed: _armed, ...rest } = state;
     return Object.keys(rest).length ? rest as T : undefined;
   };
   return { ...tree, nodes: tree.nodes.map(node => ({ ...node,
@@ -311,6 +359,10 @@ export function prunePlan(tree: CallTree, counts: Record<string, number>, clockM
     settableMarks: marks, settableSafe: safe, possible,
     why(state, name = (_kind, id) => id) {
       if (possible(state)) return null;
+      if (state?.armed && !countHolds({ armed: state.armed }, counts)) {
+        const { role, min = 1 } = state.armed;
+        return `needs ${min} of ${name('role', role)} holding something; this call has ${counts[armedKey(role)]}`;
+      }
       if (!countHolds(state, counts)) {
         const { role, min, max } = state!.count!, n = counts[role] ?? 0, who = name('role', role);
         const need = min !== undefined && max !== undefined ? min === max ? `${who} = ${min}` : `${who} ${min} to ${max}` : min !== undefined ? `${who} ≥ ${min}` : `${who} ≤ ${max}`;
@@ -343,6 +395,9 @@ export interface PlacedCast {
   /** Where each offsite role watches from, when the template places them (instance.ts): what a
    * sightline fact draws its line from. */
   vantages?: Record<string, StreetVantage>;
+  /** Per counted role, how many members hold a weapon a look would see (instance.ts), for
+   * `TreeState.armed`. Absent: unknown, so armed conditions hold (countHolds). */
+  armed?: Record<string, number>;
 }
 
 /** The door the team comes through into a room: the middle of the first opening on its walking
@@ -473,6 +528,13 @@ export const memberId = (group: string, n: number) => `${group}_${n}`;
 export const memberCounts = (placed: Pick<PlacedCast, 'groups'>): Record<string, number> =>
   Object.fromEntries(Object.entries(placed.groups).map(([group, ids]) => [group, ids.length]));
 
+/** What this call's count and armed conditions read: its group sizes, and per group how many
+ * members hold a weapon a look would see (`armedKey`). */
+export const callCounts = (placed: Pick<PlacedCast, 'groups' | 'armed'>): Record<string, number> => ({
+  ...memberCounts(placed),
+  ...Object.fromEntries(Object.entries(placed.armed ?? {}).map(([group, n]) => [armedKey(group), n])),
+});
+
 /** How this call's text binds: the drawn names, pronouns and ages, the building's name for
  * {place}, and room labels for {scene} and {role.room}. The compiler, the Scenario Lab and the
  * string checks all bind through this. */
@@ -496,7 +558,7 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
     if (!authored.roles.some(role => role.id === def.leader)) throw new Error(`${authored.type}: group ${group} is led by ${def.leader}, who is not a role`);
     if (!/^[a-z][a-z_]*$/.test(group)) throw new Error(`${authored.type}: group id ${group} must be lower snake case`);
   }
-  const tree = treeForCounts(authored, memberCounts({ groups }));
+  const tree = treeForCounts(authored, callCounts({ groups, armed: placed.armed }));
   const everyone = (roles: readonly string[] | undefined) => (roles ?? []).flatMap(role => groups[role] ?? [role]);
   /** A group where one person is meant (who fires, who force is used on, who is talked to): its
    * first member, nearest the door. A call with no members never offers that line. */
@@ -511,7 +573,7 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
   // Everyone on the map: the roles, then each group's members, who take their leader's kind.
   const present = [...onSite.map(role => ({ id: role.id, label: role.label, kind: role.kind })),
     ...Object.entries(groups).flatMap(([group, ids]) => ids.map(id => ({ id, label: tree.groups![group].label, kind: tree.roles.find(role => role.id === tree.groups![group].leader)!.kind })))];
-  const nodes = reachableNodes(tree, spec.seed, memberCounts({ groups }));
+  const nodes = reachableNodes(tree, spec.seed, callCounts({ groups, armed: placed.armed }));
   // Anyone a choice in this call walks out needs that walk clear of furniture, as the engine
   // checks it; otherwise hosting moves the call to another building seed (the v12 rule).
   for (const node of nodes) for (const choice of node.choices) if (choice.walks && groups[choice.walks]) throw new Error(`${node.id}.${choice.id}: only a key role walks out, never the group ${choice.walks}`);
@@ -523,7 +585,7 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
   // Marks and releases this call can actually set (prunePlan). A condition that needs one it can
   // never set is never true here (drop it); one that needs it absent is always true (strip that
   // part). The tree's count conditions are already settled, so `possible` reads marks and safety.
-  const plan = prunePlan(tree, memberCounts({ groups }), clockMarks, spec.seed);
+  const plan = prunePlan(tree, callCounts({ groups, armed: placed.armed }), clockMarks, spec.seed);
   const settable = { marks: plan.settableMarks, safe: plan.settableSafe };
   const possible = plan.possible;
   const trim = (state: TreeState | undefined): TreeState | undefined => state && {
@@ -821,6 +883,11 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
     if (deliberate && choice.talksTo === deliberate.id) action.summary += ` Allow extra time for {${deliberate.id}.first} to answer.`;
     return action;
   };
+
+  // TreeState.armed reads the drawn cast: text behind it must wait for a look into the group's room.
+  const leaks = armedRevealErrors(authored, nodes, (node, choice) => movement(node, choice).observes ?? [],
+    group => roomOf[authored.groups?.[group]?.leader ?? ''], clockMarks);
+  if (leaks.length) throw new Error(leaks.join('\n'));
 
   s.stages = Object.fromEntries(STAGES.map(stage => {
     const here = nodes.filter(node => node.stage === stage);

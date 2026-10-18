@@ -453,6 +453,10 @@ export interface IncidentPersonDef {
   /** Facts whose status is what the team knows of this person's weapon and temper. Unknown until
    * the fact is reported or confirmed; the odds use what the team knows. */
   armamentFactId?: Id;
+  /** What the armament fact claims, read only when it is disproved: 'weapon' (default) claims the
+   * weapon a report named, so disproving it leaves what they hold unknown; 'any' (a group member's
+   * fact) claims they hold anything at all, so disproving it means they hold nothing. */
+  armamentClaim?: 'weapon' | 'any';
   dispositionFactId?: Id;
   /** The fact that says where this person is: confirmed once the team sees them (sim/sightings.ts). */
   locationFactId?: Id;

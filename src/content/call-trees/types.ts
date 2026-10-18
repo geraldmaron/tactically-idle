@@ -40,6 +40,12 @@ export interface TreeState {
    * variant or choice only in calls where `role` (a key of `CallTree.groups`) has at least `min`
    * and at most `max` members. Write every line that names the group behind one. */
   count?: { role: string; min?: number; max?: number };
+  /** How many of a counted group's members hold a weapon a look would see, fixed per call like
+   * `count` (R-G1): the compiler keeps this outcome, prompt variant or choice only in calls where
+   * at least `min` (default 1) of `role`'s members do. It reads the drawn cast, which the team
+   * doesn't know, so the same state must list in `marks` a mark set only on favorable results of
+   * choices that look into the group's room, the results on which the team sees what they hold. */
+  armed?: { role: string; min?: number };
 }
 
 /** A counted role: the people a template slot draws past its key roles (content/incidents/types.ts
