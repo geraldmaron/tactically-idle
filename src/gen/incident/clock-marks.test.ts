@@ -6,6 +6,8 @@
 import { describe, expect, it } from 'vitest';
 import type { CallTree, TreeNext, TreeOutcome, TreeState } from '../../content/call-trees/types';
 import { INCIDENT_TEMPLATES } from '../../content/incidents';
+import type { Clock, IncidentTemplate } from '../../content/incidents/types';
+import { GROUP_TEMPLATE, GROUP_TREE } from './trees-v13/group-fixture';
 import { outcomeNexts } from './trees-v13/compile';
 
 const BANDS = ['favorable', 'mixed', 'adverse'] as const;
@@ -38,35 +40,55 @@ function readersOnceOut(tree: CallTree, mark: string, owner: string, clockNexts:
   ]);
 }
 
-describe('a clock’s onOut mark is never read once its owner may be out', () => {
-  const clocks = Object.values(INCIDENT_TEMPLATES).flatMap(template => template ? template.situations.flatMap(situation =>
-    (situation.clocks ?? []).filter(clock => clock.onOut?.mark && clock.owner).map(clock => ({ template, situation: situation.index, clock }))) : []);
+/** Every clock with an onOut mark and an owner, per situation, in these templates. */
+const markedClocks = (templates: readonly (IncidentTemplate | undefined)[]) => templates.flatMap(template => template ? template.situations.flatMap(situation =>
+  (situation.clocks ?? []).filter(clock => clock.onOut?.mark && clock.owner).map(clock => ({ template, situation: situation.index, clock }))) : []);
 
-  it('finds the marked clocks the calls have today', () => {
-    expect(clocks.map(({ template, clock }) => `${template.type}:${clock.onOut!.mark}`)).toEqual(expect.arrayContaining(['hostage_crisis:owner_down', 'protected_rescue:tank_empty']));
+// The audit's own checks run on the group fixture (an owned tree), never on a call's content, so a
+// call can drop or rename its marks without touching them. The fixture's courier is released by
+// talk.ask_out (safe, then the cascade to `last` or an ending) and by final.end_talk.
+const FIXTURE_CLOCK: Clock = { id: 'nerve', label: 'The courier', kind: 'medical', owner: 'courier', start: 60, ratePerMin: 1, rateKnown: false,
+  cues: [{ at: 40, text: 'The courier sits down by the door.' }], onOut: { harm: 'serious', mark: 'courier_down' } };
+const reading = (prompt: string) => ({ when: { marks: ['courier_down'] }, prompt });
+
+describe('the audit, on an owned fixture', () => {
+  it('finds a marked clock on a template', () => {
+    const fixture: IncidentTemplate = { ...GROUP_TEMPLATE, situations: GROUP_TEMPLATE.situations.map(situation => ({ ...situation, clocks: [FIXTURE_CLOCK] })) };
+    expect(markedClocks([fixture]).map(({ clock }) => clock.onOut!.mark)).toEqual(['courier_down', 'courier_down', 'courier_down']);
+    expect(markedClocks([GROUP_TEMPLATE])).toEqual([]);
+  });
+
+  it('passes when every reader sits where the owner is still inside', () => {
+    const tree = structuredClone(GROUP_TREE);
+    tree.nodes.find(node => node.id === 'open')!.promptIf = [reading('The courier is down.')];
+    expect(readersOnceOut(tree, 'courier_down', 'courier')).toEqual([]);
   });
 
   it('catches a reader placed where the owner is already out', () => {
-    const hostage = structuredClone(INCIDENT_TEMPLATES.hostage_crisis!.tree);
-    hostage.nodes.find(node => node.id === 'last_one')!.promptIf = [{ when: { marks: ['owner_down'] }, prompt: 'The owner is down.' }];
-    expect(readersOnceOut(hostage, 'owner_down', 'owner')).toEqual(['last_one prompt variant 1']);
+    const tree = structuredClone(GROUP_TREE);
+    tree.nodes.find(node => node.id === 'last')!.promptIf = [reading('The courier is down.')];
+    expect(readersOnceOut(tree, 'courier_down', 'courier')).toEqual(['last prompt variant 1']);
   });
 
   it('catches a release in one outcome and the route in another of the same band', () => {
-    const hostage = structuredClone(INCIDENT_TEMPLATES.hostage_crisis!.tree);
-    const reader = hostage.nodes.find(node => node.id === 'threat')!;
-    const band = hostage.nodes.find(node => node.id === 'standoff')!.choices[0].outcomes.favorable;
-    band.push({ text: 'The owner walks out.', safe: ['owner'] });
-    band.push({ text: '', next: { node: reader.id } });
-    expect(readersOnceOut(hostage, 'owner_down', 'owner')).toContain('threat prompt variant 1');
+    const tree = structuredClone(GROUP_TREE);
+    tree.nodes.find(node => node.id === 'talk')!.promptIf = [reading('The courier is down.')];
+    expect(readersOnceOut(tree, 'courier_down', 'courier'), 'talk comes before any release').toEqual([]);
+    // open.watch.mixed routes to talk; an addendum beside it now brings the courier out.
+    tree.nodes.find(node => node.id === 'open')!.choices.find(choice => choice.id === 'watch')!.outcomes.mixed.push({ text: 'The courier slips out.', safe: ['courier'] });
+    expect(readersOnceOut(tree, 'courier_down', 'courier')).toContain('talk prompt variant 1');
   });
 
   it('catches another clock that can still move the call once the owner is out', () => {
-    const hostage = structuredClone(INCIDENT_TEMPLATES.hostage_crisis!.tree);
-    expect(readersOnceOut(hostage, 'owner_down', 'owner', [{ node: 'threat' }])).toContain('threat prompt variant 1');
+    const tree = structuredClone(GROUP_TREE);
+    tree.nodes.find(node => node.id === 'final')!.promptIf = [reading('The courier is down.')];
+    expect(readersOnceOut(tree, 'courier_down', 'courier')).toEqual([]);
+    expect(readersOnceOut(tree, 'courier_down', 'courier', [{ node: 'final' }])).toContain('final prompt variant 1');
   });
+});
 
-  for (const { template, situation, clock } of clocks)
+describe('a clock’s onOut mark is never read once its owner may be out, in every call', () => {
+  for (const { template, situation, clock } of markedClocks(Object.values(INCIDENT_TEMPLATES)))
     it(`${template.type} situation ${situation}: ${clock.onOut!.mark}`, () => {
       const others = template.situations.find(entry => entry.index === situation)!.clocks!.filter(entry => entry !== clock).flatMap(entry => entry.onOut?.next ? [entry.onOut.next] : []);
       expect(readersOnceOut(template.tree, clock.onOut!.mark!, clock.owner!, others)).toEqual([]);
