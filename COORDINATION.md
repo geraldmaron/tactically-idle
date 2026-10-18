@@ -1,0 +1,110 @@
+# Coordination
+
+How parallel sessions (Claude Code and Codex) share this repo without drifting from the backlog,
+the jobs and journeys, or each other. This file holds the rules. `HANDOFF.md` holds live state.
+Work to do lives only in `docs/backlog.md`.
+
+## Roles
+
+- **Lead.** One session at a time. It owns `docs/backlog.md`, `HANDOFF.md`, `docs/architecture.md`,
+  `src/gen/incident/trees-v13/compiled-fingerprints.json` and this file. It merges branches one at a
+  time and verifies the merged result. It approves changes to the interface files listed below.
+- **Lane.** A session that works one lane's backlog items on its own branch and worktree. It writes
+  only the files its lane owns. It reports to the lead by message and never edits `HANDOFF.md`.
+
+## Lanes and ownership
+
+A file has one writer. The most specific matching path wins, so `src/content/call-trees/types.ts`
+belongs to engine even though calls owns the rest of that folder. A path no row matches belongs to
+the lead, who assigns it in `HANDOFF.md` before anyone edits it. A lane that needs a change in a
+file it doesn't own sends the owner a request that names the backlog id, the file and the behavior
+needed.
+
+| Lane | Owns |
+|---|---|
+| engine | `src/sim/`, `src/gen/`, `src/commerce/`, `src/content/items.ts`, `src/content/capabilities.ts`, `src/content/scenario-types.ts`, `src/content/locations/`, `src/content/materials.ts`, `src/content/call-trees/types.ts`, `src/content/incidents/types.ts`, `src/architecture/wiring.ts` |
+| calls | `src/content/` (the rest: call trees, incidents, scenarios, officers, personas, recruits, courses, certs, unlocks, development tree), `docs/calls/`, `.agents/skills/swat-*/` |
+| tooling | `src/gen/incident/gates/`, `src/gen/incident/trees-v13/*.test.ts`, `src/gen/incident/trees-v13/balance.ts`, `src/dev/`, `src/lab-entry.ts`, `scripts/`, `.github/workflows/`, `package.json` scripts |
+| interface | `src/ui/`, `src/main.tsx`, `src/harness.tsx`, `public/`, `scripts/validate-art.mjs` |
+| lead | `src/architecture/`, `docs/` (the rest), `README.md`, `PLAN.md`, `AGENTS.md`, this file, `HANDOFF.md`, and the generated files |
+
+Tests sit with the code they test, except where the tooling row says otherwise.
+
+### Interface files
+
+These shape what other lanes build on. Their owner changes them only with the lead's approval and
+an adversarial review (below): `src/content/call-trees/types.ts`, `src/content/incidents/types.ts`,
+`src/sim/scenario-types.ts`, `src/sim/types.ts`, the props of `src/ui/blueprint/Blueprint.tsx`,
+`JOBS` and `JOURNEYS` in `src/architecture/journeys.ts`, and `src/architecture/manifest.ts`.
+
+## Backlog format
+
+Each item in `docs/backlog.md` has a stable id and two tag lines, checked by
+`src/architecture/references.test.ts`:
+
+```
+### intel-odds: What the team learns changes the odds
+Tags: job=command; journeys=chance-not-script; probes=subject-armament, new:intel-confirmed; lane=engine
+Needs: start=none; integrate=none; ship=none
+```
+
+- `job`: a key of `JOBS`. `journeys`: ids in `JOURNEYS`. `probes`: ids in `WIRING`. Write
+  `new:<id>` for one the item adds, and `none (reason)` when the item doesn't touch any. Don't
+  invent a mapping to fill the field.
+- `lane`: engine, calls, tooling, interface, lead or deferred.
+- `Needs` says what must ship before this item can **start**, **integrate** (merge its work),
+  and **ship** (be deleted from the backlog). Each part lists backlog ids, or `none`. A note in
+  parentheses can follow an id.
+- When an item ships, the lead deletes it and removes its id from every other item's `Needs` in
+  the same commit. A `new:` id becomes a plain id once it exists.
+
+The test checks references only, not meaning. The lead checks meaning when an item ships: does the
+work serve the job it names, and do the journeys and probes still describe what players get?
+
+## Shipping an item
+
+1. Its done criteria in the backlog hold, shown by the command or screen that proves each one.
+2. If it changed what a journey covers or what a probe measures, the journey test or probe changes
+   with it, and a floor rises to the newly measured share. Floors never fall. Work that doesn't
+   change measured behavior (art, tooling, layout) leaves them alone.
+3. Content follows `docs/content-pipeline.md`, including the separate `swat-writing-review` read.
+4. A load-bearing change has an adversarial review record (below).
+
+## Merging
+
+1. The lead merges one branch at a time. The lane rebases on current main first.
+2. Generated files are never hand-merged. After the rebase the lead regenerates them
+   (`npx vitest run src/architecture -u`, and the fingerprint recapture in
+   `docs/content-pipeline.md`) and reads every changed line first. An unexplained change stops
+   the merge.
+3. On the merged main the lead runs `npm run verify`, then plays the call journey in the browser
+   at 390x844. A green lane branch doesn't stand in for the merged state.
+4. When two lanes' merged changes interact (the same call, odds or measurement), the lead reviews
+   the integrated diff adversarially again.
+5. Branches are deleted once merged.
+
+## Adversarial review
+
+Load-bearing changes get a Codex adversarial review before merge: interface files, odds formulas
+and probe floors, manifest layers, edges and `LAYER_DEBT`, `JOBS` and `JOURNEYS`, the save shape,
+and retiring a call tree. Run it from the lane's worktree:
+
+```bash
+node ~/.claude/plugins/cache/openai-codex/codex/1.0.6/scripts/codex-companion.mjs adversarial-review --wait --base main "<what to attack>"
+```
+
+The pull request records: the reviewed commit, the scope, each finding, the verdict (accepted,
+accepted with controls, needs validation, rejected) and what happened to each control.
+
+## Codex
+
+- Use Codex's configured default model (`~/.codex/config.toml`). Never pass `--model gpt-6-astra`.
+- Depth 1: a Codex run never calls back into Claude, and a lane doesn't start sessions of its own.
+- Reviews are read-only. Codex writes code only through `task --write` inside the lane's own files.
+
+## Handoff
+
+The lead keeps `HANDOFF.md` current: each lane's session, branch, items in flight, declared file
+touches and any lock on a file outside normal ownership. Before writing, a lane sends the lead its
+expected touches, including tests, producers and assets. The lead resolves overlaps before work
+starts and again when a lane's scope changes.
