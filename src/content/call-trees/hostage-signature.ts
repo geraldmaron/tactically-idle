@@ -322,7 +322,7 @@ export const HOSTAGE_SIGNATURE: CallTree = {
         // harder and provokes the coworkers too. Only its favorable band, where the squad holds the
         // windows, settles what the coworkers are holding (sightings) and sets saw_inside.
         { id: 'glass_group', title: 'Move up to the glass', icon: 'perimeter', team: { to: { vantage: 'scene' }, signal: { channel: 'visual', to: 'taker' } }, check: check(MOVE, 3), minutes: 3, consequenceLevel: 'moderate', onlyIf: GROUP_IN,
-          summary: '{lead} brings your squad to the front windows, where {others} can see you as well as {taker.first}.',
+          summary: '{lead} moves up to the front windows, in view of {others} too. One shout could drop the blinds.',
           preview: { favorable: 'You get a clear look at everyone inside before {taker.first} answers.', mixed: '{taker.first} answers but moves {owner.first} out of view.', adverse: '{others} {others#spots|spot} you first, and {taker.first} may pull {owner.first} close with the handgun drawn.' },
           outcomes: {
             favorable: [{ text: 'Officers hold the windows long enough to see every pair of hands inside. Then {taker.first} answers the counter phone.', mark: ['team_close', 'saw_inside'], moves: { taker: 'team_seen', others: 'team_seen' }, next: { node: 'talking' }, objective: 8 }],
@@ -456,7 +456,6 @@ export const HOSTAGE_SIGNATURE: CallTree = {
     { id: 'talking', stage: 'resolve',
       prompt: 'The negotiator still has the line open. {owner.first} hasn’t left {owner.his} stool.',
       promptIf: [
-        { when: { marks: ['owner_hidden', 'owner_unwell'], notMarks: ['owner_back'] }, prompt: '{owner.first} is hidden behind the shelves. At the last look {owner.he} {owner~was|were} short of breath.' },
         { when: { marks: ['owner_unwell'] }, prompt: '{owner.first} is sitting on the tiles near the till while the call goes on.' },
         { when: { marks: ['wants_back'] }, prompt: 'The alley door is the exit {taker.first} asked for. {owner.first} waits behind the register.' },
         // What the team saw from the glass (saw_inside is set only by a favorable look, team_glass or
@@ -654,9 +653,8 @@ export const HOSTAGE_SIGNATURE: CallTree = {
       prompt: 'The bargaining has stopped. {owner.first} is perched on the stool behind the register.',
       promptIf: [
         { when: { marks: ['owner_down'] }, prompt: '{owner.first} has collapsed on the tiles. {taker.first} is screaming at someone to do something.' },
-        { when: { marks: ['owner_hidden', 'owner_unwell'], notMarks: ['owner_back'] }, prompt: 'You lost sight of {owner.first}, who was struggling for air before the shelves hid {owner.him}.' },
         { when: { marks: ['owner_unwell'] }, prompt: '{owner.first} is breathing hard behind the till, and {taker.first} has stopped making offers.' },
-        { when: { marks: ['owner_hidden'], notMarks: ['owner_back'] }, prompt: '{owner.first} is still out of sight behind the shelves, and the counter phone has gone quiet.' },
+        { when: { marks: ['owner_hidden'], notMarks: ['owner_back'] }, prompt: '{owner.first} is still out of sight behind the shelves, and {taker.first} won’t talk terms anymore.' },
         { when: { marks: ['silent'] }, prompt: 'Every call goes unanswered. {owner.first} sits at the register within {taker.first}’s reach.' },
         { when: { marks: ['sign_demand'] }, prompt: '{taker.first} insists {owner.first} signs before anyone goes anywhere. {owner.He} {owner~waits|wait} by the cash drawer.' },
         { when: { notSafe: ['courier'] }, prompt: 'The bargaining is over. {courier.first} is still near the exit, while {owner.first} keeps to the stool.' },
