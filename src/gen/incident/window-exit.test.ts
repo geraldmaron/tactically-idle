@@ -80,7 +80,7 @@ describe('out through their own window (R-B2)', () => {
     expect(routeAlongOpenings(blocked, { x: 0, y: 0 }, { x: 0, y: 0 }, route.openingIds, null).reachable).toBe(false);
   });
 
-  it('in play the engine offers it on the window route, and refuses it once the window is blocked', () => {
+  it('in play the engine offers it on the window route, and once the window is blocked shows it locked, saying why', () => {
     withDraftScenario(flat.s, id => {
       const state = startGateRun(id);
       state.activeRun!.flags = [...state.activeRun!.flags, 'tree:started', 'at:quiet_dog'];
@@ -91,7 +91,8 @@ describe('out through their own window (R-B2)', () => {
       const exit = flat.s.story!.bindings.routes[walkOut(flat.s)!.storyRoute!].exitOpeningId!;
       state.activeRun!.flags = [...state.activeRun!.flags, `opening:${exit}=blocked`];
       expect(view().eligible).toBe(false);
-      expect(view().reason).toMatch(/no usable route for this move|route for this move is blocked/i);
+      // Refused through the engine's locked-choice path, with a plain reason the player sees.
+      expect(view().reason).toBe('The window on this way out is blocked');
     });
   });
 

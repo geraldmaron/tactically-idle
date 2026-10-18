@@ -567,6 +567,9 @@ export function evaluateAction(input: EvalInput): Evaluation {
   if (!conditionHolds(action.visibleWhen, run)) return blank('That option does not fit the current situation');
   if (care.issue) return blank(care.issue);
   if (followsPerson && !target) return blank('The person has no known location at the scene');
+  // A way out by a chosen exit (R-B2, R-R5) is refused, never rerouted, when that exit is blocked: say so plainly.
+  const exit = routeBinding?.exitOpeningId ? location.openings.find(opening => opening.id === routeBinding.exitOpeningId) : undefined;
+  if (followsRoute && !storyRoute && exit?.state === 'blocked') return blank(`The ${exit.type === 'window' ? 'window' : 'door'} on this way out is blocked`);
   if (followsRoute && !storyRoute) return blank('There is no usable route for this move');
   {
     const supportIssue = externalSupportActionIssue(run, scenario, action);
