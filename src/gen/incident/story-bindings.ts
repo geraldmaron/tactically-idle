@@ -10,6 +10,8 @@ export interface StoryRoomSelector {
   setting?: LocationDefinition['setting'];
   types?: readonly RoomType[];
   floor?: number;
+  /** Only rooms on this floor or above (1: anywhere but the ground floor). */
+  minFloor?: number;
   tags?: readonly string[];
   /** Every requirement must match a real object in the selected room. */
   requiredObjects?: readonly Omit<StoryObjectSelector, 'spaceId'>[];
@@ -52,6 +54,7 @@ export function queryStoryRooms(built: BuiltLocation, selector: StoryRoomSelecto
   const exteriorIds = new Set(built.location.zones.map(zone => zone.id));
   return built.location.rooms.filter(room => (selector.types === undefined || selector.types.includes(room.type))
     && (selector.floor === undefined || room.floor === selector.floor)
+    && (selector.minFloor === undefined || room.floor >= selector.minFloor)
     && allTags(room.tags, selector.tags)
     && !selector.excludeSpaceIds?.includes(room.id)
     && (selector.requiredObjects ?? []).every(requirement => built.location.objects.some(object => matchesObject(object, { ...requirement, spaceId: room.id })))

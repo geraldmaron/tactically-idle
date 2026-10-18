@@ -215,16 +215,21 @@ export function armedRevealErrors(authored: CallTree, nodes: readonly TreeNode[]
   return errors;
 }
 
-/** The key in a call's counts for how many of a group's members hold a weapon a look would see. */
+/** The key in a call's compile-time facts for how many of a group's members hold a weapon a look would see. */
 export const armedKey = (group: string) => `${group}:armed`;
+/** The key in a call's compile-time facts for whether a role starts above the ground floor (1) or not (0). */
+export const upstairsKey = (role: string) => `${role}:upstairs`;
 
-/** Whether a state's count and armed conditions hold for this call's group sizes and the weapons
- * its members drew (`armedKey`). Counts with no armed entry for the group don't know what its
- * members hold, so an armed condition holds there: the lab and the string checks see every line,
- * and a compiled call, which always passes them (callCounts), keeps only its own. */
+/** Whether a state's compile-time conditions hold for this call's compile-time facts (callCounts):
+ * its group sizes (`count`), how many members hold something (`armed`, armedKey) and which roles
+ * start upstairs (`upstairs`, `notUpstairs`, upstairsKey). A fact with no entry is unknown, and
+ * the condition on it holds: only the lab and the string checks sweep without one, so they see every
+ * line; a compiled call always passes every entry (callCounts) and keeps only its own. */
 export function countHolds(state: TreeState | undefined, counts: Record<string, number>): boolean {
   const armed = state?.armed ? counts[armedKey(state.armed.role)] : undefined;
   if (armed !== undefined && armed < (state!.armed!.min ?? 1)) return false;
+  if ((state?.upstairs ?? []).some(role => counts[upstairsKey(role)] === 0)) return false;
+  if ((state?.notUpstairs ?? []).some(role => counts[upstairsKey(role)] === 1)) return false;
   if (!state?.count) return true;
   const n = counts[state.count.role] ?? 0;
   return n >= (state.count.min ?? 0) && n <= (state.count.max ?? Infinity);
@@ -239,10 +244,12 @@ export function treeForCounts(tree: CallTree, counts: Record<string, number>): C
     ...BANDS.flatMap(band => choice.outcomes[band].map(outcome => outcome.when))])]);
   for (const state of states) if (state?.count && !groups[state.count.role]) throw new Error(`${tree.type}: a count condition on ${state.count.role}, which is not a group`);
   for (const state of states) if (state?.armed && !groups[state.armed.role]) throw new Error(`${tree.type}: an armed condition on ${state.armed.role}, which is not a group`);
-  if (!states.some(state => state?.count || state?.armed)) return tree;
-  const strip = <T extends { count?: unknown; armed?: unknown }>(state: T | undefined): T | undefined => {
-    if (!state?.count && !state?.armed) return state;
-    const { count: _count, armed: _armed, ...rest } = state;
+  for (const state of states) for (const role of [...state?.upstairs ?? [], ...state?.notUpstairs ?? []])
+    if (!tree.roles.some(entry => entry.id === role) && !groups[role]) throw new Error(`${tree.type}: an upstairs condition on ${role}, which is not a role or group`);
+  if (!states.some(state => state?.count || state?.armed || state?.upstairs || state?.notUpstairs)) return tree;
+  const strip = <T extends { count?: unknown; armed?: unknown; upstairs?: unknown; notUpstairs?: unknown }>(state: T | undefined): T | undefined => {
+    if (!state?.count && !state?.armed && !state?.upstairs && !state?.notUpstairs) return state;
+    const { count: _count, armed: _armed, upstairs: _upstairs, notUpstairs: _notUpstairs, ...rest } = state;
     return Object.keys(rest).length ? rest as T : undefined;
   };
   return { ...tree, nodes: tree.nodes.map(node => ({ ...node,
@@ -398,6 +405,10 @@ export function prunePlan(tree: CallTree, counts: Record<string, number>, clockM
         const { role, min = 1 } = state.armed;
         return `needs ${min} of ${name('role', role)} holding something; this call has ${counts[armedKey(role)]}`;
       }
+      const low = (state?.upstairs ?? []).find(role => counts[upstairsKey(role)] === 0);
+      if (low !== undefined) return `needs ${name('role', low)} upstairs; this call has them on the ground floor`;
+      const high = (state?.notUpstairs ?? []).find(role => counts[upstairsKey(role)] === 1);
+      if (high !== undefined) return `needs ${name('role', high)} on the ground floor; this call has them upstairs`;
       if (!countHolds(state, counts)) {
         const { role, min, max } = state!.count!, n = counts[role] ?? 0, who = name('role', role);
         const need = min !== undefined && max !== undefined ? min === max ? `${who} = ${min}` : `${who} ${min} to ${max}` : min !== undefined ? `${who} ≥ ${min}` : `${who} ≤ ${max}`;
@@ -433,6 +444,9 @@ export interface PlacedCast {
   /** Per counted role, how many members hold a weapon a look would see (instance.ts), for
    * `TreeState.armed`. Absent: unknown, so armed conditions hold (countHolds). */
   armed?: Record<string, number>;
+  /** Per role placed inside, whether its starting room is above the ground floor (placeCast), for
+   * `TreeState.upstairs` and `notUpstairs`. */
+  upstairs?: Record<string, boolean>;
 }
 
 /** The door the team comes through into a room: the middle of the first opening on its walking
@@ -469,9 +483,12 @@ export function placeCast(tree: CallTree, built: BuiltLocation, spec: IncidentSp
     if (place === 'offsite') continue;
     if (place === 'scene') { roomOf[role.id] = room.id; continue; }
     if (place === 'outside') { roomOf[role.id] = outside; continue; }
+    // R-B1: the ground floor unless the role says otherwise; the route out then walks the stairs.
+    const floor = place.floor ?? 'ground';
+    const level = floor === 'ground' ? { floor: 0 } : floor === 'upper' ? { minFloor: 1 } : {};
     const own = place.rooms.reduce<ReturnType<typeof selectStoryRoom>>((found, type) => found ?? selectStoryRoom(built,
-      { floor: 0, types: [type], reachableFromSpaceId: outside, excludeSpaceIds: [...usedRooms] }, hashSeed(`${spec.seed}:${role.id}:room-v13`)), null);
-    if (!own) throw new Error(`No ${place.rooms.join(' or ')} room for ${role.id} in ${tree.type}`);
+      { ...level, types: [type], reachableFromSpaceId: outside, excludeSpaceIds: [...usedRooms] }, hashSeed(`${spec.seed}:${role.id}:room-v13`)), null);
+    if (!own) throw new Error(`No ${place.rooms.join(' or ')} room${floor === 'upper' ? ' above the ground floor' : ''} for ${role.id} in ${tree.type}`);
     usedRooms.add(own.id); roomOf[role.id] = own.id;
   }
   // A walking route out for every room someone starts in; the scene's is 'exit'.
@@ -533,7 +550,17 @@ export function placeCast(tree: CallTree, built: BuiltLocation, spec: IncidentSp
     });
   }
   const cast = drawTreeCast(tree, spec, draws, Object.values(groups).flat());
-  return { recipe, situation, outside, room, roomOf, routes, routeName, anchors, cast, groups };
+  // R-B1: which roles start above the ground floor, for TreeState.upstairs.
+  const floorOf = new Map(built.location.rooms.map(entry => [entry.id, entry.floor]));
+  const above = (spaceId: string | undefined) => spaceId !== undefined && spaceId !== outside && (floorOf.get(spaceId) ?? 0) > 0;
+  const upstairs = Object.fromEntries([
+    ...tree.roles.filter(role => roomOf[role.id] !== undefined && roomOf[role.id] !== outside).map(role => [role.id, above(roomOf[role.id])]),
+    // A group means its leader's room, where its members start: only when the leader is inside,
+    // so a floor condition on a group led from outside or offsite is rejected like the leader's own.
+    ...Object.entries(tree.groups ?? {}).filter(([, def]) => roomOf[def.leader] !== undefined && roomOf[def.leader] !== outside)
+      .map(([group, def]) => [group, above(roomOf[def.leader])]),
+  ]);
+  return { recipe, situation, outside, room, roomOf, routes, routeName, anchors, cast, groups, upstairs };
 }
 
 /** The first opening on a route out that joins a room to the outside: the door it leaves the
@@ -563,11 +590,14 @@ export const memberId = (group: string, n: number) => `${group}_${n}`;
 export const memberCounts = (placed: Pick<PlacedCast, 'groups'>): Record<string, number> =>
   Object.fromEntries(Object.entries(placed.groups).map(([group, ids]) => [group, ids.length]));
 
-/** What this call's count and armed conditions read: its group sizes, and per group how many
- * members hold a weapon a look would see (`armedKey`). */
-export const callCounts = (placed: Pick<PlacedCast, 'groups' | 'armed'>): Record<string, number> => ({
+/** A call's compile-time facts, which every compile-time condition reads (countHolds): its group
+ * sizes, per group how many members hold a weapon a look would see (`armedKey`), and per role placed
+ * inside whether its room is upstairs (`upstairsKey`, 1 or 0). Named for counts, it holds facts
+ * about the building and the drawn cast too. */
+export const callCounts = (placed: Pick<PlacedCast, 'groups' | 'armed' | 'upstairs'>): Record<string, number> => ({
   ...memberCounts(placed),
   ...Object.fromEntries(Object.entries(placed.armed ?? {}).map(([group, n]) => [armedKey(group), n])),
+  ...Object.fromEntries(Object.entries(placed.upstairs ?? {}).map(([role, up]) => [upstairsKey(role), up ? 1 : 0])),
 });
 
 /** How this call's text binds: the drawn names, pronouns and ages, the building's name for
@@ -594,7 +624,13 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
     if (!authored.roles.some(role => role.id === def.leader)) throw new Error(`${authored.type}: group ${group} is led by ${def.leader}, who is not a role`);
     if (!/^[a-z][a-z_]*$/.test(group)) throw new Error(`${authored.type}: group id ${group} must be lower snake case`);
   }
-  const tree = treeForCounts(authored, callCounts({ groups, armed: placed.armed }));
+  // A floor condition reads a room inside: one on a role outside or offsite has no floor to read,
+  // so it is an authoring error, never a line the missing-fact default would let through.
+  for (const node of authored.nodes) for (const state of [...(node.promptIf ?? []).map(entry => entry.when), ...node.choices.flatMap(choice => [choice.onlyIf,
+    ...BANDS.flatMap(band => choice.outcomes[band].map(outcome => outcome.when))])])
+    for (const role of [...state?.upstairs ?? [], ...state?.notUpstairs ?? []]) if (placed.upstairs?.[role] === undefined)
+      throw new Error(`${authored.type}: ${node.id} reads whether ${role} is upstairs, but ${role} starts outside the building`);
+  const tree = treeForCounts(authored, callCounts({ groups, armed: placed.armed, upstairs: placed.upstairs }));
   const everyone = (roles: readonly string[] | undefined) => (roles ?? []).flatMap(role => groups[role] ?? [role]);
   /** A group where one person is meant (who fires, who force is used on, who is talked to): its
    * first member, nearest the door. A call with no members never offers that line. */
@@ -609,7 +645,7 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
   // Everyone on the map: the roles, then each group's members, who take their leader's kind.
   const present = [...onSite.map(role => ({ id: role.id, label: role.label, kind: role.kind })),
     ...Object.entries(groups).flatMap(([group, ids]) => ids.map(id => ({ id, label: tree.groups![group].label, kind: tree.roles.find(role => role.id === tree.groups![group].leader)!.kind })))];
-  const nodes = reachableNodes(tree, spec.seed, callCounts({ groups, armed: placed.armed }), clockNexts);
+  const nodes = reachableNodes(tree, spec.seed, callCounts({ groups, armed: placed.armed, upstairs: placed.upstairs }), clockNexts);
   // Anyone a choice in this call walks out needs that walk clear of furniture, as the engine
   // checks it; otherwise hosting moves the call to another building seed (the v12 rule).
   for (const node of nodes) for (const choice of node.choices) if (choice.walks && groups[choice.walks]) throw new Error(`${node.id}.${choice.id}: only a key role walks out, never the group ${choice.walks}`);
@@ -621,7 +657,7 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
   // Marks and releases this call can actually set (prunePlan). A condition that needs one it can
   // never set is never true here (drop it); one that needs it absent is always true (strip that
   // part). The tree's count conditions are already settled, so `possible` reads marks and safety.
-  const plan = prunePlan(tree, callCounts({ groups, armed: placed.armed }), clockMarks, spec.seed, clockNexts);
+  const plan = prunePlan(tree, callCounts({ groups, armed: placed.armed, upstairs: placed.upstairs }), clockMarks, spec.seed, clockNexts);
   const settable = { marks: plan.settableMarks, safe: plan.settableSafe };
   const possible = plan.possible;
   const trim = (state: TreeState | undefined): TreeState | undefined => state && {
