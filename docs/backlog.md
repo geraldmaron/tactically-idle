@@ -90,7 +90,9 @@ conditions that keep text true where the building doesn't allow it. Decided 2026
 request in order R-B1, R-B2, R-B3. R-B2's exit field is `walksVia` and is designed for rescue's
 R-R5 too. A place given as a step along a route declares what it must be, so text never names a
 room the building doesn't have there. R-B3 lands before `offsite-fire`, which builds on its
-positions.
+positions. When a building fact first gates a required
+need, `src/sim/board-suggestions.ts` must start reading it (public building facts only), with a test
+that a different building changes the board's list.
 
 ### rescue-engine-requests: Outcomes that change the scene
 Tags: job=command; journeys=choices-branch; probes=blueprint-building; lane=engine
@@ -178,14 +180,6 @@ Needs: start=barricade-model-first; integrate=none; ship=none
 
 High-risk warrant, robbery in progress, crisis barricade, vehicle standoff, built model-first. The
 standoff needs a roadside building family.
-
-### board-risk-card: Board risk card
-Tags: job=command; journeys=answer-a-call; probes=none (shows odds inputs, doesn't change them); lane=interface
-Needs: start=none; integrate=none; ship=none
-
-Suggested capabilities on the board before the player commits a squad. Needs a producer for risk
-and recommendations; `src/sim/operation-selectors.ts` already derives briefing recommendations
-from action equipment.
 
 ### meters-drift: Meters move with time
 Tags: job=command; journeys=chance-not-script; probes=metric-pressure; lane=engine
