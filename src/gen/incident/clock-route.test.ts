@@ -36,17 +36,21 @@ function template(next: Clock['onOut'] = CLOCK.onOut): IncidentTemplate {
   return { ...GROUP_TEMPLATE, tree, situations: GROUP_TEMPLATE.situations.map(situation => ({ ...situation, clocks: [clock] })) };
 }
 
-function call(t: IncidentTemplate) {
+/** The first call seed whose draw gives a lone taker and whose building hosts it: `compile` builds
+ * any template on it, so a test of a compile error compiles once instead of retrying every seed. */
+function host(t: IncidentTemplate) {
   for (let seed = 1; seed < 600; seed++) {
     const { clocks: _c, incidentPeople: _p, threats: _t, ...base } = generateIncident({ type: 'hostage_crisis', familyId: 'market_row', buildingSeed: 7, seed, tier: 2, contentVersion: 13 });
     const spec = hostedSpec(base), built = buildLocation(base.locationFamilyId, base.locationSeed);
     try {
       if ((memberCounts(drawInstance(t, built, spec).placed).others ?? 0) !== 0) continue;
-      return compileIncident({ ...base, id: `clock-route-${seed}`, incident: spec }, built, t);
+      const compile = (other: IncidentTemplate) => compileIncident({ ...base, id: `clock-route-${seed}`, incident: spec }, built, other);
+      return { s: compile(t), compile };
     } catch { continue; }
   }
   throw new Error('No seed draws a lone taker');
 }
+const call = (t: IncidentTemplate) => host(t).s;
 
 const id = (node: string, choice: string) => choiceActionId('hostage_crisis', node, choice);
 /** Call the shop, then hold at the glass, on the dice the run draws (natural moves, so the waits
@@ -84,7 +88,8 @@ describe('a clock that runs out moves the call (R-G4)', () => {
     expect(() => clockRoute(template().tree, { node: 'open' }, 1)).toThrow(/not a resolve node/);
     expect(() => clockRoute(template().tree, { node: 'talk' }, 1)).toThrow(/not a resolve node/);
     expect(clockRoute(template().tree, { ending: 'all_out' }, 1)).toMatchObject({ ending: 'all_out' });
-    expect(() => call(template({ mark: 'x', next: { node: 'talk' } }))).toThrow();
+    // On a seed that hosts the call, compiling the same template with an earlier-stage target throws.
+    expect(() => host(template()).compile(template({ mark: 'x', next: { node: 'talk' } }))).toThrow(/not a resolve node/);
   });
 
   it('a short choice that runs it out lands the call on that node, after the outcome, with only its choices', () => {
