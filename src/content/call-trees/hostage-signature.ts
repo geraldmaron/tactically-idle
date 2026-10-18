@@ -306,17 +306,17 @@ export const HOSTAGE_SIGNATURE: CallTree = {
             mixed: [{ text: '{courier.first} picks up {courier.his} bag and goes. {taker.first} says no more favors after this one, and {owner.first} stays until {owner.he} {owner~signs|sign}.', safe: ['courier'], mark: ['sign_demand'], moves: { taker: 'released' }, next: { node: 'standoff' }, objective: 20 }],
             adverse: [{ text: '{taker.first} says {courier.first} stays because the team asked. {courier.first} sits back down.', moves: { taker: 'provoked' }, next: { node: 'standoff' }, pressure: 8 }],
           } },
-        { id: 'team_glass', title: 'Move up to the glass', icon: 'perimeter', team: { to: { vantage: 'scene' }, signal: { channel: 'visual', to: 'taker' } }, check: check(MOVE), minutes: 3, consequenceLevel: 'moderate', onlyIf: LONE,
+        { id: 'team_glass', title: 'Move up to the glass', icon: 'perimeter', team: { to: { vantage: 'scene' }, signal: { channel: 'visual', to: 'taker' } }, check: check(MOVE), minutes: 3, consequenceLevel: 'moderate',
           summary: '{lead} brings your squad to the front windows, in plain sight of {taker.first}. Seeing you there could end the talking.',
           preview: { favorable: 'Once {taker.first} sees you, the phone gets answered.', mixed: '{taker.first} answers but moves {owner.first} out of view.', adverse: '{taker.first} retreats from the window and may drag {owner.first} along, handgun drawn.' },
           outcomes: {
-            favorable: [{ text: '{taker.first} sees officers at the windows and picks up the counter phone to ask what they are waiting for.', mark: ['team_close'], moves: { taker: 'team_seen' }, next: { node: 'talking' }, objective: 8 }],
-            mixed: [{ text: '{taker.first} answers, then pushes {owner.first} behind the shelves where nobody outside can see {owner.him}.', mark: ['team_close'], moves: { taker: 'team_seen' }, next: { node: 'talking' }, pressure: 6 }],
+            favorable: [{ text: '{taker.first} sees officers at the windows and picks up the counter phone to ask what they are waiting for.', mark: ['team_close', 'saw_inside'], moves: { taker: 'team_seen', others: 'team_seen' }, next: { node: 'talking' }, objective: 8 }],
+            mixed: [{ text: '{taker.first} answers, then pushes {owner.first} behind the shelves where nobody outside can see {owner.him}.', mark: ['team_close', 'owner_hidden'], moves: { taker: 'team_seen', others: 'team_seen' }, next: { node: 'talking' }, pressure: 6 }],
             adverse: escalate({
               lead: 'The blinds come down the moment {taker.first} spots the team.',
               threat: 'Through a gap in the slats, {taker.first} is holding {owner.first} by the arm, handgun raised.',
               quiet: 'The blinds stay down, and nobody picks up.',
-              extra: { mark: ['team_close'], moves: { taker: 'team_seen' }, pressure: 8 } }),
+              extra: { mark: ['team_close'], moves: { taker: 'team_seen', others: 'team_seen' }, pressure: 8 } }),
           } },
         { id: 'free_others', title: 'Give {others.first} a way out', icon: 'door', talksTo: 'others', check: check(TALK, 2), minutes: 4, onlyIf: GROUP_IN,
           summary: '{lead} lets {others} know the front is open to {others.him}. {taker.first} hears you pulling {taker.his} people away.',
@@ -443,6 +443,12 @@ export const HOSTAGE_SIGNATURE: CallTree = {
       promptIf: [
         { when: { marks: ['owner_unwell'] }, prompt: '{owner.first} is sitting on the tiles near the till while the call goes on.' },
         { when: { marks: ['wants_back'] }, prompt: 'The alley door is the exit {taker.first} asked for. {owner.first} waits behind the register.' },
+        // What the team saw from the glass (team_glass favorable, the only setter of saw_inside):
+        // the coworkers' weapons, kept per call by how many hold one (TreeState.armed).
+        { when: { count: { role: 'others', min: 1, max: 1 }, notMarks: ['others_out'], marks: ['saw_inside'], armed: { role: 'others', min: 1 } }, prompt: 'You saw {others.first} pull a steel bar from under the counter. {courier.first} hasn’t left the boxes.' },
+        { when: { count: { role: 'others', min: 2 }, notMarks: ['others_out'], marks: ['saw_inside'], armed: { role: 'others', min: 2 } }, prompt: 'You watched both coworkers take steel bars from under the counter. {courier.first} sits by the street door.' },
+        { when: { count: { role: 'others', min: 2 }, notMarks: ['others_out'], marks: ['saw_inside'], armed: { role: 'others', min: 1 } }, prompt: 'One coworker has a steel bar now, within reach of {owner.first}. {courier.first} waits near the entrance.' },
+        { when: { marks: ['owner_hidden'] }, prompt: '{owner.first} is behind the shelves now, out of sight of the glass. {courier.first} sits tight by the door.' },
         { when: { notSafe: ['courier'] }, prompt: 'The negotiator has {taker.first} talking. {courier.first} is near the entrance, and {owner.first} is by the till.' },
         { when: { ...GROUP, marks: ['others_out'] }, prompt: 'With {others} gone, {taker.first} is alone in there with {owner.first} and the phone.' },
         { when: GROUP_IN, prompt: 'The receiver is in {taker.first}’s hand. {others} {others#hovers|hover} near {owner.first}.' },
@@ -632,6 +638,7 @@ export const HOSTAGE_SIGNATURE: CallTree = {
       promptIf: [
         { when: { marks: ['owner_down'] }, prompt: '{owner.first} has collapsed on the tiles. {taker.first} is screaming at someone to do something.' },
         { when: { marks: ['owner_unwell'] }, prompt: '{owner.first} is breathing hard behind the till, and {taker.first} has stopped making offers.' },
+        { when: { marks: ['owner_hidden'] }, prompt: '{owner.first} is still out of sight behind the shelves, and the counter phone has gone quiet.' },
         { when: { marks: ['silent'] }, prompt: 'Every call goes unanswered. {owner.first} sits at the register within {taker.first}’s reach.' },
         { when: { marks: ['sign_demand'] }, prompt: '{taker.first} insists {owner.first} signs before anyone goes anywhere. {owner.He} {owner~waits|wait} by the cash drawer.' },
         { when: { notSafe: ['courier'] }, prompt: 'The bargaining is over. {courier.first} is still near the exit, while {owner.first} keeps to the stool.' },

@@ -771,3 +771,41 @@ unchanged from main apart from the fixed lines); `npx vitest run` on call-trees 
 (79 tests); `compiled-fingerprints.test.ts` fails on the hostage keys as expected (the lead
 recaptures); `src/dev/lab/model/describe.test.ts` fails because it pins the duplicate title NF8
 removes (tooling lane, routed through the lead).
+
+## The armed line (R-G1 in use, 2026-10-18)
+
+`TreeState.armed` landed with `intel-odds` (#45). The call now names a coworker's weapon, but only
+after the team has seen it.
+
+- Design change. `both_inside.team_glass` was lone-only. It is now offered in group calls too, so
+  the group menu is wait_silence, ask_again, team_glass, free_others (4, the skill's maximum). Its
+  favorable band alone sets `saw_inside` (no `back` in that band), which satisfies the compile-time
+  reveal rule (`armedRevealErrors`). All three bands move the coworkers as well as the taker
+  (`team_seen`), as `team_alley` already did. The mixed band sets `owner_hidden`, read by a new
+  `talking` prompt ("{owner.first} is behind the shelves now, out of sight of the glass."), which
+  fixes a line that said the owner was by the till right after the mixed result hid them, a fault
+  lone calls already had.
+- `owner_hidden` readers: the `talking` prompt above and a `standoff` prompt after `owner_unwell`.
+- Lines, in `talking.promptIf` after `owner_unwell` and `wants_back`:
+  - one coworker, armed: "You saw {others.first} pull a steel bar from under the counter.
+    {courier.first} hasn’t left the boxes."
+  - two coworkers, both armed: "You watched both coworkers take steel bars from under the counter.
+    {courier.first} sits by the street door."
+  - two coworkers, one armed: "One coworker has a steel bar now, within reach of {owner.first}.
+    {courier.first} waits near the entrance."
+- Which draws keep them, checked on the compiled call (scratch script over 360 draws, seeds 1 to
+  120 on each family, not the lab, whose armed display is the open `lab-armed-counts` item): one
+  coworker unarmed 48, kept none; one armed 54, kept line 1; two with none armed 12, kept none; two
+  with one armed 24, kept line 3; two both armed 3, kept lines 2 and 3, line 2 shown first; lone
+  219, kept none. Every compile passed the reveal rule.
+- Separate reader (swat-writing-review, fresh subagent): edit, with five fixes before ship (the
+  group list in "One of {others}", a doubled "from", the courier dropping out of the prompt, the
+  coworkers' `team_seen`, the owner behind the shelves) and two notes (one stash place, "under the
+  counter", applied; and the empty-hands case, below), all applied. Re-read: edit, one fix before
+  ship (the shelves line dropped the courier, now "{courier.first} sits tight by the door.") and a
+  note (`standoff` still put the owner on the stool after `owner_hidden`; a `standoff` prompt now
+  reads it: "{owner.first} is still out of sight behind the shelves, and the counter phone has gone
+  quiet."), both applied.
+- Request (engineering): `TreeState.armed` with `max` (or `max: 0`), so a look that finds empty
+  hands can say so. Today an unarmed group shows no line after the look, and the player can't tell
+  empty hands from not looking (fake-choice 5).
