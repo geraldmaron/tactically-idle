@@ -10,7 +10,7 @@ is complete as a design and still waits on engine work (row O) before tree data 
 ## A. Lane and version
 
 - Lane: call tree (v13). The calls lane owns the new `CallTree`
-  (`src/content/call-trees/barricade-boxes.ts`, name to confirm) and the rewritten
+  (planned as barricade-boxes.ts in the call-trees folder, name to confirm) and the rewritten
   `IncidentTemplate` (`src/content/incidents/barricade.ts`). The compiler owns node flags,
   routing, binding, placement, cascade, force and fire lines, command lines and rewards by tier.
   `src/content/call-trees/types.ts` and `src/content/incidents/types.ts` are engine files
