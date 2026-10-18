@@ -1,6 +1,7 @@
 import type { ActionDefinition, OutcomeEffect, ScenarioDefinition } from './scenario-types';
-import type { CivilianOutcomeView, ForceOutcome, GameState, Id, OfficerCasualtyRecord, OperationRun, OutcomeBand, PersonCasualtyRecord } from './types';
-import { protectedOfficerEffects, selectedForceRisk, selectedProtection, validForceOutcome } from './force-risk';
+import type { CivilianOutcomeView, GameState, Id, OfficerCasualtyRecord, OperationRun, OutcomeBand, PersonCasualtyRecord } from './types';
+import { withVariants } from '../gen/incident/drawn-model';
+import { protectedOfficerEffects, selectedProtection } from './force-risk';
 import { ITEMS } from '../content/items';
 import type { Use } from './resolution';
 import { officerNeedingFieldCare } from './physical-care';
@@ -15,7 +16,7 @@ function casualtySnapshot(person: OfficerCasualtyRecord): OfficerCasualtyRecord 
 }
 
 export function incidentOfficerUnavailable(state: GameState, run: OperationRun, officerId: Id): boolean {
-  if (run.scenarioVersion < 4) return false;
+
   return !!run.officerCasualties?.[officerId]
     || !!(state.officers[officerId]?.injury && state.officers[officerId].injury!.until > state.department.clockHighWater);
 }
@@ -37,7 +38,7 @@ export function syncCasualtyFlags(run: Pick<OperationRun, 'flags' | 'officerCasu
 export function civilianOutcomeViews(scenario: ScenarioDefinition, run: Pick<OperationRun, 'flags' | 'knowledge' | 'personCasualties'>): CivilianOutcomeView[] {
   return (scenario.civilianOutcomes ?? []).map(person => {
     const knowledge = run.knowledge[person.factId] ?? 'unknown';
-    const casualty = scenario.version >= 7 ? run.personCasualties?.[person.id] : undefined;
+    const casualty = run.personCasualties?.[person.id];
     const status: CivilianOutcomeView['status'] = casualty?.severity === 'fatal' ? 'deceased'
       : casualty ? casualty.care === 'accepted' ? 'care_accepted' : 'injured_needs_care'
       : run.flags.includes(person.careFlag) ? 'care_accepted'
@@ -79,12 +80,12 @@ export function applyIncidentConsequences(state: GameState, run: OperationRun, s
         const officer = state.officers[id];
         const { severity, label } = effect.officerHarm;
         const recoveryUntil = Math.max(officer.injury?.until ?? 0, state.department.clockHighWater + INJURY_RECOVERY_HOURS[severity] * HOUR);
-        const position = scenario.version >= 7 ? positions?.[id] : undefined;
+        const position = positions?.[id];
         const record: OfficerCasualtyRecord = { officerId: id, severity, label, at: run.clock, care: 'needed', recoveryUntil,
           ...(position ? { position: { spaceId: position.spaceId, at: { ...position.at } } } : {}) };
         run.officerCasualties ??= {};
         run.officerCasualties[id] = record;
-        if (!run.practice) officer.injury = { label, until: recoveryUntil };
+        officer.injury = { label, until: recoveryUntil };
         records.push(casualtySnapshot(record));
         text.push(`${officer.firstName} ${officer.surname} was ${severity === 'serious' ? 'seriously wounded' : 'wounded'} and is out of action. Medical care and transport are still needed.`);
       }
@@ -95,7 +96,7 @@ export function applyIncidentConsequences(state: GameState, run: OperationRun, s
         person.care = 'stabilized';
         person.recoveryUntil = Math.min(person.recoveryUntil, Math.max(state.department.clockHighWater, Math.round(state.department.clockHighWater + (person.recoveryUntil - state.department.clockHighWater) * 0.8)));
         const officer = state.officers[person.officerId];
-        if (!run.practice && officer) officer.injury = { label: person.label, until: person.recoveryUntil };
+        if (officer) officer.injury = { label: person.label, until: person.recoveryUntil };
         records.push(casualtySnapshot(person));
         text.push(`${officer?.firstName ?? ''} ${officer?.surname ?? person.officerId} received field care. They remain out of action and still need transport.`.trim());
       }
@@ -133,7 +134,7 @@ function sameCasualtyPosition(a: OfficerCasualtyRecord, b: OfficerCasualtyRecord
 const PERSON_CASUALTY_FLAGS = ['casualty:people', 'casualty:person_fatality', 'casualty:person_needs_care'];
 
 export function syncPersonCasualtyFlags(run: Pick<OperationRun, 'flags' | 'personCasualties'>, scenario: ScenarioDefinition): void {
-  if (scenario.version < 7) return;
+
   const people = Object.values(run.personCasualties ?? {});
   run.flags = run.flags.filter(flag => !PERSON_CASUALTY_FLAGS.includes(flag) && !flag.startsWith('person_harm:') && !flag.startsWith('person_care:'));
   if (people.length) run.flags.push('casualty:people');
@@ -152,7 +153,7 @@ export function syncPersonCasualtyFlags(run: Pick<OperationRun, 'flags' | 'perso
 
 /** These are committed injuries, never hidden medical facts or predictions. */
 export function personCasualtyActionIssue(run: Pick<OperationRun, 'personCasualties'>, scenario: ScenarioDefinition, action: ActionDefinition): string | null {
-  if (scenario.version < 7) return null;
+
   for (const id of action.requires.responsivePeople ?? []) {
     const participant = run.personCasualties?.[id];
     if (participant) return participant.severity === 'fatal' ? `${participant.label} has died and cannot take part in this exchange` : `${participant.label} needs recorded medical care; this ordinary conversation no longer applies`;
@@ -174,11 +175,15 @@ export function personCasualtyActionIssue(run: Pick<OperationRun, 'personCasualt
     return null;
   }
   if (person?.severity === 'fatal') return `${person.label} has died and cannot take part in this action`;
-  if (person && (action.check.kind === 'contact' || action.forceProfile || action.storyRouteActor === 'person')) return `${person.label} is injured; medical care must take priority over this action`;
+  // V13: a call tree gets a hurt civilian to care by getting them out (a clock that ran out while
+  // they were inside, sim/clocks.ts), so walking them out, and the safe flag it sets, still apply.
+  // Talking to them or using force on them does not.
+  const treeCare = (casualty: PersonCasualtyRecord) => casualty.personRole === 'civilian' && casualty.severity !== 'fatal';
+  if (person && (action.check.kind === 'contact' || action.forceProfile || (action.storyRouteActor === 'person' && !treeCare(person)))) return `${person.label} is injured; medical care must take priority over this action`;
   // Generic civilian choices may identify their recipient only through outcome flags.
   for (const casualty of Object.values(run.personCasualties ?? {})) {
     const civilian = scenario.civilianOutcomes?.find(candidate => candidate.id === casualty.personId);
-    if (civilian && Object.values(action.outcomes).flat().some(effect => effect.setFlags?.some(flag => flag === civilian.safeFlag || flag === civilian.careFlag)))
+    if (civilian && !treeCare(casualty) && Object.values(action.outcomes).flat().some(effect => effect.setFlags?.some(flag => flag === civilian.safeFlag || flag === civilian.careFlag)))
       return `${casualty.label} ${casualty.severity === 'fatal' ? 'has died' : 'needs recorded medical care'}; this ordinary safe-outcome choice no longer applies`;
     const binding = Object.values(scenario.story?.bindings.people ?? {}).find(person => person.id === casualty.personId);
     if (casualty.severity === 'fatal' && binding?.transitions.some(transition => transition.when.flags?.some(flag => Object.values(action.outcomes).flat().some(effect => effect.setFlags?.includes(flag)))))
@@ -187,22 +192,38 @@ export function personCasualtyActionIssue(run: Pick<OperationRun, 'personCasualt
   return null;
 }
 
-export function applyPersonConsequences(run: OperationRun, scenario: ScenarioDefinition, action: ActionDefinition, band: OutcomeBand, effects: OutcomeEffect[], force?: ForceOutcome): { records: PersonCasualtyRecord[]; text: string[] } {
+const HARM_PENALTY = { wounded: 10, serious: 24, fatal: 60 } as const;
+const HARM_RANK = { wounded: 1, serious: 2, fatal: 3 } as const;
+
+/** V13 authored harm from the matched effects of one decision: one record per person, the worst
+ * severity, never a lesser injury over an existing record. The narration is authored. */
+function authoredHarm(run: Pick<OperationRun, 'personCasualties' | 'clock' | 'revision'>, scenario: ScenarioDefinition, effects: OutcomeEffect[]): PersonCasualtyRecord[] {
+  const worst = new Map<Id, 'wounded' | 'serious' | 'fatal'>();
+  for (const harm of effects.flatMap(effect => effect.personHarm ?? [])) {
+    const was = worst.get(harm.personId);
+    if (!was || HARM_RANK[harm.severity] > HARM_RANK[was]) worst.set(harm.personId, harm.severity);
+  }
+  const out: PersonCasualtyRecord[] = [];
+  for (const [personId, severity] of worst) {
+    const prior = run.personCasualties?.[personId];
+    if (prior && HARM_RANK[prior.severity] >= HARM_RANK[severity]) continue;
+    const binding = scenario.story?.bindings.people[personId];
+    if (!binding) continue;
+    out.push({ personId, personRole: binding.publicKind === 'subject' ? 'subject' : 'civilian', label: binding.label, severity, at: run.clock,
+      care: severity === 'fatal' ? 'deceased' : 'needed', causeRevision: run.revision });
+  }
+  return out;
+}
+
+export function applyPersonConsequences(run: OperationRun, scenario: ScenarioDefinition, action: ActionDefinition, band: OutcomeBand, effects: OutcomeEffect[]): { records: PersonCasualtyRecord[]; text: string[] } {
   const records: PersonCasualtyRecord[] = [];
   const text: string[] = [];
-  if (scenario.version < 7) return { records, text };
-  if (force) {
-    if (force.severity === 'none') text.push(`${force.personLabel}: no new injury was recorded from ${ITEMS[force.itemId].name.toLowerCase()} use. The task result is separate.`);
-    else {
-      const person: PersonCasualtyRecord = { personId: force.personId, personRole: force.personRole, label: force.personLabel,
-        severity: force.severity, at: run.clock, care: force.severity === 'fatal' ? 'deceased' : 'needed', causeRevision: run.revision };
-      run.personCasualties ??= {};
-      run.personCasualties[person.personId] = person;
-      records.push({ ...person });
-      const penalty = { wounded: 10, serious: 24, fatal: 60 }[person.severity];
-      run.civilianSafety = Math.max(0, Math.round((run.civilianSafety - penalty) * 10) / 10);
-      text.push(`${person.label} (${person.personRole}) ${person.severity === 'fatal' ? 'died' : person.severity === 'serious' ? 'was seriously injured' : 'was injured'} following ${ITEMS[force.itemId].name.toLowerCase()} use. ${person.severity === 'fatal' ? 'The fatality remains part of the incident; ordinary safe resolution is no longer possible.' : 'Medical care and an accepting medical crew are still needed.'}`);
-    }
+
+  for (const event of authoredHarm(run, scenario, effects)) {
+    run.personCasualties ??= {};
+    run.personCasualties[event.personId] = event;
+    records.push({ ...event });
+    run.civilianSafety = Math.max(0, Math.round((run.civilianSafety - HARM_PENALTY[event.severity]) * 10) / 10);
   }
   const care = action.personCare;
   const person = care ? run.personCasualties?.[care.personId] : undefined;
@@ -229,10 +250,10 @@ export function validPersonCasualtyRecord(value: unknown): value is PersonCasual
     && (person.severity === 'fatal' ? person.care === 'deceased' : ['needed', 'stabilized', 'accepted'].includes(person.care));
 }
 
-/** Rebuild V7 causal records from immutable decisions; reject detached gear, supplies,
+/** Rebuild causal records from immutable decisions; reject detached gear, supplies,
  * invented targets, changed severity, resurrection and unearned care transitions. */
 export function validPersonConsequences(run: OperationRun, scenario: ScenarioDefinition, state: GameState): boolean {
-  if (scenario.version < 7) return run.personCasualties === undefined && run.history.every(decision => decision.committed?.forceOutcome === undefined && decision.committed?.personCasualties === undefined && decision.committed?.protectionUsed === undefined);
+
   if (run.personCasualties !== undefined && (!run.personCasualties || typeof run.personCasualties !== 'object' || Array.isArray(run.personCasualties))) return false;
   const expected: Record<Id, PersonCasualtyRecord> = {};
   const spent = new Set<Id>();
@@ -241,16 +262,15 @@ export function validPersonConsequences(run: OperationRun, scenario: ScenarioDef
     clock = Math.round((clock + decision.timeCost) * 10) / 10;
     const action = scenario.stages[decision.stage].actions.find(candidate => candidate.id === decision.actionId);
     if (!action || !decision.committed) return false;
-    const force = decision.committed.forceOutcome;
-    if (!!action.forceProfile !== !!force || personCasualtyActionIssue({ personCasualties: expected }, scenario, action)) return false;
+    if (decision.committed.forceOutcome || personCasualtyActionIssue({ personCasualties: expected }, scenario, action)) return false;
     if (new Set(decision.unitsUsed).size !== decision.unitsUsed.length) return false;
     const uses: Use[] = [];
     for (const unitId of decision.unitsUsed) {
-      const itemId = run.practice && unitId.startsWith('practice_') ? unitId.slice('practice_'.length) : state.units[unitId]?.itemId;
+      const itemId = state.units[unitId]?.itemId;
       const item = itemId ? ITEMS[itemId] : undefined;
       const reservation = state.reservations.find(reservation => reservation.runId === run.id && reservation.unitId === unitId);
-      if (!item || !run.practice && !reservation || item.kind === 'consumable' && spent.has(unitId)) return false;
-      const squadId = reservation?.squadId ?? decision.actingSquadIds[0];
+      if (!item || !reservation || item.kind === 'consumable' && spent.has(unitId)) return false;
+      const squadId = reservation.squadId;
       if (!decision.actingSquadIds.includes(squadId) && !decision.supportSquadIds.includes(squadId) && !item.supportOnly) return false;
       uses.push({ unitId, itemId: item.id, qty: 1, consumable: item.kind === 'consumable', squadId });
       if (item.kind === 'consumable') spent.add(unitId);
@@ -259,17 +279,17 @@ export function validPersonConsequences(run: OperationRun, scenario: ScenarioDef
     for (const use of uses) counts.set(use.itemId, (counts.get(use.itemId) ?? 0) + 1);
     if (decision.itemsConsumed.length !== counts.size || decision.itemsConsumed.some(use => counts.get(use.itemId) !== use.qty || use.qty <= 0)) return false;
     const events: PersonCasualtyRecord[] = [];
-    if (force) {
-      if (!validForceOutcome(force)) return false;
-      const risk = selectedForceRisk(scenario, action, uses);
-      if (!risk || (Object.keys(risk) as (keyof typeof risk)[]).some(key => risk[key] !== force[key])) return false;
-      const item = ITEMS[force.itemId];
-      const user = uses.find(use => use.unitId === force.unitId)!;
-      if (!decision.actingSquadIds.includes(user.squadId) || !decision.officerIds.some(id => state.squads.find(squad => squad.id === user.squadId)?.officerIds.includes(id)
-        && (item.requiresCerts ?? []).every(cert => state.officers[id]?.certs.includes(cert)))) return false;
-      if ((item.supplies ?? []).some(supply => supply.itemId !== 'battery_pack' && uses.filter(use => use.itemId === supply.itemId && use.consumable).length < supply.qty)) return false;
-      if (force.severity !== 'none') events.push({ personId: force.personId, personRole: force.personRole, label: force.personLabel, severity: force.severity, at: clock,
-        care: force.severity === 'fatal' ? 'deceased' : 'needed', causeRevision: decision.revision });
+    // Authored harm (v13): each record must be one this action's band can produce, at this clock,
+    // or one a clock running out records on its owner (sim/clocks.ts clockOutEffects).
+    const actualRecords = decision.committed.personCasualties ?? [];
+    const possible = [...withVariants(action.outcomes[decision.band]).flatMap(effect => effect.personHarm ?? []),
+      ...((scenario.clocks ?? []).flatMap(clock => clock.onOut?.harm && clock.owner ? [{ personId: clock.owner, severity: clock.onOut.harm }] : []))];
+    for (const record of actualRecords.slice(events.length)) {
+      if (!possible.some(harm => harm.personId === record.personId && harm.severity === record.severity)) break;
+      const binding = scenario.story?.bindings.people[record.personId];
+      if (!binding) return false;
+      events.push({ personId: record.personId, personRole: binding.publicKind === 'subject' ? 'subject' : 'civilian', label: binding.label, severity: record.severity, at: clock,
+        care: record.severity === 'fatal' ? 'deceased' : 'needed', causeRevision: decision.revision });
     }
     const care = action.personCare;
     const person = care ? expected[care.personId] : undefined;
@@ -295,7 +315,7 @@ export function validPersonConsequences(run: OperationRun, scenario: ScenarioDef
 
 /** Validate immutable saved injury snapshots, their transitions and the final public flags. */
 export function validIncidentConsequences(run: OperationRun, scenario: ScenarioDefinition, officers: GameState['officers'], squads: GameState['squads'], now: number): boolean {
-  if (scenario.version < 4) return run.officerCasualties === undefined;
+
   if (run.officerCasualties === undefined) return !run.history.some(decision => decision.committed?.officerCasualties?.length);
   if (!run.officerCasualties || typeof run.officerCasualties !== 'object' || Array.isArray(run.officerCasualties)) return false;
   const expected: Record<Id, OfficerCasualtyRecord> = {};
@@ -305,7 +325,7 @@ export function validIncidentConsequences(run: OperationRun, scenario: ScenarioD
     clock = Math.round((clock + decision.timeCost) * 10) / 10;
     const action = scenario.stages[decision.stage].actions.find(candidate => candidate.id === decision.actionId);
     if (!action) return false;
-    const possible = protectedOfficerEffects(action.outcomes[decision.band], scenario.version >= 7 ? decision.committed?.protectionUsed : undefined);
+    const possible = protectedOfficerEffects(withVariants(action.outcomes[decision.band]), decision.committed?.protectionUsed);
     for (const event of decision.committed?.officerCasualties ?? []) {
       if (!validCasualtyRecord(event) || !deployed.has(event.officerId) || event.at > clock) return false;
       const before = expected[event.officerId];
@@ -315,7 +335,7 @@ export function validIncidentConsequences(run: OperationRun, scenario: ScenarioD
       } else {
         if (event.at !== before.at || event.severity !== before.severity || event.label !== before.label || !sameCasualtyPosition(event, before)) return false;
         if (event.care === 'stabilized') {
-          if (before.care !== 'needed' || !possible.some(effect => effect.officerCare === 'stabilize') || !decision.itemsConsumed.some(use => use.itemId === 'trauma_kit' && use.qty >= 1) && !run.practice) return false;
+          if (before.care !== 'needed' || !possible.some(effect => effect.officerCare === 'stabilize') || !decision.itemsConsumed.some(use => use.itemId === 'trauma_kit' && use.qty >= 1)) return false;
           if (event.recoveryUntil > before.recoveryUntil) return false;
         } else if (event.care === 'evacuated') {
           if (before.care === 'evacuated' || !possible.some(effect => effect.officerCare === 'evacuate') || event.recoveryUntil !== before.recoveryUntil) return false;
@@ -329,7 +349,7 @@ export function validIncidentConsequences(run: OperationRun, scenario: ScenarioD
   for (const [id, person] of Object.entries(expected)) {
     const actual = run.officerCasualties[id];
     if (!actual || !validCasualtyRecord(actual) || !sameCasualtyPosition(actual, person) || (Object.keys(person) as (keyof OfficerCasualtyRecord)[]).some(key => key !== 'position' && actual[key] !== person[key])) return false;
-    if (!run.practice && person.recoveryUntil > now && (!officers[id]?.injury || officers[id].injury!.label !== person.label || officers[id].injury!.until !== person.recoveryUntil)) return false;
+    if (person.recoveryUntil > now && (!officers[id]?.injury || officers[id].injury!.label !== person.label || officers[id].injury!.until !== person.recoveryUntil)) return false;
   }
   const flags = casualtyFlags(expected);
   return CASUALTY_FLAGS.every(flag => run.flags.includes(flag) === flags.includes(flag));

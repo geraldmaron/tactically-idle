@@ -3,15 +3,14 @@ import { hashSeed } from '../../sim/rng';
 import { deriveStagingPoints } from '../../sim/location';
 import { findRoomPath, footprintRect, roomSegmentClear } from '../../sim/furniture-path';
 import {
-  accessRectAt, box, centroid, centre, FRONT, furnishedFamilyIdV7, furnishingDoorApproaches, furnitureInsideRoom, inflate, inside, OPPOSITE,
+  accessRectAt, box, centroid, centre, FRONT, furnishedFamilyId, furnishingDoorApproaches, furnitureInsideRoom, inflate, inside, OPPOSITE,
   RoomPlan, validateFurnishings, type Candidate, type FurnishingCatalog, type Rect, type Side,
-} from './furnishing-v7';
+} from './furnishing';
 import { FURNITURE_G1, type FurnishingKeyG1 } from './furnishing-definitions-g1';
 
-/** Furnishing for generated `_g1` buildings: v7's solver (wall anchoring, service fronts,
- * opening and swing clearances, obstacle-aware routes between every approach) with a catalog and
- * kits for every room the generator makes. Its output is part of the `_g1` content identity, so
- * the same rules as procedural/README.md apply: change it only as a new generation. */
+/** Furnishing for current generated buildings, using the shared solver with a catalog and
+ * kits for every room the generator makes. The G1 names identify this furnishing catalog;
+ * current g2 building generation uses it too. */
 export const CATALOG_G1: FurnishingCatalog = { defs: FURNITURE_G1, idPrefix: 'g1', rankSalt: 'furnishing:g1' };
 
 export type RoomKindG1 =
@@ -472,7 +471,7 @@ class G1Plan extends RoomPlan {
  * same `__furnished_v7` family key (the furnished-route rules key on it). */
 export function furnishLocationG1(base: LocationDefinition): LocationDefinition {
   const loc = structuredClone(base);
-  loc.id = furnishedFamilyIdV7(base.id); loc.version = 7;
+  loc.id = furnishedFamilyId(base.id); loc.version = 7;
   const roomIds = new Set(loc.rooms.map(room => room.id)), approaches = approachesOf(loc);
   loc.objects = [...loc.objects.filter(object => !roomIds.has(object.in)), ...loc.rooms.flatMap(room => {
     // Window staging points are kept clear when the room's essentials still fit; a half bath with
@@ -493,7 +492,7 @@ export function furnishingKeyG1(object: PlacedObject): FurnishingKeyG1 | null {
   return key in FURNITURE_G1 ? key as FurnishingKeyG1 : null;
 }
 
-/** validateFurnishingsV7's checks with the g1 catalog's service fronts, and every door and
+/** validateAuthoredFurnishings's checks with the g1 catalog's service fronts, and every door and
  * doorway staging point in a room clear of furniture and joined to the room's other approaches.
  * Window staging points are best effort (see furnishLocationG1) and are counted by the tests. */
 export function validateFurnishingsG1(loc: LocationDefinition): string[] {
@@ -548,4 +547,3 @@ function roomShortfalls(loc: LocationDefinition, room: Room, objects: readonly P
 }
 /** Seats a bar room of `size` sq ft must offer: about one per 45 sq ft, at most twelve. */
 const BAR_SEATS = (size: number) => Math.min(12, Math.floor(size / 45));
-

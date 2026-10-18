@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { apply, makeState, NOW, setRun, startRun, unitId } from '../../sim/test-fixtures';
 import { getScenario } from '../../sim/scenario-registry';
 import { RESUPPLY_HANDLERS } from '../../sim/equipment-resupply';
-import { generateIncident } from '../../gen/incident';
+
 import { previewAction } from '../../sim/operation-selectors';
 import { OpsLive } from './OpsLive';
 
@@ -94,25 +94,7 @@ describe('support review panel transitions and repeated confirmations', () => {
 });
 
 describe('player decisions and inventory are separate', () => {
-  it('opens legacy response choices without a decision, simulation costs or duplicate transitions', () => {
-    const scenario = generateIncident({ type: 'welfare_check', familyId: 'cedar_close', buildingSeed: 7, seed: 3, tier: 1, contentVersion: 3 });
-    const assessed = apply(startRun(makeState(), scenario.id, ['A'], { practice: true }), { type: 'decide', actionId: 'v3_welfare_contact', actingSquadIds: ['A'], supportSquadIds: [] });
-    expect(assessed.result.ok).toBe(true);
-    state = assessed.state;
-    const screen = render();
-    const continuation = screen.props.continuations[0];
-    expect(continuation).toBeDefined();
-    expect(screen.props.actions.some((action: { id: string }) => action.id === continuation.actionId)).toBe(false);
-    const before = structuredClone(state.activeRun!);
-    screen.props.onContinueStage(continuation.actionId);
-    const after = structuredClone(state.activeRun!);
-    expect(after.stage).toBe('resolve');
-    for (const key of ['clock', 'pressure', 'rngState', 'revision', 'history', 'squadTasks', 'reservationIds', 'knowledge'] as const) expect(after[key]).toEqual(before[key]);
-    screen.props.onContinueStage(continuation.actionId);
-    expect(state.activeRun).toEqual(after);
-    expect(act.mock.calls.map(([command]) => command.type)).toEqual(['continueStage']);
-    expect(render().props.selectedAction).toBeNull();
-  });
+
 
   it('starts without a selected decision and cannot confirm through unopened or empty details', () => {
     const first = render();

@@ -1,12 +1,13 @@
 import { actionEquipmentRequirements, effectiveTags, normalizedActionConsumption, operatorQualified, orderActionParticipants } from './equipment-requirements';
 import { casualtyActionIssue, incidentOfficerUnavailable, personCasualtyActionIssue } from './incident-consequences';
-import { selectedForceRisk, selectedProtection } from './force-risk';
+import { selectedProtection } from './force-risk';
 import { externalSupportActionIssue, remainingSupportWait } from './external-support';
 import { evaluateCapabilities } from './capabilities';
-import { getScenario } from './scenario-registry';
 import { hydrateStoryAction, storyActionTarget, storyPropsPublic, storyPublicScenario } from './story-people';
-import { currentStoryRoute, findStoryRoute } from './story-bindings';
-import { publicStoryMovementLegs } from './story-movement-v7';
+import { incidentFactors } from './incident-factors';
+import { authorize } from './authorization';
+import { currentStoryRoute, findStoryRoute } from '../gen/incident/story-bindings';
+import { publicStoryMovementLegs } from './story-movement';
 import { joinCareRoutes, physicalCare } from './physical-care';
 // Operation resolution: eligibility, contributors, score, probability and strain.
 // Pure functions of (state, run, scenario, action, squads). No randomness is drawn
@@ -24,7 +25,6 @@ import { joinCareRoutes, physicalCare } from './physical-care';
 import type {
   BuiltLocation,
   Contributor,
-  ForceRiskPreview,
   GameState,
   Id,
   ItemDefinition,
@@ -40,12 +40,15 @@ import type {
   SquadId,
   Vec,
 } from './types';
-import type { ActionDefinition, CheckKind, Condition, EquipmentEffect, ScenarioDefinition } from './scenario-types';
+import type { ActionDefinition, AuthorityResult, CheckKind, Condition, EquipmentEffect, ScenarioDefinition } from './scenario-types';
 import { buildLocation, deriveLocation } from './location';
-import { highRiskAllowed } from './officer';
+import { conditionFraction, EXPERIENCE_TUNING, highRiskAllowed } from './officer';
+import { CERT_HOLDER, isCertId } from '../content/certs';
 import { squadUnits, unitEffectiveness } from './inventory';
 import { ageYears, experienceBand, gameDay } from './calendar';
 import { signalBetween } from './spatial';
+import { signalCarry } from './environment';
+import { vantageZones } from './sightlines';
 import {
   assessSignal,
   centroidOf,
@@ -53,8 +56,7 @@ import {
   rangeThroughOpening,
   rangeToPoint,
   resolveSubject,
-  routeAlongOpenings,
-  routeBetween,
+  spaceLabel,
   SPATIAL_TUNING,
   standingCandidates,
   standingFromPoint,
@@ -62,15 +64,20 @@ import {
   stagingFacing,
   type EntryExposure,
   type RangeResult,
-  type Route,
   type SignalAssessment,
   type Standing,
   type Subject,
 } from './spatial-factors';
+import { routeAlongOpenings, routeBetween, type Route } from './routes';
 import { ITEMS } from '../content/items';
 import { projectedCondition } from './equipment';
+import { tunable } from './tuning';
+import { conditionHolds } from './conditions';
+import { departmentUpkeep } from './equipment-manager-policy';
 
-export const RESOLUTION_TUNING = {
+/** Tunable (sim/tuning.ts). The guard keeps the forced-band tails, the span and the band thresholds
+ * usable: forced bands aim at setback/2 and 1 - luck/2, so neither tail may vanish. */
+export const RESOLUTION_TUNING = tunable('RESOLUTION_TUNING', {
   /** Rating (0..100) to score points for the lead seat. */
   ratingScale: 0.55,
   /** Seat weights: best officer first. Later seats add little. */
@@ -83,9 +90,6 @@ export const RESOLUTION_TUNING = {
   /** Fixed tails of the sample: chance of a setback / a lucky break at any margin. */
   setbackChance: 0.04,
   luckChance: 0.03,
-  /** Fraction of a rating contribution lost at stress 100 (linear from 15). */
-  conditionMax: 0.55,
-  conditionFrom: 15,
   /** Pressure penalty for the lead seat at full pressure with zero composure. */
   pressureMax: 22,
   pressureFrom: 25,
@@ -93,6 +97,8 @@ export const RESOLUTION_TUNING = {
   composureShield: 0.8,
   workloadScore: 0.8,
   travelScore: 0.4,
+  /** How long a choice takes for its band, as a multiple of its base minutes: the commit, the
+   * preview (expected time and range) and the clock lookahead (sim/clocks.ts forkMinutes) all read it. */
   bandTime: { favorable: 1, mixed: 1.2, adverse: 1.5 } as Record<OutcomeBand, number>,
   bandStress: { favorable: 0.7, mixed: 1, adverse: 1.5 } as Record<OutcomeBand, number>,
   /** How much each check kind is degraded by pressure. */
@@ -105,27 +111,41 @@ export const RESOLUTION_TUNING = {
     coordination: 0.8,
   } as Record<CheckKind, number>,
   supportRank: 0.6,
-};
-
-/** Officer experience and age (see docs/phase2-simulation.md section 5). Proposed values. */
-export const EXPERIENCE_TUNING = {
-  /** Situation pressure at or above which experience bands matter (pressure-kind checks always count). */
-  pressureOn: 50,
-  rookiePenalty: -2,
-  rookieStrain: 1.15,
-  seasonedBonus: 2,
-  veteranBonus: 4,
-  mentoring: 2,
-  /** Strain share per 5 years of age over this. */
-  ageStrainFrom: 50,
-  ageStrainPer5: 0.05,
+  /** Display only: the risk label a favorable chance reads as (riskBand). At or above `lowAt` low,
+   * `moderateAt` moderate, `highAt` high; below it severe. */
+  riskBands: { lowAt: 0.62, moderateAt: 0.42, highAt: 0.22 },
+  /** Strain weights (strainFor). Share of a decision's strain each deployed officer takes: taking
+   * part, in the acting squad but not taking part, in a support squad, or deployed but neither. */
+  strain: {
+    participant: 1,
+    actingSquad: 0.5,
+    supportSquad: 0.6,
+    bystander: 0.25,
+    /** Pressure's extra strain at full pressure for an officer with no composure: 1 + this. */
+    pressureComposure: 1.2,
+    /** A steady officer's strain while facts are unresolved. */
+    steadyTrait: 0.75,
+    /** A rookie's strain with a mentor in the squad. */
+    rookieWithMentor: 0.85,
+  },
   /** Malfunction risk: share of an unreliable unit's lost effect charged as a separate negative contributor. */
   malfunctionShare: 0.5,
   /** Radio link: share of a support squad's coordination carried by the radio. */
   radioShare: 0.5,
-};
+}, { guard: resolutionProblem });
 
-export const RATING_LABEL: Record<RatingKey, string> = {
+/** Why a candidate RESOLUTION_TUNING can't be used, or null. */
+function resolutionProblem(next: { setbackChance: number; luckChance: number; span: number; favorableAt: number; adverseAt: number; riskBands: { lowAt: number; moderateAt: number; highAt: number } }): string | null {
+  if (next.setbackChance < 0.005 || next.luckChance < 0.005) return 'setbackChance and luckChance stay at 0.005 or more: forced bands aim inside them, and no style may guarantee a clean call.';
+  if (next.setbackChance + next.luckChance >= 1) return 'setbackChance and luckChance together stay below 1.';
+  if (next.span <= 0) return 'span stays above 0.';
+  if (next.favorableAt <= next.adverseAt) return 'favorableAt stays above adverseAt.';
+  const { lowAt, moderateAt, highAt } = next.riskBands;
+  if (!(lowAt > moderateAt && moderateAt > highAt)) return 'riskBands need lowAt > moderateAt > highAt.';
+  return null;
+}
+
+const RATING_LABEL: Record<RatingKey, string> = {
   shooting: 'shooting',
   composure: 'composure',
   communication: 'communication',
@@ -134,23 +154,14 @@ export const RATING_LABEL: Record<RatingKey, string> = {
   coordination: 'coordination',
 };
 
-export const CERT_LABEL: Record<string, string> = {
-  crisis_negotiation: 'crisis negotiator',
-  entry_team: 'entry-trained officer',
-  advanced_first_aid: 'advanced first aider',
-  surveillance: 'surveillance specialist',
-  drone_operator: 'drone operator',
-  less_lethal: 'less-lethal qualified officer',
-  advanced_less_lethal: 'advanced less-lethal qualified officer',
-  deescalation: 'de-escalation qualified officer',
-  vehicle_operations: 'qualified vehicle operator',
-  precision_support: 'qualified specialist support officer',
-  controlled_access: 'controlled-access qualified officer',
-};
-
 const round1 = (n: number) => Math.round(n * 10) / 10;
 const clamp = (n: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, n));
 export const squadLabel = (id: SquadId) => `Squad ${id}`;
+/** "Needs a crisis negotiator", "Needs an advanced first aider": what a locked card says it lacks. */
+function certNeed(cert: string): string {
+  const label = isCertId(cert) ? CERT_HOLDER[cert] : cert.replace(/_/g, ' ');
+  return `Needs ${/^[aeiou]/i.test(label) ? 'an' : 'a'} ${label}`;
+}
 
 // ---------------------------------------------------------------- location views
 
@@ -200,34 +211,9 @@ export function builtFor(familyId: Id, seed: number, flags: string[]): BuiltLoca
   return b;
 }
 
-/** Exterior zones with an opening (window, door) onto the space. */
-export function vantageZones(location: LocationDefinition, spaceId: Id): Id[] {
-  const zones = new Set(location.zones.map((z) => z.id));
-  const out = new Set<Id>();
-  for (const o of location.openings) {
-    if (o.a === spaceId && zones.has(o.b)) out.add(o.b);
-    if (o.b === spaceId && zones.has(o.a)) out.add(o.a);
-  }
-  return [...out];
-}
-
-export function spaceName(built: BuiltLocation, id: Id): string {
-  return (
-    built.location.rooms.find((r) => r.id === id)?.label ?? built.location.zones.find((z) => z.id === id)?.label ?? id
-  );
-}
 
 // ---------------------------------------------------------------- conditions and bands
 
-export function conditionHolds(c: Condition | undefined, run: Pick<OperationRun, 'knowledge' | 'flags' | 'pressure'>): boolean {
-  if (!c) return true;
-  for (const f of c.facts ?? []) if (!f.in.includes(run.knowledge[f.factId] ?? 'unknown')) return false;
-  for (const f of c.flags ?? []) if (!run.flags.includes(f)) return false;
-  for (const f of c.notFlags ?? []) if (run.flags.includes(f)) return false;
-  if (c.pressureAtLeast !== undefined && run.pressure < c.pressureAtLeast) return false;
-  if (c.pressureBelow !== undefined && run.pressure >= c.pressureBelow) return false;
-  return true;
-}
 
 /**
  * Map a saved sample to an outcome band for a given margin (score - difficulty).
@@ -257,38 +243,20 @@ export function bandProbabilities(margin: number): { favorable: number; mixed: n
 
 /** Risk band for display, from the estimated favorable probability. */
 export function riskBand(pFavorable: number): RiskBand {
-  if (pFavorable >= 0.62) return 'low';
-  if (pFavorable >= 0.42) return 'moderate';
-  if (pFavorable >= 0.22) return 'high';
+  const R = RESOLUTION_TUNING.riskBands;
+  if (pFavorable >= R.lowAt) return 'low';
+  if (pFavorable >= R.moderateAt) return 'moderate';
+  if (pFavorable >= R.highAt) return 'high';
   return 'severe';
 }
 
 // ---------------------------------------------------------------- units
 
-function itemUnlocked(state: GameState, itemId: Id): boolean {
-  const def = ITEMS[itemId];
-  if (!def) return false;
-  const owned = Object.values(state.units).some((u) => u.itemId === itemId && u.status !== 'scrapped');
-  return !def.requiresNode || state.department.unlockedNodes.includes(def.requiresNode) || owned;
-}
-
-/** Practice assumes one fresh unit of every item the department owns or has unlocked. Never wears. */
-export function practiceUnits(state: GameState, allEquipment = false): ItemUnit[] {
-  const out: ItemUnit[] = [];
-  for (const id of Object.keys(ITEMS)) {
-    const owned = Object.values(state.units).some((u) => u.itemId === id && u.status !== 'scrapped');
-    if (!ITEMS[id].supportOnly && (allEquipment || owned || itemUnlocked(state, id)))
-      out.push({ id: `practice_${id}`, itemId: id, serial: 'PRACTICE', condition: 100, acquiredAt: 0, uses: 0, status: 'reserved', serviceUntil: null, wearRate: 1, expiresAt: null, lastWearAt: 0 });
-  }
-  return out;
-}
-
 /** Units a squad still holds in a run: its reservations minus consumables already used by committed decisions. */
 export function availableUnits(state: GameState, run: OperationRun, sq: SquadId): ItemUnit[] {
   const spent = new Set(run.history.flatMap((h) => h.unitsUsed));
-  if (run.practice) return practiceUnits(state, getScenario(run.scenarioId)?.practiceOnly === true).filter(unit => run.scenarioVersion < 7 || ITEMS[unit.itemId].kind !== 'consumable' || !spent.has(unit.id));
   return squadUnits(state, run.id, sq).filter((u) => ITEMS[u.itemId] && !(ITEMS[u.itemId].kind === 'consumable' && spent.has(u.id))
-    && (run.scenarioVersion < 7 || u.expiresAt === null || u.expiresAt > state.department.clockHighWater));
+    && (u.expiresAt === null || u.expiresAt > state.department.clockHighWater));
 }
 
 const effOf = (u: ItemUnit) => {
@@ -372,7 +340,8 @@ export interface Arrival {
 }
 
 export interface Evaluation {
-  forceRisk?: ForceRiskPreview;
+  /** V13: what command says to the choice's request (sim/authorization.ts). Refused, the choice is locked with its line. */
+  authority?: AuthorityResult;
   protectionUsed?: { itemId: Id; unitId: Id };
   action: ActionDefinition;
   /** Present only for opted-in story person targets; null means no known on-scene target. */
@@ -388,6 +357,9 @@ export interface Evaluation {
   support: SquadId[];
   eligible: boolean;
   reason: string | null;
+  /** The locked card's line when it says less than `reason`: a missing cert names the need on the
+   * card ("Needs a crisis negotiator") and who lacks it in the sheet. Absent otherwise. */
+  reasonShort?: string;
   /** Officers whose ratings count, in seat order (lead first). */
   participantIds: Id[];
   excluded: { officerId: Id; reason: string }[];
@@ -434,11 +406,6 @@ function relatedFactIds(a: ActionDefinition): Set<Id> {
   return ids;
 }
 
-export function conditionFraction(stress: number): number {
-  const T = RESOLUTION_TUNING;
-  return clamp(((stress - T.conditionFrom) / (100 - T.conditionFrom)) * T.conditionMax, 0, T.conditionMax);
-}
-
 function aptitude(o: Officer, a: ActionDefinition): { value: number; parts: { key: RatingKey; rating: number }[] } {
   const kind = a.check.kind;
   // Shooting proficiency only ever counts toward execution checks.
@@ -479,7 +446,7 @@ function underPressure(run: Pick<OperationRun, 'pressure'>, kind: CheckKind): bo
 }
 
 /** Strain multiplier for age over 50: +5% per 5 years. */
-export function ageStrainMult(ageYearsNow: number): number {
+function ageStrainMult(ageYearsNow: number): number {
   const E = EXPERIENCE_TUNING;
   return 1 + (E.ageStrainPer5 * Math.max(0, ageYearsNow - E.ageStrainFrom)) / 5;
 }
@@ -520,7 +487,7 @@ export function evaluateAction(input: EvalInput): Evaluation {
   let { run, scenario, action } = input;
   const care = physicalCare(scenario, built, run, action, state);
   action = care.action;
-  const followsPerson = scenario.version >= 5 && !!action.storyTargetPersonId;
+  const followsPerson = !!action.storyTargetPersonId;
   const target = followsPerson ? storyActionTarget(scenario, action, built, run) : null;
   if (target) {
     action = hydrateStoryAction(action, target, built);
@@ -529,8 +496,8 @@ export function evaluateAction(input: EvalInput): Evaluation {
     run = { ...run, knowledge: publicView.knowledge };
   }
   const publicTarget = followsPerson ? { publicTargetId: target ? action.targetId : null } : {};
-  const followsRoute = scenario.version >= 5 && !!action.storyRoute;
-  const inspectsRoute = scenario.version >= 7 && followsRoute && action.storyRouteActor === 'inspection';
+  const followsRoute = !!action.storyRoute;
+  const inspectsRoute = followsRoute && action.storyRouteActor === 'inspection';
   const followsSquadRoute = followsRoute && action.storyRouteActor === 'squad';
   const routeBinding = followsRoute ? scenario.story?.bindings.routes[action.storyRoute!] : undefined;
   const squadStoryRoutes = followsSquadRoute && routeBinding ? new Map([...new Set(input.acting)].map(squad => [
@@ -554,6 +521,8 @@ export function evaluateAction(input: EvalInput): Evaluation {
   const derived = built.derived;
   const highRisk = kind === 'execution';
   const reasons: string[] = [];
+  /** A reason's card line when it is shorter than the reason (a missing cert). */
+  const shortReasons = new Map<string, string>();
   const contributors: Contributor[] = [];
   const details: string[] = [];
   const overlays: MapOverlay[] = [];
@@ -595,19 +564,19 @@ export function evaluateAction(input: EvalInput): Evaluation {
   if (care.issue) return blank(care.issue);
   if (followsPerson && !target) return blank('The person has no known location at the scene');
   if (followsRoute && !storyRoute) return blank('There is no usable route for this move');
-  if (scenario.version >= 4) {
+  {
     const supportIssue = externalSupportActionIssue(run, scenario, action);
     if (supportIssue) return blank(supportIssue);
     const casualtyIssue = casualtyActionIssue(run, scenario, action);
     if (casualtyIssue) return blank(casualtyIssue);
   }
-  if (scenario.version >= 7) {
+  {
     const personIssue = personCasualtyActionIssue(run, scenario, action);
     if (personIssue) return blank(personIssue);
   }
   if (acting.length === 0) return blank('Choose an acting squad');
   for (const sq of [...acting, ...support]) if (!run.squadIds.includes(sq)) return blank(`${squadLabel(sq)} is not deployed`);
-  if (scenario.version >= 4) for (const sq of [...acting, ...support]) {
+  for (const sq of [...acting, ...support]) {
     const hasAvailable = state.squads.find(squad => squad.id === sq)?.officerIds.some(id => !!state.officers[id] && !incidentOfficerUnavailable(state, run, id));
     if (!hasAvailable && !(action.commandOnly && acting.includes(sq))) return blank(`${squadLabel(sq)} has no uninjured officer available to take part`);
   }
@@ -618,8 +587,8 @@ export function evaluateAction(input: EvalInput): Evaluation {
 
   const units: Record<SquadId, ItemUnit[]> = {} as Record<SquadId, ItemUnit[]>;
   for (const sq of [...acting, ...support, ...run.squadIds]) {
-    units[sq] ??= input.unitOverride?.[sq] ?? availableUnits(state, run, sq).map((unit) => run.practice ? unit : ({ ...unit, condition: projectedCondition(state, unit, state.department.clockHighWater) }));
-    if (scenario.version >= 7) units[sq] = units[sq].filter(unit => unit.expiresAt === null || unit.expiresAt > state.department.clockHighWater);
+    units[sq] ??= input.unitOverride?.[sq] ?? availableUnits(state, run, sq).map((unit) => ({ ...unit, condition: projectedCondition(state, unit, state.department.clockHighWater, departmentUpkeep(state)) }));
+    units[sq] = units[sq].filter(unit => unit.expiresAt === null || unit.expiresAt > state.department.clockHighWater);
   }
   const taskOf = (sq: SquadId) => run.squadTasks.find((t) => t.squadId === sq) ?? { squadId: sq, positionId: '', task: '', stagingId: null, at: null };
   const actingTags = new Set<string>();
@@ -628,12 +597,15 @@ export function evaluateAction(input: EvalInput): Evaluation {
   const actingHas = (tag: string) => actingTags.has(tag);
 
   // ---- requirement gates, in reading order
+  // v13: command's answer comes first, from what the team believes now (sim/authorization.ts).
+  const authority = action.authority ? authorize(scenario, run, action.authority) : undefined;
+  if (authority && !authority.allowed) reasons.push(authority.reason);
   const req = { ...action.requires, allTags: effectiveTags(action.requires.allTags), anyTags: action.requires.anyTags?.some((t) => t === 'battery') ? [] : effectiveTags(action.requires.anyTags) };
   if (req.minSquads && acting.length + support.length < req.minSquads.count) reasons.push(req.minSquads.reason);
   for (const f of req.facts ?? []) if (!f.in.includes(run.knowledge[f.factId] ?? 'unknown')) reasons.push(f.reason);
   for (const f of req.flags ?? []) if (!run.flags.includes(f.flag)) reasons.push(f.reason);
   for (const f of req.notFlags ?? []) if (run.flags.includes(f.flag)) reasons.push(f.reason);
-  if (scenario.version >= 5 && req.storyProps?.length) {
+  if (req.storyProps?.length) {
     const props = storyPropsPublic(scenario, built, run);
     for (const requirement of req.storyProps) {
       const prop = props.find(prop => prop.id === requirement.propId);
@@ -676,8 +648,12 @@ export function evaluateAction(input: EvalInput): Evaluation {
       const sidelined = candidates.find((o) => o.certs.includes(cert) && excluded.some((e) => e.officerId === o.id));
       if (sidelined) reasons.push(incidentOfficerUnavailable(state, run, sidelined.id) ? excluded.find(entry => entry.officerId === sidelined.id)!.reason : `${sidelined.surname} is overloaded and cannot take high-risk work`);
       else {
-        const who = acting.length === 1 ? `${squadLabel(acting[0])} has none` : `none of ${listSquads(acting)} has one`;
-        reasons.push(`Needs a ${CERT_LABEL[cert] ?? cert} — ${who}`);
+        // The card shows the need; the sheet adds who lacks it.
+        const need = certNeed(cert);
+        const who = acting.length === 1 ? `${squadLabel(acting[0])} has none` : `None of ${listSquads(acting)} has one`;
+        const text = `${need}. ${who}`;
+        reasons.push(text);
+        shortReasons.set(text, need);
       }
     }
   }
@@ -714,19 +690,19 @@ export function evaluateAction(input: EvalInput): Evaluation {
   const participants = ordered.slice(0, Math.max(0, cap));
   if (care.fieldTarget && !participants.some(officer => officer.certs.includes('advanced_first_aid'))) reasons.push('A qualified first aider must participate at the patient’s location');
   const benched = ordered.slice(participants.length);
-  if (participants.length === 0 && !(scenario.version >= 4 && action.commandOnly)) {
+  if (participants.length === 0 && !(action.commandOnly)) {
     const sidelined = excluded[0];
-    reasons.push(sidelined ? scenario.version >= 4 ? `No one in ${listSquads(acting)} can take part (${sidelined.reason})` : `No one in ${listSquads(acting)} can take high-risk work (${sidelined.reason.split(' is ')[0]} is overloaded)` : `No officer in ${listSquads(acting)} can take part`);
+    reasons.push(sidelined ? `No one in ${listSquads(acting)} can take part (${sidelined.reason})` : `No officer in ${listSquads(acting)} can take part`);
   }
   if (benched.length > 0 && capSpace) {
     const n = benched.length;
     contributors.push({
-      label: `${spaceName(built, capSpace)} fits ${cap}: ${n} officer${n === 1 ? '' : 's'} can't contribute`,
+      label: `${spaceLabel(built, capSpace)} fits ${cap}: ${n} officer${n === 1 ? '' : 's'} can't contribute`,
       value: 0,
       source: 'space',
       ref: capSpace,
     });
-    details.push(`${spaceName(built, capSpace)} fits ${cap}: only ${cap} officer${cap === 1 ? '' : 's'} can work there at once.`);
+    details.push(`${spaceLabel(built, capSpace)} fits ${cap}: only ${cap} officer${cap === 1 ? '' : 's'} can work there at once.`);
   } else if (benched.length > 0) {
     details.push(`At most ${cap} officers take part; the rest stay ready.`);
   }
@@ -743,6 +719,14 @@ export function evaluateAction(input: EvalInput): Evaluation {
     } else {
       modContribs.push({ label: m.label, value: m.value, source: m.source });
     }
+  }
+  // v13: the people in the incident and where they stand (sim/incident-factors.ts).
+  const incident = incidentFactors(scenario, built, run, action, participants);
+  if (incident) {
+    difficulty += incident.add;
+    diffContribs.push(...incident.difficulty);
+    modContribs.push(...incident.score);
+    details.push(...incident.details);
   }
 
   // ---- officer contributions
@@ -903,7 +887,10 @@ export function evaluateAction(input: EvalInput): Evaluation {
       const moving = action.approach !== 'none';
       const route = moving ? routeTo(c.stand.spaceId, c.stand.at) : null;
       if (route && !route.reachable) continue;
-      const signal = spec && subject ? assessSignal(built, c.stand.at, subject.at, spec.channel, spec.noun) : null;
+      const raw = spec && subject ? assessSignal(built, c.stand.at, subject.at, spec.channel, spec.noun) : null;
+      // The scene's light and weather carry the signal as far as the building lets it (environment.ts).
+      const carry = raw && spec ? signalCarry(scenario.environment ?? null, spec.channel, location.zones.some(zone => zone.id === c.stand.spaceId)) : null;
+      const signal = raw && carry?.label ? { ...raw, quality: raw.quality * carry.factor, label: `${raw.label}. ${carry.label}` } : raw;
       const { picks, blocked } = picksAt(sq, c.stand.at);
       const pickedTags = new Set(picks.map((p) => p.eq.tag));
       const carriedAny = anyTags.filter((t) => tagsOf(units[sq]).has(t));
@@ -916,7 +903,7 @@ export function evaluateAction(input: EvalInput): Evaluation {
       if (!bestPlan || plan.score > bestPlan.score + 1e-9 || (Math.abs(plan.score - bestPlan.score) <= 1e-9 && (plan.stand.stagingId ?? '') < (bestPlan.stand.stagingId ?? ''))) bestPlan = plan;
     }
     if (!bestPlan) {
-      reasons.push(`${squadLabel(sq)} can't reach the ${spaceName(built, action.targetId).toLowerCase()} from ${spaceName(built, task.positionId)}`);
+      reasons.push(`${squadLabel(sq)} can't reach the ${spaceLabel(built, action.targetId).toLowerCase()} from ${spaceLabel(built, task.positionId)}`);
       bestPlan = { squad: sq, stand: start, zone: null, route: null, travel: 0, signal: null, picks: [], blocked: [], toolUnit: tool, missingRequired: false, score: 0 };
     }
     if (bestPlan.zone) claimed.add(bestPlan.zone);
@@ -964,7 +951,7 @@ export function evaluateAction(input: EvalInput): Evaluation {
     if (b.eff < 1 && b.full > 0) {
       contributors.push({
         label: `${b.def.name} ${b.unit.serial}: condition ${Math.round(b.unit.condition)}, malfunction risk`,
-        value: -round1(E.malfunctionShare * b.full * (1 - b.eff)),
+        value: -round1(RESOLUTION_TUNING.malfunctionShare * b.full * (1 - b.eff)),
         source: 'equipment',
         ref: b.unit.id,
       });
@@ -1040,7 +1027,7 @@ export function evaluateAction(input: EvalInput): Evaluation {
       const standAt = cover?.at ?? centroidOf(built, rule.coverSpaceId);
       const route = routeBetween(built, task.positionId, start.at, rule.coverSpaceId, standAt, tool ? { effectiveness: effOf(tool) } : null);
       if (!route.reachable) {
-        reasons.push(`${squadLabel(sq)} can't reach the ${spaceName(built, rule.coverSpaceId).toLowerCase()}`);
+        reasons.push(`${squadLabel(sq)} can't reach the ${spaceLabel(built, rule.coverSpaceId).toLowerCase()}`);
         return;
       }
       const dist = route.minutes;
@@ -1063,7 +1050,7 @@ export function evaluateAction(input: EvalInput): Evaluation {
       const raw = rule.max * (coord / 100) * reach * Math.pow(T.supportRank, i);
       contributors.push({
         label: `${squadLabel(sq)} ${rule.label}: ${round1(dist)} min away, coordination ${Math.round(coord)}`,
-        value: round1(raw * (1 - E.radioShare)),
+        value: round1(raw * (1 - RESOLUTION_TUNING.radioShare)),
         source: 'support',
         ref: sq,
       });
@@ -1091,14 +1078,14 @@ export function evaluateAction(input: EvalInput): Evaluation {
         link = 0.3;
         text = `no radios, voice carries ${Math.round(gap)} ft`;
       } else text = `no radios, ${Math.round(gap)} ft apart is out of voice range (${SPATIAL_TUNING.voiceLinkFt} ft)`;
-      if (radioA && radioB) radioDeficit += raw * E.radioShare * (1 - clamp(link, 0, 1));
-      contributors.push({ label: `${squadLabel(sq)} link: ${text}`, value: round1(raw * E.radioShare * clamp(link, 0, 1)), source: 'equipment', ref: radioB?.itemId ?? sq });
+      if (radioA && radioB) radioDeficit += raw * RESOLUTION_TUNING.radioShare * (1 - clamp(link, 0, 1));
+      contributors.push({ label: `${squadLabel(sq)} link: ${text}`, value: round1(raw * RESOLUTION_TUNING.radioShare * clamp(link, 0, 1)), source: 'equipment', ref: radioB?.itemId ?? sq });
       for (const [r, who] of [[radioA, acting[0]], [radioB, sq]] as const) {
         if (r && effOf(r) < 1) {
           const def = ITEMS[r.itemId];
           contributors.push({
             label: `${def.name} ${r.serial} (${squadLabel(who)}): condition ${Math.round(r.condition)}, malfunction risk`,
-            value: -round1(E.malfunctionShare * raw * E.radioShare * (1 - effOf(r))),
+            value: -round1(RESOLUTION_TUNING.malfunctionShare * raw * RESOLUTION_TUNING.radioShare * (1 - effOf(r))),
             source: 'equipment',
             ref: r.id,
           });
@@ -1124,7 +1111,7 @@ export function evaluateAction(input: EvalInput): Evaluation {
       source: 'space',
       ref: action.targetId,
     });
-    const areaName = (action.workload.areaSpaces?.length ?? 0) > 1 ? 'The search area' : spaceName(built, action.targetId);
+    const areaName = (action.workload.areaSpaces?.length ?? 0) > 1 ? 'The search area' : spaceLabel(built, action.targetId);
     details.push(`${areaName} covers ${Math.round(targetArea)} sq ft, about ${round1(extraMinutes)} min of work.`);
   }
   let travel = Math.max(actingTravel, supportTravel);
@@ -1156,16 +1143,16 @@ export function evaluateAction(input: EvalInput): Evaluation {
       return unit ? [{ squad, unit }] : [];
     }).sort((a, b) => effOf(b.unit) - effOf(a.unit) || a.unit.id.localeCompare(b.unit.id));
     const tool = tools[0];
-    const routeClearance = scenario.version >= 7 && binding.profile === 'chair' ? 1.5 : 1;
-    const publicLegs = scenario.version >= 7 ? publicStoryMovementLegs(scenario, built, run, action) : null;
-    if (scenario.version >= 7 && !publicLegs) return blank(inspectsRoute ? 'Account for the person and the planned destination before checking this route' : 'Account for the moving person and their destination before this move');
+    const routeClearance = binding.profile === 'chair' ? 1.5 : 1;
+    const publicLegs = publicStoryMovementLegs(scenario, built, run, action);
+    if (!publicLegs) return blank(inspectsRoute ? 'Account for the person and the planned destination before checking this route' : 'Account for the moving person and their destination before this move');
     const legs = publicLegs ?? [{ label: 'Movement', from: centroidOf(built, binding.fromSpaceId), to: centroidOf(built, binding.toSpaceId) }];
     const movementRoutes = legs.map(leg => routeAlongOpenings(built, leg.from, leg.to, storyRoute, tool ? { effectiveness: effOf(tool.unit) } : null, !!action.keyholder && !!scenario.environment?.keyholder, routeClearance));
-    if (scenario.version >= 7 && movementRoutes.some(route => !route.reachable)) return blank(binding.profile === 'chair' ? 'The mapped route does not leave enough clear space for the chair' : 'Furniture or the room layout blocks this movement route');
+    if (movementRoutes.some(route => !route.reachable)) return blank(binding.profile === 'chair' ? 'The mapped route does not leave enough clear space for the chair' : 'Furniture or the room layout blocks this movement route');
     const route = movementRoutes.reduce((longest, next) => next.minutes > longest.minutes ? next : longest);
     if (inspectsRoute) {
       for (const [i, planned] of movementRoutes.entries()) overlays.push({ kind: 'path', points: planned.points, label: `${legs[i].label}: planned ${binding.profile === 'chair' ? 'chair ' : ''}route` });
-      details.push(`Check the planned route to ${spaceName(built, binding.toSpaceId)}. The person stays in place; this check does not open doors.`);
+      details.push(`Check the planned route to ${spaceLabel(built, binding.toSpaceId)}. The person stays in place; this check does not open doors.`);
     } else {
       const alreadyForced = new Set(travelledRoutes.flatMap(path => path.forced.map(door => door.openingId)));
       storySquadOpenedIds = [...alreadyForced];
@@ -1184,8 +1171,8 @@ export function evaluateAction(input: EvalInput): Evaluation {
       storyMovementMinutes = round1(Math.max(0, routeTravel - travel));
       travel = routeTravel;
       storyOpenedIds = [...locks.keys()];
-      for (const [i, movement] of movementRoutes.entries()) overlays.push({ kind: 'path', points: movement.points, label: scenario.version >= 7 ? `${legs[i].label} movement, ${round1(movement.minutes)} min` : `Movement route, ${round1(movement.minutes)} min` });
-      details.push(`The movement route runs from ${spaceName(built, binding.fromSpaceId)} to ${spaceName(built, binding.toSpaceId)}.`);
+      for (const [i, movement] of movementRoutes.entries()) overlays.push({ kind: 'path', points: movement.points, label: `${legs[i].label} movement, ${round1(movement.minutes)} min` });
+      details.push(`The movement route runs from ${spaceLabel(built, binding.fromSpaceId)} to ${spaceLabel(built, binding.toSpaceId)}.`);
     }
   }
   if (travel >= 0.5) {
@@ -1231,8 +1218,9 @@ export function evaluateAction(input: EvalInput): Evaluation {
   const all = [...diffContribs, ...contributors];
   const margin = round1(score - difficulty);
   const probs = bandProbabilities(margin);
-  const supportWait = scenario.version >= 4 && action.awaitSupport ? remainingSupportWait(run, scenario, action.awaitSupport) : null;
-  const timeBase = supportWait ?? round1(Math.max(0.5, workloadMinutes + travel + entryMinutes + capability.minutes));
+  const supportWait = action.awaitSupport ? remainingSupportWait(run, scenario, action.awaitSupport) : null;
+  // The incident's people stretch the work itself (waiting out a barricade), never the walk to it.
+  const timeBase = supportWait ?? round1(Math.max(0.5, workloadMinutes * (incident?.timeMult ?? 1) + travel + entryMinutes + capability.minutes));
   const timeExpected = supportWait ?? round1(timeBase * (probs.favorable * T.bandTime.favorable + probs.mixed * T.bandTime.mixed + probs.adverse * T.bandTime.adverse));
 
   // ---- text
@@ -1256,16 +1244,13 @@ export function evaluateAction(input: EvalInput): Evaluation {
     allUses.push(u);
   }
 
-  const forceRisk = selectedForceRisk(scenario, action, allUses);
-  if (scenario.version >= 7 && action.forceProfile && !forceRisk) reasons.push('This force choice needs its matching serviceable equipment, qualified operator and complete supplies');
-  if (forceRisk) details.push(forceRisk.summary, 'Task success and harm are resolved separately. Carrying equipment alone causes no harm roll.');
   const protectionUsed = selectedProtection(scenario, action, allUses);
   if (protectionUsed) details.push(`${ITEMS[protectionUsed.itemId].name}: limits an authored serious officer injury to a wound; injury and medical transport may still be needed.`);
 
   const reason = reasons[0] ?? null;
   return {
     action,
-    ...(forceRisk ? { forceRisk } : {}),
+    ...(authority ? { authority } : {}),
     ...(protectionUsed ? { protectionUsed } : {}),
     ...publicTarget,
     ...(storyOpenedIds ? { storyOpenedIds, storySquadOpenedIds, storyMovementMinutes, storyMovementOnlyUnitIds } : {}),
@@ -1273,6 +1258,7 @@ export function evaluateAction(input: EvalInput): Evaluation {
     support,
     eligible: reason === null,
     reason,
+    ...(reason !== null && shortReasons.has(reason) ? { reasonShort: shortReasons.get(reason)! } : {}),
     participantIds: participants.map((o) => o.id),
     excluded,
     leadId: lead?.id ?? null,
@@ -1294,7 +1280,7 @@ export function evaluateAction(input: EvalInput): Evaluation {
     details,
     highRisk,
     overlays,
-    exposureMult: exposure?.strainMult ?? 1,
+    exposureMult: (exposure?.strainMult ?? 1) * (incident?.strainMult ?? 1),
   };
 }
 
@@ -1310,6 +1296,7 @@ export function strainFor(input: EvalInput, ev: Evaluation, band: OutcomeBand): 
   const { state, run, action } = input;
   const T = RESOLUTION_TUNING;
   const E = EXPERIENCE_TUNING;
+  const S = T.strain;
   const out: Record<Id, number> = {};
   const base = action.stressBase * T.bandStress[band];
   const uncertain = ev.unresolvedFacts.length > 0;
@@ -1321,14 +1308,14 @@ export function strainFor(input: EvalInput, ev: Evaluation, band: OutcomeBand): 
     for (const id of squad?.officerIds ?? []) {
       const o = state.officers[id];
       if (!o) continue;
-      let w = 0.25;
-      if (ev.participantIds.includes(id)) w = 1;
-      else if (ev.acting.includes(sq)) w = 0.5;
-      else if (ev.support.includes(sq)) w = 0.6;
-      const extra = 1 + (run.pressure / 100) * (1 - o.ratings.composure / 100) * 1.2;
+      let w = S.bystander;
+      if (ev.participantIds.includes(id)) w = S.participant;
+      else if (ev.acting.includes(sq)) w = S.actingSquad;
+      else if (ev.support.includes(sq)) w = S.supportSquad;
+      const extra = 1 + (run.pressure / 100) * (1 - o.ratings.composure / 100) * S.pressureComposure;
       let m = 1;
-      if (o.traits.includes('steady') && uncertain) m *= 0.75;
-      if (o.traits.includes('rookie') && mentor) m *= 0.85;
+      if (o.traits.includes('steady') && uncertain) m *= S.steadyTrait;
+      if (o.traits.includes('rookie') && mentor) m *= S.rookieWithMentor;
       if (pressured && experienceBand(o, day) === 'rookie') m *= E.rookieStrain;
       m *= ageStrainMult(ageYears(o, day));
       if (ev.participantIds.includes(id)) m *= ev.exposureMult;

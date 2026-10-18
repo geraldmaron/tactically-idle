@@ -2,7 +2,7 @@
 // Truth fields (FactDefinition.truth, PersonDefinition positions and threat profiles) are never read here.
 import type { BuiltLocation, Id, KnowledgeStatus } from '../../sim/types';
 import type { EnvironmentDefinition, FactDefinition, ScenarioDefinition } from '../../sim/scenario-types';
-import { spaceName } from '../../sim/resolution';
+import { spaceLabel } from '../../sim/spatial-factors';
 import { floorSuffix } from '../blueprint/floors';
 
 export interface IntelLine {
@@ -35,7 +35,7 @@ function isWeaponFact(f: FactDefinition): boolean {
 }
 
 function line(f: FactDefinition, built: BuiltLocation, label?: string): IntelLine {
-  return { id: f.id, label: label ?? f.person?.label ?? f.label, claim: f.claim, source: f.source, status: f.initial, where: spaceName(built, f.spaceId) + floorSuffix(built.location, f.spaceId) };
+  return { id: f.id, label: label ?? f.person?.label ?? f.label, claim: f.claim, source: f.source, status: f.initial, where: spaceLabel(built, f.spaceId) + floorSuffix(built.location, f.spaceId) };
 }
 
 export function buildIntel(s: ScenarioDefinition | null, built: BuiltLocation): Intel {
@@ -44,7 +44,7 @@ export function buildIntel(s: ScenarioDefinition | null, built: BuiltLocation): 
   const told = s.facts.filter((f) => f.initial === 'reported' || f.initial === 'confirmed');
   // V4's individual civilian outcomes link public person reports without adding
   // dynamic engine people or exposing their hidden positions/truth.
-  const civilians = new Map(s.version >= 4 ? (s.civilianOutcomes ?? []).map(person => [person.factId, person.label]) : []);
+  const civilians = new Map((s.civilianOutcomes ?? []).map(person => [person.factId, person.label]));
   const isPerson = (fact: FactDefinition) => !!fact.person || civilians.has(fact.id);
   const people = told.filter(isPerson).map((f) => line(f, built, civilians.get(f.id)));
   const threats = told.filter(isWeaponFact).map((f) => line(f, built));

@@ -1,12 +1,12 @@
+import { responseFailurePlan } from './response-failure';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { SCENARIOS } from '../content/scenarios';
 import type { ActionDefinition, OutcomeEffect, ScenarioDefinition } from './scenario-types';
 import type { GameState, KnowledgeStatus, OutcomeBand, StageId } from './types';
-import { advanceTime, matchedEffects, traceRun, validateScenario } from './operation';
+import { matchedEffects, traceRun, validateScenario } from './operation';
 import { actionViews, decisionViews, lastDecisionView, pendingDebrief, previewAction, spaceViews, stageProgress } from './operation-selectors';
-import { builtFor, evaluateAction } from './resolution';
+import { builtFor } from './resolution';
 import { next } from './rng';
-import { initializePersonnel } from './personnel';
 import { CURRENT_SAVE_VERSION, deserialize, serialize } from './save';
 import { apply, makeState, NOW, startRun } from './test-fixtures';
 
@@ -42,8 +42,7 @@ function fixture(): ScenarioDefinition {
 function started(): GameState {
   const state = makeState();
   state.saveVersion = CURRENT_SAVE_VERSION;
-  state.contentVersion = 3;
-  initializePersonnel(state);
+  state.contentVersion = 13;
   return startRun(state, ID, ['A']);
 }
 function decide(state: GameState, actionId: string): GameState {
@@ -55,7 +54,7 @@ function decide(state: GameState, actionId: string): GameState {
 beforeEach(() => { SCENARIOS[ID] = fixture(); });
 afterEach(() => { delete SCENARIOS[ID]; });
 
-describe('committed v3 decisions', () => {
+describe('committed current decisions', () => {
   it('records actual clamped scores, elapsed time, strain, supplies, knowledge and ending', () => {
     let state = decide(started(), 'prime');
     for (const officer of Object.values(state.officers)) officer.stress = 99.5;
@@ -114,12 +113,16 @@ describe('committed v3 decisions', () => {
     expect(apply(closed.state, { type: 'closeDebrief' })).toEqual({ state: closed.state, result: { ok: false, reason: 'No debrief to close' } });
   });
 
-  it('finishes safely when every one-shot nonterminal resolve option has been used', () => {
+  it('offers explicit failure reporting when every one-shot nonterminal resolve option has been used', () => {
     SCENARIOS[ID].stages.resolve.actions = [action('only_recovery', 'resolve', [{ stage: 'resolve', text: 'The recovery attempt was inconclusive.' }])];
     expect(validateScenario(SCENARIOS[ID], builtFor('maple_street', 0, []))).toEqual([]);
     const state = decide(decide(started(), 'prime'), 'only_recovery');
-    expect(state.activeRun).toMatchObject({ status: 'debrief', endingId: 'handed_over', revision: 2 });
-    expect(lastDecisionView(state)?.endingTitle).toBe(SCENARIOS[ID].endings.handed_over.title);
+    expect(state.activeRun).toMatchObject({ status: 'active', endingId: null, revision: 2 });
+    const plan = responseFailurePlan(state)!;
+    expect(plan).not.toBeNull();
+    const failed = apply(state, { type: 'endFailedResponse', runId: plan.runId, revision: plan.revision });
+    expect(failed.result).toEqual({ ok: true });
+    expect(failed.state.activeRun).toMatchObject({ status: 'debrief', endingId: 'handed_over', revision: 2 });
   });
 
   it('does not let time-saving effects reverse operation time', () => {
@@ -253,41 +256,5 @@ describe('public previews and committed truth', () => {
     const view = previewAction(started(), NOW, 'device', ['A'], [])!;
     expect(view.eligible).toBe(false);
     expect(view.suppliesRequired).toEqual([{ label: 'Device cartridge', qty: 1 }]);
-  });
-});
-
-describe('legacy compatibility boundaries', () => {
-  it('preserves historically recorded battery consumption in old decision logs', () => {
-    SCENARIOS[ID].version = 1;
-    SCENARIOS[ID].stages.resolve.actions = [action('finish', 'resolve', [{ ending: 'handed_over' }])];
-    const state = decide(started(), 'prime');
-    delete state.activeRun!.history[0].stressLevels;
-    state.activeRun!.history[0].itemsConsumed.push({ itemId: 'battery_pack', qty: 1 });
-    expect(lastDecisionView(state)?.supplies).toContainEqual({ itemId: 'battery_pack', label: 'Battery pack', qty: 1 });
-    expect(lastDecisionView(state)?.actualStressDeltas).toBe(false);
-  });
-  it.each([1, 2])('keeps legacy decision payloads free of new committed fields (version %s)', (version) => {
-    const scenario = SCENARIOS[ID];
-    scenario.version = version;
-    scenario.stages.resolve.actions = [action('finish', 'resolve', [{ ending: 'handed_over' }])];
-    const state = decide(started(), 'prime');
-    expect(state.activeRun!.history[0]).not.toHaveProperty('committed');
-    expect(lastDecisionView(state)?.actualStressDeltas).toBe(true);
-    expect(pendingDebrief(decide(state, 'finish'))).not.toHaveProperty('endingSummary');
-  });
-
-  it('preserves versioned replay and resupply pressure before decisions', () => {
-    const initial = started();
-    initial.activeRun!.resupplies = [{ minutes: 50, allocations: [] }];
-    advanceTime(initial.activeRun!, SCENARIOS[ID], 50);
-    const state = decide(initial, 'prime');
-    const run = state.activeRun!;
-    const traced = traceRun(SCENARIOS[ID], run);
-    expect(traced.end.clock).toBe(run.clock);
-    expect(traced.end.civilianSafety).toBe(run.civilianSafety);
-    expect(traced.end.pressure).toBe(run.pressure);
-    expect(traced.steps[0].pressureDelta).toBe(run.history[0].committed!.pressureDelta);
-    const ev = evaluateAction({ state, run, scenario: SCENARIOS[ID], action: SCENARIOS[ID].stages.resolve.actions[1], built: builtFor('maple_street', 0, []), acting: ['A'], support: [] });
-    expect(ev.eligible).toBe(true);
   });
 });

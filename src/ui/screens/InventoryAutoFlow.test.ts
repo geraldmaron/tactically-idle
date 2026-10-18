@@ -104,7 +104,9 @@ describe('Auto-equip squad inventory controls', () => {
     toggleSquad('A');
     const before = structuredClone(command());
     const firstControl = auto('A');
-    expect(firstControl.children).toEqual(['Auto-equip squad ', 'A']);
+    // The squad card shows a short visible label; the accessible name keeps the squad.
+    expect(firstControl.children).toBe('Auto-equip');
+    expect(firstControl['aria-label']).toBe('Auto-equip squad A');
     firstControl.onClick();
     const equipped = structuredClone(command());
     firstControl.onClick();
@@ -147,18 +149,11 @@ describe('Auto-equip squad inventory controls', () => {
     expect(act).not.toHaveBeenCalled();
   });
 
-  it('does nothing with no selected squads or in virtual practice', () => {
+  it('does nothing with no selected squads', () => {
     const all = find(render(), (element) => element.type === Button && element.props.block && element.props.icon === 'wand').props;
     expect(all.disabled).toBe(true);
     all.onClick();
     expect(command().squadIds).toEqual([]);
-    toggleSquad('A');
-    find(render(), (element) => element.type === 'input' && element.props.type === 'checkbox').props.onChange({ target: { checked: true } });
-    const before = structuredClone(command());
-    const button = auto('A');
-    expect(button.disabled).toBe(true);
-    button.onClick();
-    expect(command()).toEqual(before);
     expect(act).not.toHaveBeenCalled();
   });
 });

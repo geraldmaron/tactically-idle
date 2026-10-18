@@ -2,7 +2,7 @@
 // building family across many seeds, so generated plans can be reviewed side by side with the
 // authored ones. Dev-only page; not linked from the game and not part of the app entry.
 //
-//   /locations.html?family=bungalow_g1&seeds=1-24&floor=0
+//   /locations.html?family=bungalow_g2&seeds=1-24&floor=0
 //   optional: &w=360 (cell width px), &furnished=0 (bare plan), &seeds=3,9,12, &chrome=1 (keep map hint + zoom buttons)
 import { StrictMode, useEffect, useMemo } from 'react';
 import { createRoot } from 'react-dom/client';
@@ -11,10 +11,10 @@ import './location-sheet.css';
 import { buildLocation } from '../sim/location';
 import type { BuiltLocation, Id, SpaceView } from '../sim/types';
 import { Blueprint } from '../ui/blueprint/Blueprint';
-import { BUILDING_FAMILIES, PROCEDURAL_FAMILIES, furnishedFamilyIdV7 } from '../gen/building';
+import { BUILDING_FAMILIES, PROCEDURAL_FAMILIES, furnishedFamilyId } from '../gen/building';
 import { plausibilityReport } from '../gen/building/procedural';
 
-const AUTHORED = [{ id: 'maple_street', label: 'Maple Street' }, ...BUILDING_FAMILIES];
+const AUTHORED = BUILDING_FAMILIES;
 const PROCEDURAL_IDS = new Set(PROCEDURAL_FAMILIES.map((f) => f.id));
 
 export interface SheetCell {
@@ -138,7 +138,7 @@ function plainSpaces(built: BuiltLocation): SpaceView[] {
 function Cell({ familyId, seed, floor, furnished, chrome }: { familyId: string; seed: number; floor: number; furnished: boolean; chrome: boolean }) {
   const procedural = PROCEDURAL_IDS.has(familyId);
   const result = useMemo(() => {
-    const id = furnished ? furnishedFamilyIdV7(familyId) : familyId;
+    const id = furnished ? furnishedFamilyId(familyId) : familyId;
     try {
       const built = buildLocation(id, seed);
       return { built, cell: summarise(seed, built, procedural), spaces: plainSpaces(built) };
@@ -268,7 +268,7 @@ function Picker({ family, query }: { family: string; query: URLSearchParams }) {
 
 function Sheet() {
   const query = new URLSearchParams(window.location.search);
-  const family = query.get('family') ?? PROCEDURAL_FAMILIES[0]?.id ?? 'maple_street';
+  const family = query.get('family') ?? PROCEDURAL_FAMILIES[0]?.id ?? 'cedar_close';
   const seeds = parseSeeds(query.get('seeds'));
   const floor = query.get('floor') === '1' ? 1 : 0;
   const furnished = query.get('furnished') !== '0';

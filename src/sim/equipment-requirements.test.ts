@@ -2,8 +2,8 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { ITEMS } from '../content/items';
 import { SCENARIOS } from '../content/scenarios';
 import { autoLoadout } from './auto-equip';
-import { makeState, NOW, unitId, apply, startCmd, makeUnit } from './test-fixtures';
-import { getScenario } from './scenario-registry';
+import { makeState, NOW, unitId, apply, startCmd, makeUnit, withCallOnBoard } from './test-fixtures';
+
 import { evaluateAction, getBuilt } from './resolution';
 import { actionEquipmentRequirements, requiredEquipmentBundle, missionConsumptionBudget } from './equipment-requirements';
 import type { ActionDefinition } from './scenario-types';
@@ -19,16 +19,16 @@ const stock = () => makeState({ inventory: Object.fromEntries(Object.values(ITEM
 describe('shared mission equipment requirements', () => {
   it('changes daylight and night kits and rejects a useless solo radio relay', () => {
     const state = stock();
-    const day = autoLoadout(state, 'gen:welfare_check:cedar_close:0:1:1:2', ['A'], NOW);
-    const night = autoLoadout(state, 'gen:welfare_check:cedar_close:0:3:1:2', ['A'], NOW);
+    const day = autoLoadout(state, 'ms_occupancy', ['A'], NOW);
+    const night = autoLoadout(state, 'ms_urgent', ['A'], NOW);
     expect(day.loadouts.A?.portable_light).toBeUndefined();
     expect(night.loadouts.A?.observation_binoculars).toBeUndefined();
     expect(day.loadouts.A?.radio_relay).toBeUndefined();
     expect(night.loadouts.A?.radio_relay).toBeUndefined();
-    const clear = structuredClone(getScenario('gen:welfare_check:cedar_close:0:1:1:2')!.stages.assess.actions.find((a) => a.id === 'gen_observe')!);
-    clear.targetId = 'front_yard'; clear.approach = 'none';
+    const clear = structuredClone(SCENARIOS.ms_occupancy.stages.assess.actions.find((a) => a.id === 'ms_gather')!);
+    clear.targetId = 'front_yard'; clear.approach = 'none'; clear.spatial = undefined; clear.capabilities = { rules: ['visible_exterior', 'dark_visible_scene'] };
     const id = scenarioWith([clear]);
-    SCENARIOS[id].environment = structuredClone(getScenario('gen:welfare_check:cedar_close:0:1:1:2')!.environment!);
+    SCENARIOS[id].environment = { timeOfDay: 'day', weather: 'clear', power: 'on', clutter: 0, hazards: [], communication: 'normal', crowd: 0, keyholder: false, plansOnFile: false, alarm: 'none', cctv: false };
     SCENARIOS[id].environment!.timeOfDay = 'day'; SCENARIOS[id].environment!.power = 'on';
     expect(autoLoadout(state, id, ['A'], NOW).loadouts.A?.observation_binoculars).toBe(1);
     SCENARIOS[id].environment!.timeOfDay = 'night';
@@ -36,9 +36,9 @@ describe('shared mission equipment requirements', () => {
   });
   it('ranks actual condition contribution before nominal catalog strength', () => {
     const state = stock();
-    const source = getScenario('gen:barricaded:cedar_close:0:1:1:2')!;
-    const action = structuredClone(source.stages.adapt.actions.find((a) => a.id === 'gen_protective_containment')!);
-    action.targetId = 'front_yard';
+    const source = SCENARIOS.ms_occupancy;
+    const action = structuredClone(source.stages.resolve.actions.find((a) => a.id === 'ms_controlled_entry')!);
+    action.targetId = 'front_yard'; action.approach = 'none'; action.requires = {}; action.entry = undefined; action.capabilities = { rules: ['authorized_response'], responseContext: 'constrained' }; action.equipment = [{ tag: 'response_firearm', value: 8, group: 'response', label: 'Response equipment' }];
     for (const [id, unit] of Object.entries(state.units)) if (unit.itemId === 'response_shotgun') delete state.units[id];
     for (let i = 1; i <= 4; i++) state.units[unitId('compact_carbine', i)].condition = 11;
     const plan = autoLoadout(state, scenarioWith([action]), ['A'], NOW);
@@ -48,9 +48,9 @@ describe('shared mission equipment requirements', () => {
   });
   it('uses setup time as the tie-break for equal condition-adjusted points', () => {
     const state = stock();
-    const source = getScenario('gen:barricaded:cedar_close:0:1:1:2')!;
-    const action = structuredClone(source.stages.adapt.actions.find((a) => a.id === 'gen_protective_containment')!);
-    action.targetId = 'front_yard';
+    const source = SCENARIOS.ms_occupancy;
+    const action = structuredClone(source.stages.resolve.actions.find((a) => a.id === 'ms_controlled_entry')!);
+    action.targetId = 'front_yard'; action.approach = 'none'; action.requires = {}; action.entry = undefined; action.capabilities = { rules: ['authorized_response'], responseContext: 'constrained' }; action.equipment = [{ tag: 'response_firearm', value: 8, group: 'response', label: 'Response equipment' }];
     for (const [id, unit] of Object.entries(state.units)) {
       if (unit.itemId === 'response_shotgun') delete state.units[id];
       if (unit.itemId === 'compact_carbine') unit.condition = 15;
@@ -61,7 +61,7 @@ describe('shared mission equipment requirements', () => {
   });
   it('does not read hidden truth or hidden people positions when recommending stock', () => {
     const state = stock();
-    const source = getScenario('gen:welfare_check:cedar_close:0:1:1:2')!;
+    const source = SCENARIOS.ms_occupancy;
     const id = scenarioWith(Object.values(source.stages).flatMap((stage) => stage.actions));
     const before = autoLoadout(state, id, ['A', 'B'], NOW);
     for (const fact of SCENARIOS[id].facts) { fact.truth = !fact.truth; if (fact.person) fact.person.at = { x: 9999, y: -9999 }; }
@@ -77,11 +77,11 @@ describe('shared mission equipment requirements', () => {
     expect(plan.loadouts.A?.trauma_kit).toBeUndefined();
   });
   it('gives unqualified manual throw phones no score or wear use', () => {
-    const state = stock(); const scenario = getScenario('gen:welfare_check:cedar_close:0:1:1:2')!;
+    const state = stock(); const scenario = SCENARIOS.ms_occupancy;
     const built = getBuilt(scenario.locationFamilyId, scenario.locationSeed);
-    const started = apply(state, startCmd(scenario.id, ['B'], { practice: true, positions: { B: built.location.entries[0] }, loadouts: { B: {} } }));
+    const started = apply(withCallOnBoard(state, scenario.id), startCmd(scenario.id, ['B'], { positions: { B: built.location.entries[0] }, loadouts: { B: {} } }));
     expect(started.result.ok).toBe(true);
-    const ev = evaluateAction({ state: started.state, run: started.state.activeRun!, scenario, built, action: scenario.stages.assess.actions.find((a) => a.id === 'gen_contact')!, acting: ['B'], support: [], unitOverride: { B: [state.units[unitId('throw_phone')]] } as any });
+    const ev = evaluateAction({ state: started.state, run: started.state.activeRun!, scenario, built, action: scenario.stages.assess.actions.find((a) => a.id === 'ms_contact_hall')!, acting: ['B'], support: [], unitOverride: { B: [state.units[unitId('throw_phone')]] } as any });
     expect(ev.contributors.filter((c) => c.ref === 'throw_phone')).toEqual([]);
     expect(ev.uses.filter((u) => u.itemId === 'throw_phone')).toEqual([]);
   });

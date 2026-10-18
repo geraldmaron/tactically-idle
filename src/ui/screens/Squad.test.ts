@@ -120,7 +120,7 @@ describe('immediate squad navigation and separate rename drafts', () => {
 
   it('reserves roster portrait geometry before the first width measurement', () => {
     const html = panel('A').html;
-    expect(html.match(/class="ocard-art" style="aspect-ratio:1 \/ 1\.04;max-height:124px"/g)).toHaveLength(4);
+    expect(html.match(/class="ocard-art" style="aspect-ratio:1 \/ 1\.04"/g)).toHaveLength(4);
     expect(html).not.toContain('class="ocard-art" style="height:83px"');
   });
 

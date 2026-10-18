@@ -21,7 +21,7 @@ Direct rating gains and XP are different benefits. The existing 85 rating thresh
 
 ## Results and progression
 
-Debriefs lead with objective, safety and rewards. Meaningful officer changes receive portraits and visual stress comparisons. Unchanged practice participants are grouped, and detailed evidence and logs remain available through disclosure controls. Harm and losses remain prominent.
+Debriefs lead with objective, safety and rewards. Meaningful officer changes receive portraits and visual stress comparisons. Unchanged participants are grouped, and detailed evidence and logs remain available through disclosure controls. Harm and losses remain prominent.
 
 Officer XP fills a real progress gauge toward the next primary-rating point, using the same career threshold and bank as the simulation. There is no invented officer level. Archived debriefs display recorded deltas rather than reconstructing past progress from the current roster.
 

@@ -101,7 +101,7 @@ function openZones(loc: LocationDefinition): Set<string> {
  */
 export function plausibilityReport(loc: LocationDefinition, furniture = true): PlausibilityReport {
   const notes: string[] = [];
-  // Public ids carry the generation (`bungalow_g1`); the programme is keyed by the family.
+  // Public ids carry the generation (`bungalow_g2`); the programme is keyed by the family.
   const family = loc.familyId.replace(/_g\d+$/, '');
   const metrics: Record<string, number> = {};
   let score = 100;

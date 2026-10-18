@@ -9,6 +9,7 @@ import { DEFAULT_NAV, NavContext, type NavApi } from '../components/nav';
 import { Button } from '../components/ui';
 import { EquipmentStore } from './EquipmentStore';
 import { catalogEntries, DEFAULT_EQUIPMENT_QUERY, equipmentFacets, type EquipmentQuery } from './store-query';
+import { departmentUpkeep } from '../../sim/equipment-manager-policy';
 
 let state = makeState();
 let query: EquipmentQuery = { ...DEFAULT_EQUIPMENT_QUERY };
@@ -50,7 +51,7 @@ describe('compact equipment category filter', () => {
     expect(html).not.toContain('store-category-list');
     expect(html).not.toContain('class="store-category');
     expect(html).toContain('<details class="store-filters">');
-    expect(html).toContain('<article class="store-card">');
+    expect(html).toContain('class="inv-tile store-tile');
   });
 
   it('changes only category and retains search, availability, ownership, affordability and sort', () => {
@@ -64,8 +65,8 @@ describe('compact equipment category filter', () => {
     expect(html).toContain('Category: Communication');
     expect(html).toContain('<option value="comms" selected="">Communication (1)</option>');
     expect(html).toContain('1 of ');
-    expect(html).toContain(`<h3>${ITEMS.radio_kit.name}</h3>`);
-    expect(html).not.toContain(`<h3>${ITEMS.armored_rescue_vehicle.name}</h3>`);
+    expect(html).toContain('data-item-id="radio_kit"');
+    expect(html).not.toContain('data-item-id="armored_rescue_vehicle"');
     expect(html).toContain('value="cost_desc" selected=""');
   });
 
@@ -84,11 +85,10 @@ describe('compact equipment category filter', () => {
     state.department.funding = 100_000;
     query = { ...query, search: 'camera drone', category: 'intel', availability: 'locked', ownership: 'not_owned', affordable: true };
     const { html } = renderStore();
-    expect(html).toContain(`<h3>${ITEMS.camera_drone.name}</h3>`);
-    expect(html).toContain('Purchase locked');
-    expect(html).toContain('>Affordable</span>');
-    expect(html).toContain('<span>0 owned</span>');
-    expect(html).toContain('>0 ready</span>');
+    expect(html).toContain('data-item-id="camera_drone"');
+    expect(html).toContain(`${ITEMS.camera_drone.name}, Observation. $2,200 funding. Purchase locked: requires `);
+    expect(html).toContain('. Affordable. 0 owned, 0 ready.');
+    expect(html).toContain('store-tile-locked');
     expect(html).toContain('Purchase-locked items can still be affordable.');
   });
 
@@ -101,13 +101,31 @@ describe('compact equipment category filter', () => {
     expect(query).toEqual(DEFAULT_EQUIPMENT_QUERY);
     const { html } = renderStore();
     expect(html).toContain(`<option value="all" selected="">All equipment (${Object.keys(ITEMS).length})</option>`);
-    expect(html.match(/<article class="store-card">/g)).toHaveLength(Object.keys(ITEMS).length);
+    expect(html.match(/data-item-id="/g)).toHaveLength(Object.keys(ITEMS).length);
+  });
+
+  it('groups the default view by category with owned / total, and lists other sorts flat', () => {
+    const grouped = renderStore().html;
+    const entries = catalogEntries(state);
+    for (const category of ITEM_CATEGORIES) {
+      const set = entries.filter((entry) => entry.item.category === category);
+      if (!set.length) continue;
+      const have = set.filter((entry) => entry.owned > 0).length;
+      expect(grouped).toContain(`<section class="store-group" aria-label="${ITEM_CATEGORY_LABELS[category]}">`);
+      expect(grouped).toContain(`aria-label="${have} of ${set.length} owned">${have}/${set.length}</span>`);
+    }
+    expect(grouped).toContain(`aria-label="${entries.filter((entry) => entry.owned > 0).length} of ${entries.length} equipment types owned"`);
+    query = { ...query, sort: 'cost_asc' };
+    const flat = renderStore().html;
+    expect(flat).not.toContain('class="store-group"');
+    const ids = [...flat.matchAll(/data-item-id="([^"]+)"/g)].map((match) => match[1]);
+    expect(ids.map((id) => ITEMS[id].cost)).toEqual([...ids.map((id) => ITEMS[id].cost)].sort((a, b) => a - b));
   });
 
   it('describes service duration in real hours, matching the actual service timer', () => {
     const unit = Object.values(state.units).find((unit) => unit.itemId === 'radio_kit')!;
     unit.condition = 20;
-    const started = beginService(state, unit.id, NOW);
+    const started = beginService(state, unit.id, NOW, departmentUpkeep(state));
     expect(started.ok).toBe(true);
     expect(unit.serviceUntil! - NOW).toBe(ITEMS.radio_kit.wear.serviceHours * 3_600_000);
     const { html } = renderStore({ equipmentItemId: 'radio_kit' });

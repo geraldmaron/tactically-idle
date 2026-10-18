@@ -1,14 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { SCENARIOS } from '../content/scenarios';
-import { incidentId } from '../gen/incident';
-import { getScenario } from './scenario-registry';
-import { initializePersonnel } from './personnel';
+
+
 import { apply, makeState, NOW, startRun } from './test-fixtures';
 import { builtFor, evaluateAction, openingFlag } from './resolution';
-import { storyPoint } from './story-bindings';
+import { storyPoint } from '../gen/incident/story-bindings';
 import { storyPeoplePublic } from './story-people';
 import { physicalCare, officerCarePosition } from './physical-care';
-import { routeBetween, standingOf } from './spatial-factors';
+import { standingOf } from './spatial-factors';
+import { routeBetween } from './routes';
 import { deserialize, serialize } from './save';
 import { syncCasualtyFlags } from './incident-consequences';
 import type { ActionDefinition, OutcomeEffect, ScenarioDefinition } from './scenario-types';
@@ -62,8 +62,7 @@ function definition(): ScenarioDefinition {
   };
 }
 function started(loadouts: Partial<Record<SquadId, Record<string, number>>> = { A: { trauma_kit: 2 }, B: { trauma_kit: 2 } }): GameState {
-  const state = makeState(); state.saveVersion = 5; state.contentVersion = 7; initializePersonnel(state);
-  return startRun(state, ID, ['A', 'B'], { loadouts });
+  const state = makeState(); state.saveVersion = 9; state.contentVersion = 13; return startRun(state, ID, ['A', 'B'], { loadouts });
 }
 function evaluation(state: GameState, id: string, acting: SquadId[] = ['B'], support: SquadId[] = []) {
   const run = state.activeRun!, scenario = SCENARIOS[ID];
@@ -78,23 +77,7 @@ beforeEach(() => { SCENARIOS[ID] = definition(); });
 afterEach(() => { delete SCENARIOS[ID]; });
 
 describe('physical care follows public patients and actual acting squads', () => {
-  it('fixes the issued Jun scene without rewriting its action or drawing randomness', () => {
-    const scenario = getScenario(incidentId({ type: 'protected_rescue', familyId: 'juniper_court_v1', buildingSeed: 7, seed: 1, tier: 2, contentVersion: 7 }))!;
-    const initial = makeState(); initial.saveVersion = 5; initial.contentVersion = 7; initializePersonnel(initial);
-    const built = builtFor(scenario.locationFamilyId, scenario.locationSeed, []);
-    const state = startRun(initial, scenario.id, ['A', 'B'], { practice: true, positions: { A: built.location.entries[0], B: built.location.entries.at(-1)! } });
-    const run = state.activeRun!; run.stage = 'resolve';
-    run.flags.push(...['jun_heard', 'jun_reached', 'at_pickup', 'jun_safe', 'chair_safe', 'people_safe', 'primary_complete', 'care_mode', 'care_checked', 'care_required'].map(flag => `v5_chair_${flag}`));
-    const task = run.squadTasks.find(task => task.squadId === 'B')!;
-    const inside = scenario.story!.bindings.people.jun.initial; task.positionId = inside.spaceId; task.at = inside.at; task.stagingId = null;
-    const aid = scenario.stages.resolve.actions.find(action => action.id === 'v5_chair_civilian_aid')!;
-    const before = structuredClone(state), authored = structuredClone(aid);
-    const result = evaluateAction({ state, run, scenario, action: aid, built, acting: ['B'], support: [] });
-    expect(result).toMatchObject({ eligible: true, action: { approach: 'path', targetId: 'front_yard' } });
-    expect(result.travelMinutes).toBeGreaterThan(0); expect(result.arrivals).toEqual([expect.objectContaining({ squadId: 'B', spaceId: 'front_yard' })]);
-    expect(result.uses.filter(use => use.itemId === 'trauma_kit')).toEqual([expect.objectContaining({ squadId: 'B', qty: 1 })]);
-    expect(state).toEqual(before); expect(aid).toEqual(authored);
-  });
+
 
   it('moves the selected medic to the current patient once, then spends only that squad’s kit', () => {
     let state = choose(started(), 'move_patient');
@@ -142,10 +125,7 @@ describe('physical care follows public patients and actual acting squads', () =>
     expect(evaluation(state, 'aid')).toMatchObject({ eligible: false, arrivals: [], overlays: [] });
   });
 
-  it('leaves pre-v7 evaluation behavior and authored definitions intact', () => {
-    const state = started(); SCENARIOS[ID].version = 6; state.activeRun!.scenarioVersion = 6;
-    expect(evaluation(state, 'aid')).toMatchObject({ action: { approach: 'none' }, travelMinutes: 0 });
-  });
+
 
   it('lets a healthy squad open access while escorting the crew inside without requiring first aid or a kit', () => {
     let state = started({ A: {}, B: {} });
@@ -233,42 +213,13 @@ describe('officer field care and medical transport', () => {
     expect(evaluation(state, 'evacuate')).toMatchObject({ eligible: false, arrivals: [], uses: [] });
   });
 
-  it('uses only a defensible recorded room for old injuries and leaves the old save untouched', () => {
-    let state = choose(started(), 'injure');
+  it('refuses care when an injury has no recorded position and never reconstructs one from old history', () => {
+    const state = choose(started(), 'injure');
     const casualty = Object.values(state.activeRun!.officerCasualties!)[0]; delete casualty.position;
-    for (const decision of state.activeRun!.history) for (const event of decision.committed?.officerCasualties ?? []) delete event.position;
-    const history = structuredClone(state.activeRun!.history), rng = state.activeRun!.rngState;
-    state = deserialize(serialize(state, NOW))!;
-    expect(state.activeRun!.history).toEqual(history); expect(state.activeRun!.rngState).toBe(rng);
-    expect(officerCarePosition(state.activeRun!, SCENARIOS[ID], casualty)).toEqual({ spaceId: 'bedroom_e' });
-    expect(evaluation(state, 'officer_aid').eligible).toBe(true);
-    state = choose(state, 'move_a');
-    state.activeRun!.history[0].actionId = 'injure_remote';
-    expect(evaluation(state, 'officer_aid')).toMatchObject({ eligible: false });
+    expect(officerCarePosition(casualty)).toBeNull();
+    const before = structuredClone(state);
+    expect(evaluation(state, 'officer_aid').eligible).toBe(false);
+    expect(state).toEqual(before);
   });
 
-  it('evacuates an old Jun casualty from the last committed pickup move without inventing a position', () => {
-    const scenario = getScenario(incidentId({ type: 'protected_rescue', familyId: 'juniper_court_v1', buildingSeed: 7, seed: 0, tier: 2, contentVersion: 7 }))!;
-    const initial = makeState({ rngState: 3 }); initial.saveVersion = 5; initial.contentVersion = 7; initializePersonnel(initial);
-    initial.incidents = [{ id: scenario.id, type: 'protected_rescue', familyId: 'juniper_court_v1', tier: 2, arrivedAt: NOW, expiresAt: NOW + 3600000, seen: false }];
-    const built = builtFor(scenario.locationFamilyId, scenario.locationSeed, []);
-    let state = startRun(initial, scenario.id, ['A'], { positions: { A: built.location.entries[0] }, loadouts: { A: { trauma_kit: 1 } } });
-    const commit = (suffix: string) => {
-      state = choose(state, `v5_chair_${suffix}`);
-      const restored = deserialize(serialize(state, NOW)); expect(restored?.activeRun, suffix).toEqual(state.activeRun); state = restored!;
-    };
-    for (const suffix of ['hear_jun', 'request_receiver_early', 'reach_jun', 'check_chair_route', 'prepare_assistance', 'reach_pickup_assistance', 'assisted_move']) commit(suffix);
-    expect(state.activeRun!.history.at(-1)!.band).toBe('adverse');
-    const casualties = Object.values(state.activeRun!.officerCasualties!); expect(casualties).toHaveLength(1);
-    const realSpace = casualties[0].position!.spaceId;
-    for (const casualty of casualties) delete casualty.position;
-    for (const decision of state.activeRun!.history) for (const event of decision.committed?.officerCasualties ?? []) delete event.position;
-    const history = structuredClone(state.activeRun!.history), rng = state.activeRun!.rngState;
-    state = deserialize(serialize(state, NOW))!;
-    expect(state.activeRun!.history).toEqual(history); expect(state.activeRun!.rngState).toBe(rng);
-    expect(officerCarePosition(state.activeRun!, scenario, casualties[0], state)).toEqual({ spaceId: realSpace });
-    for (const suffix of ['resolve_officer_request', 'resolve_officer_wait', 'resolve_officer_evacuate']) commit(suffix);
-    expect(Object.values(state.activeRun!.officerCasualties!)[0]).toMatchObject({ care: 'evacuated' });
-    expect(Object.values(state.activeRun!.officerCasualties!)[0].position).toBeUndefined();
-  });
 });

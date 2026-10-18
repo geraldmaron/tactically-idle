@@ -5,7 +5,6 @@ import { nodeOptions, squadReadiness } from '../../sim/department-selectors';
 import { scenarioCards } from '../../sim/operation-selectors';
 import type { ScenarioCard } from '../../sim/operation-selectors';
 import { getScenario } from '../../sim/scenario-registry';
-import { SCENARIO_ORDER } from '../../content/scenarios';
 import { ageYears, gameDay } from '../../sim/calendar';
 import { RATING_META } from '../components/labels';
 
@@ -16,7 +15,7 @@ export function incidentsOf(g: GameState): IncidentCard[] {
   return (g as { incidents?: IncidentCard[] }).incidents ?? [];
 }
 
-/** A card for a scenario the selectors did not list (a generated incident, or a past one replayed). */
+/** A card for a scenario the selectors did not list (a generated incident, or a past one). */
 function synthCard(g: GameState, s: ScenarioDefinition, now: number): ScenarioCard {
   const eligible: SquadId[] = [];
   const why: string[] = [];
@@ -61,7 +60,7 @@ export function allCards(g: GameState, now: number): ScenarioCard[] {
   return [...extra, ...base];
 }
 
-/** One scenario's card, listed or not (past incidents replay from the debrief log). */
+/** One scenario's card, listed or not (a call leaves the board once a squad is dispatched). */
 export function cardFor(g: GameState, id: Id, now: number): ScenarioCard | undefined {
   const hit = allCards(g, now).find((c) => c.id === id);
   if (hit) return hit;
@@ -75,13 +74,6 @@ export interface BoardEntry {
   scenario: ScenarioDefinition | null;
 }
 
-export interface PracticeEntry {
-  card: ScenarioCard;
-  scenario: ScenarioDefinition | null;
-  /** Standing assignments allow real runs; exercises and past incidents require practice. */
-  kind: 'standing' | 'exercise' | 'replay';
-}
-
 /** Live incidents, newest first. */
 export function boardEntries(g: GameState, now: number): BoardEntry[] {
   const cards = allCards(g, now);
@@ -89,37 +81,17 @@ export function boardEntries(g: GameState, now: number): BoardEntry[] {
   for (const inc of incidentsOf(g)) {
     const card = cards.find((c) => c.id === inc.id);
     const scenario = getScenario(inc.id);
-    if (card && !scenario?.practiceOnly) out.push({ card, incident: inc, scenario });
+    if (card) out.push({ card, incident: inc, scenario });
   }
   return out;
 }
 
-/** Authored assignments, then past incidents that are no longer on the board. */
-export function practiceEntries(g: GameState, now: number): PracticeEntry[] {
-  const cards = allCards(g, now);
-  const onBoard = new Set(incidentsOf(g).map((i) => i.id));
-  const out: PracticeEntry[] = [];
-  for (const id of SCENARIO_ORDER) {
-    const card = cards.find((c) => c.id === id);
-    const scenario = getScenario(id);
-    if (card) out.push({ card, scenario, kind: scenario?.practiceOnly ? 'exercise' : 'standing' });
-  }
-  const seen = new Set<Id>(SCENARIO_ORDER);
-  for (const d of g.debriefs ?? []) {
-    if (seen.has(d.scenarioId) || onBoard.has(d.scenarioId)) continue;
-    seen.add(d.scenarioId);
-    const s = getScenario(d.scenarioId);
-    if (s) out.push({ card: synthCard(g, s, now), scenario: s, kind: 'replay' });
-    if (out.length >= SCENARIO_ORDER.length + 5) break;
-  }
-  return out;
-}
+/** The board never offers more than this many operations at once. */
+export const BOARD_LIMIT = 5;
 
-/** Authored exercises and closed incidents can only be launched as practice. */
-export function isReplayOnly(g: GameState, id: Id): boolean {
-  if (getScenario(id)?.practiceOnly) return true;
-  if (SCENARIO_ORDER.includes(id)) return false;
-  return !incidentsOf(g).some((i) => i.id === id);
+/** Live call-outs, newest first, capped at the board limit. */
+export function boardPlan(live: BoardEntry[]): BoardEntry[] {
+  return live.slice(0, BOARD_LIMIT);
 }
 
 // ---------------------------------------------------------------- board summary (department selector, optional)

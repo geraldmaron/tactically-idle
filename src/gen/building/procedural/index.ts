@@ -16,7 +16,7 @@ export const BUILDING_FAMILIES: BuildingFamilyInfo[] = FAMILIES.map((f) => ({ id
 
 /**
  * Deterministic: same (familyId, seed) → identical, validated LocationDefinition, unfurnished
- * (generatePair also returns its furnishLocationV7 form).
+ * (generatePair also returns its furnishLocation form).
  * Implementations retry internally on validation/plausibility failure and fall back
  * to a known-valid layout; they never return an invalid building.
  */

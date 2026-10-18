@@ -1,0 +1,61 @@
+/* Review drawer (spec 3.8). Sections step down the drawer separated by hairlines, never boxed twice.
+   Severity carries a color and a word: block red, fix before freeze orange, note paper blue,
+   accepted muted. Every selector starts with a lab- class (css-scope.test.ts). */
+
+.lab-review { display: grid; gap: var(--lab-s5); }
+.lab-review-h { margin: 0; font: var(--lab-type-head); color: var(--text); }
+.lab-review-row { display: flex; align-items: center; justify-content: space-between; gap: var(--lab-s2); flex-wrap: wrap; }
+.lab-review-help { margin: 6px 0 0; color: var(--muted); font: var(--lab-type-row); }
+.lab-review-empty { margin: 8px 0 0; color: var(--text-dim); font: var(--lab-type-body); }
+.lab-review-verdict { padding-bottom: var(--lab-s4); border-bottom: 1px solid var(--line); }
+
+.lab-review-compose { display: grid; gap: var(--lab-s3); padding-bottom: var(--lab-s5); border-bottom: 1px solid var(--line); }
+.lab-review-on { display: flex; align-items: baseline; gap: 8px; margin: 0; font: var(--lab-type-row); }
+.lab-review-anchor { display: inline-flex; align-items: center; gap: 6px; min-width: 0; padding: 2px 8px; border: 1px dashed var(--lab-xray-line); border-radius: 4px;
+  background: var(--lab-xray); color: var(--lab-xray-ink); font: 500 13px/18px var(--font-ui); overflow-wrap: anywhere; }
+.lab-review-text { width: 100%; min-height: 76px; padding: 8px 10px; resize: vertical; font: var(--lab-type-body); }
+.lab-review-sees { width: 100%; padding: 6px 8px; resize: vertical; font: var(--lab-type-row); }
+.lab-review-fields { display: grid; gap: var(--lab-s3); }
+.lab-review-fields .lab-input { width: 100%; }
+.lab-review-actions { display: flex; align-items: center; gap: var(--lab-s3); }
+.lab-review-hint { font: var(--lab-type-micro); }
+
+.lab-review-list { display: grid; gap: var(--lab-s2); }
+.lab-review-counts { display: inline-flex; flex-wrap: wrap; gap: 4px 12px; color: var(--text-dim); font: var(--lab-type-data); }
+.lab-review-count { display: inline-flex; align-items: center; gap: 5px; }
+.lab-review-count i, .lab-rnote-sev i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+
+.lab-rsev-block { --lab-sev: var(--danger); }
+.lab-rsev-fix { --lab-sev: var(--warn); }
+.lab-rsev-note { --lab-sev: var(--lab-xray-text); }
+.lab-rsev-accepted { --lab-sev: var(--muted); }
+.lab-review-count.lab-rsev-block i, .lab-review-count.lab-rsev-fix i, .lab-review-count.lab-rsev-note i, .lab-review-count.lab-rsev-accepted i { background: var(--lab-sev); }
+
+.lab-rnote { display: grid; gap: 6px; padding: 10px 12px; border: 1px solid var(--line); border-left: 3px solid var(--lab-sev, var(--line)); border-radius: var(--lab-r-control); background: var(--panel); }
+.lab-rnote-head { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+.lab-rnote-sev { display: inline-flex; align-items: center; gap: 5px; flex: none; color: var(--lab-sev); font: var(--lab-type-data); }
+.lab-rnote-sev i { background: var(--lab-sev); }
+.lab-rnote-anchor { min-width: 0; padding: 0; border: 0; background: none; color: var(--text); font: 500 13.5px/18px var(--font-ui); text-align: left; overflow-wrap: anywhere; }
+.lab-rnote-anchor:where(button):hover { color: var(--lab-xray-text); text-decoration: underline; text-underline-offset: 3px; }
+.lab-rnote-text { margin: 0; color: var(--text); font: var(--lab-type-body); }
+.lab-rnote-sees { margin: 0; padding-left: 10px; border-left: 2px solid var(--line-strong); color: var(--text-dim); font: italic 400 13px/18px var(--font-ui);
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.lab-rnote-fix { margin: 0; color: var(--text-dim); font: var(--lab-type-row); }
+.lab-rnote-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; color: var(--muted); font: var(--lab-type-micro); }
+.lab-rnote-remove { margin-left: auto; padding: 2px 4px; border: 0; background: none; color: var(--muted); font: var(--lab-type-micro); }
+.lab-rnote-remove:hover { color: var(--danger); }
+.lab-rnote-status { display: inline-flex; align-items: center; gap: 6px; justify-self: start; margin: 0; padding: 1px 8px; border-radius: 999px; font: var(--lab-type-data); }
+.lab-rnote-status-changed { border: 1px dashed var(--lab-pending); color: var(--amber-2); }
+.lab-rnote-status-orphaned { border: 1px solid rgba(255, 107, 90, 0.5); color: var(--danger); }
+.lab-rnote-orphaned .lab-rnote-anchor { text-decoration: line-through; color: var(--text-dim); }
+.lab-rnote.lab-rsev-accepted .lab-rnote-text { color: var(--text-dim); }
+
+.lab-review-export { display: grid; gap: var(--lab-s2); padding-top: var(--lab-s4); border-top: 1px solid var(--line); }
+.lab-review-saved { display: inline-flex; align-items: center; gap: 6px; color: var(--text-dim); font: var(--lab-type-data); }
+.lab-review-saved .lab-glyph { color: var(--mint); }
+.lab-review-unsaved, .lab-review-unsaved .lab-glyph { color: var(--amber-2); }
+.lab-review-why { margin: 0; color: var(--text-dim); font: var(--lab-type-row); }
+.lab-review-md { display: grid; gap: 6px; }
+.lab-review-mdtext { width: 100%; padding: 8px; resize: vertical; font: 400 12px/17px var(--lab-mono); white-space: pre-wrap; }
+.lab-review-old { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: 0; padding: 8px 10px; border: 1px dashed var(--lab-xray-line); border-radius: var(--lab-r-control); color: var(--text); font: var(--lab-type-row); }
+.lab-review-old .lab-glyph { color: var(--lab-xray-text); }

@@ -24,7 +24,7 @@ function fixture() {
   const g = startRun(makeState(), 'ms_occupancy', ['A']);
   const noop = () => {};
   const props: LiveViewProps = {
-    g, now: NOW, title: 'Map inspection', subtitle: 'TEST', practice: true,
+    g, now: NOW, title: 'Map inspection', subtitle: 'TEST',
     progress: stageProgress(g), built: currentBuilt(g)!, spaces: spaceViews(g), squadTasks: g.activeRun!.squadTasks,
     deployedSquads: [g.squads[0]], focusSquadId: 'A', onFocusSquad: noop,
     officers: [], actions: [], selectedAction: null, onSelectAction: noop,

@@ -6,10 +6,12 @@ import { ITEMS } from '../content/items';
 import type { GameState, HandlerMap, Id, ItemUnit, SquadId } from './types';
 import { projectedCondition } from './equipment';
 import { readyUnits, reserveLoadouts, unitEffectiveness } from './inventory';
-import { advanceTime } from './operation';
-import { availableUnits, builtFor, CERT_LABEL, evaluateAction } from './resolution';
+import { advanceTime, applyClockCues } from './operation';
+import { availableUnits, builtFor, evaluateAction } from './resolution';
 import { actionEquipmentRequirements, operatorQualified, qualifiedOfficers, requiredEquipmentBundle } from './equipment-requirements';
 import { getScenario } from './scenario-registry';
+import { departmentUpkeep } from './equipment-manager-policy';
+import { CERT_HOLDER } from '../content/certs';
 
 export const RESUPPLY_MINUTES = 3;
 
@@ -43,7 +45,6 @@ export function planActionResupply(
   const minutes = vehicle?.itemId === 'support_van' ? 2 : RESUPPLY_MINUTES;
   const result = (needed: boolean, reason: string | null): ActionResupplyPlan => ({ needed, ok: false, reason, minutes, allocations: [], items: [] });
   if (!run || run.status !== 'active' || run.stage === 'debrief') return result(false, 'No active operation to equip');
-  if (run.practice) return result(false, 'Practice already provides its available equipment');
   const scenario = getScenario(run.scenarioId);
   const action = scenario?.stages[run.stage].actions.find((a) => a.id === actionId);
   if (!scenario || !action) return result(false, 'That option is not available at this stage');
@@ -59,7 +60,7 @@ export function planActionResupply(
     return !!def && unitEffectiveness(u, def) > 0;
   };
   const units = Object.fromEntries(participants.map((sq) => [sq, availableUnits(state, run, sq)
-    .map((u) => ({ ...u, condition: projectedCondition(state, u, time) })).filter(usable)])) as Record<SquadId, ItemUnit[]>;
+    .map((u) => ({ ...u, condition: projectedCondition(state, u, time, departmentUpkeep(state)) })).filter(usable)])) as Record<SquadId, ItemUnit[]>;
   const carrying = (picks: Pick[], squads: SquadId[]) => squads.flatMap((sq) => [...units[sq], ...picks.filter((p) => p.squadId === sq).map((p) => p.unit)]);
   const held = participants.flatMap((squadId) => units[squadId].map((unit) => ({ squadId, unit })));
   const requirements = actionEquipmentRequirements(action);
@@ -80,18 +81,19 @@ export function planActionResupply(
   const officers = qualifiedOfficers(state, acting, action);
   const missingCerts = requirements.certs.filter((cert) => !officers.some((officer) => officer.certs.includes(cert)));
   if (!officers.length) return result(true, 'Equipment alone will not unlock this action. No acting officer can take part.');
-  if (missingCerts.length) return result(true, `Equipment alone will not unlock this action. Needs a ${missingCerts.map((cert) => CERT_LABEL[cert] ?? cert).join(' and a ')} in the acting squads.`);
+  if (missingCerts.length) return result(true, `Equipment alone will not unlock this action. Needs a ${missingCerts.map((cert) => CERT_HOLDER[cert] ?? cert).join(' and a ')} in the acting squads.`);
   for (const group of requirements.groups) {
     const items = group.itemIds.map((id) => ITEMS[id]);
     if (items.length && !items.some((item) => acting.some((squadId) => operatorQualified(state, squadId, action, item)))) {
       const certs = [...new Set(items.flatMap((item) => item.requiresCerts ?? []))];
-      return result(true, `Equipment alone will not unlock this action. ${group.label} needs a qualified operator: ${certs.map((cert) => CERT_LABEL[cert] ?? cert).join(' or ')}.`);
+      return result(true, `Equipment alone will not unlock this action. ${group.label} needs a qualified operator: ${certs.map((cert) => CERT_HOLDER[cert] ?? cert).join(' or ')}.`);
     }
   }
 
+  const upkeep = departmentUpkeep(state);
   const stock = Object.values(ITEMS).filter((item) => !item.supportOnly)
-    .flatMap((item) => readyUnits(state, item.id, time))
-    .flatMap((unit) => receivers.map((squadId) => ({ squadId, unit: { ...unit, condition: projectedCondition(state, unit, time) } })));
+    .flatMap((item) => readyUnits(state, item.id, upkeep, time))
+    .flatMap((unit) => receivers.map((squadId) => ({ squadId, unit: { ...unit, condition: projectedCondition(state, unit, time, upkeep) } })));
   // Choose the best current physical condition; a tie retains an authored OR preference.
   const preference = (unit: ItemUnit) => {
     const index = (action.requires.anyTags ?? []).findIndex((tag) => ITEMS[unit.itemId]?.tags.includes(tag));
@@ -123,7 +125,7 @@ export function planActionResupply(
     const reserved = matching.filter((unit) => unit.status === 'reserved' || state.reservations.some((reservation) => reservation.unitId === unit.id)).length;
     const service = matching.filter((unit) => unit.status === 'service').length;
     const unusable = matching.filter((unit) => unit.status === 'expired' || (unit.expiresAt !== null && unit.expiresAt <= time)
-      || projectedCondition(state, unit, time) <= ITEMS[unit.itemId].wear.failAt).length;
+      || projectedCondition(state, unit, time, departmentUpkeep(state)) <= ITEMS[unit.itemId].wear.failAt).length;
     if (reserved) reasons.push(`${reserved} already allocated`);
     if (service) reasons.push(`${service} in service`);
     if (unusable) reasons.push(`${unusable} expired or failed`);
@@ -149,10 +151,11 @@ export const RESUPPLY_HANDLERS: HandlerMap<'resupplyAction'> = {
     const run = draft.activeRun!;
     const explicit = Object.fromEntries(plan.allocations.map((a) => [a.squadId, a.unitIds]));
     const before = draft.reservations.length;
-    const reserved = reserveLoadouts(draft, run.id, {}, explicit, ctx.now);
+    const reserved = reserveLoadouts(draft, run.id, {}, explicit, ctx.now, departmentUpkeep(draft));
     if (!reserved.ok) return reserved;
     run.reservationIds.push(...draft.reservations.slice(before).map((r) => r.id));
-    advanceTime(run, getScenario(run.scenarioId)!, plan.minutes);
+    const scenario = getScenario(run.scenarioId)!;
+    applyClockCues(run, scenario, advanceTime(run, scenario, plan.minutes).cues);
     const vehicle = supportVehicle(draft, run);
     (run.resupplies ??= []).push({ minutes: plan.minutes, allocations: plan.allocations, ...(vehicle?.itemId === 'support_van' ? { supportUnitId: vehicle.id } : {}) });
     run.revision += 1;

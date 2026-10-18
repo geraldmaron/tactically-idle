@@ -17,17 +17,9 @@ import { DEV_NODES } from '../content/dev-tree';
 import { ITEMS } from '../content/items';
 import { courseCheck, describeEffect, itemCheck, nodeCheck } from './develop';
 import { quoteDevelopment, type DevelopmentQuote } from './development-tiers';
-import {
-  ECONOMY_TUNING,
-  HOUR_MS,
-  formatDuration,
-  isInjured,
-  ratesAt,
-  recoveryDuty,
-  recoveryMultiplier,
-  recoveryRate,
-  squadDeployed,
-} from './economy';
+import { ECONOMY_TUNING, HOUR_MS, isInjured, netRate, ratesAt, recoveryMultiplier, recoveryRate } from './economy';
+import { formatDuration } from './format';
+import { recoveryDuty, squadDeployed } from './squads';
 import { ROSTER_TUNING, dismissCheck, hireCheck, retentionOffer } from './roster';
 import { EXPERIENCE_LABEL, experienceBand, formatGameDate, gameDay, serviceYears } from './calendar';
 import {
@@ -44,7 +36,7 @@ import {
   LEARNING_MULTIPLIER,
 } from './career';
 import { daysToUnreliable, projectedCondition, scrapCheck, serviceCheck, stateLabelFor } from './equipment';
-import { equipmentWearMultiplier } from './equipment-manager-policy';
+import { departmentUpkeep, equipmentWearMultiplier } from './equipment-manager-policy';
 import { readyUnits, unitEffectiveness } from './inventory';
 import { boardSummaryOf, type BoardSummary } from './incidents';
 
@@ -57,6 +49,8 @@ export interface Budget {
   wages: number;
   operating: number;
   supplies: number;
+  /** Command Staff salaries while on duty. */
+  staff: number;
   net: number;
   devPointsPerHour: number;
   /** Extra wages per hour from service anniversaries landing in the next 30 game days. */
@@ -144,11 +138,11 @@ export function budget(state: GameState): Budget {
 }
 
 export function projectHire(state: GameState, candidateId: Id): Projection {
-  return hireCheck(state, candidateId);
+  return hireCheck(state, candidateId, netRate);
 }
 
 export function projectDismiss(state: GameState, officerId: Id, _now: number): Projection {
-  return dismissCheck(state, officerId);
+  return dismissCheck(state, officerId, netRate);
 }
 
 /** Stress after the time since the last settlement, so a view between ticks stays exact. */
@@ -218,11 +212,12 @@ export function nodeOptions(state: GameState): NodeOption[] {
 }
 
 export function storeOptions(state: GameState): StoreOption[] {
+  const upkeep = departmentUpkeep(state);
   const now = state.department.clockHighWater;
   return Object.values(ITEMS).map((item) => {
     const units = Object.values(state.units).filter((u) => u.itemId === item.id && u.status !== 'scrapped');
-    const ready = readyUnits(state, item.id);
-    const conditions = units.filter((u) => u.status !== 'expired').map((u) => projectedCondition(state, u, now));
+    const ready = readyUnits(state, item.id, upkeep);
+    const conditions = units.filter((u) => u.status !== 'expired').map((u) => projectedCondition(state, u, now, upkeep));
     const c = itemCheck(state, item, 1);
     return {
       item,
@@ -308,12 +303,13 @@ export function unitViews(state: GameState, itemId: Id, now: number): UnitView[]
   if (!def) return [];
   const t = Math.max(now, state.department.clockHighWater);
   const rank = (v: UnitView) => (v.unit.status === 'expired' ? -1 : v.unit.condition);
+  const upkeep = departmentUpkeep(state);
   return Object.values(state.units)
     .filter((u) => u.itemId === itemId && u.status !== 'scrapped')
     .map((u): UnitView => {
-      const condition = projectedCondition(state, u, t);
+      const condition = projectedCondition(state, u, t, upkeep);
       const shown = { ...u, condition };
-      const svc = serviceCheck(state, u.id, t);
+      const svc = serviceCheck(state, u.id, t, upkeep);
       const scrap = scrapCheck(state, u.id);
       return {
         unit: shown,
@@ -377,7 +373,7 @@ export function careerInfo(state: GameState, officerId: Id, now: number): Career
   let retirement: CareerInfo['retirement'] = null;
   if (o.retirement) {
     const r = o.retirement;
-    const offer = r.reason === 'service' ? retentionOffer(state, o.id) : null;
+    const offer = r.reason === 'service' ? retentionOffer(state, o.id, netRate) : null;
     retirement = {
       date: formatGameDate(r.day),
       inDays: Math.max(0, Math.ceil(r.day - day)),

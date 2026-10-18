@@ -191,10 +191,11 @@ describe('external support responsibility lifecycle', () => {
     const closed = apply(partial, { type: 'closeDebrief' }).state;
     expect(closed.officers.off_chen.career.favorable).toBe(beforeCareer);
     const falselyScored = decide(started(), 'fake_care');
-    expect(falselyScored.activeRun!.endingId).toBe('handed_over');
-    expect(computeDebrief(falselyScored, falselyScored.activeRun!)!).toMatchObject({ completionAchieved: false, disposition: 'unresolved', objective: { score: 100, label: 'Unresolved' }, devPointReward: 3 });
-    const full = decide(started(), 'resolve');
-    const incompleteReward = computeDebrief(falselyScored, falselyScored.activeRun!)!;
+    expect(falselyScored.activeRun!.endingId).toBeNull();
+    expect(falselyScored.activeRun!.flags).toContain('completion_pending:care');
+    expect(computeDebrief(falselyScored, falselyScored.activeRun!)).toBeNull();
+    const full = decide(decide(started(), 'prepare'), 'resolve');
+    const incompleteReward = result;
     const fullReward = computeDebrief(full, full.activeRun!)!;
     expect(incompleteReward.fundingReward).toBeLessThan(fullReward.fundingReward);
     expect(incompleteReward.officerCondition[0].xpGained).toBeLessThan(fullReward.officerCondition[0].xpGained);
@@ -245,11 +246,6 @@ describe('v5 public conditions on support effects', () => {
     expect(externalSupportActionIssue(run(), scenario, action('request', { when: matches, requestSupport: ['medical'] }))).toContain('already been requested');
   });
 
-  it.each([1, 2, 3, 4])('preserves the issued v%s scan even when its public condition does not match', version => {
-    const scenario = { ...SCENARIOS[CONDITIONAL_ID], version };
-    expect(externalSupportActionIssue(run(), scenario, action('request', { when: { notFlags: ['crew_requested'] }, requestSupport: ['medical'] }))).toContain('already been requested');
-    expect(externalSupportActionIssue(run(), scenario, action('accept', { when: { flags: ['not_ready'] }, acceptSupport: ['medical'] }))).toContain('identify the available receiving service');
-  });
 
   it.each(['favorable', 'mixed', 'adverse'] as const)('still validates a matching request or acceptance found only in the %s band', band => {
     const scenario = SCENARIOS[CONDITIONAL_ID];

@@ -5,6 +5,7 @@ import { externalSupportViews } from '../../sim/external-support';
 import { Button } from '../components/ui';
 import { Sheet } from '../components/Sheet';
 import { Icon } from '../icons';
+import type { IconName } from '../icons';
 import { opMinutes } from '../format';
 import './support-context.css';
 
@@ -48,6 +49,27 @@ export function contextualSupportAction(scenario: ScenarioDefinition, actions: A
   return continuing.find((action) => action.eligible) ?? continuing[0] ?? null;
 }
 
+const SERVICE_ICON: [RegExp, IconName][] = [[/paramedic|medic|ambulance/i, 'medic'], [/fire/i, 'flame'], [/police|patrol/i, 'shield'], [/social|welfare|care/i, 'heart']];
+function serviceIcon(kind: string): IconName {
+  return SERVICE_ICON.find(([pattern]) => pattern.test(kind))?.[1] ?? 'handover';
+}
+
+const TRACK_STEPS = ['Request', 'Arrive', 'Hand over'] as const;
+
+/** Request → arrive → hand over. The arrival segment fills with operation time, never wall-clock time. */
+function SupportTrack({ service }: { service: ServiceView }) {
+  const reached = service.status === 'accepted' ? 3 : service.status === 'available' ? 2 : service.status === 'requested' ? 1 : 0;
+  const span = service.requestedAt !== null && service.availableAt !== null ? service.availableAt - service.requestedAt : 0;
+  const travelled = service.status === 'requested' && span > 0 && service.minutesRemaining !== null ? Math.min(1, Math.max(0, 1 - service.minutesRemaining / span)) : null;
+  return <ol className="support-track" aria-hidden="true">
+    {TRACK_STEPS.map((step, index) => {
+      const state = index < reached ? 'done' : index === reached ? 'current' : 'todo';
+      const fill = state === 'done' ? 1 : index === 1 && travelled !== null ? travelled : 0;
+      return <li key={step} data-state={state}><span className="support-track-bar"><i style={{ width: `${Math.round(fill * 100)}%` }} /></span>{step}</li>;
+    })}
+  </ol>;
+}
+
 export function SupportContext({ scenario, run, actions, open, onOpen, onClose, onPickAction }: {
   scenario: ScenarioDefinition;
   run: OperationRun;
@@ -62,7 +84,14 @@ export function SupportContext({ scenario, run, actions, open, onOpen, onClose, 
   return <>
     <section className="support-context" aria-label="Care and support">
       <div className="support-context-heading"><h2><Icon name="handover" size={16} />Care &amp; support</h2><button type="button" className="support-details-trigger" onClick={onOpen} aria-haspopup="dialog" aria-expanded={open}>Details<Icon name="chevronRight" size={16} /></button></div>
-      <ul className="support-status-list" aria-live="polite">{services.map((service) => <li key={service.id} data-support-status={service.status}><strong>{service.label}</strong><span>{supportStatusLine(service)}</span></li>)}</ul>
+      <ul className="support-status-list" aria-live="polite">{services.map((service) => <li key={service.id} className="support-tile" data-support-status={service.status}>
+        <span className="support-icon" aria-hidden="true"><Icon name={serviceIcon(service.kind)} size={20} /></span>
+        <div className="support-tile-body">
+          <strong>{service.label}</strong>
+          {service.status !== 'unavailable' && <SupportTrack service={service} />}
+          <span className="support-line">{service.status === 'unavailable' && <Icon name="xcircle" size={13} />}{supportStatusLine(service)}</span>
+        </div>
+      </li>)}</ul>
     </section>
     <Sheet open={open} onClose={onClose} title="Care and support" className="support-context-sheet" footer={<Button block onClick={onClose}>Back to decisions</Button>}>
       <IncidentBriefContext scenario={scenario} />

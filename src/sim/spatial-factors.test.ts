@@ -1,4 +1,4 @@
-import { withLegacyRadios } from './test-fixtures';
+import { withReservedRadios } from './test-fixtures';
 import { describe, expect, it } from 'vitest';
 import type { BuiltLocation, Contributor, GameState, Id, LocationDefinition, SquadId, Vec } from './types';
 import type { ActionDefinition, ScenarioDefinition } from './scenario-types';
@@ -6,7 +6,7 @@ import { scenarioActions } from './scenario-types';
 import { SCENARIOS } from '../content/scenarios';
 import { ITEMS } from '../content/items';
 import { DOORS } from '../content/materials';
-import { MAPLE_STREET } from '../content/locations/maple-street';
+import { MAPLE_STREET } from './fixtures/maple-street';
 import { buildLocation, deriveLocation } from './location';
 import { builtFor, evaluateAction, strainFor, type Evaluation } from './resolution';
 import { actionViews, previewAction, spaceViews, spaceViewsForScenario } from './operation-selectors';
@@ -16,11 +16,11 @@ import {
   rangeThroughOpening,
   rangeToPoint,
   resolveSubject,
-  routeBetween,
   SPATIAL_TUNING,
   signalQuality,
   toneFor,
 } from './spatial-factors';
+import { routeBetween } from './routes';
 import { apply, makeState, NOW, playPolicy, setCareer, setRun, setUnitCondition, startCmd, startRun } from './test-fixtures';
 
 const occ = SCENARIOS.ms_occupancy;
@@ -222,7 +222,7 @@ describe('equipment range', () => {
 
 describe('unit condition: the specific unit used sets effectiveness, and wear is per unit', () => {
   const joint = () => {
-    const s = withLegacyRadios(setRun(startRun(makeState(), 'ms_urgent', ['A', 'B']), { stage: 'adapt' }), { A: 1, B: 1 });
+    const s = withReservedRadios(setRun(startRun(makeState(), 'ms_urgent', ['A', 'B']), { stage: 'adapt' }), { A: 1, B: 1 });
     const radioB = s.reservations.find((r) => r.squadId === 'B' && r.itemId === 'radio_kit')!.unitId;
     return { s, radioB };
   };
@@ -348,7 +348,7 @@ describe('entry and movement', () => {
     const nearLink = link(s);
     const farLink = link(setRun(s, { positions: { B: 'back_yard' } }));
     expect(nearLink.value).toBeGreaterThan(farLink.value);
-    const noRadios = withLegacyRadios(startRun(makeState(), 'ms_occupancy', ['A', 'B'], { loadouts: { A: { throw_phone: 1 }, B: { door_ram: 1 } } }), { A: 0, B: 0 });
+    const noRadios = withReservedRadios(startRun(makeState(), 'ms_occupancy', ['A', 'B'], { loadouts: { A: { throw_phone: 1 }, B: { door_ram: 1 } } }), { A: 0, B: 0 });
     const dull = link(setRun(noRadios, { stage: 'resolve', positions: { B: 'back_yard' } }));
     expect(dull.label).toMatch(/no radios/);
     expect(dull.label).toMatch(/out of voice range/);
@@ -412,7 +412,7 @@ describe('officer experience and age', () => {
     expect(rookie.strain / run(prep({ age: 24, service: 3 })).strain).toBeGreaterThan(1.1);
   });
 
-  it('closing a real debrief advances every deployed officer’s career counters once; practice does not', () => {
+  it('closing a debrief advances every deployed officer’s career counters once', () => {
     const start = startRun(makeState(), 'ms_occupancy', ['A']);
     const done = playPolicy(start, { assess: ['ms_gather'], adapt: ['ms_preserve_time'], resolve: ['ms_handover'] });
     for (const id of ['off_chen', 'off_brooks', 'off_ortiz', 'off_vale']) {
@@ -421,8 +421,6 @@ describe('officer experience and age', () => {
       expect(c.favorable + c.adverse).toBeLessThanOrEqual(1);
     }
     expect(done.state.officers.off_okafor.career.operations).toBe(0);
-    const practice = playPolicy(startRun(makeState(), 'ms_occupancy', ['A'], { practice: true }), { assess: ['ms_gather'], adapt: ['ms_preserve_time'], resolve: ['ms_handover'] });
-    expect(practice.state.officers.off_chen.career.operations).toBe(0);
   });
 });
 
@@ -538,8 +536,8 @@ describe('overlays', () => {
     const resolving = setRun(s, { stage: 'resolve' });
     const resolve = actionViews(resolving, NOW, 'A');
     expect(resolve.find((x) => x.id === 'ms_controlled_entry')!.overlays.some((o) => o.kind === 'path')).toBe(true);
-    expect(resolve.some((x) => x.id === 'ms_handover')).toBe(false);
-    // The frozen no-movement action is still previewable for historical compatibility.
+    expect(resolve.some((x) => x.id === 'ms_handover')).toBe(true);
+    // The isolated fixture has an explicit no-movement handover.
     expect(previewAction(resolving, NOW, 'ms_handover', ['A'], [])!.overlays).toEqual([]);
   });
 

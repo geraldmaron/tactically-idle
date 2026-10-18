@@ -49,6 +49,25 @@ export const DEV_NODES: Record<Id, DevelopmentNode> = {
     requires: ['personnel_recruiting'],
     effects: [{ kind: 'rosterCap', delta: 4 }],
   },
+  // Command Staff hires (src/sim/command-staff.ts). Each manager has an on/off switch on HQ.
+  personnel_watch_commander: {
+    id: 'personnel_watch_commander',
+    branch: 'personnel',
+    name: 'Watch commander',
+    description: "Hire a watch commander who rests idle squads when someone is worn down and puts them back on duty once everyone is fresh. Paid $45 per hour while on duty. Never touches a squad on a call.",
+    cost: { dp: 2, funding: 1500 },
+    requires: [],
+    effects: [{ kind: 'commandStaff', managerId: 'watch_commander' }],
+  },
+  personnel_training_sergeant: {
+    id: 'personnel_training_sergeant',
+    branch: 'personnel',
+    name: 'Training sergeant',
+    description: "Hire a training sergeant who fills free training places with your most rested officers, in the course you choose, while keeping a funding reserve. Paid $45 per hour while on duty.",
+    cost: { dp: 2, funding: 1800 },
+    requires: ['personnel_academy'],
+    effects: [{ kind: 'commandStaff', managerId: 'training_sergeant' }],
+  },
   // ---- field capability
   field_contact_kit: {
     id: 'field_contact_kit',

@@ -1,0 +1,120 @@
+/* Calls (spec 3.1): the landing. A gate band across the top, the four calls as cards (title in
+   Oswald, the hook in the game's people colors, the call's shape as a blueprint thumbnail, how it
+   usually ends and its gate rows), and the findings feed beside them. Also the gate rows that the
+   Outcomes gate panel shares. */
+
+.lab-calls { display: flex; flex-direction: column; min-height: 100%; }
+
+.lab-calls-gate { display: flex; flex-wrap: wrap; align-items: center; gap: var(--lab-s3) var(--lab-s5); margin: var(--lab-s4) var(--lab-s5) 0; padding: var(--lab-s3) var(--lab-s4);
+  border: 1px solid var(--line); border-radius: var(--lab-r-panel); background: var(--panel); }
+.lab-calls-gate-what { display: grid; gap: 2px; }
+.lab-calls-gate-title { display: flex; align-items: center; gap: 8px; margin: 0; font: var(--lab-type-title); }
+.lab-calls-gate-title .lab-glyph { color: var(--lab-xray-text); }
+.lab-calls-gate-pop { color: var(--muted); font: var(--lab-type-row); }
+.lab-calls-gate-status { flex: 1; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; min-width: 240px; margin: 0; font: var(--lab-type-body); }
+.lab-calls-gate-status b { font-weight: 600; }
+.lab-calls-gate-status .lab-progress { min-width: 280px; }
+.lab-calls-pass { color: var(--mint); }
+.lab-calls-fail { color: var(--danger); }
+.lab-calls-age { color: var(--muted); font: var(--lab-type-data); }
+.lab-calls-run { flex: none; }
+
+.lab-calls-body { display: grid; grid-template-columns: minmax(0, 1fr) 320px; align-items: start; gap: var(--lab-s4); padding: var(--lab-s4) var(--lab-s5) var(--lab-s6); }
+.lab-calls-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--lab-s4); }
+
+.lab-calls-card { display: flex; flex-direction: column; gap: 10px; min-width: 0; padding: var(--lab-s4) var(--lab-s4) 14px; border: 1px solid var(--line); border-radius: var(--lab-r-panel);
+  background: var(--panel); }
+.lab-calls-card-current { box-shadow: inset 3px 0 0 var(--amber); }
+.lab-calls-card-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--lab-s3); }
+.lab-calls-card-title { padding: 0; border: 0; background: none; color: var(--text); font: var(--lab-type-hero); text-align: left; }
+.lab-calls-card-title:hover { color: var(--amber-2); }
+.lab-calls-card-type { flex: none; color: var(--muted); font: 600 14px/18px var(--font-cond); }
+.lab-calls-hook { margin: 0; max-width: 64ch; color: var(--text-dim); font: 400 14.5px/21px var(--font-ui); }
+.lab-calls-counts { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 0; color: var(--text-dim); font: 600 13.5px/18px var(--font-cond); }
+.lab-calls-counts b { color: var(--text); font-variant-numeric: tabular-nums; }
+
+.lab-calls-shape { position: relative; margin: 2px 0 0; padding: 8px 10px 20px; border: 1px solid rgba(124, 160, 220, 0.18); border-radius: 6px;
+  background-color: var(--lab-canvas);
+  background-image: linear-gradient(var(--lab-grid) 1px, transparent 1px), linear-gradient(90deg, var(--lab-grid) 1px, transparent 1px); background-size: 12px 12px; }
+.lab-calls-shape svg { display: block; width: 100%; height: 64px; }
+.lab-calls-shape-lane { stroke: rgba(243, 247, 255, 0.16); stroke-width: 0.5; stroke-dasharray: 1.5 1.5; }
+.lab-calls-shape-path { fill: none; stroke: rgba(243, 247, 255, 0.28); stroke-width: 0.45; }
+.lab-calls-shape-box { fill: var(--chalk-dim); }
+.lab-calls-shape-node { fill: rgba(243, 247, 255, 0.78); }
+.lab-calls-shape-turn { fill: var(--lab-event); }
+.lab-calls-shape-ending { fill: var(--line-strong); }
+.lab-calls-shape-clean { fill: var(--lab-w-clean); }
+.lab-calls-shape-costly { fill: var(--lab-w-costly); }
+.lab-calls-shape-unresolved { fill: var(--lab-w-unresolved); }
+.lab-calls-shape-hurt { fill: var(--lab-w-hurt); }
+.lab-calls-shape-death { fill: var(--lab-w-death); }
+.lab-calls-shape-unreached { fill: none; stroke: var(--muted); stroke-width: 0.5; stroke-dasharray: 1 1; }
+.lab-calls-shape-key { position: absolute; left: 10px; right: 10px; bottom: 3px; height: 14px; }
+.lab-calls-shape-key span { position: absolute; transform: translateX(-50%); color: var(--chalk-dim); font: 400 12px/14px var(--font-marker); white-space: nowrap; }
+
+.lab-calls-row-label { color: var(--muted); font: var(--lab-type-micro); }
+.lab-calls-usually { display: grid; grid-template-columns: 64px minmax(0, 1fr); align-items: center; gap: 4px 10px; }
+.lab-calls-usually .lab-stack { grid-column: 2; }
+.lab-calls-usually-figures { grid-column: 2; display: flex; flex-wrap: wrap; gap: 2px 14px; color: var(--text-dim); font: var(--lab-type-data); font-variant-numeric: tabular-nums; }
+.lab-calls-usually-figures span { display: inline-flex; align-items: center; gap: 4px; }
+.lab-calls-usually-pop { grid-column: 2; color: var(--muted); font: var(--lab-type-micro); }
+.lab-calls-usually > .lab-muted { font: var(--lab-type-row); }
+.lab-calls-checks { display: grid; grid-template-columns: 64px minmax(0, 1fr); align-items: start; gap: 10px; }
+.lab-calls-checks .lab-calls-row-label { padding-top: 7px; }
+
+.lab-calls-card-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--lab-s2); margin-top: auto; padding-top: 10px; border-top: 1px solid var(--line); }
+.lab-calls-lint { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; color: var(--text-dim); font: var(--lab-type-data); font-variant-numeric: tabular-nums; }
+.lab-calls-lint > span { display: inline-flex; align-items: center; gap: 4px; }
+.lab-calls-notes .lab-glyph { color: var(--amber-2); }
+.lab-calls-actions { display: inline-flex; gap: 6px; }
+
+/* gate rows (also the Outcomes gate panel) */
+.lab-gate-rows { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.lab-gate-row { display: grid; gap: 2px; }
+.lab-gate-open { display: grid; grid-template-columns: 170px minmax(0, 1fr) auto; align-items: center; gap: 10px; width: 100%; min-height: 28px; padding: 2px 6px;
+  border: 0; border-radius: 5px; background: transparent; color: var(--text); text-align: left; }
+.lab-gate-open:where(button):hover { background: var(--panel-2); }
+.lab-gate-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-dim); font: var(--lab-type-row); }
+.lab-gate-progress { color: var(--lab-pending); font: var(--lab-type-data); white-space: nowrap; }
+.lab-gate-row-fail .lab-gate-label { color: var(--danger); }
+.lab-gate-row-empty .lab-bullet-track { opacity: 0.7; }
+/* one value width per row so every track ends at the same x ("5%" and "23%" alike) */
+.lab-gate-rows .lab-bullet-value { min-width: 3.2em; text-align: right; }
+.lab-gate-text { display: flex; gap: 6px; margin: 0 6px 6px; color: var(--text-dim); font: var(--lab-type-row); }
+.lab-gate-text .lab-glyph { flex: none; margin-top: 2px; }
+.lab-gate-row-fail .lab-gate-text .lab-glyph { color: var(--danger); }
+.lab-gate-row:not(.lab-gate-row-fail) .lab-gate-text .lab-glyph { color: var(--mint); }
+.lab-gate-delta { margin: -4px 6px 6px; color: var(--text); font: var(--lab-type-data); }
+.lab-gate-noise { color: var(--muted); }
+.lab-gate-rows-compact .lab-gate-open { grid-template-columns: 150px minmax(0, 1fr); }
+
+/* findings */
+.lab-calls-findings { position: sticky; top: var(--lab-s4); min-width: 0; }
+.lab-calls-findings-box { border: 1px solid var(--line); border-radius: var(--lab-r-panel); background: var(--lab-rail); }
+.lab-calls-findings-head { display: flex; align-items: center; justify-content: space-between; gap: var(--lab-s2); padding: 10px 14px; cursor: pointer; list-style: none; }
+.lab-calls-findings-head::-webkit-details-marker { display: none; }
+.lab-calls-findings-title { display: inline-flex; align-items: center; gap: 6px; font: var(--lab-type-head); }
+.lab-calls-caret { color: var(--muted); transform: rotate(-90deg); transition: transform 120ms ease-out; }
+.lab-calls-findings-box[open] .lab-calls-caret { transform: none; }
+.lab-calls-findings-counts { display: inline-flex; gap: 10px; color: var(--text-dim); font: var(--lab-type-data); font-variant-numeric: tabular-nums; }
+.lab-calls-findings-counts span { display: inline-flex; align-items: center; gap: 3px; }
+.lab-calls-findings-note { margin: 0; padding: 0 14px 8px; color: var(--muted); font: var(--lab-type-row); }
+.lab-calls-feed { display: grid; gap: 2px; margin: 0; padding: 0 6px 8px; list-style: none; max-height: calc(100vh - 260px); overflow: auto; }
+.lab-calls-feed-row { display: grid; grid-template-columns: 16px minmax(0, 1fr); gap: 2px 8px; width: 100%; padding: 8px; border: 0; border-radius: 6px; background: transparent;
+  color: var(--text-dim); font: var(--lab-type-row); text-align: left; }
+.lab-calls-feed-row:hover { background: var(--panel-2); color: var(--text); }
+.lab-calls-feed-row .lab-mark { grid-row: span 3; padding-top: 1px; }
+.lab-calls-feed-call { color: var(--text); font: 600 13px/16px var(--font-cond); }
+.lab-calls-feed-where { color: var(--text-dim); font-weight: 500; }
+.lab-calls-feed-text { grid-column: 2; }
+.lab-calls-feed-why { grid-column: 2; color: var(--muted); font: var(--lab-type-micro); }
+.lab-calls-feed-muted .lab-calls-feed-text { text-decoration: line-through; color: var(--muted); }
+
+@media (max-width: 1100px) {
+  .lab-calls-gate { margin: var(--lab-s3) var(--lab-s4) 0; }
+  .lab-calls-body { grid-template-columns: minmax(0, 1fr); padding: var(--lab-s3) var(--lab-s4) var(--lab-s5); }
+  .lab-calls-findings { position: static; order: -1; }
+  .lab-calls-findings-box:not([open]) .lab-calls-findings-head { padding-bottom: 10px; }
+  .lab-calls-cards { grid-template-columns: minmax(0, 1fr); }
+  .lab-calls-feed { max-height: 280px; }
+}

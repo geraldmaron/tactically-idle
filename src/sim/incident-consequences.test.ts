@@ -1,3 +1,4 @@
+import { responseFailurePlan } from './response-failure';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { SCENARIOS } from '../content/scenarios';
 import { createInitialState } from './department';
@@ -41,14 +42,14 @@ function definition(): ScenarioDefinition {
     endings: { handed_over: { id: 'handed_over', title: 'Unresolved duties', summary: 'Remaining duties were recorded.', trustAdjust: 0, strain: 0, disposition: 'unresolved', remainingTasks: ['Complete the protective responsibility'] } },
   };
 }
-function started(practice = false, solo = false): GameState {
+function started(solo = false): GameState {
   const state = createInitialState(NOW, 99);
   if (solo) {
     const squad = state.squads.find(entry => entry.id === 'A')!;
     for (const id of squad.officerIds) if (id !== 'off_brooks') state.officers[id].squadId = null;
     squad.officerIds = ['off_brooks']; squad.leaderId = 'off_brooks';
   }
-  return startRun(state, ID, ['A'], { practice, loadouts: { A: { trauma_kit: 2 } } });
+  return startRun(state, ID, ['A'], { loadouts: { A: { trauma_kit: 2 } } });
 }
 function choose(state: GameState, actionId: string): GameState {
   const result = apply(state, { type: 'decide', actionId, actingSquadIds: ['A'], supportSquadIds: [] });
@@ -84,29 +85,25 @@ describe('injury changes the team, care choices and saved aftermath', () => {
     expect(deserialize(serialize(state, NOW))?.activeRun).toEqual(state.activeRun);
   });
   it('keeps command care possible after a lone officer is injured, without a first-aid kit or medic', () => {
-    let state = injured(started(false, true));
+    let state = injured(started(true));
     expect(actionViews(state, NOW, 'A').find(view => view.id === 'stabilize')?.eligible).toBe(false);
     state = choose(state, 'request'); state = choose(state, 'wait'); state = choose(state, 'evacuate');
     expect(state.activeRun!.officerCasualties!.off_brooks.care).toBe('evacuated');
     expect(state.activeRun!.flags).toContain('casualty:evacuated');
     expect(state.activeRun!.flags).not.toContain('casualty:awaiting_transport');
     expect(deserialize(serialize(state, NOW))?.activeRun).toEqual(state.activeRun);
-    const ended = choose(state, 'end');
+    for (const officer of Object.values(state.officers)) officer.injury = { label: 'Unavailable', until: NOW + 100000 };
+    const plan = responseFailurePlan(state)!;
+    expect(plan).not.toBeNull();
+    const failed = apply(state, { type: 'endFailedResponse', runId: plan.runId, revision: plan.revision });
+    expect(failed.result).toEqual({ ok: true });
+    const ended = failed.state;
     const report = computeDebrief(ended, ended.activeRun!)!;
     expect(report.officerCasualties).toEqual([state.activeRun!.officerCasualties!.off_brooks]);
     const closed = apply(ended, { type: 'closeDebrief' });
     expect(closed.result.ok).toBe(true);
     expect(deployability(closed.state.officers.off_brooks, NOW).ok).toBe(false);
     expect(closed.state.debriefs[0].officerCasualties).toEqual(report.officerCasualties);
-  });
-  it('practice changes only the simulated run, not real injury, stress, supplies or recovery', () => {
-    const initial = started(true); let state = injured(initial);
-    state = choose(state, 'stabilize'); state = choose(state, 'request'); state = choose(state, 'wait'); state = choose(state, 'evacuate');
-    expect(state.officers).toEqual(initial.officers);
-    expect(state.units).toEqual(initial.units);
-    expect(state.reservations).toEqual(initial.reservations);
-    expect(state.activeRun!.history.flatMap(decision => decision.itemsConsumed)).toEqual([]);
-    expect(deserialize(serialize(state, NOW))?.activeRun).toEqual(state.activeRun);
   });
   it('rejects corrupt injury records, erased injuries, altered care and false casualty flags', () => {
     const state = injured();

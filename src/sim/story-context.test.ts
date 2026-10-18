@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { currentStoryPrompt } from './story-context';
 import { getScenario } from './scenario-registry';
+import { testCallId } from './test-fixtures';
 import type { OperationRun } from './types';
 
 describe('story dilemmas follow public committed state', () => {
   const run: Pick<OperationRun, 'stage' | 'endingId' | 'knowledge' | 'flags' | 'pressure'> = { stage: 'resolve', endingId: null, knowledge: {}, flags: [], pressure: 20 };
   const episode = () => {
-    const scenario = structuredClone(getScenario('exercise_hostage_v4')!);
+    const scenario = structuredClone(getScenario(testCallId('hostage'))!);
     scenario.version = 5;
     scenario.stages.resolve.contextPrompts = [
       { when: { flags: ['casualty:awaiting_transport'] }, prompt: 'An injured officer needs transport. The people inside still need help.' },
@@ -31,8 +32,5 @@ describe('story dilemmas follow public committed state', () => {
     expect(currentStoryPrompt(scenario, { ...publicRun, knowledge: { care: 'confirmed' } })).toContain('asked for medical help');
     expect(publicRun).toEqual(before);
   });
-  it('leaves older prompts unchanged even when extra metadata is present', () => {
-    const scenario = episode(); scenario.version = 4;
-    expect(currentStoryPrompt(scenario, { ...run, flags: ['first_safe'] })).toBe(scenario.stages.resolve.prompt);
-  });
+
 });

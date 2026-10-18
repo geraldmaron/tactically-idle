@@ -46,6 +46,24 @@ describe('external service context beside the next decision', () => {
     expect(supportStatusLine(externalSupportViews(scenario, run)[0])).toBe('Accepted');
   });
 
+  it('shows request, arrival and handover as a track whose arrival fills with operation time', () => {
+    const { props, run } = support();
+    const step = (html: string, name: string) => html.match(new RegExp(`data-state="(\\w+)"><span class="support-track-bar"><i style="width:(\\d+)%"></i></span>${name}<`))!.slice(1);
+    let html = render(createElement(SupportContext, props));
+    expect(html).toContain('data-support-status="unrequested"');
+    expect(step(html, 'Request')).toEqual(['current', '0']);
+    run.externalSupport = { medics: { requestedAt: 2, availableAt: 8, acceptedAt: null } };
+    run.clock = 5;
+    html = render(createElement(SupportContext, props));
+    expect(step(html, 'Request')).toEqual(['done', '100']);
+    expect(step(html, 'Arrive')).toEqual(['current', '50']);
+    expect(html).toContain('Requested · waiting 3 min');
+    run.externalSupport.medics.acceptedAt = 9;
+    run.clock = 9;
+    html = render(createElement(SupportContext, props));
+    expect(step(html, 'Hand over')).toEqual(['done', '100']);
+  });
+
   it('keeps the named-service status compact and details closed until requested', () => {
     const { props } = support();
     const html = render(createElement(SupportContext, props));

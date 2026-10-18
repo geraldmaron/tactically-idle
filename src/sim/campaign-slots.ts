@@ -7,7 +7,7 @@ import { allocateTestMilli, availableInLot, availableTestMilli, applyTestEvent, 
 import { createInitialState } from './department';
 import { dispatch } from './game';
 import { randomCampaignSeed } from './personnel';
-import { deserialize, serialize, SAVE_KEY, type SaveStorage } from './save';
+import { deserialize, serialize, type SaveStorage } from './save';
 import type { Command, GameState, HandlerResult } from './types';
 
 export const SLOT_COUNT = 10;
@@ -62,14 +62,9 @@ function readLibrary(raw: string): SlotLibrary | null {
     const x = JSON.parse(raw);
     const validSlot = (s: CampaignSlot | null) => s === null || (typeof s === 'object' && typeof s.name === 'string'
       && typeof s.data === 'string' && Number.isFinite(s.createdAt) && Number.isFinite(s.savedAt));
-    if (![1, 2].includes(x?.version) || !Array.isArray(x.slots) || x.slots.length !== SLOT_COUNT
+    if (x?.version !== 2 || !Array.isArray(x.slots) || x.slots.length !== SLOT_COUNT
       || !x.slots.every(validSlot) || (x.activeSlotId !== null && !validId(x.activeSlotId))
       || (x.deleted !== undefined && (!validId(x.deleted?.slotId) || !x.deleted.slot || !validSlot(x.deleted.slot)))) return null;
-    if (x.version === 1) {
-      x.slots = x.slots.map((slot: CampaignSlot | null) => slot ? { ...slot, campaignId: newLocalId() } : null);
-      if (x.deleted) x.deleted.slot = { ...x.deleted.slot, campaignId: newLocalId() };
-      x.version = 2; x.commerce = emptyTestWallet();
-    }
     const ids = x.slots.filter(Boolean).map((slot: CampaignSlot) => slot.campaignId);
     if (x.deleted) ids.push(x.deleted.slot.campaignId);
     if (ids.some((id: unknown) => typeof id !== 'string' || !/^[a-zA-Z0-9_-]{1,160}$/.test(id))
@@ -101,7 +96,6 @@ export class CampaignSlots {
 
   constructor(private storage: SaveStorage | null, now: number, private seedFactory = randomCampaignSeed) {
     this.state = createInitialState(now, seedFactory());
-    let legacy: string | null = null;
     try {
       if (!storage) throw new Error('Storage unavailable');
       this.expectedRaw = storage.getItem(SLOTS_KEY);
@@ -123,31 +117,16 @@ export class CampaignSlots {
           }
           else {
             this.library = { ...library, activeSlotId: null };
-            this.issue = 'No readable active save. Load another slot or save this new game into an empty slot. Existing saves are untouched.';
+            this.issue = 'The active save is unreadable or uses a different game version. Start a new campaign or load a current save. Existing saves are untouched.';
           }
         }
       } else {
-        legacy = storage.getItem(SAVE_KEY);
-        let loaded = legacy ? deserialize(legacy) : null;
-        if (loaded) {
-          try { this.state = dispatch(loaded, { type: 'tick' }, { now }).state; }
-          catch { loaded = null; }
-        }
-        const id = legacy && !loaded ? 2 : 1;
-        if (legacy && !loaded) this.library.slots[0] = { campaignId: newLocalId(), name: 'Previous save (unreadable)', createdAt: now, savedAt: now, data: legacy };
-        this.library.activeSlotId = id;
-        this.library.slots[id - 1] = this.record(loaded ? 'Existing campaign' : `Campaign ${id}`, now);
-        // The old autosave remains intact as a recovery copy after migration.
+        this.library.activeSlotId = 1;
+        this.library.slots[0] = this.record('Campaign 1', now);
         this.write(this.library);
-        if (legacy && !loaded) this.issue = 'Your previous save could not be read. Its original data is preserved in slot 1; the new game is in slot 2.';
       }
     } catch {
       this.issue = 'Local saving is unavailable or storage is full. Your current game is only in memory; existing saves are untouched.';
-    }
-    // Persist UUID migration before any test purchase can refer to a campaign.
-    if (this.expectedRaw && !this.blocked) {
-      try { if (JSON.parse(this.expectedRaw).version === 1) this.write(this.library); }
-      catch { this.issue = 'Campaign migration could not be saved. Existing saves are untouched; retry saving before using the test store.'; }
     }
     this.snapshot = this.makeSnapshot();
   }
@@ -225,7 +204,7 @@ export class CampaignSlots {
     const slot = this.library.slots[id - 1];
     if (!slot) return failure('That slot is empty.');
     const loaded = deserialize(slot.data);
-    if (!loaded) return failure('This save is unreadable or from a newer version. It has not been changed.');
+    if (!loaded) return failure('This save is unreadable or uses a different game version. Start a new campaign. Your saved data has not been changed.');
     return this.attempt(() => {
       const next = this.withCurrent(now);
       // Loading the active slot keeps the latest in-memory state, never rewinds it.
@@ -270,7 +249,7 @@ export class CampaignSlots {
     if (!validId(id)) return failure('Choose a slot from 1 to 10.');
     if (this.library.slots[id - 1] && !overwrite) return failure('Confirm before replacing an occupied slot.');
     const state = deserialize(data);
-    if (!state) return failure('This file is not a readable campaign backup. No saves were changed.');
+    if (!state) return failure('This backup is unreadable or uses a different game version. Start a new campaign. No saves were changed.');
     return this.attempt(() => {
       const next = this.withCurrent(now);
       // Import stores a dormant copy. Time settles only when the user loads it.

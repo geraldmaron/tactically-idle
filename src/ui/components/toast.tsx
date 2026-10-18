@@ -1,20 +1,14 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { Command, HandlerResult } from '../../sim/types';
 import { send } from '../store';
-import { Icon } from '../icons';
+import { ToastView } from './ToastView';
+import type { ToastItem, ToastTone } from './ToastView';
 
-export type ToastTone = 'info' | 'ok' | 'error' | 'amber';
-
-interface ToastItem {
-  id: number;
-  tone: ToastTone;
-  title: string;
-  lines: string[];
-}
+export type { ToastTone };
 
 interface ToastApi {
-  notify: (title: string, opts?: { tone?: ToastTone; lines?: string[] }) => void;
+  notify: (title: string, opts?: { tone?: ToastTone; lines?: string[]; onSelect?: () => void }) => void;
   /** Send a command; a refusal shows its reason in a toast. */
   act: (cmd: Command, okMessage?: string) => HandlerResult;
 }
@@ -29,8 +23,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
   const notify = useCallback<ToastApi['notify']>((title, opts) => {
     const id = idRef.current++;
-    // Latest only: stacked toasts bury the mission header and blueprint.
-    setItems([{ id, tone: opts?.tone ?? 'info', title, lines: opts?.lines ?? [] }]);
+    // Latest only, above the bottom navigation: stacked or top toasts bury the mission header and blueprint.
+    setItems([{ id, tone: opts?.tone ?? 'info', title, lines: opts?.lines ?? [], onSelect: opts?.onSelect }]);
   }, []);
 
   const act = useCallback<ToastApi['act']>(
@@ -54,28 +48,6 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         ))}
       </div>
     </Ctx.Provider>
-  );
-}
-
-function ToastView({ item, onDone }: { item: ToastItem; onDone: (id: number) => void }) {
-  useEffect(() => {
-    const ms = 3800 + item.lines.length * 1200;
-    const t = window.setTimeout(() => onDone(item.id), ms);
-    return () => window.clearTimeout(t);
-  }, [item, onDone]);
-  const icon = item.tone === 'ok' ? 'check' : item.tone === 'error' ? 'warning' : 'info';
-  return (
-    <button type="button" className={`toast toast-${item.tone}`} onClick={() => onDone(item.id)}>
-      <Icon name={icon} size={18} />
-      <span className="toast-body">
-        <strong>{item.title}</strong>
-        {item.lines.map((l, i) => (
-          <span key={i} className="toast-line">
-            {l}
-          </span>
-        ))}
-      </span>
-    </button>
   );
 }
 

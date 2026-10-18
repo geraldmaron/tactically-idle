@@ -8,6 +8,7 @@ import { createUnit, ownedCount } from './equipment';
 import { readyCount, readyUnits, reserveLoadouts, settleRun, unitEffectiveness } from './inventory';
 import { storeOptions, unitViews } from './department-selectors';
 import type { Command, GameState, ItemUnit } from './types';
+import { departmentUpkeep } from './equipment-manager-policy';
 
 const T0 = Date.UTC(2026, 0, 5, 12, 0, 0);
 
@@ -107,14 +108,14 @@ describe('time wear', () => {
 describe('per-use wear', () => {
   it('only the unit the decision used wears at debrief, scaled by its own rate', () => {
     const s = createInitialState(T0);
-    const [a, b] = readyUnits(s, 'radio_kit'); // best condition first
-    expect(reserveLoadouts(s, 'run_1', { A: { radio_kit: 2 } }, undefined, T0)).toEqual({ ok: true });
+    const [a, b] = readyUnits(s, 'radio_kit', departmentUpkeep(s)); // best condition first
+    expect(reserveLoadouts(s, 'run_1', { A: { radio_kit: 2 } }, undefined, T0, departmentUpkeep(s))).toEqual({ ok: true });
     expect(s.units[a.id].status).toBe('reserved');
     expect(s.units[b.id].status).toBe('reserved');
     const before = { a: s.units[a.id].condition, b: s.units[b.id].condition, usesA: a.uses, usesB: b.uses };
     // Nothing degrades by merely being reserved.
     expect(before.a).toBe(a.condition);
-    const out = settleRun(s, 'run_1', [a.id], T0);
+    const out = settleRun(s, 'run_1', [a.id], departmentUpkeep(s));
     const perUse = ITEMS.radio_kit.wear.perUse;
     expect(s.units[a.id].condition).toBeCloseTo(before.a - perUse * a.wearRate, 1);
     expect(s.units[a.id].uses).toBe(before.usesA + 1);
@@ -123,15 +124,15 @@ describe('per-use wear', () => {
     expect(s.units[a.id].status).toBe('ready');
     expect(out.unitWear.map((w) => w.unitId)).toEqual([a.id]);
     // A second settle finds nothing to do.
-    const again = settleRun(s, 'run_1', [a.id], T0);
+    const again = settleRun(s, 'run_1', [a.id], departmentUpkeep(s));
     expect(again.unitWear).toEqual([]);
   });
 
   it('a used consumable leaves inventory; an unused one returns', () => {
     const s = createInitialState(T0);
-    const [k1, k2] = readyUnits(s, 'trauma_kit');
-    reserveLoadouts(s, 'run_1', { A: { trauma_kit: 2 } }, undefined, T0);
-    settleRun(s, 'run_1', [k1.id], T0);
+    const [k1, k2] = readyUnits(s, 'trauma_kit', departmentUpkeep(s));
+    reserveLoadouts(s, 'run_1', { A: { trauma_kit: 2 } }, undefined, T0, departmentUpkeep(s));
+    settleRun(s, 'run_1', [k1.id], departmentUpkeep(s));
     expect(s.units[k1.id]).toBeUndefined();
     expect(s.units[k2.id].status).toBe('ready');
   });
@@ -140,14 +141,14 @@ describe('per-use wear', () => {
 describe('expiry', () => {
   it('a consumable past its shelf life becomes expired, is reported, and cannot be deployed', () => {
     const s = createInitialState(T0);
-    const kit = readyUnits(s, 'trauma_kit')[0];
+    const kit = readyUnits(s, 'trauma_kit', departmentUpkeep(s))[0];
     s.units[kit.id].expiresAt = T0 + 3 * HOUR_MS;
-    const before = readyCount(s, 'trauma_kit');
+    const before = readyCount(s, 'trauma_kit', departmentUpkeep(s));
     const mid = ok(s, { type: 'tick' }, T0 + 2 * HOUR_MS);
     expect(mid.units[kit.id].status).toBe('ready');
     const next = ok(s, { type: 'tick' }, T0 + 4 * HOUR_MS);
     expect(next.units[kit.id].status).toBe('expired');
-    expect(readyCount(next, 'trauma_kit')).toBe(before - 1);
+    expect(readyCount(next, 'trauma_kit', departmentUpkeep(next))).toBe(before - 1);
     expect(next.report!.equipment).toContainEqual({ unitId: kit.id, event: 'expired' });
     expect(unitEffectiveness(next.units[kit.id], ITEMS.trauma_kit)).toBe(0);
     // Expiry is reported once, and an expired unit can be scrapped.
@@ -158,9 +159,9 @@ describe('expiry', () => {
 
   it('a reserved consumable does not expire until it is released', () => {
     const s = createInitialState(T0);
-    const kit = readyUnits(s, 'trauma_kit')[0];
+    const kit = readyUnits(s, 'trauma_kit', departmentUpkeep(s))[0];
     s.units[kit.id].expiresAt = T0 + HOUR_MS;
-    reserveLoadouts(s, 'run_1', { A: { trauma_kit: 6 } }, undefined, T0);
+    reserveLoadouts(s, 'run_1', { A: { trauma_kit: 6 } }, undefined, T0, departmentUpkeep(s));
     const next = ok(s, { type: 'tick' }, T0 + 3 * HOUR_MS);
     expect(next.units[kit.id].status).toBe('reserved');
   });
@@ -179,7 +180,7 @@ describe('thresholds and the ready pool', () => {
     const [a, b, c] = unitsOf(s, 'radio_kit');
     a.condition = 40; // unreliable (below 45)
     b.condition = 10; // failed (at or below 15)
-    const ready = readyUnits(s, 'radio_kit').map((u) => u.id);
+    const ready = readyUnits(s, 'radio_kit', departmentUpkeep(s)).map((u) => u.id);
     expect(ready).toContain(a.id);
     expect(ready).not.toContain(b.id);
     expect(ready).toContain(c.id);
@@ -191,7 +192,7 @@ describe('thresholds and the ready pool', () => {
     expect(views.find((v) => v.unit.id === b.id)!.stateLabel).toBe('Failed');
     expect(views[0].unit.id).toBe(b.id); // worst first
     // Reservation refuses the failed unit by name.
-    expect(reserveLoadouts(s, 'run_9', {}, { A: [b.id] }, T0)).toMatchObject({ ok: false });
+    expect(reserveLoadouts(s, 'run_9', {}, { A: [b.id] }, T0, departmentUpkeep(s))).toMatchObject({ ok: false });
   });
 
   it('the shift report lists a unit once when it crosses unreliable, then failed', () => {
@@ -230,7 +231,7 @@ describe('servicing', () => {
     s = ok(s, { type: 'serviceUnit', unitId: radio.id }, T0);
     expect(s.department.funding).toBe(funding - serviceCost);
     expect(s.units[radio.id]).toMatchObject({ status: 'service', serviceUntil: T0 + serviceHours * HOUR_MS });
-    expect(readyUnits(s, 'radio_kit').map((u) => u.id)).not.toContain(radio.id);
+    expect(readyUnits(s, 'radio_kit', departmentUpkeep(s)).map((u) => u.id)).not.toContain(radio.id);
     expect(unitViews(s, 'radio_kit', T0).find((v) => v.unit.id === radio.id)).toMatchObject({ stateLabel: 'In service', canService: false, canScrap: false });
 
     const mid = ok(s, { type: 'tick' }, T0 + (serviceHours - 1) * HOUR_MS);
@@ -264,10 +265,10 @@ describe('servicing', () => {
     let s = createInitialState(T0);
     const radio = unitsOf(s, 'radio_kit')[0];
     radio.condition = 5;
-    expect(readyUnits(s, 'radio_kit').map((u) => u.id)).not.toContain(radio.id);
+    expect(readyUnits(s, 'radio_kit', departmentUpkeep(s)).map((u) => u.id)).not.toContain(radio.id);
     s = ok(s, { type: 'serviceUnit', unitId: radio.id }, T0);
     s = ok(s, { type: 'tick' }, T0 + 4 * HOUR_MS);
-    expect(readyUnits(s, 'radio_kit').map((u) => u.id)).toContain(radio.id);
+    expect(readyUnits(s, 'radio_kit', departmentUpkeep(s)).map((u) => u.id)).toContain(radio.id);
   });
 });
 
@@ -280,7 +281,7 @@ describe('scrapping', () => {
     s = ok(s, { type: 'scrapUnit', unitId: radio.id }, T0);
     expect(s.units[radio.id].status).toBe('scrapped');
     expect(ownedCount(s, 'radio_kit')).toBe(owned - 1);
-    expect(readyUnits(s, 'radio_kit').map((u) => u.id)).not.toContain(radio.id);
+    expect(readyUnits(s, 'radio_kit', departmentUpkeep(s)).map((u) => u.id)).not.toContain(radio.id);
     expect(s.department.funding).toBe(funding + Math.round(ITEMS.radio_kit.cost * 0.05));
     expect(unitViews(s, 'radio_kit', T0).map((v) => v.unit.id)).not.toContain(radio.id);
     expect(refused(s, { type: 'scrapUnit', unitId: radio.id }, T0)).toMatch(/already scrapped/);
@@ -288,8 +289,8 @@ describe('scrapping', () => {
 
   it('refuses reserved units', () => {
     const s = createInitialState(T0);
-    const radio = readyUnits(s, 'radio_kit')[0];
-    reserveLoadouts(s, 'run_1', { A: { radio_kit: 1 } }, undefined, T0);
+    const radio = readyUnits(s, 'radio_kit', departmentUpkeep(s))[0];
+    reserveLoadouts(s, 'run_1', { A: { radio_kit: 1 } }, undefined, T0, departmentUpkeep(s));
     expect(refused(s, { type: 'scrapUnit', unitId: radio.id }, T0)).toMatch(/deployed/);
   });
 

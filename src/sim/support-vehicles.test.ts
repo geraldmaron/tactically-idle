@@ -73,7 +73,7 @@ describe('exact exterior support reservation and resupply', () => {
     } finally { ITEMS.support_van.requiresCerts = original; }
   });
   it('saves exact support reservation and delivered minutes without granting new vehicles on reload', () => {
-    const state = deliver(withVan()).state; state.saveVersion = 3;
+    const state = deliver(withVan()).state; state.saveVersion = 9;
     const saved = deserialize(serialize(state, NOW))!;
     expect(saved.activeRun?.supportUnitIds).toEqual([unitId('support_van')]);
     expect(saved.activeRun?.resupplies?.[0]).toMatchObject({ minutes: 2, supportUnitId: unitId('support_van') });

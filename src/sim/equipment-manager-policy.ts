@@ -1,6 +1,7 @@
 import type { GameState, ItemDefinition } from './types';
 import { DEV_NODES } from '../content/dev-tree';
 import { developmentTier, developmentTierDefinition } from './development-tiers';
+import { serviceCost, wearFactor, type Upkeep } from './equipment';
 
 export const EQUIPMENT_MANAGER = {
   nodeId: 'logistics_equipment_manager',
@@ -28,17 +29,18 @@ export function equipmentManagerBenefits(state: GameState) {
   };
 }
 
-/** A single bounded benefit; duplicate unlock IDs can never stack it. */
+/** The upkeep the department hands equipment wear and servicing. A single bounded benefit; duplicate unlock IDs can never stack it. */
+export function departmentUpkeep(state: GameState): Upkeep {
+  const { wearMultiplier, repairMultiplier } = equipmentManagerBenefits(state);
+  return { wearMultiplier, repairMultiplier };
+}
+
 export function equipmentWearMultiplier(state: GameState, item: ItemDefinition): number {
-  return item.kind === 'equipment' ? equipmentManagerBenefits(state).wearMultiplier : 1;
+  return wearFactor(item, departmentUpkeep(state));
 }
 
 export function equipmentServiceCost(state: GameState, item: ItemDefinition): number {
-  const base = item.wear.serviceCost;
-  // Integer percentages avoid charging $56 for a $100 repair at 45% off
-  // because binary floating point represents 100 * 0.55 just above 55.
-  const percent = Math.round(equipmentManagerBenefits(state).repairMultiplier * 100);
-  return base > 0 ? Math.max(1, Math.ceil(base * percent / 100)) : 0;
+  return serviceCost(item, departmentUpkeep(state));
 }
 
 /** Missing settings in old saves always mean automatic spending is paused. */

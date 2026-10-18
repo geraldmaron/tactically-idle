@@ -6,8 +6,9 @@ import { dispatch } from './game';
 import { fillCandidates, recruitmentStatus } from './roster';
 import { deserialize, serialize, SAVE_KEY } from './save';
 import { restoreCampaign } from './session';
-import { establishedDepartment } from './department-test-fixtures';
+
 import { type Officer } from './types';
+import { candidatePoolSize } from './economy';
 
 const T0 = Date.UTC(2026, 0, 1);
 const HOUR = 3_600_000;
@@ -55,7 +56,7 @@ describe('campaign identities and succession', () => {
     const s = createInitialState(T0, 88);
     const seen = new Map<string, Officer>();
     for (let i = 0; i < 60; i++) {
-      fillCandidates(s, T0 + i * 4 * HOUR);
+      fillCandidates(s, T0 + i * 4 * HOUR, candidatePoolSize(s));
       expect(s.candidates).toHaveLength(3);
       const ids = [...Object.values(s.officers), ...s.candidates.map((c) => c.officer)].map((o) => o.identityId);
       expect(new Set(ids).size).toBe(ids.length);
@@ -74,8 +75,8 @@ describe('campaign identities and succession', () => {
       const s = createInitialState(T0, seed);
       const currentPeople = structuredClone(s.personnel!.builds);
       const loaded = deserialize(serialize(s, T0))!;
-      fillCandidates(s, T0 + 4 * HOUR);
-      fillCandidates(loaded, T0 + 4 * HOUR);
+      fillCandidates(s, T0 + 4 * HOUR, candidatePoolSize(s));
+      fillCandidates(loaded, T0 + 4 * HOUR, candidatePoolSize(loaded));
       expect(loaded).toEqual(s);
       expect(new Set(s.candidates.map((candidate) => candidate.officer.role)).size).toBeGreaterThanOrEqual(2);
       for (const [id, officer] of Object.entries(currentPeople)) expect(s.personnel!.builds[id]).toEqual(officer);
@@ -99,7 +100,7 @@ describe('campaign identities and succession', () => {
       s.department.funding = 100_000_000;
       const seen = new Set<string>();
       for (let n = 0; n < 92; n++) {
-        fillCandidates(s, T0);
+        fillCandidates(s, T0, candidatePoolSize(s));
         const c = s.candidates[0];
         expect(c).toBeDefined();
         expect(seen.has(c.officer.identityId!)).toBe(false);
@@ -111,7 +112,7 @@ describe('campaign identities and succession', () => {
         s = deserialize(serialize(dismissed.state, T0))!;
         expect(s).not.toBeNull();
       }
-      fillCandidates(s, T0);
+      fillCandidates(s, T0, candidatePoolSize(s));
       expect(s.candidates).toHaveLength(0);
       expect(s.personnel!.employedIdentityIds).toHaveLength(100);
       expect(seen.size).toBe(92);
@@ -125,15 +126,15 @@ describe('campaign identities and succession', () => {
     r = dispatch(s, { type: 'dismiss', officerId: c.officer.id }, { now: T0 });
     expect(r.result.ok).toBe(true); s = deserialize(serialize(r.state, T0))!;
     for (let i = 0; i < 30; i++) {
-      fillCandidates(s, T0 + i * 4 * HOUR);
+      fillCandidates(s, T0 + i * 4 * HOUR, candidatePoolSize(s));
       expect(s.candidates.some((x) => x.officer.identityId === c.officer.identityId)).toBe(false);
     }
   });
   it('replenishes an aged recruitment cohort with new people at their authored introduction ages', () => {
     const s = createInitialState(T0, 20);
-    for (let i = 0; i < 30; i++) fillCandidates(s, T0);
+    for (let i = 0; i < 30; i++) fillCandidates(s, T0, candidatePoolSize(s));
     const old = new Set(Object.keys(s.personnel!.builds));
-    fillCandidates(s, T0 + 50 * 365 * HOUR);
+    fillCandidates(s, T0 + 50 * 365 * HOUR, candidatePoolSize(s));
     expect(s.candidates).toHaveLength(3);
     for (const c of s.candidates) {
       expect(old.has(c.officer.identityId!)).toBe(false);
@@ -145,32 +146,17 @@ describe('campaign identities and succession', () => {
     const s = createInitialState(T0);
     s.personnel!.employedIdentityIds = PERSONAS.map((p) => p.id);
     s.candidates = [];
-    fillCandidates(s, T0);
+    fillCandidates(s, T0, candidatePoolSize(s));
     expect(s.candidates).toHaveLength(0);
     expect(recruitmentStatus(s, T0).exhausted).toBe(true);
     expect(generateBatch({ rng: 1, nextId: 1, unavailable: PERSONAS.map((p) => p.id) }, T0, 3, [], new Set())).toEqual([]);
   });
   it('round-trips candidate history, birth dates and campaign seed', () => {
     const s = createInitialState(T0, 765);
-    fillCandidates(s, T0 + 8 * HOUR);
+    fillCandidates(s, T0 + 8 * HOUR, candidatePoolSize(s));
     expect(deserialize(serialize(s, T0))).toEqual(s);
   });
-  it('migrates v3 without rerolling legacy people, while reserving departed starter identities', () => {
-    const old = establishedDepartment(T0, 13);
-    delete old.personnel;
-    for (const o of Object.values(old.officers)) delete o.identityId;
-    old.officers.off_chen.portrait = 'chen';
-    old.candidates = [];
-    delete old.officers.off_reyes;
-    old.squads[1].officerIds = old.squads[1].officerIds.filter((id) => id !== 'off_reyes');
-    old.saveVersion = 3;
-    const chen = structuredClone(old.officers.off_chen);
-    const migrated = deserialize(serialize(old, T0))!;
-    expect(migrated).not.toBeNull();
-    expect(migrated.officers.off_chen).toEqual({ ...chen, identityId: 'person_001' });
-    expect(migrated.personnel!.employedIdentityIds).toContain('person_007');
-    expect(migrated.saveVersion).toBe(7);
-  });
+
   it('persists a brand-new campaign before the first tick and preserves unreadable save data', () => {
     const data = new Map<string, string>();
     const storage = { getItem: (key: string) => data.get(key) ?? null, setItem: (key: string, value: string) => { data.set(key, value); } };
@@ -190,7 +176,7 @@ describe('campaign identities and succession', () => {
     expect(s.officers.off_chen).toBeUndefined();
     s = deserialize(serialize(s, T0 + 2 * HOUR))!;
     expect(s.personnel!.employedIdentityIds).toContain(identity);
-    fillCandidates(s, T0 + 2 * HOUR);
+    fillCandidates(s, T0 + 2 * HOUR, candidatePoolSize(s));
     expect(s.candidates.some((c) => c.officer.identityId === identity)).toBe(false);
   });
   it('rejects duplicate active identities and malformed identity history', () => {

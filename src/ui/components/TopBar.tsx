@@ -132,7 +132,7 @@ export function DepartmentStatHelp({ g, topic }: { g: GameState; topic: Departme
     const opens = frameworksOpeningAt(p.level + 1);
     return <div className="department-stat-help">
       <p className="department-stat-value">Level {p.level}</p>
-      <p>Your department earns service on every live call. Completing the agreed step on a harder call earns the most. Practice earns none.</p>
+      <p>Your department earns service on every live call. Completing the agreed step on a harder call earns the most.</p>
       {p.next === null ? <p>Your department is at the top level.</p> : <>
         <p><strong>{p.service - p.floor} of {p.next - p.floor}</strong> service toward level {p.level + 1}.</p>
         <Meter value={(100 * (p.service - p.floor)) / (p.next - p.floor)} tone="mid" label="Service toward the next level" valueText={`${p.service - p.floor} of ${p.next - p.floor}`} />

@@ -1,6 +1,7 @@
 // Recruitment, dismissal, and persistent squads. Handlers mutate the draft and
 // return ok/reason; checks are pure so selectors can preview exactly what the
-// handler will do.
+// handler will do. What the hire depends on in the department's books (its hourly
+// net, the candidate pool its upgrades allow) is handed in by the department.
 import type {
   Department,
   GameState,
@@ -13,24 +14,29 @@ import type {
 } from './types';
 import { SQUAD_IDS } from './types';
 import type { Projection } from './department-selectors';
-import { ITEMS } from '../content/items';
 import { fullNameKey, generateBatch, RECRUIT_TUNING, type RecruitGen } from '../content/recruits';
-import { candidatePoolSize, formatDuration, hasEffect, isNodeUnlocked, money, ratesAt, simNow, squadDeployed } from './economy';
+import { formatDuration, money } from './format';
+import { squadDeployed } from './squads';
 import { fullName } from './officer';
-import { gameDay } from './calendar';
+import { gameDay, simNow } from './calendar';
 import { PERSONAS } from '../content/personas';
-import { applyRetention, retentionCheck, mandatoryRetirementDay } from './career';
-import { initializePersonnel, markEmployed } from './personnel';
+import { applyRetention, CAREER_TUNING, retentionCheck, mandatoryRetirementDay } from './career';
+import { markEmployed } from './personnel';
 import { applySquadArrangement, setSquadArrangementLock, undoSquadArrangement } from './squad-optimizer';
+import { tunable } from './tuning';
 
-export const ROSTER_TUNING = {
+/** Tunable (sim/tuning.ts), except `maxSquads`: the squad slots are SQUAD_IDS, so it only names them. */
+export const ROSTER_TUNING = tunable('ROSTER_TUNING', {
   /** Owner decision (2026-10-02): up to four squads. */
   maxSquads: SQUAD_IDS.length,
   squadSize: 4,
   nameMax: 20,
   /** Severance, in hours of wage. */
   severanceHours: 8,
-};
+}, { deny: [{ path: 'maxSquads', kind: 'structural', reason: 'The squad slots are SQUAD_IDS (types.ts); this only names how many there are.' }] });
+
+/** The department's hourly net, after wages, for a state at its settled clock (economy.ts netRate). */
+export type NetRate = (state: GameState) => number;
 
 const DUTIES: SquadDuty[] = ['patrol', 'standby', 'rest'];
 
@@ -40,23 +46,23 @@ type DepartmentExt = Department & { candidateRefreshedAt?: number };
 const refusal = (reason: string): HandlerResult => ({ ok: false, reason });
 const OK: HandlerResult = { ok: true };
 
-export function rosterSize(state: GameState): number {
+function rosterSize(state: GameState): number {
   return Object.keys(state.officers).length;
 }
 
-export function severanceFor(o: Officer): number {
+function severanceFor(o: Officer): number {
   return o.wage * ROSTER_TUNING.severanceHours;
 }
 
-export function lastRefreshAt(state: GameState): number {
+function lastRefreshAt(state: GameState): number {
   return (state.department as DepartmentExt).candidateRefreshedAt ?? Number.NEGATIVE_INFINITY;
 }
 
 // ---------------------------------------------------------------- hire
 
-export function hireCheck(state: GameState, candidateId: Id): Projection {
+export function hireCheck(state: GameState, candidateId: Id, netRate: NetRate): Projection {
   const t = simNow(state);
-  const netBefore = ratesAt(state, t).net;
+  const netBefore = netRate(state);
   const cand = state.candidates.find((c) => c.id === candidateId);
   if (!cand) return { ok: false, reason: 'That candidate is no longer available', upfront: 0, wageDelta: 0, netBefore, netAfter: netBefore };
   const wage = cand.officer.wage;
@@ -75,8 +81,8 @@ export function hireCheck(state: GameState, candidateId: Id): Projection {
   return { ...base, ok: true, reason: null };
 }
 
-function hire(d: GameState, candidateId: Id): HandlerResult {
-  const check = hireCheck(d, candidateId);
+function hire(d: GameState, candidateId: Id, netRate: NetRate): HandlerResult {
+  const check = hireCheck(d, candidateId, netRate);
   if (!check.ok) return refusal(check.reason ?? 'Cannot hire');
   const idx = d.candidates.findIndex((c) => c.id === candidateId);
   const cand = d.candidates[idx];
@@ -89,9 +95,8 @@ function hire(d: GameState, candidateId: Id): HandlerResult {
 
 // ---------------------------------------------------------------- dismiss
 
-export function dismissCheck(state: GameState, officerId: Id): Projection {
-  const t = simNow(state);
-  const netBefore = ratesAt(state, t).net;
+export function dismissCheck(state: GameState, officerId: Id, netRate: NetRate): Projection {
+  const netBefore = netRate(state);
   const o = state.officers[officerId];
   if (!o) return { ok: false, reason: 'No such officer', upfront: 0, wageDelta: 0, netBefore, netAfter: netBefore };
   const rest = { ...state.officers };
@@ -101,7 +106,7 @@ export function dismissCheck(state: GameState, officerId: Id): Projection {
     officers: rest,
     squads: state.squads.map((s) => ({ ...s, officerIds: s.officerIds.filter((id) => id !== officerId) })),
   };
-  const base = { upfront: severanceFor(o), wageDelta: -o.wage, netBefore, netAfter: ratesAt(after, t).net };
+  const base = { upfront: severanceFor(o), wageDelta: -o.wage, netBefore, netAfter: netRate(after) };
   if (o.assignment?.kind === 'operation') return { ...base, ok: false, reason: `${fullName(o)} is deployed and cannot be dismissed` };
   if (state.department.funding < base.upfront) {
     return { ...base, ok: false, reason: `Severance ${money(base.upfront)} exceeds funding ${money(state.department.funding)}` };
@@ -118,8 +123,8 @@ function detachFromSquad(d: GameState, officerId: Id): void {
   }
 }
 
-function dismiss(d: GameState, officerId: Id): HandlerResult {
-  const check = dismissCheck(d, officerId);
+function dismiss(d: GameState, officerId: Id, netRate: NetRate): HandlerResult {
+  const check = dismissCheck(d, officerId, netRate);
   if (!check.ok) return refusal(check.reason ?? 'Cannot dismiss');
   d.department.funding -= check.upfront;
   detachFromSquad(d, officerId);
@@ -131,13 +136,12 @@ function dismiss(d: GameState, officerId: Id): HandlerResult {
 // ---------------------------------------------------------------- retention
 
 /** Preview of a retention offer: the same check the handler runs. */
-export function retentionOffer(state: GameState, officerId: Id) {
-  const t = simNow(state);
-  return retentionCheck(state, officerId, t, ratesAt(state, t).net);
+export function retentionOffer(state: GameState, officerId: Id, netRate: NetRate) {
+  return retentionCheck(state, officerId, simNow(state), netRate(state));
 }
 
-function offerRetention(d: GameState, officerId: Id): HandlerResult {
-  const check = retentionOffer(d, officerId);
+function offerRetention(d: GameState, officerId: Id, netRate: NetRate): HandlerResult {
+  const check = retentionOffer(d, officerId, netRate);
   if (!check.ok) return refusal(check.reason ?? 'Cannot make a retention offer');
   applyRetention(d, officerId, check);
   return OK;
@@ -152,14 +156,14 @@ function shortlist(d: GameState, candidateId: Id, on: boolean): HandlerResult {
   return OK;
 }
 
-export function refreshCheck(state: GameState): { ok: boolean; reason: string | null; availableAt: number } {
+function refreshCheck(state: GameState, poolSize: number): { ok: boolean; reason: string | null; availableAt: number } {
   const availableAt = lastRefreshAt(state) + RECRUIT_TUNING.refreshCooldownMs;
   const t = simNow(state);
   if (t < availableAt) {
     return { ok: false, reason: `Next free candidate search in ${formatDuration(availableAt - t)}`, availableAt };
   }
   const kept = state.candidates.filter((c) => c.shortlisted && gameDay(state, t) < mandatoryRetirementDay(c.officer)).length;
-  if (kept >= candidatePoolSize(state, RECRUIT_TUNING.basePool)) {
+  if (kept >= poolSize) {
     return { ok: false, reason: 'Every candidate slot is shortlisted; remove one to search again', availableAt };
   }
   return { ok: true, reason: null, availableAt };
@@ -180,26 +184,25 @@ export function recruitmentStatus(state: GameState, now: number) {
   return { total: PERSONAS.length, unseen, available, exhausted: available === 0 };
 }
 
-/** Fill the pool up to its size with deterministic candidates; shortlisted ones stay. */
-export function fillCandidates(d: GameState, now: number): void {
+/** Fill the pool up to `poolSize` (economy.ts candidatePoolSize) with deterministic candidates; shortlisted ones stay. */
+export function fillCandidates(d: GameState, now: number, poolSize: number): void {
   const kept = d.candidates.filter((c) => c.shortlisted && gameDay(d, now) < mandatoryRetirementDay(c.officer));
-  const size = candidatePoolSize(d, RECRUIT_TUNING.basePool);
-  const personnel = initializePersonnel(d);
+  const personnel = d.personnel!;
   const gen: RecruitGen = { rng: d.rngState, nextId: d.nextId, campaignSeed: personnel.campaignSeed, builds: personnel.builds, unavailable: personnel.employedIdentityIds };
   const taken = new Set<string>();
   for (const o of Object.values(d.officers)) taken.add(fullNameKey(o.firstName, o.surname));
   for (const c of kept) taken.add(fullNameKey(c.officer.firstName, c.officer.surname));
-  const fresh = generateBatch(gen, now, Math.max(0, size - kept.length), kept.map((c) => c.officer.role), taken, gameDay(d, now));
+  const fresh = generateBatch(gen, now, Math.max(0, poolSize - kept.length), kept.map((c) => c.officer.role), taken, gameDay(d, now), CAREER_TUNING.retireAge);
   d.candidates = [...kept, ...fresh];
   d.rngState = gen.rng;
   d.nextId = gen.nextId;
   (d.department as DepartmentExt).candidateRefreshedAt = now;
 }
 
-function refreshCandidates(d: GameState): HandlerResult {
-  const check = refreshCheck(d);
+function refreshCandidates(d: GameState, poolSize: number): HandlerResult {
+  const check = refreshCheck(d, poolSize);
   if (!check.ok) return refusal(check.reason ?? 'Cannot search for candidates');
-  fillCandidates(d, simNow(d));
+  fillCandidates(d, simNow(d), poolSize);
   return OK;
 }
 
@@ -279,42 +282,6 @@ function setSquadDuty(d: GameState, squadId: SquadId, duty: SquadDuty): HandlerR
   return OK;
 }
 
-function setLoadoutPreset(d: GameState, squadId: SquadId, items: Record<Id, number>): HandlerResult {
-  if (!hasEffect(d, 'loadoutPresets')) return refusal('Loadout presets are not unlocked yet');
-  const sq = squadOf(d, squadId);
-  if (!sq) return refusal('No such squad');
-  const preset: Record<Id, number> = {};
-  for (const [itemId, qty] of Object.entries(items)) {
-    const def = ITEMS[itemId];
-    if (!def) return refusal(`Unknown item ${itemId}`);
-    if (!Number.isInteger(qty) || qty < 0 || qty > 99) return refusal(`Invalid quantity for ${def.name}`);
-    if (def.requiresNode && !isNodeUnlocked(d, def.requiresNode)) return refusal(`${def.name} is not unlocked yet`);
-    if (qty > 0) preset[itemId] = qty;
-  }
-  sq.loadoutPreset = preset;
-  return OK;
-}
-
-function setRestockRule(d: GameState, rule: { itemId: Id; target: number; budgetCeiling: number } | { itemId: Id; remove: true }): HandlerResult {
-  if (!hasEffect(d, 'restockRules')) return refusal('Supply restocking is not unlocked yet');
-  const def = ITEMS[rule.itemId];
-  if (!def) return refusal(`Unknown item ${rule.itemId}`);
-  const rules = d.department.restockRules;
-  if ('remove' in rule) {
-    if (!rules.some((r) => r.itemId === rule.itemId)) return refusal(`No restock rule for ${def.name}`);
-    d.department.restockRules = rules.filter((r) => r.itemId !== rule.itemId);
-    return OK;
-  }
-  if (!Number.isInteger(rule.target) || rule.target < 0 || rule.target > 99) return refusal('Target stock must be a whole number from 0 to 99');
-  if (!Number.isFinite(rule.budgetCeiling) || rule.budgetCeiling < 0) return refusal('Spending ceiling cannot be negative');
-  if (def.requiresNode && !isNodeUnlocked(d, def.requiresNode)) return refusal(`${def.name} is not unlocked yet`);
-  const entry = { itemId: rule.itemId, target: rule.target, budgetCeiling: Math.round(rule.budgetCeiling) };
-  const i = rules.findIndex((r) => r.itemId === rule.itemId);
-  if (i >= 0) rules[i] = entry;
-  else rules.push(entry);
-  return OK;
-}
-
 export const ROSTER_HANDLERS = {
   applySquadArrangement,
   setSquadArrangementLock,
@@ -328,7 +295,5 @@ export const ROSTER_HANDLERS = {
   assignToSquad,
   setLeader,
   setSquadDuty,
-  setLoadoutPreset,
-  setRestockRule,
   offerRetention,
 };

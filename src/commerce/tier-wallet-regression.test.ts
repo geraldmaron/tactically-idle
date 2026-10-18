@@ -1,16 +1,23 @@
 import { describe, expect, it } from 'vitest';
-import legacyWalletText from '../sim/fixtures/release-v4-wallet.json?raw';
 import { CampaignSlots, SLOTS_KEY } from '../sim/campaign-slots';
 import { createInitialState } from '../sim/department';
-import { deserialize, SAVE_KEY, serialize } from '../sim/save';
+import { deserialize, serialize } from '../sim/save';
 import { availableTestMilli, campaignTestMilli } from './ledger';
 import type { TestWallet } from './types';
 
-const oldLibrary = JSON.parse(legacyWalletText);
-const NOW = oldLibrary.slots[0].savedAt as number;
-const firstCampaign = oldLibrary.slots[0].campaignId as string;
-const secondCampaign = oldLibrary.slots[1].campaignId as string;
-const oldWallet = oldLibrary.commerce as TestWallet;
+const NOW = 1_800_000_000_000;
+const firstCampaign = 'wallet-campaign-one';
+const secondCampaign = 'wallet-campaign-two';
+const oldWallet: TestWallet = {"version": 1, "installationId": "5287de1b-2e91-48e2-a2f2-8710fe1bde46", "revision": 5, "debt": 0, "transactions": [{"key": "mock:google:baseline-eight", "requestId": "baseline-eight", "provider": "google", "environment": "local-test", "productId": "mock.dp.8", "createdAt": 1800000000000, "updatedAt": 1800000000000, "status": "completed", "milliDP": 8000, "debtPaid": 0, "spent": 0, "allocations": {"wallet-campaign-one": 3300, "wallet-campaign-two": 1700}, "completionFailed": false}]};
+const oldLibrary = {
+  version: 2, commerce: oldWallet, activeSlotId: 1,
+  slots: Array.from({ length: 10 }, (_, i) => {
+    if (i > 1) return null;
+    const state = createInitialState(NOW, 13 + i); state.department.devPoints = 0.70000001;
+    return { campaignId: i ? secondCampaign : firstCampaign, name: `Campaign ${i + 1}`, createdAt: NOW, savedAt: NOW, data: serialize(state, NOW) };
+  }),
+};
+const currentWalletText = JSON.stringify(oldLibrary);
 
 function memory(raw?: string) {
   const entries = new Map<string, string>();
@@ -26,15 +33,19 @@ function memory(raw?: string) {
   return { storage, entries, quota: (value: boolean) => { full = value; } };
 }
 function historical() {
-  const store = memory(legacyWalletText);
+  const store = memory(currentWalletText);
   return { ...store, bank: new CampaignSlots(store.storage, NOW, () => 903) };
 }
 function fresh(earned: number, funding = 100000) {
   const store = memory();
   const state = createInitialState(NOW, 13);
   state.department.devPoints = earned; state.department.funding = funding;
-  store.storage.setItem(SAVE_KEY, serialize(state, NOW));
-  return { ...store, bank: new CampaignSlots(store.storage, NOW, () => 41) };
+  new CampaignSlots(store.storage, NOW, () => 13);
+  const library = JSON.parse(store.storage.getItem(SLOTS_KEY)!);
+  library.slots[0].data = serialize(state, NOW);
+  store.storage.setItem(SLOTS_KEY, JSON.stringify(library));
+  return { ...store, bank: new CampaignSlots(store.storage, NOW) };
+
 }
 function allocate(bank: CampaignSlots, milli: number) {
   expect(bank.beginPurchase('google', 'mock.dp.20', 'allocation', NOW).ok).toBe(true);
@@ -46,17 +57,17 @@ function expectOldOtherBalances(wallet: TestWallet) {
   expect(availableTestMilli(wallet)).toBe(3000);
 }
 
-describe('tier purchases and player packs over a published v4 wallet', () => {
+describe('tier purchases and player packs over a current campaign wallet', () => {
   it('preserves the complete previous ledger, campaign IDs, allocations and nonactive save bytes on load', () => {
     const { bank, storage } = historical();
     expect(bank.getSnapshot().issue).toBeNull();
-    expect(storage.getItem(SLOTS_KEY)).toBe(legacyWalletText);
+    expect(storage.getItem(SLOTS_KEY)).toBe(currentWalletText);
     expect(bank.getSnapshot().commerce).toEqual(oldWallet);
     expect(bank.getSnapshot().campaignId).toBe(firstCampaign);
     expect(bank.getSnapshot().developmentBudget).toEqual({ earnedDP: 0.70000001, testDP: 3.3, totalDP: 4.00000001 });
     expectOldOtherBalances(bank.getSnapshot().commerce);
-    const beforeFunds = JSON.parse(oldLibrary.slots[0].data).state.department.funding;
-    expect(bank.getSnapshot().state.department.funding).toBe(beforeFunds + 240);
+    const beforeFunds = JSON.parse(oldLibrary.slots[0]!.data).state.department.funding;
+    expect(bank.getSnapshot().state.department.funding).toBe(beforeFunds);
     expect(bank.save(NOW).ok).toBe(true);
     expect(JSON.parse(storage.getItem(SLOTS_KEY)!).slots[1]).toEqual(oldLibrary.slots[1]);
     const reloaded = new CampaignSlots(storage, NOW);

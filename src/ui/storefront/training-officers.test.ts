@@ -54,6 +54,7 @@ describe('course-aware officer comparisons', () => {
   it('exposes already-qualified, rating cutoff, slot and funding refusals', () => {
     const state = createInitialState(NOW, 1);
     state.department.unlockedNodes.push('personnel_negotiation');
+    for (const id of state.department.unlockedNodes) state.department.developmentTiers[id] ??= 1;
     expect(trainingCandidates(state, 'crisis_negotiation_course').find(({ officer }) => officer.id === 'off_chen')?.option.reason).toContain('already holds');
     state.officers.off_chen.ratings.communication = 85;
     expect(trainingCandidates(state, 'communication_refresher').find(({ officer }) => officer.id === 'off_chen')?.option.reason).toContain('course ceiling');

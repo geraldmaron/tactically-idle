@@ -1,0 +1,100 @@
+/* Outcomes (spec 3.4): ending cards grouped by how runs that ended there scored, a stripe in that
+   run class's color with its glyph (never color alone), the share in the surface's population with
+   its interval and provenance, and a side column with the four styles and the CI gate. Ghost cards
+   (endings this call can't reach) are dashed blueprint outlines with the reason on tape. */
+
+.lab-out { display: flex; flex-direction: column; min-height: 100%; }
+.lab-out-body { display: grid; grid-template-columns: minmax(0, 1fr) 420px; align-items: start; gap: var(--lab-s4); padding: var(--lab-s4) var(--lab-s5) var(--lab-s6); }
+.lab-out-main { min-width: 0; }
+.lab-out-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; margin-bottom: var(--lab-s3); }
+.lab-out-title { margin: 0; font: var(--lab-type-title); }
+.lab-out-count, .lab-out-total { color: var(--text-dim); font: var(--lab-type-row); }
+.lab-out-total { color: var(--muted); }
+
+.lab-out-group { margin-bottom: var(--lab-s5); }
+.lab-out-group-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 var(--lab-s2); color: var(--text); font: var(--lab-type-head); }
+.lab-out-group-note { color: var(--muted); font: var(--lab-type-row); }
+.lab-out-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: var(--lab-s3); }
+
+.lab-out-card { position: relative; display: flex; flex-direction: column; gap: 6px; min-width: 0; padding: 12px 14px 12px 18px; border: 1px solid var(--line); border-radius: var(--lab-r-panel);
+  background: var(--panel); --lab-out-w: var(--line-strong); }
+.lab-out-stripe { position: absolute; left: 0; top: 0; bottom: 0; width: 5px; border-radius: var(--lab-r-panel) 0 0 var(--lab-r-panel); background: var(--lab-out-w); }
+.lab-out-w-clean { --lab-out-w: var(--lab-w-clean); }
+.lab-out-w-costly { --lab-out-w: var(--lab-w-costly); }
+.lab-out-w-unresolved { --lab-out-w: repeating-linear-gradient(180deg, var(--lab-w-unresolved) 0 4px, rgba(147, 164, 194, 0.35) 4px 8px); }
+.lab-out-w-hurt { --lab-out-w: var(--lab-w-hurt); }
+.lab-out-w-death { --lab-out-w: var(--lab-w-death); }
+.lab-out-card-head { display: flex; align-items: flex-start; gap: 8px; }
+.lab-out-card-head .lab-mark, .lab-out-card-head > .lab-glyph { margin-top: 3px; color: var(--muted); }
+.lab-out-card-title { margin: 0; font: 500 17px/21px var(--font-display); }
+.lab-out-card-summary { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 3; margin: 0; color: var(--text-dim); font: 400 13.5px/19px var(--font-ui); }
+.lab-out-reach { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+.lab-out-reach .lab-prob-value { font-size: 17px; line-height: 20px; }
+.lab-out-type, .lab-out-scored { margin: 0; color: var(--text-dim); font: var(--lab-type-data); }
+.lab-out-scored { color: var(--warn); }
+.lab-out-mix { display: grid; gap: 3px; }
+.lab-out-mix-words { color: var(--muted); font: var(--lab-type-micro); }
+.lab-out-meta { display: flex; flex-wrap: wrap; gap: 2px 12px; margin: 0; color: var(--text-dim); font: var(--lab-type-data); }
+.lab-out-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: auto; padding-top: 4px; }
+/* An ending card open on its debrief takes the whole row; the frame fits a fixed height. */
+.lab-out-card-open { grid-column: 1 / -1; }
+.lab-out-debrief { display: flex; flex-direction: column; height: 680px; margin-top: var(--lab-s2); border-top: 1px solid var(--line); padding-top: var(--lab-s2); }
+.lab-out-actions .lab-button { min-height: 30px; }
+.lab-out-actions .lab-button-primary { min-height: 30px; font-size: 14px; }
+.lab-out-zero { border-color: rgba(255, 159, 67, 0.55); border-style: dashed; }
+.lab-out-zero-note { color: var(--warn); font: var(--lab-type-data); }
+.lab-out-ghost { border: 1px dashed var(--lab-xray-line); background: var(--lab-xray-wash); }
+.lab-out-ghost .lab-out-card-title { color: var(--text-dim); }
+.lab-out-why { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0; color: var(--text); font: var(--lab-type-row); }
+.lab-out-stuck { display: flex; align-items: center; gap: 8px; margin: 0; color: var(--warn); font: var(--lab-type-row); }
+
+.lab-out-baseline { flex-wrap: wrap; }
+.lab-out-baseline-name { color: var(--text); font: var(--lab-type-data); }
+.lab-out-baseline-strip { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; margin: 0 0 var(--lab-s4); padding: 8px 12px; border: 1px solid var(--line);
+  border-radius: var(--lab-r-panel); background: var(--panel); }
+.lab-out-delta { display: inline-flex; align-items: center; gap: 5px; color: var(--text); font: var(--lab-type-data); }
+.lab-out-noise { color: var(--muted); }
+
+/* side panels */
+.lab-out-side { display: grid; gap: var(--lab-s4); min-width: 0; }
+.lab-out-panel { display: grid; gap: 10px; padding: var(--lab-s4); border: 1px solid var(--line); border-radius: var(--lab-r-panel); background: var(--lab-rail); }
+.lab-out-panel-head { display: grid; gap: 2px; list-style: none; cursor: pointer; }
+.lab-out-panel-head::-webkit-details-marker { display: none; }
+.lab-out-caret { color: var(--muted); transform: rotate(-90deg); transition: transform 120ms ease-out; }
+.lab-out-panel[open] .lab-out-caret { transform: none; }
+.lab-out-panel-count { margin-left: 4px; color: var(--text-dim); font: var(--lab-type-row); }
+.lab-out-panel:not([open]) { gap: 0; }
+.lab-out-panel-title { display: flex; align-items: baseline; gap: 6px; margin: 0; font: var(--lab-type-title); }
+.lab-out-panel-title .lab-glyph { align-self: center; }
+.lab-out-panel-pop { color: var(--muted); font: var(--lab-type-row); }
+.lab-out-panel-note { margin: 0; color: var(--muted); font: var(--lab-type-row); }
+.lab-out-styles { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.lab-out-style { display: grid; grid-template-columns: 92px minmax(0, 1fr); align-items: center; gap: 3px 10px; }
+.lab-out-style .lab-stack, .lab-out-style-figures, .lab-out-style-wait, .lab-out-style .lab-error-text { grid-column: 2; }
+.lab-out-style-name { grid-row: span 2; align-self: start; padding: 2px 0; border: 0; background: none; color: var(--text-dim); font: 600 14px/18px var(--font-cond); text-align: left; }
+.lab-out-style-name:hover { color: var(--text); }
+.lab-out-style-on .lab-out-style-name { color: var(--amber-2); }
+.lab-out-style-figures { display: flex; flex-wrap: wrap; gap: 2px 10px; color: var(--text-dim); font: var(--lab-type-data); font-variant-numeric: tabular-nums; }
+.lab-out-style-figures span { display: inline-flex; align-items: center; gap: 3px; }
+.lab-out-style-wait { color: var(--muted); font: var(--lab-type-data); }
+
+.lab-out-spread { display: grid; gap: 4px; }
+.lab-out-spread-axis { position: relative; height: 14px; color: var(--muted); font: var(--lab-type-micro); }
+.lab-out-spread-axis span { position: absolute; top: 0; }
+.lab-out-spread-axis span:first-child { left: 0; }
+.lab-out-spread-axis span:nth-child(2) { transform: translateX(-50%); color: var(--warn); }
+.lab-out-spread-axis span:last-child { right: 0; }
+.lab-out-gate-status { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin: 0; font: var(--lab-type-body); }
+.lab-out-gate-status b { font-weight: 600; }
+.lab-out-gate-status .lab-progress { flex: 1; min-width: 180px; }
+.lab-out-gate-status .lab-button { margin-left: auto; }
+.lab-out-gate-type { margin: 6px 0 0; color: var(--text); font: var(--lab-type-head); }
+.lab-out-gate .lab-gate-open { grid-template-columns: 150px minmax(0, 1fr) auto; }
+.lab-out-gate-more summary { padding: 6px 0; color: var(--text-dim); font: var(--lab-type-head); cursor: pointer; }
+.lab-out-gate-other { display: grid; gap: 4px; margin-top: 8px; }
+
+@media (max-width: 1100px) {
+  .lab-out-body { grid-template-columns: minmax(0, 1fr); padding: var(--lab-s3) var(--lab-s4) var(--lab-s5); }
+  .lab-out-side { order: -1; grid-template-columns: minmax(0, 1fr); }
+  .lab-out-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

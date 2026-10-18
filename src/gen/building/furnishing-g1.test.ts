@@ -72,7 +72,7 @@ describe('furnishLocationG1', () => {
 
 describe('engine-independent arithmetic in the g1 furnisher', () => {
   const SOURCES = import.meta.glob(['./furnishing-g1.ts', './furnishing-definitions-g1.ts'], { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
-  // Same rule as procedural-math.test.ts: _g1 output is rebuilt on whatever engine the player runs.
+  // Same rule as procedural-math.test.ts: _g2 output is rebuilt on whatever engine the player runs.
   const BANNED = /\bMath\.(acos|acosh|asin|asinh|atan|atanh|atan2|cbrt|cos|cosh|exp|expm1|hypot|log|log1p|log2|log10|pow|random|sin|sinh|tan|tanh)\b|\*\*/;
   it.each(Object.keys(SOURCES))('%s uses only exactly specified arithmetic', (file) => {
     const code = SOURCES[file].replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/(^|[^:'"`\\])\/\/.*$/gm, '$1');

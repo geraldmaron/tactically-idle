@@ -11,7 +11,7 @@ import { exteriorObjects } from './exterior';
 
 /**
  * One generation attempt, unfurnished: rooms hold no objects (the game's furnishing solver,
- * furnishLocationV7, places them; generate.ts accepts a draw only once that solve is clean).
+ * furnishLocation, places them; generate.ts accepts a draw only once that solve is clean).
  * Returns null as soon as any stage cannot complete; the caller retries with the next draw
  * from the same stream. `familyId` is the public building type id the location carries.
  */

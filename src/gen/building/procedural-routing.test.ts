@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { deriveLocation } from '../../sim/location';
-import { routeBetween } from '../../sim/spatial-factors';
+import { routeBetween } from '../../sim/routes';
 import type { BuiltLocation } from '../../sim/types';
-import { PROCEDURAL_FAMILIES, PROCEDURAL_FAMILIES_G2, generateBuilding } from './index';
+import { PROCEDURAL_FAMILIES, generateBuilding } from './index';
 
 /**
  * The furnished form is what the game plays, and its squad router walks with 1 ft clearance through
@@ -15,7 +15,7 @@ import { PROCEDURAL_FAMILIES, PROCEDURAL_FAMILIES_G2, generateBuilding } from '.
 const SEEDS = 50;
 
 describe('generated buildings are walkable for the furnished squad router (50 seeds per type)', () => {
-  for (const family of [...PROCEDURAL_FAMILIES, ...PROCEDURAL_FAMILIES_G2]) {
+  for (const family of PROCEDURAL_FAMILIES) {
     it(`${family.id}__furnished_v7: every entry zone reaches every room`, () => {
       const problems: string[] = [];
       for (let seed = 1; seed <= SEEDS; seed++) {

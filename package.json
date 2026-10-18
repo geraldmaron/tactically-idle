@@ -5,14 +5,17 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "lab": "vite --open /lab",
     "build": "tsc -b && vite build",
+    "build:lab": "tsc -b && VITE_LAB=1 vite build",
     "typecheck": "tsc -b --noEmit",
     "test": "vitest run",
     "preview": "vite preview",
     "check:art": "node scripts/validate-art.mjs",
-    "verify": "npm run typecheck && npm test && npm run check:art && npm run build",
+    "verify": "npm run typecheck && npm test && npm run check:art && npm run build && node scripts/check-no-lab.mjs",
     "test:e2e": "node scripts/play-loop.mjs",
-    "capture:locations": "node scripts/capture-locations.mjs"
+    "capture:locations": "node scripts/capture-locations.mjs",
+    "check:strings": "bun scripts/check-strings.ts"
   },
   "dependencies": {
     "react": "^19.3.0",

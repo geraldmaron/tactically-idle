@@ -4,11 +4,11 @@ import { describe, expect, it } from 'vitest';
 import { establishedDepartment } from '../../sim/department-test-fixtures';
 import type { DebriefResult, DecisionView } from '../../sim/types';
 import { SavedDebriefContents } from '../screens/OpsDebrief';
-import { DebriefConsequences, DebriefSummary, OfficerResults, visibleDebriefConsequences } from './DebriefResults';
+import { DebriefConsequences, DebriefScore, DebriefSummary, OfficerResults, visibleDebriefConsequences } from './DebriefResults';
 
 const result: DebriefResult = {
   runId: 'saved_original', scenarioId: 'legacy_missing_scenario', endingId: 'done', endingTitle: 'Operation complete',
-  endingSummary: 'The handover is complete.', practice: false,
+  endingSummary: 'The handover is complete.',
   objective: { score: 75, label: 'Largely resolved' }, civilianSafety: { score: 68, label: 'Safety was strained' },
   officerCondition: [{ officerId: 'off_chen', stressBefore: 12.5, stressAfter: 23.5, xpGained: 29 }],
   informationPreserved: [], resources: [], unitWear: [], trustDelta: -2, fundingReward: 400, devPointReward: 1,
@@ -29,13 +29,10 @@ describe('scannable debrief results', () => {
     expect(html).not.toContain('<details');
   });
 
-  it('replaces repeated practice zero-change rows with one collapsed condition group', () => {
-    const practice = { ...result, practice: true, officerCondition: Object.values(state.officers).map((o) => ({ officerId: o.id, stressBefore: o.stress, stressAfter: o.stress, xpGained: 0 })) };
-    const summary = renderToStaticMarkup(createElement(DebriefSummary, { debrief: practice }));
-    const html = renderToStaticMarkup(createElement(OfficerResults, { debrief: practice, officers: state.officers }));
-    expect(summary).toContain('No lasting changes to officers, supplies or reputation. No rewards earned.');
-    expect(summary).not.toContain('+$400');
-    expect(html).toContain(`${practice.officerCondition.length} officers · unchanged`);
+  it('replaces repeated zero-change rows with one collapsed condition group', () => {
+    const quiet = { ...result, officerCondition: Object.values(state.officers).map((o) => ({ officerId: o.id, stressBefore: o.stress, stressAfter: o.stress, xpGained: 0 })) };
+    const html = renderToStaticMarkup(createElement(OfficerResults, { debrief: quiet, officers: state.officers }));
+    expect(html).toContain(`${quiet.officerCondition.length} officers · unchanged`);
     expect(html.match(/<details/g)).toHaveLength(1);
     expect(html).not.toContain('<details open');
     expect(html).not.toContain('+0');
@@ -173,5 +170,21 @@ describe('explicit completion evidence in current and archived results', () => {
     const partial = renderToStaticMarkup(createElement(DebriefSummary, { debrief: { ...result, disposition: 'relief_partial', completionAchieved: false, remainingTasks: ['The access route still needs to be made safe.'] } }));
     expect(partial).toContain('Partial progress · call unresolved');
     expect(partial).toContain('The access route still needs to be made safe.');
+  });
+
+  it('shows a v13 call’s score line by line, and the force used with the reason', () => {
+    const scored: DebriefResult = { ...result, trustDelta: 9,
+      scoreLines: [
+        { key: 'result', text: 'The call is resolved.', trust: 8, strain: 0 },
+        { key: 'person:worker:safe', text: 'Quinlan MacAllister is out safe.', trust: 3, strain: -2 },
+        { key: 'person:shooter:in_hand', text: 'Tamar Thorsen is with the team, unhurt.', trust: 0, strain: 0 },
+        { key: 'force:0:firearm', text: 'The use of force on Tamar Thorsen goes to review.', trust: -2, strain: 1.5 },
+      ],
+      forceLines: [{ text: 'The team fired at Tamar Thorsen, who wasn’t hit.', reason: 'Tamar is holding a handgun.' }] };
+    const html = renderToStaticMarkup(createElement(DebriefScore, { debrief: scored }));
+    for (const text of ['How the call was scored', 'The call is resolved.', '+8 trust', '+3 trust', '-2 strain', 'No change', '-2 trust', '+1.5 strain',
+      'Force used', 'The team fired at Tamar Thorsen, who wasn’t hit.', 'Why', 'Tamar is holding a handgun.']) expect(html).toContain(text);
+    expect(renderToStaticMarkup(createElement(SavedDebriefContents, { debrief: scored, officers: state.officers }))).toContain('How the call was scored');
+    expect(renderToStaticMarkup(createElement(DebriefScore, { debrief: result }))).toBe('');
   });
 });

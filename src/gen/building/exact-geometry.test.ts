@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { deriveLocation } from '../../sim/location';
 import { validateLocation } from '../../sim/location-validate';
 import { distanceFor, exactHypot, hypotFor } from '../../sim/geometry';
-import { PROCEDURAL_FAMILIES, PROCEDURAL_FAMILIES_G2 } from './index';
+import { PROCEDURAL_FAMILIES } from './index';
 import { validateFurnishingsG1 } from './furnishing-g1';
 import { generatePair, unreachableFromEntries } from './procedural/generate';
 
@@ -38,18 +38,14 @@ function exercise(familyId: string, seed: number): void {
   unreachableFromEntries(furnished);
 }
 
-const SOURCES = import.meta.glob(['../../sim/geometry.ts', '../../sim/location.ts', '../../sim/furniture-path.ts', '../../sim/location-validate.ts', '../../sim/spatial-factors.ts', './furnishing-v7.ts', './furnishing-g1.ts'], { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
+const SOURCES = import.meta.glob(['../../sim/geometry.ts', '../../sim/location.ts', '../../sim/furniture-path.ts', '../../sim/location-validate.ts', '../../sim/spatial-factors.ts', './furnishing.ts', './furnishing-g1.ts'], { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
 const stripComments = (src: string) => src.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/(^|[^:'"`\\])\/\/.*$/gm, '$1');
 
 describe('exact geometry for _g2 locations', () => {
   afterEach(() => vi.restoreAllMocks());
 
-  it.each(PROCEDURAL_FAMILIES_G2.map((f) => f.id))('%s generates, validates, furnishes and routes without an approximated Math call', (id) => {
+  it.each(PROCEDURAL_FAMILIES.map((f) => f.id))('%s generates, validates, furnishes and routes without an approximated Math call', (id) => {
     expect(approximatedCalls(() => exercise(id, 3))).toEqual({});
-  }, 60_000);
-
-  it('still measures locations without the field with Math.hypot (the spy sees g1 calls)', () => {
-    expect(approximatedCalls(() => exercise(PROCEDURAL_FAMILIES[0].id, 3)).hypot).toBeGreaterThan(0);
   }, 60_000);
 
   it('dispatches by geometry version', () => {

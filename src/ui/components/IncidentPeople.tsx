@@ -1,8 +1,16 @@
 import type { CivilianOutcomeView, GameState, OfficerCasualtyRecord, OperationRun, PersonCasualtyRecord } from '../../sim/types';
 import type { ScenarioDefinition } from '../../sim/scenario-types';
 import { civilianOutcomeViews } from '../../sim/incident-consequences';
+import { clockViews } from '../../sim/clocks';
+import { stanceOf } from '../../sim/meters';
+import type { Stance } from '../../sim/meters';
+import type { ReactNode } from 'react';
 import { Icon } from '../icons';
+import type { IconName } from '../icons';
+import { Portrait } from '../portraits/Portrait';
 import { opMinutes } from '../format';
+import { PeopleGlyph, usePeopleEntry } from '../people/PeopleText';
+import { peopleLabel } from '../people/lexicon';
 import './incident-people.css';
 
 type CivilianOutcome = CivilianOutcomeView;
@@ -23,11 +31,65 @@ export const CASUALTY_CARE_LABEL: Record<OfficerCasualty['care'], string> = {
   evacuated: 'Evacuated',
 };
 
+type PersonTone = 'pending' | 'warn' | 'ok' | 'danger';
+type PersonStatus = CivilianOutcome['status'];
+
+/** Unlocated people use the same dashed amber as reported people on the map. */
+const PERSON_TONE: Record<PersonStatus, PersonTone> = {
+  unaccounted: 'pending',
+  needs_help: 'warn',
+  injured_needs_care: 'warn',
+  safe: 'ok',
+  care_accepted: 'ok',
+  accounted_elsewhere: 'ok',
+  deceased: 'danger',
+};
+
+const PERSON_ICON: Record<PersonStatus, IconName> = {
+  unaccounted: 'question',
+  needs_help: 'warning',
+  injured_needs_care: 'bandage',
+  safe: 'check',
+  care_accepted: 'medic',
+  accounted_elsewhere: 'check',
+  deceased: 'x',
+};
+
+/** How a subject sounds to the team, once the team has heard from them (sim/meters.ts). */
+export const STANCE_LABEL: Record<Exclude<Stance, 'unheard'>, string> = {
+  calm: 'Calm',
+  tense: 'Tense',
+  volatile: 'Agitated',
+  breaking: 'Near breaking point',
+  yielding: 'Open to talking',
+};
+const STANCE_TONE: Record<Exclude<Stance, 'unheard'>, PersonTone> = { calm: 'ok', yielding: 'ok', tense: 'pending', volatile: 'warn', breaking: 'danger' };
+
+/** Two initials from a name, or the first two letters of a single-word label such as "Resident". */
+export function personInitials(label: string): string {
+  const words = label.replace(/[^\p{L}\s'-]/gu, ' ').trim().split(/\s+/).filter(Boolean);
+  if (!words.length) return '?';
+  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
+  return (words[0][0] + words[words.length - 1][0]).toUpperCase();
+}
+
+/** `personId` finds the person's public kind while names are colored: a ring around the avatar in
+ * the kind's color, and the kind's glyph before the name. */
+function PersonTile({ label, status, tone, icon, avatar, data, personId, children }: { label: string; status: string; tone: PersonTone; icon: IconName; avatar?: ReactNode; data: Record<string, string>; personId?: string; children?: ReactNode }) {
+  const who = usePeopleEntry(personId);
+  return <li className="person-tile" data-tone={tone} {...data}>
+    <span className="person-avatar" aria-hidden="true" data-kind={who?.kind} title={who ? peopleLabel(who.kind, who.squad) : undefined}>{avatar ?? personInitials(label)}</span>
+    <div className="person-text">
+      <strong>{who && <PeopleGlyph kind={who.kind} tone />}{label}</strong>
+      <span className="person-status"><Icon name={icon} size={13} />{status}</span>
+      {children}
+    </div>
+  </li>;
+}
+
 export function CivilianOutcomeList({ outcomes }: { outcomes: CivilianOutcome[] }) {
-  return <ul className="incident-people-list" aria-label="Civilian outcomes">{outcomes.map((person) => <li key={person.id} data-person-status={person.status}>
-    <Icon name={person.status === 'deceased' ? 'x' : person.status === 'injured_needs_care' ? 'bandage' : person.status === 'care_accepted' ? 'medic' : person.status === 'safe' || person.status === 'accounted_elsewhere' ? 'check' : 'user'} size={16} />
-    <div><strong>{person.label}</strong><span>{CIVILIAN_OUTCOME_LABEL[person.status]}</span></div>
-  </li>)}</ul>;
+  return <ul className="incident-people-list" aria-label="Civilian outcomes">{outcomes.map((person) =>
+    <PersonTile key={person.id} personId={person.id} label={person.label} status={CIVILIAN_OUTCOME_LABEL[person.status]} tone={PERSON_TONE[person.status]} icon={PERSON_ICON[person.status]} data={{ 'data-person-status': person.status }} />)}</ul>;
 }
 
 /** A saved fatality remains deceased even if an older care field says otherwise. */
@@ -35,10 +97,9 @@ export function PersonCasualtyList({ casualties }: { casualties: PersonCasualtyR
   if (!casualties.length) return null;
   return <ul className="incident-people-list incident-person-casualties" aria-label="Recorded injuries and deaths">{casualties.map((person) => {
     const fatal = person.severity === 'fatal' || person.care === 'deceased';
-    return <li key={person.personId} data-person-casualty={person.personId} data-person-status={fatal ? 'deceased' : person.care === 'accepted' ? 'care_accepted' : 'injured_needs_care'}>
-      <Icon name={fatal ? 'x' : 'bandage'} size={16} />
-      <div><strong>{person.label}</strong><span>{fatal ? 'Deceased' : `${person.severity === 'serious' ? 'Serious injury' : 'Wounded'} · ${person.care === 'stabilized' ? 'Stabilized' : person.care === 'accepted' ? 'Care accepted' : 'Needs care'}`}</span></div>
-    </li>;
+    const status: PersonStatus = fatal ? 'deceased' : person.care === 'accepted' ? 'care_accepted' : 'injured_needs_care';
+    const line = fatal ? 'Deceased' : `${person.severity === 'serious' ? 'Serious injury' : 'Wounded'} · ${person.care === 'stabilized' ? 'Stabilized' : person.care === 'accepted' ? 'Care accepted' : 'Needs care'}`;
+    return <PersonTile key={person.personId} personId={person.personId} label={person.label} status={line} tone={fatal ? 'danger' : 'warn'} icon={fatal ? 'x' : 'bandage'} data={{ 'data-person-casualty': person.personId, 'data-person-status': status }} />;
   })}</ul>;
 }
 
@@ -47,28 +108,47 @@ export function IncidentPeopleStatus({ scenario, run, state }: { scenario: Scena
   const civilians = civilianOutcomeViews(scenario, run);
   const officers = Object.values(run.officerCasualties ?? {});
   const additionalCasualties = Object.values(run.personCasualties ?? {}).filter((person) => !civilians.some((civilian) => civilian.id === person.personId));
-  if (!civilians.length && !officers.length && !additionalCasualties.length) return null;
+  // Subjects the team has heard from, and clocks the team has heard a cue from: nothing earlier,
+  // so the panel never shows what the team can't know yet.
+  const subjects = Object.entries(run.meters ?? {}).flatMap(([id, meters]) => {
+    const stance = stanceOf(meters);
+    const person = scenario.incidentPeople?.find((entry) => entry.id === id);
+    return stance === 'unheard' || !person || run.flags.includes(`out:${id}`) ? [] : [{ id, label: person.label, stance }];
+  });
+  const clocks = clockViews(scenario, run).filter((clock) => clock.latest && !clock.stopped);
+  if (!civilians.length && !officers.length && !additionalCasualties.length && !subjects.length && !clocks.length) return null;
+  const located = civilians.filter((person) => person.status !== 'unaccounted').length;
+  const needCare = civilians.filter((person) => PERSON_TONE[person.status] === 'warn').length;
   return <section className="incident-people-status" aria-label="People at this call">
-    <h2><Icon name="people" size={16} />People at this call</h2>
+    <div className="incident-people-head">
+      <h2><Icon name="people" size={16} />People at this call</h2>
+      {civilians.length > 0 && <span className="incident-people-tally"><strong>{located}</strong> of {civilians.length} located{needCare > 0 && <span className="incident-people-care"> · {needCare} need{needCare === 1 ? 's' : ''} help</span>}</span>}
+    </div>
+    {civilians.length > 0 && <div className="incident-people-meter" role="img" aria-label={`${located} of ${civilians.length} people located`}>
+      {civilians.map((person) => <i key={person.id} data-tone={PERSON_TONE[person.status]} />)}
+    </div>}
     {civilians.length > 0 && <CivilianOutcomeList outcomes={civilians} />}
     <PersonCasualtyList casualties={additionalCasualties} />
+    {subjects.length > 0 && <ul className="incident-people-list incident-subject-list" aria-label="Subjects">{subjects.map((subject) =>
+      <PersonTile key={subject.id} personId={subject.id} label={subject.label} status={STANCE_LABEL[subject.stance]} tone={STANCE_TONE[subject.stance]} icon="ear" data={{ 'data-subject-stance': subject.stance }} />)}</ul>}
+    {clocks.length > 0 && <ul className="incident-people-list incident-clock-list" aria-label="Running down">{clocks.map((clock) =>
+      <PersonTile key={clock.id} label={clock.label} status={clock.out ? 'Out' : 'Running low'} tone={clock.out ? 'danger' : 'warn'} icon="hourglass" avatar={<Icon name="hourglass" size={18} />} data={{ 'data-clock': clock.id }}>
+        <span className="person-note">{clock.latest}</span>
+      </PersonTile>)}</ul>}
     {officers.length > 0 && <ul className="incident-people-list incident-wounded-list" aria-label="Officers out of action">{officers.map((casualty) => {
       const officer = state.officers[casualty.officerId];
-      return <li key={casualty.officerId} data-officer-casualty={casualty.officerId}>
-        <Icon name="bandage" size={16} />
-        <div><strong>{officer ? `${officer.firstName} ${officer.surname}` : 'Officer'} · out of action</strong><span>{casualty.severity === 'serious' ? 'Serious injury · ' : ''}{casualty.label} · {CASUALTY_CARE_LABEL[casualty.care]}</span></div>
-      </li>;
+      return <PersonTile key={casualty.officerId} personId={casualty.officerId} label={`${officer ? `${officer.firstName} ${officer.surname}` : 'Officer'} · out of action`} status={`${casualty.severity === 'serious' ? 'Serious injury · ' : ''}${casualty.label} · ${CASUALTY_CARE_LABEL[casualty.care]}`} tone="warn" icon="bandage"
+        avatar={officer ? <Portrait officer={officer} size={36} /> : undefined} data={{ 'data-officer-casualty': casualty.officerId }} />;
     })}</ul>}
-    {run.practice && officers.length > 0 && <p className="incident-practice-injury">Practice injuries last for this run only</p>}
   </section>;
 }
 
 /** Archived results use the saved injury and recovery date, never current roster condition. */
-export function OfficerInjuryResult({ casualty, practice }: { casualty: OfficerCasualty; practice: boolean }) {
+export function OfficerInjuryResult({ casualty }: { casualty: OfficerCasualty }) {
   const recovery = new Date(casualty.recoveryUntil).toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
-  return <div className="result-officer-injury" aria-label={practice ? 'Practice injury' : 'Injury and recovery'}>
+  return <div className="result-officer-injury" aria-label="Injury and recovery">
     <strong><Icon name="bandage" size={15} /><span>{casualty.severity === 'serious' ? 'Serious injury · ' : ''}{casualty.label}</span></strong>
     <span>{CASUALTY_CARE_LABEL[casualty.care]} · out of action from {opMinutes(casualty.at)}</span>
-    <p>{practice ? 'Practice only. No lasting injury or recovery timer.' : <>Recovery scheduled until <time dateTime={new Date(casualty.recoveryUntil).toISOString()}>{recovery}</time>.</>}</p>
+    <p>Recovery scheduled until <time dateTime={new Date(casualty.recoveryUntil).toISOString()}>{recovery}</time>.</p>
   </div>;
 }

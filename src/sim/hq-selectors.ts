@@ -1,8 +1,9 @@
 import type { GameState } from './types';
 import { budget, boardSummary, recoveryInfo, squadReadiness } from './department-selectors';
-import { squadDeployed } from './economy';
+import { squadDeployed } from './squads';
 import { ROSTER_TUNING } from './roster';
 import { standardRadioPlan } from './standard-kit';
+import { departmentUpkeep } from './equipment-manager-policy';
 
 export function hqOverview(state: GameState, now: number) {
   const at = Math.max(now, state.department.clockHighWater);
@@ -17,7 +18,7 @@ export function hqOverview(state: GameState, now: number) {
     deployed: squadDeployed(state, squad.id),
   }));
   const idle = state.squads.filter((squad) => squad.officerIds.length > 0 && !squadDeployed(state, squad.id));
-  const radios = standardRadioPlan(state, idle.map((squad) => squad.id), at);
+  const radios = standardRadioPlan(state, idle.map((squad) => squad.id), at, departmentUpkeep(state));
   return {
     totalOfficers: officers.length, deployable: deployable.length, fresh: fresh.length,
     unavailable: officers.length - deployable.length, strained: deployable.length - fresh.length,

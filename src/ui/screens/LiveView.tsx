@@ -3,7 +3,6 @@ import type { ReactNode } from 'react';
 import type {
   ActionView,
   BuiltLocation,
-  Contributor,
   FactView,
   GameState,
   Id,
@@ -14,7 +13,6 @@ import type {
   SquadId,
   SquadTask,
   StageId,
-  StageContinuationView,
 } from '../../sim/types';
 import type { StageProgress } from '../../sim/operation-selectors';
 import type { EnvironmentDefinition } from '../../sim/scenario-types';
@@ -34,9 +32,13 @@ import { describeConstruction } from '../../sim/spatial';
 import { Icon, actionIcon, materialIcon, roomIcon } from '../icons';
 import type { IconName } from '../icons';
 import { feetInches, opMinutes, signed, sqft } from '../format';
-import { CONSEQUENCE_LABEL, OutcomeForecast } from './OperationFeedback';
-import { outcomePercentages, visibleDecisions } from './liveModels';
+import { CONSEQUENCE_LABEL, OddsBar, OutcomeForecast } from './OperationFeedback';
+import { DecisionList } from './DecisionList';
+import { CONTRIBUTOR_GROUPS } from './contributor-groups';
+import { GamePeopleProvider, PeopleText } from '../people/PeopleText';
+import type { Lexicon } from '../people/lexicon';
 import './operation-squads.css';
+import './ops-visual.css';
 
 // Presentational live-operation screen. OpsLive.tsx feeds it from the selectors.
 
@@ -46,7 +48,6 @@ export interface LiveViewProps {
   title: string;
   /** e.g. 'RESIDENTIAL / OP 0141' */
   subtitle: string;
-  practice: boolean;
   progress: StageProgress;
   built: BuiltLocation;
   spaces: SpaceView[];
@@ -60,8 +61,6 @@ export interface LiveViewProps {
   selectedAction: ActionView | null;
   onSelectAction: (id: Id) => void;
   /** Free menu progression stays separate from tactical decisions and their forecasts. */
-  continuations?: StageContinuationView[];
-  onContinueStage?: (actionId: Id) => void;
   activeOfficerId: Id | null;
   onSelectOfficer: (id: Id) => void;
   selectedSpaceId: Id | null;
@@ -84,10 +83,17 @@ export interface LiveViewProps {
   feedback?: ReactNode;
   /** Named external services stay beside the next decision, separate from squad support. */
   supportContext?: ReactNode;
+  /** The call's summary and briefing, kept in view under the title for the whole operation. */
+  situation?: ReactNode;
+  /** One line naming the last result, kept just above the next decision; the full record sits below it. */
+  lastDecision?: ReactNode;
   /** A response that can no longer progress is handled outside ordinary story choices. */
   failedResponse?: ReactNode;
   /** Overlay sheets (action detail, room sheet, cancel confirm) rendered by the container. */
   children?: ReactNode;
+  /** The game's people lexicon for this call: names are colored while "Color names by role" is on.
+   * Left out (the Scenario Lab), the surrounding PeopleProvider decides. */
+  people?: Lexicon | null;
 }
 
 export function LiveView(p: LiveViewProps) {
@@ -98,25 +104,31 @@ export function LiveView(p: LiveViewProps) {
   const [expandedStage, setExpandedStage] = useState<string | null>(null);
   const expanded = expandedStage === p.progress.stage;
   const available = p.actions.map((action) => action.id === sel?.id ? sel : action);
-  const decisions = visibleDecisions(available, sel?.id ?? null, expanded);
   // Renderer props that may not be declared yet (floor tabs, environment overlay). Spread so this compiles either way.
   const blueprintExtras = { floor: p.floor, onFloorChange: p.onFloorChange, environment: p.environment ?? undefined };
 
-  return (
+  const screen = (
     <div className="live">
       <div className="live-title">
         <div className="live-id">
           <h2 className="live-name">{p.title}</h2>
           <p className="live-sub">
-            <span>{p.subtitle}</span>
             <span className="live-flag">
               <i className="live-dot-amber" aria-hidden="true" />
-              {p.practice ? 'PRACTICE' : 'LIVE'}
+              LIVE
             </span>
+            <span>{p.subtitle}</span>
+            {p.canCancel && (
+              <button type="button" className="linkbtn live-cancel" onClick={p.onCancel} aria-label="Cancel operation">
+                Cancel
+              </button>
+            )}
           </p>
         </div>
         <StageSteps progress={p.progress} />
       </div>
+
+      {p.situation}
 
       <div className="live-map">
         <div className="map-hud map-status" aria-label="Operation time and pressure">
@@ -151,6 +163,17 @@ export function LiveView(p: LiveViewProps) {
           )}
         </div>
         <div className="map-hud map-actions" role="group" aria-label="Map display">
+          {/* The map labels reported people in place, so the key is on demand instead of a permanent row. */}
+          <details className="map-key">
+            <summary className="hud-btn hud-btn-quiet" aria-label="Map key and inspection help"><Icon name="info" size={16} />Key</summary>
+            <div className="map-key-body" aria-label="Map legend">
+              <span className="map-key-items">
+                <span><Icon name="user" size={18} className="lg-q legend-reported-person" />Reported</span>
+                <span><Icon name="user" size={18} className="lg-ok" />Confirmed</span>
+              </span>
+              <p>Dashed amber people are reports at approximate positions. Mint people have a confirmed position. Small item symbols stay beside their holder; amber items are still reported, even when the person is confirmed. An absent weapon symbol does not mean unarmed. Tap a room or use Rooms to inspect names, conditions and items.</p>
+            </div>
+          </details>
           {!p.showRooms && (
             <button type="button" className="hud-btn" onClick={() => setMaterials((v) => !v)} aria-pressed={materials}>
               <Icon name="layers" size={16} />
@@ -162,31 +185,6 @@ export function LiveView(p: LiveViewProps) {
             {p.showRooms ? 'Map' : 'Rooms'}
           </button>
         </div>
-      </div>
-
-      <div className="legend" aria-label="Map legend">
-        <span className="legend-pad" />
-        <span className="legend-items">
-          <span>
-            <Icon name="user" size={18} className="lg-q legend-reported-person" />
-            Reported
-          </span>
-          <span>
-            <Icon name="user" size={18} className="lg-ok" />
-            Confirmed
-          </span>
-        </span>
-        <details className="legend-help">
-          <summary aria-label="Map key and inspection help">Key</summary>
-          <p>Dashed amber people are reports at approximate positions. Mint people have a confirmed position. Small item symbols stay beside their holder; amber items are still reported, even when the person is confirmed. An absent weapon symbol does not mean unarmed. Tap a room or use Rooms to inspect names, conditions and items.</p>
-        </details>
-        <span className="legend-end">
-          {p.canCancel && (
-            <button type="button" className="linkbtn" onClick={p.onCancel} aria-label="Cancel operation">
-              Cancel
-            </button>
-          )}
-        </span>
       </div>
 
       {multi && (
@@ -201,7 +199,7 @@ export function LiveView(p: LiveViewProps) {
             return { value: s.id, disabled: unavailable, accessibleLabel: `Squad ${s.id}, ${s.name}, ${fit} of ${s.officerIds.length} fit${location ? `, at ${location}` : ''}${unavailable ? ', unavailable for this decision' : ''}`,
               label: <><b>{s.id}</b><span className="squad-tab-detail"><span className="squad-tab-name">{s.name}</span>{location && <small>{location}</small>}</span><span className="choice-rail-count">{fit}/{s.officerIds.length} fit</span></> };
           })} />
-          <p className="operation-squad-hint">{sel ? `Reviewing with ${sel.actingSquadIds.map(id => `Squad ${id}`).join(' + ')}. Switching here changes the acting squad.` : 'Choose who acts, then review a decision. Supporting squads are selected in the review.'}</p>
+          <p className="operation-squad-hint">{sel ? `Reviewing with ${sel.actingSquadIds.map(id => `Squad ${id}`).join(' + ')}. Switching here changes who acts.` : 'Choose who acts, then review a decision. Pick support in the review.'}</p>
         </div>
       )}
 
@@ -236,9 +234,7 @@ export function LiveView(p: LiveViewProps) {
         {p.officers.length === 0 && <p className="strip-empty">No officers in this squad.</p>}
       </div>
 
-      {p.feedback}
-
-      {p.supportContext}
+      {p.lastDecision}
 
       <div className="call operation-choices" aria-label="Your call">
         <div className="call-head">
@@ -250,54 +246,46 @@ export function LiveView(p: LiveViewProps) {
             </button>
           )}
         </div>
-        {p.progress.prompt && <p className="operation-stage-prompt">{p.progress.prompt}</p>}
-        {p.actions.length > 0 && <p className="operation-choice-count">{available.filter((action) => action.eligible).length} available{available.some((action) => !action.eligible) ? ` · ${available.filter((action) => !action.eligible).length} unavailable` : ''}. Choose an option to see what it costs and what could happen.</p>}
-        {p.actions.length === 0 ? (
-          <p className="call-empty">No decisions available right now.</p>
-        ) : (
-          <div className="call-grid">
-            {decisions.map((a) => {
-              const on = sel?.id === a.id;
-              return (
-                <button
-                  key={a.id}
-                  type="button"
-                  className={`callbtn${on ? ' callbtn-on' : ''}${a.eligible ? '' : ' callbtn-off'}`}
-                  aria-pressed={on}
-                  aria-label={`Review ${a.title}${a.eligible ? '' : ': requirements unmet'}`}
-                  onClick={() => p.onSelectAction(a.id)}
-                >
-                  <Icon name={actionIcon(a.icon)} size={p.actions.length > 2 ? 24 : 30} className="callbtn-icon" />
-                  <span className="callbtn-text">
-                    <span className="callbtn-title">{a.title}</span>
-                    <span className="callbtn-sum">
-                      {!a.eligible && a.reason ? (
-                        <>
-                          <Icon name="lock" size={11} /> {a.reason}
-                        </>
-                      ) : (
-                        a.summary
-                      )}
-                    </span>
-                    <span className="callbtn-forecast">~{opMinutes(a.timeCost)} · {a.eligible && !a.eventResult ? `${outcomePercentages(a.likelihood).favorable}% chance to go well · ` : ''}possible harm: {CONSEQUENCE_LABEL[a.consequenceLevel].toLowerCase()}</span>
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        )}
-        {p.actions.length > 5 && <Button block className="operation-more-choices" onClick={() => setExpandedStage(expanded ? null : p.progress.stage)} aria-expanded={expanded}>{expanded ? 'Show fewer choices' : `Show all ${p.actions.length} choices`}</Button>}
+        <DecisionList prompt={p.progress.prompt} actions={available} selectedId={sel?.id ?? null} expanded={expanded} onSelect={p.onSelectAction} onExpand={() => setExpandedStage(expanded ? null : p.progress.stage)} />
       </div>
-      {!!p.continuations?.length && p.onContinueStage && <section className="call operation-continuations" aria-label="Next stage">
-        {p.continuations.map((continuation) => <div key={continuation.actionId}>
-          <p className="dim">{continuation.description}</p>
-          <Button variant="ghost" block onClick={() => p.onContinueStage?.(continuation.actionId)}>{continuation.label}</Button>
-        </div>)}
-      </section>}
+
       {p.failedResponse}
+      {p.feedback}
+      {p.supportContext}
+      {p.actions.length > 0 && <DecisionDock available={available.filter((action) => action.eligible).length} />}
       {p.children}
     </div>
   );
+  return p.people === undefined ? screen : <GamePeopleProvider lexicon={p.people}>{screen}</GamePeopleProvider>;
+}
+
+/** A floating shortcut back to the decisions, shown only while they sit below the visible area. */
+function DecisionDock({ available }: { available: number }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [below, setBelow] = useState(false);
+  useEffect(() => {
+    const dock = ref.current;
+    const target = dock?.closest('.live')?.querySelector('.operation-choices');
+    if (!dock || !target || typeof IntersectionObserver === 'undefined') return;
+    const root = dock.closest('.screen');
+    const observer = new IntersectionObserver(([entry]) => {
+      const bottom = entry.rootBounds?.bottom ?? window.innerHeight;
+      setBelow(!entry.isIntersecting && entry.boundingClientRect.top >= bottom - 1);
+    }, { root, threshold: 0, rootMargin: '0px 0px -40px 0px' });
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, []);
+  const go = () => {
+    const target = ref.current?.closest('.live')?.querySelector<HTMLElement>('.operation-choices');
+    target?.scrollIntoView({ block: 'start', behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+    target?.querySelector<HTMLElement>('.callbtn')?.focus({ preventScroll: true });
+  };
+  return <div ref={ref} className={`decision-dock${below ? ' decision-dock-on' : ''}`} aria-hidden={!below}>
+    <button type="button" className="decision-dock-btn" tabIndex={below ? 0 : -1} onClick={go}>
+      <Icon name="chevronDown" size={16} />
+      Next decision{available > 0 ? <b>{available}</b> : null}
+    </button>
+  </div>;
 }
 
 function pressureWord(v: number): string {
@@ -312,7 +300,7 @@ function capabilityFor(a: ActionView, o: Officer): { value: number; text: string
   const mine = a.contributors.filter((c) => c.ref === o.id);
   if (mine.length === 0) {
     if (!a.officerIds.includes(o.id)) return null;
-    return { value: 0, text: ROLE_META[o.role].label };
+    return { value: 0, text: ROLE_META[o.role].short };
   }
   const value = mine.reduce((s, c) => s + c.value, 0);
   const top = [...mine].sort((x, y) => Math.abs(y.value) - Math.abs(x.value))[0];
@@ -326,20 +314,23 @@ function signedPoints(v: number): string {
   return `${r > 0 ? '+' : r < 0 ? '−' : ''}${Math.abs(r)}`;
 }
 
+// Portrait chips are a quarter of a phone wide, so skill words stay short; the review sheet has the full names.
 const SHORT: [RegExp, string][] = [
-  [/communicat/i, 'Communication'],
-  [/awareness/i, 'Awareness'],
-  [/coordinat/i, 'Coordination'],
+  [/communicat/i, 'Comms'],
+  [/awareness/i, 'Aware'],
+  [/coordinat/i, 'Coord'],
   [/composure/i, 'Calm'],
-  [/shooting/i, 'Shooting'],
-  [/medical/i, 'Medical'],
+  [/shooting/i, 'Shoot'],
+  [/medical/i, 'Medic'],
+  [/observ/i, 'Observe'],
+  [/leader/i, 'Lead'],
 ];
 
 function shortLabel(label: string, o: Officer): string {
   for (const [re, word] of SHORT) if (re.test(label)) return word;
   let s = label.replace(new RegExp(`^${o.surname}\\s*`, 'i'), '').replace(new RegExp(`^${o.firstName}\\s*`, 'i'), '');
   s = s.replace(/^[:\-–\s]+/, '');
-  return s.length > 24 ? 'Contribution' : s;
+  return s.length > 10 ? 'Help' : s;
 }
 
 // ---------------------------------------------------------------- stage progress
@@ -369,7 +360,7 @@ export function StageSteps({ progress }: { progress: StageProgress }) {
   return (
     <ol ref={rail} className="steps" aria-label="Operation stages" tabIndex={0}>
       {stages.map((s, i) => (
-        <li key={s.id} ref={s.state === 'current' ? current : undefined} className={`step step-${s.state}`} aria-current={s.state === 'current' ? 'step' : undefined}>
+        <li key={s.id} ref={s.state === 'current' ? current : undefined} className={`step step-${s.state}`} aria-current={s.state === 'current' ? 'step' : undefined} title={s.label}>
           <span className="step-track">
             <span className={`step-line${i === 0 ? ' step-line-hide' : ''}${s.state !== 'todo' ? ' step-line-on' : ''}`} />
             <span className="step-dot">{s.state === 'done' && <Icon name="check" size={9} strokeWidth={3.2} />}</span>
@@ -425,20 +416,6 @@ export function StatusChip({ status }: { status: SpaceView['status'] }) {
 
 // ---------------------------------------------------------------- action detail sheet
 
-/** One group per contributor source, in the order a player reads them: who, what they carry, where, then the situation. */
-const GROUPS: { source: Contributor['source']; label: string; icon: IconName }[] = [
-  { source: 'rating', label: 'Officer ratings', icon: 'gauge' },
-  { source: 'condition', label: 'Officer condition', icon: 'pulse' },
-  { source: 'trait', label: 'Traits', icon: 'star' },
-  { source: 'equipment', label: 'Equipment', icon: 'wrench' },
-  { source: 'space', label: 'Space and position', icon: 'blueprint' },
-  { source: 'support', label: 'Support', icon: 'handover' },
-  { source: 'preparation', label: 'Preparation', icon: 'list' },
-  { source: 'familiarity', label: 'Familiarity', icon: 'book' },
-  { source: 'pressure', label: 'Pressure', icon: 'flame' },
-  { source: 'difficulty', label: 'Difficulty', icon: 'mountain' },
-];
-
 export interface ActionSheetProps {
   /** Support-origin reviews keep the contextual modal route and a clear Back action. */
   onBackToSupport?: () => void;
@@ -489,10 +466,14 @@ export function ActionSheet(p: ActionSheetProps) {
       maxHeight="short"
       className="operation-action-sheet"
       title={v ? v.title : ''}
+      subtitle={v ? <span className="action-sheet-glance">
+        {v.eligible && !v.eventResult ? <OddsBar likelihood={v.likelihood} /> : <span className="action-sheet-locked"><Icon name={v.eligible ? 'flag' : 'lock'} size={13} />{v.eligible ? 'Set event' : 'Requirements unmet'}</span>}
+        <span className={`consequence-level consequence-${v.consequenceLevel}`}>Harm {CONSEQUENCE_LABEL[v.consequenceLevel].toLowerCase()}</span>
+      </span> : undefined}
       footer={
         v && (
           <div className="operation-commit">
-            <p className="operation-commit-meta">Acting: {squadText}{supportingText} · Est. {opMinutes(v.timeCost)}{v.suppliesRequired.length ? ` · ${v.suppliesRequired.reduce((total, item) => total + item.qty, 0)} supplies` : ' · No supplies'}</p>
+            <p className="operation-commit-meta">Acting: {squadText}{supportingText} · Est. {v.timeLabel ?? opMinutes(v.timeCost)}{v.suppliesRequired.length ? ` · ${v.suppliesRequired.reduce((total, item) => total + item.qty, 0)} supplies` : ' · No supplies'}</p>
             <Button variant="primary" block disabled={!v.eligible || p.acting.length === 0} onClick={p.onConfirm}>
               Confirm: {v.title}
             </Button>
@@ -504,14 +485,19 @@ export function ActionSheet(p: ActionSheetProps) {
         <div className="adetail">
           {p.onBackToSupport && <Button variant="ghost" onClick={p.onBackToSupport}>Back to care &amp; support</Button>}
           {p.squads.length > 1 && <ActionSquadAssignment {...p} view={v} />}
-          {v.summary !== v.outcomePreview.favorable && <p className="operation-action-summary">{v.summary}</p>}
-          <div className="chips">
-            <Chip icon="clock">Estimated time: {opMinutes(v.timeCost)}</Chip>
-            {p.targetLabel && <Chip>{p.targetLabel}</Chip>}
+          {v.summary !== v.outcomePreview.favorable && <p className="operation-action-summary"><PeopleText text={v.summary} /></p>}
+          {v.eligible && v.authority?.allowed && <p className="operation-command-line"><Icon name="radio" size={14} />{v.authority.reason}</p>}
+          <div className="chips action-glance">
+            <Chip icon="clock">Estimated time: {v.timeLabel ?? opMinutes(v.timeCost)}</Chip>
+            {p.targetLabel && <Chip icon="pin">{p.targetLabel}</Chip>}
             {names(p.support).length > 0 && <Chip tone="blue" icon="handover">Support: {names(p.support).join(', ')}</Chip>}
           </div>
-          {v.timeRange && <p className="operation-note operation-time-range">{v.timeRange.min === v.timeRange.max ? `${opMinutes(v.timeRange.min)} for any outcome.` : `${v.timeRange.min}–${opMinutes(v.timeRange.max)} depending on the result.`}</p>}
-          <dl className="operation-costs"><div><dt>Requirements</dt><dd>{v.requirementLine}</dd></div><div><dt>Supplies used when confirmed</dt><dd>{v.suppliesRequired.length ? v.suppliesRequired.map((item) => `${item.qty} × ${item.label}`).join(', ') : 'None'}</dd></div></dl>
+          {v.timeRange && !v.timeLabel && <p className="operation-note operation-time-range">{v.timeRange.min === v.timeRange.max ? `${opMinutes(v.timeRange.min)} for any outcome.` : `${v.timeRange.min}–${opMinutes(v.timeRange.max)} depending on the result.`}</p>}
+          <OutcomeForecast action={v} />
+          <dl className="operation-costs">
+            <div><dt>Requirements</dt><dd className="chips">{requirementParts(v.requirementLine).map((part) => <Chip key={part} tone={v.eligible ? 'mint' : 'neutral'} icon={v.eligible ? 'check' : 'list'}>{part}</Chip>)}</dd></div>
+            <div><dt>Supplies used when confirmed</dt><dd className="chips">{v.suppliesRequired.length ? v.suppliesRequired.map((item) => <Chip key={item.label} icon="box">{`${item.qty} × ${item.label}`}</Chip>) : <Chip>None</Chip>}</dd></div>
+          </dl>
           {!v.eligible && v.reason && (
             <p className="note note-warn">
               <Icon name="lock" size={16} />
@@ -548,7 +534,6 @@ export function ActionSheet(p: ActionSheetProps) {
           )}
           {!v.eligible && availableAlternative && <div className="action-resolution-actions"><Button onClick={() => p.onPick(availableAlternative.id)}>Available now: {availableAlternative.title}</Button></div>}
           {!!p.resupplyMinutes && <p className="dim adetail-note">Stores deliveries: {p.resupplyMinutes} operation minutes. Equipment is reserved for this run.</p>}
-          <OutcomeForecast action={v} />
           {p.all.length > 1 && <details className="operation-switcher"><summary>Compare another decision ({p.all.length})</summary>
             <div className="switcher" role="group" aria-label="Decisions">
               {p.all.map((a) => (
@@ -563,12 +548,12 @@ export function ActionSheet(p: ActionSheetProps) {
           {v.contributors.length === 0 ? (
             <p className="dim">No contributors listed.</p>
           ) : (
-            GROUPS.map((gr) => {
-              const rows = v.contributors.filter((c) => c.source === gr.source);
+            CONTRIBUTOR_GROUPS.map((gr) => {
+              const rows = v.contributors.filter((c) => gr.sources.includes(c.source));
               if (rows.length === 0) return null;
               const total = rows.reduce((n, c) => n + c.value, 0);
               return (
-                <div key={gr.source} className="cgroup">
+                <div key={gr.id} className="cgroup">
                   <h4>
                     <Icon name={gr.icon} size={15} />
                     <span>{gr.label}</span>
@@ -614,6 +599,12 @@ export function ActionSheet(p: ActionSheetProps) {
 }
 
 /** Role choices precede costs/forecasts so the displayed commitment is easy to change. */
+/** 'Qualified medic + trauma supplies' reads as chips; a single phrase stays one chip. */
+function requirementParts(line: string): string[] {
+  const parts = line.split(/\s\+\s/).map((part) => part.trim()).filter(Boolean);
+  return parts.length ? parts.map((part) => part.charAt(0).toUpperCase() + part.slice(1)) : [line];
+}
+
 export function ActionSquadAssignment(p: ActionSheetProps & { view: ActionView }) {
   const maxActing = p.maxActing ?? 1;
   const remaining = p.squads.filter(squad => !p.acting.includes(squad.id) && !p.support.includes(squad.id));

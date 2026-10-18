@@ -3,13 +3,13 @@ import { applyAccess, drawUnitAccess } from './access';
 import { GENERATION, GENERATIONS, publicFamilyId, type Generation } from './generation';
 import { deriveLocation } from '../../../sim/location';
 import { validateLocation } from '../../../sim/location-validate';
-import { routeBetween } from '../../../sim/spatial-factors';
+import { routeBetween } from '../../../sim/routes';
 import { furnishingShortfallsG1, furnishLocationG1, validateFurnishingsG1 } from '../furnishing-g1';
 import { buildAttempt } from './build';
 import { FAMILIES } from './families';
 import { plausibilityReport } from './plausibility';
 import { Rand } from './rand';
-import { GEN_VERSION, type FamilySpec } from './types';
+import { type FamilySpec } from './types';
 
 /** Attempts per draw stream before falling back to the family's known-good seed. */
 export const MAX_ATTEMPTS = 80;
@@ -17,7 +17,7 @@ export const MAX_ATTEMPTS = 80;
 export const FALLBACK_ATTEMPTS = 120;
 export { GENERATION, GENERATIONS, LATEST_GENERATION, publicFamilyId, type Generation } from './generation';
 /** Location `version` per generation (the furnished form is always 7). */
-const PLAN_VERSION: Record<Generation, number> = { g1: GEN_VERSION, g2: 2 };
+const PLAN_VERSION = 2;
 
 export interface AttemptStats {
   attempts: number;
@@ -116,17 +116,16 @@ function reject(notes: string[], bump: (reason: string) => void): null {
 }
 
 /** What a generation adds to a drawn plan before acceptance, so validation and furnishing see it.
- * g1 returns the plan untouched. The access draw has its own stream, keyed by the reported seed. */
-function finishPlan(spec: FamilySpec, generation: Generation, loc: LocationDefinition, reportSeed: number): LocationDefinition {
-  if (generation === 'g1') return loc;
-  loc.version = PLAN_VERSION[generation];
+ * The access draw has its own stream, keyed by the reported seed. */
+function finishPlan(spec: FamilySpec, loc: LocationDefinition, reportSeed: number): LocationDefinition {
+  loc.version = PLAN_VERSION;
   loc.geometry = 'exact';
   if (spec.unitLevel) applyAccess(loc, drawUnitAccess(spec.unitLevel(loc), new Rand(`${spec.id}:access:${reportSeed}`)));
   return loc;
 }
 
 function search(spec: FamilySpec, generation: Generation, geoSeed: number, reportSeed: number, attempts: number, stats?: AttemptStats): GeneratedBuilding | null {
-  // Every generation walks the family's one draw stream; later generations differ in how a draw is measured and finished.
+  // Walk the family's draw stream and finish each candidate before measuring it.
   const rng = new Rand(`${spec.id}:${geoSeed}`);
   const familyId = publicFamilyId(spec.id, generation);
   const bump = (r: string) => {
@@ -138,7 +137,7 @@ function search(spec: FamilySpec, generation: Generation, geoSeed: number, repor
     try {
       const loc = buildAttempt(spec, familyId, reportSeed, rng, stats ? bump : undefined);
       if (!loc) continue;
-      const done = accept(finishPlan(spec, generation, loc, reportSeed), bump);
+      const done = accept(finishPlan(spec, loc, reportSeed), bump);
       if (done) return done;
     } catch {
       bump('exception');
@@ -147,7 +146,7 @@ function search(spec: FamilySpec, generation: Generation, geoSeed: number, repor
   return null;
 }
 
-/** The family and generation a spec id (`bungalow`, generation g1) or public id (`bungalow_g2`) names. */
+/** The family and generation a spec id (`bungalow`, current generation) or public id (`bungalow_g2`) names. */
 export function resolveFamily(familyId: string): { spec: FamilySpec; generation: Generation } | undefined {
   for (const spec of FAMILIES) {
     if (spec.id === familyId) return { spec, generation: GENERATION };
@@ -159,8 +158,7 @@ export function resolveFamily(familyId: string): { spec: FamilySpec; generation:
 
 /**
  * Deterministic: the draw stream is seeded from hashSeed(`${specId}:${seed}`). `familyId` is a
- * spec id (`bungalow`, meaning `bungalow_g1`) or a public id (`bungalow_g1`, `bungalow_g2`), which
- * selects the generation; the result always carries the public id.
+ * spec id (`bungalow`) or its current public id (`bungalow_g2`). The result carries the public id.
  */
 export function generatePair(familyId: string, seed: number, stats?: AttemptStats): GeneratedBuilding {
   const resolved = resolveFamily(familyId);

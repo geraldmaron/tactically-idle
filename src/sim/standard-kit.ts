@@ -2,6 +2,7 @@
 // quantity or a purchase. Saved active runs keep their existing reservations.
 import type { GameState, Id, SquadId } from './types';
 import { readyUnits } from './inventory';
+import type { Upkeep } from './equipment';
 
 export type SquadLoadouts = Partial<Record<SquadId, Record<Id, number>>>;
 export type SquadUnitPicks = Partial<Record<SquadId, Id[]>>;
@@ -12,8 +13,8 @@ export function radioRequirement(state: GameState, sid: SquadId): number {
 }
 
 /** Select distinct best-condition owned radios for every actual officer. */
-export function standardRadioPlan(state: GameState, squadIds: SquadId[], now: number) {
-  const stock = readyUnits(state, STANDARD_RADIO, now);
+export function standardRadioPlan(state: GameState, squadIds: SquadId[], now: number, upkeep: Upkeep) {
+  const stock = readyUnits(state, STANDARD_RADIO, upkeep, now);
   const loadouts: SquadLoadouts = {};
   const units: SquadUnitPicks = {};
   let required = 0;
@@ -33,8 +34,8 @@ export function standardRadioPlan(state: GameState, squadIds: SquadId[], now: nu
 }
 
 /** Radios always follow the roster; every other manual quantity and pick survives. */
-export function withStandardRadios(state: GameState, squadIds: SquadId[], loadouts: SquadLoadouts, units: SquadUnitPicks | undefined, now: number) {
-  const plan = standardRadioPlan(state, squadIds, now);
+export function withStandardRadios(state: GameState, squadIds: SquadId[], loadouts: SquadLoadouts, units: SquadUnitPicks | undefined, now: number, upkeep: Upkeep) {
+  const plan = standardRadioPlan(state, squadIds, now, upkeep);
   const nextLoadouts = { ...loadouts };
   const nextUnits = { ...units };
   for (const sid of new Set(squadIds)) {

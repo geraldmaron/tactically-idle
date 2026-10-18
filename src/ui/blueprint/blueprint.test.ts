@@ -1,10 +1,10 @@
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
-import { MAPLE_STREET } from '../../content/locations/maple-street';
+import { MAPLE_STREET } from '../../sim/fixtures/maple-street';
 import { TWO_FLOOR_FIXTURE } from '../../content/locations/two-floor-fixture';
 import { VALID_TINY } from '../../content/locations/test-fixtures';
-import { BUILDING_FAMILIES, PROCEDURAL_FAMILIES, furnishedFamilyIdV7, generateBuilding } from '../../gen/building';
+import { BUILDING_FAMILIES, PROCEDURAL_FAMILIES, furnishedFamilyId, generateBuilding } from '../../gen/building';
 import { deriveLocation } from '../../sim/location';
 import type { BuiltLocation, LocationDefinition, SpaceView } from '../../sim/types';
 import { Blueprint } from './Blueprint';
@@ -106,7 +106,7 @@ describe('annotations refer to actual geometry', () => {
   // upper floors. Check every type, as the game furnishes it, one floor at a time as the map draws it.
   it.each(PROCEDURAL_FAMILIES.map((family) => family.id))('fits room names and knowledge text on each floor of generated %s', (family) => {
     for (const seed of [0, 3, 21]) {
-      const loc = generateBuilding(furnishedFamilyIdV7(family), seed);
+      const loc = generateBuilding(furnishedFamilyId(family), seed);
       const built = build(loc);
       for (let floor = 0; floor < floorCount(loc); floor++) {
         const scene = floorScene(built, views(loc), [], [], floor);
@@ -129,7 +129,7 @@ describe('annotations refer to actual geometry', () => {
   });
 
   it('counts people reported upstairs in a generated house on the upper floor tab, not the ground', () => {
-    const loc = generateBuilding(furnishedFamilyIdV7('two_storey_house_g1'), 3);
+    const loc = generateBuilding(furnishedFamilyId('two_storey_house_g2'), 3);
     expect(floorCount(loc)).toBe(2);
     const spaces = views(loc);
     const upper = loc.rooms.find((r) => (r.floor ?? 0) === 1 && r.type === 'bedroom')!;

@@ -1,11 +1,11 @@
-import type { ObjectDefinition } from './furnishing-definitions-v7';
+import type { ObjectDefinition } from './furnishing-definitions';
 
-/** Furniture for generated (`_g1`) buildings. Keys are catalog entries, not object types: a
+/** Furniture used by current generated buildings. Keys are catalog entries, not object types: a
  * pallet rack, a gondola and a filing cabinet are all `shelf` symbols with their own footprint,
  * service front and tags. Width runs along the back, depth runs forward, feet. Tags are the
  * rules the game reads: blocks_space (usable area, routes), blocks_sight/concealment (sightlines
  * and signal), cover, valuables (where a robbery looks), hazard, and the descriptive vocabulary
- * in procedural/tags.ts. Low pieces never carry blocks_sight. Frozen with the `_g1` output. */
+ * in procedural/tags.ts. Low pieces never carry blocks_sight. */
 const solid = ['blocks_space'];
 const low = ['blocks_space', 'cover'];
 const tall = ['blocks_space', 'blocks_sight'];

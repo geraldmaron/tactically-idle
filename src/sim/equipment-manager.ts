@@ -1,7 +1,7 @@
 import type { GameState, HandlerResult, Id } from './types';
 import { ITEMS } from '../content/items';
 import { beginService, serviceCheck } from './equipment';
-import { EQUIPMENT_MANAGER, equipmentManagerBenefits, hasEquipmentManager, maintenanceBudget } from './equipment-manager-policy';
+import { departmentUpkeep, EQUIPMENT_MANAGER, equipmentManagerBenefits, hasEquipmentManager, maintenanceBudget } from './equipment-manager-policy';
 
 export function setMaintenanceBudget(state: GameState, perHour: number): HandlerResult {
   if (!hasEquipmentManager(state)) return { ok: false, reason: 'Hire the equipment manager first.' };
@@ -15,6 +15,7 @@ export function setMaintenanceBudget(state: GameState, perHour: number): Handler
 /** Called once at each absolute clock-hour boundary by the shared settlement loop. */
 export function runEquipmentMaintenance(state: GameState, now: number): { spent: number; started: Id[] } {
   const budget = maintenanceBudget(state);
+  const upkeep = departmentUpkeep(state);
   const result = { spent: 0, started: [] as Id[] };
   if (!budget) return result;
   const units = Object.values(state.units);
@@ -32,12 +33,12 @@ export function runEquipmentMaintenance(state: GameState, now: number): { spent:
     .sort((a, b) => decisionValue(a.condition) - decisionValue(b.condition) || a.id.localeCompare(b.id));
   for (const unit of queue) {
     if (serviceSlots <= 0) break;
-    const quote = serviceCheck(state, unit.id, now);
+    const quote = serviceCheck(state, unit.id, now, upkeep);
     if (!quote.ok || result.spent + quote.cost > budget || decisionValue(state.department.funding - quote.cost) < EQUIPMENT_MANAGER.fundingReserve) continue;
     const takesWorkingRadio = unit.itemId === 'radio_kit' && decisionValue(unit.condition) > ITEMS.radio_kit.wear.failAt;
     // Automatic maintenance must not create a new standard-kit shortage.
     if (takesWorkingRadio && readyRadios - 1 < officersNeedingRadios) continue;
-    const started = beginService(state, unit.id, now);
+    const started = beginService(state, unit.id, now, upkeep);
     if (!started.ok) continue;
     // Eliminate only the sub-micro-unit residue accepted at the floor above.
     if (state.department.funding < EQUIPMENT_MANAGER.fundingReserve) state.department.funding = EQUIPMENT_MANAGER.fundingReserve;

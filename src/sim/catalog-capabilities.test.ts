@@ -9,15 +9,17 @@ import { courseCheck, DEVELOP_HANDLERS, itemCheck } from './develop';
 import { buildLocation } from './location';
 import { getScenario } from './scenario-registry';
 import { makeState, makeUnit, NOW, startRun } from './test-fixtures';
+import { registerCapabilityFixtures } from './fixtures/capability-scenarios';
 import { autoLoadout } from './auto-equip';
 import { serialize, deserialize } from './save';
 import type { CapabilityId, CertId } from './types';
 
+registerCapabilityFixtures();
 const newCerts: CertId[] = ['less_lethal', 'advanced_less_lethal', 'deescalation', 'vehicle_operations', 'precision_support', 'controlled_access'];
 function context(itemId: string, cap: CapabilityId): CapabilityInput {
   const state = startRun(makeState(), 'ms_occupancy', ['A', 'B'], { loadouts: { A: {}, B: {} } });
   Object.values(state.officers).forEach((o) => { o.certs = [...o.certs, ...newCerts, 'drone_operator', 'advanced_first_aid', 'entry_team']; });
-  const scenario = structuredClone(getScenario('practice_rescue_v2')!);
+  const scenario = structuredClone(getScenario('capability_rescue_v2')!);
   const built = structuredClone(buildLocation('market_row', 0));
   const run = state.activeRun!;
   run.supportPositionId = 'forecourt';
@@ -74,6 +76,7 @@ describe('bounded catalog and common gates', () => {
   it('buying each new program never grants a cert; prerequisite certification is checked separately', () => {
     const state = makeState(); state.department.devPoints = 100; state.department.funding = 100000;
     state.department.unlockedNodes = ['field_entry_course', 'field_response_program'];
+    for (const id of state.department.unlockedNodes) state.department.developmentTiers[id] ??= 1;
     const before = structuredClone(state.officers);
     for (const id of ['field_less_lethal', 'field_specialist_response', 'field_controlled_access', 'logistics_field_support', 'logistics_armored_support']) expect(DEVELOP_HANDLERS.unlockNode(state, id).ok).toBe(true);
     expect(state.officers).toEqual(before);
@@ -85,6 +88,7 @@ describe('bounded catalog and common gates', () => {
   });
   it('rejects invalid purchase quantities in both preview and command and permits one vehicle per purchase', () => {
     const state = makeState(); state.department.funding = 100000; state.department.unlockedNodes = Object.keys(DEV_NODES);
+    for (const id of state.department.unlockedNodes) state.department.developmentTiers[id] ??= 1;
     for (const qty of [0, -1, .5, NaN, Infinity, 100]) {
       expect(itemCheck(state, ITEMS.trauma_kit, qty).ok).toBe(false);
       expect(DEVELOP_HANDLERS.buyItem(state, 'trauma_kit', qty).ok).toBe(false);
@@ -93,7 +97,7 @@ describe('bounded catalog and common gates', () => {
     expect(itemCheck(state, ITEMS.support_van, 1).ok).toBe(true);
   });
   it('new certifications and stock survive serialization with future content enabled', () => {
-    const state = makeState(); state.saveVersion = 3;
+    const state = makeState(); state.saveVersion = 9;
     state.officers.off_chen.certs.push(...newCerts);
     state.units.new_device = { ...makeUnit('conducted_energy_device', 1), id: 'new_device' };
     const restored = deserialize(serialize(state, NOW));
@@ -186,7 +190,7 @@ describe('context, material and safety consequences', () => {
   it('auto-equip never packs vehicles, reserves no serial twice and adds matching action supplies', () => {
     const state = makeState({ inventory: Object.fromEntries(Object.keys(ITEMS).map((id) => [id, 3])) });
     Object.values(state.officers).forEach((o) => { o.certs.push(...newCerts); });
-    const plan = autoLoadout(state, 'practice_response_v2', ['A', 'B'], NOW);
+    const plan = autoLoadout(state, 'capability_response_v2', ['A', 'B'], NOW);
     const ids = Object.values(plan.units).flat();
     expect(new Set(ids).size).toBe(ids.length);
     expect(ids.some((id) => ITEMS[state.units[id].itemId].supportOnly)).toBe(false);

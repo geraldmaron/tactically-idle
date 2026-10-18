@@ -2,14 +2,16 @@ import { createElement, type ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 import type { ActionView, DebriefResult, DecisionView } from '../../sim/types';
-import { apply, makeState, NOW, setRun, startRun } from '../../sim/test-fixtures';
-import { actionViews, currentBuilt, decisionViews, pendingDebrief, previewAction, spaceViews, stageContinuations, stageProgress } from '../../sim/operation-selectors';
+import { apply, makeState, NOW, setRun, startRun, withCallOnBoard } from '../../sim/test-fixtures';
+import { registerCapabilityFixtures } from '../../sim/fixtures/capability-scenarios';
+import { actionViews, currentBuilt, decisionViews, pendingDebrief, previewAction, spaceViews, stageProgress } from '../../sim/operation-selectors';
 import { planActionResupply } from '../../sim/equipment-resupply';
 import { ActionSheet, LiveView, PersonRow, revealStageStep, StageSteps, type LiveViewProps } from './LiveView';
 import { DecisionCard, OperationFeedback, OperationLogContents, OutcomeForecast } from './OperationFeedback';
 import { OpsDebrief, SavedDebriefContents, SavedDebriefReview } from './OpsDebrief';
 import { Debriefs } from './HQ';
-import { generateIncident } from '../../gen/incident';
+import { drawIncidentSpec, generateIncident } from '../../gen/incident';
+import { startGateRun } from '../../gen/incident/gates/engine-driver';
 import { outcomePercentages, visibleDecisions } from './liveModels';
 
 let state = makeState();
@@ -24,7 +26,7 @@ const defaultResult = (html: string) => html.split('<details class="decision-cau
 const action = (patch: Partial<ActionView> = {}): ActionView => ({
   id: 'treat', stage: 'adapt', title: 'Prepare medical access', icon: 'medic', summary: 'Keep access open while preparing aid.', requirementLine: 'Qualified medic + trauma supplies',
   actingSquadIds: ['A'], supportSquadIds: [], support: null, officerIds: ['off_ortiz'], targetId: null, eligible: true, reason: null, risk: 'low',
-  timeCost: 5, timeRange: { min: 4, max: 8 }, likelihood: { favorable: .73, mixed: .19, adverse: .08 }, consequenceLevel: 'high',
+  timeCost: 5, travelMinutes: 0, timeRange: { min: 4, max: 8 }, likelihood: { favorable: .73, mixed: .19, adverse: .08 }, consequenceLevel: 'high',
   outcomePreview: { favorable: 'Prepare aid without losing access.', mixed: 'Aid takes longer and pressure rises.', adverse: 'Medical access remains unresolved.' }, suppliesRequired: [{ label: 'Trauma supplies', qty: 1 }],
   contributors: [], uncertainty: ['Patient condition is unconfirmed.'], details: [], overlays: [], ...patch,
 });
@@ -77,34 +79,10 @@ function sheet(view: ActionView, all = [view]) {
 }
 function liveProps(actions: ActionView[], selectedAction: ActionView | null = actions[0]): LiveViewProps {
   const g = startRun(makeState(), 'ms_occupancy', ['A']);
-  return { g, now: NOW, title: 'Operation test', subtitle: 'RESIDENTIAL', practice: false, progress: { ...stageProgress(g), prompt: 'How will you verify the report before committing?' }, built: currentBuilt(g)!, spaces: spaceViews(g), squadTasks: g.activeRun!.squadTasks, deployedSquads: [g.squads[0]], focusSquadId: 'A', onFocusSquad: noop, officers: [], actions, selectedAction, onSelectAction: noop, activeOfficerId: null, onSelectOfficer: noop, selectedSpaceId: null, onSelectSpace: noop, highlightSpaceIds: [], floor: 0, onFloorChange: noop, environment: null, lastChange: null, showRooms: true, onToggleRooms: noop, clock: 0, pressure: 15, canCancel: true, onCancel: noop, onOpenDetails: noop, detailsOpen: false };
+  return { g, now: NOW, title: 'Operation test', subtitle: 'RESIDENTIAL', progress: { ...stageProgress(g), prompt: 'How will you verify the report before committing?' }, built: currentBuilt(g)!, spaces: spaceViews(g), squadTasks: g.activeRun!.squadTasks, deployedSquads: [g.squads[0]], focusSquadId: 'A', onFocusSquad: noop, officers: [], actions, selectedAction, onSelectAction: noop, activeOfficerId: null, onSelectOfficer: noop, selectedSpaceId: null, onSelectSpace: noop, highlightSpaceIds: [], floor: 0, onFloorChange: noop, environment: null, lastChange: null, showRooms: true, onToggleRooms: noop, clock: 0, pressure: 15, canCancel: true, onCancel: noop, onOpenDetails: noop, detailsOpen: false };
 }
 
-it('shows the v6 welfare partial ending without a success percentage or favorable result claim', () => {
-  const scenario = generateIncident({ type: 'welfare_check', familyId: 'cedar_close', buildingSeed: 7, seed: 2, tier: 1, contentVersion: 6 });
-  const g = startRun(makeState(), scenario.id, ['A'], { practice: true, positions: { A: 'front_yard' }, loadouts: { A: {} } });
-  expect(actionViews(g, NOW, 'A').some(a => a.id.endsWith('assess_partial'))).toBe(false);
-  // The retired card is hidden, but an already-issued historical decision keeps its exact presentation.
-  const legacyId = scenario.stages.assess.actions.find(a => a.id.endsWith('assess_partial'))!.id;
-  const view = previewAction(g, NOW, legacyId, ['A'], [])!;
-  expect(view.eventResult).toBe('Response ended');
-  const card = render(createElement(LiveView, liveProps([view])));
-  expect(card).toContain('End with the progress made');
-  expect(card).not.toContain('chance to go well');
-  const forecast = render(createElement(OutcomeForecast, { action: view }));
-  expect(forecast).toContain('Expected event');
-  expect(forecast).not.toContain('% chance');
-  expect(forecast).toContain('Possible harm');
-  const committed = apply(g, { type: 'decide', actionId: view.id, actingSquadIds: ['A'], supportSquadIds: [] });
-  expect(committed.result).toEqual({ ok: true });
-  const recorded = decisionViews(committed.state)[0];
-  const html = render(createElement(DecisionCard, { decision: recorded }));
-  expect(defaultResult(html)).toContain('Response ended');
-  expect(defaultResult(html)).toContain('Time');
-  expect(defaultResult(html)).not.toMatch(/Went well|Went badly|Had complications/);
-  expect(html).toContain(`Recorded check: ${recorded.band}`);
-  expect(pendingDebrief(committed.state)?.completionAchieved).toBe(false);
-});
+
 
 describe('reviewing a decision', () => {
   it('shows every initial option without highlighting a decision the player has not chosen', () => {
@@ -116,15 +94,6 @@ describe('reviewing a decision', () => {
     expect(html).not.toContain('Confirm:');
   });
 
-  it('renders free stage navigation outside decision cards without odds, squads or confirmation', () => {
-    const props = liveProps([], null);
-    const html = render(createElement(LiveView, { ...props, onContinueStage: noop, continuations: [{ actionId: 'continue', fromStage: 'adapt', toStage: 'resolve', revision: 1, label: 'Continue to response choices', description: 'Leaves the remaining preparation options behind. No operation time passes.' }] }));
-    const continuation = html.split('aria-label="Next stage"')[1];
-    expect(continuation).toContain('Continue to response choices');
-    expect(continuation).toContain('No operation time passes');
-    expect(continuation).toContain('Leaves the remaining preparation options behind');
-    for (const excluded of ['callbtn', 'chance', 'Confirm:', 'Squad taking action', 'supplies']) expect(continuation).not.toContain(excluded);
-  });
 
   it('hides unsupported squad controls while preserving the acting-squad choice', () => {
     const g = startRun(makeState(), 'ms_occupancy', ['A', 'B']);
@@ -154,10 +123,11 @@ describe('reviewing a decision', () => {
   });
 
   it('keeps qualified specialist support visible even while another requirement is missing', () => {
-    const g = setRun(startRun(makeState(), 'practice_response_v2', ['A', 'B'], {
-      practice: true, positions: { A: 'front_yard', B: 'front_yard' }, loadouts: { A: {}, B: {} },
+    registerCapabilityFixtures();
+    const g = setRun(startRun(makeState(), 'capability_response_v2', ['A', 'B'], {
+      positions: { A: 'front_yard', B: 'front_yard' }, loadouts: { A: {}, B: {} },
     }), { stage: 'adapt' });
-    const view = previewAction(g, NOW, 'practice_specialist_clear', ['A'], ['B'])!;
+    const view = previewAction(g, NOW, 'capability_specialist_clear', ['A'], ['B'])!;
     expect(view.support).toEqual({ minSquads: 1, maxSquads: 1 });
     expect(render(sheet(view))).toContain('Supporting squad (1 required)');
   });
@@ -194,10 +164,10 @@ describe('reviewing a decision', () => {
   });
 
   it('keeps locked actions inspectable, explains the blocker and offers an available alternative', () => {
-    const locked = action({ eligible: false, reason: 'Needs a qualified medic — Squad A has none' });
+    const locked = action({ eligible: false, reason: 'Needs a qualified medic. Squad A has none' });
     const alternative = action({ id: 'wait', title: 'Reassess the report', suppliesRequired: [] });
     const html = render(sheet(locked, [locked, alternative]));
-    expect(html).toContain('Needs a qualified medic — Squad A has none');
+    expect(html).toContain('Needs a qualified medic. Squad A has none');
     expect(html).toContain('Available now: Reassess the report');
     expect(html).toMatch(/<button[^>]+disabled=""[^>]*>Confirm: Prepare medical access/);
     expect(html).toContain('Check what is missing to see the chances for this choice.');
@@ -251,7 +221,7 @@ describe('reviewing a decision', () => {
 
 describe('persistent decision results', () => {
   it('keeps actual changes and specific consequences visible after the toast is gone', () => {
-    const html = render(createElement(OperationFeedback, { decisions: [decision()], practice: false }));
+    const html = render(createElement(OperationFeedback, { decisions: [decision()] }));
     for (const expected of ['Last decision', 'Had complications', 'The patient received aid, but the route is still unresolved.', '+8 min', 'Call progress', '+12', 'Civilian safety', '-4', 'Pressure', '+5', 'Officer stress', '+1.5 stress', '1 × Trauma supplies', 'Patient condition: Confirmed', 'Decision log (1)']) expect(html).toContain(expected);
     expect(html).toContain('aria-haspopup="dialog"');
     expect(html).toContain('aria-expanded="false"');
@@ -260,7 +230,7 @@ describe('persistent decision results', () => {
 
   it('retains every decision, explanation, officer and contributor in the full log', () => {
     const last = decision({ revision: 2, title: 'Preserve access', band: 'favorable', endingTitle: 'Assistance completed' });
-    const html = render(createElement(OperationLogContents, { decisions: [decision(), last], practice: false }));
+    const html = render(createElement(OperationLogContents, { decisions: [decision(), last] }));
     expect(html).toContain('2 decisions, in order');
     expect(html.indexOf('Decision 1')).toBeLessThan(html.indexOf('Decision 2'));
     for (const expected of ['Ortiz', '+3 stress', 'Chen', '+1.5 stress', 'The delay leaves the squad with less time.', 'Pressure reduced the margin.', 'Ortiz medical rating', 'Operation ended:', 'Assistance completed']) expect(html).toContain(expected);
@@ -313,8 +283,8 @@ describe('persistent decision results', () => {
     const saved = decision({ objectiveDelta: 0, civilianSafetyDelta: 0, pressureDelta: 0, stressDeltas: [{ officerId: 'off_chen', label: 'Chen', delta: 0, stressBefore: 80, stressAfter: 80 }], supplies: [], knowledgeChanges: [], explanation: ['The room is empty.', 'Helped most: Chen: coordination 65, composure 67 (+36.2).', 'Most strain: Chen (+0).'], consequences: ['The room is empty.'] });
     const visible = defaultResult(render(createElement(DecisionCard, { decision: saved })));
     expect(visible).not.toContain('Stress on the team');
-    const log = render(createElement(OperationLogContents, { decisions: [saved], practice: true, explicitCompletion: true }));
-    expect(log).toContain('Practice results do not change your department.');
+    const log = render(createElement(OperationLogContents, { decisions: [saved], explicitCompletion: true }));
+    expect(log).toContain('Each choice records the time, supplies and changes it caused.');
     expect(log).toContain('<details class="decision-causes decision-record" open="">');
     for (const line of saved.explanation) expect(log).toContain(line);
     for (const expected of ['Call progress', 'Civilian safety', 'Pressure', 'before 80, change 0', 'Needs rest', 'No knowledge changes recorded.', 'Supplies used', 'None', 'Ortiz medical rating: +12 points']) expect(log).toContain(expected);
@@ -339,18 +309,16 @@ describe('persistent decision results', () => {
   });
 
   it('shows no empty feedback panel before the first decision', () => {
-    expect(render(createElement(OperationFeedback, { decisions: [], practice: false }))).toBe('');
+    expect(render(createElement(OperationFeedback, { decisions: [] }))).toBe('');
   });
 
   it('renders the ending summary and preserves the saved log in the real debrief', () => {
-    const scenario = generateIncident({ type: 'welfare_check', familyId: 'cedar_close', buildingSeed: 7, seed: 3, tier: 1, contentVersion: 3 });
-    state = startRun(makeState(), scenario.id, ['A'], { practice: true });
+    const scenario = generateIncident({ type: 'barricaded', familyId: 'cedar_close', buildingSeed: 7, seed: 3, tier: 1, contentVersion: 13 });
+    state = startRun(withCallOnBoard(makeState(), scenario.id), scenario.id, ['A']);
     for (let step = 0; step < 12 && state.activeRun?.status === 'active'; step++) {
       const chosen = actionViews(state, NOW, 'A').find((view) => view.eligible);
-      const continuation = stageContinuations(state)[0];
-      const result = apply(state, chosen
-        ? { type: 'decide', actionId: chosen.id, actingSquadIds: chosen.actingSquadIds, supportSquadIds: chosen.supportSquadIds }
-        : { type: 'continueStage', actionId: continuation.actionId, revision: continuation.revision });
+      expect(chosen).toBeDefined();
+      const result = apply(state, { type: 'decide', actionId: chosen!.id, actingSquadIds: chosen!.actingSquadIds, supportSquadIds: chosen!.supportSquadIds });
       expect(result.result.ok).toBe(true);
       state = result.state;
     }
@@ -359,7 +327,7 @@ describe('persistent decision results', () => {
     const html = render(createElement(OpsDebrief));
     expect(html).toContain(debrief.endingTitle);
     expect(debrief.endingSummary).toBeTruthy();
-    expect(html).toContain(debrief.endingSummary);
+    expect(html.replace(/<[^>]*>/g, '')).toContain(debrief.endingSummary);
     expect(html).toContain(`Decision log (${decisionViews(state).length})`);
     expect(html).toContain('Close debrief');
     expect(html).not.toContain('Battery pack');
@@ -369,7 +337,7 @@ describe('persistent decision results', () => {
     const saved = closed.state.debriefs[0];
     expect(saved.decisions).toHaveLength(debrief.decisions!.length);
     const review = render(createElement(SavedDebriefReview, { debrief: saved, officers: closed.state.officers, onClose: noop }));
-    expect(review).toContain(saved.endingSummary);
+    expect(review.replace(/<[^>]*>/g, '')).toContain(saved.endingSummary);
     expect(review).toContain(`${saved.decisions!.length} decisions`);
     expect(review).toContain('Return to HQ');
     expect(review).toContain('role="dialog"');
@@ -380,7 +348,7 @@ describe('persistent decision results', () => {
 });
 
 describe('saved result review', () => {
-  const saved: DebriefResult = { runId: 'run_older', scenarioId: 'ms_occupancy', endingId: 'old', endingTitle: 'Assistance completed', practice: false, objective: { score: 75, label: 'Completed' }, civilianSafety: { score: 88, label: 'Safe' }, officerCondition: [], informationPreserved: [], resources: [{ itemId: 'battery_pack', used: 1, returned: 0 }], unitWear: [], trustDelta: 2, fundingReward: 100, devPointReward: 1, causes: ['The squad verified the report.'] };
+  const saved: DebriefResult = { runId: 'run_older', scenarioId: 'ms_occupancy', endingId: 'old', endingTitle: 'Assistance completed', objective: { score: 75, label: 'Completed' }, civilianSafety: { score: 88, label: 'Safe' }, officerCondition: [], informationPreserved: [], resources: [{ itemId: 'battery_pack', used: 1, returned: 0 }], unitWear: [], trustDelta: 2, fundingReward: 100, devPointReward: 1, causes: ['The squad verified the report.'] };
   it('shows old saved totals and causes without inventing a per-decision log', () => {
     const html = render(createElement(SavedDebriefContents, { debrief: saved, officers: {} }));
     expect(html).toContain('75/100');
@@ -482,13 +450,45 @@ it('shows all possessions and their own certainty in the selected-person inspect
 });
 
 it('keeps saved subject deaths in a debrief even when a newer active call exists', () => {
-  const d: DebriefResult = { runId: 'archived_force', scenarioId: 'ms_occupancy', endingId: 'closed', endingTitle: 'Closed', practice: false, objective: { score: 100, label: 'Complete' }, civilianSafety: { score: 50, label: 'Consequences' }, officerCondition: [], informationPreserved: [], resources: [], unitWear: [], trustDelta: 0, fundingReward: 0, devPointReward: 0, causes: [], personCasualties: [{ personId: 'mara', personRole: 'subject', label: 'Mara Bell', severity: 'fatal', at: 8, care: 'deceased', causeRevision: 2 }] };
+  const d: DebriefResult = { runId: 'archived_force', scenarioId: 'ms_occupancy', endingId: 'closed', endingTitle: 'Closed', objective: { score: 100, label: 'Complete' }, civilianSafety: { score: 50, label: 'Consequences' }, officerCondition: [], informationPreserved: [], resources: [], unitWear: [], trustDelta: 0, fundingReward: 0, devPointReward: 0, causes: [], personCasualties: [{ personId: 'mara', personRole: 'subject', label: 'Mara Bell', severity: 'fatal', at: 8, care: 'deceased', causeRevision: 2 }] };
   const html = render(createElement(SavedDebriefContents, { debrief: d, officers: {} }));
   expect(html).toContain('data-person-casualty="mara"');
   expect(html).toContain('Mara Bell');
   expect(html).toContain('Deceased');
 });
 
+
+describe('command’s answer on a choice (sim/authorization.ts)', () => {
+  const approved = { allowed: true, rule: 'entry:threat', reason: 'Command approves it because Ash fired at the lock.' };
+  const refused = { allowed: false, rule: 'entry:none', reason: 'Command won’t approve it until someone sees a threat to life.' };
+  it('shows an approval under the summary on the card and in the sheet', () => {
+    const view = action({ authority: approved });
+    for (const html of [render(createElement(LiveView, liveProps([view], null))), render(sheet(view))]) {
+      expect(html).toContain('Keep access open while preparing aid.');
+      expect(html).toContain(approved.reason);
+    }
+    expect(render(createElement(LiveView, liveProps([view], null)))).toContain('callbtn-command');
+    expect(render(sheet(view))).toContain('operation-command-line');
+  });
+  it('locks a refused choice with command’s line where the lock reason goes', () => {
+    const view = action({ authority: refused, eligible: false, reason: refused.reason, summary: refused.reason });
+    const card = render(createElement(LiveView, liveProps([view], null)));
+    expect(card).toContain(refused.reason);
+    expect(card).not.toContain('callbtn-command');
+    const opened = render(sheet(view));
+    expect(opened).toContain('note note-warn');
+    expect(opened).not.toContain('operation-command-line');
+  });
+  it('carries a real call’s approval from the engine to the card', () => {
+    const s = generateIncident(drawIncidentSpec(1312, { level: 10, trust: 90, unlockedTypes: ['active_armed_incident'] }).spec);
+    const views = actionViews(startGateRun(s.id, 719), NOW, 'A');
+    const entry = views.find(view => view.authority?.allowed);
+    expect(entry, 'an approved entry at the first decision of the armed call').toBeDefined();
+    const html = render(createElement(LiveView, liveProps(views, null)));
+    expect(html).toContain(entry!.authority!.reason);
+    expect(entry!.authority!.reason).toMatch(/^Command approves it because .+\.$/);
+  });
+});
 
 it.each(['reported', 'confirmed'] as const)('uses a public %s weapon item without a contradictory armament-unknown claim', (status) => {
   const html = render(createElement(PersonRow, { m: { id: 'mara', at: { x: 2, y: 2 }, label: 'Mara Bell', kind: 'subject', status: 'confirmed', carried: [{ id: 'firearm', glyph: 'weapon', label: 'Firearm', status }] } }));

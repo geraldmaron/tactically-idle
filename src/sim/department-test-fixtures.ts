@@ -3,8 +3,9 @@ import { STARTER_PERSONAS } from '../content/personas';
 import { createInitialState } from './department';
 import { createPersonnel } from './personnel';
 import { fillCandidates } from './roster';
+import { candidatePoolSize } from './economy';
 
-/** Fixed established careers for tests of specific anniversaries and legacy migration. */
+/** Fixed established careers for tests of specific anniversaries. */
 export function establishedDepartment(now: number, campaignSeed = 12345) {
   const state = createInitialState(now, campaignSeed);
   for (const person of STARTER_PERSONAS) {
@@ -18,6 +19,6 @@ export function establishedDepartment(now: number, campaignSeed = 12345) {
   }
   state.personnel = createPersonnel(campaignSeed, state.officers);
   state.candidates = [];
-  fillCandidates(state, now);
+  fillCandidates(state, now, candidatePoolSize(state));
   return state;
 }

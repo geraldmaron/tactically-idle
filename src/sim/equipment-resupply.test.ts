@@ -85,15 +85,13 @@ describe('contextual equipment resupply', () => {
     expect(deliver(state).state).toBe(state);
   });
 
-  it('refuses indoor delivery, later decisions, practice, invalid squads and stale action IDs', () => {
+  it('refuses indoor delivery, later decisions, invalid squads and stale action IDs', () => {
     const staged = noContactKit();
     const inside = setRun(staged, { positions: { A: 'hall' } });
     expect(plan(inside).reason).toMatch(/staged outside/);
     expect(deliver(inside).state).toBe(inside);
     const decided = apply(staged, { type: 'decide', actionId: 'ms_gather', actingSquadIds: ['A'], supportSquadIds: [] }).state;
     expect(planActionResupply(decided, NOW, 'ms_thermal', ['A'], []).reason).toMatch(/before the first decision/);
-    const practice = startRun(makeState(), 'ms_occupancy', ['A'], { practice: true });
-    expect(deliver(practice).state).toBe(practice);
     for (const cmd of [
       { ...command(), actingSquadIds: ['B'] },
       { ...command(), supportSquadIds: ['A'] },

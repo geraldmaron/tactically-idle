@@ -191,7 +191,7 @@ export function buildZones(plan: Plan, lot: LotSpec, ext: ExteriorSpec, doors: P
   if (ext.alleyDepth > 0) paint('alley', (_x, y) => y < ext.alleyDepth, ground);
   if (ext.driveway) {
     const west = ext.driveway === 'w';
-    paint('driveway', (x, y) => (west ? x < bb.x0 : x >= bb.x1) && (y >= bb.y0 || false) && y >= bb.y0 - 0.01, ['front', 'west', 'east']);
+    paint('driveway', (x, y) => (west ? x < bb.x0 : x >= bb.x1) && (y >= bb.y0) && y >= bb.y0 - 0.01, ['front', 'west', 'east']);
   }
   for (const side of ext.neighbours) {
     const west = side === 'w';

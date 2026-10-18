@@ -1,5 +1,5 @@
 import type { IncidentType } from '../sim/scenario-types';
-import { SCENARIO_TYPES_V11 } from './scenario-types-v11';
+import { SCENARIO_TYPES } from './scenario-types';
 import type { CertId, GameState, Id } from '../sim/types';
 
 /** What a department needs before a framework is dispatched to it (content v11 and later).
@@ -15,34 +15,23 @@ export interface UnlockRule {
 /** New or unknown frameworks are ordinary calls until a drop gives them a rule. */
 export const DEFAULT_UNLOCK: UnlockRule = { level: 1 };
 
-/** The arc from scale plan §5. Levels are earned on live calls (sim/department-level.ts):
- * - Levels 1-2: ordinary calls on homes, then shops (an alarm, a medical call).
- * - Level 3: business calls and the first protective response.
- * - Levels 4-5, with certification or equipment: armed incidents and protected rescue at 4,
- *   hostage crises at 5.
- * Saves from before levels were earned are lifted to the level of every framework they had
- * already met or could already be sent to (save v7), so an update never takes a call away. */
-export const UNLOCK_RULES: Partial<Record<IncidentType, UnlockRule>> = {
-  // Ordinary calls on homes: from the first day.
-  welfare_check: { level: 1 },
-  missing_vulnerable: { level: 1 },
-  person_in_crisis: { level: 1 },
-  domestic: { level: 1 },
-  disturbance: { level: 1 },
-  false_intruder: { level: 1 },
-  vacant_occupancy: { level: 1 },
-  // Shops and urgent help.
-  burglary: { level: 2 },
-  medical_complication: { level: 2 },
-  // Business settings.
-  business_robbery: { level: 3 },
-  // The first protective response needs someone trained to talk a situation down.
-  barricaded: { level: 3, anyCert: ['crisis_negotiation', 'deescalation'] },
-  // Specialist calls.
-  active_armed_incident: { level: 4, anyCert: ['entry_team', 'less_lethal'], anyItem: ['ballistic_shield', 'light_protection', 'rescue_shield'] },
-  protected_rescue: { level: 4, anyCert: ['vehicle_operations'] },
-  hostage_crisis: { level: 5, anyCert: ['crisis_negotiation'] },
+/** Tactical calls open at level 1 when their required capability is available. */
+const UNLOCK_RULES: Partial<Record<IncidentType, UnlockRule>> = {
+  // Tactical calls are the reason the team exists, so they open from the first day (2026-10-06).
+  // Capability gates stay: the starting roster holds negotiation and entry certs and a shield;
+  // protected rescue still waits for a vehicle-trained officer.
+  barricaded: { level: 1, anyCert: ['crisis_negotiation', 'deescalation'] },
+  // The urgent response needs an entry-qualified officer with a response firearm, so the call waits for one.
+  active_armed_incident: { level: 1, anyCert: ['entry_team', 'less_lethal'], anyItem: ['service_sidearm', 'compact_carbine', 'response_shotgun'] },
+  protected_rescue: { level: 1, anyCert: ['vehicle_operations'] },
+  hostage_crisis: { level: 1, anyCert: ['crisis_negotiation'] },
 };
+
+/** A tactical team is sent only where the call earns it: a person armed or able to reach a
+ * weapon, a stated threat or crime, a position of advantage, and a refusal to come out. Since
+ * 2026-10-07 only these frameworks are dispatched; every patrol, welfare and medical framework is
+ * retired from the board. Other incident types are unsupported. */
+export const TACTICAL_FRAMEWORKS: ReadonlySet<IncidentType> = new Set<IncidentType>(['barricaded', 'active_armed_incident', 'hostage_crisis', 'protected_rescue']);
 
 export function unlockRule(type: IncidentType): UnlockRule {
   return UNLOCK_RULES[type] ?? DEFAULT_UNLOCK;
@@ -79,7 +68,8 @@ export function isUnlocked(state: UnlockState, type: IncidentType): boolean {
 /** Frameworks this department can be sent to, in catalog order. Never empty for a
  * non-empty catalog: a department that meets no rule (for example a hand-built level 0
  * state) still gets the frameworks with the easiest plain level rule. */
-export function unlockedTypes(state: UnlockState, types: readonly IncidentType[]): IncidentType[] {
+export function unlockedTypes(state: UnlockState, allTypes: readonly IncidentType[]): IncidentType[] {
+  const types = allTypes.filter((type) => TACTICAL_FRAMEWORKS.has(type));
   const open = types.filter((type) => isUnlocked(state, type));
   if (open.length || !types.length) return open;
   const plain = types.filter((type) => !unlockRule(type).anyCert?.length && !unlockRule(type).anyItem?.length);
@@ -91,7 +81,7 @@ export function unlockedTypes(state: UnlockState, types: readonly IncidentType[]
 /** Player-facing names of the frameworks that first become possible at exactly `level`,
  * with the capability each also needs. Names only, never call content. */
 export function frameworksOpeningAt(level: number): string[] {
-  return SCENARIO_TYPES_V11.flatMap((info) => {
+  return SCENARIO_TYPES.flatMap((info) => {
     const rule = unlockRule(info.type);
     if (rule.level !== level) return [];
     const parts = [rule.anyCert?.length ? 'a certified officer' : '', rule.anyItem?.length ? 'the right equipment' : ''].filter(Boolean);

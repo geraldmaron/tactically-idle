@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createInitialState } from './department';
 import { dispatch } from './game';
-import { HOUR_MS } from './economy';
+import { dutyRates, HOUR_MS } from './economy';
 import { deserialize, serialize } from './save';
 import type { GameState, Id, Officer, SquadId } from './types';
 import {
@@ -22,7 +22,7 @@ function improvableState(): GameState {
   return s;
 }
 function proposal(s: GameState, options = OPTIONS): SquadArrangementProposal {
-  const p = planSquadArrangement(s, options);
+  const p = planSquadArrangement(s, options, dutyRates());
   expect(p.reason).toBeNull();
   expect(p.proposal).not.toBeNull();
   return p.proposal!;
@@ -59,7 +59,7 @@ describe('pure, explainable squad arrangement suggestions', () => {
     const s = improvableState(), original = structuredClone(s), p = proposal(s);
     expect(p.after.squads.map((q) => q.officerIds.length)).toEqual([4, 4]);
     expect(p.after.squads.map((q) => q.leaderId)).toEqual(p.before.squads.map((q) => q.leaderId));
-    expect(planSquadArrangement(s, OPTIONS).moves.length).toBeGreaterThanOrEqual(2);
+    expect(planSquadArrangement(s, OPTIONS, dutyRates()).moves.length).toBeGreaterThanOrEqual(2);
     expect(applySquadArrangement(s, p)).toEqual({ ok: true });
     assertPartition(s);
     for (const [id, o] of Object.entries(s.officers)) expect({ ...o, squadId: original.officers[id].squadId }).toEqual(original.officers[id]);
@@ -76,8 +76,8 @@ describe('pure, explainable squad arrangement suggestions', () => {
     const s = state(), before = structuredClone(s);
     const random = vi.spyOn(Math, 'random').mockImplementation(() => { throw new Error('Unexpected RNG'); });
     try {
-      const first = planSquadArrangement(s, OPTIONS);
-      expect(planSquadArrangement(s, OPTIONS)).toEqual(first);
+      const first = planSquadArrangement(s, OPTIONS, dutyRates());
+      expect(planSquadArrangement(s, OPTIONS, dutyRates())).toEqual(first);
       expect(s).toEqual(before);
     } finally { random.mockRestore(); }
   });
@@ -86,16 +86,16 @@ describe('pure, explainable squad arrangement suggestions', () => {
     const s = state(), changed = structuredClone(s);
     for (const o of Object.values(changed.officers)) Object.assign(o, { firstName: 'Different', surname: 'Person', portrait: '/elsewhere.png', bornDay: -100, pronouns: 'they/them', gender: 'unspecified', culture: 'different' });
     expect(squadArrangementToken(changed)).toBe(squadArrangementToken(s));
-    expect(planSquadArrangement(changed, OPTIONS)).toEqual(planSquadArrangement(s, OPTIONS));
+    expect(planSquadArrangement(changed, OPTIONS, dutyRates())).toEqual(planSquadArrangement(s, OPTIONS, dutyRates()));
   });
 
   it('does not inspect hidden scenario truth or operation RNG while planning the roster', () => {
-    const s = improvableState(), baseline = planSquadArrangement(s, OPTIONS);
+    const s = improvableState(), baseline = planSquadArrangement(s, OPTIONS, dutyRates());
     s.activeRun = { squadIds: [], status: 'active' } as unknown as NonNullable<GameState['activeRun']>;
     for (const key of ['people', 'knowledge', 'flags', 'rngState', 'scenarioId']) Object.defineProperty(s.activeRun, key, {
       get() { throw new Error(`Planner inspected operation data: ${key}`); },
     });
-    expect(planSquadArrangement(s, OPTIONS)).toEqual(baseline);
+    expect(planSquadArrangement(s, OPTIONS, dutyRates())).toEqual(baseline);
   });
 
   it('uses actual certification, stress-adjusted execution eligibility and documented mentoring', () => {
@@ -119,7 +119,7 @@ describe('pure, explainable squad arrangement suggestions', () => {
       o.ratings = { shooting: 50, communication: 50, awareness: 50, medical: 50, coordination: 50, composure: 50 };
       o.certs = []; o.traits = []; o.serviceStartDay = -365 * 5;
     }
-    const p = planSquadArrangement(s, OPTIONS);
+    const p = planSquadArrangement(s, OPTIONS, dutyRates());
     expect(p.after.map((q) => q.fresh)).toEqual([2, 2]);
     expect(p.after.map((q) => q.deployable)).toEqual([4, 4]);
   });
@@ -130,14 +130,14 @@ describe('pure, explainable squad arrangement suggestions', () => {
       o.ratings = { shooting: 50, communication: 50, awareness: 50, medical: 50, coordination: 50, composure: 50 };
       o.certs = []; o.traits = []; o.stress = 0; o.serviceStartDay = -365 * 5;
     }
-    const before = structuredClone(s), p = planSquadArrangement(s, OPTIONS);
+    const before = structuredClone(s), p = planSquadArrangement(s, OPTIONS, dutyRates());
     expect(p.proposal).toBeNull(); expect(p.reason).toMatch(/No improving arrangement/); expect(p.moves).toEqual([]);
     expect(s).toEqual(before);
   });
 
   it('fills vacancies only after the explicit reserve option and never benches assigned officers', () => {
     const s = state(); detach(s, 'off_chen'); reserve(s);
-    const without = planSquadArrangement(s, OPTIONS);
+    const without = planSquadArrangement(s, OPTIONS, dutyRates());
     expect(without.after.find((sq) => sq.squadId === 'A')!.officerIds.length).toBe(3);
     const withReserve = proposal(s, { ...OPTIONS, includeUnassigned: true });
     expect(withReserve.after.squads.map((q) => q.officerIds.length)).toEqual([4, 4]);
@@ -146,7 +146,7 @@ describe('pure, explainable squad arrangement suggestions', () => {
   });
 
   it('includes recovery and patrol income effects for moves between duties', () => {
-    const p = planSquadArrangement(improvableState(), OPTIONS);
+    const p = planSquadArrangement(improvableState(), OPTIONS, dutyRates());
     expect(p.moves.some((m) => /patrol.*standby|standby.*patrol/.test(m.dutyImpact ?? ''))).toBe(true);
     expect(p.moves.some((m) => m.dutyImpact?.includes('$150/h'))).toBe(true);
     expect(p.moves.every((m) => m.reasons.length > 0)).toBe(true);
@@ -191,7 +191,7 @@ describe('locks, unavailable seats and exact boundaries', () => {
     const s = state(); detach(s, 'off_chen'); reserve(s);
     expect(setSquadArrangementLock(s, { kind: 'officer', officerId: 'off_chen' }, true)).toEqual({ ok: true });
     expect(setSquadArrangementLock(s, { kind: 'officer', officerId: 'off_reyes' }, true)).toEqual({ ok: true });
-    const p = planSquadArrangement(s, { ...OPTIONS, includeUnassigned: true, preserveLeaders: false });
+    const p = planSquadArrangement(s, { ...OPTIONS, includeUnassigned: true, preserveLeaders: false }, dutyRates());
     expect(p.after.find((q) => q.squadId === 'B')!.officerIds).toContain('off_reyes');
     expect(p.after.flatMap((q) => q.officerIds)).not.toContain('off_chen');
     expect(p.protected).toContainEqual({ officerId: 'off_chen', reason: 'Locked as unassigned' });
@@ -200,7 +200,7 @@ describe('locks, unavailable seats and exact boundaries', () => {
   it('whole squad lock protects roster, leadership and empty seats', () => {
     const s = state(); detach(s, 'off_chen'); reserve(s);
     setSquadArrangementLock(s, { kind: 'squad', squadId: 'A' }, true);
-    const p = planSquadArrangement(s, { ...OPTIONS, includeUnassigned: true, preserveLeaders: false });
+    const p = planSquadArrangement(s, { ...OPTIONS, includeUnassigned: true, preserveLeaders: false }, dutyRates());
     expect(p.after.find((q) => q.squadId === 'A')).toMatchObject({ officerIds: s.squads[0].officerIds, leaderId: s.squads[0].leaderId });
   });
 
@@ -234,14 +234,14 @@ describe('locks, unavailable seats and exact boundaries', () => {
     if (kind === 'operation') o.assignment = { kind, runId: 'busy' };
     if (kind === 'injury') o.injury = { label: 'Sprain', until: T0 + HOUR_MS };
     if (kind === 'recovery') o.stress = 80;
-    const p = planSquadArrangement(s, { ...OPTIONS, preserveLeaders: false });
+    const p = planSquadArrangement(s, { ...OPTIONS, preserveLeaders: false }, dutyRates());
     expect(p.after.find((sq) => sq.squadId === 'A')!.officerIds).toContain(o.id);
     expect(p.protected.some((x) => x.officerId === o.id)).toBe(true);
   });
 
   it('protects all members of a deployed squad even without individual operation assignments', () => {
     const s = state(); deployedSquad(s, 'A');
-    const p = planSquadArrangement(s, { ...OPTIONS, preserveLeaders: false });
+    const p = planSquadArrangement(s, { ...OPTIONS, preserveLeaders: false }, dutyRates());
     expect(p.after[0]).toMatchObject({ officerIds: s.squads[0].officerIds, leaderId: s.squads[0].leaderId, deployable: 0, fresh: 0 });
     expect(p.protected.filter((x) => x.reason === 'Squad is deployed')).toHaveLength(4);
   });
@@ -249,7 +249,7 @@ describe('locks, unavailable seats and exact boundaries', () => {
   it('never changes unselected squads and reports one available member as 1/4', () => {
     const s = state();
     for (const id of s.squads[0].officerIds.slice(1)) s.officers[id].stress = 80;
-    const p = planSquadArrangement(s, { ...OPTIONS, squadIds: ['B'], preserveLeaders: false });
+    const p = planSquadArrangement(s, { ...OPTIONS, squadIds: ['B'], preserveLeaders: false }, dutyRates());
     expect(p.after[0]).toMatchObject({ officerIds: s.squads[0].officerIds, leaderId: s.squads[0].leaderId, deployable: 1, unavailable: 3 });
   });
 });

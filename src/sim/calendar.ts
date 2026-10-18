@@ -12,6 +12,11 @@ export const CALENDAR = {
   startYear: 2026,
 } as const;
 
+/** The clock this state has been settled to; handlers treat it as "now". */
+export function simNow(state: Pick<GameState, 'department'>): number {
+  return state.department.clockHighWater;
+}
+
 export function gameDay(state: Pick<GameState, 'department'>, t: number): number {
   return (t - state.department.calendarEpoch) / CALENDAR.gameDayMs;
 }

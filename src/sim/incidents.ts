@@ -10,19 +10,20 @@
 import type { Department, GameState, HandlerResult, Id, IncidentCard } from './types';
 import { next } from './rng';
 import { drawIncidentSpec, incidentId, parseIncidentId } from '../gen/incident';
-import { DECISION_EXERCISES, LEGACY_DECISION_EXERCISES } from '../content/scenarios/decision-exercises';
-import { SCENARIO_TYPES_V11 } from '../content/scenario-types-v11';
+import { SCENARIO_TYPES } from '../content/scenario-types';
 import { unlockedTypes } from '../content/unlocks';
 import { noveltyWeights, recordArrival, recordDispatch } from './casebook';
 import type { IncidentType } from './scenario-types';
+import { tunable } from './tuning';
 
 /** Content v11 gates board draws by capability and weights unseen frameworks first. */
-export const PLAYER_ARC_CONTENT_VERSION = 11;
 
 const HOUR = 3_600_000;
 const MINUTE = 60_000;
 
-export const INCIDENT_TUNING = {
+/** Tunable (sim/tuning.ts). Arrival times and card expiries are stored when drawn, so a change
+ * reaches new arrivals and new cards only. */
+export const INCIDENT_TUNING = tunable('INCIDENT_TUNING', {
   /** Gap between scheduled arrivals, uniform in [min, max]. */
   minIntervalMs: 45 * MINUTE,
   maxIntervalMs: 90 * MINUTE,
@@ -31,20 +32,13 @@ export const INCIDENT_TUNING = {
   maxLifetimeMs: 12 * HOUR,
   /** The board holds at most this many cards. An arrival on a full board is lost. */
   boardMax: 5,
-  /** Cards seeded by createInitialState / the v2 -> v3 migration. */
+  /** Cards seeded by createInitialState. */
   initialCount: 3,
   /** boardSummary counts a card as expiring soon inside this window. */
   expiringSoonMs: 2 * HOUR,
-};
+}, { guard: next => next.minIntervalMs <= 0 || next.minIntervalMs > next.maxIntervalMs ? 'Arrival gaps need 0 < minIntervalMs ≤ maxIntervalMs.'
+  : next.minLifetimeMs <= 0 || next.minLifetimeMs > next.maxLifetimeMs ? 'Card lifetimes need 0 < minLifetimeMs ≤ maxLifetimeMs.' : null });
 
-/** Reward multiplier by tier 1..5, for the engine and the generator. */
-export const TIER_REWARD_MULTIPLIERS: readonly number[] = [1.0, 1.35, 1.8, 2.4, 3.2];
-
-/** Tier 1..5 (clamped, rounded) -> reward multiplier applied to funding, dev points and trust. */
-export function tierRewardMultiplier(tier: number): number {
-  const t = Number.isFinite(tier) ? Math.min(5, Math.max(1, Math.round(tier))) : 1;
-  return TIER_REWARD_MULTIPLIERS[t - 1];
-}
 
 /** Department plus the one field this module adds (JSON-safe, optional like candidateRefreshedAt). */
 type DepartmentExt = Department & { nextIncidentAt?: number };
@@ -80,7 +74,7 @@ export function takeIncident(d: GameState, id: Id): IncidentCard | null {
   const i = cards.findIndex((c) => c.id === id);
   if (i < 0) return null;
   const [card] = cards.splice(i, 1);
-  if (d.contentVersion >= PLAYER_ARC_CONTENT_VERSION) recordDispatch(d, id, d.department.clockHighWater);
+  recordDispatch(d, id, d.department.clockHighWater);
   return card;
 }
 
@@ -92,21 +86,20 @@ export function takeIncident(d: GameState, id: Id): IncidentCard | null {
 function drawCard(d: GameState, at: number): IncidentCard | null {
   const dep = d.department;
   const run = d.activeRun;
-  const activeStory = run && run.scenarioVersion >= 5
-    ? parseIncidentId(run.scenarioId) ?? [...DECISION_EXERCISES, ...LEGACY_DECISION_EXERCISES].find(exercise => exercise.id === run.scenarioId)?.spec
-    : null;
-  const avoidTypes = d.contentVersion >= 5
-    ? [...board(d).flatMap(card => { const spec = parseIncidentId(card.id); return spec && spec.contentVersion >= 5 ? [spec.type] : []; }), ...(activeStory ? [activeStory.type] : [])]
-    : undefined;
-  const recentTypes = d.contentVersion >= 6 ? d.debriefs.filter(report => !report.practice).slice(0, 2).flatMap(report => { const spec = parseIncidentId(report.scenarioId); return spec ? [spec.type] : []; }) : undefined;
-  const arc = d.contentVersion >= PLAYER_ARC_CONTENT_VERSION ? playerArcContext(d) : {};
-  const drawn = drawIncidentSpec(d.rngState, { level: dep.level, trust: dep.trust, contentVersion: d.contentVersion, avoidFamilies: [...board(d).map((c) => c.familyId), ...(run ? [activeStory?.familyId ?? run.locationFamilyId] : [])], ...(avoidTypes ? { avoidTypes } : {}), ...(recentTypes ? { recentTypes } : {}), ...arc });
+  const activeStory = run ? parseIncidentId(run.scenarioId) : null;
+  const avoidTypes = [...board(d).flatMap(card => { const spec = parseIncidentId(card.id); return spec ? [spec.type] : []; }), ...(activeStory ? [activeStory.type] : [])];
+  const recentTypes = d.debriefs.slice(0, 2).flatMap(report => { const spec = parseIncidentId(report.scenarioId); return spec ? [spec.type] : []; });
+  const arc = playerArcContext(d);
+  const drawn = drawIncidentSpec(d.rngState, { level: dep.level, trust: dep.trust, avoidFamilies: [...board(d).map((c) => c.familyId), ...(run ? [activeStory?.familyId ?? run.locationFamilyId] : [])], ...(avoidTypes ? { avoidTypes } : {}), ...(recentTypes ? { recentTypes } : {}), ...arc });
   const spec = { ...drawn.spec, tier: Math.min(5, Math.max(1, Math.round(drawn.spec.tier))) };
   const life = drawBetween(drawn.state, INCIDENT_TUNING.minLifetimeMs, INCIDENT_TUNING.maxLifetimeMs);
   d.rngState = life.state;
   const id = incidentId(spec);
   const cards = board(d);
   if (cards.some((c) => c.id === id) || d.activeRun?.scenarioId === id) return null;
+  // From v13 the board holds one live call per kind of call, never the kind in progress, so a
+  // department with two kinds unlocked sees at most two call-outs instead of the same call twice.
+  if ((cards.some((c) => c.type === spec.type) || activeStory?.type === spec.type)) return null;
   const card: IncidentCard = {
     id,
     type: spec.type,
@@ -116,14 +109,14 @@ function drawCard(d: GameState, at: number): IncidentCard | null {
     expiresAt: at + life.ms,
     seen: false,
   };
-  if (d.contentVersion >= PLAYER_ARC_CONTENT_VERSION && recordArrival(d, spec.type)) card.newKind = true;
+  if (recordArrival(d, spec.type)) card.newKind = true;
   cards.unshift(card); // newest first
   return card;
 }
 
 /** Unlocked frameworks and unseen-first weights for a v11+ draw. Reads state only. */
 export function playerArcContext(d: GameState): { unlockedTypes: IncidentType[]; typeWeights: Partial<Record<IncidentType, number>> } {
-  const types = SCENARIO_TYPES_V11.map((info) => info.type);
+  const types = SCENARIO_TYPES.map((info) => info.type);
   const open = unlockedTypes(d, types);
   return { unlockedTypes: open, typeWeights: noveltyWeights(d, open) };
 }
@@ -137,7 +130,7 @@ function scheduleAfter(d: GameState, from: number): void {
 
 /**
  * Fill the board with `count` cards arriving at `now` and start the schedule.
- * Used for a new game and for the v2 -> v3 migration. Deterministic in
+ * Used for a new game. Deterministic in
  * (rngState, level, trust, now).
  */
 export function seedIncidentBoard(d: GameState, now: number, count: number = INCIDENT_TUNING.initialCount): void {
@@ -173,7 +166,7 @@ export function applyIncidentsDue(d: GameState, _prev: number, t: number): void 
     at = nextIncidentAt(d)!;
   }
   const run = d.activeRun;
-  d.incidents = board(d).filter((c) => c.expiresAt > t && !(run && !run.practice && c.id === run.scenarioId));
+  d.incidents = board(d).filter((c) => c.expiresAt > t && !(run && c.id === run.scenarioId));
 }
 
 /** Earliest future board event after `t` (an arrival or an expiry), or null. */

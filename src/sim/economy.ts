@@ -1,25 +1,33 @@
 // Department economy and time. One code path serves online ticks and offline
 // return: settle() walks [lastSettledAt, now] event by event (course completions,
 // injury ends, equipment servicing and expiry, anniversaries, birthdays,
-// retirements, incident arrivals and expiries, the funding-cap boundary, hourly restock) and recomputes hourly
+// retirements, incident arrivals and expiries, the funding-cap boundary, hourly restock and
+// Command Staff checks) and recomputes hourly
 // rates for every segment. A final hourly rate is never multiplied across a whole
 // absence. Equipment wear is linear in game days, so it is split at the same
 // boundaries and online ticks match one offline settlement.
-import type { GameState, Id, NodeEffect, Officer, ShiftReport, SquadDuty, SquadId } from './types';
+import type { GameState, Id, NodeEffect, Officer, ShiftReport, SquadDuty } from './types';
 import { developmentTier, effectiveDevelopmentEffects } from './development-tiers';
 import { COURSES, courseRatingAfter, courseXpGain } from '../content/courses';
 import { ITEMS } from '../content/items';
 import { STRESS_BANDS } from './officer';
-import { gameDay } from './calendar';
+import { gameDay, simNow } from './calendar';
+import { money } from './format';
+import { recoveryDuty } from './squads';
+import type { DutyRates } from './squad-optimizer';
 import { ageRecoveryFactor, applyCareerDue, nextCareerEventTime } from './career';
 import { applyUnitDue, applyUnitWear, createUnit, nextUnitEventTime, ownedCount } from './equipment';
 import { applyIncidentsDue, nextIncidentEventTime } from './incidents';
 import { runEquipmentMaintenance } from './equipment-manager';
-import { maintenanceBudget } from './equipment-manager-policy';
+import { departmentUpkeep, maintenanceBudget } from './equipment-manager-policy';
+import { commandStaffActive, commandStaffSalaries, logQuartermaster, runCommandStaff } from './command-staff';
+import { tunable } from './tuning';
+import { RECRUIT_TUNING } from '../content/recruits';
 
 export const HOUR_MS = 3_600_000;
 
-export const ECONOMY_TUNING = {
+/** Tunable (sim/tuning.ts). */
+export const ECONOMY_TUNING = tunable('ECONOMY_TUNING', {
   /** Income and recurring costs accrue only this long after the last player command. */
   capMs: 24 * HOUR_MS,
   /** Department allocation per hour (funding). */
@@ -38,30 +46,9 @@ export const ECONOMY_TUNING = {
   reportMinMs: 15 * 60_000,
   /** Restock rules run on this absolute-clock grid, so tick size cannot change results. */
   restockIntervalMs: HOUR_MS,
-};
-
-// ---------------------------------------------------------------- formatting helpers
-
-export function money(n: number): string {
-  const sign = n < 0 ? '-' : '';
-  return `${sign}$${Math.round(Math.abs(n)).toLocaleString('en-US')}`;
-}
-
-/** Rounds up: '~3h', '~40m'. */
-export function formatDuration(ms: number): string {
-  const mins = Math.max(1, Math.ceil(ms / 60_000));
-  if (mins < 60) return `${mins}m`;
-  const h = Math.floor(mins / 60);
-  const m = mins % 60;
-  return m === 0 ? `${h}h` : `${h}h ${m}m`;
-}
+});
 
 // ---------------------------------------------------------------- department queries
-
-/** The clock this state has been settled to; handlers treat it as "now". */
-export function simNow(state: GameState): number {
-  return state.department.clockHighWater;
-}
 
 export function unlockedEffects(state: GameState): NodeEffect[] {
   return effectiveDevelopmentEffects(state);
@@ -81,28 +68,15 @@ export function recoveryMultiplier(state: GameState): number {
   return m;
 }
 
-export function candidatePoolSize(state: GameState, basePool: number): number {
-  let n = basePool;
+/** How many candidates the recruit pool holds: the base pool plus what upgrades add. */
+export function candidatePoolSize(state: GameState): number {
+  let n = RECRUIT_TUNING.basePool;
   for (const e of unlockedEffects(state)) if (e.kind === 'candidatePool') n += e.delta;
   return n;
 }
 
-/** Is any member of the squad deployed (assignment or active run)? */
-export function squadDeployed(state: GameState, squadId: SquadId): boolean {
-  const run = state.activeRun;
-  if (run && run.status !== 'closed' && run.squadIds.includes(squadId)) return true;
-  const squad = state.squads.find((s) => s.id === squadId);
-  if (!squad) return false;
-  return squad.officerIds.some((id) => state.officers[id]?.assignment?.kind === 'operation');
-}
-
 export function isInjured(o: Officer, t: number): boolean {
   return !!o.injury && o.injury.until > t;
-}
-
-export function recoveryDuty(state: GameState, o: Officer): SquadDuty {
-  const squad = o.squadId ? state.squads.find((s) => s.id === o.squadId) : undefined;
-  return squad ? squad.duty : 'rest';
 }
 
 /**
@@ -126,6 +100,8 @@ export interface Rates {
   wages: number;
   operating: number;
   supplies: number;
+  /** Command Staff salaries, paid with payroll while each manager is on. */
+  staff: number;
   net: number;
   devPointsPerHour: number;
 }
@@ -149,6 +125,7 @@ export function ratesAt(state: GameState, t: number): Rates {
   const patrol = patrolMembers * ECONOMY_TUNING.patrolPerOfficer;
   const gross = base + patrol + nodeIncome;
   const operating = ECONOMY_TUNING.facilities;
+  const staff = commandStaffSalaries(state);
   const supplies = ECONOMY_TUNING.supplies;
   return {
     base,
@@ -158,9 +135,20 @@ export function ratesAt(state: GameState, t: number): Rates {
     wages,
     operating,
     supplies,
-    net: gross - wages - operating - supplies,
+    staff,
+    net: gross - wages - staff - operating - supplies,
     devPointsPerHour: ECONOMY_TUNING.devPointsPerHour,
   };
+}
+
+/** What each squad duty is worth, for the squad builder's preview (squad-optimizer.ts DutyRates). */
+export function dutyRates(): DutyRates {
+  return { recoveryPerHour: ECONOMY_TUNING.recoveryPerHour, patrolPerOfficer: ECONOMY_TUNING.patrolPerOfficer };
+}
+
+/** The hourly net at the state's settled clock: what the roster weighs a hire or dismissal against. */
+export function netRate(state: GameState): number {
+  return ratesAt(state, simNow(state)).net;
 }
 
 // ---------------------------------------------------------------- settlement
@@ -238,10 +226,13 @@ function applyDue(d: GameState, prev: number, t: number, acc: Acc, restock: bool
   applyUnitDue(d, t, acc.equipment);
   applyCareerDue(d, prev, t, acc.personnel);
   if (restock) {
+    const restockBefore = acc.restock;
     runRestock(d, acc, t);
     const maintenance = runEquipmentMaintenance(d, t);
     acc.maintenance += maintenance.spent;
     acc.maintenanceStarted.push(...maintenance.started);
+    logQuartermaster(d, t, maintenance.started, maintenance.spent, acc.restock - restockBefore);
+    runCommandStaff(d, t);
   }
   applyIncidentsDue(d, prev, t);
 }
@@ -311,14 +302,14 @@ export function settle(d: GameState, now: number): void {
   applyDue(d, L, L, acc, false);
   let t = L;
   while (t < T) {
-    const restockActive = hasEffect(d, 'restockRules') || maintenanceBudget(d) > 0;
+    const restockActive = hasEffect(d, 'restockRules') || maintenanceBudget(d) > 0 || commandStaffActive(d);
     const e = nextEventTime(d, t, T, W, restockActive);
 
     const r = ratesAt(d, t);
     const accrualHours = t < W ? (Math.min(e, W) - t) / HOUR_MS : 0;
     if (accrualHours > 0) {
       acc.gross += r.gross * accrualHours;
-      acc.wages += r.wages * accrualHours;
+      acc.wages += (r.wages + r.staff) * accrualHours;
       acc.operating += (r.operating + r.supplies) * accrualHours;
       dep.funding += r.net * accrualHours;
       dep.devPoints += r.devPointsPerHour * accrualHours;
@@ -329,7 +320,7 @@ export function settle(d: GameState, now: number): void {
       }
     }
     recover(d, (e - t) / HOUR_MS, t);
-    applyUnitWear(d, t, e, acc.equipment);
+    applyUnitWear(d, t, e, acc.equipment, departmentUpkeep(d));
 
     applyDue(d, t, e, acc, restockActive && e % I === 0 && e <= W);
     t = e;

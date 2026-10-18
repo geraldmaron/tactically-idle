@@ -11,9 +11,9 @@ import { projectedCondition } from './equipment';
 import { observationDifficulty } from './environment';
 import { capabilityRuleEffect, effectiveSupplies, operatorQualified } from './equipment-requirements';
 import { resolveSubject, standingOf } from './spatial-factors';
-import { practiceSupportUnit } from './support-vehicles';
 import { signalBetween } from './spatial';
 import { forceItemMatches } from './force-risk';
+import { departmentUpkeep } from './equipment-manager-policy';
 
 export interface CapabilityInput {
   state: GameState; run: OperationRun; scenario: ScenarioDefinition; action: ActionDefinition; built: BuiltLocation;
@@ -34,7 +34,7 @@ export interface CapabilityResult {
 interface Candidate { capabilityId: CapabilityId; item: typeof ITEMS[string]; unit: ItemUnit; squadId: SquadId; value: number; group: string; minutes: number; supplies: Use[] }
 const round1 = (n: number) => Math.round(n * 10) / 10;
 
-export function capabilityVisibility(input: Pick<CapabilityInput, 'built' | 'run' | 'scenario' | 'action' | 'acting'>): number {
+function capabilityVisibility(input: Pick<CapabilityInput, 'built' | 'run' | 'scenario' | 'action' | 'acting'>): number {
   const subject = resolveSubject(input.scenario, input.built, input.run.knowledge, input.action.targetId, input.action.spatial?.subjectFactId);
   return Math.max(0, ...input.acting.map((sid) => {
     const task = input.run.squadTasks.find((t) => t.squadId === sid);
@@ -47,11 +47,11 @@ export function capabilityVisibility(input: Pick<CapabilityInput, 'built' | 'run
 /** A qualified driver anywhere in the deployed team may operate the exterior asset. */
 export function supportVehicle(state: GameState, run: OperationRun): ItemUnit | null {
   const id = run.supportUnitIds?.[0];
-  const unit = id && run.practice && id.startsWith('practice_') ? practiceSupportUnit(id.slice('practice_'.length)) : id ? state.units[id] : undefined;
-  if (!unit || !ITEMS[unit.itemId]?.supportOnly || (!run.practice && !state.reservations.some((r) => r.runId === run.id && r.unitId === id))) return null;
+  const unit = id ? state.units[id] : undefined;
+  if (!unit || !ITEMS[unit.itemId]?.supportOnly || !state.reservations.some((r) => r.runId === run.id && r.unitId === id)) return null;
   const def = ITEMS[unit.itemId];
   const now = state.department.clockHighWater;
-  if ((unit.expiresAt !== null && unit.expiresAt <= now) || unitEffectiveness({ ...unit, condition: projectedCondition(state, unit, now) }, def) <= 0) return null;
+  if ((unit.expiresAt !== null && unit.expiresAt <= now) || unitEffectiveness({ ...unit, condition: projectedCondition(state, unit, now, departmentUpkeep(state)) }, def) <= 0) return null;
   if (!run.squadIds.some((sid) => state.squads.find((s) => s.id === sid)?.officerIds.some((oid) => !incidentOfficerUnavailable(state, run, oid) && ['vehicle_operations', ...def.requiresCerts ?? []].every((cert) => (state.officers[oid]?.certs as string[] | undefined)?.includes(cert))))) return null;
   return unit;
 }
@@ -80,7 +80,7 @@ export function evaluateCapabilities(input: CapabilityInput): CapabilityResult {
     const item = ITEMS[unit.itemId];
     if (!item) continue;
     // An explicit V7 force choice cannot also use an unrelated carried weapon.
-    if (scenario.version >= 7 && action.forceProfile && ['response', 'less_lethal'].includes(item.category ?? '') && !forceItemMatches(action.forceProfile.kind, item.id)) continue;
+    if (action.forceProfile && ['response', 'less_lethal'].includes(item.category ?? '') && !forceItemMatches(action.forceProfile.kind, item.id)) continue;
     const effectiveness = unitEffectiveness(unit, item);
     if (effectiveness <= 0 || (unit.expiresAt !== null && unit.expiresAt <= state.department.clockHighWater)) continue;
     if (item.supportOnly && vehicle?.id !== unit.id) continue;
@@ -89,7 +89,7 @@ export function evaluateCapabilities(input: CapabilityInput): CapabilityResult {
       if (!rules.has(cap)) continue;
       const requiredCerts = item.requiresCerts ?? [];
       const qualified = (item.supportOnly ? run.squadIds : [squadId]).some((sid) => operatorQualified(state, sid, action, item)
-        && (scenario.version < 7 || item.supportOnly || input.participantIds === undefined || state.squads.find(squad => squad.id === sid)?.officerIds.some(id => input.participantIds!.includes(id)
+        && (item.supportOnly || input.participantIds === undefined || state.squads.find(squad => squad.id === sid)?.officerIds.some(id => input.participantIds!.includes(id)
           && requiredCerts.every(cert => state.officers[id]?.certs.includes(cert)))));
       const missing = requiredCerts.length && !qualified ? requiredCerts : [];
       let reason = missing.length ? `Needs qualified operator: ${missing.map((c) => c.replaceAll('_', ' ')).join(', ')}` : null;
@@ -122,7 +122,7 @@ export function evaluateCapabilities(input: CapabilityInput): CapabilityResult {
       let complete = true;
       for (const need of effectiveSupplies(pick.item)) {
         const pool = available.filter(({ unit }) => unit.itemId === need.itemId && unitEffectiveness(unit, ITEMS[unit.itemId]) > 0
-          && (scenario.version < 7 || unit.expiresAt === null || unit.expiresAt > state.department.clockHighWater)
+          && (unit.expiresAt === null || unit.expiresAt > state.department.clockHighWater)
           && !usedSupplies.has(unit.id) && !supplyClaimed.has(unit.id) && !replacement.some((u) => u.unitId === unit.id));
         if (pool.length < need.qty) { complete = false; break; }
         for (const p of pool.slice(0, need.qty)) replacement.push({ itemId: p.unit.itemId, unitId: p.unit.id, squadId: p.squadId, qty: 1, consumable: true });

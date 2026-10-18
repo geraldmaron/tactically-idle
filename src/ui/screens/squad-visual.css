@@ -1,0 +1,243 @@
+/* Squad roster, officer sheet, recruitment and training: dense, visual-first layout.
+   Portraits carry identity, numbers become bars and pips, detail lives in sheets. */
+
+/* ---------------------------------------------------------------- shared bars */
+.meter { position: relative; }
+.meter-gain { position: absolute; top: 0; bottom: 0; background: var(--mint); opacity: .55; border-radius: 0 3px 3px 0; background-image: repeating-linear-gradient(135deg, rgba(255,255,255,.35) 0 2px, transparent 2px 4px); }
+.rating-bars { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 14px; margin: 0; padding: 0; list-style: none; }
+.rating-bar { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 3px 6px; min-width: 0; }
+.rating-bar .meter { grid-column: 1 / -1; height: 5px; }
+.rating-bar-label { display: inline-flex; align-items: center; gap: 5px; min-width: 0; color: var(--text-dim); font-size: 13px; line-height: 1.2; }
+.rating-bar-label .icon { flex: 0 0 auto; }
+.rating-bar-label span { min-width: 0; overflow-wrap: anywhere; }
+.rating-bar-value { font: 700 15px/1 var(--font-cond); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.rating-bars-dense { gap: 6px 12px; }
+.rating-bar-label span { overflow-wrap: normal; word-break: normal; }
+.rating-bars-dense .rating-bar-label { font-size: 11.5px; gap: 3px; }
+.rating-bars-dense .rating-bar-value { font-size: 13px; }
+.rating-bars-dense .meter { height: 4px; }
+
+/* ---------------------------------------------------------------- officer tile */
+.ogrid-tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.ocard-tile { border-width: 1px; border-radius: 8px; }
+.ocard-tile:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+.ocard-tile:active { transform: scale(.97); }
+.ocard-tile .ocard-name { left: 4px; right: 4px; bottom: 2px; font-size: min(12.5px, 13.5cqw); white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; line-height: 1.05; }
+.ocard-tile .ocard-row { gap: 3px; padding: 4px 4px 5px; font-size: 11px; }
+.ocard-tile .ocard-role { color: var(--chalk-dim); }
+.ocard-tile .stress-mini { margin-left: auto; flex-basis: auto; gap: 0; padding: 0 4px; border-radius: 999px; border: 1px solid currentColor; font-size: 11px; line-height: 1.35; }
+.ocard-tile .stress-mini > span { display: none; }
+.ocard-tile .ocard-row:has(.stress-mini) { flex-wrap: nowrap; }
+.ocard-certs { display: inline-flex; align-items: center; gap: 2px; min-width: 0; color: var(--mint); overflow: hidden; }
+.ocard-certs .icon { box-sizing: content-box; padding: 1px; border-radius: 3px; background: rgba(63, 208, 142, .16); }
+.ocard-certs b { font-size: 10px; color: var(--text-dim); }
+.ocard-squad { position: absolute; z-index: 3; top: 3px; left: 3px; display: grid; place-items: center; width: 18px; height: 18px; border-radius: 4px; background: var(--amber); color: var(--amber-ink); font: 600 11.5px/1 var(--font-display); }
+.ocard-state { position: absolute; z-index: 3; top: 3px; right: 3px; display: grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; background: rgba(8, 13, 24, .9); border: 1px solid currentColor; }
+.ocard-state-mint { color: var(--mint); }
+.ocard-state-amber { color: var(--amber); }
+.ocard-state-warn { color: var(--warn); }
+.ocard-state-danger { color: var(--danger); }
+.ocard-state-blue { color: #6ea8ff; }
+.ocard-tile .ocard-leader { right: 3px; bottom: 2px; }
+.ocard-tile:has(.ocard-leader) .ocard-name { right: 16px; }
+.ocard-tile-training { border-color: rgba(110, 168, 255, .55); }
+.ocard-tile-deployed { border-color: rgba(243, 180, 50, .55); }
+.ocard-tile-injured, .ocard-tile-recovery { border-color: rgba(255, 107, 90, .55); }
+.ocard-tile-injured .ocard-art > :first-child, .ocard-tile-recovery .ocard-art > :first-child { filter: saturate(.45); }
+.oslot-tile { min-height: 0; aspect-ratio: 1 / 1.3; gap: 2px; border-width: 1px; font-size: 12px; }
+
+/* ---------------------------------------------------------------- squad panel */
+.squad-arrange-control { color: var(--amber-2); }
+.squad-arrange-control:disabled { opacity: .5; cursor: default; }
+.squadpanel { display: grid; gap: 8px; padding: 10px; }
+.squadpanel-head { gap: 8px; }
+.squadpanel-name strong { font-size: 18px; line-height: 1.15; overflow-wrap: anywhere; }
+.squadpanel-facts { display: flex; flex-wrap: wrap; gap: 2px 10px; }
+.squadpanel-facts > span { display: inline-flex; align-items: center; gap: 3px; font-size: 12.5px; color: var(--text-dim); }
+.squadpanel-lead .icon { color: var(--amber); }
+.squad-ready { display: inline-flex; flex-direction: column; align-items: flex-end; gap: 3px; flex: 0 0 auto; }
+.squad-ready b { font: 600 15px/1 var(--font-display); color: var(--mint); font-variant-numeric: tabular-nums; }
+.squad-ready-pips { display: inline-flex; gap: 2px; }
+.squad-ready-pips i { width: 7px; height: 7px; border-radius: 2px; background: var(--warn); opacity: .8; }
+.squad-ready-pips i.on { background: var(--mint); opacity: 1; }
+.squadpanel-state { gap: 4px; }
+.squadpanel-state .chip { font-size: 12px; }
+.squad-coverage { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 8px 12px; padding-top: 8px; border-top: 1px solid var(--line); }
+.squad-coverage-group { display: grid; gap: 4px; }
+.squad-coverage-label { font: 600 10.5px/1 var(--font-cond); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.squad-roles { display: flex; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.squad-roles li { position: relative; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; border: 1px dashed var(--line-strong); color: var(--muted); opacity: .6; }
+.squad-roles li.on { border: 1px solid var(--mint); color: var(--mint); background: rgba(63, 208, 142, .1); opacity: 1; }
+.squad-roles b { position: absolute; right: -4px; top: -4px; min-width: 14px; padding: 0 3px; border-radius: 999px; background: var(--panel-3); color: var(--text); font: 700 10px/14px var(--font-cond); text-align: center; }
+.squad-best { display: flex; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.squad-best li { display: grid; justify-items: center; gap: 2px; width: 22px; color: var(--text-dim); }
+.squad-best-bar { position: relative; display: block; width: 6px; height: 26px; border-radius: 3px; background: rgba(255, 255, 255, .08); overflow: hidden; }
+.squad-best-bar i { position: absolute; left: 0; right: 0; bottom: 0; background: currentColor; border-radius: 3px; }
+.squad-best-bar.meter-hi { color: var(--mint); background: rgba(255, 255, 255, .08); }
+.squad-best-bar.meter-mid { color: var(--amber); background: rgba(255, 255, 255, .08); }
+.squad-best-bar.meter-lo { color: var(--warn); background: rgba(255, 255, 255, .08); }
+.squad-best b { font: 700 11px/1 var(--font-cond); color: var(--text); font-variant-numeric: tabular-nums; }
+
+/* ---------------------------------------------------------------- bench and roster grid */
+.squad-bench, .squad-roster { display: grid; gap: 8px; margin-top: 16px; min-width: 0; }
+.squad-block-title { display: flex; align-items: center; gap: 6px; margin: 0; font: 600 16px/1.2 var(--font-display); letter-spacing: .06em; text-transform: uppercase; }
+.squad-block-title .icon { color: var(--amber); }
+.squad-block-count { margin-left: 2px; padding: 1px 6px; border-radius: 999px; background: var(--panel-3); color: var(--text-dim); font: 600 12px/1.4 var(--font-cond); letter-spacing: 0; }
+.squad-block-hint { margin: -4px 0 0; font-size: 12.5px; color: var(--text-dim); }
+.bench-list { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.bench-row { display: flex; align-items: center; gap: 6px; min-width: 0; padding: 4px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+.bench-open { display: flex; align-items: center; gap: 8px; flex: 1 1 auto; min-width: 0; min-height: 44px; padding: 0 4px 0 0; border: 0; background: none; color: var(--text); text-align: left; cursor: pointer; }
+.bench-open:focus-visible, .bench-add:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+.bench-face { flex: 0 0 auto; border-radius: 6px; overflow: hidden; }
+.bench-name { display: grid; min-width: 0; flex: 1 1 auto; }
+.bench-name strong { font: 600 14px/1.2 var(--font-display); text-transform: uppercase; letter-spacing: .03em; overflow-wrap: anywhere; }
+.bench-name span { display: inline-flex; align-items: center; gap: 3px; font-size: 12px; color: var(--text-dim); }
+.bench-open .stress-mini { flex: 0 0 auto; font-size: 12px; }
+.bench-assign { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px; flex: 0 1 auto; }
+.bench-add { display: inline-flex; align-items: center; justify-content: center; gap: 1px; min-width: 44px; min-height: 44px; padding: 0 6px; border: 1px solid rgba(243, 180, 50, .5); border-radius: 6px; background: rgba(243, 180, 50, .08); color: var(--amber-2); font: 600 15px/1 var(--font-display); cursor: pointer; }
+.squad-roster-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.squad-sort { display: inline-flex; align-items: center; gap: 4px; min-height: 44px; padding: 0 4px 0 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); color: var(--text-dim); }
+.squad-sort select { min-height: 40px; border: 0; background: transparent; color: var(--text); font: 600 14px var(--font-cond); }
+.squad-sort select option { background: var(--panel); }
+.squad-sort:focus-within { outline: 2px solid var(--amber); outline-offset: 1px; }
+
+/* ---------------------------------------------------------------- officer sheet */
+.osheet { display: grid; gap: 10px; min-width: 0; }
+.osheet .sub-h { margin: 6px 0 0; }
+.osheet-hero { display: flex; gap: 12px; align-items: flex-start; min-width: 0; }
+.osheet-portrait { position: relative; flex: 0 0 auto; border-radius: 10px; overflow: hidden; border: 1px solid var(--line-strong); box-shadow: 0 6px 18px rgba(0, 0, 0, .35); }
+.osheet-portrait > :first-child { display: block; }
+.osheet-leader { position: absolute; right: 4px; bottom: 4px; display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--amber); color: var(--amber-ink); }
+.osheet-id { flex: 1; min-width: 0; display: grid; gap: 6px; }
+.osheet-id .chips { gap: 4px; }
+.osheet-id .chip { font-size: 12px; }
+.osheet-facts { display: flex; flex-wrap: wrap; gap: 2px 12px; margin: 0; font-size: 13px; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+.osheet-facts span { display: inline-flex; align-items: center; gap: 4px; }
+.osheet .persona-note { margin: 0; font-size: 12.5px; }
+.osheet-gauges { display: grid; gap: 8px; }
+.osheet-stress { display: grid; align-content: start; gap: 4px; min-width: 0; padding: 10px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel-2); }
+.osheet-stress .stress-scale { margin: 8px 2px 4px; }
+.osheet-avail { display: flex; align-items: flex-start; gap: 5px; margin: 0; font-size: 12.5px; line-height: 1.35; overflow-wrap: anywhere; }
+.osheet-avail .icon { flex: 0 0 auto; margin-top: 1px; }
+.osheet .traits { gap: 4px; }
+.osheet .traits li { flex-direction: row; flex-wrap: wrap; align-items: baseline; gap: 0 8px; font-size: 13px; }
+.osheet .traits strong { font-size: 14px; }
+.osheet-none { margin: 0; font-size: 13px; }
+.osheet-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.osheet-actions .btn { flex: 1 1 140px; }
+.osheet-more { border-top: 1px solid var(--line); font-size: 13px; color: var(--text-dim); }
+.osheet-more > summary { display: flex; align-items: center; justify-content: space-between; min-height: 44px; cursor: pointer; color: var(--text); font-weight: 600; list-style: none; }
+.osheet-more > summary::-webkit-details-marker { display: none; }
+.osheet-more > summary::after { content: '+'; font-size: 18px; color: var(--text-dim); }
+.osheet-more[open] > summary::after { content: '−'; }
+.osheet-more > summary:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+.osheet-more .stress-guide { border-top: 0; margin-top: 0; }
+.osheet .career { display: grid; gap: 8px; }
+.osheet-dismiss { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding-top: 8px; border-top: 1px solid var(--line); }
+.osheet-dismiss .confirm { align-self: stretch; }
+
+/* XP ring: progress toward the next point of the role's main rating. */
+.officer-progress { display: flex; align-items: center; gap: 10px; padding: 10px; }
+.officer-progress-body { display: grid; gap: 3px; flex: 1 1 auto; min-width: 0; }
+.officer-progress-heading strong { font-size: 14px; }
+.officer-progress-rating { font-size: 18px; }
+.officer-progress-count { font-size: 12.5px; gap: 2px 8px; }
+.officer-progress-count strong { font-weight: 600; }
+.officer-progress-total { font-size: 11.5px; }
+.officer-progress-next { font-size: 12.5px; }
+.officer-progress-note { font-size: 12px; }
+.xp-ring { flex: 0 0 auto; display: grid; place-items: center; width: 52px; height: 52px; border-radius: 50%; background: conic-gradient(var(--mint) var(--xp), rgba(255, 255, 255, .1) 0); }
+.officer-progress-capped .xp-ring { background: conic-gradient(var(--muted) 100%, transparent 0); }
+.xp-ring-core { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 50%; background: var(--panel); color: var(--mint); }
+.officer-progress-capped .xp-ring-core { color: var(--muted); }
+
+/* ---------------------------------------------------------------- recruitment */
+.cand-list { display: grid; gap: 8px; }
+.cand { display: grid; gap: 8px; padding: 10px; }
+.cand-top { display: flex; align-items: flex-start; gap: 10px; min-width: 0; }
+.cand-portrait { flex: 0 0 auto; border-radius: 8px; overflow: hidden; border: 1px solid var(--line-strong); }
+.cand-portrait > * { display: block; }
+.cand-id { display: grid; gap: 4px; flex: 1 1 auto; min-width: 0; }
+.cand-name { font-size: 16px; line-height: 1.15; overflow-wrap: anywhere; }
+.cand-facts { display: flex; flex-wrap: wrap; gap: 1px 10px; font-size: 12.5px; color: var(--text-dim); }
+.cand-facts span { display: inline-flex; align-items: center; gap: 3px; }
+.cand-id .chips { gap: 4px; }
+.cand-id .chip { font-size: 12px; }
+.cand .chips { gap: 4px; }
+.cand .persona-note { margin: 0; font-size: 12px; }
+.cand-shortlist { flex: 0 0 auto; }
+.cand-shortlist[aria-pressed="true"] { color: var(--amber); }
+.cand-foot { display: flex; align-items: center; flex-wrap: wrap; justify-content: space-between; gap: 6px; }
+.section-head:has(.recruit-refresh) { flex-wrap: wrap; gap: 6px; }
+
+/* ---------------------------------------------------------------- training */
+.training-top { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+.training-top .section-title { margin: 0; }
+.store-training .training-intro { margin: -4px 0 0; font-size: 12.5px; }
+.training-places { display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px; border: 1px solid var(--line-strong); border-radius: 999px; color: var(--text-dim); font: 600 13px/1.2 var(--font-cond); }
+.training-places b { color: var(--text); font-variant-numeric: tabular-nums; }
+.training-pips { display: inline-flex; gap: 3px; vertical-align: middle; }
+.training-pips i { width: 9px; height: 9px; border-radius: 50%; border: 1px solid #6ea8ff; }
+.training-pips i.on { background: #6ea8ff; }
+.training-search { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.training-search .field { position: relative; flex: 1 1 auto; min-width: 0; margin: 0; }
+.training-search .field .icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
+.training-search input { width: 100%; min-height: 44px; padding-left: 34px; }
+.training-count { flex: 0 0 auto; font-size: 12.5px; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+.training-selected-officer { display: flex; flex-direction: row; align-items: center; gap: 8px; padding: 8px; }
+.training-selected-officer .training-person-name { gap: 1px; }
+.training-selected-officer .training-person-name > .dim, .training-selected-officer .training-strengths { font-size: 12px; }
+.training-selected-officer .stress-mini { flex: 0 0 auto; font-size: 12px; }
+.training-clear { flex: 0 0 auto; min-width: 44px; padding: 0; }
+.course-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.course-tile { display: flex; flex-direction: column; gap: 6px; min-width: 0; padding: 10px; border: 1px solid var(--line); border-radius: 10px; background: radial-gradient(120% 60% at 50% 0%, rgba(31, 85, 184, .2), transparent 70%), linear-gradient(180deg, var(--panel-2), var(--panel)); overflow-wrap: anywhere; }
+.course-tile-ready { border-color: rgba(63, 208, 142, .55); }
+.course-tile-locked { background: linear-gradient(180deg, var(--panel), var(--navy-900)); }
+.course-tile-top { display: flex; align-items: center; gap: 8px; }
+.course-tile-top .course-tile-meta { display: grid; gap: 2px; }
+.course-emblem { position: relative; display: grid; place-items: center; flex: 0 0 44px; width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--line-strong); background: radial-gradient(circle at 50% 35%, #1f3a6b, #0d1628 75%); color: var(--chalk-dim); }
+.course-tile-ready .course-emblem { border-color: var(--mint); color: var(--mint); }
+.course-emblem img { width: 40px; height: 40px; border-radius: 50%; }
+.course-emblem.node-medallion-locked { filter: grayscale(1); opacity: .8; }
+.course-emblem .node-medallion-badge { position: absolute; top: -3px; right: -3px; display: grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; background: var(--panel-3); border: 1px solid var(--line-strong); color: var(--text-dim); }
+.course-tile h3 { margin: 0; font: 600 15px/1.15 var(--font-display); letter-spacing: .02em; text-transform: uppercase; }
+.course-tile-gains { display: flex; flex-wrap: wrap; gap: 4px; }
+.course-tile-gains .chip { font-size: 12px; white-space: normal; }
+.course-tile-meta { display: flex; flex-wrap: wrap; gap: 2px 10px; margin: 0; font-size: 12.5px; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+.course-tile-meta span { display: inline-flex; align-items: center; gap: 3px; }
+.course-tile-meta span:first-child, .course-tile-meta span:nth-child(2) { color: var(--text); font-weight: 600; }
+.course-tile-note, .course-tile .reason, .course-tile .training-eligible { margin: 0; font-size: 12px; line-height: 1.35; }
+.course-tile .training-eligible { display: inline-flex; align-items: center; gap: 3px; }
+.course-tile .training-course-personal { padding: 5px 7px; }
+.course-tile .training-course-personal > .dim, .course-tile .training-gain { font-size: 12px; }
+.course-tile-foot { display: flex; gap: 6px; margin-top: auto; padding-top: 2px; }
+.course-tile-foot .btn { flex: 1 1 auto; min-width: 0; min-height: 44px; padding-left: 6px; padding-right: 6px; white-space: normal; }
+.course-tile-foot .course-tile-develop { flex: 0 0 44px; min-width: 44px; padding: 0; }
+.training-course-highlight { border-color: var(--amber); box-shadow: 0 0 0 1px rgba(243, 180, 50, .35); }
+@media (max-width: 360px) {
+  .course-tile { padding: 8px; }
+  .course-tile h3 { font-size: 14px; }
+}
+
+/* Comparison rows: portrait, condition and Select on one line; the relevant ratings as bars with the gain overlaid. */
+.training-officer-card { gap: 8px; padding: 8px 10px; }
+.training-officer-card .training-person { gap: 8px; }
+.training-officer-card .training-person-name { gap: 1px; }
+.training-officer-card .training-person-name > .dim, .training-officer-card .training-condition { font-size: 12px; }
+.training-officer-card .training-person .stress-mini { flex: 0 0 auto; font-size: 12px; }
+.training-select { flex: 0 0 auto; min-width: 64px; }
+.training-officer-unavailable { background: var(--panel); }
+.training-officer-unavailable .training-portrait { filter: saturate(.4); opacity: .85; }
+.training-officer-selected .training-person { padding-right: 0; }
+.training-selected-label { position: static; flex: 0 0 auto; }
+.training-officer-card .training-benefits { font-size: 12.5px; }
+.training-officer-card .training-gain { font-size: 13px; }
+.training-officer-card > .reason, .training-officer-card .training-prerequisite { font-size: 12px; }
+.training-comparison-intro { gap: 6px; }
+.training-comparison-intro p { font-size: 12.5px; }
+.training-confirm-line { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.training-confirm-line .icon { color: var(--text-dim); }
+@container (max-width: 74px) {
+  .ocard-tile .ocard-role .icon { display: inline-block; }
+}
+.squad-add-control.squad-arrange-control { display: inline-flex; align-items: center; flex: 0 0 auto; width: auto; gap: 5px; white-space: nowrap; padding: 0 10px; font: 700 13px var(--font-cond); letter-spacing: 0.05em; text-transform: uppercase; }

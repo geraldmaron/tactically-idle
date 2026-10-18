@@ -45,10 +45,9 @@ const swapChenForReyes = (s: GameState): GameState => {
 };
 
 describe('scenario content and selectors', () => {
-  it('preserves the original scenario order and adds equipment practice cards', () => {
+  it('lists the two standing assignments in their original order', () => {
     const cards = scenarioCards(makeState(), NOW);
-    expect(cards.slice(0, 5).map((c) => c.code)).toEqual(['OP 0141', 'OP 0142', 'PRACTICE 03', 'PRACTICE 04', 'PRACTICE 05']);
-    expect(cards.slice(2, 5).map((c) => c.id)).toEqual(['practice_signals_v2', 'practice_response_v2', 'practice_rescue_v2']);
+    expect(cards.map((c) => c.code)).toEqual(['OP 0141', 'OP 0142']);
     expect(cards[0].variantLabel).toBe('Uncertain occupancy');
     expect(cards[1].variantLabel).toBe('Time pressure');
     expect(cards[0].eligibleSquadIds).toEqual(['A', 'B']);
@@ -123,7 +122,7 @@ describe('capability dependency (acceptance 3)', () => {
     const s = startRun(swapChenForReyes(makeState()), 'ms_occupancy', ['A']);
     const v = view(s, 'ms_contact');
     expect(v.eligible).toBe(false);
-    expect(v.reason).toBe('Needs a crisis negotiator — Squad A has none');
+    expect(v.reason).toBe('Needs a crisis negotiator. Squad A has none');
     expect(v.summary).toBe('Needs a crisis negotiator');
     expect(apply(s, { type: 'decide', actionId: 'ms_contact', actingSquadIds: ['A'], supportSquadIds: [] }).result.ok).toBe(false);
   });
@@ -152,7 +151,7 @@ describe('capability dependency (acceptance 3)', () => {
     const s = startRun(makeState(), 'ms_occupancy', ['A', 'B']);
     const v = view(s, 'ms_contact', 'B');
     expect(v.eligible).toBe(false);
-    expect(v.reason).toBe('Needs a crisis negotiator — Squad B has none. Squad A can.');
+    expect(v.reason).toBe('Needs a crisis negotiator. Squad B has none. Squad A can.');
     expect(view(s, 'ms_contact', 'A').eligible).toBe(true);
     // No focus: the best eligible deployed squad is chosen.
     expect(view(s, 'ms_contact', null).actingSquadIds).toEqual(['A']);
@@ -192,7 +191,7 @@ describe('wrong initial report (urgent scenario)', () => {
     const aid = view(s, 'mu_targeted_aid');
     expect(aid.eligible).toBe(false);
     expect(aid.targetId).toBeNull();
-    expect(aid.reason).toBe("The patient's location is not known yet");
+    expect(aid.reason).toBe('Account for the patient’s current location before providing physical care');
     expect(spaceViews(s).find((v) => v.id === 'bedroom_e')!.actionIds).toEqual([]);
     const views = actionViews(s0(), NOW, 'A');
     expect(views.some((v) => v.targetId === 'bedroom_e')).toBe(false);
@@ -222,6 +221,7 @@ describe('wrong initial report (urgent scenario)', () => {
     expect(after.activeRun!.squadTasks[0]).toMatchObject({ positionId: 'front_yard', stagingId: 'sp_w_kitchen_s_front_yard' });
     // Now the aid action targets the real room and is eligible.
     const resolve = setRun(after, { stage: 'resolve' });
+    resolve.officers.off_ortiz.injury = null;
     expect(view(resolve, 'mu_targeted_aid')).toMatchObject({ eligible: true, targetId: 'bedroom_e' });
   });
 });
@@ -500,7 +500,7 @@ describe('integrity (acceptance 11)', () => {
     expect(r.stage).toBe('assess');
   });
 
-  it('a stage that runs out of options moves on instead of dead-ending', () => {
+  it('a stage with exhausted options waits for an explicit failed-response report', () => {
     // With no phone or hailer both contact options are ineligible, so one adverse gather leaves nothing to try.
     const loadouts = { A: { radio_kit: 1, trauma_kit: 1 } };
     let hit: GameState | null = null;
@@ -511,8 +511,9 @@ describe('integrity (acceptance 11)', () => {
     }
     expect(hit).not.toBeNull();
     const run = hit!.activeRun!;
-    expect(run.stage).toBe('adapt');
-    expect(run.history[0].explanation.join(' ')).toMatch(/moved on/);
+    expect(run.stage).toBe('assess');
+    expect(run.status).toBe('active');
+    expect(run.history).toHaveLength(1);
   });
 
   it('a JSON round trip mid-run then deciding gives the same result as deciding directly (no reroll)', () => {
@@ -577,48 +578,10 @@ describe('recovery (acceptance 10)', () => {
     expect(apply(s, startCmd('ms_occupancy', ['B'])).result.ok).toBe(true);
   });
 
-  it('practice is allowed and grants nothing', () => {
-    const s = tired();
-    s.officers.off_vale.stress = 40;
-    const before = structuredClone(s);
-    const start = startRun(s, 'ms_occupancy', ['A'], { practice: true });
-    expect(start.reservations).toEqual([]);
-    expect(start.units[unitId('throw_phone')].status).toBe('ready');
-    expect(start.activeRun!.practice).toBe(true);
-    // Practice assumes one of each owned item, so contact is available without a loadout.
-    expect(view(start, 'ms_contact').eligible).toBe(true);
-    const done = playPolicy(start, { assess: ['ms_contact'], adapt: ['ms_perimeter_watch'], resolve: ['ms_controlled_entry', 'ms_negotiated_exit'] });
-    expect(done.debrief.practice).toBe(true);
-    expect(done.debrief.fundingReward).toBe(0);
-    expect(done.debrief.devPointReward).toBe(0);
-    expect(done.debrief.trustDelta).toBe(0);
-    expect(done.debrief.officerCondition.every((o) => o.xpGained === 0 && o.stressBefore === o.stressAfter)).toBe(true);
-    expect(done.debrief.resources).toEqual([]);
-    expect(done.debrief.causes[0]).toMatch(/Practice run/);
-    expect(done.state.department).toEqual(before.department);
-    expect(done.state.units).toEqual(before.units);
-    for (const [id, o] of Object.entries(done.state.officers)) {
-      expect(o.stress).toBe(before.officers[id].stress);
-      expect(o.xp).toBe(before.officers[id].xp);
-      expect(o.assignment).toBeNull();
-    }
-    expect(done.state.activeRun).toBeNull();
-    const run = start.activeRun!;
-    expect(run.history).toEqual([]);
-  });
-
-  it('practice decisions record no strain and no item use', () => {
-    const s = startRun(tired(), 'ms_occupancy', ['A'], { practice: true });
-    const r = decideView(s, 'ms_contact').state.activeRun!;
-    expect(r.history[0].stressDeltas).toEqual({});
-    expect(r.history[0].itemsConsumed).toEqual([]);
-    expect(r.history[0].explanation.join(' ')).toMatch(/Practice run/);
-  });
-
-  it('practice does not hijack an officer who is in training', () => {
+  it('does not take an officer who is in training', () => {
     const s = makeState();
     s.officers.off_park.assignment = { kind: 'training', courseId: 'c1', startedAt: NOW, endsAt: NOW + 1000 };
-    const r = apply(s, startCmd('ms_occupancy', ['B'], { practice: true }));
+    const r = apply(s, startCmd('ms_occupancy', ['B']));
     expect(r.result.ok).toBe(false);
     expect(s.officers.off_park.assignment?.kind).toBe('training');
   });

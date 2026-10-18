@@ -3,6 +3,8 @@ import { manageSave, useCampaigns, exportCurrentSave, exportSlotSave, exportSave
 import { Sheet } from './Sheet';
 import { Button, Chip } from './ui';
 import { money } from '../format';
+import { usePeopleColor } from '../people/PeopleText';
+import { setPeopleColor } from '../people/prefs';
 
 type Edit = { type: 'new' | 'copy' | 'rename' | 'delete' | 'import' | 'load'; id: number; name: string; data?: string; permanent?: boolean };
 const timestamp = (at: number) => new Date(at).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
@@ -18,12 +20,17 @@ export function CampaignBar({ onOpen }: { onOpen: () => void }) {
   const slot = saved.activeSlotId ? saved.slots[saved.activeSlotId - 1] : null;
   return <div className={`campaign-bar${saved.issue ? ' campaign-warning' : ''}`}>
     <span><strong>{isResponsivePreview ? 'TEST · ' : ''}{slot ? `Slot ${saved.activeSlotId} · ${slot.name}` : 'Unsaved campaign'}</strong><small>{isResponsivePreview ? 'Temporary test saves · lost on reload' : saved.issue ? 'Saving needs attention' : saved.dirty ? slot ? 'Saving locally…' : 'Not saved yet' : 'Autosaved on this device'}</small></span>
-    <button type="button" onClick={onOpen} aria-label="Open local saves and new game">Saves / New</button>
+    <span className="campaign-bar-actions">
+      {/* Development builds only: the Scenario Lab (/lab) plays every call on the real engine and shows its options, odds and branches. */}
+      {import.meta.env.DEV && <a className="campaign-bar-dev" href={`${import.meta.env.BASE_URL}lab`} target="_blank" rel="noreferrer">Lab</a>}
+      <button type="button" onClick={onOpen} aria-label="Open local saves and new game">Saves / New</button>
+    </span>
   </div>;
 }
 
 export function SaveManager({ open, onClose }: { open: boolean; onClose: () => void }) {
   const saved = useCampaigns();
+  const peopleColor = usePeopleColor();
   const [edit, setEdit] = useState<Edit | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -72,6 +79,12 @@ export function SaveManager({ open, onClose }: { open: boolean; onClose: () => v
     </form> : <>
       <p className="dim save-explainer">{isResponsivePreview ? 'This test library exists only in memory. New games, copies, renames and loads never read or change normal browser campaigns. Reloading or closing this frame discards every test slot.' : 'The active campaign saves automatically. Loading another slot first saves your current progress. Browser data clearing removes local saves; export a backup to keep a copy.'}</p>
       <div className="save-actions save-primary-actions"><Button variant="primary" onClick={() => begin('new', firstEmpty || 1)}>New game</Button><Button onClick={() => run({ type: 'save' }, 'Current campaign saved.')}>Save now</Button><Button onClick={() => begin('copy', firstEmpty || 1)}>Save a copy</Button></div>
+      {/* The one switch for people colors in call text (src/ui/people); a display preference kept in this browser, not in the save. */}
+      <label className="toggle save-pref">
+        <input type="checkbox" checked={peopleColor} onChange={(e) => setPeopleColor(e.target.checked)} />
+        <span className="toggle-ui" aria-hidden="true" />
+        <span className="toggle-text"><strong>Color names by role</strong><small className="dim">Subjects, civilians, people at the scene and your officers each get their own color and mark in call text.</small></span>
+      </label>
       {!firstEmpty && <p className="save-alert">All ten slots are occupied. Choose a slot below to replace, or delete a save you no longer need.</p>}
       <ol className="save-slots">
         {saved.slots.map((slot, i) => <li className={`save-slot${saved.activeSlotId === i + 1 ? ' save-slot-active' : ''}`} key={i}>

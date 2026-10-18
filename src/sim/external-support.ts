@@ -3,6 +3,9 @@ import type { CompletionDisposition, DebriefResult, ExternalSupportEvent, Extern
 import { next } from './rng';
 import { syncCasualtyFlags, syncPersonCasualtyFlags } from './incident-consequences';
 import { protectedOfficerEffects } from './force-risk';
+import { advanceClocks, clockConditionsHold, clockOutEffects, forkMinutes, initialClocks } from './clocks';
+import { applyMoves, initialMeters, meterConditionsHold } from './meters';
+import { applyCommitments } from './commitments';
 
 type SupportRun = Pick<OperationRun, 'clock' | 'externalSupport'>;
 type PublicRun = Pick<OperationRun, 'knowledge' | 'flags' | 'pressure'>;
@@ -59,7 +62,7 @@ export function externalSupportActionIssue(run: SupportRun & PublicRun, scenario
   // Check every publicly possible band before sampling. Hidden truth must not
   // change eligibility, and issued v1–v4 actions retain their original scan.
   const effects = Object.values(action.outcomes).flat()
-    .filter((effect) => scenario.version < 5 || conditionsHold(effect.when, run));
+    .filter((effect) => conditionsHold(effect.when, run));
   for (const id of new Set(effects.flatMap((effect) => effect.requestSupport ?? []))) {
     const service = services.get(id);
     if (!service) return 'That response service is not part of this incident';
@@ -118,18 +121,22 @@ export function completionEvidence(scenario: ScenarioDefinition, run: SupportRun
   const state = serviceId ? run.externalSupport?.[serviceId] : undefined;
   const receiverAccepted = !!service && externalSupportStatus(run, service) === 'accepted' && state?.acceptedAt != null;
   const disposition = ending.disposition ?? 'unresolved';
-  const outstandingHarm = scenario.version >= 7 ? [
+  const outstandingHarm = [
     ...Object.values(run.personCasualties ?? {}).filter(person => person.care !== 'accepted').map(person => person.severity === 'fatal'
       ? `${person.label} died; the fatality and remaining scene responsibilities need formal follow-up.`
       : `${person.label} is injured and still needs an accepting medical crew.`),
     ...Object.values(run.officerCasualties ?? {}).filter(person => person.care !== 'evacuated').map(() => 'An injured officer still needs medical transport.'),
-  ] : [];
+  ];
   const completionAchieved = FULL_DISPOSITIONS.includes(disposition) && hasCompletionConditions(ending)
     && conditionsHold(ending.completion, run)
     && outstandingHarm.length === 0
     && (!serviceId || receiverAccepted) && (disposition !== 'care_accepted' || receiverAccepted);
+  // A call tree (v13) whose authored step was completed but left someone hurt, killed or awaiting
+  // transport ends partial, not unresolved: the step happened, and the harm is the unfinished part.
+  const harmOnly = FULL_DISPOSITIONS.includes(disposition) && hasCompletionConditions(ending)
+    && conditionsHold(ending.completion, run) && outstandingHarm.length > 0 && (!serviceId || receiverAccepted);
   return {
-    disposition: FULL_DISPOSITIONS.includes(disposition) && !completionAchieved ? 'unresolved' : disposition,
+    disposition: FULL_DISPOSITIONS.includes(disposition) && !completionAchieved ? harmOnly ? 'relief_partial' : 'unresolved' : disposition,
     completionAchieved,
     ...(receiverAccepted ? { receivingService: { id: service!.id, label: service!.label, kind: service!.kind, acceptedAt: state!.acceptedAt! } } : {}),
     remainingTasks: completionAchieved ? [] : [
@@ -141,9 +148,23 @@ export function completionEvidence(scenario: ScenarioDefinition, run: SupportRun
   };
 }
 
+/** A committed v13 decision's effects as the engine applied them (sim/drawn-effects.ts): each
+ * drawn effect becomes its base and the variant its saved record names, in order. `unused` counts
+ * records no drawn effect took. The engine's commit, traceRun and the save replay all read this. */
+export function savedDrawnEffects(matched: readonly OutcomeEffect[], records: readonly { key: string }[] | undefined): { effects: OutcomeEffect[]; unused: number } {
+  const queue = [...records ?? []];
+  const effects = matched.flatMap((effect): OutcomeEffect[] => {
+    if (!effect.drawn) return [effect];
+    const record = queue.shift();
+    const { drawn: _drawn, variants, ...rest } = effect;
+    return [rest, ...(record ? variants?.[record.key] ?? [] : [])];
+  });
+  return { effects, unused: queue.length };
+}
+
 /** Legacy saves omit these fields. V4 timers are reconstructed solely from committed events. */
 export function validExternalSupportState(run: OperationRun, scenario: ScenarioDefinition): boolean {
-  if (scenario.version < 4) return run.externalSupport === undefined;
+
   if (!run.externalSupport || typeof run.externalSupport !== 'object' || Array.isArray(run.externalSupport)) return false;
   const expected: Record<string, ExternalSupportState> = {};
   const casualties: Record<string, OfficerCasualtyRecord> = {};
@@ -151,11 +172,26 @@ export function validExternalSupportState(run: OperationRun, scenario: ScenarioD
   let clock = (run.resupplies ?? []).reduce((sum, delivery) => round1(sum + delivery.minutes), 0);
   const publicState: PublicRun = { knowledge: Object.fromEntries(scenario.facts.map((fact) => [fact.id, fact.initial])), flags: [], pressure: scenario.pressure.start };
   for (const delivery of run.resupplies ?? []) publicState.pressure = round1(Math.max(0, Math.min(100, publicState.pressure + scenario.pressure.perMinute * delivery.minutes)));
+  // v13: clock forks read the clocks as the engine ran them, and cues set marks (sim/clocks.ts).
+  const timed = { clocks: initialClocks(scenario), flags: publicState.flags };
+  /** Runs the clocks and sets their cue marks; returns the clocks as they were before. */
+  const passTime = (minutes: number) => {
+    timed.flags = publicState.flags;
+    const before = timed.clocks;
+    for (const cue of advanceClocks(timed, scenario, minutes)) for (const flag of cue.setFlags ?? []) if (!publicState.flags.includes(flag)) publicState.flags.push(flag);
+    return before;
+  };
+  // v13: meter branches read the subjects' meters at the start of each decision; outcomes and
+  // commitments move them after it (sim/meters.ts, sim/commitments.ts).
+  const moved: Pick<OperationRun, 'meters'> & Partial<Pick<OperationRun, 'commitments'>> = { meters: initialMeters(scenario) };
+  for (const delivery of run.resupplies ?? []) passTime(delivery.minutes);
   const decisions = new Set<string>();
   if (!Number.isSafeInteger(run.rngState) || run.rngState < 0 || run.rngState > 0xffffffff) return false;
   // Mulberry32 advances by a fixed uint32 increment. Check the whole saved sample sequence.
-  const forceDraws = scenario.version >= 7 ? run.history.filter(decision => decision.committed?.forceOutcome).length : 0;
-  let rngState = (run.rngState - Math.imul(run.history.length + forceDraws, 0x6d2b79f5)) >>> 0;
+  const forceDraws = run.history.filter(decision => decision.committed?.forceOutcome).length;
+  // v13 drawn consequences (sim/drawn-effects.ts) take one saved sample each, after the decision's own.
+  const drawnDraws = run.history.reduce((sum, decision) => sum + (decision.committed?.drawn?.length ?? 0), 0);
+  let rngState = (run.rngState - Math.imul(run.history.length + forceDraws + drawnDraws, 0x6d2b79f5)) >>> 0;
   for (const decision of run.history) {
     if (!Number.isFinite(decision.timeCost) || decision.timeCost <= 0) return false;
     const beforeClock = clock;
@@ -170,15 +206,22 @@ export function validExternalSupportState(run: OperationRun, scenario: ScenarioD
     const sample = next(rngState);
     if (sample.value !== decision.sample) return false;
     rngState = sample.state;
-    if (scenario.version >= 7 && action.forceProfile) {
+    if (action.forceProfile) {
       const force = next(rngState);
       if (decision.committed?.forceOutcome?.sample !== force.value) return false;
       rngState = force.state;
     } else if (decision.committed?.forceOutcome) return false;
+    for (let i = 0; i < (decision.committed?.drawn?.length ?? 0); i++) rngState = next(rngState).state;
     if (externalSupportActionIssue({ ...publicState, clock: beforeClock, externalSupport: expected }, scenario, action)) return false;
     if (action.awaitSupport && decision.timeCost !== remainingSupportWait({ clock: beforeClock, externalSupport: expected }, scenario, action.awaitSupport)) return false;
-    const effects = action.outcomes[decision.band].filter((effect) => conditionsHold(effect.when, publicState)
-      && (effect.truth ?? []).every((truth) => scenario.facts.find((fact) => fact.id === truth.factId)?.truth === truth.is));
+    const matched = action.outcomes[decision.band].filter((effect) => conditionsHold(effect.when, publicState)
+      && (effect.truth ?? []).every((truth) => scenario.facts.find((fact) => fact.id === truth.factId)?.truth === truth.is)
+      && (clockConditionsHold(effect.clocks, scenario, { clocks: timed.clocks, flags: publicState.flags }, forkMinutes(action, decision.band, effect))
+        && meterConditionsHold(effect.meters, moved)));
+    // v13 drawn consequences apply the variant each saved record names, in order.
+    const saved = savedDrawnEffects(matched, decision.committed?.drawn);
+    const effects = saved.effects;
+    if (saved.unused) return false;
     const expectedEvents = effects.flatMap((effect) => [
       ...(effect.requestSupport ?? []).map((serviceId) => ({ kind: 'requested', serviceId })),
       ...(effect.acceptSupport ?? []).map((serviceId) => ({ kind: 'accepted', serviceId })),
@@ -197,6 +240,8 @@ export function validExternalSupportState(run: OperationRun, scenario: ScenarioD
         state.acceptedAt = clock;
       } else return false;
     }
+    // The engine runs the clocks on the flags from before this decision's effects.
+    const clocksBefore = passTime(decision.timeCost);
     for (const effect of effects) {
       for (const flag of effect.setFlags ?? []) if (!publicState.flags.includes(flag)) publicState.flags.push(flag);
       for (const flag of effect.clearFlags ?? []) publicState.flags = publicState.flags.filter((entry) => entry !== flag);
@@ -205,7 +250,17 @@ export function validExternalSupportState(run: OperationRun, scenario: ScenarioD
         publicState.flags.push(`opening:${opening.openingId}=${opening.state}`);
       }
     }
-    if (scenario.version >= 5) for (const opening of decision.committed?.openingChanges ?? []) {
+    {
+      // A clock that ran out where no fork read it sets its mark (sim/clocks.ts); then the
+      // outcome's events and the commitments it kept or broke move the meters, as the commit does.
+      for (const out of clockOutEffects(scenario, clocksBefore, timed.clocks, publicState, effects))
+        for (const flag of out.setFlags ?? []) if (!publicState.flags.includes(flag)) publicState.flags.push(flag);
+      applyMoves(moved, scenario, effects);
+      const view = { flags: publicState.flags, clock, revision: decision.revision, meters: moved.meters, commitments: moved.commitments };
+      applyCommitments(view, scenario, action, decision.band, effects, decision.committed?.drawn ?? [], decision.revision);
+      moved.meters = view.meters; moved.commitments = view.commitments;
+    }
+    for (const opening of decision.committed?.openingChanges ?? []) {
       publicState.flags = publicState.flags.filter(entry => !entry.startsWith(`opening:${opening.openingId}=`));
       publicState.flags.push(`opening:${opening.openingId}=${opening.state}`);
     }
@@ -217,7 +272,7 @@ export function validExternalSupportState(run: OperationRun, scenario: ScenarioD
       casualties[id] = { ...event };
       return true;
     };
-    for (const effect of protectedOfficerEffects(effects, scenario.version >= 7 ? decision.committed?.protectionUsed : undefined)) {
+    for (const effect of protectedOfficerEffects(effects, decision.committed?.protectionUsed)) {
       if (effect.officerHarm) {
         const id = decision.officerIds.find(candidate => !casualties[candidate]);
         if (id && !acceptCasualty(id, 'needed', effect.officerHarm.severity, effect.officerHarm.label)) return false;
@@ -234,7 +289,7 @@ export function validExternalSupportState(run: OperationRun, scenario: ScenarioD
     const casualtyState = { flags: publicState.flags, officerCasualties: casualties };
     syncCasualtyFlags(casualtyState);
     publicState.flags = casualtyState.flags;
-    if (scenario.version >= 7) {
+    {
       for (const person of decision.committed?.personCasualties ?? []) personCasualties[person.personId] = { ...person };
       const peopleState = { flags: publicState.flags, personCasualties };
       syncPersonCasualtyFlags(peopleState, scenario);

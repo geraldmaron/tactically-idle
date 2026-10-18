@@ -1,48 +1,7 @@
-# Frozen release-migration fixtures
+# Engine test fixtures
 
-These JSON files were captured by running the unmodified published baseline at
-local commit `92ab37d7306b3ccedb0ef32c1fe910db92175da2` (recovered published
-baseline `b254f1b`), rather than creating modern states and relabeling them v4.
-They contain synthetic game state only. They have no user or browser data.
+The Maple Street calls and building are registered only by `setup.ts` through Vitest. They exercise isolated map, equipment and decision rules and are absent from production dispatch and scenario cards. Their metadata follows the current ending and physical-care contracts.
 
-- `release-v4-active.json`: the old engine's v4 initial campaign after purchasing
-  academy, recruiting, expanded barracks, records, thermal and logistics unlocks;
-  then deploying and committing Gather intel and Thermal check. It contains six
-  real old battery units: one consumed but still reserved in the historical run,
-  one unconsumed reserved, two ready, one expired, and one scrapped. A battery-only
-  three-minute delivery record and duplicate retired reservation reference are
-  deliberately included to cover cleanup without deleting elapsed time. Other
-  IDs, wear, history samples, operation and department RNG come from the old engine.
-- `release-v1-stacks.json`: an explicitly constructed v1 stack-format envelope,
-  without unit inventory, personnel identities, calendar, or officer career
-  fields. Battery stacks occur between reusable equipment stacks, so skipping
-  them would change subsequent unit IDs, wear draws, and aging.
-- `release-v1-expected-v4.json`: the actual result of deserializing that v1
-  envelope with the old baseline. This is the independent oracle for migration
-  ordering, career defaults, unit IDs, wear, service jobs, and RNG state.
-- `release-v4-wallet.json`: an old v2 slot library containing two actual v4
-  campaigns, a completed 8-DP receipt, allocations of 3300 and 1700 milli-DP,
-  and 3000 held milli-DP. Tests read its frozen campaign UUIDs rather than
-  substituting fresh identities.
+`capability-scenarios.ts` holds small test scenarios for equipment rules. Tests register them explicitly with `registerCapabilityFixtures()`.
 
-`capture-release-fixtures.test.ts.txt` records the generator. To intentionally
-recapture, copy it to `src/sim/capture-release-fixtures.test.ts` in a checkout of
-the baseline commit, update its output directory, and run that single Vitest
-test. Do not regenerate fixtures against the release implementation under test.
-The normal regression suite needs only the checked-in JSON files.
-
-`legacy-navigation-runs.json` separately captures issued v3 and v4 welfare runs
-with an already committed, scored navigation choice, immediately before the free
-stage-continuation change. It preserves their run records, officer strain and
-replayed totals. `capture-legacy-navigation.test.ts.txt` records the capture
-script; do not regenerate against the implementation under test. The regression
-checks that loading and continuing these records retains their old costs,
-sampled outcomes and history, while future navigation is free.
-
-`published-v5-scenario-hashes.json` was captured from the immutable local release
-commit `7eecc294d6f32651bc3693781c4b03362fd7207a` (the published PR22 tree).
-It covers 48 complete v5 definitions across every supported family and seeds 0, 1 and 7.
-The fingerprints use the existing `hashSeed` over recursively key-sorted JSON,
-so different object construction order does not masquerade as changed content.
-The complete values, including narrative, graphs, truth and bindings, are retained
-in the comparison; regenerate only against that historical release.
+There are no historical save captures or migration oracles. Save tests build current campaigns and alter version stamps only when testing rejection.

@@ -1,4 +1,5 @@
 import type { Officer } from './types';
+import { tunable } from './tuning';
 
 /** Proposed starting bands; tuning values, not commitments. */
 export const STRESS_BANDS = {
@@ -7,6 +8,33 @@ export const STRESS_BANDS = {
   overloaded: 60,
   recovery: 80,
 } as const;
+
+/** How strain wears an officer's ratings down. Tunable (sim/tuning.ts). */
+export const STRESS_TUNING = tunable('STRESS_TUNING', {
+  /** Fraction of a rating contribution lost at stress 100 (linear from conditionFrom). */
+  conditionMax: 0.55,
+  conditionFrom: 15,
+});
+
+/** Share of an officer's rating contribution that strain takes away: what a call and the squad builder both read. */
+export function conditionFraction(stress: number): number {
+  const T = STRESS_TUNING;
+  return Math.max(0, Math.min(T.conditionMax, ((stress - T.conditionFrom) / (100 - T.conditionFrom)) * T.conditionMax));
+}
+
+/** Officer experience and age. First-pass values. Tunable (sim/tuning.ts). */
+export const EXPERIENCE_TUNING = tunable('EXPERIENCE_TUNING', {
+  /** Situation pressure at or above which experience bands matter (pressure-kind checks always count). */
+  pressureOn: 50,
+  rookiePenalty: -2,
+  rookieStrain: 1.15,
+  seasonedBonus: 2,
+  veteranBonus: 4,
+  mentoring: 2,
+  /** Strain share per 5 years of age over this. */
+  ageStrainFrom: 50,
+  ageStrainPer5: 0.05,
+});
 
 export type StressBand = 'ready' | 'strained' | 'overloaded' | 'recovery';
 

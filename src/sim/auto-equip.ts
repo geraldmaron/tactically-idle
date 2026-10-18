@@ -4,13 +4,14 @@ import { ITEMS } from '../content/items';
 import { readyUnits } from './inventory';
 import { radioRequirement, standardRadioPlan, STANDARD_RADIO } from './standard-kit';
 import { deployability } from './officer';
-import { EXPERIENCE_TUNING, getBuilt } from './resolution';
+import { getBuilt, RESOLUTION_TUNING } from './resolution';
 import { projectedCondition } from './equipment';
 import { unitEffectiveness } from './inventory';
 import { centroidOf, standingCandidates, rangeToPoint, rangeThroughOpening } from './spatial-factors';
 import { actionConsumptionForItems, actionEquipmentRequirements, capabilityRuleEffect, missionConsumptionBudget, operatorQualified, orderActionParticipants, participantAptitude, planningEquipmentContext, qualifiedOfficers, requiredEquipmentBundle, type EquipmentPick, type PublicEquipmentContext } from './equipment-requirements';
 import { scenarioActions } from './scenario-types';
 import { getScenario } from './scenario-registry';
+import { departmentUpkeep } from './equipment-manager-policy';
 
 export interface AutoLoadout {
   loadouts: Partial<Record<SquadId, Record<Id, number>>>;
@@ -32,7 +33,7 @@ export interface AutoLoadoutOptions {
 
 /** Current usable stock, shared with preparation previews; never settles or buys. */
 export function autoEquipReadyUnits(state: GameState, itemId: Id, now: number): ItemUnit[] {
-  return readyUnits(state, itemId, now);
+  return readyUnits(state, itemId, departmentUpkeep(state), now);
 }
 
 /**
@@ -55,7 +56,8 @@ export function autoLoadout(state: GameState, scenarioId: Id, squadIds: SquadId[
   const label = (sid: SquadId) => state.squads.find((s) => s.id === sid)?.name ?? `Squad ${sid}`;
   const warn = (key: string, message: string) => warnings.set(key, message);
   const locked = (sid: SquadId, itemId: Id) => itemId === STANDARD_RADIO || Object.hasOwn(options.loadouts?.[sid] ?? {}, itemId);
-  const pool = Object.keys(ITEMS).filter((id) => !ITEMS[id].supportOnly).flatMap((id) => autoEquipReadyUnits(state, id, time)).map((u) => ({ ...u, condition: projectedCondition(state, u, time) }));
+  const upkeep = departmentUpkeep(state);
+  const pool = Object.keys(ITEMS).filter((id) => !ITEMS[id].supportOnly).flatMap((id) => autoEquipReadyUnits(state, id, time)).map((u) => ({ ...u, condition: projectedCondition(state, u, time, upkeep) }));
   const usableIds = new Set(pool.map((u) => u.id));
 
   for (const sid of chosen) {
@@ -79,7 +81,7 @@ export function autoLoadout(state: GameState, scenarioId: Id, squadIds: SquadId[
 
   // Standard radios are automatic even when only one squad's optional gear is
   // targeted. They take distinct best-condition stock before optional choices.
-  const radioPlan = standardRadioPlan(state, chosen.filter((sid) => officers[sid]), time);
+  const radioPlan = standardRadioPlan(state, chosen.filter((sid) => officers[sid]), time, upkeep);
   if (radioPlan.issue) warn('standard-radios', radioPlan.issue);
   for (const sid of chosen) {
     for (const id of radioPlan.units[sid] ?? []) {
@@ -105,7 +107,7 @@ export function autoLoadout(state: GameState, scenarioId: Id, squadIds: SquadId[
         continue;
       }
       taken.add(id);
-      picks[sid]!.push({ ...unit, condition: projectedCondition(state, unit, time) });
+      picks[sid]!.push({ ...unit, condition: projectedCondition(state, unit, time, upkeep) });
     }
     for (const unit of picks[sid]!) {
       if (!locked(sid, unit.itemId)) counts[sid]![unit.itemId] = picks[sid]!.filter((u) => u.itemId === unit.itemId).length;
@@ -177,7 +179,7 @@ export function autoLoadout(state: GameState, scenarioId: Id, squadIds: SquadId[
         factor = Math.max(0, ...origin.map((at) => (eq.range === 'target' ? rangeToPoint(def, at, centroidOf(context.built, action.targetId)) : rangeThroughOpening(context.built, def, at, action.targetId)).factor));
       }
       const full = cap <= 1 ? eq.narrowValue ?? eq.value : eq.value;
-      const value = Math.round(full * effectiveness * factor * 10) / 10 - Math.round(EXPERIENCE_TUNING.malfunctionShare * full * (1 - effectiveness) * 10) / 10;
+      const value = Math.round(full * effectiveness * factor * 10) / 10 - Math.round(RESOLUTION_TUNING.malfunctionShare * full * (1 - effectiveness) * 10) / 10;
       if (value > 0) out.push({ value, minutes: 0, group: eq.group ?? eq.tag, prerequisites: [] });
     }
     for (const capability of def.capabilities ?? []) if (action.capabilities?.rules.includes(capability)) {

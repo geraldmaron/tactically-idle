@@ -19,7 +19,9 @@ const itemCopy = (id: string) => {
 describe('plain-language equipment and programs', () => {
   it('keeps every equipment and development mechanic unchanged by the copy pass', () => {
     expect(hashSeed(JSON.stringify(mechanics(ITEMS)))).toBe(3681832267);
-    expect(hashSeed(JSON.stringify(mechanics(DEV_NODES)))).toBe(2951777412);
+    // Command Staff hires were added after the capture; their mechanics are covered by command-staff.test.ts.
+    const captured = Object.fromEntries(Object.entries(DEV_NODES).filter(([, node]) => !node.effects.some((effect) => effect.kind === 'commandStaff')));
+    expect(hashSeed(JSON.stringify(mechanics(captured)))).toBe(2951777412);
   });
 
   it('explains an everyday purpose before presenting game-score details', () => {

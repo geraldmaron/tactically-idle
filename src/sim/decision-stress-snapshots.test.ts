@@ -2,7 +2,6 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { SCENARIOS } from '../content/scenarios';
 import { HOUR_MS, settle } from './economy';
 import { decisionViews, lastDecisionView } from './operation-selectors';
-import { initializePersonnel } from './personnel';
 import { next } from './rng';
 import { CURRENT_SAVE_VERSION, deserialize, serialize } from './save';
 import type { ActionDefinition, OutcomeEffect, ScenarioDefinition } from './scenario-types';
@@ -36,12 +35,11 @@ function fixture(): ScenarioDefinition {
   return scenario;
 }
 
-function started(practice = false): GameState {
+function started(): GameState {
   const state = makeState();
   state.saveVersion = CURRENT_SAVE_VERSION;
-  state.contentVersion = 3;
-  initializePersonnel(state);
-  return startRun(state, ID, ['A'], { practice });
+  state.contentVersion = 13;
+  return startRun(state, ID, ['A']);
 }
 
 function decide(state: GameState): GameState {
@@ -102,52 +100,9 @@ describe('decision-time stress snapshots', () => {
     expect(deserialize(serialize(closed.state, NOW + HOUR_MS))!.debriefs[0].decisions).toEqual(views);
   });
 
-  it('leaves practice officers unchanged and records no stress rows', () => {
-    const state = started(true);
-    state.officers.off_chen.stress = 47;
-    const resolved = decide(decide(decide(state)));
-    expect(resolved.officers).toEqual(state.officers);
-    for (const record of resolved.activeRun!.history) {
-      expect(record.stressDeltas).toEqual({});
-      expect(record.stressLevels).toEqual({});
-    }
-    expect(decisionViews(resolved).every((view) => view.stressDeltas.length === 0)).toBe(true);
-    expect(deserialize(serialize(resolved, NOW))!.activeRun).toEqual(resolved.activeRun);
-  });
 
-  it.each([1, 2])('captures new legacy scenario decisions without changing stored requested strain (v%s)', (version) => {
-    SCENARIOS[ID].version = version;
-    const initial = started();
-    for (const id of initial.squads[0].officerIds) initial.officers[id].stress = 99.5;
-    const state = decide(initial);
-    const record = state.activeRun!.history[0];
-    expect(record).not.toHaveProperty('committed');
-    expect(record.stressDeltas.off_chen).toBeGreaterThan(0.5);
-    expect(lastDecisionView(state)).toMatchObject({ actualStressDeltas: true });
-    expect(lastDecisionView(state)!.stressDeltas[0]).toMatchObject({ delta: 0.5, stressBefore: 99.5, stressAfter: 100 });
-    expect(deserialize(serialize(state, NOW))!.activeRun).toEqual(state.activeRun);
-  });
 
-  it.each([1, 3])('loads existing active and archived decisions without inventing missing levels (v%s)', (version) => {
-    SCENARIOS[ID].version = version;
-    let state = decide(started());
-    delete state.activeRun!.history[0].stressLevels;
-    const savedDelta = state.activeRun!.history[0].stressDeltas.off_chen;
-    state.officers.off_chen.stress = 100;
-    state = deserialize(serialize(state, NOW))!;
-    const first = lastDecisionView(state)!;
-    expect(first.actualStressDeltas).toBe(version === 3);
-    expect(first.stressDeltas[0].delta).toBe(savedDelta);
-    expect(first.stressDeltas.every((row) => !('stressBefore' in row) && !('stressAfter' in row))).toBe(true);
-    state = decide(decide(state));
-    state = apply(state, { type: 'closeDebrief' }).state;
-    const archived = structuredClone(state.debriefs[0].decisions![0]);
-    state.officers.off_chen.stress = 0;
-    const loaded = deserialize(serialize(state, NOW))!;
-    expect(loaded.debriefs[0].decisions![0]).toEqual(archived);
-    expect(loaded.debriefs[0].decisions![0].stressDeltas[0]).not.toHaveProperty('stressBefore');
-    expect(loaded.department).toEqual(state.department);
-  });
+
 });
 
 describe('saved stress snapshot validation', () => {

@@ -18,7 +18,17 @@ describe('stress as a condition reading', () => {
     const html = render({ value: 60.1, before: 58.9 });
     expect(html).toContain('before 58.9, change +1.2');
     expect(html).toContain('Under strain <span aria-hidden="true">→</span> Overloaded');
-    expect(html).toContain('+1.2 stress');
+    // On screen the readings are whole numbers that agree with their bands; the change matches them.
+    expect(html).toContain('58 <span aria-hidden="true">→</span> 60');
+    expect(html).toContain('+2 stress');
+    expect(html).not.toContain('>60.1<');
+  });
+  it('shows whole readings without hiding a change too small to move them', () => {
+    const html = render({ value: 12.9, before: 12.2 });
+    expect(html).toContain('12<small>/100</small>');
+    expect(html).toContain('Slightly up');
+    expect(html).not.toContain('No change');
+    expect(render({ value: 29.9 })).toContain('29<small>/100</small>');
   });
   it('never paints a made-up minimum stress or hides recovery', () => {
     expect(render({ value: 0 })).toContain('left:0%');

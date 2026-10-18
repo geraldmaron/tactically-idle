@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-// Saves rebuild `_g1` buildings from (familyId, seed) alone, on whatever engine the player runs.
+// Saves rebuild `_g2` buildings from (familyId, seed) alone, on whatever engine the player runs.
 // ECMA-262 §21.3.2 lets engines approximate these functions (and the `**` operator, which is
 // Number::exponentiate, like Math.pow), so none may appear in generator code. Math.sqrt is
 // exempt: §21.3.2.33 defines it as the correctly rounded root. Math.random is banned outright.

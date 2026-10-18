@@ -1,24 +1,24 @@
 import { describe, expect, it } from 'vitest';
-import { ASH_GROVE, JUNIPER_COURT, RESIDENTIAL_FAMILIES_V1 } from '../../content/locations/residential-v1';
-import { createInitialState } from '../../sim/department';
+import { ASH_GROVE, JUNIPER_COURT, RESIDENTIAL_FAMILIES } from '../../content/locations/residential';
 import { buildLocation, deriveLocation, pointInPolygon } from '../../sim/location';
 import { applyChoices } from '../../sim/location-variation';
-import { actionViews, builtForScenario, previewAction } from '../../sim/operation-selectors';
-import { deserialize, serialize } from '../../sim/save';
+import { builtForScenario } from '../../sim/operation-selectors';
 import { signalBetween } from '../../sim/spatial';
-import { routeBetween } from '../../sim/spatial-factors';
-import { apply, NOW, startCmd } from '../../sim/test-fixtures';
+import { routeBetween } from '../../sim/routes';
 import type { BuiltLocation, Vec } from '../../sim/types';
 import { drawIncidentSpec, generateIncident, INCIDENT_TYPES } from './index';
 
 function freeOfFurniture(built: BuiltLocation, spaceId: string, point: Vec): boolean {
-  return !built.location.objects.some((object) => object.in === spaceId && object.tags.includes('blocks_space')
-    && point.x >= object.x - 0.4 && point.x <= object.x + object.w + 0.4
-    && point.y >= object.y - 0.4 && point.y <= object.y + object.h + 0.4);
+  return !built.location.objects.some(object => {
+    if (object.in !== spaceId || !object.tags.includes('blocks_space')) return false;
+    const rotated = object.rotation === 90 || object.rotation === 270;
+    return Math.abs(point.x - object.x - object.w / 2) <= (rotated ? object.h : object.w) / 2 + 0.4
+      && Math.abs(point.y - object.y - object.h / 2) <= (rotated ? object.w : object.h) / 2 + 0.4;
+  });
 }
 
 describe('versioned residential structures', () => {
-  it.each(RESIDENTIAL_FAMILIES_V1)('$id validates 500 seeds with usable anchors and reachable rooms from every entry', (family) => {
+  it.each(RESIDENTIAL_FAMILIES)('$id validates 500 seeds with usable anchors and reachable rooms from every entry', (family) => {
     const plans = new Set<string>();
     const connections = new Set<string>();
     for (let seed = 0; seed < 500; seed++) {
@@ -75,61 +75,26 @@ describe('versioned residential structures', () => {
     }
   });
 
-  it('offers fresh families while existing board families are occupied', () => {
+  it('offers a fresh supported family when another building is available', () => {
     const existing = ['cedar_close', 'harbour_court', 'market_row'];
-    const drawn = new Set<string>();
     for (let seed = 0; seed < 100; seed++) {
-      const result = drawIncidentSpec(seed, { level: 1, trust: 80, contentVersion: 1, avoidFamilies: existing });
-      expect(existing).not.toContain(result.spec.familyId);
-      drawn.add(result.spec.familyId);
+      const result = drawIncidentSpec(seed, { level: 1, trust: 80, avoidFamilies: existing });
+      const info = INCIDENT_TYPES.find(info => info.type === result.spec.type)!;
+      if (info.families.some(id => !existing.includes(id))) expect(existing).not.toContain(result.spec.familyId);
     }
-    expect([...drawn].sort()).toEqual(RESIDENTIAL_FAMILIES_V1.map((family) => family.id).sort());
   });
 });
 
-describe('residential incident fairness and persistence', () => {
-  it.each(RESIDENTIAL_FAMILIES_V1)('$id places people in every eligible room without furniture collisions', (family) => {
-    const occupied = new Set<string>();
+describe('current residential placement', () => {
+  it.each(RESIDENTIAL_FAMILIES)('$id places people without furniture collisions', family => {
     for (let seed = 0; seed < 100; seed++) {
-      const scenario = generateIncident({ type: 'medical_complication', familyId: family.id, buildingSeed: seed, seed, tier: 1 + seed % 5, contentVersion: 1 });
+      const scenario = generateIncident({ type: 'barricaded', familyId: family.id, buildingSeed: seed, seed, tier: 1 + seed % 5, contentVersion: 13 });
       const built = builtForScenario(scenario.id);
-      const fact = scenario.facts[0];
-      const room = built.location.rooms.find((room) => room.id === fact.spaceId)!;
-      occupied.add(room.id);
-      expect(pointInPolygon(fact.person!.at!, room.polygon)).toBe(true);
-      expect(freeOfFurniture(built, room.id, fact.person!.at!)).toBe(true);
-    }
-    expect([...occupied].sort()).toEqual(family.base.rooms.filter((room) => ['bedroom', 'bathroom', 'living'].includes(room.type)).map((room) => room.id).sort());
-  });
-
-  it.each(RESIDENTIAL_FAMILIES_V1)('$id preserves both issued equipment-free paths at every entrance and tier while hiding the retired handover', (family) => {
-    for (const seed of [0, 7, 63]) for (const type of INCIDENT_TYPES.filter((type) => type.families.includes(family.id))) {
-      const scenario = generateIncident({ type: type.type, familyId: family.id, buildingSeed: seed, seed, tier: seed === 0 ? 1 : seed === 7 ? 3 : 5, contentVersion: 1 });
-      for (const entry of family.base.entries) for (const path of [
-        ['gen_observe', 'gen_verify', 'gen_resolve'],
-        ['gen_contact', 'gen_coordinate', 'gen_handover'],
-      ]) {
-        let state = createInitialState(NOW);
-        const start = apply(state, startCmd(scenario.id, ['A'], { positions: { A: entry }, loadouts: { A: {} }, practice: true }));
-        expect(start.result, `${scenario.id} at ${entry}`).toEqual({ ok: true });
-        state = start.state;
-        for (const actionId of path) {
-          const visible = actionViews(state, NOW, 'A').find((choice) => choice.id === actionId);
-          if (actionId === 'gen_handover') expect(visible).toBeUndefined();
-          // Direct replay preserves the issued v1 contract; current players do not see this exit.
-          const choice = actionId === 'gen_handover' ? previewAction(state, NOW, actionId, ['A'], [])! : visible!;
-          expect(choice?.eligible, `${scenario.id} at ${entry}: ${actionId}: ${choice?.reason}`).toBe(true);
-          const decision = apply(state, { type: 'decide', actionId, actingSquadIds: choice.actingSquadIds, supportSquadIds: choice.supportSquadIds });
-          expect(decision.result).toEqual({ ok: true });
-          const restored = deserialize(serialize(decision.state, NOW))!;
-          expect(restored).not.toBeNull();
-          expect(restored.activeRun).toEqual(decision.state.activeRun);
-          state = restored;
-        }
-        expect(state.activeRun?.status).toBe('debrief');
-        expect(state.activeRun?.responseFailure).toBeUndefined();
-        if (path[2] === 'gen_handover') expect(state.activeRun?.endingId).toBe('handed_over');
+      for (const person of Object.values(scenario.story!.bindings.people)) {
+        const at = person.initial;
+        expect(pointInPolygon(at.at, [...built.location.rooms, ...built.location.zones].find(space => space.id === at.spaceId)!.polygon)).toBe(true);
+        expect(freeOfFurniture(built, at.spaceId, at.at)).toBe(true);
       }
     }
-  }, 20_000);
+  });
 });

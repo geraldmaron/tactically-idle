@@ -1,13 +1,19 @@
 import { reserveSupportVehicle, supportStartCheck } from './support-vehicles';
 import { isGenericResponseExit, responseFailurePlan } from './response-failure';
-import { availableStageContinuations, legacyStageNavigation } from './compatibility/legacy-choices';
 import { currentStoryPrompt } from './story-context';
 import { storyMovedAlongRoute } from './story-people';
-import { validateStoryBindings } from './story-bindings';
-import { actionResultLabel } from './action-result';
+import { validateStoryBindings } from '../gen/incident/story-bindings';
+import { actionResultLabel, harmResultLabel } from './action-result';
 import { applyIncidentConsequences, applyPersonConsequences, civilianOutcomeViews, syncCasualtyFlags, syncPersonCasualtyFlags } from './incident-consequences';
-import { protectedOfficerEffects, resolveForceRisk } from './force-risk';
-import { applyExternalSupportEffects, completionEvidence, COMPLETION_DISPOSITIONS, hasCompletionConditions, MAX_EXTERNAL_RESPONSE_MINUTES } from './external-support';
+import { protectedOfficerEffects } from './force-risk';
+import { drawnKeys, resolveDrawn } from './drawn-effects';
+import { withVariants } from '../gen/incident/drawn-model';
+import { advanceClocks, clockConditionsHold, clockErrors, clockOutEffects, cueEffects, forkMinutes, initialClocks } from './clocks';
+import { applyMoves, initialMeters, meterConditionsHold } from './meters';
+import { applyCommitments } from './commitments';
+import { forceLines, OUTCOME_SCORE_V1, scoreCall } from './outcome-score';
+import { CAREER_TUNING } from './career';
+import { applyExternalSupportEffects, completionEvidence, COMPLETION_DISPOSITIONS, hasCompletionConditions, MAX_EXTERNAL_RESPONSE_MINUTES, savedDrawnEffects } from './external-support';
 // Operation engine: start, cancel, decide, closeDebrief. The run record is the
 // save: every committed decision stores its sample and result, so resuming never
 // rerolls. Resolution math lives in resolution.ts; content in content/scenarios.
@@ -34,42 +40,40 @@ import type {
 import type { ActionDefinition, OutcomeEffect, ScenarioDefinition } from './scenario-types';
 import { scenarioActions } from './scenario-types';
 import { getScenario } from './scenario-registry';
-import { INCIDENT_TUNING, PLAYER_ARC_CONTENT_VERSION, takeIncident } from './incidents';
+import { INCIDENT_TUNING, takeIncident } from './incidents';
 import { foldDebriefs } from './casebook';
 import { addService, departmentService, levelForService, serviceEarned } from './department-level';
 import { ITEMS } from '../content/items';
-import { legacyItemDefinition } from './compatibility/retirement';
 import { hashSeed, next } from './rng';
 import { deployability, fullName } from './officer';
 import { releaseRun, reserveLoadouts, settleRun, squadUnits } from './inventory';
 import { withStandardRadios } from './standard-kit';
 import { spaceAt, stagingPointById } from './spatial';
-import { centroidOf, defaultStagingFor, reachableOverGround } from './spatial-factors';
+import { centroidOf, defaultStagingFor, reachableOverGround, spaceLabel } from './spatial-factors';
 import {
+  availableUnits,
   bandFor,
   builtFor,
-  conditionHolds,
   evaluateAction,
   getBuilt,
   openingFlag,
   openingOverrides,
-  practiceUnits,
-  spaceName,
+  RESOLUTION_TUNING,
   squadLabel,
   strainFor,
-  vantageZones,
   type Evaluation,
 } from './resolution';
+import { conditionHolds } from './conditions';
+import { departmentUpkeep } from './equipment-manager-policy';
+import { vantageZones } from './sightlines';
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
 const clamp = (n: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, n));
 const STAGES: StageId[] = ['assess', 'adapt', 'resolve'];
-/** Outcome factor (objective and civilian safety blended) at or above which a run counts as favorable for careers. */
-export const CAREER_FAVORABLE_AT = 0.6;
-/** Below this it counts as adverse. Between the two it counts as an operation only. */
-export const CAREER_ADVERSE_BELOW = 0.4;
-/** V4 partial service retains credit, but unfinished responsibility cannot earn full settlement. */
-export const INCOMPLETE_SERVICE_FACTOR_MAX = 0.65;
+// Careers count a run as favorable at an outcome factor of CAREER_TUNING.favorableAt or more and as
+// adverse below CAREER_TUNING.adverseBelow (sim/career.ts); between the two, as an operation only.
+// V4 partial service retains credit, but unfinished responsibility can't earn full settlement: the
+// factor is capped at OUTCOME_SCORE_V1.factor.unfinishedMax (sim/outcome-score.ts).
 /** Ending used when a stage runs out of options (every scenario must define it). */
 export const FALLBACK_ENDING = 'handed_over';
 
@@ -89,7 +93,7 @@ export function validateScenario(s: ScenarioDefinition, built: BuiltLocation): s
   if (s.squadRange.min < 1 || s.squadRange.max > 3 || s.squadRange.min > s.squadRange.max) errs.push(`${s.id}: squad range must sit within 1..3`);
   if (!s.endings[FALLBACK_ENDING]) errs.push(`${s.id}: missing fallback ending ${FALLBACK_ENDING}`);
   const serviceIds = new Set((s.externalServices ?? []).map((service) => service.id));
-  if (s.version >= 4) {
+  {
     if (serviceIds.size !== (s.externalServices ?? []).length) errs.push(`${s.id}: duplicate external service`);
     for (const service of s.externalServices ?? []) {
       if (!service.id || !service.label.trim() || !service.kind.trim() || !service.description.trim()) errs.push(`${s.id}: external service needs a name, kind and description`);
@@ -106,11 +110,20 @@ export function validateScenario(s: ScenarioDefinition, built: BuiltLocation): s
     }
     if (s.endings[FALLBACK_ENDING]?.disposition !== 'unresolved') errs.push(`${s.id}: exhausted choices must end unresolved`);
   }
+  // v13: the incident's people are the story's people, standing where the story puts them.
+  for (const person of s.incidentPeople ?? []) {
+    const bound = s.story?.bindings.people[person.id];
+    if (!bound) { errs.push(`${s.id}: incident person ${person.id} is not a v13 story-bound person`); continue; }
+    if (bound.initial.spaceId !== person.spaceId || bound.initial.at.x !== person.at.x || bound.initial.at.y !== person.at.y) errs.push(`${s.id}: incident person ${person.id} is not where the story puts them`);
+    for (const factId of [person.armamentFactId, person.dispositionFactId]) if (factId && !factIds.has(factId)) errs.push(`${s.id}: incident person ${person.id} reads unknown fact ${factId}`);
+  }
+  errs.push(...clockErrors(s));
+  const meterIds = new Set((s.incidentPeople ?? []).filter(person => person.meters).map(person => person.id));
   for (const f of s.facts) {
     space(f.spaceId, `fact ${f.id}`);
     if (!f.claim.trim()) errs.push(`${s.id}: fact ${f.id} has no claim sentence`);
     for (const [label, at] of [['position', f.person?.at], ['reported position', f.person?.reportedAt]] as const) {
-      const floor = s.version >= 5 ? built.location.rooms.find(room => room.id === f.spaceId)?.floor ?? 0 : 0;
+      const floor = built.location.rooms.find(room => room.id === f.spaceId)?.floor ?? 0;
       if (at && spaceAt(built, at, floor) !== f.spaceId) errs.push(`${s.id}: fact ${f.id} ${label} is not inside ${f.spaceId}`);
     }
   }
@@ -121,24 +134,24 @@ export function validateScenario(s: ScenarioDefinition, built: BuiltLocation): s
       errs.push(`${s.id}: stage ${stage} has no actions`);
       continue;
     }
-    const always = st.actions.some((a) => !a.requires.certs && !a.requires.anyTags && !a.requires.allTags && !a.requires.minSquads && !a.requires.facts && !a.requires.flags && !a.requires.openings && !a.consumes);
-    if (!always && s.version < 8) errs.push(`${s.id}: stage ${stage} has no always-available action`);
     for (const a of st.actions) {
       if (seen.has(a.id)) errs.push(`${s.id}: duplicate action id ${a.id}`);
       seen.add(a.id);
       if (a.stage !== stage) errs.push(`${a.id}: declared stage ${a.stage} but listed under ${stage}`);
       if (a.forceProfile || a.personCare) {
         const personId = a.forceProfile?.personId ?? a.personCare?.personId;
-        if (s.version < 7 || !Object.values(s.story?.bindings.people ?? {}).some(person => person.id === personId)) errs.push(`${a.id}: force or care needs a V7 bound person`);
+        if (!Object.values(s.story?.bindings.people ?? {}).some(person => person.id === personId)) errs.push(`${a.id}: force or care needs a V7 bound person`);
         if (a.forceProfile && (a.check.kind !== 'execution' || a.commandOnly || a.storyTargetPersonId !== a.forceProfile.personId || !['firearm', 'less_lethal_device', 'less_lethal_impact'].includes(a.forceProfile.kind) || !['subject', 'civilian'].includes(a.forceProfile.personRole))) errs.push(`${a.id}: force must explicitly identify its execution target and profile`);
         if (a.forceProfile && !a.capabilities?.required?.some(capability => a.forceProfile!.kind === 'firearm'
           ? capability === 'authorized_response' || capability === 'specialist_support' : capability === a.forceProfile!.kind)) errs.push(`${a.id}: force needs an explicit matching required equipment capability`);
         if (a.personCare?.kind === 'stabilize' && (!a.requires.certs?.includes('advanced_first_aid') || !a.consumes?.some(use => use.tag === 'medkit' && use.qty >= 1))) errs.push(`${a.id}: person care needs a qualified first aider and trauma kit`);
         if (a.personCare?.kind === 'accept' && !s.externalServices?.some(service => service.id === a.personCare?.serviceId && service.kind === 'medical')) errs.push(`${a.id}: injured people need a medical receiving service`);
       }
-      if (s.version >= 7 && a.consumes?.some(use => !Number.isSafeInteger(use.qty) || use.qty <= 0)) errs.push(`${a.id}: consumption must request positive whole units`);
-      if (s.version >= 4) {
-        if (a.commandOnly && (a.approach !== 'none' || a.consumes?.length || a.check.kind === 'execution' || Object.values(a.outcomes).flat().some(effect => effect.officerHarm))) errs.push(`${a.id}: command decisions cannot perform field work or cause injury`);
+      if (a.consumes?.some(use => !Number.isSafeInteger(use.qty) || use.qty <= 0)) errs.push(`${a.id}: consumption must request positive whole units`);
+      for (const harm of withVariants(Object.values(a.outcomes).flat()).flatMap(effect => effect.personHarm ?? []))
+        if (!s.story?.bindings.people[harm.personId]) errs.push(`${a.id}: authored harm needs a v13 bound person, not ${harm.personId}`);
+      {
+        if (a.commandOnly && (a.approach !== 'none' || a.consumes?.length || a.check.kind === 'execution' || withVariants(Object.values(a.outcomes).flat()).some(effect => effect.officerHarm || effect.drawn))) errs.push(`${a.id}: command decisions cannot perform field work or cause injury`);
         for (const requirement of a.requires.externalSupport ?? []) if (!serviceIds.has(requirement.serviceId)) errs.push(`${a.id}: unknown required service ${requirement.serviceId}`);
         if (a.awaitSupport && !serviceIds.has(a.awaitSupport)) errs.push(`${a.id}: unknown service to await ${a.awaitSupport}`);
         const requests = Object.values(a.outcomes).flat().flatMap((effect) => effect.requestSupport ?? []);
@@ -169,8 +182,16 @@ export function validateScenario(s: ScenarioDefinition, built: BuiltLocation): s
           errs.push(`${a.id}: missing ${band} outcome`);
           continue;
         }
-        for (const e of effects) {
-          if (s.version >= 4) {
+        for (const e of effects) if (e.drawn) {
+          // v13 drawn consequences: a person the engine can read, and a variant for every result.
+          const id = e.drawn.model === 'incoming_fire' ? e.drawn.from : e.drawn.on;
+          const person = s.incidentPeople?.find(entry => entry.id === id);
+          if (!person) errs.push(`${a.id}: a drawn ${e.drawn.model} needs a v13 incident person, not ${id}`);
+          else if (e.drawn.model === 'incoming_fire' && !person.threat) errs.push(`${a.id}: incoming fire from ${id}, who carries no threat`);
+          for (const key of drawnKeys(e, s)) if (!e.variants?.[key]) errs.push(`${a.id}: drawn ${e.drawn.model} has no ${key} variant (${band})`);
+        }
+        for (const e of withVariants(effects)) {
+          {
             if (e.officerHarm && (!['wounded', 'serious'].includes(e.officerHarm.severity) || !e.officerHarm.label.trim())) errs.push(`${a.id}: invalid officer injury`);
             if (e.officerCare === 'stabilize' && (!a.requires.certs?.includes('advanced_first_aid') || !a.consumes?.some(use => use.tag === 'medkit' && use.qty >= 1))) errs.push(`${a.id}: field care needs a first aider and trauma kit`);
             if (e.officerCare === 'evacuate' && !s.externalServices?.some(service => service.kind === 'medical' && e.acceptSupport?.includes(service.id))) errs.push(`${a.id}: injured officers need an explicit medical receiver`);
@@ -181,12 +202,15 @@ export function validateScenario(s: ScenarioDefinition, built: BuiltLocation): s
           for (const k of e.knowledge ?? []) fact(k.factId, `action ${a.id} outcome`);
           for (const id of e.reveal ?? []) fact(id, `action ${a.id} reveal`);
           for (const entry of e.truth ?? []) fact(entry.factId, `action ${a.id} truth`);
+          // A clock this call doesn't have never runs out, so a fork on one is legal; a meter event
+          // on someone without meters is an authoring slip.
+          for (const move of e.moves ?? []) if (!meterIds.has(move.personId)) errs.push(`${a.id}: meter event on ${move.personId}, who has no meters`);
           for (const f of e.when?.facts ?? []) fact(f.factId, `action ${a.id} outcome`);
           if (e.ending && !s.endings[e.ending]) errs.push(`${a.id}: unknown ending ${e.ending}`);
           for (const o of e.openings ?? []) if (!built.location.openings.some((x) => x.id === o.openingId)) errs.push(`${a.id}: unknown opening ${o.openingId}`);
-          if (e.storyExitState && (s.version < 5 || !a.storyRoute || !s.story?.bindings.routes[a.storyRoute])) errs.push(`${a.id}: a story exit change needs a bound movement route`);
+          if (e.storyExitState && (!a.storyRoute || !s.story?.bindings.routes[a.storyRoute])) errs.push(`${a.id}: a story exit change needs a bound movement route`);
         }
-        if (stage === 'resolve' && !effects.some((e) => (e.ending || (s.version >= 3 && e.stage === 'resolve')) && !e.when && !e.truth)) errs.push(`${a.id}: resolve action must always reach an ending (${band})`);
+        if (stage === 'resolve' && !effects.some((e) => (e.ending || (e.stage === 'resolve')) && !e.when && !e.truth)) errs.push(`${a.id}: resolve action must always reach an ending (${band})`);
       }
     }
   }
@@ -195,7 +219,7 @@ export function validateScenario(s: ScenarioDefinition, built: BuiltLocation): s
 
 // ---------------------------------------------------------------- start
 
-export function initialKnowledge(s: ScenarioDefinition): Record<Id, KnowledgeStatus> {
+function initialKnowledge(s: ScenarioDefinition): Record<Id, KnowledgeStatus> {
   const k: Record<Id, KnowledgeStatus> = {};
   for (const f of s.facts) k[f.id] = f.initial;
   return k;
@@ -221,10 +245,9 @@ export function checkStart(state: GameState, now: number, cmd: StartCmd): StartC
     issues.push(`Unknown operation ${cmd.scenarioId}`);
     return { issues, warnings, scenario, built };
   }
-  if (scenario.incident && !cmd.practice && !state.incidents?.some((c) => c.id === scenario.id && c.expiresAt > Math.max(now, state.department.clockHighWater))) {
-    issues.push('This incident is no longer on the board. Replay it in practice.');
+  if (scenario.incident && !state.incidents?.some((c) => c.id === scenario.id && c.expiresAt > Math.max(now, state.department.clockHighWater))) {
+    issues.push('This incident is no longer on the board.');
   }
-  if (scenario.practiceOnly && !cmd.practice) issues.push('This training exercise is practice only');
   issues.push(...supportStartCheck(state, now, cmd));
   const ids = cmd.squadIds;
   if (ids.length < 1) issues.push('Choose at least one squad');
@@ -250,13 +273,8 @@ export function checkStart(state: GameState, now: number, cmd: StartCmd): StartC
       const prev = seenOfficers.get(oid);
       if (prev) issues.push(`${fullName(o)} is in both ${squadLabel(prev)} and ${squadLabel(sid)}`);
       seenOfficers.set(oid, sid);
-      if (cmd.practice) {
-        if (o.assignment?.kind === 'training') issues.push(`${squadLabel(sid)}: ${o.surname} is in training`);
-        else if (o.assignment?.kind === 'operation') issues.push(`${squadLabel(sid)}: ${o.surname} is already deployed`);
-      } else {
-        const d = deployability(o, now);
-        if (!d.ok) issues.push(`${squadLabel(sid)}: ${d.reason}`);
-      }
+      const d = deployability(o, now);
+      if (!d.ok) issues.push(`${squadLabel(sid)}: ${d.reason}`);
     }
   }
 
@@ -281,16 +299,15 @@ export function checkStart(state: GameState, now: number, cmd: StartCmd): StartC
     for (const sid of Object.keys(cmd.staging ?? {}) as SquadId[]) if (!ids.includes(sid)) issues.push(`Staging given for ${squadLabel(sid)}, which is not deployed`);
   }
 
-  if (!cmd.practice) {
-    const standard = withStandardRadios(state, ids, cmd.loadouts, cmd.units, now);
-    if (standard.issue) issues.push(standard.issue);
-    cmd = { ...cmd, loadouts: standard.loadouts, units: standard.units };
-    for (const sid of Object.keys(cmd.units ?? {}) as SquadId[]) if (!ids.includes(sid)) issues.push(`Equipment given for ${squadLabel(sid)}, which is not deployed`);
-    for (const sid of Object.keys(cmd.loadouts) as SquadId[]) if (!ids.includes(sid)) issues.push(`Loadout given for ${squadLabel(sid)}, which is not deployed`);
-    const probe = structuredClone(state);
-    const r = reserveLoadouts(probe, 'probe', cmd.loadouts, cmd.units, now);
-    if (!r.ok && !standard.issue) issues.push(r.reason);
-  }
+  const upkeep = departmentUpkeep(state);
+  const standard = withStandardRadios(state, ids, cmd.loadouts, cmd.units, now, upkeep);
+  if (standard.issue) issues.push(standard.issue);
+  cmd = { ...cmd, loadouts: standard.loadouts, units: standard.units };
+  for (const sid of Object.keys(cmd.units ?? {}) as SquadId[]) if (!ids.includes(sid)) issues.push(`Equipment given for ${squadLabel(sid)}, which is not deployed`);
+  for (const sid of Object.keys(cmd.loadouts) as SquadId[]) if (!ids.includes(sid)) issues.push(`Loadout given for ${squadLabel(sid)}, which is not deployed`);
+  const probe = structuredClone(state);
+  const r = reserveLoadouts(probe, 'probe', cmd.loadouts, cmd.units, now, upkeep);
+  if (!r.ok && !standard.issue) issues.push(r.reason);
 
   if (issues.length === 0 && built) warnings.push(...startWarnings(state, now, scenario, built, cmd));
   return { issues, warnings, scenario, built };
@@ -300,8 +317,8 @@ function startWarnings(state: GameState, now: number, scenario: ScenarioDefiniti
   const out: string[] = [];
   const probe = structuredClone(state);
   const unitOverride = {} as Record<SquadId, ItemUnit[]>;
-  if (!cmd.practice) reserveLoadouts(probe, 'preview', cmd.loadouts, cmd.units, now);
-  for (const sid of cmd.squadIds) unitOverride[sid] = cmd.practice ? practiceUnits(state) : squadUnits(probe, 'preview', sid);
+  reserveLoadouts(probe, 'preview', cmd.loadouts, cmd.units, now, departmentUpkeep(state));
+  for (const sid of cmd.squadIds) unitOverride[sid] = squadUnits(probe, 'preview', sid);
   const run = makeRun(state, built, scenario, cmd, 'preview', 0, 0);
   for (const a of scenarioActions(scenario)) {
     const perm: OperationRun = { ...run, knowledge: { ...run.knowledge }, flags: [...run.flags] };
@@ -315,7 +332,7 @@ function startWarnings(state: GameState, now: number, scenario: ScenarioDefiniti
       out.push(`${a.title}: ${best.reason}`);
     }
   }
-  if (cmd.squadIds.length > 1 && !cmd.practice) {
+  if (cmd.squadIds.length > 1) {
     for (const sid of cmd.squadIds) {
       const hasKit = unitOverride[sid].some((u) => ITEMS[u.itemId]?.tags.includes('comms_kit'));
       if (!hasKit) out.push(`${squadLabel(sid)} has no radio kit: coordination with other squads will be slower`);
@@ -329,7 +346,7 @@ function startWarnings(state: GameState, now: number, scenario: ScenarioDefiniti
  * must lie in that zone, or on open ground reachable from it (the squad then starts
  * there). The default is the nearest door staging point to the position.
  */
-export function resolveStart(built: BuiltLocation, cmd: StartCmd, sid: SquadId): { positionId: Id; stagingId: Id | null; at: Vec } | { error: string } {
+function resolveStart(built: BuiltLocation, cmd: StartCmd, sid: SquadId): { positionId: Id; stagingId: Id | null; at: Vec } | { error: string } {
   const pos = cmd.positions[sid] ?? '';
   const chosen = cmd.staging?.[sid];
   if (chosen) {
@@ -338,7 +355,7 @@ export function resolveStart(built: BuiltLocation, cmd: StartCmd, sid: SquadId):
     if (sp.spaceId === pos) return { positionId: pos, stagingId: sp.id, at: sp.at };
     const isZone = built.location.zones.some((z) => z.id === sp.spaceId);
     if (isZone && reachableOverGround(built, pos, sp.spaceId)) return { positionId: sp.spaceId, stagingId: sp.id, at: sp.at };
-    return { error: `${squadLabel(sid)} cannot stage there: that point is not in the ${spaceName(built, pos).toLowerCase()} or on open ground reachable from it` };
+    return { error: `${squadLabel(sid)} cannot stage there: that point is not in the ${spaceLabel(built, pos).toLowerCase()} or on open ground reachable from it` };
   }
   const sp = defaultStagingFor(built, pos);
   return sp ? { positionId: pos, stagingId: sp.id, at: sp.at } : { positionId: pos, stagingId: null, at: centroidOf(built, pos) };
@@ -349,14 +366,13 @@ function makeRun(state: GameState, built: BuiltLocation, scenario: ScenarioDefin
     id: runId,
     scenarioId: scenario.id,
     scenarioVersion: scenario.version,
-    ...(!cmd.practice && state.incidents?.some((c) => c.id === scenario.id)
+    ...(state.incidents?.some((c) => c.id === scenario.id)
       ? { sourceIncident: structuredClone(state.incidents.find((c) => c.id === scenario.id)!) }
       : {}),
     locationFamilyId: scenario.locationFamilyId,
     locationSeed: scenario.locationSeed,
     contentVersion: state.contentVersion,
     rngState,
-    practice: cmd.practice,
     squadIds: [...cmd.squadIds],
     squadTasks: cmd.squadIds.map((sid) => {
       const st = resolveStart(built, cmd, sid);
@@ -368,8 +384,10 @@ function makeRun(state: GameState, built: BuiltLocation, scenario: ScenarioDefin
     stage: 'assess',
     knowledge: initialKnowledge(scenario),
     flags: [],
-    ...(scenario.version >= 4 ? { externalSupport: {} } : {}),
+    ...({ externalSupport: {} }),
     clock: 0,
+    ...(initialClocks(scenario) ? { clocks: initialClocks(scenario) } : {}),
+    ...(initialMeters(scenario) ? { meters: initialMeters(scenario) } : {}),
     pressure: scenario.pressure.start,
     objective: 0,
     civilianSafety: 100,
@@ -384,8 +402,9 @@ function makeRun(state: GameState, built: BuiltLocation, scenario: ScenarioDefin
 
 // ---------------------------------------------------------------- effects and time
 
-/** Advance operation time: pressure rises; civilian safety falls above the threshold. */
-export function advanceTime(run: Pick<OperationRun, 'clock' | 'pressure' | 'civilianSafety'>, s: ScenarioDefinition, minutes: number): { civilianLoss: number; crossed: boolean } {
+/** Advance operation time: pressure rises; civilian safety falls above the threshold; v13 clocks run
+ * down, and the cues they pass come back as effects for the caller to apply (applyClockCues). */
+export function advanceTime(run: Pick<OperationRun, 'clock' | 'pressure' | 'civilianSafety'> & Partial<Pick<OperationRun, 'clocks' | 'flags'>>, s: ScenarioDefinition, minutes: number): { civilianLoss: number; crossed: boolean; cues: OutcomeEffect[] } {
   const m = s.pressure;
   const p0 = run.pressure;
   let over = 0;
@@ -395,19 +414,29 @@ export function advanceTime(run: Pick<OperationRun, 'clock' | 'pressure' | 'civi
   run.clock = round1(run.clock + minutes);
   run.pressure = round1(clamp(p0 + m.perMinute * minutes, 0, 100));
   run.civilianSafety = round1(clamp(run.civilianSafety - loss, 0, 100));
-  return { civilianLoss: loss, crossed: p0 < m.threshold && run.pressure >= m.threshold };
+  const cues = run.clocks && run.flags ? advanceClocks(run as Pick<OperationRun, 'clocks' | 'flags'>, s, minutes) : [];
+  return { civilianLoss: loss, crossed: p0 < m.threshold && run.pressure >= m.threshold, cues };
 }
 
-/** Hidden truth is consulted only when committing/replaying an outcome, never in previews. */
-export function matchedEffects(action: ActionDefinition, band: OutcomeBand, run: Pick<OperationRun, 'knowledge' | 'flags' | 'pressure'>, scenario: ScenarioDefinition): OutcomeEffect[] {
-  return action.outcomes[band]
-    .filter((effect) => conditionHolds(effect.when, run) && (effect.truth ?? []).every((entry) => scenario.facts.find((fact) => fact.id === entry.factId)?.truth === entry.is))
-    .map((effect) => effect.reveal?.length ? { ...effect, knowledge: [...effect.knowledge ?? [], ...effect.reveal.map((factId) => ({ factId, status: scenario.facts.find((fact) => fact.id === factId)?.truth ? 'confirmed' as const : 'disproved' as const }))] } : effect);
+/** Hidden truth is consulted only when committing/replaying an outcome, never in previews. So are
+ * the v13 engine-only branches: clocks at the end of the choice's minutes, and the subjects' meters
+ * as they stand at the start of the decision (escalation, sim/meters.ts). */
+export function matchedEffects(action: ActionDefinition, band: OutcomeBand, run: Pick<OperationRun, 'knowledge' | 'flags' | 'pressure'> & Partial<Pick<OperationRun, 'clocks' | 'meters'>>, scenario: ScenarioDefinition): OutcomeEffect[] {
+  return matchedOutcomeIndices(action, band, run, scenario).map((index) => {
+    const effect = action.outcomes[band][index];
+    return effect.reveal?.length ? { ...effect, knowledge: [...effect.knowledge ?? [], ...effect.reveal.map((factId) => ({ factId, status: scenario.facts.find((fact) => fact.id === factId)?.truth ? 'confirmed' as const : 'disproved' as const }))] } : effect;
+  });
+}
+
+/** Which of the band's authored outcomes apply (their indices, in order): matchedEffects' filter. */
+export function matchedOutcomeIndices(action: ActionDefinition, band: OutcomeBand, run: Pick<OperationRun, 'knowledge' | 'flags' | 'pressure'> & Partial<Pick<OperationRun, 'clocks' | 'meters'>>, scenario: ScenarioDefinition): number[] {
+  return action.outcomes[band].flatMap((effect, index) => conditionHolds(effect.when, run) && (effect.truth ?? []).every((entry) => scenario.facts.find((fact) => fact.id === entry.factId)?.truth === entry.is)
+    && clockConditionsHold(effect.clocks, scenario, run, forkMinutes(action, band, effect)) && meterConditionsHold(effect.meters, run) ? [index] : []);
 }
 
 /** Resolve an authored exit change from this evaluation's route, never a stale binding path. */
 function storyExitEffects(scenario: ScenarioDefinition, action: ActionDefinition, built: BuiltLocation, effects: OutcomeEffect[], personMoved: boolean): OutcomeEffect[] {
-  if (!personMoved || scenario.version < 5 || !action.storyRoute || !effects.some(effect => effect.storyExitState)) return effects;
+  if (!personMoved || !action.storyRoute || !effects.some(effect => effect.storyExitState)) return effects;
   const route = scenario.story?.bindings.routes[action.storyRoute];
   if (!route) return effects;
   const rooms = new Set(built.location.rooms.map(room => room.id));
@@ -460,6 +489,12 @@ function applyEffects(
   return { changes, stage, ending };
 }
 
+/** Apply the cues a stretch of time fired (advanceTime): marks, and the facts they settle. */
+export function applyClockCues(run: Pick<OperationRun, 'knowledge' | 'flags' | 'pressure' | 'objective' | 'civilianSafety'>, scenario: ScenarioDefinition, fired: OutcomeEffect[]): { effects: OutcomeEffect[]; changes: { factId: Id; status: KnowledgeStatus }[] } {
+  const effects = cueEffects(fired, scenario, run);
+  return { effects, changes: applyEffects(run, effects).changes };
+}
+
 export interface StepTrace {
   resolution: DecisionResolution;
   action: ActionDefinition | null;
@@ -474,28 +509,44 @@ export interface StepTrace {
 
 /** Re-derive each committed decision's deltas from stored bands. Deterministic. */
 export function traceRun(scenario: ScenarioDefinition, run: OperationRun): { steps: StepTrace[]; end: Pick<OperationRun, 'knowledge' | 'flags' | 'pressure' | 'objective' | 'civilianSafety' | 'clock'> } {
-  const sim: Pick<OperationRun, 'knowledge' | 'flags' | 'pressure' | 'objective' | 'civilianSafety' | 'clock' | 'personCasualties' | 'officerCasualties'> = { knowledge: initialKnowledge(scenario), flags: [], pressure: scenario.pressure.start, objective: 0, civilianSafety: 100, clock: 0 };
+  const sim: Pick<OperationRun, 'knowledge' | 'flags' | 'pressure' | 'objective' | 'civilianSafety' | 'clock' | 'clocks' | 'personCasualties' | 'officerCasualties' | 'meters' | 'commitments'> = { knowledge: initialKnowledge(scenario), flags: [], pressure: scenario.pressure.start, objective: 0, civilianSafety: 100, clock: 0,
+    ...(initialClocks(scenario) ? { clocks: initialClocks(scenario) } : {}), ...(initialMeters(scenario) ? { meters: initialMeters(scenario) } : {}) };
   const actions = new Map(scenarioActions(scenario).map((a) => [a.id, a]));
   const steps: StepTrace[] = [];
-  for (const resupply of run.resupplies ?? []) advanceTime(sim, scenario, resupply.minutes);
+  for (const resupply of run.resupplies ?? []) applyClockCues(sim, scenario, advanceTime(sim, scenario, resupply.minutes).cues);
   for (const h of run.history) {
     const a = actions.get(h.actionId) ?? null;
     const matched = a ? matchedEffects(a, h.band, sim, scenario) : [];
     const pressure0 = sim.pressure;
     const obj0 = sim.objective;
     const civ0 = sim.civilianSafety;
-    advanceTime(sim, scenario, h.timeCost);
+    const clocksBefore = sim.clocks;
+    const timed = advanceTime(sim, scenario, h.timeCost);
     const civAfterTime = sim.civilianSafety;
-    applyEffects(sim, matched);
+    // v13: the drawn variants the commit applied, its clock outs, and the meters and commitments
+    // it moved, in the commit's order, so later meter and clock branches match what the engine saw.
+    const applied = savedDrawnEffects(matched, h.committed?.drawn).effects;
+    applyEffects(sim, applied);
+    applyClockCues(sim, scenario, timed.cues);
+    {
+      applyEffects(sim, clockOutEffects(scenario, clocksBefore, sim.clocks, sim, applied));
+      applyMoves(sim, scenario, applied);
+      if (a) {
+        const view = { flags: sim.flags, clock: sim.clock, revision: h.revision, meters: sim.meters, commitments: sim.commitments };
+        applyCommitments(view, scenario, a, h.band, applied, h.committed?.drawn ?? [], h.revision);
+        if (view.meters) sim.meters = view.meters;
+        if (view.commitments) sim.commitments = view.commitments;
+      }
+    }
     // Saved v3 deltas are authoritative, including clamping. Older histories retain
     // the original replay through their versioned content and stored outcome bands.
     if (h.committed) {
-      if (scenario.version >= 7) {
+      {
         for (const person of h.committed.personCasualties ?? []) { sim.personCasualties ??= {}; sim.personCasualties[person.personId] = { ...person }; }
         for (const officer of h.committed.officerCasualties ?? []) { sim.officerCasualties ??= {}; sim.officerCasualties[officer.officerId] = { ...officer }; }
         syncCasualtyFlags(sim); syncPersonCasualtyFlags(sim, scenario);
       }
-      if (scenario.version >= 5 && h.committed.openingChanges) applyEffects(sim, [{ openings: h.committed.openingChanges }]);
+      if (h.committed.openingChanges) applyEffects(sim, [{ openings: h.committed.openingChanges }]);
       sim.objective = round1(clamp(obj0 + h.committed.objectiveDelta, 0, 100));
       sim.civilianSafety = round1(clamp(civ0 + h.committed.civilianSafetyDelta, 0, 100));
       sim.pressure = round1(clamp(pressure0 + h.committed.pressureDelta, 0, 100));
@@ -539,7 +590,7 @@ export function decisionViewsFor(state: GameState, run: OperationRun, scenario: 
           ...(levels ? { stressBefore: levels.stressBefore, stressAfter: levels.stressAfter } : {}),
         };
       }),
-      supplies: record.itemsConsumed.filter((use) => legacyItemDefinition(use.itemId)?.kind === 'consumable').map((use) => ({ ...use, label: legacyItemDefinition(use.itemId)?.name ?? use.itemId })),
+      supplies: record.itemsConsumed.filter((use) => ITEMS[use.itemId]?.kind === 'consumable').map((use) => ({ ...use, label: ITEMS[use.itemId]?.name ?? use.itemId })),
       knowledgeChanges: record.knowledgeChanges.map((change) => ({ ...change, label: scenario.facts.find((fact) => fact.id === change.factId)?.label ?? change.factId })),
       contributors: record.inputs.map((input) => ({ ...input })),
       consequences: committed ? [...committed.consequences] : step.effects.map((effect) => effect.text).filter((text): text is string => !!text),
@@ -569,16 +620,7 @@ export function evaluateDefault(state: GameState, run: OperationRun, scenario: S
   return { ev: eligible[0] ?? evs[0], alternates: [] };
 }
 
-function anyEligible(state: GameState, run: OperationRun, scenario: ScenarioDefinition, built: BuiltLocation): boolean {
-  if (availableStageContinuations(scenario, run).length) return true;
-  for (const a of scenario.stages[run.stage as StageId].actions) {
-    if (run.history.some((h) => h.stage === run.stage && h.actionId === a.id)) continue;
-    for (const sq of run.squadIds) {
-      if (evaluateAction({ state, run, scenario, action: a, built, acting: [sq], support: defaultSupport(run, a, [sq]) }).eligible) return true;
-    }
-  }
-  return false;
-}
+
 
 // ---------------------------------------------------------------- explanation
 
@@ -597,11 +639,10 @@ function explain(
   consumed: { itemId: Id; qty: number }[],
   strain: Record<Id, number>,
   stageNote: string | null,
-  practice: boolean,
 ): string[] {
   const out: string[] = [];
   const who = ev.acting.map(squadLabel).join(' + ') + (ev.support.length ? ` with ${ev.support.map(squadLabel).join(' + ')}` : '');
-  out.push(ev.forceRisk ? `${ev.action.title}: the task effort ${BAND_WORD[band]} (${who}); harm is recorded separately.` : `${ev.action.title} ${BAND_WORD[band]} (${who}).`);
+  out.push(`${ev.action.title} ${BAND_WORD[band]} (${who}).`);
   out.push(...texts);
   const body = ev.contributors.filter((c) => c.source !== 'difficulty' && c.value !== 0);
   const best = [...body].sort((a, b) => b.value - a.value)[0];
@@ -617,7 +658,6 @@ function explain(
   for (const c of consumed) out.push(`Used ${c.qty} ${ITEMS[c.itemId]?.name.toLowerCase() ?? c.itemId}.`);
   const top = Object.entries(strain).sort((a, b) => b[1] - a[1])[0];
   if (top && top[1] >= 1) out.push(`Most strain: ${state.officers[top[0]]?.surname ?? top[0]} (+${top[1]}).`);
-  if (practice) out.push('Practice run: nothing is recorded to the department.');
   if (stageNote) out.push(stageNote);
   return out;
 }
@@ -628,7 +668,8 @@ const objectiveLabel = (n: number) => (n >= 80 ? 'Resolved' : n >= 60 ? 'Largely
 const civilianLabel = (n: number) => (n >= 90 ? 'Everyone safe' : n >= 70 ? 'Minor risk' : n >= 45 ? 'Safety was strained' : 'Serious risk');
 
 export function outcomeFactor(run: Pick<OperationRun, 'objective' | 'civilianSafety'>): number {
-  return clamp((0.55 * run.objective + 0.45 * run.civilianSafety) / 100, 0, 1);
+  const W = CAREER_TUNING.debriefWeights;
+  return clamp((W.objective * run.objective + W.civilianSafety * run.civilianSafety) / 100, 0, 1);
 }
 
 /** Compute the debrief for a run in 'debrief' status without mutating state. */
@@ -641,8 +682,17 @@ export function computeDebrief(state: GameState, run: OperationRun): DebriefResu
     disposition: 'unresolved' as const, completion: undefined, remainingTasks: run.responseFailure.remainingTasks } : authoredEnding;
   if (!ending) return null;
   const { steps } = traceRun(scenario, run);
-  const completion = scenario.version >= 4 ? completionEvidence(scenario, run, ending) : undefined;
-  const factor = completion && !completion.completionAchieved ? Math.min(INCOMPLETE_SERVICE_FACTOR_MAX, outcomeFactor(run)) : outcomeFactor(run);
+  // v13: one scoring function sets the disposition, trust, closing strain and rewards factor from
+  // people's end states, the force used, commitments and time (sim/outcome-score.ts). A resolved
+  // call is complete; harm to someone who came out is scored, not left as an open task.
+  const score = scenario.incidentPeople?.length && !run.responseFailure ? scoreCall(scenario, run, { officers: state.officers, steps }) : undefined;
+  const evidence = completionEvidence(scenario, run, ending);
+  const completion = score && evidence ? { ...evidence, disposition: score.disposition, completionAchieved: score.disposition === 'resolved',
+    remainingTasks: score.disposition === 'resolved' ? [] : evidence.remainingTasks } : evidence;
+  const factor = score ? score.factor : completion && !completion.completionAchieved ? Math.min(OUTCOME_SCORE_V1.factor.unfinishedMax, outcomeFactor(run)) : outcomeFactor(run);
+  const endingStrain = score ? score.strain : ending.strain;
+  // v13: which force the team used, on whom, and the rule's reason (slice 2 saved it on each commit).
+  const force = forceLines(scenario, run);
 
   // officers: stress from decisions is already on the officer; the ending adds its strain.
   const delta: Record<Id, number> = {};
@@ -656,11 +706,7 @@ export function computeDebrief(state: GameState, run: OperationRun): DebriefResu
     for (const id of state.squads.find((s) => s.id === sq)?.officerIds ?? []) {
       const o = state.officers[id];
       if (!o) continue;
-      if (run.practice) {
-        officerCondition.push({ officerId: id, stressBefore: o.stress, stressAfter: o.stress, xpGained: 0 });
-        continue;
-      }
-      const after = clamp(round1(o.stress + ending.strain), 0, 100);
+      const after = clamp(round1(o.stress + endingStrain), 0, 100);
       const before = clamp(round1(o.stress - (delta[id] ?? 0)), 0, 100);
       const share = Math.min(1, 0.4 + 0.3 * (participation[id] ?? 0));
       const xp = run.responseFailure ? 0 : Math.round(scenario.rewards.xp * share * (0.5 + 0.5 * factor));
@@ -669,31 +715,22 @@ export function computeDebrief(state: GameState, run: OperationRun): DebriefResu
   }
 
   // resources: settle on a throwaway clone so preview and commit agree.
-  let resources: DebriefResult['resources'] = [];
-  let unitWear: DebriefResult['unitWear'] = [];
-  if (!run.practice) {
-    const probe = structuredClone(state);
-    ({ resources, unitWear } = settleRun(probe, run.id, unitsUsedTotals(run), 0));
-  }
+  const { resources, unitWear } = settleRun(structuredClone(state), run.id, unitsUsedTotals(run), departmentUpkeep(state));
 
-  const proposedTrust = run.practice ? 0 : run.responseFailure ? -2 : Math.round(scenario.rewards.trust * (2 * factor - 1)) + ending.trustAdjust;
-  const trustDelta = run.practice ? 0 : scenario.version >= 3 ? clamp(state.department.trust + proposedTrust, 0, 100) - state.department.trust : proposedTrust;
-  const fundingReward = run.practice || run.responseFailure ? 0 : Math.round(scenario.rewards.funding * (0.4 + 0.6 * factor));
-  const devPointReward = run.practice || run.responseFailure ? 0 : factor >= 0.6 && (!completion || completion.completionAchieved) ? scenario.rewards.devPoints : factor >= 0.4 ? Math.floor(scenario.rewards.devPoints / 2) : 0;
+  const proposedTrust = run.responseFailure ? -2 : score ? score.trust : Math.round(scenario.rewards.trust * (2 * factor - 1)) + ending.trustAdjust;
+  const trustDelta = clamp(state.department.trust + proposedTrust, 0, 100) - state.department.trust;
+  const fundingReward = run.responseFailure ? 0 : Math.round(scenario.rewards.funding * (0.4 + 0.6 * factor));
+  const devPointReward = run.responseFailure ? 0 : factor >= 0.6 && (!completion || completion.completionAchieved) ? scenario.rewards.devPoints : factor >= 0.4 ? Math.floor(scenario.rewards.devPoints / 2) : 0;
   // Department service (save v7), shown on the debrief before it closes and added at close.
-  const service = !run.practice && state.contentVersion >= PLAYER_ARC_CONTENT_VERSION
-    ? serviceEarned({ practice: false, completed: completion?.completionAchieved ?? factor >= CAREER_FAVORABLE_AT, failed: !!run.responseFailure }, scenario.incident?.tier ?? 1)
-    : null;
+  const service = serviceEarned({ completed: completion?.completionAchieved ?? factor >= CAREER_TUNING.favorableAt, failed: !!run.responseFailure }, scenario.incident?.tier ?? 1);
   const levelAfter = service === null ? state.department.level : Math.max(state.department.level, levelForService(departmentService(state.department) + service));
   const causes = debriefCauses(scenario, run, steps);
-  const peopleOutcomes = scenario.version >= 4 ? civilianOutcomeViews(scenario, run) : [];
-  const casualtySafety = scenario.version >= 7
-    ? Object.values(run.personCasualties ?? {}).some(person => person.severity === 'fatal') ? 'Fatality recorded'
+  const peopleOutcomes = civilianOutcomeViews(scenario, run);
+  const casualtySafety = Object.values(run.personCasualties ?? {}).some(person => person.severity === 'fatal') ? 'Fatality recorded'
       : Object.keys(run.personCasualties ?? {}).length || Object.keys(run.officerCasualties ?? {}).length || peopleOutcomes.some(person => person.status === 'injured_needs_care') ? 'Injuries recorded'
-      : !completion?.completionAchieved && run.civilianSafety >= 90 ? 'Care and safety duties remain' : undefined
-    : undefined;
-  if (scenario.version >= 7) for (const person of Object.values(run.personCasualties ?? {}).reverse()) causes.unshift(`${person.label}: ${person.severity === 'fatal' ? 'fatality recorded' : `${person.severity === 'serious' ? 'serious injury' : 'injury'}; ${person.care === 'accepted' ? 'medical crew accepted care' : 'medical responsibility remains'}`}.`);
-  if (scenario.version >= 3 && !run.practice) {
+      : !completion?.completionAchieved && run.civilianSafety >= 90 ? 'Care and safety duties remain' : undefined;
+  for (const person of Object.values(run.personCasualties ?? {}).reverse()) causes.unshift(`${person.label}: ${person.severity === 'fatal' ? 'fatality recorded' : `${person.severity === 'serious' ? 'serious injury' : 'injury'}; ${person.care === 'accepted' ? 'medical crew accepted care' : 'medical responsibility remains'}`}.`);
+  {
     const closingStrain = officerCondition.map((officer) => ({ ...officer, delta: round1(officer.stressAfter - (state.officers[officer.officerId]?.stress ?? officer.stressAfter)) })).filter((officer) => officer.delta !== 0);
     if (closingStrain.length) causes.unshift(`Ending adjustment at close: ${closingStrain.map((officer) => `${state.officers[officer.officerId]?.surname ?? officer.officerId} ${officer.delta > 0 ? '+' : ''}${officer.delta} strain`).join('; ')}.`);
   }
@@ -704,12 +741,13 @@ export function computeDebrief(state: GameState, run: OperationRun): DebriefResu
     endingId: run.endingId,
     endingTitle: ending.title,
     decisions: decisionViewsFor(state, run, scenario, steps),
-    ...(scenario.version >= 3 || run.responseFailure ? { endingSummary: ending.summary } : {}),
+    ...({ endingSummary: ending.summary }),
     ...completion,
     ...(run.responseFailure ? { disposition: 'unresolved' as const, completionAchieved: false, remainingTasks: run.responseFailure.remainingTasks } : {}),
-    ...(scenario.version >= 4 ? { officerCasualties: Object.values(run.officerCasualties ?? {}).map(person => ({ ...person })), civilianOutcomes: civilianOutcomeViews(scenario, run) } : {}),
-    ...(scenario.version >= 7 ? { personCasualties: Object.values(run.personCasualties ?? {}).map(person => ({ ...person })) } : {}),
-    practice: run.practice,
+    ...({ officerCasualties: Object.values(run.officerCasualties ?? {}).map(person => ({ ...person })), civilianOutcomes: civilianOutcomeViews(scenario, run) }),
+    ...({ personCasualties: Object.values(run.personCasualties ?? {}).map(person => ({ ...person })) }),
+    ...(score ? { scoreLines: score.lines.map(line => ({ ...line })) } : {}),
+    ...(force.length ? { forceLines: force } : {}),
     objective: { score: Math.round(run.objective), label: completion ? ({ resolved: 'Resolved', care_accepted: 'Care accepted', followup_agreed: 'Follow-up agreed', relief_partial: 'Partial progress', unresolved: 'Unresolved' } as const)[completion.disposition!] : objectiveLabel(run.objective) },
     civilianSafety: { score: Math.round(run.civilianSafety), label: casualtySafety ?? civilianLabel(run.civilianSafety) },
     officerCondition,
@@ -730,12 +768,6 @@ export function unitsUsedTotals(run: OperationRun): Id[] {
   return [...new Set([...run.history.flatMap((h) => h.unitsUsed), ...(run.resupplies ?? []).flatMap((r) => r.supportUnitId ? [r.supportUnitId] : [])])];
 }
 
-export function consumedTotals(run: OperationRun): { itemId: Id; qty: number }[] {
-  const tot: Record<Id, number> = {};
-  for (const h of run.history) for (const c of h.itemsConsumed) tot[c.itemId] = (tot[c.itemId] ?? 0) + c.qty;
-  return Object.entries(tot).map(([itemId, qty]) => ({ itemId, qty }));
-}
-
 function debriefCauses(scenario: ScenarioDefinition, run: OperationRun, steps: StepTrace[]): string[] {
   const scored: { w: number; text: string }[] = [];
   for (const s of steps) {
@@ -750,7 +782,7 @@ function debriefCauses(scenario: ScenarioDefinition, run: OperationRun, steps: S
   const sorted = scored.sort((a, b) => b.w - a.w).map((s) => s.text);
   const unresolved = scenario.facts.filter((f) => ['unknown', 'reported'].includes(run.knowledge[f.id] ?? f.initial));
   for (const f of unresolved) sorted.push(`Never confirmed: ${f.label.toLowerCase()}.`);
-  const head: string[] = run.practice ? ['Practice run: nothing here is recorded to the department.'] : [];
+  const head: string[] = [];
   const resupplyMinutes = (run.resupplies ?? []).reduce((sum, delivery) => sum + delivery.minutes, 0);
   if (resupplyMinutes > 0) head.push(`Equipment resupply took ${resupplyMinutes} min before the first decision; time pressure continued while squads waited.`);
   return [...head, ...sorted].slice(0, 7);
@@ -760,21 +792,11 @@ function debriefCauses(scenario: ScenarioDefinition, run: OperationRun, steps: S
 
 const fail = (reason: string): HandlerResult => ({ ok: false, reason });
 
-function continueStage(run: OperationRun, scenario: ScenarioDefinition, actionId: Id, revision: number): HandlerResult {
-  if (run.revision !== revision) return fail('The choices have changed; review the current stage');
-  const continuation = availableStageContinuations(scenario, run).find(entry => entry.actionId === actionId);
-  if (!continuation) return fail('That stage continuation is not available');
-  run.stageContinuations = [{ version: 1, actionId, revision, fromStage: continuation.fromStage, toStage: continuation.toStage }];
-  run.stage = continuation.toStage;
-  return { ok: true };
-}
-
 export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
   startOperation(draft, cmd, ctx) {
-    if (!cmd.practice) {
-      const standard = withStandardRadios(draft, cmd.squadIds, cmd.loadouts, cmd.units, ctx.now);
-      cmd = { ...cmd, loadouts: standard.loadouts, units: standard.units };
-    }
+    const upkeep = departmentUpkeep(draft);
+    const standard = withStandardRadios(draft, cmd.squadIds, cmd.loadouts, cmd.units, ctx.now, upkeep);
+    cmd = { ...cmd, loadouts: standard.loadouts, units: standard.units };
     const chk = checkStart(draft, ctx.now, cmd);
     if (chk.issues.length > 0 || !chk.scenario) return fail(chk.issues[0] ?? 'Cannot start this operation');
     const scenario = chk.scenario;
@@ -785,12 +807,10 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     const rngState = (hashSeed(`${scenario.id}:${scenario.locationSeed}`) ^ Math.floor(d.value * 4294967296)) >>> 0;
     const run = makeRun(draft, chk.built!, scenario, cmd, runId, rngState, ctx.now);
 
-    if (!cmd.practice) {
-      const before = draft.reservations.length;
-      const r = reserveLoadouts(draft, runId, cmd.loadouts, cmd.units, ctx.now);
-      if (!r.ok) return r;
-      run.reservationIds = draft.reservations.slice(before).map((x) => x.id);
-    }
+    const before = draft.reservations.length;
+    const r = reserveLoadouts(draft, runId, cmd.loadouts, cmd.units, ctx.now, upkeep);
+    if (!r.ok) return r;
+    run.reservationIds = draft.reservations.slice(before).map((x) => x.id);
     reserveSupportVehicle(draft, run);
     for (const sid of cmd.squadIds) {
       for (const oid of draft.squads.find((s) => s.id === sid)?.officerIds ?? []) {
@@ -799,7 +819,7 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
       }
     }
     draft.activeRun = run;
-    if (!cmd.practice) takeIncident(draft, scenario.id);
+    takeIncident(draft, scenario.id);
     return { ok: true };
   },
 
@@ -809,22 +829,11 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     if (run.status !== 'active') return fail('The operation is already over');
     if (run.history.length > 0) return fail('Cannot cancel after the first decision');
     if (run.resupplies?.length) return fail('Cannot cancel after equipment resupply; operation time has already advanced');
-    releaseRun(draft, run.id);
-    clearAssignments(draft, run);
-    if (run.sourceIncident && run.sourceIncident.expiresAt > Math.max(ctx.now, draft.department.clockHighWater)) {
-      // Give the player's cancelled call priority if idle arrivals filled the board.
-      draft.incidents = [run.sourceIncident, ...draft.incidents.filter((c) => c.id !== run.scenarioId)].slice(0, INCIDENT_TUNING.boardMax);
-    }
-    draft.activeRun = null;
+    abandonRun(draft, run, ctx.now);
     return { ok: true };
   },
 
-  continueStage(draft, cmd) {
-    const run = draft.activeRun;
-    if (!run) return fail('No operation in progress');
-    const scenario = getScenario(run.scenarioId);
-    return scenario ? continueStage(run, scenario, cmd.actionId, cmd.revision) : fail('Unknown scenario');
-  },
+
 
   endFailedResponse(draft, cmd) {
     const run = draft.activeRun;
@@ -847,9 +856,8 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     const stage = run.stage;
     const action = scenario.stages[stage].actions.find((a) => a.id === cmd.actionId);
     if (!action) return fail('That option is not available at this stage');
-    if (scenario.version >= 8 && isGenericResponseExit(scenario, action)) return fail('This generic exit is retired. Continue the scene, or review the failed-response report if no usable plan remains.');
+    if (isGenericResponseExit(scenario, action)) return fail('This generic exit is retired. Continue the scene, or review the failed-response report if no usable plan remains.');
     // Older UI callers use decide; they receive the same free navigation semantics.
-    if (legacyStageNavigation(scenario, action)) return continueStage(run, scenario, action.id, run.revision);
     if (cmd.actingSquadIds.some((s) => cmd.supportSquadIds.includes(s))) return fail('A squad cannot both act and support');
     const built = builtFor(run.locationFamilyId, run.locationSeed, run.flags);
     const input = { state: draft, run, scenario, action, built, acting: cmd.actingSquadIds, support: cmd.supportSquadIds };
@@ -861,16 +869,11 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     run.rngState = r.state;
     const sample = r.value;
     const band = bandFor(ev.margin, sample);
-    // V1–V6 retain their exact one-draw sequence. Only a matched V7 actual
-    // force use draws severity, once, independently from effort success.
-    let forceOutcome;
-    if (scenario.version >= 7 && ev.forceRisk) {
-      const harm = next(run.rngState);
-      run.rngState = harm.state;
-      forceOutcome = resolveForceRisk(ev.forceRisk, harm.value);
-    }
-
     let matched = matchedEffects(action, band, run, scenario);
+    // v13: drawn consequences (a subject firing at the team, the team's force) settle now, each
+    // with its own saved sample, into the variant effects they choose (sim/drawn-effects.ts).
+    const drawn = resolveDrawn(matched, { state: draft, run, scenario, acting: ev.acting, participantIds: ev.participantIds, unitsOf: availableUnits });
+    matched = drawn.effects;
     let personMoved = false;
     let storyRouteUsed = false;
     if (ev.storyMovementMinutes !== undefined) {
@@ -884,13 +887,25 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     const before = { objective: run.objective, civilianSafety: run.civilianSafety, pressure: run.pressure };
     const extra = matched.reduce((s, e) => s + (e.extraMinutes ?? 0), 0);
     const movementTime = storyRouteUsed ? 0 : ev.storyMovementMinutes ?? 0;
-    const proposedTime = (ev.timeBase - movementTime) * ({ favorable: 1, mixed: 1.2, adverse: 1.5 } as Record<OutcomeBand, number>)[band] + extra;
-    const timeCost = round1(scenario.version >= 4 && action.awaitSupport ? ev.timeBase : scenario.version >= 3 ? Math.max(0.5, proposedTime) : proposedTime);
-    const strain = run.practice ? {} : strainFor(input, ev, band);
+    const proposedTime = (ev.timeBase - movementTime) * RESOLUTION_TUNING.bandTime[band] + extra;
+    const timeCost = round1(action.awaitSupport ? ev.timeBase : Math.max(0.5, proposedTime));
+    const strain = strainFor(input, ev, band);
 
+    const clocksBefore = run.clocks;
     const t = advanceTime(run, scenario, timeCost);
-    if (scenario.version >= 3) t.civilianLoss = round1(before.civilianSafety - run.civilianSafety);
+    t.civilianLoss = round1(before.civilianSafety - run.civilianSafety);
     const { changes, stage: nextStage, ending } = applyEffects(run, matched);
+    // v13: cues the clocks passed during this decision land after its own outcome, and the
+    // outcome's events move the subjects' meters (sim/clocks.ts, sim/meters.ts).
+    const cues = applyClockCues(run, scenario, t.cues);
+    changes.push(...cues.changes);
+    // v13: a clock that ran out where no fork read it sets its mark, and hurts its owner if they
+    // are still inside and this outcome didn't already (sim/clocks.ts); the harm is recorded below.
+    const outs = clockOutEffects(scenario, clocksBefore, run.clocks, run, matched);
+    applyEffects(run, outs);
+    applyMoves(run, scenario, matched);
+    // v13: what command gave a person its word on is made, kept or broken by this decision (sim/commitments.ts).
+    applyCommitments(run, scenario, action, band, matched, drawn.records, run.revision);
     // Bound v5 movement records opened locks once; explicit outcome changes retain priority.
     for (const openingId of (storyRouteUsed ? ev.storyOpenedIds : ev.storySquadOpenedIds) ?? []) {
       if (matched.some(effect => effect.openings?.some(change => change.openingId === openingId))) continue;
@@ -898,19 +913,25 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
       run.flags.push(openingFlag(openingId, 'open'));
       openingChanges.set(openingId, 'open');
     }
-    const externalSupportEvents = scenario.version >= 4 ? applyExternalSupportEffects(run, scenario, matched) : undefined;
-    const casualtyPositions = scenario.version >= 7 ? Object.fromEntries(ev.arrivals.flatMap(arrival =>
-      (draft.squads.find(squad => squad.id === arrival.squadId)?.officerIds ?? []).map(id => [id, { spaceId: arrival.spaceId, at: arrival.at }]))): undefined;
-    const incidentConsequences = scenario.version >= 4 ? applyIncidentConsequences(draft, run, scenario, protectedOfficerEffects(matched, ev.protectionUsed), ev.participantIds, casualtyPositions) : undefined;
-    const personConsequences = scenario.version >= 7 ? applyPersonConsequences(run, scenario, action, band, matched, forceOutcome) : undefined;
+    const externalSupportEvents = applyExternalSupportEffects(run, scenario, matched);
+    const casualtyPositions = Object.fromEntries(ev.arrivals.flatMap(arrival =>
+      (draft.squads.find(squad => squad.id === arrival.squadId)?.officerIds ?? []).map(id => [id, { spaceId: arrival.spaceId, at: arrival.at }])));
+    const incidentConsequences = applyIncidentConsequences(draft, run, scenario, protectedOfficerEffects(matched, ev.protectionUsed), ev.participantIds, casualtyPositions);
+    const personConsequences = applyPersonConsequences(run, scenario, action, band, [...matched, ...outs]);
 
-    // positions, staging points and task labels
+    // positions, staging points and task labels. A band that drives the team back leaves the
+    // acting squads where they started; an action that ends elsewhere (an escort out) puts them there.
+    const fellBack = matched.some(effect => effect.fallBack);
     for (const arr of ev.arrivals) {
       const task = run.squadTasks.find((x) => x.squadId === arr.squadId);
       if (!task) continue;
-      task.positionId = arr.spaceId;
-      task.stagingId = arr.stagingId;
-      task.at = arr.at;
+      const acting = arr.role === 'acting';
+      if (!(acting && fellBack)) {
+        const end = acting && action.endsAt;
+        task.positionId = end ? end.spaceId : arr.spaceId;
+        task.stagingId = end ? null : arr.stagingId;
+        task.at = end ? { ...end.at } : arr.at;
+      }
       task.task = arr.role === 'support' ? (action.support?.task ?? 'Support') : action.task;
     }
     for (const sq of ev.acting) {
@@ -926,25 +947,25 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
         const stressBefore = o.stress;
         o.stress = round1(clamp(o.stress + dlt, 0, 100));
         stressLevels[id] = { stressBefore, stressAfter: o.stress };
-        if (scenario.version >= 3) strain[id] = round1(o.stress - stressBefore);
+        strain[id] = round1(o.stress - stressBefore);
       }
     }
 
     const used: Record<Id, number> = {};
     const unitsUsed: Id[] = [];
-    if (!run.practice || scenario.version >= 7)
-      for (const u of ev.uses) {
-        if (!storyRouteUsed && ev.storyMovementOnlyUnitIds?.includes(u.unitId)) continue;
-        used[u.itemId] = (used[u.itemId] ?? 0) + u.qty;
-        unitsUsed.push(u.unitId);
-      }
+    for (const u of ev.uses) {
+      if (!storyRouteUsed && ev.storyMovementOnlyUnitIds?.includes(u.unitId)) continue;
+      used[u.itemId] = (used[u.itemId] ?? 0) + u.qty;
+      unitsUsed.push(u.unitId);
+    }
     const consumed = Object.entries(used).map(([itemId, qty]) => ({ itemId, qty }));
 
     const knowledgeChanges = changes;
     const protectedWound = ev.protectionUsed && matched.some(effect => effect.officerHarm?.severity === 'serious');
     const texts = [...matched.map((e) => e.text).filter((x): x is string => Boolean(x)),
       ...(protectedWound ? [`${ITEMS[ev.protectionUsed!.itemId].name} limited the officer's serious injury to a wound. Care and transport are still needed.`] : []),
-      ...incidentConsequences?.text ?? [], ...personConsequences?.text ?? []];
+      ...incidentConsequences?.text ?? [], ...personConsequences?.text ?? [],
+      ...cues.effects.map((e) => e.text).filter((x): x is string => Boolean(x))];
     const resolution: DecisionResolution = {
       revision: run.revision,
       stage,
@@ -972,18 +993,21 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     // stage transition (the committed decision is already in history)
     let stageNote: string | null = null;
     const pendingPrefix = 'completion_pending:';
-    const intendedEnding = ending ?? (scenario.version >= 8 ? run.flags.find(flag => flag.startsWith(pendingPrefix) && !!scenario.endings[flag.slice(pendingPrefix.length)])?.slice(pendingPrefix.length) : null);
+    const intendedEnding = ending ?? (run.flags.find(flag => flag.startsWith(pendingPrefix) && !!scenario.endings[flag.slice(pendingPrefix.length)])?.slice(pendingPrefix.length));
     if (intendedEnding) {
       const declared = scenario.endings[intendedEnding];
-      const completion = scenario.version >= 4 && declared ? completionEvidence(scenario, run, declared) : undefined;
+      const completion = declared ? completionEvidence(scenario, run, declared) : undefined;
       const incomplete = completion && ['resolved', 'care_accepted', 'followup_agreed'].includes(declared.disposition ?? '') && !completion.completionAchieved;
-      if (scenario.version >= 8 && incomplete) {
+      // A call tree (v13) ends where it says it ends. Outstanding harm still costs completion:
+      // completionEvidence marks the ending partial and lists who still needs care.
+      const treeEnding = !!declared && !!completion && completion.disposition === 'relief_partial';
+      if (incomplete && !treeEnding) {
         run.flags = [...run.flags.filter(flag => !flag.startsWith(pendingPrefix)), `${pendingPrefix}${intendedEnding}`];
         run.stage = 'resolve';
         stageNote = 'The completed step is retained. Outstanding care and scene duties keep the call open.';
       } else {
         run.flags = run.flags.filter(flag => !flag.startsWith(pendingPrefix));
-        const finalEnding = incomplete ? FALLBACK_ENDING : intendedEnding;
+        const finalEnding = incomplete && !treeEnding ? FALLBACK_ENDING : intendedEnding;
         run.stage = 'debrief';
         run.status = 'debrief';
         run.endingId = finalEnding;
@@ -991,21 +1015,11 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
       }
     } else {
       if (nextStage) run.stage = nextStage;
-      if (scenario.version < 8 && run.stage === stage && !anyEligible(draft, run, scenario, builtFor(run.locationFamilyId, run.locationSeed, run.flags))) {
-        const idx = STAGES.indexOf(stage);
-        if (idx < STAGES.length - 1) {
-          run.stage = STAGES[idx + 1];
-          stageNote = 'No options left here; the situation moved on.';
-        } else {
-          run.stage = 'debrief';
-          run.status = 'debrief';
-          run.endingId = FALLBACK_ENDING;
-          stageNote = scenario.version >= 4 ? 'No options left; incident responsibilities remain unresolved.' : 'No options left; responsibility was handed over.';
-        }
-      } else if (run.stage !== stage) stageNote = `Moved on to ${scenario.stages[run.stage as StageId].label}.`;
+      if (run.stage !== stage) stageNote = `Moved on to ${scenario.stages[run.stage as StageId].label}.`;
     }
-    const resultLabel = actionResultLabel(action, scenario.version, band);
-    if (scenario.version >= 3) resolution.committed = {
+    const resultLabel = (harmResultLabel(personConsequences?.records ?? [], incidentConsequences?.records ?? []))
+      ?? actionResultLabel(action, band);
+    resolution.committed = {
       objectiveDelta: round1(run.objective - before.objective),
       civilianSafetyDelta: round1(run.civilianSafety - before.civilianSafety),
       pressureDelta: round1(run.pressure - before.pressure),
@@ -1013,24 +1027,24 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
         ...texts,
         ...matched.flatMap((effect) => (effect.openings ?? []).map((change) => {
           const opening = built.location.openings.find((candidate) => candidate.id === change.openingId);
-          return opening ? `${spaceName(built, opening.a)} to ${spaceName(built, opening.b)}: ${change.state}.` : `${change.openingId.replaceAll('_', ' ')}: ${change.state}.`;
+          return opening ? `${spaceLabel(built, opening.a)} to ${spaceLabel(built, opening.b)}: ${change.state}.` : `${change.openingId.replaceAll('_', ' ')}: ${change.state}.`;
         })),
         ...(run.stage !== 'debrief' ? [`Next: ${currentStoryPrompt(scenario, run)}`] : []),
       ],
       endingTitle: run.endingId ? scenario.endings[run.endingId]?.title ?? run.endingId : null,
       ...(resultLabel ? { resultLabel } : {}),
-      ...(scenario.version >= 5 && openingChanges.size ? { openingChanges: [...openingChanges].map(([openingId, state]) => ({ openingId, state })) } : {}),
+      ...(openingChanges.size ? { openingChanges: [...openingChanges].map(([openingId, state]) => ({ openingId, state })) } : {}),
       ...(externalSupportEvents ? { externalSupport: externalSupportEvents } : {}),
       ...(incidentConsequences ? { officerCasualties: incidentConsequences.records } : {}),
-      ...(forceOutcome ? { forceOutcome } : {}),
       ...(personConsequences ? { personCasualties: personConsequences.records } : {}),
       ...(ev.protectionUsed ? { protectionUsed: { ...ev.protectionUsed } } : {}),
+      ...(drawn.records.length ? { drawn: drawn.records.map(record => ({ ...record })) } : {}),
     };
-    resolution.explanation = explain(draft, scenario, ev, band, texts, timeCost, t.civilianLoss, knowledgeChanges, consumed, strain, stageNote, run.practice);
+    resolution.explanation = explain(draft, scenario, ev, band, texts, timeCost, t.civilianLoss, knowledgeChanges, consumed, strain, stageNote);
     return { ok: true };
   },
 
-  closeDebrief(draft, _cmd, ctx) {
+  closeDebrief(draft, _cmd, _ctx) {
     const run = draft.activeRun;
     if (!run) return fail('No debrief to close');
     if (run.status !== 'debrief') return fail('The operation is still running');
@@ -1039,32 +1053,31 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     if (!result) return fail('Debrief unavailable');
     const scenario = getScenario(run.scenarioId);
 
-    if (!run.practice) {
-      const settled = settleRun(draft, run.id, unitsUsedTotals(run), ctx.now);
-      result.resources = settled.resources;
-      result.unitWear = settled.unitWear;
-      const factor = outcomeFactor(run);
-      const verdict: 'favorable' | 'adverse' | null = factor >= CAREER_FAVORABLE_AT && (scenario!.version < 4 || result.completionAchieved) ? 'favorable' : factor < CAREER_ADVERSE_BELOW ? 'adverse' : null;
-      draft.department.funding += result.fundingReward;
-      draft.department.devPoints += result.devPointReward;
-      draft.department.trust = clamp(draft.department.trust + result.trustDelta, 0, 100);
-      if (result.serviceEarned !== undefined) addService(draft.department, result.serviceEarned);
-      for (const oc of result.officerCondition) {
-        const o = draft.officers[oc.officerId];
-        if (!o) continue;
-        o.xp += oc.xpGained;
-        o.stress = oc.stressAfter;
-        o.career.operations += 1;
-        if (verdict) o.career[verdict] += 1;
-      }
+    const settled = settleRun(draft, run.id, unitsUsedTotals(run), departmentUpkeep(draft));
+    result.resources = settled.resources;
+    result.unitWear = settled.unitWear;
+    // v13 careers read the same scored factor the debrief paid out (sim/outcome-score.ts).
+    const factor = scenario!.incidentPeople?.length && !run.responseFailure ? scoreCall(scenario!, run, { officers: draft.officers, steps: traceRun(scenario!, run).steps }).factor : outcomeFactor(run);
+    const verdict: 'favorable' | 'adverse' | null = factor >= CAREER_TUNING.favorableAt && (result.completionAchieved) ? 'favorable' : factor < CAREER_TUNING.adverseBelow ? 'adverse' : null;
+    draft.department.funding += result.fundingReward;
+    draft.department.devPoints += result.devPointReward;
+    draft.department.trust = clamp(draft.department.trust + result.trustDelta, 0, 100);
+    if (result.serviceEarned !== undefined) addService(draft.department, result.serviceEarned);
+    for (const oc of result.officerCondition) {
+      const o = draft.officers[oc.officerId];
+      if (!o) continue;
+      o.xp += oc.xpGained;
+      o.stress = oc.stressAfter;
+      o.career.operations += 1;
+      if (verdict) o.career[verdict] += 1;
     }
     clearAssignments(draft, run);
     run.settled = true;
     run.status = 'closed';
     draft.debriefs = [result, ...draft.debriefs].slice(0, 10);
-    // Fold now, not only at the next dispatch: the state keeps ten debriefs, and a run of
-    // practice could otherwise push a best result out before it is recorded.
-    if (draft.contentVersion >= PLAYER_ARC_CONTENT_VERSION) foldDebriefs(draft, draft.department.clockHighWater);
+    // Fold now, not only at the next dispatch: the state keeps ten debriefs, so a later run
+    // could otherwise push a best result out before it is recorded.
+    foldDebriefs(draft, draft.department.clockHighWater);
     draft.activeRun = null;
     return { ok: true };
   },
@@ -1074,6 +1087,18 @@ function clearAssignments(draft: GameState, run: OperationRun): void {
   for (const o of Object.values(draft.officers)) {
     if (o.assignment?.kind === 'operation' && o.assignment.runId === run.id) o.assignment = null;
   }
+}
+
+/** End a run without settling it: no rewards, its reservations and officers are released,
+ * and its card returns to the board while it is still current. Used by cancelOperation. */
+function abandonRun(draft: GameState, run: OperationRun, now: number): void {
+  releaseRun(draft, run.id);
+  clearAssignments(draft, run);
+  if (run.sourceIncident && run.sourceIncident.expiresAt > Math.max(now, draft.department.clockHighWater)) {
+    // Give the player's cancelled call priority if idle arrivals filled the board.
+    draft.incidents = [run.sourceIncident, ...draft.incidents.filter((c) => c.id !== run.scenarioId)].slice(0, INCIDENT_TUNING.boardMax);
+  }
+  draft.activeRun = null;
 }
 
 export { openingOverrides };
