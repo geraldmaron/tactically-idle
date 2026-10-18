@@ -73,9 +73,9 @@ export const WIRING: readonly Probe[] = [
     evidence: '`conditionFraction` takes strain off each rating (src/sim/officer.ts)',
   },
   {
-    id: 'items-none', system: 'item', input: 'Carried equipment (squad A deploys with nothing)', direction: 'down', status: 'live', minShare: 0.1, openingOnly: true,
+    id: 'items-none', system: 'item', input: 'Carried equipment (squad A deploys with nothing)', direction: 'down', status: 'live', minShare: 0.2, openingOnly: true,
     perturb: (_state, restart) => restart({ items: [] }),
-    evidence: 'Equipment bonuses apply only where a choice declares them (src/gen/incident/trees-v13/compile.ts)',
+    evidence: 'A choice gets the gear its physical act asks for (src/gen/incident/action-gear.ts): a shield when the team goes in, the hailer for a voice through the walls, observation aids for a watch from outside, plus any gear the choice authors. Phone calls, texts, waits and walk-outs ask nothing of carried gear, and radios are standard issue, so neither responds. Measured 2026-10-18: 6 of 30 opening choices.',
   },
   {
     id: 'blueprint-locked', system: 'blueprint', input: 'Door and window states (every opening locked)', direction: 'any', status: 'live', minShare: 0.27,
