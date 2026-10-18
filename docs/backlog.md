@@ -64,7 +64,7 @@ the variants that can occur, and tell the calls lane so it can drop the workarou
 
 ### clock-runout-routing: A clock that runs out moves the call
 Tags: job=command; journeys=choices-branch; probes=none (routing, not odds); lane=engine
-Needs: start=none; integrate=none; ship=clock-edges-in-tooling
+Needs: start=none; integrate=none; ship=none
 
 Hostage request R-G4, which the barricade call needs before any tree data: `onOut` records harm and
 sets a mark but can't move the call (`src/sim/clocks.ts`), so a short choice can run a clock out and
@@ -73,14 +73,15 @@ person is still inside and the decision's own outcome didn't end it, shown in th
 
 Engine side merged in #46: `onOut.next` compiles to a route, clock
 targets are visible to the graph, the requirement tree and `check:strings`, and a permanent test
-audits every onOut mark reader. Still to ship: `clock-edges-in-tooling`, and the calls lane adding
-`onOut.next` to the hostage owner-condition clock.
+audits every onOut mark reader; the lab, `check:strings` and the tree tests follow clock routes (#52).
+Still to ship: the calls lane adding `onOut.next` to the hostage owner-condition clock.
 
 ### barricade-engine-requests: People placed and moving on the building
 Tags: job=command; journeys=choices-branch; probes=blueprint-building; lane=engine
 Needs: start=none; integrate=none; ship=none
 
-Requests R-B1 to R-B3 in `docs/calls/barricade-design.md`. R-B1: a role can start on an upper
+Requests R-B1 to R-B3 in `docs/calls/barricade-design.md`. R-B1 shipped in #51; the last-seen
+wording R-B3 needs shipped in #55. R-B1: a role can start on an upper
 floor (every role is placed on floor 0 today, `src/gen/incident/trees-v13/compile.ts`). R-B2: a
 person can leave by their own ground-floor window where the building has one (`usableOpening`
 rejects every window, `src/gen/incident/story-bindings.ts`). R-B3: an outcome or a clock cue can
@@ -213,16 +214,6 @@ Rescue request R-R9: `measureWiring` compares eligibility and favorable odds onl
 that the drawn incoming-fire distribution changes with the building. Done: a paired-building check
 over every fire-carrying choice shows the hit share differs where the sightline does, as a
 trees-v13 test.
-
-### clock-edges-in-tooling: The lab and the tree tests follow clock routes
-Tags: job=understand; journeys=choices-branch; probes=none (tooling); lane=tooling
-Needs: start=none (#46 merged); integrate=none; ship=none
-
-`clock-runout-routing` adds optional clock-target parameters to `callGraph`, `callStringRows` and
-`requirementTree`. Done: `scripts/check-strings.ts`, the call-tree traversals in
-`src/gen/incident/trees-v13/call-trees.test.ts`, and the lab's graph, string-row and requirement
-call sites (the full list is in the engine PR body) pass them, so a node reachable only through a
-clock shows in Flow, Script and Why and its text is checked.
 
 ### hostage-gate-requests: Gate requests from the hostage review
 Tags: job=command; journeys=answer-a-call; probes=none (tooling); lane=tooling
