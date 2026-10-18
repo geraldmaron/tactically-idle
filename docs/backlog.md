@@ -105,7 +105,9 @@ tree has 2 `team` moves out of about 37 choices (armed 13, hostage 8, rescue 8),
 building changes 6 of 33 opening choices (`blueprint-building`, floor 0.18). Done: the new call
 makes physical moves through the building, both blueprint floors rise, `npm run check:strings`
 passes on it, it passes coverage, balance and the separate review, and the old
-`barricade-order` tree is retired. The design sheet (`docs/calls/barricade-design.md`, "Everything
+`barricade-order` tree is retired. It authors the support choices from `second-squad` (R-B4), so
+the barricade reaches `squadRange` 2, and the `joint-operation` journey test switches from its
+fixture to this call. The design sheet (`docs/calls/barricade-design.md`, "Everything
 Goes Back") lists its engine requests; tree data waits on them. The `items-none` share at openings
 grows here too, since most of today's openings are phone calls that carry no gear.
 

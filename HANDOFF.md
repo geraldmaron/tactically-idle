@@ -13,13 +13,14 @@ The coordinating session, on `main`. Merged so far: #36 (coordination rules), #3
 
 | Lane | Branch | In flight | Declared touches |
 |---|---|---|---|
-| engine | `claude/engine-rb3-moves` | R-B3: rebasing onto main to open its PR. A small fixture PR for clock-marks.test.ts and clocks.test.ts (hostage mark). Queued: `armed-max`, `second-squad` | as in its PR |
+| engine | `claude/engine-rb4-second-squad` (stacked on #61) | `second-squad` (R-B4): approved, with a one-PR lock on `src/architecture/journeys.ts` for the `joint-operation` entry. Then `offsite-fire`, `armed-max`, `rescue-engine-requests` | `types.ts` (interface, approved), `compile.ts`, maybe `resolution.ts` and `operation.ts`, new `second-squad.test.ts`, `journeys.ts` under the lock |
 | calls | `claude/calls-hostage-owner-down-cleanup` | Dropping the dead owner_down mark (merges after the engine and tooling fixture PRs). Barricade tree parts covered by R-B1 and R-B2 can start | `hostage-signature.ts`, `hostage.ts`, design doc |
 | tooling | `claude/hostage-gate-requests` | `hostage-gate-requests` (coverage key B, A behind a flag). Then a fixture PR moving lab and tree tests off the hostage mark and groups.test.ts:63 | as declared |
 | interface | closed | Session closed after `board-risk-card`. Start a fresh interface session for the next interface item | none |
 
 ## Locks outside normal ownership
 
+- `src/architecture/journeys.ts` (lead-owned): engine lane, for the `second-squad` PR only, to add the `joint-operation` journey.
 
 ## Open questions for the owner
 
