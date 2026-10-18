@@ -5,12 +5,14 @@
 import { describe, expect, it } from 'vitest';
 import type { CallTree, TreeChoice } from '../../content/call-trees/types';
 import type { IncidentTemplate } from '../../content/incidents/types';
+import { INCIDENT_TEMPLATES } from '../../content/incidents';
 import { createInitialState } from '../../sim/department';
 import { dispatch } from '../../sim/game';
 import { buildLocation } from '../../sim/location';
 import { previewAction } from '../../sim/operation-selectors';
 import type { ActionDefinition, ScenarioDefinition } from '../../sim/scenario-types';
 import { deserialize, serialize } from '../../sim/save';
+import { reachableOverGround, stagingFacing } from '../../sim/spatial-factors';
 import { NOW, startWithKit } from '../../sim/test-fixtures';
 import type { GameState } from '../../sim/types';
 import { withDraftScenario } from './gates/engine-driver';
@@ -127,6 +129,43 @@ describe('a second squad supports from a named point (R-B4)', () => {
     });
   });
 
+  it('on every building the barricade lists, the point is outside, on an opening of the named room, and reachable from the street', () => {
+    // The barricade (calls lane content, cloned) with support on the walk-out under the barking (a
+    // vantage on the subject's room) and on every entry (the exit).
+    const barricade = INCIDENT_TEMPLATES.barricaded!;
+    const tree: CallTree = structuredClone(barricade.tree);
+    for (const choice of tree.nodes.flatMap(node => node.choices)) {
+      if (choice.id === 'under_barking') choice.support = { at: { vantage: 'subject' }, label: 'holding the front window' };
+      if (choice.id === 'go_in') choice.support = { at: 'exit', label: 'holding the back step' };
+    }
+    const t = { ...barricade, tree };
+    let hosted = 0;
+    for (const family of tree.families ?? []) for (let building = 1; building <= 10; building++) {
+      let call: ScenarioDefinition | null = null, b: ReturnType<typeof buildLocation> | null = null;
+      for (let seed = 1; seed < 20 && !call; seed++) {
+        let base;
+        try { base = generateIncident({ type: 'barricaded', familyId: family, buildingSeed: building, seed, tier: 2, contentVersion: 13 }); } catch { continue; }
+        const { clocks: _c, incidentPeople: _p, threats: _t, ...frame } = base;
+        b = buildLocation(frame.locationFamilyId, frame.locationSeed);
+        try { call = compileIncident({ ...frame, id: `support-${family}-${building}`, incident: hostedSpec(frame) }, b, t); } catch { continue; }
+      }
+      if (!call || !b) continue;
+      hosted++;
+      const outdoor = new Set(b.location.zones.map(zone => zone.id));
+      const subjectRoom = call.story!.bindings.people.subject.initial.spaceId;
+      for (const entry of actions(call).filter(a => a.support)) {
+        const rule = entry.support!, where = `${family} ${building} ${entry.id}`;
+        const gap = b.location.openings.find(o => o.id === rule.openingId)!;
+        expect(outdoor.has(rule.coverSpaceId), where).toBe(true);
+        expect([gap.a, gap.b], where).toContain(rule.coverSpaceId);
+        if (entry.id.endsWith('_under_barking')) expect([gap.a, gap.b], where).toContain(subjectRoom);
+        expect(reachableOverGround(b, b.location.entries[0], rule.coverSpaceId), where).toBe(true);
+      }
+      expect(call.squadRange.max, `${family} ${building}`).toBe(2);
+    }
+    expect(hosted, 'buildings that host the barricade').toBeGreaterThan(40);
+  });
+
   it('rejects a vantage on someone not on the call, an empty label, and a support choice that needs two squads', () => {
     const on = (support: Support, extra: Partial<TreeChoice> = {}) => template(tree => {
       Object.assign(tree.nodes.find(node => node.id === 'talk')!.choices.find(choice => choice.id === 'hold')!, { support, ...extra });
@@ -150,7 +189,10 @@ describe('journey joint-operation', () => {
       const decision = held.state.activeRun!.history.at(-1)!;
       expect(decision).toMatchObject({ actionId: id('talk', 'hold'), actingSquadIds: ['A'], supportSquadIds: ['B'] });
       expect(decision.inputs.some(input => input.source === 'support' && input.value > 0), 'the supporting squad counted').toBe(true);
-      expect(held.state.activeRun!.squadTasks.find(task => task.squadId === 'B')!.positionId).toBe(rule.coverSpaceId);
+      const b = held.state.activeRun!.squadTasks.find(task => task.squadId === 'B')!;
+      const stand = stagingFacing(built, rule.coverSpaceId, action('talk', 'hold').targetId, rule.openingId)!;
+      expect(stand.openingId, 'staged at the named opening').toBe(rule.openingId);
+      expect(b).toMatchObject({ positionId: rule.coverSpaceId, stagingId: stand.id, at: stand.at });
       // Mid-call, with the second squad at its point, the campaign saves and loads to the same state.
       // A draft call is on no real board, so the save carries it as a call already answered (as moves.test does).
       const copy = structuredClone(held.state);
