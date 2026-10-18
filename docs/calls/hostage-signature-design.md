@@ -887,3 +887,52 @@ hold, fast prefers ask_again's equal minutes), so they are unchanged. Not a desi
 - `armedRevealErrors` reading only the variants a call keeps (engine, strictness).
 - `dependencies.test.ts` (tooling) pins the hostage call's situation readers at 134; the new
   escalation in `glass_group` adverse makes it 136.
+
+## The owner's clock routes (R-G4 in use, 2026-10-18)
+
+`clock-runout-routing` landed (`Clock.onOut.next`, precedence in `sim/clocks.ts` clockOutEffects).
+The owner's clock (`owner_condition`, situation 2) now runs out to the `owner_down` node.
+
+### Design pass
+
+- Target: `owner_down`, the existing resolve node, rather than a new node or an ending. It already
+  holds the two right answers to a collapse (get the medic to the door; go in, authorized by the
+  urgent clock), and every long hold that forks on the clock already sends a collapse there.
+- Where it fires: the clock runs out in a decision no fork reads, with the owner still inside and
+  the decision not ending the call. Engine rules: an ending the decision reached stands (the mark is
+  still set); an owner already out or safe keeps the mark but moves nothing.
+- No cue at zero. A cue would fire even when the same decision freed the owner, and would print a
+  collapse for someone already outside; `owner_down`'s own prompt narrates the arrival instead.
+- Measured (scratch, 136 drawn situation-2 calls × 4 styles × 3 seeds, 1,632 plays): the route
+  fired in 1 random play, after `talking.take_account` adverse; main, 0. Arrivals by a fork are
+  unchanged (8 before and after). It is rare because a long hold is what runs the clock out, and
+  the long holds fork on it. Balance (`measure`, tier 2, 300 calls per style): identical before and
+  after in every style.
+- Lab Flow (situation 2, random, 2,000 runs): `owner_down` reached in about 1% of runs; capture at
+  `docs/calls/captures/hostage-owner-down-flow.png`.
+
+### Prose
+
+- `owner_down.prompt` was "{owner.first} is down behind the counter, not answering. …". After the
+  routed play above ("The handgun comes up at {owner.first}…"), "down" read as if the owner had
+  been shot. Now "{owner.first} has collapsed behind the counter and isn’t answering. A medic waits at
+  the corner for your word."
+- Separate reader (block): a run-out in a decision where the taker fired at the team
+  (`talking.alley_talk` adverse, `threat.talk_down` adverse, both to `fired_on`) now routes to
+  `owner_down` after the shot's line. Both shot outcomes set `shot_at_team`, and `owner_down` has a
+  variant for it: "The shot didn’t hit {owner.first}. Now {owner.he} {owner~is|are} slumped on the floor,
+  and a medic stands by out front."
+
+### Left open
+
+- Dead readers (separate reader, fix before ship, sent to the lead as a follow-up): every
+  `owner_down` mark reader outside the `owner_down` node (the `threat`, `fired_on` and `standoff`
+  prompt variants, the `when: { marks: ['owner_down'] }` outcome variants there, and `heldEnd`'s
+  down line) is now unreachable: the mark is set only by a branch that goes to `owner_down` or an
+  ending, or by the clock, which now moves the call. Removing them reshapes several outcomes, and the
+  mark-reader audit needs the mark to keep a reader, so it is its own change.
+- Held endings (rule 1): a run-out inside a `heldEnd` decision still ends at `held_inside` or
+  `held_both` with the owner recorded hurt, because the ending stands. The debrief's hurt line (R-E1)
+  says so; the ending text does not.
+- Notes kept: `owner_down.prompt` doesn't mention the handgun after an arrival from `threat`;
+  `owner_down.go_in` (ENTER +4) is easier than `fired_on.go_in` (ENTER +12) after a shot.
