@@ -23,6 +23,9 @@ incidents and their gates, and `src/ui/` the screens and blueprint renderer.
 ## Conventions
 
 - Work still to do lives in `docs/backlog.md` and nowhere else. Add new work there and delete an item when it ships.
+- Parallel sessions follow `COORDINATION.md`: one writer per file, the backlog's id and tag format,
+  merge and review rules, and Codex on its default model. Read it before starting any backlog item.
+  `HANDOFF.md` says which session holds which lane right now.
 - Architecture rules, odds wiring and player journeys live in `src/architecture/` and its tests enforce them. Change the manifest when the architecture changes, then re-render `docs/architecture.md` with `npx vitest run src/architecture -u`.
 - Content changes follow `docs/content-pipeline.md`: agent brief, typed package, automated
   gates, review in the Scenario Lab (`/lab`, notes in `docs/calls/notes/`), and deliberate recapture
