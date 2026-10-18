@@ -5,7 +5,7 @@
 // (compile.ts bindRoleSegments). Binding goes through the compiler's binder and the string rows
 // through strings.ts callStringRows, the same rows the CLI string checks read. Pure.
 import { CIVILIAN_FIRST_NAMES, CIVILIAN_SURNAMES } from '../../../content/call-trees/civilian-names';
-import type { CallTree } from '../../../content/call-trees/types';
+import type { CallTree, TreeNext } from '../../../content/call-trees/types';
 import type { IncidentTemplate } from '../../../content/incidents/types';
 import { armedKey, bindRoleSegments, memberId, reachableWithin, treeForCounts } from '../../../gen/incident/trees-v13/compile';
 import type { BoundPart, CastIdentity } from '../../../gen/incident/trees-v13/compile';
@@ -16,6 +16,7 @@ import { buildLexicon, segmentPeople } from '../../../ui/people/lexicon';
 import type { Lexicon } from '../../../ui/people/lexicon';
 import type { StageId } from '../../../sim/types';
 import type { CastSample } from '../jobs/protocol';
+import { treeSituationClockNexts } from './clocks';
 import { changedWords, stringRowKey } from './snapshots';
 
 export interface Variant { pronouns: 'drawn' | 'he' | 'she' | 'they'; counts: Record<string, number>; situation: 0 | 1 | 2; turns: Record<string, string>; cast: number /* -1 longest names */ }
@@ -162,11 +163,12 @@ export function castWords(bound: BoundCast): string[] {
 // ---------------------------------------------------------------- rows
 
 /** Nodes and endings a call with these group sizes and these turns can reach (every member of a
- * turn group the variant doesn't name). */
-export function turnReach(tree: CallTree, counts: Record<string, number>, turns: Record<string, string>): { nodes: Set<string>; endings: Set<string> } {
+ * turn group the variant doesn't name), from the root and from where a clock that runs out sends it
+ * (`clockNexts`). */
+export function turnReach(tree: CallTree, counts: Record<string, number>, turns: Record<string, string>, clockNexts: readonly TreeNext[] = []): { nodes: Set<string>; endings: Set<string> } {
   const fixed: CallTree = { ...tree, ...tree.turns ? { turns: Object.fromEntries(Object.entries(tree.turns).map(([group, members]) => [group, turns[group] && members.includes(turns[group]) ? [turns[group]] : members])) } : {} };
   const hasGroups = Object.keys(tree.groups ?? {}).length > 0;
-  return reachableWithin(hasGroups ? treeForCounts(fixed, counts) : fixed, counts);
+  return reachableWithin(hasGroups ? treeForCounts(fixed, counts) : fixed, counts, clockNexts);
 }
 
 /** The counts a variant's conditions read: each group's size, and, where the variant carries it (the
@@ -183,12 +185,13 @@ export function variantCounts(tree: CallTree, v: Pick<Variant, 'counts'>): Recor
 }
 
 /** The authored rows a variant shows: count and armed conditions settled, this situation's lines
- * only, and nothing from a turn this variant didn't draw. Text unbound. */
-export function variantRows(tree: CallTree, v: Pick<Variant, 'counts' | 'situation' | 'turns'>): StringRow[] {
+ * only, and nothing from a turn this variant didn't draw; what this situation's clocks reach when
+ * they run out counts as reached (`clockNexts`, by default the registered template's). Text unbound. */
+export function variantRows(tree: CallTree, v: Pick<Variant, 'counts' | 'situation' | 'turns'>, clockNexts: readonly TreeNext[] = treeSituationClockNexts(tree, v.situation)): StringRow[] {
   const hasGroups = Object.keys(tree.groups ?? {}).length > 0;
   const counts = variantCounts(tree, v);
-  const all = callStringRows(tree, text => text, hasGroups ? counts : undefined);
-  const reach = turnReach(tree, counts, v.turns);
+  const all = callStringRows(tree, text => text, hasGroups ? counts : undefined, clockNexts);
+  const reach = turnReach(tree, counts, v.turns, clockNexts);
   const tag = `s${v.situation + 1}`;
   return all.filter(row => {
     if (row.situation !== 'all' && row.situation !== tag) return false;

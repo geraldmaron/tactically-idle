@@ -4,10 +4,10 @@
 // are named with the reason, proven: the situation's hidden truth, a squad without a certification,
 // a clock that never runs out in this call, or a player never left without a move.
 import { describe, expect, it } from 'vitest';
+import { labRequirementTree, sessionClockNexts } from './clocks';
 import { availableMoves, NOW } from '../../../gen/incident/gates/engine-driver';
 import { clockMarksOf } from '../../../gen/incident/instance';
 import { choiceActionId } from '../../../gen/incident/trees-v13/compile';
-import { requirementTree } from '../../../gen/incident/trees-v13/dependencies';
 import { callGraph } from '../../../gen/incident/trees-v13/graph';
 import type { CallGraph } from '../../../gen/incident/trees-v13/graph';
 import type { GameState } from '../../../sim/types';
@@ -32,7 +32,7 @@ const replayed = (s: Session, path: string) => {
   return currentFrame(r).state;
 };
 
-const graphOf = (s: Session): CallGraph => callGraph(s.tree, { counts: s.counts, seed: s.resolved.spec!.seed, situation: s.situation, clockMarks: clockMarksOf(s.instance.clocks) });
+const graphOf = (s: Session): CallGraph => callGraph(s.tree, { counts: s.counts, seed: s.resolved.spec!.seed, situation: s.situation, clockMarks: clockMarksOf(s.instance.clocks), clockNexts: sessionClockNexts(s) });
 const inCallEndings = (graph: CallGraph) => graph.vertices.filter(v => v.kind === 'ending' && v.inCall).map(v => v.treeId).sort();
 /** Every route into the ending this call keeps needs a fact this situation's truth says is false. */
 const blockedByTruth = (graph: CallGraph, ending: string, fact: string) => {
@@ -165,7 +165,7 @@ describe('explore', () => {
 
   it('reaches where a requirement holds (an outcome\'s state), and says when nothing does', () => {
     const target = { prompt: ['talking', 0] as [string, number] };
-    const req = requirementTree(s.tree, target);
+    const req = labRequirementTree(s.tree, target);
     const found = explore(start, { req, target });
     expect(found.path).not.toBeNull();
     expect(nodeAt(replayed(s, found.path!), s.tree)).toBe('talking');

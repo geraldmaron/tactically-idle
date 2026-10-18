@@ -9,7 +9,7 @@ import { INCIDENT_TEMPLATES } from '../../../../content/incidents';
 import type { CallTree } from '../../../../content/call-trees/types';
 import type { IncidentTemplate } from '../../../../content/incidents/types';
 import { choiceActionId, treeFactId } from '../../../../gen/incident/trees-v13/compile';
-import { dependencyIndex, lintTree, requirementTree } from '../../../../gen/incident/trees-v13/dependencies';
+import { dependencyIndex, lintTree } from '../../../../gen/incident/trees-v13/dependencies';
 import type { DependencyIndex, KeyEntry, LintFinding, ReqTarget, Site, StateKey } from '../../../../gen/incident/trees-v13/dependencies';
 import { choiceIndex } from '../../../../gen/incident/trees-v13/graph';
 import { DRAW_NOTICE, useLab } from '../../context';
@@ -19,6 +19,7 @@ import type { ReachTally } from '../../jobs/tally';
 import { noPathText } from '../../model/explore';
 import { muteNote, mutedFindings, withNote } from '../../model/notes';
 import { seekCallSeed } from '../../model/seek';
+import { labRequirementTree } from '../../model/clocks';
 import { currentFrame, nodeAt, sessionBinder } from '../../model/session';
 import type { Frame, Session } from '../../model/session';
 import { certWords } from '../../model/squads';
@@ -382,7 +383,7 @@ function BowTie({ entry, names, tree, session, frame, lint, onSelectKey }: { ent
         // Only the hidden-truth clauses decide the situation: AND their per-situation verdicts.
         const facts: [Verdict, Verdict, Verdict][] = [];
         const walk = (e: EvaluatedReq) => { if ('leaf' in e.node && e.bySituation) facts.push(e.bySituation); e.children.forEach(walk); };
-        walk(evaluateReq(requirementTree(tree, target), session, frame, deps, target).root);
+        walk(evaluateReq(labRequirementTree(tree, target), session, frame, deps, target).root);
         if (facts.length) out.set(site, [0, 1, 2].map(i => facts.some(v => v[i] === 'fail') ? 'fail' : facts.every(v => v[i] === 'pass') ? 'pass' : 'unknown') as [Verdict, Verdict, Verdict]);
       } catch { /* a site the tree no longer has */ }
     }
@@ -479,7 +480,7 @@ function WhyTracer({ target, onPick, names, tree, session, frame, deps, onSelect
   const { url, navigate, jobs, tuning, playHere, notify } = useLab();
   const options = useMemo(() => whyOptions(tree, names), [tree, names]);
   const value = targetValue(target);
-  const req = useMemo(() => { try { return requirementTree(tree, target); } catch { return null; } }, [tree, value]);
+  const req = useMemo(() => { try { return labRequirementTree(tree, target); } catch { return null; } }, [tree, value]);
   const evaluated = useMemo(() => (req && session && frame ? evaluateReq(req, session, frame, deps, target) : null), [req, session, frame, deps, value]);
   const [squadSeek, setSquadSeek] = useState<{ cert: string; text: string; seed: number | null; busy: boolean } | null>(null);
   const [pathSeek, setPathSeek] = useState<{ text: string; path: string | null; busy: boolean } | null>(null);

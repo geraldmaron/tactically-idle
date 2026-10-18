@@ -4,7 +4,6 @@
 // each band goes, the minutes and the dilemma flags; the selected row opens into its full note), and
 // the state, clocks and people at this moment.
 import { useMemo, useState } from 'react';
-import { requirementTree } from '../../../../gen/incident/trees-v13/dependencies';
 import type { DependencyIndex } from '../../../../gen/incident/trees-v13/dependencies';
 import { stanceOf } from '../../../../sim/meters';
 import type { OutcomeBand } from '../../../../sim/types';
@@ -16,6 +15,7 @@ import { clockRows, endedSummary, keysSet, notOfferedHere, personTruth, truthStr
 import type { ChoiceXray } from '../../model/xray';
 import { BAND_WORDS, cx, FlagGlyph, Glyph, KeyChip, PeopleGlyph, RouteChip, Tag, WeightGlyph } from '../../viz';
 import type { PeopleKind } from '../../viz';
+import { labRequirementTree, treeClockRoutes } from '../../model/clocks';
 import { CompareRail } from './CompareRail';
 import { FullNote } from './FullNote';
 import type { Leads } from './FullNote';
@@ -99,7 +99,7 @@ function NotOffered({ session, frame, deps }: { session: Session; frame: Frame; 
             <button type="button" className="lab-moment-off-row" aria-expanded={open === row.actionId} onClick={() => setOpen(open === row.actionId ? null : row.actionId)}>
               <Glyph name="lock" size={12} />{row.title}
             </button>
-            {open === row.actionId && <WhyPanel session={session} frame={frame} deps={deps} req={requirementTree(session.tree, { choice: [row.node, row.choice] })} target={{ choice: [row.node, row.choice] }} reason={null} />}
+            {open === row.actionId && <WhyPanel session={session} frame={frame} deps={deps} req={labRequirementTree(session.tree, { choice: [row.node, row.choice] }, treeClockRoutes(session.tree, session.template))} target={{ choice: [row.node, row.choice] }} reason={null} />}
           </li>
         ))}
       </ul>

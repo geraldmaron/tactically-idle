@@ -3,6 +3,7 @@
 // widths from edgeWidth, tally counts that add up through hubs and junctions, and a crossing count
 // per tree that is recorded here and never above the input order's.
 import { describe, expect, it } from 'vitest';
+import { sessionClockNexts, treeClockNexts } from './clocks';
 import { INCIDENT_TEMPLATES } from '../../../content/incidents';
 import type { IncidentTemplate } from '../../../content/incidents/types';
 import { clockMarksOf } from '../../../gen/incident/instance';
@@ -29,7 +30,7 @@ function open(query: string): Session {
   return opened;
 }
 const callOf = (s: Session): CallGraph =>
-  callGraph(s.tree, { counts: s.counts, seed: s.resolved.spec?.seed, situation: s.situation, clockMarks: clockMarksOf(s.instance.clocks) });
+  callGraph(s.tree, { counts: s.counts, seed: s.resolved.spec?.seed, situation: s.situation, clockMarks: clockMarksOf(s.instance.clocks), clockNexts: sessionClockNexts(s) });
 const layout = (graph: CallGraph, over: Partial<FlowLayoutInput> = {}): FlowLayout =>
   layoutFlow({ graph, expanded: new Set(), tally: null, mode: 'reach', showPruned: false, size: 'full', ...over });
 const overlap = (a: FlowBox, b: FlowBox) => a.x < b.x + b.w - 0.01 && b.x < a.x + a.w - 0.01 && a.y < b.y + b.h - 0.01 && b.y < a.y + a.h - 0.01;
@@ -46,7 +47,7 @@ describe('edgeWidth', () => {
 describe('layoutFlow on the shipped trees', () => {
   for (const template of TEMPLATES) {
     const type = template.type;
-    const authored = callGraph(template.tree);
+    const authored = callGraph(template.tree, { clockNexts: treeClockNexts(template.tree, template) });
     const call = callOf(open(REFERENCE[type]));
     const endingClass = authoredEndingClass(template.tree);
 
@@ -105,7 +106,7 @@ describe('crossings', () => {
   for (const template of TEMPLATES) {
     it(`${template.type}: the sweeps never cross more than the input order`, () => {
       const endingClass = authoredEndingClass(template.tree);
-      const authored = callGraph(template.tree), call = callOf(open(REFERENCE[template.type]));
+      const authored = callGraph(template.tree, { clockNexts: treeClockNexts(template.tree, template) }), call = callOf(open(REFERENCE[template.type]));
       const counts = (graph: CallGraph): [number, number] => [layout(graph, { endingClass }).crossings, layout(graph, { endingClass, sweeps: 0 }).crossings];
       const [a, aInput] = counts(authored), [c, cInput] = counts(call);
       expect(a).toBeLessThanOrEqual(aInput);

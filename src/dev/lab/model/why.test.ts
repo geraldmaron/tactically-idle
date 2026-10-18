@@ -1,8 +1,9 @@
 // Why can or can't this happen: requirement trees checked clause by clause at a frame through the
 // engine and the compiler, per situation and per draw, with writers and fixes.
 import { describe, expect, it } from 'vitest';
+import { labRequirementTree } from './clocks';
 import type { TreeIf } from '../../../content/call-trees/types';
-import { dependencyIndex, requirementTree } from '../../../gen/incident/trees-v13/dependencies';
+import { dependencyIndex } from '../../../gen/incident/trees-v13/dependencies';
 import type { ReqNode } from '../../../gen/incident/trees-v13/dependencies';
 import { parseLabUrl } from '../url';
 import { explore } from './explore';
@@ -26,7 +27,7 @@ describe('evaluateReq', () => {
     const s = open('type=protected_rescue&tier=2');
     const deps = dependencyIndex(s.template);
     const target = { choice: ['wont_leave', 'vehicle'] as [string, string] };
-    const req = requirementTree(s.tree, target);
+    const req = labRequirementTree(s.tree, target);
     const { root, fixes } = evaluateReq(req, s, currentFrame(s), deps, target);
     const [cert] = leafOf(root, 'cert');
     expect(cert).toMatchObject({ label: 'Needs certification: vehicle operations', now: 'fail' });
@@ -47,7 +48,7 @@ describe('evaluateReq', () => {
     const s = open(REFERENCE);
     const deps = dependencyIndex(s.template);
     const target = { choice: ['talking', 'take_account'] as [string, string] };
-    const req = requirementTree(s.tree, target);
+    const req = labRequirementTree(s.tree, target);
     const at = evaluateReq(req, s, currentFrame(s), deps, target);
     const [account] = leafOf(at.root, 'mark');
     expect(account.node).toEqual({ leaf: { kind: 'mark', mark: 'account', want: false } });
@@ -75,7 +76,7 @@ describe('evaluateReq', () => {
       choice.outcomes[band].flatMap((outcome, index) => ([] as TreeIf[]).concat(outcome.if ?? []).some(entry => 'fact' in entry && entry.fact === 'owner_faint' && entry.is)
         ? [{ outcome: [node.id, choice.id, band, index] as [string, string, typeof band, number] }] : [])))) [0];
     expect(found).toBeDefined();
-    const { root } = evaluateReq(requirementTree(s.tree, found), s, currentFrame(s), deps, found);
+    const { root } = evaluateReq(labRequirementTree(s.tree, found), s, currentFrame(s), deps, found);
     const [fact] = leafOf(root, 'fact');
     const truth = s.tree.situations.map(situation => situation.truth.owner_faint);
     expect(fact.bySituation).toEqual(truth.map(t => (t ? 'pass' : 'fail')));
@@ -91,7 +92,7 @@ describe('evaluateReq', () => {
     // A node reached only through a turn this call did not draw.
     const [group, members] = Object.entries(s.tree.turns!)[0];
     const other = members.find(node => node !== s.turnDrawn[group])!;
-    const { root, fixes } = evaluateReq(requirementTree(s.tree, { node: other }), s, currentFrame(s), deps, { node: other });
+    const { root, fixes } = evaluateReq(labRequirementTree(s.tree, { node: other }), s, currentFrame(s), deps, { node: other });
     const turns = leafOf(root, 'turn');
     expect(turns.length).toBeGreaterThan(0);
     expect(turns[0]).toMatchObject({ now: 'fail', draw: expect.stringMatching(/^needs turn .+; this call drew /) });
@@ -100,7 +101,7 @@ describe('evaluateReq', () => {
 
   it('marks the exhausted-choices fallback as never known ahead', () => {
     const s = open(REFERENCE);
-    const req: ReqNode = requirementTree(s.tree, { ending: 'handed_over' });
+    const req: ReqNode = labRequirementTree(s.tree, { ending: 'handed_over' });
     const { root } = evaluateReq(req, s, currentFrame(s), dependencyIndex(s.template), { ending: 'handed_over' });
     expect(root).toMatchObject({ now: 'unknown', label: 'Reached only when no choice is left', children: [] });
   });
@@ -109,10 +110,10 @@ describe('evaluateReq', () => {
 describe('holdsAt', () => {
   it('holds where no clause fails (dice count as possible), and agrees with the context from a bare state', () => {
     const s = open(REFERENCE);
-    const req = requirementTree(s.tree, { choice: [s.tree.root, s.tree.nodes[0].choices[0].id] });
+    const req = labRequirementTree(s.tree, { choice: [s.tree.root, s.tree.nodes[0].choices[0].id] });
     const start = s.frames[0].state;
     expect(holdsAt(req, start, s)).toBe(true);
-    expect(holdsAt(requirementTree(s.tree, { choice: ['talking', 'take_account'] }), start, s)).toBe(false);
+    expect(holdsAt(labRequirementTree(s.tree, { choice: ['talking', 'take_account'] }), start, s)).toBe(false);
     const ctx = stateContext(start)!;
     expect(ctx.tree).toBe(s.tree);
     expect(ctx.counts).toEqual(s.counts);

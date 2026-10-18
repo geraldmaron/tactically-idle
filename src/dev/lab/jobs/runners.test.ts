@@ -8,7 +8,7 @@ import { bindRoleTokens, memberCounts, textBinder } from '../../../gen/incident/
 import { drawCalls, measure, playCalls } from '../../../gen/incident/trees-v13/balance';
 import { callStringRows } from '../../../gen/incident/trees-v13/strings';
 import { incidentId, INCIDENT_CONTENT_VERSION } from '../../../gen/incident';
-import { instanceOf } from '../../../gen/incident/instance';
+import { clockNextsOf, instanceOf } from '../../../gen/incident/instance';
 import { buildLocation } from '../../../sim/location';
 import { getScenario } from '../../../sim/scenario-registry';
 import { applyTuningPatch, tuningLayers } from '../../../sim/tuning';
@@ -127,11 +127,11 @@ describe('runJob', () => {
       const spec = barricade.resolved.spec!;
       const scenario = getScenario(incidentId({ type: 'barricaded', familyId: spec.familyId, buildingSeed: spec.buildingSeed, seed: sample.call, tier: 2, contentVersion: INCIDENT_CONTENT_VERSION }))!;
       const built = buildLocation(scenario.locationFamilyId, scenario.locationSeed);
-      const placed = instanceOf(scenario, built)!.placed;
+      const instance = instanceOf(scenario, built)!, placed = instance.placed;
       expect(scenario.incident).toBeDefined();
       const counts = memberCounts(placed);
-      const ours = callStringRows(tree, text => bindRoleTokens(text, sample.cast, sample.place, sample.rooms, sample.groups), counts);
-      const compiler = callStringRows(tree, textBinder(tree, built, placed), counts);
+      const ours = callStringRows(tree, text => bindRoleTokens(text, sample.cast, sample.place, sample.rooms, sample.groups), counts, clockNextsOf(instance.clocks));
+      const compiler = callStringRows(tree, textBinder(tree, built, placed), counts, clockNextsOf(instance.clocks));
       expect(ours.map(row => row.text)).toEqual(compiler.map(row => row.text));
       expect(ours.length).toBeGreaterThan(20);
     }

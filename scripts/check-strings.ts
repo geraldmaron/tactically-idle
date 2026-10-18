@@ -26,9 +26,9 @@ for (const template of Object.values(INCIDENT_TEMPLATES)) {
   if (!template || (only.length && !only.includes(template.type))) continue;
   // The worst case for the budgets (strings.ts longestNamesCast, shared with the Scenario Lab):
   // groups at their largest size, every person with the longest names.
-  const { cast, groups, rooms, place, counts } = longestNamesCast(template);
+  const { cast, groups, rooms, place, counts, clockNexts } = longestNamesCast(template);
   const { firstName: first, surname } = Object.values(cast)[0];
-  const rows = callStringRows(template.tree, text => bindRoleTokens(text, cast, place, rooms, groups), Object.keys(counts).length ? counts : undefined);
+  const rows = callStringRows(template.tree, text => bindRoleTokens(text, cast, place, rooms, groups), Object.keys(counts).length ? counts : undefined, clockNexts);
   const path = join(dir, `${template.type}.tsv`);
   writeFileSync(path, toTsv(rows));
   // The place's own words are a name too, never a repeated run or an opener.
