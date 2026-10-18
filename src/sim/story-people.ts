@@ -249,5 +249,11 @@ export function observingAction(scenario: ScenarioDefinition, built: BuiltLocati
   if (!person || !moveHolds(person, run)) return action;
   const building = typeof built === 'function' ? built() : built;
   const target = storyActionTarget(scenario, action, building, run);
-  return target ? hydrateStoryAction(action, target, building) : action;
+  if (!target?.position || 'kind' in target.position) return action;
+  const believed = target.position.spaceId;
+  // The look is at the person: the room it was authored on (their starting room, or the action's own
+  // target) becomes where the team believes they are, even when it watches from another room.
+  const follows = (id: Id) => id === person.initial.spaceId || id === action.targetId;
+  const hydrated = hydrateStoryAction(action, target, building);
+  return action.observes ? { ...hydrated, observes: [...new Set(action.observes.map(id => follows(id) ? believed : id))] } : hydrated;
 }

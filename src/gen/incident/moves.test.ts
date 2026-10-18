@@ -303,6 +303,28 @@ describe('a look that follows a person goes where the team believes they are', (
   });
 });
 
+describe('an interior vantage that watches a person follows them too', () => {
+  it('watching from one room into the person’s room: the look goes where the team believes they are', () => {
+    // The review's reproduction: the vantage's approach room and its observed room differ.
+    const t = variant({ edit: tree => {
+      const root = tree.nodes.find(node => node.id === tree.root)!;
+      root.choices[1].team = { to: { vantage: 'subject' }, signal: { channel: 'visual', to: 'subject' } };
+      root.choices[1].talksTo = 'subject';
+    } });
+    const found2 = call(withCue(t), 'cedar_close', 1, true)!;
+    const s = found2.s;
+    const watch = s.stages.assess.actions.find(action => action.id === choiceActionId('barricaded', 'window', t.tree.nodes[0].choices[1].id))!;
+    const start = s.story!.bindings.people.subject.initial.spaceId, hallRoom = (s.story!.bindings.people.subject.transitions[0].to as { spaceId: string }).spaceId;
+    expect(watch.observes).toEqual([start]);
+    const back = [movedFlag('subject', 1), seenFlag('subject', 1), movedFlag('subject', cueMoveKey('boxes', 0))].reduce<string[]>((set, flag) => withFlag(set, flag), []);
+    const state = { flags: back, knowledge: { [s.incidentPeople!.find(person => person.id === 'subject')!.locationFactId!]: 'confirmed' as const }, pressure: 0 };
+    const look = observingAction(s, found2.built, state, watch);
+    expect(look.observes).toEqual([hallRoom]);
+    // The hall is empty now: the trail is lost; nothing about the start room is revealed.
+    expect(sightings(s, state, look, 'favorable', [])?.setFlags).toEqual([lostFlag('subject')]);
+  });
+});
+
 describe('the decision replay keeps a re-sighting and a later move', () => {
   it('move, look (seen), move again: traceRun ends where the live run does at every step', () => {
     const t = variant({ edit: tree => {
