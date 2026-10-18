@@ -8,13 +8,14 @@ import { buildLocation } from '../../sim/location';
 import { generateIncident } from './index';
 import { compileIncident, drawInstance, hostedSpec } from './instance';
 import { armedKey, countHolds, memberCounts, treeForCounts } from './trees-v13/compile';
+import { callStringRows } from './trees-v13/strings';
 import { GROUP_TEMPLATE, GROUP_TREE } from './trees-v13/group-fixture';
 
 const ARMED_LINE = 'Through the glass the team sees what {others.first} has in {others.his} hand.';
 
 /** The fixture with its glass watch turned into a look into the counter room that sets `seen` on a
  * favorable result, an extra mark-setter where a test needs one, and an `armed` line in `talk`. */
-function variant(opts: { marks?: string[]; alsoSetBy?: 'call' | 'watch_mixed' } = {}): IncidentTemplate {
+function variant(opts: { marks?: string[]; alsoSetBy?: 'call' | 'watch_mixed'; fallBack?: 'setter' | 'other' } = {}): IncidentTemplate {
   const tree: CallTree = structuredClone(GROUP_TREE);
   const open = tree.nodes.find(node => node.id === 'open')!;
   const watch = open.choices.find(choice => choice.id === 'watch')!;
@@ -22,6 +23,8 @@ function variant(opts: { marks?: string[]; alsoSetBy?: 'call' | 'watch_mixed' } 
   watch.outcomes.favorable[0].mark = ['seen'];
   if (opts.alsoSetBy === 'call') open.choices.find(choice => choice.id === 'call')!.outcomes.favorable[0].mark = ['seen'];
   if (opts.alsoSetBy === 'watch_mixed') watch.outcomes.mixed[0].mark = ['seen'];
+  if (opts.fallBack === 'setter') watch.outcomes.favorable[0].back = true;
+  if (opts.fallBack === 'other') watch.outcomes.favorable.push({ when: { count: { role: 'others', min: 1 } }, text: 'The blinds come down as the team settles in.', back: true });
   const talk = tree.nodes.find(node => node.id === 'talk')!;
   const hold: TreeChoice = talk.choices.find(choice => choice.id === 'hold')!;
   hold.outcomes.favorable.push({ when: { armed: { role: 'others' }, ...(opts.marks ? { marks: opts.marks } : {}) }, text: ARMED_LINE });
@@ -45,7 +48,9 @@ describe('TreeState.armed is settled per call from the drawn cast', () => {
   it('holds when at least `min` members hold a weapon a look would see', () => {
     expect(countHolds({ armed: { role: 'others' } }, { [armedKey('others')]: 1 })).toBe(true);
     expect(countHolds({ armed: { role: 'others', min: 2 } }, { [armedKey('others')]: 1 })).toBe(false);
-    expect(countHolds({ armed: { role: 'others' } }, { others: 3 })).toBe(false);
+    expect(countHolds({ armed: { role: 'others' } }, { [armedKey('others')]: 0 })).toBe(false);
+    // Counts with no armed entry (the lab, the string checks) don't know, so the line stays in view.
+    expect(countHolds({ armed: { role: 'others' } }, { others: 3 })).toBe(true);
   });
 
   it('counts the members the fixture arms, and none when there are none', () => {
@@ -58,6 +63,15 @@ describe('TreeState.armed is settled per call from the drawn cast', () => {
     const line = (t: CallTree) => t.nodes.find(node => node.id === 'talk')!.choices.find(choice => choice.id === 'hold')!.outcomes.favorable.find(outcome => outcome.text === ARMED_LINE);
     expect(line(treeForCounts(tree, { others: 2, [armedKey('others')]: 2 }))?.when).toEqual({ marks: ['seen'] });
     expect(line(treeForCounts(tree, { others: 2, [armedKey('others')]: 0 }))).toBeUndefined();
+  });
+});
+
+describe('the string checks see text behind TreeState.armed', () => {
+  it('keeps an armed-only line when only group sizes are known, and drops it only on a known zero', () => {
+    const tree = variant({ marks: ['seen'] }).tree;
+    const has = (counts: Record<string, number>) => callStringRows(tree, text => text, counts).some(row => row.text === ARMED_LINE);
+    expect(has({ others: 2 })).toBe(true);
+    expect(has({ others: 2, [armedKey('others')]: 0 })).toBe(false);
   });
 });
 
@@ -77,6 +91,11 @@ describe('text behind TreeState.armed waits for a look into the group’s room',
 
   it('rejects a mark a phone call also sets', () => {
     expect(() => compiled(variant({ marks: ['seen'], alsoSetBy: 'call' }), 2).compile()).toThrow(/reads what others hold/);
+  });
+
+  it('rejects a look that sends the team back, on the setting outcome or beside it, since sightings settle nothing then', () => {
+    expect(() => compiled(variant({ marks: ['seen'], fallBack: 'setter' }), 2).compile()).toThrow(/reads what others hold/);
+    expect(() => compiled(variant({ marks: ['seen'], fallBack: 'other' }), 2).compile()).toThrow(/reads what others hold/);
   });
 
   it('rejects a mark the look also sets on a mixed result, when sightings settle nothing', () => {

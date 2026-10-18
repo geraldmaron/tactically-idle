@@ -183,6 +183,8 @@ export function stateCondition(state: TreeState | undefined, groups: Record<stri
  * doesn't count. Returns one message per leaking state. */
 export function armedRevealErrors(authored: CallTree, nodes: readonly TreeNode[], lookInto: (node: TreeNode, choice: TreeChoice) => readonly string[],
   groupRoom: (group: string) => string | undefined, clockMarks: readonly string[] = []): string[] {
+  // A band where any outcome sends the team back never gets the look (sim/sightings.ts), so a mark
+  // it sets is no reveal even when its own outcome stays.
   type Setter = { node: TreeNode; choice: TreeChoice; band: OutcomeBand } | 'other';
   const setters = new Map<string, Setter[]>();
   const add = (mark: string, setter: Setter) => (setters.get(mark) ?? setters.set(mark, []).get(mark)!).push(setter);
@@ -193,7 +195,8 @@ export function armedRevealErrors(authored: CallTree, nodes: readonly TreeNode[]
   for (const mark of clockMarks) add(mark, 'other');
   const onlyByLook = (mark: string, room: string | undefined) => {
     const list = setters.get(mark) ?? [];
-    return list.length > 0 && room !== undefined && list.every(setter => setter !== 'other' && setter.band === 'favorable' && lookInto(setter.node, setter.choice).includes(room));
+    return list.length > 0 && room !== undefined && list.every(setter => setter !== 'other' && setter.band === 'favorable'
+      && !setter.choice.outcomes[setter.band].some(outcome => outcome.back) && lookInto(setter.node, setter.choice).includes(room));
   };
   const errors: string[] = [];
   const check = (where: string, state: TreeState | undefined) => {
@@ -215,9 +218,12 @@ export function armedRevealErrors(authored: CallTree, nodes: readonly TreeNode[]
 export const armedKey = (group: string) => `${group}:armed`;
 
 /** Whether a state's count and armed conditions hold for this call's group sizes and the weapons
- * its members drew (`armedKey`). Counts without armed entries read every group as unarmed. */
+ * its members drew (`armedKey`). Counts with no armed entry for the group don't know what its
+ * members hold, so an armed condition holds there: the lab and the string checks see every line,
+ * and a compiled call, which always passes them (callCounts), keeps only its own. */
 export function countHolds(state: TreeState | undefined, counts: Record<string, number>): boolean {
-  if (state?.armed && (counts[armedKey(state.armed.role)] ?? 0) < (state.armed.min ?? 1)) return false;
+  const armed = state?.armed ? counts[armedKey(state.armed.role)] : undefined;
+  if (armed !== undefined && armed < (state!.armed!.min ?? 1)) return false;
   if (!state?.count) return true;
   const n = counts[state.count.role] ?? 0;
   return n >= (state.count.min ?? 0) && n <= (state.count.max ?? Infinity);
@@ -355,7 +361,7 @@ export function prunePlan(tree: CallTree, counts: Record<string, number>, clockM
       if (possible(state)) return null;
       if (state?.armed && !countHolds({ armed: state.armed }, counts)) {
         const { role, min = 1 } = state.armed;
-        return `needs ${min} of ${name('role', role)} holding something; this call has ${counts[armedKey(role)] ?? 0}`;
+        return `needs ${min} of ${name('role', role)} holding something; this call has ${counts[armedKey(role)]}`;
       }
       if (!countHolds(state, counts)) {
         const { role, min, max } = state!.count!, n = counts[role] ?? 0, who = name('role', role);
@@ -390,7 +396,7 @@ export interface PlacedCast {
    * sightline fact draws its line from. */
   vantages?: Record<string, StreetVantage>;
   /** Per counted role, how many members hold a weapon a look would see (instance.ts), for
-   * `TreeState.armed`. Absent: every group reads as unarmed. */
+   * `TreeState.armed`. Absent: unknown, so armed conditions hold (countHolds). */
   armed?: Record<string, number>;
 }
 
