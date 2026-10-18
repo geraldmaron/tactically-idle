@@ -50,6 +50,19 @@ It's in the catalog (`src/content/items.ts`) and no call uses it. Done: a choice
 through it, using the sightings step, and what it sees moves the odds through the intel rules
 (`intel-confirmed` probe).
 
+### exit-via-reachable: A window exit counts only when the walk out is clear
+Tags: job=command; journeys=choices-branch; probes=blueprint-building; lane=engine
+Needs: start=none; integrate=none; ship=none
+
+R-B2 bug found by the calls lane building the barricade. `TreeState.exitVia` with `via: 'window'`
+holds whenever the room has a wide enough ground-floor window, but the compiler's walk check then
+finds furniture blocking the route and throws "Walk out blocked", refusing the building instead of
+pruning the choice. Barricade, building seeds 1 to 30, mover in a bedroom: harbour_court fails 30 of
+30, cedar_close 17, willow_terrace_v1 16. Done: the exit fact holds only when the walk along that
+window route is reachable (the same check the compiler runs, moved into the exits computation), the
+window choice is pruned where it isn't, every barricade family hosts, and a regression test covers
+a furniture-blocked window.
+
 ### clock-forks-read-travel: Clock forks read the decision's full time
 Tags: job=command; journeys=chance-not-script; probes=none (clock timing, not odds); lane=engine
 Needs: start=none; integrate=none; ship=none
@@ -92,7 +105,7 @@ which the sheet did not re-read.
 
 ### barricade-model-first: Write the barricade call model-first
 Tags: job=command; journeys=answer-a-call, choices-branch; probes=blueprint-building, blueprint-locked; lane=calls
-Needs: start=none; integrate=none; ship=none
+Needs: start=none; integrate=exit-via-reachable; ship=none
 
 As the hostage call was: template, design sheet in `docs/calls/`, tree, separate review. The old
 tree has 2 `team` moves out of about 37 choices (armed 13, hostage 8, rescue 8), and a different
