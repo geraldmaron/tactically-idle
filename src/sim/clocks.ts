@@ -79,7 +79,7 @@ export function advanceClocks(run: Pick<OperationRun, 'clocks' | 'flags'>, scena
     next[def.id] = after;
     for (const cue of def.cues.slice(before.cued, after.cued)) fired.push({
       text: cue.text,
-      ...(cue.mark ? { setFlags: [`mark:${cue.mark}`] } : {}),
+      ...(cue.mark || cue.setFlags?.length ? { setFlags: [...cue.mark ? [`mark:${cue.mark}`] : [], ...cue.setFlags ?? []] } : {}),
       ...(cue.reveal && def.factId ? { reveal: [def.factId] } : {}),
     });
   }

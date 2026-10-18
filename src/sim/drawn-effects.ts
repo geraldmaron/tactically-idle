@@ -11,6 +11,7 @@
 //
 // A cascade (M2 slice 5) settles whether a group follows its leader when the leader gives up: each
 // member by influence, rapport and agitation, never by group role, name or pronoun.
+import { getBuilt, scenarioWithPeopleNow } from './resolution';
 import { FORCE_REASONS } from '../content/incidents/lines';
 import { peopleNear, readForceThreat } from './authorization';
 import { cutFor, cutShares, FORCE_RISK_V1, forceCuts, qualifiedForceUnit, type ForceRiskProfile, type SampleCuts } from './force-risk';
@@ -236,13 +237,16 @@ type DrawPlan =
   | { model: 'cascade'; personId: Id; chances: (number | null)[] };
 
 function drawPlan(drawn: NonNullable<OutcomeEffect['drawn']>, ctx: DrawnContext): DrawPlan {
+  // Where people are now (R-B3): fire comes from where the shooter really is; the force choice reads
+  // what the team can see, so where it believes everyone is.
+  const built = () => getBuilt(ctx.scenario.locationFamilyId, ctx.scenario.locationSeed);
   if (drawn.model === 'incoming_fire') {
-    const person = ctx.scenario.incidentPeople?.find(entry => entry.id === drawn.from);
+    const person = scenarioWithPeopleNow(ctx.scenario, built, ctx.run, 'truth').incidentPeople?.find(entry => entry.id === drawn.from);
     const { hit, serious } = person ? incomingFireOdds(person) : { hit: 0, serious: 0 };
     return { model: 'incoming_fire', personId: drawn.from, draw: incomingFireCuts(hit, serious) };
   }
   if (drawn.model === 'cascade') return { model: 'cascade', personId: drawn.on, chances: cascadeChances(ctx.scenario, ctx.run, drawn.members) };
-  const choice = teamForceProfile(ctx.state, ctx.run, ctx.scenario, ctx.acting, ctx.participantIds, drawn.on, ctx.unitsOf);
+  const choice = teamForceProfile(ctx.state, ctx.run, scenarioWithPeopleNow(ctx.scenario, built, ctx.run, 'belief'), ctx.acting, ctx.participantIds, drawn.on, ctx.unitsOf);
   const noFatal = ctx.scenario.incidentPeople?.find(entry => entry.id === drawn.on)?.noFatal ?? false;
   return { model: 'team_force', personId: drawn.on, profile: choice.profile, reason: choice.reason, draw: forceCuts(choice.profile, noFatal) };
 }

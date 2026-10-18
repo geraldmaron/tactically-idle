@@ -1,7 +1,8 @@
 import type { ActionDefinition, ScenarioDefinition, StoryAnchor, StoryPersonBinding } from './scenario-types';
 import type { BuiltLocation, Id, KnowledgeStatus, OperationRun } from './types';
-import { conditionHolds } from './conditions';
+import { conditionHolds, lostFlag, movedFlag, seenFlag } from './conditions';
 import { approxPoint, spaceLabel } from './spatial-factors';
+
 
 type StoryState = Pick<OperationRun, 'knowledge' | 'flags' | 'pressure'>;
 export type StoryPosition = StoryAnchor | { kind: 'offscene'; label: string };
@@ -16,6 +17,35 @@ export interface StoryPublicPerson extends Omit<StoryActualPerson, 'position'> {
   position: StoryPosition | null;
   /** Only an observed transition can supply this public location description. */
   locationLabel?: string;
+  /** The team looked where it last saw them and found the spot empty (R-B3, lostFlag): `position`
+   * is where it last saw them. */
+  stale?: true;
+}
+
+/** The public words for a place the team last saw someone (content/incidents/lines.ts LAST_SEEN_LINES,
+ * the calls lane's): passed in by the scenario-side callers, so this module holds no strings. */
+export interface LastSeenWords { source: string; claim: string; marker: string }
+
+const SEEN_PREFIX = seenFlag('', 0).split(':')[0] + ':';
+const MOVED_PREFIX = movedFlag('', 0).split(':')[0] + ':';
+const isSeenTwin = (transition: StoryPersonBinding['transitions'][number]) => (transition.when.flags ?? []).some(flag => flag.startsWith(SEEN_PREFIX));
+
+/** A compiled move is a hidden transition followed by its observed twin (the same place, where the
+ * team last saw them: `seen:` flag). The index of the current move when the team hasn't seen them
+ * there, and they haven't since left the building, or -1. */
+function unseenMove(person: StoryPersonBinding, run: StoryState): number {
+  // The engine keeps one current move per person (withFlag), so at most one move transition holds.
+  return person.transitions.findIndex((transition, i) => !transition.observed && isSeenTwin(person.transitions[i + 1] ?? transition)
+    && conditionHolds(transition.when, run) && !conditionHolds(person.transitions[i + 1].when, run)
+    && !person.transitions.slice(i + 2).some(later => !isSeenTwin(later) && later.observed && conditionHolds(later.when, run)));
+}
+
+/** The flags a sighting sets to see a person where their latest unseen move took them, or none. */
+export function sightingFlags(scenario: ScenarioDefinition, run: StoryState, personId: Id): string[] {
+  const person = scenario.story?.bindings.people[personId];
+  if (!person) return [];
+  const i = unseenMove(person, run);
+  return i < 0 ? [] : (person.transitions[i + 1].when.flags ?? []).filter(flag => flag.startsWith(SEEN_PREFIX));
 }
 
 function bindings(scenario: ScenarioDefinition): StoryPersonBinding[] {
@@ -26,7 +56,8 @@ function bindings(scenario: ScenarioDefinition): StoryPersonBinding[] {
 export function storyPeopleActual(scenario: ScenarioDefinition, run: StoryState): StoryActualPerson[] {
   return bindings(scenario).map(person => {
     let position: StoryPosition = person.initial;
-    for (const transition of person.transitions) if (conditionHolds(transition.when, run)) position = transition.to;
+    // Where the team last saw someone (a seen twin, R-B3) is belief, never where they are.
+    for (const transition of person.transitions) if (!isSeenTwin(transition) && conditionHolds(transition.when, run)) position = transition.to;
     return { id: person.id, label: person.label, locationFactId: person.locationFactId, position };
   });
 }
@@ -58,7 +89,12 @@ export function storyPeoplePublic(scenario: ScenarioDefinition, built: BuiltLoca
       status = 'confirmed';
       locationLabel = transition.label;
     }
-    return { id: person.id, label: person.label, locationFactId: person.locationFactId, status, position, ...(locationLabel ? { locationLabel } : {}) };
+    // The team looked where it last saw them and found the spot empty: it holds only where it last saw
+    // them. An unseen move alone changes nothing the team knows, so nothing here.
+    const stale = status === 'confirmed' && run.flags.includes(lostFlag(person.id))
+      && !person.transitions.some(transition => transition.when.flags?.some(flag => flag.startsWith('out:')) && conditionHolds(transition.when, run));
+    if (stale) { status = 'reported'; locationLabel = undefined; }
+    return { id: person.id, label: person.label, locationFactId: person.locationFactId, status, position, ...(locationLabel ? { locationLabel } : {}), ...(stale ? { stale: true as const } : {}) };
   });
 }
 
@@ -117,7 +153,7 @@ export function storyPropsKnown(scenario: ScenarioDefinition, built: BuiltLocati
 }
 
 /** A transient view of location facts shared by room inspection, map markers and spatial checks. */
-export function storyPublicScenario(scenario: ScenarioDefinition, built: BuiltLocation, run: StoryState): { scenario: ScenarioDefinition; knowledge: Record<Id, KnowledgeStatus> } {
+export function storyPublicScenario(scenario: ScenarioDefinition, built: BuiltLocation, run: StoryState, lastSeen: LastSeenWords): { scenario: ScenarioDefinition; knowledge: Record<Id, KnowledgeStatus> } {
   const people = storyPeoplePublic(scenario, built, run);
   if (!people.length) return { scenario, knowledge: run.knowledge };
   const byFact = new Map(people.map(person => [person.locationFactId, person]));
@@ -134,6 +170,16 @@ export function storyPublicScenario(scenario: ScenarioDefinition, built: BuiltLo
     knowledge[fact.id] = person.status;
     if (!person.position) return [{ ...fact, person: undefined }];
     if ('kind' in person.position) return [];
+    if (person.stale) {
+      // Where the team last saw them, in its own words: no reporter is credited with the team's sighting.
+      // {person} is the first name, as other person claims bind it; {place} is the room as prose.
+      const first = scenario.incidentPeople?.find(entry => entry.id === person.id)?.label ?? person.label;
+      const place = `the ${spaceLabel(built, person.position.spaceId).toLowerCase()}`;
+      const { markerSource: _source, ...rest } = fact;
+      return [{ ...rest, spaceId: person.position.spaceId, person: { label: person.label, reportedAt: person.position.at },
+        label: `${person.label}'s location`, claim: lastSeen.claim.replace('{person}', first).replace('{place}', place), source: lastSeen.source, note: null,
+        markers: { ...fact.markers, reported: lastSeen.marker } }];
+    }
     const moved = person.position.spaceId !== fact.spaceId || person.locationLabel !== undefined;
     const place = spaceLabel(built, person.position.spaceId);
     return [{
@@ -173,4 +219,34 @@ export function hydrateStoryAction(action: ActionDefinition, target: StoryPublic
     ...(action.capacityBound ? { capacityBound: relocate(action.capacityBound) } : {}),
     ...(action.workload.areaSpaces ? { workload: { ...action.workload, areaSpaces: relocate(action.workload.areaSpaces) } } : {}),
   };
+}
+
+/** Whether a compiled move of this person holds (R-B3): a transition keyed on a move flag (an
+ * outcome's or a clock cue's). Leaving the building is not a move. */
+export function moveHolds(person: StoryPersonBinding, run: StoryState): boolean {
+  return person.transitions.some(transition => (transition.when.flags ?? []).some(flag => flag.startsWith(MOVED_PREFIX)) && conditionHolds(transition.when, run));
+}
+
+/** The room the team last saw `personId` in, from what it has observed alone (no building needed):
+ * where a seen move took them, else where it confirmed them at the start; null when it never saw them. */
+export function lastSeenRoom(scenario: ScenarioDefinition, run: StoryState, personId: Id): Id | null {
+  const person = scenario.story?.bindings.people[personId];
+  if (!person) return null;
+  const seen = [...person.transitions].reverse().find(transition => isSeenTwin(transition) && conditionHolds(transition.when, run));
+  if (seen && !('kind' in seen.to)) return seen.to.spaceId;
+  return run.knowledge[person.locationFactId] === 'confirmed' ? person.initial.spaceId : null;
+}
+
+/** The action as the team carries it out, for what it sees (R-B3). A choice that follows a person
+ * and looks into that person's starting room looks where the team believes they are now (the same
+ * public target evaluateAction aims it at), whether or not anything moved: what the team sees never
+ * depends on hidden state. Any other look stays where it was authored. The commit and both replays
+ * read sightings through this. */
+export function observingAction(scenario: ScenarioDefinition, built: BuiltLocation | (() => BuiltLocation), run: StoryState, action: ActionDefinition): ActionDefinition {
+  const person = action.storyTargetPersonId ? scenario.story?.bindings.people[action.storyTargetPersonId] : undefined;
+  if (!person || !action.observes?.includes(person.initial.spaceId)) return action;
+  const target = storyActionTarget(scenario, action, typeof built === 'function' ? built() : built, run);
+  if (!target?.position || 'kind' in target.position) return action;
+  const believed = target.position.spaceId;
+  return { ...action, observes: [...new Set(action.observes.map(id => id === person.initial.spaceId ? believed : id))] };
 }

@@ -43,7 +43,7 @@ describe('a group member’s weapon is a belief', () => {
 
   it('a look into their room settles it, like the subject’s', () => {
     const look = { ...Object.values(s.stages)[0].actions[0], observes: [member.spaceId] };
-    const seen = sightings(s, { flags: [], knowledge: {} }, look, 'favorable', []);
+    const seen = sightings(s, { flags: [], knowledge: {}, pressure: 0 }, look, 'favorable', []);
     expect(seen?.knowledge).toContainEqual({ factId: member.armamentFactId, status: 'confirmed' });
   });
 

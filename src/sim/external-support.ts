@@ -1,4 +1,8 @@
 import type { ActionDefinition, Condition, EndingDefinition, ExternalServiceDefinition, OutcomeEffect, ScenarioDefinition } from './scenario-types';
+import { withFlag } from './conditions';
+import { sightings } from './sightings';
+import { observingAction } from './story-people';
+import { buildLocation } from './location';
 import type { CompletionDisposition, DebriefResult, ExternalSupportEvent, ExternalSupportState, OfficerCasualtyRecord, OperationRun, PersonCasualtyRecord } from './types';
 import { next } from './rng';
 import { syncCasualtyFlags, syncPersonCasualtyFlags } from './incident-consequences';
@@ -174,17 +178,22 @@ export function validExternalSupportState(run: OperationRun, scenario: ScenarioD
   for (const delivery of run.resupplies ?? []) publicState.pressure = round1(Math.max(0, Math.min(100, publicState.pressure + scenario.pressure.perMinute * delivery.minutes)));
   // v13: clock forks read the clocks as the engine ran them, and cues set marks (sim/clocks.ts).
   const timed = { clocks: initialClocks(scenario), flags: publicState.flags };
-  /** Runs the clocks and sets their cue marks; returns the clocks as they were before. */
+  /** Runs the clocks; returns the clocks as they were before and the cues that fired. Their flags
+   * land when the caller applies them: at once between decisions, after the outcome in a decision,
+   * as the commit applies them (R-B3: a cue's move and an outcome's move keep the commit's order). */
   const passTime = (minutes: number) => {
     timed.flags = publicState.flags;
     const before = timed.clocks;
-    for (const cue of advanceClocks(timed, scenario, minutes)) for (const flag of cue.setFlags ?? []) if (!publicState.flags.includes(flag)) publicState.flags.push(flag);
-    return before;
+    return { before, cues: advanceClocks(timed, scenario, minutes) };
   };
+  // Built once, and only if a look follows a person (observingAction).
+  let built: ReturnType<typeof buildLocation> | undefined;
+  const building = () => built ??= buildLocation(scenario.locationFamilyId, scenario.locationSeed);
+  const applyCues = (cues: OutcomeEffect[]) => { for (const cue of cues) for (const flag of cue.setFlags ?? []) publicState.flags = withFlag(publicState.flags, flag); };
   // v13: meter branches read the subjects' meters at the start of each decision; outcomes and
   // commitments move them after it (sim/meters.ts, sim/commitments.ts).
   const moved: Pick<OperationRun, 'meters'> & Partial<Pick<OperationRun, 'commitments'>> = { meters: initialMeters(scenario) };
-  for (const delivery of run.resupplies ?? []) passTime(delivery.minutes);
+  for (const delivery of run.resupplies ?? []) applyCues(passTime(delivery.minutes).cues);
   const decisions = new Set<string>();
   if (!Number.isSafeInteger(run.rngState) || run.rngState < 0 || run.rngState > 0xffffffff) return false;
   // Mulberry32 advances by a fixed uint32 increment. Check the whole saved sample sequence.
@@ -241,20 +250,24 @@ export function validExternalSupportState(run: OperationRun, scenario: ScenarioD
       } else return false;
     }
     // The engine runs the clocks on the flags from before this decision's effects.
-    const clocksBefore = passTime(decision.timeCost);
-    for (const effect of effects) {
-      for (const flag of effect.setFlags ?? []) if (!publicState.flags.includes(flag)) publicState.flags.push(flag);
+    const { before: clocksBefore, cues } = passTime(decision.timeCost);
+    // Who the team saw, read before the outcome moves anyone and applied before it, as the commit does (R-B3).
+    const seen = sightings(scenario, publicState, observingAction(scenario, building, publicState, action), decision.band, effects);
+    for (const effect of [...seen ? [seen] : [], ...effects]) {
+      for (const flag of effect.setFlags ?? []) publicState.flags = withFlag(publicState.flags, flag);
       for (const flag of effect.clearFlags ?? []) publicState.flags = publicState.flags.filter((entry) => entry !== flag);
       for (const opening of effect.openings ?? []) {
         publicState.flags = publicState.flags.filter((entry) => !entry.startsWith(`opening:${opening.openingId}=`));
         publicState.flags.push(`opening:${opening.openingId}=${opening.state}`);
       }
     }
+    // The cues this decision's minutes passed land after its outcome, as the commit applies them.
+    applyCues(cues);
     {
       // A clock that ran out where no fork read it sets its mark (sim/clocks.ts); then the
       // outcome's events and the commitments it kept or broke move the meters, as the commit does.
       for (const out of clockOutEffects(scenario, clocksBefore, timed.clocks, publicState, effects)) {
-        for (const flag of out.setFlags ?? []) if (!publicState.flags.includes(flag)) publicState.flags.push(flag);
+        for (const flag of out.setFlags ?? []) publicState.flags = withFlag(publicState.flags, flag);
         // A route clears the node the call was at (R-G4).
         for (const flag of out.clearFlags ?? []) publicState.flags = publicState.flags.filter((entry) => entry !== flag);
       }

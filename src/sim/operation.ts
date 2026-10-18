@@ -1,7 +1,7 @@
 import { reserveSupportVehicle, supportStartCheck } from './support-vehicles';
 import { isGenericResponseExit, responseFailurePlan } from './response-failure';
 import { currentStoryPrompt } from './story-context';
-import { storyMovedAlongRoute } from './story-people';
+import { observingAction, storyMovedAlongRoute } from './story-people';
 import { validateStoryBindings } from '../gen/incident/story-bindings';
 import { actionResultLabel, harmResultLabel } from './action-result';
 import { applyIncidentConsequences, applyPersonConsequences, civilianOutcomeViews, syncCasualtyFlags, syncPersonCasualtyFlags } from './incident-consequences';
@@ -63,7 +63,7 @@ import {
   strainFor,
   type Evaluation,
 } from './resolution';
-import { conditionHolds } from './conditions';
+import { conditionHolds, withFlag } from './conditions';
 import { departmentUpkeep } from './equipment-manager-policy';
 import { vantageZones } from './sightlines';
 import { sightings } from './sightings';
@@ -475,7 +475,7 @@ function applyEffects(
         changes.push({ factId: k.factId, status: k.status });
       }
     }
-    for (const f of e.setFlags ?? []) if (!run.flags.includes(f)) run.flags.push(f);
+    for (const f of e.setFlags ?? []) run.flags = withFlag(run.flags, f);
     for (const f of e.clearFlags ?? []) run.flags = run.flags.filter((x) => x !== f);
     for (const o of e.openings ?? []) {
       run.flags = run.flags.filter((x) => !x.startsWith(`opening:${o.openingId}=`));
@@ -527,6 +527,10 @@ export function traceRun(scenario: ScenarioDefinition, run: OperationRun): { ste
     // v13: the drawn variants the commit applied, its clock outs, and the meters and commitments
     // it moved, in the commit's order, so later meter and clock branches match what the engine saw.
     const applied = savedDrawnEffects(matched, h.committed?.drawn).effects;
+    // Who the team saw, read before the outcome moves anyone, as the commit reads it (sim/sightings.ts):
+    // its seen flags keep a re-sighting in the replay (R-B3).
+    const seen = a ? sightings(scenario, sim, observingAction(scenario, () => getBuilt(scenario.locationFamilyId, scenario.locationSeed), sim, a), h.band, applied) : null;
+    if (seen) applyEffects(sim, [seen]);
     applyEffects(sim, applied);
     applyClockCues(sim, scenario, timed.cues);
     {
@@ -896,9 +900,12 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     const t = advanceTime(run, scenario, timeCost);
     t.civilianLoss = round1(before.civilianSafety - run.civilianSafety);
     // Who the team sees, read before the outcome moves anyone (sim/sightings.ts).
-    const seen = sightings(scenario, run, action, band, matched);
-    const { changes, stage: outcomeStage, ending: outcomeEnding } = applyEffects(run, matched);
-    if (seen) changes.push(...applyEffects(run, [seen]).changes);
+    // It lands before the outcome's own effects, so a move the outcome makes (seen or not) is the
+    // latest word on where they are (R-B3).
+    const seen = sightings(scenario, run, observingAction(scenario, built, run, action), band, matched);
+    const seenChanges = seen ? applyEffects(run, [seen]).changes : [];
+    const { changes: outcomeChanges, stage: outcomeStage, ending: outcomeEnding } = applyEffects(run, matched);
+    const changes = [...seenChanges, ...outcomeChanges];
     // v13: cues the clocks passed during this decision land after its own outcome, and the
     // outcome's events move the subjects' meters (sim/clocks.ts, sim/meters.ts).
     const cues = applyClockCues(run, scenario, t.cues);

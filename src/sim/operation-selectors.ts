@@ -1,4 +1,5 @@
 import { actionEquipmentRequirements, capabilityRuleEffect, effectiveSupplies, normalizedActionConsumption, operatorQualified, planningEquipmentContext } from './equipment-requirements';
+import { LAST_SEEN_LINES } from '../content/incidents/lines';
 import { isGenericResponseExit } from './response-failure';
 import { currentStoryPrompt } from './story-context';
 import { hydrateStoryAction, storyActionTarget, storyPublicScenario, storyPropsKnown } from './story-people';
@@ -263,7 +264,7 @@ function peopleFor(s: ScenarioDefinition, spaceId: Id, built: BuiltLocation, kno
 }
 
 function buildSpaceViews(s: ScenarioDefinition, built: BuiltLocation, knowledge: Record<Id, KnowledgeStatus>, run: OperationRun | null, state: GameState | null): SpaceView[] {
-  const publicView = storyPublicScenario(s, built, run ?? { knowledge, flags: [], pressure: s.pressure.start });
+  const publicView = storyPublicScenario(s, built, run ?? { knowledge, flags: [], pressure: s.pressure.start }, LAST_SEEN_LINES);
   s = publicView.scenario;
   knowledge = publicView.knowledge;
   const ids = [...built.location.rooms.map((r) => r.id), ...built.location.zones.map((z) => z.id)];

@@ -218,6 +218,10 @@ export interface TreeOutcome {
   /** The team falls back: on this path the squad ends the choice where it started it, not where
    * the choice's `team` was taking it. Write it on every outcome whose text sends the team back. */
   back?: true;
+  /** Moves people on the building (R-B3), after this outcome. A role moved anywhere in the call
+   * can't be read by upstairs, notUpstairs or exitVia (those are about where they started), and
+   * can't be a walker (`walks` leaves from where they started). */
+  moveTo?: TreeMoveTo;
 }
 
 export interface TreeChoice {
@@ -282,9 +286,25 @@ export interface TreeChoice {
  * `signal`: the squad works on someone from where it stands, by voice through the walls and
  * openings or by sight through them (`to` the role). The building decides how well it carries, and
  * the light and the weather decide how well a sightline reads. */
+/** A place on the generated building a person can move to and the team can go to or watch (R-B3).
+ * - `'scene'`: the scene room. `{ room: role }`: that role's starting room.
+ * - `{ doorOf: role }`: just outside that role's room, at the door their way out leaves it by.
+ * - `{ route: role; step; is }`: the `step`-th room along that role's way out (1: the first room
+ *   past their own). The room changes with the building, so `is` declares what it must be: a
+ *   building where it is another kind can't host the call. Text names it by the room token, never
+ *   by a kind the building might not have. */
+export type TreePlace = 'scene' | { room: string } | { doorOf: string } | { route: string; step: number; is: RoomType | RoomType[] };
+
+/** Where an outcome or a clock cue moves a person (R-B3). Hidden unless `seen` (the line itself says
+ * where they went): the team keeps where it last saw them until a look into the room they went to. */
+export type TreeMoveTo = Record<string, TreePlace | { to: TreePlace; seen: true }>;
+
 export interface TreeTeam {
-  /** Absent: the squad stays where it stands and works from there (a hailer from the cars). */
-  to?: 'scene' | 'escort' | { room: string } | { vantage: 'scene' | string };
+  /** Absent: the squad stays where it stands and works from there (a hailer from the cars). A route
+   * step or a door (TreePlace) can be entered like a role's room; `{ watch: step }` watches a route
+   * step from outside, as `vantage` watches a role's room. */
+  to?: 'scene' | 'escort' | { room: string } | { doorOf: string } | { route: string; step: number; is: RoomType | RoomType[] }
+    | { vantage: 'scene' | string } | { watch: { route: string; step: number; is: RoomType | RoomType[] } };
   entry?: string;
   signal?: { channel: 'voice' | 'visual'; to: string };
 }
