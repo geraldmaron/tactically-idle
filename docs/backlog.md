@@ -195,7 +195,7 @@ High-risk warrant, robbery in progress, crisis barricade, vehicle standoff, buil
 standoff needs a roadside building family.
 
 ### board-risk-card: Board risk card
-Tags: job=command; journeys=answer-a-call; probes=none (shows odds inputs, doesn't change them); lane=deferred
+Tags: job=command; journeys=answer-a-call; probes=none (shows odds inputs, doesn't change them); lane=interface
 Needs: start=none; integrate=none; ship=none
 
 Suggested capabilities on the board before the player commits a squad. Needs a producer for risk

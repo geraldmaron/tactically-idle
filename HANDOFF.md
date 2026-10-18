@@ -16,7 +16,7 @@ The coordinating session, on `main`. Merged so far: #36 (coordination rules), #3
 | engine | `claude/engine-rb1-upstairs` | `barricade-engine-requests`: R-B1 (upstairs), then R-B2 (`walksVia`), R-B3 (TreePlace). Queued: `armed-max`, `second-squad` | `types.ts` (interface, approved), `compile.ts`, `story-bindings.ts`, tests |
 | calls | `claude/calls-hostage-armed-line` (#48) | The hostage armed line: sent back for the lone-only reason, the dominance grid, an engine-agreement test, balance numbers and a Codex review | `hostage-signature.ts`, `docs/calls/hostage-signature-design.md` |
 | tooling | to be cut from main | `clock-edges-in-tooling` next, then `hostage-gate-requests`; the e2e flake is recorded in `e2e-in-ci` | to be declared |
-| interface | none | Done with its queue (`small-screen-map`, `hq-tiles`, `manager-art`). Next item to be assigned | none |
+| interface | to be cut from main | `board-risk-card`: file list due; any new producer goes to the engine lane as a request | to be declared |
 
 ## Locks outside normal ownership
 
