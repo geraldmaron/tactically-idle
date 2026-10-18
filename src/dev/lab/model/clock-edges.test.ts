@@ -16,6 +16,7 @@ import { callStringRows } from '../../../gen/incident/trees-v13/strings';
 import { buildLocation } from '../../../sim/location';
 import { labRequirementTree, sessionClockNexts, situationClockNexts, treeClockNexts, treeClockRoutes } from './clocks';
 import { turnReach, variantRows } from './script';
+import { baselineRows } from './snapshots';
 import type { Session } from './session';
 
 const PROMPT = 'While the team waited on that, the courier ran for the door.';
@@ -96,5 +97,19 @@ describe('a node only a clock reaches shows in each view family', () => {
     expect(variantRows(tree, v, situationClockNexts(t, call.situation)).some(row => row.text === PROMPT)).toBe(true);
     // A tree that isn't the registered template's reads no clocks by default: the negative control.
     expect(variantRows(tree, v).some(row => row.text === PROMPT)).toBe(false);
+  });
+});
+
+describe('a baseline pinned in one situation keeps a clock-only line another situation shows', () => {
+  it('reads every situation’s clock targets, not only the drawn call’s', () => {
+    // The clock only in a situation the drawn call doesn't have.
+    const other = ([0, 1, 2] as const).find(i => i !== call.situation && t.situations.some(entry => entry.index === i))!;
+    const oneSituation: IncidentTemplate = { ...t, situations: t.situations.map(entry => ({ ...entry, clocks: entry.index === other ? [CLOCK] : [] })) };
+    const s = { tree, template: oneSituation, counts: call.counts, instance: { ...call.instance, clocks: [] } } as unknown as Session;
+    expect(sessionClockNexts(s)).toEqual([]);
+    const has = (rows: ReturnType<typeof callStringRows>) => rows.some(row => row.text === PROMPT);
+    expect(has(baselineRows(s, text => text))).toBe(true);
+    // Negative control: the drawn call's own targets miss it.
+    expect(has(callStringRows(tree, text => text, call.counts, sessionClockNexts(s)))).toBe(false);
   });
 });

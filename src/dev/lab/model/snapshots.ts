@@ -3,10 +3,12 @@
 // kept in this browser's localStorage so the lab can show what an edit changed: which lines (with the
 // changed words), which odds, which ending shares.
 import type { Distribution, Policy } from '../../../gen/incident/trees-v13/balance';
+import { callStringRows } from '../../../gen/incident/trees-v13/strings';
 import type { StringRow } from '../../../gen/incident/trees-v13/strings';
 import type { IncidentType } from '../../../sim/scenario-types';
 import { tuningHash } from '../../../sim/tuning';
 import type { ReachTally } from '../jobs/tally';
+import { treeClockNexts } from './clocks';
 import type { Session } from './session';
 
 /** `population`: the reach population `reach` was played on (populationKey in surfaces/flow/reach.ts);
@@ -32,6 +34,13 @@ export function pinLabel(at: number, population?: string): string {
 }
 
 /** The call's strings now, keyed by row, with the hashes that say what they were read under. */
+/** The rows a baseline pins: every line of this call in every situation, bound with `bind`, counted
+ * with the call's group sizes. A node only one situation's clock reaches counts too (every
+ * situation's clock targets), so pinning from one situation keeps the lines another shows. */
+export function baselineRows(s: Pick<Session, 'tree' | 'template' | 'counts'>, bind: (text: string) => string): StringRow[] {
+  return callStringRows(s.tree, bind, s.counts, treeClockNexts(s.tree, s.template));
+}
+
 export function takeSnapshot(s: Session, rows: readonly StringRow[], extra: { reach?: ReachTally; population?: string; styles?: Partial<Record<Policy, Distribution>>; label?: string } = {}): CallSnapshot {
   const at = Date.now();
   return {

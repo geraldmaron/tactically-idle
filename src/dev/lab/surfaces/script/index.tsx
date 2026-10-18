@@ -30,10 +30,10 @@ import {
   scriptSections, variantKey, variantRows, variantRowsKey, variantSpace,
 } from '../../model/script';
 import type { AuditHit, ScriptRow, ScriptSection, Variant } from '../../model/script';
-import { labRequirementTree, sessionClockNexts } from '../../model/clocks';
+import { labRequirementTree } from '../../model/clocks';
 import { sessionBinder } from '../../model/session';
 import type { Session } from '../../model/session';
-import { diffStrings, loadSnapshot, pinLabel, saveSnapshot, SNAPSHOT_PREFIX, takeSnapshot } from '../../model/snapshots';
+import { baselineRows, diffStrings, loadSnapshot, pinLabel, saveSnapshot, SNAPSHOT_PREFIX, takeSnapshot } from '../../model/snapshots';
 import { goalFor } from '../../model/why';
 import type { ReviewNote } from '../../types';
 import { cx, Glyph, SegmentedControl } from '../../viz';
@@ -137,7 +137,7 @@ function Script({ template, session }: { template: IncidentTemplate; session: Se
 
   // ------------------------------------------------ baseline (bound as the call in focus, every situation)
   const ownBound = useMemo(() => (own ? castFor(tree, own, { pronouns: 'drawn', counts: session.counts }) : null), [tree, own, session.counts]);
-  const callRows = useMemo(() => (ownBound ? bindRows(callStringRows(tree, text => text, session.counts, sessionClockNexts(session)), ownBound) : []), [tree, ownBound, session.counts]);
+  const callRows = useMemo(() => (ownBound ? bindRows(baselineRows(session, text => text), ownBound) : []), [tree, ownBound, session.counts]);
   const [baseline, setBaseline] = useState(() => loadSnapshot(type));
   useEffect(() => setBaseline(loadSnapshot(type)), [type]);
   useEffect(() => {

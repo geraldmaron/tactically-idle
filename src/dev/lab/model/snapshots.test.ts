@@ -1,14 +1,12 @@
 // Baselines: a call's strings pinned with the content key and tuning they were read under, the rows
 // that changed since (with the changed words), and storage that never throws.
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { sessionClockNexts } from './clocks';
-import { callStringRows } from '../../../gen/incident/trees-v13/strings';
 import type { StringRow } from '../../../gen/incident/trees-v13/strings';
 import { tuningHash } from '../../../sim/tuning';
 import { parseLabUrl } from '../url';
 import { openSession, sessionBinder } from './session';
 import type { Session } from './session';
-import { changedWords, diffStrings, loadSnapshot, pinLabel, saveSnapshot, SNAPSHOT_PREFIX, stringRowKey, takeSnapshot } from './snapshots';
+import { baselineRows, changedWords, diffStrings, loadSnapshot, pinLabel, saveSnapshot, SNAPSHOT_PREFIX, stringRowKey, takeSnapshot } from './snapshots';
 
 function open(query: string): Session {
   const opened = openSession(parseLabUrl(`?${query}`).url, null);
@@ -30,7 +28,7 @@ afterEach(() => { vi.unstubAllGlobals(); });
 
 describe('snapshots', () => {
   const s = open('type=hostage_crisis&family=market_row&seed=7&tier=2&variant=1');
-  const rows = callStringRows(s.tree, sessionBinder(s), s.counts, sessionClockNexts(s));
+  const rows = baselineRows(s, sessionBinder(s));
 
   it('pins every row by its key with the content key and tuning hash', () => {
     const snap = takeSnapshot(s, rows, { label: 'Before the edit' });

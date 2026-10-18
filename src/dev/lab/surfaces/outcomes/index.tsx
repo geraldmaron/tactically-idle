@@ -7,10 +7,9 @@ import { useCallback, useMemo, useState } from 'react';
 import { POLICIES } from '../../../../gen/incident/trees-v13/balance';
 import type { Policy, Weight } from '../../../../gen/incident/trees-v13/balance';
 import { clockMarksOf } from '../../../../gen/incident/instance';
-import { sessionClockNexts, situationClockNexts, treeClockNexts } from '../../model/clocks';
+import { situationClockNexts, treeClockNexts } from '../../model/clocks';
 import { plainTokens } from '../../../../gen/incident/trees-v13/dependencies';
 import { callGraph, truthReach } from '../../../../gen/incident/trees-v13/graph';
-import { callStringRows } from '../../../../gen/incident/trees-v13/strings';
 import type { IncidentType } from '../../../../sim/scenario-types';
 import type { GameState } from '../../../../sim/types';
 import { PeopleProvider, PeopleText } from '../../../../ui/people/PeopleText';
@@ -27,7 +26,7 @@ import { percent, STYLE_HELP, styleLabel, weightLabel } from '../../model/label'
 import { seekCallSeed } from '../../model/seek';
 import { currentFrame, playPath, sessionBinder } from '../../model/session';
 import type { Session } from '../../model/session';
-import { loadSnapshot, pinLabel, saveSnapshot, SNAPSHOT_PREFIX, takeSnapshot } from '../../model/snapshots';
+import { baselineRows, loadSnapshot, pinLabel, saveSnapshot, SNAPSHOT_PREFIX, takeSnapshot } from '../../model/snapshots';
 import type { CallSnapshot } from '../../model/snapshots';
 import type { DrawWant } from '../../model/seek';
 import { CALL_TEMPLATES } from '../../shell/CallSwitcher';
@@ -121,7 +120,7 @@ function OutcomesReady({ session }: { session: Session }) {
   const pin = () => {
     if (!reach.tally || reach.status !== 'done') { notify('Wait for the runs to finish, then pin them as the baseline.'); return; }
     try {
-      const rows = callStringRows(tree, sessionBinder(session), session.counts, sessionClockNexts(session));
+      const rows = baselineRows(session, sessionBinder(session));
       const stylesNow = Object.fromEntries(POLICIES.flatMap((style, i) => { const t = tallyOf(i); return t ? [[style, distributionShares(t)]] : []; }));
       const snap = takeSnapshot(session, rows, { reach: reach.tally, population, styles: stylesNow, label: pinLabel(Date.now(), reach.text.plain) });
       if (saveSnapshot(snap)) { setSnapshot(snap); notify(`Baseline pinned: ${reach.text.plain}. Strings, ending shares and run classes now compare against it.`); }
