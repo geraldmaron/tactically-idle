@@ -20,10 +20,10 @@ export function squadOf(u: LabUrl): SquadSpec {
 }
 
 /** A fresh run of the call for this squad and kit: startGateRun(id, seed, { items, certs }). 'day1'
- * stocks what a new department can field; 'full' every non-support item. */
+ * stocks what a new department can field; 'full' every non-support item; 'none' nothing. */
 export function startCall(scenarioId: string, kit: Kit, squad: SquadSpec): GameState {
   const certs = squad.certs.filter(isCertId);
-  return startGateRun(scenarioId, squad.seed, { ...(kit === 'full' ? { items: KIT_ITEMS_FULL } : {}), ...(certs.length ? { certs } : {}) });
+  return startGateRun(scenarioId, squad.seed, { ...(kit === 'full' ? { items: KIT_ITEMS_FULL } : kit === 'none' ? { items: [] } : {}), ...(certs.length ? { certs } : {}) });
 }
 
 /** The squad a run's choices are offered to: the first deployed squad in roster order, as the

@@ -322,6 +322,8 @@ describe('compare instance B (vs)', () => {
   it('drops unknown fields and bad values, and needs a call', () => {
     expect(parseVs('kit:gold,tier:9,colour:red,seed:x')).toEqual({ tier: 5 });
     expect(vsText({ kit: 'day1', tier: 2 })).toBe('tier:2,kit:day1');
+    expect(parseVs('kit:none')).toEqual({ kit: 'none' });
+    expect(parse(`?${HOSTAGE}&kit=none`).url.call!.kit).toBe('none');
     expect(parse('?vs=kit:full').url.vs).toBeNull();
   });
 

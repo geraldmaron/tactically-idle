@@ -80,7 +80,7 @@ export function CompareRail({ session, frame, deps, vs }: { session: Session; fr
           </select>
         </label>
         <span className="lab-cmp-field"><span>Kit</span>
-          <SegmentedControl label="B kit" size="small" value={b.kit} options={[{ value: 'day1', label: 'Day one' }, { value: 'full', label: 'Every item' }] as const} onChange={kit => set({ kit })} />
+          <SegmentedControl label="B kit" size="small" value={b.kit} options={[{ value: 'none', label: 'No items' }, { value: 'day1', label: 'Day one' }, { value: 'full', label: 'Every item' }] as const} onChange={kit => set({ kit })} />
         </span>
         <label className="lab-cmp-field"><span>Squad seed</span><SeedInput label="B squad seed" value={b.squad} onCommit={squad => set({ squad })} /></label>
         <span className="lab-cmp-field"><span>Grants</span>

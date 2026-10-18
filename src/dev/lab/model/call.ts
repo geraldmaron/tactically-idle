@@ -47,10 +47,15 @@ export const situationsOf = (type: IncidentType): ScenarioSituation[] => scenari
 
 // ---------------------------------------------------------------- URL parameters
 
-/** 'day1': startGateRun exactly (one owned unit of each item a new department can field).
+/** 'none': squad A deploys carrying nothing, as the items-none wiring probe restarts it.
+ * 'day1': startGateRun exactly (one owned unit of each item a new department can field).
  * 'full': the same start with one unit of every non-support item, so options behind gear a
  * new department has not unlocked (firearms, less-lethal, door charges) can be evaluated. */
-export type Kit = 'day1' | 'full';
+export type Kit = 'none' | 'day1' | 'full';
+
+/** The kit as the lab's controls name it. */
+export const KIT_WORDS: Record<Kit, string> = { none: 'No items', day1: 'Day one', full: 'Every item' };
+export const isKit = (value: string | null): value is Kit => value === 'none' || value === 'day1' || value === 'full';
 
 export interface LabParams {
   type: IncidentType;
@@ -84,7 +89,7 @@ export function readParams(q: URLSearchParams): LabParams {
   return {
     type: entry.type, family, seed: int(q.get('seed'), 7, 0, 0xffffffff), variant, pacing, tier: int(q.get('tier'), 2, 1, 5),
     call: q.get('call') === null ? null : int(q.get('call'), 0, 0, 0xffffffff), id: q.get('id') || null,
-    kit: q.get('kit') === 'full' ? 'full' : 'day1', path: q.get('path') ?? '',
+    kit: isKit(q.get('kit')) ? q.get('kit') as Kit : 'day1', path: q.get('path') ?? '',
   };
 }
 
@@ -158,9 +163,10 @@ export function contentKey(type: IncidentType): string {
 export const KIT_ITEMS_FULL: Id[] = Object.keys(ITEMS).filter(id => !ITEMS[id].supportOnly);
 
 /** A live run of the call with squad A at the first entry. 'day1' is startGateRun itself;
- * 'full' is the same start with one unit of every item (same campaign seed, so the same dice). */
+ * 'full' is the same start with one unit of every item and 'none' with no items (same campaign
+ * seed, so the same dice). */
 export function startLabRun(id: string, kit: Kit, campaignSeed = 719): GameState {
-  return kit === 'day1' ? startGateRun(id, campaignSeed) : startGateRun(id, campaignSeed, { items: KIT_ITEMS_FULL });
+  return kit === 'day1' ? startGateRun(id, campaignSeed) : startGateRun(id, campaignSeed, { items: kit === 'full' ? KIT_ITEMS_FULL : [] });
 }
 
 /** A step: a decision aimed at a band, a decision with the run's own dice ('roll'), a free

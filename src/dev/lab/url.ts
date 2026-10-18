@@ -7,7 +7,7 @@ import { parseIncidentId } from '../../gen/incident';
 import type { Policy } from '../../gen/incident/trees-v13/balance';
 import type { IncidentType } from '../../sim/scenario-types';
 import type { OutcomeBand } from '../../sim/types';
-import { paramsToQuery, readParams } from './model/call';
+import { isKit, paramsToQuery, readParams } from './model/call';
 import type { CompareDraw, FrameScreen, LabCall, LabUrl, Scope, Selection, Surface, Vision } from './types';
 
 export interface ParsedUrl { url: LabUrl; rewritten: boolean; notices: string[] }
@@ -144,7 +144,7 @@ export function selectionText(sel: Selection): string {
 /** The surface a URL with no `tab` opens: Play when a call is in focus, else the Calls landing. */
 export const defaultTab = (call: LabCall | null): Surface => call ? 'play' : 'calls';
 
-/** Instance B of the compare view: `vs=kit:full,family:market_row,seed:9,tier:3,squad:12,certs:a~b`.
+/** Instance B of the compare view: `vs=kit:none,family:market_row,seed:9,tier:3,squad:12,certs:a~b`.
  * Unknown fields are dropped; `vs=on` (or any text with no field) opens the view with nothing changed
  * yet, read back as an empty draw. Null when the param is absent. */
 export function parseVs(text: string | null): CompareDraw | null {
@@ -155,7 +155,7 @@ export function parseVs(text: string | null): CompareDraw | null {
     if (at <= 0) continue;
     const key = part.slice(0, at), value = part.slice(at + 1);
     if (key === 'family' && value) draw.family = value;
-    else if (key === 'kit' && (value === 'full' || value === 'day1')) draw.kit = value;
+    else if (key === 'kit' && isKit(value)) draw.kit = value;
     else if (key === 'seed') { const n = int(value, 0, 0xffffffff); if (n !== null) draw.seed = n; }
     else if (key === 'tier') { const n = int(value, 1, 5); if (n !== null) draw.tier = n; }
     else if (key === 'squad') { const n = int(value, 0, 0xffffffff); if (n !== null) draw.squad = n; }

@@ -50,6 +50,28 @@ describe('compareInstances', () => {
     expect(c.rows.every(row => row.delta!.likelihood.favorable < 0 && row.groups.some(group => group.id === 'difficulty'))).toBe(true);
   });
 
+  it('shows gear: a choice that asks for gear loses odds when B carries nothing, as the items-none probe measures', () => {
+    // Day one already stocks what these opening choices ask for, so Every item moves nothing and No
+    // items is the comparison that shows the gear (src/architecture/wiring.ts, items-none).
+    const { s, u } = openCall('type=protected_rescue');
+    const deps = dependencyIndex(s.template);
+    const none = compareInstances(s, u, { kit: 'none' }, 0, deps);
+    const goGet = none.rows.find(row => row.actionId.endsWith('_go_get'))!;
+    expect(goGet.delta!.likelihood.favorable).toBeLessThan(0);
+    expect(goGet.groups.map(group => group.id)).toContain('equipment');
+    const full = compareInstances(s, u, { kit: 'full' }, 0, deps);
+    expect(full.rows.find(row => row.actionId.endsWith('_go_get'))!.delta!.likelihood.favorable).toBe(0);
+    expect(none.changed).toEqual(['kit No items']);
+  });
+
+  it('locks a choice whose gear B lacks', () => {
+    const { s, u } = openCall('type=active_armed_incident');
+    const announce = compareInstances(s, u, { kit: 'none' }, 0, dependencyIndex(s.template)).rows.find(row => row.actionId.endsWith('_announce'))!;
+    expect(announce.a!.eligible).toBe(true);
+    expect(announce.b!.eligible).toBe(false);
+    expect(announce.delta).toBeNull();
+  });
+
   it('shows a squad change in the rating groups', () => {
     const { s, u } = openCall(REFERENCE);
     const c = compareInstances(s, u, { squad: 42 }, 0, dependencyIndex(s.template));
@@ -118,6 +140,6 @@ describe('where compare reads its numbers', () => {
 
   it('takes only labels from ./call', () => {
     const source = SOURCES['/src/dev/lab/model/compare.ts'];
-    expect(source.match(/^import \{([^}]*)\} from '\.\/call';$/m)?.[1].trim()).toBe('familyLabel');
+    expect(source.match(/^import \{([^}]*)\} from '\.\/call';$/m)?.[1].trim()).toBe('familyLabel, KIT_WORDS');
   });
 });

@@ -8,7 +8,7 @@
 import type { DependencyIndex } from '../../../gen/incident/trees-v13/dependencies';
 import type { OutcomeBand } from '../../../sim/types';
 import type { CompareDraw, LabUrl } from '../types';
-import { familyLabel } from './call';
+import { familyLabel, KIT_WORDS } from './call';
 import { currentFrame, openSession, replayTokens, sessionTokens } from './session';
 import type { Frame, Session } from './session';
 import { whereIs, xrayChoices } from './xray';
@@ -39,7 +39,7 @@ export function drawChanges(u: LabUrl, vs: CompareDraw): string[] {
   if (vs.family !== undefined && vs.family !== call.family) out.push(`building ${familyLabel(vs.family)}`);
   if (vs.seed !== undefined && vs.seed !== call.seed) out.push(`building seed ${vs.seed}`);
   if (vs.tier !== undefined && vs.tier !== call.tier) out.push(`tier ${vs.tier}`);
-  if (vs.kit !== undefined && vs.kit !== call.kit) out.push(vs.kit === 'full' ? 'kit Every item' : 'kit Day one');
+  if (vs.kit !== undefined && vs.kit !== call.kit) out.push(`kit ${KIT_WORDS[vs.kit]}`);
   if (vs.squad !== undefined && vs.squad !== u.squad) out.push(`squad seed ${vs.squad}`);
   if (vs.certs !== undefined && vs.certs.join() !== u.certs.join()) out.push(vs.certs.length ? `grants ${vs.certs.join(', ').replace(/_/g, ' ')}` : 'no grants');
   return out;

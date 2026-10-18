@@ -191,7 +191,7 @@ export function XrayRail(p: {
           <span className="lab-moment-prov" title="Odds and routes from one exact engine state, for this squad">{header}</span>
           <button type="button" className={cx('lab-toggle', url.vs && 'lab-toggle-on')} aria-pressed={!!url.vs} disabled={p.session.squad.kind === 'game'}
             title={p.session.squad.kind === 'game' ? 'A call from the game keeps its own draw' : 'The same picks under a second instance, side by side'}
-            onClick={() => navigate({ vs: url.vs ? null : { kit: url.call?.kit === 'full' ? 'day1' : 'full' } }, 'replace')}>
+            onClick={() => navigate({ vs: url.vs ? null : { kit: url.call?.kit === 'day1' ? 'none' : 'day1' } }, 'replace')}>
             <span>Compare</span><i className="lab-toggle-dot" aria-hidden="true" />
           </button>
         </header>
