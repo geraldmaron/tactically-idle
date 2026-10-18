@@ -202,8 +202,8 @@ export function CallStrip() {
   ) });
 
   chips.push({ key: 'kit', node: (
-    <StripChip label={draw.kit === 'full' ? 'Full kit' : 'Day-one kit'} title="Kit" director={director('kit')}>
-      <SegmentedControl label="Kit" value={draw.kit} options={[{ value: 'day1', label: 'Day one' }, { value: 'full', label: 'Every item' }] as const} onChange={kit => setDraw({ kit })} />
+    <StripChip label={draw.kit === 'full' ? 'Full kit' : draw.kit === 'none' ? 'No kit' : 'Day-one kit'} title="Kit" director={director('kit')}>
+      <SegmentedControl label="Kit" value={draw.kit} options={[{ value: 'none', label: 'No items' }, { value: 'day1', label: 'Day one' }, { value: 'full', label: 'Every item' }] as const} onChange={kit => setDraw({ kit })} />
     </StripChip>
   ) });
 

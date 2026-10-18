@@ -94,6 +94,7 @@ The URL holds the focus: the call (draw, squad, kit), the path (moves played) an
   - **Truth:** each hidden fact in this situation, beside what the team knows. **Tape in frame** (`truth=1`) tags people in the frame with their hidden facts, drawn outside the game's markup.
   - **This moment:** one row per choice offered here, in the player's order. Odds, where each band goes (goes well, complications, goes badly), minutes and flags (beaten, flat, all high). Locked rows show the engine's reason; rows the game hides behind "Show all" say so.
   - **Full note** for the selected row: odds and margin (score minus difficulty), what the odds are made of, the band curve, and per band the route, what it writes ("read later by n"), drawn results with their exact odds and routes, and **Player reads after** (the result text and the `Next:` line). Then the exact next step, and actions: force a band, Roll, **Where this leads** (1,000 runs from here), Note, Flow, Deps. A locked row shows **Why** with fixes.
+  - **Compare** (`vs=`), a toggle on This moment: the same picks under a second instance that changes the building, tier, kit, squad seed or grants. Each choice offered here shows the engine's chance of going well under A and B, B minus A in points, the margin change and the contributor groups that moved. Rows pair by choice; a step B refuses stops the compare there with the engine's reason. The situation has its own compare on the path rail.
   - **State, Clocks, People** tabs.
 - Keys: `1` to `9` select a row; `W` `C` `B` force goes well, complications, goes badly; `R` or `Enter` roll; `[` `]` step back and forward; `Backspace` rewind one; `X` hide the rail; `T` tape; `P` people colors; `F` `D` `S` this choice in Flow, Dependencies, Script.
 
@@ -176,7 +177,7 @@ The call and the path:
 | `tier` | 1 to 5 | `2` |
 | `call` | a literal call seed (wins over `variant` and `pacing`) | none |
 | `id` | an incident id (wins over everything above) | none |
-| `kit` | `day1`, `full` | `day1` |
+| `kit` | `none` (nothing carried), `day1`, `full` | `day1` |
 | `squad` | campaign seed for squad A | `719` |
 | `certs` | comma list of cert ids granted to squad A (lab grant) | none |
 | `path` | moves, comma-joined `actionId~band`; band is `favorable`, `mixed`, `adverse`, `roll`, `continue` or `fail`. A forced drawn result follows the band: `…~adverse/firearm:none/none` (a cascade's `+` is written `.`) | empty |
@@ -198,6 +199,7 @@ What you see:
 | `screen` | `card`, `brief`, `live`, `debrief` | follows the run |
 | `dice` | `roll`, `force` | `roll` |
 | `w`, `zoom` | `390` or `430`; `fit` or `1` | `390`, `fit` |
+| `vs` | the compare view's instance B: `family:<id>,seed:<n>,tier:<n>,kit:none\|day1\|full,squad:<n>,certs:<a>~<b>`, or `on` | none |
 | `mode`, `color`, `pruned`, `exp` | Flow: `reach`, `structure`, `state`; `band`, `fate`; `1`; expanded node ids | `reach`, `band` |
 | `vision` | `deutan`, `protan`, `tritan` | none |
 | `grp`, `adv` | Tuning group; `1` opens advanced fields | `odds` |

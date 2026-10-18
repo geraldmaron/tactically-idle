@@ -32,7 +32,7 @@ code wins, and this file gets a dated correction.
 |---|---|---|---|---|---|---|
 | 1 | Card title | title | 34 | 1 to 3 words | a place, object or person, never a genre | 22px, wraps to 2 lines |
 | 2 | Card chips | variantLabel, difficulty drivers | none | 1 to 3 words | shown only when it differs from the title | one line |
-| 3 | Card hook | summary | none | about 130 chars, first sentence 14 words | person and want in the first five words, one gap, what gets worse | live panel clamps to 3 lines at 14px |
+| 3 | Card hook | summary | none | about 100 chars bound, first sentence 14 words | person and want in the first five words, one gap, what gets worse | the Ops board card clamps to 2 lines at 13.5px (about 100 characters at 390px, measured 2026-10-08 on a replica of the card CSS), and that is the budget that binds; the live panel clamps to 3 lines at 14px |
 | 4 | Pressure label | pressureLabel | none | 2 to 4 words | whose safety, then what runs out ("Mara’s time inside"). An institution's schedule fails unless the hook ties it to a person's safety | written in the call tree's briefing |
 | 5 | Dispatch reason | dispatchReason | 240 | 2 sentences | who called and what they want the team for | full, under "Why your team was sent" |
 | 6 | Known line | known[] | 260 | 3 lines of about 12 words | source, claim, how they know | full |

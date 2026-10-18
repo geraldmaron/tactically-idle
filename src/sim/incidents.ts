@@ -203,6 +203,8 @@ export interface BoardSummary {
   nextArrivalAt: number | null;
   /** Live cards that expire within INCIDENT_TUNING.expiringSoonMs. */
   expiringSoon: number;
+  /** Most cards the board holds (INCIDENT_TUNING.boardMax). */
+  max: number;
 }
 
 export function boardSummaryOf(state: GameState, now: number): BoardSummary {
@@ -214,5 +216,6 @@ export function boardSummaryOf(state: GameState, now: number): BoardSummary {
     newCount: live.filter((c) => !c.seen).length,
     nextArrivalAt: live.length >= INCIDENT_TUNING.boardMax || at === null ? null : Math.max(at, t),
     expiringSoon: live.filter((c) => c.expiresAt - t <= INCIDENT_TUNING.expiringSoonMs).length,
+    max: INCIDENT_TUNING.boardMax,
   };
 }

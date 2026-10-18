@@ -145,12 +145,12 @@ N15 and N16 count-conditioned briefing lines and ending addenda. R-G1 is in `int
 `clock-runout-routing`; N6, N7, N9 and N21 are in `hostage-gate-requests`. Done: each request works in
 the hostage call and the call's fingerprints are recaptured deliberately.
 
-### hostage-review-leftovers: Hostage review leftovers
-Tags: job=command; journeys=answer-a-call; probes=none (prose and skill text); lane=calls
-Needs: start=none; integrate=none; ship=none
+### hostage-review-leftovers: Hostage review leftover B9
+Tags: job=command; journeys=answer-a-call; probes=none (prose); lane=deferred
+Needs: start=none (waits on the owner's ruling, design question 10); integrate=none; ship=none
 
-The B9 owner-condition replay leak (waits on the owner's ruling), the NF3 to NF8 prose notes, and
-the N8 and N20 skill budget fixes.
+The B9 owner-condition replay leak: the stage 2 cue still identifies the situation. NF3 to NF8 and
+the N8 and N20 skill fixes shipped in #44.
 
 ### crisis-content-note: Content note and 988 line
 Tags: job=command; journeys=answer-a-call; probes=none (text); lane=deferred
@@ -209,12 +209,6 @@ that the drawn incoming-fire distribution changes with the building. Done: a pai
 over every fire-carrying choice shows the hit share differs where the sightline does, as a
 trees-v13 test.
 
-### lab-compare: Lab compare view
-Tags: job=understand; journeys=team-moves-odds; probes=none (tooling); lane=tooling
-Needs: start=none; integrate=none; ship=none
-
-Per-choice odds deltas for the same call under two instances.
-
 ### hostage-gate-requests: Gate requests from the hostage review
 Tags: job=command; journeys=answer-a-call; probes=none (tooling); lane=tooling
 Needs: start=none; integrate=none; ship=none
@@ -242,11 +236,23 @@ replace. Done: `npm run verify` and pull-request CI run it, and it passes.
 
 ## Player experience
 
-### hq-tiles: HQ stat tiles
-Tags: job=return; journeys=none (HQ display, no journey covers it); probes=none (display); lane=interface
+### manager-names-disjoint: Manager names stay out of call casts
+Tags: job=command; journeys=answer-a-call; probes=none (names); lane=calls
+Needs: start=intel-odds (both change hostage fingerprints, so they merge in order); integrate=none; ship=none
+
+The civilian pool (`src/content/call-trees/civilian-names.ts`) is kept disjoint from the officer
+catalog, but not from the Command Staff managers: "Navarro" is in `CIVILIAN_SURNAMES`, so a subject
+can be drawn as "<first> Navarro" while Sam Navarro sits on the HQ screen. Done: the disjointness
+test also covers the names in `MANAGERS` (`src/sim/command-staff.ts`), 'Navarro' leaves the pool,
+and the changed fingerprints are recaptured. The calls lane holds a lock on that test for this item.
+
+### manager-pronouns: Managers carry their pronouns as data
+Tags: job=build; journeys=none (no manager text uses a pronoun yet); probes=none (data); lane=engine
 Needs: start=none; integrate=none; ship=none
 
-Icon tiles with mini bars.
+The manager portraits fix how each manager looks (she, he, they in the art briefs), but
+`ManagerProfile` has no pronoun field. Done: `pronouns` on `ManagerProfile`, set from the briefs,
+before any shift report or log line refers to a manager by pronoun.
 
 ### manager-art: Manager portraits and emblems
 Tags: job=build; journeys=none (art); probes=none (art); lane=interface

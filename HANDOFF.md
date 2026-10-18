@@ -7,20 +7,20 @@ entries instead of keeping history. Rules are in `COORDINATION.md`; work to do i
 ## Lead
 
 The coordinating session, on `main`. Merged so far: #36 (coordination rules), #37 (`e2e-script`),
-#38 (`small-screen-map`), #39 (barricade design sheet), #40 (`gear-by-action`), #41 (rescue design sheet).
+#38 (`small-screen-map`), #39 (barricade design sheet), #40 (`gear-by-action`), #41 (rescue design sheet), #42 (`hq-tiles`), #43 (`lab-compare`), #44 (hostage review leftovers, all but B9).
 
 ## Lanes
 
 | Lane | Branch | In flight | Declared touches |
 |---|---|---|---|
-| engine | `claude/engine-intel-odds` | `intel-odds` (with R-B5): approved, in progress. Adds `TreeState.armed` (interface file, approved with a compile-time reveal check and a Codex review). Then `clock-runout-routing`, `barricade-engine-requests`, `second-squad` | `src/sim/threat.ts`, `src/sim/incident-factors.ts`, `trees-v13/compile.ts`, `src/gen/incident/instance.ts`, `src/content/call-trees/types.ts`, `src/architecture/wiring.ts`, tests |
-| calls | to be cut from main | `hostage-review-leftovers` next (file list due). Queued: the armed-gated hostage line after intel-odds merges. Barricade and rescue tree data wait on their engine Needs | to be declared |
-| tooling | `claude/lab-compare` | `lab-compare`: approved, in progress | `src/dev/lab/model/compare.ts` and test, `src/dev/lab/surfaces/play/CompareRail.tsx`, `XrayRail.tsx`, `play.css`, `src/dev/lab/types.ts`, `url.ts` and test |
-| interface | `feat/hq-tiles` | `hq-tiles`: approved, in progress | `src/ui/screens/HQ.tsx`, `hq-overview.css`, new `hq-tiles.test.ts`; `src/sim/incidents.ts` under the lock below |
+| engine | `claude/engine-intel-odds` (#45) | `intel-odds`: ready; the lead integrates it with tooling's explore.test.ts fix. Next `clock-runout-routing`, `barricade-engine-requests`, `second-squad` | as declared in #45 |
+| calls | none | Manager briefs delivered. Next, once `intel-odds` merges: the armed-gated hostage line, then `manager-names-disjoint` | none |
+| tooling | `claude/tooling-explore-intel-odds` (from #45's head) | Fixing explore.test.ts for #45. Then `hostage-gate-requests` | `src/dev/lab/model/explore.test.ts`; maybe `session.ts`, `why.ts` |
+| interface | `feat/manager-art` | `manager-art`: approved; emblems first, portraits after the briefs; at most 45 image generations | `public/art/managers/`, `public/art/emblems/`, `scripts/validate-art.mjs`, `src/ui/screens/Develop.tsx`, `development.css`; `docs/art/manager-emblem-expansion/` under the lock below |
 
 ## Locks outside normal ownership
 
-- `src/sim/incidents.ts` (engine-owned): interface lane, for the `hq-tiles` PR only, limited to adding `max` to `BoardSummary`.
+- `docs/art/manager-emblem-expansion/` (lead-owned): interface lane, for the `manager-art` PR only.
 
 ## Open questions for the owner
 

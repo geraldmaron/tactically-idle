@@ -7,8 +7,8 @@ import { parseIncidentId } from '../../gen/incident';
 import type { Policy } from '../../gen/incident/trees-v13/balance';
 import type { IncidentType } from '../../sim/scenario-types';
 import type { OutcomeBand } from '../../sim/types';
-import { paramsToQuery, readParams } from './model/call';
-import type { FrameScreen, LabCall, LabUrl, Scope, Selection, Surface, Vision } from './types';
+import { isKit, paramsToQuery, readParams } from './model/call';
+import type { CompareDraw, FrameScreen, LabCall, LabUrl, Scope, Selection, Surface, Vision } from './types';
 
 export interface ParsedUrl { url: LabUrl; rewritten: boolean; notices: string[] }
 
@@ -144,6 +144,38 @@ export function selectionText(sel: Selection): string {
 /** The surface a URL with no `tab` opens: Play when a call is in focus, else the Calls landing. */
 export const defaultTab = (call: LabCall | null): Surface => call ? 'play' : 'calls';
 
+/** Instance B of the compare view: `vs=kit:none,family:market_row,seed:9,tier:3,squad:12,certs:a~b`.
+ * Unknown fields are dropped; `vs=on` (or any text with no field) opens the view with nothing changed
+ * yet, read back as an empty draw. Null when the param is absent. */
+export function parseVs(text: string | null): CompareDraw | null {
+  if (text === null) return null;
+  const draw: CompareDraw = {};
+  for (const part of list(text)) {
+    const at = part.indexOf(':');
+    if (at <= 0) continue;
+    const key = part.slice(0, at), value = part.slice(at + 1);
+    if (key === 'family' && value) draw.family = value;
+    else if (key === 'kit' && isKit(value)) draw.kit = value;
+    else if (key === 'seed') { const n = int(value, 0, 0xffffffff); if (n !== null) draw.seed = n; }
+    else if (key === 'tier') { const n = int(value, 1, 5); if (n !== null) draw.tier = n; }
+    else if (key === 'squad') { const n = int(value, 0, 0xffffffff); if (n !== null) draw.squad = n; }
+    else if (key === 'certs') draw.certs = value.split(/[~+ ]/).map(cert => cert.trim()).filter(Boolean);
+  }
+  return draw;
+}
+
+/** The `vs` param for a draw, fields in a fixed order; `on` for an empty draw. */
+export function vsText(draw: CompareDraw): string {
+  const parts: string[] = [];
+  if (draw.family !== undefined) parts.push(`family:${draw.family}`);
+  if (draw.seed !== undefined) parts.push(`seed:${draw.seed}`);
+  if (draw.tier !== undefined) parts.push(`tier:${draw.tier}`);
+  if (draw.kit !== undefined) parts.push(`kit:${draw.kit}`);
+  if (draw.squad !== undefined) parts.push(`squad:${draw.squad}`);
+  if (draw.certs !== undefined) parts.push(`certs:${draw.certs.join('~')}`);
+  return parts.length ? parts.join(',') : 'on';
+}
+
 function readUrl(q: URLSearchParams): LabUrl {
   const call = parseCall(q);
   return {
@@ -178,6 +210,7 @@ function readUrl(q: URLSearchParams): LabUrl {
     notes: q.get('notes') === '1',
     frame: q.get('frame') === 'player' ? 'player' : null,
     labAlias: q.has('lab'),
+    vs: call ? parseVs(q.get('vs')) : null,
   };
 }
 
@@ -216,6 +249,7 @@ export function labUrlToSearch(u: LabUrl): string {
   put('f', u.filter);
   put('notes', '1', !u.notes);
   put('frame', u.frame);
+  if (u.call) put('vs', u.vs && vsText(u.vs));
   const query = readable(new URLSearchParams(out).toString());
   const search = u.labAlias ? (query ? `lab&${query}` : 'lab') : query;
   return search ? `?${search}` : '';
@@ -233,7 +267,7 @@ export function parseLabUrl(search: string): ParsedUrl {
 /** The true-device page for a lab URL (`frame=player`, spec 10.4): the same call, squad, path,
  * screen and switches; no selection, drawer or tab, which that page doesn't draw. */
 export function playerSearch(u: LabUrl): string {
-  return labUrlToSearch({ ...u, frame: 'player', tab: defaultTab(u.call), notes: false, sel: null, node: null });
+  return labUrlToSearch({ ...u, frame: 'player', tab: defaultTab(u.call), notes: false, sel: null, node: null, vs: null });
 }
 
 /** What makes a call different: the draw, the squad and its lab grants, the kit, a handoff, and the
