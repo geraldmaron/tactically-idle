@@ -242,12 +242,6 @@ replace. Done: `npm run verify` and pull-request CI run it, and it passes.
 
 ## Player experience
 
-### hq-tiles: HQ stat tiles
-Tags: job=return; journeys=none (HQ display, no journey covers it); probes=none (display); lane=interface
-Needs: start=none; integrate=none; ship=none
-
-Icon tiles with mini bars.
-
 ### manager-art: Manager portraits and emblems
 Tags: job=build; journeys=none (art); probes=none (art); lane=interface
 Needs: start=none; integrate=none; ship=none
