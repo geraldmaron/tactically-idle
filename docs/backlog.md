@@ -59,7 +59,9 @@ minutes, but not travel through the building or forcing a door, which the clock 
 So a fork can read a clock as still running when the decision has run it out. The calls lane saw it
 once in 3,152 hostage situation-2 plays (#62), and main does the same. Done: a fork reads the same
 minutes the clock advances by, with a test where travel alone carries a clock past zero inside the
-decision.
+decision. The fix stores the fork's base on the decision (`clockBaseMinutes`), so replays agree. The lab's
+X-ray preview (`src/dev/lab/model/xray.ts`) still reads the old formula until tooling wires it to
+the same base.
 
 ### armed-max: Text can say a look found empty hands
 Tags: job=command; journeys=chance-not-script; probes=none (text condition); lane=engine
