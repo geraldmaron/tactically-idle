@@ -386,5 +386,47 @@
       ],
       "sha256": "3e79aad82d31ac3058e0de548adba35c5e79e449b3b5c1a55f33913bea7b00e9"
     }
+  ],
+  "managerCount": 3,
+  "managerDimensions": [
+    512,
+    532
+  ],
+  "managerRuntimeBytes": 61344,
+  "managersDistinctFromOfficers": true,
+  "managers": [
+    {
+      "id": "watch_commander",
+      "file": "watch_commander.webp",
+      "bytes": 19744,
+      "dimensions": [
+        512,
+        532
+      ],
+      "mode": "RGB",
+      "sha256": "8b9081b83051e0e4a47a6ece7dd6271a9da0f09ee7cec1d7a816aa093da5c4cd"
+    },
+    {
+      "id": "training_sergeant",
+      "file": "training_sergeant.webp",
+      "bytes": 22398,
+      "dimensions": [
+        512,
+        532
+      ],
+      "mode": "RGB",
+      "sha256": "9c53761387800ac5c5aa65cf9b0bb570ad99b1513e57c809ad9ea195b05d50be"
+    },
+    {
+      "id": "quartermaster",
+      "file": "quartermaster.webp",
+      "bytes": 19202,
+      "dimensions": [
+        512,
+        532
+      ],
+      "mode": "RGB",
+      "sha256": "4add3bebcfccfca40873fa1d76492a04485b768cb5984825b962b38965a1ceac"
+    }
   ]
 }
