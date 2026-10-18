@@ -209,12 +209,6 @@ that the drawn incoming-fire distribution changes with the building. Done: a pai
 over every fire-carrying choice shows the hit share differs where the sightline does, as a
 trees-v13 test.
 
-### lab-compare: Lab compare view
-Tags: job=understand; journeys=team-moves-odds; probes=none (tooling); lane=tooling
-Needs: start=none; integrate=none; ship=none
-
-Per-choice odds deltas for the same call under two instances.
-
 ### hostage-gate-requests: Gate requests from the hostage review
 Tags: job=command; journeys=answer-a-call; probes=none (tooling); lane=tooling
 Needs: start=none; integrate=none; ship=none
