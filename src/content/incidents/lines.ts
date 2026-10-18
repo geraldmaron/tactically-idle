@@ -110,3 +110,16 @@ export const COMMAND_LINES = {
 
 /** A line about person `{P}`, rewritten for a role ('shooter'): `{P.first}` becomes `{shooter.first}`. */
 export const asRole = (line: string, role: string) => line.replace(/\{P(?=[.~^}])/g, `{${role}`);
+
+// A person the team saw and has since lost sight of (sim/threat.ts basis 'last_seen'): the map keeps
+// an amber marker where they were seen, and the fact panel shows this claim and source. The engine
+// fills `{person}` with the person's first name, as the other person claims do ("{x.first} is
+// inside."), and `{place}` with the room as prose: "the " plus spaceLabel lowercased ("the
+// kitchen", the form sim/spatial-factors.ts already uses), never the bare label ("in Kitchen"). The source
+// credits the squad's own look, never a reporter, and reads after "Reported by" or "Source". The
+// marker names the checked fact, never the person (swat-call-prose surface budgets, row 13).
+export const LAST_SEEN_LINES = {
+  source: 'Your squad, by sight',
+  claim: '{person} was last seen in {place}.',
+  marker: 'LAST SEEN',
+} as const;
