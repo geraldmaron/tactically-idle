@@ -7,10 +7,11 @@ import { pathToFileURL } from 'node:url';
  * 1. checks the casebook shows a locked framework as its requirement, with no call content;
  * 2. takes every starting board call live (each a "New kind of call"), which discovers its recipe
  *    in the casebook and earns department service;
- * 3. takes each standing assignment live once the incidents are gone.
- * With `squads: 2` every call that takes two squads sends both; the radios the second squad
- * needs are bought through the Prepare screen's own purchase button, never injected. */
-export async function playLiveCalls(page, { baseURL = 'http://127.0.0.1:5174', width = 390, height = 844, squads = 1, captureDir } = {}) {
+ * 3. checks the emptied board offers no standing assignments, only the wait for the next call-out.
+ * Each call sends as many ready squads as its Prepare screen says it takes, so a call that takes
+ * two sends two; radios a squad lacks are bought through the Prepare screen's own purchase
+ * button, never injected. */
+export async function playLiveCalls(page, { baseURL = 'http://127.0.0.1:5174', width = 390, height = 844, captureDir } = {}) {
   await page.clock.setFixedTime(new Date());
   await page.setViewportSize({ width, height });
   const errors = []; page.on('pageerror', error => errors.push(String(error)));
@@ -37,7 +38,7 @@ export async function playLiveCalls(page, { baseURL = 'http://127.0.0.1:5174', w
   assert.ok(await locked.count() > 0, 'a new department has a locked framework');
   const lockedText = await locked.first().innerText();
   assert.match(lockedText, /Not yet dispatched to your department/);
-  assert.match(lockedText, /Department level \d|An officer certified in \w/);
+  assert.match(lockedText, /Department level \d|An officer certified in \w|in stock$/m);
   // Tactical calls open at level 1; protected rescue still waits for a vehicle-trained officer.
   const rescue = await row('protected_rescue').innerText();
   assert.match(rescue, /An officer certified in \w/);
@@ -66,8 +67,14 @@ export async function playLiveCalls(page, { baseURL = 'http://127.0.0.1:5174', w
       await overflow(`${label} prepare upper floor`);
       await page.getByRole('tab', { name: /^Ground floor/ }).click();
     }
-    await page.getByRole('button', { name: /Alpha/ }).click();
-    if (squads > 1) await page.getByRole('button', { name: /Bravo/ }).click();
+    // The squad range is read from the screen, as the player reads it: "Takes 1 squad" or "Takes 1 to 2 squads".
+    const takes = (await page.getByText(/^Takes \d+( to \d+)? squads?\./).first().innerText()).match(/Takes (\d+)(?: to (\d+))?/);
+    const range = { min: Number(takes[1]), max: Number(takes[2] ?? takes[1]) };
+    const ready = page.locator('.squadpick button[aria-label^="Squad "]:not([aria-label*="not deployable"])');
+    const pick = Math.min(range.max, await ready.count());
+    assert.ok(pick >= range.min, `${label}: ${range.min} ready squad${range.min > 1 ? 's' : ''} to send`);
+    for (let i = 0; i < pick; i++) await ready.nth(i).click();
+    assert.equal(await page.locator('.squadpick button[aria-pressed="true"]').count(), pick, `${label}: ${pick} squad${pick > 1 ? 's' : ''} chosen`);
     // Standard radios come from owned stock, one per officer. A short squad is equipped by
     // buying the missing radios on this screen, as a player would.
     const buyRadios = page.getByRole('button', { name: /^Buy \d+ radios? · / });
@@ -166,20 +173,14 @@ export async function playLiveCalls(page, { baseURL = 'http://127.0.0.1:5174', w
   await capture('casebook-found', row(discovered[0]));
   await capture('casebook', casebook);
 
-  // 3. With the incidents taken, the standing assignments fill the open places. Each is live too.
-  const divider = page.locator('.opboard-divider');
-  assert.match(await divider.innerText(), /^Standing assignments$/);
-  await capture('board-standing', divider);
-  const codes = await page.locator('.opboard-divider ~ .opboard .opboard-code').allInnerTexts();
-  assert.ok(codes.length > 0, 'standing assignments fill the open places');
-  for (const code of codes) {
-    const card = page.locator('.opboard', { has: page.locator('.opboard-code', { hasText: code }) });
-    await card.getByRole('button', { name: 'Prepare', exact: true }).click();
-    const { result } = await play(`${code} standing`);
-    Object.assign(result, { kind: 'standing' });
-  }
+  // 3. With the incidents taken the board is empty: no standing assignments, only the next arrival.
+  assert.match(await page.locator('.opboard-count').innerText(), /No call-outs right now/);
+  assert.equal(await page.getByText('Standing assignments').count(), 0, 'the board has no standing assignments');
+  assert.equal(await page.getByRole('button', { name: 'Prepare', exact: true }).count(), 0, 'nothing left to prepare');
+  await overflow('empty board');
+  await page.evaluate(() => scrollTo(0, 0));
+  await capture('board-empty');
 
-  if (squads > 1) assert.ok(results.some(result => result.squads > 1), 'at least one live call sent two squads');
   assert.deepEqual(errors, [], 'uncaught browser errors');
   return results;
 }
@@ -191,11 +192,10 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   try {
     for (const [width, height] of [[390, 844], [320, 568]]) {
       const context = await browser.newContext({ viewport: { width, height }, hasTouch: true });
-      try { results.push(...await playLiveCalls(await context.newPage(), { width, height, squads: width === 320 ? 2 : 1, baseURL: process.env.TI_BASE_URL, captureDir: process.env.TI_CAPTURE_DIR })); }
+      try { results.push(...await playLiveCalls(await context.newPage(), { width, height, baseURL: process.env.TI_BASE_URL, captureDir: process.env.TI_CAPTURE_DIR })); }
       finally { await context.close(); }
     }
     if (process.env.TI_E2E_REPORT) await writeFile(process.env.TI_E2E_REPORT, JSON.stringify(results, null, 2) + '\n');
-    const incidents = results.filter(result => result.kind === 'incident');
-    console.log(`Passed ${results.length} live browser journeys at both phone sizes with one and two squads: a locked casebook row, ${incidents.length} board calls discovering ${new Set(incidents.map(result => result.type)).size} frameworks, ${results.filter(result => result.kind === 'standing').length} standing assignments, ${results.filter(result => result.squads > 1).length} two-squad deployments (${results.reduce((total, result) => total + result.boughtRadios, 0)} radios bought on Prepare), ${results.filter(result => result.floors > 1).length} with an upper floor.`);
+    console.log(`Passed ${results.length} live board calls at 390x844 and 320x568: a locked casebook row, ${new Set(results.map(result => result.type)).size} frameworks discovered, ${results.filter(result => result.squads > 1).length} two-squad deployments (${results.reduce((total, result) => total + result.boughtRadios, 0)} radios bought on Prepare), ${results.filter(result => result.floors > 1).length} with an upper floor, then an empty board.`);
   } finally { await browser.close(); }
 }
