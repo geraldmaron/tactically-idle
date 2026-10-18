@@ -68,6 +68,15 @@ Needs: start=intel-odds; integrate=none; ship=none (a calls-lane tree authors th
 It's in the catalog (`src/content/items.ts`) and no call uses it. Done: a choice watches a room
 through it, using the sightings step, and what it sees moves the odds through `intel-odds`.
 
+### armed-max: Text can say a look found empty hands
+Tags: job=command; journeys=chance-not-script; probes=none (text condition); lane=engine
+Needs: start=none; integrate=none; ship=none
+
+From the hostage armed line's writing review: `TreeState.armed` takes `min` only, so after a look
+into the room an unarmed group gets no line at all, which the review flags as a fake-choice risk
+(the look pays nothing visible). Done: `TreeState.armed` takes `max` (including `max: 0`), under the
+same compile-time reveal rule, with a test, so the hostage call can say the hands were empty.
+
 ### clock-runout-routing: A clock that runs out moves the call
 Tags: job=command; journeys=choices-branch; probes=none (routing, not odds); lane=engine
 Needs: start=none; integrate=none; ship=clock-edges-in-tooling
@@ -77,7 +86,7 @@ sets a mark but can't move the call (`src/sim/clocks.ts`), so a short choice can
 leave choices on screen that the text has made false. Done: `onOut.next` routes the call when the
 person is still inside and the decision's own outcome didn't end it, shown in the hostage call.
 
-Engine side built on `claude/engine-clock-runout-routing`: `onOut.next` compiles to a route, clock
+Engine side merged in #46: `onOut.next` compiles to a route, clock
 targets are visible to the graph, the requirement tree and `check:strings`, and a permanent test
 audits every onOut mark reader. Still to ship: `clock-edges-in-tooling`, and the calls lane adding
 `onOut.next` to the hostage owner-condition clock.
@@ -92,7 +101,11 @@ person can leave by their own ground-floor window where the building has one (`u
 rejects every window, `src/gen/incident/story-bindings.ts`). R-B3: an outcome or a clock cue can
 move a person, and the team can watch or enter a place on a route (the hall), not only a role's
 room. Done: each works in the barricade call on the building families its sheet names, with the
-conditions that keep text true where the building doesn't allow it.
+conditions that keep text true where the building doesn't allow it. Decided 2026-10-18: one PR per
+request in order R-B1, R-B2, R-B3. R-B2's exit field is `walksVia` and is designed for rescue's
+R-R5 too. A place given as a step along a route declares what it must be, so text never names a
+room the building doesn't have there. R-B3 lands before `offsite-fire`, which builds on its
+positions.
 
 ### rescue-engine-requests: Outcomes that change the scene
 Tags: job=command; journeys=choices-branch; probes=blueprint-building; lane=engine
@@ -220,7 +233,7 @@ trees-v13 test.
 
 ### clock-edges-in-tooling: The lab and the tree tests follow clock routes
 Tags: job=understand; journeys=choices-branch; probes=none (tooling); lane=tooling
-Needs: start=none (after the clock-runout-routing engine PR merges); integrate=none; ship=none
+Needs: start=none (#46 merged); integrate=none; ship=none
 
 `clock-runout-routing` adds optional clock-target parameters to `callGraph`, `callStringRows` and
 `requirementTree`. Done: `scripts/check-strings.ts`, the call-tree traversals in

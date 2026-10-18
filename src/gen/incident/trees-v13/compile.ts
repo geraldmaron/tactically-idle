@@ -1,4 +1,5 @@
 import type { CallTree, TreeChoice, TreeIf, TreeMove, TreeNext, TreeNode, TreeOutcome, TreeState } from '../../../content/call-trees/types';
+import type { IncidentTemplate } from '../../../content/incidents/types';
 import { CIVILIAN_FIRST_NAMES, CIVILIAN_SURNAMES } from '../../../content/call-trees/civilian-names';
 import { scenarioRecipe } from '../../../content/scenario-recipes';
 import { hashIndex, hashSeed } from '../../../sim/rng';
@@ -273,6 +274,33 @@ export function resolveNext(tree: CallTree, next: TreeNext, seed: number): { nod
   return next;
 }
 
+/** Where a clock running out sends the call (Clock.onOut.next, R-G4), as the engine applies it
+ * (ClockDef.onOut.route): the target node's flag and stage, or the ending, with every other node
+ * flag cleared, since the call may be at any node when the clock runs out. A clock sends the call
+ * on to the last stage or ends it, never anywhere earlier: a route can't go back a stage from any
+ * node, so commit and replay need no stage to agree, and the root (open only before the call
+ * starts) is never a target. */
+export function clockRoute(tree: CallTree, to: TreeNext, seed: number): Pick<OutcomeEffect, 'setFlags' | 'clearFlags' | 'stage' | 'ending'> {
+  const next = resolveNext(tree, to, seed);
+  const target = 'node' in next ? tree.nodes.find(node => node.id === next.node) : undefined;
+  if ('node' in next && !target) throw new Error(`${tree.type}: a clock runs out to unknown node ${next.node}`);
+  if (target && (target.id === tree.root || target.stage !== STAGES[STAGES.length - 1]))
+    throw new Error(`${tree.type}: a clock runs out to ${target.id}, which is not a ${STAGES[STAGES.length - 1]} node; a clock moves the call on to the last stage or ends it`);
+  if ('ending' in next && !tree.endings[next.ending] && next.ending !== 'handed_over') throw new Error(`${tree.type}: a clock runs out to unknown ending ${next.ending}`);
+  const others = tree.nodes.filter(node => node.id !== target?.id).map(node => nodeFlag(node.id));
+  return 'node' in next
+    ? { setFlags: [TREE_STARTED, nodeFlag(next.node)], clearFlags: others, stage: target!.stage }
+    : { setFlags: [TREE_STARTED, endFlag(next.ending)], clearFlags: others, ending: next.ending };
+}
+
+/** Where any situation's clocks can send the call when they run out (Clock.onOut.next), once each:
+ * what the static checks (strings, lint, the graph) count as reachable from every node. A clock the
+ * story runs by itself never routes. */
+export function templateClockNexts(template: Pick<IncidentTemplate, 'situations'>): TreeNext[] {
+  const all = template.situations.flatMap(situation => (situation.clocks ?? []).filter(clock => !clock.story).flatMap(clock => clock.onOut?.next ? [clock.onOut.next] : []));
+  return [...new Map(all.map(next => [JSON.stringify(next), next])).values()];
+}
+
 /** Everywhere an outcome can send the call: its `next`, every severity of a force outcome, and the
  * results a cascade can have with this many members in its group (only `all` with none, never
  * `some` with one; every result when the size is not known). */
@@ -289,10 +317,15 @@ export function outcomeNexts(outcome: TreeOutcome, counts?: Record<string, numbe
 /** What a call with these group sizes can reach from the root, through every turn any call can draw:
  * its nodes and endings (with the exhausted-choices fallback). For strings and gates; a compiled
  * call reaches only its own turns (reachableNodes). */
-export function reachableWithin(tree: CallTree, counts: Record<string, number>): { nodes: Set<string>; endings: Set<string> } {
+export function reachableWithin(tree: CallTree, counts: Record<string, number>, clockNexts: readonly TreeNext[] = []): { nodes: Set<string>; endings: Set<string> } {
   const byId = new Map(tree.nodes.map(node => [node.id, node]));
   const nodes = new Set([tree.root]), endings = new Set(['handed_over']);
-  for (const queue = [tree.root]; queue.length;) for (const choice of byId.get(queue.shift()!)?.choices ?? []) for (const band of BANDS)
+  const queue = [tree.root];
+  for (const next of clockNexts) {
+    if ('ending' in next) { endings.add(next.ending); continue; }
+    for (const id of 'turn' in next ? tree.turns?.[next.turn] ?? [] : [next.node]) if (!nodes.has(id)) { nodes.add(id); queue.push(id); }
+  }
+  for (; queue.length;) for (const choice of byId.get(queue.shift()!)?.choices ?? []) for (const band of BANDS)
     for (const outcome of choice.outcomes[band]) for (const next of outcomeNexts(outcome, counts)) {
       if ('ending' in next) { endings.add(next.ending); continue; }
       for (const id of 'turn' in next ? tree.turns?.[next.turn] ?? [] : [next.node]) if (!nodes.has(id)) { nodes.add(id); queue.push(id); }
@@ -300,10 +333,12 @@ export function reachableWithin(tree: CallTree, counts: Record<string, number>):
   return { nodes, endings };
 }
 
-/** Nodes this call can reach from the root, after its turn draws (and its group sizes, when given). */
-export function reachableNodes(tree: CallTree, seed: number, counts?: Record<string, number>): TreeNode[] {
+/** Nodes this call can reach from the root, after its turn draws (and its group sizes, when given),
+ * and from where its clocks send it when they run out (`clockNexts`, reached from any node). */
+export function reachableNodes(tree: CallTree, seed: number, counts?: Record<string, number>, clockNexts: readonly TreeNext[] = []): TreeNode[] {
   const byId = new Map(tree.nodes.map(node => [node.id, node]));
-  const seen = new Set<string>([tree.root]), queue = [tree.root];
+  const fromClocks = clockNexts.map(to => resolveNext(tree, to, seed)).flatMap(next => 'node' in next ? [next.node] : []);
+  const seen = new Set<string>([tree.root, ...fromClocks]), queue = [tree.root, ...fromClocks];
   while (queue.length) {
     const node = byId.get(queue.shift()!);
     if (!node) continue;
@@ -335,10 +370,10 @@ export interface PrunePlan {
  * An outcome's own marks count, and so does the mark its `fire` sets when an officer is hit: a
  * drawn result, but one the call can produce. Marks set only by choices that need a mark nobody
  * sets don't count either: repeat until nothing more drops out. */
-export function prunePlan(tree: CallTree, counts: Record<string, number>, clockMarks: readonly string[] = [], seed?: number): PrunePlan {
+export function prunePlan(tree: CallTree, counts: Record<string, number>, clockMarks: readonly string[] = [], seed?: number, clockNexts: readonly TreeNext[] = []): PrunePlan {
   const counted = treeForCounts(tree, counts);
-  const reach = seed === undefined ? reachableWithin(counted, counts).nodes : null;
-  const nodes = reach ? counted.nodes.filter(node => reach.has(node.id)) : reachableNodes(counted, seed!, counts);
+  const reach = seed === undefined ? reachableWithin(counted, counts, clockNexts).nodes : null;
+  const nodes = reach ? counted.nodes.filter(node => reach.has(node.id)) : reachableNodes(counted, seed!, counts, clockNexts);
   const choices = nodes.flatMap(node => node.choices);
   const settableFrom = (live: TreeChoice[]) => {
     const outcomes = live.flatMap(choice => BANDS.flatMap(band => choice.outcomes[band]));
@@ -546,9 +581,10 @@ export function textBinder(tree: CallTree, built: BuiltLocation, placed: PlacedC
   return text => bindRoleTokens(text, cast, built.location.name, rooms, groups);
 }
 
-/** `clockMarks`: marks this call's clocks can set by themselves (cues, running out), so a prompt or
+/** `clockNexts`: where this call's clocks send it when they run out (Clock.onOut.next), so a node
+ * or ending reached only that way is kept. `clockMarks`: marks this call's clocks can set by themselves (cues, running out), so a prompt or
  * choice that reads one is kept even when no outcome sets it. */
-export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, authored: CallTree, placed: PlacedCast = placeCast(authored, built, input.incident!), clockMarks: readonly string[] = []): ScenarioDefinition {
+export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, authored: CallTree, placed: PlacedCast = placeCast(authored, built, input.incident!), clockMarks: readonly string[] = [], clockNexts: readonly TreeNext[] = []): ScenarioDefinition {
   const spec = input.incident!;
   const { recipe, situation, outside, room, roomOf, routes, routeName, anchors, cast } = placed;
   // Counted roles (groups): their size is fixed for this call, so count conditions settle here and
@@ -573,7 +609,7 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
   // Everyone on the map: the roles, then each group's members, who take their leader's kind.
   const present = [...onSite.map(role => ({ id: role.id, label: role.label, kind: role.kind })),
     ...Object.entries(groups).flatMap(([group, ids]) => ids.map(id => ({ id, label: tree.groups![group].label, kind: tree.roles.find(role => role.id === tree.groups![group].leader)!.kind })))];
-  const nodes = reachableNodes(tree, spec.seed, callCounts({ groups, armed: placed.armed }));
+  const nodes = reachableNodes(tree, spec.seed, callCounts({ groups, armed: placed.armed }), clockNexts);
   // Anyone a choice in this call walks out needs that walk clear of furniture, as the engine
   // checks it; otherwise hosting moves the call to another building seed (the v12 rule).
   for (const node of nodes) for (const choice of node.choices) if (choice.walks && groups[choice.walks]) throw new Error(`${node.id}.${choice.id}: only a key role walks out, never the group ${choice.walks}`);
@@ -585,7 +621,7 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
   // Marks and releases this call can actually set (prunePlan). A condition that needs one it can
   // never set is never true here (drop it); one that needs it absent is always true (strip that
   // part). The tree's count conditions are already settled, so `possible` reads marks and safety.
-  const plan = prunePlan(tree, callCounts({ groups, armed: placed.armed }), clockMarks, spec.seed);
+  const plan = prunePlan(tree, callCounts({ groups, armed: placed.armed }), clockMarks, spec.seed, clockNexts);
   const settable = { marks: plan.settableMarks, safe: plan.settableSafe };
   const possible = plan.possible;
   const trim = (state: TreeState | undefined): TreeState | undefined => state && {
@@ -909,7 +945,7 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
   s.squadRange = { min: 1, max: Math.min(3, Math.max(1, ...Object.values(s.stages).flatMap(stage => stage.actions.map(squadsPutToWork)))) };
 
   // Only the endings this call's actions can reach, plus the exhausted-choices fallback.
-  const reachableEndings = new Set(['handed_over', ...Object.values(s.stages).flatMap(stage => stage.actions.flatMap(action => withVariants(Object.values(action.outcomes).flat()).flatMap(effect => effect.ending ? [effect.ending] : [])))]);
+  const reachableEndings = new Set(['handed_over', ...clockNexts.map(to => resolveNext(tree, to, spec.seed)).flatMap(next => 'ending' in next ? [next.ending] : []), ...Object.values(s.stages).flatMap(stage => stage.actions.flatMap(action => withVariants(Object.values(action.outcomes).flat()).flatMap(effect => effect.ending ? [effect.ending] : [])))]);
   s.endings = Object.fromEntries(Object.entries(tree.endings).filter(([id]) => reachableEndings.has(id)).map(([id, ending]) => [id, {
     // A v13 debrief scores trust and strain from people's end states (sim/outcome-score.ts).
     id, title: ending.title, summary: ending.summary, trustAdjust: 0, strain: 0, disposition: ending.disposition,

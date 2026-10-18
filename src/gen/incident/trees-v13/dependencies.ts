@@ -11,7 +11,7 @@ import type { IncidentTemplate } from '../../../content/incidents/types';
 import type { MeterStance } from '../../../sim/scenario-types';
 import type { OutcomeBand } from '../../../sim/types';
 import { clockMarksOf } from '../instance';
-import { choiceActionId, outcomeNexts, prunePlan, reachableWithin, TOKEN, treeForCounts } from './compile';
+import { choiceActionId, outcomeNexts, prunePlan, reachableWithin, templateClockNexts, TOKEN, treeForCounts } from './compile';
 
 export type StateKey = `mark:${string}` | `safe:${string}` | `out:${string}` | `fact:${string}` | `clock:${string}` | `meter:${string}`
   | `promise:${string}` | `harm:${string}` | `count:${string}` | `turn:${string}` | 'situation'
@@ -96,6 +96,11 @@ export function countCombos(template: IncidentTemplate): Record<string, number>[
 
 /** Marks any situation's clocks can set by themselves: settable for every static check. */
 const templateClockMarks = (template: IncidentTemplate): string[] => [...new Set(template.situations.flatMap(situation => clockMarksOf(situation.clocks ?? [])))];
+
+/** Each clock of any situation that sends the call somewhere when it runs out, for requirementTree. */
+export const templateClockRoutes = (template: IncidentTemplate): { clock: string; next: TreeNext }[] =>
+  [...new Map(template.situations.flatMap(situation => (situation.clocks ?? []).filter(clock => !clock.story && clock.onOut?.next)
+    .map(clock => [`${clock.id}:${JSON.stringify(clock.onOut!.next)}`, { clock: clock.id, next: clock.onOut!.next! }] as const))).values()];
 
 /** A count condition as text: "others ≥ 1", "others 1 to 2". */
 function countText(count: NonNullable<TreeState['count']>): string {
@@ -307,9 +312,11 @@ export function lintTree(template: IncidentTemplate, index: DependencyIndex = de
   // Reachability and pruning, over every group size the template draws and every turn.
   const combos = countCombos(template);
   const clockMarks = templateClockMarks(template);
+  // Where a clock running out sends the call is reachable from any node (R-G4).
+  const clockNexts = templateClockNexts(template);
   const nodes = new Set<string>(), endings = new Set<string>();
   for (const counts of combos) {
-    const reach = reachableWithin(treeForCounts(tree, counts), counts);
+    const reach = reachableWithin(treeForCounts(tree, counts), counts, clockNexts);
     for (const id of reach.nodes) nodes.add(id);
     for (const id of reach.endings) endings.add(id);
   }
@@ -318,7 +325,7 @@ export function lintTree(template: IncidentTemplate, index: DependencyIndex = de
   for (const ending of Object.keys(tree.endings)) if (ending !== 'handed_over' && !endings.has(ending))
     add({ code: 'unreachable_ending', severity: 'error', ending, sites: [], message: `The ending ${ending} can't be reached by any turn or group size.` }, `ending:${ending}`);
 
-  const plans = combos.map(counts => prunePlan(tree, counts, clockMarks));
+  const plans = combos.map(counts => prunePlan(tree, counts, clockMarks, undefined, clockNexts));
   const never = (state: TreeState | undefined) => !!state && plans.every(plan => !plan.possible(state));
   for (const node of tree.nodes) for (const choice of node.choices) {
     if (never(choice.onlyIf)) {
@@ -340,7 +347,7 @@ export function lintTree(template: IncidentTemplate, index: DependencyIndex = de
 /** One requirement. `clock` carries `is` (a fork reads a clock both ways: low or not low). */
 export type ReqLeaf =
   | { kind: 'at'; node: string } | { kind: 'mark'; mark: string; want: boolean } | { kind: 'safe'; role: string; want: boolean }
-  | { kind: 'count'; group: string; min?: number; max?: number } | { kind: 'cert'; cert: string } | { kind: 'tags'; tags: string[]; all: boolean }
+  | { kind: 'count'; group: string; min?: number; max?: number } | { kind: 'armed'; role: string; min?: number } | { kind: 'cert'; cert: string } | { kind: 'tags'; tags: string[]; all: boolean }
   | { kind: 'minSquads'; n: number } | { kind: 'fact'; fact: string; is: boolean } | { kind: 'clock'; clock: string; when: 'low' | 'out'; is: boolean }
   | { kind: 'meter'; role: string; stance?: MeterStance[]; agitationAtLeast?: number; is?: boolean } | { kind: 'band'; band: OutcomeBand }
   | { kind: 'turn'; group: string; node: string } | { kind: 'drawn'; result: string } | { kind: 'authority'; detail: string }
@@ -354,7 +361,9 @@ function stateLeaves(state: TreeState | undefined): ReqNode[] {
   if (!state) return [];
   return [...(state.marks ?? []).map(mark => leaf({ kind: 'mark', mark, want: true })), ...(state.notMarks ?? []).map(mark => leaf({ kind: 'mark', mark, want: false })),
     ...(state.safe ?? []).map(role => leaf({ kind: 'safe', role, want: true })), ...(state.notSafe ?? []).map(role => leaf({ kind: 'safe', role, want: false })),
-    ...state.count ? [leaf({ kind: 'count', group: state.count.role, ...state.count.min !== undefined ? { min: state.count.min } : {}, ...state.count.max !== undefined ? { max: state.count.max } : {} })] : []];
+    ...state.count ? [leaf({ kind: 'count', group: state.count.role, ...state.count.min !== undefined ? { min: state.count.min } : {}, ...state.count.max !== undefined ? { max: state.count.max } : {} })] : [],
+    // TreeState.armed: how many of the group hold a weapon a look would see, settled per call like count.
+    ...state.armed ? [leaf({ kind: 'armed', role: state.armed.role, ...state.armed.min !== undefined ? { min: state.armed.min } : {} })] : []];
 }
 function ifLeaves(outcome: TreeOutcome): ReqNode[] {
   return ifsOf(outcome).map(entry => 'fact' in entry ? leaf({ kind: 'fact', fact: entry.fact, is: entry.is })
@@ -388,9 +397,10 @@ function routesOf(outcome: TreeOutcome): { next: TreeNext; drawn?: string; count
 }
 
 /** What must hold for a target to happen (spec 6.4): a choice offered and eligible; a prompt
- * variant shown; an outcome applying; an ending or node reached (any edge into it). Being at a node
- * is a leaf (`at`), never expanded; the engine's own refusal reason is the lab's to add. */
-export function requirementTree(tree: CallTree, target: ReqTarget): ReqNode {
+ * variant shown; an outcome applying; an ending or node reached (any edge into it, and any clock
+ * whose running out sends the call there: `clocks`, the template's clock ids and `onOut.next`).
+ * Being at a node is a leaf (`at`), never expanded; the engine's own refusal reason is the lab's to add. */
+export function requirementTree(tree: CallTree, target: ReqTarget, clocks: readonly { clock: string; next: TreeNext }[] = []): ReqNode {
   const nodeOf = (id: string) => {
     const node = tree.nodes.find(entry => entry.id === id);
     if (!node) throw new Error(`${tree.type}: no node ${id}`);
@@ -404,14 +414,19 @@ export function requirementTree(tree: CallTree, target: ReqTarget): ReqNode {
   const outcomeReq = (node: string, choice: TreeChoice, band: OutcomeBand, outcome: TreeOutcome): ReqNode[] =>
     [...choiceLeaves(node, choice), leaf({ kind: 'band', band }), ...stateLeaves(outcome.when), ...ifLeaves(outcome)];
   /** Every edge into a node or an ending, each as what must hold to take it. */
-  const into = (match: (next: TreeNext) => { turn?: { group: string; node: string } } | null): ReqNode => ({ any: tree.nodes.flatMap(node => node.choices.flatMap(choice => BANDS.flatMap(band =>
+  const into = (match: (next: TreeNext) => { turn?: { group: string; node: string } } | null): ReqNode => ({ any: [...tree.nodes.flatMap(node => node.choices.flatMap(choice => BANDS.flatMap(band =>
     choice.outcomes[band].flatMap(outcome => routesOf(outcome).flatMap(route => {
       const hit = match(route.next);
       if (!hit) return [];
       return [{ all: [...outcomeReq(node.id, choice, band, outcome), ...route.drawn ? [leaf({ kind: 'drawn', result: route.drawn })] : [],
         ...route.count ? [leaf({ kind: 'count', group: route.count.group, min: route.count.min })] : [],
         ...hit.turn ? [leaf({ kind: 'turn', ...hit.turn })] : []] }];
-    }))))) });
+    }))))),
+    // A clock that runs out sends the call there from wherever it is (R-G4).
+    ...clocks.flatMap(({ clock, next }) => {
+      const hit = match(next);
+      return hit ? [{ all: [leaf({ kind: 'clock', clock, when: 'out', is: true }), ...hit.turn ? [leaf({ kind: 'turn', ...hit.turn })] : []] }] : [];
+    })] });
 
   if ('choice' in target) return { all: choiceLeaves(target.choice[0], choiceOf(...target.choice)) };
   if ('prompt' in target) {

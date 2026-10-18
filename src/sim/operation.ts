@@ -897,7 +897,7 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     t.civilianLoss = round1(before.civilianSafety - run.civilianSafety);
     // Who the team sees, read before the outcome moves anyone (sim/sightings.ts).
     const seen = sightings(scenario, run, action, band, matched);
-    const { changes, stage: nextStage, ending } = applyEffects(run, matched);
+    const { changes, stage: outcomeStage, ending: outcomeEnding } = applyEffects(run, matched);
     if (seen) changes.push(...applyEffects(run, [seen]).changes);
     // v13: cues the clocks passed during this decision land after its own outcome, and the
     // outcome's events move the subjects' meters (sim/clocks.ts, sim/meters.ts).
@@ -905,8 +905,12 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     changes.push(...cues.changes);
     // v13: a clock that ran out where no fork read it sets its mark, and hurts its owner if they
     // are still inside and this outcome didn't already (sim/clocks.ts); the harm is recorded below.
+    // Its route, when it takes one, moves the call on after the outcome (R-G4).
     const outs = clockOutEffects(scenario, clocksBefore, run.clocks, run, matched);
-    applyEffects(run, outs);
+    const routed = applyEffects(run, outs);
+    changes.push(...routed.changes);
+    const nextStage = routed.ending ? null : routed.stage ?? outcomeStage;
+    const ending = routed.ending ?? outcomeEnding;
     applyMoves(run, scenario, matched);
     // v13: what command gave a person its word on is made, kept or broken by this decision (sim/commitments.ts).
     applyCommitments(run, scenario, action, band, matched, drawn.records, run.revision);

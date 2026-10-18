@@ -112,15 +112,31 @@ function clocksRunOut(scenario: ScenarioDefinition, before: OperationRun['clocks
  * applied after the decision's own outcome and its cues. `run.flags` are the flags after the
  * outcome. The mark is set whenever the clock runs out. The harm lands on the owner only when they
  * are still inside and the decision's own effects (`matched`, drawn variants included) don't
- * already hurt them: an outcome that narrates the collapse owns it. */
+ * already hurt them: an outcome that narrates the collapse owns it.
+ *
+ * The route (R-G4, precedence from docs/calls/barricade-design.md row H) moves the call, after
+ * the outcome, only when:
+ * 1. the decision's own outcome didn't end the call (an ending stands; the mark is still set);
+ * 2. the owner isn't out or safe once the outcome applied (the clock has stopped).
+ * Otherwise it moves the call to its target, a last-stage node or an ending (compile.ts
+ * clockRoute), so it never goes back a stage and reads nothing but these flags and effects: the
+ * commit and both replays take the same route. When two clocks run out in one decision, the
+ * first that routes wins. */
 export function clockOutEffects(scenario: ScenarioDefinition, before: OperationRun['clocks'], after: OperationRun['clocks'],
   run: Pick<OperationRun, 'flags'>, matched: readonly OutcomeEffect[]): OutcomeEffect[] {
+  const ended = matched.some(effect => effect.ending);
+  let routed = false;
   return clocksRunOut(scenario, before, after).flatMap((def): OutcomeEffect[] => {
     if (!def.onOut) return [];
     const owner = def.owner;
     const hurt = !!owner && matched.some(effect => effect.personHarm?.some(harm => harm.personId === owner));
     const harm = def.onOut.harm && owner && !stopped(def, run.flags) && !hurt ? { personHarm: [{ personId: owner, severity: def.onOut.harm }] } : {};
-    const effect: OutcomeEffect = { ...harm, ...(def.onOut.mark ? { setFlags: [`mark:${def.onOut.mark}`] } : {}) };
+    const route = def.onOut.route;
+    const moves = !!route && !routed && !ended && !stopped(def, run.flags);
+    if (moves) routed = true;
+    const setFlags = [...(def.onOut.mark ? [`mark:${def.onOut.mark}`] : []), ...(moves ? route!.setFlags ?? [] : [])];
+    const effect: OutcomeEffect = { ...harm, ...(setFlags.length ? { setFlags } : {}),
+      ...(moves && route!.clearFlags ? { clearFlags: [...route!.clearFlags] } : {}), ...(moves && route!.stage ? { stage: route!.stage } : {}), ...(moves && route!.ending ? { ending: route!.ending } : {}) };
     return Object.keys(effect).length ? [effect] : [];
   });
 }
