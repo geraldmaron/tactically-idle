@@ -27,7 +27,7 @@ import { runStringChecks } from '../../model/endpoints';
 import { anchorCovers, pinRow } from '../../model/notes';
 import {
   bindRows, castFor, castWords, changedRows, checkSummary, goneRows, groupSizes, lexiconForCast, longestSample, matcherAudit, PRONOUN_SETS, sampleFor,
-  scriptSections, variantKey, variantRows, variantSpace,
+  scriptSections, variantKey, variantRows, variantRowsKey, variantSpace,
 } from '../../model/script';
 import type { AuditHit, ScriptRow, ScriptSection, Variant } from '../../model/script';
 import { sessionBinder } from '../../model/session';
@@ -170,7 +170,7 @@ function Script({ template, session }: { template: IncidentTemplate; session: Se
   // ------------------------------------------------ string checks (dev server)
   const [checks, setChecks] = useState<Checks | null>(null);
   const runChecks = async () => {
-    const key = variantKey(v) + `|${v.cast}`;
+    const key = variantRowsKey(v) + `|${v.cast}`;
     setChecks({ status: 'running', variant: key, findings: new Map(), summary: [], stderr: '', code: 0 });
     const strings = rows.filter(row => !row.error).map(row => ({ ...row.row, text: row.text }));
     try {
@@ -184,7 +184,7 @@ function Script({ template, session }: { template: IncidentTemplate; session: Se
       setChecks({ status: 'error', variant: key, findings: new Map(), summary: [], stderr: error instanceof Error ? error.message : String(error), code: -1 });
     }
   };
-  const checksHere = checks && checks.variant === variantKey(v) + `|${v.cast}` ? checks : null;
+  const checksHere = checks && checks.variant === variantRowsKey(v) + `|${v.cast}` ? checks : null;
   const findingsOf = (row: ScriptRow) => checksHere?.findings.get(row.row.where) ?? [];
   const checkable = dev.available === true && dev.python !== false;
 

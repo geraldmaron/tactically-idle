@@ -9,6 +9,7 @@ import { generateIncident } from './index';
 import { compileIncident, drawInstance, hostedSpec } from './instance';
 import { armedKey, countHolds, memberCounts, treeForCounts } from './trees-v13/compile';
 import { callStringRows } from './trees-v13/strings';
+import { requirementTree } from './trees-v13/dependencies';
 import { GROUP_TEMPLATE, GROUP_TREE } from './trees-v13/group-fixture';
 
 const ARMED_LINE = 'Through the glass the team sees what {others.first} has in {others.his} hand.';
@@ -100,5 +101,21 @@ describe('text behind TreeState.armed waits for a look into the group’s room',
 
   it('rejects a mark the look also sets on a mixed result, when sightings settle nothing', () => {
     expect(() => compiled(variant({ marks: ['seen'], alsoSetBy: 'watch_mixed' }), 2).compile()).toThrow(/reads what others hold/);
+  });
+});
+
+describe('the requirement tree names an armed condition (the lab’s Why panel)', () => {
+  const tree = variant({ marks: ['seen'] }).tree;
+  const index = tree.nodes.find(node => node.id === 'talk')!.choices.find(choice => choice.id === 'hold')!.outcomes.favorable.findIndex(outcome => outcome.text === ARMED_LINE);
+
+  it('an outcome behind TreeState.armed requires the armed leaf, beside its reveal mark', () => {
+    const req = requirementTree(tree, { outcome: ['talk', 'hold', 'favorable', index] });
+    expect(req).toMatchObject({ all: expect.arrayContaining([{ leaf: { kind: 'armed', role: 'others' } }, { leaf: { kind: 'mark', mark: 'seen', want: true } }]) });
+  });
+
+  it('carries min when the condition sets one', () => {
+    const two = structuredClone(tree);
+    two.nodes.find(node => node.id === 'talk')!.choices.find(choice => choice.id === 'hold')!.outcomes.favorable[index].when!.armed!.min = 2;
+    expect(requirementTree(two, { outcome: ['talk', 'hold', 'favorable', index] })).toMatchObject({ all: expect.arrayContaining([{ leaf: { kind: 'armed', role: 'others', min: 2 } }]) });
   });
 });
