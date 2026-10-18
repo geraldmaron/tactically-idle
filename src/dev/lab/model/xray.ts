@@ -11,7 +11,7 @@ import type { Weight } from '../../../gen/incident/trees-v13/balance';
 import { labRequirementTree, treeClockRoutes } from './clocks';
 import type { DependencyIndex, ReqNode, Site, StateKey } from '../../../gen/incident/trees-v13/dependencies';
 import { choiceIndex, humanizeNode } from '../../../gen/incident/trees-v13/graph';
-import { clockViews, forkMinutes, stepClock } from '../../../sim/clocks';
+import { clockViews, forkMinutes, stepClock, teamMinutes } from '../../../sim/clocks';
 import type { DrawnResult } from '../../../sim/drawn-effects';
 import { matchedOutcomeIndices } from '../../../sim/operation';
 import { drawnDistributionAt, pendingDebrief, stageProgress } from '../../../sim/operation-selectors';
@@ -131,7 +131,7 @@ export function harmOf(scenario: ScenarioDefinition, effect: OutcomeEffect): str
 }
 
 /** The hidden inputs and public state that decide whether an effect applies. */
-function reasonsOf(scenario: ScenarioDefinition, action: ActionDefinition, band: OutcomeBand, effect: OutcomeEffect, deps: DependencyIndex | null): Because[] {
+function reasonsOf(scenario: ScenarioDefinition, action: ActionDefinition, band: OutcomeBand, effect: OutcomeEffect, deps: DependencyIndex | null, clockBase: number): Because[] {
   const out: Because[] = [];
   for (const entry of effect.truth ?? []) {
     const fact = scenario.facts.find(f => f.id === entry.factId);
@@ -140,7 +140,7 @@ function reasonsOf(scenario: ScenarioDefinition, action: ActionDefinition, band:
     out.push({ kind: 'truth', text: `${label}: ${entry.is ? 'yes' : 'no'}`, title: `Hidden truth in this situation. ${fact?.claim ?? ''} ${said ? `(${said})` : ''}`.trim() });
   }
   if (effect.clocks?.length) {
-    const minutes = Math.round(forkMinutes(action, band, effect));
+    const minutes = Math.round(forkMinutes(action, band, effect, clockBase));
     for (const entry of effect.clocks) {
       const clock = scenario.clocks?.find(c => c.id === entry.clockId);
       const label = clock?.label ?? entry.clockId;
@@ -223,12 +223,14 @@ function bandRoute(s: Session, state: GameState, run: OperationRun, scenario: Sc
   ev: Pick<Evaluation, 'timeBase' | 'storyMovementMinutes'>, deps: DependencyIndex | null): BandRoute {
   const p = view.likelihood[band];
   const possible = view.eligible && p > 1e-9 && sampleFor(view, band) !== null;
-  const indices = matchedOutcomeIndices(action, band, run, scenario);
+  // The team's minutes, travel and forcing included, as the engine's clock forks read them.
+  const clockBase = teamMinutes(ev, action, band);
+  const indices = matchedOutcomeIndices(action, band, run, scenario, clockBase);
   const list = action.outcomes[band];
   const applied = indices.map(index => list[index]);
   const effects = indices.map(index => {
     const effect = list[index];
-    const why = reasonsOf(scenario, action, band, effect, deps);
+    const why = reasonsOf(scenario, action, band, effect, deps, clockBase);
     return { index, routed: !!routeOf([effect]) || !!effect.drawn, text: effect.text ?? '', writes: writesOf(s, effect), because: why.map(entry => entry.text), why };
   });
   const base = routeOf(applied);
