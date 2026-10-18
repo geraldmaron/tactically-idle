@@ -49,7 +49,7 @@ describe('dependency index', () => {
     expect(entry('hostage_crisis', 'count:others')!.readers.length).toBeGreaterThan(0);
     expect(entry('hostage_crisis', 'meter:taker')!.readers.filter(site => site.field === 'outcome.if').length).toBe(25);
     // A fact branch reads the situation's truth, not what the team knows.
-    expect(entry('hostage_crisis', 'situation')!.readers.length).toBe(134);
+    expect(entry('hostage_crisis', 'situation')!.readers.length).toBe(136); // glass_group's escalation added two readers
     expect(entry('protected_rescue', 'clock:oxygen')!.readers.filter(site => site.field === 'outcome.if').length).toBe(26);
   });
 
