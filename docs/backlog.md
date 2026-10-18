@@ -148,7 +148,7 @@ Tags: job=command; journeys=answer-a-call; probes=none (text, not odds); lane=en
 Needs: start=none; integrate=none; ship=none
 
 Filed in `docs/calls/hostage-signature-design.md`: R-G2 a group role the player meets, and R-G3 with
-N15 and N16 count-conditioned briefing lines and ending addenda. R-G1 is in `intel-odds`, R-G4 in
+N15 and N16 count-conditioned briefing lines and ending addenda. R-G1 shipped with `intel-odds` (#45, #48), R-G4 is in
 `clock-runout-routing`; N6, N7, N9 and N21 are in `hostage-gate-requests`. Done: each request works in
 the hostage call and the call's fingerprints are recaptured deliberately.
 
