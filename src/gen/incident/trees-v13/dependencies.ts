@@ -347,7 +347,7 @@ export function lintTree(template: IncidentTemplate, index: DependencyIndex = de
 /** One requirement. `clock` carries `is` (a fork reads a clock both ways: low or not low). */
 export type ReqLeaf =
   | { kind: 'at'; node: string } | { kind: 'mark'; mark: string; want: boolean } | { kind: 'safe'; role: string; want: boolean }
-  | { kind: 'count'; group: string; min?: number; max?: number } | { kind: 'cert'; cert: string } | { kind: 'tags'; tags: string[]; all: boolean }
+  | { kind: 'count'; group: string; min?: number; max?: number } | { kind: 'armed'; role: string; min?: number } | { kind: 'cert'; cert: string } | { kind: 'tags'; tags: string[]; all: boolean }
   | { kind: 'minSquads'; n: number } | { kind: 'fact'; fact: string; is: boolean } | { kind: 'clock'; clock: string; when: 'low' | 'out'; is: boolean }
   | { kind: 'meter'; role: string; stance?: MeterStance[]; agitationAtLeast?: number; is?: boolean } | { kind: 'band'; band: OutcomeBand }
   | { kind: 'turn'; group: string; node: string } | { kind: 'drawn'; result: string } | { kind: 'authority'; detail: string }
@@ -361,7 +361,9 @@ function stateLeaves(state: TreeState | undefined): ReqNode[] {
   if (!state) return [];
   return [...(state.marks ?? []).map(mark => leaf({ kind: 'mark', mark, want: true })), ...(state.notMarks ?? []).map(mark => leaf({ kind: 'mark', mark, want: false })),
     ...(state.safe ?? []).map(role => leaf({ kind: 'safe', role, want: true })), ...(state.notSafe ?? []).map(role => leaf({ kind: 'safe', role, want: false })),
-    ...state.count ? [leaf({ kind: 'count', group: state.count.role, ...state.count.min !== undefined ? { min: state.count.min } : {}, ...state.count.max !== undefined ? { max: state.count.max } : {} })] : []];
+    ...state.count ? [leaf({ kind: 'count', group: state.count.role, ...state.count.min !== undefined ? { min: state.count.min } : {}, ...state.count.max !== undefined ? { max: state.count.max } : {} })] : [],
+    // TreeState.armed: how many of the group hold a weapon a look would see, settled per call like count.
+    ...state.armed ? [leaf({ kind: 'armed', role: state.armed.role, ...state.armed.min !== undefined ? { min: state.armed.min } : {} })] : []];
 }
 function ifLeaves(outcome: TreeOutcome): ReqNode[] {
   return ifsOf(outcome).map(entry => 'fact' in entry ? leaf({ kind: 'fact', fact: entry.fact, is: entry.is })
