@@ -70,12 +70,17 @@ through it, using the sightings step, and what it sees moves the odds through `i
 
 ### clock-runout-routing: A clock that runs out moves the call
 Tags: job=command; journeys=choices-branch; probes=none (routing, not odds); lane=engine
-Needs: start=none; integrate=none; ship=none
+Needs: start=none; integrate=none; ship=clock-edges-in-tooling
 
 Hostage request R-G4, which the barricade call needs before any tree data: `onOut` records harm and
 sets a mark but can't move the call (`src/sim/clocks.ts`), so a short choice can run a clock out and
 leave choices on screen that the text has made false. Done: `onOut.next` routes the call when the
 person is still inside and the decision's own outcome didn't end it, shown in the hostage call.
+
+Engine side built on `claude/engine-clock-runout-routing`: `onOut.next` compiles to a route, clock
+targets are visible to the graph, the requirement tree and `check:strings`, and a permanent test
+audits every onOut mark reader. Still to ship: `clock-edges-in-tooling`, and the calls lane adding
+`onOut.next` to the hostage owner-condition clock.
 
 ### barricade-engine-requests: People placed and moving on the building
 Tags: job=command; journeys=choices-branch; probes=blueprint-building; lane=engine
@@ -212,6 +217,16 @@ Rescue request R-R9: `measureWiring` compares eligibility and favorable odds onl
 that the drawn incoming-fire distribution changes with the building. Done: a paired-building check
 over every fire-carrying choice shows the hit share differs where the sightline does, as a
 trees-v13 test.
+
+### clock-edges-in-tooling: The lab and the tree tests follow clock routes
+Tags: job=understand; journeys=choices-branch; probes=none (tooling); lane=tooling
+Needs: start=none (after the clock-runout-routing engine PR merges); integrate=none; ship=none
+
+`clock-runout-routing` adds optional clock-target parameters to `callGraph`, `callStringRows` and
+`requirementTree`. Done: `scripts/check-strings.ts`, the call-tree traversals in
+`src/gen/incident/trees-v13/call-trees.test.ts`, and the lab's graph, string-row and requirement
+call sites (the full list is in the engine PR body) pass them, so a node reachable only through a
+clock shows in Flow, Script and Why and its text is checked.
 
 ### lab-armed-counts: The lab reads armed conditions as the compiled call does
 Tags: job=understand; journeys=none (lab tooling); probes=none (tooling); lane=tooling
