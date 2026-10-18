@@ -69,8 +69,9 @@ describe('the lab shows an armed line only where the compiled call keeps it', ()
   });
 
   it('reads the call’s own counts, armed key included', () => {
-    expect(callCounts(none.placed)).toEqual({ others: 0, [armedKey('others')]: 0 });
-    expect(callCounts(two.placed)).toEqual({ others: 2, [armedKey('others')]: 2 });
+    // callCounts is the call's compile-time facts and keeps gaining keys: assert the ones this is about.
+    expect(callCounts(none.placed)).toMatchObject({ others: 0, [armedKey('others')]: 0 });
+    expect(callCounts(two.placed)).toMatchObject({ others: 2, [armedKey('others')]: 2 });
   });
 
   it('hides it in Script and the palette on the draw that drops it, and shows it on the one that keeps it', () => {
