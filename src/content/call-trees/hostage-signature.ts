@@ -456,6 +456,7 @@ export const HOSTAGE_SIGNATURE: CallTree = {
     { id: 'talking', stage: 'resolve',
       prompt: 'The negotiator still has the line open. {owner.first} hasn’t left {owner.his} stool.',
       promptIf: [
+        { when: { marks: ['owner_hidden', 'owner_unwell'], notMarks: ['owner_back'] }, prompt: '{owner.first} is hidden behind the shelves. At the last look {owner.he} {owner~was|were} short of breath.' },
         { when: { marks: ['owner_unwell'] }, prompt: '{owner.first} is sitting on the tiles near the till while the call goes on.' },
         { when: { marks: ['wants_back'] }, prompt: 'The alley door is the exit {taker.first} asked for. {owner.first} waits behind the register.' },
         // What the team saw from the glass (saw_inside is set only by a favorable look, team_glass or
@@ -653,6 +654,7 @@ export const HOSTAGE_SIGNATURE: CallTree = {
       prompt: 'The bargaining has stopped. {owner.first} is perched on the stool behind the register.',
       promptIf: [
         { when: { marks: ['owner_down'] }, prompt: '{owner.first} has collapsed on the tiles. {taker.first} is screaming at someone to do something.' },
+        { when: { marks: ['owner_hidden', 'owner_unwell'], notMarks: ['owner_back'] }, prompt: 'You lost sight of {owner.first}, who was struggling for air before the shelves hid {owner.him}.' },
         { when: { marks: ['owner_unwell'] }, prompt: '{owner.first} is breathing hard behind the till, and {taker.first} has stopped making offers.' },
         { when: { marks: ['owner_hidden'], notMarks: ['owner_back'] }, prompt: '{owner.first} is still out of sight behind the shelves, and the counter phone has gone quiet.' },
         { when: { marks: ['silent'] }, prompt: 'Every call goes unanswered. {owner.first} sits at the register within {taker.first}’s reach.' },
