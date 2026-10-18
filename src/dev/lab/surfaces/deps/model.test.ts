@@ -6,6 +6,7 @@ import type { IncidentTemplate } from '../../../../content/incidents/types';
 import { dependencyIndex, lintTree } from '../../../../gen/incident/trees-v13/dependencies';
 import type { ReqTarget } from '../../../../gen/incident/trees-v13/dependencies';
 import { armedWithoutHitMark } from '../../../../gen/incident/trees-v13/never-offered-fixture';
+import { CLOCK_FIXTURE_IDS, clockFixtureTemplate } from '../../../../gen/incident/gates/clock-fixture';
 import { mutedFindings, muteNote } from '../../model/notes';
 import {
   engineReaders, groupKeys, humanizeCondition, humanizeFinding, KIND_ORDER, kindOf, LINT_LABEL, LINT_MEANING, plainNames, selectionTarget, siteGoal, siteWords, sortFindings, targetSelection,
@@ -16,13 +17,18 @@ const T = (type: keyof typeof INCIDENT_TEMPLATES) => INCIDENT_TEMPLATES[type] as
 const names = (template: IncidentTemplate) => ({ ...plainNames(template.tree), clock: (id: string) => id.replace(/_/g, ' ') });
 
 describe('lint in words (J6)', () => {
-  it('hostage: turned is read only by command approval, owner_down has a clock writer and is never dead', () => {
+  it('hostage: turned is read only by command approval, and nothing is a dead write', () => {
     const lint = lintTree(T('hostage_crisis'));
     const turned = lint.find(f => f.key === 'mark:turned')!;
     expect(turned.code).toBe('threat_only');
     expect(LINT_LABEL[turned.code]).toBe('Read only by command approval');
-    expect(lint.filter(f => f.key === 'mark:owner_down').map(f => f.code)).toEqual(['clock_writer']);
     expect(lint.some(f => f.code === 'dead_write')).toBe(false);
+  });
+
+  it('a mark only a clock writes, read later, is a clock writer and never dead (owned fixture)', () => {
+    const lint = lintTree(clockFixtureTemplate()).filter(f => f.key === `mark:${CLOCK_FIXTURE_IDS.outMark}`);
+    expect(lint.map(f => f.code)).toEqual(['clock_writer']);
+    expect(LINT_LABEL.clock_writer).toBeTruthy();
   });
 
   it('armed: officer_down is set only by a drawn result', () => {
@@ -32,13 +38,14 @@ describe('lint in words (J6)', () => {
   });
 
   it('reads raw ids in lint messages as names', () => {
-    // The armed call with nothing setting officer_down, so its medic choice is never offered.
-    const hostage = T('hostage_crisis'), armed = armedWithoutHitMark();
-    const clock = lintTree(hostage).find(f => f.code === 'clock_writer')!;
-    expect(clock.message).toContain('owner_condition');
-    const text = humanizeFinding(clock, names(hostage), dependencyIndex(hostage));
-    expect(text).not.toContain('owner_condition');
-    expect(text).toBe('Owner down is also set when owner condition runs out.');
+    // A clock writer from an owned fixture, and the armed call with nothing setting officer_down,
+    // so its medic choice is never offered.
+    const fixture = clockFixtureTemplate(), armed = armedWithoutHitMark();
+    const clock = lintTree(fixture).find(f => f.code === 'clock_writer')!;
+    expect(clock.message).toContain(CLOCK_FIXTURE_IDS.clock);
+    const text = humanizeFinding(clock, names(fixture), dependencyIndex(fixture));
+    expect(text).not.toContain(CLOCK_FIXTURE_IDS.clock);
+    expect(text).toBe('Courier bolts is also set when courier nerve runs out.');
     const never = lintTree(armed).find(f => f.code === 'never_offered')!;
     const read = humanizeFinding(never, names(armed), dependencyIndex(armed));
     expect(read).not.toMatch(/treat_ours|officer_down/);
@@ -91,13 +98,14 @@ describe('sites in words', () => {
   const template = T('hostage_crisis');
   const index = dependencyIndex(template);
 
-  it('reads a clock writer by its clock and situation', () => {
-    const site = index.keys.get('mark:owner_down')!.writers.find(entry => entry.field === 'clock.onOut.mark')!;
-    const words = siteWords(site, template.tree, 'writers', names(template));
+  it('reads a clock writer by its clock and situation (owned fixture)', () => {
+    const fixture = clockFixtureTemplate();
+    const site = dependencyIndex(fixture).keys.get(`mark:${CLOCK_FIXTURE_IDS.outMark}`)!.writers.find(entry => entry.field === 'clock.onOut.mark')!;
+    const words = siteWords(site, fixture.tree, 'writers', names(fixture));
     expect(words.where).toMatch(/situation \d/);
     expect(words.does).toBe('sets it when the clock runs out');
     expect(words.playable).toBe(false);
-    expect(siteGoal(site, template.tree)).toBeNull();
+    expect(siteGoal(site, fixture.tree)).toBeNull();
   });
 
   it('reads an outcome writer as node › choice · band, with its condition', () => {
@@ -127,7 +135,9 @@ describe('conditions in words', () => {
     const read = (text: string) => humanizeCondition(text, template.tree, index, t => t.replace(/\{(\w+)\.first\}/g, (_m, id: string) => id.toUpperCase()), () => 'The shop owner’s condition');
     expect(read('lets_go = true and owner_condition out')).toBe('TAKER’s terms for OWNER: true and the shop owner’s condition has run out');
     expect(read('raised = false and taker breaking')).toBe('The view of the counter: false and the former employee is breaking');
-    expect(read('no mark owner_down')).toBe('not: owner down');
+    // A mark by name, read from an owned fixture so a content change can't remove it.
+    const fixture = clockFixtureTemplate();
+    expect(humanizeCondition(`no mark ${CLOCK_FIXTURE_IDS.outMark}`, fixture.tree, dependencyIndex(fixture), t => t, () => '')).toBe('not: courier bolts');
     expect(read('courier not safe')).toMatch(/^the .+ not yet out safe$/);
     expect(read('odds +8')).toBe('odds +8');
     expect(read('at 55')).toBe('at 55');

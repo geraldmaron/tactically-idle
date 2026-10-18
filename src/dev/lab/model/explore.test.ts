@@ -8,6 +8,9 @@ import { labRequirementTree, sessionClockNexts } from './clocks';
 import { availableMoves, NOW } from '../../../gen/incident/gates/engine-driver';
 import { clockMarksOf } from '../../../gen/incident/instance';
 import { choiceActionId } from '../../../gen/incident/trees-v13/compile';
+import { dependencyIndex } from '../../../gen/incident/trees-v13/dependencies';
+import type { Site } from '../../../gen/incident/trees-v13/dependencies';
+import type { TreeIf } from '../../../content/call-trees/types';
 import { callGraph } from '../../../gen/incident/trees-v13/graph';
 import type { CallGraph } from '../../../gen/incident/trees-v13/graph';
 import type { GameState } from '../../../sim/types';
@@ -84,18 +87,35 @@ describe('explore', () => {
     expect(all.truncated).toBe(false);
     expect(all.states).toBeLessThan(EXPLORE_CAP);
     const missing = inCallEndings(graph).filter(ending => !(ending in all.endings!));
-    // The rest need the taker to trade (lets_go true) or the owner down, which only the owner's
-    // heart clock writes, and this situation has no such clock; or no move to be left.
-    expect(missing).toEqual(['handed_over', 'held_both_down', 'owner_collapsed', 'owner_left_down', 'went_in_for_owner', 'went_in_taker_hurt']);
-    const needsOwnerDown = (edge: CallGraph['edges'][number]) => edge.node === 'owner_down'
-      || edge.conditions.some(c => (c.kind === 'state' && !!c.state.marks?.includes('owner_down')) || (c.kind === 'clock' && c.clock === 'owner_condition' && c.is));
-    for (const ending of missing.filter(e => e !== 'handed_over'))
-      expect(graph.edges.filter(edge => edge.inCall && edge.to === `ending:${ending}`)
-        .every(edge => needsOwnerDown(edge) || edge.conditions.some(c => c.kind === 'fact' && c.holds === false))).toBe(true);
-    expect(keeps.instance.clocks.map(clock => clock.id)).not.toContain('owner_condition');
-    // One complete walk: no state has the owner down (mark or node), and none leaves no move.
-    const ownerDownOrStuck = (state: GameState) => !!state.activeRun?.flags.includes('mark:owner_down') || nodeAt(state, keeps.tree) === 'owner_down' || noMoveLeft(state);
-    expect(explore(keeps.frames[0].state, null, { holds: ownerDownOrStuck })).toMatchObject({ path: null, truncated: false });
+    // The rest need the taker to trade (lets_go true) or something only a clock this situation
+    // doesn't have brings about (the owner's heart clock: where it sends the call, the marks only it
+    // writes, it running out); or no move to be left. Read from the call, not named, so a content
+    // change to that clock's route or marks moves the test with it.
+    const ids = new Set(keeps.instance.clocks.map(clock => clock.id));
+    const absent = keeps.template.situations.flatMap(entry => entry.clocks ?? []).filter(clock => !clock.story && !ids.has(clock.id));
+    expect(absent.length).toBeGreaterThan(0);
+    const absentIds = new Set(absent.map(clock => clock.id));
+    const theirNodes = new Set(absent.flatMap(clock => clock.onOut?.next && 'node' in clock.onOut.next ? [clock.onOut.next.node] : []));
+    const deps = dependencyIndex(keeps.template);
+    // A writer only that clock enables: the clock itself, or an outcome that holds only once it ran out.
+    const needsItOut = (site: Site) => {
+      if (site.clock) return absentIds.has(site.clock);
+      const outcome = site.node && site.choice && site.band && site.outcome !== undefined
+        ? keeps.tree.nodes.find(node => node.id === site.node)?.choices.find(choice => choice.id === site.choice)?.outcomes[site.band][site.outcome] : undefined;
+      return ([] as TreeIf[]).concat(outcome?.if ?? []).some(entry => 'out' in entry && entry.out && absentIds.has(entry.clock));
+    };
+    const theirMarks = new Set([...deps.keys.entries()].filter(([key, entry]) => key.startsWith('mark:') && entry.writers.length > 0
+      && entry.writers.every(needsItOut)).map(([key]) => key.slice(5)));
+    const needsAbsentClock = (edge: CallGraph['edges'][number]) => theirNodes.has(edge.node)
+      || edge.conditions.some(c => (c.kind === 'state' && !!c.state.marks?.some(mark => theirMarks.has(mark))) || (c.kind === 'clock' && absentIds.has(c.clock) && c.is));
+    const blocked = (ending: string) => graph.edges.filter(edge => edge.inCall && edge.to === `ending:${ending}`)
+      .every(edge => needsAbsentClock(edge) || edge.conditions.some(c => c.kind === 'fact' && c.holds === false));
+    expect(missing).toContain('handed_over');
+    expect(missing.filter(e => e !== 'handed_over')).toEqual(inCallEndings(graph).filter(e => e !== 'handed_over' && blocked(e)));
+    // One complete walk: no state is at a node only that clock reaches or has a mark only it
+    // writes, and none leaves no move.
+    const absentReached = (state: GameState) => [...theirMarks].some(mark => !!state.activeRun?.flags.includes(`mark:${mark}`)) || theirNodes.has(nodeAt(state, keeps.tree) ?? '') || noMoveLeft(state);
+    expect(explore(keeps.frames[0].state, null, { holds: absentReached })).toMatchObject({ path: null, truncated: false });
     for (const [ending, force] of [['owner_killed', 'firearm:none'], ['owner_killed_taker_hurt', null]] as const) {
       const path = all.endings![ending];
       expect(path).toBeDefined();
