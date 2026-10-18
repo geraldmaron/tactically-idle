@@ -14,3 +14,9 @@ export function conditionHolds(c: Condition | undefined, run: Pick<OperationRun,
   if (c.pressureBelow !== undefined && run.pressure >= c.pressureBelow) return false;
   return true;
 }
+
+/** A compiled move (R-B3, compile.ts): the flag that moves `role` (its `n`-th move), and the flag a
+ * sighting sets once the team sees them where that move took them (story-people, sightings). One
+ * definition, so a renamed flag can't silently stop re-sighting. */
+export const movedFlag = (role: string, n: number) => `moved:${role}:${n}`;
+export const seenFlag = (role: string, n: number) => `seen:${role}:${n}`;

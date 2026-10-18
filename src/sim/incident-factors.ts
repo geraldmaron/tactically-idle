@@ -81,7 +81,10 @@ export function incidentSubjects(scenario: ScenarioDefinition, run: Pick<Operati
     const none = arm === 'disproved' && person.armamentClaim === 'any';
     const armSource = arm === 'confirmed' || none ? 'confirmed' as const : arm === 'reported' ? 'reported' as const : 'assumed' as const;
     const temper = person.dispositionFactId ? known(run.knowledge[person.dispositionFactId]) : false;
-    const at = built && person.locationFactId ? resolveSubject(scenario, built, run.knowledge, person.spaceId, person.locationFactId).at : person.at;
+    // Moved (scenarioWithPeopleNow, R-B3): already where the team believes they are now.
+    const start = scenario.story?.bindings.people[person.id]?.initial;
+    const moved = !!start && (start.spaceId !== person.spaceId || start.at.x !== person.at.x || start.at.y !== person.at.y);
+    const at = built && person.locationFactId && !moved ? resolveSubject(scenario, built, run.knowledge, person.spaceId, person.locationFactId).at : person.at;
     return {
       personId: person.id, label: person.label, role: person.kind === 'animal' ? 'dangerous_dog' : 'subject', spaceId: person.spaceId, at: { ...at },
       armament: none ? 'none' : armSource === 'assumed' ? 'unknown' : threat.armament, readiness: threat.readiness, armSource,
@@ -99,6 +102,8 @@ function rooms(scenario: ScenarioDefinition, built: BuiltLocation, action: Actio
   return [...new Set([route.fromSpaceId, ...route.openingIds.flatMap(id => { const o = byId.get(id); return o ? [o.a, o.b] : []; })])];
 }
 
+/** `scenario` has its people where the team believes they are now (story-people
+ * scenarioWithPeopleNow, applied by the caller, R-B3): the odds read belief. */
 export function incidentFactors(scenario: ScenarioDefinition, built: BuiltLocation, run: OperationRun, action: ActionDefinition, participants: Officer[]): IncidentFx | null {
   if (!scenario.incidentPeople?.length) return null;
   const all = incidentSubjects(scenario, run, built);

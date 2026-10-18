@@ -1,7 +1,8 @@
 import type { ActionDefinition, ScenarioDefinition, StoryAnchor, StoryPersonBinding } from './scenario-types';
 import type { BuiltLocation, Id, KnowledgeStatus, OperationRun } from './types';
-import { conditionHolds } from './conditions';
+import { conditionHolds, movedFlag, seenFlag } from './conditions';
 import { approxPoint, spaceLabel } from './spatial-factors';
+
 
 type StoryState = Pick<OperationRun, 'knowledge' | 'flags' | 'pressure'>;
 export type StoryPosition = StoryAnchor | { kind: 'offscene'; label: string };
@@ -16,6 +17,41 @@ export interface StoryPublicPerson extends Omit<StoryActualPerson, 'position'> {
   position: StoryPosition | null;
   /** Only an observed transition can supply this public location description. */
   locationLabel?: string;
+  /** The team saw them, and they have moved since out of sight (R-B3): `position` is where it last saw them. */
+  stale?: true;
+}
+
+/** Public words for a person the team saw and who has since moved out of sight (R-B3). */
+export const LAST_SEEN_LINES = {
+  source: 'Last seen by the team',
+  claim: (person: string, place: string) => `${person} was last seen in ${place}.`,
+  marker: (person: string) => `${person.toUpperCase()}?`,
+};
+
+const SEEN_PREFIX = seenFlag('', 0).split(':')[0] + ':';
+const MOVED_PREFIX = movedFlag('', 0).split(':')[0] + ':';
+const isSeenTwin = (transition: StoryPersonBinding['transitions'][number]) => (transition.when.flags ?? []).some(flag => flag.startsWith(SEEN_PREFIX));
+
+/** A compiled move is a hidden transition followed by its observed twin (the same place, once the
+ * team has seen them there: `seen:` flag). The index of the latest move that holds and whose twin
+ * doesn't, or -1. */
+function unseenMove(person: StoryPersonBinding, run: StoryState): number {
+  let latest = -1;
+  person.transitions.forEach((transition, i) => {
+    if (!conditionHolds(transition.when, run)) return;
+    const twin = person.transitions[i + 1];
+    if (!transition.observed && twin?.observed && isSeenTwin(twin)) latest = i;
+    else if (transition.observed) latest = -1;
+  });
+  return latest;
+}
+
+/** The flags a sighting sets to see a person where their latest unseen move took them, or none. */
+export function sightingFlags(scenario: ScenarioDefinition, run: StoryState, personId: Id): string[] {
+  const person = scenario.story?.bindings.people[personId];
+  if (!person) return [];
+  const i = unseenMove(person, run);
+  return i < 0 ? [] : (person.transitions[i + 1].when.flags ?? []).filter(flag => flag.startsWith(SEEN_PREFIX));
 }
 
 function bindings(scenario: ScenarioDefinition): StoryPersonBinding[] {
@@ -58,7 +94,10 @@ export function storyPeoplePublic(scenario: ScenarioDefinition, built: BuiltLoca
       status = 'confirmed';
       locationLabel = transition.label;
     }
-    return { id: person.id, label: person.label, locationFactId: person.locationFactId, status, position, ...(locationLabel ? { locationLabel } : {}) };
+    // Seen, then moved out of sight: the team holds only where it last saw them.
+    const stale = status === 'confirmed' && unseenMove(person, run) >= 0;
+    if (stale) { status = 'reported'; locationLabel = undefined; }
+    return { id: person.id, label: person.label, locationFactId: person.locationFactId, status, position, ...(locationLabel ? { locationLabel } : {}), ...(stale ? { stale: true as const } : {}) };
   });
 }
 
@@ -134,6 +173,14 @@ export function storyPublicScenario(scenario: ScenarioDefinition, built: BuiltLo
     knowledge[fact.id] = person.status;
     if (!person.position) return [{ ...fact, person: undefined }];
     if ('kind' in person.position) return [];
+    if (person.stale) {
+      // Where the team last saw them, in its own words: no reporter is credited with the team's sighting.
+      const place = spaceLabel(built, person.position.spaceId);
+      const { markerSource: _source, ...rest } = fact;
+      return [{ ...rest, spaceId: person.position.spaceId, person: { label: person.label, reportedAt: person.position.at },
+        label: `${person.label}'s location`, claim: LAST_SEEN_LINES.claim(person.label, place), source: LAST_SEEN_LINES.source, note: null,
+        markers: { ...fact.markers, reported: LAST_SEEN_LINES.marker(person.label) } }];
+    }
     const moved = person.position.spaceId !== fact.spaceId || person.locationLabel !== undefined;
     const place = spaceLabel(built, person.position.spaceId);
     return [{
@@ -173,4 +220,10 @@ export function hydrateStoryAction(action: ActionDefinition, target: StoryPublic
     ...(action.capacityBound ? { capacityBound: relocate(action.capacityBound) } : {}),
     ...(action.workload.areaSpaces ? { workload: { ...action.workload, areaSpaces: relocate(action.workload.areaSpaces) } } : {}),
   };
+}
+
+/** Whether a compiled move of this person holds (R-B3): a transition keyed on a move flag, or on a
+ * clock cue's mark for a cue's move. Leaving the building is not a move. */
+export function moveHolds(person: StoryPersonBinding, run: StoryState): boolean {
+  return person.transitions.some(transition => (transition.when.flags ?? []).some(flag => flag.startsWith(MOVED_PREFIX) || flag.startsWith('mark:')) && conditionHolds(transition.when, run));
 }

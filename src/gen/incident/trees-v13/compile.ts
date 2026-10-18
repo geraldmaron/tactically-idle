@@ -1,12 +1,13 @@
-import type { CallTree, TreeChoice, TreeIf, TreeMove, TreeNext, TreeNode, TreeOutcome, TreeState } from '../../../content/call-trees/types';
+import type { CallTree, TreeChoice, TreeIf, TreeMove, TreeMoveTo, TreeNext, TreeNode, TreeOutcome, TreePlace, TreeState } from '../../../content/call-trees/types';
 import type { IncidentTemplate } from '../../../content/incidents/types';
 import { CIVILIAN_FIRST_NAMES, CIVILIAN_SURNAMES } from '../../../content/call-trees/civilian-names';
 import { scenarioRecipe } from '../../../content/scenario-recipes';
 import { hashIndex, hashSeed } from '../../../sim/rng';
 import { tierRewardMultiplier } from '../../../content/incidents/rewards';
-import type { ActionDefinition, ClockCondition, Condition, FactDefinition, IncidentSpec, MeterCondition, MeterStance, OutcomeEffect, ScenarioDefinition, StageDefinition, StoryPersonBinding } from '../../../sim/scenario-types';
+import type { ActionDefinition, ClockCondition, Condition, FactDefinition, IncidentSpec, MeterCondition, MeterStance, OutcomeEffect, ScenarioDefinition, StageDefinition, StoryAnchor, StoryPersonBinding } from '../../../sim/scenario-types';
 import { squadsPutToWork } from '../../../sim/scenario-types';
 import { findStoryRoute, selectStoryRoom, storyPoint, validateStoryBindings, windowExit } from '../story-bindings';
+import { movedFlag, seenFlag } from '../../../sim/conditions';
 import { routeAlongOpenings } from '../../../sim/routes';
 import { sightFromStreet, vantageZones, type StreetVantage } from '../../../sim/sightlines';
 import type { BuiltLocation, OutcomeBand, StageId, Vec } from '../../../sim/types';
@@ -639,7 +640,7 @@ export function textBinder(tree: CallTree, built: BuiltLocation, placed: PlacedC
 /** `clockNexts`: where this call's clocks send it when they run out (Clock.onOut.next), so a node
  * or ending reached only that way is kept. `clockMarks`: marks this call's clocks can set by themselves (cues, running out), so a prompt or
  * choice that reads one is kept even when no outcome sets it. */
-export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, authored: CallTree, placed: PlacedCast = placeCast(authored, built, input.incident!), clockMarks: readonly string[] = [], clockNexts: readonly TreeNext[] = []): ScenarioDefinition {
+export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, authored: CallTree, placed: PlacedCast = placeCast(authored, built, input.incident!), clockMarks: readonly string[] = [], clockNexts: readonly TreeNext[] = [], clockMoves: readonly { mark: string; moveTo: TreeMoveTo }[] = []): ScenarioDefinition {
   const spec = input.incident!;
   const { recipe, situation, outside, room, roomOf, routes, routeName, anchors, cast } = placed;
   // Counted roles (groups): their size is fixed for this call, so count conditions settle here and
@@ -762,10 +763,77 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
     id: role.id, label: `{${role.id}}`, factId: personFactId(role.id), safeFlag: safeFlag(role.id), injuredFlag: hurtFlag(role.id), careFlag: careFlag(role.id),
   }));
 
+  // R-B3: people move on the building. Each move compiles into the person's story transitions,
+  // hidden until the team sees them there (an observed twin keyed on a seen flag sightings set), or
+  // observed at once when the line says where they went. Leaving the building stays the last word.
+  /** The space a TreePlace names on this building; a route step of the wrong kind can't be hosted. */
+  const spaceOfPlace = (place: TreePlace, where: string): string => {
+    if (place === 'scene') return room.id;
+    const inside = (role: string) => {
+      const id = roomOf[groups[role]?.[0] ?? role];
+      if (!id || id === outside) throw new Error(`${tree.type}: ${where} ${role}'s room, but ${role} starts outside the building`);
+      return id;
+    };
+    if ('room' in place) return inside(place.room);
+    const from = inside('doorOf' in place ? place.doorOf : place.route);
+    const way = routes[routeName('doorOf' in place ? place.doorOf : place.route)]?.openingIds ?? [];
+    const steps: string[] = [];
+    for (let at = from, i = 0; i < way.length; i++) {
+      const opening = built.location.openings.find(entry => entry.id === way[i])!;
+      at = opening.a === at ? opening.b : opening.a;
+      steps.push(at);
+    }
+    if ('doorOf' in place) {
+      if (!steps[0]) throw new Error(`${tree.type}: ${where} the door of ${place.doorOf}'s room, which has no way out`);
+      return steps[0];
+    }
+    const id = steps[place.step - 1], found = built.location.rooms.find(entry => entry.id === id), kinds = ([] as string[]).concat(place.is);
+    // The step's room changes with the building, so its declared kind is checked here: elsewhere the call goes to another building.
+    if (!found || !kinds.includes(found.type)) throw new Error(`${tree.type}: ${where} step ${place.step} of ${place.route}'s way out, which is ${found ? `a ${found.type}` : 'not a room'} on this building, not ${kinds.join(' or ')}; this building can't host the call`);
+    return id;
+  };
+  /** Just past the door of `role`'s room on its way out: the staging spot there. */
+  const doorStanding = (role: string, spaceId: string): Vec | null => {
+    const first = routes[routeName(role)]?.openingIds[0];
+    return built.derived.stagingPoints.find(point => point.openingId === first && point.spaceId === spaceId)?.at ?? null;
+  };
+  const moves = new Map<TreeOutcome, string[]>();
+  const transitionsOf = new Map<string, StoryPersonBinding['transitions']>();
+  const moveCount = new Map<string, number>();
+  const standing: StoryAnchor[] = Object.entries(anchors).map(([role, anchor]) => ({ spaceId: roomOf[role], at: anchor.inside }));
+  const addMove = (role: string, entry: TreeMoveTo[string], key: string, flag: string | null): string[] => {
+    if (groups[role]) throw new Error(`${tree.type}: ${key} moves the group ${role}; moves are for one person`);
+    if (roomOf[role] === undefined || roomOf[role] === outside) throw new Error(`${tree.type}: ${key} moves ${role}, who starts outside the building`);
+    const place = typeof entry === 'object' && 'to' in entry ? entry.to : entry, seen = typeof entry === 'object' && 'to' in entry && entry.seen;
+    const list = transitionsOf.get(role) ?? transitionsOf.set(role, []).get(role)!;
+    const n = (moveCount.get(role) ?? 0) + 1;
+    moveCount.set(role, n);
+    const spaceId = spaceOfPlace(place, `${key} moves ${role} to`);
+    const door = typeof place === 'object' && 'doorOf' in place ? doorStanding(place.doorOf, spaceId) : null;
+    const at = door ?? storyPoint(built, spaceId, hashSeed(`${spec.seed}:${role}:move-${n}`), standing);
+    if (!at) throw new Error(`${tree.type}: no room to stand in ${spaceId} for ${role}'s move`);
+    standing.push({ spaceId, at });
+    const moved = flag ?? movedFlag(role, n), to = { spaceId, at: { ...at } };
+    if (seen) list.push({ when: { flags: [moved] }, observed: true, to });
+    else list.push({ when: { flags: [moved] }, observed: false, to }, { when: { flags: [moved, seenFlag(role, n)] }, observed: true, to });
+    return flag ? [] : [moved];
+  };
+  for (const node of nodes) for (const choice of node.choices) for (const band of BANDS) for (const outcome of choice.outcomes[band])
+    if (outcome.moveTo) moves.set(outcome, Object.entries(outcome.moveTo).flatMap(([role, entry]) => addMove(role, entry, `${node.id}.${choice.id}`, null)));
+  for (const cue of clockMoves) for (const [role, entry] of Object.entries(cue.moveTo)) addMove(role, entry, `clock cue ${cue.mark}`, markFlag(cue.mark));
+  // A moved person's start-room facts and way out no longer describe them.
+  for (const role of transitionsOf.keys()) {
+    for (const node of authored.nodes) for (const state of [...(node.promptIf ?? []).map(entry => entry.when), ...node.choices.flatMap(choice => [choice.onlyIf, ...BANDS.flatMap(band => choice.outcomes[band].map(outcome => outcome.when))])])
+      if ([...state?.upstairs ?? [], ...state?.notUpstairs ?? []].includes(role) || state?.exitVia?.role === role)
+        throw new Error(`${tree.type}: ${node.id} reads where ${role} started (upstairs or a way out), but ${role} moves in this call`);
+    if (nodes.some(node => node.choices.some(choice => choice.walks === role))) throw new Error(`${tree.type}: ${role} moves in this call and also walks out from where they started; a walk-out after a move isn't built`);
+  }
+
   const people: Record<string, StoryPersonBinding> = Object.fromEntries(present.map(role => [role.id, {
     id: role.id, label: `{${role.id}}`, locationFactId: personFactId(role.id), publicKind: role.kind === 'bystander' ? 'person' : role.kind,
     initial: { spaceId: roomOf[role.id], at: anchors[role.id].inside },
-    transitions: roomOf[role.id] === outside ? [] : [{ when: { flags: [outFlag(role.id)] }, observed: true, to: { spaceId: outside, at: anchors[role.id].outside }, label: role.kind === 'civilian' ? 'Outside with patrol' : 'Outside with the team' }],
+    transitions: roomOf[role.id] === outside ? [] : [...transitionsOf.get(role.id) ?? [],
+      { when: { flags: [outFlag(role.id)] }, observed: true, to: { spaceId: outside, at: anchors[role.id].outside }, label: role.kind === 'civilian' ? 'Outside with patrol' : 'Outside with the team' }],
   } satisfies StoryPersonBinding]));
   const props = Object.fromEntries(onSite.filter(role => role.carries).map(role => {
     const carried = role.carries!, id = `${role.id}_${carried.glyph}`, factId = treeFactId(carried.knownFrom);
@@ -875,7 +943,7 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
     return {};
   };
 
-  const effectsFor = (node: TreeNode, authoredOutcome: TreeOutcome): OutcomeEffect[] => {
+  const effectsFor = (node: TreeNode, authoredOutcome: TreeOutcome, moveFlags: readonly string[] = []): OutcomeEffect[] => {
     const outcome = groupOutcome(node, authoredOutcome);
     if (outcome.force && outcome.next) throw new Error(`${node.id}: a force outcome routes by severity, never by next`);
     const next = outcome.next ? resolveNext(tree, outcome.next, spec.seed) : undefined;
@@ -890,6 +958,7 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
       ...(next && node.id === tree.root ? [TREE_STARTED] : []),
       ...(next ? 'node' in next ? [nodeFlag(next.node)] : [endFlag(next.ending)] : []),
       ...(outcome.mark ?? []).map(markFlag),
+      ...moveFlags,
       ...(outcome.safe ?? []).map(safeFlag),
       ...out.map(outFlag),
     ];
@@ -949,10 +1018,10 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
       ? { approach: 'path', targetId: outside, workload, observes: [], endsAt: { spaceId: outside, at: { ...anchors[walker].outside } } }
       : { approach: 'none', targetId: outside, workload, observes: [] };
     if (to === undefined) return { approach: 'none', targetId: room.id, workload, observes: [], ...entry, ...signal };
-    if (typeof to === 'object' && 'vantage' in to) {
+    if (typeof to === 'object' && ('vantage' in to || 'watch' in to)) {
       // A room with a window or door onto the outside is watched through it. An inside room (a
       // stockroom, a hallway) is reached through the building from the door its way out uses.
-      const watched = roomFor(node, choice, to.vantage);
+      const watched = 'watch' in to ? spaceOfPlace(to.watch, `${node.id}.${choice.id} watches`) : roomFor(node, choice, to.vantage);
       const observes = team?.signal?.channel === 'visual' ? [watched] : [];
       if (vantageZones(built.location, watched).length) return { approach: 'window', targetId: watched, workload, observes, ...entry, ...signal };
       const way = findStoryRoute(built, watched, outside, 'walking');
@@ -962,7 +1031,9 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
       return { approach: 'window', targetId: front, workload, observes, ...entry,
         ...(signal.spatial ? { spatial: { ...signal.spatial, openingId: door.id } } : {}) };
     }
-    const targetId = roomFor(node, choice, to === 'scene' ? 'scene' : (to as { room: string }).room);
+    // A door or a room on someone's way out (R-B3) is entered like a role's room.
+    const targetId = typeof to === 'object' && ('doorOf' in to || 'route' in to) ? spaceOfPlace(to, `${node.id}.${choice.id} goes to`)
+      : roomFor(node, choice, to === 'scene' ? 'scene' : (to as { room: string }).room);
     return { approach: 'path', targetId, workload: { ...workload, perSqFt: TEAM_MOVES.clearPerSqFt }, observes: [targetId], ...entry, ...signal };
   };
 
@@ -994,7 +1065,7 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
       // A resolve-stage step always says it stays in resolve unless it ends the call; the engine
       // reads that before any branch, and a later routed effect still moves the call on.
       outcomes: Object.fromEntries(BANDS.map(band => [band, [...(node.stage === 'resolve' ? [{ stage: 'resolve' as const }] : []),
-        ...choice.outcomes[band].filter(outcome => possible(outcome.when)).flatMap(outcome => effectsFor(node, { ...outcome, when: trim(outcome.when) }))]])) as ActionDefinition['outcomes'],
+        ...choice.outcomes[band].filter(outcome => possible(outcome.when)).flatMap(outcome => effectsFor(node, { ...outcome, when: trim(outcome.when) }, moves.get(outcome)))]])) as ActionDefinition['outcomes'],
     };
     if (deliberate && choice.talksTo === deliberate.id) action.summary += ` Allow extra time for {${deliberate.id}.first} to answer.`;
     return action;
@@ -1034,7 +1105,7 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
   }]));
 
   const bound = mapScenarioText(s, textBinder(tree, built, placed));
-  const errors = validateStoryBindings(bound, built);
+  const errors = validateStoryBindings(bound, built, clockMarks.map(markFlag));
   if (errors.length) throw new Error(errors.join('\n'));
   return bound;
 }

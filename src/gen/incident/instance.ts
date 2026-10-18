@@ -3,7 +3,7 @@
 // placeCast, the same function the call-tree compiler uses, so the instance and the compiled
 // scenario can never disagree about who is where.
 import type { CastDraw, CastIdentity, PlacedCast } from './trees-v13/compile';
-import type { CallTree, TreeNext } from '../../content/call-trees/types';
+import type { CallTree, TreeMoveTo, TreeNext } from '../../content/call-trees/types';
 import { clockRoute, doorInto, memberId, personFactId, placeCast, resolveNext, textBinder, treeFactId, withCallTree } from './trees-v13/compile';
 import { scenarioRecipe, scenarioSituations } from '../../content/scenario-recipes';
 import type { ScenarioCharacteristic } from '../../content/scenario-recipes';
@@ -92,6 +92,15 @@ function membersOf(template: IncidentTemplate, counts: ReadonlyMap<string, numbe
     if (group) members[group] = Math.max(0, counts.get(slot.id)! - slot.keyRoles.length);
   }
   return members;
+}
+
+/** The moves the clocks the engine runs make as their cues pass (R-B3), keyed by each cue's mark. */
+export function clockMovesOf(clocks: readonly Clock[]): { mark: string; moveTo: TreeMoveTo }[] {
+  return clocks.filter(clock => !clock.story).flatMap(clock => clock.cues.flatMap(cue => {
+    if (!cue.moveTo) return [];
+    if (!cue.mark) throw new Error(`Clock ${clock.id}: a cue that moves people needs a mark, which keys the move`);
+    return [{ mark: cue.mark, moveTo: cue.moveTo }];
+  }));
 }
 
 /** Where the clocks the engine runs send the call when they run out (Clock.onOut.next). */
@@ -309,7 +318,7 @@ export function incidentPeopleFor(instance: IncidentInstance, built: BuiltLocati
  * (placeCast), the tree compiled onto them, and the people and clocks the engine reads. */
 export function compileIncident(scenario: ScenarioDefinition, built: BuiltLocation, template: IncidentTemplate): ScenarioDefinition {
   const instance = drawInstance(template, built, scenario.incident!);
-  const tree = withCallTree(scenario, built, template.tree, instance.placed, clockMarksOf(instance.clocks), clockNextsOf(instance.clocks));
+  const tree = withCallTree(scenario, built, template.tree, instance.placed, clockMarksOf(instance.clocks), clockNextsOf(instance.clocks), clockMovesOf(instance.clocks));
   const compiled = { ...tree, facts: [...tree.facts, ...memberWeaponFacts(instance)] };
   const factIds = new Set(compiled.facts.map(fact => fact.id));
   const clocks = clocksFor(instance, textBinder(template.tree, built, instance.placed), factIds, template.tree);

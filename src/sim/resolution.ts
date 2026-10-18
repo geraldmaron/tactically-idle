@@ -3,7 +3,9 @@ import { casualtyActionIssue, incidentOfficerUnavailable, personCasualtyActionIs
 import { selectedProtection } from './force-risk';
 import { externalSupportActionIssue, remainingSupportWait } from './external-support';
 import { evaluateCapabilities } from './capabilities';
-import { hydrateStoryAction, storyActionTarget, storyPropsPublic, storyPublicScenario } from './story-people';
+import { hydrateStoryAction, moveHolds, storyActionTarget, storyPeopleActual, storyPeoplePublic, storyPropsPublic, storyPublicScenario } from './story-people';
+import { doorInto } from '../gen/incident/trees-v13/compile';
+import { coverOnLine } from './cover';
 import { incidentFactors } from './incident-factors';
 import { authorize } from './authorization';
 import { currentStoryRoute, findStoryRoute } from '../gen/incident/story-bindings';
@@ -40,7 +42,7 @@ import type {
   SquadId,
   Vec,
 } from './types';
-import type { ActionDefinition, AuthorityResult, CheckKind, Condition, EquipmentEffect, ScenarioDefinition } from './scenario-types';
+import type { ActionDefinition, AuthorityResult, CheckKind, Condition, EquipmentEffect, ScenarioDefinition, IncidentPersonDef } from './scenario-types';
 import { buildLocation, deriveLocation } from './location';
 import { conditionFraction, EXPERIENCE_TUNING, highRiskAllowed } from './officer';
 import { CERT_HOLDER, isCertId } from '../content/certs';
@@ -605,7 +607,8 @@ export function evaluateAction(input: EvalInput): Evaluation {
 
   // ---- requirement gates, in reading order
   // v13: command's answer comes first, from what the team believes now (sim/authorization.ts).
-  const authority = action.authority ? authorize(scenario, run, action.authority) : undefined;
+  // Command reads the threat the team believes, where it believes everyone is now (R-B3).
+  const authority = action.authority ? authorize(scenarioWithPeopleNow(scenario, built, run, 'belief'), run, action.authority) : undefined;
   if (authority && !authority.allowed) reasons.push(authority.reason);
   const req = { ...action.requires, allTags: effectiveTags(action.requires.allTags), anyTags: action.requires.anyTags?.some((t) => t === 'battery') ? [] : effectiveTags(action.requires.anyTags) };
   if (req.minSquads && acting.length + support.length < req.minSquads.count) reasons.push(req.minSquads.reason);
@@ -728,7 +731,8 @@ export function evaluateAction(input: EvalInput): Evaluation {
     }
   }
   // v13: the people in the incident and where they stand (sim/incident-factors.ts).
-  const incident = incidentFactors(scenario, built, run, action, participants);
+  // The odds read where the team believes everyone is now, once someone has moved (R-B3).
+  const incident = incidentFactors(scenarioWithPeopleNow(scenario, built, run, 'belief'), built, run, action, participants);
   if (incident) {
     difficulty += incident.add;
     diffContribs.push(...incident.difficulty);
@@ -1330,4 +1334,46 @@ export function strainFor(input: EvalInput, ev: Evaluation, band: OutcomeBand): 
     }
   }
   return out;
+}
+
+// ---------------------------------------------------------------- people where they are now (R-B3)
+
+/** Where a person in the incident is now, once a compiled move has taken them from where they
+ * started (R-B3): `truth` (storyPeopleActual: sightings, incoming fire) or `belief` (storyPeoplePublic:
+ * the odds and the force rules, which read what the team knows). With the cover between them and the
+ * door the team comes through, and how far they stand from it, read from that spot as the compiler
+ * reads them from where they start. Null while no move holds, or the team holds no position for them:
+ * the reader keeps what it reads today. */
+export function movedPersonAt(scenario: ScenarioDefinition, built: BuiltLocation, run: Pick<OperationRun, 'knowledge' | 'flags' | 'pressure'>, person: IncidentPersonDef, basis: 'truth' | 'belief'):
+  { spaceId: Id; at: Vec; cover?: IncidentPersonDef['cover']; doorFt?: number } | null {
+  const binding = scenario.story?.bindings.people[person.id];
+  if (!binding || !moveHolds(binding, run)) return null;
+  const position = basis === 'truth' ? storyPeopleActual(scenario, run).find(entry => entry.id === person.id)?.position
+    : storyPeoplePublic(scenario, built, run).find(entry => entry.id === person.id)?.position;
+  if (!position || 'kind' in position) return null;
+  if (position.spaceId === person.spaceId && position.at.x === person.at.x && position.at.y === person.at.y) return null;
+  const doorAt = person.threat && person.threat.armament !== 'none' ? doorInto(built, position.spaceId, built.location.entries[0]) : undefined;
+  const found = doorAt ? coverOnLine(built, position.spaceId, position.at, doorAt) : null;
+  return { spaceId: position.spaceId, at: { ...position.at },
+    ...(found ? { cover: { objectId: found.object.id, label: found.object.type.replace(/_/g, ' '), grade: found.grade } } : {}),
+    ...(doorAt ? { doorFt: Math.round(Math.hypot(position.at.x - doorAt.x, position.at.y - doorAt.y) * 10) / 10 } : {}) };
+}
+
+/** The scenario with its incident people where they are now (R-B3), by `basis`: what a reader of
+ * position, cover or the distance to the team's door sees once a move holds. The same scenario
+ * while nobody has moved. */
+export function scenarioWithPeopleNow(scenario: ScenarioDefinition, built: BuiltLocation | (() => BuiltLocation), run: Pick<OperationRun, 'knowledge' | 'flags' | 'pressure'>, basis: 'truth' | 'belief'): ScenarioDefinition {
+  if (!scenario.incidentPeople?.length || !scenario.story) return scenario;
+  // Nobody moved: nothing to read, and the building is never built for it.
+  if (!Object.values(scenario.story.bindings.people).some(person => moveHolds(person, run))) return scenario;
+  const building = typeof built === 'function' ? built() : built;
+  let changed = false;
+  const incidentPeople = scenario.incidentPeople.map(person => {
+    const now = movedPersonAt(scenario, building, run, person, basis);
+    if (!now) return person;
+    changed = true;
+    const { cover: _cover, doorFt: _doorFt, ...rest } = person;
+    return { ...rest, spaceId: now.spaceId, at: now.at, ...(now.cover ? { cover: now.cover } : {}), ...(now.doorFt !== undefined ? { doorFt: now.doorFt } : {}) };
+  });
+  return changed ? { ...scenario, incidentPeople } : scenario;
 }

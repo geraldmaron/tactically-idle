@@ -9,7 +9,7 @@
 import type { Armament, Disposition, IncidentType, Intent, PoliceAwareness, Readiness } from '../../sim/scenario-types';
 import type { Id, RoomType, Vec } from '../../sim/types';
 import type { StreetVantage } from '../../sim/sightlines';
-import type { CallTree, TreeNext } from '../call-trees/types';
+import type { CallTree, TreeMoveTo, TreeNext } from '../call-trees/types';
 
 // ---------------------------------------------------------------- people (§1)
 
@@ -120,7 +120,9 @@ export interface Clock {
   /** Highest first. What the team hears as it passes each point: the line, a mark the tree's
    * prompts and choices read, and whether it settles the fact this clock answers. A cue whose mark
    * is already set, or whose fact is already settled, stays silent. */
-  cues: { at: number; text: string; mark?: string; reveal?: boolean }[];
+  cues: { at: number; text: string; mark?: string; reveal?: boolean;
+    /** Moves people as this cue passes (R-B3), keyed by the cue's `mark`, which it then needs. */
+    moveTo?: TreeMoveTo }[];
   /** The tree fact whose claim this clock answers ("whether the door will hold"). */
   factKey?: string;
   /** Once low, command won't wait for talking to work (sim/authorization.ts): completes "Command
