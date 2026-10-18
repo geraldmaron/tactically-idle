@@ -14,13 +14,13 @@ The coordinating session, on `main`. Merged so far: #36 (coordination rules), #3
 | Lane | Branch | In flight | Declared touches |
 |---|---|---|---|
 | engine | `claude/engine-rb1-upstairs` | `barricade-engine-requests`: R-B1 (upstairs), then R-B2 (`walksVia`), R-B3 (TreePlace). Queued: `armed-max`, `second-squad` | `types.ts` (interface, approved), `compile.ts`, `story-bindings.ts`, tests |
-| calls | `claude/calls-hostage-armed-line` (#48) | The hostage armed line: sent back for the lone-only reason, the dominance grid, an engine-agreement test, balance numbers and a Codex review | `hostage-signature.ts`, `docs/calls/hostage-signature-design.md` |
+| calls | `claude/calls-hostage-armed-line` (#48) | The hostage armed line: controls met (glass_group as its own choice). Moving its test into the call-trees folder and bumping one pinned count, then the lead merges | `hostage-signature.ts`, `docs/calls/hostage-signature-design.md`, new `src/content/call-trees/hostage-glass.test.ts`; one line of `dependencies.test.ts` under the lock below |
 | tooling | to be cut from main | `clock-edges-in-tooling` next, then `hostage-gate-requests`; the e2e flake is recorded in `e2e-in-ci` | to be declared |
 | interface | to be cut from main | `board-risk-card`: file list due; any new producer goes to the engine lane as a request | to be declared |
 
 ## Locks outside normal ownership
 
-None.
+- `src/gen/incident/trees-v13/dependencies.test.ts` line 52 (tooling-owned): calls lane, for #48 only, the hostage situation reader count 134 to 136.
 
 ## Open questions for the owner
 
