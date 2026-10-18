@@ -70,6 +70,18 @@ work serve the job it names, and do the journeys and probes still describe what 
 3. Content follows `docs/content-pipeline.md`, including the separate `swat-writing-review` read.
 4. A load-bearing change has an adversarial review record (below).
 
+## Tests across lanes
+
+A test must not pin something another lane will change. Three merges in a row broke on this: a lab
+test pinning a hostage ending title, a lab test pinning the whole compile-time facts map, and a lab
+negative control borrowing the hostage tree.
+
+- Assert the property under test, not a whole value that grows (`toMatchObject` on the keys the
+  test is about, not `toEqual` on a map other lanes add to).
+- A negative control uses a fixture it owns, never live content another lane edits.
+- Before READY, search for tests in other lanes that read what you changed (content ids, map keys,
+  counts) and say in the PR which ones you checked.
+
 ## Merging
 
 1. The lead merges one branch at a time. The lane rebases on current main first.
