@@ -11,7 +11,8 @@ import type { CallTree, TreeChoice, TreeIf, TreeNext, TreeOutcome } from './type
 // refusal turns the handgun on the owner (raised). Stage 3 escalation reads the meters too: the
 // truth decides, or a taker past breaking point does it anyway (mark `turned`, a threat mark). In
 // the second situation the owner's heart is a clock: the long holds fork on it, and anywhere else it
-// runs out its `onOut` records the collapse and marks `owner_down` for the prompts.
+// runs out its `onOut` records the collapse and moves the call to `owner_down`; a held ending reads
+// the clock itself (heldEnd), since an ending the decision reached stands.
 //
 // Routing-only outcomes carry no text of their own (`text: ''`): the line the player reads is the
 // addendum beside them, so one line is never written twice to route by who is still inside.
@@ -59,16 +60,18 @@ function escalate(opts: { lead: string; threat: string; anyway?: string; quiet: 
 const courierToo = (text: string, extra: Partial<TreeOutcome> = {}): TreeOutcome => ({ when: { notSafe: ['courier'] }, text, safe: ['courier'], ...extra });
 
 /** The call ends with the owner still inside. `lead` is the line either way; `courierLine` is added
- * while the courier is inside and `downLine` once the owner has collapsed (the clock's onOut), and
- * the ending follows both: held_inside, held_both, owner_left_down or held_both_down. */
-const heldEnd = (lead: TreeOutcome, courierLine: string, downLine: string): TreeOutcome[] => [
+ * while the courier is inside and `downLine` when the owner's clock runs out in this decision (the
+ * ending stands, R-G4 rule 1, so the text says the collapse here), and the ending follows both:
+ * held_inside, held_both, owner_left_down or held_both_down. `also` are the conditions the band puts
+ * on the held branch (the truth or the taker's meters), added to every outcome after the lead. */
+const heldEnd = (lead: TreeOutcome, courierLine: string, downLine: string, also: TreeIf[] = []): TreeOutcome[] => [
   lead,
-  { when: { notSafe: ['courier'] }, text: courierLine },
-  { when: { marks: ['owner_down'] }, text: downLine },
-  { when: { safe: ['courier'], notMarks: ['owner_down'] }, text: '', next: { ending: 'held_inside' } },
-  { when: { notSafe: ['courier'], notMarks: ['owner_down'] }, text: '', next: { ending: 'held_both' } },
-  { when: { safe: ['courier'], marks: ['owner_down'] }, text: '', next: { ending: 'owner_left_down' } },
-  { when: { notSafe: ['courier'], marks: ['owner_down'] }, text: '', next: { ending: 'held_both_down' } },
+  { ...(also.length ? { if: also } : {}), when: { notSafe: ['courier'] }, text: courierLine },
+  { if: [...also, OWNER_OUT], text: downLine },
+  { if: [...also, OWNER_OK], when: { safe: ['courier'] }, text: '', next: { ending: 'held_inside' } },
+  { if: [...also, OWNER_OK], when: { notSafe: ['courier'] }, text: '', next: { ending: 'held_both' } },
+  { if: [...also, OWNER_OUT], when: { safe: ['courier'] }, text: '', next: { ending: 'owner_left_down' } },
+  { if: [...also, OWNER_OUT], when: { notSafe: ['courier'] }, text: '', next: { ending: 'held_both_down' } },
 ];
 
 /** The taker comes out, and the group decides whether to follow (CASCADE_V1). */
@@ -218,18 +221,18 @@ export const HOSTAGE_SIGNATURE: CallTree = {
             favorable: [
               { text: 'The landlord gets the spare key to the corner.', mark: ['spare_key'], objective: 10 },
               { if: OWNER_OK, text: 'While the team waits, {taker.first} calls back to ask if {courier.first} got home.', moves: { taker: 'contact' }, next: { node: 'talking' } },
-              { if: OWNER_OUT, text: 'By then {owner.first} has slid to the floor, and {taker.first} is shouting for help down the phone.', mark: ['owner_down'], next: { node: 'owner_down' } },
+              { if: OWNER_OUT, text: 'By then {owner.first} has slid to the floor, and {taker.first} is shouting for help down the phone.', next: { node: 'owner_down' } },
             ],
             mixed: [
               { text: 'Half an hour goes by before the landlord turns up with the key.', mark: ['spare_key'], moves: { taker: 'provoked' }, pressure: 6 },
               { if: OWNER_OK, text: 'When officers ring the counter, {taker.first} lifts the receiver and says nothing.', next: { node: 'talking' }, minutes: 10 },
-              { if: OWNER_OUT, text: 'Inside, {owner.first} is stretched out on the tiles, and {taker.first} is yelling for a medic.', mark: ['owner_down'], next: { node: 'owner_down' }, minutes: 10 },
+              { if: OWNER_OUT, text: 'Inside, {owner.first} is stretched out on the tiles, and {taker.first} is yelling for a medic.', next: { node: 'owner_down' }, minutes: 10 },
             ],
             adverse: [
               { text: 'The landlord can’t find the spare key anywhere.', pressure: 8 },
               { if: [OWNER_OK, RAISED], text: 'When the team calls back, the handgun is leveled at {owner.first}.', reveal: ['raised'], next: { node: 'threat' }, minutes: 8 },
               { if: [OWNER_OK, CALM], text: 'The line drops after {taker.first} says nobody is coming in.', reveal: ['raised'], next: { node: 'standoff' }, minutes: 8 },
-              { if: OWNER_OUT, text: '{owner.first} has been folding over on the stool the whole time. {owner.He} {owner~is|are} down now, and {taker.first} won’t stop shouting.', mark: ['owner_down'], next: { node: 'owner_down' }, minutes: 8 },
+              { if: OWNER_OUT, text: '{owner.first} has been folding over on the stool the whole time. {owner.He} {owner~is|are} down now, and {taker.first} won’t stop shouting.', next: { node: 'owner_down' }, minutes: 8 },
             ],
           } },
         { id: 'ask_unlock', title: 'Get the front unlocked', icon: 'radio', talksTo: 'taker', check: check(TALK), minutes: 3,
@@ -630,14 +633,14 @@ export const HOSTAGE_SIGNATURE: CallTree = {
           outcomes: {
             favorable: [
               { if: [LETS_GO, OWNER_OK], text: '{taker.first} talks until the street lights come on. Then {owner.first} is told {owner.he} can go home.', reveal: ['lets_go'], safe: ['owner'], moves: { taker: 'released' }, next: { node: 'last_one' }, objective: 50, pressure: -8 },
-              { if: [LETS_GO, OWNER_OUT], text: '{owner.first} sags off the stool two hours in and stays down. {taker.first} lets officers carry {owner.him} out and never lets go of the handgun.', reveal: ['lets_go', 'owner_faint'], safe: ['owner'], harm: { owner: 'serious' }, mark: ['owner_down'], next: { ending: 'owner_collapsed' }, objective: 20 },
+              { if: [LETS_GO, OWNER_OUT], text: '{owner.first} sags off the stool two hours in and stays down. {taker.first} lets officers carry {owner.him} out and never lets go of the handgun.', reveal: ['lets_go', 'owner_faint'], safe: ['owner'], harm: { owner: 'serious' }, next: { ending: 'owner_collapsed' }, objective: 20 },
               courierToo('{courier.first} leaves with {owner.him}.', { if: LETS_GO }),
               // The owner's clock runs only where the taker would trade (s2), so a refusal never forks on it.
               { if: KEEPS, text: 'The street lights are on, and {taker.first} still wants the signature.', reveal: ['lets_go'], next: { node: 'standoff' }, objective: 10 },
             ],
             mixed: [
               { if: [LETS_GO, OWNER_OK], text: '{taker.first} lets {owner.first} go after dark, with the handgun still across {taker.his} lap.', reveal: ['lets_go'], safe: ['owner'], mark: ['still_armed'], moves: { taker: 'released' }, next: { node: 'last_one' }, objective: 42, minutes: 20 },
-              { if: [LETS_GO, OWNER_OUT], text: 'After dark {owner.first} stops answering when the team asks for {owner.him}. {taker.first} opens up, and two officers bring {owner.him} out gray and barely awake.', reveal: ['lets_go', 'owner_faint'], safe: ['owner'], harm: { owner: 'serious' }, mark: ['owner_down'], next: { ending: 'owner_collapsed' }, objective: 16, minutes: 20 },
+              { if: [LETS_GO, OWNER_OUT], text: 'After dark {owner.first} stops answering when the team asks for {owner.him}. {taker.first} opens up, and two officers bring {owner.him} out gray and barely awake.', reveal: ['lets_go', 'owner_faint'], safe: ['owner'], harm: { owner: 'serious' }, next: { ending: 'owner_collapsed' }, objective: 16, minutes: 20 },
               courierToo('{courier.first} is let go an hour before {owner.him}.', { if: LETS_GO }),
               { if: KEEPS, text: 'The answers get shorter as the evening wears on. {owner.first} is still in there.', reveal: ['lets_go'], next: { node: 'standoff' }, minutes: 20 },
             ],
@@ -645,14 +648,13 @@ export const HOSTAGE_SIGNATURE: CallTree = {
             // the owner. The owner's heart is another matter.
             adverse: [
               { if: OWNER_OK, text: '{taker.first} puts the phone down. From the corner, officers can see {taker.him} sitting with {taker.his} head in {taker.his} hands, {owner.first} still by the register.', mark: ['owner_back', 'silent'], next: { node: 'standoff' }, minutes: 10 },
-              { if: OWNER_OUT, text: 'The line goes quiet. From outside, {owner.first} can be seen on the floor, not moving.', mark: ['owner_down'], next: { node: 'owner_down' }, minutes: 10 },
+              { if: OWNER_OUT, text: 'The line goes quiet. From outside, {owner.first} can be seen on the floor, not moving.', next: { node: 'owner_down' }, minutes: 10 },
             ],
           } },
       ] },
     { id: 'standoff', stage: 'resolve',
       prompt: 'The bargaining has stopped. {owner.first} is perched on the stool behind the register.',
       promptIf: [
-        { when: { marks: ['owner_down'] }, prompt: '{owner.first} has collapsed on the tiles. {taker.first} is screaming at someone to do something.' },
         { when: { marks: ['owner_unwell'] }, prompt: '{owner.first} is breathing hard behind the till, and {taker.first} has stopped making offers.' },
         { when: { marks: ['owner_hidden'], notMarks: ['owner_back'] }, prompt: '{owner.first} is still out of sight behind the shelves, and {taker.first} won’t talk terms anymore.' },
         { when: { marks: ['silent'] }, prompt: 'Every call goes unanswered. {owner.first} sits at the register within {taker.first}’s reach.' },
@@ -667,12 +669,12 @@ export const HOSTAGE_SIGNATURE: CallTree = {
           outcomes: {
             favorable: [
               { if: OWNER_OK, text: 'A call comes back after midnight, and {taker.first} sounds worn out. {owner.first} gets to walk out unsigned.', reveal: ['owner_faint'], safe: ['owner'], moves: { taker: 'released' }, next: { node: 'last_one' }, objective: 40 },
-              { if: OWNER_OUT, text: 'After midnight, {owner.first} lies collapsed by the till. {taker.first} unbolts the door so officers can bring {owner.him} to the medic.', reveal: ['owner_faint'], safe: ['owner'], harm: { owner: 'serious' }, mark: ['owner_down'], next: { ending: 'owner_collapsed' }, objective: 18 },
+              { if: OWNER_OUT, text: 'After midnight, {owner.first} lies collapsed by the till. {taker.first} unbolts the door so officers can bring {owner.him} to the medic.', reveal: ['owner_faint'], safe: ['owner'], harm: { owner: 'serious' }, next: { ending: 'owner_collapsed' }, objective: 18 },
               courierToo('{courier.first} walks out with {owner.him}.'),
             ],
             mixed: [
               { if: OWNER_OK, text: 'Before midnight, {owner.first} is allowed out. The handgun and the receiver stay with {taker.first}.', reveal: ['owner_faint'], safe: ['owner'], mark: ['still_armed'], moves: { taker: 'released' }, next: { node: 'last_one' }, objective: 35, minutes: 20 },
-              { if: OWNER_OUT, text: 'By midnight {owner.first} can’t sit up. {taker.first} lets the team in for {owner.him} but won’t give up the handgun.', reveal: ['owner_faint'], safe: ['owner'], harm: { owner: 'serious' }, mark: ['owner_down'], next: { ending: 'owner_collapsed' }, objective: 14, minutes: 20 },
+              { if: OWNER_OUT, text: 'By midnight {owner.first} can’t sit up. {taker.first} lets the team in for {owner.him} but won’t give up the handgun.', reveal: ['owner_faint'], safe: ['owner'], harm: { owner: 'serious' }, next: { ending: 'owner_collapsed' }, objective: 14, minutes: 20 },
               courierToo('{courier.first} gets released first.'),
             ],
             adverse: [
@@ -682,10 +684,10 @@ export const HOSTAGE_SIGNATURE: CallTree = {
               // A clock that has run out stays out, so OWNER_OK also means the owner is still on the stool.
               { if: [CALM, HOLDING, OWNER_OK], when: { safe: ['courier'] }, text: 'Command keeps the block shut through the night.', reveal: ['raised'], next: { ending: 'held_inside' } },
               { if: [CALM, HOLDING, OWNER_OK], when: { notSafe: ['courier'] }, text: '{courier.first} spends the night on those boxes too.', reveal: ['raised'], next: { ending: 'held_both' } },
-              { if: OWNER_OUT, text: 'In the night, {owner.first} collapses out of sight. Nobody inside answers the team.', mark: ['owner_down'], next: { node: 'owner_down' } },
+              { if: OWNER_OUT, text: 'In the night, {owner.first} collapses out of sight. Nobody inside answers the team.', next: { node: 'owner_down' } },
             ],
           } },
-        { id: 'read_back', title: 'Read {taker.his} account back', icon: 'handover', talksTo: 'taker', check: check(TALK, -2), minutes: 8, onlyIf: { marks: ['account'], notMarks: ['owner_down'] },
+        { id: 'read_back', title: 'Read {taker.his} account back', icon: 'handover', talksTo: 'taker', check: check(TALK, -2), minutes: 8, onlyIf: { marks: ['account'] },
           summary: '{lead} reads back every line on the pad. {owner.first} hears it too, with {taker.first} standing over {owner.him}.',
           preview: { favorable: '{taker.first} hears {taker.his} own words and lets the signature go.', mixed: '{taker.first} corrects the account line by line while {owner.first} waits.', adverse: '{taker.first} hears a line {taker.he} never said and may turn on {owner.first} for it.' },
           outcomes: {
@@ -702,8 +704,7 @@ export const HOSTAGE_SIGNATURE: CallTree = {
               { if: RAISED, text: 'Officers at the window watch {taker.him} wheel on {owner.first}, handgun out.', reveal: ['raised'], next: { node: 'threat' } },
               { if: [CALM, BREAKING], text: '{taker.He} {taker~has|have} had enough of being misheard and {taker~points|point} at {owner.first}.', mark: ['turned'], next: { node: 'threat' } },
               ...heldEnd({ if: [CALM, HOLDING], text: '{taker.He} {taker~hangs|hang} up before the next line.', reveal: ['raised'] },
-                '{courier.first} is still waiting on the boxes.', '{owner.first} has slid off the stool and isn’t getting up.')
-                .map((outcome, i) => i === 0 ? outcome : { ...outcome, if: [CALM, HOLDING] }),
+                '{courier.first} is still waiting on the boxes.', '{owner.first} has slid off the stool and isn’t getting up.', [CALM, HOLDING]),
             ],
           } },
         { id: 'pull_back', title: 'Pull back to the corner', icon: 'handover', check: check(MOVE, -20), minutes: 2,
@@ -711,24 +712,22 @@ export const HOSTAGE_SIGNATURE: CallTree = {
           preview: { favorable: 'You hold the corner, and {owner.first} remains inside.', mixed: 'From the corner, you keep the block shut. {owner.first} stays with {taker.first}.', adverse: 'You give up the glass and nobody gets {owner.first} out.' },
           outcomes: {
             favorable: heldEnd({ text: 'The team withdraws to the corner. {owner.first} remains at the till.', objective: 5 },
-              '{courier.first} is in there too, on the boxes.', 'Nobody reaches {owner.first}, who is down on the tiles.'),
+              '{courier.first} is in there too, on the boxes.', 'Then {owner.first} folds over behind the till, out of anyone’s reach.'),
             mixed: heldEnd({ text: 'Officers fall back and close the block. Inside, {taker.first} hasn’t let {owner.first} go.', objective: 5 },
-              'So is {courier.first}, by the entrance.', '{owner.first} hasn’t gotten up.'),
+              '{courier.first} is in there too, by the entrance.', '{owner.first} tips sideways from the stool onto the tiles.'),
             adverse: heldEnd({ text: 'The team gives up the windows and holds the cross street.', objective: 5 },
-              '{courier.first} is stuck in there as well.', 'Behind the till, {owner.first} lies where {owner.he} fell.'),
+              '{courier.first} is stuck inside with them.', 'Behind the till, {owner.first} lies where {owner.he} fell.'),
           } },
       ] },
     { id: 'threat', stage: 'resolve',
       prompt: '{owner.first} has gone still since {taker.first} raised the handgun toward {owner.him}.',
       promptIf: [
-        { when: { marks: ['owner_down'] }, prompt: '{owner.first} is down, and {taker.first} stands over {owner.him}, armed.' },
         { when: { notSafe: ['courier'] }, prompt: 'The handgun is pointed at {owner.first}. {courier.first} is pressed against the stacked boxes.' },
         { when: GROUP_IN, prompt: '{owner.first} is pinned against the counter by {taker.first}. {others} {others#has|have} backed against the shelves.' },
         { when: { marks: ['team_close'] }, prompt: '{owner.first} is staring at what {taker.first} is holding. Your squad is a few steps away.' },
       ],
       choices: [
-        { id: 'talk_down', title: 'Talk {taker.him} down', icon: 'radio', team: { to: { vantage: 'scene' }, signal: { channel: 'voice', to: 'taker' } }, talksTo: 'taker', check: check(TALK, 6), minutes: 3, stress: 4, consequenceLevel: 'high', onlyIf: { notMarks: ['owner_down'] },
-          modifiers: [{ label: 'You know how that day went', mark: 'knows_story', value: 6 }],
+        { id: 'talk_down', title: 'Talk {taker.him} down', icon: 'radio', team: { to: { vantage: 'scene' }, signal: { channel: 'voice', to: 'taker' } }, talksTo: 'taker', check: check(TALK, 6), minutes: 3, stress: 4, consequenceLevel: 'high', modifiers: [{ label: 'You know how that day went', mark: 'knows_story', value: 6 }],
           summary: '{lead} calls to {taker.first} from the glass, in plain view and in line with the handgun.',
           preview: { favorable: 'The handgun is set down, and {owner.first} walks out ahead of {taker.first}.', mixed: '{owner.first} gets out, and {taker.first} stays armed.', adverse: 'Whoever stands at the glass may be hit if {taker.first} fires.' },
           outcomes: {
@@ -749,19 +748,16 @@ export const HOSTAGE_SIGNATURE: CallTree = {
           preview: { favorable: 'You reach {owner.first} and get {owner.him} out.', mixed: '{owner.first} is out, hurt on the way.', adverse: '{taker.first} turns on {owner.first} as you come in. Either of them can be badly hurt, and {owner.first} could die.' },
           outcomes: {
             favorable: [
-              { when: { notMarks: ['owner_down'] }, text: 'The team is through the door before {taker.first} turns. {owner.first} is out on the sidewalk, and the team has {taker.first}, the handgun out of reach.', safe: ['owner'], out: ['taker', 'others'], next: { ending: 'entry_clean' }, objective: 50 },
-              { when: { marks: ['owner_down'] }, text: 'Officers reach the counter before {taker.first} can turn and lift {owner.first} off the floor. {taker.first} ends up face down, empty-handed.', safe: ['owner'], out: ['taker', 'others'], next: { ending: 'went_in_for_owner' }, objective: 45 },
+              { text: 'The team is through the door before {taker.first} turns. {owner.first} is out on the sidewalk, and the team has {taker.first}, the handgun out of reach.', safe: ['owner'], out: ['taker', 'others'], next: { ending: 'entry_clean' }, objective: 50 },
               courierToo('{courier.first} goes out ahead of {owner.him}.'),
               { when: GROUP, text: '{others} {others#lies|lie} down without being told.' },
             ],
             mixed: [
-              { when: { notMarks: ['owner_down'] }, text: '{owner.first} falls hard against the counter as the team pulls {owner.him} clear. The medic at the curb checks {owner.his} arm, and {taker.first} is taken.', safe: ['owner'], harm: { owner: 'wounded' }, out: ['taker', 'others'], next: { ending: 'entry_hurt' }, objective: 35 },
-              { when: { marks: ['owner_down'] }, text: '{taker.first} grapples with the first officer over {owner.first}. The team gets {owner.first} out, and that officer comes away hurt.', safe: ['owner'], officer: 'wounded', out: ['taker', 'others'], next: { ending: 'went_in_for_owner' }, objective: 38 },
+              { text: '{owner.first} falls hard against the counter as the team pulls {owner.him} clear. The medic at the curb checks {owner.his} arm, and {taker.first} is taken.', safe: ['owner'], harm: { owner: 'wounded' }, out: ['taker', 'others'], next: { ending: 'entry_hurt' }, objective: 35 },
               courierToo('{courier.first} is out first.'),
             ],
             adverse: [
-              { if: LETS_GO, when: { notMarks: ['owner_down'] }, text: '{taker.first} hauls {owner.first} low behind the register as the door gives. {owner.first} hits the floor hard, and {taker.first} lets go when the team reaches them.', reveal: ['lets_go'], safe: ['owner'], harm: { owner: 'serious' }, out: ['taker', 'others'], next: { ending: 'entry_hurt' }, objective: 20, civilian: -15 },
-              { if: LETS_GO, when: { marks: ['owner_down'] }, text: '{taker.first} stands over {owner.first} and fires once at the door before the team gets there. Officers haul {owner.first} out over the counter.', reveal: ['lets_go'], safe: ['owner'], out: ['taker', 'others'], fire: { from: 'taker' }, next: { ending: 'went_in_for_owner' }, objective: 25 },
+              { if: LETS_GO, text: '{taker.first} hauls {owner.first} low behind the register as the door gives. {owner.first} hits the floor hard, and {taker.first} lets go when the team reaches them.', reveal: ['lets_go'], safe: ['owner'], harm: { owner: 'serious' }, out: ['taker', 'others'], next: { ending: 'entry_hurt' }, objective: 20, civilian: -15 },
               { if: KEEPS, text: '{taker.first} fires at {owner.first} when the door swings in, then turns toward the team.', reveal: ['lets_go'], harm: { owner: 'fatal' }, out: ['others'], force: { on: 'taker', next: { hurt: { ending: 'owner_killed_taker_hurt' }, none: { ending: 'owner_killed' } }, noFatal: true }, objective: 5 },
               { if: KEEPS, text: '', fire: { from: 'taker' } },
               courierToo('{courier.first} slips away in the struggle.'),
@@ -772,16 +768,14 @@ export const HOSTAGE_SIGNATURE: CallTree = {
           preview: { favorable: 'With nobody in view, the handgun comes down.', mixed: '{taker.first} puts the handgun down but won’t release {owner.first}.', adverse: 'The handgun stays where it is, and nobody is close by if {taker.first} hurts {owner.first}.' },
           outcomes: {
             favorable: [
-              { when: { notMarks: ['owner_down'] }, text: 'With the street empty, {taker.first} picks up the phone and releases {owner.first}.', safe: ['owner'], mark: ['still_armed'], moves: { taker: 'released' }, next: { node: 'last_one' }, objective: 40 },
-              { when: { marks: ['owner_down'] }, text: 'Once nobody is in sight, {taker.first} opens the door for the medic, and the team lifts {owner.first} out.', safe: ['owner'], next: { ending: 'owner_collapsed' }, objective: 20 },
+              { text: 'With the street empty, {taker.first} picks up the phone and releases {owner.first}.', safe: ['owner'], mark: ['still_armed'], moves: { taker: 'released' }, next: { node: 'last_one' }, objective: 40 },
               courierToo('{courier.first} leaves the shop with {owner.him}.'),
             ],
             mixed: heldEnd({ text: 'The handgun drops to {taker.first}’s side, but {owner.first} isn’t let go. The block stays sealed.', objective: 15 },
-              '{courier.first} stays put on the boxes.', 'Nobody inside helps {owner.first} up.'),
+              '{courier.first} stays put on the boxes.', '{owner.first} slumps to the tiles, and nobody inside helps {owner.him} up.'),
             adverse: [
               ...heldEnd({ if: LETS_GO, text: 'From the corner, the team can see {owner.first} still in the handgun’s path.', reveal: ['lets_go'], pressure: 8 },
-                '{courier.first} has {courier.his} back to the wall by the door.', '{owner.first} is down, and {taker.first} is standing over {owner.him}.')
-                .map((outcome, i) => i === 0 ? outcome : { ...outcome, if: LETS_GO }),
+                '{courier.first} has {courier.his} back to the wall by the door.', 'Then {owner.first} goes down, and {taker.first} stands over {owner.him}.', [LETS_GO]),
               { if: KEEPS, text: 'By the time the team looks again, {owner.first} has signed, struck with the handgun until {owner.he} did. {taker.first} sends {owner.him} out and keeps the page.', reveal: ['lets_go'], safe: ['owner'], harm: { owner: 'serious' }, next: { ending: 'owner_beaten' }, objective: 10, pressure: 10 },
               courierToo('{courier.first} is sent out the front.', { if: KEEPS }),
             ],
@@ -790,7 +784,6 @@ export const HOSTAGE_SIGNATURE: CallTree = {
     { id: 'fired_on', stage: 'resolve',
       prompt: 'A shot has been fired. {owner.first} is still at the counter.',
       promptIf: [
-        { when: { marks: ['owner_down'] }, prompt: 'After the shot, {owner.first} still lies behind the till, within {taker.first}’s reach.' },
         { when: { notSafe: ['courier'] }, prompt: 'Since the shot, neither {owner.first} nor {courier.first} has come out.' },
       ],
       choices: [
@@ -801,19 +794,16 @@ export const HOSTAGE_SIGNATURE: CallTree = {
           preview: { favorable: 'You get to {owner.first} first and bring {owner.him} out.', mixed: 'You bring {owner.first} out with an injury.', adverse: '{taker.first} meets you at the till, armed. {owner.first} may not survive the entry, and {taker.first} may be hurt too.' },
           outcomes: {
             favorable: [
-              { when: { notMarks: ['owner_down'] }, text: 'Officers get there before {taker.first} can swing around. {owner.first} is hustled out to the street, and {taker.first} ends up prone with empty hands.', safe: ['owner'], out: ['taker', 'others'], next: { ending: 'entry_clean' }, objective: 50 },
-              { when: { marks: ['owner_down'] }, text: 'Officers are over the counter with {taker.first} still looking the other way. Two of them carry {owner.first} out, and {taker.first} lets the handgun fall.', safe: ['owner'], out: ['taker', 'others'], next: { ending: 'went_in_for_owner' }, objective: 45 },
+              { text: 'Officers get there before {taker.first} can swing around. {owner.first} is hustled out to the street, and {taker.first} ends up prone with empty hands.', safe: ['owner'], out: ['taker', 'others'], next: { ending: 'entry_clean' }, objective: 50 },
               courierToo('{courier.first} is already outside.'),
               { when: GROUP, text: '{others} {others#shows|show} officers {others.his} empty hands.' },
             ],
             mixed: [
-              { when: { notMarks: ['owner_down'] }, text: '{owner.first} goes down against the shelves in the rush and comes out holding {owner.his} arm. Officers hold {taker.first}.', safe: ['owner'], harm: { owner: 'wounded' }, out: ['taker', 'others'], next: { ending: 'entry_hurt' }, objective: 35 },
-              { when: { marks: ['owner_down'] }, text: 'An officer is hurt pulling {taker.first} back from the till. Two more officers bring {owner.first} out to the ambulance.', safe: ['owner'], officer: 'wounded', out: ['taker', 'others'], next: { ending: 'went_in_for_owner' }, objective: 38 },
+              { text: '{owner.first} goes down against the shelves in the rush and comes out holding {owner.his} arm. Officers hold {taker.first}.', safe: ['owner'], harm: { owner: 'wounded' }, out: ['taker', 'others'], next: { ending: 'entry_hurt' }, objective: 35 },
               courierToo('{courier.first} beats everyone outside.'),
             ],
             adverse: [
-              { if: LETS_GO, when: { notMarks: ['owner_down'] }, text: '{taker.first} drags {owner.first} to the floor as officers come in. {owner.first} is badly hurt when they pull {owner.him} free, and {taker.first} surrenders.', reveal: ['lets_go'], safe: ['owner'], harm: { owner: 'serious' }, out: ['taker', 'others'], next: { ending: 'entry_hurt' }, objective: 20, civilian: -15 },
-              { if: LETS_GO, when: { marks: ['owner_down'] }, text: 'A second shot comes through the door as officers go in. They reach {owner.first} where {owner.he} {owner~lies|lie} and carry {owner.him} away while others take {taker.first}.', reveal: ['lets_go'], safe: ['owner'], out: ['taker', 'others'], fire: { from: 'taker' }, next: { ending: 'went_in_for_owner' }, objective: 25 },
+              { if: LETS_GO, text: '{taker.first} drags {owner.first} to the floor as officers come in. {owner.first} is badly hurt when they pull {owner.him} free, and {taker.first} surrenders.', reveal: ['lets_go'], safe: ['owner'], harm: { owner: 'serious' }, out: ['taker', 'others'], next: { ending: 'entry_hurt' }, objective: 20, civilian: -15 },
               { if: KEEPS, text: '{taker.first} fires again, this time at {owner.first}, then swings toward the door.', reveal: ['lets_go'], harm: { owner: 'fatal' }, out: ['others'], force: { on: 'taker', next: { hurt: { ending: 'owner_killed_taker_hurt' }, none: { ending: 'owner_killed' } }, noFatal: true }, objective: 5 },
               { if: KEEPS, text: '', fire: { from: 'taker' } },
               courierToo('{courier.first} crawls out the door in the noise.'),
@@ -824,14 +814,13 @@ export const HOSTAGE_SIGNATURE: CallTree = {
           preview: { favorable: 'You get an answer, and {owner.first} goes free.', mixed: '{taker.first} talks but keeps {owner.first} there.', adverse: 'No answer comes, and {owner.first} stays in there with {taker.him}.' },
           outcomes: {
             favorable: [
-              { when: { notMarks: ['owner_down'] }, text: 'On the fourth call {taker.first} picks up and says {taker.he} didn’t mean to fire. {owner.first} can go.', safe: ['owner'], mark: ['still_armed'], moves: { taker: 'released' }, next: { node: 'last_one' }, objective: 35 },
-              { when: { marks: ['owner_down'] }, text: 'Eventually {taker.first} lets two officers in to carry {owner.first} out.', safe: ['owner'], next: { ending: 'owner_collapsed' }, objective: 18 },
+              { text: 'On the fourth call {taker.first} picks up and says {taker.he} didn’t mean to fire. {owner.first} can go.', safe: ['owner'], mark: ['still_armed'], moves: { taker: 'released' }, next: { node: 'last_one' }, objective: 35 },
               courierToo('{courier.first} comes out alongside {owner.him}.'),
             ],
             mixed: heldEnd({ text: '{taker.first} picks up but won’t let {owner.first} go. The street stays shut.', objective: 8 },
-              '{courier.first} is crouched by the boxes.', 'Nobody has reached {owner.first} on the floor.'),
+              '{courier.first} is crouched by the boxes.', 'The shot never touched {owner.first}, but {owner.he} {owner~has|have} sunk down by the till, and nobody has reached {owner.him}.'),
             adverse: heldEnd({ text: 'The phone rings out every time, and the street stays sealed off.', pressure: 6 },
-              'Nobody has let {courier.first} out either.', '{owner.first} hasn’t moved since the shot.'),
+              'Nobody has let {courier.first} out.', '{owner.first} is down on the floor now, untouched by the shot.'),
           } },
       ] },
     { id: 'owner_down', stage: 'resolve',
@@ -995,8 +984,8 @@ export const HOSTAGE_SIGNATURE: CallTree = {
       remainingTasks: ['Walk {courier.first} out to patrol', 'Get {owner.first} off that stool', 'Talk {taker.first} into putting the handgun down'],
       summary: 'Patrol has the block sealed. {courier.first} and {owner.first} are both still in there with {taker.first}, who is armed.' },
     held_both_down: { title: 'Two inside, no medic yet', disposition: 'relief_partial',
-      remainingTasks: ['Get a medic to {owner.first}', 'Bring {courier.first} out from the boxes', 'Talk {taker.first} into setting the handgun aside'],
-      summary: 'The street stays closed. {owner.first} has collapsed inside, and {courier.first} is still on the boxes, a few steps from {taker.first}.' },
+      remainingTasks: ['Get a medic to {owner.first}', 'Bring {courier.first} out safely', 'Talk {taker.first} into setting the handgun aside'],
+      summary: 'The street stays closed. {owner.first} has collapsed inside, and {courier.first} is still in there, a few steps from {taker.first}.' },
     handed_over: { title: 'No step left to take', disposition: 'unresolved', remainingTasks: ['Get everyone out safely'],
       summary: 'Command still holds the street, and the call is still open. The team has no step left that it can take from here.' },
   },
