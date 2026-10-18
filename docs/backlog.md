@@ -16,15 +16,6 @@ measures the odds wiring; its floors rise as these items land.
 
 ## Now: the odds and the blueprint
 
-### gear-by-action: Gear moves the odds on most choices
-Tags: job=build; journeys=team-moves-odds; probes=items-none; lane=engine
-Needs: start=none; integrate=none; ship=none
-
-Today carried gear moves 3 of 30 sampled opening choices (`items-none` probe, floor 0.1), because
-bonuses apply only where a choice declares them. Done: equipment applies by what the choice
-physically does, read from the fields a choice already has (`team`, `walks`, `talksTo`, `check`,
-`equipment`, `capabilities`) rather than a second vocabulary, and the floor rises.
-
 ### intel-odds: What the team learns changes the odds
 Tags: job=command; journeys=chance-not-script, team-moves-odds; probes=subject-armament, new:intel-confirmed; lane=engine
 Needs: start=none; integrate=none; ship=none
@@ -95,7 +86,7 @@ conditions that keep text true where the building doesn't allow it.
 
 ### barricade-model-first: Write the barricade call model-first
 Tags: job=command; journeys=answer-a-call, choices-branch; probes=blueprint-building, blueprint-locked; lane=calls
-Needs: start=none; integrate=gear-by-action, intel-odds, clock-runout-routing, barricade-engine-requests; ship=none
+Needs: start=none; integrate=intel-odds, clock-runout-routing, barricade-engine-requests; ship=none
 
 As the hostage call was: template, design sheet in `docs/calls/`, tree, separate review. The old
 tree has 2 `team` moves out of about 37 choices (armed 13, hostage 8, rescue 8), and a different
@@ -116,7 +107,7 @@ and review; and the old `rescue-chair` tree is retired.
 
 ### armed-model-first: Write the armed-incident call model-first
 Tags: job=command; journeys=answer-a-call, choices-branch; probes=subject-armament; lane=calls
-Needs: start=barricade-model-first; integrate=gear-by-action, intel-odds; ship=none
+Needs: start=barricade-model-first; integrate=intel-odds; ship=none
 
 Same pipeline. Done: `npm run check:strings` passes on it, it passes coverage, balance and review,
 and the old `armed-noise` tree is retired.
@@ -167,7 +158,7 @@ standoff needs a roadside building family.
 
 ### board-risk-card: Board risk card
 Tags: job=command; journeys=answer-a-call; probes=none (shows odds inputs, doesn't change them); lane=deferred
-Needs: start=gear-by-action; integrate=none; ship=none
+Needs: start=none; integrate=none; ship=none
 
 Suggested capabilities on the board before the player commits a squad. Needs a producer for risk
 and recommendations; `src/sim/operation-selectors.ts` already derives briefing recommendations
@@ -181,7 +172,7 @@ Time moves the meters, the `shots` event is written into content, and escalation
 
 ### less-lethal-cartridges: Less-lethal use spends cartridges
 Tags: job=build; journeys=hire-and-equip; probes=none (inventory, not odds); lane=engine
-Needs: start=gear-by-action; integrate=none; ship=none
+Needs: start=none; integrate=none; ship=none
 
 ## Gates and tooling
 
