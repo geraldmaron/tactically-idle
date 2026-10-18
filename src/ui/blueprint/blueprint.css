@@ -1073,15 +1073,70 @@
   stroke: #123c92;
   stroke-width: 0.4px;
 }
-/* A 230px preview letterboxed a full-height plan down to unreadable labels on a phone. */
+/* Map boxes take the plan's shape (--bp-hw, set by Blueprint) within a floor and a cap, so a wide
+   plan is not letterboxed in a tall box and a tall plan is not shrunk to a short one. */
 .prep-map:has(> .bp-root) {
-  height: clamp(330px, 58vh, 440px);
+  height: auto;
+  container-type: inline-size;
+}
+.prep-map > .bp-root {
+  --bp-chrome: 48px;
+  height: calc(clamp(180px, 100cqw * var(--bp-hw, 0.8), min(440px, 58svh)) + var(--bp-chrome));
+  aspect-ratio: auto !important;
+}
+.prep-map > .bp-multifloor {
+  --bp-chrome: 96px;
+}
+/* The zoom row sits under the drawing, never over a room. */
+.prep-map > .bp-root > .bp-canvas {
+  bottom: 48px;
 }
 .live-map:has(.bp-root) {
-  min-height: 300px;
+  min-height: 0;
 }
-.live-map:has(.bp-multifloor) {
-  min-height: 380px;
+
+/* Which room? A tap on a room drawn smaller than a finger lists it with its near neighbours. */
+.bp-chooser {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 8px;
+  z-index: 6;
+  max-height: calc(100% - 16px);
+  overflow-y: auto;
+  padding: 4px 8px 8px;
+  background: var(--bg);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+.bp-chooser-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-family: var(--font-cond);
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+.bp-chooser-close {
+  min-width: var(--touch);
+  min-height: var(--touch);
+  margin-right: -8px;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+}
+.bp-chooser-close:focus-visible {
+  outline: 2px solid var(--amber-2);
+  outline-offset: -4px;
+  border-radius: 8px;
 }
 
 /* Public people and possessions: certainty belongs to each mark independently. */

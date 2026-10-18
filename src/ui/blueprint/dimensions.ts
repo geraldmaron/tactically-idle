@@ -24,6 +24,10 @@ export interface DimLine {
 /** Distance from the drawn frame to each dimension line, and the paper margin that holds the dimension rows. */
 export const DIM_OFFSET = 1.5;
 export const SHEET_MARGIN = 3.5;
+/** Paper margin on a narrow map, which leaves out the dimension rows and north arrow to draw the plan larger. */
+export const COMPACT_SHEET_MARGIN = 1.5;
+/** Maps narrower than this, px, use the compact sheet: the 320px class of phone, where the plan draws near 4.5 px per foot. */
+export const COMPACT_SHEET_PX = 340;
 
 type Side = 'N' | 'E' | 'S' | 'W';
 const SIDE_VEC: Record<Side, Vec> = { N: { x: 0, y: -1 }, E: { x: 1, y: 0 }, S: { x: 0, y: 1 }, W: { x: -1, y: 0 } };
@@ -170,7 +174,7 @@ export function computeDimensions(loc: LocationDefinition, frame?: Rect): DimLin
 }
 
 /** Sheet viewBox: the drawn frame (default: the whole lot) plus margins that hold the dimension rows and the north arrow. */
-export function sheetViewBox(loc: LocationDefinition, frame?: Rect, extraTop = 0): Rect {
+export function sheetViewBox(loc: LocationDefinition, frame?: Rect, extraTop = 0, margin = SHEET_MARGIN): Rect {
   const fr = frame ?? { x: 0, y: 0, w: loc.bounds.w, h: loc.bounds.h };
-  return { x: fr.x - SHEET_MARGIN, y: fr.y - SHEET_MARGIN - extraTop, w: fr.w + 2 * SHEET_MARGIN, h: fr.h + 2 * SHEET_MARGIN + extraTop };
+  return { x: fr.x - margin, y: fr.y - margin - extraTop, w: fr.w + 2 * margin, h: fr.h + 2 * margin + extraTop };
 }

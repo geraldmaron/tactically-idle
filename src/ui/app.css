@@ -4418,10 +4418,13 @@ button.ocard {
 }
 /* Every live-map control gets its own flow area. The SVG's measured viewport
    contains only drawing, so fit/pan/zoom never place room hit targets under UI. */
+.app .live-map-inner:has(> .bp-root) {
+  container-type: inline-size;
+}
 .app .live-map-inner > .bp-root {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
-  grid-template-rows: auto 300px auto auto;
+  grid-template-rows: auto clamp(180px, 100cqw * var(--bp-hw, 0.8), min(440px, 60svh)) auto auto;
   height: auto;
   aspect-ratio: auto !important;
 }

@@ -42,6 +42,16 @@ export interface LabelItem {
   rot: number;
 }
 
+/** Approximate extent of a drawn label, rotation and wrapped lines included. */
+export function labelBox(l: LabelItem): Rect {
+  const lines = l.lines ?? [l.text];
+  const w = Math.max(...lines.map((line) => line.length)) * W_COND * l.size;
+  const h = l.size * 1.1 + (lines.length - 1) * l.size * 1.15;
+  const cx = l.x - (l.rot ? l.size * 0.36 : 0);
+  const cy = l.y + (l.rot ? 0 : -l.size * 0.36 + (lines.length - 1) * l.size * 1.15 / 2);
+  return { x: cx - (l.rot ? h : w) / 2, y: cy - (l.rot ? w : h) / 2, w: l.rot ? h : w, h: l.rot ? w : h };
+}
+
 export interface MarkerItem {
   spaceId: Id;
   tone: 'amber' | 'mint';

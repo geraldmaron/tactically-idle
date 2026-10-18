@@ -1,22 +1,24 @@
 // The operations blueprint. Drawn entirely from built.location / built.derived plus the player's
 // SpaceViews; nothing here is a bitmap of the house, so the drawing cannot drift from the rules.
-import { useCallback, useId, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type CSSProperties, type MouseEvent } from 'react';
 import type { EnvironmentDefinition } from '../../sim/scenario-types';
 import type { BuiltLocation, Id, MapOverlay, SpaceView, SquadId, SquadTask, Vec } from '../../sim/types';
 import './blueprint.css';
-import { computeDimensions, sheetViewBox } from './dimensions';
+import { COMPACT_SHEET_MARGIN, COMPACT_SHEET_PX, computeDimensions, sheetViewBox } from './dimensions';
 import { DimensionLines, NorthArrow } from './DimensionLines';
 import { ObjectLabels, ObjectSymbol, isFloorLayer } from './furniture';
-import { bboxOf, polyPath, r2 } from './geometry';
+import { bboxOf, inflate, polyPath, r2, type Rect } from './geometry';
 import { computeFrame } from './frame';
-import { computeLayout } from './layout';
+import { computeLayout, labelBox } from './layout';
 import { FrontMark, MarkerLoop, NoteMark, PersonGlyph, SquadToken } from './markers';
 import { MaterialLegend, WallMaterialRuns, WallPatternDefs, materialsInUse } from './materials';
 import { OverlayLayer, placeOverlays } from './overlays';
 import { OpeningsLayer } from './openings';
 import { PaperBack, PaperDefs, PaperFront, ids } from './paper';
 import { computeWalls } from './walls';
-import { personDescription, statusWord } from './RoomList';
+import { RoomList, personDescription, statusWord } from './RoomList';
+import { resolveTap } from './hit-resolve';
+import { screenToWorld, unitsPerPixel } from './camera';
 import { useViewport } from './useViewport';
 import { useBlueprintNavigation } from './useBlueprintNavigation';
 import { floorBadges, floorCount, floorGeometry, floorKnowledge, floorWord } from './floors';
@@ -53,6 +55,12 @@ export interface BlueprintProps {
 
 const DOUBLE_TAP_MS = 380;
 
+function unionRect(a: Rect, b: Rect): Rect {
+  const x = Math.min(a.x, b.x);
+  const y = Math.min(a.y, b.y);
+  return { x, y, w: Math.max(a.x + a.w, b.x + b.w) - x, h: Math.max(a.y + a.h, b.y + b.h) - y };
+}
+
 export function Blueprint({ built: allBuilt, spaces: allSpaces, squadTasks: allSquadTasks, selectedSpaceId, focusSquadId, highlightSpaceIds, onSelectSpace, lastChange, overlays: allOverlays, showMaterials, className, floor: controlledFloor, onFloorChange }: BlueprintProps) {
   const uid = useId().replace(/[^a-zA-Z0-9]/g, '');
   const [localFloor, setLocalFloor] = useState({ location: allBuilt.location.id, floor: 0 });
@@ -80,11 +88,29 @@ export function Blueprint({ built: allBuilt, spaces: allSpaces, squadTasks: allS
   // The drawn frame: footprint plus the exterior ground actually used. Keyed like the layout.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const frame = useMemo(() => computeFrame(built, squadTasks, spaces), [built, sig]);
-  const base = useMemo(() => sheetViewBox(loc, frame), [loc, frame]);
-  const walls = useMemo(() => computeWalls(loc), [loc]);
-  const dims = useMemo(() => computeDimensions(loc, frame), [loc, frame]);
+  // A narrow map drops the dimension rows and their paper margin, so the plan itself draws larger.
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [compact, setCompact] = useState(false);
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root || typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(([entry]) => {
+      const width = entry.contentRect.width;
+      if (width > 0) setCompact(width < COMPACT_SHEET_PX);
+    });
+    observer.observe(root);
+    return () => observer.disconnect();
+  }, []);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const layout = useMemo(() => computeLayout(built, spaces, squadTasks, focusSquadId, frame), [built, sig, frame]);
+  const base = useMemo(() => {
+    const sheet = sheetViewBox(loc, frame, 0, compact ? COMPACT_SHEET_MARGIN : undefined);
+    if (!compact) return sheet;
+    // The narrow margin no longer hides a street or yard label that runs past the frame; keep each one whole.
+    return [...layout.zoneLabels, ...layout.roomLabels].reduce((r, l) => unionRect(r, inflate(labelBox(l), 0.3)), sheet);
+  }, [loc, frame, compact, layout]);
+  const walls = useMemo(() => computeWalls(loc), [loc]);
+  const dims = useMemo(() => computeDimensions(loc, frame), [loc, frame]);
   const overlaySig = JSON.stringify(overlays ?? []);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const overlayItems = useMemo(() => placeOverlays(built, overlays ?? [], frame, layout.obstacles), [built, overlaySig, frame, layout]);
@@ -97,7 +123,10 @@ export function Blueprint({ built: allBuilt, spaces: allSpaces, squadTasks: allS
   const { view, zoom, zoomBy, reset, zoomToRect } = camera;
   const svgRef = useRef<SVGSVGElement>(null);
   const lastTap = useRef<{ id: Id; t: number } | null>(null);
-  useBlueprintNavigation(svgRef, camera, `${sceneKey}:${base.x},${base.y},${base.w},${base.h}`, () => { lastTap.current = null; });
+  // Rooms offered after a tap on one drawn smaller than a finger; see hit-resolve.ts.
+  const [chooser, setChooser] = useState<{ scene: string; ids: Id[]; t: number } | null>(null);
+  const choices = chooser?.scene === sceneKey ? chooser.ids : null;
+  useBlueprintNavigation(svgRef, camera, `${sceneKey}:${base.x},${base.y},${base.w},${base.h}`, () => { lastTap.current = null; setChooser(null); });
 
   const changed = useMemo(() => new Set(lastChange?.spaceIds ?? []), [lastChange]);
   const revision = lastChange?.revision ?? 0;
@@ -114,18 +143,47 @@ export function Blueprint({ built: allBuilt, spaces: allSpaces, squadTasks: allS
   const upperObjects = useMemo(() => loc.objects.filter((o) => !isFloorLayer(o.type)), [loc]);
 
   const choose = useCallback(
-    (spaceId: Id, poly: Vec[]) => {
-      onSelectSpace?.(spaceId);
+    (spaceId: Id, poly: Vec[], event: MouseEvent) => {
       const now = performance.now();
       const prev = lastTap.current;
       if (prev && prev.id === spaceId && now - prev.t < DOUBLE_TAP_MS) {
         lastTap.current = null;
+        setChooser(null);
+        onSelectSpace?.(spaceId);
         if (zoom > 1.5) reset();
         else zoomToRect(bboxOf(poly));
-      } else lastTap.current = { id: spaceId, t: now };
+        return;
+      }
+      lastTap.current = { id: spaceId, t: now };
+      const svg = svgRef.current;
+      // Keyboard and screen-reader activation (detail 0) means the named room, never a guess. A map
+      // with nothing to select (the Prepare preview) has nothing to ask about.
+      if (svg && onSelectSpace && event.detail > 0) {
+        const bounds = svg.getBoundingClientRect();
+        const at = screenToWorld(view, { x: event.clientX, y: event.clientY }, bounds);
+        const tap = resolveTap(spaceId, at, polys.map((p) => ({ id: p.id, poly: p.poly, zone: p.zone })), 1 / unitsPerPixel(view, bounds.width, bounds.height));
+        if (tap.kind === 'choose') {
+          setChooser({ scene: sceneKey, ids: tap.ids, t: now });
+          return;
+        }
+      }
+      setChooser(null);
+      onSelectSpace?.(spaceId);
     },
-    [onSelectSpace, zoom, reset, zoomToRect],
+    [onSelectSpace, zoom, reset, zoomToRect, view, polys, sceneKey],
   );
+  const pick = (spaceId: Id) => {
+    // The list opens under the finger, so a quick second tap is the double-tap: zoom to the rooms offered.
+    if (chooser && performance.now() - chooser.t < DOUBLE_TAP_MS) {
+      const offered = polys.filter((p) => chooser.ids.includes(p.id));
+      setChooser(null);
+      lastTap.current = null;
+      zoomToRect(bboxOf(offered.flatMap((p) => p.poly)));
+      return;
+    }
+    setChooser(null);
+    onSelectSpace?.(spaceId);
+  };
 
   const ariaFor = (spaceId: Id): string => {
     const v = viewById.get(spaceId);
@@ -142,12 +200,14 @@ export function Blueprint({ built: allBuilt, spaces: allSpaces, squadTasks: allS
     return parts.join(', ');
   };
 
-  const sheetCls = `bp-root ${count > 1 ? 'bp-multifloor' : ''} ${zoom > 1.05 ? 'bp-zoomed' : ''} ${className ?? ''}`;
+  const sheetCls = `bp-root ${count > 1 ? 'bp-multifloor' : ''} ${zoom > 1.05 ? 'bp-zoomed' : ''} ${compact ? 'bp-compact' : ''} ${className ?? ''}`;
+  // Screens size the map from the plan's shape: --bp-hw is the sheet's height over its width.
+  const rootStyle = { aspectRatio: `${base.w} / ${base.h}`, '--bp-hw': (base.h / base.w).toFixed(4) } as CSSProperties;
   const vbStr = `${view.x} ${view.y} ${view.w} ${view.h}`;
   const north = { x: frame.x + frame.w + 0.4, y: frame.y - 0.8 };
 
   return (
-    <div className={sheetCls} style={{ aspectRatio: `${base.w} / ${base.h}` }}>
+    <div ref={rootRef} className={sheetCls} style={rootStyle}>
       <div className="bp-canvas">
         <svg ref={svgRef} className="bp-svg" viewBox={vbStr} role="group" tabIndex={0} aria-label={`Floor plan of ${loc.name}${count > 1 ? `, ${floorWord(floor).toLowerCase()}` : ''}`} aria-describedby={`${uid}-navigation-help`} aria-keyshortcuts="ArrowUp ArrowDown ArrowLeft ArrowRight Home" data-floor={floor} preserveAspectRatio="xMidYMid meet">
           <PaperDefs uid={uid} vb={base} />
@@ -232,9 +292,9 @@ export function Blueprint({ built: allBuilt, spaces: allSpaces, squadTasks: allS
             {layout.roomLabels.map((l) => <PlanLabel key={l.id} label={l} kind="room" />)}
           </g>
 
-          <DimensionLines dims={dims} />
+          {!compact && <DimensionLines dims={dims} />}
           {/* Floor tabs carry the north arrow on multi-floor plans; a second one would crowd the sheet corner. */}
-          {count < 2 && <NorthArrow x={north.x} y={north.y} />}
+          {count < 2 && !compact && <NorthArrow x={north.x} y={north.y} />}
 
           {layout.notes.map((n) => (
             <NoteMark key={n.id} n={n} />
@@ -288,7 +348,7 @@ export function Blueprint({ built: allBuilt, spaces: allSpaces, squadTasks: allS
                 tabIndex={0}
                 aria-label={ariaFor(p.id)}
                 aria-pressed={p.id === selectedSpaceId}
-                onClick={() => choose(p.id, p.poly)}
+                onClick={(e) => choose(p.id, p.poly, e)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault();
@@ -304,6 +364,18 @@ export function Blueprint({ built: allBuilt, spaces: allSpaces, squadTasks: allS
       {count > 1 && <div className="bp-floor-controls"><FloorTabs floors={count} floor={floor} badges={badges} onChange={changeFloor} /></div>}
 
       {showMaterials && <MaterialLegend uid={uid} use={keyUse} />}
+
+      {choices && (
+        <div className="bp-chooser" role="group" aria-labelledby={`${uid}-chooser`} onKeyDown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); setChooser(null); } }}>
+          <div className="bp-chooser-head">
+            <span id={`${uid}-chooser`}>Which room?</span>
+            <button type="button" className="bp-chooser-close" aria-label="Close" onClick={() => setChooser(null)}>
+              <span aria-hidden="true">×</span>
+            </button>
+          </div>
+          <RoomList built={built} spaces={spaces.filter((s) => choices.includes(s.id))} selectedSpaceId={selectedSpaceId} onSelectSpace={pick} className="bp-chooser-list" />
+        </div>
+      )}
 
       <p className="bp-nav-help" id={`${uid}-navigation-help`}>Tap a room to inspect · Drag to pan · Pinch to zoom<span className="bp-sr-only">. Keyboard: + and − to zoom, arrow keys to pan, Home to fit the map. Tab to a room and press Enter to inspect its people and carried items. Use the Rooms list for a text alternative. Scroll to zoom. Double-tap a room to zoom in or fit the map.</span></p>
 
