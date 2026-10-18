@@ -14,7 +14,7 @@ The coordinating session, on `main`. Merged so far: #36 (coordination rules), #3
 | Lane | Branch | In flight | Declared touches |
 |---|---|---|---|
 | engine | `claude/engine-intel-odds` | `intel-odds` (with R-B5): approved, in progress. Adds `TreeState.armed` (interface file, approved with a compile-time reveal check and a Codex review). Then `clock-runout-routing`, `barricade-engine-requests`, `second-squad` | `src/sim/threat.ts`, `src/sim/incident-factors.ts`, `trees-v13/compile.ts`, `src/gen/incident/instance.ts`, `src/content/call-trees/types.ts`, `src/architecture/wiring.ts`, tests |
-| calls | none | Idle until an engine item lands: the armed-gated hostage line after `intel-odds`; barricade tree data after its four engine Needs. Queued: the armed-gated hostage line after intel-odds merges. Barricade and rescue tree data wait on their engine Needs | to be declared |
+| calls | none | Idle until an engine item lands: the armed-gated hostage line after `intel-odds`; barricade and rescue tree data after their engine Needs | none |
 | tooling | `claude/lab-compare` (#43) | `lab-compare`: held for an empty-kit check that the tool detects gear | `src/dev/lab/model/compare.ts` and test, `src/dev/lab/surfaces/play/CompareRail.tsx`, `XrayRail.tsx`, `play.css`, `src/dev/lab/types.ts`, `url.ts` and test |
 | interface | to be cut from main | `manager-art`: file list due | to be declared |
 
