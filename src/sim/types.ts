@@ -623,6 +623,10 @@ export interface DecisionResolution {
   sample: number;
   band: OutcomeBand;
   timeCost: number;
+  /** The team's minutes for this decision before its outcomes added any (sim/clocks.ts
+   * teamMinutes): travel, forcing and work at its band. Clock forks read it, so replays read the
+   * same minutes the commit did. */
+  clockBaseMinutes: number;
   stressDeltas: Record<Id, number>;
   /** Recorded at application time; absent in older decisions. Never reconstructed from current stress. */
   stressLevels?: Record<Id, { stressBefore: number; stressAfter: number }>;

@@ -8,7 +8,7 @@ import { applyIncidentConsequences, applyPersonConsequences, civilianOutcomeView
 import { protectedOfficerEffects } from './force-risk';
 import { drawnKeys, resolveDrawn } from './drawn-effects';
 import { withVariants } from '../gen/incident/drawn-model';
-import { advanceClocks, clockConditionsHold, clockErrors, clockOutEffects, cueEffects, forkMinutes, initialClocks } from './clocks';
+import { advanceClocks, clockConditionsHold, clockErrors, clockOutEffects, cueEffects, decisionMinutes, forkMinutes, initialClocks, teamMinutes } from './clocks';
 import { applyMoves, initialMeters, meterConditionsHold } from './meters';
 import { applyCommitments } from './commitments';
 import { forceLines, OUTCOME_SCORE_V1, scoreCall } from './outcome-score';
@@ -58,7 +58,6 @@ import {
   getBuilt,
   openingFlag,
   openingOverrides,
-  RESOLUTION_TUNING,
   squadLabel,
   strainFor,
   type Evaluation,
@@ -420,19 +419,20 @@ export function advanceTime(run: Pick<OperationRun, 'clock' | 'pressure' | 'civi
 }
 
 /** Hidden truth is consulted only when committing/replaying an outcome, never in previews. So are
- * the v13 engine-only branches: clocks at the end of the choice's minutes, and the subjects' meters
- * as they stand at the start of the decision (escalation, sim/meters.ts). */
-export function matchedEffects(action: ActionDefinition, band: OutcomeBand, run: Pick<OperationRun, 'knowledge' | 'flags' | 'pressure'> & Partial<Pick<OperationRun, 'clocks' | 'meters'>>, scenario: ScenarioDefinition): OutcomeEffect[] {
-  return matchedOutcomeIndices(action, band, run, scenario).map((index) => {
+ * the v13 engine-only branches: clocks at the end of the decision's minutes (`clockBase`, the
+ * team's minutes: sim/clocks.ts teamMinutes), and the subjects' meters as they stand at the start
+ * of the decision (escalation, sim/meters.ts). */
+export function matchedEffects(action: ActionDefinition, band: OutcomeBand, run: Pick<OperationRun, 'knowledge' | 'flags' | 'pressure'> & Partial<Pick<OperationRun, 'clocks' | 'meters'>>, scenario: ScenarioDefinition, clockBase?: number): OutcomeEffect[] {
+  return matchedOutcomeIndices(action, band, run, scenario, clockBase).map((index) => {
     const effect = action.outcomes[band][index];
     return effect.reveal?.length ? { ...effect, knowledge: [...effect.knowledge ?? [], ...effect.reveal.map((factId) => ({ factId, status: scenario.facts.find((fact) => fact.id === factId)?.truth ? 'confirmed' as const : 'disproved' as const }))] } : effect;
   });
 }
 
 /** Which of the band's authored outcomes apply (their indices, in order): matchedEffects' filter. */
-export function matchedOutcomeIndices(action: ActionDefinition, band: OutcomeBand, run: Pick<OperationRun, 'knowledge' | 'flags' | 'pressure'> & Partial<Pick<OperationRun, 'clocks' | 'meters'>>, scenario: ScenarioDefinition): number[] {
+export function matchedOutcomeIndices(action: ActionDefinition, band: OutcomeBand, run: Pick<OperationRun, 'knowledge' | 'flags' | 'pressure'> & Partial<Pick<OperationRun, 'clocks' | 'meters'>>, scenario: ScenarioDefinition, clockBase?: number): number[] {
   return action.outcomes[band].flatMap((effect, index) => conditionHolds(effect.when, run) && (effect.truth ?? []).every((entry) => scenario.facts.find((fact) => fact.id === entry.factId)?.truth === entry.is)
-    && clockConditionsHold(effect.clocks, scenario, run, forkMinutes(action, band, effect)) && meterConditionsHold(effect.meters, run) ? [index] : []);
+    && clockConditionsHold(effect.clocks, scenario, run, forkMinutes(action, band, effect, clockBase)) && meterConditionsHold(effect.meters, run) ? [index] : []);
 }
 
 /** Resolve an authored exit change from this evaluation's route, never a stale binding path. */
@@ -517,7 +517,7 @@ export function traceRun(scenario: ScenarioDefinition, run: OperationRun): { ste
   for (const resupply of run.resupplies ?? []) applyClockCues(sim, scenario, advanceTime(sim, scenario, resupply.minutes).cues);
   for (const h of run.history) {
     const a = actions.get(h.actionId) ?? null;
-    const matched = a ? matchedEffects(a, h.band, sim, scenario) : [];
+    const matched = a ? matchedEffects(a, h.band, sim, scenario, h.clockBaseMinutes) : [];
     const pressure0 = sim.pressure;
     const obj0 = sim.objective;
     const civ0 = sim.civilianSafety;
@@ -874,7 +874,9 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     run.rngState = r.state;
     const sample = r.value;
     const band = bandFor(ev.margin, sample);
-    let matched = matchedEffects(action, band, run, scenario);
+    // Clock forks read the decision's own minutes, travel and forcing included (sim/clocks.ts).
+    const clockBaseMinutes = teamMinutes(ev, action, band);
+    let matched = matchedEffects(action, band, run, scenario, clockBaseMinutes);
     // v13: drawn consequences (a subject firing at the team, the team's force) settle now, each
     // with its own saved sample, into the variant effects they choose (sim/drawn-effects.ts).
     const drawn = resolveDrawn(matched, { state: draft, run, scenario, acting: ev.acting, participantIds: ev.participantIds, unitsOf: availableUnits });
@@ -891,9 +893,7 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     const openingChanges = new Map<Id, OpeningState>(matched.flatMap(effect => (effect.openings ?? []).map(change => [change.openingId, change.state] as const)));
     const before = { objective: run.objective, civilianSafety: run.civilianSafety, pressure: run.pressure };
     const extra = matched.reduce((s, e) => s + (e.extraMinutes ?? 0), 0);
-    const movementTime = storyRouteUsed ? 0 : ev.storyMovementMinutes ?? 0;
-    const proposedTime = (ev.timeBase - movementTime) * RESOLUTION_TUNING.bandTime[band] + extra;
-    const timeCost = round1(action.awaitSupport ? ev.timeBase : Math.max(0.5, proposedTime));
+    const timeCost = decisionMinutes(teamMinutes(ev, action, band, storyRouteUsed), extra, action);
     const strain = strainFor(input, ev, band);
 
     const clocksBefore = run.clocks;
@@ -995,6 +995,7 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
       sample,
       band,
       timeCost,
+      clockBaseMinutes,
       stressDeltas: strain,
       stressLevels,
       itemsConsumed: consumed,

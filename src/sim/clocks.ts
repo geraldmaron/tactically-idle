@@ -49,9 +49,26 @@ function readClock(def: ClockDef | undefined, state: ClockState | undefined): Cl
   return { value: state.value, low: state.cued > 0, out: state.value <= 0 };
 }
 
-/** The minutes a clock fork looks ahead: the choice's own minutes for its band, plus the outcome's. */
-export function forkMinutes(action: ActionDefinition, band: OutcomeBand, effect: OutcomeEffect): number {
-  return action.workload.base * RESOLUTION_TUNING.bandTime[band] + (effect.extraMinutes ?? 0);
+/** The team's minutes for a decision at its band before any outcome adds to them: travel through
+ * the building, forcing doors and the work itself (the evaluation's timeBase). A walk by a person
+ * the outcome moves along their route counts only when `walked`: it depends on the outcome, so a
+ * clock fork reads the time without it. A choice that waits on outside support takes its wait. */
+export function teamMinutes(ev: { timeBase: number; storyMovementMinutes?: number }, action: Pick<ActionDefinition, 'awaitSupport'>, band: OutcomeBand, walked = false): number {
+  if (action.awaitSupport) return ev.timeBase;
+  return (ev.timeBase - (walked ? 0 : ev.storyMovementMinutes ?? 0)) * RESOLUTION_TUNING.bandTime[band];
+}
+
+/** The minutes a decision runs the clocks by: the team's minutes plus what the outcomes add. The
+ * commit charges this, and a clock fork reads it for its own outcome, so the two never disagree. */
+export function decisionMinutes(team: number, extra: number, action: Pick<ActionDefinition, 'awaitSupport'>): number {
+  return round1(action.awaitSupport ? team : Math.max(0.5, team + extra));
+}
+
+/** The minutes a clock fork looks ahead: the decision's minutes with this outcome's own extra.
+ * `clockBase` is the decision's saved team minutes (DecisionResolution.clockBaseMinutes). Without
+ * it (a preview with no evaluation) only the choice's own work counts, not its travel. */
+export function forkMinutes(action: ActionDefinition, band: OutcomeBand, effect: OutcomeEffect, clockBase?: number): number {
+  return decisionMinutes(clockBase ?? action.workload.base * RESOLUTION_TUNING.bandTime[band], effect.extraMinutes ?? 0, action);
 }
 
 /** Whether an outcome's clock conditions hold at the end of its own minutes. */

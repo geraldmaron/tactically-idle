@@ -73,7 +73,7 @@ function validReport(r: unknown): boolean {
 }
 
 function validDecision(d: unknown): boolean {
-  return isObj(d) && numbers(d, ['revision', 'score', 'difficulty', 'sample', 'timeCost'])
+  return isObj(d) && numbers(d, ['revision', 'score', 'difficulty', 'sample', 'timeCost', 'clockBaseMinutes']) && (d.clockBaseMinutes as number) >= 0
     && isStr(d.actionId) && oneOf(d.stage, STAGES) && oneOf(d.band, ['favorable', 'mixed', 'adverse'])
     && isList(d.actingSquadIds, (id) => oneOf(id, SQUAD_IDS)) && isList(d.supportSquadIds, (id) => oneOf(id, SQUAD_IDS))
     && isStrings(d.officerIds) && (d.targetId === null || isStr(d.targetId)) && validNumericRecord(d.stressDeltas)

@@ -225,7 +225,7 @@ export function validExternalSupportState(run: OperationRun, scenario: ScenarioD
     if (action.awaitSupport && decision.timeCost !== remainingSupportWait({ clock: beforeClock, externalSupport: expected }, scenario, action.awaitSupport)) return false;
     const matched = action.outcomes[decision.band].filter((effect) => conditionsHold(effect.when, publicState)
       && (effect.truth ?? []).every((truth) => scenario.facts.find((fact) => fact.id === truth.factId)?.truth === truth.is)
-      && (clockConditionsHold(effect.clocks, scenario, { clocks: timed.clocks, flags: publicState.flags }, forkMinutes(action, decision.band, effect))
+      && (clockConditionsHold(effect.clocks, scenario, { clocks: timed.clocks, flags: publicState.flags }, forkMinutes(action, decision.band, effect, decision.clockBaseMinutes))
         && meterConditionsHold(effect.meters, moved)));
     // v13 drawn consequences apply the variant each saved record names, in order.
     const saved = savedDrawnEffects(matched, decision.committed?.drawn);
