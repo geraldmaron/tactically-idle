@@ -771,3 +771,119 @@ unchanged from main apart from the fixed lines); `npx vitest run` on call-trees 
 (79 tests); `compiled-fingerprints.test.ts` fails on the hostage keys as expected (the lead
 recaptures); `src/dev/lab/model/describe.test.ts` fails because it pins the duplicate title NF8
 removes (tooling lane, routed through the lead).
+
+## The armed line (R-G1 in use, 2026-10-18)
+
+`TreeState.armed` landed with `intel-odds` (#45). The call now names a coworker's weapon, but only
+after the team has seen it. This is a design change to one stage menu, done through
+swat-call-design before the prose.
+
+### Why the glass look was lone-only
+
+Row F marks `team_glass` "[lone]", and the sheet gives the reason for every [lone] and [group]
+pair (line 120): "so every menu stays at two to four options". It was a menu-size choice, not an
+exposure or dominance finding. No review finding names it, and `git log -S` shows it lone-only
+since the call was first written (a1e86f2). The group `both_inside` menu had three options, so a
+fourth fits the cap.
+
+### The change
+
+- `team_glass` stays lone-only and unchanged in wording. Its favorable band now also sets
+  `saw_inside` (no armed line survives in a lone call; see the reveal-rule note below), and its
+  mixed band sets `owner_hidden`.
+- New `glass_group`, group calls only (`GROUP_IN`): the same look, with the cost of more watchers.
+  Check MOVE +3 (the lone look is MOVE +0); summary "{lead} moves up to the front windows, in view of
+  {others} too. One shout could drop the blinds."; the coworkers are moved by `team_seen` on every
+  band, and the adverse escalation provokes the taker as well. Only its favorable band, which has no
+  `back`, sets `saw_inside`.
+- Three `talking` prompts gated on `saw_inside` plus `armed` (one armed of one, both of two, one of
+  two), naming a steel bar from under the counter.
+- `owner_hidden`, from either glass mixed band, read by a `talking` prompt and a `standoff` prompt,
+  each guarded by `notMarks: ['owner_back']`. `owner_back` is set by the two results that show the
+  owner again (`talking.ask_owner` mixed in the KEEPS situation, `talking.his_pace` adverse where the
+  owner is fine).
+
+Dominance grid, group `both_inside` (4 options):
+
+| Option | Odds | Minutes | Unlocks | Who pays on adverse | Charged by | Cost the player sees | Payoff only it produces |
+|---|---|---|---|---|---|---|---|
+| hold in silence | best (HOLD −4) | 10 | contact, pressure −5 | the owner (escalation) | `wait_silence.adverse` escalate | "{courier.first} and {owner.first} wait in there however long" | the lowest provocation |
+| ask again for the courier | mid (TALK +4) | 3 | the courier out (objective 25) | the courier stays (provoked) | `ask_again.adverse` | "Asking twice can harden {taker.first} against both of them" | a life out now |
+| look through the glass | worst (MOVE +3) | 3 | the coworkers' weapons settled, `team_close` (opens `alley_talk`), the armed lines | the owner (escalation), the taker provoked | `glass_group.adverse` escalate with `provoked` | "in view of {others} too. One shout could drop the blinds" | what the coworkers hold: +1.6 points on every `talking` choice from the intel alone (53 of 53 group calls), and the force rules read the settled facts |
+| give the others a way out | mid (TALK +2) | 4 | the coworkers out (objective 10) | the owner (escalation), everyone provoked | `free_others.adverse` escalate | "{taker.first} hears you pulling {taker.his} people away" | no cascade risk later |
+
+The +1.6 was measured by taking the state after a favorable `glass_group` and setting the
+coworkers' weapon facts back to unknown, so the difference is the intel alone, not mood
+(`team_seen` costs about 8 points against a favorable silence). Fake-choice checklist lines 1 to
+10, by the separate reader: clear. Nothing is dominated: the look has the worst odds and the
+smallest objective, and pays only in knowledge.
+
+### Text and engine agree
+
+The armed lines claim a sighting. In 90 drawn group calls played through the engine
+(`take_courier` adverse, then `glass_group` favorable), every coworker's weapon fact went from
+unknown to confirmed or disproved, and `saw_inside` was set, in every one. A vitest file holds this
+(`hostage-glass.test.ts`, written for `src/gen/incident/`, the engine lane's folder, so it waits on
+the lead's lock; it passes locally, 1 test). On the compiled call over 360 draws, the lines are kept
+only where the cast matches (54 one armed, 24 one of two, 3 both), none where nobody is armed.
+
+Reveal rule note: `armedRevealErrors` checks every authored prompt variant against the setters in
+the compiled call, including variants this call prunes. With `saw_inside` set only by
+`glass_group`, every lone compile failed, so `team_glass` sets it too (harmless there, since no
+armed line survives in a lone call). Reported to the lead as a strictness question for the engine.
+
+### Lab read (390px, after `lab-armed-counts`)
+
+The game's own screens (`/lab?…&frame=player`, 390 by 844), on market_row seed 7, path
+`offer.take_courier` adverse then `both_inside.glass_group` favorable, at the `talking` prompt:
+
+| Call | Cast | Prompt the player reads |
+|---|---|---|
+| 8 | one coworker, armed | "You saw Tariq pull a steel bar from under the counter. Yusuf hasn’t left the boxes." |
+| 25 | two, both armed | "You watched both coworkers take steel bars from under the counter. Efrain sits by the street door." |
+| 26 | two, one armed | "One coworker has a steel bar now, within reach of Yetunde. Silas waits near the entrance." |
+| 3 | one, unarmed | "Florence is sitting on the tiles near the till while the call goes on." (the medical cue's prompt; no armed line) |
+
+Each matches the compiled call's draw check. Captures in `docs/calls/captures/hostage-armed-*-390.png`.
+No notes filed.
+
+### Balance
+
+`measure`, tier 2, 300 calls per style, before (main) and after:
+
+| Style | Clean | Costly | Unresolved | Hurt | Died | Mean minutes |
+|---|---|---|---|---|---|---|
+| random | 17.3% → 17.3% | 44.0% → 43.7% | 34.3% → 34.7% | 4.0% → 4.0% | 0.3% → 0.3% | 61 → 60 |
+| best odds | 0% → 0% | 66.3% → 66.3% | 31.3% → 31.3% | 2.3% → 2.3% | 0% → 0% | 76 → 76 |
+| patient | 0% → 0% | 91.7% → 91.7% | 5.3% → 5.3% | 3.0% → 3.0% | 0% → 0% | 109 → 109 |
+| fast | 41.0% → 41.0% | 1.0% → 1.0% | 47.0% → 47.0% | 8.3% → 8.3% | 2.7% → 2.7% | 17 → 17 |
+
+The random style moves one call of 300 from costly to unresolved; no ending's share moves by 0.7
+points or more. The other styles never take the new option (best odds and patient prefer the
+hold, fast prefers ask_again's equal minutes), so they are unchanged. Not a design finding.
+
+### Reviews
+
+- Codex adversarial review, three rounds, default model. Round 1: `owner_hidden` outlived the two
+  results that show the owner again (fixed with `owner_back`). Round 2: the medical cue can fire
+  during the glass mixed result, and its prompt order placed the owner at the till (I added
+  combined prompts). Round 3: the combined prompts invented an observation, and the cue's own text
+  ("Through the glass, the team sees {owner.first} get down from the stool") still contradicts a
+  result that just hid the owner. The combined prompts were removed, so the next prompt agrees with
+  the cue. The cue itself is unchanged: rewording it touches the owner-condition cue that B9 is
+  about, so it is left for the owner's ruling, with the fix named there (an audible or reported
+  symptom while the owner is hidden). Lone calls had the same contradiction before this change.
+- Separate reader (swat-writing-review, fresh subagents), three reads. The first two were on the first version (team_glass opened to groups):
+  edit, then edit, six fixes before ship in all (the group list in "One of {others}", a doubled
+  "from", the courier missing from the prompt, the coworkers' `team_seen`, the owner behind the
+  shelves, the courier in the shelves line). The third was on the split: edit, one fix before ship (the summary named
+  the watchers but no consequence, now "One shout could drop the blinds") and three notes (the
+  combined prompts, removed; the `standoff` line's "phone has gone quiet" false after a talking
+  result, now "{taker.first} won’t talk terms anymore"; the empty-hands case, the filed request).
+
+### Requests
+
+- `TreeState.armed` with `max` (filed by the lead), so the look can say it found empty hands.
+- `armedRevealErrors` reading only the variants a call keeps (engine, strictness).
+- `dependencies.test.ts` (tooling) pins the hostage call's situation readers at 134; the new
+  escalation in `glass_group` adverse makes it 136.
