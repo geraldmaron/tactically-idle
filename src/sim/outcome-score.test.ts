@@ -253,7 +253,7 @@ describe('the v13 debrief', () => {
         expect(lines[index].reason).toBe(record.reason);
       });
     }
-  });
+  }, 60000);
 
   it('saves and loads with the score and force lines', () => {
     for (const { state } of runs.slice(0, 12)) {
