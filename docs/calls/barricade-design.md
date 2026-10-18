@@ -398,6 +398,11 @@ None reserved; `{lead}` once per string where used.
 
 ## O. Engineering requests
 
+Where each request now lives in `docs/backlog.md` (lead, 2026-10-18): R-B5 in `intel-odds`, R-G4 as
+`clock-runout-routing`, R-B1 to R-B3 as `barricade-engine-requests`, R-B4 as `second-squad`
+(decided as support choices, with this sheet's three controls). `barricade-model-first` integrates
+after all four.
+
 Two backlog items must work end to end before tree data is written, per the calls brief:
 
 - `gear-by-action`: the call's moves need gear to count by what the choice does. The window
@@ -517,7 +522,7 @@ Blocks:          row L (route axis), the blueprint-building share on later choic
 Extends:         new; could sit inside intel-odds
 ```
 
-Second-squad meaning, settled for the lead's decision: support choices, not two squads acting at
+Second-squad meaning (decided by the lead on 2026-10-18 as support, with the controls below): support choices, not two squads acting at
 once. The strongest case against: a barricade's best real play is exactly two squads doing two
 things at the same moment (one talking at the front, one bringing the mover out the back), and a
 support rule turns the second squad into score points on the first squad's check, which a player
