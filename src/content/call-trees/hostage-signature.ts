@@ -94,9 +94,9 @@ export const HOSTAGE_SIGNATURE: CallTree = {
     dispatchReason: '{taker.first} worked the counter here until {owner.first} fired {taker.him}. Patrol says {taker.he} came back carrying a handgun, threatened the people inside and won’t let them go.',
     known: [
       '{taker.first} says {owner.first} accused {taker.him} of taking money from the till.',
-      '{courier.first} told the dispatcher, “I only needed one signature.”',
+      '{courier.first}, the courier, told the dispatcher, “I only needed one signature.”',
       '{courier.first} says {owner.first} sat down hard when {taker.first} shoved past {owner.him}.',
-      'The only street door faces the counter, where {taker.first} keeps {owner.first} close.',
+      'Patrol says {taker.first} keeps {owner.first} by the counter facing the street door.',
     ],
     unknown: ['Whether {taker.first} will let {owner.first} leave'],
     responsibilities: ['Get {courier.first} and {owner.first} out', 'Bring {taker.first} and anyone with {taker.him} out alive'],
@@ -375,7 +375,7 @@ export const HOSTAGE_SIGNATURE: CallTree = {
               { if: { fact: 'owner_faint', is: true }, text: '{owner.first} is short of breath and says {owner.he} {owner~needs|need} to lie down. {owner.His} chest hurts.', reveal: ['owner_faint'], mark: ['owner_heard', 'owner_unwell'], next: { node: 'talking' }, objective: 10 },
             ],
             mixed: [
-              { if: { fact: 'owner_faint', is: false }, text: '{owner.first} won’t sign anything {owner.he} {owner~doesn’t|don’t} believe. The receiver is snatched back before {owner.he} can say more.', reveal: ['owner_faint'], mark: ['owner_heard', 'sign_demand'], moves: { taker: 'provoked' }, next: { node: 'standoff' }, objective: 6 },
+              { if: { fact: 'owner_faint', is: false }, text: '{owner.first} won’t sign anything {owner.he} {owner~doesn’t|don’t} believe. The receiver goes back to {taker.first} before {owner.he} can say more.', reveal: ['owner_faint'], mark: ['owner_heard', 'sign_demand'], moves: { taker: 'provoked' }, next: { node: 'standoff' }, objective: 6 },
               { if: { fact: 'owner_faint', is: true }, text: '{owner.first} refuses to sign, then has to stop for air. The phone is pulled out of {owner.his} hand.', reveal: ['owner_faint'], mark: ['owner_heard', 'owner_unwell', 'sign_demand'], moves: { taker: 'provoked' }, next: { node: 'standoff' }, objective: 6 },
             ],
             adverse: [{ text: '{taker.first} says {owner.first} can talk once {owner.he} {owner~signs|sign}, and holds on to the receiver.', next: { node: 'standoff' }, pressure: 5 }],
@@ -473,7 +473,7 @@ export const HOSTAGE_SIGNATURE: CallTree = {
         { id: 'ask_owner', title: 'Ask for {owner.first} now', icon: 'radio', talksTo: 'taker', check: check(TALK, 6), minutes: 2, onlyIf: { ...LONE, notMarks: ['door_open'] },
           modifiers: [{ label: '{taker.His} account is written down', mark: 'account', value: 8 }],
           summary: '{lead} presses for {owner.first} and offers nothing new in return. {taker.first} may hear it as an order.',
-          preview: { favorable: '{taker.first} makes up {taker.his} mind about {owner.first} on the spot.', mixed: '{taker.first} keeps hold of the handgun, and maybe {owner.first} too.', adverse: 'A demand is what {taker.first} hears, and the handgun may come up toward {owner.first}.' },
+          preview: { favorable: '{taker.first} makes up {taker.his} mind about {owner.first} on the spot.', mixed: '{taker.first} keeps hold of the handgun, and maybe {owner.first} too.', adverse: '{taker.first} hears a demand, and the handgun may come up toward {owner.first}.' },
           outcomes: {
             favorable: [
               { if: LETS_GO, text: 'After a moment, {taker.first} waves {owner.first} toward the door. {owner.He} {owner~walks|walk} out without {owner.his} coat.', reveal: ['lets_go'], safe: ['owner'], moves: { taker: 'released' }, next: { node: 'last_one' }, objective: 45 },
@@ -500,7 +500,7 @@ export const HOSTAGE_SIGNATURE: CallTree = {
             favorable: [
               { if: LETS_GO, text: 'At a nod from {taker.first}, {others} {others#brings|bring} {owner.first} through the street door, and officers meet them outside.', reveal: ['lets_go'], safe: ['owner'], out: ['others'], mark: ['others_out'], moves: { taker: 'released' }, next: { node: 'last_one' }, objective: 48 },
               courierToo('{courier.first} comes along behind them.', { if: LETS_GO }),
-              { if: KEEPS, text: '{taker.first} tells {others} to go if {others.he} {others~wants|want}, but {owner.first} stays. The street door shuts behind {others.him} alone.', reveal: ['lets_go'], out: ['others'], mark: ['others_out'], next: { node: 'standoff' }, objective: 14 },
+              { if: KEEPS, text: '{taker.first} tells {others} to go if {others.he} {others~wants|want}, but {owner.first} stays. The street door shuts behind {others.him}.', reveal: ['lets_go'], out: ['others'], mark: ['others_out'], next: { node: 'standoff' }, objective: 14 },
             ],
             mixed: [
               { if: LETS_GO, text: '{others} {others#gets|get} {owner.first} as far as the door. {taker.first} orders {others.him} to the till and keeps the handgun.', reveal: ['lets_go'], safe: ['owner'], mark: ['still_armed'], moves: { taker: 'released', others: 'heard' }, next: { node: 'last_one' }, objective: 40 },
@@ -583,7 +583,7 @@ export const HOSTAGE_SIGNATURE: CallTree = {
           } },
         { id: 'his_door', title: 'Use the door {taker.he} unlocked', icon: 'door', talksTo: 'taker', check: check(TALK, -2), minutes: 3, onlyIf: { marks: ['door_open'] },
           summary: 'That door is unbolted because you asked. {lead} wants it used now, and a refusal would be to your face.',
-          preview: { favorable: 'You get a straight answer, and the front stays unbolted.', mixed: '{taker.first} turns the bolt again, whatever happens to {owner.first}.', adverse: 'The front gets locked again, and {owner.first} could be next.' },
+          preview: { favorable: 'The front stays unbolted, and {taker.first} gives you a straight answer.', mixed: '{taker.first} turns the bolt again, whatever happens to {owner.first}.', adverse: 'The front gets locked again, and {owner.first} could be next.' },
           outcomes: {
             favorable: [
               { if: LETS_GO, text: '{taker.first} walks {owner.first} to the front and holds the door open for {owner.him}.', reveal: ['lets_go'], safe: ['owner'], moves: { taker: 'released' }, next: { node: 'last_one' }, objective: 48 },
@@ -622,7 +622,7 @@ export const HOSTAGE_SIGNATURE: CallTree = {
             // A patient hold lowers the temperature: at worst the taker stops talking, never turns on
             // the owner. The owner's heart is another matter.
             adverse: [
-              { if: OWNER_OK, text: 'The phone is put down. From the corner, officers can see {taker.first} sitting with {taker.his} head in {taker.his} hands, {owner.first} still by the register.', mark: ['silent'], next: { node: 'standoff' }, minutes: 10 },
+              { if: OWNER_OK, text: '{taker.first} puts the phone down. From the corner, officers can see {taker.him} sitting with {taker.his} head in {taker.his} hands, {owner.first} still by the register.', mark: ['silent'], next: { node: 'standoff' }, minutes: 10 },
               { if: OWNER_OUT, text: 'The line goes quiet. From outside, {owner.first} can be seen on the floor, not moving.', mark: ['owner_down'], next: { node: 'owner_down' }, minutes: 10 },
             ],
           } },
@@ -696,7 +696,7 @@ export const HOSTAGE_SIGNATURE: CallTree = {
           } },
       ] },
     { id: 'threat', stage: 'resolve',
-      prompt: '{owner.first} is at the till, close enough for {taker.first} to grab.',
+      prompt: '{owner.first} has gone still since {taker.first} raised the handgun toward {owner.him}.',
       promptIf: [
         { when: { marks: ['owner_down'] }, prompt: '{owner.first} is down, and {taker.first} stands over {owner.him}, armed.' },
         { when: { notSafe: ['courier'] }, prompt: 'The handgun is pointed at {owner.first}. {courier.first} is pressed against the stacked boxes.' },
@@ -854,7 +854,7 @@ export const HOSTAGE_SIGNATURE: CallTree = {
           } },
       ] },
     { id: 'last_one', stage: 'resolve',
-      prompt: '{courier.first} and {owner.first} are outside with patrol. Behind the counter, {taker.first} is alone.',
+      prompt: '{courier.first} and {owner.first} are outside with patrol. {taker.first} is alone behind the counter.',
       promptIf: [
         { when: GROUP_IN, prompt: '{owner.first} and {courier.first} are clear. {others} {others#is|are} still beside {taker.first}.' },
         { when: { marks: ['still_armed'] }, prompt: 'Both people {taker.first} held are clear, and {taker.he} {taker~has|have} the handgun by the register.' },
@@ -968,7 +968,7 @@ export const HOSTAGE_SIGNATURE: CallTree = {
     held_both: { title: 'Both still inside', disposition: 'relief_partial',
       remainingTasks: ['Walk {courier.first} out to patrol', 'Get {owner.first} off that stool', 'Talk {taker.first} into putting the handgun down'],
       summary: 'Patrol has the block sealed. {courier.first} and {owner.first} are both still in there with {taker.first}, who is armed.' },
-    held_both_down: { title: 'Both still inside', disposition: 'relief_partial',
+    held_both_down: { title: 'Two inside, no medic yet', disposition: 'relief_partial',
       remainingTasks: ['Get a medic to {owner.first}', 'Bring {courier.first} out from the boxes', 'Talk {taker.first} into setting the handgun aside'],
       summary: 'The street stays closed. {owner.first} has collapsed inside, and {courier.first} is still on the boxes, a few steps from {taker.first}.' },
     handed_over: { title: 'No step left to take', disposition: 'unresolved', remainingTasks: ['Get everyone out safely'],

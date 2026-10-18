@@ -746,3 +746,28 @@ lead is handling the engineering; "owner" means it waits on a ruling.
 | N17 | Advantage line added as known[3] |
 | N18 | "is still in there with", "is left in there with" and "is still sitting by the door" varied |
 | N19 | Open, owner (question 13) |
+
+## Review leftovers response (2026-10-18, backlog `hostage-review-leftovers`)
+
+The NF3 to NF8 notes from the re-check in `docs/calls/hostage-signature-review.md`, and the N8 and
+N20 skill fixes. B9 is not touched; it waits on the owner. NF1 and NF2 had already been applied.
+Where the review's suggested data tripped `check:strings` (a fronted title, a 14-word known line, a
+path echo, or a 4-word run shared with another string), the line was rewritten, and a separate
+reader checked the rewrite.
+
+| ID | Response |
+|---|---|
+| NF3 | `talking.ask_owner.preview.adverse` now "{taker.first} hears a demand, and the handgun may come up toward {owner.first}."; `last_one.prompt` now "… {taker.first} is alone behind the counter."; `his_side.owner_voice.mixed[0]` now "The receiver goes back to {taker.first} before {owner.he} can say more."; `talking.his_pace.adverse[0]` now opens "{taker.first} puts the phone down." |
+| NF4 | `threat.prompt` names the object again. The review's text ("still at the till") was false on the `quiet_exit` doorway path (separate reader, finding 1); now "{owner.first} has gone still since {taker.first} raised the handgun toward {owner.him}." The reader approved it with one note (in s2 "gone still" could suggest a collapse, but the `owner_down` prompt shows whenever she is down); the suggested "hasn’t moved since" shares a 4-word run with `fired_on.hold_corner.adverse[2]` |
+| NF5 | `briefing.known[1]` names the courier's role; `briefing.known[3]` is sourced and keeps the taker in the line: "Patrol says {taker.first} keeps {owner.first} by the counter facing the street door." |
+| NF6 | `talking.his_door.preview.favorable` no longer opens "You get": "The front stays unbolted, and {taker.first} gives you a straight answer." |
+| NF7 | `talking.others_walk_owner.favorable[2]` now ends "The street door shuts behind {others.him}." |
+| NF8 | `held_both_down` retitled "Two inside, no medic yet" (distinct from `held_both` and `owner_left_down`). The routing half is R-G4, now the engine's `clock-runout-routing` |
+| N8 | `swat-call-prose/references/surface-budgets.md` row 3, `swat-call-prose/SKILL.md`, `swat-call-design/SKILL.md` section 4 and `swat-writing-review/references/review-rubric.md` now give the board card's 2-line clamp, about 100 characters bound, as the budget that binds |
+| N20 | `swat-writing-review/SKILL.md` carries fake-choice lines 9 and 10 word for word, and its rule ids read `fake-choice <1-10>` |
+
+Gates on the branch: `bun scripts/check-strings.ts hostage_crisis` exit 0 (701 strings; findings
+unchanged from main apart from the fixed lines); `npx vitest run` on call-trees and coverage pass
+(79 tests); `compiled-fingerprints.test.ts` fails on the hostage keys as expected (the lead
+recaptures); `src/dev/lab/model/describe.test.ts` fails because it pins the duplicate title NF8
+removes (tooling lane, routed through the lead).

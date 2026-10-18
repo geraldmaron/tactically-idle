@@ -178,6 +178,8 @@ any line is true.
 6. Waiting or opting out costs nothing. Opting out of the adventure makes a boring story.
 7. A later stage forgets the choice.
 8. Tone gives away the answer, with one option written warmly and the others as straw men.
+9. A band label contradicts its text on some truth.
+10. The mixed band is the favorable band plus time. A mixed result must change who is talking, what is known, where a person is, or what a later option costs.
 
 Six named tests, cited by name in findings.
 
@@ -340,7 +342,7 @@ Gate 11. Every finding is one row in this shape.
 [severity] <call, situation, seed> | <field path> | sees '<what the player reads>' | rule <id> | fix as data '<replacement>' | route <skill | engineering | owner>
 ```
 
-Rule ids are `fake-choice <1-8>`, `test <name>`, `table <claims | dominance | pairs | time-band |
+Rule ids are `fake-choice <1-10>`, `test <name>`, `table <claims | dominance | pairs | time-band |
 taps | coverage>`, `static walk`, `cold read`, `restatement`, `cue trace`, `cost lands`,
 `dry-run <rule>`, `H<1-11>`, `E<n>` or `inline <n>`, `C<n>` or `G<n>` from
 references/cliche-and-copaganda.md, `batch <check>`, `budget <surface>`, `officer <check>` and
