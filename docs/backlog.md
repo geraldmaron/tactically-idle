@@ -145,12 +145,12 @@ N15 and N16 count-conditioned briefing lines and ending addenda. R-G1 is in `int
 `clock-runout-routing`; N6, N7, N9 and N21 are in `hostage-gate-requests`. Done: each request works in
 the hostage call and the call's fingerprints are recaptured deliberately.
 
-### hostage-review-leftovers: Hostage review leftovers
-Tags: job=command; journeys=answer-a-call; probes=none (prose and skill text); lane=calls
-Needs: start=none; integrate=none; ship=none
+### hostage-review-leftovers: Hostage review leftover B9
+Tags: job=command; journeys=answer-a-call; probes=none (prose); lane=deferred
+Needs: start=none (waits on the owner's ruling, design question 10); integrate=none; ship=none
 
-The B9 owner-condition replay leak (waits on the owner's ruling), the NF3 to NF8 prose notes, and
-the N8 and N20 skill budget fixes.
+The B9 owner-condition replay leak: the stage 2 cue still identifies the situation. NF3 to NF8 and
+the N8 and N20 skill fixes shipped in #44.
 
 ### crisis-content-note: Content note and 988 line
 Tags: job=command; journeys=answer-a-call; probes=none (text); lane=deferred
