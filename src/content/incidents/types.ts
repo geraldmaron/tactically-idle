@@ -132,8 +132,8 @@ export interface Clock {
   /** Running out where no fork reads it (sim/clocks.ts): harm recorded to the owner while they are
    * still inside, and a mark the tree's prompts read. `next` moves the call there after the
    * decision's own outcome (R-G4), unless that outcome ended the call or the owner is already out
-   * or safe; the target's prompt follows the outcome's text. A node there may be reached only this
-   * way: the compiler keeps it. */
+   * or safe; the target's prompt follows the outcome's text. The target is a last-stage node (never
+   * the root) or an ending. A node there may be reached only this way: the compiler keeps it. */
   onOut?: { harm?: 'wounded' | 'serious'; mark?: string; next?: TreeNext };
 }
 

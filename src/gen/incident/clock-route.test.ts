@@ -77,6 +77,13 @@ describe('a clock that runs out moves the call (R-G4)', () => {
     expect(() => clockRoute(template().tree, { ending: 'nowhere' }, 1)).toThrow(/a clock runs out to unknown ending nowhere/);
   });
 
+  it('sends the call only on to the last stage or to an ending: never the root, never an earlier stage', () => {
+    expect(() => clockRoute(template().tree, { node: 'open' }, 1)).toThrow(/not a resolve node/);
+    expect(() => clockRoute(template().tree, { node: 'talk' }, 1)).toThrow(/not a resolve node/);
+    expect(clockRoute(template().tree, { ending: 'all_out' }, 1)).toMatchObject({ ending: 'all_out' });
+    expect(() => call(template({ mark: 'x', next: { node: 'talk' } }))).toThrow();
+  });
+
   it('a short choice that runs it out lands the call on that node, after the outcome, with only its choices', () => {
     withDraftScenario(call(template()), scenarioId => {
       const state = play(scenarioId);

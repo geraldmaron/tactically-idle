@@ -410,8 +410,8 @@ export interface ClockDef {
    * record and the prompts that read the mark agree. */
   onOut?: { harm?: 'wounded' | 'serious'; mark?: string;
     /** Where the call goes (compiled from the template's `onOut.next`): the flags, stage or ending
-     * of the node or ending it reaches. Applied after the decision's own outcome, never when that
-     * outcome ended the call, when the owner is out or safe, or when it would go back a stage. */
+     * of the last-stage node or ending it reaches. Applied after the decision's own outcome, never
+     * when that outcome ended the call or when the owner is out or safe. */
     route?: Pick<OutcomeEffect, 'setFlags' | 'clearFlags' | 'stage' | 'ending'> };
 }
 export interface ClockCondition { clockId: Id; state: 'low' | 'out'; is: boolean }

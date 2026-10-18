@@ -275,11 +275,16 @@ export function resolveNext(tree: CallTree, next: TreeNext, seed: number): { nod
 
 /** Where a clock running out sends the call (Clock.onOut.next, R-G4), as the engine applies it
  * (ClockDef.onOut.route): the target node's flag and stage, or the ending, with every other node
- * flag cleared, since the call may be at any node when the clock runs out. */
+ * flag cleared, since the call may be at any node when the clock runs out. A clock sends the call
+ * on to the last stage or ends it, never anywhere earlier: a route can't go back a stage from any
+ * node, so commit and replay need no stage to agree, and the root (open only before the call
+ * starts) is never a target. */
 export function clockRoute(tree: CallTree, to: TreeNext, seed: number): Pick<OutcomeEffect, 'setFlags' | 'clearFlags' | 'stage' | 'ending'> {
   const next = resolveNext(tree, to, seed);
   const target = 'node' in next ? tree.nodes.find(node => node.id === next.node) : undefined;
   if ('node' in next && !target) throw new Error(`${tree.type}: a clock runs out to unknown node ${next.node}`);
+  if (target && (target.id === tree.root || target.stage !== STAGES[STAGES.length - 1]))
+    throw new Error(`${tree.type}: a clock runs out to ${target.id}, which is not a ${STAGES[STAGES.length - 1]} node; a clock moves the call on to the last stage or ends it`);
   if ('ending' in next && !tree.endings[next.ending] && next.ending !== 'handed_over') throw new Error(`${tree.type}: a clock runs out to unknown ending ${next.ending}`);
   const others = tree.nodes.filter(node => node.id !== target?.id).map(node => nodeFlag(node.id));
   return 'node' in next

@@ -13,7 +13,7 @@
 // to the owner (unless the outcome already hurt them) and sets a mark the tree's prompts read. The
 // record and the text then agree: the debrief and the score see the harm like any authored harm.
 import type { ActionDefinition, ClockCondition, ClockDef, OutcomeEffect, ScenarioDefinition } from './scenario-types';
-import type { Id, OperationRun, OutcomeBand, StageId } from './types';
+import type { Id, OperationRun, OutcomeBand } from './types';
 import { RESOLUTION_TUNING } from './resolution';
 import { tunable } from './tuning';
 
@@ -108,8 +108,6 @@ function clocksRunOut(scenario: ScenarioDefinition, before: OperationRun['clocks
   return (scenario.clocks ?? []).filter(def => (before?.[def.id]?.value ?? 0) > 0 && (after?.[def.id]?.value ?? 1) <= 0);
 }
 
-const STAGE_ORDER: readonly StageId[] = ['assess', 'adapt', 'resolve'];
-
 /** What the clocks that ran out during a decision do where no fork reads them (ClockDef.onOut),
  * applied after the decision's own outcome and its cues. `run.flags` are the flags after the
  * outcome. The mark is set whenever the clock runs out. The harm lands on the owner only when they
@@ -119,13 +117,14 @@ const STAGE_ORDER: readonly StageId[] = ['assess', 'adapt', 'resolve'];
  * The route (R-G4, precedence from docs/calls/barricade-design.md row H) moves the call, after
  * the outcome, only when:
  * 1. the decision's own outcome didn't end the call (an ending stands; the mark is still set);
- * 2. the owner isn't out or safe once the outcome applied (the clock has stopped);
- * 3. it doesn't go back a stage from where the outcome left the call.
- * When two clocks run out in one decision, the first that routes wins. */
+ * 2. the owner isn't out or safe once the outcome applied (the clock has stopped).
+ * Otherwise it moves the call to its target, a last-stage node or an ending (compile.ts
+ * clockRoute), so it never goes back a stage and reads nothing but these flags and effects: the
+ * commit and both replays take the same route. When two clocks run out in one decision, the
+ * first that routes wins. */
 export function clockOutEffects(scenario: ScenarioDefinition, before: OperationRun['clocks'], after: OperationRun['clocks'],
-  run: Pick<OperationRun, 'flags'> & { stage?: StageId | 'debrief' }, matched: readonly OutcomeEffect[]): OutcomeEffect[] {
+  run: Pick<OperationRun, 'flags'>, matched: readonly OutcomeEffect[]): OutcomeEffect[] {
   const ended = matched.some(effect => effect.ending);
-  const stage = [...matched].reverse().find(effect => effect.stage)?.stage ?? run.stage;
   let routed = false;
   return clocksRunOut(scenario, before, after).flatMap((def): OutcomeEffect[] => {
     if (!def.onOut) return [];
@@ -133,8 +132,7 @@ export function clockOutEffects(scenario: ScenarioDefinition, before: OperationR
     const hurt = !!owner && matched.some(effect => effect.personHarm?.some(harm => harm.personId === owner));
     const harm = def.onOut.harm && owner && !stopped(def, run.flags) && !hurt ? { personHarm: [{ personId: owner, severity: def.onOut.harm }] } : {};
     const route = def.onOut.route;
-    const back = !!route?.stage && !!stage && stage !== 'debrief' && STAGE_ORDER.indexOf(route.stage) < STAGE_ORDER.indexOf(stage);
-    const moves = !!route && !routed && !ended && !stopped(def, run.flags) && !back;
+    const moves = !!route && !routed && !ended && !stopped(def, run.flags);
     if (moves) routed = true;
     const setFlags = [...(def.onOut.mark ? [`mark:${def.onOut.mark}`] : []), ...(moves ? route!.setFlags ?? [] : [])];
     const effect: OutcomeEffect = { ...harm, ...(setFlags.length ? { setFlags } : {}),
