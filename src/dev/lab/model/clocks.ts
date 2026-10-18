@@ -21,8 +21,9 @@ export const sessionClockNexts = (s: Session): TreeNext[] => clockNextsOf(s.inst
 export const situationClockNexts = (template: Pick<IncidentTemplate, 'situations'>, situation: 0 | 1 | 2): TreeNext[] =>
   clockNextsOf(template.situations.find(entry => entry.index === situation)?.clocks ?? []);
 
-/** The template a tree is drawn from, when the tree is the registered one (a draft or fixture isn't). */
-const templateOf = (tree: CallTree): IncidentTemplate | undefined => templateAt(tree.type);
+/** The template a tree is drawn from, when the tree is the registered one. A draft or fixture tree
+ * of the same type isn't, so it never reads the live call's clocks. */
+const templateOf = (tree: CallTree): IncidentTemplate | undefined => { const template = templateAt(tree.type); return template?.tree === tree ? template : undefined; };
 
 /** Where one situation's clocks send a call of this tree (none for a draft or fixture tree). */
 export const treeSituationClockNexts = (tree: CallTree, situation: 0 | 1 | 2, template = templateOf(tree)): TreeNext[] =>
