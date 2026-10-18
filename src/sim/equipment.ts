@@ -7,10 +7,27 @@ import type { GameState, HandlerResult, Id, ItemDefinition, ItemUnit, ShiftRepor
 import { ITEMS } from '../content/items';
 import { CALENDAR } from './calendar';
 import { next } from './rng';
-import { equipmentServiceCost, equipmentWearMultiplier } from './equipment-manager-policy';
 import { tunable } from './tuning';
 
 const REAL_HOUR_MS = 3_600_000;
+
+/** What the department's upkeep does to its equipment: a wear multiplier and a service price
+ * multiplier. The department works it out (equipment-manager-policy.ts departmentUpkeep) and hands it
+ * in, so wear never reads department upgrades. Consumables ignore it. */
+export interface Upkeep { wearMultiplier: number; repairMultiplier: number }
+
+/** The share of a unit's wear that lands, after the department's upkeep. */
+export function wearFactor(def: ItemDefinition, upkeep: Upkeep): number {
+  return def.kind === 'equipment' ? upkeep.wearMultiplier : 1;
+}
+
+export function serviceCost(def: ItemDefinition, upkeep: Upkeep): number {
+  const base = def.wear.serviceCost;
+  // Integer percentages avoid charging $56 for a $100 repair at 45% off
+  // because binary floating point represents 100 * 0.55 just above 55.
+  const percent = Math.round(upkeep.repairMultiplier * 100);
+  return base > 0 ? Math.max(1, Math.ceil(base * percent / 100)) : 0;
+}
 
 /** Tunable (sim/tuning.ts). A unit's wear rate is drawn and stored when it is made. */
 export const EQUIPMENT_TUNING = tunable('EQUIPMENT_TUNING', {
@@ -127,11 +144,11 @@ export function ownedCount(state: GameState, itemId: Id): number {
 }
 
 /** Condition now, projecting unsettled time since the last settlement for units that age. */
-export function projectedCondition(state: GameState, u: ItemUnit, now: number): number {
+export function projectedCondition(state: GameState, u: ItemUnit, now: number, upkeep: Upkeep): number {
   const def = ITEMS[u.itemId];
   if (!def || (u.status !== 'ready' && u.status !== 'reserved')) return u.condition;
   const gapDays = Math.max(0, now - state.department.clockHighWater) / CALENDAR.gameDayMs;
-  return Math.max(0, u.condition - def.wear.perDay * u.wearRate * equipmentWearMultiplier(state, def) * gapDays);
+  return Math.max(0, u.condition - def.wear.perDay * u.wearRate * wearFactor(def, upkeep) * gapDays);
 }
 
 export function stateLabelFor(u: ItemUnit, def: ItemDefinition, condition: number): string {
@@ -186,14 +203,14 @@ export function nextUnitEventTime(d: GameState, t: number): number | null {
  * reserved units age; units in service, expired or scrapped do not. Records the
  * threshold crossings (unreliable, failed) that happen inside the span.
  */
-export function applyUnitWear(d: GameState, t: number, e: number, events: EquipmentEvent[]): void {
+export function applyUnitWear(d: GameState, t: number, e: number, events: EquipmentEvent[], upkeep: Upkeep): void {
   const days = (e - t) / CALENDAR.gameDayMs;
   if (!(days > 0)) return;
   for (const u of Object.values(d.units)) {
     if (u.status !== 'ready' && u.status !== 'reserved') continue;
     const def = ITEMS[u.itemId];
     if (!def) continue;
-    const loss = def.wear.perDay * u.wearRate * equipmentWearMultiplier(d, def) * days;
+    const loss = def.wear.perDay * u.wearRate * wearFactor(def, upkeep) * days;
     if (loss > 0) {
       const before = u.condition;
       const after = Math.max(0, before - loss);
@@ -221,18 +238,18 @@ const STATUS_WORD: Record<UnitStatus, string> = {
   scrapped: 'scrapped',
 };
 
-export function serviceCheck(state: GameState, unitId: Id, now: number): UnitActionCheck & { cost: number; hours: number } {
+export function serviceCheck(state: GameState, unitId: Id, now: number, upkeep: Upkeep): UnitActionCheck & { cost: number; hours: number } {
   const u = state.units[unitId];
   const no = (reason: string, cost = 0, hours = 0) => ({ ok: false, reason, cost, hours });
   if (!u) return no('No such unit');
   const def = ITEMS[u.itemId];
   if (!def) return no('Unknown item');
   const { serviceHours: hours, restoreTo } = def.wear;
-  const cost = equipmentServiceCost(state, def);
+  const cost = serviceCost(def, upkeep);
   if (def.kind !== 'equipment') return no('Consumables cannot be serviced', cost, hours);
   if (hours <= 0) return no(`${def.name} cannot be serviced`, cost, hours);
   if (u.status !== 'ready') return no(`${u.serial} is ${STATUS_WORD[u.status]}`, cost, hours);
-  const cond = projectedCondition(state, u, now);
+  const cond = projectedCondition(state, u, now, upkeep);
   if (cond >= restoreTo) return no(`${u.serial} is already in better condition than servicing restores (${restoreTo})`, cost, hours);
   if (state.department.funding < cost) return no(`Needs $${cost.toLocaleString('en-US')} (have $${Math.floor(state.department.funding).toLocaleString('en-US')})`, cost, hours);
   return { ok: true, reason: null, cost, hours };
@@ -250,8 +267,8 @@ export function scrapCheck(state: GameState, unitId: Id): UnitActionCheck & { sa
   return { ok: true, reason: null, salvage };
 }
 
-export function beginService(d: GameState, unitId: Id, now: number): HandlerResult {
-  const c = serviceCheck(d, unitId, now);
+export function beginService(d: GameState, unitId: Id, now: number, upkeep: Upkeep): HandlerResult {
+  const c = serviceCheck(d, unitId, now, upkeep);
   if (!c.ok) return { ok: false, reason: c.reason ?? 'Cannot service this unit' };
   const u = d.units[unitId];
   d.department.funding -= c.cost;
@@ -261,8 +278,8 @@ export function beginService(d: GameState, unitId: Id, now: number): HandlerResu
   return { ok: true };
 }
 
-function serviceUnit(d: GameState, unitId: Id): HandlerResult {
-  return beginService(d, unitId, d.department.clockHighWater);
+function serviceUnit(d: GameState, unitId: Id, upkeep: Upkeep): HandlerResult {
+  return beginService(d, unitId, d.department.clockHighWater, upkeep);
 }
 
 function scrapUnit(d: GameState, unitId: Id): HandlerResult {

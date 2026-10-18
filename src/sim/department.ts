@@ -12,6 +12,7 @@ import { setMaintenanceBudget } from './equipment-manager';
 import { START_LEVEL } from './department-level';
 import { INCIDENT_CONTENT_VERSION } from '../gen/incident';
 import { COMMAND_STAFF_HANDLERS, createCommandStaff } from './command-staff';
+import { departmentUpkeep } from './equipment-manager-policy';
 
 export const DEPARTMENT_HANDLERS: HandlerMap<DepartmentCommandType> = {
   tick: (d, _cmd, ctx) => {
@@ -39,7 +40,7 @@ export const DEPARTMENT_HANDLERS: HandlerMap<DepartmentCommandType> = {
   setSquadDuty: (d, c) => ROSTER_HANDLERS.setSquadDuty(d, c.squadId, c.duty),
   setLoadoutPreset: (d, c) => ROSTER_HANDLERS.setLoadoutPreset(d, c.squadId, c.items),
   setRestockRule: (d, c) => ROSTER_HANDLERS.setRestockRule(d, c.rule),
-  serviceUnit: (d, c) => EQUIPMENT_HANDLERS.serviceUnit(d, c.unitId),
+  serviceUnit: (d, c) => EQUIPMENT_HANDLERS.serviceUnit(d, c.unitId, departmentUpkeep(d)),
   setMaintenanceBudget: (d, c) => setMaintenanceBudget(d, c.perHour),
   scrapUnit: (d, c) => EQUIPMENT_HANDLERS.scrapUnit(d, c.unitId),
   offerRetention: (d, c) => ROSTER_HANDLERS.offerRetention(d, c.officerId),

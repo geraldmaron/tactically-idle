@@ -14,10 +14,10 @@ syntax tree (`src/dev/import-graph.ts`, with the parser Vite ships), and a dynam
 | world | 49 | 8196 | kernel | Blueprints: authored and procedural buildings, rooms, openings, furniture, routes and sightlines. |
 | catalog | 27 | 5105 | kernel, world | Authored data: officers, personas, items, courses, unlocks, call templates and call trees. |
 | scenario | 9 | 2289 | kernel, world, catalog | Turns a drawn call into a playable definition: cast, placement on the blueprint, compiled tree. |
-| engine | 53 | 12252 | kernel, world, catalog, scenario, commerce | Game rules and state: department, economy, operations, resolution, outcomes, saves. |
+| engine | 53 | 12288 | kernel, world, catalog, scenario, commerce | Game rules and state: department, economy, operations, resolution, outcomes, saves. |
 | commerce | 4 | 198 | kernel | Point packs and the purchase ledger. |
-| qa | 26 | 3892 | kernel, world, catalog, scenario, engine, commerce | Content gates, balance measurement, fixtures and test support. Never loaded by the game. |
-| ui | 105 | 15622 | kernel, world, catalog, scenario, engine, commerce | Player screens, the blueprint renderer, portraits and the store that dispatches commands. |
+| qa | 26 | 3891 | kernel, world, catalog, scenario, engine, commerce | Content gates, balance measurement, fixtures and test support. Never loaded by the game. |
+| ui | 105 | 15627 | kernel, world, catalog, scenario, engine, commerce | Player screens, the blueprint renderer, portraits and the store that dispatches commands. |
 | lab | 97 | 16947 | kernel, world, catalog, scenario, engine, commerce, qa, ui | The dev-only Scenario Lab and dev sheets. Reads everything, never ships. |
 | shell | 3 | 372 | kernel, world, catalog, engine, ui, lab | Entry points that choose which app to mount. |
 
@@ -28,10 +28,10 @@ syntax tree (`src/dev/import-graph.ts`, with the parser Vite ships), and a dynam
 | blueprint | 79 | 13685 | Where things are: buildings, rooms, doors and windows, furniture, routes, cover and sightlines. |
 | subject | 6 | 1152 | Who is on scene: subjects, hostages, victims, bystanders and animals, their holds, weapons, temper (agitation and rapport) and positions. |
 | officer | 11 | 1864 | Who the player sends: ratings, traits, stress, injuries, certifications, careers and squads. |
-| item | 6 | 1304 | What they carry: the item catalog, ratings and capabilities, force risk, inventory and wear. |
-| scenario | 56 | 12124 | What happens: call trees, placement on the blueprint, choices, chance per choice, branches and clocks, and the call-time logistics (loadouts, resupply, outside support) that read the items. |
-| metric | 28 | 4080 | What it meant: outcome scoring, harm, debriefs, department reputation, money and progression, and the Command Staff who run the department. |
-| platform | 194 | 32856 | Everything that serves the systems above: records, randomness, saves, the store, screens and tooling. |
+| item | 6 | 1322 | What they carry: the item catalog, ratings and capabilities, force risk, inventory and wear. |
+| scenario | 56 | 12135 | What happens: call trees, placement on the blueprint, choices, chance per choice, branches and clocks, and the call-time logistics (loadouts, resupply, outside support) that read the items. |
+| metric | 28 | 4087 | What it meant: outcome scoring, harm, debriefs, department reputation, money and progression, and the Command Staff who run the department. |
+| platform | 194 | 32860 | Everything that serves the systems above: records, randomness, saves, the store, screens and tooling. |
 
 ## System dependency chain
 
@@ -39,9 +39,8 @@ Runtime imports between systems (count of module edges). Platform is left out.
 
 ```mermaid
 flowchart LR
-  item -.->|2 reversed| metric
   metric -->|1| blueprint
-  metric -->|18| item
+  metric -->|19| item
   metric -->|22| officer
   metric -->|10| scenario
   metric -->|1| subject
@@ -50,7 +49,7 @@ flowchart LR
   officer -.->|1 reversed| scenario
   scenario -->|24| blueprint
   scenario -->|29| item
-  scenario -->|11| metric
+  scenario -->|18| metric
   scenario -->|7| officer
   scenario -->|10| subject
   subject -->|9| blueprint
@@ -58,7 +57,6 @@ flowchart LR
 
 Solid edges follow the intended chain (the scenario reads the blueprint, people, officers and items; metrics read what happened). Dotted edges run against it:
 
-- `item -> metric`: wear and service cost read the equipment manager, a department upgrade (equipment-manager-policy.ts), directly. Paying it means the department hands wear its multiplier.
 - `officer -> metric`: the roster and squad builder read department money, unlocks, the sim clock and squad deployment from economy.ts. Paying it means moving the clock and squad state out of economy and passing hiring costs in.
 - `officer -> scenario`: the squad builder mirrors the call check (sim/resolution.ts conditionFraction, EXPERIENCE_TUNING mentoring, CERT_LABEL). Paying it means officer condition and mentoring tuning live with the officer.
 
@@ -94,4 +92,4 @@ Each input a system feeds into a choice's chance, and whether the engine actuall
 None.
 
 
-Cross-layer runtime imports in total: 603.
+Cross-layer runtime imports in total: 606.

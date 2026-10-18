@@ -13,6 +13,7 @@ import { capabilityRuleEffect, effectiveSupplies, operatorQualified } from './eq
 import { resolveSubject, standingOf } from './spatial-factors';
 import { signalBetween } from './spatial';
 import { forceItemMatches } from './force-risk';
+import { departmentUpkeep } from './equipment-manager-policy';
 
 export interface CapabilityInput {
   state: GameState; run: OperationRun; scenario: ScenarioDefinition; action: ActionDefinition; built: BuiltLocation;
@@ -50,7 +51,7 @@ export function supportVehicle(state: GameState, run: OperationRun): ItemUnit | 
   if (!unit || !ITEMS[unit.itemId]?.supportOnly || !state.reservations.some((r) => r.runId === run.id && r.unitId === id)) return null;
   const def = ITEMS[unit.itemId];
   const now = state.department.clockHighWater;
-  if ((unit.expiresAt !== null && unit.expiresAt <= now) || unitEffectiveness({ ...unit, condition: projectedCondition(state, unit, now) }, def) <= 0) return null;
+  if ((unit.expiresAt !== null && unit.expiresAt <= now) || unitEffectiveness({ ...unit, condition: projectedCondition(state, unit, now, departmentUpkeep(state)) }, def) <= 0) return null;
   if (!run.squadIds.some((sid) => state.squads.find((s) => s.id === sid)?.officerIds.some((oid) => !incidentOfficerUnavailable(state, run, oid) && ['vehicle_operations', ...def.requiresCerts ?? []].every((cert) => (state.officers[oid]?.certs as string[] | undefined)?.includes(cert))))) return null;
   return unit;
 }

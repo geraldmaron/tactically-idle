@@ -7,6 +7,7 @@ import { readyUnits } from '../../sim/inventory';
 import { projectedCondition } from '../../sim/equipment';
 import { actionEquipmentRequirements, operatorQualified, qualifiedOfficers, requiredEquipmentBundle } from '../../sim/equipment-requirements';
 import { CERT_LABEL } from '../../sim/resolution';
+import { departmentUpkeep } from '../../sim/equipment-manager-policy';
 
 export type Loadouts = Partial<Record<SquadId, Record<Id, number>>>;
 /** Explicit unit picks per squad and item. Editing an item's quantity drops that item's picks. */
@@ -113,11 +114,12 @@ export function planPreparationEquipment(args: {
       return finish([], `Needs a qualified operator for ${group.label}: ${certs.map((cert) => CERT_LABEL[cert] ?? cert).join(' or ')}`);
     }
   }
-  const ready = Object.values(ITEMS).filter((item) => !item.supportOnly).flatMap((item) => readyUnits(state, item.id, time));
+  const upkeep = departmentUpkeep(state);
+  const ready = Object.values(ITEMS).filter((item) => !item.supportOnly).flatMap((item) => readyUnits(state, item.id, upkeep, time));
   const usable = new Set(ready.map((unit) => unit.id));
   const unavailable = held.filter((unit) => !usable.has(unit.id));
   if (unavailable.length) return finish([], `Selected equipment is no longer usable: ${unavailable.map((unit) => unit.serial).join(', ')}. Update those selections first.`);
-  const prepared = (unit: ItemUnit) => ({ squadId, unit: { ...unit, condition: projectedCondition(state, unit, time) } });
+  const prepared = (unit: ItemUnit) => ({ squadId, unit: { ...unit, condition: projectedCondition(state, unit, time, upkeep) } });
   const bundle = requiredEquipmentBundle({
     action, acting: [squadId], held: held.map(prepared), stock: ready.filter((unit) => !taken.has(unit.id)).map(prepared),
     allowed: ({ unit }) => usable.has(unit.id) && operatorQualified(state, squadId, action, ITEMS[unit.itemId]),
@@ -144,7 +146,7 @@ export function preparationEquipmentFix(args: {
   const requirements = actionEquipmentRequirements(action);
   if (!requirements.groups.length && !requirements.consumes.length) return null;
   const time = Math.max(now, state.department.clockHighWater);
-  const ready = new Set(Object.keys(ITEMS).flatMap((id) => readyUnits(state, id, time).map((unit) => unit.id)));
+  const ready = new Set(Object.keys(ITEMS).flatMap((id) => readyUnits(state, id, departmentUpkeep(state), time).map((unit) => unit.id)));
   // A fully carried physical bundle means this warning is about context or people.
   // Equipment repair must not turn that into a redundant packing suggestion.
   if (chosen.some((sid) => !requiredEquipmentBundle({ action, acting: [sid], stock: [],

@@ -7,6 +7,7 @@ import { actionViews } from './operation-selectors';
 import { computeDebrief } from './operation';
 import { makeUnit } from './test-fixtures';
 import type { GameState } from './types';
+import { departmentUpkeep } from './equipment-manager-policy';
 
 const scenario = () => generateIncident({ type: 'active_armed_incident', familyId: 'market_row', buildingSeed: 7, seed: 3, tier: 2, contentVersion: 13 });
 
@@ -66,11 +67,11 @@ describe('current armed call force equipment', () => {
     const qualified = state.squads.find(squad => squad.id === 'A')!.officerIds[0];
     for (const [profile, item] of [['firearm', 'service_sidearm'], ['less_lethal_device', 'conducted_energy_device'], ['less_lethal_impact', 'impact_launcher']] as const) {
       const unit = makeUnit(item, 999);
-      expect(qualifiedForceUnit(state, profile, [unit], [])).toBeUndefined();
-      expect(qualifiedForceUnit(state, profile, [unit], ['missing'])).toBeUndefined();
-      expect(qualifiedForceUnit(state, profile, [unit], [qualified])).toBe(unit);
+      expect(qualifiedForceUnit(state, profile, [unit], [], departmentUpkeep(state))).toBeUndefined();
+      expect(qualifiedForceUnit(state, profile, [unit], ['missing'], departmentUpkeep(state))).toBeUndefined();
+      expect(qualifiedForceUnit(state, profile, [unit], [qualified], departmentUpkeep(state))).toBe(unit);
       unit.condition = 0;
-      expect(qualifiedForceUnit(state, profile, [unit], [qualified])).toBeUndefined();
+      expect(qualifiedForceUnit(state, profile, [unit], [qualified], departmentUpkeep(state))).toBeUndefined();
     }
   });
 });

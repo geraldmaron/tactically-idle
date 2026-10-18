@@ -1,7 +1,7 @@
 import { ITEMS } from '../content/items';
 import type { ActionDefinition, OutcomeEffect, ScenarioDefinition } from './scenario-types';
 import type { ForceOutcome, GameState, Id, ItemUnit } from './types';
-import { projectedCondition } from './equipment';
+import { projectedCondition, type Upkeep } from './equipment';
 import type { Use } from './resolution';
 import { tunable } from './tuning';
 
@@ -82,14 +82,14 @@ export function forceItemMatches(profile: ForceRiskProfile, itemId: Id): boolean
 
 /** A force tool needs a serviceable carried unit and a qualified acting participant.
  * Callers supply only the acting squads' units and the action's actual participants. */
-export function qualifiedForceUnit(state: GameState, profile: ForceRiskProfile, units: readonly ItemUnit[], participantIds: readonly Id[]): ItemUnit | undefined {
+export function qualifiedForceUnit(state: GameState, profile: ForceRiskProfile, units: readonly ItemUnit[], participantIds: readonly Id[], upkeep: Upkeep): ItemUnit | undefined {
   const now = state.department.clockHighWater;
   return units.find(unit => {
     const item = ITEMS[unit.itemId];
     return forceItemMatches(profile, unit.itemId)
       && (unit.status === 'ready' || unit.status === 'reserved')
       && (unit.expiresAt === null || unit.expiresAt > now)
-      && projectedCondition(state, unit, now) > item.wear.failAt
+      && projectedCondition(state, unit, now, upkeep) > item.wear.failAt
       && participantIds.some(id => !!state.officers[id] && (item.requiresCerts ?? []).every(cert => state.officers[id].certs.includes(cert)));
   });
 }

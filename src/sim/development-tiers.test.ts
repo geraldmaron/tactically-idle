@@ -7,7 +7,7 @@ import { nodeOptions } from './department-selectors';
 import { developmentTierDefinition, maxDevelopmentTier, quoteDevelopment } from './development-tiers';
 import { HOUR_MS, ratesAt, recoveryMultiplier, unlockedEffects } from './economy';
 import { createUnit, serviceCheck } from './equipment';
-import { equipmentManagerBenefits, equipmentServiceCost, equipmentWearMultiplier, maintenanceBudget } from './equipment-manager-policy';
+import { departmentUpkeep, equipmentManagerBenefits, equipmentServiceCost, equipmentWearMultiplier, maintenanceBudget } from './equipment-manager-policy';
 import { runEquipmentMaintenance } from './equipment-manager';
 import { dispatch } from './game';
 import type { Command, GameState } from './types';
@@ -147,7 +147,7 @@ describe('development tiers', () => {
       expect(equipmentServiceCost(state, item)).toBe(Math.ceil(base * [75, 65, 55][tier - 1] / 100));
     }
     const first = Object.values(state.units)[0];
-    expect(serviceCheck(state, first.id, NOW).cost).toBe(Math.ceil(80 * repairMultiplier));
+    expect(serviceCheck(state, first.id, NOW, departmentUpkeep(state)).cost).toBe(Math.ceil(80 * repairMultiplier));
     const repair = runEquipmentMaintenance(state, NOW);
     expect(repair.started).toHaveLength(tier + 1);
     expect(repair.spent).toBe(Math.ceil(80 * repairMultiplier) * (tier + 1));

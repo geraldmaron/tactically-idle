@@ -10,6 +10,7 @@ import { advanceTime, applyClockCues } from './operation';
 import { availableUnits, builtFor, CERT_LABEL, evaluateAction } from './resolution';
 import { actionEquipmentRequirements, operatorQualified, qualifiedOfficers, requiredEquipmentBundle } from './equipment-requirements';
 import { getScenario } from './scenario-registry';
+import { departmentUpkeep } from './equipment-manager-policy';
 
 export const RESUPPLY_MINUTES = 3;
 
@@ -58,7 +59,7 @@ export function planActionResupply(
     return !!def && unitEffectiveness(u, def) > 0;
   };
   const units = Object.fromEntries(participants.map((sq) => [sq, availableUnits(state, run, sq)
-    .map((u) => ({ ...u, condition: projectedCondition(state, u, time) })).filter(usable)])) as Record<SquadId, ItemUnit[]>;
+    .map((u) => ({ ...u, condition: projectedCondition(state, u, time, departmentUpkeep(state)) })).filter(usable)])) as Record<SquadId, ItemUnit[]>;
   const carrying = (picks: Pick[], squads: SquadId[]) => squads.flatMap((sq) => [...units[sq], ...picks.filter((p) => p.squadId === sq).map((p) => p.unit)]);
   const held = participants.flatMap((squadId) => units[squadId].map((unit) => ({ squadId, unit })));
   const requirements = actionEquipmentRequirements(action);
@@ -88,9 +89,10 @@ export function planActionResupply(
     }
   }
 
+  const upkeep = departmentUpkeep(state);
   const stock = Object.values(ITEMS).filter((item) => !item.supportOnly)
-    .flatMap((item) => readyUnits(state, item.id, time))
-    .flatMap((unit) => receivers.map((squadId) => ({ squadId, unit: { ...unit, condition: projectedCondition(state, unit, time) } })));
+    .flatMap((item) => readyUnits(state, item.id, upkeep, time))
+    .flatMap((unit) => receivers.map((squadId) => ({ squadId, unit: { ...unit, condition: projectedCondition(state, unit, time, upkeep) } })));
   // Choose the best current physical condition; a tie retains an authored OR preference.
   const preference = (unit: ItemUnit) => {
     const index = (action.requires.anyTags ?? []).findIndex((tag) => ITEMS[unit.itemId]?.tags.includes(tag));
@@ -122,7 +124,7 @@ export function planActionResupply(
     const reserved = matching.filter((unit) => unit.status === 'reserved' || state.reservations.some((reservation) => reservation.unitId === unit.id)).length;
     const service = matching.filter((unit) => unit.status === 'service').length;
     const unusable = matching.filter((unit) => unit.status === 'expired' || (unit.expiresAt !== null && unit.expiresAt <= time)
-      || projectedCondition(state, unit, time) <= ITEMS[unit.itemId].wear.failAt).length;
+      || projectedCondition(state, unit, time, departmentUpkeep(state)) <= ITEMS[unit.itemId].wear.failAt).length;
     if (reserved) reasons.push(`${reserved} already allocated`);
     if (service) reasons.push(`${service} in service`);
     if (unusable) reasons.push(`${unusable} expired or failed`);
@@ -148,7 +150,7 @@ export const RESUPPLY_HANDLERS: HandlerMap<'resupplyAction'> = {
     const run = draft.activeRun!;
     const explicit = Object.fromEntries(plan.allocations.map((a) => [a.squadId, a.unitIds]));
     const before = draft.reservations.length;
-    const reserved = reserveLoadouts(draft, run.id, {}, explicit, ctx.now);
+    const reserved = reserveLoadouts(draft, run.id, {}, explicit, ctx.now, departmentUpkeep(draft));
     if (!reserved.ok) return reserved;
     run.reservationIds.push(...draft.reservations.slice(before).map((r) => r.id));
     const scenario = getScenario(run.scenarioId)!;

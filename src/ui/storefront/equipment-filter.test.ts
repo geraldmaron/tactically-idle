@@ -9,6 +9,7 @@ import { DEFAULT_NAV, NavContext, type NavApi } from '../components/nav';
 import { Button } from '../components/ui';
 import { EquipmentStore } from './EquipmentStore';
 import { catalogEntries, DEFAULT_EQUIPMENT_QUERY, equipmentFacets, type EquipmentQuery } from './store-query';
+import { departmentUpkeep } from '../../sim/equipment-manager-policy';
 
 let state = makeState();
 let query: EquipmentQuery = { ...DEFAULT_EQUIPMENT_QUERY };
@@ -124,7 +125,7 @@ describe('compact equipment category filter', () => {
   it('describes service duration in real hours, matching the actual service timer', () => {
     const unit = Object.values(state.units).find((unit) => unit.itemId === 'radio_kit')!;
     unit.condition = 20;
-    const started = beginService(state, unit.id, NOW);
+    const started = beginService(state, unit.id, NOW, departmentUpkeep(state));
     expect(started.ok).toBe(true);
     expect(unit.serviceUntil! - NOW).toBe(ITEMS.radio_kit.wear.serviceHours * 3_600_000);
     const { html } = renderStore({ equipmentItemId: 'radio_kit' });

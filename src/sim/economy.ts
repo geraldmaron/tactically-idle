@@ -16,7 +16,7 @@ import { ageRecoveryFactor, applyCareerDue, nextCareerEventTime } from './career
 import { applyUnitDue, applyUnitWear, createUnit, nextUnitEventTime, ownedCount } from './equipment';
 import { applyIncidentsDue, nextIncidentEventTime } from './incidents';
 import { runEquipmentMaintenance } from './equipment-manager';
-import { maintenanceBudget } from './equipment-manager-policy';
+import { departmentUpkeep, maintenanceBudget } from './equipment-manager-policy';
 import { commandStaffActive, commandStaffSalaries, logQuartermaster, runCommandStaff } from './command-staff';
 import { tunable } from './tuning';
 
@@ -340,7 +340,7 @@ export function settle(d: GameState, now: number): void {
       }
     }
     recover(d, (e - t) / HOUR_MS, t);
-    applyUnitWear(d, t, e, acc.equipment);
+    applyUnitWear(d, t, e, acc.equipment, departmentUpkeep(d));
 
     applyDue(d, t, e, acc, restockActive && e % I === 0 && e <= W);
     t = e;

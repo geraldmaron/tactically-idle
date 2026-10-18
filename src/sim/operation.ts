@@ -65,6 +65,7 @@ import {
   type Evaluation,
 } from './resolution';
 import { conditionHolds } from './conditions';
+import { departmentUpkeep } from './equipment-manager-policy';
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
 const clamp = (n: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, n));
@@ -298,13 +299,14 @@ export function checkStart(state: GameState, now: number, cmd: StartCmd): StartC
     for (const sid of Object.keys(cmd.staging ?? {}) as SquadId[]) if (!ids.includes(sid)) issues.push(`Staging given for ${squadLabel(sid)}, which is not deployed`);
   }
 
-  const standard = withStandardRadios(state, ids, cmd.loadouts, cmd.units, now);
+  const upkeep = departmentUpkeep(state);
+  const standard = withStandardRadios(state, ids, cmd.loadouts, cmd.units, now, upkeep);
   if (standard.issue) issues.push(standard.issue);
   cmd = { ...cmd, loadouts: standard.loadouts, units: standard.units };
   for (const sid of Object.keys(cmd.units ?? {}) as SquadId[]) if (!ids.includes(sid)) issues.push(`Equipment given for ${squadLabel(sid)}, which is not deployed`);
   for (const sid of Object.keys(cmd.loadouts) as SquadId[]) if (!ids.includes(sid)) issues.push(`Loadout given for ${squadLabel(sid)}, which is not deployed`);
   const probe = structuredClone(state);
-  const r = reserveLoadouts(probe, 'probe', cmd.loadouts, cmd.units, now);
+  const r = reserveLoadouts(probe, 'probe', cmd.loadouts, cmd.units, now, upkeep);
   if (!r.ok && !standard.issue) issues.push(r.reason);
 
   if (issues.length === 0 && built) warnings.push(...startWarnings(state, now, scenario, built, cmd));
@@ -315,7 +317,7 @@ function startWarnings(state: GameState, now: number, scenario: ScenarioDefiniti
   const out: string[] = [];
   const probe = structuredClone(state);
   const unitOverride = {} as Record<SquadId, ItemUnit[]>;
-  reserveLoadouts(probe, 'preview', cmd.loadouts, cmd.units, now);
+  reserveLoadouts(probe, 'preview', cmd.loadouts, cmd.units, now, departmentUpkeep(state));
   for (const sid of cmd.squadIds) unitOverride[sid] = squadUnits(probe, 'preview', sid);
   const run = makeRun(state, built, scenario, cmd, 'preview', 0, 0);
   for (const a of scenarioActions(scenario)) {
@@ -713,7 +715,7 @@ export function computeDebrief(state: GameState, run: OperationRun): DebriefResu
   }
 
   // resources: settle on a throwaway clone so preview and commit agree.
-  const { resources, unitWear } = settleRun(structuredClone(state), run.id, unitsUsedTotals(run), 0);
+  const { resources, unitWear } = settleRun(structuredClone(state), run.id, unitsUsedTotals(run), departmentUpkeep(state));
 
   const proposedTrust = run.responseFailure ? -2 : score ? score.trust : Math.round(scenario.rewards.trust * (2 * factor - 1)) + ending.trustAdjust;
   const trustDelta = clamp(state.department.trust + proposedTrust, 0, 100) - state.department.trust;
@@ -792,7 +794,8 @@ const fail = (reason: string): HandlerResult => ({ ok: false, reason });
 
 export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
   startOperation(draft, cmd, ctx) {
-    const standard = withStandardRadios(draft, cmd.squadIds, cmd.loadouts, cmd.units, ctx.now);
+    const upkeep = departmentUpkeep(draft);
+    const standard = withStandardRadios(draft, cmd.squadIds, cmd.loadouts, cmd.units, ctx.now, upkeep);
     cmd = { ...cmd, loadouts: standard.loadouts, units: standard.units };
     const chk = checkStart(draft, ctx.now, cmd);
     if (chk.issues.length > 0 || !chk.scenario) return fail(chk.issues[0] ?? 'Cannot start this operation');
@@ -805,7 +808,7 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     const run = makeRun(draft, chk.built!, scenario, cmd, runId, rngState, ctx.now);
 
     const before = draft.reservations.length;
-    const r = reserveLoadouts(draft, runId, cmd.loadouts, cmd.units, ctx.now);
+    const r = reserveLoadouts(draft, runId, cmd.loadouts, cmd.units, ctx.now, upkeep);
     if (!r.ok) return r;
     run.reservationIds = draft.reservations.slice(before).map((x) => x.id);
     reserveSupportVehicle(draft, run);
@@ -1035,7 +1038,7 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     return { ok: true };
   },
 
-  closeDebrief(draft, _cmd, ctx) {
+  closeDebrief(draft, _cmd, _ctx) {
     const run = draft.activeRun;
     if (!run) return fail('No debrief to close');
     if (run.status !== 'debrief') return fail('The operation is still running');
@@ -1044,7 +1047,7 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     if (!result) return fail('Debrief unavailable');
     const scenario = getScenario(run.scenarioId);
 
-    const settled = settleRun(draft, run.id, unitsUsedTotals(run), ctx.now);
+    const settled = settleRun(draft, run.id, unitsUsedTotals(run), departmentUpkeep(draft));
     result.resources = settled.resources;
     result.unitWear = settled.unitWear;
     // v13 careers read the same scored factor the debrief paid out (sim/outcome-score.ts).

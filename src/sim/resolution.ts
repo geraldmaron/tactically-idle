@@ -70,6 +70,7 @@ import { ITEMS } from '../content/items';
 import { projectedCondition } from './equipment';
 import { tunable } from './tuning';
 import { conditionHolds } from './conditions';
+import { departmentUpkeep } from './equipment-manager-policy';
 
 /** Tunable (sim/tuning.ts). The guard keeps the forced-band tails, the span and the band thresholds
  * usable: forced bands aim at setback/2 and 1 - luck/2, so neither tail may vanish. */
@@ -630,7 +631,7 @@ export function evaluateAction(input: EvalInput): Evaluation {
 
   const units: Record<SquadId, ItemUnit[]> = {} as Record<SquadId, ItemUnit[]>;
   for (const sq of [...acting, ...support, ...run.squadIds]) {
-    units[sq] ??= input.unitOverride?.[sq] ?? availableUnits(state, run, sq).map((unit) => ({ ...unit, condition: projectedCondition(state, unit, state.department.clockHighWater) }));
+    units[sq] ??= input.unitOverride?.[sq] ?? availableUnits(state, run, sq).map((unit) => ({ ...unit, condition: projectedCondition(state, unit, state.department.clockHighWater, departmentUpkeep(state)) }));
     units[sq] = units[sq].filter(unit => unit.expiresAt === null || unit.expiresAt > state.department.clockHighWater);
   }
   const taskOf = (sq: SquadId) => run.squadTasks.find((t) => t.squadId === sq) ?? { squadId: sq, positionId: '', task: '', stagingId: null, at: null };

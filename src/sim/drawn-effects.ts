@@ -19,6 +19,7 @@ import { next } from './rng';
 import { tunable } from './tuning';
 import type { IncidentPersonDef, OutcomeEffect, ScenarioDefinition, SubjectMeters } from './scenario-types';
 import type { GameState, Id, ItemUnit, OperationRun, SquadId } from './types';
+import { departmentUpkeep } from './equipment-manager-policy';
 
 type WeaponKind = NonNullable<IncidentPersonDef['weapon']>['kind'];
 export type FireSeverity = 'none' | 'wounded' | 'serious';
@@ -93,7 +94,7 @@ export function teamForceProfile(state: GameState, run: OperationRun, scenario: 
   const deadlyReason = threat.rule === 'force:gun'
     ? fill(FORCE_REASONS.deadly.gun).replace('{weapon}', person.weapon?.kind === 'long_gun' ? 'a rifle' : person.weapon?.kind === 'shotgun' ? 'a shotgun' : 'a handgun')
     : fill(FORCE_REASONS.deadly.reach, (threat.deadly ? threat.near?.label : undefined) ?? FORCE_REASONS.theTeam);
-  if (threat.deadly && qualifiedForceUnit(state, 'firearm', units, participantIds)) return threat.rule === 'force:gun'
+  if (threat.deadly && qualifiedForceUnit(state, 'firearm', units, participantIds, departmentUpkeep(state))) return threat.rule === 'force:gun'
     ? { profile: 'firearm', rule: 'firearm:gun', reason: deadlyReason }
     : { profile: 'firearm', rule: 'firearm:reach', reason: deadlyReason };
   const seen = threat.deadly ? `${deadlyReason} ${FORCE_REASONS.no_firearm}` : fill(FORCE_REASONS.threat[threat.rule.slice('force:'.length) as keyof typeof FORCE_REASONS.threat]);
@@ -103,7 +104,7 @@ export function teamForceProfile(state: GameState, run: OperationRun, scenario: 
   if (close) return hands('bystander', close.label);
   let carriedAny = false;
   for (const profile of ['less_lethal_impact', 'less_lethal_device'] as const) {
-    const carried = qualifiedForceUnit(state, profile, units, participantIds);
+    const carried = qualifiedForceUnit(state, profile, units, participantIds, departmentUpkeep(state));
     if (!carried) continue;
     carriedAny = true;
     if (person.doorFt !== undefined && person.doorFt > TEAM_FORCE_V1.rangeFt[profile]) continue;

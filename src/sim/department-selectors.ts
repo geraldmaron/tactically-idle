@@ -44,7 +44,7 @@ import {
   LEARNING_MULTIPLIER,
 } from './career';
 import { daysToUnreliable, projectedCondition, scrapCheck, serviceCheck, stateLabelFor } from './equipment';
-import { equipmentWearMultiplier } from './equipment-manager-policy';
+import { departmentUpkeep, equipmentWearMultiplier } from './equipment-manager-policy';
 import { readyUnits, unitEffectiveness } from './inventory';
 import { boardSummaryOf, type BoardSummary } from './incidents';
 
@@ -220,11 +220,12 @@ export function nodeOptions(state: GameState): NodeOption[] {
 }
 
 export function storeOptions(state: GameState): StoreOption[] {
+  const upkeep = departmentUpkeep(state);
   const now = state.department.clockHighWater;
   return Object.values(ITEMS).map((item) => {
     const units = Object.values(state.units).filter((u) => u.itemId === item.id && u.status !== 'scrapped');
-    const ready = readyUnits(state, item.id);
-    const conditions = units.filter((u) => u.status !== 'expired').map((u) => projectedCondition(state, u, now));
+    const ready = readyUnits(state, item.id, upkeep);
+    const conditions = units.filter((u) => u.status !== 'expired').map((u) => projectedCondition(state, u, now, upkeep));
     const c = itemCheck(state, item, 1);
     return {
       item,
@@ -310,12 +311,13 @@ export function unitViews(state: GameState, itemId: Id, now: number): UnitView[]
   if (!def) return [];
   const t = Math.max(now, state.department.clockHighWater);
   const rank = (v: UnitView) => (v.unit.status === 'expired' ? -1 : v.unit.condition);
+  const upkeep = departmentUpkeep(state);
   return Object.values(state.units)
     .filter((u) => u.itemId === itemId && u.status !== 'scrapped')
     .map((u): UnitView => {
-      const condition = projectedCondition(state, u, t);
+      const condition = projectedCondition(state, u, t, upkeep);
       const shown = { ...u, condition };
-      const svc = serviceCheck(state, u.id, t);
+      const svc = serviceCheck(state, u.id, t, upkeep);
       const scrap = scrapCheck(state, u.id);
       return {
         unit: shown,

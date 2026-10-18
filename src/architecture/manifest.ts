@@ -175,7 +175,6 @@ export const SYSTEM_EDGE_REASONS: Readonly<Record<string, string>> = {
   'metric -> scenario': 'chain',
   'metric -> subject': 'chain',
   'officer -> item': 'chain',
-  'item -> metric': 'Reversed: wear and service cost read the equipment manager, a department upgrade (equipment-manager-policy.ts), directly. Paying it means the department hands wear its multiplier.',
   'officer -> metric': 'Reversed: the roster and squad builder read department money, unlocks, the sim clock and squad deployment from economy.ts. Paying it means moving the clock and squad state out of economy and passing hiring costs in.',
   'officer -> scenario': 'Reversed: the squad builder mirrors the call check (sim/resolution.ts conditionFraction, EXPERIENCE_TUNING mentoring, CERT_LABEL). Paying it means officer condition and mentoring tuning live with the officer.',
 };

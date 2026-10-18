@@ -8,6 +8,7 @@ import { actionViews } from './operation-selectors';
 import type { ActionDefinition } from './scenario-types';
 import { apply, makeState, makeUnit, NOW, startCmd, unitId } from './test-fixtures';
 import type { GameState, ItemUnit, SquadId } from './types';
+import { departmentUpkeep } from './equipment-manager-policy';
 
 const TEST_SCENARIO = 'auto_equip_test';
 afterEach(() => { delete SCENARIOS[TEST_SCENARIO]; });
@@ -41,7 +42,7 @@ function assertActualUnits(state: GameState, plan: AutoLoadout) {
     for (const id of picked) expect(state.units[id]?.status).toBe('ready');
   }
   const probe = structuredClone(state);
-  expect(reserveLoadouts(probe, 'verify', plan.loadouts, plan.units, NOW)).toEqual({ ok: true });
+  expect(reserveLoadouts(probe, 'verify', plan.loadouts, plan.units, NOW, departmentUpkeep(probe))).toEqual({ ok: true });
   expect(probe.reservations.map((r) => r.unitId).sort()).toEqual([...ids].sort());
 }
 

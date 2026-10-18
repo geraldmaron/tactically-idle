@@ -11,6 +11,7 @@ import { centroidOf, standingCandidates, rangeToPoint, rangeThroughOpening } fro
 import { actionConsumptionForItems, actionEquipmentRequirements, capabilityRuleEffect, missionConsumptionBudget, operatorQualified, orderActionParticipants, participantAptitude, planningEquipmentContext, qualifiedOfficers, requiredEquipmentBundle, type EquipmentPick, type PublicEquipmentContext } from './equipment-requirements';
 import { scenarioActions } from './scenario-types';
 import { getScenario } from './scenario-registry';
+import { departmentUpkeep } from './equipment-manager-policy';
 
 export interface AutoLoadout {
   loadouts: Partial<Record<SquadId, Record<Id, number>>>;
@@ -32,7 +33,7 @@ export interface AutoLoadoutOptions {
 
 /** Current usable stock, shared with preparation previews; never settles or buys. */
 export function autoEquipReadyUnits(state: GameState, itemId: Id, now: number): ItemUnit[] {
-  return readyUnits(state, itemId, now);
+  return readyUnits(state, itemId, departmentUpkeep(state), now);
 }
 
 /**
@@ -55,7 +56,8 @@ export function autoLoadout(state: GameState, scenarioId: Id, squadIds: SquadId[
   const label = (sid: SquadId) => state.squads.find((s) => s.id === sid)?.name ?? `Squad ${sid}`;
   const warn = (key: string, message: string) => warnings.set(key, message);
   const locked = (sid: SquadId, itemId: Id) => itemId === STANDARD_RADIO || Object.hasOwn(options.loadouts?.[sid] ?? {}, itemId);
-  const pool = Object.keys(ITEMS).filter((id) => !ITEMS[id].supportOnly).flatMap((id) => autoEquipReadyUnits(state, id, time)).map((u) => ({ ...u, condition: projectedCondition(state, u, time) }));
+  const upkeep = departmentUpkeep(state);
+  const pool = Object.keys(ITEMS).filter((id) => !ITEMS[id].supportOnly).flatMap((id) => autoEquipReadyUnits(state, id, time)).map((u) => ({ ...u, condition: projectedCondition(state, u, time, upkeep) }));
   const usableIds = new Set(pool.map((u) => u.id));
 
   for (const sid of chosen) {
@@ -79,7 +81,7 @@ export function autoLoadout(state: GameState, scenarioId: Id, squadIds: SquadId[
 
   // Standard radios are automatic even when only one squad's optional gear is
   // targeted. They take distinct best-condition stock before optional choices.
-  const radioPlan = standardRadioPlan(state, chosen.filter((sid) => officers[sid]), time);
+  const radioPlan = standardRadioPlan(state, chosen.filter((sid) => officers[sid]), time, upkeep);
   if (radioPlan.issue) warn('standard-radios', radioPlan.issue);
   for (const sid of chosen) {
     for (const id of radioPlan.units[sid] ?? []) {
@@ -105,7 +107,7 @@ export function autoLoadout(state: GameState, scenarioId: Id, squadIds: SquadId[
         continue;
       }
       taken.add(id);
-      picks[sid]!.push({ ...unit, condition: projectedCondition(state, unit, time) });
+      picks[sid]!.push({ ...unit, condition: projectedCondition(state, unit, time, upkeep) });
     }
     for (const unit of picks[sid]!) {
       if (!locked(sid, unit.itemId)) counts[sid]![unit.itemId] = picks[sid]!.filter((u) => u.itemId === unit.itemId).length;

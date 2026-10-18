@@ -45,6 +45,7 @@ import { toggleDeploymentSquad } from './operation-squads';
 import './preparation-options.css';
 import './operation-squads.css';
 import './ops-visual.css';
+import { departmentUpkeep } from '../../sim/equipment-manager-policy';
 
 export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel: () => void }) {
   const pageRef = useRef<HTMLDivElement>(null);
@@ -82,7 +83,7 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
   const [supportUnitId, setSupportUnitId] = useState<Id | null>(null);
   const [floor, setFloor] = useState(0);
 
-  const radioPlan = useMemo(() => standardRadioPlan(g, chosen, now), [g, chosen, now]);
+  const radioPlan = useMemo(() => standardRadioPlan(g, chosen, now, departmentUpkeep(g)), [g, chosen, now]);
   const loadouts = useMemo<Loadouts>(() => {
     const next = { ...optionalLoadouts };
     for (const sid of chosen) next[sid] = { ...handCarriedLoadout(next[sid] ?? {}), ...radioPlan.loadouts[sid] };
@@ -492,7 +493,7 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
                       {(units.length > 0 || (standard && units.length < qty) || units.length < qty) && (
                         <ul className="lo-units" aria-label={`Units taking ${o.item.name}`}>
                           {units.map((u) => {
-                            const condition = projectedCondition(g, u, Math.max(now, g.department.clockHighWater));
+                            const condition = projectedCondition(g, u, Math.max(now, g.department.clockHighWater), departmentUpkeep(g));
                             const state = unitStateOf(condition, o.item.wear);
                             const meta = UNIT_STATE_META[state];
                             return (

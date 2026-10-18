@@ -11,6 +11,7 @@ import { moneyFull } from '../format';
 import { Icon } from '../icons';
 import { GearArtFrame } from '../art/GearArt';
 import './preparation-support.css';
+import { departmentUpkeep } from '../../sim/equipment-manager-policy';
 
 /** Support assets never enter a squad's backpack, including old saved presets. */
 export function handCarriedLoadout(loadout: Record<Id, number>): Record<Id, number> {
@@ -32,7 +33,7 @@ export function supportChoices(state: GameState, now: number, cmd: StartOperatio
   return units.map((unit) => ({
     id: unit.id,
     unit,
-    condition: projectedCondition(state, unit, Math.max(now, state.department.clockHighWater)),
+    condition: projectedCondition(state, unit, Math.max(now, state.department.clockHighWater), departmentUpkeep(state)),
     issues: supportStartCheck(state, now, { ...cmd, supportUnitIds: [unit.id] }),
   })).sort((a, b) => Number(a.issues.length > 0) - Number(b.issues.length > 0) || b.condition - a.condition || a.id.localeCompare(b.id));
 }
@@ -53,7 +54,8 @@ export function SupportPreparation({ state, now, cmd, built, onSelect }: {
     .flatMap((squad) => squad.officerIds.map((id) => state.officers[id]))
     .filter((officer) => officer?.certs.includes('vehicle_operations'));
   const selectedIssues = selectedId ? supportStartCheck(state, now, cmd) : [];
-  const readyTotal = options.reduce((total, option) => total + readyUnits(state, option.item.id, now).length, 0);
+  const upkeep = departmentUpkeep(state);
+  const readyTotal = options.reduce((total, option) => total + readyUnits(state, option.item.id, upkeep, now).length, 0);
   return <Section title="Operation support" icon="pin" hint="Optional. One support vehicle waits outside the building.">
     <Card className="prep-support-summary">
       <div className="prep-support-heading">
@@ -79,7 +81,7 @@ export function SupportPreparation({ state, now, cmd, built, onSelect }: {
         const { item } = option;
         const choices = supportChoices(state, now, cmd, item);
         const selection = choices.find((choice) => choice.id === selectedId);
-        const ready = readyUnits(state, item.id, now).length;
+        const ready = readyUnits(state, item.id, departmentUpkeep(state), now).length;
         const available = choices.filter((choice) => choice.issues.length === 0);
         const conditions = [...new Set(choices.flatMap((choice) => choice.issues))];
         return <Card key={item.id} className={`prep-support-card${selection ? ' prep-support-selected' : ''}`}>
