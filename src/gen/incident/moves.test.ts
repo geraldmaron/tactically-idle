@@ -117,6 +117,29 @@ describe('truth and belief after a hidden move', () => {
   });
 });
 
+describe('an unseen move changes nothing belief reads', () => {
+  // The review's reproduction: bungalow_g2, building and call seed 12, the subject only on report;
+  // a hidden move must leave cover, the door distance and every belief-read difficulty as they were.
+  it('the same odds and force reads with and without the unseen move flag, on every hosting seed tried', () => {
+    for (let seed = 1; seed <= 14; seed++) {
+      let base;
+      try { base = generateIncident({ type: 'barricaded', familyId: 'bungalow_g2', buildingSeed: seed, seed, tier: 2, contentVersion: 13 }); } catch { continue; }
+      const { clocks: _c, incidentPeople: _p, threats: _t, ...frame } = base;
+      const built = buildLocation(frame.locationFamilyId, frame.locationSeed);
+      let s: ScenarioDefinition;
+      try { s = compileIncident({ ...frame, id: `unseen-${seed}`, incident: hostedSpec(frame) }, built, variant()); } catch { continue; }
+      const person = s.incidentPeople!.find(entry => entry.id === 'subject')!;
+      for (const status of ['reported', 'confirmed'] as const) {
+        const before = { flags: [] as string[], knowledge: { [person.locationFactId!]: status }, pressure: 0 };
+        const after = { ...before, flags: [movedFlag('subject', 1)] };
+        expect(scenarioWithPeopleNow(s, built, after, 'belief'), `seed ${seed} ${status}`).toBe(s);
+        expect(movedPersonAt(s, built, after, person, 'belief'), `seed ${seed} ${status}`).toBeNull();
+        expect(readForceThreat(scenarioWithPeopleNow(s, built, after, 'belief'), after, person)).toEqual(readForceThreat(s, before, person));
+      }
+    }
+  });
+});
+
 describe('the team can enter or watch a place on someone’s way out', () => {
   it('enters the hall and watches it from outside', () => {
     const t = variant({ edit: tree => {

@@ -1348,6 +1348,10 @@ export function movedPersonAt(scenario: ScenarioDefinition, built: BuiltLocation
   { spaceId: Id; at: Vec; cover?: IncidentPersonDef['cover']; doorFt?: number } | null {
   const binding = scenario.story?.bindings.people[person.id];
   if (!binding || !moveHolds(binding, run)) return null;
+  // Belief follows a move only once the team has seen them somewhere new (a seen twin holds): an
+  // unseen move changes nothing the team knows, so it changes nothing belief reads (odds, force).
+  if (basis === 'belief' && !binding.transitions.some((transition, i) => i > 0 && transition.observed && !transition.when.flags?.some(flag => flag.startsWith('out:'))
+    && !binding.transitions[i - 1].observed && conditionHolds(transition.when, run))) return null;
   const position = basis === 'truth' ? storyPeopleActual(scenario, run).find(entry => entry.id === person.id)?.position
     : storyPeoplePublic(scenario, built, run).find(entry => entry.id === person.id)?.position;
   if (!position || 'kind' in position) return null;
