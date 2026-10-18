@@ -36,7 +36,9 @@ their real weapon as known (hostage request R-G1, `src/sim/incident-factors.ts`,
 `src/gen/incident/instance.ts`). Done: confirmed intel moves the favorable chance on the choices
 it bears on, group members' weapons are beliefs like the subject's, call text can name a member's
 weapon through a condition on it (R-G1's `TreeState.armed`, shown working in the hostage call), a
-wiring probe measures it, and gathering intel is a real choice with a cost in time or exposure.
+wiring probe measures it, gathering intel is a real choice with a cost in time or exposure, and with one subject how close the
+work comes to where the team believes they are moves the favorable odds (barricade request R-B5:
+nearness only sorts subjects today, `src/sim/incident-factors.ts`).
 
 ### offsite-fire: Gunfire from outside the building uses the incoming-fire model
 Tags: job=command; journeys=chance-not-script; probes=none (adds a drawn harm result, not a favorable-chance input); lane=engine
@@ -50,12 +52,16 @@ sightline from the generated building.
 
 ### second-squad: A second squad can act
 Tags: job=build; journeys=new:joint-operation; probes=none (squad count is not a probe input yet); lane=engine
-Needs: start=barricade-model-first (its design sheet settles support choices or two acting squads); integrate=none; ship=barricade-model-first (a call authors the choices)
+Needs: start=none; integrate=none; ship=barricade-model-first (a call authors the choices)
 
 Every v13 choice puts one squad to work (`squadsPutToWork`), and evaluation always supplies one
 acting squad (`src/sim/operation.ts`) though the engine has `maxActing`, `support` and
 `minSquads`. Done: a call authors support or second-squad choices, `squadRange` reaches 2 or more
-on at least one call, and a journey test plays it.
+on at least one call, and a journey test plays it. Decided 2026-10-18 from the barricade design
+sheet: a second squad supports (barricade request R-B4, `support: { at, label, max }` compiled into
+the existing `SupportRule`) rather than two squads acting at once. Controls: the support point is on
+the map, the summary names the second squad's task, and every support choice also works with one
+squad.
 
 ### camera-drone: A call that uses the camera drone
 Tags: job=build; journeys=team-moves-odds; probes=none (covered by intel-confirmed once it exists); lane=engine
@@ -64,19 +70,41 @@ Needs: start=intel-odds; integrate=none; ship=none (a calls-lane tree authors th
 It's in the catalog (`src/content/items.ts`) and no call uses it. Done: a choice watches a room
 through it, using the sightings step, and what it sees moves the odds through `intel-odds`.
 
+### clock-runout-routing: A clock that runs out moves the call
+Tags: job=command; journeys=choices-branch; probes=none (routing, not odds); lane=engine
+Needs: start=none; integrate=none; ship=none
+
+Hostage request R-G4, which the barricade call needs before any tree data: `onOut` records harm and
+sets a mark but can't move the call (`src/sim/clocks.ts`), so a short choice can run a clock out and
+leave choices on screen that the text has made false. Done: `onOut.next` routes the call when the
+person is still inside and the decision's own outcome didn't end it, shown in the hostage call.
+
+### barricade-engine-requests: People placed and moving on the building
+Tags: job=command; journeys=choices-branch; probes=blueprint-building; lane=engine
+Needs: start=none; integrate=none; ship=none
+
+Requests R-B1 to R-B3 in `docs/calls/barricade-design.md`. R-B1: a role can start on an upper
+floor (every role is placed on floor 0 today, `src/gen/incident/trees-v13/compile.ts`). R-B2: a
+person can leave by their own ground-floor window where the building has one (`usableOpening`
+rejects every window, `src/gen/incident/story-bindings.ts`). R-B3: an outcome or a clock cue can
+move a person, and the team can watch or enter a place on a route (the hall), not only a role's
+room. Done: each works in the barricade call on the building families its sheet names, with the
+conditions that keep text true where the building doesn't allow it.
+
 ## Next: calls and the incident model
 
 ### barricade-model-first: Write the barricade call model-first
 Tags: job=command; journeys=answer-a-call, choices-branch; probes=blueprint-building, blueprint-locked; lane=calls
-Needs: start=none; integrate=gear-by-action, intel-odds; ship=none
+Needs: start=none; integrate=gear-by-action, intel-odds, clock-runout-routing, barricade-engine-requests; ship=none
 
 As the hostage call was: template, design sheet in `docs/calls/`, tree, separate review. The old
 tree has 2 `team` moves out of about 37 choices (armed 13, hostage 8, rescue 8), and a different
 building changes 6 of 33 opening choices (`blueprint-building`, floor 0.18). Done: the new call
 makes physical moves through the building, both blueprint floors rise, `npm run check:strings`
 passes on it, it passes coverage, balance and the separate review, and the old
-`barricade-order` tree is retired. The design sheet lists its engine requests before any tree
-data is written.
+`barricade-order` tree is retired. The design sheet (`docs/calls/barricade-design.md`, "Everything
+Goes Back") lists its engine requests; tree data waits on them. The `items-none` share at openings
+grows here too, since most of today's openings are phone calls that carry no gear.
 
 ### rescue-model-first: Write the rescue call model-first
 Tags: job=command; journeys=answer-a-call, choices-branch; probes=blueprint-building; lane=calls
@@ -102,12 +130,12 @@ Every template has `complications: []` today. Each module that needs a new perso
 the engine lane as a request first.
 
 ### hostage-engine-requests: Hostage engine requests
-Tags: job=command; journeys=answer-a-call; probes=none (text and routing, not odds); lane=engine
+Tags: job=command; journeys=answer-a-call; probes=none (text, not odds); lane=engine
 Needs: start=none; integrate=none; ship=none
 
-Filed in `docs/calls/hostage-signature-design.md`: R-G2 a group role the player meets, R-G3 with
-N15 and N16 count-conditioned briefing lines and ending addenda, and R-G4 `onOut.next`. R-G1 is
-in `intel-odds`; N6, N7, N9 and N21 are in `hostage-gate-requests`. Done: each request works in
+Filed in `docs/calls/hostage-signature-design.md`: R-G2 a group role the player meets, and R-G3 with
+N15 and N16 count-conditioned briefing lines and ending addenda. R-G1 is in `intel-odds`, R-G4 in
+`clock-runout-routing`; N6, N7, N9 and N21 are in `hostage-gate-requests`. Done: each request works in
 the hostage call and the call's fingerprints are recaptured deliberately.
 
 ### hostage-review-leftovers: Hostage review leftovers
@@ -157,13 +185,13 @@ Needs: start=gear-by-action; integrate=none; ship=none
 
 ## Gates and tooling
 
-### e2e-script: Browser end-to-end script works again
+### e2e-in-ci: The browser end-to-end script runs in CI
 Tags: job=command; journeys=answer-a-call; probes=none (tooling); lane=tooling
 Needs: start=none; integrate=none; ship=none
 
-`scripts/play-loop.mjs` (`npm run test:e2e`) still expects standing assignments and a two-squad
-deployment, which no longer exist. Done: it plays one tactical call through the real UI at
-390x844 and 320x568.
+`npm run test:e2e` plays the board through the real UI at 390x844 and 320x568, but neither `npm
+run verify` nor CI runs it, which is how it went stale. Done: pull-request CI runs it against a
+built preview, with its runtime and Chrome setup stated, or the backlog records why not.
 
 ### lab-compare: Lab compare view
 Tags: job=understand; journeys=team-moves-odds; probes=none (tooling); lane=tooling
@@ -197,12 +225,6 @@ It exits 1 today only on the barricade, armed and rescue trees, which the model-
 replace. Done: `npm run verify` and pull-request CI run it, and it passes.
 
 ## Player experience
-
-### small-screen-map: Small-screen map
-Tags: job=command; journeys=answer-a-call; probes=none (layout); lane=interface
-Needs: start=none; integrate=none; ship=none
-
-Rooms under 44px on the 320px map, and long footprints that render small.
 
 ### hq-tiles: HQ stat tiles
 Tags: job=return; journeys=none (HQ display, no journey covers it); probes=none (display); lane=interface
