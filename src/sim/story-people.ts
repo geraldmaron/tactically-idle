@@ -1,6 +1,6 @@
 import type { ActionDefinition, ScenarioDefinition, StoryAnchor, StoryPersonBinding } from './scenario-types';
 import type { BuiltLocation, Id, KnowledgeStatus, OperationRun } from './types';
-import { conditionHolds, movedFlag, seenFlag } from './conditions';
+import { conditionHolds, lostFlag, movedFlag, seenFlag } from './conditions';
 import { approxPoint, spaceLabel } from './spatial-factors';
 
 
@@ -17,7 +17,8 @@ export interface StoryPublicPerson extends Omit<StoryActualPerson, 'position'> {
   position: StoryPosition | null;
   /** Only an observed transition can supply this public location description. */
   locationLabel?: string;
-  /** The team saw them, and they have moved since out of sight (R-B3): `position` is where it last saw them. */
+  /** The team looked where it last saw them and found the spot empty (R-B3, lostFlag): `position`
+   * is where it last saw them. */
   stale?: true;
 }
 
@@ -91,8 +92,10 @@ export function storyPeoplePublic(scenario: ScenarioDefinition, built: BuiltLoca
       status = 'confirmed';
       locationLabel = transition.label;
     }
-    // Seen, then moved out of sight: the team holds only where it last saw them.
-    const stale = status === 'confirmed' && unseenMove(person, run) >= 0;
+    // The team looked where it last saw them and found the spot empty: it holds only where it last saw
+    // them. An unseen move alone changes nothing the team knows, so nothing here.
+    const stale = status === 'confirmed' && run.flags.includes(lostFlag(person.id))
+      && !person.transitions.some(transition => transition.when.flags?.some(flag => flag.startsWith('out:')) && conditionHolds(transition.when, run));
     if (stale) { status = 'reported'; locationLabel = undefined; }
     return { id: person.id, label: person.label, locationFactId: person.locationFactId, status, position, ...(locationLabel ? { locationLabel } : {}), ...(stale ? { stale: true as const } : {}) };
   });
@@ -223,4 +226,14 @@ export function hydrateStoryAction(action: ActionDefinition, target: StoryPublic
  * outcome's or a clock cue's). Leaving the building is not a move. */
 export function moveHolds(person: StoryPersonBinding, run: StoryState): boolean {
   return person.transitions.some(transition => (transition.when.flags ?? []).some(flag => flag.startsWith(MOVED_PREFIX)) && conditionHolds(transition.when, run));
+}
+
+/** The room the team last saw `personId` in, from what it has observed alone (no building needed):
+ * where a seen move took them, else where it confirmed them at the start; null when it never saw them. */
+export function lastSeenRoom(scenario: ScenarioDefinition, run: StoryState, personId: Id): Id | null {
+  const person = scenario.story?.bindings.people[personId];
+  if (!person) return null;
+  const seen = [...person.transitions].reverse().find(transition => isSeenTwin(transition) && conditionHolds(transition.when, run));
+  if (seen && !('kind' in seen.to)) return seen.to.spaceId;
+  return run.knowledge[person.locationFactId] === 'confirmed' ? person.initial.spaceId : null;
 }

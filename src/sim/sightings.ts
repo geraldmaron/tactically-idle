@@ -9,7 +9,8 @@
 // points at, to that fact's own truth.
 import type { ActionDefinition, OutcomeEffect, ScenarioDefinition } from './scenario-types';
 import type { OperationRun, OutcomeBand } from './types';
-import { sightingFlags, storyPeopleActual } from './story-people';
+import { lastSeenRoom, sightingFlags, storyPeopleActual } from './story-people';
+import { lostFlag } from './conditions';
 
 /** The knowledge a committed decision's sightings add, as one effect, or null when the team saw
  * nobody new. `effects` are the decision's matched outcome effects: a band that sends the team
@@ -33,7 +34,11 @@ export function sightings(scenario: ScenarioDefinition, run: Pick<OperationRun, 
   for (const person of scenario.incidentPeople ?? []) {
     const now = actual.get(person.id);
     const spaceId = now && !('kind' in now) ? now.spaceId : person.spaceId;
-    if (!rooms.includes(spaceId) || run.flags.includes(`out:${person.id}`) || run.flags.includes(`safe:${person.id}`)) continue;
+    if (run.flags.includes(`out:${person.id}`) || run.flags.includes(`safe:${person.id}`)) continue;
+    // Looking where the team last saw them, and they aren't there now: the trail is lost (R-B3).
+    const last = lastSeenRoom(scenario, run, person.id);
+    if (last && last !== spaceId && rooms.includes(last) && !run.flags.includes(lostFlag(person.id))) setFlags.push(lostFlag(person.id));
+    if (!rooms.includes(spaceId)) continue;
     settle(person.locationFactId);
     // Seen where a hidden move took them: the team knows the new spot (story-people sightingFlags).
     setFlags.push(...sightingFlags(scenario, run, person.id));

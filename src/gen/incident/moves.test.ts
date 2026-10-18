@@ -8,7 +8,7 @@ import type { CallTree, TreeMoveTo } from '../../content/call-trees/types';
 import type { IncidentTemplate } from '../../content/incidents/types';
 import { INCIDENT_TEMPLATES } from '../../content/incidents';
 import { readForceThreat } from '../../sim/authorization';
-import { cueMoveKey, movedFlag, seenFlag, withFlag } from '../../sim/conditions';
+import { cueMoveKey, lostFlag, movedFlag, seenFlag, withFlag } from '../../sim/conditions';
 import { buildLocation } from '../../sim/location';
 import { traceRun } from '../../sim/operation';
 import { movedPersonAt, scenarioWithPeopleNow } from '../../sim/resolution';
@@ -19,6 +19,7 @@ import { getScenario } from '../../sim/scenario-registry';
 import { sightings } from '../../sim/sightings';
 import { LAST_SEEN_LINES, sightingFlags, storyPeopleActual, storyPeoplePublic, storyPublicScenario } from '../../sim/story-people';
 import { NOW } from '../../sim/test-fixtures';
+import { actionViews } from '../../sim/operation-selectors';
 import type { GameState } from '../../sim/types';
 import { applyMove, applyNaturalMove, startGateRun, withDraftScenario } from './gates/engine-driver';
 import { generateIncident } from './index';
@@ -81,14 +82,25 @@ describe('a move compiles into the person’s story (R-B3)', () => {
 describe('truth and belief after a hidden move', () => {
   const moved = run([movedFlag('subject', 1)]);
 
-  it('truth is the hall; the team still believes the room it saw them in, as last seen, with no reporter credited', () => {
+  it('truth is the hall; nothing public changes until the team looks, so an unseen move tells the player nothing', () => {
     expect(storyPeopleActual(found.s, moved).find(person => person.id === 'subject')!.position).toEqual(hall());
-    const believed = storyPeoplePublic(found.s, found.built, moved).find(person => person.id === 'subject')!;
+    expect(storyPeoplePublic(found.s, found.built, moved)).toEqual(storyPeoplePublic(found.s, found.built, run([])));
+    expect(storyPublicScenario(found.s, found.built, moved)).toEqual(storyPublicScenario(found.s, found.built, run([])));
+  });
+
+  it('a look into the room the team last saw them in, now empty, shows it as where they were last seen, with no reporter credited', () => {
+    const look = { ...Object.values(found.s.stages).flatMap(stage => stage.actions)[0], observes: [subject().spaceId] };
+    const empty = sightings(found.s, moved, look, 'favorable', []);
+    expect(empty?.setFlags).toEqual([lostFlag('subject')]);
+    const lost = run([movedFlag('subject', 1), lostFlag('subject')]);
+    const believed = storyPeoplePublic(found.s, found.built, lost).find(person => person.id === 'subject')!;
     expect(believed).toMatchObject({ status: 'reported', stale: true, position: found.s.story!.bindings.people.subject.initial });
-    const fact = storyPublicScenario(found.s, found.built, moved).scenario.facts.find(entry => entry.id === subject().locationFactId)!;
+    const fact = storyPublicScenario(found.s, found.built, lost).scenario.facts.find(entry => entry.id === subject().locationFactId)!;
     expect(fact.markerSource).toBeUndefined();
     expect(fact.source).toBe(LAST_SEEN_LINES.source);
     expect(fact.claim).toMatch(/was last seen in/);
+    // Seeing them anywhere settles it.
+    expect(withFlag(lost.flags, seenFlag('subject', 1))).not.toContain(lostFlag('subject'));
   });
 
   it('a look into the hall settles it: the sighting sets the twin’s seen flag, and the team then knows the new spot', () => {
@@ -97,8 +109,8 @@ describe('truth and belief after a hidden move', () => {
     expect(seen?.setFlags).toEqual([seenFlag('subject', 1)]);
     const after = run([movedFlag('subject', 1), seenFlag('subject', 1)]);
     expect(storyPeoplePublic(found.s, found.built, after).find(person => person.id === 'subject')).toMatchObject({ status: 'confirmed', position: hall() });
-    // A look into the room they left sees nobody there now.
-    expect(sightings(found.s, moved, { ...look, observes: [subject().spaceId] }, 'favorable', [])?.setFlags ?? []).toEqual([]);
+    // A look into the room they left finds it empty: the trail is lost, nobody is seen there.
+    expect(sightings(found.s, moved, { ...look, observes: [subject().spaceId] }, 'favorable', [])?.setFlags ?? []).toEqual([lostFlag('subject')]);
   });
 
   it('the odds and force read belief, fire reads truth: cover and the door distance follow each', () => {
@@ -135,8 +147,21 @@ describe('an unseen move changes nothing belief reads', () => {
         expect(scenarioWithPeopleNow(s, built, after, 'belief'), `seed ${seed} ${status}`).toBe(s);
         expect(movedPersonAt(s, built, after, person, 'belief'), `seed ${seed} ${status}`).toBeNull();
         expect(readForceThreat(scenarioWithPeopleNow(s, built, after, 'belief'), after, person)).toEqual(readForceThreat(s, before, person));
+        expect(storyPublicScenario(s, built, after)).toEqual(storyPublicScenario(s, built, before));
       }
     }
+  });
+});
+
+describe('an unseen move leaves every offered choice’s odds as they were', () => {
+  it('actionViews with and without only the unseen move flag', () => {
+    withDraftScenario(found.s, id => {
+      const state = startGateRun(id);
+      const views = (s: GameState) => actionViews(s, NOW, 'A').map(view => [view.id, view.eligible, view.reason, view.likelihood]);
+      const moved = structuredClone(state);
+      moved.activeRun!.flags = [...moved.activeRun!.flags, movedFlag('subject', 1)];
+      expect(views(moved)).toEqual(views(state));
+    });
   });
 });
 
@@ -213,8 +238,8 @@ describe('the latest move wins, whatever order the call compiled them in', () =>
   it('one current move and one place last seen per person', () => {
     expect(after(action, cue, seenFlag('subject', 1), seenFlag('subject', 2))).toEqual([cue, seenFlag('subject', 2)]);
   });
-  it('seen in the hall, then moved out of sight: the team holds the hall as last seen', () => {
-    const flags = after(action, seenFlag('subject', 1), cue);
+  it('seen in the hall, moved out of sight, then the hall found empty: the team holds the hall as last seen', () => {
+    const flags = after(action, seenFlag('subject', 1), cue, lostFlag('subject'));
     const believed = storyPeoplePublic(s, buildLocation(s.locationFamilyId, s.locationSeed), { flags, knowledge: { [s.incidentPeople!.find(person => person.id === 'subject')!.locationFactId!]: 'confirmed' }, pressure: 0 })
       .find(person => person.id === 'subject')!;
     expect(believed).toMatchObject({ status: 'reported', stale: true, position: place(action) });

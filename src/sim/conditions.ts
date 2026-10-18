@@ -28,6 +28,10 @@ export const cueMoveKey = (clockId: string, cueIndex: number) => `cue.${clockId}
  * them in. Every engine path that sets flags goes through this. */
 export function withFlag(flags: string[], flag: string): string[] {
   const kind = /^(moved|seen):([^:]+):/.exec(flag);
-  const kept = kind ? flags.filter(entry => !entry.startsWith(`${kind[1]}:${kind[2]}:`) || entry === flag) : flags;
+  // Seeing someone anywhere settles a lost trail (lostFlag).
+  const kept = kind ? flags.filter(entry => (!entry.startsWith(`${kind[1]}:${kind[2]}:`) || entry === flag) && !(kind[1] === 'seen' && entry === lostFlag(kind[2]))) : flags;
   return kept.includes(flag) ? kept : [...kept, flag];
 }
+/** The team looked where it last saw `role` and found the spot empty (sightings.ts): the place shows
+ * as where they were last seen until the team sees them again. Only what the team observed sets it. */
+export const lostFlag = (role: string) => `lost:${role}`;

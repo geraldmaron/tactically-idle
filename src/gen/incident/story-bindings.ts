@@ -3,7 +3,7 @@ import { withVariants } from './drawn-model';
 import type { BuiltLocation, ExteriorZone, Id, LocationDefinition, ObjectType, Opening, PlacedObject, Polygon, Room, RoomType, Vec, ZoneKind } from '../../sim/types';
 import { floorMap, LOCATION_TUNING, openingFloor, pointInPolygon, polygonBBox, polygonCentroid } from '../../sim/location';
 import { findRoomPath } from '../../sim/furniture-path';
-import { seenFlag } from '../../sim/conditions';
+import { lostFlag, seenFlag } from '../../sim/conditions';
 
 export type StoryRouteProfile = StoryInstance['bindings']['routes'][string]['profile'];
 export interface StoryObjectSelector { spaceId?: Id; type?: ObjectType; tags?: readonly string[] }
@@ -242,6 +242,7 @@ export function validateStoryBindings(scenario: ScenarioDefinition, built: Built
     ...effects.flatMap(effect => [...effect.setFlags ?? [], ...effect.clearFlags ?? []]),
     // Set by the engine, not an authored effect (R-B3): a sighting's seen flag for a move, and a clock cue's mark.
     ...people.flatMap(person => person.transitions.flatMap(transition => (transition.when.flags ?? []).filter(flag => flag.startsWith(seenFlag(person.id, ''))))),
+    ...people.filter(person => person.transitions.some(transition => transition.when.flags?.some(flag => flag.startsWith(seenFlag(person.id, ''))))).map(person => lostFlag(person.id)),
     ...(scenario.clocks ?? []).flatMap(clock => clock.cues.flatMap(cue => [...cue.mark ? [`mark:${cue.mark}`] : [], ...cue.setFlags ?? []])), ...engineFlags,
     ...built.location.openings.flatMap(opening => ['open', 'closed', 'locked', 'blocked'].map(state => `opening:${opening.id}=${state}`))]);
   const requiredFact = (id: Id, context: string) => { if (!facts.has(id)) error(`${context} references unknown fact ${id}`); };
