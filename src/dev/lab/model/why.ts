@@ -73,13 +73,9 @@ function countText(leaf: Extract<ReqLeaf, { kind: 'count' }>): string {
   return min !== undefined && max !== undefined ? min === max ? `${group} = ${min}` : `${group} ${min} to ${max}` : min !== undefined ? `${group} ≥ ${min}` : `${group} ≤ ${max}`;
 }
 
-/** The clause the requirement tree will carry for `TreeState.armed`: at least `min` (default 1) of a
- * group's members hold a weapon a look would see. ReqLeaf has no such member yet (engine work after
- * clock-runout-routing; shape decided 2026-10-18), so each reader below recognizes it by kind in its
- * default branch, and keeps compiling once the member exists. It holds through countHolds on the
- * call's counts (callCounts), the compiler's own rule. */
-type ArmedLeaf = { kind: 'armed'; role: string; min?: number };
-const armedLeaf = (leaf: { kind: string }): ArmedLeaf | null => leaf.kind === 'armed' ? leaf as unknown as ArmedLeaf : null;
+/** The clause for `TreeState.armed`: at least `min` (default 1) of a group's members hold a weapon a
+ * look would see. It holds through countHolds on the call's counts (callCounts), the compiler's own rule. */
+type ArmedLeaf = Extract<ReqLeaf, { kind: 'armed' }>;
 const armedText = (leaf: ArmedLeaf, tree: CallTree) => `at least ${leaf.min ?? 1} of the ${roleNoun(tree, leaf.role)} armed`;
 const armedHolds = (leaf: ArmedLeaf, ctx: ReqContext) => countHolds({ armed: { role: leaf.role, ...leaf.min !== undefined ? { min: leaf.min } : {} } }, ctx.counts);
 const armedHas = (leaf: ArmedLeaf, ctx: ReqContext) => ctx.counts[armedKey(leaf.role)];
@@ -112,10 +108,7 @@ export function leafLabel(leaf: ReqLeaf, tree: CallTree, deps: DependencyIndex |
     case 'drawn': return `Drawn result: ${leaf.result.replace(':', ' ')}`;
     case 'authority': return leaf.detail === 'entry' ? 'Command approves an entry' : `Command approves the concession (${leaf.detail.replace(/^concede /, '').replace(/_/g, ' ')})`;
     case 'noEarlierPrompt': return 'No earlier prompt variant matches';
-    default: {
-      const armed = armedLeaf(leaf as { kind: string });
-      return armed ? `Armed: ${armedText(armed, tree).replace(/^at least/, 'At least')}` : (leaf as { kind: string }).kind;
-    }
+    case 'armed': return `Armed: ${armedText(leaf, tree).replace(/^at least/, 'At least')}`;
   }
 }
 
@@ -162,10 +155,7 @@ export function leafNow(leaf: ReqLeaf, state: GameState, ctx: ReqContext, view?:
       return verdict(!earlier.some(entry => stateHolds(entry.when, ctx, run)));
     }
     case 'band': case 'drawn': return 'unknown';
-    default: {
-      const armed = armedLeaf(leaf as { kind: string });
-      return armed ? verdict(armedHolds(armed, ctx)) : 'unknown';
-    }
+    case 'armed': return verdict(armedHolds(leaf, ctx));
   }
 }
 
@@ -181,8 +171,7 @@ function leafDraw(leaf: ReqLeaf, ctx: ReqContext, now: Verdict): string | null {
     return `needs turn ${sentenceCase(leaf.node).toLowerCase()}${now === 'fail' && drawn ? `; this call drew ${sentenceCase(drawn).toLowerCase()}` : ''}`;
   }
   if (leaf.kind === 'drawn') return `needs the drawn result ${leaf.result.replace(':', ' ')}`;
-  const armed = armedLeaf(leaf);
-  if (armed) { const n = armedHas(armed, ctx); return `needs ${armedText(armed, ctx.tree)}${now === 'fail' && n !== undefined ? `; this call has ${n}` : ''}`; }
+  if (leaf.kind === 'armed') { const n = armedHas(leaf, ctx); return `needs ${armedText(leaf, ctx.tree)}${now === 'fail' && n !== undefined ? `; this call has ${n}` : ''}`; }
   return null;
 }
 
@@ -300,7 +289,7 @@ export function holdsIn(req: ReqNode, state: GameState, ctx: ReqContext, view?: 
 
 /** Clauses a call can't change by playing: its hidden truth, the squad's certs, its group sizes, how
  * many members are armed, and the turns it drew. */
-const STATIC_KINDS = new Set<string>(['fact', 'cert', 'count', 'turn', 'armed']);
+const STATIC_KINDS = new Set<ReqLeaf['kind']>(['fact', 'cert', 'count', 'armed', 'turn']);
 
 /** One failing clause in words: what it needs, then what this call has instead. */
 function blockerWords(leaf: ReqLeaf, ctx: ReqContext, deps: DependencyIndex | null, squad: string): string {
@@ -312,10 +301,8 @@ function blockerWords(leaf: ReqLeaf, ctx: ReqContext, deps: DependencyIndex | nu
     case 'cert': return `certification in ${certWords(leaf.cert)}, and ${squad} has none`;
     case 'count': return `${countText(leaf)}, and this call has ${ctx.counts[leaf.group] ?? 0}`;
     case 'turn': return `the turn ${sentenceCase(leaf.node).toLowerCase()}, and this call drew ${sentenceCase(ctx.turnDrawn[leaf.group] ?? 'none').toLowerCase()}`;
-    default: {
-      const armed = armedLeaf(leaf);
-      return armed ? `${armedText(armed, ctx.tree)}, and this call has ${armedHas(armed, ctx) ?? 'no count'}` : leafLabel(leaf, ctx.tree, deps);
-    }
+    case 'armed': return `${armedText(leaf, ctx.tree)}, and this call has ${armedHas(leaf, ctx) ?? 'no count'}`;
+    default: return leafLabel(leaf, ctx.tree, deps);
   }
 }
 

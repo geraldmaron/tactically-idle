@@ -10,7 +10,8 @@ import type { IncidentTemplate } from '../../../content/incidents/types';
 import { generateIncident } from '../../../gen/incident';
 import { compileIncident, drawInstance, hostedSpec } from '../../../gen/incident/instance';
 import { armedKey, callCounts, memberCounts } from '../../../gen/incident/trees-v13/compile';
-import type { ReqLeaf } from '../../../gen/incident/trees-v13/dependencies';
+import { requirementTree } from '../../../gen/incident/trees-v13/dependencies';
+import type { ReqLeaf, ReqNode } from '../../../gen/incident/trees-v13/dependencies';
 import { GROUP_TEMPLATE, GROUP_TREE } from '../../../gen/incident/trees-v13/group-fixture';
 import { callStringRows } from '../../../gen/incident/trees-v13/strings';
 import { buildLocation } from '../../../sim/location';
@@ -54,8 +55,8 @@ const inScript = (counts: Record<string, number>) => variantRows(tree, { counts,
 const inPalette = (counts: Record<string, number>) => callStringRows(tree, text => text, counts).some(row => row.text === ARMED_LINE);
 const ctx = (counts: Record<string, number>) => ({ tree, counts }) as unknown as ReqContext;
 const RUNNING = { activeRun: {} } as unknown as GameState;
-// The leaf the requirement tree will carry for TreeState.armed (shape decided 2026-10-18).
-const ARMED = { kind: 'armed', role: 'others' } as unknown as ReqLeaf;
+// The requirement tree's clause for TreeState.armed.
+const ARMED: ReqLeaf = { kind: 'armed', role: 'others' };
 
 describe('the lab shows an armed line only where the compiled call keeps it', () => {
   const none = draw(template, 0), two = draw(template, 2);
@@ -93,8 +94,18 @@ describe('the lab shows an armed line only where the compiled call keeps it', ()
   it('reads the Why clause for the armed leaf from the same counts', () => {
     expect(leafNow(ARMED, RUNNING, ctx(callCounts(none.placed)))).toBe('fail');
     expect(leafNow(ARMED, RUNNING, ctx(callCounts(two.placed)))).toBe('pass');
-    expect(leafNow({ ...ARMED, min: 3 } as unknown as ReqLeaf, RUNNING, ctx(callCounts(two.placed)))).toBe('fail');
+    expect(leafNow({ kind: 'armed', role: 'others', min: 3 }, RUNNING, ctx(callCounts(two.placed)))).toBe('fail');
     expect(leafLabel(ARMED, tree, null)).toBe('Armed: At least 1 of the others armed');
+  });
+
+  it('reads the armed clause the requirement tree gives the armed line', () => {
+    const hold = tree.nodes.find(node => node.id === 'talk')!.choices.find(choice => choice.id === 'hold')!;
+    const index = hold.outcomes.favorable.findIndex(outcome => outcome.text === ARMED_LINE);
+    const leaves = (node: ReqNode): ReqLeaf[] => 'leaf' in node ? [node.leaf] : ('all' in node ? node.all : node.any).flatMap(leaves);
+    const armed = leaves(requirementTree(tree, { outcome: ['talk', 'hold', 'favorable', index] })).find(leaf => leaf.kind === 'armed')!;
+    expect(armed).toEqual({ kind: 'armed', role: 'others' });
+    expect(leafNow(armed, RUNNING, ctx(callCounts(none.placed)))).toBe('fail');
+    expect(leafNow(armed, RUNNING, ctx(callCounts(two.placed)))).toBe('pass');
   });
 });
 
