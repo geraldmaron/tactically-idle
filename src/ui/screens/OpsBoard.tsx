@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { send, useGame } from '../store';
 import type { GameState, Id } from '../../sim/types';
 import type { ScenarioCard } from '../../sim/operation-selectors';
+import { boardShortages } from '../../sim/board-suggestions';
 import { Button, Chip, Section } from '../components/ui';
 import { TimeLeftBar, useNow } from '../components/incident';
 import { Icon } from '../icons';
@@ -41,7 +42,7 @@ export function OpsBoard({ onPrepare }: { onPrepare: (id: Id) => void }) {
         </div>
         <div className="stack opboard-list">
           {live.map((e) => (
-            <IncidentCardView key={e.card.id} entry={e} now={now} isNew={fresh.has(e.card.id)} squadCount={squadCount} onPrepare={onPrepare} />
+            <IncidentCardView key={e.card.id} g={g} entry={e} now={now} isNew={fresh.has(e.card.id)} squadCount={squadCount} onPrepare={onPrepare} />
           ))}
         </div>
         {arrival && (
@@ -101,14 +102,16 @@ function Eligibility({ card, squadCount }: { card: ScenarioCard; squadCount: num
   );
 }
 
-function IncidentCardView({ entry, now, isNew, squadCount, onPrepare }: { entry: BoardEntry; now: number; isNew: boolean; squadCount: number; onPrepare: (id: Id) => void }) {
+function IncidentCardView({ g, entry, now, isNew, squadCount, onPrepare }: { g: GameState; entry: BoardEntry; now: number; isNew: boolean; squadCount: number; onPrepare: (id: Id) => void }) {
   const { card, incident, scenario } = entry;
+  const short = boardShortages(g, card.id, now);
   const spec = scenario?.incident;
   // Each card names its own call's people; nobody is deployed yet.
   return (
     <GamePeopleProvider lexicon={scenario ? lexiconFor(scenario, null, []) : null}>
       <CallTile card={card} scenario={scenario} isNew={isNew} familyId={scenario?.locationFamilyId ?? spec?.familyId ?? incident.familyId} type={spec?.type ?? incident.type} tier={spec?.tier ?? incident.tier}
         facts={incident.newKind && <Chip tone="amber" icon="star">New kind of call</Chip>}
+        short={short}
         warning={<Eligibility card={card} squadCount={squadCount} />}
         footer={<>
           <TimeLeftBar arrivedAt={incident.arrivedAt} expiresAt={incident.expiresAt} now={now} />
