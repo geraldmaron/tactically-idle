@@ -4,15 +4,13 @@
 // opened from the game keeps the game's own squads instead. Every start goes through the content
 // gates' driver, so the run is the engine's own.
 import { startGateRun } from '../../../gen/incident/gates/engine-driver';
-import { CERT_LABEL } from '../../../sim/resolution';
-import type { CertId, GameState, SquadId } from '../../../sim/types';
+import type { GameState, SquadId } from '../../../sim/types';
 import type { SquadSpec } from '../jobs/protocol';
 import type { Kit, LabUrl } from '../types';
 import { KIT_ITEMS_FULL } from './call';
 import type { SquadSource } from './session';
+import { isCertId } from '../../../content/certs';
 
-/** A cert id the engine knows (sim/resolution CERT_LABEL); URL text is checked before it is granted. */
-export const isCertId = (cert: string): cert is CertId => Object.prototype.hasOwnProperty.call(CERT_LABEL, cert);
 /** "vehicle_operations" → "vehicle operations", as the call strip writes grants. */
 export const certWords = (cert: string): string => cert.replace(/_/g, ' ');
 

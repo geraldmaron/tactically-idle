@@ -50,7 +50,7 @@ export const WIRING: readonly Probe[] = [
   {
     id: 'officer-stress', system: 'officer', input: 'Officer strain (squad A at stress 90)', direction: 'down', status: 'live', minShare: 1, everyTree: true,
     perturb: state => edit(state, draft => { for (const officer of squadOfficers(draft)) officer.stress = 90; }),
-    evidence: '`conditionFraction` takes strain off each rating',
+    evidence: '`conditionFraction` takes strain off each rating (src/sim/officer.ts)',
   },
   {
     id: 'items-none', system: 'item', input: 'Carried equipment (squad A deploys with nothing)', direction: 'down', status: 'live', minShare: 0.1, openingOnly: true,

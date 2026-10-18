@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { TUNED_TABLES } from './tuning-tables';
 import { registeredTables, tuningLayers, validatePatch, type TuningPatch } from './tuning';
 import savedJson from './tuning.json';
-import { EXPERIENCE_TUNING, RESOLUTION_TUNING } from './resolution';
+import { RESOLUTION_TUNING } from './resolution';
+import { EXPERIENCE_TUNING, STRESS_TUNING } from './officer';
 import { SPATIAL_TUNING } from './spatial-factors';
 import { ROSTER_TUNING } from './roster';
 import { INCIDENT_TUNING } from './incidents';
@@ -27,7 +28,7 @@ import { RECRUIT_TUNING } from '../content/recruits';
 // problem.
 
 const LIVE: Record<string, object> = {
-  RESOLUTION_TUNING, EXPERIENCE_TUNING, SPATIAL_TUNING, ROSTER_TUNING, INCIDENT_TUNING, CLOCK_RULES_V1, FORCE_RISK_V1, CAREER_TUNING,
+  RESOLUTION_TUNING, EXPERIENCE_TUNING, STRESS_TUNING, SPATIAL_TUNING, ROSTER_TUNING, INCIDENT_TUNING, CLOCK_RULES_V1, FORCE_RISK_V1, CAREER_TUNING,
   LEARNING_MULTIPLIER, DEVELOP_TUNING, THREAT_TUNING, ENV_TUNING, OUTCOME_SCORE_V1, AUTHORIZATION_V1, INCIDENT_CLASS_V1, INCOMING_FIRE_V1,
   TEAM_FORCE_V1, CASCADE_V1, METERS_V1, ECONOMY_TUNING, EQUIPMENT_TUNING, RECRUIT_TUNING,
 };
@@ -41,7 +42,7 @@ const at = (table: object, path: string) => path.split('.').slice(1).reduce<unkn
 
 describe('the registry', () => {
   it('registers every table spec 7.4 wraps, and nothing else', () => {
-    expect(TUNED_TABLES).toHaveLength(22);
+    expect(TUNED_TABLES).toHaveLength(23);
     expect(registeredTables()).toEqual([...TUNED_TABLES].sort());
     expect(Object.keys(LIVE).sort()).toEqual([...TUNED_TABLES].sort());
   });

@@ -28,12 +28,13 @@ import { SCENARIO_ORDER } from '../content/scenarios';
 import { getScenario } from './scenario-registry';
 import { ITEMS } from '../content/items';
 import { deployability } from './officer';
-import { availableUnits, builtFor, CERT_LABEL, evaluateAction, getBuilt, RESOLUTION_TUNING, squadLabel, tagNames, type Evaluation } from './resolution';
+import { availableUnits, builtFor, evaluateAction, getBuilt, RESOLUTION_TUNING, squadLabel, tagNames, type Evaluation } from './resolution';
 import { conditionHolds } from './conditions';
 import { checkStart, computeDebrief, defaultSupport, evaluateDefault, decisionViewsFor, matchedEffects, matchedOutcomeIndices } from './operation';
 import { drawnDistribution, type DrawnDistribution } from './drawn-effects';
 import { approxPoint, spaceLabel } from './spatial-factors';
 import { actionEventResult } from './action-result';
+import { CERT_HOLDER } from '../content/certs';
 
 export interface ScenarioCard {
   id: Id;
@@ -348,7 +349,7 @@ export function stageProgress(state: GameState): StageProgress {
 
 function requirementLine(a: ActionDefinition): string {
   const parts: string[] = [];
-  for (const c of a.requires.certs ?? []) parts.push(CERT_LABEL[c] ?? c);
+  for (const c of a.requires.certs ?? []) parts.push(CERT_HOLDER[c] ?? c);
   const equipment = actionEquipmentRequirements(a);
   for (const group of equipment.groups) parts.push(group.label.toLowerCase());
   for (const consume of equipment.consumes) parts.push(`uses ${consume.qty} ${tagNames([consume.tag])}`);

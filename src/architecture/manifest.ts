@@ -90,6 +90,7 @@ export const OWNERSHIP: readonly { glob: string; layer: Layer; system: System }[
   { glob: '/src/content/personas.ts', layer: 'catalog', system: 'officer' },
   { glob: '/src/content/recruits.ts', layer: 'catalog', system: 'officer' },
   { glob: '/src/content/courses.ts', layer: 'catalog', system: 'officer' },
+  { glob: '/src/content/certs.ts', layer: 'catalog', system: 'officer' },
   { glob: '/src/content/dev-tree.ts', layer: 'catalog', system: 'metric' },
   { glob: '/src/content/american-english.ts', layer: 'catalog', system: 'platform' },
   // scenario generation
@@ -176,6 +177,5 @@ export const SYSTEM_EDGE_REASONS: Readonly<Record<string, string>> = {
   'metric -> subject': 'chain',
   'officer -> item': 'chain',
   'officer -> metric': 'Reversed: the roster and squad builder read department money, unlocks, the sim clock and squad deployment from economy.ts. Paying it means moving the clock and squad state out of economy and passing hiring costs in.',
-  'officer -> scenario': 'Reversed: the squad builder mirrors the call check (sim/resolution.ts conditionFraction, EXPERIENCE_TUNING mentoring, CERT_LABEL). Paying it means officer condition and mentoring tuning live with the officer.',
 };
 export const SYSTEM_EDGES: readonly string[] = Object.keys(SYSTEM_EDGE_REASONS);

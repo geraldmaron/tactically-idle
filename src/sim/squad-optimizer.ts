@@ -4,8 +4,8 @@ import type { CertId, GameState, HandlerResult, Id, Officer, RatingKey, SquadId 
 import { SQUAD_IDS } from './types';
 import { experienceBand, gameDay } from './calendar';
 import { ECONOMY_TUNING, recoveryDuty, simNow, squadDeployed } from './economy';
-import { deployability, highRiskAllowed, STRESS_BANDS, stressBand } from './officer';
-import { CERT_LABEL, conditionFraction, EXPERIENCE_TUNING } from './resolution';
+import { conditionFraction, deployability, EXPERIENCE_TUNING, highRiskAllowed, STRESS_BANDS, stressBand } from './officer';
+import { CERT_HOLDER } from '../content/certs';
 
 export interface SquadTopology {
   squads: { squadId: SquadId; officerIds: Id[]; leaderId: Id | null }[];
@@ -185,7 +185,7 @@ export function summarizeSquadArrangement(state: GameState, topology: SquadTopol
       const best = Math.max(0, ...usable.filter((o) => k !== 'shooting' || highRiskAllowed(o)).map((o) => effective(o, k)));
       (best >= 50 ? coverage : gaps).push(`${LABEL[k]} ${best}`);
     }
-    for (const cert of CERTS) if (usable.some((o) => usableCert(o, cert))) coverage.push(CERT_LABEL[cert] ?? cert);
+    for (const cert of CERTS) if (usable.some((o) => usableCert(o, cert))) coverage.push(CERT_HOLDER[cert] ?? cert);
     if (!usable.some((o) => usableCert(o, 'advanced_first_aid'))) gaps.push('No deployable advanced first aider');
     if (!usable.some((o) => usableCert(o, 'crisis_negotiation'))) gaps.push('No deployable crisis negotiator');
     if (!usable.some((o) => usableCert(o, 'entry_team'))) gaps.push('No available entry-trained officer');

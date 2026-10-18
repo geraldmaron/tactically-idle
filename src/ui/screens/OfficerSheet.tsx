@@ -14,12 +14,13 @@ import { OfficerProgress } from '../components/OfficerProgress';
 import { StressDisplay, StressGuide } from '../components/StressDisplay';
 import { useToast } from '../components/toast';
 import type { StatusKey } from '../components/labels';
-import { CERT_ICON, CERT_LABEL, ROLE_META, TRAIT_INFO } from '../components/labels';
+import { CERT_ICON, ROLE_META, TRAIT_INFO } from '../components/labels';
 import { officerStatus } from './squad-model';
 import { Portrait } from '../portraits/Portrait';
 import { agePortraitProps } from './helpers';
 import { Icon } from '../icons';
 import { money, perHour, rate, relativeTime, signedMoney, yearsText } from '../format';
+import { CERT_NAME } from '../../content/certs';
 
 export function OfficerSheet({ officerId, onClose }: { officerId: Id | null; onClose: () => void }) {
   const g = useGame();
@@ -93,7 +94,7 @@ function OfficerBody({ o, onClose }: { o: Officer; onClose: () => void }) {
         {o.certs.length > 0 && <div className="chips">
           {o.certs.map((c) => (
             <Chip key={c} tone="mint" icon={CERT_ICON[c]}>
-              {CERT_LABEL[c]}
+              {CERT_NAME[c]}
             </Chip>
           ))}
         </div>}

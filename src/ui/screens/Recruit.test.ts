@@ -6,9 +6,10 @@ import { dispatch } from '../../sim/game';
 import { projectHire } from '../../sim/department-selectors';
 import type { Command } from '../../sim/types';
 import { Button } from '../components/ui';
-import { CERT_LABEL, ROLE_META } from '../components/labels';
+import { ROLE_META } from '../components/labels';
 import { money, perHour, rate } from '../format';
 import { CandidateCard, candidatesWithHireReceipt, dismissHireReceipt, Recruit, RecruitRefresh, type HireReceipt } from './Recruit';
+import { CERT_NAME } from '../../content/certs';
 
 const NOW = Date.UTC(2026, 9, 3, 12);
 let state = createInitialState(NOW);
@@ -57,7 +58,7 @@ describe('ordinary recruitment refresh', () => {
       const name = `${c.officer.firstName} ${c.officer.surname}`;
       expect(html).toContain(renderToStaticMarkup(createElement('strong', { className: 'cand-name' }, name)));
       expect(html).toContain(ROLE_META[c.officer.role].label);
-      for (const cert of c.officer.certs) expect(html).toContain(CERT_LABEL[cert]);
+      for (const cert of c.officer.certs) expect(html).toContain(CERT_NAME[cert]);
     }
     expect(html).not.toContain('Hire…');
   });

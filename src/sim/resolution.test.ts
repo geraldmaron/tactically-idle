@@ -10,12 +10,12 @@ import {
   bandFor,
   bandProbabilities,
   builtFor,
-  conditionFraction,
   evaluateAction,
   riskBand,
   strainFor,
   type Evaluation,
 } from './resolution';
+import { conditionFraction } from './officer';
 import { validateScenario } from './operation';
 import { makeState, setRun, startRun } from './test-fixtures';
 

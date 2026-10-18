@@ -31,6 +31,7 @@ const sim = (...names: string[]) => names.map(name => `src/sim/${name}.test.ts`)
 export const PINNED_BY: Readonly<Record<string, readonly string[]>> = {
   RESOLUTION_TUNING: [...sim('resolution', 'consolidation', 'incident-factors', 'meters', 'pending-completion', 'spatial-factors', 'story-people', 'story-route-outcomes', 'story-squad-routes'), BALANCE],
   EXPERIENCE_TUNING: [...sim('spatial-factors'), BALANCE],
+  STRESS_TUNING: [...sim('resolution'), BALANCE],
   SPATIAL_TUNING: [...sim('spatial-factors'), BALANCE],
   ROSTER_TUNING: sim('department', 'career'),
   INCIDENT_TUNING: sim('incidents'),
@@ -89,8 +90,6 @@ export const TUNING_META: readonly FieldMeta[] = [
     adverseAt: { label: 'Goes badly below', help: 'A result below this goes badly. Must stay below "Goes well at".', min: -40, max: 10, step: 0.5, unit: 'points' },
     setbackChance: { label: 'Setback chance', help: 'Chance any choice goes badly, however strong the squad. Never below 0.005: forced bands aim inside it, and no style may guarantee a clean call.', min: 0.005, max: 0.12, step: 0.005, unit: 'chance' },
     luckChance: { label: 'Lucky-break chance', help: 'Chance any choice goes well, however weak the squad. Never below 0.005.', min: 0.005, max: 0.12, step: 0.005, unit: 'chance' },
-    conditionMax: { label: 'Stress cost to ratings', help: 'Share of an officer\'s rating contribution lost at stress 100, rising linearly from "Stress cost starts at".', group: 'pressure', min: 0, max: 0.9, step: 0.05, unit: 'share' },
-    conditionFrom: { label: 'Stress cost starts at', help: 'Stress level where ratings start to suffer.', group: 'pressure', min: 0, max: 60, step: 1, unit: 'stress' },
     pressureMax: { label: 'Scene pressure', help: 'Score points the lead seat loses at full scene pressure with no composure. Composure takes off up to "Composure shield" of it.', group: 'pressure', min: 0, max: 40, step: 1, unit: 'points' },
     pressureFrom: { label: 'Pressure bites from', help: 'Scene pressure (0 to 100) where the pressure penalty starts.', group: 'pressure', min: 0, max: 80, step: 1, unit: 'pressure' },
     composureShield: { label: 'Composure shield', help: 'Share of the pressure penalty that composure 100 removes.', group: 'pressure', min: 0, max: 1, step: 0.05, unit: 'share' },
@@ -110,6 +109,12 @@ export const TUNING_META: readonly FieldMeta[] = [
     'strain.pressureComposure': { label: 'Pressure strain', help: 'Extra strain at full scene pressure for an officer with no composure: strain × (1 + this × pressure × (1 − composure)).', group: 'strain', min: 0, max: 3, step: 0.05, unit: '×' },
     'strain.steadyTrait': { label: 'Steady officer, facts unresolved', help: 'Strain multiple for an officer with the steady trait while facts are still unresolved.', group: 'strain', min: 0.3, max: 1.2, step: 0.05, unit: '×' },
     'strain.rookieWithMentor': { label: 'Rookie with a mentor', help: 'Strain multiple for a rookie with a mentor in the squad.', group: 'strain', min: 0.3, max: 1.2, step: 0.05, unit: '×' },
+    malfunctionShare: { label: 'Unreliable kit penalty', help: 'Share of an unreliable unit\'s lost effect charged as its own negative line. The auto-equip ranking reads it too.', min: 0, max: 1, step: 0.05, unit: 'share' },
+    radioShare: { label: 'Radio share of coordination', help: 'Share of a support squad\'s coordination carried by the radio link.', min: 0, max: 1, step: 0.05, unit: 'share' },
+  }),
+  ...table('STRESS_TUNING', { group: 'pressure', mode: 'live' }, {
+    conditionMax: { label: 'Stress cost to ratings', help: 'Share of an officer\'s rating contribution lost at stress 100, rising linearly from "Stress cost starts at".', min: 0, max: 0.9, step: 0.05, unit: 'share' },
+    conditionFrom: { label: 'Stress cost starts at', help: 'Stress level where ratings start to suffer.', min: 0, max: 60, step: 1, unit: 'stress' },
   }),
   ...table('EXPERIENCE_TUNING', { group: 'odds', mode: 'live' }, {
     pressureOn: { label: 'Experience counts from', help: 'Scene pressure at which experience bonuses and penalties apply. Holding-the-line checks always count.', group: 'pressure', min: 0, max: 100, step: 5, unit: 'pressure' },
@@ -120,8 +125,6 @@ export const TUNING_META: readonly FieldMeta[] = [
     mentoring: { label: 'Mentoring', help: 'Score points when a mentor works beside a rookie. The squad builder reads it too.', min: 0, max: 6, step: 0.5, unit: 'points' },
     ageStrainFrom: { label: 'Age strain from', help: 'Age past which strain rises.', group: 'strain', min: 40, max: 60, step: 1, unit: 'years' },
     ageStrainPer5: { label: 'Age strain per 5 years', help: 'Extra strain share for each 5 years past "Age strain from".', group: 'strain', min: 0, max: 0.2, step: 0.01, unit: 'share' },
-    malfunctionShare: { label: 'Unreliable kit penalty', help: 'Share of an unreliable unit\'s lost effect charged as its own negative line. The auto-equip ranking reads it too.', min: 0, max: 1, step: 0.05, unit: 'share' },
-    radioShare: { label: 'Radio share of coordination', help: 'Share of a support squad\'s coordination carried by the radio link.', min: 0, max: 1, step: 0.05, unit: 'share' },
   }),
   ...table('SPATIAL_TUNING', { group: 'odds', mode: 'live' }, {
     clearFull: { label: 'Signal clear at', help: 'Transmission that counts as a fully clear signal; weaker signals help less.', min: 0.2, max: 1, step: 0.05, unit: 'transmission' },

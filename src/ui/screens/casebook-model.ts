@@ -10,7 +10,7 @@ import { ALL_BUILDING_FAMILIES } from '../../gen/building';
 import { casebookRecipes, betterBest, situationCount } from '../../sim/casebook';
 import type { IncidentType } from '../../sim/scenario-types';
 import type { CasebookBest, GameState } from '../../sim/types';
-import { CERT_LABEL } from '../components/labels';
+import { CERT_NAME } from '../../content/certs';
 
 // ---------------------------------------------------------------- requirements
 
@@ -20,7 +20,7 @@ const list = (words: readonly string[]) => words.length < 2 ? words.join('') : `
 export function requirementLines(missing: MissingRequirement): string[] {
   const lines: string[] = [];
   if (missing.level !== undefined) lines.push(`Department level ${missing.level}`);
-  if (missing.anyCert?.length) lines.push(`An officer certified in ${list(missing.anyCert.map((cert) => CERT_LABEL[cert] ?? cert))}`);
+  if (missing.anyCert?.length) lines.push(`An officer certified in ${list(missing.anyCert.map((cert) => CERT_NAME[cert] ?? cert))}`);
   if (missing.anyItem?.length) lines.push(`${list(missing.anyItem.map((item) => ITEMS[item]?.name ?? item))} in stock`);
   return lines;
 }

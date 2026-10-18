@@ -42,7 +42,8 @@ import type {
 } from './types';
 import type { ActionDefinition, AuthorityResult, CheckKind, Condition, EquipmentEffect, ScenarioDefinition } from './scenario-types';
 import { buildLocation, deriveLocation } from './location';
-import { highRiskAllowed } from './officer';
+import { conditionFraction, EXPERIENCE_TUNING, highRiskAllowed } from './officer';
+import { CERT_HOLDER, isCertId } from '../content/certs';
 import { squadUnits, unitEffectiveness } from './inventory';
 import { ageYears, experienceBand, gameDay } from './calendar';
 import { signalBetween } from './spatial';
@@ -87,9 +88,6 @@ export const RESOLUTION_TUNING = tunable('RESOLUTION_TUNING', {
   /** Fixed tails of the sample: chance of a setback / a lucky break at any margin. */
   setbackChance: 0.04,
   luckChance: 0.03,
-  /** Fraction of a rating contribution lost at stress 100 (linear from 15). */
-  conditionMax: 0.55,
-  conditionFrom: 15,
   /** Pressure penalty for the lead seat at full pressure with zero composure. */
   pressureMax: 22,
   pressureFrom: 25,
@@ -128,6 +126,10 @@ export const RESOLUTION_TUNING = tunable('RESOLUTION_TUNING', {
     /** A rookie's strain with a mentor in the squad. */
     rookieWithMentor: 0.85,
   },
+  /** Malfunction risk: share of an unreliable unit's lost effect charged as a separate negative contributor. */
+  malfunctionShare: 0.5,
+  /** Radio link: share of a support squad's coordination carried by the radio. */
+  radioShare: 0.5,
 }, { guard: resolutionProblem });
 
 /** Why a candidate RESOLUTION_TUNING can't be used, or null. */
@@ -141,24 +143,6 @@ function resolutionProblem(next: { setbackChance: number; luckChance: number; sp
   return null;
 }
 
-/** Officer experience and age (see docs/phase2-simulation.md section 5). Proposed values. Tunable (sim/tuning.ts). */
-export const EXPERIENCE_TUNING = tunable('EXPERIENCE_TUNING', {
-  /** Situation pressure at or above which experience bands matter (pressure-kind checks always count). */
-  pressureOn: 50,
-  rookiePenalty: -2,
-  rookieStrain: 1.15,
-  seasonedBonus: 2,
-  veteranBonus: 4,
-  mentoring: 2,
-  /** Strain share per 5 years of age over this. */
-  ageStrainFrom: 50,
-  ageStrainPer5: 0.05,
-  /** Malfunction risk: share of an unreliable unit's lost effect charged as a separate negative contributor. */
-  malfunctionShare: 0.5,
-  /** Radio link: share of a support squad's coordination carried by the radio. */
-  radioShare: 0.5,
-});
-
 const RATING_LABEL: Record<RatingKey, string> = {
   shooting: 'shooting',
   composure: 'composure',
@@ -168,26 +152,12 @@ const RATING_LABEL: Record<RatingKey, string> = {
   coordination: 'coordination',
 };
 
-export const CERT_LABEL: Record<string, string> = {
-  crisis_negotiation: 'crisis negotiator',
-  entry_team: 'entry-trained officer',
-  advanced_first_aid: 'advanced first aider',
-  surveillance: 'surveillance specialist',
-  drone_operator: 'drone operator',
-  less_lethal: 'less-lethal qualified officer',
-  advanced_less_lethal: 'advanced less-lethal qualified officer',
-  deescalation: 'de-escalation qualified officer',
-  vehicle_operations: 'qualified vehicle operator',
-  precision_support: 'qualified specialist support officer',
-  controlled_access: 'controlled-access qualified officer',
-};
-
 const round1 = (n: number) => Math.round(n * 10) / 10;
 const clamp = (n: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, n));
 export const squadLabel = (id: SquadId) => `Squad ${id}`;
 /** "Needs a crisis negotiator", "Needs an advanced first aider": what a locked card says it lacks. */
 function certNeed(cert: string): string {
-  const label = CERT_LABEL[cert] ?? cert.replace(/_/g, ' ');
+  const label = isCertId(cert) ? CERT_HOLDER[cert] : cert.replace(/_/g, ' ');
   return `Needs ${/^[aeiou]/i.test(label) ? 'an' : 'a'} ${label}`;
 }
 
@@ -443,11 +413,6 @@ function relatedFactIds(a: ActionDefinition): Set<Id> {
       e.reveal?.forEach((id) => ids.add(id));
     }
   return ids;
-}
-
-export function conditionFraction(stress: number): number {
-  const T = RESOLUTION_TUNING;
-  return clamp(((stress - T.conditionFrom) / (100 - T.conditionFrom)) * T.conditionMax, 0, T.conditionMax);
 }
 
 function aptitude(o: Officer, a: ActionDefinition): { value: number; parts: { key: RatingKey; rating: number }[] } {
@@ -992,7 +957,7 @@ export function evaluateAction(input: EvalInput): Evaluation {
     if (b.eff < 1 && b.full > 0) {
       contributors.push({
         label: `${b.def.name} ${b.unit.serial}: condition ${Math.round(b.unit.condition)}, malfunction risk`,
-        value: -round1(E.malfunctionShare * b.full * (1 - b.eff)),
+        value: -round1(RESOLUTION_TUNING.malfunctionShare * b.full * (1 - b.eff)),
         source: 'equipment',
         ref: b.unit.id,
       });
@@ -1091,7 +1056,7 @@ export function evaluateAction(input: EvalInput): Evaluation {
       const raw = rule.max * (coord / 100) * reach * Math.pow(T.supportRank, i);
       contributors.push({
         label: `${squadLabel(sq)} ${rule.label}: ${round1(dist)} min away, coordination ${Math.round(coord)}`,
-        value: round1(raw * (1 - E.radioShare)),
+        value: round1(raw * (1 - RESOLUTION_TUNING.radioShare)),
         source: 'support',
         ref: sq,
       });
@@ -1119,14 +1084,14 @@ export function evaluateAction(input: EvalInput): Evaluation {
         link = 0.3;
         text = `no radios, voice carries ${Math.round(gap)} ft`;
       } else text = `no radios, ${Math.round(gap)} ft apart is out of voice range (${SPATIAL_TUNING.voiceLinkFt} ft)`;
-      if (radioA && radioB) radioDeficit += raw * E.radioShare * (1 - clamp(link, 0, 1));
-      contributors.push({ label: `${squadLabel(sq)} link: ${text}`, value: round1(raw * E.radioShare * clamp(link, 0, 1)), source: 'equipment', ref: radioB?.itemId ?? sq });
+      if (radioA && radioB) radioDeficit += raw * RESOLUTION_TUNING.radioShare * (1 - clamp(link, 0, 1));
+      contributors.push({ label: `${squadLabel(sq)} link: ${text}`, value: round1(raw * RESOLUTION_TUNING.radioShare * clamp(link, 0, 1)), source: 'equipment', ref: radioB?.itemId ?? sq });
       for (const [r, who] of [[radioA, acting[0]], [radioB, sq]] as const) {
         if (r && effOf(r) < 1) {
           const def = ITEMS[r.itemId];
           contributors.push({
             label: `${def.name} ${r.serial} (${squadLabel(who)}): condition ${Math.round(r.condition)}, malfunction risk`,
-            value: -round1(E.malfunctionShare * raw * E.radioShare * (1 - effOf(r))),
+            value: -round1(RESOLUTION_TUNING.malfunctionShare * raw * RESOLUTION_TUNING.radioShare * (1 - effOf(r))),
             source: 'equipment',
             ref: r.id,
           });

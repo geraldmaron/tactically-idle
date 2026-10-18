@@ -6,7 +6,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { INCIDENT_TEMPLATES } from '../../../../content/incidents';
-import { CERT_LABEL } from '../../../../sim/resolution';
 import { Portrait } from '../../../../ui/portraits/Portrait';
 import { DRAW_NOTICE, useLab } from '../../context';
 import { familyLabel } from '../../model/call';
@@ -20,8 +19,9 @@ import type { FrameScreen, LabCall } from '../../types';
 import { REFERENCE_SQUAD } from '../../url';
 import { cx, Glyph, SegmentedControl, Tag } from '../../viz';
 import { TrueDeviceButton } from './TrueDevice';
+import { CERT_IDS } from '../../../../content/certs';
 
-const CERTS = Object.keys(CERT_LABEL).sort();
+const CERTS = [...CERT_IDS].sort();
 const words = (id: string) => id.replace(/_/g, ' ');
 const sentence = (id: string) => { const text = words(id); return text.charAt(0).toUpperCase() + text.slice(1); };
 const randomSeed = () => Math.floor(Math.random() * 100000);

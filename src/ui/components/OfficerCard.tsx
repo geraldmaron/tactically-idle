@@ -6,9 +6,10 @@ import { agePortraitProps } from '../screens/helpers';
 import { DepartmentContext } from './department-context';
 import { Icon } from '../icons';
 import { useWidth } from './hooks';
-import { CERT_ICON, CERT_LABEL, ROLE_META, bandOf, BAND_SHORT, STATUS_META } from './labels';
+import { CERT_ICON, ROLE_META, bandOf, BAND_SHORT, STATUS_META } from './labels';
 import type { StatusKey } from './labels';
 import { ReadinessBar } from './ui';
+import { CERT_NAME } from '../../content/certs';
 
 export interface OfficerCardProps {
   officer: Officer;
@@ -55,7 +56,7 @@ export function OfficerCard({ officer, now, variant = 'strip', selected, onClick
         className={`ocard ocard-tile${selected ? ' ocard-on' : ''}${statusKey ? ` ocard-tile-${statusKey}` : ''}`}
         onClick={onClick}
         aria-pressed={onClick && selected !== undefined ? selected : undefined}
-        aria-label={`${officer.firstName} ${officer.surname}, ${role.label}, ${statusText}, stress ${Math.floor(officer.stress + 1e-9)}${squadId ? `, squad ${squadId}` : ''}${leader ? ', squad leader' : ''}${officer.certs.length ? `, ${officer.certs.map((cert) => CERT_LABEL[cert]).join(', ')}` : ''}`}
+        aria-label={`${officer.firstName} ${officer.surname}, ${role.label}, ${statusText}, stress ${Math.floor(officer.stress + 1e-9)}${squadId ? `, squad ${squadId}` : ''}${leader ? ', squad leader' : ''}${officer.certs.length ? `, ${officer.certs.map((cert) => CERT_NAME[cert]).join(', ')}` : ''}`}
       >
         <span className="ocard-art" ref={ref} style={{ aspectRatio: '1 / 1.04' }}>
           <Portrait officer={officer} size={size} {...age} />

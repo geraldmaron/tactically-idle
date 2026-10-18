@@ -7,7 +7,6 @@ import { equipmentWearMultiplier } from '../../sim/equipment-manager-policy';
 import type { CertId, Id } from '../../sim/types';
 import { GearArtFrame } from '../art/GearArt';
 import { useNav } from '../components/nav';
-import { CERT_LABEL } from '../components/labels';
 import { Sheet } from '../components/Sheet';
 import { useToast } from '../components/toast';
 import { Button, Chip, EmptyState } from '../components/ui';
@@ -22,6 +21,7 @@ import {
   type AvailabilityFilter, type CatalogEntry, type EquipmentQuery, type OwnershipFilter, type StoreSort,
 } from './store-query';
 import { useEquipmentDetail } from './useEquipmentDetail';
+import { CERT_NAME } from '../../content/certs';
 
 interface EquipmentStoreProps {
   active: boolean;
@@ -171,7 +171,7 @@ function EquipmentDetail({ entry, onClose, onDevelopment, onTraining }: {
     <section className="store-detail-section"><h3>Unlock and qualifications</h3>
       <p>{entry.unlocked ? 'Purchase unlocked.' : `Purchase requires ${entry.unlockName}.`} {entry.affordable ? 'One unit is affordable with current funding.' : 'Current funding is below the unit price.'}</p>
       {item.requiresNode && <Button size="sm" onClick={() => onDevelopment(item.requiresNode!)}>View {entry.unlockName}</Button>}
-      {item.requiresCerts?.length ? <><p>Use requires {item.requiresCerts.map((cert) => CERT_LABEL[cert]).join(' + ')}. {entry.qualified} officer{entry.qualified === 1 ? '' : 's'} currently hold{entry.qualified === 1 ? 's' : ''} all required certifications.</p><p className="dim">Buying stock does not qualify an officer. Certified officers may still be unavailable or unsuitable for a particular action.</p><Button size="sm" onClick={() => onTraining(item.requiresCerts?.[0])}>Find qualification training</Button></> : <p>No item-specific certification required. Individual action requirements still apply.</p>}
+      {item.requiresCerts?.length ? <><p>Use requires {item.requiresCerts.map((cert) => CERT_NAME[cert]).join(' + ')}. {entry.qualified} officer{entry.qualified === 1 ? '' : 's'} currently hold{entry.qualified === 1 ? 's' : ''} all required certifications.</p><p className="dim">Buying stock does not qualify an officer. Certified officers may still be unavailable or unsuitable for a particular action.</p><Button size="sm" onClick={() => onTraining(item.requiresCerts?.[0])}>Find qualification training</Button></> : <p>No item-specific certification required. Individual action requirements still apply.</p>}
     </section>
     {restock.unlocked && item.kind !== 'infrastructure' && <div className="store-detail-section"><RestockRuleEditor itemId={item.id} /></div>}
     <details className="store-detail-more"><summary>Supplies, upkeep and action fit</summary>

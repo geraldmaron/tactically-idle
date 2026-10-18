@@ -22,20 +22,6 @@ export const RATING_META: { key: RatingKey; label: string; short: string; icon: 
   { key: 'coordination', label: 'Coordination', short: 'Coordination', icon: 'nodes' },
 ];
 
-export const CERT_LABEL: Record<CertId, string> = {
-  crisis_negotiation: 'Crisis negotiation',
-  entry_team: 'Entry team',
-  advanced_first_aid: 'Advanced first aid',
-  surveillance: 'Surveillance',
-  drone_operator: 'Drone operator',
-  less_lethal: 'Less-lethal response',
-  advanced_less_lethal: 'Advanced less-lethal response',
-  deescalation: 'De-escalation',
-  vehicle_operations: 'Vehicle operations',
-  precision_support: 'Precision support',
-  controlled_access: 'Controlled access',
-};
-
 export const CERT_ICON: Record<CertId, IconName> = {
   crisis_negotiation: 'chat',
   entry_team: 'door',

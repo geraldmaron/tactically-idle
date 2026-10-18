@@ -6,7 +6,7 @@ import { projectHire, sortedCandidates, type Projection } from '../../sim/depart
 import type { Candidate, Id } from '../../sim/types';
 import { Button, Card, Chip, EmptyState, ExperienceChip, KV, RatingBars, Section } from '../components/ui';
 import { useToast } from '../components/toast';
-import { CERT_ICON, CERT_LABEL, ROLE_META, TRAIT_INFO } from '../components/labels';
+import { CERT_ICON, ROLE_META, TRAIT_INFO } from '../components/labels';
 import { RetirementChip, useCareerSnapshot } from '../components/Career';
 import { Portrait } from '../portraits/Portrait';
 import { agePortraitProps } from './helpers';
@@ -14,6 +14,7 @@ import { Icon } from '../icons';
 import { money, perHour, rate, relativeTime, yearsText } from '../format';
 import './recruit.css';
 import './squad-visual.css';
+import { CERT_NAME } from '../../content/certs';
 
 export interface HireReceipt { candidate: Candidate; projection: Projection; index: number }
 
@@ -130,7 +131,7 @@ export function CandidateCard({ c, now, open, onToggle, onHired, receipt, onDone
         <div className="chips">
           {o.certs.map((x) => (
             <Chip key={x} tone="mint" icon={CERT_ICON[x]}>
-              {CERT_LABEL[x]}
+              {CERT_NAME[x]}
             </Chip>
           ))}
           {o.traits.map((t) => (

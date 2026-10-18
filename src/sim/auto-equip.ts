@@ -4,7 +4,7 @@ import { ITEMS } from '../content/items';
 import { readyUnits } from './inventory';
 import { radioRequirement, standardRadioPlan, STANDARD_RADIO } from './standard-kit';
 import { deployability } from './officer';
-import { EXPERIENCE_TUNING, getBuilt } from './resolution';
+import { getBuilt, RESOLUTION_TUNING } from './resolution';
 import { projectedCondition } from './equipment';
 import { unitEffectiveness } from './inventory';
 import { centroidOf, standingCandidates, rangeToPoint, rangeThroughOpening } from './spatial-factors';
@@ -179,7 +179,7 @@ export function autoLoadout(state: GameState, scenarioId: Id, squadIds: SquadId[
         factor = Math.max(0, ...origin.map((at) => (eq.range === 'target' ? rangeToPoint(def, at, centroidOf(context.built, action.targetId)) : rangeThroughOpening(context.built, def, at, action.targetId)).factor));
       }
       const full = cap <= 1 ? eq.narrowValue ?? eq.value : eq.value;
-      const value = Math.round(full * effectiveness * factor * 10) / 10 - Math.round(EXPERIENCE_TUNING.malfunctionShare * full * (1 - effectiveness) * 10) / 10;
+      const value = Math.round(full * effectiveness * factor * 10) / 10 - Math.round(RESOLUTION_TUNING.malfunctionShare * full * (1 - effectiveness) * 10) / 10;
       if (value > 0) out.push({ value, minutes: 0, group: eq.group ?? eq.tag, prerequisites: [] });
     }
     for (const capability of def.capabilities ?? []) if (action.capabilities?.rules.includes(capability)) {

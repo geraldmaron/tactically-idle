@@ -7,10 +7,11 @@ import type { GameState, HandlerMap, Id, ItemUnit, SquadId } from './types';
 import { projectedCondition } from './equipment';
 import { readyUnits, reserveLoadouts, unitEffectiveness } from './inventory';
 import { advanceTime, applyClockCues } from './operation';
-import { availableUnits, builtFor, CERT_LABEL, evaluateAction } from './resolution';
+import { availableUnits, builtFor, evaluateAction } from './resolution';
 import { actionEquipmentRequirements, operatorQualified, qualifiedOfficers, requiredEquipmentBundle } from './equipment-requirements';
 import { getScenario } from './scenario-registry';
 import { departmentUpkeep } from './equipment-manager-policy';
+import { CERT_HOLDER } from '../content/certs';
 
 export const RESUPPLY_MINUTES = 3;
 
@@ -80,12 +81,12 @@ export function planActionResupply(
   const officers = qualifiedOfficers(state, acting, action);
   const missingCerts = requirements.certs.filter((cert) => !officers.some((officer) => officer.certs.includes(cert)));
   if (!officers.length) return result(true, 'Equipment alone will not unlock this action. No acting officer can take part.');
-  if (missingCerts.length) return result(true, `Equipment alone will not unlock this action. Needs a ${missingCerts.map((cert) => CERT_LABEL[cert] ?? cert).join(' and a ')} in the acting squads.`);
+  if (missingCerts.length) return result(true, `Equipment alone will not unlock this action. Needs a ${missingCerts.map((cert) => CERT_HOLDER[cert] ?? cert).join(' and a ')} in the acting squads.`);
   for (const group of requirements.groups) {
     const items = group.itemIds.map((id) => ITEMS[id]);
     if (items.length && !items.some((item) => acting.some((squadId) => operatorQualified(state, squadId, action, item)))) {
       const certs = [...new Set(items.flatMap((item) => item.requiresCerts ?? []))];
-      return result(true, `Equipment alone will not unlock this action. ${group.label} needs a qualified operator: ${certs.map((cert) => CERT_LABEL[cert] ?? cert).join(' or ')}.`);
+      return result(true, `Equipment alone will not unlock this action. ${group.label} needs a qualified operator: ${certs.map((cert) => CERT_HOLDER[cert] ?? cert).join(' or ')}.`);
     }
   }
 

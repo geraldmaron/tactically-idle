@@ -9,7 +9,6 @@ import type { ReactNode } from 'react';
 import { INCIDENT_TEMPLATES } from '../../../content/incidents';
 import { lintTree } from '../../../gen/incident/trees-v13/dependencies';
 import type { LintFinding } from '../../../gen/incident/trees-v13/dependencies';
-import { CERT_LABEL } from '../../../sim/resolution';
 import type { IncidentType } from '../../../sim/scenario-types';
 import { plural } from '../../../ui/format';
 import { DRAW_NOTICE, useLab } from '../context';
@@ -31,11 +30,12 @@ import { cx, Glyph, LintGlyph, Popover, SegmentedControl } from '../viz';
 import { onDirector, openDirector } from './director';
 import type { DirectorSection } from './director';
 import { useNarrow } from './media';
+import { CERT_IDS } from '../../../content/certs';
 
 /** "vehicle_operations" → "vehicle operations"; "out_keys" → "Out keys". */
 export const words = (id: string) => id.replace(/_/g, ' ');
 export const sentence = (id: string) => { const text = words(id); return text.charAt(0).toUpperCase() + text.slice(1); };
-export const CERTS = Object.keys(CERT_LABEL).sort();
+export const CERTS = [...CERT_IDS].sort();
 const PACING_LABEL = { ordinary: 'Steady', deliberate_answers: 'Slow to answer' } as const;
 const randomSeed = () => Math.floor(Math.random() * 100000);
 

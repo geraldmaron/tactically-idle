@@ -4,7 +4,7 @@ import { DEV_NODES } from '../../content/dev-tree';
 import { courseOptions } from '../../sim/department-selectors';
 import { fullName } from '../../sim/officer';
 import type { CertId, Course, Id, Officer } from '../../sim/types';
-import { CERT_ICON, CERT_LABEL, RATING_META, ROLE_META } from '../components/labels';
+import { CERT_ICON, RATING_META, ROLE_META } from '../components/labels';
 import { StressDisplay } from '../components/StressDisplay';
 import { Icon, type IconName } from '../icons';
 import { useToast } from '../components/toast';
@@ -19,13 +19,14 @@ import { trainingCandidates, trainingOfficerCondition, trainingRatingGain, train
 import { createTrainingChooserNavigation, type TrainingChoice, type TrainingEnrolment } from './training-chooser-navigation';
 import './training-store.css';
 import '../screens/squad-visual.css';
+import { CERT_NAME } from '../../content/certs';
 
 /** Apply a deep link once; returning from Develop keeps the officer and search the player edited. */
 export function trainingDraftForRequest(draft: TrainingDraft, focus: TrainingFocus, request: number): TrainingDraft {
   if (draft.request === request) return draft;
   return {
     officerId: focus.officerId ?? draft.officerId,
-    search: focus.courseId ? COURSES[focus.courseId]?.name ?? '' : focus.certId ? CERT_LABEL[focus.certId] : focus.officerId ? '' : draft.search,
+    search: focus.courseId ? COURSES[focus.courseId]?.name ?? '' : focus.certId ? CERT_NAME[focus.certId] : focus.officerId ? '' : draft.search,
     request,
   };
 }
@@ -84,7 +85,7 @@ export function TrainingStore({ requestedCert, requestedOfficer, requestedCourse
   const officers = Object.values(game.officers).sort((a, b) => a.surname.localeCompare(b.surname) || a.id.localeCompare(b.id));
   const officer = game.officers[officerId];
   const options = courseOptions(game, officer?.id ?? null, game.department.clockHighWater)
-    .filter(({ course }) => [course.name, course.grants.cert ? CERT_LABEL[course.grants.cert] : '', course.grants.rating?.key ?? ''].join(' ').toLowerCase().includes(search.trim().toLowerCase()));
+    .filter(({ course }) => [course.name, course.grants.cert ? CERT_NAME[course.grants.cert] : '', course.grants.rating?.key ?? ''].join(' ').toLowerCase().includes(search.trim().toLowerCase()));
   const inTraining = officers.filter((member) => member.assignment?.kind === 'training').length;
   const selectedCourse = choice ? COURSES[choice.courseId] : null;
   const candidates = selectedCourse ? trainingCandidates(game, selectedCourse.id) : [];
@@ -152,12 +153,12 @@ export function TrainingStore({ requestedCert, requestedOfficer, requestedCourse
         </div>
         <h3>{course.name}</h3>
         <div className="course-tile-gains">
-          {cert ? <Chip tone="mint" icon={CERT_ICON[cert]}>Earn {CERT_LABEL[cert]}</Chip> : rating ? <Chip tone="mint" icon={ratingMeta?.icon}>+{rating.delta} {ratingMeta?.label ?? rating.key}</Chip> : null}
+          {cert ? <Chip tone="mint" icon={CERT_ICON[cert]}>Earn {CERT_NAME[cert]}</Chip> : rating ? <Chip tone="mint" icon={ratingMeta?.icon}>+{rating.delta} {ratingMeta?.label ?? rating.key}</Chip> : null}
           <Chip icon="trend">+{courseXpGain(course.hours)} XP</Chip>
         </div>
         {rating && <p className="course-tile-note">Enrol below {COURSE_RATING_CEILING}</p>}
         {officer && <div className="training-course-personal"><span className="dim">For {officer.firstName}</span><TrainingGain course={course} officer={officer} compact /></div>}
-        {!!course.requiresCerts?.length && <p className="course-tile-note">Needs {course.requiresCerts.map((required) => CERT_LABEL[required]).join(' + ')}</p>}
+        {!!course.requiresCerts?.length && <p className="course-tile-note">Needs {course.requiresCerts.map((required) => CERT_NAME[required]).join(' + ')}</p>}
         {/* A full department is shown once by the places pips, not repeated on every tile. */}
         {reason && reason !== 'No free training slot' && <p className="reason">{reason}</p>}
         {officer && available && <p className="training-eligible"><Icon name="check" size={13} />{officer.firstName} can enrol</p>}
@@ -191,7 +192,7 @@ export function TrainingStore({ requestedCert, requestedOfficer, requestedCourse
       </div> : <div className="training-candidates">
         <div className="training-comparison-intro">
           <div className="course-tile-gains">
-            {selectedCourse.grants.cert ? <Chip tone="mint" icon={CERT_ICON[selectedCourse.grants.cert]}>Earn {CERT_LABEL[selectedCourse.grants.cert]}</Chip> : selectedCourse.grants.rating ? <Chip tone="mint" icon={RATING_META.find((meta) => meta.key === selectedCourse.grants.rating!.key)?.icon}>+{selectedCourse.grants.rating.delta} {RATING_META.find((meta) => meta.key === selectedCourse.grants.rating!.key)?.label}</Chip> : null}
+            {selectedCourse.grants.cert ? <Chip tone="mint" icon={CERT_ICON[selectedCourse.grants.cert]}>Earn {CERT_NAME[selectedCourse.grants.cert]}</Chip> : selectedCourse.grants.rating ? <Chip tone="mint" icon={RATING_META.find((meta) => meta.key === selectedCourse.grants.rating!.key)?.icon}>+{selectedCourse.grants.rating.delta} {RATING_META.find((meta) => meta.key === selectedCourse.grants.rating!.key)?.label}</Chip> : null}
             <Chip icon="trend">+{courseXpGain(selectedCourse.hours)} XP</Chip>
             <TrainingPlaces used={inTraining} total={game.department.trainingSlots} />
           </div>
@@ -229,7 +230,7 @@ export function TrainingEnrolmentReceipt({ course, enrolment, officer, now }: { 
       {officer && <Portrait officer={officer} size={52} className="training-portrait" />}
       <div className="training-person-name"><strong>{enrolment.officerName}</strong><span>{course.name}</span><span className="training-eligible" role="status">{inTraining ? `In training · ${duration(assignment.endsAt - now)} remaining` : completed ? 'Course completed' : officer ? trainingOfficerCondition(officer, now) : 'No longer on the roster'}</span></div>
     </div>
-    <div className="training-confirm-details"><strong>{completed ? 'Course completion benefits' : 'On completion'}</strong><p className="training-course-gain">{cert ? `Earn ${CERT_LABEL[cert]}` : rating ? `+${rating.delta} ${RATING_META.find((meta) => meta.key === rating.key)?.label ?? rating.key}` : ''}</p><p>+{courseXpGain(course.hours)} XP</p><p className="dim">{inTraining ? 'Away from squad duties until training finishes. Gains arrive on completion; XP may also improve a rating.' : completed ? 'Training has finished. Course gains and XP have been applied.' : 'Enrolment recorded. Check the officer’s current assignment for their availability.'}</p></div>
+    <div className="training-confirm-details"><strong>{completed ? 'Course completion benefits' : 'On completion'}</strong><p className="training-course-gain">{cert ? `Earn ${CERT_NAME[cert]}` : rating ? `+${rating.delta} ${RATING_META.find((meta) => meta.key === rating.key)?.label ?? rating.key}` : ''}</p><p>+{courseXpGain(course.hours)} XP</p><p className="dim">{inTraining ? 'Away from squad duties until training finishes. Gains arrive on completion; XP may also improve a rating.' : completed ? 'Training has finished. Course gains and XP have been applied.' : 'Enrolment recorded. Check the officer’s current assignment for their availability.'}</p></div>
   </div>;
 }
 
@@ -263,7 +264,7 @@ function TrainingGain({ course, officer, compact = false }: { course: Course; of
     <strong>{RATING_META.find((meta) => meta.key === gain.key)?.short}: {gain.before} → {gain.after}</strong>
     {(!compact || !gain.delta) && <span>{gain.delta ? `+${gain.delta} on completion` : `Enrolment cutoff reached (${COURSE_RATING_CEILING})`}</span>}
   </p>;
-  return cert ? <p className="training-gain"><strong>{officer.certs.includes(cert) ? `Already certified: ${CERT_LABEL[cert]}` : `Earns ${CERT_LABEL[cert]}`}</strong></p> : null;
+  return cert ? <p className="training-gain"><strong>{officer.certs.includes(cert) ? `Already certified: ${CERT_NAME[cert]}` : `Earns ${CERT_NAME[cert]}`}</strong></p> : null;
 }
 
 /** Comparison and confirmation share the same live eligibility and gain presentation. */
@@ -280,7 +281,7 @@ export function TrainingOfficerCard({ candidate: { officer, option }, now, selec
     </div>
     <RatingBars ratings={officer.ratings} only={keys} dense gains={gain && gain.delta ? { [gain.key]: gain.after } : undefined} label="Current relevant ratings" />
     {!gain?.delta && <div className="training-benefits" aria-label="On completion"><TrainingGain course={option.course} officer={officer} compact /><span className="training-xp">+{courseXpGain(option.course.hours)} XP</span></div>}
-    {!!option.course.requiresCerts?.length && <p className="training-prerequisite">Prior qualification: {option.course.requiresCerts.map((cert) => `${CERT_LABEL[cert]} (${officer.certs.includes(cert) ? 'held' : 'needed'})`).join(' · ')}</p>}
+    {!!option.course.requiresCerts?.length && <p className="training-prerequisite">Prior qualification: {option.course.requiresCerts.map((cert) => `${CERT_NAME[cert]} (${officer.certs.includes(cert) ? 'held' : 'needed'})`).join(' · ')}</p>}
     {option.reason ? <p className="reason">{option.reason}</p> : !onSelect && <p className="training-eligible">Can enrol</p>}
   </article>;
 }
