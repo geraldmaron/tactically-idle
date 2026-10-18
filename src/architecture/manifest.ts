@@ -142,6 +142,8 @@ export const OWNERSHIP: readonly { glob: string; layer: Layer; system: System }[
   { glob: '/src/sim/session.ts', layer: 'engine', system: 'platform' },
   { glob: '/src/sim/story-context.ts', layer: 'engine', system: 'scenario' },
   { glob: '/src/sim/{action-result,authorization,commitments,incidents,operation,operation-selectors,resolution,response-failure,scenario-registry}.ts', layer: 'engine', system: 'scenario' },
+  // What the board suggests bringing, read from a call type's authored tree and the department, never from a drawn call.
+  { glob: '/src/sim/board-suggestions.ts', layer: 'engine', system: 'scenario' },
   // ui
   { glob: '/src/ui/blueprint/**', layer: 'ui', system: 'blueprint' },
   { glob: '/src/ui/portraits/**', layer: 'ui', system: 'officer' },
