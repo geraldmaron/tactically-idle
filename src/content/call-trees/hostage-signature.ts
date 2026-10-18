@@ -464,7 +464,7 @@ export const HOSTAGE_SIGNATURE: CallTree = {
         { when: { count: { role: 'others', min: 1, max: 1 }, notMarks: ['others_out'], marks: ['saw_inside'], armed: { role: 'others', min: 1 } }, prompt: 'You saw {others.first} pull a steel bar from under the counter. {courier.first} hasn’t left the boxes.' },
         { when: { count: { role: 'others', min: 2 }, notMarks: ['others_out'], marks: ['saw_inside'], armed: { role: 'others', min: 2 } }, prompt: 'You watched both coworkers take steel bars from under the counter. {courier.first} sits by the street door.' },
         { when: { count: { role: 'others', min: 2 }, notMarks: ['others_out'], marks: ['saw_inside'], armed: { role: 'others', min: 1 } }, prompt: 'One coworker has a steel bar now, within reach of {owner.first}. {courier.first} waits near the entrance.' },
-        { when: { marks: ['owner_hidden'] }, prompt: '{owner.first} is behind the shelves now, out of sight of the glass. {courier.first} sits tight by the door.' },
+        { when: { marks: ['owner_hidden'], notMarks: ['owner_back'] }, prompt: '{owner.first} is behind the shelves now, out of sight of the glass. {courier.first} sits tight by the door.' },
         { when: { notSafe: ['courier'] }, prompt: 'The negotiator has {taker.first} talking. {courier.first} is near the entrance, and {owner.first} is by the till.' },
         { when: { ...GROUP, marks: ['others_out'] }, prompt: 'With {others} gone, {taker.first} is alone in there with {owner.first} and the phone.' },
         { when: GROUP_IN, prompt: 'The receiver is in {taker.first}’s hand. {others} {others#hovers|hover} near {owner.first}.' },
@@ -505,7 +505,7 @@ export const HOSTAGE_SIGNATURE: CallTree = {
             mixed: [
               { if: LETS_GO, text: '{taker.first} releases {owner.first} but keeps to the counter, still gripping the handgun.', reveal: ['lets_go'], safe: ['owner'], mark: ['still_armed'], moves: { taker: 'released' }, next: { node: 'last_one' }, objective: 40 },
               courierToo('{courier.first} is a pace ahead of {owner.him}.', { if: LETS_GO }),
-              { if: KEEPS, text: 'Nobody gets released on demand. {owner.first} goes back to the stool.', reveal: ['lets_go'], next: { node: 'standoff' } },
+              { if: KEEPS, text: 'Nobody gets released on demand. {owner.first} goes back to the stool.', reveal: ['lets_go'], mark: ['owner_back'], next: { node: 'standoff' } },
             ],
             adverse: escalate({
               lead: '“Nobody gives me orders,” {taker.first} says.',
@@ -644,7 +644,7 @@ export const HOSTAGE_SIGNATURE: CallTree = {
             // A patient hold lowers the temperature: at worst the taker stops talking, never turns on
             // the owner. The owner's heart is another matter.
             adverse: [
-              { if: OWNER_OK, text: '{taker.first} puts the phone down. From the corner, officers can see {taker.him} sitting with {taker.his} head in {taker.his} hands, {owner.first} still by the register.', mark: ['silent'], next: { node: 'standoff' }, minutes: 10 },
+              { if: OWNER_OK, text: '{taker.first} puts the phone down. From the corner, officers can see {taker.him} sitting with {taker.his} head in {taker.his} hands, {owner.first} still by the register.', mark: ['owner_back', 'silent'], next: { node: 'standoff' }, minutes: 10 },
               { if: OWNER_OUT, text: 'The line goes quiet. From outside, {owner.first} can be seen on the floor, not moving.', mark: ['owner_down'], next: { node: 'owner_down' }, minutes: 10 },
             ],
           } },
@@ -654,7 +654,7 @@ export const HOSTAGE_SIGNATURE: CallTree = {
       promptIf: [
         { when: { marks: ['owner_down'] }, prompt: '{owner.first} has collapsed on the tiles. {taker.first} is screaming at someone to do something.' },
         { when: { marks: ['owner_unwell'] }, prompt: '{owner.first} is breathing hard behind the till, and {taker.first} has stopped making offers.' },
-        { when: { marks: ['owner_hidden'] }, prompt: '{owner.first} is still out of sight behind the shelves, and the counter phone has gone quiet.' },
+        { when: { marks: ['owner_hidden'], notMarks: ['owner_back'] }, prompt: '{owner.first} is still out of sight behind the shelves, and the counter phone has gone quiet.' },
         { when: { marks: ['silent'] }, prompt: 'Every call goes unanswered. {owner.first} sits at the register within {taker.first}’s reach.' },
         { when: { marks: ['sign_demand'] }, prompt: '{taker.first} insists {owner.first} signs before anyone goes anywhere. {owner.He} {owner~waits|wait} by the cash drawer.' },
         { when: { notSafe: ['courier'] }, prompt: 'The bargaining is over. {courier.first} is still near the exit, while {owner.first} keeps to the stool.' },
