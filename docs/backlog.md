@@ -37,9 +37,12 @@ Needs: start=none (the rescue design sheet states the request); integrate=none; 
 
 The rescue shooter is offsite (`src/content/call-trees/rescue-chair.ts`), instance compilation
 leaves offsite people out of the incident (`src/gen/incident/instance.ts`), and incoming fire needs
-an incident person with a threat profile (`src/sim/operation.ts`). Done: a threat outside the
+an incident person with a threat profile (`src/sim/operation.ts`). The rescue design sheet
+(`docs/calls/rescue-design.md`, section O) splits this into R-R1 (the shooter as an incident person
+on the plan), R-R2 (one exposure that draws fire at each person in it) and R-R3 (fire odds from where
+each target really is and for how long, a new incoming-fire version). Done: a threat outside the
 building can fire on the team and on civilians through the drawn incoming-fire result, with its
-sightline from the generated building.
+sightline from the generated building, and R-R1 to R-R3 work in the rescue call.
 
 ### second-squad: A second squad can act
 Tags: job=build; journeys=new:joint-operation; probes=none (squad count is not a probe input yet); lane=engine
@@ -82,6 +85,19 @@ move a person, and the team can watch or enter a place on a route (the hall), no
 room. Done: each works in the barricade call on the building families its sheet names, with the
 conditions that keep text true where the building doesn't allow it.
 
+### rescue-engine-requests: Outcomes that change the scene
+Tags: job=command; journeys=choices-branch; probes=blueprint-building; lane=engine
+Needs: start=none; integrate=none; ship=none
+
+Requests R-R4 to R-R8 in `docs/calls/rescue-design.md`: R-R4 an outcome places cover (the rescue
+vehicle between the shooter and the porch), R-R5 an escort by the front or the back door, R-R6 an
+outcome changes a clock's rate, R-R7 an outcome sets a named exterior door's state, R-R8 the light
+at an outdoor place counts. R-R5 overlaps the barricade's window exit (R-B2): design one exit-route
+field for both. Each adds a field to an interface file, so each needs the lead's approval and a
+Codex review; prefer one general outcome shape over five call-specific ones where the review
+supports it. Done: each works in the rescue call, and R-R6 is checked against `src/sim/clocks.ts`,
+which the sheet did not re-read.
+
 ## Next: calls and the incident model
 
 ### barricade-model-first: Write the barricade call model-first
@@ -99,9 +115,9 @@ grows here too, since most of today's openings are phone calls that carry no gea
 
 ### rescue-model-first: Write the rescue call model-first
 Tags: job=command; journeys=answer-a-call, choices-branch; probes=blueprint-building; lane=calls
-Needs: start=none; integrate=offsite-fire; ship=none
+Needs: start=none; integrate=offsite-fire, clock-runout-routing, rescue-engine-requests; ship=none
 
-Same pipeline as the barricade. Done: rescue gunfire comes from the drawn incoming-fire result,
+Same pipeline as the barricade; the design sheet is `docs/calls/rescue-design.md`. Done: rescue gunfire comes from the drawn incoming-fire result,
 not harm authored per branch; `npm run check:strings` passes on it; it passes coverage, balance
 and review; and the old `rescue-chair` tree is retired.
 
@@ -183,6 +199,15 @@ Needs: start=none; integrate=none; ship=none
 `npm run test:e2e` plays the board through the real UI at 390x844 and 320x568, but neither `npm
 run verify` nor CI runs it, which is how it went stale. Done: pull-request CI runs it against a
 built preview, with its runtime and Chrome setup stated, or the backlog records why not.
+
+### fire-follows-building: Incoming fire follows the building
+Tags: job=command; journeys=chance-not-script; probes=none (a drawn-harm check, not a favorable-chance probe); lane=tooling
+Needs: start=none; integrate=offsite-fire; ship=none
+
+Rescue request R-R9: `measureWiring` compares eligibility and favorable odds only, so nothing checks
+that the drawn incoming-fire distribution changes with the building. Done: a paired-building check
+over every fire-carrying choice shows the hit share differs where the sightline does, as a
+trees-v13 test.
 
 ### lab-compare: Lab compare view
 Tags: job=understand; journeys=team-moves-odds; probes=none (tooling); lane=tooling
