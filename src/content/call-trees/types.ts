@@ -46,6 +46,11 @@ export interface TreeState {
    * doesn't know, so the same state must list in `marks` a mark set only on favorable results of
    * choices that look into the group's room, the results on which the team sees what they hold. */
   armed?: { role: string; min?: number };
+  /** Roles whose starting room is above the ground floor in this call (R-B1), settled when it
+   * compiles from the building, like `count`: text that says "upstairs" goes behind it.
+   * `notUpstairs`: roles whose room is on the ground floor. A group means its leader's room. */
+  upstairs?: string[];
+  notUpstairs?: string[];
 }
 
 /** A counted role: the people a template slot draws past its key roles (content/incidents/types.ts
@@ -79,7 +84,11 @@ export interface TreeRole {
   /** Where the person starts: the scene room (default), another room by type preference, or
    * outside with patrol. A bystander is always outside. 'offsite': outside the building altogether
    * (the shooter across the street): named in prose, never placed on the map. */
-  place?: 'scene' | 'outside' | 'offsite' | { rooms: RoomType[] };
+  place?: 'scene' | 'outside' | 'offsite' | { rooms: RoomType[];
+    /** Which floor that room may be on (R-B1): 'ground' (default), 'upper' (above the ground
+     * floor only: a building without one can't host the call), or 'any'. The route out walks the
+     * stairs. Text that says where they are goes behind TreeState.upstairs or notUpstairs. */
+    floor?: 'ground' | 'upper' | 'any' };
   /** Roles in one group share a drawn surname (a couple, a parent and child). */
   surnameGroup?: string;
   /** 'chair': this person leaves only along a step-free route wide enough for a wheelchair. */
