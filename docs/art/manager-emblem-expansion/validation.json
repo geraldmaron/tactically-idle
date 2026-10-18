@@ -1,0 +1,432 @@
+{
+  "emblemCount": 18,
+  "allDimensions": [
+    512,
+    512
+  ],
+  "allTrueAlpha": true,
+  "allDistinctHashes": true,
+  "runtimeBytes": 1264578,
+  "entries": [
+    {
+      "id": "crisis_negotiation_course",
+      "file": "crisis_negotiation_course.webp",
+      "bytes": 65604,
+      "dimensions": [
+        512,
+        512
+      ],
+      "mode": "RGBA",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "alphaBoundingBox": [
+        0,
+        15,
+        512,
+        498
+      ],
+      "sha256": "aa99e3bab2d6bde2a650137872ec032b8b104768b84ab8447269a704c3ed2d27"
+    },
+    {
+      "id": "entry_course",
+      "file": "entry_course.webp",
+      "bytes": 56326,
+      "dimensions": [
+        512,
+        512
+      ],
+      "mode": "RGBA",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "alphaBoundingBox": [
+        0,
+        13,
+        504,
+        503
+      ],
+      "sha256": "a389170003413869ecd36fec2a07c498f89b6e8dd1c050d3c33b00a08f465488"
+    },
+    {
+      "id": "drone_course",
+      "file": "drone_course.webp",
+      "bytes": 76420,
+      "dimensions": [
+        512,
+        512
+      ],
+      "mode": "RGBA",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "alphaBoundingBox": [
+        0,
+        0,
+        508,
+        507
+      ],
+      "sha256": "223445202bedae048e4563a4599d947bbeb6d884941d3d1952d84aa46d2c6235"
+    },
+    {
+      "id": "first_aid_course",
+      "file": "first_aid_course.webp",
+      "bytes": 77090,
+      "dimensions": [
+        512,
+        512
+      ],
+      "mode": "RGBA",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "alphaBoundingBox": [
+        8,
+        7,
+        504,
+        505
+      ],
+      "sha256": "ef4493344dd9519147604cae1b3a668d83090df4080f9916582bce1355982f11"
+    },
+    {
+      "id": "composure_workshop",
+      "file": "composure_workshop.webp",
+      "bytes": 64818,
+      "dimensions": [
+        512,
+        512
+      ],
+      "mode": "RGBA",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "alphaBoundingBox": [
+        4,
+        4,
+        508,
+        506
+      ],
+      "sha256": "1c86ce23121203e77a7625f052feba68d1cd1801640565444a02cbd6e7bdf5f9"
+    },
+    {
+      "id": "communication_refresher",
+      "file": "communication_refresher.webp",
+      "bytes": 71916,
+      "dimensions": [
+        512,
+        512
+      ],
+      "mode": "RGBA",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "alphaBoundingBox": [
+        14,
+        11,
+        499,
+        500
+      ],
+      "sha256": "18a5250fcc6b1649798d41f93f5c307f775674cde3bfcdbc8655594648ba84a2"
+    },
+    {
+      "id": "range_qualification",
+      "file": "range_qualification.webp",
+      "bytes": 66674,
+      "dimensions": [
+        512,
+        512
+      ],
+      "mode": "RGBA",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "alphaBoundingBox": [
+        16,
+        16,
+        496,
+        493
+      ],
+      "sha256": "e521edc3427b650a15a6601f3817967ccc43e8553b77c6a687e3b03563d4a08b"
+    },
+    {
+      "id": "less_lethal_course",
+      "file": "less_lethal_course.webp",
+      "bytes": 69240,
+      "dimensions": [
+        512,
+        512
+      ],
+      "mode": "RGBA",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "alphaBoundingBox": [
+        8,
+        6,
+        503,
+        501
+      ],
+      "sha256": "c46b180cb9017877a8b250b7d3d9f3a9b291b7708288dbcf0b0cfd249b4210db"
+    },
+    {
+      "id": "advanced_less_lethal_course",
+      "file": "advanced_less_lethal_course.webp",
+      "bytes": 72114,
+      "dimensions": [
+        512,
+        512
+      ],
+      "mode": "RGBA",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "alphaBoundingBox": [
+        0,
+        0,
+        509,
+        507
+      ],
+      "sha256": "52bbbff12db643eeb8b2e5c4acc6859b95a4001bbb59682979f3708f783e1352"
+    },
+    {
+      "id": "deescalation_course",
+      "file": "deescalation_course.webp",
+      "bytes": 63326,
+      "dimensions": [
+        512,
+        512
+      ],
+      "mode": "RGBA",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "alphaBoundingBox": [
+        17,
+        16,
+        494,
+        492
+      ],
+      "sha256": "1d6df41995b9c0b9aaab0d1648cfc22fc2a5f065776414afd1ae81ead105d425"
+    },
+    {
+      "id": "vehicle_operations_course",
+      "file": "vehicle_operations_course.webp",
+      "bytes": 69134,
+      "dimensions": [
+        512,
+        512
+      ],
+      "mode": "RGBA",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "alphaBoundingBox": [
+        9,
+        8,
+        502,
+        502
+      ],
+      "sha256": "ffebf6ae9ba7c099a58118af16d302b6d29d9512c545e67255f5f694bd6113f0"
+    },
+    {
+      "id": "precision_support_course",
+      "file": "precision_support_course.webp",
+      "bytes": 66274,
+      "dimensions": [
+        512,
+        512
+      ],
+      "mode": "RGBA",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "alphaBoundingBox": [
+        6,
+        6,
+        505,
+        504
+      ],
+      "sha256": "7d13bc4036a5f3c824a166c26cbd742492b6d4a2bc3e50a0a13a9d8135b8531f"
+    },
+    {
+      "id": "controlled_access_course",
+      "file": "controlled_access_course.webp",
+      "bytes": 57108,
+      "dimensions": [
+        512,
+        512
+      ],
+      "mode": "RGBA",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "alphaBoundingBox": [
+        10,
+        9,
+        500,
+        501
+      ],
+      "sha256": "7699d5a70ce10f41b5fe54173537af4db52b5de8477b706e90561f1f21f5725c"
+    },
+    {
+      "id": "branch_personnel",
+      "file": "branch_personnel.webp",
+      "bytes": 77260,
+      "dimensions": [
+        512,
+        512
+      ],
+      "mode": "RGBA",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "alphaBoundingBox": [
+        6,
+        6,
+        505,
+        507
+      ],
+      "sha256": "d9405159d18eb276e4b923a982f3e3d4aac163094dab1d4eb4cafee857d17448"
+    },
+    {
+      "id": "branch_field",
+      "file": "branch_field.webp",
+      "bytes": 77194,
+      "dimensions": [
+        512,
+        512
+      ],
+      "mode": "RGBA",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "alphaBoundingBox": [
+        12,
+        12,
+        499,
+        500
+      ],
+      "sha256": "128e85931579c194a551b6bb82d4a0dc3f10493f48b4039a877a0b45100f1fd3"
+    },
+    {
+      "id": "branch_intel",
+      "file": "branch_intel.webp",
+      "bytes": 72068,
+      "dimensions": [
+        512,
+        512
+      ],
+      "mode": "RGBA",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "alphaBoundingBox": [
+        11,
+        10,
+        500,
+        501
+      ],
+      "sha256": "f43109d9ba5ed4a36ef475ddd53b4ca011b87ca1efa2e7b897edf55173c95afc"
+    },
+    {
+      "id": "branch_logistics",
+      "file": "branch_logistics.webp",
+      "bytes": 81856,
+      "dimensions": [
+        512,
+        512
+      ],
+      "mode": "RGBA",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "alphaBoundingBox": [
+        0,
+        13,
+        499,
+        505
+      ],
+      "sha256": "ccd1a56adc6c07ecb0532c0aa755039deb8ff51372757f88ebd344cb2dbfc4a2"
+    },
+    {
+      "id": "branch_wellbeing",
+      "file": "branch_wellbeing.webp",
+      "bytes": 80156,
+      "dimensions": [
+        512,
+        512
+      ],
+      "mode": "RGBA",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "alphaBoundingBox": [
+        6,
+        5,
+        504,
+        505
+      ],
+      "sha256": "3e79aad82d31ac3058e0de548adba35c5e79e449b3b5c1a55f33913bea7b00e9"
+    }
+  ],
+  "managerCount": 3,
+  "managerDimensions": [
+    512,
+    532
+  ],
+  "managerRuntimeBytes": 61344,
+  "managersDistinctFromOfficers": true,
+  "managers": [
+    {
+      "id": "watch_commander",
+      "file": "watch_commander.webp",
+      "bytes": 19744,
+      "dimensions": [
+        512,
+        532
+      ],
+      "mode": "RGB",
+      "sha256": "8b9081b83051e0e4a47a6ece7dd6271a9da0f09ee7cec1d7a816aa093da5c4cd"
+    },
+    {
+      "id": "training_sergeant",
+      "file": "training_sergeant.webp",
+      "bytes": 22398,
+      "dimensions": [
+        512,
+        532
+      ],
+      "mode": "RGB",
+      "sha256": "9c53761387800ac5c5aa65cf9b0bb570ad99b1513e57c809ad9ea195b05d50be"
+    },
+    {
+      "id": "quartermaster",
+      "file": "quartermaster.webp",
+      "bytes": 19202,
+      "dimensions": [
+        512,
+        532
+      ],
+      "mode": "RGB",
+      "sha256": "4add3bebcfccfca40873fa1d76492a04485b768cb5984825b962b38965a1ceac"
+    }
+  ]
+}

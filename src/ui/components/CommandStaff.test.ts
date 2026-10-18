@@ -24,7 +24,8 @@ describe('Command Staff on HQ', () => {
     expect((html.match(/class="staff-card /g) ?? [])).toHaveLength(3);
     expect((html.match(/>Not hired</g) ?? [])).toHaveLength(3);
     for (const text of ['Watch Commander', 'Training Sergeant', 'Quartermaster', 'Squad duty and rest', 'Course enrolment', 'Servicing and restock']) expect(html).toContain(text);
-    expect(html).toContain('data-portrait="unavailable"');
+    expect((html.match(/data-portrait="painted"/g) ?? [])).toHaveLength(3);
+    for (const id of ['watch_commander', 'training_sergeant', 'quartermaster']) expect(html).toContain(`src="/art/managers/${id}.webp"`);
     expect(html).toContain('aria-label="0 of 3 hired"');
   });
 
