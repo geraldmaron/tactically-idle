@@ -298,4 +298,11 @@ Optional.
   CI as regression tripwires, or drop them.
 - **Domain-model defaults D1 to D5** stand unless changed: no explosives, a fled subject's follow-up
   call, groups above 8 as a later mode, 24h review after a shooting, concessions within policy.
+- **Crisis call cap:** the writing review's house target is at most one crisis call (a person who
+  may harm themselves) per shift. The shift sampler (`hostage-gate-requests`) treats a shift as one
+  game day and a crisis call as hostage or barricade, and only reports. Decide what a shift and a
+  crisis call are, and whether the cap should gate.
+- **Barricade on apartments:** with the child in a bedroom, `apartment_unit_g2` hosts the barricade
+  on 22 of 30 seeds (the rest are rejected because the first room off the bedroom is the living
+  room). This bears on the existing barricade building-family decision above.
 - **Later scope:** districts, career stories, simultaneous tactical incidents.
