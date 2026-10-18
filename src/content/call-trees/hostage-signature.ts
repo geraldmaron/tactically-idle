@@ -584,7 +584,7 @@ export const HOSTAGE_SIGNATURE: CallTree = {
               courierToo('{courier.first} is out ahead of everyone.', { if: LETS_GO }),
               { if: KEEPS, text: 'At the sight of more officers in the alley, {taker.first} retreats to {owner.first}.', reveal: ['lets_go'], moves: { taker: 'team_seen' }, next: { node: 'standoff' }, pressure: 6 },
             ],
-            adverse: [{ text: '{taker.first} comes to the back shouting and fires through the gap, then bolts the door.', fire: { from: 'taker' }, moves: { taker: 'shots', others: 'shots' }, next: { node: 'fired_on' }, pressure: 10 }],
+            adverse: [{ text: '{taker.first} comes to the back shouting and fires through the gap, then bolts the door.', fire: { from: 'taker' }, mark: ['shot_at_team'], moves: { taker: 'shots', others: 'shots' }, next: { node: 'fired_on' }, pressure: 10 }],
           } },
         { id: 'last_day', title: 'Ask about {taker.his} last day', icon: 'radio', talksTo: 'taker', check: check(TALK, -4), minutes: 7, onlyIf: { marks: ['knows_story'] },
           summary: '{lead} asks {taker.first} to tell the last day start to finish. {owner.first} has to hear it all again.',
@@ -740,7 +740,7 @@ export const HOSTAGE_SIGNATURE: CallTree = {
               { text: '{owner.first} gets out the front door. {taker.first} backs away from the window, the handgun still up.', safe: ['owner'], mark: ['still_armed'], moves: { taker: 'released' }, next: { node: 'last_one' }, objective: 40 },
               courierToo('{courier.first} is out before {owner.him}.'),
             ],
-            adverse: [{ text: 'A shot goes through the window as {taker.first} spins around. {owner.first} is still inside.', fire: { from: 'taker' }, moves: { taker: 'shots', others: 'shots' }, next: { node: 'fired_on' }, pressure: 10 }],
+            adverse: [{ text: 'A shot goes through the window as {taker.first} spins around. {owner.first} is still inside.', fire: { from: 'taker' }, mark: ['shot_at_team'], moves: { taker: 'shots', others: 'shots' }, next: { node: 'fired_on' }, pressure: 10 }],
           } },
         { id: 'go_in', title: 'Send the team in', icon: 'shield', team: { to: 'scene', entry: 'taker' }, check: check(ENTER, 8), minutes: 2, stress: 6, tempo: 'urgent', consequenceLevel: 'severe',
           requires: { certs: ['entry_team'] }, authority: 'entry', equipment: [{ tag: 'shield', value: 6, label: 'Shield up front' }],
@@ -835,7 +835,10 @@ export const HOSTAGE_SIGNATURE: CallTree = {
           } },
       ] },
     { id: 'owner_down', stage: 'resolve',
-      prompt: '{owner.first} is down behind the counter, not answering. A medic waits at the corner for your word.',
+      prompt: '{owner.first} has collapsed behind the counter and isn’t answering. A medic waits at the corner for your word.',
+      // A clock that runs out in the decision a shot came from (onOut.next) arrives here after that
+      // shot's line, so the prompt says the shot missed the owner.
+      promptIf: [{ when: { marks: ['shot_at_team'] }, prompt: 'The shot didn’t hit {owner.first}. Now {owner.he} {owner~is|are} slumped on the floor, and a medic stands by out front.' }],
       choices: [
         { id: 'medic_door', title: 'Get the medic to {owner.first}', icon: 'radio', talksTo: 'taker', check: check(TALK, -4), minutes: 3,
           summary: '{lead} wants {taker.first} to unbolt the front for the medic. Two officers will fetch {owner.first} only if {taker.he} {taker~does|do}.',
