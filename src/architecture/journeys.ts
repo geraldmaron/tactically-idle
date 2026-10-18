@@ -21,5 +21,6 @@ export const JOURNEYS: readonly Journey[] = [
   { id: 'hire-and-equip', job: 'build', title: 'Hire an officer and buy equipment with department money', test: 'src/architecture/journeys.test.ts' },
   { id: 'debrief-explains', job: 'understand', title: 'Every committed decision in the debrief names what helped and what hurt', test: 'src/architecture/journeys.test.ts' },
   { id: 'offline-settles', job: 'return', title: 'Time away settles once and caps at 24 hours', test: 'src/sim/economy.test.ts' },
+  { id: 'joint-operation', job: 'build', title: 'Two squads deploy to one call and the second supports from a named point on the map', test: 'src/gen/incident/second-squad.test.ts' },
   { id: 'save-round-trip', job: 'keep', title: 'A campaign mid-call saves and loads to the same state', test: 'src/architecture/journeys.test.ts' },
 ];

@@ -250,6 +250,14 @@ export interface TreeChoice {
   /** Where the team physically goes for this choice, on the generated building. Without it the
    * squad acts from where it stands (a phone call, a wait, a word over the hailer from the cars). */
   team?: TreeTeam;
+  /** A second deployed squad supports the acting one from a named point (R-B4). It goes there on
+   * the map and its coordination adds to the acting squad's check, less the farther it has to go.
+   * The choice still works with one squad: support makes it better, never possible.
+   * - `at: { vantage }`: the spot outside with an opening onto that room, as `team.to` vantage.
+   * - `at: 'exit'`: just outside the door the scene room's way out leaves the building by.
+   * `label` is the squad's task as the summary and the breakdown name it ("holding the front
+   * window"); `max` is the most it adds, in score points. */
+  support?: { at: { vantage: 'scene' | string } | 'exit'; label: string; max?: number };
   /** Offered only in this public state. */
   onlyIf?: TreeState;
   requires?: Pick<ActionRequirements, 'certs' | 'anyTags' | 'allTags' | 'minSquads'>;
