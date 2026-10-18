@@ -5,7 +5,7 @@ import { actionViews } from './operation-selectors';
 import type { GameState } from './types';
 import { buildLocation } from './location';
 import { evaluateAction } from './resolution';
-import { INCIDENT_CLASS_V1, incidentClass, incidentFactors } from './incident-factors';
+import { INCIDENT_CLASS_V1, incidentClass, incidentFactors, incidentSubjects } from './incident-factors';
 import { applyMoves } from './meters';
 import { THREAT_TUNING } from './threat';
 import { withTuning } from './tuning';
@@ -259,4 +259,25 @@ describe('intel-odds: with one subject, how close a move comes to them (R-B5)', 
     expect(far.labels.some(label => label.includes('this work reaches'))).toBe(false);
     expect(near.labels.some(label => label.includes('this work reaches'))).toBe(false);
   });
+});
+
+describe('intel-odds: what an armament fact claims, by what the team knows', () => {
+  const s = calls('active_armed_incident', 1)[0];
+  const subject = s.incidentPeople!.find(person => person.threat)!;
+  const read = (claim: 'weapon' | 'any' | undefined, status: string) => {
+    const scenario = structuredClone(s);
+    const person = scenario.incidentPeople!.find(entry => entry.id === subject.id)!;
+    if (claim) person.armamentClaim = claim; else delete person.armamentClaim;
+    const subjects = incidentSubjects(scenario, { flags: [], knowledge: { [subject.armamentFactId!]: status } as Record<string, never> });
+    const found = subjects.find(entry => entry.personId === subject.id)!;
+    return { armament: found.armament, armSource: found.armSource };
+  };
+  const real = subject.threat!.armament;
+  const table: [claim: 'weapon' | 'any' | undefined, status: string, armament: string, armSource: string][] = [
+    [undefined, 'unknown', 'unknown', 'assumed'], [undefined, 'reported', real, 'reported'], [undefined, 'confirmed', real, 'confirmed'], [undefined, 'disproved', 'unknown', 'assumed'],
+    ['weapon', 'unknown', 'unknown', 'assumed'], ['weapon', 'reported', real, 'reported'], ['weapon', 'confirmed', real, 'confirmed'], ['weapon', 'disproved', 'unknown', 'assumed'],
+    ['any', 'unknown', 'unknown', 'assumed'], ['any', 'reported', real, 'reported'], ['any', 'confirmed', real, 'confirmed'], ['any', 'disproved', 'none', 'confirmed'],
+  ];
+  for (const [claim, status, armament, armSource] of table)
+    it(`claim ${claim ?? 'weapon (default)'}, ${status}: ${armament} (${armSource})`, () => expect(read(claim, status)).toEqual({ armament, armSource }));
 });

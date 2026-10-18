@@ -76,12 +76,15 @@ export function incidentSubjects(scenario: ScenarioDefinition, run: Pick<Operati
   return (scenario.incidentPeople ?? []).filter(person => person.threat && !run.flags.includes(`out:${person.id}`)).map(person => {
     const threat = person.threat!;
     const arm = person.armamentFactId ? run.knowledge[person.armamentFactId] : 'confirmed';
-    const armSource = arm === 'confirmed' ? 'confirmed' as const : arm === 'reported' ? 'reported' as const : 'assumed' as const;
+    // A disproved claim that they hold anything means they hold nothing; a disproved report of one
+    // weapon leaves what they hold unknown.
+    const none = arm === 'disproved' && person.armamentClaim === 'any';
+    const armSource = arm === 'confirmed' || none ? 'confirmed' as const : arm === 'reported' ? 'reported' as const : 'assumed' as const;
     const temper = person.dispositionFactId ? known(run.knowledge[person.dispositionFactId]) : false;
     const at = built && person.locationFactId ? resolveSubject(scenario, built, run.knowledge, person.spaceId, person.locationFactId).at : person.at;
     return {
       personId: person.id, label: person.label, role: person.kind === 'animal' ? 'dangerous_dog' : 'subject', spaceId: person.spaceId, at: { ...at },
-      armament: armSource === 'assumed' ? 'unknown' : threat.armament, readiness: threat.readiness, armSource,
+      armament: none ? 'none' : armSource === 'assumed' ? 'unknown' : threat.armament, readiness: threat.readiness, armSource,
       ...(temper ? { disposition: threat.disposition } : {}), intent: threat.intent, awareness: threat.awareness,
       demSource: temper ? 'confirmed' : 'reported',
     } satisfies Subject;
