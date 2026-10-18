@@ -17,7 +17,7 @@ Question. After 3 seconds on the card and 10 on the briefing, can I say who, wha
 what gets worse if the team waits?
 
 - Ship. Person and want in the first five words, one wrong note, one gap a single fact would
-  close, under about 130 characters on the card.
+  close, under about 100 characters on the board card (2 lines at 13.5px, measured 2026-10-08).
 - Fix before ship. The person is there but the pressure is missing, the hook opens on a
   genre label, or a later surface restates a fact with no change. Read card, dispatch, known
   lines and the first stage prompt in order. A restated fact in the first stage prompt is always
