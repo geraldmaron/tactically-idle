@@ -34,7 +34,10 @@ export const choiceActionId = (type: string, node: string, choice: string) => `t
  * difficulty. `clearPerSqFt`: minutes per square foot to clear a room the team moves into (a
  * 200 sq ft shop floor is a minute). `signalWeight`: score points for a fully clear voice or
  * sightline from where the squad stands, scaled by how well it carries through the building. */
-export const TEAM_MOVES = { clearPerSqFt: 0.005, signalWeight: { voice: 6, visual: 6 } } as const;
+/** Team-move constants the compiler bakes into each action. `supportMax` and `supportReachMinutes`
+ * are a support choice's SupportRule defaults (R-B4): the most a second squad adds in score points,
+ * and the travel minutes at which what it adds reaches zero. */
+export const TEAM_MOVES = { clearPerSqFt: 0.005, signalWeight: { voice: 6, visual: 6 }, supportMax: 10, supportReachMinutes: 10 } as const;
 
 export interface CastIdentity { firstName: string; surname: string; pronouns: 'he' | 'she' | 'they'; age?: number }
 /** Drawn identity per role (instance.ts): pronouns and, where the text names it, age. */
@@ -1042,6 +1045,35 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
     return { approach: 'path', targetId, workload: { ...workload, perSqFt: TEAM_MOVES.clearPerSqFt }, observes: [targetId], ...entry, ...signal };
   };
 
+  /** Where a support choice's second squad holds (TreeChoice.support, R-B4): the outside space and
+   * the opening it stages at. A vantage onto a room with an opening to the outside holds at that
+   * opening (a window before a door, then by id); an inside room is held at the door its way out
+   * leaves by. 'exit' holds outside the door the scene room's way out leaves the building by. */
+  const supportPoint = (node: TreeNode, choice: TreeChoice): { coverSpaceId: string; openingId: string } => {
+    const at = choice.support!.at;
+    const zones = new Set(built.location.zones.map(zone => zone.id));
+    const outsideOf = (opening: { a: string; b: string }) => zones.has(opening.a) ? opening.a : opening.b;
+    const doorOutOf = (spaceId: string, what: string) => {
+      const way = findStoryRoute(built, spaceId, outside, 'walking');
+      const door = way ? doorOut(built, way) : undefined;
+      if (!door) throw new Error(`${node.id}.${choice.id}: support at ${what} needs a way out of ${spaceId}`);
+      return { coverSpaceId: outsideOf(door), openingId: door.id };
+    };
+    if (at === 'exit') return doorOutOf(room.id, 'the exit');
+    const watched = roomFor(node, choice, at.vantage);
+    const onto = built.location.openings.filter(opening => (opening.a === watched && zones.has(opening.b)) || (opening.b === watched && zones.has(opening.a)))
+      .sort((a, b) => Number(b.type === 'window') - Number(a.type === 'window') || a.id.localeCompare(b.id));
+    return onto.length ? { coverSpaceId: outsideOf(onto[0]), openingId: onto[0].id } : doorOutOf(watched, `the vantage on ${at.vantage}`);
+  };
+  const supportFor = (node: TreeNode, choice: TreeChoice): Pick<ActionDefinition, 'support'> => {
+    if (!choice.support) return {};
+    const { label, max = TEAM_MOVES.supportMax } = choice.support;
+    if (!label.trim()) throw new Error(`${node.id}.${choice.id}: support needs a label naming the second squad's task`);
+    if (choice.requires?.minSquads) throw new Error(`${node.id}.${choice.id}: a support choice works with one squad, so it can't require more`);
+    return { support: { max, ...supportPoint(node, choice), reachMinutes: TEAM_MOVES.supportReachMinutes, maxSquads: 1,
+      label, task: label[0].toUpperCase() + label.slice(1) } };
+  };
+
   const actionFor = (node: TreeNode, choice: TreeChoice): ActionDefinition => {
     const visibleWhen = joinConditions(node.id === tree.root ? { notFlags: [TREE_STARTED] } : { flags: [nodeFlag(node.id)] }, stateCondition(trim(choice.onlyIf), groups));
     const modifiers = (choice.modifiers ?? []).filter(m => settable.marks.has(m.mark));
@@ -1051,6 +1083,7 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
     const action: ActionDefinition = {
       id: choiceActionId(tree.type, node.id, choice.id), stage: node.stage, title: choice.title, summary: choice.summary, task: choice.title, icon: choice.icon,
       ...movement(node, choice),
+      ...supportFor(node, choice),
       requires: {
         ...(choice.requires ?? {}),
         ...(node.id === tree.root ? { notFlags: [{ flag: TREE_STARTED, reason: 'This decision is behind you' }] } : { flags: [{ flag: nodeFlag(node.id), reason: 'This decision is no longer open' }] }),
@@ -1096,8 +1129,8 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
     return [stage, definition];
   })) as Record<StageId, StageDefinition>;
 
-  // Deploy only as many squads as some choice can put to work: v13 choices compile one acting
-  // squad and no support rule, so every v13 call takes one squad until a tree authors more.
+  // Deploy only as many squads as some choice can put to work: one acting squad, plus one more
+  // where a choice authors support (R-B4).
   s.squadRange = { min: 1, max: Math.min(3, Math.max(1, ...Object.values(s.stages).flatMap(stage => stage.actions.map(squadsPutToWork)))) };
 
   // Only the endings this call's actions can reach, plus the exhausted-choices fallback.
