@@ -4,6 +4,7 @@
 // one state key). Selecting anything opens it in the inspector and keeps it in the URL.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { CallTree } from '../../../../content/call-trees/types';
+import { treeClockNexts } from '../../model/clocks';
 import { lintTree, plainTokens, sentenceCase } from '../../../../gen/incident/trees-v13/dependencies';
 import type { LintFinding, StateKey } from '../../../../gen/incident/trees-v13/dependencies';
 import { callGraph, humanizeNode } from '../../../../gen/incident/trees-v13/graph';
@@ -66,7 +67,7 @@ function FlowReady({ session }: { session: Session }) {
   const runs = reach.tally?.runs ?? 0;
 
   // ------------------------------------------------ graph and layout
-  const authored = useMemo(() => callGraph(tree), [tree]);
+  const authored = useMemo(() => callGraph(tree, { clockNexts: treeClockNexts(tree, template) }), [tree, template]);
   const graph = reach.pop.scope === 'type' ? authored : lab.graph ?? authored;
   const endingClass = useMemo(() => authoredEndingClass(tree), [tree]);
   const expandedKey = url.flow.expanded.join(',');

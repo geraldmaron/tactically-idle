@@ -7,9 +7,9 @@ import { useCallback, useMemo, useState } from 'react';
 import { POLICIES } from '../../../../gen/incident/trees-v13/balance';
 import type { Policy, Weight } from '../../../../gen/incident/trees-v13/balance';
 import { clockMarksOf } from '../../../../gen/incident/instance';
+import { situationClockNexts, treeClockNexts } from '../../model/clocks';
 import { plainTokens } from '../../../../gen/incident/trees-v13/dependencies';
 import { callGraph, truthReach } from '../../../../gen/incident/trees-v13/graph';
-import { callStringRows } from '../../../../gen/incident/trees-v13/strings';
 import type { IncidentType } from '../../../../sim/scenario-types';
 import type { GameState } from '../../../../sim/types';
 import { PeopleProvider, PeopleText } from '../../../../ui/people/PeopleText';
@@ -26,7 +26,7 @@ import { percent, STYLE_HELP, styleLabel, weightLabel } from '../../model/label'
 import { seekCallSeed } from '../../model/seek';
 import { currentFrame, playPath, sessionBinder } from '../../model/session';
 import type { Session } from '../../model/session';
-import { loadSnapshot, pinLabel, saveSnapshot, SNAPSHOT_PREFIX, takeSnapshot } from '../../model/snapshots';
+import { baselineRows, loadSnapshot, pinLabel, saveSnapshot, SNAPSHOT_PREFIX, takeSnapshot } from '../../model/snapshots';
 import type { CallSnapshot } from '../../model/snapshots';
 import type { DrawWant } from '../../model/seek';
 import { CALL_TEMPLATES } from '../../shell/CallSwitcher';
@@ -84,14 +84,14 @@ function OutcomesReady({ session }: { session: Session }) {
   const shortest = explored.result?.kind === 'explore' ? (explored.result.result as ExploreResult & { endings?: Record<string, string> }).endings ?? null : null;
 
   // ------------------------------------------------ cards
-  const authored = useMemo(() => callGraph(tree), [tree]);
+  const authored = useMemo(() => callGraph(tree, { clockNexts: treeClockNexts(tree, session.template) }), [tree, session.template]);
   const graph = scope === 'type' ? authored : lab.graph ?? authored;
   const endingClass = useMemo(() => authoredEndingClass(tree), [tree]);
   const bySituation = useMemo(() => {
     if (scope === 'type') return null;
     try {
       const clockMarks = clockMarksOf(session.instance.clocks);
-      return [0, 1, 2].map(s => new Set<string>(truthReach(callGraph(tree, { counts: session.counts, seed: session.resolved.spec?.seed, situation: s as 0 | 1 | 2, clockMarks }), tree)));
+      return [0, 1, 2].map(s => new Set<string>(truthReach(callGraph(tree, { counts: session.counts, seed: session.resolved.spec?.seed, situation: s as 0 | 1 | 2, clockMarks, clockNexts: situationClockNexts(session.template, s as 0 | 1 | 2) }), tree)));
     } catch { return null; }
   }, [scope, session.instance, tree]);
   const cards = useMemo(() => endingCards({ tree, graph, tally: reach.tally, typeTally, scope, endingClass, shortest, bySituation })
@@ -120,7 +120,7 @@ function OutcomesReady({ session }: { session: Session }) {
   const pin = () => {
     if (!reach.tally || reach.status !== 'done') { notify('Wait for the runs to finish, then pin them as the baseline.'); return; }
     try {
-      const rows = callStringRows(tree, sessionBinder(session), session.counts);
+      const rows = baselineRows(session, sessionBinder(session));
       const stylesNow = Object.fromEntries(POLICIES.flatMap((style, i) => { const t = tallyOf(i); return t ? [[style, distributionShares(t)]] : []; }));
       const snap = takeSnapshot(session, rows, { reach: reach.tally, population, styles: stylesNow, label: pinLabel(Date.now(), reach.text.plain) });
       if (saveSnapshot(snap)) { setSnapshot(snap); notify(`Baseline pinned: ${reach.text.plain}. Strings, ending shares and run classes now compare against it.`); }

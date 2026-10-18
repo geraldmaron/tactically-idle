@@ -2,6 +2,7 @@
 // the fallback ending always a card, groups by the run class most runs had, shares that add up, and
 // paired deltas against a baseline only when the runs pair.
 import { describe, expect, it } from 'vitest';
+import { sessionClockNexts, situationClockNexts, treeClockNexts } from '../../model/clocks';
 import { clockMarksOf } from '../../../../gen/incident/instance';
 import { callGraph, truthReach } from '../../../../gen/incident/trees-v13/graph';
 import { emptyTally } from '../../jobs/tally';
@@ -19,8 +20,8 @@ function open(query: string): Session {
 }
 const s = open('type=hostage_crisis&family=market_row&seed=7&tier=2&variant=1');
 const clockMarks = clockMarksOf(s.instance.clocks);
-const graph = callGraph(s.tree, { counts: s.counts, seed: s.resolved.spec?.seed, situation: s.situation, clockMarks });
-const bySituation = [0, 1, 2].map(i => new Set<string>(truthReach(callGraph(s.tree, { counts: s.counts, seed: s.resolved.spec?.seed, situation: i as 0 | 1 | 2, clockMarks }), s.tree)));
+const graph = callGraph(s.tree, { counts: s.counts, seed: s.resolved.spec?.seed, situation: s.situation, clockMarks, clockNexts: sessionClockNexts(s) });
+const bySituation = [0, 1, 2].map(i => new Set<string>(truthReach(callGraph(s.tree, { counts: s.counts, seed: s.resolved.spec?.seed, situation: i as 0 | 1 | 2, clockMarks, clockNexts: situationClockNexts(s.template, i as 0 | 1 | 2) }), s.tree)));
 const base = { tree: s.tree, graph, typeTally: null, endingClass: authoredEndingClass(s.tree), shortest: null, bySituation };
 
 describe('endingCards', () => {
@@ -37,7 +38,7 @@ describe('endingCards', () => {
     if (situational) expect(situational.reason).toMatch(/^needs situation/);
   });
   it('this type has no ghosts: every draw counts', () => {
-    expect(endingCards({ ...base, graph: callGraph(s.tree), tally: null, scope: 'type', bySituation: null }).every(c => c.kind === 'card')).toBe(true);
+    expect(endingCards({ ...base, graph: callGraph(s.tree, { clockNexts: treeClockNexts(s.tree, s.template) }), tally: null, scope: 'type', bySituation: null }).every(c => c.kind === 'card')).toBe(true);
   });
   it('groups by how the runs that ended there scored, and the shares add up with stuck runs', () => {
     const tally: ReachTally = { ...emptyTally(), runs: 10, endings: {

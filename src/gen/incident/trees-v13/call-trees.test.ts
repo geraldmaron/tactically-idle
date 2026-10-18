@@ -13,10 +13,10 @@ import type { OutcomeBand } from '../../../sim/types';
 import { applyMove, availableMoves, NOW, startGateRun } from '../gates/engine-driver';
 import { drawIncidentSpec, generateIncident, INCIDENT_CONTENT_VERSION } from '../index';
 import { specForSituation } from '../gates/catalog';
-import { bindRoleTokens, memberId, outcomeNexts, reachableWithin, TOKEN, treeForCounts } from './compile';
+import { bindRoleTokens, memberId, outcomeNexts, reachableWithin, templateClockNexts, TOKEN, treeForCounts } from './compile';
 import { asRole, CASCADE_LINES, FIRE_LINES, FORCE_LINES } from '../../../content/incidents/lines';
 import { INCIDENT_TEMPLATES } from '../../../content/incidents';
-import type { IncidentTemplate } from '../../../content/incidents/types';
+import type { Clock, IncidentTemplate } from '../../../content/incidents/types';
 import type { TreeIf } from '../../../content/call-trees/types';
 import { CONCESSIONS_ALLOWED, scenarioActions, squadsPutToWork } from '../../../sim/scenario-types';
 import { GROUP_TEMPLATE, GROUP_TREE } from './group-fixture';
@@ -34,6 +34,24 @@ const outcomesOf = (choice: TreeChoice): TreeOutcome[] => BANDS.flatMap(band => 
 const nextsOf = (outcome: TreeOutcome): TreeNext[] => outcomeNexts(outcome);
 /** The template a tree is drawn from: its own, never another tree's of the same type. */
 const templateOf = (tree: CallTree): IncidentTemplate | undefined => tree === GROUP_TREE ? GROUP_TEMPLATE : INCIDENT_TEMPLATES[tree.type]?.tree === tree ? INCIDENT_TEMPLATES[tree.type] : undefined;
+/** Where the template's clocks send the call when they run out: reachable from every node. The
+ * strings checks read every such target (templateClockNexts), so no text a clock can show goes
+ * unchecked. */
+const clockNextsOf = (tree: CallTree): TreeNext[] => { const template = templateOf(tree); return template ? templateClockNexts(template) : []; };
+/** The targets of clocks that can actually run out, for the reachability gate: the engine runs a
+ * clock down only by its rate (sim/clocks.ts stepClock), so a story clock or one with no rate never
+ * sends the call anywhere, and a node only such a clock reaches is unreachable. */
+const expiringClockNexts = (template: Pick<IncidentTemplate, 'situations'>): TreeNext[] =>
+  template.situations.flatMap(situation => (situation.clocks ?? []).filter(clock => !clock.story && clock.ratePerMin > 0).flatMap(clock => clock.onOut?.next ? [clock.onOut.next] : []));
+/** Every node reached from the root by choices, or from where a clock that can run out sends the call. */
+function reachedFromRoot(tree: CallTree, clockTargets: readonly TreeNext[]): Set<string> {
+  const byId = new Map(tree.nodes.map(node => [node.id, node]));
+  const seen = new Set([tree.root]), queue = [tree.root];
+  for (const target of clockTargets.flatMap(next => targets(tree, next))) if (!seen.has(target)) { seen.add(target); queue.push(target); }
+  while (queue.length) for (const choice of byId.get(queue.shift()!)?.choices ?? []) for (const outcome of outcomesOf(choice))
+    for (const target of nextsOf(outcome).flatMap(next => targets(tree, next))) if (!seen.has(target)) { seen.add(target); queue.push(target); }
+  return seen;
+}
 /** Every combination of group sizes the template allows: [{}] for a tree without groups. */
 function countsOf(tree: CallTree): Record<string, number>[] {
   let combos: Record<string, number>[] = [{}];
@@ -65,7 +83,7 @@ const AGREEMENT = [
  * nodes and endings it can't reach left out. */
 function treeStrings(authored: CallTree, counts?: Record<string, number>): { field: string; text: string }[] {
   const tree = counts ? treeForCounts(authored, counts) : authored;
-  const reach = counts && authored.groups ? reachableWithin(tree, counts) : null;
+  const reach = counts && authored.groups ? reachableWithin(tree, counts, clockNextsOf(authored)) : null;
   const out: { field: string; text: string }[] = [];
   const add = (field: string, text: string | undefined) => { if (text) out.push({ field, text }); };
   add('summary', tree.summary); add('title', tree.title); add('pressureLabel', tree.pressureLabel);
@@ -158,10 +176,9 @@ describe('call trees: authoring rules', () => {
       }
     });
 
-    it('reaches every node from the root', () => {
-      const seen = new Set([tree.root]), queue = [tree.root];
-      while (queue.length) for (const choice of nodeById.get(queue.shift()!)!.choices) for (const outcome of outcomesOf(choice))
-        for (const target of nextsOf(outcome).flatMap(next => targets(tree, next))) if (!seen.has(target)) { seen.add(target); queue.push(target); }
+    it('reaches every node from the root, by choices or by a clock that can run out', () => {
+      const template = templateOf(tree);
+      const seen = reachedFromRoot(tree, template ? expiringClockNexts(template) : []);
       expect(tree.nodes.map(node => node.id).filter(id => !seen.has(id))).toEqual([]);
     });
 
@@ -436,5 +453,32 @@ describe('v13 squad range', () => {
     expect(squadsPutToWork({ ...action, maxActing: 2 })).toBe(2);
     expect(squadsPutToWork({ ...action, support: { max: 6, coverSpaceId: action.targetId, reachMinutes: 5, maxSquads: 1, label: 'covering the back', task: 'cover' } })).toBe(2);
     expect(squadsPutToWork({ ...action, requires: { ...action.requires, minSquads: { count: 3, reason: 'Needs three squads' } } })).toBe(3);
+  });
+});
+
+describe('the reachability gate counts only clocks that can run out', () => {
+  // The group fixture with a node, `bolted`, that only the courier's clock reaches when it runs out.
+  const withClock = (ratePerMin: number, story = false) => {
+    const tree: CallTree = structuredClone(GROUP_TREE);
+    const out = { text: 'The courier is out.', safe: ['courier'], next: { ending: 'handed_over' } };
+    tree.nodes.push({ id: 'bolted', stage: 'resolve', prompt: 'While the team waited on that, the courier ran for the door.',
+      choices: [{ id: 'cover', title: 'Cover the door', summary: 'You cover the door while the courier runs.', preview: { favorable: 'The courier gets out.', mixed: 'The courier gets out.', adverse: 'The courier gets out.' },
+        icon: 'door', check: GROUP_TREE.nodes[0].choices[0].check, minutes: 2, outcomes: { favorable: [out], mixed: [out], adverse: [out] } }] });
+    const clock: Clock = { id: 'nerve', label: 'The courier’s nerve', kind: 'deadline', owner: 'courier', start: 30, ratePerMin, rateKnown: false,
+      cues: [{ at: 25, text: 'The courier keeps looking at the door.', mark: 'courier_restless' }], onOut: { mark: 'courier_bolts', next: { node: 'bolted' } }, ...story ? { story: true as const } : {} };
+    return { tree, template: { ...GROUP_TEMPLATE, tree, situations: GROUP_TEMPLATE.situations.map(situation => ({ ...situation, clocks: [clock] })) } };
+  };
+
+  it('reaches a node a running clock sends the call to', () => {
+    const { tree, template } = withClock(5);
+    expect(reachedFromRoot(tree, expiringClockNexts(template)).has('bolted')).toBe(true);
+  });
+
+  it('leaves a node unreached when its only clock has no rate or runs only in the story', () => {
+    for (const { tree, template } of [withClock(0), withClock(5, true)]) {
+      expect(reachedFromRoot(tree, expiringClockNexts(template)).has('bolted')).toBe(false);
+    }
+    // The strings checks still read a zero-rate clock's target, so its text is checked all the same.
+    expect(templateClockNexts(withClock(0).template)).toEqual([{ node: 'bolted' }]);
   });
 });

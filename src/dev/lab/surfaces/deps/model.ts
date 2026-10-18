@@ -5,10 +5,11 @@
 // requirement trees (trees-v13/dependencies.ts); nothing evaluates a condition.
 import type { CallTree } from '../../../../content/call-trees/types';
 import { choiceActionId } from '../../../../gen/incident/trees-v13/compile';
-import { plainTokens, requirementTree, roleNoun, sentenceCase, siteKey } from '../../../../gen/incident/trees-v13/dependencies';
+import { plainTokens, roleNoun, sentenceCase, siteKey } from '../../../../gen/incident/trees-v13/dependencies';
 import type { DependencyIndex, KeyEntry, LintFinding, ReqTarget, Site, StateKey } from '../../../../gen/incident/trees-v13/dependencies';
 import type { OutcomeBand } from '../../../../sim/types';
 import type { Goal } from '../../jobs/protocol';
+import { labRequirementTree } from '../../model/clocks';
 import { goalFor } from '../../model/why';
 import type { Selection } from '../../types';
 import type { GlyphName } from '../../viz';
@@ -135,7 +136,7 @@ export function siteGoal(site: Site, tree: CallTree): Goal | null {
   else if (site.choice && site.band && site.outcome !== undefined) target = { outcome: [site.node, site.choice, site.band, site.outcome] };
   else if (site.choice) return { offered: choiceActionId(tree.type, site.node, site.choice) };
   else return { node: site.node };
-  try { return goalFor(tree, requirementTree(tree, target), target); } catch { return { node: site.node }; }
+  try { return goalFor(tree, labRequirementTree(tree, target), target); } catch { return { node: site.node }; }
 }
 
 // ---------------------------------------------------------------- Why targets

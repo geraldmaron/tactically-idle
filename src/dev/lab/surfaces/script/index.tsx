@@ -11,7 +11,7 @@ import { INCIDENT_TEMPLATES } from '../../../../content/incidents';
 import type { CallTree, TreeState } from '../../../../content/call-trees/types';
 import type { IncidentTemplate } from '../../../../content/incidents/types';
 import { choiceActionId } from '../../../../gen/incident/trees-v13/compile';
-import { requirementTree, roleNoun } from '../../../../gen/incident/trees-v13/dependencies';
+import { roleNoun } from '../../../../gen/incident/trees-v13/dependencies';
 import type { DependencyIndex, ReqTarget, StateKey } from '../../../../gen/incident/trees-v13/dependencies';
 import { callStringRows, parseFindings, toTsv } from '../../../../gen/incident/trees-v13/strings';
 import type { StringFinding, StringRow } from '../../../../gen/incident/trees-v13/strings';
@@ -30,9 +30,10 @@ import {
   scriptSections, variantKey, variantRows, variantRowsKey, variantSpace,
 } from '../../model/script';
 import type { AuditHit, ScriptRow, ScriptSection, Variant } from '../../model/script';
+import { labRequirementTree } from '../../model/clocks';
 import { sessionBinder } from '../../model/session';
 import type { Session } from '../../model/session';
-import { diffStrings, loadSnapshot, pinLabel, saveSnapshot, SNAPSHOT_PREFIX, takeSnapshot } from '../../model/snapshots';
+import { baselineRows, diffStrings, loadSnapshot, pinLabel, saveSnapshot, SNAPSHOT_PREFIX, takeSnapshot } from '../../model/snapshots';
 import { goalFor } from '../../model/why';
 import type { ReviewNote } from '../../types';
 import { cx, Glyph, SegmentedControl } from '../../viz';
@@ -136,7 +137,7 @@ function Script({ template, session }: { template: IncidentTemplate; session: Se
 
   // ------------------------------------------------ baseline (bound as the call in focus, every situation)
   const ownBound = useMemo(() => (own ? castFor(tree, own, { pronouns: 'drawn', counts: session.counts }) : null), [tree, own, session.counts]);
-  const callRows = useMemo(() => (ownBound ? bindRows(callStringRows(tree, text => text, session.counts), ownBound) : []), [tree, ownBound, session.counts]);
+  const callRows = useMemo(() => (ownBound ? bindRows(baselineRows(session, text => text), ownBound) : []), [tree, ownBound, session.counts]);
   const [baseline, setBaseline] = useState(() => loadSnapshot(type));
   useEffect(() => setBaseline(loadSnapshot(type)), [type]);
   useEffect(() => {
@@ -506,7 +507,7 @@ function rowGoal(row: ScriptRow, tree: CallTree): Goal | 'card' | 'brief' | null
   else if (line) target = { outcome: [node, line[1], line[2] as 'favorable', Number(line[3])] };
   else if (row.row.action) return { offered: choiceActionId(tree.type, node, row.row.action) };
   else return { node };
-  try { return goalFor(tree, requirementTree(tree, target), target); } catch { return { node }; }
+  try { return goalFor(tree, labRequirementTree(tree, target), target); } catch { return { node }; }
 }
 
 function Inspector({ row, tree, names, lex, prevRows, changed, since, findings, audit, notesOn, castName, onNote, onPlay, onPlayScreen, onWhy, onFlow }: {

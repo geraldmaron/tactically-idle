@@ -1,5 +1,6 @@
 // Lint from played runs, on a fixture tally over the hostage reference call's graph.
 import { describe, expect, it } from 'vitest';
+import { sessionClockNexts } from './clocks';
 import type { Weight } from '../../../gen/incident/trees-v13/balance';
 import { clockMarksOf } from '../../../gen/incident/instance';
 import { callGraph, truthReach } from '../../../gen/incident/trees-v13/graph';
@@ -20,7 +21,7 @@ function open(query: string): Session {
 
 describe('simLint', () => {
   const s = open('type=hostage_crisis&family=market_row&seed=7&tier=2&variant=1');
-  const graph = callGraph(s.tree, { counts: s.counts, seed: s.resolved.spec!.seed, situation: s.situation, clockMarks: clockMarksOf(s.instance.clocks) });
+  const graph = callGraph(s.tree, { counts: s.counts, seed: s.resolved.spec!.seed, situation: s.situation, clockMarks: clockMarksOf(s.instance.clocks), clockNexts: sessionClockNexts(s) });
   const reach = truthReach(graph, s.tree);
   const nodes = graph.vertices.filter(v => v.kind === 'node' && v.inCall && reach.has(v.id)).map(v => v.treeId);
   const endings = graph.vertices.filter(v => v.kind === 'ending' && v.inCall && reach.has(v.id) && v.treeId !== 'handed_over').map(v => v.treeId);

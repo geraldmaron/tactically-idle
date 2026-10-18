@@ -9,6 +9,7 @@ import { TUNING_META } from '../../../sim/tuning-meta';
 import { useLab } from '../context';
 import { paletteItems, searchPalette } from '../model/palette';
 import type { PaletteItem } from '../model/palette';
+import { sessionClockNexts } from '../model/clocks';
 import { sessionBinder } from '../model/session';
 import { SURFACE_META } from '../surfaces/meta';
 import type { Surface } from '../types';
@@ -61,7 +62,7 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
     try {
       // Script's lines, bound as the call in focus: the same rows Script lists and pins its baseline with.
       let rows: ReturnType<typeof callStringRows> | null = null;
-      if (session) try { rows = callStringRows(session.tree, sessionBinder(session), session.counts); } catch { rows = null; }
+      if (session) try { rows = callStringRows(session.tree, sessionBinder(session), session.counts, sessionClockNexts(session)); } catch { rows = null; }
       const items = paletteItems({ session, deps, rows, fields: TUNING_META });
       return { full: true, search: (q: string) => searchPalette(items, q, LIMIT) };
     } catch (error) {

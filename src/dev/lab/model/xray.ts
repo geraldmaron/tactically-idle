@@ -8,7 +8,7 @@
 import { sampleFor } from '../../../gen/incident/gates/engine-driver';
 import { weigh } from '../../../gen/incident/trees-v13/balance';
 import type { Weight } from '../../../gen/incident/trees-v13/balance';
-import { requirementTree } from '../../../gen/incident/trees-v13/dependencies';
+import { labRequirementTree, treeClockRoutes } from './clocks';
 import type { DependencyIndex, ReqNode, Site, StateKey } from '../../../gen/incident/trees-v13/dependencies';
 import { choiceIndex, humanizeNode } from '../../../gen/incident/trees-v13/graph';
 import { clockViews, forkMinutes, stepClock } from '../../../sim/clocks';
@@ -308,7 +308,7 @@ function computeXray(s: Session, frame: Frame, deps: DependencyIndex | null): Ch
     const written = new Set(BANDS.flatMap(band => bands[band].writes));
     const readers = deps ? [...written].flatMap(key => deps.keys.get(key)?.readers.filter(site => site.field !== 'engine') ?? []) : [];
     let req: ReqNode | null = null;
-    if (!view.eligible) { try { req = requirementTree(s.tree, { choice: [parts.node, parts.choice] }); } catch { req = null; } }
+    if (!view.eligible) { try { req = labRequirementTree(s.tree, { choice: [parts.node, parts.choice] }, treeClockRoutes(s.tree, s.template)); } catch { req = null; } }
     return [{
       actionId: view.id, node: parts.node, choice: parts.choice, view, shown: shown.has(view.id) ? 'shown' as const : 'behind-show-all' as const,
       score: ev.score, difficulty: ev.difficulty, margin: ev.margin, groups, bands, readers, req,
