@@ -622,6 +622,12 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
     if (!authored.roles.some(role => role.id === def.leader)) throw new Error(`${authored.type}: group ${group} is led by ${def.leader}, who is not a role`);
     if (!/^[a-z][a-z_]*$/.test(group)) throw new Error(`${authored.type}: group id ${group} must be lower snake case`);
   }
+  // A floor condition reads a room inside: one on a role outside or offsite has no floor to read,
+  // so it is an authoring error, never a line the missing-fact default would let through.
+  for (const node of authored.nodes) for (const state of [...(node.promptIf ?? []).map(entry => entry.when), ...node.choices.flatMap(choice => [choice.onlyIf,
+    ...BANDS.flatMap(band => choice.outcomes[band].map(outcome => outcome.when))])])
+    for (const role of [...state?.upstairs ?? [], ...state?.notUpstairs ?? []]) if (placed.upstairs?.[role] === undefined)
+      throw new Error(`${authored.type}: ${node.id} reads whether ${role} is upstairs, but ${role} starts outside the building`);
   const tree = treeForCounts(authored, callCounts({ groups, armed: placed.armed, upstairs: placed.upstairs }));
   const everyone = (roles: readonly string[] | undefined) => (roles ?? []).flatMap(role => groups[role] ?? [role]);
   /** A group where one person is meant (who fires, who force is used on, who is talked to): its

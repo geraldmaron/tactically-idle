@@ -8,6 +8,7 @@ import { INCIDENT_TEMPLATES } from '../../content/incidents';
 import { buildLocation } from '../../sim/location';
 import type { ScenarioDefinition } from '../../sim/scenario-types';
 import { generateIncident } from './index';
+import { specForSituation } from './gates/catalog';
 import { compileIncident, drawInstance, hostedSpec } from './instance';
 import { callCounts, countHolds, treeForCounts, upstairsKey } from './trees-v13/compile';
 
@@ -24,14 +25,14 @@ function variant(floor: 'ground' | 'upper' | 'any'): IncidentTemplate {
 }
 
 /** The first seed that hosts `template` on `family`, compiled, with the building. */
-function call(template: IncidentTemplate, family: string): { s: ScenarioDefinition; built: ReturnType<typeof buildLocation> } | null {
+function call(template: IncidentTemplate, family: string, rethrow = false): { s: ScenarioDefinition; built: ReturnType<typeof buildLocation> } | null {
   for (let seed = 1; seed < 40; seed++) {
     let base;
     try { base = generateIncident({ type: 'barricaded', familyId: family, buildingSeed: 1, seed, tier: 2, contentVersion: 13 }); } catch { continue; }
     const { clocks: _c, incidentPeople: _p, threats: _t, ...frame } = base;
     const spec = hostedSpec(frame), built = buildLocation(frame.locationFamilyId, frame.locationSeed);
     if (built.location.rooms.every(room => room.floor === 0) !== (family !== 'two_storey_house_g2')) continue;
-    try { return { s: compileIncident({ ...frame, id: `upstairs-${family}-${seed}`, incident: spec }, built, template), built }; } catch { continue; }
+    try { return { s: compileIncident({ ...frame, id: `upstairs-${family}-${seed}`, incident: spec }, built, template), built }; } catch (error) { if (rethrow) throw error; continue; }
   }
   return null;
 }
@@ -78,6 +79,17 @@ describe('a person can start upstairs (R-B1)', () => {
     expect(countHolds({ upstairs: ['child'] }, {})).toBe(true);
     expect(() => treeForCounts({ ...tree, nodes: tree.nodes.map((node, i) => i ? node : { ...node, promptIf: [{ when: { upstairs: ['nobody'] }, prompt: 'x' }] }) }, {})).toThrow(/not a role or group/);
   });
+
+  it('rejects a floor condition on a role who starts outside the building', () => {
+    const outside = variant('ground');
+    const ex = outside.tree.roles.find(role => role.place === 'outside' || role.kind === 'bystander')!;
+    expect(ex, 'the barricade has someone outside with patrol').toBeDefined();
+    for (const key of ['upstairs', 'notUpstairs'] as const) {
+      const t = structuredClone(outside);
+      t.tree.nodes.find(node => node.id === t.tree.root)!.promptIf!.unshift({ when: { [key]: [ex.id] }, prompt: 'x' });
+      expect(() => call(t, 'bungalow_g2', true)).toThrow(/starts outside the building/);
+    }
+  });
 });
 
 describe('a compiled call in play always knows its compile-time facts', () => {
@@ -86,9 +98,11 @@ describe('a compiled call in play always knows its compile-time facts', () => {
   for (const template of Object.values(INCIDENT_TEMPLATES)) if (template)
     it(`${template.type}: every family it lists, every situation`, () => {
       let checked = 0;
-      for (const family of template.tree.families) for (let seed = 1; seed <= 3; seed++) {
+      const situations = new Set<number>();
+      for (const family of template.tree.families) for (const variant of [0, 1, 2] as const) {
         let s: ScenarioDefinition;
-        try { s = generateIncident({ type: template.type, familyId: family, buildingSeed: seed, seed, tier: 2, contentVersion: 13 }); } catch { continue; }
+        try { s = generateIncident(specForSituation(template.type, family, variant)); } catch { continue; }
+        situations.add(variant);
         const placed = drawInstance(template, buildLocation(s.locationFamilyId, s.locationSeed), hostedSpec(s)).placed;
         const facts = callCounts(placed);
         for (const group of Object.keys(template.tree.groups ?? {})) {
@@ -100,5 +114,6 @@ describe('a compiled call in play always knows its compile-time facts', () => {
         checked++;
       }
       expect(checked).toBeGreaterThan(0);
+      expect([...situations].sort(), 'every situation').toEqual(template.situations.map(entry => entry.index).sort());
     }, 60000);
 });
