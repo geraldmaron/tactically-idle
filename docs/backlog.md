@@ -125,7 +125,7 @@ grows here too, since most of today's openings are phone calls that carry no gea
 
 ### rescue-model-first: Write the rescue call model-first
 Tags: job=command; journeys=answer-a-call, choices-branch; probes=blueprint-building; lane=calls
-Needs: start=none; integrate=offsite-fire, clock-runout-routing, rescue-engine-requests; ship=none
+Needs: start=none; integrate=offsite-fire, clock-runout-routing, rescue-engine-requests, lab-tests-off-live-content; ship=none
 
 Same pipeline as the barricade; the design sheet is `docs/calls/rescue-design.md`. Done: rescue gunfire comes from the drawn incoming-fire result,
 not harm authored per branch; `npm run check:strings` passes on it; it passes coverage, balance
@@ -224,6 +224,17 @@ Rescue request R-R9: `measureWiring` compares eligibility and favorable odds onl
 that the drawn incoming-fire distribution changes with the building. Done: a paired-building check
 over every fire-carrying choice shows the hit share differs where the sightline does, as a
 trees-v13 test.
+
+### lab-tests-off-live-content: Lab tests stop pinning live call content
+Tags: job=understand; journeys=none (lab tooling); probes=none (tooling); lane=tooling
+Needs: start=none; integrate=none; ship=none
+
+Per the "Tests across lanes" rule in `COORDINATION.md`. About 12 lab test files use today's hostage
+and rescue content as their subject (node ids, ending sets, crossing counts, choice labels, a gate's
+check count), and `src/dev/lab/model/explore.test.ts` has a negative control that assumes the rescue
+call never reaches a narrow-window state. The rescue rows break when `rescue-model-first` retires the
+old tree. Done: those tests use owned fixtures, or derive ids from the tree under test; the rescue
+rows first, before `rescue-model-first` integrates. The full table is in PR #58.
 
 ### hostage-gate-requests: Gate requests from the hostage review
 Tags: job=command; journeys=answer-a-call; probes=none (tooling); lane=tooling
