@@ -12,7 +12,7 @@ differs by situation.
 ## A. Lane and version
 
 - Lane: call tree (v13). The calls lane owns the new `CallTree`
-  (`src/content/call-trees/rescue-fireworks.ts`, name to confirm) and the rewritten
+  (planned as rescue-fireworks.ts in the call-trees folder, name to confirm) and the rewritten
   `IncidentTemplate` (`src/content/incidents/rescue.ts`). `call-trees/types.ts`,
   `incidents/types.ts`, `src/gen/` and `src/sim/` are engine files, so every new field is a request.
 - Version: `CALL_TREE_CONTENT_VERSION` 13, read 2026-10-18. Fingerprints are the lead's to
