@@ -69,6 +69,7 @@ export const OWNERSHIP: readonly { glob: string; layer: Layer; system: System }[
   { glob: '/src/sim/tuning-meta.ts', layer: 'lab', system: 'platform' },
   { glob: '/src/sim/tuning.ts', layer: 'kernel', system: 'platform' },
   { glob: '/src/sim/calendar.ts', layer: 'kernel', system: 'platform' },
+  { glob: '/src/sim/format.ts', layer: 'kernel', system: 'platform' },
   { glob: '/src/sim/conditions.ts', layer: 'kernel', system: 'platform' },
   // world (blueprint)
   { glob: '/src/gen/building/**', layer: 'world', system: 'blueprint' },
@@ -175,7 +176,5 @@ export const SYSTEM_EDGE_REASONS: Readonly<Record<string, string>> = {
   'metric -> officer': 'chain',
   'metric -> scenario': 'chain',
   'metric -> subject': 'chain',
-  'officer -> item': 'chain',
-  'officer -> metric': 'Reversed: the roster and squad builder read department money, unlocks, the sim clock and squad deployment from economy.ts. Paying it means moving the clock and squad state out of economy and passing hiring costs in.',
 };
 export const SYSTEM_EDGES: readonly string[] = Object.keys(SYSTEM_EDGE_REASONS);

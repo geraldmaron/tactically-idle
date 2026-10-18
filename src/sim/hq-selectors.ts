@@ -1,6 +1,6 @@
 import type { GameState } from './types';
 import { budget, boardSummary, recoveryInfo, squadReadiness } from './department-selectors';
-import { squadDeployed } from './economy';
+import { squadDeployed } from './squads';
 import { ROSTER_TUNING } from './roster';
 import { standardRadioPlan } from './standard-kit';
 import { departmentUpkeep } from './equipment-manager-policy';

@@ -4,7 +4,7 @@ import { useCampaigns, useGame } from '../store';
 import { squadReadiness } from '../../sim/department-selectors';
 import { hqOverview } from '../../sim/hq-selectors';
 import { formatGameDate, gameDay } from '../../sim/calendar';
-import { squadDeployed } from '../../sim/economy';
+import { squadDeployed } from '../../sim/squads';
 import { Sheet } from '../components/Sheet';
 import { Portrait } from '../portraits/Portrait';
 import './hq-overview.css';

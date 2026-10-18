@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { dispatch } from './game';
 import { establishedDepartment as createInitialState } from './department-test-fixtures';
-import { ECONOMY_TUNING, HOUR_MS, ratesAt, recoveryRate } from './economy';
+import { ECONOMY_TUNING, HOUR_MS, ratesAt, recoveryRate, candidatePoolSize } from './economy';
 import { CALENDAR, experienceBand, formatGameDate, gameDay } from './calendar';
 import {
   CAREER_TUNING,
@@ -522,7 +522,7 @@ describe('recruits', () => {
     const pool: { c: GameState['candidates'][number]; day: number }[] = [];
     let t = T0;
     for (let i = 0; i < 12; i++) {
-      fillCandidates(s, t);
+      fillCandidates(s, t, candidatePoolSize(s));
       for (const c of s.candidates) pool.push({ c, day: gameDay(s, t) });
       t += 5 * HOUR_MS;
     }

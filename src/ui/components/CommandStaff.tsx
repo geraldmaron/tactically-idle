@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { COURSES } from '../../content/courses';
 import { COMMAND_STAFF, commandStaffOf, managerView, managerViews, type ManagerId, type ManagerView } from '../../sim/command-staff';
-import { isNodeUnlocked, squadDeployed } from '../../sim/economy';
+import { isNodeUnlocked } from '../../sim/economy';
+import { squadDeployed } from '../../sim/squads';
 import { EQUIPMENT_MANAGER, equipmentManagerBenefits, maintenanceBudget } from '../../sim/equipment-manager-policy';
 import type { GameState, SquadId } from '../../sim/types';
 import { ManagerPortrait } from '../art/ManagerArt';

@@ -14,7 +14,10 @@ import type { GameState, HandlerResult, Id, Officer, SquadDuty, SquadId } from '
 import { SQUAD_IDS } from './types';
 import { COURSES } from '../content/courses';
 import { DEV_NODES } from '../content/dev-tree';
-import { HOUR_MS, isInjured, isNodeUnlocked, money, simNow, squadDeployed } from './economy';
+import { HOUR_MS, isInjured, isNodeUnlocked } from './economy';
+import { money } from './format';
+import { simNow } from './calendar';
+import { squadDeployed } from './squads';
 import { courseCheck } from './develop';
 import { ROSTER_HANDLERS } from './roster';
 import { fullName, STRESS_BANDS } from './officer';

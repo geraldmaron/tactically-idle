@@ -5,7 +5,9 @@ import type { Course, DevelopmentNode, GameState, HandlerResult, Id, ItemDefinit
 import { DEV_NODES } from '../content/dev-tree';
 import { COURSES, COURSE_RATING_CEILING } from '../content/courses';
 import { ITEMS } from '../content/items';
-import { HOUR_MS, isNodeUnlocked, money, ratesAt, simNow } from './economy';
+import { HOUR_MS, isNodeUnlocked, ratesAt } from './economy';
+import { money } from './format';
+import { simNow } from './calendar';
 import { fullName } from './officer';
 import { createUnit } from './equipment';
 import { quoteDevelopment } from './development-tiers';

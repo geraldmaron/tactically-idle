@@ -7,6 +7,7 @@ import { createInitialState } from './department';
 import { deserialize, serialize } from './save';
 import { fillCandidates } from './roster';
 import { type GameState } from './types';
+import { candidatePoolSize } from './economy';
 
 const NOW = Date.UTC(2026, 9, 5);
 const ids = (state: GameState) => Object.values(state.officers).map((o) => o.identityId!);
@@ -103,8 +104,8 @@ describe('campaign-wide identity selection', () => {
       expect(loaded).toEqual(state);
       for (let search = 0; search < 8; search++) {
         const at = NOW + search * 4 * 3_600_000;
-        fillCandidates(state, at);
-        fillCandidates(loaded, at);
+        fillCandidates(state, at, candidatePoolSize(state));
+        fillCandidates(loaded, at, candidatePoolSize(loaded));
         expect(loaded).toEqual(state);
       }
     }

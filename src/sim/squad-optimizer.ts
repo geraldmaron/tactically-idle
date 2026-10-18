@@ -1,9 +1,9 @@
 // A bounded, deterministic arrangement suggestion. It only reads the department
 // roster: no scenario, hidden truth, demographics, or random-number generator.
-import type { CertId, GameState, HandlerResult, Id, Officer, RatingKey, SquadId } from './types';
+import type { CertId, GameState, HandlerResult, Id, Officer, RatingKey, SquadDuty, SquadId } from './types';
 import { SQUAD_IDS } from './types';
-import { experienceBand, gameDay } from './calendar';
-import { ECONOMY_TUNING, recoveryDuty, simNow, squadDeployed } from './economy';
+import { experienceBand, gameDay, simNow } from './calendar';
+import { recoveryDuty, squadDeployed } from './squads';
 import { conditionFraction, deployability, EXPERIENCE_TUNING, highRiskAllowed, STRESS_BANDS, stressBand } from './officer';
 import { CERT_HOLDER } from '../content/certs';
 
@@ -241,17 +241,21 @@ function moveCount(before: SquadTopology, after: SquadTopology): number {
   const from = placements(before), to = placements(after);
   return [...from].filter(([id, sq]) => to.get(id) !== sq).length + before.squads.filter((s) => after.squads.find((x) => x.squadId === s.squadId)?.leaderId !== s.leaderId).length;
 }
-function dutyImpact(state: GameState, id: Id, to: SquadId | null): string | null {
+/** What a duty is worth in the department's books (economy.ts dutyRates): base stress recovered
+ * per hour, and patrol income per officer. The plan quotes them; it never reads the economy. */
+export interface DutyRates { recoveryPerHour: Readonly<Record<SquadDuty, number>>; patrolPerOfficer: number }
+
+function dutyImpact(state: GameState, id: Id, to: SquadId | null, rates: DutyRates): string | null {
   const fromDuty = recoveryDuty(state, state.officers[id]);
   const toDuty = state.squads.find((s) => s.id === to)?.duty ?? 'rest';
   if (fromDuty === toDuty) return null;
-  const patrol = (Number(toDuty === 'patrol') - Number(fromDuty === 'patrol')) * ECONOMY_TUNING.patrolPerOfficer;
-  return `${fromDuty} → ${toDuty}; base recovery ${ECONOMY_TUNING.recoveryPerHour[fromDuty]} → ${ECONOMY_TUNING.recoveryPerHour[toDuty]} stress/h${patrol ? `; patrol income ${patrol > 0 ? '+' : '−'}$${Math.abs(patrol)}/h for this officer` : ''}. Recovery modifiers still apply.`;
+  const patrol = (Number(toDuty === 'patrol') - Number(fromDuty === 'patrol')) * rates.patrolPerOfficer;
+  return `${fromDuty} → ${toDuty}; base recovery ${rates.recoveryPerHour[fromDuty]} → ${rates.recoveryPerHour[toDuty]} stress/h${patrol ? `; patrol income ${patrol > 0 ? '+' : '−'}$${Math.abs(patrol)}/h for this officer` : ''}. Recovery modifiers still apply.`;
 }
 
 /** Greedy vacancy filling, then up to 24 best improving pair swaps. Exact score
  * ties prefer fewer moves, then stable IDs. This is a suggestion, not an optimum. */
-export function planSquadArrangement(state: GameState, requested: SquadOptimizerOptions): SquadArrangementPreview {
+export function planSquadArrangement(state: GameState, requested: SquadOptimizerOptions, rates: DutyRates): SquadArrangementPreview {
   const before = squadTopology(state);
   const base: SquadArrangementPreview = { proposal: null, reason: null, before: [], after: [], moves: [], protected: [], scoreBefore: 0, scoreAfter: 0 };
   for (const check of [currentTopologyCheck(state), optionsCheck(state, requested)]) if (!check.ok) return { ...base, reason: check.reason };
@@ -324,7 +328,7 @@ export function planSquadArrangement(state: GameState, requested: SquadOptimizer
     const added = destination?.coverage.filter((c) => !previous?.coverage.includes(c) && !KEYS.some((k) => c.startsWith(LABEL[k]))) ?? [];
     if (added.length) reasons.push(`Adds ${added.join(', ')}`);
     reasons.push('Part of the combined improvement in readiness balance and complementary coverage');
-    return { officerId: id, from: from.get(id)!, to: to.get(id)!, reasons, dutyImpact: dutyImpact(state, id, to.get(id)!) };
+    return { officerId: id, from: from.get(id)!, to: to.get(id)!, reasons, dutyImpact: dutyImpact(state, id, to.get(id)!, rates) };
   });
   if (sameTopology(before, current) || currentScore <= base.scoreBefore + EPS) return { ...base, reason: 'No improving arrangement found with these options and protections. Keep the current roster, or adjust the selected squads and locks.' };
   base.proposal = { token: squadArrangementToken(state), options, before, after: current };

@@ -17,17 +17,9 @@ import { DEV_NODES } from '../content/dev-tree';
 import { ITEMS } from '../content/items';
 import { courseCheck, describeEffect, itemCheck, nodeCheck } from './develop';
 import { quoteDevelopment, type DevelopmentQuote } from './development-tiers';
-import {
-  ECONOMY_TUNING,
-  HOUR_MS,
-  formatDuration,
-  isInjured,
-  ratesAt,
-  recoveryDuty,
-  recoveryMultiplier,
-  recoveryRate,
-  squadDeployed,
-} from './economy';
+import { ECONOMY_TUNING, HOUR_MS, isInjured, netRate, ratesAt, recoveryMultiplier, recoveryRate } from './economy';
+import { formatDuration } from './format';
+import { recoveryDuty, squadDeployed } from './squads';
 import { ROSTER_TUNING, dismissCheck, hireCheck, retentionOffer } from './roster';
 import { EXPERIENCE_LABEL, experienceBand, formatGameDate, gameDay, serviceYears } from './calendar';
 import {
@@ -146,11 +138,11 @@ export function budget(state: GameState): Budget {
 }
 
 export function projectHire(state: GameState, candidateId: Id): Projection {
-  return hireCheck(state, candidateId);
+  return hireCheck(state, candidateId, netRate);
 }
 
 export function projectDismiss(state: GameState, officerId: Id, _now: number): Projection {
-  return dismissCheck(state, officerId);
+  return dismissCheck(state, officerId, netRate);
 }
 
 /** Stress after the time since the last settlement, so a view between ticks stays exact. */
@@ -381,7 +373,7 @@ export function careerInfo(state: GameState, officerId: Id, now: number): Career
   let retirement: CareerInfo['retirement'] = null;
   if (o.retirement) {
     const r = o.retirement;
-    const offer = r.reason === 'service' ? retentionOffer(state, o.id) : null;
+    const offer = r.reason === 'service' ? retentionOffer(state, o.id, netRate) : null;
     retirement = {
       date: formatGameDate(r.day),
       inDays: Math.max(0, Math.ceil(r.day - day)),

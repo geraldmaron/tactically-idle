@@ -6,12 +6,15 @@
 // rates for every segment. A final hourly rate is never multiplied across a whole
 // absence. Equipment wear is linear in game days, so it is split at the same
 // boundaries and online ticks match one offline settlement.
-import type { GameState, Id, NodeEffect, Officer, ShiftReport, SquadDuty, SquadId } from './types';
+import type { GameState, Id, NodeEffect, Officer, ShiftReport, SquadDuty } from './types';
 import { developmentTier, effectiveDevelopmentEffects } from './development-tiers';
 import { COURSES, courseRatingAfter, courseXpGain } from '../content/courses';
 import { ITEMS } from '../content/items';
 import { STRESS_BANDS } from './officer';
-import { gameDay } from './calendar';
+import { gameDay, simNow } from './calendar';
+import { money } from './format';
+import { recoveryDuty } from './squads';
+import type { DutyRates } from './squad-optimizer';
 import { ageRecoveryFactor, applyCareerDue, nextCareerEventTime } from './career';
 import { applyUnitDue, applyUnitWear, createUnit, nextUnitEventTime, ownedCount } from './equipment';
 import { applyIncidentsDue, nextIncidentEventTime } from './incidents';
@@ -19,6 +22,7 @@ import { runEquipmentMaintenance } from './equipment-manager';
 import { departmentUpkeep, maintenanceBudget } from './equipment-manager-policy';
 import { commandStaffActive, commandStaffSalaries, logQuartermaster, runCommandStaff } from './command-staff';
 import { tunable } from './tuning';
+import { RECRUIT_TUNING } from '../content/recruits';
 
 export const HOUR_MS = 3_600_000;
 
@@ -44,28 +48,7 @@ export const ECONOMY_TUNING = tunable('ECONOMY_TUNING', {
   restockIntervalMs: HOUR_MS,
 });
 
-// ---------------------------------------------------------------- formatting helpers
-
-export function money(n: number): string {
-  const sign = n < 0 ? '-' : '';
-  return `${sign}$${Math.round(Math.abs(n)).toLocaleString('en-US')}`;
-}
-
-/** Rounds up: '~3h', '~40m'. */
-export function formatDuration(ms: number): string {
-  const mins = Math.max(1, Math.ceil(ms / 60_000));
-  if (mins < 60) return `${mins}m`;
-  const h = Math.floor(mins / 60);
-  const m = mins % 60;
-  return m === 0 ? `${h}h` : `${h}h ${m}m`;
-}
-
 // ---------------------------------------------------------------- department queries
-
-/** The clock this state has been settled to; handlers treat it as "now". */
-export function simNow(state: GameState): number {
-  return state.department.clockHighWater;
-}
 
 export function unlockedEffects(state: GameState): NodeEffect[] {
   return effectiveDevelopmentEffects(state);
@@ -85,28 +68,15 @@ export function recoveryMultiplier(state: GameState): number {
   return m;
 }
 
-export function candidatePoolSize(state: GameState, basePool: number): number {
-  let n = basePool;
+/** How many candidates the recruit pool holds: the base pool plus what upgrades add. */
+export function candidatePoolSize(state: GameState): number {
+  let n = RECRUIT_TUNING.basePool;
   for (const e of unlockedEffects(state)) if (e.kind === 'candidatePool') n += e.delta;
   return n;
 }
 
-/** Is any member of the squad deployed (assignment or active run)? */
-export function squadDeployed(state: GameState, squadId: SquadId): boolean {
-  const run = state.activeRun;
-  if (run && run.status !== 'closed' && run.squadIds.includes(squadId)) return true;
-  const squad = state.squads.find((s) => s.id === squadId);
-  if (!squad) return false;
-  return squad.officerIds.some((id) => state.officers[id]?.assignment?.kind === 'operation');
-}
-
 export function isInjured(o: Officer, t: number): boolean {
   return !!o.injury && o.injury.until > t;
-}
-
-export function recoveryDuty(state: GameState, o: Officer): SquadDuty {
-  const squad = o.squadId ? state.squads.find((s) => s.id === o.squadId) : undefined;
-  return squad ? squad.duty : 'rest';
 }
 
 /**
@@ -169,6 +139,16 @@ export function ratesAt(state: GameState, t: number): Rates {
     net: gross - wages - staff - operating - supplies,
     devPointsPerHour: ECONOMY_TUNING.devPointsPerHour,
   };
+}
+
+/** What each squad duty is worth, for the squad builder's preview (squad-optimizer.ts DutyRates). */
+export function dutyRates(): DutyRates {
+  return { recoveryPerHour: ECONOMY_TUNING.recoveryPerHour, patrolPerOfficer: ECONOMY_TUNING.patrolPerOfficer };
+}
+
+/** The hourly net at the state's settled clock: what the roster weighs a hire or dismissal against. */
+export function netRate(state: GameState): number {
+  return ratesAt(state, simNow(state)).net;
 }
 
 // ---------------------------------------------------------------- settlement

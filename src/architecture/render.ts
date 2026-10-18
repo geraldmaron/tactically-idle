@@ -44,8 +44,11 @@ export function renderArchitecture(): string {
   }
   out.push('', '## System dependency chain', '', 'Runtime imports between systems (count of module edges). Platform is left out.', '', '```mermaid', 'flowchart LR');
   for (const [key, n] of [...counts].sort()) out.push(`  ${key.replace(' --> ', SYSTEM_EDGE_REASONS[key.replace('-->', '->')] === 'chain' ? ` -->|${n}| ` : ` -.->|${n} reversed| `)}`);
-  out.push('```', '', 'Solid edges follow the intended chain (the scenario reads the blueprint, people, officers and items; metrics read what happened). Dotted edges run against it:', '');
-  for (const [edge, why] of Object.entries(SYSTEM_EDGE_REASONS)) if (why !== 'chain') out.push(`- \`${edge}\`: ${why.replace(/^Reversed: /, '')}`);
+  const reversed = Object.entries(SYSTEM_EDGE_REASONS).filter(([, why]) => why !== 'chain');
+  const chain = 'Solid edges follow the intended chain (the scenario reads the blueprint, people, officers and items; metrics read what happened).';
+  out.push('```', '', reversed.length ? `${chain} Dotted edges run against it:` : `${chain} No edge runs against it.`);
+  if (reversed.length) out.push('');
+  for (const [edge, why] of reversed) out.push(`- \`${edge}\`: ${why.replace(/^Reversed: /, '')}`);
 
   out.push('', '## What moves the odds', '', 'Each input a system feeds into a choice\'s chance, and whether the engine actually reads it.',
     '`wiring.test.ts` perturbs the input on every opening choice of every call tree and checks the favorable chance moves (or, for a gap, that it still does not).', '',

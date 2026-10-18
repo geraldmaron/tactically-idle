@@ -8,7 +8,8 @@ import {
 import type { SquadArrangementPreview, SquadOptimizerOptions } from '../../sim/squad-optimizer';
 import type { GameState, Id, SquadId } from '../../sim/types';
 import { fullName } from '../../sim/officer';
-import { squadDeployed } from '../../sim/economy';
+import { squadDeployed } from '../../sim/squads';
+import { dutyRates } from '../../sim/economy';
 import { Sheet } from '../components/Sheet';
 import { Button, Chip } from '../components/ui';
 import { DUTY_META } from '../components/labels';
@@ -70,7 +71,7 @@ function SquadOptimizerSession({ open, onClose, campaignId, session }: { open: b
   const makePreview = () => {
     const current = getState();
     const squadIds = options.squadIds.filter((id) => current.squads.some((squad) => squad.id === id) && !squadDeployed(current, id));
-    setPreview(planSquadArrangement(current, { ...options, squadIds }));
+    setPreview(planSquadArrangement(current, { ...options, squadIds }, dutyRates()));
     setMessage('');
   };
   const apply = () => {

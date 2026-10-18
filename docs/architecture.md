@@ -10,14 +10,14 @@ syntax tree (`src/dev/import-graph.ts`, with the parser Vite ships), and a dynam
 
 | Layer | Modules | Lines | May import | Owns |
 | --- | --- | --- | --- | --- |
-| kernel | 7 | 2192 | nothing | Shared records, ids, seeded randomness, geometry and the tuning registry. No game rules. |
+| kernel | 8 | 2213 | nothing | Shared records, ids, seeded randomness, geometry and the tuning registry. No game rules. |
 | world | 49 | 8196 | kernel | Blueprints: authored and procedural buildings, rooms, openings, furniture, routes and sightlines. |
 | catalog | 28 | 5132 | kernel, world | Authored data: officers, personas, items, courses, unlocks, call templates and call trees. |
 | scenario | 9 | 2289 | kernel, world, catalog | Turns a drawn call into a playable definition: cast, placement on the blueprint, compiled tree. |
-| engine | 53 | 12283 | kernel, world, catalog, scenario, commerce | Game rules and state: department, economy, operations, resolution, outcomes, saves. |
+| engine | 54 | 12284 | kernel, world, catalog, scenario, commerce | Game rules and state: department, economy, operations, resolution, outcomes, saves. |
 | commerce | 4 | 198 | kernel | Point packs and the purchase ledger. |
-| qa | 26 | 3891 | kernel, world, catalog, scenario, engine, commerce | Content gates, balance measurement, fixtures and test support. Never loaded by the game. |
-| ui | 105 | 15617 | kernel, world, catalog, scenario, engine, commerce | Player screens, the blueprint renderer, portraits and the store that dispatches commands. |
+| qa | 26 | 3894 | kernel, world, catalog, scenario, engine, commerce | Content gates, balance measurement, fixtures and test support. Never loaded by the game. |
+| ui | 105 | 15619 | kernel, world, catalog, scenario, engine, commerce | Player screens, the blueprint renderer, portraits and the store that dispatches commands. |
 | lab | 97 | 16949 | kernel, world, catalog, scenario, engine, commerce, qa, ui | The dev-only Scenario Lab and dev sheets. Reads everything, never ships. |
 | shell | 3 | 372 | kernel, world, catalog, engine, ui, lab | Entry points that choose which app to mount. |
 
@@ -27,11 +27,11 @@ syntax tree (`src/dev/import-graph.ts`, with the parser Vite ships), and a dynam
 | --- | --- | --- | --- |
 | blueprint | 79 | 13685 | Where things are: buildings, rooms, doors and windows, furniture, routes, cover and sightlines. |
 | subject | 6 | 1152 | Who is on scene: subjects, hostages, victims, bystanders and animals, their holds, weapons, temper (agitation and rapport) and positions. |
-| officer | 12 | 1919 | Who the player sends: ratings, traits, stress, injuries, certifications, careers and squads. |
+| officer | 13 | 1903 | Who the player sends: ratings, traits, stress, injuries, certifications, careers and squads. |
 | item | 6 | 1322 | What they carry: the item catalog, ratings and capabilities, force risk, inventory and wear. |
 | scenario | 56 | 12102 | What happens: call trees, placement on the blueprint, choices, chance per choice, branches and clocks, and the call-time logistics (loadouts, resupply, outside support) that read the items. |
-| metric | 28 | 4088 | What it meant: outcome scoring, harm, debriefs, department reputation, money and progression, and the Command Staff who run the department. |
-| platform | 194 | 32851 | Everything that serves the systems above: records, randomness, saves, the store, screens and tooling. |
+| metric | 28 | 4105 | What it meant: outcome scoring, harm, debriefs, department reputation, money and progression, and the Command Staff who run the department. |
+| platform | 195 | 32877 | Everything that serves the systems above: records, randomness, saves, the store, screens and tooling. |
 
 ## System dependency chain
 
@@ -40,12 +40,10 @@ Runtime imports between systems (count of module edges). Platform is left out.
 ```mermaid
 flowchart LR
   metric -->|1| blueprint
-  metric -->|19| item
-  metric -->|24| officer
+  metric -->|20| item
+  metric -->|29| officer
   metric -->|10| scenario
   metric -->|1| subject
-  officer -->|1| item
-  officer -.->|2 reversed| metric
   scenario -->|24| blueprint
   scenario -->|29| item
   scenario -->|18| metric
@@ -54,9 +52,7 @@ flowchart LR
   subject -->|9| blueprint
 ```
 
-Solid edges follow the intended chain (the scenario reads the blueprint, people, officers and items; metrics read what happened). Dotted edges run against it:
-
-- `officer -> metric`: the roster and squad builder read department money, unlocks, the sim clock and squad deployment from economy.ts. Paying it means moving the clock and squad state out of economy and passing hiring costs in.
+Solid edges follow the intended chain (the scenario reads the blueprint, people, officers and items; metrics read what happened). No edge runs against it.
 
 ## What moves the odds
 
@@ -90,4 +86,4 @@ Each input a system feeds into a choice's chance, and whether the engine actuall
 None.
 
 
-Cross-layer runtime imports in total: 618.
+Cross-layer runtime imports in total: 629.
