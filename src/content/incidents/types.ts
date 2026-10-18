@@ -9,7 +9,7 @@
 import type { Armament, Disposition, IncidentType, Intent, PoliceAwareness, Readiness } from '../../sim/scenario-types';
 import type { Id, RoomType, Vec } from '../../sim/types';
 import type { StreetVantage } from '../../sim/sightlines';
-import type { CallTree } from '../call-trees/types';
+import type { CallTree, TreeNext } from '../call-trees/types';
 
 // ---------------------------------------------------------------- people (§1)
 
@@ -130,8 +130,11 @@ export interface Clock {
    * it, and the engine leaves it alone until the tree reads it. */
   story?: true;
   /** Running out where no fork reads it (sim/clocks.ts): harm recorded to the owner while they are
-   * still inside, and a mark the tree's prompts read. */
-  onOut?: { harm?: 'wounded' | 'serious'; mark?: string };
+   * still inside, and a mark the tree's prompts read. `next` moves the call there after the
+   * decision's own outcome (R-G4), unless that outcome ended the call or the owner is already out
+   * or safe; the target's prompt follows the outcome's text. The target is a last-stage node (never
+   * the root) or an ending. A node there may be reached only this way: the compiler keeps it. */
+  onOut?: { harm?: 'wounded' | 'serious'; mark?: string; next?: TreeNext };
 }
 
 // ---------------------------------------------------------------- conditions

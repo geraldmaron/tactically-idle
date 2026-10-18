@@ -28,17 +28,26 @@ export type EdgeCondition = { kind: 'fact'; fact: string; is: boolean; holds?: b
 export interface GraphEdge { id: string; node: string; choice: string; band: OutcomeBand; outcome: number; to: VertexId;
   via: 'next' | 'force' | 'cascade' | 'turn'; drawn?: 'fatal' | 'hurt' | 'none' | 'all' | 'some'; conditions: EdgeCondition[]; inCall: boolean; pruned?: string }
 /** `turnDrawn`: the node each turn group drew in this call, or null without a seed. */
-export interface CallGraph { root: string; vertices: GraphVertex[]; choices: GraphChoice[]; edges: GraphEdge[]; turnDrawn: Record<string, string | null> }
+/** `clockRoutes`: where a clock running out sends the call, from any node (R-G4). They aren't edges,
+ * since no choice takes them: they mark a node or ending in the call and seed truthReach. */
+export interface CallGraph { root: string; vertices: GraphVertex[]; choices: GraphChoice[]; edges: GraphEdge[]; turnDrawn: Record<string, string | null>; clockRoutes?: VertexId[] }
 
 const BANDS: readonly OutcomeBand[] = ['favorable', 'mixed', 'adverse'];
 const vertexOf = (next: TreeNext): VertexId => 'node' in next ? `node:${next.node}` : 'ending' in next ? `ending:${next.ending}` : `turn:${next.turn}`;
 
+/** Where a `next` lands in this graph: a node or ending, a turn resolved by `seed` (every member without one). */
+function landing(tree: CallTree, next: TreeNext, seed: number | undefined): string[] {
+  return 'turn' in next ? seed !== undefined ? [(resolveNext(tree, next, seed) as { node: string }).node] : tree.turns?.[next.turn] ?? [] : 'node' in next ? [next.node] : [];
+}
+
 /** The nodes a call reaches from the root as the compiler walks it: every route an outcome can take
- * with these group sizes, each turn resolved by `seed` (every member without one). */
-function reachable(tree: CallTree, counts: Record<string, number> | undefined, seed: number | undefined): Set<string> {
+ * with these group sizes, each turn resolved by `seed` (every member without one), and where a clock
+ * running out sends it (`clockNexts`, reached from any node). */
+function reachable(tree: CallTree, counts: Record<string, number> | undefined, seed: number | undefined, clockNexts: readonly TreeNext[]): Set<string> {
   const byId = new Map(tree.nodes.map(node => [node.id, node]));
-  const seen = new Set([tree.root]);
-  for (const queue = [tree.root]; queue.length;) for (const choice of byId.get(queue.shift()!)?.choices ?? []) for (const band of BANDS)
+  const fromClocks = clockNexts.flatMap(next => landing(tree, next, seed));
+  const seen = new Set([tree.root, ...fromClocks]);
+  for (const queue = [tree.root, ...fromClocks]; queue.length;) for (const choice of byId.get(queue.shift()!)?.choices ?? []) for (const band of BANDS)
     for (const outcome of choice.outcomes[band]) for (const next of outcomeNexts(outcome, counts)) {
       const targets = 'turn' in next ? seed !== undefined ? [(resolveNext(tree, next, seed) as { node: string }).node] : tree.turns?.[next.turn] ?? [] : 'node' in next ? [next.node] : [];
       for (const id of targets) if (!seen.has(id)) { seen.add(id); queue.push(id); }
@@ -81,13 +90,15 @@ function routesOf(outcome: TreeOutcome, counts: Record<string, number> | undefin
 }
 
 /** The graph of a tree, for one call when `counts` (memberCounts of its placement), `seed` (its
- * spec seed, for the turns) and `clockMarks` (clockMarksOf its clocks) are given; the authored
- * structure without them. `situation` fills in whether each fact condition holds. */
-export function callGraph(tree: CallTree, opts: { counts?: Record<string, number>; seed?: number; situation?: 0 | 1 | 2; clockMarks?: readonly string[] } = {}): CallGraph {
-  const { counts, seed, situation, clockMarks = [] } = opts;
-  const reach = reachable(tree, counts, seed);
+ * spec seed, for the turns), `clockMarks` (clockMarksOf its clocks) and `clockNexts` (clockNextsOf
+ * its clocks; templateClockNexts for the authored structure) are given; the authored structure
+ * without them. `situation` fills in whether each fact condition holds. */
+export function callGraph(tree: CallTree, opts: { counts?: Record<string, number>; seed?: number; situation?: 0 | 1 | 2; clockMarks?: readonly string[]; clockNexts?: readonly TreeNext[] } = {}): CallGraph {
+  const { counts, seed, situation, clockMarks = [], clockNexts = [] } = opts;
+  const reach = reachable(tree, counts, seed, clockNexts);
   // Without group sizes nothing can be pruned: the pruning needs to know who is there.
-  const plan: PrunePlan | null = counts ? prunePlan(tree, counts, clockMarks, seed) : null;
+  const plan: PrunePlan | null = counts ? prunePlan(tree, counts, clockMarks, seed, clockNexts) : null;
+  const clockRoutes = [...new Set(clockNexts.flatMap((next): VertexId[] => 'ending' in next ? [`ending:${next.ending}`] : landing(tree, next, seed).map(id => `node:${id}` as VertexId)))];
   const turnDrawn = Object.fromEntries(Object.keys(tree.turns ?? {}).map(group => [group, seed === undefined ? null : (resolveNext(tree, { turn: group }, seed) as { node: string }).node]));
   const dropped = (state: TreeState | undefined) => counts && !countHolds(state, counts) || plan && !plan.possible(state) ? plan?.why(state) ?? 'never true in this call' : undefined;
 
@@ -110,7 +121,7 @@ export function callGraph(tree: CallTree, opts: { counts?: Record<string, number
     if (member) for (const [group, nodes] of Object.entries(tree.turns ?? {})) if (nodes.includes(member) && turnDrawn[group] && turnDrawn[group] !== member)
       return `not drawn here (this call drew ${sentenceCase(turnDrawn[group]!).toLowerCase()})`;
     const sources = edges.filter(edge => edge.to === id || (member && edge.to.startsWith('turn:') && tree.turns?.[edge.to.slice(5)]?.includes(member)));
-    if (!sources.length) return 'no choice leads here';
+    if (!sources.length) return clockNexts.length ? 'no choice or clock leads here' : 'no choice leads here';
     const near = sources.find(edge => reach.has(edge.node) && edge.pruned);
     return near ? `only reached by routes this call drops (${near.pruned})` : 'only reached from nodes this call doesn’t reach';
   };
@@ -125,18 +136,20 @@ export function callGraph(tree: CallTree, opts: { counts?: Record<string, number
     }),
     ...Object.keys(tree.endings).map((ending): GraphVertex => {
       // The exhausted-choices fallback is in every call (compile.ts).
-      const inCall = ending === 'handed_over' || edges.some(edge => edge.inCall && edge.to === `ending:${ending}`);
+      const inCall = ending === 'handed_over' || clockRoutes.includes(`ending:${ending}`) || edges.some(edge => edge.inCall && edge.to === `ending:${ending}`);
       return { id: `ending:${ending}`, kind: 'ending', treeId: ending, inCall, ...inCall ? {} : { pruned: outReason(`ending:${ending}`) } };
     }),
   ];
-  return { root: tree.root, vertices, choices, edges, turnDrawn };
+  return { root: tree.root, vertices, choices, edges, turnDrawn, clockRoutes };
 }
 
-/** Vertices reachable from the root over in-call edges whose fact conditions hold in the graph's
- * situation: what a call with this hidden truth can still reach (clocks, meters and marks aside). */
+/** Vertices reachable from the root, or from where a clock sends the call, over in-call edges whose
+ * fact conditions hold in the graph's situation: what a call with this hidden truth can still reach
+ * (clock timing, meters and marks aside). */
 export function truthReach(graph: CallGraph, tree: CallTree): ReadonlySet<VertexId> {
-  const seen = new Set<VertexId>([`node:${graph.root}`]);
-  for (const queue: VertexId[] = [`node:${graph.root}`]; queue.length;) {
+  const start: VertexId[] = [`node:${graph.root}`, ...graph.clockRoutes ?? []];
+  const seen = new Set<VertexId>(start);
+  for (const queue: VertexId[] = [...start]; queue.length;) {
     const at = queue.shift()!;
     const out = at.startsWith('turn:')
       ? (tree.turns?.[at.slice(5)] ?? []).filter(id => graph.turnDrawn[at.slice(5)] === null || graph.turnDrawn[at.slice(5)] === id).map(id => `node:${id}` as VertexId)
