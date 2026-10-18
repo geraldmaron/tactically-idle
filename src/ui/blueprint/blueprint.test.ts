@@ -11,7 +11,7 @@ import { Blueprint } from './Blueprint';
 import { floorBadges, floorCount, floorScene } from './floors';
 import { computeFrame } from './frame';
 import { bboxOf, distToPolygonEdges, pointInPolygon, rectsOverlapArea } from './geometry';
-import { CARRIED_H, CARRIED_W, computeLayout, type LabelItem } from './layout';
+import { CARRIED_H, CARRIED_W, computeLayout, labelBox } from './layout';
 import { PlanLabel } from './labels';
 import { placeOverlays } from './overlays';
 import { unitsPerPixel } from './useViewport';
@@ -19,14 +19,6 @@ import { RoomList } from './RoomList';
 
 const build = (location: LocationDefinition): BuiltLocation => ({ location, derived: deriveLocation(location), issues: [] });
 const views = (loc: LocationDefinition): SpaceView[] => [...loc.rooms, ...loc.zones].map((s) => ({ id: s.id, label: s.label, status: 'none', marker: null, squadsHere: [], facts: [], people: [], actionIds: [] }));
-const labelBox = (l: LabelItem) => {
-  const lines = l.lines ?? [l.text];
-  const w = Math.max(...lines.map((line) => line.length)) * 0.6 * l.size;
-  const h = l.size * 1.1 + (lines.length - 1) * l.size * 1.15;
-  const cx = l.x - (l.rot ? l.size * 0.36 : 0);
-  const cy = l.y + (l.rot ? 0 : -l.size * 0.36 + (lines.length - 1) * l.size * 1.15 / 2);
-  return { x: cx - (l.rot ? h : w) / 2, y: cy - (l.rot ? w : h) / 2, w: l.rot ? h : w, h: l.rot ? w : h };
-};
 const markup = (built: BuiltLocation, spaces: SpaceView[], floor = 0) => renderToStaticMarkup(createElement(Blueprint, { built, spaces, squadTasks: [], selectedSpaceId: null, focusSquadId: null, floor }));
 
 describe('blueprint label rendering', () => {
@@ -306,4 +298,16 @@ it.each([false, true])('keeps possessions off all actors regardless of person it
   const carried = layout.people.find((p) => p.id === 'holder')!.carried;
   expect(carried).toHaveLength(1);
   for (const item of carried) for (const person of people) expect(rectsOverlapArea({ x: item.at.x - CARRIED_W / 2, y: item.at.y - CARRIED_H / 2, w: CARRIED_W, h: CARRIED_H }, { x: person.at.x - 1.9, y: person.at.y - 1.9, w: 3.8, h: 3.8 })).toBe(0);
+});
+
+describe('map box sizing', () => {
+  it('publishes the sheet shape for screens to size the map box, and draws dimension rows until measured narrow', () => {
+    const built = build(MAPLE_STREET.base);
+    const html = markup(built, views(MAPLE_STREET.base));
+    const hw = Number(/--bp-hw:\s*([0-9.]+)/.exec(html)?.[1]);
+    const frame = computeFrame(built, [], views(MAPLE_STREET.base));
+    expect(hw).toBeCloseTo((frame.h + 7) / (frame.w + 7), 3);
+    expect(html).toContain('bp-dims');
+    expect(html).not.toContain('bp-chooser');
+  });
 });

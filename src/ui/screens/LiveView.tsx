@@ -275,13 +275,37 @@ function DecisionDock({ available }: { available: number }) {
     observer.observe(target);
     return () => observer.disconnect();
   }, []);
+  // On a short screen the map fills the view; the shortcut would cover rooms, so it waits until the map scrolls past.
+  const [overMap, setOverMap] = useState(false);
+  useEffect(() => {
+    const dock = ref.current;
+    if (!dock) return;
+    let frame = 0;
+    const check = () => {
+      frame = 0;
+      const button = dock.querySelector('.decision-dock-btn')?.getBoundingClientRect();
+      const map = dock.closest('.live')?.querySelector('.live-map')?.getBoundingClientRect();
+      setOverMap(Boolean(button && map && button.top < map.bottom && button.bottom > map.top));
+    };
+    const schedule = () => { if (!frame) frame = requestAnimationFrame(check); };
+    check();
+    // Capture catches whichever ancestor scrolls.
+    document.addEventListener('scroll', schedule, { capture: true, passive: true });
+    window.addEventListener('resize', schedule);
+    return () => {
+      cancelAnimationFrame(frame);
+      document.removeEventListener('scroll', schedule, { capture: true });
+      window.removeEventListener('resize', schedule);
+    };
+  }, []);
+  const shown = below && !overMap;
   const go = () => {
     const target = ref.current?.closest('.live')?.querySelector<HTMLElement>('.operation-choices');
     target?.scrollIntoView({ block: 'start', behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
     target?.querySelector<HTMLElement>('.callbtn')?.focus({ preventScroll: true });
   };
-  return <div ref={ref} className={`decision-dock${below ? ' decision-dock-on' : ''}`} aria-hidden={!below}>
-    <button type="button" className="decision-dock-btn" tabIndex={below ? 0 : -1} onClick={go}>
+  return <div ref={ref} className={`decision-dock${shown ? ' decision-dock-on' : ''}`} aria-hidden={!shown}>
+    <button type="button" className="decision-dock-btn" tabIndex={shown ? 0 : -1} onClick={go}>
       <Icon name="chevronDown" size={16} />
       Next decision{available > 0 ? <b>{available}</b> : null}
     </button>
