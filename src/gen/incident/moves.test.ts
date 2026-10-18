@@ -13,6 +13,7 @@ import { buildLocation } from '../../sim/location';
 import { traceRun } from '../../sim/operation';
 import { movedPersonAt, scenarioWithPeopleNow } from '../../sim/resolution';
 import { deserialize, serialize } from '../../sim/save';
+import { validExternalSupportState } from '../../sim/external-support';
 import type { ScenarioDefinition } from '../../sim/scenario-types';
 import { getScenario } from '../../sim/scenario-registry';
 import { sightings } from '../../sim/sightings';
@@ -195,6 +196,46 @@ describe('the latest move wins, whatever order the call compiled them in', () =>
       .find(person => person.id === 'subject')!;
     expect(believed).toMatchObject({ status: 'reported', stale: true, position: place(action) });
     expect(sightingFlags(s, { flags, knowledge: {}, pressure: 0 }, 'subject')).toEqual([seenFlag('subject', cueMoveKey('boxes', 0))]);
+  });
+});
+
+describe('within one decision, the commit’s order', () => {
+  it('a look into where they went, then an outcome that moves them on seen: the observed move wins', () => {
+    const t = variant({ edit: tree => {
+      const line = tree.nodes.find(node => node.id === 'on_the_line')!.choices.find(choice => choice.id === 'honest_no')!;
+      line.team = { to: { watch: HALL }, signal: { channel: 'visual', to: 'subject' } };
+      for (const outcome of line.outcomes.favorable) if (outcome.next) outcome.moveTo = { subject: { to: 'scene', seen: true } };
+    } });
+    const s = call(t, 'bungalow_g2', 1, true)!.s;
+    withDraftScenario(s, id => {
+      let state: GameState | null = applyMove(startGateRun(id), { kind: 'decide', actionId: choiceActionId('barricaded', 'window', 'call_him'), band: 'favorable' });
+      state = applyMove(state!, { kind: 'decide', actionId: choiceActionId('barricaded', 'on_the_line', 'honest_no'), band: 'favorable' });
+      const run = state!.activeRun!;
+      const moved = run.flags.find(flag => flag.startsWith('moved:subject:'))!, n = moved.split(':')[2];
+      expect(run.flags).toContain(seenFlag('subject', n));
+      const believed = storyPeoplePublic(getScenario(id)!, buildLocation(s.locationFamilyId, s.locationSeed), run).find(person => person.id === 'subject')!;
+      expect(believed.stale).toBeUndefined();
+      expect(believed.position).toEqual(storyPeopleActual(getScenario(id)!, run).find(person => person.id === 'subject')!.position);
+      expect(traceRun(getScenario(id)!, run).end.flags.filter(flag => /^(moved|seen):subject:/.test(flag)).sort()).toEqual(run.flags.filter(flag => /^(moved|seen):subject:/.test(flag)).sort());
+    });
+  });
+
+  it('an outcome move and a cue move in one decision: live, the replay, the waits validator and a reload agree', () => {
+    const fast = { ...CLOCK, start: 50, ratePerMin: 9, cues: [{ ...CLOCK.cues[0], at: 46 }] };
+    const t = { ...variant(), situations: BARRICADE.situations.map(situation => ({ ...situation, clocks: [fast] })) };
+    const s = call(t, 'bungalow_g2', 1, true)!.s;
+    withDraftScenario(s, id => {
+      const state = applyNaturalMove(startGateRun(id), { kind: 'decide', actionId: choiceActionId('barricaded', 'window', 'call_him') })!;
+      const run = state.activeRun!;
+      // The cue lands after the outcome, as the commit applies it: the cue's move is current.
+      expect(run.flags).toContain(movedFlag('subject', cueMoveKey('boxes', 0)));
+      expect(traceRun(getScenario(id)!, run).end.flags.filter(flag => flag.startsWith('moved:subject:'))).toEqual([movedFlag('subject', cueMoveKey('boxes', 0))]);
+      expect(validExternalSupportState(run, getScenario(id)!)).toBe(true);
+      const copy = structuredClone(state);
+      copy.incidents = [];
+      delete copy.activeRun!.sourceIncident;
+      expect(deserialize(serialize(copy, NOW)), 'the save loads').not.toBeNull();
+    });
   });
 });
 

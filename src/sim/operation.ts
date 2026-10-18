@@ -530,8 +530,8 @@ export function traceRun(scenario: ScenarioDefinition, run: OperationRun): { ste
     // Who the team saw, read before the outcome moves anyone, as the commit reads it (sim/sightings.ts):
     // its seen flags keep a re-sighting in the replay (R-B3).
     const seen = a ? sightings(scenario, sim, a, h.band, applied) : null;
-    applyEffects(sim, applied);
     if (seen) applyEffects(sim, [seen]);
+    applyEffects(sim, applied);
     applyClockCues(sim, scenario, timed.cues);
     {
       applyEffects(sim, clockOutEffects(scenario, clocksBefore, sim.clocks, sim, applied));
@@ -900,9 +900,12 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     const t = advanceTime(run, scenario, timeCost);
     t.civilianLoss = round1(before.civilianSafety - run.civilianSafety);
     // Who the team sees, read before the outcome moves anyone (sim/sightings.ts).
+    // It lands before the outcome's own effects, so a move the outcome makes (seen or not) is the
+    // latest word on where they are (R-B3).
     const seen = sightings(scenario, run, action, band, matched);
-    const { changes, stage: outcomeStage, ending: outcomeEnding } = applyEffects(run, matched);
-    if (seen) changes.push(...applyEffects(run, [seen]).changes);
+    const seenChanges = seen ? applyEffects(run, [seen]).changes : [];
+    const { changes: outcomeChanges, stage: outcomeStage, ending: outcomeEnding } = applyEffects(run, matched);
+    const changes = [...seenChanges, ...outcomeChanges];
     // v13: cues the clocks passed during this decision land after its own outcome, and the
     // outcome's events move the subjects' meters (sim/clocks.ts, sim/meters.ts).
     const cues = applyClockCues(run, scenario, t.cues);

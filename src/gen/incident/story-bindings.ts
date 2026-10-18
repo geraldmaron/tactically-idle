@@ -242,7 +242,7 @@ export function validateStoryBindings(scenario: ScenarioDefinition, built: Built
     ...effects.flatMap(effect => [...effect.setFlags ?? [], ...effect.clearFlags ?? []]),
     // Set by the engine, not an authored effect (R-B3): a sighting's seen flag for a move, and a clock cue's mark.
     ...people.flatMap(person => person.transitions.flatMap(transition => (transition.when.flags ?? []).filter(flag => flag.startsWith(seenFlag(person.id, ''))))),
-    ...(scenario.clocks ?? []).flatMap(clock => clock.cues.flatMap(cue => cue.mark ? [`mark:${cue.mark}`] : [])), ...engineFlags,
+    ...(scenario.clocks ?? []).flatMap(clock => clock.cues.flatMap(cue => [...cue.mark ? [`mark:${cue.mark}`] : [], ...cue.setFlags ?? []])), ...engineFlags,
     ...built.location.openings.flatMap(opening => ['open', 'closed', 'locked', 'blocked'].map(state => `opening:${opening.id}=${state}`))]);
   const requiredFact = (id: Id, context: string) => { if (!facts.has(id)) error(`${context} references unknown fact ${id}`); };
   const condition = (when: Condition | undefined, context: string) => {
