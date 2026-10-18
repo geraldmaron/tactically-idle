@@ -22,6 +22,7 @@ incidents and their gates, and `src/ui/` the screens and blueprint renderer.
 
 ## Conventions
 
+- Work still to do lives in `docs/backlog.md` and nowhere else. Add new work there and delete an item when it ships.
 - Architecture rules, odds wiring and player journeys live in `src/architecture/` and its tests enforce them. Change the manifest when the architecture changes, then re-render `docs/architecture.md` with `npx vitest run src/architecture -u`.
 - Content changes follow `docs/content-pipeline.md`: agent brief, typed package, automated
   gates, review in the Scenario Lab (`/lab`, notes in `docs/calls/notes/`), and deliberate recapture

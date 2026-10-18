@@ -29,14 +29,13 @@ export interface CatalogEntry {
   type: IncidentType;
   label: string;
   families: string[];
-  squads: [number, number];
   rule: UnlockRule;
 
 }
 
 /** Every current tactical type, with buildings owned by its call tree. */
 export const CATALOG: CatalogEntry[] = SCENARIO_TYPES.map(info => ({
-  type: info.type, label: info.label, families: info.families, squads: info.squads,
+  type: info.type, label: info.label, families: info.families,
   rule: unlockRule(info.type),
 }));
 export const catalogEntry = (type: string): CatalogEntry | undefined => CATALOG.find(entry => entry.type === type);

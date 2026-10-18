@@ -1,152 +1,12 @@
 # Incident domain model: standardize what a scenario is, then generate, resolve, narrate and review from it
 
-**Status:** approved 2026-10-07. Milestone 1 done 2026-10-07. Milestone 2 done 2026-10-08 (slices 1 to 5, with the hostage pilot). Next: M3 to M5 under the model-first plan change below; start each in a fresh session. Defaults D1 to D5 stand unless the owner changes them.
+**Status:** M1 completed on 2026-10-07 and M2 completed on 2026-10-08, including the model-first hostage pilot. The domain rules below remain the contract; remaining implementation and review work lives only in [docs/backlog.md](backlog.md).
 
-**Correction found in M2 (2026-10-07):** `src/sim/threat.ts` (`threatFx`, `subjectsFor` and the rest) is not wired into resolution; nothing imports it. The plan assumed it ran. M2 reuses its pure scoring rules (`threatFx`, `relevantSubjects`) fed from the incident instance, and does not revive its parallel person system (`run.people`, `movePeople`), which would run a second person model beside the story bindings.
+The resolution pipeline uses `threatFx` and `relevantSubjects` from `src/sim/threat.ts` through `src/sim/incident-factors.ts`, fed by the incident instance. Story bindings remain the person-position source; the parallel legacy person model is not revived.
 
-**M2 slice 1, people and place in the odds (done):**
-- **Instance to engine.** The compiled scenario carries `incidentPeople` (`IncidentPersonDef`, scenario-types.ts), emitted by `incidentPeopleFor` (instance.ts). `validateScenario` requires each person to be story-bound, standing where the story puts them, and reading real facts.
-- **`sim/incident-factors.ts` in `evaluateAction`**, after authored modifiers, so every factor is a labelled contributor on the card and in the debrief:
-  - armament and readiness by kind of work (an entry feels a handgun at about 13 points, talk about 5);
-  - temper, once a fact reveals it;
-  - awareness, for entries and observation;
-  - what waiting does by intent (helps against a barricade, costs against someone seeking a victim);
-  - cover: furniture between an armed person and the door into their room (`coverOnLine`, sim/cover.ts; hard cover 6, concealment 3).
-  - the threat rules' two multipliers (2026-10-18): armed subjects near the work raise the strain the officers taking part carry (`strainExecution`, `strainOther`, capped by `strainCap`), and waiting out a barricade takes `barricadeSlow` times as long, with a line on the card saying so.
-- **What counts.** Every subject inside counts, with the nearest first; someone out with the team no longer counts. The odds use what the team knows: a weapon is reported or an unknown risk, and a temper counts only when revealed. Hidden truth still decides which authored result happens.
-- **Re-tuned with the simulator.** Hostage base 40, barricade 40, armed 32, and the armed call's talk-through at +14. All bands hold at tier 2.
-- **Gates.** `sim/incident-factors.test.ts` checks the same action with one thing changed: cover vs none, weapon known vs unknown, temper hidden vs revealed, subject inside vs out, waiting on a barricade vs on someone seeking a victim.
+M1 delivered incident templates, seeded instances, per-person identity binding and the Scenario Lab. M2 connected people and place to the odds, incoming fire and team force, clocks and meters, authorization, commitments, scoring, counted groups, cascades and resolve-then-narrate coverage. The hostage pilot, "One Last Signature", was written model-first with one to three subjects. Its design and review history are in [hostage-signature-design.md](calls/hostage-signature-design.md) and [hostage-signature-review.md](calls/hostage-signature-review.md). The Lab now lives at `/lab`; `npm run check:strings` and the Lab use the skill's existing Python string checker.
 
-**M2 slice 2, incoming fire and team force (done):**
-- **Drawn consequences** (`sim/drawn-effects.ts`). An outcome effect can carry `drawn` and `variants`. At commit the engine draws once per drawn effect, from its own saved sample, picks a variant, and applies it as if authored. Versions without drawn effects keep their one-draw sequence. Save validators, `validateScenario`, the story-binding check and the text binder all see variants.
-- **Incoming fire** (`INCOMING_FIRE_V1`). Whether an officer is missed, wounded or seriously hurt depends on:
-  - the subject's weapon, real or replica;
-  - their accuracy, drawn per call from the template;
-  - their distance to the door the team comes through;
-  - cover.
-
-  The shield rule still applies after. Officers are never killed.
-- **Team force** (`TEAM_FORCE_V1`).
-  - Firearm against a gun in hand.
-  - Otherwise less-lethal when the acting squads carry it with a trained officer, the person is in range of the door (device 15 ft, launcher 60 ft), no hard cover blocks the line, and no held person or child is within 6 ft.
-  - Severity comes from `FORCE_RISK_V1`, unchanged. A minor, or a subject the self-harm screen covers (`noDeathOnCard`: the hostage taker and the barricade subject), is never killed.
-  - The ending follows the severity: killed, hurt, or taken unhurt on a miss.
-- **Content.** Tree outcomes write `fire: { from }` or `force: { on, next }`; their own text sets up the moment, and a standard line (`content/incidents/lines.ts`, under the identity gates) says what happened.
-  - The hostage, barricade and armed calls were converted.
-  - Previews now say an officer "may be hit".
-  - The armed call's "get the officer to the medic" choice needs an officer actually down, and a "regroup" choice covers a miss.
-  - The force endings no longer say "shot".
-- **Tuning.** Armed base 34, giving 38% clean, 9% with a death, and officers hurt in 36% of fast-style calls.
-- **Tests.** `sim/drawn-effects.test.ts` covers the model rules, plus real armed and barricade calls played fast with every save validated after every decision.
-- **Not yet:**
-  - The rescue's shooter is offsite and has no position, so its gunfire stays authored until sightlines exist. (2026-10-18: the shooter now has a window on the plan, and whether it sees the front door is computed per building; the gunfire itself is still authored.)
-  - Less-lethal use doesn't spend cartridges yet.
-  - The debrief doesn't say which force was used or why. The reason is computed (`teamForceProfile`) but not shown.
-
-**M2 slice 3, clocks and meters (done 2026-10-07):**
-- **Clocks** (`sim/clocks.ts`, `CLOCK_RULES_V1`). The instance's clocks reach the engine as `scenario.clocks` (`clocksFor`, instance.ts), with each call's rate drawn within the template's `rateSpread`. The run keeps each clock's value and how many cues have fired (`run.clocks`). Operation minutes run them in `advanceTime`, resupply included. A clock stops once its owner is out.
-- **Cues.** Each cue fires once, after the decision's own outcome: a result line, an optional mark, and an optional settling of the clock's fact. A cue stays silent when its mark is already set or its fact already settled, so it never repeats what the outcome just said.
-- **No outcome without a warning (§13).** A clock can't run out before the team heard one of its cues in an earlier decision. One long wait from a silent start stops it just short and fires the cue; the next decision can run it out.
-- **Forks.** Tree outcomes read `if: { clock, out }` or `if: { clock, low }`, evaluated at the end of the choice's own minutes for its band plus the outcome's minutes. Rates stay facts (asking about the door tells you which door you have); events are forks.
-  - **Armed.** `doorFork` reads the door. A splitting frame gives about 20 minutes in (±25%), and the worker says so on the line about 6 minutes in (cue, `door_weak`, settles `door_holds`). A holding door outlasts any call. The holds branch no longer reveals the fact or sets `door_strong`, which had claimed the bolt held in the splitting situation.
-  - **Rescue.** Waits read the tank gauge (`gauge`, `low`), the all-night wait reads it empty (`empty`, `out`); asking stays a fact (`breath`). A short tank lasts about 40 minutes (±20%). Cues: the needle in the red (`running_low`), then the hiss stopping (`tank_empty`, read by two new prompts).
-  - **Hostage.** The long holds read the owner's condition. An unwell owner shows the first sign through the glass within a few minutes (`owner_unwell`) and the clock runs out about half an hour in (±25%), because the holds narrate hours in 30 to 40 engine minutes.
-  - **Barricade.** The phone battery stays a story clock (`story: true`): the tree's own outcomes still run it down.
-- **Meters** (`sim/meters.ts`, `METERS_V1`). Subjects reach the engine with agitation, rapport and volatility. The run keeps them (`run.meters`) and what each kind of event moved. Outcomes write `moves: { role: event }` (heard, contact, honest, provoked, team_seen, shots, released), scaled by volatility (steady 0.6, shifting 1, volatile 1.5) and clamped 0 to 100.
-  - Every contact check with the subject (`action.talksTo`, or every subject inside when the check talks to nobody) shows what moved since the call began as two contributors: "is talking to you more or less" and "is more worked up now" or "is steadier now".
-  - The mood modifiers (`stung`, `heard`, `talking`, `told_no`, `limit_told`) were replaced by events on 38 outcomes. Marks stay where prompts or choices read them as facts (`stung` in the hostage "hung up" prompts, `talking`).
-- **Player view.** "People at this call" shows a subject's stance once the team has heard from them, and a clock once one of its cues has fired, so it never shows what the team can't know.
-- **Lab.** The instance panel shows each clock's drawn rate, when it runs out, each cue's minute, mark and reveal, and subject meters. The step-through shows live clocks and meters. (Since the 2026-10-09 rebuild, Play's Clocks and People tabs show them; [scenario-lab.md](scenario-lab.md).) Coverage counts both sides of a clock fork where the situation's clock can reach it.
-- **Gates.** `sim/clocks.test.ts` (model rules, the same choice before and after the cue, a holding door never giving, the cue said once, saves). `sim/meters.test.ts` (volatility, clamping, contributors, odds after heard vs provoked, other people's conversations untouched). Call-tree gates for clock forks, reveal cues and cue marks; the path walk tells clock states apart. Clock labels and cues join the string gates and `check:strings` rows.
-- **Balance (tier 2, random style):** hostage 32% clean, harm 5%, deaths 1.7%; barricade 30% clean, harm 12%; armed 38% clean, harm 35%, deaths 10%; rescue 47% clean, harm 32%, deaths 5%. Waiting out an unwell owner now costs them in 12% of patient calls.
-- **Not yet:**
-  - A clock that runs out where no fork reads it changes nothing on the record (the tank emptying during a crossing records no harm). The casualty model (M4) and the coverage gate (slice 5) close this.
-  - Time doesn't move meters, and meters don't drive escalation yet (slice 5). `shots` and `released` are defined but not yet written into content.
-  - Promises as commitments are slice 4.
-
-**M2 slice 4, authorization and scoring (done 2026-10-07):**
-- **Authorization** (`sim/authorization.ts`, `AUTHORIZATION_V1`), from what the team believes:
-  - An entry is authorized on a seen threat to life: a threat fact the team believes (`TreeFact.threat`) or a threat mark (`CallTree.threatMarks`). It is also authorized once an `urgent` clock is low.
-  - Concessions are allowed (food, water, phone, statement, message, third party, surrender terms) or never (weapon, transport, officer swap, family).
-  - Choices declare `authority`. Unauthorized, a choice is locked with the generated reason. Authorized, the card carries the generated command line ("Command approves it because …"), so summaries no longer say it.
-- **Deadly force** (`teamForceProfile`): the firearm only on a gun in hand the team believes in, or a weapon within reach of someone. Otherwise less-lethal, and when neither applies a new `hands` profile (never fatal, `FORCE_RISK_V1.hands`). Every force use records its rule and a plain reason.
-- **Scoring** (`sim/outcome-score.ts`, `OUTCOME_SCORE_V1`). One function sets a v13 debrief's disposition, trust, closing strain and rewards factor from people's end states in priority-of-life order (held, trapped, bystanders, officers, subjects), force used, entries, commitments, time and the objective. The debrief lists the lines and the force used, with who and why. Calibrated on 2,400 played calls against the retired hand-set numbers: trust within 0.5 on average, disposition agreeing on every call. Ending trust and strain are gone from the trees.
-- **Commitments** (`sim/commitments.ts`). Made by a `promise` outcome or a granted concession. Broken by an entry or team force while open, kept when the person comes out. Kept and broken move the person's meters and the score.
-- **Content.** All four calls tag entries, threat evidence, concessions and the hostage back-door promise. The authored command sentences are gone from summaries and threat prompts.
-- **Fixes on the way.** Saves with a v13 run that had gunfire or force failed to load (slice 2): the saved-sample replay now counts drawn draws, applies drawn variants and reads clock forks. The career verdict reads the scored factor.
-- **Gates.** `authorization.test.ts`, `outcome-score.test.ts` (calibration fixture, disposition agreement over played calls), `commitments.test.ts` (rule on every played call, every save loads), the path walk (an offered authority choice is authorized somewhere it is offered), and content gates (entries tagged, no never-concession, phrases pass the string checks).
-- **Balance (tier 2, random style):** hostage 18% clean, harm 5%; barricade 28% clean, harm 12%; armed 17% clean, harm 35%, deaths 10%; rescue 42% clean, harm 32%. A long night or an entry now scores as costly rather than clean.
-- **Owner calls:**
-  - Some endings still say "goes to review", which the debrief now says. This is the open E2.1 vs prose-skill question from M1.
-  - Resolved-with-harm now counts as complete, which raises department service about 10%.
-  - An entry breaks every open commitment, including one made to a civilian.
-
-**M2 slice 5 engine (done 2026-10-07; the pilot is below when it lands):**
-- **Groups.** A template slot with a count range: its first person is the key role and leader; the rest are a counted tree role (`CallTree.groups`), numbered nearest the door first (`others_1…`). Each member is a full engine person: placed by `placeCast`, story-bound with a location fact and `out:` transition, in `incidentPeople` with threat, weapon (drawn per person), meters, volatility, `group` (role, influence) and `hold`. `compileIncident` (instance.ts) is the one emit path.
-- **Count-aware text.** `{others}`, `{others.first}`, `{others.n}`, pronoun forms (plural for two or more), `{others#…|…}` after names, `{others~…|…}` after pronouns. `TreeState.count` is settled by the compiler (`treeForCounts`), so a lone call carries no group text. Gates bind every string at every size with every pronoun; a never-dispatched fixture call (`trees-v13/group-fixture.ts`) exercises them.
-- **Cascade** (`CASCADE_V1`, drawn). Where the leader gives up, each member follows with 0.25 + 0.5 × influence + rapport − agitation terms (0.05 to 0.95), from one saved sample; followers come out, a standard line names them, and all/some/none route.
-- **Escalation.** `TreeIf` meter branches (`stance`, `agitationAtLeast`, `is`), read at the start of the decision and replayed by `traceRun` and the save check.
-- **Incident class** (`INCIDENT_CLASS_V1`). A victim incident (an expressive hold inside) costs 3 on waiting and scales the holder's "more worked up" contributor ×1.5; the current hostage call is one.
-- **Clocks running out** (`onOut`). Harm to an owner still inside and a mark, unless the outcome already hurt them. The rescue tank uses it (serious, `tank_empty`); a hurt but living civilian can still be walked out.
-- **Coverage gate** (`trees-v13/coverage.test.ts`). Walks every situation, pacing, turn, band, clock and meter bucket and drawn result through the engine: a commit that routes nowhere or twice, or carries no text, fails, as does a live state with no choice. 0 gaps on all four calls after fixing 12 armed and 7 rescue gaps.
-- **Fixes on the way.** The turn draw now uses the hash's high bits (the low bit tied the armed turn to pacing). Marks a clock sets count as settable. Saves replay cascades.
-- **Tuning note.** An entry now goes to review and costs trust, so a clean armed call means talking the shooter out; armed random-play clean sits at the 15% floor.
-
-**M2 slice 5 pilot (2026-10-08):** "One Last Signature" rewritten model-first as a 1 to 3 subject call.
-- **Sources.** Design sheet, prose record and review response in `docs/calls/hostage-signature-design.md`; the separate review in `docs/calls/hostage-signature-review.md`.
-- **The group.** One or two coworkers from the taker's last shift came back to back the taker's story. They draw no weapon (60%) or something heavy from behind the counter. They are a follower or a lookout, with an influence that depends on the situation. Group sizes are 55/30/15.
-- **Group choices.** Separating them, them walking the courier out, and a face-saving release of the owner, each offered only when there is a group. The taker's surrender carries a cascade whose all, some and none results lead to different nodes and endings.
-- **Hostage vs victim.** The courier is the taker's opening offer, released as a bargain. Escalation only turns toward the owner. Releasing the owner always costs the taker something they came for. The engine prices waiting and provocation as a victim incident.
-- **Models.** Stage 3 escalation reads the taker's meters. The owner's clock has `onOut`, so a collapse is recorded wherever it happens. Entries and concessions declare authority, the alley deal is a promise, and endings are scored.
-- **Size.** 15 nodes, 46 choices, 327 outcomes, 20 endings, 3 situations, 3 turns. Coverage is 0 gaps, including a crossed walk over every situation, group size, turn and pacing (195,226 states).
-- **Balance (tier 2, random):** 23% clean, harm 5%, deaths 1.7%; all four calls hold their bands. `check:strings` exits 0 for the call.
-- **Review.** The separate read gave edit. On re-check 33 of 44 findings are closed, and its two new fix-before-freeze lines (NF1, NF2) are applied. The 11 left open are owner, engineering or skill-file items, plus notes NF3 to NF8. `npm run verify` passes (2,972 tests).
-- **Not done from the review:** the skill-file budget fixes (N8 in `surface-budgets.md`, N20 in `swat-writing-review/SKILL.md`), the engineering notes N6, N7, N9, N15, N16 and N21, and notes NF3 to NF8 (passives, briefing sources, preview openers, a duplicate held-ending title).
-- **Engine fixes from the review.**
-  - Every `{lead}` is replaced.
-  - A decision where someone is hurt or killed names it on the result chip, never "Went well".
-  - Name, recipe, turn and age draws read the hash's high bits (`hashIndex`), so only about half the surnames were reachable before.
-  - The slow-answer pacing line never applies to a subject (E4, R9).
-  - The checker no longer counts a field as repeating itself.
-- **Open for the owner:**
-  - B9: the owner's condition exists only in one situation, so its cue tells a returning player the situation. Fixing it needs facts drawn per call.
-  - O4 custody wording.
-  - Human reads of the deaths, the beating and the surname spread.
-  - O1 armed-lane words.
-  - O2/R5: the content note and 988 line have no surface.
-  - The time charge on all-night holds.
-  - Whether the board clamps hooks at 3 lines.
-  - Whether to accept the 6-decision stage 3 chain.
-  - R-G1 to R-G4: a member's own weapon as a belief; role effects; count-conditioned briefing lines; `onOut.next`, so a collapse can route in the same decision.
-
-**M2 slices as planned (all done):** 5. **Resolve then narrate, and the pilot.** Models settle state and text is chosen for it, with a coverage gate. The hostage call becomes a 1 to 3 subject call with group roles and a cascade.
-
-**M2 slice 5 design (2026-10-07, before the work):**
-- **Groups.** A template slot with a count range binds its first person to the key role (`taker`, the leader) and the rest to a counted tree role (`CallTree.groups`, for example `others`). Each counted person is a full engine person: placed on the map, story-bound with a location fact, an `incidentPeople` entry with threat, meters, volatility and a drawn group role (`leader`, `follower`, `lookout`) with influence. `out: ['others']` and `safe: ['others']` expand to every member.
-- **Count-aware text.** `{others}` binds the members' names ("Sol" or "Sol and Ines"), `{others.n}` the count in words, `{others.they}` and the other pronoun forms the one member's pronoun or plural they, `{others~is|are}` singular for one member drawn he or she and plural otherwise. Text that names the group sits behind a count condition (`TreeState.count: { role, min?, max? }`) so a lone call never reads "and the others". Gates bind every string at each count the slot allows.
-- **Cascade** (`sim/drawn-effects.ts`, `CASCADE_V1`). An outcome writes `cascade: { leader, group, next: { all, some, none } }` where the leader gives up. Each member follows with a chance from influence, rapport and agitation, drawn from its own saved sample; followers get `out:` flags; a standard line says who followed.
-- **Escalation from meters.** `TreeIf` gains `{ meter: role, stance | agitationAtLeast }`, read at the start of the decision. A tree writes the escalation it means: the hidden truth decides, or a subject past breaking point does it anyway.
-- **Incident class weights.** A victim incident (expressive hold) gets less from waiting and more from provocation than a hostage incident (instrumental hold), through one table in `sim/incident-factors.ts`.
-- **Clocks that run out where no fork reads them.** `ClockDef.onOut` records harm to the owner while inside and sets a mark the tree's prompts read, so the record and the text agree.
-- **Coverage gate.** A walk over every reachable state (situations, turns, bands, clock and stance buckets, drawn results) fails a decision that matches no routed outcome, two routed outcomes, or no text.
-- **Pilot.** The hostage call becomes a 1 to 3 subject call through the writing skills (design sheet, prose, a separate review): the taker leads; a second or third person is a follower or lookout with a group role and their own weapon or none; choices can work on the group (talk to the follower, separate them); the courier is an incidental hostage and the owner the victim of the grievance, and the odds and the text treat them differently.
-
-**M1 as delivered:**
-- **Model and templates.** `src/content/incidents/` (types, one template per dispatched call). The templates describe only what each call's text establishes; nothing is invented to fill a field.
-- **Generator.** `src/gen/incident/instance.ts`: `drawInstance`, `aggregates`, `signature`, `countTemplate`, `instanceOf`. Generation runs through instances, and `placeCast` (`trees-v13/compile.ts`) is the one place people are put on the building. The refactor was proven byte-identical on 92 compiled calls before any content changed (`compiled-fingerprints.test.ts`). The guard was then re-captured for the deliberate identity change below.
-- **Identity.** Pronouns and ages are drawn per person (`IDENTITY_DEFAULT`). All four calls' prose was converted to pronoun, agreement and gendered-noun tokens. Gates fail any literal gendered word in calls or templates, bind every string with each role as he, she and they, and require identical mechanics whoever is drawn.
-- **Scenario Lab** (then at `/story.html`, rebuilt; rebuilt again on 2026-10-09 at `/lab`, see [scenario-lab.md](scenario-lab.md)). In M1 it had a catalog with counts, a draw bar, the instance (people with truth beside what the team knows, aggregates, clocks, conditions, and which fields the engine reads yet), the map, the story graph, real choice cards at any decision, a step-through on the engine, writing, balance in a worker, and review notes exported as markdown.
-- **String checks.** The swat-call-prose Python checker stays the one implementation: it is written to work inside the skill on any harness, so porting it would make a second copy. `npm run check:strings` and the lab (the Writing tab then, Script's Run checks now, through a dev-server endpoint in `vite.config.ts`) both send it rows from `trees-v13/strings.ts`, bound with real casts. The lab can bind everyone as he, she or they (Script's Pronouns control) to find sentences that turn ambiguous when two people share pronouns.
-
-**M1 findings carried into M2 and the writing pass:**
-- **String checker backlog.** The checker reports blocking findings on all four calls, mostly repeated 4-word runs and path echoes, plus a few unsafe-detail hits. It also flags the "goes to review" ending line that the call-design ethics rule (E2.1) requires; the two skills disagree, which needs an owner call. Its path-echo rule splits accented names.
-- **Shared pronouns.** 389 sentences carry a pronoun and two or more people. They are grammatical in every draw (gated), and most read fine because one person is named, but some turn ambiguous when two people share pronouns. They need a read in the lab with everyone bound the same way (Script's Pronouns control).
-
-**Changes during M1 (owner direction, 2026-10-07):**
-- **Identity is drawn per person, never by role.** Pronouns (he, she, they) come from one distribution for every kind of person (`IDENTITY_DEFAULT`), so a subject is as likely to be a woman as a hostage is. Age comes from the template where the story supports it, and minors can be subjects. No mechanic reads pronouns or names. Prose uses pronoun, agreement and gendered-noun tokens, and a gate forbids literal gendered words in call text.
-- **Who the subject is can be unknown.** `kind` is a belief like any other (§4). Several people can be inside with the subject unidentified and possibly armed; force is never authorized on an unidentified person, and mistaking a held person for the subject is a possible result once milestone 2 resolves it.
-- **Minors are never killed**, whatever their kind, subjects included.
-- **Paths.** The model lives in `src/content/incidents/` (retired Maple scenarios are simulation fixtures). The writing checks extend the existing TypeScript linter in `src/gen/incident/gates/` instead of adding a new module.
+Identity is drawn per person, never by role. Names and pronouns do not affect mechanics, and minors are never killed. Current force requires a carried firearm and a qualified officer; rescue sightlines use building geometry in `src/sim/sightlines.ts`.
 
 ## Context
 
@@ -159,33 +19,17 @@ They want every part of an incident standardized and defined in the data model a
 
 This plan replaces the earlier drafts. Those drafts bolted attributes onto today's fixed call trees, so the data model followed the story. Here the story follows the data model.
 
-### Where we are (measured 2026-10-07)
+### Current implementation
 
-| Measure | Now |
-| --- | --- |
-| Dispatched call types | 4 call trees: hostage, barricade, armed incident, protected rescue |
-| Distinct setups (hidden-truth situation × mid-call turn) | 33 (66 with the answer-pacing variant) |
-| Decision points / choices / endings | 39 / 109 / 37 |
-| Choice-and-dice sequences | about 200,000 |
-| Cast per call | Fixed 2 or 3 named roles, exactly one subject, one weapon |
-| Location effect on odds | None for tree calls |
+The four dispatched v13 call trees are barricade, armed incident, hostage and protected rescue. Templates live in `src/content/incidents/`; `src/gen/incident/instance.ts` draws instances and `src/gen/incident/trees-v13/compile.ts` binds their people and choices to the building. Call choices carry physical moves and the incident factors contribute to resolution.
 
-**The engine has more than tree calls use:**
-- `PersonDefinition` and `ThreatProfile` (`src/sim/scenario-types.ts`), with roles including `held_person`, `child`, `dog`, `dangerous_dog`, and reported-vs-true values.
-- `threatFx` (`src/sim/threat.ts`), with multi-subject seat weights.
-- `EnvironmentDefinition`.
-- Spatial contributors in `src/sim/resolution.ts`.
-- `FORCE_RISK_V1` (`src/sim/force-risk.ts`).
-- External services with arrival times.
-- Officer stress, injury recovery, certs, traits and roles (`src/sim/types.ts`).
-
-`withCallTree` (`src/gen/incident/trees-v13/compile.ts`) deletes `s.people`, neutralizes the environment, and compiles choices with none of the spatial, entry or force inputs.
+The model describes both implemented rules and the broader contract. Implementation gaps are tracked only in [docs/backlog.md](backlog.md).
 
 ### Owner decisions so far
 - Children can be hurt, never killed.
 - Pets can be hurt or killed, rarely.
 - The lab comes first.
-- New call types: high-risk warrant, robbery in progress, vehicle standoff, crisis barricade.
+- Call-type expansion is tracked in [docs/backlog.md](backlog.md).
 - Standing rules: E4.5, non-graphic text, force only on a visible threat, preserving life is the value.
 
 ## Challenge: what the previous drafts got wrong or left out
@@ -506,87 +350,16 @@ Each verb has a standard engine mapping, a standard set of inputs it reads (§1 
 
 ## Milestones
 
-Each ends with `npm run verify` passing. Start each in a fresh session with this plan as the brief.
+**M1 done:** domain types, templates, generator, identity binding and the Scenario Lab.
 
-**M1. Domain model, generator, and the Scenario Lab (no engine behaviour change)**
-- Types for §1 to §5, §11 and §12 in `src/content/incidents/types.ts`.
-- The generator in `src/gen/incident/instance.ts` (`drawInstance`, `aggregates`, `signature`, `countInstances`).
-- The four current calls expressed as templates that reproduce today's casts, with a snapshot test so the compiled scenarios are unchanged.
-- The lab rebuilt on instances (`src/dev/lab/` at `/lab`, [scenario-lab.md](scenario-lab.md)):
-  - catalog with honest counts;
-  - instance inspector (people table with truth vs belief, aggregates, clocks, meters);
-  - map (`src/ui/blueprint/Blueprint.tsx`);
-  - story graph;
-  - real choice cards (`actionViews`, `OddsBar`, `OutcomeForecast`);
-  - step-through on the real engine;
-  - writing panel;
-  - balance worker;
-  - review notes.
-- The writing checks: planned as a TypeScript port (not implemented) with a parity test before the Python was retired. Not done, by decision (see "M1 as delivered"): the skill's Python checker (`.agents/skills/swat-call-prose/scripts/game_string_checks.py`) stays the one implementation, and `npm run check:strings` (`scripts/check-strings.ts`) and the lab's Script checks send it rows from `trees-v13/strings.ts`.
+**M2 done:** the resolution pipeline and model-first hostage pilot, including clocks, meters, authorization, incoming fire, force, groups, cascades, commitments, scoring and coverage.
 
-**M2. Resolution pipeline**
-- Emit `people` and the environment.
-- The verb mapping.
-- The spatial factors: cover, exposure, exits, backstop and range, in `src/sim/spatial-factors.ts`, using `roomSegmentClear` from `src/sim/furniture-path.ts`.
-- Meters and clocks in the engine.
-- The authorization table.
-- The incoming-fire model.
-- The cascade.
-- Resolve-then-narrate with the coverage gate.
-- The scoring function.
-- Pilot on the hostage template, rewritten through the skills as a 1 to 3 subject call, with the hostage/victim distinction made real.
+Remaining M3 to M6 scope is tracked in the [backlog](backlog.md), under calls and the incident model, and gates and tooling. Calls are written model-first through a template, design sheet, prose and separate review; a replacement retires its old tree after coverage, balance and review.
 
-**M3. Lab scene panels**
-- Sightlines, exposure, cover, range rings, containment.
-- A compare view: per-choice odds deltas with causes, for the same call under two instances.
+## Verification contract
 
-**Plan change (owner, 2026-10-07): calls are written model-first, not converted.** Once the hostage pilot landed, converting the remaining v13 trees stopped. Barricade, armed and rescue are each written fresh, the way the pilot was:
-- a new template;
-- a design sheet (`docs/calls/<call>-design.md`) through swat-call-design;
-- the tree through swat-call-prose;
-- a separate swat-writing-review read.
+Generation, binding, resolution, coverage, authorization and balance are checked through the project's validation gates. The Lab provides engine step-through, counts, writing checks and review surfaces; see [scenario-lab.md](scenario-lab.md). The model's invariants and stress tests above define expected behavior rather than a claim that all gates are implemented. Outstanding gate work is tracked in [docs/backlog.md](backlog.md), item 16.
 
-A premise is kept only where it earns its place. The old tree is retired once its replacement passes coverage, balance and review. Some call types are thinner while replacements are written.
+## Owner decisions
 
-**M4. Rollout and the department game**
-- Complication modules (child, dog, second subject, medical bystander, crowd, power out, reinforced door, intoxication).
-- The casualty and care model and the aftermath model.
-- The board risk card and suggested capabilities.
-- Barricade, armed and rescue written fresh, model-first (replacing "templates converted"), each retiring its old tree.
-- Skill updates:
-  - design: taxonomy, verbs, clocks, meters, invariants;
-  - prose: count-aware grammar and fragments keyed to resolved state;
-  - review: combination audit in the lab;
-  - the engine map reference.
-
-**M5. New call types** (model-first, like M4's rewrites)
-- High-risk warrant.
-- Robbery in progress.
-- Crisis barricade.
-- Vehicle standoff (needs the new `roadside_g2` family in `src/gen/building/procedural/families/`).
-
-**M6. Gates and the count**
-- The combinatorial gate (every signature class × K seeds: generate, bind, validate, agree, walk, coverage, writing).
-- Balance per template, incident class and scale class.
-- The §13 invariant gates.
-- The stress-test cases above as tests.
-- Counts published in the lab and in `docs/scenarios.md`.
-
-## Verification
-
-- **M1.** Snapshot equality for the four calls.
-  - `/story.html` (`/lab` since 2026-10-09) in the browser pane (`preview_start` "tactically-idle"): every template steps to an ending.
-  - The catalog count equals the CLI count.
-  - The balance worker equals `measure` (`src/gen/incident/trees-v13/balance.ts`); today `__lab.measure` and `runners.test.ts` check it.
-  - No console errors.
-  - `check:strings` runs the skill's checker (no port, so no parity test).
-- **M2.** `npx vitest run src/gen/incident/trees-v13` plus the new pipeline gates: coverage, agreement, authorization, sensitivity (cover vs no cover, 1 vs 3 subjects, trained vs untrained) and balance. In the lab, the same building shows labeled odds deltas.
-- **M3 to M6.** Every stress-test case passes as a test. The combinatorial and invariant gates are green. The published count matches the lab.
-
-## Decisions to confirm (recommended default in bold)
-
-- **D1. Explosives or claimed devices.** **Excluded.** Too far from the game's grounded tone for now.
-- **D2. A fled subject.** **Creates a follow-up warrant call** with a trust cost.
-- **D3. Groups above 8.** **A future multi-building "operation" mode**, not in these calls.
-- **D4. Officer-involved shooting.** **The officer is unavailable for 24 game hours pending review**, and the review result moves trust.
-- **D5. Conceding demands.** **Allowed within the §7 policy list**, and every concession is a commitment.
+Defaults D1 to D5 and any changes to them are tracked only in the [backlog owner decisions](backlog.md#owner-decisions).

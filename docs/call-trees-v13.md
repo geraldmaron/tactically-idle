@@ -107,22 +107,13 @@ To re-measure after a content change, run the simulator from a script (see `meas
 
 ## Second-reader pass
 
-A separate reader walked every path of all four trees through the engine, for every situation and turn draw, and bound the text on 120 to 200 generated calls per type (20 blockers, 64 should-fix, 5 polish). All were applied on 2026-10-07. The ones that changed structure:
-
-- Hostage: `held_both` when the courier is still inside at a held ending; `fired_on` after he shoots at the glass; `back_promised` closes the front-door exit once command has promised the alley; his account is marked on every branch that writes it, so reading it back opens.
-- Barricade: `subject_shot` replaces `subject_killed` (E4.5); `fired_on` after he shoots the officer on the step; the written message goes in the report, not to her.
-- Armed incident: drawn only to shops, bars and the motel front desk (offices and warehouses have no drawer to rob), with the man placed at the counter; harm moved off an outcome that didn't end the call.
-- Protected rescue: `tank_ran_out` for the hallway oxygen death; houses only (the crossing is a porch, a step and a lawn); every gunfire preview holds when he can't see the door.
-
-Still owed (owner calls): a human read of each death (`owner_killed`, `worker_killed`, armed `subject_killed`, `resident_killed`, `tank_ran_out`); the E4.7 content note and 988 debrief line for hostage and barricade; whether a team holding outside an active shooter fits E12; and whether the barricade keeps its apartment family.
+The outstanding human reads, content-note wording, E12 active-shooter hold and barricade building-family decision are tracked in the [backlog owner decisions](backlog.md#owner-decisions). Hostage review and engine work are tracked under [calls and the incident model](backlog.md#next-calls-and-the-incident-model).
 
 ## Tools
 
 - **Scenario Lab** (`npm run lab`, `/lab?type=<type>`, Lab link in the campaign bar and Open in lab on a live call in dev; guide in [scenario-lab.md](scenario-lab.md)): rebuilt on 2026-10-09 around the real game screens. Play steps any call on the engine with the hidden truth, odds and routes beside the frame; Flow draws every node by stage with this call's turn draws and how often runs take each route; Outcomes gives ending shares by play style and the CI gate; Dependencies lints the marks; Script reads every line in every variant; Tuning changes the game's numbers. Old `/story.html` links redirect to `/lab` in dev.
 - The engine walk used for the table above is the gate test's last block. In the lab, Outcomes with population "This type" and 60 calls equals `measure` for the same style, and Play here finds the shortest path to any node or ending.
 
-## Next
+## Work tracking
 
-1. More tactical frameworks, each a tree, so the board has more than four kinds of call. Department levels no longer open new kinds of call; new frameworks can carry level gates again.
-2. Give the retired patrol frameworks a home under the Watch Commander as idle patrol work (`docs/game-ux-direction.md`, Command Staff), or delete them.
-3. Force in trees: a `forceProfile` choice needs the v7 harm and person-care chain. Trees today keep the team staged and gate entry on a visible threat, with its cost in trust, strain and who gets hurt.
+Remaining call types and owner decisions live only in [docs/backlog.md](backlog.md). Force resolution is implemented; it requires a carried firearm and a qualified officer. The scope of routine patrol work under the Watch Commander is an owner decision there.

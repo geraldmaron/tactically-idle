@@ -2,6 +2,8 @@
 
 Portrait mobile department-management game with an idle economy and short branching operations on a data-driven blueprint. Design: [PLAN.md](PLAN.md). Location/operation contract: [docs/operation-model.md](docs/operation-model.md).
 
+Work still to do lives only in [docs/backlog.md](docs/backlog.md).
+
 This is the browser application. Hosted phone-sized browser journeys have been checked; native device hardware and a native engine have not been validated.
 
 ## Run
@@ -26,11 +28,11 @@ npm run build
 
 Use **Saves / New** below the header for ten local campaign slots, New Game, loading, named copies, and backup import/export. The active slot autosaves; starting or loading another campaign saves the current one first. Only saves from the current save and content version load; old saves are rejected. See [local campaigns](docs/local-campaigns.md).
 
-Every operation is a live call: it uses owned equipment, applies strain and injuries, and pays rewards and department service. The Ops board shows live incidents first, and the two standing assignments fill any open places. Practice runs, decision exercises, casebook replays and the daily featured operation were removed on 2026-10-06; save v8 ends any saved practice run as cancelled and drops practice records.
+Every operation is a live tactical call: it uses owned equipment, applies strain and injuries, and pays rewards and department service. The Ops board dispatches barricade, armed incident, hostage and protected rescue calls. Each current v13 call takes one squad; its squad range is derived from its choices.
 
 In an incident briefing, **Auto-equip** fills untouched loadout choices from usable stock, keeps manual quantities, and explains shortages. It never chooses or commits a story decision. See [auto-equip](docs/auto-equip.md).
 
-New campaigns sample officers from the full 100-person catalog. Current calls use coherent scene variants with shared blueprint bindings. Content has one current version, using the v13 call-tree model. Compiled fingerprints catch regressions and are deliberately recaptured when content changes. See [campaign and choice variety](docs/campaign-choice-variety.md).
+New campaigns sample officers from the full 100-person catalog. Calls bind people and physical moves to generated buildings; rescue sightlines come from geometry in `src/sim/sightlines.ts`. Content has one current version, using the [v13 call-tree model](docs/call-trees-v13.md). Compiled fingerprints catch regressions and are deliberately recaptured when content changes.
 
 Radios load automatically at one per deployed officer. Gear offers an equipment-manager upgrade with discounted repairs, slower wear and explicitly enabled maintenance budgets. Blocked action details can request a timed stores delivery while squads remain staged outside. See [field readiness](docs/field-readiness.md). Maps support drag, pinch, wheel, keyboard navigation and Fit; the isolated [responsive harness](docs/responsive-layout.md) exercises real viewport widths.
 
@@ -50,35 +52,18 @@ Dev-only state handle in the browser console: `window.__ti.getState()`, `__ti.se
 | `src/ui/screens/` | HQ, Squad, Ops (board, prepare, live, debrief), Develop, Gear |
 | `src/dev/lab/` | Scenario Lab, dev only (`/lab`): plays calls on the real engine beside what the player can't see; its shell, surfaces, models and workers. Saved tuning is `src/sim/tuning.json` (registry in `src/sim/tuning.ts`). See [docs/scenario-lab.md](docs/scenario-lab.md) |
 
-## Historical first-playable status (2026-10-01)
+## Current status
 
-**Works and was observed on the real UI** (headless Chrome at 390×844 and 320×568; captures in [docs/captures](docs/captures)):
+The browser game includes the department economy, recruitment, training, equipment, recovery and the prepare, deploy, decide and debrief loop. It has four squad slots, 100 officers and 16 Develop nodes. Command Staff v1 is on HQ with the Watch Commander, Training Sergeant and Quartermaster.
 
-- One full department → operation → department loop. Prepare, deploy with reserved gear, three staged decisions, debrief, close. Rewards apply once, gear returns, and stress and XP land per officer.
-- Two-squad deployment with a joint action (one squad acting, one supporting).
-- The live screen follows the approved composition: blueprint, marker annotations that change with knowledge, painted portrait strip, amber decisions. It fits 390×844 without scrolling, and there's no horizontal scroll at 320px.
+The four v13 call trees use generated buildings and one squad per call. Force requires a carried firearm and a qualified officer. Maple Street survives only in `src/sim/fixtures`. Architecture rules are enforced by `src/architecture/` and rendered to [docs/architecture.md](docs/architecture.md).
 
-**Covered by the regression suite** (`npm test`):
-
-- Offline equivalence, the 24h cap, and backward-clock checks.
-- Hiring and dismissal, training and the tree, three-squad limits.
-- Inventory integrity, interruption with no reroll, and geometry/rating relevance.
-- Generation validity across 200 seeds.
-- Cautious play wins one scenario and direct play wins the other.
-
-**Not done or not proven:**
-
-- Native device spike: no engine comparison, no touch hardware, no suspend/resume on a phone.
-- Dispatch uses four tactical call trees on supported authored and procedural buildings. Maple Street remains test data only.
-- The camera drone, a separate "change priorities" action, and team familiarity are not used in any scenario yet.
-- Balance numbers are first-pass and directional only. There's been no playtest (acceptance 12 and 14).
-- The authored roster has 100 distinct identities, each with an individual file portrait listed in `public/art/portraits/manifest.json`. Missing identities and image-loading failures use personnel-file cards. See [personnel and art integration](docs/art/roster-integration.md).
-- Room shapes on the 320px map are smaller than 44px. Zoom and the Rooms list are the accessible path.
+Remaining work and owner decisions live in [docs/backlog.md](docs/backlog.md).
 
 ## Re-running the UI checks
 
 Use a supported Node release (CI uses Node 24; local verification used Node 22). Run `npm ci`, then start the server with `npm run dev -- --host 127.0.0.1 --port 5174`. In another terminal, run `npm run test:e2e`.
 
-The Playwright driver takes every starting board call and both standing assignments live at 390×844 with one squad and at 320×568 with two squads, buying the second squad's radios on the Prepare screen. It uses the real UI and isolated browser contexts. `playwright-core` is a declared development dependency; Google Chrome must be installed. Set `CHROME_PATH` for another Chrome executable or `TI_BASE_URL` for another server address. Set `TI_CAPTURE_DIR` and `TI_E2E_REPORT` to save screenshots and the JSON journey report. `node scripts/play-two-squads-320.mjs` runs only the smaller two-squad pass using the same driver.
+The Playwright driver uses the real UI and isolated browser contexts at 390×844 and 320×568. Current v13 calls take one squad. The driver still contains retired board assumptions and a two-squad assertion, so it does not establish coverage of the current catalog. `playwright-core` is a declared development dependency; Google Chrome must be installed. Set `CHROME_PATH` for another Chrome executable or `TI_BASE_URL` for another server address. Set `TI_CAPTURE_DIR` and `TI_E2E_REPORT` to save screenshots and the JSON journey report. `node scripts/play-two-squads-320.mjs` invokes the same legacy driver at the smaller viewport.
 
 The current incident catalog uses the v13 call-tree model. See [call trees](docs/call-trees-v13.md) for its structure. Older content generators and save migrations are not supported.

@@ -15,7 +15,7 @@ import { indoorOrphans, plausibilityReport } from './procedural/plausibility';
  *    from every entry zone.
  * 3. Plans with 6 or more rooms have an interior loop (a cycle in the room graph) in at least 40% of
  *    draws, at most 75%. The four authored families with loops have them in 9-15 of 24 seeds (37-62%,
- *    docs/procedural-locations-review.md); 40% is the floor that keeps generated plans tactically as
+ *    measured in the v10 locations review, since retired); 40% is the floor that keeps generated plans tactically as
  *    rich as those, and 75% keeps them from being a warren of doors. Output is deterministic, so the
  *    bounds catch regressions, not noise; measured shares sit between 46% and 59%.
  */

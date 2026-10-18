@@ -1,6 +1,6 @@
 # Tactically Idle location and operation data contract
 
-**Status:** Proposed implementation contract attached to the [game plan](../PLAN.md). The requirement that locations, ratings, decisions, and up to three squads matter is user-approved; record shapes and formulas remain design proposals. No generator or simulation has been implemented.
+**Status:** the operation model is implemented in `src/sim/operation.ts` and `src/sim/resolution.ts`. Current v13 calls use one squad on generated buildings; the department has four squad slots. This contract accompanies the [game plan](../PLAN.md). Remaining work lives only in [docs/backlog.md](backlog.md).
 
 ## Governing rule
 
@@ -8,7 +8,7 @@
 
 The complete content package contains a location definition, compatible scenario definition, presentation references, generator/content version, and seed. A running operation adds squads, assignments, player knowledge, resources, and a decision history. Static content and mutable run state are separate.
 
-## Proposed records
+## Records
 
 | Record | Required information | Used by |
 | --- | --- | --- |
@@ -30,7 +30,7 @@ Coordinates use one consistent unit system. Displayed dimensions and scale marks
 
 Each mechanical spatial property names its consuming rule. An unused field is either decorative or a design gap, not evidence of realism.
 
-| Property | Proposed game effect | Example visible consequence |
+| Property | Game effect | Example visible consequence |
 | --- | --- | --- |
 | Setting / room function | Eligible incident modules, plausible facts, relevant objectives. | A business storage room can require a different assessment from a residential bedroom. |
 | Area and usable space | Assessment workload and useful participant capacity. | A larger room takes more task effort; furniture can reduce usable task space. |
@@ -45,7 +45,7 @@ These are abstract game effects. Exact real-world ballistic behavior, shooting p
 
 Expose distinct shooting proficiency and composure ratings alongside communication, awareness, medical response, and coordination. Define an action's relevant ratings explicitly; do not average all officer statistics into a universal power score.
 
-Proposed resolution sequence:
+Resolution sequence:
 
 1. Verify that participating squads, officers, certifications, target spaces, and reserved items are eligible.
 2. Determine the acting officers and supported tasks. Remove duplicate participants and respect task-capacity limits.
@@ -57,30 +57,25 @@ Proposed resolution sequence:
 
 Composure affects how pressure degrades effective performance and how much extra strain is accrued. Stress remains a separate state; high composure cannot nullify recovery restrictions. Shooting proficiency contributes only to designated execution checks, never automatically to contact, observation, or medical tasks. Favorable resolution is multidimensional and cannot be reduced to a shooting score.
 
-Balance formulas and coefficients are intentionally unselected until the same scenarios can be simulated with controlled inputs. Required test: vary one relevant rating at a time and inspect the calculation trace. Where uncertainty would make a displayed percentage misleading, show a qualitative risk band plus the known contributors.
+Balance formulas and coefficients are tunable. Rating-relevance checks vary one relevant rating at a time and inspect the calculation trace. Where uncertainty would make a displayed percentage misleading, show a qualitative risk band plus the known contributors.
 
-## Three persistent squads
+## Four persistent squads
 
-The department has at most three Squad records. Proposed default composition is four officers each. Starting staffing, squad-size changes, and progression of staffing capacity remain tuning decisions; the three-squad maximum is fixed by the user.
+The department has four squad slots, each holding four officers. One officer has one active squad membership and one assignment at a time. One physical item has one reservation at a time. Reassignment cannot reset condition.
 
-One officer has one active squad membership and one assignment at a time. One physical item has one reservation at a time. Reassignment cannot reset condition. Deploying several squads creates one shared OperationRun with distinct squad tasks, not separate simulations that award the mission reward several times.
-
-A scenario explicitly declares its supported squad range. The content set must include scenarios supporting one, two, and three squads. A larger deployment can divide work and provide actual support; benefits depend on locations and task capacities. An officer on one task does not contribute their full ratings to all other tasks simultaneously.
-
-Joint decisions declare actors and supporters. Dependent tasks specify what each squad must complete or make available. When one task is delayed, explain the dependency and update affected choices. If a squad is withdrawn or becomes unavailable, validate surviving paths to resolution or controlled handover. Shared mission rewards apply once; individual experience, item usage, and strain follow participation.
+Each current v13 call uses one squad. Its `squadRange` is derived from the squads its choices put to work. Mission rewards apply once; individual experience, item use and strain follow participation. Joint operations are tracked in [docs/backlog.md](backlog.md), item 4.
 
 ## Interface contract
 
 Use the approved image's icon-led decision buttons, short titles, amber active choice, dark secondary choice, blueprint, and illustrated portrait strip. Information attaches to the drawn object and selected action rather than filling the screen with explanation cards.
 
-- Show compact A/B/C selectors for deployed squads. Their names and readiness remain available without relying on color alone.
+- Show the deployed squad's name and readiness without relying on color alone.
 - The active squad selector changes the portrait strip and relevant map labels; it does not issue an order.
 - Selecting a room shows its known identity/status and highlights compatible actions. Keep undiscovered facts hidden.
 - Each choice presents an icon, action name, acting squad, known requirement, and a short tradeoff. A selected choice can expand its details before confirmation.
-- Detail view names relevant ratings, equipment, space/position effects, uncertainty, and dependencies. Describe proposed effects in player language; keep internal record IDs and coefficients out of the interface.
+- Detail view names relevant ratings, equipment, space/position effects, uncertainty, and dependencies. Describe effects in player language; keep internal record IDs and coefficients out of the interface.
 - Confirmation names the affected squad(s) and target. Ineligible choices show a specific reason rather than a silently disabled button.
 - After resolution, animate the corresponding room/annotation/task change and give a concise explanation. Do not move a marker or reveal a fact that the engine did not change.
-- During a joint decision, indicate all affected squads even if only one portrait strip is visible.
 - Keep map zoom, a room-list alternative, and a readable debrief available. Compact presentation must not conceal the information needed to make a choice.
 
 ## Generation and validation pipeline
@@ -94,7 +89,7 @@ Use the approved image's icon-led decision buttons, short titles, amber active c
 7. Render geometry, furniture, grid, ink, dimensions, and current knowledge annotations. Apply generated textures only as surface assets that cannot alter topology.
 8. Save the exact package version and seed with the run. If validation fails, reject it with an authoring diagnostic or select a known-valid fallback before the player starts.
 
-Initial generation is controlled variation over authored layouts. Broader procedural topology can be introduced only once the same validators and gameplay checks apply to it.
+Generation supports authored layouts and procedural topology with shared validation and gameplay checks.
 
 ## Required validation fixtures
 
@@ -102,11 +97,11 @@ Initial generation is controlled variation over authored layouts. Broader proced
 - Two valid connection graphs for the same room set: reachability/time effects match the depiction.
 - Identical room and equipment with different shooting proficiency: only designated execution contributors change.
 - Identical proficiency with different composure/current stress: the pressure response changes without double-counting the penalty.
-- One, two, and three squad runs: responsibilities and actual support change; no duplicate people, gear, or mission rewards appear.
+- Four persistent squad slots and a one-squad v13 run: no duplicate people, gear or mission rewards appear.
 - An overcrowded assignment: useful participant capacity limits contributions and the UI explains it.
 - An unsupported role/item requirement: generator rejects the case or provides a valid alternative before deployment.
 - A wrong initial report: marker status changes only after the corresponding discovery; the scene does not reveal hidden truth early.
-- A interrupted joint action: resuming restores its committed state and all reservations without rerolling or partial duplicate settlement.
+- An interrupted action: resuming restores its committed state and all reservations without rerolling or partial duplicate settlement.
 - Same seed and content version: identical location and scenario binding. An intentional decision change can branch the run without changing the underlying building unexpectedly.
 
 **Review:** The implementer supplies fixture results and actual-screen captures. The owner reviews decision comprehension and fidelity to the approved image. None of these checks is claimed complete by this specification.

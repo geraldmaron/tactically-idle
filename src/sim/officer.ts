@@ -22,7 +22,7 @@ export function conditionFraction(stress: number): number {
   return Math.max(0, Math.min(T.conditionMax, ((stress - T.conditionFrom) / (100 - T.conditionFrom)) * T.conditionMax));
 }
 
-/** Officer experience and age (see docs/phase2-simulation.md section 5). Proposed values. Tunable (sim/tuning.ts). */
+/** Officer experience and age. First-pass values. Tunable (sim/tuning.ts). */
 export const EXPERIENCE_TUNING = tunable('EXPERIENCE_TUNING', {
   /** Situation pressure at or above which experience bands matter (pressure-kind checks always count). */
   pressureOn: 50,
