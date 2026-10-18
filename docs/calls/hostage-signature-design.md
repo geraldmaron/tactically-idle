@@ -832,6 +832,21 @@ the compiled call, including variants this call prunes. With `saw_inside` set on
 `glass_group`, every lone compile failed, so `team_glass` sets it too (harmless there, since no
 armed line survives in a lone call). Reported to the lead as a strictness question for the engine.
 
+### Lab read (390px, after `lab-armed-counts`)
+
+The game's own screens (`/lab?…&frame=player`, 390 by 844), on market_row seed 7, path
+`offer.take_courier` adverse then `both_inside.glass_group` favorable, at the `talking` prompt:
+
+| Call | Cast | Prompt the player reads |
+|---|---|---|
+| 8 | one coworker, armed | "You saw Tariq pull a steel bar from under the counter. Yusuf hasn’t left the boxes." |
+| 25 | two, both armed | "You watched both coworkers take steel bars from under the counter. Efrain sits by the street door." |
+| 26 | two, one armed | "One coworker has a steel bar now, within reach of Yetunde. Silas waits near the entrance." |
+| 3 | one, unarmed | "Florence is sitting on the tiles near the till while the call goes on." (the medical cue's prompt; no armed line) |
+
+Each matches the compiled call's draw check. Captures in `docs/calls/captures/hostage-armed-*-390.png`.
+No notes filed.
+
 ### Balance
 
 `measure`, tier 2, 300 calls per style, before (main) and after:
