@@ -136,7 +136,9 @@ describe('compareSituations', () => {
       const other = openSession({ ...u, call: { ...u.call!, call: run.call, id: null } }, null);
       if (!('frames' in other)) throw new Error(other.message);
       expect(other.situation).toBe(run.situation);
-      expect(other.counts).toEqual(s.counts);
+      // Group sizes are kept; the call's other compile-time facts (callCounts) may differ by seed.
+      const sizes = (counts: Record<string, number>) => Object.fromEntries(Object.keys(s.tree.groups ?? {}).map(group => [group, counts[group]]));
+      expect(sizes(other.counts)).toEqual(sizes(s.counts));
       expect(other.turnDrawn).toEqual(s.turnDrawn);
     }
   });
