@@ -62,20 +62,6 @@ the same item: `armedRevealErrors` also checks variants the compiler prunes, whi
 hostage call to set `saw_inside` on the lone-only `team_glass` as a workaround (#48). Check only
 the variants that can occur, and tell the calls lane so it can drop the workaround.
 
-### clock-runout-routing: A clock that runs out moves the call
-Tags: job=command; journeys=choices-branch; probes=none (routing, not odds); lane=engine
-Needs: start=none; integrate=none; ship=none
-
-Hostage request R-G4, which the barricade call needs before any tree data: `onOut` records harm and
-sets a mark but can't move the call (`src/sim/clocks.ts`), so a short choice can run a clock out and
-leave choices on screen that the text has made false. Done: `onOut.next` routes the call when the
-person is still inside and the decision's own outcome didn't end it, shown in the hostage call.
-
-Engine side merged in #46: `onOut.next` compiles to a route, clock
-targets are visible to the graph, the requirement tree and `check:strings`, and a permanent test
-audits every onOut mark reader; the lab, `check:strings` and the tree tests follow clock routes (#52).
-Still to ship: the calls lane adding `onOut.next` to the hostage owner-condition clock.
-
 ### barricade-engine-requests: People placed and moving on the building
 Tags: job=command; journeys=choices-branch; probes=blueprint-building; lane=engine
 Needs: start=none; integrate=none; ship=none
@@ -112,7 +98,7 @@ which the sheet did not re-read.
 
 ### barricade-model-first: Write the barricade call model-first
 Tags: job=command; journeys=answer-a-call, choices-branch; probes=blueprint-building, blueprint-locked; lane=calls
-Needs: start=none; integrate=clock-runout-routing, barricade-engine-requests; ship=none
+Needs: start=none; integrate=barricade-engine-requests; ship=none
 
 As the hostage call was: template, design sheet in `docs/calls/`, tree, separate review. The old
 tree has 2 `team` moves out of about 37 choices (armed 13, hostage 8, rescue 8), and a different
@@ -125,7 +111,7 @@ grows here too, since most of today's openings are phone calls that carry no gea
 
 ### rescue-model-first: Write the rescue call model-first
 Tags: job=command; journeys=answer-a-call, choices-branch; probes=blueprint-building; lane=calls
-Needs: start=none; integrate=offsite-fire, clock-runout-routing, rescue-engine-requests, lab-tests-off-live-content; ship=none
+Needs: start=none; integrate=offsite-fire, rescue-engine-requests, lab-tests-off-live-content; ship=none
 
 Same pipeline as the barricade; the design sheet is `docs/calls/rescue-design.md`. Done: rescue gunfire comes from the drawn incoming-fire result,
 not harm authored per branch; `npm run check:strings` passes on it; it passes coverage, balance
@@ -151,13 +137,12 @@ Tags: job=command; journeys=answer-a-call; probes=none (text, not odds); lane=en
 Needs: start=none; integrate=none; ship=none
 
 Filed in `docs/calls/hostage-signature-design.md`: R-G2 a group role the player meets, and R-G3 with
-N15 and N16 count-conditioned briefing lines and ending addenda. R-G1 shipped with `intel-odds` (#45, #48), R-G4 is in
-`clock-runout-routing`; N6, N7, N9 and N21 are in `hostage-gate-requests`. Done: each request works in
+N15 and N16 count-conditioned briefing lines and ending addenda. R-G1 shipped with `intel-odds` (#45, #48), R-G4 shipped with `clock-runout-routing` (#46, #56); N6, N7, N9 and N21 are in `hostage-gate-requests`. Done: each request works in
 the hostage call and the call's fingerprints are recaptured deliberately.
 
 ### hostage-owner-down-cleanup: Hostage owner_down readers and held endings
 Tags: job=command; journeys=answer-a-call; probes=none (text and routing); lane=calls
-Needs: start=clock-runout-routing; integrate=none; ship=none
+Needs: start=none; integrate=none; ship=none
 
 Two follow-ups from the hostage clock route (#56). The `owner_down` mark is still read by nodes
 outside `owner_down` that the clock route now makes dead; the writing review asked for them to be
