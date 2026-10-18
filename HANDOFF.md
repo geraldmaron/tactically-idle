@@ -7,14 +7,14 @@ entries instead of keeping history. Rules are in `COORDINATION.md`; work to do i
 ## Lead
 
 The coordinating session, on `main`. Merged so far: #36 (coordination rules), #37 (`e2e-script`),
-#38 (`small-screen-map`), #40 (`gear-by-action`).
+#38 (`small-screen-map`), #39 (barricade design sheet), #40 (`gear-by-action`).
 
 ## Lanes
 
 | Lane | Branch | In flight | Declared touches |
 |---|---|---|---|
-| engine | to be cut from main | `intel-odds` (with R-B5): reading, file list due. Then `clock-runout-routing`, `barricade-engine-requests`, `second-squad` | to be declared |
-| calls | `claude/calls-barricade-model-first-b60068` (#39) | `barricade-model-first`: design sheet in #39, sent back to fix one path citation. Tree data waits on the engine items in its Needs. Rescue design sheet started | `docs/calls/barricade-design.md`, `docs/calls/rescue-design.md` |
+| engine | `claude/engine-intel-odds` | `intel-odds` (with R-B5): approved, in progress. Adds `TreeState.armed` (interface file, approved with a compile-time reveal check and a Codex review). Then `clock-runout-routing`, `barricade-engine-requests`, `second-squad` | `src/sim/threat.ts`, `src/sim/incident-factors.ts`, `trees-v13/compile.ts`, `src/gen/incident/instance.ts`, `src/content/call-trees/types.ts`, `src/architecture/wiring.ts`, tests |
+| calls | `claude/calls-rescue-model-first` | `rescue-model-first` design sheet. Queued: the armed-gated hostage line after intel-odds merges. Barricade tree data waits on its engine Needs | `docs/calls/rescue-design.md`; later `hostage-signature.ts` |
 | tooling | `claude/lab-compare` | `lab-compare`: approved, in progress | `src/dev/lab/model/compare.ts` and test, `src/dev/lab/surfaces/play/CompareRail.tsx`, `XrayRail.tsx`, `play.css`, `src/dev/lab/types.ts`, `url.ts` and test |
 | interface | `feat/hq-tiles` | `hq-tiles`: approved, in progress | `src/ui/screens/HQ.tsx`, `hq-overview.css`, new `hq-tiles.test.ts`; `src/sim/incidents.ts` under the lock below |
 
