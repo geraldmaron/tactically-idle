@@ -62,25 +62,6 @@ the same item: `armedRevealErrors` also checks variants the compiler prunes, whi
 hostage call to set `saw_inside` on the lone-only `team_glass` as a workaround (#48). Check only
 the variants that can occur, and tell the calls lane so it can drop the workaround.
 
-### barricade-engine-requests: People placed and moving on the building
-Tags: job=command; journeys=choices-branch; probes=blueprint-building; lane=engine
-Needs: start=none; integrate=none; ship=none
-
-Requests R-B1 to R-B3 in `docs/calls/barricade-design.md`. R-B1 shipped in #51 and R-B2 in #59;
-the last-seen wording R-B3 needs shipped in #55. R-B1: a role can start on an upper
-floor (every role is placed on floor 0 today, `src/gen/incident/trees-v13/compile.ts`). R-B2: a
-person can leave by their own ground-floor window where the building has one (`usableOpening`
-rejects every window, `src/gen/incident/story-bindings.ts`). R-B3: an outcome or a clock cue can
-move a person, and the team can watch or enter a place on a route (the hall), not only a role's
-room. Done: each works in the barricade call on the building families its sheet names, with the
-conditions that keep text true where the building doesn't allow it. Decided 2026-10-18: one PR per
-request in order R-B1, R-B2, R-B3. R-B2's exit field is `walksVia` and is designed for rescue's
-R-R5 too. A place given as a step along a route declares what it must be, so text never names a
-room the building doesn't have there. R-B3 lands before `offsite-fire`, which builds on its
-positions. When a building fact first gates a required
-need, `src/sim/board-suggestions.ts` must start reading it (public building facts only), with a test
-that a different building changes the board's list.
-
 ### rescue-engine-requests: Outcomes that change the scene
 Tags: job=command; journeys=choices-branch; probes=blueprint-building; lane=engine
 Needs: start=none; integrate=none; ship=none
@@ -98,7 +79,7 @@ which the sheet did not re-read.
 
 ### barricade-model-first: Write the barricade call model-first
 Tags: job=command; journeys=answer-a-call, choices-branch; probes=blueprint-building, blueprint-locked; lane=calls
-Needs: start=none; integrate=barricade-engine-requests; ship=none
+Needs: start=none; integrate=none; ship=none
 
 As the hostage call was: template, design sheet in `docs/calls/`, tree, separate review. The old
 tree has 2 `team` moves out of about 37 choices (armed 13, hostage 8, rescue 8), and a different
@@ -107,7 +88,9 @@ makes physical moves through the building, both blueprint floors rise, `npm run 
 passes on it, it passes coverage, balance and the separate review, and the old
 `barricade-order` tree is retired. It authors the support choices from `second-squad` (R-B4), so
 the barricade reaches `squadRange` 2, and the `joint-operation` journey test switches from its
-fixture to this call. The design sheet (`docs/calls/barricade-design.md`, "Everything
+fixture to this call. If a building fact (R-B1 upstairs, R-B2 window) first gates a required
+need here, `src/sim/board-suggestions.ts` reads it (public building facts only), with a test that a
+different building changes the board's list. R-B1 to R-B3 shipped in #51, #59 and #61. The design sheet (`docs/calls/barricade-design.md`, "Everything
 Goes Back") lists its engine requests; tree data waits on them. The `items-none` share at openings
 grows here too, since most of today's openings are phone calls that carry no gear.
 
