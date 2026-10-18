@@ -3,7 +3,8 @@
 // placeCast, the same function the call-tree compiler uses, so the instance and the compiled
 // scenario can never disagree about who is where.
 import type { CastDraw, CastIdentity, PlacedCast } from './trees-v13/compile';
-import { doorInto, memberId, personFactId, placeCast, resolveNext, textBinder, treeFactId, withCallTree } from './trees-v13/compile';
+import type { CallTree, TreeNext } from '../../content/call-trees/types';
+import { clockRoute, doorInto, memberId, personFactId, placeCast, resolveNext, textBinder, treeFactId, withCallTree } from './trees-v13/compile';
 import { scenarioRecipe, scenarioSituations } from '../../content/scenario-recipes';
 import type { ScenarioCharacteristic } from '../../content/scenario-recipes';
 import type { AgeBand, Clock, Conditions, Dist, GroupRole, IncidentClass, IncidentPerson, IncidentTemplate, PersonSpec, Placement, Pronouns, ScaleClass, Weapon, WeaponKind } from '../../content/incidents/types';
@@ -91,6 +92,11 @@ function membersOf(template: IncidentTemplate, counts: ReadonlyMap<string, numbe
     if (group) members[group] = Math.max(0, counts.get(slot.id)! - slot.keyRoles.length);
   }
   return members;
+}
+
+/** Where the clocks the engine runs send the call when they run out (Clock.onOut.next). */
+export function clockNextsOf(clocks: readonly Clock[]): TreeNext[] {
+  return clocks.filter(clock => !clock.story).flatMap(clock => clock.onOut?.next ? [clock.onOut.next] : []);
 }
 
 /** Marks a call's clocks can set by themselves (cues, running out): settable for the compiler's
@@ -218,7 +224,7 @@ function drawClock(clock: Clock, seed: number): Clock {
 
 /** The instance's clocks as the engine runs them (sim/clocks.ts), text bound for this call. A clock
  * the story still runs by itself stays in the instance for the lab, and out of the engine. */
-function clocksFor(instance: IncidentInstance, bind: (text: string) => string, factIds: ReadonlySet<string>): ClockDef[] {
+function clocksFor(instance: IncidentInstance, bind: (text: string) => string, factIds: ReadonlySet<string>, tree: CallTree): ClockDef[] {
   return instance.clocks.filter(clock => !clock.story).map(clock => {
     const factId = clock.factKey ? treeFactId(clock.factKey) : undefined;
     return {
@@ -227,7 +233,8 @@ function clocksFor(instance: IncidentInstance, bind: (text: string) => string, f
       cues: clock.cues.map(cue => ({ at: cue.at, text: bind(cue.text), ...(cue.mark ? { mark: cue.mark } : {}), ...(cue.reveal ? { reveal: true } : {}) })),
       ...(factId && factIds.has(factId) ? { factId } : {}),
       ...(clock.urgent ? { urgent: bind(clock.urgent) } : {}),
-      ...(clock.onOut ? { onOut: { ...clock.onOut } } : {}),
+      ...(clock.onOut ? { onOut: { ...(clock.onOut.harm ? { harm: clock.onOut.harm } : {}), ...(clock.onOut.mark ? { mark: clock.onOut.mark } : {}),
+        ...(clock.onOut.next ? { route: clockRoute(tree, clock.onOut.next, instance.spec.seed) } : {}) } } : {}),
     };
   });
 }
@@ -302,10 +309,10 @@ export function incidentPeopleFor(instance: IncidentInstance, built: BuiltLocati
  * (placeCast), the tree compiled onto them, and the people and clocks the engine reads. */
 export function compileIncident(scenario: ScenarioDefinition, built: BuiltLocation, template: IncidentTemplate): ScenarioDefinition {
   const instance = drawInstance(template, built, scenario.incident!);
-  const tree = withCallTree(scenario, built, template.tree, instance.placed, clockMarksOf(instance.clocks));
+  const tree = withCallTree(scenario, built, template.tree, instance.placed, clockMarksOf(instance.clocks), clockNextsOf(instance.clocks));
   const compiled = { ...tree, facts: [...tree.facts, ...memberWeaponFacts(instance)] };
   const factIds = new Set(compiled.facts.map(fact => fact.id));
-  const clocks = clocksFor(instance, textBinder(template.tree, built, instance.placed), factIds);
+  const clocks = clocksFor(instance, textBinder(template.tree, built, instance.placed), factIds, template.tree);
   // The call's drawn conditions are the scene the engine runs: the light a sightline reads by, the
   // weather a voice carries through, the crowd at the tape.
   const { timeOfDay, power, weather, crowd } = instance.conditions;
