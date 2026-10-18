@@ -14,6 +14,7 @@ import { ChoiceRail } from '../components/ChoiceRail';
 import { BRANCHES, BRANCH_META } from '../components/labels';
 import { Icon } from '../icons';
 import { GearArt } from '../art/GearArt';
+import { EmblemArt, branchEmblemId } from '../art/EmblemArt';
 import { moneyFull as money, money as compactMoney } from '../format';
 import { useDevelopmentBudget, useGame } from '../store';
 import { useDevelopmentPurchase } from '../storefront/useDevelopmentPurchase';
@@ -193,11 +194,14 @@ export function layoutBranch(nodes: NodeOption[], columns: number): TreeCell[] {
   });
 }
 
-/** Gear art when a development unlocks equipment, else a course or branch symbol. */
+/** Gear art when a development unlocks equipment, else the emblem of the course it unlocks or of its branch. */
 function NodeGlyph({ option: o, size }: { option: NodeOption; size: number }) {
   const item = o.node.effects.find((effect): effect is Extract<typeof effect, { kind: 'unlockItem' }> => effect.kind === 'unlockItem');
-  const course = o.node.effects.some((effect) => effect.kind === 'unlockCourse');
-  return <span className="dev-glyph" aria-hidden="true">{item ? <GearArt itemId={item.itemId} size={size} /> : <Icon name={course ? 'mortarboard' : BRANCH_META[o.node.branch].icon} size={Math.round(size * 0.66)} />}</span>;
+  const course = o.node.effects.find((effect): effect is Extract<typeof effect, { kind: 'unlockCourse' }> => effect.kind === 'unlockCourse');
+  const iconSize = Math.round(size * 0.66);
+  return <span className="dev-glyph" aria-hidden="true">{item ? <GearArt itemId={item.itemId} size={size} />
+    : course ? <EmblemArt id={course.courseId} icon="mortarboard" size={size} iconSize={iconSize} />
+    : <EmblemArt id={branchEmblemId(o.node.branch)} icon={BRANCH_META[o.node.branch].icon} size={size} iconSize={iconSize} />}</span>;
 }
 
 /** Long program names drop the trailing "program" on the tile; the full name stays in the label and sheet. */

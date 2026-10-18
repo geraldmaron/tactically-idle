@@ -12,7 +12,7 @@ import { Button, Chip, EmptyState, RatingBars } from '../components/ui';
 import { Sheet } from '../components/Sheet';
 import { Portrait } from '../portraits/Portrait';
 import { duration, moneyFull as money } from '../format';
-import { assetUrl } from '../art/assetUrl';
+import { EmblemArt } from '../art/EmblemArt';
 import { getState, useGame } from '../store';
 import { useNav, type TrainingDraft, type TrainingFocus } from '../components/nav';
 import { trainingCandidates, trainingOfficerCondition, trainingRatingGain, trainingRatingKeys, trainingStrongestRatings, type TrainingCandidate } from './training-officers';
@@ -234,15 +234,11 @@ export function TrainingEnrolmentReceipt({ course, enrolment, officer, now }: { 
   </div>;
 }
 
-const EMBLEMS = import.meta.glob<{ readyIds?: string[] }>('/public/art/emblems/manifest.json', { eager: true, import: 'default' });
-const EMBLEM_IDS = new Set(Object.values(EMBLEMS)[0]?.readyIds ?? []);
-
 /** Course art when the emblem set lists it as ready; otherwise the certificate or skill icon. */
 export function CourseEmblem({ course, locked = false }: { course: Course; locked?: boolean }) {
-  const [failed, setFailed] = useState(false);
   const icon: IconName = course.grants.cert ? CERT_ICON[course.grants.cert] : RATING_META.find((meta) => meta.key === course.grants.rating?.key)?.icon ?? 'mortarboard';
   return <span className={`node-medallion course-emblem${locked ? ' node-medallion-locked' : ''}`} aria-hidden="true">
-    {EMBLEM_IDS.has(course.id) && !failed ? <img src={assetUrl(`art/emblems/${course.id}.webp`)} alt="" width={40} height={40} onError={() => setFailed(true)} /> : <Icon name={icon} size={22} />}
+    <EmblemArt id={course.id} icon={icon} size={40} iconSize={22} />
     {locked && <span className="node-medallion-badge node-badge-locked"><Icon name="lock" size={10} /></span>}
   </span>;
 }

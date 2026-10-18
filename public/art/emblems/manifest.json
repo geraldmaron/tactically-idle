@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "readyIds": [
+    "crisis_negotiation_course",
+    "entry_course",
+    "drone_course",
+    "first_aid_course",
+    "composure_workshop",
+    "communication_refresher",
+    "range_qualification",
+    "less_lethal_course",
+    "advanced_less_lethal_course",
+    "deescalation_course",
+    "vehicle_operations_course",
+    "precision_support_course",
+    "controlled_access_course",
+    "branch_personnel",
+    "branch_field",
+    "branch_intel",
+    "branch_logistics",
+    "branch_wellbeing"
+  ],
+  "width": 512,
+  "height": 512
+}
