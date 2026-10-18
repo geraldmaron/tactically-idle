@@ -53,7 +53,7 @@ function Row({ label, children, hint }: { label: string; children: ReactNode; hi
   return <div className="lab-dir-row"><span className="lab-dir-label">{label}{hint && <span className="lab-dir-hint">{hint}</span>}</span>{children}</div>;
 }
 
-function SeedInput({ label, value, onCommit }: { label: string; value: number | null; onCommit(seed: number): void }) {
+export function SeedInput({ label, value, onCommit }: { label: string; value: number | null; onCommit(seed: number): void }) {
   const [text, setText] = useState(value === null ? '' : String(value));
   useEffect(() => setText(value === null ? '' : String(value)), [value]);
   const commit = () => { const n = Math.floor(Number(text)); if (text.trim() !== '' && Number.isFinite(n) && n >= 0 && n !== value) onCommit(n); };
@@ -191,7 +191,7 @@ export function Director({ session, focus = null }: { session: Session | null; f
 
       <Section id="kit" focus={focus} title="Kit and dice">
         <Row label="Kit">
-          <SegmentedControl label="Kit" size="small" value={draw.kit} options={[{ value: 'day1', label: 'Day one', disabled: fromGame }, { value: 'full', label: 'Every item', disabled: fromGame }] as const} onChange={kit => setDraw({ kit })} />
+          <SegmentedControl label="Kit" size="small" value={draw.kit} options={[{ value: 'none', label: 'No items', disabled: fromGame }, { value: 'day1', label: 'Day one', disabled: fromGame }, { value: 'full', label: 'Every item', disabled: fromGame }] as const} onChange={kit => setDraw({ kit })} />
         </Row>
         <Row label="Confirm resolves" hint={url.dice === 'roll' ? 'the run’s own dice' : 'you pick the band'}>
           <SegmentedControl label="Dice" size="small" value={url.dice} options={[{ value: 'roll', label: 'Roll' }, { value: 'force', label: 'Force' }] as const} onChange={dice => navigate({ dice }, 'replace')} />
