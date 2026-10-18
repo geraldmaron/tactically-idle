@@ -301,10 +301,10 @@ export interface ActionDefinition {
   /** Acting squads allowed (1..4, default 1). */
   maxActing?: number;
   /**
-   * Spaces this action lets the squad see into. A favourable result updates what the player last
-   * saw there (and settles location/armament facts of the people actually present). Default:
-   * [targetId] when the action has an approach other than 'none' or a spatial signal; pass [] for none.
-   * A remote camera action uses approach 'none' with explicit `observes`.
+   * Spaces this action lets the squad see into (sim/sightings.ts). On a favourable result that
+   * doesn't send the team back, everyone still inside one of them is seen: their location fact is
+   * confirmed, and their weapon fact settled unless they keep it concealed. Temper is never read
+   * at a glance. Default: none.
    */
   observes?: Id[];
   /** Locked doors on the route open with the keyholder: no force time. Needs environment.keyholder. */
@@ -454,6 +454,8 @@ export interface IncidentPersonDef {
    * the fact is reported or confirmed; the odds use what the team knows. */
   armamentFactId?: Id;
   dispositionFactId?: Id;
+  /** The fact that says where this person is: confirmed once the team sees them (sim/sightings.ts). */
+  locationFactId?: Id;
   /** Furniture between this person and the door the team comes through (spatial-factors.ts). */
   cover?: { objectId: Id; label: string; grade: 'hard' | 'concealment' };
   /** Truth, read only when a drawn effect resolves (incoming fire, team force). */

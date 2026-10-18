@@ -11,9 +11,11 @@ measures the odds wiring; its floors rise as these items land.
 
 ## Now: the odds and the blueprint
 
-1. **Observe step for `observes`.** In progress on `claude/zealous-mclean-5fccb5`. Choices that
-   watch a room settle what the squad knows, built on `scenario.incidentPeople` and
-   `run.knowledge`. Done: a wiring probe proves it, and the camera drone has a call that uses it.
+1. **What the team learns changes the odds.** Team moves now settle what the squad sees
+   (`src/sim/sightings.ts`), but knowing barely matters: a weapon counts the same reported or
+   confirmed, so confirming one changes only the wording, and a confirmed location moves no odds.
+   Done: confirmed intel moves the favorable chance on the choices it bears on, with a wiring
+   probe, and gathering it is a real choice with a cost in time or exposure.
 2. **Gear moves the odds on most choices.** Today carried gear moves 3 of 30 sampled opening
    choices (`items-none` probe, floor 0.1), because bonuses apply only where a choice declares
    them. Done: equipment applies by what the choice physically does, and the floor rises.
@@ -24,55 +26,57 @@ measures the odds wiring; its floors rise as these items land.
 4. **A second squad can act.** Every v13 choice puts one squad to work (`squadsPutToWork`), so
    joint operations don't exist. Done: trees author support or second-squad choices, and
    `squadRange` reaches 2 or more on at least one call.
-5. **Rescue gunfire through the incoming-fire model.** The shooter's sightline is computed from
+5. **A call that uses the camera drone.** It's in the catalog (`src/content/items.ts`) and no call
+   uses it. Done: a choice watches a room through it, using the sightings step.
+6. **Rescue gunfire through the incoming-fire model.** The shooter's sightline is computed from
    the building, but harm is still authored per branch. Done: rescue fire uses the drawn
    incoming-fire result.
 
 ## Next: calls and the incident model
 
-6. **Write barricade, armed and rescue model-first,** as the hostage call was: template, design
+7. **Write barricade, armed and rescue model-first,** as the hostage call was: template, design
    sheet in `docs/calls/`, tree, separate review. Retire each old tree once its replacement passes
    coverage, balance and review.
-7. **Complication modules:** child, dog, second subject, medical bystander, crowd, power out,
+8. **Complication modules:** child, dog, second subject, medical bystander, crowd, power out,
    reinforced door, intoxication. Every template has `complications: []` today.
-8. **Casualty, care and aftermath:** an officer who fires is off duty for 24 game hours (D4); a
+9. **Casualty, care and aftermath:** an officer who fires is off duty for 24 game hours (D4); a
    fled subject creates a follow-up warrant call (D2).
-9. **New call types:** high-risk warrant, robbery in progress, crisis barricade, vehicle standoff.
+10. **New call types:** high-risk warrant, robbery in progress, crisis barricade, vehicle standoff.
    The standoff needs a roadside building family.
-10. **Board risk card** with suggested capabilities, before the player commits a squad.
-11. **Meters:** time moves them, the `shots` event is written into content, and escalation by drift.
-12. **Less-lethal use spends cartridges.**
-13. **Hostage engine requests** filed in `docs/calls/hostage-signature-design.md`: R-G1 a group
+11. **Board risk card** with suggested capabilities, before the player commits a squad.
+12. **Meters:** time moves them, the `shots` event is written into content, and escalation by drift.
+13. **Less-lethal use spends cartridges.**
+14. **Hostage engine requests** filed in `docs/calls/hostage-signature-design.md`: R-G1 a group
     member's weapon as a belief, R-G2 a role change the player meets, R-G3 count-conditioned
     briefing lines, R-G4 `onOut.next`, and N6, N7, N9, N15, N16 and N21.
-14. **Hostage review leftovers:** the B9 owner-condition replay leak, the NF3 to NF8 prose notes,
+15. **Hostage review leftovers:** the B9 owner-condition replay leak, the NF3 to NF8 prose notes,
     and the N8 and N20 skill budget fixes.
-15. **Content note and 988 line** shown for the hostage and barricade calls once the owner settles
+16. **Content note and 988 line** shown for the hostage and barricade calls once the owner settles
     the wording (see decisions).
 
 ## Gates and tooling
 
-16. **Scale gates (M6):** every signature class over K seeds (generate, bind, validate, agree,
+17. **Scale gates (M6):** every signature class over K seeds (generate, bind, validate, agree,
     walk, coverage, writing), balance per template and incident class, the domain model's
     invariants as code, its stress-test cases as tests, and published counts.
-17. **Lab compare view:** per-choice odds deltas for the same call under two instances.
-18. **`npm run check:strings` passes.** It exits 1 on existing call-tree prose (repeat and
+18. **Lab compare view:** per-choice odds deltas for the same call under two instances.
+19. **`npm run check:strings` passes.** It exits 1 on existing call-tree prose (repeat and
     path-echo findings).
-19. **Browser end-to-end script works again.** `scripts/play-loop.mjs` (`npm run test:e2e`) still
+20. **Browser end-to-end script works again.** `scripts/play-loop.mjs` (`npm run test:e2e`) still
     expects standing assignments and a two-squad deployment, which no longer exist. Done: it plays
     one tactical call through the real UI at 390x844 and 320x568.
 
 ## Player experience
 
-20. **Onboarding:** a first call that teaches the loop.
-21. **HQ stat tiles** become icon tiles with mini bars.
-22. **Art:** manager portraits (Watch Commander, Quartermaster, Training Sergeant) and course and
+21. **Onboarding:** a first call that teaches the loop.
+22. **HQ stat tiles** become icon tiles with mini bars.
+23. **Art:** manager portraits (Watch Commander, Quartermaster, Training Sergeant) and course and
     branch emblems.
-23. **Small-screen map:** rooms under 44px on the 320px map, and long footprints that render small.
-24. **Team familiarity** and a change-priorities action, both unused by any call.
-25. **Playtests** with first-time players, and a check on a real iOS and Android phone, including
+24. **Small-screen map:** rooms under 44px on the 320px map, and long footprints that render small.
+25. **Team familiarity** and a change-priorities action, both unused by any call.
+26. **Playtests** with first-time players, and a check on a real iOS and Android phone, including
     keyboard and text zoom. Includes the rendered save-slot rejection message, never seen.
-26. **Audio and haptics.** Optional.
+27. **Audio and haptics.** Optional.
 
 ## Owner decisions
 
