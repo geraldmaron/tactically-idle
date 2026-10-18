@@ -1,6 +1,7 @@
 // Baselines: a call's strings pinned with the content key and tuning they were read under, the rows
 // that changed since (with the changed words), and storage that never throws.
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { sessionClockNexts } from './clocks';
 import { callStringRows } from '../../../gen/incident/trees-v13/strings';
 import type { StringRow } from '../../../gen/incident/trees-v13/strings';
 import { tuningHash } from '../../../sim/tuning';
@@ -29,7 +30,7 @@ afterEach(() => { vi.unstubAllGlobals(); });
 
 describe('snapshots', () => {
   const s = open('type=hostage_crisis&family=market_row&seed=7&tier=2&variant=1');
-  const rows = callStringRows(s.tree, sessionBinder(s), s.counts);
+  const rows = callStringRows(s.tree, sessionBinder(s), s.counts, sessionClockNexts(s));
 
   it('pins every row by its key with the content key and tuning hash', () => {
     const snap = takeSnapshot(s, rows, { label: 'Before the edit' });

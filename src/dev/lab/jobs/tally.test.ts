@@ -2,6 +2,7 @@
 // tally as one worker playing them all), recorded edges use the graph's own keys, and a run is
 // counted the way the spec's fields say.
 import { describe, expect, it } from 'vitest';
+import { sessionClockNexts } from '../model/clocks';
 import { WEIGHTS } from '../../../gen/incident/trees-v13/balance';
 import type { CallResult } from '../../../gen/incident/trees-v13/balance';
 import { clockMarksOf } from '../../../gen/incident/instance';
@@ -51,7 +52,7 @@ describe('mergeTally', () => {
 describe('recordStep', () => {
   it('keys every recorded edge the way the call graph keys its edges', async () => {
     const s = open('type=hostage_crisis&family=market_row&seed=7&tier=2&variant=1');
-    const graph = callGraph(s.tree, { counts: s.counts, seed: s.resolved.spec!.seed, situation: s.situation, clockMarks: clockMarksOf(s.instance.clocks) });
+    const graph = callGraph(s.tree, { counts: s.counts, seed: s.resolved.spec!.seed, situation: s.situation, clockMarks: clockMarksOf(s.instance.clocks), clockNexts: sessionClockNexts(s) });
     const keys = new Set(graph.edges.map(edge => {
       // A turn edge goes to its hub; this call drew one member of the group.
       const to = edge.to.startsWith('turn:') ? `node:${graph.turnDrawn[edge.to.slice(5)] ?? ''}` : edge.to;

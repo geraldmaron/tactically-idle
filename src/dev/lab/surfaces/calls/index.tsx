@@ -16,6 +16,7 @@ import type { ReachTally } from '../../jobs/tally';
 import { GATE_SECONDS } from '../../jobs/budgets';
 import { usePoolStored } from '../../jobs/use-pool';
 import { contentKey, resolveScenario } from '../../model/call';
+import { treeClockNexts } from '../../model/clocks';
 import { loadNotesFile } from '../../model/endpoints';
 import { authoredEndingClass, dominant, layoutFlow } from '../../model/flow-layout';
 import { gateVerdicts } from '../../model/gate-view';
@@ -57,7 +58,7 @@ export default function CallsSurface() {
     let findings: LintFinding[] = [];
     try { findings = lintTree(t); } catch { findings = []; }
     const cached = usuallyTallies[t.type];
-    if (cached) try { findings = [...findings, ...simLint(cached, callGraph(t.tree), 'this type · random style · 60 calls', t.tree)]; } catch { /* sim lint is extra */ }
+    if (cached) try { findings = [...findings, ...simLint(cached, callGraph(t.tree, { clockNexts: treeClockNexts(t.tree, t) }), 'this type · random style · 60 calls', t.tree)]; } catch { /* sim lint is extra */ }
     return [t.type, findings];
   })) as Record<IncidentType, LintFinding[]>, [usuallyTallies]);
 
@@ -205,7 +206,7 @@ function CallCard({ template, verdicts, progress, usually, endings, lint, notes,
 /** The call's shape: the Flow layout in structure mode, thumbnail size, endings colored by how runs
  * that ended there scored when runs are cached. */
 function Shape({ template, endings }: { template: IncidentTemplate; endings: Record<string, Record<Weight, number>> }) {
-  const layout = useMemo(() => layoutFlow({ graph: callGraph(template.tree), expanded: new Set(), tally: null, mode: 'structure', showPruned: false, size: 'thumb',
+  const layout = useMemo(() => layoutFlow({ graph: callGraph(template.tree, { clockNexts: treeClockNexts(template.tree, template) }), expanded: new Set(), tally: null, mode: 'structure', showPruned: false, size: 'thumb',
     endingClass: authoredEndingClass(template.tree) }), [template]);
   const boxes = Object.values(layout.boxes);
   const reached = Object.keys(endings).length > 0;

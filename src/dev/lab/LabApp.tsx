@@ -10,6 +10,7 @@ import '../../sim/tuning-tables';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { INCIDENT_TEMPLATES } from '../../content/incidents';
 import { clockMarksOf } from '../../gen/incident/instance';
+import { sessionClockNexts } from './model/clocks';
 import { dependencyIndex } from '../../gen/incident/trees-v13/dependencies';
 import type { DependencyIndex } from '../../gen/incident/trees-v13/dependencies';
 import { callGraph, choiceIndex } from '../../gen/incident/trees-v13/graph';
@@ -326,7 +327,7 @@ function Lab({ initial }: { initial: ReturnType<typeof parseLabUrl> & { search: 
     if (!session) return null;
     try {
       // Clock marks count as settable, as in compileIncident.
-      return callGraph(session.tree, { counts: session.counts, seed: session.resolved.spec?.seed, situation: session.situation, clockMarks: clockMarksOf(session.instance.clocks) });
+      return callGraph(session.tree, { counts: session.counts, seed: session.resolved.spec?.seed, situation: session.situation, clockMarks: clockMarksOf(session.instance.clocks), clockNexts: sessionClockNexts(session) });
     } catch { return null; }
   }, [session]);
 

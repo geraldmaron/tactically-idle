@@ -5,7 +5,7 @@
 // from the graph, never hidden; reachable endings no run reached keep a normal card with "0 of n".
 import type { CallTree } from '../../../../content/call-trees/types';
 import type { IncidentTemplate } from '../../../../content/incidents/types';
-import { clockMarksOf } from '../../../../gen/incident/instance';
+import { clockMarksOf, clockNextsOf } from '../../../../gen/incident/instance';
 import { countCombos } from '../../../../gen/incident/trees-v13/dependencies';
 import type { DrawWant } from '../../model/seek';
 import { WEIGHTS } from '../../../../gen/incident/trees-v13/balance';
@@ -131,7 +131,7 @@ export function drawFor(template: IncidentTemplate, ending: string, current: { c
   for (const c of candidates) {
     const narrowed: CallTree = { ...tree, turns: Object.fromEntries(groups.map(([group]) => [group, [c.turns[group]]])) };
     const clocks = template.situations.find(entry => entry.index === c.situation)?.clocks ?? [];
-    const graph = callGraph(narrowed, { counts: c.counts, seed: 0, situation: c.situation, clockMarks: clockMarksOf(clocks) });
+    const graph = callGraph(narrowed, { counts: c.counts, seed: 0, situation: c.situation, clockMarks: clockMarksOf(clocks), clockNexts: clockNextsOf(clocks) });
     const id = `ending:${ending}` as const;
     if (!graph.vertices.find(v => v.id === id)?.inCall || !truthReach(graph, narrowed).has(id)) continue;
     const want: DrawWant = {};

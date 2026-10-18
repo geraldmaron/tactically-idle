@@ -13,7 +13,7 @@ import type { OutcomeBand } from '../../../sim/types';
 import { applyMove, availableMoves, NOW, startGateRun } from '../gates/engine-driver';
 import { drawIncidentSpec, generateIncident, INCIDENT_CONTENT_VERSION } from '../index';
 import { specForSituation } from '../gates/catalog';
-import { bindRoleTokens, memberId, outcomeNexts, reachableWithin, TOKEN, treeForCounts } from './compile';
+import { bindRoleTokens, memberId, outcomeNexts, reachableWithin, templateClockNexts, TOKEN, treeForCounts } from './compile';
 import { asRole, CASCADE_LINES, FIRE_LINES, FORCE_LINES } from '../../../content/incidents/lines';
 import { INCIDENT_TEMPLATES } from '../../../content/incidents';
 import type { IncidentTemplate } from '../../../content/incidents/types';
@@ -34,6 +34,8 @@ const outcomesOf = (choice: TreeChoice): TreeOutcome[] => BANDS.flatMap(band => 
 const nextsOf = (outcome: TreeOutcome): TreeNext[] => outcomeNexts(outcome);
 /** The template a tree is drawn from: its own, never another tree's of the same type. */
 const templateOf = (tree: CallTree): IncidentTemplate | undefined => tree === GROUP_TREE ? GROUP_TEMPLATE : INCIDENT_TEMPLATES[tree.type]?.tree === tree ? INCIDENT_TEMPLATES[tree.type] : undefined;
+/** Where the template's clocks send the call when they run out: reachable from every node. */
+const clockNextsOf = (tree: CallTree): TreeNext[] => { const template = templateOf(tree); return template ? templateClockNexts(template) : []; };
 /** Every combination of group sizes the template allows: [{}] for a tree without groups. */
 function countsOf(tree: CallTree): Record<string, number>[] {
   let combos: Record<string, number>[] = [{}];
@@ -65,7 +67,7 @@ const AGREEMENT = [
  * nodes and endings it can't reach left out. */
 function treeStrings(authored: CallTree, counts?: Record<string, number>): { field: string; text: string }[] {
   const tree = counts ? treeForCounts(authored, counts) : authored;
-  const reach = counts && authored.groups ? reachableWithin(tree, counts) : null;
+  const reach = counts && authored.groups ? reachableWithin(tree, counts, clockNextsOf(authored)) : null;
   const out: { field: string; text: string }[] = [];
   const add = (field: string, text: string | undefined) => { if (text) out.push({ field, text }); };
   add('summary', tree.summary); add('title', tree.title); add('pressureLabel', tree.pressureLabel);
@@ -158,8 +160,9 @@ describe('call trees: authoring rules', () => {
       }
     });
 
-    it('reaches every node from the root', () => {
+    it('reaches every node from the root, by choices or by a clock that runs out', () => {
       const seen = new Set([tree.root]), queue = [tree.root];
+      for (const target of clockNextsOf(tree).flatMap(next => targets(tree, next))) if (!seen.has(target)) { seen.add(target); queue.push(target); }
       while (queue.length) for (const choice of nodeById.get(queue.shift()!)!.choices) for (const outcome of outcomesOf(choice))
         for (const target of nextsOf(outcome).flatMap(next => targets(tree, next))) if (!seen.has(target)) { seen.add(target); queue.push(target); }
       expect(tree.nodes.map(node => node.id).filter(id => !seen.has(id))).toEqual([]);

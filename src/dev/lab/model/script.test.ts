@@ -85,7 +85,7 @@ describe('rows', () => {
 
   it('binds the longest names exactly as npm run check:strings does', () => {
     const longest = longestNamesCast(hostage);
-    const cli = callStringRows(hostage.tree, text => bindRoleTokens(text, longest.cast, longest.place, longest.rooms, longest.groups), longest.counts);
+    const cli = callStringRows(hostage.tree, text => bindRoleTokens(text, longest.cast, longest.place, longest.rooms, longest.groups), longest.counts, longest.clockNexts);
     for (const situation of [0, 1, 2] as const) {
       const v: Variant = { pronouns: 'drawn', counts: longest.counts, situation, turns: {}, cast: -1 };
       const rows = rowsFor(hostage.tree, v, [], longestSample(hostage));

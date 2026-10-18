@@ -10,7 +10,7 @@ import type { CallTree, TreeState } from '../../../content/call-trees/types';
 import { templateAt } from '../../../content/incidents';
 import { instanceOf } from '../../../gen/incident/instance';
 import { armedKey, callCounts, choiceActionId, countHolds, stateCondition, treeFactId } from '../../../gen/incident/trees-v13/compile';
-import { requirementTree, roleNoun, sentenceCase } from '../../../gen/incident/trees-v13/dependencies';
+import { roleNoun, sentenceCase } from '../../../gen/incident/trees-v13/dependencies';
 import type { DependencyIndex, ReqLeaf, ReqNode, ReqTarget, Site, StateKey } from '../../../gen/incident/trees-v13/dependencies';
 import { authorize } from '../../../sim/authorization';
 import { clockConditionsHold } from '../../../sim/clocks';
@@ -24,6 +24,7 @@ import type { Goal } from '../jobs/protocol';
 import type { DrawWant } from './seek';
 import type { Frame, Session } from './session';
 import { nodeAt } from './session';
+import { labRequirementTree, treeClockRoutes } from './clocks';
 import { certWords, focusSquad } from './squads';
 
 export type Verdict = 'pass' | 'fail' | 'unknown';
@@ -324,7 +325,7 @@ export function blockedBecause(s: Session, goal: Goal, deps: DependencyIndex | n
   const target = targetOf(s.tree, goal);
   if (!target) return null;
   let req: ReqNode;
-  try { req = 'req' in goal ? goal.req : requirementTree(s.tree, target); } catch { return null; }
+  try { req = 'req' in goal ? goal.req : labRequirementTree(s.tree, target, treeClockRoutes(s.tree, s.template)); } catch { return null; }
   const ctx = sessionContext(s);
   const start = s.frames[0].state;
   const failing = (node: ReqNode): ReqLeaf[] => 'leaf' in node
