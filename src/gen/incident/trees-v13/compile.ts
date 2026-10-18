@@ -12,6 +12,7 @@ import type { BuiltLocation, OutcomeBand, StageId, Vec } from '../../../sim/type
 import { mapScenarioText } from '../scenario-text';
 import { asRole, CASCADE_LINES, countWord, FIRE_LINES, FORCE_LINES, listOf } from '../../../content/incidents/lines';
 import { cascadeCombos, cascadeKey, cascadeResult, withVariants } from '../drawn-model';
+import { gearFor } from '../action-gear';
 
 const STAGES: readonly StageId[] = ['assess', 'adapt', 'resolve'];
 const BANDS: readonly OutcomeBand[] = ['favorable', 'mixed', 'adverse'];
@@ -807,8 +808,7 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
       consequenceLevel: choice.consequenceLevel ?? 'low',
       ...(choice.tempo ? { tempo: choice.tempo } : {}),
       ...(choice.span ? { timeLabel: choice.span } : {}),
-      ...(choice.equipment ? { equipment: structuredClone(choice.equipment) } : {}),
-      ...(choice.capabilities ? { capabilities: structuredClone(choice.capabilities) } : {}),
+      ...gearFor(choice),
       ...(modifiers.length ? { modifiers: modifiers.map(m => ({ label: m.label, when: { flags: [markFlag(m.mark)] }, source: m.value < 0 ? 'difficulty' as const : 'preparation' as const, value: Math.abs(m.value) })) } : {}),
       ...(walker ? { storyRoute: routeName(walker), storyRouteActor: 'person' as const, storyTargetPersonId: walker } : talksTo ? { storyTargetPersonId: talksTo } : {}),
       ...(talksTo ? { talksTo } : {}),
