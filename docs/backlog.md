@@ -17,8 +17,8 @@ measures the odds wiring; its floors rise as these items land.
 ## Now: the odds and the blueprint
 
 ### intel-odds: What the team learns changes the odds
-Tags: job=command; journeys=chance-not-script, team-moves-odds; probes=subject-armament, new:intel-confirmed; lane=engine
-Needs: start=none; integrate=none; ship=none
+Tags: job=command; journeys=chance-not-script, team-moves-odds; probes=subject-armament, intel-confirmed; lane=engine
+Needs: start=none; integrate=none; ship=lab-armed-counts
 
 Team moves settle what the squad sees (`src/sim/sightings.ts`), but knowing barely matters: a
 weapon counts the same reported or confirmed, so confirming one changes only the wording, and a
@@ -30,6 +30,10 @@ weapon through a condition on it (R-G1's `TreeState.armed`, shown working in the
 wiring probe measures it, gathering intel is a real choice with a cost in time or exposure, and with one subject how close the
 work comes to where the team believes they are moves the favorable odds (barricade request R-B5:
 nearness only sorts subjects today, `src/sim/incident-factors.ts`).
+
+Engine work merged in #45 (intel-confirmed probe 97 of 117, subject-armament floor 0.83, member
+weapons as beliefs through `armamentClaim`). Still to ship: the calls lane's armed-gated hostage
+line, and `lab-armed-counts` so the lab shows that line only where the compiled call keeps it.
 
 ### offsite-fire: Gunfire from outside the building uses the incoming-fire model
 Tags: job=command; journeys=chance-not-script; probes=none (adds a drawn harm result, not a favorable-chance input); lane=engine
@@ -208,6 +212,18 @@ Rescue request R-R9: `measureWiring` compares eligibility and favorable odds onl
 that the drawn incoming-fire distribution changes with the building. Done: a paired-building check
 over every fire-carrying choice shows the hit share differs where the sightline does, as a
 trees-v13 test.
+
+### lab-armed-counts: The lab reads armed conditions as the compiled call does
+Tags: job=understand; journeys=none (lab tooling); probes=none (tooling); lane=tooling
+Needs: start=none; integrate=none; ship=none
+
+The lab builds its counts with `memberCounts` (`src/dev/lab/model/session.ts`, `src/dev/lab/model/why.ts`),
+which has no `<group>:armed` keys, and a missing key reads as "holds". So the lab would show
+armed-gated lines on every call, including ones whose compiled tree dropped them. Done: the lab
+uses `callCounts`, the Script surface's variant counts carry the armed keys, and the Why panel
+explains an armed leaf. That leaf belongs in the requirement tree
+(`src/gen/incident/trees-v13/dependencies.ts`), which is engine work after `clock-runout-routing`.
+Needed before the hostage call's armed line merges.
 
 ### hostage-gate-requests: Gate requests from the hostage review
 Tags: job=command; journeys=answer-a-call; probes=none (tooling); lane=tooling
