@@ -7,15 +7,15 @@ entries instead of keeping history. Rules are in `COORDINATION.md`; work to do i
 ## Lead
 
 The coordinating session, on `main`. Merged so far: #36 (coordination rules), #37 (`e2e-script`),
-#38 (`small-screen-map`), #39 (barricade design sheet), #40 (`gear-by-action`), #41 (rescue design sheet), #42 (`hq-tiles`), #43 (`lab-compare`), #44 (hostage review leftovers, all but B9).
+#38 (`small-screen-map`), #39 (barricade design sheet), #40 (`gear-by-action`), #41 (rescue design sheet), #42 (`hq-tiles`), #43 (`lab-compare`), #44 (hostage review leftovers, all but B9), #45 (`intel-odds` engine work).
 
 ## Lanes
 
 | Lane | Branch | In flight | Declared touches |
 |---|---|---|---|
-| engine | `claude/engine-intel-odds` (#45) | `intel-odds`: ready; the lead integrates it with tooling's explore.test.ts fix. Next `clock-runout-routing`, `barricade-engine-requests`, `second-squad` | as declared in #45 |
-| calls | none | Manager briefs delivered. Next, once `intel-odds` merges: the armed-gated hostage line, then `manager-names-disjoint` | none |
-| tooling | `claude/tooling-explore-intel-odds` (from #45's head) | Fixing explore.test.ts for #45. Then `hostage-gate-requests` | `src/dev/lab/model/explore.test.ts`; maybe `session.ts`, `why.ts` |
+| engine | `claude/engine-clock-runout-routing` | `clock-runout-routing`: built, threading clock targets through graph.ts, dependencies.ts and strings.ts; rebasing onto main. Then the armed leaf for `lab-armed-counts`, `barricade-engine-requests`, `second-squad` | `src/content/incidents/types.ts`, `src/sim/scenario-types.ts` (interface, approved), `compile.ts`, `instance.ts`, `graph.ts`, `dependencies.ts`, `strings.ts`, `clocks.ts`, `operation.ts`, `external-support.ts`, tests |
+| calls | to be cut from main | The armed-gated hostage line (merges after `lab-armed-counts`), then `manager-names-disjoint` | to be declared |
+| tooling | to be cut from main | `lab-armed-counts` (the lab parts now, the Why leaf after the engine adds it), then `hostage-gate-requests` | to be declared |
 | interface | `feat/manager-art` | `manager-art`: approved; emblems first, portraits after the briefs; at most 45 image generations | `public/art/managers/`, `public/art/emblems/`, `scripts/validate-art.mjs`, `src/ui/screens/Develop.tsx`, `development.css`; `docs/art/manager-emblem-expansion/` under the lock below |
 
 ## Locks outside normal ownership

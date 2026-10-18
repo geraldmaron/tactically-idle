@@ -254,7 +254,7 @@ replace. Done: `npm run verify` and pull-request CI run it, and it passes.
 
 ### manager-names-disjoint: Manager names stay out of call casts
 Tags: job=command; journeys=answer-a-call; probes=none (names); lane=calls
-Needs: start=intel-odds (both change hostage fingerprints, so they merge in order); integrate=none; ship=none
+Needs: start=none (after #45, now merged); integrate=none; ship=none
 
 The civilian pool (`src/content/call-trees/civilian-names.ts`) is kept disjoint from the officer
 catalog, but not from the Command Staff managers: "Navarro" is in `CIVILIAN_SURNAMES`, so a subject
