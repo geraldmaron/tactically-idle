@@ -3,7 +3,7 @@ import { applyAccess, drawUnitAccess } from './access';
 import { GENERATION, GENERATIONS, publicFamilyId, type Generation } from './generation';
 import { deriveLocation } from '../../../sim/location';
 import { validateLocation } from '../../../sim/location-validate';
-import { routeBetween } from '../../../sim/spatial-factors';
+import { routeBetween } from '../../../sim/routes';
 import { furnishingShortfallsG1, furnishLocationG1, validateFurnishingsG1 } from '../furnishing-g1';
 import { buildAttempt } from './build';
 import { FAMILIES } from './families';

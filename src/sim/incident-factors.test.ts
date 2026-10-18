@@ -1,10 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { drawIncidentSpec, generateIncident } from '../gen/incident';
-import { startGateRun } from '../gen/incident/gates/engine-driver';
+import { applyMove, availableMoves, NOW, startGateRun } from '../gen/incident/gates/engine-driver';
+import { actionViews } from './operation-selectors';
+import type { GameState } from './types';
 import { buildLocation } from './location';
 import { evaluateAction } from './resolution';
 import { INCIDENT_CLASS_V1, incidentClass, incidentFactors } from './incident-factors';
 import { applyMoves } from './meters';
+import { THREAT_TUNING } from './threat';
+import { withTuning } from './tuning';
 import type { IncidentPersonDef } from './scenario-types';
 import type { ScenarioDefinition } from './scenario-types';
 import type { IncidentType } from './scenario-types';
@@ -75,6 +79,47 @@ describe('incident factors: the people and the building change the odds', () => 
     };
     expect(labelsOf(calls('barricaded', 1)[0]).some(label => /waiting is safe/.test(label) && / 4$/.test(label))).toBe(true);
     expect(labelsOf(armed[2]).some(label => /may hurt someone/.test(label) && / -5$/.test(label))).toBe(true);
+  });
+
+  it('carries the threat rules\' strain and time multipliers into the evaluation', () => {
+    type Action = ScenarioDefinition['stages'][keyof ScenarioDefinition['stages']]['actions'][number];
+    const evaluate = (s: ScenarioDefinition, pick: (action: Action) => boolean, change: (scenario: ScenarioDefinition) => void = () => {}) => {
+      const state = startGateRun(s.id, 719);
+      const scenario = structuredClone(s);
+      change(scenario);
+      // The first stage that offers a matching choice, with the run standing on it.
+      const [stage, action] = Object.entries(scenario.stages).flatMap(([id, entry]) => entry.actions.filter(pick).map(found => [id, found] as const))[0];
+      const run = { ...state.activeRun!, stage: stage as keyof ScenarioDefinition['stages'] };
+      const built = buildLocation(scenario.locationFamilyId, scenario.locationSeed);
+      const fx = incidentFactors(scenario, built, run, action, [])!;
+      return { fx, ev: () => evaluateAction({ state, run, scenario, action, built, acting: ['A'], support: [] }) };
+    };
+    // An armed subject near the work: the officers taking part carry more strain; unarmed, none.
+    const armedCall = armed[0];
+    const near = (action: Action) => action.check.kind === 'execution' || Boolean(action.entry) || action.check.kind === 'contact';
+    const withArms = evaluate(armedCall, near);
+    const disarmed = evaluate(armedCall, near, scenario => { for (const person of scenario.incidentPeople!) if (person.threat) person.threat.armament = 'none'; });
+    expect(withArms.fx.strainMult).toBeGreaterThan(1);
+    expect(disarmed.fx.strainMult).toBe(1);
+    expect(withArms.ev().exposureMult / disarmed.ev().exposureMult).toBeCloseTo(withArms.fx.strainMult, 5);
+    // Waiting out a barricade: the wait takes longer, and the card says so. Play the call until a
+    // wait is on offer, then evaluate it there.
+    const barricade = calls('barricaded', 1)[0];
+    const isWait = (id: string) => Object.values(barricade.stages).flatMap(stage => stage.actions).find(action => action.id === id)?.icon === 'wait';
+    let frontier = [startGateRun(barricade.id, 719)], at: GameState | null = null;
+    for (let depth = 0; depth < 5 && !at; depth++) {
+      at = frontier.find(state => actionViews(state, NOW, 'A').some(view => view.eligible && isWait(view.id))) ?? null;
+      frontier = frontier.flatMap(state => availableMoves(state).filter(move => move.band === 'favorable').map(move => applyMove(state, move)).filter((next): next is GameState => !!next)).slice(0, 40);
+    }
+    expect(at, 'a reachable wait on the barricade call').not.toBeNull();
+    const run = at!.activeRun!;
+    const waitAction = barricade.stages[run.stage as keyof ScenarioDefinition['stages']].actions.find(action => isWait(action.id) && actionViews(at!, NOW, 'A').some(view => view.id === action.id && view.eligible))!;
+    const built = buildLocation(barricade.locationFamilyId, barricade.locationSeed);
+    expect(incidentFactors(barricade, built, run, waitAction, [])!.timeMult).toBe(THREAT_TUNING.barricadeSlow);
+    const evaluateWait = () => evaluateAction({ state: at!, run, scenario: barricade, action: waitAction, built, acting: ['A'], support: [] });
+    const slow = evaluateWait(), plain = withTuning({ THREAT_TUNING: { barricadeSlow: 1 } }, evaluateWait);
+    expect(slow.timeBase).toBeGreaterThan(plain.timeBase);
+    expect(slow.details.some(line => /Waiting out a barricade is slow/.test(line))).toBe(true);
   });
 });
 

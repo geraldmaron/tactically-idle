@@ -6,7 +6,7 @@ import { evaluateCapabilities } from './capabilities';
 import { hydrateStoryAction, storyActionTarget, storyPropsPublic, storyPublicScenario } from './story-people';
 import { incidentFactors } from './incident-factors';
 import { authorize } from './authorization';
-import { currentStoryRoute, findStoryRoute } from './story-bindings';
+import { currentStoryRoute, findStoryRoute } from '../gen/incident/story-bindings';
 import { publicStoryMovementLegs } from './story-movement';
 import { joinCareRoutes, physicalCare } from './physical-care';
 // Operation resolution: eligibility, contributors, score, probability and strain.
@@ -53,8 +53,7 @@ import {
   rangeThroughOpening,
   rangeToPoint,
   resolveSubject,
-  routeAlongOpenings,
-  routeBetween,
+  spaceLabel,
   SPATIAL_TUNING,
   standingCandidates,
   standingFromPoint,
@@ -62,14 +61,15 @@ import {
   stagingFacing,
   type EntryExposure,
   type RangeResult,
-  type Route,
   type SignalAssessment,
   type Standing,
   type Subject,
 } from './spatial-factors';
+import { routeAlongOpenings, routeBetween, type Route } from './routes';
 import { ITEMS } from '../content/items';
 import { projectedCondition } from './equipment';
 import { tunable } from './tuning';
+import { conditionHolds } from './conditions';
 
 /** Tunable (sim/tuning.ts). The guard keeps the forced-band tails, the span and the band thresholds
  * usable: forced bands aim at setback/2 and 1 - luck/2, so neither tail may vanish. */
@@ -249,23 +249,9 @@ export function vantageZones(location: LocationDefinition, spaceId: Id): Id[] {
   return [...out];
 }
 
-export function spaceName(built: BuiltLocation, id: Id): string {
-  return (
-    built.location.rooms.find((r) => r.id === id)?.label ?? built.location.zones.find((z) => z.id === id)?.label ?? id
-  );
-}
 
 // ---------------------------------------------------------------- conditions and bands
 
-export function conditionHolds(c: Condition | undefined, run: Pick<OperationRun, 'knowledge' | 'flags' | 'pressure'>): boolean {
-  if (!c) return true;
-  for (const f of c.facts ?? []) if (!f.in.includes(run.knowledge[f.factId] ?? 'unknown')) return false;
-  for (const f of c.flags ?? []) if (!run.flags.includes(f)) return false;
-  for (const f of c.notFlags ?? []) if (run.flags.includes(f)) return false;
-  if (c.pressureAtLeast !== undefined && run.pressure < c.pressureAtLeast) return false;
-  if (c.pressureBelow !== undefined && run.pressure >= c.pressureBelow) return false;
-  return true;
-}
 
 /**
  * Map a saved sample to an outcome band for a given margin (score - difficulty).
@@ -754,12 +740,12 @@ export function evaluateAction(input: EvalInput): Evaluation {
   if (benched.length > 0 && capSpace) {
     const n = benched.length;
     contributors.push({
-      label: `${spaceName(built, capSpace)} fits ${cap}: ${n} officer${n === 1 ? '' : 's'} can't contribute`,
+      label: `${spaceLabel(built, capSpace)} fits ${cap}: ${n} officer${n === 1 ? '' : 's'} can't contribute`,
       value: 0,
       source: 'space',
       ref: capSpace,
     });
-    details.push(`${spaceName(built, capSpace)} fits ${cap}: only ${cap} officer${cap === 1 ? '' : 's'} can work there at once.`);
+    details.push(`${spaceLabel(built, capSpace)} fits ${cap}: only ${cap} officer${cap === 1 ? '' : 's'} can work there at once.`);
   } else if (benched.length > 0) {
     details.push(`At most ${cap} officers take part; the rest stay ready.`);
   }
@@ -957,7 +943,7 @@ export function evaluateAction(input: EvalInput): Evaluation {
       if (!bestPlan || plan.score > bestPlan.score + 1e-9 || (Math.abs(plan.score - bestPlan.score) <= 1e-9 && (plan.stand.stagingId ?? '') < (bestPlan.stand.stagingId ?? ''))) bestPlan = plan;
     }
     if (!bestPlan) {
-      reasons.push(`${squadLabel(sq)} can't reach the ${spaceName(built, action.targetId).toLowerCase()} from ${spaceName(built, task.positionId)}`);
+      reasons.push(`${squadLabel(sq)} can't reach the ${spaceLabel(built, action.targetId).toLowerCase()} from ${spaceLabel(built, task.positionId)}`);
       bestPlan = { squad: sq, stand: start, zone: null, route: null, travel: 0, signal: null, picks: [], blocked: [], toolUnit: tool, missingRequired: false, score: 0 };
     }
     if (bestPlan.zone) claimed.add(bestPlan.zone);
@@ -1081,7 +1067,7 @@ export function evaluateAction(input: EvalInput): Evaluation {
       const standAt = cover?.at ?? centroidOf(built, rule.coverSpaceId);
       const route = routeBetween(built, task.positionId, start.at, rule.coverSpaceId, standAt, tool ? { effectiveness: effOf(tool) } : null);
       if (!route.reachable) {
-        reasons.push(`${squadLabel(sq)} can't reach the ${spaceName(built, rule.coverSpaceId).toLowerCase()}`);
+        reasons.push(`${squadLabel(sq)} can't reach the ${spaceLabel(built, rule.coverSpaceId).toLowerCase()}`);
         return;
       }
       const dist = route.minutes;
@@ -1165,7 +1151,7 @@ export function evaluateAction(input: EvalInput): Evaluation {
       source: 'space',
       ref: action.targetId,
     });
-    const areaName = (action.workload.areaSpaces?.length ?? 0) > 1 ? 'The search area' : spaceName(built, action.targetId);
+    const areaName = (action.workload.areaSpaces?.length ?? 0) > 1 ? 'The search area' : spaceLabel(built, action.targetId);
     details.push(`${areaName} covers ${Math.round(targetArea)} sq ft, about ${round1(extraMinutes)} min of work.`);
   }
   let travel = Math.max(actingTravel, supportTravel);
@@ -1206,7 +1192,7 @@ export function evaluateAction(input: EvalInput): Evaluation {
     const route = movementRoutes.reduce((longest, next) => next.minutes > longest.minutes ? next : longest);
     if (inspectsRoute) {
       for (const [i, planned] of movementRoutes.entries()) overlays.push({ kind: 'path', points: planned.points, label: `${legs[i].label}: planned ${binding.profile === 'chair' ? 'chair ' : ''}route` });
-      details.push(`Check the planned route to ${spaceName(built, binding.toSpaceId)}. The person stays in place; this check does not open doors.`);
+      details.push(`Check the planned route to ${spaceLabel(built, binding.toSpaceId)}. The person stays in place; this check does not open doors.`);
     } else {
       const alreadyForced = new Set(travelledRoutes.flatMap(path => path.forced.map(door => door.openingId)));
       storySquadOpenedIds = [...alreadyForced];
@@ -1226,7 +1212,7 @@ export function evaluateAction(input: EvalInput): Evaluation {
       travel = routeTravel;
       storyOpenedIds = [...locks.keys()];
       for (const [i, movement] of movementRoutes.entries()) overlays.push({ kind: 'path', points: movement.points, label: `${legs[i].label} movement, ${round1(movement.minutes)} min` });
-      details.push(`The movement route runs from ${spaceName(built, binding.fromSpaceId)} to ${spaceName(built, binding.toSpaceId)}.`);
+      details.push(`The movement route runs from ${spaceLabel(built, binding.fromSpaceId)} to ${spaceLabel(built, binding.toSpaceId)}.`);
     }
   }
   if (travel >= 0.5) {
@@ -1273,7 +1259,8 @@ export function evaluateAction(input: EvalInput): Evaluation {
   const margin = round1(score - difficulty);
   const probs = bandProbabilities(margin);
   const supportWait = action.awaitSupport ? remainingSupportWait(run, scenario, action.awaitSupport) : null;
-  const timeBase = supportWait ?? round1(Math.max(0.5, workloadMinutes + travel + entryMinutes + capability.minutes));
+  // The incident's people stretch the work itself (waiting out a barricade), never the walk to it.
+  const timeBase = supportWait ?? round1(Math.max(0.5, workloadMinutes * (incident?.timeMult ?? 1) + travel + entryMinutes + capability.minutes));
   const timeExpected = supportWait ?? round1(timeBase * (probs.favorable * T.bandTime.favorable + probs.mixed * T.bandTime.mixed + probs.adverse * T.bandTime.adverse));
 
   // ---- text
@@ -1333,7 +1320,7 @@ export function evaluateAction(input: EvalInput): Evaluation {
     details,
     highRisk,
     overlays,
-    exposureMult: exposure?.strainMult ?? 1,
+    exposureMult: (exposure?.strainMult ?? 1) * (incident?.strainMult ?? 1),
   };
 }
 

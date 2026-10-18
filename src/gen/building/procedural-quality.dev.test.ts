@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { LocationDefinition } from '../../sim/types';
 import { deriveLocation } from '../../sim/location';
 import { validateLocation } from '../../sim/location-validate';
-import { routeBetween } from '../../sim/spatial-factors';
+import { routeBetween } from '../../sim/routes';
 import { validateFurnishingsG1 } from './furnishing-g1';
 import { PROCEDURAL_FAMILIES } from './index';
 import { generatePair } from './procedural/generate';

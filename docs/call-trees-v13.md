@@ -41,6 +41,7 @@ A `CallTree` (`src/content/call-trees/types.ts`) is typed data.
 - Unreachable turn nodes, the conditions that depend on them, and endings this call can't reach are pruned per call. A choice that needs a mark this call can never set is dropped, and so are the marks only it could set (repeated until nothing more drops).
 - A call whose scene room, other rooms, routes or walk-outs don't fit the building throws, and hosting moves it to another seed.
 - Rooms are tried in the tree's order of fit, and the board only draws a tree to the building types it lists (`SCENARIO_TYPES_V13`).
+- The squad range is derived, never authored: a call deploys at most as many squads as one of its choices can put to work (`squadsPutToWork`, scenario-types.ts: acting squads plus supporters, or the count a choice requires). Tree choices compile one acting squad and no support rule, so every v13 call takes one squad (2026-10-18). A second squad would stand by the whole call, taking strain and earning nothing. Multi-squad calls come back when a tree authors choices a second squad can act in.
 
 ## Authoring rules the gates enforce
 

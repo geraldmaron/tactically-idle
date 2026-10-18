@@ -391,5 +391,4 @@ export const RESCUE_CHAIR: CallTree = {
       summary: 'Command still holds the street, and the call is still open. The team has no step left that it can take from here.' },
   },
   rewards: { funding: 2900, devPoints: 4, trust: 7, xp: 50 },
-  squads: { min: 1, max: 3 },
 };

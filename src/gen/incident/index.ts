@@ -69,7 +69,8 @@ function generateIncidentAt(spec: IncidentSpec): ScenarioDefinition {
     id: incidentId(spec), version: INCIDENT_CONTENT_VERSION, code: `CALL ${String(spec.seed % 10000).padStart(4, '0')}`,
     title: tree.title, setting: built.location.setting, locationFamilyId, locationSeed: spec.buildingSeed,
     summary: tree.summary, variantLabel: tree.title, pressureLabel: tree.pressureLabel,
-    squadRange: { ...tree.squads },
+    // The compiler sets the range from what the choices can put to work (compile.ts).
+    squadRange: { min: 1, max: 1 },
     briefing: { known: [...tree.briefing.known], unknown: [...tree.briefing.unknown] },
     facts: [], objectives: tree.objectives.map(objective => ({ ...objective })), pressure: { ...tree.pressure },
     stages: {

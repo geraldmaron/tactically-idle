@@ -28,10 +28,11 @@ import { SCENARIO_ORDER } from '../content/scenarios';
 import { getScenario } from './scenario-registry';
 import { ITEMS } from '../content/items';
 import { deployability } from './officer';
-import { availableUnits, builtFor, CERT_LABEL, conditionHolds, evaluateAction, getBuilt, RESOLUTION_TUNING, squadLabel, spaceName, tagNames, type Evaluation } from './resolution';
+import { availableUnits, builtFor, CERT_LABEL, evaluateAction, getBuilt, RESOLUTION_TUNING, squadLabel, tagNames, type Evaluation } from './resolution';
+import { conditionHolds } from './conditions';
 import { checkStart, computeDebrief, defaultSupport, evaluateDefault, decisionViewsFor, matchedEffects, matchedOutcomeIndices } from './operation';
 import { drawnDistribution, type DrawnDistribution } from './drawn-effects';
-import { approxPoint } from './spatial-factors';
+import { approxPoint, spaceLabel } from './spatial-factors';
 import { actionEventResult } from './action-result';
 
 export interface ScenarioCard {
@@ -166,7 +167,7 @@ export function briefing(scenarioId: Id, state?: GameState, squadIds?: SquadId[]
     known,
     unknown,
     objectives: s.objectives.map((o) => o.label),
-    entries: built.location.entries.map((id) => ({ id, label: spaceName(built, id) })),
+    entries: built.location.entries.map((id) => ({ id, label: spaceLabel(built, id) })),
     usefulItemIds,
   };
 }
@@ -275,7 +276,7 @@ function buildSpaceViews(s: ScenarioDefinition, built: BuiltLocation, knowledge:
     const repeatedPersonMarker = people.length > 0 && marker && /^(CHECK NEEDED|CHECKED|PERSON\??|PERSON LOCATED|OCCUPIED)$/i.test(marker.text);
     return {
       id,
-      label: spaceName(built, id),
+      label: spaceLabel(built, id),
       status,
       marker: repeatedPersonMarker ? null : marker,
       squadsHere: run ? run.squadTasks.filter((t) => t.positionId === id).map((t) => t.squadId) : [],

@@ -11,7 +11,7 @@ import { ageBandOf, IDENTITY_DEFAULT, WEAPON_ARMAMENT } from '../../content/inci
 import { templateAt } from '../../content/incidents';
 import { hashIndex, hashSeed } from '../../sim/rng';
 import { nearestOpening } from '../../sim/spatial';
-import { coverOnLine } from '../../sim/spatial-factors';
+import { coverOnLine } from '../../sim/cover';
 import type { ClockDef, IncidentPersonDef, IncidentSpec, ScenarioDefinition } from '../../sim/scenario-types';
 import type { BuiltLocation, Id, Vec } from '../../sim/types';
 

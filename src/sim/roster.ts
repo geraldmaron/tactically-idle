@@ -19,7 +19,7 @@ import { candidatePoolSize, formatDuration, hasEffect, isNodeUnlocked, money, ra
 import { fullName } from './officer';
 import { gameDay } from './calendar';
 import { PERSONAS } from '../content/personas';
-import { applyRetention, retentionCheck, mandatoryRetirementDay } from './career';
+import { applyRetention, CAREER_TUNING, retentionCheck, mandatoryRetirementDay } from './career';
 import { markEmployed } from './personnel';
 import { applySquadArrangement, setSquadArrangementLock, undoSquadArrangement } from './squad-optimizer';
 import { tunable } from './tuning';
@@ -191,7 +191,7 @@ export function fillCandidates(d: GameState, now: number): void {
   const taken = new Set<string>();
   for (const o of Object.values(d.officers)) taken.add(fullNameKey(o.firstName, o.surname));
   for (const c of kept) taken.add(fullNameKey(c.officer.firstName, c.officer.surname));
-  const fresh = generateBatch(gen, now, Math.max(0, size - kept.length), kept.map((c) => c.officer.role), taken, gameDay(d, now));
+  const fresh = generateBatch(gen, now, Math.max(0, size - kept.length), kept.map((c) => c.officer.role), taken, gameDay(d, now), CAREER_TUNING.retireAge);
   d.candidates = [...kept, ...fresh];
   d.rngState = gen.rng;
   d.nextId = gen.nextId;

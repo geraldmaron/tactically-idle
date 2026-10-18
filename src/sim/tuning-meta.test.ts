@@ -3,7 +3,7 @@ import { TUNED_TABLES } from './tuning-tables';
 import { PINNED_BY, READONLY_TABLES, TUNING_META, type FieldMeta } from './tuning-meta';
 import { registeredTables, tuningLayers, validatePatch, type TuningPatch } from './tuning';
 import { LOCATION_TUNING } from './location';
-import { TIER_REWARD_MULTIPLIERS } from './incidents';
+import { TIER_REWARD_MULTIPLIERS } from '../content/incidents/rewards';
 
 // TUNING_META is what the lab's Tuning surface shows: one entry per leaf of every registered table,
 // with a plain label, help, a group, the read mode, a range for anything editable, why for anything
@@ -63,10 +63,13 @@ describe('TUNING_META', () => {
 
   it('marks the fields the game never reads as dead (spec 7.4)', () => {
     const dead = TUNING_META.filter(meta => meta.mode === 'dead').map(meta => meta.path);
-    for (const path of ['RECRUIT_TUNING.rookieService', 'AUTHORIZATION_V1.entry.rules', 'THREAT_TUNING.harmRate', 'THREAT_TUNING.barricadeRate', 'THREAT_TUNING.barricadeSlow',
-      'THREAT_TUNING.strainExecution', 'THREAT_TUNING.strainOther', 'THREAT_TUNING.strainCap', 'THREAT_TUNING.civilian.execution', 'THREAT_TUNING.mixedShare',
+    for (const path of ['RECRUIT_TUNING.rookieService', 'AUTHORIZATION_V1.entry.rules', 'THREAT_TUNING.harmRate', 'THREAT_TUNING.barricadeRate',
+      'THREAT_TUNING.civilian.execution', 'THREAT_TUNING.mixedShare',
       'ENV_TUNING.light.night', 'ENV_TUNING.weatherSound.rain', 'ENV_TUNING.crowd.outside', 'ENV_TUNING.keyholderScore', 'ENV_TUNING.fire.score'])
       expect(dead, path).toContain(path);
+    // The threat rules' strain and time multipliers reach the evaluation (incident-factors.ts).
+    for (const path of ['THREAT_TUNING.strainExecution', 'THREAT_TUNING.strainOther', 'THREAT_TUNING.strainCap', 'THREAT_TUNING.barricadeSlow'])
+      expect(dead, path).not.toContain(path);
     // Of ENV_TUNING, only the dark's observation difficulty is read.
     expect(TUNING_META.filter(meta => meta.path.startsWith('ENV_TUNING.') && meta.mode !== 'dead').map(meta => meta.path))
       .toEqual(['ENV_TUNING.observationDifficulty.dusk', 'ENV_TUNING.observationDifficulty.night', 'ENV_TUNING.observationDifficulty.powerOff']);
@@ -79,7 +82,6 @@ describe('TUNING_META', () => {
       const value = LEAVES.get(meta.path);
       if (Array.isArray(value) && value.some(item => typeof item !== 'number')) expect(['structural', 'dead'], meta.path).toContain(meta.mode);
     }
-    expect(META.get('SPATIAL_TUNING.coverReach')?.mode).toBe('generation');
     expect(META.get('ROSTER_TUNING.maxSquads')?.mode).toBe('structural');
     expect(META.get('FORCE_RISK_V1.hands.fatal')?.mode).toBe('structural');
     expect(META.get('RESOLUTION_TUNING.riskBands.lowAt')?.mode).toBe('display');
@@ -101,7 +103,7 @@ describe('TUNING_META', () => {
 
 describe('READONLY_TABLES', () => {
   it('lists the tables left unwrapped in v1, each with its values and why, none of them registered', () => {
-    expect(READONLY_TABLES.map(entry => entry.name)).toEqual(['LOCATION_TUNING', 'STRESS_BANDS', 'COMMAND_STAFF', 'EQUIPMENT_MANAGER', 'TIER_REWARD_MULTIPLIERS', 'IDENTITY_DEFAULT']);
+    expect(READONLY_TABLES.map(entry => entry.name)).toEqual(['LOCATION_TUNING', 'STRESS_BANDS', 'COMMAND_STAFF', 'EQUIPMENT_MANAGER', 'TIER_REWARD_MULTIPLIERS', 'IDENTITY_DEFAULT', 'COVER_REACH']);
     for (const entry of READONLY_TABLES) {
       expect(registeredTables()).not.toContain(entry.name);
       expect(entry.why.trim()).not.toBe('');

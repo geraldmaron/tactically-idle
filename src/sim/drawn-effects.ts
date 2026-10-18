@@ -14,6 +14,7 @@
 import { FORCE_REASONS } from '../content/incidents/lines';
 import { peopleNear, readForceThreat } from './authorization';
 import { cutFor, cutShares, FORCE_RISK_V1, forceCuts, qualifiedForceUnit, type ForceRiskProfile, type SampleCuts } from './force-risk';
+import { cascadeCombos, cascadeKey, cascadeResult, type CascadeState } from '../gen/incident/drawn-model';
 import { next } from './rng';
 import { tunable } from './tuning';
 import type { IncidentPersonDef, OutcomeEffect, ScenarioDefinition, SubjectMeters } from './scenario-types';
@@ -137,10 +138,6 @@ export const CASCADE_V1 = tunable('CASCADE_V1', {
   floor: 0.05, ceiling: 0.95,
 }, { guard: next => next.floor < 0 || next.floor > next.ceiling || next.ceiling > 1 ? 'Follow chances need 0 ≤ floor ≤ ceiling ≤ 1.' : null });
 
-/** What one member does in a cascade: follows the leader out, stays inside, or was already out (or
- * hurt) before it, and takes no part. */
-export type CascadeState = 'follows' | 'stays' | 'out';
-const CASCADE_STATES: readonly CascadeState[] = ['follows', 'stays', 'out'];
 
 /** The chance a member follows a leader who gives up. */
 export function cascadeChance(person: Pick<IncidentPersonDef, 'group' | 'meters'> | undefined, meters?: SubjectMeters): number {
@@ -186,20 +183,6 @@ function cascadeStatesFor(chances: readonly (number | null)[], sample: number): 
   return chances.map((chance, i) => chance === null ? 'out' : samples[i] < chance ? 'follows' : 'stays');
 }
 
-/** A cascade's result key: each member's state in the group's order ('follows+stays'). */
-export const cascadeKey = (states: readonly CascadeState[]) => states.join('+');
-/** Where a cascade routes: everyone still inside followed (or nobody was left to), some did, or none. */
-export function cascadeResult(states: readonly CascadeState[]): 'all' | 'some' | 'none' {
-  const inside = states.filter(state => state !== 'out');
-  const followed = inside.filter(state => state === 'follows').length;
-  return followed === inside.length ? 'all' : followed === 0 ? 'none' : 'some';
-}
-/** Every state combination of a group this size, as keys. */
-export function cascadeCombos(size: number): CascadeState[][] {
-  let combos: CascadeState[][] = [[]];
-  for (let i = 0; i < size; i++) combos = combos.flatMap(combo => CASCADE_STATES.map(state => [...combo, state]));
-  return combos;
-}
 
 /** The chance each combination happens, members still inside following independently by their
  * chance (cascadeChances; null for someone out). Only possible combinations are listed. */
@@ -233,10 +216,6 @@ export function drawnKeys(effect: OutcomeEffect, scenario: ScenarioDefinition): 
     .map(severity => drawnKey('team_force', severity, profile)));
 }
 
-/** Every effect an action's band can apply once drawn effects resolve: for save validation. */
-export function withVariants(effects: OutcomeEffect[]): OutcomeEffect[] {
-  return effects.flatMap(effect => [effect, ...Object.values(effect.variants ?? {}).flat()]);
-}
 
 /** One settled drawn effect, saved on the commit. For a cascade, `personId` is the leader and `key`
  * every member's state in the group's order. */

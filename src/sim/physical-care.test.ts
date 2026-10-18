@@ -4,10 +4,11 @@ import { SCENARIOS } from '../content/scenarios';
 
 import { apply, makeState, NOW, startRun } from './test-fixtures';
 import { builtFor, evaluateAction, openingFlag } from './resolution';
-import { storyPoint } from './story-bindings';
+import { storyPoint } from '../gen/incident/story-bindings';
 import { storyPeoplePublic } from './story-people';
 import { physicalCare, officerCarePosition } from './physical-care';
-import { routeBetween, standingOf } from './spatial-factors';
+import { standingOf } from './spatial-factors';
+import { routeBetween } from './routes';
 import { deserialize, serialize } from './save';
 import { syncCasualtyFlags } from './incident-consequences';
 import type { ActionDefinition, OutcomeEffect, ScenarioDefinition } from './scenario-types';

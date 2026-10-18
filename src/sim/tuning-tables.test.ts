@@ -72,7 +72,6 @@ describe('the committed tuning.json', () => {
 
 describe('read-only fields', () => {
   it.each([
-    ['SPATIAL_TUNING.coverReach', { SPATIAL_TUNING: { coverReach: 0.5 } }, 'generation'],
     ['ROSTER_TUNING.maxSquads', { ROSTER_TUNING: { maxSquads: 5 } }, 'structural'],
     ['AUTHORIZATION_V1.believed', { AUTHORIZATION_V1: { believed: ['confirmed', 'confirmed'] } }, 'structural'],
     ['AUTHORIZATION_V1.concessions.allowed', { AUTHORIZATION_V1: { concessions: { allowed: ['food', 'water', 'phone', 'statement', 'message', 'third_party', 'weapons'] } } }, 'structural'],

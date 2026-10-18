@@ -16,11 +16,11 @@ import {
   rangeThroughOpening,
   rangeToPoint,
   resolveSubject,
-  routeBetween,
   SPATIAL_TUNING,
   signalQuality,
   toneFor,
 } from './spatial-factors';
+import { routeBetween } from './routes';
 import { apply, makeState, NOW, playPolicy, setCareer, setRun, setUnitCondition, startCmd, startRun } from './test-fixtures';
 
 const occ = SCENARIOS.ms_occupancy;

@@ -296,7 +296,7 @@ Runs: this call and from this step offer 400, 1,000, 2,000 (default) or 5,000 ru
 | New only | stored when a card, recruit or unit is made | editable; affects new ones only |
 | Department | economy, roster, careers | editable; no call-level preview |
 | Labels | display only (risk labels) | editable |
-| Generation | read when a call is generated (`SPATIAL_TUNING.coverReach`) | read-only |
+| Generation | read when a call is generated (`TIER_REWARD_MULTIPLIERS`, `COVER_REACH`): listed read-only, outside the registry | read-only |
 | Structure | the game's structure, not its balance (`ROSTER_TUNING.maxSquads`, `AUTHORIZATION_V1.believed`, `.concessions`, `.deadlyForce.guns`, `.inReach`) | read-only |
 | Unused | read nowhere | hidden behind "Show unused (n)" with why |
 

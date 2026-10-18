@@ -20,9 +20,9 @@ import { tunable } from './tuning';
 const round1 = (n: number) => Math.round(n * 10) / 10;
 const lower = (s: string) => s.charAt(0).toLowerCase() + s.slice(1);
 
-/** Tunable (sim/tuning.ts). Only threatFx reads this table in play (through incident-factors.ts):
- * the civilian, harm-rate and barricade-rate fields feed functions nothing calls, and the strain
- * fields and barricadeSlow set ThreatFx fields IncidentFx drops. TUNING_META marks them unused. */
+/** Tunable (sim/tuning.ts). Only threatFx reads this table in play (through incident-factors.ts,
+ * which carries its strain and time multipliers into the evaluation): the civilian, harm-rate and
+ * barricade-rate fields feed functions nothing calls. TUNING_META marks those unused. */
 export const THREAT_TUNING = tunable('THREAT_TUNING', {
   /** 0..1 weight of an armament category. */
   armament: { none: 0, blunt: 0.35, edged: 0.55, handgun: 0.8, long_gun: 1, unknown: 0.6 } as Record<Armament, number>,

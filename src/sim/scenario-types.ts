@@ -560,6 +560,14 @@ export function scenarioActions(s: ScenarioDefinition): ActionDefinition[] {
   return [...s.stages.assess.actions, ...s.stages.adapt.actions, ...s.stages.resolve.actions];
 }
 
+/** The most squads one choice can put to work: its acting squads (maxActing, default 1) and its
+ * supporters (support.maxSquads), or the count it requires, whichever is more. A squad past every
+ * choice's count would stand by the whole call, taking strain and earning nothing, so a call
+ * should never deploy more (sim/resolution.ts evaluateAction enforces the same counts). */
+export function squadsPutToWork(action: ActionDefinition): number {
+  return Math.max((action.maxActing ?? 1) + (action.support?.maxSquads ?? 0), action.requires.minSquads?.count ?? 1);
+}
+
 // ---------------------------------------------------------------- phase 3: generated incidents
 // See docs/phase3-generation.md. Distributions live in src/gen/incident/tables.ts.
 

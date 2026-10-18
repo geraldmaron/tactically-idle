@@ -5,7 +5,7 @@ import { applyMove } from '../gen/incident/gates/engine-driver';
 import { builtFor, evaluateAction, openingFlag } from './resolution';
 import { getScenario } from './scenario-registry';
 import { scenarioActions } from './scenario-types';
-import { currentStoryRoute } from './story-bindings';
+import { currentStoryRoute } from '../gen/incident/story-bindings';
 import { deserialize, serialize } from './save';
 import { NOW } from './test-fixtures';
 

@@ -94,7 +94,7 @@ describe('individual civilian and officer outcomes', () => {
 
   it('does not describe an evacuated officer as fit or taking part on the live portrait strip', () => {
     const entry = briefing(WELFARE).entries[0].id;
-    state = startRun(withCallOnBoard(state, WELFARE), WELFARE, ['A', 'B'], { positions: { A: entry, B: entry } });
+    state = startRun(withCallOnBoard(state, WELFARE), WELFARE, ['A'], { positions: { A: entry } });
     const record = { ...casualty(), care: 'evacuated' as const };
     state.activeRun!.officerCasualties = { off_chen: record };
     const focus = state.squads.find((squad) => squad.id === 'A')!;
@@ -103,6 +103,8 @@ describe('individual civilian and officer outcomes', () => {
     const html = renderToStaticMarkup(createElement(LiveView, {
       g: state, now: NOW, title: 'Test rescue', subtitle: 'TEST',
       progress: stageProgress(state), built: currentBuilt(state)!, spaces: spaceViews(state), squadTasks: state.activeRun!.squadTasks,
+      // The squad rail shows only with two squads; the component reads them from props, so it gets two
+      // while the run (a v13 call takes one squad) deploys A.
       deployedSquads: state.squads.filter((squad) => ['A', 'B'].includes(squad.id)), focusSquadId: 'A', onFocusSquad: noop,
       officers: focus.officerIds.map((id) => state.officers[id]), actions, selectedAction: actions[0], onSelectAction: noop,
       activeOfficerId: 'off_chen', onSelectOfficer: noop, selectedSpaceId: null, onSelectSpace: noop, highlightSpaceIds: [],

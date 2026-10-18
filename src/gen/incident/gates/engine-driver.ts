@@ -1,6 +1,7 @@
 import { SCENARIOS } from '../../../content/scenarios';
 import { createInitialState } from '../../../sim/department';
-import { cascadeKey, cascadeStates, drawnKey, incomingFireCuts, incomingFireOdds } from '../../../sim/drawn-effects';
+import { cascadeStates, drawnKey, incomingFireCuts, incomingFireOdds } from '../../../sim/drawn-effects';
+import { cascadeKey } from '../drawn-model';
 import type { DrawnDistribution, ForceProfile } from '../../../sim/drawn-effects';
 import { cutFor, forceCuts } from '../../../sim/force-risk';
 import { buildLocation } from '../../../sim/location';

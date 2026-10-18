@@ -4,7 +4,7 @@ import { DOORS, STAIR_MINUTES } from '../content/materials';
 import { BUILDING_FAMILIES, generateBuilding } from '../gen/building';
 import { findRoomPath, footprintRect, roomPointClear, roomSegmentClear } from './furniture-path';
 import { deriveLocation, LOCATION_TUNING } from './location';
-import { routeAlongOpenings, routeBetween } from './spatial-factors';
+import { routeAlongOpenings, routeBetween } from './routes';
 import type { BuiltLocation, PlacedObject, Room, Vec } from './types';
 
 const rectangle = (x: number, y: number, w: number, h: number): Vec[] => [{ x, y }, { x: x + w, y }, { x: x + w, y: y + h }, { x, y: y + h }];

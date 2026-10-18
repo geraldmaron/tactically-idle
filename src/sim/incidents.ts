@@ -39,14 +39,6 @@ export const INCIDENT_TUNING = tunable('INCIDENT_TUNING', {
 }, { guard: next => next.minIntervalMs <= 0 || next.minIntervalMs > next.maxIntervalMs ? 'Arrival gaps need 0 < minIntervalMs ≤ maxIntervalMs.'
   : next.minLifetimeMs <= 0 || next.minLifetimeMs > next.maxLifetimeMs ? 'Card lifetimes need 0 < minLifetimeMs ≤ maxLifetimeMs.' : null });
 
-/** Reward multiplier by tier 1..5, for the engine and the generator. */
-export const TIER_REWARD_MULTIPLIERS: readonly number[] = [1.0, 1.35, 1.8, 2.4, 3.2];
-
-/** Tier 1..5 (clamped, rounded) -> reward multiplier applied to funding, dev points and trust. */
-export function tierRewardMultiplier(tier: number): number {
-  const t = Number.isFinite(tier) ? Math.min(5, Math.max(1, Math.round(tier))) : 1;
-  return TIER_REWARD_MULTIPLIERS[t - 1];
-}
 
 /** Department plus the one field this module adds (JSON-safe, optional like candidateRefreshedAt). */
 type DepartmentExt = Department & { nextIncidentAt?: number };

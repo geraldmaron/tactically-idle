@@ -4,7 +4,7 @@ import { buildLocation, deriveLocation, pointInPolygon } from '../../sim/locatio
 import { applyChoices } from '../../sim/location-variation';
 import { builtForScenario } from '../../sim/operation-selectors';
 import { signalBetween } from '../../sim/spatial';
-import { routeBetween } from '../../sim/spatial-factors';
+import { routeBetween } from '../../sim/routes';
 import type { BuiltLocation, Vec } from '../../sim/types';
 import { drawIncidentSpec, generateIncident, INCIDENT_TYPES } from './index';
 

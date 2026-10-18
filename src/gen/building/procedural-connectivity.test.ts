@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { deriveLocation } from '../../sim/location';
-import { routeBetween } from '../../sim/spatial-factors';
+import { routeBetween } from '../../sim/routes';
 import type { BuiltLocation, LocationDefinition, Room } from '../../sim/types';
 import { PROCEDURAL_FAMILIES, generateBuilding } from './index';
 import { indoorOrphans, plausibilityReport } from './procedural/plausibility';

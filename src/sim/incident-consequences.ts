@@ -1,6 +1,6 @@
 import type { ActionDefinition, OutcomeEffect, ScenarioDefinition } from './scenario-types';
 import type { CivilianOutcomeView, GameState, Id, OfficerCasualtyRecord, OperationRun, OutcomeBand, PersonCasualtyRecord } from './types';
-import { withVariants } from './drawn-effects';
+import { withVariants } from '../gen/incident/drawn-model';
 import { protectedOfficerEffects, selectedProtection } from './force-risk';
 import { ITEMS } from '../content/items';
 import type { Use } from './resolution';

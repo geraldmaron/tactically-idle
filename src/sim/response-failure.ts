@@ -1,7 +1,8 @@
 import type { ActionDefinition, ScenarioDefinition } from './scenario-types';
 import type { GameState, OperationRun, ResponseFailureRecord, SquadId } from './types';
 import { getScenario } from './scenario-registry';
-import { builtFor, conditionHolds, evaluateAction } from './resolution';
+import { builtFor, evaluateAction } from './resolution';
+import { conditionHolds } from './conditions';
 import { civilianOutcomeViews, incidentOfficerUnavailable } from './incident-consequences';
 import { planActionResupply } from './equipment-resupply';
 import { externalSupportStatus } from './external-support';

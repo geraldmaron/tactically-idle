@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { drawIncidentSpec, generateIncident } from '../gen/incident';
 import { applyMove, NOW, sampleFor, startGateRun } from '../gen/incident/gates/engine-driver';
 import { CLOCK_RULES_V1, forkMinutes } from './clocks';
-import { withVariants } from './drawn-effects';
+import { withVariants } from '../gen/incident/drawn-model';
 import { actionViews } from './operation-selectors';
 import { builtFor, evaluateAction, RESOLUTION_TUNING } from './resolution';
 import { getScenario } from './scenario-registry';

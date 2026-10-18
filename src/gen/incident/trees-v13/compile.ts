@@ -2,14 +2,15 @@ import type { CallTree, TreeChoice, TreeIf, TreeMove, TreeNext, TreeNode, TreeOu
 import { CIVILIAN_FIRST_NAMES, CIVILIAN_SURNAMES } from '../../../content/call-trees/civilian-names';
 import { scenarioRecipe } from '../../../content/scenario-recipes';
 import { hashIndex, hashSeed } from '../../../sim/rng';
-import { tierRewardMultiplier } from '../../../sim/incidents';
+import { tierRewardMultiplier } from '../../../content/incidents/rewards';
 import type { ActionDefinition, ClockCondition, Condition, FactDefinition, IncidentSpec, MeterCondition, MeterStance, OutcomeEffect, ScenarioDefinition, StageDefinition, StoryPersonBinding } from '../../../sim/scenario-types';
-import { findStoryRoute, selectStoryRoom, storyPoint, validateStoryBindings } from '../../../sim/story-bindings';
-import { routeAlongOpenings } from '../../../sim/spatial-factors';
+import { squadsPutToWork } from '../../../sim/scenario-types';
+import { findStoryRoute, selectStoryRoom, storyPoint, validateStoryBindings } from '../story-bindings';
+import { routeAlongOpenings } from '../../../sim/routes';
 import type { BuiltLocation, OutcomeBand, StageId, Vec } from '../../../sim/types';
 import { mapScenarioText } from '../scenario-text';
 import { asRole, CASCADE_LINES, countWord, FIRE_LINES, FORCE_LINES, listOf } from '../../../content/incidents/lines';
-import { cascadeCombos, cascadeKey, cascadeResult, withVariants } from '../../../sim/drawn-effects';
+import { cascadeCombos, cascadeKey, cascadeResult, withVariants } from '../drawn-model';
 
 const STAGES: readonly StageId[] = ['assess', 'adapt', 'resolve'];
 const BANDS: readonly OutcomeBand[] = ['favorable', 'mixed', 'adverse'];
@@ -513,7 +514,6 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
   s.summary = tree.summary;
   s.pressureLabel = tree.pressureLabel;
   s.pressure = { ...tree.pressure };
-  s.squadRange = { ...tree.squads };
   s.briefing = { dispatchReason: tree.briefing.dispatchReason, known: [...tree.briefing.known], unknown: [...tree.briefing.unknown], teamResponsibilities: [...tree.briefing.responsibilities] };
   s.objectives = tree.objectives.map(objective => ({ ...objective }));
   s.externalServices = [];
@@ -762,6 +762,10 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
       actions: here.flatMap(node => node.choices.filter(choice => possible(choice.onlyIf)).map(choice => actionFor(node, choice))) };
     return [stage, definition];
   })) as Record<StageId, StageDefinition>;
+
+  // Deploy only as many squads as some choice can put to work: v13 choices compile one acting
+  // squad and no support rule, so every v13 call takes one squad until a tree authors more.
+  s.squadRange = { min: 1, max: Math.min(3, Math.max(1, ...Object.values(s.stages).flatMap(stage => stage.actions.map(squadsPutToWork)))) };
 
   // Only the endings this call's actions can reach, plus the exhausted-choices fallback.
   const reachableEndings = new Set(['handed_over', ...Object.values(s.stages).flatMap(stage => stage.actions.flatMap(action => withVariants(Object.values(action.outcomes).flat()).flatMap(effect => effect.ending ? [effect.ending] : [])))]);

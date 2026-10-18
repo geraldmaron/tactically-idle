@@ -9,10 +9,11 @@
 // behind "Show unused", with why).
 import type { TuningPath } from './tuning';
 import { LOCATION_TUNING } from './location';
+import { COVER_REACH } from './cover';
 import { STRESS_BANDS } from './officer';
 import { COMMAND_STAFF } from './command-staff';
 import { EQUIPMENT_MANAGER } from './equipment-manager-policy';
-import { TIER_REWARD_MULTIPLIERS } from './incidents';
+import { TIER_REWARD_MULTIPLIERS } from '../content/incidents/rewards';
 import { IDENTITY_DEFAULT } from '../content/incidents/types';
 
 export type ReadMode = 'live' | 'new-entities' | 'department' | 'display' | 'generation' | 'structural' | 'dead';
@@ -76,7 +77,6 @@ const PAIR = ['trust', 'strain'] as const;
 const pair = (label: string, help: string): Spec => ({ label, help: `${help} Trust for the department, strain the deployed officers carry home.`, items: PAIR, min: -10, max: 10, step: 0.25, unit: 'points' });
 
 const THREAT_DEAD_CALLER = 'Read only by civilianRiskLoss and pressureDynamics (threat.ts), which nothing calls.';
-const THREAT_DROPPED = 'threatFx sets a ThreatFx field from it, but incident-factors.ts drops that field, so nothing reads the result.';
 const ENV_NO_CALLER = (fn: string) => `Read only by ${fn} (environment.ts or threat.ts), which nothing calls.`;
 const ENV_NOWHERE = 'Read nowhere.';
 
@@ -134,8 +134,6 @@ export const TUNING_META: readonly FieldMeta[] = [
     voiceLinkFt: { label: 'Voice carries', help: 'Feet over which squads without radios can still talk.', min: 0, max: 80, step: 5, unit: 'ft' },
     coverHard: { label: 'Hard cover', help: 'Difficulty an entry gains when an armed person has hard cover (a counter, an appliance) between them and the door.', group: 'subjects', min: 0, max: 15, step: 0.5, unit: 'points' },
     coverConcealment: { label: 'Concealment', help: 'Difficulty an entry gains when an armed person is behind something that only hides them (a sofa, a desk).', group: 'subjects', min: 0, max: 10, step: 0.5, unit: 'points' },
-    coverReach: { label: 'Cover reach', help: 'Cover counts only within this share of the line from the person to the door.', group: 'subjects', mode: 'generation',
-      why: 'Baked into generated calls. Change the content and deliberately recapture current fingerprints.' },
   }),
   ...table('ROSTER_TUNING', { group: 'economy', mode: 'department' }, {
     maxSquads: { label: 'Squads', help: 'How many squads the department has.', mode: 'structural', why: 'The squad slots are SQUAD_IDS (types.ts); this only counts them.' },
@@ -200,9 +198,9 @@ export const TUNING_META: readonly FieldMeta[] = [
       name => ({ label: `Readiness: ${name}`, help: 'Multiple on the armament weight for how ready the weapon is.', min: 0, max: 1.5, step: 0.05, unit: '×' })),
     ...each('difficulty', CHECKS, name => ({ label: `Armed subject: ${name}`, help: 'Difficulty points at full threat for this kind of check.', min: 0, max: 30, step: 0.5, unit: 'points' })),
     seats: { label: 'Subject seats', help: 'Share counted for the 1st, 2nd, 3rd and later subject near the work.', items: ['1st', '2nd', '3rd', '4th and later'], min: 0, max: 1, step: 0.05, unit: 'share' },
-    strainExecution: unused(THREAT_DROPPED, 'Threat strain on entries'),
-    strainOther: unused(THREAT_DROPPED, 'Threat strain on other work'),
-    strainCap: unused(THREAT_DROPPED, 'Threat strain cap'),
+    strainExecution: { label: 'Threat strain on entries', help: 'Extra strain share per point of armed threat near an entry, for the officers taking part.', group: 'strain', min: 0, max: 1, step: 0.05, unit: 'share' },
+    strainOther: { label: 'Threat strain on other work', help: 'Extra strain share per point of armed threat near any other work, for the officers taking part.', group: 'strain', min: 0, max: 1, step: 0.05, unit: 'share' },
+    strainCap: { label: 'Threat strain cap', help: 'Most the armed threat can multiply the strain of the officers taking part.', group: 'strain', min: 1, max: 3, step: 0.05, unit: '×' },
     ...each('civilian', CHECKS, name => unused(THREAT_DEAD_CALLER, `Civilian cost: ${name}`)),
     mixedShare: unused(THREAT_DEAD_CALLER, 'Civilian cost when it partly works'),
     distantShare: unused(THREAT_DEAD_CALLER, 'Civilian cost at a distance'),
@@ -215,7 +213,7 @@ export const TUNING_META: readonly FieldMeta[] = [
     ...each('awareness', { unaware: 'unaware of police', suspicious: 'suspicious', aware: 'knows police are here' },
       name => ({ label: `Surprise: ${name}`, help: 'Score points on watching and entries from how aware the subject is.', min: -10, max: 10, step: 0.5, unit: 'points' })),
     barricadeWait: { label: 'Waiting on a barricade', help: 'Score points waiting gets when the subject is barricaded and means no harm.', min: 0, max: 10, step: 0.5, unit: 'points' },
-    barricadeSlow: unused(THREAT_DROPPED, 'Barricade slows waiting'),
+    barricadeSlow: { label: 'Barricade slows waiting', help: 'How much longer waiting takes when the subject is barricaded in and means no harm.', group: 'time', min: 1, max: 2, step: 0.05, unit: '×' },
     harmWait: { label: 'Waiting while someone may get hurt', help: 'Score points waiting gets per subject who may harm themselves or others (negative: a penalty).', min: -15, max: 0, step: 0.5, unit: 'points' },
     escapeWait: { label: 'Waiting while someone may slip away', help: 'Score points waiting gets when a subject means to escape.', min: -10, max: 0, step: 0.5, unit: 'points' },
     harmRate: unused(THREAT_DEAD_CALLER, 'Pressure from harm intent'),
@@ -355,4 +353,5 @@ export const READONLY_TABLES: readonly { name: string; values: unknown; mode: 'g
   { name: 'EQUIPMENT_MANAGER', values: EQUIPMENT_MANAGER, mode: 'load-time', why: 'Its node id is copied at load time into COMMAND_STAFF, and its benefit numbers come from the development tree (DEV_NODES), not this table.' },
   { name: 'TIER_REWARD_MULTIPLIERS', values: TIER_REWARD_MULTIPLIERS, mode: 'generation', why: 'Changes generated calls. Edit the content and deliberately recapture current fingerprints.' },
   { name: 'IDENTITY_DEFAULT', values: IDENTITY_DEFAULT, mode: 'generation', why: 'Changes generated calls. Edit the content and deliberately recapture current fingerprints.' },
+  { name: 'COVER_REACH', values: COVER_REACH, mode: 'generation', why: 'Cover is found when a call is generated and baked into it. Edit sim/cover.ts and deliberately recapture current fingerprints.' },
 ];

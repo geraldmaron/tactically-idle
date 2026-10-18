@@ -1,6 +1,6 @@
 import type { ActionDefinition, ScenarioDefinition, StoryAnchor } from './scenario-types';
 import type { BuiltLocation, OperationRun, Vec } from './types';
-import { conditionHolds } from './resolution';
+import { conditionHolds } from './conditions';
 import { storyPeoplePublic } from './story-people';
 import { centroidOf } from './spatial-factors';
 

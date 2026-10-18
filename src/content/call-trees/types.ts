@@ -281,5 +281,4 @@ export interface CallTree {
    * `check.difficulty` is added to it. Set from the balance gate, never by feel. */
   difficulty?: { base: number; perTier: number };
   rewards: { funding: number; devPoints: number; trust: number; xp: number };
-  squads: { min: number; max: number };
 }

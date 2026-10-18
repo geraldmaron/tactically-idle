@@ -15,7 +15,10 @@ import { SPATIAL_TUNING } from './spatial-factors';
 import { meterContributors } from './meters';
 import { tunable } from './tuning';
 
-export interface IncidentFx { difficulty: Contributor[]; add: number; score: Contributor[]; details: string[] }
+/** What the incident's people do to one choice: difficulty and score contributors, and two
+ * multipliers from the threat rules (threat.ts): the strain the officers taking part carry
+ * (armed subjects near the work), and the time the work takes (waiting out a barricade is slow). */
+export interface IncidentFx { difficulty: Contributor[]; add: number; score: Contributor[]; details: string[]; strainMult: number; timeMult: number }
 
 const known = (status: string | undefined) => status === 'confirmed' || status === 'disproved';
 const round1 = (n: number) => Math.round(n * 10) / 10;
@@ -120,5 +123,6 @@ export function incidentFactors(scenario: ScenarioDefinition, built: BuiltLocati
       if (contributor.value < 0) { add -= contributor.value; difficulty.push(contributor); } else score.push(contributor);
     }
   }
-  return { difficulty, add: Math.round(add * 10) / 10, score, details };
+  if (fx.timeMult !== 1) details.push(`Waiting out a barricade is slow: this takes about ${Math.round((fx.timeMult - 1) * 100)}% longer.`);
+  return { difficulty, add: Math.round(add * 10) / 10, score, details, strainMult: fx.strainMult, timeMult: fx.timeMult };
 }

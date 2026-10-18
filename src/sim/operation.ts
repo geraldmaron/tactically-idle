@@ -2,11 +2,12 @@ import { reserveSupportVehicle, supportStartCheck } from './support-vehicles';
 import { isGenericResponseExit, responseFailurePlan } from './response-failure';
 import { currentStoryPrompt } from './story-context';
 import { storyMovedAlongRoute } from './story-people';
-import { validateStoryBindings } from './story-bindings';
+import { validateStoryBindings } from '../gen/incident/story-bindings';
 import { actionResultLabel, harmResultLabel } from './action-result';
 import { applyIncidentConsequences, applyPersonConsequences, civilianOutcomeViews, syncCasualtyFlags, syncPersonCasualtyFlags } from './incident-consequences';
 import { protectedOfficerEffects } from './force-risk';
-import { drawnKeys, resolveDrawn, withVariants } from './drawn-effects';
+import { drawnKeys, resolveDrawn } from './drawn-effects';
+import { withVariants } from '../gen/incident/drawn-model';
 import { advanceClocks, clockConditionsHold, clockErrors, clockOutEffects, cueEffects, forkMinutes, initialClocks } from './clocks';
 import { applyMoves, initialMeters, meterConditionsHold } from './meters';
 import { applyCommitments } from './commitments';
@@ -48,23 +49,22 @@ import { deployability, fullName } from './officer';
 import { releaseRun, reserveLoadouts, settleRun, squadUnits } from './inventory';
 import { withStandardRadios } from './standard-kit';
 import { spaceAt, stagingPointById } from './spatial';
-import { centroidOf, defaultStagingFor, reachableOverGround } from './spatial-factors';
+import { centroidOf, defaultStagingFor, reachableOverGround, spaceLabel } from './spatial-factors';
 import {
   availableUnits,
   bandFor,
   builtFor,
-  conditionHolds,
   evaluateAction,
   getBuilt,
   openingFlag,
   openingOverrides,
   RESOLUTION_TUNING,
-  spaceName,
   squadLabel,
   strainFor,
   vantageZones,
   type Evaluation,
 } from './resolution';
+import { conditionHolds } from './conditions';
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
 const clamp = (n: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, n));
@@ -353,7 +353,7 @@ function resolveStart(built: BuiltLocation, cmd: StartCmd, sid: SquadId): { posi
     if (sp.spaceId === pos) return { positionId: pos, stagingId: sp.id, at: sp.at };
     const isZone = built.location.zones.some((z) => z.id === sp.spaceId);
     if (isZone && reachableOverGround(built, pos, sp.spaceId)) return { positionId: sp.spaceId, stagingId: sp.id, at: sp.at };
-    return { error: `${squadLabel(sid)} cannot stage there: that point is not in the ${spaceName(built, pos).toLowerCase()} or on open ground reachable from it` };
+    return { error: `${squadLabel(sid)} cannot stage there: that point is not in the ${spaceLabel(built, pos).toLowerCase()} or on open ground reachable from it` };
   }
   const sp = defaultStagingFor(built, pos);
   return sp ? { positionId: pos, stagingId: sp.id, at: sp.at } : { positionId: pos, stagingId: null, at: centroidOf(built, pos) };
@@ -1018,7 +1018,7 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
         ...texts,
         ...matched.flatMap((effect) => (effect.openings ?? []).map((change) => {
           const opening = built.location.openings.find((candidate) => candidate.id === change.openingId);
-          return opening ? `${spaceName(built, opening.a)} to ${spaceName(built, opening.b)}: ${change.state}.` : `${change.openingId.replaceAll('_', ' ')}: ${change.state}.`;
+          return opening ? `${spaceLabel(built, opening.a)} to ${spaceLabel(built, opening.b)}: ${change.state}.` : `${change.openingId.replaceAll('_', ' ')}: ${change.state}.`;
         })),
         ...(run.stage !== 'debrief' ? [`Next: ${currentStoryPrompt(scenario, run)}`] : []),
       ],

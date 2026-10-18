@@ -1,6 +1,7 @@
 // Layer and ownership rules from manifest.ts, checked against the real runtime import graph.
 // Run `npx vitest run src/architecture -u` to re-render docs/architecture.md after a manifest change.
 import { describe, expect, it } from 'vitest';
+import { computedImports, SOURCES } from '../dev/import-graph';
 import { layerEdges, ownerOf, RULES, sourceFiles, systemEdges, unresolvedImports } from './graph';
 import { LAYER_DEBT, LAYERS, SYSTEM_EDGES, SYSTEMS, type Layer } from './manifest';
 import { renderArchitecture } from './render';
@@ -35,6 +36,8 @@ describe('architecture', () => {
 
   it('resolves every local import, so no edge escapes the rules', () => {
     expect(unresolvedImports(), 'a local import that names no source module').toEqual([]);
+    const computed = sourceFiles().flatMap(file => computedImports(SOURCES[file] ?? '', file).map(load => `${file}: ${load}`));
+    expect(computed, 'name the module in a dynamic import() literally, so the bundler and these rules can follow it').toEqual([]);
   });
 
   it('keeps the system dependency chain to the edges the manifest lists', () => {

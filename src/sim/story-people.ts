@@ -1,7 +1,7 @@
 import type { ActionDefinition, ScenarioDefinition, StoryAnchor, StoryPersonBinding } from './scenario-types';
 import type { BuiltLocation, Id, KnowledgeStatus, OperationRun } from './types';
-import { conditionHolds, spaceName } from './resolution';
-import { approxPoint } from './spatial-factors';
+import { conditionHolds } from './conditions';
+import { approxPoint, spaceLabel } from './spatial-factors';
 
 type StoryState = Pick<OperationRun, 'knowledge' | 'flags' | 'pressure'>;
 export type StoryPosition = StoryAnchor | { kind: 'offscene'; label: string };
@@ -135,7 +135,7 @@ export function storyPublicScenario(scenario: ScenarioDefinition, built: BuiltLo
     if (!person.position) return [{ ...fact, person: undefined }];
     if ('kind' in person.position) return [];
     const moved = person.position.spaceId !== fact.spaceId || person.locationLabel !== undefined;
-    const place = spaceName(built, person.position.spaceId);
+    const place = spaceLabel(built, person.position.spaceId);
     return [{
       ...fact,
       spaceId: person.position.spaceId,

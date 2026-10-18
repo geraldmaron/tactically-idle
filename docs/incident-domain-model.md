@@ -11,7 +11,8 @@
   - temper, once a fact reveals it;
   - awareness, for entries and observation;
   - what waiting does by intent (helps against a barricade, costs against someone seeking a victim);
-  - cover: furniture between an armed person and the door into their room (`coverOnLine`, spatial-factors.ts; hard cover 6, concealment 3).
+  - cover: furniture between an armed person and the door into their room (`coverOnLine`, sim/cover.ts; hard cover 6, concealment 3).
+  - the threat rules' two multipliers (2026-10-18): armed subjects near the work raise the strain the officers taking part carry (`strainExecution`, `strainOther`, capped by `strainCap`), and waiting out a barricade takes `barricadeSlow` times as long, with a line on the card saying so.
 - **What counts.** Every subject inside counts, with the nearest first; someone out with the team no longer counts. The odds use what the team knows: a weapon is reported or an unknown risk, and a temper counts only when revealed. Hidden truth still decides which authored result happens.
 - **Re-tuned with the simulator.** Hostage base 40, barricade 40, armed 32, and the armed call's talk-through at +14. All bands hold at tier 2.
 - **Gates.** `sim/incident-factors.test.ts` checks the same action with one thing changed: cover vs none, weapon known vs unknown, temper hidden vs revealed, subject inside vs out, waiting on a barricade vs on someone seeking a victim.

@@ -29,7 +29,7 @@ const NON_SOURCE = /\.(css|json|svg|png|jpe?g|webp|html|md|txt)$/;
 
 /** Local imports that name no source module: each one is an edge the layer rules can't see. */
 export function unresolvedImports(): string[] {
-  return sourceFiles().flatMap(file => runtimeImports(SOURCES[file] ?? '').filter(spec => local(spec) && !NON_SOURCE.test(spec.split('?')[0]) && !targetOf(file, spec)).map(spec => `${file} -> ${spec}`));
+  return sourceFiles().flatMap(file => runtimeImports(SOURCES[file] ?? '', file).filter(spec => local(spec) && !NON_SOURCE.test(spec.split('?')[0]) && !targetOf(file, spec)).map(spec => `${file} -> ${spec}`));
 }
 
 /** Every runtime import between two owned modules (type-only imports are erased and don't count). */
@@ -38,7 +38,7 @@ export function moduleEdges(): Edge[] {
   for (const file of sourceFiles()) {
     const from = ownerOf(file);
     if (!from) continue;
-    for (const spec of runtimeImports(SOURCES[file] ?? '')) {
+    for (const spec of runtimeImports(SOURCES[file] ?? '', file)) {
       if (!local(spec)) continue;
       const target = targetOf(file, spec);
       const to = target ? ownerOf(target) : null;

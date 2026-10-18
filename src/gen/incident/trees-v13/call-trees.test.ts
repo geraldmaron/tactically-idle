@@ -17,7 +17,7 @@ import { asRole, CASCADE_LINES, FIRE_LINES, FORCE_LINES } from '../../../content
 import { INCIDENT_TEMPLATES } from '../../../content/incidents';
 import type { IncidentTemplate } from '../../../content/incidents/types';
 import type { TreeIf } from '../../../content/call-trees/types';
-import { CONCESSIONS_ALLOWED } from '../../../sim/scenario-types';
+import { CONCESSIONS_ALLOWED, scenarioActions, squadsPutToWork } from '../../../sim/scenario-types';
 import { GROUP_TEMPLATE, GROUP_TREE } from './group-fixture';
 import { dependencyIndex } from './dependencies';
 import { pathStateKey } from './path-key';
@@ -409,5 +409,28 @@ describe('standard lines for drawn consequences (content/incidents/lines.ts)', (
       expect(bound, 'colon or dash').not.toMatch(/[:–—]| - /);
       expect(bound).toMatch(count === 'one' ? /^Sol [a-z]+s / : /^Sol and Ines [a-z]+[^s] /);
     }
+  });
+});
+
+describe('v13 squad range', () => {
+  it('deploys only as many squads as one of the call\'s choices can put to work', () => {
+    let seed = 4242;
+    for (const tree of TREES) {
+      const drawn = drawIncidentSpec(seed, { level: 10, trust: 90, unlockedTypes: [tree.type] });
+      seed = drawn.state;
+      const s = generateIncident(drawn.spec);
+      const most = Math.max(...scenarioActions(s).map(squadsPutToWork));
+      expect(s.squadRange, tree.type).toEqual({ min: 1, max: most });
+      // Tree choices compile one acting squad and no support rule today, so a second squad would idle.
+      expect(most, tree.type).toBe(1);
+    }
+  });
+
+  it('counts acting squads, supporters and required squads', () => {
+    const action = scenarioActions(generateIncident(drawIncidentSpec(7, { level: 10, trust: 90, unlockedTypes: [TREES[0].type] }).spec))[0];
+    expect(squadsPutToWork(action)).toBe(1);
+    expect(squadsPutToWork({ ...action, maxActing: 2 })).toBe(2);
+    expect(squadsPutToWork({ ...action, support: { max: 6, coverSpaceId: action.targetId, reachMinutes: 5, maxSquads: 1, label: 'covering the back', task: 'cover' } })).toBe(2);
+    expect(squadsPutToWork({ ...action, requires: { ...action.requires, minSquads: { count: 3, reason: 'Needs three squads' } } })).toBe(3);
   });
 });

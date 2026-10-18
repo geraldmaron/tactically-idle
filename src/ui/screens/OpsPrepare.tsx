@@ -13,7 +13,7 @@ import { unitEffectiveness } from '../../sim/inventory';
 import { standardRadioPlan, STANDARD_RADIO } from '../../sim/standard-kit';
 import { projectedCondition } from '../../sim/equipment';
 import { stagingPointsIn } from '../../sim/spatial';
-import { spaceName } from '../../sim/resolution';
+import { spaceLabel } from '../../sim/spatial-factors';
 import { ITEMS } from '../../content/items';
 import { autoEquipReadyUnits, autoLoadout } from '../../sim/auto-equip';
 import type { AutoLoadout } from '../../sim/auto-equip';
@@ -594,9 +594,9 @@ function StageOption({ on, icon, title, sub, onPick }: { on: boolean; icon: Icon
 /** 'Hall door', 'East bedroom window': what the point faces plus how the squad gets there. Duplicates get a number. */
 function stageLabels(built: ReturnType<typeof builtForScenario>, points: StagingPoint[]): { point: StagingPoint; title: string; sub: string; icon: IconName }[] {
   const base = points.map((p) => {
-    const faces = spaceName(built, p.facesId);
+    const faces = spaceLabel(built, p.facesId);
     const kind = p.kind === 'window' ? 'window' : p.kind === 'doorway' ? 'doorway' : 'door';
-    return { point: p, title: `${faces} ${kind}`, sub: `From ${spaceName(built, p.spaceId)}`, icon: (p.kind === 'window' ? 'window' : 'door') as IconName };
+    return { point: p, title: `${faces} ${kind}`, sub: `From ${spaceLabel(built, p.spaceId)}`, icon: (p.kind === 'window' ? 'window' : 'door') as IconName };
   });
   const seen = new Map<string, number>();
   const total = new Map<string, number>();

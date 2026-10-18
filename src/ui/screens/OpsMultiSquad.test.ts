@@ -109,8 +109,9 @@ describe('multi-squad review and commitment', () => {
   });
 
   it('keeps a fully injured squad out of field roles while preserving command-only emergency choices', () => {
-    const scenario = getScenario(testCallId('armed'))!;
-    hooks.state = startRun(withCallOnBoard(hooks.state!, scenario.id), scenario.id, ['A', 'B'], { positions: { A: buildLocation(getScenario(testCallId('armed'))!.locationFamilyId, getScenario(testCallId('armed'))!.locationSeed).location.entries[0], B: buildLocation(getScenario(testCallId('armed'))!.locationFamilyId, getScenario(testCallId('armed'))!.locationSeed).location.entries[0] }, loadouts: { A: {}, B: {} } });
+    // A v13 call deploys one squad (compile.ts squadRange), so the two-squad fixture carries this.
+    const scenario = getScenario('ms_occupancy')!;
+    hooks.state = startRun(hooks.state!, scenario.id, ['A', 'B']);
     for (const id of hooks.state.squads[1].officerIds) hooks.state.officers[id].injury = { label: 'Wounded', until: NOW + 100000 };
     const fieldAction = live().view.actions.find(view => !scenarioActions(scenario).find(action => action.id === view.id)?.commandOnly)!;
     live().view.onSelectAction(fieldAction.id);
@@ -145,9 +146,9 @@ describe('multi-squad review and commitment', () => {
   });
 
   it('keeps failure outside story choices, reviews unresolved duties, and rejects stale or repeated confirmation', () => {
-    hooks.state = startRun(withCallOnBoard(hooks.state!, testCallId('armed')), testCallId('armed'), ['A', 'B'], { positions: { A: buildLocation(getScenario(testCallId('armed'))!.locationFamilyId, getScenario(testCallId('armed'))!.locationSeed).location.entries[0], B: buildLocation(getScenario(testCallId('armed'))!.locationFamilyId, getScenario(testCallId('armed'))!.locationSeed).location.entries[0] }, loadouts: { A: {}, B: {} } });
+    hooks.state = startRun(withCallOnBoard(hooks.state!, testCallId('armed')), testCallId('armed'), ['A'], { positions: { A: buildLocation(getScenario(testCallId('armed'))!.locationFamilyId, getScenario(testCallId('armed'))!.locationSeed).location.entries[0] }, loadouts: { A: {} } });
     expect(live().view.failedResponse).toBeNull();
-    for (const squad of hooks.state.squads.filter(squad => ['A', 'B'].includes(squad.id))) for (const id of squad.officerIds) hooks.state.officers[id].injury = { label: 'Wounded', until: NOW + 100000 };
+    for (const squad of hooks.state.squads.filter(squad => squad.id === 'A')) for (const id of squad.officerIds) hooks.state.officers[id].injury = { label: 'Wounded', until: NOW + 100000 };
     const panel = () => descendants(live().view.failedResponse);
     const open = () => (panel().find(node => node.type === Button)!.props.onClick as () => void)();
     const confirmation = () => descendants(live().view.children).find(node => node.type === Sheet && node.props.title === 'Report the team unable to continue') as unknown as ReactElement<SheetProps>;

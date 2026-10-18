@@ -1,7 +1,6 @@
 import type { Candidate, CertId, Id, Officer, RatingKey, Ratings, Role, TraitId } from '../sim/types';
 import { hashSeed, next } from '../sim/rng';
 import { shuffledPersonas, type Persona } from './personas';
-import { CAREER_TUNING } from '../sim/career';
 import { tunable } from '../sim/tuning';
 
 /** Tunable (sim/tuning.ts). A candidate's cost, wage, ratings and expiry are set when the candidate
@@ -141,15 +140,17 @@ function candidateFor(gen: RecruitGen, now: number, person: Persona, day: number
   };
 }
 
-/** A small hiring window onto the authored cast; build assignment is fixed for the campaign. */
+/** A small hiring window onto the authored cast; build assignment is fixed for the campaign. People
+ * already at `retireAge` on `day` never appear; the roster passes the career rule's age in
+ * (CAREER_TUNING.retireAge), so this catalog module reads no engine tuning. */
 export function generateBatch(
-  gen: RecruitGen, now: number, count: number, existingRoles: Role[], takenNames: Set<string>, day = 0,
+  gen: RecruitGen, now: number, count: number, existingRoles: Role[], takenNames: Set<string>, day = 0, retireAge = Infinity,
 ): Candidate[] {
   const seed = gen.campaignSeed ?? 12345;
   const excluded = new Set(gen.unavailable ?? []);
   const eligible = shuffledPersonas(seed, 'recruitment').filter((p) => !excluded.has(p.id)
     && !takenNames.has(fullNameKey(p.firstName, p.surname))
-    && (!gen.builds?.[p.id] || (day - gen.builds[p.id].bornDay) / 365 < CAREER_TUNING.retireAge));
+    && (!gen.builds?.[p.id] || (day - gen.builds[p.id].bornDay) / 365 < retireAge));
   const introduced = eligible.filter((p) => gen.builds?.[p.id]);
   // Keep a small local recruitment market. New distinct people arrive as hiring and
   // retirement open room, rather than ageing the entire unseen reserve on day zero.

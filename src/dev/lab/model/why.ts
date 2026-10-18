@@ -16,7 +16,7 @@ import { authorize } from '../../../sim/authorization';
 import { clockConditionsHold } from '../../../sim/clocks';
 import { buildLocation } from '../../../sim/location';
 import { meterConditionsHold } from '../../../sim/meters';
-import { conditionHolds } from '../../../sim/resolution';
+import { conditionHolds } from '../../../sim/conditions';
 import { getScenario } from '../../../sim/scenario-registry';
 import type { ConcessionKind, ScenarioDefinition } from '../../../sim/scenario-types';
 import type { ActionView, GameState, OutcomeBand } from '../../../sim/types';

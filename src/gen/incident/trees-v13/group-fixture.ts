@@ -122,7 +122,6 @@ export const GROUP_TREE: CallTree = {
     handed_over: { title: 'Handed over', summary: 'The next shift has the glass.', disposition: 'unresolved' },
   },
   rewards: { funding: 2000, devPoints: 2, trust: 4, xp: 30 },
-  squads: { min: 1, max: 3 },
 };
 
 /** The taker and 0 to 3 others, each drawn into the group; in the third situation the others are

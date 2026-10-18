@@ -1,8 +1,8 @@
-import type { Condition, ScenarioDefinition, StoryAnchor, StoryInstance } from './scenario-types';
-import { withVariants } from './drawn-effects';
-import type { BuiltLocation, ExteriorZone, Id, LocationDefinition, ObjectType, Opening, PlacedObject, Polygon, Room, RoomType, Vec, ZoneKind } from './types';
-import { floorMap, openingFloor, pointInPolygon, polygonBBox, polygonCentroid } from './location';
-import { findRoomPath } from './furniture-path';
+import type { Condition, ScenarioDefinition, StoryAnchor, StoryInstance } from '../../sim/scenario-types';
+import { withVariants } from './drawn-model';
+import type { BuiltLocation, ExteriorZone, Id, LocationDefinition, ObjectType, Opening, PlacedObject, Polygon, Room, RoomType, Vec, ZoneKind } from '../../sim/types';
+import { floorMap, openingFloor, pointInPolygon, polygonBBox, polygonCentroid } from '../../sim/location';
+import { findRoomPath } from '../../sim/furniture-path';
 
 export type StoryRouteProfile = StoryInstance['bindings']['routes'][string]['profile'];
 export interface StoryObjectSelector { spaceId?: Id; type?: ObjectType; tags?: readonly string[] }

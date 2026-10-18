@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { VALID_TINY } from '../content/locations/test-fixtures';
-import { TWO_FLOOR_FIXTURE } from '../content/locations/two-floor-fixture';
-import { BUILDING_FAMILIES } from '../gen/building';
-import { generateIncident, INCIDENT_TYPES } from '../gen/incident';
-import { buildLocation, deriveLocation, pointInPolygon } from './location';
-import { validateScenario } from './operation';
-import { builtFor } from './resolution';
-import type { ActionDefinition, IncidentSpec, ScenarioDefinition, StoryAnchor } from './scenario-types';
-import type { BuiltLocation, LocationDefinition, Opening } from './types';
+import { VALID_TINY } from '../../content/locations/test-fixtures';
+import { TWO_FLOOR_FIXTURE } from '../../content/locations/two-floor-fixture';
+import { BUILDING_FAMILIES } from '../building';
+import { generateIncident, INCIDENT_TYPES } from '.';
+import { buildLocation, deriveLocation, pointInPolygon } from '../../sim/location';
+import { validateScenario } from '../../sim/operation';
+import { builtFor } from '../../sim/resolution';
+import type { ActionDefinition, IncidentSpec, ScenarioDefinition, StoryAnchor } from '../../sim/scenario-types';
+import type { BuiltLocation, LocationDefinition, Opening } from '../../sim/types';
 import { currentStoryRoute, findStoryObject, findStoryRoute, queryStoryRooms, selectStoryExterior, selectStoryRoom, storyPoint, validateStoryBindings } from './story-bindings';
 
 function build(location: LocationDefinition = VALID_TINY): BuiltLocation {

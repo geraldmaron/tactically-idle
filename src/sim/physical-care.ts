@@ -1,7 +1,8 @@
 import type { ActionDefinition, ScenarioDefinition, StoryAnchor } from './scenario-types';
 import type { BuiltLocation, GameState, Id, OfficerCasualtyRecord, OperationRun, Vec } from './types';
 import { storyPeoplePublic } from './story-people';
-import { centroidOf, routeBetween, type Route } from './spatial-factors';
+import { centroidOf } from './spatial-factors';
+import { routeBetween, type Route } from './routes';
 import { pointInPolygon } from './location';
 
 export interface CarePosition { spaceId: string; at?: StoryAnchor['at'] }

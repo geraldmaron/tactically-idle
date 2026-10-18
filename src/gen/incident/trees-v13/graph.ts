@@ -7,7 +7,7 @@
 // pruning keeps (prunePlan), and the routes a force or cascade can take with this many people.
 // The situation's hidden truth never removes anything: a fact condition says whether it holds.
 import type { CallTree, TreeIf, TreeNext, TreeNode, TreeOutcome, TreeState } from '../../../content/call-trees/types';
-import { cascadeResult, type CascadeState } from '../../../sim/drawn-effects';
+import { cascadeResult, type CascadeState } from '../drawn-model';
 import type { MeterStance } from '../../../sim/scenario-types';
 import type { OutcomeBand, StageId } from '../../../sim/types';
 import { choiceActionId, countHolds, outcomeNexts, prunePlan, resolveNext, type PrunePlan } from './compile';
