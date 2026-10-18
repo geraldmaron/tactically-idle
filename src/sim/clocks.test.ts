@@ -2,7 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { generateIncident } from '../gen/incident';
 import { specForSituation } from '../gen/incident/gates/catalog';
 import { applyMove, applyNaturalMove, startGateRun, withDraftScenario } from '../gen/incident/gates/engine-driver';
-import { choiceActionId } from '../gen/incident/trees-v13/compile';
+import { compileIncident, drawInstance, hostedSpec } from '../gen/incident/instance';
+import { GROUP_TEMPLATE } from '../gen/incident/trees-v13/group-fixture';
+import type { Clock, IncidentTemplate } from '../content/incidents/types';
+import { buildLocation } from './location';
+import { choiceActionId, memberCounts } from '../gen/incident/trees-v13/compile';
 import { actionViews } from './operation-selectors';
 import { computeDebrief, traceRun } from './operation';
 import { endStates } from './outcome-score';
@@ -61,6 +65,20 @@ describe('clocks: the model', () => {
 
 // ---------------------------------------------------------------- in play
 
+/** The group fixture (src/gen/incident/trees-v13/group-fixture.ts) compiled on a market_row hostage
+ * frame with no group members: an owned call for clock behavior that hostage content can't change. */
+function fixtureCall(template: IncidentTemplate): ScenarioDefinition {
+  for (let seed = 1; seed < 200; seed++) {
+    const { clocks: _c, incidentPeople: _p, threats: _t, ...frame } = generateIncident({ type: 'hostage_crisis', familyId: 'market_row', buildingSeed: 7, seed, tier: 2, contentVersion: 13 });
+    const spec = hostedSpec(frame), built = buildLocation(frame.locationFamilyId, frame.locationSeed);
+    try {
+      if ((memberCounts(drawInstance(template, built, spec).placed).others ?? 0) !== 0) continue;
+      return compileIncident({ ...frame, id: `clock-fixture-${seed}`, incident: spec }, built, template);
+    } catch { continue; }
+  }
+  throw new Error('No seed hosts the group fixture with no members');
+}
+
 function at(type: IncidentType, family: string, variant: 0 | 1 | 2, node: string, stage: StageId, clocks: Record<string, { value: number; cued: number }>, clock = 10): { state: GameState; s: ScenarioDefinition } {
   const s = generateIncident(specForSituation(type, family, variant));
   const state = startGateRun(s.id, 719);
@@ -103,19 +121,30 @@ describe('clocks: in the calls', () => {
     expect(decide(full.state, 'protected_rescue', 'their_terms', 'stay_in').flags).not.toContain('mark:running_low');
   });
 
-  it('an unwell owner collapses in a night-long hold after the first sign, and not before it', () => {
-    // The collapse is the owner badly hurt and `owner_down` set, wherever the call goes next.
-    const collapsed = (run: NonNullable<GameState['activeRun']>) => run.personCasualties?.owner?.severity === 'serious' && run.flags.includes('mark:owner_down');
-    const seen = at('hostage_crisis', 'market_row', 1, 'standoff', 'resolve', { owner_condition: { value: 30, cued: 1 } });
-    expect(collapsed(decide(seen.state, 'hostage_crisis', 'standoff', 'into_night'))).toBe(true);
-    const unseen = at('hostage_crisis', 'market_row', 1, 'standoff', 'resolve', { owner_condition: { value: 60, cued: 0 } });
-    const run = decide(unseen.state, 'hostage_crisis', 'standoff', 'into_night');
-    expect(collapsed(run)).toBe(false);
-    expect(run.flags).toContain('mark:owner_unwell');
-    // A well owner has no clock, and never collapses.
-    const well = at('hostage_crisis', 'market_row', 0, 'standoff', 'resolve', {});
-    expect(well.s.clocks ?? []).toEqual([]);
-    expect(collapsed(decide(well.state, 'hostage_crisis', 'standoff', 'into_night'))).toBe(false);
+  it('an owner whose clock runs out in a long hold after the first sign collapses, and not before it', () => {
+    // On the group fixture (an owned call, not hostage content): the courier's clock, its first
+    // sign at 55, and running out records the courier badly hurt and sets the clock's mark.
+    const clock: Clock = { id: 'nerve', label: 'The courier', kind: 'medical', owner: 'courier', start: 60, ratePerMin: 5, rateKnown: false,
+      cues: [{ at: 55, text: 'The courier sits down by the door.', mark: 'courier_unwell' }], onOut: { harm: 'serious', mark: 'courier_down' } };
+    const withClock: IncidentTemplate = { ...GROUP_TEMPLATE, situations: GROUP_TEMPLATE.situations.map(situation => ({ ...situation, clocks: [clock] })) };
+    const collapsed = (run: NonNullable<GameState['activeRun']>) => run.personCasualties?.courier?.severity === 'serious' && run.flags.includes('mark:courier_down');
+    const hold = (template: IncidentTemplate, clocks: Record<string, { value: number; cued: number }>) => {
+      const s = fixtureCall(template);
+      return withDraftScenario(s, id => {
+        const state = startGateRun(id, 719);
+        const run = state.activeRun!;
+        run.flags = ['tree:started', 'at:talk'];
+        run.stage = 'adapt';
+        run.clocks = { ...run.clocks, ...clocks };
+        return decide(state, 'hostage_crisis', 'talk', 'hold');
+      });
+    };
+    expect(collapsed(hold(withClock, { nerve: { value: 25, cued: 1 } }))).toBe(true);
+    const unseen = hold(withClock, { nerve: { value: 60, cued: 0 } });
+    expect(collapsed(unseen)).toBe(false);
+    expect(unseen.flags).toContain('mark:courier_unwell');
+    // Without the clock, nobody collapses.
+    expect(collapsed(hold(GROUP_TEMPLATE, {}))).toBe(false);
   });
 
   it('keep a save valid with clocks and meters mid-call', () => {
