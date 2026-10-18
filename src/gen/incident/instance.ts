@@ -3,7 +3,7 @@
 // placeCast, the same function the call-tree compiler uses, so the instance and the compiled
 // scenario can never disagree about who is where.
 import type { CastDraw, CastIdentity, PlacedCast } from './trees-v13/compile';
-import { doorInto, memberId, placeCast, resolveNext, textBinder, treeFactId, withCallTree } from './trees-v13/compile';
+import { doorInto, memberId, personFactId, placeCast, resolveNext, textBinder, treeFactId, withCallTree } from './trees-v13/compile';
 import { scenarioRecipe, scenarioSituations } from '../../content/scenario-recipes';
 import type { ScenarioCharacteristic } from '../../content/scenario-recipes';
 import type { AgeBand, Clock, Conditions, Dist, GroupRole, IncidentClass, IncidentPerson, IncidentTemplate, PersonSpec, Placement, Pronouns, ScaleClass, Weapon, WeaponKind } from '../../content/incidents/types';
@@ -249,10 +249,11 @@ export function incidentPeopleFor(instance: IncidentInstance, built: BuiltLocati
     }
     const weapon = person.weapons.find(entry => entry.where !== 'elsewhere');
     const armamentFactId = fact(person.knowledge.weapons?.learnedBy), dispositionFactId = fact(person.knowledge.disposition?.learnedBy);
+    const locationFactId = fact(personFactId(person.roleKey));
     out.push({
       id: person.roleKey, kind: person.kind, label: person.name?.first ?? person.label, minor: MINORS.includes(person.age), spaceId, at: { ...at },
       ...(person.threat ? { threat: { ...person.threat } } : {}),
-      ...(armamentFactId ? { armamentFactId } : {}), ...(dispositionFactId ? { dispositionFactId } : {}),
+      ...(armamentFactId ? { armamentFactId } : {}), ...(dispositionFactId ? { dispositionFactId } : {}), ...(locationFactId ? { locationFactId } : {}),
       ...(cover ? { cover } : {}),
       ...(weapon ? { weapon: { kind: weapon.kind, real: weapon.real } } : {}),
       ...(person.proficiency ? { proficiency: person.proficiency } : {}),

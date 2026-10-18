@@ -66,6 +66,7 @@ import {
 import { conditionHolds } from './conditions';
 import { departmentUpkeep } from './equipment-manager-policy';
 import { vantageZones } from './sightlines';
+import { sightings } from './sightings';
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
 const clamp = (n: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, n));
@@ -894,7 +895,10 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     const clocksBefore = run.clocks;
     const t = advanceTime(run, scenario, timeCost);
     t.civilianLoss = round1(before.civilianSafety - run.civilianSafety);
+    // Who the team sees, read before the outcome moves anyone (sim/sightings.ts).
+    const seen = sightings(scenario, run, action, band, matched);
     const { changes, stage: nextStage, ending } = applyEffects(run, matched);
+    if (seen) changes.push(...applyEffects(run, [seen]).changes);
     // v13: cues the clocks passed during this decision land after its own outcome, and the
     // outcome's events move the subjects' meters (sim/clocks.ts, sim/meters.ts).
     const cues = applyClockCues(run, scenario, t.cues);

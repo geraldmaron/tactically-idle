@@ -6,7 +6,7 @@
 // at zero, so the day a gap is wired the test fails and asks for the entry to be promoted.
 // Test support.
 import { CALL_TREES } from '../content/call-trees';
-import { startGateRun } from '../gen/incident/gates/engine-driver';
+import { applyMove, startGateRun } from '../gen/incident/gates/engine-driver';
 import { drawCalls, playToEnd } from '../gen/incident/trees-v13/balance';
 import { getScenario } from '../sim/scenario-registry';
 import { generateIncident } from '../gen/incident';
@@ -209,4 +209,36 @@ export function buildingTravelChanges(points: readonly Point[] = samplePoints())
     }
   }
   return { checked, changed, byTree };
+}
+
+/** Share of sampled observing choices whose favorable result settles where someone is, measured
+ * 2026-10-18 (15 of 15: barricade 1, armed 11, rescue 3). A floor: it may only rise. */
+export const MIN_SIGHTING_SHARE = 1;
+
+/** What being there teaches the team (sim/sightings.ts). At every sampled point, each eligible
+ * choice is committed on a favorable result: a choice that observes a room (ActionDefinition.
+ * observes) counts when it settles where someone is, and a choice that observes nothing must
+ * never settle anyone's location, since no authored outcome does. So `observes` can't go silently
+ * dead: if the engine stopped reading it, no observing choice would respond. */
+export function sightingsWiring(points: readonly Point[] = samplePoints()): { choices: number; moved: number; wrong: string[]; byTree: Record<string, { choices: number; moved: number }> } {
+  const byTree: Record<string, { choices: number; moved: number }> = {};
+  const wrong: string[] = [];
+  for (const point of points) {
+    const run = point.state.activeRun!;
+    const scenario = getScenario(run.scenarioId)!;
+    const located = new Set((scenario.incidentPeople ?? []).flatMap(person => person.locationFactId ? [person.locationFactId] : []));
+    const views = actionViews(point.state, NOW, 'A');
+    const tree = (byTree[point.type] ??= { choices: 0, moved: 0 });
+    for (const action of scenario.stages[run.stage as keyof typeof scenario.stages]?.actions ?? []) {
+      if (!views.some(view => view.id === action.id && view.eligible)) continue;
+      const after = applyMove(point.state, { kind: 'decide', actionId: action.id, band: 'favorable' }, views);
+      if (!after) continue;
+      const learned = (after.activeRun?.history.at(-1)?.knowledgeChanges ?? []).filter(change => located.has(change.factId));
+      if (action.observes?.length) { tree.choices++; if (learned.length) tree.moved++; }
+      else if (learned.length) wrong.push(`${action.id} settled ${learned.map(change => change.factId).join(', ')} without observing a room`);
+    }
+  }
+  const choices = Object.values(byTree).reduce((n, t) => n + t.choices, 0);
+  const moved = Object.values(byTree).reduce((n, t) => n + t.moved, 0);
+  return { choices, moved, wrong, byTree };
 }

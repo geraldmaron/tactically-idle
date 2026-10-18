@@ -134,6 +134,7 @@ export const OWNERSHIP: readonly { glob: string; layer: Layer; system: System }[
   { glob: '/src/sim/physical-care.ts', layer: 'engine', system: 'subject' },
   { glob: '/src/sim/story-people.ts', layer: 'engine', system: 'subject' },
   { glob: '/src/sim/story-movement.ts', layer: 'engine', system: 'subject' },
+  { glob: '/src/sim/sightings.ts', layer: 'engine', system: 'subject' },
   { glob: '/src/sim/personnel.ts', layer: 'engine', system: 'officer' },
   { glob: '/src/sim/standard-kit.ts', layer: 'engine', system: 'item' },
   { glob: '/src/sim/hq-selectors.ts', layer: 'engine', system: 'metric' },

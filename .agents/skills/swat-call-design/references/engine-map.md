@@ -76,6 +76,15 @@ Search the symbol if the file moved. The design brief is `docs/incident-domain-m
   call, a wait or a word from the cars declares nothing (or only a `signal` from where it stands).
   Sheet rows name the room, vantage or escort per choice, never "approach: none" for a choice whose
   text moves the team.
+- **What being there teaches** (`src/sim/sightings.ts`, read 2026-10-18). An entry (`to: 'scene' |
+  { room }`) observes the room it goes into; a vantage with a `visual` signal observes the room it
+  watches. A voice-only vantage, a signal from where the squad stands and an escort observe
+  nothing. On a favorable band that doesn't write `back`, everyone still inside an observed room is
+  seen: their location fact (`p_<role>`) is confirmed, and the template's weapon fact
+  (`knowledge.weapons.learnedBy`) settles to its own truth unless their `readiness` is
+  `concealed`. Temper (`knowledge.disposition.learnedBy`) is never settled by sight. So a hidden
+  fact a call means to reveal by conversation must not be anyone's `weapons.learnedBy`, and a weapon
+  fact must be true in every situation where the person really holds the weapon.
 - **Sightline facts.** `TreeFact.sightline: { from, to }` lets the building settle a hidden truth:
   whether an offsite role's window (template `vantage`, `StreetVantage`) sees the door `to`'s way
   out uses. Situations leave the fact out and place the window instead; its `disproved` line must be
@@ -117,9 +126,11 @@ explains it. The table below is what the compiler turns it into.
 
 Fact prefixes (`FACT_PREFIX` in `src/sim/scenario-types.ts`).
 
-- `loc:` position, or whether a person is present. Settled by observing the space.
+- `loc:` position, or whether a person is present. Settled by observing the space. v13 compiles
+  this as `p_<role>` (sim/sightings.ts).
 - `arm:` armament and readiness. Settled only when a favorable action `observes` the room the
-  person is in, so it must agree with that person's `threat.armament` in every situation. When
+  person is in, so it must agree with that person's `threat.armament` in every situation. v13
+  points at it with the template's `weapons.learnedBy` tree fact. When
   they disagree, nobody has decided which wins, so never let them. Any other effect whose text
   settles armament ("his hands were empty", "he was holding it") carries an explicit
   `knowledge` entry for that fact, or the map marker stays open after the text has answered it.

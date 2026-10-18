@@ -53,6 +53,47 @@ describe('team moves', () => {
     }
   });
 
+  it('sees into the room it enters, and a room it watches by sight, never through a wall by voice', () => {
+    const all = (Object.keys(CALL_TREES) as (keyof typeof CALL_TREES)[]).flatMap(type => calls(type, 3));
+    let entries = 0, watched = 0;
+    for (const s of all) {
+      const built = buildLocation(s.locationFamilyId, s.locationSeed);
+      const placed = instanceOf(s, built)!.placed;
+      const tree = CALL_TREES[s.incident!.type]!;
+      for (const node of tree.nodes) for (const choice of node.choices) {
+        const action = Object.values(s.stages).flatMap(stage => stage.actions).find(entry => entry.id === choiceActionId(tree.type, node.id, choice.id));
+        if (!action) continue;
+        const to = choice.team?.to;
+        const where = `${action.id}`;
+        if (to === 'scene' || (typeof to === 'object' && 'room' in to)) {
+          entries++;
+          expect(action.observes, where).toEqual([action.targetId]);
+        } else if (typeof to === 'object' && 'vantage' in to && choice.team?.signal?.channel === 'visual') {
+          watched++;
+          expect(action.observes, where).toEqual([to.vantage === 'scene' ? placed.room.id : placed.roomOf[to.vantage]]);
+        } else expect(action.observes, where).toEqual([]);
+      }
+    }
+    expect(entries).toBeGreaterThan(0);
+    expect(watched).toBeGreaterThan(0);
+  });
+
+  it('confirms where the subject is, and the weapon patrol reported, when an entry goes well', () => {
+    for (const s of calls('active_armed_incident', 3)) {
+      const start = startGateRun(s.id);
+      const go = choiceActionId(s.incident!.type, 'shots', 'go_now');
+      expect(start.activeRun!.knowledge.p_shooter ?? 'reported').toBe('reported');
+      const seen = commit(start, go, 'favorable').activeRun!;
+      expect(seen.knowledge.p_shooter).toBe('confirmed');
+      expect(seen.knowledge.f_shots).toBe('confirmed');
+      expect(seen.history.at(-1)!.knowledgeChanges).toContainEqual({ factId: 'p_shooter', status: 'confirmed' });
+      // Driven back from the doorway, the team saw no one; a call through the door sees no one either.
+      expect(commit(start, go, 'adverse').activeRun!.knowledge.p_shooter ?? 'reported').toBe('reported');
+      const announce = choiceActionId(s.incident!.type, 'shots', 'announce');
+      expect(commit(start, announce, 'favorable').activeRun!.knowledge.p_shooter ?? 'reported').toBe('reported');
+    }
+  });
+
   it('walks someone out alone with the squad staying put, and an escort ends outside with them', () => {
     for (const s of calls('hostage_crisis', 3)) {
       const take = actionOf(s, 'offer', 'take_courier');
