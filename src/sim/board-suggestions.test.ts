@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { CALL_TREES } from '../content/call-trees';
 import { scenarioRecipe } from '../content/scenario-recipes';
 import { INCIDENT_CONTENT_VERSION, incidentId } from '../gen/incident';
-import { boardShortages, callNeeds } from './board-suggestions';
+import { boardShortages, callNeeds, callNeedsOf } from './board-suggestions';
 import { createInitialState } from './department';
 import { createUnit } from './equipment';
 import { getScenario } from './scenario-registry';
@@ -27,18 +27,22 @@ describe('board shortages read nothing hidden', () => {
     const state = bare();
     const situations = new Set<number>();
     const hidden = new Set<string>();
+    const weapons = new Set<string>();
     const lists = new Set<string>();
     for (let seed = 1; seed <= 90; seed++) {
       const s = spec(type, tree.families[0], 4242, seed);
       const scenario = getScenario(incidentId(s));
       if (!scenario) continue;
       situations.add(scenarioRecipe(s).variant);
-      hidden.add(JSON.stringify([scenario.facts.map((f) => f.truth), (scenario as unknown as { people?: { armament?: string }[] }).people?.map((p) => p.armament)]));
+      hidden.add(JSON.stringify([scenario.facts.map((f) => f.truth), (scenario.incidentPeople ?? []).map((p) => p.threat ?? null)]));
+      weapons.add(JSON.stringify((scenario.incidentPeople ?? []).map((p) => p.threat ?? null)));
       lists.add(JSON.stringify(boardShortages(state, incidentId(s), NOW)));
     }
     // The sample really varied the hidden truth: all three situations and more than one truth pattern.
     expect(situations.size).toBe(3);
     expect(hidden.size).toBeGreaterThan(1);
+    // Calls whose tree reads a weapon must have drawn both armed and unarmed casts here.
+    if (JSON.stringify(tree).includes('"armed"')) expect(weapons.size).toBeGreaterThan(1);
     expect(lists.size).toBe(1);
     expect(JSON.parse([...lists][0]).length).toBeGreaterThan(0);
   });
@@ -54,6 +58,17 @@ describe('board shortages read nothing hidden', () => {
       return getScenario(id) ? JSON.stringify(boardShortages(state, id, NOW)) : null;
     })).filter((x): x is string => x !== null));
     expect(lists.size).toBe(1);
+  });
+});
+
+describe('needs come from the whole authored tree', () => {
+  it('include a choice no call can reach: behind an armed-group condition, in an unreachable turn node', () => {
+    const tree = structuredClone(CALL_TREES.hostage_crisis!);
+    const base = tree.nodes[0].choices[0];
+    tree.nodes.push({ ...structuredClone(tree.nodes[0]), id: 'zz_unreachable', choices: [{ ...structuredClone(base), id: 'zz_only_if_armed', onlyIf: { armed: { role: Object.keys(tree.groups ?? { taker: 0 })[0] ?? 'taker' } }, requires: { certs: ['drone_operator'] } }] });
+    tree.turns = { ...(tree.turns ?? {}), zz_turn: ['zz_unreachable'] };
+    expect(callNeedsOf(tree).certs).toContain('drone_operator');
+    expect(callNeedsOf(CALL_TREES.hostage_crisis!).certs).not.toContain('drone_operator');
   });
 });
 

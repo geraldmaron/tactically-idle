@@ -6,7 +6,7 @@
 // read: `callShortages` takes the call type and building, not the scenario.
 import type { CertId, GameState, Id, SquadId } from './types';
 import type { ActionDefinition, IncidentType } from './scenario-types';
-import { callTreeAt } from '../content/call-trees';
+import { callTreeAt, type CallTree } from '../content/call-trees';
 import { ITEMS } from '../content/items';
 import { getScenario } from './scenario-registry';
 import { actionEquipmentRequirements } from './equipment-requirements';
@@ -33,8 +33,14 @@ function deployableHolders(state: GameState, cert: CertId, now: number): number 
  * qualification, and each required item group or consumable with the count one squad needs.
  * Reads only the authored tree, so it is the same for every call of the type.
  */
-export function callNeeds(type: IncidentType): { certs: CertId[]; gear: { itemIds: Id[]; label: string; need: number }[] } {
-  const tree = callTreeAt(type);
+export function callNeeds(type: IncidentType): CallNeeds {
+  return callNeedsOf(callTreeAt(type));
+}
+
+export interface CallNeeds { certs: CertId[]; gear: { itemIds: Id[]; label: string; need: number }[] }
+
+/** `callNeeds` for one authored tree: every node, including turn nodes and ones a call may prune. */
+export function callNeedsOf(tree: CallTree | undefined): CallNeeds {
   const certs: CertId[] = [];
   const gear = new Map<string, { itemIds: Id[]; label: string; need: number }>();
   const add = (itemIds: Id[], label: string, need: number) => {
