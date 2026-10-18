@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { CALL_TREES } from '../../content/call-trees';
 import { getScenario } from '../../sim/scenario-registry';
+import { actionViews } from '../../sim/operation-selectors';
+import { NOW } from '../../sim/test-fixtures';
+import { startGateRun } from './gates/engine-driver';
 import { drawCalls } from './trees-v13/balance';
 import { derivedGear, GEAR_BY_ACTION, gearFor, WATCH_CAPABILITY } from './action-gear';
 
@@ -59,5 +62,26 @@ describe('compiled calls carry the gear their choices bring', () => {
       }
     }
     expect(checked).toBeGreaterThan(50);
+  });
+});
+
+describe('the hailer only carries as far as its range', () => {
+  // The armed call's announcement needs a hailer, and the derived hailer reaches the shooter only
+  // within the item's range: from the cars it is open, from a block away it closes with the reason.
+  const [{ scenarioId }] = drawCalls(CALL_TREES.active_armed_incident!, 3, 1);
+  const announce = (far: boolean) => {
+    const state = startGateRun(scenarioId);
+    if (far) for (const task of state.activeRun!.squadTasks) { const at = task.at ?? { x: 0, y: 0 }; task.stagingId = null; task.at = { x: at.x + 1000, y: at.y + 1000 }; }
+    return actionViews(state, NOW, 'A').find(view => view.id === 't13_active_armed_incident_shots_announce')!;
+  };
+
+  it('is open from where the squad deploys', () => {
+    expect(announce(false).eligible).toBe(true);
+  });
+
+  it('closes, with the out-of-range reason, when the squad stands beyond it', () => {
+    const view = announce(true);
+    expect(view.eligible).toBe(false);
+    expect(view.reason).toMatch(/^Loud hailer: target \d+ ft away, max/);
   });
 });
