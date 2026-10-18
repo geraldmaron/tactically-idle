@@ -324,10 +324,10 @@ describe('board commands and selectors', () => {
     expect(draft.incidents).toHaveLength(2);
   });
 
-  it('boardSummary reports count, new, next arrival and expiring-soon', () => {
+  it('boardSummary reports count, new, next arrival, expiring-soon and the board cap', () => {
     const s = createInitialState(T0);
     const sum = boardSummary(s, T0);
-    expect(sum).toEqual({ count: 3, newCount: 3, nextArrivalAt: nextIncidentAt(s), expiringSoon: 0 });
+    expect(sum).toEqual({ count: 3, newCount: 3, nextArrivalAt: nextIncidentAt(s), expiringSoon: 0, max: INCIDENT_TUNING.boardMax });
     // Close to the earliest expiry, that card is expiring soon.
     const first = Math.min(...s.incidents.map((c) => c.expiresAt));
     const near = boardSummary(s, first - HOUR_MS);
