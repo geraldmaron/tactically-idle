@@ -519,8 +519,13 @@ export function sightlineHolds(tree: CallTree, built: BuiltLocation, placed: Pla
 export const memberId = (group: string, n: number) => `${group}_${n}`;
 
 /** How many members each counted role has in this placement. */
-export const memberCounts = (placed: Pick<PlacedCast, 'groups' | 'armed'>): Record<string, number> => ({
-  ...Object.fromEntries(Object.entries(placed.groups).map(([group, ids]) => [group, ids.length])),
+export const memberCounts = (placed: Pick<PlacedCast, 'groups'>): Record<string, number> =>
+  Object.fromEntries(Object.entries(placed.groups).map(([group, ids]) => [group, ids.length]));
+
+/** What this call's count and armed conditions read: its group sizes, and per group how many
+ * members hold a weapon a look would see (`armedKey`). */
+export const callCounts = (placed: Pick<PlacedCast, 'groups' | 'armed'>): Record<string, number> => ({
+  ...memberCounts(placed),
   ...Object.fromEntries(Object.entries(placed.armed ?? {}).map(([group, n]) => [armedKey(group), n])),
 });
 
@@ -547,7 +552,7 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
     if (!authored.roles.some(role => role.id === def.leader)) throw new Error(`${authored.type}: group ${group} is led by ${def.leader}, who is not a role`);
     if (!/^[a-z][a-z_]*$/.test(group)) throw new Error(`${authored.type}: group id ${group} must be lower snake case`);
   }
-  const tree = treeForCounts(authored, memberCounts({ groups, armed: placed.armed }));
+  const tree = treeForCounts(authored, callCounts({ groups, armed: placed.armed }));
   const everyone = (roles: readonly string[] | undefined) => (roles ?? []).flatMap(role => groups[role] ?? [role]);
   /** A group where one person is meant (who fires, who force is used on, who is talked to): its
    * first member, nearest the door. A call with no members never offers that line. */
@@ -562,7 +567,7 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
   // Everyone on the map: the roles, then each group's members, who take their leader's kind.
   const present = [...onSite.map(role => ({ id: role.id, label: role.label, kind: role.kind })),
     ...Object.entries(groups).flatMap(([group, ids]) => ids.map(id => ({ id, label: tree.groups![group].label, kind: tree.roles.find(role => role.id === tree.groups![group].leader)!.kind })))];
-  const nodes = reachableNodes(tree, spec.seed, memberCounts({ groups, armed: placed.armed }));
+  const nodes = reachableNodes(tree, spec.seed, callCounts({ groups, armed: placed.armed }));
   // Anyone a choice in this call walks out needs that walk clear of furniture, as the engine
   // checks it; otherwise hosting moves the call to another building seed (the v12 rule).
   for (const node of nodes) for (const choice of node.choices) if (choice.walks && groups[choice.walks]) throw new Error(`${node.id}.${choice.id}: only a key role walks out, never the group ${choice.walks}`);
@@ -574,7 +579,7 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
   // Marks and releases this call can actually set (prunePlan). A condition that needs one it can
   // never set is never true here (drop it); one that needs it absent is always true (strip that
   // part). The tree's count conditions are already settled, so `possible` reads marks and safety.
-  const plan = prunePlan(tree, memberCounts({ groups, armed: placed.armed }), clockMarks, spec.seed);
+  const plan = prunePlan(tree, callCounts({ groups, armed: placed.armed }), clockMarks, spec.seed);
   const settable = { marks: plan.settableMarks, safe: plan.settableSafe };
   const possible = plan.possible;
   const trim = (state: TreeState | undefined): TreeState | undefined => state && {

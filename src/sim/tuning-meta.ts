@@ -45,6 +45,7 @@ export const PINNED_BY: Readonly<Record<string, readonly string[]>> = {
   OUTCOME_SCORE_V1: [...sim('outcome-score', 'consolidation'), BALANCE],
   AUTHORIZATION_V1: [...sim('authorization', 'drawn-effects'), BALANCE],
   INCIDENT_CLASS_V1: [...sim('incident-factors'), BALANCE],
+  INTEL_V1: [...sim('incident-factors'), BALANCE],
   INCOMING_FIRE_V1: [...sim('drawn-effects'), BALANCE],
   TEAM_FORCE_V1: [...sim('drawn-effects'), BALANCE],
   CASCADE_V1: [...sim('drawn-effects'), BALANCE],
@@ -222,6 +223,7 @@ export const TUNING_META: readonly FieldMeta[] = [
     harmRate: unused(THREAT_DEAD_CALLER, 'Pressure from harm intent'),
     ...each('harmWaitCivilian', { harm_self: 'self-harm', harm_others: 'harm to others' }, name => unused(THREAT_DEAD_CALLER, `Civilian cost of waiting: ${name}`)),
     barricadeRate: unused(THREAT_DEAD_CALLER, 'Pressure from a barricade'),
+    unconfirmed: { label: 'Weapon only reported', help: 'Share of the work\'s full-threat difficulty added for a weapon the team holds only on report, scaled by the weapon but not by how it is held. Confirming the weapon takes it off.', min: 0, max: 1, step: 0.05, unit: 'share' },
   }),
   ...table('ENV_TUNING', { group: 'pressure', mode: 'dead' }, {
     ...each('light', { dusk: 'dusk', night: 'night', powerOff: 'power off' },
@@ -278,6 +280,12 @@ export const TUNING_META: readonly FieldMeta[] = [
     'hostage.agitation': { label: 'Hostage call: provoking the holder', help: 'Scale on the "more worked up" line when talking to the holder. 1 leaves it alone.', min: 0.5, max: 3, step: 0.05, unit: '×' },
     'victim.waiting': { label: 'Grievance hold: waiting', help: 'Score points on holding and waiting choices while someone is held over the subject\'s grievance (negative: time is no ally).', min: -10, max: 5, step: 0.5, unit: 'points' },
     'victim.agitation': { label: 'Grievance hold: provoking the holder', help: 'Scale on the "more worked up" line when talking to someone holding a person over a grievance.', min: 0.5, max: 3, step: 0.05, unit: '×' },
+  }),
+  ...table('INTEL_V1', { group: 'subjects', mode: 'live' }, {
+    apartShare: { label: 'Work kept away from a lone subject', help: 'With one subject, the share of their weapon\'s threat a move meets when none of its rooms is or adjoins the room the team believes they are in. 1 leaves it alone.', min: 0, max: 1, step: 0.05, unit: 'share' },
+    knownPosition: { label: 'Seen where they are', help: 'Score points for an entry or a look into a room once the team has confirmed where the armed person in it is.', min: 0, max: 10, step: 0.5, unit: 'points' },
+    watched: { label: 'Watching an armed room', help: 'Difficulty points a look from outside carries when someone believed armed is in the room it watches.', min: 0, max: 10, step: 0.5, unit: 'points' },
+    watchedStrain: { label: 'Strain of watching an armed room', help: 'Added strain share on the officers doing that look.', group: 'strain', min: 0, max: 0.5, step: 0.05, unit: 'share' },
   }),
   ...table('INCOMING_FIRE_V1', { group: 'harm', mode: 'live' }, {
     ...each('hit', WEAPONS, name => ({ label: `Officer hit: ${name}`, help: 'Chance someone on the team is hit when a subject with this weapon attacks, for an ordinary hand at mid range. The engine clamps the final chance to floor and ceiling.', min: 0, max: 1, step: 0.01, unit: 'chance' })),
