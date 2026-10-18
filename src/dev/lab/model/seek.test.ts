@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { INCIDENT_TEMPLATES } from '../../../content/incidents';
 import type { IncidentTemplate } from '../../../content/incidents/types';
 import { countCombos } from '../../../gen/incident/trees-v13/dependencies';
+import { armedKey } from '../../../gen/incident/trees-v13/compile';
 import { parseLabUrl } from '../url';
 import { drawOf, seekCallSeed, seekSquadSeed } from './seek';
 import type { DrawWant } from './seek';
@@ -37,7 +38,10 @@ describe('seekCallSeed', () => {
         // The rest of the draw is kept: situation, pacing, the other groups and turns.
         expect(s.situation).toBe(base.situation);
         expect(s.resolved.situation).toEqual(base.resolved.situation);
-        expect({ ...s.counts, ...want.counts }).toEqual({ ...base.counts, ...want.counts });
+        // A group's armed count follows its size (callCounts), so a changed size may change it too.
+        const sized = (counts: Record<string, number>) => Object.fromEntries(Object.entries({ ...counts, ...want.counts })
+          .filter(([key]) => !Object.keys(want.counts ?? {}).some(group => key === armedKey(group))));
+        expect(sized(s.counts)).toEqual(sized(base.counts));
         expect({ ...s.turnDrawn, ...want.turns }).toEqual({ ...base.turnDrawn, ...want.turns });
         // The building hosts it in place, and a changed seed says whose names changed.
         expect(s.scenario.locationSeed).toBe(spec.buildingSeed);
