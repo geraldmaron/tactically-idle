@@ -2,14 +2,14 @@
 // checked clause by clause at the current frame, per situation and per draw, with the writers of each
 // state clause and the fixes that would make it hold. Every clause is read through the engine or the
 // compiler, never through a lab copy of their rules: marks and safe flags through the compiler's
-// stateCondition and the engine's conditionHolds, group sizes through countHolds, clocks through
+// stateCondition and the engine's conditionHolds, group sizes and armed members through countHolds on the call's own counts (callCounts), clocks through
 // clockConditionsHold (at this moment), meters through meterConditionsHold, command approval through
 // authorize, facts from the compiled call's hidden truth. Dice (a band, a drawn result) are never
 // known in advance: those clauses read "unknown".
 import type { CallTree, TreeState } from '../../../content/call-trees/types';
 import { templateAt } from '../../../content/incidents';
 import { instanceOf } from '../../../gen/incident/instance';
-import { choiceActionId, countHolds, memberCounts, stateCondition, treeFactId } from '../../../gen/incident/trees-v13/compile';
+import { armedKey, callCounts, choiceActionId, countHolds, stateCondition, treeFactId } from '../../../gen/incident/trees-v13/compile';
 import { requirementTree, roleNoun, sentenceCase } from '../../../gen/incident/trees-v13/dependencies';
 import type { DependencyIndex, ReqLeaf, ReqNode, ReqTarget, Site, StateKey } from '../../../gen/incident/trees-v13/dependencies';
 import { authorize } from '../../../sim/authorization';
@@ -53,7 +53,7 @@ export function stateContext(state: GameState): ReqContext | null {
   const scenario = getScenario(id);
   const template = scenario?.incident ? templateAt(scenario.incident.type) : undefined;
   const instance = scenario && template ? instanceOf(scenario, buildLocation(scenario.locationFamilyId, scenario.locationSeed)) : null;
-  const context = scenario && template && instance ? { scenario, tree: template.tree, counts: memberCounts(instance.placed), turnDrawn: { ...instance.turns },
+  const context = scenario && template && instance ? { scenario, tree: template.tree, counts: callCounts(instance.placed), turnDrawn: { ...instance.turns },
     situation: (instance.situation === 1 || instance.situation === 2 ? instance.situation : 0) as 0 | 1 | 2, groups: instance.placed.groups } : null;
   if (CONTEXTS.size > 32) CONTEXTS.clear();
   CONTEXTS.set(id, context);
@@ -72,6 +72,13 @@ function countText(leaf: Extract<ReqLeaf, { kind: 'count' }>): string {
   const { group, min, max } = leaf;
   return min !== undefined && max !== undefined ? min === max ? `${group} = ${min}` : `${group} ${min} to ${max}` : min !== undefined ? `${group} ≥ ${min}` : `${group} ≤ ${max}`;
 }
+
+/** The clause for `TreeState.armed`: at least `min` (default 1) of a group's members hold a weapon a
+ * look would see. It holds through countHolds on the call's counts (callCounts), the compiler's own rule. */
+type ArmedLeaf = Extract<ReqLeaf, { kind: 'armed' }>;
+const armedText = (leaf: ArmedLeaf, tree: CallTree) => `at least ${leaf.min ?? 1} of the ${roleNoun(tree, leaf.role)} armed`;
+const armedHolds = (leaf: ArmedLeaf, ctx: ReqContext) => countHolds({ armed: { role: leaf.role, ...leaf.min !== undefined ? { min: leaf.min } : {} } }, ctx.counts);
+const armedHas = (leaf: ArmedLeaf, ctx: ReqContext) => ctx.counts[armedKey(leaf.role)];
 
 function truthOf(tree: CallTree, fact: string, situation: number): boolean | undefined {
   return tree.facts[fact]?.truth ?? tree.situations[situation]?.truth[fact];
@@ -101,6 +108,7 @@ export function leafLabel(leaf: ReqLeaf, tree: CallTree, deps: DependencyIndex |
     case 'drawn': return `Drawn result: ${leaf.result.replace(':', ' ')}`;
     case 'authority': return leaf.detail === 'entry' ? 'Command approves an entry' : `Command approves the concession (${leaf.detail.replace(/^concede /, '').replace(/_/g, ' ')})`;
     case 'noEarlierPrompt': return 'No earlier prompt variant matches';
+    case 'armed': return `Armed: ${armedText(leaf, tree).replace(/^at least/, 'At least')}`;
   }
 }
 
@@ -147,6 +155,7 @@ export function leafNow(leaf: ReqLeaf, state: GameState, ctx: ReqContext, view?:
       return verdict(!earlier.some(entry => stateHolds(entry.when, ctx, run)));
     }
     case 'band': case 'drawn': return 'unknown';
+    case 'armed': return verdict(armedHolds(leaf, ctx));
   }
 }
 
@@ -162,6 +171,7 @@ function leafDraw(leaf: ReqLeaf, ctx: ReqContext, now: Verdict): string | null {
     return `needs turn ${sentenceCase(leaf.node).toLowerCase()}${now === 'fail' && drawn ? `; this call drew ${sentenceCase(drawn).toLowerCase()}` : ''}`;
   }
   if (leaf.kind === 'drawn') return `needs the drawn result ${leaf.result.replace(':', ' ')}`;
+  if (leaf.kind === 'armed') { const n = armedHas(leaf, ctx); return `needs ${armedText(leaf, ctx.tree)}${now === 'fail' && n !== undefined ? `; this call has ${n}` : ''}`; }
   return null;
 }
 
@@ -277,9 +287,9 @@ export function holdsIn(req: ReqNode, state: GameState, ctx: ReqContext, view?: 
 
 // ---------------------------------------------------------------- what rules a goal out
 
-/** Clauses a call can't change by playing: its hidden truth, the squad's certs, its group sizes and
- * the turns it drew. */
-const STATIC_KINDS = new Set<ReqLeaf['kind']>(['fact', 'cert', 'count', 'turn']);
+/** Clauses a call can't change by playing: its hidden truth, the squad's certs, its group sizes, how
+ * many members are armed, and the turns it drew. */
+const STATIC_KINDS = new Set<ReqLeaf['kind']>(['fact', 'cert', 'count', 'armed', 'turn']);
 
 /** One failing clause in words: what it needs, then what this call has instead. */
 function blockerWords(leaf: ReqLeaf, ctx: ReqContext, deps: DependencyIndex | null, squad: string): string {
@@ -291,6 +301,7 @@ function blockerWords(leaf: ReqLeaf, ctx: ReqContext, deps: DependencyIndex | nu
     case 'cert': return `certification in ${certWords(leaf.cert)}, and ${squad} has none`;
     case 'count': return `${countText(leaf)}, and this call has ${ctx.counts[leaf.group] ?? 0}`;
     case 'turn': return `the turn ${sentenceCase(leaf.node).toLowerCase()}, and this call drew ${sentenceCase(ctx.turnDrawn[leaf.group] ?? 'none').toLowerCase()}`;
+    case 'armed': return `${armedText(leaf, ctx.tree)}, and this call has ${armedHas(leaf, ctx) ?? 'no count'}`;
     default: return leafLabel(leaf, ctx.tree, deps);
   }
 }

@@ -408,7 +408,11 @@ export interface ClockDef {
    * during a decision and the owner is still inside after that decision's own outcome, the engine
    * records `harm` to the owner (unless the outcome already hurt them) and sets `mark`, so the
    * record and the prompts that read the mark agree. */
-  onOut?: { harm?: 'wounded' | 'serious'; mark?: string };
+  onOut?: { harm?: 'wounded' | 'serious'; mark?: string;
+    /** Where the call goes (compiled from the template's `onOut.next`): the flags, stage or ending
+     * of the last-stage node or ending it reaches. Applied after the decision's own outcome, never
+     * when that outcome ended the call or when the owner is out or safe. */
+    route?: Pick<OutcomeEffect, 'setFlags' | 'clearFlags' | 'stage' | 'ending'> };
 }
 export interface ClockCondition { clockId: Id; state: 'low' | 'out'; is: boolean }
 /** How a subject sounds to the team (sim/meters.ts stanceOf). 'unheard' until the first event. */

@@ -7,7 +7,7 @@
 import { CIVILIAN_FIRST_NAMES, CIVILIAN_SURNAMES } from '../../../content/call-trees/civilian-names';
 import type { CallTree } from '../../../content/call-trees/types';
 import type { IncidentTemplate } from '../../../content/incidents/types';
-import { bindRoleSegments, memberId, reachableWithin, treeForCounts } from '../../../gen/incident/trees-v13/compile';
+import { armedKey, bindRoleSegments, memberId, reachableWithin, treeForCounts } from '../../../gen/incident/trees-v13/compile';
 import type { BoundPart, CastIdentity } from '../../../gen/incident/trees-v13/compile';
 import { countCombos, sentenceCase } from '../../../gen/incident/trees-v13/dependencies';
 import { callStringRows, longestNamesCast } from '../../../gen/incident/trees-v13/strings';
@@ -53,9 +53,20 @@ export function variantSpace(tree: CallTree, template: IncidentTemplate, casts: 
 }
 
 const sorted = (record: Record<string, string | number>) => Object.keys(record).sort().map(key => `${key}=${record[key]}`).join(',');
-/** A variant's identity without its cast: what the "variants read" counter counts. */
+const isArmedKey = (key: string) => key.endsWith(':armed');
+/** A variant's identity without its cast: what the "variants read" counter counts and where "Next
+ * variant" steps from. The armed counts the call's own variant carries aren't an axis the sweep
+ * steps, so they're left out and the call's variant matches its sweep entry. */
 export function variantKey(v: Variant): string {
-  return `${v.pronouns}|${sorted(v.counts)}|s${v.situation + 1}|${sorted(v.turns)}`;
+  const sizes = Object.fromEntries(Object.entries(v.counts).filter(([key]) => !isArmedKey(key)));
+  return `${v.pronouns}|${sorted(sizes)}|s${v.situation + 1}|${sorted(v.turns)}`;
+}
+
+/** The variant's identity for what its rows read, armed counts included: two variants with the same
+ * key show the same lines (string-check results are kept per this key). */
+export function variantRowsKey(v: Variant): string {
+  const armed = Object.fromEntries(Object.entries(v.counts).filter(([key]) => isArmedKey(key)));
+  return `${variantKey(v)}|${sorted(armed)}`;
 }
 
 // ---------------------------------------------------------------- casts
@@ -158,11 +169,24 @@ export function turnReach(tree: CallTree, counts: Record<string, number>, turns:
   return reachableWithin(hasGroups ? treeForCounts(fixed, counts) : fixed, counts);
 }
 
-/** The authored rows a variant shows: count conditions settled, this situation's lines only, and
- * nothing from a turn this variant didn't draw. Text unbound. */
+/** The counts a variant's conditions read: each group's size, and, where the variant carries it (the
+ * call's own draw, callCounts), how many of its members are armed, never more than the size the
+ * variant shows. A sweep variant carries no armed count, so armed lines show, as in check:strings. */
+export function variantCounts(tree: CallTree, v: Pick<Variant, 'counts'>): Record<string, number> {
+  const counts: Record<string, number> = {};
+  for (const group of Object.keys(tree.groups ?? {})) {
+    const n = counts[group] = v.counts[group] ?? 0;
+    const armed = v.counts[armedKey(group)];
+    if (armed !== undefined) counts[armedKey(group)] = Math.min(armed, n);
+  }
+  return counts;
+}
+
+/** The authored rows a variant shows: count and armed conditions settled, this situation's lines
+ * only, and nothing from a turn this variant didn't draw. Text unbound. */
 export function variantRows(tree: CallTree, v: Pick<Variant, 'counts' | 'situation' | 'turns'>): StringRow[] {
   const hasGroups = Object.keys(tree.groups ?? {}).length > 0;
-  const counts = Object.fromEntries(Object.keys(tree.groups ?? {}).map(group => [group, v.counts[group] ?? 0]));
+  const counts = variantCounts(tree, v);
   const all = callStringRows(tree, text => text, hasGroups ? counts : undefined);
   const reach = turnReach(tree, counts, v.turns);
   const tag = `s${v.situation + 1}`;

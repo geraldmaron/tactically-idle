@@ -253,8 +253,11 @@ export function validExternalSupportState(run: OperationRun, scenario: ScenarioD
     {
       // A clock that ran out where no fork read it sets its mark (sim/clocks.ts); then the
       // outcome's events and the commitments it kept or broke move the meters, as the commit does.
-      for (const out of clockOutEffects(scenario, clocksBefore, timed.clocks, publicState, effects))
+      for (const out of clockOutEffects(scenario, clocksBefore, timed.clocks, publicState, effects)) {
         for (const flag of out.setFlags ?? []) if (!publicState.flags.includes(flag)) publicState.flags.push(flag);
+        // A route clears the node the call was at (R-G4).
+        for (const flag of out.clearFlags ?? []) publicState.flags = publicState.flags.filter((entry) => entry !== flag);
+      }
       applyMoves(moved, scenario, effects);
       const view = { flags: publicState.flags, clock, revision: decision.revision, meters: moved.meters, commitments: moved.commitments };
       applyCommitments(view, scenario, action, decision.band, effects, decision.committed?.drawn ?? [], decision.revision);

@@ -18,7 +18,7 @@ measures the odds wiring; its floors rise as these items land.
 
 ### intel-odds: What the team learns changes the odds
 Tags: job=command; journeys=chance-not-script, team-moves-odds; probes=subject-armament, intel-confirmed; lane=engine
-Needs: start=none; integrate=none; ship=lab-armed-counts
+Needs: start=none; integrate=none; ship=none
 
 Team moves settle what the squad sees (`src/sim/sightings.ts`), but knowing barely matters: a
 weapon counts the same reported or confirmed, so confirming one changes only the wording, and a
@@ -32,8 +32,8 @@ work comes to where the team believes they are moves the favorable odds (barrica
 nearness only sorts subjects today, `src/sim/incident-factors.ts`).
 
 Engine work merged in #45 (intel-confirmed probe 97 of 117, subject-armament floor 0.83, member
-weapons as beliefs through `armamentClaim`). Still to ship: the calls lane's armed-gated hostage
-line, and `lab-armed-counts` so the lab shows that line only where the compiled call keeps it.
+weapons as beliefs through `armamentClaim`); the lab reads armed conditions as the compiled call
+does (#49). Still to ship: the calls lane's armed-gated hostage line (#48).
 
 ### offsite-fire: Gunfire from outside the building uses the incoming-fire model
 Tags: job=command; journeys=chance-not-script; probes=none (adds a drawn harm result, not a favorable-chance input); lane=engine
@@ -68,6 +68,15 @@ Needs: start=intel-odds; integrate=none; ship=none (a calls-lane tree authors th
 It's in the catalog (`src/content/items.ts`) and no call uses it. Done: a choice watches a room
 through it, using the sightings step, and what it sees moves the odds through `intel-odds`.
 
+### armed-max: Text can say a look found empty hands
+Tags: job=command; journeys=chance-not-script; probes=none (text condition); lane=engine
+Needs: start=none; integrate=none; ship=none
+
+From the hostage armed line's writing review: `TreeState.armed` takes `min` only, so after a look
+into the room an unarmed group gets no line at all, which the review flags as a fake-choice risk
+(the look pays nothing visible). Done: `TreeState.armed` takes `max` (including `max: 0`), under the
+same compile-time reveal rule, with a test, so the hostage call can say the hands were empty.
+
 ### clock-runout-routing: A clock that runs out moves the call
 Tags: job=command; journeys=choices-branch; probes=none (routing, not odds); lane=engine
 Needs: start=none; integrate=none; ship=clock-edges-in-tooling
@@ -77,7 +86,7 @@ sets a mark but can't move the call (`src/sim/clocks.ts`), so a short choice can
 leave choices on screen that the text has made false. Done: `onOut.next` routes the call when the
 person is still inside and the decision's own outcome didn't end it, shown in the hostage call.
 
-Engine side built on `claude/engine-clock-runout-routing`: `onOut.next` compiles to a route, clock
+Engine side merged in #46: `onOut.next` compiles to a route, clock
 targets are visible to the graph, the requirement tree and `check:strings`, and a permanent test
 audits every onOut mark reader. Still to ship: `clock-edges-in-tooling`, and the calls lane adding
 `onOut.next` to the hostage owner-condition clock.
@@ -92,7 +101,11 @@ person can leave by their own ground-floor window where the building has one (`u
 rejects every window, `src/gen/incident/story-bindings.ts`). R-B3: an outcome or a clock cue can
 move a person, and the team can watch or enter a place on a route (the hall), not only a role's
 room. Done: each works in the barricade call on the building families its sheet names, with the
-conditions that keep text true where the building doesn't allow it.
+conditions that keep text true where the building doesn't allow it. Decided 2026-10-18: one PR per
+request in order R-B1, R-B2, R-B3. R-B2's exit field is `walksVia` and is designed for rescue's
+R-R5 too. A place given as a step along a route declares what it must be, so text never names a
+room the building doesn't have there. R-B3 lands before `offsite-fire`, which builds on its
+positions.
 
 ### rescue-engine-requests: Outcomes that change the scene
 Tags: job=command; journeys=choices-branch; probes=blueprint-building; lane=engine
@@ -207,7 +220,11 @@ Needs: start=none; integrate=none; ship=none
 
 `npm run test:e2e` plays the board through the real UI at 390x844 and 320x568, but neither `npm
 run verify` nor CI runs it, which is how it went stale. Done: pull-request CI runs it against a
-built preview, with its runtime and Chrome setup stated, or the backlog records why not.
+built preview, with its runtime and Chrome setup stated, or the backlog records why not. First fix a
+flake seen 2026-10-18 (1 of 5 runs on main at 4d81419's parent): after a barricade call ends
+`entry_subject_hurt`, the next call's Deploy button is disabled and the script asserts "the chosen
+squads can deploy". The script picks squads without checking that they're ready after an injury.
+Find whether that's the script's assumption or a game state the player can't see a reason for.
 
 ### fire-follows-building: Incoming fire follows the building
 Tags: job=command; journeys=chance-not-script; probes=none (a drawn-harm check, not a favorable-chance probe); lane=tooling
@@ -220,25 +237,13 @@ trees-v13 test.
 
 ### clock-edges-in-tooling: The lab and the tree tests follow clock routes
 Tags: job=understand; journeys=choices-branch; probes=none (tooling); lane=tooling
-Needs: start=none (after the clock-runout-routing engine PR merges); integrate=none; ship=none
+Needs: start=none (#46 merged); integrate=none; ship=none
 
 `clock-runout-routing` adds optional clock-target parameters to `callGraph`, `callStringRows` and
 `requirementTree`. Done: `scripts/check-strings.ts`, the call-tree traversals in
 `src/gen/incident/trees-v13/call-trees.test.ts`, and the lab's graph, string-row and requirement
 call sites (the full list is in the engine PR body) pass them, so a node reachable only through a
 clock shows in Flow, Script and Why and its text is checked.
-
-### lab-armed-counts: The lab reads armed conditions as the compiled call does
-Tags: job=understand; journeys=none (lab tooling); probes=none (tooling); lane=tooling
-Needs: start=none; integrate=none; ship=none
-
-The lab builds its counts with `memberCounts` (`src/dev/lab/model/session.ts`, `src/dev/lab/model/why.ts`),
-which has no `<group>:armed` keys, and a missing key reads as "holds". So the lab would show
-armed-gated lines on every call, including ones whose compiled tree dropped them. Done: the lab
-uses `callCounts`, the Script surface's variant counts carry the armed keys, and the Why panel
-explains an armed leaf. That leaf belongs in the requirement tree
-(`src/gen/incident/trees-v13/dependencies.ts`), which is engine work after `clock-runout-routing`.
-Needed before the hostage call's armed line merges.
 
 ### hostage-gate-requests: Gate requests from the hostage review
 Tags: job=command; journeys=answer-a-call; probes=none (tooling); lane=tooling
@@ -266,16 +271,6 @@ It exits 1 today only on the barricade, armed and rescue trees, which the model-
 replace. Done: `npm run verify` and pull-request CI run it, and it passes.
 
 ## Player experience
-
-### manager-names-disjoint: Manager names stay out of call casts
-Tags: job=command; journeys=answer-a-call; probes=none (names); lane=calls
-Needs: start=none (after #45, now merged); integrate=none; ship=none
-
-The civilian pool (`src/content/call-trees/civilian-names.ts`) is kept disjoint from the officer
-catalog, but not from the Command Staff managers: "Navarro" is in `CIVILIAN_SURNAMES`, so a subject
-can be drawn as "<first> Navarro" while Sam Navarro sits on the HQ screen. Done: the disjointness
-test also covers the names in `MANAGERS` (`src/sim/command-staff.ts`), 'Navarro' leaves the pool,
-and the changed fingerprints are recaptured. The calls lane holds a lock on that test for this item.
 
 ### manager-pronouns: Managers carry their pronouns as data
 Tags: job=build; journeys=none (no manager text uses a pronoun yet); probes=none (data); lane=engine

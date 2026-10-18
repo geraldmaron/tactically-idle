@@ -1,6 +1,7 @@
 // Civilian names for call-tree casts (content v13). Deliberately disjoint from the officer
-// catalog (content/personas.json), so a person inside a call never shares a name with someone on
-// the player's roster; a test holds the two lists apart. Drawn by pronoun set only: identity
+// catalog (content/personas.json) and the Command Staff managers (sim/command-staff.ts MANAGERS),
+// so a person inside a call never shares a name with someone on the player's roster or HQ screen;
+// a test holds the lists apart. Drawn by pronoun set only: identity
 // never determines a role, danger, cooperation or any gameplay score.
 
 export const CIVILIAN_FIRST_NAMES = {
@@ -40,7 +41,7 @@ export const CIVILIAN_SURNAMES: readonly string[] = [
   'Halvorsen', 'Hargreaves', 'Hashemi', 'Hendricks', 'Hidalgo', 'Holloway', 'Ibekwe', 'Iglesias', 'Ivanova', 'Jablonski',
   'Jankowski', 'Jaramillo', 'Kariuki', 'Kaszuba', 'Keane', 'Khalil', 'Kowalczyk', 'Krishnan', 'Lachance', 'Langford',
   'Lundgren', 'Llewellyn', 'Lombardi', 'MacAllister', 'Machado', 'Makinde', 'Marchetti', 'Mbatha', 'McCready', 'Mendoza',
-  'Molina', 'Montgomery', 'Muriuki', 'Nakashima', 'Navarro', 'Nkemelu', 'Novak', 'Nwachukwu', 'Oduya', 'Okonkwo',
+  'Molina', 'Montgomery', 'Muriuki', 'Nakashima', 'Nkemelu', 'Novak', 'Nwachukwu', 'Oduya', 'Okonkwo',
   'Olawale', 'Ortega', 'Pacheco', 'Palmieri', 'Pappas', 'Pellegrino', 'Pemberton', 'Quintero', 'Radcliffe', 'Rahimi',
   'Ramaswamy', 'Ravenscroft', 'Rinaldi', 'Romanov', 'Rothwell', 'Saavedra', 'Salazar', 'Santangelo', 'Schreiber', 'Sepúlveda',
   'Shevchenko', 'Sinclair', 'Sobczak', 'Stavros', 'Szabo', 'Takahashi', 'Talbot', 'Tembo', 'Thorsen', 'Tiwari',

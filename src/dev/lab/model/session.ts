@@ -16,7 +16,7 @@ import { parseIncidentId } from '../../../gen/incident';
 import { applyMove, applyNaturalMove, drawnAt, drawnChance, NOW, sampleFor } from '../../../gen/incident/gates/engine-driver';
 import { instanceOf } from '../../../gen/incident/instance';
 import type { IncidentInstance } from '../../../gen/incident/instance';
-import { memberCounts, textBinder, TREE_STARTED } from '../../../gen/incident/trees-v13/compile';
+import { callCounts, textBinder, TREE_STARTED } from '../../../gen/incident/trees-v13/compile';
 import { choiceIndex } from '../../../gen/incident/trees-v13/graph';
 import type { DrawnDistribution } from '../../../sim/drawn-effects';
 import { buildLocation } from '../../../sim/location';
@@ -259,7 +259,7 @@ export function openSession(u: LabUrl, handoff: LabHandoff | null): Session | Op
 
   return {
     key: `${callKey(u)}|${tuningHash('current')}`, resolved, scenario, tree, template, instance,
-    counts: memberCounts(instance.placed), turnDrawn: { ...instance.turns }, situation: situationOf(instance.situation),
+    counts: callCounts(instance.placed), turnDrawn: { ...instance.turns }, situation: situationOf(instance.situation),
     contentKey: contentKey(spec.type), squad, frames: [frameOf(start, null, null)], prior, stopped: null,
     ahead: [], focus: focusSquad(start), note,
   };

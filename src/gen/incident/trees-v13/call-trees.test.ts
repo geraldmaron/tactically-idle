@@ -5,6 +5,7 @@ import personas from '../../../content/personas.json';
 import type { CallTree, TreeChoice, TreeNext, TreeOutcome } from '../../../content/call-trees/types';
 import { TACTICAL_FRAMEWORKS } from '../../../content/unlocks';
 import { SCENARIO_TYPES } from '../../../content/scenario-types';
+import { MANAGERS } from '../../../sim/command-staff';
 import { buildLocation } from '../../../sim/location';
 import { validateScenario } from '../../../sim/operation';
 import { actionViews } from '../../../sim/operation-selectors';
@@ -100,9 +101,11 @@ function treeStrings(authored: CallTree, counts?: Record<string, number>): { fie
 }
 
 describe('call trees: civilian names', () => {
-  it('share no first name or surname with any officer the player can hire, and repeat nothing', () => {
+  it('share no first name or surname with any officer the player can hire or any Command Staff manager, and repeat nothing', () => {
     const officers = (personas as { firstName: string; surname: string }[]);
-    const officerNames = new Set(officers.flatMap(person => [person.firstName, person.surname]));
+    // Managers show on the HQ screen beside the roster, so a civilian never shares their names either.
+    const managers = Object.values(MANAGERS).flatMap(manager => manager.name.split(' '));
+    const officerNames = new Set([...officers.flatMap(person => [person.firstName, person.surname]), ...managers]);
     const first = Object.values(CIVILIAN_FIRST_NAMES).flat();
     expect(first.filter(name => officerNames.has(name))).toEqual([]);
     expect(CIVILIAN_SURNAMES.filter(name => officerNames.has(name))).toEqual([]);
