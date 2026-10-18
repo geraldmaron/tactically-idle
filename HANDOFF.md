@@ -13,14 +13,14 @@ The coordinating session, on `main`. Merged so far: #36 (coordination rules), #3
 
 | Lane | Branch | In flight | Declared touches |
 |---|---|---|---|
-| engine | `claude/engine-clock-forks-travel` | `clock-forks-read-travel` (approved, `clockBaseMinutes` in types.ts). Then moving 8 tests off barricade-order onto fixtures, then `offsite-fire`, `armed-max`, `rescue-engine-requests` | `operation.ts`, `clocks.ts`, `types.ts` (interface, approved), `save.ts`, `external-support.ts`, tests |
+| engine | `claude/engine-clock-forks-travel` | `clock-forks-read-travel` (finishing, with the xray.ts lock). Then `exit-via-reachable` (top: the barricade needs it), the barricade test fixtures, `offsite-fire`, `armed-max`, `rescue-engine-requests` | `operation.ts`, `clocks.ts`, `types.ts` (interface, approved), `save.ts`, `external-support.ts`, `xray.ts` under the lock, tests |
 | calls | `claude/calls-barricade-tree` | `barricade-model-first`: building the tree, adding support choices now that R-B4 is in. #62 (owner_down cleanup) waits on tooling's fixture PR | `barricade-boxes.ts`, `call-trees/index.ts`, `incidents/barricade.ts`, retiring `barricade-order.ts`, `docs/calls/` |
 | tooling | `claude/hostage-gate-requests` | `hostage-gate-requests` (coverage key B, A behind a flag). Then a fixture PR moving lab and tree tests off the hostage mark and groups.test.ts:63 | as declared |
 | interface | closed | Session closed after `board-risk-card`. Start a fresh interface session for the next interface item | none |
 
 ## Locks outside normal ownership
 
-None.
+- `src/dev/lab/model/xray.ts` (tooling-owned): engine lane, for the `clock-forks-read-travel` PR only, to pass team minutes into the fork preview.
 
 
 ## Open questions for the owner
