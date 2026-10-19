@@ -98,17 +98,18 @@ function treeStrings(authored: CallTree, counts?: Record<string, number>): { fie
   for (const node of tree.nodes) {
     if (reach && !reach.nodes.has(node.id)) continue;
     add('prompt', node.prompt);
-    for (const entry of node.promptIf ?? []) add('prompt', entry.prompt);
+    for (const line of node.exchange ?? []) add('exchange', line.line);
+    for (const entry of node.promptIf ?? []) { add('prompt', entry.prompt); for (const line of entry.exchange ?? []) add('exchange', line.line); }
     for (const choice of node.choices) {
       add('choice.title', choice.title); add('choice.summary', choice.summary);
       for (const band of BANDS) add('choice.preview', choice.preview[band]);
       for (const modifier of choice.modifiers ?? []) add('modifier', modifier.label);
-      for (const outcome of outcomesOf(choice)) add('outcome', outcome.text);
+      for (const outcome of outcomesOf(choice)) { add('outcome', outcome.text); for (const line of outcome.exchange ?? []) add('exchange', line.line); }
     }
   }
   for (const [id, ending] of Object.entries(tree.endings)) {
     if (reach && !reach.endings.has(id)) continue;
-    add('ending.title', ending.title); add('ending.summary', ending.summary); for (const task of ending.remainingTasks ?? []) add('ending.task', task);
+    add('ending.title', ending.title); add('ending.summary', ending.summary); add('ending.epilogue', ending.epilogue); for (const task of ending.remainingTasks ?? []) add('ending.task', task);
   }
   for (const situation of templateOf(authored)?.situations ?? []) for (const clock of situation.clocks ?? []) {
     add('clock.label', clock.label);
@@ -214,7 +215,8 @@ describe('call trees: authoring rules', () => {
         for (const outcome of outcomesOf(choice)) if (outcome.promise) {
           const { id, to, kind = 'promise' } = outcome.promise;
           expect(tree.roles.find(role => role.id === to)?.kind, `${where} promises ${id} to ${to}`).toBe('subject');
-          if (kind !== 'promise') expect(CONCESSIONS_ALLOWED, `${where} promises ${kind}`).toContain(kind);
+          // A lie (deception-commitments) is the team's own empty promise, never a concession command gave.
+          if (kind !== 'promise' && kind !== 'lie') expect(CONCESSIONS_ALLOWED, `${where} promises ${kind}`).toContain(kind);
           expect(promisedTo.get(id) ?? to, `promise ${id} made to two people`).toBe(to);
           promisedTo.set(id, to);
         }
