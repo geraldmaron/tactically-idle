@@ -38,7 +38,8 @@ function fixture() {
     const all = descendants(LiveView(props));
     const map = all.find((element) => element.props.className === 'live-map')!;
     const controls = all.find((element) => element.props['aria-label'] === 'Map display')!;
-    const buttons = descendants(controls.props.children).filter((element) => element.type === 'button');
+    // Display toggles; the map key button opens a sheet and is checked on its own.
+    const buttons = descendants(controls.props.children).filter((element) => element.type === 'button' && !String(element.props.className ?? '').includes('map-key-btn'));
     const drawing = all.find((element) => element.type === Blueprint) as ReactElement<Parameters<typeof Blueprint>[0]> | undefined;
     const rooms = all.find((element) => element.type === RoomList) as ReactElement<Parameters<typeof RoomList>[0]> | undefined;
     return { map, controls, buttons, drawing, rooms };

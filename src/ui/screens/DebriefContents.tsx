@@ -20,6 +20,7 @@ import { signed } from '../format';
 import { OperationLogContents } from './OperationFeedback';
 import { PersonCasualtyList } from '../components/IncidentPeople';
 import { PeopleText } from '../people/PeopleText';
+import { Disclosure } from '../components/Disclosure';
 
 /** What OpsDebrief shows inside its scrolling page. `decisions` defaults to the saved log;
  * `reality` (default on) keeps "What was really there"; `heroAction` sits under the hero summary. */
@@ -49,12 +50,12 @@ export function DebriefEvidence({ debrief: d, decisions, officers, scenario, rea
   const worn = (d.unitWear ?? []).filter((row) => row.itemId !== 'battery_pack' && row.after < row.before).length;
   return <Card className="result-evidence">
     <SubHead icon="list">Review the operation</SubHead>
-    {d.causes.length > 0 && <details className="result-disclosure"><summary>Why this outcome · {d.causes.length} reasons</summary><ol className="causes">{d.causes.map((cause, index) => <li key={index}><PeopleText text={cause} /></li>)}</ol></details>}
-    <details className="result-disclosure"><summary>Decision log{decisions.length > 0 ? ` (${decisions.length})` : ''}</summary>
+    {d.causes.length > 0 && <Disclosure name="debrief-causes" className="result-disclosure" summary="Why this outcome" count={d.causes.length}><ol className="causes">{d.causes.map((cause, index) => <li key={index}><PeopleText text={cause} /></li>)}</ol></Disclosure>}
+    <Disclosure name="debrief-decisions" className="result-disclosure" summary="Decision log" count={decisions.length || undefined}>
       {decisions.length ? <OperationLogContents decisions={decisions} officers={officers} explicitCompletion={!!d.disposition} /> : <p className="operation-note">No per-decision log is stored for this operation. The saved result and causes are shown above.</p>}
-    </details>
-    <details className="result-disclosure"><summary>Information &amp; reality</summary><Information d={d} />{reality && <Reality d={d} scenario={scenario} />}</details>
-    <details className="result-disclosure"><summary>Supplies &amp; equipment{used > 0 || worn > 0 ? ` · ${used} used · ${worn} worn` : ' · unchanged'}</summary><Supplies d={d} /></details>
+    </Disclosure>
+    <Disclosure name="debrief-reality" className="result-disclosure" summary="Information and reality"><Information d={d} />{reality && <Reality d={d} scenario={scenario} />}</Disclosure>
+    <Disclosure name="debrief-supplies" className="result-disclosure" summary="Supplies and equipment" hint={used > 0 || worn > 0 ? `${used} used, ${worn} worn` : 'Unchanged'}><Supplies d={d} /></Disclosure>
   </Card>;
 }
 

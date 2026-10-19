@@ -47,6 +47,7 @@ import './preparation-options.css';
 import './operation-squads.css';
 import './ops-visual.css';
 import { departmentUpkeep } from '../../sim/equipment-manager-policy';
+import { Disclosure } from '../components/Disclosure';
 
 export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel: () => void }) {
   const pageRef = useRef<HTMLDivElement>(null);
@@ -390,16 +391,7 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
               </Button>
             </div>
             {note && (
-              <details className="autonote">
-                <summary className="autonote-h">
-                  <Icon name="wand" size={14} />
-                  Auto-equip notes · {note.lines.length || 'none'}
-                  {note.edited && (
-                    <Chip tone="amber" icon="edit">
-                      You changed this
-                    </Chip>
-                  )}
-                </summary>
+              <Disclosure name="autoequip-notes" className="autonote" icon="wand" summary="Auto-equip notes" count={note.lines.length} hint={note.edited ? 'You changed this' : undefined}>
                 {note.lines.length > 0 ? (
                   <ul>
                     {note.lines.map((l, i) => (
@@ -409,7 +401,7 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
                 ) : (
                   <p className="dim">Current choices kept. No extra gear added.</p>
                 )}
-              </details>
+              </Disclosure>
             )}
             <label className="field">
               <span className="field-label">
@@ -534,15 +526,14 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
 
       <SupportPreparation state={g} now={now} cmd={cmd} built={built} onSelect={setSupportUnitId} />
 
-      {!!preparation?.equipment.length && <details className="prep-equipment-options">
-        <summary>Optional equipment · {preparation.equipment.length} {preparation.equipment.length === 1 ? 'option' : 'options'} to review</summary>
+      {!!preparation?.equipment.length && <Disclosure name="prep-equipment" className="prep-equipment-options" summary="Optional equipment to review" count={preparation.equipment.length}>
         <p>These bundles open up more choices. You can deploy without them; each decision shows its needs when it comes up.</p>
         <ul>{preparation.equipment.map(({ key, label, fix }) => <li key={key}>
           <strong>{label}</strong>
           <p className="dim">Optional equipment for squad {fix.sid}. Scene requirements are checked when you choose an action.</p>
           {fix.plan.issue ? <p>{fix.plan.issue}</p> : <Button size="sm" icon="box" onClick={() => equipPreparationFix(fix)}>Equip {fix.plan.label} on squad {fix.sid}</Button>}
         </li>)}</ul>
-      </details>}
+      </Disclosure>}
 
       {(check.issues.length > 0 || visibleWarnings.length > 0) && <div className="prepcheck" aria-live="polite">
         {check.issues.map((i, k) => (

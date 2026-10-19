@@ -4,12 +4,10 @@ import { DEFAULT_EQUIPMENT_QUERY, type EquipmentQuery } from '../storefront/stor
 import { INITIAL_SQUAD_VIEW, updateSquadView, type SquadView, type SquadViewAction } from './squad-view';
 
 export type Tab = 'hq' | 'squad' | 'ops' | 'develop' | 'gear';
-export type GearSection = 'inventory' | 'equipment';
 export type SquadSection = 'roster' | 'training';
 export interface TrainingFocus { officerId?: Id; certId?: CertId; courseId?: Id }
 export interface PlayerRoute {
   tab: Tab;
-  gearSection: GearSection;
   squadSection: SquadSection;
   equipmentItemId: Id | null;
   trainingFocus: TrainingFocus;
@@ -19,7 +17,7 @@ export interface PlayerRoute {
   returnToItem: Id | null;
 }
 export const INITIAL_PLAYER_ROUTE: PlayerRoute = {
-  tab: 'hq', gearSection: 'inventory', squadSection: 'roster', equipmentItemId: null,
+  tab: 'hq', squadSection: 'roster', equipmentItemId: null,
   trainingFocus: {}, trainingRequest: 0, developmentRequest: 0, returnToItem: null,
 };
 export const PLAYER_NAV_HISTORY_KEY = 'tacticallyIdlePlayerRoute';
@@ -37,7 +35,7 @@ export function createPlayerNavigation(history: HistoryPort, owner: string, onRo
   const commit = (next: PlayerRoute, replace = false) => {
     if (closing) { pendingRoute = next; return; }
     if (JSON.stringify(next) === JSON.stringify(route)) return;
-    const detailBack = !!next.equipmentItemId && !route.equipmentItemId && route.tab === 'gear' && route.gearSection === 'equipment';
+    const detailBack = !!next.equipmentItemId && !route.equipmentItemId && route.tab === 'gear';
     const value = { ...history.state, [PLAYER_NAV_HISTORY_KEY]: { owner, route: next, detailBack } };
     if (replace) history.replaceState(value, ''); else history.pushState(value, '');
     route = next;
@@ -49,10 +47,9 @@ export function createPlayerNavigation(history: HistoryPort, owner: string, onRo
     },
     getRoute: () => route,
     go(tab: Tab) { commit({ ...route, tab, equipmentItemId: null, returnToItem: null }); },
-    setGearSection(gearSection: GearSection) { commit({ ...route, tab: 'gear', gearSection, equipmentItemId: null, returnToItem: null }); },
     setSquadSection(squadSection: SquadSection) { commit({ ...route, tab: 'squad', squadSection, equipmentItemId: null, returnToItem: null }); },
     openEquipment(request?: { itemId?: Id }) {
-      commit({ ...route, tab: 'gear', gearSection: 'equipment', equipmentItemId: request?.itemId ?? null, returnToItem: null });
+      commit({ ...route, tab: 'gear', equipmentItemId: request?.itemId ?? null, returnToItem: null });
     },
     closeEquipment() {
       if (closing || !route.equipmentItemId) return;
@@ -69,7 +66,7 @@ export function createPlayerNavigation(history: HistoryPort, owner: string, onRo
     },
     returnToEquipment() {
       if (!route.returnToItem) return;
-      commit({ ...route, tab: 'gear', gearSection: 'equipment', equipmentItemId: route.returnToItem, returnToItem: null });
+      commit({ ...route, tab: 'gear', equipmentItemId: route.returnToItem, returnToItem: null });
     },
     onPop() {
       closing = false;
@@ -91,7 +88,6 @@ export function createPlayerNavigation(history: HistoryPort, owner: string, onRo
 export interface TrainingDraft { officerId: Id; search: string; request?: number }
 export interface NavApi extends PlayerRoute {
   go: (tab: Tab) => void;
-  setGearSection: (section: GearSection) => void;
   setSquadSection: (section: SquadSection) => void;
   openEquipment: (request?: { itemId?: Id }) => void;
   closeEquipment: () => void;
@@ -109,7 +105,7 @@ export interface NavApi extends PlayerRoute {
 }
 const noop = () => {};
 export const DEFAULT_NAV: NavApi = {
-  ...INITIAL_PLAYER_ROUTE, go: noop, setGearSection: noop, setSquadSection: noop, openEquipment: noop,
+  ...INITIAL_PLAYER_ROUTE, go: noop, setSquadSection: noop, openEquipment: noop,
   closeEquipment: noop, openTraining: noop, openDevelopment: noop, returnToEquipment: noop,
   equipmentQuery: DEFAULT_EQUIPMENT_QUERY, setEquipmentQuery: noop, equipmentQuantities: {}, setEquipmentQuantity: noop,
   trainingDraft: { officerId: '', search: '' }, setTrainingDraft: noop,

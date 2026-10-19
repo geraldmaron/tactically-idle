@@ -32,7 +32,7 @@ describe('scannable debrief results', () => {
   it('replaces repeated zero-change rows with one collapsed condition group', () => {
     const quiet = { ...result, officerCondition: Object.values(state.officers).map((o) => ({ officerId: o.id, stressBefore: o.stress, stressAfter: o.stress, xpGained: 0 })) };
     const html = renderToStaticMarkup(createElement(OfficerResults, { debrief: quiet, officers: state.officers }));
-    expect(html).toContain(`${quiet.officerCondition.length} officers · unchanged`);
+    expect(html).toContain(`${quiet.officerCondition.length} officers unchanged`);
     expect(html.match(/<details/g)).toHaveLength(1);
     expect(html).not.toContain('<details open');
     expect(html).not.toContain('+0');
@@ -55,7 +55,7 @@ describe('scannable debrief results', () => {
   it('keeps real zero-change officers available without a zero reward or duplicate bars', () => {
     const unchanged = { ...result, officerCondition: [{ officerId: 'off_chen', stressBefore: 12, stressAfter: 12, xpGained: 0 }] };
     const html = renderToStaticMarkup(createElement(OfficerResults, { debrief: unchanged, officers: state.officers }));
-    expect(html).toContain('1 officer · unchanged');
+    expect(html).toContain('1 officer unchanged');
     expect(html).toContain('Stress unchanged');
     expect(html).not.toContain('XP');
     expect(html).not.toContain('stress before');

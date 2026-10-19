@@ -71,7 +71,7 @@ describe('squad arrangement review', () => {
     const first = renderToStaticMarkup(createElement(SquadOptimizer, { open: true, onClose: () => {} }));
     expect(first).toContain('aria-label="Unlock Noor Vale" aria-pressed="true"');
     expect(first).toContain('aria-label="Unlock squad B, Bravo" aria-pressed="true"');
-    expect(first).toContain('1 saved');
+    expect(first).toContain('Officer locks<span class="disclosure-count">1</span>');
     expect(first).not.toContain('disabled="">Undo last arrangement');
     const second = renderToStaticMarkup(createElement(SquadOptimizer, { open: true, onClose: () => {} }));
     expect(second).toEqual(first);

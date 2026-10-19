@@ -38,9 +38,6 @@
 .result-stress-unchanged .meter { width: 100%; height: 5px; }
 .result-disclosure { min-width: 0; border-bottom: 1px solid var(--line); }
 .result-disclosure:last-child { border-bottom: 0; }
-.result-disclosure > summary { min-height: 44px; padding: 12px 0; cursor: pointer; font-size: 14px; line-height: 1.4; font-weight: 600; color: var(--text); }
-.result-disclosure > summary::marker { color: var(--amber); }
-.result-disclosure > summary:focus-visible { outline: 2px solid var(--amber); outline-offset: 3px; border-radius: 4px; }
 .result-disclosure > .drows { border: 0; padding: 0; background: transparent; }
 .result-disclosure > .causes { margin: 0 0 12px; }
 .result-disclosure > .operation-log-content { margin: 3px 0 12px; }

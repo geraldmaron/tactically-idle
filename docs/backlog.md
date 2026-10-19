@@ -272,10 +272,6 @@ staff, unlock, grant, detail) go through one ledger with before and after; hourl
 rate and a shift-report line. The top bar counts to new values with floating deltas and opens a
 Finance sheet with the hourly breakdown and recent entries.
 
-### gear-armory: One Armory list replaces Inventory and Equipment
-Tags: job=build; journeys=hire-and-equip; probes=none (layout); lane=interface
-Needs: start=none; integrate=none; ship=none
-
 ### disclosure-taxonomy: One way to reveal more, used everywhere
 Tags: job=understand; journeys=debrief-explains; probes=none (layout); lane=interface
 Needs: start=none; integrate=none; ship=none
@@ -310,7 +306,7 @@ Needs: start=officer-value; integrate=none; ship=none
 
 ### squad-preset-editor: One place to edit loadout presets
 Tags: job=build; journeys=hire-and-equip; probes=none (layout); lane=interface
-Needs: start=gear-armory; integrate=none; ship=none
+Needs: start=none; integrate=none; ship=none
 
 The Squad screen and the Armory both edit `squad.loadoutPreset` (`src/ui/screens/Squad.tsx`).
 Keep one.

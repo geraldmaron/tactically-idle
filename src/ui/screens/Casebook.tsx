@@ -1,3 +1,4 @@
+import { ChoiceRail } from '../components/ChoiceRail';
 import { useMemo, useState } from 'react';
 import './casebook.css';
 import type { CasebookBest, GameState } from '../../sim/types';
@@ -27,32 +28,15 @@ export function Casebook({ state }: { state: GameState }) {
         </p>
         <span className="casebook-bar" aria-hidden="true"><i style={{ width: `${Math.round(share * 100)}%` }} /></span>
       </div>
-      <details className="casebook-filter-box">
-        <summary><Icon name="list" size={14} />Filter{filtered ? ` · ${shown.length} shown` : ''}</summary>
-        <div className="casebook-filters">
-          <label className="field">Framework
-            <select value={filter.type} onChange={(event) => setFilter({ ...filter, type: event.target.value as CasebookFilter['type'] })}>
-              <option value="all">All frameworks</option>
-              {rows.map((row) => <option key={row.type} value={row.type}>{row.label}</option>)}
-            </select>
-          </label>
-          <label className="field">Setting
-            <select value={filter.setting} onChange={(event) => setFilter({ ...filter, setting: event.target.value as CasebookFilter['setting'] })}>
-              <option value="all">All settings</option>
-              <option value="homes">Homes</option>
-              <option value="businesses">Businesses</option>
-            </select>
-          </label>
-          <label className="field">Status
-            <select value={filter.status} onChange={(event) => setFilter({ ...filter, status: event.target.value as CasebookFilter['status'] })}>
-              <option value="all">All</option>
-              <option value="found">Found</option>
-              <option value="unfound">Still to find</option>
-              <option value="locked">Not yet dispatched</option>
-            </select>
-          </label>
-        </div>
-      </details>
+      <div className="casebook-filters">
+        <ChoiceRail kind="filter" label="Show calls" grow value={filter.status} onChange={(status) => setFilter({ ...filter, status })} options={[
+          { value: 'all', label: 'All' }, { value: 'found', label: 'Found' }, { value: 'unfound', label: 'To find' }, { value: 'locked', label: 'Locked', accessibleLabel: 'Not yet dispatched' },
+        ]} />
+        <ChoiceRail kind="filter" label="Setting" grow value={filter.setting} onChange={(setting) => setFilter({ ...filter, setting })} options={[
+          { value: 'all', label: 'Any setting' }, { value: 'homes', label: 'Homes' }, { value: 'businesses', label: 'Businesses' },
+        ]} />
+        {filtered && <p className="dim casebook-shown" role="status">{shown.length} shown</p>}
+      </div>
       {shown.length === 0 ? <p className="dim">No frameworks match these filters.</p> : <ul className="casebook-rows">
         {shown.map((row) => <CasebookRowView key={row.type} row={row} />)}
       </ul>}

@@ -2237,28 +2237,13 @@ button.ocard {
   color: var(--text-dim);
 }
 
-/* Map key: a quiet control at the start of the map's action row that opens into the full row. */
-.map-key {
+/* Map key: a quiet control at the start of the map's action row; the key opens in a sheet. */
+.map-key-btn {
   margin-right: auto;
-}
-.map-key[open] {
-  flex-basis: 100%;
-  order: 3;
-}
-.map-key summary {
-  list-style: none;
-}
-.map-key summary::-webkit-details-marker {
-  display: none;
 }
 .map-key-body {
   display: grid;
   gap: 8px;
-  margin-top: 8px;
-  padding: 10px 12px;
-  border-radius: 8px;
-  background: rgba(8, 13, 24, 0.88);
-  border: 1px solid rgba(255, 255, 255, 0.2);
   font-size: 13px;
   line-height: 1.45;
   color: var(--text-dim);
@@ -4261,7 +4246,6 @@ button.ocard {
 @media(max-width: 340px) { .wordmark { flex-basis: 108px; } .brand-lockup { max-width: 108px; height: 27px; } }
 
 .material-guide { padding: 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); }
-.material-guide summary { cursor: pointer; font-family: var(--font-cond); font-size: 16px; min-height: 44px; align-content: center; }
 .material-guide p { font-size: 12px; line-height: 1.4; }
 .material-guide-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
 .material-guide-grid figure { margin: 0; min-width: 0; }
@@ -4491,30 +4475,23 @@ button.ocard {
 .gear-surfaces button, .store-tabs button { appearance: none; min-width: 0; min-height: 44px; padding: 9px 6px; border: 1px solid transparent; border-radius: 6px; background: transparent; color: var(--text-dim); font-weight: 600; cursor: pointer; }
 .gear-surfaces button span { display: inline-block; margin-left: 5px; font-size: 11px; font-weight: 400; }
 .gear-surfaces button.is-selected, .store-tabs button.is-selected { border-color: var(--line-strong); background: var(--panel-3); color: var(--text); }
-.gear-surfaces button:focus-visible, .store-tabs button:focus-visible, .store-category:focus-visible, .store-filters summary:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
-.store-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+.gear-surfaces button:focus-visible, .store-tabs button:focus-visible, .store-category:focus-visible, .store-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
 .store-heading h2 { margin: 2px 0 0; font-family: var(--font-display); font-size: 26px; }
 .store-heading .kicker { font-size: 10px; }
 .store-tabs { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .store-tabs button { font-size: 12px; padding-inline: 2px; }
 .store-intro, .store-card p, .store-training > p { margin: 0; line-height: 1.45; }
 .store-search input { width: 100%; }
-.store-filters { border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
-.store-filters summary { min-height: 46px; padding: 12px; font-weight: 600; cursor: pointer; }
-.store-filters summary > span { display: block; margin-top: 4px; font-size: 11px; font-weight: 400; }
-.store-filter-body { display: flex; flex-direction: column; gap: 14px; padding: 2px 12px 14px; }
 .store-category-fieldset { min-width: 0; margin: 0; padding: 0; border: 0; }
 .store-category-fieldset legend { margin-bottom: 8px; color: var(--text-dim); font-size: 12px; }
 .store-category-list { display: flex; flex-wrap: wrap; gap: 6px; }
 .store-category { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel-2); text-align: left; font-size: 12px; cursor: pointer; }
 .store-category span { color: var(--text-dim); font-size: 11px; }
 .store-category.is-selected { border-color: var(--amber); color: var(--amber); background: rgba(243, 180, 50, .08); }
-.store-filter-row { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
 .storefront .field { min-width: 0; margin: 0; }
 .storefront .field select, .storefront .field input { width: 100%; min-width: 0; }
 .store-toggle { display: flex; align-items: center; gap: 9px; min-height: 44px; font-size: 13px; line-height: 1.4; }
 .store-toggle input { width: 18px; height: 18px; flex: 0 0 18px; accent-color: var(--amber); }
-.store-filter-help { margin: 0; font-size: 11px; line-height: 1.45; }
 .store-results-head { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; }
 .store-results-head > [role="status"] { font-size: 13px; font-weight: 600; }
 .store-sort { flex: 1 0 100%; }
@@ -4557,11 +4534,9 @@ button.ocard {
 .store-development > p { margin: 0; line-height: 1.5; }
 @container game (min-width: 620px) {
   .store-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .store-filter-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .store-sort { flex: 0 1 260px; }
   .store-tabs button { font-size: 14px; }
-  .store-filters summary > span { display: inline; margin-left: 12px; }
-}
+  }
 @container game (max-width: 359px) {
   .store-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .store-card { padding: 12px; }
@@ -4570,7 +4545,3 @@ button.ocard {
 }
 
 .scene-condition-details { margin-top: 10px; }
-.scene-condition-details > summary { min-height: 44px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: var(--muted, #b5c2d7); font-size: 14px; }
-.scene-condition-details > summary::before { content: '›'; font-size: 20px; }
-.scene-condition-details[open] > summary::before { transform: rotate(90deg); }
-.scene-condition-details > summary:focus-visible { outline: 2px solid var(--amber, #f3b432); outline-offset: 2px; }

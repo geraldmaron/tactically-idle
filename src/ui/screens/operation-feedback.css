@@ -79,15 +79,6 @@
 .decision-next p { margin: 0; }
 .decision-next p + p { margin-top: 6px; }
 .decision-causes { margin-top: 8px; border-top: 1px solid var(--line); }
-.decision-causes summary,
-.operation-switcher summary,
-.operation-contributors summary {
-  min-height: 44px;
-  padding: 11px 0;
-  color: var(--text-dim);
-  cursor: pointer;
-  font-weight: 600;
-}
 .decision-record h4 { margin: 12px 0 5px; font-size: 13px; font-weight: 650; }
 .decision-record > p { margin: 6px 0; color: var(--text-dim); font-size: 13px; }
 .decision-causes ul { margin: 0 0 6px; padding-left: 18px; }

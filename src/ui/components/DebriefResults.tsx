@@ -8,6 +8,7 @@ import { stressBand } from '../../sim/officer';
 import type { ReactNode } from 'react';
 import { CivilianOutcomeList, OfficerInjuryResult } from './IncidentPeople';
 import './debrief-results.css';
+import { Disclosure } from './Disclosure';
 
 /** Only identity is read from the roster. All result values come from the saved debrief. */
 export type DebriefOfficers = Record<string, Pick<Officer, 'surname' | 'firstName'> & Partial<Pick<Officer, 'id' | 'identityId' | 'portrait' | 'role'>>>;
@@ -141,10 +142,10 @@ export function OfficerResults({ debrief: d, officers }: { debrief: DebriefResul
     <div className="result-section-heading"><SubHead icon="people">Officer changes</SubHead>{xp !== 0 && <span className="result-xp">{signed(xp, 1)} XP total</span>}</div>
     {changed.length > 0 && <ul className="result-officer-list">{changed.map((c) => <OfficerChange key={c.officerId} condition={c} officers={officers} casualty={casualties.get(c.officerId)} />)}</ul>}
     {extraCasualties.length > 0 && <ul className="result-officer-list">{extraCasualties.map((casualty) => <li className="result-officer" key={casualty.officerId}><ResultPortrait officerId={casualty.officerId} officers={officers} /><div className="result-officer-body"><strong>{officers[casualty.officerId] ? `${officers[casualty.officerId].firstName} ${officers[casualty.officerId].surname}` : 'Former officer'}</strong><OfficerInjuryResult casualty={casualty} /></div></li>)}</ul>}
-    {unchanged.length > 0 && <details className="result-disclosure result-unchanged">
-      <summary><span className="result-unchanged-summary"><span className="result-portrait-stack" aria-hidden="true">{unchanged.slice(0, 3).map((c) => <ResultPortrait key={c.officerId} officerId={c.officerId} officers={officers} size={28} />)}</span><span>{unchanged.length} officer{unchanged.length === 1 ? '' : 's'} · unchanged<span className="result-summary-hint">View condition</span></span></span></summary>
+    {unchanged.length > 0 && <Disclosure name="debrief-unchanged" className="result-disclosure result-unchanged" hint="View condition"
+      summary={<span className="result-unchanged-summary"><span className="result-portrait-stack" aria-hidden="true">{unchanged.slice(0, 3).map((c) => <ResultPortrait key={c.officerId} officerId={c.officerId} officers={officers} size={28} />)}</span><span>{unchanged.length} officer{unchanged.length === 1 ? '' : 's'} unchanged</span></span>}>
       <ul className="result-officer-list">{unchanged.map((c) => <OfficerChange key={c.officerId} condition={c} officers={officers} casualty={casualties.get(c.officerId)} />)}</ul>
-    </details>}
+    </Disclosure>}
     {d.officerCondition.length === 0 && extraCasualties.length === 0 && <p className="result-empty dim">No officers deployed.</p>}
   </Card>;
 }

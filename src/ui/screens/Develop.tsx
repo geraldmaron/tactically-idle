@@ -312,7 +312,7 @@ export function DevelopmentDetail({ option: o, onClose, pending, failure, purcha
         </ol></section>}
       {(training || gear || staff) && <div className="dev-links">
         {training && <Button size="sm" icon="mortarboard" onClick={() => { onClose(); nav.openTraining(trainingCourse ? { certId: COURSES[trainingCourse.courseId]?.grants.cert } : undefined); }}>Open Training</Button>}
-        {gear && <Button size="sm" icon="gear" onClick={() => { onClose(); if (gearItem) nav.openEquipment({ itemId: gearItem.itemId }); else nav.setGearSection('inventory'); }}>Open Gear</Button>}
+        {gear && <Button size="sm" icon="gear" onClick={() => { onClose(); if (gearItem) nav.openEquipment({ itemId: gearItem.itemId }); else nav.go('gear'); }}>Open Gear</Button>}
         {staff && <Button size="sm" icon="people" onClick={() => { onClose(); nav.go('hq'); }}>Open Command Staff</Button>}
       </div>}
       {failure && <p className="reason" role="alert">{failure}</p>}

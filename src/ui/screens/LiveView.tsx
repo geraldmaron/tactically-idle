@@ -39,6 +39,7 @@ import { GamePeopleProvider, PeopleText } from '../people/PeopleText';
 import type { Lexicon } from '../people/lexicon';
 import './operation-squads.css';
 import './ops-visual.css';
+import { Disclosure } from '../components/Disclosure';
 
 // Presentational live-operation screen. OpsLive.tsx feeds it from the selectors.
 
@@ -101,6 +102,7 @@ export function LiveView(p: LiveViewProps) {
   const sel = p.selectedAction;
   const multi = p.deployedSquads.length > 1;
   const [materials, setMaterials] = useState(false);
+  const [mapKey, setMapKey] = useState(false);
   const [expandedStage, setExpandedStage] = useState<string | null>(null);
   const expanded = expandedStage === p.progress.stage;
   const available = p.actions.map((action) => action.id === sel?.id ? sel : action);
@@ -164,8 +166,8 @@ export function LiveView(p: LiveViewProps) {
         </div>
         <div className="map-hud map-actions" role="group" aria-label="Map display">
           {/* The map labels reported people in place, so the key is on demand instead of a permanent row. */}
-          <details className="map-key">
-            <summary className="hud-btn hud-btn-quiet" aria-label="Map key and inspection help"><Icon name="info" size={16} />Key</summary>
+          <button type="button" className="hud-btn hud-btn-quiet map-key-btn" aria-label="Map key and inspection help" aria-haspopup="dialog" aria-expanded={mapKey} onClick={() => setMapKey(true)}><Icon name="info" size={16} />Key</button>
+          <Sheet open={mapKey} onClose={() => setMapKey(false)} title="Map key" modal={false} maxHeight="short">
             <div className="map-key-body" aria-label="Map legend">
               <span className="map-key-items">
                 <span><Icon name="user" size={18} className="lg-q legend-reported-person" />Reported</span>
@@ -173,7 +175,7 @@ export function LiveView(p: LiveViewProps) {
               </span>
               <p>Dashed amber people are reports at approximate positions. Mint people have a confirmed position. Small item symbols stay beside their holder; amber items are still reported, even when the person is confirmed. An absent weapon symbol does not mean unarmed. Tap a room or use Rooms to inspect names, conditions and items.</p>
             </div>
-          </details>
+          </Sheet>
           {!p.showRooms && (
             <button type="button" className="hud-btn" onClick={() => setMaterials((v) => !v)} aria-pressed={materials}>
               <Icon name="layers" size={16} />
@@ -558,7 +560,7 @@ export function ActionSheet(p: ActionSheetProps) {
           )}
           {!v.eligible && availableAlternative && <div className="action-resolution-actions"><Button onClick={() => p.onPick(availableAlternative.id)}>Available now: {availableAlternative.title}</Button></div>}
           {!!p.resupplyMinutes && <p className="dim adetail-note">Stores deliveries: {p.resupplyMinutes} operation minutes. Equipment is reserved for this run.</p>}
-          {p.all.length > 1 && <details className="operation-switcher"><summary>Compare another decision ({p.all.length})</summary>
+          {p.all.length > 1 && <Disclosure name="decision-compare" className="operation-switcher" summary="Compare another decision" count={p.all.length}>
             <div className="switcher" role="group" aria-label="Decisions">
               {p.all.map((a) => (
                 <button key={a.id} type="button" className={`pill${a.id === v.id ? ' pill-on' : ''}`} aria-pressed={a.id === v.id} onClick={() => p.onPick(a.id)}>
@@ -566,9 +568,8 @@ export function ActionSheet(p: ActionSheetProps) {
                 </button>
               ))}
             </div>
-          </details>}
-          <details className="operation-contributors">
-          <summary>Why these odds · officer, equipment and situation factors</summary>
+          </Disclosure>}
+          <Disclosure name="decision-odds" className="operation-contributors" summary="Why these odds" hint="Officer, equipment and situation factors">
           {v.contributors.length === 0 ? (
             <p className="dim">No contributors listed.</p>
           ) : (
@@ -595,7 +596,7 @@ export function ActionSheet(p: ActionSheetProps) {
               );
             })
           )}
-          </details>
+          </Disclosure>
           {v.uncertainty.length > 0 && (
             <>
               <SubHead icon="question" tone="amber">Still unknown</SubHead>

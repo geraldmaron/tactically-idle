@@ -14,6 +14,7 @@ import { PeopleGlyph, PeopleText, usePeopleEntry } from '../people/PeopleText';
 import { peopleLabel } from '../people/lexicon';
 import { IncidentBriefContext } from './SupportContext';
 import type { Intel, IntelLine } from './intel';
+import { Disclosure } from '../components/Disclosure';
 
 /** `built` is the call's building as the player sees it; the briefing reads it through `intel`. */
 export function PrepBriefing({ scenario, brief, intel }: { scenario: ScenarioDefinition | null | undefined; built: BuiltLocation; brief: Briefing; intel: Intel }): JSX.Element {
@@ -49,8 +50,7 @@ export function PrepBriefing({ scenario, brief, intel }: { scenario: ScenarioDef
             ))}
           </ul>
         </div>}
-        <details className="prep-brief-more">
-          <summary><Icon name="intel" size={14} />Full briefing</summary>
+        <Disclosure name="prep-briefing" className="prep-brief-more" icon="intel" summary="Full briefing">
           {scenario && <IncidentBriefContext scenario={scenario} />}
           <BriefList icon="check" tone="mint" title="Known" items={knownRest} empty="Nothing confirmed yet." />
           <div className="brief">
@@ -94,7 +94,7 @@ export function PrepBriefing({ scenario, brief, intel }: { scenario: ScenarioDef
               <p className="dim">Based on what is known. New information can raise or lower it.</p>
             </div>
           )}
-        </details>
+        </Disclosure>
       </Card>
     </Section>
   );

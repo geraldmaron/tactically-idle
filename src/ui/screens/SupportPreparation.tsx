@@ -12,6 +12,7 @@ import { Icon } from '../icons';
 import { GearArtFrame } from '../art/GearArt';
 import './preparation-support.css';
 import { departmentUpkeep } from '../../sim/equipment-manager-policy';
+import { Disclosure } from '../components/Disclosure';
 
 /** Support assets never enter a squad's backpack, including old saved presets. */
 export function handCarriedLoadout(loadout: Record<Id, number>): Record<Id, number> {
@@ -65,8 +66,7 @@ export function SupportPreparation({ state, now, cmd, built, onSelect }: {
       </div>
       {selectedIssues.map((issue) => <p key={issue} className="note note-warn"><Icon name="warning" size={16} />{issue}</p>)}
     </Card>
-    <details className="prep-support-more" open={!!selectedId || readyTotal > 0 || undefined}>
-    <summary><Icon name="list" size={14} />Vehicles and requirements · {options.length}</summary>
+    <Disclosure name="prep-support" className="prep-support-more" open={!!selectedId || readyTotal > 0} icon="list" summary="Vehicles and requirements" count={options.length}>
     <div className="prep-support-facts">
       <p className={operators.length ? 'tone-mint' : 'tone-amber'}>{operators.length
         ? `Vehicle operations: ${operators.map((officer) => `${officer.firstName} ${officer.surname}`).join(', ')}`
@@ -108,6 +108,6 @@ export function SupportPreparation({ state, now, cmd, built, onSelect }: {
         </Card>;
       })}
     </div>
-    </details>
+    </Disclosure>
   </Section>;
 }

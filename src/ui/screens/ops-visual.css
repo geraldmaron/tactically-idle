@@ -54,10 +54,6 @@
 .casebook-totals { font-size: 13px; }
 .casebook-bar { display: block; height: 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.08); overflow: hidden; }
 .casebook-bar i { display: block; height: 100%; background: var(--mint); }
-.casebook-filter-box > summary { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; cursor: pointer; font-family: var(--font-cond); font-size: 14px; font-weight: 600; letter-spacing: 0.04em; color: var(--text-dim); list-style: none; }
-.casebook-filter-box > summary::-webkit-details-marker { display: none; }
-.casebook-filter-box[open] > summary { color: var(--amber-2); }
-.casebook-filter-box .casebook-filters { margin-bottom: 4px; }
 .casebook-card .casebook-rows { display: grid; grid-template-columns: repeat(auto-fill, minmax(148px, 1fr)); gap: 6px; }
 .casebook-card .casebook-row { gap: 3px; padding: 7px 8px; border-radius: 8px; background: rgba(8, 13, 24, 0.35); }
 .casebook-card .casebook-row[data-status='unfound'] { opacity: 0.85; }
@@ -104,10 +100,6 @@
 .prep-people .person-tile { padding: 6px 8px; font-size: 12.5px; }
 .prep-people .person-avatar { flex-basis: 30px; width: 30px; height: 30px; font-size: 11.5px; }
 .prep-brief-more { border-top: 1px solid var(--line); }
-.prep-brief-more > summary, .prep-support-more > summary { display: flex; align-items: center; gap: 6px; min-height: 44px; cursor: pointer; font-family: var(--font-cond); font-size: 14px; font-weight: 600; letter-spacing: 0.05em; color: var(--text-dim); list-style: none; }
-.prep-brief-more > summary::-webkit-details-marker, .prep-support-more > summary::-webkit-details-marker { display: none; }
-.prep-brief-more > summary::after, .prep-support-more > summary::after { content: '+'; margin-left: auto; font-size: 18px; color: var(--amber); }
-.prep-brief-more[open] > summary::after, .prep-support-more[open] > summary::after { content: '−'; }
 .prep-brief-more[open] { display: grid; gap: 10px; padding-bottom: 4px; }
 .prep-brief-more .incident-context { margin: 0; }
 
@@ -141,8 +133,6 @@
 .prepare .prepsquad-head { flex-wrap: nowrap; min-width: 0; }
 .prepare .prepsquad-head strong { flex: 1 1 auto; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .prepare .prepsquad-auto { flex-shrink: 0; }
-.prepare .autonote > summary { min-height: 40px; cursor: pointer; list-style: none; }
-.prepare .autonote > summary::-webkit-details-marker { display: none; }
 .prepare .stagelist { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 6px; }
 .prepare .stageopt { gap: 7px; padding: 5px 8px; }
 .prepare .stageopt-main { font-size: 13px; }

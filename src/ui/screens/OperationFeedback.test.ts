@@ -22,7 +22,7 @@ vi.mock('../components/Sheet', () => ({ Sheet: ({ open, title, children, footer,
 const noop = () => {};
 const render = (node: ReactNode) => renderToStaticMarkup(node);
 // The native details boundary separates the default result from its complete saved evidence.
-const defaultResult = (html: string) => html.split('<details class="decision-causes decision-record"')[0];
+const defaultResult = (html: string) => html.split('<details class="disclosure decision-causes decision-record"')[0];
 const action = (patch: Partial<ActionView> = {}): ActionView => ({
   id: 'treat', stage: 'adapt', title: 'Prepare medical access', icon: 'medic', summary: 'Keep access open while preparing aid.', requirementLine: 'Qualified medic + trauma supplies',
   actingSquadIds: ['A'], supportSquadIds: [], support: null, officerIds: ['off_ortiz'], targetId: null, eligible: true, reason: null, risk: 'low',
@@ -245,7 +245,7 @@ describe('persistent decision results', () => {
     expect(visible).toContain('+0.5 min');
     expect(visible.match(/<dt>/g)).toHaveLength(1);
     for (const absent of ['Civilian safety', 'Pressure', 'Supplies used', 'What you learned', 'Stress on the team', 'No change', 'Nothing new']) expect(visible).not.toContain(absent);
-    expect(html).toContain('<details class="decision-causes decision-record">');
+    expect(html).toContain('<details class="disclosure decision-causes decision-record" data-disclosure="decision-record">');
     for (const saved of ['Civilian safety', 'Pressure', 'Supplies used', 'None', 'No knowledge changes recorded.', 'No change to officer stress.']) expect(html).toContain(saved);
     expect(quiet).toEqual(before);
   });
@@ -285,7 +285,7 @@ describe('persistent decision results', () => {
     expect(visible).not.toContain('Stress on the team');
     const log = render(createElement(OperationLogContents, { decisions: [saved], explicitCompletion: true }));
     expect(log).toContain('Each choice records the time, supplies and changes it caused.');
-    expect(log).toContain('<details class="decision-causes decision-record" open="">');
+    expect(log).toContain('<details class="disclosure decision-causes decision-record" data-disclosure="decision-record" open="">');
     for (const line of saved.explanation) expect(log).toContain(line);
     for (const expected of ['Call progress', 'Civilian safety', 'Pressure', 'before 80, change 0', 'Needs rest', 'No knowledge changes recorded.', 'Supplies used', 'None', 'Ortiz medical rating: +12 points']) expect(log).toContain(expected);
   });
@@ -328,7 +328,7 @@ describe('persistent decision results', () => {
     expect(html).toContain(debrief.endingTitle);
     expect(debrief.endingSummary).toBeTruthy();
     expect(html.replace(/<[^>]*>/g, '')).toContain(debrief.endingSummary);
-    expect(html).toContain(`Decision log (${decisionViews(state).length})`);
+    expect(html).toContain(`Decision log<span class="disclosure-count">${decisionViews(state).length}</span>`);
     expect(html).toContain('Close debrief');
     expect(html).not.toContain('Battery pack');
     const closed = apply(state, { type: 'closeDebrief' });

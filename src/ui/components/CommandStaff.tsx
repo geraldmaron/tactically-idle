@@ -103,7 +103,7 @@ export function ManagerSheet({ id, g, now, onClose, inGear = false }: { id: Mana
             {id === 'training_sergeant' && <TrainingSergeantPolicy g={g} />}
             {id === 'peer_support_lead' && <PeerSupportPolicy g={g} />}
             {id === 'recruiter' && <RecruiterPolicy g={g} />}
-            {id === 'quartermaster' && <QuartermasterPolicy g={g} onOpenGear={inGear ? undefined : () => { onClose(); nav.setGearSection('inventory'); }} />}
+            {id === 'quartermaster' && <QuartermasterPolicy g={g} onOpenGear={inGear ? undefined : () => { onClose(); nav.go('gear'); }} />}
             <ReplaceCard id={id} g={g} name={personName(view)!} severance={staffSeverance(holder)} />
           </>}
       <section className="staff-log" aria-label={`${profile.title} activity log`}>

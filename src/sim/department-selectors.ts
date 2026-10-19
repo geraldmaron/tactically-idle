@@ -109,6 +109,8 @@ export interface StoreOption {
   inService: number;
   /** Ready but below unreliableBelow. */
   unreliable: number;
+  /** Held and not reserved or in service, but worn to failAt or below: needs service before use. */
+  failed: number;
   expired: number;
   /** Mean condition of owned, non-scrapped units (0..100), null when none. */
   meanCondition: number | null;
@@ -228,6 +230,7 @@ export function storeOptions(state: GameState): StoreOption[] {
       reserved: units.filter((u) => u.status === 'reserved').length,
       inService: units.filter((u) => u.status === 'service').length,
       unreliable: ready.filter((u) => u.condition < item.wear.unreliableBelow).length,
+      failed: units.filter((u) => u.status === 'ready' && !ready.includes(u)).length,
       expired: units.filter((u) => u.status === 'expired').length,
       meanCondition: conditions.length ? Math.round((conditions.reduce((a, x) => a + x, 0) / conditions.length) * 10) / 10 : null,
       available: ready.length,

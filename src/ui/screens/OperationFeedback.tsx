@@ -11,6 +11,7 @@ import './operation-feedback.css';
 import { ITEMS } from '../../content/items';
 import { Icon } from '../icons';
 import { PeopleText } from '../people/PeopleText';
+import { Disclosure } from '../components/Disclosure';
 
 export const RESULT_LABEL: Record<OutcomeBand, string> = { favorable: 'Went well', mixed: 'Had complications', adverse: 'Went badly' };
 export const FORECAST_LABEL: Record<OutcomeBand, string> = { favorable: 'Goes well', mixed: 'Complications', adverse: 'Goes badly' };
@@ -79,8 +80,7 @@ export function DecisionCard({ decision: d, full = false, officers = {}, explici
       {full ? <DecisionStress decision={d} officers={officers} complete /> : <DecisionStressChips decision={d} officers={officers} />}
       {next.length > 0 && <div className="decision-next">{next.map((line, index) => <p key={index}><PeopleText text={line} /></p>)}</div>}
       {d.endingTitle && <p className="decision-next"><strong>Operation ended:</strong> {d.endingTitle}</p>}
-      <details className="decision-causes decision-record" open={full}>
-        <summary>Details and reasons</summary>
+      <Disclosure name="decision-record" className="decision-causes decision-record" open={full} summary="Details and reasons">
         {d.resultLabel && <p>Recorded check: {d.band}. Time, supplies and stress are recorded below.</p>}
         {!full && <>
           <h4>Recorded changes</h4>
@@ -97,7 +97,7 @@ export function DecisionCard({ decision: d, full = false, officers = {}, explici
         <h4>What do the scores mean?</h4>
         {explicitCompletion ? <p>The recorded call progress score is separate from completion. Completion depends on the work done and any agreed transfer of responsibility. Civilian safety tracks how safely the call has gone, from 0 to 100.</p> : <p>Call progress shows how much of the call has been resolved. Civilian safety tracks how safely it has gone. Both run from 0 to 100; higher is better.</p>}
         <p>Pressure runs from 0 to 100; lower is better. Delays and setbacks can raise it and make the situation harder. A lower safety score does not by itself mean someone was injured.</p>
-      </details>
+      </Disclosure>
     </article>
   );
 }
