@@ -28,11 +28,14 @@ export function DebriefContents({ result: d, officers, scenario, reality = true,
   decisions?: DecisionView[]; heroAction?: ReactNode }): JSX.Element {
   const worst = d.disposition ? d.civilianSafety.score : Math.min(d.objective.score, d.civilianSafety.score);
   const tone = worst >= 80 ? 'good' : worst >= 50 ? 'mixed' : 'poor';
+  // The epilogue is the call's last human beat: what is true afterward, set apart from the scores.
+  const epilogue = scenario?.endings[d.endingId]?.epilogue;
   return <>
     <div className={`debrief-hero debrief-hero-${tone}`}>
       <span className="kicker">DEBRIEF</span>
       <h2 className="debrief-title">{d.endingTitle}</h2>
       {d.endingSummary && <p className="debrief-narrative"><PeopleText text={d.endingSummary} /></p>}
+      {epilogue && <p className="debrief-epilogue"><PeopleText text={epilogue} /></p>}
       {heroAction}
     </div>
     <DebriefSummary debrief={d} />

@@ -25,7 +25,8 @@
 .optile .opboard-where { align-items: flex-start; } .optile .opboard-where > span { min-width: 0; overflow-wrap: anywhere; }
 .optile .opboard-where .icon { margin-top: 2px; }
 .optile .opboard-where .icon { flex-shrink: 0; }
-.optile .opboard-summary { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; font-size: 13.5px; line-height: 1.35; }
+/* The hook sells the call: three lines (owner, 2026-10-19), so the threat object never falls off. */
+.optile .opboard-summary { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; font-size: 13.5px; line-height: 1.35; }
 .optile .opboard-facts { gap: 5px; }
 .optile .opboard-facts .chip { font-size: 12px; }
 /* Bring: what the department is short of for this call, hidden when nothing is. */

@@ -10,6 +10,7 @@ import { outcomePercentages } from './liveModels';
 import './operation-feedback.css';
 import { ITEMS } from '../../content/items';
 import { PeopleText } from '../people/PeopleText';
+import { Transcript } from '../components/Transcript';
 import { Disclosure } from '../components/Disclosure';
 
 export const RESULT_LABEL: Record<OutcomeBand, string> = { favorable: 'Went well', mixed: 'Had complications', adverse: 'Went badly' };
@@ -74,6 +75,7 @@ export function DecisionCard({ decision: d, full = false, officers = {}, explici
         <p>{ITEMS[d.forceOutcome.itemId]?.name ?? 'Selected equipment'} used. This result is separate from the task check.</p>
       </section>}
       {narrative.length > 0 ? <ul className="decision-narrative">{narrative.map((line, index) => <li key={index}><PeopleText text={line} /></li>)}</ul> : fallback ? <p className="decision-lead"><PeopleText text={fallback} /></p> : null}
+      <Transcript lines={d.exchange} />
       <DecisionChanges decision={d} complete={full} explicitCompletion={explicitCompletion} />
       <DecisionEffects decision={d} complete={full} />
       {full ? <DecisionStress decision={d} officers={officers} complete /> : <DecisionStressChips decision={d} officers={officers} />}

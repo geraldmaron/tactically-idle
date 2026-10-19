@@ -157,7 +157,7 @@ export function LiveView(p: LiveViewProps) {
             </button>
           )}
         </div>
-        <DecisionList prompt={p.progress.prompt} actions={available} selectedId={sel?.id ?? null} expanded={expanded} onSelect={p.onSelectAction} onExpand={() => setExpandedStage(expanded ? null : p.progress.stage)} />
+        <DecisionList prompt={p.progress.prompt} exchange={p.progress.exchange} actions={available} selectedId={sel?.id ?? null} expanded={expanded} onSelect={p.onSelectAction} onExpand={() => setExpandedStage(expanded ? null : p.progress.stage)} />
       </div>
 
       {p.failedResponse}
