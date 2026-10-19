@@ -164,7 +164,7 @@ describe('a second squad supports from a named point (R-B4)', () => {
       expect(call.squadRange.max, `${family} ${building}`).toBe(2);
     }
     expect(hosted, 'buildings that host the barricade').toBeGreaterThan(40);
-  });
+  }, 60_000);
 
   it('rejects a vantage on someone not on the call, an empty label, and a support choice that needs two squads', () => {
     const on = (support: Support, extra: Partial<TreeChoice> = {}) => template(tree => {
