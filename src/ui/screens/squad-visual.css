@@ -241,3 +241,13 @@
   .ocard-tile .ocard-role .icon { display: inline-block; }
 }
 .squad-add-control.squad-arrange-control { display: inline-flex; align-items: center; flex: 0 0 auto; width: auto; gap: 5px; white-space: nowrap; padding: 0 10px; font: 700 13px var(--font-cond); letter-spacing: 0.05em; text-transform: uppercase; }
+
+/* Squad moves waiting for a call to end (run-roster-snapshot). */
+.squad-queue { display: grid; gap: 8px; margin-top: 12px; }
+.squad-queue-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.squad-queue-list li { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: var(--touch); }
+.squad-queue-move { display: grid; gap: 2px; min-width: 0; font-size: 13px; }
+.squad-queue-move > span { color: var(--text-dim, inherit); }
+.squad-queue-reason { display: inline-flex; align-items: center; gap: 4px; color: var(--amber); }
+.squad-queue-dropped strong { text-decoration: line-through; text-decoration-thickness: 1px; }
+.squad-queued-note { display: flex; align-items: center; gap: 6px; margin: 0; }

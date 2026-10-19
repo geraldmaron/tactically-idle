@@ -42,7 +42,7 @@ function SquadOptimizerSession({ open, onClose, campaignId, session }: { open: b
   const state = useGame();
   const { act } = useToast();
   const [options, setOptions] = useState<SquadOptimizerOptions>(() => ({
-    squadIds: state.squads.filter((squad) => !squadDeployed(state, squad.id)).map((squad) => squad.id),
+    squadIds: state.squads.map((squad) => squad.id),
     includeUnassigned: false,
     preserveLeaders: true,
   }));
@@ -52,7 +52,7 @@ function SquadOptimizerSession({ open, onClose, campaignId, session }: { open: b
   const saved = squadArrangementState(state);
   const undoCheck = saved.undo ? undoSquadArrangementCheck(state) : null;
   const stale = !!preview?.proposal && preview.proposal.token !== squadArrangementToken(state);
-  const selectedIds = options.squadIds.filter((id) => state.squads.some((squad) => squad.id === id) && !squadDeployed(state, id));
+  const selectedIds = options.squadIds.filter((id) => state.squads.some((squad) => squad.id === id));
 
   useEffect(() => {
     if (!open) { setPreview(null); setMessage(''); }
@@ -70,7 +70,7 @@ function SquadOptimizerSession({ open, onClose, campaignId, session }: { open: b
   const close = () => { setPreview(null); setMessage(''); onClose(); };
   const makePreview = () => {
     const current = getState();
-    const squadIds = options.squadIds.filter((id) => current.squads.some((squad) => squad.id === id) && !squadDeployed(current, id));
+    const squadIds = options.squadIds.filter((id) => current.squads.some((squad) => squad.id === id));
     setPreview(planSquadArrangement(current, { ...options, squadIds }, dutyRates()));
     setMessage('');
   };
@@ -132,8 +132,8 @@ function SquadOptimizerSession({ open, onClose, campaignId, session }: { open: b
           const locked = saved.squadLocks.includes(squad.id);
           return <div key={squad.id} className="arrangement-squad-option">
             <label className="arrangement-check">
-              <input type="checkbox" aria-label={`Include squad ${squad.id}, ${squad.name}`} checked={selectedIds.includes(squad.id)} disabled={deployed} onChange={(event) => updateOptions({ squadIds: event.target.checked ? [...options.squadIds.filter((id) => id !== squad.id), squad.id] : options.squadIds.filter((id) => id !== squad.id) })} />
-              <span><strong>{squadName(state, squad.id)}</strong><FaceStack state={state} ids={squad.officerIds} leaderId={squad.leaderId} /><small>{squad.officerIds.length} officers · {DUTY_META[squad.duty].label}{deployed ? ' · Deployed, stays fixed' : locked ? ' · Locked, stays fixed' : ''}</small></span>
+              <input type="checkbox" aria-label={`Include squad ${squad.id}, ${squad.name}`} checked={selectedIds.includes(squad.id)} onChange={(event) => updateOptions({ squadIds: event.target.checked ? [...options.squadIds.filter((id) => id !== squad.id), squad.id] : options.squadIds.filter((id) => id !== squad.id) })} />
+              <span><strong>{squadName(state, squad.id)}</strong><FaceStack state={state} ids={squad.officerIds} leaderId={squad.leaderId} /><small>{squad.officerIds.length} officers · {DUTY_META[squad.duty].label}{deployed ? ' · On a call, officers out stay put' : ''}{locked ? ' · Locked, stays fixed' : ''}</small></span>
             </label>
             <Button aria-label={`${locked ? 'Unlock' : 'Lock'} squad ${squad.id}, ${squad.name}`} aria-pressed={locked} onClick={() => act({ type: 'setSquadArrangementLock', target: { kind: 'squad', squadId: squad.id }, locked: !locked })}><Icon name={locked ? 'lock' : 'unlock'} size={16} />{locked ? 'Locked' : 'Lock'}</Button>
           </div>;

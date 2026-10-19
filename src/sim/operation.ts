@@ -47,6 +47,7 @@ import { ITEMS } from '../content/items';
 import { hashSeed, next } from './rng';
 import { fullName } from './officer';
 import { deployRoster, runRoster } from './squads';
+import { flushSquadMoves } from './roster';
 import { releaseRun, reserveLoadouts, settleRun, squadUnits } from './inventory';
 import { withStandardRadios } from './standard-kit';
 import { spaceAt, stagingPointById } from './spatial';
@@ -1108,10 +1109,12 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
   },
 };
 
+/** Every way a run ends comes through here, so queued squad moves apply once its officers are back. */
 function clearAssignments(draft: GameState, run: OperationRun): void {
   for (const o of Object.values(draft.officers)) {
     if (o.assignment?.kind === 'operation' && o.assignment.runId === run.id) o.assignment = null;
   }
+  flushSquadMoves(draft);
 }
 
 /** End a run without settling it: no rewards, its reservations and officers are released,

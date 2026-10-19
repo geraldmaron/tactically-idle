@@ -161,8 +161,17 @@ function SquadControls({ o }: { o: Officer }) {
   const g = useGame();
   const { act } = useToast();
   const squad = o.squadId ? g.squads.find((s) => s.id === o.squadId) : undefined;
+  // An officer out on a call keeps their squad until it ends; the move waits and shows as queued.
+  const onCall = o.assignment?.kind === 'operation';
+  const queued = g.pendingSquadMoves?.find((m) => m.officerId === o.id && !m.dropped);
+  const moveTo = (squadId: SquadId | null) => {
+    const target = squadId ? g.squads.find((s) => s.id === squadId)?.name : undefined;
+    const done = !onCall ? undefined : squadId === o.squadId ? 'Queued move withdrawn' : target ? `${o.surname} joins ${target} when the call ends` : `${o.surname} leaves the squad when the call ends`;
+    act({ type: 'assignToSquad', officerId: o.id, squadId }, done);
+  };
   return (
     <div className="stack-sm">
+      {queued && <p className="note squad-queued-note"><Icon name="clock" size={14} />After this call: {queued.squadId ? `joins ${g.squads.find((s) => s.id === queued.squadId)?.name ?? `squad ${queued.squadId}`}` : 'leaves the squad'}</p>}
       <div className="chips">
         {g.squads.map((s) => (
           <Button
@@ -170,15 +179,15 @@ function SquadControls({ o }: { o: Officer }) {
             size="sm"
             variant={o.squadId === s.id ? 'primary' : 'secondary'}
             aria-pressed={o.squadId === s.id}
-            onClick={() => o.squadId !== s.id && act({ type: 'assignToSquad', officerId: o.id, squadId: s.id as SquadId })}
+            onClick={() => (o.squadId !== s.id || queued) && moveTo(s.id as SquadId)}
           >
-            {s.id} · {s.name}
+            {s.id} · {s.name}{queued?.squadId === s.id ? ' · queued' : ''}
           </Button>
         ))}
         {g.squads.length === 0 && <span className="dim">Create a squad first (Squad tab).</span>}
         {o.squadId && (
-          <Button size="sm" variant="ghost" icon="x" onClick={() => act({ type: 'assignToSquad', officerId: o.id, squadId: null })}>
-            Remove from squad
+          <Button size="sm" variant="ghost" icon="x" onClick={() => moveTo(null)}>
+            {onCall ? 'Remove after the call' : 'Remove from squad'}
           </Button>
         )}
       </div>

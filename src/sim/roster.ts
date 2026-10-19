@@ -9,6 +9,7 @@ import type {
   HandlerResult,
   Id,
   Officer,
+  PendingSquadMove,
   Squad,
   SquadDuty,
   SquadId,
@@ -17,7 +18,6 @@ import { SQUAD_IDS } from './types';
 import type { Projection } from './department-selectors';
 import { fullNameKey, generateBatch, RECRUIT_TUNING, type RecruitGen } from '../content/recruits';
 import { formatDuration, money } from './format';
-import { squadDeployed } from './squads';
 import { fullName } from './officer';
 import { gameDay, simNow } from './calendar';
 import { PERSONAS } from '../content/personas';
@@ -251,34 +251,72 @@ function renameSquad(d: GameState, squadId: SquadId, rawName: string): HandlerRe
 function assignToSquad(d: GameState, officerId: Id, squadId: SquadId | null): HandlerResult {
   const o = d.officers[officerId];
   if (!o) return refusal('No such officer');
-  if (o.assignment?.kind === 'operation') return refusal(`${fullName(o)} is deployed and cannot change squads`);
+  if (o.assignment?.kind === 'operation') return queueSquadMove(d, o, squadId);
   const from = o.squadId ? squadOf(d, o.squadId) : undefined;
-  if (from && squadDeployed(d, from.id)) return refusal(`${from.name} is deployed; ${fullName(o)} cannot leave it now`);
 
   if (squadId === null) {
     if (!from) return refusal(`${fullName(o)} is not in a squad`);
     detachFromSquad(d, officerId);
     o.squadId = null;
+    clearPendingMove(d, officerId);
     return OK;
   }
   const to = squadOf(d, squadId);
   if (!to) return refusal('No such squad');
   if (to.id === o.squadId) return refusal(`${fullName(o)} is already in ${to.name}`);
-  if (squadDeployed(d, to.id)) return refusal(`${to.name} is deployed and cannot change roster`);
   if (to.officerIds.length >= ROSTER_TUNING.squadSize) return refusal(`${to.name} already has ${ROSTER_TUNING.squadSize} officers`);
 
   detachFromSquad(d, officerId);
   to.officerIds.push(officerId);
   if (!to.leaderId) to.leaderId = officerId;
   o.squadId = to.id;
+  clearPendingMove(d, officerId);
   return OK;
+}
+
+// An officer out on a call keeps their squad until it ends: the run's own records follow them there.
+// Their move waits in the queue, one per officer, the latest choice replacing an earlier one.
+function queueSquadMove(d: GameState, o: Officer, squadId: SquadId | null): HandlerResult {
+  if (squadId !== null && !squadOf(d, squadId)) return refusal('No such squad');
+  if (squadId === null && !o.squadId) return refusal(`${fullName(o)} is not in a squad`);
+  clearPendingMove(d, o.id);
+  // Choosing the squad they are already in withdraws the queued move.
+  if (squadId === o.squadId) return OK;
+  (d.pendingSquadMoves ??= []).push({ officerId: o.id, squadId, queuedAt: d.department.clockHighWater });
+  return OK;
+}
+
+function clearPendingMove(d: GameState, officerId: Id): void {
+  if (d.pendingSquadMoves?.some((m) => m.officerId === officerId)) d.pendingSquadMoves = d.pendingSquadMoves.filter((m) => m.officerId !== officerId);
+}
+
+function cancelPendingSquadMove(d: GameState, officerId: Id): HandlerResult {
+  if (!d.pendingSquadMoves?.some((m) => m.officerId === officerId)) return refusal('No squad move is waiting for that officer');
+  clearPendingMove(d, officerId);
+  return OK;
+}
+
+/** Apply the queued moves of officers no longer on a call, in the order they were queued. A move
+ * that no longer holds (the squad filled up, the officer left) stays with its reason. */
+export function flushSquadMoves(d: GameState): void {
+  if (!d.pendingSquadMoves?.length) return;
+  const kept: PendingSquadMove[] = [];
+  for (const move of d.pendingSquadMoves) {
+    const o = d.officers[move.officerId];
+    if (move.dropped) { kept.push(move); continue; }
+    if (!o) { kept.push({ ...move, dropped: 'No longer with the department' }); continue; }
+    if (o.assignment?.kind === 'operation') { kept.push(move); continue; }
+    if (move.squadId === o.squadId) continue;
+    const result = assignToSquad(d, o.id, move.squadId);
+    if (!result.ok) kept.push({ ...move, dropped: result.reason });
+  }
+  d.pendingSquadMoves = kept;
 }
 
 function setLeader(d: GameState, squadId: SquadId, officerId: Id): HandlerResult {
   const sq = squadOf(d, squadId);
   if (!sq) return refusal('No such squad');
   if (!sq.officerIds.includes(officerId)) return refusal('The leader must be a member of the squad');
-  if (squadDeployed(d, squadId)) return refusal(`${sq.name} is deployed and cannot change leader`);
   sq.leaderId = officerId;
   return OK;
 }
@@ -287,7 +325,6 @@ function setSquadDuty(d: GameState, squadId: SquadId, duty: SquadDuty): HandlerR
   const sq = squadOf(d, squadId);
   if (!sq) return refusal('No such squad');
   if (!DUTIES.includes(duty)) return refusal('Unknown duty');
-  if (squadDeployed(d, squadId)) return refusal(`${sq.name} is deployed and cannot change duty`);
   sq.duty = duty;
   return OK;
 }
@@ -303,6 +340,7 @@ export const ROSTER_HANDLERS = {
   createSquad,
   renameSquad,
   assignToSquad,
+  cancelPendingSquadMove,
   setLeader,
   setSquadDuty,
   offerRetention,

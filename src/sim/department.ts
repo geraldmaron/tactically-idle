@@ -78,6 +78,7 @@ export const DEPARTMENT_HANDLERS: HandlerMap<DepartmentCommandType> = {
   createSquad: (d, c) => ROSTER_HANDLERS.createSquad(d, c.name),
   renameSquad: (d, c) => ROSTER_HANDLERS.renameSquad(d, c.squadId, c.name),
   assignToSquad: (d, c) => ROSTER_HANDLERS.assignToSquad(d, c.officerId, c.squadId),
+  cancelPendingSquadMove: (d, c) => ROSTER_HANDLERS.cancelPendingSquadMove(d, c.officerId),
   setSquadArrangementLock: (d, c) => ROSTER_HANDLERS.setSquadArrangementLock(d, c.target, c.locked),
   applySquadArrangement: (d, c) => ROSTER_HANDLERS.applySquadArrangement(d, c.proposal),
   undoSquadArrangement: (d) => ROSTER_HANDLERS.undoSquadArrangement(d),

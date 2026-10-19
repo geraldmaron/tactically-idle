@@ -77,17 +77,14 @@ describe('squad arrangement review', () => {
     expect(second).toEqual(first);
   });
 
-  it('excludes the whole squad when a member has an operation assignment without an active run', () => {
+  it('keeps a squad with an officer out on a call selectable and says who stays put', () => {
     state.activeRun = null;
     state.officers.off_vale.assignment = { kind: 'operation', runId: 'away-run' };
     const html = renderToStaticMarkup(createElement(SquadOptimizer, { open: true, onClose: () => {} }));
     const alpha = html.match(/<input[^>]*aria-label="Include squad A, Alpha"[^>]*>/)?.[0];
-    const bravo = html.match(/<input[^>]*aria-label="Include squad B, Bravo"[^>]*>/)?.[0];
-    expect(alpha).toContain('disabled=""');
-    expect(alpha).not.toContain('checked=""');
-    expect(bravo).not.toContain('disabled=""');
-    expect(bravo).toContain('checked=""');
-    expect(html).toContain('Deployed, stays fixed');
+    expect(alpha).not.toContain('disabled=""');
+    expect(alpha).toContain('checked=""');
+    expect(html).toContain('On a call, officers out stay put');
   });
 
   it('keeps the undo control visible with the current reason when restoring would be unsafe', () => {

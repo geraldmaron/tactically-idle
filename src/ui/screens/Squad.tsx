@@ -66,6 +66,7 @@ export function SquadScreen() {
         </button>
       </div>
       {creating && <CreateSquad count={g.squads.length} onDone={(id) => { setCreating(false); if (id) setSel(id); }} />}
+      <QueuedMoves />
 
       <div id="selected-squad-panel" role="tabpanel" aria-labelledby={active ? `selected-squad-panel-tab-${active.id}` : undefined} aria-label={active ? undefined : 'Squads'} tabIndex={0}>{active ? (
         <SquadPanel key={active.id} squad={active} onOpen={setOfficerId} />
@@ -247,6 +248,38 @@ export function SquadCoverageStrip({ members }: { members: Officer[] }) {
         })}
       </ul></div>
     </div>
+  );
+}
+
+/** Squad moves waiting for a call to end, and moves that could not apply when it did. */
+function QueuedMoves() {
+  const g = useGame();
+  const { act } = useToast();
+  const moves = g.pendingSquadMoves ?? [];
+  if (!moves.length) return null;
+  const squadName = (id: SquadId | null) => id ? g.squads.find((s) => s.id === id)?.name ?? `Squad ${id}` : 'Unassigned';
+  return (
+    <section className="card squad-queue" aria-labelledby="squad-queue-h">
+      <h2 id="squad-queue-h" className="squad-block-title"><Icon name="clock" size={16} />After the call <span className="squad-block-count">{moves.length}</span></h2>
+      <ul className="squad-queue-list">
+        {moves.map((m) => {
+          const o = g.officers[m.officerId];
+          const who = o ? o.surname : 'Former officer';
+          return (
+            <li key={m.officerId} className={m.dropped ? 'squad-queue-dropped' : undefined}>
+              <span className="squad-queue-move">
+                <strong>{who}</strong>
+                <span>{o?.squadId ? squadName(o.squadId) : 'Unassigned'}<span aria-hidden="true"> → </span>{squadName(m.squadId)}</span>
+                {m.dropped && <span className="squad-queue-reason"><Icon name="warning" size={12} />Not moved. {m.dropped}</span>}
+              </span>
+              <Button size="sm" variant="ghost" aria-label={`${m.dropped ? 'Clear' : 'Cancel'} the move for ${who}`} onClick={() => act({ type: 'cancelPendingSquadMove', officerId: m.officerId }, m.dropped ? undefined : 'Move cancelled')}>
+                {m.dropped ? 'Clear' : 'Cancel'}
+              </Button>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
   );
 }
 

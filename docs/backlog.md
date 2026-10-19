@@ -263,15 +263,6 @@ Watch Commander runs it, how it shows on the board without crowding tactical cal
 lead, then the engine loop and its UI. The note is `docs/patrol-work.md` (proposed 2026-10-19); it
 waits on three owner answers listed there.
 
-### run-roster-snapshot: Squad edits during a call apply now or queue until it ends
-Tags: job=build; journeys=short-squad; probes=none (roster plumbing); lane=engine
-Needs: start=none; integrate=none; ship=none
-
-Owner request 2026-10-19. Deploy snapshots who went (`run.roster`) and in-run reads use it. Duty,
-leader and moves of officers who stayed home apply at once; moving an officer who is on the call
-queues until the run closes or is cancelled, last write wins, and a move that no longer holds is
-dropped and reported. The squad screen shows queued moves with a cancel.
-
 ### funding-ledger: Every funding event is recorded and shown live
 Tags: job=build; journeys=hire-and-equip; probes=none (economy display); lane=engine
 Needs: start=none; integrate=none; ship=none

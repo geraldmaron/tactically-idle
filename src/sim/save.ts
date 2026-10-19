@@ -17,7 +17,7 @@ import { validResponseFailure } from './response-failure';
 export const SAVE_KEY = 'tactically-idle/save';
 
 /** Version written by this build. Other versions are rejected. */
-export const CURRENT_SAVE_VERSION = 10;
+export const CURRENT_SAVE_VERSION = 11;
 
 export interface SaveStorage {
   getItem(key: string): string | null;
@@ -296,6 +296,8 @@ function validState(s: unknown): s is GameState {
   if (!validIncidents(s)) return false;
   if (!validCasebook(s.casebook)) return false;
   if (!validCommandStaff(s.commandStaff)) return false;
+  if (s.pendingSquadMoves !== undefined && !isList(s.pendingSquadMoves, (m) => isObj(m) && isStr(m.officerId) && isNum(m.queuedAt)
+    && (m.squadId === null || oneOf(m.squadId, SQUAD_IDS)) && (m.dropped === undefined || isStr(m.dropped)))) return false;
   if (s.report !== null && !validReport(s.report)) return false;
   if (s.activeRun !== null && !validRun(s.activeRun)) return false;
   if (s.activeRun !== null && !validIncidentConsequences(s.activeRun as unknown as OperationRun, getScenario((s.activeRun as unknown as OperationRun).scenarioId)!, s.officers as GameState['officers'], s.squads as GameState['squads'], (s.department as GameState['department']).clockHighWater)) return false;

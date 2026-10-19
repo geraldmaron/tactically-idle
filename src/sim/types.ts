@@ -977,7 +977,18 @@ export interface PersonnelState {
   builds: Record<Id, Officer>;
 }
 
+/** A squad move for an officer who is out on a call, applied when that call closes or is cancelled.
+ * A move that no longer holds by then keeps its reason in `dropped` until the player clears it. */
+export interface PendingSquadMove {
+  officerId: Id;
+  squadId: SquadId | null;
+  queuedAt: number;
+  dropped?: string;
+}
+
 export interface GameState {
+  /** Squad moves waiting for a call to end (save v11). Optional for isolated simulation fixtures. */
+  pendingSquadMoves?: PendingSquadMove[];
   /** Saved arrangement protections and a mapping-only undo point. */
   squadArrangement?: SquadArrangementState;
   /** Campaign personnel. Optional for isolated simulation fixtures. */
@@ -1023,6 +1034,7 @@ export type Command =
   | { type: 'createSquad'; name: string }
   | { type: 'renameSquad'; squadId: SquadId; name: string }
   | { type: 'assignToSquad'; officerId: Id; squadId: SquadId | null }
+  | { type: 'cancelPendingSquadMove'; officerId: Id }
   | { type: 'setSquadArrangementLock'; target: SquadArrangementLockTarget; locked: boolean }
   | { type: 'applySquadArrangement'; proposal: SquadArrangementProposal }
   | { type: 'undoSquadArrangement' }
@@ -1099,6 +1111,7 @@ export type DepartmentCommandType =
   | 'createSquad'
   | 'renameSquad'
   | 'assignToSquad'
+  | 'cancelPendingSquadMove'
   | 'setSquadArrangementLock'
   | 'applySquadArrangement'
   | 'undoSquadArrangement'

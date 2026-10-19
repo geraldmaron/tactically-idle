@@ -296,17 +296,18 @@ describe('squads', () => {
     expect(refused(s, { type: 'renameSquad', squadId: 'B', name: 'x'.repeat(21) }, T0)).toMatch(/at most 20/);
   });
 
-  it('leader must be a member; duty and roster are locked while deployed', () => {
+  it('leader must be a member; only an officer out on a call has their move queued', () => {
     let s = createInitialState(T0);
     expect(refused(s, { type: 'setLeader', squadId: 'A', officerId: 'off_reyes' }, T0)).toMatch(/member/);
     s = ok(s, { type: 'setLeader', squadId: 'A', officerId: 'off_chen' }, T0);
     expect(s.squads[0].leaderId).toBe('off_chen');
     s.officers.off_vale.assignment = { kind: 'operation', runId: 'run_1' };
-    expect(refused(s, { type: 'setSquadDuty', squadId: 'A', duty: 'rest' }, T0)).toMatch(/deployed/);
-    expect(refused(s, { type: 'assignToSquad', officerId: 'off_chen', squadId: null }, T0)).toMatch(/deployed/);
-    expect(refused(s, { type: 'assignToSquad', officerId: 'off_reyes', squadId: 'A' }, T0)).toMatch(/deployed|already has 4/);
-    s = ok(s, { type: 'setSquadDuty', squadId: 'B', duty: 'rest' }, T0);
-    expect(s.squads[1].duty).toBe('rest');
+    s = ok(s, { type: 'setSquadDuty', squadId: 'A', duty: 'rest' }, T0);
+    expect(s.squads[0].duty).toBe('rest');
+    s = ok(s, { type: 'assignToSquad', officerId: 'off_vale', squadId: null }, T0);
+    expect(s.officers.off_vale.squadId).toBe('A');
+    expect(s.pendingSquadMoves).toMatchObject([{ officerId: 'off_vale', squadId: null }]);
+    expect(refused(s, { type: 'assignToSquad', officerId: 'off_reyes', squadId: 'A' }, T0)).toMatch(/already has 4/);
   });
 
   it('presets and restock rules need their nodes', () => {

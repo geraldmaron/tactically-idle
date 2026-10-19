@@ -52,6 +52,7 @@ function detach(s: GameState, id: Id) {
 }
 function deployedSquad(s: GameState, id: SquadId) {
   s.activeRun = { id: 'deployment', squadIds: [id], status: 'active' } as GameState['activeRun'];
+  for (const officerId of s.squads.find((q) => q.id === id)!.officerIds) s.officers[officerId].assignment = { kind: 'operation', runId: 'deployment' };
 }
 
 describe('pure, explainable squad arrangement suggestions', () => {
@@ -239,11 +240,11 @@ describe('locks, unavailable seats and exact boundaries', () => {
     expect(p.protected.some((x) => x.officerId === o.id)).toBe(true);
   });
 
-  it('protects all members of a deployed squad even without individual operation assignments', () => {
+  it('keeps every officer who is out on a call in place', () => {
     const s = state(); deployedSquad(s, 'A');
     const p = planSquadArrangement(s, { ...OPTIONS, preserveLeaders: false }, dutyRates());
     expect(p.after[0]).toMatchObject({ officerIds: s.squads[0].officerIds, leaderId: s.squads[0].leaderId, deployable: 0, fresh: 0 });
-    expect(p.protected.filter((x) => x.reason === 'Squad is deployed')).toHaveLength(4);
+    expect(p.protected.filter((x) => x.reason === 'On a call')).toHaveLength(4);
   });
 
   it('never changes unselected squads and reports one available member as 1/4', () => {
