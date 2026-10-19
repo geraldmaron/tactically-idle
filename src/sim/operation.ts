@@ -6,7 +6,7 @@ import { validateStoryBindings } from '../gen/incident/story-bindings';
 import { actionResultLabel, harmResultLabel } from './action-result';
 import { applyIncidentConsequences, applyPersonConsequences, civilianOutcomeViews, syncCasualtyFlags, syncPersonCasualtyFlags } from './incident-consequences';
 import { protectedOfficerEffects } from './force-risk';
-import { drawnKeys, resolveDrawn } from './drawn-effects';
+import { drawnKeys, forceSuppliesSpent, resolveDrawn } from './drawn-effects';
 import { withVariants } from '../gen/incident/drawn-model';
 import { advanceClocks, clockConditionsHold, clockErrors, clockOutEffects, cueEffects, decisionMinutes, forkMinutes, initialClocks, teamMinutes } from './clocks';
 import { applyMoves, initialMeters, meterConditionsHold } from './meters';
@@ -884,7 +884,10 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     let matched = matchedEffects(action, band, run, scenario, clockBaseMinutes);
     // v13: drawn consequences (a subject firing at the team, the team's force) settle now, each
     // with its own saved sample, into the variant effects they choose (sim/drawn-effects.ts).
-    const drawn = resolveDrawn(matched, { state: draft, run, scenario, acting: ev.acting, participantIds: ev.participantIds, unitsOf: availableUnits });
+    const drawnContext = { state: draft, run, scenario, acting: ev.acting, participantIds: ev.participantIds, unitsOf: availableUnits };
+    const drawn = resolveDrawn(matched, drawnContext);
+    // A less-lethal draw spends a cartridge or supply from the acting squads (sim/drawn-effects.ts).
+    const suppliesSpent = forceSuppliesSpent(drawn.records, drawnContext);
     matched = drawn.effects;
     let personMoved = false;
     let storyRouteUsed = false;
@@ -973,7 +976,7 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
 
     const used: Record<Id, number> = {};
     const unitsUsed: Id[] = [];
-    for (const u of ev.uses) {
+    for (const u of [...ev.uses, ...suppliesSpent.map(supply => ({ ...supply, qty: 1, consumable: true }))]) {
       if (!storyRouteUsed && ev.storyMovementOnlyUnitIds?.includes(u.unitId)) continue;
       used[u.itemId] = (used[u.itemId] ?? 0) + u.qty;
       unitsUsed.push(u.unitId);

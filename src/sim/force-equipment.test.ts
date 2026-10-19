@@ -76,4 +76,35 @@ describe('current armed call force equipment', () => {
       expect(qualifiedForceUnit(state, profile, [unit], [qualified], departmentUpkeep(state))).toBeUndefined();
     }
   });
+
+  describe('less-lethal supplies', () => {
+    const device = (key: string) => key.startsWith('less_lethal_device:');
+    const armed = (seed: number) => generateIncident({ type: 'active_armed_incident', familyId: 'market_row', buildingSeed: 7, seed, tier: 2, contentVersion: 13 });
+    const kit = (seed: number, supplies: string[]) => startGateRun(armed(seed).id, 719, { items: ['conducted_energy_device', ...supplies], certs: ['less_lethal'] });
+    /** The first call seed whose reachable force decision is within the device's reach. */
+    function inReach(supplies: string[]) {
+      for (let seed = 1; seed <= 25; seed++) {
+        try {
+          const found = forceDecision(kit(seed, ['energy_cartridge']));
+          if (found.forces.flatMap(dist => dist.results).some(result => device(result.key))) return { seed, state: kit(seed, supplies) };
+        } catch { continue; }
+      }
+      throw new Error('No call seed reaches a device-range force decision');
+    }
+
+    it('does not count a device with no cartridge as carried', () => {
+      const { state } = inReach([]);
+      const { forces } = forceDecision(state);
+      expect(forces.flatMap(dist => dist.results).some(result => device(result.key))).toBe(false);
+    });
+
+    it('spends one cartridge when the device is used, and says so', () => {
+      const { state } = inReach(['energy_cartridge']);
+      const { after } = forceDecision(state);
+      const decision = after.activeRun!.history.at(-1)!;
+      expect(decision.committed!.drawn!.find(record => record.model === 'team_force')!.key).toMatch(/^less_lethal_device:/);
+      expect(decision.itemsConsumed).toContainEqual({ itemId: 'energy_cartridge', qty: 1 });
+      expect(decision.unitsUsed.filter(id => after.units[id].itemId === 'energy_cartridge')).toHaveLength(1);
+    });
+  });
 });

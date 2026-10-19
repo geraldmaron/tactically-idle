@@ -190,30 +190,16 @@ Needs: start=none; integrate=none; ship=none
 
 Time moves the meters, the `shots` event is written into content, and escalation comes by drift.
 
-### less-lethal-cartridges: Less-lethal use spends cartridges
-Tags: job=build; journeys=hire-and-equip; probes=none (inventory, not odds); lane=engine
-Needs: start=none; integrate=none; ship=none
-
 ## Gates and tooling
-
-### short-squad-ui: The squad card and Prepare say who stays home
-Tags: job=build; journeys=short-squad; probes=none (display); lane=interface
-Needs: start=none; integrate=none; ship=none
-
-The engine side shipped in #78: a squad deploys with its ready officers, and the rest stay home
-(`deployRoster` and `runRoster` in `src/sim/squads.ts`, `SquadReadiness.staysHome`). Left: the squad
-card and Prepare render `staysHome` (who stays home and why), and `OpsPrepare.tsx` passes Deploy's
-crew to `standardRadioPlan`; until then its radio count and "buy radios" prompt count every squad
-member while Deploy reserves one radio per officer who goes. The e2e script's all-ready rule
-(`scripts/play-loop.mjs`) relaxes to one ready officer (tooling).
 
 ### e2e-in-ci: The browser end-to-end script runs in CI
 Tags: job=command; journeys=answer-a-call; probes=none (tooling); lane=tooling
 Needs: start=none; integrate=none; ship=none
 
-`npm run test:e2e` plays the board through the real UI at 390x844 and 320x568, but neither `npm
-run verify` nor CI runs it, which is how it went stale. Done: pull-request CI runs it against a
-built preview, with its runtime and Chrome setup stated, or the backlog records why not.
+`.github/workflows/e2e.yml` runs `npm run test:e2e` on pull requests against the dev server (the
+script reads `window.__ti`, which a built preview doesn't expose) with the runner's Chrome. It passes
+locally at 390x844 and 320x568 (2026-10-19) but hasn't run on a runner yet. Done: the first pull
+request run is green, or the failure is fixed.
 
 ### fire-follows-building: Incoming fire follows the building
 Tags: job=command; journeys=chance-not-script; probes=none (a drawn-harm check, not a favorable-chance probe); lane=tooling
