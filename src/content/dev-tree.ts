@@ -54,8 +54,8 @@ export const DEV_NODES: Record<Id, DevelopmentNode> = {
     id: 'personnel_watch_commander',
     branch: 'personnel',
     name: 'Watch commander',
-    description: "Hire a watch commander who rests idle squads when someone is worn down and puts them back on duty once everyone is fresh. Paid $45 per hour while on duty. Never touches a squad on a call.",
-    cost: { dp: 2, funding: 1500 },
+    description: "Open a watch commander post. You choose who fills it from three candidates; whoever you hire rests idle squads when someone is worn down and puts them back on duty once everyone is fresh. Never touches a squad on a call.",
+    cost: { dp: 2, funding: 0 },
     requires: [],
     effects: [{ kind: 'commandStaff', managerId: 'watch_commander' }],
   },
@@ -63,10 +63,28 @@ export const DEV_NODES: Record<Id, DevelopmentNode> = {
     id: 'personnel_training_sergeant',
     branch: 'personnel',
     name: 'Training sergeant',
-    description: "Hire a training sergeant who fills free training places with your most rested officers, in the course you choose, while keeping a funding reserve. Paid $45 per hour while on duty.",
-    cost: { dp: 2, funding: 1800 },
+    description: "Open a training sergeant post. You choose who fills it from three candidates; whoever you hire fills free training places with your most rested officers, in the course you choose, while keeping a funding reserve.",
+    cost: { dp: 2, funding: 0 },
     requires: ['personnel_academy'],
     effects: [{ kind: 'commandStaff', managerId: 'training_sergeant' }],
+  },
+  personnel_peer_support_lead: {
+    id: 'personnel_peer_support_lead',
+    branch: 'personnel',
+    name: 'Peer support lead',
+    description: "Open a peer support lead post. You choose who fills it from three candidates; whoever you hire offers sessions to your most strained idle officers each hour, taking stress off faster than rest alone for $80 a session, above a funding reserve you set.",
+    cost: { dp: 2, funding: 0 },
+    requires: [],
+    effects: [{ kind: 'commandStaff', managerId: 'peer_support_lead' }],
+  },
+  personnel_recruiter: {
+    id: 'personnel_recruiter',
+    branch: 'personnel',
+    name: 'Recruiter',
+    description: "Open a recruiter post. You choose who fills it from three candidates; whoever you hire signs the best candidate for the role you choose whenever the roster has room, keeping funding above a reserve you set.",
+    cost: { dp: 2, funding: 0 },
+    requires: ['personnel_recruiting'],
+    effects: [{ kind: 'commandStaff', managerId: 'recruiter' }],
   },
   // ---- field capability
   field_contact_kit: {
@@ -221,7 +239,7 @@ export const DEV_NODES: Record<Id, DevelopmentNode> = {
     "id": "field_response_program",
     "branch": "field",
     "name": "Protective response program",
-    "description": "Makes sidearms, carbines, response shotguns and light protective kits available to buy. Weapons still require an officer trained for entry team duty.",
+    "description": "Makes carbines, response shotguns and light protective kits available to buy. Weapons still require an officer trained for entry team duty. Sidearms are issued from the first day.",
     "cost": {
         "dp": 2,
         "funding": 1000
@@ -230,10 +248,6 @@ export const DEV_NODES: Record<Id, DevelopmentNode> = {
         "field_entry_course"
     ],
     "effects": [
-        {
-            "kind": "unlockItem",
-            "itemId": "service_sidearm"
-        },
         {
             "kind": "unlockItem",
             "itemId": "compact_carbine"

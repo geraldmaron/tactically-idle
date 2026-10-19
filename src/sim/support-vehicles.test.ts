@@ -5,7 +5,7 @@ import { dispatch } from './game';
 import { planActionResupply } from './equipment-resupply';
 import { advanceTime, unitsUsedTotals } from './operation';
 import { getScenario } from './scenario-registry';
-import { deserialize, serialize } from './save';
+import { CURRENT_SAVE_VERSION, deserialize, serialize } from './save';
 import { availableUnits } from './resolution';
 import type { GameState } from './types';
 
@@ -73,7 +73,7 @@ describe('exact exterior support reservation and resupply', () => {
     } finally { ITEMS.support_van.requiresCerts = original; }
   });
   it('saves exact support reservation and delivered minutes without granting new vehicles on reload', () => {
-    const state = deliver(withVan()).state; state.saveVersion = 9;
+    const state = deliver(withVan()).state; state.saveVersion = CURRENT_SAVE_VERSION;
     const saved = deserialize(serialize(state, NOW))!;
     expect(saved.activeRun?.supportUnitIds).toEqual([unitId('support_van')]);
     expect(saved.activeRun?.resupplies?.[0]).toMatchObject({ minutes: 2, supportUnitId: unitId('support_van') });

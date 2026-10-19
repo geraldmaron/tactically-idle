@@ -4,6 +4,7 @@ import { readyUnits } from './inventory';
 import { getScenario } from './scenario-registry';
 import { buildLocation } from './location';
 import { departmentUpkeep } from './equipment-manager-policy';
+import { deployRoster } from './squads';
 
 export function supportStartCheck(state: GameState, now: number, cmd: Extract<Command, { type: 'startOperation' }>): string[] {
   const ids = cmd.supportUnitIds ?? [];
@@ -14,7 +15,8 @@ export function supportStartCheck(state: GameState, now: number, cmd: Extract<Co
   if (!unit || !ITEMS[unit.itemId]?.supportOnly) return ['Choose a valid support vehicle unit'];
   const item = ITEMS[unit.itemId];
   if (!readyUnits(state, item.id, departmentUpkeep(state), now).some((u) => u.id === unit.id)) return [`${unit.serial}: support vehicle is reserved, in service, expired or unusable`];
-  if (!cmd.squadIds.some((sid) => state.squads.find((s) => s.id === sid)?.officerIds.some((oid) => ['vehicle_operations', ...item.requiresCerts ?? []].every((cert) => (state.officers[oid]?.certs as string[] | undefined)?.includes(cert))))) return ['Support vehicle needs a deployed officer with vehicle operations qualification'];
+  // The driver has to be someone who goes (deployRoster), or the van supports nobody.
+  if (!cmd.squadIds.some((sid) => deployRoster(state, sid, now).goes.some((oid) => ['vehicle_operations', ...item.requiresCerts ?? []].every((cert) => (state.officers[oid]?.certs as string[] | undefined)?.includes(cert))))) return ['Support vehicle needs a deployed officer with vehicle operations qualification'];
   if (scenario) {
     const location = buildLocation(scenario.locationFamilyId, scenario.locationSeed);
     const zone = location.location.zones.find((z) => z.id === cmd.positions[cmd.squadIds[0]]);

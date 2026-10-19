@@ -89,8 +89,9 @@ export function liveScreen(g: GameState, now: number, ui: LiveUiState): { model:
     .filter((a): a is NonNullable<typeof a> => !!a?.eligible) : [];
 
   const officers = focus ? focus.officerIds.map((id) => g.officers[id]).filter((o) => !!o) : [];
-  const defaultOfficer = view?.officerIds.find((id) => focus?.officerIds.includes(id)) ?? officers[0]?.id ?? null;
-  const activeOfficerId = ui.activeOfficer && officers.some((o) => o.id === ui.activeOfficer) ? ui.activeOfficer : defaultOfficer;
+  // No officer is highlighted by default: no decision asks the player to pick one. Tapping an
+  // officer while reviewing a decision shows what they add to it.
+  const activeOfficerId = view && ui.activeOfficer && officers.some((o) => o.id === ui.activeOfficer) ? ui.activeOfficer : null;
 
   const card = cardFor(g, run.scenarioId, now);
   const scenario = getScenario(run.scenarioId);

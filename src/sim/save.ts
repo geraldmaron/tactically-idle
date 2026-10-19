@@ -17,7 +17,7 @@ import { validResponseFailure } from './response-failure';
 export const SAVE_KEY = 'tactically-idle/save';
 
 /** Version written by this build. Other versions are rejected. */
-export const CURRENT_SAVE_VERSION = 9;
+export const CURRENT_SAVE_VERSION = 10;
 
 export interface SaveStorage {
   getItem(key: string): string | null;

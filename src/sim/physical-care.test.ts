@@ -9,7 +9,7 @@ import { storyPeoplePublic } from './story-people';
 import { physicalCare, officerCarePosition } from './physical-care';
 import { standingOf } from './spatial-factors';
 import { routeBetween } from './routes';
-import { deserialize, serialize } from './save';
+import { CURRENT_SAVE_VERSION, deserialize, serialize } from './save';
 import { syncCasualtyFlags } from './incident-consequences';
 import type { ActionDefinition, OutcomeEffect, ScenarioDefinition } from './scenario-types';
 import type { GameState, SquadId } from './types';
@@ -62,7 +62,7 @@ function definition(): ScenarioDefinition {
   };
 }
 function started(loadouts: Partial<Record<SquadId, Record<string, number>>> = { A: { trauma_kit: 2 }, B: { trauma_kit: 2 } }): GameState {
-  const state = makeState(); state.saveVersion = 9; state.contentVersion = 13; return startRun(state, ID, ['A', 'B'], { loadouts });
+  const state = makeState(); state.saveVersion = CURRENT_SAVE_VERSION; state.contentVersion = 13; return startRun(state, ID, ['A', 'B'], { loadouts });
 }
 function evaluation(state: GameState, id: string, acting: SquadId[] = ['B'], support: SquadId[] = []) {
   const run = state.activeRun!, scenario = SCENARIOS[ID];

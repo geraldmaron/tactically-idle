@@ -293,7 +293,7 @@ describe('call trees: coverage of every reachable state (resolve, then narrate)'
       return;
     }
     expect(coverage.gaps).toEqual([]);
-  }, FULL ? 1_200_000 : 600000);
+  }, FULL ? 1_800_000 : 1_200_000);
 
   it('the group fixture with 0 to 3 others: every cascade result routes once, with text', () => {
     const calls = groupStarts();

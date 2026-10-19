@@ -80,6 +80,16 @@ export function forceItemMatches(profile: ForceRiskProfile, itemId: Id): boolean
     : !!item.capabilities?.includes(profile));
 }
 
+/** The single-use supply a less-lethal tool spends each time it is used (items.ts): a device
+ * fires a cartridge, a launcher a supply. Firearms and hands spend nothing. */
+export const FORCE_SUPPLY: Partial<Record<ForceRiskProfile, Id>> = { less_lethal_device: 'energy_cartridge', less_lethal_impact: 'impact_supply' };
+
+/** A carried supply unit this profile can spend, or none. The lowest id goes first so the pick is the same wherever it is read. */
+export function forceSupplyUnit(profile: ForceRiskProfile, units: readonly ItemUnit[], spent: ReadonlySet<Id> = new Set()): ItemUnit | undefined {
+  const supply = FORCE_SUPPLY[profile];
+  return supply ? [...units].sort((a, b) => a.id.localeCompare(b.id)).find(unit => unit.itemId === supply && !spent.has(unit.id) && (unit.status === 'ready' || unit.status === 'reserved')) : undefined;
+}
+
 /** A force tool needs a serviceable carried unit and a qualified acting participant.
  * Callers supply only the acting squads' units and the action's actual participants. */
 export function qualifiedForceUnit(state: GameState, profile: ForceRiskProfile, units: readonly ItemUnit[], participantIds: readonly Id[], upkeep: Upkeep): ItemUnit | undefined {

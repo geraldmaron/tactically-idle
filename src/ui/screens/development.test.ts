@@ -31,7 +31,7 @@ describe('development browsing and shared detail', () => {
     expect(html).toContain('Get Points');
     expect(html).toContain('aria-label="Development branches"');
     expect(html).not.toContain('aria-label="Development ownership"');
-    expect(html).toContain('aria-label="Staff, 0 of 6 owned"');
+    expect(html).toContain('aria-label="Staff, 0 of 8 owned"');
     expect(html).toContain('Ready to buy');
     expect(html).toContain('Expanded barracks');
     expect(html).toMatch(/data-development-node="personnel_academy"[^>]*class="dev-tile store-node-highlight"/);
@@ -68,7 +68,8 @@ describe('development browsing and shared detail', () => {
         expect(cells).toHaveLength(nodes.length);
         expect(new Set(cells.map((cell) => `${cell.row}:${cell.col}`)).size).toBe(cells.length);
         expect(cells.every((cell) => cell.col >= 0 && cell.col < columns)).toBe(true);
-        expect(Math.max(...cells.map((cell) => cell.row)) + 1).toBeLessThanOrEqual(2);
+        // The staff branch holds eight developments (four of them Command Staff hires): three rows at three columns.
+        expect(Math.max(...cells.map((cell) => cell.row)) + 1).toBeLessThanOrEqual(3);
         // Every development whose prerequisite is in the branch is drawn connected to it.
         for (const cell of cells) if (cell.option.node.requires.some((id) => nodes.some((entry) => entry.node.id === id))) expect(cell.link).not.toBeNull();
       }

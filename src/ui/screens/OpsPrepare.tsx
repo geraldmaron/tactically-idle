@@ -11,6 +11,7 @@ import { squadReadiness, storeOptions } from '../../sim/department-selectors';
 import type { StoreOption } from '../../sim/department-selectors';
 import { unitEffectiveness } from '../../sim/inventory';
 import { standardRadioPlan, STANDARD_RADIO } from '../../sim/standard-kit';
+import { deployRoster } from '../../sim/squads';
 import { projectedCondition } from '../../sim/equipment';
 import { stagingPointsIn } from '../../sim/spatial';
 import { spaceLabel } from '../../sim/spatial-factors';
@@ -30,7 +31,7 @@ import { UNIT_STATE_META, unitStateOf } from '../components/labels';
 import { Icon } from '../icons';
 import type { IconName } from '../icons';
 import { moneyFull, pct } from '../format';
-import { cardFor, hasNodeEffect } from './helpers';
+import { cardFor, hasNodeEffect, staysHomeLine } from './helpers';
 import { planAuto, preparationEquipmentFix } from './autoPlan';
 import { scenarioActions } from '../../sim/scenario-types';
 import type { AutoNote, Explicit, Loadouts } from './autoPlan';
@@ -83,7 +84,7 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
   const [supportUnitId, setSupportUnitId] = useState<Id | null>(null);
   const [floor, setFloor] = useState(0);
 
-  const radioPlan = useMemo(() => standardRadioPlan(g, chosen, now, departmentUpkeep(g)), [g, chosen, now]);
+  const radioPlan = useMemo(() => standardRadioPlan(g, chosen, now, departmentUpkeep(g), (sid) => deployRoster(g, sid, now).goes), [g, chosen, now]);
   const loadouts = useMemo<Loadouts>(() => {
     const next = { ...optionalLoadouts };
     for (const sid of chosen) next[sid] = { ...handCarriedLoadout(next[sid] ?? {}), ...radioPlan.loadouts[sid] };
@@ -293,11 +294,11 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
         </div>
       </div>
 
+      <PrepBriefing scenario={scenario} built={built} brief={brief} intel={intel} />
+
       <div className="prep-map" aria-label="Location preview">
         <Blueprint built={built} spaces={spaces} squadTasks={[]} selectedSpaceId={null} focusSquadId={null} {...blueprintExtras} />
       </div>
-
-      <PrepBriefing scenario={scenario} built={built} brief={brief} intel={intel} />
 
       <Section title="Squads" icon="people" hint={`Takes ${range.min === range.max ? range.min : `${range.min} to ${range.max}`} squad${range.max > 1 ? 's' : ''}. Tap to choose.`}>
         {g.squads.length === 0 ? (
@@ -328,6 +329,7 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
                       <span className="pickcard-bar">{Array.from({ length: r.total }, (_, i) => <i key={i} className={i < r.ready ? 'on' : undefined} />)}</span>
                       <span className={r.deployable ? 'tone-mint' : 'tone-warn'}>{r.ready}/{r.total} ready</span>
                     </span>
+                    {r.deployable && r.staysHome.length > 0 && <span className="pickcard-issue">{staysHomeLine(g, r.staysHome)}</span>}
                     {r.issues.slice(0, 1).map((i, k) => (
                       <span key={k} className="pickcard-issue">
                         {i}

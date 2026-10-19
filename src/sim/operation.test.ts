@@ -566,24 +566,35 @@ describe('recovery (acceptance 10)', () => {
     return s;
   };
 
-  it('an officer in mandatory recovery blocks a real deployment with a reason', () => {
+  it('an officer in mandatory recovery stays home while the rest of the squad deploys (short-squad-deploys)', () => {
     const s = tired();
     const r = apply(s, startCmd('ms_occupancy', ['A']));
-    expect(r.result.ok).toBe(false);
-    if (!r.result.ok) expect(r.result.reason).toBe('Squad A: Ortiz is in mandatory recovery');
+    expect(r.result.ok).toBe(true);
+    expect(r.state.officers.off_ortiz.assignment).toBeNull();
+    const others = r.state.squads.find((squad) => squad.id === 'A')!.officerIds.filter((id) => id !== 'off_ortiz');
+    expect(others.length).toBeGreaterThan(0);
+    for (const id of others) expect(r.state.officers[id].assignment).toEqual({ kind: 'operation', runId: r.state.activeRun!.id });
     const card = scenarioCards(s, NOW)[0];
-    expect(card.eligibleSquadIds).toEqual(['B']);
-    expect(prepCheck(s, NOW, startCmd('ms_occupancy', ['A'])).issues[0]).toMatch(/mandatory recovery/);
-    // Squad B can still deploy.
+    expect(card.eligibleSquadIds).toEqual(['A', 'B']);
+    expect(prepCheck(s, NOW, startCmd('ms_occupancy', ['A'])).warnings).toContain('Squad A: Ortiz is in mandatory recovery and stays home');
+  });
+
+  it('a squad with nobody ready is refused, with each reason', () => {
+    const s = tired();
+    for (const id of s.squads.find((squad) => squad.id === 'A')!.officerIds) s.officers[id].stress = 85;
+    const r = apply(s, startCmd('ms_occupancy', ['A']));
+    expect(r.result.ok).toBe(false);
+    if (!r.result.ok) expect(r.result.reason).toMatch(/^Squad A: nobody is ready \(.*Ortiz is in mandatory recovery/);
+    expect(scenarioCards(s, NOW)[0].eligibleSquadIds).toEqual(['B']);
     expect(apply(s, startCmd('ms_occupancy', ['B'])).result.ok).toBe(true);
   });
 
-  it('does not take an officer who is in training', () => {
+  it('does not take an officer who is in training, and the squad deploys without them', () => {
     const s = makeState();
     s.officers.off_park.assignment = { kind: 'training', courseId: 'c1', startedAt: NOW, endsAt: NOW + 1000 };
     const r = apply(s, startCmd('ms_occupancy', ['B']));
-    expect(r.result.ok).toBe(false);
-    expect(s.officers.off_park.assignment?.kind).toBe('training');
+    expect(r.result.ok).toBe(true);
+    expect(r.state.officers.off_park.assignment?.kind).toBe('training');
   });
 
   it('strain from play accumulates onto officers and survives the debrief', () => {

@@ -162,3 +162,8 @@ export function agePortraitProps(g: Pick<GameState, 'department'>, officer: Pick
   if (!Number.isFinite(officer.bornDay)) return {};
   return { age: ageYears(officer, gameDay(g, now)) };
 }
+
+/** "Deploys without Vale, Okafor": who stays home when a squad deploys short (deployRoster). */
+export function staysHomeLine(g: GameState, staysHome: readonly { officerId: Id }[]): string {
+  return `Deploys without ${staysHome.map(({ officerId }) => g.officers[officerId]?.surname ?? 'an officer').join(', ')}`;
+}
