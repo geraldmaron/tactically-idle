@@ -83,7 +83,7 @@ describe('gateVerdicts', () => {
     const job: GateJob = { type: 'barricaded', style: 'random', calls: 500, tier: 2 };
     const [verdict] = gateVerdicts([{ job, side: 'saved', results: calls(500, { costly: 198 }) }], [check]);
     expect(verdict.saved).toBe(0.604);
-    expect(verdict.text).toBe('Fails: the random style reaches clean in 60.4% of protective response calls; the gate allows at most 60%.');
+    expect(verdict.text).toBe('Fails: the random style reaches clean in 60.4% of barricade calls; the gate allows at most 60%.');
   });
 
   it('reads the gate metric from the rounded shares, as CI does', () => {
