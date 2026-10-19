@@ -91,7 +91,11 @@ export async function playLiveCalls(page, { baseURL = 'http://127.0.0.1:5174', w
       await overflow(`${label} prepare after buying radios`);
     }
     const deploy = page.getByRole('button', { name: 'Deploy', exact: true });
-    assert.equal(await deploy.isEnabled(), true, `${label}: the chosen squads can deploy`);
+    // Wait for the screen to settle before judging Deploy (a slow render under load is not a refusal),
+    // and when it stays off, say what the Prepare screen says.
+    let enabled = false;
+    for (const until = Date.now() + 5000; !(enabled = await deploy.isEnabled()) && Date.now() < until;) await page.waitForTimeout(100);
+    assert.equal(enabled, true, `${label}: the chosen squads can deploy; the screen says: ${(await page.locator('.prepcheck .note-warn').allInnerTexts()).join(' | ') || 'nothing'}`);
     await deploy.click();
     await page.locator('.call-grid').waitFor(); await overflow(`${label} live`);
     const started = await state();
