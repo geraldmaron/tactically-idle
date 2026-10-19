@@ -13,10 +13,14 @@ The coordinating session, on `main`. Merged so far: #36 (coordination rules), #3
 
 | Lane | Branch | In flight | Declared touches |
 |---|---|---|---|
-| engine | `claude/engine-tests-off-barricade` | Moving its barricade-order tests onto HOUSE_TREE. Then `offsite-fire`, `armed-max`, `rescue-engine-requests` | engine tests, new `house-fixture.ts` |
-| calls | `claude/calls-barricade-tree` | `barricade-model-first`: prose pass, then rebase, rerun generation and push. Then the hostage repro test (now unblocked by #62) | as declared |
-| tooling | #69, #64 open | #69 (barricade and squad pins) and #64 (`hostage-gate-requests`) are with the lead. Next `deploy-disabled-after-injury`, then `xray-band-minutes` | as declared |
-| interface | closed | Session closed after `board-risk-card`. Start a fresh interface session for the next interface item | none |
+| engine | `claude/engine-tests-off-barricade` | Moving its barricade-order tests onto HOUSE_TREE; also adds an optional template parameter to `generateIncident` (tests only). Then `offsite-fire`, `armed-max`, `rescue-engine-requests` | `src/gen/incident/index.ts`, `house-fixture.ts`, `house-call-fixture.ts`, `instance.test.ts`, `moves.test.ts`, `second-squad.test.ts`, `upstairs.test.ts`, `window-exit.test.ts`, `incident-factors.test.ts`, `meters.test.ts` |
+| calls | `claude/calls-barricade-tree` (not pushed) | `barricade-model-first`: prose pass in progress | `barricade-boxes.ts`, `call-trees/index.ts`, `incidents/barricade.ts`; later `second-squad.test.ts` after the engine PR merges |
+| tooling | `claude/deploy-disabled-after-injury`; #69 and #64 with the lead | `deploy-disabled-after-injury` (investigating). Then `xray-band-minutes` | `scripts/play-loop.mjs`; #69: `lint-fixture.ts`, `call-trees.test.ts`, `dependencies.test.ts`; #64: `check-strings.ts`, `cross-call.ts`, `shift-sampler.ts`, `coverage.test.ts` |
+| interface | closed | Queue finished; worktree idle on merged `feat/board-risk-card` | none |
+
+## Ordering on shared files
+
+- `src/gen/incident/second-squad.test.ts`: the engine lane's barricade-fixture PR merges first; the calls lane switches the `joint-operation` journey there only after it.
 
 ## Locks outside normal ownership
 
