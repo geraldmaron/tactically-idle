@@ -13,6 +13,8 @@ The coordinating session, on `main`. Merged so far: #36 (coordination rules), #3
 
 Each lane finishes its current item, the lead merges it, and the lane stops for the owner to reassess: engine after `short-squad-deploys`, tooling after `e2e-in-ci`, calls parked. The lead notifies the owner when all three are stopped and merged.
 
+When work resumes, calls and tooling restart as fresh sessions from their hand-over briefs (owner, 2026-10-19); the current calls and tooling sessions retire.
+
 ## Lanes
 
 | Lane | Branch | In flight | Declared touches |

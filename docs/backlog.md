@@ -73,6 +73,15 @@ for incoming fire. Done: the move falls back to a free point inside the room's d
 building can't host, the entry-plus-doorOf rule is decided and enforced, and the fire test runs on
 an owned fixture.
 
+### clock-only-marks: Validation accepts a mark that only a clock's run-out sets
+Tags: job=command; journeys=choices-branch; probes=none (validation); lane=engine
+Needs: start=none; integrate=none; ship=none
+
+Reported by tooling in draft PR #76: `validateScenario` rejects a reader of a mark whose only setter
+is a clock running out, though clock routing (#46, #56) makes such marks legitimate. Done: the
+validator counts clock run-out setters (`onOut.mark` and the compiled route), with a test on an
+owned clock fixture, and the mark-reader audit stays green.
+
 ### armed-max: Text can say a look found empty hands
 Tags: job=command; journeys=chance-not-script; probes=none (text condition); lane=engine
 Needs: start=none; integrate=none; ship=none
