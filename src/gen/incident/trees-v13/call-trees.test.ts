@@ -13,7 +13,7 @@ import type { OutcomeBand } from '../../../sim/types';
 import { applyMove, availableMoves, NOW, startGateRun } from '../gates/engine-driver';
 import { drawIncidentSpec, generateIncident, INCIDENT_CONTENT_VERSION } from '../index';
 import { specForSituation } from '../gates/catalog';
-import { bindRoleTokens, memberId, outcomeNexts, reachableWithin, templateClockNexts, TOKEN, treeForCounts } from './compile';
+import { bindRoleTokens, choiceActionId, memberId, outcomeNexts, reachableWithin, templateClockNexts, TOKEN, treeForCounts } from './compile';
 import { asRole, CASCADE_LINES, FIRE_LINES, FORCE_LINES } from '../../../content/incidents/lines';
 import { INCIDENT_TEMPLATES } from '../../../content/incidents';
 import type { Clock, IncidentTemplate } from '../../../content/incidents/types';
@@ -442,8 +442,16 @@ describe('v13 squad range', () => {
       const s = generateIncident(drawn.spec);
       const most = Math.max(...scenarioActions(s).map(squadsPutToWork));
       expect(s.squadRange, tree.type).toEqual({ min: 1, max: most });
-      // Tree choices compile one acting squad and no support rule today, so a second squad would idle.
-      expect(most, tree.type).toBe(1);
+      // Each compiled choice puts to work what its tree authors: one acting squad, two where it
+      // authors `support` (second-squad), and a support choice never needs both to be offered.
+      const authored = (choice: TreeChoice) => (choice as TreeChoice & { support?: unknown }).support ? 2 : 1;
+      const choices = new Map(tree.nodes.flatMap(node => node.choices.map(choice => [choiceActionId(tree.type, node.id, choice.id), choice] as const)));
+      for (const action of scenarioActions(s)) {
+        const choice = choices.get(action.id);
+        if (!choice) continue;
+        expect(squadsPutToWork(action), action.id).toBe(authored(choice));
+        expect(action.requires.minSquads?.count ?? 1, action.id).toBe(1);
+      }
     }
   });
 
