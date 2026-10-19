@@ -8,18 +8,23 @@ export type SquadLoadouts = Partial<Record<SquadId, Record<Id, number>>>;
 export type SquadUnitPicks = Partial<Record<SquadId, Id[]>>;
 export const STANDARD_RADIO = 'radio_kit';
 
-export function radioRequirement(state: GameState, sid: SquadId): number {
-  return new Set(state.squads.find((s) => s.id === sid)?.officerIds.filter((id) => state.officers[id]) ?? []).size;
+/** Who goes from each squad: the caller passes Deploy's roster (squads.ts deployRoster), since the
+ * item system doesn't read officer readiness. Absent, every officer in the squad. */
+export type CrewOf = (sid: SquadId) => readonly Id[];
+
+/** One radio per officer who goes. */
+export function radioRequirement(state: GameState, sid: SquadId, crewOf?: CrewOf): number {
+  return new Set((crewOf ? crewOf(sid) : state.squads.find((s) => s.id === sid)?.officerIds ?? []).filter((id) => state.officers[id])).size;
 }
 
 /** Select distinct best-condition owned radios for every actual officer. */
-export function standardRadioPlan(state: GameState, squadIds: SquadId[], now: number, upkeep: Upkeep) {
+export function standardRadioPlan(state: GameState, squadIds: SquadId[], now: number, upkeep: Upkeep, crewOf?: CrewOf) {
   const stock = readyUnits(state, STANDARD_RADIO, upkeep, now);
   const loadouts: SquadLoadouts = {};
   const units: SquadUnitPicks = {};
   let required = 0;
   for (const sid of [...new Set(squadIds)].sort()) {
-    const quantity = radioRequirement(state, sid);
+    const quantity = radioRequirement(state, sid, crewOf);
     loadouts[sid] = { [STANDARD_RADIO]: quantity };
     units[sid] = stock.slice(required, required + quantity).map((unit) => unit.id);
     required += quantity;
@@ -34,8 +39,8 @@ export function standardRadioPlan(state: GameState, squadIds: SquadId[], now: nu
 }
 
 /** Radios always follow the roster; every other manual quantity and pick survives. */
-export function withStandardRadios(state: GameState, squadIds: SquadId[], loadouts: SquadLoadouts, units: SquadUnitPicks | undefined, now: number, upkeep: Upkeep) {
-  const plan = standardRadioPlan(state, squadIds, now, upkeep);
+export function withStandardRadios(state: GameState, squadIds: SquadId[], loadouts: SquadLoadouts, units: SquadUnitPicks | undefined, now: number, upkeep: Upkeep, crewOf?: CrewOf) {
+  const plan = standardRadioPlan(state, squadIds, now, upkeep, crewOf);
   const nextLoadouts = { ...loadouts };
   const nextUnits = { ...units };
   for (const sid of new Set(squadIds)) {

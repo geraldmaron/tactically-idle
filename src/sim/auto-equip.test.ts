@@ -60,18 +60,20 @@ describe('auto-equip owned inventory', () => {
     expect(s).toEqual(before);
   });
 
-  it('does not allocate to empty, missing, or partly unavailable squads', () => {
+  it('does not allocate to empty, missing or wholly unavailable squads, and equips who goes from a short one', () => {
     const s = makeState({ squadC: true });
     s.squads[0].officerIds = [];
     s.officers.off_reyes.assignment = { kind: 'training', courseId: 'test', startedAt: NOW, endsAt: NOW + 1000 };
-    s.officers.off_holt.stress = 80;
+    for (const id of s.squads[2].officerIds) s.officers[id].stress = 80;
     const plan = autoLoadout(s, 'ms_occupancy', ['A', 'B', 'C', 'D'], NOW);
-    expect(plan.added).toBe(0);
-    expect(Object.values(plan.units).flat()).toEqual([]);
+    expect(plan.units.A ?? []).toEqual([]);
+    expect(plan.units.C ?? []).toEqual([]);
     expect(plan.warnings.join(' ')).toMatch(/no officers/);
-    expect(plan.warnings.join(' ')).toMatch(/training/);
     expect(plan.warnings.join(' ')).toMatch(/mandatory recovery/);
     expect(plan.warnings.join(' ')).toMatch(/does not exist/);
+    // Squad B is short Reyes, who is in training: it is equipped for the three who go (short-squad-deploys).
+    expect(plan.warnings.join(' ')).not.toMatch(/training/);
+    expect(plan.loadouts.B?.radio_kit).toBe(3);
   });
 
   it('packs real distinct useful units and bounds reusable equipment without a slot cap', () => {
