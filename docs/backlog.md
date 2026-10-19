@@ -75,20 +75,6 @@ pruned choice's move becomes a story transition whose flag no effect sets, and v
 moves loop uses the same `possible` filters as `actionFor`, with a regression test on a fixture
 tree whose pruned choice carries a move.
 
-### clock-forks-read-travel: Clock forks read the decision's full time
-Tags: job=command; journeys=chance-not-script; probes=none (clock timing, not odds); lane=engine
-Needs: start=none; integrate=none; ship=none
-
-`forkMinutes` (`src/sim/clocks.ts`) looks ahead by the choice's base minutes and the outcome's extra
-minutes, but not travel through the building or forcing a door, which the clock itself advances by.
-So a fork can read a clock as still running when the decision has run it out. The calls lane saw it
-once in 3,152 hostage situation-2 plays (#62), and main does the same. Done: a fork reads the same
-minutes the clock advances by, with a test where travel alone carries a clock past zero inside the
-decision. The fix stores the fork's base on the decision (`clockBaseMinutes`), so replays agree. The lab's
-X-ray preview reads the same team minutes, in the same PR; its `bandMinutes`
-(`src/dev/lab/model/xray.ts`) still keeps its own copy of the commit formula, which tooling swaps
-for `decisionMinutes`.
-
 ### armed-max: Text can say a look found empty hands
 Tags: job=command; journeys=chance-not-script; probes=none (text condition); lane=engine
 Needs: start=none; integrate=none; ship=none
@@ -244,6 +230,14 @@ check count), and `src/dev/lab/model/explore.test.ts` has a negative control tha
 call never reaches a narrow-window state. The rescue rows break when `rescue-model-first` retires the
 old tree. Done: those tests use owned fixtures, or derive ids from the tree under test; the rescue
 rows first, before `rescue-model-first` integrates. The full table is in PR #58.
+
+### xray-band-minutes: The lab's X-ray uses the engine's decision minutes
+Tags: job=understand; journeys=none (lab tooling); probes=none (tooling); lane=tooling
+Needs: start=none; integrate=none; ship=none
+
+`bandMinutes` in `src/dev/lab/model/xray.ts` keeps its own copy of the commit's time formula. It
+gives the same answer today (#65), but it can drift. Done: it calls `decisionMinutes` from
+`src/sim/clocks.ts`, with a test that the X-ray's minutes equal the engine's for a sampled decision.
 
 ### hostage-gate-requests: Gate requests from the hostage review
 Tags: job=command; journeys=answer-a-call; probes=none (tooling); lane=tooling
