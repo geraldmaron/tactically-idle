@@ -39,6 +39,19 @@ export function CampaignButton({ onOpen }: { onOpen: () => void }) {
   </button>;
 }
 
+/** When saving fails the game keeps running in memory, so the failure must not hide behind a dot:
+ * a visible strip under the header, announced once, with the way to fix it. Healthy saves cost
+ * no height. */
+export function SaveWarning({ onOpen }: { onOpen: () => void }) {
+  const saved = useCampaigns();
+  if (!saved.issue) return null;
+  return <div className="save-warning" role="alert">
+    <Icon name="warning" size={16} />
+    <span>Progress isn’t being saved. Export a backup before you close this.</span>
+    <button type="button" onClick={onOpen}>Fix</button>
+  </div>;
+}
+
 function SaveStatus() {
   const saved = useCampaigns();
   const status = campaignStatus(saved);

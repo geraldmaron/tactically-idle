@@ -139,9 +139,14 @@ export function OperationLogContents({ decisions, officers = {}, explicitComplet
 export function OperationFeedback({ decisions, ended = false, onOpenLog, officers = {}, explicitCompletion = false }: { decisions: DecisionView[]; ended?: boolean; onOpenLog?: () => void; officers?: DebriefOfficers; explicitCompletion?: boolean }) {
   const [open, setOpen] = useState(false);
   const last = decisions.at(-1);
-  if (!last) return null;
+  // A polite live region that is always rendered, so each new result is announced even when it is
+  // the first: the scene scrolls to the result, and this says what it was.
+  const announcement = last ? `${last.title}: ${last.forceOutcome ? 'task and harm recorded' : last.resultLabel ?? RESULT_LABEL[last.band]}. ${last.consequences.find((line) => !line.startsWith('Next: ')) ?? ''}` : '';
+  const live = <p className="sr-only" role="status" aria-live="polite">{announcement}</p>;
+  if (!last) return live;
   return (
     <section className="operation-feedback" aria-label="Operation feedback">
+      {live}
       <div className="operation-feedback-heading"><h2>What happened</h2><Button variant="ghost" size="sm" className="operation-log-trigger" onClick={() => { onOpenLog?.(); setOpen(true); }} aria-haspopup="dialog" aria-expanded={open}>Decision log ({decisions.length})</Button></div>
       <DecisionCard key={last.revision} decision={last} officers={officers} explicitCompletion={explicitCompletion} />
       <Sheet open={open} onClose={() => setOpen(false)} title="Decision log" className="operation-log-sheet" footer={<Button block onClick={() => setOpen(false)}>{ended ? 'Return to debrief' : 'Return to operation'}</Button>}>

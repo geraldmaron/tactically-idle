@@ -308,8 +308,9 @@ describe('persistent decision results', () => {
     for (const invented of ['decision-lead', 'decision-narrative', 'Successfully completed', 'Everyone is safe', 'Operation ended']) expect(absent).not.toContain(invented);
   });
 
-  it('shows no empty feedback panel before the first decision', () => {
-    expect(render(createElement(OperationFeedback, { decisions: [] }))).toBe('');
+  it('shows no empty feedback panel before the first decision, only the empty live region', () => {
+    // The live region is rendered empty from the start so the first result is announced.
+    expect(render(createElement(OperationFeedback, { decisions: [] }))).toBe('<p class="sr-only" role="status" aria-live="polite"></p>');
   });
 
   it('renders the ending summary and preserves the saved log in the real debrief', () => {
