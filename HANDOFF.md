@@ -13,9 +13,9 @@ The coordinating session, on `main`. Merged so far: #36 (coordination rules), #3
 
 | Lane | Branch | In flight | Declared touches |
 |---|---|---|---|
-| engine | none | Holding: its context is heavy, and the owner is deciding whether a fresh engine session takes `offsite-fire` from the hand-over brief. Queue: `offsite-fire`, `armed-max`, `rescue-engine-requests`, `squad-ready-agrees`, `harbour-court-window` | none |
+| engine | `engine-lane-2` session, branch from main | Fresh engine session (the first one's context was too heavy; it has stood down). `offsite-fire` TOUCHES due. Queue: `armed-max`, `rescue-engine-requests`, `squad-ready-agrees`, `harbour-court-window` | to be declared |
 | calls | `claude/calls-barricade-tree` (not pushed) | `barricade-model-first`: prose pass in progress | `barricade-boxes.ts`, `call-trees/index.ts`, `incidents/barricade.ts`; later `second-squad.test.ts` after the engine PR merges |
-| tooling | to be cut from main | Rescue rows of `lab-tests-off-live-content`, then `e2e-in-ci` | to be declared |
+| tooling | `claude/tooling-rescue-pins` | Rescue rows of `lab-tests-off-live-content` (approved, fixture fallback instead of skips). Then `e2e-in-ci`, possibly from a fresh tooling session | `why.test.ts`, `squads.test.ts`, `deps/model.test.ts`, `explore.test.ts`, a new test helper in `src/dev/lab/model/` |
 | interface | closed | Queue finished; worktree idle on merged `feat/board-risk-card` | none |
 
 ## Ordering on shared files
