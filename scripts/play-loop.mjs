@@ -70,10 +70,14 @@ export async function playLiveCalls(page, { baseURL = 'http://127.0.0.1:5174', w
     // The squad range is read from the screen, as the player reads it: "Takes 1 squad" or "Takes 1 to 2 squads".
     const takes = (await page.getByText(/^Takes \d+( to \d+)? squads?\./).first().innerText()).match(/Takes (\d+)(?: to (\d+))?/);
     const range = { min: Number(takes[1]), max: Number(takes[2] ?? takes[1]) };
-    const ready = page.locator('.squadpick button[aria-label^="Squad "]:not([aria-label*="not deployable"])');
-    const pick = Math.min(range.max, await ready.count());
-    assert.ok(pick >= range.min, `${label}: ${range.min} ready squad${range.min > 1 ? 's' : ''} to send`);
-    for (let i = 0; i < pick; i++) await ready.nth(i).click();
+    // A squad deploys only when every officer in it is fit (sim/operation.ts checkStart), so pick the
+    // squads whose card reads all of them ready ("Squad B, Bravo, 4 of 4 ready"), as a player would
+    // after an injury; a card with one hurt officer still isn't marked "not deployable".
+    const cards = await page.locator('.squadpick button[aria-label^="Squad "]').evaluateAll(buttons => buttons.map((button, index) => ({ index, label: button.getAttribute('aria-label') ?? '' })));
+    const fit = cards.filter(card => { const m = /, (\d+) of (\d+) ready/.exec(card.label); return !!m && m[1] === m[2] && !card.label.includes('not deployable'); });
+    const pick = Math.min(range.max, fit.length);
+    assert.ok(pick >= range.min, `${label}: ${range.min} squad${range.min > 1 ? 's' : ''} with every officer ready to send; the cards read ${cards.map(card => `"${card.label}"`).join(', ')}`);
+    for (const card of fit.slice(0, pick)) await page.locator('.squadpick button[aria-label^="Squad "]').nth(card.index).click();
     assert.equal(await page.locator('.squadpick button[aria-pressed="true"]').count(), pick, `${label}: ${pick} squad${pick > 1 ? 's' : ''} chosen`);
     // Standard radios come from owned stock, one per officer. A short squad is equipped by
     // buying the missing radios on this screen, as a player would.
