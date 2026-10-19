@@ -336,6 +336,22 @@ Needs: start=barricade-model-first; integrate=none; ship=none
 First-time players, and a real iOS and Android phone, including keyboard and text zoom. Includes
 the rendered save-slot rejection message, never seen.
 
+### store-wrap: Package the game for the App Store and Play Store
+Tags: job=keep; journeys=save-round-trip; probes=none (packaging); lane=deferred
+Needs: start=none; integrate=none; ship=none
+
+Owner decision 2026-10-19: wrap the web app for iOS and Android. Done: a wrapper chosen with
+evidence (e.g. Capacitor), the build running on a real iPhone and Android phone with saves surviving
+an app restart, and the safe-area, keyboard and text-zoom checks from `playtests` passing on device.
+
+### real-purchases: Point packs become real in-app purchases
+Tags: job=build; journeys=hire-and-equip; probes=none (commerce); lane=deferred
+Needs: start=store-wrap; integrate=none; ship=none
+
+Owner decision 2026-10-19: free to play with purchases. The store and ledger are simulated today
+(`src/commerce/`). Done: the point packs sell through the App Store and Play Store billing, purchases
+restore across reinstalls, and the ledger records real receipts. Needs the store-wrap first.
+
 ### audio-haptics: Audio and haptics
 Tags: job=command; journeys=none (optional polish); probes=none (polish); lane=deferred
 Needs: start=none; integrate=none; ship=none
@@ -344,8 +360,6 @@ Optional.
 
 ## Owner decisions
 
-- **Mobile engine and device targets; business model and price; content rating; budget and
-  release date.** The store and ledger are simulated until then.
 - **Death endings:** a human read of `owner_killed`, `worker_killed`, the armed `subject_killed`,
   `resident_killed` and `tank_ran_out`.
 - **Content note and 988 line wording** for the hostage and barricade calls.
@@ -367,3 +381,6 @@ deploy short of injured officers (`short-squad-deploys`); sidearms from day one
 with harm counts as resolved (already so in `dispositionOf`); an entry breaks every open commitment
 (already so in `src/sim/commitments.ts`); build the Peer Support Lead, the Recruiter and patrol work;
 the crisis cap stays report-only until playtests.
+Also decided 2026-10-19: ship by wrapping the web app for iOS and Android; free to play with
+purchases, so the simulated point packs become real purchases; target a Mature rating (ESRB M,
+PEGI 16); no release date or budget yet.
