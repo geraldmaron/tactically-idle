@@ -61,6 +61,18 @@ so the window exit is pruned on all 90 sampled calls. The pruning is correct; a 
 reach is likely a layout defect. Done: find what blocks it, and either fix the layout (if a person
 should be able to reach that window) or record why it's blocked by design.
 
+### barricade-engine-fixes: Engine fixes the new barricade needs
+Tags: job=command; journeys=choices-branch; probes=none (compile correctness); lane=engine
+Needs: start=none; integrate=none; ship=none
+
+From the calls lane's full run of the new barricade (2026-10-18). A move into a small room finds no
+free point and generation throws instead of hosting elsewhere (ash_grove_v1). The rule for a team
+move that is both an `entry` and `{ doorOf }` is undefined (the test expects an entry to observe its
+target, the content observes the hall). `src/sim/drawn-effects.test.ts` samples live barricade plays
+for incoming fire. Done: the move falls back to a free point inside the room's doorway or the
+building can't host, the entry-plus-doorOf rule is decided and enforced, and the fire test runs on
+an owned fixture.
+
 ### armed-max: Text can say a look found empty hands
 Tags: job=command; journeys=chance-not-script; probes=none (text condition); lane=engine
 Needs: start=none; integrate=none; ship=none
@@ -90,7 +102,7 @@ which the sheet did not re-read.
 
 ### barricade-model-first: Write the barricade call model-first
 Tags: job=command; journeys=answer-a-call, choices-branch; probes=blueprint-building, blueprint-locked; lane=calls
-Needs: start=none; integrate=none; ship=none
+Needs: start=none; integrate=barricade-engine-fixes, barricade-tooling-fixes; ship=none
 
 As the hostage call was: template, design sheet in `docs/calls/`, tree, separate review. The old
 tree has 2 `team` moves out of about 37 choices (armed 13, hostage 8, rescue 8), and a different
@@ -120,6 +132,14 @@ Needs: start=barricade-model-first; integrate=none; ship=none
 
 Same pipeline. Done: `npm run check:strings` passes on it, it passes coverage, balance and review,
 and the old `armed-noise` tree is retired.
+
+### civilian-hit-lines: Lines for a civilian hit by fire
+Tags: job=command; journeys=chance-not-script; probes=none (text); lane=calls
+Needs: start=none; integrate=none; ship=none
+
+`offsite-fire`'s second PR draws fire at each person in an exposure, and needs per-target lines for
+a civilian wounded or seriously hurt, in `src/content/incidents/lines.ts`. Done: the lines exist
+through the prose skill and a separate review, before that PR merges.
 
 ### complications: Complication modules
 Tags: job=command; journeys=choices-branch; probes=none (modules change situations, not a probe input); lane=calls
@@ -204,6 +224,15 @@ Rescue request R-R9: `measureWiring` compares eligibility and favorable odds onl
 that the drawn incoming-fire distribution changes with the building. Done: a paired-building check
 over every fire-carrying choice shows the hit share differs where the sightline does, as a
 trees-v13 test.
+
+### barricade-tooling-fixes: Tooling fixes the new barricade needs
+Tags: job=understand; journeys=choices-branch; probes=none (tooling); lane=tooling
+Needs: start=none; integrate=none; ship=none
+
+From the same run: `src/gen/incident/trees-v13/graph.test.ts` passes `memberCounts` where it needs
+`callCounts`, so upstairs facts never settle; and the lab's Flow endings column overflows with the
+new barricade's 11 endings (`src/dev/lab/model/flow-layout.test.ts`). Done: the graph test reads
+compile-time facts, and the lab shows every ending at 390 and 430.
 
 ### lab-tests-off-live-content: Lab tests stop pinning live call content
 Tags: job=understand; journeys=none (lab tooling); probes=none (tooling); lane=tooling
