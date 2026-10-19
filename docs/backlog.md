@@ -219,14 +219,6 @@ rows first, before `rescue-model-first` integrates. The full table is in PR #58.
 Slices shipped: the hostage owner_down pins (#67) and the barricade-swap and squad-count pins (#69).
 Left: the rescue rows (`explore`, `why`, `squads`, `deps/model` lab tests).
 
-### xray-band-minutes: The lab's X-ray uses the engine's decision minutes
-Tags: job=understand; journeys=none (lab tooling); probes=none (tooling); lane=tooling
-Needs: start=none; integrate=none; ship=none
-
-`bandMinutes` in `src/dev/lab/model/xray.ts` keeps its own copy of the commit's time formula. It
-gives the same answer today (#65), but it can drift. Done: it calls `decisionMinutes` from
-`src/sim/clocks.ts`, with a test that the X-ray's minutes equal the engine's for a sampled decision.
-
 ### scale-gates: Scale gates (M6)
 Tags: job=command; journeys=answer-a-call, choices-branch; probes=none (gates); lane=tooling
 Needs: start=none; integrate=none; ship=barricade-model-first, rescue-model-first, armed-model-first
