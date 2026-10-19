@@ -88,7 +88,8 @@ makes physical moves through the building, both blueprint floors rise, `npm run 
 passes on it, it passes coverage, balance and the separate review, and the old
 `barricade-order` tree is retired. It authors the support choices from `second-squad` (R-B4), so
 the barricade reaches `squadRange` 2, and the `joint-operation` journey test switches from its
-fixture to this call. If a building fact (R-B1 upstairs, R-B2 window) first gates a required
+fixture to this call. The old barricade's outcome-score calibration row retires with it, so
+this call adds a calibration row for its own endings (`src/sim/outcome-score.test.ts`). If a building fact (R-B1 upstairs, R-B2 window) first gates a required
 need here, `src/sim/board-suggestions.ts` reads it (public building facts only), with a test that a
 different building changes the board's list. R-B1 to R-B3 shipped in #51, #59 and #61. The design sheet (`docs/calls/barricade-design.md`, "Everything
 Goes Back") lists its engine requests; tree data waits on them. The `items-none` share at openings
