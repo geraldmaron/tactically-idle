@@ -82,6 +82,19 @@ negative control borrowing the hostage tree.
 - Before READY, search for tests in other lanes that read what you changed (content ids, map keys,
   counts) and say in the PR which ones you checked.
 
+## Sharing one machine
+
+All lanes run in worktrees of one checkout on one machine. Three things are shared even though
+files aren't:
+
+- **The git stash stack** is shared by every worktree. Never run a bare `git stash` or
+  `git stash pop`; set work aside with a WIP commit on your own branch.
+- **Dev server ports.** Each port has its own local storage, so two lanes on one port share saved
+  campaigns. Use your lane's port: engine 5183, calls 5184, tooling 5174, interface 5175, lead 5182.
+- **CPU.** Full `npm run verify` runs from several lanes at once slow every test, and tests near
+  their timeout fail. While working, run the tests for what you changed; run the full verify once,
+  before READY.
+
 ## Merging
 
 1. The lead merges one branch at a time. The lane rebases on current main first.
