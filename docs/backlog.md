@@ -61,18 +61,6 @@ so the window exit is pruned on all 90 sampled calls. The pruning is correct; a 
 reach is likely a layout defect. Done: find what blocks it, and either fix the layout (if a person
 should be able to reach that window) or record why it's blocked by design.
 
-### barricade-engine-fixes: Engine fixes the new barricade needs
-Tags: job=command; journeys=choices-branch; probes=none (compile correctness); lane=engine
-Needs: start=none; integrate=none; ship=none
-
-From the calls lane's full run of the new barricade (2026-10-18). A move into a small room finds no
-free point and generation throws instead of hosting elsewhere (ash_grove_v1). The rule for a team
-move that is both an `entry` and `{ doorOf }` is undefined (the test expects an entry to observe its
-target, the content observes the hall). `src/sim/drawn-effects.test.ts` samples live barricade plays
-for incoming fire. Done: the move falls back to a free point inside the room's doorway or the
-building can't host, the entry-plus-doorOf rule is decided and enforced, and the fire test runs on
-an owned fixture.
-
 ### armed-max: Text can say a look found empty hands
 Tags: job=command; journeys=chance-not-script; probes=none (text condition); lane=engine
 Needs: start=none; integrate=none; ship=none
@@ -100,9 +88,22 @@ which the sheet did not re-read.
 
 ## Next: calls and the incident model
 
+### outcome-calibration-drift: Outcome scores drifted from the hand-set numbers after sidearms
+Tags: job=command; journeys=chance-not-script; probes=none (scoring calibration, not a favorable-chance input); lane=engine
+Needs: start=none; integrate=none; ship=none
+
+`src/sim/outcome-score.test.ts` caps the trust error against the retired hand-set numbers at 0.75.
+Since sidearms on day one (ec7ba79, #79) `main` sits at exactly 0.750: hostage rose from 0.38 to
+0.83, while armed is 0.90 and rescue 1.02; the old barricade (0.24) holds the average down. The new
+barricade fits better on its own (0.43) but replaces those rows, so its branch reads 0.80 and fails.
+Measured 2026-10-19 with the test's own sample. Done: either recalibrate the score so the hostage,
+armed and rescue trees are back near the 0.48 fit, or record why sidearms rightly moved the
+hand-set comparison and set a new ceiling with the owner's sign-off; then the barricade branch
+passes.
+
 ### barricade-model-first: Write the barricade call model-first
 Tags: job=command; journeys=answer-a-call, choices-branch; probes=blueprint-building, blueprint-locked; lane=calls
-Needs: start=none; integrate=barricade-engine-fixes, barricade-tooling-fixes; ship=none
+Needs: start=none; integrate=barricade-tooling-fixes, outcome-calibration-drift; ship=none
 
 As the hostage call was: template, design sheet in `docs/calls/`, tree, separate review. The old
 tree has 2 `team` moves out of about 37 choices (armed 13, hostage 8, rescue 8), and a different
@@ -120,7 +121,7 @@ grows here too, since most of today's openings are phone calls that carry no gea
 
 ### rescue-model-first: Write the rescue call model-first
 Tags: job=command; journeys=answer-a-call, choices-branch; probes=blueprint-building; lane=calls
-Needs: start=none; integrate=offsite-fire, rescue-engine-requests, lab-tests-off-live-content; ship=none
+Needs: start=none; integrate=offsite-fire, rescue-engine-requests; ship=none
 
 Same pipeline as the barricade; the design sheet is `docs/calls/rescue-design.md`. Done: rescue gunfire comes from the drawn incoming-fire result,
 not harm authored per branch; `npm run check:strings` passes on it; it passes coverage, balance
@@ -224,19 +225,9 @@ From the same run: `src/gen/incident/trees-v13/graph.test.ts` passes `memberCoun
 new barricade's 11 endings (`src/dev/lab/model/flow-layout.test.ts`). Done: the graph test reads
 compile-time facts, and the lab shows every ending at 390 and 430.
 
-### lab-tests-off-live-content: Lab tests stop pinning live call content
-Tags: job=understand; journeys=none (lab tooling); probes=none (tooling); lane=tooling
-Needs: start=none; integrate=none; ship=none
-
-Per the "Tests across lanes" rule in `COORDINATION.md`. About 12 lab test files use today's hostage
-and rescue content as their subject (node ids, ending sets, crossing counts, choice labels, a gate's
-check count), and `src/dev/lab/model/explore.test.ts` has a negative control that assumes the rescue
-call never reaches a narrow-window state. The rescue rows break when `rescue-model-first` retires the
-old tree. Done: those tests use owned fixtures, or derive ids from the tree under test; the rescue
-rows first, before `rescue-model-first` integrates. The full table is in PR #58.
-
-Slices shipped: the hostage owner_down pins (#67) and the barricade-swap and squad-count pins (#69).
-Left: the rescue rows (`explore`, `why`, `squads`, `deps/model` lab tests).
+Shipped in #80: the graph test reads `callCounts`, and `flow-layout.test.ts` checks the endings
+column at Fit's legibility floor (900x596). Left: confirm every ending row is reachable at 390 and
+430 with the new barricade loaded.
 
 ### scale-gates: Scale gates (M6)
 Tags: job=command; journeys=answer-a-call, choices-branch; probes=none (gates); lane=tooling
