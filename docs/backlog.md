@@ -263,6 +263,76 @@ Watch Commander runs it, how it shows on the board without crowding tactical cal
 lead, then the engine loop and its UI. The note is `docs/patrol-work.md` (proposed 2026-10-19); it
 waits on three owner answers listed there.
 
+### run-roster-snapshot: Squad edits during a call apply now or queue until it ends
+Tags: job=build; journeys=short-squad; probes=none (roster plumbing); lane=engine
+Needs: start=none; integrate=none; ship=none
+
+Owner request 2026-10-19. Deploy snapshots who went (`run.roster`) and in-run reads use it. Duty,
+leader and moves of officers who stayed home apply at once; moving an officer who is on the call
+queues until the run closes or is cancelled, last write wins, and a move that no longer holds is
+dropped and reported. The squad screen shows queued moves with a cancel.
+
+### funding-ledger: Every funding event is recorded and shown live
+Tags: job=build; journeys=hire-and-equip; probes=none (economy display); lane=engine
+Needs: start=none; integrate=none; ship=none
+
+Owner request 2026-10-19. Discrete funding events (payout, signing, purchase, service, restock,
+staff, unlock, grant, detail) go through one ledger with before and after; hourly accrual stays a
+rate and a shift-report line. The top bar counts to new values with floating deltas and opens a
+Finance sheet with the hourly breakdown and recent entries.
+
+### starter-kit: New departments and hires arrive equipped
+Tags: job=build; journeys=hire-and-equip; probes=none (starting gear); lane=engine
+Needs: start=none; integrate=none; ship=none
+
+Owner decision 2026-10-19. Each officer brings a role kit into the pool: a radio for everyone, a
+sidearm only with entry_team, and a role tool. The radio is free; the rest is a visible issue-kit
+line in the signing cost. The starting department is a start-up grant of its officers' kits plus
+department kit.
+
+### gear-armory: One Armory list replaces Inventory and Equipment
+Tags: job=build; journeys=hire-and-equip; probes=none (layout); lane=interface
+Needs: start=none; integrate=none; ship=none
+
+### disclosure-taxonomy: One way to reveal more, used everywhere
+Tags: job=understand; journeys=debrief-explains; probes=none (layout); lane=interface
+Needs: start=none; integrate=none; ship=none
+
+Owner request 2026-10-19. One shared Disclosure for evidence and logs, sheets for reference guides,
+chip rails for filters, harm always visible. Ad hoc expanders are removed.
+
+### hire-contract-card: The hire review shows money as shapes
+Tags: job=build; journeys=hire-and-equip; probes=none (layout); lane=interface
+Needs: start=none; integrate=none; ship=none
+
+### develop-track: Develop reads as a research track
+Tags: job=build; journeys=none (no journey covers Develop); probes=none (layout); lane=interface
+Needs: start=none; integrate=none; ship=none
+
+Owner decision 2026-10-19: one branch per tab on a vertical spine with drawn edges, state, tier
+pips, cost and needs on each tile, a Next marker and a sticky resource bar.
+
+### officer-value: Officers learn and earn by who they are
+Tags: job=build; journeys=team-moves-odds; probes=none (officer economy); lane=engine
+Needs: start=none; integrate=none; ship=none
+
+Owner decision 2026-10-19. Learning pace comes from ratings (composure) on top of experience band.
+Pricier, better-rated officers earn through service income: call payouts already scale with
+outcome, and a certified officer can take a paid mutual-aid detail that keeps them off calls. No
+candidate pool may make a cheap officer dominated on every count. Answers question 1 in
+`docs/patrol-work.md`: patrol pay stays flat.
+
+### officer-profile: The officer profile, rebuilt
+Tags: job=build; journeys=hire-and-equip; probes=none (layout); lane=interface
+Needs: start=officer-value; integrate=none; ship=none
+
+### squad-preset-editor: One place to edit loadout presets
+Tags: job=build; journeys=hire-and-equip; probes=none (layout); lane=interface
+Needs: start=gear-armory; integrate=none; ship=none
+
+The Squad screen and the Armory both edit `squad.loadoutPreset` (`src/ui/screens/Squad.tsx`).
+Keep one.
+
 ## Player experience
 
 ### onboarding: A first call that teaches the loop
