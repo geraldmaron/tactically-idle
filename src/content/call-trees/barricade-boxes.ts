@@ -341,8 +341,8 @@ export const BARRICADE_BOXES: CallTree = {
           preview: { favorable: 'The list is down, and {subject.first} decides what happens next.', mixed: 'The list goes down on paper, and {subject.first} stays inside.', adverse: '{subject.first} hears the sale in every line and may go to {mover.first}’s door armed.' },
           outcomes: {
             favorable: [
-              { if: COMES, text: '{subject.first} listens to the list read back, puts the weapon on the stairs and walks out the front with {subject.his} hands empty.', reveal: ['comes_out'], ...walksOut, promise: { id: 'list', to: 'subject', kind: 'statement' }, mark: ['list_promised'], next: { node: 'mover_out_last' }, objective: 40 },
-              { if: STAYS, text: '{subject.first} hears the items twice, then opens the front door for {mover.first}. {subject.He} {subject~stays|stay} inside.', reveal: ['comes_out'], promise: { id: 'list', to: 'subject', kind: 'statement' }, mark: ['list_promised'], next: { node: 'release' }, objective: 20 },
+              { if: COMES, text: '{subject.first} listens to the list read back, puts the weapon on the stairs and walks out the front with {subject.his} hands empty. Two officers fetch {mover.first} from the bedroom behind {subject.him}.', reveal: ['comes_out'], ...walksOut, safe: ['mover'], promise: { id: 'list', to: 'subject', kind: 'statement' }, mark: ['list_promised'], next: { ending: 'everyone_out' }, objective: 50 },
+              { if: STAYS, text: '{subject.first} hears the items twice, then opens the front door for {mover.first}. {subject.He} {subject~stays|stay} inside.', reveal: ['comes_out'], safe: ['mover'], promise: { id: 'list', to: 'subject', kind: 'statement' }, mark: ['list_promised'], next: { node: 'release' }, objective: 20 },
             ],
             mixed: [{ text: '{subject.first} keeps adding things until the list runs two pages. Nobody moves.', promise: { id: 'list', to: 'subject', kind: 'statement' }, mark: ['list_promised'], next: { node: 'standoff' }, objective: 8 }],
             adverse: escalate({
@@ -353,6 +353,7 @@ export const BARRICADE_BOXES: CallTree = {
               extra: { moves: { subject: 'provoked' }, pressure: 8 } }),
           } },
         { id: 'walk_out', title: 'Escort {mover.first} out', icon: 'door', walks: 'mover', team: { to: 'escort' }, check: check(MOVE, 2), minutes: 5, consequenceLevel: 'high',
+          support: { at: { vantage: 'scene' }, label: 'holding the front window' },
           modifiers: [{ label: 'The ringing keeps {subject.first} up front', mark: 'hall_timed', value: 4 },
             { label: '{mover.first} is ready to go', mark: 'mover_steady', value: 4 }, { label: 'No way to warn {mover.first}', mark: 'mover_dark', value: -4 }, { label: '{subject.first} is right outside that door', mark: 'in_hall', value: -6 }],
           summary: '{lead} takes two officers down the hall for {mover.first}. That hall is the one place {subject.first} keeps coming back to.',
@@ -410,7 +411,7 @@ export const BARRICADE_BOXES: CallTree = {
           preview: { favorable: '{subject.first} talks late into the night and comes to a decision.', mixed: 'Night falls with {subject.first} still deciding.', adverse: 'The boxes keep moving, and {subject.first} may reach {mover.first} first.' },
           outcomes: {
             favorable: [
-              { if: [COMES, BOXES_OK], text: '{subject.first} leans the weapon against the bottom stair long after dark and comes outside.', reveal: ['comes_out'], ...walksOut, next: { node: 'mover_out_last' }, objective: 36 },
+              { if: [COMES, BOXES_OK], text: '{subject.first} leans the weapon against the bottom stair long after dark and comes outside. {mover.first} waits until officers knock before coming out.', reveal: ['comes_out'], ...walksOut, safe: ['mover'], next: { ending: 'out_after_dark' }, objective: 46 },
               { if: [STAYS, BOXES_OK], text: 'The streetlights come on. {subject.first} says this is home and {subject.he} {subject~stays|stay}.', reveal: ['comes_out'], next: { node: 'standoff' }, objective: 10 },
               { if: [COMES, BOXES_OUT], text: '{subject.first} opens the closet near midnight, finds {mover.first} and leads {mover.him} out the back.', reveal: ['comes_out', 'knows_mover'], safe: ['mover'], moveTo: { subject: 'scene' }, next: { node: 'release' }, objective: 30 },
               { if: [STAYS, BOXES_OUT], text: 'The last box reaches the bedroom late at night, and {mover.first} is right there when the closet opens.', reveal: ['comes_out'], moveTo: { subject: { to: { room: 'mover' }, seen: true } }, next: { node: 'found' } },
@@ -450,7 +451,7 @@ export const BARRICADE_BOXES: CallTree = {
           preview: { favorable: 'The front door opens by first light.', mixed: '{mover.first} gets out at dawn, and {subject.first} doesn’t.', adverse: 'Dawn comes, and the house is still shut with {mover.first} inside.' },
           outcomes: {
             favorable: [
-              { if: [COMES, BOXES_OK], text: '{subject.first} unlatches the front door as day breaks, lays the weapon down on the step and walks out.', reveal: ['comes_out'], ...walksOut, next: { node: 'mover_out_last' }, objective: 30 },
+              { if: [COMES, BOXES_OK], text: '{subject.first} unlatches the front door as day breaks, lays the weapon down on the step and walks out. Officers find {mover.first} asleep in the bedroom, still in work gloves.', reveal: ['comes_out'], ...walksOut, safe: ['mover'], next: { ending: 'out_after_dark' }, objective: 40 },
               { if: [STAYS, BOXES_OK], text: '{subject.first} opens up at dawn for {mover.first}, then slides the bolt across again.', reveal: ['comes_out'], safe: ['mover'], next: { node: 'release' }, objective: 24 },
               { if: BOXES_OUT, text: 'The closet opens in the night. By morning {mover.first} is out the front, sent by {subject.first}.', reveal: ['knows_mover'], safe: ['mover'], next: { node: 'release' }, objective: 24 },
             ],
@@ -537,27 +538,6 @@ export const BARRICADE_BOXES: CallTree = {
           } },
       ] },
 
-    { id: 'mover_out_last', stage: 'resolve',
-      prompt: '{subject.first} is outside with your officers now. {mover.first} hasn’t heard and stays hidden in the closet.',
-      choices: [
-        { id: 'fetch', title: 'Go in for {mover.first}', icon: 'door', walks: 'mover', team: { to: 'escort' }, check: check(MOVE, -10), minutes: 4,
-          summary: '{lead} and two officers walk the empty house to the closet. {mover.first} may not trust a stranger’s voice.',
-          preview: { favorable: '{mover.first} walks out between two of your officers.', mixed: '{mover.first} won’t open the closet until {mover.he} {mover~hears|hear} the driver.', adverse: '{mover.first} won’t leave the closet for twenty minutes of coaxing.' },
-          outcomes: {
-            favorable: [{ text: '{mover.first} steps out when {mover.he} {mover~hears|hear} the team say {mover.his} name.', safe: ['mover'], next: { ending: 'everyone_out' }, objective: 20 }],
-            mixed: [{ text: 'The closet stays shut until the driver calls in from the front door.', safe: ['mover'], next: { ending: 'everyone_out' }, objective: 16 }],
-            adverse: [{ text: 'Twenty minutes of talking pass before {mover.first} pushes the closet door open.', safe: ['mover'], next: { ending: 'everyone_out' }, objective: 12, minutes: 20 }],
-          } },
-        { id: 'call_mover', title: 'Text {mover.first} to come out', icon: 'radio', check: check(TALK, -6), minutes: 3, onlyIf: { notMarks: ['mover_dark'] },
-          summary: 'You text {mover.first} that it’s over and let {mover.him} walk out alone. If {mover.he} {mover~doesn’t|don’t} believe the text, {mover.he} {mover~stays|stay}.',
-          preview: { favorable: '{mover.first} walks out on {mover.his} own.', mixed: '{mover.first} texts three questions back before coming out.', adverse: '{mover.first} doesn’t trust the text and stays hidden.' },
-          outcomes: {
-            favorable: [{ text: '{mover.first} steps onto the porch holding the phone up like a ticket.', safe: ['mover'], next: { ending: 'everyone_out' }, objective: 20 }],
-            mixed: [{ text: '{mover.first} asks three times who is texting, then walks out ten minutes later.', safe: ['mover'], next: { ending: 'everyone_out' }, objective: 16, minutes: 10 }],
-            adverse: [{ text: '{mover.first} doesn’t answer. Two officers go in and find {mover.him} crouched behind the coats.', safe: ['mover'], next: { ending: 'everyone_out' }, objective: 12, minutes: 8 }],
-          } },
-      ] },
-
     { id: 'threat', stage: 'resolve',
       prompt: '{subject.first} has the weapon raised at {mover.first}’s door. {mover.first} is behind that door.',
       choices: [
@@ -572,13 +552,14 @@ export const BARRICADE_BOXES: CallTree = {
               { if: HOLDING, text: '{subject.first} opens {mover.first}’s door and goes through.', moveTo: { subject: { to: { room: 'mover' }, seen: true } }, next: { node: 'found' }, pressure: 6 },
             ],
           } },
-        goIn('go_in', 4, 'door', {
+        { ...goIn('go_in', 4, 'door', {
           summary: 'Anyone in that hall can be badly hurt, {mover.first} included. {lead} goes first while the weapon is still raised.',
           preview: { favorable: 'You reach {mover.first} and bring {mover.him} out the front.', mixed: 'You get {mover.first} out, and {subject.first} is hurt giving up the weapon.', adverse: 'Someone in that hall could end up badly hurt, maybe {mover.first}.' },
           clean: 'Officers fill the hall before {subject.first} turns. {mover.first} goes out the front, and the weapon is on the floor.',
           hurt: '{subject.first} is hurt when the team takes the weapon away. The medic starts on {subject.him} while {mover.first} gets clear.',
           trip: '{mover.first} trips over a box by the bedroom and goes down hard. One officer is hurt pulling {subject.first} off the weapon.',
           swing: '{subject.first} swings the weapon toward the team as they reach {mover.first}.' }),
+          support: { at: 'exit', label: 'holding the front door' } },
         { id: 'step_away', title: 'Pull out of sight', icon: 'wait', check: check(HOLD, -2), minutes: 8,
           summary: 'You clear every window and leave the next move to {subject.first}. {mover.first} stays behind that door throughout.',
           preview: { favorable: '{subject.first} turns from the door and goes back to stacking.', mixed: '{subject.first} stays at the door, the weapon down.', adverse: '{subject.first} opens the bedroom door and goes in to {mover.first}.' },
