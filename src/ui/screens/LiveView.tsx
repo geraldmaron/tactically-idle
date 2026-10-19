@@ -40,6 +40,7 @@ import type { Lexicon } from '../people/lexicon';
 import './operation-squads.css';
 import './ops-visual.css';
 import { Disclosure } from '../components/Disclosure';
+import { runRoster } from '../../sim/squads';
 
 // Presentational live-operation screen. OpsLive.tsx feeds it from the selectors.
 
@@ -194,12 +195,13 @@ export function LiveView(p: LiveViewProps) {
           <p className="picker-label">Squad for next decision</p>
           <ChoiceRail value={focus?.id ?? p.deployedSquads[0].id} kind="tabs" label="Squad for next decision" panelId="deployed-officer-strip" onChange={p.onFocusSquad} options={p.deployedSquads.map((s) => {
             // In the field, readiness means members still fit for high-risk work (not deploy eligibility).
-            const fit = s.officerIds.filter((id) => p.g.officers[id] && highRiskAllowed(p.g.officers[id]) && (!p.g.activeRun || !incidentOfficerUnavailable(p.g, p.g.activeRun, id))).length;
+            const went = p.g.activeRun ? runRoster(p.g, p.g.activeRun, s.id) : s.officerIds;
+            const fit = went.filter((id) => p.g.officers[id] && highRiskAllowed(p.g.officers[id]) && (!p.g.activeRun || !incidentOfficerUnavailable(p.g, p.g.activeRun, id))).length;
             const task = p.squadTasks.find(task => task.squadId === s.id);
             const location = p.spaces.find(space => space.id === task?.positionId)?.label ?? task?.positionId;
             const unavailable = p.unavailableSquadIds?.includes(s.id) && s.id !== focus?.id;
-            return { value: s.id, disabled: unavailable, accessibleLabel: `Squad ${s.id}, ${s.name}, ${fit} of ${s.officerIds.length} fit${location ? `, at ${location}` : ''}${unavailable ? ', unavailable for this decision' : ''}`,
-              label: <><b>{s.id}</b><span className="squad-tab-detail"><span className="squad-tab-name">{s.name}</span>{location && <small>{location}</small>}</span><span className="choice-rail-count">{fit}/{s.officerIds.length} fit</span></> };
+            return { value: s.id, disabled: unavailable, accessibleLabel: `Squad ${s.id}, ${s.name}, ${fit} of ${went.length} fit${location ? `, at ${location}` : ''}${unavailable ? ', unavailable for this decision' : ''}`,
+              label: <><b>{s.id}</b><span className="squad-tab-detail"><span className="squad-tab-name">{s.name}</span>{location && <small>{location}</small>}</span><span className="choice-rail-count">{fit}/{went.length} fit</span></> };
           })} />
           <p className="operation-squad-hint">{sel ? `Reviewing with ${sel.actingSquadIds.map(id => `Squad ${id}`).join(' + ')}. Switching here changes who acts.` : 'Choose who acts, then review a decision. Pick support in the review.'}</p>
         </div>

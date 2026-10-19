@@ -15,6 +15,7 @@ import { focusActingSquad, toggleActingSquad, toggleSupportingSquad } from './op
 import { responseFailurePlan } from '../../sim/response-failure';
 import { liveScreen, type ActionSelection, type Override } from './live-model';
 import { lexiconFor } from '../people/lexicon';
+import { runRoster } from '../../sim/squads';
 
 /** Scroll the saved result into view without moving focus away from the player's place. */
 function revealLastDecision() {
@@ -56,7 +57,7 @@ export function OpsLive() {
   const actions = model.actions;
   const spaces = model.spaces;
   // The deployed officers, by squad, for the names in this call's text.
-  const people = scenario ? lexiconFor(scenario, run, deployed.flatMap((squad) => squad.officerIds.flatMap((id) => g.officers[id] ? [{ ...g.officers[id], squad: squad.id }] : []))) : null;
+  const people = scenario ? lexiconFor(scenario, run, deployed.flatMap((squad) => runRoster(g, run, squad.id).flatMap((id) => g.officers[id] ? [{ ...g.officers[id], squad: squad.id }] : []))) : null;
 
   const pickAction = (id: Id) => {
     if (view?.id === id || !actions.some((action) => action.id === id) || run.stage === 'debrief') return;

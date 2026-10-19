@@ -42,7 +42,8 @@ export function useLiveFunding(g: GameState): { shown: number; deltas: FundingDe
     seen.current = lastSeq;
     if (reducedMotion() || !fresh.length) return;
     // One chip per frame of news: several events at once read as their sum.
-    const amount = fresh.reduce((sum, e) => sum + e.amount, 0);
+    // A folded entry announces only its newest posting; the rest was announced when it happened.
+    const amount = fresh.reduce((sum, e) => sum + (e.latest ?? e.amount), 0);
     if (Math.round(amount) === 0) return;
     const delta = { key: lastSeq, amount, label: fresh.length === 1 ? fresh[0].label : `${fresh.length} changes` };
     setDeltas((list) => [...list.slice(-2), delta]);

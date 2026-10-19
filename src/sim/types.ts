@@ -500,6 +500,8 @@ export interface LedgerEntry {
   after: number;
   kind: LedgerKind;
   label: string;
+  /** The newest posting folded into this entry (absent when there is only one). */
+  latest?: number;
 }
 
 export interface Department {

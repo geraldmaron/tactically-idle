@@ -5,6 +5,7 @@ import { planActionResupply } from '../../sim/equipment-resupply';
 import type { ActionResupplyPlan } from '../../sim/equipment-resupply';
 import { incidentOfficerUnavailable } from '../../sim/incident-consequences';
 import { getScenario } from '../../sim/scenario-registry';
+import { runRoster } from '../../sim/squads';
 import type { ActionDefinition, ScenarioDefinition } from '../../sim/scenario-types';
 import type { ActionView, GameState, Id, OperationRun, SpaceView, Squad, SquadId, StageId } from '../../sim/types';
 import { floorCount } from '../blueprint/floors';
@@ -88,7 +89,8 @@ export function liveScreen(g: GameState, now: number, ui: LiveUiState): { model:
     .map((s) => previewAction(g, now, view.id, [s.id], support.filter((id) => id !== s.id)))
     .filter((a): a is NonNullable<typeof a> => !!a?.eligible) : [];
 
-  const officers = focus ? focus.officerIds.map((id) => g.officers[id]).filter((o) => !!o) : [];
+  // Who went, not who is in the squad now: officers can join a deployed squad mid-call (run-roster).
+  const officers = focus ? runRoster(g, run, focus.id).map((id) => g.officers[id]).filter((o) => !!o) : [];
   // No officer is highlighted by default: no decision asks the player to pick one. Tapping an
   // officer while reviewing a decision shows what they add to it.
   const activeOfficerId = view && ui.activeOfficer && officers.some((o) => o.id === ui.activeOfficer) ? ui.activeOfficer : null;
@@ -97,7 +99,7 @@ export function liveScreen(g: GameState, now: number, ui: LiveUiState): { model:
   const scenario = getScenario(run.scenarioId);
   const actionRule = run.stage === 'debrief' ? undefined : scenario?.stages[run.stage].actions.find(action => action.id === view?.id);
   const maxActing = actionRule?.maxActing ?? 1;
-  const availableMembers = (id: SquadId) => deployed.find(squad => squad.id === id)?.officerIds.filter(officerId => !!g.officers[officerId] && !incidentOfficerUnavailable(g, run, officerId)) ?? [];
+  const availableMembers = (id: SquadId) => deployed.some(squad => squad.id === id) ? runRoster(g, run, id).filter(officerId => !!g.officers[officerId] && !incidentOfficerUnavailable(g, run, officerId)) : [];
   const actorUnavailable = (id: SquadId) => !actionRule?.commandOnly && availableMembers(id).length === 0;
   const floors = floorCount(built.location);
   /** Floor a room or zone sits on (exterior zones are ground). */

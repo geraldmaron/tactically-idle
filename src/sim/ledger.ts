@@ -6,17 +6,18 @@ import type { Department, LedgerEntry, LedgerKind } from './types';
 
 export const LEDGER_TUNING = { keep: 60, hourMs: 3_600_000 } as const;
 
-/** Change funding by `amount` and record it. Repeats of the same kind and label in one clock hour
- * fold into one entry, so an hourly manager reads as one line, and offline settlement writes the
- * same entries as the same hours played online. */
+/** Change funding by `amount` and record it. A repeat of the same kind and label in the same clock
+ * hour folds into the previous entry only when nothing else moved the balance in between, so every
+ * entry's before + amount = after; `latest` keeps the newest posting so a viewer announces only it. */
 export function postFunding(dep: Department, amount: number, kind: LedgerKind, label: string, at: number): void {
   if (!Number.isFinite(amount) || amount === 0) return;
   const before = dep.funding;
   dep.funding = before + amount;
   const ledger = (dep.ledger ??= []);
   const last = ledger.at(-1);
-  if (last && last.kind === kind && last.label === label && Math.floor(last.at / LEDGER_TUNING.hourMs) === Math.floor(at / LEDGER_TUNING.hourMs)) {
+  if (last && last.kind === kind && last.label === label && last.after === before && Math.floor(last.at / LEDGER_TUNING.hourMs) === Math.floor(at / LEDGER_TUNING.hourMs)) {
     last.amount += amount;
+    last.latest = amount;
     last.after = dep.funding;
     last.at = Math.max(last.at, at);
     // Re-sequence so a viewer diffing by seq sees the folded entry as new.

@@ -45,6 +45,19 @@ describe('funding ledger', () => {
     expect(dep.ledger.at(-1)!.after).toBe(dep.funding);
   });
 
+  it('folds only when nothing moved the balance in between, and keeps the newest posting', () => {
+    const dep = createInitialState(T0).department;
+    dep.ledger = [];
+    postFunding(dep, -240, 'purchase', 'Trauma kit', T0);
+    postFunding(dep, -240, 'purchase', 'Trauma kit', T0 + 60_000);
+    expect(dep.ledger).toHaveLength(1);
+    expect(dep.ledger[0]).toMatchObject({ amount: -480, latest: -240 });
+    dep.funding += 33; // hourly accrual between purchases
+    postFunding(dep, -240, 'purchase', 'Trauma kit', T0 + 120_000);
+    expect(dep.ledger).toHaveLength(2);
+    for (const e of dep.ledger) expect(e.before + e.amount).toBeCloseTo(e.after);
+  });
+
   it('ignores zero amounts', () => {
     const dep = createInitialState(T0).department;
     const n = dep.ledger?.length ?? 0;
