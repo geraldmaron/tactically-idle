@@ -79,14 +79,15 @@ export const HOSTAGE_TEMPLATE: IncidentTemplate = {
     { index: 0, people: { taker: { ...TAKER, volatility: { pick: [['steady', 50], ['shifting', 50]] } }, others: OTHERS({ min: 0.55, max: 0.9 }) } },
     // The owner's heart: a medical clock, about forty minutes to an hour (±25%). The team sees the
     // first sign through the glass a few minutes in, and command will approve going in from then.
-    // The long holds fork on it; anywhere else running out records the collapse and marks it.
+    // The long holds fork on it; anywhere else running out records the collapse and moves the call
+    // to owner_down. The node, not a mark, carries the collapse from there.
     { index: 1, people: { taker: { ...TAKER, volatility: 'volatile' }, others: OTHERS({ min: 0.4, max: 0.8 }), owner: { needs: ['cardiac'], meters: { condition: 60, composure: 40 } } },
       clocks: [{ id: 'owner_condition', label: '{owner.first}’s condition', kind: 'medical', owner: 'owner', start: 60, ratePerMin: 1.2, rateSpread: 0.25, rateKnown: false, factKey: 'owner_faint',
         urgent: '{owner.first} is down on the tiles behind the counter and can’t wait',
         cues: [{ at: 55, text: 'Through the glass, the team sees {owner.first} get down from the stool and sit on the tiles.', mark: 'owner_unwell' }],
         // Running out where no fork reads it moves the call to owner_down (R-G4): an ending the decision
-        // reached stands, and an owner already out keeps the mark but moves nothing (sim/clocks.ts).
-        onOut: { harm: 'serious', mark: 'owner_down', next: { node: 'owner_down' } } }] },
+        // reached stands (heldEnd reads the clock itself), and an owner already out moves nothing (sim/clocks.ts).
+        onOut: { harm: 'serious', next: { node: 'owner_down' } } }] },
     { index: 2, people: {
       taker: { ...TAKER, volatility: 'volatile', threat: { disposition: 'hostile', intent: 'barricade', awareness: 'aware', readiness: 'brandished' },
         demands: [{ kind: 'statement', text: '{owner.His} signature on a statement clearing {taker.him}, and nothing less', concedable: false }] },
