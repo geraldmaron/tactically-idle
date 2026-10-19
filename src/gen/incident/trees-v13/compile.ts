@@ -519,17 +519,6 @@ export function placeCast(tree: CallTree, built: BuiltLocation, spec: IncidentSp
     if (!openingIds) throw new Error(`No ${profile} route out for ${role.id} in ${tree.type}`);
     routes[routeName(role.id)] = { fromSpaceId: roomOf[role.id], toSpaceId: outside, openingIds, profile };
   }
-  // R-B2: which roles placed inside have a window to climb out of, and that way out for every role a
-  // choice walks by it (viaRouteName). A chair user never climbs.
-  const exits: Record<string, { window: boolean }> = {};
-  const viaWindow = new Set(tree.nodes.flatMap(node => node.choices.flatMap(choice => choice.walks && choice.walksVia === 'window' ? [choice.walks] : [])));
-  for (const role of onSite) {
-    if (roomOf[role.id] === undefined || roomOf[role.id] === outside) continue;
-    const exit = chair(role.id) ? null : windowExit(built, roomOf[role.id]);
-    const openingIds = exit ? findStoryRoute(built, roomOf[role.id], outside, 'walking', exit.id) : null;
-    exits[role.id] = { window: !!openingIds };
-    if (openingIds && viaWindow.has(role.id)) routes[viaRouteName(role.id, 'window')] = { fromSpaceId: roomOf[role.id], toSpaceId: outside, openingIds, profile: 'walking', exitOpeningId: exit!.id };
-  }
   if (!routes.exit) {
     const openingIds = findStoryRoute(built, room.id, outside, 'walking');
     if (!openingIds) throw new Error(`No walking route out of the scene for ${tree.type}`);
@@ -547,6 +536,20 @@ export function placeCast(tree: CallTree, built: BuiltLocation, spec: IncidentSp
     if (!start) throw new Error(`No room for ${role.id} in ${tree.type}`);
     if (roomOf[role.id] !== outside) occupied.push({ spaceId: roomOf[role.id], at: start });
     anchors[role.id] = { inside: start, outside: out };
+  }
+  // R-B2: which roles placed inside have a window to climb out of, and that way out for every role a
+  // choice walks by it (viaRouteName). A chair user never climbs. The window counts only when the
+  // walk to it is clear of furniture from where the person starts, as the walk-out check below and
+  // the engine read it, so a blocked window prunes the choice instead of refusing the building.
+  const exits: Record<string, { window: boolean }> = {};
+  const viaWindow = new Set(tree.nodes.flatMap(node => node.choices.flatMap(choice => choice.walks && choice.walksVia === 'window' ? [choice.walks] : [])));
+  for (const role of onSite) {
+    if (roomOf[role.id] === undefined || roomOf[role.id] === outside) continue;
+    const exit = chair(role.id) ? null : windowExit(built, roomOf[role.id]);
+    const found = exit ? findStoryRoute(built, roomOf[role.id], outside, 'walking', exit.id) : null;
+    const openingIds = found && routeAlongOpenings(built, anchors[role.id].inside, anchors[role.id].outside, found, null, false, 1).reachable ? found : null;
+    exits[role.id] = { window: !!openingIds };
+    if (openingIds && viaWindow.has(role.id)) routes[viaRouteName(role.id, 'window')] = { fromSpaceId: roomOf[role.id], toSpaceId: outside, openingIds, profile: 'walking', exitOpeningId: exit!.id };
   }
   const groups: Record<string, string[]> = {};
   for (const [group, def] of Object.entries(tree.groups ?? {})) {
