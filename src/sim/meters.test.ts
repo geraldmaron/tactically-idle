@@ -223,3 +223,17 @@ describe('meters: drift with time', () => {
     expect(() => advanceTime(bare, scenario, 20)).not.toThrow();
   });
 });
+
+describe('meters: drift survives a save', () => {
+  it('reloads every natural play of every shipping call, so the validator replays drift as the commit does', async () => {
+    const { CALL_TREES } = await import('../content/call-trees');
+    const { drawCalls, playToEnd, POLICIES } = await import('../gen/incident/trees-v13/balance');
+    let checked = 0;
+    for (const tree of Object.values(CALL_TREES)) for (const { scenarioId, seed } of drawCalls(tree!, 2, 6)) for (const policy of POLICIES) {
+      const state = playToEnd(scenarioId, policy, seed);
+      expect(deserialize(serialize(state, NOW)), `${scenarioId} ${policy} ${seed}`).not.toBeNull();
+      checked++;
+    }
+    expect(checked).toBeGreaterThan(20);
+  }, 120_000);
+});
