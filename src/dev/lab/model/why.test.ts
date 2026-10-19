@@ -1,7 +1,9 @@
 // Why can or can't this happen: requirement trees checked clause by clause at a frame through the
 // engine and the compiler, per situation and per draw, with writers and fixes.
 import { describe, expect, it } from 'vitest';
-import { labRequirementTree } from './clocks';
+import { labRequirementTree, treeClockRoutes } from './clocks';
+import { certWords } from './squads';
+import { certSubjects } from './test-subjects';
 import type { TreeIf } from '../../../content/call-trees/types';
 import { dependencyIndex } from '../../../gen/incident/trees-v13/dependencies';
 import type { ReqNode } from '../../../gen/incident/trees-v13/dependencies';
@@ -23,25 +25,27 @@ const leaves = (e: EvaluatedReq): EvaluatedReq[] => 'leaf' in e.node ? [e] : e.c
 const leafOf = (e: EvaluatedReq, kind: string) => leaves(e).filter(entry => 'leaf' in entry.node && entry.node.leaf.kind === kind);
 
 describe('evaluateReq', () => {
-  it('rescue vehicle: the cert clause fails for squad A; fixes are a lab grant and a squad search', () => {
-    const s = open('type=protected_rescue&tier=2');
-    const deps = dependencyIndex(s.template);
-    const target = { choice: ['wont_leave', 'vehicle'] as [string, string] };
-    const req = labRequirementTree(s.tree, target);
-    const { root, fixes } = evaluateReq(req, s, currentFrame(s), deps, target);
-    const [cert] = leafOf(root, 'cert');
-    expect(cert).toMatchObject({ label: 'Needs certification: vehicle operations', now: 'fail' });
-    expect(leafOf(root, 'at')[0].now).toBe('pass');
-    expect(root.now).toBe('fail');
-    expect(fixes).toEqual(expect.arrayContaining([{ kind: 'grant-cert', cert: 'vehicle_operations' }, { kind: 'seek-squad', cert: 'vehicle_operations' }]));
-    expect(fixes.some(fix => fix.kind === 'find-path')).toBe(false);
-    // With the grant the clause and the choice hold, as the engine says.
-    const granted = open('type=protected_rescue&tier=2&certs=vehicle_operations');
-    const again = evaluateReq(req, granted, currentFrame(granted), deps, target);
-    expect(leafOf(again.root, 'cert')[0].now).toBe('pass');
-    expect(again.root.now).toBe('pass');
-    expect(again.fixes).toEqual([]);
-    expect(currentFrame(granted).views.find(view => view.id.endsWith('_wont_leave_vehicle'))!.eligible).toBe(true);
+  // A root choice that needs a cert squad A lacks: on a shipped call that has one, and always on the
+  // certification fixture (model/test-subjects.ts), so the property never goes untested.
+  for (const subject of certSubjects()) it(`${subject.source}: the cert clause fails for squad A; fixes are a lab grant and a squad search`, () => {
+    subject.withSessions((s, granted) => {
+      const deps = dependencyIndex(s.template);
+      const target = { choice: [subject.node, subject.choice] as [string, string] };
+      const req = labRequirementTree(s.tree, target, treeClockRoutes(s.tree, s.template));
+      const { root, fixes } = evaluateReq(req, s, currentFrame(s), deps, target);
+      const [cert] = leafOf(root, 'cert');
+      expect(cert).toMatchObject({ label: `Needs certification: ${certWords(subject.cert)}`, now: 'fail' });
+      expect(leafOf(root, 'at')[0].now).toBe('pass');
+      expect(root.now).toBe('fail');
+      expect(fixes).toEqual(expect.arrayContaining([{ kind: 'grant-cert', cert: subject.cert }, { kind: 'seek-squad', cert: subject.cert }]));
+      expect(fixes.some(fix => fix.kind === 'find-path')).toBe(false);
+      // With the grant the clause and the choice hold, as the engine says.
+      const again = evaluateReq(req, granted, currentFrame(granted), deps, target);
+      expect(leafOf(again.root, 'cert')[0].now).toBe('pass');
+      expect(again.root.now).toBe('pass');
+      expect(again.fixes).toEqual([]);
+      expect(currentFrame(granted).views.find(view => view.id === subject.actionId)!.eligible).toBe(true);
+    });
   });
 
   it('a notMarks clause lists the sites that write the mark, and fails once it is set', () => {
@@ -133,11 +137,12 @@ describe('blockedBecause', () => {
     expect(blockedBecause(open('type=hostage_crisis&family=market_row&seed=7&tier=2&variant=2'), { ending: 'owner_killed' }, deps)).toBeNull();
   });
 
-  it('names the missing cert for a locked choice, and nothing once it is granted', () => {
-    const s = open('type=protected_rescue&tier=2');
-    const goal = { eligible: 't13_protected_rescue_wont_leave_vehicle' };
-    expect(blockedBecause(s, goal, dependencyIndex(s.template), 'squad A (719)')).toBe('It needs certification in vehicle operations, and squad A (719) has none.');
-    expect(blockedBecause(open('type=protected_rescue&tier=2&certs=vehicle_operations'), goal, null)).toBeNull();
+  for (const subject of certSubjects()) it(`${subject.source}: names the missing cert for a locked choice, and nothing once it is granted`, () => {
+    subject.withSessions((s, granted) => {
+      const goal = { eligible: subject.actionId };
+      expect(blockedBecause(s, goal, dependencyIndex(s.template), 'squad A (719)')).toBe(`It needs certification in ${certWords(subject.cert)}, and squad A (719) has none.`);
+      expect(blockedBecause(granted, goal, null)).toBeNull();
+    });
   });
 
   it('says nothing for goals the play itself decides', () => {

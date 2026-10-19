@@ -1,23 +1,21 @@
 // The lab's squads: the reference squad (day-one squad A of campaign 719), lab cert grants to its
 // first officer, the full kit, and the gate's own start left exactly as it was.
 import { describe, expect, it } from 'vitest';
+import { INCIDENT_TEMPLATES } from '../../../content/incidents';
 import { NOW, startGateRun } from '../../../gen/incident/gates/engine-driver';
-import { choiceActionId } from '../../../gen/incident/trees-v13/compile';
 import { createInitialState } from '../../../sim/department';
 import { buildLocation } from '../../../sim/location';
 import { getScenario } from '../../../sim/scenario-registry';
 import { apply, startCmd, stockKit } from '../../../sim/test-fixtures';
 import type { GameState } from '../../../sim/types';
-import { liveDecisions } from '../../../ui/screens/live-model';
 import { parseLabUrl } from '../url';
 import { KIT_ITEMS_FULL, readParams, resolveScenario, startLabRun } from './call';
-import { explore } from './explore';
-import { currentFrame, openSession, replayTokens } from './session';
-import type { Session } from './session';
-import { focusSquad, squadLine, squadOf, startCall } from './squads';
+import { currentFrame } from './session';
+import { certWords, focusSquad, squadLine, squadOf, startCall } from './squads';
+import { certSubjects } from './test-subjects';
+import { CERT_FIXTURE } from '../../../gen/incident/gates/fixture-call';
 
 const HOSTAGE = resolveScenario(readParams(new URLSearchParams('type=hostage_crisis&family=market_row&seed=7&tier=2&variant=1'))).id!;
-const RESCUE = resolveScenario(readParams(new URLSearchParams('type=protected_rescue&tier=2'))).id!;
 
 /** startGateRun exactly as it was before the lab's options (the content gates' start). */
 function gateStartBefore(scenarioId: string, campaignSeed = 719): GameState {
@@ -29,11 +27,6 @@ function gateStartBefore(scenarioId: string, campaignSeed = 719): GameState {
   return apply(kit.state, startCmd(s.id, ['A'], { positions: { A: entry }, loadouts: kit.loadouts, units: kit.units })).state;
 }
 
-function open(query: string): Session {
-  const opened = openSession(parseLabUrl(`?${query}`).url, null);
-  if (!('frames' in opened)) throw new Error(opened.message);
-  return opened;
-}
 
 describe('the reference squad', () => {
   it('is squad A of campaign 719: Singh, Aung, Vann, Moretti', () => {
@@ -54,7 +47,8 @@ describe('the reference squad', () => {
   });
 
   it('leaves the gate\'s own start unchanged without options, and with empty ones', () => {
-    for (const id of [HOSTAGE, RESCUE]) {
+    // Every shipped call's default draw, so no one call's content is pinned.
+    for (const id of Object.keys(INCIDENT_TEMPLATES).map(type => resolveScenario(readParams(new URLSearchParams(`type=${type}&tier=2`))).id!)) {
       const before = gateStartBefore(id);
       expect(startGateRun(id)).toEqual(before);
       expect(startGateRun(id, 719, {})).toEqual(before);
@@ -68,30 +62,26 @@ describe('the reference squad', () => {
     expect(full).toEqual(startLabRun(HOSTAGE, 'full'));
     const units = new Set(Object.values(full.units).map(unit => unit.itemId));
     for (const item of KIT_ITEMS_FULL) expect(units.has(item)).toBe(true);
-    const granted = startCall(RESCUE, 'day1', { seed: 719, certs: ['vehicle_operations'] });
-    const plain = startGateRun(RESCUE);
+    // A cert the reference squad lacks (the certification fixture's), granted on the hostage call.
+    const cert = CERT_FIXTURE.cert;
+    const granted = startCall(HOSTAGE, 'day1', { seed: 719, certs: [cert] });
+    const plain = startGateRun(HOSTAGE);
     const first = granted.squads.find(entry => entry.id === 'A')!.officerIds[0];
-    expect(granted.officers[first].certs).toEqual(['crisis_negotiation', 'vehicle_operations']);
+    expect(plain.officers[first].certs).not.toContain(cert);
+    expect(granted.officers[first].certs).toEqual([...plain.officers[first].certs, cert]);
     expect(granted.activeRun!.rngState).toBe(plain.activeRun!.rngState);
     expect({ ...granted, officers: plain.officers }).toEqual(plain);
-    expect(squadLine(granted, { kind: 'reference', seed: 719, certs: ['vehicle_operations'] }).label).toBe('Squad A (719) + vehicle operations (lab grant)');
+    expect(squadLine(granted, { kind: 'reference', seed: 719, certs: [cert] }).label).toBe(`Squad A (719) + ${certWords(cert)} (lab grant)`);
     expect(squadLine(granted, { kind: 'game', at: NOW }).label).toBe('Your squad (from game)');
   });
 
-  it('makes both rescue vehicle choices eligible with a vehicle operations grant, and only then', () => {
-    const vehicle = choiceActionId('protected_rescue', 'wont_leave', 'vehicle');
-    const tree = open('type=protected_rescue&tier=2').tree;
-    const screen = tree.nodes.flatMap(node => node.choices.filter(choice => choice.id === 'screen_first').map(choice => choiceActionId(tree.type, node.id, choice.id)))[0];
-    expect(screen).toBeDefined();
-    for (const [query, eligible] of [['type=protected_rescue&tier=2', false], ['type=protected_rescue&tier=2&certs=vehicle_operations', true]] as const) {
-      const s = open(query);
-      const root = currentFrame(s).views.find(view => view.id === vehicle)!;
-      expect(root.eligible).toBe(eligible);
-      if (!eligible) expect(root.reason).toContain('qualified vehicle operator');
-      const found = explore(s.frames[0].state, { offered: screen });
-      expect(found.path).not.toBeNull();
-      const there = currentFrame(replayTokens(s, found.path!));
-      expect(liveDecisions(there.state, NOW, 'A').find(view => view.id === screen)!.eligible).toBe(eligible);
-    }
+  // A choice that needs a cert squad A lacks, on a shipped call that has one and on the fixture.
+  for (const subject of certSubjects()) it(`${subject.source}: makes a cert-gated choice eligible with the lab grant, and only then`, () => {
+    subject.withSessions((bare, granted) => {
+      const before = currentFrame(bare).views.find(view => view.id === subject.actionId)!;
+      expect(before.eligible).toBe(false);
+      expect(before.reason).toMatch(/qualified|certif/i);
+      expect(currentFrame(granted).views.find(view => view.id === subject.actionId)!.eligible).toBe(true);
+    });
   }, 30000);
 });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { drawIncidentSpec, generateIncident } from '../gen/incident';
+import { houseCalls } from '../gen/incident/trees-v13/house-call-fixture';
 import { applyNaturalMove, NOW, startGateRun } from '../gen/incident/gates/engine-driver';
 import { FORCE_REASONS } from '../content/incidents/lines';
 import { AUTHORIZATION_V1 } from './authorization';
@@ -193,28 +193,30 @@ describe('cascade (CASCADE_V1)', () => {
 });
 
 describe('drawn consequences in play', () => {
+  // On the engine's own house call (house-fixture.ts), never the shipping trees: its threat node
+  // carries incoming fire and its entries carry force, whatever the calls lane writes.
   it('keep every save valid while calls with gunfire and force are played', () => {
-    let seen = 0;
-    for (const type of ['active_armed_incident', 'barricaded'] as const) {
-      let rng = 2718;
-      for (let i = 0; i < 12; i++) {
-        const drawn = drawIncidentSpec(rng, { level: 10, trust: 90, unlockedTypes: [type] });
-        rng = drawn.state;
-        const s = generateIncident(drawn.spec);
-        let state: GameState | null = startGateRun(s.id, 300 + i);
-        for (let step = 0; step < 8 && state?.activeRun?.status === 'active' && state.activeRun.stage !== 'debrief'; step++) {
-          // The fastest eligible choice: the style that meets gunfire most.
-          const views = actionViews(state, NOW, 'A').filter(view => view.eligible).sort((a, b) => a.timeCost - b.timeCost);
-          if (!views.length) break;
-          state = applyNaturalMove(state, { kind: 'decide', actionId: views[0].id });
-          if (!state?.activeRun) break;
-          const run = state.activeRun, scenario = getScenario(run.scenarioId)!;
-          expect(validIncidentConsequences(run, scenario, state.officers, state.squads, state.department.clockHighWater), `${s.id} officer records`).toBe(true);
-          expect(validPersonConsequences(run, scenario, state), `${s.id} person records`).toBe(true);
-          seen += Object.keys(run.officerCasualties ?? {}).length;
-        }
+    let seen = 0, drawnSeen = 0;
+    for (const [i, s] of houseCalls(48).entries()) {
+      let state: GameState | null = startGateRun(s.id, 300 + i);
+      for (let step = 0; step < 8 && state?.activeRun?.status === 'active' && state.activeRun.stage !== 'debrief'; step++) {
+        // A choice that can draw incoming fire when there is one, else the fastest.
+        const views = actionViews(state, NOW, 'A').filter(view => view.eligible).sort((a, b) => a.timeCost - b.timeCost);
+        if (!views.length) break;
+        const scenario = getScenario(state.activeRun.scenarioId)!;
+        const drawing = (id: string) => Object.values(scenario.stages).flatMap(stage => stage.actions).find(action => action.id === id)
+          ?.outcomes.adverse?.some(effect => effect.drawn?.model === 'incoming_fire') ?? false;
+        const pick = views.find(view => drawing(view.id)) ?? views[0];
+        if (drawing(pick.id)) drawnSeen++;
+        state = applyNaturalMove(state, { kind: 'decide', actionId: pick.id });
+        if (!state?.activeRun) break;
+        const run = state.activeRun;
+        expect(validIncidentConsequences(run, scenario, state.officers, state.squads, state.department.clockHighWater), `${s.id} officer records`).toBe(true);
+        expect(validPersonConsequences(run, scenario, state), `${s.id} person records`).toBe(true);
+        seen += Object.keys(run.officerCasualties ?? {}).length;
       }
     }
+    expect(drawnSeen, 'a choice that draws was played').toBeGreaterThan(0);
     expect(seen, 'some officer was hit along the way').toBeGreaterThan(0);
   }, 300000);
 });

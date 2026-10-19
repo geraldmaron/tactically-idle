@@ -14,7 +14,7 @@ import { INCIDENT_TEMPLATES, templateAt } from '../../../content/incidents';
 import type { IncidentTemplate } from '../../../content/incidents/types';
 import { parseIncidentId } from '../../../gen/incident';
 import { applyMove, applyNaturalMove, drawnAt, drawnChance, NOW, sampleFor } from '../../../gen/incident/gates/engine-driver';
-import { instanceOf } from '../../../gen/incident/instance';
+import { drawInstance, hostedSpec, instanceOf } from '../../../gen/incident/instance';
 import type { IncidentInstance } from '../../../gen/incident/instance';
 import { callCounts, textBinder, TREE_STARTED } from '../../../gen/incident/trees-v13/compile';
 import { choiceIndex } from '../../../gen/incident/trees-v13/graph';
@@ -27,9 +27,10 @@ import type { ActionView, BuiltLocation, DecisionResolution, GameState, OutcomeB
 import type { LabHandoff } from '../../../ui/lab-handoff';
 import { liveDecisions } from '../../../ui/screens/live-model';
 import type { LabUrl } from '../types';
-import { callKey, noTreeNotice } from '../url';
+import { callKey, noTreeNotice, REFERENCE_SQUAD } from '../url';
+import { isCertId } from '../../../content/certs';
 import { contentKey, decodePath, encodePath, resolveScenario } from './call';
-import type { LabMove, Resolved } from './call';
+import type { Kit, LabMove, Resolved } from './call';
 import { actionTitle } from './describe';
 import { percent } from './label';
 import { focusSquad, squadOf, startCall } from './squads';
@@ -257,12 +258,30 @@ export function openSession(u: LabUrl, handoff: LabHandoff | null): Session | Op
     }
   }
 
+  return assemble(`${callKey(u)}|${tuningHash('current')}`, resolved, scenario, template, instance, start, squad, prior, note, contentKey(spec.type));
+}
+
+function assemble(key: string, resolved: Resolved, scenario: ScenarioDefinition, template: IncidentTemplate, instance: IncidentInstance,
+  start: GameState, squad: SquadSource, prior: PriorStep[], note: string | null, content: string): Session {
   return {
-    key: `${callKey(u)}|${tuningHash('current')}`, resolved, scenario, tree, template, instance,
+    key, resolved, scenario, tree: template.tree, template, instance,
     counts: callCounts(instance.placed), turnDrawn: { ...instance.turns }, situation: situationOf(instance.situation),
-    contentKey: contentKey(spec.type), squad, frames: [frameOf(start, null, null)], prior, stopped: null,
+    contentKey: content, squad, frames: [frameOf(start, null, null)], prior, stopped: null,
     ahead: [], focus: focusSquad(start), note,
   };
+}
+
+/** Test support: a session on a fixture call, a scenario compiled from a template that isn't the
+ * registered one (gates/fixture-call.ts). `scenarioId` must stay registered while the session is
+ * played (engine-driver withDraftScenario); the squad is the reference squad with `certs` granted. */
+export function fixtureSession(template: IncidentTemplate, scenarioId: string, certs: readonly string[] = [], kit: Kit = 'day1'): Session {
+  const scenario = getScenario(scenarioId);
+  if (!scenario?.incident) throw new Error(`No fixture call ${scenarioId} is registered`);
+  const instance = drawInstance(template, buildLocation(scenario.locationFamilyId, scenario.locationSeed), hostedSpec(scenario));
+  const reference = { seed: REFERENCE_SQUAD, certs: certs.filter(isCertId) };
+  const resolved: Resolved = { spec: scenario.incident, id: scenarioId, scenario, error: null, situation: null, recipeId: null };
+  return assemble(`fixture:${scenarioId}|${reference.certs.join(',')}|${kit}`, resolved, scenario, template, instance,
+    startCall(scenarioId, kit, reference), { kind: 'reference', seed: reference.seed, certs: reference.certs }, [], null, `fixture:${template.type}`);
 }
 
 /** One move. A move equal to the next frame ahead (after a rewind) reuses it; any other move drops
