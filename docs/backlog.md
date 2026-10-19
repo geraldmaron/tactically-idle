@@ -205,17 +205,16 @@ Needs: start=none; integrate=none; ship=none
 
 ## Gates and tooling
 
-### short-squad-deploys: A squad can deploy without its injured officers
-Tags: job=build; journeys=answer-a-call; probes=officer-ratings; lane=engine
+### short-squad-ui: The squad card and Prepare say who stays home
+Tags: job=build; journeys=short-squad; probes=none (display); lane=interface
 Needs: start=none; integrate=none; ship=none
 
-Owner decision 2026-10-19: a squad with at least one ready officer can deploy, and officers who
-aren't ready (injured, recovering, in training) stay home. Today the squad card marks such a squad
-deployable (`src/sim/department-selectors.ts`) while Deploy refuses it unless every officer is ready
-(`src/sim/operation.ts`). Done: Deploy sends only the ready officers, the squad card and the Prepare
-screen say who stays home and why, the odds use the officers who actually go, and a journey test
-deploys a squad short one injured officer. The e2e script's ready-squad rule (#72) is relaxed to
-match.
+The engine side shipped in #78: a squad deploys with its ready officers, and the rest stay home
+(`deployRoster` and `runRoster` in `src/sim/squads.ts`, `SquadReadiness.staysHome`). Left: the squad
+card and Prepare render `staysHome` (who stays home and why), and `OpsPrepare.tsx` passes Deploy's
+crew to `standardRadioPlan`; until then its radio count and "buy radios" prompt count every squad
+member while Deploy reserves one radio per officer who goes. The e2e script's all-ready rule
+(`scripts/play-loop.mjs`) relaxes to one ready officer (tooling).
 
 ### e2e-in-ci: The browser end-to-end script runs in CI
 Tags: job=command; journeys=answer-a-call; probes=none (tooling); lane=tooling
