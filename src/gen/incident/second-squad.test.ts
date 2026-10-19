@@ -144,7 +144,7 @@ describe('a second squad supports from a named point (R-B4)', () => {
       let call: ScenarioDefinition | null = null, b: ReturnType<typeof buildLocation> | null = null;
       for (let seed = 1; seed < 20 && !call; seed++) {
         let base;
-        try { base = generateIncident({ type: 'barricaded', familyId: family, buildingSeed: building, seed, tier: 2, contentVersion: 13 }); } catch { continue; }
+        try { base = generateIncident({ type: 'barricaded', familyId: family, buildingSeed: building, seed, tier: 2, contentVersion: 13 }, HOUSE_TEMPLATE); } catch { continue; }
         const { clocks: _c, incidentPeople: _p, threats: _t, ...frame } = base;
         b = buildLocation(frame.locationFamilyId, frame.locationSeed);
         try { call = compileIncident({ ...frame, id: `support-${family}-${building}`, incident: hostedSpec(frame) }, b, t); } catch { continue; }

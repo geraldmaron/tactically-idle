@@ -31,7 +31,7 @@ function variant(floor: 'ground' | 'upper' | 'any'): IncidentTemplate {
 function call(template: IncidentTemplate, family: string, rethrow = false): { s: ScenarioDefinition; built: ReturnType<typeof buildLocation> } | null {
   for (let seed = 1; seed < 40; seed++) {
     let base;
-    try { base = generateIncident({ type: 'barricaded', familyId: family, buildingSeed: 1, seed, tier: 2, contentVersion: 13 }); } catch { continue; }
+    try { base = generateIncident({ type: 'barricaded', familyId: family, buildingSeed: 1, seed, tier: 2, contentVersion: 13 }, HOUSE_TEMPLATE); } catch { continue; }
     const { clocks: _c, incidentPeople: _p, threats: _t, ...frame } = base;
     const spec = hostedSpec(frame), built = buildLocation(frame.locationFamilyId, frame.locationSeed);
     if (built.location.rooms.every(room => room.floor === 0) !== (family !== 'two_storey_house_g2')) continue;

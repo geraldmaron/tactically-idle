@@ -47,7 +47,7 @@ function variant(opts: { move?: TreeMoveTo; edit?: (tree: CallTree) => void } = 
 function call(template: IncidentTemplate, family: string, from = 1, rethrow = false): { s: ScenarioDefinition; built: ReturnType<typeof buildLocation>; seed: number } | null {
   for (let seed = from; seed < from + 30; seed++) {
     let base;
-    try { base = generateIncident({ type: 'barricaded', familyId: family, buildingSeed: 1, seed, tier: 2, contentVersion: 13 }); } catch { continue; }
+    try { base = generateIncident({ type: 'barricaded', familyId: family, buildingSeed: 1, seed, tier: 2, contentVersion: 13 }, HOUSE_TEMPLATE); } catch { continue; }
     const { clocks: _c, incidentPeople: _p, threats: _t, ...frame } = base;
     const spec = hostedSpec(frame), built = buildLocation(frame.locationFamilyId, frame.locationSeed);
     try { return { s: compileIncident({ ...frame, id: `moves-${family}-${seed}`, incident: spec }, built, template), built, seed }; } catch (error) { if (rethrow) throw error; continue; }
@@ -154,7 +154,7 @@ describe('an unseen move changes nothing belief reads', () => {
   it('the same odds and force reads with and without the unseen move flag, on every hosting seed tried', () => {
     for (let seed = 1; seed <= 14; seed++) {
       let base;
-      try { base = generateIncident({ type: 'barricaded', familyId: 'bungalow_g2', buildingSeed: seed, seed, tier: 2, contentVersion: 13 }); } catch { continue; }
+      try { base = generateIncident({ type: 'barricaded', familyId: 'bungalow_g2', buildingSeed: seed, seed, tier: 2, contentVersion: 13 }, HOUSE_TEMPLATE); } catch { continue; }
       const { clocks: _c, incidentPeople: _p, threats: _t, ...frame } = base;
       const built = buildLocation(frame.locationFamilyId, frame.locationSeed);
       let s: ScenarioDefinition;
@@ -212,7 +212,7 @@ describe('a route step names what it must be, and a building where it isn’t ca
       let hosted = 0, tried = 0;
       for (let seed = 1; seed <= 12; seed++) {
         let base;
-        try { base = generateIncident({ type: 'barricaded', familyId: family, buildingSeed: seed, seed, tier: 2, contentVersion: 13 }); } catch { continue; }
+        try { base = generateIncident({ type: 'barricaded', familyId: family, buildingSeed: seed, seed, tier: 2, contentVersion: 13 }, HOUSE_TEMPLATE); } catch { continue; }
         const { clocks: _c, incidentPeople: _p, threats: _t, ...frame } = base;
         tried++;
         try { compileIncident({ ...frame, id: `host-${family}-${seed}`, incident: hostedSpec(frame) }, buildLocation(frame.locationFamilyId, frame.locationSeed), variant()); hosted++; } catch { /* rejected */ }
