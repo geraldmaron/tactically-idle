@@ -18,7 +18,7 @@ Each lane finishes its current item, the lead merges it, and the lane stops for 
 | Lane | Branch | In flight | Declared touches |
 |---|---|---|---|
 | engine | `engine-lane-2` session | Scenario work paused: parking `barricade-engine-fixes` (WIP, no PR). Queue: `short-squad-deploys`, `sidearms-day-one`, `peer-support-lead`, `recruiter`, `patrol-work` (design note first), `meters-drift`, `less-lethal-cartridges`, `manager-pronouns` | to be declared per item |
-| calls | `claude/calls-barricade-tree` (parked) | Scenario work paused: barricade parked as WIP on its branch, nothing merges. Next: identity briefs for the two new managers when the engine defines them | none |
+| calls | `claude/calls-barricade-tree` at 9b2847e (parked, stopped) | Stopped at the checkpoint. Parked: the new tree after the first writing review and the prose pass (check:strings exits 0), calibration rows for the new endings (trust floor unchanged), and the joint-operation journey switched to the barricade. Not done: the Codex retirement review and the reviewer's re-read (stopped before their verdicts), deleting barricade-order.ts, the turn_hall.watch change, the intel-floor list, civilian-hit lines and design-doc records | none |
 | tooling | parked `claude/tooling-rescue-pins` | Scenario work paused: rescue rows and barricade tooling fixes parked as WIP. Queue: `e2e-in-ci`, the `scale-gates` harness | to be declared |
 | interface | closed | Start a fresh interface session for the Command Staff cards once the engine defines the new managers | none |
 
