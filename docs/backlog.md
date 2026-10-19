@@ -270,13 +270,6 @@ Needs: start=none; integrate=none; ship=none
 Owner request 2026-10-19. One shared Disclosure for evidence and logs, sheets for reference guides,
 chip rails for filters, harm always visible. Ad hoc expanders are removed.
 
-### develop-track: Develop reads as a research track
-Tags: job=build; journeys=none (no journey covers Develop); probes=none (layout); lane=interface
-Needs: start=none; integrate=none; ship=none
-
-Owner decision 2026-10-19: one branch per tab on a vertical spine with drawn edges, state, tier
-pips, cost and needs on each tile, a Next marker and a sticky resource bar.
-
 ### officer-value: Officers learn and earn by who they are
 Tags: job=build; journeys=team-moves-odds; probes=none (officer economy); lane=engine
 Needs: start=none; integrate=none; ship=none
