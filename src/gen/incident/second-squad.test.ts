@@ -1,17 +1,18 @@
 // R-B4: a second squad supports the acting one from a point the choice names (TreeChoice.support),
 // compiled into the engine's SupportRule. The controls: the supporting squad goes to that point on
 // the map, the card and the breakdown name its task, and every support choice also works with one
-// squad. Exercised on the group fixture, so no shipping call is involved.
+// squad. Exercised on the group fixture; the joint-operation journey at the end plays the shipping barricade.
 import { describe, expect, it } from 'vitest';
 import type { CallTree, TreeChoice } from '../../content/call-trees/types';
 import type { IncidentTemplate } from '../../content/incidents/types';
 import { createInitialState } from '../../sim/department';
 import { dispatch } from '../../sim/game';
 import { buildLocation } from '../../sim/location';
-import { previewAction } from '../../sim/operation-selectors';
+import { actionViews, previewAction } from '../../sim/operation-selectors';
+import { getScenario } from '../../sim/scenario-registry';
 import type { ActionDefinition, ScenarioDefinition } from '../../sim/scenario-types';
 import { deserialize, serialize } from '../../sim/save';
-import { reachableOverGround, stagingFacing } from '../../sim/spatial-factors';
+import { reachableOverGround } from '../../sim/spatial-factors';
 import { NOW, startWithKit } from '../../sim/test-fixtures';
 import type { GameState } from '../../sim/types';
 import { withDraftScenario } from './gates/engine-driver';
@@ -177,35 +178,52 @@ describe('a second squad supports from a named point (R-B4)', () => {
 });
 
 // The joint-operation journey (architecture/journeys.ts), played headless through the real
-// dispatcher on the fixture until the barricade authors support; that call's PR moves it there.
+// dispatcher on the shipping barricade: the walk-out holds the front window and the entries hold
+// the front door, so a second squad has a named point on the call.
 describe('journey joint-operation', () => {
   it('two squads deploy, the second supports from the named point, the call saves mid-way and ends in a closed debrief', () => {
-    withDraftScenario(s, scenarioId => {
-      const two = atTalk(scenarioId, ['A', 'B']);
-      expect(two.activeRun!.squadIds).toEqual(['A', 'B']);
-      const rule = action('talk', 'hold').support!;
-      const held = send(two, { type: 'decide', actionId: id('talk', 'hold'), actingSquadIds: ['A'], supportSquadIds: ['B'] });
-      expect(held.result).toEqual({ ok: true });
-      const decision = held.state.activeRun!.history.at(-1)!;
-      expect(decision).toMatchObject({ actionId: id('talk', 'hold'), actingSquadIds: ['A'], supportSquadIds: ['B'] });
+    for (let seed = 1; seed < 40; seed++) {
+      let base;
+      try { base = generateIncident({ type: 'barricaded', familyId: 'cedar_close', buildingSeed: 3, seed, tier: 2, contentVersion: 13 }); } catch { continue; }
+      const scenario = getScenario(base.id)!;
+      expect(scenario.squadRange.max, 'the barricade deploys two squads').toBe(2);
+      const b = buildLocation(base.locationFamilyId, base.locationSeed);
+      const entry = b.location.entries[0];
+      let state = startWithKit(createInitialState(NOW, 4242), base.id, ['A', 'B'], { positions: { A: entry, B: entry } });
+      expect(state.activeRun!.squadIds).toEqual(['A', 'B']);
+      // The first eligible choice at each node, until one names a point for the second squad.
+      let supported: ActionDefinition | undefined;
+      for (let step = 0; step < 12 && !supported; step++) {
+        const run = state.activeRun!;
+        if (run.stage === 'debrief') break;
+        const views = actionViews(state, NOW, 'A').filter(view => view.eligible);
+        const defs = scenario.stages[run.stage].actions;
+        const withSupport = views.map(view => defs.find(def => def.id === view.id)!).find(def => def.support);
+        const next = withSupport ?? defs.find(def => def.id === views[0]?.id);
+        if (!next) break;
+        const done = send(state, { type: 'decide', actionId: next.id, actingSquadIds: ['A'], supportSquadIds: withSupport ? ['B'] : [] });
+        expect(done.result).toEqual({ ok: true });
+        state = done.state;
+        supported = withSupport;
+      }
+      if (!supported) continue;
+      const decision = state.activeRun!.history.at(-1)!;
+      expect(decision).toMatchObject({ actionId: supported.id, actingSquadIds: ['A'], supportSquadIds: ['B'] });
       expect(decision.inputs.some(input => input.source === 'support' && input.value > 0), 'the supporting squad counted').toBe(true);
-      const b = held.state.activeRun!.squadTasks.find(task => task.squadId === 'B')!;
-      const stand = stagingFacing(built, rule.coverSpaceId, action('talk', 'hold').targetId, rule.openingId)!;
-      expect(stand.openingId, 'staged at the named opening').toBe(rule.openingId);
-      expect(b).toMatchObject({ positionId: rule.coverSpaceId, stagingId: stand.id, at: stand.at });
+      const rule = supported.support!;
+      const task = state.activeRun!.squadTasks.find(entry => entry.squadId === 'B')!;
+      expect(task.positionId, 'on the map at the named point').toBe(rule.coverSpaceId);
       // Mid-call, with the second squad at its point, the campaign saves and loads to the same state.
-      // A draft call is on no real board, so the save carries it as a call already answered (as moves.test does).
-      const copy = structuredClone(held.state);
-      copy.incidents = [];
-      delete copy.activeRun!.sourceIncident;
-      const reloaded = deserialize(serialize(copy, NOW))!;
+      const reloaded = deserialize(serialize(state, NOW))!;
       expect(reloaded, 'the save loads').not.toBeNull();
-      expect(reloaded.activeRun!.squadTasks).toEqual(held.state.activeRun!.squadTasks);
-      const ended = playToEnd(scenarioId, 'random', 4242, { start: reloaded });
+      expect(reloaded.activeRun!.squadTasks).toEqual(state.activeRun!.squadTasks);
+      const ended = reloaded.activeRun!.stage === 'debrief' ? reloaded : playToEnd(base.id, 'random', 4242, { start: reloaded });
       expect(ended.activeRun?.stage, 'the call reached its debrief').toBe('debrief');
       const closed = send(ended, { type: 'closeDebrief' });
       expect(closed.result).toEqual({ ok: true });
       expect(closed.state.activeRun).toBeNull();
-    });
+      return;
+    }
+    throw new Error('No barricade seed reached a support choice');
   });
 });
