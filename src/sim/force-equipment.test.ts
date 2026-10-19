@@ -53,10 +53,12 @@ describe('current armed call force equipment', () => {
   it.each(['unqualified', 'broken', 'expired', 'servicing'] as const)('falls back from a carried sidearm when %s', fault => {
     const state = startGateRun(scenario().id, 719, { items: ['service_sidearm'], certs: ['entry_team'] });
     if (fault === 'unqualified') for (const officer of Object.values(state.officers)) officer.certs = [];
-    const unit = Object.values(state.units).find(unit => unit.itemId === 'service_sidearm')!;
-    if (fault === 'broken') unit.condition = 0;
-    if (fault === 'expired') unit.expiresAt = state.department.clockHighWater;
-    if (fault === 'servicing') unit.status = 'service';
+    // The department starts with sidearms issued (sidearms-day-one), so the fault applies to every one.
+    for (const unit of Object.values(state.units).filter(unit => unit.itemId === 'service_sidearm')) {
+      if (fault === 'broken') unit.condition = 0;
+      if (fault === 'expired') unit.expiresAt = state.department.clockHighWater;
+      if (fault === 'servicing') unit.status = 'service';
+    }
     const { forces, after } = forceDecision(state);
     expect(forces.flatMap(dist => dist.results).some(result => result.key.startsWith('firearm:'))).toBe(false);
     expect(after.activeRun!.history.at(-1)!.committed!.drawn!.find(record => record.model === 'team_force')!.key).toMatch(/^hands:/);
@@ -73,5 +75,36 @@ describe('current armed call force equipment', () => {
       unit.condition = 0;
       expect(qualifiedForceUnit(state, profile, [unit], [qualified], departmentUpkeep(state))).toBeUndefined();
     }
+  });
+
+  describe('less-lethal supplies', () => {
+    const device = (key: string) => key.startsWith('less_lethal_device:');
+    const armed = (seed: number) => generateIncident({ type: 'active_armed_incident', familyId: 'market_row', buildingSeed: 7, seed, tier: 2, contentVersion: 13 });
+    const kit = (seed: number, supplies: string[]) => startGateRun(armed(seed).id, 719, { items: ['conducted_energy_device', ...supplies], certs: ['less_lethal'] });
+    /** The first call seed whose reachable force decision is within the device's reach. */
+    function inReach(supplies: string[]) {
+      for (let seed = 1; seed <= 25; seed++) {
+        try {
+          const found = forceDecision(kit(seed, ['energy_cartridge']));
+          if (found.forces.flatMap(dist => dist.results).some(result => device(result.key))) return { seed, state: kit(seed, supplies) };
+        } catch { continue; }
+      }
+      throw new Error('No call seed reaches a device-range force decision');
+    }
+
+    it('does not count a device with no cartridge as carried', () => {
+      const { state } = inReach([]);
+      const { forces } = forceDecision(state);
+      expect(forces.flatMap(dist => dist.results).some(result => device(result.key))).toBe(false);
+    });
+
+    it('spends one cartridge when the device is used, and says so', () => {
+      const { state } = inReach(['energy_cartridge']);
+      const { after } = forceDecision(state);
+      const decision = after.activeRun!.history.at(-1)!;
+      expect(decision.committed!.drawn!.find(record => record.model === 'team_force')!.key).toMatch(/^less_lethal_device:/);
+      expect(decision.itemsConsumed).toContainEqual({ itemId: 'energy_cartridge', qty: 1 });
+      expect(decision.unitsUsed.filter(id => after.units[id].itemId === 'energy_cartridge')).toHaveLength(1);
+    });
   });
 });

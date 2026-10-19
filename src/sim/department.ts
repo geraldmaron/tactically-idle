@@ -12,7 +12,7 @@ import { INCIDENT_HANDLERS, seedIncidentBoard } from './incidents';
 import { setMaintenanceBudget } from './equipment-manager';
 import { START_LEVEL } from './department-level';
 import { INCIDENT_CONTENT_VERSION } from '../gen/incident';
-import { COMMAND_STAFF_HANDLERS, createCommandStaff } from './command-staff';
+import { COMMAND_STAFF_HANDLERS, createCommandStaff, fillOpenPosts } from './command-staff';
 import { departmentUpkeep } from './equipment-manager-policy';
 
 const fail = (reason: string): HandlerResult => ({ ok: false, reason });
@@ -68,7 +68,12 @@ export const DEPARTMENT_HANDLERS: HandlerMap<DepartmentCommandType> = {
   shortlist: (d, c) => ROSTER_HANDLERS.shortlist(d, c.candidateId, c.on),
   refreshCandidates: (d) => ROSTER_HANDLERS.refreshCandidates(d, candidatePoolSize(d)),
   startCourse: (d, c) => DEVELOP_HANDLERS.startCourse(d, c.officerId, c.courseId),
-  unlockNode: (d, c) => DEVELOP_HANDLERS.unlockNode(d, c.nodeId, c.expectedTier),
+  unlockNode: (d, c) => {
+    const result = DEVELOP_HANDLERS.unlockNode(d, c.nodeId, c.expectedTier);
+    // Opening a Command Staff post puts its first candidates on offer.
+    if (result.ok) fillOpenPosts(d);
+    return result;
+  },
   buyItem: (d, c) => DEVELOP_HANDLERS.buyItem(d, c.itemId, c.qty),
   createSquad: (d, c) => ROSTER_HANDLERS.createSquad(d, c.name),
   renameSquad: (d, c) => ROSTER_HANDLERS.renameSquad(d, c.squadId, c.name),
@@ -87,6 +92,9 @@ export const DEPARTMENT_HANDLERS: HandlerMap<DepartmentCommandType> = {
   markIncidentsSeen: (d) => INCIDENT_HANDLERS.markIncidentsSeen(d),
   setManagerEnabled: (d, c) => COMMAND_STAFF_HANDLERS.setManagerEnabled(d, c.managerId, c.enabled),
   setManagerPolicy: (d, c) => COMMAND_STAFF_HANDLERS.setManagerPolicy(d, c.patch),
+  hireStaff: (d, c) => COMMAND_STAFF_HANDLERS.hireStaff(d, c.managerId, c.candidateId),
+  dismissStaff: (d, c) => COMMAND_STAFF_HANDLERS.dismissStaff(d, c.managerId),
+  refreshStaffPool: (d, c) => COMMAND_STAFF_HANDLERS.refreshStaffPool(d, c.managerId),
 };
 
 export function createInitialState(now: number, campaignSeed = 12345): GameState {

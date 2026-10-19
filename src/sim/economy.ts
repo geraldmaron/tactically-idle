@@ -22,6 +22,7 @@ import { runEquipmentMaintenance } from './equipment-manager';
 import { departmentUpkeep, maintenanceBudget } from './equipment-manager-policy';
 import { commandStaffActive, commandStaffSalaries, logQuartermaster, runCommandStaff } from './command-staff';
 import { tunable } from './tuning';
+import { staffLever } from './staff-pool';
 import { RECRUIT_TUNING } from '../content/recruits';
 
 export const HOUR_MS = 3_600_000;
@@ -84,9 +85,16 @@ export function isInjured(o: Officer, t: number): boolean {
  * per year past 45, floor 80%). Deployed officers recover nothing. `t` is the instant
  * the rate applies to (default: the settled clock), because age steps at birthdays.
  */
+/** The Watch Commander's recovery lever, on squads they sent to rest. */
+function restBonus(state: GameState, o: Officer): number {
+  const lever = staffLever(state, 'watch_commander', 0);
+  if (!lever || !o.squadId) return 1;
+  return state.commandStaff?.watch_commander.rested[o.squadId] && state.squads.some((s) => s.id === o.squadId && s.duty === 'rest') ? 1 + lever : 1;
+}
+
 export function recoveryRate(state: GameState, o: Officer, t: number = simNow(state)): number {
   if (o.assignment?.kind === 'operation') return 0;
-  const base = ECONOMY_TUNING.recoveryPerHour[recoveryDuty(state, o)] * recoveryMultiplier(state);
+  const base = ECONOMY_TUNING.recoveryPerHour[recoveryDuty(state, o)] * recoveryMultiplier(state) * restBonus(state, o);
   return Number.isFinite(o.bornDay) ? base * ageRecoveryFactor(o, gameDay(state, t)) : base;
 }
 
@@ -167,7 +175,7 @@ interface Acc {
   personnel: ShiftReport['personnel'];
 }
 
-function applyCourseCompletion(o: Officer, acc: Acc): void {
+function applyCourseCompletion(d: GameState, o: Officer, acc: Acc): void {
   const a = o.assignment;
   if (!a || a.kind !== 'training') return;
   const course = COURSES[a.courseId];
@@ -175,7 +183,7 @@ function applyCourseCompletion(o: Officer, acc: Acc): void {
     const { cert, rating } = course.grants;
     if (cert && !o.certs.includes(cert)) o.certs.push(cert);
     if (rating) o.ratings[rating.key] = courseRatingAfter(o.ratings[rating.key], rating.delta);
-    o.xp += courseXpGain(course.hours);
+    o.xp += Math.round(courseXpGain(course.hours) * (1 + (staffLever(d, 'training_sergeant', 1) ?? 0)));
   }
   o.assignment = null;
   acc.courses.push({ officerId: o.id, courseId: a.courseId });
@@ -219,7 +227,7 @@ function applyDue(d: GameState, prev: number, t: number, acc: Acc, restock: bool
       const eb = b.assignment?.kind === 'training' ? b.assignment.endsAt : 0;
       return ea - eb || a.id.localeCompare(b.id);
     });
-  for (const o of due) applyCourseCompletion(o, acc);
+  for (const o of due) applyCourseCompletion(d, o, acc);
   for (const o of Object.values(d.officers)) {
     if (o.injury && o.injury.until <= t) o.injury = null;
   }

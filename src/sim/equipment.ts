@@ -116,6 +116,11 @@ const STARTING_UNITS: Record<Id, UnitSeed[]> = {
     { condition: 69, ageDays: 500, uses: 20 },
   ],
   throw_phone: [{ condition: 81, ageDays: 150, uses: 4 }],
+  // Issued from the first day: the starting entry-trained officers can choose force on the first call.
+  service_sidearm: [
+    { condition: 90, ageDays: 500, uses: 10 },
+    { condition: 82, ageDays: 650, uses: 18 },
+  ],
   ballistic_shield: [
     { condition: 93, ageDays: 400, uses: 6 },
     { condition: 77, ageDays: 700, uses: 14 },

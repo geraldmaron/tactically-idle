@@ -73,15 +73,6 @@ for incoming fire. Done: the move falls back to a free point inside the room's d
 building can't host, the entry-plus-doorOf rule is decided and enforced, and the fire test runs on
 an owned fixture.
 
-### clock-only-marks: Validation accepts a mark that only a clock's run-out sets
-Tags: job=command; journeys=choices-branch; probes=none (validation); lane=engine
-Needs: start=none; integrate=none; ship=none
-
-Reported by tooling in draft PR #76: `validateScenario` rejects a reader of a mark whose only setter
-is a clock running out, though clock routing (#46, #56) makes such marks legitimate. Done: the
-validator counts clock run-out setters (`onOut.mark` and the compiled route), with a test on an
-owned clock fixture, and the mark-reader audit stays green.
-
 ### armed-max: Text can say a look found empty hands
 Tags: job=command; journeys=chance-not-script; probes=none (text condition); lane=engine
 Needs: start=none; integrate=none; ship=none
@@ -194,35 +185,26 @@ High-risk warrant, robbery in progress, crisis barricade, vehicle standoff, buil
 standoff needs a roadside building family.
 
 ### meters-drift: Meters move with time
-Tags: job=command; journeys=chance-not-script; probes=metric-pressure; lane=engine
+Tags: job=command; journeys=chance-not-script; probes=metric-pressure; lane=calls
 Needs: start=none; integrate=none; ship=none
 
-Time moves the meters, the `shots` event is written into content, and escalation comes by drift.
-
-### less-lethal-cartridges: Less-lethal use spends cartridges
-Tags: job=build; journeys=hire-and-equip; probes=none (inventory, not odds); lane=engine
-Needs: start=none; integrate=none; ship=none
+The engine side shipped: time moves agitation (`METERS_V1.drift` in `src/sim/meters.ts`, run from
+`advanceTime`; a subject the team hasn't reached winds up, one who talks to the team settles, and a
+drift never counts as an event). Left, in content: write the `shots` event into the outcomes where
+shots fire (`moves: [{ personId, event: 'shots' }]`), and let the escalation branches read the
+drifted stances. The drift rates are first-pass (0.06 and 0.04 a minute): 0.15 and 0.10 moved the
+outcome-score calibration past its 0.75 trust bound, so any rise needs the calibration rows rechecked.
 
 ## Gates and tooling
-
-### short-squad-ui: The squad card and Prepare say who stays home
-Tags: job=build; journeys=short-squad; probes=none (display); lane=interface
-Needs: start=none; integrate=none; ship=none
-
-The engine side shipped in #78: a squad deploys with its ready officers, and the rest stay home
-(`deployRoster` and `runRoster` in `src/sim/squads.ts`, `SquadReadiness.staysHome`). Left: the squad
-card and Prepare render `staysHome` (who stays home and why), and `OpsPrepare.tsx` passes Deploy's
-crew to `standardRadioPlan`; until then its radio count and "buy radios" prompt count every squad
-member while Deploy reserves one radio per officer who goes. The e2e script's all-ready rule
-(`scripts/play-loop.mjs`) relaxes to one ready officer (tooling).
 
 ### e2e-in-ci: The browser end-to-end script runs in CI
 Tags: job=command; journeys=answer-a-call; probes=none (tooling); lane=tooling
 Needs: start=none; integrate=none; ship=none
 
-`npm run test:e2e` plays the board through the real UI at 390x844 and 320x568, but neither `npm
-run verify` nor CI runs it, which is how it went stale. Done: pull-request CI runs it against a
-built preview, with its runtime and Chrome setup stated, or the backlog records why not.
+`.github/workflows/e2e.yml` runs `npm run test:e2e` on pull requests against the dev server (the
+script reads `window.__ti`, which a built preview doesn't expose) with the runner's Chrome. It passes
+locally at 390x844 and 320x568 (2026-10-19) but hasn't run on a runner yet. Done: the first pull
+request run is green, or the failure is fixed.
 
 ### fire-follows-building: Incoming fire follows the building
 Tags: job=command; journeys=chance-not-script; probes=none (a drawn-harm check, not a favorable-chance probe); lane=tooling
@@ -278,34 +260,6 @@ deterministic since #57, and the `check:strings` wrapper since #64 (byte-identic
 
 ## Department and staff
 
-### sidearms-day-one: A new department can use sidearms from its first call
-Tags: job=build; journeys=answer-a-call; probes=items-none; lane=engine
-Needs: start=none; integrate=none; ship=none
-
-Owner decision 2026-10-19. Today the sidearm items require the `field_response_program` node
-(`src/content/items.ts`) and force choices require the `entry_team` certification. Done: a new
-department starts with sidearms issued and can choose force on its first call; decide with evidence
-whether `entry_team` stays the force certification (and who holds it at the start) or the
-requirement moves, record the effect on the opening odds, and update the casebook's locked rows and
-the e2e script's casebook check.
-
-### peer-support-lead: Command Staff gains a Peer Support Lead
-Tags: job=build; journeys=hire-and-equip; probes=officer-stress; lane=engine
-Needs: start=none; integrate=none; ship=none
-
-Owner decision 2026-10-19. A fourth manager who runs officer stress and recovery as a department
-loop, hired in Develop like the others (`src/sim/command-staff.ts`). Done: the manager's loop, hire
-cost and log lines in the engine; a Command Staff card and portrait (interface lane, the existing
-art pipeline); an identity brief and pronouns (calls lane, the officer-stories rules). The engine
-defines the loop first.
-
-### recruiter: Command Staff gains a Recruiter
-Tags: job=build; journeys=hire-and-equip; probes=none (hiring, not odds); lane=engine
-Needs: start=none; integrate=none; ship=none
-
-Owner decision 2026-10-19. A fifth manager who runs hiring as a department loop. Same shape and
-split as `peer-support-lead`. Done: loop, hire cost, log lines, card, portrait and brief.
-
 ### patrol-work: Routine patrol returns as idle work under the Watch Commander
 Tags: job=return; journeys=offline-settles; probes=none (idle economy); lane=engine
 Needs: start=none; integrate=none; ship=none
@@ -315,17 +269,10 @@ Owner decision 2026-10-19: restore routine patrol work, which was deleted. Squad
 standing patrol assignments on the board (removed before 2026-10-18, see git history around
 721536c and 4e908ac). Done: a short design note first (what patrol work is, how it pays, how the
 Watch Commander runs it, how it shows on the board without crowding tactical calls), approved by the
-lead, then the engine loop and its UI.
+lead, then the engine loop and its UI. The note is `docs/patrol-work.md` (proposed 2026-10-19); it
+waits on three owner answers listed there.
 
 ## Player experience
-
-### manager-pronouns: Managers carry their pronouns as data
-Tags: job=build; journeys=none (no manager text uses a pronoun yet); probes=none (data); lane=engine
-Needs: start=none; integrate=none; ship=none
-
-The manager portraits fix how each manager looks (she, he, they in the art briefs), but
-`ManagerProfile` has no pronoun field. Done: `pronouns` on `ManagerProfile`, set from the briefs,
-before any shift report or log line refers to a manager by pronoun.
 
 ### onboarding: A first call that teaches the loop
 Tags: job=command; journeys=answer-a-call; probes=none (teaching flow); lane=deferred
@@ -385,7 +332,7 @@ Optional.
 
 Decided 2026-10-19: scenario work is paused (the barricade is parked on its branch); a squad can
 deploy short of injured officers (`short-squad-deploys`); sidearms from day one
-(`sidearms-day-one`); keep the compiled fingerprints and the cross-engine check; a call resolved
+(`sidearms-day-one`, shipped: two sidearms are issued at the start and `entry_team` stays the force certification, which both starting squads hold); keep the compiled fingerprints and the cross-engine check; a call resolved
 with harm counts as resolved (already so in `dispositionOf`); an entry breaks every open commitment
 (already so in `src/sim/commitments.ts`); build the Peer Support Lead, the Recruiter and patrol work;
 the crisis cap stays report-only until playtests.

@@ -6,10 +6,10 @@ import { validateStoryBindings } from '../gen/incident/story-bindings';
 import { actionResultLabel, harmResultLabel } from './action-result';
 import { applyIncidentConsequences, applyPersonConsequences, civilianOutcomeViews, syncCasualtyFlags, syncPersonCasualtyFlags } from './incident-consequences';
 import { protectedOfficerEffects } from './force-risk';
-import { drawnKeys, resolveDrawn } from './drawn-effects';
+import { drawnKeys, forceSuppliesSpent, resolveDrawn } from './drawn-effects';
 import { withVariants } from '../gen/incident/drawn-model';
 import { advanceClocks, clockConditionsHold, clockErrors, clockOutEffects, cueEffects, decisionMinutes, forkMinutes, initialClocks, teamMinutes } from './clocks';
-import { applyMoves, initialMeters, meterConditionsHold } from './meters';
+import { applyMoves, driftMeters, initialMeters, meterConditionsHold } from './meters';
 import { applyCommitments } from './commitments';
 import { forceLines, OUTCOME_SCORE_V1, scoreCall } from './outcome-score';
 import { CAREER_TUNING } from './career';
@@ -411,7 +411,7 @@ function makeRun(state: GameState, built: BuiltLocation, scenario: ScenarioDefin
 
 /** Advance operation time: pressure rises; civilian safety falls above the threshold; v13 clocks run
  * down, and the cues they pass come back as effects for the caller to apply (applyClockCues). */
-export function advanceTime(run: Pick<OperationRun, 'clock' | 'pressure' | 'civilianSafety'> & Partial<Pick<OperationRun, 'clocks' | 'flags'>>, s: ScenarioDefinition, minutes: number): { civilianLoss: number; crossed: boolean; cues: OutcomeEffect[] } {
+export function advanceTime(run: Pick<OperationRun, 'clock' | 'pressure' | 'civilianSafety'> & Partial<Pick<OperationRun, 'clocks' | 'flags' | 'meters'>>, s: ScenarioDefinition, minutes: number): { civilianLoss: number; crossed: boolean; cues: OutcomeEffect[] } {
   const m = s.pressure;
   const p0 = run.pressure;
   let over = 0;
@@ -421,6 +421,7 @@ export function advanceTime(run: Pick<OperationRun, 'clock' | 'pressure' | 'civi
   run.clock = round1(run.clock + minutes);
   run.pressure = round1(clamp(p0 + m.perMinute * minutes, 0, 100));
   run.civilianSafety = round1(clamp(run.civilianSafety - loss, 0, 100));
+  if (run.meters) { run.meters = structuredClone(run.meters); driftMeters(run, s, minutes); }
   const cues = run.clocks && run.flags ? advanceClocks(run as Pick<OperationRun, 'clocks' | 'flags'>, s, minutes) : [];
   return { civilianLoss: loss, crossed: p0 < m.threshold && run.pressure >= m.threshold, cues };
 }
@@ -884,7 +885,10 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     let matched = matchedEffects(action, band, run, scenario, clockBaseMinutes);
     // v13: drawn consequences (a subject firing at the team, the team's force) settle now, each
     // with its own saved sample, into the variant effects they choose (sim/drawn-effects.ts).
-    const drawn = resolveDrawn(matched, { state: draft, run, scenario, acting: ev.acting, participantIds: ev.participantIds, unitsOf: availableUnits });
+    const drawnContext = { state: draft, run, scenario, acting: ev.acting, participantIds: ev.participantIds, unitsOf: availableUnits };
+    const drawn = resolveDrawn(matched, drawnContext);
+    // A less-lethal draw spends a cartridge or supply from the acting squads (sim/drawn-effects.ts).
+    const suppliesSpent = forceSuppliesSpent(drawn.records, drawnContext);
     matched = drawn.effects;
     let personMoved = false;
     let storyRouteUsed = false;
@@ -973,7 +977,7 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
 
     const used: Record<Id, number> = {};
     const unitsUsed: Id[] = [];
-    for (const u of ev.uses) {
+    for (const u of [...ev.uses, ...suppliesSpent.map(supply => ({ ...supply, qty: 1, consumable: true }))]) {
       if (!storyRouteUsed && ev.storyMovementOnlyUnitIds?.includes(u.unitId)) continue;
       used[u.itemId] = (used[u.itemId] ?? 0) + u.qty;
       unitsUsed.push(u.unitId);
