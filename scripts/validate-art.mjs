@@ -11,7 +11,7 @@ const managers = JSON.parse(read('public/art/managers/manifest.json'));
 const emblems = JSON.parse(read('public/art/emblems/manifest.json'));
 const plates = JSON.parse(read('public/art/plates/manifest.json'));
 // Plates are scene_<call type>, banner_<tab> or tex_<texture> (src/ui/art/Plates.tsx).
-const PLATE_ID = /^(scene_[a-z_]+|banner_(hq|squad|ops|develop|gear)|tex_[a-z_]+)$/;
+const PLATE_ID = /^(scene_[a-z_]+|banner_(hq|squad|ops|develop|gear)|hub_hq|tex_[a-z_]+)$/;
 const MANAGER_IDS = ['watch_commander', 'training_sergeant', 'quartermaster'];
 // Emblem ids are course ids, plus branch_<id> for each development branch.
 const courseSource = read('src/content/courses.ts');

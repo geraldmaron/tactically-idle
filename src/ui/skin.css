@@ -146,3 +146,27 @@
 
 /* A banner opening a padded page bleeds to the frame edges. */
 .page > .screen-banner:first-child { margin: -12px calc(-1 * var(--gutter)) 0; }
+
+/* ------------------------------------------------------------ the main action */
+/* Ops is lifted out of the rail as a round amber button, the primary action of the game. */
+.bottomnav { overflow: visible; position: relative; z-index: 9; }
+.navbtn-primary { overflow: visible; }
+.navbtn-primary .navicon {
+  display: grid; place-items: center; width: 56px; height: 56px; margin-top: -26px; border-radius: 50%;
+  background: radial-gradient(circle at 50% 30%, #ffd56a, var(--amber) 60%, #c98d17);
+  color: var(--amber-ink); border: 3px solid #0b111c;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(243, 180, 50, 0.5), inset 0 2px 0 rgba(255, 245, 210, 0.6);
+}
+.navbtn-primary .navicon .icon { filter: none; }
+.navbtn-primary.navbtn-on::before { display: none; }
+.navbtn-primary.navbtn-on .navicon { box-shadow: 0 6px 18px rgba(243, 180, 50, 0.45), 0 0 0 2px var(--amber-2), inset 0 2px 0 rgba(255, 245, 210, 0.6); }
+.navbtn-primary .navlabel { margin-top: 2px; }
+.navbtn-primary .live-dot { top: 2px; right: 2px; background: var(--danger); border-color: #0b111c; }
+.navbtn-primary .navbadge { top: -2px; right: -4px; }
+.navdot { position: absolute; top: -1px; right: -4px; width: 9px; height: 9px; border-radius: 50%; background: var(--danger); border: 2px solid #0a111d; }
+
+/* The reward preview on a call card, the way mission cards show what a run pays. */
+.optile-rewards { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; margin: 0; padding: 6px 10px; border-radius: 6px; background: rgba(243, 180, 50, 0.07); border: 1px solid rgba(243, 180, 50, 0.18); font: 600 13px/1.2 var(--font-cond); letter-spacing: 0.03em; color: #f1dba4; }
+.optile-rewards > span { display: inline-flex; align-items: center; gap: 4px; }
+.optile-rewards .icon { color: var(--amber-2); }
+.optile-rewards-label { font: 500 10px/1 var(--font-mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-dim); }

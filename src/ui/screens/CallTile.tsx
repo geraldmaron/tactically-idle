@@ -12,6 +12,7 @@ import { DifficultyChip, FloorsChip, TierChevrons, familyBlurb, incidentMeta, sc
 import { Icon, itemIcon } from '../icons';
 import { PeopleText } from '../people/PeopleText';
 import { PlateArt, sceneFor } from '../art/Plates';
+import { money } from '../format';
 
 /** A compact call tile: a type badge with tier pips, the title and place, a two-line summary, a fact
  * row and a footer with the time left and Prepare. The full brief lives on the Prepare screen.
@@ -55,6 +56,12 @@ export function CallTile({ card, scenario, familyId, type, tier, isNew = false, 
         {(!scenario) && <Chip icon="clock">{card.pressureLabel}</Chip>}
         {facts}
       </div>
+      {scenario?.rewards && <p className="optile-rewards" aria-label={`Pays up to ${money(scenario.rewards.funding)}, ${scenario.rewards.devPoints} development points and ${scenario.rewards.xp} experience. How the call ends sets what it pays.`}>
+        <span className="optile-rewards-label" aria-hidden="true">Up to</span>
+        <span aria-hidden="true"><Icon name="cash" size={14} />{money(scenario.rewards.funding)}</span>
+        <span aria-hidden="true"><Icon name="chart" size={14} />{scenario.rewards.devPoints} DP</span>
+        <span aria-hidden="true"><Icon name="star" size={14} />{scenario.rewards.xp} XP</span>
+      </p>}
       <BringRow short={short} />
       {warning}
       <div className="optile-foot">{footer}</div>
