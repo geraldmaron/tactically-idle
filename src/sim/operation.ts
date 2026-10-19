@@ -607,6 +607,8 @@ export function decisionViewsFor(state: GameState, run: OperationRun, scenario: 
       knowledgeChanges: record.knowledgeChanges.map((change) => ({ ...change, label: scenario.facts.find((fact) => fact.id === change.factId)?.label ?? change.factId })),
       contributors: record.inputs.map((input) => ({ ...input })),
       consequences: committed ? [...committed.consequences] : step.effects.map((effect) => effect.text).filter((text): text is string => !!text),
+      ...((committed ? committed.exchange : step.effects.flatMap(effect => effect.exchange ?? []))?.length
+        ? { exchange: (committed?.exchange ?? step.effects.flatMap(effect => effect.exchange ?? [])).map(line => ({ ...line })) } : {}),
       ...(committed?.officerCasualties !== undefined ? { officerCasualties: committed.officerCasualties.map(person => ({ ...person })) } : {}),
       ...(committed?.forceOutcome ? { forceOutcome: { ...committed.forceOutcome } } : {}),
       ...(committed?.personCasualties ? { personCasualties: committed.personCasualties.map(person => ({ ...person })) } : {}),
@@ -1063,6 +1065,7 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
       ...(incidentConsequences ? { officerCasualties: incidentConsequences.records } : {}),
       ...(personConsequences ? { personCasualties: personConsequences.records } : {}),
       ...(ev.protectionUsed ? { protectionUsed: { ...ev.protectionUsed } } : {}),
+      ...(matched.some(effect => effect.exchange?.length) ? { exchange: matched.flatMap(effect => effect.exchange ?? []).map(line => ({ ...line })) } : {}),
       ...(drawn.records.length ? { drawn: drawn.records.map(record => ({ ...record })) } : {}),
     };
     resolution.explanation = explain(draft, scenario, ev, band, texts, timeCost, t.civilianLoss, knowledgeChanges, consumed, strain, stageNote);

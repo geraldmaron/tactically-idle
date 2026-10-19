@@ -171,6 +171,9 @@ export interface SupportRule {
   openingId?: Id;
 }
 
+/** A spoken line in a transcript: the speaker's display name and the words (call-surfaces). */
+export interface SpokenLine { speaker: string; line: string }
+
 export interface OutcomeEffect {
   /** Fictional person-level injury; selected from actual participants, without an extra random draw. */
   officerHarm?: { severity: 'wounded' | 'serious'; label: string };
@@ -197,7 +200,11 @@ export interface OutcomeEffect {
   moves?: { personId: Id; event: MeterEvent }[];
   /** V13: command commits to something a subject asked for (sim/commitments.ts). Kept or broken
    * by what the team does to that person afterwards; breaking one costs rapport and trust. */
-  promise?: { id: Id; personId: Id; kind: ConcessionKind | 'promise' };
+  promise?: { id: Id; personId: Id; kind: ConcessionKind | 'promise' | 'lie' };
+  /** V13: commitments this outcome breaks, because the person learns the promise was empty. */
+  breaks?: Id[];
+  /** V13: lines spoken in this result, shown under it as a transcript. */
+  exchange?: SpokenLine[];
   officerCare?: 'stabilize' | 'evacuate';
   requestSupport?: Id[];
   acceptSupport?: Id[];
@@ -249,6 +256,8 @@ export interface ActionDefinition {
   /** V13: what this choice asks command for (sim/authorization.ts). Unauthorized, it is locked
    * with the generated reason; authorized, the card carries the generated command line. */
   authority?: AuthorityRequest;
+  /** V13: a lie or a promise command never approved (dilemma pattern 15). The card says so. */
+  deceives?: true;
   /** Full archetype route rechecked against current openings at action evaluation. */
   storyRoute?: string;
   /** Person routes use bound endpoints; squad routes start at each squad's actual current position. */
@@ -338,7 +347,7 @@ export interface StageDefinition {
   /** One-line situation prompt for the stage. */
   prompt: string;
   /** V5 story dilemmas in priority order, based only on public committed state. */
-  contextPrompts?: { when: Condition; prompt: string }[];
+  contextPrompts?: { when: Condition; prompt: string; exchange?: SpokenLine[] }[];
   actions: ActionDefinition[];
 }
 
@@ -355,6 +364,8 @@ export interface EndingDefinition {
   completion?: Condition & { acceptedServiceId?: Id };
   /** Public unfinished responsibilities, saved with incomplete debriefs. */
   remainingTasks?: string[];
+  /** What is true after the call, shown with the ending in the debrief (E11.2). */
+  epilogue?: string;
 }
 
 export interface ExternalServiceDefinition {

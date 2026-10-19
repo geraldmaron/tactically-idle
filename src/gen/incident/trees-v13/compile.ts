@@ -1,10 +1,11 @@
-import type { CallTree, TreeChoice, TreeIf, TreeMove, TreeMoveTo, TreeNext, TreeNode, TreeOutcome, TreePlace, TreeState } from '../../../content/call-trees/types';
+import type { CallTree, TreeChoice, TreeIf, TreeLine, TreeMove, TreeMoveTo, TreeNext, TreeNode, TreeOutcome, TreePlace, TreeState } from '../../../content/call-trees/types';
+import { TREE_VOICES } from '../../../content/call-trees/types';
 import type { IncidentTemplate } from '../../../content/incidents/types';
 import { CIVILIAN_FIRST_NAMES, CIVILIAN_SURNAMES } from '../../../content/call-trees/civilian-names';
 import { scenarioRecipe } from '../../../content/scenario-recipes';
 import { hashIndex, hashSeed } from '../../../sim/rng';
 import { tierRewardMultiplier } from '../../../content/incidents/rewards';
-import type { ActionDefinition, ClockCondition, Condition, FactDefinition, IncidentSpec, MeterCondition, MeterStance, OutcomeEffect, ScenarioDefinition, StageDefinition, StoryAnchor, StoryPersonBinding } from '../../../sim/scenario-types';
+import type { ActionDefinition, ClockCondition, Condition, FactDefinition, IncidentSpec, MeterCondition, MeterStance, OutcomeEffect, ScenarioDefinition, SpokenLine, StageDefinition, StoryAnchor, StoryPersonBinding } from '../../../sim/scenario-types';
 import { squadsPutToWork } from '../../../sim/scenario-types';
 import { findStoryRoute, selectStoryRoom, storyPoint, validateStoryBindings, windowExit } from '../story-bindings';
 import { cueMoveKey, movedFlag, seenFlag } from '../../../sim/conditions';
@@ -216,6 +217,33 @@ export function armedRevealErrors(authored: CallTree, nodes: readonly TreeNode[]
       for (const band of BANDS) for (const [i, outcome] of choice.outcomes[band].entries()) check(`${node.id}.${choice.id} ${band} outcome ${i + 1}`, outcome.when);
     }
   }
+  return errors;
+}
+
+/** Authoring errors in a call's lies (deception-commitments, dilemma pattern 15): a `lie` promise is
+ * made only by a choice marked `deceives`, every `deceives` choice makes one, every lie can be found
+ * out by an outcome that names it in `breaks` and says so in its text, and `breaks` names only
+ * promises the call makes. */
+export function deceptionErrors(tree: CallTree): string[] {
+  const errors: string[] = [];
+  const promises = new Set<string>(), lies = new Set<string>(), broken = new Set<string>();
+  for (const node of tree.nodes) for (const choice of node.choices) {
+    let made = false;
+    for (const band of BANDS) for (const outcome of choice.outcomes[band]) {
+      if (outcome.promise) promises.add(outcome.promise.id);
+      if (outcome.promise?.kind === 'lie') {
+        lies.add(outcome.promise.id); made = true;
+        if (!choice.deceives) errors.push(`${tree.type}: ${node.id}.${choice.id} tells a lie (${outcome.promise.id}) but is not marked deceives`);
+      }
+      for (const id of outcome.breaks ?? []) {
+        broken.add(id);
+        if (!outcome.text.trim()) errors.push(`${tree.type}: ${node.id}.${choice.id} ${band}: breaking ${id} needs text that says the person found out`);
+      }
+    }
+    if (choice.deceives && !made) errors.push(`${tree.type}: ${node.id}.${choice.id} is marked deceives but makes no lie promise`);
+  }
+  for (const id of lies) if (!broken.has(id)) errors.push(`${tree.type}: the lie ${id} is never found out; add an outcome that breaks it`);
+  for (const id of broken) if (!promises.has(id)) errors.push(`${tree.type}: an outcome breaks ${id}, which no outcome promises`);
   return errors;
 }
 
@@ -678,6 +706,8 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
         throw new Error(`${where}: walksVia '${choice.walksVia}' must carry onlyIf: { exitVia: { role: '${choice.walks}', via: '${choice.walksVia}' } }`);
     }
   }
+  const lieErrors = deceptionErrors(authored);
+  if (lieErrors.length) throw new Error(lieErrors.join('\n'));
   const tree = treeForCounts(authored, callCounts({ groups, armed: placed.armed, upstairs: placed.upstairs, exits: placed.exits }));
   const everyone = (roles: readonly string[] | undefined) => (roles ?? []).flatMap(role => groups[role] ?? [role]);
   /** A group where one person is meant (who fires, who force is used on, who is talked to): its
@@ -688,6 +718,16 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
     if (!ids.length) throw new Error(`${tree.type}: ${what} ${role} in a call with no members of ${role}: put it behind a count condition`);
     return ids[0];
   };
+  /** A transcript as the engine shows it (call-surfaces): each speaker by the name token the text
+   * binder fills (a group speaks as its first member), or a voice the call always has. */
+  const spoken = (lines: readonly TreeLine[] | undefined, where: string): SpokenLine[] => (lines ?? []).map(({ by, line }) => {
+    if (!line.trim()) throw new Error(`${tree.type}: ${where} has an empty transcript line`);
+    const voice = TREE_VOICES[by as keyof typeof TREE_VOICES];
+    if (voice) return { speaker: voice, line };
+    if (!tree.roles.some(role => role.id === by) && !groups[by]) throw new Error(`${tree.type}: ${where}: ${by} speaks, but is no role, group or voice`);
+    if (groups[by] && !groups[by].length) throw new Error(`${tree.type}: ${where}: ${by} speaks in a call with no members of ${by}: put it behind a count condition`);
+    return { speaker: `{${by}.first}`, line };
+  });
   // Someone outside the building (the shooter across the street) is in the prose, never on the map.
   const onSite = tree.roles.filter(role => role.place !== 'offsite');
   // Everyone on the map: the roles, then each group's members, who take their leader's kind.
@@ -992,6 +1032,8 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
           ...(entry.agitationAtLeast !== undefined ? { agitationAtLeast: entry.agitationAtLeast } : {}), is: entry.is ?? true }];
       }) } : {}),
       ...(outcome.promise ? { promise: { id: outcome.promise.id, personId: outcome.promise.to, kind: outcome.promise.kind ?? 'promise' } } : {}),
+      ...(outcome.breaks?.length ? { breaks: [...outcome.breaks] } : {}),
+      ...(outcome.exchange?.length ? { exchange: spoken(outcome.exchange, `${node.id} result`) } : {}),
       ...(outcome.moves ? { moves: Object.entries(outcome.moves).flatMap(([personId, events]) => ([] as TreeMove[]).concat(events).map(event => ({ personId, event }))) } : {}),
       ...(when.flags || when.notFlags ? { when } : {}),
       ...(outcome.reveal?.length ? { reveal: outcome.reveal.map(treeFactId) } : {}),
@@ -1110,6 +1152,7 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
       ...(modifiers.length ? { modifiers: modifiers.map(m => ({ label: m.label, when: { flags: [markFlag(m.mark)] }, source: m.value < 0 ? 'difficulty' as const : 'preparation' as const, value: Math.abs(m.value) })) } : {}),
       ...(walker ? { storyRoute: walkRoute(choice), storyRouteActor: 'person' as const, storyTargetPersonId: walker } : talksTo ? { storyTargetPersonId: talksTo } : {}),
       ...(talksTo ? { talksTo } : {}),
+      ...(choice.deceives ? { deceives: true as const } : {}),
       ...(choice.authority ? { authority: choice.authority === 'entry' ? { kind: 'entry' as const } : { kind: 'concession' as const, item: choice.authority.concede } } : {}),
       // A resolve-stage step always says it stays in resolve unless it ends the call; the engine
       // reads that before any branch, and a later routed effect still moves the call on.
@@ -1131,8 +1174,11 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
     const contextPrompts = here.flatMap(node => {
       const at = node.id === tree.root ? { notFlags: [TREE_STARTED] } : { flags: [nodeFlag(node.id)] };
       return [
-        ...(node.promptIf ?? []).filter(entry => possible(entry.when)).map(entry => ({ when: joinConditions(at, stateCondition(trim(entry.when), groups)), prompt: entry.prompt })),
-        { when: at, prompt: node.prompt },
+        ...(node.promptIf ?? []).filter(entry => possible(entry.when)).map(entry => {
+          const exchange = spoken(entry.exchange ?? node.exchange, `${node.id} prompt variant`);
+          return { when: joinConditions(at, stateCondition(trim(entry.when), groups)), prompt: entry.prompt, ...(exchange.length ? { exchange } : {}) };
+        }),
+        { when: at, prompt: node.prompt, ...(node.exchange?.length ? { exchange: spoken(node.exchange, `${node.id} prompt`) } : {}) },
       ];
     });
     const definition: StageDefinition = { id: stage, label: tree.stageLabels[stage], prompt: here[0].prompt, contextPrompts,
@@ -1151,6 +1197,7 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
     id, title: ending.title, summary: ending.summary, trustAdjust: 0, strain: 0, disposition: ending.disposition,
     ...(['resolved', 'care_accepted', 'followup_agreed'].includes(ending.disposition) ? { completion: { flags: [endFlag(id)] } } : {}),
     ...(ending.remainingTasks ? { remainingTasks: [...ending.remainingTasks] } : {}),
+    ...(ending.epilogue ? { epilogue: ending.epilogue } : {}),
   }]));
 
   const bound = mapScenarioText(s, textBinder(tree, built, placed));
