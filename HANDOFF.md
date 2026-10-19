@@ -13,10 +13,10 @@ The coordinating session, on `main`. Merged so far: #36 (coordination rules), #3
 
 | Lane | Branch | In flight | Declared touches |
 |---|---|---|---|
-| engine | `engine-lane-2` session, branch from main | Fresh engine session (the first one's context was too heavy; it has stood down). `offsite-fire` TOUCHES due. Queue: `armed-max`, `rescue-engine-requests`, `squad-ready-agrees`, `harbour-court-window` | to be declared |
-| calls | `claude/calls-barricade-tree` (not pushed) | `barricade-model-first`: prose pass in progress | `barricade-boxes.ts`, `call-trees/index.ts`, `incidents/barricade.ts`; later `second-squad.test.ts` after the engine PR merges |
-| tooling | `claude/tooling-rescue-pins` | Rescue rows of `lab-tests-off-live-content` (approved, fixture fallback instead of skips). Then `e2e-in-ci`, possibly from a fresh tooling session | `why.test.ts`, `squads.test.ts`, `deps/model.test.ts`, `explore.test.ts`, a new test helper in `src/dev/lab/model/` |
-| interface | closed | Queue finished; worktree idle on merged `feat/board-risk-card` | none |
+| engine | `engine-lane-2` session | Scenario work paused: parking `barricade-engine-fixes` (WIP, no PR). Queue: `short-squad-deploys`, `sidearms-day-one`, `peer-support-lead`, `recruiter`, `patrol-work` (design note first), `meters-drift`, `less-lethal-cartridges`, `manager-pronouns` | to be declared per item |
+| calls | `claude/calls-barricade-tree` (parked) | Scenario work paused: barricade parked as WIP on its branch, nothing merges. Next: identity briefs for the two new managers when the engine defines them | none |
+| tooling | parked `claude/tooling-rescue-pins` | Scenario work paused: rescue rows and barricade tooling fixes parked as WIP. Queue: `e2e-in-ci`, the `scale-gates` harness | to be declared |
+| interface | closed | Start a fresh interface session for the Command Staff cards once the engine defines the new managers | none |
 
 ## Ordering on shared files
 

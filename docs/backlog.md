@@ -196,17 +196,17 @@ Needs: start=none; integrate=none; ship=none
 
 ## Gates and tooling
 
-### squad-ready-agrees: The squad card and Deploy agree on readiness
-Tags: job=command; journeys=answer-a-call; probes=none (readiness display); lane=engine
+### short-squad-deploys: A squad can deploy without its injured officers
+Tags: job=build; journeys=answer-a-call; probes=officer-ratings; lane=engine
 Needs: start=none; integrate=none; ship=none
 
-Found by tooling investigating the e2e Deploy failure (#72). `squadReadiness` marks a squad
-deployable when one officer is ready (`src/sim/department-selectors.ts`), but Deploy requires every
-officer in a chosen squad to be ready (`src/sim/operation.ts`). So after an injury the card reads
-"3 of 4 ready" and looks selectable, and Deploy then refuses with the injured officer named. Done:
-the card's deployable flag uses the same rule as Deploy (one function), and the squad card and
-Prepare screen show the same answer, with a test. If the rule itself should change (deploy short),
-that's an owner decision, not this item.
+Owner decision 2026-10-19: a squad with at least one ready officer can deploy, and officers who
+aren't ready (injured, recovering, in training) stay home. Today the squad card marks such a squad
+deployable (`src/sim/department-selectors.ts`) while Deploy refuses it unless every officer is ready
+(`src/sim/operation.ts`). Done: Deploy sends only the ready officers, the squad card and the Prepare
+screen say who stays home and why, the odds use the officers who actually go, and a journey test
+deploys a squad short one injured officer. The e2e script's ready-squad rule (#72) is relaxed to
+match.
 
 ### e2e-in-ci: The browser end-to-end script runs in CI
 Tags: job=command; journeys=answer-a-call; probes=none (tooling); lane=tooling
@@ -268,6 +268,47 @@ repeated phrase. Done: the output is byte-identical across runs (stable order, a
 of quoted phrase), `npm run verify` and pull-request CI run it, and it passes. The checker is
 deterministic since #57, and the `check:strings` wrapper since #64 (byte-identical across runs).
 
+## Department and staff
+
+### sidearms-day-one: A new department can use sidearms from its first call
+Tags: job=build; journeys=answer-a-call; probes=items-none; lane=engine
+Needs: start=none; integrate=none; ship=none
+
+Owner decision 2026-10-19. Today the sidearm items require the `field_response_program` node
+(`src/content/items.ts`) and force choices require the `entry_team` certification. Done: a new
+department starts with sidearms issued and can choose force on its first call; decide with evidence
+whether `entry_team` stays the force certification (and who holds it at the start) or the
+requirement moves, record the effect on the opening odds, and update the casebook's locked rows and
+the e2e script's casebook check.
+
+### peer-support-lead: Command Staff gains a Peer Support Lead
+Tags: job=build; journeys=hire-and-equip; probes=officer-stress; lane=engine
+Needs: start=none; integrate=none; ship=none
+
+Owner decision 2026-10-19. A fourth manager who runs officer stress and recovery as a department
+loop, hired in Develop like the others (`src/sim/command-staff.ts`). Done: the manager's loop, hire
+cost and log lines in the engine; a Command Staff card and portrait (interface lane, the existing
+art pipeline); an identity brief and pronouns (calls lane, the officer-stories rules). The engine
+defines the loop first.
+
+### recruiter: Command Staff gains a Recruiter
+Tags: job=build; journeys=hire-and-equip; probes=none (hiring, not odds); lane=engine
+Needs: start=none; integrate=none; ship=none
+
+Owner decision 2026-10-19. A fifth manager who runs hiring as a department loop. Same shape and
+split as `peer-support-lead`. Done: loop, hire cost, log lines, card, portrait and brief.
+
+### patrol-work: Routine patrol returns as idle work under the Watch Commander
+Tags: job=return; journeys=offline-settles; probes=none (idle economy); lane=engine
+Needs: start=none; integrate=none; ship=none
+
+Owner decision 2026-10-19: restore routine patrol work, which was deleted. Squads still have a
+`patrol` duty that earns routine funding (`src/sim/types.ts` `SquadDuty`); what went was the
+standing patrol assignments on the board (removed before 2026-10-18, see git history around
+721536c and 4e908ac). Done: a short design note first (what patrol work is, how it pays, how the
+Watch Commander runs it, how it shows on the board without crowding tactical calls), approved by the
+lead, then the engine loop and its UI.
+
 ## Player experience
 
 ### manager-pronouns: Managers carry their pronouns as data
@@ -311,23 +352,18 @@ Optional.
 - **E12:** whether a team holding outside an active shooter fits the game.
 - **Barricade building family:** keep apartments (`apartment_unit_g2`) or not.
 - **"Goes to review" ending line** (E2.1) in the barricade call.
-- **Scoring:** whether "resolved with harm" counts as complete (+10% service), and whether an entry
-  breaks every open commitment, including those to civilians.
 - **Hostage review calls:** O4 custody wording, O1 armed-lane words, N19 time charge on all-night
   holds, the 3-line board hook clamp, the 6-decision stage-3 chain, the E3 count read, and B9.
-- **Sidearms:** a new department can't fire until it unlocks `field_response_program` and trains
-  `entry_team`. Keep that, or issue sidearms from day one.
-- **Command Staff scope:** build the Peer Support Lead and Recruiter, and decide whether routine
-  patrol work gets an idle home under the Watch Commander or stays deleted.
-- **Fingerprints under the no-freeze rule:** keep the compiled-fingerprint test and cross-engine
-  CI as regression tripwires, or drop them.
 - **Domain-model defaults D1 to D5** stand unless changed: no explosives, a fled subject's follow-up
   call, groups above 8 as a later mode, 24h review after a shooting, concessions within policy.
-- **Crisis call cap:** the writing review's house target is at most one crisis call (a person who
-  may harm themselves) per shift. The shift sampler (`src/gen/incident/gates/shift-sampler.ts`, #64) treats a shift as one
-  game day and a crisis call as hostage or barricade, and only reports. Decide what a shift and a
-  crisis call are, and whether the cap should gate.
 - **Barricade on apartments:** with the child in a bedroom, `apartment_unit_g2` hosts the barricade
   on 22 of 30 seeds (the rest are rejected because the first room off the bedroom is the living
   room). This bears on the existing barricade building-family decision above.
 - **Later scope:** districts, career stories, simultaneous tactical incidents.
+
+Decided 2026-10-19: scenario work is paused (the barricade is parked on its branch); a squad can
+deploy short of injured officers (`short-squad-deploys`); sidearms from day one
+(`sidearms-day-one`); keep the compiled fingerprints and the cross-engine check; a call resolved
+with harm counts as resolved (already so in `dispositionOf`); an entry breaks every open commitment
+(already so in `src/sim/commitments.ts`); build the Peer Support Lead, the Recruiter and patrol work;
+the crisis cap stays report-only until playtests.
