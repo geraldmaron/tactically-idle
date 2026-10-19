@@ -936,3 +936,33 @@ The owner's clock (`owner_condition`, situation 2) now runs out to the `owner_do
   says so; the ending text does not.
 - Notes kept: `owner_down.prompt` doesn't mention the handgun after an arrival from `threat`;
   `owner_down.go_in` (ENTER +4) is easier than `fired_on.go_in` (ENTER +12) after a shot.
+
+## The owner_down cleanup (2026-10-18, backlog `hostage-owner-down-cleanup`)
+
+The two follow-ups from the clock routing, with the lead's decision to drop the mark (option A).
+
+- Dead readers. Every outcome that set `owner_down` goes to the `owner_down` node or an ending,
+  and the clock now routes to the node; the node's own choices all end. So every reader outside
+  the node was dead: the `standoff`, `threat` and `fired_on` prompt variants, 8 outcome pairs split on
+  the mark in `threat` and `fired_on` (the kept half is now unconditional), and the `onlyIf` guards
+  on `read_back` and `talk_down`. They are removed, and so is the mark: `owner_condition.onOut` keeps
+  `harm` and `next`, and the 9 fork outcomes drop it. The node, the recorded harm and the route carry
+  the collapse. A reader kept inside the node would be true on every arrival, a reader in name only.
+- Held endings (rule 1). `heldEnd` now picks its ending by the owner's clock running out in this
+  decision (`if: OWNER_OUT` / `OWNER_OK`, read at the end of the choice's own minutes; never out in s1
+  or s3) instead of the mark, which was set only after the ending was chosen. A run-out inside a held
+  decision now ends at `owner_left_down` or `held_both_down` with its down line. Forced on a real
+  call (the clock set just above zero before `threat.step_back`): mixed and adverse now end at
+  `owner_left_down` with "{owner.first} slumps to the tiles…" and "Then {owner.first} goes down…";
+  main ended both at `held_inside` with the owner recorded seriously hurt and no line. Callers that
+  added band conditions to heldEnd by overwriting `if` now pass them as `also`, so the clock read
+  isn't lost.
+- The down lines were never live before, so a separate reader (swat-writing-review, fresh subagent)
+  read every one in player order: edit (one block: the `fired_on.hold_corner` adverse line placed
+  the collapse at the shot; five fixes: falls shown as they happen, courier positions agreeing with
+  `held_both_down`), then approve with one note (an unanchored "them"), applied.
+- Remaining, engine: a clock fork reads the clock at `workload.base × bandTime` (`forkMinutes`,
+  `sim/clocks.ts:53`), while the commit also spends travel and movement minutes. In 3,152 situation-2
+  plays (197 calls × 4 styles × 4 seeds) one run ended at `held_inside` with the owner hurt because
+  `threat.step_back` mixed took 12.5 real minutes; the same run does so on main. Request: fork reads
+  use the decision's real minutes.
