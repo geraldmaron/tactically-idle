@@ -170,3 +170,11 @@
 .optile-rewards > span { display: inline-flex; align-items: center; gap: 4px; }
 .optile-rewards .icon { color: var(--amber-2); }
 .optile-rewards-label { font: 500 10px/1 var(--font-mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-dim); }
+
+/* The result grade: three marks, filled from the outcome score; a death leaves them empty and grey. */
+.result-marks { display: inline-flex; gap: 6px; margin: 2px 0 4px; }
+.result-marks i { width: 26px; height: 26px; clip-path: polygon(50% 0, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%); background: rgba(255, 255, 255, 0.14); }
+.result-marks i[data-on] { background: linear-gradient(180deg, #ffe08a, var(--amber) 60%, #c98d17); filter: drop-shadow(0 0 6px rgba(243, 180, 50, 0.6)); animation: mark-in .5s ease-out backwards; }
+.result-marks i[data-on]:nth-child(2) { animation-delay: .15s; } .result-marks i[data-on]:nth-child(3) { animation-delay: .3s; }
+.result-marks-muted i { background: rgba(170, 183, 202, 0.18); }
+@keyframes mark-in { from { transform: scale(0.2); opacity: 0; } 70% { transform: scale(1.18); } to { transform: scale(1); opacity: 1; } }
