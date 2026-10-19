@@ -11,11 +11,11 @@ import type { Weight } from '../../../gen/incident/trees-v13/balance';
 import { labRequirementTree, treeClockRoutes } from './clocks';
 import type { DependencyIndex, ReqNode, Site, StateKey } from '../../../gen/incident/trees-v13/dependencies';
 import { choiceIndex, humanizeNode } from '../../../gen/incident/trees-v13/graph';
-import { clockViews, forkMinutes, stepClock, teamMinutes } from '../../../sim/clocks';
+import { clockViews, decisionMinutes, forkMinutes, stepClock, teamMinutes } from '../../../sim/clocks';
 import type { DrawnResult } from '../../../sim/drawn-effects';
 import { matchedOutcomeIndices } from '../../../sim/operation';
 import { drawnDistributionAt, pendingDebrief, stageProgress } from '../../../sim/operation-selectors';
-import { bandProbabilities, builtFor, evaluateAction, RESOLUTION_TUNING } from '../../../sim/resolution';
+import { bandProbabilities, builtFor, evaluateAction } from '../../../sim/resolution';
 import type { Evaluation } from '../../../sim/resolution';
 import { getScenario } from '../../../sim/scenario-registry';
 import type { ActionDefinition, IncidentPersonDef, OutcomeEffect, ScenarioDefinition } from '../../../sim/scenario-types';
@@ -169,22 +169,19 @@ const harmsResult = (model: string, key: string) => model === 'incoming_fire' ? 
 
 // ---------------------------------------------------------------- clocks that run out
 
-const round1 = (n: number) => Math.round(n * 10) / 10;
 const extraOf = (effects: readonly OutcomeEffect[]) => effects.reduce((sum, effect) => sum + (effect.extraMinutes ?? 0), 0);
 
-/** The least and most minutes this band can take at the commit (sim/operation.ts decide): the
- * choice's base minutes for the band, less the route's movement when the person doesn't move along
- * it (which the commit settles from the outcome), plus the outcome's extra minutes and the least or
- * most a drawn result's variant adds. */
+/** The least and most minutes this band can take at the commit (sim/operation.ts decide), through
+ * the engine's teamMinutes and decisionMinutes: the choice's base minutes for the band, less the
+ * route's movement when the person doesn't move along it (which the commit settles from the
+ * outcome), plus the outcome's extra minutes and the least or most a drawn result's variant adds. */
 export function bandMinutes(_scenario: ScenarioDefinition, action: ActionDefinition, ev: Pick<Evaluation, 'timeBase' | 'storyMovementMinutes'>, band: OutcomeBand,
   applied: readonly OutcomeEffect[], variantExtra: readonly [least: number, most: number]): [least: number, most: number] {
-  if (action.awaitSupport) return [ev.timeBase, ev.timeBase];
-  const time = (movement: number, extra: number) => {
-    const proposed = (ev.timeBase - movement) * RESOLUTION_TUNING.bandTime[band] + extra;
-    return round1(Math.max(0.5, proposed));
-  };
+  // The engine's own minutes (sim/clocks.ts), as the commit charges them: the least when the
+  // person doesn't walk their route, the most when they do, each with the drawn result's extra.
   const extra = extraOf(applied);
-  return [time(ev.storyMovementMinutes ?? 0, extra + variantExtra[0]), time(0, extra + variantExtra[1])];
+  return [decisionMinutes(teamMinutes(ev, action, band, false), extra + variantExtra[0], action),
+    decisionMinutes(teamMinutes(ev, action, band, true), extra + variantExtra[1], action)];
 }
 
 const ownerTaken = (owner: string, effects: readonly OutcomeEffect[]) =>

@@ -8,9 +8,12 @@ import FULL_NOTE from '../surfaces/play/FullNote.tsx?raw';
 import { aimedMoves, applyMove, NOW } from '../../../gen/incident/gates/engine-driver';
 import type { Weight } from '../../../gen/incident/trees-v13/balance';
 import { pathStateKey } from '../../../gen/incident/trees-v13/path-key';
-import { bandProbabilities } from '../../../sim/resolution';
+import { teamMinutes } from '../../../sim/clocks';
+import { matchedEffects } from '../../../sim/operation';
+import { bandProbabilities, builtFor, evaluateAction } from '../../../sim/resolution';
+import { getScenario } from '../../../sim/scenario-registry';
 import { applyTuningPatch } from '../../../sim/tuning';
-import type { GameState, OutcomeBand } from '../../../sim/types';
+import type { GameState, OutcomeBand, StageId } from '../../../sim/types';
 import { liveDecisions } from '../../../ui/screens/live-model';
 import { visibleDecisions } from '../../../ui/screens/liveModels';
 import { parseLabUrl } from '../url';
@@ -19,7 +22,7 @@ import { aimsDrawn, nextStep, previewBand, previewDrawn } from './next-step';
 import { currentFrame, openSession, playPath, replayTokens, rewindSession, stepSession } from './session';
 import type { Frame, Session } from './session';
 import { focusSquad } from './squads';
-import { bandCurve, BANDS, clockRows, endedSummary, keysSet, notOfferedHere, pathChance, pathSteps, personTruth, priorSteps, truthStrip, weightsWanted, whereIs, withWeights, xrayChoices } from './xray';
+import { bandCurve, bandMinutes, BANDS, clockRows, endedSummary, keysSet, notOfferedHere, pathChance, pathSteps, personTruth, priorSteps, truthStrip, weightsWanted, whereIs, withWeights, xrayChoices } from './xray';
 import type { ChoiceXray, RouteTarget } from './xray';
 import { dependencyIndex } from '../../../gen/incident/trees-v13/dependencies';
 
@@ -364,5 +367,31 @@ describe('bandCurve (review finding fullnote-curve-ignores-patch)', () => {
     expect(FULL_NOTE).not.toMatch(/^const \w+[^=]*=\s*Array\.from\([^\n]*bandProbabilities/m);
     expect(FULL_NOTE).toMatch(/useMemo\(\(\) => bandCurve\(\), \[tuning\.hash\]\)/);
     expect(FULL_NOTE).toMatch(/<BandCurve points=\{curve\}/);
+  });
+});
+
+describe('bandMinutes reads the engine\'s decision minutes (xray-band-minutes)', () => {
+  it('gives the minutes the commit charges, for each root choice and band the engine can produce', () => {
+    const s = openCall(REFERENCE), frame = s.frames[0], state = frame.state, run = state.activeRun!;
+    const scenario = getScenario(run.scenarioId)!, built = builtFor(run.locationFamilyId, run.locationSeed, run.flags);
+    let checked = 0;
+    for (const view of frame.views.filter(entry => entry.eligible)) for (const band of BANDS) {
+      const action = scenario.stages[run.stage as StageId].actions.find(entry => entry.id === view.id)!;
+      const ev = evaluateAction({ state, run, scenario, action, built, acting: [focusSquad(state)], support: [] });
+      const next = stepSession(s, { kind: 'decide', actionId: view.id, band });
+      if ('refused' in next) continue;
+      const committed = currentFrame(next);
+      // A drawn result adds its own variant's minutes, which the X-ray reads from the variant; the
+      // bands here are the ones without one, where the X-ray's range is the band's alone.
+      if (committed.drawn.length) continue;
+      const applied = matchedEffects(action, band, run, scenario, teamMinutes(ev, action, band));
+      const [least, most] = bandMinutes(scenario, action, ev, band, applied, [0, 0]);
+      const charged = committed.state.activeRun!.history.at(-1)!.timeCost;
+      expect(charged, `${view.id} ${band}`).toBeGreaterThanOrEqual(least);
+      expect(charged, `${view.id} ${band}`).toBeLessThanOrEqual(most);
+      if (least === most) expect(charged, `${view.id} ${band}`).toBe(least);
+      checked++;
+    }
+    expect(checked).toBeGreaterThan(0);
   });
 });
