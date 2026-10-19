@@ -70,10 +70,14 @@ export async function playLiveCalls(page, { baseURL = 'http://127.0.0.1:5174', w
     // The squad range is read from the screen, as the player reads it: "Takes 1 squad" or "Takes 1 to 2 squads".
     const takes = (await page.getByText(/^Takes \d+( to \d+)? squads?\./).first().innerText()).match(/Takes (\d+)(?: to (\d+))?/);
     const range = { min: Number(takes[1]), max: Number(takes[2] ?? takes[1]) };
-    const ready = page.locator('.squadpick button[aria-label^="Squad "]:not([aria-label*="not deployable"])');
-    const pick = Math.min(range.max, await ready.count());
-    assert.ok(pick >= range.min, `${label}: ${range.min} ready squad${range.min > 1 ? 's' : ''} to send`);
-    for (let i = 0; i < pick; i++) await ready.nth(i).click();
+    // A squad deploys only when every officer in it is fit (sim/operation.ts checkStart), so pick the
+    // squads whose card reads all of them ready ("Squad B, Bravo, 4 of 4 ready"), as a player would
+    // after an injury; a card with one hurt officer still isn't marked "not deployable".
+    const cards = await page.locator('.squadpick button[aria-label^="Squad "]').evaluateAll(buttons => buttons.map((button, index) => ({ index, label: button.getAttribute('aria-label') ?? '' })));
+    const fit = cards.filter(card => { const m = /, (\d+) of (\d+) ready/.exec(card.label); return !!m && m[1] === m[2] && !card.label.includes('not deployable'); });
+    const pick = Math.min(range.max, fit.length);
+    assert.ok(pick >= range.min, `${label}: ${range.min} squad${range.min > 1 ? 's' : ''} with every officer ready to send; the cards read ${cards.map(card => `"${card.label}"`).join(', ')}`);
+    for (const card of fit.slice(0, pick)) await page.locator('.squadpick button[aria-label^="Squad "]').nth(card.index).click();
     assert.equal(await page.locator('.squadpick button[aria-pressed="true"]').count(), pick, `${label}: ${pick} squad${pick > 1 ? 's' : ''} chosen`);
     // Standard radios come from owned stock, one per officer. A short squad is equipped by
     // buying the missing radios on this screen, as a player would.
@@ -87,7 +91,11 @@ export async function playLiveCalls(page, { baseURL = 'http://127.0.0.1:5174', w
       await overflow(`${label} prepare after buying radios`);
     }
     const deploy = page.getByRole('button', { name: 'Deploy', exact: true });
-    assert.equal(await deploy.isEnabled(), true, `${label}: the chosen squads can deploy`);
+    // Wait for the screen to settle before judging Deploy (a slow render under load is not a refusal),
+    // and when it stays off, say what the Prepare screen says.
+    let enabled = false;
+    for (const until = Date.now() + 5000; !(enabled = await deploy.isEnabled()) && Date.now() < until;) await page.waitForTimeout(100);
+    assert.equal(enabled, true, `${label}: the chosen squads can deploy; the screen says: ${(await page.locator('.prepcheck .note-warn').allInnerTexts()).join(' | ') || 'nothing'}`);
     await deploy.click();
     await page.locator('.call-grid').waitFor(); await overflow(`${label} live`);
     const started = await state();
