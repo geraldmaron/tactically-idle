@@ -5,8 +5,8 @@ import { applyNaturalMove, firstMove, startGateRun, withDraftScenario } from '..
 import { choiceActionId } from '../gen/incident/trees-v13/compile';
 import { houseCalls } from '../gen/incident/trees-v13/house-call-fixture';
 import { buildLocation } from './location';
-import { applyMoves, meterConditionsHold, meterContributors, METERS_V1, stanceOf } from './meters';
-import { matchedEffects, traceRun } from './operation';
+import { applyMoves, driftMeters, meterConditionsHold, meterContributors, METERS_V1, stanceOf } from './meters';
+import { advanceTime, matchedEffects, traceRun } from './operation';
 import { evaluateAction } from './resolution';
 import { deserialize, serialize } from './save';
 import { NOW } from './test-fixtures';
@@ -184,4 +184,56 @@ describe('meters: escalation branches, in play', () => {
     });
   });
   const getDraft = (id: string) => ({ ...draft, id });
+});
+
+describe('meters: drift with time', () => {
+  const drifted = (volatility: IncidentPersonDef['volatility'], rapport: number, minutes: number) => {
+    const scenario = { incidentPeople: [subject(volatility)] } as ScenarioDefinition;
+    const run: Pick<OperationRun, 'meters'> = { meters: { taker: { agitation: 60, rapport, moved: {} } } };
+    driftMeters(run, scenario, minutes);
+    return run.meters!.taker;
+  };
+
+  it('winds up a subject the team has not reached and settles one who talks to the team', () => {
+    const { windUp, settle, rapportBelow, rapportSettled } = METERS_V1.drift;
+    expect(drifted('shifting', rapportBelow - 1, 10).agitation).toBeCloseTo(60 + windUp * 10, 1);
+    expect(drifted('shifting', rapportSettled, 10).agitation).toBeCloseTo(60 - settle * 10, 1);
+    expect(drifted('shifting', (rapportBelow + rapportSettled) / 2, 10).agitation).toBe(60);
+  });
+
+  it('scales by volatility, stays inside 0 to 100 and leaves rapport alone', () => {
+    expect(drifted('volatile', 0, 10).agitation).toBeGreaterThan(drifted('steady', 0, 10).agitation);
+    expect(drifted('volatile', 0, 100_000).agitation).toBe(100);
+    expect(drifted('volatile', 100, 100_000).agitation).toBe(0);
+    expect(drifted('shifting', 5, 10).rapport).toBe(5);
+  });
+
+  it('is not an event: a subject nobody has reached stays unheard, and the odds line shows the change', () => {
+    const wound = drifted('shifting', 0, 120);
+    expect(stanceOf(wound)).toBe('unheard');
+    expect(meterContributors(subject('shifting'), wound).some(entry => entry.ref === 'meters:taker:agitation' && entry.value < 0)).toBe(true);
+  });
+
+  it('runs with the call’s own minutes, and a call with no meters is untouched', () => {
+    const scenario = { incidentPeople: [subject('shifting')], pressure: { start: 0, perMinute: 0, threshold: 100, civilianPerMinute: 0 } } as unknown as ScenarioDefinition;
+    const run = { clock: 0, pressure: 0, civilianSafety: 100, meters: { taker: { agitation: 60, rapport: 0, moved: {} } } };
+    advanceTime(run, scenario, 20);
+    expect(run.meters.taker.agitation).toBeCloseTo(60 + METERS_V1.drift.windUp * 20, 1);
+    const bare = { clock: 0, pressure: 0, civilianSafety: 100 };
+    expect(() => advanceTime(bare, scenario, 20)).not.toThrow();
+  });
+});
+
+describe('meters: drift survives a save', () => {
+  it('reloads every natural play of every shipping call, so the validator replays drift as the commit does', async () => {
+    const { CALL_TREES } = await import('../content/call-trees');
+    const { drawCalls, playToEnd, POLICIES } = await import('../gen/incident/trees-v13/balance');
+    let checked = 0;
+    for (const tree of Object.values(CALL_TREES)) for (const { scenarioId, seed } of drawCalls(tree!, 2, 6)) for (const policy of POLICIES) {
+      const state = playToEnd(scenarioId, policy, seed);
+      expect(deserialize(serialize(state, NOW)), `${scenarioId} ${policy} ${seed}`).not.toBeNull();
+      checked++;
+    }
+    expect(checked).toBeGreaterThan(20);
+  }, 120_000);
 });

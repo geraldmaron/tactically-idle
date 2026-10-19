@@ -1,3 +1,4 @@
+import { fillOpenPostsForTest } from '../sim/staff-fixtures';
 import { createElement, type ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -135,7 +136,7 @@ describe('rendered player destinations and persistent drafts', () => {
     expect(html.indexOf('class="inv-grid"')).toBeLessThan(html.indexOf('class="gear-maintenance"'));
     expect(html).toContain('<details class="gear-maintenance">');
     expect(html).toContain('class="qm-card qm-card-not_hired"');
-    expect(html).toContain('Hire in Develop');
+    expect(html).toContain('Open the post in Develop');
     // Inventory is an item grid; restocking lives in each item's sheet.
     expect(html).toMatch(/class="inv-tile"[^>]* aria-label="[^"]+: \d+ owned, \d+ ready/);
     expect(html).toContain('At each clock hour');
@@ -150,12 +151,13 @@ describe('rendered player destinations and persistent drafts', () => {
     state.department.unlockedNodes.push('logistics_equipment_manager');
     for (const id of state.department.unlockedNodes) state.department.developmentTiers[id] ??= 1;
     state.department.developmentTiers.logistics_equipment_manager = 3;
+    fillOpenPostsForTest(state);
     const html = markup(createElement(GearScreen));
     expect(html).toContain('class="qm-card qm-card-off"');
     expect(html).toContain('Tier 3</span>');
     expect(html).toContain('45% cheaper service</span>');
     expect(html).toContain('40% less wear</span>');
-    expect(html).not.toContain('Hire in Develop');
+    expect(html).not.toContain('Open the post in Develop');
     // The budget control lives once, in the Quartermaster's Command Staff sheet.
     const sheet = markup(createElement(ManagerSheet, { id: 'quartermaster', g: state, now: NOW, onClose: () => {}, inGear: true }));
     expect(sheet).toContain('Tier 3: 45% cheaper servicing and 40% less wear');

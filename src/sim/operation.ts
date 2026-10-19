@@ -6,10 +6,10 @@ import { validateStoryBindings } from '../gen/incident/story-bindings';
 import { actionResultLabel, harmResultLabel } from './action-result';
 import { applyIncidentConsequences, applyPersonConsequences, civilianOutcomeViews, syncCasualtyFlags, syncPersonCasualtyFlags } from './incident-consequences';
 import { protectedOfficerEffects } from './force-risk';
-import { drawnKeys, resolveDrawn } from './drawn-effects';
+import { drawnKeys, forceSuppliesSpent, resolveDrawn } from './drawn-effects';
 import { withVariants } from '../gen/incident/drawn-model';
 import { advanceClocks, clockConditionsHold, clockErrors, clockOutEffects, cueEffects, decisionMinutes, forkMinutes, initialClocks, teamMinutes } from './clocks';
-import { applyMoves, initialMeters, meterConditionsHold } from './meters';
+import { applyMoves, driftMeters, initialMeters, meterConditionsHold } from './meters';
 import { applyCommitments } from './commitments';
 import { forceLines, OUTCOME_SCORE_V1, scoreCall } from './outcome-score';
 import { CAREER_TUNING } from './career';
@@ -45,7 +45,8 @@ import { foldDebriefs } from './casebook';
 import { addService, departmentService, levelForService, serviceEarned } from './department-level';
 import { ITEMS } from '../content/items';
 import { hashSeed, next } from './rng';
-import { deployability, fullName } from './officer';
+import { fullName } from './officer';
+import { deployRoster, runRoster } from './squads';
 import { releaseRun, reserveLoadouts, settleRun, squadUnits } from './inventory';
 import { withStandardRadios } from './standard-kit';
 import { spaceAt, stagingPointById } from './spatial';
@@ -273,9 +274,11 @@ export function checkStart(state: GameState, now: number, cmd: StartCmd): StartC
       const prev = seenOfficers.get(oid);
       if (prev) issues.push(`${fullName(o)} is in both ${squadLabel(prev)} and ${squadLabel(sid)}`);
       seenOfficers.set(oid, sid);
-      const d = deployability(o, now);
-      if (!d.ok) issues.push(`${squadLabel(sid)}: ${d.reason}`);
     }
+    // A squad deploys with the officers who are ready; the rest stay home (short-squad-deploys).
+    const roster = deployRoster(state, sid, now);
+    if (squad.officerIds.length && !roster.goes.length) issues.push(`${squadLabel(sid)}: nobody is ready (${roster.staysHome.map(entry => entry.reason).join('; ')})`);
+    else for (const entry of roster.staysHome) warnings.push(`${squadLabel(sid)}: ${entry.reason} and stays home`);
   }
 
   try {
@@ -300,7 +303,7 @@ export function checkStart(state: GameState, now: number, cmd: StartCmd): StartC
   }
 
   const upkeep = departmentUpkeep(state);
-  const standard = withStandardRadios(state, ids, cmd.loadouts, cmd.units, now, upkeep);
+  const standard = withStandardRadios(state, ids, cmd.loadouts, cmd.units, now, upkeep, (sid) => deployRoster(state, sid, now).goes);
   if (standard.issue) issues.push(standard.issue);
   cmd = { ...cmd, loadouts: standard.loadouts, units: standard.units };
   for (const sid of Object.keys(cmd.units ?? {}) as SquadId[]) if (!ids.includes(sid)) issues.push(`Equipment given for ${squadLabel(sid)}, which is not deployed`);
@@ -319,7 +322,11 @@ function startWarnings(state: GameState, now: number, scenario: ScenarioDefiniti
   const unitOverride = {} as Record<SquadId, ItemUnit[]>;
   reserveLoadouts(probe, 'preview', cmd.loadouts, cmd.units, now, departmentUpkeep(state));
   for (const sid of cmd.squadIds) unitOverride[sid] = squadUnits(probe, 'preview', sid);
+  // The probe sends who Deploy would send, so the preview's odds use who goes (runRoster).
+  for (const sid of cmd.squadIds) for (const oid of deployRoster(probe, sid, now).goes) probe.officers[oid].assignment = { kind: 'operation', runId: 'preview' };
   const run = makeRun(state, built, scenario, cmd, 'preview', 0, 0);
+  // The probe is mid-run, as the run it previews will be: equipment qualification reads the run's roster.
+  probe.activeRun = run;
   for (const a of scenarioActions(scenario)) {
     const perm: OperationRun = { ...run, knowledge: { ...run.knowledge }, flags: [...run.flags] };
     for (const f of a.requires.flags ?? []) perm.flags.push(f.flag);
@@ -404,7 +411,7 @@ function makeRun(state: GameState, built: BuiltLocation, scenario: ScenarioDefin
 
 /** Advance operation time: pressure rises; civilian safety falls above the threshold; v13 clocks run
  * down, and the cues they pass come back as effects for the caller to apply (applyClockCues). */
-export function advanceTime(run: Pick<OperationRun, 'clock' | 'pressure' | 'civilianSafety'> & Partial<Pick<OperationRun, 'clocks' | 'flags'>>, s: ScenarioDefinition, minutes: number): { civilianLoss: number; crossed: boolean; cues: OutcomeEffect[] } {
+export function advanceTime(run: Pick<OperationRun, 'clock' | 'pressure' | 'civilianSafety'> & Partial<Pick<OperationRun, 'clocks' | 'flags' | 'meters'>>, s: ScenarioDefinition, minutes: number): { civilianLoss: number; crossed: boolean; cues: OutcomeEffect[] } {
   const m = s.pressure;
   const p0 = run.pressure;
   let over = 0;
@@ -414,6 +421,7 @@ export function advanceTime(run: Pick<OperationRun, 'clock' | 'pressure' | 'civi
   run.clock = round1(run.clock + minutes);
   run.pressure = round1(clamp(p0 + m.perMinute * minutes, 0, 100));
   run.civilianSafety = round1(clamp(run.civilianSafety - loss, 0, 100));
+  if (run.meters) { run.meters = structuredClone(run.meters); driftMeters(run, s, minutes); }
   const cues = run.clocks && run.flags ? advanceClocks(run as Pick<OperationRun, 'clocks' | 'flags'>, s, minutes) : [];
   return { civilianLoss: loss, crossed: p0 < m.threshold && run.pressure >= m.threshold, cues };
 }
@@ -708,7 +716,7 @@ export function computeDebrief(state: GameState, run: OperationRun): DebriefResu
   }
   const officerCondition: DebriefResult['officerCondition'] = [];
   for (const sq of run.squadIds) {
-    for (const id of state.squads.find((s) => s.id === sq)?.officerIds ?? []) {
+    for (const id of runRoster(state, run, sq)) {
       const o = state.officers[id];
       if (!o) continue;
       const after = clamp(round1(o.stress + endingStrain), 0, 100);
@@ -800,7 +808,7 @@ const fail = (reason: string): HandlerResult => ({ ok: false, reason });
 export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
   startOperation(draft, cmd, ctx) {
     const upkeep = departmentUpkeep(draft);
-    const standard = withStandardRadios(draft, cmd.squadIds, cmd.loadouts, cmd.units, ctx.now, upkeep);
+    const standard = withStandardRadios(draft, cmd.squadIds, cmd.loadouts, cmd.units, ctx.now, upkeep, (sid) => deployRoster(draft, sid, ctx.now).goes);
     cmd = { ...cmd, loadouts: standard.loadouts, units: standard.units };
     const chk = checkStart(draft, ctx.now, cmd);
     if (chk.issues.length > 0 || !chk.scenario) return fail(chk.issues[0] ?? 'Cannot start this operation');
@@ -817,11 +825,9 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     if (!r.ok) return r;
     run.reservationIds = draft.reservations.slice(before).map((x) => x.id);
     reserveSupportVehicle(draft, run);
+    // Only the officers who are ready go; their assignment is the run's roster (runRoster).
     for (const sid of cmd.squadIds) {
-      for (const oid of draft.squads.find((s) => s.id === sid)?.officerIds ?? []) {
-        const o = draft.officers[oid];
-        if (o) o.assignment = { kind: 'operation', runId };
-      }
+      for (const oid of deployRoster(draft, sid, ctx.now).goes) draft.officers[oid].assignment = { kind: 'operation', runId };
     }
     draft.activeRun = run;
     takeIncident(draft, scenario.id);
@@ -879,7 +885,10 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     let matched = matchedEffects(action, band, run, scenario, clockBaseMinutes);
     // v13: drawn consequences (a subject firing at the team, the team's force) settle now, each
     // with its own saved sample, into the variant effects they choose (sim/drawn-effects.ts).
-    const drawn = resolveDrawn(matched, { state: draft, run, scenario, acting: ev.acting, participantIds: ev.participantIds, unitsOf: availableUnits });
+    const drawnContext = { state: draft, run, scenario, acting: ev.acting, participantIds: ev.participantIds, unitsOf: availableUnits };
+    const drawn = resolveDrawn(matched, drawnContext);
+    // A less-lethal draw spends a cartridge or supply from the acting squads (sim/drawn-effects.ts).
+    const suppliesSpent = forceSuppliesSpent(drawn.records, drawnContext);
     matched = drawn.effects;
     let personMoved = false;
     let storyRouteUsed = false;
@@ -930,7 +939,7 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     }
     const externalSupportEvents = applyExternalSupportEffects(run, scenario, matched);
     const casualtyPositions = Object.fromEntries(ev.arrivals.flatMap(arrival =>
-      (draft.squads.find(squad => squad.id === arrival.squadId)?.officerIds ?? []).map(id => [id, { spaceId: arrival.spaceId, at: arrival.at }])));
+      runRoster(draft, run, arrival.squadId).map(id => [id, { spaceId: arrival.spaceId, at: arrival.at }])));
     const incidentConsequences = applyIncidentConsequences(draft, run, scenario, protectedOfficerEffects(matched, ev.protectionUsed), ev.participantIds, casualtyPositions);
     const personConsequences = applyPersonConsequences(run, scenario, action, band, [...matched, ...outs]);
 
@@ -968,7 +977,7 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
 
     const used: Record<Id, number> = {};
     const unitsUsed: Id[] = [];
-    for (const u of ev.uses) {
+    for (const u of [...ev.uses, ...suppliesSpent.map(supply => ({ ...supply, qty: 1, consumable: true }))]) {
       if (!storyRouteUsed && ev.storyMovementOnlyUnitIds?.includes(u.unitId)) continue;
       used[u.itemId] = (used[u.itemId] ?? 0) + u.qty;
       unitsUsed.push(u.unitId);

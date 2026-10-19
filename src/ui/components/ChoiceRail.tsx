@@ -36,7 +36,7 @@ export function ChoiceRail<T extends string>({ value, options, onChange, label, 
     select(next);
     buttons.current.get(next)?.focus({ preventScroll: true });
   };
-  return <div ref={rail} className={`choice-rail${grow ? ' choice-rail-grow' : ''}`} role={kind === 'tabs' ? 'tablist' : kind === 'filter' ? 'radiogroup' : 'navigation'} aria-label={label}>
+  return <div ref={rail} className={`choice-rail choice-rail-${kind}${grow ? ' choice-rail-grow' : ''}`} role={kind === 'tabs' ? 'tablist' : kind === 'filter' ? 'radiogroup' : 'navigation'} aria-label={label}>
     {options.map((option) => <button key={option.value} type="button"
       ref={(node) => { if (node) buttons.current.set(option.value, node); else buttons.current.delete(option.value); }}
       className={`choice-rail-item${value === option.value ? ' choice-rail-selected' : ''}`}

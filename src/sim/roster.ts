@@ -2,6 +2,7 @@
 // return ok/reason; checks are pure so selectors can preview exactly what the
 // handler will do. What the hire depends on in the department's books (its hourly
 // net, the candidate pool its upgrades allow) is handed in by the department.
+import type { StaffPost } from './staff-pool';
 import type {
   Department,
   GameState,
@@ -184,11 +185,20 @@ export function recruitmentStatus(state: GameState, now: number) {
   return { total: PERSONAS.length, unseen, available, exhausted: available === 0 };
 }
 
+/** People in or offered a Command Staff post: the officer market leaves them out. Read structurally,
+ * so the officer system does not depend on the staff module at runtime. */
+function staffIdentityIds(state: GameState): string[] {
+  return Object.values(state.commandStaff ?? {}).flatMap((record) => {
+    const post = (record as { post?: StaffPost }).post;
+    return post ? [...(post.holder ? [post.holder.person.identityId] : []), ...post.pool.map((c) => c.person.identityId)] : [];
+  });
+}
+
 /** Fill the pool up to `poolSize` (economy.ts candidatePoolSize) with deterministic candidates; shortlisted ones stay. */
 export function fillCandidates(d: GameState, now: number, poolSize: number): void {
   const kept = d.candidates.filter((c) => c.shortlisted && gameDay(d, now) < mandatoryRetirementDay(c.officer));
   const personnel = d.personnel!;
-  const gen: RecruitGen = { rng: d.rngState, nextId: d.nextId, campaignSeed: personnel.campaignSeed, builds: personnel.builds, unavailable: personnel.employedIdentityIds };
+  const gen: RecruitGen = { rng: d.rngState, nextId: d.nextId, campaignSeed: personnel.campaignSeed, builds: personnel.builds, unavailable: [...personnel.employedIdentityIds, ...staffIdentityIds(d)] };
   const taken = new Set<string>();
   for (const o of Object.values(d.officers)) taken.add(fullNameKey(o.firstName, o.surname));
   for (const c of kept) taken.add(fullNameKey(c.officer.firstName, c.officer.surname));

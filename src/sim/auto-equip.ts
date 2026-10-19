@@ -3,7 +3,7 @@ import type { ActionDefinition } from './scenario-types';
 import { ITEMS } from '../content/items';
 import { readyUnits } from './inventory';
 import { radioRequirement, standardRadioPlan, STANDARD_RADIO } from './standard-kit';
-import { deployability } from './officer';
+import { deployRoster } from './squads';
 import { getBuilt, RESOLUTION_TUNING } from './resolution';
 import { projectedCondition } from './equipment';
 import { unitEffectiveness } from './inventory';
@@ -48,6 +48,7 @@ export function autoLoadout(state: GameState, scenarioId: Id, squadIds: SquadId[
   const chosen = [...new Set(squadIds)].sort();
   const targets = new Set((options.targets ?? chosen).filter((sid) => chosen.includes(sid)));
   const time = Math.max(now, state.department.clockHighWater);
+  const crew = (sid: SquadId) => deployRoster(state, sid, time).goes;
   const taken = new Set<Id>(state.reservations.map((r) => r.unitId));
   const counts: Partial<Record<SquadId, Record<Id, number>>> = {};
   const picks: Partial<Record<SquadId, ItemUnit[]>> = {};
@@ -61,7 +62,7 @@ export function autoLoadout(state: GameState, scenarioId: Id, squadIds: SquadId[
   const usableIds = new Set(pool.map((u) => u.id));
 
   for (const sid of chosen) {
-    counts[sid] = { ...Object.fromEntries(Object.entries(options.loadouts?.[sid] ?? {}).filter(([id]) => id !== 'battery_pack')), [STANDARD_RADIO]: radioRequirement(state, sid) };
+    counts[sid] = { ...Object.fromEntries(Object.entries(options.loadouts?.[sid] ?? {}).filter(([id]) => id !== 'battery_pack')), [STANDARD_RADIO]: radioRequirement(state, sid, crew) };
     picks[sid] = [];
     if (targets.has(sid)) {
       result.loadouts[sid] = counts[sid];
@@ -69,19 +70,17 @@ export function autoLoadout(state: GameState, scenarioId: Id, squadIds: SquadId[
       result.rationale[sid] = [];
     }
     const squad = state.squads.find((s) => s.id === sid);
-    const roster = squad?.officerIds.map((id) => state.officers[id]);
-    const blocker = roster?.find((o) => !o || !deployability(o, time).ok);
-    const valid = !!roster?.length && roster.every((o) => o && deployability(o, time).ok);
-    if (valid) officers[sid] = roster as Officer[];
+    // Equip the officers who go (deployRoster); a squad with nobody ready gets nothing.
+    const roster = deployRoster(state, sid, time);
+    if (roster.goes.length) officers[sid] = roster.goes.map((id) => state.officers[id]);
     else if (targets.has(sid)) {
-      const reason = blocker ? deployability(blocker, time) : null;
-      warn(`squad:${sid}`, `${label(sid)}: no equipment added (${reason && !reason.ok ? reason.reason : !squad ? 'squad does not exist' : !roster?.length ? 'no officers' : 'an officer is unavailable'}).`);
+      warn(`squad:${sid}`, `${label(sid)}: no equipment added (${!squad ? 'squad does not exist' : !squad.officerIds.length ? 'no officers' : roster.staysHome[0]?.reason ?? 'an officer is unavailable'}).`);
     }
   }
 
   // Standard radios are automatic even when only one squad's optional gear is
   // targeted. They take distinct best-condition stock before optional choices.
-  const radioPlan = standardRadioPlan(state, chosen.filter((sid) => officers[sid]), time, upkeep);
+  const radioPlan = standardRadioPlan(state, chosen.filter((sid) => officers[sid]), time, upkeep, crew);
   if (radioPlan.issue) warn('standard-radios', radioPlan.issue);
   for (const sid of chosen) {
     for (const id of radioPlan.units[sid] ?? []) {
@@ -90,7 +89,7 @@ export function autoLoadout(state: GameState, scenarioId: Id, squadIds: SquadId[
       if (targets.has(sid) && !options.units?.[sid]?.includes(id)) result.added += 1;
     }
     if (targets.has(sid) && officers[sid]) {
-      result.rationale[sid]!.push(`${radioPlan.units[sid]?.length ?? 0}/${radioRequirement(state, sid)} standard radios ready: one per officer, assigned automatically.`);
+      result.rationale[sid]!.push(`${radioPlan.units[sid]?.length ?? 0}/${radioRequirement(state, sid, crew)} standard radios ready: one per officer, assigned automatically.`);
     }
   }
 

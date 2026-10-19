@@ -48,6 +48,7 @@ import { buildLocation, deriveLocation } from './location';
 import { conditionFraction, EXPERIENCE_TUNING, highRiskAllowed } from './officer';
 import { CERT_HOLDER, isCertId } from '../content/certs';
 import { squadUnits, unitEffectiveness } from './inventory';
+import { runRoster } from './squads';
 import { ageYears, experienceBand, gameDay } from './calendar';
 import { signalBetween } from './spatial';
 import { signalCarry } from './environment';
@@ -587,7 +588,7 @@ export function evaluateAction(input: EvalInput): Evaluation {
   if (acting.length === 0) return blank('Choose an acting squad');
   for (const sq of [...acting, ...support]) if (!run.squadIds.includes(sq)) return blank(`${squadLabel(sq)} is not deployed`);
   for (const sq of [...acting, ...support]) {
-    const hasAvailable = state.squads.find(squad => squad.id === sq)?.officerIds.some(id => !!state.officers[id] && !incidentOfficerUnavailable(state, run, id));
+    const hasAvailable = runRoster(state, run, sq).some(id => !!state.officers[id] && !incidentOfficerUnavailable(state, run, id));
     if (!hasAvailable && !(action.commandOnly && acting.includes(sq))) return blank(`${squadLabel(sq)} has no uninjured officer available to take part`);
   }
   const maxActing = action.maxActing ?? 1;
@@ -632,8 +633,7 @@ export function evaluateAction(input: EvalInput): Evaluation {
   const squadOf = new Map<Id, SquadId>();
   const candidates: Officer[] = [];
   for (const sq of acting) {
-    const squad = state.squads.find((s) => s.id === sq);
-    for (const id of squad?.officerIds ?? []) {
+    for (const id of runRoster(state, run, sq)) {
       const o = state.officers[id];
       if (o && !squadOf.has(id)) {
         squadOf.set(id, sq);
@@ -748,8 +748,7 @@ export function evaluateAction(input: EvalInput): Evaluation {
   const sens = T.pressureSensitivity[kind];
   const mentorSquads = new Set<SquadId>();
   for (const sq of acting) {
-    const squad = state.squads.find((s) => s.id === sq);
-    if (squad?.officerIds.some((id) => !incidentOfficerUnavailable(state, run, id) && state.officers[id]?.traits.includes('mentor'))) mentorSquads.add(sq);
+    if (runRoster(state, run, sq).some((id) => !incidentOfficerUnavailable(state, run, id) && state.officers[id]?.traits.includes('mentor'))) mentorSquads.add(sq);
   }
   const hasUnresolvedReport = Object.values(run.knowledge).includes('reported');
   const lead = participants[0] ?? null;
@@ -795,7 +794,7 @@ export function evaluateAction(input: EvalInput): Evaluation {
     }
     if (band === 'rookie') {
       const sq = squadOf.get(o.id);
-      const mentor = (state.squads.find((s) => s.id === sq)?.officerIds ?? []).map((id) => state.officers[id]).find((m) => m && !incidentOfficerUnavailable(state, run, m.id) && m.id !== o.id && experienceBand(m, day) === 'veteran');
+      const mentor = (sq ? runRoster(state, run, sq) : []).map((id) => state.officers[id]).find((m) => m && !incidentOfficerUnavailable(state, run, m.id) && m.id !== o.id && experienceBand(m, day) === 'veteran');
       if (mentor) contributors.push({ label: `${mentor.surname}: mentoring ${o.surname} +${E.mentoring}`, value: round1(E.mentoring * seat), source: 'familiarity', ref: o.id });
     }
     const age = ageYears(o, day);
@@ -1051,8 +1050,7 @@ export function evaluateAction(input: EvalInput): Evaluation {
         } else contributors.push({ label: `${squadLabel(sq)}: locked ${f.label.toLowerCase()}, ${f.minutes} min to force`, value: 0, source: 'space', ref: f.openingId });
       }
       supportTravel = Math.max(supportTravel, dist);
-      const squad = state.squads.find((s) => s.id === sq);
-      const coords = (squad?.officerIds ?? [])
+      const coords = runRoster(state, run, sq)
         .filter(id => !incidentOfficerUnavailable(state, run, id))
         .map((id) => state.officers[id]?.ratings.coordination ?? 0)
         .sort((a, b) => b - a)
@@ -1315,9 +1313,9 @@ export function strainFor(input: EvalInput, ev: Evaluation, band: OutcomeBand): 
   const day = gameDay(state, run.startedAt);
   const pressured = underPressure(run, action.check.kind);
   for (const sq of run.squadIds) {
-    const squad = state.squads.find((s) => s.id === sq);
-    const mentor = squad?.officerIds.some((id) => !incidentOfficerUnavailable(state, run, id) && state.officers[id]?.traits.includes('mentor')) ?? false;
-    for (const id of squad?.officerIds ?? []) {
+    const roster = runRoster(state, run, sq);
+    const mentor = roster.some((id) => !incidentOfficerUnavailable(state, run, id) && state.officers[id]?.traits.includes('mentor'));
+    for (const id of roster) {
       const o = state.officers[id];
       if (!o) continue;
       let w = S.bystander;

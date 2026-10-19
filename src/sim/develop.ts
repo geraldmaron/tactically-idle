@@ -13,6 +13,7 @@ import { createUnit } from './equipment';
 import { quoteDevelopment } from './development-tiers';
 import { MANAGERS } from './command-staff';
 import { tunable } from './tuning';
+import { courseFee } from './staff-pool';
 
 /** Tunable (sim/tuning.ts). */
 export const DEVELOP_TUNING = tunable('DEVELOP_TUNING', {
@@ -47,7 +48,7 @@ export function describeEffect(e: NodeEffect): string {
     case 'candidatePool':
       return `+${e.delta} recruit candidate in the pool`;
     case 'commandStaff':
-      return `Hires ${MANAGERS[e.managerId].title} ${MANAGERS[e.managerId].name}: automates ${MANAGERS[e.managerId].loop.toLowerCase()}`;
+      return `Opens the ${MANAGERS[e.managerId].title} post: automates ${MANAGERS[e.managerId].loop.toLowerCase()}`;
   }
 }
 
@@ -116,8 +117,9 @@ export function courseCheck(state: GameState, course: Course, officer: Officer |
     }
   }
   if (trainingCount(state) >= state.department.trainingSlots) return no('No free training slot');
-  if (state.department.funding < course.cost) {
-    return no(`Needs ${money(course.cost)} (have ${money(state.department.funding)})`);
+  const fee = courseFee(state, course.cost);
+  if (state.department.funding < fee) {
+    return no(`Needs ${money(fee)} (have ${money(state.department.funding)})`);
   }
   if (officer) {
     // Training takes the officer off patrol income; refuse if that would push the budget into deficit.
@@ -143,7 +145,7 @@ function startCourse(d: GameState, officerId: Id, courseId: Id): HandlerResult {
   const check = courseCheck(d, course, officer);
   if (!check.ok) return refusal(check.reason ?? 'Cannot start this course');
   const t = simNow(d);
-  d.department.funding -= course.cost;
+  d.department.funding -= courseFee(d, course.cost);
   officer.assignment = { kind: 'training', courseId, startedAt: t, endsAt: t + Math.round(course.hours * HOUR_MS) };
   return OK;
 }

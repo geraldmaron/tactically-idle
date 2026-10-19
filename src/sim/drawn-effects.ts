@@ -14,7 +14,7 @@
 import { getBuilt, scenarioWithPeopleNow } from './resolution';
 import { FORCE_REASONS } from '../content/incidents/lines';
 import { peopleNear, readForceThreat } from './authorization';
-import { cutFor, cutShares, FORCE_RISK_V1, forceCuts, qualifiedForceUnit, type ForceRiskProfile, type SampleCuts } from './force-risk';
+import { cutFor, cutShares, FORCE_RISK_V1, forceCuts, forceSupplyUnit, qualifiedForceUnit, type ForceRiskProfile, type SampleCuts } from './force-risk';
 import { cascadeCombos, cascadeKey, cascadeResult, type CascadeState } from '../gen/incident/drawn-model';
 import { next } from './rng';
 import { tunable } from './tuning';
@@ -106,7 +106,8 @@ export function teamForceProfile(state: GameState, run: OperationRun, scenario: 
   let carriedAny = false;
   for (const profile of ['less_lethal_impact', 'less_lethal_device'] as const) {
     const carried = qualifiedForceUnit(state, profile, units, participantIds, departmentUpkeep(state));
-    if (!carried) continue;
+    // A device or launcher with nothing to fire is not carried: its supply is spent per use.
+    if (!carried || !forceSupplyUnit(profile, units)) continue;
     carriedAny = true;
     if (person.doorFt !== undefined && person.doorFt > TEAM_FORCE_V1.rangeFt[profile]) continue;
     return { profile, rule: `${profile}:in_range`, reason: `${seen} ${fill(FORCE_REASONS.tool[profile])}` };
@@ -276,6 +277,26 @@ export function resolveDrawn(effects: OutcomeEffect[], ctx: DrawnContext): { eff
     out.push(rest, ...(variants?.[key] ?? []));
   }
   return { effects: out, records };
+}
+
+/** The supply each less-lethal draw in `records` spends, one unit per draw, taken from the acting
+ * squads in squad order (lowest unit id first). The commit adds them to the decision's used units,
+ * so the debrief says what was spent and settlement uses the cartridge up. */
+export function forceSuppliesSpent(records: readonly DrawnRecord[], ctx: DrawnContext): { unitId: Id; itemId: Id; squadId: SquadId }[] {
+  const spent = new Set<Id>();
+  const out: { unitId: Id; itemId: Id; squadId: SquadId }[] = [];
+  for (const record of records) {
+    const profile = record.model === 'team_force' ? record.key.split(':')[0] as ForceRiskProfile : undefined;
+    if (!profile) continue;
+    for (const squadId of ctx.acting) {
+      const unit = forceSupplyUnit(profile, ctx.unitsOf(ctx.state, ctx.run, squadId), spent);
+      if (!unit) continue;
+      spent.add(unit.id);
+      out.push({ unitId: unit.id, itemId: unit.itemId, squadId });
+      break;
+    }
+  }
+  return out;
 }
 
 // ---------------------------------------------------------------- odds (Scenario Lab)

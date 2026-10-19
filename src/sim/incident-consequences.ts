@@ -319,7 +319,9 @@ export function validIncidentConsequences(run: OperationRun, scenario: ScenarioD
   if (run.officerCasualties === undefined) return !run.history.some(decision => decision.committed?.officerCasualties?.length);
   if (!run.officerCasualties || typeof run.officerCasualties !== 'object' || Array.isArray(run.officerCasualties)) return false;
   const expected: Record<Id, OfficerCasualtyRecord> = {};
-  const deployed = new Set(run.squadIds.flatMap(id => squads.find(squad => squad.id === id)?.officerIds ?? []));
+  // Who Deploy sent (runRoster): the squad's officers assigned to this run.
+  const deployed = new Set(run.squadIds.flatMap(id => (squads.find(squad => squad.id === id)?.officerIds ?? [])
+    .filter(oid => { const a = officers[oid]?.assignment; return a?.kind === 'operation' && a.runId === run.id; })));
   let clock = (run.resupplies ?? []).reduce((sum, delivery) => Math.round((sum + delivery.minutes) * 10) / 10, 0);
   for (const decision of run.history) {
     clock = Math.round((clock + decision.timeCost) * 10) / 10;

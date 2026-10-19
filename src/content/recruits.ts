@@ -143,6 +143,13 @@ function candidateFor(gen: RecruitGen, now: number, person: Persona, day: number
 /** A small hiring window onto the authored cast; build assignment is fixed for the campaign. People
  * already at `retireAge` on `day` never appear; the roster passes the career rule's age in
  * (CAREER_TUNING.retireAge), so this catalog module reads no engine tuning. */
+const meanRating = (o: Officer) => Object.values(o.ratings).reduce((sum, v) => sum + v, 0) / Object.keys(o.ratings).length;
+
+/** Same role, at least as well rated with at least as many certifications, and no dearer: a dead option beside the other. */
+export function officerDominates(a: Officer, b: Officer): boolean {
+  return a.role === b.role && meanRating(a) >= meanRating(b) && a.certs.length >= b.certs.length && a.wage <= b.wage;
+}
+
 export function generateBatch(
   gen: RecruitGen, now: number, count: number, existingRoles: Role[], takenNames: Set<string>, day = 0, retireAge = Infinity,
 ): Candidate[] {
@@ -161,9 +168,14 @@ export function generateBatch(
   const out: Candidate[] = [];
   const used = [...existingRoles];
   const roleOf = (p: Persona) => gen.builds?.[p.id]?.role ?? roleForPersona(seed, p.id);
+  const buildOf = (p: Persona) => gen.builds?.[p.id] ?? buildPersona(p, seed, undefined, day);
   while (out.length < count && available.length) {
     let pool = available.filter((p) => !used.includes(roleOf(p)));
     if (!pool.length) pool = available;
+    // A repeated role must still be a choice: leave out anyone who matches or loses to a
+    // same-role candidate already offered on every count, unless nobody else is left.
+    const choices = pool.filter((p) => !out.some((c) => officerDominates(c.officer, buildOf(p)) || officerDominates(buildOf(p), c.officer)));
+    if (choices.length) pool = choices;
     const person = pool[rollInt(gen, pool.length)];
     available.splice(available.indexOf(person), 1);
     takenNames.add(fullNameKey(person.firstName, person.surname));
