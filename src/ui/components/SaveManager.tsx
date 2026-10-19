@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { manageSave, useCampaigns, exportCurrentSave, exportSlotSave, exportSaveRecovery, isResponsivePreview, type SaveAction } from '../store';
 import { Sheet } from './Sheet';
 import { Button, Chip } from './ui';
+import { Icon } from '../icons';
 import { money } from '../format';
 import { usePeopleColor } from '../people/PeopleText';
 import { setPeopleColor } from '../people/prefs';
@@ -15,16 +16,36 @@ function download(text: string, name: string) {
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-export function CampaignBar({ onOpen }: { onOpen: () => void }) {
-  const saved = useCampaigns();
+/** The campaign's save state in one line, for the header button and the saves sheet. */
+export function campaignStatus(saved: ReturnType<typeof useCampaigns>): { name: string; detail: string; attention: boolean } {
   const slot = saved.activeSlotId ? saved.slots[saved.activeSlotId - 1] : null;
-  return <div className={`campaign-bar${saved.issue ? ' campaign-warning' : ''}`}>
-    <span><strong>{isResponsivePreview ? 'TEST · ' : ''}{slot ? `Slot ${saved.activeSlotId} · ${slot.name}` : 'Unsaved campaign'}</strong><small>{isResponsivePreview ? 'Temporary test saves · lost on reload' : saved.issue ? 'Saving needs attention' : saved.dirty ? slot ? 'Saving locally…' : 'Not saved yet' : 'Autosaved on this device'}</small></span>
-    <span className="campaign-bar-actions">
-      {/* Development builds only: the Scenario Lab (/lab) plays every call on the real engine and shows its options, odds and branches. */}
-      {import.meta.env.DEV && <a className="campaign-bar-dev" href={`${import.meta.env.BASE_URL}lab`} target="_blank" rel="noreferrer">Lab</a>}
-      <button type="button" onClick={onOpen} aria-label="Open local saves and new game">Saves / New</button>
-    </span>
+  return {
+    name: `${isResponsivePreview ? 'TEST · ' : ''}${slot ? `Slot ${saved.activeSlotId} · ${slot.name}` : 'Unsaved campaign'}`,
+    detail: isResponsivePreview ? 'Temporary test saves · lost on reload' : saved.issue ? 'Saving needs attention' : saved.dirty ? slot ? 'Saving locally…' : 'Not saved yet' : 'Autosaved on this device',
+    attention: !!saved.issue || !slot,
+  };
+}
+
+/** Saves live behind one header button. A dot marks a campaign that isn't safely saved, so the
+ * status costs no screen height until it matters. */
+export function CampaignButton({ onOpen }: { onOpen: () => void }) {
+  const saved = useCampaigns();
+  const status = campaignStatus(saved);
+  return <button type="button" className={`campaign-btn${saved.issue ? ' campaign-btn-warning' : ''}`} onClick={onOpen}
+    aria-label={`Saves and new game. ${status.name}, ${status.detail}`}>
+    <Icon name="bookmark" size={18} />
+    {isResponsivePreview && <span className="campaign-btn-test">Test</span>}
+    {status.attention && <i className="campaign-btn-dot" aria-hidden="true" />}
+  </button>;
+}
+
+function SaveStatus() {
+  const saved = useCampaigns();
+  const status = campaignStatus(saved);
+  return <div className={`save-status${saved.issue ? ' save-status-warning' : ''}`}>
+    <span><strong>{status.name}</strong><small>{status.detail}</small></span>
+    {/* Development builds only: the Scenario Lab (/lab) plays every call on the real engine and shows its options, odds and branches. */}
+    {import.meta.env.DEV && <a className="save-status-lab" href={`${import.meta.env.BASE_URL}lab`} target="_blank" rel="noreferrer">Scenario Lab</a>}
   </div>;
 }
 
@@ -77,6 +98,7 @@ export function SaveManager({ open, onClose }: { open: boolean; onClose: () => v
       {selected && edit.type !== 'rename' && <Button onClick={() => { const data = exportSlotSave(edit.id); if (data) download(data, `tactically-idle-slot-${edit.id}.json`); }}>Export existing slot {edit.id}</Button>}
       <div className="save-actions"><Button onClick={() => { if (inFlight.current) return; importRequest.current++; setEdit(null); setError(null); }}>Cancel</Button><Button type="submit" variant={edit.type === 'delete' || (selected && edit.type !== 'rename') ? 'danger' : 'primary'}>{edit.type === 'delete' ? edit.permanent ? 'Permanently delete save' : 'Delete save' : edit.type === 'rename' ? 'Save name' : edit.type === 'load' ? 'Discard unsaved game and load' : selected ? edit.type === 'new' ? 'Replace and start new' : 'Replace save' : edit.type === 'new' ? 'Start new game' : edit.type === 'import' ? 'Import backup' : 'Save copy'}</Button></div>
     </form> : <>
+      <SaveStatus />
       <p className="dim save-explainer">{isResponsivePreview ? 'This test library exists only in memory. New games, copies, renames and loads never read or change normal browser campaigns. Reloading or closing this frame discards every test slot.' : 'The active campaign saves automatically. Loading another slot first saves your current progress. Browser data clearing removes local saves; export a backup to keep a copy.'}</p>
       <div className="save-actions save-primary-actions"><Button variant="primary" onClick={() => begin('new', firstEmpty || 1)}>New game</Button><Button onClick={() => run({ type: 'save' }, 'Current campaign saved.')}>Save now</Button><Button onClick={() => begin('copy', firstEmpty || 1)}>Save a copy</Button></div>
       {/* The one switch for people colors in call text (src/ui/people); a display preference kept in this browser, not in the save. */}

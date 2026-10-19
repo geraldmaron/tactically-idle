@@ -15,7 +15,7 @@ import { OpsScreen } from './screens/Ops';
 import { DevelopScreen } from './screens/Develop';
 import { GearScreen } from './screens/Gear';
 import { OfficerSheet } from './screens/OfficerSheet';
-import { CampaignBar, SaveManager } from './components/SaveManager';
+import { SaveManager } from './components/SaveManager';
 import { useCampaigns, useGame } from './store';
 import { DepartmentContext } from './components/department-context';
 
@@ -44,8 +44,7 @@ function GameShell() {
           <DepartmentScope>
             <OverlayRootContext.Provider value={overlay}>
               <ToastProvider>
-                <TopBar />
-                <CampaignBar onOpen={() => setSavesOpen(true)} />
+                <TopBar onOpenSaves={() => setSavesOpen(true)} />
                 <main className={`screen screen-${tab}`} key={tab}>
                   {nav.returnToItem && <div className="player-return"><Button onClick={nav.returnToEquipment}>Back to item · {ITEMS[nav.returnToItem]?.name ?? 'Equipment'}</Button></div>}
                   {tab === 'hq' && <HQ />}
