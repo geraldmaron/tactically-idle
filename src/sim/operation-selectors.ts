@@ -26,9 +26,9 @@ import type {
 import type { ActionDefinition, FactDefinition, ScenarioDefinition } from './scenario-types';
 import { scenarioActions } from './scenario-types';
 import { SCENARIO_ORDER } from '../content/scenarios';
+import { deployRoster } from './squads';
 import { getScenario } from './scenario-registry';
 import { ITEMS } from '../content/items';
-import { deployability } from './officer';
 import { availableUnits, builtFor, evaluateAction, getBuilt, RESOLUTION_TUNING, squadLabel, tagNames, type Evaluation } from './resolution';
 import { teamMinutes } from './clocks';
 import { conditionHolds } from './conditions';
@@ -98,16 +98,9 @@ export function scenarioCards(state: GameState, now: number): ScenarioCard[] {
         why.push(`${squadLabel(squad.id)} has no officers`);
         continue;
       }
-      let blocker: string | null = null;
-      for (const oid of squad.officerIds) {
-        const o = state.officers[oid];
-        if (!o) continue;
-        const d = deployability(o, now);
-        if (!d.ok) {
-          blocker = d.reason;
-          break;
-        }
-      }
+      // A squad deploys with whoever is ready; the rest stay home (short-squad-deploys).
+      const roster = deployRoster(state, squad.id, now);
+      const blocker = roster.goes.length ? null : `nobody is ready (${roster.staysHome.map(entry => entry.reason).join('; ')})`;
       if (blocker) why.push(`${squadLabel(squad.id)}: ${blocker}`);
       else eligible.push(squad.id);
     }

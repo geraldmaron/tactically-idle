@@ -45,7 +45,8 @@ import { foldDebriefs } from './casebook';
 import { addService, departmentService, levelForService, serviceEarned } from './department-level';
 import { ITEMS } from '../content/items';
 import { hashSeed, next } from './rng';
-import { deployability, fullName } from './officer';
+import { fullName } from './officer';
+import { deployRoster, runRoster } from './squads';
 import { releaseRun, reserveLoadouts, settleRun, squadUnits } from './inventory';
 import { withStandardRadios } from './standard-kit';
 import { spaceAt, stagingPointById } from './spatial';
@@ -273,9 +274,11 @@ export function checkStart(state: GameState, now: number, cmd: StartCmd): StartC
       const prev = seenOfficers.get(oid);
       if (prev) issues.push(`${fullName(o)} is in both ${squadLabel(prev)} and ${squadLabel(sid)}`);
       seenOfficers.set(oid, sid);
-      const d = deployability(o, now);
-      if (!d.ok) issues.push(`${squadLabel(sid)}: ${d.reason}`);
     }
+    // A squad deploys with the officers who are ready; the rest stay home (short-squad-deploys).
+    const roster = deployRoster(state, sid, now);
+    if (squad.officerIds.length && !roster.goes.length) issues.push(`${squadLabel(sid)}: nobody is ready (${roster.staysHome.map(entry => entry.reason).join('; ')})`);
+    else for (const entry of roster.staysHome) warnings.push(`${squadLabel(sid)}: ${entry.reason} and stays home`);
   }
 
   try {
@@ -300,7 +303,7 @@ export function checkStart(state: GameState, now: number, cmd: StartCmd): StartC
   }
 
   const upkeep = departmentUpkeep(state);
-  const standard = withStandardRadios(state, ids, cmd.loadouts, cmd.units, now, upkeep);
+  const standard = withStandardRadios(state, ids, cmd.loadouts, cmd.units, now, upkeep, (sid) => deployRoster(state, sid, now).goes);
   if (standard.issue) issues.push(standard.issue);
   cmd = { ...cmd, loadouts: standard.loadouts, units: standard.units };
   for (const sid of Object.keys(cmd.units ?? {}) as SquadId[]) if (!ids.includes(sid)) issues.push(`Equipment given for ${squadLabel(sid)}, which is not deployed`);
@@ -319,7 +322,11 @@ function startWarnings(state: GameState, now: number, scenario: ScenarioDefiniti
   const unitOverride = {} as Record<SquadId, ItemUnit[]>;
   reserveLoadouts(probe, 'preview', cmd.loadouts, cmd.units, now, departmentUpkeep(state));
   for (const sid of cmd.squadIds) unitOverride[sid] = squadUnits(probe, 'preview', sid);
+  // The probe sends who Deploy would send, so the preview's odds use who goes (runRoster).
+  for (const sid of cmd.squadIds) for (const oid of deployRoster(probe, sid, now).goes) probe.officers[oid].assignment = { kind: 'operation', runId: 'preview' };
   const run = makeRun(state, built, scenario, cmd, 'preview', 0, 0);
+  // The probe is mid-run, as the run it previews will be: equipment qualification reads the run's roster.
+  probe.activeRun = run;
   for (const a of scenarioActions(scenario)) {
     const perm: OperationRun = { ...run, knowledge: { ...run.knowledge }, flags: [...run.flags] };
     for (const f of a.requires.flags ?? []) perm.flags.push(f.flag);
@@ -708,7 +715,7 @@ export function computeDebrief(state: GameState, run: OperationRun): DebriefResu
   }
   const officerCondition: DebriefResult['officerCondition'] = [];
   for (const sq of run.squadIds) {
-    for (const id of state.squads.find((s) => s.id === sq)?.officerIds ?? []) {
+    for (const id of runRoster(state, run, sq)) {
       const o = state.officers[id];
       if (!o) continue;
       const after = clamp(round1(o.stress + endingStrain), 0, 100);
@@ -800,7 +807,7 @@ const fail = (reason: string): HandlerResult => ({ ok: false, reason });
 export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
   startOperation(draft, cmd, ctx) {
     const upkeep = departmentUpkeep(draft);
-    const standard = withStandardRadios(draft, cmd.squadIds, cmd.loadouts, cmd.units, ctx.now, upkeep);
+    const standard = withStandardRadios(draft, cmd.squadIds, cmd.loadouts, cmd.units, ctx.now, upkeep, (sid) => deployRoster(draft, sid, ctx.now).goes);
     cmd = { ...cmd, loadouts: standard.loadouts, units: standard.units };
     const chk = checkStart(draft, ctx.now, cmd);
     if (chk.issues.length > 0 || !chk.scenario) return fail(chk.issues[0] ?? 'Cannot start this operation');
@@ -817,11 +824,9 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     if (!r.ok) return r;
     run.reservationIds = draft.reservations.slice(before).map((x) => x.id);
     reserveSupportVehicle(draft, run);
+    // Only the officers who are ready go; their assignment is the run's roster (runRoster).
     for (const sid of cmd.squadIds) {
-      for (const oid of draft.squads.find((s) => s.id === sid)?.officerIds ?? []) {
-        const o = draft.officers[oid];
-        if (o) o.assignment = { kind: 'operation', runId };
-      }
+      for (const oid of deployRoster(draft, sid, ctx.now).goes) draft.officers[oid].assignment = { kind: 'operation', runId };
     }
     draft.activeRun = run;
     takeIncident(draft, scenario.id);
@@ -930,7 +935,7 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     }
     const externalSupportEvents = applyExternalSupportEffects(run, scenario, matched);
     const casualtyPositions = Object.fromEntries(ev.arrivals.flatMap(arrival =>
-      (draft.squads.find(squad => squad.id === arrival.squadId)?.officerIds ?? []).map(id => [id, { spaceId: arrival.spaceId, at: arrival.at }])));
+      runRoster(draft, run, arrival.squadId).map(id => [id, { spaceId: arrival.spaceId, at: arrival.at }])));
     const incidentConsequences = applyIncidentConsequences(draft, run, scenario, protectedOfficerEffects(matched, ev.protectionUsed), ev.participantIds, casualtyPositions);
     const personConsequences = applyPersonConsequences(run, scenario, action, band, [...matched, ...outs]);
 

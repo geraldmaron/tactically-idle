@@ -19,7 +19,7 @@ import { courseCheck, describeEffect, itemCheck, nodeCheck } from './develop';
 import { quoteDevelopment, type DevelopmentQuote } from './development-tiers';
 import { ECONOMY_TUNING, HOUR_MS, isInjured, netRate, ratesAt, recoveryMultiplier, recoveryRate } from './economy';
 import { formatDuration } from './format';
-import { recoveryDuty, squadDeployed } from './squads';
+import { deployRoster, recoveryDuty, squadDeployed } from './squads';
 import { ROSTER_TUNING, dismissCheck, hireCheck, retentionOffer } from './roster';
 import { EXPERIENCE_LABEL, experienceBand, formatGameDate, gameDay, serviceYears } from './calendar';
 import {
@@ -123,6 +123,8 @@ export interface SquadReadiness {
   total: number;
   deployable: boolean;
   issues: string[];
+  /** Officers who aren't ready stay home when the squad deploys, with why (deployRoster). */
+  staysHome: { officerId: Id; reason: string }[];
 }
 
 export type { BoardSummary };
@@ -237,18 +239,14 @@ export function storeOptions(state: GameState): StoreOption[] {
 
 export function squadReadiness(state: GameState, squadId: SquadId, now: number): SquadReadiness {
   const squad = state.squads.find((s) => s.id === squadId);
-  if (!squad) return { squadId, ready: 0, total: 0, deployable: false, issues: ['No such squad'] };
+  if (!squad) return { squadId, ready: 0, total: 0, deployable: false, issues: ['No such squad'], staysHome: [] };
   const t = Math.max(now, state.department.clockHighWater);
   const issues: string[] = [];
-  let ready = 0;
   for (const id of squad.officerIds) {
     const o = state.officers[id];
     if (!o) continue;
     const info = recoveryInfo(state, id, t);
-    if (info.blocker === null) {
-      ready++;
-      continue;
-    }
+    if (info.blocker === null) continue;
     const wait = info.deployableAt !== null ? ` ~${formatDuration(info.deployableAt - t)}` : '';
     if (o.assignment?.kind === 'operation') issues.push(`${o.surname}: deployed`);
     else if (o.assignment?.kind === 'training') issues.push(`${o.surname}: in training${wait}`);
@@ -262,7 +260,9 @@ export function squadReadiness(state: GameState, squadId: SquadId, now: number):
   if (total > 0 && total < size) issues.push(`Short ${size - total} officer${size - total === 1 ? '' : 's'} of ${size}`);
   const deployed = squadDeployed(state, squadId);
   if (deployed) issues.unshift('Squad is on an operation');
-  return { squadId, ready, total, deployable: ready >= 1 && !deployed, issues };
+  // Deploy's own rule (deployRoster): who goes, and who stays home and why.
+  const roster = deployRoster(state, squadId, now);
+  return { squadId, ready: roster.goes.length, total, deployable: roster.goes.length >= 1 && !deployed, issues, staysHome: roster.staysHome };
 }
 
 export function sortedCandidates(state: GameState): Candidate[] {
