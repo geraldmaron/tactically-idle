@@ -9,7 +9,7 @@ import { currentStoryRoute } from '../gen/incident/story-bindings';
 import { centroidOf, standingOf } from './spatial-factors';
 import { routeAlongOpenings, routeBetween } from './routes';
 import type { ActionDefinition, FactDefinition, ScenarioDefinition, StoryAnchor } from './scenario-types';
-import { deserialize, serialize } from './save';
+import { CURRENT_SAVE_VERSION, deserialize, serialize } from './save';
 import { storyPeopleActual, storyPeoplePublic, storyPropsActual, storyPropsPublic, storyPropsKnown } from './story-people';
 import { apply, makeState, NOW, startRun } from './test-fixtures';
 import type { GameState, KnowledgeStatus } from './types';
@@ -61,7 +61,7 @@ function fixture(status: KnowledgeStatus = 'confirmed'): { scenario: ScenarioDef
   };
   scenario.stages.assess.actions = [care];
   let state = startRun(makeState(), 'ms_occupancy', ['A']);
-  state.saveVersion = 9; state.contentVersion = 13; state = structuredClone(state);
+  state.saveVersion = CURRENT_SAVE_VERSION; state.contentVersion = 13; state = structuredClone(state);
   state.activeRun!.scenarioId = fixtureId;
   state.activeRun!.scenarioVersion = 13;
   state.activeRun!.externalSupport = {};

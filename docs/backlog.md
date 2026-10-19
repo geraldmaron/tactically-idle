@@ -185,36 +185,26 @@ High-risk warrant, robbery in progress, crisis barricade, vehicle standoff, buil
 standoff needs a roadside building family.
 
 ### meters-drift: Meters move with time
-Tags: job=command; journeys=chance-not-script; probes=metric-pressure; lane=engine
+Tags: job=command; journeys=chance-not-script; probes=metric-pressure; lane=calls
 Needs: start=none; integrate=none; ship=none
 
-Time moves the meters, the `shots` event is written into content, and escalation comes by drift.
-
-### less-lethal-cartridges: Less-lethal use spends cartridges
-Tags: job=build; journeys=hire-and-equip; probes=none (inventory, not odds); lane=engine
-Needs: start=none; integrate=none; ship=none
+The engine side shipped: time moves agitation (`METERS_V1.drift` in `src/sim/meters.ts`, run from
+`advanceTime`; a subject the team hasn't reached winds up, one who talks to the team settles, and a
+drift never counts as an event). Left, in content: write the `shots` event into the outcomes where
+shots fire (`moves: [{ personId, event: 'shots' }]`), and let the escalation branches read the
+drifted stances. The drift rates are first-pass (0.06 and 0.04 a minute): 0.15 and 0.10 moved the
+outcome-score calibration past its 0.75 trust bound, so any rise needs the calibration rows rechecked.
 
 ## Gates and tooling
-
-### squad-ready-agrees: The squad card and Deploy agree on readiness
-Tags: job=command; journeys=answer-a-call; probes=none (readiness display); lane=engine
-Needs: start=none; integrate=none; ship=none
-
-Found by tooling investigating the e2e Deploy failure (#72). `squadReadiness` marks a squad
-deployable when one officer is ready (`src/sim/department-selectors.ts`), but Deploy requires every
-officer in a chosen squad to be ready (`src/sim/operation.ts`). So after an injury the card reads
-"3 of 4 ready" and looks selectable, and Deploy then refuses with the injured officer named. Done:
-the card's deployable flag uses the same rule as Deploy (one function), and the squad card and
-Prepare screen show the same answer, with a test. If the rule itself should change (deploy short),
-that's an owner decision, not this item.
 
 ### e2e-in-ci: The browser end-to-end script runs in CI
 Tags: job=command; journeys=answer-a-call; probes=none (tooling); lane=tooling
 Needs: start=none; integrate=none; ship=none
 
-`npm run test:e2e` plays the board through the real UI at 390x844 and 320x568, but neither `npm
-run verify` nor CI runs it, which is how it went stale. Done: pull-request CI runs it against a
-built preview, with its runtime and Chrome setup stated, or the backlog records why not.
+`.github/workflows/e2e.yml` runs `npm run test:e2e` on pull requests against the dev server (the
+script reads `window.__ti`, which a built preview doesn't expose) with the runner's Chrome. It passes
+locally at 390x844 and 320x568 (2026-10-19) but hasn't run on a runner yet. Done: the first pull
+request run is green, or the failure is fixed.
 
 ### fire-follows-building: Incoming fire follows the building
 Tags: job=command; journeys=chance-not-script; probes=none (a drawn-harm check, not a favorable-chance probe); lane=tooling
@@ -268,15 +258,21 @@ repeated phrase. Done: the output is byte-identical across runs (stable order, a
 of quoted phrase), `npm run verify` and pull-request CI run it, and it passes. The checker is
 deterministic since #57, and the `check:strings` wrapper since #64 (byte-identical across runs).
 
-## Player experience
+## Department and staff
 
-### manager-pronouns: Managers carry their pronouns as data
-Tags: job=build; journeys=none (no manager text uses a pronoun yet); probes=none (data); lane=engine
+### patrol-work: Routine patrol returns as idle work under the Watch Commander
+Tags: job=return; journeys=offline-settles; probes=none (idle economy); lane=engine
 Needs: start=none; integrate=none; ship=none
 
-The manager portraits fix how each manager looks (she, he, they in the art briefs), but
-`ManagerProfile` has no pronoun field. Done: `pronouns` on `ManagerProfile`, set from the briefs,
-before any shift report or log line refers to a manager by pronoun.
+Owner decision 2026-10-19: restore routine patrol work, which was deleted. Squads still have a
+`patrol` duty that earns routine funding (`src/sim/types.ts` `SquadDuty`); what went was the
+standing patrol assignments on the board (removed before 2026-10-18, see git history around
+721536c and 4e908ac). Done: a short design note first (what patrol work is, how it pays, how the
+Watch Commander runs it, how it shows on the board without crowding tactical calls), approved by the
+lead, then the engine loop and its UI. The note is `docs/patrol-work.md` (proposed 2026-10-19); it
+waits on three owner answers listed there.
+
+## Player experience
 
 ### onboarding: A first call that teaches the loop
 Tags: job=command; journeys=answer-a-call; probes=none (teaching flow); lane=deferred
@@ -295,6 +291,22 @@ Needs: start=barricade-model-first; integrate=none; ship=none
 First-time players, and a real iOS and Android phone, including keyboard and text zoom. Includes
 the rendered save-slot rejection message, never seen.
 
+### store-wrap: Package the game for the App Store and Play Store
+Tags: job=keep; journeys=save-round-trip; probes=none (packaging); lane=deferred
+Needs: start=none; integrate=none; ship=none
+
+Owner decision 2026-10-19: wrap the web app for iOS and Android. Done: a wrapper chosen with
+evidence (e.g. Capacitor), the build running on a real iPhone and Android phone with saves surviving
+an app restart, and the safe-area, keyboard and text-zoom checks from `playtests` passing on device.
+
+### real-purchases: Point packs become real in-app purchases
+Tags: job=build; journeys=hire-and-equip; probes=none (commerce); lane=deferred
+Needs: start=store-wrap; integrate=none; ship=none
+
+Owner decision 2026-10-19: free to play with purchases. The store and ledger are simulated today
+(`src/commerce/`). Done: the point packs sell through the App Store and Play Store billing, purchases
+restore across reinstalls, and the ledger records real receipts. Needs the store-wrap first.
+
 ### audio-haptics: Audio and haptics
 Tags: job=command; journeys=none (optional polish); probes=none (polish); lane=deferred
 Needs: start=none; integrate=none; ship=none
@@ -303,31 +315,27 @@ Optional.
 
 ## Owner decisions
 
-- **Mobile engine and device targets; business model and price; content rating; budget and
-  release date.** The store and ledger are simulated until then.
 - **Death endings:** a human read of `owner_killed`, `worker_killed`, the armed `subject_killed`,
   `resident_killed` and `tank_ran_out`.
 - **Content note and 988 line wording** for the hostage and barricade calls.
 - **E12:** whether a team holding outside an active shooter fits the game.
 - **Barricade building family:** keep apartments (`apartment_unit_g2`) or not.
 - **"Goes to review" ending line** (E2.1) in the barricade call.
-- **Scoring:** whether "resolved with harm" counts as complete (+10% service), and whether an entry
-  breaks every open commitment, including those to civilians.
 - **Hostage review calls:** O4 custody wording, O1 armed-lane words, N19 time charge on all-night
   holds, the 3-line board hook clamp, the 6-decision stage-3 chain, the E3 count read, and B9.
-- **Sidearms:** a new department can't fire until it unlocks `field_response_program` and trains
-  `entry_team`. Keep that, or issue sidearms from day one.
-- **Command Staff scope:** build the Peer Support Lead and Recruiter, and decide whether routine
-  patrol work gets an idle home under the Watch Commander or stays deleted.
-- **Fingerprints under the no-freeze rule:** keep the compiled-fingerprint test and cross-engine
-  CI as regression tripwires, or drop them.
 - **Domain-model defaults D1 to D5** stand unless changed: no explosives, a fled subject's follow-up
   call, groups above 8 as a later mode, 24h review after a shooting, concessions within policy.
-- **Crisis call cap:** the writing review's house target is at most one crisis call (a person who
-  may harm themselves) per shift. The shift sampler (`src/gen/incident/gates/shift-sampler.ts`, #64) treats a shift as one
-  game day and a crisis call as hostage or barricade, and only reports. Decide what a shift and a
-  crisis call are, and whether the cap should gate.
 - **Barricade on apartments:** with the child in a bedroom, `apartment_unit_g2` hosts the barricade
   on 22 of 30 seeds (the rest are rejected because the first room off the bedroom is the living
   room). This bears on the existing barricade building-family decision above.
 - **Later scope:** districts, career stories, simultaneous tactical incidents.
+
+Decided 2026-10-19: scenario work is paused (the barricade is parked on its branch); a squad can
+deploy short of injured officers (`short-squad-deploys`); sidearms from day one
+(`sidearms-day-one`, shipped: two sidearms are issued at the start and `entry_team` stays the force certification, which both starting squads hold); keep the compiled fingerprints and the cross-engine check; a call resolved
+with harm counts as resolved (already so in `dispositionOf`); an entry breaks every open commitment
+(already so in `src/sim/commitments.ts`); build the Peer Support Lead, the Recruiter and patrol work;
+the crisis cap stays report-only until playtests.
+Also decided 2026-10-19: ship by wrapping the web app for iOS and Android; free to play with
+purchases, so the simulated point packs become real purchases; target a Mature rating (ESRB M,
+PEGI 16); no release date or budget yet.

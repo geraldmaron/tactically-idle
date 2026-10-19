@@ -19,7 +19,8 @@ describe('current completion preserves actual harm and care duties', () => {
       const report = computeDebrief(state, state.activeRun!)!;
       expect(report.personCasualties).toEqual(Object.values(state.activeRun!.personCasualties!));
       expect(deserialize(serialize(state, NOW))?.activeRun).toEqual(state.activeRun);
-      if (Object.values(state.activeRun!.personCasualties!).some(person => person.care === 'deceased')) expect(report.completionAchieved).toBe(false);
+      // A call resolved with harm counts as resolved (outcome-score dispositionOf): the harm is scored, not an open task.
+      expect(report.completionAchieved).toBe(report.disposition === 'resolved');
     }
   });
   it('settles the recorded result once without granting care or rewards on a repeated close', () => {

@@ -39,8 +39,7 @@ function referenceProps(g: GameState, now: number, ui: LiveUiState) {
     .map((s) => previewAction(g, now, view.id, [s.id], support.filter((id) => id !== s.id)))
     .filter((a): a is NonNullable<typeof a> => !!a?.eligible) : [];
   const officers = focus ? focus.officerIds.map((id) => g.officers[id]).filter((o) => !!o) : [];
-  const defaultOfficer = view?.officerIds.find((id) => focus?.officerIds.includes(id)) ?? officers[0]?.id ?? null;
-  const activeOfficerId = activeOfficer && officers.some((o) => o.id === activeOfficer) ? activeOfficer : defaultOfficer;
+  const activeOfficerId = view && activeOfficer && officers.some((o) => o.id === activeOfficer) ? activeOfficer : null;
   const card = cardFor(g, run.scenarioId, now);
   const scenario = getScenario(run.scenarioId);
   const actionRule = run.stage === 'debrief' ? undefined : scenario?.stages[run.stage].actions.find(action => action.id === view?.id);
@@ -96,6 +95,16 @@ describe('live view model', () => {
     expect(next.activeRun!.history).toHaveLength(1);
     expectSame(next, idle());
     for (const action of liveDecisions(next, NOW, 'A')) expectSame(next, reviewing(next, action.id, ['A']));
+  });
+
+  it('highlights no officer unless the player taps one while reviewing a decision', () => {
+    const officerId = hostage.squads[0].officerIds[0];
+    expect(liveViewModel(hostage, NOW, idle()).activeOfficerId).toBeNull();
+    expect(liveViewModel(hostage, NOW, { ...idle(), activeOfficer: officerId }).activeOfficerId).toBeNull();
+    const action = liveDecisions(hostage, NOW, 'A')[0];
+    const review = { ...reviewing(hostage, action.id, ['A']), activeOfficer: null };
+    expect(liveViewModel(hostage, NOW, review).activeOfficerId).toBeNull();
+    expect(liveViewModel(hostage, NOW, { ...review, activeOfficer: officerId }).activeOfficerId).toBe(officerId);
   });
 
   it('matches with two squads, a switched actor, support and a locked choice', () => {

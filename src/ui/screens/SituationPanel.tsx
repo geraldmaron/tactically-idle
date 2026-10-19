@@ -8,21 +8,22 @@ import './situation-panel.css';
 const STATUS_LABEL: Partial<Record<KnowledgeStatus, string>> = { reported: 'Reported', confirmed: 'Confirmed', disproved: 'Ruled out' };
 
 /** The call's situation stays in view during the operation: the summary is always readable and the
- * rest of the briefing opens in place. Only public information is listed: the authored briefing and
+ * rest of the briefing opens in place. It starts open until the first decision is made, so the
+ * player reads why the team is there before choosing anything. Only public information is listed: the authored briefing and
  * facts this run has already reported, confirmed or ruled out. Unknown facts are never enumerated,
  * because whether one is drawn can depend on its hidden truth. */
-export function SituationPanel({ scenario, run }: { scenario: ScenarioDefinition; run: Pick<OperationRun, 'knowledge'> }) {
-  const [open, setOpen] = useState(false);
+export function SituationPanel({ scenario, run }: { scenario: ScenarioDefinition; run: Pick<OperationRun, 'knowledge'> & Partial<Pick<OperationRun, 'history'>> }) {
+  const [open, setOpen] = useState(() => !run.history?.length);
   const { dispatchReason, teamResponsibilities, unknown } = scenario.briefing;
   const established = scenario.facts.filter((fact) => STATUS_LABEL[run.knowledge[fact.id] ?? fact.initial]);
   const hasMore = !!dispatchReason || !!teamResponsibilities?.length || unknown.length > 0 || established.length > 0;
   return (
     <section className={`situation${open ? ' situation-open' : ''}`} aria-label="Situation">
+      <h2 className="situation-head"><Icon name="intel" size={14} />Briefing</h2>
       <p className="situation-summary"><PeopleText text={scenario.summary} /></p>
       {hasMore && (
         <button type="button" className="situation-toggle" aria-expanded={open} onClick={() => setOpen((value) => !value)}>
-          <Icon name="intel" size={14} />
-          {open ? 'Hide briefing' : 'Briefing'}
+          {open ? 'Hide details' : 'Full briefing'}
           <Icon name={open ? 'chevronUp' : 'chevronDown'} size={14} />
         </button>
       )}

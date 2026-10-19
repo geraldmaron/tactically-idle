@@ -61,17 +61,17 @@ describe('casebook rows', () => {
     expect(rescue).toEqual({ type: 'protected_rescue', label: 'Protected rescue', settings: ['homes'], families: rescue.families, situationsTotal: 3, status: 'locked', missing: ['An officer certified in Vehicle operations'] });
     // Frameworks retired from dispatch and never met have no row. A new department is level 1:
     // the level-1 frameworks its roster qualifies for are dispatched; rescue still needs a driver
-    // and the armed incident a response firearm.
+    // (sidearms are issued from the first day, so the armed incident is dispatched).
     const dispatchable = SCENARIO_TYPES.map((info) => info.type);
     expect(rows.map((row) => row.type)).toEqual(dispatchable);
-    const levelOne = dispatchable.filter((type) => unlockRule(type).level === 1 && type !== 'protected_rescue' && type !== 'active_armed_incident');
+    const levelOne = dispatchable.filter((type) => unlockRule(type).level === 1 && type !== 'protected_rescue');
     expect(rows.filter((row) => row.status === 'unfound').map((row) => row.type)).toEqual(levelOne);
     for (const row of rows) expect(Object.keys(row).sort()).toEqual(row.status === 'locked' ? ['families', 'label', 'missing', 'settings', 'situationsTotal', 'status', 'type'] : ['families', 'label', 'settings', 'situationsTotal', 'status', 'type']);
     const html = renderToStaticMarkup(createElement(Casebook, { state }));
     expect(html).toContain('Not yet dispatched to your department');
     expect(html).toContain('An officer certified in Vehicle operations');
     // Every dispatched kind of call opens at level 1; locks name capabilities, never a level.
-    expect(html).toContain('Service sidearm, Compact carbine or Response shotgun in stock');
+    expect(html).not.toContain('Service sidearm, Compact carbine or Response shotgun in stock');
     expect(html).not.toContain('Department level');
     expect(html).toContain(`0 of ${dispatchable.length}</strong> kinds of call found`);
     const rescueTitles = scenarioSituations('protected_rescue').map((situation) => hostedCall('protected_rescue', 'juniper_court_v1', situation)!.title);
@@ -84,7 +84,7 @@ describe('casebook rows', () => {
     const rows = casebookRows(state);
     const barricade = rows.find((row) => row.type === 'barricaded')!;
     expect(barricade).toMatchObject({ status: 'found', situationsTotal: 3, buildings: ['two_storey_house_g2'], situations: [{ variant: 1, pacings: [{ variant: 1, characteristic: 'ordinary' }] }] });
-    const locked = SCENARIO_TYPES.map((info) => info.type).filter((type) => (unlockRule(type).level > 1 || type === 'protected_rescue' || type === 'active_armed_incident'));
+    const locked = SCENARIO_TYPES.map((info) => info.type).filter((type) => (unlockRule(type).level > 1 || type === 'protected_rescue'));
     expect(casebookTotals(rows)).toMatchObject({ frameworksFound: 1, situationsFound: 1, locked: locked.length });
     expect(filterRows(rows, { type: 'all', setting: 'businesses', status: 'all' }).every((row) => row.settings.includes('businesses'))).toBe(true);
     expect(filterRows(rows, { type: 'all', setting: 'all', status: 'found' }).map((row) => row.type)).toEqual(['barricaded']);

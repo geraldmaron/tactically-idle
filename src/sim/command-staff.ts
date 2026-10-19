@@ -6,29 +6,36 @@
 //   using the same course rules as the startCourse command, above a funding reserve.
 // - Quartermaster: the existing equipment manager (servicing budget) plus restock rules,
 //   presented as staff. Its mechanics live in equipment-manager.ts and are not changed here.
-// Hiring is a Develop purchase. Each manager has an on/off switch, a small policy, an hourly
+// - Peer Support Lead: each clock hour offers peer-support sessions to the most strained idle
+//   officers, which take stress off faster than rest alone, for a fee above a funding reserve.
+// - Recruiter: each clock hour signs the best candidate for the role you chose while the roster
+//   has room, through the same rules as the hire command, above a funding reserve.
+// A Develop purchase opens each post; the post then offers three candidates who trade price against
+// two levers in that manager's loop (staff-pool.ts), and hiring one fills it. Each manager has an on/off switch, a small policy, an hourly
 // salary paid with payroll (economy.ratesAt) while switched on, and a saved activity log.
 // Automation runs inside settle() at absolute clock hours within the 24-hour accrual window,
 // exactly like restock rules, so an offline settlement equals any sequence of online ticks.
-import type { GameState, HandlerResult, Id, Officer, SquadDuty, SquadId } from './types';
+import type { GameState, HandlerResult, Id, Officer, Role, SquadDuty, SquadId } from './types';
 import { SQUAD_IDS } from './types';
 import { COURSES } from '../content/courses';
+import { ROLES } from '../content/recruits';
 import { DEV_NODES } from '../content/dev-tree';
-import { HOUR_MS, isInjured, isNodeUnlocked } from './economy';
+import { HOUR_MS, isInjured, isNodeUnlocked, netRate } from './economy';
 import { money } from './format';
 import { simNow } from './calendar';
 import { squadDeployed } from './squads';
 import { courseCheck } from './develop';
-import { ROSTER_HANDLERS } from './roster';
+import { hireCheck, ROSTER_HANDLERS } from './roster';
 import { fullName, STRESS_BANDS } from './officer';
-import { effectiveDevelopmentEffects, quoteDevelopment } from './development-tiers';
-import { EQUIPMENT_MANAGER, hasEquipmentManager, maintenanceBudget } from './equipment-manager-policy';
+import { developmentTier, effectiveDevelopmentEffects, quoteDevelopment } from './development-tiers';
+import { EQUIPMENT_MANAGER, maintenanceBudget } from './equipment-manager-policy';
 import { setMaintenanceBudget } from './equipment-manager';
+import { courseFee, drawStaffPool, emptyPost, staffLever, staffPostOf, STAFF_LEVERS, STAFF_POOL, type StaffCandidate, type StaffHolder, type StaffPost } from './staff-pool';
 
 // ---------------------------------------------------------------- shapes
 
-export type ManagerId = 'watch_commander' | 'training_sergeant' | 'quartermaster';
-export const MANAGER_IDS: readonly ManagerId[] = ['watch_commander', 'training_sergeant', 'quartermaster'];
+export type ManagerId = 'watch_commander' | 'training_sergeant' | 'quartermaster' | 'peer_support_lead' | 'recruiter';
+export const MANAGER_IDS: readonly ManagerId[] = ['watch_commander', 'training_sergeant', 'quartermaster', 'peer_support_lead', 'recruiter'];
 
 /** Duties the Watch Commander returns a squad to. Rest is where it sends tired squads. */
 export type EarningDuty = Exclude<SquadDuty, 'rest'>;
@@ -53,6 +60,20 @@ export interface TrainingSergeantPolicy {
   reserve: number;
 }
 
+export interface PeerSupportPolicy {
+  /** Offer a session to idle officers at or above this stress. */
+  supportAt: number;
+  /** Never run a session if funding after its fee would fall below this. */
+  reserve: number;
+}
+
+export interface RecruiterPolicy {
+  /** Role to recruit; null takes the best candidate of any role. */
+  role: Role | null;
+  /** Never sign a candidate if funding after the signing cost would fall below this. */
+  reserve: number;
+}
+
 /** Current command staff. Optional on GameState for isolated fixtures. */
 export interface CommandStaffState {
   watch_commander: {
@@ -61,23 +82,30 @@ export interface CommandStaffState {
     /** Duty each squad held when the Watch Commander rested it. */
     rested: Partial<Record<SquadId, EarningDuty>>;
     log: ManagerLogEntry[];
+    post: StaffPost;
   };
   training_sergeant: {
     enabled: boolean;
     policy: TrainingSergeantPolicy;
     log: ManagerLogEntry[];
+    post: StaffPost;
   };
   quartermaster: {
     /** Hourly service budget restored when the Quartermaster is switched back on. */
     resumeBudget: number;
     log: ManagerLogEntry[];
+    post: StaffPost;
   };
+  peer_support_lead: { enabled: boolean; policy: PeerSupportPolicy; log: ManagerLogEntry[]; post: StaffPost };
+  recruiter: { enabled: boolean; policy: RecruiterPolicy; log: ManagerLogEntry[]; post: StaffPost };
 }
 
 export type ManagerPolicyPatch =
   | { managerId: 'watch_commander'; restAt?: number; optOut?: SquadId[] }
   | { managerId: 'training_sergeant'; courseId?: Id | null; reserve?: number }
-  | { managerId: 'quartermaster'; budgetPerHour?: number };
+  | { managerId: 'quartermaster'; budgetPerHour?: number }
+  | { managerId: 'peer_support_lead'; supportAt?: number; reserve?: number }
+  | { managerId: 'recruiter'; role?: Role | null; reserve?: number };
 
 // ---------------------------------------------------------------- tuning and roster
 
@@ -86,9 +114,8 @@ export const COMMAND_STAFF = {
   logLimit: 20,
   watchCommander: {
     nodeId: 'personnel_watch_commander',
-    salaryPerHour: 45,
     defaultRestAt: STRESS_BANDS.overloaded,
-    /** A rested squad returns once every member is below this. */
+    /** A rested squad returns once every member is below this, unless the hire's lever sets it. */
     returnBelow: STRESS_BANDS.strained,
     minRestAt: STRESS_BANDS.strained,
     maxRestAt: STRESS_BANDS.recovery,
@@ -96,27 +123,40 @@ export const COMMAND_STAFF = {
   },
   trainingSergeant: {
     nodeId: 'personnel_training_sergeant',
-    salaryPerHour: 45,
     /** Only officers below this stress are enrolled. */
     maxStress: STRESS_BANDS.strained,
     defaultReserve: 2500,
     maxReserve: 100_000,
     reserveChoices: [1000, 2500, 5000, 10_000] as readonly number[],
   },
+  peerSupportLead: {
+    nodeId: 'personnel_peer_support_lead',
+    /** Funding per session. Sessions an hour and the stress each takes off are the hire's levers. */
+    sessionCost: 80,
+    defaultSupportAt: STRESS_BANDS.strained,
+    supportChoices: [STRESS_BANDS.strained, 45, STRESS_BANDS.overloaded] as readonly number[],
+    defaultReserve: 2500,
+    maxReserve: 100_000,
+    reserveChoices: [1000, 2500, 5000, 10_000] as readonly number[],
+  },
+  recruiter: {
+    nodeId: 'personnel_recruiter',
+    defaultReserve: 5000,
+    maxReserve: 100_000,
+    reserveChoices: [2500, 5000, 10_000, 20_000] as readonly number[],
+  },
   quartermaster: {
     nodeId: EQUIPMENT_MANAGER.nodeId,
-    /** The equipment manager never had a salary; its cost is the service budget it spends. */
-    salaryPerHour: 0,
+    /** The Quartermaster has no salary; its cost is the signing fee and the service budget it spends. */
     defaultBudget: 200,
   },
 } as const;
 
+/** The post, not the person: who fills it comes from the hire (staff-pool.ts). */
 export interface ManagerProfile {
   id: ManagerId;
-  name: string;
   title: string;
   nodeId: Id;
-  salaryPerHour: number;
   /** The loop it automates, as a short label. */
   loop: string;
   /** What it does, in one sentence. */
@@ -128,33 +168,43 @@ export interface ManagerProfile {
 export const MANAGERS: Record<ManagerId, ManagerProfile> = {
   watch_commander: {
     id: 'watch_commander',
-    name: 'Sam Navarro',
     title: 'Watch Commander',
     nodeId: COMMAND_STAFF.watchCommander.nodeId,
-    salaryPerHour: COMMAND_STAFF.watchCommander.salaryPerHour,
     loop: 'Squad duty and rest',
-    duty: 'Each clock hour, moves an idle squad to Rest when anyone reaches your stress limit, then back to its earlier duty once everyone is below Strained.',
+    duty: 'Each clock hour, moves an idle squad to Rest when anyone reaches your stress limit, then back to its earlier duty once everyone is fresh again.',
     never: 'Never touches deployed squads, operations or squads you keep on manual duty.',
   },
   training_sergeant: {
     id: 'training_sergeant',
-    name: 'Jordan Pike',
     title: 'Training Sergeant',
     nodeId: COMMAND_STAFF.trainingSergeant.nodeId,
-    salaryPerHour: COMMAND_STAFF.trainingSergeant.salaryPerHour,
     loop: 'Course enrolment',
     duty: 'Each clock hour, fills free training places with the most rested officer who can take your chosen course, keeping funding above your reserve.',
     never: 'Never enrols deployed, injured or strained officers, and never picks a course for you.',
   },
   quartermaster: {
     id: 'quartermaster',
-    name: 'Robin Kessler',
     title: 'Quartermaster',
     nodeId: COMMAND_STAFF.quartermaster.nodeId,
-    salaryPerHour: COMMAND_STAFF.quartermaster.salaryPerHour,
     loop: 'Servicing and restock',
     duty: 'Each clock hour, sends worn idle equipment for service within an hourly budget. Restock rules refill held stock on the same clock.',
     never: 'Never buys new kinds of equipment or touches gear reserved for a call.',
+  },
+  peer_support_lead: {
+    id: 'peer_support_lead',
+    title: 'Peer Support Lead',
+    nodeId: COMMAND_STAFF.peerSupportLead.nodeId,
+    loop: 'Officer peer support',
+    duty: `Each clock hour, offers peer-support sessions to the most strained idle officers, ${money(COMMAND_STAFF.peerSupportLead.sessionCost)} each, above your funding reserve. How many and how much each helps depends on who you hire.`,
+    never: 'Never touches deployed officers, hurts nobody, and never decides who rests or trains.',
+  },
+  recruiter: {
+    id: 'recruiter',
+    title: 'Recruiter',
+    nodeId: COMMAND_STAFF.recruiter.nodeId,
+    loop: 'Hiring',
+    duty: 'Each clock hour, while the roster has room, signs the best candidate for the role you choose, keeping funding above your reserve and the department in the black.',
+    never: 'Never dismisses anyone, searches for new candidates or signs past a full roster.',
   },
 };
 
@@ -162,27 +212,46 @@ export const MANAGERS: Record<ManagerId, ManagerProfile> = {
 
 export function createCommandStaff(): CommandStaffState {
   return {
-    watch_commander: { enabled: true, policy: { restAt: COMMAND_STAFF.watchCommander.defaultRestAt, optOut: [] }, rested: {}, log: [] },
-    training_sergeant: { enabled: true, policy: { courseId: null, reserve: COMMAND_STAFF.trainingSergeant.defaultReserve }, log: [] },
-    quartermaster: { resumeBudget: COMMAND_STAFF.quartermaster.defaultBudget, log: [] },
+    watch_commander: { enabled: true, policy: { restAt: COMMAND_STAFF.watchCommander.defaultRestAt, optOut: [] }, rested: {}, log: [], post: emptyPost() },
+    training_sergeant: { enabled: true, policy: { courseId: null, reserve: COMMAND_STAFF.trainingSergeant.defaultReserve }, log: [], post: emptyPost() },
+    quartermaster: { resumeBudget: COMMAND_STAFF.quartermaster.defaultBudget, log: [], post: emptyPost() },
+    peer_support_lead: { enabled: true, policy: { supportAt: COMMAND_STAFF.peerSupportLead.defaultSupportAt, reserve: COMMAND_STAFF.peerSupportLead.defaultReserve }, log: [], post: emptyPost() },
+    recruiter: { enabled: true, policy: { role: null, reserve: COMMAND_STAFF.recruiter.defaultReserve }, log: [], post: emptyPost() },
   };
 }
 
 /** Read-only view; states from before save v9 (and hand-built fixtures) read as defaults. */
 export function commandStaffOf(state: GameState): CommandStaffState {
-  return state.commandStaff ?? createCommandStaff();
+  // A staff record saved before a manager existed reads that manager as its defaults.
+  const staff = state.commandStaff;
+  return staff && MANAGER_IDS.every((id) => id in staff) ? staff : { ...createCommandStaff(), ...staff };
 }
 
 /** Writable staff record on a draft, created on first write. */
 function staffOn(d: GameState): CommandStaffState {
-  d.commandStaff ??= createCommandStaff();
+  const defaults = createCommandStaff();
+  d.commandStaff ??= defaults;
+  for (const id of MANAGER_IDS) {
+    if (!(id in d.commandStaff)) Object.assign(d.commandStaff, { [id]: defaults[id] });
+    else if (!d.commandStaff[id].post) d.commandStaff[id].post = emptyPost();
+  }
   return d.commandStaff;
 }
 
-/** Hired through Develop. The Quartermaster is the equipment manager node. */
-export function managerHired(state: GameState, id: ManagerId): boolean {
-  if (id === 'quartermaster') return hasEquipmentManager(state);
+/** The post exists: opened through Develop. The Quartermaster's post is the equipment manager node. */
+export function postOpen(state: GameState, id: ManagerId): boolean {
+  if (id === 'quartermaster') return developmentTier(state, EQUIPMENT_MANAGER.nodeId) > 0;
   return effectiveDevelopmentEffects(state).some((effect) => effect.kind === 'commandStaff' && effect.managerId === id);
+}
+
+/** The person in the post, if anyone holds it. */
+export function postHolder(state: GameState, id: ManagerId): StaffHolder | null {
+  return postOpen(state, id) ? staffPostOf(state, id).holder : null;
+}
+
+/** Someone holds the post. */
+export function managerHired(state: GameState, id: ManagerId): boolean {
+  return postHolder(state, id) !== null;
 }
 
 /** Hired and switched on. The Quartermaster is on while its service budget is above zero. */
@@ -195,13 +264,13 @@ export function managerOn(state: GameState, id: ManagerId): boolean {
 /** Hourly salaries of managers on duty, paid with payroll. */
 export function commandStaffSalaries(state: GameState): number {
   let total = 0;
-  for (const id of MANAGER_IDS) if (managerOn(state, id)) total += MANAGERS[id].salaryPerHour;
+  for (const id of MANAGER_IDS) if (managerOn(state, id)) total += postHolder(state, id)!.salaryPerHour;
   return total;
 }
 
 /** Does settlement need the hourly grid for Command Staff? */
 export function commandStaffActive(state: GameState): boolean {
-  return managerOn(state, 'watch_commander') || managerOn(state, 'training_sergeant');
+  return managerOn(state, 'watch_commander') || managerOn(state, 'training_sergeant') || managerOn(state, 'peer_support_lead') || managerOn(state, 'recruiter');
 }
 
 function log(entries: ManagerLogEntry[], at: number, text: string): void {
@@ -218,7 +287,7 @@ const decide = (value: number) => Math.round(value * 1_000_000) / 1_000_000;
 function runWatchCommander(d: GameState, t: number): void {
   if (!managerOn(d, 'watch_commander')) return;
   const wc = staffOn(d).watch_commander;
-  const { returnBelow } = COMMAND_STAFF.watchCommander;
+  const returnBelow = staffLever(d, 'watch_commander', 1) ?? COMMAND_STAFF.watchCommander.returnBelow;
   for (const squad of d.squads) {
     // A squad the player moved off Rest is no longer the Watch Commander's to return.
     if (wc.rested[squad.id] && squad.duty !== 'rest') delete wc.rested[squad.id];
@@ -248,8 +317,9 @@ function sergeantPick(state: GameState, t: number): { officer: Officer; courseId
   if (!course) return { officer: null, reason: 'Choose a course to enrol officers in' };
   const general = courseCheck(state, course, null, t);
   if (!general.ok) return { officer: null, reason: general.reason ?? 'The course is not available' };
-  if (decide(state.department.funding - course.cost) < policy.reserve) {
-    return { officer: null, reason: `Waiting: the ${money(course.cost)} fee would take funding below the ${money(policy.reserve)} reserve` };
+  const fee = courseFee(state, course.cost);
+  if (decide(state.department.funding - fee) < policy.reserve) {
+    return { officer: null, reason: `Waiting: the ${money(fee)} fee would take funding below the ${money(policy.reserve)} reserve` };
   }
   const { maxStress } = COMMAND_STAFF.trainingSergeant;
   const eligible = Object.values(state.officers)
@@ -268,9 +338,77 @@ function runTrainingSergeant(d: GameState, t: number): void {
     const pick = sergeantPick(d, t);
     if (!pick.officer) return;
     const course = COURSES[pick.courseId];
-    d.department.funding -= course.cost;
+    const fee = courseFee(d, course.cost);
+    d.department.funding -= fee;
     pick.officer.assignment = { kind: 'training', courseId: course.id, startedAt: t, endsAt: t + Math.round(course.hours * HOUR_MS) };
-    log(ts.log, t, `Enrolled ${fullName(pick.officer)} in ${course.name} (${money(course.cost)})`);
+    log(ts.log, t, `Enrolled ${fullName(pick.officer)} in ${course.name} (${money(fee)})`);
+  }
+}
+
+/** Idle officers a peer-support session can reach: not on a call or in training, stressed enough, most strained first. */
+function supportQueue(state: GameState): Officer[] {
+  const { supportAt } = commandStaffOf(state).peer_support_lead.policy;
+  return Object.values(state.officers)
+    .filter((o) => !o.assignment && decide(o.stress) >= supportAt)
+    .sort((a, b) => decide(b.stress) - decide(a.stress) || a.id.localeCompare(b.id));
+}
+
+/** Peer Support Lead: offer this hour's sessions at clock hour t. */
+function runPeerSupport(d: GameState, t: number): void {
+  if (!managerOn(d, 'peer_support_lead')) return;
+  const ps = staffOn(d).peer_support_lead;
+  const { sessionCost } = COMMAND_STAFF.peerSupportLead;
+  const sessionsPerHour = staffLever(d, 'peer_support_lead', 0) ?? 0;
+  const relief = staffLever(d, 'peer_support_lead', 1) ?? 0;
+  for (const officer of supportQueue(d).slice(0, sessionsPerHour)) {
+    if (decide(d.department.funding - sessionCost) < ps.policy.reserve) return;
+    const before = Math.floor(decide(officer.stress));
+    d.department.funding -= sessionCost;
+    officer.stress = Math.max(0, officer.stress - relief);
+    log(ps.log, t, `Peer support for ${fullName(officer)}: stress ${before} to ${Math.floor(decide(officer.stress))} (${money(sessionCost)})`);
+  }
+}
+
+/** Why the recruiter cannot sign anyone right now, or the candidate it would sign. */
+function recruiterPick(state: GameState): { candidateId: Id; name: string; cost: number } | { candidateId: null; reason: string } {
+  const { policy } = commandStaffOf(state).recruiter;
+  const cap = state.department.rosterCap, size = Object.keys(state.officers).length;
+  if (size >= cap) return { candidateId: null, reason: `Roster is full (${size}/${cap})` };
+  const rolePool = state.candidates.filter((c) => policy.role === null || c.officer.role === policy.role);
+  if (!rolePool.length) return { candidateId: null, reason: policy.role ? `No ${policy.role} candidate in the pool` : 'No candidates in the pool' };
+  const score = (o: Officer) => Object.values(o.ratings).reduce((sum, value) => sum + value, 0);
+  const floor = staffLever(state, 'recruiter', 1) ?? 0;
+  const discount = staffLever(state, 'recruiter', 0) ?? 0;
+  const pool = rolePool.filter((c) => score(c.officer) / Object.keys(c.officer.ratings).length >= floor);
+  if (!pool.length) return { candidateId: null, reason: `No candidate${policy.role ? ` for ${policy.role}` : ''} is rated ${floor} or better` };
+  const ranked = [...pool].sort((a, b) => score(b.officer) - score(a.officer) || a.id.localeCompare(b.id));
+  let reason = '';
+  for (const candidate of ranked) {
+    const cost = negotiated(candidate.signingCost, discount);
+    if (decide(state.department.funding - cost) < policy.reserve) {
+      reason ||= `Waiting: the ${money(cost)} signing cost would take funding below the ${money(policy.reserve)} reserve`;
+      continue;
+    }
+    const check = hireCheck({ ...state, candidates: state.candidates.map((c) => c.id === candidate.id ? { ...c, signingCost: cost } : c) }, candidate.id, netRate);
+    if (check.ok) return { candidateId: candidate.id, name: fullName(candidate.officer), cost };
+    reason ||= check.reason ?? 'Cannot sign anyone right now';
+  }
+  return { candidateId: null, reason };
+}
+
+const negotiated = (cost: number, discount: number) => Math.round((cost * (1 - discount)) / 10) * 10;
+
+/** Recruiter: sign candidates while the roster has room, at clock hour t. */
+function runRecruiter(d: GameState, t: number): void {
+  if (!managerOn(d, 'recruiter')) return;
+  const rc = staffOn(d).recruiter;
+  for (;;) {
+    const pick = recruiterPick(d);
+    if (!pick.candidateId) return;
+    const candidate = d.candidates.find((c) => c.id === pick.candidateId);
+    if (candidate) candidate.signingCost = pick.cost;
+    if (!ROSTER_HANDLERS.hire(d, pick.candidateId, netRate).ok) return;
+    log(rc.log, t, `Signed ${pick.name} (${money(pick.cost)})`);
   }
 }
 
@@ -280,7 +418,9 @@ function runTrainingSergeant(d: GameState, t: number): void {
  */
 export function runCommandStaff(d: GameState, t: number): void {
   runWatchCommander(d, t);
+  runPeerSupport(d, t);
   runTrainingSergeant(d, t);
+  runRecruiter(d, t);
 }
 
 /** Records what the Quartermaster's existing automation did at clock hour t. */
@@ -304,7 +444,7 @@ export function setManagerEnabled(d: GameState, managerId: ManagerId, enabled: b
   if (!isManagerId(managerId)) return refusal('Unknown manager');
   if (typeof enabled !== 'boolean') return refusal('Choose on or off');
   const profile = MANAGERS[managerId];
-  if (!managerHired(d, managerId)) return refusal(`Hire the ${profile.title} in Develop first.`);
+  if (!managerHired(d, managerId)) return refusal(`Hire a ${profile.title} first.`);
   if (managerOn(d, managerId) === enabled) return refusal(`The ${profile.title} is already ${enabled ? 'on' : 'off'}.`);
   const staff = staffOn(d);
   const t = simNow(d);
@@ -323,7 +463,7 @@ export function setManagerEnabled(d: GameState, managerId: ManagerId, enabled: b
 export function setManagerPolicy(d: GameState, patch: ManagerPolicyPatch): HandlerResult {
   if (!patch || typeof patch !== 'object' || !isManagerId(patch.managerId)) return refusal('Unknown manager');
   const profile = MANAGERS[patch.managerId];
-  if (!managerHired(d, patch.managerId)) return refusal(`Hire the ${profile.title} in Develop first.`);
+  if (!managerHired(d, patch.managerId)) return refusal(`Hire a ${profile.title} first.`);
   const staff = staffOn(d);
   switch (patch.managerId) {
     case 'watch_commander': {
@@ -361,6 +501,24 @@ export function setManagerPolicy(d: GameState, patch: ManagerPolicyPatch): Handl
       if (patch.reserve !== undefined) policy.reserve = patch.reserve;
       return OK;
     }
+    case 'peer_support_lead': {
+      const policy = staff.peer_support_lead.policy;
+      const { supportChoices, maxReserve } = COMMAND_STAFF.peerSupportLead;
+      if (patch.supportAt !== undefined && !supportChoices.includes(patch.supportAt)) return refusal(`Choose a stress from ${supportChoices.join(', ')}.`);
+      if (patch.reserve !== undefined && (!Number.isInteger(patch.reserve) || patch.reserve < 0 || patch.reserve > maxReserve)) return refusal(`Choose a reserve from $0 to ${money(maxReserve)}.`);
+      if (patch.supportAt !== undefined) policy.supportAt = patch.supportAt;
+      if (patch.reserve !== undefined) policy.reserve = patch.reserve;
+      return OK;
+    }
+    case 'recruiter': {
+      const policy = staff.recruiter.policy;
+      const { maxReserve } = COMMAND_STAFF.recruiter;
+      if (patch.role !== undefined && patch.role !== null && !(ROLES as readonly unknown[]).includes(patch.role)) return refusal('Unknown role');
+      if (patch.reserve !== undefined && (!Number.isInteger(patch.reserve) || patch.reserve < 0 || patch.reserve > maxReserve)) return refusal(`Choose a reserve from $0 to ${money(maxReserve)}.`);
+      if (patch.role !== undefined) policy.role = patch.role;
+      if (patch.reserve !== undefined) policy.reserve = patch.reserve;
+      return OK;
+    }
     case 'quartermaster': {
       const budget = patch.budgetPerHour;
       if (budget === undefined) return OK;
@@ -373,12 +531,109 @@ export function setManagerPolicy(d: GameState, patch: ManagerPolicyPatch): Handl
   }
 }
 
-export const COMMAND_STAFF_HANDLERS = { setManagerEnabled, setManagerPolicy };
+/** Draw a new pool into an open, vacant post. */
+function redraw(d: GameState, id: ManagerId, t: number, exclude: string[]): void {
+  const post = staffOn(d)[id].post;
+  post.round += 1;
+  post.pool = [];
+  post.pool = drawStaffPool(d, id, post.round, exclude);
+  post.drawnAt = t;
+}
+
+/** Open posts with no holder and no pool get their first draw. Develop calls this after opening a post. */
+export function fillOpenPosts(d: GameState): void {
+  if (!d.commandStaff) return;
+  const t = simNow(d);
+  for (const id of MANAGER_IDS) {
+    if (!postOpen(d, id)) continue;
+    const post = staffOn(d)[id].post;
+    if (post.holder || post.pool.length) continue;
+    post.pool = drawStaffPool(d, id, post.round);
+    post.drawnAt = t;
+  }
+}
+
+/** Why a candidate cannot be hired, or null. */
+export function staffHireCheck(state: GameState, managerId: ManagerId, candidateId: Id): string | null {
+  if (!isManagerId(managerId)) return 'Unknown manager';
+  const profile = MANAGERS[managerId];
+  if (!postOpen(state, managerId)) return `Open the ${profile.title} post in Develop first.`;
+  const post = staffPostOf(state, managerId);
+  if (post.holder) return `Replace ${post.holder.person.firstName} ${post.holder.person.surname} first.`;
+  const candidate = post.pool.find((c) => c.id === candidateId);
+  if (!candidate) return 'That candidate is no longer available';
+  if (state.department.funding < candidate.signingCost) return `Needs ${money(candidate.signingCost)} to sign (have ${money(state.department.funding)})`;
+  const on = managerId === 'quartermaster' || commandStaffOf(state)[managerId].enabled;
+  if (on && netRate(state) - candidate.salaryPerHour < 0) return `Their ${money(candidate.salaryPerHour)}/h salary would leave the department short each hour`;
+  return null;
+}
+
+export function hireStaff(d: GameState, managerId: ManagerId, candidateId: Id): HandlerResult {
+  const reason = staffHireCheck(d, managerId, candidateId);
+  if (reason) return refusal(reason);
+  const post = staffOn(d)[managerId].post;
+  const candidate = post.pool.find((c) => c.id === candidateId)!;
+  const t = simNow(d);
+  d.department.funding -= candidate.signingCost;
+  post.holder = { ...structuredClone(candidate), hiredAt: t };
+  post.pool = [];
+  log(staffOn(d)[managerId].log, t, `${candidate.person.firstName} ${candidate.person.surname} signed on (${money(candidate.signingCost)})`);
+  return OK;
+}
+
+/** Severance owed for letting the person in a post go. */
+export function staffSeverance(holder: Pick<StaffCandidate, 'salaryPerHour'>): number {
+  return holder.salaryPerHour * STAFF_POOL.severanceHours;
+}
+
+export function dismissStaff(d: GameState, managerId: ManagerId): HandlerResult {
+  if (!isManagerId(managerId)) return refusal('Unknown manager');
+  const holder = postHolder(d, managerId);
+  if (!holder) return refusal(`Nobody holds the ${MANAGERS[managerId].title} post.`);
+  const severance = staffSeverance(holder);
+  if (d.department.funding < severance) return refusal(`Needs ${money(severance)} severance (have ${money(d.department.funding)})`);
+  const t = simNow(d);
+  if (managerId === 'quartermaster') {
+    staffOn(d).quartermaster.resumeBudget = maintenanceBudget(d) || staffOn(d).quartermaster.resumeBudget;
+    const result = setMaintenanceBudget(d, 0);
+    if (!result.ok) return result;
+  }
+  d.department.funding -= severance;
+  const post = staffOn(d)[managerId].post;
+  post.holder = null;
+  log(staffOn(d)[managerId].log, t, `${holder.person.firstName} ${holder.person.surname} left the post${severance ? ` (${money(severance)} severance)` : ''}`);
+  redraw(d, managerId, t, [holder.person.identityId]);
+  return OK;
+}
+
+/** When the next free search for a vacant post opens. */
+export function staffRefreshAt(state: GameState, managerId: ManagerId): number {
+  return staffPostOf(state, managerId).drawnAt + STAFF_POOL.refreshCooldownMs;
+}
+
+export function refreshStaffPool(d: GameState, managerId: ManagerId): HandlerResult {
+  if (!isManagerId(managerId)) return refusal('Unknown manager');
+  if (!postOpen(d, managerId)) return refusal(`Open the ${MANAGERS[managerId].title} post in Develop first.`);
+  if (staffPostOf(d, managerId).holder) return refusal('The post is filled.');
+  const t = simNow(d);
+  if (t < staffRefreshAt(d, managerId)) return refusal(`Next search in ${Math.ceil((staffRefreshAt(d, managerId) - t) / HOUR_MS)}h`);
+  // A new search shows new people.
+  redraw(d, managerId, t, staffPostOf(d, managerId).pool.map((c) => c.person.identityId));
+  return OK;
+}
+
+export const COMMAND_STAFF_HANDLERS = { setManagerEnabled, setManagerPolicy, hireStaff, dismissStaff, refreshStaffPool };
 
 // ---------------------------------------------------------------- read model
 
 export interface ManagerView {
   profile: ManagerProfile;
+  /** The post exists (opened in Develop). */
+  open: boolean;
+  /** The person in post, when hired. */
+  holder: StaffHolder | null;
+  /** Candidates on offer while the post is open and vacant. */
+  pool: StaffCandidate[];
   hired: boolean;
   on: boolean;
   status: 'on' | 'off' | 'not_hired';
@@ -387,6 +642,15 @@ export interface ManagerView {
   activity: string;
   /** Develop price of the hire, and why it cannot be bought yet. */
   hire: { dp: number; funding: number; reason: string | null } | null;
+}
+
+/** Lever lines for a person in or offered a post, in the post's own terms. */
+export function leverLines(id: ManagerId, levers: [number, number]): { label: string; value: string; position: number }[] {
+  return STAFF_LEVERS[id].map((def, index) => {
+    const value = levers[index];
+    const text = def.kind === 'share' ? `${Math.round(value * 100)}%` : String(value);
+    return { label: def.label, value: text, position: def.high === def.low ? 0 : (value - def.low) / (def.high - def.low) };
+  });
 }
 
 function activityOf(state: GameState, id: ManagerId, on: boolean): string {
@@ -402,25 +666,40 @@ function activityOf(state: GameState, id: ManagerId, on: boolean): string {
     const pick = sergeantPick(state, t);
     return pick.officer ? `Next place goes to ${fullName(pick.officer)}` : pick.reason;
   }
+  if (id === 'peer_support_lead') {
+    const queue = supportQueue(state);
+    const { policy } = commandStaffOf(state).peer_support_lead;
+    return queue.length ? `Next session goes to ${fullName(queue[0])}` : `Nobody idle is at ${policy.supportAt} stress or more`;
+  }
+  if (id === 'recruiter') {
+    const pick = recruiterPick(state);
+    return 'reason' in pick ? pick.reason : `Next signing: ${pick.name}`;
+  }
   return `Servicing worn gear up to ${money(maintenanceBudget(state))}/hour`;
 }
 
 export function managerView(state: GameState, id: ManagerId): ManagerView {
   const profile = MANAGERS[id];
-  const hired = managerHired(state, id);
+  const open = postOpen(state, id);
+  const holder = postHolder(state, id);
+  const hired = holder !== null;
   const on = managerOn(state, id);
-  const quote = hired ? null : quoteDevelopment(state, profile.nodeId);
+  const quote = open ? null : quoteDevelopment(state, profile.nodeId);
   const cost = quote?.cost ?? DEV_NODES[profile.nodeId]?.cost ?? null;
   return {
     profile,
+    open,
+    holder,
+    pool: open && !hired ? staffPostOf(state, id).pool : [],
     hired,
     on,
     status: !hired ? 'not_hired' : on ? 'on' : 'off',
     log: commandStaffOf(state)[id].log,
-    activity: hired ? activityOf(state, id, on) : quote?.missingPrerequisites.length
-      ? `Needs ${quote.missingPrerequisites.map((nodeId) => DEV_NODES[nodeId]?.name ?? nodeId).join(', ')} first`
-      : cost ? `Hire in Develop: ${cost.dp} DP + ${money(cost.funding)}` : 'Not hired',
-    hire: hired || !cost ? null : { ...cost, reason: quote?.reason ?? null },
+    activity: hired ? activityOf(state, id, on) : open ? `${staffPostOf(state, id).pool.length} candidates to choose from`
+      : quote?.missingPrerequisites.length
+        ? `Needs ${quote.missingPrerequisites.map((nodeId) => DEV_NODES[nodeId]?.name ?? nodeId).join(', ')} first`
+        : cost ? `Open the post in Develop: ${cost.dp} DP${cost.funding ? ` + ${money(cost.funding)}` : ''}` : 'Not open',
+    hire: open || !cost ? null : { ...cost, reason: quote?.reason ?? null },
   };
 }
 
@@ -434,10 +713,23 @@ const isObj = (value: unknown): value is Record<string, unknown> => !!value && t
 const validLog = (value: unknown): boolean => Array.isArray(value) && value.length <= COMMAND_STAFF.logLimit
   && value.every((entry) => isObj(entry) && typeof entry.at === 'number' && Number.isFinite(entry.at) && typeof entry.text === 'string');
 
+const validPerson = (p: unknown): boolean => isObj(p) && ['identityId', 'firstName', 'surname', 'portrait'].every((k) => typeof p[k] === 'string')
+  && (p.pronouns === 'she' || p.pronouns === 'he' || p.pronouns === 'they') && (p.note === null || typeof p.note === 'string');
+const validStaffCandidate = (c: unknown): boolean => isObj(c) && typeof c.id === 'string' && validPerson(c.person)
+  && (c.archetype === 'seasoned' || c.archetype === 'specialist' || c.archetype === 'steady')
+  && Array.isArray(c.levers) && c.levers.length === 2 && c.levers.every((v) => typeof v === 'number' && Number.isFinite(v))
+  && typeof c.salaryPerHour === 'number' && c.salaryPerHour >= 0 && typeof c.signingCost === 'number' && c.signingCost >= 0;
+function validPost(post: unknown): boolean {
+  if (!isObj(post) || !Array.isArray(post.pool) || post.pool.length > STAFF_POOL.size || !post.pool.every(validStaffCandidate)) return false;
+  if (typeof post.round !== 'number' || !Number.isInteger(post.round) || post.round < 0 || typeof post.drawnAt !== 'number' || !Number.isFinite(post.drawnAt)) return false;
+  return post.holder === null || (validStaffCandidate(post.holder) && typeof (post.holder as Record<string, unknown>).hiredAt === 'number');
+}
+
 /** Structural check for a loaded save. Absent is valid for isolated hand-built states. */
 export function validCommandStaff(value: unknown): boolean {
   if (value === undefined) return true;
   if (!isObj(value)) return false;
+  if (!MANAGER_IDS.every((id) => isObj(value[id]) && validPost((value[id] as Record<string, unknown>).post))) return false;
   const wc = value.watch_commander, ts = value.training_sergeant, qm = value.quartermaster;
   if (!isObj(wc) || typeof wc.enabled !== 'boolean' || !isObj(wc.policy) || !isObj(wc.rested) || !validLog(wc.log)) return false;
   const { minRestAt, maxRestAt } = COMMAND_STAFF.watchCommander;
@@ -450,6 +742,20 @@ export function validCommandStaff(value: unknown): boolean {
   const { courseId, reserve } = ts.policy;
   if (courseId !== null && !(typeof courseId === 'string' && Object.hasOwn(COURSES, courseId))) return false;
   if (typeof reserve !== 'number' || !Number.isInteger(reserve) || reserve < 0 || reserve > COMMAND_STAFF.trainingSergeant.maxReserve) return false;
+  // Managers added after a save was written may be absent; one that is present must be well formed.
+  const ps = value.peer_support_lead, rc = value.recruiter;
+  if (ps !== undefined) {
+    if (!isObj(ps) || typeof ps.enabled !== 'boolean' || !isObj(ps.policy) || !validLog(ps.log)) return false;
+    const { supportAt, reserve: psReserve } = ps.policy;
+    if (typeof supportAt !== 'number' || !COMMAND_STAFF.peerSupportLead.supportChoices.includes(supportAt)) return false;
+    if (typeof psReserve !== 'number' || !Number.isInteger(psReserve) || psReserve < 0 || psReserve > COMMAND_STAFF.peerSupportLead.maxReserve) return false;
+  }
+  if (rc !== undefined) {
+    if (!isObj(rc) || typeof rc.enabled !== 'boolean' || !isObj(rc.policy) || !validLog(rc.log)) return false;
+    const { role, reserve: rcReserve } = rc.policy;
+    if (role !== null && !(typeof role === 'string' && (ROLES as readonly string[]).includes(role))) return false;
+    if (typeof rcReserve !== 'number' || !Number.isInteger(rcReserve) || rcReserve < 0 || rcReserve > COMMAND_STAFF.recruiter.maxReserve) return false;
+  }
   if (!isObj(qm) || !validLog(qm.log)) return false;
   const resume = qm.resumeBudget;
   return typeof resume === 'number' && Number.isInteger(resume) && resume >= 1 && resume <= EQUIPMENT_MANAGER.maxHourlyBudget;

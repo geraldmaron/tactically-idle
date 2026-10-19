@@ -10,7 +10,7 @@ import { Icon } from '../icons';
 import { SQUAD_IDS } from '../../sim/types';
 import { OfficerSheet } from './OfficerSheet';
 import { Recruit } from './Recruit';
-import { officerList } from './helpers';
+import { officerList, staysHomeLine } from './helpers';
 import { useNav } from '../components/nav';
 import { TrainingStore } from '../storefront/TrainingStore';
 import { SquadOptimizer } from './SquadOptimizer';
@@ -200,6 +200,7 @@ export function SquadPanel({ squad, onOpen }: { squad: Squad; onOpen: (id: Id) =
             {i}
           </Chip>
         ))}
+        {r.deployable && r.staysHome.length > 0 && <Chip tone="warn" icon="warning">{staysHomeLine(g, r.staysHome)}</Chip>}
       </div>
       <div className="ogrid ogrid-tiles">
         {Array.from({ length: slots }).map((_, i) => {

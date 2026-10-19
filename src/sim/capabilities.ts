@@ -1,5 +1,6 @@
 // All effects below are fictional score/time rules. Only public action context and
 // player knowledge are read: compatibility never asks a hidden fact for its truth.
+import { runRoster } from './squads';
 import { CAPABILITIES } from '../content/capabilities';
 import { incidentOfficerUnavailable } from './incident-consequences';
 import { ITEMS } from '../content/items';
@@ -52,7 +53,7 @@ export function supportVehicle(state: GameState, run: OperationRun): ItemUnit | 
   const def = ITEMS[unit.itemId];
   const now = state.department.clockHighWater;
   if ((unit.expiresAt !== null && unit.expiresAt <= now) || unitEffectiveness({ ...unit, condition: projectedCondition(state, unit, now, departmentUpkeep(state)) }, def) <= 0) return null;
-  if (!run.squadIds.some((sid) => state.squads.find((s) => s.id === sid)?.officerIds.some((oid) => !incidentOfficerUnavailable(state, run, oid) && ['vehicle_operations', ...def.requiresCerts ?? []].every((cert) => (state.officers[oid]?.certs as string[] | undefined)?.includes(cert))))) return null;
+  if (!run.squadIds.some((sid) => runRoster(state, run, sid).some((oid) => !incidentOfficerUnavailable(state, run, oid) && ['vehicle_operations', ...def.requiresCerts ?? []].every((cert) => (state.officers[oid]?.certs as string[] | undefined)?.includes(cert))))) return null;
   return unit;
 }
 
@@ -89,7 +90,7 @@ export function evaluateCapabilities(input: CapabilityInput): CapabilityResult {
       if (!rules.has(cap)) continue;
       const requiredCerts = item.requiresCerts ?? [];
       const qualified = (item.supportOnly ? run.squadIds : [squadId]).some((sid) => operatorQualified(state, sid, action, item)
-        && (item.supportOnly || input.participantIds === undefined || state.squads.find(squad => squad.id === sid)?.officerIds.some(id => input.participantIds!.includes(id)
+        && (item.supportOnly || input.participantIds === undefined || runRoster(state, run, sid).some(id => input.participantIds!.includes(id)
           && requiredCerts.every(cert => state.officers[id]?.certs.includes(cert)))));
       const missing = requiredCerts.length && !qualified ? requiredCerts : [];
       let reason = missing.length ? `Needs qualified operator: ${missing.map((c) => c.replaceAll('_', ' ')).join(', ')}` : null;

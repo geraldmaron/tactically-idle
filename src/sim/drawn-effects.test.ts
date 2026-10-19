@@ -40,7 +40,7 @@ describe('team force (TEAM_FORCE_V1)', () => {
   // A department with every item and every cert, so only the person and the place decide.
   const state = { department: { clockHighWater: UNIT_NOW, developmentTiers: {} }, officers: { o1: { certs: ['less_lethal', 'advanced_less_lethal', 'entry_team'] } } } as unknown as GameState;
   const run = {} as GameState['activeRun'] & object;
-  const units = () => [makeUnit('impact_launcher', 1), makeUnit('conducted_energy_device', 2), makeUnit('service_sidearm', 3)];
+  const units = () => [makeUnit('impact_launcher', 1), makeUnit('conducted_energy_device', 2), makeUnit('service_sidearm', 3), makeUnit('impact_supply', 4), makeUnit('energy_cartridge', 5)];
   const scenario = (people: IncidentPersonDef[]) => ({ incidentPeople: people } as ScenarioDefinition);
   const pick = (people: IncidentPersonDef[], knowledge: Record<string, string> = {}, flags: string[] = []) =>
     teamForceProfile(state, { knowledge, flags } as unknown as typeof run, scenario(people), ['A'], ['o1'], 'shooter', units);
@@ -85,7 +85,7 @@ describe('team force (TEAM_FORCE_V1)', () => {
     expect(choose([empty, child])).toBe('hands');
     expect(teamForceProfile({ department: { clockHighWater: UNIT_NOW, developmentTiers: {} }, officers: { o1: { certs: [] } } } as unknown as GameState, run, scenario([empty]), ['A'], ['o1'], 'shooter', units).profile).toBe('hands');
     // Out of the launcher's range only the device remains, and it reaches 15 feet.
-    const deviceOnly = () => [makeUnit('conducted_energy_device', 2)];
+    const deviceOnly = () => [makeUnit('conducted_energy_device', 2), makeUnit('energy_cartridge', 5)];
     expect(teamForceProfile(state, run, scenario([{ ...empty, doorFt: 12 }]), ['A'], ['o1'], 'shooter', deviceOnly).profile).toBe('less_lethal_device');
     expect(teamForceProfile(state, run, scenario([{ ...empty, doorFt: 20 }]), ['A'], ['o1'], 'shooter', deviceOnly).profile).toBe('hands');
   });

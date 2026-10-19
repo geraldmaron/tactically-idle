@@ -8,7 +8,7 @@ import { next } from './rng';
 import { syncCasualtyFlags, syncPersonCasualtyFlags } from './incident-consequences';
 import { protectedOfficerEffects } from './force-risk';
 import { advanceClocks, clockConditionsHold, clockOutEffects, forkMinutes, initialClocks } from './clocks';
-import { applyMoves, initialMeters, meterConditionsHold } from './meters';
+import { applyMoves, driftMeters, initialMeters, meterConditionsHold } from './meters';
 import { applyCommitments } from './commitments';
 
 type SupportRun = Pick<OperationRun, 'clock' | 'externalSupport'>;
@@ -184,6 +184,8 @@ export function validExternalSupportState(run: OperationRun, scenario: ScenarioD
   const passTime = (minutes: number) => {
     timed.flags = publicState.flags;
     const before = timed.clocks;
+    // Time moves the meters in the commit's order: after the decision's branches read them (sim/meters.ts driftMeters).
+    if (moved.meters) { moved.meters = structuredClone(moved.meters); driftMeters(moved, scenario, minutes); }
     return { before, cues: advanceClocks(timed, scenario, minutes) };
   };
   // Built once, and only if a look follows a person (observingAction).
