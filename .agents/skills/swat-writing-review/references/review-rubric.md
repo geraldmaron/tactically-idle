@@ -1,6 +1,6 @@
 # Review rubric
 
-Eight dimensions, each with the question a reviewer asks, anchored descriptions for each
+Nine dimensions, each with the question a reviewer asks, anchored descriptions for each
 severity, and two example findings in the row shape from SKILL.md section 11. Rows tagged
 (observed) quote text read in the repo or on the story sheet on 2026-10-06, much of it from
 layers deleted on 2026-10-17 (the typed packages, the v12 depth layer, the hand-authored
@@ -207,6 +207,33 @@ on a call with no entry), because the player sees a manufactured result.
 [block] officer person_016 | arc.strain.fork.options[0] | sees 'Pair with {Mentor} on the next entry' then 'Strain note cleared at Larkin Court' on a call with no entry step | rule officer cause | fix as data clear only on the next call with an entry step, and name the mentor's cost in the option | route swat-officer-stories (observed in a proof draft)
 ```
 
+## 9. Depth (D1 to D9)
+
+Question. Would a player remember this call a week later, and want to argue about what they did
+in it? Correct is the floor. These gates fail a call that has zero defects. They come from the
+depth bible (`docs/scenario-depth.md`, swat-call-design's lenses, psychology and patterns 15 and
+the escalation palette), and only a separate reader can pass them.
+
+| Gate | The test | Fails when | Severity |
+|---|---|---|---|
+| D1 Private logic | Read each key person's lines alone. Write their want, wound, self-lie and need | A key person has only a want, or two people share one voice | block |
+| D2 Reframe | Name the earlier scene each situation's truth changes the meaning of | A situation only flips whether someone acts | block |
+| D3 Escalation palette | Tag every adverse escalation on every path by mechanism | Fewer than four mechanisms in the call, or one mechanism more than twice on a path | block |
+| D4 Blind voice | Strip the names from the subject's transcript lines and mix them with another call's | A reader can't tell whose lines are whose | fix before ship |
+| D5 Argument | For each stage, write the case two players would make for two different options, on values | Every option's case is about odds or minutes | block |
+| D6 Temptation | Find the call's lie, unapproved promise or tempting shortcut, and trace its cost on a path | None exists, its cost lands somewhere the player never saw, or it dominates | fix before ship |
+| D7 The line | Quote the one sentence a player would repeat to someone else | No line is quotable. The owner makes the final pick | note, owner |
+| D8 The after | Read every ending's epilogue alone | An ending stops at status, or an epilogue moralizes or invents an outcome (E11.2) | fix before ship |
+| D9 Replay | Play the same opening under each situation, back to back | Two situations read as the same person with different dice | fix before ship |
+
+Reject. A new or rebuilt call that fails two or more of D1, D2, D3 and D5 goes back to
+swat-call-design. Rewording can't fix a call with no psychology.
+
+```
+[block] hostage_crisis, all situations | situations[*].truth | sees the taker's want and the same pacing across s1 to s3; only whether he trades and whether he aims changes | rule D2 | fix as data a truth per situation that changes what the till scene meant (who counted the money) | route swat-call-design (observed, v13 pilot, 2026-10-19)
+[block] hostage_crisis, all paths | adverse escalations | sees 'the handgun comes up at {owner.first}' as the escalation on 15 adverse results | rule D3 | fix as data draw the escalations from the palette, shame at the tape, the coworker's push, the bolt turned from outside | route swat-call-design (observed, v13 pilot, 2026-10-19)
+```
+
 ## Categories, severities and routes
 
 | Category | What it covers | Default route |
@@ -241,11 +268,12 @@ names the owner. If any of those five is missing, the note is not ready.
 - edit. Every block and fix before ship finding has a fix as data or a filed request with an
   owner, and no reject condition holds. A self-read verdict is never better than edit.
 - reject. A stage's decision is not real, a red line is crossed, the truth leaks through
-  structure, or a blocker has no data fix. The call goes back to swat-call-design.
+  structure, a blocker has no data fix, or a new or rebuilt call fails two or more of D1, D2,
+  D3 and D5. The call goes back to swat-call-design.
 
 ## Pipeline checklist mapped to passes
 
-The reviewer checklist in docs/content-pipeline.md (search "Reviewer checklist") has five items.
+The reviewer checklist in docs/content-pipeline.md (search "Reviewer checklist") has six items.
 This table shows where each one is covered.
 
 | Pipeline item | Pass |
@@ -254,6 +282,7 @@ This table shows where each one is covered.
 | 2. Compare situations. Does anything before the check give the answer away? | Pass four side by side |
 | 3. Are the people, rooms and building plausible together in all six samples? | Pass two path read across building families, batch audit name hygiene |
 | 4. Are the endings honest about what the team did, and silent about what it didn't? | Pass four honesty list H1 to H10 |
-| 5. Is it non-graphic, and does it keep allegations apart from facts? | Pass five ethics, G3 stacked hedges, cliche patterns C4 and C6 |
+| 5. Does it keep anatomy and method off the card, and allegations apart from facts? | Pass five ethics, G3 stacked hedges, cliche patterns C4 and C6 |
+| 6. Does it pass the depth gates D1 to D9? | Pass six, the depth read (section 9) |
 
 The pipeline items are paraphrased into question form here. The doc is the source.

@@ -154,6 +154,13 @@ export type TreeNext = { node: string } | { ending: string } | { turn: string };
 export type TreeIf = { fact: string; is: boolean } | { clock: string; low: boolean } | { clock: string; out: boolean }
   | { meter: string; stance?: MeterStance | MeterStance[]; agitationAtLeast?: number; is?: boolean };
 
+/** One spoken line of a transcript (call-surfaces): who says it and the words, with no quotation
+ * marks and no speaker tag in the line. `by` is a role (or a group, meaning its first member), or
+ * one of the voices the call always has: 'negotiator', 'radio' or 'dispatch'. The UI prints the
+ * speaker's name beside the line. Two to four lines make an exchange. */
+export interface TreeLine { by: string; line: string }
+export const TREE_VOICES = { negotiator: 'Negotiator', radio: 'Radio', dispatch: 'Dispatch' } as const;
+
 /** Standard events that move a subject's agitation and rapport (sim/meters.ts). */
 export type TreeMove = 'heard' | 'contact' | 'honest' | 'provoked' | 'team_seen' | 'shots' | 'released';
 
@@ -174,7 +181,13 @@ export interface TreeOutcome {
   mark?: string[];
   /** Command commits to something a person asked for (sim/commitments.ts): kept or broken by what
    * the team does to them afterwards. `id` is unique in the call; `to` is the role. */
-  promise?: { id: string; to: string; kind?: ConcessionKind | 'promise' };
+  promise?: { id: string; to: string; kind?: ConcessionKind | 'promise' | 'lie' };
+  /** Commitments this outcome breaks (deception-commitments): the person learns the promise was
+   * empty. Write the discovery in `text`, so the break is never silent. A `lie` promise needs at
+   * least one reachable outcome that breaks it. */
+  breaks?: string[];
+  /** Lines spoken in this result, shown under it as a transcript. */
+  exchange?: TreeLine[];
   /** What this outcome does to a subject's agitation and rapport: the subject's role, and the
    * event. The engine scales it by the subject's volatility, and every later conversation with
    * them shows it on the card. Replaces mood marks like "stung" and "heard". A group moves every
@@ -261,6 +274,9 @@ export interface TreeChoice {
   /** Offered only in this public state. */
   onlyIf?: TreeState;
   requires?: Pick<ActionRequirements, 'certs' | 'anyTags' | 'allTags' | 'minSquads'>;
+  /** The choice is a lie, or a promise command never approved (dilemma pattern 15, E12.6). The
+   * card says command hasn't approved it. Its outcomes carry the `lie` promise they make. */
+  deceives?: true;
   /** What this choice asks command for (sim/authorization.ts): an entry, or a concession. The
    * engine locks it with the generated reason until the rule allows it, and the card carries the
    * generated command line, so the summary never says "Command approves it because …" itself. */
@@ -322,8 +338,11 @@ export interface TreeNode {
   stage: StageId;
   /** The situation the player faces at this node. */
   prompt: string;
-  /** Replaces `prompt` in that public state; the first match wins. */
-  promptIf?: { when: TreeState; prompt: string }[];
+  /** Lines spoken as the player reaches this decision, shown with the prompt as a transcript. */
+  exchange?: TreeLine[];
+  /** Replaces `prompt` in that public state; the first match wins. Its `exchange` replaces the
+   * node's when given (`[]` for none); without one the node's exchange shows. */
+  promptIf?: { when: TreeState; prompt: string; exchange?: TreeLine[] }[];
   choices: TreeChoice[];
 }
 
@@ -334,6 +353,9 @@ export interface TreeEnding {
    * states (sim/outcome-score.ts), and a gate checks they agree. */
   disposition: CompletionDisposition;
   remainingTasks?: string[];
+  /** What is true after the call, told as fiction may tell it (E11.2): true on every path that
+   * reaches this ending, putting the cost or the grace on one named person. */
+  epilogue?: string;
 }
 
 export interface CallTree {

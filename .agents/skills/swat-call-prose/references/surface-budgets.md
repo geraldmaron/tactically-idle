@@ -32,7 +32,7 @@ code wins, and this file gets a dated correction.
 |---|---|---|---|---|---|---|
 | 1 | Card title | title | 34 | 1 to 3 words | a place, object or person, never a genre | 22px, wraps to 2 lines |
 | 2 | Card chips | variantLabel, difficulty drivers | none | 1 to 3 words | shown only when it differs from the title | one line |
-| 3 | Card hook | summary | none | about 100 chars bound, first sentence 14 words | person and want in the first five words, one gap, what gets worse | the Ops board card clamps to 2 lines at 13.5px (about 100 characters at 390px, measured 2026-10-08 on a replica of the card CSS), and that is the budget that binds; the live panel clamps to 3 lines at 14px |
+| 3 | Card hook | summary | none | about 145 chars bound, first sentence 14 words | person and want in the first five words, one gap, what gets worse | the Ops board card clamps to 3 lines at 13.5px (owner 2026-10-19; 2 lines held about 100 characters at 390px, measured 2026-10-08, so 3 hold about 150), and the live panel clamps to 3 lines. Keep the threat object inside the first 100 characters |
 | 4 | Pressure label | pressureLabel | none | 2 to 4 words | whose safety, then what runs out ("Mara’s time inside"). An institution's schedule fails unless the hook ties it to a person's safety | written in the call tree's briefing |
 | 5 | Dispatch reason | dispatchReason | 240 | 2 sentences | who called and what they want the team for | full, under "Why your team was sent" |
 | 6 | Known line | known[] | 260 | 3 lines of about 12 words | source, claim, how they know | full |
@@ -47,15 +47,18 @@ code wins, and this file gets a dated correction.
 | 15 | Stage label | stage.label | none | 1 to 2 words, about 24 chars | the position or the problem | uppercase 12px, clamped to 2 lines |
 | 16 | Stage prompt | prompt | 120 | 2 sentences, 18 words | the new fact, then the pressure | about 3 lines at 16px |
 | 17 | Context prompt | contextPrompts[].prompt | none, hold to 120 | 2 sentences, 18 words | names the earlier choice through one detail | replaces the prompt while its condition holds |
+| 17a | Transcript at a decision | node.exchange, promptIf[].exchange | 90 a line | 2 to 4 lines, 15 words each | voices on the line as the decision arrives: the subject, a held person, the negotiator, radio | printed with the prompt, the speaker's name beside each line |
 | 18 | Choice title | action title | 60 | 2 to 5 words, 30 chars | verb, object, optional qualifier | about 34 chars a line at 17px, 2 lines |
 | 19 | Choice summary | action summary | 230, and 80 when the action has a requirement | 20 words | the act, then its cost as a concrete event | locked choices clamp to 2 lines (about 80 chars at 390px), so with a requirement the cost lands in the first 80 characters or the whole summary fits in 80. Hidden when equal to the favorable preview |
 | 20 | Requirement reason | requires reason, hazardReason | none | 8 words | what is missing, verb first | shown on a locked choice |
 | 21 | Outcome preview | outcomePreview per band | none | 20 words each | how well the team does it, true in every situation, adverse names who pays | 1 to 2 sentences |
 | 22 | Result line | outcome effect text (ScenarioDefinition) | 240 | 30 words | who did what, then what changed, in the call's one result tense | the decision log prints the choice title before it |
+| 22a | Transcript in a result | outcome exchange | 90 a line | 1 to 3 lines, 15 words each | what was said, in the speaker's own words | under the result line in the decision card |
 | 23 | Result label | resultLabels per band | none | 2 to 4 words | the band in plain words | beside the result |
 | 24 | Officer harm | officerHarm.label | none | 10 words | plain, non-graphic, names the call | becomes the injury label on the roster |
 | 25 | Ending title | ending title | 60 | 2 to 6 words | the outcome, with a person in it | debrief header |
 | 26 | Ending summary | ending summary | 240 | 35 words | who is safe, who is not, one lasting detail | debrief body |
+| 26a | Epilogue | ending epilogue | 200 | 30 words, 1 to 3 sentences | what is true after the call, on one named person (E11.2) | after the ending summary, set apart |
 | 27 | Still needed | remainingTasks[] | none | 8 words | verb first, a person named | listed under "Still needed" |
 | 28 | Civilian outcome | civilianOutcomes[].label | none | 6 words | the person and their state | debrief |
 | 29 | Service text | externalServices[] label and description | none | 15 words | who arrives, when, what they take over | briefing and debrief |
@@ -163,6 +166,7 @@ governs and the house target stays at 1 to 3 words, which fits either way.
 
 ## Change log
 
+- 2026-10-19. Depth surfaces: rows 17a, 22a and 26a for the transcript and the epilogue, and the board hook at 3 lines (about 145 characters, the checker's HOOK_CHARS).
 - 2026-10-06. First version, values read from the repo that day.
 - 2026-10-07. Proof round 2. Pressure-label shape, bound-length measuring, the result tense section, and row 22 named for the ScenarioDefinition field.
 - 2026-10-06. Proof round 1. Counted limits for markers and map tasks, the locked-summary 80-character rule, neutral markers, truthful previews, and rows 31a to 31e for modifier, cert, support, equipment and objective labels (fields read in src/sim/scenario-types.ts).

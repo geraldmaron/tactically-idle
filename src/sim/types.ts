@@ -631,6 +631,8 @@ export interface DecisionResolution {
     drawn?: { model: 'incoming_fire' | 'team_force' | 'cascade'; personId: Id; key: string; reason?: string }[];
     /** V5 opening changes resolved against the route actually used, in committed order. */
     openingChanges?: { openingId: Id; state: OpeningState }[];
+    /** V13 lines spoken in this result, frozen at commit (call-surfaces). */
+    exchange?: { speaker: string; line: string }[];
   };
   /** Run revision this decision was applied to. */
   revision: number;
@@ -843,6 +845,8 @@ export interface DecisionView {
   knowledgeChanges: { factId: Id; label: string; status: KnowledgeStatus }[];
   contributors: Contributor[];
   consequences: string[];
+  /** Lines spoken in this result (call-surfaces). */
+  exchange?: { speaker: string; line: string }[];
   endingTitle: string | null;
 }
 
@@ -851,6 +855,8 @@ export interface ActionView {
   /** V13: what command says to the choice's request (sim/authorization.ts). Allowed, the card shows
    * the line under the summary; refused, the choice is locked and `reason` is the same line. */
   authority?: import('./scenario-types').AuthorityResult;
+  /** V13: a lie or a promise command never approved (dilemma pattern 15). */
+  deceives?: true;
   /** Common event across effort bands: authored explicitly or proven by identical v6 effect tables. */
   eventResult?: string;
   likelihood: Record<OutcomeBand, number>;

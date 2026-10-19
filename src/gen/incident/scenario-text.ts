@@ -6,6 +6,7 @@ export function mapScenarioText(input: ScenarioDefinition, text: (value: string)
   const fields = <T extends object>(value: T, names: readonly (keyof T)[]) => {
     for (const key of names) if (typeof value[key] === 'string') value[key] = text(value[key] as string) as T[keyof T];
   };
+  const lines = (list: { speaker: string; line: string }[] | undefined) => { for (const line of list ?? []) fields(line, ['speaker', 'line']); };
   fields(s, ['title', 'summary', 'variantLabel', 'pressureLabel']);
   s.briefing.known = s.briefing.known.map(text); s.briefing.unknown = s.briefing.unknown.map(text);
   fields(s.briefing, ['dispatchReason']);
@@ -23,7 +24,7 @@ export function mapScenarioText(input: ScenarioDefinition, text: (value: string)
   if (s.difficulty) s.difficulty.drivers = s.difficulty.drivers.map(text);
   for (const stage of Object.values(s.stages)) {
     fields(stage, ['label', 'prompt']);
-    for (const entry of stage.contextPrompts ?? []) fields(entry, ['prompt']);
+    for (const entry of stage.contextPrompts ?? []) { fields(entry, ['prompt']); lines(entry.exchange); }
     for (const a of stage.actions) {
       fields(a, ['title', 'summary', 'task', 'hazardReason']);
       for (const map of [a.outcomePreview, a.resultLabels]) if (map) fields(map, ['favorable', 'mixed', 'adverse']);
@@ -37,12 +38,12 @@ export function mapScenarioText(input: ScenarioDefinition, text: (value: string)
       if (a.spatial) fields(a.spatial, ['noun']);
       // Drawn consequences (v13) carry their own effects per result: bind those too.
       for (const effect of Object.values(a.outcomes).flat().flatMap(entry => [entry, ...Object.values(entry.variants ?? {}).flat()])) {
-        fields(effect, ['text']); if (effect.officerHarm) fields(effect.officerHarm, ['label']);
+        fields(effect, ['text']); lines(effect.exchange); if (effect.officerHarm) fields(effect.officerHarm, ['label']);
       }
     }
   }
   for (const ending of Object.values(s.endings)) {
-    fields(ending, ['title', 'summary']); if (ending.remainingTasks) ending.remainingTasks = ending.remainingTasks.map(text);
+    fields(ending, ['title', 'summary', 'epilogue']); if (ending.remainingTasks) ending.remainingTasks = ending.remainingTasks.map(text);
   }
   if (s.story) {
     if (s.story.episode) s.story.episode.publicContext = s.story.episode.publicContext.map(text);

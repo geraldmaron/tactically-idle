@@ -302,6 +302,14 @@ its target is at least fix before ship, and section 11 says who may downgrade it
 Fill the batch table in references/batch-audit.md section 9, one row per check with its count,
 house target and finding row.
 
+## 8a. Pass six, the depth read
+
+A call can be correct and forgettable. Run the nine depth gates in references/review-rubric.md
+section 9 on every new or rebuilt call, after the other passes. Read the transcript lines
+aloud. Tag every adverse escalation by its mechanism from swat-call-design's escalation palette.
+Write the two-player argument for each stage, and read each epilogue alone. Only a separate
+reader passes D1 to D9, and the owner picks the D7 line. Rule ids are `D<1-9>`.
+
 ## 9. Reading officer text
 
 When the scope names officer text, read it in context (recruit card, sheet tiers, shift report
@@ -346,7 +354,7 @@ Rule ids are `fake-choice <1-10>`, `test <name>`, `table <claims | dominance | p
 taps | coverage>`, `static walk`, `cold read`, `restatement`, `cue trace`, `cost lands`,
 `dry-run <rule>`, `H<1-11>`, `E<n>` or `inline <n>`, `C<n>` or `G<n>` from
 references/cliche-and-copaganda.md, `batch <check>`, `budget <surface>`, `officer <check>` and
-`gate <test name>`.
+`gate <test name>` and `D<1-9>`.
 
 - block. Shipping would mislead, harm or break. A fake decision at a stage, an untraced adverse
   result, a leak, a dead end, a missing result cell, a placeholder, a red line, an invented
@@ -381,7 +389,8 @@ Verdict rules.
 - edit. No reject condition holds, and every block and fix before ship finding has a fix as
   data or a filed request with an owner. A self-read verdict is never better than edit.
 - reject. A stage's decision is not real, a red line is crossed, the truth leaks through
-  structure, or a blocker has no data fix. It goes back to swat-call-design.
+  structure, a blocker has no data fix, or a new or rebuilt call fails two or more of D1, D2,
+  D3 and D5 (pass six). It goes back to swat-call-design.
 
 ```
 Verdict <call or story id> v<N> | <approve | edit | reject> | block <n | unverified, self-read> | fix before ship <n> | note <n> | fingerprints recapture <yes | no>
@@ -415,6 +424,7 @@ second reader, and its record is the evidence the reading happened.
 10. Engine gates run with command and exit code, or recorded as not run, and the engine
     dry-run done for any unbuilt call.
 11. Every finding in row shape and routed, one verdict per call.
+12. Depth gates D1 to D9 read on every new or rebuilt call, or marked not applicable with why.
 
 The record says DRAFT in its first line until every slot is filled. A gate not done says "not
 done | <reason>" in its slot and is never deleted.
@@ -434,6 +444,7 @@ Writing review record (DRAFT until every slot is filled)
 - Batch audit: answered | sample <n>, repeats <n>, openers over target <n>, collisions <n>, crisis cap <held | broken> | not applicable | <why>
 - Engine gates: answered | <command> exit <code>, <summary line> | not run | <reason>
 - Engine dry-run: answered | rules failed <n>, invalid values <n>, best ending scores <n%> against worst <n%>, prompts unwritten or shadowed <n> | not applicable, built and loaded by tests
+- Depth: answered | D1 <pass | fail>, D2, D3 <mechanisms n, max per path n>, D4, D5, D6, D7 <owner pick | pending>, D8, D9 | not applicable | <why>
 - Tells checked: answered | the written-voice skill's voice-check script ran on exported strings with joined allow list | not run | <reason>
 - Findings: <n> block, <n> fix before ship, <n> note, routed to <skills, engineering, owner>
 - Owner decisions surfaced: <list | none>

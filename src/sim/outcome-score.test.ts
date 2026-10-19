@@ -99,6 +99,19 @@ describe('the weights (OUTCOME_SCORE_V1)', () => {
     }
   });
 
+  it('weigh a lie apart from a kept word: one found out costs more than a broken promise, one that held earns nothing', () => {
+    const W = OUTCOME_SCORE_V1;
+    const base = [person('trapped', 'safe'), person('subject', 'in_hand')];
+    const found = scoreFrom(inputs({ people: base, commitments: [{ personId: 's', label: 'Ash', kind: 'lie', status: 'broken' }] }), 8);
+    const held = scoreFrom(inputs({ people: base, commitments: [{ personId: 's', label: 'Ash', kind: 'lie', status: 'kept' }] }), 8);
+    const kept = scoreFrom(inputs({ people: base, commitments: [{ personId: 's', label: 'Ash', status: 'kept' }] }), 8);
+    expect(found.lines.find(line => line.key.endsWith('lie-found'))?.text).toBe('Ash found out the team lied.');
+    expect(held.lines.find(line => line.key.endsWith('lie-held'))?.text).toBe('The lie told to Ash held.');
+    expect(W.commitments.lieFound[0]).toBeLessThan(W.commitments.broken[0]);
+    expect(found.points).toBeLessThan(held.points);
+    expect(held.points).toBeLessThan(kept.points);
+  });
+
   it('set the disposition from end states, never from the ending', () => {
     expect(dispositionOf({ people: [person('held', 'safe'), person('subject', 'in_hand')], ranOut: false })).toBe('resolved');
     expect(dispositionOf({ people: [person('held', 'hurt', 'serious'), person('subject', 'killed')], ranOut: false })).toBe('resolved');

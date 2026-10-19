@@ -34,7 +34,8 @@ and it still goes through review before ship.
 - No em dashes, en dashes or spaced hyphens doing a dash's job in game text.
 - Colons only where a format needs one: clock times, stat rows, the UI's speaker format.
 - No stock AI tells. Every line names something a person on scene could see, hear, touch or do.
-- Grounded and non-graphic. Preserving life is the value the game rewards.
+- Grounded. Consequences land plainly on named people, with no wound anatomy or method.
+  Preserving life is the value the game rewards (the darker tier, E16).
 
 ## How these relate to written-voice
 

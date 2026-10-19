@@ -44,6 +44,21 @@ describe('commitments: the rule', () => {
     expect(Object.keys(r.commitments!)).toHaveLength(1);
   });
 
+  it('a lie breaks when an outcome says the person found out, and holds if they come out first (deception-commitments)', () => {
+    const lie = action({ id: 'tell_her_signs', deceives: true });
+    const told: OutcomeEffect[] = [{ promise: { id: 'will_sign', personId: 'taker', kind: 'lie' }, text: 'He frees the courier.' }];
+    const found = step(run(), lie, 'favorable', told);
+    expect(found).toEqual([]);
+    const r = run();
+    step(r, lie, 'favorable', told);
+    expect(step(r, action({ id: 'read_page' }), 'adverse', [{ breaks: ['will_sign'], text: 'She says she never agreed to sign.' }]))
+      .toEqual([{ id: 'will_sign', status: 'broken' }]);
+    expect(r.meters!.taker.moved?.promise_broken).toBeDefined();
+    const held = run();
+    step(held, lie, 'favorable', told);
+    expect(step(held, action({ id: 'walk' }), 'favorable', [], [], ['out:taker'])).toEqual([{ id: 'will_sign', status: 'kept' }]);
+  });
+
   it('break when the team goes in, and the subject hears it', () => {
     const r = run();
     step(r, concession);
