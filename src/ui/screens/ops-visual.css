@@ -206,9 +206,10 @@
 .live .situation-toggle::after { content: ''; position: absolute; inset: -6px 0; }
 .live .situation-toggle { position: relative; }
 
-/* The scene: the title stays pinned with the stage rail, the clock and the pressure, so the story
-   below can scroll without losing where the call stands. */
-.live .live-title { position: sticky; top: 0; z-index: 6; background: linear-gradient(180deg, var(--bg) 82%, rgba(11, 17, 28, 0)); padding-bottom: 6px; }
+/* The scene's title carries the stage rail, the clock and the pressure. It scrolls with the scene:
+   on a phone a pinned head costs the choices their room, and the current stage is repeated above
+   the choices. */
+.live .live-title { position: relative; padding-bottom: 6px; }
 .live .live-status { display: flex; flex: 1 1 100%; flex-wrap: wrap; gap: 6px; align-items: center; }
 .live .live-status .hud-pill { padding: 2px 8px; font-size: 12.5px; }
 

@@ -24,7 +24,7 @@ import { scenarioTitle } from './helpers';
 import { SavedDebriefReview } from './OpsDebrief';
 import { ScoreRing } from '../components/DebriefResults';
 import { CommandStaff } from '../components/CommandStaff';
-import { ScreenBanner } from '../art/Plates';
+import { Hub } from '../components/Hub';
 
 export function HQ() {
   const g = useGame();
@@ -45,19 +45,22 @@ export function HQ() {
   // department at a glance, then the standing work (staff, duties, past calls).
   return (
     <>
-    <ScreenBanner id="hq" kicker={`Headquarters · ${formatGameDate(gameDay(g, Math.max(now, g.department.clockHighWater)))}`} title={g.department.name}
-      line={<>{campaign ? `${campaign.name} · ` : ''}Level {g.department.level} · Public trust {Math.round(g.department.trust)} / 100</>} />
+    <Hub kicker={`Headquarters · ${formatGameDate(gameDay(g, Math.max(now, g.department.clockHighWater)))}`} title={g.department.name}
+      line={`${campaign ? `${campaign.name} · ` : ''}Level ${g.department.level} · Public trust ${Math.round(g.department.trust)} / 100`}
+      rooms={[
+        { id: 'dispatch', label: 'Dispatch', icon: 'pin', status: g.activeRun ? 'Call in progress' : overview.board.expiringSoon ? `${overview.board.expiringSoon} closing soon` : plural(overview.board.count, 'call'), alert: !!g.activeRun || overview.board.newCount > 0 || overview.board.expiringSoon > 0, onOpen: () => nav.go('ops') },
+        { id: 'training', label: 'Training', icon: 'mortarboard', status: `${Math.max(0, overview.trainingSlots - overview.training)} of ${overview.trainingSlots} places free`, onOpen: () => nav.openTraining() },
+        { id: 'lockers', label: 'Roster', icon: 'people', status: `${overview.deployable} of ${overview.totalOfficers} ready`, alert: overview.unavailable > 0 && overview.deployable === 0, onOpen: () => nav.setSquadSection('roster') },
+        { id: 'armory', label: 'Armory', icon: 'box', status: overview.radios.shortage ? 'Radios short' : 'Stocked', alert: !!overview.radios.shortage, onOpen: () => nav.go('gear') },
+        { id: 'briefing', label: 'Planning', icon: 'chart', status: 'Upgrades', onOpen: () => nav.go('develop') },
+        { id: 'garage', label: 'Duties', icon: 'patrol', status: `${rate(b.net)} net`, alert: b.net < 0, onOpen: () => document.getElementById('hq-duties')?.scrollIntoView({ block: 'start', behavior: 'smooth' }) },
+      ]} />
     <div className="page hq-page">
       {g.report && <section className="hq-report-summary hq-away"><span className="file-tab">While you were away</span><div><strong>Shift report ready</strong><p>{signedMoney(g.report.net)} net funding · {g.report.completedCourses.length} courses completed</p></div><Button size="sm" variant="primary" onClick={() => setReportOpen(true)}>Review report</Button></section>}
       {g.activeRun && <ActiveOpCard g={g} now={now} />}
       {!!attention.length && <section className="hq-attention"><h2 className="section-title">Needs you now</h2>{attention.slice(0, 3).map((item) => <div key={item.text}><span>{item.text}</span><Button size="sm" onClick={() => nav.go(item.tab)}>{item.action}</Button></div>)}</section>}
+      {/* Training and calls live on the hub's rooms; the glance keeps who is ready and the money. */}
       <section className="hq-identity" aria-label="Department at a glance">
-        <HqStatTiles
-          training={{ inCourses: overview.training, places: overview.trainingSlots }}
-          board={overview.board}
-          onTraining={() => nav.openTraining()}
-          onCalls={() => nav.go('ops')}
-        />
         <RosterSummary g={g} overview={overview} />
         <HeaderBudget g={g} b={b} />
       </section>
@@ -124,46 +127,6 @@ function RosterSummary({ g, overview }: { g: GameState; overview: ReturnType<typ
   );
 }
 
-interface TileSegment { key: string; value: number }
-
-/** A capacity bar in the roster bar's style: one segment per state, the rest of the capacity left empty. */
-function CapacityBar({ segments, capacity, label }: { segments: TileSegment[]; capacity: number; label: string }) {
-  const shown = segments.filter((segment) => segment.value > 0);
-  const empty = Math.max(0, capacity - shown.reduce((n, segment) => n + segment.value, 0));
-  return (
-    <span className="hq-roster-bar hq-tile-bar" role="img" aria-label={label}>
-      {shown.map((segment) => <i key={segment.key} data-state={segment.key} style={{ flexGrow: segment.value }} />)}
-      {empty > 0 && <i data-state="empty" style={{ flexGrow: empty }} />}
-    </span>
-  );
-}
-
-/** The header's last row: training places and the call board, each a count against capacity with a
- * thin bar and one short line, each opening its screen. Squads are not repeated here: the roster
- * block above already shows every squad's state. */
-export function HqStatTiles({ training, board, onTraining, onCalls }: {
-  training: { inCourses: number; places: number };
-  board: { count: number; newCount: number; expiringSoon: number; max: number };
-  onTraining: () => void;
-  onCalls: () => void;
-}) {
-  const settled = Math.max(0, board.count - board.expiringSoon);
-  const free = Math.max(0, training.places - training.inCourses);
-  return (
-    <div className="hq-status-row" role="group" aria-label="Training and calls">
-      <button type="button" className="hq-tile" onClick={onTraining}>
-        <span className="hq-tile-head"><Icon name="mortarboard" size={14} />Training</span>
-        <span className="hq-tile-value"><strong>{training.inCourses}<small>/{training.places}</small></strong><small>{free ? `${free} free` : 'Full'}</small></span>
-        <CapacityBar segments={[{ key: 'training', value: training.inCourses }]} capacity={training.places} label={`${training.inCourses} of ${training.places} training places in use`} />
-      </button>
-      <button type="button" className="hq-tile" onClick={onCalls}>
-        <span className="hq-tile-head"><Icon name="pin" size={14} />Calls</span>
-        <span className="hq-tile-value"><strong>{board.count}<small>/{board.max}</small></strong><small className={board.expiringSoon ? 'tone-warn' : undefined}>{board.expiringSoon ? `${board.expiringSoon} closing` : board.newCount ? `${board.newCount} new` : 'On the board'}</small></span>
-        <CapacityBar segments={[{ key: 'strained', value: board.expiringSoon }, { key: 'live', value: settled }]} capacity={board.max} label={`${board.count} of ${board.max} calls on the board, ${board.newCount} unseen, ${board.expiringSoon} closing soon`} />
-      </button>
-    </div>
-  );
-}
 
 type Tone = 'mint' | 'amber' | 'warn' | 'danger' | 'blue' | 'neutral';
 
@@ -344,7 +307,7 @@ function DutySection({ squads, g }: { squads: Squad[]; g: GameState }) {
   const { act } = useToast();
   const { go } = useNav();
   return (
-    <Section title="Squad duty" icon="patrol" hint="Patrol earns routine funding. Standby keeps a squad ready. Rest recovers stress fastest.">
+    <Section id="hq-duties" title="Squad duty" icon="patrol" hint="Patrol earns routine funding. Standby keeps a squad ready. Rest recovers stress fastest.">
       {squads.length === 0 ? (
         <Card>
           <EmptyState icon="people" title="No squads yet">

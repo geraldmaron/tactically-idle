@@ -10,6 +10,8 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import type { ReactNode } from 'react';
 import '../../../../ui/app.css';
 import '../../../../ui/screens/ops-visual.css';
+// The game's skin, so the frame shows the player's real screen (plates, stamps, panels).
+import '../../../../ui/skin.css';
 import { NOW } from '../../../../gen/incident/gates/engine-driver';
 import { briefing, builtForScenario, decisionViews, lastResolution, pendingDebrief } from '../../../../sim/operation-selectors';
 import { responseFailurePlan } from '../../../../sim/response-failure';
@@ -358,7 +360,7 @@ function LiveScreen({ state, onReview, onConfirm,  onFail }: { state: GameState;
       onToggleRooms={() => setShowRooms(value => !value)}
       onCancel={() => {}}
       onOpenDetails={() => setPanel(panel === 'action' ? 'none' : 'action')}
-      feedback={<OperationFeedback officers={state.officers} decisions={decisions} explicitCompletion={(scenario?.version ?? 0) >= 4} onOpenLog={() => setPanel('none')} />}
+      feedback={<OperationFeedback officers={state.officers} decisions={decisions} explicitCompletion={(scenario?.version ?? 0) >= 4} currentPrompt={model.progress.prompt} onOpenLog={() => setPanel('none')} />}
       scene={sceneFor(scenario?.incident?.type)}
       situation={scenario && <SituationPanel scenario={scenario} run={run} />}
       supportContext={scenario && <><IncidentPeopleStatus scenario={scenario} run={run} state={state} />

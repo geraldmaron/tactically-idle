@@ -58,10 +58,12 @@ export function OutcomeForecast({ action }: { action: ActionView }) {
   );
 }
 
-export function DecisionCard({ decision: d, full = false, officers = {}, explicitCompletion = false }: { decision: DecisionView; full?: boolean; officers?: DebriefOfficers; explicitCompletion?: boolean }) {
+export function DecisionCard({ decision: d, full = false, officers = {}, explicitCompletion = false, currentPrompt }: { decision: DecisionView; full?: boolean; officers?: DebriefOfficers; explicitCompletion?: boolean;
+  /** The live stage prompt shown right below this card; a Next line that repeats it word for word is left out. */
+  currentPrompt?: string }) {
   // Consequences are saved facts, in authored order. A later line can contain an injury or discovery.
   const narrative = d.consequences.filter((line) => !line.startsWith('Next: '));
-  const next = d.consequences.filter((line) => line.startsWith('Next: '));
+  const next = d.consequences.filter((line) => line.startsWith('Next: ') && line.slice(6).trim() !== currentPrompt?.trim());
   const fallback = narrative.length === 0 ? d.explanation.find((line) => line.trim()) : undefined;
   return (
     <article className={`decision-card decision-${d.forceOutcome ? 'force' : d.resultLabel ? 'event' : d.band}`} aria-label={`${d.title}: ${d.forceOutcome ? 'task and harm recorded' : d.resultLabel ?? RESULT_LABEL[d.band]}`}>
@@ -136,7 +138,7 @@ export function OperationLogContents({ decisions, officers = {}, explicitComplet
 
 /** The latest result leads the live scene, ahead of the next choice. The history comes from the
  * saved run, so closing a sheet or reloading cannot discard it. */
-export function OperationFeedback({ decisions, ended = false, onOpenLog, officers = {}, explicitCompletion = false }: { decisions: DecisionView[]; ended?: boolean; onOpenLog?: () => void; officers?: DebriefOfficers; explicitCompletion?: boolean }) {
+export function OperationFeedback({ decisions, ended = false, onOpenLog, officers = {}, explicitCompletion = false, currentPrompt }: { decisions: DecisionView[]; ended?: boolean; onOpenLog?: () => void; officers?: DebriefOfficers; explicitCompletion?: boolean; currentPrompt?: string }) {
   const [open, setOpen] = useState(false);
   const last = decisions.at(-1);
   // A polite live region that is always rendered, so each new result is announced even when it is
@@ -148,7 +150,7 @@ export function OperationFeedback({ decisions, ended = false, onOpenLog, officer
     <section className="operation-feedback" aria-label="Operation feedback">
       {live}
       <div className="operation-feedback-heading"><h2>What happened</h2><Button variant="ghost" size="sm" className="operation-log-trigger" onClick={() => { onOpenLog?.(); setOpen(true); }} aria-haspopup="dialog" aria-expanded={open}>Decision log ({decisions.length})</Button></div>
-      <DecisionCard key={last.revision} decision={last} officers={officers} explicitCompletion={explicitCompletion} />
+      <DecisionCard key={last.revision} decision={last} officers={officers} explicitCompletion={explicitCompletion} currentPrompt={currentPrompt} />
       <Sheet open={open} onClose={() => setOpen(false)} title="Decision log" className="operation-log-sheet" footer={<Button block onClick={() => setOpen(false)}>{ended ? 'Return to debrief' : 'Return to operation'}</Button>}>
         <OperationLogContents decisions={decisions} officers={officers} explicitCompletion={explicitCompletion} />
       </Sheet>
