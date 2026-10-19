@@ -165,28 +165,25 @@ Needs: start=none; integrate=none; ship=none
 
 ## Gates and tooling
 
-### deploy-disabled-after-injury: Find why Deploy is disabled after a call ends with someone hurt
-Tags: job=command; journeys=answer-a-call; probes=none (investigation); lane=tooling
+### squad-ready-agrees: The squad card and Deploy agree on readiness
+Tags: job=command; journeys=answer-a-call; probes=none (readiness display); lane=engine
 Needs: start=none; integrate=none; ship=none
 
-The e2e script fails about 1 run in 7: right after a call ends with someone hurt (`entry_subject_hurt`
-on 2026-10-18, `entry_hurt` on integrating #62), the next call's Deploy button is disabled and
-`scripts/play-loop.mjs` asserts "the chosen squads can deploy". Seen twice in about 15 runs across
-different PRs, so it isn't caused by any one of them. Done: the cause is found with evidence. Either
-the script picks a squad that an injury took out of action (fix the script to pick by readiness), or
-the game disables Deploy without showing the player why (a game bug, routed to the owning lane).
+Found by tooling investigating the e2e Deploy failure (#72). `squadReadiness` marks a squad
+deployable when one officer is ready (`src/sim/department-selectors.ts`), but Deploy requires every
+officer in a chosen squad to be ready (`src/sim/operation.ts`). So after an injury the card reads
+"3 of 4 ready" and looks selectable, and Deploy then refuses with the injured officer named. Done:
+the card's deployable flag uses the same rule as Deploy (one function), and the squad card and
+Prepare screen show the same answer, with a test. If the rule itself should change (deploy short),
+that's an owner decision, not this item.
 
 ### e2e-in-ci: The browser end-to-end script runs in CI
 Tags: job=command; journeys=answer-a-call; probes=none (tooling); lane=tooling
-Needs: start=deploy-disabled-after-injury; integrate=none; ship=none
+Needs: start=none; integrate=none; ship=none
 
 `npm run test:e2e` plays the board through the real UI at 390x844 and 320x568, but neither `npm
 run verify` nor CI runs it, which is how it went stale. Done: pull-request CI runs it against a
-built preview, with its runtime and Chrome setup stated, or the backlog records why not. First fix a
-flake seen 2026-10-18 (1 of 5 runs on main at 4d81419's parent): after a barricade call ends
-`entry_subject_hurt`, the next call's Deploy button is disabled and the script asserts "the chosen
-squads can deploy". The script picks squads without checking that they're ready after an injury.
-Find whether that's the script's assumption or a game state the player can't see a reason for.
+built preview, with its runtime and Chrome setup stated, or the backlog records why not.
 
 ### fire-follows-building: Incoming fire follows the building
 Tags: job=command; journeys=chance-not-script; probes=none (a drawn-harm check, not a favorable-chance probe); lane=tooling
