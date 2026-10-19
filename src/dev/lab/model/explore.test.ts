@@ -20,6 +20,8 @@ import { decodePath } from './call';
 import { createExplorer, explore, EXPLORE_CAP, noPathText } from './explore';
 import { currentFrame, nodeAt, openSession, replayTokens } from './session';
 import { focusSquad } from './squads';
+import { certSubjects, clockSubjects, groupFixtureSession, stoppedClockSession } from './test-subjects';
+import { CLOCK_FIXTURE_IDS } from '../../../gen/incident/gates/clock-fixture';
 import type { Session } from './session';
 
 const REFERENCE = 'type=hostage_crisis&family=market_row&seed=7&tier=2&variant=1';
@@ -132,38 +134,30 @@ describe('explore', () => {
     }
   }, 120000);
 
-  it('rescue: out carried needs a vehicle operator, and the tank only runs out where it is short', () => {
-    const rescue = open('type=protected_rescue');
-    const all = explore(rescue.frames[0].state, null);
-    expect(all.truncated).toBe(false);
-    expect(Object.keys(all.endings!).sort()).toEqual(['out_together', 'out_without_chair', 'resident_hurt', 'slow_out', 'still_inside']);
-    // The crossing (where the carry is offered) is reached only through choices that need a vehicle
-    // operator, and squad A (719) has none.
-    expect(explore(rescue.frames[0].state, { node: 'crossing' })).toMatchObject({ path: null, truncated: false });
-    const locked = (q: Session, node: string, choice: string, path: string) => {
-      const id = choiceActionId('protected_rescue', node, choice);
-      return currentFrame(replayTokens(q, path)).views.find(view => view.id === id);
-    };
-    expect(locked(rescue, 'wont_leave', 'vehicle', '')).toMatchObject({ eligible: false, reason: expect.stringContaining('vehicle operator') });
-    const toTerms = explore(rescue.frames[0].state, { node: 'their_terms' }).path!;
-    expect(locked(rescue, 'their_terms', 'screen_first', toTerms)).toMatchObject({ eligible: false, reason: expect.stringContaining('vehicle operator') });
-    const granted = open('type=protected_rescue&certs=vehicle_operations');
-    const withCert = explore(granted.frames[0].state, null);
-    expect(withCert.truncated).toBe(false);
-    expect(replayed(granted, withCert.endings!.out_carried).activeRun!.endingId).toBe('out_carried');
-    // The tank: in this situation it holds 100 and drains 0.2 a minute, 500 minutes, so the longest
-    // wait ends with it still going (still_inside, the all_night branch where it lasts).
-    const tank = rescue.instance.clocks.find(clock => clock.id === 'oxygen')!;
-    expect(tank.start / tank.ratePerMin).toBe(500);
-    expect(withCert.endings).toHaveProperty('still_inside');
-    expect(withCert.endings).not.toHaveProperty('tank_ran_out');
-    // Where the tank is short (situation 3: 40 at about 1 a minute), the same wait runs it out.
-    const short = open('type=protected_rescue&variant=2');
-    const shortTank = short.instance.clocks.find(clock => clock.id === 'oxygen')!;
-    expect(shortTank.start / shortTank.ratePerMin).toBeLessThan(60);
-    const ranOut = explore(short.frames[0].state, { ending: 'tank_ran_out' }).path;
-    expect(ranOut).not.toBeNull();
-    expect(replayed(short, ranOut!).activeRun!.endingId).toBe('tank_ran_out');
+  // A cert-gated choice and a clock that routes the call: on a shipped call that has one, and always
+  // on an owned fixture (model/test-subjects.ts), so the properties are tested whatever content does.
+  // A fixture's tree isn't the registered one, so the walk is given the session's own goal test.
+  const eligibleHere = (actionId: string) => (state: GameState) => !!liveDecisions(state, NOW, focusSquad(state)).find(view => view.id === actionId)?.eligible;
+  for (const subject of certSubjects()) it(`${subject.source}: a cert-gated choice is eligible only with the cert`, () => {
+    subject.withSessions((bare, granted) => {
+      expect(explore(bare.frames[0].state, null, { holds: eligibleHere(subject.actionId) })).toMatchObject({ path: null, truncated: false });
+      expect(explore(granted.frames[0].state, null, { holds: eligibleHere(subject.actionId) }).path).not.toBeNull();
+    });
+  }, 120000);
+
+  for (const subject of clockSubjects()) it(`${subject.source}: a clock that runs out takes the call where it routes, and the path replays there`, () => {
+    subject.withSession(s => {
+      const at = (state: GameState) => 'node' in subject.target ? nodeAt(state, s.tree) === subject.target.node : state.activeRun?.endingId === subject.target.ending;
+      const found = explore(s.frames[0].state, null, { holds: at });
+      expect(found.path, JSON.stringify(subject.target)).not.toBeNull();
+      expect(at(currentFrame(replayTokens(s, found.path!)).state)).toBe(true);
+    });
+  }, 120000);
+
+  it('a clock that never runs down never takes the call there (owned fixture)', () => {
+    stoppedClockSession(s => {
+      expect(explore(s.frames[0].state, null, { holds: state => nodeAt(state, s.tree) === CLOCK_FIXTURE_IDS.node })).toMatchObject({ path: null, truncated: false });
+    });
   }, 120000);
 
   it('reaches a node, a choice on offer and an eligible choice', () => {
@@ -239,7 +233,11 @@ describe('no path, in words', () => {
     }
     expect(walked!.truncated).toBe(false);
     expect(walked!.unforced).toBeGreaterThan(0);
-    // The rescue call never reaches such a state in its default draw.
-    expect(explore(open('type=protected_rescue').frames[0].state, null).unforced).toBe(0);
+    // Control: a complete walk of the group fixture (a call the tooling owns) counts none.
+    groupFixtureSession(fixture => {
+      const all = explore(fixture.frames[0].state, null);
+      expect(all.truncated).toBe(false);
+      expect(all.unforced).toBe(0);
+    });
   }, 120000);
 });
