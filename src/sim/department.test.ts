@@ -55,7 +55,7 @@ describe('starting state', () => {
       expect(o.assignment).toBeNull();
       if (o.id !== 'off_reyes') expect(o.stress).toBeLessThanOrEqual(25);
     }
-    expect(ownedCount(s, 'radio_kit')).toBe(6);
+    expect(ownedCount(s, 'radio_kit')).toBe(Object.keys(s.officers).length);
     expect(ownedCount(s, 'thermal_imager')).toBe(0);
     expect(s.candidates).toHaveLength(3);
   });

@@ -107,6 +107,7 @@ export function createInitialState(now: number, campaignSeed = 12345): GameState
     department: {
       name: 'Westhaven Department',
       funding: 12400,
+      ledger: [],
       devPoints: 3,
       trust: 78,
       level: START_LEVEL,

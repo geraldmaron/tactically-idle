@@ -24,6 +24,7 @@ import { commandStaffActive, commandStaffSalaries, logQuartermaster, runCommandS
 import { tunable } from './tuning';
 import { staffLever } from './staff-pool';
 import { RECRUIT_TUNING } from '../content/recruits';
+import { postFunding } from './ledger';
 
 export const HOUR_MS = 3_600_000;
 
@@ -204,7 +205,7 @@ function runRestock(d: GameState, acc: Acc, t: number): void {
     const n = Math.min(need, byCeiling, byFunds);
     if (n > 0) {
       for (let i = 0; i < n; i++) createUnit(d, rule.itemId, t);
-      dep.funding -= n * def.cost;
+      postFunding(dep, -n * def.cost, 'restock', `Restocked ${def.name}`, t);
       acc.restock += n * def.cost;
     }
     if (n < need) {

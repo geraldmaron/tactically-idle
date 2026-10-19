@@ -239,6 +239,8 @@ function validBase(s: unknown): s is Record<string, unknown> {
   if (!isStrings(dep.unlockedNodes) || !dep.unlockedNodes.every((id) => Object.hasOwn(DEV_NODES, id))
     || !isList(dep.restockRules, (r) => isObj(r) && isStr(r.itemId) && Object.hasOwn(ITEMS, r.itemId) && numbers(r, ['target', 'budgetCeiling']))) return false;
   if (dep.candidateRefreshedAt !== undefined && !isNum(dep.candidateRefreshedAt)) return false;
+  if (dep.ledger !== undefined && !isList(dep.ledger, (e) => isObj(e) && numbers(e, ['seq', 'at', 'amount', 'before', 'after']) && isStr(e.label)
+    && oneOf(e.kind, ['payout', 'signing', 'severance', 'purchase', 'training', 'development', 'service', 'salvage', 'restock', 'staff', 'detail']))) return false;
   if (dep.service !== undefined && (!Number.isSafeInteger(dep.service) || (dep.service as number) < 0)) return false;
   if (dep.maintenanceBudgetPerHour !== undefined && (!isNum(dep.maintenanceBudgetPerHour) || !Number.isInteger(dep.maintenanceBudgetPerHour) || dep.maintenanceBudgetPerHour < 0 || dep.maintenanceBudgetPerHour > 500)) return false;
   if (!isObj(s.officers)) return false;

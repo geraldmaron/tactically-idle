@@ -87,6 +87,8 @@ export const OWNERSHIP: readonly { glob: string; layer: Layer; system: System }[
   { glob: '/src/content/unlocks.ts', layer: 'catalog', system: 'scenario' },
   { glob: '/src/content/items.ts', layer: 'catalog', system: 'item' },
   { glob: '/src/content/capabilities.ts', layer: 'catalog', system: 'item' },
+  // What each officer brings: chosen from the item catalog by role and certification (starter-kit).
+  { glob: '/src/content/issue-kit.ts', layer: 'catalog', system: 'item' },
   { glob: '/src/content/officers.ts', layer: 'catalog', system: 'officer' },
   { glob: '/src/content/personas.ts', layer: 'catalog', system: 'officer' },
   { glob: '/src/content/recruits.ts', layer: 'catalog', system: 'officer' },
@@ -130,6 +132,8 @@ export const OWNERSHIP: readonly { glob: string; layer: Layer; system: System }[
   // Agitation and rapport are a subject's temper.
   { glob: '/src/sim/meters.ts', layer: 'engine', system: 'subject' },
   { glob: '/src/sim/save*.ts', layer: 'engine', system: 'platform' },
+  // The department's books: every system that spends or earns posts here, like it saves through save.ts.
+  { glob: '/src/sim/ledger.ts', layer: 'engine', system: 'platform' },
   { glob: '/src/sim/campaign-*.ts', layer: 'engine', system: 'platform' },
   { glob: '/src/sim/game.ts', layer: 'engine', system: 'platform' },
   { glob: '/src/sim/environment.ts', layer: 'engine', system: 'blueprint' },
@@ -181,5 +185,7 @@ export const SYSTEM_EDGE_REASONS: Readonly<Record<string, string>> = {
   'metric -> officer': 'chain',
   'metric -> scenario': 'chain',
   'metric -> subject': 'chain',
+  // An officer arrives with issue kit and the signing pays for it (starter-kit, owner decision 2026-10-19).
+  'officer -> item': 'issue kit: a hire brings items into the pool, priced into the signing',
 };
 export const SYSTEM_EDGES: readonly string[] = Object.keys(SYSTEM_EDGE_REASONS);

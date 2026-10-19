@@ -4,9 +4,12 @@ import { hqOverview } from './hq-selectors';
 const NOW = Date.UTC(2026, 9, 3);
 describe('truthful department overview', () => {
   it('separates personnel from standard-radio availability', () => {
-    const state = createInitialState(NOW, 1); const view = hqOverview(state, NOW);
+    const state = createInitialState(NOW, 1);
+    expect(hqOverview(state, NOW).radios.shortage).toBe(0); // starter-kit: a radio for every officer
+    for (const radio of Object.values(state.units).filter((u) => u.itemId === 'radio_kit').slice(0, 2)) radio.status = 'scrapped';
+    const view = hqOverview(state, NOW);
     expect(view.totalOfficers).toBe(8); expect(view.radios.required).toBe(8);
-    expect(view.radios.shortage).toBeGreaterThan(0);
+    expect(view.radios.shortage).toBe(2);
     expect(view.deployable).toBeGreaterThan(view.radios.available);
     expect(view.fresh + view.strained).toBe(view.deployable);
   });

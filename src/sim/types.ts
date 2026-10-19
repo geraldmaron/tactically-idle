@@ -331,7 +331,10 @@ export interface Officer {
 export interface Candidate {
   id: Id;
   officer: Officer; // squadId null, assignment null
+  /** Total due at signing, issue kit included. */
   signingCost: number;
+  /** The part of signingCost that pays for the officer's issue kit (content/issue-kit.ts). */
+  issueKit?: number;
   shortlisted: boolean;
   expiresAt: number;
 }
@@ -482,9 +485,26 @@ export interface Course {
   grants: { cert?: CertId; rating?: { key: RatingKey; delta: number } };
 }
 
+/** What a ledger entry was for (src/sim/ledger.ts). */
+export type LedgerKind = 'payout' | 'signing' | 'severance' | 'purchase' | 'training' | 'development' | 'service' | 'salvage' | 'restock' | 'staff' | 'detail';
+
+/** One discrete change to funding, with the balance either side (save v11). */
+export interface LedgerEntry {
+  /** Increases with every new or folded entry, so a viewer can tell what it has not shown yet. */
+  seq: number;
+  at: number;
+  amount: number;
+  before: number;
+  after: number;
+  kind: LedgerKind;
+  label: string;
+}
+
 export interface Department {
   name: string;
   funding: number;
+  /** Recent funding events, oldest first, capped (src/sim/ledger.ts). Optional for fixtures. */
+  ledger?: LedgerEntry[];
   devPoints: number;
   /** Standing, 0..100. Not spendable. */
   trust: number;

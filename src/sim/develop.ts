@@ -14,6 +14,7 @@ import { quoteDevelopment } from './development-tiers';
 import { MANAGERS } from './command-staff';
 import { tunable } from './tuning';
 import { courseFee } from './staff-pool';
+import { postFunding } from './ledger';
 
 /** Tunable (sim/tuning.ts). */
 export const DEVELOP_TUNING = tunable('DEVELOP_TUNING', {
@@ -71,7 +72,7 @@ function unlockNode(d: GameState, nodeId: Id, expectedTier = 1): HandlerResult {
   const { node, cost, targetTier, effects, currentEffects } = quote;
   const dep = d.department;
   dep.devPoints -= cost!.dp;
-  dep.funding -= cost!.funding;
+  postFunding(dep, -cost!.funding, 'development', `${node!.name} ${['I', 'II', 'III', 'IV', 'V'][targetTier! - 1] ?? targetTier}`, simNow(d));
   dep.developmentTiers ??= {};
   dep.developmentTiers[node!.id] = targetTier!;
   if (!dep.unlockedNodes.includes(node!.id)) dep.unlockedNodes.push(node!.id);
@@ -145,7 +146,7 @@ function startCourse(d: GameState, officerId: Id, courseId: Id): HandlerResult {
   const check = courseCheck(d, course, officer);
   if (!check.ok) return refusal(check.reason ?? 'Cannot start this course');
   const t = simNow(d);
-  d.department.funding -= courseFee(d, course.cost);
+  postFunding(d.department, -courseFee(d, course.cost), 'training', `${course.name} for ${officer.surname}`, t);
   officer.assignment = { kind: 'training', courseId, startedAt: t, endsAt: t + Math.round(course.hours * HOUR_MS) };
   return OK;
 }
@@ -176,9 +177,9 @@ function buyItem(d: GameState, itemId: Id, qty: number): HandlerResult {
   if (!Number.isInteger(qty) || qty < 1 || qty > DEVELOP_TUNING.maxPurchase) return refusal(`Quantity must be a whole number from 1 to ${DEVELOP_TUNING.maxPurchase}`);
   const check = itemCheck(d, item, qty);
   if (!check.ok) return refusal(check.reason ?? 'Cannot buy this item');
-  d.department.funding -= item.cost * qty;
   // Every purchase is individual units: condition 100, their own wear rate, and a shelf life for consumables.
   const now = simNow(d);
+  postFunding(d.department, -item.cost * qty, 'purchase', qty > 1 ? `${qty} ${item.name}` : item.name, now);
   for (let i = 0; i < qty; i++) createUnit(d, itemId, now);
   return OK;
 }

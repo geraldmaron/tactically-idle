@@ -25,6 +25,9 @@ import { applyRetention, CAREER_TUNING, retentionCheck, mandatoryRetirementDay }
 import { markEmployed } from './personnel';
 import { applySquadArrangement, setSquadArrangementLock, undoSquadArrangement } from './squad-optimizer';
 import { tunable } from './tuning';
+import { postFunding } from './ledger';
+import { issueKit } from '../content/issue-kit';
+import { createUnit } from './equipment';
 
 /** Tunable (sim/tuning.ts), except `maxSquads`: the squad slots are SQUAD_IDS, so it only names them. */
 export const ROSTER_TUNING = tunable('ROSTER_TUNING', {
@@ -88,9 +91,11 @@ function hire(d: GameState, candidateId: Id, netRate: NetRate): HandlerResult {
   const idx = d.candidates.findIndex((c) => c.id === candidateId);
   const cand = d.candidates[idx];
   markEmployed(d, cand.officer);
-  d.department.funding -= cand.signingCost;
+  postFunding(d.department, -cand.signingCost, 'signing', `Signed ${fullName(cand.officer)}`, simNow(d));
   d.candidates.splice(idx, 1);
   d.officers[cand.officer.id] = { ...cand.officer, squadId: null, assignment: null, hiredAt: simNow(d) };
+  // The officer's issue kit joins the department pool (its cost is part of the signing).
+  for (const itemId of issueKit(cand.officer)) createUnit(d, itemId, simNow(d));
   return OK;
 }
 
@@ -127,7 +132,7 @@ function detachFromSquad(d: GameState, officerId: Id): void {
 function dismiss(d: GameState, officerId: Id, netRate: NetRate): HandlerResult {
   const check = dismissCheck(d, officerId, netRate);
   if (!check.ok) return refusal(check.reason ?? 'Cannot dismiss');
-  d.department.funding -= check.upfront;
+  postFunding(d.department, -check.upfront, 'severance', `Severance for ${fullName(d.officers[officerId])}`, simNow(d));
   detachFromSquad(d, officerId);
   delete d.officers[officerId];
   // Dismissed officers are never added back to the candidate pool.

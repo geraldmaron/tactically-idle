@@ -272,15 +272,6 @@ staff, unlock, grant, detail) go through one ledger with before and after; hourl
 rate and a shift-report line. The top bar counts to new values with floating deltas and opens a
 Finance sheet with the hourly breakdown and recent entries.
 
-### starter-kit: New departments and hires arrive equipped
-Tags: job=build; journeys=hire-and-equip; probes=none (starting gear); lane=engine
-Needs: start=none; integrate=none; ship=none
-
-Owner decision 2026-10-19. Each officer brings a role kit into the pool: a radio for everyone, a
-sidearm only with entry_team, and a role tool. The radio is free; the rest is a visible issue-kit
-line in the signing cost. The starting department is a start-up grant of its officers' kits plus
-department kit.
-
 ### gear-armory: One Armory list replaces Inventory and Equipment
 Tags: job=build; journeys=hire-and-equip; probes=none (layout); lane=interface
 Needs: start=none; integrate=none; ship=none

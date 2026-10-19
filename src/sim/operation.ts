@@ -68,6 +68,7 @@ import { conditionHolds, withFlag } from './conditions';
 import { departmentUpkeep } from './equipment-manager-policy';
 import { vantageZones } from './sightlines';
 import { sightings } from './sightings';
+import { postFunding } from './ledger';
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
 const clamp = (n: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, n));
@@ -1085,7 +1086,7 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     // v13 careers read the same scored factor the debrief paid out (sim/outcome-score.ts).
     const factor = scenario!.incidentPeople?.length && !run.responseFailure ? scoreCall(scenario!, run, { officers: draft.officers, steps: traceRun(scenario!, run).steps }).factor : outcomeFactor(run);
     const verdict: 'favorable' | 'adverse' | null = factor >= CAREER_TUNING.favorableAt && (result.completionAchieved) ? 'favorable' : factor < CAREER_TUNING.adverseBelow ? 'adverse' : null;
-    draft.department.funding += result.fundingReward;
+    postFunding(draft.department, result.fundingReward, 'payout', `Call payout, ${scenario?.title ?? result.endingTitle}`, draft.department.clockHighWater);
     draft.department.devPoints += result.devPointReward;
     draft.department.trust = clamp(draft.department.trust + result.trustDelta, 0, 100);
     if (result.serviceEarned !== undefined) addService(draft.department, result.serviceEarned);

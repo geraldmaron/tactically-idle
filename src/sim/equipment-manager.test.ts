@@ -124,7 +124,7 @@ describe('equipment manager', () => {
     state.reservations.push({ id: 'held', runId: 'elsewhere', squadId: 'A', itemId: otherShield.itemId, unitId: otherShield.id });
     const next = ok(state, { type: 'tick' }, T0 + HOUR_MS);
     expect(Object.values(next.units).filter((u) => u.status === 'service')).toHaveLength(0);
-    expect(Object.values(next.units).filter((u) => u.itemId === 'radio_kit' && u.status === 'ready')).toHaveLength(6);
+    expect(Object.values(next.units).filter((u) => u.itemId === 'radio_kit' && u.status === 'ready')).toHaveLength(8);
     const failedRadio = Object.values(next.units).find((u) => u.itemId === 'radio_kit')!;
     failedRadio.condition = 0;
     const repaired = ok(next, { type: 'tick' }, T0 + 2 * HOUR_MS);

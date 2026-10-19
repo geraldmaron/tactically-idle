@@ -2,6 +2,7 @@ import type { Candidate, CertId, Id, Officer, RatingKey, Ratings, Role, TraitId 
 import { hashSeed, next } from '../sim/rng';
 import { shuffledPersonas, type Persona } from './personas';
 import { tunable } from '../sim/tuning';
+import { issueKitCost } from './issue-kit';
 
 /** Tunable (sim/tuning.ts). A candidate's cost, wage, ratings and expiry are set when the candidate
  * is drawn, so those fields reach new candidates only. `rookieService` is read nowhere. */
@@ -133,9 +134,11 @@ function candidateFor(gen: RecruitGen, now: number, person: Persona, day: number
   const officer = structuredClone(gen.builds?.[person.id] ?? buildPersona(person, seed, undefined, day));
   if (gen.builds) gen.builds[person.id] = structuredClone(officer);
   const service = Math.max(0, (day - officer.serviceStartDay) / 365);
+  const issueKit = issueKitCost(officer);
   return {
     id: `cand_${gen.nextId++}`, officer,
-    signingCost: Math.round((officer.wage * RECRUIT_TUNING.signingHours + service * RECRUIT_TUNING.signingPerServiceYear) / 10) * 10,
+    signingCost: Math.round((officer.wage * RECRUIT_TUNING.signingHours + service * RECRUIT_TUNING.signingPerServiceYear) / 10) * 10 + issueKit,
+    issueKit,
     shortlisted: false, expiresAt: now + RECRUIT_TUNING.lifetimeMs,
   };
 }

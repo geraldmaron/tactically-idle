@@ -33,7 +33,7 @@ describe('starting units', () => {
 
   it('turns the starting stock into individual units with unique serials', () => {
     const counts = Object.fromEntries(Object.keys(ITEMS).map((id) => [id, unitsOf(s, id).length]));
-    expect(counts).toMatchObject({ radio_kit: 6, loud_hailer: 2, throw_phone: 1, ballistic_shield: 2, door_ram: 1, trauma_kit: 6, thermal_imager: 0, camera_drone: 0 });
+    expect(counts).toMatchObject({ radio_kit: 8, loud_hailer: 2, throw_phone: 1, service_sidearm: 2, ballistic_shield: 2, door_ram: 1, observation_binoculars: 2, trauma_kit: 6, thermal_imager: 0, camera_drone: 0 });
     const serials = Object.values(s.units).map((u) => u.serial);
     expect(new Set(serials).size).toBe(serials.length);
     expect(unitsOf(s, 'radio_kit')[0].serial).toBe('RH-0101');
@@ -298,10 +298,10 @@ describe('scrapping', () => {
     let s = createInitialState(T0);
     s = ok(s, { type: 'unlockNode', nodeId: 'logistics_presets' }, T0);
     s = ok(s, { type: 'unlockNode', nodeId: 'logistics_restock' }, T0);
-    s = ok(s, { type: 'setRestockRule', rule: { itemId: 'radio_kit', target: 6, budgetCeiling: 2000 } }, T0);
+    s = ok(s, { type: 'setRestockRule', rule: { itemId: 'radio_kit', target: 8, budgetCeiling: 2000 } }, T0);
     s = ok(s, { type: 'scrapUnit', unitId: unitsOf(s, 'radio_kit')[0].id }, T0);
     const next = ok(s, { type: 'tick' }, T0 + HOUR_MS);
-    expect(ownedCount(next, 'radio_kit')).toBe(6);
+    expect(ownedCount(next, 'radio_kit')).toBe(8);
     const fresh = unitsOf(next, 'radio_kit').filter((u) => u.acquiredAt >= T0);
     expect(fresh).toHaveLength(1);
     expect(fresh[0].condition).toBeGreaterThan(99);
@@ -316,7 +316,7 @@ describe('store and unit views', () => {
     radios[1].condition = 10; // failed
     s = ok(s, { type: 'serviceUnit', unitId: radios[2].id }, T0);
     const opt = storeOptions(s).find((o) => o.item.id === 'radio_kit')!;
-    expect(opt).toMatchObject({ owned: 6, ready: 4, inService: 1, unreliable: 1, reserved: 0, expired: 0 });
+    expect(opt).toMatchObject({ owned: 8, ready: 6, inService: 1, unreliable: 1, reserved: 0, expired: 0 });
     expect(opt.meanCondition).toBeGreaterThan(50);
     expect(opt.meanCondition).toBeLessThan(95);
     expect(storeOptions(s).find((o) => o.item.id === 'thermal_imager')!.meanCondition).toBeNull();
