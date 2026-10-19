@@ -30,6 +30,7 @@ import { getScenario } from './scenario-registry';
 import { ITEMS } from '../content/items';
 import { deployability } from './officer';
 import { availableUnits, builtFor, evaluateAction, getBuilt, RESOLUTION_TUNING, squadLabel, tagNames, type Evaluation } from './resolution';
+import { teamMinutes } from './clocks';
 import { conditionHolds } from './conditions';
 import { checkStart, computeDebrief, defaultSupport, evaluateDefault, decisionViewsFor, matchedEffects, matchedOutcomeIndices } from './operation';
 import { drawnDistribution, type DrawnDistribution } from './drawn-effects';
@@ -534,8 +535,9 @@ export function drawnDistributionAt(state: GameState, actionId: string, band: Ou
   const built = builtFor(run.locationFamilyId, run.locationSeed, run.flags);
   const ev = acting ? evaluateAction({ state, run, scenario, action, built, acting, support: defaultSupport(run, action, acting) })
     : evaluateDefault(state, run, scenario, built, action, null).ev;
-  const indices = matchedOutcomeIndices(action, band, run, scenario);
-  return drawnDistribution(matchedEffects(action, band, run, scenario), { state, run, scenario, acting: ev.acting, participantIds: ev.participantIds, unitsOf: availableUnits })
+  const clockBase = teamMinutes(ev, action, band);
+  const indices = matchedOutcomeIndices(action, band, run, scenario, clockBase);
+  return drawnDistribution(matchedEffects(action, band, run, scenario, clockBase), { state, run, scenario, acting: ev.acting, participantIds: ev.participantIds, unitsOf: availableUnits })
     .map((entry) => ({ ...entry, effect: indices[entry.effect] }));
 }
 
