@@ -716,6 +716,8 @@ export interface DebriefResult {
   endingTitle: string;
   /** Absent only in older saved debriefs. */
   endingSummary?: string;
+  /** The ending's epilogue, frozen when the call ends (call-surfaces, E11.2). */
+  endingEpilogue?: string;
   /** Saved disposition and receiver evidence survive future content updates. */
   disposition?: CompletionDisposition;
   completionAchieved?: boolean;

@@ -173,7 +173,7 @@ function validDebrief(d: unknown): boolean {
     && isList(d.informationPreserved, (f) => isObj(f) && strings(f, ['factId', 'label']) && oneOf(f.status, KNOWLEDGE))
     && isList(d.resources, (i) => isObj(i) && isStr(i.itemId) && numbers(i, ['used', 'returned']))
     && isList(d.unitWear, (u) => isObj(u) && strings(u, ['unitId', 'itemId', 'serial']) && numbers(u, ['before', 'after']))
-    && (d.endingSummary === undefined || isStr(d.endingSummary)) && (d.decisions === undefined || isList(d.decisions, validDecisionView))
+    && (d.endingSummary === undefined || isStr(d.endingSummary)) && (d.endingEpilogue === undefined || isStr(d.endingEpilogue)) && (d.decisions === undefined || isList(d.decisions, validDecisionView))
     && (d.officerCasualties === undefined || isList(d.officerCasualties, validCasualtyRecord))
     && (d.personCasualties === undefined || isList(d.personCasualties, validPersonCasualtyRecord))
     && (d.civilianOutcomes === undefined || isList(d.civilianOutcomes, person => isObj(person) && strings(person, ['id', 'label']) && oneOf(person.status, ['unaccounted', 'needs_help', 'safe', 'injured_needs_care', 'care_accepted', 'accounted_elsewhere', 'deceased'])))
