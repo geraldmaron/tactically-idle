@@ -37,7 +37,15 @@ BUDGETS = {
     "still_needed": (None, 8, False), "objective": (None, 8, True),
     "civilian_outcome": (None, 6, False), "radio": (None, 10, False), "speech": (None, 15, False),
     "service": (None, 15, True), "debrief": (None, 10, False), "pressure_label": (None, 4, True),
+    # Transcript lines (TreeNode.exchange before the check, TreeOutcome.exchange after) and the
+    # ending epilogue: the depth surfaces (owner 2026-10-19, swat-call-design E16 and E17).
+    "exchange": (90, 15, True), "exchange_result": (90, 15, False), "epilogue": (200, 30, False),
 }
+# Spoken lines. The speaker is the source, so an accusation is the speaker's framing, and speech
+# may shout, front a clause and say what it feels (E17).
+SPOKEN = ("exchange", "exchange_result", "speech", "radio")
+# Fragment-only strings allowed per call in narration (E17 raised it from 2).
+FRAGMENT_CAP = 4
 LOCKED_CLAMP = 80
 HOOK_CHARS = 130
 BANDS = ("favorable", "mixed", "adverse")
@@ -264,7 +272,7 @@ def main():
             flag("colon", row, f"...{text[max(0, m.start() - 20):m.start() + 20]}...")
         if ";" in text:
             flag("semicolon", row, "split the sentence")
-        if "!" in text and OQ not in text:
+        if "!" in text and OQ not in text and surface not in SPOKEN:
             flag("exclamation", row, "only in shouted dialogue")
         if "'" in text:
             flag("apostrophe", row, "straight apostrophe, data uses curly")
@@ -293,6 +301,8 @@ def main():
             flag("it-check", row, "read this string alone; does 'it' have a referent inside it?")
         for s in sentences(unquoted(text)):
             words = s.split()
+            if surface in SPOKEN:
+                continue
             if INVERSION.search(s) or MOVED_FRAGMENT.search(s):
                 flag("inversion", row, f"'{s[:50]}'; plain subject and verb")
             m = re.match(r"^([A-Z][\w" + APOS + r"']*)((?: [\w" + APOS + r"']+){0,6}), ([\w" + APOS + r"']+)\b", s)
@@ -314,12 +324,12 @@ def main():
                 result_tense[tenses.pop()] += 1
         if surface in PROSE_SURFACES and sentences(unquoted(text)) and all(is_fragment(s) for s in sentences(unquoted(text))):
             fragment_only.append(row)
-        for c in sorted(cast):
+        for c in sorted(cast) if surface not in SPOKEN else []:
             n = len(re.findall(r",\s+" + re.escape(c) + r"\s+(says|said|tells|told|decides|decided)\b", low))
             if n:
                 speech_tags[c] += n
         spoken = [q.lower().replace(APOS, "'") for q in QUOTED.findall(text)]
-        if surface in ("speech", "radio"):
+        if surface in SPOKEN:
             spoken = [low.replace(APOS, "'")]
         for q in sorted(set(spoken)):
             for p in STOCK_SPOKEN:
@@ -355,7 +365,7 @@ def main():
                     flag("unsafe" if name == "UNSAFE_DETAIL" else "meta", row, m.group(0))
             for s in sentences(text):
                 neg = lint.get("NEGATED") and lint["NEGATED"].search(s)
-                if pre and lint.get("ACCUSATION") and (m := lint["ACCUSATION"].search(s)):
+                if pre and surface not in SPOKEN and lint.get("ACCUSATION") and (m := lint["ACCUSATION"].search(s)):
                     if not (lint.get("HEDGE") and lint["HEDGE"].search(s)) and not neg:
                         flag("accusation", row, f"'{m.group(0)}' needs a source in the sentence")
                 if lint.get("SETTLED") and (m := lint["SETTLED"].search(s)) and not neg:
@@ -366,9 +376,9 @@ def main():
                 policy.append((row["where"], row["situation"], m.group(0), "matches " + "+".join(hits) if hits else "matches none"))
 
     # Call-level counts from the row pass.
-    if len(fragment_only) > 2:
+    if len(fragment_only) > FRAGMENT_CAP:
         for r in fragment_only:
-            flag("fragments", r, f"fragment-only string ({len(fragment_only)} in the call, limit 2): {r['text'][:50]}")
+            flag("fragments", r, f"fragment-only string ({len(fragment_only)} in the call, limit {FRAGMENT_CAP}): {r['text'][:50]}")
     if len(result_tense) == 2:
         minority = min(result_tense, key=result_tense.get)
         flag("tense-call", None, f"results run {dict(result_tense)}; the {minority} ones break the call's tense")
