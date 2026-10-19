@@ -208,6 +208,9 @@ call never reaches a narrow-window state. The rescue rows break when `rescue-mod
 old tree. Done: those tests use owned fixtures, or derive ids from the tree under test; the rescue
 rows first, before `rescue-model-first` integrates. The full table is in PR #58.
 
+Slices shipped: the hostage owner_down pins (#67) and the barricade-swap and squad-count pins (#69).
+Left: the rescue rows (`explore`, `why`, `squads`, `deps/model` lab tests).
+
 ### xray-band-minutes: The lab's X-ray uses the engine's decision minutes
 Tags: job=understand; journeys=none (lab tooling); probes=none (tooling); lane=tooling
 Needs: start=none; integrate=none; ship=none
@@ -215,15 +218,6 @@ Needs: start=none; integrate=none; ship=none
 `bandMinutes` in `src/dev/lab/model/xray.ts` keeps its own copy of the commit's time formula. It
 gives the same answer today (#65), but it can drift. Done: it calls `decisionMinutes` from
 `src/sim/clocks.ts`, with a test that the X-ray's minutes equal the engine's for a sampled decision.
-
-### hostage-gate-requests: Gate requests from the hostage review
-Tags: job=command; journeys=answer-a-call; probes=none (tooling); lane=tooling
-Needs: start=none; integrate=none; ship=none
-
-N6 coverage starts that cross group size (`src/gen/incident/trees-v13/coverage.test.ts`), N7
-`check:strings` binding distinct names and pronouns, N9 prose lint on dashes, colons and stock
-phrases (`src/gen/incident/gates/prose-lint.ts`), and N21 a shift sampler for crisis frequency.
-Stricter checks may add findings to calls in progress; tell the calls lane before merging.
 
 ### scale-gates: Scale gates (M6)
 Tags: job=command; journeys=answer-a-call, choices-branch; probes=none (gates); lane=tooling
@@ -242,9 +236,8 @@ It exits 1 today only on the barricade, armed and rescue trees, which the model-
 replace. Its output isn't deterministic either: two runs on the same commit (main, 2026-10-18) list
 the same findings by kind, scope and field path, but in a different order and quoting a different
 repeated phrase. Done: the output is byte-identical across runs (stable order, a deterministic choice
-of quoted phrase), `npm run verify` and pull-request CI run it, and it passes. The checker itself
-is deterministic since #57; the `check:strings` wrapper's own ordering is in
-`hostage-gate-requests`.
+of quoted phrase), `npm run verify` and pull-request CI run it, and it passes. The checker is
+deterministic since #57, and the `check:strings` wrapper since #64 (byte-identical across runs).
 
 ## Player experience
 
