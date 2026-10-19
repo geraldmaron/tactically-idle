@@ -61,6 +61,7 @@ export function deployability(o: Officer, now: number): { ok: true } | { ok: fal
   if (o.injury && o.injury.until > now) return { ok: false, reason: `${o.surname} is injured (${o.injury.label})` };
   if (stressBand(o.stress) === 'recovery') return { ok: false, reason: `${o.surname} is in mandatory recovery` };
   if (o.assignment?.kind === 'training') return { ok: false, reason: `${o.surname} is in training` };
+  if (o.assignment?.kind === 'detail') return { ok: false, reason: `${o.surname} is on an instructor detail` };
   if (o.assignment?.kind === 'operation') return { ok: false, reason: `${o.surname} is already deployed` };
   return { ok: true };
 }

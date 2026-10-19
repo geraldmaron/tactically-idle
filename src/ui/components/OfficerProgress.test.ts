@@ -13,6 +13,8 @@ function officer(years = 1): Officer {
   o.career = { operations: 0, favorable: 0, adverse: 0 };
   o.role = 'comms';
   o.ratings.communication = 60;
+  // Aptitude 1 (mean composure and awareness 50), so the band alone sets the rate here.
+  o.ratings.composure = o.ratings.awareness = 50;
   o.xp = 130;
   o.xpBanked = 100;
   return o;

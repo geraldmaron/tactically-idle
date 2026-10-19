@@ -117,6 +117,9 @@ describe('age and learning', () => {
 
   it('xp becomes rating growth scaled by experience band: rookies faster, veterans slower', () => {
     const s = createInitialState(T0);
+    // Hold aptitude at 1 (mean composure and awareness 50) so only the band moves the rate here;
+    // officer-value.test.ts covers aptitude.
+    for (const o of Object.values(s.officers)) o.ratings.composure = o.ratings.awareness = 50;
     const park = s.officers.off_park; // rookie medic: 100/1.3 = 77 xp per point
     const medical = park.ratings.medical;
     park.xp += 76;
@@ -135,6 +138,7 @@ describe('age and learning', () => {
     // The same 100 xp is worth more to a rookie than to a veteran.
     const gain = (id: string) => {
       const x = createInitialState(T0).officers[id];
+      x.ratings.composure = x.ratings.awareness = 50;
       x.xp += 300;
       return applyXpGrowth(x, 0);
     };

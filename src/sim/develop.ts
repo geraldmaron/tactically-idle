@@ -109,6 +109,7 @@ export function courseCheck(state: GameState, course: Course, officer: Officer |
   if (officer) {
     if (officer.assignment?.kind === 'operation') return no(`${fullName(officer)} is deployed`);
     if (officer.assignment?.kind === 'training') return no(`${fullName(officer)} is already in training`);
+    if (officer.assignment?.kind === 'detail') return no(`${fullName(officer)} is on an instructor detail`);
     const missing = (course.requiresCerts ?? []).filter((cert) => !officer.certs.includes(cert));
     if (missing.length) return no(`Requires prior qualification: ${missing.map((cert) => cert.replaceAll('_', ' ')).join(', ')}`);
     const { cert, rating } = course.grants;

@@ -25,6 +25,7 @@ import { tunable } from './tuning';
 import { staffLever } from './staff-pool';
 import { RECRUIT_TUNING } from '../content/recruits';
 import { postFunding } from './ledger';
+import { completeDetails } from './detail';
 
 export const HOUR_MS = 3_600_000;
 
@@ -229,6 +230,7 @@ function applyDue(d: GameState, prev: number, t: number, acc: Acc, restock: bool
       return ea - eb || a.id.localeCompare(b.id);
     });
   for (const o of due) applyCourseCompletion(d, o, acc);
+  completeDetails(d, t);
   for (const o of Object.values(d.officers)) {
     if (o.injury && o.injury.until <= t) o.injury = null;
   }
@@ -252,7 +254,7 @@ function nextEventTime(d: GameState, t: number, T: number, W: number, restockAct
     if (x !== null && x > t && x < e) e = x;
   };
   for (const o of Object.values(d.officers)) {
-    if (o.assignment?.kind === 'training') consider(o.assignment.endsAt);
+    if (o.assignment?.kind === 'training' || o.assignment?.kind === 'detail') consider(o.assignment.endsAt);
     if (o.injury) consider(o.injury.until);
   }
   consider(nextUnitEventTime(d, t));

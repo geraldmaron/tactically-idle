@@ -9,7 +9,8 @@ import { ROSTER_TUNING } from './roster';
 import { INCIDENT_TUNING } from './incidents';
 import { CLOCK_RULES_V1 } from './clocks';
 import { FORCE_RISK_V1 } from './force-risk';
-import { CAREER_TUNING, LEARNING_MULTIPLIER } from './career';
+import { CAREER_TUNING, LEARNING_APTITUDE, LEARNING_MULTIPLIER } from './career';
+import { DETAIL_TUNING } from './detail';
 import { DEVELOP_TUNING } from './develop';
 import { THREAT_TUNING } from './threat';
 import { ENV_TUNING } from './environment';
@@ -30,7 +31,7 @@ import { RECRUIT_TUNING } from '../content/recruits';
 const LIVE: Record<string, object> = {
   RESOLUTION_TUNING, EXPERIENCE_TUNING, STRESS_TUNING, SPATIAL_TUNING, ROSTER_TUNING, INCIDENT_TUNING, CLOCK_RULES_V1, FORCE_RISK_V1, CAREER_TUNING,
   LEARNING_MULTIPLIER, DEVELOP_TUNING, THREAT_TUNING, ENV_TUNING, OUTCOME_SCORE_V1, AUTHORIZATION_V1, INCIDENT_CLASS_V1, INTEL_V1, INCOMING_FIRE_V1,
-  TEAM_FORCE_V1, CASCADE_V1, METERS_V1, ECONOMY_TUNING, EQUIPMENT_TUNING, RECRUIT_TUNING,
+  TEAM_FORCE_V1, CASCADE_V1, METERS_V1, ECONOMY_TUNING, EQUIPMENT_TUNING, RECRUIT_TUNING, LEARNING_APTITUDE, DETAIL_TUNING,
 };
 
 /** Every leaf under `value` as [path, value]; a list is one leaf. */
@@ -42,7 +43,7 @@ const at = (table: object, path: string) => path.split('.').slice(1).reduce<unkn
 
 describe('the registry', () => {
   it('registers every table spec 7.4 wraps, and nothing else', () => {
-    expect(TUNED_TABLES).toHaveLength(24);
+    expect(TUNED_TABLES).toHaveLength(26);
     expect(registeredTables()).toEqual([...TUNED_TABLES].sort());
     expect(Object.keys(LIVE).sort()).toEqual([...TUNED_TABLES].sort());
   });

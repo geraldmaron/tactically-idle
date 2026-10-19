@@ -185,7 +185,7 @@ export function recoveryInfo(state: GameState, officerId: Id, now: number): Reco
   let at: number | null = t;
   let fixable = true;
   if (isInjured(o, t)) at = Math.max(at, o.injury!.until);
-  if (o.assignment?.kind === 'training') at = Math.max(at, o.assignment.endsAt);
+  if (o.assignment?.kind === 'training' || o.assignment?.kind === 'detail') at = Math.max(at, o.assignment.endsAt);
   if (o.assignment?.kind === 'operation') fixable = false;
   if (stress >= STRESS_BANDS.recovery) {
     if (rate > 0) at = Math.max(at, t + ((stress - STRESS_BANDS.recovery) / rate) * HOUR_MS + 1000);
@@ -253,6 +253,7 @@ export function squadReadiness(state: GameState, squadId: SquadId, now: number):
     const wait = info.deployableAt !== null ? ` ~${formatDuration(info.deployableAt - t)}` : '';
     if (o.assignment?.kind === 'operation') issues.push(`${o.surname}: deployed`);
     else if (o.assignment?.kind === 'training') issues.push(`${o.surname}: in training${wait}`);
+    else if (o.assignment?.kind === 'detail') issues.push(`${o.surname}: on an instructor detail${wait}`);
     else if (isInjured(o, t)) issues.push(`${o.surname}: injured (${o.injury!.label})${wait}`);
     else issues.push(`${o.surname}: mandatory recovery${wait}`);
   }

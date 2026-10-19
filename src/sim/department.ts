@@ -14,6 +14,7 @@ import { START_LEVEL } from './department-level';
 import { INCIDENT_CONTENT_VERSION } from '../gen/incident';
 import { COMMAND_STAFF_HANDLERS, createCommandStaff, fillOpenPosts } from './command-staff';
 import { departmentUpkeep } from './equipment-manager-policy';
+import { startDetail } from './detail';
 
 const fail = (reason: string): HandlerResult => ({ ok: false, reason });
 
@@ -90,6 +91,7 @@ export const DEPARTMENT_HANDLERS: HandlerMap<DepartmentCommandType> = {
   setMaintenanceBudget: (d, c) => setMaintenanceBudget(d, c.perHour),
   scrapUnit: (d, c) => EQUIPMENT_HANDLERS.scrapUnit(d, c.unitId),
   offerRetention: (d, c) => ROSTER_HANDLERS.offerRetention(d, c.officerId, netRate),
+  startDetail: (d, c) => startDetail(d, c.officerId),
   markIncidentsSeen: (d) => INCIDENT_HANDLERS.markIncidentsSeen(d),
   setManagerEnabled: (d, c) => COMMAND_STAFF_HANDLERS.setManagerEnabled(d, c.managerId, c.enabled),
   setManagerPolicy: (d, c) => COMMAND_STAFF_HANDLERS.setManagerPolicy(d, c.patch),

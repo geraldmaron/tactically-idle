@@ -19,6 +19,11 @@ import { ISSUE_RADIO, issueKit } from '../../content/issue-kit';
 import { ITEMS } from '../../content/items';
 import { GearArtFrame } from '../art/GearArt';
 import { Sheet } from '../components/Sheet';
+import { learningPace, type LearningPace } from '../../sim/career';
+import { detailRate } from '../../sim/detail';
+import { gameDay } from '../../sim/calendar';
+
+export const PACE_LABEL: Record<LearningPace, string> = { fast: 'Fast', steady: 'Steady', slow: 'Slowly' };
 
 export interface HireReceipt { candidate: Candidate; projection: Projection; index: number }
 
@@ -178,6 +183,8 @@ export function HireContract({ c, proj, hired, open, onClose, onConfirm }: { c: 
   const kitCost = c.issueKit ?? 0;
   const scale = Math.max(1, Math.abs(proj.netBefore), Math.abs(proj.netAfter));
   const short = proj.netAfter < 0;
+  const pace = learningPace(o, gameDay(g, g.department.clockHighWater));
+  const detail = detailRate(o);
   return (
     <Sheet open={open} onClose={onClose} interactionKey={hired ? 'hired' : 'review'} title={`Hire ${o.firstName} ${o.surname}`} className="hire-contract"
       subtitle={<span className="chips"><Chip icon={ROLE_META[o.role].icon}>{ROLE_META[o.role].label}</Chip><Chip tone="amber" icon="cash">{perHour(o.wage)}</Chip></span>}
@@ -202,6 +209,11 @@ export function HireContract({ c, proj, hired, open, onClose, onConfirm }: { c: 
             <span className="contract-gauge-row"><span>Now</span><span className="contract-gauge-bar"><i className={proj.netBefore < 0 ? 'neg' : 'pos'} style={{ width: `${(Math.abs(proj.netBefore) / scale) * 100}%` }} /></span><b className={proj.netBefore < 0 ? 'tone-danger' : 'tone-mint'}>{rate(proj.netBefore)}</b></span>
             <span className="contract-gauge-row"><span>After</span><span className="contract-gauge-bar"><i className={short ? 'neg' : 'pos'} style={{ width: `${(Math.abs(proj.netAfter) / scale) * 100}%` }} /></span><b className={short ? 'tone-danger' : 'tone-mint'}>{rate(proj.netAfter)}</b></span>
           </span>
+        </section>
+        <section className="contract-value" aria-label="Value">
+          <span className="contract-label">Value</span>
+          <span className="contract-rate-row"><span>Learns from calls</span><b className={pace === 'fast' ? 'tone-mint' : pace === 'slow' ? 'tone-danger' : undefined}>{PACE_LABEL[pace]}</b></span>
+          <span className="contract-rate-row"><span>Instructor detail</span><b className={detail === null ? 'dim' : 'tone-mint'}>{detail === null ? 'Needs a certification' : `+${perHour(detail)}`}</b></span>
         </section>
         {kit.length > 0 && <section className="contract-kit" aria-label="Brings">
           <span className="contract-label">Brings</span>

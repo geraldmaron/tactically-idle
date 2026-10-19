@@ -201,8 +201,9 @@ function validOfficer(o: unknown, key: string): boolean {
   if (o.assignment !== null) {
     const a = o.assignment;
     const training = isObj(a) && a.kind === 'training' && isStr(a.courseId) && Object.hasOwn(COURSES, a.courseId) && isNum(a.startedAt) && isNum(a.endsAt);
+    const detail = isObj(a) && a.kind === 'detail' && isNum(a.startedAt) && isNum(a.endsAt) && isNum(a.fee) && a.fee >= 0;
     const op = isObj(a) && a.kind === 'operation' && isStr(a.runId);
-    if (!training && !op) return false;
+    if (!training && !detail && !op) return false;
   }
   if ((o.xpBanked !== undefined && !isNum(o.xpBanked))
     || (o.highStressSince !== undefined && o.highStressSince !== null && !isNum(o.highStressSince))

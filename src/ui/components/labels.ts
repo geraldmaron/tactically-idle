@@ -69,7 +69,7 @@ export const BAND_SHORT: Record<StressBand, string> = {
 };
 
 /** Officer status chips: stress bands plus the non-stress states an officer can be in. */
-export type StatusKey = StressBand | 'injured' | 'training' | 'deployed' | 'retiring';
+export type StatusKey = StressBand | 'injured' | 'training' | 'detail' | 'deployed' | 'retiring';
 export const STATUS_META: Record<StatusKey, { label: string; icon: IconName; tone: 'mint' | 'amber' | 'warn' | 'danger' | 'blue' | 'neutral' }> = {
   ready: { label: 'Ready', icon: 'checkcircle', tone: 'mint' },
   strained: { label: 'Strained', icon: 'gauge', tone: 'amber' },
@@ -77,6 +77,7 @@ export const STATUS_META: Record<StatusKey, { label: string; icon: IconName; ton
   recovery: { label: 'Recovery', icon: 'moon', tone: 'danger' },
   injured: { label: 'Injured', icon: 'bandage', tone: 'danger' },
   training: { label: 'Training', icon: 'mortarboard', tone: 'blue' },
+  detail: { label: 'On detail', icon: 'book', tone: 'blue' },
   deployed: { label: 'Deployed', icon: 'pin', tone: 'amber' },
   retiring: { label: 'Retiring', icon: 'retire', tone: 'warn' },
 };

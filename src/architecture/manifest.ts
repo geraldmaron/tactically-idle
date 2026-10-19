@@ -118,6 +118,8 @@ export const OWNERSHIP: readonly { glob: string; layer: Layer; system: System }[
   { glob: '/src/sim/officer*.ts', layer: 'engine', system: 'officer' },
   { glob: '/src/sim/roster*.ts', layer: 'engine', system: 'officer' },
   { glob: '/src/sim/career*.ts', layer: 'engine', system: 'officer' },
+  // Instructor details: what an officer earns teaching for a neighbouring department (officer-value).
+  { glob: '/src/sim/detail.ts', layer: 'engine', system: 'officer' },
   { glob: '/src/sim/squad*.ts', layer: 'engine', system: 'officer' },
   // Command Staff are hired managers who run department loops; they never go on calls.
   { glob: '/src/sim/command-staff.ts', layer: 'engine', system: 'metric' },

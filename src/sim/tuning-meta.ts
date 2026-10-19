@@ -53,6 +53,8 @@ export const PINNED_BY: Readonly<Record<string, readonly string[]>> = {
   ECONOMY_TUNING: sim('economy', 'career', 'command-staff', 'department', 'equipment-manager', 'squad-optimizer'),
   EQUIPMENT_TUNING: sim('equipment', 'save'),
   RECRUIT_TUNING: [...sim('department', 'campaign-selection', 'personnel'), 'src/ui/screens/Recruit.test.ts'],
+  LEARNING_APTITUDE: sim('officer-value', 'career'),
+  DETAIL_TUNING: sim('officer-value'),
 };
 
 type Spec = { label: string; help: string; group?: TuningGroup; mode?: ReadMode; min?: number; max?: number; step?: number; unit?: string; why?: string; items?: readonly string[] };
@@ -360,6 +362,19 @@ export const TUNING_META: readonly FieldMeta[] = [
     wagePerThreeYears: { label: 'Wage per 3 service years', help: 'Hourly wage added per 3 years of prior service, set when drawn.', min: 0, max: 5, step: 0.5, unit: 'per hour' },
     wageExperienceCap: { label: 'Experience wage cap', help: 'Most hourly wage prior service adds.', min: 0, max: 20, step: 1, unit: 'per hour' },
     signingPerServiceYear: { label: 'Signing fee per service year', help: 'Signing cost added per year of prior service, set when drawn.', min: 0, max: 100, step: 5, unit: 'funding' },
+  }),
+  ...table('LEARNING_APTITUDE', { group: 'strain', mode: 'department' }, {
+    min: { label: 'Aptitude at rating 0', help: 'Learning rate multiplier for an officer whose mean composure and awareness is 0.', min: 0.3, max: 1, step: 0.05, unit: '×' },
+    max: { label: 'Aptitude at rating 100', help: 'Learning rate multiplier for an officer whose mean composure and awareness is 100.', min: 1, max: 2, step: 0.05, unit: '×' },
+    fastAt: { label: 'Reads "learns fast" from', help: 'Combined learning rate at or above which the profile says the officer learns fast. Labels only.', mode: 'display', min: 1, max: 2, step: 0.05, unit: '×' },
+    slowAt: { label: 'Reads "learns slowly" at', help: 'Combined learning rate at or below which the profile says the officer learns slowly. Labels only.', mode: 'display', min: 0.3, max: 1, step: 0.05, unit: '×' },
+  }),
+  ...table('DETAIL_TUNING', { group: 'economy', mode: 'department' }, {
+    hours: { label: 'Instructor detail length', help: 'Hours an officer is away teaching for a neighbouring department.', min: 1, max: 24, step: 1, unit: 'hours' },
+    base: { label: 'Detail fee base', help: 'Funding per hour every instructor detail pays before wage and certifications.', min: 0, max: 400, step: 5, unit: 'per hour' },
+    perWage: { label: 'Detail fee per wage dollar', help: 'Funding per hour added for each dollar of the officer\'s hourly wage.', min: 0, max: 5, step: 0.1, unit: '×' },
+    perCert: { label: 'Detail fee per certification', help: 'Funding per hour added for each certification the officer holds.', min: 0, max: 100, step: 5, unit: 'per hour' },
+    xpPerHour: { label: 'Detail experience', help: 'Experience an officer gains per hour of teaching.', min: 0, max: 20, step: 1, unit: 'xp' },
   }),
 ];
 

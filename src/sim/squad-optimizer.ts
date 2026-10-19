@@ -89,7 +89,7 @@ export function officerArrangementReadiness(state: GameState, officer: Officer):
   if (!result.ok) {
     const reason = officer.injury && officer.injury.until > simNow(state) ? 'Injured'
       : officer.stress >= STRESS_BANDS.recovery ? 'Mandatory recovery'
-        : officer.assignment?.kind === 'training' ? 'In training' : 'Deployed';
+        : officer.assignment?.kind === 'training' ? 'In training' : officer.assignment?.kind === 'detail' ? 'On a detail' : 'Deployed';
     return { fresh: false, deployable: false, reason };
   }
   return { fresh: officer.stress < STRESS_BANDS.strained, deployable: true, reason: null };

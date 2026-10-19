@@ -62,6 +62,16 @@ export const LEARNING_MULTIPLIER: Record<ExperienceBand, number> = tunable('LEAR
   veteran: 0.7,
 });
 
+/** Attribute aptitude for learning (officer-value). Officers who stay settled and read a scene well
+ * take more from the same call: the mean of composure and awareness scales the band's rate from
+ * `min` (a rating of 0) to `max` (100), crossing 1 at 50. Tunable (sim/tuning.ts). */
+export const LEARNING_APTITUDE = tunable('LEARNING_APTITUDE', { min: 0.7, max: 1.3, fastAt: 1.15, slowAt: 0.85 });
+
+export function learningAptitude(o: Pick<Officer, 'ratings'>): number {
+  const r = Math.max(0, Math.min(100, ((o.ratings?.composure ?? 50) + (o.ratings?.awareness ?? 50)) / 2));
+  return LEARNING_APTITUDE.min + ((LEARNING_APTITUDE.max - LEARNING_APTITUDE.min) * r) / 100;
+}
+
 /** The rating an officer's xp improves, by role. */
 export const ROLE_MAIN_RATING: Record<Role, RatingKey> = {
   comms: 'communication',
@@ -104,8 +114,15 @@ export function ageRecoveryFactor(o: Pick<Officer, 'bornDay'>, day: number): num
   return Math.max(CAREER_TUNING.ageRecoveryFloor, 1 - CAREER_TUNING.ageRecoveryPerYear * over);
 }
 
-export function learningMultiplier(o: Pick<Officer, 'serviceStartDay' | 'career'>, day: number): number {
-  return LEARNING_MULTIPLIER[experienceBand(o, day)];
+export function learningMultiplier(o: Pick<Officer, 'serviceStartDay' | 'career' | 'ratings'>, day: number): number {
+  return LEARNING_MULTIPLIER[experienceBand(o, day)] * learningAptitude(o);
+}
+
+export type LearningPace = 'fast' | 'steady' | 'slow';
+/** How quickly experience turns into skill, in words, from the band and the officer's aptitude. */
+export function learningPace(o: Pick<Officer, 'serviceStartDay' | 'career' | 'ratings'>, day: number): LearningPace {
+  const m = learningMultiplier(o, day);
+  return m >= LEARNING_APTITUDE.fastAt ? 'fast' : m <= LEARNING_APTITUDE.slowAt ? 'slow' : 'steady';
 }
 
 /**

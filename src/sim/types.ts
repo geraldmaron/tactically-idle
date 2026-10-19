@@ -290,6 +290,8 @@ export type Role = 'comms' | 'breach' | 'medic' | 'recon' | 'lead';
 
 export type Assignment =
   | { kind: 'training'; courseId: Id; startedAt: number; endsAt: number }
+  /** Teaching for a neighbouring department (src/sim/detail.ts); `fee` is paid when it ends. */
+  | { kind: 'detail'; startedAt: number; endsAt: number; fee: number }
   | { kind: 'operation'; runId: Id };
 
 export interface Officer {
@@ -1066,6 +1068,7 @@ export type Command =
   | { type: 'setMaintenanceBudget'; perHour: number }
   | { type: 'scrapUnit'; unitId: Id }
   | { type: 'offerRetention'; officerId: Id }
+  | { type: 'startDetail'; officerId: Id }
   | { type: 'markIncidentsSeen' }
   // command staff (src/sim/command-staff.ts); unlockNode opens a post, hireStaff fills it
   | { type: 'setManagerEnabled'; managerId: ManagerId; enabled: boolean }
@@ -1132,6 +1135,7 @@ export type DepartmentCommandType =
   | 'renameSquad'
   | 'assignToSquad'
   | 'cancelPendingSquadMove'
+  | 'startDetail'
   | 'setSquadArrangementLock'
   | 'applySquadArrangement'
   | 'undoSquadArrangement'

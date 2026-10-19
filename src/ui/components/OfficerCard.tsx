@@ -41,7 +41,7 @@ export function OfficerCard({ officer, now, variant = 'strip', selected, onClick
   const band = bandOf(officer);
   const injured = !!incidentInjury || (!!officer.injury && officer.injury.until > now);
   const trainingOrDeployed: StatusKey | null =
-    variant !== 'strip' && !injured ? (officer.assignment?.kind === 'training' ? 'training' : officer.assignment?.kind === 'operation' ? 'deployed' : null) : null;
+    variant !== 'strip' && !injured ? (officer.assignment?.kind === 'training' ? 'training' : officer.assignment?.kind === 'detail' ? 'detail' : officer.assignment?.kind === 'operation' ? 'deployed' : null) : null;
   const statusKey: StatusKey | null = injured ? 'injured' : trainingOrDeployed ? trainingOrDeployed : band === 'ready' ? null : band;
   const status = statusKey ? STATUS_META[statusKey] : null;
   const role = ROLE_META[officer.role];
@@ -90,7 +90,7 @@ export function OfficerCard({ officer, now, variant = 'strip', selected, onClick
         <Portrait officer={officer} size={size} {...age} />
         {chip && <span className="ocard-chip">{chip}</span>}
         {status && statusKey && (
-          <span className={`ocard-status band-${injured ? 'recovery' : statusKey === 'training' || statusKey === 'deployed' ? 'strained' : statusKey}`}>
+          <span className={`ocard-status band-${injured ? 'recovery' : statusKey === 'training' || statusKey === 'detail' || statusKey === 'deployed' ? 'strained' : statusKey}`}>
             <Icon name={status.icon} size={11} />
             {status.label}
           </span>

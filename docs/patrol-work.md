@@ -47,7 +47,10 @@ Patrol work is what a patrol squad does between calls, shown as a shift log and 
 
 ## For the owner
 
-1. Is "texture, no new income" what you want, or should patrol also earn something other than funding?
+1. Answered 2026-10-19: patrol pay stays flat at 150 an officer an hour. Officer quality earns
+   through service income instead: call payouts already scale with how a call goes, and a certified
+   officer can take a paid instructor detail (`src/sim/detail.ts`) that keeps them off calls and off
+   patrol while they teach. Skill-scaled patrol pay was rejected because it reads as quota policing.
 2. Should a lead move a board call earlier, or is a log line enough?
 3. Should patrol work exist for a squad the player keeps on manual duty, or only under the Watch Commander?
 

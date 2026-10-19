@@ -261,7 +261,7 @@ standing patrol assignments on the board (removed before 2026-10-18, see git his
 721536c and 4e908ac). Done: a short design note first (what patrol work is, how it pays, how the
 Watch Commander runs it, how it shows on the board without crowding tactical calls), approved by the
 lead, then the engine loop and its UI. The note is `docs/patrol-work.md` (proposed 2026-10-19); it
-waits on three owner answers listed there.
+waits on owner answers 2 and 3 listed there (1 is answered: patrol pay stays flat).
 
 ### disclosure-taxonomy: One way to reveal more, used everywhere
 Tags: job=understand; journeys=debrief-explains; probes=none (layout); lane=interface
@@ -270,19 +270,9 @@ Needs: start=none; integrate=none; ship=none
 Owner request 2026-10-19. One shared Disclosure for evidence and logs, sheets for reference guides,
 chip rails for filters, harm always visible. Ad hoc expanders are removed.
 
-### officer-value: Officers learn and earn by who they are
-Tags: job=build; journeys=team-moves-odds; probes=none (officer economy); lane=engine
-Needs: start=none; integrate=none; ship=none
-
-Owner decision 2026-10-19. Learning pace comes from ratings (composure) on top of experience band.
-Pricier, better-rated officers earn through service income: call payouts already scale with
-outcome, and a certified officer can take a paid mutual-aid detail that keeps them off calls. No
-candidate pool may make a cheap officer dominated on every count. Answers question 1 in
-`docs/patrol-work.md`: patrol pay stays flat.
-
 ### officer-profile: The officer profile, rebuilt
 Tags: job=build; journeys=hire-and-equip; probes=none (layout); lane=interface
-Needs: start=officer-value; integrate=none; ship=none
+Needs: start=none; integrate=none; ship=none
 
 ### squad-preset-editor: One place to edit loadout presets
 Tags: job=build; journeys=hire-and-equip; probes=none (layout); lane=interface
