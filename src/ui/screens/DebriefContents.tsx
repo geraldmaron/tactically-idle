@@ -29,7 +29,8 @@ export function DebriefContents({ result: d, officers, scenario, reality = true,
   const worst = d.disposition ? d.civilianSafety.score : Math.min(d.objective.score, d.civilianSafety.score);
   const tone = worst >= 80 ? 'good' : worst >= 50 ? 'mixed' : 'poor';
   // The epilogue is the call's last human beat: what is true afterward, set apart from the scores.
-  const epilogue = scenario?.endings[d.endingId]?.epilogue;
+  // Frozen on the saved result, so an archived debrief keeps it; older results fall back to the call.
+  const epilogue = d.endingEpilogue ?? scenario?.endings[d.endingId]?.epilogue;
   return <>
     <div className={`debrief-hero debrief-hero-${tone}`}>
       <span className="kicker">DEBRIEF</span>
