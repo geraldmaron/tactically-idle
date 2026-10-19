@@ -759,6 +759,7 @@ export function computeDebrief(state: GameState, run: OperationRun): DebriefResu
     endingTitle: ending.title,
     decisions: decisionViewsFor(state, run, scenario, steps),
     ...({ endingSummary: ending.summary }),
+    ...(ending.epilogue ? { endingEpilogue: ending.epilogue } : {}),
     ...completion,
     ...(run.responseFailure ? { disposition: 'unresolved' as const, completionAchieved: false, remainingTasks: run.responseFailure.remainingTasks } : {}),
     ...({ officerCasualties: Object.values(run.officerCasualties ?? {}).map(person => ({ ...person })), civilianOutcomes: civilianOutcomeViews(scenario, run) }),
