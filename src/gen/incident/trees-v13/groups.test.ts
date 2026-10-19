@@ -60,7 +60,9 @@ describe('groups: every member is a full engine person', () => {
       // Beside their leader, where the story puts them, with a location fact and a way out.
       expect(person.position.spaceId).toBe(s.story!.bindings.people.taker.initial.spaceId);
       expect(binding.initial).toEqual({ spaceId: person.position.spaceId, at: person.position.at });
-      expect(binding.transitions[0].when.flags).toEqual([`out:${person.id}`]);
+      // Leaving wins: the out transition comes last, after any move the story adds (R-B3).
+      expect(binding.transitions.at(-1)!.when.flags).toEqual([`out:${person.id}`]);
+      expect(binding.transitions.filter(transition => transition.when.flags?.includes(`out:${person.id}`))).toHaveLength(1);
       const fact = s.facts.find(entry => entry.id === `p_${person.id}`)!;
       expect(fact.storyPersonId).toBe(person.id);
       expect(fact.markers).toEqual({ reported: 'SUBJECT', confirmed: 'SUBJECT' });
