@@ -7,6 +7,7 @@ import { dependencyIndex, lintTree } from '../../../../gen/incident/trees-v13/de
 import type { ReqTarget } from '../../../../gen/incident/trees-v13/dependencies';
 import { armedWithoutHitMark } from '../../../../gen/incident/trees-v13/never-offered-fixture';
 import { CLOCK_FIXTURE_IDS, clockFixtureTemplate } from '../../../../gen/incident/gates/clock-fixture';
+import { certFixtureTemplate } from '../../../../gen/incident/gates/fixture-call';
 import { mutedFindings, muteNote } from '../../model/notes';
 import {
   engineReaders, groupKeys, humanizeCondition, humanizeFinding, KIND_ORDER, kindOf, LINT_LABEL, LINT_MEANING, plainNames, selectionTarget, siteGoal, siteWords, sortFindings, targetSelection,
@@ -145,12 +146,16 @@ describe('conditions in words', () => {
 });
 
 describe('Why targets', () => {
-  const rescue = T('protected_rescue');
-
-  it('lists the rescue vehicle choice and every ending', () => {
-    const options = whyOptions(rescue.tree, plainNames(rescue.tree));
-    expect(options.some(option => option.label === 'Screen the door with the rescue vehicle' && option.group === 'Wont leave')).toBe(true);
-    expect(options.filter(option => option.group === 'Endings')).toHaveLength(Object.keys(rescue.tree.endings).length);
+  // Every shipped call, and the certification fixture, so no one call's choice labels are pinned.
+  const trees = [...(Object.values(INCIDENT_TEMPLATES) as IncidentTemplate[]).map(template => template.tree), certFixtureTemplate().tree];
+  for (const tree of trees) it(`${tree === trees.at(-1) ? 'fixture' : tree.type}: lists every choice once under its node, and every ending`, () => {
+    const names = plainNames(tree), options = whyOptions(tree, names);
+    for (const node of tree.nodes) for (const choice of node.choices) {
+      const listed = options.filter(option => 'choice' in option.target && option.target.choice[0] === node.id && option.target.choice[1] === choice.id);
+      expect(listed, `${node.id}.${choice.id}`).toHaveLength(1);
+      expect(listed[0]).toMatchObject({ label: names.choice(node.id, choice.id), group: names.node(node.id) });
+    }
+    expect(options.filter(option => option.group === 'Endings')).toHaveLength(Object.keys(tree.endings).length);
   });
 
   it('round-trips every target through a URL selection', () => {
