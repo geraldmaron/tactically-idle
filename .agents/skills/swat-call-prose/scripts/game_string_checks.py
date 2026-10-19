@@ -47,7 +47,7 @@ SPOKEN = ("exchange", "exchange_result", "speech", "radio")
 # Fragment-only strings allowed per call in narration (E17 raised it from 2).
 FRAGMENT_CAP = 4
 LOCKED_CLAMP = 80
-HOOK_CHARS = 130
+HOOK_CHARS = 145
 BANDS = ("favorable", "mixed", "adverse")
 DASH_CHARS = "".join(chr(c) for c in (0x2012, 0x2013, 0x2014, 0x2015))
 DASHES = re.compile("[" + DASH_CHARS + "]|(?<=\\S) \\x2d (?=\\S)|\\x2d\\x2d")

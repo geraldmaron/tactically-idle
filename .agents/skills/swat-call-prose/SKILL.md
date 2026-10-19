@@ -94,7 +94,7 @@ wins. The full table, clamps, field reuse and tense rules are in [references/sur
 | Surface | Field | Hard limit | House target | Shape |
 |---|---|---|---|---|
 | Card title | title | 34 chars | 1 to 3 words | a place, object or person |
-| Card hook | summary | none | 100 chars bound, first sentence 14 words | person and want in five words, then the danger |
+| Card hook | summary | none | 145 chars bound, first sentence 14 words | person and want in five words, then the danger |
 | Pressure label | pressureLabel | none | 2 to 4 words | whose safety, then what runs out |
 | Dispatch reason | dispatchReason | 240 | 2 sentences | who called, what they want the team for |
 | Known, unknown | known[], unknown[] | 260 | 12 words | source, claim, how they know |
@@ -106,6 +106,8 @@ wins. The full table, clamps, field reuse and tense rules are in [references/sur
 | Outcome preview | outcomePreview per band | none | 20 words | how well the team does it |
 | Result line | outcome effect text | 240 | 30 words | who did what, what changed, one tense |
 | Ending | title, summary | 60, 240 | 35 words | who is safe, who is not, one detail |
+| Transcript | node, promptIf and outcome exchange | 90 a line | 2 to 4 lines, 15 words | the voices, speaker named by the UI |
+| Epilogue | ending epilogue | 200 | 30 words | the after, on one named person |
 | Modifier, support, cert, gear | modifiers[].label, support.label, support.task, certBonus.label, equipment[].label | none | 6 words | the reason, in the world |
 
 Coverage. Every writer-owned field of every action, fact, ending, objective,
