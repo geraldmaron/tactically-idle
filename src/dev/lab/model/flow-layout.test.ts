@@ -238,7 +238,7 @@ describe('fitView (review finding flow-endings-offscreen-or-clipped)', () => {
   // The canvas Flow gets at 900 × 800 (no inspector), and at 1440 × 900 beside the inspector and without it.
   const SIZES: [w: number, h: number][] = [[900, 596], [1056, 724], [1440, 724]];
   for (const template of TEMPLATES) {
-    it(`keeps the whole endings column of ${template.type} on screen, each row holding a line of its title`, () => {
+    it(`keeps the endings column of ${template.type} on screen (whole above Fit's floor, every row's start at it), each row holding a line of its title`, () => {
       const s = open(REFERENCE[template.type]);
       const drawn = layout(callOf(s));
       const column = endingsColumn(drawn)!;
@@ -248,10 +248,18 @@ describe('fitView (review finding flow-endings-offscreen-or-clipped)', () => {
         const view = fitView(drawn, w, h);
         expect(view.k).toBeGreaterThanOrEqual(FIT_FLOOR);
         const grow = endingGrowth(drawn, view.k);
-        // Rows keep their screen width, and the column's right edge is inside the canvas.
+        // Rows keep their screen width.
         expect((column.w + grow) * view.k).toBeGreaterThanOrEqual(Math.min(ENDING_MIN_PX, column.w * view.k) - 1e-9);
-        expect(view.x + (column.x + column.w + grow) * view.k).toBeLessThanOrEqual(w - 8);
         expect(view.x).toBeGreaterThanOrEqual(0);
+        if (view.k > FIT_FLOOR) {
+          // Fit has room: the whole column, its right edge included, is inside the canvas.
+          expect(view.x + (column.x + column.w + grow) * view.k).toBeLessThanOrEqual(w - 8);
+        } else {
+          // Fit is at its legibility floor (a wide call on the narrowest canvas): it starts at the
+          // left, and every ending row starts on screen, so each title shows and its share is a pan away.
+          expect(view.x).toBe(12);
+          expect(view.x + column.x * view.k).toBeLessThanOrEqual(w - 8);
+        }
         // The shortest ending row holds one 14px line at this zoom.
         expect(shortest * view.k).toBeGreaterThanOrEqual(14);
       }

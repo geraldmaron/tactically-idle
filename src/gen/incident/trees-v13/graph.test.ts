@@ -4,7 +4,7 @@ import type { IncidentTemplate } from '../../../content/incidents/types';
 import { buildLocation } from '../../../sim/location';
 import { drawIncidentSpec, generateIncident } from '../index';
 import { clockMarksOf, instanceOf } from '../instance';
-import { memberCounts, reachableNodes, treeForCounts } from './compile';
+import { callCounts, reachableNodes, treeForCounts } from './compile';
 import { countCombos } from './dependencies';
 import { callGraph, choiceIndex, drawnRoute, humanizeNode, matchKey, truthReach } from './graph';
 
@@ -72,7 +72,8 @@ describe('call graph: one call', () => {
         rng = drawn.state;
         const s = generateIncident(drawn.spec);
         const instance = instanceOf(s, buildLocation(s.locationFamilyId, s.locationSeed))!;
-        const graph = callGraph(template.tree, { counts: memberCounts(instance.placed), seed: s.incident!.seed, situation: instance.situation as 0 | 1 | 2, clockMarks: clockMarksOf(instance.clocks) });
+        // The call's own counts (callCounts): group sizes and every compile-time fact its conditions read.
+        const graph = callGraph(template.tree, { counts: callCounts(instance.placed), seed: s.incident!.seed, situation: instance.situation as 0 | 1 | 2, clockMarks: clockMarksOf(instance.clocks) });
         const where = `${template.type} ${s.id}`;
         expect(graph.vertices.filter(v => v.kind === 'node' && v.inCall).map(v => v.treeId).sort(), where).toEqual(s.story!.episode!.modules.filter(id => id !== 'call-tree').sort());
         expect(graph.choices.filter(c => c.inCall).map(c => c.actionId).sort(), where).toEqual(Object.values(s.stages).flatMap(stage => stage.actions.map(action => action.id)).sort());
