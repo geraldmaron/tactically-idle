@@ -123,7 +123,7 @@ Tags: job=command; journeys=answer-a-call; probes=none (text, not odds); lane=en
 Needs: start=none; integrate=none; ship=none
 
 Filed in `docs/calls/hostage-signature-design.md`: R-G2 a group role the player meets, and R-G3 with
-N15 and N16 count-conditioned briefing lines and ending addenda. R-G1 shipped with `intel-odds` (#45, #48), R-G4 shipped with `clock-runout-routing` (#46, #56); N6, N7, N9 and N21 are in `hostage-gate-requests`. Done: each request works in
+N15 and N16 count-conditioned briefing lines and ending addenda. R-G1 shipped with `intel-odds` (#45, #48), R-G4 shipped with `clock-runout-routing` (#46, #56); N6, N7, N9 and N21 shipped in #64. Done: each request works in
 the hostage call and the call's fingerprints are recaptured deliberately.
 
 ### hostage-review-leftovers: Hostage review leftover B9
@@ -295,7 +295,7 @@ Optional.
 - **Domain-model defaults D1 to D5** stand unless changed: no explosives, a fled subject's follow-up
   call, groups above 8 as a later mode, 24h review after a shooting, concessions within policy.
 - **Crisis call cap:** the writing review's house target is at most one crisis call (a person who
-  may harm themselves) per shift. The shift sampler (`hostage-gate-requests`) treats a shift as one
+  may harm themselves) per shift. The shift sampler (`src/gen/incident/gates/shift-sampler.ts`, #64) treats a shift as one
   game day and a crisis call as hostage or barricade, and only reports. Decide what a shift and a
   crisis call are, and whether the cap should gate.
 - **Barricade on apartments:** with the child in a bedroom, `apartment_unit_g2` hosts the barricade
