@@ -3,7 +3,7 @@ import { drawIncidentSpec, generateIncident } from '../gen/incident';
 import { applyMove, availableMoves, NOW, startGateRun } from '../gen/incident/gates/engine-driver';
 // The engine's house call (a frozen barricade), not the shipping barricade: these rules are keyed on
 // the barricade type and the subject, never on the calls lane's ids.
-import { houseCalls } from '../gen/incident/trees-v13/house-call';
+import { houseCalls } from '../gen/incident/trees-v13/house-call-fixture';
 import { actionViews } from './operation-selectors';
 import type { GameState } from './types';
 import { buildLocation } from './location';

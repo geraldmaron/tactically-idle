@@ -3,7 +3,7 @@ import { generateIncident } from '../gen/incident';
 import { specForSituation } from '../gen/incident/gates/catalog';
 import { applyNaturalMove, firstMove, startGateRun, withDraftScenario } from '../gen/incident/gates/engine-driver';
 import { choiceActionId } from '../gen/incident/trees-v13/compile';
-import { houseCalls } from '../gen/incident/trees-v13/house-call';
+import { houseCalls } from '../gen/incident/trees-v13/house-call-fixture';
 import { buildLocation } from './location';
 import { applyMoves, meterConditionsHold, meterContributors, METERS_V1, stanceOf } from './meters';
 import { matchedEffects, traceRun } from './operation';
