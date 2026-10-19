@@ -3,7 +3,7 @@ import { generateIncident } from '../gen/incident';
 import { specForSituation } from '../gen/incident/gates/catalog';
 import { applyNaturalMove, firstMove, startGateRun, withDraftScenario } from '../gen/incident/gates/engine-driver';
 import { choiceActionId } from '../gen/incident/trees-v13/compile';
-import { SCENARIO_TYPES } from '../content/scenario-types';
+import { houseCalls } from '../gen/incident/trees-v13/house-call';
 import { buildLocation } from './location';
 import { applyMoves, meterConditionsHold, meterContributors, METERS_V1, stanceOf } from './meters';
 import { matchedEffects, traceRun } from './operation';
@@ -142,8 +142,8 @@ describe('meters: escalation branches, in play', () => {
   // A barricade call where every outcome is split on the subject's agitation: the calm side provokes
   // the subject past the line, the other side says ESCALATED. The first decision must take the calm
   // side (the line is read before its own events), the second the escalated one.
-  const family = SCENARIO_TYPES.find(info => info.type === 'barricaded')!.families[0];
-  const base = generateIncident(specForSituation('barricaded', family, 0));
+  // The engine's house call (a frozen barricade, gen/incident/trees-v13/house-fixture.ts).
+  const base = houseCalls(1)[0];
   const subject = base.incidentPeople!.find(person => person.meters)!;
   const line = subject.meters!.agitation + 3;
   const split = (effect: OutcomeEffect): OutcomeEffect[] => [

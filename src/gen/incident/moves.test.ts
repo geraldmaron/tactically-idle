@@ -2,11 +2,11 @@
 // A move compiles into the person's story transitions: hidden until the team sees them there (an
 // observed twin keyed on a seen flag), or seen at once when the line says where they went. Truth and
 // belief are read apart: sightings and incoming fire read where they are; the odds and the force
-// rules read where the team believes they are. Exercised on the barricade template.
+// rules read where the team believes they are. Exercised on the engine's house call (a frozen
+// barricade, trees-v13/house-fixture.ts).
 import { describe, expect, it } from 'vitest';
 import type { CallTree, TreeMoveTo } from '../../content/call-trees/types';
 import type { IncidentTemplate } from '../../content/incidents/types';
-import { INCIDENT_TEMPLATES } from '../../content/incidents';
 import { readForceThreat } from '../../sim/authorization';
 import { cueMoveKey, lostFlag, movedFlag, seenFlag, withFlag } from '../../sim/conditions';
 import { buildLocation } from '../../sim/location';
@@ -27,8 +27,10 @@ import { applyMove, applyNaturalMove, startGateRun, withDraftScenario } from './
 import { generateIncident } from './index';
 import { compileIncident, hostedSpec } from './instance';
 import { choiceActionId } from './trees-v13/compile';
+import { HOUSE_TEMPLATE } from './trees-v13/house-fixture';
 
-const BARRICADE = INCIDENT_TEMPLATES.barricaded!;
+// The engine's frozen house call (trees-v13/house-fixture.ts), not the shipping barricade.
+const BARRICADE = HOUSE_TEMPLATE;
 const HALL = { route: 'child', step: 1, is: 'hall' } as const;
 
 /** The barricade with every band of its opening phone call moving the subject (to the hall on the

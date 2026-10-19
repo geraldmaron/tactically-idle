@@ -1,6 +1,7 @@
 // R-B1: a person can start upstairs where the building has an upper floor, and text says so only
 // where it's true (TreeState.upstairs / notUpstairs, settled when the call compiles). Exercised on
-// the barricade template with its child placed by floor, on two-floor and single-floor families.
+// the engine's house call (a frozen barricade, trees-v13/house-fixture.ts) with its child placed by
+// floor, on two-floor and single-floor families.
 import { describe, expect, it } from 'vitest';
 import type { CallTree } from '../../content/call-trees/types';
 import type { IncidentTemplate } from '../../content/incidents/types';
@@ -11,8 +12,10 @@ import { generateIncident } from './index';
 import { specForSituation } from './gates/catalog';
 import { compileIncident, drawInstance, hostedSpec } from './instance';
 import { callCounts, countHolds, exitKey, treeForCounts, upstairsKey } from './trees-v13/compile';
+import { HOUSE_TEMPLATE } from './trees-v13/house-fixture';
 
-const BARRICADE = INCIDENT_TEMPLATES.barricaded!;
+// The engine's frozen house call (trees-v13/house-fixture.ts), not the shipping barricade.
+const BARRICADE = HOUSE_TEMPLATE;
 const UP = 'The child is upstairs, above the living room.', DOWN = 'The child is on the ground floor.';
 
 /** The barricade with its child placed by `floor`, and a prompt variant for each answer. */

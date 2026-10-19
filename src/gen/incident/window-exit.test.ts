@@ -1,11 +1,11 @@
 // R-B2: a person can leave by their own ground-floor window where the building has one
 // (TreeChoice.walksVia 'window', gated by TreeState.exitVia, settled when the call compiles). The
 // route keeps that exit when the engine recomputes it, so a blocked window refuses the walk-out
-// instead of sending them out the door. The barricade's child, placed in a bedroom.
+// instead of sending them out the door. The house call's child (trees-v13/house-fixture.ts), placed
+// in a bedroom.
 import { describe, expect, it } from 'vitest';
 import type { CallTree } from '../../content/call-trees/types';
 import type { IncidentTemplate } from '../../content/incidents/types';
-import { INCIDENT_TEMPLATES } from '../../content/incidents';
 import { buildLocation } from '../../sim/location';
 import { validateScenario } from '../../sim/operation';
 import { routeAlongOpenings, windowClimbMinutes } from '../../sim/routes';
@@ -17,8 +17,10 @@ import { choiceActionId, countHolds, exitKey, treeForCounts, viaRouteName } from
 import { startGateRun, withDraftScenario } from './gates/engine-driver';
 import { actionViews } from '../../sim/operation-selectors';
 import { NOW } from '../../sim/test-fixtures';
+import { HOUSE_TEMPLATE } from './trees-v13/house-fixture';
 
-const BARRICADE = INCIDENT_TEMPLATES.barricaded!;
+// The engine's frozen house call (trees-v13/house-fixture.ts), not the shipping barricade.
+const BARRICADE = HOUSE_TEMPLATE;
 type Via = 'window' | 'front' | 'back';
 
 /** The barricade with its child in a bedroom by `floor`, and under_barking walking them out by `via`. */

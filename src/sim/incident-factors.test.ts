@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { drawIncidentSpec, generateIncident } from '../gen/incident';
 import { applyMove, availableMoves, NOW, startGateRun } from '../gen/incident/gates/engine-driver';
+// The engine's house call (a frozen barricade), not the shipping barricade: these rules are keyed on
+// the barricade type and the subject, never on the calls lane's ids.
+import { houseCalls } from '../gen/incident/trees-v13/house-call';
 import { actionViews } from './operation-selectors';
 import type { GameState } from './types';
 import { buildLocation } from './location';
@@ -77,7 +80,7 @@ describe('incident factors: the people and the building change the odds', () => 
       const fx = incidentFactors(s, buildLocation(s.locationFamilyId, s.locationSeed), state.activeRun!, wait, []);
       return fx!.score.map(c => `${c.label} ${c.value}`);
     };
-    expect(labelsOf(calls('barricaded', 1)[0]).some(label => /waiting is safe/.test(label) && / 4$/.test(label))).toBe(true);
+    expect(labelsOf(houseCalls(1)[0]).some(label => /waiting is safe/.test(label) && / 4$/.test(label))).toBe(true);
     expect(labelsOf(armed[2]).some(label => /may hurt someone/.test(label) && / -5$/.test(label))).toBe(true);
   });
 
@@ -104,7 +107,7 @@ describe('incident factors: the people and the building change the odds', () => 
     expect(withArms.ev().exposureMult / disarmed.ev().exposureMult).toBeCloseTo(withArms.fx.strainMult, 5);
     // Waiting out a barricade: the wait takes longer, and the card says so. Play the call until a
     // wait is on offer, then evaluate it there.
-    const barricade = calls('barricaded', 1)[0];
+    const barricade = houseCalls(1)[0];
     const isWait = (id: string) => Object.values(barricade.stages).flatMap(stage => stage.actions).find(action => action.id === id)?.icon === 'wait';
     let frontier = [startGateRun(barricade.id, 719)], at: GameState | null = null;
     for (let depth = 0; depth < 5 && !at; depth++) {
@@ -127,7 +130,7 @@ describe('incident factors: the people and the building change the odds', () => 
 // same barricade call, with the trapped child held by the subject: over the subject's grievance (a
 // victim incident) or as leverage (a hostage incident).
 describe('incident factors: the incident class', () => {
-  const s = calls('barricaded', 1, 77)[0];
+  const s = houseCalls(1, 77)[0];
   const subject = s.incidentPeople!.find(person => person.meters)!;
   const heldId = s.incidentPeople!.find(person => person.id !== subject.id)!.id;
   const hold = (kind: NonNullable<IncidentPersonDef['hold']>['kind'] | null) => (scenario: ScenarioDefinition) => {

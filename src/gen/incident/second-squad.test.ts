@@ -5,7 +5,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CallTree, TreeChoice } from '../../content/call-trees/types';
 import type { IncidentTemplate } from '../../content/incidents/types';
-import { INCIDENT_TEMPLATES } from '../../content/incidents';
 import { createInitialState } from '../../sim/department';
 import { dispatch } from '../../sim/game';
 import { buildLocation } from '../../sim/location';
@@ -22,6 +21,7 @@ import { findStoryRoute } from './story-bindings';
 import { playToEnd } from './trees-v13/balance';
 import { choiceActionId, doorOut, TEAM_MOVES } from './trees-v13/compile';
 import { GROUP_TEMPLATE, GROUP_TREE } from './trees-v13/group-fixture';
+import { HOUSE_TEMPLATE } from './trees-v13/house-fixture';
 
 type Support = NonNullable<TreeChoice['support']>;
 const AT_GLASS: Support = { at: { vantage: 'taker' }, label: 'holding the counter window' };
@@ -130,9 +130,9 @@ describe('a second squad supports from a named point (R-B4)', () => {
   });
 
   it('on every building the barricade lists, the point is outside, on an opening of the named room, and reachable from the street', () => {
-    // The barricade (calls lane content, cloned) with support on the walk-out under the barking (a
+    // The house call (a frozen barricade, trees-v13/house-fixture.ts) with support on the walk-out under the barking (a
     // vantage on the subject's room) and on every entry (the exit).
-    const barricade = INCIDENT_TEMPLATES.barricaded!;
+    const barricade = HOUSE_TEMPLATE;
     const tree: CallTree = structuredClone(barricade.tree);
     for (const choice of tree.nodes.flatMap(node => node.choices)) {
       if (choice.id === 'under_barking') choice.support = { at: { vantage: 'subject' }, label: 'holding the front window' };
