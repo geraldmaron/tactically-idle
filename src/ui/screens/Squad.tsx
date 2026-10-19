@@ -8,7 +8,6 @@ import { useToast } from '../components/toast';
 import { DUTY_META, RATING_META, ROLE_META, ratingTone } from '../components/labels';
 import { Icon } from '../icons';
 import { SQUAD_IDS } from '../../sim/types';
-import { OfficerSheet } from './OfficerSheet';
 import { Recruit } from './Recruit';
 import { officerList, staysHomeLine } from './helpers';
 import { useNav } from '../components/nav';
@@ -26,7 +25,7 @@ export function SquadScreen() {
   const g = useGame();
   const nav = useNav();
   const setSel = (squadId: SquadId) => nav.updateSquadView({ type: 'select', squadId });
-  const [officerId, setOfficerId] = useState<Id | null>(null);
+  const setOfficerId = (id: Id) => nav.openOfficer(id);
   const [creating, setCreating] = useState(false);
   const [arranging, setArranging] = useState(false);
   const { notify } = useToast();
@@ -61,7 +60,7 @@ export function SquadScreen() {
         >
           <Icon name="plus" size={18} />
         </button>
-        <button type="button" className="squad-add-control squad-arrange-control" aria-label="Arrange squads" disabled={g.squads.length === 0} onClick={() => { setOfficerId(null); setArranging(true); }}>
+        <button type="button" className="squad-add-control squad-arrange-control" aria-label="Arrange squads" disabled={g.squads.length === 0} onClick={() => { nav.closeOfficer(); setArranging(true); }}>
           <Icon name="nodes" size={16} /><span>Arrange</span>
         </button>
       </div>
@@ -89,7 +88,6 @@ export function SquadScreen() {
       <RosterGrid onOpen={setOfficerId} />
 
       <Recruit />
-      <OfficerSheet officerId={officerId} onClose={() => setOfficerId(null)} />
       {arranging && <SquadOptimizer open onClose={() => setArranging(false)} />}
       </>}
     </div>

@@ -14,6 +14,7 @@ import { SquadScreen } from './screens/Squad';
 import { OpsScreen } from './screens/Ops';
 import { DevelopScreen } from './screens/Develop';
 import { GearScreen } from './screens/Gear';
+import { OfficerSheet } from './screens/OfficerSheet';
 import { CampaignBar, SaveManager } from './components/SaveManager';
 import { useCampaigns, useGame } from './store';
 import { DepartmentContext } from './components/department-context';
@@ -55,6 +56,7 @@ function GameShell() {
                 </main>
                 <BottomNav />
                 <SaveManager open={savesOpen} onClose={() => setSavesOpen(false)} />
+                <OfficerSheet officerId={nav.officerId} onClose={nav.closeOfficer} />
               </ToastProvider>
             </OverlayRootContext.Provider>
           </DepartmentScope>

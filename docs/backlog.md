@@ -263,17 +263,6 @@ Watch Commander runs it, how it shows on the board without crowding tactical cal
 lead, then the engine loop and its UI. The note is `docs/patrol-work.md` (proposed 2026-10-19); it
 waits on owner answers 2 and 3 listed there (1 is answered: patrol pay stays flat).
 
-### disclosure-taxonomy: One way to reveal more, used everywhere
-Tags: job=understand; journeys=debrief-explains; probes=none (layout); lane=interface
-Needs: start=none; integrate=none; ship=none
-
-Owner request 2026-10-19. One shared Disclosure for evidence and logs, sheets for reference guides,
-chip rails for filters, harm always visible. Ad hoc expanders are removed.
-
-### officer-profile: The officer profile, rebuilt
-Tags: job=build; journeys=hire-and-equip; probes=none (layout); lane=interface
-Needs: start=none; integrate=none; ship=none
-
 ### squad-preset-editor: One place to edit loadout presets
 Tags: job=build; journeys=hire-and-equip; probes=none (layout); lane=interface
 Needs: start=none; integrate=none; ship=none

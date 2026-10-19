@@ -102,39 +102,6 @@
 .squad-sort:focus-within { outline: 2px solid var(--amber); outline-offset: 1px; }
 
 /* ---------------------------------------------------------------- officer sheet */
-.osheet { display: grid; gap: 10px; min-width: 0; }
-.osheet .sub-h { margin: 6px 0 0; }
-.osheet-hero { display: flex; gap: 12px; align-items: flex-start; min-width: 0; }
-.osheet-portrait { position: relative; flex: 0 0 auto; border-radius: 10px; overflow: hidden; border: 1px solid var(--line-strong); box-shadow: 0 6px 18px rgba(0, 0, 0, .35); }
-.osheet-portrait > :first-child { display: block; }
-.osheet-leader { position: absolute; right: 4px; bottom: 4px; display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--amber); color: var(--amber-ink); }
-.osheet-id { flex: 1; min-width: 0; display: grid; gap: 6px; }
-.osheet-id .chips { gap: 4px; }
-.osheet-id .chip { font-size: 12px; }
-.osheet-facts { display: flex; flex-wrap: wrap; gap: 2px 12px; margin: 0; font-size: 13px; color: var(--text-dim); font-variant-numeric: tabular-nums; }
-.osheet-facts span { display: inline-flex; align-items: center; gap: 4px; }
-.osheet .persona-note { margin: 0; font-size: 12.5px; }
-.osheet-gauges { display: grid; gap: 8px; }
-.osheet-stress { display: grid; align-content: start; gap: 4px; min-width: 0; padding: 10px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel-2); }
-.osheet-stress .stress-scale { margin: 8px 2px 4px; }
-.osheet-avail { display: flex; align-items: flex-start; gap: 5px; margin: 0; font-size: 12.5px; line-height: 1.35; overflow-wrap: anywhere; }
-.osheet-avail .icon { flex: 0 0 auto; margin-top: 1px; }
-.osheet .traits { gap: 4px; }
-.osheet .traits li { flex-direction: row; flex-wrap: wrap; align-items: baseline; gap: 0 8px; font-size: 13px; }
-.osheet .traits strong { font-size: 14px; }
-.osheet-none { margin: 0; font-size: 13px; }
-.osheet-actions { display: flex; flex-wrap: wrap; gap: 8px; }
-.osheet-actions .btn { flex: 1 1 140px; }
-.osheet-more { border-top: 1px solid var(--line); font-size: 13px; color: var(--text-dim); }
-.osheet-more > summary { display: flex; align-items: center; justify-content: space-between; min-height: 44px; cursor: pointer; color: var(--text); font-weight: 600; list-style: none; }
-.osheet-more > summary::-webkit-details-marker { display: none; }
-.osheet-more > summary::after { content: '+'; font-size: 18px; color: var(--text-dim); }
-.osheet-more[open] > summary::after { content: '−'; }
-.osheet-more > summary:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
-.osheet-more .stress-guide { border-top: 0; margin-top: 0; }
-.osheet .career { display: grid; gap: 8px; }
-.osheet-dismiss { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding-top: 8px; border-top: 1px solid var(--line); }
-.osheet-dismiss .confirm { align-self: stretch; }
 
 /* XP ring: progress toward the next point of the role's main rating. */
 .officer-progress { display: flex; align-items: center; gap: 10px; padding: 10px; }
