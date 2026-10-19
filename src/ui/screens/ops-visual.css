@@ -205,18 +205,22 @@
 .live .situation-toggle::after { content: ''; position: absolute; inset: -6px 0; }
 .live .situation-toggle { position: relative; }
 
-.last-peek { --tone: var(--amber); display: flex; align-items: center; gap: 9px; width: calc(100% - var(--gutter) * 2); min-height: 48px; margin: 4px var(--gutter) 8px; padding: 6px 10px; border: 1px solid var(--line); border-left: 3px solid var(--tone); border-radius: 8px; background: var(--panel); color: var(--text); font: inherit; text-align: left; cursor: pointer; }
-.last-peek-favorable { --tone: var(--mint); }
-.last-peek-adverse { --tone: var(--danger); }
-.last-peek-event { --tone: var(--line-strong); }
-.last-peek:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
-.last-peek-dot { flex-shrink: 0; width: 10px; height: 10px; border-radius: 50%; background: var(--tone); }
-.last-peek-text { display: grid; flex: 1 1 auto; min-width: 0; }
-.last-peek-text small { font-family: var(--font-cond); font-size: 12px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-dim); }
-.last-peek-text strong { font-size: 14px; line-height: 1.25; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-.last-peek-go { display: inline-flex; align-items: center; gap: 2px; flex-shrink: 0; font-family: var(--font-cond); font-size: 12.5px; font-weight: 600; color: var(--amber-2); }
+/* The scene: the title stays pinned with the stage rail, the clock and the pressure, so the story
+   below can scroll without losing where the call stands. */
+.live .live-title { position: sticky; top: 0; z-index: 6; background: linear-gradient(180deg, var(--bg) 82%, rgba(11, 17, 28, 0)); padding-bottom: 6px; }
+.live .live-status { display: flex; flex: 1 1 100%; flex-wrap: wrap; gap: 6px; align-items: center; }
+.live .live-status .hud-pill { padding: 2px 8px; font-size: 12.5px; }
 
-.operation-choices .operation-stage-prompt { margin: 0 0 4px; font-size: 15px; line-height: 1.4; }
+/* What happened: the latest result leads, read as a beat, not a log row. */
+.live .operation-feedback .decision-card { border-left: 3px solid var(--line-strong); }
+.live .operation-feedback .decision-favorable { border-left-color: var(--mint); }
+.live .operation-feedback .decision-mixed { border-left-color: var(--amber); }
+.live .operation-feedback .decision-adverse, .live .operation-feedback .decision-force { border-left-color: var(--danger); }
+.live .operation-feedback-heading h2 { font-family: var(--font-cond); font-size: 12px; font-weight: 600; letter-spacing: .13em; text-transform: uppercase; color: var(--text-dim); }
+.live .operation-feedback .decision-narrative { font-size: 15.5px; line-height: 1.5; color: #e8edf5; }
+
+/* The moment: the stage prompt is the hero line of the scene. */
+.operation-choices .operation-stage-prompt { margin: 2px 0 10px; padding-left: 12px; border-left: 3px solid var(--amber); font-size: 17px; line-height: 1.45; color: #eef2f8; }
 .operation-choices .operation-choice-count { margin: 0 0 8px; font-size: 12.5px; }
 .operation-choices .callbtn { min-height: 0; padding: 9px 11px; gap: 10px; }
 .operation-choices .callbtn-title { font-size: 16px; line-height: 1.2; }
@@ -266,7 +270,6 @@
 
 @media (max-width: 359px) {
   .live .live-name { font-size: 21px; }
-  .last-peek-go { font-size: 0; gap: 0; }
 }
 
 /* A toast never covers a sheet's Confirm footer: while a footed sheet is open, toasts sit at the top. */

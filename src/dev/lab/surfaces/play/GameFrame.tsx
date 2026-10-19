@@ -31,7 +31,7 @@ import { liveScreen } from '../../../../ui/screens/live-model';
 import type { ActionSelection, Override } from '../../../../ui/screens/live-model';
 import { ActionSheet, LiveView, RoomSheet } from '../../../../ui/screens/LiveView';
 import { focusActingSquad, toggleActingSquad, toggleSupportingSquad } from '../../../../ui/screens/operation-squads';
-import { LastDecisionPeek, OperationFeedback } from '../../../../ui/screens/OperationFeedback';
+import { OperationFeedback } from '../../../../ui/screens/OperationFeedback';
 import { PrepBriefing } from '../../../../ui/screens/PrepBriefing';
 import { SituationPanel } from '../../../../ui/screens/SituationPanel';
 import { SupportContext } from '../../../../ui/screens/SupportContext';
@@ -357,7 +357,6 @@ function LiveScreen({ state, onReview, onConfirm,  onFail }: { state: GameState;
       onToggleRooms={() => setShowRooms(value => !value)}
       onCancel={() => {}}
       onOpenDetails={() => setPanel(panel === 'action' ? 'none' : 'action')}
-      lastDecision={<LastDecisionPeek decisions={decisions} onReveal={() => document.querySelector('.lab-frame-device .operation-feedback')?.scrollIntoView({ block: 'start' })} />}
       feedback={<OperationFeedback officers={state.officers} decisions={decisions} explicitCompletion={(scenario?.version ?? 0) >= 4} onOpenLog={() => setPanel('none')} />}
       situation={scenario && <SituationPanel scenario={scenario} run={run} />}
       supportContext={scenario && <><IncidentPeopleStatus scenario={scenario} run={run} state={state} />

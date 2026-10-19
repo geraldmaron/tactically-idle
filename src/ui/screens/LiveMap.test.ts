@@ -50,15 +50,16 @@ function fixture() {
 beforeEach(() => { hooks.values = []; hooks.cursor = 0; });
 
 describe('live map display controls', () => {
-  it('keeps operation status and display buttons outside the drawable surface in both views', () => {
+  it('keeps the display buttons outside the drawable surface in both views', () => {
     const { props, render } = fixture();
     for (const showRooms of [false, true]) {
       props.showRooms = showRooms;
       const view = render();
       const children = Children.toArray(view.map.props.children).filter(isValidElement) as Element[];
-      expect(children.map((element) => element.props.className)).toEqual(['map-hud map-status', 'live-map-inner', 'map-hud map-actions']);
-      expect(children[2].props).toBe(view.controls.props);
-      expect(descendants(children[1].props.children).some((element) => element.props['aria-label'] === 'Map display')).toBe(false);
+      // The clock and pressure moved to the pinned call title, so the map holds only the drawing and its controls.
+      expect(children.map((element) => element.props.className)).toEqual(['live-map-inner', 'map-hud map-actions']);
+      expect(children[1].props).toBe(view.controls.props);
+      expect(descendants(children[0].props.children).some((element) => element.props['aria-label'] === 'Map display')).toBe(false);
       expect(view.buttons).toHaveLength(showRooms ? 1 : 2);
     }
   });

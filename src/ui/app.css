@@ -2175,9 +2175,6 @@ button.ocard {
   align-items: center;
   padding: 6px 8px;
 }
-.map-status {
-  border-bottom: 1px solid var(--line);
-}
 .map-actions {
   justify-content: flex-end;
   border-top: 1px solid var(--line);

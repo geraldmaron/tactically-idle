@@ -9,7 +9,6 @@ import { opMinutes, signed } from '../format';
 import { outcomePercentages } from './liveModels';
 import './operation-feedback.css';
 import { ITEMS } from '../../content/items';
-import { Icon } from '../icons';
 import { PeopleText } from '../people/PeopleText';
 import { Disclosure } from '../components/Disclosure';
 
@@ -133,27 +132,15 @@ export function OperationLogContents({ decisions, officers = {}, explicitComplet
   );
 }
 
-/** One line above the next decision naming the last result; tapping it shows the full record below. */
-export function LastDecisionPeek({ decisions, onReveal }: { decisions: DecisionView[]; onReveal: () => void }) {
-  const last = decisions.at(-1);
-  if (!last) return null;
-  const label = last.forceOutcome ? 'Task and harm recorded' : last.resultLabel ?? RESULT_LABEL[last.band];
-  const tone = last.forceOutcome || last.resultLabel ? 'event' : last.band;
-  return <button type="button" className={`last-peek last-peek-${tone}`} onClick={onReveal}>
-    <span className="last-peek-dot" aria-hidden="true" />
-    <span className="last-peek-text"><small>Last decision · {label}</small><strong>{last.title}</strong></span>
-    <span className="last-peek-go">What changed<Icon name="chevronDown" size={14} /></span>
-  </button>;
-}
-
-/** The history comes from the saved run, so closing a sheet or reloading cannot discard it. */
+/** The latest result leads the live scene, ahead of the next choice. The history comes from the
+ * saved run, so closing a sheet or reloading cannot discard it. */
 export function OperationFeedback({ decisions, ended = false, onOpenLog, officers = {}, explicitCompletion = false }: { decisions: DecisionView[]; ended?: boolean; onOpenLog?: () => void; officers?: DebriefOfficers; explicitCompletion?: boolean }) {
   const [open, setOpen] = useState(false);
   const last = decisions.at(-1);
   if (!last) return null;
   return (
     <section className="operation-feedback" aria-label="Operation feedback">
-      <div className="operation-feedback-heading"><h2>Last decision</h2><Button variant="ghost" size="sm" className="operation-log-trigger" onClick={() => { onOpenLog?.(); setOpen(true); }} aria-haspopup="dialog" aria-expanded={open}>Decision log ({decisions.length})</Button></div>
+      <div className="operation-feedback-heading"><h2>What happened</h2><Button variant="ghost" size="sm" className="operation-log-trigger" onClick={() => { onOpenLog?.(); setOpen(true); }} aria-haspopup="dialog" aria-expanded={open}>Decision log ({decisions.length})</Button></div>
       <DecisionCard key={last.revision} decision={last} officers={officers} explicitCompletion={explicitCompletion} />
       <Sheet open={open} onClose={() => setOpen(false)} title="Decision log" className="operation-log-sheet" footer={<Button block onClick={() => setOpen(false)}>{ended ? 'Return to debrief' : 'Return to operation'}</Button>}>
         <OperationLogContents decisions={decisions} officers={officers} explicitCompletion={explicitCompletion} />

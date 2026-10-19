@@ -222,7 +222,7 @@ describe('reviewing a decision', () => {
 describe('persistent decision results', () => {
   it('keeps actual changes and specific consequences visible after the toast is gone', () => {
     const html = render(createElement(OperationFeedback, { decisions: [decision()] }));
-    for (const expected of ['Last decision', 'Had complications', 'The patient received aid, but the route is still unresolved.', '+8 min', 'Call progress', '+12', 'Civilian safety', '-4', 'Pressure', '+5', 'Officer stress', '+1.5 stress', '1 × Trauma supplies', 'Patient condition: Confirmed', 'Decision log (1)']) expect(html).toContain(expected);
+    for (const expected of ['What happened', 'Had complications', 'The patient received aid, but the route is still unresolved.', '+8 min', 'Call progress', '+12', 'Civilian safety', '-4', 'Pressure', '+5', 'Officer stress', '+1.5 stress', '1 × Trauma supplies', 'Patient condition: Confirmed', 'Decision log (1)']) expect(html).toContain(expected);
     expect(html).toContain('aria-haspopup="dialog"');
     expect(html).toContain('aria-expanded="false"');
     expect(html).not.toContain('role="dialog"');
