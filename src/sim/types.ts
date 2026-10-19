@@ -319,7 +319,9 @@ export interface Officer {
   bornDay: number;
   /** Game-calendar day service began (may precede joining this department). */
   serviceStartDay: number;
-  career: { operations: number; favorable: number; adverse: number };
+  /** `earned`: funding this officer brought in through call payouts (an equal share of each
+   * payout among the officers on the call) and instructor detail fees. */
+  career: { operations: number; favorable: number; adverse: number; earned?: number };
   /** Announced retirement; the officer leaves on `day`. Forecastable, never instant. */
   retirement: { day: number; reason: 'age' | 'service' | 'burnout'; announcedDay: number; extended: boolean } | null;
   /** XP already converted into rating growth. */

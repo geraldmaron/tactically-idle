@@ -210,7 +210,7 @@ function validOfficer(o: unknown, key: string): boolean {
     || (o.lastRunCounted !== undefined && o.lastRunCounted !== null && !isStr(o.lastRunCounted))) return false;
   if (!isNum(o.bornDay) || !isNum(o.serviceStartDay)) return false;
   const c = o.career;
-  if (!isObj(c) || !isNum(c.operations) || !isNum(c.favorable) || !isNum(c.adverse)) return false;
+  if (!isObj(c) || !isNum(c.operations) || !isNum(c.favorable) || !isNum(c.adverse) || (c.earned !== undefined && !isNum(c.earned))) return false;
   if (o.retirement !== null) {
     const r = o.retirement;
     if (!isObj(r) || !isNum(r.day) || !isNum(r.announcedDay) || typeof r.extended !== 'boolean') return false;

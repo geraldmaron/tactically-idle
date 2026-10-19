@@ -4,7 +4,7 @@ import { useGame } from '../store';
 import { budget } from '../../sim/department-selectors';
 import type { GameState } from '../../sim/types';
 import { Icon } from '../icons';
-import { money, moneyFull, pad2, rate } from '../format';
+import { liveMoney, moneyFull, pad2, ratePerMinute } from '../format';
 import { Sheet } from './Sheet';
 import { Meter } from './ui';
 import { levelProgress } from '../../sim/department-level';
@@ -92,12 +92,12 @@ export function DepartmentStatusBar({ g, topic, onOpen, onClose, live = { shown:
       <ul className="stats" aria-label="Department status">
         <li><button className="stat stat-cash topbar-stat-button" {...helpProps('funding', moneyFull(d.funding))}>
           <Icon name="cash" size={18} />
-          <span>{money(live.shown)}</span>
+          <span className="stat-cash-value">{liveMoney(live.shown)}</span>
           <FundingDeltas deltas={live.deltas} />
         </button></li>
-        <li><button className={`stat stat-rate topbar-stat-button${b.net < 0 ? ' stat-neg' : ''}`} {...helpProps('income', `${moneyFull(b.net)} per real hour`)}>
+        <li><button className={`stat stat-rate topbar-stat-button${b.net < 0 ? ' stat-neg' : ''}`} {...helpProps('income', `${ratePerMinute(b.net)} a real minute, ${moneyFull(b.net)} an hour`)}>
           <Icon name="trend" size={16} />
-          <span>{rate(b.net)}</span>
+          <span>{ratePerMinute(b.net)}</span>
         </button></li>
         <li><button className="stat stat-trust topbar-stat-button" {...helpProps('trust', `${Math.round(d.trust)} out of 100`)}>
           <Icon name="shield" size={17} />

@@ -27,7 +27,8 @@ import { officerStatus } from './squad-model';
 import { Portrait } from '../portraits/Portrait';
 import { agePortraitProps } from './helpers';
 import { Icon } from '../icons';
-import { money, perHour, rate, relativeTime, signedMoney, yearsText } from '../format';
+import { money, perHour, rate, ratePerMinute, relativeTime, signedMoney, yearsText } from '../format';
+import { officerRates } from '../../sim/economy';
 import { PACE_LABEL } from './Recruit';
 
 export type ProfileTab = 'overview' | 'career' | 'care';
@@ -159,11 +160,14 @@ function CareerTab({ o }: { o: Officer }) {
   const retainable = !!ret && ret.canRetain;
   const effects = info?.effects.filter((effect) => !effect.startsWith('Needs ') || !effect.includes('xp per rating point')) ?? [];
   const outlook = info?.outlook && !(ret && info.outlook.includes(ret.date)) ? info.outlook : null;
+  const net = officerRates(g, Math.max(now, g.department.lastSettledAt))[o.id]?.net ?? -o.wage;
   return <div className="profile-stack career">
     <dl className="profile-record" aria-label="Service record">
       <div><dt>Calls</dt><dd>{o.career.operations}</dd></div>
       <div><dt>Went well</dt><dd className="tone-mint">{o.career.favorable}</dd></div>
       <div><dt>Went badly</dt><dd className="tone-danger">{o.career.adverse}</dd></div>
+      <div><dt>Brought in</dt><dd>{money(o.career.earned ?? 0)}</dd></div>
+      <div><dt>Net now</dt><dd className={net < 0 ? 'tone-danger' : 'tone-mint'}>{ratePerMinute(net)}</dd></div>
     </dl>
     {ret && <div className="note note-warn career-retire"><Icon name="retire" size={16} /><span>Retiring on {ret.date}, {ret.inDays === 1 ? '1 day' : `${ret.inDays} days`} left. {sentence(ret.reason)} They leave the roster and any squad on that day.</span></div>}
     {ret && retainable && !confirm && <Button size="sm" variant="primary" icon="handover" onClick={() => setConfirm(true)}>Offer retention{ret.retainCost ? ` · ${ret.retainCost}` : ''}</Button>}

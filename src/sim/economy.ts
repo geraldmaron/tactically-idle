@@ -151,6 +151,30 @@ export function ratesAt(state: GameState, t: number): Rates {
   };
 }
 
+/** One officer's hourly money: what they bring in (patrol, or a detail's fee spread over its hours)
+ * against their wage. Patrol pay is flat per officer (docs/patrol-work.md, owner 2026-10-19), so
+ * rates differ by wage, duty and instructor details, never by skill on patrol. */
+export interface OfficerRate {
+  patrol: number;
+  detail: number;
+  wage: number;
+  net: number;
+}
+
+/** Hourly rate of every officer at time t. Their patrol column sums to ratesAt().patrol. Pure. */
+export function officerRates(state: GameState, t: number): Record<Id, OfficerRate> {
+  const patrolling = new Set<Id>();
+  for (const sq of state.squads) if (sq.duty === 'patrol') for (const id of sq.officerIds) patrolling.add(id);
+  const out: Record<Id, OfficerRate> = {};
+  for (const o of Object.values(state.officers)) {
+    const patrol = patrolling.has(o.id) && !o.assignment && !isInjured(o, t) ? ECONOMY_TUNING.patrolPerOfficer : 0;
+    const a = o.assignment;
+    const detail = a?.kind === 'detail' && a.endsAt > a.startedAt ? a.fee / ((a.endsAt - a.startedAt) / HOUR_MS) : 0;
+    out[o.id] = { patrol, detail, wage: o.wage, net: patrol + detail - o.wage };
+  }
+  return out;
+}
+
 /** What each squad duty is worth, for the squad builder's preview (squad-optimizer.ts DutyRates). */
 export function dutyRates(): DutyRates {
   return { recoveryPerHour: ECONOMY_TUNING.recoveryPerHour, patrolPerOfficer: ECONOMY_TUNING.patrolPerOfficer };

@@ -1090,9 +1090,11 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     draft.department.devPoints += result.devPointReward;
     draft.department.trust = clamp(draft.department.trust + result.trustDelta, 0, 100);
     if (result.serviceEarned !== undefined) addService(draft.department, result.serviceEarned);
+    const payoutShare = result.officerCondition.length ? result.fundingReward / result.officerCondition.length : 0;
     for (const oc of result.officerCondition) {
       const o = draft.officers[oc.officerId];
       if (!o) continue;
+      o.career.earned = (o.career.earned ?? 0) + payoutShare;
       o.xp += oc.xpGained;
       o.stress = oc.stressAfter;
       o.career.operations += 1;

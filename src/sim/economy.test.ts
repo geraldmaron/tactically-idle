@@ -335,3 +335,18 @@ describe('restock rules', () => {
     expect(r.result.ok).toBe(false);
   });
 });
+
+describe('officer rates', () => {
+  it('splits the hourly money by officer, and patrol shares sum to the department patrol line', async () => {
+    const { officerRates } = await import('./economy');
+    const g = establishedDepartment(T0);
+    const t = g.department.clockHighWater;
+    const rows = Object.values(officerRates(g, t));
+    expect(rows.length).toBe(Object.keys(g.officers).length);
+    expect(rows.reduce((s, r) => s + r.patrol, 0)).toBe(ratesAt(g, t).patrol);
+    expect(rows.reduce((s, r) => s + r.wage, 0)).toBe(ratesAt(g, t).wages);
+    for (const r of rows) expect(r.net).toBeCloseTo(r.patrol + r.detail - r.wage);
+    // Wages differ, so officers on the same duty net different amounts.
+    expect(new Set(rows.map((r) => r.net)).size).toBeGreaterThan(1);
+  });
+});

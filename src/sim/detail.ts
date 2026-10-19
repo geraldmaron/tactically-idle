@@ -52,6 +52,7 @@ export function completeDetails(d: GameState, t: number): void {
     const a = o.assignment;
     if (a?.kind !== 'detail') continue;
     postFunding(d.department, a.fee, 'detail', `Instructor detail, ${fullName(o)}`, a.endsAt);
+    o.career.earned = (o.career.earned ?? 0) + a.fee;
     o.xp += Math.round(DETAIL_TUNING.xpPerHour * (a.endsAt - a.startedAt) / HOUR_MS);
     o.assignment = null;
   }
