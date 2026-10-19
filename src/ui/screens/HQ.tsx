@@ -47,18 +47,16 @@ export function HQ() {
         <div className="chips"><Chip icon="medal">Level {g.department.level}</Chip><Chip icon="people">Public trust {Math.round(g.department.trust)} / 100</Chip></div>
         <HeaderBudget g={g} b={b} />
         <RosterSummary g={g} overview={overview} />
+        <HqStatTiles
+          training={{ inCourses: overview.training, places: overview.trainingSlots }}
+          board={overview.board}
+          onTraining={() => nav.openTraining()}
+          onCalls={() => nav.go('ops')}
+        />
       </header>
       {g.activeRun && <ActiveOpCard g={g} now={now} />}
       {g.report && <section className="hq-report-summary"><div><strong>Shift report ready</strong><p>{signedMoney(g.report.net)} net funding · {g.report.completedCourses.length} courses completed</p></div><Button size="sm" onClick={() => setReportOpen(true)}>Review report</Button></section>}
       <CommandStaff />
-      <HqStatTiles
-        squads={{ staffed: overview.staffedSquads, total: g.squads.length, deployed: overview.squads.filter((squad) => squad.deployed).length }}
-        training={{ inCourses: overview.training, places: overview.trainingSlots }}
-        board={overview.board}
-        onSquads={() => nav.setSquadSection('roster')}
-        onTraining={() => nav.openTraining()}
-        onCalls={() => nav.go('ops')}
-      />
       {!!attention.length && <section className="hq-attention"><h2 className="section-title">Needs attention</h2>{attention.slice(0, 3).map((item) => <div key={item.text}><span>{item.text}</span><Button size="sm" onClick={() => nav.go(item.tab)}>{item.action}</Button></div>)}</section>}
       <DutySection squads={g.squads} g={g} />
       <Debriefs key={`${saved.campaignId ?? 'unsaved'}:${saved.session}`} g={g} now={now} />
@@ -67,17 +65,24 @@ export function HQ() {
   );
 }
 
-/** Money at a glance in the department header: funding, net per hour and DP per hour. The full
- * hourly breakdown opens in place, so the budget is never a scroll away. */
+/** Money at a glance in the department header: funding and DP per hour, then income, expenses
+ * and net per hour. The line-by-line breakdown opens in place, so the budget is never a scroll away. */
 function HeaderBudget({ g, b }: { g: GameState; b: Budget }) {
   const [open, setOpen] = useState(false);
+  const expenses = b.gross - b.net;
   return (
     <div className="hq-money">
-      <button type="button" className="hq-money-row" aria-expanded={open} onClick={() => setOpen((value) => !value)} aria-label={`Funding ${money(g.department.funding)}, ${rate(b.net)} net, ${b.devPointsPerHour.toFixed(1)} development points per hour. ${open ? 'Hide' : 'Show'} hourly budget`}>
-        <span className="hq-money-stat"><small>Funding</small><strong className="hq-money-funding">{money(g.department.funding)}</strong></span>
-        <span className="hq-money-stat"><small>Net</small><strong className={b.net < 0 ? 'tone-danger' : 'tone-mint'}>{rate(b.net)}</strong></span>
-        <span className="hq-money-stat"><small>Dev points</small><strong>{b.devPointsPerHour.toFixed(1)}/h</strong></span>
-        <Icon name={open ? 'chevronUp' : 'chevronDown'} size={16} className="hq-money-toggle" />
+      <button type="button" className="hq-money-row" aria-expanded={open} onClick={() => setOpen((value) => !value)} aria-label={`Funding ${money(g.department.funding)}. Income ${perHour(b.gross)}, expenses ${perHour(expenses)}, ${rate(b.net)} net, ${b.devPointsPerHour.toFixed(1)} development points per hour. ${open ? 'Hide' : 'Show'} hourly budget`}>
+        <span className="hq-money-top">
+          <span className="hq-money-stat"><small>Funding</small><strong className="hq-money-funding">{money(g.department.funding)}</strong></span>
+          <span className="hq-money-stat hq-money-dp"><small>Dev points</small><strong>{b.devPointsPerHour.toFixed(1)}/h</strong></span>
+          <Icon name={open ? 'chevronUp' : 'chevronDown'} size={16} className="hq-money-toggle" />
+        </span>
+        <span className="hq-money-flow">
+          <span className="hq-money-stat"><small>Income</small><strong className="tone-mint">+{perHour(b.gross)}</strong></span>
+          <span className="hq-money-stat"><small>Expenses</small><strong className="tone-danger">-{perHour(expenses)}</strong></span>
+          <span className="hq-money-stat"><small>Net</small><strong className={b.net < 0 ? 'tone-danger' : 'tone-mint'}>{rate(b.net)}</strong></span>
+        </span>
       </button>
       {open && <BudgetCard b={b} />}
     </div>
@@ -127,38 +132,30 @@ function CapacityBar({ segments, capacity, label }: { segments: TileSegment[]; c
   );
 }
 
-/** Squads, training places and calls as icon tiles: a count against capacity, a bar, one short line. Each opens its screen. */
-export function HqStatTiles({ squads, training, board, onSquads, onTraining, onCalls }: {
-  squads: { staffed: number; total: number; deployed: number };
+/** The header's last row: training places and the call board, each a count against capacity with a
+ * thin bar and one short line, each opening its screen. Squads are not repeated here: the roster
+ * block above already shows every squad's state. */
+export function HqStatTiles({ training, board, onTraining, onCalls }: {
   training: { inCourses: number; places: number };
   board: { count: number; newCount: number; expiringSoon: number; max: number };
-  onSquads: () => void;
   onTraining: () => void;
   onCalls: () => void;
 }) {
-  const home = Math.max(0, squads.staffed - squads.deployed);
   const settled = Math.max(0, board.count - board.expiringSoon);
+  const free = Math.max(0, training.places - training.inCourses);
   return (
-    <section className="hq-status-grid" aria-label="Department overview">
-      <button type="button" className="hq-tile" onClick={onSquads}>
-        <span className="hq-tile-head"><Icon name="people" size={16} />Squads</span>
-        <strong>{squads.staffed}<small>/{squads.total}</small></strong>
-        <CapacityBar segments={[{ key: 'deployed', value: squads.deployed }, { key: 'fresh', value: home }]} capacity={squads.total} label={`${squads.staffed} of ${squads.total} squads staffed, ${squads.deployed} on an operation`} />
-        <small>{squads.deployed ? `${squads.deployed} out` : 'All home'}</small>
-      </button>
+    <div className="hq-status-row" role="group" aria-label="Training and calls">
       <button type="button" className="hq-tile" onClick={onTraining}>
-        <span className="hq-tile-head"><Icon name="mortarboard" size={16} />Training</span>
-        <strong>{training.inCourses}<small>/{training.places}</small></strong>
+        <span className="hq-tile-head"><Icon name="mortarboard" size={14} />Training</span>
+        <span className="hq-tile-value"><strong>{training.inCourses}<small>/{training.places}</small></strong><small>{free ? `${free} free` : 'Full'}</small></span>
         <CapacityBar segments={[{ key: 'training', value: training.inCourses }]} capacity={training.places} label={`${training.inCourses} of ${training.places} training places in use`} />
-        <small>{training.inCourses ? 'In courses' : 'Places free'}</small>
       </button>
       <button type="button" className="hq-tile" onClick={onCalls}>
-        <span className="hq-tile-head"><Icon name="pin" size={16} />Calls</span>
-        <strong>{board.count}<small>/{board.max}</small></strong>
+        <span className="hq-tile-head"><Icon name="pin" size={14} />Calls</span>
+        <span className="hq-tile-value"><strong>{board.count}<small>/{board.max}</small></strong><small className={board.expiringSoon ? 'tone-warn' : undefined}>{board.expiringSoon ? `${board.expiringSoon} closing` : board.newCount ? `${board.newCount} new` : 'On the board'}</small></span>
         <CapacityBar segments={[{ key: 'strained', value: board.expiringSoon }, { key: 'live', value: settled }]} capacity={board.max} label={`${board.count} of ${board.max} calls on the board, ${board.newCount} unseen, ${board.expiringSoon} closing soon`} />
-        <small>{board.expiringSoon ? `${board.expiringSoon} closing` : `${board.newCount} new`}</small>
       </button>
-    </section>
+    </div>
   );
 }
 

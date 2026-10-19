@@ -294,11 +294,11 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
         </div>
       </div>
 
+      <PrepBriefing scenario={scenario} built={built} brief={brief} intel={intel} />
+
       <div className="prep-map" aria-label="Location preview">
         <Blueprint built={built} spaces={spaces} squadTasks={[]} selectedSpaceId={null} focusSquadId={null} {...blueprintExtras} />
       </div>
-
-      <PrepBriefing scenario={scenario} built={built} brief={brief} intel={intel} />
 
       <Section title="Squads" icon="people" hint={`Takes ${range.min === range.max ? range.min : `${range.min} to ${range.max}`} squad${range.max > 1 ? 's' : ''}. Tap to choose.`}>
         {g.squads.length === 0 ? (
