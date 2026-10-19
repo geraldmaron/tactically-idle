@@ -88,6 +88,49 @@ which the sheet did not re-read.
 
 ## Next: calls and the incident model
 
+The scenario depth program (owner, 2026-10-19) comes first in this section: the calls are correct
+but forgettable, and no gate can fail a call for that. Order: `depth-bible` and `call-surfaces`
+with `deception-commitments`, then `hostage-depth-pilot`, then an owner read before any other call
+is rewritten. Plan of record: `docs/scenario-depth.md`.
+
+### depth-bible: Depth rules a call can fail with zero defects
+Tags: job=command; journeys=choices-branch; probes=none (writing rules and review gates); lane=calls
+Needs: start=none; integrate=none; ship=none
+
+Technique lenses, a psychology reference, the temptation pattern and escalation palette, a darker
+tier in the ethics rules, a keep, relax or drop verdict on every house style rule, and depth gates
+D1 to D9 in the review rubric, all inside the four `swat-*` skills. Done: the skills carry them,
+the string checker and prose lint match the verdicts, and AGENTS.md's player-facing writing rules
+say the same.
+
+### call-surfaces: Radio transcript, ending epilogue and a 3-line board hook
+Tags: job=command; journeys=answer-a-call; probes=none (text surfaces, not odds inputs); lane=engine
+Needs: start=none; integrate=none; ship=none
+
+`TreeNode.exchange` and `TreeOutcome.exchange` (two to four spoken lines with a speaker), and
+`TreeEnding.epilogue`, compiled with name binding, budgeted in the string checker and rendered in
+the live call and the debrief. The Ops board hook clamps at 3 lines (owner decision B5, 2026-10-19).
+Done: a call that authors them shows them at 390x844, and the checker fails an over-budget line.
+
+### deception-commitments: Lies and unapproved promises the player can make
+Tags: job=command; journeys=choices-branch; probes=none (commitment state, not a favorable-chance input); lane=engine
+Needs: start=none; integrate=none; ship=none
+
+A choice can make a commitment command never approved. It breaks when the promised thing is still
+undelivered where the tree says it must be, moves the person's meters (`promise_broken`) and counts
+in the score. Later choices can read whether it was kept or broken. Done: a gate fails a deception
+whose break has no visible cue, and a test shows a lie that helps now and costs later.
+
+### hostage-depth-pilot: Rebuild One Last Signature to the depth rules
+Tags: job=command; journeys=answer-a-call, choices-branch; probes=none (a rewrite of an existing call, whose probes keep their floors); lane=calls
+Needs: start=depth-bible; integrate=call-surfaces, deception-commitments; ship=none (waits on the owner read)
+
+A redesign, not a polish: situations that reframe the taker, a temptation, an escalation palette,
+voices for the owner, courier and negotiator, and an epilogue on every ending. Done: the gates and
+the crossed coverage walk pass, a separate reader records D1 to D9, fingerprints are recaptured
+deliberately, and the owner has read three paths aloud and approved the bible as calibrated.
+
+
 ### outcome-calibration-drift: Outcome scores drifted from the hand-set numbers after sidearms
 Tags: job=command; journeys=chance-not-script; probes=none (scoring calibration, not a favorable-chance input); lane=engine
 Needs: start=none; integrate=none; ship=none
@@ -103,9 +146,9 @@ passes.
 
 ### barricade-model-first: Write the barricade call model-first
 Tags: job=command; journeys=answer-a-call, choices-branch; probes=blueprint-building, blueprint-locked; lane=calls
-Needs: start=none; integrate=barricade-tooling-fixes, outcome-calibration-drift; ship=none
+Needs: start=hostage-depth-pilot (the owner read); integrate=barricade-tooling-fixes, outcome-calibration-drift; ship=none
 
-As the hostage call was: template, design sheet in `docs/calls/`, tree, separate review. The old
+Under `depth-bible`: template, design sheet in `docs/calls/` (the parked sheet reworked to the depth rules), tree, separate review including D1 to D9. The old
 tree has 2 `team` moves out of about 37 choices (armed 13, hostage 8, rescue 8), and a different
 building changes 6 of 33 opening choices (`blueprint-building`, floor 0.18). Done: the new call
 makes physical moves through the building, both blueprint floors rise, `npm run check:strings`
@@ -121,9 +164,9 @@ grows here too, since most of today's openings are phone calls that carry no gea
 
 ### rescue-model-first: Write the rescue call model-first
 Tags: job=command; journeys=answer-a-call, choices-branch; probes=blueprint-building; lane=calls
-Needs: start=none; integrate=offsite-fire, rescue-engine-requests; ship=none
+Needs: start=hostage-depth-pilot (the owner read); integrate=offsite-fire, rescue-engine-requests; ship=none
 
-Same pipeline as the barricade; the design sheet is `docs/calls/rescue-design.md`. Done: rescue gunfire comes from the drawn incoming-fire result,
+Same pipeline as the barricade, under `depth-bible`; the design sheet is `docs/calls/rescue-design.md` and is reworked to it. Done: it passes D1 to D9, rescue gunfire comes from the drawn incoming-fire result,
 not harm authored per branch; `npm run check:strings` passes on it; it passes coverage, balance
 and review; and the old `rescue-chair` tree is retired.
 
@@ -131,7 +174,7 @@ and review; and the old `rescue-chair` tree is retired.
 Tags: job=command; journeys=answer-a-call, choices-branch; probes=subject-armament; lane=calls
 Needs: start=barricade-model-first; integrate=none; ship=none
 
-Same pipeline. Done: `npm run check:strings` passes on it, it passes coverage, balance and review,
+Same pipeline, under `depth-bible`. Done: `npm run check:strings` passes on it, it passes D1 to D9, it passes coverage, balance and review,
 and the old `armed-noise` tree is retired.
 
 ### civilian-hit-lines: Lines for a civilian hit by fire
@@ -313,7 +356,7 @@ Optional.
 - **Barricade building family:** keep apartments (`apartment_unit_g2`) or not.
 - **"Goes to review" ending line** (E2.1) in the barricade call.
 - **Hostage review calls:** O4 custody wording, O1 armed-lane words, N19 time charge on all-night
-  holds, the 3-line board hook clamp, the 6-decision stage-3 chain, the E3 count read, and B9.
+  holds, the 6-decision stage-3 chain, the E3 count read, and B9.
 - **Domain-model defaults D1 to D5** stand unless changed: no explosives, a fled subject's follow-up
   call, groups above 8 as a later mode, 24h review after a shooting, concessions within policy.
 - **Barricade on apartments:** with the child in a bedroom, `apartment_unit_g2` hosts the barricade
@@ -327,6 +370,11 @@ deploy short of injured officers (`short-squad-deploys`); sidearms from day one
 with harm counts as resolved (already so in `dispositionOf`); an entry breaks every open commitment
 (already so in `src/sim/commitments.ts`); build the Peer Support Lead, the Recruiter and patrol work;
 the crisis cap stays report-only until playtests.
+
+Decided 2026-10-19 (scenario depth): scenario work resumes as the depth program above; the board
+hook clamps at 3 lines; text gets new surfaces (transcript, epilogue) rather than larger budgets
+everywhere; the player may lie or promise without approval, at a real cost; the tone goes darker,
+with the self-harm safe-messaging rules, E2 and E3 kept (`docs/scenario-depth.md`).
 Also decided 2026-10-19: ship by wrapping the web app for iOS and Android; free to play with
 purchases, so the simulated point packs become real purchases; target a Mature rating (ESRB M,
 PEGI 16); no release date or budget yet.
