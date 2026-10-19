@@ -185,10 +185,15 @@ High-risk warrant, robbery in progress, crisis barricade, vehicle standoff, buil
 standoff needs a roadside building family.
 
 ### meters-drift: Meters move with time
-Tags: job=command; journeys=chance-not-script; probes=metric-pressure; lane=engine
+Tags: job=command; journeys=chance-not-script; probes=metric-pressure; lane=calls
 Needs: start=none; integrate=none; ship=none
 
-Time moves the meters, the `shots` event is written into content, and escalation comes by drift.
+The engine side shipped: time moves agitation (`METERS_V1.drift` in `src/sim/meters.ts`, run from
+`advanceTime`; a subject the team hasn't reached winds up, one who talks to the team settles, and a
+drift never counts as an event). Left, in content: write the `shots` event into the outcomes where
+shots fire (`moves: [{ personId, event: 'shots' }]`), and let the escalation branches read the
+drifted stances. The drift rates are first-pass (0.06 and 0.04 a minute): 0.15 and 0.10 moved the
+outcome-score calibration past its 0.75 trust bound, so any rise needs the calibration rows rechecked.
 
 ## Gates and tooling
 
@@ -275,7 +280,8 @@ Owner decision 2026-10-19: restore routine patrol work, which was deleted. Squad
 standing patrol assignments on the board (removed before 2026-10-18, see git history around
 721536c and 4e908ac). Done: a short design note first (what patrol work is, how it pays, how the
 Watch Commander runs it, how it shows on the board without crowding tactical calls), approved by the
-lead, then the engine loop and its UI.
+lead, then the engine loop and its UI. The note is `docs/patrol-work.md` (proposed 2026-10-19); it
+waits on three owner answers listed there.
 
 ## Player experience
 

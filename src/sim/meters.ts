@@ -31,6 +31,11 @@ export const METERS_V1 = tunable('METERS_V1', {
     promise_broken: { agitation: 12, rapport: -15 },
   } satisfies Record<MeterEvent, SubjectMeters>,
   volatility: { steady: 0.6, shifting: 1, volatile: 1.5 },
+  /** What time alone does, per minute of the call, scaled by volatility like an event. A subject the
+   * team has not reached (rapport under `rapportBelow`) winds up by `windUp`; one who talks to the
+   * team (rapport at `rapportSettled` or more) settles by `settle`. In between, nothing moves. It
+   * never counts as an event the team caused, so a subject nobody has reached stays 'unheard'. */
+  drift: { windUp: 0.06, settle: 0.04, rapportBelow: 30, rapportSettled: 50 },
   /** Odds per point moved since the start, on a conversation with this subject. */
   odds: { rapport: 0.3, agitation: 0.25 },
   /** A change smaller than this is not worth a line on the card. */
@@ -69,6 +74,18 @@ export function applyMoves(run: Pick<OperationRun, 'meters'>, scenario: Scenario
     meters.agitation = agitation; meters.rapport = rapport;
   }
   run.meters = next;
+}
+
+/** Let `minutes` of the call pass for every subject with meters (METERS_V1.drift). Agitation only;
+ * rapport moves by what the team does. Not recorded in `moved`, so stances ignore it until an event. */
+export function driftMeters(run: Pick<OperationRun, 'meters'>, scenario: Pick<ScenarioDefinition, 'incidentPeople'>, minutes: number): void {
+  if (!run.meters || minutes <= 0) return;
+  const D = METERS_V1.drift;
+  for (const [personId, meters] of Object.entries(run.meters)) {
+    const scale = METERS_V1.volatility[scenario.incidentPeople?.find(entry => entry.id === personId)?.volatility ?? 'shifting'];
+    const rate = meters.rapport < D.rapportBelow ? D.windUp : meters.rapport >= D.rapportSettled ? -D.settle : 0;
+    if (rate) meters.agitation = clamp(round1(meters.agitation + rate * scale * minutes));
+  }
 }
 
 /** How a subject sounds to the team now. 'unheard' until the first event the team caused. */

@@ -9,7 +9,7 @@ import { protectedOfficerEffects } from './force-risk';
 import { drawnKeys, forceSuppliesSpent, resolveDrawn } from './drawn-effects';
 import { withVariants } from '../gen/incident/drawn-model';
 import { advanceClocks, clockConditionsHold, clockErrors, clockOutEffects, cueEffects, decisionMinutes, forkMinutes, initialClocks, teamMinutes } from './clocks';
-import { applyMoves, initialMeters, meterConditionsHold } from './meters';
+import { applyMoves, driftMeters, initialMeters, meterConditionsHold } from './meters';
 import { applyCommitments } from './commitments';
 import { forceLines, OUTCOME_SCORE_V1, scoreCall } from './outcome-score';
 import { CAREER_TUNING } from './career';
@@ -411,7 +411,7 @@ function makeRun(state: GameState, built: BuiltLocation, scenario: ScenarioDefin
 
 /** Advance operation time: pressure rises; civilian safety falls above the threshold; v13 clocks run
  * down, and the cues they pass come back as effects for the caller to apply (applyClockCues). */
-export function advanceTime(run: Pick<OperationRun, 'clock' | 'pressure' | 'civilianSafety'> & Partial<Pick<OperationRun, 'clocks' | 'flags'>>, s: ScenarioDefinition, minutes: number): { civilianLoss: number; crossed: boolean; cues: OutcomeEffect[] } {
+export function advanceTime(run: Pick<OperationRun, 'clock' | 'pressure' | 'civilianSafety'> & Partial<Pick<OperationRun, 'clocks' | 'flags' | 'meters'>>, s: ScenarioDefinition, minutes: number): { civilianLoss: number; crossed: boolean; cues: OutcomeEffect[] } {
   const m = s.pressure;
   const p0 = run.pressure;
   let over = 0;
@@ -421,6 +421,7 @@ export function advanceTime(run: Pick<OperationRun, 'clock' | 'pressure' | 'civi
   run.clock = round1(run.clock + minutes);
   run.pressure = round1(clamp(p0 + m.perMinute * minutes, 0, 100));
   run.civilianSafety = round1(clamp(run.civilianSafety - loss, 0, 100));
+  if (run.meters) { run.meters = structuredClone(run.meters); driftMeters(run, s, minutes); }
   const cues = run.clocks && run.flags ? advanceClocks(run as Pick<OperationRun, 'clocks' | 'flags'>, s, minutes) : [];
   return { civilianLoss: loss, crossed: p0 < m.threshold && run.pressure >= m.threshold, cues };
 }
