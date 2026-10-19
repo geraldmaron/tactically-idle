@@ -1,6 +1,7 @@
 import { CALL_TREE_CONTENT_VERSION as INCIDENT_CONTENT_VERSION } from '../../content/call-trees';
 import { SCENARIO_TYPES } from '../../content/scenario-types';
 import { templateAt } from '../../content/incidents';
+import type { IncidentTemplate } from '../../content/incidents/types';
 import { compileIncident } from './instance';
 import { furnishedFamilyId } from '../building/furnishing';
 import type { IncidentSpec, IncidentType, ScenarioDefinition } from '../../sim/scenario-types';
@@ -39,8 +40,10 @@ export function parseIncidentId(id: string): IncidentSpec | null {
  * the building actually used in locationFamilyId/locationSeed, which every run and map
  * reads. Deterministic, so the same ID always resolves to the same building. */
 const HOSTING_SEEDS = 12;
-export function generateIncident(spec: IncidentSpec): ScenarioDefinition {
-  if (!isProceduralFamily(spec.familyId)) return generateIncidentAt(spec);
+/** `template` (tests only) hosts another template of the spec's type the way the board hosts the
+ * shipping one, so engine tests can run their own calls without reading the calls lane's trees. */
+export function generateIncident(spec: IncidentSpec, template?: IncidentTemplate): ScenarioDefinition {
+  if (!isProceduralFamily(spec.familyId)) return generateIncidentAt(spec, template);
   const places: Pick<IncidentSpec, 'familyId' | 'buildingSeed'>[] = [{ familyId: spec.familyId, buildingSeed: spec.buildingSeed }];
   for (let attempt = 1; attempt < HOSTING_SEEDS; attempt++) places.push({ familyId: spec.familyId, buildingSeed: hashSeed(`${spec.buildingSeed}:${spec.seed}:host-v10:${attempt}`) });
   const authored = SCENARIO_TYPES.find(info => info.type === spec.type)?.families.filter(id => !isProceduralFamily(id)) ?? [];
@@ -49,19 +52,20 @@ export function generateIncident(spec: IncidentSpec): ScenarioDefinition {
   let failure: unknown = new Error('Unsupported incident and building combination');
   for (const place of places) {
     try {
-      const hosted = generateIncidentAt({ ...spec, ...place });
+      const hosted = generateIncidentAt({ ...spec, ...place }, template);
       return place === places[0] ? hosted : { ...hosted, id: incidentId(spec), incident: { ...spec } };
     } catch (error) { failure = error; }
   }
   throw failure;
 }
 
-function generateIncidentAt(spec: IncidentSpec): ScenarioDefinition {
+function generateIncidentAt(spec: IncidentSpec, given?: IncidentTemplate): ScenarioDefinition {
   if (!parseIncidentId(incidentId(spec))) throw new Error('Invalid incident specification');
   const locationFamilyId = furnishedFamilyId(spec.familyId);
   const built = buildLocation(locationFamilyId, spec.buildingSeed);
   if (built.issues.some((i) => i.severity === 'error')) throw new Error('Incident location is invalid');
-  const template = templateAt(spec.type);
+  if (given && given.type !== spec.type) throw new Error(`A ${given.type} template can't host a ${spec.type} call`);
+  const template = given ?? templateAt(spec.type);
   if (!template) throw new Error('No current incident template');
   const tree = template.tree;
   // The compiler fills facts, stages and endings after placing the template's people.

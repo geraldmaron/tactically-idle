@@ -7,6 +7,7 @@ import { drawIncidentSpec, generateIncident } from './index';
 import { aggregates, countTemplate, drawInstance, instanceOf, signature } from './instance';
 import { placeCast, TOKEN, withCallTree } from './trees-v13/compile';
 import type { CastDraw } from './trees-v13/compile';
+import { HOUSE_TEMPLATE } from './trees-v13/house-fixture';
 
 const templates = Object.values(INCIDENT_TEMPLATES) as IncidentTemplate[];
 const EXPECTED_CLASS: Partial<Record<IncidentType, IncidentClass>> = {
@@ -99,8 +100,8 @@ describe('incident templates', () => {
   // Slice 5: nobody is drawn who isn't an engine person. Everyone past a slot's key roles is a member
   // of a group the tree names (groups.test.ts holds the members to the key roles' rules).
   it('refuses a slot that draws people past its key roles without a group to put them in', () => {
-    // The barricade names no group (the hostage call does since the slice 5 pilot).
-    const barricade = INCIDENT_TEMPLATES.barricaded!;
+    // The engine's house call (a frozen barricade) names no group.
+    const barricade = HOUSE_TEMPLATE;
     const loose: IncidentTemplate = { ...barricade, cast: barricade.cast.map(slot => slot.id === 'subjects' ? { ...slot, count: { min: 2, max: 2 } } : slot) };
     const s = generateIncident(drawIncidentSpec(5, { level: 10, trust: 90, unlockedTypes: ['barricaded'] }).spec);
     const spec = { ...s.incident!, familyId: s.locationFamilyId.split('__')[0], buildingSeed: s.locationSeed };
@@ -108,8 +109,10 @@ describe('incident templates', () => {
   });
 
   it('counts what the four dispatched calls can produce', () => {
+    // The total grows with content (the calls lane's trees); what's under test is that every count
+    // multiplies out and every template draws at least one setup.
     const counts = templates.map(countTemplate);
-    expect(counts.reduce((sum, count) => sum + count.setups, 0)).toBe(33);
+    for (const count of counts) expect(count.setups).toBeGreaterThan(0);
     for (const count of counts) expect(count.signatures).toBe(count.setups * count.pacingVariants * count.castShapes * count.complicationSets);
   });
 });
