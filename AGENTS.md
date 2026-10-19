@@ -58,7 +58,8 @@ These rules hold even when no skill loads:
 - No em dashes, en dashes or spaced hyphens used as dashes in game prose.
 - Colons only where a format needs one (clock times, stat rows, the UI's speaker format).
 - No stock AI tells. Name something a person on scene could see, hear, touch or do.
-- Grounded and non-graphic. Preserving life is what the game values.
+- Grounded. Consequences land plainly on named people, with no wound anatomy or method.
+  Preserving life is what the game values, and force is never the reward.
 
 Each skill's canonical copy lives in `.agents/skills/<name>/`. Claude Code reads
 `.claude/skills/`, so a new skill also needs `ln -s ../../.agents/skills/<name> .claude/skills/<name>`.

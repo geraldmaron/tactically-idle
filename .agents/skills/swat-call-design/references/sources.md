@@ -50,6 +50,10 @@ layer, the hand-authored stories and their compiler files. All of those were del
 | TV18 | SlashFilm on Michael Mann's research (secondary). https://www.slashfilm.com/812856/michael-mann-went-to-some-exhaustive-lengths-while-doing-research-for-heat/ | Ride-along research |
 | TV19 | Hachette publisher copy, The Real Prime Suspect. https://www.hachette.co.uk/titles/jackie-malton/the-real-prime-suspect/9781804190142 | A detective behind a drama |
 | TV20 | PERF ICAT, module 5. https://www.policeforum.org/assets/ICAT/module%205_operational%20safety%20tactics_dec16.pdf | Time on the responders' side, the tactical pause, distance and cover |
+| TV21 | Kathryn Bigelow, Electric Sheep interview on The Hurt Locker, 2009 (opened 2026-10-19). https://www.electricsheepmagazine.co.uk/2009/08/24/the-hurt-locker-interview-with-kathryn-bigelow/ | Unknown faces amplify tension, the observer's position, the lonely walk (L6) |
+| TV22 | Megan McLachlan, Awards Daily, on the crafts of Mindhunter season 2, 2020 (opened 2026-10-19; quotes the cinematographer, editor and sound team, not Fincher). https://www.awardsdaily.com/2020/06/20/how-crafts-amplified-berkowitz-watson-manson-scenes-in-mindhunter-season-2 | Seating as power, the audience included in whether someone cracks, a voice that shifts (L4) |
+| TV23 | Chris Evangelista, SlashFilm, on Nolan explaining Memento's structure, 2018 (secondary, opened 2026-10-19). https://www.slashfilm.com/558607/christopher-nolan-memento-video/ | The filmmaker in the protagonist's position, a structure that rewrites earlier scenes (L7) |
+| TV24 | Brian Brems, Vague Visages, on Dog Day Afternoon, 2019 (secondary, no Lumet quotes, opened 2026-10-19). https://vaguevisages.com/2019/11/12/dog-day-afternoon-movie-essay-1975-film/ | The crowd turned by the subject, sympathy for the robbers, a lie told to a hostage (L3) |
 
 ## Interactive structure and games
 
@@ -88,6 +92,7 @@ layer, the hand-authored stories and their compiler files. All of those were del
 | PS8 | Nielsen Norman Group, Reading Content on Mobile. https://www.nngroup.com/articles/mobile-content/ | Brevity on phones |
 | PS9 | Moral Foundations Theory. https://moralfoundations.org/ | Goods drawn from different values |
 | PS10 | David Bordwell on Hitchcock's bomb, 2013. https://www.davidbordwell.net/blog/2013/11/29/hitchcock-lessing-and-the-bomb-under-the-table/ | Suspense against surprise |
+| PS11 | Arkes and Blumer, The Psychology of Sunk Cost, Organizational Behavior and Human Decision Processes 35, 1985 (abstract and opening read 2026-10-19). https://cognition.aau.at/bg/BA/Arkes%20%26%20Blumer%201985.pdf | People continue once they have invested, and rate their chances higher for it |
 
 ## Authenticity and ethics
 
@@ -108,6 +113,11 @@ layer, the hand-authored stories and their compiler files. All of those were del
 | AU13 | Color of Change, Normalizing Injustice full report, 2020 (advocacy). https://hollywood.colorofchange.org/wp-content/uploads/2020/02/Normalizing-Injustice_Complete-Report-2.pdf | Same study as TV16 |
 | AU14 | ACLU, War Comes Home, 2014 (advocacy). https://assets.aclu.org/live/uploads/publications/jus14-warcomeshome-text-rel1.pdf | E6 deployment figures |
 | AU15 | 988 Suicide and Crisis Lifeline. https://988lifeline.org/ | E4.7, US only |
+| AU16 | Chuck Regini, Crisis Intervention for Law Enforcement Negotiators, FBI Law Enforcement Bulletin, October 2004, pp. 1 to 6 (read 2026-10-19). https://leb.fbi.gov/file-repository/archives/oct04leb.pdf | The eight active listening skills, empathy is not pity, values as hooks, boundaries against blame, reframing a liability as an asset |
+
+Not opened for the 2026-10-19 lenses: Roger Ebert's Dog Day Afternoon review and Filmmaker's
+Nolan interview (both refused the request), and Noesner and Webster's 1997 active listening
+article (no copy found). Lumet and Nolan are cited only through TV23 and TV24.
 
 ## Not opened, so not cited
 

@@ -6,17 +6,19 @@ description: >-
   check, the named person and private logic, the two-line hook, three stages as
   approach, turn and commit with a real dilemma at each, the consequence and
   ending map, pressure levers the data can carry, the ethics screen and a
-  variant plan that differs by fact. Mandatory gates are the lane and version
+  variant plan that differs by fact, all held to the depth bible (lenses,
+  psychology, the temptation and the escalation palette). Mandatory gates are the lane and version
   check, the eight hook tests, the fake-choice checklist and a dominance grid
   on every stage, no dead flags, a band by situation consequence matrix,
   ending reachability, one planted turn, every adverse result traced to a
   visible cue, force gated on a visible threat to life, the ethics screen, and
-  engineering requests for shapes the data cannot hold. Produces a call design
+  the depth plan (D1 to D9), and engineering requests for shapes the data
+  cannot hold. Produces a call design
   sheet and a design record. Not for wording, officer bios or arcs, or judging
   finished content.
 license: Proprietary
 metadata:
-  version: 0.3.0
+  version: 0.4.0
 ---
 
 # SWAT call design
@@ -115,6 +117,9 @@ Worse if they wait:  <what changes, for whom, if the team holds>
 Why a tactical team: "<one quoted line from the briefing that shows it>"
 Self-harm risk:      <none | present, because <signs>> (every armed or weapon-reaching person)
 Private logic:       <why the person acts this way; never printed as an explanation>
+Lenses:              <primary L<n>, secondary L<n> (technique-library.md)>
+Reframe:             <per situation, the earlier scene its truth changes the meaning of (D2)>
+Temptation:          <the lie, unapproved promise or shortcut; its cue; where it breaks (D6)>
 Iceberg tip:         <one concrete detail from the private logic> in <field>, via <choice>
 Closing fact:        <the one fact that answers the gap; NEVER PRINTED>
 ```
@@ -130,6 +135,10 @@ Behavioral reads:      <2 or 3 things the team can observe that change which cho
 Memory anchor:         <one object or habit, shown on the common path by stage 2; callbacks per row C>
 How they know:         <what they saw, heard or were told, and from whom>
 Private logic:         <never explained in text; their behavior obeys it>
+Wound and self-lie:    <what happened to them; the story that keeps them right (psychology.md)>
+Need, or hook:         <what would actually move them, which is rarely the want>
+Breaking point:        <what turns them, as behavior, from the escalation palette>
+Voice:                 <2 or 3 diction markers and one line only they would say (D4)>
 Pronouns:              <one set, the same in every field>
 ```
 
@@ -213,6 +222,23 @@ entry state shows (engine-map.md section 7). A `Condition` ANDs its keys, so sca
 the word "or" and rewrite it (engine-map.md section 2). In resolve, every band of every action
 needs one effect with `ending` or `stage: 'resolve'` and no `when` or `truth`. A stage with no
 options left ends in `handed_over`.
+
+## 5a. Depth
+
+Correct is the floor. A call must also pass swat-writing-review's depth gates D1 to D9, and a
+call that fails two of D1, D2, D3 and D5 is rejected. Design for them here.
+
+- Every key person gets a full card, not only the subject (D1). Fill it from
+  [references/psychology.md](references/psychology.md).
+- Each situation reframes a person: its truth changes what an earlier scene meant (D2, lens L7).
+  A truth that only decides whether someone acts is a switch, not a situation.
+- Draw adverse escalations from at least four mechanisms in the escalation palette, and no one
+  of them more than twice on a path (D3, dilemma-patterns.md).
+- The voices go in `exchange` lines. Stage 1 and 2 nodes carry two to four, and the negotiator
+  speaks too. A person's diction shifts as their meters move (lens L4).
+- At least one stage sets two goods against each other that players would argue about (D5).
+  Lean on the stairway: listen, earn rapport, ask for the change, and price each step.
+- Plan one temptation (dilemma pattern 15, D6) and one epilogue per ending (E11.2, D8).
 
 ## 6. Real dilemmas
 
@@ -436,6 +462,7 @@ Call design record
 - Lever and minutes (row K): <levers>; threshold reached between commits <a> and <b> | request <R> filed
 - Variants (row L): axes <list>; correlated <cheapest reveal | none>; visibility reveals <n, each paired>; strings marked
 - Call-tree gates: `npx vitest run src/gen/incident/trees-v13` exit <code> | not run: <reason>
+- Depth plan: lenses <L, L>; reframes s1 <scene>, s2, s3; palette <mechanisms, max per path>; temptation <choice, cue, break>; voices <roles with exchange lines>; epilogues <n of n endings>
 - Ethics screen (row M): E1 to E10, E12.1 to E12.5 <clear | finding, per line>; E4 <applies | screened, reason>
 - E3 tally (row M): clear, <seeds, subject-role distribution> | pending batch tally
 - Crisis checks (row M): E4.5 vs E2.1 checked; content note "<draft>"; support line "<draft>"; pending O2, R5 | E4 screened
@@ -452,5 +479,6 @@ Call design record
 - [references/design-sheet.md](references/design-sheet.md). The template, tables, two sheets.
 - [references/dilemma-patterns.md](references/dilemma-patterns.md). Checklist, grid rules, patterns.
 - [references/technique-library.md](references/technique-library.md). Craft mapped to fields.
+- [references/psychology.md](references/psychology.md). People from the inside, the stairway, the player.
 - [references/ethics-and-authenticity.md](references/ethics-and-authenticity.md). The rulebook.
 - [references/sources.md](references/sources.md). Every source and its limits.
