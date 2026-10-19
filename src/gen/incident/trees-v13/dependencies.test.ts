@@ -6,6 +6,7 @@ import { countCombos, dependencyIndex, lintTree, plainTokens, requirementTree, r
 import { GROUP_TEMPLATE } from './group-fixture';
 import { armedWithoutHitMark } from './never-offered-fixture';
 import { CLOCK_FIXTURE_IDS, clockFixtureTemplate } from '../gates/clock-fixture';
+import { LINT_FIXTURE_MARKS, lintFixtureTemplate } from '../gates/lint-fixture';
 
 const TEMPLATES = Object.values(INCIDENT_TEMPLATES) as IncidentTemplate[];
 const template = (type: IncidentType) => INCIDENT_TEMPLATES[type]!;
@@ -73,13 +74,13 @@ describe('dependency index', () => {
 });
 
 describe('static lint', () => {
-  it('finds what the shipped trees are known to carry', () => {
-    expect(codes('hostage_crisis')).toContain('threat_only:mark:turned');
+  it('finds threat-only, drawn-only and clock-writer marks (owned fixtures)', () => {
     // A mark only a clock writes, read later: noted, never a dead write (an owned fixture).
     expect(lintTree(clockFixtureTemplate()).filter(finding => finding.key === `mark:${CLOCK_FIXTURE_IDS.outMark}`).map(finding => finding.code)).toEqual(['clock_writer']);
-    expect(codes('barricaded')).toContain('threat_only:mark:rifle_at_door');
-    expect(codes('active_armed_incident')).toContain('drawn_only:mark:officer_down');
-    expect(codes('protected_rescue')).toContain('clock_writer:mark:tank_empty');
+    // A mark read only by command approval, and one set only by a drawn result (owned fixture).
+    const lint = lintTree(lintFixtureTemplate()), at = (key: string) => lint.filter(finding => finding.key === `mark:${key}`).map(finding => finding.code);
+    expect(at(LINT_FIXTURE_MARKS.threatOnly)).toEqual(['threat_only']);
+    expect(at(LINT_FIXTURE_MARKS.drawnOnly)).toContain('drawn_only');
   });
 
   it('finds no unread mark, unset read, or unreachable node or ending in any shipped tree', () => {
