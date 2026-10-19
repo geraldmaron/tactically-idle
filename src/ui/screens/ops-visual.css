@@ -184,7 +184,7 @@
   .prepare .pickcard { padding: 7px; }
   .pickcard-face { width: 26px; height: 26px; }
   .pickcard-faces { min-height: 26px; }
-  .prep-brief-stats span { font-size: 10.5px; letter-spacing: 0.02em; }
+  .prep-brief-stats span { font-size: 11px; letter-spacing: 0.02em; }
 }
 
 /* ------------------------------------------------------------ live operation */
@@ -192,7 +192,8 @@
 .live .live-id { flex: 1 1 100%; }
 .live .live-name { font-size: 24px; line-height: 1.05; overflow-wrap: anywhere; }
 .live .live-sub { margin-top: 3px; gap: 4px 10px; font-size: 12px; }
-.live .live-cancel { min-height: 32px; }
+.live .live-cancel { position: relative; min-height: 32px; }
+.live .live-cancel::after { content: ""; position: absolute; inset: -6px -4px; }
 .live .steps { padding: 2px 2px 4px; }
 .live .step { gap: 2px; }
 .live .step-track { height: 14px; }

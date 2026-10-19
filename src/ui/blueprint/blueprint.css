@@ -481,9 +481,11 @@
   gap: 0;
   opacity: 0.8;
 }
-.bp-zoomctl:hover,
 .bp-zoomctl:focus-within {
   opacity: 1;
+}
+@media (hover: hover) {
+  .bp-zoomctl:hover { opacity: 1; }
 }
 .bp-zbtn {
   width: var(--touch);

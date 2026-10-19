@@ -159,9 +159,10 @@ if (typeof window !== 'undefined') {
   window.addEventListener('beforeunload', (event) => {
     if (campaigns.getSnapshot().dirty) { event.preventDefault(); event.returnValue = ''; }
   });
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') send({ type: 'tick' });
-  });
+  // iOS often skips beforeunload and may kill a hidden tab, so settle and save the moment the page
+  // hides instead of waiting for the next tick.
+  document.addEventListener('visibilitychange', () => send({ type: 'tick' }));
+  window.addEventListener('pagehide', () => send({ type: 'tick' }));
   window.addEventListener('storage', (event) => {
     if (event.key === 'tactically-idle/campaign-slots') {
       campaigns.reportStorageIssue('Saves or test purchases changed in another tab. Reload to see them before making further changes. This tab will not overwrite them.');

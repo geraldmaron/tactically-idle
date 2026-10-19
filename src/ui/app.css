@@ -1185,7 +1185,7 @@ button.ocard {
   padding: 5px 6px 6px;
   font-family: var(--font-cond);
   font-weight: 600;
-  font-size: 10.5px;
+  font-size: 11px;
   letter-spacing: 0.03em;
   text-transform: uppercase;
   color: var(--text-dim);
@@ -2977,7 +2977,7 @@ button.ocard {
   align-items: center;
   gap: 1px;
   font-family: var(--font-cond);
-  font-size: 10.5px;
+  font-size: 11px;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--muted);
@@ -3312,7 +3312,7 @@ button.ocard {
   align-items: center;
   gap: 3px;
   font-family: var(--font-cond);
-  font-size: 10.5px;
+  font-size: 11px;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--muted);
@@ -3812,7 +3812,7 @@ button.ocard {
   box-sizing: content-box;
   font-family: var(--font-cond);
   font-weight: 700;
-  font-size: 10.5px;
+  font-size: 11px;
   line-height: 1;
 }
 
@@ -4260,7 +4260,7 @@ button.ocard {
 .campaign-bar { flex: 0 0 auto; display: flex; align-items: center; gap: 10px; padding: 5px var(--gutter); min-height: 38px; background: #101b2d; border-bottom: 1px solid var(--line); }
 .campaign-bar > span { display: grid; min-width: 0; flex: 1; }
 .campaign-bar strong { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.campaign-bar small { font-size: 10px; color: var(--text-dim); }
+.campaign-bar small { font-size: 12px; color: var(--text-dim); }
 .campaign-bar button { flex: 0 0 auto; min-height: var(--touch); padding: 4px 9px; border: 1px solid var(--line-strong); background: var(--panel); border-radius: 6px; color: var(--text); font: 600 13px var(--font-cond); cursor: pointer; }
 .campaign-bar > .campaign-bar-actions { display: flex; flex: 0 0 auto; align-items: center; gap: 8px; }
 .campaign-bar-dev { display: inline-flex; align-items: center; min-height: var(--touch); padding: 4px 9px; border: 1px dashed var(--amber); border-radius: 6px; color: var(--amber-2); font: 600 13px var(--font-cond); letter-spacing: 0.04em; text-decoration: none; }
@@ -4477,7 +4477,7 @@ button.ocard {
 .gear-surfaces button.is-selected, .store-tabs button.is-selected { border-color: var(--line-strong); background: var(--panel-3); color: var(--text); }
 .gear-surfaces button:focus-visible, .store-tabs button:focus-visible, .store-category:focus-visible, .store-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
 .store-heading h2 { margin: 2px 0 0; font-family: var(--font-display); font-size: 26px; }
-.store-heading .kicker { font-size: 10px; }
+.store-heading .kicker { font-size: 12px; }
 .store-tabs { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .store-tabs button { font-size: 12px; padding-inline: 2px; }
 .store-intro, .store-card p, .store-training > p { margin: 0; line-height: 1.45; }
@@ -4500,7 +4500,7 @@ button.ocard {
 .store-card-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-width: 0; }
 .store-card-heading > div { flex: 1; min-width: 0; }
 .store-card-heading h3 { margin: 4px 0; font-size: 17px; line-height: 1.2; }
-.store-card-heading .kicker { font-size: 10px; }
+.store-card-heading .kicker { font-size: 12px; }
 .store-card-heading .dim { font-size: 11px; }
 .store-art { display: flex; flex: 0 0 68px; align-items: center; justify-content: center; min-height: 72px; border-radius: 7px; color: var(--text-dim); background: rgba(0, 0, 0, .2); }
 .store-card-use { font-size: 13px; }

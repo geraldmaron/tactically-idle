@@ -19,7 +19,7 @@
 .topbar-help .topbar-stat-button > span { text-decoration: underline dotted; text-decoration-color: var(--muted); text-underline-offset: 4px; }
 .topbar-help .topbar-level-button { width: 44px; height: 44px; font: 700 14px var(--font-cond); }
 .topbar-help .topbar-level-button svg { inset: 3px 5px; }
-.topbar-help button:hover { background: rgba(255, 255, 255, .05); }
+@media (hover: hover) { .topbar-help button:hover { background: rgba(255, 255, 255, .05); } }
 .topbar-help button:focus-visible { outline: 2px solid var(--amber); outline-offset: -2px; }
 .department-stat-help { display: grid; gap: 16px; }
 .department-stat-help p { margin: 0; line-height: 1.5; }
