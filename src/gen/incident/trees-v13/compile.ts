@@ -806,7 +806,11 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
   const moves = new Map<TreeOutcome, string[]>();
   const transitionsOf = new Map<string, StoryPersonBinding['transitions']>();
   const moveCount = new Map<string, number>();
-  const standing: StoryAnchor[] = Object.entries(anchors).map(([role, anchor]) => ({ spaceId: roomOf[role], at: anchor.inside }));
+  // Where people stand, and who stands there: everyone's start, then each new place a move takes
+  // someone. A person's moves are one person over time, so their own earlier places never crowd
+  // them, and a second move of the same person to the same place reuses that place's point.
+  const standing: (StoryAnchor & { role: string; moved?: true })[] = Object.entries(anchors).map(([role, anchor]) => ({ role, spaceId: roomOf[role], at: anchor.inside }));
+  const movedTo = new Map<string, Vec>();
   // Each move: a hidden transition keyed on its move flag (where they are), and a twin keyed on its
   // seen flag (where the team last saw them). The engine keeps one of each per person (withFlag), so
   // the latest move wins; a seen move sets both, a sighting sets the seen flag (sightings.ts).
@@ -817,9 +821,11 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
     const list = transitionsOf.get(role) ?? transitionsOf.set(role, []).get(role)!;
     const spaceId = spaceOfPlace(place, `${where} moves ${role} to`);
     const door = typeof place === 'object' && 'doorOf' in place ? doorStanding(place.doorOf, spaceId) : null;
-    const at = door ?? storyPoint(built, spaceId, hashSeed(`${spec.seed}:${role}:move-${key}`), standing);
-    if (!at) throw new Error(`${tree.type}: no room to stand in ${spaceId} for ${role}'s move`);
-    standing.push({ spaceId, at });
+    const placeKey = `${role}|${spaceId}|${door ? 'door' : 'room'}`;
+    const others = standing.filter(anchor => anchor.role !== role || !anchor.moved);
+    const at = movedTo.get(placeKey) ?? door ?? storyPoint(built, spaceId, hashSeed(`${spec.seed}:${role}:move-${key}`), others);
+    if (!at) throw new Error(`${tree.type}: no room to stand in ${spaceId} for ${role}'s move; this building can't host the call`);
+    if (!movedTo.has(placeKey)) { movedTo.set(placeKey, at); standing.push({ role, spaceId, at, moved: true }); }
     const to = { spaceId, at: { ...at } };
     list.push({ when: { flags: [movedFlag(role, key)] }, observed: false, to }, { when: { flags: [seenFlag(role, key)] }, observed: true, to });
     return [movedFlag(role, key), ...seen ? [seenFlag(role, key)] : []];
