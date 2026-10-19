@@ -6,20 +6,25 @@
 //   using the same course rules as the startCourse command, above a funding reserve.
 // - Quartermaster: the existing equipment manager (servicing budget) plus restock rules,
 //   presented as staff. Its mechanics live in equipment-manager.ts and are not changed here.
+// - Peer Support Lead: each clock hour offers peer-support sessions to the most strained idle
+//   officers, which take stress off faster than rest alone, for a fee above a funding reserve.
+// - Recruiter: each clock hour signs the best candidate for the role you chose while the roster
+//   has room, through the same rules as the hire command, above a funding reserve.
 // Hiring is a Develop purchase. Each manager has an on/off switch, a small policy, an hourly
 // salary paid with payroll (economy.ratesAt) while switched on, and a saved activity log.
 // Automation runs inside settle() at absolute clock hours within the 24-hour accrual window,
 // exactly like restock rules, so an offline settlement equals any sequence of online ticks.
-import type { GameState, HandlerResult, Id, Officer, SquadDuty, SquadId } from './types';
+import type { GameState, HandlerResult, Id, Officer, Role, SquadDuty, SquadId } from './types';
 import { SQUAD_IDS } from './types';
 import { COURSES } from '../content/courses';
+import { ROLES } from '../content/recruits';
 import { DEV_NODES } from '../content/dev-tree';
-import { HOUR_MS, isInjured, isNodeUnlocked } from './economy';
+import { HOUR_MS, isInjured, isNodeUnlocked, netRate } from './economy';
 import { money } from './format';
 import { simNow } from './calendar';
 import { squadDeployed } from './squads';
 import { courseCheck } from './develop';
-import { ROSTER_HANDLERS } from './roster';
+import { hireCheck, ROSTER_HANDLERS } from './roster';
 import { fullName, STRESS_BANDS } from './officer';
 import { effectiveDevelopmentEffects, quoteDevelopment } from './development-tiers';
 import { EQUIPMENT_MANAGER, hasEquipmentManager, maintenanceBudget } from './equipment-manager-policy';
@@ -27,8 +32,8 @@ import { setMaintenanceBudget } from './equipment-manager';
 
 // ---------------------------------------------------------------- shapes
 
-export type ManagerId = 'watch_commander' | 'training_sergeant' | 'quartermaster';
-export const MANAGER_IDS: readonly ManagerId[] = ['watch_commander', 'training_sergeant', 'quartermaster'];
+export type ManagerId = 'watch_commander' | 'training_sergeant' | 'quartermaster' | 'peer_support_lead' | 'recruiter';
+export const MANAGER_IDS: readonly ManagerId[] = ['watch_commander', 'training_sergeant', 'quartermaster', 'peer_support_lead', 'recruiter'];
 
 /** Duties the Watch Commander returns a squad to. Rest is where it sends tired squads. */
 export type EarningDuty = Exclude<SquadDuty, 'rest'>;
@@ -53,6 +58,20 @@ export interface TrainingSergeantPolicy {
   reserve: number;
 }
 
+export interface PeerSupportPolicy {
+  /** Offer a session to idle officers at or above this stress. */
+  supportAt: number;
+  /** Never run a session if funding after its fee would fall below this. */
+  reserve: number;
+}
+
+export interface RecruiterPolicy {
+  /** Role to recruit; null takes the best candidate of any role. */
+  role: Role | null;
+  /** Never sign a candidate if funding after the signing cost would fall below this. */
+  reserve: number;
+}
+
 /** Current command staff. Optional on GameState for isolated fixtures. */
 export interface CommandStaffState {
   watch_commander: {
@@ -72,12 +91,16 @@ export interface CommandStaffState {
     resumeBudget: number;
     log: ManagerLogEntry[];
   };
+  peer_support_lead: { enabled: boolean; policy: PeerSupportPolicy; log: ManagerLogEntry[] };
+  recruiter: { enabled: boolean; policy: RecruiterPolicy; log: ManagerLogEntry[] };
 }
 
 export type ManagerPolicyPatch =
   | { managerId: 'watch_commander'; restAt?: number; optOut?: SquadId[] }
   | { managerId: 'training_sergeant'; courseId?: Id | null; reserve?: number }
-  | { managerId: 'quartermaster'; budgetPerHour?: number };
+  | { managerId: 'quartermaster'; budgetPerHour?: number }
+  | { managerId: 'peer_support_lead'; supportAt?: number; reserve?: number }
+  | { managerId: 'recruiter'; role?: Role | null; reserve?: number };
 
 // ---------------------------------------------------------------- tuning and roster
 
@@ -102,6 +125,27 @@ export const COMMAND_STAFF = {
     defaultReserve: 2500,
     maxReserve: 100_000,
     reserveChoices: [1000, 2500, 5000, 10_000] as readonly number[],
+  },
+  peerSupportLead: {
+    nodeId: 'personnel_peer_support_lead',
+    salaryPerHour: 45,
+    /** Sessions offered per clock hour, most strained first. */
+    sessionsPerHour: 2,
+    /** Funding per session, and the stress a session takes off on top of the hour's normal recovery. */
+    sessionCost: 80,
+    relief: 8,
+    defaultSupportAt: STRESS_BANDS.strained,
+    supportChoices: [STRESS_BANDS.strained, 45, STRESS_BANDS.overloaded] as readonly number[],
+    defaultReserve: 2500,
+    maxReserve: 100_000,
+    reserveChoices: [1000, 2500, 5000, 10_000] as readonly number[],
+  },
+  recruiter: {
+    nodeId: 'personnel_recruiter',
+    salaryPerHour: 45,
+    defaultReserve: 5000,
+    maxReserve: 100_000,
+    reserveChoices: [2500, 5000, 10_000, 20_000] as readonly number[],
   },
   quartermaster: {
     nodeId: EQUIPMENT_MANAGER.nodeId,
@@ -161,6 +205,30 @@ export const MANAGERS: Record<ManagerId, ManagerProfile> = {
     duty: 'Each clock hour, sends worn idle equipment for service within an hourly budget. Restock rules refill held stock on the same clock.',
     never: 'Never buys new kinds of equipment or touches gear reserved for a call.',
   },
+  // Identity (name, pronouns, portrait) is the calls and interface lanes' work: until their briefs
+  // land the title stands in for the name and the pronouns read as 'they'.
+  peer_support_lead: {
+    id: 'peer_support_lead',
+    name: 'Peer Support Lead',
+    title: 'Peer Support Lead',
+    pronouns: 'they',
+    nodeId: COMMAND_STAFF.peerSupportLead.nodeId,
+    salaryPerHour: COMMAND_STAFF.peerSupportLead.salaryPerHour,
+    loop: 'Officer peer support',
+    duty: `Each clock hour, offers up to ${COMMAND_STAFF.peerSupportLead.sessionsPerHour} peer-support sessions to the most strained idle officers, taking ${COMMAND_STAFF.peerSupportLead.relief} stress off each for ${money(COMMAND_STAFF.peerSupportLead.sessionCost)}, above your funding reserve.`,
+    never: 'Never touches deployed officers, hurts nobody, and never decides who rests or trains.',
+  },
+  recruiter: {
+    id: 'recruiter',
+    name: 'Recruiter',
+    title: 'Recruiter',
+    pronouns: 'they',
+    nodeId: COMMAND_STAFF.recruiter.nodeId,
+    salaryPerHour: COMMAND_STAFF.recruiter.salaryPerHour,
+    loop: 'Hiring',
+    duty: 'Each clock hour, while the roster has room, signs the best candidate for the role you choose, keeping funding above your reserve and the department in the black.',
+    never: 'Never dismisses anyone, searches for new candidates or signs past a full roster.',
+  },
 };
 
 // ---------------------------------------------------------------- state access
@@ -170,17 +238,23 @@ export function createCommandStaff(): CommandStaffState {
     watch_commander: { enabled: true, policy: { restAt: COMMAND_STAFF.watchCommander.defaultRestAt, optOut: [] }, rested: {}, log: [] },
     training_sergeant: { enabled: true, policy: { courseId: null, reserve: COMMAND_STAFF.trainingSergeant.defaultReserve }, log: [] },
     quartermaster: { resumeBudget: COMMAND_STAFF.quartermaster.defaultBudget, log: [] },
+    peer_support_lead: { enabled: true, policy: { supportAt: COMMAND_STAFF.peerSupportLead.defaultSupportAt, reserve: COMMAND_STAFF.peerSupportLead.defaultReserve }, log: [] },
+    recruiter: { enabled: true, policy: { role: null, reserve: COMMAND_STAFF.recruiter.defaultReserve }, log: [] },
   };
 }
 
 /** Read-only view; states from before save v9 (and hand-built fixtures) read as defaults. */
 export function commandStaffOf(state: GameState): CommandStaffState {
-  return state.commandStaff ?? createCommandStaff();
+  // A staff record saved before a manager existed reads that manager as its defaults.
+  const staff = state.commandStaff;
+  return staff && MANAGER_IDS.every((id) => id in staff) ? staff : { ...createCommandStaff(), ...staff };
 }
 
 /** Writable staff record on a draft, created on first write. */
 function staffOn(d: GameState): CommandStaffState {
-  d.commandStaff ??= createCommandStaff();
+  const defaults = createCommandStaff();
+  d.commandStaff ??= defaults;
+  for (const id of MANAGER_IDS) if (!(id in d.commandStaff)) Object.assign(d.commandStaff, { [id]: defaults[id] });
   return d.commandStaff;
 }
 
@@ -206,7 +280,7 @@ export function commandStaffSalaries(state: GameState): number {
 
 /** Does settlement need the hourly grid for Command Staff? */
 export function commandStaffActive(state: GameState): boolean {
-  return managerOn(state, 'watch_commander') || managerOn(state, 'training_sergeant');
+  return managerOn(state, 'watch_commander') || managerOn(state, 'training_sergeant') || managerOn(state, 'peer_support_lead') || managerOn(state, 'recruiter');
 }
 
 function log(entries: ManagerLogEntry[], at: number, text: string): void {
@@ -279,13 +353,71 @@ function runTrainingSergeant(d: GameState, t: number): void {
   }
 }
 
+/** Idle officers a peer-support session can reach: not on a call or in training, stressed enough, most strained first. */
+function supportQueue(state: GameState): Officer[] {
+  const { supportAt } = commandStaffOf(state).peer_support_lead.policy;
+  return Object.values(state.officers)
+    .filter((o) => !o.assignment && decide(o.stress) >= supportAt)
+    .sort((a, b) => decide(b.stress) - decide(a.stress) || a.id.localeCompare(b.id));
+}
+
+/** Peer Support Lead: offer this hour's sessions at clock hour t. */
+function runPeerSupport(d: GameState, t: number): void {
+  if (!managerOn(d, 'peer_support_lead')) return;
+  const ps = staffOn(d).peer_support_lead;
+  const { sessionsPerHour, sessionCost, relief } = COMMAND_STAFF.peerSupportLead;
+  for (const officer of supportQueue(d).slice(0, sessionsPerHour)) {
+    if (decide(d.department.funding - sessionCost) < ps.policy.reserve) return;
+    const before = Math.floor(decide(officer.stress));
+    d.department.funding -= sessionCost;
+    officer.stress = Math.max(0, officer.stress - relief);
+    log(ps.log, t, `Peer support for ${fullName(officer)}: stress ${before} to ${Math.floor(decide(officer.stress))} (${money(sessionCost)})`);
+  }
+}
+
+/** Why the recruiter cannot sign anyone right now, or the candidate it would sign. */
+function recruiterPick(state: GameState): { candidateId: Id; name: string; cost: number } | { candidateId: null; reason: string } {
+  const { policy } = commandStaffOf(state).recruiter;
+  const cap = state.department.rosterCap, size = Object.keys(state.officers).length;
+  if (size >= cap) return { candidateId: null, reason: `Roster is full (${size}/${cap})` };
+  const pool = state.candidates.filter((c) => policy.role === null || c.officer.role === policy.role);
+  if (!pool.length) return { candidateId: null, reason: policy.role ? `No ${policy.role} candidate in the pool` : 'No candidates in the pool' };
+  const score = (o: Officer) => Object.values(o.ratings).reduce((sum, value) => sum + value, 0);
+  const ranked = [...pool].sort((a, b) => score(b.officer) - score(a.officer) || a.id.localeCompare(b.id));
+  let reason = '';
+  for (const candidate of ranked) {
+    if (decide(state.department.funding - candidate.signingCost) < policy.reserve) {
+      reason ||= `Waiting: the ${money(candidate.signingCost)} signing cost would take funding below the ${money(policy.reserve)} reserve`;
+      continue;
+    }
+    const check = hireCheck(state, candidate.id, netRate);
+    if (check.ok) return { candidateId: candidate.id, name: fullName(candidate.officer), cost: candidate.signingCost };
+    reason ||= check.reason ?? 'Cannot sign anyone right now';
+  }
+  return { candidateId: null, reason };
+}
+
+/** Recruiter: sign candidates while the roster has room, at clock hour t. */
+function runRecruiter(d: GameState, t: number): void {
+  if (!managerOn(d, 'recruiter')) return;
+  const rc = staffOn(d).recruiter;
+  for (;;) {
+    const pick = recruiterPick(d);
+    if (!pick.candidateId) return;
+    if (!ROSTER_HANDLERS.hire(d, pick.candidateId, netRate).ok) return;
+    log(rc.log, t, `Signed ${pick.name} (${money(pick.cost)})`);
+  }
+}
+
 /**
  * Called by settle() at each absolute clock hour inside the accrual window, after restock
  * and equipment servicing. Duty first, so the sergeant's budget check sees the new duties.
  */
 export function runCommandStaff(d: GameState, t: number): void {
   runWatchCommander(d, t);
+  runPeerSupport(d, t);
   runTrainingSergeant(d, t);
+  runRecruiter(d, t);
 }
 
 /** Records what the Quartermaster's existing automation did at clock hour t. */
@@ -366,6 +498,24 @@ export function setManagerPolicy(d: GameState, patch: ManagerPolicyPatch): Handl
       if (patch.reserve !== undefined) policy.reserve = patch.reserve;
       return OK;
     }
+    case 'peer_support_lead': {
+      const policy = staff.peer_support_lead.policy;
+      const { supportChoices, maxReserve } = COMMAND_STAFF.peerSupportLead;
+      if (patch.supportAt !== undefined && !supportChoices.includes(patch.supportAt)) return refusal(`Choose a stress from ${supportChoices.join(', ')}.`);
+      if (patch.reserve !== undefined && (!Number.isInteger(patch.reserve) || patch.reserve < 0 || patch.reserve > maxReserve)) return refusal(`Choose a reserve from $0 to ${money(maxReserve)}.`);
+      if (patch.supportAt !== undefined) policy.supportAt = patch.supportAt;
+      if (patch.reserve !== undefined) policy.reserve = patch.reserve;
+      return OK;
+    }
+    case 'recruiter': {
+      const policy = staff.recruiter.policy;
+      const { maxReserve } = COMMAND_STAFF.recruiter;
+      if (patch.role !== undefined && patch.role !== null && !(ROLES as readonly unknown[]).includes(patch.role)) return refusal('Unknown role');
+      if (patch.reserve !== undefined && (!Number.isInteger(patch.reserve) || patch.reserve < 0 || patch.reserve > maxReserve)) return refusal(`Choose a reserve from $0 to ${money(maxReserve)}.`);
+      if (patch.role !== undefined) policy.role = patch.role;
+      if (patch.reserve !== undefined) policy.reserve = patch.reserve;
+      return OK;
+    }
     case 'quartermaster': {
       const budget = patch.budgetPerHour;
       if (budget === undefined) return OK;
@@ -406,6 +556,15 @@ function activityOf(state: GameState, id: ManagerId, on: boolean): string {
   if (id === 'training_sergeant') {
     const pick = sergeantPick(state, t);
     return pick.officer ? `Next place goes to ${fullName(pick.officer)}` : pick.reason;
+  }
+  if (id === 'peer_support_lead') {
+    const queue = supportQueue(state);
+    const { policy } = commandStaffOf(state).peer_support_lead;
+    return queue.length ? `Next session goes to ${fullName(queue[0])}` : `Nobody idle is at ${policy.supportAt} stress or more`;
+  }
+  if (id === 'recruiter') {
+    const pick = recruiterPick(state);
+    return 'reason' in pick ? pick.reason : `Next signing: ${pick.name}`;
   }
   return `Servicing worn gear up to ${money(maintenanceBudget(state))}/hour`;
 }
@@ -455,6 +614,20 @@ export function validCommandStaff(value: unknown): boolean {
   const { courseId, reserve } = ts.policy;
   if (courseId !== null && !(typeof courseId === 'string' && Object.hasOwn(COURSES, courseId))) return false;
   if (typeof reserve !== 'number' || !Number.isInteger(reserve) || reserve < 0 || reserve > COMMAND_STAFF.trainingSergeant.maxReserve) return false;
+  // Managers added after a save was written may be absent; one that is present must be well formed.
+  const ps = value.peer_support_lead, rc = value.recruiter;
+  if (ps !== undefined) {
+    if (!isObj(ps) || typeof ps.enabled !== 'boolean' || !isObj(ps.policy) || !validLog(ps.log)) return false;
+    const { supportAt, reserve: psReserve } = ps.policy;
+    if (typeof supportAt !== 'number' || !COMMAND_STAFF.peerSupportLead.supportChoices.includes(supportAt)) return false;
+    if (typeof psReserve !== 'number' || !Number.isInteger(psReserve) || psReserve < 0 || psReserve > COMMAND_STAFF.peerSupportLead.maxReserve) return false;
+  }
+  if (rc !== undefined) {
+    if (!isObj(rc) || typeof rc.enabled !== 'boolean' || !isObj(rc.policy) || !validLog(rc.log)) return false;
+    const { role, reserve: rcReserve } = rc.policy;
+    if (role !== null && !(typeof role === 'string' && (ROLES as readonly string[]).includes(role))) return false;
+    if (typeof rcReserve !== 'number' || !Number.isInteger(rcReserve) || rcReserve < 0 || rcReserve > COMMAND_STAFF.recruiter.maxReserve) return false;
+  }
   if (!isObj(qm) || !validLog(qm.log)) return false;
   const resume = qm.resumeBudget;
   return typeof resume === 'number' && Number.isInteger(resume) && resume >= 1 && resume <= EQUIPMENT_MANAGER.maxHourlyBudget;

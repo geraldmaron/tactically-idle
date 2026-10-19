@@ -4,20 +4,21 @@ import { COMMAND_STAFF, commandStaffOf, managerView, managerViews, type ManagerI
 import { isNodeUnlocked } from '../../sim/economy';
 import { squadDeployed } from '../../sim/squads';
 import { EQUIPMENT_MANAGER, equipmentManagerBenefits, maintenanceBudget } from '../../sim/equipment-manager-policy';
-import type { GameState, SquadId } from '../../sim/types';
+import type { GameState, Role, SquadId } from '../../sim/types';
+import { ROLES } from '../../content/recruits';
 import { ManagerPortrait } from '../art/ManagerArt';
 import { money, moneyFull, perHour, relativeTime } from '../format';
 import { Icon, type IconName } from '../icons';
 import { useGame } from '../store';
 import { ChoiceRail } from './ChoiceRail';
-import { DUTY_META } from './labels';
+import { DUTY_META, ROLE_META } from './labels';
 import { useNav } from './nav';
 import { Sheet } from './Sheet';
 import { useToast } from './toast';
 import { Button, Chip } from './ui';
 import './command-staff.css';
 
-const LOOP_ICON: Record<ManagerId, IconName> = { watch_commander: 'patrol', training_sergeant: 'mortarboard', quartermaster: 'wrench' };
+const LOOP_ICON: Record<ManagerId, IconName> = { watch_commander: 'patrol', training_sergeant: 'mortarboard', quartermaster: 'wrench', peer_support_lead: 'heart', recruiter: 'people' };
 const STATUS_LABEL: Record<ManagerView['status'], string> = { on: 'On', off: 'Off', not_hired: 'Not hired' };
 
 /** HQ roster of hireable managers: a face, a status pill, the loop each automates and its latest action. */
@@ -85,6 +86,8 @@ export function ManagerSheet({ id, g, now, onClose, inGear = false }: { id: Mana
         </div>
         {id === 'watch_commander' && <WatchCommanderPolicy g={g} />}
         {id === 'training_sergeant' && <TrainingSergeantPolicy g={g} />}
+        {id === 'peer_support_lead' && <PeerSupportPolicy g={g} />}
+        {id === 'recruiter' && <RecruiterPolicy g={g} />}
         {id === 'quartermaster' && <QuartermasterPolicy g={g} onOpenGear={inGear ? undefined : () => { onClose(); nav.setGearSection('inventory'); }} />}
       </>}
       <section className="staff-log" aria-label={`${profile.title} activity log`}>
@@ -156,6 +159,45 @@ function TrainingSergeantPolicy({ g }: { g: GameState }) {
       options={reserves.map((value) => ({ value: String(value), label: money(value), accessibleLabel: `${moneyFull(value)} reserve` }))} />
     <p className="dim">Picks the officer with the lowest stress below Strained who meets the course rules: not deployed, injured or already training.</p>
     <Button size="sm" onClick={() => nav.openTraining()}>Open Training</Button>
+  </div>;
+}
+
+function PeerSupportPolicy({ g }: { g: GameState }) {
+  const { act } = useToast();
+  const policy = commandStaffOf(g).peer_support_lead.policy;
+  const { supportChoices, reserveChoices, sessionsPerHour, sessionCost, relief } = COMMAND_STAFF.peerSupportLead;
+  const reserves = [...new Set([...reserveChoices, policy.reserve])].sort((a, b) => a - b);
+  return <div className="staff-policy">
+    <h3>Offer sessions at</h3>
+    <ChoiceRail label="Stress to offer a session" grow value={String(policy.supportAt)} onChange={(value) => act({ type: 'setManagerPolicy', patch: { managerId: 'peer_support_lead', supportAt: Number(value) } }, `Offers sessions at ${value} stress`)}
+      options={supportChoices.map((value) => ({ value: String(value), label: String(value), accessibleLabel: `${value} stress` }))} />
+    <h3>Keep funding above</h3>
+    <ChoiceRail label="Funding reserve" grow value={String(policy.reserve)} onChange={(value) => act({ type: 'setManagerPolicy', patch: { managerId: 'peer_support_lead', reserve: Number(value) } }, `Keeps ${moneyFull(Number(value))} in reserve`)}
+      options={reserves.map((value) => ({ value: String(value), label: money(value), accessibleLabel: `${moneyFull(value)} reserve` }))} />
+    <p className="dim">Up to {sessionsPerHour} sessions an hour, {money(sessionCost)} each, {relief} stress off. Only idle officers, most strained first.</p>
+  </div>;
+}
+
+function RecruiterPolicy({ g }: { g: GameState }) {
+  const { act } = useToast();
+  const policy = commandStaffOf(g).recruiter.policy;
+  const { reserveChoices } = COMMAND_STAFF.recruiter;
+  const reserves = [...new Set([...reserveChoices, policy.reserve])].sort((a, b) => a - b);
+  return <div className="staff-policy">
+    <label className="field">
+      <span className="field-label">Role to recruit</span>
+      <select value={policy.role ?? ''} onChange={(event) => {
+        const role = (event.target.value || null) as Role | null;
+        act({ type: 'setManagerPolicy', patch: { managerId: 'recruiter', role } }, role ? `Recruiting ${ROLE_META[role].label}` : 'Recruiting any role');
+      }}>
+        <option value="">Any role</option>
+        {ROLES.map((role) => <option key={role} value={role}>{ROLE_META[role].label}</option>)}
+      </select>
+    </label>
+    <h3>Keep funding above</h3>
+    <ChoiceRail label="Funding reserve" grow value={String(policy.reserve)} onChange={(value) => act({ type: 'setManagerPolicy', patch: { managerId: 'recruiter', reserve: Number(value) } }, `Keeps ${moneyFull(Number(value))} in reserve`)}
+      options={reserves.map((value) => ({ value: String(value), label: money(value), accessibleLabel: `${moneyFull(value)} reserve` }))} />
+    <p className="dim">Signs the candidate with the strongest ratings while the roster has room and the department stays in the black.</p>
   </div>;
 }
 

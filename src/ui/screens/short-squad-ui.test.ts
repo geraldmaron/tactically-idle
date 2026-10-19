@@ -31,7 +31,7 @@ describe('a squad deploying short', () => {
     const s = shortA();
     const everyone = standardRadioPlan(s, ['A'], NOW, departmentUpkeep(s));
     const crew = standardRadioPlan(s, ['A'], NOW, departmentUpkeep(s), sid => deployRoster(s, sid, NOW).goes);
-    expect(Object.values(everyone.loadouts.A)[0]).toBe(4);
-    expect(Object.values(crew.loadouts.A)[0]).toBe(3);
+    expect(Object.values(everyone.loadouts.A!)[0]).toBe(4);
+    expect(Object.values(crew.loadouts.A!)[0]).toBe(3);
   });
 });

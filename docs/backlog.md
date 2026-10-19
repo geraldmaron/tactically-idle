@@ -255,22 +255,16 @@ deterministic since #57, and the `check:strings` wrapper since #64 (byte-identic
 
 ## Department and staff
 
-### peer-support-lead: Command Staff gains a Peer Support Lead
-Tags: job=build; journeys=hire-and-equip; probes=officer-stress; lane=engine
+### manager-identities: The Peer Support Lead and the Recruiter get a name, pronouns and a face
+Tags: job=build; journeys=hire-and-equip; probes=none (identity and art); lane=calls
 Needs: start=none; integrate=none; ship=none
 
-Owner decision 2026-10-19. A fourth manager who runs officer stress and recovery as a department
-loop, hired in Develop like the others (`src/sim/command-staff.ts`). Done: the manager's loop, hire
-cost and log lines in the engine; a Command Staff card and portrait (interface lane, the existing
-art pipeline); an identity brief and pronouns (calls lane, the officer-stories rules). The engine
-defines the loop first.
-
-### recruiter: Command Staff gains a Recruiter
-Tags: job=build; journeys=hire-and-equip; probes=none (hiring, not odds); lane=engine
-Needs: start=none; integrate=none; ship=none
-
-Owner decision 2026-10-19. A fifth manager who runs hiring as a department loop. Same shape and
-split as `peer-support-lead`. Done: loop, hire cost, log lines, card, portrait and brief.
+The engine side shipped (`peer_support_lead` and `recruiter` in `src/sim/command-staff.ts`: Develop
+hires, salary, hourly loops, policy, log lines, tests). Their `name` is the title and `pronouns` read
+`they` until this lands. Done: an identity brief for each (calls lane, the officer-stories rules)
+sets `name` and `pronouns` in `MANAGERS`, and a painted portrait for each (interface lane, the
+existing art pipeline) is listed in `public/art/managers/manifest.json`. The cards already render
+with the silhouette fallback.
 
 ### patrol-work: Routine patrol returns as idle work under the Watch Commander
 Tags: job=return; journeys=offline-settles; probes=none (idle economy); lane=engine

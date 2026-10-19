@@ -21,12 +21,12 @@ describe('Command Staff on HQ', () => {
   it('shows a card per manager with a face, status pill and the loop it automates', () => {
     state = createInitialState(NOW, 1);
     const html = renderToStaticMarkup(createElement(CommandStaff));
-    expect((html.match(/class="staff-card /g) ?? [])).toHaveLength(3);
-    expect((html.match(/>Not hired</g) ?? [])).toHaveLength(3);
-    for (const text of ['Watch Commander', 'Training Sergeant', 'Quartermaster', 'Squad duty and rest', 'Course enrolment', 'Servicing and restock']) expect(html).toContain(text);
+    expect((html.match(/class="staff-card /g) ?? [])).toHaveLength(5);
+    expect((html.match(/>Not hired</g) ?? [])).toHaveLength(5);
+    for (const text of ['Watch Commander', 'Training Sergeant', 'Quartermaster', 'Squad duty and rest', 'Course enrolment', 'Servicing and restock', 'Peer Support Lead', 'Recruiter', 'Officer peer support', 'Hiring']) expect(html).toContain(text);
     expect((html.match(/data-portrait="painted"/g) ?? [])).toHaveLength(3);
     for (const id of ['watch_commander', 'training_sergeant', 'quartermaster']) expect(html).toContain(`src="/art/managers/${id}.webp"`);
-    expect(html).toContain('aria-label="0 of 3 hired"');
+    expect(html).toContain('aria-label="0 of 5 hired"');
   });
 
   it('marks hired managers On or Off and shows their latest action', () => {

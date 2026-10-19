@@ -284,6 +284,91 @@ describe('Quartermaster', () => {
 
 describe('manager identity', () => {
   it('carries each manager’s pronouns from the portrait briefs', () => {
-    expect(Object.fromEntries(Object.values(MANAGERS).map(m => [m.id, m.pronouns]))).toEqual({ watch_commander: 'she', training_sergeant: 'he', quartermaster: 'they' });
+    expect(Object.fromEntries((['watch_commander', 'training_sergeant', 'quartermaster'] as const).map(id => [id, MANAGERS[id].pronouns]))).toEqual({ watch_commander: 'she', training_sergeant: 'he', quartermaster: 'they' });
+  });
+});
+
+describe('peer support lead and recruiter', () => {
+  const withManager = (nodeId: string, requires: string[] = []) => {
+    const start = createInitialState(T0);
+    start.department.devPoints = 10;
+    start.department.funding = 50_000;
+    let s = start;
+    for (const id of [...requires, nodeId]) s = ok(s, { type: 'unlockNode', nodeId: id });
+    return s;
+  };
+
+  it('are hired in Develop, cost a salary while on, and can be switched off', () => {
+    const s = withManager(COMMAND_STAFF.peerSupportLead.nodeId);
+    expect(managerOn(s, 'peer_support_lead')).toBe(true);
+    expect(ratesAt(s, T0).staff).toBe(45);
+    const off = ok(s, { type: 'setManagerEnabled', managerId: 'peer_support_lead', enabled: false });
+    expect(ratesAt(off, T0).staff).toBe(0);
+    const r = withManager(COMMAND_STAFF.recruiter.nodeId, ['personnel_recruiting']);
+    expect(managerOn(r, 'recruiter')).toBe(true);
+    expect(refused(createInitialState(T0), { type: 'unlockNode', nodeId: COMMAND_STAFF.recruiter.nodeId })).toMatch(/Recruiting/i);
+  });
+
+  it('offers sessions to the most strained idle officers, for a fee, above the reserve', () => {
+    const s = withManager(COMMAND_STAFF.peerSupportLead.nodeId);
+    for (const o of Object.values(s.officers)) o.stress = 0;
+    s.officers.off_brooks.stress = 70; s.officers.off_okafor.stress = 50; s.officers.off_chen.stress = 40;
+    s.department.funding = 20_000;
+    const after = ticks(s, T0, T0 + HOUR_MS, 5 * 60_000);
+    const log = commandStaffOf(after).peer_support_lead.log;
+    expect(log).toHaveLength(2); // two sessions an hour, Brooks and Okafor
+    const relief = (text: string) => { const [, from, to] = /stress (\d+) to (\d+)/.exec(text)!; return Number(from) - Number(to); };
+    expect(log[1].text).toMatch(new RegExp(`^Peer support for ${fullName(s.officers.off_brooks)}: `));
+    expect(log[0].text).toMatch(new RegExp(`^Peer support for ${fullName(s.officers.off_okafor)}: `));
+    expect(log.map((entry) => relief(entry.text))).toEqual([8, 8]);
+    expect(after.officers.off_chen.stress).toBeLessThanOrEqual(40);
+    const calm = withManager(COMMAND_STAFF.peerSupportLead.nodeId);
+    for (const o of Object.values(calm.officers)) o.stress = 0;
+    const quiet = ticks(calm, T0, T0 + HOUR_MS, 5 * 60_000);
+    expect(commandStaffOf(quiet).peer_support_lead.log).toEqual([]);
+  });
+
+  it('holds a session when the fee would take funding under the reserve, and never reaches a deployed officer', () => {
+    const s = withManager(COMMAND_STAFF.peerSupportLead.nodeId);
+    for (const o of Object.values(s.officers)) o.stress = 0;
+    s.officers.off_brooks.stress = 70;
+    s.officers.off_okafor.stress = 70;
+    s.department.funding = 20_000;
+    const guarded = ok(s, { type: 'setManagerPolicy', patch: { managerId: 'peer_support_lead', reserve: 100_000 } });
+    const held = ok(guarded, { type: 'tick' }, T0 + HOUR_MS);
+    expect(commandStaffOf(held).peer_support_lead.log).toEqual([]);
+    expect(managerView(held, 'peer_support_lead').activity).toMatch(/Next session/);
+    const busy = withManager(COMMAND_STAFF.peerSupportLead.nodeId);
+    busy.officers.off_brooks.assignment = { kind: 'operation', runId: 'run' } as never;
+    busy.officers.off_brooks.stress = 70;
+    for (const o of Object.values(busy.officers)) if (o.id !== 'off_brooks') o.stress = 0;
+    expect(managerView(busy, 'peer_support_lead').activity).toMatch(/Nobody idle/);
+  });
+
+  it('signs the best candidate for the chosen role while the roster has room, and stops at the reserve and the cap', () => {
+    const s = withManager(COMMAND_STAFF.recruiter.nodeId, ['personnel_recruiting']);
+    s.department.rosterCap = Object.keys(s.officers).length + 1;
+    const medics = s.candidates.filter((c) => c.officer.role === 'medic');
+    const target = ok(s, { type: 'setManagerPolicy', patch: { managerId: 'recruiter', role: 'medic', reserve: 0 } });
+    if (!medics.length) return; // the seeded pool decides whether a medic is on offer
+    const best = [...medics].sort((a, b) => Object.values(b.officer.ratings).reduce((x, y) => x + y, 0) - Object.values(a.officer.ratings).reduce((x, y) => x + y, 0))[0];
+    const after = ok(target, { type: 'tick' }, T0 + HOUR_MS);
+    expect(commandStaffOf(after).recruiter.log[0].text).toMatch(/^Signed /);
+    expect(Object.values(after.officers).some((o) => o.id === best.officer.id)).toBe(true);
+    expect(Object.keys(after.officers)).toHaveLength(Object.keys(s.officers).length + 1);
+    expect(managerView(after, 'recruiter').activity).toMatch(/Roster is full/);
+  });
+
+  it('refuses nonsense policy and keeps a saved record from before these managers loadable', () => {
+    const s = withManager(COMMAND_STAFF.recruiter.nodeId, ['personnel_recruiting']);
+    expect(refused(s, { type: 'setManagerPolicy', patch: { managerId: 'recruiter', role: 'chef' as never } })).toBe('Unknown role');
+    expect(refused(s, { type: 'setManagerPolicy', patch: { managerId: 'recruiter', reserve: -5 } })).toMatch(/reserve/);
+    const ps = withManager(COMMAND_STAFF.peerSupportLead.nodeId);
+    expect(refused(ps, { type: 'setManagerPolicy', patch: { managerId: 'peer_support_lead', supportAt: 31 } })).toMatch(/Choose a stress/);
+    const old = structuredClone(ps);
+    delete (old.commandStaff as Partial<typeof old.commandStaff>)!.recruiter;
+    delete (old.commandStaff as Partial<typeof old.commandStaff>)!.peer_support_lead;
+    expect(deserialize(serialize(old, T0))?.commandStaff).toBeDefined();
+    expect(commandStaffOf(old).recruiter.policy.role).toBeNull();
   });
 });

@@ -68,6 +68,24 @@ export const DEV_NODES: Record<Id, DevelopmentNode> = {
     requires: ['personnel_academy'],
     effects: [{ kind: 'commandStaff', managerId: 'training_sergeant' }],
   },
+  personnel_peer_support_lead: {
+    id: 'personnel_peer_support_lead',
+    branch: 'personnel',
+    name: 'Peer support lead',
+    description: "Hire a peer support lead who offers sessions to your most strained idle officers each hour, taking stress off faster than rest alone for $80 a session, above a funding reserve you set. Paid $45 per hour while on duty.",
+    cost: { dp: 2, funding: 1600 },
+    requires: [],
+    effects: [{ kind: 'commandStaff', managerId: 'peer_support_lead' }],
+  },
+  personnel_recruiter: {
+    id: 'personnel_recruiter',
+    branch: 'personnel',
+    name: 'Recruiter',
+    description: "Hire a recruiter who signs the best candidate for the role you choose whenever the roster has room, keeping funding above a reserve you set. Paid $45 per hour while on duty.",
+    cost: { dp: 2, funding: 2000 },
+    requires: ['personnel_recruiting'],
+    effects: [{ kind: 'commandStaff', managerId: 'recruiter' }],
+  },
   // ---- field capability
   field_contact_kit: {
     id: 'field_contact_kit',
