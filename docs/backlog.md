@@ -50,6 +50,17 @@ It's in the catalog (`src/content/items.ts`) and no call uses it. Done: a choice
 through it, using the sightings step, and what it sees moves the odds through the intel rules
 (`intel-confirmed` probe).
 
+### harbour-court-window: harbour_court's bedroom window can never be reached
+Tags: job=command; journeys=choices-branch; probes=blueprint-building; lane=engine
+Needs: start=none; integrate=none; ship=none
+
+From the engine lane's sweep of the new barricade (2026-10-18): on `harbour_court`, an authored
+layout, the mover's ground-floor bedroom has an exterior window and a route out through it
+(w_bedroom to p_garden_e to p_walk_e), but the walk from the mover's starting spot is never clear,
+so the window exit is pruned on all 90 sampled calls. The pruning is correct; a window no one can
+reach is likely a layout defect. Done: find what blocks it, and either fix the layout (if a person
+should be able to reach that window) or record why it's blocked by design.
+
 ### armed-max: Text can say a look found empty hands
 Tags: job=command; journeys=chance-not-script; probes=none (text condition); lane=engine
 Needs: start=none; integrate=none; ship=none
