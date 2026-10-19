@@ -824,8 +824,10 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
     list.push({ when: { flags: [movedFlag(role, key)] }, observed: false, to }, { when: { flags: [seenFlag(role, key)] }, observed: true, to });
     return [movedFlag(role, key), ...seen ? [seenFlag(role, key)] : []];
   };
-  for (const node of nodes) for (const choice of node.choices) for (const band of BANDS) for (const outcome of choice.outcomes[band])
-    if (outcome.moveTo) moves.set(outcome, Object.entries(outcome.moveTo).flatMap(([role, entry]) => {
+  // Only the choices and outcomes this call compiles (actionFor's possible() filters): a pruned one's
+  // move would be a transition on a flag nothing sets.
+  for (const node of nodes) for (const choice of node.choices) if (possible(choice.onlyIf)) for (const band of BANDS) for (const outcome of choice.outcomes[band])
+    if (outcome.moveTo && possible(outcome.when)) moves.set(outcome, Object.entries(outcome.moveTo).flatMap(([role, entry]) => {
       const n = (moveCount.get(role) ?? 0) + 1;
       moveCount.set(role, n);
       return addMove(role, entry, `${node.id}.${choice.id}`, n);
