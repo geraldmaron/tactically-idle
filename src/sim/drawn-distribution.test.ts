@@ -24,7 +24,7 @@ const member = (id: string, influence: number, meters = { agitation: 60, rapport
 });
 // A department where every officer carries every cert, so only the person and the place choose the tool.
 const STATE = { department: { clockHighWater: NOW, developmentTiers: {} }, officers: { o1: { certs: ['less_lethal', 'advanced_less_lethal', 'entry_team'] } } } as unknown as GameState;
-const UNITS = () => [makeUnit('impact_launcher', 1), makeUnit('conducted_energy_device', 2), makeUnit('service_sidearm', 3)];
+const UNITS = () => [makeUnit('impact_launcher', 1), makeUnit('conducted_energy_device', 2), makeUnit('service_sidearm', 3), makeUnit('impact_supply', 4), makeUnit('energy_cartridge', 5)];
 
 function context(people: IncidentPersonDef[], run: Partial<OperationRun> = {}): DrawnContext {
   return { state: STATE, run: { flags: [], knowledge: {}, rngState: 1, ...run } as unknown as OperationRun,
@@ -74,7 +74,7 @@ describe('incoming fire odds', () => {
 
 describe('team force odds', () => {
   const knife = (patch: Partial<IncidentPersonDef> = {}) => subject({ threat: { armament: 'edged', readiness: 'brandished', disposition: 'agitated', intent: 'harm_others', awareness: 'aware' }, weapon: { kind: 'edged', real: 'real' }, ...patch });
-  const deviceOnly = () => [makeUnit('conducted_energy_device', 2)];
+  const deviceOnly = () => [makeUnit('conducted_energy_device', 2), makeUnit('energy_cartridge', 5)];
   it.each([
     ['firearm', subject(), UNITS],
     ['firearm', subject({ noFatal: true }), UNITS],

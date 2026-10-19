@@ -1,0 +1,32 @@
+name: Browser end-to-end
+# Plays the Ops board through the real UI at 390x844 and 320x568 (scripts/play-loop.mjs). The script
+# reads game state through `window.__ti`, which only the dev server exposes (src/ui/store.ts), so it
+# runs against `vite` rather than a built preview. It drives the Chrome that ships on the runner.
+on:
+  pull_request:
+permissions:
+  contents: read
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Start the dev server
+        run: |
+          npx vite --host 127.0.0.1 --port 5174 --strictPort > vite.log 2>&1 &
+          for i in $(seq 1 60); do curl -sf http://127.0.0.1:5174 > /dev/null && exit 0; sleep 1; done
+          cat vite.log
+          exit 1
+      - name: Play the board
+        env:
+          CHROME_PATH: /usr/bin/google-chrome
+        run: npm run test:e2e

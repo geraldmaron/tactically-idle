@@ -1,4 +1,5 @@
 import type { ActionDefinition, ScenarioDefinition } from './scenario-types';
+import { runRoster } from './squads';
 import type { GameState, OperationRun, ResponseFailureRecord, SquadId } from './types';
 import { getScenario } from './scenario-registry';
 import { builtFor, evaluateAction } from './resolution';
@@ -29,7 +30,7 @@ export function responseFailurePlan(state: GameState): ResponseFailurePlan | nul
   if (!run || run.status !== 'active' || run.stage === 'debrief') return null;
   const scenario = getScenario(run.scenarioId);
   if (!scenario) return null;
-  const allUnavailable = run.squadIds.every(id => (state.squads.find(squad => squad.id === id)?.officerIds ?? [])
+  const allUnavailable = run.squadIds.every(id => runRoster(state, run, id)
     .every(officerId => incidentOfficerUnavailable(state, run, officerId)));
   const reasons: string[] = [];
   {

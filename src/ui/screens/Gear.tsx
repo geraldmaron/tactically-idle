@@ -133,9 +133,9 @@ function QuartermasterCard() {
   return (
     <>
       <button type="button" className={`qm-card qm-card-${view.status}`} onClick={() => setOpen(true)} aria-haspopup="dialog">
-        <ManagerPortrait id="quartermaster" size={52} hired={view.hired} />
+        <ManagerPortrait person={view.holder?.person ?? null} size={52} />
         <span className="qm-main">
-          <span className="qm-title"><strong>{view.profile.title}</strong><span className={`staff-pill staff-pill-${view.status}`}>{view.status === 'on' ? 'On' : view.status === 'off' ? 'Off' : 'Not hired'}</span></span>
+          <span className="qm-title"><strong>{view.profile.title}</strong><span className={`staff-pill staff-pill-${view.status}`}>{view.status === 'on' ? 'On' : view.status === 'off' ? 'Off' : view.open ? 'Vacant' : 'Not hired'}</span></span>
           <span className="qm-line">{line}</span>
           {view.hired && (
             <span className="chips qm-chips">

@@ -1,3 +1,4 @@
+import { courseFee } from '../../sim/staff-pool';
 import { useEffect, useId, useRef, useState } from 'react';
 import { COURSES, COURSE_RATING_CEILING, courseXpGain } from '../../content/courses';
 import { DEV_NODES } from '../../content/dev-tree';
@@ -40,6 +41,8 @@ interface TrainingStoreProps {
 }
 export function TrainingStore({ requestedCert, requestedOfficer, requestedCourse, requestKey, onDevelopment }: TrainingStoreProps = {}) {
   const game = useGame();
+  // The fee actually charged: the Training Sergeant's discount, when one is in post.
+  const fee = (cost: number) => courseFee(game, cost);
   const { act } = useToast();
   const nav = useNav();
   const focus = nav.trainingFocus;
@@ -149,7 +152,7 @@ export function TrainingStore({ requestedCert, requestedOfficer, requestedCourse
       return <article className={`course-tile training-course${courseId === course.id ? ' training-course-highlight' : ''}${locked ? ' course-tile-locked' : ''}${officer && available ? ' course-tile-ready' : ''}`} key={course.id} data-course-id={course.id} tabIndex={courseId === course.id ? -1 : undefined} aria-label={course.name}>
         <div className="course-tile-top">
           <CourseEmblem course={course} locked={locked} />
-          <p className="course-tile-meta"><span><Icon name="clock" size={13} />{course.hours}h</span><span><Icon name="cash" size={13} />{money(course.cost)}</span></p>
+          <p className="course-tile-meta"><span><Icon name="clock" size={13} />{course.hours}h</span><span><Icon name="cash" size={13} />{money(fee(course.cost))}</span></p>
         </div>
         <h3>{course.name}</h3>
         <div className="course-tile-gains">
@@ -170,10 +173,10 @@ export function TrainingStore({ requestedCert, requestedOfficer, requestedCourse
       </article>;
     })}</div>
     {!options.length && <EmptyState icon="mortarboard" title="No courses match">Clear the course search to see all training.</EmptyState>}
-    <Sheet open={!!selectedCourse} onClose={closeChooser} title={choice?.enrolment ? 'Enrolment confirmed' : reviewing ? 'Review enrolment' : 'Choose officer'} subtitle={selectedCourse ? `${selectedCourse.name} · ${money(selectedCourse.cost)} · ${selectedCourse.hours}h` : undefined} className="training-chooser" footer={selectedCourse && <div className="training-chooser-footer">
-      {choice?.enrolment ? <TrainingEnrolmentActions course={selectedCourse} onDone={closeChooser} /> : reviewing ? <>
-        <p className="training-confirm-cost">{money(selectedCourse.cost)} funding · 1 slot · {selectedCourse.hours} real hours</p>
-        <div className="training-confirm-actions"><Button onClick={backToCandidates}>Back</Button><Button variant="primary" disabled={!reviewing.option.available} onClick={enrol} aria-label={`Enrol ${fullName(reviewing.officer)} in ${selectedCourse.name} for ${money(selectedCourse.cost)}`}>Enrol officer</Button></div>
+    <Sheet open={!!selectedCourse} onClose={closeChooser} title={choice?.enrolment ? 'Enrolment confirmed' : reviewing ? 'Review enrolment' : 'Choose officer'} subtitle={selectedCourse ? `${selectedCourse.name} · ${money(fee(selectedCourse.cost))} · ${selectedCourse.hours}h` : undefined} className="training-chooser" footer={selectedCourse && <div className="training-chooser-footer">
+      {choice?.enrolment ? <TrainingEnrolmentActions course={selectedCourse} paid={fee(selectedCourse.cost)} onDone={closeChooser} /> : reviewing ? <>
+        <p className="training-confirm-cost">{money(fee(selectedCourse.cost))} funding · 1 slot · {selectedCourse.hours} real hours</p>
+        <div className="training-confirm-actions"><Button onClick={backToCandidates}>Back</Button><Button variant="primary" disabled={!reviewing.option.available} onClick={enrol} aria-label={`Enrol ${fullName(reviewing.officer)} in ${selectedCourse.name} for ${money(fee(selectedCourse.cost))}`}>Enrol officer</Button></div>
       </> : <Button block onClick={closeChooser}>Cancel</Button>}
     </div>}>
       {selectedCourse && (choice?.enrolment ? <div className="training-review">
@@ -183,7 +186,7 @@ export function TrainingStore({ requestedCert, requestedOfficer, requestedCourse
         <h3 ref={reviewHeading} className="training-review-heading" tabIndex={-1}>Confirm {fullName(reviewing.officer)}</h3>
         <TrainingOfficerCard candidate={reviewing} now={game.department.clockHighWater} selected />
         <div className="training-confirm-details">
-          <p className="training-confirm-line"><Icon name="cash" size={14} />{game.department.funding >= selectedCourse.cost ? <>Funding {money(game.department.funding)} <span aria-hidden="true">→</span><span className="sr-only"> to </span> {money(game.department.funding - selectedCourse.cost)}</> : `Funding ${money(game.department.funding)} of ${money(selectedCourse.cost)} needed`}</p>
+          <p className="training-confirm-line"><Icon name="cash" size={14} />{game.department.funding >= fee(selectedCourse.cost) ? <>Funding {money(game.department.funding)} <span aria-hidden="true">→</span><span className="sr-only"> to </span> {money(game.department.funding - fee(selectedCourse.cost))}</> : `Funding ${money(game.department.funding)} of ${money(fee(selectedCourse.cost))} needed`}</p>
           <p className="training-confirm-line"><Icon name="mortarboard" size={14} />{freePlaces} training {freePlaces === 1 ? 'place' : 'places'} free <TrainingPlaces used={inTraining} total={game.department.trainingSlots} bare /></p>
           <p className="training-confirm-line"><Icon name="clock" size={14} />Away from squad duties for {selectedCourse.hours} real hours</p>
           <p className="dim">Grants arrive on completion. XP may also improve a rating.</p>
@@ -212,9 +215,9 @@ export function TrainingStore({ requestedCert, requestedOfficer, requestedCourse
 }
 
 /** Keep the previous Enrol hit area inert so a repeated tap cannot dismiss the sheet. */
-export function TrainingEnrolmentActions({ course, onDone }: { course: Course; onDone: () => void }) {
+export function TrainingEnrolmentActions({ course, paid = course.cost, onDone }: { course: Course; paid?: number; onDone: () => void }) {
   return <>
-    <p className="training-confirm-cost">{money(course.cost)} funding paid · {course.hours} real hours</p>
+    <p className="training-confirm-cost">{money(paid)} funding paid · {course.hours} real hours</p>
     <div className="training-confirm-actions"><Button variant="primary" onClick={(event) => { if (event.detail <= 1) onDone(); }}>Done</Button><Button disabled>Enrolled</Button></div>
   </>;
 }

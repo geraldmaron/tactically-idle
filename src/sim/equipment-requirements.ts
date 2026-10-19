@@ -1,5 +1,6 @@
 // Shared public requirements for planning, preparation, delivery and live gates.
 // No inventory mutations, hidden fact truth, people positions or RNG are read.
+import { deployRoster, runRoster } from './squads';
 import { ITEMS } from '../content/items';
 import type { ActionDefinition, ScenarioDefinition } from './scenario-types';
 import type { BuiltLocation, CapabilityId, GameState, Id, ItemDefinition, ItemUnit, KnowledgeStatus, Officer, SquadId } from './types';
@@ -32,7 +33,9 @@ export function actionEquipmentRequirements(action: ActionDefinition) {
   return { groups, consumes: normalizedActionConsumption(action), certs: action.requires.certs ?? [], minSquads: Math.max(action.requires.minSquads?.count ?? 1, (action.capabilities?.required ?? []).some((cap) => ['specialist_support', 'weak_radio_link', 'scene_coordination'].includes(cap)) ? 2 : 1) };
 }
 export function qualifiedOfficers(state: GameState, squads: SquadId[], action: ActionDefinition): Officer[] {
-  return [...new Set(squads.flatMap((sid) => state.squads.find((s) => s.id === sid)?.officerIds ?? []))].map((id) => state.officers[id]).filter((o): o is Officer => !!o
+  // Who goes: on a live run the officers Deploy sent (runRoster), before it the ones who are ready.
+  const run = state.activeRun && state.activeRun.status !== 'closed' ? state.activeRun : null;
+  return [...new Set(squads.flatMap((sid) => run?.squadIds.includes(sid) ? runRoster(state, run, sid) : deployRoster(state, sid, state.department.clockHighWater).goes))].map((id) => state.officers[id]).filter((o): o is Officer => !!o
     && !(state.activeRun && (state.activeRun.officerCasualties?.[o.id] || o.injury && o.injury.until > state.department.clockHighWater))
     && (action.check.kind !== 'execution' || highRiskAllowed(o)));
 }

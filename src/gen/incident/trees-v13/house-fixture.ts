@@ -1,3 +1,4 @@
+// Frozen 2026-10-18 test copy; never edit to track content.
 // An engine-owned house call: the barricade tree and template as they stood on 2026-10-18
 // (content/call-trees/barricade-order.ts and content/incidents/barricade.ts), frozen here so the
 // engine's tests of moves, window exits, upstairs facts, waits and meters keep a stable call while

@@ -1,3 +1,4 @@
+import { fillOpenPostsForTest } from './staff-fixtures';
 import { describe, expect, it } from 'vitest';
 import { DEV_NODES } from '../content/dev-tree';
 import { ITEMS } from '../content/items';
@@ -29,7 +30,7 @@ function funded() {
 function apply(state: GameState, command: Command, now = NOW) {
   const result = dispatch(state, command, { now });
   expect(result.result).toEqual({ ok: true });
-  return result.state;
+  return command.type === 'unlockNode' ? fillOpenPostsForTest(result.state) : result.state;
 }
 function buyThrough(state: GameState, nodeId: string, tier: number) {
   for (let target = 1; target <= tier; target++) state = apply(state, { type: 'unlockNode', nodeId, expectedTier: target });
