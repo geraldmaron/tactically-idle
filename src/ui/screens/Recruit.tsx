@@ -4,7 +4,7 @@ import { useRef, useState } from 'react';
 import { useGame } from '../store';
 import { projectHire, sortedCandidates, type Projection } from '../../sim/department-selectors';
 import type { Candidate, Id } from '../../sim/types';
-import { Button, Card, Chip, EmptyState, ExperienceChip, KV, RatingBars, Section } from '../components/ui';
+import { Button, Card, Chip, EmptyState, ExperienceChip, RatingBars, Section } from '../components/ui';
 import { useToast } from '../components/toast';
 import { CERT_ICON, ROLE_META, TRAIT_INFO } from '../components/labels';
 import { RetirementChip, useCareerSnapshot } from '../components/Career';
@@ -15,6 +15,10 @@ import { money, perHour, rate, relativeTime, yearsText } from '../format';
 import './recruit.css';
 import './squad-visual.css';
 import { CERT_NAME } from '../../content/certs';
+import { ISSUE_RADIO, issueKit } from '../../content/issue-kit';
+import { ITEMS } from '../../content/items';
+import { GearArtFrame } from '../art/GearArt';
+import { Sheet } from '../components/Sheet';
 
 export interface HireReceipt { candidate: Candidate; projection: Projection; index: number }
 
@@ -62,10 +66,10 @@ export function Recruit() {
         <div className="cand-list">
           {candidates.map((c, index) => {
             const receipt = receipts.find((entry) => entry.candidate.id === c.id);
-            return <CandidateCard key={c.id} c={c} now={now} open={hireFor === c.id || !!receipt}
+            return <CandidateCard key={c.id} c={c} now={now} open={hireFor === c.id}
               receipt={receipt?.projection}
               onToggle={() => setHireFor((current) => current === c.id ? null : c.id)}
-              onHired={(projection) => { setReceipts((previous) => [...previous, { candidate: c, projection, index }]); setHireFor(null); }}
+              onHired={(projection) => setReceipts((previous) => [...previous, { candidate: c, projection, index }])}
               onDone={() => setReceipts((previous) => dismissHireReceipt(previous, c.id))} />;
           })}
         </div>
@@ -91,7 +95,6 @@ export function CandidateCard({ c, now, open, onToggle, onHired, receipt, onDone
   const [receiptHeight, setReceiptHeight] = useState(0);
   const o = c.officer;
   const proj = receipt ?? (open ? projectHire(g, c.id) : null);
-  const reviewId = `hire-review-${c.id}`;
   const career = useCareerSnapshot(o);
   return (
     <div ref={slot} className="recruit-candidate-slot" style={receipt && receiptHeight ? { minHeight: receiptHeight } : undefined}>
@@ -147,40 +150,65 @@ export function CandidateCard({ c, now, open, onToggle, onHired, receipt, onDone
           <Icon name="cash" size={13} />
           {receipt ? <>Signing {money(receipt.upfront)} paid · Added to roster</> : <>Signing {money(c.signingCost)} · <Icon name="clock" size={13} /> leaves {relativeTime(c.expiresAt, now)}</>}
         </span>
-        <Button className="recruit-review-toggle" size="sm" variant={open ? 'secondary' : 'primary'} aria-expanded={receipt ? undefined : open} aria-controls={open ? reviewId : undefined} aria-label={`${receipt ? 'Done reviewing hire for' : open ? 'Cancel hire review for' : 'Review hire for'} ${o.firstName} ${o.surname}`} onClick={(event) => { if (event.detail > 1) return; if (receipt) onDone?.(); else onToggle(); }}>
-          {receipt ? 'Done' : open ? 'Cancel' : 'Review hire'}
+        <Button className="recruit-review-toggle" size="sm" variant={receipt ? 'secondary' : 'primary'} aria-haspopup={receipt ? undefined : 'dialog'} aria-expanded={receipt ? undefined : open} aria-label={`${receipt ? 'Done reviewing hire for' : 'Review hire for'} ${o.firstName} ${o.surname}`} onClick={(event) => { if (event.detail > 1) return; if (receipt) onDone?.(); else onToggle(); }}>
+          {receipt ? 'Done' : 'Review hire'}
         </Button>
       </div>
-      {open && proj && (
-        <div className="confirm recruit-hire-review" id={reviewId} role="region" aria-label={`Hire ${o.firstName} ${o.surname}`}>
-          <h3>Hire {o.firstName} {o.surname}</h3>
-          <KV k="Signing cost" v={money(proj.upfront)} />
-          <KV k="Wage change" v={`${proj.wageDelta >= 0 ? '+' : '-'}${perHour(Math.abs(proj.wageDelta))}`} />
-          <KV k="Net funding" v={`${rate(proj.netBefore)} → ${rate(proj.netAfter)}`} tone={proj.netAfter < 0 ? 'danger' : undefined} />
-          {!proj.ok && proj.reason && (
-            <p className="note note-warn">
-              <Icon name="lock" size={16} />
-              {proj.reason}
-            </p>
-          )}
-          <Button
-            variant="primary"
-            block
-            disabled={!!receipt || !proj.ok}
-            onClick={() => {
-              if (receipt || !proj.ok || hiring.current) return;
-              hiring.current = true;
-              const height = slot.current?.getBoundingClientRect().height ?? 0;
-              if (act({ type: 'hire', candidateId: c.id }, `${o.surname} hired`).ok) { setReceiptHeight(height); onHired(proj); }
-              else hiring.current = false;
-            }}
-          >
-            {receipt ? 'Hired' : `Confirm hire · ${money(proj.upfront)}`}
-          </Button>
-          {receipt && <p className="recruit-hire-success" role="status"><Icon name="check" size={16} />{o.firstName} {o.surname} is now on your roster.</p>}
-        </div>
-      )}
+      {proj && <HireContract c={c} proj={proj} hired={!!receipt} open={open} onClose={onToggle} onConfirm={() => {
+        if (receipt || !proj.ok || hiring.current) return;
+        hiring.current = true;
+        const height = slot.current?.getBoundingClientRect().height ?? 0;
+        if (act({ type: 'hire', candidateId: c.id }, `${o.surname} hired`).ok) { setReceiptHeight(height); onHired(proj); }
+        else hiring.current = false;
+      }} />}
     </Card>
     </div>
+  );
+}
+
+/** The hire as a contract (hire-contract-card): what it costs now, what it costs every hour, where
+ * that leaves the department's rate, and the kit the officer brings. Money is drawn as bars on one
+ * scale so the trade reads before the numbers do. */
+export function HireContract({ c, proj, hired, open, onClose, onConfirm }: { c: Candidate; proj: Projection; hired: boolean; open: boolean; onClose: () => void; onConfirm: () => void }) {
+  const g = useGame();
+  const o = c.officer;
+  const funding = hired ? g.department.funding + proj.upfront : g.department.funding;
+  const after = funding - proj.upfront;
+  const kit = issueKit(o);
+  const kitCost = c.issueKit ?? 0;
+  const scale = Math.max(1, Math.abs(proj.netBefore), Math.abs(proj.netAfter));
+  const short = proj.netAfter < 0;
+  return (
+    <Sheet open={open} onClose={onClose} interactionKey={hired ? 'hired' : 'review'} title={`Hire ${o.firstName} ${o.surname}`} className="hire-contract"
+      subtitle={<span className="chips"><Chip icon={ROLE_META[o.role].icon}>{ROLE_META[o.role].label}</Chip><Chip tone="amber" icon="cash">{perHour(o.wage)}</Chip></span>}
+      footer={hired
+        ? <><p className="recruit-hire-success" role="status"><Icon name="check" size={16} />{o.firstName} {o.surname} is now on your roster{kit.length ? ', with their kit in the Armory' : ''}.</p><Button variant="primary" block onClick={onClose}>Done</Button></>
+        : <Button variant="primary" block disabled={!proj.ok} onClick={onConfirm}>Confirm hire · {money(proj.upfront)}</Button>}>
+      <div className="contract">
+        <section className="contract-sign" aria-label="Due at signing">
+          <span className="contract-label">Due at signing</span>
+          <strong className="contract-hero">{money(proj.upfront)}</strong>
+          {kitCost > 0 && <span className="dim">Includes {money(kitCost)} of issue kit</span>}
+          <span className="contract-funds" role="img" aria-label={`Funding ${money(funding)} now, ${money(after)} after signing`}>
+            <i className="contract-funds-left" style={{ width: `${Math.max(0, Math.min(100, (after / Math.max(1, funding)) * 100))}%` }} />
+            <i className="contract-funds-spent" style={{ width: `${Math.max(0, Math.min(100, (proj.upfront / Math.max(1, funding)) * 100))}%` }} />
+          </span>
+          <span className="contract-funds-legend"><span>Now {money(funding)}</span><span className={after < 0 ? 'tone-danger' : undefined}>After {money(after)}</span></span>
+        </section>
+        <section className="contract-rate" aria-label="Every hour">
+          <span className="contract-label">Every hour</span>
+          <span className="contract-rate-row"><span>Wages</span><b className="tone-danger">-{perHour(proj.wageDelta)}</b></span>
+          <span className="contract-gauge" role="img" aria-label={`Department net ${rate(proj.netBefore)} now, ${rate(proj.netAfter)} after hiring`}>
+            <span className="contract-gauge-row"><span>Now</span><span className="contract-gauge-bar"><i className={proj.netBefore < 0 ? 'neg' : 'pos'} style={{ width: `${(Math.abs(proj.netBefore) / scale) * 100}%` }} /></span><b className={proj.netBefore < 0 ? 'tone-danger' : 'tone-mint'}>{rate(proj.netBefore)}</b></span>
+            <span className="contract-gauge-row"><span>After</span><span className="contract-gauge-bar"><i className={short ? 'neg' : 'pos'} style={{ width: `${(Math.abs(proj.netAfter) / scale) * 100}%` }} /></span><b className={short ? 'tone-danger' : 'tone-mint'}>{rate(proj.netAfter)}</b></span>
+          </span>
+        </section>
+        {kit.length > 0 && <section className="contract-kit" aria-label="Brings">
+          <span className="contract-label">Brings</span>
+          <ul>{kit.map((itemId, i) => <li key={`${itemId}-${i}`}><GearArtFrame itemId={itemId} size={30} /><span>{ITEMS[itemId]?.name ?? itemId}</span>{itemId === ISSUE_RADIO && <span className="dim">Provided</span>}</li>)}</ul>
+        </section>}
+        {!hired && !proj.ok && proj.reason && <p className="note note-warn"><Icon name="lock" size={16} />{proj.reason}</p>}
+      </div>
+    </Sheet>
   );
 }

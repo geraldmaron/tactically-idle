@@ -8,7 +8,7 @@ import type { Command } from '../../sim/types';
 import { Button } from '../components/ui';
 import { ROLE_META } from '../components/labels';
 import { money, perHour, rate } from '../format';
-import { CandidateCard, candidatesWithHireReceipt, dismissHireReceipt, Recruit, RecruitRefresh, type HireReceipt } from './Recruit';
+import { CandidateCard, candidatesWithHireReceipt, dismissHireReceipt, HireContract, Recruit, RecruitRefresh, type HireReceipt } from './Recruit';
 import { CERT_NAME } from '../../content/certs';
 
 const NOW = Date.UTC(2026, 9, 3, 12);
@@ -20,6 +20,7 @@ const act = vi.fn((command: Command, _message?: string) => {
 });
 vi.mock('../store', () => ({ useGame: () => state }));
 vi.mock('../components/toast', () => ({ useToast: () => ({ act }) }));
+vi.mock('../components/Sheet', () => ({ Sheet: ({ open, title, children, footer }: { open: boolean; title: string; children: ReactNode; footer: ReactNode }) => open ? createElement('section', { role: 'dialog', 'aria-label': title }, children, footer) : null }));
 
 type CapturedElement = ReactElement<{ children?: ReactNode; onClick?: (event: MouseEvent<HTMLButtonElement>) => void; disabled?: boolean }>;
 function elements(node: ReactNode): CapturedElement[] {
@@ -39,8 +40,13 @@ function button(tree: ReactNode, label: string) {
 }
 function card(open: boolean, onToggle = vi.fn(), onHired = vi.fn()) {
   const c = state.candidates[0];
-  return { ...capture(() => CandidateCard({ c, now: NOW, open, onToggle, onHired })), c, onToggle, onHired };
+  const view = capture(() => CandidateCard({ c, now: NOW, open, onToggle, onHired }));
+  // The contract is its own component: render it with the props the card gave it.
+  const contract = elements(view.tree).find((element) => element.type === HireContract) as ReactElement<Parameters<typeof HireContract>[0]> | undefined;
+  const sheet = contract ? capture(() => HireContract(contract.props)) : null;
+  return { ...view, html: view.html + (sheet?.html ?? ''), contract: contract?.props, sheet: sheet?.tree, c, onToggle, onHired };
 }
+const confirmHire = (view: ReturnType<typeof card>) => ({ props: { disabled: button((view.sheet as ReactElement<{ footer: ReactNode }>).props.footer, 'Confirm hire').props.disabled, onClick: (_event?: unknown) => view.contract!.onConfirm() } });
 
 beforeEach(() => {
   state = createInitialState(NOW);
@@ -75,40 +81,40 @@ describe('ordinary recruitment refresh', () => {
 });
 
 describe('candidate hire review', () => {
-  it('opens an explicit review and cancels without hiring or charging', () => {
+  it('opens the contract as a sheet and closes it without hiring or charging', () => {
     const before = structuredClone(state);
     const closed = card(false);
     expect(closed.html).toContain('>Review hire</button>');
     expect(closed.html).toContain('aria-expanded="false"');
+    expect(closed.html).toContain('aria-haspopup="dialog"');
     expect(closed.html).not.toContain('Confirm hire');
     button(closed.tree, 'Review hire').props.onClick?.({ detail: 0 } as MouseEvent<HTMLButtonElement>);
     expect(closed.onToggle).toHaveBeenCalledOnce();
 
     const open = card(true);
-    expect(open.html).toContain('>Cancel</button>');
-    expect(open.html).toContain(`aria-controls="hire-review-${open.c.id}"`);
-    expect(open.html).toContain(`id="hire-review-${open.c.id}" role="region"`);
-    button(open.tree, 'Cancel').props.onClick?.({ detail: 0 } as MouseEvent<HTMLButtonElement>);
+    expect(open.html).toContain(`role="dialog" aria-label="Hire ${open.c.officer.firstName} ${open.c.officer.surname}"`);
+    open.contract!.onClose();
     expect(open.onToggle).toHaveBeenCalledOnce();
     expect(act).not.toHaveBeenCalled();
     expect(state).toEqual(before);
   });
 
-  it('shows the full signing, wage and net projection before confirmation', () => {
+  it('shows signing, the hourly wage, the net rate before and after, and the kit before confirmation', () => {
     const view = card(true);
     const projection = projectHire(state, view.c.id);
-    for (const text of ['Signing cost', money(projection.upfront), 'Wage change', `+${perHour(projection.wageDelta)}`, 'Net funding', `${rate(projection.netBefore)} → ${rate(projection.netAfter)}`]) {
+    for (const text of ['Due at signing', money(projection.upfront), 'Every hour', `-${perHour(projection.wageDelta)}`, rate(projection.netBefore), rate(projection.netAfter), 'Brings', 'Radio headset']) {
       expect(view.html).toContain(text);
       expect(view.html.indexOf(text)).toBeLessThan(view.html.indexOf('Confirm hire'));
     }
+    if (view.c.issueKit) expect(view.html).toContain(`Includes ${money(view.c.issueKit)} of issue kit`);
   });
 
   it('confirms and charges exactly once even when the same confirmation handler repeats', () => {
     const before = state.department.funding;
     const view = card(true);
-    const confirm = button(view.tree, 'Confirm hire');
-    confirm.props.onClick?.({ detail: 0 } as MouseEvent<HTMLButtonElement>);
-    confirm.props.onClick?.({ detail: 0 } as MouseEvent<HTMLButtonElement>);
+    const confirm = confirmHire(view);
+    confirm.props.onClick({ detail: 0 });
+    confirm.props.onClick({ detail: 0 });
     expect(act).toHaveBeenCalledExactlyOnceWith({ type: 'hire', candidateId: view.c.id }, `${view.c.officer.surname} hired`);
     expect(view.onHired).toHaveBeenCalledOnce();
     expect(state.department.funding).toBe(before - view.c.signingCost);
@@ -166,27 +172,23 @@ describe('candidate hire review', () => {
     expect(dismissHireReceipt(original, 'not-a-receipt')).toBe(original);
   });
 
-  it('keeps the old Confirm area inert for repeated desktop clicks and mobile taps while showing a stable success receipt', () => {
+  it('after a hire the contract shows success and Done, and the card keeps a receipt until dismissed', () => {
     const original = card(true);
     const projection = projectHire(state, original.c.id);
-    button(original.tree, 'Confirm hire').props.onClick?.({ detail: 1 } as MouseEvent<HTMLButtonElement>);
+    confirmHire(original).props.onClick({ detail: 1 });
     const fundingAfterHire = state.department.funding;
     const onDone = vi.fn(), onHired = vi.fn(), onToggle = vi.fn();
     const receipt = capture(() => CandidateCard({ c: original.c, now: NOW, open: true, onToggle, onHired, receipt: projection, onDone }));
-    expect(receipt.html).toContain(`${original.c.officer.firstName} ${original.c.officer.surname} is now on your roster.`);
+    const contract = elements(receipt.tree).find((element) => element.type === HireContract) as ReactElement<Parameters<typeof HireContract>[0]>;
+    const sheet = capture(() => HireContract(contract.props));
+    expect(sheet.html).toContain(`${original.c.officer.firstName} ${original.c.officer.surname} is now on your roster`);
+    expect(sheet.html).not.toContain('Confirm hire');
     expect(receipt.html).toContain(`Signing ${money(projection.upfront)} paid`);
     expect(receipt.html).toContain('Added to roster');
     expect(receipt.html).not.toContain('leaves ');
-    expect(receipt.html).not.toContain('no longer available');
-    const hired = button(receipt.tree, 'Hired');
-    expect(hired.props.disabled).toBe(true);
-    for (const detail of [1, 2, 1]) hired.props.onClick?.({ detail } as MouseEvent<HTMLButtonElement>);
+    contract.props.onConfirm();
     expect(act).toHaveBeenCalledOnce();
     expect(state.department.funding).toBe(fundingAfterHire);
-    expect(onDone).not.toHaveBeenCalled();
-    expect(onHired).not.toHaveBeenCalled();
-    expect(onToggle).not.toHaveBeenCalled();
-    expect(elements(receipt.tree).find((element) => element.props.children === 'Refresh candidates')).toBeUndefined();
     const done = button(receipt.tree, 'Done');
     done.props.onClick?.({ detail: 2 } as MouseEvent<HTMLButtonElement>);
     expect(onDone).not.toHaveBeenCalled();
@@ -198,26 +200,26 @@ describe('candidate hire review', () => {
   it('rechecks a changed roster at confirmation and permits retry after a refused hire', () => {
     const before = state.department.funding;
     const view = card(true);
-    const confirm = button(view.tree, 'Confirm hire');
+    const confirm = confirmHire(view);
     state.department.rosterCap = Object.keys(state.officers).length;
-    confirm.props.onClick?.({ detail: 0 } as MouseEvent<HTMLButtonElement>);
+    confirm.props.onClick({ detail: 0 });
     expect(state.department.funding).toBe(before);
     expect(view.onHired).not.toHaveBeenCalled();
     state.department.rosterCap += 1;
-    confirm.props.onClick?.({ detail: 0 } as MouseEvent<HTMLButtonElement>);
+    confirm.props.onClick({ detail: 0 });
     expect(act).toHaveBeenCalledTimes(2);
     expect(view.onHired).toHaveBeenCalledOnce();
     expect(state.department.funding).toBe(before - view.c.signingCost);
   });
 
-  it('keeps an unaffordable review cancelable and prevents an invalid confirmation', () => {
+  it('keeps an unaffordable review closable and prevents an invalid confirmation', () => {
     state.department.funding = 0;
     const view = card(true);
-    const confirm = button(view.tree, 'Confirm hire');
+    const confirm = confirmHire(view);
     expect(view.html).toContain('exceeds funding');
     expect(confirm.props.disabled).toBe(true);
-    confirm.props.onClick?.({ detail: 0 } as MouseEvent<HTMLButtonElement>);
-    button(view.tree, 'Cancel').props.onClick?.({ detail: 0 } as MouseEvent<HTMLButtonElement>);
+    confirm.props.onClick({ detail: 0 });
+    view.contract!.onClose();
     expect(act).not.toHaveBeenCalled();
     expect(view.onToggle).toHaveBeenCalledOnce();
     expect(state.department.funding).toBe(0);

@@ -263,25 +263,12 @@ Watch Commander runs it, how it shows on the board without crowding tactical cal
 lead, then the engine loop and its UI. The note is `docs/patrol-work.md` (proposed 2026-10-19); it
 waits on three owner answers listed there.
 
-### funding-ledger: Every funding event is recorded and shown live
-Tags: job=build; journeys=hire-and-equip; probes=none (economy display); lane=engine
-Needs: start=none; integrate=none; ship=none
-
-Owner request 2026-10-19. Discrete funding events (payout, signing, purchase, service, restock,
-staff, unlock, grant, detail) go through one ledger with before and after; hourly accrual stays a
-rate and a shift-report line. The top bar counts to new values with floating deltas and opens a
-Finance sheet with the hourly breakdown and recent entries.
-
 ### disclosure-taxonomy: One way to reveal more, used everywhere
 Tags: job=understand; journeys=debrief-explains; probes=none (layout); lane=interface
 Needs: start=none; integrate=none; ship=none
 
 Owner request 2026-10-19. One shared Disclosure for evidence and logs, sheets for reference guides,
 chip rails for filters, harm always visible. Ad hoc expanders are removed.
-
-### hire-contract-card: The hire review shows money as shapes
-Tags: job=build; journeys=hire-and-equip; probes=none (layout); lane=interface
-Needs: start=none; integrate=none; ship=none
 
 ### develop-track: Develop reads as a research track
 Tags: job=build; journeys=none (no journey covers Develop); probes=none (layout); lane=interface

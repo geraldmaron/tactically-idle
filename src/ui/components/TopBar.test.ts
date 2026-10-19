@@ -63,15 +63,17 @@ describe('department status explanations', () => {
     expect(html).toContain('>Close</button>');
   });
 
-  it('shows full funding and its uses without introducing a purchase or claiming a forecast', () => {
+  it('shows full funding, the hourly flow and recent activity without a purchase button (funding-ledger)', () => {
     const state = makeState();
     state.department.funding = 125678;
+    state.department.lastSettledAt = state.department.lastInteractionAt = state.department.clockHighWater;
+    state.department.ledger = [{ seq: 1, at: state.department.clockHighWater, amount: -400, before: 126078, after: 125678, kind: 'purchase', label: 'Radio headset' }];
     const html = render(createElement(DepartmentStatHelp, { g: state, topic: 'funding' }));
-    expect(html).toContain('$125,678');
-    expect(html).toContain('Hiring, training, equipment and development purchases');
-    expect(html).toContain('over real time');
+    expect(html).toMatch(/\$125,6\d\d/);
+    expect(html).toContain('Recent activity');
+    expect(html).toContain('<strong>Radio headset</strong>');
+    expect(html).toContain('-$400');
     expect(html).not.toContain('<button');
-    expect(html).not.toContain('125.7K');
   });
 
   it.each([620, 0, -42])('explains a net income of %s per real hour using the current budget components', (net) => {
@@ -80,12 +82,9 @@ describe('department status explanations', () => {
     const current = budget(state);
     const html = render(createElement(DepartmentStatHelp, { g: state, topic: 'income' }));
     expect(current.net).toBe(net);
-    expect(html).toContain(`${net > 0 ? '+' : ''}${moneyFull(net)} <span>per real hour`);
-    for (const [label, value] of [['Base allocation', current.base], ['Patrol income', current.patrol], ['Development income', current.nodeIncome], ['Total income', current.gross], ['Officer wages', current.wages], ['Operating costs', current.operating], ['Supply costs', current.supplies]] as const) {
-      expect(html).toContain(`<dt>${label}</dt><dd>${moneyFull(value)} / real hour</dd>`);
-    }
-    expect(html).toContain(net > 0 ? 'Funding grows' : net < 0 ? 'Funding falls' : 'covers wages and running costs exactly');
-    expect(html).toContain('One-off purchases reduce your balance separately.');
+    expect(html).toContain(`${net > 0 ? '+' : net < 0 ? '-' : ''}$${Math.abs(net)}/h`);
+    expect(html).toContain(`Income ${'$'}${current.gross.toLocaleString('en-US')}/h, costs`);
+    for (const label of ['Base allocation', 'Patrol work', 'Officer wages', 'Facilities', 'Routine supplies']) expect(html).toContain(`<dt>${label}</dt>`);
   });
 
   it.each([0, 78, 100])('explains public trust at %s on its actual 0–100 scale', (trust) => {

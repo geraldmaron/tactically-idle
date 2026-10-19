@@ -1,3 +1,4 @@
+import { FinanceDetail, useLiveFunding } from '../components/Finance';
 import { useToast } from '../components/toast';
 import { useState } from 'react';
 import { useCampaigns, useGame } from '../store';
@@ -66,17 +67,18 @@ export function HQ() {
 }
 
 /** Money at a glance in the department header: funding and DP per hour, then income, expenses
- * and net per hour. The line-by-line breakdown opens in place, so the budget is never a scroll away. */
+ * and net per hour. Tapping opens Finances, the same view as the top bar's balance. */
 function HeaderBudget({ g, b }: { g: GameState; b: Budget }) {
   const [open, setOpen] = useState(false);
   const expenses = b.gross - b.net;
+  const live = useLiveFunding(g);
   return (
     <div className="hq-money">
-      <button type="button" className="hq-money-row" aria-expanded={open} onClick={() => setOpen((value) => !value)} aria-label={`Funding ${money(g.department.funding)}. Income ${perHour(b.gross)}, expenses ${perHour(expenses)}, ${rate(b.net)} net, ${b.devPointsPerHour.toFixed(1)} development points per hour. ${open ? 'Hide' : 'Show'} hourly budget`}>
+      <button type="button" className="hq-money-row" aria-haspopup="dialog" aria-expanded={open} onClick={() => setOpen(true)} aria-label={`Funding ${money(g.department.funding)}. Income ${perHour(b.gross)}, expenses ${perHour(expenses)}, ${rate(b.net)} net, ${b.devPointsPerHour.toFixed(1)} development points per hour. Open finances`}>
         <span className="hq-money-top">
-          <span className="hq-money-stat"><small>Funding</small><strong className="hq-money-funding">{money(g.department.funding)}</strong></span>
+          <span className="hq-money-stat"><small>Funding</small><strong className="hq-money-funding">{money(live.shown)}</strong></span>
           <span className="hq-money-stat hq-money-dp"><small>Dev points</small><strong>{b.devPointsPerHour.toFixed(1)}/h</strong></span>
-          <Icon name={open ? 'chevronUp' : 'chevronDown'} size={16} className="hq-money-toggle" />
+          <Icon name="chart" size={16} className="hq-money-toggle" />
         </span>
         <span className="hq-money-flow">
           <span className="hq-money-stat"><small>Income</small><strong className="tone-mint">+{perHour(b.gross)}</strong></span>
@@ -84,7 +86,7 @@ function HeaderBudget({ g, b }: { g: GameState; b: Budget }) {
           <span className="hq-money-stat"><small>Net</small><strong className={b.net < 0 ? 'tone-danger' : 'tone-mint'}>{rate(b.net)}</strong></span>
         </span>
       </button>
-      {open && <BudgetCard b={b} />}
+      <Sheet open={open} onClose={() => setOpen(false)} title="Finances"><FinanceDetail g={g} /></Sheet>
     </div>
   );
 }
@@ -331,25 +333,6 @@ function ActiveOpCard({ g, now }: { g: GameState; now: number }) {
       </span>
       <Icon name="chevronRight" size={20} />
     </button>
-  );
-}
-
-function BudgetCard({ b }: { b: Budget }) {
-  return (
-    <Section title="Hourly budget" icon="cash" hint="Funding per hour while squads are on duty. Wages are paid whether or not you are watching.">
-      <Card>
-        <KV icon="cash" k="Base allocation" v={perHour(b.base)} />
-        <KV icon="patrol" k="Patrol work" v={perHour(b.patrol)} />
-        {b.nodeIncome !== 0 && <KV icon="chart" k="Development income" v={perHour(b.nodeIncome)} />}
-        <KV icon="trend" k="Gross" v={perHour(b.gross)} strong />
-        <KV icon="people" k="Officer wages" v={`-${perHour(b.wages)}`} />
-        <KV icon="gear" k="Facilities" v={`-${perHour(b.operating)}`} />
-        <KV icon="box" k="Routine supplies" v={`-${perHour(b.supplies)}`} />
-        {b.staff > 0 && <KV icon="people" k="Command staff" v={`-${perHour(b.staff)}`} />}
-        <KV icon="cash" k="Net" v={rate(b.net)} tone={b.net < 0 ? 'danger' : 'mint'} strong />
-        <KV icon="chart" k="Development points" v={`${b.devPointsPerHour.toFixed(1)}/h`} />
-      </Card>
-    </Section>
   );
 }
 

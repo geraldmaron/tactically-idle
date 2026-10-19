@@ -10,6 +10,7 @@ import { Meter } from './ui';
 import { levelProgress } from '../../sim/department-level';
 import { frameworksOpeningAt } from '../../content/unlocks';
 import './topbar-help.css';
+import { FinanceDetail, FundingDeltas, useLiveFunding } from './Finance';
 
 export type DepartmentStat = 'funding' | 'income' | 'trust' | 'level';
 const STAT_TITLES: Record<DepartmentStat, string> = { funding: 'Funding', income: 'Income after costs', trust: 'Public trust', level: 'Department level' };
@@ -70,10 +71,11 @@ export function TopBar() {
     window.addEventListener('popstate', current.onPop);
     return () => { window.removeEventListener('popstate', current.onPop); current.dispose(); };
   }, []);
-  return <DepartmentStatusBar g={g} topic={topic} onOpen={(next) => navigation.current?.open(next)} onClose={() => navigation.current?.close()} />;
+  const live = useLiveFunding(g);
+  return <DepartmentStatusBar g={g} live={live} topic={topic} onOpen={(next) => navigation.current?.open(next)} onClose={() => navigation.current?.close()} />;
 }
 
-export function DepartmentStatusBar({ g, topic, onOpen, onClose }: { g: GameState; topic: DepartmentStat | null; onOpen: (topic: DepartmentStat) => void; onClose: () => void }) {
+export function DepartmentStatusBar({ g, topic, onOpen, onClose, live = { shown: g.department.funding, deltas: [] } }: { g: GameState; topic: DepartmentStat | null; onOpen: (topic: DepartmentStat) => void; onClose: () => void; live?: ReturnType<typeof useLiveFunding> }) {
   const b = budget(g);
   const d = g.department;
   const helpProps = (stat: DepartmentStat, value: string) => ({
@@ -90,7 +92,8 @@ export function DepartmentStatusBar({ g, topic, onOpen, onClose }: { g: GameStat
       <ul className="stats" aria-label="Department status">
         <li><button className="stat stat-cash topbar-stat-button" {...helpProps('funding', moneyFull(d.funding))}>
           <Icon name="cash" size={18} />
-          <span>{money(d.funding)}</span>
+          <span>{money(live.shown)}</span>
+          <FundingDeltas deltas={live.deltas} />
         </button></li>
         <li><button className={`stat stat-rate topbar-stat-button${b.net < 0 ? ' stat-neg' : ''}`} {...helpProps('income', `${moneyFull(b.net)} per real hour`)}>
           <Icon name="trend" size={16} />
@@ -108,7 +111,7 @@ export function DepartmentStatusBar({ g, topic, onOpen, onClose }: { g: GameStat
         <span>{pad2(d.level)}</span>
       </button>
     </header>
-    <Sheet open={topic !== null} onClose={onClose} title={topic ? STAT_TITLES[topic] : 'Department status'} className="department-stat-sheet">
+    <Sheet open={topic !== null} onClose={onClose} title={topic === 'funding' || topic === 'income' ? 'Finances' : topic ? STAT_TITLES[topic] : 'Department status'} className="department-stat-sheet">
       {topic && <DepartmentStatHelp g={g} topic={topic} />}
     </Sheet>
     </>
@@ -116,12 +119,7 @@ export function DepartmentStatusBar({ g, topic, onOpen, onClose }: { g: GameStat
 }
 
 export function DepartmentStatHelp({ g, topic }: { g: GameState; topic: DepartmentStat }) {
-  const b = budget(g);
-  if (topic === 'funding') return <div className="department-stat-help">
-    <p className="department-stat-value">{moneyFull(g.department.funding)} <span>available</span></p>
-    <p>Money available to run your department. Hiring, training, equipment and development purchases spend this balance.</p>
-    <p>Income and running costs change your funding over real time.</p>
-  </div>;
+  if (topic === 'funding' || topic === 'income') return <div className="department-stat-help"><FinanceDetail g={g} /></div>;
   if (topic === 'trust') return <div className="department-stat-help">
     <p className="department-stat-value">{Math.round(g.department.trust)} <span>out of 100</span></p>
     <p>Public confidence in your department, on a scale from 0 to 100. Higher means more trust.</p>
@@ -141,19 +139,5 @@ export function DepartmentStatHelp({ g, topic }: { g: GameState; topic: Departme
       <p>Higher levels also bring harder calls, which pay more. Level is separate from public trust and from an officer’s experience.</p>
     </div>;
   }
-  const perRealHour = (value: number) => `${moneyFull(value)} / real hour`;
-  return <div className="department-stat-help">
-    <p className={`department-stat-value${b.net < 0 ? ' tone-danger' : ' tone-mint'}`}>{b.net > 0 ? '+' : ''}{moneyFull(b.net)} <span>per real hour</span></p>
-    <p>{b.net > 0 ? 'Funding grows by this amount each real hour after wages and running costs.' : b.net < 0 ? 'Funding falls by this amount each real hour because costs exceed income.' : 'Income currently covers wages and running costs exactly.'}</p>
-    <dl className="department-stat-budget">
-      <div><dt>Base allocation</dt><dd>{perRealHour(b.base)}</dd></div>
-      <div><dt>Patrol income</dt><dd>{perRealHour(b.patrol)}</dd></div>
-      <div><dt>Development income</dt><dd>{perRealHour(b.nodeIncome)}</dd></div>
-      <div className="department-stat-subtotal"><dt>Total income</dt><dd>{perRealHour(b.gross)}</dd></div>
-      <div><dt>Officer wages</dt><dd>{perRealHour(b.wages)}</dd></div>
-      <div><dt>Operating costs</dt><dd>{perRealHour(b.operating)}</dd></div>
-      <div><dt>Supply costs</dt><dd>{perRealHour(b.supplies)}</dd></div>
-    </dl>
-    <p className="department-stat-note">This is the current rate. Hiring, patrol duty and developments can change it. One-off purchases reduce your balance separately.</p>
-  </div>;
+  return null;
 }
