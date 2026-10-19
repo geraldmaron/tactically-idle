@@ -305,6 +305,26 @@ Owner decision 2026-10-19: free to play with purchases. The store and ledger are
 (`src/commerce/`). Done: the point packs sell through the App Store and Play Store billing, purchases
 restore across reinstalls, and the ledger records real receipts. Needs the store-wrap first.
 
+### offline-shell: The game opens with no network
+Tags: job=keep; journeys=save-round-trip; probes=none (packaging); lane=interface
+Needs: start=none; integrate=none; ship=none
+
+The web app manifest shipped 2026-10-19 (`public/manifest.webmanifest`); there is no service worker,
+so a cold open offline shows a blank page. Risk to design out first: a cached old shell after a
+deploy would reject a newer save as "a different game version". Done: network-first navigation with
+a cached fallback, the new build taking over on the next open, checked on a real phone. May be
+folded into `store-wrap` if the native wrapper makes it moot.
+
+### reputation-review: A separate read of the reputation labels and their effect
+Tags: job=command; journeys=chance-not-script; probes=reputation-lean; lane=calls
+Needs: start=none; integrate=none; ship=none
+
+Department reputation shipped 2026-10-19 (`src/sim/reputation.ts`): four contributor labels in the
+odds breakdown and a board tilt toward armed and barricade calls for a hard name, hostage and rescue
+calls for a patient one. The labels passed `game_string_checks.py` but have had no separate
+`swat-writing-review` read. Done: that read, a playtest of whether players notice the line, and a
+decision on whether the lean needs a player-facing explanation (the HQ or the debrief).
+
 ### audio-haptics: Audio and haptics
 Tags: job=command; journeys=none (optional polish); probes=none (polish); lane=deferred
 Needs: start=none; integrate=none; ship=none

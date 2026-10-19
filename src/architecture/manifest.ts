@@ -130,6 +130,7 @@ export const OWNERSHIP: readonly { glob: string; layer: Layer; system: System }[
   { glob: '/src/sim/department*.ts', layer: 'engine', system: 'metric' },
   { glob: '/src/sim/develop*.ts', layer: 'engine', system: 'metric' },
   { glob: '/src/sim/casebook.ts', layer: 'engine', system: 'metric' },
+  { glob: '/src/sim/reputation.ts', layer: 'engine', system: 'metric' },
   { glob: '/src/sim/clocks.ts', layer: 'engine', system: 'scenario' },
   // Agitation and rapport are a subject's temper.
   { glob: '/src/sim/meters.ts', layer: 'engine', system: 'subject' },

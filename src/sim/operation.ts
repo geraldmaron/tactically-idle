@@ -69,6 +69,7 @@ import { departmentUpkeep } from './equipment-manager-policy';
 import { vantageZones } from './sightlines';
 import { sightings } from './sightings';
 import { postFunding } from './ledger';
+import { postureOf, recordPosture } from './reputation';
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
 const clamp = (n: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, n));
@@ -877,6 +878,8 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     const ev = evaluateAction(input);
     if (!ev.eligible) return fail(ev.reason ?? 'Not available');
 
+    // The department becomes known for how it works (sim/reputation.ts).
+    recordPosture(draft.department, postureOf(action));
     // One saved sample per committed decision.
     const r = next(run.rngState);
     run.rngState = r.state;

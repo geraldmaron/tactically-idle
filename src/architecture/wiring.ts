@@ -112,6 +112,11 @@ export const WIRING: readonly Probe[] = [
     evidence: 'A weapon held only on report costs a share of the threat on top (THREAT_TUNING.unconfirmed, src/sim/threat.ts), and an entry or a look into a room goes better once the team has seen where the armed person in it is (INTEL_V1.knownPosition, src/sim/incident-factors.ts). Confirming either takes the cost off or adds the credit. Measured 2026-10-18: 97 of 117 sampled choices.',
   },
   {
+    id: 'reputation-lean', system: 'metric', input: 'Department reputation (a full name for going in hard)', direction: 'any', status: 'live', minShare: 0.77, everyTree: true,
+    perturb: state => edit(state, draft => { draft.department.reputation = { lean: 1, choices: 100 }; }),
+    evidence: '`reputationContributor` adds a named line to contact and pressure checks (people have heard of the department) and to execution checks (the team has drilled it), capped at REPUTATION_TUNING.maxPoints (src/sim/reputation.ts). Observation, medical and coordination checks never respond. Measured 2026-10-19: 90 of 116 sampled choices, every tree.',
+  },
+  {
     id: 'metric-pressure', system: 'scenario', input: 'Time pressure on the call (pressure 95)', direction: 'down', status: 'live', minShare: 1, everyTree: true,
     perturb: state => edit(state, draft => { draft.activeRun!.pressure = 95; }),
     evidence: 'Pressure penalty scaled by composure (src/sim/resolution.ts)',

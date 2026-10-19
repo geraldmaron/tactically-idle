@@ -511,6 +511,9 @@ export interface Department {
   funding: number;
   /** Recent funding events, oldest first, capped (src/sim/ledger.ts). Optional for fixtures. */
   ledger?: LedgerEntry[];
+  /** How the department is known to work (src/sim/reputation.ts): lean -1 talks first .. +1 goes in
+   * hard, a moving average of committed choices, and how many choices it has seen. */
+  reputation?: { lean: number; choices: number };
   devPoints: number;
   /** Standing, 0..100. Not spendable. */
   trust: number;
@@ -595,7 +598,8 @@ export interface Contributor {
     | 'familiarity'
     | 'preparation'
     | 'difficulty'
-    | 'pressure';
+    | 'pressure'
+    | 'reputation';
   /** Officer / item / room the contribution came from. */
   ref?: Id;
 }

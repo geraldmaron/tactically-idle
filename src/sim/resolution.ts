@@ -76,6 +76,7 @@ import { routeAlongOpenings, routeBetween, type Route } from './routes';
 import { ITEMS } from '../content/items';
 import { projectedCondition } from './equipment';
 import { tunable } from './tuning';
+import { reputationContributor } from './reputation';
 import { conditionHolds } from './conditions';
 import { departmentUpkeep } from './equipment-manager-policy';
 
@@ -1222,6 +1223,10 @@ export function evaluateAction(input: EvalInput): Evaluation {
     const existingTraining = action.certBonus && pool.some((o) => o.certs.includes(action.certBonus!.cert)) ? action.certBonus.value : 0;
     if (existingTraining < 4) contributors.push({ label: 'De-escalation training: distressed contact', value: 4 - existingTraining, source: 'preparation', ref: 'deescalation' });
   }
+
+  // The department's name travels ahead of it (sim/reputation.ts).
+  const known = reputationContributor(state.department, kind);
+  if (known) { contributors.push(known); details.push(`${known.label}.`); }
 
   // ---- totals
   const score = round1(contributors.filter((c) => c.source !== 'difficulty').reduce((s, c) => s + c.value, 0));

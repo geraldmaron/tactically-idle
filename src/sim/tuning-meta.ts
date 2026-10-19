@@ -55,6 +55,7 @@ export const PINNED_BY: Readonly<Record<string, readonly string[]>> = {
   RECRUIT_TUNING: [...sim('department', 'campaign-selection', 'personnel'), 'src/ui/screens/Recruit.test.ts'],
   LEARNING_APTITUDE: sim('officer-value', 'career'),
   DETAIL_TUNING: sim('officer-value'),
+  REPUTATION_TUNING: [...sim('reputation'), 'src/architecture/wiring.test.ts', BALANCE],
 };
 
 type Spec = { label: string; help: string; group?: TuningGroup; mode?: ReadMode; min?: number; max?: number; step?: number; unit?: string; why?: string; items?: readonly string[] };
@@ -375,6 +376,14 @@ export const TUNING_META: readonly FieldMeta[] = [
     perWage: { label: 'Detail fee per wage dollar', help: 'Funding per hour added for each dollar of the officer\'s hourly wage.', min: 0, max: 5, step: 0.1, unit: '×' },
     perCert: { label: 'Detail fee per certification', help: 'Funding per hour added for each certification the officer holds.', min: 0, max: 100, step: 5, unit: 'per hour' },
     xpPerHour: { label: 'Detail experience', help: 'Experience an officer gains per hour of teaching.', min: 0, max: 20, step: 1, unit: 'xp' },
+  }),
+  ...table('REPUTATION_TUNING', { group: 'odds', mode: 'live' }, {
+    weight: { label: 'Reputation memory', help: 'How far one committed choice moves the department\'s lean: about the last 1/weight choices count.', min: 0.01, max: 0.5, step: 0.01, unit: '×' },
+    warmup: { label: 'Reputation warmup', help: 'Committed choices before the lean shows in the odds or the board.', min: 0, max: 30, step: 1, unit: 'choices' },
+    maxPoints: { label: 'Reputation at full lean', help: 'Score points a full lean adds to or takes off a contact, pressure or execution check.', min: 0, max: 15, step: 0.5, unit: 'points' },
+    deadZone: { label: 'Reputation dead zone', help: 'A lean smaller than this reads as no reputation.', min: 0, max: 0.9, step: 0.05, unit: '×' },
+    ...each('pull', { force: 'going in hard', assertive: 'pushing the pace', patient: 'waiting it out', talk: 'talking first' }, name => ({ label: `Reputation pull for ${name}`, help: 'Where a choice of this posture pulls the lean, from -1 (talks first) to +1 (goes in hard).', group: 'odds', min: -1, max: 1, step: 0.1, unit: '×' })),
+    board: { label: 'Reputation board tilt', help: 'At a full lean, the kinds of call the name draws weigh up to 1 + this.', min: 0, max: 2, step: 0.1, unit: '×' },
   }),
 ];
 
