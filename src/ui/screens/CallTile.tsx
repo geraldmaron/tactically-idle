@@ -11,6 +11,7 @@ import { Card, Chip } from '../components/ui';
 import { DifficultyChip, FloorsChip, TierChevrons, familyBlurb, incidentMeta, scenarioFloorCount, settingIcon } from '../components/incident';
 import { Icon, itemIcon } from '../icons';
 import { PeopleText } from '../people/PeopleText';
+import { PlateArt, sceneFor } from '../art/Plates';
 
 /** A compact call tile: a type badge with tier pips, the title and place, a two-line summary, a fact
  * row and a footer with the time left and Prepare. The full brief lives on the Prepare screen.
@@ -23,21 +24,17 @@ export function CallTile({ card, scenario, familyId, type, tier, isNew = false, 
   const floors = scenarioFloorCount(scenario);
   return (
     <Card className={`opboard optile${isNew ? ' opboard-new' : ''}`}>
-      <div className="optile-top">
+      {/* The scene: the call type's painted plate behind the type, case number and title. */}
+      <div className="optile-top plate optile-scene">
+        <PlateArt src={sceneFor(type ?? undefined)} />
         <span className={`optile-badge optile-band-${diff?.band ?? 'none'}`}>
-          <Icon name={type ? meta.icon : settingIcon(card.setting)} size={24} />
+          <Icon name={type ? meta.icon : settingIcon(card.setting)} size={22} />
           {tier !== null && <TierChevrons tier={tier} />}
         </span>
         <div className="optile-main">
           <div className="opboard-head">
             <span className="opboard-kind">{type ? meta.label : card.setting.toUpperCase()}</span>
-            <span className="opboard-code">{card.code}</span>
-            {isNew && (
-              <span className="newbadge">
-                <Icon name="bell" size={12} />
-                NEW
-              </span>
-            )}
+            <span className="opboard-code mono">{card.code}</span>
           </div>
           <h3 className="opboard-title">{card.title}</h3>
           {blurb && (
@@ -47,6 +44,7 @@ export function CallTile({ card, scenario, familyId, type, tier, isNew = false, 
             </p>
           )}
         </div>
+        {isNew && <span className="newbadge stamp stamp-amber">New</span>}
       </div>
       <p className="opboard-summary"><PeopleText text={card.summary} /></p>
       <div className="chips opboard-facts">

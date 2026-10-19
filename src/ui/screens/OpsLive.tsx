@@ -8,6 +8,7 @@ import { Button } from '../components/ui';
 import { OpenInLab } from '../components/OpenInLab';
 import { ActionSheet, LiveView, RoomSheet } from './LiveView';
 import { OperationFeedback } from './OperationFeedback';
+import { sceneFor } from '../art/Plates';
 import { SituationPanel } from './SituationPanel';
 import { SupportContext } from './SupportContext';
 import { IncidentPeopleStatus } from '../components/IncidentPeople';
@@ -134,6 +135,7 @@ export function OpsLive() {
       onCancel={() => setConfirmCancel(true)}
       onOpenDetails={() => { setActionFromSupport(false); setPanel(panel === 'action' ? 'none' : 'action'); }}
       feedback={<OperationFeedback officers={g.officers} decisions={decisions} explicitCompletion={(scenario?.version ?? 0) >= 4} onOpenLog={() => setPanel('none')} />}
+      scene={sceneFor(scenario?.incident?.type)}
       situation={scenario && <SituationPanel scenario={scenario} run={run} />}
       supportContext={scenario && <><IncidentPeopleStatus scenario={scenario} run={run} state={g} /><SupportContext scenario={scenario} run={run} actions={actions} open={panel === 'support'} onOpen={() => setPanel('support')} onClose={() => setPanel('none')} onPickAction={(id) => {
         setActionFromSupport(true);

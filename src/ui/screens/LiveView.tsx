@@ -37,6 +37,7 @@ import { DecisionList } from './DecisionList';
 import { CONTRIBUTOR_GROUPS } from './contributor-groups';
 import { GamePeopleProvider, PeopleText } from '../people/PeopleText';
 import type { Lexicon } from '../people/lexicon';
+import { PlateArt } from '../art/Plates';
 import './operation-squads.css';
 import './ops-visual.css';
 import { Disclosure } from '../components/Disclosure';
@@ -87,6 +88,8 @@ export interface LiveViewProps {
   supportContext?: ReactNode;
   /** The call's summary and briefing, kept in view under the title for the whole operation. */
   situation?: ReactNode;
+  /** The call type's painted scene (art/Plates sceneFor), behind the pinned title. */
+  scene?: string | null;
   /** A response that can no longer progress is handled outside ordinary story choices. */
   failedResponse?: ReactNode;
   /** Overlay sheets (action detail, room sheet, cancel confirm) rendered by the container. */
@@ -110,7 +113,8 @@ export function LiveView(p: LiveViewProps) {
 
   const screen = (
     <div className="live">
-      <div className="live-title">
+      <div className={`live-title${p.scene ? ' plate' : ''}`}>
+        {p.scene && <PlateArt src={p.scene} />}
         <div className="live-id">
           <h2 className="live-name">{p.title}</h2>
           <p className="live-sub">

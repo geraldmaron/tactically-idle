@@ -20,6 +20,7 @@ import { budget as netBudget } from '../../sim/department-selectors';
 import { useDevelopmentBudget, useGame } from '../store';
 import { useDevelopmentPurchase } from '../storefront/useDevelopmentPurchase';
 import './development.css';
+import { ScreenBanner } from '../art/Plates';
 
 export type DevelopmentFilter = 'all' | 'available' | 'owned';
 export function filterDevelopmentOptions(options: NodeOption[], branch: DevBranch | 'all', filter: DevelopmentFilter): NodeOption[] {
@@ -91,6 +92,7 @@ export function DevelopScreen({ highlightedNode, highlightRequest }: { highlight
 
   const dpShown = Math.floor(budget.totalDP * 100) / 100;
   return <div ref={rootRef} className="page develop-page">
+    <ScreenBanner id="develop" kicker="Development" title="Build the department" line={`${dpShown} DP banked · +${rates.devPointsPerHour.toFixed(1)} an hour`} />
     <header className="dev-head">
       <h2 className="sr-only">Department development</h2>
       <span className="dev-stat" aria-label={`${dpShown} development points, ${rates.devPointsPerHour.toFixed(1)} an hour`}><Icon name="chart" size={16} /><b>{dpShown}</b><small>DP</small><small className="dev-stat-rate">+{rates.devPointsPerHour.toFixed(1)}/h</small></span>

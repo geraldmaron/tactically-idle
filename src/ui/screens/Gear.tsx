@@ -19,6 +19,7 @@ import { Icon } from '../icons';
 import { money } from '../format';
 import { hasNodeEffect } from './helpers';
 import './gear-visual.css';
+import { ScreenBanner } from '../art/Plates';
 
 // The Armory (gear-armory): one list of every item, owned or not. Tapping an item opens one sheet
 // that buys it, shows its stock and units, and sets its restock rule. Standing tools (restock rules,
@@ -31,6 +32,7 @@ export function GearScreen() {
   const owned = opts.filter((option) => option.owned > 0);
   return (
     <div className="page gear-page">
+      <ScreenBanner id="gear" kicker="Armory" title="Equipment" line={`${owned.reduce((n, o) => n + o.ready, 0)} ready to deploy · ${owned.length} kinds held`} />
       <ArmoryHeader owned={owned} onTool={setTool} />
       <EquipmentStore active />
       <Sheet open={tool === 'rules'} onClose={() => setTool(null)} title="Restock rules" subtitle="At each clock hour, held stock is refilled up to each target within its spending ceiling. Rules never take funding below zero and stop after 24 hours without orders.">

@@ -35,7 +35,7 @@ function fixture(emblemIds: string[]): string {
   write('src/content/personas.json', '[]');
   write('src/content/courses.ts', "export const COURSES = {\n  composure_workshop: {\n    name: 'Composure workshop',\n  },\n};\n");
   write('src/ui/components/labels.ts', "export const BRANCHES: DevBranch[] = ['personnel', 'field'];\n");
-  for (const set of ['portraits', 'gear', 'materials', 'managers']) write(`public/art/${set}/manifest.json`, JSON.stringify({ version: 1, readyIds: [], width: 512, height: 512 }));
+  for (const set of ['portraits', 'gear', 'materials', 'managers', 'plates']) write(`public/art/${set}/manifest.json`, JSON.stringify({ version: 1, readyIds: [], width: 512, height: 512 }));
   write('public/art/emblems/manifest.json', JSON.stringify({ version: 1, readyIds: emblemIds, width: 512, height: 512 }));
   for (const id of emblemIds) write(`public/art/emblems/${id}.webp`, WEBP);
   for (const file of ['header-lockup-dark.svg', 'favicon.svg', 'apple-touch-icon.png']) write(`public/brand/${file}`, '');

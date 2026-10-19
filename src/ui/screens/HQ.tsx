@@ -24,6 +24,7 @@ import { scenarioTitle } from './helpers';
 import { SavedDebriefReview } from './OpsDebrief';
 import { ScoreRing } from '../components/DebriefResults';
 import { CommandStaff } from '../components/CommandStaff';
+import { ScreenBanner } from '../art/Plates';
 
 export function HQ() {
   const g = useGame();
@@ -40,29 +41,32 @@ export function HQ() {
   if (overview.unavailable) attention.push({ text:`${overview.unavailable} officer${overview.unavailable === 1 ? '' : 's'} unavailable for deployment`,action:'Review squad',tab:'squad' });
   if (overview.emptySeats) attention.push({ text:`${overview.emptySeats} open seats across staffed idle squads`,action:'Arrange squads',tab:'squad' });
   if (b.net < 0) attention.push({ text:`Current duties spend ${money(Math.abs(b.net))} more per hour than they earn`,action:'Review duties',tab:'squad' });
+  // The return job: what happened while you were away and what needs you now come first, then the
+  // department at a glance, then the standing work (staff, duties, past calls).
   return (
+    <>
+    <ScreenBanner id="hq" kicker={`Headquarters · ${formatGameDate(gameDay(g, Math.max(now, g.department.clockHighWater)))}`} title={g.department.name}
+      line={<>{campaign ? `${campaign.name} · ` : ''}Level {g.department.level} · Public trust {Math.round(g.department.trust)} / 100</>} />
     <div className="page hq-page">
-      <header className="hq-identity">
-        <span className="hq-eyebrow">Department headquarters</span><h2>{g.department.name}</h2>
-        <p>{formatGameDate(gameDay(g, Math.max(now, g.department.clockHighWater)))}{campaign ? ` · ${campaign.name}` : ''}</p>
-        <div className="chips"><Chip icon="medal">Level {g.department.level}</Chip><Chip icon="people">Public trust {Math.round(g.department.trust)} / 100</Chip></div>
-        <HeaderBudget g={g} b={b} />
-        <RosterSummary g={g} overview={overview} />
+      {g.report && <section className="hq-report-summary hq-away"><span className="file-tab">While you were away</span><div><strong>Shift report ready</strong><p>{signedMoney(g.report.net)} net funding · {g.report.completedCourses.length} courses completed</p></div><Button size="sm" variant="primary" onClick={() => setReportOpen(true)}>Review report</Button></section>}
+      {g.activeRun && <ActiveOpCard g={g} now={now} />}
+      {!!attention.length && <section className="hq-attention"><h2 className="section-title">Needs you now</h2>{attention.slice(0, 3).map((item) => <div key={item.text}><span>{item.text}</span><Button size="sm" onClick={() => nav.go(item.tab)}>{item.action}</Button></div>)}</section>}
+      <section className="hq-identity" aria-label="Department at a glance">
         <HqStatTiles
           training={{ inCourses: overview.training, places: overview.trainingSlots }}
           board={overview.board}
           onTraining={() => nav.openTraining()}
           onCalls={() => nav.go('ops')}
         />
-      </header>
-      {g.activeRun && <ActiveOpCard g={g} now={now} />}
-      {g.report && <section className="hq-report-summary"><div><strong>Shift report ready</strong><p>{signedMoney(g.report.net)} net funding · {g.report.completedCourses.length} courses completed</p></div><Button size="sm" onClick={() => setReportOpen(true)}>Review report</Button></section>}
+        <RosterSummary g={g} overview={overview} />
+        <HeaderBudget g={g} b={b} />
+      </section>
       <CommandStaff />
-      {!!attention.length && <section className="hq-attention"><h2 className="section-title">Needs attention</h2>{attention.slice(0, 3).map((item) => <div key={item.text}><span>{item.text}</span><Button size="sm" onClick={() => nav.go(item.tab)}>{item.action}</Button></div>)}</section>}
       <DutySection squads={g.squads} g={g} />
       <Debriefs key={`${saved.campaignId ?? 'unsaved'}:${saved.session}`} g={g} now={now} />
       <Sheet open={reportOpen && !!g.report} onClose={() => setReportOpen(false)} title="Shift report">{g.report && <ShiftReportCard report={g.report} g={g} />}</Sheet>
     </div>
+    </>
   );
 }
 

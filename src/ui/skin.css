@@ -1,0 +1,148 @@
+/* The night-shift skin (scene pass, 2026-10-19). Loaded after app.css so it restyles every screen
+   without moving layout: a grained night-paper ground, panels with weight and a lit top edge,
+   case-file labels in a mono face, rubber-stamp marks, and a heavier navigation rail.
+   Texture URLs arrive as custom properties set from assetUrl() on .app, so they follow the base
+   path; every texture has a flat color under it, so a missing file changes nothing but grain. */
+
+/* ------------------------------------------------------------ ground */
+.app {
+  background-color: var(--bg);
+  background-image: radial-gradient(130% 60% at 50% 0%, rgba(43, 70, 120, 0.28), transparent 70%), var(--tex-paper, none);
+  background-size: 100% 100%, 384px 384px;
+  background-repeat: no-repeat, repeat;
+}
+.stage { background: radial-gradient(1200px 700px at 50% -10%, #17253f 0%, #06090f 62%), #06090f; }
+
+/* ------------------------------------------------------------ chrome */
+.topbar {
+  background: linear-gradient(180deg, rgba(14, 22, 36, 0.96), rgba(10, 16, 27, 0.92));
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.6), 0 8px 18px -10px rgba(0, 0, 0, 0.8);
+  position: relative;
+  z-index: 8;
+}
+.bottomnav {
+  background: linear-gradient(180deg, #0f1828 0%, #080d16 100%);
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  box-shadow: 0 -10px 24px -14px rgba(0, 0, 0, 0.9);
+}
+.navbtn { border-left-color: rgba(255, 255, 255, 0.035); transition: color .15s ease; }
+.navbtn-on { color: var(--amber-2); background: radial-gradient(70% 90% at 50% 0%, rgba(243, 180, 50, 0.16), transparent 70%); }
+.navbtn-on::before { left: 22%; right: 22%; height: 3px; top: 0; border-radius: 0 0 3px 3px; }
+.navlabel { font-size: 12.5px; letter-spacing: 0.12em; }
+.navbtn-on .icon { filter: drop-shadow(0 0 6px rgba(243, 180, 50, 0.45)); }
+
+/* ------------------------------------------------------------ panels */
+.card {
+  border-color: rgba(58, 79, 110, 0.75);
+  background: var(--panel-grad);
+  box-shadow: inset 0 1px 0 var(--edge-hi), var(--shadow-card);
+}
+.card-amber {
+  border-color: rgba(243, 180, 50, 0.55);
+  box-shadow: inset 0 1px 0 rgba(255, 201, 77, 0.18), 0 0 0 1px rgba(243, 180, 50, 0.1), 0 14px 30px -14px rgba(0, 0, 0, 0.85);
+}
+
+/* Section titles read as file headings: a short amber rule, then the title. */
+.section-title { font-size: 18px; letter-spacing: 0.08em; }
+.section-title::before { content: ''; display: inline-block; width: 4px; height: 16px; margin-right: 2px; border-radius: 1px; background: var(--amber); box-shadow: 0 0 10px rgba(243, 180, 50, 0.4); }
+.section-title > .icon:first-child { display: none; }
+.kicker, .sub-h { font-family: var(--font-mono); font-weight: 500; font-size: 11px; letter-spacing: 0.14em; }
+
+/* ------------------------------------------------------------ controls */
+.btn {
+  border-color: rgba(70, 95, 130, 0.9);
+  background: linear-gradient(180deg, rgba(40, 56, 80, 0.95), rgba(24, 34, 50, 0.95));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 2px 0 rgba(0, 0, 0, 0.45);
+  transition: transform .08s ease, filter .15s ease;
+}
+.btn:active:not(:disabled) { transform: translateY(1px); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05); }
+.btn-primary {
+  background: linear-gradient(180deg, #ffd56a 0%, var(--amber) 55%, #d99a1e 100%);
+  border-color: #c98d17;
+  box-shadow: inset 0 1px 0 rgba(255, 245, 210, 0.7), 0 2px 0 #7a5410, 0 8px 18px -8px rgba(243, 180, 50, 0.55);
+  text-shadow: 0 1px 0 rgba(255, 240, 200, 0.4);
+}
+.btn-primary:hover:not(:disabled) { filter: brightness(1.05); }
+.btn-ghost { background: transparent; box-shadow: none; }
+.chip { border-radius: 4px; }
+
+/* ------------------------------------------------------------ case-file marks */
+.mono { font-family: var(--font-mono); }
+/* A rubber stamp: mono caps in a rotated double border, ink at reduced opacity. */
+.stamp {
+  display: inline-flex; align-items: center; padding: 2px 7px;
+  border: 2px solid currentColor; border-radius: 3px; outline: 1px solid currentColor; outline-offset: 2px;
+  font: 600 11px/1.2 var(--font-mono); letter-spacing: 0.16em; text-transform: uppercase;
+  transform: rotate(-4deg); opacity: 0.9; mix-blend-mode: screen;
+}
+.stamp-amber { color: var(--amber-2); }
+.stamp-mint { color: var(--mint); }
+.stamp-danger { color: var(--danger); }
+/* A manila file tab sitting on a card's top edge. */
+.file-tab {
+  display: inline-flex; align-items: center; gap: 6px; align-self: flex-start;
+  margin: -12px 0 2px -12px; padding: 3px 12px 3px 12px; border-radius: var(--radius) 0 8px 0;
+  background-color: var(--manila); background-image: var(--tex-manila, none); background-size: 256px;
+  background-blend-mode: multiply; color: var(--manila-ink);
+  font: 600 11px/1.3 var(--font-mono); letter-spacing: 0.12em; text-transform: uppercase;
+  box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.25);
+}
+
+/* ------------------------------------------------------------ painted art plates */
+/* A scene or banner plate: the painting, a scrim that keeps text legible, and the text over it. */
+.plate { position: relative; overflow: hidden; isolation: isolate; background: linear-gradient(135deg, #1a2740, #0b111c); }
+.plate > .plate-art { position: absolute; inset: 0; z-index: -2; width: 100%; height: 100%; object-fit: cover; object-position: center right; }
+.plate::after { content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background: linear-gradient(90deg, rgba(8, 13, 22, 0.92) 0%, rgba(8, 13, 22, 0.62) 46%, rgba(8, 13, 22, 0.18) 100%),
+              linear-gradient(0deg, rgba(8, 13, 22, 0.85) 0%, transparent 55%); }
+.plate-grain::before { content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none; opacity: 0.25; mix-blend-mode: overlay; background-image: var(--tex-paper, none); background-size: 256px; }
+
+/* The screen banner at the top of a tab: painted room, title, a one-line status. */
+.screen-banner { display: flex; flex-direction: column; justify-content: flex-end; gap: 4px; min-height: 132px; padding: 16px var(--gutter) 14px; border-bottom: 1px solid rgba(255, 255, 255, 0.06); }
+.screen-banner-kicker { font: 500 11px/1.2 var(--font-mono); letter-spacing: 0.18em; text-transform: uppercase; color: var(--amber-2); }
+.screen-banner-title { margin: 0; font: 600 28px/1.02 var(--font-display); letter-spacing: 0.04em; text-transform: uppercase; color: #f3f7ff; text-shadow: 0 2px 12px rgba(0, 0, 0, 0.8); overflow-wrap: anywhere; }
+.screen-banner-line { margin: 0; font-size: 14px; line-height: 1.35; color: #c9d3e2; text-shadow: 0 1px 8px rgba(0, 0, 0, 0.9); }
+@media (max-width: 340px) { .screen-banner { min-height: 112px; } .screen-banner-title { font-size: 24px; } }
+
+@media (prefers-reduced-motion: reduce) { .btn { transition: none; } }
+
+/* ------------------------------------------------------------ HQ (the return job) */
+/* The glance group is a stack of its own tiles, not a box around boxes. */
+.hq-page .hq-identity { display: grid; gap: 10px; padding: 0; border: 0; background: none; }
+.hq-page .hq-identity > * { margin: 0; }
+.hq-away { border-color: rgba(179, 154, 108, 0.5) !important; background: linear-gradient(180deg, rgba(179, 154, 108, 0.12), rgba(19, 28, 42, 0.92)) !important; box-shadow: inset 0 1px 0 var(--edge-hi), var(--shadow-card); }
+.hq-away .file-tab { flex: 0 0 auto; margin-bottom: 0; }
+.hq-away > div { flex-basis: 100%; }
+.hq-attention > div { border-left: 3px solid var(--amber) !important; background: var(--panel-grad) !important; box-shadow: inset 0 1px 0 var(--edge-hi), var(--shadow-card); }
+
+/* ------------------------------------------------------------ Ops board (the command job) */
+/* Each call opens on its painted scene: type, case number and title sit on the plate. */
+.app .card.optile { padding: 0 0 10px; overflow: hidden; }
+.app .card.optile > :not(.optile-scene) { margin-inline: 11px; }
+.optile-scene { min-height: 132px; padding: 14px 12px 12px; align-items: flex-end !important; border-bottom: 1px solid rgba(255, 255, 255, 0.06); }
+.optile-scene .optile-badge { width: 44px; height: 48px; background: rgba(8, 13, 22, 0.55); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
+.optile-scene .opboard-kind { color: var(--amber-2); text-shadow: 0 1px 6px rgba(0, 0, 0, 0.9); }
+.optile-scene .opboard-code { color: #c9d3e2; font-size: 11px; letter-spacing: 0.08em; }
+.optile-scene .opboard-title { font-size: 22px; color: #f6f8fc; text-shadow: 0 2px 12px rgba(0, 0, 0, 0.9); }
+.optile-scene .opboard-where { color: #c9d3e2; text-shadow: 0 1px 6px rgba(0, 0, 0, 0.9); }
+.optile .newbadge.stamp { position: absolute; top: 12px; right: 12px; z-index: 1; background: rgba(8, 13, 22, 0.45); }
+.opboard-new { border-color: rgba(243, 180, 50, 0.55) !important; }
+.optile .opboard-summary { font-size: 14px; color: #dbe2ec; }
+
+/* ------------------------------------------------------------ Prepare, Live and Debrief heads */
+/* The call's scene runs edge to edge behind its title through the whole call journey. */
+.app .prepare .prep-title.plate { margin: 4px calc(-1 * var(--gutter)) 0; padding: 56px var(--gutter) 14px; min-height: 150px; align-items: flex-end; border-block: 1px solid rgba(255, 255, 255, 0.06); }
+.app .prepare .prep-title.plate .live-name { font-size: 26px; text-shadow: 0 2px 12px rgba(0, 0, 0, 0.9); }
+.app .prepare .prep-title.plate .prep-kicker { color: #c9d3e2; text-shadow: 0 1px 6px rgba(0, 0, 0, 0.9); }
+.app .prepare .prep-title.plate .prep-title-badge { background: rgba(8, 13, 22, 0.55); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
+.app .live .live-title.plate { background: #0b111c; }
+.app .live .live-title.plate::after { background: linear-gradient(90deg, rgba(8, 13, 22, 0.94) 0%, rgba(8, 13, 22, 0.7) 55%, rgba(8, 13, 22, 0.45) 100%), linear-gradient(0deg, rgba(11, 17, 28, 1) 0%, transparent 60%); }
+.app .live .live-title.plate .plate-art { object-position: center 40%; opacity: 0.85; }
+.app .debrief-hero.plate { padding-top: 64px; }
+.app .debrief-hero.plate .debrief-title { text-shadow: 0 2px 12px rgba(0, 0, 0, 0.9); }
+.app .debrief-hero.plate .debrief-narrative { color: #dbe2ec; text-shadow: 0 1px 8px rgba(0, 0, 0, 0.9); }
+.debrief-stamp { position: absolute; top: 16px; right: 16px; font-size: 13px; padding: 4px 10px; }
+
+/* A banner opening a padded page bleeds to the frame edges. */
+.page > .screen-banner:first-child { margin: -12px calc(-1 * var(--gutter)) 0; }

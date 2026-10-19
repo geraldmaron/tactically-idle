@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "readyIds": [
+    "banner_develop",
+    "banner_gear",
+    "banner_hq",
+    "banner_ops",
+    "banner_squad",
+    "scene_active_armed_incident",
+    "scene_barricaded",
+    "scene_hostage_crisis",
+    "scene_protected_rescue",
+    "tex_manila",
+    "tex_night_paper"
+  ],
+  "width": 1200,
+  "height": 675
+}

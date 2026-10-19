@@ -4,7 +4,8 @@
 import type { JSX, ReactNode } from 'react';
 import { useMemo } from 'react';
 import { builtForScenario } from '../../sim/operation-selectors';
-import type { DebriefResult, DecisionView, KnowledgeStatus } from '../../sim/types';
+import type { CompletionDisposition, DebriefResult, DecisionView, KnowledgeStatus } from '../../sim/types';
+import { PlateArt, sceneFor } from '../art/Plates';
 import type { PersonDefinition, ScenarioDefinition } from '../../sim/scenario-types';
 import { getScenario } from '../../sim/scenario-registry';
 import { getBuilt } from '../../sim/resolution';
@@ -22,6 +23,12 @@ import { PersonCasualtyList } from '../components/IncidentPeople';
 import { PeopleText } from '../people/PeopleText';
 import { Disclosure } from '../components/Disclosure';
 
+/** The case-file stamp for each way a call can close. Decorative; the title and scores say it. */
+const STAMP: Record<CompletionDisposition, { text: string; tone: 'mint' | 'amber' | 'danger' }> = {
+  resolved: { text: 'Closed', tone: 'mint' }, care_accepted: { text: 'Closed', tone: 'mint' }, followup_agreed: { text: 'Follow up', tone: 'amber' },
+  relief_partial: { text: 'Open', tone: 'amber' }, unresolved: { text: 'Unresolved', tone: 'danger' },
+};
+
 /** What OpsDebrief shows inside its scrolling page. `decisions` defaults to the saved log;
  * `reality` (default on) keeps "What was really there"; `heroAction` sits under the hero summary. */
 export function DebriefContents({ result: d, officers, scenario, reality = true, decisions = d.decisions ?? [], heroAction }: { result: DebriefResult; officers: DebriefOfficers; scenario?: ScenarioDefinition; reality?: boolean;
@@ -31,8 +38,13 @@ export function DebriefContents({ result: d, officers, scenario, reality = true,
   // The epilogue is the call's last human beat: what is true afterward, set apart from the scores.
   // Frozen on the saved result, so an archived debrief keeps it; older results fall back to the call.
   const epilogue = d.endingEpilogue ?? scenario?.endings[d.endingId]?.epilogue;
+  // The call's scene closes the case behind the ending, with a stamp for how it closed.
+  const scene = sceneFor(scenario?.incident?.type);
+  const stamp = d.disposition ? STAMP[d.disposition] : null;
   return <>
-    <div className={`debrief-hero debrief-hero-${tone}`}>
+    <div className={`debrief-hero debrief-hero-${tone}${scene ? ' plate' : ''}`}>
+      <PlateArt src={scene} />
+      {stamp && <span className={`stamp stamp-${stamp.tone} debrief-stamp`} aria-hidden="true">{stamp.text}</span>}
       <span className="kicker">DEBRIEF</span>
       <h2 className="debrief-title">{d.endingTitle}</h2>
       {d.endingSummary && <p className="debrief-narrative"><PeopleText text={d.endingSummary} /></p>}

@@ -2,6 +2,8 @@ import { useState } from 'react';
 import type { ReactNode } from 'react';
 import './app.css';
 import './player-navigation.css';
+import './skin.css';
+import { textureVars } from './art/Plates';
 import { TopBar } from './components/TopBar';
 import { BottomNav } from './components/BottomNav';
 import { ToastProvider } from './components/toast';
@@ -31,6 +33,9 @@ function DepartmentScope({ children }: { children: ReactNode }) {
   return <DepartmentContext.Provider value={g.department}>{children}</DepartmentContext.Provider>;
 }
 
+/** The skin's texture URLs (skin.css), resolved once against the base path. */
+const TEXTURES = textureVars() as React.CSSProperties;
+
 function GameShell() {
   const nav = usePlayerNavigation();
   const { tab } = nav;
@@ -39,7 +44,7 @@ function GameShell() {
 
   return (
     <div className="stage">
-      <div className="app">
+      <div className="app" style={TEXTURES}>
         <NavContext.Provider value={nav}>
           <DepartmentScope>
             <OverlayRootContext.Provider value={overlay}>
