@@ -13,9 +13,9 @@ import type { Clock, IncidentTemplate, SituationModel } from './types';
  * subject to that door where the team can see it; running out sends the call to `found`. */
 const BOXES: Clock = {
   id: 'boxes', label: 'Boxes going back in', kind: 'deadline', owner: 'mover', start: 60, ratePerMin: 1, rateSpread: 0.3, rateKnown: false,
-  cues: [{ at: 45, text: 'Through the side window, the team sees {subject.first} set a box down outside the {mover.room} door.', mark: 'in_hall',
+  cues: [{ at: 45, text: 'Through the wall, the team hears {subject.first} drop a box by {mover.first}’s door.', mark: 'in_hall',
     moveTo: { subject: { to: { doorOf: 'mover' }, seen: true } } }],
-  onOut: { next: { node: 'found' } },
+  onOut: { mark: 'found', next: { node: 'found' } },
 };
 
 const DEMANDS = [
