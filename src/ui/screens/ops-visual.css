@@ -355,18 +355,22 @@
 .action-sheet-locked { display: inline-flex; align-items: center; gap: 4px; flex: 1 1 auto; font-size: 12.5px; color: var(--text-dim); }
 
 /* ------------------------------------------------------------ siren lights (siren-ambiance)
-   Red and blue light from the top corners while a hot call runs (sim/authorization.ts isHotCall).
-   Edges only and low alpha, so the map and text keep their contrast; it never takes a tap. Under
-   reduced motion the two colours sit still as a faint split tint. */
-.siren-lights { position: fixed; inset: 0; z-index: 30; pointer-events: none; overflow: hidden; mix-blend-mode: screen; }
+   Red then blue light washes across the whole blueprint while a hot call runs (sim/authorization.ts
+   isHotCall), clipped to the map so the text and controls around it stay steady. A slow 1.6s
+   alternating glow, never a strobe: each colour swells once a cycle, well under the
+   three-flashes-a-second limit (WCAG 2.3.1). It never takes a tap. Under reduced motion the two
+   colours sit still as a faint split tint. */
+.live-map-inner { overflow: hidden; }
+.siren-lights { position: absolute; inset: 0; z-index: 4; pointer-events: none; mix-blend-mode: screen; }
 .siren-lights::before,
-.siren-lights::after { content: ''; position: absolute; top: -30vh; width: 110vw; height: 95vh; opacity: 0; }
-/* A slow alternating glow, never a strobe: each colour swells once per 1.6s cycle, well under the
-   three-flashes-a-second limit (WCAG 2.3.1). */
-.siren-lights::before { left: -40vw; background: radial-gradient(closest-side, var(--siren-red), transparent); animation: siren-glow 1.6s ease-in-out infinite; }
-.siren-lights::after { right: -40vw; background: radial-gradient(closest-side, var(--siren-blue), transparent); animation: siren-glow 1.6s ease-in-out -0.8s infinite; }
+.siren-lights::after { content: ''; position: absolute; inset: 0; opacity: 0; }
+.siren-lights::before { background: radial-gradient(ellipse 90% 120% at 0% 50%, var(--siren-red), transparent 75%); animation: siren-glow 1.6s ease-in-out infinite; }
+.siren-lights::after { background: radial-gradient(ellipse 90% 120% at 100% 50%, var(--siren-blue), transparent 75%); animation: siren-glow 1.6s ease-in-out -0.8s infinite; }
 @keyframes siren-glow { 0%, 60%, 100% { opacity: 0; } 25% { opacity: var(--siren-alpha); } }
 @media (prefers-reduced-motion: reduce) {
   .siren-lights::before,
   .siren-lights::after { animation: none !important; opacity: calc(var(--siren-alpha) * 0.5); }
 }
+
+/* Room between the blueprint and the officer strip on the live screen. */
+.live > .strip { padding-top: 12px; }

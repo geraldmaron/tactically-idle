@@ -119,10 +119,9 @@ export function OpsLive() {
   };
 
   return (
-    <>
-    {hot && <div className="siren-lights" aria-hidden="true" data-testid="siren-lights" />}
     <LiveView
       {...model}
+      sirens={hot}
       people={people}
       onFocusSquad={(id) => {
         if (view && actorUnavailable(id)) return;
@@ -248,6 +247,5 @@ export function OpsLive() {
       </Sheet>
       {import.meta.env.DEV && <OpenInLab getState={() => g} />}
     </LiveView>
-    </>
   );
 }

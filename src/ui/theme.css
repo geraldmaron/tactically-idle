@@ -70,11 +70,11 @@ button {
 }
 /* Game chrome is tapped and held, not read: no text selection or iOS callout on a long press.
    Prose, inputs and anything marked .selectable stay selectable. */
-button,
-[role="button"],
-[role="tab"],
-nav,
-summary {
+.app button,
+.app [role="button"],
+.app [role="tab"],
+.app nav,
+.app summary {
   -webkit-user-select: none;
   user-select: none;
   -webkit-touch-callout: none;

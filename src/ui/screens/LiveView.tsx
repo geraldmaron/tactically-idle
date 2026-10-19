@@ -93,6 +93,8 @@ export interface LiveViewProps {
   failedResponse?: ReactNode;
   /** Overlay sheets (action detail, room sheet, cancel confirm) rendered by the container. */
   children?: ReactNode;
+  /** Lights and sirens over the blueprint while a hot call runs (sim/authorization.ts isHotCall). */
+  sirens?: boolean;
   /** The game's people lexicon for this call: names are colored while "Color names by role" is on.
    * Left out (the Scenario Lab), the surrounding PeopleProvider decides. */
   people?: Lexicon | null;
@@ -147,6 +149,7 @@ export function LiveView(p: LiveViewProps) {
           </span>
         </div>
         <div className="live-map-inner">
+          {p.sirens && <div className="siren-lights" aria-hidden="true" data-testid="siren-lights" />}
           {p.showRooms ? (
             <RoomList built={p.built} spaces={p.spaces} selectedSpaceId={p.selectedSpaceId} onSelectSpace={p.onSelectSpace} />
           ) : (
