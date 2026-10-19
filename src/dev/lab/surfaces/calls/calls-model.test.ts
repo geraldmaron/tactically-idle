@@ -6,6 +6,7 @@ import { INCIDENT_TEMPLATES } from '../../../../content/incidents';
 import { GATE_SUITE, gateJobs } from '../../../../gen/incident/trees-v13/balance';
 import type { CallResult, Weight } from '../../../../gen/incident/trees-v13/balance';
 import { dependencyIndex, lintTree } from '../../../../gen/incident/trees-v13/dependencies';
+import { CLOCK_FIXTURE_IDS, clockFixtureTemplate } from '../../../../gen/incident/gates/clock-fixture';
 import { armedWithoutHitMark } from '../../../../gen/incident/trees-v13/never-offered-fixture';
 import { emptyTally } from '../../jobs/tally';
 import { emptyNotes } from '../../model/endpoints';
@@ -106,7 +107,9 @@ describe('findings feed', () => {
     expect(words.where).toBe(`Pinned › ${choice.title}`);
     expect(words.message).not.toMatch(/treat_ours|officer_down/);
     expect(words.message).toContain(`“${choice.title}” at Pinned`);
-    const clock = hostageLint.find(f => f.code === 'clock_writer')!;
-    expect(humanizeFinding(clock, hostage, dependencyIndex(hostage)).message).not.toMatch(/owner_condition/);
+    // A clock writer from an owned fixture, so a content change can't remove it.
+    const fixture = clockFixtureTemplate();
+    const clock = lintTree(fixture).find(f => f.code === 'clock_writer')!;
+    expect(humanizeFinding(clock, fixture, dependencyIndex(fixture)).message).not.toContain(CLOCK_FIXTURE_IDS.clock);
   });
 });

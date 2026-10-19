@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { INCIDENT_TEMPLATES } from '../../../content/incidents';
 import type { IncidentTemplate } from '../../../content/incidents/types';
 import { lintTree } from '../../../gen/incident/trees-v13/dependencies';
+import { CLOCK_FIXTURE_IDS, clockFixtureTemplate } from '../../../gen/incident/gates/clock-fixture';
 import type { NotesFile, ReviewNote, Selection } from '../types';
 import { parseSelection } from '../url';
 import REVIEW_DRAWER from '../surfaces/review/index.tsx?raw';
@@ -203,7 +204,8 @@ describe('export', () => {
   });
 
   it('exports the verdict line, rows blockers first, links, and lint kept on purpose', () => {
-    const finding = lintTree(hostage).find(entry => entry.code === 'clock_writer')!;
+    // A lint finding to keep on purpose, from an owned fixture so a content change can't remove it.
+    const finding = lintTree(clockFixtureTemplate()).find(entry => entry.code === 'clock_writer')!;
     const file: NotesFile = { v: 1, type: 'hostage_crisis', verdict: { value: 'edit', at: 5 }, notes: [
       note('node:offer', { id: 'a', severity: 'note', at: 1 }),
       note(`choice:offer/${choice.id}`, { id: 'b', severity: 'block', at: 2, route: 'swat-call-design' }),
@@ -217,7 +219,7 @@ describe('export', () => {
     expect(rows[0].startsWith('[block]')).toBe(true);
     expect(md).toContain(`<${URL}>`);
     expect(md).toContain('## Lint kept on purpose');
-    expect(md).toContain('lint clock_writer:mark:owner_down: The owner collapsing is meant to set it.');
+    expect(md).toContain(`lint clock_writer:mark:${CLOCK_FIXTURE_IDS.outMark}: The owner collapsing is meant to set it.`);
   });
 
   it('says when nothing is open', () => {
