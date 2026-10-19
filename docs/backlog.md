@@ -126,16 +126,6 @@ Filed in `docs/calls/hostage-signature-design.md`: R-G2 a group role the player 
 N15 and N16 count-conditioned briefing lines and ending addenda. R-G1 shipped with `intel-odds` (#45, #48), R-G4 shipped with `clock-runout-routing` (#46, #56); N6, N7, N9 and N21 are in `hostage-gate-requests`. Done: each request works in
 the hostage call and the call's fingerprints are recaptured deliberately.
 
-### hostage-owner-down-cleanup: Hostage owner_down readers and held endings
-Tags: job=command; journeys=answer-a-call; probes=none (text and routing); lane=calls
-Needs: start=none; integrate=none; ship=none
-
-Two follow-ups from the hostage clock route (#56). The `owner_down` mark is still read by nodes
-outside `owner_down` that the clock route now makes dead; the writing review asked for them to be
-reshaped before more is added. Held endings under clock rule 1 (the decision's own outcome ended the
-call) still record the owner hurt with no line saying so, so the debrief can show harm the text
-never mentioned. Done: no dead readers, and every recorded harm has a line the player reads.
-
 ### hostage-review-leftovers: Hostage review leftover B9
 Tags: job=command; journeys=answer-a-call; probes=none (prose); lane=deferred
 Needs: start=none (waits on the owner's ruling, design question 10); integrate=none; ship=none
@@ -175,9 +165,20 @@ Needs: start=none; integrate=none; ship=none
 
 ## Gates and tooling
 
+### deploy-disabled-after-injury: Find why Deploy is disabled after a call ends with someone hurt
+Tags: job=command; journeys=answer-a-call; probes=none (investigation); lane=tooling
+Needs: start=none; integrate=none; ship=none
+
+The e2e script fails about 1 run in 7: right after a call ends with someone hurt (`entry_subject_hurt`
+on 2026-10-18, `entry_hurt` on integrating #62), the next call's Deploy button is disabled and
+`scripts/play-loop.mjs` asserts "the chosen squads can deploy". Seen twice in about 15 runs across
+different PRs, so it isn't caused by any one of them. Done: the cause is found with evidence. Either
+the script picks a squad that an injury took out of action (fix the script to pick by readiness), or
+the game disables Deploy without showing the player why (a game bug, routed to the owning lane).
+
 ### e2e-in-ci: The browser end-to-end script runs in CI
 Tags: job=command; journeys=answer-a-call; probes=none (tooling); lane=tooling
-Needs: start=none; integrate=none; ship=none
+Needs: start=deploy-disabled-after-injury; integrate=none; ship=none
 
 `npm run test:e2e` plays the board through the real UI at 390x844 and 320x568, but neither `npm
 run verify` nor CI runs it, which is how it went stale. Done: pull-request CI runs it against a
