@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { COMMAND_LINES } from '../content/incidents/lines';
 import { drawIncidentSpec, generateIncident } from '../gen/incident';
 import { NOW, startGateRun } from '../gen/incident/gates/engine-driver';
-import { AUTHORIZATION_V1, authorize, readForceThreat } from './authorization';
+import { AUTHORIZATION_V1, authorize, isHotCall, readForceThreat } from './authorization';
 import { buildLocation } from './location';
 import { actionViews } from './operation-selectors';
 import { evaluateAction } from './resolution';
@@ -206,4 +206,17 @@ describe('authorization in evaluation', () => {
     }
     expect(seen, 'choices asking command for something at the start of a call').toBeGreaterThan(0);
   }, 120000);
+});
+
+describe('hot calls', () => {
+  const person = (kind: 'subject' | 'hostage', hold?: { by: string; kind: 'incidental' }) => ({ id: kind, kind, label: kind, minor: false, spaceId: 's', at: { x: 0, y: 0 }, ...(hold ? { hold } : {}) });
+  const threats = [{ factId: 'armed', because: 'he has a gun' }];
+  it('runs the lights for someone held, or a threat to life the team believes', () => {
+    expect(isHotCall({ incidentPeople: [person('hostage', { by: 'subject', kind: 'incidental' })] }, { knowledge: {}, flags: [] })).toBe(true);
+    expect(isHotCall({ incidentPeople: [person('subject')], threats }, { knowledge: { armed: 'reported' }, flags: [] })).toBe(true);
+  });
+  it('keeps a call calm when the threat is unknown or disproved', () => {
+    expect(isHotCall({ incidentPeople: [person('subject')], threats }, { knowledge: {}, flags: [] })).toBe(false);
+    expect(isHotCall({ incidentPeople: [person('subject')], threats }, { knowledge: { armed: 'disproved' }, flags: [] })).toBe(false);
+  });
 });

@@ -16,6 +16,7 @@ import { responseFailurePlan } from '../../sim/response-failure';
 import { liveScreen, type ActionSelection, type Override } from './live-model';
 import { lexiconFor } from '../people/lexicon';
 import { runRoster } from '../../sim/squads';
+import { isHotCall } from '../../sim/authorization';
 
 /** Scroll the saved result into view without moving focus away from the player's place. */
 function revealLastDecision() {
@@ -50,6 +51,13 @@ export function OpsLive() {
   useEffect(() => {
     if (targetFloor !== null) setFloor(targetFloor);
   }, [screen?.review.view?.id, targetFloor]);
+
+  // Lights and sirens while a hot call runs; one short buzz the moment they start, where supported.
+  const scenarioDef = screen?.review.scenario;
+  const hot = !!scenarioDef && run.status === 'active' && run.stage !== 'debrief' && isHotCall(scenarioDef, run);
+  useEffect(() => {
+    if (hot && typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') navigator.vibrate(30);
+  }, [hot]);
 
   if (!screen) return <div className="page"><p className="dim">Operation location unavailable.</p></div>;
   const { model, review } = screen;
@@ -111,6 +119,8 @@ export function OpsLive() {
   };
 
   return (
+    <>
+    {hot && <div className="siren-lights" aria-hidden="true" data-testid="siren-lights" />}
     <LiveView
       {...model}
       people={people}
@@ -238,5 +248,6 @@ export function OpsLive() {
       </Sheet>
       {import.meta.env.DEV && <OpenInLab getState={() => g} />}
     </LiveView>
+    </>
   );
 }
