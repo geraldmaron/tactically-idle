@@ -221,7 +221,7 @@ export const DEV_NODES: Record<Id, DevelopmentNode> = {
     "id": "field_response_program",
     "branch": "field",
     "name": "Protective response program",
-    "description": "Makes sidearms, carbines, response shotguns and light protective kits available to buy. Weapons still require an officer trained for entry team duty.",
+    "description": "Makes carbines, response shotguns and light protective kits available to buy. Weapons still require an officer trained for entry team duty. Sidearms are issued from the first day.",
     "cost": {
         "dp": 2,
         "funding": 1000
@@ -230,10 +230,6 @@ export const DEV_NODES: Record<Id, DevelopmentNode> = {
         "field_entry_course"
     ],
     "effects": [
-        {
-            "kind": "unlockItem",
-            "itemId": "service_sidearm"
-        },
         {
             "kind": "unlockItem",
             "itemId": "compact_carbine"

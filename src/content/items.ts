@@ -292,7 +292,6 @@ export const ITEMS: Record<string, ItemDefinition> = {
         "serviceCost": 90,
         "restoreTo": 95
     },
-    "requiresNode": "field_response_program",
     "requiresCerts": [
         "entry_team"
     ],

@@ -18,10 +18,10 @@ const itemCopy = (id: string) => {
 
 describe('plain-language equipment and programs', () => {
   it('keeps every equipment and development mechanic unchanged by the copy pass', () => {
-    expect(hashSeed(JSON.stringify(mechanics(ITEMS)))).toBe(3681832267);
+    expect(hashSeed(JSON.stringify(mechanics(ITEMS)))).toBe(3343205392);
     // Command Staff hires were added after the capture; their mechanics are covered by command-staff.test.ts.
     const captured = Object.fromEntries(Object.entries(DEV_NODES).filter(([, node]) => !node.effects.some((effect) => effect.kind === 'commandStaff')));
-    expect(hashSeed(JSON.stringify(mechanics(captured)))).toBe(2951777412);
+    expect(hashSeed(JSON.stringify(mechanics(captured)))).toBe(1217405044);
   });
 
   it('explains an everyday purpose before presenting game-score details', () => {
@@ -88,7 +88,7 @@ describe('plain-language equipment and programs', () => {
   it('names what programs make available and keeps officer training separate', () => {
     const programs: [string, RegExp][] = [
       ['field_less_lethal', /devices, launchers and their supplies/],
-      ['field_response_program', /sidearms, carbines, response shotguns and light protective kits/],
+      ['field_response_program', /carbines, response shotguns and light protective kits/],
       ['field_specialist_response', /precision support rifles/],
       ['field_controlled_access', /hydraulic rescue tools and single-use door charges/],
       ['logistics_field_support', /support vans, command vans and radio relays/],

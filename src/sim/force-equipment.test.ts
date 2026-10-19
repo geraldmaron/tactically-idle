@@ -53,10 +53,12 @@ describe('current armed call force equipment', () => {
   it.each(['unqualified', 'broken', 'expired', 'servicing'] as const)('falls back from a carried sidearm when %s', fault => {
     const state = startGateRun(scenario().id, 719, { items: ['service_sidearm'], certs: ['entry_team'] });
     if (fault === 'unqualified') for (const officer of Object.values(state.officers)) officer.certs = [];
-    const unit = Object.values(state.units).find(unit => unit.itemId === 'service_sidearm')!;
-    if (fault === 'broken') unit.condition = 0;
-    if (fault === 'expired') unit.expiresAt = state.department.clockHighWater;
-    if (fault === 'servicing') unit.status = 'service';
+    // The department starts with sidearms issued (sidearms-day-one), so the fault applies to every one.
+    for (const unit of Object.values(state.units).filter(unit => unit.itemId === 'service_sidearm')) {
+      if (fault === 'broken') unit.condition = 0;
+      if (fault === 'expired') unit.expiresAt = state.department.clockHighWater;
+      if (fault === 'servicing') unit.status = 'service';
+    }
     const { forces, after } = forceDecision(state);
     expect(forces.flatMap(dist => dist.results).some(result => result.key.startsWith('firearm:'))).toBe(false);
     expect(after.activeRun!.history.at(-1)!.committed!.drawn!.find(record => record.model === 'team_force')!.key).toMatch(/^hands:/);

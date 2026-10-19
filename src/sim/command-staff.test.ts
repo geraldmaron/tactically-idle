@@ -4,7 +4,7 @@ import { dispatch } from './game';
 import { HOUR_MS, ratesAt } from './economy';
 import { createUnit } from './equipment';
 import { maintenanceBudget } from './equipment-manager-policy';
-import { COMMAND_STAFF, commandStaffOf, managerHired, managerOn, managerView } from './command-staff';
+import { COMMAND_STAFF, MANAGERS, commandStaffOf, managerHired, managerOn, managerView } from './command-staff';
 import { deserialize, serialize } from './save';
 import { DEV_NODES } from '../content/dev-tree';
 import { fullName } from './officer';
@@ -279,5 +279,11 @@ describe('Quartermaster', () => {
     s = ok(s, { type: 'setManagerEnabled', managerId: 'quartermaster', enabled: true }, T0 + HOUR_MS);
     expect(maintenanceBudget(s)).toBe(300);
     expect(refused(s, { type: 'setManagerPolicy', patch: { managerId: 'quartermaster', budgetPerHour: 501 } })).toMatch(/ceiling/);
+  });
+});
+
+describe('manager identity', () => {
+  it('carries each manager’s pronouns from the portrait briefs', () => {
+    expect(Object.fromEntries(Object.values(MANAGERS).map(m => [m.id, m.pronouns]))).toEqual({ watch_commander: 'she', training_sergeant: 'he', quartermaster: 'they' });
   });
 });

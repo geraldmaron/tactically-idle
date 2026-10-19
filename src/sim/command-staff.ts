@@ -115,6 +115,8 @@ export interface ManagerProfile {
   id: ManagerId;
   name: string;
   title: string;
+  /** From the portrait briefs (docs/art/manager-emblem-expansion/README.md). Identity only, never read by a formula. */
+  pronouns: 'she' | 'he' | 'they';
   nodeId: Id;
   salaryPerHour: number;
   /** The loop it automates, as a short label. */
@@ -129,6 +131,7 @@ export const MANAGERS: Record<ManagerId, ManagerProfile> = {
   watch_commander: {
     id: 'watch_commander',
     name: 'Sam Navarro',
+    pronouns: 'she',
     title: 'Watch Commander',
     nodeId: COMMAND_STAFF.watchCommander.nodeId,
     salaryPerHour: COMMAND_STAFF.watchCommander.salaryPerHour,
@@ -139,6 +142,7 @@ export const MANAGERS: Record<ManagerId, ManagerProfile> = {
   training_sergeant: {
     id: 'training_sergeant',
     name: 'Jordan Pike',
+    pronouns: 'he',
     title: 'Training Sergeant',
     nodeId: COMMAND_STAFF.trainingSergeant.nodeId,
     salaryPerHour: COMMAND_STAFF.trainingSergeant.salaryPerHour,
@@ -149,6 +153,7 @@ export const MANAGERS: Record<ManagerId, ManagerProfile> = {
   quartermaster: {
     id: 'quartermaster',
     name: 'Robin Kessler',
+    pronouns: 'they',
     title: 'Quartermaster',
     nodeId: COMMAND_STAFF.quartermaster.nodeId,
     salaryPerHour: COMMAND_STAFF.quartermaster.salaryPerHour,

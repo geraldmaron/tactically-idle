@@ -73,15 +73,6 @@ for incoming fire. Done: the move falls back to a free point inside the room's d
 building can't host, the entry-plus-doorOf rule is decided and enforced, and the fire test runs on
 an owned fixture.
 
-### clock-only-marks: Validation accepts a mark that only a clock's run-out sets
-Tags: job=command; journeys=choices-branch; probes=none (validation); lane=engine
-Needs: start=none; integrate=none; ship=none
-
-Reported by tooling in draft PR #76: `validateScenario` rejects a reader of a mark whose only setter
-is a clock running out, though clock routing (#46, #56) makes such marks legitimate. Done: the
-validator counts clock run-out setters (`onOut.mark` and the compiled route), with a test on an
-owned clock fixture, and the mark-reader audit stays green.
-
 ### armed-max: Text can say a look found empty hands
 Tags: job=command; journeys=chance-not-script; probes=none (text condition); lane=engine
 Needs: start=none; integrate=none; ship=none
@@ -278,17 +269,6 @@ deterministic since #57, and the `check:strings` wrapper since #64 (byte-identic
 
 ## Department and staff
 
-### sidearms-day-one: A new department can use sidearms from its first call
-Tags: job=build; journeys=answer-a-call; probes=items-none; lane=engine
-Needs: start=none; integrate=none; ship=none
-
-Owner decision 2026-10-19. Today the sidearm items require the `field_response_program` node
-(`src/content/items.ts`) and force choices require the `entry_team` certification. Done: a new
-department starts with sidearms issued and can choose force on its first call; decide with evidence
-whether `entry_team` stays the force certification (and who holds it at the start) or the
-requirement moves, record the effect on the opening odds, and update the casebook's locked rows and
-the e2e script's casebook check.
-
 ### peer-support-lead: Command Staff gains a Peer Support Lead
 Tags: job=build; journeys=hire-and-equip; probes=officer-stress; lane=engine
 Needs: start=none; integrate=none; ship=none
@@ -318,14 +298,6 @@ Watch Commander runs it, how it shows on the board without crowding tactical cal
 lead, then the engine loop and its UI.
 
 ## Player experience
-
-### manager-pronouns: Managers carry their pronouns as data
-Tags: job=build; journeys=none (no manager text uses a pronoun yet); probes=none (data); lane=engine
-Needs: start=none; integrate=none; ship=none
-
-The manager portraits fix how each manager looks (she, he, they in the art briefs), but
-`ManagerProfile` has no pronoun field. Done: `pronouns` on `ManagerProfile`, set from the briefs,
-before any shift report or log line refers to a manager by pronoun.
 
 ### onboarding: A first call that teaches the loop
 Tags: job=command; journeys=answer-a-call; probes=none (teaching flow); lane=deferred
@@ -385,7 +357,7 @@ Optional.
 
 Decided 2026-10-19: scenario work is paused (the barricade is parked on its branch); a squad can
 deploy short of injured officers (`short-squad-deploys`); sidearms from day one
-(`sidearms-day-one`); keep the compiled fingerprints and the cross-engine check; a call resolved
+(`sidearms-day-one`, shipped: two sidearms are issued at the start and `entry_team` stays the force certification, which both starting squads hold); keep the compiled fingerprints and the cross-engine check; a call resolved
 with harm counts as resolved (already so in `dispositionOf`); an entry breaks every open commitment
 (already so in `src/sim/commitments.ts`); build the Peer Support Lead, the Recruiter and patrol work;
 the crisis cap stays report-only until playtests.
