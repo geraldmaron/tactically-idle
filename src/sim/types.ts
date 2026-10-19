@@ -1035,9 +1035,12 @@ export type Command =
   | { type: 'scrapUnit'; unitId: Id }
   | { type: 'offerRetention'; officerId: Id }
   | { type: 'markIncidentsSeen' }
-  // command staff (src/sim/command-staff.ts); hiring is the unlockNode purchase
+  // command staff (src/sim/command-staff.ts); unlockNode opens a post, hireStaff fills it
   | { type: 'setManagerEnabled'; managerId: ManagerId; enabled: boolean }
   | { type: 'setManagerPolicy'; patch: ManagerPolicyPatch }
+  | { type: 'hireStaff'; managerId: ManagerId; candidateId: Id }
+  | { type: 'dismissStaff'; managerId: ManagerId }
+  | { type: 'refreshStaffPool'; managerId: ManagerId }
   // operations (src/sim/operation.ts)
   | {
       type: 'startOperation';
@@ -1108,7 +1111,10 @@ export type DepartmentCommandType =
   | 'offerRetention'
   | 'markIncidentsSeen'
   | 'setManagerEnabled'
-  | 'setManagerPolicy';
+  | 'setManagerPolicy'
+  | 'hireStaff'
+  | 'dismissStaff'
+  | 'refreshStaffPool';
 
 export type OperationCommandType = 'startOperation' | 'cancelOperation' | 'endFailedResponse' | 'decide' | 'closeDebrief';
 

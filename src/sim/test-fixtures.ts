@@ -1,3 +1,4 @@
+import { CURRENT_SAVE_VERSION } from './save';
 import { createPersonnel } from './personnel';
 // Test GameState builder for operation tests. Independent of department.ts so the
 // operation engine can be exercised without the department simulation.
@@ -175,7 +176,7 @@ export function makeState(opts: FixtureOptions = {}): GameState {
   if (opts.squadC) squads.push({ id: 'C', name: 'Charlie', officerIds: ['off_holt', 'off_dray', 'off_ng', 'off_ibarra'], leaderId: 'off_holt', duty: 'standby', loadoutPreset: {} });
   return {
     personnel: createPersonnel(opts.rngState ?? 12345, officers),
-    saveVersion: 9,
+    saveVersion: CURRENT_SAVE_VERSION,
     contentVersion: 13,
     department: {
       name: 'Westhaven Department',

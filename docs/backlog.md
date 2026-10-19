@@ -260,17 +260,6 @@ deterministic since #57, and the `check:strings` wrapper since #64 (byte-identic
 
 ## Department and staff
 
-### manager-identities: The Peer Support Lead and the Recruiter get a name, pronouns and a face
-Tags: job=build; journeys=hire-and-equip; probes=none (identity and art); lane=calls
-Needs: start=none; integrate=none; ship=none
-
-The engine side shipped (`peer_support_lead` and `recruiter` in `src/sim/command-staff.ts`: Develop
-hires, salary, hourly loops, policy, log lines, tests). Their `name` is the title and `pronouns` read
-`they` until this lands. Done: an identity brief for each (calls lane, the officer-stories rules)
-sets `name` and `pronouns` in `MANAGERS`, and a painted portrait for each (interface lane, the
-existing art pipeline) is listed in `public/art/managers/manifest.json`. The cards already render
-with the silhouette fallback.
-
 ### patrol-work: Routine patrol returns as idle work under the Watch Commander
 Tags: job=return; journeys=offline-settles; probes=none (idle economy); lane=engine
 Needs: start=none; integrate=none; ship=none

@@ -1,27 +1,30 @@
-/* Command Staff: a three-up roster of manager cards on HQ. Art first, a status pill on the
-   portrait, then the role, the loop it automates and its latest action. Detail lives in the sheet. */
+/* Command Staff: a list of posts on HQ, hired staff first. One row each: face (or an empty post),
+   the role and its status, who holds it and the loop it runs, then the latest action. Every post
+   stays visible at once, so nothing hides off-screen the way a carousel would. Detail lives in the sheet. */
 .command-staff { display: grid; gap: 8px; min-width: 0; }
 .command-staff .section-head { margin: 0; }
 .command-staff-count { font-family: var(--font-display); font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; }
-.staff-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.staff-list { display: grid; margin: 0; padding: 0; list-style: none; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); overflow: hidden; }
+.staff-list > li + li { border-top: 1px solid var(--line); }
 
-.staff-card { position: relative; display: grid; justify-items: center; align-content: start; gap: 3px; min-width: 0; min-height: var(--touch); padding: 8px 5px 9px; border: 1px solid var(--line); border-radius: var(--radius); background: radial-gradient(120% 70% at 50% 0%, rgba(31, 85, 184, 0.26), transparent 70%), linear-gradient(180deg, var(--panel-2), var(--panel)); color: var(--text); font: inherit; text-align: center; cursor: pointer; overflow: hidden; }
-.staff-card::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 3px; background: var(--muted); }
+.staff-card { position: relative; display: flex; align-items: center; gap: 10px; width: 100%; min-width: 0; min-height: 64px; padding: 9px 10px 9px 12px; border: 0; background: transparent; color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+.staff-card::before { content: ''; position: absolute; left: 0; top: 8px; bottom: 8px; width: 3px; border-radius: 0 3px 3px 0; background: var(--line); }
 .staff-card-on::before { background: var(--mint); }
 .staff-card-off::before { background: var(--amber); }
-.staff-card-not_hired { background: linear-gradient(180deg, var(--panel), var(--navy-900)); }
-.staff-card-not_hired::before { background: var(--line); }
-.staff-card:active { transform: scale(0.98); }
-.staff-card:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
-.staff-card-art { position: relative; display: grid; place-items: center; padding-bottom: 6px; }
-.staff-card-art .staff-pill { position: absolute; bottom: -2px; left: 50%; transform: translateX(-50%); white-space: nowrap; }
-.staff-card-title { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; width: 100%; margin-top: 3px; font-family: var(--font-cond); font-size: 12.5px; font-weight: 700; line-height: 1.1; letter-spacing: 0.03em; text-transform: uppercase; overflow-wrap: anywhere; }
-.staff-card-name { width: 100%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 11px; color: var(--text-dim); }
-.staff-card-loop { display: flex; align-items: flex-start; justify-content: center; gap: 3px; width: 100%; font-size: 11px; font-weight: 600; line-height: 1.2; color: var(--amber-2); }
-.staff-card-loop .icon { flex: none; margin-top: 1px; }
-.staff-card-loop > span { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; }
-.staff-card-log { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; width: 100%; font-size: 10.5px; line-height: 1.25; color: var(--muted); overflow-wrap: anywhere; }
-.staff-card-not_hired .staff-card-title, .staff-card-not_hired .staff-card-loop { color: var(--text-dim); }
+.staff-card:active { background: var(--panel-2); }
+.staff-card:focus-visible { outline: 2px solid var(--amber); outline-offset: -2px; }
+.staff-card-main { display: grid; gap: 2px; flex: 1 1 auto; min-width: 0; }
+.staff-card-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; }
+.staff-card-title { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-family: var(--font-cond); font-size: 15px; font-weight: 700; line-height: 1.15; letter-spacing: 0.03em; text-transform: uppercase; }
+.staff-card-top .staff-pill { flex: none; }
+.staff-card-loop { display: flex; align-items: center; gap: 4px; min-width: 0; font-size: 12.5px; font-weight: 600; color: var(--amber-2); }
+.staff-card-loop .icon { flex: none; }
+.staff-card-loop > span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.staff-card-vacant { font-style: italic; font-weight: 500; color: var(--muted); }
+.staff-card-log { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 12px; color: var(--muted); }
+.staff-card-go { flex: none; color: var(--muted); }
+.staff-card-not_hired .staff-card-title { color: var(--text-dim); }
+.staff-card-not_hired .staff-card-loop { color: var(--text-dim); }
 
 .staff-pill { display: inline-flex; align-items: center; padding: 1px 7px; border-radius: 999px; border: 1px solid var(--line-strong); background: rgba(8, 13, 24, 0.94); font-family: var(--font-cond); font-size: 11px; font-weight: 700; letter-spacing: 0.06em; line-height: 1.45; text-transform: uppercase; color: var(--muted); }
 .staff-pill-on { border-color: rgba(63, 208, 142, 0.7); color: var(--mint); }
@@ -71,3 +74,34 @@
 .staff-log time { flex: none; font-size: 11.5px; white-space: nowrap; }
 .staff-log > p { margin: 6px 0 0; font-size: 12.5px; }
 .staff-policy > p.staff-benefits { font-size: 12.5px; color: var(--mint); }
+
+/* Vacant post: open and waiting for a hire. */
+.staff-pill-vacant { border-color: rgba(243, 180, 50, 0.55); color: var(--amber-2); }
+
+/* Levers: what sets this person apart, as a value and a bar across the post's range. */
+.staff-levers { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.staff-levers li { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 2px 10px; }
+.staff-lever-label { min-width: 0; font-size: 13px; color: var(--text-dim); }
+.staff-levers strong { font-family: var(--font-display); font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--text); }
+.staff-lever-bar { grid-column: 1 / -1; height: 5px; border-radius: 3px; background: rgba(255, 255, 255, 0.07); overflow: hidden; }
+.staff-lever-bar i { display: block; height: 100%; border-radius: 3px; background: var(--amber); }
+
+/* Candidate compare: one card per person, the same rows in the same order. */
+.staff-pool { display: grid; gap: 10px; }
+.staff-pool-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.staff-pool-head h3 { margin: 0; font-family: var(--font-cond); font-size: 14px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+.staff-candidates { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.staff-candidate { display: grid; gap: 10px; padding: 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel-2); }
+.staff-candidate-head { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.staff-candidate-who { display: grid; gap: 2px; min-width: 0; }
+.staff-candidate-who strong { font-family: var(--font-display); font-size: 17px; font-weight: 600; letter-spacing: 0.02em; }
+.staff-candidate-who .dim { font-size: 12.5px; }
+.staff-candidate-note { margin: 0; font-size: 13px; line-height: 1.4; color: var(--text-dim); }
+.staff-archetype { justify-self: start; padding: 1px 8px; border-radius: 999px; font-family: var(--font-cond); font-size: 11.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; border: 1px solid var(--line-strong); color: var(--text-dim); }
+.staff-archetype-seasoned { border-color: rgba(243, 180, 50, 0.6); color: var(--amber-2); }
+.staff-archetype-specialist { border-color: rgba(156, 196, 255, 0.6); color: var(--people-officer); }
+.staff-archetype-steady { border-color: rgba(63, 208, 142, 0.55); color: var(--mint); }
+.staff-candidate .reason { margin: 0; }
+.staff-replace { display: grid; gap: 8px; padding: 10px 12px; border: 1px solid rgba(255, 159, 67, 0.45); border-radius: var(--radius); background: rgba(255, 159, 67, 0.06); }
+.staff-replace p { margin: 0; font-size: 13.5px; }
+.staff-replace .row-actions { display: flex; gap: 8px; justify-content: flex-end; }

@@ -11,7 +11,7 @@ import { getScenario } from './scenario-registry';
 import { makeState, makeUnit, NOW, startRun } from './test-fixtures';
 import { registerCapabilityFixtures } from './fixtures/capability-scenarios';
 import { autoLoadout } from './auto-equip';
-import { serialize, deserialize } from './save';
+import { CURRENT_SAVE_VERSION, serialize, deserialize } from './save';
 import type { CapabilityId, CertId } from './types';
 
 registerCapabilityFixtures();
@@ -97,7 +97,7 @@ describe('bounded catalog and common gates', () => {
     expect(itemCheck(state, ITEMS.support_van, 1).ok).toBe(true);
   });
   it('new certifications and stock survive serialization with future content enabled', () => {
-    const state = makeState(); state.saveVersion = 9;
+    const state = makeState(); state.saveVersion = CURRENT_SAVE_VERSION;
     state.officers.off_chen.certs.push(...newCerts);
     state.units.new_device = { ...makeUnit('conducted_energy_device', 1), id: 'new_device' };
     const restored = deserialize(serialize(state, NOW));

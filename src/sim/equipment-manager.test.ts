@@ -1,3 +1,4 @@
+import { fillOpenPostsForTest } from './staff-fixtures';
 import { describe, expect, it } from 'vitest';
 import { createInitialState } from './department';
 import { dispatch } from './game';
@@ -13,7 +14,8 @@ const T0 = Date.UTC(2026, 9, 2, 12);
 const ok = (state: GameState, command: Command, now = T0) => {
   const result = dispatch(state, command, { now });
   expect(result.result).toEqual({ ok: true });
-  return result.state;
+  // Opening the post puts candidates on offer; these tests run the loop with a baseline Quartermaster.
+  return command.type === 'unlockNode' ? fillOpenPostsForTest(result.state) : result.state;
 };
 const hired = () => ok(createInitialState(T0, 71), { type: 'unlockNode', nodeId: 'logistics_equipment_manager' });
 function workshop() {

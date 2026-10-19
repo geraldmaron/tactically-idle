@@ -1,10 +1,12 @@
+import { fillOpenPostsForTest } from './staff-fixtures';
+import { AUTHORED_STAFF } from './staff-pool';
 import { describe, expect, it } from 'vitest';
 import { createInitialState } from './department';
 import { dispatch } from './game';
 import { HOUR_MS, ratesAt } from './economy';
 import { createUnit } from './equipment';
 import { maintenanceBudget } from './equipment-manager-policy';
-import { COMMAND_STAFF, MANAGERS, commandStaffOf, managerHired, managerOn, managerView } from './command-staff';
+import { COMMAND_STAFF, commandStaffOf, managerHired, managerOn, managerView } from './command-staff';
 import { deserialize, serialize } from './save';
 import { DEV_NODES } from '../content/dev-tree';
 import { fullName } from './officer';
@@ -15,7 +17,8 @@ const T0 = Date.UTC(2026, 0, 5, 12, 0, 0); // on the hour grid
 function ok(state: GameState, cmd: Command, now = T0): GameState {
   const r = dispatch(state, cmd, { now });
   expect(r.result, JSON.stringify(cmd)).toEqual({ ok: true });
-  return r.state;
+  // Behaviour tests run each loop with a baseline person in post; the hiring tests use `dispatch` directly.
+  return cmd.type === 'unlockNode' ? fillOpenPostsForTest(r.state) : r.state;
 }
 function refused(state: GameState, cmd: Command, now = T0): string {
   const r = dispatch(state, cmd, { now });
@@ -64,10 +67,23 @@ describe('command staff hiring and state', () => {
       expect(managerView(fresh, id).status).toBe('not_hired');
     }
     expect(fresh.commandStaff).toEqual(commandStaffOf(createInitialState(T0)));
-    const hired = ok(fresh, { type: 'unlockNode', nodeId: COMMAND_STAFF.watchCommander.nodeId });
-    expect(hired.department.devPoints).toBe(fresh.department.devPoints - 2);
-    expect(hired.department.funding).toBe(fresh.department.funding - 1500);
+    // Develop opens the post for DP alone and puts three candidates on offer; nobody is hired yet.
+    const opened = dispatch(fresh, { type: 'unlockNode', nodeId: COMMAND_STAFF.watchCommander.nodeId }, { now: T0 }).state;
+    expect(opened.department.devPoints).toBe(fresh.department.devPoints - 2);
+    expect(opened.department.funding).toBe(fresh.department.funding);
+    expect(managerHired(opened, 'watch_commander')).toBe(false);
+    const view = managerView(opened, 'watch_commander');
+    expect(view.open).toBe(true);
+    expect(view.pool.map((c) => c.archetype).sort()).toEqual(['seasoned', 'specialist', 'steady']);
+    // The painted Watch Commander is offered first for a new post.
+    expect(view.pool.some((c) => c.person.surname === 'Navarro')).toBe(true);
+    const pick = view.pool[0];
+    const hired = ok(opened, { type: 'hireStaff', managerId: 'watch_commander', candidateId: pick.id });
+    expect(hired.department.funding).toBe(opened.department.funding - pick.signingCost);
     expect(managerOn(hired, 'watch_commander')).toBe(true);
+    expect(managerView(hired, 'watch_commander').holder?.person.identityId).toBe(pick.person.identityId);
+    expect(ratesAt(hired, T0).staff).toBe(pick.salaryPerHour);
+    expect(commandStaffOf(hired).watch_commander.log[0].text).toMatch(/signed on/);
     // The Training Sergeant needs the training academy.
     expect(refused(hired, { type: 'unlockNode', nodeId: COMMAND_STAFF.trainingSergeant.nodeId })).toMatch(/Training academy/);
   });
@@ -88,7 +104,7 @@ describe('command staff hiring and state', () => {
 
   it('validates commands and returns reasons like other handlers', () => {
     const fresh = createInitialState(T0);
-    expect(refused(fresh, { type: 'setManagerEnabled', managerId: 'watch_commander', enabled: false })).toMatch(/Hire the Watch Commander/);
+    expect(refused(fresh, { type: 'setManagerEnabled', managerId: 'watch_commander', enabled: false })).toMatch(/Hire a Watch Commander/);
     expect(refused(fresh, { type: 'setManagerPolicy', patch: { managerId: 'training_sergeant', reserve: 1000 } })).toMatch(/Hire/);
     expect(refused(fresh, { type: 'setManagerEnabled', managerId: 'nobody' as never, enabled: true })).toBe('Unknown manager');
     const s = withWatchCommander();
@@ -252,9 +268,11 @@ describe('Command Staff saves', () => {
     }
   });
 
-  it('keeps the Develop copy in step with the salaries it states', () => {
-    expect(DEV_NODES[COMMAND_STAFF.watchCommander.nodeId].description).toContain(`$${COMMAND_STAFF.watchCommander.salaryPerHour} per hour`);
-    expect(DEV_NODES[COMMAND_STAFF.trainingSergeant.nodeId].description).toContain(`$${COMMAND_STAFF.trainingSergeant.salaryPerHour} per hour`);
+  it('describes each post in Develop as a choice of three candidates, for DP alone', () => {
+    for (const nodeId of [COMMAND_STAFF.watchCommander.nodeId, COMMAND_STAFF.trainingSergeant.nodeId, COMMAND_STAFF.peerSupportLead.nodeId, COMMAND_STAFF.recruiter.nodeId]) {
+      expect(DEV_NODES[nodeId].description).toContain('three candidates');
+      expect(DEV_NODES[nodeId].cost.funding).toBe(0);
+    }
   });
 });
 
@@ -283,8 +301,8 @@ describe('Quartermaster', () => {
 });
 
 describe('manager identity', () => {
-  it('carries each manager’s pronouns from the portrait briefs', () => {
-    expect(Object.fromEntries((['watch_commander', 'training_sergeant', 'quartermaster'] as const).map(id => [id, MANAGERS[id].pronouns]))).toEqual({ watch_commander: 'she', training_sergeant: 'he', quartermaster: 'they' });
+  it('carries each authored manager’s pronouns from the portrait briefs', () => {
+    expect(Object.fromEntries((['watch_commander', 'training_sergeant', 'quartermaster'] as const).map(id => [id, AUTHORED_STAFF[id]!.pronouns]))).toEqual({ watch_commander: 'she', training_sergeant: 'he', quartermaster: 'they' });
   });
 });
 
@@ -359,7 +377,7 @@ describe('peer support lead and recruiter', () => {
     expect(managerView(after, 'recruiter').activity).toMatch(/Roster is full/);
   });
 
-  it('refuses nonsense policy and keeps a saved record from before these managers loadable', () => {
+  it('refuses nonsense policy and rejects a staff record without its posts', () => {
     const s = withManager(COMMAND_STAFF.recruiter.nodeId, ['personnel_recruiting']);
     expect(refused(s, { type: 'setManagerPolicy', patch: { managerId: 'recruiter', role: 'chef' as never } })).toBe('Unknown role');
     expect(refused(s, { type: 'setManagerPolicy', patch: { managerId: 'recruiter', reserve: -5 } })).toMatch(/reserve/);
@@ -368,7 +386,8 @@ describe('peer support lead and recruiter', () => {
     const old = structuredClone(ps);
     delete (old.commandStaff as Partial<typeof old.commandStaff>)!.recruiter;
     delete (old.commandStaff as Partial<typeof old.commandStaff>)!.peer_support_lead;
-    expect(deserialize(serialize(old, T0))?.commandStaff).toBeDefined();
-    expect(commandStaffOf(old).recruiter.policy.role).toBeNull();
+    // Old saves are rejected, not migrated: every post must be in the record.
+    expect(deserialize(serialize(old, T0))).toBeNull();
+    expect(deserialize(serialize(ps, T0))?.commandStaff?.peer_support_lead.post.holder).not.toBeNull();
   });
 });

@@ -119,6 +119,8 @@ export const OWNERSHIP: readonly { glob: string; layer: Layer; system: System }[
   { glob: '/src/sim/squad*.ts', layer: 'engine', system: 'officer' },
   // Command Staff are hired managers who run department loops; they never go on calls.
   { glob: '/src/sim/command-staff.ts', layer: 'engine', system: 'metric' },
+  { glob: '/src/sim/staff-pool.ts', layer: 'engine', system: 'metric' },
+  { glob: '/src/sim/staff-fixtures.ts', layer: 'qa', system: 'platform' },
   { glob: '/src/sim/outcome-score.ts', layer: 'engine', system: 'metric' },
   { glob: '/src/sim/economy.ts', layer: 'engine', system: 'metric' },
   { glob: '/src/sim/department*.ts', layer: 'engine', system: 'metric' },
