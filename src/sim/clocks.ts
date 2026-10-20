@@ -131,14 +131,16 @@ export function ditherCap(scenario: ScenarioDefinition, run: Pick<OperationRun, 
   return Number.isFinite(next) ? Math.floor(next * 10) / 10 : 0;
 }
 
-/** The characters the player reads at the open decision: the prompt, the lines spoken with it, and
- * each visible choice's title and summary. The Relaxed reading floor scales with it. */
-export function decisionTextLength(scenario: ScenarioDefinition, run: Pick<OperationRun, 'stage' | 'endingId' | 'flags' | 'knowledge' | 'pressure'>): number {
+/** The characters the player reads at the open decision: the last decision's result (the screen
+ * shows it first), the prompt, the lines spoken with it, and each visible choice's title and
+ * summary. The Relaxed reading floor scales with it. */
+export function decisionTextLength(scenario: ScenarioDefinition, run: Pick<OperationRun, 'stage' | 'endingId' | 'flags' | 'knowledge' | 'pressure' | 'history'>): number {
   if (run.stage === 'debrief') return 0;
+  const result = (run.history.at(-1)?.explanation ?? []).reduce((n, line) => n + line.length, 0);
   const said = currentStoryExchange(scenario, run).reduce((n, line) => n + line.line.length, 0);
   const choices = scenario.stages[run.stage].actions.filter(action => conditionHolds(action.visibleWhen, run))
     .reduce((n, action) => n + action.title.length + action.summary.length, 0);
-  return currentStoryPrompt(scenario, run).length + said + choices;
+  return result + currentStoryPrompt(scenario, run).length + said + choices;
 }
 
 /** The open decision's dither now: what the commit charges and the preview shows. `now` is read
