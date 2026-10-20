@@ -201,9 +201,10 @@ the hostage call and the call's fingerprints are recaptured deliberately.
 
 ### crisis-content-note: Content note and 988 line
 Tags: job=command; journeys=answer-a-call; probes=none (text); lane=deferred
-Needs: start=content-descriptors (waits on the owner's wording too); integrate=none; ship=none
+Needs: start=content-descriptors; integrate=none; ship=none
 
-Shown for the hostage and barricade calls once the owner settles the wording (see decisions).
+Shown for the hostage and barricade calls. The wording is drafted for the owner's approval, and
+nothing ships before the owner approves it (see decisions).
 Where it appears is proposed in `docs/content-rating.md` (Content notes): a topic-only note on the
 call card, governed by the player's note setting, and the E4.7 support line in the debrief of
 every situation with `suicide_self_harm`, whatever the setting.
@@ -502,9 +503,8 @@ Optional.
 
 - **Death endings:** a human read of `owner_killed`, `worker_killed`, the armed `subject_killed`,
   `resident_killed` and `tank_ran_out`.
-- **Content note and 988 line wording** for the hostage and barricade calls. Placement is proposed
-  in `docs/content-rating.md`; the tier names, descriptor list and note default there need sign-off. "Standard" currently names
-  both a content tier and a timer setting (`docs/call-pressure.md`); one of them needs a new name.
+- **Content note and 988 line wording** for the hostage and barricade calls: a session drafts it
+  (`crisis-content-note`) and the owner approves it before anything ships.
 - **E12:** whether a team holding outside an active shooter fits the game.
 - **Barricade building family:** keep apartments (`apartment_unit_g2`) or not.
 - **"Goes to review" ending line** (E2.1) in the barricade call.
@@ -537,3 +537,7 @@ Decided 2026-10-20 (progression): development points are removed and every devel
 or is granted free at a milestone (`src/sim/grants.ts`); officers hold real US police ranks from
 Probationary Officer to Lieutenant, XP stops at Lieutenant, and the experience band is read from the
 rank (`src/content/ranks.ts`, `src/sim/ranks.ts`).
+Decided 2026-10-20 (content rating): the content tiers are Core and Mature, and the timer setting
+keeps Off, Relaxed and Standard; the six descriptors in `docs/content-rating.md` stand as written;
+the call-card note defaults to every topic; the note and 988 line wording is drafted for the
+owner's review, and nothing ships before approval.

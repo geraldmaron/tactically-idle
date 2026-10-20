@@ -4,7 +4,8 @@ How a call says what it contains, how a player keeps what they don't want off th
 the game warns before a hard call. Design only: nothing here is built yet. Work items are
 `content-descriptors`, `content-filter-draw`, `calls-per-kind` and `crisis-content-note` in
 `docs/backlog.md`. Owner decisions behind it, 2026-10-20: filter by situation, a "no deaths" topic
-in place of "no one harmed", docs before code.
+in place of "no one harmed", docs before code. Signed off the same day: the tiers are Core and
+Mature, the six descriptors below stand as written, and the call-card note defaults to every topic.
 
 ## What a tier is, and what it is not
 
@@ -19,7 +20,7 @@ names, which would read as a certification the call does not have.
 
 | Setting | What it does |
 |---|---|
-| Tier: Standard | Leaves off situations carrying any descriptor marked *mature only* below |
+| Tier: Core | Leaves off situations carrying any descriptor marked *mature only* below |
 | Tier: Mature (default for an M-rated app) | Everything the app contains |
 | Topic toggles | Each descriptor can be switched off on its own, in either tier |
 
@@ -86,8 +87,8 @@ asked for: several hostage, barricade, armed and rescue calls, not one each.
 ## Content notes
 
 This settles where the note appears (open decision O2 in
-`.agents/skills/swat-call-design/references/ethics-and-authenticity.md`). The wording is still the
-owner's.
+`.agents/skills/swat-call-design/references/ethics-and-authenticity.md`). The wording is drafted
+for the owner's approval, and none of it ships until the owner approves it.
 
 - **On the call card**, before the player accepts: a one-line note naming topics, never plot ("This
   call involves a person at risk of suicide"). Naming what happens would spoil a planted turn.
