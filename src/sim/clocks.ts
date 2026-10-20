@@ -16,14 +16,26 @@ import type { ActionDefinition, ClockCondition, ClockDef, OutcomeEffect, Scenari
 import type { Id, OperationRun, OutcomeBand } from './types';
 import { RESOLUTION_TUNING } from './resolution';
 import { tunable } from './tuning';
-import { stableFlag } from './conditions';
+import { conditionHolds, stableFlag } from './conditions';
+import { currentStoryExchange, currentStoryPrompt, currentStoryThreat } from './story-context';
+import type { TimerSetting } from './timer-setting';
 
 /** Tunable (sim/tuning.ts). A choice's minutes per band are RESOLUTION_TUNING.bandTime, the one table
  * the commit, the preview and the clock lookahead (forkMinutes) all read. */
 export const CLOCK_RULES_V1 = tunable('CLOCK_RULES_V1', {
   /** Where a clock stops in a decision that would run it out before any cue was heard. */
   floor: 1,
-});
+  /** Dither minutes (docs/call-pressure.md), per timer setting; Off never adds any. Real time on an
+   * open decision starts counting after a reading floor: `floorSeconds`, plus a second for every
+   * `readingCharsPerSecond` characters of the stage's text (0: the floor doesn't scale). After it,
+   * each real minute is `gameMinutesPerRealMinute` game minutes. Relaxed lets a player read a long
+   * stage at their own pace and then gives a minute a minute; Standard starts soon and runs at four. */
+  dither: {
+    relaxed: { floorSeconds: 10, readingCharsPerSecond: 12, gameMinutesPerRealMinute: 1 },
+    standard: { floorSeconds: 8, readingCharsPerSecond: 0, gameMinutesPerRealMinute: 4 },
+  } as Record<Exclude<TimerSetting, 'off'>, { floorSeconds: number; readingCharsPerSecond: number; gameMinutesPerRealMinute: number }>,
+}, { guard: (next) => Object.entries(next.dither).some(([, rule]) => !(rule.floorSeconds >= 0 && rule.readingCharsPerSecond >= 0 && rule.gameMinutesPerRealMinute >= 0))
+  ? 'dither floors, reading speeds and rates must be 0 or more' : null });
 
 export type ClockState = NonNullable<OperationRun['clocks']>[Id];
 const round1 = (n: number) => Math.round(n * 10) / 10;
@@ -71,6 +83,70 @@ export function decisionMinutes(team: number, extra: number, action: Pick<Action
  * it (a preview with no evaluation) only the choice's own work counts, not its travel. */
 export function forkMinutes(action: ActionDefinition, band: OutcomeBand, effect: OutcomeEffect, clockBase?: number): number {
   return decisionMinutes(clockBase ?? action.workload.base * RESOLUTION_TUNING.bandTime[band], effect.extraMinutes ?? 0, action);
+}
+
+export interface DitherInput {
+  /** When the decision opened (OperationRun.decisionOpenedAt), in ms. */
+  openedAt: number;
+  /** The latest time the department has seen, in ms: never a device clock moved backward. */
+  now: number;
+  timer: TimerSetting;
+  /** Characters the player reads at this decision: the prompt, what is said, the choices. */
+  textLength: number;
+  /** Where dither stops (ditherCap). */
+  cap: number;
+}
+
+/** Game minutes a stall on an open decision has cost so far. Pure: the same inputs always give the
+ * same minutes, and they never fall as `now` rises. Off is always zero; nothing counts before the
+ * reading floor; it stops at `cap`. Time away from the app counts like time on screen, because
+ * `openedAt` is saved with the operation; a moved-back clock gives a smaller `now`, so callers pass
+ * the department's high-water time. Floored to tenths, so the preview never shows more than the
+ * commit would charge a moment later. */
+export function ditherMinutes({ openedAt, now, timer, textLength, cap }: DitherInput): number {
+  if (timer === 'off' || !(cap > 0) || !Number.isFinite(openedAt) || !Number.isFinite(now)) return 0;
+  const rule = CLOCK_RULES_V1.dither[timer];
+  const floor = rule.floorSeconds + (rule.readingCharsPerSecond > 0 ? Math.max(0, textLength) / rule.readingCharsPerSecond : 0);
+  const counted = Math.max(0, (now - openedAt) / 1000 - floor);
+  return Math.min(cap, Math.floor(counted / 60 * rule.gameMinutesPerRealMinute * 10) / 10);
+}
+
+/** Minutes until a running clock's next unheard cue: 0 once every cue is heard, Infinity when the
+ * clock isn't running. */
+function minutesToNextCue(def: ClockDef, state: ClockState, flags: readonly string[]): number {
+  if (stopped(def, flags) || !(def.ratePerMin > 0)) return Infinity;
+  const cue = def.cues[state.cued];
+  return cue ? Math.max(0, (state.value - cue.at) / def.ratePerMin) : 0;
+}
+
+/** Where dither stops on the open decision (docs/call-pressure.md, "The cap"): the decision point's
+ * threat's minutes, so a long absence can land that threat but never more than one. Without a
+ * threat, a running clock's next cue: a stall can bring a warning, never a run-out. Zero when
+ * neither is open, so nothing accrues. */
+export function ditherCap(scenario: ScenarioDefinition, run: Pick<OperationRun, 'stage' | 'flags' | 'knowledge' | 'pressure' | 'clocks'>): number {
+  if (run.stage === 'debrief') return 0;
+  const threat = currentStoryThreat(scenario, run);
+  if (threat) return threat.minutes;
+  const next = Math.min(...(scenario.clocks ?? []).map(def => run.clocks?.[def.id] ? minutesToNextCue(def, run.clocks[def.id], run.flags) : Infinity));
+  return Number.isFinite(next) ? Math.floor(next * 10) / 10 : 0;
+}
+
+/** The characters the player reads at the open decision: the prompt, the lines spoken with it, and
+ * each visible choice's title and summary. The Relaxed reading floor scales with it. */
+export function decisionTextLength(scenario: ScenarioDefinition, run: Pick<OperationRun, 'stage' | 'endingId' | 'flags' | 'knowledge' | 'pressure'>): number {
+  if (run.stage === 'debrief') return 0;
+  const said = currentStoryExchange(scenario, run).reduce((n, line) => n + line.line.length, 0);
+  const choices = scenario.stages[run.stage].actions.filter(action => conditionHolds(action.visibleWhen, run))
+    .reduce((n, action) => n + action.title.length + action.summary.length, 0);
+  return currentStoryPrompt(scenario, run).length + said + choices;
+}
+
+/** The open decision's dither now: what the commit charges and the preview shows. `now` is read
+ * against the department's high-water time, so a device clock moved backward never reduces it, and
+ * time it already counted is never counted again. */
+export function openDither(scenario: ScenarioDefinition, run: OperationRun, highWater: number, now: number, timer: TimerSetting): number {
+  if (run.status !== 'active' || run.decisionOpenedAt === undefined) return 0;
+  return ditherMinutes({ openedAt: run.decisionOpenedAt, now: Math.max(now, highWater), timer, textLength: decisionTextLength(scenario, run), cap: ditherCap(scenario, run) });
 }
 
 /** Whether an outcome's clock conditions hold at the end of its own minutes. */
