@@ -10,3 +10,6 @@ export const CREW_MARKS: readonly string[] = [...CREW_TRAITS, ...CREW_BANDS.map(
 export const crewFlag = (mark: string) => `crew:${mark}`;
 /** Every flag a crew can set, for validation of the call trees that read them. */
 export const CREW_FLAGS: readonly string[] = CREW_MARKS.map(crewFlag);
+/** A lead mark: the same names, for the one officer leading the current decision (sim/crew.ts leadFlags). */
+export const LEAD_PREFIX = 'lead:';
+export const leadFlag = (mark: string) => `${LEAD_PREFIX}${mark}`;

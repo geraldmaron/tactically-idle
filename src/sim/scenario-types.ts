@@ -258,6 +258,9 @@ export interface ActionDefinition {
   authority?: AuthorityRequest;
   /** V13: a lie or a promise command never approved (dilemma pattern 15). The card says so. */
   deceives?: true;
+  /** This decision point's threat (NodeThreat). When the decision takes `minutes` or longer, travel
+   * and the band's delay included, its effects apply: the line the player reads and what it costs. */
+  threat?: NodeThreat & { effects: OutcomeEffect[] };
   /** V13: what draws a player to the choice, and what it costs, one line each. */
   weighing?: { pull: string; cost: string };
   /** Full archetype route rechecked against current openings at action evaluation. */
@@ -343,13 +346,22 @@ export interface ActionDefinition {
   outcomes: OutcomeTable;
 }
 
+/** What gets worse while the player decides (scenario pressure work, owner 2026-10-20): every
+ * decision point has one. A choice slow enough to reach `minutes` lets it happen. */
+export interface NodeThreat {
+  /** What happens, in a few words ("The count reaches zero"). */
+  label: string;
+  /** Minutes the player has here before it happens. */
+  minutes: number;
+}
+
 export interface StageDefinition {
   id: StageId;
   label: string;
   /** One-line situation prompt for the stage. */
   prompt: string;
   /** V5 story dilemmas in priority order, based only on public committed state. */
-  contextPrompts?: { when: Condition; prompt: string; exchange?: SpokenLine[] }[];
+  contextPrompts?: { when: Condition; prompt: string; exchange?: SpokenLine[]; threat?: NodeThreat }[];
   actions: ActionDefinition[];
 }
 

@@ -16,6 +16,7 @@ import type { ActionDefinition, ClockCondition, ClockDef, OutcomeEffect, Scenari
 import type { Id, OperationRun, OutcomeBand } from './types';
 import { RESOLUTION_TUNING } from './resolution';
 import { tunable } from './tuning';
+import { stableFlag } from './conditions';
 
 /** Tunable (sim/tuning.ts). A choice's minutes per band are RESOLUTION_TUNING.bandTime, the one table
  * the commit, the preview and the clock lookahead (forkMinutes) all read. */
@@ -32,8 +33,9 @@ export function initialClocks(scenario: ScenarioDefinition): OperationRun['clock
   return Object.fromEntries(scenario.clocks.map(def => [def.id, { value: def.start, cued: def.cues.filter(cue => def.start <= cue.at).length }]));
 }
 
-/** A clock stops once the person it belongs to is out of the building. */
-const stopped = (def: ClockDef, flags: readonly string[]) => !!def.owner && (flags.includes(`safe:${def.owner}`) || flags.includes(`out:${def.owner}`));
+/** A clock stops once the person it belongs to is out of the building, or once someone holds it steady. */
+const stopped = (def: ClockDef, flags: readonly string[]) => flags.includes(stableFlag(def.id))
+  || (!!def.owner && (flags.includes(`safe:${def.owner}`) || flags.includes(`out:${def.owner}`)));
 
 /** Where a clock will be after `minutes` more, and how many of its cues will have fired. */
 export function stepClock(def: ClockDef, state: ClockState, minutes: number, flags: readonly string[]): ClockState {

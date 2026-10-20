@@ -1,7 +1,7 @@
 import { actionEquipmentRequirements, capabilityRuleEffect, effectiveSupplies, normalizedActionConsumption, operatorQualified, planningEquipmentContext } from './equipment-requirements';
 import { LAST_SEEN_LINES } from '../content/incidents/lines';
 import { isGenericResponseExit } from './response-failure';
-import { currentStoryExchange, currentStoryPrompt } from './story-context';
+import { currentStoryExchange, currentStoryPrompt, currentStoryThreat } from './story-context';
 import { hydrateStoryAction, storyActionTarget, storyPublicScenario, storyPropsKnown } from './story-people';
 // Operation selectors consumed by the UI. Everything here is derived from game
 // state and content; nothing mutates. Export names and signatures are a contract.
@@ -23,7 +23,7 @@ import type {
   SquadId,
   StageId,
 } from './types';
-import type { ActionDefinition, FactDefinition, ScenarioDefinition } from './scenario-types';
+import type { ActionDefinition, FactDefinition, NodeThreat, ScenarioDefinition } from './scenario-types';
 import { scenarioActions } from './scenario-types';
 import { SCENARIO_ORDER } from '../content/scenarios';
 import { deployRoster, runRoster } from './squads';
@@ -70,6 +70,8 @@ export interface StageProgress {
   prompt: string;
   /** Lines spoken with the prompt (call-surfaces). */
   exchange?: { speaker: string; line: string }[];
+  /** What gets worse while the player decides here, and how many minutes they have. */
+  threat?: NodeThreat | null;
   stage: StageId | 'debrief';
   index: number;
   stages: { id: StageId; label: string; state: 'done' | 'current' | 'todo' }[];
@@ -341,6 +343,7 @@ export function stageProgress(state: GameState): StageProgress {
     prompt: s && run ? currentStoryPrompt(s, run) : '',
     // The negotiator's lines are the lead officer's: the first deployed officer on the run.
     exchange: s && run ? currentStoryExchange(s, run).map(line => ({ ...line, speaker: line.speaker.replace('{lead}', runLeadSurname(state, run)) })) : [],
+    threat: s && run ? currentStoryThreat(s, run) : null,
     index: cur,
     stages: STAGE_ORDER.map((id, i) => ({
       id,
@@ -450,6 +453,7 @@ function toView(state: GameState, run: OperationRun, a: ActionDefinition, ev: Ev
     ...(eventResult ? { eventResult } : {}),
     ...(ev.authority ? { authority: { ...ev.authority } } : {}),
     ...(a.deceives ? { deceives: true as const } : {}),
+    ...(a.threat ? { threat: { label: a.threat.label, bands: (['favorable', 'mixed', 'adverse'] as const).filter((band) => teamMinutes(ev, a, band) >= a.threat!.minutes) } } : {}),
     ...(a.weighing ? { weighing: { pull: leadIn(a.weighing.pull, ev, state), cost: leadIn(a.weighing.cost, ev, state) } } : {}),
     id: a.id,
     stage: a.stage,

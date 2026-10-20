@@ -39,6 +39,11 @@ export interface TreeState {
    * when the call starts, so a choice behind it is simply there or not for this team. */
   crew?: string[];
   notCrew?: string[];
+  /** Who leads the decision being resolved (sim/crew.ts leadFlags): the same trait and band names,
+   * for the one officer the player sent. Read in outcome `when` only, so a result can be written for
+   * the rookie who got seen at the glass or the calm voice who bought a minute. */
+  lead?: string[];
+  notLead?: string[];
   safe?: string[];
   notSafe?: string[];
   /** The size of a counted group, which is fixed per call: the compiler keeps this outcome, prompt
@@ -235,6 +240,9 @@ export interface TreeOutcome {
   objective?: number;
   civilian?: number;
   pressure?: number;
+  /** Clocks this result holds steady (a template clock id, 'owner_condition'): a medic or a hand on
+   * the person stops the clock where it stands, so it never runs out on this call. */
+  stabilize?: string[];
   /** Extra operation minutes on top of the choice's own minutes. */
   minutes?: number;
   /** The team falls back: on this path the squad ends the choice where it started it, not where
@@ -290,6 +298,10 @@ export interface TreeChoice {
   /** The choice is a lie, or a promise command never approved (dilemma pattern 15, E12.6). The
    * card says command hasn't approved it. Its outcomes carry the `lie` promise they make. */
   deceives?: true;
+  /** A certificate that makes this choice go better when an officer taking part holds it (resolution
+   * credits the first holder): 'crisis_negotiation' on a talk, 'advanced_first_aid' on care.
+   * `label` names it in the odds breakdown. Assets change how a call goes, not only whether. */
+  certBonus?: ActionDefinition['certBonus'];
   /** What this choice asks command for (sim/authorization.ts): an entry, or a concession. The
    * engine locks it with the generated reason until the rule allows it, and the card carries the
    * generated command line, so the summary never says "Command approves it because …" itself. */
@@ -356,7 +368,26 @@ export interface TreeNode {
   /** Replaces `prompt` in that public state; the first match wins. Its `exchange` replaces the
    * node's when given (`[]` for none); without one the node's exchange shows. */
   promptIf?: { when: TreeState; prompt: string; exchange?: TreeLine[] }[];
+  /** What gets worse while the player decides here (owner 2026-10-20: every decision point has one).
+   * A choice whose time reaches `minutes`, travel and its band's delay included, lets it happen: the
+   * line and its costs are added to that result. It raises costs and urgency; it never harms anyone,
+   * fires, or sets a threat-to-life mark (E12.4), and it never routes. */
+  threat?: TreeThreat;
   choices: TreeChoice[];
+}
+
+export interface TreeThreat {
+  /** What happens, in a few words, shown with the prompt ("The count reaches zero"). */
+  label: string;
+  /** Minutes the player has here. */
+  minutes: number;
+  /** The line the player reads when it happens. */
+  text: string;
+  /** What it costs: marks later options read, moves on a subject's temper, pressure, civilian safety. */
+  mark?: string[];
+  moves?: Record<string, TreeMove | TreeMove[]>;
+  pressure?: number;
+  civilian?: number;
 }
 
 export interface TreeEnding {

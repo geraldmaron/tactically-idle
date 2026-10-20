@@ -647,6 +647,9 @@ export interface DecisionResolution {
   actingSquadIds: SquadId[];
   supportSquadIds: SquadId[];
   officerIds: Id[];
+  /** The lead officer's trait and band flags this decision was resolved with (TreeState.lead), so a
+   * replay reads the same results without the roster. */
+  leadFlags?: string[];
   targetId: Id | null;
   inputs: Contributor[];
   score: number;
@@ -867,6 +870,8 @@ export interface ActionView {
   authority?: import('./scenario-types').AuthorityResult;
   /** V13: a lie or a promise command never approved (dilemma pattern 15). */
   deceives?: true;
+  /** The decision point's threat, and the bands of this choice slow enough to let it happen. */
+  threat?: { label: string; bands: OutcomeBand[] };
   /** V13: what draws a player to the choice, and what it costs (bound, {lead} filled). */
   weighing?: { pull: string; cost: string };
   /** Common event across effort bands: authored explicitly or proven by identical v6 effect tables. */
@@ -1115,7 +1120,9 @@ export type Command =
   | { type: 'cancelOperation' }
   | { type: 'endFailedResponse'; runId: Id; revision: number }
   | { type: 'resupplyAction'; actionId: Id; actingSquadIds: SquadId[]; supportSquadIds: SquadId[] }
-  | { type: 'decide'; actionId: Id; actingSquadIds: SquadId[]; supportSquadIds: SquadId[] }
+  /** `leadOfficerId`: the officer the player sends to lead this decision, one of those taking part.
+   * Without it the best fit leads (cert holders first, then aptitude). */
+  | { type: 'decide'; actionId: Id; actingSquadIds: SquadId[]; supportSquadIds: SquadId[]; leadOfficerId?: Id }
   | { type: 'closeDebrief' };
 
 export type CommandType = Command['type'];

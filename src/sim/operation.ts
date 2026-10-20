@@ -48,7 +48,8 @@ import { hashSeed, next } from './rng';
 import { fullName } from './officer';
 import { deployRoster, runRoster } from './squads';
 import { flushSquadMoves } from './roster';
-import { crewFlags } from './crew';
+import { crewFlags, leadFlags } from './crew';
+import { LEAD_PREFIX } from './crew-flags';
 import { releaseRun, reserveLoadouts, settleRun, squadUnits } from './inventory';
 import { withStandardRadios } from './standard-kit';
 import { spaceAt, stagingPointById } from './spatial';
@@ -435,10 +436,15 @@ export function advanceTime(run: Pick<OperationRun, 'clock' | 'pressure' | 'civi
  * team's minutes: sim/clocks.ts teamMinutes), and the subjects' meters as they stand at the start
  * of the decision (escalation, sim/meters.ts). */
 export function matchedEffects(action: ActionDefinition, band: OutcomeBand, run: Pick<OperationRun, 'knowledge' | 'flags' | 'pressure'> & Partial<Pick<OperationRun, 'clocks' | 'meters'>>, scenario: ScenarioDefinition, clockBase?: number): OutcomeEffect[] {
-  return matchedOutcomeIndices(action, band, run, scenario, clockBase).map((index) => {
+  // The decision point's threat (NodeThreat): a decision that takes its minutes, travel and the band's
+  // delay included, lets it happen. Its effects are addenda; they never route, so where the call
+  // goes still rests on the choice and the truth. One place, so a replay matches the live commit.
+  const threat = action.threat && clockBase !== undefined && clockBase >= action.threat.minutes
+    ? action.threat.effects.filter((effect) => conditionHolds(effect.when, run)) : [];
+  return [...matchedOutcomeIndices(action, band, run, scenario, clockBase).map((index) => {
     const effect = action.outcomes[band][index];
     return effect.reveal?.length ? { ...effect, knowledge: [...effect.knowledge ?? [], ...effect.reveal.map((factId) => ({ factId, status: scenario.facts.find((fact) => fact.id === factId)?.truth ? 'confirmed' as const : 'disproved' as const }))] } : effect;
-  });
+  }), ...threat];
 }
 
 /** Which of the band's authored outcomes apply (their indices, in order): matchedEffects' filter. */
@@ -529,6 +535,8 @@ export function traceRun(scenario: ScenarioDefinition, run: OperationRun): { ste
   for (const resupply of run.resupplies ?? []) applyClockCues(sim, scenario, advanceTime(sim, scenario, resupply.minutes).cues);
   for (const h of run.history) {
     const a = actions.get(h.actionId) ?? null;
+    // Who led this decision, as the commit saw it (the stored lead flags).
+    sim.flags = [...sim.flags.filter((flag) => !flag.startsWith(LEAD_PREFIX)), ...h.leadFlags ?? []];
     const matched = a ? matchedEffects(a, h.band, sim, scenario, h.clockBaseMinutes) : [];
     const pressure0 = sim.pressure;
     const obj0 = sim.objective;
@@ -883,9 +891,13 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     // Older UI callers use decide; they receive the same free navigation semantics.
     if (cmd.actingSquadIds.some((s) => cmd.supportSquadIds.includes(s))) return fail('A squad cannot both act and support');
     const built = builtFor(run.locationFamilyId, run.locationSeed, run.flags);
-    const input = { state: draft, run, scenario, action, built, acting: cmd.actingSquadIds, support: cmd.supportSquadIds };
+    const input = { state: draft, run, scenario, action, built, acting: cmd.actingSquadIds, support: cmd.supportSquadIds, ...(cmd.leadOfficerId ? { lead: cmd.leadOfficerId } : {}) };
     const ev = evaluateAction(input);
     if (!ev.eligible) return fail(ev.reason ?? 'Not available');
+    if (cmd.leadOfficerId && ev.participantIds[0] !== cmd.leadOfficerId) return fail('That officer is not taking part in this decision');
+    // Who leads is part of the story: results can read the lead's traits and experience
+    // (TreeState.lead → lead:<trait>, lead:band_<band>), replaced at every decision.
+    run.flags = [...run.flags.filter((flag) => !flag.startsWith(LEAD_PREFIX)), ...leadFlags(draft, run, ev.participantIds[0])];
 
     // The department becomes known for how it works (sim/reputation.ts).
     recordPosture(draft.department, postureOf(action));
@@ -1011,6 +1023,7 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
       actingSquadIds: [...ev.acting],
       supportSquadIds: [...ev.support],
       officerIds: [...ev.participantIds],
+      leadFlags: run.flags.filter((flag) => flag.startsWith(LEAD_PREFIX)),
       targetId: ev.action.targetId,
       inputs: ev.contributors,
       score: ev.score,

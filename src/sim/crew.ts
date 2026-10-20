@@ -3,7 +3,7 @@
 // choice for an observant officer or write a veteran's result differently (TreeState.crew). Read
 // once at the start; an officer hurt mid-call keeps their flag, as the call's story already has them.
 import { experienceBand, gameDay } from './calendar';
-import { crewFlag } from './crew-flags';
+import { crewFlag, leadFlag } from './crew-flags';
 import { runRoster } from './squads';
 import type { GameState, OperationRun } from './types';
 
@@ -18,4 +18,12 @@ export function crewFlags(state: GameState, run: Pick<OperationRun, 'id' | 'squa
     out.add(crewFlag(`band_${experienceBand(officer, day)}`));
   }
   return [...out].sort();
+}
+
+/** The lead flags for the officer leading a decision: their traits and experience band, so a result
+ * can be written for who actually did it (TreeState.lead). Empty when nobody leads. */
+export function leadFlags(state: GameState, run: Pick<OperationRun, 'startedAt'>, officerId: string | undefined): string[] {
+  const officer = officerId ? state.officers[officerId] : undefined;
+  if (!officer) return [];
+  return [...officer.traits.map(leadFlag), leadFlag(`band_${experienceBand(officer, gameDay(state, run.startedAt))}`)].sort();
 }

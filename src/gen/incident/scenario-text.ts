@@ -25,7 +25,7 @@ export function mapScenarioText(input: ScenarioDefinition, text: (value: string)
   if (s.difficulty) s.difficulty.drivers = s.difficulty.drivers.map(text);
   for (const stage of Object.values(s.stages)) {
     fields(stage, ['label', 'prompt']);
-    for (const entry of stage.contextPrompts ?? []) { fields(entry, ['prompt']); lines(entry.exchange); }
+    for (const entry of stage.contextPrompts ?? []) { fields(entry, ['prompt']); lines(entry.exchange); if (entry.threat) fields(entry.threat, ['label']); }
     for (const a of stage.actions) {
       fields(a, ['title', 'summary', 'task', 'hazardReason']);
       if (a.weighing) fields(a.weighing, ['pull', 'cost']);
@@ -36,6 +36,7 @@ export function mapScenarioText(input: ScenarioDefinition, text: (value: string)
       for (const opening of a.requires.openings ?? []) fields(opening, ['blockedReason', 'lockedNote']);
       for (const list of [a.equipment, a.modifiers]) for (const item of list ?? []) fields(item, ['label']);
       if (a.certBonus) fields(a.certBonus, ['label']);
+      if (a.threat) { fields(a.threat, ['label']); for (const effect of a.threat.effects) fields(effect, ['text']); }
       if (a.support) fields(a.support, ['label', 'task']);
       if (a.spatial) fields(a.spatial, ['noun']);
       // Drawn consequences (v13) carry their own effects per result: bind those too.

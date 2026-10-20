@@ -107,6 +107,7 @@ export const TUNING_META: readonly FieldMeta[] = [
     'riskBands.moderateAt': { label: 'Moderate-risk label from', help: 'A choice reads "moderate risk" at this chance of going well or more. Labels only.', mode: 'display', min: 0, max: 1, step: 0.01, unit: 'chance' },
     'riskBands.highAt': { label: 'High-risk label from', help: 'A choice reads "high risk" at this chance of going well or more, and "severe" below. Labels only.', mode: 'display', min: 0, max: 1, step: 0.01, unit: 'chance' },
     'strain.participant': { label: 'Strain: taking part', help: 'Share of a decision\'s strain an officer taking part carries.', group: 'strain', min: 0, max: 2, step: 0.05, unit: 'share' },
+    'strain.lead': { label: 'Strain: leading', help: 'Share of a decision\'s strain the officer who leads it carries.', group: 'strain', min: 0, max: 3, step: 0.05, unit: 'share' },
     'strain.actingSquad': { label: 'Strain: acting squad, standing by', help: 'Share an officer in the acting squad carries when not taking part.', group: 'strain', min: 0, max: 2, step: 0.05, unit: 'share' },
     'strain.supportSquad': { label: 'Strain: support squad', help: 'Share an officer in a support squad carries.', group: 'strain', min: 0, max: 2, step: 0.05, unit: 'share' },
     'strain.bystander': { label: 'Strain: deployed, not involved', help: 'Share a deployed officer carries whose squad neither acts nor supports.', group: 'strain', min: 0, max: 2, step: 0.05, unit: 'share' },
