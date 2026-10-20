@@ -497,3 +497,39 @@ it.each(['reported', 'confirmed'] as const)('uses a public %s weapon item withou
   expect(html).toContain(status === 'reported' ? 'Reported item · unverified' : 'Confirmed item');
   expect(html).not.toContain('Armament not known');
 });
+
+describe('the live call in two beats (docs/call-presentation.md)', () => {
+  const threat = { label: 'Indigo edges for the door', minutes: 4 };
+  const props = (patch: Partial<LiveViewProps> = {}): LiveViewProps => {
+    const base = liveProps([action()], null);
+    return { ...base, progress: { ...base.progress, threat }, ...patch };
+  };
+
+  it('decides with the threat pinned, the team above the choices, and the scene held apart', () => {
+    const html = render(createElement(LiveView, props()));
+    const call = html.slice(html.indexOf('id="live-panel-call"'), html.indexOf('id="live-panel-scene"'));
+    expect(html.indexOf('class="threat-pill"')).toBeLessThan(html.indexOf('id="live-panel-call"'));
+    expect(html).toContain('aria-label="Threat: Indigo edges for the door in 4 minutes"');
+    expect(call.indexOf('How will you verify the report before committing?')).toBeLessThan(call.indexOf('aria-label="Who&#x27;s on it"'));
+    expect(call.indexOf('aria-label="Who&#x27;s on it"')).toBeLessThan(call.indexOf('aria-label="Review Prepare medical access"'));
+    expect(call).not.toContain('class="live-map"');
+    expect(html).toMatch(/id="live-panel-scene"[^>]*hidden=""/);
+    expect(html).toContain('class="live-map"');
+  });
+
+  it('reads the result on its own beat, with no choices and no threat until Continue', () => {
+    const html = render(createElement(LiveView, props({ beat: 'result', onContinue: noop, continueLabel: 'Continue to The till', feedback: createElement(OperationFeedback, { decisions: [decision()] }) })));
+    expect(html).toContain('What happened');
+    expect(html).toContain('Continue to The till');
+    expect(html).not.toContain('Review Prepare medical access');
+    expect(html).not.toContain('class="threat-pill"');
+  });
+
+  it('folds the last result to one row on the decide beat, the full record inside', () => {
+    const html = render(createElement(OperationFeedback, { decisions: [decision()], folded: true }));
+    expect(html).toContain('Last decision');
+    expect(html).toMatch(/<details class="disclosure last-decision last-decision-mixed" data-disclosure="last-decision">/);
+    expect(html).toContain('Had complications');
+    expect(html).toContain('The patient received aid, but the route is still unresolved.');
+  });
+});

@@ -19,8 +19,7 @@ import { lexiconFor } from '../people/lexicon';
 import { runRoster } from '../../sim/squads';
 import { isHotCall } from '../../sim/authorization';
 
-/** After a decision the result sits at the head of the scene: bring the scene back to the top so
- * the player reads what happened before the next choice. */
+/** A beat change (result, then the next decision) starts at the top of the call. */
 function revealLastDecision() {
   document.querySelector('.live')?.scrollIntoView({ block: 'start', behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
 }
@@ -43,10 +42,14 @@ export function OpsLive() {
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [confirmFailure, setConfirmFailure] = useState<{ runId: Id; revision: number } | null>(null);
   const [floor, setFloor] = useState(0);
+  // The result beat: the revision just confirmed, read on its own before the next decision shows.
+  const [resultOf, setResultOf] = useState<number | null>(null);
 
   // One selector block for the game and the Scenario Lab (live-model.ts).
   const screen = liveScreen(g, now, { focusId, selection, override, floor, activeOfficer, selectedSpaceId: selSpace, lastChange, showRooms, detailsOpen: panel === 'action' });
   const decisions = decisionViews(g);
+  const beat = resultOf !== null && decisions.at(-1)?.revision === resultOf ? 'result' : 'decide';
+  const nextStage = screen?.model.progress.stages.find((step) => step.state === 'current')?.label;
   const failurePlan = responseFailurePlan(g);
   // Follow the selected action: when its target is on another floor, show that floor.
   const targetFloor = screen?.review.targetFloor ?? null;
@@ -120,9 +123,11 @@ export function OpsLive() {
       const ids = new Set(spaces.map((s) => s.id));
       const spaceIds = [r.targetId, ...r.knowledgeChanges.map((k) => k.factId)].filter((x): x is Id => !!x && ids.has(x));
       setLastChange({ revision: r.revision, spaceIds });
-      // The result card now leads the scene, so it replaces the toast that pointed down at it.
-      // When the decision ends the call the debrief shows the result instead.
-      if (getState().activeRun?.stage !== 'debrief' && typeof requestAnimationFrame === 'function') requestAnimationFrame(revealLastDecision);
+      // The result gets its own beat. When the decision ends the call the debrief shows it instead.
+      if (getState().activeRun?.status === 'active') {
+        setResultOf(r.revision);
+        if (typeof requestAnimationFrame === 'function') requestAnimationFrame(revealLastDecision);
+      }
     }
   };
 
@@ -130,6 +135,12 @@ export function OpsLive() {
     <LiveView
       {...model}
       sirens={hot}
+      beat={beat}
+      onContinue={() => {
+        setResultOf(null);
+        if (typeof requestAnimationFrame === 'function') requestAnimationFrame(revealLastDecision);
+      }}
+      continueLabel={nextStage ? `Continue to ${nextStage}` : 'Continue'}
       people={people}
       onFocusSquad={(id) => {
         if (view && actorUnavailable(id)) return;
@@ -149,7 +160,7 @@ export function OpsLive() {
       onToggleRooms={() => setShowRooms((v) => !v)}
       onCancel={() => setConfirmCancel(true)}
       onOpenDetails={() => { setActionFromSupport(false); setPanel(panel === 'action' ? 'none' : 'action'); }}
-      feedback={<OperationFeedback officers={g.officers} decisions={decisions} explicitCompletion={(scenario?.version ?? 0) >= 4} currentPrompt={model.progress.prompt} onOpenLog={() => setPanel('none')} />}
+      feedback={<OperationFeedback officers={g.officers} decisions={decisions} folded={beat === 'decide'} explicitCompletion={(scenario?.version ?? 0) >= 4} currentPrompt={model.progress.prompt} onOpenLog={() => setPanel('none')} />}
       scene={sceneFor(scenario?.incident?.type)}
       situation={scenario && <SituationPanel scenario={scenario} run={run} />}
       supportContext={scenario && <><IncidentPeopleStatus scenario={scenario} run={run} state={g} /><SupportContext scenario={scenario} run={run} actions={actions} open={panel === 'support'} onOpen={() => setPanel('support')} onClose={() => setPanel('none')} onPickAction={(id) => {

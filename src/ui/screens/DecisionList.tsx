@@ -4,7 +4,7 @@
 // available card names who would lead it and their number for it, and says when the decision point's
 // threat would land on it (ActionView.threat).
 import { Fragment, useState } from 'react';
-import type { JSX } from 'react';
+import type { JSX, ReactNode } from 'react';
 import type { ActionView, Id, Officer, RatingKey } from '../../sim/types';
 import { Button } from '../components/ui';
 import { Icon, actionIcon } from '../icons';
@@ -61,9 +61,11 @@ function CardMeta({ a, officers }: { a: ActionView; officers?: Readonly<Record<I
 
 /** `actions` are the stage's choices as the player sees them, with any reviewed choice already
  * forecast for its chosen squads. */
-export function DecisionList({ prompt, exchange, actions, selectedId, expanded, officers, onSelect, onExpand }: { prompt: string; exchange?: readonly SpokenLine[]; actions: ActionView[]; selectedId: Id | null; expanded: boolean;
+export function DecisionList({ prompt, exchange, actions, selectedId, expanded, officers, team, onSelect, onExpand }: { prompt: string; exchange?: readonly SpokenLine[]; actions: ActionView[]; selectedId: Id | null; expanded: boolean;
   /** The deployed officers, for each card's lead line; left out, cards show no lead. */
   officers?: Readonly<Record<Id, LeadOfficer>>;
+  /** Who's on it, set between the moment and the choices, because every card names one of them to lead. */
+  team?: ReactNode;
   onSelect(id: Id): void; onExpand(): void }): JSX.Element {
   const decisions = visibleDecisions(actions, selectedId, expanded);
   const [opened, setOpened] = useState<ReadonlySet<Id>>(() => new Set());
@@ -72,7 +74,8 @@ export function DecisionList({ prompt, exchange, actions, selectedId, expanded, 
   return <>
     {prompt && <p className="operation-stage-prompt"><PeopleText text={prompt} /></p>}
     <Transcript lines={exchange} label="On the line" />
-    {actions.length > 0 && <p className="operation-choice-count">{open} available{actions.some((action) => !action.eligible) ? ` · ${actions.length - open} unavailable` : ''}. Tap one to review costs and odds.</p>}
+    {team}
+    {actions.length > 0 && <h3 className="operation-choice-count">Your call<span>{open} open{actions.length > open ? ` · ${actions.length - open} locked` : ''}</span></h3>}
     {actions.length === 0 ? (
       <p className="call-empty">No decisions available right now.</p>
     ) : (

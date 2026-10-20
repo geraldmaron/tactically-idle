@@ -43,7 +43,8 @@ export function BottomNav() {
           >
             <span className="navicon">
               <Icon name={t.icon} size={primary ? 26 : 24} />
-              {primary && live && <span className="live-dot" role="img" aria-label="Operation in progress" />}
+              {/* The one motion signal: a call waits on the player and they are looking elsewhere. */}
+              {primary && live && !on && <span className="live-dot" role="img" aria-label={g.activeRun?.status === 'debrief' ? 'A debrief is waiting' : 'A call is waiting on you'} />}
               {primary && !live && fresh > 0 && !on && (
                 <span className="navbadge" role="img" aria-label={`${fresh} new incident${fresh === 1 ? '' : 's'}`}>
                   {fresh}

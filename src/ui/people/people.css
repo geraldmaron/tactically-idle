@@ -1,6 +1,7 @@
 /* People in call text (src/ui/people/PeopleText.tsx, spec 8.2). Color comes from the public kind
-   and never carries the meaning alone: every kind also has its own weight, underline or face, and a
-   glyph before its first mention in a text block. Tokens live in theme.css. */
+   and never carries the meaning alone: every kind also has its own weight, face or slant. Prose
+   carries no symbol and no underline (an underline on a phone reads as a link); the glyph is kept
+   for names that stand alone as labels (person tiles, legends). Tokens live in theme.css. */
 .people-name { color: var(--people-color); font-weight: 600; }
 .people-name[data-kind="subject"], .person-avatar[data-kind="subject"], .people-glyph-tone[data-kind="subject"] { --people-color: var(--people-subject); }
 .people-name[data-kind="civilian"], .person-avatar[data-kind="civilian"], .people-glyph-tone[data-kind="civilian"] { --people-color: var(--people-civilian); }
@@ -8,11 +9,12 @@
 .people-name[data-kind="officer"], .person-avatar[data-kind="officer"], .people-glyph-tone[data-kind="officer"] { --people-color: var(--people-officer); }
 .people-name[data-kind="withheld"], .person-avatar[data-kind="withheld"], .people-glyph-tone[data-kind="withheld"] { --people-color: var(--people-withheld); }
 
-/* Subject: solid underline. Person at the scene: lighter weight, dotted underline. Officer: the
-   callsign face. Civilian and withheld: weight alone, told apart by glyph and color. */
-.people-name[data-kind="subject"] { text-decoration: underline solid 1.5px; text-underline-offset: 3px; }
-.people-name[data-kind="person"] { font-weight: 500; text-decoration: underline dotted 1px; text-underline-offset: 3px; }
+/* Subject: the heaviest weight. Civilian: semibold. Person at the scene: medium. Officer: the
+   callsign face. Withheld (named, role not confirmed): semibold italic. */
+.people-name[data-kind="subject"] { font-weight: 700; }
+.people-name[data-kind="person"] { font-weight: 500; }
 .people-name[data-kind="officer"] { font-family: var(--font-cond); font-weight: 600; }
+.people-name[data-kind="withheld"] { font-style: italic; }
 
 .people-glyph { display: inline-block; width: 0.62em; height: 0.62em; margin-right: 0.22em; vertical-align: 0.04em; }
 .people-glyph-tone { color: var(--people-color); }

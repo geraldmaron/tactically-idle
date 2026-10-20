@@ -1,5 +1,5 @@
 // The live call's pressure pieces (pressure engine, 2026-10-20): who leads each choice and their number
-// for it, the decision point's threat on the cards and beside the prompt, and the review sheet's lead
+// for it, the decision point's threat on the cards and in the pinned call bar, and the review sheet's lead
 // swap. The swap previews what decide would commit, and the commit carries the pick.
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
@@ -58,7 +58,7 @@ describe('choice cards', () => {
     expect(html).not.toMatch(/<button[^>]*class="callbtn[^"]*"[^>]*>(?:(?!<\/button>).)*<div/);
   });
 
-  it('shows the threat beside the prompt as a short countdown pill', () => {
+  it('shows the threat as one still line: label and minutes', () => {
     const html = renderToStaticMarkup(createElement(ThreatPill, { label: 'The count reaches zero', minutes: 6 }));
     expect(html.replace(/<[^>]+>/g, '')).toBe('The count reaches zero·6 min');
     expect(html).toContain('aria-label="Threat: The count reaches zero in 6 minutes"');

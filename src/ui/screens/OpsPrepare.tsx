@@ -25,7 +25,6 @@ import { floorCount } from '../blueprint/floors';
 import { Button, Card, Chip, Section, Stepper, SubHead } from '../components/ui';
 import { familyBlurb, incidentMeta } from '../components/incident';
 import { PlateArt, sceneFor } from '../art/Plates';
-import { SirenFlash } from '../components/SirenFlash';
 import { Portrait } from '../portraits/Portrait';
 import { GearArt } from '../art/GearArt';
 import { useToast } from '../components/toast';
@@ -293,7 +292,6 @@ export function OpsPrepare({ scenarioId, onCancel, initialStep = 'brief' }: { sc
         </button>
         <div className="prep-title plate plate-grain">
           <PlateArt src={sceneFor(incidentType ?? undefined)} />
-          <SirenFlash />
           <span className="prep-title-badge" aria-hidden="true"><Icon name={incidentType ? incidentMeta(incidentType).icon : 'pin'} size={22} /></span>
           <span className="prep-title-text">
             <span className="opboard-code mono">{card?.code ?? 'OP'}</span>

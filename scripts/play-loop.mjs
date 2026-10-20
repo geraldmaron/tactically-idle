@@ -106,6 +106,8 @@ export async function playLiveCalls(page, { baseURL = 'http://127.0.0.1:5174', w
     const used = started.activeRun.squadIds.length;
     if (floors === 2) {
       // People and markers upstairs are only drawn on the upper floor; the tab must reach them.
+      // The map is on the live call's Scene view.
+      await page.getByRole('tab', { name: 'Scene', exact: true }).click();
       const tab = page.getByRole('tab', { name: /^Upper floor/ });
       const known = /known (person|people)/.test(await tab.getAttribute('aria-label'));
       await tab.click();
@@ -114,11 +116,19 @@ export async function playLiveCalls(page, { baseURL = 'http://127.0.0.1:5174', w
       await overflow(`${label} live upper floor`);
       await capture(`${label.replace(/\W+/g, '-')}-live-upper`);
       await page.getByRole('tab', { name: /^Ground floor/ }).click();
+      await page.getByRole('tab', { name: 'Call', exact: true }).click();
     }
     let steps = 0;
     for (; steps < 60; steps++) {
       const current = await state(); if (current.activeRun?.status !== 'active') break;
       const available = page.locator('.call-grid .callbtn:not(.callbtn-off)');
+      // After a confirm the result has its own beat; Continue reveals the next decision.
+      const proceed = page.locator('.live-continue button');
+      if (await proceed.count()) {
+        await proceed.click();
+        await page.locator('.call-grid').waitFor();
+        continue;
+      }
       if (await available.count()) {
         // A weighed choice opens for reading when its text is tapped; its own Review button selects it.
         const card = available.first(), review = card.locator('.callbtn-review');

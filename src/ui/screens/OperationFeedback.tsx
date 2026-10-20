@@ -138,7 +138,9 @@ export function OperationLogContents({ decisions, officers = {}, explicitComplet
 
 /** The latest result leads the live scene, ahead of the next choice. The history comes from the
  * saved run, so closing a sheet or reloading cannot discard it. */
-export function OperationFeedback({ decisions, ended = false, onOpenLog, officers = {}, explicitCompletion = false, currentPrompt }: { decisions: DecisionView[]; ended?: boolean; onOpenLog?: () => void; officers?: DebriefOfficers; explicitCompletion?: boolean; currentPrompt?: string }) {
+export function OperationFeedback({ decisions, ended = false, onOpenLog, officers = {}, explicitCompletion = false, currentPrompt, folded = false }: { decisions: DecisionView[]; ended?: boolean; onOpenLog?: () => void; officers?: DebriefOfficers; explicitCompletion?: boolean; currentPrompt?: string;
+  /** The decide beat: the result was read on its own beat, so it folds to one row above the prompt. */
+  folded?: boolean }) {
   const [open, setOpen] = useState(false);
   const last = decisions.at(-1);
   // A polite live region that is always rendered, so each new result is announced even when it is
@@ -146,11 +148,13 @@ export function OperationFeedback({ decisions, ended = false, onOpenLog, officer
   const announcement = last ? `${last.title}: ${last.forceOutcome ? 'task and harm recorded' : last.resultLabel ?? RESULT_LABEL[last.band]}. ${last.consequences.find((line) => !line.startsWith('Next: ')) ?? ''}` : '';
   const live = <p className="sr-only" role="status" aria-live="polite">{announcement}</p>;
   if (!last) return live;
+  const card = <DecisionCard key={last.revision} decision={last} officers={officers} explicitCompletion={explicitCompletion} currentPrompt={currentPrompt} />;
+  const outcome = last.forceOutcome ? 'Task and harm recorded' : last.resultLabel ?? RESULT_LABEL[last.band];
   return (
-    <section className="operation-feedback" aria-label="Operation feedback">
+    <section className={`operation-feedback${folded ? ' operation-feedback-folded' : ''}`} aria-label="Operation feedback">
       {live}
-      <div className="operation-feedback-heading"><h2>What happened</h2><Button variant="ghost" size="sm" className="operation-log-trigger" onClick={() => { onOpenLog?.(); setOpen(true); }} aria-haspopup="dialog" aria-expanded={open}>Decision log ({decisions.length})</Button></div>
-      <DecisionCard key={last.revision} decision={last} officers={officers} explicitCompletion={explicitCompletion} currentPrompt={currentPrompt} />
+      <div className="operation-feedback-heading"><h2>{folded ? 'Last decision' : 'What happened'}</h2><Button variant="ghost" size="sm" className="operation-log-trigger" onClick={() => { onOpenLog?.(); setOpen(true); }} aria-haspopup="dialog" aria-expanded={open}>Decision log ({decisions.length})</Button></div>
+      {folded ? <Disclosure key={last.revision} name="last-decision" className={`last-decision last-decision-${last.forceOutcome ? 'force' : last.resultLabel ? 'event' : last.band}`} summary={last.title} hint={`${last.stageLabel} · ${outcome}`}>{card}</Disclosure> : card}
       <Sheet open={open} onClose={() => setOpen(false)} title="Decision log" className="operation-log-sheet" footer={<Button block onClick={() => setOpen(false)}>{ended ? 'Return to debrief' : 'Return to operation'}</Button>}>
         <OperationLogContents decisions={decisions} officers={officers} explicitCompletion={explicitCompletion} />
       </Sheet>

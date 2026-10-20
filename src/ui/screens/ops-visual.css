@@ -183,31 +183,9 @@
   .prep-brief-stats span { font-size: 11px; letter-spacing: 0.02em; }
 }
 
-/* ------------------------------------------------------------ live operation */
-.live .live-title { gap: 4px; padding: 8px var(--gutter) 2px; min-height: 0; }
-.live .live-id { flex: 1 1 100%; }
-.live .live-name { font-size: 24px; line-height: 1.05; overflow-wrap: anywhere; }
-.live .live-sub { margin-top: 3px; gap: 4px 10px; font-size: 12px; }
+/* ------------------------------------------------------------ live operation (layout in live-call.css) */
 .live .live-cancel { position: relative; min-height: 32px; }
 .live .live-cancel::after { content: ""; position: absolute; inset: -6px -4px; }
-.live .steps { padding: 2px 2px 4px; }
-.live .step { gap: 2px; }
-.live .step-track { height: 14px; }
-.live .step-line { top: 6px; }
-.live .step-dot { width: 14px; height: 14px; margin-left: -7px; }
-.live .step-label { font-size: 11px; }
-.live .situation { margin-bottom: 6px; padding: 6px 10px 2px; }
-.live .situation-summary { -webkit-line-clamp: 2; font-size: 13.5px; line-height: 1.35; }
-.live .situation-toggle { min-height: 32px; }
-.live .situation-toggle::after { content: ''; position: absolute; inset: -6px 0; }
-.live .situation-toggle { position: relative; }
-
-/* The scene's title carries the stage rail, the clock and the pressure. It scrolls with the scene:
-   on a phone a pinned head costs the choices their room, and the current stage is repeated above
-   the choices. */
-.live .live-title { position: relative; padding-bottom: 6px; }
-.live .live-status { display: flex; flex: 1 1 100%; flex-wrap: wrap; gap: 6px; align-items: center; }
-.live .live-status .hud-pill { padding: 2px 8px; font-size: 12.5px; }
 
 /* What happened: the latest result leads, read as a beat, not a log row. */
 .live .operation-feedback .decision-card { border-left: 3px solid var(--line-strong); }
@@ -219,10 +197,9 @@
 
 /* The moment: the stage prompt is the hero line of the scene. */
 .operation-choices .operation-stage-prompt { margin: 2px 0 10px; padding-left: 12px; border-left: 3px solid var(--amber); font-size: 17px; line-height: 1.45; color: #eef2f8; }
-.operation-choices .operation-choice-count { margin: 0 0 8px; font-size: 12.5px; }
 .operation-choices .callbtn { min-height: 0; padding: 9px 11px; gap: 10px; }
 .operation-choices .callbtn-title { font-size: 16px; line-height: 1.2; }
-.operation-choices .callbtn:not(.callbtn-off) .callbtn-sum { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; font-size: 13px; line-height: 1.35; }
+.operation-choices .callbtn:not(.callbtn-off) .callbtn-sum { font-size: 13.5px; line-height: 1.4; }
 .operation-choices .callbtn-forecast { display: grid; gap: 4px; margin-top: 3px; }
 .callbtn-forecast-text { font-size: 12px; line-height: 1.35; }
 .callbtn-harm-high { color: var(--warn); }
@@ -236,12 +213,6 @@
 .odds-bar .odds-adverse { background: var(--danger); color: #2a0703; }
 .odds-bar-mini { height: 5px; max-width: 160px; border-radius: 3px; }
 .callbtn-on .odds-bar-mini { box-shadow: 0 0 0 1px rgba(27, 20, 4, 0.5); }
-
-.decision-dock { position: sticky; bottom: 0; z-index: 4; height: 0; pointer-events: none; }
-.decision-dock-btn { position: absolute; right: 12px; bottom: 12px; display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 14px 0 10px; border: 1px solid #ffd36d; border-radius: 999px; background: linear-gradient(180deg, #ffc94d, #f1b02b); color: var(--amber-ink); font-family: var(--font-cond); font-size: 14px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45); cursor: pointer; opacity: 0; transform: translateY(8px); transition: opacity 0.18s ease, transform 0.18s ease; }
-.decision-dock-btn b { display: grid; place-items: center; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 999px; background: var(--amber-ink); color: var(--amber-2); font-size: 12px; }
-.decision-dock-on .decision-dock-btn { opacity: 1; transform: none; pointer-events: auto; }
-.decision-dock-btn:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
 
 /* the review sheet: chances as a bar, harm as a pill, requirements and supplies as chips */
 .operation-action-sheet .adetail { gap: 8px; }
@@ -354,26 +325,8 @@
 .action-sheet-glance .consequence-level { flex-shrink: 0; font-size: 12px; white-space: nowrap; }
 .action-sheet-locked { display: inline-flex; align-items: center; gap: 4px; flex: 1 1 auto; font-size: 12.5px; color: var(--text-dim); }
 
-/* ------------------------------------------------------------ siren lights (siren-ambiance)
-   Red then blue light washes across the whole blueprint while a hot call runs (sim/authorization.ts
-   isHotCall), clipped to the map so the text and controls around it stay steady. A slow 1.6s
-   alternating glow, never a strobe: each colour swells once a cycle, well under the
-   three-flashes-a-second limit (WCAG 2.3.1). It never takes a tap. Under reduced motion the two
-   colours sit still as a faint split tint. */
 .live-map-inner { overflow: hidden; }
-.siren-lights { position: absolute; inset: 0; z-index: 4; pointer-events: none; mix-blend-mode: screen; }
-.siren-lights::before,
-.siren-lights::after { content: ''; position: absolute; inset: 0; opacity: 0; }
-.siren-lights::before { background: radial-gradient(ellipse 90% 120% at 0% 50%, var(--siren-red), transparent 75%); animation: siren-glow 1.6s ease-in-out infinite; }
-.siren-lights::after { background: radial-gradient(ellipse 90% 120% at 100% 50%, var(--siren-blue), transparent 75%); animation: siren-glow 1.6s ease-in-out -0.8s infinite; }
-@keyframes siren-glow { 0%, 60%, 100% { opacity: 0; } 25% { opacity: var(--siren-alpha); } }
-@media (prefers-reduced-motion: reduce) {
-  .siren-lights::before,
-  .siren-lights::after { animation: none !important; opacity: calc(var(--siren-alpha) * 0.5); }
-}
 
-/* Room between the blueprint and the officer strip on the live screen. */
-.live > .strip { padding-top: 12px; }
 
 /* Weighed choices (choice-weighing): title and cost collapsed, the full reading on tap, and a
    separate Review button so expanding and deciding never share one target. */
@@ -399,12 +352,10 @@
    and the review sheet's lead picker. The pill rides in the head row, so it costs the first choice no
    height unless the head wraps. */
 .threat-pill { display: inline-flex; align-items: center; gap: 5px; max-width: 100%; min-height: 26px; padding: 3px 9px 3px 7px; border: 1px solid rgba(255, 107, 87, 0.55); border-radius: 999px; background: rgba(255, 107, 87, 0.12); color: #ffd2ca; font: 600 13px/1.15 var(--font-cond); letter-spacing: 0.02em; }
-.threat-pill .icon { flex: 0 0 auto; color: var(--danger); animation: threat-tick 2s steps(2, jump-none) infinite; }
+.threat-pill .icon { flex: 0 0 auto; color: var(--danger); }
 .threat-pill-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .threat-pill-sep { opacity: 0.6; }
 .threat-pill-min { flex: 0 0 auto; color: #fff; font-variant-numeric: tabular-nums; white-space: nowrap; }
-@keyframes threat-tick { from { transform: rotate(0deg); } to { transform: rotate(180deg); } }
-@media (prefers-reduced-motion: reduce) { .threat-pill .icon { animation: none; } }
 /* The stage label gives way first: on a narrow phone the pill keeps its minutes and the label truncates. */
 .operation-choices .call-head .call-label { flex: 0 1 auto; min-width: 0; }
 .operation-choices .call-head .threat-pill { flex: 0 1 auto; margin-right: auto; }

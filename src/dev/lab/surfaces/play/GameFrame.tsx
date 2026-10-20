@@ -296,6 +296,20 @@ function ForcePicker({ pick, onPick, onCancel }: { pick: ForcePick; onPick(band:
 
 // ---------------------------------------------------------------- the game's screens
 
+/** The frame's own Confirm, waiting for the lab to commit it (rolled, or forced from the band picker). */
+export interface LabConfirm { actionId: string; decisions: number }
+
+/** The revision a new state opens the result beat on, or null for the decide beat. Only the frame's
+ * own Confirm opens it, once its decision is the one decision added and the call is still running
+ * (a call-ending decision goes to the debrief). A lab step, a rewind or a replay starts on the
+ * decide beat, as does a cancelled band picker followed by some other move. */
+export function labResultOf(confirmed: LabConfirm | null, state: GameState): number | null {
+  const run = state.activeRun;
+  const last = run?.history.at(-1);
+  if (!confirmed || !run || run.status !== 'active' || run.stage === 'debrief' || !last) return null;
+  return run.history.length === confirmed.decisions + 1 && last.actionId === confirmed.actionId ? last.revision : null;
+}
+
 /** OpsLive's wiring with the lab's moves in place of the store: one selector block (liveScreen),
  * the game's LiveView, its review sheet and room sheet, its result record and situation panel. */
 function LiveScreen({ state, onReview, onConfirm,  onFail }: { state: GameState; onReview(id: string): void; onConfirm(id: string, lead?: string): void; onFail(): void }) {
@@ -315,11 +329,20 @@ function LiveScreen({ state, onReview, onConfirm,  onFail }: { state: GameState;
     return { revision: r.revision, spaceIds: [r.targetId, ...r.knowledgeChanges.map(k => k.factId)].filter((x): x is Id => !!x) };
   }, [state]);
 
-  // A new frame (a step, a rewind) starts with nothing under review, as after a commit in the game.
+  // The result beat (docs/call-presentation.md), as OpsLive keeps it: the revision the frame's own
+  // Confirm just committed, read on its own before the next decision shows.
+  const [resultOf, setResultOf] = useState<number | null>(null);
+  const confirmed = useRef<LabConfirm | null>(null);
+
+  // A new frame (a step, a rewind) starts with nothing under review, as after a commit in the game,
+  // and on the decide beat unless it is the frame's own Confirm landing.
   const shownState = useRef(state);
   if (shownState.current !== state) {
     shownState.current = state;
     if (selection || override || panel !== 'none') { setSelection(null); setOverride(null); setActiveOfficer(null); setPanel('none'); }
+    const next = labResultOf(confirmed.current, state);
+    confirmed.current = null;
+    if (next !== resultOf) setResultOf(next);
   }
   const screen = liveScreen(state, NOW, { focusId, selection, override, floor, activeOfficer, selectedSpaceId: selSpace, lastChange, showRooms, detailsOpen: panel === 'action' });
   const targetFloor = screen?.review.targetFloor ?? null;
@@ -328,6 +351,8 @@ function LiveScreen({ state, onReview, onConfirm,  onFail }: { state: GameState;
   const { model, review } = screen;
   const { deployed, focus, view, acting, support, actionRule, maxActing, resupply, lead, bestFit, leadOrder, leadOfficerId, leadMarks, leadBlend, leadCerts, alternatives, scenario, spaceById, targetLabel, availableMembers, actorUnavailable, floorOf } = review;
   const decisions = decisionViews(state);
+  const beat = resultOf !== null && decisions.at(-1)?.revision === resultOf ? 'result' : 'decide';
+  const nextStage = model.progress.stages.find(step => step.state === 'current')?.label;
   const failurePlan = responseFailurePlan(state);
 
   const pickAction = (id: Id) => {
@@ -345,6 +370,7 @@ function LiveScreen({ state, onReview, onConfirm,  onFail }: { state: GameState;
   const confirm = () => {
     if (!view?.eligible || panel !== 'action') return;
     setPanel('none');
+    confirmed.current = { actionId: view.id, decisions: run.history.length };
     onConfirm(view.id, leadOfficerId);
   };
 
@@ -352,6 +378,9 @@ function LiveScreen({ state, onReview, onConfirm,  onFail }: { state: GameState;
   return (
     <LiveView
       {...model}
+      beat={beat}
+      onContinue={() => setResultOf(null)}
+      continueLabel={nextStage ? `Continue to ${nextStage}` : 'Continue'}
       onFocusSquad={id => { if (view && actorUnavailable(id)) return; setFocusId(id); setActiveOfficer(null); if (view) setOverride({ actionId: view.id, ...focusActingSquad({ acting, support }, id) }); }}
       onSelectAction={selectAction}
 
@@ -361,7 +390,7 @@ function LiveScreen({ state, onReview, onConfirm,  onFail }: { state: GameState;
       onToggleRooms={() => setShowRooms(value => !value)}
       onCancel={() => {}}
       onOpenDetails={() => setPanel(panel === 'action' ? 'none' : 'action')}
-      feedback={<OperationFeedback officers={state.officers} decisions={decisions} explicitCompletion={(scenario?.version ?? 0) >= 4} currentPrompt={model.progress.prompt} onOpenLog={() => setPanel('none')} />}
+      feedback={<OperationFeedback officers={state.officers} decisions={decisions} folded={beat === 'decide'} explicitCompletion={(scenario?.version ?? 0) >= 4} currentPrompt={model.progress.prompt} onOpenLog={() => setPanel('none')} />}
       scene={sceneFor(scenario?.incident?.type)}
       situation={scenario && <SituationPanel scenario={scenario} run={run} />}
       supportContext={scenario && <><IncidentPeopleStatus scenario={scenario} run={run} state={state} />

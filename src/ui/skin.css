@@ -136,9 +136,6 @@
 .app .prepare .prep-title.plate .live-name { font-size: 26px; text-shadow: 0 2px 12px rgba(0, 0, 0, 0.9); }
 .app .prepare .prep-title.plate .prep-kicker { color: #c9d3e2; text-shadow: 0 1px 6px rgba(0, 0, 0, 0.9); }
 .app .prepare .prep-title.plate .prep-title-badge { background: rgba(8, 13, 22, 0.55); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
-.app .live .live-title.plate { background: #0b111c; }
-.app .live .live-title.plate::after { background: linear-gradient(90deg, rgba(8, 13, 22, 0.94) 0%, rgba(8, 13, 22, 0.7) 55%, rgba(8, 13, 22, 0.45) 100%), linear-gradient(0deg, rgba(11, 17, 28, 1) 0%, transparent 60%); }
-.app .live .live-title.plate .plate-art { object-position: center 40%; opacity: 0.85; }
 .app .debrief-hero.plate { padding-top: 64px; }
 .app .debrief-hero.plate .debrief-title { text-shadow: 0 2px 12px rgba(0, 0, 0, 0.9); }
 .app .debrief-hero.plate .debrief-narrative { color: #dbe2ec; text-shadow: 0 1px 8px rgba(0, 0, 0, 0.9); }
@@ -177,4 +174,4 @@
 .result-marks i[data-on] { background: linear-gradient(180deg, #ffe08a, var(--amber) 60%, #c98d17); filter: drop-shadow(0 0 6px rgba(243, 180, 50, 0.6)); animation: mark-in .5s ease-out backwards; }
 .result-marks i[data-on]:nth-child(2) { animation-delay: .15s; } .result-marks i[data-on]:nth-child(3) { animation-delay: .3s; }
 .result-marks-muted i { background: rgba(170, 183, 202, 0.18); }
-@keyframes mark-in { from { transform: scale(0.2); opacity: 0; } 70% { transform: scale(1.18); } to { transform: scale(1); opacity: 1; } }
+@keyframes mark-in { from { opacity: 0; } to { opacity: 1; } }

@@ -16,10 +16,6 @@
   --mint: #3fd08e;
   --danger: #ff6b5a;
   --warn: #ff9f43;
-  /* Lights and sirens on a hot call (ops-visual.css .siren-lights). */
-  --siren-red: #ff2a3a;
-  --siren-blue: #2a6bff;
-  --siren-alpha: 0.42;
   /* blueprint paper */
   --paper: #1f55b8;
   --paper-deep: #17469d;

@@ -35,7 +35,7 @@ describe('DecisionList', () => {
     expect(cards(short)).toHaveLength(5);
     expect(ids(short).every(id => id !== null)).toBe(true);
     expect(short).toContain('Show all 9 choices');
-    expect(short).toContain('6 available · 3 unavailable.');
+    expect(short).toContain('Your call<span>6 open · 3 locked</span>');
     const all = render(NINE, null, true);
     expect(ids(all)).toEqual(NINE.map(a => a.id));
     expect(all).toContain('Show fewer choices');
