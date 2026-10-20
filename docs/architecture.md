@@ -10,15 +10,14 @@ syntax tree (`src/dev/import-graph.ts`, with the parser Vite ships), and a dynam
 
 | Layer | Modules | Lines | May import | Owns |
 | --- | --- | --- | --- | --- |
-| kernel | 9 | 2384 | nothing | Shared records, ids, seeded randomness, geometry and the tuning registry. No game rules. |
+| kernel | 9 | 2390 | nothing | Shared records, ids, seeded randomness, geometry and the tuning registry. No game rules. |
 | world | 50 | 8307 | kernel | Blueprints: authored and procedural buildings, rooms, openings, furniture, routes and sightlines. |
-| catalog | 29 | 5932 | kernel, world | Authored data: officers, personas, items, courses, unlocks, call templates and call trees. |
+| catalog | 30 | 6025 | kernel, world | Authored data: officers, personas, items, courses, unlocks, call templates and call trees. |
 | scenario | 10 | 2977 | kernel, world, catalog | Turns a drawn call into a playable definition: cast, placement on the blueprint, compiled tree. |
-| engine | 61 | 13843 | kernel, world, catalog, scenario, commerce | Game rules and state: department, economy, operations, resolution, outcomes, saves. |
-| commerce | 4 | 198 | kernel | Point packs and the purchase ledger. |
-| qa | 34 | 4773 | kernel, world, catalog, scenario, engine, commerce | Content gates, balance measurement, fixtures and test support. Never loaded by the game. |
-| ui | 117 | 16553 | kernel, world, catalog, scenario, engine, commerce | Player screens, the blueprint renderer, portraits and the store that dispatches commands. |
-| lab | 101 | 17461 | kernel, world, catalog, scenario, engine, commerce, qa, ui | The dev-only Scenario Lab and dev sheets. Reads everything, never ships. |
+| engine | 64 | 13999 | kernel, world, catalog, scenario | Game rules and state: department, economy, operations, resolution, outcomes, saves. |
+| qa | 34 | 4784 | kernel, world, catalog, scenario, engine | Content gates, balance measurement, fixtures and test support. Never loaded by the game. |
+| ui | 118 | 16774 | kernel, world, catalog, scenario, engine | Player screens, the blueprint renderer, portraits and the store that dispatches commands. |
+| lab | 101 | 17481 | kernel, world, catalog, scenario, engine, qa, ui | The dev-only Scenario Lab and dev sheets. Reads everything, never ships. |
 | shell | 3 | 372 | kernel, world, catalog, engine, ui, lab | Entry points that choose which app to mount. |
 
 ## Systems
@@ -27,11 +26,11 @@ syntax tree (`src/dev/import-graph.ts`, with the parser Vite ships), and a dynam
 | --- | --- | --- | --- |
 | blueprint | 81 | 13942 | Where things are: buildings, rooms, doors and windows, furniture, routes, cover and sightlines. |
 | subject | 7 | 1358 | Who is on scene: subjects, hostages, victims, bystanders and animals, their holds, weapons, temper (agitation and rapport) and positions. |
-| officer | 16 | 2124 | Who the player sends: ratings, traits, stress, injuries, certifications, careers and squads. |
+| officer | 18 | 2327 | Who the player sends: ratings, traits, stress, injuries, certifications, careers and squads. |
 | item | 7 | 1408 | What they carry: the item catalog, ratings and capabilities, force risk, inventory and wear. |
-| scenario | 65 | 14595 | What happens: call trees, placement on the blueprint, choices, chance per choice, branches and clocks, and the call-time logistics (loadouts, resupply, outside support) that read the items. |
-| metric | 31 | 4989 | What it meant: outcome scoring, harm, debriefs, department reputation, money and progression, and the Command Staff who run the department. |
-| platform | 211 | 34384 | Everything that serves the systems above: records, randomness, saves, the store, screens and tooling. |
+| scenario | 65 | 14636 | What happens: call trees, placement on the blueprint, choices, chance per choice, branches and clocks, and the call-time logistics (loadouts, resupply, outside support) that read the items. |
+| metric | 28 | 4899 | What it meant: outcome scoring, harm, debriefs, department reputation, money and progression, and the Command Staff who run the department. |
+| platform | 213 | 34539 | Everything that serves the systems above: records, randomness, saves, the store, screens and tooling. |
 
 ## System dependency chain
 
@@ -41,14 +40,14 @@ Runtime imports between systems (count of module edges). Platform is left out.
 flowchart LR
   metric -->|1| blueprint
   metric -->|21| item
-  metric -->|33| officer
-  metric -->|10| scenario
+  metric -->|35| officer
+  metric -->|11| scenario
   metric -->|1| subject
   officer -.->|3 reversed| item
   scenario -->|32| blueprint
   scenario -->|30| item
-  scenario -->|23| metric
-  scenario -->|22| officer
+  scenario -->|24| metric
+  scenario -->|25| officer
   scenario -->|13| subject
   subject -->|9| blueprint
 ```
@@ -84,6 +83,8 @@ Each input a system feeds into a choice's chance, and whether the engine actuall
 | When a call comes in, let me make hard decisions under pressure and live with what follows. | The same pick can take more than one branch, by a roll the player was shown the odds of | `src/architecture/journeys.test.ts` |
 | Let me build a department whose people and gear visibly change how calls go. | Better ratings, less strain and the right gear raise the chance on the choices they apply to | `src/architecture/wiring.test.ts` |
 | Let me build a department whose people and gear visibly change how calls go. | Hire an officer and buy equipment with department money | `src/architecture/journeys.test.ts` |
+| Let me build a department whose people and gear visibly change how calls go. | A call earns an officer XP toward a capped rank, and the promotion raises the rating the odds read | `src/architecture/journeys.test.ts` |
+| Let me build a department whose people and gear visibly change how calls go. | A call that lifts the department a level grants that level's developments free, with no purchase | `src/architecture/journeys.test.ts` |
 | After a call, show me why it went the way it did, so the next decision is better. | Every committed decision in the debrief names what helped and what hurt | `src/architecture/journeys.test.ts` |
 | When I come back, show me what happened while I was away and what needs me now. | Time away settles once and caps at 24 hours | `src/sim/economy.test.ts` |
 | Let me build a department whose people and gear visibly change how calls go. | Two squads deploy to one call and the second supports from a named point on the map | `src/gen/incident/second-squad.test.ts` |
@@ -95,4 +96,4 @@ Each input a system feeds into a choice's chance, and whether the engine actuall
 None.
 
 
-Cross-layer runtime imports in total: 720.
+Cross-layer runtime imports in total: 732.

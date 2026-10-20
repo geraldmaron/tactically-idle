@@ -19,6 +19,7 @@ import type {
   OperationRun,
   OutcomeBand,
   PersonMark,
+  RatingKey,
   SpaceView,
   SquadId,
   StageId,
@@ -37,6 +38,7 @@ import { drawnDistribution, type DrawnDistribution } from './drawn-effects';
 import { approxPoint, spaceLabel } from './spatial-factors';
 import { actionEventResult } from './action-result';
 import { CERT_HOLDER } from '../content/certs';
+import { LEAD_PREFIX } from './crew-flags';
 
 export interface ScenarioCard {
   id: Id;
@@ -444,6 +446,24 @@ function inferredConsequenceLevel(action: ActionDefinition): ActionView['consequ
   return safetyLoss >= 18 ? 'severe' : safetyLoss >= 10 ? 'high' : safetyLoss > 0 || action.stressBase >= 5 ? 'moderate' : 'low';
 }
 
+/** The rating a choice leans on most (its heaviest weight; shooting only on an execution check, as
+ * the aptitude counts it), so the card can show the lead's number for it. */
+function keyRatingOf(a: ActionDefinition): Pick<ActionView, 'keyRating'> {
+  if (a.commandOnly) return {};
+  const key = a.check.ratings.filter((r) => r.weight > 0 && (r.key !== 'shooting' || a.check.kind === 'execution'))
+    .reduce<{ key: RatingKey; weight: number } | null>((best, r) => !best || r.weight > best.weight ? r : best, null)?.key;
+  return key ? { keyRating: key } : {};
+}
+
+/** The lead marks (trait ids, band_<band>) this choice's results read (TreeState.lead), so the review
+ * can say whose traits change how it reads before the player picks who leads. */
+function leadReadsOf(a: ActionDefinition): Pick<ActionView, 'leadReads'> {
+  const marks = new Set((['favorable', 'mixed', 'adverse'] as const).flatMap((band) => a.outcomes[band])
+    .flatMap((effect) => [...effect.when?.flags ?? [], ...effect.when?.notFlags ?? []])
+    .filter((flag) => flag.startsWith(LEAD_PREFIX)).map((flag) => flag.slice(LEAD_PREFIX.length)));
+  return marks.size ? { leadReads: [...marks].sort() } : {};
+}
+
 function toView(state: GameState, run: OperationRun, a: ActionDefinition, ev: Evaluation, alternates: SquadId[]): ActionView {
   const hidden = isTargetHidden(a, run);
   const eventResult = actionEventResult(a);
@@ -455,6 +475,8 @@ function toView(state: GameState, run: OperationRun, a: ActionDefinition, ev: Ev
     ...(a.deceives ? { deceives: true as const } : {}),
     ...(a.threat ? { threat: { label: a.threat.label, bands: (['favorable', 'mixed', 'adverse'] as const).filter((band) => teamMinutes(ev, a, band) >= a.threat!.minutes) } } : {}),
     ...(a.weighing ? { weighing: { pull: leadIn(a.weighing.pull, ev, state), cost: leadIn(a.weighing.cost, ev, state) } } : {}),
+    ...keyRatingOf(a),
+    ...leadReadsOf(a),
     id: a.id,
     stage: a.stage,
     title: a.title,
@@ -506,6 +528,8 @@ export function previewAction(
   actionId: Id,
   actingSquadIds: SquadId[],
   supportSquadIds: SquadId[],
+  /** The officer the player sends to lead (decide's leadOfficerId); honored only among those taking part. */
+  lead?: Id,
 ): ActionView | null {
   const run = state.activeRun;
   if (!run || run.status !== 'active' || run.stage === 'debrief') return null;
@@ -513,7 +537,7 @@ export function previewAction(
   const a = s?.stages[run.stage].actions.find((x) => x.id === actionId);
   if (!s || !a || !conditionHolds(a.visibleWhen, run)) return null;
   const built = builtFor(run.locationFamilyId, run.locationSeed, run.flags);
-  const ev = evaluateAction({ state, run, scenario: s, action: a, built, acting: actingSquadIds, support: supportSquadIds });
+  const ev = evaluateAction({ state, run, scenario: s, action: a, built, acting: actingSquadIds, support: supportSquadIds, ...(lead ? { lead } : {}) });
   return toView(state, run, a, ev, []);
 }
 
