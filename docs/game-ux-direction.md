@@ -48,6 +48,15 @@ Each familiar pattern was argued against before it was built. The verdicts:
 - **Armory shop grid.** Strongest failure: a gold price on every tile turns the Armory into a store front and hides what the department already holds. Alternative: price only in the sheet. Verdict: accepted. Owned count, condition and attention stay on the same tile, and the tag's colour says whether a buy is possible now, which is the one decision the grid serves.
 - **Three-mark grade.** Found in the sweep: the marks came from the safety score, which does not count the team's own force, so a call closed by taking a man by hand with shots fired earned three marks. Verdict: rejected as built and fixed. Force, a partial close or an agreed follow-up caps the grade at two, and an unresolved or incomplete call at one (found by the Codex adversarial review); talking everyone out to a resolved close is the only way to three.
 
+### Depth register surfaces, challenged
+
+The depth fields from the scenario-depth work are optional, and a call without them renders as before.
+
+- **Cold open** (`DepthBrief.tsx`). Set as unclamped prose on Prepare above the briefing, and at the top of the live briefing the first time it opens. After that it folds to "Before the call". It never sits on the live scene's first screen, which belongs to the moment and the choices.
+- **Who they are.** The first section of the full briefing, above why the team was sent, on Prepare and live.
+- **Weighed choices.** Strongest failure: the old card was one target that opened the review sheet, and adding tap-to-expand on a phone either costs every decision an extra tap or makes one tap do two things. Alternative: keep one tap to review and put the pull and the cost only in the sheet. Verdict: accepted with controls. Collapsed, the card is the title, the cost, and a 44px Review row that keeps time, odds and possible harm in view (harm is never folded). Tapping the text expands the full summary, the pull, the cost and the odds in place. Review is a separate button, so reviewing still takes one tap. A choice without a pull and cost keeps today's single-tap card.
+- **Results and endings** run long now. Neither the decision card nor the debrief hero clamps them.
+
 ## How the game reveals more
 
 One rule per kind of hidden content (disclosure-taxonomy, 2026-10-19):

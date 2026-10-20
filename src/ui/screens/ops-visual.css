@@ -357,3 +357,23 @@
 .action-sheet-glance .odds-bar { flex: 1 1 auto; height: 18px; }
 .action-sheet-glance .consequence-level { flex-shrink: 0; font-size: 12px; white-space: nowrap; }
 .action-sheet-locked { display: inline-flex; align-items: center; gap: 4px; flex: 1 1 auto; font-size: 12.5px; color: var(--text-dim); }
+
+/* Weighed choices (choice-weighing): title and cost collapsed, the full reading on tap, and a
+   separate Review button so expanding and deciding never share one target. */
+.operation-choices .callbtn-weighed { display: grid; gap: 6px; padding: 0; cursor: default; }
+.callbtn-expand { display: flex; align-items: flex-start; gap: 10px; width: 100%; min-height: 44px; padding: 9px 11px 0; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.callbtn-expand:focus-visible, .callbtn-review:focus-visible { outline: 2px solid var(--amber); outline-offset: -2px; border-radius: 6px; }
+.callbtn-expand .callbtn-text { flex: 1 1 auto; }
+.callbtn-chevron { flex: 0 0 auto; margin-top: 2px; opacity: 0.7; }
+.callbtn-cost { margin-top: 3px; font-size: 13.5px; line-height: 1.4; color: #c9d3e2; }
+.callbtn-weigh { display: grid; gap: 6px; padding: 0 11px; }
+.callbtn-weigh p { margin: 0; font-size: 14px; line-height: 1.5; color: #dce5f2; }
+.callbtn-weigh-line b { font-family: var(--font-cond); font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; font-size: 12.5px; color: var(--amber-2); }
+.callbtn-weigh-cost b { color: #ffb4aa; }
+.callbtn-weighed > .callbtn-command, .callbtn-weighed > .callbtn-forecast { margin: 0 11px; }
+.callbtn-review { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; margin-top: 2px; padding: 6px 11px; border: 0; border-top: 1px solid rgba(255, 255, 255, 0.08); border-radius: 0 0 6px 6px; background: rgba(8, 13, 24, 0.35); color: inherit; font: inherit; cursor: pointer; }
+.callbtn-review-odds { min-width: 0; font-size: 12px; line-height: 1.35; color: #9fb0c8; }
+.callbtn-review-label { display: inline-flex; align-items: center; gap: 2px; margin-left: auto; flex: 0 0 auto; font: 700 13px/1 var(--font-cond); letter-spacing: 0.08em; text-transform: uppercase; color: var(--amber-2); }
+.callbtn-on .callbtn-cost, .callbtn-on .callbtn-weigh p, .callbtn-on .callbtn-review-odds { color: #3a2a06; }
+.callbtn-on .callbtn-review { background: rgba(58, 42, 6, 0.12); }
+.callbtn-on .callbtn-review-label, .callbtn-on .callbtn-weigh-line b { color: var(--amber-ink); }

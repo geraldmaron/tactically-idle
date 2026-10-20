@@ -39,6 +39,7 @@ import type { AutoNote, Explicit, Loadouts } from './autoPlan';
 import { buildIntel } from './intel';
 import { handCarriedLoadout, SupportPreparation } from './SupportPreparation';
 import { PrepBriefing } from './PrepBriefing';
+import { ColdOpen } from '../components/DepthBrief';
 import { GamePeopleProvider } from '../people/PeopleText';
 import { lexiconFor } from '../people/lexicon';
 import { preparationOptions } from './preparation-options';
@@ -297,6 +298,7 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
         </div>
       </div>
 
+      <ColdOpen text={scenario?.coldOpen} className="prep-cold-open" />
       <PrepBriefing scenario={scenario} built={built} brief={brief} intel={intel} />
 
       <div className="prep-map" aria-label="Location preview">
