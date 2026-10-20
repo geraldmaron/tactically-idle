@@ -966,11 +966,13 @@ export const HOSTAGE_SIGNATURE: CallTree = {
             ],
           } },
         { id: 'step_back', title: 'Clear out of sight', icon: 'wait', check: check(HOLD, -2), minutes: 8,
-          summary: 'Everyone steps out of {taker.first}’s sight, leaving nobody to aim at, and nobody near enough to help {owner.first}.',
+          summary: 'Every officer steps back out of {taker.first}’s sight, off the glass and off the street, until there is nobody left for {taker.him} to aim at and nobody to perform for. That also leaves nobody near enough to help {owner.first} if it goes wrong.',
+          pull: 'Take away the audience and the target in one move.',
+          cost: 'Nobody is close enough to reach {owner.first} if it goes wrong.',
           preview: { favorable: 'With nobody in view, the handgun comes down.', mixed: '{taker.first} puts the handgun down but won’t release {owner.first}.', adverse: 'The handgun stays where it is, and nobody is close by if {taker.first} hurts {owner.first}.' },
           outcomes: {
             favorable: [
-              { text: 'With the street empty, {taker.first} picks up the phone and releases {owner.first}.', safe: ['owner'], mark: ['still_armed'], moves: { taker: 'released' }, next: { node: 'last_one' }, objective: 40 },
+              { text: 'With the street suddenly empty, {taker.first} lowers the handgun by inches. After a minute {taker.he} {taker~picks|pick} up the phone, asks where everybody went, and tells {owner.first} to go while nobody is looking.', safe: ['owner'], mark: ['still_armed'], moves: { taker: 'released' }, next: { node: 'last_one' }, objective: 40 },
               courierToo('{courier.first} leaves the shop with {owner.him}.'),
             ],
             mixed: heldEnd({ text: 'The handgun drops to {taker.first}’s side, but {owner.first} isn’t let go. The block stays sealed.', objective: 15 },
@@ -978,13 +980,13 @@ export const HOSTAGE_SIGNATURE: CallTree = {
             adverse: [
               ...heldEnd({ if: LETS_GO, text: 'From the corner, the team can see {owner.first} still in the handgun’s path.', reveal: ['lets_go'], pressure: 8 },
                 '{courier.first} has {courier.his} back to the wall by the door.', 'Then {owner.first} goes down, and {taker.first} stands over {owner.him}.', [LETS_GO]),
-              { if: KEEPS, text: 'By the time the team looks again, {owner.first} has signed, struck with the handgun until {owner.he} did. {taker.first} sends {owner.him} out and keeps the page.', reveal: ['lets_go'], safe: ['owner'], harm: { owner: 'serious' }, next: { ending: 'owner_beaten' }, objective: 10, pressure: 10 },
-              courierToo('{courier.first} is sent out the front.', { if: KEEPS }),
+              { if: KEEPS, text: 'By the time the team looks again, {owner.first} has signed, struck with the handgun until {owner.he} did. {taker.first} sends {owner.him} out the front, holding {owner.his} face, and keeps the page folded in {taker.his} shirt pocket like a receipt.', reveal: ['lets_go'], safe: ['owner'], harm: { owner: 'serious' }, next: { ending: 'owner_beaten' }, objective: 10, pressure: 10 },
+              courierToo('{courier.first} is waved out after {owner.him}.', { if: KEEPS }),
             ],
           } },
       ] },
     { id: 'fired_on', stage: 'resolve',
-      prompt: 'A shot has been fired. {owner.first} is still at the counter.',
+      prompt: 'A shot has been fired, and every officer on the street heard where it came from. {owner.first} is still at the counter. Nobody inside has said a word since, and the shop radio has gone quiet too.',
       exchange: [{ by: 'radio', line: 'One round fired. Everybody’s back behind cover.' }],
       promptIf: [
         { when: { notSafe: ['courier'] }, prompt: 'Since the shot, neither {owner.first} nor {courier.first} has come out.' },
@@ -993,11 +995,13 @@ export const HOSTAGE_SIGNATURE: CallTree = {
         { id: 'go_in', title: 'Go in now', icon: 'shield', team: { to: 'scene', entry: 'taker' }, check: check(ENTER, 12), minutes: 2, stress: 6, tempo: 'urgent', consequenceLevel: 'severe',
           requires: { certs: ['entry_team'] }, authority: 'entry', equipment: [{ tag: 'shield', value: 6, label: 'Shield up front' }],
           modifiers: [{ label: 'Officers are already at the door', mark: 'team_close', value: 8 }, { label: 'The landlord’s key works', mark: 'spare_key', value: 8 }, { label: 'The bolt is open', mark: 'door_open', value: 6 }],
-          summary: 'Your squad goes in at someone who just fired. {owner.first} could die, and an officer could be hit.',
+          summary: 'Your squad goes in at someone who has just fired, with the shot still ringing in everyone’s ears. {owner.first} is in there with that handgun for every second you wait. In the doorway {owner.first} could die, so could {taker.first}, and an officer could be hit.',
+          pull: 'Someone just fired, and {owner.first} is in the room with it.',
+          cost: 'An officer can be hit, and so can the people inside.',
           preview: { favorable: 'You get to {owner.first} first and bring {owner.him} out.', mixed: 'You bring {owner.first} out with an injury.', adverse: '{taker.first} meets you at the till, armed. {owner.first} may not survive the entry, and {taker.first} may be hurt too.' },
           outcomes: {
             favorable: [
-              { text: 'Officers get there before {taker.first} can swing around. {owner.first} is hustled out to the street, and {taker.first} ends up prone with empty hands.', safe: ['owner'], out: ['taker', 'others'], next: { ending: 'entry_clean' }, objective: 50 },
+              { text: 'Officers get there before {taker.first} can swing around. {owner.first} is out on the street before {owner.he} knows {owner.he} {owner~has|have} moved, and {taker.first} ends up face down on the tiles with empty hands, saying sorry to nobody in particular.', safe: ['owner'], out: ['taker', 'others'], next: { ending: 'entry_clean' }, objective: 50 },
               courierToo('{courier.first} is already outside.'),
               { when: GROUP, text: '{others} {others#shows|show} officers {others.his} empty hands.' },
             ],
@@ -1013,11 +1017,13 @@ export const HOSTAGE_SIGNATURE: CallTree = {
             ],
           } },
         { id: 'hold_corner', title: 'Regroup and call {taker.him}', icon: 'wait', talksTo: 'taker', check: check(HOLD), minutes: 10,
-          summary: 'You regroup behind cover and call the shop. {owner.first} stays inside with someone who has just fired.',
+          summary: 'You pull everyone back behind cover, count heads, and call the shop again as if nothing changed. Most people who fire once are as frightened by it as anyone. {owner.first} stays inside with someone who has just fired while you find out which kind this is.',
+          pull: 'Learn what that shot meant before anyone answers it.',
+          cost: '{owner.first} stays in a room where a shot was just fired.',
           preview: { favorable: 'You get an answer, and {owner.first} goes free.', mixed: '{taker.first} talks but keeps {owner.first} there.', adverse: 'No answer comes, and {owner.first} stays in there with {taker.him}.' },
           outcomes: {
             favorable: [
-              { text: 'On the fourth call {taker.first} picks up and says {taker.he} didn’t mean to fire. {owner.first} can go.', safe: ['owner'], mark: ['still_armed'], moves: { taker: 'released' }, next: { node: 'last_one' }, objective: 35 },
+              { text: 'On the fourth call {taker.first} picks up. {taker.His} voice is shaking. {taker.He} {taker~keeps|keep} saying {taker.he} didn’t mean to fire, that it just went off, and that {owner.first} can go right now.', safe: ['owner'], mark: ['still_armed'], moves: { taker: 'released' }, next: { node: 'last_one' }, objective: 35 },
               courierToo('{courier.first} comes out alongside {owner.him}.'),
             ],
             mixed: heldEnd({ text: '{taker.first} picks up but won’t let {owner.first} go. The street stays shut.', objective: 8 },
@@ -1027,18 +1033,20 @@ export const HOSTAGE_SIGNATURE: CallTree = {
           } },
       ] },
     { id: 'owner_down', stage: 'resolve',
-      prompt: '{owner.first} has collapsed behind the counter and isn’t answering. A medic waits at the corner for your word.',
+      prompt: '{owner.first} has collapsed behind the counter and isn’t answering, and {taker.first} is shouting into the phone for somebody to do something. A medic waits at the corner with the bag open. The door is still bolted, and only {taker.first} can unbolt it.',
       exchange: [{ by: 'radio', line: 'Medic says minutes, not an hour.' }],
       // A clock that runs out in the decision a shot came from (onOut.next) arrives here after that
       // shot's line, so the prompt says the shot missed the owner.
       promptIf: [{ when: { marks: ['shot_at_team'] }, prompt: 'The shot missed {owner.first}. Now {owner.he} {owner~is|are} slumped on the floor, and a medic stands by out front.' }],
       choices: [
         { id: 'medic_door', title: 'Get the medic to {owner.first}', icon: 'radio', talksTo: 'taker', check: check(TALK, -4), minutes: 3,
-          summary: '{lead} wants {taker.first} to unbolt the front for the medic. Two officers will fetch {owner.first} only if {taker.he} {taker~does|do}.',
+          summary: '{lead} asks {taker.first} to unbolt the front for the medic, now, and to step back from the door while two officers carry {owner.first} out. It asks {taker.him} to trust you with the one thing that matters to everyone right now.',
+          pull: 'The fastest care {owner.first} can get, with nobody hurt.',
+          cost: 'It only works if {taker.first} opens that door.',
           preview: { favorable: 'The bolt comes back, and {owner.first} is carried out.', mixed: '{owner.first} is brought out while {taker.first} watches, armed.', adverse: '{taker.first} won’t open, and {owner.first} lies there untreated.' },
           outcomes: {
             favorable: [
-              { text: '{taker.first} slides the bolt and steps back from the door, the handgun on the counter behind {taker.him}. Two officers lift {owner.first} onto a stretcher.', safe: ['owner'], moves: { taker: 'released' }, next: { ending: 'owner_collapsed' }, objective: 25 },
+              { text: '{taker.first} slides the bolt and steps back from the door with {taker.his} palms out, the handgun on the counter behind {taker.him}. Two officers lift {owner.first} onto a stretcher. As they go, {taker.first} asks them to take {owner.his} coat.', safe: ['owner'], moves: { taker: 'released' }, next: { ending: 'owner_collapsed' }, objective: 25 },
               courierToo('{courier.first} comes out behind the stretcher.'),
             ],
             mixed: [
@@ -1054,7 +1062,9 @@ export const HOSTAGE_SIGNATURE: CallTree = {
         { id: 'go_in', title: 'Go in for {owner.first}', icon: 'shield', team: { to: 'scene', entry: 'taker' }, check: check(ENTER, 4), minutes: 2, stress: 6, tempo: 'urgent', consequenceLevel: 'severe',
           requires: { certs: ['entry_team'] }, authority: 'entry', equipment: [{ tag: 'shield', value: 6, label: 'Shield up front' }],
           modifiers: [{ label: 'A key to the front', mark: 'spare_key', value: 8 }, { label: 'The front is unbolted', mark: 'door_open', value: 6 }],
-          summary: '{lead} takes your squad in for {owner.first}. {taker.first} is armed, and anyone at that counter can be hurt.',
+          summary: '{lead} takes your squad in for {owner.first} without waiting for the bolt. Minutes matter for a heart, and the door is the only thing in the way. {taker.first} is armed and frightened, and anyone at that counter can be hurt.',
+          pull: 'A failing heart can’t wait for a bolt.',
+          cost: 'Going through an armed, frightened person to reach {owner.him}.',
           preview: { favorable: 'Your squad gets to {owner.first}, and {taker.first} gives up the handgun.', mixed: 'Officers get {owner.first} out, but one of them is hurt in the scramble.', adverse: '{taker.first} fights you at the counter and may end up badly hurt. An officer can be hit.' },
           outcomes: {
             favorable: [
@@ -1073,7 +1083,7 @@ export const HOSTAGE_SIGNATURE: CallTree = {
           } },
       ] },
     { id: 'last_one', stage: 'resolve',
-      prompt: '{courier.first} and {owner.first} are outside with patrol. {taker.first} is alone behind the counter.',
+      prompt: '{courier.first} and {owner.first} are outside with patrol, wrapped in the same gray blanket from the medic. {taker.first} is alone behind the counter of a shop {taker.he} opened every morning for six years, and the only thing left to decide is how {taker.he} walks out.',
       exchange: [{ by: 'taker', line: 'Everybody out there is filming.' }, { by: 'negotiator', line: 'Tell me what you need to walk out.' }],
       promptIf: [
         { when: GROUP_IN, prompt: '{owner.first} and {courier.first} are clear. {others} {others#is|are} still beside {taker.first}.' },
@@ -1082,16 +1092,20 @@ export const HOSTAGE_SIGNATURE: CallTree = {
       choices: [
         { id: 'out_front', title: 'Talk {taker.him} out the front', icon: 'radio', talksTo: 'taker', check: check(TALK, 8), minutes: 6, onlyIf: { notMarks: ['back_promised'] },
           modifiers: [{ label: '{taker.He} still {taker~has|have} the handgun', mark: 'still_armed', value: -8 }, { label: 'You heard the whole story', mark: 'knows_story', value: 4 }],
-          summary: '{lead} tells {taker.first} how to come out, hands open, past the street and every phone at the tape.',
+          summary: '{lead} tells {taker.first} exactly how to come out, one step at a time, hands open, through the front door and past the street and every phone at the tape. It is the plainest way out, and the most public. The regulars are out there.',
+          pull: 'Simple instructions, in plain view.',
+          cost: 'The whole street watches {taker.first} walk out.',
           preview: { favorable: '{taker.first} walks out the front with empty hands.', mixed: '{taker.first} stalls in the doorway with the street watching, then comes out.', adverse: '{taker.first} won’t walk out where the street can see, and stays at the counter.' },
           outcomes: {
-            favorable: [{ text: '{taker.first} steps through the front door with {taker.his} hands open, the way the team tells {taker.him}. Officers take {taker.him} by the arms.', ...surrender('everyone_out'), objective: 30 }],
+            favorable: [{ text: '{taker.first} steps through the front door with {taker.his} hands open, the way the team tells {taker.him}, and stops at the top step to look at the regulars behind the tape. One of them lifts a hand. Officers take {taker.him} by the arms.', ...surrender('everyone_out'), objective: 30 }],
             mixed: [{ text: '{taker.first} stands inside the glass for twenty minutes, then steps out past a row of phones at the tape. Two officers meet {taker.him} on the step.', ...surrender('everyone_out'), objective: 25, minutes: 15 }],
             adverse: [{ text: '{taker.first} isn’t walking out in front of everyone, {taker.he} {taker~says|say}, and sits back down at the register.', next: { ending: 'taker_held' }, objective: 5 }],
           } },
         { id: 'out_back', title: 'Bring {taker.him} out the back', icon: 'door', team: { to: { vantage: 'scene' }, signal: { channel: 'voice', to: 'taker' } }, talksTo: 'taker', check: check(TALK, -4), minutes: 5, onlyIf: { marks: ['wants_back'] }, authority: { concede: 'surrender_terms' },
           modifiers: [{ label: 'The handgun is still in reach', mark: 'still_armed', value: -8 }],
-          summary: '{lead} brings {taker.first} out the rear, away from any camera. The alley leaves little room for a change of mind.',
+          summary: '{lead} brings {taker.first} out the rear, as promised, away from the tape and every camera on the street. It keeps {taker.his} face out of tomorrow’s phones. The alley is narrow and dark, though, and leaves little room for a change of mind.',
+          pull: 'Keep the promise, and keep {taker.his} face off the street.',
+          cost: 'A narrow dark alley, and no room if {taker.he} {taker~changes|change} {taker.his} mind.',
           preview: { favorable: '{taker.first} steps into the alley with nothing in {taker.his} hands.', mixed: '{taker.first} hesitates at the rear, then comes out.', adverse: '{taker.first} stops in the back doorway and goes back inside.' },
           outcomes: {
             favorable: [{ text: '{taker.first} comes out the alley door with open hands and asks the team not to let the street see {taker.him}. The team has {taker.him} before the corner.', ...surrender('out_the_back'), objective: 32 }],
@@ -1099,7 +1113,9 @@ export const HOSTAGE_SIGNATURE: CallTree = {
             adverse: [{ text: 'At the doorway {taker.first} backs inside again and bolts the rear exit.', next: { ending: 'taker_held' } }],
           } },
         { id: 'let_him_sit', title: 'Let {taker.him} decide', icon: 'wait', check: check(HOLD, -14), minutes: 45, span: 'All night',
-          summary: 'Command keeps the street closed while {taker.first} decides when to come out. Your squad stays on the corner until then.',
+          summary: 'Command keeps the street closed while {taker.first} decides, alone, when to come out. Nobody is in danger in there now but {taker.first}. Your squad stays on the corner until morning if it takes until morning.',
+          pull: 'No one left to protect but {taker.first}, so let time do it.',
+          cost: 'Your squad holds a corner all night, and {taker.first} sits alone with it.',
           preview: { favorable: '{taker.first} calls out that {taker.he} {taker~is|are} coming out.', mixed: 'The door opens near dawn.', adverse: 'The shift ends and {taker.first} hasn’t come out.' },
           outcomes: {
             favorable: [{ text: '{taker.first} shouts through the door that {taker.he} {taker~is|are} done. {taker.He} {taker~walks|walk} to the team with {taker.his} palms showing.', ...surrender('out_by_dawn'), objective: 28 }],
