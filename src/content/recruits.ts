@@ -3,6 +3,7 @@ import { hashSeed, next } from '../sim/rng';
 import { shuffledPersonas, type Persona } from './personas';
 import { tunable } from '../sim/tuning';
 import { issueKitCost } from './issue-kit';
+import { rankForService, rankPay, xpForService } from './ranks';
 
 /** Tunable (sim/tuning.ts). A candidate's cost, wage, ratings and expiry are set when the candidate
  * is drawn, so those fields reach new candidates only. `rookieService` is read nowhere. */
@@ -19,8 +20,6 @@ export const RECRUIT_TUNING = tunable('RECRUIT_TUNING', {
   /** Newcomers can be any adult age. Prior service is rolled separately. */
   rookieService: [0, 1.2] as [number, number],
   /** Experience adds this much wage per 3 years of prior service (capped), and this much signing fee per year. */
-  wagePerThreeYears: 1,
-  wageExperienceCap: 6,
   signingPerServiceYear: 25,
 });
 
@@ -88,8 +87,7 @@ export function fullNameKey(first: string, last: string): string {
 
 function wageFor(ratings: Ratings, certs: CertId[], traits: TraitId[], serviceYears: number): number {
   const avg = Object.values(ratings).reduce((a, b) => a + b, 0) / 6;
-  const experience = Math.min(RECRUIT_TUNING.wageExperienceCap, Math.floor(serviceYears / 3) * RECRUIT_TUNING.wagePerThreeYears);
-  const w = 34 + avg * 0.22 + certs.length * 2 + experience + (traits.includes('rookie') ? -5 : 0);
+  const w = 34 + avg * 0.22 + certs.length * 2 + rankPay(rankForService(serviceYears)) + (traits.includes('rookie') ? -5 : 0);
   return Math.max(38, Math.min(62, Math.round(w)));
 }
 
@@ -117,11 +115,12 @@ export function buildPersona(person: Persona, seed: number, role = roleForPerson
   const maxService = Math.max(0, person.ageAtStart - 21);
   const service = rookie ? roll(gen) * Math.min(1.2, maxService) : roll(gen) * maxService;
   const operations = Math.floor(service * 5 * roll(gen));
-  const xp = rookie ? 0 : rollInt(gen, 200);
+  // Rank follows service (sim/ranks.ts): a recruit arrives at the rank their years place them.
+  const xp = xpForService(service);
   return {
     id: `off_${person.id}`, identityId: person.id,
     firstName: person.firstName, surname: person.surname, portrait: person.portrait,
-    role, ratings, certs, traits, wage: wageFor(ratings, certs, traits, service), xp, xpBanked: xp,
+    role, ratings, certs, traits, wage: wageFor(ratings, certs, traits, service), xp,
     stress: rollInt(gen, 20), injury: null, squadId: null, assignment: null, hiredAt: 0,
     // Birth/service dates are fixed at first introduction, never reset on a later refresh.
     bornDay: introducedDay - Math.round(person.ageAtStart * 365), serviceStartDay: introducedDay - Math.round(service * 365),

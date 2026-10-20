@@ -446,7 +446,7 @@ export const MS_URGENT: ScenarioDefinition = {
     handed_to_ems: { id: 'handed_to_ems', disposition: 'resolved', completion: { pressureAtLeast: 0 }, title: 'Handed to medical responders', summary: 'A safe transfer to the people best placed to help.', trustAdjust: 0, strain: 0 },
     handed_over: { id: 'handed_over', disposition: 'unresolved', title: 'Handed over', summary: 'Responsibility was transferred.', trustAdjust: 0, strain: 0 },
   },
-  rewards: { funding: 1600, devPoints: 2, trust: 4, xp: 28 },
+  rewards: { funding: 1600, trust: 4, xp: 28 },
 };
 
 

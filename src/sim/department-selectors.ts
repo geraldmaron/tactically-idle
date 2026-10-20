@@ -7,6 +7,7 @@ import type {
   GameState,
   Id,
   ItemDefinition,
+  GrantRecord,
   Officer,
   SquadId,
 } from './types';
@@ -21,7 +22,10 @@ import { ECONOMY_TUNING, HOUR_MS, isInjured, netRate, ratesAt, recoveryMultiplie
 import { formatDuration } from './format';
 import { deployRoster, recoveryDuty, squadDeployed } from './squads';
 import { ROSTER_TUNING, dismissCheck, hireCheck, retentionOffer } from './roster';
-import { EXPERIENCE_LABEL, experienceBand, formatGameDate, gameDay, serviceYears } from './calendar';
+import { formatGameDate, gameDay, serviceYears } from './calendar';
+import { RANKS } from '../content/ranks';
+import { EXPERIENCE_LABEL, experienceBand, rankProgress, type ExperienceBand, type RankId } from './ranks';
+import { grantOf, nextMilestone, type MilestoneView } from './grants';
 import {
   CAREER_TUNING,
   ageEffectLine,
@@ -32,8 +36,6 @@ import {
   spanLabel,
   upcomingWageSteps,
   wholeAge,
-  xpProgress,
-  LEARNING_MULTIPLIER,
 } from './career';
 import { daysToUnreliable, projectedCondition, scrapCheck, serviceCheck, stateLabelFor } from './equipment';
 import { departmentUpkeep, equipmentWearMultiplier } from './equipment-manager-policy';
@@ -52,7 +54,6 @@ export interface Budget {
   /** Command Staff salaries while on duty. */
   staff: number;
   net: number;
-  devPointsPerHour: number;
   /** Extra wages per hour from service anniversaries landing in the next 30 game days. */
   wageStepsNext30d: number;
 }
@@ -92,12 +93,16 @@ export interface NodeOption {
   currentEffects: string[];
   /**
    * 'available' means prerequisites are met. When it cannot be bought yet
-   * (points or funding), `reason` says what is missing; a null reason means buy now.
+   * (funding), `reason` says what is missing; a null reason means buy now.
    */
   status: 'unlocked' | 'available' | 'locked';
   reason: string | null;
   /** Player-language effect lines. */
   effects: string[];
+  /** The milestone that grants the next tier free (sim/grants.ts), null when complete. */
+  milestone: MilestoneView | null;
+  /** How the current tier was granted, when a milestone gave it. */
+  granted: GrantRecord | null;
 }
 
 export interface StoreOption {
@@ -211,6 +216,8 @@ export function nodeOptions(state: GameState): NodeOption[] {
       status: c.status, reason: c.reason,
       currentEffects: quote.currentEffects.map(describeEffect),
       effects: (quote.targetTier ? quote.effects : quote.currentEffects).map(describeEffect),
+      milestone: nextMilestone(state, node.id)?.view ?? null,
+      granted: quote.currentTier ? grantOf(state, node.id, quote.currentTier) : null,
     };
   });
 }
@@ -336,8 +343,12 @@ export function unitViews(state: GameState, itemId: Id, now: number): UnitView[]
 export interface CareerInfo {
   age: number;
   serviceYears: number;
-  experience: import('./calendar').ExperienceBand;
+  experience: ExperienceBand;
   experienceLabel: string;
+  rank: RankId;
+  rankTitle: string;
+  /** The next rank and the XP still needed for it; null at the top rank, where XP stops. */
+  nextRank: { rank: RankId; title: string; xpToGo: number } | null;
   /** Player-language effects of experience/age currently applied in operations and training. */
   effects: string[];
   /** Formatted game date strings. */
@@ -348,11 +359,11 @@ export interface CareerInfo {
   outlook: string;
 }
 
-const EXPERIENCE_EFFECT: Record<import('./calendar').ExperienceBand, string> = {
-  rookie: 'Rookie: rattles more easily under pressure, but learns fast (+30% from xp)',
-  developing: 'Developing: steady, learns at the normal rate',
-  seasoned: 'Seasoned: holds up better under pressure, learns 15% slower',
-  veteran: 'Veteran: steadier under pressure and mentors others, learns 30% slower',
+const EXPERIENCE_EFFECT: Record<ExperienceBand, string> = {
+  rookie: 'Rookie: rattles more easily under pressure, but takes 30% more from each call',
+  developing: 'Developing: steady, takes the normal share from each call',
+  seasoned: 'Seasoned: holds up better under pressure, takes 15% less from each call',
+  veteran: 'Veteran: steadier under pressure and mentors others, takes 30% less from each call',
 };
 
 export function careerInfo(state: GameState, officerId: Id, now: number): CareerInfo | null {
@@ -361,14 +372,15 @@ export function careerInfo(state: GameState, officerId: Id, now: number): Career
   const t = Math.max(now, state.department.clockHighWater);
   const day = gameDay(state, t);
   const age = wholeAge(o, day);
-  const band = experienceBand(o, day);
+  const band = experienceBand(o);
   const years = serviceYears(o, day);
 
   const effects: string[] = [EXPERIENCE_EFFECT[band]];
   const ageLine = ageEffectLine(age);
   if (ageLine) effects.push(ageLine);
-  const need = Math.round(CAREER_TUNING.xpPerPoint / LEARNING_MULTIPLIER[band]);
-  effects.push(`Needs ${need} xp per rating point (${Math.round(xpProgress(o, day) * 100)}% of the way to the next)`);
+  const progress = rankProgress(o);
+  const nextRankInfo = progress.next && progress.need !== null ? { rank: progress.next, title: RANKS[progress.next].title, xpToGo: Math.max(0, progress.need - o.xp) } : null;
+  effects.push(nextRankInfo ? `${nextRankInfo.xpToGo} XP to ${nextRankInfo.title}` : `${RANKS[progress.rank].title}, the top rank. XP no longer rises`);
   const { adverse, total } = recentAdverse(state, o.id);
   if (adverse >= 2) effects.push(`Strained by recent operations: ${adverse} of the last ${total} went badly`);
   if (o.stress > CAREER_TUNING.burnoutStress) effects.push(`Burnout risk: stress above ${CAREER_TUNING.burnoutStress}`);
@@ -406,6 +418,9 @@ export function careerInfo(state: GameState, officerId: Id, now: number): Career
     serviceYears: Math.round(years * 10) / 10,
     experience: band,
     experienceLabel: EXPERIENCE_LABEL[band],
+    rank: progress.rank,
+    rankTitle: RANKS[progress.rank].title,
+    nextRank: nextRankInfo,
     effects,
     born: formatGameDate(o.bornDay),
     serviceStart: formatGameDate(o.serviceStartDay),

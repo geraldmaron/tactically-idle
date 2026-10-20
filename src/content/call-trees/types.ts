@@ -441,5 +441,5 @@ export interface CallTree {
   /** Base check difficulty is base + perTier x tier (default 31 + 3 x tier); a choice's
    * `check.difficulty` is added to it. Set from the balance gate, never by feel. */
   difficulty?: { base: number; perTier: number };
-  rewards: { funding: number; devPoints: number; trust: number; xp: number };
+  rewards: { funding: number; trust: number; xp: number };
 }

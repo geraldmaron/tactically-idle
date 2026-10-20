@@ -116,7 +116,6 @@ export function FinanceDetail({ g, now = Date.now() }: { g: GameState; now?: num
       {b.staff > 0 && <div><dt>Command staff</dt><dd>-{perHour(b.staff)}</dd></div>}
       <div><dt>Facilities</dt><dd>-{perHour(b.operating)}</dd></div>
       <div><dt>Routine supplies</dt><dd>-{perHour(b.supplies)}</dd></div>
-      <div className="finance-lines-dp"><dt>Development points</dt><dd>{b.devPointsPerHour.toFixed(1)}/h</dd></div>
     </dl>
     <OfficerMoney g={g} />
     <h3 className="finance-head">Recent activity</h3>

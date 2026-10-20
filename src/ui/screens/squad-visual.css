@@ -222,12 +222,14 @@
 /* ---------------------------------------------------------------- character-card badge */
 /* The role's main rating in a medallion, ringed by XP toward its next point (squad-cards). No
    rarity frame: officers are people, not loot (E3). */
-.ocard-badge { position: absolute; z-index: 3; top: 3px; right: 3px; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%;
+.ocard-badge { position: absolute; z-index: 3; top: 3px; right: 3px; display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%;
   background: conic-gradient(var(--mint) var(--xp, 0%), rgba(255, 255, 255, 0.16) 0); box-shadow: 0 1px 4px rgba(0, 0, 0, 0.6); }
 .ocard-badge::before { content: ''; position: absolute; inset: 2.5px; border-radius: 50%; background: radial-gradient(circle at 50% 30%, #24324a, #0b111c); }
 .ocard-badge b { position: relative; font: 600 11px/1 var(--font-display); color: #f3f7ff; font-variant-numeric: tabular-nums; letter-spacing: 0; }
 .ocard-badge-capped { background: conic-gradient(var(--amber) 100%, transparent 0); }
 .ocard-badge-capped b { color: var(--amber-2); }
+.ocard-badge .rank-insignia { position: relative; }
+.ocard-name small { font: 700 0.8em/1 var(--font-cond); letter-spacing: 0.02em; color: var(--chalk-dim); }
 .ocard-state-low { top: 30px; }
 
 /* Small phones: squad tabs show the letter only (the panel below names the squad), so up to four

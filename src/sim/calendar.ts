@@ -33,24 +33,6 @@ export function serviceYears(o: Pick<Officer, 'serviceStartDay'>, day: number): 
   return Math.max(0, (day - o.serviceStartDay) / CALENDAR.daysPerYear);
 }
 
-export type ExperienceBand = 'rookie' | 'developing' | 'seasoned' | 'veteran';
-
-/** Proposed bands from years of service, nudged by operations actually run. */
-export function experienceBand(o: Pick<Officer, 'serviceStartDay' | 'career'>, day: number): ExperienceBand {
-  const years = serviceYears(o, day) + Math.min(3, o.career.operations / 20);
-  if (years < 2) return 'rookie';
-  if (years < 8) return 'developing';
-  if (years < 15) return 'seasoned';
-  return 'veteran';
-}
-
-export const EXPERIENCE_LABEL: Record<ExperienceBand, string> = {
-  rookie: 'Rookie',
-  developing: 'Developing',
-  seasoned: 'Seasoned',
-  veteran: 'Veteran',
-};
-
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const MONTH_DAYS = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 

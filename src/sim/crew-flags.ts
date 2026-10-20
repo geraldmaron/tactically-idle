@@ -1,6 +1,6 @@
 // The names of the crew flags a run can carry (sim/crew.ts sets them; call trees read them through
 // TreeState.crew). Constants only, so the compiler can validate a tree without the engine.
-import type { ExperienceBand } from './calendar';
+import type { ExperienceBand } from './ranks';
 import type { TraitId } from './types';
 
 export const CREW_TRAITS: readonly TraitId[] = ['steady', 'observant', 'mentor', 'impatient', 'calm_voice', 'rookie'];

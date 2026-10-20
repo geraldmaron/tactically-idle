@@ -398,7 +398,6 @@ export interface ExternalServiceDefinition {
 
 export interface ScenarioRewards {
   funding: number;
-  devPoints: number;
   /** Maximum trust change; the actual change runs from -trust to +trust. */
   trust: number;
   xp: number;

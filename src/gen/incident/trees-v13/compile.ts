@@ -797,7 +797,7 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
   s.objectives = tree.objectives.map(objective => ({ ...objective }));
   s.externalServices = [];
   const multiplier = tierRewardMultiplier(spec.tier);
-  s.rewards = { funding: Math.round(tree.rewards.funding * multiplier), devPoints: Math.round(tree.rewards.devPoints * multiplier), trust: Math.round(tree.rewards.trust * multiplier), xp: Math.round(tree.rewards.xp * multiplier) };
+  s.rewards = { funding: Math.round(tree.rewards.funding * multiplier), trust: Math.round(tree.rewards.trust * multiplier), xp: Math.round(tree.rewards.xp * multiplier) };
   s.environment = { timeOfDay: tree.scene.timeOfDay ?? 'day', weather: 'clear', power: 'on', clutter: 0, hazards: [], communication: 'normal',
     crowd: tree.scene.crowd ?? 0, keyholder: false, plansOnFile: false, alarm: 'none', cctv: false };
   delete s.difficulty;

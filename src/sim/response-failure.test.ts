@@ -48,7 +48,7 @@ describe('guarded failed responses', () => {
     const restored = deserialize(serialize(ended.state, NOW));
     expect(restored?.activeRun).toEqual(ended.state.activeRun);
     const report = computeDebrief(ended.state, ended.state.activeRun!)!;
-    expect(report).toMatchObject({ completionAchieved: false, disposition: 'unresolved', fundingReward: 0, devPointReward: 0, trustDelta: -2 });
+    expect(report).toMatchObject({ completionAchieved: false, disposition: 'unresolved', fundingReward: 0, trustDelta: -2 });
     expect(report.officerCondition.every(officer => officer.xpGained === 0)).toBe(true);
     expect(apply(ended.state, { type: 'endFailedResponse', runId: plan.runId, revision: plan.revision }).result.ok).toBe(false);
     const closed = apply(ended.state, { type: 'closeDebrief' });

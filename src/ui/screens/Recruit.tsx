@@ -4,7 +4,8 @@ import { useRef, useState } from 'react';
 import { useGame } from '../store';
 import { projectHire, sortedCandidates, type Projection } from '../../sim/department-selectors';
 import type { Candidate, Id } from '../../sim/types';
-import { Button, Card, Chip, EmptyState, ExperienceChip, RatingBars, Section } from '../components/ui';
+import { Button, Card, Chip, EmptyState, RatingBars, Section } from '../components/ui';
+import { RankChip } from '../components/RankInsignia';
 import { useToast } from '../components/toast';
 import { CERT_ICON, ROLE_META, TRAIT_INFO } from '../components/labels';
 import { RetirementChip, useCareerSnapshot } from '../components/Career';
@@ -21,7 +22,6 @@ import { GearArtFrame } from '../art/GearArt';
 import { Sheet } from '../components/Sheet';
 import { learningPace, type LearningPace } from '../../sim/career';
 import { detailRate } from '../../sim/detail';
-import { gameDay } from '../../sim/calendar';
 
 export const PACE_LABEL: Record<LearningPace, string> = { fast: 'Fast', steady: 'Steady', slow: 'Slowly' };
 
@@ -119,7 +119,7 @@ export function CandidateCard({ c, now, open, onToggle, onHired, receipt, onDone
           </span>
           <span className="chips">
             <Chip tone="amber" icon="cash">{perHour(o.wage)}</Chip>
-            <ExperienceChip band={career.band} />
+            <RankChip rank={career.rank} />
             {career.retirement && <RetirementChip date={career.retirement.date} inDays={career.retirement.inDays} compact />}
           </span>
         </div>
@@ -183,7 +183,7 @@ export function HireContract({ c, proj, hired, open, onClose, onConfirm }: { c: 
   const kitCost = c.issueKit ?? 0;
   const scale = Math.max(1, Math.abs(proj.netBefore), Math.abs(proj.netAfter));
   const short = proj.netAfter < 0;
-  const pace = learningPace(o, gameDay(g, g.department.clockHighWater));
+  const pace = learningPace(o);
   const detail = detailRate(o);
   return (
     <Sheet open={open} onClose={onClose} interactionKey={hired ? 'hired' : 'review'} title={`Hire ${o.firstName} ${o.surname}`} className="hire-contract"

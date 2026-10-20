@@ -9,6 +9,8 @@ import type { ReactNode } from 'react';
 import { CivilianOutcomeList, OfficerInjuryResult } from './IncidentPeople';
 import './debrief-results.css';
 import { Disclosure } from './Disclosure';
+import { RankInsignia } from './RankInsignia';
+import { RANKS } from '../../content/ranks';
 
 /** Only identity is read from the roster. All result values come from the saved debrief. */
 export type DebriefOfficers = Record<string, Pick<Officer, 'surname' | 'firstName'> & Partial<Pick<Officer, 'id' | 'identityId' | 'portrait' | 'role'>>>;
@@ -23,6 +25,7 @@ export function ScoreRing({ value, size = 34, children }: { value: number; size?
 }
 
 export function DebriefSummary({ debrief: d }: { debrief: DebriefResult }) {
+  const promotions = d.officerCondition.reduce((total, c) => total + (c.promotions?.length ?? 0), 0);
   return <Card className="result-summary">
     {d.disposition && <CompletionResult debrief={d} />}
     {d.civilianOutcomes?.length ? <section className="result-civilian-outcomes"><span className="result-score-label"><Icon name="civilian" size={16} />People at the call</span><CivilianOutcomeList outcomes={d.civilianOutcomes} /></section> : <div className={`result-scores${d.disposition ? ' result-scores-explicit' : ''}`}>
@@ -40,10 +43,10 @@ export function DebriefSummary({ debrief: d }: { debrief: DebriefResult }) {
       <div className="chips result-reward-chips">
         {d.fundingReward !== 0 && <Chip tone={d.fundingReward < 0 ? 'danger' : 'mint'} icon="cash">{signedMoney(d.fundingReward)} funding</Chip>}
         {d.trustDelta !== 0 && <Chip tone={d.trustDelta < 0 ? 'danger' : 'mint'} icon="shield">{signed(d.trustDelta, 1)} trust</Chip>}
-        {d.devPointReward !== 0 && <Chip tone={d.devPointReward < 0 ? 'danger' : 'amber'} icon="chart">{signed(d.devPointReward)} dev point{Math.abs(d.devPointReward) === 1 ? '' : 's'}</Chip>}
+        {promotions > 0 && <Chip tone="amber" icon="medal">{promotions === 1 ? '1 promotion' : `${promotions} promotions`}</Chip>}
         {!!d.serviceEarned && <Chip tone="mint" icon="medal">{signed(d.serviceEarned)} service</Chip>}
         {d.levelReached !== undefined && <Chip tone="amber" icon="medal">Department level {d.levelReached}</Chip>}
-        {d.fundingReward === 0 && d.trustDelta === 0 && d.devPointReward === 0 && !d.serviceEarned && <span className="dim">No funding, trust or development-point change.</span>}
+        {d.fundingReward === 0 && d.trustDelta === 0 && !d.serviceEarned && !promotions && <span className="dim">No funding or trust change.</span>}
       </div>
     </section>
   </Card>;
@@ -115,7 +118,7 @@ function OfficerChange({ condition: c, officers, casualty }: { condition: Condit
     <div className="result-officer-body">
       <div className="result-officer-heading">
         <div><strong>{label}</strong>{!officer && <span className="result-officer-id">{c.officerId}</span>}</div>
-        {c.xpGained !== 0 && <span className={c.xpGained > 0 ? 'result-xp' : 'result-xp tone-danger'}>{signed(c.xpGained, 1)} XP</span>}
+        {c.xpGained !== 0 && <span className={c.xpGained > 0 ? 'result-xp' : 'result-xp tone-danger'}>{signed(c.xpGained, 1)} XP{c.promotions?.length ? <>, <RankInsignia rank={c.promotions[c.promotions.length - 1].rank} size={13} /> {RANKS[c.promotions[c.promotions.length - 1].rank].abbr}</> : null}</span>}
       </div>
       {casualty && <OfficerInjuryResult casualty={casualty} />}
       <div className="result-stress-row">
@@ -138,8 +141,20 @@ export function OfficerResults({ debrief: d, officers }: { debrief: DebriefResul
   const changed = d.officerCondition.filter((c) => casualties.has(c.officerId) || c.xpGained !== 0 || c.stressAfter !== c.stressBefore);
   const unchanged = d.officerCondition.filter((c) => !changed.includes(c));
   const xp = d.officerCondition.reduce((total, c) => total + c.xpGained, 0);
+  const promoted = d.officerCondition.flatMap((c) => (c.promotions ?? []).map((p) => ({ ...p, officerId: c.officerId })));
   return <Card className="result-officers">
     <div className="result-section-heading"><SubHead icon="people">Officer changes</SubHead>{xp !== 0 && <span className="result-xp">{signed(xp, 1)} XP total</span>}</div>
+    {promoted.length > 0 && <ul className="result-promotions" aria-label="Promotions">{promoted.map((p) => {
+      const officer = officers[p.officerId];
+      return <li key={`${p.officerId}:${p.rank}`} className="result-promotion" data-promotion={p.rank}>
+        <span className="result-promotion-mark"><RankInsignia rank={p.rank} size={30} /></span>
+        <span className="result-promotion-body">
+          <span className="result-promotion-kicker">Promoted</span>
+          <strong>{officer ? `${officer.firstName} ${officer.surname}` : 'Former officer'} makes {RANKS[p.rank].title}</strong>
+          {p.line && <span className="result-promotion-line">{p.line}</span>}
+        </span>
+      </li>;
+    })}</ul>}
     {changed.length > 0 && <ul className="result-officer-list">{changed.map((c) => <OfficerChange key={c.officerId} condition={c} officers={officers} casualty={casualties.get(c.officerId)} />)}</ul>}
     {extraCasualties.length > 0 && <ul className="result-officer-list">{extraCasualties.map((casualty) => <li className="result-officer" key={casualty.officerId}><ResultPortrait officerId={casualty.officerId} officers={officers} /><div className="result-officer-body"><strong>{officers[casualty.officerId] ? `${officers[casualty.officerId].firstName} ${officers[casualty.officerId].surname}` : 'Former officer'}</strong><OfficerInjuryResult casualty={casualty} /></div></li>)}</ul>}
     {unchanged.length > 0 && <Disclosure name="debrief-unchanged" className="result-disclosure result-unchanged" hint="View condition"

@@ -42,7 +42,7 @@ function withWatchCommander(): GameState {
 
 function withTrainingSergeant(): GameState {
   const start = createInitialState(T0);
-  start.department.devPoints = 10;
+
   let s = ok(start, { type: 'unlockNode', nodeId: 'personnel_academy' });
   s = ok(s, { type: 'unlockNode', nodeId: COMMAND_STAFF.trainingSergeant.nodeId });
   return ok(s, { type: 'setManagerPolicy', patch: { managerId: 'training_sergeant', courseId: 'composure_workshop' } });
@@ -67,10 +67,9 @@ describe('command staff hiring and state', () => {
       expect(managerView(fresh, id).status).toBe('not_hired');
     }
     expect(fresh.commandStaff).toEqual(commandStaffOf(createInitialState(T0)));
-    // Develop opens the post for DP alone and puts three candidates on offer; nobody is hired yet.
+    // Develop opens the post for cash and puts three candidates on offer; nobody is hired yet.
     const opened = dispatch(fresh, { type: 'unlockNode', nodeId: COMMAND_STAFF.watchCommander.nodeId }, { now: T0 }).state;
-    expect(opened.department.devPoints).toBe(fresh.department.devPoints - 2);
-    expect(opened.department.funding).toBe(fresh.department.funding);
+    expect(opened.department.funding).toBe(fresh.department.funding - DEV_NODES[COMMAND_STAFF.watchCommander.nodeId].cost.funding);
     expect(managerHired(opened, 'watch_commander')).toBe(false);
     const view = managerView(opened, 'watch_commander');
     expect(view.open).toBe(true);
@@ -268,10 +267,11 @@ describe('Command Staff saves', () => {
     }
   });
 
-  it('describes each post in Develop as a choice of three candidates, for DP alone', () => {
+  it('describes each post in Develop as a choice of three candidates, for cash or a milestone', () => {
     for (const nodeId of [COMMAND_STAFF.watchCommander.nodeId, COMMAND_STAFF.trainingSergeant.nodeId, COMMAND_STAFF.peerSupportLead.nodeId, COMMAND_STAFF.recruiter.nodeId]) {
       expect(DEV_NODES[nodeId].description).toContain('three candidates');
-      expect(DEV_NODES[nodeId].cost.funding).toBe(0);
+      expect(DEV_NODES[nodeId].cost.funding).toBe(1600);
+      expect(DEV_NODES[nodeId].grant).toBeDefined();
     }
   });
 });
@@ -309,7 +309,7 @@ describe('manager identity', () => {
 describe('peer support lead and recruiter', () => {
   const withManager = (nodeId: string, requires: string[] = []) => {
     const start = createInitialState(T0);
-    start.department.devPoints = 10;
+
     start.department.funding = 50_000;
     let s = start;
     for (const id of [...requires, nodeId]) s = ok(s, { type: 'unlockNode', nodeId: id });

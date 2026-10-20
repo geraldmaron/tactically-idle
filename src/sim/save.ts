@@ -13,11 +13,13 @@ import { parseIncidentId, INCIDENT_CONTENT_VERSION } from '../gen/incident';
 import { maxDevelopmentTier } from './development-tiers';
 import { normalizeSquadArrangementState } from './squad-optimizer';
 import { validResponseFailure } from './response-failure';
+import { validPromotions } from './ranks';
+import { RANK_IDS } from '../content/ranks';
 
 export const SAVE_KEY = 'tactically-idle/save';
 
 /** Version written by this build. Other versions are rejected. */
-export const CURRENT_SAVE_VERSION = 11;
+export const CURRENT_SAVE_VERSION = 12;
 
 export interface SaveStorage {
   getItem(key: string): string | null;
@@ -61,15 +63,19 @@ const KNOWLEDGE = ['unknown', 'reported', 'confirmed', 'disproved'];
 const STAGES = ['assess', 'adapt', 'resolve'];
 const CONTRIBUTOR_SOURCES = ['rating', 'condition', 'trait', 'equipment', 'space', 'support', 'familiarity', 'preparation', 'difficulty', 'pressure', 'reputation'];
 
+const validGrant = (g: unknown) => isObj(g) && isStr(g.nodeId) && Object.hasOwn(DEV_NODES, g.nodeId) && Number.isInteger(g.tier)
+  && (g.tier as number) >= 1 && (g.tier as number) <= maxDevelopmentTier(DEV_NODES[g.nodeId as string]) && isNum(g.at) && isStr(g.milestone);
+
 function validReport(r: unknown): boolean {
-  return isObj(r) && numbers(r, ['from', 'to', 'accruedHours', 'gross', 'wages', 'operating', 'restockSpend', 'net', 'devPoints'])
+  return isObj(r) && numbers(r, ['from', 'to', 'accruedHours', 'gross', 'wages', 'operating', 'restockSpend', 'net'])
+    && (r.grants === undefined || isList(r.grants, validGrant))
     && (r.maintenanceSpend === undefined || (isNum(r.maintenanceSpend) && r.maintenanceSpend >= 0))
     && (r.maintenanceStarted === undefined || isStrings(r.maintenanceStarted))
     && isBool(r.capped) && isStrings(r.recovered) && isStrings(r.shortages)
     && isList(r.completedCourses, (c) => isObj(c) && strings(c, ['officerId', 'courseId']))
     && isList(r.equipment, (e) => isObj(e) && isStr(e.unitId) && oneOf(e.event, ['unreliable', 'failed', 'expired', 'serviced']))
     && isList(r.personnel, (p) => isObj(p) && strings(p, ['officerId', 'detail'])
-      && oneOf(p.event, ['retirement_announced', 'retired', 'anniversary', 'birthday']));
+      && oneOf(p.event, ['retirement_announced', 'retired', 'anniversary', 'birthday', 'promoted']));
 }
 
 function validDecision(d: unknown): boolean {
@@ -168,9 +174,10 @@ function validRun(r: unknown): boolean {
 
 function validDebrief(d: unknown): boolean {
   return isObj(d) && strings(d, ['runId', 'scenarioId', 'endingId', 'endingTitle'])
-    && numbers(d, ['trustDelta', 'fundingReward', 'devPointReward']) && isStrings(d.causes)
+    && numbers(d, ['trustDelta', 'fundingReward']) && isStrings(d.causes)
     && [d.objective, d.civilianSafety].every((v) => isObj(v) && isNum(v.score) && isStr(v.label))
-    && isList(d.officerCondition, (o) => isObj(o) && isStr(o.officerId) && numbers(o, ['stressBefore', 'stressAfter', 'xpGained']))
+    && isList(d.officerCondition, (o) => isObj(o) && isStr(o.officerId) && numbers(o, ['stressBefore', 'stressAfter', 'xpGained'])
+      && (o.promotions === undefined || isList(o.promotions, (p) => isObj(p) && oneOf(p.rank, RANK_IDS) && isStr(p.line))))
     && isList(d.informationPreserved, (f) => isObj(f) && strings(f, ['factId', 'label']) && oneOf(f.status, KNOWLEDGE))
     && isList(d.resources, (i) => isObj(i) && isStr(i.itemId) && numbers(i, ['used', 'returned']))
     && isList(d.unitWear, (u) => isObj(u) && strings(u, ['unitId', 'itemId', 'serial']) && numbers(u, ['before', 'after']))
@@ -208,8 +215,8 @@ function validOfficer(o: unknown, key: string): boolean {
     const op = isObj(a) && a.kind === 'operation' && isStr(a.runId);
     if (!training && !detail && !op) return false;
   }
-  if ((o.xpBanked !== undefined && !isNum(o.xpBanked))
-    || (o.highStressSince !== undefined && o.highStressSince !== null && !isNum(o.highStressSince))
+  if (!validPromotions(o.promotions) || (o.xp as number) < 0) return false;
+  if ((o.highStressSince !== undefined && o.highStressSince !== null && !isNum(o.highStressSince))
     || (o.lastRunCounted !== undefined && o.lastRunCounted !== null && !isStr(o.lastRunCounted))) return false;
   if (!isNum(o.bornDay) || !isNum(o.serviceStartDay)) return false;
   const c = o.career;
@@ -237,11 +244,12 @@ function validBase(s: unknown): s is Record<string, unknown> {
   if (!isObj(s)) return false;
   const dep = s.department;
   if (!isObj(dep)) return false;
-  const depNums = ['funding', 'devPoints', 'trust', 'level', 'rosterCap', 'trainingSlots', 'lastSettledAt', 'lastInteractionAt', 'clockHighWater'];
+  const depNums = ['funding', 'trust', 'level', 'rosterCap', 'trainingSlots', 'lastSettledAt', 'lastInteractionAt', 'clockHighWater'];
   if (!isStr(dep.name) || !depNums.every((k) => isNum(dep[k]))) return false;
   if (!isNum(dep.calendarEpoch)) return false;
   if (!isStrings(dep.unlockedNodes) || !dep.unlockedNodes.every((id) => Object.hasOwn(DEV_NODES, id))
     || !isList(dep.restockRules, (r) => isObj(r) && isStr(r.itemId) && Object.hasOwn(ITEMS, r.itemId) && numbers(r, ['target', 'budgetCeiling']))) return false;
+  if (!Number.isSafeInteger(dep.callsResolved) || (dep.callsResolved as number) < 0 || !isList(dep.grants, validGrant)) return false;
   if (dep.candidateRefreshedAt !== undefined && !isNum(dep.candidateRefreshedAt)) return false;
   if (dep.reputation !== undefined && !(isObj(dep.reputation) && isNum(dep.reputation.lean) && Math.abs(dep.reputation.lean) <= 1 && isNum(dep.reputation.choices) && dep.reputation.choices >= 0)) return false;
   if (dep.ledger !== undefined && !isList(dep.ledger, (e) => isObj(e) && numbers(e, ['seq', 'at', 'amount', 'before', 'after']) && isStr(e.label) && (e.latest === undefined || isNum(e.latest))

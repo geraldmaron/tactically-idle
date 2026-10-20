@@ -15,7 +15,7 @@ import { gameDay, simNow } from './calendar';
 import { money } from './format';
 import { recoveryDuty } from './squads';
 import type { DutyRates } from './squad-optimizer';
-import { ageRecoveryFactor, applyCareerDue, nextCareerEventTime } from './career';
+import { ageRecoveryFactor, applyCareerDue, awardXp, learnedXp, nextCareerEventTime } from './career';
 import { applyUnitDue, applyUnitWear, createUnit, nextUnitEventTime, ownedCount } from './equipment';
 import { applyIncidentsDue, nextIncidentEventTime } from './incidents';
 import { runEquipmentMaintenance } from './equipment-manager';
@@ -41,8 +41,6 @@ export const ECONOMY_TUNING = tunable('ECONOMY_TUNING', {
   facilities: 120,
   /** Routine supplies, per hour. */
   supplies: 80,
-  /** Passive development points per hour; most come from operations. */
-  devPointsPerHour: 0.25,
   /** Stress recovered per hour by the squad duty of the officer. */
   recoveryPerHour: { rest: 6, standby: 3, patrol: 1 } as Record<SquadDuty, number>,
   /** A settlement shorter than this does not produce a shift report (unless something notable happened). */
@@ -113,7 +111,6 @@ export interface Rates {
   /** Command Staff salaries, paid with payroll while each manager is on. */
   staff: number;
   net: number;
-  devPointsPerHour: number;
 }
 
 /** Hourly rates implied by the state at time t. Pure. */
@@ -147,7 +144,6 @@ export function ratesAt(state: GameState, t: number): Rates {
     supplies,
     staff,
     net: gross - wages - staff - operating - supplies,
-    devPointsPerHour: ECONOMY_TUNING.devPointsPerHour,
   };
 }
 
@@ -194,7 +190,6 @@ interface Acc {
   restock: number;
   maintenance: number;
   maintenanceStarted: Id[];
-  dp: number;
   courses: { officerId: Id; courseId: Id }[];
   shortages: Set<string>;
   equipment: ShiftReport['equipment'];
@@ -209,7 +204,8 @@ function applyCourseCompletion(d: GameState, o: Officer, acc: Acc): void {
     const { cert, rating } = course.grants;
     if (cert && !o.certs.includes(cert)) o.certs.push(cert);
     if (rating) o.ratings[rating.key] = courseRatingAfter(o.ratings[rating.key], rating.delta);
-    o.xp += Math.round(courseXpGain(course.hours) * (1 + (staffLever(d, 'training_sergeant', 1) ?? 0)));
+    const base = courseXpGain(course.hours) * (1 + (staffLever(d, 'training_sergeant', 1) ?? 0));
+    awardXp(d, o, learnedXp(o, base), `on finishing the ${course.name}`, a.endsAt, acc.personnel);
   }
   o.assignment = null;
   acc.courses.push({ officerId: o.id, courseId: a.courseId });
@@ -254,7 +250,7 @@ function applyDue(d: GameState, prev: number, t: number, acc: Acc, restock: bool
       return ea - eb || a.id.localeCompare(b.id);
     });
   for (const o of due) applyCourseCompletion(d, o, acc);
-  completeDetails(d, t);
+  completeDetails(d, t, acc.personnel);
   for (const o of Object.values(d.officers)) {
     if (o.injury && o.injury.until <= t) o.injury = null;
   }
@@ -321,7 +317,6 @@ export function settle(d: GameState, now: number): void {
     restock: 0,
     maintenance: 0,
     maintenanceStarted: [],
-    dp: 0,
     courses: [],
     shortages: new Set(),
     equipment: [],
@@ -347,8 +342,6 @@ export function settle(d: GameState, now: number): void {
       acc.wages += (r.wages + r.staff) * accrualHours;
       acc.operating += (r.operating + r.supplies) * accrualHours;
       dep.funding += r.net * accrualHours;
-      dep.devPoints += r.devPointsPerHour * accrualHours;
-      acc.dp += r.devPointsPerHour * accrualHours;
       if (dep.funding < 0) {
         dep.funding = 0;
         acc.shortages.add('Funding ran out: payroll and operating costs were not fully covered');
@@ -380,7 +373,6 @@ export function settle(d: GameState, now: number): void {
     maintenanceSpend: acc.maintenance,
     maintenanceStarted: acc.maintenanceStarted,
     net: dep.funding - fundingBefore,
-    devPoints: acc.dp,
     completedCourses: acc.courses,
     recovered,
     shortages: [...acc.shortages],
@@ -404,7 +396,7 @@ export function settle(d: GameState, now: number): void {
     maintenanceSpend: (prev.maintenanceSpend ?? 0) + (rep.maintenanceSpend ?? 0),
     maintenanceStarted: [...(prev.maintenanceStarted ?? []), ...(rep.maintenanceStarted ?? [])],
     net: prev.net + rep.net,
-    devPoints: prev.devPoints + rep.devPoints,
+    ...(prev.grants?.length || rep.grants?.length ? { grants: [...(prev.grants ?? []), ...(rep.grants ?? [])] } : {}),
     completedCourses: [...prev.completedCourses, ...rep.completedCourses],
     recovered: [...new Set([...prev.recovered, ...rep.recovered])],
     shortages: [...new Set([...prev.shortages, ...rep.shortages])],

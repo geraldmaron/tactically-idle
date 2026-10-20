@@ -320,7 +320,6 @@ describe('joint operations (acceptance 18)', () => {
       expect(r.state.debriefs).toHaveLength(1);
       expect(r.state.activeRun).toBeNull();
       expect(r.state.department.funding - r.before.department.funding).toBe(r.debrief.fundingReward);
-      expect(r.state.department.devPoints - r.before.department.devPoints).toBe(r.debrief.devPointReward);
       expect(r.state.department.trust - r.before.department.trust).toBe(r.debrief.trustDelta);
       const ids = r.debrief.officerCondition.map((o) => o.officerId);
       expect(ids).toHaveLength(squads.length * 4);
@@ -605,7 +604,7 @@ describe('recovery (acceptance 10)', () => {
     for (const oc of done.debrief.officerCondition) {
       expect(done.state.officers[oc.officerId].stress).toBe(oc.stressAfter);
       expect(oc.stressAfter).toBeGreaterThanOrEqual(oc.stressBefore - 3);
-      expect(done.state.officers[oc.officerId].xp).toBe(oc.xpGained);
+      expect(done.state.officers[oc.officerId].xp).toBe(start.officers[oc.officerId].xp + oc.xpGained);
     }
   });
 });

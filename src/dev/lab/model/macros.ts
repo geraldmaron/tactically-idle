@@ -224,7 +224,7 @@ export const MACRO_DIALS: readonly MacroDial[] = [
   multiple({ id: 'strain', paths: BANDS.map(b => `${R}.bandStress.${b}`), label: 'Strain per choice', group: 'strain', range: [0.5, 1.5], step: 0.05,
     help: 'How much stress each choice puts on the officers who carry it out, whatever its result.' }),
   direct({ id: 'payout', path: 'OUTCOME_SCORE_V1.factor.base', label: 'Reward baseline', group: 'debrief', unit: 'reward factor', range: [0.5, 0.9], step: 0.01, neutral: 0.7,
-    help: 'What a call pays in funding, experience, development points and trust before its own score lines move it.' }),
+    help: 'What a call pays in funding, experience and trust before its own score lines move it.' }),
 ];
 
 export const dialById = (id: string): MacroDial | undefined => MACRO_DIALS.find(dial => dial.id === id);

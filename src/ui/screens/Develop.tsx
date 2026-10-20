@@ -6,7 +6,6 @@ import { describeEffect } from '../../sim/develop';
 import { nodeOptions, type NodeOption } from '../../sim/department-selectors';
 import { developmentTierDefinition, tierLabel } from '../../sim/development-tiers';
 import type { DevBranch, Id } from '../../sim/types';
-import { PointPacks } from '../components/PointPacks';
 import { Sheet } from '../components/Sheet';
 import { useNav } from '../components/nav';
 import { Button } from '../components/ui';
@@ -17,7 +16,9 @@ import { GearArt } from '../art/GearArt';
 import { EmblemArt, branchEmblemId } from '../art/EmblemArt';
 import { moneyFull as money, money as compactMoney } from '../format';
 import { budget as netBudget } from '../../sim/department-selectors';
-import { useDevelopmentBudget, useGame } from '../store';
+import { useGame } from '../store';
+import type { MilestoneView } from '../../sim/grants';
+import { milestoneShare, milestoneView } from '../../sim/grants';
 import { useDevelopmentPurchase } from '../storefront/useDevelopmentPurchase';
 import './development.css';
 import { ScreenBanner } from '../art/Plates';
@@ -28,14 +29,14 @@ export function filterDevelopmentOptions(options: NodeOption[], branch: DevBranc
     && (filter === 'all' || (filter === 'owned' ? option.currentTier > 0 : option.quote.ok)));
 }
 
-/** What the player has to spend; nodes mark the resource that falls short. */
-export interface DevelopmentBudget { dp: number; funding: number }
+/** What the player has to spend; nodes mark when funding falls short. */
+export interface DevelopmentBudget { funding: number }
 
 /** The development to point the player at: the cheapest that can be bought now, else the cheapest
  * whose prerequisites are met, so there is always one clear next step while any remains. */
 export function nextDevelopment(options: NodeOption[]): NodeOption | null {
   const open = options.filter((o) => o.targetTier && o.status !== 'locked' && o.quote.cost);
-  const byCost = (a: NodeOption, b: NodeOption) => a.quote.cost!.dp - b.quote.cost!.dp || a.quote.cost!.funding - b.quote.cost!.funding || a.node.id.localeCompare(b.node.id);
+  const byCost = (a: NodeOption, b: NodeOption) => a.quote.cost!.funding - b.quote.cost!.funding || a.node.id.localeCompare(b.node.id);
   return [...open.filter((o) => o.quote.ok)].sort(byCost)[0] ?? [...open].sort(byCost)[0] ?? null;
 }
 
@@ -55,19 +56,15 @@ export function trackRows(nodes: NodeOption[]): TrackRow[] {
 }
 
 export function DevelopScreen({ highlightedNode, highlightRequest }: { highlightedNode?: Id; highlightRequest?: number }) {
-  const [pointsOpen, setPointsOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<Id | null>(null);
   const [purchased, setPurchased] = useState<{ nodeId: Id; tier: number } | null>(null);
   const g = useGame();
-  const budget = useDevelopmentBudget();
   const purchases = useDevelopmentPurchase();
   const rootRef = useRef<HTMLDivElement>(null);
-  // Combined DP is a preview only; persisted state retains earned DP separately.
-  const preview = { ...g, department: { ...g.department, devPoints: budget.totalDP } };
-  const options = nodeOptions(preview);
+  const options = nodeOptions(g);
   const next = nextDevelopment(options);
   const [branch, setBranch] = useState<DevBranch>(() => (highlightedNode && DEV_NODES[highlightedNode]?.branch) || next?.node.branch || BRANCHES[0]);
-  const wallet: DevelopmentBudget = { dp: budget.totalDP, funding: g.department.funding };
+  const wallet: DevelopmentBudget = { funding: g.department.funding };
   const rates = netBudget(g);
   const selected = options.find((option) => option.node.id === selectedId);
   const open = (id: Id) => { setSelectedId(id); setPurchased(null); };
@@ -90,27 +87,27 @@ export function DevelopScreen({ highlightedNode, highlightRequest }: { highlight
     return () => cancelAnimationFrame(frame);
   }, [highlightedNode, highlightRequest]);
 
-  const dpShown = Math.floor(budget.totalDP * 100) / 100;
+  const granted = options.filter((option) => option.granted).length;
   return <div ref={rootRef} className="page develop-page">
-    <ScreenBanner id="develop" kicker="Development" title="Build the department" line={`${dpShown} DP banked · +${rates.devPointsPerHour.toFixed(1)} an hour`} />
+    <ScreenBanner id="develop" kicker="Development" title="Build the department" line="Buy upgrades now, or earn them free at each milestone" />
     <header className="dev-head">
       <h2 className="sr-only">Department development</h2>
-      <span className="dev-stat" aria-label={`${dpShown} development points, ${rates.devPointsPerHour.toFixed(1)} an hour`}><Icon name="chart" size={16} /><b>{dpShown}</b><small>DP</small><small className="dev-stat-rate">+{rates.devPointsPerHour.toFixed(1)}/h</small></span>
       <span className="dev-stat" aria-label={`${money(g.department.funding)} funding, ${compactMoney(rates.net)} an hour`}><Icon name="cash" size={16} /><b>{compactMoney(g.department.funding)}</b><small className="dev-stat-rate">{rates.net >= 0 ? '+' : ''}{compactMoney(rates.net)}/h</small></span>
-      <Button size="sm" className="dev-get" icon="plus" onClick={() => setPointsOpen(true)}>Get Points</Button>
+      <span className="dev-stat" aria-label={`Department level ${g.department.level}, ${g.department.callsResolved} calls resolved, trust ${Math.round(g.department.trust)}`}><Icon name="star" size={16} /><b>Lv {g.department.level}</b><small className="dev-stat-rate">{g.department.callsResolved} resolved · trust {Math.round(g.department.trust)}</small></span>
+      {granted > 0 && <span className="dev-stat dev-stat-granted" aria-label={`${granted} granted by milestones`}><Icon name="medal" size={16} /><b>{granted}</b><small className="dev-stat-rate">granted</small></span>}
     </header>
-    <PointPacks open={pointsOpen} onClose={() => setPointsOpen(false)} />
     {next && <button type="button" className={`dev-next${next.quote.ok ? ' dev-next-ready' : ''}`} onClick={() => { setBranch(next.node.branch); open(next.node.id); }}
-      aria-label={`Next up: ${next.node.name}${next.maxTier > 1 && next.targetTier ? ` tier ${tierLabel(next.targetTier)}` : ''}, ${costText(next)}. ${next.quote.ok ? 'Ready to buy' : next.reason ?? ''}`}>
+      aria-label={`Next up: ${next.node.name}${next.maxTier > 1 && next.targetTier ? ` tier ${tierLabel(next.targetTier)}` : ''}, ${costText(next)}${next.milestone ? `, or ${milestoneText(next.milestone)}` : ''}. ${next.quote.ok ? 'Ready to buy' : next.reason ?? ''}`}>
       <NodeGlyph option={next} size={34} />
       <span className="dev-next-main">
         <span className="dev-label">Next up · {BRANCH_META[next.node.branch].label}</span>
         <strong>{next.node.name}{next.maxTier > 1 && next.targetTier ? ` ${tierLabel(next.targetTier)}` : ''}</strong>
         <span className="dev-next-fx">{nodeSummary(next)}</span>
+        {next.milestone && <MilestoneLine view={next.milestone} share={milestoneShare(g, next.milestone)} />}
       </span>
       <span className="dev-buy-btn" data-ready={next.quote.ok ? 'yes' : undefined}>
         <span className="dev-buy-btn-label">{next.quote.ok ? next.maxTier > 1 && next.currentTier > 0 ? 'Upgrade' : 'Unlock' : 'Save up'}</span>
-        <span className="dev-buy-btn-cost"><span data-short={budget.totalDP < next.quote.cost!.dp ? 'yes' : undefined}>{next.quote.cost!.dp} DP</span><span data-short={g.department.funding < next.quote.cost!.funding ? 'yes' : undefined}>{compactMoney(next.quote.cost!.funding)}</span></span>
+        <span className="dev-buy-btn-cost"><span data-short={g.department.funding < next.quote.cost!.funding ? 'yes' : undefined}>{compactMoney(next.quote.cost!.funding)}</span></span>
       </span>
     </button>}
     {/* Five branches as five equal tabs (icon, owned count, a dot when one is ready), so the rail
@@ -185,7 +182,20 @@ function NodeGlyph({ option: o, size }: { option: NodeOption; size: number }) {
 }
 
 function costText(o: NodeOption): string {
-  return o.quote.cost ? `costs ${o.quote.cost.dp} DP and ${money(o.quote.cost.funding)}` : '';
+  return o.quote.cost ? `costs ${money(o.quote.cost.funding)}` : '';
+}
+
+/** 'granted at Level 4, 3 of 4', for labels. */
+export function milestoneText(view: MilestoneView): string {
+  return `granted at ${view.label}${view.met ? '' : `, ${view.have} of ${view.need}`}`;
+}
+
+/** The free route beside the price: the milestone, how far along it is, and a thin bar. */
+function MilestoneLine({ view, share, compact = false }: { view: MilestoneView; share: number; compact?: boolean }) {
+  return <span className={`dev-milestone${compact ? ' dev-milestone-compact' : ''}`} data-met={view.met ? 'yes' : undefined} aria-hidden="true">
+    <span className="dev-milestone-text"><Icon name="medal" size={11} />Free at {view.label}<b>{view.met ? 'Reached' : `${view.have} of ${view.need}`}</b></span>
+    <span className="dev-milestone-bar"><i style={{ width: `${Math.round(share * 100)}%` }} /></span>
+  </span>;
 }
 
 export type TileState = 'owned' | 'ready' | 'short' | 'locked';
@@ -207,17 +217,18 @@ export function nodeSummary(o: NodeOption): string {
 export function DevelopmentTile({ option: o, budget, highlighted, next = false, onOpen }: {
   option: NodeOption; budget: DevelopmentBudget; highlighted: boolean; next?: boolean; onOpen: () => void;
 }) {
+  const game = useGame();
   const state = tileState(o);
   const tiered = o.maxTier > 1;
   const cost = o.quote.cost;
-  const shortDp = !!cost && budget.dp < cost.dp;
   const shortFunding = !!cost && budget.funding < cost.funding;
   const needs = o.quote.missingPrerequisites.map((id) => DEV_NODES[id]?.name ?? id);
   const label = [
     o.node.name,
-    state === 'owned' ? (tiered ? 'Fully upgraded' : 'Owned') : state === 'locked' ? `Locked, needs ${needs.join(' and ')}` : state === 'ready' ? 'Ready to buy' : `Needs more ${[shortDp && 'DP', shortFunding && 'funding'].filter(Boolean).join(' and ')}`,
+    state === 'owned' ? (tiered ? 'Fully upgraded' : 'Owned') : state === 'locked' ? `Locked, needs ${needs.join(' and ')}` : state === 'ready' ? 'Ready to buy' : shortFunding ? 'Needs more funding' : 'Not ready',
     tiered ? `Tier ${o.currentTier} of ${o.maxTier}` : '',
     cost ? `Next ${costText(o)}` : '',
+    o.milestone ? `Or ${milestoneText(o.milestone)}` : o.granted ? `Granted at ${o.granted.milestone}` : '',
     next ? 'Suggested next' : '',
   ].filter(Boolean).join('. ');
   return <button type="button" data-development-node={o.node.id} data-state={state}
@@ -232,13 +243,15 @@ export function DevelopmentTile({ option: o, budget, highlighted, next = false, 
       <span className="dev-node-title"><strong>{o.node.name}</strong>{next && <span className="dev-next-badge">Next</span>}</span>
       <span className="dev-node-fx">{state === 'owned' ? (o.currentEffects.filter((line) => !UNLOCK_LINE.test(line))[0] ?? 'Active') : nodeSummary(o)}</span>
       {state === 'locked' && <span className="dev-node-needs"><Icon name="lock" size={11} />Needs {needs.join(' and ')}</span>}
+      {o.milestone ? <MilestoneLine view={o.milestone} share={milestoneShare(game, o.milestone)} compact />
+        : o.granted ? <span className="dev-node-granted"><Icon name="medal" size={11} />Granted at {o.granted.milestone}</span> : null}
     </span>
     <span className="dev-node-side" aria-hidden="true">
       {tiered && <span className="dev-pips">{Array.from({ length: o.maxTier }, (_, index) => <i key={index} data-on={index < o.currentTier ? 'yes' : undefined} />)}</span>}
-      {cost ? state === 'locked' ? <span className="dev-cost"><Icon name="lock" size={11} /><span>{cost.dp} DP</span><span>{compactMoney(cost.funding)}</span></span>
+      {cost ? state === 'locked' ? <span className="dev-cost"><Icon name="lock" size={11} /><span>{compactMoney(cost.funding)}</span></span>
         : <span className="dev-buy-btn" data-ready={state === 'ready' ? 'yes' : undefined}>
           <span className="dev-buy-btn-label">{state === 'ready' ? tiered && o.currentTier > 0 ? 'Upgrade' : 'Unlock' : 'Save up'}</span>
-          <span className="dev-buy-btn-cost"><span data-short={shortDp ? 'yes' : undefined}>{cost.dp} DP</span><span data-short={shortFunding ? 'yes' : undefined}>{compactMoney(cost.funding)}</span></span>
+          <span className="dev-buy-btn-cost"><span data-short={shortFunding ? 'yes' : undefined}>{compactMoney(cost.funding)}</span></span>
         </span>
         : <span className="dev-cost dev-cost-done"><Icon name="check" size={11} strokeWidth={3} />{tiered ? 'Max' : 'Owned'}</span>}
     </span>
@@ -257,6 +270,7 @@ export function DevelopmentDetail({ option: o, onClose, pending, failure, purcha
   option: NodeOption; onClose: () => void; pending: boolean; failure: string | null; purchasedTier: number | null; onPurchase: () => void;
 }) {
   const nav = useNav();
+  const game = useGame();
   const tiered = o.maxTier > 1;
   const allEffects = o.node.tiers?.flatMap((tier) => tier.effects) ?? o.node.effects;
   const training = allEffects.some((effect) => effect.kind === 'unlockCourse' || effect.kind === 'trainingSlots');
@@ -273,12 +287,23 @@ export function DevelopmentDetail({ option: o, onClose, pending, failure, purcha
   return <Sheet open onClose={onClose} title={o.node.name} subtitle={<>{BRANCH_META[o.node.branch].label} · {o.currentTier ? tiered ? `Tier ${tierLabel(o.currentTier)} of ${tierLabel(o.maxTier)}` : 'Owned' : 'Not owned'}</>} className="development-sheet" footer={
     o.targetTier && o.quote.cost ? <div className="dev-buy">
       {shortReason && <p className="dev-buy-reason">{shortReason}</p>}
-      <span className="dev-buy-cost"><b>{o.quote.cost.dp} DP</b><b>{money(o.quote.cost.funding)}</b></span>
-      <Button variant="primary" disabled={!o.quote.ok || pending} onClick={onPurchase}>{pending ? 'Upgrading…' : tiered ? `Upgrade to tier ${tierLabel(o.targetTier)}` : 'Unlock program'}</Button>
+      <div className="dev-buy-ways">
+        <div className="dev-buy-way">
+          <span className="dev-label">Buy now</span>
+          <b className="dev-buy-cost">{money(o.quote.cost.funding)}</b>
+          <Button variant="primary" disabled={!o.quote.ok || pending} onClick={onPurchase}>{pending ? 'Upgrading…' : tiered ? `Buy tier ${tierLabel(o.targetTier)}` : 'Unlock'}</Button>
+        </div>
+        {o.milestone && <div className="dev-buy-way dev-buy-free">
+          <span className="dev-label">Or free</span>
+          <MilestoneLine view={o.milestone} share={milestoneShare(game, o.milestone)} />
+          <span className="dim dev-buy-free-note">{o.milestone.met ? 'Grants when the prerequisites are owned' : 'Grants itself when reached'}</span>
+        </div>}
+      </div>
     </div> : <p className="dim dev-buy-done"><Icon name="check" size={14} />{tiered ? 'Fully upgraded. All benefits are active.' : 'Program owned. Its unlocks are active.'}</p>
   }>
     <div className="dev-detail">
       <p className="dim">{o.node.description}</p>
+      {o.granted && purchasedTier === null && <p className="development-success"><Icon name="medal" size={14} /> {tiered ? `Tier ${tierLabel(o.currentTier)} was granted` : 'Granted'} at {o.granted.milestone}.</p>}
       {purchasedTier !== null && <p className="development-success" role="status">{tiered ? `Tier ${tierLabel(purchasedTier)} purchased` : 'Program unlocked'}. The benefits below are now active.</p>}
       {o.node.requires.length > 0 && <section aria-labelledby="dev-needs"><h3 id="dev-needs" className="dev-label">Needs first</h3>
         <ul className="dev-chips">{o.node.requires.map((id) => {
@@ -298,7 +323,7 @@ export function DevelopmentDetail({ option: o, onClose, pending, failure, purcha
             return <li key={tier} data-state={state} aria-current={state === 'current' ? 'step' : undefined}>
               <span className="dev-ladder-tier">{tierLabel(tier)}</span>
               <span className="dev-ladder-fx">{definition.effects.map(describeEffect).join(' · ')}</span>
-              <span className="dev-ladder-cost">{state === 'current' ? 'Current' : state === 'owned' ? 'Owned' : `${definition.cost.dp} DP · ${money(definition.cost.funding)}`}{(state === 'next' || state === 'later') && <span className="sr-only">, {state}</span>}</span>
+              <span className="dev-ladder-cost">{state === 'current' ? 'Current' : state === 'owned' ? 'Owned' : `${compactMoney(definition.cost.funding)} or ${milestoneView(game, definition.grant).label}`}{(state === 'next' || state === 'later') && <span className="sr-only">, {state}</span>}</span>
             </li>;
           })}
         </ol></section>}

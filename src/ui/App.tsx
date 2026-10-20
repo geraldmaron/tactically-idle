@@ -19,6 +19,7 @@ import { GearScreen } from './screens/Gear';
 import { OfficerSheet } from './screens/OfficerSheet';
 import { SaveManager, SaveWarning } from './components/SaveManager';
 import { WelcomeBack } from './components/WelcomeBack';
+import { GrantToasts } from './components/GrantToasts';
 import { useCampaigns, useGame } from './store';
 import { DepartmentContext } from './components/department-context';
 
@@ -64,6 +65,7 @@ function GameShell() {
                 <SaveManager open={savesOpen} onClose={() => setSavesOpen(false)} />
                 <OfficerSheet officerId={nav.officerId} onClose={nav.closeOfficer} />
                 <WelcomeBack />
+                <GrantToasts />
               </ToastProvider>
             </OverlayRootContext.Provider>
           </DepartmentScope>

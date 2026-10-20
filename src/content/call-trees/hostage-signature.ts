@@ -1508,5 +1508,5 @@ export const HOSTAGE_SIGNATURE: CallTree = {
       summary: 'Command still holds the street, and the call is still open. The team has no step left that it can take from here.',
       epilogue: '{owner.first} was still on the stool when the next shift dialed the counter phone.' },
   },
-  rewards: { funding: 2600, devPoints: 3, trust: 6, xp: 45 },
+  rewards: { funding: 2600, trust: 6, xp: 45 },
 };

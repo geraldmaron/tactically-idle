@@ -3,12 +3,11 @@
 import { describe, expect, it } from 'vitest';
 import { createInitialState } from './department';
 import { dispatch } from './game';
-import { applyXpGrowth, learningAptitude, learningMultiplier, learningPace } from './career';
+import { learnedXp, learningAptitude, learningMultiplier, learningPace } from './career';
 import { DETAIL_TUNING, detailCheck, detailRate } from './detail';
 import { deployability } from './officer';
 import { budget } from './department-selectors';
 import { ECONOMY_TUNING } from './economy';
-import { gameDay } from './calendar';
 import type { Command, GameState } from './types';
 
 const T0 = Date.UTC(2026, 0, 1, 8);
@@ -16,20 +15,17 @@ const HOUR = 3_600_000;
 const send = (s: GameState, cmd: Command, now = T0) => dispatch(s, cmd, { now });
 
 describe('learning pace from attributes', () => {
-  it('scales xp per rating point by composure and awareness on top of experience band', () => {
+  it('scales the XP an award gives by composure and awareness on top of experience band', () => {
     const s = createInitialState(T0);
-    const day = gameDay(s, T0);
     const calm = structuredClone(s.officers.off_chen), rattled = structuredClone(s.officers.off_chen);
     calm.ratings.composure = calm.ratings.awareness = 90;
     rattled.ratings.composure = rattled.ratings.awareness = 20;
     expect(learningAptitude(calm)).toBeGreaterThan(1);
     expect(learningAptitude(rattled)).toBeLessThan(1);
-    expect(learningMultiplier(calm, day)).toBeGreaterThan(learningMultiplier(rattled, day));
-    for (const o of [calm, rattled]) { o.xp = 1000; (o as { xpBanked?: number }).xpBanked = 0; o.ratings.communication = 40; }
-    const fast = applyXpGrowth(calm, day), slow = applyXpGrowth(rattled, day);
-    expect(fast).toBeGreaterThan(slow);
-    expect(learningPace(calm, day)).not.toBe('slow');
-    expect(learningPace(rattled, day)).not.toBe('fast');
+    expect(learningMultiplier(calm)).toBeGreaterThan(learningMultiplier(rattled));
+    expect(learnedXp(calm, 100)).toBeGreaterThan(learnedXp(rattled, 100));
+    expect(learningPace(calm)).not.toBe('slow');
+    expect(learningPace(rattled)).not.toBe('fast');
   });
 });
 

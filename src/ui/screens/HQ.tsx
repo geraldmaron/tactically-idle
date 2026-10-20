@@ -53,7 +53,7 @@ export function HQ() {
         { id: 'garage', label: 'Duties', icon: 'patrol', status: `${rate(b.net)} net`, alert: b.net < 0, onOpen: () => document.getElementById('hq-duties')?.scrollIntoView({ block: 'start', behavior: 'smooth' }) },
       ]} />
     <div className="page hq-page">
-      {g.report && <section className="hq-report-summary hq-away"><span className="file-tab">While you were away</span><div><strong>Shift report ready</strong><p>{signedMoney(g.report.net)} net funding · {g.report.completedCourses.length} courses completed</p></div><Button size="sm" variant="primary" onClick={() => setReportOpen(true)}>Review report</Button></section>}
+      {g.report && <section className="hq-report-summary hq-away"><span className="file-tab">While you were away</span><div><strong>Shift report ready</strong><p>{reportSummary(g.report)}</p></div><Button size="sm" variant="primary" onClick={() => setReportOpen(true)}>Review report</Button></section>}
       {g.activeRun && <ActiveOpCard g={g} now={now} />}
       {!!attention.length && <section className="hq-attention"><h2 className="section-title">Needs you now</h2>{attention.slice(0, 3).map((item) => <div key={item.text}><span>{item.text}</span><Button size="sm" onClick={() => nav.go(item.tab)}>{item.action}</Button></div>)}</section>}
       {/* Training and calls live on the hub's rooms; the glance keeps who is ready and the money. */}
@@ -70,7 +70,19 @@ export function HQ() {
   );
 }
 
-/** Money at a glance in the department header: funding and DP per hour, then income, expenses
+/** The HQ line for a waiting report: money and courses, then grants and promotions when there are any. */
+function reportSummary(report: NonNullable<GameState['report']>): string {
+  const promoted = report.personnel.filter((p) => p.event === 'promoted').length;
+  const grants = report.grants?.length ?? 0;
+  return [
+    report.to > report.from || report.net !== 0 ? `${signedMoney(report.net)} net funding` : '',
+    report.completedCourses.length ? `${report.completedCourses.length} course${report.completedCourses.length === 1 ? '' : 's'} completed` : '',
+    grants ? `${grants} granted` : '',
+    promoted ? `${promoted} promoted` : '',
+  ].filter(Boolean).join(' · ') || 'Nothing new';
+}
+
+/** Money at a glance in the department header: funding, then income, expenses
  * and net per hour. Tapping opens Finances, the same view as the top bar's balance. */
 function HeaderBudget({ g, b }: { g: GameState; b: Budget }) {
   const [open, setOpen] = useState(false);
@@ -78,10 +90,9 @@ function HeaderBudget({ g, b }: { g: GameState; b: Budget }) {
   const live = useLiveFunding(g);
   return (
     <div className="hq-money">
-      <button type="button" className="hq-money-row" aria-haspopup="dialog" aria-expanded={open} onClick={() => setOpen(true)} aria-label={`Funding ${money(g.department.funding)}. Income ${perHour(b.gross)}, expenses ${perHour(expenses)}, ${rate(b.net)} net, ${b.devPointsPerHour.toFixed(1)} development points per hour. Open finances`}>
+      <button type="button" className="hq-money-row" aria-haspopup="dialog" aria-expanded={open} onClick={() => setOpen(true)} aria-label={`Funding ${money(g.department.funding)}. Income ${perHour(b.gross)}, expenses ${perHour(expenses)}, ${rate(b.net)} net. Open finances`}>
         <span className="hq-money-top">
           <span className="hq-money-stat"><small>Funding</small><strong className="hq-money-funding">{money(live.shown)}</strong></span>
-          <span className="hq-money-stat hq-money-dp"><small>Dev points</small><strong>{b.devPointsPerHour.toFixed(1)}/h</strong></span>
           <Icon name="chart" size={16} className="hq-money-toggle" />
         </span>
         <span className="hq-money-flow">
@@ -250,7 +261,6 @@ function DebriefTile({ g, d, now, open, onOpen }: { g: GameState; d: GameState['
           {team.length > 0 && <span className="debrief-team" aria-hidden="true">{team.map((officer) => <span key={officer.id} className="debrief-team-face"><Portrait officer={officer} size={24} /></span>)}</span>}
           <span className="debrief-reward tone-mint"><Icon name="cash" size={13} />{signedMoney(d.fundingReward)}</span>
           <span className={`debrief-reward ${d.trustDelta >= 0 ? '' : 'tone-danger'}`}><Icon name="shield" size={13} />{d.trustDelta >= 0 ? '+' : ''}{d.trustDelta}</span>
-          {d.devPointReward > 0 && <span className="debrief-reward"><Icon name="chart" size={13} />+{d.devPointReward} DP</span>}
         </span>
       </span>
       <Icon name="chevronRight" size={16} className="debrief-tile-go" />

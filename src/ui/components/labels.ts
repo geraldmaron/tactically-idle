@@ -1,5 +1,4 @@
 import type { CertId, DevBranch, Officer, RatingKey, Role, SquadDuty, StageId, TraitId } from '../../sim/types';
-import type { ExperienceBand } from '../../sim/calendar';
 import type { StressBand } from '../../sim/officer';
 import { stressBand } from '../../sim/officer';
 import type { IconName } from '../icons';
@@ -82,12 +81,6 @@ export const STATUS_META: Record<StatusKey, { label: string; icon: IconName; ton
   retiring: { label: 'Retiring', icon: 'retire', tone: 'warn' },
 };
 
-export const EXPERIENCE_META: Record<ExperienceBand, { icon: IconName; tone: 'mint' | 'amber' | 'blue' | 'neutral' }> = {
-  rookie: { icon: 'sprout', tone: 'neutral' },
-  developing: { icon: 'trend', tone: 'blue' },
-  seasoned: { icon: 'star', tone: 'amber' },
-  veteran: { icon: 'medal', tone: 'mint' },
-};
 
 export const NODE_STATUS_META = {
   unlocked: { label: 'Unlocked', icon: 'check' as IconName, tone: 'mint' as const },

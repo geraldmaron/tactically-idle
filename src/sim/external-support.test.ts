@@ -25,7 +25,7 @@ function definition(): ScenarioDefinition {
   const requests = ['medical', 'community', 'unavailable'].map((serviceId) => action(`request_${serviceId}`, { requestSupport: [serviceId], stage: 'assess' }));
   return {
     ...base, id: ID, version: 4, pressure: { start: 0, perMinute: 0, threshold: 100, civilianPerMinute: 0 },
-    rewards: { funding: 200, devPoints: 6, trust: 5, xp: 20 },
+    rewards: { funding: 200, trust: 5, xp: 20 },
     externalServices: [
       { id: 'medical', label: 'North medical team', kind: 'medical', description: 'A clinical receiving team', arrivalMinutes: 10, available: true, acceptWhen: { flags: ['care_ready'] } },
       { id: 'community', label: 'Community response team', kind: 'community', description: 'A named follow-up service', arrivalMinutes: 7, available: true, acceptWhen: { flags: ['care_ready'] } },
@@ -91,7 +91,6 @@ describe('external support responsibility lifecycle', () => {
     expect(run.status).toBe('active');
     expect(run.objective).toBe(0);
     expect(state.department.funding).toBe(initial.department.funding);
-    expect(state.department.devPoints).toBe(initial.department.devPoints);
     expect(run.externalSupport?.medical).toEqual({ requestedAt: run.clock, availableAt: run.clock + 10, acceptedAt: null });
     expect(externalSupportViews(SCENARIOS[ID], run)[0]).toMatchObject({ status: 'requested', minutesRemaining: 10 });
     refused(state, 'request_medical');
@@ -185,7 +184,6 @@ describe('external support responsibility lifecycle', () => {
     expect(outcomeFactor(partial.activeRun!)).toBeCloseTo(0.615);
     const result = computeDebrief(partial, partial.activeRun!)!;
     expect(result.objective).toEqual({ score: 30, label: 'Unresolved' });
-    expect(result.devPointReward).toBe(3);
     expect(result.fundingReward).toBeGreaterThan(0);
     const beforeCareer = partial.officers.off_chen.career.favorable;
     const closed = apply(partial, { type: 'closeDebrief' }).state;
@@ -208,8 +206,7 @@ describe('external support responsibility lifecycle', () => {
     care = decide(care, 'wait_medical');
     care = decide(care, 'accept_medical');
     const resolved = decide(started(), 'resolve');
-    expect(computeDebrief(care, care.activeRun!)!.devPointReward).toBe(computeDebrief(resolved, resolved.activeRun!)!.devPointReward);
-    expect(computeDebrief(care, care.activeRun!)!.devPointReward).toBe(6);
+    expect(computeDebrief(care, care.activeRun!)!.completionAchieved).toBe(computeDebrief(resolved, resolved.activeRun!)!.completionAchieved);
     expect(apply(care, { type: 'closeDebrief' }).state.officers.off_chen.career.favorable).toBe(care.officers.off_chen.career.favorable + 1);
   });
 
