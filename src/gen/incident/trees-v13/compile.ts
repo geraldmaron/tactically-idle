@@ -13,7 +13,7 @@ import { routeAlongOpenings } from '../../../sim/routes';
 import { sightFromStreet, vantageZones, type StreetVantage } from '../../../sim/sightlines';
 import type { BuiltLocation, OutcomeBand, StageId, Vec } from '../../../sim/types';
 import { mapScenarioText } from '../scenario-text';
-import { CREW_FLAGS, CREW_MARKS, crewFlag } from '../../../sim/crew-flags';
+import { CREW_MARKS, crewFlag } from '../../../sim/crew-flags';
 import { asRole, CASCADE_LINES, countWord, FIRE_LINES, FORCE_LINES, listOf } from '../../../content/incidents/lines';
 import { cascadeCombos, cascadeKey, cascadeResult, withVariants } from '../drawn-model';
 import { gearFor } from '../action-gear';
@@ -1212,7 +1212,7 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
   }]));
 
   const bound = mapScenarioText(s, textBinder(tree, built, placed));
-  const errors = validateStoryBindings(bound, built, [...clockMarks.map(markFlag), ...cueFlags, ...CREW_FLAGS]);
+  const errors = validateStoryBindings(bound, built, [...clockMarks.map(markFlag), ...cueFlags]);
   if (errors.length) throw new Error(errors.join('\n'));
   return bound;
 }
