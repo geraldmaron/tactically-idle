@@ -369,6 +369,7 @@ writing. A verdict changes the rule here, in swat-call-prose and in `game_string
 | Stock spoken lines | Keep, and extend to the transcript | A cliché is a cliché in any field |
 | Weapon-speech (civilians never say "weapon") | Keep | Civilians frame a weapon in their own words |
 | Negated openers, name openers, cadence | Keep as reports | They catch monotony, not drama |
+| Repeated runs across a call counted from 4 words | Relax to 6 words (`NGRAM`); back-to-back path echoes stay at 3 | The depth register triples string length, and 4-word place phrases collided across variants that never meet |
 | Process status as an ending's last beat | Keep. The epilogue gives the last beat to a person | E11.2 |
 | "Grounded and non-graphic" (AGENTS.md and the skills README) | Rewrite as "Grounded. Consequences land plainly on named people, with no wound anatomy or method." | E16 |
 
