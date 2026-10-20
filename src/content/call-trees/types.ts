@@ -1,5 +1,6 @@
 import type { ActionDefinition, ActionRequirements, CheckKind, ConcessionKind, IncidentType, MeterStance, PressureModel, RatingWeight } from '../../sim/scenario-types';
 import type { CompletionDisposition, OutcomeBand, RoomType, StageId } from '../../sim/types';
+import type { ContentDescriptor } from '../content-descriptors';
 
 /** Call trees (content v13, docs/call-trees-v13.md).
  *
@@ -143,6 +144,16 @@ export interface TreeSituation {
   /** Authoring note, never shown. */
   note: string;
   truth: Record<string, boolean>;
+  /** What a player can meet in this situation (docs/content-rating.md), from the closed list. The
+   * board leaves out a situation carrying a descriptor the player turned off. The list holds every
+   * descriptor the tree derives here (`death`, `injury`, `police_gunfire`; gates/content-descriptors.ts
+   * fails when one is missing) plus the themes the data can't see, declared by the designer through
+   * the swat-call-design ethics screen (`suicide_self_harm`, `child_at_risk`, `domestic_violence`). */
+  descriptors?: ContentDescriptor[];
+  /** Why an adult subject this situation spares with `noFatal` force is not at risk of harming
+   * themselves, when `descriptors` leaves out `suicide_self_harm` (the E4 screen's "screened,
+   * <reason>"). Authoring record, never shown. */
+  selfHarmScreened?: string;
 }
 
 /** Where an outcome sends the call: a node, an ending, or one node of a turn group drawn per call. */
