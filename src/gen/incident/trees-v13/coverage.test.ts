@@ -13,7 +13,7 @@ import { getScenario } from '../../../sim/scenario-registry';
 import type { OutcomeEffect, ScenarioDefinition } from '../../../sim/scenario-types';
 import { apply } from '../../../sim/test-fixtures';
 import type { ActionView, GameState, OutcomeBand } from '../../../sim/types';
-import { applyMove, NOW, sampleFor, startGateRun, withDraftScenario } from '../gates/engine-driver';
+import { applyMove, NOW, sampleFor, startGateRun, withDice, withDraftScenario } from '../gates/engine-driver';
 import { GATE_CONTENT_VERSION } from '../gates/catalog';
 import { drawIncidentSpec, generateIncident } from '../index';
 import { choiceActionId, memberCounts } from './compile';
@@ -202,9 +202,7 @@ function drawnSteers(state: GameState, view: ActionView, band: OutcomeBand, samp
   return [...chosen.values()];
 }
 function applySteered(state: GameState, view: ActionView, band: OutcomeBand, rngState: number): GameState | null {
-  const aimed = structuredClone(state);
-  aimed.activeRun!.rngState = rngState;
-  const result = apply(aimed, { type: 'decide', actionId: view.id, actingSquadIds: view.actingSquadIds, supportSquadIds: view.supportSquadIds }, NOW);
+  const result = apply(withDice(state, rngState), { type: 'decide', actionId: view.id, actingSquadIds: view.actingSquadIds, supportSquadIds: view.supportSquadIds }, NOW);
   return result.result.ok && result.state.activeRun!.history.at(-1)?.band === band ? result.state : null;
 }
 
@@ -283,17 +281,29 @@ function groupStarts(): { start: Start; scenario: ScenarioDefinition }[] {
   return out;
 }
 
+/** Starts per test. Each start is walked on its own, so a call's starts split into tests of this
+ * many walk exactly what one test did, each under its own time limit. The rebuilt hostage call
+ * (2026-10-20) has 37 starts and about 470,000 states, which no longer fit one 20-minute test on CI. */
+const STARTS_PER_TEST = 8;
+
 describe('call trees: coverage of every reachable state (resolve, then narrate)', () => {
-  for (const tree of TREES) it(`${tree.type}: one routed outcome with text at every commit, and no dead end${FULL ? ' (full cross)' : ''}`, () => {
-    const coverage = walk(tree);
-    console.info(`${tree.type} coverage: ${coverage.starts} starts, ${coverage.states} states, ${coverage.commits} commits, ${coverage.drawnWalked} drawn results walked, ${coverage.ended} endings, ${coverage.gaps.length} gaps, ${coverage.ms} ms`);
-    expect(coverage.ended).toBeGreaterThan(0);
-    if (REPORT_ONLY.has(tree.type)) {
-      if (coverage.gaps.length) console.info(`${tree.type} gaps (report only, call being rewritten):\n${coverage.gaps.join('\n')}`);
-      return;
+  for (const tree of TREES) {
+    const starts = startsFor(tree);
+    for (let from = 0; from < starts.length; from += STARTS_PER_TEST) {
+      const chunk = starts.slice(from, from + STARTS_PER_TEST);
+      const part = starts.length > STARTS_PER_TEST ? ` (starts ${from + 1} to ${from + chunk.length} of ${starts.length})` : '';
+      it(`${tree.type}: one routed outcome with text at every commit, and no dead end${part}${FULL ? ' (full cross)' : ''}`, () => {
+        const coverage = walk(tree, chunk);
+        console.info(`${tree.type}${part} coverage: ${coverage.starts} starts, ${coverage.states} states, ${coverage.commits} commits, ${coverage.drawnWalked} drawn results walked, ${coverage.ended} endings, ${coverage.gaps.length} gaps, ${coverage.ms} ms`);
+        expect(coverage.ended).toBeGreaterThan(0);
+        if (REPORT_ONLY.has(tree.type)) {
+          if (coverage.gaps.length) console.info(`${tree.type} gaps (report only, call being rewritten):\n${coverage.gaps.join('\n')}`);
+          return;
+        }
+        expect(coverage.gaps).toEqual([]);
+      }, FULL ? 1_800_000 : 1_200_000);
     }
-    expect(coverage.gaps).toEqual([]);
-  }, FULL ? 1_800_000 : 1_200_000);
+  }
 
   it('the group fixture with 0 to 3 others: every cascade result routes once, with text', () => {
     const calls = groupStarts();
