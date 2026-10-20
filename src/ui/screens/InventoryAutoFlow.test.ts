@@ -31,7 +31,7 @@ function nodes(node: ReactNode): Element[] {
   if (!isValidElement<Record<string, any>>(node)) return [];
   return [node, ...nodes(node.props.children)];
 }
-const render = () => { hooks.cursor = 0; return OpsPrepare({ scenarioId: 'ms_occupancy', onCancel: () => {} }); };
+const render = () => { hooks.cursor = 0; return OpsPrepare({ scenarioId: 'ms_occupancy', onCancel: () => {}, initialStep: 'team' }); };
 const find = (root: ReactNode, test: (element: Element) => boolean) => {
   const element = nodes(root).find(test);
   if (!element) throw new Error('Expected preparation control was not found');
