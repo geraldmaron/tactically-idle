@@ -13,7 +13,7 @@ import { Sheet } from './Sheet';
 import { Button } from './ui';
 import { Disclosure } from './Disclosure';
 import { useToast } from './toast';
-import { ShiftReportCard, EQUIPMENT_EVENT, PERSONNEL_EVENT } from './ShiftReport';
+import { ShiftReportCard, EQUIPMENT_EVENT, PERSONNEL_EVENT, grantName } from './ShiftReport';
 import { PlateArt, plateUrl } from '../art/Plates';
 import { Icon, type IconName } from '../icons';
 import { duration, money, signedMoney } from '../format';
@@ -68,7 +68,10 @@ interface Line { key: string; icon: IconName; text: string; tone?: 'mint' | 'war
 export function welcomeLines(report: ShiftReport, g: Pick<GameState, 'officers'>): Line[] {
   const lines: Line[] = [];
   const name = (id: string) => (g.officers[id] ? fullName(g.officers[id]) : 'An officer');
-  if (report.devPoints > 0) lines.push({ key: 'dp', icon: 'chart', text: `${Math.round(report.devPoints * 10) / 10} development points banked`, tone: 'mint' });
+  for (const grant of report.grants ?? []) lines.push({ key: `grant:${grant.nodeId}:${grant.tier}`, icon: 'star', text: `${grantName(grant)} granted at ${grant.milestone.replace(/^Level/, 'level').replace(/^Trust/, 'trust')}`, tone: 'mint' });
+  const promoted = report.personnel.filter((p) => p.event === 'promoted');
+  if (promoted.length === 1) lines.push({ key: 'promoted', icon: 'medal', text: promoted[0].detail.split('. ')[0], tone: 'mint' });
+  else if (promoted.length > 1) lines.push({ key: 'promoted', icon: 'medal', text: `${promoted.length} officers promoted`, tone: 'mint' });
   if (report.completedCourses.length === 1) {
     const [c] = report.completedCourses;
     lines.push({ key: 'courses', icon: 'mortarboard', text: `${name(c.officerId)} finished ${COURSES[c.courseId]?.name ?? 'a course'}`, tone: 'mint' });

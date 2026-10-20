@@ -38,7 +38,8 @@ export const PINNED_BY: Readonly<Record<string, readonly string[]>> = {
   CLOCK_RULES_V1: [...sim('clocks'), BALANCE],
   FORCE_RISK_V1: [...sim('force-risk'), BALANCE],
   CAREER_TUNING: [...sim('career', 'consolidation', 'economy', 'external-support'), 'src/ui/components/OfficerProgress.test.ts'],
-  LEARNING_MULTIPLIER: [...sim('career'), 'src/ui/components/OfficerProgress.test.ts'],
+  LEARNING_MULTIPLIER: [...sim('career', 'ranks'), 'src/ui/components/OfficerProgress.test.ts'],
+  RANK_TUNING: [...sim('ranks', 'career'), 'src/ui/components/OfficerProgress.test.ts'],
   DEVELOP_TUNING: sim('catalog-capabilities'),
   THREAT_TUNING: [...sim('incident-factors', 'outcome-score'), BALANCE],
   ENV_TUNING: [...sim('catalog-capabilities'), BALANCE],
@@ -70,6 +71,8 @@ function table(name: string, base: { group: TuningGroup; mode: ReadMode }, field
 function each(prefix: string, keys: Record<string, string>, make: (name: string, key: string) => Spec): Record<string, Spec> {
   return Object.fromEntries(Object.entries(keys).map(([key, name]) => [prefix ? `${prefix}.${key}` : key, make(name, key)]));
 }
+
+const RANK_ITEMS = ['Probationary Officer', 'Officer', 'Corporal', 'Sergeant', 'Lieutenant'];
 
 const unused = (why: string, label: string, group?: TuningGroup): Spec => ({ label, help: 'Not used by the game.', mode: 'dead', why, ...(group ? { group } : {}) });
 
@@ -187,15 +190,22 @@ export const TUNING_META: readonly FieldMeta[] = [
     ageRecoveryPerYear: { label: 'Recovery lost per year', help: 'Share of recovery lost per year past "Slower recovery from".', min: 0, max: 0.05, step: 0.005, unit: 'share' },
     ageRecoveryFloor: { label: 'Recovery floor', help: 'Recovery never slows below this share of the base rate.', min: 0.3, max: 1, step: 0.05, unit: 'share' },
     ageBands: { label: 'Birthdays reported at', help: 'Ages at which a birthday shows in the shift report (where its effect band changes). Report only.', mode: 'display', items: ['1st', '2nd', '3rd'], min: 30, max: 70, step: 1, unit: 'years' },
-    xpPerPoint: { label: 'XP per rating point', help: 'Experience needed for +1 to an officer\'s main rating, before the learning rate.', min: 25, max: 400, step: 5, unit: 'xp' },
-    xpRatingCeiling: { label: 'XP growth ceiling', help: 'Experience stops raising a rating at this level.', min: 60, max: 100, step: 1, unit: 'rating' },
     favorableAt: { label: 'Career: good call at', help: 'Outcome factor at or above which a call counts as favorable for careers and department service.', group: 'debrief', min: 0, max: 1, step: 0.01, unit: 'factor' },
     adverseBelow: { label: 'Career: bad call below', help: 'Outcome factor below which a call counts as adverse for careers (burnout counts these).', group: 'debrief', min: 0, max: 1, step: 0.01, unit: 'factor' },
     'debriefWeights.objective': { label: 'Outcome blend: objective', help: 'Weight of the objective in the outcome factor of calls before v13 and in each debrief\'s band in officer histories. v13 calls score their factor from what happened (Debrief group).', group: 'debrief', min: 0, max: 1, step: 0.05, unit: 'weight' },
     'debriefWeights.civilianSafety': { label: 'Outcome blend: civilian safety', help: 'Weight of civilian safety in the same blend.', group: 'debrief', min: 0, max: 1, step: 0.05, unit: 'weight' },
   }),
   ...table('LEARNING_MULTIPLIER', { group: 'strain', mode: 'department' }, each('', { rookie: 'rookie', developing: 'developing officer', seasoned: 'seasoned officer', veteran: 'veteran' },
-    name => ({ label: `Learning rate: ${name}`, help: 'How fast experience turns into rating growth at this experience band.', min: 0.3, max: 2, step: 0.05, unit: '×' }))),
+    name => ({ label: `Learning rate: ${name}`, help: 'Share of each XP award an officer takes in at this experience band (the band comes from rank).', min: 0.3, max: 2, step: 0.05, unit: '×' }))),
+  ...table('RANK_TUNING', { group: 'strain', mode: 'department' }, {
+    xp: { label: 'XP for each rank', help: 'Total XP that reaches each rank. The last is the XP cap.', items: RANK_ITEMS, min: 0, max: 10000, step: 10, unit: 'xp' },
+    serviceYears: { label: 'Service years for each rank', help: 'Prior service that places a starting officer or recruit at each rank, set when made.', mode: 'new-entities', items: RANK_ITEMS, min: 0, max: 40, step: 1, unit: 'years' },
+    mainBoost: { label: 'Main rating on promotion', help: 'Added to the role\'s main rating on promotion to each rank.', items: RANK_ITEMS, min: 0, max: 10, step: 1, unit: 'rating' },
+    composureBoost: { label: 'Composure on promotion', help: 'Added to composure on promotion to each rank.', items: RANK_ITEMS, min: 0, max: 10, step: 1, unit: 'rating' },
+    wageStep: { label: 'Wage raise on promotion', help: 'Hourly wage added on promotion to each rank; recruits are drawn with the total up to their rank.', group: 'economy', items: RANK_ITEMS, min: 0, max: 10, step: 1, unit: 'per hour' },
+    ratingCeiling: { label: 'Promotion rating ceiling', help: 'Promotions stop raising a rating at this level.', min: 60, max: 100, step: 1, unit: 'rating' },
+    traitCap: { label: 'Most traits', help: 'A promotion grants its trait only below this many traits.', min: 1, max: 6, step: 1, unit: 'traits' },
+  }),
   ...table('DEVELOP_TUNING', { group: 'economy', mode: 'department' }, {
     maxPurchase: { label: 'Most units per purchase', help: 'Largest quantity one store purchase accepts.', min: 1, max: 999, step: 1, unit: 'units' },
   }),
@@ -345,7 +355,6 @@ export const TUNING_META: readonly FieldMeta[] = [
     patrolPerOfficer: { label: 'Patrol income', help: 'Funding per available officer in a squad on patrol, per hour.', min: 0, max: 500, step: 5, unit: 'per hour' },
     facilities: { label: 'Facilities cost', help: 'Funding spent on facilities per hour.', min: 0, max: 500, step: 5, unit: 'per hour' },
     supplies: { label: 'Supplies cost', help: 'Funding spent on routine supplies per hour.', min: 0, max: 500, step: 5, unit: 'per hour' },
-    devPointsPerHour: { label: 'Development points', help: 'Development points per hour; most come from calls.', min: 0, max: 2, step: 0.05, unit: 'per hour' },
     ...each('recoveryPerHour', { rest: 'resting', standby: 'on standby', patrol: 'on patrol' }, name => ({ label: `Stress recovery ${name}`, help: 'Stress an officer sheds per hour on this duty.', group: 'strain', min: 0, max: 15, step: 0.5, unit: 'per hour' })),
     reportMinMs: { label: 'Shift report from', help: 'A settlement shorter than this makes no shift report unless something notable happened.', mode: 'display', min: 60_000, max: 3_600_000, step: 60_000, unit: 'ms' },
     restockIntervalMs: { label: 'Restock interval', help: 'Restock rules run on this grid of the clock.', min: 600_000, max: 14_400_000, step: 600_000, unit: 'ms' },
@@ -363,8 +372,6 @@ export const TUNING_META: readonly FieldMeta[] = [
     refreshCooldownMs: { label: 'Free search cooldown', help: 'Time between free candidate searches.', mode: 'department', min: 600_000, max: 86_400_000, step: 600_000, unit: 'ms' },
     rookiePenalty: { label: 'Rookie rating penalty', help: 'Rating points taken off a rookie candidate\'s ratings, set when drawn.', min: 0, max: 20, step: 1, unit: 'rating' },
     rookieService: unused('Read nowhere: prior service is rolled separately.', 'Rookie prior service', 'economy'),
-    wagePerThreeYears: { label: 'Wage per 3 service years', help: 'Hourly wage added per 3 years of prior service, set when drawn.', min: 0, max: 5, step: 0.5, unit: 'per hour' },
-    wageExperienceCap: { label: 'Experience wage cap', help: 'Most hourly wage prior service adds.', min: 0, max: 20, step: 1, unit: 'per hour' },
     signingPerServiceYear: { label: 'Signing fee per service year', help: 'Signing cost added per year of prior service, set when drawn.', min: 0, max: 100, step: 5, unit: 'funding' },
   }),
   ...table('LEARNING_APTITUDE', { group: 'strain', mode: 'department' }, {

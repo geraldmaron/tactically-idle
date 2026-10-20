@@ -32,6 +32,7 @@ import { EQUIPMENT_MANAGER, maintenanceBudget } from './equipment-manager-policy
 import { setMaintenanceBudget } from './equipment-manager';
 import { courseFee, drawStaffPool, emptyPost, staffLever, staffPostOf, STAFF_LEVERS, STAFF_POOL, type StaffCandidate, type StaffHolder, type StaffPost } from './staff-pool';
 import { postFunding } from './ledger';
+import { milestoneView } from './grants';
 
 // ---------------------------------------------------------------- shapes
 
@@ -642,7 +643,7 @@ export interface ManagerView {
   /** One plain line on what the manager is doing or waiting for. */
   activity: string;
   /** Develop price of the hire, and why it cannot be bought yet. */
-  hire: { dp: number; funding: number; reason: string | null } | null;
+  hire: { funding: number; reason: string | null } | null;
 }
 
 /** Lever lines for a person in or offered a post, in the post's own terms. */
@@ -699,7 +700,7 @@ export function managerView(state: GameState, id: ManagerId): ManagerView {
     activity: hired ? activityOf(state, id, on) : open ? `${staffPostOf(state, id).pool.length} candidates to choose from`
       : quote?.missingPrerequisites.length
         ? `Needs ${quote.missingPrerequisites.map((nodeId) => DEV_NODES[nodeId]?.name ?? nodeId).join(', ')} first`
-        : cost ? `Open the post in Develop: ${cost.dp} DP${cost.funding ? ` + ${money(cost.funding)}` : ''}` : 'Not open',
+        : cost ? `Open the post in Develop for ${money(cost.funding)}, or reach ${milestoneView(state, DEV_NODES[profile.nodeId].grant).label.replace(/^Level/, 'level').replace(/^Trust/, 'trust')}` : 'Not open',
     hire: open || !cost ? null : { ...cost, reason: quote?.reason ?? null },
   };
 }

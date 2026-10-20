@@ -23,6 +23,7 @@ import { METERS_V1 } from './meters';
 import { ECONOMY_TUNING } from './economy';
 import { EQUIPMENT_TUNING } from './equipment';
 import { RECRUIT_TUNING } from '../content/recruits';
+import { RANK_TUNING } from '../content/ranks';
 
 // The tuning registry over the real tables (spec 7.1, 7.4): every table is registered, the committed
 // tuning.json validates and is what the tables hold, read-only fields refuse a patch with their
@@ -33,6 +34,7 @@ const LIVE: Record<string, object> = {
   RESOLUTION_TUNING, EXPERIENCE_TUNING, STRESS_TUNING, SPATIAL_TUNING, ROSTER_TUNING, INCIDENT_TUNING, CLOCK_RULES_V1, FORCE_RISK_V1, CAREER_TUNING,
   LEARNING_MULTIPLIER, DEVELOP_TUNING, THREAT_TUNING, ENV_TUNING, OUTCOME_SCORE_V1, AUTHORIZATION_V1, INCIDENT_CLASS_V1, INTEL_V1, INCOMING_FIRE_V1,
   TEAM_FORCE_V1, CASCADE_V1, METERS_V1, ECONOMY_TUNING, EQUIPMENT_TUNING, RECRUIT_TUNING, LEARNING_APTITUDE, DETAIL_TUNING, REPUTATION_TUNING,
+  RANK_TUNING,
 };
 
 /** Every leaf under `value` as [path, value]; a list is one leaf. */
@@ -44,7 +46,7 @@ const at = (table: object, path: string) => path.split('.').slice(1).reduce<unkn
 
 describe('the registry', () => {
   it('registers every table spec 7.4 wraps, and nothing else', () => {
-    expect(TUNED_TABLES).toHaveLength(27);
+    expect(TUNED_TABLES).toHaveLength(28);
     expect(registeredTables()).toEqual([...TUNED_TABLES].sort());
     expect(Object.keys(LIVE).sort()).toEqual([...TUNED_TABLES].sort());
   });

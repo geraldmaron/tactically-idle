@@ -10,8 +10,9 @@ import { CERT_ICON, ROLE_META, bandOf, BAND_SHORT, STATUS_META } from './labels'
 import type { StatusKey } from './labels';
 import { ReadinessBar } from './ui';
 import { CERT_NAME } from '../../content/certs';
-import { gameDay } from '../../sim/calendar';
 import { officerGrowth } from './OfficerProgress';
+import { RankInsignia } from './RankInsignia';
+import { RANKS } from '../../content/ranks';
 
 export interface OfficerCardProps {
   officer: Officer;
@@ -52,11 +53,11 @@ export function OfficerCard({ officer, now, variant = 'strip', selected, onClick
   if (variant === 'tile') {
     const statusText = incidentInjury ? `injured: ${incidentInjury}` : status ? status.label.toLowerCase() : BAND_SHORT[band].toLowerCase();
     const certs = officer.certs.slice(0, 3);
-    // The character-card badge (squad-cards): officers have no level, so the badge is the role's
-    // main rating and its ring the XP toward the next point, the same numbers as the profile.
-    const growth = department ? officerGrowth(officer, gameDay({ department }, now)) : null;
-    const xp = growth ? (growth.capped ? 100 : Math.max(0, Math.min(100, growth.progress))) : 0;
-    const growthText = growth ? `, ${growth.rating.label} ${Math.floor(growth.current)}${growth.capped ? '' : `, ${Math.floor(xp)}% to the next point`}` : '';
+    // The character-card badge (squad-cards, officer-ranks): the rank insignia, its ring the XP
+    // toward the next rank, the same numbers as the profile. The name carries the rank's short form.
+    const growth = officerGrowth(officer);
+    const xp = growth.capped ? 100 : Math.max(0, Math.min(100, growth.progress));
+    const growthText = `, ${RANKS[growth.rank].title}${growth.capped ? '' : `, ${Math.floor(xp)}% to ${RANKS[growth.next!].title}`}`;
     return (
       <Tag
         type={onClick ? 'button' : undefined}
@@ -68,14 +69,14 @@ export function OfficerCard({ officer, now, variant = 'strip', selected, onClick
         <span className="ocard-art" ref={ref} style={{ aspectRatio: '1 / 1.04' }}>
           <Portrait officer={officer} size={size} {...age} />
           {squadId && <span className="ocard-squad" aria-hidden="true">{squadId}</span>}
-          {growth && <span className={`ocard-badge${growth.capped ? ' ocard-badge-capped' : ''}`} style={{ ['--xp' as string]: `${xp}%` }} aria-hidden="true" title={`${growth.rating.label} ${Math.floor(growth.current)}`}><b>{Math.floor(growth.current)}</b></span>}
+          <span className={`ocard-badge${growth.capped ? ' ocard-badge-capped' : ''}`} style={{ ['--xp' as string]: `${xp}%` }} aria-hidden="true" title={RANKS[growth.rank].title}><RankInsignia rank={growth.rank} size={18} /></span>
           {status && statusKey && (
-            <span className={`ocard-state ocard-state-${status.tone}${growth ? ' ocard-state-low' : ''}`} aria-hidden="true" title={status.label}>
+            <span className={`ocard-state ocard-state-${status.tone} ocard-state-low`} aria-hidden="true" title={status.label}>
               <Icon name={status.icon} size={11} />
             </span>
           )}
           {leader && <span className="ocard-leader" aria-hidden="true"><Icon name="star" size={11} /></span>}
-          <span className="ocard-name">{officer.surname}</span>
+          <span className="ocard-name"><small>{RANKS[growth.rank].abbr}</small> {officer.surname}</span>
         </span>
         <span className="ocard-row" aria-hidden="true">
           <span className="ocard-role" title={role.label}><Icon name={role.icon} size={13} /></span>

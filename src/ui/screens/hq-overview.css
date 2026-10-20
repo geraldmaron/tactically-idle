@@ -34,7 +34,6 @@
 .hq-money-top, .hq-money-flow { display: flex; align-items: center; gap: 4px; }
 .hq-money-flow { padding-top: 8px; border-top: 1px solid var(--line); }
 .hq-money-flow .hq-money-stat strong { font-size: 16px; }
-.hq-money-dp { text-align: right; }
 .hq-money .section { margin: 0; padding: 0 10px 10px; }
 .hq-roster { display: grid; gap: 7px; width: 100%; margin-top: 10px; padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: rgba(8, 13, 24, 0.45); color: var(--text); font: inherit; text-align: left; cursor: pointer; }
 .hq-roster:focus-visible, .hq-money-row:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }

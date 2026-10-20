@@ -12,7 +12,7 @@ const result: DebriefResult = {
   endingSummary: 'The handover is complete.',
   objective: { score: 75, label: 'Largely resolved' }, civilianSafety: { score: 68, label: 'Safety was strained' },
   officerCondition: [{ officerId: 'off_chen', stressBefore: 12.5, stressAfter: 23.5, xpGained: 29 }],
-  informationPreserved: [], resources: [], unitWear: [], trustDelta: -2, fundingReward: 400, devPointReward: 1,
+  informationPreserved: [], resources: [], unitWear: [], trustDelta: -2, fundingReward: 400,
   causes: ['The team verified access before the handover.'],
 };
 const state = establishedDepartment(Date.UTC(2026, 9, 3), 1);
@@ -26,7 +26,7 @@ const decision: DecisionView = {
 describe('scannable debrief results', () => {
   it('keeps objective, safety and real reward losses in the first summary', () => {
     const html = renderToStaticMarkup(createElement(DebriefSummary, { debrief: result }));
-    for (const label of ['75/100', '68/100', 'Largely resolved', 'Safety was strained', '+$400', '-2 trust', '+1 dev point']) expect(html).toContain(label);
+    for (const label of ['75/100', '68/100', 'Largely resolved', 'Safety was strained', '+$400', '-2 trust']) expect(html).toContain(label);
     expect(html).not.toContain('<details');
   });
 
@@ -117,7 +117,6 @@ describe('scannable debrief results', () => {
     const a = structuredClone(state.officers);
     const b = structuredClone(a);
     b.off_chen.xp += 9_000;
-    b.off_chen.xpBanked = 8_000;
     b.off_chen.ratings.communication = 99;
     b.off_chen.stress = 99;
     b.off_chen.injury = { label: 'Later injury', until: Date.now() + 100_000 };

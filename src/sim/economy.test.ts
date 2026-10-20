@@ -45,7 +45,6 @@ function scenario(): GameState {
 
 function expectEquivalent(a: GameState, b: GameState) {
   expect(a.department.funding).toBeCloseTo(b.department.funding, 3);
-  expect(a.department.devPoints).toBeCloseTo(b.department.devPoints, 6);
   expect(a.department.lastSettledAt).toBe(b.department.lastSettledAt);
   expect(Object.keys(a.units).sort()).toEqual(Object.keys(b.units).sort());
   for (const id of Object.keys(a.units)) {
@@ -116,7 +115,6 @@ describe('offline equivalence', () => {
     expect(s.report!.wages).toBeCloseTo(1520, 3);
     expect(s.report!.operating).toBeCloseTo(800, 3);
     expect(s.report!.net).toBeCloseTo(2480, 3);
-    expect(s.report!.devPoints).toBeCloseTo(1, 6);
   });
 
   it('short settlements do not make a report; acknowledgeReport clears one', () => {
@@ -136,7 +134,6 @@ describe('funding cap', () => {
     const at30 = ok(start, { type: 'tick' }, T0 + 30 * HOUR_MS);
     expect(at30.department.funding).toBeCloseTo(at24.department.funding, 3);
     expect(at30.department.funding).toBeCloseTo(12400 + 24 * 620, 3);
-    expect(at30.department.devPoints).toBeCloseTo(3 + 24 * 0.25, 6);
     expect(at30.report).toMatchObject({ capped: true, accruedHours: 24 });
     expect(at24.report).toMatchObject({ capped: false });
   });
@@ -192,7 +189,6 @@ describe('time safety', () => {
     const snapshot = structuredClone(s);
     s = ok(s, { type: 'tick' }, T0 + 1 * HOUR_MS);
     expect(s.department.funding).toBe(snapshot.department.funding);
-    expect(s.department.devPoints).toBe(snapshot.department.devPoints);
     expect(s.department.clockHighWater).toBe(T0 + 2 * HOUR_MS);
     s = ok(s, { type: 'tick' }, T0 + 2 * HOUR_MS);
     expect(s).toEqual(snapshot);

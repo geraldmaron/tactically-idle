@@ -6,6 +6,8 @@
 
 import type { SquadArrangementLockTarget, SquadArrangementProposal, SquadArrangementState } from './squad-optimizer';
 import type { CommandStaffState, ManagerId, ManagerPolicyPatch } from './command-staff';
+import type { RankId } from './ranks';
+import type { UnlockRule } from '../content/unlocks';
 
 export type Id = string;
 
@@ -324,8 +326,9 @@ export interface Officer {
   career: { operations: number; favorable: number; adverse: number; earned?: number };
   /** Announced retirement; the officer leaves on `day`. Forecastable, never instant. */
   retirement: { day: number; reason: 'age' | 'service' | 'burnout'; announcedDay: number; extended: boolean } | null;
-  /** XP already converted into rating growth. */
-  xpBanked?: number;
+  /** Ranks reached in play (save v12), oldest first, each with the call, course or detail that
+   * brought it. The rank itself derives from `xp` (sim/ranks.ts). */
+  promotions?: { rank: RankId; day: number; cause: string }[];
   /** Epoch ms when stress last rose above the burnout threshold and stayed there. */
   highStressSince?: number | null;
   /** Newest debrief run id already counted into `career`. */
@@ -463,7 +466,9 @@ export type NodeEffect =
 
 export interface DevelopmentTier {
   /** Incremental purchase price; effects are the total benefit at this tier. */
-  cost: { dp: number; funding: number };
+  cost: { funding: number };
+  /** Milestone that grants this tier free when met (sim/grants.ts). */
+  grant: UnlockRule;
   effects: NodeEffect[];
 }
 
@@ -472,7 +477,9 @@ export interface DevelopmentNode {
   branch: DevBranch;
   name: string;
   description: string;
-  cost: { dp: number; funding: number };
+  cost: { funding: number };
+  /** Milestone that grants a one-time node free; tiered nodes carry one per tier. */
+  grant: UnlockRule;
   requires: Id[];
   effects: NodeEffect[];
   /** Ordered tiers I through III. Missing for a one-time program or license. */
@@ -506,6 +513,15 @@ export interface LedgerEntry {
   latest?: number;
 }
 
+/** A development a milestone granted free (sim/grants.ts). */
+export interface GrantRecord {
+  nodeId: Id;
+  tier: number;
+  at: number;
+  /** The milestone in words, as Develop showed it: 'Level 4', '10 calls resolved', 'Trust 85'. */
+  milestone: string;
+}
+
 export interface Department {
   name: string;
   funding: number;
@@ -514,7 +530,10 @@ export interface Department {
   /** How the department is known to work (src/sim/reputation.ts): lean -1 talks first .. +1 goes in
    * hard, a moving average of committed choices, and how many choices it has seen. */
   reputation?: { lean: number; choices: number };
-  devPoints: number;
+  /** Live calls closed resolved (save v12), counted for development milestones. */
+  callsResolved: number;
+  /** Developments granted by a milestone (save v12), oldest first. */
+  grants: GrantRecord[];
   /** Standing, 0..100. Not spendable. */
   trust: number;
   level: number;
@@ -554,7 +573,8 @@ export interface ShiftReport {
   maintenanceSpend?: number;
   maintenanceStarted?: Id[];
   net: number;
-  devPoints: number;
+  /** Developments a milestone granted in this window (save v12). */
+  grants?: GrantRecord[];
   completedCourses: { officerId: Id; courseId: Id }[];
   recovered: Id[];
   shortages: string[];
@@ -562,7 +582,7 @@ export interface ShiftReport {
   /** Units that crossed into unreliable/failed/expired, and servicing that finished. */
   equipment: { unitId: Id; event: 'unreliable' | 'failed' | 'expired' | 'serviced' }[];
   /** Retirements announced or completed, birthdays/anniversaries that changed wages. */
-  personnel: { officerId: Id; event: 'retirement_announced' | 'retired' | 'anniversary' | 'birthday'; detail: string }[];
+  personnel: { officerId: Id; event: 'retirement_announced' | 'retired' | 'anniversary' | 'birthday' | 'promoted'; detail: string }[];
 }
 
 // ---------------------------------------------------------------- operations
@@ -771,14 +791,15 @@ export interface DebriefResult {
   decisions?: DecisionView[];
   objective: { score: number; label: string };
   civilianSafety: { score: number; label: string };
-  officerCondition: { officerId: Id; stressBefore: number; stressAfter: number; xpGained: number }[];
+  /** `promotions`: ranks the officer reaches when this debrief closes, each with what it gives
+   * (save v12). */
+  officerCondition: { officerId: Id; stressBefore: number; stressAfter: number; xpGained: number; promotions?: { rank: RankId; line: string }[] }[];
   informationPreserved: { factId: Id; label: string; status: KnowledgeStatus }[];
   resources: { itemId: Id; used: number; returned: number }[];
   /** Per-unit condition change from this run. */
   unitWear: { unitId: Id; itemId: Id; serial: string; before: number; after: number }[];
   trustDelta: number;
   fundingReward: number;
-  devPointReward: number;
   /** Department service this call earned (save v7; absent before). */
   serviceEarned?: number;
   /** The department level this call took the department to, when it rose. */

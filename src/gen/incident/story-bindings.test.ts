@@ -20,7 +20,7 @@ function fixture(built = build()): ScenarioDefinition {
     id: 'story_fixture', version: 5, code: 'TEST', title: 'Binding test', setting: 'residential',
     locationFamilyId: built.location.familyId, locationSeed: 0, summary: 'Test', variantLabel: 'Test', pressureLabel: 'Test',
     squadRange: { min: 1, max: 1 }, briefing: { known: [], unknown: [] }, objectives: [],
-    pressure: { start: 0, perMinute: 0, threshold: 100, civilianPerMinute: 0 }, rewards: { funding: 0, devPoints: 0, trust: 0, xp: 0 }, endings: {},
+    pressure: { start: 0, perMinute: 0, threshold: 100, civilianPerMinute: 0 }, rewards: { funding: 0, trust: 0, xp: 0 }, endings: {},
     stages: {
       assess: { id: 'assess', label: 'Assess', prompt: 'Test', actions: [] },
       adapt: { id: 'adapt', label: 'Adapt', prompt: 'Test', actions: [] },

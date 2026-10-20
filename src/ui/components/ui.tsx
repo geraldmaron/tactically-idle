@@ -1,11 +1,9 @@
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
 import { Icon } from '../icons';
 import type { IconName } from '../icons';
-import { EXPERIENCE_META, RATING_META, STATUS_META, ratingTone } from './labels';
+import { RATING_META, STATUS_META, ratingTone } from './labels';
 import type { RatingKey } from '../../sim/types';
 import type { StatusKey } from './labels';
-import type { ExperienceBand } from '../../sim/calendar';
-import { EXPERIENCE_LABEL } from '../../sim/calendar';
 import { ChoiceRail } from './ChoiceRail';
 import { StressDisplay } from './StressDisplay';
 
@@ -228,15 +226,6 @@ export function OfficerStatusChip({ status, children }: { status: StatusKey; chi
   return (
     <Chip tone={m.tone} icon={m.icon}>
       {children ?? m.label}
-    </Chip>
-  );
-}
-
-export function ExperienceChip({ band }: { band: ExperienceBand }) {
-  const m = EXPERIENCE_META[band];
-  return (
-    <Chip tone={m.tone} icon={m.icon}>
-      {EXPERIENCE_LABEL[band]}
     </Chip>
   );
 }

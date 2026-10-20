@@ -114,7 +114,7 @@ describe('arrivals and expiry are event-ordered', () => {
 
   it('stays identical when restocking also draws from the shared PRNG', () => {
     let start = createInitialState(T0);
-    start.department.devPoints = 10;
+
     start = ok(start, { type: 'unlockNode', nodeId: 'logistics_presets' }, T0);
     start = ok(start, { type: 'unlockNode', nodeId: 'logistics_restock' }, T0);
     start = ok(start, { type: 'setRestockRule', rule: { itemId: 'trauma_kit', target: 40, budgetCeiling: 400 } }, T0);

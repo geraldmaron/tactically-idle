@@ -69,7 +69,7 @@ export const OUTCOME_SCORE_V1 = tunable('OUTCOME_SCORE_V1', {
     lieHeld: [0, 0.5] as Pair, lieFound: [-3, 1.5] as Pair },
   /** A call that runs this many operation minutes or more is a long one. */
   time: { longAt: 45, long: [-1, 3] as Pair },
-  /** The rewards factor (funding, experience, development points, and the trust the call's size
+  /** The rewards factor (funding, experience, and the trust the call's size
    * brings): `base`, plus `perPoint` for each trust point the lines add up to, plus `objective` for
    * how far the call got (run.objective, 0 to 100) against the middle. Clamped 0 to 1, and to
    * `unfinishedMax` when the call is not resolved: unfinished work never earns full settlement

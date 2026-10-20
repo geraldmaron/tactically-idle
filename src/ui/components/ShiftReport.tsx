@@ -1,4 +1,6 @@
-import type { GameState, ShiftReport } from '../../sim/types';
+import type { GameState, GrantRecord, ShiftReport } from '../../sim/types';
+import { DEV_NODES } from '../../content/dev-tree';
+import { tierLabel } from '../../sim/development-tiers';
 import { fullName } from '../../sim/officer';
 import { COURSES } from '../../content/courses';
 import { ITEMS } from '../../content/items';
@@ -17,11 +19,18 @@ export const EQUIPMENT_EVENT: Record<ShiftReport['equipment'][number]['event'], 
   serviced: { chip: 'Serviced', text: 'back from service', icon: 'wrench', tone: 'mint', warn: false },
 };
 
+/** A granted development by name, with its tier when it has tiers: 'Training academy II'. */
+export function grantName(grant: Pick<GrantRecord, 'nodeId' | 'tier'>): string {
+  const node = DEV_NODES[grant.nodeId];
+  return node ? `${node.name}${node.tiers ? ` ${tierLabel(grant.tier)}` : ''}` : grant.nodeId;
+}
+
 export const PERSONNEL_EVENT: Record<ShiftReport['personnel'][number]['event'], { chip: string; icon: IconName; tone: Tone; warn: boolean }> = {
   retirement_announced: { chip: 'Retiring', icon: 'retire', tone: 'warn', warn: true },
   retired: { chip: 'Retired', icon: 'door', tone: 'danger', warn: true },
   anniversary: { chip: 'Anniversary', icon: 'medal', tone: 'mint', warn: false },
   birthday: { chip: 'Birthday', icon: 'cake', tone: 'blue', warn: false },
+  promoted: { chip: 'Promoted', icon: 'medal', tone: 'mint', warn: false },
 };
 
 /** The full shift report: money, courses, recoveries, shortages, equipment and personnel events.
@@ -29,6 +38,8 @@ export const PERSONNEL_EVENT: Record<ShiftReport['personnel'][number]['event'], 
 export function ShiftReportCard({ report, g, acknowledge = true }: { report: ShiftReport; g: GameState; acknowledge?: boolean }) {
   const { act } = useToast();
   const elapsed = report.to - report.from;
+  // A report opened when a debrief closed (a grant or promotion) has settled no time yet: no money rows.
+  const settled = elapsed > 0 || report.gross !== 0 || report.net !== 0;
   return (
     <section className="card card-amber report" aria-label="Shift report">
       <div className="section-head">
@@ -36,9 +47,9 @@ export function ShiftReportCard({ report, g, acknowledge = true }: { report: Shi
           <Icon name="list" size={18} />
           Shift report
         </h2>
-        <Chip icon="clock">{duration(elapsed)} away</Chip>
+        {settled && <Chip icon="clock">{duration(elapsed)} away</Chip>}
       </div>
-      <div className="report-net">
+      {settled && <><div className="report-net">
         <span className="report-net-label">
           <Icon name="cash" size={16} />
           Net funding
@@ -47,11 +58,11 @@ export function ShiftReportCard({ report, g, acknowledge = true }: { report: Shi
       </div>
       <KV icon="trend" k="Gross income" v={money(report.gross)} />
       <KV icon="people" k="Wages" v={`-${money(report.wages)}`} />
-      <KV icon="gear" k="Operating costs" v={`-${money(report.operating)}`} />
+      <KV icon="gear" k="Operating costs" v={`-${money(report.operating)}`} /></>}
       {report.restockSpend > 0 && <KV icon="box" k="Restocking" v={`-${money(report.restockSpend)}`} />}
       {(report.maintenanceSpend ?? 0) > 0 && <KV icon="wrench" k="Equipment manager servicing" v={`-${money(report.maintenanceSpend ?? 0)}`} />}
       {(report.maintenanceStarted?.length ?? 0) > 0 && <p className="dim">Sent for service: {report.maintenanceStarted!.map((id) => g.units[id]?.serial ?? id).join(', ')}.</p>}
-      {report.devPoints > 0 && <KV icon="chart" k="Development points" v={`+${Math.round(report.devPoints * 10) / 10}`} tone="amber" />}
+      {(report.grants ?? []).map((grant) => <KV key={`${grant.nodeId}:${grant.tier}`} icon="star" k={`Granted at ${grant.milestone}`} v={grantName(grant)} tone="mint" />)}
       {report.capped && (
         <p className="note note-amber">
           <Icon name="info" size={16} />

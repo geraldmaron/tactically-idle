@@ -224,7 +224,7 @@ export function OpsLive() {
           <h3>Still unresolved</h3>
           <ul className="bullets">{failurePlan.remainingTasks.map(task => <li key={task}>{task}</li>)}</ul>
           <p>{failurePlan.consequence}</p>
-          <p className="note note-warn">No incident funding, development points or completion experience. Department trust falls by 2.</p>
+          <p className="note note-warn">No incident funding or completion experience. Department trust falls by 2.</p>
         </>}
       </Sheet>
       <Sheet

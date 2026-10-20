@@ -1,15 +1,18 @@
-// Officer careers: ageing, service anniversaries, experience-driven learning and
-// announced retirement. Pure of the economy module (callers pass recovery rates
+// Officer careers: ageing, service anniversaries, how much each XP award teaches (ranks live in
+// sim/ranks.ts) and announced retirement. Pure of the economy module (callers pass recovery rates
 // and the budget in) so economy.settle can call it without an import cycle.
 //
 // Everything runs on the game calendar (src/sim/calendar.ts). Scheduled events
 // (anniversaries, birthdays, retirement days, the 20-day burnout clock) are
 // returned by nextCareerEventTime so the settlement cuts its segments there;
-// condition-based rules (burnout, mandatory age, xp growth) are evaluated at every
+// condition-based rules (burnout, mandatory age) are evaluated at every
 // sweep. Both are functions of state and time only, so online ticks and one
 // offline settlement land in the same place.
-import type { DebriefResult, GameState, Id, Officer, RatingKey, Role, ShiftReport } from './types';
-import { CALENDAR, EXPERIENCE_LABEL, ageYears, experienceBand, formatGameDate, gameDay, msForGameDay, serviceYears, type ExperienceBand } from './calendar';
+import type { DebriefResult, GameState, Id, Officer, RatingKey, ShiftReport } from './types';
+import { CALENDAR, ageYears, formatGameDate, gameDay, msForGameDay, serviceYears } from './calendar';
+import { RANKS } from '../content/ranks';
+import { cappedXp, creditXp, experienceBand, promotionLine, type ExperienceBand, type Promotion } from './ranks';
+import { openReport } from './shift-report';
 import { next, hashSeed } from './rng';
 import { fullName } from './officer';
 import { tunable } from './tuning';
@@ -43,9 +46,6 @@ export const CAREER_TUNING = tunable('CAREER_TUNING', {
   ageRecoveryFloor: 0.8,
   /** Birthdays are reported only when they reach one of these ages (the effect band changes). */
   ageBands: [50, 55, 60],
-  /** xp -> rating growth: every 100 xp is +1 to the officer's main rating, scaled by the learning multiplier. */
-  xpPerPoint: 100,
-  xpRatingCeiling: 90,
   /** A run's outcome factor blends objective and civilian safety by `debriefWeights` (debriefBand,
    * and operation.ts outcomeFactor for calls before v13). Careers count it favorable at `favorableAt`
    * or more and adverse below `adverseBelow`; v13 calls use the scored factor (sim/outcome-score.ts). */
@@ -54,7 +54,7 @@ export const CAREER_TUNING = tunable('CAREER_TUNING', {
   debriefWeights: { objective: 0.55, civilianSafety: 0.45 },
 }, { guard: next => next.favorableAt < next.adverseBelow ? 'favorableAt stays at or above adverseBelow.' : null });
 
-/** Experience band -> how fast xp becomes rating growth. Tunable (sim/tuning.ts). */
+/** Experience band -> how much of each XP award an officer takes in. Tunable (sim/tuning.ts). */
 export const LEARNING_MULTIPLIER: Record<ExperienceBand, number> = tunable('LEARNING_MULTIPLIER', {
   rookie: 1.3,
   developing: 1.0,
@@ -72,23 +72,13 @@ export function learningAptitude(o: Pick<Officer, 'ratings'>): number {
   return LEARNING_APTITUDE.min + ((LEARNING_APTITUDE.max - LEARNING_APTITUDE.min) * r) / 100;
 }
 
-/** The rating an officer's xp improves, by role. */
-export const ROLE_MAIN_RATING: Record<Role, RatingKey> = {
-  comms: 'communication',
-  breach: 'shooting',
-  medic: 'medical',
-  recon: 'awareness',
-  lead: 'coordination',
-};
-
 /**
  * Hidden bookkeeping stored on officers as optional JSON-safe fields (same pattern
- * as Department.candidateRefreshedAt), because the Officer type is frozen:
- * - xpBanked: xp already converted into rating growth (or present at creation).
+ * as Department.candidateRefreshedAt):
  * - highStressSince: epoch ms when stress first went above the burnout line, if it still is.
  * - lastRunCounted: runId of the newest debrief already counted into `career`.
  */
-export type OfficerExt = Officer & { xpBanked?: number; highStressSince?: number | null; lastRunCounted?: string | null };
+export type OfficerExt = Officer & { highStressSince?: number | null; lastRunCounted?: string | null };
 const ext = (o: Officer) => o as OfficerExt;
 
 const EPS_DAY = 1e-6;
@@ -114,42 +104,47 @@ export function ageRecoveryFactor(o: Pick<Officer, 'bornDay'>, day: number): num
   return Math.max(CAREER_TUNING.ageRecoveryFloor, 1 - CAREER_TUNING.ageRecoveryPerYear * over);
 }
 
-export function learningMultiplier(o: Pick<Officer, 'serviceStartDay' | 'career' | 'ratings'>, day: number): number {
-  return LEARNING_MULTIPLIER[experienceBand(o, day)] * learningAptitude(o);
+/** How much of an award an officer takes in: the rank's band rate times aptitude. */
+export function learningMultiplier(o: Pick<Officer, 'xp' | 'ratings'>): number {
+  return LEARNING_MULTIPLIER[experienceBand(o)] * learningAptitude(o);
 }
 
 export type LearningPace = 'fast' | 'steady' | 'slow';
-/** How quickly experience turns into skill, in words, from the band and the officer's aptitude. */
-export function learningPace(o: Pick<Officer, 'serviceStartDay' | 'career' | 'ratings'>, day: number): LearningPace {
-  const m = learningMultiplier(o, day);
+/** How quickly experience turns into rank, in words, from the band and the officer's aptitude. */
+export function learningPace(o: Pick<Officer, 'xp' | 'ratings'>): LearningPace {
+  const m = learningMultiplier(o);
   return m >= LEARNING_APTITUDE.fastAt ? 'fast' : m <= LEARNING_APTITUDE.slowAt ? 'slow' : 'steady';
 }
 
-/**
- * Convert banked-up xp into rating growth: `xpPerPoint / multiplier` xp buys +1 to the
- * role's main rating (rookies need ~77, developing 100, seasoned ~118, veterans ~143).
- * Returns the rating points gained. Stops at the ceiling; courses can still go higher.
- */
-export function applyXpGrowth(o: Officer, day: number): number {
-  const e = ext(o);
-  const key = ROLE_MAIN_RATING[o.role];
-  if (!key || !hasCareer(o)) return 0;
-  const need = Math.max(1, Math.round(CAREER_TUNING.xpPerPoint / learningMultiplier(o, day)));
-  let banked = e.xpBanked ?? 0;
-  let gained = 0;
-  while (o.xp - banked >= need && o.ratings[key] < CAREER_TUNING.xpRatingCeiling) {
-    banked += need;
-    o.ratings[key] += 1;
-    gained++;
-  }
-  e.xpBanked = banked;
-  return gained;
+/** The XP an award of `base` gives this officer, after learning and the top-rank cap. */
+export function learnedXp(o: Pick<Officer, 'xp' | 'ratings'>, base: number): number {
+  return cappedXp(o, base * learningMultiplier(o));
 }
 
-/** Share of xp still to go for the next rating point, for display (0..1). */
-export function xpProgress(o: Officer, day: number): number {
-  const need = Math.max(1, Math.round(CAREER_TUNING.xpPerPoint / learningMultiplier(o, day)));
-  return Math.max(0, Math.min(1, (o.xp - (ext(o).xpBanked ?? 0)) / need));
+const ratingWord = (key: RatingKey) => (key === 'medical' ? 'medical response' : key);
+
+/** What a promotion gave, as a sentence: 'Coordination +3, composure +2, earns mentor, wage +$3/h'. */
+export function promotionText(p: Pick<Promotion, 'ratings' | 'wage' | 'trait' | 'drops'>): string {
+  const line = promotionLine(p, ratingWord, (trait) => trait.replace('_', ' '));
+  return line ? `${line[0].toUpperCase()}${line.slice(1)}` : '';
+}
+
+/** The shift report line for a promotion. */
+export function promotionDetail(o: Officer, p: Promotion): string {
+  const line = promotionText(p);
+  return `${fullName(o)} promoted to ${RANKS[p.rank].title} ${p.cause}${line ? `. ${line}` : ''}`;
+}
+
+/**
+ * Award XP an officer has already earned (see learnedXp): the one path every award takes, so
+ * calls, courses and details promote the same way. Promotions go to `ev` when a settlement is
+ * collecting them, else to the open shift report.
+ */
+export function awardXp(d: GameState, o: Officer, xp: number, cause: string, at: number, ev?: PersonnelEvent[]): Promotion[] {
+  const promotions = creditXp(o, xp, { label: cause, day: gameDay(d, at) });
+  const out = ev ?? (promotions.length ? openReport(d, at).personnel : []);
+  for (const p of promotions) out.push({ officerId: o.id, event: 'promoted', detail: promotionDetail(o, p) });
+  return promotions;
 }
 
 // ---------------------------------------------------------------- operation history (derived from debriefs)
@@ -308,7 +303,7 @@ export function ageEffectLine(age: number): string | null {
 
 /**
  * Apply career events due in (prev, t]: anniversaries and birthdays in time order,
- * then the condition-based rules at t (xp growth, operation counts, burnout,
+ * then the condition-based rules at t (operation counts, burnout,
  * announcements, retirement). Mutates the draft; reports go to `ev`.
  */
 export function applyCareerDue(d: GameState, prev: number, t: number, ev: PersonnelEvent[]): void {
@@ -337,15 +332,12 @@ export function applyCareerDue(d: GameState, prev: number, t: number, ev: Person
     if (!o) continue;
     const eventDay = gameDay(d, s.ms);
     if (s.kind === 'anniversary') {
-      const before = experienceBand(o, eventDay - DAY);
-      const after = experienceBand(o, eventDay);
       let detail = `${fullName(o)}: ${yearsWord(s.k)} of service`;
       if (o.wage < CAREER_TUNING.wageCap) {
         const raise = Math.min(CAREER_TUNING.wageStep, CAREER_TUNING.wageCap - o.wage);
         o.wage += raise;
         detail += `. Wage +${money(raise)}/h (now ${money(o.wage)}/h)`;
       }
-      if (before !== after) detail += `. Now ${EXPERIENCE_LABEL[after]}`;
       ev.push({ officerId: o.id, event: 'anniversary', detail });
       // At 25+ years the officer may choose to retire; the draw is deterministic per officer and year.
       if (!o.retirement && servicePicksRetirement(o, s.k)) {
@@ -370,7 +362,6 @@ export function applyCareerDue(d: GameState, prev: number, t: number, ev: Person
     if (!d.officers[o.id]) continue;
     const e = ext(o);
     countNewDebriefs(d, o);
-    applyXpGrowth(o, day);
 
     // Burnout clock: starts when stress first goes above the line, resets when it drops back.
     const high = o.stress > CAREER_TUNING.burnoutStress + 1e-9;

@@ -12,7 +12,9 @@ import { advanceClocks, clockConditionsHold, clockErrors, clockOutEffects, cueEf
 import { applyMoves, driftMeters, initialMeters, meterConditionsHold } from './meters';
 import { applyCommitments } from './commitments';
 import { forceLines, OUTCOME_SCORE_V1, scoreCall } from './outcome-score';
-import { CAREER_TUNING } from './career';
+import { CAREER_TUNING, awardXp, learnedXp, promotionText } from './career';
+import { creditXp } from './ranks';
+import { applyGrants } from './grants';
 import { applyExternalSupportEffects, completionEvidence, COMPLETION_DISPOSITIONS, hasCompletionConditions, MAX_EXTERNAL_RESPONSE_MINUTES, savedDrawnEffects } from './external-support';
 // Operation engine: start, cancel, decide, closeDebrief. The run record is the
 // save: every committed decision stores its sample and result, so resuming never
@@ -736,8 +738,10 @@ export function computeDebrief(state: GameState, run: OperationRun): DebriefResu
       const after = clamp(round1(o.stress + endingStrain), 0, 100);
       const before = clamp(round1(o.stress - (delta[id] ?? 0)), 0, 100);
       const share = Math.min(1, 0.4 + 0.3 * (participation[id] ?? 0));
-      const xp = run.responseFailure ? 0 : Math.round(scenario.rewards.xp * share * (0.5 + 0.5 * factor));
-      officerCondition.push({ officerId: id, stressBefore: before, stressAfter: after, xpGained: xp });
+      const xp = run.responseFailure ? 0 : learnedXp(o, scenario.rewards.xp * share * (0.5 + 0.5 * factor));
+      // The promotions closing this debrief brings, worked on a copy so the preview is what close applies.
+      const promotions = creditXp(structuredClone(o), xp, { label: '', day: 0 }).map((p) => ({ rank: p.rank, line: promotionText(p) }));
+      officerCondition.push({ officerId: id, stressBefore: before, stressAfter: after, xpGained: xp, ...(promotions.length ? { promotions } : {}) });
     }
   }
 
@@ -747,7 +751,6 @@ export function computeDebrief(state: GameState, run: OperationRun): DebriefResu
   const proposedTrust = run.responseFailure ? -2 : score ? score.trust : Math.round(scenario.rewards.trust * (2 * factor - 1)) + ending.trustAdjust;
   const trustDelta = clamp(state.department.trust + proposedTrust, 0, 100) - state.department.trust;
   const fundingReward = run.responseFailure ? 0 : Math.round(scenario.rewards.funding * (0.4 + 0.6 * factor));
-  const devPointReward = run.responseFailure ? 0 : factor >= 0.6 && (!completion || completion.completionAchieved) ? scenario.rewards.devPoints : factor >= 0.4 ? Math.floor(scenario.rewards.devPoints / 2) : 0;
   // Department service (save v7), shown on the debrief before it closes and added at close.
   const service = serviceEarned({ completed: completion?.completionAchieved ?? factor >= CAREER_TUNING.favorableAt, failed: !!run.responseFailure }, scenario.incident?.tier ?? 1);
   const levelAfter = service === null ? state.department.level : Math.max(state.department.level, levelForService(departmentService(state.department) + service));
@@ -786,7 +789,6 @@ export function computeDebrief(state: GameState, run: OperationRun): DebriefResu
     unitWear,
     trustDelta,
     fundingReward,
-    devPointReward,
     ...(service !== null ? { serviceEarned: service } : {}),
     ...(levelAfter > state.department.level ? { levelReached: levelAfter } : {}),
     causes: causes.slice(0, 7),
@@ -1113,15 +1115,15 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     const factor = scenario!.incidentPeople?.length && !run.responseFailure ? scoreCall(scenario!, run, { officers: draft.officers, steps: traceRun(scenario!, run).steps }).factor : outcomeFactor(run);
     const verdict: 'favorable' | 'adverse' | null = factor >= CAREER_TUNING.favorableAt && (result.completionAchieved) ? 'favorable' : factor < CAREER_TUNING.adverseBelow ? 'adverse' : null;
     postFunding(draft.department, result.fundingReward, 'payout', `Call payout, ${scenario?.title ?? result.endingTitle}`, draft.department.clockHighWater);
-    draft.department.devPoints += result.devPointReward;
     draft.department.trust = clamp(draft.department.trust + result.trustDelta, 0, 100);
     if (result.serviceEarned !== undefined) addService(draft.department, result.serviceEarned);
+    if (!run.responseFailure && (result.completionAchieved ?? factor >= CAREER_TUNING.favorableAt)) draft.department.callsResolved = (draft.department.callsResolved ?? 0) + 1;
     const payoutShare = result.officerCondition.length ? result.fundingReward / result.officerCondition.length : 0;
     for (const oc of result.officerCondition) {
       const o = draft.officers[oc.officerId];
       if (!o) continue;
       o.career.earned = (o.career.earned ?? 0) + payoutShare;
-      o.xp += oc.xpGained;
+      awardXp(draft, o, oc.xpGained, `after ${scenario?.title ?? result.endingTitle}`, draft.department.clockHighWater);
       o.stress = oc.stressAfter;
       o.career.operations += 1;
       if (verdict) o.career[verdict] += 1;
@@ -1133,6 +1135,8 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     // Fold now, not only at the next dispatch: the state keeps ten debriefs, so a later run
     // could otherwise push a best result out before it is recorded.
     foldDebriefs(draft, draft.department.clockHighWater);
+    // Level, trust and resolved calls only move here, so this is where milestones are met.
+    applyGrants(draft, draft.department.clockHighWater);
     draft.activeRun = null;
     return { ok: true };
   },

@@ -37,7 +37,7 @@ describe('Command Staff on HQ', () => {
 
   it('marks hired managers On or Off and shows their latest action', () => {
     state = createInitialState(NOW, 1);
-    state.department.devPoints = 20;
+
     hire(COMMAND_STAFF.watchCommander.nodeId);
     hire('logistics_equipment_manager');
     state.commandStaff!.watch_commander.log.unshift({ at: NOW - 2 * 3_600_000, text: 'Rested Alpha: Lim reached 64 stress' });
@@ -50,7 +50,7 @@ describe('Command Staff on HQ', () => {
 
   it('opens a sheet with the switch, policy and log for a hired manager, and a Develop link for the rest', () => {
     state = createInitialState(NOW, 1);
-    state.department.devPoints = 20;
+
     hire(COMMAND_STAFF.watchCommander.nodeId);
     const hired = renderToStaticMarkup(createElement(ManagerSheet, { id: 'watch_commander', g: state, now: NOW, onClose: () => {} }));
     expect(hired).toContain('role="switch" aria-checked="true" aria-label="Watch Commander on duty"');
@@ -67,7 +67,7 @@ describe('Command Staff on HQ', () => {
 
   it('offers three candidates for an open, vacant post, compared on the same rows', () => {
     state = createInitialState(NOW, 1);
-    state.department.devPoints = 20;
+
     expect(DEVELOP_HANDLERS.unlockNode(state, COMMAND_STAFF.watchCommander.nodeId, 1)).toEqual({ ok: true });
     fillOpenPosts(state);
     const card = renderToStaticMarkup(createElement(CommandStaff));

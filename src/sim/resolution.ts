@@ -49,7 +49,8 @@ import { conditionFraction, EXPERIENCE_TUNING, highRiskAllowed } from './officer
 import { CERT_HOLDER, isCertId } from '../content/certs';
 import { squadUnits, unitEffectiveness } from './inventory';
 import { runRoster } from './squads';
-import { ageYears, experienceBand, gameDay } from './calendar';
+import { ageYears, gameDay } from './calendar';
+import { experienceBand } from './ranks';
 import { signalBetween } from './spatial';
 import { signalCarry } from './environment';
 import { vantageZones } from './sightlines';
@@ -795,8 +796,8 @@ export function evaluateAction(input: EvalInput): Evaluation {
         ref: o.id,
       });
     }
-    // Experience band, from service and operations at the run's game day.
-    const band = experienceBand(o, day);
+    // Experience band, read from the officer's rank (sim/ranks.ts).
+    const band = experienceBand(o);
     if (pressured) {
       if (band === 'rookie') contributors.push({ label: `${o.surname}: rookie under pressure ${E.rookiePenalty}`, value: round1(E.rookiePenalty * seat), source: 'familiarity', ref: o.id });
       else if (band === 'seasoned') contributors.push({ label: `${o.surname}: seasoned under pressure +${E.seasonedBonus}`, value: round1(E.seasonedBonus * seat), source: 'familiarity', ref: o.id });
@@ -804,7 +805,7 @@ export function evaluateAction(input: EvalInput): Evaluation {
     }
     if (band === 'rookie') {
       const sq = squadOf.get(o.id);
-      const mentor = (sq ? runRoster(state, run, sq) : []).map((id) => state.officers[id]).find((m) => m && !incidentOfficerUnavailable(state, run, m.id) && m.id !== o.id && experienceBand(m, day) === 'veteran');
+      const mentor = (sq ? runRoster(state, run, sq) : []).map((id) => state.officers[id]).find((m) => m && !incidentOfficerUnavailable(state, run, m.id) && m.id !== o.id && experienceBand(m) === 'veteran');
       if (mentor) contributors.push({ label: `${mentor.surname}: mentoring ${o.surname} +${E.mentoring}`, value: round1(E.mentoring * seat), source: 'familiarity', ref: o.id });
     }
     const age = ageYears(o, day);
@@ -1341,7 +1342,7 @@ export function strainFor(input: EvalInput, ev: Evaluation, band: OutcomeBand): 
       let m = 1;
       if (o.traits.includes('steady') && uncertain) m *= S.steadyTrait;
       if (o.traits.includes('rookie') && mentor) m *= S.rookieWithMentor;
-      if (pressured && experienceBand(o, day) === 'rookie') m *= E.rookieStrain;
+      if (pressured && experienceBand(o) === 'rookie') m *= E.rookieStrain;
       m *= ageStrainMult(ageYears(o, day));
       if (ev.participantIds.includes(id)) m *= ev.exposureMult;
       out[id] = round1(base * w * extra * m);

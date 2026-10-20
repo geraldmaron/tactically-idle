@@ -19,6 +19,8 @@ export const JOURNEYS: readonly Journey[] = [
   { id: 'chance-not-script', job: 'command', title: 'The same pick can take more than one branch, by a roll the player was shown the odds of', test: 'src/architecture/journeys.test.ts' },
   { id: 'team-moves-odds', job: 'build', title: 'Better ratings, less strain and the right gear raise the chance on the choices they apply to', test: 'src/architecture/wiring.test.ts' },
   { id: 'hire-and-equip', job: 'build', title: 'Hire an officer and buy equipment with department money', test: 'src/architecture/journeys.test.ts' },
+  { id: 'officer-promotes', job: 'build', title: 'A call earns an officer XP toward a capped rank, and the promotion raises the rating the odds read', test: 'src/architecture/journeys.test.ts' },
+  { id: 'milestone-grants', job: 'build', title: 'A call that lifts the department a level grants that level\'s developments free, with no purchase', test: 'src/architecture/journeys.test.ts' },
   { id: 'debrief-explains', job: 'understand', title: 'Every committed decision in the debrief names what helped and what hurt', test: 'src/architecture/journeys.test.ts' },
   { id: 'offline-settles', job: 'return', title: 'Time away settles once and caps at 24 hours', test: 'src/sim/economy.test.ts' },
   { id: 'joint-operation', job: 'build', title: 'Two squads deploy to one call and the second supports from a named point on the map', test: 'src/gen/incident/second-squad.test.ts' },
