@@ -131,6 +131,14 @@ const STARTING_SEEDS: Record<Id, UnitSeed[]> = {
     { condition: 90, ageDays: 500, uses: 10 },
     { condition: 82, ageDays: 650, uses: 18 },
   ],
+  // Issued to everyone; the oldest is due for service soon. Fixed draws keep the department's dice
+  // where they were before light protection joined the grant.
+  light_protection: [
+    { condition: 92, ageDays: 180, uses: 5, wearRoll: 0.42 },
+    { condition: 86, ageDays: 360, uses: 11, wearRoll: 0.67 },
+    { condition: 74, ageDays: 620, uses: 19, wearRoll: 0.31 },
+    { condition: 63, ageDays: 900, uses: 26, wearRoll: 0.85 },
+  ],
   ballistic_shield: [
     { condition: 93, ageDays: 400, uses: 6 },
     { condition: 77, ageDays: 700, uses: 14 },
