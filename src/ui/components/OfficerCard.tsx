@@ -10,6 +10,8 @@ import { CERT_ICON, ROLE_META, bandOf, BAND_SHORT, STATUS_META } from './labels'
 import type { StatusKey } from './labels';
 import { ReadinessBar } from './ui';
 import { CERT_NAME } from '../../content/certs';
+import { gameDay } from '../../sim/calendar';
+import { officerGrowth } from './OfficerProgress';
 
 export interface OfficerCardProps {
   officer: Officer;
@@ -50,19 +52,25 @@ export function OfficerCard({ officer, now, variant = 'strip', selected, onClick
   if (variant === 'tile') {
     const statusText = incidentInjury ? `injured: ${incidentInjury}` : status ? status.label.toLowerCase() : BAND_SHORT[band].toLowerCase();
     const certs = officer.certs.slice(0, 3);
+    // The character-card badge (squad-cards): officers have no level, so the badge is the role's
+    // main rating and its ring the XP toward the next point, the same numbers as the profile.
+    const growth = department ? officerGrowth(officer, gameDay({ department }, now)) : null;
+    const xp = growth ? (growth.capped ? 100 : Math.max(0, Math.min(100, growth.progress))) : 0;
+    const growthText = growth ? `, ${growth.rating.label} ${Math.floor(growth.current)}${growth.capped ? '' : `, ${Math.floor(xp)}% to the next point`}` : '';
     return (
       <Tag
         type={onClick ? 'button' : undefined}
         className={`ocard ocard-tile${selected ? ' ocard-on' : ''}${statusKey ? ` ocard-tile-${statusKey}` : ''}`}
         onClick={onClick}
         aria-pressed={onClick && selected !== undefined ? selected : undefined}
-        aria-label={`${officer.firstName} ${officer.surname}, ${role.label}, ${statusText}, stress ${Math.floor(officer.stress + 1e-9)}${squadId ? `, squad ${squadId}` : ''}${leader ? ', squad leader' : ''}${officer.certs.length ? `, ${officer.certs.map((cert) => CERT_NAME[cert]).join(', ')}` : ''}`}
+        aria-label={`${officer.firstName} ${officer.surname}, ${role.label}, ${statusText}, stress ${Math.floor(officer.stress + 1e-9)}${growthText}${squadId ? `, squad ${squadId}` : ''}${leader ? ', squad leader' : ''}${officer.certs.length ? `, ${officer.certs.map((cert) => CERT_NAME[cert]).join(', ')}` : ''}`}
       >
         <span className="ocard-art" ref={ref} style={{ aspectRatio: '1 / 1.04' }}>
           <Portrait officer={officer} size={size} {...age} />
           {squadId && <span className="ocard-squad" aria-hidden="true">{squadId}</span>}
+          {growth && <span className={`ocard-badge${growth.capped ? ' ocard-badge-capped' : ''}`} style={{ ['--xp' as string]: `${xp}%` }} aria-hidden="true" title={`${growth.rating.label} ${Math.floor(growth.current)}`}><b>{Math.floor(growth.current)}</b></span>}
           {status && statusKey && (
-            <span className={`ocard-state ocard-state-${status.tone}`} aria-hidden="true" title={status.label}>
+            <span className={`ocard-state ocard-state-${status.tone}${growth ? ' ocard-state-low' : ''}`} aria-hidden="true" title={status.label}>
               <Icon name={status.icon} size={11} />
             </span>
           )}

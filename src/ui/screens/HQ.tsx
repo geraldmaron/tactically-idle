@@ -9,22 +9,19 @@ import { squadDeployed } from '../../sim/squads';
 import { Sheet } from '../components/Sheet';
 import { Portrait } from '../portraits/Portrait';
 import './hq-overview.css';
-import { COURSES } from '../../content/courses';
 import type { Budget } from '../../sim/department-selectors';
-import type { GameState, ShiftReport, SquadDuty, Squad } from '../../sim/types';
-import { Button, Card, Chip, EmptyState, KV, Section, Segmented } from '../components/ui';
+import type { GameState, SquadDuty, Squad } from '../../sim/types';
+import { Button, Card, Chip, EmptyState, Section, Segmented } from '../components/ui';
 import { useNav } from '../components/nav';
 import { DUTIES, DUTY_META } from '../components/labels';
-import { Icon, itemIcon } from '../icons';
-import type { IconName } from '../icons';
-import { ITEMS } from '../../content/items';
-import { duration, money, perHour, plural, rate, signedMoney } from '../format';
-import { fullName } from '../../sim/officer';
+import { Icon } from '../icons';
+import { money, perHour, plural, rate, signedMoney } from '../format';
 import { scenarioTitle } from './helpers';
 import { SavedDebriefReview } from './OpsDebrief';
 import { ScoreRing } from '../components/DebriefResults';
 import { CommandStaff } from '../components/CommandStaff';
 import { Hub } from '../components/Hub';
+import { ShiftReportCard } from '../components/ShiftReport';
 
 export function HQ() {
   const g = useGame();
@@ -128,159 +125,6 @@ function RosterSummary({ g, overview }: { g: GameState; overview: ReturnType<typ
 }
 
 
-type Tone = 'mint' | 'amber' | 'warn' | 'danger' | 'blue' | 'neutral';
-
-const EQUIPMENT_EVENT: Record<ShiftReport['equipment'][number]['event'], { chip: string; text: string; icon: IconName; tone: Tone; warn: boolean }> = {
-  unreliable: { chip: 'Unreliable', text: 'now unreliable and may malfunction', icon: 'warning', tone: 'warn', warn: true },
-  failed: { chip: 'Failed', text: 'failed and cannot deploy until serviced', icon: 'xcircle', tone: 'danger', warn: true },
-  expired: { chip: 'Expired', text: 'passed its shelf life', icon: 'wait', tone: 'danger', warn: true },
-  serviced: { chip: 'Serviced', text: 'back from service', icon: 'wrench', tone: 'mint', warn: false },
-};
-
-const PERSONNEL_EVENT: Record<ShiftReport['personnel'][number]['event'], { chip: string; icon: IconName; tone: Tone; warn: boolean }> = {
-  retirement_announced: { chip: 'Retiring', icon: 'retire', tone: 'warn', warn: true },
-  retired: { chip: 'Retired', icon: 'door', tone: 'danger', warn: true },
-  anniversary: { chip: 'Anniversary', icon: 'medal', tone: 'mint', warn: false },
-  birthday: { chip: 'Birthday', icon: 'cake', tone: 'blue', warn: false },
-};
-
-function ShiftReportCard({ report, g }: { report: ShiftReport; g: GameState }) {
-  const { act } = useToast();
-  const elapsed = report.to - report.from;
-  return (
-    <section className="card card-amber report" aria-label="Shift report">
-      <div className="section-head">
-        <h2 className="section-title">
-          <Icon name="list" size={18} />
-          Shift report
-        </h2>
-        <Chip icon="clock">{duration(elapsed)} away</Chip>
-      </div>
-      <div className="report-net">
-        <span className="report-net-label">
-          <Icon name="cash" size={16} />
-          Net funding
-        </span>
-        <span className={`report-net-val ${report.net < 0 ? 'tone-danger' : 'tone-mint'}`}>{signedMoney(report.net)}</span>
-      </div>
-      <KV icon="trend" k="Gross income" v={money(report.gross)} />
-      <KV icon="people" k="Wages" v={`-${money(report.wages)}`} />
-      <KV icon="gear" k="Operating costs" v={`-${money(report.operating)}`} />
-      {report.restockSpend > 0 && <KV icon="box" k="Restocking" v={`-${money(report.restockSpend)}`} />}
-      {(report.maintenanceSpend ?? 0) > 0 && <KV icon="wrench" k="Equipment manager servicing" v={`-${money(report.maintenanceSpend ?? 0)}`} />}
-      {(report.maintenanceStarted?.length ?? 0) > 0 && <p className="dim">Sent for service: {report.maintenanceStarted!.map((id) => g.units[id]?.serial ?? id).join(', ')}.</p>}
-      {report.devPoints > 0 && <KV icon="chart" k="Development points" v={`+${Math.round(report.devPoints * 10) / 10}`} tone="amber" />}
-      {report.capped && (
-        <p className="note note-amber">
-          <Icon name="info" size={16} />
-          Capped at 24h: income and wages stop accruing after a day without orders ({duration(report.accruedHours * 3600000)} counted).
-        </p>
-      )}
-      {report.completedCourses.length > 0 && (
-        <div className="report-list">
-          <h3>
-            <Icon name="mortarboard" size={15} />
-            Completed courses
-          </h3>
-          <ul>
-            {report.completedCourses.map((c, i) => (
-              <li key={i}>
-                <Icon name="check" size={14} />
-                {g.officers[c.officerId]?.surname ?? 'Officer'}: {COURSES[c.courseId]?.name ?? c.courseId}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-      {report.recovered.length > 0 && (
-        <div className="report-list">
-          <h3>
-            <Icon name="pulse" size={15} />
-            Recovered, deployable again
-          </h3>
-          <ul>
-            {report.recovered.map((id) => (
-              <li key={id}>
-                <Icon name="check" size={14} />
-                {g.officers[id] ? fullName(g.officers[id]) : id}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-      {report.shortages.filter((line) => !/battery/i.test(line)).length > 0 && (
-        <div className="report-list report-warn">
-          <h3>
-            <Icon name="warning" size={15} />
-            Shortages
-          </h3>
-          <ul>
-            {report.shortages.filter((line) => !/battery/i.test(line)).map((s, i) => (
-              <li key={i}>
-                <Icon name="warning" size={14} />
-                {s}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-      {(report.equipment ?? []).length > 0 && (
-        <div className="report-list">
-          <h3>
-            <Icon name="wrench" size={15} />
-            Equipment
-          </h3>
-          <ul>
-            {report.equipment.map((e, i) => {
-              const u = g.units[e.unitId];
-              const m = EQUIPMENT_EVENT[e.event];
-              const name = u ? `${u.serial} ${ITEMS[u.itemId]?.name ?? u.itemId}` : e.unitId;
-              return (
-                <li key={i} className={m.warn ? 'report-bad' : ''}>
-                  <Icon name={u ? itemIcon(u.itemId) : m.icon} size={14} />
-                  <span>
-                    {name}: {m.text}
-                  </span>
-                  <Chip tone={m.tone} icon={m.icon}>
-                    {m.chip}
-                  </Chip>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      )}
-      {(report.personnel ?? []).length > 0 && (
-        <div className="report-list">
-          <h3>
-            <Icon name="people" size={15} />
-            Personnel
-          </h3>
-          <ul>
-            {report.personnel.map((p, i) => {
-              const m = PERSONNEL_EVENT[p.event];
-              const who = g.officers[p.officerId];
-              return (
-                <li key={i} className={m.warn ? 'report-bad' : ''}>
-                  <Icon name={m.icon} size={14} />
-                  <span>
-                    {who ? fullName(who) : 'Officer'}: {p.detail}
-                  </span>
-                  <Chip tone={m.tone} icon={m.icon}>
-                    {m.chip}
-                  </Chip>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      )}
-      <Button variant="primary" block onClick={() => act({ type: 'acknowledgeReport' })}>
-        Acknowledge
-      </Button>
-    </section>
-  );
-}
 
 function ActiveOpCard({ g, now }: { g: GameState; now: number }) {
   const { go } = useNav();

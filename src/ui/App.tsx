@@ -18,6 +18,7 @@ import { DevelopScreen } from './screens/Develop';
 import { GearScreen } from './screens/Gear';
 import { OfficerSheet } from './screens/OfficerSheet';
 import { SaveManager, SaveWarning } from './components/SaveManager';
+import { WelcomeBack } from './components/WelcomeBack';
 import { useCampaigns, useGame } from './store';
 import { DepartmentContext } from './components/department-context';
 
@@ -62,6 +63,7 @@ function GameShell() {
                 <BottomNav />
                 <SaveManager open={savesOpen} onClose={() => setSavesOpen(false)} />
                 <OfficerSheet officerId={nav.officerId} onClose={nav.closeOfficer} />
+                <WelcomeBack />
               </ToastProvider>
             </OverlayRootContext.Provider>
           </DepartmentScope>

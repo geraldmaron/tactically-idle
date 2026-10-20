@@ -108,15 +108,20 @@ export function DevelopScreen({ highlightedNode, highlightRequest }: { highlight
         <strong>{next.node.name}{next.maxTier > 1 && next.targetTier ? ` ${tierLabel(next.targetTier)}` : ''}</strong>
         <span className="dev-next-fx">{nodeSummary(next)}</span>
       </span>
-      <span className="dev-next-cost">{next.quote.cost!.dp} DP<br />{compactMoney(next.quote.cost!.funding)}<span className="dev-next-state">{next.quote.ok ? 'Ready' : 'Save up'}</span></span>
+      <span className="dev-buy-btn" data-ready={next.quote.ok ? 'yes' : undefined}>
+        <span className="dev-buy-btn-label">{next.quote.ok ? next.maxTier > 1 && next.currentTier > 0 ? 'Upgrade' : 'Unlock' : 'Save up'}</span>
+        <span className="dev-buy-btn-cost"><span data-short={budget.totalDP < next.quote.cost!.dp ? 'yes' : undefined}>{next.quote.cost!.dp} DP</span><span data-short={g.department.funding < next.quote.cost!.funding ? 'yes' : undefined}>{compactMoney(next.quote.cost!.funding)}</span></span>
+      </span>
     </button>}
-    <ChoiceRail value={branch} onChange={setBranch} kind="tabs" label="Development branches" options={BRANCHES.map((id) => {
+    {/* Five branches as five equal tabs (icon, owned count, a dot when one is ready), so the rail
+        never scrolls or clips; the chosen branch is named on the line below. */}
+    <div className="dev-branch-tabs"><ChoiceRail value={branch} onChange={setBranch} kind="tabs" grow label="Development branches" options={BRANCHES.map((id) => {
       const { owned, total, ready } = progress(id);
       const name = BRANCH_META[id].label;
       return { value: id, accessibleLabel: `${name}, ${owned} of ${total} owned${ready ? `, ${ready} ready` : ''}`,
-        label: <><Icon name={BRANCH_META[id].icon} size={16} />{name}<span className={`choice-rail-count${ready ? ' dev-rail-ready' : ''}`}>{owned}/{total}</span></> };
-    })} />
-    <p className="dev-branch-blurb dim">{BRANCH_META[branch].blurb}</p>
+        label: <><span className="dev-tab-icon"><Icon name={BRANCH_META[id].icon} size={20} />{ready > 0 && <i className="dev-tab-dot" />}</span><span className={`choice-rail-count${ready ? ' dev-rail-ready' : ''}`}>{owned}/{total}</span></> };
+    })} /></div>
+    <p className="dev-branch-blurb"><strong>{BRANCH_META[branch].label}</strong><span className="dim">{BRANCH_META[branch].blurb}</span></p>
     <Track rows={rows} wallet={wallet} nextId={next?.node.id ?? null} highlightedNode={highlightedNode} onOpen={open} />
     {selected && <DevelopmentDetail option={selected} onClose={() => setSelectedId(null)} pending={!!purchases.pendingNode}
       failure={purchases.failure?.nodeId === selected.node.id ? purchases.failure.reason : null}
@@ -230,8 +235,12 @@ export function DevelopmentTile({ option: o, budget, highlighted, next = false, 
     </span>
     <span className="dev-node-side" aria-hidden="true">
       {tiered && <span className="dev-pips">{Array.from({ length: o.maxTier }, (_, index) => <i key={index} data-on={index < o.currentTier ? 'yes' : undefined} />)}</span>}
-      {cost ? <span className="dev-cost"><span data-short={shortDp ? 'yes' : undefined}>{cost.dp} DP</span><span data-short={shortFunding ? 'yes' : undefined}>{compactMoney(cost.funding)}</span></span>
-        : <span className="dev-cost dev-cost-done">{tiered ? 'Max' : 'Owned'}</span>}
+      {cost ? state === 'locked' ? <span className="dev-cost"><Icon name="lock" size={11} /><span>{cost.dp} DP</span><span>{compactMoney(cost.funding)}</span></span>
+        : <span className="dev-buy-btn" data-ready={state === 'ready' ? 'yes' : undefined}>
+          <span className="dev-buy-btn-label">{state === 'ready' ? tiered && o.currentTier > 0 ? 'Upgrade' : 'Unlock' : 'Save up'}</span>
+          <span className="dev-buy-btn-cost"><span data-short={shortDp ? 'yes' : undefined}>{cost.dp} DP</span><span data-short={shortFunding ? 'yes' : undefined}>{compactMoney(cost.funding)}</span></span>
+        </span>
+        : <span className="dev-cost dev-cost-done"><Icon name="check" size={11} strokeWidth={3} />{tiered ? 'Max' : 'Owned'}</span>}
     </span>
   </button>;
 }
