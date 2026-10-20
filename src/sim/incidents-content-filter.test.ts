@@ -1,9 +1,9 @@
 // Board filtering by content settings (docs/content-rating.md, "Filtering the board"): a pure
-// engine input. The walk over every tier and topic combination records what stays drawable, for the
-// Settings warning; the draw tests check the filter holds on a real board, and that no exclusion
-// leaves the draw exactly as it was.
+// engine input. The walk over every combination of avoided themes records what stays drawable and
+// holds that each leaves the board drawable; the draw tests check the filter holds on a real board,
+// and that avoiding nothing leaves the draw exactly as it was.
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { CONTENT_DESCRIPTORS, CONTENT_TIERS, MATURE_ONLY, type ContentDescriptor } from '../content/content-descriptors';
+import { AVOIDABLE_THEMES } from '../content/content-descriptors';
 import { callTreeAt } from '../content/call-trees';
 import { scenarioRecipe } from '../content/scenario-recipes';
 import { SCENARIO_TYPES } from '../content/scenario-types';
@@ -28,10 +28,9 @@ beforeEach(() => {
 const T0 = Date.UTC(2026, 0, 5, 12, 0, 0);
 const HOUR = 3_600_000;
 
-/** Every subset of the six topics, as lists in descriptor order. */
-const SUBSETS: ContentDescriptor[][] = Array.from({ length: 1 << CONTENT_DESCRIPTORS.length }, (_, mask) => CONTENT_DESCRIPTORS.filter((_, i) => mask & (1 << i)));
-const COMBOS: ContentExclusion[] = CONTENT_TIERS.flatMap((tier) => SUBSETS.map((off) => ({ tier, off })));
-const label = (e: ContentExclusion) => `${e.tier}${e.off.length ? ` −${e.off.join(' −')}` : ''}`;
+/** Every subset of the avoidable themes, in list order. */
+const COMBOS: ContentExclusion[] = Array.from({ length: 1 << AVOIDABLE_THEMES.length }, (_, mask) => ({ avoid: AVOIDABLE_THEMES.filter((_, i) => mask & (1 << i)) }));
+const label = (e: ContentExclusion) => (e.avoid.length ? `avoid ${e.avoid.join(', ')}` : 'avoid nothing');
 
 /** Every card a campaign's board shows over `days`, as (type, situation) pairs. */
 function boardDraws(campaignSeed: number, exclusion: ContentExclusion | undefined, days = 4): { cards: { type: string; situation: number }[]; state: GameState } {
@@ -45,18 +44,16 @@ function boardDraws(campaignSeed: number, exclusion: ContentExclusion | undefine
 }
 
 describe('content exclusion', () => {
-  it('Core rules out the mature-only descriptors, and topics add to either tier', () => {
-    const mature = CONTENT_DESCRIPTORS.filter((d) => MATURE_ONLY[d]);
-    expect([...excludedDescriptors({ tier: 'core', off: [] })].sort()).toEqual([...mature].sort());
-    expect([...excludedDescriptors({ tier: 'mature', off: [] })]).toEqual([]);
-    expect([...excludedDescriptors({ tier: 'mature', off: ['injury'] })]).toEqual(['injury']);
+  it('rules out exactly the avoided themes', () => {
+    expect([...excludedDescriptors({ avoid: [] })]).toEqual([]);
+    expect([...excludedDescriptors({ avoid: ['child_at_risk'] })]).toEqual(['child_at_risk']);
   });
 
   it('with nothing ruled out, every situation of every kind stays drawable', () => {
-    expect(drawableSituations({ tier: 'mature', off: [] })).toEqual(Object.fromEntries(EVERY_TYPE.map((type) => [type, [0, 1, 2]])));
+    expect(drawableSituations({ avoid: [] })).toEqual(Object.fromEntries(EVERY_TYPE.map((type) => [type, [0, 1, 2]])));
   });
 
-  it('walks every tier and topic combination: a kept situation carries nothing excluded, and turning more off never keeps more', () => {
+  it('walks every combination of avoided themes: a kept situation carries nothing avoided, and avoiding more never keeps more', () => {
     const table: Record<string, Record<string, number[]>> = {};
     for (const exclusion of COMBOS) {
       const kept = drawableSituations(exclusion);
@@ -67,8 +64,8 @@ describe('content exclusion', () => {
           const carries = (tree.situations[index].descriptors ?? []).some((d) => out.has(d));
           expect(kept[type].includes(index), `${label(exclusion)} ${type} ${index}`).toBe(!carries);
         }
-        for (const more of CONTENT_DESCRIPTORS) {
-          const wider = drawableSituations({ ...exclusion, off: [...exclusion.off, more] })[type];
+        for (const more of AVOIDABLE_THEMES) {
+          const wider = drawableSituations({ avoid: [...exclusion.avoid, more] })[type];
           expect(wider.every((index) => kept[type].includes(index))).toBe(true);
         }
       }
@@ -79,40 +76,29 @@ describe('content exclusion', () => {
     // re-tagging a call or adding a call per kind (calls-per-kind) moves it, deliberately.
     expect(table).toMatchSnapshot();
   });
+
+  it('leaves at least two kinds drawable whatever the player avoids', () => {
+    for (const exclusion of COMBOS) expect(drawableKinds(exclusion).length, label(exclusion)).toBeGreaterThanOrEqual(2);
+  });
 });
 
 describe('a filtered board', () => {
-  const NO_DEATHS: ContentExclusion = { tier: 'mature', off: ['death'] };
+  const AVOID_ALL: ContentExclusion = { avoid: [...AVOIDABLE_THEMES] };
 
   it('draws only situations the exclusion keeps, and never a kind left with none', () => {
-    const kept = drawableSituations(NO_DEATHS);
+    const kept = drawableSituations(AVOID_ALL);
     let total = 0;
     for (let seed = 1; seed <= 12; seed++) {
-      const { cards } = boardDraws(seed, NO_DEATHS);
+      const { cards } = boardDraws(seed, AVOID_ALL);
       total += cards.length;
       for (const card of cards) expect(kept[card.type as keyof typeof kept], `${card.type} ${card.situation}`).toContain(card.situation);
     }
     expect(total).toBeGreaterThan(0);
   });
 
-  it('draws nothing, and leaves the stream alone, when no kind is left', () => {
-    const none: ContentExclusion = { tier: 'mature', off: ['injury'] };
-    expect(drawableKinds(none)).toEqual([]);
-    const state = createInitialState(T0, 7);
-    const before = state.rngState;
-    state.incidents = [];
-    seedIncidentBoard(state, T0, undefined, none);
-    expect(state.incidents).toEqual([]);
-    // The schedule still draws its gap: only card draws are skipped.
-    const scheduleOnly = createInitialState(T0, 7);
-    scheduleOnly.rngState = before;
-    seedIncidentBoard(scheduleOnly, T0, 0);
-    expect(state.rngState).toBe(scheduleOnly.rngState);
-  });
-
-  it('with nothing ruled out, draws exactly what the unfiltered board draws', () => {
+  it('avoiding nothing draws exactly what the unfiltered board draws', () => {
     for (let seed = 1; seed <= 12; seed++) {
-      const plain = boardDraws(seed, undefined), open = boardDraws(seed, { tier: 'mature', off: [] });
+      const plain = boardDraws(seed, undefined), open = boardDraws(seed, { avoid: [] });
       expect(open.state.incidents).toEqual(plain.state.incidents);
       expect(open.state.rngState).toBe(plain.state.rngState);
     }

@@ -17,7 +17,7 @@ import { reputationWeights } from './reputation';
 import type { IncidentType } from './scenario-types';
 import { tunable } from './tuning';
 import { callTreeAt } from '../content/call-trees';
-import { MATURE_ONLY, type ContentDescriptor, type ContentTier } from '../content/content-descriptors';
+import type { AvoidableTheme, ContentDescriptor } from '../content/content-descriptors';
 
 /** Content v11 gates board draws by capability and weights unseen frameworks first. */
 
@@ -45,16 +45,14 @@ export const INCIDENT_TUNING = tunable('INCIDENT_TUNING', {
 
 // ---------------------------------------------------------------- content filter
 
-/** What the player keeps off the board (docs/content-rating.md): the Core tier leaves off every
- * situation carrying a mature-only descriptor, and each topic turned off leaves off the situations
- * carrying it, in either tier. A pure input: the store owns the setting and passes it in. */
-export interface ContentExclusion { tier: ContentTier; off: readonly ContentDescriptor[] }
+/** What the player keeps off the board (docs/content-rating.md): the avoidable themes they turned
+ * off. A situation carrying any of them is left out. A pure input: the store owns the setting and
+ * passes it in. */
+export interface ContentExclusion { avoid: readonly AvoidableTheme[] }
 
 /** The descriptors an exclusion rules out. */
 export function excludedDescriptors(exclusion: ContentExclusion): Set<ContentDescriptor> {
-  const out = new Set<ContentDescriptor>(exclusion.off);
-  if (exclusion.tier === 'core') for (const [descriptor, mature] of Object.entries(MATURE_ONLY) as [ContentDescriptor, boolean][]) if (mature) out.add(descriptor);
-  return out;
+  return new Set<ContentDescriptor>(exclusion.avoid);
 }
 
 const SITUATIONS = [0, 1, 2] as const;
@@ -71,9 +69,8 @@ export function drawableSituations(exclusion: ContentExclusion): Record<Incident
   })) as Record<IncidentType, SituationIndex[]>;
 }
 
-/** The kinds of call that can still reach the board under an exclusion, in SCENARIO_TYPES order:
- * what the Settings screen warns about when it leaves none. Unlocks aside: the screen intersects
- * these with what the department has unlocked. */
+/** The kinds of call that can still reach the board under an exclusion, in SCENARIO_TYPES order.
+ * Unlocks aside: a caller intersects these with what the department has unlocked. */
 export function drawableKinds(exclusion: ContentExclusion): IncidentType[] {
   const situations = drawableSituations(exclusion);
   return SCENARIO_TYPES.map(({ type }) => type).filter(type => situations[type].length > 0);
