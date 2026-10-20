@@ -181,8 +181,8 @@ export const HOSTAGE_SIGNATURE: CallTree = {
             adverse: [{ text: 'At the door {courier.first} grabs {owner.first}’s wrist to take {owner.him} too. {taker.first} fires into the ceiling. Plaster comes down on all three of them, {courier.first} freezes in the doorway, and {owner.first} is pulled back behind the counter.',
               mark: ['shot_inside'], moves: { taker: 'shots' }, next: { node: 'fired_on' }, pressure: 14, civilian: -6 }],
           } },
-        { id: 'ask_both', title: 'Ask for {owner.first} too', icon: 'radio', talksTo: 'taker', check: check(TALK), minutes: 4,
-          summary: '{lead} thanks {taker.first} for the courier and asks for {owner.first} in the same breath. {courier.first} waits in the doorway while you push, and an offer that was free a minute ago can turn into a price.',
+        { id: 'ask_both', title: 'Ask for {owner.first} too', icon: 'radio', walks: 'courier', talksTo: 'taker', check: check(TALK), minutes: 4,
+          summary: '{lead} thanks {taker.first} for the courier and asks for {owner.first} in the same breath. Your squad waits at the shop door for {courier.first} while you push, and an offer that was free a minute ago can turn into a price.',
           pull: 'Both of them, before {taker.first} settles into keeping {owner.first}.',
           cost: '{courier.first} stays inside while you push, and the first offer can vanish.',
           preview: { favorable: 'You learn {taker.first}’s price for {owner.first}.', mixed: '{taker.first} keeps the offer to {courier.first} alone and starts a countdown.', adverse: '{taker.first} turns the offer into a choice {owner.first} has to make, out loud.' },
@@ -209,8 +209,8 @@ export const HOSTAGE_SIGNATURE: CallTree = {
             adverse: [{ text: 'The answers stop. The line stays open, and the radio is the only sound on it, a ballgame in the late innings. Nobody inside turns it down. Once, very faintly, someone coughs.', mark: ['silent'], next: { node: 'both_inside' }, pressure: 6 }],
           } },
         // The opening gamble: the owner speaks before anyone has framed it (owner 2026-10-19).
-        { id: 'owner_first', title: 'Ask to hear from {owner.first} first', icon: 'radio', check: check(TALK, 4), minutes: 3,
-          summary: '{lead} asks {taker.first} to put {owner.first} on the line before anything is agreed. Nobody has heard {owner.him} yet. Whatever {owner.he} {owner~says|say} first sets the shape of everything after, and {taker.first} is standing right there.',
+        { id: 'owner_first', title: 'Ask to hear from {owner.first} first', icon: 'radio', team: { to: { vantage: 'scene' }, signal: { channel: 'voice', to: 'owner' } }, check: check(TALK, 4), minutes: 3, consequenceLevel: 'moderate',
+          summary: '{lead} stands at the shop window in plain view and asks {taker.first} to let {owner.first} speak, there and then, before anything is agreed. Nobody has heard {owner.him} yet. Whatever {owner.he} {owner~says|say} first sets the shape of everything after, and {taker.first} is standing right there.',
           pull: '{owner.first}’s first words, before anyone has decided what they mean.',
           cost: 'One wrong sentence from {owner.first}, said in front of the whole street.',
           preview: { favorable: '{owner.first} says one sentence, and the call changes shape.', mixed: '{owner.first} starts to speak and is cut off.', adverse: '{owner.first} says the wrong thing, and the handgun could come up at {owner.him}.' },
@@ -251,11 +251,11 @@ export const HOSTAGE_SIGNATURE: CallTree = {
           outcomes: {
             favorable: [{ text: 'The team settles in on either side of the alley door without a sound anyone inside could name. A minute later {taker.first} calls dispatch back, not the negotiator, and asks a dispatcher who is standing in {taker.his} alley. {taker.He} {taker~calls|call} it {taker.his} alley twice.', mark: ['team_close'], next: { node: 'talking' }, objective: 10 }],
             mixed: [{ text: 'The team reaches the rear exit, and the gravel carries inside with them. Within a minute dispatch has {taker.first} on another line, saying the alley is full of police and asking whether the street is next. The handle on the steel door stops turning.', mark: ['team_close'], moves: { taker: 'team_seen', others: 'team_seen' }, next: { node: 'talking' }, pressure: 5 }],
-            adverse: escalate({
+            adverse: [{ when: { crew: ['rookie'] }, text: 'It is the team’s newest officer whose boot found the pallet, and everyone on the squad heard it.' }, ...escalate({
               lead: 'A pallet shifts under an officer’s boot and goes over with a crack like a dropped tray. Inside, every sound stops.',
               threat: '{taker.first} yanks {owner.first} behind the register and aims at {owner.him}.',
               quiet: 'Calls go unanswered after that, with {taker.first} planted between {owner.first} and the front.',
-              extra: { mark: ['team_close'], moves: { taker: 'team_seen', others: 'team_seen' }, pressure: 10 } }),
+              extra: { mark: ['team_close'], moves: { taker: 'team_seen', others: 'team_seen' }, pressure: 10 } })],
           } },
         { id: 'ask_door', title: 'Ask about the back door', icon: 'radio', talksTo: 'taker', check: check(TALK), minutes: 3,
           summary: '{lead} rings the counter and asks, plainly, what {taker.first} wants with the exit out back. The question might tell you how {taker.he} {taker~means|mean} this to end. It also tells {taker.him} that somebody outside has been watching that handle.',
@@ -380,6 +380,21 @@ export const HOSTAGE_SIGNATURE: CallTree = {
               quiet: 'The team can make out {taker.first} walking behind the counter, the handgun hanging at {taker.his} side.',
               extra: { mark: ['withdrawn'], pressure: 8 } }),
           } },
+        // The crew layer: an observant officer reads the room and finds the camera (owner 2026-10-19).
+        { id: 'read_glass', title: 'Have your observant officer read the room', icon: 'search', team: { to: { vantage: 'scene' }, signal: { channel: 'visual', to: 'taker' } }, check: check(ASK, -2), minutes: 4, consequenceLevel: 'moderate', onlyIf: { crew: ['observant'] },
+          summary: 'Your most observant officer works along the glass from the corner, reading the room in pieces through the gap in the blinds. Hands, exits, the cooler, the ceiling. It is the kind of look that finds what nobody reported, and it puts an officer in {taker.first}’s line of sight.',
+          pull: 'See what no report mentioned, before you choose anything else.',
+          cost: 'An officer at the glass, in {taker.first}’s line of sight.',
+          preview: { favorable: 'Your officer spots a detail in that room nobody reported.', mixed: 'Your officer sees the room, and {taker.first} sees your officer.', adverse: '{taker.first} catches the movement at the glass and may turn the handgun toward {owner.first}.' },
+          outcomes: {
+            favorable: [{ text: 'There is a camera above the door with a small red light, aimed straight at the register. Nobody inside has looked at it once. The officer also counts {owner.first}’s hands and {courier.first}’s, both empty, and sees the back exit bolted from inside.', mark: ['camera_seen', 'team_close'], next: { node: 'talking' }, objective: 10 }],
+            mixed: [{ text: 'The officer sees the red light over the entrance and the bolted back exit, and then {taker.first} sees the officer. The blinds come down hard enough to rattle the glass.', mark: ['camera_seen', 'team_close'], moves: { taker: 'team_seen' }, next: { node: 'talking' }, pressure: 6 }],
+            adverse: escalate({
+              lead: 'A shadow crosses the blinds, and {taker.first} spins toward the window.',
+              threat: 'The handgun swings from the window to {owner.first}, as if {owner.he} had signalled someone.',
+              quiet: '{taker.first} drags the cooler in front of the window, and the room disappears from view.',
+              extra: { mark: ['team_close'], moves: { taker: 'team_seen' }, pressure: 8 } }),
+          } },
         { id: 'ask_again', title: 'Ask again for {courier.first}', icon: 'door', walks: 'courier', talksTo: 'taker', check: check(TALK, 4), minutes: 3,
           summary: 'Once more, {lead} asks for {courier.first} alone, the same request in fewer words. It worked once. Asking twice tells {taker.first} you think {taker.he} {taker~is|are} the kind of person who gives in when asked again, and that can harden {taker.him} against both of them.',
           pull: 'Get the person who never belonged in there out first.',
@@ -398,11 +413,11 @@ export const HOSTAGE_SIGNATURE: CallTree = {
           outcomes: {
             favorable: [{ text: '{taker.first} sees officers at the windows and freezes for a long second. Then {taker.he} {taker~picks|pick} up the counter phone and {taker~asks|ask}, not angry, just tired, what exactly they are all waiting for.', mark: ['team_close', 'saw_inside'], moves: { taker: 'team_seen' }, next: { node: 'talking' }, objective: 8 }],
             mixed: [{ text: '{taker.first} answers, but walks {owner.first} back behind the back shelves first, where nobody outside can see {owner.him}. The team can see {taker.first} fine. {owner.first} is gone from view.', mark: ['team_close', 'owner_hidden'], moves: { taker: 'team_seen' }, next: { node: 'talking' }, pressure: 6 }],
-            adverse: escalate({
+            adverse: [{ when: { crew: ['rookie'] }, text: 'The team’s newest officer is the one {taker.first} sees first, a full step past the corner of the glass without being told.' }, ...escalate({
               lead: 'A phone goes up at the tape as the team reaches the glass. {taker.first} sees it and drops the blinds.',
               threat: 'Through a gap in the slats, {taker.first} is holding {owner.first} by the arm, handgun raised.',
               quiet: 'The blinds stay down, and nobody picks up.',
-              extra: { mark: ['team_close'], moves: { taker: 'team_seen' }, pressure: 8 } }),
+              extra: { mark: ['team_close'], moves: { taker: 'team_seen' }, pressure: 8 } })],
           } },
         // The same look in a group call (R-G1): more people inside can see the glass, so it is
         // harder and provokes the coworkers too. Only its favorable band, where the squad holds the
@@ -512,7 +527,7 @@ export const HOSTAGE_SIGNATURE: CallTree = {
         // The temptation (dilemma pattern 15, E12.6): command never agreed, and neither did the owner.
         // It frees the courier now and breaks in stage 3 (FOUND_OUT, own_up), or holds if the taker
         // walks out first.
-        { id: 'say_she_signs', title: 'Tell {taker.him} {owner.first} will sign', icon: 'radio', walks: 'courier', talksTo: 'taker', check: check(TALK, -4), minutes: 2, onlyIf: LONE, deceives: true,
+        { id: 'say_she_signs', title: 'Tell {taker.him} {owner.first} will sign', icon: 'radio', walks: 'courier', talksTo: 'taker', check: check(TALK, -4), minutes: 2, stress: 4, onlyIf: LONE, deceives: true,
           summary: '{lead} tells {taker.first} that {owner.first} will sign. Command can’t promise that, and {owner.first} hasn’t agreed to anything. {taker.first} may free {courier.first} on that word right now, and then {taker.he} will want the page.',
           pull: '{courier.first} walks out now, on one sentence.',
           cost: 'A lie {taker.first} will come back for, with the handgun in reach.',
@@ -824,6 +839,54 @@ export const HOSTAGE_SIGNATURE: CallTree = {
               quiet: 'The counter phone goes dead, unplugged at the wall.',
               extra: { moves: { taker: 'provoked' }, pressure: 10 } })],
           } },
+        // The camera as a gamble: nobody on your side knows what the tape shows (each situation answers it differently).
+        { id: 'camera_bluff', title: 'Tell {taker.him} about the camera', icon: 'radio', talksTo: 'taker', check: check(TALK, 2), minutes: 3, onlyIf: { marks: ['camera_seen'] },
+          summary: 'There is a camera over the door, aimed at the register. {lead} tells {taker.first} you know it is there and asks what it would show from that last shift. Nobody on your side knows the answer. {taker.first} knows, and so does {owner.first}.',
+          pull: 'Make the one witness nobody mentioned part of the conversation.',
+          cost: 'You don’t know what the tape shows, and both of them do.',
+          preview: { favorable: '{taker.first} answers the question about the tape, and it changes what this is about.', mixed: '{taker.first} and {owner.first} both go quiet about the camera, for different reasons.', adverse: 'The camera turns into an accusation, and {owner.first} is the one within reach.' },
+          outcomes: {
+            favorable: [
+              { if: { fact: 'owner_wrong', is: true }, text: '{taker.first} laughs once, short and surprised. The tape would show {taker.him} counting that drawer twice and putting every bill back, {taker.he} {taker~says|say}. Then {taker.he} {taker~asks|ask} {owner.first} if {owner.he} ever watched it. {owner.first} shakes {owner.his} head, and {taker.first} tells {owner.him} to go home.',
+                reveal: ['owner_wrong'], safe: ['owner'], mark: ['owner_admits'], moves: { taker: 'heard' }, next: { node: 'last_one' }, objective: 50 },
+              { if: { fact: 'owner_faint', is: true }, text: '{owner.first} answers before {taker.first} can. {owner.He} {owner~says|say} the footage shows who closed out that night, and it wasn’t {taker.first}. {taker.first} lowers the handgun an inch at a time, then unbolts the door and asks for a medic for {owner.first}, now.',
+                reveal: ['owner_wrong', 'owner_faint'], safe: ['owner'], mark: ['owner_unwell'], moves: { taker: 'heard' }, next: { node: 'last_one' }, objective: 45 },
+              courierToo('{courier.first} follows {owner.first} out without being told.', { if: LETS_GO }),
+              { if: { fact: 'took_it', is: true }, text: '{taker.first} goes completely still. Then {taker.he} {taker~says|say} {taker.he} took it, all three hundred and forty, for the rent. The camera has been dead since spring, and {owner.first} knew that too. {owner.first} doesn’t contradict a word.',
+                reveal: ['took_it'], mark: ['camera_said'], moves: { taker: 'honest' }, next: { node: 'standoff' }, objective: 14 },
+            ],
+            mixed: [{ text: '{taker.first} says the camera hasn’t worked in months. {owner.first} says nothing at all. Nobody outside can tell which of them is right, and both of them know it.', mark: ['camera_said'], next: { node: 'standoff' }, objective: 6 }],
+            adverse: escalate({
+              lead: '{taker.first} hears “tape” and “last shift” and decides the team has already made up its mind about {taker.him}.',
+              threat: '{taker.He} {taker~points|point} the handgun at {owner.first} and tells {owner.him} to say what the tape shows.',
+              anyway: '{taker.first} is past listening and holds the handgun on {owner.first}, demanding the truth from {owner.him}.',
+              quiet: '{taker.first} pulls the camera off its bracket and throws it into the back room.',
+              extra: { moves: { taker: 'provoked' }, pressure: 10 } }),
+          } },
+        // The crew layer: an impatient officer wants the phone.
+        { id: 'push_hard', title: 'Let your fastest talker push', icon: 'radio', talksTo: 'taker', check: check(TALK, 4), minutes: 2, stress: 3, onlyIf: { crew: ['impatient'] },
+          summary: 'The most impatient officer in your squad wants the phone, and the case is simple. {owner.first} has been on that stool too long already. Pushing gets answers fast. It also means quick words, landing on someone {owner.first} accused in front of the regulars.',
+          pull: 'An answer now, before anything else goes wrong.',
+          cost: 'Fast words, and the wrong one could land on {owner.first}.',
+          preview: { favorable: '{taker.first} answers fast and decides about {owner.first} on the spot.', mixed: '{owner.first} gets out, and {taker.first} keeps the handgun and a grudge.', adverse: 'One wrong word lands hard, and {owner.first} is standing closest.' },
+          outcomes: {
+            favorable: [
+              { if: LETS_GO, text: '{taker.first} doesn’t have time to dig in. Thirty seconds of short questions and shorter answers, and {taker.he} {taker~tells|tell} {owner.first} to get out before {taker.he} {taker~changes|change} {taker.his} mind.', reveal: ['lets_go'], safe: ['owner'], moves: { taker: 'released' }, next: { node: 'last_one' }, objective: 45 },
+              courierToo('{courier.first} is out the door a step ahead of {owner.first}.', { if: LETS_GO }),
+              { if: KEEPS, text: '{taker.first} answers every question with the same three words. {owner.His} name, signed. The faster the questions come, the slower {taker.he} {taker~says|say} them.', reveal: ['lets_go'], next: { node: 'standoff' }, objective: 6 },
+            ],
+            mixed: [
+              { if: LETS_GO, text: '{owner.first} gets out. {taker.first} keeps the handgun and tells the negotiator {taker.he} won’t speak to that officer again, not tonight, not ever.', reveal: ['lets_go'], safe: ['owner'], mark: ['still_armed'], moves: { taker: 'provoked' }, next: { node: 'last_one' }, objective: 38 },
+              courierToo('{courier.first} goes out right behind {owner.first}.', { if: LETS_GO }),
+              { if: KEEPS, text: '{taker.first} stops answering the fast questions and starts answering slower ones nobody asked, about the till, about the regulars, about yesterday.', reveal: ['lets_go'], next: { node: 'standoff' }, objective: 4 },
+            ],
+            adverse: escalate({
+              lead: 'The officer says nobody out here thinks {taker.first} is a thief. {taker.first} hears only the last word.',
+              threat: '{taker.He} {taker~swings|swing} the handgun up at {owner.first} and holds it there.',
+              anyway: 'The word does its damage. {taker.first} has the handgun on {owner.first} before anyone can take it back.',
+              quiet: '{taker.first} hangs up and doesn’t take the next six calls.',
+              extra: { moves: { taker: 'provoked' }, pressure: 10 } }),
+          } },
         { id: 'his_pace', title: 'Let {taker.first} set the pace', icon: 'wait', talksTo: 'taker', check: check(HOLD, -10), minutes: 30, span: 'Hours',
           summary: '{lead} stays on the line as long as {taker.first} wants, hours if it takes hours, and lets {taker.him} set every pace. {owner.first} spends every one of those hours behind the counter.',
           pull: 'Time on your side, and nothing forced.',
@@ -847,7 +910,7 @@ export const HOSTAGE_SIGNATURE: CallTree = {
             // A patient hold lowers the temperature: at worst the taker stops talking, never turns on
             // the owner. The owner's heart is another matter.
             adverse: [
-              { if: OWNER_OK, text: '{taker.first} puts the phone down and doesn’t pick up again. {owner.first} is still by the register.', mark: ['owner_back', 'silent'], next: { node: 'standoff' }, minutes: 10 },
+              { if: OWNER_OK, text: '{taker.first} puts the phone down and doesn’t pick up again. {owner.first} is still by the register.', mark: ['owner_back', 'silent', 'withdrawn'], next: { node: 'standoff' }, minutes: 10 },
               { if: OWNER_OUT, text: 'The line goes quiet. From outside, {owner.first} can be seen on the floor, not moving.', next: { node: 'owner_down' }, minutes: 10 },
             ],
           } },
@@ -938,6 +1001,30 @@ export const HOSTAGE_SIGNATURE: CallTree = {
             adverse: heldEnd({ text: '{taker.first} stops answering halfway through a sentence.', pressure: 6 },
               '{courier.first} is still in there too.', 'Then {owner.first} slumps against the till and doesn’t sit back up.'),
           } },
+        // Family on the line, as a gamble (owner 2026-10-19).
+        { id: 'cousin_line', title: 'Put {cousin.first} on the line', icon: 'radio', talksTo: 'taker', check: check(TALK), minutes: 8,
+          summary: '{cousin.first} came straight from the bus depot and has been at the tape for an hour, asking to talk to {taker.first}. Family can reach a person no negotiator can. Family can also say the one thing that has gone unsaid for years, where every regular can hear it, and nobody can take it back.',
+          pull: 'The one voice {taker.first} has known all {taker.his} life.',
+          cost: 'You can’t control what {cousin.first} says, and {taker.first} hears every word.',
+          preview: { favorable: '{cousin.first} says the right thing, and {taker.first} decides about {owner.first}.', mixed: '{cousin.first} can’t get through it, and the call goes quiet without ending.', adverse: '{cousin.first} says the unsayable on an open line, with {owner.first} three feet from the handgun.' },
+          outcomes: {
+            favorable: [
+              { if: LETS_GO, text: '{cousin.first} doesn’t plead. {cousin.He} {cousin~talks|talk} about the night route and Sunday dinners and the last time they argued, over nothing. {taker.first} cuts in halfway through to tell {owner.first} to leave, and {owner.first} leaves.',
+                exchange: [{ by: 'cousin', line: 'Come out and eat something. I brought the car.' }], reveal: ['lets_go'], safe: ['owner'], moves: { taker: 'heard' }, next: { node: 'last_one' }, objective: 45 },
+              courierToo('{courier.first} walks out beside {owner.first}.', { if: LETS_GO }),
+              ...heldEnd({ if: KEEPS, text: '{cousin.first} talks {taker.first} into setting the handgun on the counter, but not into letting {owner.first} go. That still takes a name on a page, {taker.first} says, gently now.', exchange: [{ by: 'cousin', line: 'Then I’ll wait out here as long as it takes.' }], reveal: ['lets_go'], moves: { taker: 'heard' }, objective: 12 },
+                '{courier.first} keeps still by the door.', '{owner.first} sags off the stool while they talk and doesn’t get up.', [KEEPS]),
+            ],
+            mixed: heldEnd({ text: '{cousin.first} gets three sentences in and has to hand the phone back to an officer. {taker.first} stays on the line, listening to {cousin.him} cry, and says nothing for a long time.', moves: { taker: 'heard' }, objective: 6 },
+              '{courier.first} has {courier.his} eyes shut, on the boxes.', '{owner.first} slips off the stool partway through and stays on the tiles.'),
+            adverse: [
+              { text: '{cousin.first} says what the family always said, that {taker.first} would end up exactly like this. The whole tape hears it.', moves: { taker: 'provoked' }, pressure: 12 },
+              { if: RAISED, text: 'Then the handgun swings toward {owner.first}, the nearest person who heard it.', reveal: ['raised'], next: { node: 'threat' } },
+              { if: [CALM, BREAKING], text: '{taker.first} can’t take one more voice telling {taker.him} who {taker.he} {taker~is|are}, and aims at {owner.first}.', mark: ['turned'], next: { node: 'threat' } },
+              ...heldEnd({ if: [CALM, HOLDING], text: '{taker.first} hangs up and goes quiet, in a way that frightens the team more than shouting would.', reveal: ['raised'], mark: ['withdrawn'] },
+                '{courier.first} is still in there with {taker.him}.', 'Then {owner.first} goes down behind the counter, and nobody inside moves.', [CALM, HOLDING]),
+            ],
+          } },
         { id: 'pull_back', title: 'Pull back to the corner', icon: 'handover', check: check(MOVE, -20), minutes: 2, onlyIf: { notMarks: ['withdrawn'] },
           summary: 'Your squad withdraws a block and holds the street. Nobody pushes {taker.first} tonight, and nobody gets {owner.first} out either. {owner.first} is left inside with {taker.first} and whatever comes after.',
           pull: 'Nobody forces anything, and nobody walks into a doorway.',
@@ -972,6 +1059,7 @@ export const HOSTAGE_SIGNATURE: CallTree = {
             favorable: [
               { text: '{taker.first} looks at the glass for a long moment, then at {owner.first}. {taker.He} {taker~sets|set} the handgun next to the register, carefully, the way a person puts down something that belongs to someone else, and {taker~lets|let} {owner.first} out first. {taker.He} {taker~follows|follow} on the team’s word into the hands of two officers by the step.', safe: ['owner'], moves: { taker: 'released' }, ...surrender('everyone_out'), objective: 75, pressure: -12 },
               courierToo('{courier.first} is already on the sidewalk.'),
+              { when: { crew: ['band_veteran'] }, text: 'The team’s veteran has stood at glass like this before and keeps the same even voice the whole way through.' },
             ],
             mixed: [
               { text: '{owner.first} gets out the front door. {taker.first} backs away from the window, the handgun still up.', safe: ['owner'], mark: ['still_armed'], moves: { taker: 'released' }, next: { node: 'last_one' }, objective: 40 },
@@ -1150,6 +1238,17 @@ export const HOSTAGE_SIGNATURE: CallTree = {
             favorable: [{ text: '{taker.first} comes out the alley door with open hands and asks the team not to let the street see {taker.him}. The team has {taker.him} before the corner.', ...surrender('out_the_back'), objective: 32 }],
             mixed: [{ text: '{taker.first} gives up in the alley, hands empty, but a neighbor at the far end has a phone up.', ...surrender('out_the_back'), objective: 26 }],
             adverse: [{ text: 'At the doorway {taker.first} backs inside again and bolts the rear exit.', next: { ending: 'taker_held' } }],
+          } },
+        // A regular at the tape calls out, as a gamble: the crowd can turn a walk-out into a show.
+        { id: 'regular_call', title: 'Let {regular.first} shout to {taker.him}', icon: 'radio', check: check(TALK, 2), minutes: 6, onlyIf: { notMarks: ['back_promised'] },
+          summary: '{regular.first} is pushing toward the front of the crowd and wants to shout to {taker.first} from the street. It might be the voice that makes walking out bearable. It might also turn the walk-out into a show for everyone holding up a phone.',
+          pull: 'A friendly face waiting at the end.',
+          cost: 'The street turns into an audience, and audiences change people.',
+          preview: { favorable: '{taker.first} walks out toward a voice {taker.he} {taker~knows|know}.', mixed: '{taker.first} comes out, but the street makes a scene of it.', adverse: '{taker.first} hears the crowd, not the friend, and stays behind the counter.' },
+          outcomes: {
+            favorable: [{ text: '{regular.first} calls out the usual order, the way {regular.he} {regular~has|have} every morning for nine years. Inside, {taker.first} laughs once. Then {taker.he} {taker~walks|walk} out with {taker.his} hands open, straight toward the one face {taker.he} {taker~knows|know}, and officers meet {taker.him} halfway.', ...surrender('everyone_out'), objective: 30 }],
+            mixed: [{ text: '{taker.first} comes out to {regular.first}’s voice, and the crowd at the tape erupts, cheering and filming both. {taker.first} keeps {taker.his} head down all the way to the officers.', ...surrender('everyone_out'), objective: 25 }],
+            adverse: [{ text: '{regular.first} calls out, and half the crowd joins in, chanting {taker.first}’s name like a game. {taker.first} looks at the phones held up behind {regular.him} and goes back behind the counter.', next: { ending: 'taker_held' }, objective: 4 }],
           } },
         { id: 'let_him_sit', title: 'Let {taker.him} decide', icon: 'wait', check: check(HOLD, -14), minutes: 45, span: 'All night',
           summary: 'Command keeps the street closed while {taker.first} decides, alone, when to come out. Nobody is in danger in there now but {taker.first}. Your squad stays on the corner until morning if it takes until morning.',

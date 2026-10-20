@@ -121,9 +121,11 @@ describe('commitments in play', () => {
         const entered = after.some(decision => actions.get(decision.actionId)?.authority?.kind === 'entry');
         const forced = after.some(decision => decision.committed?.drawn?.some(record => record.model === 'team_force' && record.personId === commitment.personId));
         const out = run.flags.includes(`out:${commitment.personId}`) || run.flags.includes(`safe:${commitment.personId}`);
-        if (commitment.status === 'broken') expect(entered || forced).toBe(true);
+        // A lie breaks only when the person finds out (an outcome's `breaks`), never on an entry or force.
+        const lie = commitment.kind === 'lie';
+        if (commitment.status === 'broken' && !lie) expect(entered || forced).toBe(true);
         if (commitment.status === 'kept') expect(out).toBe(true);
-        if (commitment.status === 'open') expect(out || entered || forced).toBe(false);
+        if (commitment.status === 'open') expect(out || (!lie && (entered || forced))).toBe(false);
         if (commitment.status !== 'open' && run.meters?.[commitment.personId]) expect(run.meters[commitment.personId].moved[commitment.status === 'kept' ? 'promise_kept' : 'promise_broken']).toBeDefined();
       }
       // Every run must load, gunfire and force included (their draws are counted on load).

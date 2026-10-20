@@ -22,7 +22,8 @@ describe('hostage call: the glass look in a group call', () => {
         if (next) state = next;
         return !!next;
       };
-      if (!take('_offer_take_courier', 'adverse')) continue;
+      // Both still inside: the courier's walk-out going badly now ends in a shot, so reach it by an unheard opening.
+      if (!take('_offer_hear_him', 'adverse')) continue;
       expect(members.map(person => state.activeRun!.knowledge[person.armamentFactId!])).toEqual(members.map(() => 'unknown'));
       expect(take('_both_inside_glass_group', 'favorable')).toBe(true);
       const run = state.activeRun!;
