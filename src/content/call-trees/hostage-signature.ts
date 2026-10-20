@@ -413,10 +413,10 @@ export const HOSTAGE_SIGNATURE: CallTree = {
             favorable: [
               { if: { fact: 'owner_wrong', is: true }, text: '{owner.first} says the money turned up that night, in a deposit bag nobody had opened. {owner.He} never called {taker.first}.',
                 exchange: [{ by: 'owner', line: 'I was going to call you. I didn’t know how to start.' }, { by: 'taker', line: 'You could have started with sorry.' }],
-                reveal: ['owner_faint', 'owner_wrong', 'took_it'], mark: ['owner_heard', 'owner_admits'], moves: { taker: 'heard' }, next: { node: 'talking' }, objective: 14 },
+                reveal: ['owner_faint', 'owner_wrong'], mark: ['owner_heard', 'owner_admits'], moves: { taker: 'heard' }, next: { node: 'talking' }, objective: 14 },
               { if: { fact: 'owner_faint', is: true }, text: '{owner.first} is short of breath. {owner.He} {owner~says|say} {owner.his} kid closed out the drawer that night, and {owner.he} won’t sign a page about who took it.',
                 exchange: [{ by: 'owner', line: 'If I sign it, I’m saying it was my kid.' }, { by: 'taker', line: 'So it was easier to say it was me.' }],
-                reveal: ['owner_faint', 'owner_wrong', 'took_it'], mark: ['owner_heard', 'owner_unwell'], moves: { taker: 'provoked' }, next: { node: 'talking' }, objective: 10 },
+                reveal: ['owner_faint', 'owner_wrong'], mark: ['owner_heard', 'owner_unwell'], moves: { taker: 'provoked' }, next: { node: 'talking' }, objective: 10 },
               { if: { fact: 'took_it', is: true }, text: '{owner.first} says {owner.he} watched {taker.first} take the money on the shop camera, and left it out of the police report.',
                 exchange: [{ by: 'owner', line: 'I gave you a week’s pay so you could leave with something.' }, { by: 'taker', line: 'Turn the speaker off. Turn it off.' }],
                 reveal: ['owner_faint', 'owner_wrong', 'took_it'], mark: ['owner_heard'], moves: { taker: 'provoked' }, next: { node: 'talking' }, objective: 10 },
