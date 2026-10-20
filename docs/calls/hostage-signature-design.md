@@ -1090,3 +1090,10 @@ approved, and the whole call was rewritten to it:
 The mechanics are unchanged: truths, marks, routes and the lie. Budgets roughly doubled (surface-budgets rows 0a, 0b, 19a), and the
 repeat check counts from 6 words. The props are kept to things every hosting building has: no
 lottery stand, no bread rack.
+
+### Register review response (2026-10-19, docs/calls/hostage-depth-register-review.md)
+
+B1 to B4 and F1 to F19 and F21 are applied as the reader gave them, with checker-driven wording
+changes. This also cuts every narrator maxim and portent, makes the props fit a bar as well as a
+shop ("the place", "the back shelves"; the owner's role label is now "owner"), and splits the
+longest sentences. F20, a temptation in group calls, stays open with the owner.
