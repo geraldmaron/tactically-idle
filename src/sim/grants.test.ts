@@ -6,6 +6,7 @@ import { applyGrants, milestoneView, nextMilestone } from './grants';
 import { serviceForLevel } from './department-level';
 import { deserialize, serialize } from './save';
 import { nodeOptions } from './department-selectors';
+import { dispatch } from './game';
 
 const T0 = Date.UTC(2026, 0, 5, 12);
 
@@ -64,6 +65,22 @@ describe('development milestones (develop-grants)', () => {
     expect(granted.find((grant) => grant.nodeId === 'intel_thermal')!.milestone).toBe('Level 3');
     expect(applyGrants(s, T0 + 2)).toEqual([]);
     expect(deserialize(serialize(s, T0 + 2))!.department.grants).toEqual(granted);
+  });
+
+  it('buying the last prerequisite grants a development whose milestone already holds, with no second charge', () => {
+    const s = createInitialState(T0);
+    s.department.funding = 100_000;
+    s.department.level = 7;
+    s.department.service = serviceForLevel(7);
+    s.department.callsResolved = 11;
+    applyGrants(s, T0);
+    expect(s.department.developmentTiers.field_specialist_response).toBeUndefined();
+    const before = s.department.funding;
+    const out = dispatch(s, { type: 'unlockNode', nodeId: 'field_response_program' }, { now: T0 });
+    expect(out.result).toEqual({ ok: true });
+    expect(out.state.department.developmentTiers.field_specialist_response).toBe(1);
+    expect(out.state.department.funding).toBe(before - DEV_NODES.field_response_program.cost.funding);
+    expect(out.state.department.grants.at(-1)).toMatchObject({ nodeId: 'field_specialist_response', milestone: 'Level 7' });
   });
 
   it('a Command Staff grant opens the post with candidates on offer', () => {

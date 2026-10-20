@@ -1,8 +1,9 @@
 // Development grants (save v12). Every development tier has a cash price and a milestone, an
 // UnlockRule from content/unlocks.ts read by the same missingFor the call board uses. The player
 // can buy a tier now, or it is granted free the moment its milestone holds and its prerequisites
-// are owned. Grants apply themselves: closing a debrief and every settlement run applyGrants, which
-// records each one on the department (Develop, the toast) and in the shift report.
+// are owned. Grants apply themselves: closing a debrief (where level, trust and resolved calls move)
+// and buying a development (which can own a waiting grant's last prerequisite) run applyGrants,
+// which records each one on the department (Develop, the toast) and in the shift report.
 import { DEV_NODES } from '../content/dev-tree';
 import { missingFor, type UnlockRule } from '../content/unlocks';
 import { developmentTier, developmentTierDefinition, maxDevelopmentTier } from './development-tiers';

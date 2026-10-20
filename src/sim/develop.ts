@@ -11,7 +11,7 @@ import { simNow } from './calendar';
 import { fullName } from './officer';
 import { createUnit } from './equipment';
 import { quoteDevelopment } from './development-tiers';
-import { applyTier } from './grants';
+import { applyGrants, applyTier } from './grants';
 import { MANAGERS } from './command-staff';
 import { tunable } from './tuning';
 import { courseFee } from './staff-pool';
@@ -73,6 +73,8 @@ function unlockNode(d: GameState, nodeId: Id, expectedTier = 1): HandlerResult {
   const { node, cost, targetTier } = quote;
   postFunding(d.department, -cost!.funding, 'development', `${node!.name} ${['I', 'II', 'III', 'IV', 'V'][targetTier! - 1] ?? targetTier}`, simNow(d));
   applyTier(d, node!.id, targetTier!);
+  // A purchase can own the last prerequisite of a development whose milestone already holds.
+  applyGrants(d, simNow(d));
   return OK;
 }
 
