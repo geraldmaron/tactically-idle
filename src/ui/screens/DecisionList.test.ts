@@ -18,7 +18,8 @@ const NINE: ActionView[] = Array.from({ length: 9 }, (_, i) => ({ ...real[0], id
 const noop = () => {};
 const render = (actions: ActionView[], selectedId: string | null = null, expanded = false) =>
   renderToStaticMarkup(createElement(DecisionList, { prompt: 'What now?', actions, selectedId, expanded, onSelect: noop, onExpand: noop }));
-const cards = (html: string) => [...html.matchAll(/<button[^>]*class="callbtn[^"]*"[^>]*>/g)].map(match => match[0]);
+/** Each choice card: a plain card is a button, a weighed one (pull and cost) a div holding two. */
+const cards = (html: string) => [...html.matchAll(/<(?:button|div)[^>]*class="callbtn(?: [^"]*)?"[^>]*>/g)].map(match => match[0]);
 const ids = (html: string) => cards(html).map(card => /data-action-id="([^"]+)"/.exec(card)?.[1] ?? null);
 
 describe('DecisionList', () => {
