@@ -159,8 +159,18 @@ last_day, which is the D9 reach problem again: today most players will hear none
   the s2 and s3 favorable bands provoke the taker (F14).
 - New choices checked and clear in every situation: call_now, wait_silence, team_glass,
   spare_key, say_she_signs, own_up, take_account (with foundOut).
-- Leaks: pre-check fields read the same across situations in the export. Carried: B9 (the s2
-  heart cue and the per-situation taker volatility).
+- Leaks: pre-check fields read the same across situations in the export. B9 (the s2 heart cue
+  and the per-situation taker volatility) closed 2026-10-20 with no change, on these grounds:
+  - The volatility and the threat disposition never reach a player surface before the result.
+    Volatility lives only in the meters (`src/sim/meters.ts`), and the disposition prints only
+    in the debrief. Only the Lab's X-ray shows them, by design.
+  - The heart cue is an event the team sees mid-call: the owner getting down off the stool. It
+    is information earned by being there, the same as a sighting. It only identifies the
+    situation to someone who has replayed the call enough to learn that, which is replay
+    knowledge, not a leak.
+  - The fix that was proposed, a decoy clock in s1 and s3, would make the owner show a heart
+    symptom in calls where nothing is wrong. Every line has to be true on every path that
+    reaches it, so that fix would put false text on the card.
 
 ## 9. Honesty and ethics
 
