@@ -28,10 +28,14 @@ import { useSettings } from './settings/SettingsControls';
 
 export function App() {
   const saved = useCampaigns();
-  const settings = useSettings();
-  // The first launch asks for the player's settings before the department opens.
-  if (!settings.firstRunDone) return <div className="stage"><div className="app" style={TEXTURES}><FirstRun /></div></div>;
-  return <GameShell key={saved.session} />;
+  return <FirstRunGate key={saved.session} />;
+}
+
+/** The first launch asks for the player's settings before the department opens. Keyed by session
+ * in App, so New and Load still remount the shell. */
+function FirstRunGate() {
+  if (!useSettings().firstRunDone) return <div className="stage"><div className="app" style={TEXTURES}><FirstRun /></div></div>;
+  return <GameShell />;
 }
 
 /** The department for store-free components (OfficerCard's aged portraits). Only this provider
