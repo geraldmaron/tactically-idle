@@ -81,6 +81,7 @@ export const OWNERSHIP: readonly { glob: string; layer: Layer; system: System }[
   { glob: '/src/sim/{routes,cover,sightlines}.ts', layer: 'world', system: 'blueprint' },
   // catalog
   { glob: '/src/content/call-trees/**', layer: 'catalog', system: 'scenario' },
+  { glob: '/src/content/content-descriptors.ts', layer: 'catalog', system: 'scenario' },
   { glob: '/src/content/incidents/**', layer: 'catalog', system: 'scenario' },
   { glob: '/src/content/scenarios/**', layer: 'catalog', system: 'scenario' },
   { glob: '/src/content/scenario-*.ts', layer: 'catalog', system: 'scenario' },
@@ -136,6 +137,7 @@ export const OWNERSHIP: readonly { glob: string; layer: Layer; system: System }[
   { glob: '/src/sim/casebook.ts', layer: 'engine', system: 'metric' },
   { glob: '/src/sim/reputation.ts', layer: 'engine', system: 'metric' },
   { glob: '/src/sim/clocks.ts', layer: 'engine', system: 'scenario' },
+  { glob: '/src/sim/timer-setting.ts', layer: 'engine', system: 'scenario' },
   // Agitation and rapport are a subject's temper.
   { glob: '/src/sim/meters.ts', layer: 'engine', system: 'subject' },
   { glob: '/src/sim/crew.ts', layer: 'engine', system: 'officer' },
