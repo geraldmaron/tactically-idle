@@ -32,7 +32,7 @@ import { buildIntel } from '../../../../ui/screens/intel';
 import { liveScreen } from '../../../../ui/screens/live-model';
 import type { ActionSelection, Override } from '../../../../ui/screens/live-model';
 import { ActionSheet, LiveView, RoomSheet } from '../../../../ui/screens/LiveView';
-import { focusActingSquad, pickLead, toggleActingSquad, toggleSupportingSquad } from '../../../../ui/screens/operation-squads';
+import { focusActingSquad, toggleActingSquad, toggleSupportingSquad } from '../../../../ui/screens/operation-squads';
 import { OperationFeedback } from '../../../../ui/screens/OperationFeedback';
 import { sceneFor } from '../../../../ui/art/Plates';
 import { PrepBriefing } from '../../../../ui/screens/PrepBriefing';
@@ -347,11 +347,7 @@ function LiveScreen({ state, onReview, onConfirm,  onFail }: { state: GameState;
     setPanel('none');
     onConfirm(view.id, leadOfficerId);
   };
-  const chooseLead = (id: Id) => {
-    if (!view) return;
-    const next = pickLead(view.officerIds, bestFit, leadOfficerId, id);
-    setOverride({ actionId: view.id, acting, support, ...(next ? { lead: next } : {}) });
-  };
+
 
   return (
     <LiveView
@@ -403,7 +399,9 @@ function LiveScreen({ state, onReview, onConfirm,  onFail }: { state: GameState;
         leadMarks={leadMarks}
         leadBlend={leadBlend}
         leadCerts={leadCerts}
-        onPickLead={chooseLead}
+        // Read-only here until a lab move carries the lead (LabMove has no lead field): a swap the
+        // lab previewed but rolled with the best fit would show odds the step never used.
+        onPickLead={undefined}
         onConfirm={confirm}
         resupply={resupply}
         resupplyMinutes={(run.resupplies ?? []).reduce((sum, delivery) => sum + delivery.minutes, 0)}
