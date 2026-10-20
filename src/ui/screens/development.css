@@ -134,7 +134,12 @@
 .dev-cost-done { display: inline-flex; align-items: center; gap: 4px; }
 /* Deep rows on narrow phones: the button moves under the text instead of squeezing it. */
 .dev-track > li { container-type: inline-size; }
-@container (max-width: 300px) {
+@container (max-width: 270px) {
   .dev-node { grid-template-columns: auto minmax(0, 1fr); }
-  .dev-node-side { grid-column: 2; display: flex; align-items: center; justify-content: space-between; }
+  .dev-node-side { grid-column: 2; display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
+  .dev-node-side .dev-pips { margin-right: auto; }
+}
+/* Small phones: the hourly rates live on the banner line, so the pills keep only the balances. */
+@media (max-width: 374px) {
+  .dev-head .dev-stat-rate { display: none; }
 }

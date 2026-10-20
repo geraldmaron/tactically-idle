@@ -40,18 +40,20 @@ export function DebriefContents({ result: d, officers, scenario, reality = true,
   const epilogue = d.endingEpilogue ?? scenario?.endings[d.endingId]?.epilogue;
   // The call's scene closes the case behind the ending, with a stamp for how it closed.
   const scene = sceneFor(scenario?.incident?.type);
-  // The result screen's grade, the way mission results show stars: three marks from the call's own
-  // outcome score, which already ranks talking everyone out above force (E2). A death takes the
-  // marks away and the screen stays muted: nothing about a death is celebrated.
+  // The result screen's grade, the way mission results show stars: marks from the call's safety
+  // score. That score does not count the team's own force, so any use of force caps the grade at
+  // two: the third mark is for talking everyone out (E2). A death takes the marks away and the
+  // screen stays muted: nothing about a death is celebrated.
   const death = (d.personCasualties ?? []).some((person) => person.severity === 'fatal');
-  const marks = death ? 0 : worst >= 80 ? 3 : worst >= 50 ? 2 : 1;
+  const forced = (d.forceLines?.length ?? 0) > 0;
+  const marks = death ? 0 : Math.min(worst >= 80 ? 3 : worst >= 50 ? 2 : 1, forced ? 2 : 3);
   const stamp = d.disposition ? STAMP[d.disposition] : null;
   return <>
     <div className={`debrief-hero debrief-hero-${tone}${scene ? ' plate' : ''}`}>
       <PlateArt src={scene} />
       {stamp && <span className={`stamp stamp-${stamp.tone} debrief-stamp`} aria-hidden="true">{stamp.text}</span>}
       <span className="kicker">DEBRIEF</span>
-      <span className={`result-marks${death ? ' result-marks-muted' : ''}`} role="img" aria-label={death ? 'No commendation: someone died on this call' : `Commendation ${marks} of 3`}>
+      <span className={`result-marks${death ? ' result-marks-muted' : ''}`} role="img" aria-label={death ? 'No commendation: someone died on this call' : `Commendation ${marks} of 3${forced && worst >= 80 ? ', capped because force was used' : ''}`}>
         {[1, 2, 3].map((n) => <i key={n} data-on={n <= marks || undefined} />)}
       </span>
       <h2 className="debrief-title">{d.endingTitle}</h2>

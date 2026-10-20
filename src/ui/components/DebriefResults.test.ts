@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { establishedDepartment } from '../../sim/department-test-fixtures';
 import type { DebriefResult, DecisionView } from '../../sim/types';
 import { SavedDebriefContents } from '../screens/OpsDebrief';
+import { DebriefContents } from '../screens/DebriefContents';
 import { DebriefConsequences, DebriefScore, DebriefSummary, OfficerResults, visibleDebriefConsequences } from './DebriefResults';
 
 const result: DebriefResult = {
@@ -186,5 +187,13 @@ describe('explicit completion evidence in current and archived results', () => {
       'Force used', 'The team fired at Tamar Thorsen, who wasn’t hit.', 'Why', 'Tamar is holding a handgun.']) expect(html).toContain(text);
     expect(renderToStaticMarkup(createElement(SavedDebriefContents, { debrief: scored, officers: state.officers }))).toContain('How the call was scored');
     expect(renderToStaticMarkup(createElement(DebriefScore, { debrief: result }))).toBe('');
+  });
+
+  it('grades with three marks only when nobody was forced, and none on a death (result-marks)', () => {
+    const safe = { ...result, disposition: 'resolved' as const, civilianSafety: { score: 92, label: 'Everyone safe' } };
+    const marks = (d: DebriefResult) => renderToStaticMarkup(createElement(DebriefContents, { result: d, officers: {} })).match(/aria-label="(No commendation[^"]*|Commendation[^"]*)"/)?.[1];
+    expect(marks(safe)).toBe('Commendation 3 of 3');
+    expect(marks({ ...safe, forceLines: [{ text: 'Two officers took hold of him.' }] })).toBe('Commendation 2 of 3, capped because force was used');
+    expect(marks({ ...safe, personCasualties: [{ personId: 'p1', personRole: 'subject', label: 'Yusuf Kowalczyk', severity: 'fatal', at: 0, care: 'deceased', causeRevision: 1 }] })).toBe('No commendation: someone died on this call');
   });
 });

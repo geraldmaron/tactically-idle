@@ -153,6 +153,11 @@
 .armory-tool > span { justify-items: center; }
 .armory-tool strong { font-size: 12.5px; }
 .store-sort-inline { display: inline-flex; align-items: center; gap: 4px; margin-left: auto; color: var(--text-dim); }
-.store-sort-inline select { min-height: 36px; max-width: 150px; background: var(--panel-2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; font: inherit; font-size: 13px; }
+.store-sort-inline select { min-height: 44px; max-width: 150px; background: var(--panel-2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; font: inherit; font-size: 13px; }
 .store-owned .stock { margin-top: 4px; }
 .unit .disclosure > .disclosure-summary.unit-row { display: grid; padding: 6px 10px; }
+
+/* Small phones: the four Armory filters fit on one row instead of scrolling the last one away. */
+@media (max-width: 374px) {
+  .store-equipment .choice-rail-item { gap: 4px; padding-inline: 5px; font-size: 14px; }
+}
