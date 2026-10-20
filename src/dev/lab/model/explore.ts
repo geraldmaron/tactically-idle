@@ -24,8 +24,9 @@ import { holdsIn, stateContext } from './why';
 const BANDS: readonly OutcomeBand[] = ['favorable', 'mixed', 'adverse'];
 
 /** Spec 9.5: the default cap of an explore job. Raised from 6000 when the hostage depth pilot
- * (2026-10-19) took its third situation to 6010 states with the lie, the speaker and the confession. */
-export const EXPLORE_CAP = 8000;
+ * (2026-10-19) took its third situation to 6010 states with the lie, the speaker and the confession,
+ * and to 12000 when the officer and bystander options took it to 8576. */
+export const EXPLORE_CAP = 12000;
 
 export interface ExploreOptions { cap?: number; shouldStop?: () => boolean; holds?: (state: GameState) => boolean }
 /** `states`: states taken off the queue. `endings`: the shortest path found to each ending reached.

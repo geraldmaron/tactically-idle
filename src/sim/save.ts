@@ -139,6 +139,7 @@ function validRun(r: unknown): boolean {
   if (r.clocks !== undefined && (!isObj(r.clocks) || !Object.values(r.clocks).every((c) => isObj(c) && within(c.value) && Number.isSafeInteger(c.cued) && (c.cued as number) >= 0))) return false;
   if (r.meters !== undefined && (!isObj(r.meters) || !Object.values(r.meters).every((m) => isObj(m) && within(m.agitation) && within(m.rapport)
     && isObj(m.moved) && Object.values(m.moved).every((v) => isObj(v) && numbers(v, ['agitation', 'rapport']))))) return false;
+  if (r.crew !== undefined && !isStrings(r.crew)) return false;
   if (r.commitments !== undefined && (!isObj(r.commitments) || !Object.values(r.commitments).every((c) => isObj(c) && strings(c, ['personId', 'kind'])
     && numbers(c, ['madeAt', 'revision']) && oneOf(c.status, ['open', 'kept', 'broken'])))) return false;
   if (r.supportUnitIds !== undefined && (!isStrings(r.supportUnitIds) || r.supportUnitIds.length > 1)) return false;

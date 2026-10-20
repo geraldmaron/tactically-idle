@@ -26,7 +26,7 @@ import type {
 import type { ActionDefinition, FactDefinition, ScenarioDefinition } from './scenario-types';
 import { scenarioActions } from './scenario-types';
 import { SCENARIO_ORDER } from '../content/scenarios';
-import { deployRoster } from './squads';
+import { deployRoster, runRoster } from './squads';
 import { getScenario } from './scenario-registry';
 import { ITEMS } from '../content/items';
 import { availableUnits, builtFor, evaluateAction, getBuilt, RESOLUTION_TUNING, squadLabel, tagNames, type Evaluation } from './resolution';
@@ -325,6 +325,12 @@ export function spaceViews(state: GameState): SpaceView[] {
   return buildSpaceViews(s, builtFor(run.locationFamilyId, run.locationSeed, run.flags), run.knowledge, run, state);
 }
 
+/** The surname of the run's lead: the first deployed officer of its first squad. */
+function runLeadSurname(state: GameState, run: OperationRun): string {
+  for (const squadId of run.squadIds) for (const id of runRoster(state, run, squadId)) if (state.officers[id]) return state.officers[id].surname;
+  return 'Negotiator';
+}
+
 export function stageProgress(state: GameState): StageProgress {
   const run = state.activeRun;
   const s = run ? getScenario(run.scenarioId) : null;
@@ -333,7 +339,8 @@ export function stageProgress(state: GameState): StageProgress {
   return {
     stage,
     prompt: s && run ? currentStoryPrompt(s, run) : '',
-    exchange: s && run ? currentStoryExchange(s, run) : [],
+    // The negotiator's lines are the lead officer's: the first deployed officer on the run.
+    exchange: s && run ? currentStoryExchange(s, run).map(line => ({ ...line, speaker: line.speaker.replace('{lead}', runLeadSurname(state, run)) })) : [],
     index: cur,
     stages: STAGE_ORDER.map((id, i) => ({
       id,

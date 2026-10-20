@@ -702,6 +702,8 @@ export interface OperationRun {
   /** V13 commitments (sim/commitments.ts): what command promised a person, and whether the team
    * kept it. */
   commitments?: Record<Id, { personId: Id; kind: string; madeAt: number; revision: number; status: 'open' | 'kept' | 'broken' }>;
+  /** V13 the crew flags set when the run started (sim/crew.ts), so a replay starts from them too. */
+  crew?: string[];
   /** V13 subject meters (sim/meters.ts): agitation and rapport now, and how far each kind of
    * event has moved them this call. */
   meters?: Record<Id, { agitation: number; rapport: number; moved: Partial<Record<string, { agitation: number; rapport: number }>> }>;

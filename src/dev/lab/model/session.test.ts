@@ -387,9 +387,10 @@ describe('replayTokens', () => {
 });
 
 describe('handoff', () => {
-  /** A "game": the hostage reference call two decisions in, for another campaign's squad. */
+  /** A "game": the hostage reference call one decision in, for another campaign's squad. Two rolled
+   * decisions can end this call now that the walk-out can draw a shot (2026-10-19). */
   function gameState(): GameState {
-    const game = rollOn(open(`${REFERENCE}&squad=4242`), 2);
+    const game = rollOn(open(`${REFERENCE}&squad=4242`), 1);
     return currentFrame(game).state;
   }
 

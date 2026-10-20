@@ -34,6 +34,11 @@ import type { CompletionDisposition, OutcomeBand, RoomType, StageId } from '../.
 export interface TreeState {
   marks?: string[];
   notMarks?: string[];
+  /** Who the team brought (sim/crew.ts): a trait ('observant', 'calm_voice', 'impatient', 'rookie',
+   * 'mentor', 'steady') or an experience band ('band_veteran') some deployed officer has. Settled
+   * when the call starts, so a choice behind it is simply there or not for this team. */
+  crew?: string[];
+  notCrew?: string[];
   safe?: string[];
   notSafe?: string[];
   /** The size of a counted group, which is fixed per call: the compiler keeps this outcome, prompt
@@ -162,7 +167,8 @@ export type TreeIf = { fact: string; is: boolean } | { clock: string; low: boole
  * one of the voices the call always has: 'negotiator', 'radio' or 'dispatch'. The UI prints the
  * speaker's name beside the line. Two to four lines make an exchange. */
 export interface TreeLine { by: string; line: string }
-export const TREE_VOICES = { negotiator: 'Negotiator', radio: 'Radio', dispatch: 'Dispatch' } as const;
+// The negotiator is the lead officer on the line: the engine fills {lead} with their surname.
+export const TREE_VOICES = { negotiator: '{lead}', radio: 'Radio', dispatch: 'Dispatch' } as const;
 
 /** Standard events that move a subject's agitation and rapport (sim/meters.ts). */
 export type TreeMove = 'heard' | 'contact' | 'honest' | 'provoked' | 'team_seen' | 'shots' | 'released';

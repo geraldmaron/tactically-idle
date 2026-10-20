@@ -69,6 +69,7 @@ export const OWNERSHIP: readonly { glob: string; layer: Layer; system: System }[
   { glob: '/src/sim/tuning-meta.ts', layer: 'lab', system: 'platform' },
   { glob: '/src/sim/tuning.ts', layer: 'kernel', system: 'platform' },
   { glob: '/src/sim/calendar.ts', layer: 'kernel', system: 'platform' },
+  { glob: '/src/sim/crew-flags.ts', layer: 'kernel', system: 'officer' },
   { glob: '/src/sim/format.ts', layer: 'kernel', system: 'platform' },
   { glob: '/src/sim/conditions.ts', layer: 'kernel', system: 'platform' },
   // world (blueprint)
@@ -134,6 +135,7 @@ export const OWNERSHIP: readonly { glob: string; layer: Layer; system: System }[
   { glob: '/src/sim/clocks.ts', layer: 'engine', system: 'scenario' },
   // Agitation and rapport are a subject's temper.
   { glob: '/src/sim/meters.ts', layer: 'engine', system: 'subject' },
+  { glob: '/src/sim/crew.ts', layer: 'engine', system: 'officer' },
   { glob: '/src/sim/save*.ts', layer: 'engine', system: 'platform' },
   // The department's books: every system that spends or earns posts here, like it saves through save.ts.
   { glob: '/src/sim/ledger.ts', layer: 'engine', system: 'platform' },

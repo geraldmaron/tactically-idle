@@ -13,6 +13,7 @@ import { routeAlongOpenings } from '../../../sim/routes';
 import { sightFromStreet, vantageZones, type StreetVantage } from '../../../sim/sightlines';
 import type { BuiltLocation, OutcomeBand, StageId, Vec } from '../../../sim/types';
 import { mapScenarioText } from '../scenario-text';
+import { CREW_MARKS, crewFlag } from '../../../sim/crew-flags';
 import { asRole, CASCADE_LINES, countWord, FIRE_LINES, FORCE_LINES, listOf } from '../../../content/incidents/lines';
 import { cascadeCombos, cascadeKey, cascadeResult, withVariants } from '../drawn-model';
 import { gearFor } from '../action-gear';
@@ -176,8 +177,8 @@ export function bindRoleTokens(text: string, cast: Record<string, CastIdentity>,
  * that none is. A count condition is the compiler's, settled before this (countHolds). */
 export function stateCondition(state: TreeState | undefined, groups: Record<string, readonly string[]> = {}): Condition {
   const people = (roles: readonly string[] | undefined) => (roles ?? []).flatMap(role => groups[role] ?? [role]);
-  const flags = [...(state?.marks ?? []).map(markFlag), ...people(state?.safe).map(safeFlag)];
-  const notFlags = [...(state?.notMarks ?? []).map(markFlag), ...people(state?.notSafe).map(safeFlag)];
+  const flags = [...(state?.marks ?? []).map(markFlag), ...people(state?.safe).map(safeFlag), ...(state?.crew ?? []).map(crewFlag)];
+  const notFlags = [...(state?.notMarks ?? []).map(markFlag), ...people(state?.notSafe).map(safeFlag), ...(state?.notCrew ?? []).map(crewFlag)];
   return { ...(flags.length ? { flags } : {}), ...(notFlags.length ? { notFlags } : {}) };
 }
 
@@ -706,6 +707,10 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
         throw new Error(`${where}: walksVia '${choice.walksVia}' must carry onlyIf: { exitVia: { role: '${choice.walks}', via: '${choice.walksVia}' } }`);
     }
   }
+  // A crew condition names a trait or experience band the engine sets (sim/crew-flags.ts).
+  for (const node of authored.nodes) for (const state of [...(node.promptIf ?? []).map(entry => entry.when), ...node.choices.flatMap(choice => [choice.onlyIf, ...BANDS.flatMap(band => choice.outcomes[band].map(outcome => outcome.when))])])
+    for (const mark of [...state?.crew ?? [], ...state?.notCrew ?? []]) if (!CREW_MARKS.includes(mark))
+      throw new Error(`${authored.type}: ${node.id} reads crew '${mark}', which is no trait or band the engine sets`);
   const lieErrors = deceptionErrors(authored);
   if (lieErrors.length) throw new Error(lieErrors.join('\n'));
   const tree = treeForCounts(authored, callCounts({ groups, armed: placed.armed, upstairs: placed.upstairs, exits: placed.exits }));
@@ -754,6 +759,7 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
   const trim = (state: TreeState | undefined): TreeState | undefined => state && {
     marks: state.marks, safe: state.safe,
     notMarks: state.notMarks?.filter(mark => settable.marks.has(mark)), notSafe: state.notSafe?.filter(role => settable.safe.has(role)),
+    ...(state.crew ? { crew: state.crew } : {}), ...(state.notCrew ? { notCrew: state.notCrew } : {}),
   };
   const nodeById = new Map(tree.nodes.map(node => [node.id, node]));
   const s = structuredClone(input);
