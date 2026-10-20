@@ -366,6 +366,8 @@ export interface EndingDefinition {
   remainingTasks?: string[];
   /** What is true after the call, shown with the ending in the debrief (E11.2). */
   epilogue?: string;
+  /** Replaces `epilogue` when its condition holds at the end of the call; the first match wins. */
+  epilogueIf?: { when: Condition; epilogue: string }[];
 }
 
 export interface ExternalServiceDefinition {

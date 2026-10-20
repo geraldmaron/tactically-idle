@@ -109,7 +109,7 @@ function treeStrings(authored: CallTree, counts?: Record<string, number>): { fie
   }
   for (const [id, ending] of Object.entries(tree.endings)) {
     if (reach && !reach.endings.has(id)) continue;
-    add('ending.title', ending.title); add('ending.summary', ending.summary); add('ending.epilogue', ending.epilogue); for (const task of ending.remainingTasks ?? []) add('ending.task', task);
+    add('ending.title', ending.title); add('ending.summary', ending.summary); add('ending.epilogue', ending.epilogue); for (const entry of ending.epilogueIf ?? []) add('ending.epilogue', entry.epilogue); for (const task of ending.remainingTasks ?? []) add('ending.task', task);
   }
   for (const situation of templateOf(authored)?.situations ?? []) for (const clock of situation.clocks ?? []) {
     add('clock.label', clock.label);

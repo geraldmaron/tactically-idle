@@ -356,6 +356,9 @@ export interface TreeEnding {
   /** What is true after the call, told as fiction may tell it (E11.2): true on every path that
    * reaches this ending, putting the cost or the grace on one named person. */
   epilogue?: string;
+  /** Replaces `epilogue` in that public state at the end of the call (marks and who is out); the
+   * first match wins. It carries a reframe into the after (review F19). */
+  epilogueIf?: { when: TreeState; epilogue: string }[];
 }
 
 export interface CallTree {

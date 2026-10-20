@@ -41,7 +41,8 @@ const TREE: CallTree = {
       adverse: [{ text: '{taker.first} asks to see the signed page, and there is none.', breaks: ['signs'], next: { ending: 'handed_over' } }] } }) };
     return node;
   }),
-  endings: { ...GROUP_TREE.endings, all_out: { ...GROUP_TREE.endings.all_out, epilogue: '{courier.first} still has the parcel. Nobody ever signed for it.' } },
+  endings: { ...GROUP_TREE.endings, all_out: { ...GROUP_TREE.endings.all_out, epilogue: '{courier.first} still has the parcel. Nobody ever signed for it.',
+    epilogueIf: [{ when: { marks: ['heard_out'] }, epilogue: '{taker.first} asked after the courier twice.' }] } },
 };
 const TEMPLATE: IncidentTemplate = { ...GROUP_TEMPLATE, tree: TREE };
 
@@ -80,6 +81,8 @@ describe('call surfaces compile with every name bound', () => {
     expect(said).toHaveLength(1);
     expect(said[0].speaker).not.toContain('{');
     expect(lone.endings.all_out.epilogue).toMatch(/^[A-Z][a-z]+ still has the parcel\. Nobody ever signed for it\.$/);
+    // A variant keyed to a mark the call can't set is pruned; one it can set keeps its condition.
+    expect(lone.endings.all_out.epilogueIf ?? []).toEqual([]);
     const lie = action(lone, 'talk', 'lie');
     expect(lie.deceives).toBe(true);
     expect(lie.outcomes.favorable.find(effect => effect.promise)?.promise).toMatchObject({ id: 'signs', kind: 'lie' });
@@ -110,5 +113,15 @@ describe('a lie is always findable', () => {
     const errors = deceptionErrors(silent);
     expect(errors).toContain('hostage_crisis: an outcome breaks nothing, which no outcome promises');
     expect(errors).toContain('hostage_crisis: final.leave favorable: breaking nothing needs text that says the person found out');
+  });
+});
+
+describe('the hostage pilot carries its reframe into the after', () => {
+  it('keeps both everyone_out epilogue variants, each behind the mark that sets it', () => {
+    const s = generateIncident({ type: 'hostage_crisis', familyId: 'market_row', buildingSeed: 7, seed: 3, tier: 2, contentVersion: 13 });
+    const variants = s.endings.everyone_out?.epilogueIf ?? [];
+    expect(variants).toHaveLength(2);
+    expect(variants.map(entry => entry.when.flags)).toEqual([[expect.stringContaining('owner_admits')], [expect.stringContaining('camera_said')]]);
+    expect(unbound(variants)).toBeNull();
   });
 });

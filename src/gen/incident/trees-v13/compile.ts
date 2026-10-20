@@ -1198,6 +1198,7 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
     ...(['resolved', 'care_accepted', 'followup_agreed'].includes(ending.disposition) ? { completion: { flags: [endFlag(id)] } } : {}),
     ...(ending.remainingTasks ? { remainingTasks: [...ending.remainingTasks] } : {}),
     ...(ending.epilogue ? { epilogue: ending.epilogue } : {}),
+    ...(ending.epilogueIf?.length ? { epilogueIf: ending.epilogueIf.filter(entry => possible(entry.when)).map(entry => ({ when: stateCondition(trim(entry.when), groups), epilogue: entry.epilogue })) } : {}),
   }]));
 
   const bound = mapScenarioText(s, textBinder(tree, built, placed));

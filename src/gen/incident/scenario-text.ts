@@ -43,7 +43,7 @@ export function mapScenarioText(input: ScenarioDefinition, text: (value: string)
     }
   }
   for (const ending of Object.values(s.endings)) {
-    fields(ending, ['title', 'summary', 'epilogue']); if (ending.remainingTasks) ending.remainingTasks = ending.remainingTasks.map(text);
+    fields(ending, ['title', 'summary', 'epilogue']); for (const entry of ending.epilogueIf ?? []) fields(entry, ['epilogue']); if (ending.remainingTasks) ending.remainingTasks = ending.remainingTasks.map(text);
   }
   if (s.story) {
     if (s.story.episode) s.story.episode.publicContext = s.story.episode.publicContext.map(text);

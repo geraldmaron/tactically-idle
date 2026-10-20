@@ -125,7 +125,7 @@ whose break has no visible cue, and a test shows a lie that helps now and costs 
 Tags: job=command; journeys=answer-a-call, choices-branch; probes=none (a rewrite of an existing call, whose probes keep their floors); lane=calls
 Needs: start=depth-bible; integrate=call-surfaces, deception-commitments; ship=none (waits on the owner read)
 
-A redesign, not a polish: situations that reframe the taker, a temptation, an escalation palette,
+Open after the separate review: a temptation in group calls (F5, a promise can't be made to a group today). A redesign, not a polish: situations that reframe the taker, a temptation, an escalation palette,
 voices for the owner, courier and negotiator, and an epilogue on every ending. Done: the gates and
 the crossed coverage walk pass, a separate reader records D1 to D9, fingerprints are recaptured
 deliberately, and the owner has read three paths aloud and approved the bible as calibrated.
@@ -136,7 +136,7 @@ Tags: job=command; journeys=chance-not-script; probes=none (scoring calibration,
 Needs: start=none; integrate=none; ship=none
 
 `src/sim/outcome-score.test.ts` caps the trust error against the retired hand-set numbers at 0.75.
-Since sidearms on day one (ec7ba79, #79) `main` sits at exactly 0.750: hostage rose from 0.38 to
+The hostage depth pilot (`hostage-depth-pilot`) moves it to 0.754. Since sidearms on day one (ec7ba79, #79) `main` sits at exactly 0.750: hostage rose from 0.38 to
 0.83, while armed is 0.90 and rescue 1.02; the old barricade (0.24) holds the average down. The new
 barricade fits better on its own (0.43) but replaces those rows, so its branch reads 0.80 and fails.
 Measured 2026-10-19 with the test's own sample. Done: either recalibrate the score so the hostage,

@@ -91,6 +91,7 @@ export function callStringRows(authored: CallTree, bind: (text: string) => strin
     add(`ending.${id}.title`, 'ending_title', ending.title);
     add(`ending.${id}.summary`, 'ending_summary', ending.summary);
     add(`ending.${id}.epilogue`, 'epilogue', ending.epilogue);
+    (ending.epilogueIf ?? []).forEach((entry, i) => add(`ending.${id}.epilogueIf[${i}]`, 'epilogue', entry.epilogue));
     (ending.remainingTasks ?? []).forEach((task, i) => add(`ending.${id}.task[${i}]`, 'still_needed', task));
   }
   // Clocks (content/incidents): the label on the player's panel and each cue line the engine adds
