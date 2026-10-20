@@ -1043,3 +1043,35 @@ cost or grace on one named person. The custody lines from F5 are neutral now.
 - Gates: check:strings hostage_crisis exit 0 (three bindings); trees-v13 green after the
   test helper read transcripts and epilogues; fingerprints recaptured for the 12 hostage keys
 ```
+
+### Review response (2026-10-19, docs/calls/hostage-depth-review.md)
+
+| Finding | Response |
+|---|---|
+| B1 last_day preview false in s3 | Rewritten to hold in all three situations |
+| B2 group_out_dawn epilogue false | Rewritten to the apron line |
+| B3 two epilogues invent a recovery | Rewritten (the open till drawer; the name never said again) |
+| F1 reframe reach | New stage 3 choice owner_speaker (before the owner has spoken); ask_owner returns only after |
+| F2 later stages forget | talking and standoff prompt variants on owner_admits and camera_said, with transcripts |
+| F3 lie breaks unreachable | foundOut on owner_speaker (every band), ask_owner adverse and his_pace KEEPS; dead last_day and his_door breaks removed; a standoff variant keeps the pad in view |
+| F4 lie read as an afterthought | foundOut comes before the escalation on take_account |
+| F5 no temptation in group calls | Open. A promise can't be made to a group (compile.ts groupOutcome), so this waits for an engine request or an owner call |
+| F6, F7 transcripts restating prompts; the taker naming the owner | Prompts and lines rewritten; the taker uses pronouns for the owner |
+| F8, F9, F13 to F18 | Applied as the review gave them, with small wording changes where the checker found repeats |
+| F10 withdrawal as a beat | mark withdrawn; standoff opens with the negotiator's direct question (E4); his_pace's head-in-hands picture cut |
+| F11, F12 epilogues on no one, one frame | Rewritten onto named people; the asking frame cut to three |
+| F19 the reframe never reaches the after | Built: TreeEnding.epilogueIf (first match on marks at the end of the call); everyone_out carries owner_admits and camera_said variants |
+| F20 an entry "finds out" a lie | Fixed in sim/commitments.ts: only `breaks` breaks a lie; an entry leaves it open |
+
+Side effects measured: situation 3 now has 6010 explorer states, so the lab's EXPLORE_CAP rose to
+8000; the owner clock test's policy seed moved from 687 to 825; the outcome-score calibration
+reads trust MAE 0.754 against its 0.75 ceiling (0.756 after the re-check fixes) (main sat at exactly 0.750), which is the open
+owner decision in `outcome-calibration-drift`.
+
+### Re-check response (2026-10-19)
+
+RB1 to RB3, RF1 and RF2 fixed as the reader gave them, with checker-driven wording changes. F10:
+a standoff choice `stay_on` answers "Doesn't matter." (E4.4), pull_back hides while the taker is
+withdrawn, and the threat node asks the direct question too. RB2's `lie_found` prompt variant is
+lone only, because the mark planner ignores an outcome's own condition (backlog
+`mark-plan-reads-when`). F5 (no temptation in group calls) stays open.

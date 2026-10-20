@@ -95,6 +95,9 @@ export interface TreeRole {
     floor?: 'ground' | 'upper' | 'any' };
   /** Roles in one group share a drawn surname (a couple, a parent and child). */
   surnameGroup?: string;
+  /** Who they are before today (the briefing's "Who they are", depth gate D10): one to three
+   * sentences of past the player can see, never the private logic and never a hidden truth. */
+  profile?: string;
   /** 'chair': this person leaves only along a step-free route wide enough for a wheelchair. */
   mobility?: 'walking' | 'chair';
   /** A carried prop shown on the map once the named public fact is reported. */
@@ -274,6 +277,10 @@ export interface TreeChoice {
   /** Offered only in this public state. */
   onlyIf?: TreeState;
   requires?: Pick<ActionRequirements, 'certs' | 'anyTags' | 'allTags' | 'minSquads'>;
+  /** What draws a player to this choice, and what it costs, each one plain line shown with the
+   * choice (the depth register, owner 2026-10-19). Both or neither. */
+  pull?: string;
+  cost?: string;
   /** The choice is a lie, or a promise command never approved (dilemma pattern 15, E12.6). The
    * card says command hasn't approved it. Its outcomes carry the `lie` promise they make. */
   deceives?: true;
@@ -356,6 +363,9 @@ export interface TreeEnding {
   /** What is true after the call, told as fiction may tell it (E11.2): true on every path that
    * reaches this ending, putting the cost or the grace on one named person. */
   epilogue?: string;
+  /** Replaces `epilogue` in that public state at the end of the call (marks and who is out); the
+   * first match wins. It carries a reframe into the after (review F19). */
+  epilogueIf?: { when: TreeState; epilogue: string }[];
 }
 
 export interface CallTree {
@@ -374,6 +384,9 @@ export interface CallTree {
   scene: { setting: TreeSetting | TreeSetting[]; rooms: RoomType[]; timeOfDay?: 'day' | 'dusk' | 'night'; crowd?: 0 | 1 | 2 };
   /** Card hook. */
   summary: string;
+  /** The scene before the call, read once before the briefing: the place, the people and what
+   * happened before the team was called (the depth register, owner 2026-10-19). */
+  coldOpen?: string;
   pressureLabel: string;
   pressure: PressureModel;
   briefing: { dispatchReason: string; known: string[]; unknown: string[]; responsibilities: string[] };

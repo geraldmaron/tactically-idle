@@ -357,6 +357,12 @@ function requirementLine(a: ActionDefinition): string {
   return line.charAt(0).toUpperCase() + line.slice(1);
 }
 
+/** `{lead}` filled with the lead officer's surname, as the summary does. */
+function leadIn(text: string, ev: Evaluation, state: GameState): string {
+  const lead = ev.leadId ? state.officers[ev.leadId]?.surname : undefined;
+  return text.replace(/\{lead\}/g, lead ?? 'Squad');
+}
+
 function summaryFor(a: ActionDefinition, ev: Evaluation, state: GameState): string {
   if (!ev.eligible) return ev.reasonShort ?? ev.reason ?? 'Unavailable';
   const lead = ev.leadId ? state.officers[ev.leadId]?.surname : undefined;
@@ -437,6 +443,7 @@ function toView(state: GameState, run: OperationRun, a: ActionDefinition, ev: Ev
     ...(eventResult ? { eventResult } : {}),
     ...(ev.authority ? { authority: { ...ev.authority } } : {}),
     ...(a.deceives ? { deceives: true as const } : {}),
+    ...(a.weighing ? { weighing: { pull: leadIn(a.weighing.pull, ev, state), cost: leadIn(a.weighing.cost, ev, state) } } : {}),
     id: a.id,
     stage: a.stage,
     title: a.title,

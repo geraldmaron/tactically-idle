@@ -86,8 +86,8 @@ function treeStrings(authored: CallTree, counts?: Record<string, number>): { fie
   const reach = counts && authored.groups ? reachableWithin(tree, counts, clockNextsOf(authored)) : null;
   const out: { field: string; text: string }[] = [];
   const add = (field: string, text: string | undefined) => { if (text) out.push({ field, text }); };
-  add('summary', tree.summary); add('title', tree.title); add('pressureLabel', tree.pressureLabel);
-  for (const role of tree.roles) add('role.label', role.label);
+  add('summary', tree.summary); add('title', tree.title); add('pressureLabel', tree.pressureLabel); add('coldOpen', tree.coldOpen);
+  for (const role of tree.roles) { add('role.label', role.label); add('role.profile', role.profile); }
   add('dispatchReason', tree.briefing.dispatchReason);
   for (const line of [...tree.briefing.known, ...tree.briefing.unknown, ...tree.briefing.responsibilities]) add('briefing', line);
   for (const label of Object.values(tree.stageLabels)) add('stageLabel', label);
@@ -101,7 +101,7 @@ function treeStrings(authored: CallTree, counts?: Record<string, number>): { fie
     for (const line of node.exchange ?? []) add('exchange', line.line);
     for (const entry of node.promptIf ?? []) { add('prompt', entry.prompt); for (const line of entry.exchange ?? []) add('exchange', line.line); }
     for (const choice of node.choices) {
-      add('choice.title', choice.title); add('choice.summary', choice.summary);
+      add('choice.title', choice.title); add('choice.summary', choice.summary); add('choice.pull', choice.pull); add('choice.cost', choice.cost);
       for (const band of BANDS) add('choice.preview', choice.preview[band]);
       for (const modifier of choice.modifiers ?? []) add('modifier', modifier.label);
       for (const outcome of outcomesOf(choice)) { add('outcome', outcome.text); for (const line of outcome.exchange ?? []) add('exchange', line.line); }
@@ -109,7 +109,7 @@ function treeStrings(authored: CallTree, counts?: Record<string, number>): { fie
   }
   for (const [id, ending] of Object.entries(tree.endings)) {
     if (reach && !reach.endings.has(id)) continue;
-    add('ending.title', ending.title); add('ending.summary', ending.summary); add('ending.epilogue', ending.epilogue); for (const task of ending.remainingTasks ?? []) add('ending.task', task);
+    add('ending.title', ending.title); add('ending.summary', ending.summary); add('ending.epilogue', ending.epilogue); for (const entry of ending.epilogueIf ?? []) add('ending.epilogue', entry.epilogue); for (const task of ending.remainingTasks ?? []) add('ending.task', task);
   }
   for (const situation of templateOf(authored)?.situations ?? []) for (const clock of situation.clocks ?? []) {
     add('clock.label', clock.label);

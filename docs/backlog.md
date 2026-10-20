@@ -93,6 +93,17 @@ but forgettable, and no gate can fail a call for that. Order: `depth-bible` and 
 with `deception-commitments`, then `hostage-depth-pilot`, then an owner read before any other call
 is rewritten. Plan of record: `docs/scenario-depth.md`.
 
+### mark-plan-reads-when: The mark planner ignores an outcome's own condition
+Tags: job=command; journeys=choices-branch; probes=none (compile-time pruning, not an odds input); lane=engine
+Needs: start=none; integrate=none; ship=none
+
+`prunePlan` (src/gen/incident/trees-v13/compile.ts) counts a mark as settable when any outcome of
+a reachable choice sets it, even when that outcome's own `when` can never hold in the call. The
+compile then drops the outcome, and `validateStoryBindings` fails a prompt that reads the mark as
+undeclared. Found with the hostage pilot's `lie_found` (set only behind `lied_sign`, which group
+calls can't set), worked around with a count condition. Done: settable marks respect the
+outcome's `when`, and a fixture test shows a prompt variant pruned in the call that can't set it.
+
 ### depth-bible: Depth rules a call can fail with zero defects
 Tags: job=command; journeys=choices-branch; probes=none (writing rules and review gates); lane=calls
 Needs: start=none; integrate=none; ship=none
@@ -125,7 +136,7 @@ whose break has no visible cue, and a test shows a lie that helps now and costs 
 Tags: job=command; journeys=answer-a-call, choices-branch; probes=none (a rewrite of an existing call, whose probes keep their floors); lane=calls
 Needs: start=depth-bible; integrate=call-surfaces, deception-commitments; ship=none (waits on the owner read)
 
-A redesign, not a polish: situations that reframe the taker, a temptation, an escalation palette,
+Open after the separate review: a temptation in group calls (F5, a promise can't be made to a group today). A redesign, not a polish: situations that reframe the taker, a temptation, an escalation palette,
 voices for the owner, courier and negotiator, and an epilogue on every ending. Done: the gates and
 the crossed coverage walk pass, a separate reader records D1 to D9, fingerprints are recaptured
 deliberately, and the owner has read three paths aloud and approved the bible as calibrated.
@@ -136,7 +147,7 @@ Tags: job=command; journeys=chance-not-script; probes=none (scoring calibration,
 Needs: start=none; integrate=none; ship=none
 
 `src/sim/outcome-score.test.ts` caps the trust error against the retired hand-set numbers at 0.75.
-Since sidearms on day one (ec7ba79, #79) `main` sits at exactly 0.750: hostage rose from 0.38 to
+The hostage depth pilot (`hostage-depth-pilot`) moves it to 0.756. Since sidearms on day one (ec7ba79, #79) `main` sits at exactly 0.750: hostage rose from 0.38 to
 0.83, while armed is 0.90 and rescue 1.02; the old barricade (0.24) holds the average down. The new
 barricade fits better on its own (0.43) but replaces those rows, so its branch reads 0.80 and fails.
 Measured 2026-10-19 with the test's own sample. Done: either recalibrate the score so the hostage,

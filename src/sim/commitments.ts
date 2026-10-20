@@ -49,7 +49,10 @@ export function applyCommitments(run: CommitmentRun, scenario: ScenarioDefinitio
   const changed: { id: Id; status: 'kept' | 'broken' }[] = [];
   for (const [id, commitment] of Object.entries(run.commitments)) {
     if (commitment.status !== 'open') continue;
-    const status = entry || forced.has(commitment.personId) || found.has(id) ? 'broken' : isOut(run, commitment.personId) ? 'kept' : null;
+    // A lie breaks only when the person finds out (`breaks`). An entry or force doesn't tell them,
+    // so it leaves the lie open: it neither held nor was found (review F20).
+    const lie = commitment.kind === 'lie';
+    const status = found.has(id) || (!lie && (entry || forced.has(commitment.personId))) ? 'broken' : isOut(run, commitment.personId) ? 'kept' : null;
     if (!status) continue;
     run.commitments = { ...run.commitments, [id]: { ...commitment, status } };
     changed.push({ id, status });

@@ -752,6 +752,8 @@ export function computeDebrief(state: GameState, run: OperationRun): DebriefResu
     if (closingStrain.length) causes.unshift(`Ending adjustment at close: ${closingStrain.map((officer) => `${state.officers[officer.officerId]?.surname ?? officer.officerId} ${officer.delta > 0 ? '+' : ''}${officer.delta} strain`).join('; ')}.`);
   }
 
+  // The ending's epilogue, or the first variant whose state holds at the end of the call (E11.2).
+  const epilogue = ending.epilogueIf?.find(entry => conditionHolds(entry.when, run))?.epilogue ?? ending.epilogue;
   return {
     runId: run.id,
     scenarioId: run.scenarioId,
@@ -759,7 +761,7 @@ export function computeDebrief(state: GameState, run: OperationRun): DebriefResu
     endingTitle: ending.title,
     decisions: decisionViewsFor(state, run, scenario, steps),
     ...({ endingSummary: ending.summary }),
-    ...(ending.epilogue ? { endingEpilogue: ending.epilogue } : {}),
+    ...(epilogue ? { endingEpilogue: epilogue } : {}),
     ...completion,
     ...(run.responseFailure ? { disposition: 'unresolved' as const, completionAchieved: false, remainingTasks: run.responseFailure.remainingTasks } : {}),
     ...({ officerCasualties: Object.values(run.officerCasualties ?? {}).map(person => ({ ...person })), civilianOutcomes: civilianOutcomeViews(scenario, run) }),

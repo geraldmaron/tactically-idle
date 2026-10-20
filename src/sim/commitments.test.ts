@@ -57,6 +57,10 @@ describe('commitments: the rule', () => {
     const held = run();
     step(held, lie, 'favorable', told);
     expect(step(held, action({ id: 'walk' }), 'favorable', [], [], ['out:taker'])).toEqual([{ id: 'will_sign', status: 'kept' }]);
+    const entered = run();
+    step(entered, lie, 'favorable', told);
+    expect(step(entered, entry)).toEqual([]);
+    expect(entered.commitments!.will_sign.status).toBe('open');
   });
 
   it('break when the team goes in, and the subject hears it', () => {

@@ -28,18 +28,21 @@ BUDGETS = {
     "known": (260, 12, True), "unknown": (260, 12, True), "team_job": (260, 10, True),
     "fact_label": (40, 5, True), "fact_claim": (None, 20, True), "fact_note": (None, 12, True),
     "fact_source": (None, 6, True), "fact_result": (None, 20, False), "marker": (10, 1, True),
-    "map_task": (12, 3, True), "stage_label": (24, 2, True), "prompt": (120, 18, True),
-    "choice_title": (60, 5, True), "summary": (230, 20, True), "preview": (None, 20, True),
+    "map_task": (12, 3, True), "stage_label": (24, 2, True), "prompt": (300, 50, True),
+    "choice_title": (60, 5, True), "summary": (350, 60, True), "preview": (None, 25, True),
     "requirement": (None, 8, True), "modifier": (None, 6, True), "cert_bonus": (None, 6, True),
-    "support": (None, 6, True), "equipment": (None, 6, True), "result": (240, 30, False),
+    "support": (None, 6, True), "equipment": (None, 6, True), "result": (450, 80, False),
     "result_label": (None, 4, False), "officer_harm": (None, 10, False),
-    "ending_title": (60, 6, False), "ending_summary": (240, 35, False),
+    "ending_title": (60, 6, False), "ending_summary": (400, 70, False),
     "still_needed": (None, 8, False), "objective": (None, 8, True),
     "civilian_outcome": (None, 6, False), "radio": (None, 10, False), "speech": (None, 15, False),
     "service": (None, 15, True), "debrief": (None, 10, False), "pressure_label": (None, 4, True),
     # Transcript lines (TreeNode.exchange before the check, TreeOutcome.exchange after) and the
     # ending epilogue: the depth surfaces (owner 2026-10-19, swat-call-design E16 and E17).
-    "exchange": (90, 15, True), "exchange_result": (90, 15, False), "epilogue": (200, 30, False),
+    "exchange": (90, 15, True), "exchange_result": (90, 15, False), "epilogue": (300, 50, False),
+    # The depth register (owner 2026-10-19): the scene before the call, who the people are, and what
+    # draws a player to a choice and what it costs.
+    "cold_open": (900, 150, True), "profile": (300, 50, True), "pull": (140, 22, True), "cost": (140, 22, True),
 }
 # Spoken lines. The speaker is the source, so an accusation is the speaker's framing, and speech
 # may shout, front a clause and say what it feels (E17).

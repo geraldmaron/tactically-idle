@@ -859,6 +859,8 @@ export interface ActionView {
   authority?: import('./scenario-types').AuthorityResult;
   /** V13: a lie or a promise command never approved (dilemma pattern 15). */
   deceives?: true;
+  /** V13: what draws a player to the choice, and what it costs (bound, {lead} filled). */
+  weighing?: { pull: string; cost: string };
   /** Common event across effort bands: authored explicitly or proven by identical v6 effect tables. */
   eventResult?: string;
   likelihood: Record<OutcomeBand, number>;
