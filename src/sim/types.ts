@@ -680,8 +680,11 @@ export interface DecisionResolution {
   timeCost: number;
   /** The team's minutes for this decision before its outcomes added any (sim/clocks.ts
    * teamMinutes): travel, forcing and work at its band. Clock forks read it, so replays read the
-   * same minutes the commit did. */
+   * same minutes the commit did. Includes `ditherMinutes`. */
   clockBaseMinutes: number;
+  /** Game minutes the player's stall on this decision cost (sim/clocks.ts ditherMinutes), already
+   * in `clockBaseMinutes` and `timeCost`, so a replay reads them from there. Absent when zero. */
+  ditherMinutes?: number;
   stressDeltas: Record<Id, number>;
   /** Recorded at application time; absent in older decisions. Never reconstructed from current stress. */
   stressLevels?: Record<Id, { stressBefore: number; stressAfter: number }>;
@@ -751,6 +754,9 @@ export interface OperationRun {
   /** Player knowledge: where each person was last observed, and at which run revision. */
   lastSeen?: Record<Id, { spaceId: Id; at: Vec; revision: number }>;
   startedAt: number;
+  /** When the open decision opened (the start, or the last commit), on the department's clock. A
+   * close and resume reads the same time, so time away counts once (sim/clocks.ts openDither). */
+  decisionOpenedAt: number;
 }
 
 export interface ResponseFailureRecord {
@@ -1147,7 +1153,9 @@ export type Command =
   | { type: 'resupplyAction'; actionId: Id; actingSquadIds: SquadId[]; supportSquadIds: SquadId[] }
   /** `leadOfficerId`: the officer the player sends to lead this decision, one of those taking part.
    * Without it the best fit leads (cert holders first, then aptitude). */
-  | { type: 'decide'; actionId: Id; actingSquadIds: SquadId[]; supportSquadIds: SquadId[]; leadOfficerId?: Id }
+  | { type: 'decide'; actionId: Id; actingSquadIds: SquadId[]; supportSquadIds: SquadId[]; leadOfficerId?: Id;
+    /** Game minutes the stall cost (sim/clocks.ts openDither); the engine caps it at the open threat. */
+    ditherMinutes?: number }
   | { type: 'closeDebrief' };
 
 export type CommandType = Command['type'];

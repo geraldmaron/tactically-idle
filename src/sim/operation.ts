@@ -8,7 +8,7 @@ import { applyIncidentConsequences, applyPersonConsequences, civilianOutcomeView
 import { protectedOfficerEffects } from './force-risk';
 import { drawnKeys, forceSuppliesSpent, resolveDrawn } from './drawn-effects';
 import { withVariants } from '../gen/incident/drawn-model';
-import { advanceClocks, clockConditionsHold, clockErrors, clockOutEffects, cueEffects, decisionMinutes, forkMinutes, initialClocks, teamMinutes } from './clocks';
+import { advanceClocks, clockConditionsHold, clockErrors, clockOutEffects, cueEffects, decisionMinutes, ditherCap, forkMinutes, initialClocks, teamMinutes } from './clocks';
 import { applyMoves, driftMeters, initialMeters, meterConditionsHold } from './meters';
 import { applyCommitments } from './commitments';
 import { forceLines, OUTCOME_SCORE_V1, scoreCall } from './outcome-score';
@@ -411,6 +411,7 @@ function makeRun(state: GameState, built: BuiltLocation, scenario: ScenarioDefin
     endingId: null,
     settled: false,
     startedAt: now,
+    decisionOpenedAt: Math.max(now, state.department.clockHighWater),
   };
 }
 
@@ -880,7 +881,7 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     return { ok: true };
   },
 
-  decide(draft, cmd) {
+  decide(draft, cmd, ctx) {
     const run = draft.activeRun;
     if (!run) return fail('No operation in progress');
     if (run.status !== 'active' || run.stage === 'debrief') return fail('The operation is over; close the debrief');
@@ -897,6 +898,10 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     const ev = evaluateAction(input);
     if (!ev.eligible) return fail(ev.reason ?? 'Not available');
     if (cmd.leadOfficerId && ev.participantIds[0] !== cmd.leadOfficerId) return fail('That officer is not taking part in this decision');
+    if (cmd.ditherMinutes !== undefined && !(Number.isFinite(cmd.ditherMinutes) && cmd.ditherMinutes >= 0)) return fail('Dither minutes must be 0 or more');
+    // The stall's minutes (docs/call-pressure.md), stopped at the open threat. They join the
+    // decision's own minutes below, so clocks, cues and the threat move through the one path.
+    const dither = Math.min(ditherCap(scenario, run), Math.floor((cmd.ditherMinutes ?? 0) * 10) / 10);
     // Who leads is part of the story: results can read the lead's traits and experience
     // (TreeState.lead → lead:<trait>, lead:band_<band>), replaced at every decision.
     run.flags = [...run.flags.filter((flag) => !flag.startsWith(LEAD_PREFIX)), ...leadFlags(draft, run, ev.participantIds[0])];
@@ -909,7 +914,7 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     const sample = r.value;
     const band = bandFor(ev.margin, sample);
     // Clock forks read the decision's own minutes, travel and forcing included (sim/clocks.ts).
-    const clockBaseMinutes = teamMinutes(ev, action, band);
+    const clockBaseMinutes = teamMinutes(ev, action, band) + dither;
     let matched = matchedEffects(action, band, run, scenario, clockBaseMinutes);
     // v13: drawn consequences (a subject firing at the team, the team's force) settle now, each
     // with its own saved sample, into the variant effects they choose (sim/drawn-effects.ts).
@@ -930,7 +935,7 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     const openingChanges = new Map<Id, OpeningState>(matched.flatMap(effect => (effect.openings ?? []).map(change => [change.openingId, change.state] as const)));
     const before = { objective: run.objective, civilianSafety: run.civilianSafety, pressure: run.pressure };
     const extra = matched.reduce((s, e) => s + (e.extraMinutes ?? 0), 0);
-    const timeCost = decisionMinutes(teamMinutes(ev, action, band, storyRouteUsed), extra, action);
+    const timeCost = decisionMinutes(teamMinutes(ev, action, band, storyRouteUsed) + dither, extra, action);
     const strain = strainFor(input, ev, band);
 
     const clocksBefore = run.clocks;
@@ -1034,6 +1039,7 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
       band,
       timeCost,
       clockBaseMinutes,
+      ...(dither > 0 ? { ditherMinutes: dither } : {}),
       stressDeltas: strain,
       stressLevels,
       itemsConsumed: consumed,
@@ -1043,6 +1049,8 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     };
     run.history.push(resolution);
     run.revision += 1;
+    // The next decision opens now.
+    run.decisionOpenedAt = Math.max(ctx.now, draft.department.clockHighWater);
 
     // stage transition (the committed decision is already in history)
     let stageNote: string | null = null;
