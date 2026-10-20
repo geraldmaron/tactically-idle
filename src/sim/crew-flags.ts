@@ -13,3 +13,4 @@ export const CREW_FLAGS: readonly string[] = CREW_MARKS.map(crewFlag);
 /** A lead mark: the same names, for the one officer leading the current decision (sim/crew.ts leadFlags). */
 export const LEAD_PREFIX = 'lead:';
 export const leadFlag = (mark: string) => `${LEAD_PREFIX}${mark}`;
+export const LEAD_FLAGS: readonly string[] = CREW_MARKS.map(leadFlag);

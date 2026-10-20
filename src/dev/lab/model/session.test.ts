@@ -422,7 +422,7 @@ describe('handoff', () => {
   });
 
   it('replays the game\'s drawn results too, and says when this squad can\'t produce one', () => {
-    const drawnPath = 't13_hostage_crisis_offer_take_courier~favorable,t13_hostage_crisis_out_six_years_ask_courier~adverse,t13_hostage_crisis_threat_go_in~adverse/firearm:none/none';
+    const drawnPath = 't13_hostage_crisis_offer_take_courier~favorable,t13_hostage_crisis_out_cousin_cousin_glass~adverse,t13_hostage_crisis_threat_go_in~adverse/firearm:none/none';
     const id = open('type=hostage_crisis&family=market_row&seed=7&tier=2&variant=2').resolved.id!;
     const aimed = open(`id=${id}&kit=full&certs=entry_team&handoff=gone&hist=${drawnPath}`);
     expect(aimed.prior).toHaveLength(3);

@@ -1,5 +1,5 @@
 import type { Condition, ScenarioDefinition, StoryAnchor, StoryInstance } from '../../sim/scenario-types';
-import { CREW_FLAGS } from '../../sim/crew-flags';
+import { CREW_FLAGS, LEAD_FLAGS } from '../../sim/crew-flags';
 import { withVariants } from './drawn-model';
 import type { BuiltLocation, ExteriorZone, Id, LocationDefinition, ObjectType, Opening, PlacedObject, Polygon, Room, RoomType, Vec, ZoneKind } from '../../sim/types';
 import { floorMap, LOCATION_TUNING, openingFloor, pointInPolygon, polygonBBox, polygonCentroid } from '../../sim/location';
@@ -249,6 +249,7 @@ export function validateStoryBindings(scenario: ScenarioDefinition, built: Built
     ...(scenario.clocks ?? []).flatMap(clock => [...clock.onOut?.mark ? [`mark:${clock.onOut.mark}`] : [], ...clock.onOut?.route?.setFlags ?? [], ...clock.onOut?.route?.clearFlags ?? []]), ...engineFlags,
     // The crew on the run (sim/crew.ts) is set by the engine at the start of every call.
     ...CREW_FLAGS,
+    ...LEAD_FLAGS,
     ...built.location.openings.flatMap(opening => ['open', 'closed', 'locked', 'blocked'].map(state => `opening:${opening.id}=${state}`))]);
   const requiredFact = (id: Id, context: string) => { if (!facts.has(id)) error(`${context} references unknown fact ${id}`); };
   const condition = (when: Condition | undefined, context: string) => {
