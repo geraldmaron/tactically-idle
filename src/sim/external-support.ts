@@ -224,7 +224,11 @@ export function validExternalSupportState(run: OperationRun, scenario: ScenarioD
     } else if (decision.committed?.forceOutcome) return false;
     for (let i = 0; i < (decision.committed?.drawn?.length ?? 0); i++) rngState = next(rngState).state;
     if (externalSupportActionIssue({ ...publicState, clock: beforeClock, externalSupport: expected }, scenario, action)) return false;
-    if (action.awaitSupport && decision.timeCost !== remainingSupportWait({ clock: beforeClock, externalSupport: expected }, scenario, action.awaitSupport)) return false;
+    // A wait takes the support's remaining minutes, plus the stall the player spent on it (dither-minutes).
+    if (action.awaitSupport) {
+      const wait = remainingSupportWait({ clock: beforeClock, externalSupport: expected }, scenario, action.awaitSupport);
+      if (wait === null || decision.timeCost !== round1(wait + (decision.ditherMinutes ?? 0))) return false;
+    }
     const matched = action.outcomes[decision.band].filter((effect) => conditionsHold(effect.when, publicState)
       && (effect.truth ?? []).every((truth) => scenario.facts.find((fact) => fact.id === truth.factId)?.truth === truth.is)
       && (clockConditionsHold(effect.clocks, scenario, { clocks: timed.clocks, flags: publicState.flags }, forkMinutes(action, decision.band, effect, decision.clockBaseMinutes))
