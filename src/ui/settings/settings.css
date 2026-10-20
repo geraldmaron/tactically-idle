@@ -1,5 +1,5 @@
-/* First-run screen and Settings sheet (src/ui/settings). Toggles reuse .toggle from app.css and the
- * note and timer choices reuse the ChoiceRail; every target is at least var(--touch) tall. */
+/* Launch advisory and Settings sheet (src/ui/settings). Toggles reuse .toggle from app.css and the
+ * warning and timer choices reuse the ChoiceRail; every target is at least var(--touch) tall. */
 
 .settings-controls {
   display: flex;
@@ -37,57 +37,6 @@
   color: var(--text-dim);
 }
 
-.settings-tiers {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-}
-.settings-tier {
-  position: relative;
-  display: flex;
-  min-height: var(--touch);
-  padding: 12px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--panel);
-  cursor: pointer;
-}
-.settings-tier input {
-  position: absolute;
-  opacity: 0;
-  width: 1px;
-  height: 1px;
-}
-.settings-tier:has(input:checked) {
-  border-color: var(--amber);
-  background: var(--panel-3);
-  box-shadow: inset 0 0 0 1px var(--amber);
-}
-.settings-tier:has(input:focus-visible) {
-  outline: 2px solid var(--amber-2);
-  outline-offset: 2px;
-}
-.settings-tier-text {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.settings-tier-text strong {
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: 18px;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-.settings-tier:has(input:checked) strong {
-  color: var(--amber-2);
-}
-.settings-tier-text small {
-  font-size: 14px;
-  line-height: 1.35;
-  color: var(--text-dim);
-}
-
 .settings-topics {
   display: flex;
   flex-direction: column;
@@ -107,36 +56,6 @@
   min-width: 0;
   min-height: var(--touch);
 }
-.settings-topic[data-locked] .settings-topic-toggle {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-.settings-note-flag {
-  flex: 0 0 auto;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-width: var(--touch);
-  min-height: var(--touch);
-  padding: 0 12px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--panel);
-  font: 600 15px/1 var(--font-cond);
-  color: var(--text-dim);
-  cursor: pointer;
-}
-.settings-note-flag input {
-  width: 20px;
-  height: 20px;
-  margin: 0;
-  accent-color: var(--amber);
-}
-.settings-note-flag:has(input:checked) {
-  border-color: var(--amber);
-  color: var(--text);
-}
-
 .first-run {
   flex: 1 1 auto;
   min-width: 0;
@@ -185,13 +104,94 @@
   line-height: 1.4;
   color: var(--text-dim);
 }
+.first-run-lead {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.45;
+  color: var(--text);
+}
+.first-run-themes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.first-run-themes li {
+  position: relative;
+  padding-left: 14px;
+  font: 600 16px/1.3 var(--font-cond);
+  letter-spacing: 0.02em;
+  color: var(--text);
+}
+.first-run-themes li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.5em;
+  width: 6px;
+  height: 6px;
+  background: var(--amber);
+}
+.first-run-ack {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: var(--touch);
+  padding: 10px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--panel);
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.first-run-ack input {
+  width: 24px;
+  height: 24px;
+  margin: 0;
+  accent-color: var(--amber);
+}
+.first-run-ack:has(input:checked) {
+  border-color: var(--amber);
+}
 .first-run-actions {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-.settings-sheet .settings-hint:first-child {
+.settings-support {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--mint);
+  border-radius: var(--radius);
+  background: var(--panel);
+}
+.settings-support .settings-heading {
+  margin: 0;
+}
+.settings-support p {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.4;
+  color: var(--text-dim);
+}
+.settings-support-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.settings-support-actions .btn {
+  min-height: var(--touch);
+  text-decoration: none;
+}
+.settings-sheet .settings-support + .settings-hint {
   margin-bottom: 16px;
 }
 

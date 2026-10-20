@@ -1,37 +1,32 @@
 // The player's settings (docs/content-rating.md "First run and settings", docs/call-pressure.md
-// "Settings"): the content tier, topics turned off, content notes and the call timer. Kept in
-// localStorage outside the versioned save, so they survive a save rejected on a version bump, and
-// read and written in try/catch like src/ui/people/prefs.ts. When storage refuses the write (a
-// sandboxed frame, a private window, a full quota) the choice still holds for this page, in memory.
+// "Settings"; owner redesign 2026-10-20 after Xbox Accessibility Guideline 123): the themes to keep
+// off the board, whether call cards carry theme warnings, and the call timer. Kept in localStorage
+// outside the versioned save, so they survive a save rejected on a version bump, and read and
+// written in try/catch like src/ui/people/prefs.ts. When storage refuses the write (a sandboxed
+// frame, a private window, a full quota) the choice still holds for this page, in memory.
 // Pure: no React, no store. The plain read functions at the bottom are what the engine wiring calls.
 
-import { CONTENT_DESCRIPTORS, CONTENT_TIERS, MATURE_ONLY, type ContentDescriptor, type ContentTier } from '../../content/content-descriptors';
 import { DEFAULT_TIMER_SETTING, TIMER_SETTINGS, type TimerSetting } from '../../sim/timer-setting';
+import { AVOIDABLE_THEMES, type AvoidableTheme } from './labels';
 
 export const SETTINGS_KEY = 'ti-settings';
 
-/** Where the call card note shows: for every topic a call carries, only for the topics the
- * player marked, or never. */
-export const CONTENT_NOTE_SETTINGS = ['all', 'flagged', 'none'] as const;
-export type ContentNoteSetting = (typeof CONTENT_NOTE_SETTINGS)[number];
+/** Whether call cards name the themes a call involves before the player accepts it. */
+export const CARD_WARNING_SETTINGS = ['all', 'none'] as const;
+export type CardWarningSetting = (typeof CARD_WARNING_SETTINGS)[number];
 
 export interface PlayerSettings {
-  tier: ContentTier;
-  /** Topics the player switched off, in either tier. Core also leaves off the mature-only ones;
-   * those stay out of this list so switching back to Mature restores the player's own choices. */
-  topicsOff: ContentDescriptor[];
-  contentNotes: ContentNoteSetting;
-  /** The topics that get a note when `contentNotes` is 'flagged'. */
-  noteTopics: ContentDescriptor[];
+  /** Themes kept off the board. Only the avoidable ones; the rest are warnings only. */
+  avoidThemes: AvoidableTheme[];
+  cardWarnings: CardWarningSetting;
   timer: TimerSetting;
+  /** Set once the player has read the launch advisory and continued. */
   firstRunDone: boolean;
 }
 
 export const DEFAULT_SETTINGS: Readonly<PlayerSettings> = Object.freeze({
-  tier: 'mature',
-  topicsOff: [],
-  contentNotes: 'all',
-  noteTopics: [],
+  avoidThemes: [],
+  cardWarnings: 'all',
   timer: DEFAULT_TIMER_SETTING,
   firstRunDone: false,
 });
@@ -44,8 +39,6 @@ const listeners = new Set<() => void>();
 
 const pick = <T extends string>(allowed: readonly T[], value: unknown, fallback: T): T =>
   allowed.includes(value as T) ? value as T : fallback;
-const topics = (value: unknown): ContentDescriptor[] =>
-  Array.isArray(value) ? CONTENT_DESCRIPTORS.filter((d) => value.includes(d)) : [];
 
 /** Anything stored that isn't a known value falls back to its default, field by field. */
 export function parseSettings(raw: string | null): PlayerSettings {
@@ -54,11 +47,10 @@ export function parseSettings(raw: string | null): PlayerSettings {
     const parsed: unknown = raw ? JSON.parse(raw) : null;
     if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) data = parsed as Record<string, unknown>;
   } catch { /* unreadable: defaults */ }
+  const avoid = data.avoidThemes;
   return {
-    tier: pick(CONTENT_TIERS, data.tier, DEFAULT_SETTINGS.tier),
-    topicsOff: topics(data.topicsOff),
-    contentNotes: pick(CONTENT_NOTE_SETTINGS, data.contentNotes, DEFAULT_SETTINGS.contentNotes),
-    noteTopics: topics(data.noteTopics),
+    avoidThemes: Array.isArray(avoid) ? AVOIDABLE_THEMES.filter((t) => avoid.includes(t)) : [],
+    cardWarnings: pick(CARD_WARNING_SETTINGS, data.cardWarnings, DEFAULT_SETTINGS.cardWarnings),
     timer: pick(TIMER_SETTINGS, data.timer, DEFAULT_SETTINGS.timer),
     firstRunDone: data.firstRunDone === true,
   };
@@ -99,19 +91,10 @@ export function resetSettingsMemory(): void {
   cache = null;
 }
 
-// Plain reads for the engine wiring (board filtering, content notes, dither).
+// Plain reads for the engine wiring (board filtering, call card warnings, dither).
 
-export const contentTier = (): ContentTier => readSettings().tier;
+/** The themes the board leaves out. */
+export const avoidedThemes = (): readonly AvoidableTheme[] => readSettings().avoidThemes;
+export const cardWarningsOn = (): boolean => readSettings().cardWarnings === 'all';
 export const timerSetting = (): TimerSetting => readSettings().timer;
-export const contentNoteSetting = (): ContentNoteSetting => readSettings().contentNotes;
 export const firstRunDone = (): boolean => readSettings().firstRunDone;
-
-/** Topics the board leaves out: the ones switched off, plus the mature-only ones under Core. */
-export function topicsLeftOut(settings: PlayerSettings = readSettings()): ContentDescriptor[] {
-  return CONTENT_DESCRIPTORS.filter((d) => settings.topicsOff.includes(d) || (settings.tier === 'core' && MATURE_ONLY[d]));
-}
-
-/** Whether a call carrying `topic` gets a note on its card under the player's setting. */
-export function notesTopic(topic: ContentDescriptor, settings: PlayerSettings = readSettings()): boolean {
-  return settings.contentNotes === 'all' || (settings.contentNotes === 'flagged' && settings.noteTopics.includes(topic));
-}

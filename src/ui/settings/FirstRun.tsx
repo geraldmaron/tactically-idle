@@ -1,25 +1,34 @@
 import { useState } from 'react';
 import { Button } from '../components/ui';
-import { DEFAULT_SETTINGS, readSettings, updateSettings, type PlayerSettings } from './prefs';
-import { SETTINGS_TEXT } from './labels';
+import { readSettings, updateSettings, type PlayerSettings } from './prefs';
+import { ADVISORY_THEMES, SETTINGS_TEXT } from './labels';
 import { SettingsControls } from './SettingsControls';
 
-/** Shown once, at first launch, before the department (docs/content-rating.md "First run and
- * settings"). Choices stay on this screen until the player starts; skipping keeps the defaults. */
+/** The launch advisory, shown once before the department (owner redesign 2026-10-20, after Xbox
+ * Accessibility Guideline 123). It names the game's themes, then takes a deliberate tick before the
+ * continue button works, so a reflex tap can't skip past it. */
 export function FirstRun() {
   const [draft, setDraft] = useState<PlayerSettings>(readSettings);
+  const [read, setRead] = useState(false);
   const t = SETTINGS_TEXT;
   return <main className="first-run" aria-labelledby="first-run-title">
     <header className="first-run-head">
-      <p className="first-run-kicker">{t.firstRunKicker}</p>
-      <h1 id="first-run-title" className="first-run-title">{t.firstRunTitle}</h1>
+      <p className="first-run-kicker">{t.advisoryKicker}</p>
+      <h1 id="first-run-title" className="first-run-title">{t.advisoryTitle}</h1>
+      <p className="first-run-lead">{t.advisoryIntro}</p>
+      <ul className="first-run-themes">{ADVISORY_THEMES.map((theme) => <li key={theme}>{theme}</li>)}</ul>
+      <p className="first-run-lead">{t.leaveCalls}</p>
       <p className="first-run-note">{t.notAgeCheck}</p>
     </header>
     <SettingsControls value={draft} onChange={(patch) => setDraft((d) => ({ ...d, ...patch }))} />
     <p className="settings-hint">{t.changeLater}</p>
     <footer className="first-run-actions">
-      <Button variant="primary" block onClick={() => updateSettings({ ...draft, firstRunDone: true })}>{t.start}</Button>
-      <Button variant="ghost" block onClick={() => updateSettings({ ...DEFAULT_SETTINGS, firstRunDone: true })}>{t.skip}</Button>
+      <label className="first-run-ack">
+        <input type="checkbox" checked={read} onChange={(e) => setRead(e.target.checked)} />
+        <span>{t.acknowledge}</span>
+      </label>
+      {!read && <p className="settings-hint">{t.acknowledgeHint}</p>}
+      <Button variant="primary" block disabled={!read} onClick={() => updateSettings({ ...draft, firstRunDone: true })}>{t.continue}</Button>
     </footer>
   </main>;
 }
