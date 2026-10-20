@@ -9,22 +9,10 @@
 .inv-count { position: absolute; top: 3px; right: 3px; padding: 0 5px; border-radius: 999px; background: rgba(8, 13, 24, 0.92); border: 1px solid var(--line-strong); font-family: var(--font-display); font-size: 11.5px; font-weight: 600; line-height: 1.5; font-variant-numeric: tabular-nums; }
 .inv-alert { position: absolute; top: 4px; left: 4px; display: grid; place-items: center; width: 16px; height: 16px; border-radius: 50%; background: var(--warn); color: var(--amber-ink); }
 .inv-name { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; width: 100%; min-height: 2.3em; font-family: var(--font-cond); font-size: 11.5px; font-weight: 700; line-height: 1.15; letter-spacing: 0.02em; text-transform: uppercase; overflow-wrap: anywhere; }
-.inv-ready { display: inline-flex; align-items: center; gap: 2px; font-size: 11.5px; font-weight: 600; color: var(--mint); white-space: nowrap; font-variant-numeric: tabular-nums; }
-.inv-ready .dim { color: var(--muted); font-weight: 500; }
 .inv-cond { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: rgba(255, 255, 255, 0.08); }
 .inv-cond i { display: block; height: 100%; background: var(--mint); }
 .inv-cond-worn i { background: var(--amber); }
 .inv-cond-bad i { background: var(--danger); }
-
-/* Inventory summary: three numbers as icon pills above the grid. */
-.inv-summary { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
-.inv-stat { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border: 1px solid var(--line); border-radius: 999px; background: var(--panel); font-size: 12px; color: var(--text-dim); font-variant-numeric: tabular-nums; }
-.inv-stat b { font-family: var(--font-display); font-size: 13.5px; font-weight: 600; color: var(--text); }
-.inv-stat-ready .icon, .inv-stat-ready b { color: var(--mint); }
-.inv-stat-warn { border-color: rgba(255, 159, 67, 0.6); }
-.inv-stat-warn .icon, .inv-stat-warn b { color: var(--warn); }
-.inv-tile-add { align-content: center; border-style: dashed; background: var(--panel); color: var(--text-dim); }
-.inv-add-icon { display: grid; place-items: center; width: 40px; height: 40px; margin-bottom: 4px; border-radius: 50%; border: 1px dashed var(--line-strong); color: var(--amber); }
 
 /* Equipment store: the same tile as Inventory, grouped by category with owned / total. */
 .store-collection { display: flex; align-items: center; gap: 10px; min-width: 0; padding: 8px 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); }
@@ -48,8 +36,17 @@
 .store-tile-lock { position: absolute; top: 4px; left: 4px; display: grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; background: var(--panel-3); border: 1px solid var(--line-strong); color: var(--text-dim); }
 .store-tile-cert { position: absolute; top: 34px; right: 4px; display: grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; background: rgba(8, 13, 24, 0.92); border: 1px solid var(--line-strong); color: var(--chalk-dim); }
 .store-tile-cert-none { color: var(--warn); border-color: rgba(255, 159, 67, 0.6); }
-.store-tile-price { font-family: var(--font-display); font-size: 12.5px; font-weight: 600; color: var(--amber-2); font-variant-numeric: tabular-nums; }
-.store-tile-short .store-tile-price, .store-tile-locked .store-tile-price { color: var(--muted); }
+/* The shop price tag (gear-shop). The condition strip moves to the tile's top edge to make room. */
+.store-tile-price { display: inline-flex; align-items: center; justify-content: center; gap: 3px; align-self: end; width: 100%; margin-top: 3px; padding: 3px 4px; border-radius: 5px; border: 1px solid var(--line-strong); background: rgba(8, 13, 24, 0.6); font-family: var(--font-display); font-size: 12.5px; font-weight: 600; line-height: 1.1; color: var(--text-dim); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.store-tile-buy .store-tile-price { border-color: #d99a1e; background: linear-gradient(180deg, #ffd56a 0%, var(--amber) 55%, #d99a1e 100%); color: var(--amber-ink); box-shadow: inset 0 1px 0 rgba(255, 245, 210, 0.6); }
+.store-tile-short .store-tile-price { color: #ff8f80; border-color: rgba(255, 107, 90, 0.45); }
+.store-tile-locked .store-tile-price { color: var(--muted); border-style: dashed; }
+.store-tile { grid-template-rows: auto auto 1fr; }
+.store-tile .inv-cond { top: 0; bottom: auto; }
+.armory-line { display: inline-flex; flex-wrap: wrap; gap: 2px 12px; }
+.armory-line > span { display: inline-flex; align-items: center; gap: 4px; }
+.armory-line b { color: #f3f7ff; font-variant-numeric: tabular-nums; }
+.armory-line-ready .icon { color: var(--mint); }
 
 /* Equipment detail sheet */
 .store-detail-art { align-items: flex-start; margin-bottom: 10px; }
@@ -69,9 +66,6 @@
 .restock-rule .row-actions { justify-content: flex-end; }
 
 /* Unit sheet: stock as one segmented bar, units as compact expandable rows. */
-.gear-dossier { flex-wrap: nowrap; align-items: flex-start; gap: 12px; margin-bottom: 12px; }
-.gear-dossier-main { display: grid; gap: 10px; flex: 1 1 auto; min-width: 0; }
-.gear-dossier > .gear-art-frame { flex: none; }
 .stock { display: grid; gap: 6px; }
 .stock-bar { display: flex; height: 8px; border-radius: 4px; background: rgba(255, 255, 255, 0.08); overflow: hidden; }
 .stock-bar i { display: block; height: 100%; }
@@ -83,7 +77,6 @@
 .stock-reserved { background: #6aa6ff; }
 .stock-service { background: var(--muted); }
 .stock-expired { background: var(--danger); }
-.gear-dossier + .gear-buy { margin: 0 0 12px; }
 .units-head { display: flex; align-items: baseline; gap: 8px; margin: 0; font-family: var(--font-cond); font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-dim); }
 .units-head .dim { font-family: var(--font-ui); font-size: 11.5px; letter-spacing: normal; text-transform: none; }
 .units { gap: 8px; }
@@ -139,8 +132,16 @@
 .armory-tool > span { display: grid; gap: 2px; min-width: 0; }
 .armory-tool strong { font-size: 13px; line-height: 1.2; }
 .armory-tool .dim { font-size: 11px; }
-@media (max-width: 360px) { .armory-tools { grid-template-columns: 1fr; } }
+/* Three short tools in one row at every phone width: icon over name over status. */
+.armory-tool { flex-direction: column; align-items: center; gap: 4px; min-height: 44px; padding: 8px 4px; text-align: center; }
+.armory-tool > span { justify-items: center; }
+.armory-tool strong { font-size: 12.5px; }
 .store-sort-inline { display: inline-flex; align-items: center; gap: 4px; margin-left: auto; color: var(--text-dim); }
-.store-sort-inline select { min-height: 36px; max-width: 150px; background: var(--panel-2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; font: inherit; font-size: 13px; }
+.store-sort-inline select { min-height: 44px; max-width: 150px; background: var(--panel-2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; font: inherit; font-size: 13px; }
 .store-owned .stock { margin-top: 4px; }
 .unit .disclosure > .disclosure-summary.unit-row { display: grid; padding: 6px 10px; }
+
+/* Small phones: the four Armory filters fit on one row instead of scrolling the last one away. */
+@media (max-width: 374px) {
+  .store-equipment .choice-rail-item { gap: 4px; padding-inline: 5px; font-size: 14px; }
+}

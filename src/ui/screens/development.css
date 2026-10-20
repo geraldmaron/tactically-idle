@@ -11,10 +11,10 @@
 .dev-stat .dev-stat-rate { color: var(--mint); }
 .dev-stat:first-of-type > .icon { color: var(--amber-2); }
 .dev-stat:nth-of-type(2) > .icon { color: var(--mint); }
-.dev-head .dev-get { margin-left: auto; flex: 0 0 auto; white-space: nowrap; }
+.dev-stat-granted { margin-left: auto; }
+.dev-stat-granted > .icon { color: var(--amber-2); }
 
 .dev-label { display: flex; align-items: baseline; gap: 6px; margin: 0; font: 700 12px/1.2 var(--font-cond); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
-.dev-label-count { color: var(--amber-2); font-variant-numeric: tabular-nums; }
 .dev-label-note { font-weight: 500; letter-spacing: 0.02em; text-transform: none; font-family: var(--font-ui); }
 
 .dev-next { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px; min-height: 64px; padding: 10px 12px; border: 1px solid var(--line-strong); border-radius: var(--radius); background: var(--panel-2); color: var(--text); font: inherit; text-align: left; cursor: pointer; }
@@ -23,9 +23,6 @@
 .dev-next-main { display: grid; gap: 2px; min-width: 0; }
 .dev-next-main strong { font: 700 17px/1.15 var(--font-cond); letter-spacing: 0.02em; }
 .dev-next-fx { font-size: 12.5px; color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.dev-next-cost { display: grid; justify-items: end; font: 600 13px/1.25 var(--font-cond); color: var(--text-dim); font-variant-numeric: tabular-nums; }
-.dev-next-state { margin-top: 3px; padding: 1px 8px; border-radius: 999px; background: var(--panel-3, var(--panel)); color: var(--text-dim); font-size: 11px; }
-.dev-next-ready .dev-next-state { background: var(--amber-2); color: var(--amber-ink); }
 .dev-rail-ready { color: var(--amber-2); }
 .dev-branch-blurb { margin: 0; font-size: 13px; }
 
@@ -41,7 +38,7 @@
 .dev-node-main { display: grid; gap: 2px; min-width: 0; }
 .dev-node-title { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .dev-node-title strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 700 15px/1.2 var(--font-cond); letter-spacing: 0.02em; }
-.dev-next-badge { flex: none; padding: 0 6px; border-radius: 999px; background: var(--amber-2); color: var(--amber-ink); font: 700 10.5px/1.6 var(--font-cond); letter-spacing: 0.06em; text-transform: uppercase; }
+.dev-next-badge { flex: none; padding: 0 6px; border-radius: 999px; background: var(--amber-2); color: var(--amber-ink); font: 700 11px/1.6 var(--font-cond); letter-spacing: 0.06em; text-transform: uppercase; }
 .dev-node-fx { font-size: 12.5px; line-height: 1.3; color: var(--text-dim); overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
 .dev-node-needs { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: #ffb4aa; }
 .dev-node-side { display: grid; justify-items: end; gap: 4px; }
@@ -105,9 +102,57 @@
 .dev-links .btn { flex: 1 1 auto; }
 .dev-buy { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
 .dev-buy-reason { flex: 1 1 100%; margin: 0; font-size: 13px; color: var(--warn); }
-.dev-buy-cost { display: grid; gap: 1px; font: 600 15px/1.15 var(--font-display); font-variant-numeric: tabular-nums; }
-.dev-buy-cost b { font-weight: 600; }
-.dev-buy > .btn { flex: 1 1 160px; }
+.dev-buy-cost { font: 600 18px/1.15 var(--font-display); font-variant-numeric: tabular-nums; }
+/* Two ways to get the next tier, side by side (develop-grants): the cash price and the milestone. */
+.dev-buy-ways { flex: 1 1 100%; display: grid; grid-template-columns: repeat(auto-fit, minmax(132px, 1fr)); gap: 8px; }
+.dev-buy-way { display: grid; align-content: start; gap: 6px; min-width: 0; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+.dev-buy-way > .btn { width: 100%; }
+.dev-buy-free-note { font-size: 12px; }
+
+/* The free route on a row and in the sheet: milestone, count and a thin progress bar. */
+.dev-milestone { display: grid; gap: 3px; min-width: 0; }
+.dev-milestone-text { display: flex; align-items: center; gap: 4px; min-width: 0; font: 600 12px/1.2 var(--font-cond); letter-spacing: 0.02em; color: var(--text-dim); }
+.dev-milestone-text > .icon { flex: 0 0 auto; color: var(--amber-2); }
+.dev-milestone-text b { margin-left: auto; padding-left: 6px; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.dev-milestone-bar { display: block; height: 3px; border-radius: 2px; background: var(--line); overflow: hidden; }
+.dev-milestone-bar > i { display: block; height: 100%; border-radius: inherit; background: var(--amber-2); }
+.dev-milestone[data-met] .dev-milestone-text b { color: var(--mint); }
+.dev-milestone[data-met] .dev-milestone-bar > i { background: var(--mint); }
+.dev-milestone-compact { max-width: 220px; }
+.dev-node-granted { display: inline-flex; align-items: center; gap: 4px; font: 600 12px/1.2 var(--font-cond); color: var(--mint); }
 .dev-buy-done { display: flex; align-items: center; gap: 6px; margin: 0; }
 .dev-buy-done > .icon { color: var(--mint); }
 @media (prefers-reduced-motion: reduce) { .dev-node:active { transform: none; } }
+
+/* Branch tabs: five equal cells, icon over count (develop-tabs). */
+.dev-branch-tabs .choice-rail { overflow: visible; }
+.dev-branch-tabs .choice-rail-item { flex: 1 1 0; min-width: 0; flex-direction: column; gap: 2px; padding: 6px 2px; }
+.dev-tab-icon { position: relative; display: grid; place-items: center; }
+.dev-tab-dot { position: absolute; top: -2px; right: -6px; width: 8px; height: 8px; border-radius: 50%; background: var(--amber-2); box-shadow: 0 0 6px rgba(243, 180, 50, 0.7); }
+.dev-branch-tabs .choice-rail-count { font-size: 12px; }
+.dev-branch-blurb { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; font-size: 13px; }
+.dev-branch-blurb strong { font: 700 15px/1.2 var(--font-cond); letter-spacing: 0.04em; text-transform: uppercase; color: var(--amber-2); }
+
+/* Upgrade buttons (develop-upgrade): the familiar research-lab button with its price. Tapping the
+   row opens the sheet that confirms the spend, because a buy can't be undone and a milestone might
+   grant the same tier free. */
+.dev-buy-btn { display: grid; justify-items: center; gap: 1px; min-width: 76px; min-height: 44px; padding: 5px 10px; border-radius: 8px; border: 1px solid var(--line-strong); background: rgba(8, 13, 24, 0.6); color: var(--text-dim); font-family: var(--font-cond); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.dev-buy-btn-label { font: 700 13px/1.1 var(--font-cond); letter-spacing: 0.08em; text-transform: uppercase; }
+.dev-buy-btn-cost { display: inline-flex; gap: 6px; font: 600 12px/1.2 var(--font-cond); }
+.dev-buy-btn-cost [data-short] { color: var(--danger); }
+.dev-buy-btn[data-ready] { border-color: #d99a1e; background: linear-gradient(180deg, #ffd56a 0%, var(--amber) 55%, #d99a1e 100%); color: var(--amber-ink); box-shadow: inset 0 1px 0 rgba(255, 245, 210, 0.6), 0 2px 8px rgba(243, 180, 50, 0.3); }
+.dev-node[data-state="ready"] .dev-buy-btn .dev-buy-btn-cost { color: var(--amber-ink); }
+.dev-node:active .dev-buy-btn[data-ready] { transform: translateY(1px); }
+.dev-cost .icon { align-self: center; }
+.dev-cost-done { display: inline-flex; align-items: center; gap: 4px; }
+/* Deep rows on narrow phones: the button moves under the text instead of squeezing it. */
+.dev-track > li { container-type: inline-size; }
+@container (max-width: 270px) {
+  .dev-node { grid-template-columns: auto minmax(0, 1fr); }
+  .dev-node-side { grid-column: 2; display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
+  .dev-node-side .dev-pips { margin-right: auto; }
+}
+/* Small phones: the hourly rates live on the banner line, so the pills keep only the balances. */
+@media (max-width: 374px) {
+  .dev-head .dev-stat-rate { display: none; }
+}

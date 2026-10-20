@@ -6,6 +6,8 @@
 
 import type { SquadArrangementLockTarget, SquadArrangementProposal, SquadArrangementState } from './squad-optimizer';
 import type { CommandStaffState, ManagerId, ManagerPolicyPatch } from './command-staff';
+import type { RankId } from './ranks';
+import type { UnlockRule } from '../content/unlocks';
 
 export type Id = string;
 
@@ -319,11 +321,14 @@ export interface Officer {
   bornDay: number;
   /** Game-calendar day service began (may precede joining this department). */
   serviceStartDay: number;
-  career: { operations: number; favorable: number; adverse: number };
+  /** `earned`: funding this officer brought in through call payouts (an equal share of each
+   * payout among the officers on the call) and instructor detail fees. */
+  career: { operations: number; favorable: number; adverse: number; earned?: number };
   /** Announced retirement; the officer leaves on `day`. Forecastable, never instant. */
   retirement: { day: number; reason: 'age' | 'service' | 'burnout'; announcedDay: number; extended: boolean } | null;
-  /** XP already converted into rating growth. */
-  xpBanked?: number;
+  /** Ranks reached in play (save v12), oldest first, each with the call, course or detail that
+   * brought it. The rank itself derives from `xp` (sim/ranks.ts). */
+  promotions?: { rank: RankId; day: number; cause: string }[];
   /** Epoch ms when stress last rose above the burnout threshold and stayed there. */
   highStressSince?: number | null;
   /** Newest debrief run id already counted into `career`. */
@@ -461,7 +466,9 @@ export type NodeEffect =
 
 export interface DevelopmentTier {
   /** Incremental purchase price; effects are the total benefit at this tier. */
-  cost: { dp: number; funding: number };
+  cost: { funding: number };
+  /** Milestone that grants this tier free when met (sim/grants.ts). */
+  grant: UnlockRule;
   effects: NodeEffect[];
 }
 
@@ -470,7 +477,9 @@ export interface DevelopmentNode {
   branch: DevBranch;
   name: string;
   description: string;
-  cost: { dp: number; funding: number };
+  cost: { funding: number };
+  /** Milestone that grants a one-time node free; tiered nodes carry one per tier. */
+  grant: UnlockRule;
   requires: Id[];
   effects: NodeEffect[];
   /** Ordered tiers I through III. Missing for a one-time program or license. */
@@ -504,12 +513,27 @@ export interface LedgerEntry {
   latest?: number;
 }
 
+/** A development a milestone granted free (sim/grants.ts). */
+export interface GrantRecord {
+  nodeId: Id;
+  tier: number;
+  at: number;
+  /** The milestone in words, as Develop showed it: 'Level 4', '10 calls resolved', 'Trust 85'. */
+  milestone: string;
+}
+
 export interface Department {
   name: string;
   funding: number;
   /** Recent funding events, oldest first, capped (src/sim/ledger.ts). Optional for fixtures. */
   ledger?: LedgerEntry[];
-  devPoints: number;
+  /** How the department is known to work (src/sim/reputation.ts): lean -1 talks first .. +1 goes in
+   * hard, a moving average of committed choices, and how many choices it has seen. */
+  reputation?: { lean: number; choices: number };
+  /** Live calls closed resolved (save v12), counted for development milestones. */
+  callsResolved: number;
+  /** Developments granted by a milestone (save v12), oldest first. */
+  grants: GrantRecord[];
   /** Standing, 0..100. Not spendable. */
   trust: number;
   level: number;
@@ -549,7 +573,8 @@ export interface ShiftReport {
   maintenanceSpend?: number;
   maintenanceStarted?: Id[];
   net: number;
-  devPoints: number;
+  /** Developments a milestone granted in this window (save v12). */
+  grants?: GrantRecord[];
   completedCourses: { officerId: Id; courseId: Id }[];
   recovered: Id[];
   shortages: string[];
@@ -557,7 +582,7 @@ export interface ShiftReport {
   /** Units that crossed into unreliable/failed/expired, and servicing that finished. */
   equipment: { unitId: Id; event: 'unreliable' | 'failed' | 'expired' | 'serviced' }[];
   /** Retirements announced or completed, birthdays/anniversaries that changed wages. */
-  personnel: { officerId: Id; event: 'retirement_announced' | 'retired' | 'anniversary' | 'birthday'; detail: string }[];
+  personnel: { officerId: Id; event: 'retirement_announced' | 'retired' | 'anniversary' | 'birthday' | 'promoted'; detail: string }[];
 }
 
 // ---------------------------------------------------------------- operations
@@ -593,7 +618,8 @@ export interface Contributor {
     | 'familiarity'
     | 'preparation'
     | 'difficulty'
-    | 'pressure';
+    | 'pressure'
+    | 'reputation';
   /** Officer / item / room the contribution came from. */
   ref?: Id;
 }
@@ -631,6 +657,8 @@ export interface DecisionResolution {
     drawn?: { model: 'incoming_fire' | 'team_force' | 'cascade'; personId: Id; key: string; reason?: string }[];
     /** V5 opening changes resolved against the route actually used, in committed order. */
     openingChanges?: { openingId: Id; state: OpeningState }[];
+    /** V13 lines spoken in this result, frozen at commit (call-surfaces). */
+    exchange?: { speaker: string; line: string }[];
   };
   /** Run revision this decision was applied to. */
   revision: number;
@@ -639,6 +667,9 @@ export interface DecisionResolution {
   actingSquadIds: SquadId[];
   supportSquadIds: SquadId[];
   officerIds: Id[];
+  /** The lead officer's trait and band flags this decision was resolved with (TreeState.lead), so a
+   * replay reads the same results without the roster. */
+  leadFlags?: string[];
   targetId: Id | null;
   inputs: Contributor[];
   score: number;
@@ -694,6 +725,8 @@ export interface OperationRun {
   /** V13 commitments (sim/commitments.ts): what command promised a person, and whether the team
    * kept it. */
   commitments?: Record<Id, { personId: Id; kind: string; madeAt: number; revision: number; status: 'open' | 'kept' | 'broken' }>;
+  /** V13 the crew flags set when the run started (sim/crew.ts), so a replay starts from them too. */
+  crew?: string[];
   /** V13 subject meters (sim/meters.ts): agitation and rapport now, and how far each kind of
    * event has moved them this call. */
   meters?: Record<Id, { agitation: number; rapport: number; moved: Partial<Record<string, { agitation: number; rapport: number }>> }>;
@@ -738,6 +771,8 @@ export interface DebriefResult {
   endingTitle: string;
   /** Absent only in older saved debriefs. */
   endingSummary?: string;
+  /** The ending's epilogue, frozen when the call ends (call-surfaces, E11.2). */
+  endingEpilogue?: string;
   /** Saved disposition and receiver evidence survive future content updates. */
   disposition?: CompletionDisposition;
   completionAchieved?: boolean;
@@ -756,14 +791,15 @@ export interface DebriefResult {
   decisions?: DecisionView[];
   objective: { score: number; label: string };
   civilianSafety: { score: number; label: string };
-  officerCondition: { officerId: Id; stressBefore: number; stressAfter: number; xpGained: number }[];
+  /** `promotions`: ranks the officer reaches when this debrief closes, each with what it gives
+   * (save v12). */
+  officerCondition: { officerId: Id; stressBefore: number; stressAfter: number; xpGained: number; promotions?: { rank: RankId; line: string }[] }[];
   informationPreserved: { factId: Id; label: string; status: KnowledgeStatus }[];
   resources: { itemId: Id; used: number; returned: number }[];
   /** Per-unit condition change from this run. */
   unitWear: { unitId: Id; itemId: Id; serial: string; before: number; after: number }[];
   trustDelta: number;
   fundingReward: number;
-  devPointReward: number;
   /** Department service this call earned (save v7; absent before). */
   serviceEarned?: number;
   /** The department level this call took the department to, when it rose. */
@@ -843,6 +879,8 @@ export interface DecisionView {
   knowledgeChanges: { factId: Id; label: string; status: KnowledgeStatus }[];
   contributors: Contributor[];
   consequences: string[];
+  /** Lines spoken in this result (call-surfaces). */
+  exchange?: { speaker: string; line: string }[];
   endingTitle: string | null;
 }
 
@@ -851,6 +889,16 @@ export interface ActionView {
   /** V13: what command says to the choice's request (sim/authorization.ts). Allowed, the card shows
    * the line under the summary; refused, the choice is locked and `reason` is the same line. */
   authority?: import('./scenario-types').AuthorityResult;
+  /** V13: a lie or a promise command never approved (dilemma pattern 15). */
+  deceives?: true;
+  /** The decision point's threat, and the bands of this choice slow enough to let it happen. */
+  threat?: { label: string; bands: OutcomeBand[] };
+  /** The rating this choice leans on most, so the card can show the lead's number for it. */
+  keyRating?: RatingKey;
+  /** Lead marks (trait ids, band_<band>) this choice's results read (TreeState.lead). */
+  leadReads?: string[];
+  /** V13: what draws a player to the choice, and what it costs (bound, {lead} filled). */
+  weighing?: { pull: string; cost: string };
   /** Common event across effort bands: authored explicitly or proven by identical v6 effect tables. */
   eventResult?: string;
   likelihood: Record<OutcomeBand, number>;
@@ -1097,7 +1145,9 @@ export type Command =
   | { type: 'cancelOperation' }
   | { type: 'endFailedResponse'; runId: Id; revision: number }
   | { type: 'resupplyAction'; actionId: Id; actingSquadIds: SquadId[]; supportSquadIds: SquadId[] }
-  | { type: 'decide'; actionId: Id; actingSquadIds: SquadId[]; supportSquadIds: SquadId[] }
+  /** `leadOfficerId`: the officer the player sends to lead this decision, one of those taking part.
+   * Without it the best fit leads (cert holders first, then aptitude). */
+  | { type: 'decide'; actionId: Id; actingSquadIds: SquadId[]; supportSquadIds: SquadId[]; leadOfficerId?: Id }
   | { type: 'closeDebrief' };
 
 export type CommandType = Command['type'];

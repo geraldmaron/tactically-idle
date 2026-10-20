@@ -202,6 +202,13 @@ excuses abuse.
   with the team now. What happens next is not this call's to decide." swat-writing-review should
   accept that one line under its implied-custody check. If its copy disagrees, file the drift.
 
+- E11.2 The epilogue (house, owner 2026-10-19). An ending may carry one epilogue: what is true
+  after the call, told as fiction may tell it ("The shop never reopened. The slip is still in her
+  van."). It holds on every path that reaches its ending, never contradicts a person's end
+  state, never claims a legal outcome (custody, a charge, a verdict) while O4 is open, and never
+  invents a recovery or a diagnosis. It puts the human cost or grace on one named person, and
+  it never moralizes.
+
 ### E12. Real call flow
 
 - Contain, then talk, then resolve [AU1]. Teams stage, deploy and work the problem [AU2].
@@ -259,6 +266,12 @@ excuses abuse.
   Row F lists every force and entry action with its `visibleWhen` per situation and quotes the
   threat line that sets each flag. A situation with no quoted threat line shows force as not
   visible. E4.0 fails whenever an armed crisis subject can be entered on before that.
+- E12.6 The lie is the player's (house, owner 2026-10-19). A trained negotiator makes no promise
+  command hasn't approved [AU6]. The player may make one anyway, as a choice written to dilemma
+  pattern 15. The summary says plainly that it is a lie or that command can't deliver it. A lie
+  never authorizes entry or force, never tells a held person they are safe in a way that makes
+  them act against their own safety, and never comes from a narrator. Its break is cued before
+  it lands. Authorized concessions keep their generated command line, and a deception has none.
 - In an active-shooter call, patrol now goes in first, because assembling a team takes too long
   [AU1].
 - Contact by a trained negotiator or by phone went with negotiated endings, and bullhorn
@@ -306,6 +319,60 @@ Radio is short plain sentences giving what, where, who and weapon, with the doub
 out [AU3]. In one case officers told a man that medics were there and he wasn't in trouble
 [AU1].
 
+### E16. The darker tier (house, owner 2026-10-19)
+
+The owner chose a darker tone. Darker means the consequences are harsher, specific and lasting,
+and they land on named people. It does not mean the game enjoys violence. What changes:
+
+- Death may be shown on the card for anyone E4 doesn't cover: a subject with no self-harm risk,
+  a hostage or a bystander. E2.1 gives the shape, and E2.2 puts its weight on a named person
+  present. The force draw's `noFatal` screen and E4.5 still govern every E4 subject.
+- Aftermath is specific and lasting. Write the limp, the shop that never reopens, the child who
+  won't sleep in that room, the officer who asks off the next call. That goes in the ending and
+  its epilogue (E11.2).
+- The team carries what it did. An officer who fired, or who chose the entry that went wrong,
+  is changed by it in their story (swat-officer-stories). E14 still holds for restraint.
+- Weapons and death are named plainly. "Rifle", "handgun", "shot" and "killed" are allowed in
+  player text, which settles O1.
+
+What does not change, and why:
+
+- E1, no method. A manual is a real-world harm.
+- E2, force is never the reward. Darker makes force cost more, never pay more.
+- E3, identity never signals danger. Darker raises the stakes of prejudice.
+- E4 in full. Safe messaging exists because portrayals change real behavior [AU8][AU9].
+- E7, no wound anatomy. Blood, wounds as anatomy, procedure and restraint holds stay off the
+  card. They add no psychology, and they raise the store rating.
+- E9, the subject's life always counts.
+- E11, honest outcomes. Darker never means inventing what the engine didn't decide.
+
+Officer death is not in this tier. It would change the department game around the call, so it
+waits for an owner decision. The darker tier targets a mature store rating, which the owner
+confirms at `store-wrap`.
+
+### E17. House style rules, audited (owner, 2026-10-19)
+
+The calls were correct and flat. Each house style rule was weighed against what it costs the
+writing. A verdict changes the rule here, in swat-call-prose and in `game_string_checks.py` or
+`prose-lint.ts`.
+
+| Rule | Verdict | Reason |
+|---|---|---|
+| UNSAFE_DETAIL weapon nouns, `shoot`, `kill`, `wound`, `wounded`, `unconscious`, `not breathing` | Drop from the ban | E16. The call must name the threat object anyway, and the barricade already failed the gate on "rifle" |
+| UNSAFE_DETAIL gore, anatomy, procedure, restraint holds, ammunition, `shot dead`, `suicide`, `overdose` | Keep | E1, E4.9 and E7 |
+| ACCUSATION words inside a transcript line | Relax: the speaker is the source | "You called me a thief" is the speaker's own framing, already sourced by the speaker format |
+| ACCUSATION in narration before a check | Keep | Spoiler and honesty rule (E11) |
+| Speech-tag cap, 6 per person per call | Keep for narration. Transcript lines don't count | The cap catches a tic. Speech now lives in the transcript |
+| Fragment-only strings, 2 per call | Relax: transcript lines exempt, and the narration cap rises to 4 | Fragments are how people talk under pressure. In narration they are still a tic past a handful |
+| A result opens on a fragment | Keep | A result's first sentence orients the player at a glance |
+| Feeling words in narration | Keep for narration. Transcript lines exempt | People say what they feel. Narration shows it |
+| Stock spoken lines | Keep, and extend to the transcript | A cliché is a cliché in any field |
+| Weapon-speech (civilians never say "weapon") | Keep | Civilians frame a weapon in their own words |
+| Negated openers, name openers, cadence | Keep as reports | They catch monotony, not drama |
+| Repeated runs across a call counted from 4 words | Relax to 6 words (`NGRAM`); back-to-back path echoes stay at 3 | The depth register triples string length, and 4-word place phrases collided across variants that never meet |
+| Process status as an ending's last beat | Keep. The epilogue gives the last beat to a person | E11.2 |
+| "Grounded and non-graphic" (AGENTS.md and the skills README) | Rewrite as "Grounded. Consequences land plainly on named people, with no wound anatomy or method." | E16 |
+
 ## Copaganda patterns as rules
 
 swat-writing-review holds the detector form of these in its cliche-and-copaganda reference.
@@ -324,15 +391,12 @@ Each pattern breaks the rule beside it.
 | P9 | The deadline as license, in wording or in structure (an effect that sets a danger or threat flag under a `pressureAtLeast` condition) | E10, E12.4 |
 | P11 | Hearsay as the key. A path that wins by passing the subject a third party's words that implicate someone | E12.3 |
 | P10 | Oversight as obstacle | E10 |
+| P12 | Darkness as spectacle. Death or injury described for its own sake, lingered on, or used as a punchline | E2, E7, E16 |
 
 ## Open owner decisions
 
-- O1. Clinical words. The prose lint bans plain words such as bleeding and gun, while armed
-  call trees use "handgun", "gunfire" and "wounded" in their data. Which words armed calls
-  may use in player text is the owner's call. Until then, flag every such line. The list
-  sent to the owner names the exact strings with their field paths, never only the words, and
-  separates force and death register lines (titles such as "Go in with weapons up") from
-  single words.
+- O1. Settled 2026-10-19 by the darker tier (E16, E17): weapon and death words are allowed in
+  player text. Anatomy, procedure and restraint words stay banned.
 - O2. A support line. Where it appears, what it says outside the US, and whether a content note
   precedes crisis calls. No surface exists (R5). Proposed answer, pending sign-off:
   `docs/content-rating.md` (Content notes).

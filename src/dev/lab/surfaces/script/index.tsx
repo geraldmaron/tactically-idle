@@ -17,7 +17,6 @@ import { callStringRows, parseFindings, toTsv } from '../../../../gen/incident/t
 import type { StringFinding, StringRow } from '../../../../gen/incident/trees-v13/strings';
 import { segmentPeople } from '../../../../ui/people/lexicon';
 import type { Lexicon } from '../../../../ui/people/lexicon';
-import { PeopleGlyph } from '../../../../ui/people/PeopleText';
 import { peopleLabel } from '../../../../ui/people/lexicon';
 import { useLab } from '../../context';
 import type { Goal, CastSample } from '../../jobs/protocol';
@@ -382,8 +381,8 @@ function Line({ row, lex, marks }: LineProps) {
       ? piece.split('{lead}').flatMap((chunk, j) => j ? [<span key={`l${j}`} className="lab-script-lead" title="The engine writes the lead officer’s surname here at play time">lead officer</span>, chunk] : [chunk])
       : piece;
     if (person) {
-      const first = person.first && own!.pos === start;
-      node = <span className="people-name" data-kind={person.kind} data-person={person.id} title={peopleLabel(person.kind)}>{first && <PeopleGlyph kind={person.kind} />}{node}</span>;
+      // As in the game, a name in prose carries no symbol (src/ui/people/PeopleText.tsx).
+      node = <span className="people-name" data-kind={person.kind} data-person={person.id} title={peopleLabel(person.kind)}>{node}</span>;
     }
     out.push(marked(start) ? <mark key={start} className="lab-script-mark">{node}</mark> : <Fragment key={start}>{node}</Fragment>);
   }

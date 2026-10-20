@@ -38,7 +38,7 @@
 .choice-rail-grow .choice-rail-item { flex-grow: 1; }
 .choice-rail-selected { color: var(--text); background: var(--panel-3); box-shadow: 0 1px 2px rgba(0, 0, 0, .35), inset 0 1px 0 rgba(255, 255, 255, .05); }
 .choice-rail-selected b { color: var(--amber-2); }
-.choice-rail-item:not(:disabled):not(.choice-rail-selected):hover { color: var(--text); }
+@media (hover: hover) { .choice-rail-item:not(:disabled):not(.choice-rail-selected):hover { color: var(--text); } }
 
 /* Filters and squad tabs: one recessed track with the chosen option raised out of it. */
 .choice-rail-filter, .choice-rail-tabs { padding: 3px; gap: 2px; border-color: rgba(43, 59, 84, .7); background: rgba(8, 13, 24, .55); }

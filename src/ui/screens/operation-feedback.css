@@ -132,6 +132,9 @@
 .callbtn-command .icon, .operation-command-line .icon { flex-shrink: 0; margin-top: 2px; }
 .callbtn-command { font-size: 12px; line-height: 1.35; }
 .callbtn-on .callbtn-command { color: var(--amber-ink); }
+/* A lie or a promise past command: amber, not command's mint, so it never reads as approved. */
+.callbtn-command.callbtn-deceive { color: var(--amber-2); }
+.debrief-epilogue { margin: 12px 0 0; padding-top: 10px; border-top: 1px solid rgba(255, 255, 255, .1); font-size: 15.5px; line-height: 1.5; font-style: italic; color: #e8edf5; overflow-wrap: anywhere; }
 .operation-command-line { margin: 0 0 6px; font-size: 14px; line-height: 1.4; }
 .operation-costs { display: grid; gap: 8px; margin: 5px 0 9px; }
 .operation-costs > div { display: grid; grid-template-columns: minmax(0, 1fr); gap: 2px; }
@@ -153,9 +156,6 @@
 .saved-debrief-content { display: grid; gap: 10px; min-width: 0; }
 .saved-debrief-content .chip { white-space: normal; max-width: 100%; overflow-wrap: anywhere; }
 .saved-debrief-content .debrief-narrative { margin: 0; }
-.saved-debrief-log-title { margin: 8px 0 0; font-size: 17px; }
-.saved-debrief-totals .drows { padding-inline: 0; border: 0; }
-.debrief-row > .btn { align-self: flex-start; white-space: normal; max-width: 100%; }
 @media (max-width: 350px) {
   .operation-feedback { margin-inline: 12px; }
   .debrief > .operation-feedback { margin-inline: 0; }

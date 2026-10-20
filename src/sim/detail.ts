@@ -3,7 +3,8 @@
 // ends. The fee per hour rises with the officer's wage and certifications, so pricier, better
 // qualified officers earn faster. While on a detail the officer cannot deploy and earns no patrol
 // pay, so the fee is a trade against readiness, never free money.
-import type { GameState, HandlerResult, Id, Officer } from './types';
+import type { GameState, HandlerResult, Id, Officer, ShiftReport } from './types';
+import { awardXp, learnedXp } from './career';
 import { deployability, fullName } from './officer';
 import { postFunding } from './ledger';
 import { simNow } from './calendar';
@@ -44,7 +45,7 @@ export function startDetail(d: GameState, officerId: Id): HandlerResult {
 }
 
 /** Pay and release every detail that has ended by `t`, in the order they end. */
-export function completeDetails(d: GameState, t: number): void {
+export function completeDetails(d: GameState, t: number, ev?: ShiftReport['personnel']): void {
   const due = Object.values(d.officers)
     .filter((o) => o.assignment?.kind === 'detail' && o.assignment.endsAt <= t)
     .sort((a, b) => (a.assignment!.kind === 'detail' ? a.assignment!.endsAt : 0) - (b.assignment!.kind === 'detail' ? b.assignment!.endsAt : 0) || a.id.localeCompare(b.id));
@@ -52,7 +53,8 @@ export function completeDetails(d: GameState, t: number): void {
     const a = o.assignment;
     if (a?.kind !== 'detail') continue;
     postFunding(d.department, a.fee, 'detail', `Instructor detail, ${fullName(o)}`, a.endsAt);
-    o.xp += Math.round(DETAIL_TUNING.xpPerHour * (a.endsAt - a.startedAt) / HOUR_MS);
+    o.career.earned = (o.career.earned ?? 0) + a.fee;
+    awardXp(d, o, learnedXp(o, DETAIL_TUNING.xpPerHour * (a.endsAt - a.startedAt) / HOUR_MS), 'after an instructor detail', a.endsAt, ev);
     o.assignment = null;
   }
 }

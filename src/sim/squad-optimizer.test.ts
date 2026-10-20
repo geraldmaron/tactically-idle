@@ -260,7 +260,6 @@ describe('transaction validation and persistent undo', () => {
     const s = improvableState(), p = proposal(s);
     const applied = dispatch(s, { type: 'applySquadArrangement', proposal: p }, { now: T0 });
     expect(applied.result).toEqual({ ok: true }); assertPartition(applied.state);
-    expect(applied.state.department.devPoints).toBe(s.department.devPoints);
     const undone = dispatch(applied.state, { type: 'undoSquadArrangement' }, { now: T0 });
     expect(undone.result).toEqual({ ok: true }); expect(squadTopology(undone.state)).toEqual(p.before);
     expect(undone.state.department.funding).toBe(s.department.funding);
@@ -332,7 +331,7 @@ describe('transaction validation and persistent undo', () => {
 
   it('undo restores only mappings/leaders and preserves later condition, spending, training and earned DP', () => {
     const s = improvableState(), p = proposal(s); applySquadArrangement(s, p);
-    s.department.funding += 700; s.department.devPoints += 40;
+    s.department.funding += 700;
     s.officers.off_brooks.ratings.shooting += 3;
     s.officers.off_brooks.stress += 2;
     s.officers.off_brooks.assignment = { kind: 'training', courseId: 'composure_workshop', startedAt: T0, endsAt: T0 + HOUR_MS };

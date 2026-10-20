@@ -1,17 +1,19 @@
-import type { CallTree, TreeChoice, TreeIf, TreeMove, TreeMoveTo, TreeNext, TreeNode, TreeOutcome, TreePlace, TreeState } from '../../../content/call-trees/types';
+import type { CallTree, TreeChoice, TreeIf, TreeLine, TreeMove, TreeMoveTo, TreeNext, TreeNode, TreeOutcome, TreePlace, TreeState } from '../../../content/call-trees/types';
+import { TREE_VOICES } from '../../../content/call-trees/types';
 import type { IncidentTemplate } from '../../../content/incidents/types';
 import { CIVILIAN_FIRST_NAMES, CIVILIAN_SURNAMES } from '../../../content/call-trees/civilian-names';
 import { scenarioRecipe } from '../../../content/scenario-recipes';
 import { hashIndex, hashSeed } from '../../../sim/rng';
 import { tierRewardMultiplier } from '../../../content/incidents/rewards';
-import type { ActionDefinition, ClockCondition, Condition, FactDefinition, IncidentSpec, MeterCondition, MeterStance, OutcomeEffect, ScenarioDefinition, StageDefinition, StoryAnchor, StoryPersonBinding } from '../../../sim/scenario-types';
+import type { ActionDefinition, ClockCondition, Condition, FactDefinition, IncidentSpec, MeterCondition, MeterStance, OutcomeEffect, ScenarioDefinition, SpokenLine, StageDefinition, StoryAnchor, StoryPersonBinding } from '../../../sim/scenario-types';
 import { squadsPutToWork } from '../../../sim/scenario-types';
 import { findStoryRoute, selectStoryRoom, storyPoint, validateStoryBindings, windowExit } from '../story-bindings';
-import { cueMoveKey, movedFlag, seenFlag } from '../../../sim/conditions';
+import { cueMoveKey, movedFlag, seenFlag, stableFlag } from '../../../sim/conditions';
 import { routeAlongOpenings } from '../../../sim/routes';
 import { sightFromStreet, vantageZones, type StreetVantage } from '../../../sim/sightlines';
 import type { BuiltLocation, OutcomeBand, StageId, Vec } from '../../../sim/types';
 import { mapScenarioText } from '../scenario-text';
+import { CREW_MARKS, crewFlag, leadFlag } from '../../../sim/crew-flags';
 import { asRole, CASCADE_LINES, countWord, FIRE_LINES, FORCE_LINES, listOf } from '../../../content/incidents/lines';
 import { cascadeCombos, cascadeKey, cascadeResult, withVariants } from '../drawn-model';
 import { gearFor } from '../action-gear';
@@ -175,8 +177,8 @@ export function bindRoleTokens(text: string, cast: Record<string, CastIdentity>,
  * that none is. A count condition is the compiler's, settled before this (countHolds). */
 export function stateCondition(state: TreeState | undefined, groups: Record<string, readonly string[]> = {}): Condition {
   const people = (roles: readonly string[] | undefined) => (roles ?? []).flatMap(role => groups[role] ?? [role]);
-  const flags = [...(state?.marks ?? []).map(markFlag), ...people(state?.safe).map(safeFlag)];
-  const notFlags = [...(state?.notMarks ?? []).map(markFlag), ...people(state?.notSafe).map(safeFlag)];
+  const flags = [...(state?.marks ?? []).map(markFlag), ...people(state?.safe).map(safeFlag), ...(state?.crew ?? []).map(crewFlag), ...(state?.lead ?? []).map(leadFlag)];
+  const notFlags = [...(state?.notMarks ?? []).map(markFlag), ...people(state?.notSafe).map(safeFlag), ...(state?.notCrew ?? []).map(crewFlag), ...(state?.notLead ?? []).map(leadFlag)];
   return { ...(flags.length ? { flags } : {}), ...(notFlags.length ? { notFlags } : {}) };
 }
 
@@ -216,6 +218,33 @@ export function armedRevealErrors(authored: CallTree, nodes: readonly TreeNode[]
       for (const band of BANDS) for (const [i, outcome] of choice.outcomes[band].entries()) check(`${node.id}.${choice.id} ${band} outcome ${i + 1}`, outcome.when);
     }
   }
+  return errors;
+}
+
+/** Authoring errors in a call's lies (deception-commitments, dilemma pattern 15): a `lie` promise is
+ * made only by a choice marked `deceives`, every `deceives` choice makes one, every lie can be found
+ * out by an outcome that names it in `breaks` and says so in its text, and `breaks` names only
+ * promises the call makes. */
+export function deceptionErrors(tree: CallTree): string[] {
+  const errors: string[] = [];
+  const promises = new Set<string>(), lies = new Set<string>(), broken = new Set<string>();
+  for (const node of tree.nodes) for (const choice of node.choices) {
+    let made = false;
+    for (const band of BANDS) for (const outcome of choice.outcomes[band]) {
+      if (outcome.promise) promises.add(outcome.promise.id);
+      if (outcome.promise?.kind === 'lie') {
+        lies.add(outcome.promise.id); made = true;
+        if (!choice.deceives) errors.push(`${tree.type}: ${node.id}.${choice.id} tells a lie (${outcome.promise.id}) but is not marked deceives`);
+      }
+      for (const id of outcome.breaks ?? []) {
+        broken.add(id);
+        if (!outcome.text.trim()) errors.push(`${tree.type}: ${node.id}.${choice.id} ${band}: breaking ${id} needs text that says the person found out`);
+      }
+    }
+    if (choice.deceives && !made) errors.push(`${tree.type}: ${node.id}.${choice.id} is marked deceives but makes no lie promise`);
+  }
+  for (const id of lies) if (!broken.has(id)) errors.push(`${tree.type}: the lie ${id} is never found out; add an outcome that breaks it`);
+  for (const id of broken) if (!promises.has(id)) errors.push(`${tree.type}: an outcome breaks ${id}, which no outcome promises`);
   return errors;
 }
 
@@ -678,6 +707,24 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
         throw new Error(`${where}: walksVia '${choice.walksVia}' must carry onlyIf: { exitVia: { role: '${choice.walks}', via: '${choice.walksVia}' } }`);
     }
   }
+  // A crew condition names a trait or experience band the engine sets (sim/crew-flags.ts).
+  for (const node of authored.nodes) for (const state of [...(node.promptIf ?? []).map(entry => entry.when), ...node.choices.flatMap(choice => [choice.onlyIf, ...BANDS.flatMap(band => choice.outcomes[band].map(outcome => outcome.when))])])
+    for (const mark of [...state?.crew ?? [], ...state?.notCrew ?? []]) if (!CREW_MARKS.includes(mark))
+      throw new Error(`${authored.type}: ${node.id} reads crew '${mark}', which is no trait or band the engine sets`);
+  // A lead condition reads the same names for the officer leading the decision, so it belongs on a result.
+  for (const node of authored.nodes) {
+    for (const state of [...(node.promptIf ?? []).map(entry => entry.when), ...node.choices.map(choice => choice.onlyIf)])
+      if (state?.lead?.length || state?.notLead?.length) throw new Error(`${authored.type}: ${node.id} reads the lead before anyone leads; put it on an outcome's when`);
+    // Only an addendum may read the lead: routing that hung on who leads would make one choice's
+    // future depend on a swap the player made after reading its preview.
+    for (const choice of node.choices) for (const band of BANDS) for (const outcome of choice.outcomes[band])
+      if (outcome.next && (outcome.when?.lead?.length || outcome.when?.notLead?.length)) throw new Error(`${authored.type}: ${node.id}.${choice.id} routes on the lead; only an addendum line may read it`);
+    for (const state of node.choices.flatMap(choice => BANDS.flatMap(band => choice.outcomes[band].map(outcome => outcome.when))))
+      for (const mark of [...state?.lead ?? [], ...state?.notLead ?? []]) if (!CREW_MARKS.includes(mark))
+        throw new Error(`${authored.type}: ${node.id} reads lead '${mark}', which is no trait or band the engine sets`);
+  }
+  const lieErrors = deceptionErrors(authored);
+  if (lieErrors.length) throw new Error(lieErrors.join('\n'));
   const tree = treeForCounts(authored, callCounts({ groups, armed: placed.armed, upstairs: placed.upstairs, exits: placed.exits }));
   const everyone = (roles: readonly string[] | undefined) => (roles ?? []).flatMap(role => groups[role] ?? [role]);
   /** A group where one person is meant (who fires, who force is used on, who is talked to): its
@@ -688,6 +735,16 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
     if (!ids.length) throw new Error(`${tree.type}: ${what} ${role} in a call with no members of ${role}: put it behind a count condition`);
     return ids[0];
   };
+  /** A transcript as the engine shows it (call-surfaces): each speaker by the name token the text
+   * binder fills (a group speaks as its first member), or a voice the call always has. */
+  const spoken = (lines: readonly TreeLine[] | undefined, where: string): SpokenLine[] => (lines ?? []).map(({ by, line }) => {
+    if (!line.trim()) throw new Error(`${tree.type}: ${where} has an empty transcript line`);
+    const voice = TREE_VOICES[by as keyof typeof TREE_VOICES];
+    if (voice) return { speaker: voice, line };
+    if (!tree.roles.some(role => role.id === by) && !groups[by]) throw new Error(`${tree.type}: ${where}: ${by} speaks, but is no role, group or voice`);
+    if (groups[by] && !groups[by].length) throw new Error(`${tree.type}: ${where}: ${by} speaks in a call with no members of ${by}: put it behind a count condition`);
+    return { speaker: `{${by}.first}`, line };
+  });
   // Someone outside the building (the shooter across the street) is in the prose, never on the map.
   const onSite = tree.roles.filter(role => role.place !== 'offsite');
   // Everyone on the map: the roles, then each group's members, who take their leader's kind.
@@ -714,6 +771,8 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
   const trim = (state: TreeState | undefined): TreeState | undefined => state && {
     marks: state.marks, safe: state.safe,
     notMarks: state.notMarks?.filter(mark => settable.marks.has(mark)), notSafe: state.notSafe?.filter(role => settable.safe.has(role)),
+    ...(state.crew ? { crew: state.crew } : {}), ...(state.notCrew ? { notCrew: state.notCrew } : {}),
+    ...(state.lead ? { lead: state.lead } : {}), ...(state.notLead ? { notLead: state.notLead } : {}),
   };
   const nodeById = new Map(tree.nodes.map(node => [node.id, node]));
   const s = structuredClone(input);
@@ -731,11 +790,14 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
   s.summary = tree.summary;
   s.pressureLabel = tree.pressureLabel;
   s.pressure = { ...tree.pressure };
-  s.briefing = { dispatchReason: tree.briefing.dispatchReason, known: [...tree.briefing.known], unknown: [...tree.briefing.unknown], teamResponsibilities: [...tree.briefing.responsibilities] };
+  const profiles = tree.roles.filter(role => role.profile?.trim()).map(role => ({ personId: role.id, name: `{${role.id}}`, text: role.profile! }));
+  s.briefing = { dispatchReason: tree.briefing.dispatchReason, known: [...tree.briefing.known], unknown: [...tree.briefing.unknown], teamResponsibilities: [...tree.briefing.responsibilities],
+    ...(profiles.length ? { people: profiles } : {}) };
+  if (tree.coldOpen) s.coldOpen = tree.coldOpen;
   s.objectives = tree.objectives.map(objective => ({ ...objective }));
   s.externalServices = [];
   const multiplier = tierRewardMultiplier(spec.tier);
-  s.rewards = { funding: Math.round(tree.rewards.funding * multiplier), devPoints: Math.round(tree.rewards.devPoints * multiplier), trust: Math.round(tree.rewards.trust * multiplier), xp: Math.round(tree.rewards.xp * multiplier) };
+  s.rewards = { funding: Math.round(tree.rewards.funding * multiplier), trust: Math.round(tree.rewards.trust * multiplier), xp: Math.round(tree.rewards.xp * multiplier) };
   s.environment = { timeOfDay: tree.scene.timeOfDay ?? 'day', weather: 'clear', power: 'on', clutter: 0, hazards: [], communication: 'normal',
     crowd: tree.scene.crowd ?? 0, keyholder: false, plansOnFile: false, alarm: 'none', cctv: false };
   delete s.difficulty;
@@ -980,6 +1042,8 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
       ...moveFlags,
       ...(outcome.safe ?? []).map(safeFlag),
       ...out.map(outFlag),
+      // A medic holding a person steady stops their clock where it stands (sim/clocks.ts stopped).
+      ...(outcome.stabilize ?? []).map(stableFlag),
     ];
     const effect: OutcomeEffect = {
       ...(ifs.some(entry => 'fact' in entry) ? { truth: ifs.flatMap(entry => 'fact' in entry ? [{ factId: treeFactId(entry.fact), is: entry.is }] : []) } : {}),
@@ -992,6 +1056,8 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
           ...(entry.agitationAtLeast !== undefined ? { agitationAtLeast: entry.agitationAtLeast } : {}), is: entry.is ?? true }];
       }) } : {}),
       ...(outcome.promise ? { promise: { id: outcome.promise.id, personId: outcome.promise.to, kind: outcome.promise.kind ?? 'promise' } } : {}),
+      ...(outcome.breaks?.length ? { breaks: [...outcome.breaks] } : {}),
+      ...(outcome.exchange?.length ? { exchange: spoken(outcome.exchange, `${node.id} result`) } : {}),
       ...(outcome.moves ? { moves: Object.entries(outcome.moves).flatMap(([personId, events]) => ([] as TreeMove[]).concat(events).map(event => ({ personId, event }))) } : {}),
       ...(when.flags || when.notFlags ? { when } : {}),
       ...(outcome.reveal?.length ? { reveal: outcome.reveal.map(treeFactId) } : {}),
@@ -1085,6 +1151,18 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
       label, task: label[0].toUpperCase() + label.slice(1) } };
   };
 
+  /** A decision point's threat (TreeNode.threat) as the engine runs it: its line and costs, applied
+   * when a decision here runs long (sim/operation.ts). It may raise costs, never harm or route. */
+  const threatFor = (node: TreeNode): Pick<ActionDefinition, 'threat'> => {
+    const threat = node.threat;
+    if (!threat) return {};
+    if (!(threat.minutes > 0)) throw new Error(`${node.id}: a threat needs minutes above zero`);
+    const deadly = (threat.mark ?? []).filter(mark => tree.threatMarks?.[mark]);
+    if (deadly.length) throw new Error(`${node.id}: a threat may not set the threat-to-life mark ${deadly.join(', ')} (E12.4)`);
+    const { label, minutes, text, mark, moves: threatMoves, pressure, civilian } = threat;
+    return { threat: { label, minutes, effects: effectsFor(node, { text, ...(mark ? { mark } : {}), ...(threatMoves ? { moves: threatMoves } : {}), ...(pressure ? { pressure } : {}), ...(civilian ? { civilian } : {}) }) } };
+  };
+
   const actionFor = (node: TreeNode, choice: TreeChoice): ActionDefinition => {
     const visibleWhen = joinConditions(node.id === tree.root ? { notFlags: [TREE_STARTED] } : { flags: [nodeFlag(node.id)] }, stateCondition(trim(choice.onlyIf), groups));
     const modifiers = (choice.modifiers ?? []).filter(m => settable.marks.has(m.mark));
@@ -1110,6 +1188,10 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
       ...(modifiers.length ? { modifiers: modifiers.map(m => ({ label: m.label, when: { flags: [markFlag(m.mark)] }, source: m.value < 0 ? 'difficulty' as const : 'preparation' as const, value: Math.abs(m.value) })) } : {}),
       ...(walker ? { storyRoute: walkRoute(choice), storyRouteActor: 'person' as const, storyTargetPersonId: walker } : talksTo ? { storyTargetPersonId: talksTo } : {}),
       ...(talksTo ? { talksTo } : {}),
+      ...(choice.deceives ? { deceives: true as const } : {}),
+      ...(choice.pull && choice.cost ? { weighing: { pull: choice.pull, cost: choice.cost } } : {}),
+      ...threatFor(node),
+      ...(choice.certBonus ? { certBonus: { ...choice.certBonus } } : {}),
       ...(choice.authority ? { authority: choice.authority === 'entry' ? { kind: 'entry' as const } : { kind: 'concession' as const, item: choice.authority.concede } } : {}),
       // A resolve-stage step always says it stays in resolve unless it ends the call; the engine
       // reads that before any branch, and a later routed effect still moves the call on.
@@ -1130,9 +1212,13 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
     if (!here.length) throw new Error(`${tree.type}: no reachable node in ${stage}`);
     const contextPrompts = here.flatMap(node => {
       const at = node.id === tree.root ? { notFlags: [TREE_STARTED] } : { flags: [nodeFlag(node.id)] };
+      const threatShown = node.threat ? { threat: { label: node.threat.label, minutes: node.threat.minutes } } : {};
       return [
-        ...(node.promptIf ?? []).filter(entry => possible(entry.when)).map(entry => ({ when: joinConditions(at, stateCondition(trim(entry.when), groups)), prompt: entry.prompt })),
-        { when: at, prompt: node.prompt },
+        ...(node.promptIf ?? []).filter(entry => possible(entry.when)).map(entry => {
+          const exchange = spoken(entry.exchange ?? node.exchange, `${node.id} prompt variant`);
+          return { when: joinConditions(at, stateCondition(trim(entry.when), groups)), prompt: entry.prompt, ...(exchange.length ? { exchange } : {}), ...threatShown };
+        }),
+        { when: at, prompt: node.prompt, ...(node.exchange?.length ? { exchange: spoken(node.exchange, `${node.id} prompt`) } : {}), ...threatShown },
       ];
     });
     const definition: StageDefinition = { id: stage, label: tree.stageLabels[stage], prompt: here[0].prompt, contextPrompts,
@@ -1151,6 +1237,8 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
     id, title: ending.title, summary: ending.summary, trustAdjust: 0, strain: 0, disposition: ending.disposition,
     ...(['resolved', 'care_accepted', 'followup_agreed'].includes(ending.disposition) ? { completion: { flags: [endFlag(id)] } } : {}),
     ...(ending.remainingTasks ? { remainingTasks: [...ending.remainingTasks] } : {}),
+    ...(ending.epilogue ? { epilogue: ending.epilogue } : {}),
+    ...(ending.epilogueIf?.length ? { epilogueIf: ending.epilogueIf.filter(entry => possible(entry.when)).map(entry => ({ when: stateCondition(trim(entry.when), groups), epilogue: entry.epilogue })) } : {}),
   }]));
 
   const bound = mapScenarioText(s, textBinder(tree, built, placed));

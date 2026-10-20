@@ -12,9 +12,6 @@
 .operation-squad-participants { margin: 3px 0; font-size: 12px; line-height: 1.45; }
 .prep-squad-workspace { min-width: 0; }
 .prep-squad-workspace > .choice-rail { margin-bottom: 10px; }
-.prep-deployment-summary { margin: 0 0 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; list-style: none; display: grid; gap: 7px; font-size: 12px; color: var(--text-dim); }
-.prep-deployment-summary li { min-width: 0; overflow-wrap: anywhere; }
-.prep-deployment-summary strong { color: var(--text); }
 .call.operation-failed-response { margin: 14px var(--gutter) 20px; padding: 12px; border: 1px solid var(--danger); border-radius: 10px; background: var(--panel); }
 .operation-failed-response h3 { margin: 0 0 8px; font-size: 16px; }
 .operation-failed-response p { margin: 8px 0; font-size: 13px; line-height: 1.45; }

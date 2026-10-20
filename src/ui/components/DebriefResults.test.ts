@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { establishedDepartment } from '../../sim/department-test-fixtures';
 import type { DebriefResult, DecisionView } from '../../sim/types';
 import { SavedDebriefContents } from '../screens/OpsDebrief';
+import { DebriefContents } from '../screens/DebriefContents';
 import { DebriefConsequences, DebriefScore, DebriefSummary, OfficerResults, visibleDebriefConsequences } from './DebriefResults';
 
 const result: DebriefResult = {
@@ -11,7 +12,7 @@ const result: DebriefResult = {
   endingSummary: 'The handover is complete.',
   objective: { score: 75, label: 'Largely resolved' }, civilianSafety: { score: 68, label: 'Safety was strained' },
   officerCondition: [{ officerId: 'off_chen', stressBefore: 12.5, stressAfter: 23.5, xpGained: 29 }],
-  informationPreserved: [], resources: [], unitWear: [], trustDelta: -2, fundingReward: 400, devPointReward: 1,
+  informationPreserved: [], resources: [], unitWear: [], trustDelta: -2, fundingReward: 400,
   causes: ['The team verified access before the handover.'],
 };
 const state = establishedDepartment(Date.UTC(2026, 9, 3), 1);
@@ -25,7 +26,7 @@ const decision: DecisionView = {
 describe('scannable debrief results', () => {
   it('keeps objective, safety and real reward losses in the first summary', () => {
     const html = renderToStaticMarkup(createElement(DebriefSummary, { debrief: result }));
-    for (const label of ['75/100', '68/100', 'Largely resolved', 'Safety was strained', '+$400', '-2 trust', '+1 dev point']) expect(html).toContain(label);
+    for (const label of ['75/100', '68/100', 'Largely resolved', 'Safety was strained', '+$400', '-2 trust']) expect(html).toContain(label);
     expect(html).not.toContain('<details');
   });
 
@@ -116,7 +117,6 @@ describe('scannable debrief results', () => {
     const a = structuredClone(state.officers);
     const b = structuredClone(a);
     b.off_chen.xp += 9_000;
-    b.off_chen.xpBanked = 8_000;
     b.off_chen.ratings.communication = 99;
     b.off_chen.stress = 99;
     b.off_chen.injury = { label: 'Later injury', until: Date.now() + 100_000 };
@@ -186,5 +186,16 @@ describe('explicit completion evidence in current and archived results', () => {
       'Force used', 'The team fired at Tamar Thorsen, who wasn’t hit.', 'Why', 'Tamar is holding a handgun.']) expect(html).toContain(text);
     expect(renderToStaticMarkup(createElement(SavedDebriefContents, { debrief: scored, officers: state.officers }))).toContain('How the call was scored');
     expect(renderToStaticMarkup(createElement(DebriefScore, { debrief: result }))).toBe('');
+  });
+
+  it('grades with three marks only when nobody was forced, and none on a death (result-marks)', () => {
+    const safe = { ...result, disposition: 'resolved' as const, civilianSafety: { score: 92, label: 'Everyone safe' } };
+    const marks = (d: DebriefResult) => renderToStaticMarkup(createElement(DebriefContents, { result: d, officers: {} })).match(/aria-label="(No commendation[^"]*|Commendation[^"]*)"/)?.[1];
+    expect(marks(safe)).toBe('Commendation 3 of 3');
+    expect(marks({ ...safe, forceLines: [{ text: 'Two officers took hold of him.' }] })).toBe('Commendation 2 of 3, capped because force was used');
+    expect(marks({ ...safe, disposition: 'unresolved', completionAchieved: false, civilianSafety: { score: 100, label: 'Everyone safe' } })).toBe('Commendation 1 of 3, capped because the call is not resolved');
+    expect(marks({ ...safe, completionAchieved: false })).toBe('Commendation 1 of 3, capped because the call is not resolved');
+    expect(marks({ ...safe, disposition: 'followup_agreed' })).toBe('Commendation 2 of 3, capped because the call is only partly resolved');
+    expect(marks({ ...safe, personCasualties: [{ personId: 'p1', personRole: 'subject', label: 'Yusuf Kowalczyk', severity: 'fatal', at: 0, care: 'deceased', causeRevision: 1 }] })).toBe('No commendation: someone died on this call');
   });
 });

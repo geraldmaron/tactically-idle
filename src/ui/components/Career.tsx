@@ -1,15 +1,17 @@
 import type { Officer } from '../../sim/types';
-import { ageYears, experienceBand, formatGameDate, gameDay, serviceYears } from '../../sim/calendar';
-import type { ExperienceBand } from '../../sim/calendar';
+import { ageYears, formatGameDate, gameDay, serviceYears } from '../../sim/calendar';
+import { experienceBand, rankOf, type ExperienceBand, type RankId } from '../../sim/ranks';
 import { useGame } from '../store';
 import { Icon } from '../icons';
 import { gameDays, yearsText } from '../format';
-import { Chip, ExperienceChip } from './ui';
+import { Chip } from './ui';
+import { RankChip } from './RankInsignia';
 
 export interface CareerSnapshot {
   age: number;
   service: number;
   band: ExperienceBand;
+  rank: RankId;
   retirement: { date: string; inDays: number; reason: string } | null;
 }
 
@@ -22,7 +24,8 @@ export function useCareerSnapshot(o: Officer): CareerSnapshot {
   return {
     age: Math.floor(ageYears(o, day)),
     service: serviceYears(o, day),
-    band: experienceBand(o, day),
+    band: experienceBand(o),
+    rank: rankOf(o),
     retirement: o.retirement
       ? { date: formatGameDate(o.retirement.day), inDays: Math.max(0, Math.ceil(o.retirement.day - day)), reason: REASON[o.retirement.reason] ?? o.retirement.reason }
       : null,
@@ -54,7 +57,7 @@ export function CareerMini({ officer, prior }: { officer: Officer; prior?: boole
         </span>
       </span>
       <span className="career-chips">
-        <ExperienceChip band={c.band} />
+        <RankChip rank={c.rank} />
         {c.retirement && <RetirementChip date={c.retirement.date} inDays={c.retirement.inDays} compact />}
       </span>
     </span>

@@ -222,7 +222,7 @@ describe('reviewing a decision', () => {
 describe('persistent decision results', () => {
   it('keeps actual changes and specific consequences visible after the toast is gone', () => {
     const html = render(createElement(OperationFeedback, { decisions: [decision()] }));
-    for (const expected of ['Last decision', 'Had complications', 'The patient received aid, but the route is still unresolved.', '+8 min', 'Call progress', '+12', 'Civilian safety', '-4', 'Pressure', '+5', 'Officer stress', '+1.5 stress', '1 × Trauma supplies', 'Patient condition: Confirmed', 'Decision log (1)']) expect(html).toContain(expected);
+    for (const expected of ['What happened', 'Had complications', 'The patient received aid, but the route is still unresolved.', '+8 min', 'Call progress', '+12', 'Civilian safety', '-4', 'Pressure', '+5', 'Officer stress', '+1.5 stress', '1 × Trauma supplies', 'Patient condition: Confirmed', 'Decision log (1)']) expect(html).toContain(expected);
     expect(html).toContain('aria-haspopup="dialog"');
     expect(html).toContain('aria-expanded="false"');
     expect(html).not.toContain('role="dialog"');
@@ -308,8 +308,9 @@ describe('persistent decision results', () => {
     for (const invented of ['decision-lead', 'decision-narrative', 'Successfully completed', 'Everyone is safe', 'Operation ended']) expect(absent).not.toContain(invented);
   });
 
-  it('shows no empty feedback panel before the first decision', () => {
-    expect(render(createElement(OperationFeedback, { decisions: [] }))).toBe('');
+  it('shows no empty feedback panel before the first decision, only the empty live region', () => {
+    // The live region is rendered empty from the start so the first result is announced.
+    expect(render(createElement(OperationFeedback, { decisions: [] }))).toBe('<p class="sr-only" role="status" aria-live="polite"></p>');
   });
 
   it('renders the ending summary and preserves the saved log in the real debrief', () => {
@@ -348,7 +349,7 @@ describe('persistent decision results', () => {
 });
 
 describe('saved result review', () => {
-  const saved: DebriefResult = { runId: 'run_older', scenarioId: 'ms_occupancy', endingId: 'old', endingTitle: 'Assistance completed', objective: { score: 75, label: 'Completed' }, civilianSafety: { score: 88, label: 'Safe' }, officerCondition: [], informationPreserved: [], resources: [{ itemId: 'battery_pack', used: 1, returned: 0 }], unitWear: [], trustDelta: 2, fundingReward: 100, devPointReward: 1, causes: ['The squad verified the report.'] };
+  const saved: DebriefResult = { runId: 'run_older', scenarioId: 'ms_occupancy', endingId: 'old', endingTitle: 'Assistance completed', objective: { score: 75, label: 'Completed' }, civilianSafety: { score: 88, label: 'Safe' }, officerCondition: [], informationPreserved: [], resources: [{ itemId: 'battery_pack', used: 1, returned: 0 }], unitWear: [], trustDelta: 2, fundingReward: 100, causes: ['The squad verified the report.'] };
   it('shows old saved totals and causes without inventing a per-decision log', () => {
     const html = render(createElement(SavedDebriefContents, { debrief: saved, officers: {} }));
     expect(html).toContain('75/100');
@@ -450,7 +451,7 @@ it('shows all possessions and their own certainty in the selected-person inspect
 });
 
 it('keeps saved subject deaths in a debrief even when a newer active call exists', () => {
-  const d: DebriefResult = { runId: 'archived_force', scenarioId: 'ms_occupancy', endingId: 'closed', endingTitle: 'Closed', objective: { score: 100, label: 'Complete' }, civilianSafety: { score: 50, label: 'Consequences' }, officerCondition: [], informationPreserved: [], resources: [], unitWear: [], trustDelta: 0, fundingReward: 0, devPointReward: 0, causes: [], personCasualties: [{ personId: 'mara', personRole: 'subject', label: 'Mara Bell', severity: 'fatal', at: 8, care: 'deceased', causeRevision: 2 }] };
+  const d: DebriefResult = { runId: 'archived_force', scenarioId: 'ms_occupancy', endingId: 'closed', endingTitle: 'Closed', objective: { score: 100, label: 'Complete' }, civilianSafety: { score: 50, label: 'Consequences' }, officerCondition: [], informationPreserved: [], resources: [], unitWear: [], trustDelta: 0, fundingReward: 0, causes: [], personCasualties: [{ personId: 'mara', personRole: 'subject', label: 'Mara Bell', severity: 'fatal', at: 8, care: 'deceased', causeRevision: 2 }] };
   const html = render(createElement(SavedDebriefContents, { debrief: d, officers: {} }));
   expect(html).toContain('data-person-casualty="mara"');
   expect(html).toContain('Mara Bell');
@@ -495,4 +496,40 @@ it.each(['reported', 'confirmed'] as const)('uses a public %s weapon item withou
   expect(html).toContain('Firearm');
   expect(html).toContain(status === 'reported' ? 'Reported item · unverified' : 'Confirmed item');
   expect(html).not.toContain('Armament not known');
+});
+
+describe('the live call in two beats (docs/call-presentation.md)', () => {
+  const threat = { label: 'Indigo edges for the door', minutes: 4 };
+  const props = (patch: Partial<LiveViewProps> = {}): LiveViewProps => {
+    const base = liveProps([action()], null);
+    return { ...base, progress: { ...base.progress, threat }, ...patch };
+  };
+
+  it('decides with the threat pinned, the team above the choices, and the scene held apart', () => {
+    const html = render(createElement(LiveView, props()));
+    const call = html.slice(html.indexOf('id="live-panel-call"'), html.indexOf('id="live-panel-scene"'));
+    expect(html.indexOf('class="threat-pill"')).toBeLessThan(html.indexOf('id="live-panel-call"'));
+    expect(html).toContain('aria-label="Threat: Indigo edges for the door in 4 minutes"');
+    expect(call.indexOf('How will you verify the report before committing?')).toBeLessThan(call.indexOf('aria-label="Who&#x27;s on it"'));
+    expect(call.indexOf('aria-label="Who&#x27;s on it"')).toBeLessThan(call.indexOf('aria-label="Review Prepare medical access"'));
+    expect(call).not.toContain('class="live-map"');
+    expect(html).toMatch(/id="live-panel-scene"[^>]*hidden=""/);
+    expect(html).toContain('class="live-map"');
+  });
+
+  it('reads the result on its own beat, with no choices and no threat until Continue', () => {
+    const html = render(createElement(LiveView, props({ beat: 'result', onContinue: noop, continueLabel: 'Continue to The till', feedback: createElement(OperationFeedback, { decisions: [decision()] }) })));
+    expect(html).toContain('What happened');
+    expect(html).toContain('Continue to The till');
+    expect(html).not.toContain('Review Prepare medical access');
+    expect(html).not.toContain('class="threat-pill"');
+  });
+
+  it('folds the last result to one row on the decide beat, the full record inside', () => {
+    const html = render(createElement(OperationFeedback, { decisions: [decision()], folded: true }));
+    expect(html).toContain('Last decision');
+    expect(html).toMatch(/<details class="disclosure last-decision last-decision-mixed" data-disclosure="last-decision">/);
+    expect(html).toContain('Had complications');
+    expect(html).toContain('The patient received aid, but the route is still unresolved.');
+  });
 });

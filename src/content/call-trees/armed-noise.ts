@@ -444,5 +444,5 @@ export const ARMED_NOISE: CallTree = {
     handed_over: { title: 'No step left to take', disposition: 'unresolved', remainingTasks: ['Get everyone out of {place} safely'],
       summary: 'Command still holds the street, and the call is still open. The team has no step left that it can take from here.' },
   },
-  rewards: { funding: 3200, devPoints: 4, trust: 8, xp: 55 },
+  rewards: { funding: 3200, trust: 8, xp: 55 },
 };

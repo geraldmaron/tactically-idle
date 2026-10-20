@@ -1,9 +1,3 @@
-import { DEV_NODES } from '../content/dev-tree';
-import { developmentSpendPlan } from '../commerce/development-spend';
-import { quoteDevelopment } from './development-tiers';
-import { newLocalId, type MockOutcome, type MockProvider, type ProviderEvent, type TestWallet } from '../commerce/types';
-import { MockStoreProvider } from '../commerce/mock-provider';
-import { allocateTestMilli, availableInLot, availableTestMilli, applyTestEvent, beginTestPurchase, campaignTestMilli, completeTestPurchase, emptyTestWallet, refundTestPurchase, spendTestMilli, unassignTestMilli, validTestWallet } from '../commerce/ledger';
 import { createInitialState } from './department';
 import { dispatch } from './game';
 import { randomCampaignSeed } from './personnel';
@@ -11,6 +5,9 @@ import { deserialize, serialize, type SaveStorage } from './save';
 import type { Command, GameState, HandlerResult } from './types';
 
 export const SLOT_COUNT = 10;
+
+const newLocalId = () => typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+  ? crypto.randomUUID() : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`;
 export const SLOTS_KEY = 'tactically-idle/campaign-slots';
 
 export interface CampaignSlot {
@@ -20,9 +17,10 @@ export interface CampaignSlot {
   savedAt: number;
   data: string;
 }
+/** Libraries written before save v12 also hold a `commerce` test wallet; it is ignored on read
+ * and dropped on the next write. The saves inside are checked one by one (save.ts). */
 interface SlotLibrary {
   version: 2;
-  commerce: TestWallet;
   activeSlotId: number | null;
   slots: (CampaignSlot | null)[];
   deleted?: { slotId: number; slot: CampaignSlot };
@@ -48,11 +46,9 @@ export interface CampaignSnapshot {
   session: number;
   canUndoDelete: boolean;
   dirty: boolean;
-  commerce: TestWallet;
   campaignId: string | null;
-  developmentBudget: { earnedDP: number; testDP: number; totalDP: number };
 }
-const emptyLibrary = (): SlotLibrary => ({ version: 2, commerce: emptyTestWallet(), activeSlotId: null, slots: Array(SLOT_COUNT).fill(null) });
+const emptyLibrary = (): SlotLibrary => ({ version: 2, activeSlotId: null, slots: Array(SLOT_COUNT).fill(null) });
 const validId = (id: number) => Number.isInteger(id) && id >= 1 && id <= SLOT_COUNT;
 const cleanName = (name: string, id: number) => name.trim().slice(0, 36) || `Campaign ${id}`;
 const failure = (reason: string): HandlerResult => ({ ok: false, reason });
@@ -68,8 +64,8 @@ function readLibrary(raw: string): SlotLibrary | null {
     const ids = x.slots.filter(Boolean).map((slot: CampaignSlot) => slot.campaignId);
     if (x.deleted) ids.push(x.deleted.slot.campaignId);
     if (ids.some((id: unknown) => typeof id !== 'string' || !/^[a-zA-Z0-9_-]{1,160}$/.test(id))
-      || new Set(ids).size !== ids.length || !validTestWallet(x.commerce)) return null;
-    return x;
+      || new Set(ids).size !== ids.length) return null;
+    return { version: 2, activeSlotId: x.activeSlotId, slots: x.slots, ...(x.deleted ? { deleted: x.deleted } : {}) };
   } catch { return null; }
 }
 
@@ -136,9 +132,7 @@ export class CampaignSlots {
 
   private makeSnapshot(): CampaignSnapshot {
     const campaignId = this.library.activeSlotId ? this.library.slots[this.library.activeSlotId - 1]?.campaignId ?? null : null;
-    const earnedDP = this.state.department.devPoints;
-    const testDP = campaignTestMilli(this.library.commerce, campaignId) / 1000;
-    return { commerce: this.library.commerce, campaignId, developmentBudget: { earnedDP, testDP, totalDP: earnedDP + testDP },
+    return { campaignId,
       state: this.state, slots: this.library.slots.map((s, i) => s ? summary(s, i) : null),
       activeSlotId: this.library.activeSlotId, issue: this.issue, session: this.session, canUndoDelete: !!this.library.deleted, dirty: this.dirty };
   }
@@ -159,14 +153,6 @@ export class CampaignSlots {
     if (!this.storage) throw new Error('Local storage is unavailable. Enable browser storage to save this game.');
     if (this.blocked) throw new Error('The save library is unreadable. Existing data will not be overwritten.');
     if (this.storage.getItem(SLOTS_KEY) !== this.expectedRaw) throw new Error('Saves changed in another tab. Reload this page before switching or saving; this tab has not overwritten them.');
-    // Return unused credits only after their campaign can no longer be restored with Undo.
-    const retained = new Set(next.slots.flatMap((slot) => slot ? [slot.campaignId] : []));
-    if (next.deleted) retained.add(next.deleted.slot.campaignId);
-    let released = false;
-    for (const receipt of next.commerce.transactions) for (const id of Object.keys(receipt.allocations)) {
-      if (!retained.has(id)) { delete receipt.allocations[id]; released = true; }
-    }
-    if (released) next.commerce.revision++;
     const raw = JSON.stringify(next);
     this.storage.setItem(SLOTS_KEY, raw);
     this.expectedRaw = raw;
@@ -283,7 +269,7 @@ export class CampaignSlots {
   exportSlot(id: number): string | null { return validId(id) ? this.library.slots[id - 1]?.data ?? null : null; }
   exportRecovery(): string | null {
     if (!this.expectedRaw) return null;
-    // Readable exports contain game progress only. UUIDs and wallet grants never become import authority.
+    // Readable exports contain game progress only. Campaign UUIDs never become import authority.
     try {
       const raw = JSON.parse(this.expectedRaw);
       if (!readLibrary(this.expectedRaw)) return this.expectedRaw;
@@ -291,113 +277,5 @@ export class CampaignSlots {
       return JSON.stringify({ version: 1, activeSlotId: raw.activeSlotId, slots: raw.slots.map(strip),
         ...(raw.deleted ? { deleted: { slotId: raw.deleted.slotId, slot: strip(raw.deleted.slot) } } : {}) });
     } catch { return this.expectedRaw; }
-  }
-
-  /** Called only inside the same save lock as all ordinary bank writes. */
-  private walletChange(now: number, change: (wallet: TestWallet) => void): HandlerResult {
-    return this.attempt(() => { const next = this.withCurrent(now); change(next.commerce); this.write(next); });
-  }
-  beginPurchase(provider: MockProvider, productId: string, requestId: string, now: number): HandlerResult {
-    return this.walletChange(now, (wallet) => { beginTestPurchase(wallet, provider, productId, requestId, now); });
-  }
-  receivePurchase(event: ProviderEvent, now: number): HandlerResult {
-    return this.walletChange(now, (wallet) => applyTestEvent(wallet, event, now));
-  }
-  resolvePurchase(key: string, outcome: MockOutcome, now: number): HandlerResult {
-    const t = this.library.commerce.transactions.find((entry) => entry.key === key);
-    if (!t) return failure('Unknown test transaction');
-    return this.receivePurchase(new MockStoreProvider(t.provider).resolve(t, outcome), now);
-  }
-  completePurchase(key: string, now: number, fail = false): HandlerResult {
-    return this.walletChange(now, (wallet) => completeTestPurchase(wallet, key, now, fail));
-  }
-  reconcilePurchases(now: number): HandlerResult {
-    return this.walletChange(now, (wallet) => {
-      for (const t of wallet.transactions) {
-        const event = new MockStoreProvider(t.provider).reconcile(t);
-        if (event) { applyTestEvent(wallet, event, now); completeTestPurchase(wallet, t.key, now); }
-      }
-    });
-  }
-  refundPurchase(key: string, now: number): HandlerResult {
-    return this.walletChange(now, (wallet) => refundTestPurchase(wallet, key, now));
-  }
-  allocatePurchase(campaignId: string, milliDP: number, now: number): HandlerResult {
-    if (!this.library.slots.some((slot) => slot?.campaignId === campaignId && deserialize(slot.data))) return failure('Choose a readable saved campaign');
-    return this.walletChange(now, (wallet) => allocateTestMilli(wallet, campaignId, milliDP));
-  }
-  unassignPurchase(campaignId: string, now: number): HandlerResult {
-    return this.walletChange(now, (wallet) => unassignTestMilli(wallet, campaignId));
-  }
-  /** The confirmation captures the campaign UUID, so switching slots cannot redirect a claim. */
-  beginPointClaim(productId: string, requestId: string, campaignId: string, now: number): HandlerResult {
-    if (campaignId !== this.getSnapshot().campaignId || !this.library.slots.some((slot) => slot?.campaignId === campaignId && deserialize(slot.data))) return failure('The selected campaign changed. Reopen Get Points and confirm the current campaign.');
-    return this.walletChange(now, (wallet) => {
-      const key = beginTestPurchase(wallet, 'apple', productId, requestId, now);
-      const t = wallet.transactions.find((entry) => entry.key === key)!;
-      if (t.claimCampaignId && t.claimCampaignId !== campaignId) throw new Error('This claim belongs to another campaign.');
-      if (!t.claimCampaignId && t.status !== 'pending') throw new Error('This receipt already belongs to an earlier purchase.');
-      t.claimCampaignId = campaignId;
-      t.claimDelivered ??= false;
-    });
-  }
-  finishPointClaim(key: string, now: number): HandlerResult {
-    return this.attempt(() => {
-      const next = this.withCurrent(now);
-      const t = next.commerce.transactions.find((entry) => entry.key === key);
-      if (!t?.claimCampaignId) throw new Error('Unknown point claim.');
-      if (t.claimDelivered) return;
-      if (t.status === 'cancelled' || t.status === 'failed' || t.refundedAt !== undefined) throw new Error('This claim ended without a reward.');
-      applyTestEvent(next.commerce, new MockStoreProvider(t.provider).resolve(t, 'success'), now);
-      // Allocate only this receipt, never unrelated held credits or another campaign's points.
-      const destination = next.slots.find((slot) => slot !== null && slot.campaignId === t.claimCampaignId && deserialize(slot.data));
-      if (destination) t.allocations[t.claimCampaignId] = (t.allocations[t.claimCampaignId] ?? 0) + availableInLot(t);
-      // A removed destination leaves its credited reward available for a later explicit claim.
-      t.claimDelivered = true;
-      completeTestPurchase(next.commerce, key, now);
-      this.write(next);
-    });
-  }
-  resumePointClaims(now: number): HandlerResult {
-    for (const t of this.library.commerce.transactions) {
-      if (t.claimCampaignId && !t.claimDelivered && !['cancelled', 'failed'].includes(t.status)) {
-        const result = this.finishPointClaim(t.key, now);
-        if (!result.ok) return result;
-      }
-    }
-    return { ok: true };
-  }
-  claimHeldPoints(campaignId: string, now: number): HandlerResult {
-    if (campaignId !== this.getSnapshot().campaignId) return failure('The active campaign changed. Reopen Get Points.');
-    return this.walletChange(now, (wallet) => {
-      const amount = availableTestMilli(wallet);
-      if (!amount) throw new Error('No saved points are waiting to be collected.');
-      allocateTestMilli(wallet, campaignId, amount);
-    });
-  }
-  unlockDevelopment(nodeId: string, now: number, expectedTier = 1): HandlerResult {
-    const id = this.library.activeSlotId;
-    const slot = id ? this.library.slots[id - 1] : null;
-    if (!id || !slot) return failure('Save this campaign in a slot before spending development points');
-    const node = DEV_NODES[nodeId];
-    if (!node) return failure('Unknown development node');
-    return this.attempt(() => {
-      const state = dispatch(this.state, { type: 'tick' }, { now }).state;
-      const earned = state.department.devPoints;
-      const quote = quoteDevelopment({ ...state, department: { ...state.department, devPoints: earned + campaignTestMilli(this.library.commerce, slot.campaignId) / 1000 } }, nodeId, expectedTier);
-      if (!quote.ok || !quote.cost) throw new Error(quote.reason ?? 'Development is unavailable.');
-      const { paidMilli, earnedUsed } = developmentSpendPlan(quote.cost.dp, earned);
-      if (campaignTestMilli(this.library.commerce, slot.campaignId) < paidMilli) throw new Error('Not enough development points. Earn points or explicitly allocate test DP to this campaign.');
-      const temporary = structuredClone(state);
-      temporary.department.devPoints = quote.cost.dp;
-      const applied = dispatch(temporary, { type: 'unlockNode', nodeId, expectedTier }, { now });
-      if (!applied.result.ok) throw new Error(applied.result.reason);
-      applied.state.department.devPoints = Math.max(0, earned - earnedUsed);
-      const next = this.withCurrent(now);
-      spendTestMilli(next.commerce, slot.campaignId, paidMilli);
-      next.slots[id - 1] = { ...slot, savedAt: now, data: serialize(applied.state, now) };
-      this.write(next);
-      this.state = applied.state;
-    });
   }
 }

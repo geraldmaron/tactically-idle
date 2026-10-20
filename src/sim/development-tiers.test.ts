@@ -15,15 +15,15 @@ import type { Command, GameState } from './types';
 
 const NOW = Date.UTC(2026, 9, 3, 12);
 const prices = {
-  personnel_academy: [[3, 2500], [4, 4000], [6, 6500]],
-  intel_records: [[1, 1000], [3, 3000], [5, 6000]],
-  wellbeing_peer_support: [[2, 1000], [4, 2800], [6, 5000]],
-  logistics_equipment_manager: [[3, 2500], [5, 4500], [7, 7500]],
+  personnel_academy: [4900, 7200, 11300],
+  intel_records: [1800, 5400, 10000],
+  wellbeing_peer_support: [2600, 6000, 9800],
+  logistics_equipment_manager: [4900, 8500, 13100],
 } as const;
 const serviceIds = Object.keys(prices) as (keyof typeof prices)[];
 function funded() {
   const state = createInitialState(NOW, 71);
-  state.department.devPoints = 100;
+
   state.department.funding = 100_000;
   return state;
 }
@@ -50,13 +50,12 @@ describe('development tiers', () => {
     state.department.level = 0; // These upgrades do not depend on nonexistent level progression.
     expect(maxDevelopmentTier(DEV_NODES[nodeId])).toBe(3);
     for (let tier = 1; tier <= 3; tier++) {
-      const [dp, funding] = prices[nodeId][tier - 1];
+      const funding = prices[nodeId][tier - 1];
       const before = structuredClone(state);
       const quote = quoteDevelopment(state, nodeId, tier);
-      expect(quote).toMatchObject({ ok: true, currentTier: tier - 1, targetTier: tier, maxTier: 3, cost: { dp, funding } });
+      expect(quote).toMatchObject({ ok: true, currentTier: tier - 1, targetTier: tier, maxTier: 3, cost: { funding } });
       expect(quote.effects).toEqual(developmentTierDefinition(DEV_NODES[nodeId], tier)!.effects);
       state = apply(state, { type: 'unlockNode', nodeId, expectedTier: tier });
-      expect(state.department.devPoints).toBe(before.department.devPoints - dp);
       expect(state.department.funding).toBe(before.department.funding - funding);
       expect(state.department.developmentTiers[nodeId]).toBe(tier);
       expect(state.department.unlockedNodes.filter((id) => id === nodeId)).toHaveLength(1);
@@ -114,11 +113,8 @@ describe('development tiers', () => {
     const tierOne = buyThrough(state, 'personnel_academy', 1);
     expect(reject(tierOne, 'personnel_academy')).toMatch(/review tier II/);
     expect(reject(tierOne, 'personnel_academy', 1)).toMatch(/review tier II/);
-    tierOne.department.devPoints = 3;
-    expect(reject(tierOne, 'personnel_academy', 2)).toMatch(/Needs 4 development points/);
-    tierOne.department.devPoints = 4;
-    tierOne.department.funding = 3999;
-    expect(reject(tierOne, 'personnel_academy', 2)).toMatch(/Needs \$4,000/);
+    tierOne.department.funding = 7199;
+    expect(reject(tierOne, 'personnel_academy', 2)).toMatch(/Needs \$7,200/);
     const maxed = buyThrough(funded(), 'personnel_academy', 3);
     expect(reject(maxed, 'personnel_academy', 4)).toMatch(/maximum tier/);
   });
@@ -202,7 +198,6 @@ describe('development tiers', () => {
     for (let time = NOW + 10 * 60_000; time <= NOW + 30 * HOUR_MS; time += 10 * 60_000) online = apply(online, { type: 'tick' }, time);
     const offline = apply(start, { type: 'tick' }, NOW + 30 * HOUR_MS);
     expect(online.department.funding).toBeCloseTo(offline.department.funding, 6);
-    expect(online.department.devPoints).toBeCloseTo(offline.department.devPoints, 6);
     expect(online.report?.maintenanceSpend).toBe(offline.report?.maintenanceSpend);
     expect(online.rngState).toBe(offline.rngState);
     for (const id of Object.keys(online.officers)) expect(online.officers[id].stress).toBeCloseTo(offline.officers[id].stress, 6);

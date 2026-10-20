@@ -4,13 +4,14 @@ import { useGame } from '../store';
 import { budget } from '../../sim/department-selectors';
 import type { GameState } from '../../sim/types';
 import { Icon } from '../icons';
-import { money, moneyFull, pad2, rate } from '../format';
+import { liveMoney, moneyFull, pad2, ratePerMinute } from '../format';
 import { Sheet } from './Sheet';
 import { Meter } from './ui';
 import { levelProgress } from '../../sim/department-level';
 import { frameworksOpeningAt } from '../../content/unlocks';
 import './topbar-help.css';
 import { FinanceDetail, FundingDeltas, useLiveFunding } from './Finance';
+import { CampaignButton } from './SaveManager';
 
 export type DepartmentStat = 'funding' | 'income' | 'trust' | 'level';
 const STAT_TITLES: Record<DepartmentStat, string> = { funding: 'Funding', income: 'Income after costs', trust: 'Public trust', level: 'Department level' };
@@ -57,8 +58,8 @@ export function createDepartmentHelpNavigation(history: HistoryPort, owner: stri
   };
 }
 
-/** Wordmark, funding, net rate, trust, department level. Shown on every screen. */
-export function TopBar() {
+/** Mark, funding, net rate, trust, department level and saves, in one row on every screen. */
+export function TopBar({ onOpenSaves }: { onOpenSaves?: () => void }) {
   const g = useGame();
   const owner = useId();
   const [topic, setTopic] = useState<DepartmentStat | null>(null);
@@ -72,10 +73,10 @@ export function TopBar() {
     return () => { window.removeEventListener('popstate', current.onPop); current.dispose(); };
   }, []);
   const live = useLiveFunding(g);
-  return <DepartmentStatusBar g={g} live={live} topic={topic} onOpen={(next) => navigation.current?.open(next)} onClose={() => navigation.current?.close()} />;
+  return <DepartmentStatusBar g={g} live={live} topic={topic} onOpen={(next) => navigation.current?.open(next)} onClose={() => navigation.current?.close()} onOpenSaves={onOpenSaves} />;
 }
 
-export function DepartmentStatusBar({ g, topic, onOpen, onClose, live = { shown: g.department.funding, deltas: [] } }: { g: GameState; topic: DepartmentStat | null; onOpen: (topic: DepartmentStat) => void; onClose: () => void; live?: ReturnType<typeof useLiveFunding> }) {
+export function DepartmentStatusBar({ g, topic, onOpen, onClose, onOpenSaves, live = { shown: g.department.funding, deltas: [] } }: { g: GameState; topic: DepartmentStat | null; onOpen: (topic: DepartmentStat) => void; onClose: () => void; onOpenSaves?: () => void; live?: ReturnType<typeof useLiveFunding> }) {
   const b = budget(g);
   const d = g.department;
   const helpProps = (stat: DepartmentStat, value: string) => ({
@@ -88,16 +89,16 @@ export function DepartmentStatusBar({ g, topic, onOpen, onClose, live = { shown:
   return (
     <>
     <header className="topbar topbar-help">
-      <h1 className="wordmark"><img className="brand-lockup" src={assetUrl("brand/header-lockup-dark.svg")} alt="Tactically Idle" width="146" height="36" /></h1>
+      <h1 className="wordmark"><img className="brand-mark" src={assetUrl("brand/mark-dark.svg")} alt="Tactically Idle" width="34" height="34" /></h1>
       <ul className="stats" aria-label="Department status">
         <li><button className="stat stat-cash topbar-stat-button" {...helpProps('funding', moneyFull(d.funding))}>
           <Icon name="cash" size={18} />
-          <span>{money(live.shown)}</span>
+          <span className="stat-cash-value">{liveMoney(live.shown)}</span>
           <FundingDeltas deltas={live.deltas} />
         </button></li>
-        <li><button className={`stat stat-rate topbar-stat-button${b.net < 0 ? ' stat-neg' : ''}`} {...helpProps('income', `${moneyFull(b.net)} per real hour`)}>
+        <li><button className={`stat stat-rate topbar-stat-button${b.net < 0 ? ' stat-neg' : ''}`} {...helpProps('income', `${ratePerMinute(b.net)} a real minute, ${moneyFull(b.net)} an hour`)}>
           <Icon name="trend" size={16} />
-          <span>{rate(b.net)}</span>
+          <span>{ratePerMinute(b.net)}</span>
         </button></li>
         <li><button className="stat stat-trust topbar-stat-button" {...helpProps('trust', `${Math.round(d.trust)} out of 100`)}>
           <Icon name="shield" size={17} />
@@ -110,6 +111,7 @@ export function DepartmentStatusBar({ g, topic, onOpen, onClose, live = { shown:
         </svg>
         <span>{pad2(d.level)}</span>
       </button>
+      {onOpenSaves && <CampaignButton onOpen={onOpenSaves} />}
     </header>
     <Sheet open={topic !== null} onClose={onClose} title={topic === 'funding' || topic === 'income' ? 'Finances' : topic ? STAT_TITLES[topic] : 'Department status'} className="department-stat-sheet">
       {topic && <DepartmentStatHelp g={g} topic={topic} />}

@@ -100,7 +100,7 @@ Session design targets: a quick management visit around one minute, and an opera
 
 ## Department economy and offline simulation
 
-Begin with funding, development points, and public trust. Funding pays wages and purchases; development points unlock capabilities; trust is a standing that affects opportunities, not a spendable currency.
+Begin with funding and public trust. Funding pays wages, purchases and development; each development can instead be granted free at a milestone (department level, calls resolved or trust). Trust is a standing that affects opportunities, not a spendable currency. There are no development points (removed 2026-10-20).
 
 Funding comes from a base department allocation and routine work. Mission compensation reflects service and responsibilities rather than arrests or casualties. Active missions should accelerate specialist progression without making routine funding useless.
 

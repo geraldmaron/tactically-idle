@@ -98,7 +98,8 @@ export function EquipmentStore({ active, onDevelopment, onTraining }: EquipmentS
 type TileState = 'buy' | 'short' | 'locked';
 
 /** Store tile: same art frame as Inventory. Buy-now tiles glow, locked tiles dim behind a lock,
- * and the price is the caption. Use, limits and qualifications live in the detail sheet. */
+ * and the price sits on a shop price tag (gear-shop): gold when it can be bought now, red when
+ * funding is short, grey behind a lock. Use, limits and qualifications live in the detail sheet. */
 function EquipmentTile({ entry, onOpen }: { entry: CatalogEntry; onOpen: (button: HTMLButtonElement) => void }) {
   const { item } = entry;
   const state: TileState = !entry.unlocked ? 'locked' : entry.canBuy ? 'buy' : 'short';
@@ -108,11 +109,10 @@ function EquipmentTile({ entry, onOpen }: { entry: CatalogEntry; onOpen: (button
   return <button type="button" className={`inv-tile store-tile store-tile-${state}${entry.needsAttention ? ' inv-tile-alert' : ''}`} data-item-id={item.id} title={item.name} aria-label={label} aria-haspopup="dialog" onClick={(event) => onOpen(event.currentTarget)}>
     <span className="inv-art"><GearArtFrame itemId={item.id} size={42} /></span>
     {entry.owned > 0 && <span className="inv-count" aria-hidden="true">×{entry.owned}</span>}
-    {state === 'locked' && <span className="store-tile-lock" aria-hidden="true"><Icon name="lock" size={11} /></span>}
     {entry.needsAttention && <span className="inv-alert" aria-hidden="true"><Icon name="warning" size={12} /></span>}
     {!!item.requiresCerts?.length && <span className={`store-tile-cert${entry.qualified ? '' : ' store-tile-cert-none'}`} aria-hidden="true"><Icon name="mortarboard" size={11} /></span>}
     <span className="inv-name" aria-hidden="true">{item.name}</span>
-    <span className="store-tile-price" aria-hidden="true">{moneyShort(item.cost)}</span>
+    <span className="store-tile-price" aria-hidden="true">{state === 'locked' ? <Icon name="lock" size={11} /> : <Icon name="cash" size={12} />}{moneyShort(item.cost)}</span>
     {condition !== null && <span className={`inv-cond inv-cond-${conditionTone(condition, item.wear)}`} aria-hidden="true"><i style={{ width: `${Math.max(4, condition)}%` }} /></span>}
   </button>;
 }

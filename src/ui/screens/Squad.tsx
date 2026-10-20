@@ -18,6 +18,7 @@ import { Portrait } from '../portraits/Portrait';
 import { StressDisplay } from '../components/StressDisplay';
 import { ROSTER_FILTER_LABEL, ROSTER_SORT_LABEL, filterRoster, squadCoverage, sortRoster, type RosterFilter, type RosterSort } from './squad-model';
 import './squad-visual.css';
+import { ScreenBanner } from '../art/Plates';
 
 const DEFAULT_NAMES = ['Alpha', 'Bravo', 'Charlie', 'Delta'];
 
@@ -36,6 +37,7 @@ export function SquadScreen() {
 
   return (
     <div className="page squad-page">
+      <ScreenBanner id="squad" kicker="The team" title="Squad" line={`${officerList(g).length} officers · ${g.squads.length} squads`} />
       <ChoiceRail value={nav.squadSection} kind="navigation" label="Squad sections" grow onChange={nav.setSquadSection} options={[
         { value: 'roster', label: 'Roster' }, { value: 'training', label: 'Training' },
       ]} />

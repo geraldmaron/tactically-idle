@@ -29,10 +29,6 @@
 .result-officer-id { display: block; font-size: 11px; color: var(--text-dim); }
 .result-xp { flex-shrink: 0; color: var(--mint); font-size: 15px; font-weight: 650; font-variant-numeric: tabular-nums; }
 .result-stress { display: grid; gap: 4px; }
-.result-stress-heading { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; }
-.result-stress-heading > span { color: var(--text-dim); }
-.result-stress-line { display: grid; grid-template-columns: 38px minmax(0, 1fr) 28px; align-items: center; gap: 7px; font-size: 11px; color: var(--text-dim); font-variant-numeric: tabular-nums; }
-.result-stress-line > span:last-child { text-align: right; }
 .result-stress .meter { width: 100%; height: 5px; }
 .result-stress-unchanged { display: grid; grid-template-columns: minmax(0, 1fr) 50px; align-items: center; gap: 9px; color: var(--text-dim); font-size: 12px; }
 .result-stress-unchanged .meter { width: 100%; height: 5px; }
@@ -45,7 +41,6 @@
 .result-unchanged-summary { display: inline-flex; align-items: center; gap: 11px; max-width: calc(100% - 18px); vertical-align: middle; }
 .result-portrait-stack { display: flex; flex-shrink: 0; padding-left: 4px; }
 .result-portrait-stack > * { margin-left: -4px; outline: 2px solid var(--panel); }
-.result-summary-hint { display: block; color: var(--text-dim); font-size: 11px; font-weight: 400; }
 .result-empty { margin: 0; font-size: 14px; }
 .result-consequences { border-left: 3px solid var(--warn); }
 .result-consequences ul { margin: 0; padding-left: 18px; font-size: 14px; line-height: 1.5; }
@@ -83,3 +78,15 @@
 .force-lines li { display: grid; gap: 3px; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 14px; line-height: 1.45; }
 .force-line-reason { font-size: 13px; color: var(--text-dim); }
 .force-line-why { margin-right: 6px; font-size: 11px; letter-spacing: .04em; text-transform: uppercase; color: var(--amber); }
+
+/* The promotion moment (officer-ranks): one bright row per rank reached, above the officer list. */
+.result-promotions { display: grid; gap: 6px; margin: 0 0 8px; padding: 0; list-style: none; }
+.result-promotion { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid rgba(243, 180, 50, 0.55); border-radius: 10px; background: linear-gradient(120deg, rgba(243, 180, 50, 0.16), var(--panel)); animation: result-promotion-in 520ms ease-out both; }
+.result-promotion-mark { display: grid; place-items: center; width: 46px; height: 46px; border-radius: 50%; background: radial-gradient(circle at 50% 30%, #24324a, #0b111c); border: 2px solid var(--amber); box-shadow: 0 0 14px rgba(243, 180, 50, 0.35); }
+.result-promotion-body { display: grid; gap: 2px; min-width: 0; }
+.result-promotion-kicker { font: 700 11px/1.2 var(--font-cond); letter-spacing: 0.1em; text-transform: uppercase; color: var(--amber-2); }
+.result-promotion-body strong { font: 700 16px/1.2 var(--font-cond); letter-spacing: 0.02em; }
+.result-promotion-line { font-size: 12.5px; color: var(--text-dim); }
+.result-xp .rank-insignia { vertical-align: -2px; }
+@keyframes result-promotion-in { from { opacity: 0; transform: translateY(6px) scale(0.98); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .result-promotion { animation: none; } }

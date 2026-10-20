@@ -36,7 +36,7 @@ function debrief(scenarioId: string, objective: number, completed: boolean): Deb
     runId: `run_${objective}`, scenarioId, endingId: 'e', endingTitle: 'Ending',
     objective: { score: objective, label: completed ? 'Resolved' : 'Partial progress' }, civilianSafety: { score: 90, label: 'Safe' },
     completionAchieved: completed, disposition: completed ? 'resolved' : 'relief_partial',
-    officerCondition: [], informationPreserved: [], resources: [], unitWear: [], trustDelta: 0, fundingReward: 0, devPointReward: 0, causes: [],
+    officerCondition: [], informationPreserved: [], resources: [], unitWear: [], trustDelta: 0, fundingReward: 0, causes: [],
   };
 }
 

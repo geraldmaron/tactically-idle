@@ -393,5 +393,5 @@ export const RESCUE_CHAIR: CallTree = {
     handed_over: { title: 'No step left to take', disposition: 'unresolved', remainingTasks: ['Get {resident.first} out safely'],
       summary: 'Command still holds the street, and the call is still open. The team has no step left that it can take from here.' },
   },
-  rewards: { funding: 2900, devPoints: 4, trust: 7, xp: 50 },
+  rewards: { funding: 2900, trust: 7, xp: 50 },
 };

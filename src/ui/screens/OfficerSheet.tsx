@@ -9,16 +9,18 @@ import { COURSES } from '../../content/courses';
 import { CERT_NAME } from '../../content/certs';
 import { useGame } from '../store';
 import { careerInfo, projectDismiss, recoveryInfo } from '../../sim/department-selectors';
-import { gameDay } from '../../sim/calendar';
 import { learningPace } from '../../sim/career';
 import { detailCheck, detailRate } from '../../sim/detail';
 import type { Id, Officer, SquadId } from '../../sim/types';
 import { Sheet } from '../components/Sheet';
 import { useNav } from '../components/nav';
 import { ChoiceRail } from '../components/ChoiceRail';
-import { Button, Chip, ExperienceChip, OfficerStatusChip, RatingBars } from '../components/ui';
+import { Button, Chip, OfficerStatusChip, RatingBars } from '../components/ui';
+import { RankChip } from '../components/RankInsignia';
 import { RetirementChip, useCareerSnapshot } from '../components/Career';
-import { OfficerProgress } from '../components/OfficerProgress';
+import { OfficerProgress, RankLadder } from '../components/OfficerProgress';
+import { RANKS } from '../../content/ranks';
+import { formatGameDate } from '../../sim/calendar';
 import { StressDisplay, StressGuide } from '../components/StressDisplay';
 import { useToast } from '../components/toast';
 import type { StatusKey } from '../components/labels';
@@ -27,7 +29,8 @@ import { officerStatus } from './squad-model';
 import { Portrait } from '../portraits/Portrait';
 import { agePortraitProps } from './helpers';
 import { Icon } from '../icons';
-import { money, perHour, rate, relativeTime, signedMoney, yearsText } from '../format';
+import { money, perHour, rate, ratePerMinute, relativeTime, signedMoney, yearsText } from '../format';
+import { officerRates } from '../../sim/economy';
 import { PACE_LABEL } from './Recruit';
 
 export type ProfileTab = 'overview' | 'career' | 'care';
@@ -49,7 +52,6 @@ export function OfficerSheet({ officerId, onClose, initialTab = 'overview' }: { 
 function ProfileBody({ o, tab, setTab }: { o: Officer; tab: ProfileTab; setTab: (tab: ProfileTab) => void }) {
   const g = useGame();
   const now = Date.now();
-  const day = gameDay(g, Math.max(now, g.department.clockHighWater));
   const info = recoveryInfo(g, o.id, now);
   const squad = o.squadId ? g.squads.find((s) => s.id === o.squadId) : undefined;
   const isLeader = squad?.leaderId === o.id;
@@ -58,7 +60,7 @@ function ProfileBody({ o, tab, setTab }: { o: Officer; tab: ProfileTab; setTab: 
   const injured = !!o.injury && o.injury.until > now;
   const statusText = injured ? `Injured, ${o.injury!.label}` : o.assignment?.kind === 'training' ? `Training, back ${relativeTime(o.assignment.endsAt, now)}`
     : o.assignment?.kind === 'detail' ? `Teaching, back ${relativeTime(o.assignment.endsAt, now)}` : o.assignment?.kind === 'operation' ? 'On a call' : undefined;
-  const pace = learningPace(o, day);
+  const pace = learningPace(o);
   const detail = detailRate(o);
   const persona = personaNote(o.identityId);
   return (
@@ -72,7 +74,7 @@ function ProfileBody({ o, tab, setTab }: { o: Officer; tab: ProfileTab; setTab: 
           <div className="chips">
             <Chip icon={ROLE_META[o.role].icon}>{ROLE_META[o.role].label}</Chip>
             {squad ? <Chip tone="blue" icon={isLeader ? 'star' : 'people'}>{squad.name}{isLeader ? ', leader' : ''}</Chip> : <Chip icon="user">Unassigned</Chip>}
-            <ExperienceChip band={career.band} />
+            <RankChip rank={career.rank} />
             {career.retirement && <RetirementChip date={career.retirement.date} inDays={career.retirement.inDays} compact />}
           </div>
           <p className="profile-facts"><span><Icon name="cake" size={13} />Age {career.age}</span><span><Icon name="medal" size={13} />{yearsText(career.service)} served</span></p>
@@ -96,7 +98,7 @@ function ProfileBody({ o, tab, setTab }: { o: Officer; tab: ProfileTab; setTab: 
         { value: 'overview', label: 'Overview' }, { value: 'career', label: 'Career' }, { value: 'care', label: 'Care' },
       ]} />
       <div id="profile-panel" role="tabpanel" className="profile-panel">
-        {tab === 'overview' && <Overview o={o} day={day} />}
+        {tab === 'overview' && <Overview o={o} />}
         {tab === 'career' && <CareerTab o={o} />}
         {tab === 'care' && <CareTab o={o} factors={info.factors} />}
       </div>
@@ -104,15 +106,20 @@ function ProfileBody({ o, tab, setTab }: { o: Officer; tab: ProfileTab; setTab: 
   );
 }
 
-function Overview({ o, day }: { o: Officer; day: number }) {
+function Overview({ o }: { o: Officer }) {
   return <div className="profile-stack">
-    <OfficerProgress officer={o} day={day} />
+    <OfficerProgress officer={o} />
     <section aria-label="Skills"><h3 className="profile-head">Skills</h3><RatingBars ratings={o.ratings} label="Skills out of 100" /></section>
     <section aria-label="Qualifications and traits">
       <h3 className="profile-head">Qualifications and traits</h3>
       {o.certs.length > 0 ? <div className="chips">{o.certs.map((c) => <Chip key={c} tone="mint" icon={CERT_ICON[c]}>{CERT_NAME[c]}</Chip>)}</div>
         : <p className="dim">No qualifications yet. Courses grant them on completion, and a qualified officer can teach.</p>}
-      {o.traits.length > 0 && <ul className="profile-traits">{o.traits.map((t) => <li key={t}><strong><Icon name={TRAIT_INFO[t].icon} size={14} />{TRAIT_INFO[t].label}</strong><span>{TRAIT_INFO[t].condition}</span></li>)}</ul>}
+      {o.traits.length > 0 && <ul className="profile-traits">{o.traits.map((t) => {
+        // A trait a promotion granted names its cause (swat-officer-stories: earned traits cite the call).
+        const earned = o.promotions?.find((p) => RANKS[p.rank].trait === t);
+        return <li key={t}><strong><Icon name={TRAIT_INFO[t].icon} size={14} />{TRAIT_INFO[t].label}</strong><span>{TRAIT_INFO[t].condition}</span>
+          {earned && <span className="profile-trait-origin">Earned on promotion to {RANKS[earned.rank].title}, {earned.cause}, {formatGameDate(earned.day)}.</span>}</li>;
+      })}</ul>}
     </section>
     <section aria-label="Squad"><h3 className="profile-head">Squad</h3><SquadControls o={o} /></section>
   </div>;
@@ -157,13 +164,16 @@ function CareerTab({ o }: { o: Officer }) {
   const [confirm, setConfirm] = useState(false);
   const ret = info?.retirement ?? (snap.retirement ? { ...snap.retirement, canRetain: false, retainReason: null, retainCost: null } : null);
   const retainable = !!ret && ret.canRetain;
-  const effects = info?.effects.filter((effect) => !effect.startsWith('Needs ') || !effect.includes('xp per rating point')) ?? [];
+  const effects = info?.effects.filter((effect) => !/ XP to |the top rank/.test(effect)) ?? [];
   const outlook = info?.outlook && !(ret && info.outlook.includes(ret.date)) ? info.outlook : null;
+  const net = officerRates(g, Math.max(now, g.department.lastSettledAt))[o.id]?.net ?? -o.wage;
   return <div className="profile-stack career">
     <dl className="profile-record" aria-label="Service record">
       <div><dt>Calls</dt><dd>{o.career.operations}</dd></div>
       <div><dt>Went well</dt><dd className="tone-mint">{o.career.favorable}</dd></div>
       <div><dt>Went badly</dt><dd className="tone-danger">{o.career.adverse}</dd></div>
+      <div><dt>Brought in</dt><dd>{money(o.career.earned ?? 0)}</dd></div>
+      <div><dt>Net now</dt><dd className={net < 0 ? 'tone-danger' : 'tone-mint'}>{ratePerMinute(net)}</dd></div>
     </dl>
     {ret && <div className="note note-warn career-retire"><Icon name="retire" size={16} /><span>Retiring on {ret.date}, {ret.inDays === 1 ? '1 day' : `${ret.inDays} days`} left. {sentence(ret.reason)} They leave the roster and any squad on that day.</span></div>}
     {ret && retainable && !confirm && <Button size="sm" variant="primary" icon="handover" onClick={() => setConfirm(true)}>Offer retention{ret.retainCost ? ` · ${ret.retainCost}` : ''}</Button>}
@@ -175,6 +185,7 @@ function CareerTab({ o }: { o: Officer }) {
         <Button size="sm" variant="primary" icon="check" onClick={() => { if (act({ type: 'offerRetention', officerId: o.id }, `Retention offered to ${o.surname}`).ok) setConfirm(false); }}>Confirm offer</Button>
       </div>
     </div>}
+    <RankLadder officer={o} />
     {info && <p className="career-dates dim"><Icon name="calendar" size={13} />Born {info.born} · joined service {info.serviceStart}</p>}
     {effects.length > 0 && <ul className="career-effects">{effects.map((e, i) => <li key={i}><Icon name="chevronRight" size={13} />{e}</li>)}</ul>}
     {outlook && <p className="career-outlook"><Icon name="flag" size={14} />{outlook}</p>}

@@ -11,6 +11,7 @@ import { simNow } from './calendar';
 import { fullName } from './officer';
 import { createUnit } from './equipment';
 import { quoteDevelopment } from './development-tiers';
+import { applyGrants, applyTier } from './grants';
 import { MANAGERS } from './command-staff';
 import { tunable } from './tuning';
 import { courseFee } from './staff-pool';
@@ -69,20 +70,11 @@ export function nodeCheck(state: GameState, node: DevelopmentNode): NodeCheck {
 function unlockNode(d: GameState, nodeId: Id, expectedTier = 1): HandlerResult {
   const quote = quoteDevelopment(d, nodeId, expectedTier);
   if (!quote.ok) return refusal(quote.reason ?? 'Cannot buy this development');
-  const { node, cost, targetTier, effects, currentEffects } = quote;
-  const dep = d.department;
-  dep.devPoints -= cost!.dp;
-  postFunding(dep, -cost!.funding, 'development', `${node!.name} ${['I', 'II', 'III', 'IV', 'V'][targetTier! - 1] ?? targetTier}`, simNow(d));
-  dep.developmentTiers ??= {};
-  dep.developmentTiers[node!.id] = targetTier!;
-  if (!dep.unlockedNodes.includes(node!.id)) dep.unlockedNodes.push(node!.id);
-  // Persist only the difference: upgrading never replays purchased capacities.
-  for (const kind of ['rosterCap', 'trainingSlots'] as const) {
-    const total = (list: NodeEffect[]) => list.reduce((sum, effect) => sum + (effect.kind === kind ? effect.delta : 0), 0);
-    const difference = total(effects) - total(currentEffects);
-    if (kind === 'rosterCap') dep.rosterCap += difference;
-    else dep.trainingSlots += difference;
-  }
+  const { node, cost, targetTier } = quote;
+  postFunding(d.department, -cost!.funding, 'development', `${node!.name} ${['I', 'II', 'III', 'IV', 'V'][targetTier! - 1] ?? targetTier}`, simNow(d));
+  applyTier(d, node!.id, targetTier!);
+  // A purchase can own the last prerequisite of a development whose milestone already holds.
+  applyGrants(d, simNow(d));
   return OK;
 }
 

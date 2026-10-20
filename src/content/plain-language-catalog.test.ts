@@ -20,8 +20,9 @@ describe('plain-language equipment and programs', () => {
   it('keeps every equipment and development mechanic unchanged by the copy pass', () => {
     expect(hashSeed(JSON.stringify(mechanics(ITEMS)))).toBe(3763580165);
     // Command Staff hires were added after the capture; their mechanics are covered by command-staff.test.ts.
+    // Recaptured 2026-10-20 when development points were removed and every tier gained a cash price and a milestone.
     const captured = Object.fromEntries(Object.entries(DEV_NODES).filter(([, node]) => !node.effects.some((effect) => effect.kind === 'commandStaff')));
-    expect(hashSeed(JSON.stringify(mechanics(captured)))).toBe(2406665389);
+    expect(hashSeed(JSON.stringify(mechanics(captured)))).toBe(2935013264);
   });
 
   it('explains an everyday purpose before presenting game-score details', () => {

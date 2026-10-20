@@ -1,8 +1,7 @@
 /* The call's situation under the live title: the summary always reads; the briefing opens in place. */
 .situation { min-width: 0; margin: 0 var(--gutter) 10px; padding: 10px 12px 6px; border: 1px solid rgba(243, 180, 50, 0.35); border-left: 4px solid var(--amber); border-radius: 0 var(--radius) var(--radius) 0; background: rgba(243, 180, 50, 0.08); overflow-wrap: anywhere; }
 .situation-head { display: flex; align-items: center; gap: 6px; margin: 0 0 4px; font-family: var(--font-cond); font-size: 12.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--amber-2); }
-.situation-summary { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; margin: 0; font-size: 15.5px; line-height: 1.45; color: var(--text); }
-.situation-open .situation-summary { display: block; }
+.situation-summary { margin: 0; font-size: 15.5px; line-height: 1.45; color: var(--text); }
 .situation-toggle { display: inline-flex; align-items: center; gap: 5px; min-height: 36px; padding: 4px 0; border: 0; background: transparent; color: var(--amber-2); font-family: var(--font-cond); font-size: 13px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; }
 .situation-toggle:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; border-radius: 3px; }
 .situation-body { display: grid; gap: 10px; padding: 2px 0 8px; font-size: 14px; line-height: 1.5; color: var(--text-dim); }

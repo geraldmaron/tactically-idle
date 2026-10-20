@@ -3,11 +3,13 @@ import type { ReactNode } from 'react';
 import type {
   ActionView,
   BuiltLocation,
+  CertId,
   FactView,
   GameState,
   Id,
   Officer,
   OutcomeBand,
+  RatingKey,
   SpaceView,
   Squad,
   SquadId,
@@ -25,20 +27,24 @@ import { Sheet } from '../components/Sheet';
 import { Button, Chip, SubHead } from '../components/ui';
 import { ChoiceRail } from '../components/ChoiceRail';
 import { armamentLabel } from '../components/incident';
-import { ROLE_META, ROOM_TYPE_LABEL, STAGE_LABEL } from '../components/labels';
-import { highRiskAllowed } from '../../sim/officer';
+import { RATING_META, ROLE_META, ROOM_TYPE_LABEL, STAGE_LABEL, TRAIT_INFO } from '../components/labels';
+import { highRiskAllowed, stressBand } from '../../sim/officer';
+import { STRESS_LABEL, whole } from '../components/StressDisplay';
+import { CERT_NAME } from '../../content/certs';
 import { incidentOfficerUnavailable } from '../../sim/incident-consequences';
 import { describeConstruction } from '../../sim/spatial';
 import { Icon, actionIcon, materialIcon, roomIcon } from '../icons';
 import type { IconName } from '../icons';
 import { feetInches, opMinutes, signed, sqft } from '../format';
 import { CONSEQUENCE_LABEL, OddsBar, OutcomeForecast } from './OperationFeedback';
-import { DecisionList } from './DecisionList';
+import { DecisionList, LeadFace, RATING_SHORT } from './DecisionList';
 import { CONTRIBUTOR_GROUPS } from './contributor-groups';
 import { GamePeopleProvider, PeopleText } from '../people/PeopleText';
 import type { Lexicon } from '../people/lexicon';
+import { PlateArt } from '../art/Plates';
 import './operation-squads.css';
 import './ops-visual.css';
+import './live-call.css';
 import { Disclosure } from '../components/Disclosure';
 import { runRoster } from '../../sim/squads';
 
@@ -87,32 +93,67 @@ export interface LiveViewProps {
   supportContext?: ReactNode;
   /** The call's summary and briefing, kept in view under the title for the whole operation. */
   situation?: ReactNode;
-  /** One line naming the last result, kept just above the next decision; the full record sits below it. */
-  lastDecision?: ReactNode;
+  /** The call type's painted scene (art/Plates sceneFor), behind the pinned title. */
+  scene?: string | null;
   /** A response that can no longer progress is handled outside ordinary story choices. */
   failedResponse?: ReactNode;
   /** Overlay sheets (action detail, room sheet, cancel confirm) rendered by the container. */
   children?: ReactNode;
+  /** A hot call (sim/authorization.ts isHotCall): the call bar says "Lights and sirens". */
+  sirens?: boolean;
+  /** Which beat of the call shows (docs/call-presentation.md): the decision, or the result of the
+   * one just confirmed, with a Continue button. Left out, the decision. */
+  beat?: 'decide' | 'result';
+  /** Ends the result beat; shown as a pinned button labeled `continueLabel`. */
+  onContinue?: () => void;
+  continueLabel?: string;
   /** The game's people lexicon for this call: names are colored while "Color names by role" is on.
    * Left out (the Scenario Lab), the surrounding PeopleProvider decides. */
   people?: Lexicon | null;
 }
 
+/** The two halves of the live call (docs/call-presentation.md): the Call, read in story order, and
+ * the Scene, consulted for reference. */
+export type LiveTab = 'call' | 'scene';
+
 export function LiveView(p: LiveViewProps) {
   const focus = p.deployedSquads.find((s) => s.id === p.focusSquadId) ?? p.deployedSquads[0] ?? null;
   const sel = p.selectedAction;
   const multi = p.deployedSquads.length > 1;
+  const beat = p.beat ?? 'decide';
   const [materials, setMaterials] = useState(false);
   const [mapKey, setMapKey] = useState(false);
   const [expandedStage, setExpandedStage] = useState<string | null>(null);
+  const [tab, setTab] = useState<LiveTab>('call');
+  // The Scene switch carries a dot while the last decision changed the map and the player hasn't looked.
+  const [seenChange, setSeenChange] = useState<number | null>(null);
   const expanded = expandedStage === p.progress.stage;
   const available = p.actions.map((action) => action.id === sel?.id ? sel : action);
   // Renderer props that may not be declared yet (floor tabs, environment overlay). Spread so this compiles either way.
   const blueprintExtras = { floor: p.floor, onFloorChange: p.onFloorChange, environment: p.environment ?? undefined };
+  const changed = !!p.lastChange?.spaceIds.length && seenChange !== p.lastChange.revision;
+  const sceneDot = changed && tab !== 'scene';
+  const show = (next: LiveTab) => {
+    setTab(next);
+    if (next === 'scene' && p.lastChange) setSeenChange(p.lastChange.revision);
+  };
+  const stageNumber = p.progress.stages.findIndex((step) => step.state === 'current') + 1;
+  const threat = beat === 'decide' && tab === 'call' ? p.progress.threat ?? null : null;
+  const casualties = p.g.activeRun?.officerCasualties ?? {};
+  // A new result always opens on the Call view, even when the choice was picked from the Scene.
+  const beatKey = `${beat}:${p.lastChange?.revision ?? ''}`;
+  const [beatSeen, setBeatSeen] = useState(beatKey);
+  if (beatSeen !== beatKey) {
+    setBeatSeen(beatKey);
+    if (tab !== 'call') setTab('call');
+  }
 
   const screen = (
-    <div className="live">
-      <div className="live-title">
+    <div className={`live live-beat-${beat}`}>
+      {/* The call's name scrolls away; the bar under it stays pinned: where the call is, the two
+          views, and the one threat. */}
+      <header className={`live-head${p.scene ? ' plate' : ''}`}>
+        {p.scene && <PlateArt src={p.scene} />}
         <div className="live-id">
           <h2 className="live-name">{p.title}</h2>
           <p className="live-sub">
@@ -121,6 +162,7 @@ export function LiveView(p: LiveViewProps) {
               LIVE
             </span>
             <span>{p.subtitle}</span>
+            {p.sirens && <span className="live-hot"><Icon name="car" size={13} />Lights and sirens</span>}
             {p.canCancel && (
               <button type="button" className="linkbtn live-cancel" onClick={p.onCancel} aria-label="Cancel operation">
                 Cancel
@@ -128,13 +170,7 @@ export function LiveView(p: LiveViewProps) {
             )}
           </p>
         </div>
-        <StageSteps progress={p.progress} />
-      </div>
-
-      {p.situation}
-
-      <div className="live-map">
-        <div className="map-hud map-status" aria-label="Operation time and pressure">
+        <div className="live-status" aria-label="Operation time and pressure">
           <span className="hud-pill">
             <Icon name="clock" size={14} />
             {opMinutes(p.clock)}
@@ -146,174 +182,169 @@ export function LiveView(p: LiveViewProps) {
             <span>{pressureWord(p.pressure)}</span>
           </span>
         </div>
-        <div className="live-map-inner">
-          {p.showRooms ? (
-            <RoomList built={p.built} spaces={p.spaces} selectedSpaceId={p.selectedSpaceId} onSelectSpace={p.onSelectSpace} />
-          ) : (
-            <Blueprint
-              built={p.built}
-              spaces={p.spaces}
-              squadTasks={p.squadTasks}
-              selectedSpaceId={p.selectedSpaceId}
-              focusSquadId={focus?.id ?? null}
-              highlightSpaceIds={p.highlightSpaceIds}
-              onSelectSpace={p.onSelectSpace}
-              lastChange={p.lastChange}
-              overlays={sel?.overlays}
-              showMaterials={materials}
-              {...blueprintExtras}
-            />
-          )}
-        </div>
-        <div className="map-hud map-actions" role="group" aria-label="Map display">
-          {/* The map labels reported people in place, so the key is on demand instead of a permanent row. */}
-          <button type="button" className="hud-btn hud-btn-quiet map-key-btn" aria-label="Map key and inspection help" aria-haspopup="dialog" aria-expanded={mapKey} onClick={() => setMapKey(true)}><Icon name="info" size={16} />Key</button>
-          <Sheet open={mapKey} onClose={() => setMapKey(false)} title="Map key" modal={false} maxHeight="short">
-            <div className="map-key-body" aria-label="Map legend">
-              <span className="map-key-items">
-                <span><Icon name="user" size={18} className="lg-q legend-reported-person" />Reported</span>
-                <span><Icon name="user" size={18} className="lg-ok" />Confirmed</span>
-              </span>
-              <p>Dashed amber people are reports at approximate positions. Mint people have a confirmed position. Small item symbols stay beside their holder; amber items are still reported, even when the person is confirmed. An absent weapon symbol does not mean unarmed. Tap a room or use Rooms to inspect names, conditions and items.</p>
-            </div>
-          </Sheet>
-          {!p.showRooms && (
-            <button type="button" className="hud-btn" onClick={() => setMaterials((v) => !v)} aria-pressed={materials}>
-              <Icon name="layers" size={16} />
-              Materials
+      </header>
+      <div className="live-bar">
+        <StageSteps progress={p.progress} />
+        {threat && <ThreatPill label={threat.label} minutes={threat.minutes} />}
+        <div className="live-switch" role="tablist" aria-label="Live call">
+          {([['call', 'Call', 'flag'], ['scene', 'Scene', 'blueprint']] as const).map(([id, label, icon]) => (
+            <button key={id} type="button" role="tab" id={`live-tab-${id}`} aria-controls={`live-panel-${id}`} aria-selected={tab === id} className={`live-switch-btn${tab === id ? ' live-switch-on' : ''}`} onClick={() => show(id)}>
+              <Icon name={icon} size={15} />{label}
+              {id === 'scene' && sceneDot && <span className="navdot live-switch-dot" role="img" aria-label="The map changed" />}
             </button>
-          )}
-          <button type="button" className="hud-btn" onClick={p.onToggleRooms} aria-pressed={p.showRooms}>
-            <Icon name={p.showRooms ? 'blueprint' : 'list'} size={16} />
-            {p.showRooms ? 'Map' : 'Rooms'}
-          </button>
+          ))}
         </div>
       </div>
 
-      {multi && (
-        <div className="live-squad-rail operation-squad-focus">
-          <p className="picker-label">Squad for next decision</p>
-          <ChoiceRail value={focus?.id ?? p.deployedSquads[0].id} kind="tabs" label="Squad for next decision" panelId="deployed-officer-strip" onChange={p.onFocusSquad} options={p.deployedSquads.map((s) => {
-            // In the field, readiness means members still fit for high-risk work (not deploy eligibility).
-            const went = p.g.activeRun ? runRoster(p.g, p.g.activeRun, s.id) : s.officerIds;
-            const fit = went.filter((id) => p.g.officers[id] && highRiskAllowed(p.g.officers[id]) && (!p.g.activeRun || !incidentOfficerUnavailable(p.g, p.g.activeRun, id))).length;
-            const task = p.squadTasks.find(task => task.squadId === s.id);
-            const location = p.spaces.find(space => space.id === task?.positionId)?.label ?? task?.positionId;
-            const unavailable = p.unavailableSquadIds?.includes(s.id) && s.id !== focus?.id;
-            return { value: s.id, disabled: unavailable, accessibleLabel: `Squad ${s.id}, ${s.name}, ${fit} of ${went.length} fit${location ? `, at ${location}` : ''}${unavailable ? ', unavailable for this decision' : ''}`,
-              label: <><b>{s.id}</b><span className="squad-tab-detail"><span className="squad-tab-name">{s.name}</span>{location && <small>{location}</small>}</span><span className="choice-rail-count">{fit}/{went.length} fit</span></> };
-          })} />
-          <p className="operation-squad-hint">{sel ? `Reviewing with ${sel.actingSquadIds.map(id => `Squad ${id}`).join(' + ')}. Switching here changes who acts.` : 'Choose who acts, then review a decision. Pick support in the review.'}</p>
-        </div>
-      )}
-
-      <div className="strip" id="deployed-officer-strip" role={multi ? 'tabpanel' : undefined} aria-label={focus ? `${focus.name} officers` : 'Officers'}>
-        {p.officers.map((o) => {
-          const casualty = p.g.activeRun?.officerCasualties?.[o.id];
-          const acting = !casualty && (sel?.officerIds.includes(o.id) ?? false);
-          const active = p.activeOfficerId === o.id;
-          const cap = !casualty && active && sel ? capabilityFor(sel, o) : null;
-          return (
-            <OfficerCard
-              key={o.id}
-              officer={o}
-              now={p.now}
-              incidentInjury={casualty?.label}
-              note={casualty ? 'Out of action' : undefined}
-              selected={active}
-              onClick={() => p.onSelectOfficer(o.id)}
-              leader={focus?.leaderId === o.id}
-              chip={
-                cap ? (
-                  <span className={`capchip${cap.value < 0 ? ' capchip-neg' : ''}`}>
-                    {cap.text}
-                  </span>
-                ) : acting ? (
-                  <span className="capchip capchip-quiet">Taking part</span>
-                ) : undefined
-              }
-            />
-          );
-        })}
-        {p.officers.length === 0 && <p className="strip-empty">No officers in this squad.</p>}
+      <div className="live-panel live-panel-call" id="live-panel-call" role="tabpanel" aria-labelledby="live-tab-call" hidden={tab !== 'call'}>
+        {beat === 'result' ? <>
+          {p.feedback}
+          {p.onContinue && <div className="stickyfoot live-continue">
+            <Button variant="primary" block onClick={p.onContinue}>{p.continueLabel ?? 'Continue'}<Icon name="chevronRight" size={18} /></Button>
+          </div>}
+        </> : <>
+          {p.feedback}
+          <section className="call operation-choices" aria-label="Your call">
+            <p className="call-head">
+              <span className="call-label">{stageNumber > 0 ? `Stage ${stageNumber} of ${p.progress.stages.length}` : 'Your next decision'}</span>
+              {sel && (
+                <button type="button" className="call-details" onClick={p.onOpenDetails} aria-expanded={p.detailsOpen}>
+                  Review decision
+                  <Icon name="chevronDown" size={14} />
+                </button>
+              )}
+            </p>
+            <DecisionList prompt={p.progress.prompt} exchange={p.progress.exchange} actions={available} selectedId={sel?.id ?? null} expanded={expanded} officers={p.g.officers} onSelect={p.onSelectAction} onExpand={() => setExpandedStage(expanded ? null : p.progress.stage)}
+              team={<section className="live-team" aria-label="Who's on it">
+                <h3 className="live-team-h"><Icon name="people" size={14} />{focus ? `Squad ${focus.id} · ${focus.name}` : 'Your team'}</h3>
+                {multi && <div className="live-squad-rail operation-squad-focus">
+                  <ChoiceRail value={focus?.id ?? p.deployedSquads[0].id} kind="tabs" label="Squad for next decision" panelId="live-team-faces" onChange={p.onFocusSquad} options={p.deployedSquads.map((s) => {
+                    // In the field, readiness means members still fit for high-risk work (not deploy eligibility).
+                    const went = p.g.activeRun ? runRoster(p.g, p.g.activeRun, s.id) : s.officerIds;
+                    const fit = went.filter((id) => p.g.officers[id] && highRiskAllowed(p.g.officers[id]) && (!p.g.activeRun || !incidentOfficerUnavailable(p.g, p.g.activeRun, id))).length;
+                    const task = p.squadTasks.find(task => task.squadId === s.id);
+                    const location = p.spaces.find(space => space.id === task?.positionId)?.label ?? task?.positionId;
+                    const unavailable = p.unavailableSquadIds?.includes(s.id) && s.id !== focus?.id;
+                    return { value: s.id, disabled: unavailable, accessibleLabel: `Squad ${s.id}, ${s.name}, ${fit} of ${went.length} fit${location ? `, at ${location}` : ''}${unavailable ? ', unavailable for this decision' : ''}`,
+                      label: <><b>{s.id}</b><span className="squad-tab-detail"><span className="squad-tab-name">{s.name}</span>{location && <small>{location}</small>}</span><span className="choice-rail-count">{fit}/{went.length} fit</span></> };
+                  })} />
+                  <p className="operation-squad-hint">{sel ? `Reviewing with ${sel.actingSquadIds.map(id => `Squad ${id}`).join(' + ')}. Switching here changes who acts.` : 'Choose who acts, then review a decision. Pick support in the review.'}</p>
+                </div>}
+                <ul className="live-team-faces" id="live-team-faces" role={multi ? 'tabpanel' : undefined}>
+                  {p.officers.map((o) => {
+                    const casualty = casualties[o.id];
+                    const band = stressBand(o.stress);
+                    return <li key={o.id} className={`live-team-face${casualty ? ' live-team-out' : ''}`}>
+                      <LeadFace officer={o} size={40} />
+                      <span className="live-team-name">{o.surname}{focus?.leaderId === o.id && <Icon name="star" size={11} className="live-team-leader" />}</span>
+                      {casualty ? <span className="live-team-stress stress-recovery">Out of action</span>
+                        : <span className={`live-team-stress lead-choice-stress stress-${band}`} aria-label={`Stress ${whole(o.stress)}, ${STRESS_LABEL[band].toLowerCase()}`}>Stress {whole(o.stress)}</span>}
+                    </li>;
+                  })}
+                  {p.officers.length === 0 && <li className="strip-empty">No officers in this squad.</li>}
+                </ul>
+              </section>} />
+          </section>
+          {p.failedResponse}
+        </>}
       </div>
 
-      {p.lastDecision}
-
-      <div className="call operation-choices" aria-label="Your call">
-        <div className="call-head">
-          <span className="call-label">YOUR NEXT DECISION</span>
-          {sel && (
-            <button type="button" className="call-details" onClick={p.onOpenDetails} aria-expanded={p.detailsOpen}>
-              Review decision
-              <Icon name="chevronDown" size={14} />
+      <div className="live-panel live-panel-scene" id="live-panel-scene" role="tabpanel" aria-labelledby="live-tab-scene" hidden={tab !== 'scene'}>
+        {p.situation}
+        <div className="live-map">
+          <div className="live-map-inner">
+            {p.showRooms ? (
+              <RoomList built={p.built} spaces={p.spaces} selectedSpaceId={p.selectedSpaceId} onSelectSpace={p.onSelectSpace} />
+            ) : (
+              <Blueprint
+                built={p.built}
+                spaces={p.spaces}
+                squadTasks={p.squadTasks}
+                selectedSpaceId={p.selectedSpaceId}
+                focusSquadId={focus?.id ?? null}
+                highlightSpaceIds={p.highlightSpaceIds}
+                onSelectSpace={p.onSelectSpace}
+                lastChange={p.lastChange}
+                overlays={sel?.overlays}
+                showMaterials={materials}
+                {...blueprintExtras}
+              />
+            )}
+          </div>
+          <div className="map-hud map-actions" role="group" aria-label="Map display">
+            {/* The map labels reported people in place, so the key is on demand instead of a permanent row. */}
+            <button type="button" className="hud-btn hud-btn-quiet map-key-btn" aria-label="Map key and inspection help" aria-haspopup="dialog" aria-expanded={mapKey} onClick={() => setMapKey(true)}><Icon name="info" size={16} />Key</button>
+            <Sheet open={mapKey} onClose={() => setMapKey(false)} title="Map key" modal={false} maxHeight="short">
+              <div className="map-key-body" aria-label="Map legend">
+                <span className="map-key-items">
+                  <span><Icon name="user" size={18} className="lg-q legend-reported-person" />Reported</span>
+                  <span><Icon name="user" size={18} className="lg-ok" />Confirmed</span>
+                </span>
+                <p>Dashed amber people are reports at approximate positions. Mint people have a confirmed position. Small item symbols stay beside their holder; amber items are still reported, even when the person is confirmed. An absent weapon symbol does not mean unarmed. Tap a room or use Rooms to inspect names, conditions and items.</p>
+              </div>
+            </Sheet>
+            {!p.showRooms && (
+              <button type="button" className="hud-btn" onClick={() => setMaterials((v) => !v)} aria-pressed={materials}>
+                <Icon name="layers" size={16} />
+                Materials
+              </button>
+            )}
+            <button type="button" className="hud-btn" onClick={p.onToggleRooms} aria-pressed={p.showRooms}>
+              <Icon name={p.showRooms ? 'blueprint' : 'list'} size={16} />
+              {p.showRooms ? 'Map' : 'Rooms'}
             </button>
-          )}
+          </div>
         </div>
-        <DecisionList prompt={p.progress.prompt} actions={available} selectedId={sel?.id ?? null} expanded={expanded} onSelect={p.onSelectAction} onExpand={() => setExpandedStage(expanded ? null : p.progress.stage)} />
-      </div>
 
-      {p.failedResponse}
-      {p.feedback}
-      {p.supportContext}
-      {p.actions.length > 0 && <DecisionDock available={available.filter((action) => action.eligible).length} />}
+        <div className="strip" id="deployed-officer-strip" aria-label={focus ? `${focus.name} officers` : 'Officers'}>
+          {p.officers.map((o) => {
+            const casualty = casualties[o.id];
+            const acting = !casualty && (sel?.officerIds.includes(o.id) ?? false);
+            const active = p.activeOfficerId === o.id;
+            const cap = !casualty && active && sel ? capabilityFor(sel, o) : null;
+            return (
+              <OfficerCard
+                key={o.id}
+                officer={o}
+                now={p.now}
+                incidentInjury={casualty?.label}
+                note={casualty ? 'Out of action' : undefined}
+                selected={active}
+                onClick={() => p.onSelectOfficer(o.id)}
+                leader={focus?.leaderId === o.id}
+                chip={
+                  cap ? (
+                    <span className={`capchip${cap.value < 0 ? ' capchip-neg' : ''}`}>
+                      {cap.text}
+                    </span>
+                  ) : acting ? (
+                    <span className="capchip capchip-quiet">{sel?.officerIds[0] === o.id ? 'Leads' : 'Taking part'}</span>
+                  ) : undefined
+                }
+              />
+            );
+          })}
+          {p.officers.length === 0 && <p className="strip-empty">No officers in this squad.</p>}
+        </div>
+
+        {p.supportContext}
+      </div>
       {p.children}
     </div>
   );
   return p.people === undefined ? screen : <GamePeopleProvider lexicon={p.people}>{screen}</GamePeopleProvider>;
 }
 
-/** A floating shortcut back to the decisions, shown only while they sit below the visible area. */
-function DecisionDock({ available }: { available: number }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [below, setBelow] = useState(false);
-  useEffect(() => {
-    const dock = ref.current;
-    const target = dock?.closest('.live')?.querySelector('.operation-choices');
-    if (!dock || !target || typeof IntersectionObserver === 'undefined') return;
-    const root = dock.closest('.screen');
-    const observer = new IntersectionObserver(([entry]) => {
-      const bottom = entry.rootBounds?.bottom ?? window.innerHeight;
-      setBelow(!entry.isIntersecting && entry.boundingClientRect.top >= bottom - 1);
-    }, { root, threshold: 0, rootMargin: '0px 0px -40px 0px' });
-    observer.observe(target);
-    return () => observer.disconnect();
-  }, []);
-  // On a short screen the map fills the view; the shortcut would cover rooms, so it waits until the map scrolls past.
-  const [overMap, setOverMap] = useState(false);
-  useEffect(() => {
-    const dock = ref.current;
-    if (!dock) return;
-    let frame = 0;
-    const check = () => {
-      frame = 0;
-      const button = dock.querySelector('.decision-dock-btn')?.getBoundingClientRect();
-      const map = dock.closest('.live')?.querySelector('.live-map')?.getBoundingClientRect();
-      setOverMap(Boolean(button && map && button.top < map.bottom && button.bottom > map.top));
-    };
-    const schedule = () => { if (!frame) frame = requestAnimationFrame(check); };
-    check();
-    // Capture catches whichever ancestor scrolls.
-    document.addEventListener('scroll', schedule, { capture: true, passive: true });
-    window.addEventListener('resize', schedule);
-    return () => {
-      cancelAnimationFrame(frame);
-      document.removeEventListener('scroll', schedule, { capture: true });
-      window.removeEventListener('resize', schedule);
-    };
-  }, []);
-  const shown = below && !overMap;
-  const go = () => {
-    const target = ref.current?.closest('.live')?.querySelector<HTMLElement>('.operation-choices');
-    target?.scrollIntoView({ block: 'start', behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
-    target?.querySelector<HTMLElement>('.callbtn')?.focus({ preventScroll: true });
-  };
-  return <div ref={ref} className={`decision-dock${shown ? ' decision-dock-on' : ''}`} aria-hidden={!shown}>
-    <button type="button" className="decision-dock-btn" tabIndex={shown ? 0 : -1} onClick={go}>
-      <Icon name="chevronDown" size={16} />
-      Next decision{available > 0 ? <b>{available}</b> : null}
-    </button>
-  </div>;
+/** The decision point's threat, pinned under the call bar while the player decides: "<label> · <n>
+ * min". The minutes are what a choice may take before it lands; each card's tag says whether it
+ * would. Still, never animated: nothing changes until the player chooses. */
+export function ThreatPill({ label, minutes }: { label: string; minutes: number }) {
+  return <p className="threat-pill" aria-label={`Threat: ${label} in ${minutes} minutes`}>
+    <Icon name="hourglass" size={14} />
+    <span className="threat-pill-label">{label}</span>
+    <span className="threat-pill-sep" aria-hidden="true">·</span>
+    <b className="threat-pill-min">{minutes} min</b>
+  </p>;
 }
 
 function pressureWord(v: number): string {
@@ -472,6 +503,19 @@ export interface ActionSheetProps {
   onResupply?: () => void;
   alternatives?: ActionView[];
   onUseAlternative?: (view: ActionView) => void;
+  /** The deployed officers, for the lead picker. Left out, the sheet shows no picker. */
+  officers?: Readonly<Record<Id, Officer>>;
+  /** Who leads now, the engine's best fit, and the lead's marks (trait ids, band_<band>). */
+  lead?: Id | null;
+  bestFit?: Id | null;
+  /** Those taking part in the engine's order, so the faces stay put when the lead changes. */
+  leadOrder?: Id[];
+  leadMarks?: string[];
+  /** The ratings the choice blends, heaviest first, and the certificates whose holders lead first. */
+  leadBlend?: RatingKey[];
+  leadCerts?: CertId[];
+  /** A tap on a face among those taking part. */
+  onPickLead?: (id: Id) => void;
 }
 
 export function ActionSheet(p: ActionSheetProps) {
@@ -514,6 +558,7 @@ export function ActionSheet(p: ActionSheetProps) {
           {p.onBackToSupport && <Button variant="ghost" onClick={p.onBackToSupport}>Back to care &amp; support</Button>}
           {p.squads.length > 1 && <ActionSquadAssignment {...p} view={v} />}
           {v.summary !== v.outcomePreview.favorable && <p className="operation-action-summary"><PeopleText text={v.summary} /></p>}
+          {p.officers && v.eligible && <LeadPicker view={v} officers={p.officers} lead={p.lead ?? v.officerIds[0] ?? null} bestFit={p.bestFit ?? null} order={p.leadOrder} marks={p.leadMarks ?? []} blend={p.leadBlend ?? []} certs={p.leadCerts ?? []} onPick={p.onPickLead} />}
           {v.eligible && v.authority?.allowed && <p className="operation-command-line"><Icon name="radio" size={14} />{v.authority.reason}</p>}
           <div className="chips action-glance">
             <Chip icon="clock">Estimated time: {v.timeLabel ?? opMinutes(v.timeCost)}</Chip>
@@ -623,6 +668,55 @@ export function ActionSheet(p: ActionSheetProps) {
       )}
     </Sheet>
   );
+}
+
+const BAND_MARK: Record<string, string> = { band_rookie: 'Rookie service', band_developing: 'Developing', band_seasoned: 'Seasoned', band_veteran: 'Veteran' };
+/** A lead mark as a chip label: a trait's name, or the experience band. */
+export function leadMarkLabel(mark: string): string {
+  return TRAIT_INFO[mark as keyof typeof TRAIT_INFO]?.label ?? BAND_MARK[mark] ?? mark.replace(/_/g, ' ');
+}
+
+/** Who leads, among those taking part: one tap on a face swaps the lead, and the odds, the strain
+ * and the results that read the lead follow. The engine's best fit leads until the player picks. */
+export function LeadPicker({ view, officers, lead, bestFit, order, marks, blend = [], certs = [], onPick }: { view: ActionView; officers: Readonly<Record<Id, Officer>>; lead: Id | null; bestFit: Id | null;
+  order?: readonly Id[]; marks: readonly string[]; blend?: readonly RatingKey[]; certs?: readonly CertId[]; onPick?: (id: Id) => void }) {
+  // The faces keep the engine's order, so the one tapped doesn't jump to the front.
+  const taking = view.officerIds.filter((id) => officers[id]);
+  const ids = [...(order ?? []).filter((id) => taking.includes(id)), ...taking.filter((id) => !order?.includes(id))];
+  const leader = lead ? officers[lead] : undefined;
+  if (!ids.length || !leader) return null;
+  const key = view.keyRating;
+  const keyLabel = key ? RATING_META.find((meta) => meta.key === key)?.label ?? key : null;
+  const reads = view.leadReads ?? [];
+  return <section className="lead-picker" aria-label="Who leads">
+    {/* The best fit is the engine's order: a needed certificate first, then the blend, worn down by stress. */}
+    <span className="picker-label"><Icon name="flag" size={14} />Who leads{blend.length ? <small> · {blend.map((r) => RATING_SHORT[r]).join(' + ')}</small> : keyLabel ? <small> · {keyLabel}</small> : null}</span>
+    {ids.length > 1 && onPick && <div className="lead-choices" role="radiogroup" aria-label="Who leads">
+      {ids.map((id) => {
+        const officer = officers[id];
+        const on = id === lead;
+        const band = stressBand(officer.stress);
+        const rating = key ? Math.round(officer.ratings[key]) : null;
+        return <button key={id} type="button" role="radio" aria-checked={on} className={`lead-choice${on ? ' lead-choice-on' : ''}`} onClick={() => onPick(id)}
+          aria-label={`${officer.firstName} ${officer.surname}${rating !== null ? `, ${keyLabel} ${rating}` : ''}, ${STRESS_LABEL[band].toLowerCase()}${id === bestFit ? ', best fit' : ''}`}>
+          <LeadFace officer={officer} size={40} />
+          <span className="lead-choice-name">{officer.surname}</span>
+          {rating !== null && key && <span className="lead-choice-rating">{RATING_SHORT[key]} <b>{rating}</b></span>}
+          {certs.filter((cert) => officer.certs.includes(cert)).slice(0, 1).map((cert) => <span key={cert} className="lead-choice-cert">{CERT_NAME[cert]}</span>)}
+          <span className={`lead-choice-stress stress-${band}`}>Stress {whole(officer.stress)}</span>
+          {id === bestFit && <span className="lead-choice-fit">Best fit</span>}
+        </button>;
+      })}
+    </div>}
+    <p className="lead-strain"><Icon name="warning" size={14} /><span><b>{leader.surname}</b> leads: carries more strain.</span></p>
+    {reads.length > 0 && <div className="lead-reads">
+      <p>Results here turn on who leads.</p>
+      <div className="chips">{reads.map((mark) => {
+        const has = marks.includes(mark);
+        return <Chip key={mark} tone={has ? 'mint' : 'neutral'} icon={has ? 'check' : 'x'} title={has ? `${leader.surname} brings this` : `${leader.surname} does not`}>{leadMarkLabel(mark)}</Chip>;
+      })}</div>
+    </div>}
+  </section>;
 }
 
 /** Role choices precede costs/forecasts so the displayed commitment is easy to change. */

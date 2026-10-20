@@ -3,11 +3,12 @@
 // rate and lists recent events. Nothing here invents money: between ticks the balance follows the
 // settled rate only while it is really accruing, and it snaps to the saved value on every tick.
 import { useEffect, useRef, useState } from 'react';
-import type { GameState, LedgerEntry, LedgerKind } from '../../sim/types';
+import type { GameState, LedgerEntry, LedgerKind, SquadDuty } from '../../sim/types';
 import { budget } from '../../sim/department-selectors';
-import { ECONOMY_TUNING, HOUR_MS } from '../../sim/economy';
+import { ECONOMY_TUNING, HOUR_MS, officerRates } from '../../sim/economy';
+import { fullName } from '../../sim/officer';
 import { Icon, type IconName } from '../icons';
-import { duration, money, moneyFull, perHour, rate, relativeTime, signedMoney } from '../format';
+import { duration, money, moneyFull, perHour, rate, ratePerMinute, relativeTime, signedMoney } from '../format';
 import './finance.css';
 
 const reducedMotion = () => typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -53,15 +54,23 @@ export function useLiveFunding(g: GameState): { shown: number; deltas: FundingDe
 
   useEffect(() => {
     if (reducedMotion()) { setShown(g.department.funding); return; }
-    const timer = window.setInterval(() => {
+    // Frame-bound so the balance climbs smoothly. The ease is time-based (35% of the gap per 100ms),
+    // so a payout still counts up over about half a second at any frame rate, and the view only
+    // re-renders when the shown whole-dollar figure changes.
+    let frame = 0;
+    let last = performance.now();
+    const step = (at: number) => {
       const target = liveFunding(gRef.current, Date.now());
       const current = shownRef.current;
-      // Ease toward the target: a payout counts up over about half a second, accrual just follows.
-      const next = Math.abs(target - current) < 1 ? target : current + (target - current) * 0.35;
+      const k = 1 - Math.pow(0.65, Math.min(1000, at - last) / 100);
+      last = at;
+      const next = Math.abs(target - current) < 1 ? target : current + (target - current) * k;
       shownRef.current = next;
-      setShown(next);
-    }, 100);
-    return () => window.clearInterval(timer);
+      if (Math.round(next) !== Math.round(current)) setShown(next);
+      frame = window.requestAnimationFrame(step);
+    };
+    frame = window.requestAnimationFrame(step);
+    return () => window.cancelAnimationFrame(frame);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return { shown: reducedMotion() ? g.department.funding : shown, deltas };
@@ -91,7 +100,7 @@ export function FinanceDetail({ g, now = Date.now() }: { g: GameState; now?: num
   return <div className="finance">
     <div className="finance-hero">
       <p className="finance-balance">{moneyFull(liveFunding(g, now))}</p>
-      <span className={`finance-rate ${b.net < 0 ? 'tone-danger' : 'tone-mint'}`}><Icon name="trend" size={14} />{rate(b.net)}</span>
+      <span className={`finance-rate ${b.net < 0 ? 'tone-danger' : 'tone-mint'}`}><Icon name="trend" size={14} />{ratePerMinute(b.net)}<small>{rate(b.net)}</small></span>
     </div>
     {left <= 0 ? <p className="note note-warn finance-window"><Icon name="clock" size={14} />Hourly income and costs are paused. They resume with your next order.</p>
       : left < 6 * HOUR_MS && <p className="dim finance-window"><Icon name="clock" size={14} />Hourly income and costs stop in {duration(left)} unless you give an order.</p>}
@@ -107,12 +116,37 @@ export function FinanceDetail({ g, now = Date.now() }: { g: GameState; now?: num
       {b.staff > 0 && <div><dt>Command staff</dt><dd>-{perHour(b.staff)}</dd></div>}
       <div><dt>Facilities</dt><dd>-{perHour(b.operating)}</dd></div>
       <div><dt>Routine supplies</dt><dd>-{perHour(b.supplies)}</dd></div>
-      <div className="finance-lines-dp"><dt>Development points</dt><dd>{b.devPointsPerHour.toFixed(1)}/h</dd></div>
     </dl>
+    <OfficerMoney g={g} />
     <h3 className="finance-head">Recent activity</h3>
     {entries.length === 0 ? <p className="dim">No payouts, purchases or fees yet. Hourly income and costs show as the rate above.</p>
       : <ul className="finance-activity">{entries.map((e) => <ActivityRow key={e.seq} e={e} now={now} />)}</ul>}
   </div>;
+}
+
+const DUTY_LABEL: Record<SquadDuty, string> = { patrol: 'On patrol', standby: 'On standby', rest: 'Resting' };
+
+/** Each officer's net a minute, best first: patrol pay or a detail's fee, less their wage. */
+export function OfficerMoney({ g, now = Date.now() }: { g: GameState; now?: number }) {
+  const per = officerRates(g, Math.max(now, g.department.lastSettledAt));
+  const squadDuty = new Map(g.squads.flatMap((s) => s.officerIds.map((id) => [id, s.duty] as const)));
+  const rows = Object.values(g.officers)
+    .map((o) => ({ o, r: per[o.id] }))
+    .sort((a, b) => b.r.net - a.r.net || a.o.surname.localeCompare(b.o.surname));
+  if (!rows.length) return null;
+  const doing = (o: GameState['officers'][string], r: (typeof rows)[number]['r']) =>
+    r.detail > 0 ? 'Instructor detail'
+      : o.assignment?.kind === 'training' ? 'In training'
+      : o.assignment?.kind === 'operation' ? 'On a call'
+      : o.injury && o.injury.until > now ? 'Injured'
+      : DUTY_LABEL[squadDuty.get(o.id) ?? 'standby'] ?? 'Unassigned';
+  return <section className="finance-officers" aria-label="Money by officer">
+    <h3 className="finance-head">By officer</h3>
+    <ul className="finance-officer-list">{rows.map(({ o, r }) => <li key={o.id}>
+      <span className="finance-activity-main"><strong>{fullName(o)}</strong><span className="dim">{doing(o, r)} · wage {perHour(r.wage)}{o.career.earned ? ` · brought in ${money(o.career.earned)}` : ''}</span></span>
+      <b className={r.net < 0 ? 'tone-danger' : 'tone-mint'}>{ratePerMinute(r.net)}</b>
+    </li>)}</ul>
+  </section>;
 }
 
 function ActivityRow({ e, now }: { e: LedgerEntry; now: number }) {

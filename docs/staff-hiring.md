@@ -90,7 +90,7 @@ ranges show the spread from Steady to Seasoned. Salary is per hour while on duty
 
 ## How it plays
 
-1. Develop establishes the post (DP only; the funding moves to the signing fee).
+1. Develop establishes the post for $1,600, or grants it free at its milestone; the person's own cost is the signing fee.
 2. The post shows three candidates in its sheet: face, name, archetype, the two levers as plain
    numbers against the post's default, salary and signing fee, and the net-per-hour change, the
    same projection officer hires use.
@@ -102,7 +102,8 @@ ranges show the spread from Steady to Seasoned. Salary is per hour while on duty
 The owner said to proceed with the proposals (2026-10-19):
 
 1. The four personnel posts cost DP only in Develop; the funding moved to each candidate's signing
-   fee. The Quartermaster's post is still the equipment manager node, whose tiers keep their prices
+   fee. Superseded 2026-10-20: development points are gone, so each post costs $1,600 in Develop
+   or opens free at its milestone. The Quartermaster's post is still the equipment manager node, whose tiers keep their prices
    because each tier raises the post's own servicing benefits.
 2. The three painted managers (Sam Navarro, Jordan Pike, Robin Kessler) are offered first when
    their post opens, as one of the three archetypes. Later draws use the persona pool.

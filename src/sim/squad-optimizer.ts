@@ -2,7 +2,8 @@
 // roster: no scenario, hidden truth, demographics, or random-number generator.
 import type { CertId, GameState, HandlerResult, Id, Officer, RatingKey, SquadDuty, SquadId } from './types';
 import { SQUAD_IDS } from './types';
-import { experienceBand, gameDay, simNow } from './calendar';
+import { simNow } from './calendar';
+import { experienceBand } from './ranks';
 import { recoveryDuty, squadDeployed } from './squads';
 import { conditionFraction, deployability, EXPERIENCE_TUNING, highRiskAllowed, STRESS_BANDS, stressBand } from './officer';
 import { CERT_HOLDER } from '../content/certs';
@@ -99,7 +100,7 @@ export function officerArrangementReadiness(state: GameState, officer: Officer):
 function effective(o: Officer, key: RatingKey): number {
   return Math.round(o.ratings[key] * (1 - conditionFraction(o.stress)));
 }
-function band(state: GameState, o: Officer) { return experienceBand(o, gameDay(state, simNow(state))); }
+function band(_state: GameState, o: Officer) { return experienceBand(o); }
 
 /** Relevant facts, not the tick timestamp. No names, portraits, birth dates or other demographics. */
 export function squadArrangementToken(state: GameState): string {
