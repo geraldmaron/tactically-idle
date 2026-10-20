@@ -51,6 +51,8 @@ export function callStringRows(authored: CallTree, bind: (text: string) => strin
   };
   add('card.title', 'title', tree.title);
   add('card.summary', 'hook', tree.summary);
+  add('card.coldOpen', 'cold_open', tree.coldOpen);
+  for (const role of tree.roles) add(`briefing.who.${role.id}`, 'profile', role.profile);
   add('card.pressure', 'pressure_label', tree.pressureLabel);
   add('briefing.dispatch', 'dispatch', tree.briefing.dispatchReason);
   tree.briefing.known.forEach((line, i) => add(`briefing.known[${i}]`, 'known', line));
@@ -76,6 +78,8 @@ export function callStringRows(authored: CallTree, bind: (text: string) => strin
       const base = { stage: node.stage, action: choice.id, path: node.id };
       add(`${node.id}.${choice.id}.title`, 'choice_title', choice.title, base);
       add(`${node.id}.${choice.id}.summary`, 'summary', choice.summary, base);
+      add(`${node.id}.${choice.id}.pull`, 'pull', choice.pull, base);
+      add(`${node.id}.${choice.id}.cost`, 'cost', choice.cost, base);
       for (const band of BANDS) add(`${node.id}.${choice.id}.preview.${band}`, 'preview', choice.preview[band], { ...base, band });
       (choice.modifiers ?? []).forEach((modifier, i) => add(`${node.id}.${choice.id}.modifier[${i}]`, 'modifier', modifier.label, base));
       for (const band of BANDS) choice.outcomes[band].forEach((outcome, i) => {

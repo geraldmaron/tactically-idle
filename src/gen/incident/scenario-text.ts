@@ -7,7 +7,8 @@ export function mapScenarioText(input: ScenarioDefinition, text: (value: string)
     for (const key of names) if (typeof value[key] === 'string') value[key] = text(value[key] as string) as T[keyof T];
   };
   const lines = (list: { speaker: string; line: string }[] | undefined) => { for (const line of list ?? []) fields(line, ['speaker', 'line']); };
-  fields(s, ['title', 'summary', 'variantLabel', 'pressureLabel']);
+  fields(s, ['title', 'summary', 'variantLabel', 'pressureLabel', 'coldOpen']);
+  for (const person of s.briefing.people ?? []) fields(person, ['name', 'text']);
   s.briefing.known = s.briefing.known.map(text); s.briefing.unknown = s.briefing.unknown.map(text);
   fields(s.briefing, ['dispatchReason']);
   if (s.briefing.teamResponsibilities) s.briefing.teamResponsibilities = s.briefing.teamResponsibilities.map(text);
@@ -27,6 +28,7 @@ export function mapScenarioText(input: ScenarioDefinition, text: (value: string)
     for (const entry of stage.contextPrompts ?? []) { fields(entry, ['prompt']); lines(entry.exchange); }
     for (const a of stage.actions) {
       fields(a, ['title', 'summary', 'task', 'hazardReason']);
+      if (a.weighing) fields(a.weighing, ['pull', 'cost']);
       for (const map of [a.outcomePreview, a.resultLabels]) if (map) fields(map, ['favorable', 'mixed', 'adverse']);
       for (const list of [a.requires.facts, a.requires.flags, a.requires.notFlags, a.requires.storyProps, a.requires.externalSupport])
         for (const item of list ?? []) fields(item, ['reason']);

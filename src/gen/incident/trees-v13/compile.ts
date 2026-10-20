@@ -771,7 +771,10 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
   s.summary = tree.summary;
   s.pressureLabel = tree.pressureLabel;
   s.pressure = { ...tree.pressure };
-  s.briefing = { dispatchReason: tree.briefing.dispatchReason, known: [...tree.briefing.known], unknown: [...tree.briefing.unknown], teamResponsibilities: [...tree.briefing.responsibilities] };
+  const profiles = tree.roles.filter(role => role.profile?.trim()).map(role => ({ personId: role.id, name: `{${role.id}}`, text: role.profile! }));
+  s.briefing = { dispatchReason: tree.briefing.dispatchReason, known: [...tree.briefing.known], unknown: [...tree.briefing.unknown], teamResponsibilities: [...tree.briefing.responsibilities],
+    ...(profiles.length ? { people: profiles } : {}) };
+  if (tree.coldOpen) s.coldOpen = tree.coldOpen;
   s.objectives = tree.objectives.map(objective => ({ ...objective }));
   s.externalServices = [];
   const multiplier = tierRewardMultiplier(spec.tier);
@@ -1153,6 +1156,7 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
       ...(walker ? { storyRoute: walkRoute(choice), storyRouteActor: 'person' as const, storyTargetPersonId: walker } : talksTo ? { storyTargetPersonId: talksTo } : {}),
       ...(talksTo ? { talksTo } : {}),
       ...(choice.deceives ? { deceives: true as const } : {}),
+      ...(choice.pull && choice.cost ? { weighing: { pull: choice.pull, cost: choice.cost } } : {}),
       ...(choice.authority ? { authority: choice.authority === 'entry' ? { kind: 'entry' as const } : { kind: 'concession' as const, item: choice.authority.concede } } : {}),
       // A resolve-stage step always says it stays in resolve unless it ends the call; the engine
       // reads that before any branch, and a later routed effect still moves the call on.

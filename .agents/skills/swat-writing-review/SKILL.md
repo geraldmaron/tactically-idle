@@ -304,7 +304,7 @@ house target and finding row.
 
 ## 8a. Pass six, the depth read
 
-A call can be correct and forgettable. Run the nine depth gates in references/review-rubric.md
+A call can be correct and forgettable. Run the ten depth gates in references/review-rubric.md
 section 9 on every new or rebuilt call, after the other passes. Read the transcript lines
 aloud. Tag every adverse escalation by its mechanism from swat-call-design's escalation palette.
 Write the two-player argument for each stage, and read each epilogue alone. Only a separate

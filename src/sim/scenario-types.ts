@@ -258,6 +258,8 @@ export interface ActionDefinition {
   authority?: AuthorityRequest;
   /** V13: a lie or a promise command never approved (dilemma pattern 15). The card says so. */
   deceives?: true;
+  /** V13: what draws a player to the choice, and what it costs, one line each. */
+  weighing?: { pull: string; cost: string };
   /** Full archetype route rechecked against current openings at action evaluation. */
   storyRoute?: string;
   /** Person routes use bound endpoints; squad routes start at each squad's actual current position. */
@@ -516,7 +518,11 @@ export interface ScenarioDefinition {
   /** e.g. 'Low time pressure' */
   pressureLabel: string;
   squadRange: { min: number; max: number };
-  briefing: { known: string[]; unknown: string[]; dispatchReason?: string; teamResponsibilities?: string[] };
+  briefing: { known: string[]; unknown: string[]; dispatchReason?: string; teamResponsibilities?: string[];
+    /** V13: who the key people are before today (the briefing's "Who they are"). `name` is bound. */
+    people?: { personId: Id; name: string; text: string }[] };
+  /** V13: the scene before the call, read once before the briefing. */
+  coldOpen?: string;
   /** V5 archetype bindings share the generated world with narrative, actions and map views. */
   story?: StoryInstance;
   /** v13: the incident instance's people as the engine reads them (sim/incident-factors.ts). */
