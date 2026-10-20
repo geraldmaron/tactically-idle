@@ -67,7 +67,7 @@ export const HOSTAGE_TEMPLATE: IncidentTemplate = {
       knowledge: { presence: { status: 'reported', source: 'Dispatch' }, position: { status: 'reported', source: 'Dispatch', value: 'by the door' } },
     } },
     { id: 'victims', kind: 'victim', count: { min: 1, max: 1 }, keyRoles: ['owner'], person: {
-      label: 'shop owner', age: 'adult',
+      label: 'owner', age: 'adult',
       hold: { by: 'taker', kind: 'expressive', restraint: 'watched', relationship: 'employer' },
       relationshipToSubject: 'employer', meters: { condition: 100, composure: 50 },
       knowledge: { presence: { status: 'reported', source: 'Dispatch' }, needs: { status: 'unknown', source: 'Nobody yet', learnedBy: 'f_owner_faint' } },
