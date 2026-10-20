@@ -270,6 +270,63 @@ Needs: start=none; integrate=none; ship=none
 The Squad screen and the Armory both edit `squad.loadoutPreset` (`src/ui/screens/Squad.tsx`).
 Keep one.
 
+### worn-kit: Each officer wears their own kit, and it protects the officer who wears it
+Tags: job=build; journeys=hire-and-equip, team-moves-odds; probes=items-none; lane=engine
+Needs: start=none (owner approves this proposal); integrate=outcome-calibration-drift (measure on a settled calibration); ship=none
+
+Proposed 2026-10-19, not yet approved. Every item is a pooled `ItemUnit`. Protection counts once
+per action, best unit of its group (`src/sim/resolution.ts` best-of-group,
+`src/sim/force-risk.ts` `selectedProtection`), and only on actions that declare
+`authorized_response` or `medical_exposure` (`src/sim/equipment-requirements.ts`). No v13 call
+tree declares either, so in shipped calls the light protective kit every officer now gets
+(`src/content/issue-kit.ts`) does nothing, and eight kits would score the same as one where it did.
+Radios already show the right pattern: `src/sim/standard-kit.ts` gives one per deploying officer,
+outside the loadout, and `src/gen/incident/action-gear.ts` gives them no score bonus because a bonus
+everyone has raises every call alike.
+
+Recommendation:
+1. **Worn kit is a class of item.** Radio headset, light protective kit and service sidearm are
+   worn. Everything else (shields, ram, binoculars, drone, less-lethal, consumables) stays pooled.
+2. **Each worn unit belongs to one officer.** It is issued on hire, goes where they go, and comes
+   back to the pool when they leave. Deploy reserves it with the officer. Generalize
+   `standard-kit.ts` from radios to all worn kit, rather than adding a second mechanism. Loadouts
+   and `squad.loadoutPreset` hold pooled gear only, which makes `squad-preset-editor` smaller.
+3. **Protection acts on the officer, not the score.** Light protection loses its +4 on
+   `authorized_response`. Instead, where harm lands on a named officer
+   (`applyIncidentConsequences` in `src/sim/incident-consequences.ts`, which covers authored
+   `officerHarm` and the drawn incoming-fire result), that officer's own serviceable kit turns a
+   serious injury into a wound, as `protectedOfficerEffects` does today for one kit per action.
+   Light kit converts handgun, edged, blunt and improvised hits only, never a long gun, so a
+   heavier vest has room to be a purchase later.
+4. **Wear is per officer.** A worn unit takes `perUse` wear on each deployment and `perDay` as
+   now. The Gear tab and officer profile show whose kit is near failing. A failed vest protects
+   nothing, and its officer still deploys, flagged on the roster.
+5. **Sidearms follow the shooter.** The firearm draw takes the acting officer's own sidearm
+   instead of the first qualified unit in the squad (`qualifiedForceUnit`).
+
+What it moves:
+- **Odds:** choice chances barely move, since no v13 choice reads `authorized_response`. Officer
+  harm severity does move on every call with incoming fire.
+- **Compiled fingerprints:** none expected, because protection is read when the call is played,
+  not compiled. If an implementation adds a compiled gear rule, the fingerprints move and the lead
+  recaptures them on purpose.
+- **`outcome-calibration-drift`:** fewer serious officer injuries raise trust on fire-heavy
+  endings, and the hostage call is already furthest from the hand-set numbers. Measure the trust
+  error with the test's own sample before and after. No ceiling rises because of this item.
+- **`items-none`:** the probe strips pooled gear only, since worn kit is not a loadout choice.
+  Re-measure. Floors never fall.
+
+Strongest objection: if every officer always wears working protection, serious injury from
+handgun fire mostly disappears, and with it a band of consequence the calls write lines for. The
+vest also becomes an upkeep tax rather than a decision. Controls: worn kit wears and fails per
+officer, so neglected kit shows up in harm. Long-gun hits stay serious. The writing review checks
+that the "badly hurt" lines still occur at a rate players notice.
+
+Done: worn units carry their officer and the deploy and save paths keep them together. Protection
+converts harm only for the officer wearing the kit, with tests for a worn-out vest and a long-gun
+hit. The Gear tab shows worn kit by officer. The trust error and `items-none` are re-measured and
+recorded in the PR. `npm run verify` passes.
+
 ## Player experience
 
 ### onboarding: A first call that teaches the loop
