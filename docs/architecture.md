@@ -12,9 +12,9 @@ syntax tree (`src/dev/import-graph.ts`, with the parser Vite ships), and a dynam
 | --- | --- | --- | --- | --- |
 | kernel | 8 | 2307 | nothing | Shared records, ids, seeded randomness, geometry and the tuning registry. No game rules. |
 | world | 50 | 8307 | kernel | Blueprints: authored and procedural buildings, rooms, openings, furniture, routes and sightlines. |
-| catalog | 29 | 5335 | kernel, world | Authored data: officers, personas, items, courses, unlocks, call templates and call trees. |
+| catalog | 29 | 5331 | kernel, world | Authored data: officers, personas, items, courses, unlocks, call templates and call trees. |
 | scenario | 10 | 2868 | kernel, world, catalog | Turns a drawn call into a playable definition: cast, placement on the blueprint, compiled tree. |
-| engine | 59 | 13578 | kernel, world, catalog, scenario, commerce | Game rules and state: department, economy, operations, resolution, outcomes, saves. |
+| engine | 59 | 13586 | kernel, world, catalog, scenario, commerce | Game rules and state: department, economy, operations, resolution, outcomes, saves. |
 | commerce | 4 | 198 | kernel | Point packs and the purchase ledger. |
 | qa | 34 | 4752 | kernel, world, catalog, scenario, engine, commerce | Content gates, balance measurement, fixtures and test support. Never loaded by the game. |
 | ui | 110 | 16072 | kernel, world, catalog, scenario, engine, commerce | Player screens, the blueprint renderer, portraits and the store that dispatches commands. |
@@ -28,9 +28,9 @@ syntax tree (`src/dev/import-graph.ts`, with the parser Vite ships), and a dynam
 | blueprint | 81 | 13942 | Where things are: buildings, rooms, doors and windows, furniture, routes, cover and sightlines. |
 | subject | 7 | 1358 | Who is on scene: subjects, hostages, victims, bystanders and animals, their holds, weapons, temper (agitation and rapport) and positions. |
 | officer | 14 | 2076 | Who the player sends: ratings, traits, stress, injuries, certifications, careers and squads. |
-| item | 7 | 1400 | What they carry: the item catalog, ratings and capabilities, force risk, inventory and wear. |
+| item | 7 | 1408 | What they carry: the item catalog, ratings and capabilities, force risk, inventory and wear. |
 | scenario | 65 | 13787 | What happens: call trees, placement on the blueprint, choices, chance per choice, branches and clocks, and the call-time logistics (loadouts, resupply, outside support) that read the items. |
-| metric | 30 | 4867 | What it meant: outcome scoring, harm, debriefs, department reputation, money and progression, and the Command Staff who run the department. |
+| metric | 30 | 4863 | What it meant: outcome scoring, harm, debriefs, department reputation, money and progression, and the Command Staff who run the department. |
 | platform | 204 | 33802 | Everything that serves the systems above: records, randomness, saves, the store, screens and tooling. |
 
 ## System dependency chain
