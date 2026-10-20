@@ -4,7 +4,9 @@
 //
 // - Made when a committed outcome carries a promise, or when an authorized concession choice (a
 //   statement, a message, surrender terms) commits on a favorable or mixed result.
-// - Broken if, while it is open, the team takes an entry choice, or uses force on that person.
+// - Broken if, while it is open, the team takes an entry choice, or uses force on that person, or
+//   an outcome names it in `breaks` (the person learns a promise was empty: a lie, dilemma pattern
+//   15, owner 2026-10-19).
 // - Kept when that person comes out while it is open.
 // - Still open at the end of the call stays open.
 //
@@ -43,10 +45,14 @@ export function applyCommitments(run: CommitmentRun, scenario: ScenarioDefinitio
   if (!run.commitments) return [];
   const entry = action.authority?.kind === 'entry';
   const forced = new Set(drawn.filter(record => record.model === 'team_force').map(record => record.personId));
+  const found = new Set(effects.flatMap(effect => effect.breaks ?? []));
   const changed: { id: Id; status: 'kept' | 'broken' }[] = [];
   for (const [id, commitment] of Object.entries(run.commitments)) {
     if (commitment.status !== 'open') continue;
-    const status = entry || forced.has(commitment.personId) ? 'broken' : isOut(run, commitment.personId) ? 'kept' : null;
+    // A lie breaks only when the person finds out (`breaks`). An entry or force doesn't tell them,
+    // so it leaves the lie open: it neither held nor was found (review F20).
+    const lie = commitment.kind === 'lie';
+    const status = found.has(id) || (!lie && (entry || forced.has(commitment.personId))) ? 'broken' : isOut(run, commitment.personId) ? 'kept' : null;
     if (!status) continue;
     run.commitments = { ...run.commitments, [id]: { ...commitment, status } };
     changed.push({ id, status });

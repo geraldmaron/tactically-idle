@@ -7,7 +7,8 @@ import { Sheet } from '../components/Sheet';
 import { Button } from '../components/ui';
 import { OpenInLab } from '../components/OpenInLab';
 import { ActionSheet, LiveView, RoomSheet } from './LiveView';
-import { LastDecisionPeek, OperationFeedback, RESULT_LABEL } from './OperationFeedback';
+import { OperationFeedback } from './OperationFeedback';
+import { sceneFor } from '../art/Plates';
 import { SituationPanel } from './SituationPanel';
 import { SupportContext } from './SupportContext';
 import { IncidentPeopleStatus } from '../components/IncidentPeople';
@@ -18,15 +19,16 @@ import { lexiconFor } from '../people/lexicon';
 import { runRoster } from '../../sim/squads';
 import { isHotCall } from '../../sim/authorization';
 
-/** Scroll the saved result into view without moving focus away from the player's place. */
+/** After a decision the result sits at the head of the scene: bring the scene back to the top so
+ * the player reads what happened before the next choice. */
 function revealLastDecision() {
-  document.querySelector('.operation-feedback')?.scrollIntoView({ block: 'start', behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+  document.querySelector('.live')?.scrollIntoView({ block: 'start', behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
 }
 
 export function OpsLive() {
   const g = useGame();
   const now = Date.now();
-  const { act, notify } = useToast();
+  const { act } = useToast();
   const run = g.activeRun!;
 
   const [focusId, setFocusId] = useState<SquadId | null>(() => run.history.at(-1)?.actingSquadIds[0] ?? null);
@@ -112,9 +114,9 @@ export function OpsLive() {
       const ids = new Set(spaces.map((s) => s.id));
       const spaceIds = [r.targetId, ...r.knowledgeChanges.map((k) => k.factId)].filter((x): x is Id => !!x && ids.has(x));
       setLastChange({ revision: r.revision, spaceIds });
-      // When the decision ends the call the debrief already shows the result; there is nothing to reveal.
-      const ended = getState().activeRun?.stage === 'debrief';
-      notify(r.committed?.resultLabel ?? RESULT_LABEL[r.band], { tone: r.committed?.resultLabel ? 'info' : r.band === 'adverse' ? 'error' : r.band === 'favorable' ? 'ok' : 'amber', ...(ended ? {} : { lines: ['Tap to see what happened and what changed.'], onSelect: revealLastDecision }) });
+      // The result card now leads the scene, so it replaces the toast that pointed down at it.
+      // When the decision ends the call the debrief shows the result instead.
+      if (getState().activeRun?.stage !== 'debrief' && typeof requestAnimationFrame === 'function') requestAnimationFrame(revealLastDecision);
     }
   };
 
@@ -141,8 +143,8 @@ export function OpsLive() {
       onToggleRooms={() => setShowRooms((v) => !v)}
       onCancel={() => setConfirmCancel(true)}
       onOpenDetails={() => { setActionFromSupport(false); setPanel(panel === 'action' ? 'none' : 'action'); }}
-      lastDecision={<LastDecisionPeek decisions={decisions} onReveal={revealLastDecision} />}
-      feedback={<OperationFeedback officers={g.officers} decisions={decisions} explicitCompletion={(scenario?.version ?? 0) >= 4} onOpenLog={() => setPanel('none')} />}
+      feedback={<OperationFeedback officers={g.officers} decisions={decisions} explicitCompletion={(scenario?.version ?? 0) >= 4} currentPrompt={model.progress.prompt} onOpenLog={() => setPanel('none')} />}
+      scene={sceneFor(scenario?.incident?.type)}
       situation={scenario && <SituationPanel scenario={scenario} run={run} />}
       supportContext={scenario && <><IncidentPeopleStatus scenario={scenario} run={run} state={g} /><SupportContext scenario={scenario} run={run} actions={actions} open={panel === 'support'} onOpen={() => setPanel('support')} onClose={() => setPanel('none')} onPickAction={(id) => {
         setActionFromSupport(true);

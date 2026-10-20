@@ -13,6 +13,7 @@ import type { IconName } from '../icons';
 import { PeopleGlyph, PeopleText, usePeopleEntry } from '../people/PeopleText';
 import { peopleLabel } from '../people/lexicon';
 import { IncidentBriefContext } from './SupportContext';
+import { WhoTheyAre } from '../components/DepthBrief';
 import type { Intel, IntelLine } from './intel';
 import { Disclosure } from '../components/Disclosure';
 
@@ -51,6 +52,7 @@ export function PrepBriefing({ scenario, brief, intel }: { scenario: ScenarioDef
           </ul>
         </div>}
         <Disclosure name="prep-briefing" className="prep-brief-more" icon="intel" summary="Full briefing">
+          <WhoTheyAre people={scenario?.briefing.people} />
           {scenario && <IncidentBriefContext scenario={scenario} />}
           <BriefList icon="check" tone="mint" title="Known" items={knownRest} empty="Nothing confirmed yet." />
           <div className="brief">

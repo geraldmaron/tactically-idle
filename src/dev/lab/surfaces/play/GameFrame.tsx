@@ -10,6 +10,8 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import type { ReactNode } from 'react';
 import '../../../../ui/app.css';
 import '../../../../ui/screens/ops-visual.css';
+// The game's skin, so the frame shows the player's real screen (plates, stamps, panels).
+import '../../../../ui/skin.css';
 import { NOW } from '../../../../gen/incident/gates/engine-driver';
 import { briefing, builtForScenario, decisionViews, lastResolution, pendingDebrief } from '../../../../sim/operation-selectors';
 import { responseFailurePlan } from '../../../../sim/response-failure';
@@ -31,7 +33,8 @@ import { liveScreen } from '../../../../ui/screens/live-model';
 import type { ActionSelection, Override } from '../../../../ui/screens/live-model';
 import { ActionSheet, LiveView, RoomSheet } from '../../../../ui/screens/LiveView';
 import { focusActingSquad, toggleActingSquad, toggleSupportingSquad } from '../../../../ui/screens/operation-squads';
-import { LastDecisionPeek, OperationFeedback } from '../../../../ui/screens/OperationFeedback';
+import { OperationFeedback } from '../../../../ui/screens/OperationFeedback';
+import { sceneFor } from '../../../../ui/art/Plates';
 import { PrepBriefing } from '../../../../ui/screens/PrepBriefing';
 import { SituationPanel } from '../../../../ui/screens/SituationPanel';
 import { SupportContext } from '../../../../ui/screens/SupportContext';
@@ -357,8 +360,8 @@ function LiveScreen({ state, onReview, onConfirm,  onFail }: { state: GameState;
       onToggleRooms={() => setShowRooms(value => !value)}
       onCancel={() => {}}
       onOpenDetails={() => setPanel(panel === 'action' ? 'none' : 'action')}
-      lastDecision={<LastDecisionPeek decisions={decisions} onReveal={() => document.querySelector('.lab-frame-device .operation-feedback')?.scrollIntoView({ block: 'start' })} />}
-      feedback={<OperationFeedback officers={state.officers} decisions={decisions} explicitCompletion={(scenario?.version ?? 0) >= 4} onOpenLog={() => setPanel('none')} />}
+      feedback={<OperationFeedback officers={state.officers} decisions={decisions} explicitCompletion={(scenario?.version ?? 0) >= 4} currentPrompt={model.progress.prompt} onOpenLog={() => setPanel('none')} />}
+      scene={sceneFor(scenario?.incident?.type)}
       situation={scenario && <SituationPanel scenario={scenario} run={run} />}
       supportContext={scenario && <><IncidentPeopleStatus scenario={scenario} run={run} state={state} />
         <SupportContext scenario={scenario} run={run} actions={model.actions} open={panel === 'support'} onOpen={() => setPanel('support')} onClose={() => setPanel('none')}

@@ -37,6 +37,7 @@ import { DecisionList } from './DecisionList';
 import { CONTRIBUTOR_GROUPS } from './contributor-groups';
 import { GamePeopleProvider, PeopleText } from '../people/PeopleText';
 import type { Lexicon } from '../people/lexicon';
+import { PlateArt } from '../art/Plates';
 import './operation-squads.css';
 import './ops-visual.css';
 import { Disclosure } from '../components/Disclosure';
@@ -87,8 +88,8 @@ export interface LiveViewProps {
   supportContext?: ReactNode;
   /** The call's summary and briefing, kept in view under the title for the whole operation. */
   situation?: ReactNode;
-  /** One line naming the last result, kept just above the next decision; the full record sits below it. */
-  lastDecision?: ReactNode;
+  /** The call type's painted scene (art/Plates sceneFor), behind the pinned title. */
+  scene?: string | null;
   /** A response that can no longer progress is handled outside ordinary story choices. */
   failedResponse?: ReactNode;
   /** Overlay sheets (action detail, room sheet, cancel confirm) rendered by the container. */
@@ -114,7 +115,8 @@ export function LiveView(p: LiveViewProps) {
 
   const screen = (
     <div className="live">
-      <div className="live-title">
+      <div className={`live-title${p.scene ? ' plate' : ''}`}>
+        {p.scene && <PlateArt src={p.scene} />}
         <div className="live-id">
           <h2 className="live-name">{p.title}</h2>
           <p className="live-sub">
@@ -131,12 +133,7 @@ export function LiveView(p: LiveViewProps) {
           </p>
         </div>
         <StageSteps progress={p.progress} />
-      </div>
-
-      {p.situation}
-
-      <div className="live-map">
-        <div className="map-hud map-status" aria-label="Operation time and pressure">
+        <div className="live-status" aria-label="Operation time and pressure">
           <span className="hud-pill">
             <Icon name="clock" size={14} />
             {opMinutes(p.clock)}
@@ -148,6 +145,30 @@ export function LiveView(p: LiveViewProps) {
             <span>{pressureWord(p.pressure)}</span>
           </span>
         </div>
+      </div>
+
+      {p.situation}
+
+      {/* The scene reads in story order: what just happened, the moment, the choices. The map and
+          the team follow, one scroll away, because the words carry the call on a phone. */}
+      {p.feedback}
+
+      <div className="call operation-choices" aria-label="Your call">
+        <div className="call-head">
+          <span className="call-label">{p.progress.stages.find((step) => step.state === 'current')?.label ?? 'Your next decision'}</span>
+          {sel && (
+            <button type="button" className="call-details" onClick={p.onOpenDetails} aria-expanded={p.detailsOpen}>
+              Review decision
+              <Icon name="chevronDown" size={14} />
+            </button>
+          )}
+        </div>
+        <DecisionList prompt={p.progress.prompt} exchange={p.progress.exchange} actions={available} selectedId={sel?.id ?? null} expanded={expanded} onSelect={p.onSelectAction} onExpand={() => setExpandedStage(expanded ? null : p.progress.stage)} />
+      </div>
+
+      {p.failedResponse}
+
+      <div className="live-map">
         <div className="live-map-inner">
           {p.sirens && <div className="siren-lights" aria-hidden="true" data-testid="siren-lights" />}
           {p.showRooms ? (
@@ -241,23 +262,6 @@ export function LiveView(p: LiveViewProps) {
         {p.officers.length === 0 && <p className="strip-empty">No officers in this squad.</p>}
       </div>
 
-      {p.lastDecision}
-
-      <div className="call operation-choices" aria-label="Your call">
-        <div className="call-head">
-          <span className="call-label">YOUR NEXT DECISION</span>
-          {sel && (
-            <button type="button" className="call-details" onClick={p.onOpenDetails} aria-expanded={p.detailsOpen}>
-              Review decision
-              <Icon name="chevronDown" size={14} />
-            </button>
-          )}
-        </div>
-        <DecisionList prompt={p.progress.prompt} actions={available} selectedId={sel?.id ?? null} expanded={expanded} onSelect={p.onSelectAction} onExpand={() => setExpandedStage(expanded ? null : p.progress.stage)} />
-      </div>
-
-      {p.failedResponse}
-      {p.feedback}
       {p.supportContext}
       {p.actions.length > 0 && <DecisionDock available={available.filter((action) => action.eligible).length} />}
       {p.children}

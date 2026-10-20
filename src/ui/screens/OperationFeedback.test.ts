@@ -222,7 +222,7 @@ describe('reviewing a decision', () => {
 describe('persistent decision results', () => {
   it('keeps actual changes and specific consequences visible after the toast is gone', () => {
     const html = render(createElement(OperationFeedback, { decisions: [decision()] }));
-    for (const expected of ['Last decision', 'Had complications', 'The patient received aid, but the route is still unresolved.', '+8 min', 'Call progress', '+12', 'Civilian safety', '-4', 'Pressure', '+5', 'Officer stress', '+1.5 stress', '1 × Trauma supplies', 'Patient condition: Confirmed', 'Decision log (1)']) expect(html).toContain(expected);
+    for (const expected of ['What happened', 'Had complications', 'The patient received aid, but the route is still unresolved.', '+8 min', 'Call progress', '+12', 'Civilian safety', '-4', 'Pressure', '+5', 'Officer stress', '+1.5 stress', '1 × Trauma supplies', 'Patient condition: Confirmed', 'Decision log (1)']) expect(html).toContain(expected);
     expect(html).toContain('aria-haspopup="dialog"');
     expect(html).toContain('aria-expanded="false"');
     expect(html).not.toContain('role="dialog"');
@@ -308,8 +308,9 @@ describe('persistent decision results', () => {
     for (const invented of ['decision-lead', 'decision-narrative', 'Successfully completed', 'Everyone is safe', 'Operation ended']) expect(absent).not.toContain(invented);
   });
 
-  it('shows no empty feedback panel before the first decision', () => {
-    expect(render(createElement(OperationFeedback, { decisions: [] }))).toBe('');
+  it('shows no empty feedback panel before the first decision, only the empty live region', () => {
+    // The live region is rendered empty from the start so the first result is announced.
+    expect(render(createElement(OperationFeedback, { decisions: [] }))).toBe('<p class="sr-only" role="status" aria-live="polite"></p>');
   });
 
   it('renders the ending summary and preserves the saved log in the real debrief', () => {

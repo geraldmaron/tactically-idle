@@ -25,7 +25,8 @@
 .optile .opboard-where { align-items: flex-start; } .optile .opboard-where > span { min-width: 0; overflow-wrap: anywhere; }
 .optile .opboard-where .icon { margin-top: 2px; }
 .optile .opboard-where .icon { flex-shrink: 0; }
-.optile .opboard-summary { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; font-size: 13.5px; line-height: 1.35; }
+/* The hook sells the call: three lines (owner, 2026-10-19), so the threat object never falls off. */
+.optile .opboard-summary { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; font-size: 13.5px; line-height: 1.35; }
 .optile .opboard-facts { gap: 5px; }
 .optile .opboard-facts .chip { font-size: 12px; }
 /* Bring: what the department is short of for this call, hidden when nothing is. */
@@ -206,18 +207,23 @@
 .live .situation-toggle::after { content: ''; position: absolute; inset: -6px 0; }
 .live .situation-toggle { position: relative; }
 
-.last-peek { --tone: var(--amber); display: flex; align-items: center; gap: 9px; width: calc(100% - var(--gutter) * 2); min-height: 48px; margin: 4px var(--gutter) 8px; padding: 6px 10px; border: 1px solid var(--line); border-left: 3px solid var(--tone); border-radius: 8px; background: var(--panel); color: var(--text); font: inherit; text-align: left; cursor: pointer; }
-.last-peek-favorable { --tone: var(--mint); }
-.last-peek-adverse { --tone: var(--danger); }
-.last-peek-event { --tone: var(--line-strong); }
-.last-peek:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
-.last-peek-dot { flex-shrink: 0; width: 10px; height: 10px; border-radius: 50%; background: var(--tone); }
-.last-peek-text { display: grid; flex: 1 1 auto; min-width: 0; }
-.last-peek-text small { font-family: var(--font-cond); font-size: 12px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-dim); }
-.last-peek-text strong { font-size: 14px; line-height: 1.25; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-.last-peek-go { display: inline-flex; align-items: center; gap: 2px; flex-shrink: 0; font-family: var(--font-cond); font-size: 12.5px; font-weight: 600; color: var(--amber-2); }
+/* The scene's title carries the stage rail, the clock and the pressure. It scrolls with the scene:
+   on a phone a pinned head costs the choices their room, and the current stage is repeated above
+   the choices. */
+.live .live-title { position: relative; padding-bottom: 6px; }
+.live .live-status { display: flex; flex: 1 1 100%; flex-wrap: wrap; gap: 6px; align-items: center; }
+.live .live-status .hud-pill { padding: 2px 8px; font-size: 12.5px; }
 
-.operation-choices .operation-stage-prompt { margin: 0 0 4px; font-size: 15px; line-height: 1.4; }
+/* What happened: the latest result leads, read as a beat, not a log row. */
+.live .operation-feedback .decision-card { border-left: 3px solid var(--line-strong); }
+.live .operation-feedback .decision-favorable { border-left-color: var(--mint); }
+.live .operation-feedback .decision-mixed { border-left-color: var(--amber); }
+.live .operation-feedback .decision-adverse, .live .operation-feedback .decision-force { border-left-color: var(--danger); }
+.live .operation-feedback-heading h2 { font-family: var(--font-cond); font-size: 12px; font-weight: 600; letter-spacing: .13em; text-transform: uppercase; color: var(--text-dim); }
+.live .operation-feedback .decision-narrative { font-size: 15.5px; line-height: 1.5; color: #e8edf5; }
+
+/* The moment: the stage prompt is the hero line of the scene. */
+.operation-choices .operation-stage-prompt { margin: 2px 0 10px; padding-left: 12px; border-left: 3px solid var(--amber); font-size: 17px; line-height: 1.45; color: #eef2f8; }
 .operation-choices .operation-choice-count { margin: 0 0 8px; font-size: 12.5px; }
 .operation-choices .callbtn { min-height: 0; padding: 9px 11px; gap: 10px; }
 .operation-choices .callbtn-title { font-size: 16px; line-height: 1.2; }
@@ -267,7 +273,6 @@
 
 @media (max-width: 359px) {
   .live .live-name { font-size: 21px; }
-  .last-peek-go { font-size: 0; gap: 0; }
 }
 
 /* A toast never covers a sheet's Confirm footer: while a footed sheet is open, toasts sit at the top. */
@@ -374,3 +379,23 @@
 
 /* Room between the blueprint and the officer strip on the live screen. */
 .live > .strip { padding-top: 12px; }
+
+/* Weighed choices (choice-weighing): title and cost collapsed, the full reading on tap, and a
+   separate Review button so expanding and deciding never share one target. */
+.operation-choices .callbtn-weighed { display: grid; gap: 6px; padding: 0; cursor: default; }
+.callbtn-expand { display: flex; align-items: flex-start; gap: 10px; width: 100%; min-height: 44px; padding: 9px 11px 0; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.callbtn-expand:focus-visible, .callbtn-review:focus-visible { outline: 2px solid var(--amber); outline-offset: -2px; border-radius: 6px; }
+.callbtn-expand .callbtn-text { flex: 1 1 auto; }
+.callbtn-chevron { flex: 0 0 auto; margin-top: 2px; opacity: 0.7; }
+.callbtn-cost { margin-top: 3px; font-size: 13.5px; line-height: 1.4; color: #c9d3e2; }
+.callbtn-weigh { display: grid; gap: 6px; padding: 0 11px; }
+.callbtn-weigh p { margin: 0; font-size: 14px; line-height: 1.5; color: #dce5f2; }
+.callbtn-weigh-line b { font-family: var(--font-cond); font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; font-size: 12.5px; color: var(--amber-2); }
+.callbtn-weigh-cost b { color: #ffb4aa; }
+.callbtn-weighed > .callbtn-command, .callbtn-weighed > .callbtn-forecast { margin: 0 11px; }
+.callbtn-review { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; margin-top: 2px; padding: 6px 11px; border: 0; border-top: 1px solid rgba(255, 255, 255, 0.08); border-radius: 0 0 6px 6px; background: rgba(8, 13, 24, 0.35); color: inherit; font: inherit; cursor: pointer; }
+.callbtn-review-odds { min-width: 0; font-size: 12px; line-height: 1.35; color: #9fb0c8; }
+.callbtn-review-label { display: inline-flex; align-items: center; gap: 2px; margin-left: auto; flex: 0 0 auto; font: 700 13px/1 var(--font-cond); letter-spacing: 0.08em; text-transform: uppercase; color: var(--amber-2); }
+.callbtn-on .callbtn-cost, .callbtn-on .callbtn-weigh p, .callbtn-on .callbtn-review-odds { color: #3a2a06; }
+.callbtn-on .callbtn-review { background: rgba(58, 42, 6, 0.12); }
+.callbtn-on .callbtn-review-label, .callbtn-on .callbtn-weigh-line b { color: var(--amber-ink); }

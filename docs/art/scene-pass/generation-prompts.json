@@ -1,0 +1,57 @@
+[
+  {
+    "id": "scene_hostage_crisis",
+    "set": "scenes",
+    "prompt": "Use case: stylized-concept. Asset type: ONE wide scene plate for Tactically Idle, a grounded modern tactical management game. Subject: a small corner market seen from across a quiet street at dusk. Warm fluorescent light spills from a glass storefront; inside, grocery shelves and a counter with a till are visible as soft shapes; nobody is visible inside or outside. A strip of plain yellow barrier tape crosses the foreground on two stanchions. A faint wash of blue and amber emergency light falls on the wet pavement from somewhere out of frame. Mood: tense, still, a held breath. Style: refined painted editorial illustration matching the game's equipment art: muted navy and graphite night palette, one warm amber accent, soft painterly brushwork, subdued cinematic depth, subtle film grain. No people, no faces, no silhouettes. No text, letters, numbers, signage words, logos, police insignia, badges, flags or watermark; any sign is blank. No weapons, no blood. Composition: wide landscape, the storefront slightly right of center, dark negative space on the left for interface text. Ideally 1536x864."
+  },
+  {
+    "id": "scene_barricaded",
+    "set": "scenes",
+    "prompt": "Use case: stylized-concept. Asset type: ONE wide scene plate for Tactically Idle, a grounded modern tactical management game. Subject: a modest single-story suburban house at night. Only one small frosted bathroom window is lit, a faint warm square; the porch light is on; the front curtains are drawn. A parked car in the driveway reflects a soft blue glow on the wet concrete from out of frame. Bare winter hedges, a child's bicycle lying on the lawn. Nobody visible. Mood: quiet dread, someone hiding. Style: refined painted editorial illustration matching the game's equipment art: muted navy and graphite night palette, one warm amber accent in the lit window, soft painterly brushwork, subdued cinematic depth, subtle film grain. No people, no faces, no silhouettes. No text, letters, numbers, house numbers, logos, police insignia, badges or watermark. No weapons, no blood. Composition: wide landscape, house right of center, dark sky and lawn on the left for interface text. Ideally 1536x864."
+  },
+  {
+    "id": "scene_active_armed_incident",
+    "set": "scenes",
+    "prompt": "Use case: stylized-concept. Asset type: ONE wide scene plate for Tactically Idle, a grounded modern tactical management game. Subject: a roadside motel and bar after closing time, seen across an empty parking lot. Sodium streetlights cast amber pools on puddles; the bar's main windows are dark; one small back-office window glows. A blank unlit roadside sign on a pole. A single parked car with its door left open. Nobody visible. Mood: the silence right after something loud. Style: refined painted editorial illustration matching the game's equipment art: muted navy and graphite night palette with amber sodium light, soft painterly brushwork, subdued cinematic depth, subtle film grain. No people, no faces, no silhouettes. No text, letters, numbers, neon words, logos, police insignia, badges or watermark. No weapons, no bullet holes, no blood. Composition: wide landscape, building on the right half, open dark lot on the left for interface text. Ideally 1536x864."
+  },
+  {
+    "id": "scene_protected_rescue",
+    "set": "scenes",
+    "prompt": "Use case: stylized-concept. Asset type: ONE wide scene plate for Tactically Idle, a grounded modern tactical management game. Subject: the entrance of an older three-story apartment building just before dawn. A concrete wheelchair ramp with a metal handrail leads to a glass front door; the lobby light is on inside. At the curb an ambulance-style van sits with its rear doors open, warm light inside, no markings or lettering. A thin haze, the sky turning pale blue at the top. Nobody visible. Mood: patient, fragile, a long night ending. Style: refined painted editorial illustration matching the game's equipment art: muted navy and slate palette warming toward dawn, one amber accent, soft painterly brushwork, subdued cinematic depth, subtle film grain. No people, no faces, no silhouettes. No text, letters, numbers, red crosses, logos, police insignia, badges or watermark. No weapons. Composition: wide landscape, entrance right of center, darker space on the left for interface text. Ideally 1536x864."
+  },
+  {
+    "id": "banner_hq",
+    "set": "banners",
+    "prompt": "Use case: stylized-concept. Asset type: ONE wide banner illustration for Tactically Idle, a grounded modern tactical management game. Subject: the department's operations room at night. A large table in the foreground covered with a blue architectural blueprint held down by tape, a coffee mug and a handheld radio on it; behind, a wall of dim monitors showing abstract glowing map shapes, a corkboard with pinned photographs shown only as blank cards and red string. Warm desk lamp light against cool monitor glow. Nobody in the room. Mood: the calm before the next call. Style: refined painted editorial illustration matching the game's equipment art: dark navy and graphite palette, blueprint blue, one warm amber lamp accent, soft painterly brushwork, subdued cinematic depth, subtle film grain. No people, no faces. No readable text, letters, numbers, logos, police insignia, badges, flags or watermark; screens and papers show only abstract shapes. No weapons. Composition: wide landscape with darker space at the bottom left for interface text. Ideally 1536x864."
+  },
+  {
+    "id": "banner_squad",
+    "set": "banners",
+    "prompt": "Use case: stylized-concept. Asset type: ONE wide banner illustration for Tactically Idle, a grounded modern tactical management game. Subject: a team locker room early in the morning. A row of open steel lockers with plain navy jackets on hooks, helmets on the top shelf, a wooden bench with a folded towel and a water bottle, a coffee thermos. Pale window light from the right, a fluorescent tube overhead. Nobody in the room. Mood: the people who go, before the shift. Style: refined painted editorial illustration matching the game's equipment art: dark navy and graphite palette with chalk highlights and one amber accent, soft painterly brushwork, subdued cinematic depth, subtle film grain. No people, no faces. No text, letters, numbers, name tapes, patches, logos, police insignia, badges, flags or watermark. No firearms. Composition: wide landscape, lockers receding to the right, darker space on the left for interface text. Ideally 1536x864."
+  },
+  {
+    "id": "banner_gear",
+    "set": "banners",
+    "prompt": "Use case: stylized-concept. Asset type: ONE wide banner illustration for Tactically Idle, a grounded modern tactical management game. Subject: an equipment cage and supply room. Steel wire shelving with hard equipment cases, a charging rack of handheld radios with small green lights, coiled rope, first aid bags, a door ram resting against the wall, a plain black ballistic shield leaning on a shelf, a small drone in an open foam case. Cool overhead light, one warm work lamp on a bench with a clipboard. Nobody in the room. Mood: ready, ordered, well kept. Style: refined painted editorial illustration matching the game's equipment art: dark navy and graphite palette, brushed metal, one amber accent, soft painterly brushwork, subdued cinematic depth, subtle film grain. No people, no faces. No text, letters, numbers, labels, logos, police insignia, badges, flags or watermark. No firearms or ammunition. Composition: wide landscape, shelves on the right, darker space on the left for interface text. Ideally 1536x864."
+  },
+  {
+    "id": "banner_develop",
+    "set": "banners",
+    "prompt": "Use case: stylized-concept. Asset type: ONE wide banner illustration for Tactically Idle, a grounded modern tactical management game. Subject: a training and planning room. A large whiteboard covered in hand-drawn abstract diagrams, arrows and boxes (no readable writing), a free-standing practice door frame made of plywood, a few orange training cones, folding chairs, a projector beam catching dust. Late afternoon light through blinds making stripes. Nobody in the room. Mood: building something better for next time. Style: refined painted editorial illustration matching the game's equipment art: dark navy and graphite palette with chalk white and one amber accent, soft painterly brushwork, subdued cinematic depth, subtle film grain. No people, no faces. No readable text, letters, numbers, logos, police insignia, badges, flags or watermark. No weapons. Composition: wide landscape, whiteboard on the right, darker space on the left for interface text. Ideally 1536x864."
+  },
+  {
+    "id": "banner_ops",
+    "set": "banners",
+    "prompt": "Use case: stylized-concept. Asset type: ONE wide banner illustration for Tactically Idle, a grounded modern tactical management game. Subject: a dispatch desk at night. A headset resting on a desk beside a desk phone with several small amber line lights, a notepad with an uncapped pen, a monitor showing an abstract night city map with a few glowing points, rain on a window behind with distant city lights. Nobody at the desk. Mood: a call is coming in. Style: refined painted editorial illustration matching the game's equipment art: dark navy and graphite palette, cool monitor blue, warm amber line lights, soft painterly brushwork, subdued cinematic depth, subtle film grain. No people, no faces. No readable text, letters, numbers, logos, police insignia, badges, flags or watermark. No weapons. Composition: wide landscape, desk on the right, darker space on the left for interface text. Ideally 1536x864."
+  },
+  {
+    "id": "tex_night_paper",
+    "set": "textures",
+    "prompt": "Use case: texture. Asset type: ONE flat surface texture for a game interface background. Subject: very dark navy cotton paper seen straight on, evenly lit, with subtle fibers, faint mottling and fine grain. No objects, no folds, no edges, no vignette, no lighting gradient, no shadows, no text or marks. Color: deep navy around #0d1522 with only slight tonal variation so interface text stays readable on top. Full-bleed square, uniform across the whole canvas. Ideally 1024x1024."
+  },
+  {
+    "id": "tex_manila",
+    "set": "textures",
+    "prompt": "Use case: texture. Asset type: ONE flat surface texture for a game interface. Subject: a muted, slightly worn manila case-folder card stock seen straight on, evenly lit, with soft fibers and faint mottling. No objects, no folds, no edges, no vignette, no lighting gradient, no stains, no text or marks. Color: a desaturated warm tan around #b39a6c with small tonal variation. Full-bleed square, uniform across the whole canvas. Ideally 1024x1024."
+  }
+]

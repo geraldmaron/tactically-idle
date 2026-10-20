@@ -1,7 +1,7 @@
 import { actionEquipmentRequirements, capabilityRuleEffect, effectiveSupplies, normalizedActionConsumption, operatorQualified, planningEquipmentContext } from './equipment-requirements';
 import { LAST_SEEN_LINES } from '../content/incidents/lines';
 import { isGenericResponseExit } from './response-failure';
-import { currentStoryPrompt } from './story-context';
+import { currentStoryExchange, currentStoryPrompt } from './story-context';
 import { hydrateStoryAction, storyActionTarget, storyPublicScenario, storyPropsKnown } from './story-people';
 // Operation selectors consumed by the UI. Everything here is derived from game
 // state and content; nothing mutates. Export names and signatures are a contract.
@@ -68,6 +68,8 @@ export interface Briefing {
 
 export interface StageProgress {
   prompt: string;
+  /** Lines spoken with the prompt (call-surfaces). */
+  exchange?: { speaker: string; line: string }[];
   stage: StageId | 'debrief';
   index: number;
   stages: { id: StageId; label: string; state: 'done' | 'current' | 'todo' }[];
@@ -331,6 +333,7 @@ export function stageProgress(state: GameState): StageProgress {
   return {
     stage,
     prompt: s && run ? currentStoryPrompt(s, run) : '',
+    exchange: s && run ? currentStoryExchange(s, run) : [],
     index: cur,
     stages: STAGE_ORDER.map((id, i) => ({
       id,
@@ -352,6 +355,12 @@ function requirementLine(a: ActionDefinition): string {
   if (parts.length === 0) return 'No special requirements';
   const line = parts.join(' + ');
   return line.charAt(0).toUpperCase() + line.slice(1);
+}
+
+/** `{lead}` filled with the lead officer's surname, as the summary does. */
+function leadIn(text: string, ev: Evaluation, state: GameState): string {
+  const lead = ev.leadId ? state.officers[ev.leadId]?.surname : undefined;
+  return text.replace(/\{lead\}/g, lead ?? 'Squad');
 }
 
 function summaryFor(a: ActionDefinition, ev: Evaluation, state: GameState): string {
@@ -433,6 +442,8 @@ function toView(state: GameState, run: OperationRun, a: ActionDefinition, ev: Ev
   return {
     ...(eventResult ? { eventResult } : {}),
     ...(ev.authority ? { authority: { ...ev.authority } } : {}),
+    ...(a.deceives ? { deceives: true as const } : {}),
+    ...(a.weighing ? { weighing: { pull: leadIn(a.weighing.pull, ev, state), cost: leadIn(a.weighing.cost, ev, state) } } : {}),
     id: a.id,
     stage: a.stage,
     title: a.title,

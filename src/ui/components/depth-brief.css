@@ -1,0 +1,12 @@
+/* Cold open and "Who they are" (call-depth): long-form prose, so a reading measure and air. */
+.cold-open { display: grid; gap: 8px; min-width: 0; padding: 14px 14px 16px; border: 1px solid rgba(179, 154, 108, 0.35); border-radius: var(--radius); background: linear-gradient(180deg, rgba(179, 154, 108, 0.1), rgba(19, 28, 42, 0.9)); overflow-wrap: anywhere; }
+.cold-open-kicker { font: 500 11px/1.2 var(--font-mono); letter-spacing: 0.16em; text-transform: uppercase; color: #d9c79f; }
+.cold-open-text { margin: 0; max-width: 34em; font-size: 15.5px; line-height: 1.6; color: var(--text); }
+.who-they-are { display: grid; gap: 6px; min-width: 0; }
+.who-they-are-h { display: flex; align-items: center; gap: 6px; margin: 0; font-family: var(--font-cond); font-size: 12.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text); }
+.who-they-are ul { display: grid; gap: 8px; margin: 0; padding: 0 !important; list-style: none; }
+.who-they-are li { display: grid; gap: 2px; padding-left: 10px; border-left: 2px solid var(--line-strong); }
+.who-they-are li + li { margin-top: 0 !important; }
+.who-they-are strong { font-size: 14px; color: var(--text); }
+.who-they-are p { margin: 0; font-size: 14px; line-height: 1.5; color: var(--text-dim); }
+.prep-cold-open { margin: 12px 0 0; }

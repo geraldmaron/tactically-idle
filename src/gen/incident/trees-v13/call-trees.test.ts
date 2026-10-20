@@ -86,8 +86,8 @@ function treeStrings(authored: CallTree, counts?: Record<string, number>): { fie
   const reach = counts && authored.groups ? reachableWithin(tree, counts, clockNextsOf(authored)) : null;
   const out: { field: string; text: string }[] = [];
   const add = (field: string, text: string | undefined) => { if (text) out.push({ field, text }); };
-  add('summary', tree.summary); add('title', tree.title); add('pressureLabel', tree.pressureLabel);
-  for (const role of tree.roles) add('role.label', role.label);
+  add('summary', tree.summary); add('title', tree.title); add('pressureLabel', tree.pressureLabel); add('coldOpen', tree.coldOpen);
+  for (const role of tree.roles) { add('role.label', role.label); add('role.profile', role.profile); }
   add('dispatchReason', tree.briefing.dispatchReason);
   for (const line of [...tree.briefing.known, ...tree.briefing.unknown, ...tree.briefing.responsibilities]) add('briefing', line);
   for (const label of Object.values(tree.stageLabels)) add('stageLabel', label);
@@ -98,17 +98,18 @@ function treeStrings(authored: CallTree, counts?: Record<string, number>): { fie
   for (const node of tree.nodes) {
     if (reach && !reach.nodes.has(node.id)) continue;
     add('prompt', node.prompt);
-    for (const entry of node.promptIf ?? []) add('prompt', entry.prompt);
+    for (const line of node.exchange ?? []) add('exchange', line.line);
+    for (const entry of node.promptIf ?? []) { add('prompt', entry.prompt); for (const line of entry.exchange ?? []) add('exchange', line.line); }
     for (const choice of node.choices) {
-      add('choice.title', choice.title); add('choice.summary', choice.summary);
+      add('choice.title', choice.title); add('choice.summary', choice.summary); add('choice.pull', choice.pull); add('choice.cost', choice.cost);
       for (const band of BANDS) add('choice.preview', choice.preview[band]);
       for (const modifier of choice.modifiers ?? []) add('modifier', modifier.label);
-      for (const outcome of outcomesOf(choice)) add('outcome', outcome.text);
+      for (const outcome of outcomesOf(choice)) { add('outcome', outcome.text); for (const line of outcome.exchange ?? []) add('exchange', line.line); }
     }
   }
   for (const [id, ending] of Object.entries(tree.endings)) {
     if (reach && !reach.endings.has(id)) continue;
-    add('ending.title', ending.title); add('ending.summary', ending.summary); for (const task of ending.remainingTasks ?? []) add('ending.task', task);
+    add('ending.title', ending.title); add('ending.summary', ending.summary); add('ending.epilogue', ending.epilogue); for (const entry of ending.epilogueIf ?? []) add('ending.epilogue', entry.epilogue); for (const task of ending.remainingTasks ?? []) add('ending.task', task);
   }
   for (const situation of templateOf(authored)?.situations ?? []) for (const clock of situation.clocks ?? []) {
     add('clock.label', clock.label);
@@ -214,7 +215,8 @@ describe('call trees: authoring rules', () => {
         for (const outcome of outcomesOf(choice)) if (outcome.promise) {
           const { id, to, kind = 'promise' } = outcome.promise;
           expect(tree.roles.find(role => role.id === to)?.kind, `${where} promises ${id} to ${to}`).toBe('subject');
-          if (kind !== 'promise') expect(CONCESSIONS_ALLOWED, `${where} promises ${kind}`).toContain(kind);
+          // A lie (deception-commitments) is the team's own empty promise, never a concession command gave.
+          if (kind !== 'promise' && kind !== 'lie') expect(CONCESSIONS_ALLOWED, `${where} promises ${kind}`).toContain(kind);
           expect(promisedTo.get(id) ?? to, `promise ${id} made to two people`).toBe(to);
           promisedTo.set(id, to);
         }
@@ -235,10 +237,11 @@ describe('call trees: text for whoever is drawn, at every group size', () => {
   for (const tree of BOUND_TREES) describe(tree === GROUP_TREE ? 'group fixture' : tree.type, () => {
     const roles = new Set(tree.roles.map(role => role.id)), groups = new Set(Object.keys(tree.groups ?? {}));
 
-    it('writes known role tokens only, {lead} only in summaries, and no dashes or stray colons', () => {
+    it('writes known role tokens only, {lead} only in summaries and the pull and cost, and no dashes or stray colons', () => {
       for (const { field, text } of treeStrings(tree)) {
         for (const [, token, part, singular, , heForm, , , oneForm] of text.matchAll(TOKEN)) {
-          if (token === 'lead') { expect(field, `{lead} in ${field}: "${text}"`).toBe('choice.summary'); continue; }
+          // The selectors fill {lead} in a choice's summary and its pull and cost (operation-selectors leadIn).
+          if (token === 'lead') { expect(['choice.summary', 'choice.pull', 'choice.cost'], `{lead} in ${field}: "${text}"`).toContain(field); continue; }
           if (token === 'place' || token === 'scene') { expect(part).toBeUndefined(); continue; }
           if (part === 'room') { expect(roles.has(token) || groups.has(token), `unknown room token {${token}.room}`).toBe(true); continue; }
           expect(roles.has(token) || groups.has(token), `unknown token {${token}} in "${text}"`).toBe(true);

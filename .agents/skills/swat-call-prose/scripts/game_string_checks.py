@@ -28,18 +28,33 @@ BUDGETS = {
     "known": (260, 12, True), "unknown": (260, 12, True), "team_job": (260, 10, True),
     "fact_label": (40, 5, True), "fact_claim": (None, 20, True), "fact_note": (None, 12, True),
     "fact_source": (None, 6, True), "fact_result": (None, 20, False), "marker": (10, 1, True),
-    "map_task": (12, 3, True), "stage_label": (24, 2, True), "prompt": (120, 18, True),
-    "choice_title": (60, 5, True), "summary": (230, 20, True), "preview": (None, 20, True),
+    "map_task": (12, 3, True), "stage_label": (24, 2, True), "prompt": (300, 50, True),
+    "choice_title": (60, 5, True), "summary": (350, 60, True), "preview": (None, 25, True),
     "requirement": (None, 8, True), "modifier": (None, 6, True), "cert_bonus": (None, 6, True),
-    "support": (None, 6, True), "equipment": (None, 6, True), "result": (240, 30, False),
+    "support": (None, 6, True), "equipment": (None, 6, True), "result": (450, 80, False),
     "result_label": (None, 4, False), "officer_harm": (None, 10, False),
-    "ending_title": (60, 6, False), "ending_summary": (240, 35, False),
+    "ending_title": (60, 6, False), "ending_summary": (400, 70, False),
     "still_needed": (None, 8, False), "objective": (None, 8, True),
     "civilian_outcome": (None, 6, False), "radio": (None, 10, False), "speech": (None, 15, False),
     "service": (None, 15, True), "debrief": (None, 10, False), "pressure_label": (None, 4, True),
+    # Transcript lines (TreeNode.exchange before the check, TreeOutcome.exchange after) and the
+    # ending epilogue: the depth surfaces (owner 2026-10-19, swat-call-design E16 and E17).
+    "exchange": (90, 15, True), "exchange_result": (90, 15, False), "epilogue": (300, 50, False),
+    # The depth register (owner 2026-10-19): the scene before the call, who the people are, and what
+    # draws a player to a choice and what it costs.
+    "cold_open": (900, 150, True), "profile": (300, 50, True), "pull": (140, 22, True), "cost": (140, 22, True),
 }
+# Spoken lines. The speaker is the source, so an accusation is the speaker's framing, and speech
+# may shout, front a clause and say what it feels (E17).
+SPOKEN = ("exchange", "exchange_result", "speech", "radio")
+# Fragment-only strings allowed per call in narration (E17 raised it from 2).
+FRAGMENT_CAP = 4
 LOCKED_CLAMP = 80
-HOOK_CHARS = 130
+# A run of this many words shared by two strings is a repeat. 4 suited 20-word strings; the depth
+# register (owner 2026-10-19) triples string length, and at 4 ordinary place phrases collide across
+# variants that never meet. Back-to-back echoes on one path stay at 3 words (path-echo).
+NGRAM = 6
+HOOK_CHARS = 145
 BANDS = ("favorable", "mixed", "adverse")
 DASH_CHARS = "".join(chr(c) for c in (0x2012, 0x2013, 0x2014, 0x2015))
 DASHES = re.compile("[" + DASH_CHARS + "]|(?<=\\S) \\x2d (?=\\S)|\\x2d\\x2d")
@@ -264,7 +279,7 @@ def main():
             flag("colon", row, f"...{text[max(0, m.start() - 20):m.start() + 20]}...")
         if ";" in text:
             flag("semicolon", row, "split the sentence")
-        if "!" in text and OQ not in text:
+        if "!" in text and OQ not in text and surface not in SPOKEN:
             flag("exclamation", row, "only in shouted dialogue")
         if "'" in text:
             flag("apostrophe", row, "straight apostrophe, data uses curly")
@@ -293,6 +308,8 @@ def main():
             flag("it-check", row, "read this string alone; does 'it' have a referent inside it?")
         for s in sentences(unquoted(text)):
             words = s.split()
+            if surface in SPOKEN:
+                continue
             if INVERSION.search(s) or MOVED_FRAGMENT.search(s):
                 flag("inversion", row, f"'{s[:50]}'; plain subject and verb")
             m = re.match(r"^([A-Z][\w" + APOS + r"']*)((?: [\w" + APOS + r"']+){0,6}), ([\w" + APOS + r"']+)\b", s)
@@ -314,12 +331,12 @@ def main():
                 result_tense[tenses.pop()] += 1
         if surface in PROSE_SURFACES and sentences(unquoted(text)) and all(is_fragment(s) for s in sentences(unquoted(text))):
             fragment_only.append(row)
-        for c in sorted(cast):
+        for c in sorted(cast) if surface not in SPOKEN else []:
             n = len(re.findall(r",\s+" + re.escape(c) + r"\s+(says|said|tells|told|decides|decided)\b", low))
             if n:
                 speech_tags[c] += n
         spoken = [q.lower().replace(APOS, "'") for q in QUOTED.findall(text)]
-        if surface in ("speech", "radio"):
+        if surface in SPOKEN:
             spoken = [low.replace(APOS, "'")]
         for q in sorted(set(spoken)):
             for p in STOCK_SPOKEN:
@@ -355,7 +372,7 @@ def main():
                     flag("unsafe" if name == "UNSAFE_DETAIL" else "meta", row, m.group(0))
             for s in sentences(text):
                 neg = lint.get("NEGATED") and lint["NEGATED"].search(s)
-                if pre and lint.get("ACCUSATION") and (m := lint["ACCUSATION"].search(s)):
+                if pre and surface not in SPOKEN and lint.get("ACCUSATION") and (m := lint["ACCUSATION"].search(s)):
                     if not (lint.get("HEDGE") and lint["HEDGE"].search(s)) and not neg:
                         flag("accusation", row, f"'{m.group(0)}' needs a source in the sentence")
                 if lint.get("SETTLED") and (m := lint["SETTLED"].search(s)) and not neg:
@@ -366,9 +383,9 @@ def main():
                 policy.append((row["where"], row["situation"], m.group(0), "matches " + "+".join(hits) if hits else "matches none"))
 
     # Call-level counts from the row pass.
-    if len(fragment_only) > 2:
+    if len(fragment_only) > FRAGMENT_CAP:
         for r in fragment_only:
-            flag("fragments", r, f"fragment-only string ({len(fragment_only)} in the call, limit 2): {r['text'][:50]}")
+            flag("fragments", r, f"fragment-only string ({len(fragment_only)} in the call, limit {FRAGMENT_CAP}): {r['text'][:50]}")
     if len(result_tense) == 2:
         minority = min(result_tense, key=result_tense.get)
         flag("tense-call", None, f"results run {dict(result_tense)}; the {minority} ones break the call's tense")
@@ -398,7 +415,7 @@ def main():
         if not any(b == "adverse" for _, b in have):
             flag("missing-band", None, f"{act}: no adverse preview")
 
-    # Repeats: whole sentences, 4-word runs across fields or situations, motifs, content words.
+    # Repeats: whole sentences, NGRAM-word runs across fields or situations, motifs, content words.
     seen = collections.defaultdict(set)
     grams = collections.defaultdict(set)
     for r in rows:
@@ -408,9 +425,9 @@ def main():
             if len(s.split()) >= 4:
                 seen[s].add(key)
         t = toks(r["text"])
-        for i in range(len(t) - 3):
-            g = " ".join(t[i:i + 4])
-            if any(k in g for k in keep) or all(w in cast or w in STOP for w in t[i:i + 4]):
+        for i in range(len(t) - NGRAM + 1):
+            g = " ".join(t[i:i + NGRAM])
+            if any(k in g for k in keep) or all(w in cast or w in STOP for w in t[i:i + NGRAM]):
                 continue
             grams[g].add(key)
     for s, keys in sorted(seen.items(), key=lambda kv: -len(kv[1])):
@@ -421,7 +438,7 @@ def main():
         if len(keys) >= a.min_repeat:
             runs.setdefault(frozenset(keys), []).append(g)
     for keys, gs in runs.items():
-        flag("ngram", None, f"{len(keys)} strings share a run starting '{gs[0]}' ({len(gs) + 3} words) in {', '.join(sorted(w for w, _ in keys))[:80]}")
+        flag("ngram", None, f"{len(keys)} strings share a run starting '{gs[0]}' ({len(gs) + NGRAM - 1} words) in {', '.join(sorted(w for w, _ in keys))[:80]}")
     alltext = " ".join(r["text"] for r in rows).lower()
     for k in keep:
         n = alltext.count(k)
@@ -464,6 +481,12 @@ def main():
             pair = (x["where"], x["situation"], y["where"], y["situation"])
             if x["where"] == y["where"] and x["text"] == y["text"]:
                 continue  # the same field's row for another situation, not a second string
+            # A node's prompt and its prompt variants replace each other on screen; they are never
+            # read back to back (prompt, promptIf[n], and each one's exchange).
+            node_of = lambda w: w.split(".")[0]
+            if x["surface"] in ("prompt", "exchange") and y["surface"] in ("prompt", "exchange") and node_of(x["where"]) == node_of(y["where"]) \
+                    and ("promptIf[" in x["where"]) != ("promptIf[" in y["where"]) or ("promptIf[" in x["where"] and "promptIf[" in y["where"] and x["where"].split(".exchange")[0] != y["where"].split(".exchange")[0]):
+                continue
             if shared and pair not in seen_pairs:
                 seen_pairs.add(pair)
                 flag("path-echo", y, f"repeats '{shared[0]}' from {x['where']}, read back to back")

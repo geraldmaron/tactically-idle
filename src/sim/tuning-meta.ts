@@ -263,6 +263,8 @@ export const TUNING_META: readonly FieldMeta[] = [
     'force.hands': pair('Taken by hand', 'Per person the team took by hand: no review, a struggle the team carries home.'),
     'commitments.kept': pair('Promise kept', 'Per promise command kept.'),
     'commitments.broken': pair('Promise broken', 'Per promise the team went back on.'),
+    'commitments.lieHeld': pair('Lie held', 'Per lie the person never found out (deception-commitments).'),
+    'commitments.lieFound': pair('Lie found out', 'Per lie the person found out.'),
     'time.longAt': { label: 'Long call from', help: 'Operation minutes from which a call counts as long.', group: 'time', min: 15, max: 120, step: 5, unit: 'min' },
     'time.long': pair('Long call', 'Once for a long call.'),
     'factor.base': { label: 'Reward baseline', help: 'The rewards factor (funding, experience, development points, trust) before the call\'s trust points and progress.', min: 0.5, max: 0.9, step: 0.01, unit: 'factor' },

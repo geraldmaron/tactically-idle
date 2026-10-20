@@ -19,6 +19,7 @@ import { Icon } from '../icons';
 import { money } from '../format';
 import { hasNodeEffect } from './helpers';
 import './gear-visual.css';
+import { ScreenBanner } from '../art/Plates';
 
 // The Armory (gear-armory): one list of every item, owned or not. Tapping an item opens one sheet
 // that buys it, shows its stock and units, and sets its restock rule. Standing tools (restock rules,
@@ -31,6 +32,7 @@ export function GearScreen() {
   const owned = opts.filter((option) => option.owned > 0);
   return (
     <div className="page gear-page">
+      <ScreenBanner id="gear" kicker="Armory" title="Equipment" line={<ArmoryLine owned={owned} />} />
       <ArmoryHeader owned={owned} onTool={setTool} />
       <EquipmentStore active />
       <Sheet open={tool === 'rules'} onClose={() => setTool(null)} title="Restock rules" subtitle="At each clock hour, held stock is refilled up to each target within its spending ceiling. Rules never take funding below zero and stop after 24 hours without orders.">
@@ -46,20 +48,25 @@ export function GearScreen() {
   );
 }
 
-/** What the department holds, as three numbers, and the Armory's standing tools. */
-function ArmoryHeader({ owned, onTool }: { owned: StoreOption[]; onTool: (tool: 'rules' | 'presets' | 'reference') => void }) {
+/** What the department holds, as three numbers on the banner. */
+function ArmoryLine({ owned }: { owned: StoreOption[] }) {
+  const ready = owned.reduce((n, o) => n + o.ready, 0);
+  const busy = owned.reduce((n, o) => n + o.reserved + o.inService, 0);
+  return <span className="armory-line">
+    <span className="armory-line-ready"><Icon name="checkcircle" size={13} /><b>{ready}</b> ready</span>
+    {busy > 0 && <span><Icon name="wait" size={13} /><b>{busy}</b> busy</span>}
+    <span><Icon name="box" size={13} /><b>{owned.length}</b> kinds held</span>
+  </span>;
+}
+
+/** The Armory's standing tools: the Quartermaster, then restock rules, presets and the wall guide.
+ * They sit above the shop grid in as little height as they can, so the items start on screen one. */
+function ArmoryHeader({ onTool }: { owned: StoreOption[]; onTool: (tool: 'rules' | 'presets' | 'reference') => void }) {
   const g = useGame();
   const presets = hasNodeEffect(g, 'loadoutPresets');
   const restock = hasNodeEffect(g, 'restockRules');
-  const ready = owned.reduce((n, o) => n + o.ready, 0);
-  const busy = owned.reduce((n, o) => n + o.reserved + o.inService, 0);
   return (
     <section className="armory-head" aria-label="Armory">
-      <div className="inv-summary">
-        <span className="inv-stat inv-stat-ready"><Icon name="checkcircle" size={14} /><b>{ready}</b> ready</span>
-        <span className="inv-stat"><Icon name="wait" size={14} /><b>{busy}</b> busy</span>
-        <span className="inv-stat"><Icon name="box" size={14} /><b>{owned.length}</b> kinds held</span>
-      </div>
       <QuartermasterCard />
       <div className="armory-tools">
         <button type="button" className="armory-tool" aria-haspopup="dialog" onClick={() => onTool('rules')}>

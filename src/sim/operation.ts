@@ -610,6 +610,8 @@ export function decisionViewsFor(state: GameState, run: OperationRun, scenario: 
       knowledgeChanges: record.knowledgeChanges.map((change) => ({ ...change, label: scenario.facts.find((fact) => fact.id === change.factId)?.label ?? change.factId })),
       contributors: record.inputs.map((input) => ({ ...input })),
       consequences: committed ? [...committed.consequences] : step.effects.map((effect) => effect.text).filter((text): text is string => !!text),
+      ...((committed ? committed.exchange : step.effects.flatMap(effect => effect.exchange ?? []))?.length
+        ? { exchange: (committed?.exchange ?? step.effects.flatMap(effect => effect.exchange ?? [])).map(line => ({ ...line })) } : {}),
       ...(committed?.officerCasualties !== undefined ? { officerCasualties: committed.officerCasualties.map(person => ({ ...person })) } : {}),
       ...(committed?.forceOutcome ? { forceOutcome: { ...committed.forceOutcome } } : {}),
       ...(committed?.personCasualties ? { personCasualties: committed.personCasualties.map(person => ({ ...person })) } : {}),
@@ -751,6 +753,8 @@ export function computeDebrief(state: GameState, run: OperationRun): DebriefResu
     if (closingStrain.length) causes.unshift(`Ending adjustment at close: ${closingStrain.map((officer) => `${state.officers[officer.officerId]?.surname ?? officer.officerId} ${officer.delta > 0 ? '+' : ''}${officer.delta} strain`).join('; ')}.`);
   }
 
+  // The ending's epilogue, or the first variant whose state holds at the end of the call (E11.2).
+  const epilogue = ending.epilogueIf?.find(entry => conditionHolds(entry.when, run))?.epilogue ?? ending.epilogue;
   return {
     runId: run.id,
     scenarioId: run.scenarioId,
@@ -758,6 +762,7 @@ export function computeDebrief(state: GameState, run: OperationRun): DebriefResu
     endingTitle: ending.title,
     decisions: decisionViewsFor(state, run, scenario, steps),
     ...({ endingSummary: ending.summary }),
+    ...(epilogue ? { endingEpilogue: epilogue } : {}),
     ...completion,
     ...(run.responseFailure ? { disposition: 'unresolved' as const, completionAchieved: false, remainingTasks: run.responseFailure.remainingTasks } : {}),
     ...({ officerCasualties: Object.values(run.officerCasualties ?? {}).map(person => ({ ...person })), civilianOutcomes: civilianOutcomeViews(scenario, run) }),
@@ -1068,6 +1073,7 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
       ...(incidentConsequences ? { officerCasualties: incidentConsequences.records } : {}),
       ...(personConsequences ? { personCasualties: personConsequences.records } : {}),
       ...(ev.protectionUsed ? { protectionUsed: { ...ev.protectionUsed } } : {}),
+      ...(matched.some(effect => effect.exchange?.length) ? { exchange: matched.flatMap(effect => effect.exchange ?? []).map(line => ({ ...line })) } : {}),
       ...(drawn.records.length ? { drawn: drawn.records.map(record => ({ ...record })) } : {}),
     };
     resolution.explanation = explain(draft, scenario, ev, band, texts, timeCost, t.civilianLoss, knowledgeChanges, consumed, strain, stageNote);

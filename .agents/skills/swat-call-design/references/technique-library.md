@@ -250,3 +250,87 @@ illustrative. Never paste a pattern line into data. Write the call's own.
 - Pattern. "Talking first kept him at the window. The medic’s training opened the care step."
 - Lands in. The debrief.
 - Goes wrong. Grading the player's character.
+
+## Lenses (depth bible, 2026-10-19)
+
+A lens is a way a renowned thriller maker builds dread, sympathy or a turn, restated as a
+technique this game can carry. Pick one primary lens and one secondary for each call, and record
+them in sheet row B. A lens names a source, never a voice: no maker's characters, lines, plots or
+signature shots. If a reader could name the film from the call, it has become pastiche.
+
+### L1. The bomb the subject can't see
+
+- Does. Gives the player a fact the person on the line doesn't have, and makes every later line
+  of theirs land against it.
+- Works because. Shared foreknowledge turns every ordinary exchange into suspense [PS10].
+- Pattern. Known line: "The coworker holding the door is the one who counted that till."
+- Lands in. A known line, a reveal result, or a transcript line the subject doesn't hear.
+- Goes wrong. Spending the fact as a surprise in the same stage, or never letting the subject
+  find out.
+
+### L2. The voice in the dark
+
+- Does. Puts most of the call on the line, so the player builds the room from what they hear.
+- Works because. A picture the listener draws is personal, and a wrong first picture becomes
+  the turn [TV8].
+- Pattern. Transcript: "Radio: Breathing, then the till drawer, then nothing."
+- Lands in. `exchange` on the stage 1 and 2 nodes, and the facts settled by a later look.
+- Goes wrong. A narrator describing what the voice means, or sound effects in place of people.
+
+### L3. The crowd at the tape
+
+- Does. Makes the street an audience the subject performs for, and lets the player feel
+  sympathy for the person holding the weapon.
+- Works because. A subject who plays to onlookers turns the crowd into pressure nobody controls,
+  and a sympathetic subject makes force cost more [TV24].
+- Pattern. "Someone at the tape starts chanting the taker's name, and he goes to the window."
+- Lands in. The escalation palette (crowd), the dignity dilemma (pattern 13) and the temptation
+  (a promise made to a hostage to calm them).
+- Goes wrong. A crowd that mocks one side, or a subject made heroic for the threat itself.
+
+### L4. The interview
+
+- Does. Plays a run of exchanges as a contest of position, where who sits where and who
+  speaks first decides who leads.
+- Works because. Staging power keeps a long conversation tense, and the reaction includes the
+  audience in whether someone cracks [TV22].
+- Pattern. Transcript, stage 2 then 3: "Taker: You don't get to ask about my last day." Then
+  later: "Taker: It was a Tuesday."
+- Lands in. Successive `exchange` lines on the same person, with the diction shifting as their
+  meters move.
+- Goes wrong. A charming monster. The subject is ordinary, and that is what frightens.
+
+### L5. The professionals
+
+- Does. Shows character through how people do the job, in few words over the radio.
+- Works because. Competence under pressure reads as truth, and terse lines leave the stakes
+  room [TV18][TV11].
+- Pattern. "Radio: Rear's covered. Nobody moves till you say."
+- Lands in. Negotiator and radio lines in `exchange`, choice summaries.
+- Goes wrong. Jargon, codes (AU7) or swagger.
+
+### L6. The lonely walk
+
+- Does. Holds on the officer who has to step forward, and on what it costs them.
+- Works because. Unknown faces make anyone's death possible, and staying with one person's
+  experience builds dread better than spectacle [TV21].
+- Pattern. Summary: "Okafor walks to the glass alone, hands where the taker can see them."
+- Lands in. Entry and talk-at-the-door choices, officer stress lines and the officer epilogue.
+- Goes wrong. Addiction to danger played as cool, or courage that costs nothing.
+
+### L7. The reframe
+
+- Does. Lets a late truth change what an earlier scene meant, so the player re-reads their own
+  choices.
+- Works because. When the player shares the lead's ignorance, every new fact rewrites what came
+  before [TV23].
+- Pattern. Reveal in stage 3: "The coworker who held the door for the courier took the money."
+- Lands in. Situations (D2), reveal results and the epilogue.
+- Goes wrong. A twist that makes the earlier choices meaningless, or a truth the player could
+  never have suspected (T23).
+
+### L8. The self-justifier
+
+T11 and T13 carry this lens [TV3]. Every person on scene has a story in which they are right,
+and the call is written from inside each story. The depth gates require it of every key person,
+not only the subject (D1).

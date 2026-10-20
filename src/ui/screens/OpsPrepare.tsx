@@ -24,6 +24,7 @@ import { Blueprint } from '../blueprint/Blueprint';
 import { floorCount } from '../blueprint/floors';
 import { Button, Card, Chip, Section, Stepper, SubHead } from '../components/ui';
 import { familyBlurb, incidentMeta } from '../components/incident';
+import { PlateArt, sceneFor } from '../art/Plates';
 import { Portrait } from '../portraits/Portrait';
 import { GearArt } from '../art/GearArt';
 import { useToast } from '../components/toast';
@@ -38,6 +39,7 @@ import type { AutoNote, Explicit, Loadouts } from './autoPlan';
 import { buildIntel } from './intel';
 import { handCarriedLoadout, SupportPreparation } from './SupportPreparation';
 import { PrepBriefing } from './PrepBriefing';
+import { ColdOpen } from '../components/DepthBrief';
 import { GamePeopleProvider } from '../people/PeopleText';
 import { lexiconFor } from '../people/lexicon';
 import { preparationOptions } from './preparation-options';
@@ -285,16 +287,18 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
           <Icon name="chevronLeft" size={18} />
           Operations
         </button>
-        <div className="prep-title">
+        <div className="prep-title plate plate-grain">
+          <PlateArt src={sceneFor(incidentType ?? undefined)} />
           <span className="prep-title-badge" aria-hidden="true"><Icon name={incidentType ? incidentMeta(incidentType).icon : 'pin'} size={22} /></span>
           <span className="prep-title-text">
-            <span className="opboard-code">{card?.code ?? 'OP'}</span>
+            <span className="opboard-code mono">{card?.code ?? 'OP'}</span>
             <h2 className="live-name">{(card?.title ?? scenarioId.replace(/_/g, ' ')).toUpperCase()}</h2>
             {kicker && <p className="prep-kicker">{kicker}</p>}
           </span>
         </div>
       </div>
 
+      <ColdOpen text={scenario?.coldOpen} className="prep-cold-open" />
       <PrepBriefing scenario={scenario} built={built} brief={brief} intel={intel} />
 
       <div className="prep-map" aria-label="Location preview">

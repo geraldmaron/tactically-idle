@@ -2,6 +2,8 @@ import { useState } from 'react';
 import type { ReactNode } from 'react';
 import './app.css';
 import './player-navigation.css';
+import './skin.css';
+import { textureVars } from './art/Plates';
 import { TopBar } from './components/TopBar';
 import { BottomNav } from './components/BottomNav';
 import { ToastProvider } from './components/toast';
@@ -15,7 +17,8 @@ import { OpsScreen } from './screens/Ops';
 import { DevelopScreen } from './screens/Develop';
 import { GearScreen } from './screens/Gear';
 import { OfficerSheet } from './screens/OfficerSheet';
-import { CampaignBar, SaveManager } from './components/SaveManager';
+import { SaveManager, SaveWarning } from './components/SaveManager';
+import { WelcomeBack } from './components/WelcomeBack';
 import { useCampaigns, useGame } from './store';
 import { DepartmentContext } from './components/department-context';
 
@@ -31,6 +34,9 @@ function DepartmentScope({ children }: { children: ReactNode }) {
   return <DepartmentContext.Provider value={g.department}>{children}</DepartmentContext.Provider>;
 }
 
+/** The skin's texture URLs (skin.css), resolved once against the base path. */
+const TEXTURES = textureVars() as React.CSSProperties;
+
 function GameShell() {
   const nav = usePlayerNavigation();
   const { tab } = nav;
@@ -39,13 +45,13 @@ function GameShell() {
 
   return (
     <div className="stage">
-      <div className="app">
+      <div className="app" style={TEXTURES}>
         <NavContext.Provider value={nav}>
           <DepartmentScope>
             <OverlayRootContext.Provider value={overlay}>
               <ToastProvider>
-                <TopBar />
-                <CampaignBar onOpen={() => setSavesOpen(true)} />
+                <TopBar onOpenSaves={() => setSavesOpen(true)} />
+                <SaveWarning onOpen={() => setSavesOpen(true)} />
                 <main className={`screen screen-${tab}`} key={tab}>
                   {nav.returnToItem && <div className="player-return"><Button onClick={nav.returnToEquipment}>Back to item · {ITEMS[nav.returnToItem]?.name ?? 'Equipment'}</Button></div>}
                   {tab === 'hq' && <HQ />}
@@ -57,6 +63,7 @@ function GameShell() {
                 <BottomNav />
                 <SaveManager open={savesOpen} onClose={() => setSavesOpen(false)} />
                 <OfficerSheet officerId={nav.officerId} onClose={nav.closeOfficer} />
+                <WelcomeBack />
               </ToastProvider>
             </OverlayRootContext.Provider>
           </DepartmentScope>
