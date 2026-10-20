@@ -50,6 +50,10 @@ SPOKEN = ("exchange", "exchange_result", "speech", "radio")
 # Fragment-only strings allowed per call in narration (E17 raised it from 2).
 FRAGMENT_CAP = 4
 LOCKED_CLAMP = 80
+# A run of this many words shared by two strings is a repeat. 4 suited 20-word strings; the depth
+# register (owner 2026-10-19) triples string length, and at 4 ordinary place phrases collide across
+# variants that never meet. Back-to-back echoes on one path stay at 3 words (path-echo).
+NGRAM = 6
 HOOK_CHARS = 145
 BANDS = ("favorable", "mixed", "adverse")
 DASH_CHARS = "".join(chr(c) for c in (0x2012, 0x2013, 0x2014, 0x2015))
@@ -411,7 +415,7 @@ def main():
         if not any(b == "adverse" for _, b in have):
             flag("missing-band", None, f"{act}: no adverse preview")
 
-    # Repeats: whole sentences, 4-word runs across fields or situations, motifs, content words.
+    # Repeats: whole sentences, NGRAM-word runs across fields or situations, motifs, content words.
     seen = collections.defaultdict(set)
     grams = collections.defaultdict(set)
     for r in rows:
@@ -421,9 +425,9 @@ def main():
             if len(s.split()) >= 4:
                 seen[s].add(key)
         t = toks(r["text"])
-        for i in range(len(t) - 3):
-            g = " ".join(t[i:i + 4])
-            if any(k in g for k in keep) or all(w in cast or w in STOP for w in t[i:i + 4]):
+        for i in range(len(t) - NGRAM + 1):
+            g = " ".join(t[i:i + NGRAM])
+            if any(k in g for k in keep) or all(w in cast or w in STOP for w in t[i:i + NGRAM]):
                 continue
             grams[g].add(key)
     for s, keys in sorted(seen.items(), key=lambda kv: -len(kv[1])):
@@ -434,7 +438,7 @@ def main():
         if len(keys) >= a.min_repeat:
             runs.setdefault(frozenset(keys), []).append(g)
     for keys, gs in runs.items():
-        flag("ngram", None, f"{len(keys)} strings share a run starting '{gs[0]}' ({len(gs) + 3} words) in {', '.join(sorted(w for w, _ in keys))[:80]}")
+        flag("ngram", None, f"{len(keys)} strings share a run starting '{gs[0]}' ({len(gs) + NGRAM - 1} words) in {', '.join(sorted(w for w, _ in keys))[:80]}")
     alltext = " ".join(r["text"] for r in rows).lower()
     for k in keep:
         n = alltext.count(k)
@@ -477,6 +481,12 @@ def main():
             pair = (x["where"], x["situation"], y["where"], y["situation"])
             if x["where"] == y["where"] and x["text"] == y["text"]:
                 continue  # the same field's row for another situation, not a second string
+            # A node's prompt and its prompt variants replace each other on screen; they are never
+            # read back to back (prompt, promptIf[n], and each one's exchange).
+            node_of = lambda w: w.split(".")[0]
+            if x["surface"] in ("prompt", "exchange") and y["surface"] in ("prompt", "exchange") and node_of(x["where"]) == node_of(y["where"]) \
+                    and ("promptIf[" in x["where"]) != ("promptIf[" in y["where"]) or ("promptIf[" in x["where"] and "promptIf[" in y["where"] and x["where"].split(".exchange")[0] != y["where"].split(".exchange")[0]):
+                continue
             if shared and pair not in seen_pairs:
                 seen_pairs.add(pair)
                 flag("path-echo", y, f"repeats '{shared[0]}' from {x['where']}, read back to back")

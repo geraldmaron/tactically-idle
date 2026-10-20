@@ -1075,3 +1075,18 @@ a standoff choice `stay_on` answers "Doesn't matter." (E4.4), pull_back hides wh
 withdrawn, and the threat node asks the direct question too. RB2's `lie_found` prompt variant is
 lone only, because the mark planner ignores an outcome's own condition (backlog
 `mark-plan-reads-when`). F5 (no temptation in group calls) stays open.
+
+## The depth register (2026-10-19, owner approved a sample)
+
+The owner read the pilot and asked for more depth and more pretext. One rewritten slice was
+approved, and the whole call was rewritten to it:
+- A cold open on the shop's six years.
+- Who they are for the taker, the owner and the courier.
+- Prompts that say what each fact means for a named person.
+- Every choice carries a body that says who it touches, plus a pull line and a cost line.
+- Results written as a beat: the act, the reaction, what changed.
+- Endings that land on a person.
+
+The mechanics are unchanged: truths, marks, routes and the lie. Budgets roughly doubled (surface-budgets rows 0a, 0b, 19a), and the
+repeat check counts from 6 words. The props are kept to things every hosting building has: no
+lottery stand, no bread rack.
