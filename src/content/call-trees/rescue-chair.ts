@@ -93,9 +93,9 @@ export const RESCUE_CHAIR: CallTree = {
       confirmed: '{resident.first} says the concentrator stopped with the power, and the spare tank has about forty minutes.', disproved: '{resident.first} says the spare tank is full and good for hours.' },
   },
   situations: [
-    { note: '{shooter.He} fires from a window down the street, which on most houses can’t see the door, and the tank is full. Moving now is usually safe; waiting only costs time.', truth: { oxygen_low: false } },
-    { note: '{shooter.He} fires from the window straight across, which sees the door unless a tree is in the way, and the tank is full. Waiting is right; the door is where people get hurt.', truth: { oxygen_low: false } },
-    { note: '{shooter.He} fires from the window straight across, and the tank is running out. Neither waiting nor walking out is free.', truth: { oxygen_low: true } },
+    { note: '{shooter.He} fires from a window down the street, which on most houses can’t see the door, and the tank is full. Moving now is usually safe; waiting only costs time.', truth: { oxygen_low: false }, descriptors: ['death', 'injury'] },
+    { note: '{shooter.He} fires from the window straight across, which sees the door unless a tree is in the way, and the tank is full. Waiting is right; the door is where people get hurt.', truth: { oxygen_low: false }, descriptors: ['death', 'injury'] },
+    { note: '{shooter.He} fires from the window straight across, and the tank is running out. Neither waiting nor walking out is free.', truth: { oxygen_low: true }, descriptors: ['death', 'injury'] },
   ],
   turns: { waiting: ['lights_on', 'quiet_window', 'neighbor_runs'] },
   difficulty: { base: 40, perTier: 2 },
