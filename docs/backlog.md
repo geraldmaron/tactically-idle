@@ -241,7 +241,7 @@ fingerprints and Lab handle a list. Distinct from `new-call-types`, which adds k
 
 ### dither-minutes: Stalling on a decision costs game minutes
 Tags: job=command; journeys=new:stalling-costs-minutes; probes=none (time, not a favorable-chance input); lane=engine
-Needs: start=none (the stage threats on `claude/reconcile-main` must be on `main`); integrate=none; ship=none
+Needs: start=none; integrate=none; ship=none
 
 Design in `docs/call-pressure.md`. Done: real time on an open decision with a threat or running
 clock accrues dither minutes at the timer setting's rate after its reading floor; the dither is
