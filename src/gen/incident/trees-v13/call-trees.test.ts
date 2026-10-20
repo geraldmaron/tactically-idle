@@ -237,10 +237,11 @@ describe('call trees: text for whoever is drawn, at every group size', () => {
   for (const tree of BOUND_TREES) describe(tree === GROUP_TREE ? 'group fixture' : tree.type, () => {
     const roles = new Set(tree.roles.map(role => role.id)), groups = new Set(Object.keys(tree.groups ?? {}));
 
-    it('writes known role tokens only, {lead} only in summaries, and no dashes or stray colons', () => {
+    it('writes known role tokens only, {lead} only in summaries and the pull and cost, and no dashes or stray colons', () => {
       for (const { field, text } of treeStrings(tree)) {
         for (const [, token, part, singular, , heForm, , , oneForm] of text.matchAll(TOKEN)) {
-          if (token === 'lead') { expect(field, `{lead} in ${field}: "${text}"`).toBe('choice.summary'); continue; }
+          // The selectors fill {lead} in a choice's summary and its pull and cost (operation-selectors leadIn).
+          if (token === 'lead') { expect(['choice.summary', 'choice.pull', 'choice.cost'], `{lead} in ${field}: "${text}"`).toContain(field); continue; }
           if (token === 'place' || token === 'scene') { expect(part).toBeUndefined(); continue; }
           if (part === 'room') { expect(roles.has(token) || groups.has(token), `unknown room token {${token}.room}`).toBe(true); continue; }
           expect(roles.has(token) || groups.has(token), `unknown token {${token}} in "${text}"`).toBe(true);
