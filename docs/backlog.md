@@ -461,7 +461,7 @@ Optional.
 
 Decided 2026-10-19: scenario work is paused (the barricade is parked on its branch); a squad can
 deploy short of injured officers (`short-squad-deploys`); sidearms from day one
-(`sidearms-day-one`, shipped: two sidearms are issued at the start and `entry_team` stays the force certification, which both starting squads hold); keep the compiled fingerprints and the cross-engine check; a call resolved
+(`sidearms-day-one`, shipped: two sidearms are issued at the start and `entry_team` stays the force certification, which both starting squads hold); every officer is issued a light protective kit, at the start and on hire, and the Protective response program now unlocks only the carbine and shotgun; keep the compiled fingerprints and the cross-engine check; a call resolved
 with harm counts as resolved (already so in `dispositionOf`); an entry breaks every open commitment
 (already so in `src/sim/commitments.ts`); build the Peer Support Lead, the Recruiter and patrol work;
 the crisis cap stays report-only until playtests.
