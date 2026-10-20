@@ -6,6 +6,8 @@ import { Icon } from '../icons';
 import { money } from '../format';
 import { usePeopleColor } from '../people/PeopleText';
 import { setPeopleColor } from '../people/prefs';
+import { useSettings } from '../settings/SettingsControls';
+import { SETTINGS_TEXT, settingsSummary } from '../settings/labels';
 
 type Edit = { type: 'new' | 'copy' | 'rename' | 'delete' | 'import' | 'load'; id: number; name: string; data?: string; permanent?: boolean };
 const timestamp = (at: number) => new Date(at).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
@@ -32,7 +34,7 @@ export function CampaignButton({ onOpen }: { onOpen: () => void }) {
   const saved = useCampaigns();
   const status = campaignStatus(saved);
   return <button type="button" className={`campaign-btn${saved.issue ? ' campaign-btn-warning' : ''}`} onClick={onOpen}
-    aria-label={`Saves and new game. ${status.name}, ${status.detail}`}>
+    aria-label={`Saves, settings and new game. ${status.name}, ${status.detail}`}>
     <Icon name="bookmark" size={18} />
     {isResponsivePreview && <span className="campaign-btn-test">Test</span>}
     {status.attention && <i className="campaign-btn-dot" aria-hidden="true" />}
@@ -62,8 +64,9 @@ function SaveStatus() {
   </div>;
 }
 
-export function SaveManager({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function SaveManager({ open, onClose, onOpenSettings }: { open: boolean; onClose: () => void; onOpenSettings?: () => void }) {
   const saved = useCampaigns();
+  const settings = useSettings();
   const peopleColor = usePeopleColor();
   const [edit, setEdit] = useState<Edit | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -114,6 +117,12 @@ export function SaveManager({ open, onClose }: { open: boolean; onClose: () => v
       <SaveStatus />
       <p className="dim save-explainer">{isResponsivePreview ? 'This test library exists only in memory. New games, copies, renames and loads never read or change normal browser campaigns. Reloading or closing this frame discards every test slot.' : 'The active campaign saves automatically. Loading another slot first saves your current progress. Browser data clearing removes local saves; export a backup to keep a copy.'}</p>
       <div className="save-actions save-primary-actions"><Button variant="primary" onClick={() => begin('new', firstEmpty || 1)}>New game</Button><Button onClick={() => run({ type: 'save' }, 'Current campaign saved.')}>Save now</Button><Button onClick={() => begin('copy', firstEmpty || 1)}>Save a copy</Button></div>
+      {/* Settings ride on this sheet, the one menu in the header, rather than a sixth nav destination. */}
+      {onOpenSettings && <button type="button" className="settings-entry" onClick={onOpenSettings}>
+        <Icon name="wrench" size={18} />
+        <span className="settings-entry-text"><strong>{SETTINGS_TEXT.openSettings}</strong><small className="dim">{settingsSummary(settings)}</small></span>
+        <Icon name="chevronRight" size={18} />
+      </button>}
       {/* The one switch for people colors in call text (src/ui/people); a display preference kept in this browser, not in the save. */}
       <label className="toggle save-pref">
         <input type="checkbox" checked={peopleColor} onChange={(e) => setPeopleColor(e.target.checked)} />
