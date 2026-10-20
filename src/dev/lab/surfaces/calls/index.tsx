@@ -205,8 +205,8 @@ function CallCard({ template, verdicts, progress, usually, endings, lint, notes,
 }
 
 /** Each situation's content descriptors (docs/content-rating.md): what the board filter reads. A
- * derived one is set by the tree's own outcomes, a declared one by the designer's ethics screen; a
- * mature-only one is left off by the Core tier. One the tree derives but the list leaves out is
+ * derived one is set by the tree's own outcomes, a declared one by the designer's ethics screen; an
+ * avoidable one is a theme a player can keep off the board (the rest only warn). One the tree derives but the list leaves out is
  * shown as missing, as the content gate fails it. */
 function Content({ template }: { template: IncidentTemplate }) {
   const rows = useMemo(() => situationContent(template), [template]);
@@ -219,8 +219,8 @@ function Content({ template }: { template: IncidentTemplate }) {
             <span className="lab-calls-content-sit" title={row.note}>Situation {row.index + 1}</span>
             <span className="lab-calls-content-tags">
               {row.tags.map(tag => (
-                <span key={tag.descriptor} data-descriptor={tag.descriptor} className={cx('lab-calls-content-tag', tag.mature && 'lab-calls-content-mature')}
-                  title={`${tag.derived ? 'Derived from the tree' : 'Declared by the designer'}${tag.mature ? '; left off in the Core tier' : ''}`}>
+                <span key={tag.descriptor} data-descriptor={tag.descriptor} className={cx('lab-calls-content-tag', tag.avoidable && 'lab-calls-content-avoidable')}
+                  title={`${tag.derived ? 'Derived from the tree' : 'Declared by the designer'}${tag.avoidable ? '; a player can avoid it' : '; warns only'}`}>
                   {descriptorLabel(tag.descriptor)}{tag.derived ? '' : ' *'}
                 </span>
               ))}
@@ -231,7 +231,7 @@ function Content({ template }: { template: IncidentTemplate }) {
           </li>
         ))}
       </ul>
-      <span className="lab-calls-content-key">* declared by the designer · bordered: left off in the Core tier</span>
+      <span className="lab-calls-content-key">* declared by the designer · bordered: a player can avoid it</span>
     </div>
   );
 }
