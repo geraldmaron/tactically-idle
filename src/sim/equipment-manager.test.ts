@@ -1,3 +1,4 @@
+import { DEV_NODES } from '../content/dev-tree';
 import { fillOpenPostsForTest } from './staff-fixtures';
 import { describe, expect, it } from 'vitest';
 import { createInitialState } from './department';
@@ -29,8 +30,7 @@ describe('equipment manager', () => {
   it('charges a real one-time hire, starts automatic spending paused, and never stacks benefits', () => {
     const original = createInitialState(T0, 71);
     const next = ok(original, { type: 'unlockNode', nodeId: 'logistics_equipment_manager' });
-    expect(next.department.funding).toBe(original.department.funding - 2500);
-    expect(next.department.devPoints).toBe(original.department.devPoints - 3);
+    expect(next.department.funding).toBe(original.department.funding - DEV_NODES.logistics_equipment_manager.cost.funding);
     expect(maintenanceBudget(next)).toBe(0);
     expect(dispatch(next, { type: 'unlockNode', nodeId: 'logistics_equipment_manager' }, { now: T0 }).result.ok).toBe(false);
     expect(equipmentServiceCost(next, ITEMS.radio_kit)).toBe(45);
@@ -124,7 +124,7 @@ describe('equipment manager', () => {
     state.reservations.push({ id: 'held', runId: 'elsewhere', squadId: 'A', itemId: otherShield.itemId, unitId: otherShield.id });
     const next = ok(state, { type: 'tick' }, T0 + HOUR_MS);
     expect(Object.values(next.units).filter((u) => u.status === 'service')).toHaveLength(0);
-    expect(Object.values(next.units).filter((u) => u.itemId === 'radio_kit' && u.status === 'ready')).toHaveLength(6);
+    expect(Object.values(next.units).filter((u) => u.itemId === 'radio_kit' && u.status === 'ready')).toHaveLength(8);
     const failedRadio = Object.values(next.units).find((u) => u.itemId === 'radio_kit')!;
     failedRadio.condition = 0;
     const repaired = ok(next, { type: 'tick' }, T0 + 2 * HOUR_MS);

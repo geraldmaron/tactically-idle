@@ -1,0 +1,225 @@
+/* First-run screen and Settings sheet (src/ui/settings). Toggles reuse .toggle from app.css and the
+ * note and timer choices reuse the ChoiceRail; every target is at least var(--touch) tall. */
+
+.settings-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+.settings-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.settings-heading {
+  padding: 0;
+  margin-bottom: 8px;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 17px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text);
+}
+.settings-hint,
+.settings-detail {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--muted);
+}
+.settings-detail {
+  color: var(--text-dim);
+}
+
+.settings-tiers {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.settings-tier {
+  position: relative;
+  display: flex;
+  min-height: var(--touch);
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel);
+  cursor: pointer;
+}
+.settings-tier input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+}
+.settings-tier:has(input:checked) {
+  border-color: var(--amber);
+  background: var(--panel-3);
+  box-shadow: inset 0 0 0 1px var(--amber);
+}
+.settings-tier:has(input:focus-visible) {
+  outline: 2px solid var(--amber-2);
+  outline-offset: 2px;
+}
+.settings-tier-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.settings-tier-text strong {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 18px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.settings-tier:has(input:checked) strong {
+  color: var(--amber-2);
+}
+.settings-tier-text small {
+  font-size: 14px;
+  line-height: 1.35;
+  color: var(--text-dim);
+}
+
+.settings-topics {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.settings-topic {
+  display: flex;
+  gap: 6px;
+  align-items: stretch;
+  min-width: 0;
+}
+.settings-topic-toggle {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: var(--touch);
+}
+.settings-topic[data-locked] .settings-topic-toggle {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.settings-note-flag {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: var(--touch);
+  min-height: var(--touch);
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel);
+  font: 600 15px/1 var(--font-cond);
+  color: var(--text-dim);
+  cursor: pointer;
+}
+.settings-note-flag input {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  accent-color: var(--amber);
+}
+.settings-note-flag:has(input:checked) {
+  border-color: var(--amber);
+  color: var(--text);
+}
+
+.first-run {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 20px var(--gutter) calc(20px + env(safe-area-inset-bottom));
+}
+.first-run > * {
+  flex: 0 0 auto;
+}
+.first-run-head {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.first-run-kicker {
+  margin: 0;
+  font-family: var(--font-cond);
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--amber);
+}
+.first-run-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 28px;
+  line-height: 1.1;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+.first-run-note {
+  margin: 0;
+  padding: 10px 12px;
+  border-left: 3px solid var(--amber);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  background: var(--panel);
+  font-size: 15px;
+  line-height: 1.4;
+  color: var(--text-dim);
+}
+.first-run-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.settings-sheet .settings-hint:first-child {
+  margin-bottom: 16px;
+}
+
+/* The way into Settings from the saves sheet. */
+.settings-entry {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: var(--touch);
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.settings-entry:focus-visible {
+  outline: 2px solid var(--amber-2);
+  outline-offset: 2px;
+}
+.settings-entry-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 15px;
+}

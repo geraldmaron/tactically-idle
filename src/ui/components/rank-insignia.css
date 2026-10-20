@@ -1,0 +1,7 @@
+/* Rank insignia (officer-ranks): pale chevrons on dark panels, a gold lieutenant's bar. */
+.rank-insignia { flex: 0 0 auto; display: inline-block; vertical-align: middle; }
+.rank-chevron { fill: none; stroke: #cfe0ff; stroke-width: 2.3; stroke-linecap: round; stroke-linejoin: round; }
+.rank-chevron-empty { stroke: var(--text-dim); stroke-width: 1.6; stroke-dasharray: 2 2.4; }
+.rank-bar { fill: var(--amber-2); stroke: #b8860b; stroke-width: 1; }
+.rank-chip { gap: 5px; color: var(--chalk); border-color: rgba(207, 224, 255, 0.35); background: rgba(70, 110, 190, 0.16); }
+.rank-chip-lieutenant { border-color: rgba(243, 180, 50, 0.45); background: rgba(243, 180, 50, 0.1); color: var(--amber-2); }

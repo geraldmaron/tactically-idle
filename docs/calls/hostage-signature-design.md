@@ -966,3 +966,134 @@ The two follow-ups from the clock routing, with the lead's decision to drop the 
   plays (197 calls × 4 styles × 4 seeds) one run ended at `held_inside` with the owner hurt because
   `threat.step_back` mixed took 12.5 real minutes; the same run does so on main. Request: fork reads
   use the decision's real minutes.
+
+## Depth redesign (2026-10-19, backlog `hostage-depth-pilot`)
+
+Written through swat-call-design 0.4.0 under the depth bible (`docs/scenario-depth.md`). The
+engine plumbing above stands: roles, the group, the owner's clock, the cascade, the node and
+ending ids. What changed is the psychology. Private logic and truths are NEVER PRINTED.
+
+### Premise, revised
+
+```
+Lenses:      primary L1 (the bomb the subject can't see), secondary L7 (the reframe); L3 at the tape
+Reframe:     "Ask her. She knows." (offer transcript) means a different thing in each situation
+             s1  she found the money that night and never called him (owner_wrong)
+             s2  her kid closed out the drawer, and signing names the kid (owner_wrong false)
+             s3  he took it, and the page is the lie he needs (took_it)
+             reached by owner_voice (stage 2) in all three, and by last_day (stage 3) in s3
+Temptation:  say_she_signs (one_door, lone calls): "Tell him the owner will sign". It frees the
+             courier on the spot; the cue is the talking prompt "You said she would sign. Put her
+             on."; it breaks on own_up and on the adverse results of take_account, last_day and
+             his_door (foundOut), and holds if the taker walks out first
+Iceberg tip: the deposit bag (s1), "my kid" (s2), the shop camera (s3), each only through owner_voice
+```
+
+### People, revised
+
+```
+Taker        want "a page saying I took nothing"; wound: six years, the till counted out loud with
+             the regulars watching; self-lie "I only want the paper"; need: the owner looking at
+             him and saying she was wrong; breaking point: being lied to, the crowd filming, the
+             owner's silence; voice: short declaratives, numbers ("Six years"), never says the
+             owner's name to the negotiator, "Everything." as a whole answer
+Owner        want: to keep the shop and her word; wound: what she found, or who she is covering
+             for, or what she let go; self-lie s1 "I'll call him tomorrow", s2 "it was a
+             mistake", s3 "I was kind to him"; voice: precise, counts things ("I counted that
+             drawer twice"), speaks to the taker directly, "Look at me."
+Courier      want: to finish the route; fear: the van left running; voice: practical, corrects
+             himself ("I didn't run. I walked fast."), notices hands and pockets
+Negotiator   the player's voice: labels and open questions ("Help me understand why she
+             stays.", "What does her name fix for you?"), a mirror once ("Today."), never
+             explains the plan
+```
+
+### Escalation palette (D3)
+
+| Mechanism | Where |
+|---|---|
+| Lost control | team_alley, ask_door, ask_unlock, quiet_exit, back_deal, his_door |
+| The crowd | team_glass (a phone at the tape), last_one transcript and out_front |
+| A deadline passing | spare_key adverse (the minutes counted out loud) |
+| The call from home | call_now adverse (his own phone, a name, turned face down) |
+| Withdrawal | wait_silence adverse (it doesn't matter anymore, a flat voice). An E4 sign; the taker is screened, noFatal |
+| Bargaining collapse | write_now, honest_limit, offer_record, own_up, say_she_signs adverse |
+| Shame | take_account, last_day, read_back, owner_voice in s3 |
+| The partner | free_others, others_courier, others_walk_owner (group calls) |
+
+No mechanism is the only one on a path. The threat beat is still a handgun on the owner,
+because the engine's threat node needs it; what differs is why it comes up and what answers it.
+
+### Endings
+
+Every one of the 20 endings has an epilogue (E11.2), true on each path that reaches it, with the
+cost or grace on one named person. The custody lines from F5 are neutral now.
+
+### Design record, depth lines
+
+```
+- Depth plan: lenses L1, L7 (L3 at the tape); reframes s1 the owner's silence, s2 the same
+  silence, s3 the page itself; palette 8 mechanisms, max 2 per path by design (unmeasured);
+  temptation say_she_signs, cue talking.promptIf[0], break own_up and foundOut x3; voices
+  taker, owner, courier, negotiator, radio; epilogues 20 of 20
+- Open: D6 has no temptation in group calls (say_she_signs is lone only, to keep one_door at
+  three options); the group's tempting move is others_courier. For the reviewer and owner.
+- Darker tier (E16): the owner's deaths stay as written, with epilogues that carry the weight
+  ("still drives that route"); no new death paths
+- Gates: check:strings hostage_crisis exit 0 (three bindings); trees-v13 green after the
+  test helper read transcripts and epilogues; fingerprints recaptured for the 12 hostage keys
+```
+
+### Review response (2026-10-19, docs/calls/hostage-depth-review.md)
+
+| Finding | Response |
+|---|---|
+| B1 last_day preview false in s3 | Rewritten to hold in all three situations |
+| B2 group_out_dawn epilogue false | Rewritten to the apron line |
+| B3 two epilogues invent a recovery | Rewritten (the open till drawer; the name never said again) |
+| F1 reframe reach | New stage 3 choice owner_speaker (before the owner has spoken); ask_owner returns only after |
+| F2 later stages forget | talking and standoff prompt variants on owner_admits and camera_said, with transcripts |
+| F3 lie breaks unreachable | foundOut on owner_speaker (every band), ask_owner adverse and his_pace KEEPS; dead last_day and his_door breaks removed; a standoff variant keeps the pad in view |
+| F4 lie read as an afterthought | foundOut comes before the escalation on take_account |
+| F5 no temptation in group calls | Open. A promise can't be made to a group (compile.ts groupOutcome), so this waits for an engine request or an owner call |
+| F6, F7 transcripts restating prompts; the taker naming the owner | Prompts and lines rewritten; the taker uses pronouns for the owner |
+| F8, F9, F13 to F18 | Applied as the review gave them, with small wording changes where the checker found repeats |
+| F10 withdrawal as a beat | mark withdrawn; standoff opens with the negotiator's direct question (E4); his_pace's head-in-hands picture cut |
+| F11, F12 epilogues on no one, one frame | Rewritten onto named people; the asking frame cut to three |
+| F19 the reframe never reaches the after | Built: TreeEnding.epilogueIf (first match on marks at the end of the call); everyone_out carries owner_admits and camera_said variants |
+| F20 an entry "finds out" a lie | Fixed in sim/commitments.ts: only `breaks` breaks a lie; an entry leaves it open |
+
+Side effects measured: situation 3 now has 6010 explorer states, so the lab's EXPLORE_CAP rose to
+8000; the owner clock test's policy seed moved from 687 to 825; the outcome-score calibration
+reads trust MAE 0.754 against its 0.75 ceiling (0.756 after the re-check fixes) (main sat at exactly 0.750), which is the open
+owner decision in `outcome-calibration-drift`.
+
+### Re-check response (2026-10-19)
+
+RB1 to RB3, RF1 and RF2 fixed as the reader gave them, with checker-driven wording changes. F10:
+a standoff choice `stay_on` answers "Doesn't matter." (E4.4), pull_back hides while the taker is
+withdrawn, and the threat node asks the direct question too. RB2's `lie_found` prompt variant is
+lone only, because the mark planner ignores an outcome's own condition (backlog
+`mark-plan-reads-when`). F5 (no temptation in group calls) stays open.
+
+## The depth register (2026-10-19, owner approved a sample)
+
+The owner read the pilot and asked for more depth and more pretext. One rewritten slice was
+approved, and the whole call was rewritten to it:
+- A cold open on the shop's six years.
+- Who they are for the taker, the owner and the courier.
+- Prompts that say what each fact means for a named person.
+- Every choice carries a body that says who it touches, plus a pull line and a cost line.
+- Results written as a beat: the act, the reaction, what changed.
+- Endings that land on a person.
+
+The mechanics are unchanged: truths, marks, routes and the lie. Budgets roughly doubled (surface-budgets rows 0a, 0b, 19a), and the
+repeat check counts from 6 words. The props are kept to things every hosting building has: no
+lottery stand, no bread rack.
+
+### Register review response (2026-10-19, docs/calls/hostage-depth-register-review.md)
+
+B1 to B4 and F1 to F19 and F21 are applied as the reader gave them, with checker-driven wording
+changes. This also cuts every narrator maxim and portent, makes the props fit a bar as well as a
+shop ("the place", "the back shelves"; the owner's role label is now "owner"), and splits the
+longest sentences. F20, a temptation in group calls, stays open with the owner.

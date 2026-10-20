@@ -5,7 +5,7 @@ import type { GameState, ItemDefinition } from '../../sim/types';
 
 export type StoreCategory = ItemDefinition['category'];
 export type AvailabilityFilter = 'all' | 'buy_now' | 'locked';
-export type OwnershipFilter = 'all' | 'not_owned' | 'owned' | 'replenish';
+export type OwnershipFilter = 'all' | 'not_owned' | 'owned' | 'replenish' | 'attention';
 export type StoreSort = 'recommended' | 'cost_asc' | 'cost_desc' | 'name' | 'recent';
 export interface EquipmentQuery {
   search: string;
@@ -23,6 +23,10 @@ export interface CatalogEntry extends StoreOption {
   affordable: boolean;
   qualified: number;
   needsReplenishment: boolean;
+  /** Owned stock the player should look at: short of target or none ready, unreliable or expired units. */
+  needsAttention: boolean;
+  /** Why it needs attention, for the tile and its label. */
+  attention: string | null;
   unlockName: string | null;
   unlockOrder: number;
   searchText: string;
@@ -32,12 +36,17 @@ export function catalogEntries(state: GameState): CatalogEntry[] {
   return storeOptions(state).map((option) => {
     const item = option.item;
     const target = state.department.restockRules.find((rule) => rule.itemId === item.id)?.target;
+    const needsReplenishment = target !== undefined ? option.ready < target : option.owned > 0 && option.ready === 0;
+    const attention = option.owned === 0 ? null : option.ready === 0 ? 'None ready' : option.failed > 0 ? `${option.failed} need${option.failed === 1 ? 's' : ''} service` : option.unreliable > 0 ? `${option.unreliable} unreliable`
+      : option.expired > 0 ? `${option.expired} expired` : needsReplenishment ? 'Below restock target' : null;
     return {
       ...option,
+      needsAttention: attention !== null,
+      attention,
       unlocked: !item.requiresNode || state.department.unlockedNodes.includes(item.requiresNode),
       affordable: state.department.funding >= item.cost,
       qualified: Object.values(state.officers).filter((officer) => (item.requiresCerts ?? []).every((cert) => officer.certs.includes(cert))).length,
-      needsReplenishment: target !== undefined ? option.ready < target : option.owned > 0 && option.ready === 0,
+      needsReplenishment,
       unlockName: item.requiresNode ? DEV_NODES[item.requiresNode]?.name ?? item.requiresNode : null,
       // Unlocks are appended in purchase order. This is ordering, not an invented timestamp.
       unlockOrder: item.requiresNode ? state.department.unlockedNodes.indexOf(item.requiresNode) : -1,
@@ -60,7 +69,8 @@ export function matchesEquipment(entry: CatalogEntry, query: EquipmentQuery): bo
     && (query.ownership === 'all'
       || (query.ownership === 'owned' && entry.owned > 0)
       || (query.ownership === 'not_owned' && entry.owned === 0)
-      || (query.ownership === 'replenish' && entry.needsReplenishment));
+      || (query.ownership === 'replenish' && entry.needsReplenishment)
+      || (query.ownership === 'attention' && entry.needsAttention));
 }
 
 export function queryEquipment(entries: CatalogEntry[], query: EquipmentQuery): CatalogEntry[] {
@@ -86,11 +96,22 @@ export function equipmentFacets(entries: CatalogEntry[], query: EquipmentQuery) 
   return {
     categories: Object.fromEntries(['all', ...ITEM_CATEGORIES].map((category) => [category, count({ category: category as EquipmentQuery['category'] })])) as Record<EquipmentQuery['category'], number>,
     availability: Object.fromEntries(['all', 'buy_now', 'locked'].map((availability) => [availability, count({ availability: availability as AvailabilityFilter })])) as Record<AvailabilityFilter, number>,
-    ownership: Object.fromEntries(['all', 'not_owned', 'owned', 'replenish'].map((ownership) => [ownership, count({ ownership: ownership as OwnershipFilter })])) as Record<OwnershipFilter, number>,
+    ownership: Object.fromEntries(['all', 'not_owned', 'owned', 'replenish', 'attention'].map((ownership) => [ownership, count({ ownership: ownership as OwnershipFilter })])) as Record<OwnershipFilter, number>,
     affordable: count({ affordable: true }),
   };
 }
 
 export function activeEquipmentFilterCount(query: EquipmentQuery): number {
   return Number(!!query.search.trim()) + Number(query.category !== 'all') + Number(query.availability !== 'all') + Number(query.affordable) + Number(query.ownership !== 'all');
+}
+
+/** The Armory's one filter rail (gear-armory): everything, what the department holds, what needs
+ * looking at, and what can be bought now. Each view is a preset over the query's filters. */
+export type ArmoryView = 'all' | 'owned' | 'attention' | 'buy';
+export function armoryView(query: EquipmentQuery): ArmoryView {
+  return query.ownership === 'owned' ? 'owned' : query.ownership === 'attention' ? 'attention' : query.availability === 'buy_now' ? 'buy' : 'all';
+}
+export function withArmoryView(query: EquipmentQuery, view: ArmoryView): EquipmentQuery {
+  const base: EquipmentQuery = { ...query, ownership: 'all', availability: 'all', affordable: false };
+  return view === 'owned' ? { ...base, ownership: 'owned' } : view === 'attention' ? { ...base, ownership: 'attention' } : view === 'buy' ? { ...base, availability: 'buy_now' } : base;
 }

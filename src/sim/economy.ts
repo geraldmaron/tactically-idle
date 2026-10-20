@@ -15,7 +15,7 @@ import { gameDay, simNow } from './calendar';
 import { money } from './format';
 import { recoveryDuty } from './squads';
 import type { DutyRates } from './squad-optimizer';
-import { ageRecoveryFactor, applyCareerDue, nextCareerEventTime } from './career';
+import { ageRecoveryFactor, applyCareerDue, awardXp, learnedXp, nextCareerEventTime } from './career';
 import { applyUnitDue, applyUnitWear, createUnit, nextUnitEventTime, ownedCount } from './equipment';
 import { applyIncidentsDue, nextIncidentEventTime } from './incidents';
 import { runEquipmentMaintenance } from './equipment-manager';
@@ -24,6 +24,8 @@ import { commandStaffActive, commandStaffSalaries, logQuartermaster, runCommandS
 import { tunable } from './tuning';
 import { staffLever } from './staff-pool';
 import { RECRUIT_TUNING } from '../content/recruits';
+import { postFunding } from './ledger';
+import { completeDetails } from './detail';
 
 export const HOUR_MS = 3_600_000;
 
@@ -39,8 +41,6 @@ export const ECONOMY_TUNING = tunable('ECONOMY_TUNING', {
   facilities: 120,
   /** Routine supplies, per hour. */
   supplies: 80,
-  /** Passive development points per hour; most come from operations. */
-  devPointsPerHour: 0.25,
   /** Stress recovered per hour by the squad duty of the officer. */
   recoveryPerHour: { rest: 6, standby: 3, patrol: 1 } as Record<SquadDuty, number>,
   /** A settlement shorter than this does not produce a shift report (unless something notable happened). */
@@ -111,7 +111,6 @@ export interface Rates {
   /** Command Staff salaries, paid with payroll while each manager is on. */
   staff: number;
   net: number;
-  devPointsPerHour: number;
 }
 
 /** Hourly rates implied by the state at time t. Pure. */
@@ -145,8 +144,31 @@ export function ratesAt(state: GameState, t: number): Rates {
     supplies,
     staff,
     net: gross - wages - staff - operating - supplies,
-    devPointsPerHour: ECONOMY_TUNING.devPointsPerHour,
   };
+}
+
+/** One officer's hourly money: what they bring in (patrol, or a detail's fee spread over its hours)
+ * against their wage. Patrol pay is flat per officer (docs/patrol-work.md, owner 2026-10-19), so
+ * rates differ by wage, duty and instructor details, never by skill on patrol. */
+export interface OfficerRate {
+  patrol: number;
+  detail: number;
+  wage: number;
+  net: number;
+}
+
+/** Hourly rate of every officer at time t. Their patrol column sums to ratesAt().patrol. Pure. */
+export function officerRates(state: GameState, t: number): Record<Id, OfficerRate> {
+  const patrolling = new Set<Id>();
+  for (const sq of state.squads) if (sq.duty === 'patrol') for (const id of sq.officerIds) patrolling.add(id);
+  const out: Record<Id, OfficerRate> = {};
+  for (const o of Object.values(state.officers)) {
+    const patrol = patrolling.has(o.id) && !o.assignment && !isInjured(o, t) ? ECONOMY_TUNING.patrolPerOfficer : 0;
+    const a = o.assignment;
+    const detail = a?.kind === 'detail' && a.endsAt > a.startedAt ? a.fee / ((a.endsAt - a.startedAt) / HOUR_MS) : 0;
+    out[o.id] = { patrol, detail, wage: o.wage, net: patrol + detail - o.wage };
+  }
+  return out;
 }
 
 /** What each squad duty is worth, for the squad builder's preview (squad-optimizer.ts DutyRates). */
@@ -168,7 +190,6 @@ interface Acc {
   restock: number;
   maintenance: number;
   maintenanceStarted: Id[];
-  dp: number;
   courses: { officerId: Id; courseId: Id }[];
   shortages: Set<string>;
   equipment: ShiftReport['equipment'];
@@ -183,7 +204,8 @@ function applyCourseCompletion(d: GameState, o: Officer, acc: Acc): void {
     const { cert, rating } = course.grants;
     if (cert && !o.certs.includes(cert)) o.certs.push(cert);
     if (rating) o.ratings[rating.key] = courseRatingAfter(o.ratings[rating.key], rating.delta);
-    o.xp += Math.round(courseXpGain(course.hours) * (1 + (staffLever(d, 'training_sergeant', 1) ?? 0)));
+    const base = courseXpGain(course.hours) * (1 + (staffLever(d, 'training_sergeant', 1) ?? 0));
+    awardXp(d, o, learnedXp(o, base), `on finishing the ${course.name}`, a.endsAt, acc.personnel);
   }
   o.assignment = null;
   acc.courses.push({ officerId: o.id, courseId: a.courseId });
@@ -204,7 +226,7 @@ function runRestock(d: GameState, acc: Acc, t: number): void {
     const n = Math.min(need, byCeiling, byFunds);
     if (n > 0) {
       for (let i = 0; i < n; i++) createUnit(d, rule.itemId, t);
-      dep.funding -= n * def.cost;
+      postFunding(dep, -n * def.cost, 'restock', `Restocked ${def.name}`, t);
       acc.restock += n * def.cost;
     }
     if (n < need) {
@@ -228,6 +250,7 @@ function applyDue(d: GameState, prev: number, t: number, acc: Acc, restock: bool
       return ea - eb || a.id.localeCompare(b.id);
     });
   for (const o of due) applyCourseCompletion(d, o, acc);
+  completeDetails(d, t, acc.personnel);
   for (const o of Object.values(d.officers)) {
     if (o.injury && o.injury.until <= t) o.injury = null;
   }
@@ -251,7 +274,7 @@ function nextEventTime(d: GameState, t: number, T: number, W: number, restockAct
     if (x !== null && x > t && x < e) e = x;
   };
   for (const o of Object.values(d.officers)) {
-    if (o.assignment?.kind === 'training') consider(o.assignment.endsAt);
+    if (o.assignment?.kind === 'training' || o.assignment?.kind === 'detail') consider(o.assignment.endsAt);
     if (o.injury) consider(o.injury.until);
   }
   consider(nextUnitEventTime(d, t));
@@ -294,7 +317,6 @@ export function settle(d: GameState, now: number): void {
     restock: 0,
     maintenance: 0,
     maintenanceStarted: [],
-    dp: 0,
     courses: [],
     shortages: new Set(),
     equipment: [],
@@ -320,8 +342,6 @@ export function settle(d: GameState, now: number): void {
       acc.wages += (r.wages + r.staff) * accrualHours;
       acc.operating += (r.operating + r.supplies) * accrualHours;
       dep.funding += r.net * accrualHours;
-      dep.devPoints += r.devPointsPerHour * accrualHours;
-      acc.dp += r.devPointsPerHour * accrualHours;
       if (dep.funding < 0) {
         dep.funding = 0;
         acc.shortages.add('Funding ran out: payroll and operating costs were not fully covered');
@@ -353,7 +373,6 @@ export function settle(d: GameState, now: number): void {
     maintenanceSpend: acc.maintenance,
     maintenanceStarted: acc.maintenanceStarted,
     net: dep.funding - fundingBefore,
-    devPoints: acc.dp,
     completedCourses: acc.courses,
     recovered,
     shortages: [...acc.shortages],
@@ -377,7 +396,7 @@ export function settle(d: GameState, now: number): void {
     maintenanceSpend: (prev.maintenanceSpend ?? 0) + (rep.maintenanceSpend ?? 0),
     maintenanceStarted: [...(prev.maintenanceStarted ?? []), ...(rep.maintenanceStarted ?? [])],
     net: prev.net + rep.net,
-    devPoints: prev.devPoints + rep.devPoints,
+    ...(prev.grants?.length || rep.grants?.length ? { grants: [...(prev.grants ?? []), ...(rep.grants ?? [])] } : {}),
     completedCourses: [...prev.completedCourses, ...rep.completedCourses],
     recovered: [...new Set([...prev.recovered, ...rep.recovered])],
     shortages: [...new Set([...prev.shortages, ...rep.shortages])],

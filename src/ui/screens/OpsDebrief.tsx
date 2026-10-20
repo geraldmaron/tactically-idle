@@ -12,6 +12,7 @@ import { GamePeopleProvider } from '../people/PeopleText';
 import { lexiconFor } from '../people/lexicon';
 import { DebriefContents, DebriefEvidence } from './DebriefContents';
 import './ops-visual.css';
+import { runRoster } from '../../sim/squads';
 
 /** A saved debrief is self-contained; it never borrows history from a newer active run. */
 export function SavedDebriefContents({ debrief: d, officers }: { debrief: DebriefResult; officers: DebriefOfficers }) {
@@ -47,7 +48,7 @@ export function OpsDebrief() {
   const scenario = getScenario(d.scenarioId);
   // The call's people and the squads that went in, for the names in the debrief.
   const deployed = g.squads.filter((squad) => run?.squadIds.includes(squad.id));
-  const people = scenario ? lexiconFor(scenario, run, deployed.flatMap((squad) => squad.officerIds.flatMap((id) => g.officers[id] ? [{ ...g.officers[id], squad: squad.id }] : []))) : null;
+  const people = scenario ? lexiconFor(scenario, run, deployed.flatMap((squad) => (run ? runRoster(g, run, squad.id) : squad.officerIds).flatMap((id) => g.officers[id] ? [{ ...g.officers[id], squad: squad.id }] : []))) : null;
   return <GamePeopleProvider lexicon={people}><div className="debrief-layout"><div className="page debrief">
     <DebriefContents result={d} officers={g.officers} decisions={decisions} scenario={scenario ?? undefined} heroAction={import.meta.env.DEV && <OpenInLab getState={() => g} />} />
   </div><div className="debrief-footer"><Button variant="primary" block onClick={close}>Close debrief</Button></div></div></GamePeopleProvider>;

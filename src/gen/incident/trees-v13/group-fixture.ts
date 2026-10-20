@@ -121,7 +121,7 @@ export const GROUP_TREE: CallTree = {
     some_left: { title: 'Still inside', summary: '{others} {others#is|are} still inside with the next shift at the door.', disposition: 'unresolved' },
     handed_over: { title: 'Handed over', summary: 'The next shift has the glass.', disposition: 'unresolved' },
   },
-  rewards: { funding: 2000, devPoints: 2, trust: 4, xp: 30 },
+  rewards: { funding: 2000, trust: 4, xp: 30 },
 };
 
 /** The taker and 0 to 3 others, each drawn into the group; in the third situation the others are

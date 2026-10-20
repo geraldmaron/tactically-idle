@@ -17,11 +17,15 @@ import '../screens/gear-visual.css';
 import { RestockRuleEditor } from './RestockRuleEditor';
 import { useGame } from '../store';
 import {
-  activeEquipmentFilterCount, catalogEntries, DEFAULT_EQUIPMENT_QUERY, equipmentFacets, queryEquipment,
-  type AvailabilityFilter, type CatalogEntry, type EquipmentQuery, type OwnershipFilter, type StoreSort,
+  activeEquipmentFilterCount, armoryView, catalogEntries, DEFAULT_EQUIPMENT_QUERY, equipmentFacets, queryEquipment, withArmoryView,
+  type CatalogEntry, type EquipmentQuery, type StoreSort,
 } from './store-query';
 import { useEquipmentDetail } from './useEquipmentDetail';
 import { CERT_NAME } from '../../content/certs';
+import { Disclosure } from '../components/Disclosure';
+import { ChoiceRail } from '../components/ChoiceRail';
+import { conditionTone } from '../components/labels';
+import { StockBar, UnitList } from './ItemUnits';
 
 interface EquipmentStoreProps {
   active: boolean;
@@ -37,7 +41,8 @@ export function EquipmentStore({ active, onDevelopment, onTraining }: EquipmentS
   const detail = useEquipmentDetail(active);
   const entries = useMemo(() => catalogEntries(game), [game]);
   const shown = useMemo(() => queryEquipment(entries, query), [entries, query]);
-  const facets = useMemo(() => equipmentFacets(entries, query), [entries, query]);
+  // Rail counts ignore the rail's own choice, so each tab says what it would show.
+  const facets = useMemo(() => equipmentFacets(entries, withArmoryView(query, 'all')), [entries, query]);
   const selected = entries.find((entry) => entry.item.id === detail.detailId);
   const activeFilters = activeEquipmentFilterCount(query);
   const patch = (value: Partial<EquipmentQuery>) => setQuery({ ...query, ...value });
@@ -53,42 +58,22 @@ export function EquipmentStore({ active, onDevelopment, onTraining }: EquipmentS
       <span className="field-label sr-only">Search equipment</span>
       <input type="search" placeholder="Search equipment or what it helps with" value={query.search} onChange={(event) => patch({ search: event.target.value })} />
     </label>
-    <details className="store-filters">
-      <summary>Filters{activeFilters ? ` · ${activeFilters} active` : ''}<span className="dim">{query.category === 'all' ? 'Category, availability, ownership and sort' : `Category: ${ITEM_CATEGORY_LABELS[query.category]}`}</span></summary>
-      <div className="store-filter-body">
-        <label className="field">
-          <span className="field-label">Category</span>
-          <select name="equipment-category" value={query.category} onChange={(event) => patch({ category: event.target.value as EquipmentQuery['category'] })}>
-            {(['all', ...ITEM_CATEGORIES] as const).map((category) => <option key={category} value={category}>
-              {category === 'all' ? 'All equipment' : ITEM_CATEGORY_LABELS[category]} ({facets.categories[category]})
-            </option>)}
-          </select>
-        </label>
-        <div className="store-filter-row">
-          <label className="field"><span className="field-label">Availability</span>
-            <select value={query.availability} onChange={(event) => patch({ availability: event.target.value as AvailabilityFilter })}>
-              <option value="all">All ({facets.availability.all})</option><option value="buy_now">Buy now ({facets.availability.buy_now})</option><option value="locked">Purchase locked ({facets.availability.locked})</option>
-            </select>
-          </label>
-          <label className="field"><span className="field-label">Ownership</span>
-            <select value={query.ownership} onChange={(event) => patch({ ownership: event.target.value as OwnershipFilter })}>
-              <option value="all">All ({facets.ownership.all})</option><option value="not_owned">Not owned ({facets.ownership.not_owned})</option><option value="owned">Owned ({facets.ownership.owned})</option><option value="replenish">Needs replenishment ({facets.ownership.replenish})</option>
-            </select>
-          </label>
-        </div>
-        <label className="field store-sort"><span className="field-label">Sort equipment</span>
-          <select value={query.sort} onChange={(event) => patch({ sort: event.target.value as StoreSort })}>
-            <option value="recommended">By category, available first</option><option value="cost_asc">Funding: low to high</option><option value="cost_desc">Funding: high to low</option><option value="name">Name</option><option value="recent">Recently unlocked</option>
-          </select>
-        </label>
-        <label className="store-toggle"><input type="checkbox" checked={query.affordable} onChange={(event) => patch({ affordable: event.target.checked })} />Affordable with current funding ({facets.affordable})</label>
-        <p className="dim store-filter-help">Needs replenishment means ready stock is below your restock target, or an owned item has no ready units. Purchase-locked items can still be affordable. Ready stock describes owned units that can be used.</p>
-      </div>
-    </details>
+    <ChoiceRail kind="filter" label="Show equipment" grow value={armoryView(query)} onChange={(view) => setQuery(withArmoryView(query, view))} options={[
+      { value: 'all', label: <>All <span className="choice-rail-count">{entries.length}</span></>, accessibleLabel: `All, ${entries.length}` },
+      { value: 'owned', label: <>Owned <span className="choice-rail-count">{facets.ownership.owned}</span></>, accessibleLabel: `Owned, ${facets.ownership.owned}` },
+      { value: 'attention', label: <>Attention <span className="choice-rail-count">{facets.ownership.attention}</span></>, accessibleLabel: `Needs attention, ${facets.ownership.attention}` },
+      { value: 'buy', label: <>Buy now <span className="choice-rail-count">{facets.availability.buy_now}</span></>, accessibleLabel: `Buy now, ${facets.availability.buy_now}` },
+    ]} />
     <div className="store-results-head">
       <span role="status" aria-live="polite">{shown.length} of {entries.length} items</span>
-      <span className="store-legend" aria-hidden="true"><i className="store-legend-buy" />Buy now<Icon name="lock" size={11} />Purchase locked</span>
-      <Button size="sm" variant="ghost" disabled={!activeFilters && query.sort === 'recommended'} onClick={() => setQuery(DEFAULT_EQUIPMENT_QUERY)}>Clear all</Button>
+      <label className="store-sort-inline">
+        <span className="sr-only">Sort equipment</span>
+        <Icon name="list" size={14} />
+        <select value={query.sort} onChange={(event) => patch({ sort: event.target.value as StoreSort })}>
+          <option value="recommended">By category</option><option value="cost_asc">Cheapest first</option><option value="cost_desc">Dearest first</option><option value="name">Name</option><option value="recent">Recently unlocked</option>
+        </select>
+      </label>
+      {(activeFilters > 0 || query.sort !== 'recommended') && <Button size="sm" variant="ghost" onClick={() => setQuery(DEFAULT_EQUIPMENT_QUERY)}>Clear</Button>}
     </div>
     {!shown.length ? <div className="card"><EmptyState icon="search" title="No equipment matches these filters">Try a broader search or clear your filters. Locked equipment is included when availability is set to All.</EmptyState><Button block onClick={() => setQuery(DEFAULT_EQUIPMENT_QUERY)}>Clear all filters</Button></div>
       : grouped ? ITEM_CATEGORIES.map((category) => {
@@ -113,20 +98,22 @@ export function EquipmentStore({ active, onDevelopment, onTraining }: EquipmentS
 type TileState = 'buy' | 'short' | 'locked';
 
 /** Store tile: same art frame as Inventory. Buy-now tiles glow, locked tiles dim behind a lock,
- * and the price is the caption. Use, limits and qualifications live in the detail sheet. */
+ * and the price sits on a shop price tag (gear-shop): gold when it can be bought now, red when
+ * funding is short, grey behind a lock. Use, limits and qualifications live in the detail sheet. */
 function EquipmentTile({ entry, onOpen }: { entry: CatalogEntry; onOpen: (button: HTMLButtonElement) => void }) {
   const { item } = entry;
   const state: TileState = !entry.unlocked ? 'locked' : entry.canBuy ? 'buy' : 'short';
+  const condition = entry.meanCondition === null ? null : Math.round(entry.meanCondition);
   const certs = item.requiresCerts?.length ? `. Certification needed to use: ${entry.qualified} certified officer${entry.qualified === 1 ? '' : 's'}` : '';
-  const label = `${item.name}, ${ITEM_CATEGORY_LABELS[item.category]}. ${money(item.cost)} funding. ${entry.unlocked ? 'Purchase unlocked' : `Purchase locked: requires ${entry.unlockName}`}. ${entry.affordable ? 'Affordable' : 'Needs funding'}. ${entry.owned} owned, ${entry.ready} ready${entry.needsReplenishment ? ', needs replenishment' : ''}${certs}.`;
-  return <button type="button" className={`inv-tile store-tile store-tile-${state}`} data-item-id={item.id} title={item.name} aria-label={label} aria-haspopup="dialog" onClick={(event) => onOpen(event.currentTarget)}>
+  const label = `${item.name}, ${ITEM_CATEGORY_LABELS[item.category]}. ${money(item.cost)} funding. ${entry.unlocked ? 'Purchase unlocked' : `Purchase locked: requires ${entry.unlockName}`}. ${entry.affordable ? 'Affordable' : 'Needs funding'}. ${entry.owned} owned, ${entry.ready} ready${condition === null ? '' : `, condition ${condition}%`}${entry.attention ? `, ${entry.attention}` : ''}${certs}.`;
+  return <button type="button" className={`inv-tile store-tile store-tile-${state}${entry.needsAttention ? ' inv-tile-alert' : ''}`} data-item-id={item.id} title={item.name} aria-label={label} aria-haspopup="dialog" onClick={(event) => onOpen(event.currentTarget)}>
     <span className="inv-art"><GearArtFrame itemId={item.id} size={42} /></span>
     {entry.owned > 0 && <span className="inv-count" aria-hidden="true">×{entry.owned}</span>}
-    {state === 'locked' && <span className="store-tile-lock" aria-hidden="true"><Icon name="lock" size={11} /></span>}
-    {state !== 'locked' && entry.needsReplenishment && <span className="inv-alert" aria-hidden="true"><Icon name="warning" size={12} /></span>}
+    {entry.needsAttention && <span className="inv-alert" aria-hidden="true"><Icon name="warning" size={12} /></span>}
     {!!item.requiresCerts?.length && <span className={`store-tile-cert${entry.qualified ? '' : ' store-tile-cert-none'}`} aria-hidden="true"><Icon name="mortarboard" size={11} /></span>}
     <span className="inv-name" aria-hidden="true">{item.name}</span>
-    <span className="store-tile-price" aria-hidden="true">{moneyShort(item.cost)}</span>
+    <span className="store-tile-price" aria-hidden="true">{state === 'locked' ? <Icon name="lock" size={11} /> : <Icon name="cash" size={12} />}{moneyShort(item.cost)}</span>
+    {condition !== null && <span className={`inv-cond inv-cond-${conditionTone(condition, item.wear)}`} aria-hidden="true"><i style={{ width: `${Math.max(4, condition)}%` }} /></span>}
   </button>;
 }
 
@@ -152,7 +139,7 @@ function EquipmentDetail({ entry, onClose, onDevelopment, onTraining }: {
     {item.supportOnly && <p className="dim">Vehicles are purchased one at a time. One support asset can be assigned per operation.</p>}
     <Button block variant="primary" disabled={!check.ok} onClick={() => {
       const result = act({ type: 'buyItem', itemId: item.id, qty }, `Bought ${qty} × ${item.name}`);
-      setFeedback({ ok: result.ok, text: result.ok ? `${qty} ${qty === 1 ? 'unit added' : 'units added'} to Inventory for ${money(item.cost * qty)} funding.` : result.reason });
+      setFeedback({ ok: result.ok, text: result.ok ? `${qty} ${qty === 1 ? 'unit added' : 'units added'} to the Armory for ${money(item.cost * qty)} funding.` : result.reason });
     }}>{quantityValid ? `Buy ${qty} · ${money(item.cost * qty)} funding` : 'Enter quantity to buy'}</Button>
     {check.reason && <p className="reason">{check.reason}</p>}
     {feedback && <p className={feedback.ok ? "store-purchase-feedback" : "reason"} role="status">{feedback.text}</p>}
@@ -165,6 +152,7 @@ function EquipmentDetail({ entry, onClose, onDevelopment, onTraining }: {
         {!!item.requiresCerts?.length && <Chip tone={entry.qualified ? 'blue' : 'warn'} icon="mortarboard">{entry.qualified} certified</Chip>}
       </span>
     </div></div>
+    {entry.owned > 0 && <section className="store-detail-section store-owned" aria-label="Your stock"><h3>Your stock</h3><StockBar o={entry} />{entry.attention && <p className="note note-warn"><Icon name="warning" size={14} />{entry.attention}</p>}</section>}
     {!!item.capabilities?.length && <div className="chips store-capabilities" aria-label="Capabilities">{item.capabilities.map((id) => <Chip key={id} tone="blue" title={CAPABILITIES[id]?.description}>{CAPABILITIES[id]?.name ?? id}</Chip>)}</div>}
     <DetailSection title="Helps with" lines={item.helpsWith ?? [item.description]} />
     <DetailSection title="When it won’t help" lines={item.counters ?? []} />
@@ -174,17 +162,18 @@ function EquipmentDetail({ entry, onClose, onDevelopment, onTraining }: {
       {item.requiresCerts?.length ? <><p>Use requires {item.requiresCerts.map((cert) => CERT_NAME[cert]).join(' + ')}. {entry.qualified} officer{entry.qualified === 1 ? '' : 's'} currently hold{entry.qualified === 1 ? 's' : ''} all required certifications.</p><p className="dim">Buying stock does not qualify an officer. Certified officers may still be unavailable or unsuitable for a particular action.</p><Button size="sm" onClick={() => onTraining(item.requiresCerts?.[0])}>Find qualification training</Button></> : <p>No item-specific certification required. Individual action requirements still apply.</p>}
     </section>
     {restock.unlocked && item.kind !== 'infrastructure' && <div className="store-detail-section"><RestockRuleEditor itemId={item.id} /></div>}
-    <details className="store-detail-more"><summary>Supplies, upkeep and action fit</summary>
+    {entry.owned > 0 && <UnitList itemId={item.id} />}
+    <Disclosure name="item-more" className="store-detail-more" summary="Supplies, upkeep and action fit">
     <section className="store-detail-section"><h3>Supplies used</h3>
       {item.supplies?.length ? <ul className="bullets">{item.supplies.map((supply) => <li key={supply.itemId}>{supply.qty} × {ITEMS[supply.itemId]?.name ?? supply.itemId} each time this equipment is used. Buy these supplies separately.</li>)}</ul> : <p>{item.kind === 'consumable' ? 'Used once when you confirm an action that needs it.' : 'No separate supply needed for this item. A particular action may still need other equipment.'}</p>}
     </section>
     <section className="store-detail-section"><h3>Upkeep</h3>
       {item.kind === 'consumable' ? <p>Single-use; cannot be serviced.{item.wear.shelfLifeDays ? ` Shelf life: ${item.wear.shelfLifeDays} game days.` : ''}{item.wear.perDay ? ` Condition also falls ${item.wear.perDay} per game day.` : ''}</p>
         : <p>Base wear: {Math.round(item.wear.perUse * wear * 100) / 100} per use and {Math.round(item.wear.perDay * wear * 1000) / 1000} per game day, adjusted by each unit’s wear rate. Service takes {item.wear.serviceHours} real hours; base cost {money(item.wear.serviceCost)} funding before any manager discount. No automatic hourly equipment charge.</p>}
-      <p className="dim">Repair individual units from this item in Inventory.</p>
+      <p className="dim">Service or scrap a unit from its row under Units.</p>
     </section>
     <section className="store-detail-section"><h3>Action compatibility</h3><p>{preview.reasons.join(' ')}</p><p className="dim">This store view has no selected action. It does not claim a score bonus or reveal unconfirmed scene information. Check the action preview during an operation.</p></section>
-    </details>
+    </Disclosure>
   </Sheet>;
 }
 

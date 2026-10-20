@@ -479,5 +479,5 @@ export const MS_OCCUPANCY: ScenarioDefinition = {
     entry_costly: { id: 'entry_costly', disposition: 'resolved', completion: { pressureAtLeast: 0 }, title: 'Entry led to a harder outcome', summary: 'Entry created more problems than it solved.', trustAdjust: -3, strain: 5 },
     handed_over: { id: 'handed_over', disposition: 'unresolved', title: 'Handed to specialist support', summary: 'A safe transfer: modest, but nothing was lost.', trustAdjust: 0, strain: 0 },
   },
-  rewards: { funding: 1800, devPoints: 2, trust: 4, xp: 30 },
+  rewards: { funding: 1800, trust: 4, xp: 30 },
 };

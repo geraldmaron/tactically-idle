@@ -30,7 +30,7 @@ The model describes both implemented rules and the broader contract. Implementat
 - Pets can be hurt or killed, rarely.
 - The lab comes first.
 - Call-type expansion is tracked in [docs/backlog.md](backlog.md).
-- Standing rules: E4.5, non-graphic text, force only on a visible threat, preserving life is the value.
+- Standing rules: E4.5, no wound anatomy or method (E16), force only on a visible threat, preserving life is the value.
 
 ## Challenge: what the previous drafts got wrong or left out
 

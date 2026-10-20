@@ -2,7 +2,8 @@
 // roster: no scenario, hidden truth, demographics, or random-number generator.
 import type { CertId, GameState, HandlerResult, Id, Officer, RatingKey, SquadDuty, SquadId } from './types';
 import { SQUAD_IDS } from './types';
-import { experienceBand, gameDay, simNow } from './calendar';
+import { simNow } from './calendar';
+import { experienceBand } from './ranks';
 import { recoveryDuty, squadDeployed } from './squads';
 import { conditionFraction, deployability, EXPERIENCE_TUNING, highRiskAllowed, STRESS_BANDS, stressBand } from './officer';
 import { CERT_HOLDER } from '../content/certs';
@@ -81,14 +82,15 @@ function placements(t: SquadTopology): Map<Id, SquadId | null> {
   return new Map([...t.squads.flatMap((s) => s.officerIds.map((id) => [id, s.squadId] as const)), ...t.unassignedIds.map((id) => [id, null] as const)]);
 }
 
-/** Uses the same deployment gate as operations; a deployed squad is wholly unavailable. */
+/** Uses the same deployment gate as operations. An officer out on a call stays put; the rest of a
+ * deployed squad can be arranged, because runs read who went from their assignments (runRoster). */
 export function officerArrangementReadiness(state: GameState, officer: Officer): { fresh: boolean; deployable: boolean; reason: string | null } {
-  if (officer.squadId && squadDeployed(state, officer.squadId)) return { fresh: false, deployable: false, reason: 'Squad is deployed' };
+  if (officer.assignment?.kind === 'operation') return { fresh: false, deployable: false, reason: 'On a call' };
   const result = deployability(officer, simNow(state));
   if (!result.ok) {
     const reason = officer.injury && officer.injury.until > simNow(state) ? 'Injured'
       : officer.stress >= STRESS_BANDS.recovery ? 'Mandatory recovery'
-        : officer.assignment?.kind === 'training' ? 'In training' : 'Deployed';
+        : officer.assignment?.kind === 'training' ? 'In training' : officer.assignment?.kind === 'detail' ? 'On a detail' : 'Deployed';
     return { fresh: false, deployable: false, reason };
   }
   return { fresh: officer.stress < STRESS_BANDS.strained, deployable: true, reason: null };
@@ -98,7 +100,7 @@ export function officerArrangementReadiness(state: GameState, officer: Officer):
 function effective(o: Officer, key: RatingKey): number {
   return Math.round(o.ratings[key] * (1 - conditionFraction(o.stress)));
 }
-function band(state: GameState, o: Officer) { return experienceBand(o, gameDay(state, simNow(state))); }
+function band(_state: GameState, o: Officer) { return experienceBand(o); }
 
 /** Relevant facts, not the tick timestamp. No names, portraits, birth dates or other demographics. */
 export function squadArrangementToken(state: GameState): string {
@@ -146,7 +148,6 @@ function currentTopologyCheck(state: GameState): HandlerResult {
 
 function fixedReason(state: GameState, o: Officer, options?: SquadOptimizerOptions): string | null {
   const locks = squadArrangementState(state);
-  if (o.squadId && squadDeployed(state, o.squadId)) return 'Squad is deployed';
   const available = officerArrangementReadiness(state, o);
   if (!available.deployable) return available.reason;
   if (locks.officerLocks.includes(o.id)) return o.squadId ? 'Assignment locked' : 'Locked as unassigned';
@@ -275,7 +276,7 @@ export function planSquadArrangement(state: GameState, requested: SquadOptimizer
     for (let i = 0; i < CAPACITY * SQUAD_IDS.length; i++) {
       let best: SquadTopology | null = null, bestScore = currentScore;
       for (const sq of current.squads) {
-        if (!options.squadIds.includes(sq.squadId) || squadArrangementState(state).squadLocks.includes(sq.squadId) || squadDeployed(state, sq.squadId) || sq.officerIds.length >= CAPACITY) continue;
+        if (!options.squadIds.includes(sq.squadId) || squadArrangementState(state).squadLocks.includes(sq.squadId) || sq.officerIds.length >= CAPACITY) continue;
         for (const id of sorted(current.unassignedIds.filter((id) => movable.has(id)))) {
           const candidate = copyTopology(current);
           candidate.squads.find((s) => s.squadId === sq.squadId)!.officerIds.push(id);
@@ -341,7 +342,7 @@ function transitionCheck(state: GameState, before: SquadTopology, after: SquadTo
   for (const sq of before.squads) {
     const next = after.squads.find((s) => s.squadId === sq.squadId)!;
     const unchanged = sq.leaderId === next.leaderId && sorted(sq.officerIds).join('\0') === sorted(next.officerIds).join('\0');
-    if (!unchanged && (squadDeployed(state, sq.squadId) || locks.squadLocks.includes(sq.squadId) || (options && !options.squadIds.includes(sq.squadId)))) return refuse(`Squad ${sq.squadId} is protected and cannot change`);
+    if (!unchanged && (locks.squadLocks.includes(sq.squadId) || (options && !options.squadIds.includes(sq.squadId)))) return refuse(`Squad ${sq.squadId} is protected and cannot change`);
     if (options) {
       if ((!options.includeUnassigned && next.officerIds.length !== sq.officerIds.length) || next.officerIds.length < sq.officerIds.length) return refuse('Keep existing squad headcounts; only opted-in reserve officers may fill vacancies');
       if (options.preserveLeaders && sq.leaderId !== null && sq.leaderId !== next.leaderId) return refuse('Preserve current squad leaders');
@@ -356,7 +357,7 @@ function transitionCheck(state: GameState, before: SquadTopology, after: SquadTo
     if (reason) return refuse(`An officer cannot move: ${reason.toLowerCase()}`);
     if (options && from.get(o.id) !== null && to.get(o.id) === null) return refuse('Assigned officers cannot be displaced into the reserve');
     const destination = to.get(o.id);
-    if (destination && (squadDeployed(state, destination) || locks.squadLocks.includes(destination) || (options && !options.squadIds.includes(destination)))) return refuse('An officer cannot enter a protected squad');
+    if (destination && (locks.squadLocks.includes(destination) || (options && !options.squadIds.includes(destination)))) return refuse('An officer cannot enter a protected squad');
   }
   return ok;
 }

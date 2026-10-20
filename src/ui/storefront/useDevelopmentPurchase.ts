@@ -2,10 +2,10 @@ import { useRef, useState } from 'react';
 import { DEV_NODES } from '../../content/dev-tree';
 import type { Id } from '../../sim/types';
 import { useToast } from '../components/toast';
-import { unlockDevelopment } from '../store';
+import { send } from '../store';
 import { tierLabel } from '../../sim/development-tiers';
 
-/** The persistence layer rechecks funding and atomically spends earned/test DP. */
+/** Buys the next tier with cash; the handler rechecks the price and the expected tier. */
 export function useDevelopmentPurchase() {
   const { notify } = useToast();
   const busyRef = useRef(false);
@@ -17,7 +17,7 @@ export function useDevelopmentPurchase() {
     setPendingNode(nodeId);
     setFailure(null);
     try {
-      const result = await unlockDevelopment(nodeId, expectedTier);
+      const result = send({ type: 'unlockNode', nodeId, expectedTier });
       if (result.ok) notify(successMessage ?? `${DEV_NODES[nodeId]?.name ?? 'Development'} ${DEV_NODES[nodeId]?.tiers ? `tier ${tierLabel(expectedTier)} purchased` : 'unlocked'}`, { tone: 'ok' });
       else { setFailure({ nodeId, reason: result.reason }); notify(result.reason, { tone: 'error' }); }
       return result;

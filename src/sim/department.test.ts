@@ -40,7 +40,7 @@ function refused(state: GameState, cmd: Command, now: number): string {
 describe('starting state', () => {
   const s = createInitialState(T0);
   it('matches the fixed contract other agents rely on', () => {
-    expect(s.department).toMatchObject({ name: 'Westhaven Department', funding: 12400, devPoints: 3, trust: 78, level: 1, service: 0, rosterCap: 12, trainingSlots: 1 });
+    expect(s.department).toMatchObject({ name: 'Westhaven Department', funding: 12400, trust: 78, level: 1, service: 0, rosterCap: 12, trainingSlots: 1 });
     expect(Object.keys(s.officers).sort()).toEqual(
       ['off_brooks', 'off_chen', 'off_lindqvist', 'off_okafor', 'off_ortiz', 'off_park', 'off_reyes', 'off_vale'].sort(),
     );
@@ -55,7 +55,7 @@ describe('starting state', () => {
       expect(o.assignment).toBeNull();
       if (o.id !== 'off_reyes') expect(o.stress).toBeLessThanOrEqual(25);
     }
-    expect(ownedCount(s, 'radio_kit')).toBe(6);
+    expect(ownedCount(s, 'radio_kit')).toBe(Object.keys(s.officers).length);
     expect(ownedCount(s, 'thermal_imager')).toBe(0);
     expect(s.candidates).toHaveLength(3);
   });
@@ -64,7 +64,7 @@ describe('starting state', () => {
   });
   it('opens with the illustrative budget', () => {
     const b = budget(s);
-    expect(b).toMatchObject({ gross: 1200, wages: 380, operating: 120, supplies: 80, net: 620, devPointsPerHour: 0.25 });
+    expect(b).toMatchObject({ gross: 1200, wages: 380, operating: 120, supplies: 80, net: 620 });
   });
   it('gives every officer a distinct, uneven profile', () => {
     const profiles = Object.values(s.officers).map((o) => JSON.stringify(o.ratings));
@@ -254,7 +254,7 @@ describe('squads', () => {
 
   it('staffing four full squads (16 officers) is reachable through the tree', () => {
     let s = createInitialState(T0);
-    s.department.devPoints = 20;
+
     s.department.funding = 100_000;
     expect(refused(s, { type: 'unlockNode', nodeId: 'personnel_fourth_squad' }, T0)).toMatch(/Requires Recruiting office/);
     s = ok(s, { type: 'unlockNode', nodeId: 'personnel_recruiting' }, T0);
@@ -296,17 +296,18 @@ describe('squads', () => {
     expect(refused(s, { type: 'renameSquad', squadId: 'B', name: 'x'.repeat(21) }, T0)).toMatch(/at most 20/);
   });
 
-  it('leader must be a member; duty and roster are locked while deployed', () => {
+  it('leader must be a member; only an officer out on a call has their move queued', () => {
     let s = createInitialState(T0);
     expect(refused(s, { type: 'setLeader', squadId: 'A', officerId: 'off_reyes' }, T0)).toMatch(/member/);
     s = ok(s, { type: 'setLeader', squadId: 'A', officerId: 'off_chen' }, T0);
     expect(s.squads[0].leaderId).toBe('off_chen');
     s.officers.off_vale.assignment = { kind: 'operation', runId: 'run_1' };
-    expect(refused(s, { type: 'setSquadDuty', squadId: 'A', duty: 'rest' }, T0)).toMatch(/deployed/);
-    expect(refused(s, { type: 'assignToSquad', officerId: 'off_chen', squadId: null }, T0)).toMatch(/deployed/);
-    expect(refused(s, { type: 'assignToSquad', officerId: 'off_reyes', squadId: 'A' }, T0)).toMatch(/deployed|already has 4/);
-    s = ok(s, { type: 'setSquadDuty', squadId: 'B', duty: 'rest' }, T0);
-    expect(s.squads[1].duty).toBe('rest');
+    s = ok(s, { type: 'setSquadDuty', squadId: 'A', duty: 'rest' }, T0);
+    expect(s.squads[0].duty).toBe('rest');
+    s = ok(s, { type: 'assignToSquad', officerId: 'off_vale', squadId: null }, T0);
+    expect(s.officers.off_vale.squadId).toBe('A');
+    expect(s.pendingSquadMoves).toMatchObject([{ officerId: 'off_vale', squadId: null }]);
+    expect(refused(s, { type: 'assignToSquad', officerId: 'off_reyes', squadId: 'A' }, T0)).toMatch(/already has 4/);
   });
 
   it('presets and restock rules need their nodes', () => {
@@ -346,7 +347,7 @@ describe('development tree, training and store', () => {
     expect(Object.values(DEV_NODES).filter((node) => node.effects.some((effect) => effect.kind === 'commandStaff')).map((node) => node.id)).toEqual(['personnel_watch_commander', 'personnel_training_sergeant', 'personnel_peer_support_lead', 'personnel_recruiter']);
     for (const id of ['field_less_lethal', 'field_response_program', 'field_specialist_response', 'field_controlled_access', 'logistics_field_support', 'logistics_armored_support']) {
       expect(DEV_NODES[id].effects.some((effect) => effect.kind === 'unlockItem')).toBe(true);
-      expect(DEV_NODES[id].cost.dp).toBeGreaterThan(0);
+      expect(DEV_NODES[id].cost.funding).toBeGreaterThan(0);
     }
     const n = DEV_NODES;
     expect(n.personnel_negotiation.effects).toContainEqual({ kind: 'unlockCourse', courseId: 'crisis_negotiation_course' });
@@ -363,31 +364,28 @@ describe('development tree, training and store', () => {
     expect(n.wellbeing_peer_support.effects).toContainEqual({ kind: 'recoveryRate', mult: 1.5 });
     const branches = new Set(Object.values(n).map((x) => x.branch));
     expect(branches).toEqual(new Set(['personnel', 'field', 'intel', 'logistics', 'wellbeing']));
-    // Every early branch is reachable with the 3 starting development points.
+    // Every early branch is reachable with the starting funding.
     for (const b of branches) {
-      expect(Object.values(n).some((x) => x.branch === b && x.requires.length === 0 && x.cost.dp <= 3)).toBe(true);
+      expect(Object.values(n).some((x) => x.branch === b && x.requires.length === 0 && x.cost.funding <= 12400)).toBe(true);
     }
   });
 
-  it('unlockNode checks prerequisites, points and funding', () => {
+  it('unlockNode checks prerequisites and funding', () => {
     let s = createInitialState(T0);
     expect(refused(s, { type: 'unlockNode', nodeId: 'intel_drone' }, T0)).toMatch(/Requires Thermal imaging/);
     expect(refused(s, { type: 'unlockNode', nodeId: 'nope' }, T0)).toMatch(/Unknown/);
     s.department.funding = 500;
-    expect(refused(s, { type: 'unlockNode', nodeId: 'personnel_negotiation' }, T0)).toMatch(/Needs \$800/);
-    s.department.funding = 12400;
-    s.department.devPoints = 1;
-    expect(refused(s, { type: 'unlockNode', nodeId: 'personnel_negotiation' }, T0)).toMatch(/development points/);
+    expect(refused(s, { type: 'unlockNode', nodeId: 'personnel_negotiation' }, T0)).toMatch(/Needs \$2,400/);
   });
 
-  it('unlock charges points and funding once and applies capacity effects', () => {
+  it('unlock charges funding once and applies capacity effects', () => {
     let s = createInitialState(T0);
     s = ok(s, { type: 'unlockNode', nodeId: 'personnel_recruiting' }, T0);
-    expect(s.department.devPoints).toBe(1);
-    expect(s.department.funding).toBe(12400 - 1500);
+    expect(s.department.funding).toBe(12400 - 3100);
     expect(s.department.rosterCap).toBe(14);
     expect(refused(s, { type: 'unlockNode', nodeId: 'personnel_recruiting' }, T0)).toMatch(/already unlocked/);
-    expect(refused(s, { type: 'unlockNode', nodeId: 'personnel_academy' }, T0)).toMatch(/development points/);
+    s.department.funding = 1000;
+    expect(refused(s, { type: 'unlockNode', nodeId: 'personnel_academy' }, T0)).toMatch(/Needs \$4,900/);
     const opt = nodeOptions(s);
     expect(opt.find((o) => o.node.id === 'personnel_recruiting')!.status).toBe('unlocked');
     expect(opt.find((o) => o.node.id === 'intel_drone')!.status).toBe('locked');

@@ -67,7 +67,7 @@ describe('canonical player navigation', () => {
     f.nav.openDevelopment('intel_drone');
     expect(f.route()).toMatchObject({ tab: 'develop', developmentNode: 'intel_drone', returnToItem: 'camera_drone' });
     f.nav.returnToEquipment();
-    expect(f.route()).toMatchObject({ tab: 'gear', gearSection: 'equipment', equipmentItemId: 'camera_drone', returnToItem: null });
+    expect(f.route()).toMatchObject({ tab: 'gear', equipmentItemId: 'camera_drone', returnToItem: null });
   });
 
   it('browser Back and Forward recover the item and prerequisite destination', () => {
@@ -105,13 +105,13 @@ describe('canonical player navigation', () => {
     expect(f.route()).toMatchObject({ tab: 'ops', equipmentItemId: null, returnToItem: null });
   });
 
-  it('closes a direct Inventory restock into the Equipment list without jumping to Inventory', () => {
+  it('closes an item opened from another tab onto the Armory list without leaving Gear', () => {
     const f = historyFixture();
-    f.nav.setGearSection('inventory');
+    f.nav.go('develop');
     f.nav.openEquipment({ itemId: 'trauma_kit' });
     f.nav.closeEquipment();
     expect(f.backCalls()).toBe(0);
-    expect(f.route()).toMatchObject({ tab: 'gear', gearSection: 'equipment', equipmentItemId: null });
+    expect(f.route()).toMatchObject({ tab: 'gear', equipmentItemId: null });
   });
 
   it('explicit main navigation clears a stale return intent and preserves unrelated history', () => {
@@ -128,22 +128,19 @@ describe('canonical player navigation', () => {
 });
 
 describe('rendered player destinations and persistent drafts', () => {
-  it('puts owned inventory before collapsed maintenance, with one Equipment destination', () => {
+  it('shows one Armory list with owned stock on its tiles and the standing tools in the header (gear-armory)', () => {
     const html = markup(createElement(GearScreen));
-    expect(html).toContain('aria-label="Gear sections"');
-    expect(html).toMatch(/>Inventory <span class="choice-rail-count">/);
-    expect(html).toMatch(/>Equipment <span class="choice-rail-count">/);
-    expect(html.indexOf('class="inv-grid"')).toBeLessThan(html.indexOf('class="gear-maintenance"'));
-    expect(html).toContain('<details class="gear-maintenance">');
+    expect(html).not.toContain('aria-label="Gear sections"');
+    expect(html).not.toContain('<details');
+    expect(html).toContain('aria-label="Show equipment"');
+    expect(html.indexOf('class="armory-head"')).toBeLessThan(html.indexOf('class="inv-grid"'));
     expect(html).toContain('class="qm-card qm-card-not_hired"');
     expect(html).toContain('Open the post in Develop');
-    // Inventory is an item grid; restocking lives in each item's sheet.
-    expect(html).toMatch(/class="inv-tile"[^>]* aria-label="[^"]+: \d+ owned, \d+ ready/);
-    expect(html).toContain('At each clock hour');
-    expect(html).not.toContain('after each operation');
-    expect(html).not.toContain('Buy 1 ·');
+    // Owned items show stock on the same tile that buys more; detail lives in each item's sheet.
+    expect(html).toMatch(/class="inv-tile store-tile[^"]*"[^>]* aria-label="Radio headset[^"]+\d+ owned, \d+ ready, condition \d+%/);
+    expect(html).toContain('<strong>Restock rules</strong>');
+    expect(html).toContain('<strong>Loadout presets</strong>');
     expect(html).not.toContain('Hire manager');
-    expect(html).not.toContain('Store sections');
     expect(html).not.toContain('Search courses');
   });
 

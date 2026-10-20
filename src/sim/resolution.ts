@@ -49,7 +49,8 @@ import { conditionFraction, EXPERIENCE_TUNING, highRiskAllowed } from './officer
 import { CERT_HOLDER, isCertId } from '../content/certs';
 import { squadUnits, unitEffectiveness } from './inventory';
 import { runRoster } from './squads';
-import { ageYears, experienceBand, gameDay } from './calendar';
+import { ageYears, gameDay } from './calendar';
+import { experienceBand } from './ranks';
 import { signalBetween } from './spatial';
 import { signalCarry } from './environment';
 import { vantageZones } from './sightlines';
@@ -76,6 +77,7 @@ import { routeAlongOpenings, routeBetween, type Route } from './routes';
 import { ITEMS } from '../content/items';
 import { projectedCondition } from './equipment';
 import { tunable } from './tuning';
+import { reputationContributor } from './reputation';
 import { conditionHolds } from './conditions';
 import { departmentUpkeep } from './equipment-manager-policy';
 
@@ -122,6 +124,9 @@ export const RESOLUTION_TUNING = tunable('RESOLUTION_TUNING', {
    * part, in the acting squad but not taking part, in a support squad, or deployed but neither. */
   strain: {
     participant: 1,
+    /** The officer who leads a decision carries more of it than the others taking part, so who the
+     * player sends is a trade between the best fit and the freshest. */
+    lead: 1.5,
     actingSquad: 0.5,
     supportSquad: 0.6,
     bystander: 0.25,
@@ -333,6 +338,9 @@ export interface EvalInput {
   support: SquadId[];
   /** Pre-deployment preview: use these units per squad instead of reservations. */
   unitOverride?: Record<SquadId, ItemUnit[]>;
+  /** The officer the player sends to lead. Honored only when they are among those taking part, so a
+   * needed certificate or the room's capacity is never traded away for the pick. */
+  lead?: Id;
 }
 
 export interface Arrival {
@@ -699,6 +707,9 @@ export function evaluateAction(input: EvalInput): Evaluation {
   // ---- seat order: cert holders lead, then by effective aptitude
   const ordered = orderActionParticipants(pool, action);
   const participants = ordered.slice(0, Math.max(0, cap));
+  // The player's pick leads: moved to the first seat from among those already taking part.
+  const picked = input.lead ? participants.findIndex((officer) => officer.id === input.lead) : -1;
+  if (picked > 0) participants.unshift(...participants.splice(picked, 1));
   if (care.fieldTarget && !participants.some(officer => officer.certs.includes('advanced_first_aid'))) reasons.push('A qualified first aider must participate at the patient’s location');
   const benched = ordered.slice(participants.length);
   if (participants.length === 0 && !(action.commandOnly)) {
@@ -785,8 +796,8 @@ export function evaluateAction(input: EvalInput): Evaluation {
         ref: o.id,
       });
     }
-    // Experience band, from service and operations at the run's game day.
-    const band = experienceBand(o, day);
+    // Experience band, read from the officer's rank (sim/ranks.ts).
+    const band = experienceBand(o);
     if (pressured) {
       if (band === 'rookie') contributors.push({ label: `${o.surname}: rookie under pressure ${E.rookiePenalty}`, value: round1(E.rookiePenalty * seat), source: 'familiarity', ref: o.id });
       else if (band === 'seasoned') contributors.push({ label: `${o.surname}: seasoned under pressure +${E.seasonedBonus}`, value: round1(E.seasonedBonus * seat), source: 'familiarity', ref: o.id });
@@ -794,7 +805,7 @@ export function evaluateAction(input: EvalInput): Evaluation {
     }
     if (band === 'rookie') {
       const sq = squadOf.get(o.id);
-      const mentor = (sq ? runRoster(state, run, sq) : []).map((id) => state.officers[id]).find((m) => m && !incidentOfficerUnavailable(state, run, m.id) && m.id !== o.id && experienceBand(m, day) === 'veteran');
+      const mentor = (sq ? runRoster(state, run, sq) : []).map((id) => state.officers[id]).find((m) => m && !incidentOfficerUnavailable(state, run, m.id) && m.id !== o.id && experienceBand(m) === 'veteran');
       if (mentor) contributors.push({ label: `${mentor.surname}: mentoring ${o.surname} +${E.mentoring}`, value: round1(E.mentoring * seat), source: 'familiarity', ref: o.id });
     }
     const age = ageYears(o, day);
@@ -1223,6 +1234,10 @@ export function evaluateAction(input: EvalInput): Evaluation {
     if (existingTraining < 4) contributors.push({ label: 'De-escalation training: distressed contact', value: 4 - existingTraining, source: 'preparation', ref: 'deescalation' });
   }
 
+  // The department's name travels ahead of it (sim/reputation.ts).
+  const known = reputationContributor(state.department, kind);
+  if (known) { contributors.push(known); details.push(`${known.label}.`); }
+
   // ---- totals
   const score = round1(contributors.filter((c) => c.source !== 'difficulty').reduce((s, c) => s + c.value, 0));
   const all = [...diffContribs, ...contributors];
@@ -1319,14 +1334,15 @@ export function strainFor(input: EvalInput, ev: Evaluation, band: OutcomeBand): 
       const o = state.officers[id];
       if (!o) continue;
       let w = S.bystander;
-      if (ev.participantIds.includes(id)) w = S.participant;
+      if (ev.participantIds[0] === id) w = S.lead;
+      else if (ev.participantIds.includes(id)) w = S.participant;
       else if (ev.acting.includes(sq)) w = S.actingSquad;
       else if (ev.support.includes(sq)) w = S.supportSquad;
       const extra = 1 + (run.pressure / 100) * (1 - o.ratings.composure / 100) * S.pressureComposure;
       let m = 1;
       if (o.traits.includes('steady') && uncertain) m *= S.steadyTrait;
       if (o.traits.includes('rookie') && mentor) m *= S.rookieWithMentor;
-      if (pressured && experienceBand(o, day) === 'rookie') m *= E.rookieStrain;
+      if (pressured && experienceBand(o) === 'rookie') m *= E.rookieStrain;
       m *= ageStrainMult(ageYears(o, day));
       if (ev.participantIds.includes(id)) m *= ev.exposureMult;
       out[id] = round1(base * w * extra * m);

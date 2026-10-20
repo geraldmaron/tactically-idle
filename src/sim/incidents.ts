@@ -13,6 +13,7 @@ import { drawIncidentSpec, incidentId, parseIncidentId } from '../gen/incident';
 import { SCENARIO_TYPES } from '../content/scenario-types';
 import { unlockedTypes } from '../content/unlocks';
 import { noveltyWeights, recordArrival, recordDispatch } from './casebook';
+import { reputationWeights } from './reputation';
 import type { IncidentType } from './scenario-types';
 import { tunable } from './tuning';
 
@@ -118,7 +119,7 @@ function drawCard(d: GameState, at: number): IncidentCard | null {
 export function playerArcContext(d: GameState): { unlockedTypes: IncidentType[]; typeWeights: Partial<Record<IncidentType, number>> } {
   const types = SCENARIO_TYPES.map((info) => info.type);
   const open = unlockedTypes(d, types);
-  return { unlockedTypes: open, typeWeights: noveltyWeights(d, open) };
+  return { unlockedTypes: open, typeWeights: reputationWeights(d.department, noveltyWeights(d, open)) };
 }
 
 /** Draw the gap to the following arrival and store the new schedule. */

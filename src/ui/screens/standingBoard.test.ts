@@ -36,7 +36,9 @@ describe('the ops board: tactical call-outs only', () => {
 
   it('still prepares an authored scenario as an ordinary deployment', () => {
     vi.spyOn(Date, 'now').mockReturnValue(NOW);
-    const html = renderToStaticMarkup(createElement(OpsPrepare, { scenarioId: 'ms_occupancy', onCancel: () => {} }));
+    // The briefing step leads to the team step, which deploys.
+    expect(renderToStaticMarkup(createElement(OpsPrepare, { scenarioId: 'ms_occupancy', onCancel: () => {} }))).toMatch(/>Choose team<\/button>/);
+    const html = renderToStaticMarkup(createElement(OpsPrepare, { scenarioId: 'ms_occupancy', onCancel: () => {}, initialStep: 'team' }));
     expect(html).toMatch(/>Deploy<\/button>/);
     expect(html).not.toContain('type="checkbox"');
   });

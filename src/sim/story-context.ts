@@ -1,4 +1,4 @@
-import type { ScenarioDefinition } from './scenario-types';
+import type { NodeThreat, ScenarioDefinition, SpokenLine } from './scenario-types';
 import type { OperationRun } from './types';
 import { conditionHolds } from './conditions';
 
@@ -19,4 +19,19 @@ export function currentStoryPrompt(scenario: ScenarioDefinition, run: Pick<Opera
     if (contextual) return contextual.prompt;
   }
   return stage.prompt;
+}
+
+/** The transcript that goes with the current prompt (call-surfaces): the lines spoken as the player
+ * reaches this decision, from the same context prompt `currentStoryPrompt` picks. */
+export function currentStoryExchange(scenario: ScenarioDefinition, run: Pick<OperationRun, 'stage' | 'flags' | 'knowledge' | 'pressure'>): SpokenLine[] {
+  if (run.stage === 'debrief' || run.flags.some(flag => flag.startsWith('completion_pending:'))) return [];
+  const contextual = scenario.stages[run.stage].contextPrompts?.find(entry => conditionHolds(entry.when, run));
+  return contextual?.exchange?.map(line => ({ ...line })) ?? [];
+}
+
+/** The threat at the current decision point (NodeThreat): what gets worse while the player decides. */
+export function currentStoryThreat(scenario: ScenarioDefinition, run: Pick<OperationRun, 'stage' | 'flags' | 'knowledge' | 'pressure'>): NodeThreat | null {
+  if (run.stage === 'debrief' || run.flags.some(flag => flag.startsWith('completion_pending:'))) return null;
+  const contextual = scenario.stages[run.stage].contextPrompts?.find(entry => conditionHolds(entry.when, run));
+  return contextual?.threat ? { ...contextual.threat } : null;
 }

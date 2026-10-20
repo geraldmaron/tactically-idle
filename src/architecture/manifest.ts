@@ -14,11 +14,10 @@ export const LAYERS = {
   world: { summary: 'Blueprints: authored and procedural buildings, rooms, openings, furniture, routes and sightlines.', uses: ['kernel'] },
   catalog: { summary: 'Authored data: officers, personas, items, courses, unlocks, call templates and call trees.', uses: ['kernel', 'world'] },
   scenario: { summary: 'Turns a drawn call into a playable definition: cast, placement on the blueprint, compiled tree.', uses: ['kernel', 'world', 'catalog'] },
-  engine: { summary: 'Game rules and state: department, economy, operations, resolution, outcomes, saves.', uses: ['kernel', 'world', 'catalog', 'scenario', 'commerce'] },
-  commerce: { summary: 'Point packs and the purchase ledger.', uses: ['kernel'] },
-  qa: { summary: 'Content gates, balance measurement, fixtures and test support. Never loaded by the game.', uses: ['kernel', 'world', 'catalog', 'scenario', 'engine', 'commerce'] },
-  ui: { summary: 'Player screens, the blueprint renderer, portraits and the store that dispatches commands.', uses: ['kernel', 'world', 'catalog', 'scenario', 'engine', 'commerce'] },
-  lab: { summary: 'The dev-only Scenario Lab and dev sheets. Reads everything, never ships.', uses: ['kernel', 'world', 'catalog', 'scenario', 'engine', 'commerce', 'qa', 'ui'] },
+  engine: { summary: 'Game rules and state: department, economy, operations, resolution, outcomes, saves.', uses: ['kernel', 'world', 'catalog', 'scenario'] },
+  qa: { summary: 'Content gates, balance measurement, fixtures and test support. Never loaded by the game.', uses: ['kernel', 'world', 'catalog', 'scenario', 'engine'] },
+  ui: { summary: 'Player screens, the blueprint renderer, portraits and the store that dispatches commands.', uses: ['kernel', 'world', 'catalog', 'scenario', 'engine'] },
+  lab: { summary: 'The dev-only Scenario Lab and dev sheets. Reads everything, never ships.', uses: ['kernel', 'world', 'catalog', 'scenario', 'engine', 'qa', 'ui'] },
   shell: { summary: 'Entry points that choose which app to mount.', uses: ['kernel', 'world', 'catalog', 'engine', 'ui', 'lab'] },
 } as const satisfies Record<string, { summary: string; uses: readonly string[] }>;
 export type Layer = keyof typeof LAYERS;
@@ -69,6 +68,7 @@ export const OWNERSHIP: readonly { glob: string; layer: Layer; system: System }[
   { glob: '/src/sim/tuning-meta.ts', layer: 'lab', system: 'platform' },
   { glob: '/src/sim/tuning.ts', layer: 'kernel', system: 'platform' },
   { glob: '/src/sim/calendar.ts', layer: 'kernel', system: 'platform' },
+  { glob: '/src/sim/crew-flags.ts', layer: 'kernel', system: 'officer' },
   { glob: '/src/sim/format.ts', layer: 'kernel', system: 'platform' },
   { glob: '/src/sim/conditions.ts', layer: 'kernel', system: 'platform' },
   // world (blueprint)
@@ -81,23 +81,26 @@ export const OWNERSHIP: readonly { glob: string; layer: Layer; system: System }[
   { glob: '/src/sim/{routes,cover,sightlines}.ts', layer: 'world', system: 'blueprint' },
   // catalog
   { glob: '/src/content/call-trees/**', layer: 'catalog', system: 'scenario' },
+  { glob: '/src/content/content-descriptors.ts', layer: 'catalog', system: 'scenario' },
   { glob: '/src/content/incidents/**', layer: 'catalog', system: 'scenario' },
   { glob: '/src/content/scenarios/**', layer: 'catalog', system: 'scenario' },
   { glob: '/src/content/scenario-*.ts', layer: 'catalog', system: 'scenario' },
   { glob: '/src/content/unlocks.ts', layer: 'catalog', system: 'scenario' },
   { glob: '/src/content/items.ts', layer: 'catalog', system: 'item' },
   { glob: '/src/content/capabilities.ts', layer: 'catalog', system: 'item' },
+  // What each officer brings: chosen from the item catalog by role and certification (starter-kit).
+  { glob: '/src/content/issue-kit.ts', layer: 'catalog', system: 'item' },
   { glob: '/src/content/officers.ts', layer: 'catalog', system: 'officer' },
   { glob: '/src/content/personas.ts', layer: 'catalog', system: 'officer' },
   { glob: '/src/content/recruits.ts', layer: 'catalog', system: 'officer' },
+  // The rank ladder: titles, XP thresholds and what a promotion gives (the rules are sim/ranks.ts).
+  { glob: '/src/content/ranks.ts', layer: 'catalog', system: 'officer' },
   { glob: '/src/content/courses.ts', layer: 'catalog', system: 'officer' },
   { glob: '/src/content/certs.ts', layer: 'catalog', system: 'officer' },
   { glob: '/src/content/dev-tree.ts', layer: 'catalog', system: 'metric' },
   { glob: '/src/content/american-english.ts', layer: 'catalog', system: 'platform' },
   // scenario generation
   { glob: '/src/gen/incident/**', layer: 'scenario', system: 'scenario' },
-  // commerce
-  { glob: '/src/commerce/**', layer: 'commerce', system: 'metric' },
   // engine, by system. Call-time logistics (what a squad carries into this call, resupply on
   // scene, outside services and support vehicles, what an action asks of equipment and what a
   // capability adds to it) belong to the scenario that reads the items, not to the item system.
@@ -116,6 +119,10 @@ export const OWNERSHIP: readonly { glob: string; layer: Layer; system: System }[
   { glob: '/src/sim/officer*.ts', layer: 'engine', system: 'officer' },
   { glob: '/src/sim/roster*.ts', layer: 'engine', system: 'officer' },
   { glob: '/src/sim/career*.ts', layer: 'engine', system: 'officer' },
+  // The one writer of officer XP, and promotions.
+  { glob: '/src/sim/ranks.ts', layer: 'engine', system: 'officer' },
+  // Instructor details: what an officer earns teaching for a neighbouring department (officer-value).
+  { glob: '/src/sim/detail.ts', layer: 'engine', system: 'officer' },
   { glob: '/src/sim/squad*.ts', layer: 'engine', system: 'officer' },
   // Command Staff are hired managers who run department loops; they never go on calls.
   { glob: '/src/sim/command-staff.ts', layer: 'engine', system: 'metric' },
@@ -125,11 +132,20 @@ export const OWNERSHIP: readonly { glob: string; layer: Layer; system: System }[
   { glob: '/src/sim/economy.ts', layer: 'engine', system: 'metric' },
   { glob: '/src/sim/department*.ts', layer: 'engine', system: 'metric' },
   { glob: '/src/sim/develop*.ts', layer: 'engine', system: 'metric' },
+  // Development milestones: each tier granted free when its UnlockRule holds.
+  { glob: '/src/sim/grants.ts', layer: 'engine', system: 'metric' },
   { glob: '/src/sim/casebook.ts', layer: 'engine', system: 'metric' },
+  { glob: '/src/sim/reputation.ts', layer: 'engine', system: 'metric' },
   { glob: '/src/sim/clocks.ts', layer: 'engine', system: 'scenario' },
+  { glob: '/src/sim/timer-setting.ts', layer: 'engine', system: 'scenario' },
   // Agitation and rapport are a subject's temper.
   { glob: '/src/sim/meters.ts', layer: 'engine', system: 'subject' },
+  { glob: '/src/sim/crew.ts', layer: 'engine', system: 'officer' },
   { glob: '/src/sim/save*.ts', layer: 'engine', system: 'platform' },
+  // The department's books: every system that spends or earns posts here, like it saves through save.ts.
+  { glob: '/src/sim/ledger.ts', layer: 'engine', system: 'platform' },
+  // The open shift report: careers, grants and settlement all add lines to it.
+  { glob: '/src/sim/shift-report.ts', layer: 'engine', system: 'platform' },
   { glob: '/src/sim/campaign-*.ts', layer: 'engine', system: 'platform' },
   { glob: '/src/sim/game.ts', layer: 'engine', system: 'platform' },
   { glob: '/src/sim/environment.ts', layer: 'engine', system: 'blueprint' },
@@ -152,7 +168,7 @@ export const OWNERSHIP: readonly { glob: string; layer: Layer; system: System }[
   // The lexicon colors names in call text: the call's cast and the officers on it.
   { glob: '/src/ui/people/{lexicon,PeopleText}.{ts,tsx}', layer: 'ui', system: 'scenario' },
   { glob: '/src/ui/people/**', layer: 'ui', system: 'officer' },
-  // The storefront is where department money and points are spent: equipment, training and development.
+  // The storefront is where department money is spent: equipment, training and development.
   { glob: '/src/ui/storefront/**', layer: 'ui', system: 'metric' },
   // Every other screen and component is the ui layer by location; its system label is informational.
   { glob: '/src/ui/**', layer: 'ui', system: 'platform' },
@@ -181,5 +197,7 @@ export const SYSTEM_EDGE_REASONS: Readonly<Record<string, string>> = {
   'metric -> officer': 'chain',
   'metric -> scenario': 'chain',
   'metric -> subject': 'chain',
+  // An officer arrives with issue kit and the signing pays for it (starter-kit, owner decision 2026-10-19).
+  'officer -> item': 'issue kit: a hire brings items into the pool, priced into the signing',
 };
 export const SYSTEM_EDGES: readonly string[] = Object.keys(SYSTEM_EDGE_REASONS);

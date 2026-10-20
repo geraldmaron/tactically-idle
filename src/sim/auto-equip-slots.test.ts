@@ -37,23 +37,20 @@ describe('auto-equip local campaign integration', () => {
     expect(JSON.parse(storage.getItem(SLOTS_KEY)!).slots[0]).toEqual(slotOneBefore);
   });
 
-  it('keeps six starting radios, blocks two squads, and deploys after an explicit two-radio purchase', () => {
+  it('starts with a radio for every officer, so both squads deploy on day one (starter-kit)', () => {
     const values = new Map<string, string>();
     const storage = { getItem: (key: string) => values.get(key) ?? null, setItem: (key: string, value: string) => { values.set(key, value); } };
     const saves = new CampaignSlots(storage, NOW, () => 72);
     expect(saves.newGame(2, 'Standard kit QA', NOW).ok).toBe(true);
     const slotOne = JSON.parse(storage.getItem(SLOTS_KEY)!).slots[0];
     const before = saves.getSnapshot().state;
-    expect(Object.values(before.units).filter((unit) => unit.itemId === 'radio_kit')).toHaveLength(6);
+    expect(Object.values(before.units).filter((unit) => unit.itemId === 'radio_kit')).toHaveLength(Object.keys(before.officers).length);
     const scenarioId = SCENARIO_ORDER[0];
     const positions = { A: briefing(scenarioId).entries[0].id, B: briefing(scenarioId).entries[0].id };
     const command = { type: 'startOperation' as const, scenarioId, squadIds: ['A' as const, 'B' as const], positions, loadouts: {} };
-    expect(saves.send(command, NOW)).toMatchObject({ ok: false, reason: expect.stringContaining('2 short') });
-    expect(saves.getSnapshot().state.department.funding).toBe(before.department.funding);
-    expect(saves.send({ type: 'buyItem', itemId: 'radio_kit', qty: 2 }, NOW).ok).toBe(true);
-    expect(saves.getSnapshot().state.department.funding).toBe(before.department.funding - 800);
     expect(saves.send(command, NOW).ok).toBe(true);
     const deployed = saves.getSnapshot().state;
+    expect(deployed.department.funding).toBe(before.department.funding);
     expect(deployed.reservations).toHaveLength(8);
     expect(new Set(deployed.reservations.map((reservation) => reservation.unitId)).size).toBe(8);
     const restored = new CampaignSlots(storage, NOW, () => 99);
@@ -62,5 +59,6 @@ describe('auto-equip local campaign integration', () => {
     expect(restored.getSnapshot().state.reservations).toEqual([]);
     expect(JSON.parse(storage.getItem(SLOTS_KEY)!).slots[0]).toEqual(slotOne);
   });
+
 
 });

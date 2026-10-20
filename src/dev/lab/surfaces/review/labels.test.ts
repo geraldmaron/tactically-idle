@@ -36,7 +36,7 @@ describe('labels', () => {
     expect(anchorLabel('call', bound, hostage.tree, deps)).toBe('The whole call');
     expect(anchorLabel('choice:offer/take_courier', bound, hostage.tree, deps)).toBe(`Offer › ${bound.choice('offer', 'take_courier')}`);
     expect(anchorLabel('band:offer/take_courier/mixed', bound, hostage.tree, deps)).toMatch(/· complications$/);
-    expect(anchorLabel('key:mark:turned', bound, hostage.tree, deps)).toBe('The former employee turned the handgun on the shop owner');
+    expect(anchorLabel('key:mark:turned', bound, hostage.tree, deps)).toBe('The former employee turned the handgun on the owner');
     expect(anchorLabel('string:offer.prompt', bound, hostage.tree, deps)).toBe('Offer · prompt');
   });
 

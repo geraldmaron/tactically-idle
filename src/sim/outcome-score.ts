@@ -64,10 +64,12 @@ export const OUTCOME_SCORE_V1 = tunable('OUTCOME_SCORE_V1', {
     /** Officers took hold of the person: no review, a struggle the team carries home. */
     hands: [0, 0.5] as Pair,
   },
-  commitments: { kept: [1, -0.5] as Pair, broken: [-2, 1] as Pair },
+  commitments: { kept: [1, -0.5] as Pair, broken: [-2, 1] as Pair,
+    /** A lie that held to the end still weighs on the team; one found out costs the most trust. */
+    lieHeld: [0, 0.5] as Pair, lieFound: [-3, 1.5] as Pair },
   /** A call that runs this many operation minutes or more is a long one. */
   time: { longAt: 45, long: [-1, 3] as Pair },
-  /** The rewards factor (funding, experience, development points, and the trust the call's size
+  /** The rewards factor (funding, experience, and the trust the call's size
    * brings): `base`, plus `perPoint` for each trust point the lines add up to, plus `objective` for
    * how far the call got (run.objective, 0 to 100) against the middle. Clamped 0 to 1, and to
    * `unfinishedMax` when the call is not resolved: unfinished work never earns full settlement
@@ -166,7 +168,7 @@ export interface ScoreInputs {
   people: PersonEnd[];
   force: ForceUse[];
   entries: number;
-  commitments: { personId: Id; label: string; status: 'open' | 'kept' | 'broken' }[];
+  commitments: { personId: Id; label: string; kind?: string; status: 'open' | 'kept' | 'broken' }[];
   minutes: number;
   objective: number;
   /** The call ran out of steps (the fallback ending), or the response failed. */
@@ -178,7 +180,7 @@ function scoreInputs(scenario: ScenarioDefinition, run: ScoreRun, opts: ScoreOpt
     people: endStates(scenario, run, opts),
     force: forceUses(scenario, run),
     entries: entriesTaken(scenario, run),
-    commitments: Object.values(run.commitments ?? {}).map(entry => ({ personId: entry.personId, label: personLabel(scenario, entry.personId), status: entry.status })),
+    commitments: Object.values(run.commitments ?? {}).map(entry => ({ personId: entry.personId, label: personLabel(scenario, entry.personId), kind: entry.kind, status: entry.status })),
     minutes: run.clock,
     objective: run.objective,
     ranOut: !!run.responseFailure || run.endingId === RAN_OUT_ENDING,
@@ -267,6 +269,11 @@ export function scoreFrom(inputs: ScoreInputs, rewardsTrust: number): CallScore 
     else add(`force:${index}:${use.profile}`, `The team used less-lethal force on ${use.label}.`, W.force.lessLethal);
   });
   inputs.commitments.forEach((commitment, index) => {
+    if (commitment.kind === 'lie') {
+      if (commitment.status === 'kept') add(`commitment:${index}:lie-held`, `The lie told to ${commitment.label} held.`, W.commitments.lieHeld);
+      else if (commitment.status === 'broken') add(`commitment:${index}:lie-found`, `${commitment.label} found out the team lied.`, W.commitments.lieFound);
+      return;
+    }
     if (commitment.status === 'kept') add(`commitment:${index}:kept`, `Command kept its word to ${commitment.label}.`, W.commitments.kept);
     else if (commitment.status === 'broken') add(`commitment:${index}:broken`, `The team went back on what command promised ${commitment.label}.`, W.commitments.broken);
   });

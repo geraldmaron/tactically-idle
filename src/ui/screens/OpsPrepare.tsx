@@ -24,6 +24,7 @@ import { Blueprint } from '../blueprint/Blueprint';
 import { floorCount } from '../blueprint/floors';
 import { Button, Card, Chip, Section, Stepper, SubHead } from '../components/ui';
 import { familyBlurb, incidentMeta } from '../components/incident';
+import { PlateArt, sceneFor } from '../art/Plates';
 import { Portrait } from '../portraits/Portrait';
 import { GearArt } from '../art/GearArt';
 import { useToast } from '../components/toast';
@@ -38,6 +39,7 @@ import type { AutoNote, Explicit, Loadouts } from './autoPlan';
 import { buildIntel } from './intel';
 import { handCarriedLoadout, SupportPreparation } from './SupportPreparation';
 import { PrepBriefing } from './PrepBriefing';
+import { ColdOpen } from '../components/DepthBrief';
 import { GamePeopleProvider } from '../people/PeopleText';
 import { lexiconFor } from '../people/lexicon';
 import { preparationOptions } from './preparation-options';
@@ -47,8 +49,10 @@ import './preparation-options.css';
 import './operation-squads.css';
 import './ops-visual.css';
 import { departmentUpkeep } from '../../sim/equipment-manager-policy';
+import { Disclosure } from '../components/Disclosure';
 
-export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel: () => void }) {
+/** `initialStep` opens on the team step, for tests and a return from the Lab; players start on the briefing. */
+export function OpsPrepare({ scenarioId, onCancel, initialStep = 'brief' }: { scenarioId: Id; onCancel: () => void; initialStep?: 'brief' | 'team' }) {
   const pageRef = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
     const screen = pageRef.current?.closest('.screen');
@@ -65,6 +69,8 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
   const store = storeOptions(g);
   const presets = hasNodeEffect(g, 'loadoutPresets');
 
+  // Two steps, the mission-prep pattern: read the call, then choose who goes and what they carry.
+  const [step, setStep] = useState<'brief' | 'team'>(initialStep);
   const [chosen, setChosen] = useState<SquadId[]>([]);
   const [setupSquad, setSetupSquad] = useState<SquadId | null>(null);
   const visibleSquad = setupSquad && chosen.includes(setupSquad) ? setupSquad : chosen[0] ?? null;
@@ -284,21 +290,38 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
           <Icon name="chevronLeft" size={18} />
           Operations
         </button>
-        <div className="prep-title">
+        <div className="prep-title plate plate-grain">
+          <PlateArt src={sceneFor(incidentType ?? undefined)} />
           <span className="prep-title-badge" aria-hidden="true"><Icon name={incidentType ? incidentMeta(incidentType).icon : 'pin'} size={22} /></span>
           <span className="prep-title-text">
-            <span className="opboard-code">{card?.code ?? 'OP'}</span>
+            <span className="opboard-code mono">{card?.code ?? 'OP'}</span>
             <h2 className="live-name">{(card?.title ?? scenarioId.replace(/_/g, ' ')).toUpperCase()}</h2>
             {kicker && <p className="prep-kicker">{kicker}</p>}
           </span>
         </div>
       </div>
 
-      <PrepBriefing scenario={scenario} built={built} brief={brief} intel={intel} />
-
-      <div className="prep-map" aria-label="Location preview">
-        <Blueprint built={built} spaces={spaces} squadTasks={[]} selectedSpaceId={null} focusSquadId={null} {...blueprintExtras} />
+      <div className="prep-steps" role="tablist" aria-label="Preparation steps">
+        {([['brief', 'Briefing'], ['team', 'Team & gear']] as const).map(([id, label], index) => (
+          <button key={id} type="button" role="tab" aria-selected={step === id} className={`prep-step${step === id ? ' prep-step-on' : ''}`} onClick={() => { setStep(id); pageRef.current?.scrollIntoView({ block: 'start' }); }}>
+            <span className="prep-step-n">{index + 1}</span>{label}
+            {id === 'team' && chosen.length > 0 && <span className="prep-step-count">{chosen.map((sid) => sid).join('+')}</span>}
+          </button>
+        ))}
       </div>
+
+      {step === 'brief' && <>
+        <ColdOpen text={scenario?.coldOpen} className="prep-cold-open" />
+        <PrepBriefing scenario={scenario} built={built} brief={brief} intel={intel} />
+        <section className="pb-block" aria-labelledby="prep-map-h">
+          <h3 id="prep-map-h" className="pb-h"><Icon name="blueprint" size={15} />The building</h3>
+          <div className="prep-map" aria-label="Location preview">
+            <Blueprint built={built} spaces={spaces} squadTasks={[]} selectedSpaceId={null} focusSquadId={null} {...blueprintExtras} />
+          </div>
+        </section>
+      </>}
+
+      {step === 'team' && <>
 
       <Section title="Squads" icon="people" hint={`Takes ${range.min === range.max ? range.min : `${range.min} to ${range.max}`} squad${range.max > 1 ? 's' : ''}. Tap to choose.`}>
         {g.squads.length === 0 ? (
@@ -390,16 +413,7 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
               </Button>
             </div>
             {note && (
-              <details className="autonote">
-                <summary className="autonote-h">
-                  <Icon name="wand" size={14} />
-                  Auto-equip notes · {note.lines.length || 'none'}
-                  {note.edited && (
-                    <Chip tone="amber" icon="edit">
-                      You changed this
-                    </Chip>
-                  )}
-                </summary>
+              <Disclosure name="autoequip-notes" className="autonote" icon="wand" summary="Auto-equip notes" count={note.lines.length} hint={note.edited ? 'You changed this' : undefined}>
                 {note.lines.length > 0 ? (
                   <ul>
                     {note.lines.map((l, i) => (
@@ -409,7 +423,7 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
                 ) : (
                   <p className="dim">Current choices kept. No extra gear added.</p>
                 )}
-              </details>
+              </Disclosure>
             )}
             <label className="field">
               <span className="field-label">
@@ -534,15 +548,14 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
 
       <SupportPreparation state={g} now={now} cmd={cmd} built={built} onSelect={setSupportUnitId} />
 
-      {!!preparation?.equipment.length && <details className="prep-equipment-options">
-        <summary>Optional equipment · {preparation.equipment.length} {preparation.equipment.length === 1 ? 'option' : 'options'} to review</summary>
+      {!!preparation?.equipment.length && <Disclosure name="prep-equipment" className="prep-equipment-options" summary="Optional equipment to review" count={preparation.equipment.length}>
         <p>These bundles open up more choices. You can deploy without them; each decision shows its needs when it comes up.</p>
         <ul>{preparation.equipment.map(({ key, label, fix }) => <li key={key}>
           <strong>{label}</strong>
           <p className="dim">Optional equipment for squad {fix.sid}. Scene requirements are checked when you choose an action.</p>
           {fix.plan.issue ? <p>{fix.plan.issue}</p> : <Button size="sm" icon="box" onClick={() => equipPreparationFix(fix)}>Equip {fix.plan.label} on squad {fix.sid}</Button>}
         </li>)}</ul>
-      </details>}
+      </Disclosure>}
 
       {(check.issues.length > 0 || visibleWarnings.length > 0) && <div className="prepcheck" aria-live="polite">
         {check.issues.map((i, k) => (
@@ -562,12 +575,20 @@ export function OpsPrepare({ scenarioId, onCancel }: { scenarioId: Id; onCancel:
         })}
       </div>}
 
+      </>}
+
       <div className="stickyfoot prepfoot">
-        <p className={`prepfoot-status tone-${footStatus.tone}`}><Icon name={footStatus.icon} size={15} /><span>{footStatus.text}</span></p>
-        <Button onClick={onCancel}>Cancel</Button>
-        <Button variant="primary" disabled={!check.ok} onClick={deploy}>
-          Deploy
-        </Button>
+        {step === 'brief' ? <>
+          <p className="prepfoot-status tone-amber"><Icon name="intel" size={15} /><span>Read the call, then choose who goes</span></p>
+          <Button onClick={onCancel}>Cancel</Button>
+          <Button variant="primary" onClick={() => { setStep('team'); pageRef.current?.scrollIntoView({ block: 'start' }); }}>Choose team</Button>
+        </> : <>
+          <p className={`prepfoot-status tone-${footStatus.tone}`}><Icon name={footStatus.icon} size={15} /><span>{footStatus.text}</span></p>
+          <Button onClick={() => setStep('brief')}>Briefing</Button>
+          <Button variant="primary" disabled={!check.ok} onClick={deploy}>
+            Deploy
+          </Button>
+        </>}
       </div>
     </div>
   );

@@ -9,6 +9,9 @@ const gear = JSON.parse(read('public/art/gear/manifest.json'));
 const materials = JSON.parse(read('public/art/materials/manifest.json'));
 const managers = JSON.parse(read('public/art/managers/manifest.json'));
 const emblems = JSON.parse(read('public/art/emblems/manifest.json'));
+const plates = JSON.parse(read('public/art/plates/manifest.json'));
+// Plates are scene_<call type>, banner_<tab> or tex_<texture> (src/ui/art/Plates.tsx).
+const PLATE_ID = /^(scene_[a-z_]+|banner_(hq|squad|ops|develop|gear)|hub_hq|tex_[a-z_]+)$/;
 const MANAGER_IDS = ['watch_commander', 'training_sergeant', 'quartermaster'];
 // Emblem ids are course ids, plus branch_<id> for each development branch.
 const courseSource = read('src/content/courses.ts');
@@ -18,7 +21,7 @@ const EMBLEM_IDS = new Set([...COURSE_IDS, ...BRANCH_IDS.map((id) => `branch_${i
 const errors=[];
 if(!COURSE_IDS.size) errors.push('emblems: no course ids found in src/content/courses.ts');
 if(!BRANCH_IDS.length) errors.push('emblems: no BRANCHES found in src/ui/components/labels.ts');
-for(const [kind, manifest] of [['portraits',portrait],['gear',gear],['materials',materials],['managers',managers],['emblems',emblems]]) {
+for(const [kind, manifest] of [['portraits',portrait],['gear',gear],['materials',materials],['managers',managers],['emblems',emblems],['plates',plates]]) {
   if(new Set(manifest.readyIds).size!==manifest.readyIds.length) errors.push(`${kind}: duplicate ready id`);
   for(const id of manifest.readyIds) {
     const file=path.join(root,`public/art/${kind}/${id}.webp`);
@@ -30,6 +33,7 @@ for(const [kind, manifest] of [['portraits',portrait],['gear',gear],['materials'
     if(kind==='portraits'&&!people.some(p=>p.id===id)) errors.push(`${id}: no authored identity`);
     if(kind==='managers'&&!MANAGER_IDS.includes(id)) errors.push(`managers/${id}: not a Command Staff manager`);
     if(kind==='emblems'&&!EMBLEM_IDS.has(id)) errors.push(`emblems/${id}: not a course or development branch`);
+    if(kind==='plates'&&!PLATE_ID.test(id)) errors.push(`plates/${id}: not a scene, banner or texture id`);
   }
 }
 for(const filename of ['header-lockup-dark.svg','favicon.svg','apple-touch-icon.png']) {

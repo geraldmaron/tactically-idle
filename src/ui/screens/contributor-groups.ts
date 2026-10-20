@@ -15,6 +15,7 @@ export const CONTRIBUTOR_GROUPS: readonly ContributorGroup[] = [
   { id: 'support', label: 'Support', sources: ['support'], icon: 'handover' },
   { id: 'preparation', label: 'Preparation', sources: ['preparation'], icon: 'list' },
   { id: 'familiarity', label: 'Familiarity', sources: ['familiarity'], icon: 'book' },
+  { id: 'reputation', label: 'Reputation', sources: ['reputation'], icon: 'shield' },
   { id: 'pressure', label: 'Pressure', sources: ['pressure'], icon: 'flame' },
   { id: 'difficulty', label: 'Difficulty', sources: ['difficulty'], icon: 'mountain' },
 ];

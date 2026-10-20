@@ -2,14 +2,18 @@ import type { IncidentType } from '../sim/scenario-types';
 import { SCENARIO_TYPES } from './scenario-types';
 import type { CertId, GameState, Id } from '../sim/types';
 
-/** What a department needs before a framework is dispatched to it (content v11 and later).
- * Every listed part must hold: the department level, at least one officer holding any of
- * `anyCert`, and at least one owned unit of any of `anyItem`. A framework with no rule
- * here uses DEFAULT_UNLOCK. Requirements name capabilities, never the content of a call. */
+/** What a department needs before a framework is dispatched to it (content v11 and later), or
+ * before a development is granted free (sim/grants.ts, save v12). Every listed part must hold:
+ * the department level, at least one officer holding any of `anyCert`, at least one owned unit
+ * of any of `anyItem`, `resolved` live calls closed resolved, and trust at `trust` or more. A
+ * framework with no rule here uses DEFAULT_UNLOCK. Requirements name capabilities, never the
+ * content of a call. */
 export interface UnlockRule {
   level: number;
   anyCert?: readonly CertId[];
   anyItem?: readonly Id[];
+  resolved?: number;
+  trust?: number;
 }
 
 /** New or unknown frameworks are ordinary calls until a drop gives them a rule. */
@@ -42,14 +46,22 @@ export interface MissingRequirement {
   level?: number;
   anyCert?: readonly CertId[];
   anyItem?: readonly Id[];
+  resolved?: number;
+  trust?: number;
 }
 
 type UnlockState = Pick<GameState, 'department' | 'officers' | 'units'>;
 
 export function missingRequirements(state: UnlockState, type: IncidentType): MissingRequirement {
-  const rule = unlockRule(type);
+  return missingFor(state, unlockRule(type));
+}
+
+/** The parts of any rule a department does not meet yet; empty when it holds. */
+export function missingFor(state: UnlockState, rule: UnlockRule): MissingRequirement {
   const missing: MissingRequirement = {};
   if (state.department.level < rule.level) missing.level = rule.level;
+  if (rule.resolved !== undefined && (state.department.callsResolved ?? 0) < rule.resolved) missing.resolved = rule.resolved;
+  if (rule.trust !== undefined && state.department.trust < rule.trust) missing.trust = rule.trust;
   if (rule.anyCert?.length) {
     const held = new Set(Object.values(state.officers ?? {}).flatMap((officer) => officer.certs ?? []));
     if (!rule.anyCert.some((cert) => held.has(cert))) missing.anyCert = rule.anyCert;

@@ -27,10 +27,13 @@ When work resumes, calls and tooling restart as fresh sessions from their hand-o
 ## Branches and worktrees (reconciled 2026-10-19)
 
 Merged and patch-equivalent branches are deleted locally and on GitHub, and extra worktrees are
-removed. #79 merged. #80 (`claude/land-parked-fixes`) lands the engine barricade blockers and the
-two tooling drafts (#76, #77) after merging `main` into each. What stays: `main`, #80 until it
-merges, and `claude/calls-barricade-tree`, which carries `main` and #80 but waits on
-`outcome-calibration-drift` and its writing review.
+removed. #79 and #80 merged. What stays: `main`; `claude/calls-barricade-tree`, which waits on
+`outcome-calibration-drift` and its writing review; and `claude/department-ux-pass` (lead, owner
+request 2026-10-19), one branch for the department UX pass across engine and interface files while
+no lane runs: squad edits during a call, the funding ledger and live finance view, starter kit,
+one Disclosure, the Armory, the hire contract, the Develop track, officer learning and instructor
+details, and the officer profile. Save version 11. It touches `src/content/recruits.ts` (calls lane)
+for the issue-kit price; the calls lane rebases on it before its next content change.
 
 ## Ordering on shared files
 

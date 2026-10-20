@@ -44,7 +44,7 @@ describe('stance thresholds (METERS_V1.stance)', () => {
 
 describe('strain weights (RESOLUTION_TUNING.strain)', () => {
   it('hold the old literals', () => {
-    expect(RESOLUTION_TUNING.strain).toEqual({ participant: 1, actingSquad: 0.5, supportSquad: 0.6, bystander: 0.25, pressureComposure: 1.2, steadyTrait: 0.75, rookieWithMentor: 0.85 });
+    expect(RESOLUTION_TUNING.strain).toEqual({ participant: 1, lead: 1.5, actingSquad: 0.5, supportSquad: 0.6, bystander: 0.25, pressureComposure: 1.2, steadyTrait: 0.75, rookieWithMentor: 0.85 });
   });
   it('are what strainFor reads', () => {
     const occ = SCENARIOS.ms_occupancy;
@@ -60,8 +60,12 @@ describe('strain weights (RESOLUTION_TUNING.strain)', () => {
     expect(squadB.every(id => base[id] > 0)).toBe(true);
     const none = strain({ RESOLUTION_TUNING: { strain: { bystander: 0 } } });
     expect(squadB.every(id => none[id] === 0)).toBe(true);
+    // The lead carries the lead share; everyone else taking part carries the participant share.
+    const [lead, ...rest] = ev.participantIds;
     const doubled = strain({ RESOLUTION_TUNING: { strain: { participant: 2 } } });
-    for (const id of ev.participantIds) expect(doubled[id]).toBeCloseTo(2 * base[id], 0);
+    for (const id of rest) expect(doubled[id]).toBeCloseTo(2 * base[id], 0);
+    const leadDoubled = strain({ RESOLUTION_TUNING: { strain: { lead: 3 } } });
+    expect(leadDoubled[lead]).toBeCloseTo(2 * base[lead], 0);
     const calm = strain({ RESOLUTION_TUNING: { strain: { pressureComposure: 0 } } });
     for (const id of ev.participantIds) expect(calm[id]).toBeLessThan(base[id]);
   });

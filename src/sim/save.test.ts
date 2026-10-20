@@ -64,7 +64,6 @@ describe('save round trip', () => {
     const reopened = ok(deserialize(serialize(s, T0 + 3 * HOUR_MS))!, { type: 'tick' }, T0 + 5 * HOUR_MS);
     const direct = ok(s, { type: 'tick' }, T0 + 5 * HOUR_MS);
     expect(reopened.department.funding).toBeCloseTo(direct.department.funding, 6);
-    expect(reopened.department.devPoints).toBeCloseTo(direct.department.devPoints, 6);
     // Loading the same save a second time and ticking again does not stack.
     const second = ok(deserialize(serialize(s, T0 + 3 * HOUR_MS))!, { type: 'tick' }, T0 + 5 * HOUR_MS);
     expect(second.department.funding).toBeCloseTo(reopened.department.funding, 6);
@@ -233,7 +232,7 @@ describe('version 3 validation and squad D', () => {
 describe('current version boundary', () => {
   it('rejects every historical or future envelope and state version without migrating', () => {
     const current = JSON.parse(serialize(createInitialState(T0), T0));
-    for (const [field, values] of [['saveVersion', [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 11]], ['contentVersion', [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14]]] as const) {
+    for (const [field, values] of [['saveVersion', [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13]], ['contentVersion', [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14]]] as const) {
       for (const value of values) for (const target of ['envelope', 'state'] as const) {
         const bad = structuredClone(current);
         if (target === 'envelope') bad[field] = value; else bad.state[field] = value;

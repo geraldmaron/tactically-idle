@@ -1,5 +1,4 @@
 import type { CertId, DevBranch, Officer, RatingKey, Role, SquadDuty, StageId, TraitId } from '../../sim/types';
-import type { ExperienceBand } from '../../sim/calendar';
 import type { StressBand } from '../../sim/officer';
 import { stressBand } from '../../sim/officer';
 import type { IconName } from '../icons';
@@ -69,7 +68,7 @@ export const BAND_SHORT: Record<StressBand, string> = {
 };
 
 /** Officer status chips: stress bands plus the non-stress states an officer can be in. */
-export type StatusKey = StressBand | 'injured' | 'training' | 'deployed' | 'retiring';
+export type StatusKey = StressBand | 'injured' | 'training' | 'detail' | 'deployed' | 'retiring';
 export const STATUS_META: Record<StatusKey, { label: string; icon: IconName; tone: 'mint' | 'amber' | 'warn' | 'danger' | 'blue' | 'neutral' }> = {
   ready: { label: 'Ready', icon: 'checkcircle', tone: 'mint' },
   strained: { label: 'Strained', icon: 'gauge', tone: 'amber' },
@@ -77,16 +76,11 @@ export const STATUS_META: Record<StatusKey, { label: string; icon: IconName; ton
   recovery: { label: 'Recovery', icon: 'moon', tone: 'danger' },
   injured: { label: 'Injured', icon: 'bandage', tone: 'danger' },
   training: { label: 'Training', icon: 'mortarboard', tone: 'blue' },
+  detail: { label: 'On detail', icon: 'book', tone: 'blue' },
   deployed: { label: 'Deployed', icon: 'pin', tone: 'amber' },
   retiring: { label: 'Retiring', icon: 'retire', tone: 'warn' },
 };
 
-export const EXPERIENCE_META: Record<ExperienceBand, { icon: IconName; tone: 'mint' | 'amber' | 'blue' | 'neutral' }> = {
-  rookie: { icon: 'sprout', tone: 'neutral' },
-  developing: { icon: 'trend', tone: 'blue' },
-  seasoned: { icon: 'star', tone: 'amber' },
-  veteran: { icon: 'medal', tone: 'mint' },
-};
 
 export const NODE_STATUS_META = {
   unlocked: { label: 'Unlocked', icon: 'check' as IconName, tone: 'mint' as const },

@@ -11,6 +11,7 @@ import { BOARD_LIMIT, boardEntries, boardNote, boardPlan, incidentsOf } from './
 import type { BoardEntry } from './helpers';
 import { Casebook } from './Casebook';
 import { CallTile } from './CallTile';
+import { ScreenBanner } from '../art/Plates';
 import { GamePeopleProvider } from '../people/PeopleText';
 import { lexiconFor } from '../people/lexicon';
 import './ops-visual.css';
@@ -32,8 +33,10 @@ export function OpsBoard({ onPrepare }: { onPrepare: (id: Id) => void }) {
   const squadCount = g.squads.filter((squad) => squad.officerIds.length > 0).length;
 
   return (
+    <>
+    <ScreenBanner id="ops" kicker="Dispatch" title="Call-outs" line="SWAT is called when someone is armed, there is a threat, and they won't come out. A call nobody takes goes to another unit." />
     <div className="page opboard-page">
-      <Section title="Call-outs" icon="pin" hint="SWAT is called when someone is armed, there is a threat, and they won't come out. A call nobody takes goes to another unit.">
+      <Section title="Live calls" icon="pin">
         <div className="opboard-count" role="status">
           <span className="opboard-slots" aria-hidden="true">
             {Array.from({ length: BOARD_LIMIT }, (_, i) => <i key={i} data-slot={i < live.length ? 'live' : 'open'} />)}
@@ -55,6 +58,7 @@ export function OpsBoard({ onPrepare }: { onPrepare: (id: Id) => void }) {
 
       <Casebook state={g} />
     </div>
+    </>
   );
 }
 

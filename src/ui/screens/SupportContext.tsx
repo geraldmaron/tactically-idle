@@ -8,6 +8,7 @@ import { Icon } from '../icons';
 import type { IconName } from '../icons';
 import { opMinutes } from '../format';
 import './support-context.css';
+import { Disclosure } from '../components/Disclosure';
 
 type ServiceView = ReturnType<typeof externalSupportViews>[number];
 
@@ -19,7 +20,7 @@ export function IncidentBriefContext({ scenario, compact = false }: { scenario: 
     {dispatchReason && <p>{dispatchReason}</p>}
     {!!teamResponsibilities?.length && <div className="incident-responsibilities"><strong>Your team’s responsibilities</strong><ul>{teamResponsibilities.map((task) => <li key={task}>{task}</li>)}</ul></div>}
   </>;
-  if (compact) return <details className="incident-context incident-context-compact"><summary>Why your team was requested</summary>{content}</details>;
+  if (compact) return <Disclosure name="team-requested" className="incident-context incident-context-compact" summary="Why your team was requested">{content}</Disclosure>;
   return <section className="incident-context" aria-label="Your team’s role"><h3><Icon name="radio" size={16} />Why your team was requested</h3>{content}</section>;
 }
 

@@ -42,7 +42,7 @@ function live() {
 }
 function prepare() {
   hooks.cursor = 0;
-  const nodes = descendants(OpsPrepare({ scenarioId: 'ms_occupancy', onCancel: () => {} }));
+  const nodes = descendants(OpsPrepare({ scenarioId: 'ms_occupancy', onCancel: () => {}, initialStep: 'team' }));
   const command = (nodes.find(node => node.type === SupportPreparation) as ReactElement<Parameters<typeof SupportPreparation>[0]>).props.cmd;
   const rail = nodes.find(node => node.type === ChoiceRail) as ReactElement<Parameters<typeof ChoiceRail<SquadId>>[0]> | undefined;
   const choose = (id: SquadId) => (nodes.find(node => node.type === 'button' && node.props.className?.toString().startsWith('pickcard') && descendants(node.props.children).some(child => child.props.className === 'squad-badge' && child.props.children === id))!.props.onClick as () => void)();

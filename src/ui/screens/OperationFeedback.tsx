@@ -9,8 +9,9 @@ import { opMinutes, signed } from '../format';
 import { outcomePercentages } from './liveModels';
 import './operation-feedback.css';
 import { ITEMS } from '../../content/items';
-import { Icon } from '../icons';
 import { PeopleText } from '../people/PeopleText';
+import { Transcript } from '../components/Transcript';
+import { Disclosure } from '../components/Disclosure';
 
 export const RESULT_LABEL: Record<OutcomeBand, string> = { favorable: 'Went well', mixed: 'Had complications', adverse: 'Went badly' };
 export const FORECAST_LABEL: Record<OutcomeBand, string> = { favorable: 'Goes well', mixed: 'Complications', adverse: 'Goes badly' };
@@ -57,10 +58,12 @@ export function OutcomeForecast({ action }: { action: ActionView }) {
   );
 }
 
-export function DecisionCard({ decision: d, full = false, officers = {}, explicitCompletion = false }: { decision: DecisionView; full?: boolean; officers?: DebriefOfficers; explicitCompletion?: boolean }) {
+export function DecisionCard({ decision: d, full = false, officers = {}, explicitCompletion = false, currentPrompt }: { decision: DecisionView; full?: boolean; officers?: DebriefOfficers; explicitCompletion?: boolean;
+  /** The live stage prompt shown right below this card; a Next line that repeats it word for word is left out. */
+  currentPrompt?: string }) {
   // Consequences are saved facts, in authored order. A later line can contain an injury or discovery.
   const narrative = d.consequences.filter((line) => !line.startsWith('Next: '));
-  const next = d.consequences.filter((line) => line.startsWith('Next: '));
+  const next = d.consequences.filter((line) => line.startsWith('Next: ') && line.slice(6).trim() !== currentPrompt?.trim());
   const fallback = narrative.length === 0 ? d.explanation.find((line) => line.trim()) : undefined;
   return (
     <article className={`decision-card decision-${d.forceOutcome ? 'force' : d.resultLabel ? 'event' : d.band}`} aria-label={`${d.title}: ${d.forceOutcome ? 'task and harm recorded' : d.resultLabel ?? RESULT_LABEL[d.band]}`}>
@@ -74,13 +77,13 @@ export function DecisionCard({ decision: d, full = false, officers = {}, explici
         <p>{ITEMS[d.forceOutcome.itemId]?.name ?? 'Selected equipment'} used. This result is separate from the task check.</p>
       </section>}
       {narrative.length > 0 ? <ul className="decision-narrative">{narrative.map((line, index) => <li key={index}><PeopleText text={line} /></li>)}</ul> : fallback ? <p className="decision-lead"><PeopleText text={fallback} /></p> : null}
+      <Transcript lines={d.exchange} />
       <DecisionChanges decision={d} complete={full} explicitCompletion={explicitCompletion} />
       <DecisionEffects decision={d} complete={full} />
       {full ? <DecisionStress decision={d} officers={officers} complete /> : <DecisionStressChips decision={d} officers={officers} />}
       {next.length > 0 && <div className="decision-next">{next.map((line, index) => <p key={index}><PeopleText text={line} /></p>)}</div>}
       {d.endingTitle && <p className="decision-next"><strong>Operation ended:</strong> {d.endingTitle}</p>}
-      <details className="decision-causes decision-record" open={full}>
-        <summary>Details and reasons</summary>
+      <Disclosure name="decision-record" className="decision-causes decision-record" open={full} summary="Details and reasons">
         {d.resultLabel && <p>Recorded check: {d.band}. Time, supplies and stress are recorded below.</p>}
         {!full && <>
           <h4>Recorded changes</h4>
@@ -97,7 +100,7 @@ export function DecisionCard({ decision: d, full = false, officers = {}, explici
         <h4>What do the scores mean?</h4>
         {explicitCompletion ? <p>The recorded call progress score is separate from completion. Completion depends on the work done and any agreed transfer of responsibility. Civilian safety tracks how safely the call has gone, from 0 to 100.</p> : <p>Call progress shows how much of the call has been resolved. Civilian safety tracks how safely it has gone. Both run from 0 to 100; higher is better.</p>}
         <p>Pressure runs from 0 to 100; lower is better. Delays and setbacks can raise it and make the situation harder. A lower safety score does not by itself mean someone was injured.</p>
-      </details>
+      </Disclosure>
     </article>
   );
 }
@@ -133,28 +136,25 @@ export function OperationLogContents({ decisions, officers = {}, explicitComplet
   );
 }
 
-/** One line above the next decision naming the last result; tapping it shows the full record below. */
-export function LastDecisionPeek({ decisions, onReveal }: { decisions: DecisionView[]; onReveal: () => void }) {
-  const last = decisions.at(-1);
-  if (!last) return null;
-  const label = last.forceOutcome ? 'Task and harm recorded' : last.resultLabel ?? RESULT_LABEL[last.band];
-  const tone = last.forceOutcome || last.resultLabel ? 'event' : last.band;
-  return <button type="button" className={`last-peek last-peek-${tone}`} onClick={onReveal}>
-    <span className="last-peek-dot" aria-hidden="true" />
-    <span className="last-peek-text"><small>Last decision · {label}</small><strong>{last.title}</strong></span>
-    <span className="last-peek-go">What changed<Icon name="chevronDown" size={14} /></span>
-  </button>;
-}
-
-/** The history comes from the saved run, so closing a sheet or reloading cannot discard it. */
-export function OperationFeedback({ decisions, ended = false, onOpenLog, officers = {}, explicitCompletion = false }: { decisions: DecisionView[]; ended?: boolean; onOpenLog?: () => void; officers?: DebriefOfficers; explicitCompletion?: boolean }) {
+/** The latest result leads the live scene, ahead of the next choice. The history comes from the
+ * saved run, so closing a sheet or reloading cannot discard it. */
+export function OperationFeedback({ decisions, ended = false, onOpenLog, officers = {}, explicitCompletion = false, currentPrompt, folded = false }: { decisions: DecisionView[]; ended?: boolean; onOpenLog?: () => void; officers?: DebriefOfficers; explicitCompletion?: boolean; currentPrompt?: string;
+  /** The decide beat: the result was read on its own beat, so it folds to one row above the prompt. */
+  folded?: boolean }) {
   const [open, setOpen] = useState(false);
   const last = decisions.at(-1);
-  if (!last) return null;
+  // A polite live region that is always rendered, so each new result is announced even when it is
+  // the first: the scene scrolls to the result, and this says what it was.
+  const announcement = last ? `${last.title}: ${last.forceOutcome ? 'task and harm recorded' : last.resultLabel ?? RESULT_LABEL[last.band]}. ${last.consequences.find((line) => !line.startsWith('Next: ')) ?? ''}` : '';
+  const live = <p className="sr-only" role="status" aria-live="polite">{announcement}</p>;
+  if (!last) return live;
+  const card = <DecisionCard key={last.revision} decision={last} officers={officers} explicitCompletion={explicitCompletion} currentPrompt={currentPrompt} />;
+  const outcome = last.forceOutcome ? 'Task and harm recorded' : last.resultLabel ?? RESULT_LABEL[last.band];
   return (
-    <section className="operation-feedback" aria-label="Operation feedback">
-      <div className="operation-feedback-heading"><h2>Last decision</h2><Button variant="ghost" size="sm" className="operation-log-trigger" onClick={() => { onOpenLog?.(); setOpen(true); }} aria-haspopup="dialog" aria-expanded={open}>Decision log ({decisions.length})</Button></div>
-      <DecisionCard key={last.revision} decision={last} officers={officers} explicitCompletion={explicitCompletion} />
+    <section className={`operation-feedback${folded ? ' operation-feedback-folded' : ''}`} aria-label="Operation feedback">
+      {live}
+      <div className="operation-feedback-heading"><h2>{folded ? 'Last decision' : 'What happened'}</h2><Button variant="ghost" size="sm" className="operation-log-trigger" onClick={() => { onOpenLog?.(); setOpen(true); }} aria-haspopup="dialog" aria-expanded={open}>Decision log ({decisions.length})</Button></div>
+      {folded ? <Disclosure key={last.revision} name="last-decision" className={`last-decision last-decision-${last.forceOutcome ? 'force' : last.resultLabel ? 'event' : last.band}`} summary={last.title} hint={`${last.stageLabel} · ${outcome}`}>{card}</Disclosure> : card}
       <Sheet open={open} onClose={() => setOpen(false)} title="Decision log" className="operation-log-sheet" footer={<Button block onClick={() => setOpen(false)}>{ended ? 'Return to debrief' : 'Return to operation'}</Button>}>
         <OperationLogContents decisions={decisions} officers={officers} explicitCompletion={explicitCompletion} />
       </Sheet>
