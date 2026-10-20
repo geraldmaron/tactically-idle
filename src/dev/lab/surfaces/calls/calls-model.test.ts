@@ -12,7 +12,8 @@ import { emptyTally } from '../../jobs/tally';
 import { emptyNotes } from '../../model/endpoints';
 import { gateVerdicts } from '../../model/gate-view';
 import type { GateRun } from '../../model/gate-view';
-import { ageText, checkLabel, checksFor, endingWeights, findingSite, findingsFeed, gateHeadline, gateLine, gateTally, glyphRun, humanizeFinding, randomResults, severityCounts, usuallyOf } from './calls-model';
+import { ageText, checkLabel, checksFor, descriptorLabel, endingWeights, findingSite, findingsFeed, gateHeadline, gateLine, gateTally, glyphRun, humanizeFinding, randomResults, severityCounts, situationContent, usuallyOf } from './calls-model';
+import { MATURE_ONLY } from '../../../../content/content-descriptors';
 
 const result = (weight: Weight, ending: string, officersHurt = 0): CallResult => ({ weight, ending, minutes: 30, officersHurt, peopleHurt: 0, deaths: 0, decisions: 3 });
 
@@ -111,5 +112,28 @@ describe('findings feed', () => {
     const fixture = clockFixtureTemplate();
     const clock = lintTree(fixture).find(f => f.code === 'clock_writer')!;
     expect(humanizeFinding(clock, fixture, dependencyIndex(fixture)).message).not.toContain(CLOCK_FIXTURE_IDS.clock);
+  });
+});
+
+describe('situation content descriptors', () => {
+  it('lists each situation of every call with its declared descriptors, marks derived and mature-only, and misses nothing', () => {
+    for (const template of Object.values(INCIDENT_TEMPLATES)) {
+      const rows = situationContent(template!);
+      expect(rows.map(row => row.index)).toEqual([0, 1, 2]);
+      for (const row of rows) {
+        expect(row.missing, `${template!.type} ${row.index}`).toEqual([]);
+        expect(row.tags.map(tag => tag.descriptor)).toEqual(template!.tree.situations[row.index].descriptors ?? []);
+        for (const tag of row.tags) expect(tag.mature).toBe(MATURE_ONLY[tag.descriptor]);
+        expect(row.note).not.toMatch(/\{/);
+      }
+    }
+  });
+
+  it('shows a descriptor the tree derives but the list leaves out as missing', () => {
+    const template = INCIDENT_TEMPLATES.active_armed_incident!;
+    const bare = { ...template, tree: { ...template.tree, situations: template.tree.situations.map(s => ({ ...s, descriptors: [] })) as unknown as typeof template.tree.situations } };
+    expect(situationContent(bare)[0].missing).toEqual(['death', 'injury', 'police_gunfire']);
+    expect(descriptorLabel('suicide_self_harm')).toBe('suicide or self-harm');
+    expect(descriptorLabel('police_gunfire')).toBe('police gunfire');
   });
 });

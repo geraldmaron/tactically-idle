@@ -59,6 +59,15 @@
 .lab-calls-usually-figures span { display: inline-flex; align-items: center; gap: 4px; }
 .lab-calls-usually-pop { grid-column: 2; color: var(--muted); font: var(--lab-type-micro); }
 .lab-calls-usually > .lab-muted { font: var(--lab-type-row); }
+.lab-calls-content { display: grid; grid-template-columns: 64px minmax(0, 1fr); align-items: start; gap: 4px 10px; }
+.lab-calls-content-list { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.lab-calls-content-row { display: grid; grid-template-columns: 82px minmax(0, 1fr); align-items: baseline; gap: 8px; }
+.lab-calls-content-sit { color: var(--text-dim); font: var(--lab-type-row); cursor: help; }
+.lab-calls-content-tags { display: flex; flex-wrap: wrap; gap: 4px 6px; font: var(--lab-type-data); }
+.lab-calls-content-tag { padding: 0 6px; border: 1px solid transparent; border-radius: 4px; background: var(--panel-2); color: var(--text); }
+.lab-calls-content-mature { border-color: var(--line-strong); }
+.lab-calls-content-screened { color: var(--muted); }
+.lab-calls-content-key { grid-column: 2; color: var(--muted); font: var(--lab-type-micro); }
 .lab-calls-checks { display: grid; grid-template-columns: 64px minmax(0, 1fr); align-items: start; gap: 10px; }
 .lab-calls-checks .lab-calls-row-label { padding-top: 7px; }
 
