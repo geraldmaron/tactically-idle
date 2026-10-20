@@ -147,7 +147,7 @@ Tags: job=command; journeys=chance-not-script; probes=none (scoring calibration,
 Needs: start=none; integrate=none; ship=none
 
 `src/sim/outcome-score.test.ts` caps the trust error against the retired hand-set numbers at 0.75.
-The hostage depth pilot (`hostage-depth-pilot`) moves it to 0.754. Since sidearms on day one (ec7ba79, #79) `main` sits at exactly 0.750: hostage rose from 0.38 to
+The hostage depth pilot (`hostage-depth-pilot`) moves it to 0.756. Since sidearms on day one (ec7ba79, #79) `main` sits at exactly 0.750: hostage rose from 0.38 to
 0.83, while armed is 0.90 and rescue 1.02; the old barricade (0.24) holds the average down. The new
 barricade fits better on its own (0.43) but replaces those rows, so its branch reads 0.80 and fails.
 Measured 2026-10-19 with the test's own sample. Done: either recalibrate the score so the hostage,

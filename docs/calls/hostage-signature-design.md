@@ -1065,7 +1065,7 @@ cost or grace on one named person. The custody lines from F5 are neutral now.
 
 Side effects measured: situation 3 now has 6010 explorer states, so the lab's EXPLORE_CAP rose to
 8000; the owner clock test's policy seed moved from 687 to 825; the outcome-score calibration
-reads trust MAE 0.754 against its 0.75 ceiling (main sat at exactly 0.750), which is the open
+reads trust MAE 0.754 against its 0.75 ceiling (0.756 after the re-check fixes) (main sat at exactly 0.750), which is the open
 owner decision in `outcome-calibration-drift`.
 
 ### Re-check response (2026-10-19)
