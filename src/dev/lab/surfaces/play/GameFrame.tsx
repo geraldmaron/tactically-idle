@@ -32,7 +32,7 @@ import { buildIntel } from '../../../../ui/screens/intel';
 import { liveScreen } from '../../../../ui/screens/live-model';
 import type { ActionSelection, Override } from '../../../../ui/screens/live-model';
 import { ActionSheet, LiveView, RoomSheet } from '../../../../ui/screens/LiveView';
-import { focusActingSquad, toggleActingSquad, toggleSupportingSquad } from '../../../../ui/screens/operation-squads';
+import { focusActingSquad, pickLead, toggleActingSquad, toggleSupportingSquad } from '../../../../ui/screens/operation-squads';
 import { OperationFeedback } from '../../../../ui/screens/OperationFeedback';
 import { sceneFor } from '../../../../ui/art/Plates';
 import { PrepBriefing } from '../../../../ui/screens/PrepBriefing';
@@ -62,7 +62,7 @@ export function GameFrame(p: {
   tabs: Map<string, number>; selectedId: string | null; hoverId: string | null; playing: boolean;
   /** Bumped when a choice is picked outside the frame: its card scrolls into view, as a player would scroll to it. */
   reveal: { id: string; seq: number } | null;
-  onReview(id: string): void; onConfirm(id: string): void; onFail(): void;
+  onReview(id: string): void; onConfirm(id: string, lead?: string): void; onFail(): void;
   toast: FrameToast | null; onToastDone(): void; force: ForcePick | null; onForce(band: OutcomeBand | 'roll'): void; onForceCancel(): void;
 }) {
   const fitBox = useRef<HTMLDivElement>(null);
@@ -197,7 +197,7 @@ export function GameFrame(p: {
  * the phone frame; the true-device page (`?frame=player`) draws it full window. */
 export function GameApp(p: {
   state: GameState; screen: FrameScreen; names: boolean;
-  onReview(id: string): void; onConfirm(id: string): void; onFail(): void;
+  onReview(id: string): void; onConfirm(id: string, lead?: string): void; onFail(): void;
   toast: FrameToast | null; onToastDone(): void;
 }) {
   const [overlay, setOverlay] = useState<HTMLElement | null>(null);
@@ -298,7 +298,7 @@ function ForcePicker({ pick, onPick, onCancel }: { pick: ForcePick; onPick(band:
 
 /** OpsLive's wiring with the lab's moves in place of the store: one selector block (liveScreen),
  * the game's LiveView, its review sheet and room sheet, its result record and situation panel. */
-function LiveScreen({ state, onReview, onConfirm,  onFail }: { state: GameState; onReview(id: string): void; onConfirm(id: string): void; onFail(): void }) {
+function LiveScreen({ state, onReview, onConfirm,  onFail }: { state: GameState; onReview(id: string): void; onConfirm(id: string, lead?: string): void; onFail(): void }) {
   const run = state.activeRun!;
   const [focusId, setFocusId] = useState<SquadId | null>(() => run.history.at(-1)?.actingSquadIds[0] ?? null);
   const [selection, setSelection] = useState<ActionSelection | null>(null);
@@ -326,7 +326,7 @@ function LiveScreen({ state, onReview, onConfirm,  onFail }: { state: GameState;
   useEffect(() => { if (targetFloor !== null) setFloor(targetFloor); }, [screen?.review.view?.id, targetFloor]);
   if (!screen) return <div className="page"><p className="dim">Operation location unavailable.</p></div>;
   const { model, review } = screen;
-  const { deployed, focus, view, acting, support, actionRule, maxActing, resupply, alternatives, scenario, spaceById, targetLabel, availableMembers, actorUnavailable, floorOf } = review;
+  const { deployed, focus, view, acting, support, actionRule, maxActing, resupply, lead, bestFit, leadOrder, leadOfficerId, leadMarks, leadBlend, leadCerts, alternatives, scenario, spaceById, targetLabel, availableMembers, actorUnavailable, floorOf } = review;
   const decisions = decisionViews(state);
   const failurePlan = responseFailurePlan(state);
 
@@ -345,7 +345,12 @@ function LiveScreen({ state, onReview, onConfirm,  onFail }: { state: GameState;
   const confirm = () => {
     if (!view?.eligible || panel !== 'action') return;
     setPanel('none');
-    onConfirm(view.id);
+    onConfirm(view.id, leadOfficerId);
+  };
+  const chooseLead = (id: Id) => {
+    if (!view) return;
+    const next = pickLead(view.officerIds, bestFit, leadOfficerId, id);
+    setOverride({ actionId: view.id, acting, support, ...(next ? { lead: next } : {}) });
   };
 
   return (
@@ -383,7 +388,7 @@ function LiveScreen({ state, onReview, onConfirm,  onFail }: { state: GameState;
         acting={acting}
         support={support}
         onToggleActing={id => { if (!view || (!acting.includes(id) && actorUnavailable(id))) return; const next = toggleActingSquad({ acting, support }, id, maxActing); setOverride({ actionId: view.id, ...next }); setFocusId(next.acting.includes(id) ? id : next.acting[0]); }}
-        onToggleSupport={id => { if (!view?.support || (!support.includes(id) && availableMembers(id).length === 0)) return; setOverride({ actionId: view.id, ...toggleSupportingSquad({ acting, support }, id, view.support.maxSquads) }); }}
+        onToggleSupport={id => { if (!view?.support || (!support.includes(id) && availableMembers(id).length === 0)) return; setOverride({ actionId: view.id, ...toggleSupportingSquad({ acting, support }, id, view.support.maxSquads), ...(leadOfficerId ? { lead: leadOfficerId } : {}) }); }}
         maxActing={maxActing}
         squadPositions={Object.fromEntries(run.squadTasks.map(task => [task.squadId, spaceById.get(task.positionId)?.label ?? task.positionId]))}
         unavailableActors={deployed.filter(squad => actorUnavailable(squad.id)).map(squad => squad.id)}
@@ -391,6 +396,14 @@ function LiveScreen({ state, onReview, onConfirm,  onFail }: { state: GameState;
         participantNames={view?.officerIds.map(id => state.officers[id]).filter(officer => !!officer).map(officer => `${officer.firstName} ${officer.surname}`) ?? []}
         supportTask={actionRule?.support ? `${actionRule.support.label} at ${spaceById.get(actionRule.support.coverSpaceId)?.label ?? actionRule.support.coverSpaceId}` : null}
         targetLabel={targetLabel}
+        officers={state.officers}
+        lead={lead}
+        bestFit={bestFit}
+        leadOrder={leadOrder}
+        leadMarks={leadMarks}
+        leadBlend={leadBlend}
+        leadCerts={leadCerts}
+        onPickLead={chooseLead}
         onConfirm={confirm}
         resupply={resupply}
         resupplyMinutes={(run.resupplies ?? []).reduce((sum, delivery) => sum + delivery.minutes, 0)}

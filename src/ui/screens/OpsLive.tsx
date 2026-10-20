@@ -12,7 +12,7 @@ import { sceneFor } from '../art/Plates';
 import { SituationPanel } from './SituationPanel';
 import { SupportContext } from './SupportContext';
 import { IncidentPeopleStatus } from '../components/IncidentPeople';
-import { focusActingSquad, toggleActingSquad, toggleSupportingSquad } from './operation-squads';
+import { focusActingSquad, pickLead, toggleActingSquad, toggleSupportingSquad } from './operation-squads';
 import { responseFailurePlan } from '../../sim/response-failure';
 import { liveScreen, type ActionSelection, type Override } from './live-model';
 import { lexiconFor } from '../people/lexicon';
@@ -63,7 +63,7 @@ export function OpsLive() {
 
   if (!screen) return <div className="page"><p className="dim">Operation location unavailable.</p></div>;
   const { model, review } = screen;
-  const { deployed, focus, view, acting, support, actionRule, maxActing, resupply, alternatives, scenario, spaceById, targetLabel, availableMembers, actorUnavailable, floorOf } = review;
+  const { deployed, focus, view, acting, support, actionRule, maxActing, resupply, lead, bestFit, leadOrder, leadOfficerId, leadMarks, leadBlend, leadCerts, alternatives, scenario, spaceById, targetLabel, availableMembers, actorUnavailable, floorOf } = review;
   const actions = model.actions;
   const spaces = model.spaces;
   // The deployed officers, by squad, for the names in this call's text.
@@ -96,14 +96,20 @@ export function OpsLive() {
   };
   const toggleSupport = (id: SquadId) => {
     if (!view?.support || (!support.includes(id) && availableMembers(id).length === 0)) return;
-    setOverride({ actionId: view.id, ...toggleSupportingSquad({ acting, support }, id, view.support.maxSquads) });
+    // Support doesn't change who takes part, so the lead pick stays.
+    setOverride({ actionId: view.id, ...toggleSupportingSquad({ acting, support }, id, view.support.maxSquads), ...(leadOfficerId ? { lead: leadOfficerId } : {}) });
+  };
+  const chooseLead = (id: Id) => {
+    if (!view) return;
+    const next = pickLead(view.officerIds, bestFit, leadOfficerId, id);
+    setOverride({ actionId: view.id, acting, support, ...(next ? { lead: next } : {}) });
   };
 
   const confirm = () => {
     const currentRun = getState().activeRun;
     // A second tap from the same rendered choice must not commit another decision.
     if (!view?.eligible || panel !== 'action' || currentRun?.id !== run.id || currentRun.stage !== run.stage || currentRun.revision !== run.revision || currentRun.status !== 'active') return;
-    const res = act({ type: 'decide', actionId: view.id, actingSquadIds: acting, supportSquadIds: support });
+    const res = act({ type: 'decide', actionId: view.id, actingSquadIds: acting, supportSquadIds: support, ...(leadOfficerId ? { leadOfficerId } : {}) });
     if (!res.ok) return;
     const r = lastResolution(getState());
     setPanel('none');
@@ -177,6 +183,14 @@ export function OpsLive() {
         participantNames={view?.officerIds.map(id => g.officers[id]).filter(officer => !!officer).map(officer => `${officer.firstName} ${officer.surname}`) ?? []}
         supportTask={actionRule?.support ? `${actionRule.support.label} at ${spaceById.get(actionRule.support.coverSpaceId)?.label ?? actionRule.support.coverSpaceId}` : null}
         targetLabel={targetLabel}
+        officers={g.officers}
+        lead={lead}
+        bestFit={bestFit}
+        leadOrder={leadOrder}
+        leadMarks={leadMarks}
+        leadBlend={leadBlend}
+        leadCerts={leadCerts}
+        onPickLead={chooseLead}
         onConfirm={confirm}
         resupply={resupply}
         resupplyMinutes={(run.resupplies ?? []).reduce((sum, delivery) => sum + delivery.minutes, 0)}

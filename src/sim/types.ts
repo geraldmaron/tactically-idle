@@ -872,6 +872,10 @@ export interface ActionView {
   deceives?: true;
   /** The decision point's threat, and the bands of this choice slow enough to let it happen. */
   threat?: { label: string; bands: OutcomeBand[] };
+  /** The rating this choice leans on most, so the card can show the lead's number for it. */
+  keyRating?: RatingKey;
+  /** Lead marks (trait ids, band_<band>) this choice's results read (TreeState.lead). */
+  leadReads?: string[];
   /** V13: what draws a player to the choice, and what it costs (bound, {lead} filled). */
   weighing?: { pull: string; cost: string };
   /** Common event across effort bands: authored explicitly or proven by identical v6 effect tables. */

@@ -3,11 +3,13 @@ import type { ReactNode } from 'react';
 import type {
   ActionView,
   BuiltLocation,
+  CertId,
   FactView,
   GameState,
   Id,
   Officer,
   OutcomeBand,
+  RatingKey,
   SpaceView,
   Squad,
   SquadId,
@@ -25,15 +27,17 @@ import { Sheet } from '../components/Sheet';
 import { Button, Chip, SubHead } from '../components/ui';
 import { ChoiceRail } from '../components/ChoiceRail';
 import { armamentLabel } from '../components/incident';
-import { ROLE_META, ROOM_TYPE_LABEL, STAGE_LABEL } from '../components/labels';
-import { highRiskAllowed } from '../../sim/officer';
+import { RATING_META, ROLE_META, ROOM_TYPE_LABEL, STAGE_LABEL, TRAIT_INFO } from '../components/labels';
+import { highRiskAllowed, stressBand } from '../../sim/officer';
+import { STRESS_LABEL, whole } from '../components/StressDisplay';
+import { CERT_NAME } from '../../content/certs';
 import { incidentOfficerUnavailable } from '../../sim/incident-consequences';
 import { describeConstruction } from '../../sim/spatial';
 import { Icon, actionIcon, materialIcon, roomIcon } from '../icons';
 import type { IconName } from '../icons';
 import { feetInches, opMinutes, signed, sqft } from '../format';
 import { CONSEQUENCE_LABEL, OddsBar, OutcomeForecast } from './OperationFeedback';
-import { DecisionList } from './DecisionList';
+import { DecisionList, LeadFace, RATING_SHORT } from './DecisionList';
 import { CONTRIBUTOR_GROUPS } from './contributor-groups';
 import { GamePeopleProvider, PeopleText } from '../people/PeopleText';
 import type { Lexicon } from '../people/lexicon';
@@ -156,6 +160,7 @@ export function LiveView(p: LiveViewProps) {
       <div className="call operation-choices" aria-label="Your call">
         <div className="call-head">
           <span className="call-label">{p.progress.stages.find((step) => step.state === 'current')?.label ?? 'Your next decision'}</span>
+          {p.progress.threat && <ThreatPill label={p.progress.threat.label} minutes={p.progress.threat.minutes} />}
           {sel && (
             <button type="button" className="call-details" onClick={p.onOpenDetails} aria-expanded={p.detailsOpen}>
               Review decision
@@ -163,7 +168,7 @@ export function LiveView(p: LiveViewProps) {
             </button>
           )}
         </div>
-        <DecisionList prompt={p.progress.prompt} exchange={p.progress.exchange} actions={available} selectedId={sel?.id ?? null} expanded={expanded} onSelect={p.onSelectAction} onExpand={() => setExpandedStage(expanded ? null : p.progress.stage)} />
+        <DecisionList prompt={p.progress.prompt} exchange={p.progress.exchange} actions={available} selectedId={sel?.id ?? null} expanded={expanded} officers={p.g.officers} onSelect={p.onSelectAction} onExpand={() => setExpandedStage(expanded ? null : p.progress.stage)} />
       </div>
 
       {p.failedResponse}
@@ -253,7 +258,7 @@ export function LiveView(p: LiveViewProps) {
                     {cap.text}
                   </span>
                 ) : acting ? (
-                  <span className="capchip capchip-quiet">Taking part</span>
+                  <span className="capchip capchip-quiet">{sel?.officerIds[0] === o.id ? 'Leads' : 'Taking part'}</span>
                 ) : undefined
               }
             />
@@ -268,6 +273,17 @@ export function LiveView(p: LiveViewProps) {
     </div>
   );
   return p.people === undefined ? screen : <GamePeopleProvider lexicon={p.people}>{screen}</GamePeopleProvider>;
+}
+
+/** What gets worse while the player decides here, as a countdown-style pill beside the stage label:
+ * "<label> · <minutes> min". The minutes are what a choice may take before it lands. */
+export function ThreatPill({ label, minutes }: { label: string; minutes: number }) {
+  return <span className="threat-pill" aria-label={`Threat: ${label} in ${minutes} minutes`}>
+    <Icon name="hourglass" size={13} />
+    <span className="threat-pill-label">{label}</span>
+    <span className="threat-pill-sep" aria-hidden="true">·</span>
+    <b className="threat-pill-min">{minutes} min</b>
+  </span>;
 }
 
 /** A floating shortcut back to the decisions, shown only while they sit below the visible area. */
@@ -479,6 +495,19 @@ export interface ActionSheetProps {
   onResupply?: () => void;
   alternatives?: ActionView[];
   onUseAlternative?: (view: ActionView) => void;
+  /** The deployed officers, for the lead picker. Left out, the sheet shows no picker. */
+  officers?: Readonly<Record<Id, Officer>>;
+  /** Who leads now, the engine's best fit, and the lead's marks (trait ids, band_<band>). */
+  lead?: Id | null;
+  bestFit?: Id | null;
+  /** Those taking part in the engine's order, so the faces stay put when the lead changes. */
+  leadOrder?: Id[];
+  leadMarks?: string[];
+  /** The ratings the choice blends, heaviest first, and the certificates whose holders lead first. */
+  leadBlend?: RatingKey[];
+  leadCerts?: CertId[];
+  /** A tap on a face among those taking part. */
+  onPickLead?: (id: Id) => void;
 }
 
 export function ActionSheet(p: ActionSheetProps) {
@@ -520,6 +549,7 @@ export function ActionSheet(p: ActionSheetProps) {
         <div className="adetail">
           {p.onBackToSupport && <Button variant="ghost" onClick={p.onBackToSupport}>Back to care &amp; support</Button>}
           {p.squads.length > 1 && <ActionSquadAssignment {...p} view={v} />}
+          {p.officers && v.eligible && <LeadPicker view={v} officers={p.officers} lead={p.lead ?? v.officerIds[0] ?? null} bestFit={p.bestFit ?? null} order={p.leadOrder} marks={p.leadMarks ?? []} blend={p.leadBlend ?? []} certs={p.leadCerts ?? []} onPick={p.onPickLead} />}
           {v.summary !== v.outcomePreview.favorable && <p className="operation-action-summary"><PeopleText text={v.summary} /></p>}
           {v.eligible && v.authority?.allowed && <p className="operation-command-line"><Icon name="radio" size={14} />{v.authority.reason}</p>}
           <div className="chips action-glance">
@@ -630,6 +660,55 @@ export function ActionSheet(p: ActionSheetProps) {
       )}
     </Sheet>
   );
+}
+
+const BAND_MARK: Record<string, string> = { band_rookie: 'Rookie service', band_developing: 'Developing', band_seasoned: 'Seasoned', band_veteran: 'Veteran' };
+/** A lead mark as a chip label: a trait's name, or the experience band. */
+export function leadMarkLabel(mark: string): string {
+  return TRAIT_INFO[mark as keyof typeof TRAIT_INFO]?.label ?? BAND_MARK[mark] ?? mark.replace(/_/g, ' ');
+}
+
+/** Who leads, among those taking part: one tap on a face swaps the lead, and the odds, the strain
+ * and the results that read the lead follow. The engine's best fit leads until the player picks. */
+export function LeadPicker({ view, officers, lead, bestFit, order, marks, blend = [], certs = [], onPick }: { view: ActionView; officers: Readonly<Record<Id, Officer>>; lead: Id | null; bestFit: Id | null;
+  order?: readonly Id[]; marks: readonly string[]; blend?: readonly RatingKey[]; certs?: readonly CertId[]; onPick?: (id: Id) => void }) {
+  // The faces keep the engine's order, so the one tapped doesn't jump to the front.
+  const taking = view.officerIds.filter((id) => officers[id]);
+  const ids = [...(order ?? []).filter((id) => taking.includes(id)), ...taking.filter((id) => !order?.includes(id))];
+  const leader = lead ? officers[lead] : undefined;
+  if (!ids.length || !leader) return null;
+  const key = view.keyRating;
+  const keyLabel = key ? RATING_META.find((meta) => meta.key === key)?.label ?? key : null;
+  const reads = view.leadReads ?? [];
+  return <section className="lead-picker" aria-label="Who leads">
+    {/* The best fit is the engine's order: a needed certificate first, then the blend, worn down by stress. */}
+    <span className="picker-label"><Icon name="flag" size={14} />Who leads{blend.length ? <small> · {blend.map((r) => RATING_SHORT[r]).join(' + ')}</small> : keyLabel ? <small> · {keyLabel}</small> : null}</span>
+    {ids.length > 1 && onPick && <div className="lead-choices" role="radiogroup" aria-label="Who leads">
+      {ids.map((id) => {
+        const officer = officers[id];
+        const on = id === lead;
+        const band = stressBand(officer.stress);
+        const rating = key ? Math.round(officer.ratings[key]) : null;
+        return <button key={id} type="button" role="radio" aria-checked={on} className={`lead-choice${on ? ' lead-choice-on' : ''}`} onClick={() => onPick(id)}
+          aria-label={`${officer.firstName} ${officer.surname}${rating !== null ? `, ${keyLabel} ${rating}` : ''}, ${STRESS_LABEL[band].toLowerCase()}${id === bestFit ? ', best fit' : ''}`}>
+          <LeadFace officer={officer} size={40} />
+          <span className="lead-choice-name">{officer.surname}</span>
+          {rating !== null && key && <span className="lead-choice-rating">{RATING_SHORT[key]} <b>{rating}</b></span>}
+          {certs.filter((cert) => officer.certs.includes(cert)).slice(0, 1).map((cert) => <span key={cert} className="lead-choice-cert">{CERT_NAME[cert]}</span>)}
+          <span className={`lead-choice-stress stress-${band}`}>Stress {whole(officer.stress)}</span>
+          {id === bestFit && <span className="lead-choice-fit">Best fit</span>}
+        </button>;
+      })}
+    </div>}
+    <p className="lead-strain"><Icon name="warning" size={14} /><span><b>{leader.surname}</b> leads: carries more strain.</span></p>
+    {reads.length > 0 && <div className="lead-reads">
+      <p>Results here turn on who leads.</p>
+      <div className="chips">{reads.map((mark) => {
+        const has = marks.includes(mark);
+        return <Chip key={mark} tone={has ? 'mint' : 'neutral'} icon={has ? 'check' : 'x'} title={has ? `${leader.surname} brings this` : `${leader.surname} does not`}>{leadMarkLabel(mark)}</Chip>;
+      })}</div>
+    </div>}
+  </section>;
 }
 
 /** Role choices precede costs/forecasts so the displayed commitment is easy to change. */

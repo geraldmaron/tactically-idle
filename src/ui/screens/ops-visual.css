@@ -394,3 +394,52 @@
 .callbtn-on .callbtn-cost, .callbtn-on .callbtn-weigh p, .callbtn-on .callbtn-review-odds { color: #3a2a06; }
 .callbtn-on .callbtn-review { background: rgba(58, 42, 6, 0.12); }
 .callbtn-on .callbtn-review-label, .callbtn-on .callbtn-weigh-line b { color: var(--amber-ink); }
+
+/* Pressure engine: the decision point's threat beside the stage label, each card's lead and threat,
+   and the review sheet's lead picker. The pill rides in the head row, so it costs the first choice no
+   height unless the head wraps. */
+.threat-pill { display: inline-flex; align-items: center; gap: 5px; max-width: 100%; min-height: 26px; padding: 3px 9px 3px 7px; border: 1px solid rgba(255, 107, 87, 0.55); border-radius: 999px; background: rgba(255, 107, 87, 0.12); color: #ffd2ca; font: 600 13px/1.15 var(--font-cond); letter-spacing: 0.02em; }
+.threat-pill .icon { flex: 0 0 auto; color: var(--danger); animation: threat-tick 2s steps(2, jump-none) infinite; }
+.threat-pill-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.threat-pill-sep { opacity: 0.6; }
+.threat-pill-min { flex: 0 0 auto; color: #fff; font-variant-numeric: tabular-nums; white-space: nowrap; }
+@keyframes threat-tick { from { transform: rotate(0deg); } to { transform: rotate(180deg); } }
+@media (prefers-reduced-motion: reduce) { .threat-pill .icon { animation: none; } }
+/* The stage label gives way first: on a narrow phone the pill keeps its minutes and the label truncates. */
+.operation-choices .call-head .call-label { flex: 0 1 auto; min-width: 0; }
+.operation-choices .call-head .threat-pill { flex: 0 1 auto; margin-right: auto; }
+
+.callbtn-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin-top: 4px; font-size: 12px; line-height: 1.3; }
+.callbtn-weighed > .callbtn-meta { margin: 0 11px; }
+.callbtn-lead { display: inline-flex; align-items: center; gap: 6px; min-width: 0; color: #c9d3e2; font-variant-numeric: tabular-nums; }
+.lead-face { position: relative; display: inline-grid; place-items: center; flex: 0 0 auto; overflow: hidden; border-radius: 50%; background: linear-gradient(160deg, #1c2c49 0%, #0d1628 100%); box-shadow: 0 0 0 1px rgba(158, 184, 212, 0.35); }
+.lead-face img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center top; }
+.lead-face-initials { font: 600 10px/1 var(--font-cond); letter-spacing: 0.04em; color: #b8c8dc; }
+.callbtn-threat { display: inline-flex; align-items: center; gap: 4px; padding: 1px 7px; border-radius: 4px; font: 600 12px/1.3 var(--font-cond); letter-spacing: 0.02em; }
+.callbtn-threat .icon { flex: 0 0 auto; }
+.callbtn-threat-slow { background: rgba(255, 107, 87, 0.16); color: #ffb4aa; box-shadow: inset 0 0 0 1px rgba(255, 107, 87, 0.5); }
+.callbtn-threat-risk { background: rgba(243, 180, 50, 0.12); color: var(--amber-2); box-shadow: inset 0 0 0 1px rgba(243, 180, 50, 0.4); }
+.callbtn-on .callbtn-lead { color: var(--amber-ink); }
+.callbtn-on .callbtn-threat-slow { background: rgba(120, 20, 8, 0.16); color: #6b1206; box-shadow: inset 0 0 0 1px rgba(107, 18, 6, 0.55); }
+.callbtn-on .callbtn-threat-risk { background: rgba(58, 42, 6, 0.12); color: var(--amber-ink); box-shadow: inset 0 0 0 1px rgba(58, 42, 6, 0.45); }
+
+.lead-picker { display: grid; gap: 6px; }
+.lead-picker .picker-label { margin-bottom: 0; }
+.lead-picker .picker-label small { font: inherit; letter-spacing: 0.06em; color: var(--text-dim); }
+.lead-choices { display: flex; gap: 6px; overflow-x: auto; padding: 2px 1px 4px; scrollbar-width: none; }
+.lead-choice { display: grid; justify-items: center; align-content: start; gap: 2px; flex: 0 0 auto; min-width: 72px; min-height: 44px; padding: 6px 6px 5px; border: 1px solid var(--line-strong); border-radius: 8px; background: rgba(8, 13, 24, 0.35); color: inherit; font: inherit; cursor: pointer; }
+.lead-choice:focus-visible { outline: 2px solid var(--amber); outline-offset: 1px; }
+.lead-choice-on { border-color: var(--amber); background: rgba(243, 180, 50, 0.14); box-shadow: inset 0 0 0 1px var(--amber); }
+.lead-choice-on .lead-face { box-shadow: 0 0 0 2px var(--amber); }
+.lead-choice-name { max-width: 84px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 600 13px/1.2 var(--font-cond); }
+.lead-choice-rating { font-size: 11.5px; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+.lead-choice-rating b { color: var(--text); }
+.lead-choice-stress { --stress-ink: var(--mint); font-size: 11px; color: var(--stress-ink); font-variant-numeric: tabular-nums; }
+.lead-choice-stress.stress-strained { --stress-ink: var(--amber); }
+.lead-choice-stress.stress-overloaded { --stress-ink: var(--warn); }
+.lead-choice-stress.stress-recovery { --stress-ink: var(--danger); }
+.lead-choice-fit { font: 600 10px/1.2 var(--font-cond); letter-spacing: 0.1em; text-transform: uppercase; color: var(--mint); }
+.lead-strain { display: flex; align-items: flex-start; gap: 6px; margin: 0; font-size: 13px; line-height: 1.4; color: #f1dba4; }
+.lead-strain .icon { flex: 0 0 auto; margin-top: 2px; color: var(--amber-2); }
+.lead-reads p { margin: 0 0 4px; font-size: 12.5px; color: var(--text-dim); }
+.lead-choice-cert { max-width: 84px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; color: var(--mint); }
