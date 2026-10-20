@@ -47,6 +47,7 @@ import { ITEMS } from '../content/items';
 import { hashSeed, next } from './rng';
 import { fullName } from './officer';
 import { deployRoster, runRoster } from './squads';
+import { crewFlags } from './crew';
 import { releaseRun, reserveLoadouts, settleRun, squadUnits } from './inventory';
 import { withStandardRadios } from './standard-kit';
 import { spaceAt, stagingPointById } from './spatial';
@@ -834,6 +835,8 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     for (const sid of cmd.squadIds) {
       for (const oid of deployRoster(draft, sid, ctx.now).goes) draft.officers[oid].assignment = { kind: 'operation', runId };
     }
+    // Who went: their traits and experience open choices and shape results (sim/crew.ts).
+    run.flags.push(...crewFlags(draft, run));
     draft.activeRun = run;
     takeIncident(draft, scenario.id);
     return { ok: true };
@@ -1068,7 +1071,7 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
       ...(incidentConsequences ? { officerCasualties: incidentConsequences.records } : {}),
       ...(personConsequences ? { personCasualties: personConsequences.records } : {}),
       ...(ev.protectionUsed ? { protectionUsed: { ...ev.protectionUsed } } : {}),
-      ...(matched.some(effect => effect.exchange?.length) ? { exchange: matched.flatMap(effect => effect.exchange ?? []).map(line => ({ ...line })) } : {}),
+      ...(matched.some(effect => effect.exchange?.length) ? { exchange: matched.flatMap(effect => effect.exchange ?? []).map(line => ({ ...line, speaker: line.speaker.replace('{lead}', (ev.leadId && draft.officers[ev.leadId]?.surname) || 'Negotiator') })) } : {}),
       ...(drawn.records.length ? { drawn: drawn.records.map(record => ({ ...record })) } : {}),
     };
     resolution.explanation = explain(draft, scenario, ev, band, texts, timeCost, t.civilianLoss, knowledgeChanges, consumed, strain, stageNote);

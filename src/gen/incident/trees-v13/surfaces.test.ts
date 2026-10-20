@@ -70,7 +70,7 @@ describe('call surfaces compile with every name bound', () => {
     const first = (s: ScenarioDefinition) => currentStoryExchange(s, { stage: 'assess', flags: [], knowledge: {}, pressure: 0 });
     const lines = first(lone);
     expect(lines.map(line => line.line)).toEqual(['Who is this?', 'My name’s on the card I left at the door.']);
-    expect(lines[1].speaker).toBe('Negotiator');
+    expect(lines[1].speaker).toBe('{lead}'); // the lead officer's surname, filled by the selectors
     expect(lines[0].speaker).toMatch(/^[A-Z][a-z]+$/);
     expect(first(crowd)).toEqual([{ speaker: 'Radio', line: 'Two by the till. Nobody moves yet.' }]);
     expect(unbound(lone.stages)).toBeNull();
@@ -123,5 +123,27 @@ describe('the hostage pilot carries its reframe into the after', () => {
     expect(variants).toHaveLength(2);
     expect(variants.map(entry => entry.when.flags)).toEqual([[expect.stringContaining('owner_admits')], [expect.stringContaining('camera_said')]]);
     expect(unbound(variants)).toBeNull();
+  });
+});
+
+describe('the crew opens choices (the officer-driven layer)', () => {
+  it('sets a flag for every trait and experience band the deployed officers have', async () => {
+    const { startGateRun } = await import('../gates/engine-driver');
+    const s = generateIncident({ type: 'hostage_crisis', familyId: 'market_row', buildingSeed: 7, seed: 3, tier: 2, contentVersion: 13 });
+    const state = startGateRun(s.id);
+    const flags = state.activeRun!.flags.filter(flag => flag.startsWith('crew:'));
+    expect(flags.some(flag => flag.startsWith('crew:band_'))).toBe(true);
+    expect(flags).toEqual([...flags].sort());
+  });
+  it('compiles a crew condition to its flag, and refuses a mark the engine never sets', () => {
+    const crewTree: CallTree = { ...TREE, nodes: TREE.nodes.map(node => node.id !== 'open' ? node : { ...node, choices: node.choices.map(choice => choice.id !== 'watch' ? choice : { ...choice, onlyIf: { crew: ['observant'] } }) }) };
+    const s = (() => { for (let seed = 1; seed < 600; seed++) {
+      const { clocks: _c, incidentPeople: _p, threats: _t, ...base } = generateIncident({ type: 'hostage_crisis', familyId: 'market_row', buildingSeed: 7, seed, tier: 2, contentVersion: 13 });
+      try { return compileIncident({ ...base, id: `crew-${seed}`, incident: hostedSpec(base) }, buildLocation(base.locationFamilyId, base.locationSeed), { ...TEMPLATE, tree: crewTree }); } catch { continue; } }
+      throw new Error('no seed'); })();
+    expect(action(s, 'open', 'watch').visibleWhen?.flags).toContain('crew:observant');
+    const bad: CallTree = { ...crewTree, nodes: crewTree.nodes.map(node => node.id !== 'open' ? node : { ...node, choices: node.choices.map(choice => choice.id !== 'watch' ? choice : { ...choice, onlyIf: { crew: ['psychic'] } }) }) };
+    const { clocks: _c, incidentPeople: _p, threats: _t, ...base } = generateIncident({ type: 'hostage_crisis', familyId: 'market_row', buildingSeed: 7, seed: 3, tier: 2, contentVersion: 13 });
+    expect(() => compileIncident({ ...base, id: 'crew-bad', incident: hostedSpec(base) }, buildLocation(base.locationFamilyId, base.locationSeed), { ...TEMPLATE, tree: bad })).toThrow(/psychic/);
   });
 });
