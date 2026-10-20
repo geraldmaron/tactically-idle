@@ -334,7 +334,8 @@ Each pattern breaks the rule beside it.
   separates force and death register lines (titles such as "Go in with weapons up") from
   single words.
 - O2. A support line. Where it appears, what it says outside the US, and whether a content note
-  precedes crisis calls. No surface exists (R5).
+  precedes crisis calls. No surface exists (R5). Proposed answer, pending sign-off:
+  `docs/content-rating.md` (Content notes).
 - O3. Retired. Content has one current version and edits in place, so no version is closed to prose changes.
 - O4. Custody. What an ending may say about a person who surrendered after an alleged crime.
   E11.1 holds the neutral line until then.

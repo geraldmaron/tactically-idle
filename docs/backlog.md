@@ -167,9 +167,72 @@ the N8 and N20 skill fixes shipped in #44.
 
 ### crisis-content-note: Content note and 988 line
 Tags: job=command; journeys=answer-a-call; probes=none (text); lane=deferred
-Needs: start=none (waits on the owner's wording); integrate=none; ship=none
+Needs: start=content-descriptors (waits on the owner's wording too); integrate=none; ship=none
 
 Shown for the hostage and barricade calls once the owner settles the wording (see decisions).
+Where it appears is proposed in `docs/content-rating.md` (Content notes): a topic-only note on the
+call card, governed by the player's note setting, and the E4.7 support line in the debrief of
+every situation with `suicide_self_harm`, whatever the setting.
+
+### content-descriptors: Each situation says what it contains
+Tags: job=command; journeys=answer-a-call; probes=none (metadata, not a chance input); lane=engine
+Needs: start=none; integrate=none; ship=none
+
+Design in `docs/content-rating.md`. Done: a closed descriptor type on each situation of a
+`CallTree`; derived descriptors (`death`, `injury`, `police_gunfire`) computed from the compiled
+tree; a gate in `src/gen/incident/gates/` that fails when a declared list leaves out a derived
+descriptor, or when an adult subject with `noFatal` force outcomes has neither `suicide_self_harm`
+nor a recorded reason; the four existing trees tagged (calls lane writes the declared ones); the
+Scenario Lab's Calls surface shows each situation's descriptors.
+
+### content-filter-draw: Players keep topics off the board
+Tags: job=command; journeys=answer-a-call, new:board-respects-filters; probes=none (selection, not a chance input); lane=interface
+Needs: start=content-descriptors; integrate=none; ship=none
+
+Design in `docs/content-rating.md`. Done: tier and topic preferences persisted outside the save
+(extending `src/ui/people/prefs.ts`); a first-run screen and a Settings screen for them; `drawCard`
+skips excluded situations and drops a kind with none left; changing a setting clears cards that no
+longer fit while a call in progress finishes; a test walks every filter combination and the
+Settings screen warns when one leaves no kind drawable; fingerprints stay pinned unfiltered.
+
+### calls-per-kind: More than one call for each kind
+Tags: job=command; journeys=answer-a-call, choices-branch; probes=none (each call joins the existing probes); lane=engine
+Needs: start=barricade-model-first; integrate=none; ship=none
+
+`CALL_TREES` maps each kind to one tree (`src/content/call-trees/index.ts`), so every hostage call
+is the same call, and a content filter that rules out its situations removes the kind. Done: a kind
+holds several trees, the draw picks among those the filters allow, and the content version,
+fingerprints and Lab handle a list. Distinct from `new-call-types`, which adds kinds.
+
+### dither-minutes: Stalling on a decision costs game minutes
+Tags: job=command; journeys=new:stalling-costs-minutes; probes=none (time, not a favorable-chance input); lane=engine
+Needs: start=none (the stage threats on `claude/reconcile-main` must be on `main`); integrate=none; ship=none
+
+Design in `docs/call-pressure.md`. Done: real time on an open decision with a threat or running
+clock accrues dither minutes at the timer setting's rate after its reading floor; the dither is
+recorded with the decision and added to its minutes on commit, capped at the open threat's minutes;
+replay reads it from the record; time away survives a close and resume once, and a backward
+device clock never reduces or repeats it; previews and `threatTag` read it live; rates in
+`src/sim/tuning.json`; a Lab slider; outcome-score calibration runs at zero dither and a separate
+test records the shift at each setting.
+
+### threat-drain-bar: The threat pill drains
+Tags: job=command; journeys=new:stalling-costs-minutes; probes=none (display); lane=interface
+Needs: start=dither-minutes; integrate=none; ship=none
+
+Design in `docs/call-pressure.md`. Done: `ThreatPill` shows a bar of the threat's minutes left after
+dither, matching its minute text; choices turn "Too slow" as it drains; the Off, Relaxed and
+Standard timer setting sits in Settings beside the content filters; checked at 390x844 in the
+running app.
+
+### threat-agitation-lines: The subject reacts when the team stalls
+Tags: job=command; journeys=new:stalling-costs-minutes; probes=none (text); lane=calls
+Needs: start=dither-minutes; integrate=none; ship=none
+
+Design in `docs/call-pressure.md`. Done: a threat can carry per-subject lines that fire once as a cue
+when dither crosses a threshold, written under `swat-call-prose` and reviewed under
+`swat-writing-review`; no global line pool; suppressed in any situation with `suicide_self_harm`;
+the hostage threats carry lines.
 
 ### aftermath: Casualty, care and aftermath
 Tags: job=command; journeys=new:aftermath-follows; probes=none (consequences after the call); lane=deferred
@@ -270,6 +333,63 @@ Needs: start=none; integrate=none; ship=none
 The Squad screen and the Armory both edit `squad.loadoutPreset` (`src/ui/screens/Squad.tsx`).
 Keep one.
 
+### worn-kit: Each officer wears their own kit, and it protects the officer who wears it
+Tags: job=build; journeys=hire-and-equip, team-moves-odds; probes=items-none; lane=engine
+Needs: start=none (owner approves this proposal); integrate=outcome-calibration-drift (measure on a settled calibration); ship=none
+
+Proposed 2026-10-19, not yet approved. Every item is a pooled `ItemUnit`. Protection counts once
+per action, best unit of its group (`src/sim/resolution.ts` best-of-group,
+`src/sim/force-risk.ts` `selectedProtection`), and only on actions that declare
+`authorized_response` or `medical_exposure` (`src/sim/equipment-requirements.ts`). No v13 call
+tree declares either, so in shipped calls the light protective kit every officer now gets
+(`src/content/issue-kit.ts`) does nothing, and eight kits would score the same as one where it did.
+Radios already show the right pattern: `src/sim/standard-kit.ts` gives one per deploying officer,
+outside the loadout, and `src/gen/incident/action-gear.ts` gives them no score bonus because a bonus
+everyone has raises every call alike.
+
+Recommendation:
+1. **Worn kit is a class of item.** Radio headset, light protective kit and service sidearm are
+   worn. Everything else (shields, ram, binoculars, drone, less-lethal, consumables) stays pooled.
+2. **Each worn unit belongs to one officer.** It is issued on hire, goes where they go, and comes
+   back to the pool when they leave. Deploy reserves it with the officer. Generalize
+   `standard-kit.ts` from radios to all worn kit, rather than adding a second mechanism. Loadouts
+   and `squad.loadoutPreset` hold pooled gear only, which makes `squad-preset-editor` smaller.
+3. **Protection acts on the officer, not the score.** Light protection loses its +4 on
+   `authorized_response`. Instead, where harm lands on a named officer
+   (`applyIncidentConsequences` in `src/sim/incident-consequences.ts`, which covers authored
+   `officerHarm` and the drawn incoming-fire result), that officer's own serviceable kit turns a
+   serious injury into a wound, as `protectedOfficerEffects` does today for one kit per action.
+   Light kit converts handgun, edged, blunt and improvised hits only, never a long gun, so a
+   heavier vest has room to be a purchase later.
+4. **Wear is per officer.** A worn unit takes `perUse` wear on each deployment and `perDay` as
+   now. The Gear tab and officer profile show whose kit is near failing. A failed vest protects
+   nothing, and its officer still deploys, flagged on the roster.
+5. **Sidearms follow the shooter.** The firearm draw takes the acting officer's own sidearm
+   instead of the first qualified unit in the squad (`qualifiedForceUnit`).
+
+What it moves:
+- **Odds:** choice chances barely move, since no v13 choice reads `authorized_response`. Officer
+  harm severity does move on every call with incoming fire.
+- **Compiled fingerprints:** none expected, because protection is read when the call is played,
+  not compiled. If an implementation adds a compiled gear rule, the fingerprints move and the lead
+  recaptures them on purpose.
+- **`outcome-calibration-drift`:** fewer serious officer injuries raise trust on fire-heavy
+  endings, and the hostage call is already furthest from the hand-set numbers. Measure the trust
+  error with the test's own sample before and after. No ceiling rises because of this item.
+- **`items-none`:** the probe strips pooled gear only, since worn kit is not a loadout choice.
+  Re-measure. Floors never fall.
+
+Strongest objection: if every officer always wears working protection, serious injury from
+handgun fire mostly disappears, and with it a band of consequence the calls write lines for. The
+vest also becomes an upkeep tax rather than a decision. Controls: worn kit wears and fails per
+officer, so neglected kit shows up in harm. Long-gun hits stay serious. The writing review checks
+that the "badly hurt" lines still occur at a rate players notice.
+
+Done: worn units carry their officer and the deploy and save paths keep them together. Protection
+converts harm only for the officer wearing the kit, with tests for a worn-out vest and a long-gun
+hit. The Gear tab shows worn kit by officer. The trust error and `items-none` are re-measured and
+recorded in the PR. `npm run verify` passes.
+
 ## Player experience
 
 ### onboarding: A first call that teaches the loop
@@ -315,7 +435,9 @@ Optional.
 
 - **Death endings:** a human read of `owner_killed`, `worker_killed`, the armed `subject_killed`,
   `resident_killed` and `tank_ran_out`.
-- **Content note and 988 line wording** for the hostage and barricade calls.
+- **Content note and 988 line wording** for the hostage and barricade calls. Placement is proposed
+  in `docs/content-rating.md`; the tier names, descriptor list and note default there need sign-off. "Standard" currently names
+  both a content tier and a timer setting (`docs/call-pressure.md`); one of them needs a new name.
 - **E12:** whether a team holding outside an active shooter fits the game.
 - **Barricade building family:** keep apartments (`apartment_unit_g2`) or not.
 - **"Goes to review" ending line** (E2.1) in the barricade call.
@@ -330,7 +452,7 @@ Optional.
 
 Decided 2026-10-19: scenario work is paused (the barricade is parked on its branch); a squad can
 deploy short of injured officers (`short-squad-deploys`); sidearms from day one
-(`sidearms-day-one`, shipped: two sidearms are issued at the start and `entry_team` stays the force certification, which both starting squads hold); keep the compiled fingerprints and the cross-engine check; a call resolved
+(`sidearms-day-one`, shipped: two sidearms are issued at the start and `entry_team` stays the force certification, which both starting squads hold); every officer is issued a light protective kit, at the start and on hire, and the Protective response program now unlocks only the carbine and shotgun; keep the compiled fingerprints and the cross-engine check; a call resolved
 with harm counts as resolved (already so in `dispositionOf`); an entry breaks every open commitment
 (already so in `src/sim/commitments.ts`); build the Peer Support Lead, the Recruiter and patrol work;
 the crisis cap stays report-only until playtests.

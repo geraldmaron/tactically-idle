@@ -1,8 +1,8 @@
 # Tactically Idle game and first playable plan
 
-**Status:** Current browser-game scope as of 2026-10-18. Work still to do and owner decisions live only in [docs/backlog.md](docs/backlog.md).
+**Status:** Current browser-game scope as of 2026-10-20. Work still to do and owner decisions live only in [docs/backlog.md](docs/backlog.md).
 
-**Created:** October 1, 2026. **Updated:** October 18, 2026, America/New_York. **Prepared by:** Codex from the user's game concept, approved image, and public Reddit discussions. **Audience:** The owner and future design, art, and engineering contributors.
+**Created:** October 1, 2026. **Updated:** October 20, 2026, America/New_York. **Prepared by:** Codex from the user's game concept, approved image, and public Reddit discussions. **Audience:** The owner and future design, art, and engineering contributors.
 
 ## Game overview
 
@@ -36,7 +36,7 @@ The browser implementation uses the approved mockup as its visual baseline. Repe
 
 ### Product decisions
 
-The browser game uses portrait presentation, local saves, fictional people and grounded, non-graphic calls. Release scope, commercial choices and device targets belong to the [backlog owner decisions](docs/backlog.md#owner-decisions). Balance values are tunable.
+The browser game uses portrait presentation, local saves, fictional people and grounded, non-graphic calls. A content tier and topic filters are proposed but not built: players would choose a tier and turn topics off, and the store rating stays the owner's Mature target. The design is [content rating](docs/content-rating.md). Release scope, commercial choices and device targets belong to the [backlog owner decisions](docs/backlog.md#owner-decisions). Balance values are tunable.
 
 ## Intended players and observable outcomes
 
@@ -96,7 +96,7 @@ Essential actions must work by touch without hover. The touch-target design mini
 7. **Debrief:** See objective results, civilian and officer outcomes, supplies used, stress, and the reasons behind them.
 8. **Develop:** Apply rewards and rotate or train the next squad.
 
-Session design targets: a quick management visit around one minute, and an operation session around three to five minutes. These are usability hypotheses, not real-time decision deadlines. Closing the app between decisions pauses the operation; it does not expose the squad to new hazards.
+Session design targets: a quick management visit around one minute, and an operation session around three to five minutes. These are usability hypotheses. Today closing the app between decisions pauses the operation. Under the proposed [call pressure](docs/call-pressure.md) design, real time on an open decision with a threat becomes game minutes, at home or away, unless the player sets the timer to Off. One open decision can land at most its own threat, so an interruption never ends a call.
 
 ## Department economy and offline simulation
 
@@ -138,7 +138,7 @@ Recruitment presents a small pool with visible wages, signing cost, traits, skil
 
 Hiring requires capacity and an affordable projected budget. Dismissal previews severance, returns assigned equipment, releases future assignments, and cannot happen during deployment. Dismissing and rehiring an officer must not erase condition or generate free signing rewards.
 
-Training reserves the officer and course slot until completion. Department unlocks make courses available; completion grants the officer's skill or certification. Unlocking a course is not itself instant officer qualification. Team familiarity is tracked as unused call capability in [docs/backlog.md](docs/backlog.md), item 23.
+Training reserves the officer and course slot until completion. Department unlocks make courses available; completion grants the officer's skill or certification. Unlocking a course is not itself instant officer qualification. Team familiarity is tracked as unused call capability in [docs/backlog.md](docs/backlog.md) (`familiarity-priorities`).
 
 ## Persistent squads and joint operations
 
@@ -196,6 +196,8 @@ Resolve actions into favorable, mixed, or adverse developments. A poor check can
 
 Use separate final results for objective completion, civilian safety, officer condition, preserved information, resources, and trust. Explain material causes in the debrief. The visible risk estimate must be labeled as conditional on known information.
 
+Time pressure stays in game minutes. In the proposed [call pressure](docs/call-pressure.md) design, real time a player spends on an open decision adds game minutes to it at the timer setting's rate (Off, Relaxed by default, or Standard), capped at the open threat's minutes. The threat on screen and its countdown are one clock, and the previews read the added minutes before the player commits, so nothing is hidden. The added minutes are recorded with the decision so replays match.
+
 Save the scenario seed, state, selected action, and resolved result together. Resuming cannot reroll the same decision or apply the same reward twice.
 
 ## Stress, recovery, and failure
@@ -204,7 +206,7 @@ Track stress per officer. A squad summary is derived from its members and must n
 
 Stress bands are Ready 0 to 29, Strained 30 to 59, Overloaded 60 to 79 and Mandatory recovery 80 to 100. Penalties and recovery rates are tunable. Mild strain affects relevant tasks; overloaded officers are restricted from high-risk assignments; mandatory recovery prevents deployment.
 
-Keep recovery eligibility explicit: show when an officer is expected to be deployable and what improves recovery. Medical injuries are a separate, less frequent source of absence. Standard mode excludes permanent officer death in the first playable.
+Keep recovery eligibility explicit: show when an officer is expected to be deployable and what improves recovery. Medical injuries are a separate, less frequent source of absence. The first playable excludes permanent officer death.
 
 Recovery and reserve staffing support roster rotation. Every operation is live; department management and recovery remain available between calls. A paid skip is never required after an adverse result.
 
@@ -242,7 +244,7 @@ These criteria describe the behavior under review, not a second work list or a c
 8. **Offline equivalence:** For identical starting state and no active decisions, compare a four-hour unattended online simulation and offline settlement. Funding, inventory, course completion, and recovery agree. Repeat at the cap and beyond it, including a job completing partway through the interval.
 9. **No hidden offline debt:** At or beyond the cap, payroll does not continue independently of income. Optional purchases/restocking cannot make balances negative.
 10. **Recovery:** A mandatory-recovery officer cannot deploy. Advancing the simulation according to the displayed recovery rules restores eligibility. A team-wide setback leaves department management and a funded recovery path available.
-11. **Interruption integrity:** Close/resume after preparation, each decision, and debrief. The committed outcome, seed, costs, reservations, and rewards survive without duplication or reroll. Backward clock movement does not create a second grant.
+11. **Interruption integrity:** Close/resume after preparation, each decision, and debrief. The committed outcome, seed, costs, reservations, and rewards survive without duplication or reroll. Backward clock movement does not create a second grant. Once call pressure is built, time away during an open decision counts once, never past the cap, and a backward clock never reduces or repeats it.
 12. **Understandable outcome:** After playing, participants explain a roster/equipment effect and a consequence using information available in the game. Record misunderstandings and revise the design; this exploratory round does not establish statistical market demand.
 13. **Routine automation:** After unlocking a preset and a restock rule, repeat a deployment without manually reallocating each item. The rule respects its budget ceiling and reports shortages.
 14. **Research-grounded pacing review:** Playtest notes explicitly record guide dependence, forced inactivity, repetitive manual tasks, and visual comprehension. Content expansion waits until each material issue has a fix or an owner-accepted tradeoff.
@@ -257,7 +259,7 @@ These criteria describe the behavior under review, not a second work list or a c
 
 - Real-time direct unit movement or detailed combat simulation: would obscure the test of branching command decisions.
 - Multiplayer, PvP, clans, and leaderboards: add service and balance work before the core loop is proven.
-- Live events, attendance streaks, and battle passes: can create obligations that interfere with testing voluntary return play.
+- Live events, attendance streaks, battle passes, and notifications that pull a player back into a call: can create obligations that interfere with testing voluntary return play.
 - Paid officer gacha, forced ads, or paid success boosts: would distort initial pacing and roster validation.
 - Unconstrained procedural buildings, image-first playable maps, or freeform generated scenario prose: the initial approach is authored layouts plus validated, data-driven variations.
 - Full prestige resets, permanent death and complex interpersonal drama are outside the current scope.
