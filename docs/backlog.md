@@ -381,6 +381,19 @@ converts harm only for the officer wearing the kit, with tests for a worn-out ve
 hit. The Gear tab shows worn kit by officer. The trust error and `items-none` are re-measured and
 recorded in the PR. `npm run verify` passes.
 
+### progression-pacing: Measure rank and milestone pacing, and read the promotion lines
+Tags: job=build; journeys=officer-promotes, milestone-grants; probes=none (pacing, not a chance input); lane=engine
+Needs: start=none; integrate=none; ship=none
+
+Shipped 2026-10-20 with proposed numbers: development prices are the old funding price plus $800
+per old development point, milestones by department level, calls resolved or trust
+(`src/content/dev-tree.ts`), and ranks at 150, 450, 1,000 and 2,000 XP (`src/content/ranks.ts`).
+None of it was measured over a long campaign. Done: a headless campaign of about 100 calls records
+when each rank and each grant lands, whether buying ever beats waiting for the milestone, and
+whether a lieutenant arrives before the 25-year retirement window; the numbers change only from
+that run. The promotion lines in the shift report and debrief and the trait origin line on the
+profile get a `swat-writing-review` read.
+
 ## Player experience
 
 ### onboarding: A first call that teaches the loop
@@ -408,13 +421,15 @@ Owner decision 2026-10-19: wrap the web app for iOS and Android. Done: a wrapper
 evidence (e.g. Capacitor), the build running on a real iPhone and Android phone with saves surviving
 an app restart, and the safe-area, keyboard and text-zoom checks from `playtests` passing on device.
 
-### real-purchases: Point packs become real in-app purchases
+### real-purchases: Decide what real in-app purchases sell
 Tags: job=build; journeys=hire-and-equip; probes=none (commerce); lane=deferred
-Needs: start=store-wrap; integrate=none; ship=none
+Needs: start=store-wrap (and an owner decision on what is sold); integrate=none; ship=none
 
-Owner decision 2026-10-19: free to play with purchases. The store and ledger are simulated today
-(`src/commerce/`). Done: the point packs sell through the App Store and Play Store billing, purchases
-restore across reinstalls, and the ledger records real receipts. Needs the store-wrap first.
+Owner decision 2026-10-19: free to play with purchases. Owner decision 2026-10-20 removed
+development points, the point packs they sold and the simulated store are gone, so
+nothing is for sale now. Open owner decision: what a purchase sells (for example cosmetic portraits
+or a funding pack), weighed against milestones granting developments free. Done: that decision,
+then purchases through App Store and Play Store billing that restore across reinstalls.
 
 ### offline-shell: The game opens with no network
 Tags: job=keep; journeys=save-round-trip; probes=none (packaging); lane=interface
@@ -458,6 +473,7 @@ Optional.
   on 22 of 30 seeds (the rest are rejected because the first room off the bedroom is the living
   room). This bears on the existing barricade building-family decision above.
 - **Later scope:** districts, career stories, simultaneous tactical incidents.
+- **What purchases sell** now that development points and point packs are gone (`real-purchases`).
 
 Decided 2026-10-19: scenario work is paused (the barricade is parked on its branch); a squad can
 deploy short of injured officers (`short-squad-deploys`); sidearms from day one
@@ -471,5 +487,10 @@ hook clamps at 3 lines; text gets new surfaces (transcript, epilogue) rather tha
 everywhere; the player may lie or promise without approval, at a real cost; the tone goes darker,
 with the self-harm safe-messaging rules, E2 and E3 kept (`docs/scenario-depth.md`).
 Also decided 2026-10-19: ship by wrapping the web app for iOS and Android; free to play with
-purchases, so the simulated point packs become real purchases; target a Mature rating (ESRB M,
+purchases (what is sold is open again since point packs were removed on 2026-10-20, see
+`real-purchases`); target a Mature rating (ESRB M,
 PEGI 16); no release date or budget yet.
+Decided 2026-10-20 (progression): development points are removed and every development costs cash
+or is granted free at a milestone (`src/sim/grants.ts`); officers hold real US police ranks from
+Probationary Officer to Lieutenant, XP stops at Lieutenant, and the experience band is read from the
+rank (`src/content/ranks.ts`, `src/sim/ranks.ts`).

@@ -23,7 +23,7 @@ Direct rating gains and XP are different benefits. The existing 85 rating thresh
 
 Debriefs lead with objective, safety and rewards. Meaningful officer changes receive portraits and visual stress comparisons. Unchanged participants are grouped, and detailed evidence and logs remain available through disclosure controls. Harm and losses remain prominent.
 
-Officer XP fills a real progress gauge toward the next primary-rating point, using the same career threshold and bank as the simulation. There is no invented officer level. Archived debriefs display recorded deltas rather than reconstructing past progress from the current roster.
+Officer XP fills a real progress gauge toward the next rank (Probationary Officer, Officer, Corporal, Sergeant, Lieutenant), using the same thresholds the simulation promotes by (`src/content/ranks.ts`). XP stops at Lieutenant. A promotion raises the role's main rating and wage and grants the rank's trait, and the debrief shows it. Archived debriefs display recorded deltas rather than reconstructing past progress from the current roster.
 
 Stress is a condition reading from 0–100, not an overall readiness percentage. Its marked ranges follow the engine's 30/60/80 thresholds. Portrait-led decision rows show each recorded before/after change and any crossed range. New decisions save those readings; older decisions show only their recorded change. Current roster stress is never used to invent a past reading. Injury, training and deployment remain separate availability facts.
 
@@ -31,7 +31,7 @@ Stress is a condition reading from 0–100, not an overall readiness percentage.
 
 Action titles say what the team will do, and neutral descriptions are authored separately from the best possible outcome. The forecast distinguishes a choice going well from a whole call being resolved. Costs and limits remain explicit; conditional outcomes do not promise help that the engine may leave unfinished.
 
-Use full skill names, explain development points on first use, and label real-time waits as real hours. Header values open touch- and keyboard-accessible explanations rather than relying on hover titles. Existing saved explanations remain historical records.
+Use full skill names, show a development's price beside its milestone, and label real-time waits as real hours. Header values open touch- and keyboard-accessible explanations rather than relying on hover titles. Existing saved explanations remain historical records.
 
 ## Verification
 
