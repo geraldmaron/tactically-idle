@@ -9,7 +9,7 @@
 // show, never less.
 import { CONTENT_DESCRIPTORS, type ContentDescriptor } from '../../../content/content-descriptors';
 import type { CallTree, TreeIf, TreeNext, TreeOutcome } from '../../../content/call-trees/types';
-import type { IncidentTemplate } from '../../../content/incidents/types';
+import { ageBandOf, type IncidentTemplate } from '../../../content/incidents/types';
 import type { OutcomeBand } from '../../../sim/types';
 import { outcomeNexts } from '../trees-v13/compile';
 
@@ -67,8 +67,8 @@ export function derivedDescriptors(template: IncidentTemplate, situation: Situat
   return CONTENT_DESCRIPTORS.filter(descriptor => found.has(descriptor));
 }
 
-/** Subjects this situation spares with `noFatal` force who can be drawn as adults (an adult or
- * elderly age band on their cast slot, after the situation's override): the people the E4 cross-check
+/** Subjects this situation spares with `noFatal` force who can be drawn as adults (drawn years
+ * reaching 18, or else an adult or elderly age band, after the situation's override): the people the E4 cross-check
  * covers. Minors are never killed anyway, so `noFatal` on them says nothing about self-harm. */
 export function adultNoFatalSubjects(template: IncidentTemplate, situation: Situation): string[] {
   const tree = template.tree;
@@ -76,7 +76,12 @@ export function adultNoFatalSubjects(template: IncidentTemplate, situation: Situ
   const model = template.situations.find(entry => entry.index === situation);
   return tree.roles.filter(role => role.kind === 'subject' && spared.has(role.id)).filter(role => {
     const slot = template.cast.find(entry => entry.keyRoles.includes(role.id));
-    const age = model?.people?.[role.id]?.age ?? (slot ? model?.people?.[slot.id]?.age : undefined) ?? slot?.person.age ?? 'adult';
+    // As drawInstance resolves a person: the role's override, else the slot's, merged shallowly
+    // over the slot's person; drawn years, when given, set the age band in place of `age`.
+    const person = { ...slot?.person, ...(model?.people?.[role.id] ?? (slot ? model?.people?.[slot.id] : undefined)) };
+    const years = person.identity?.years;
+    if (years) return ageBandOf(years.max) === 'adult' || ageBandOf(years.max) === 'elderly';
+    const age = person.age ?? 'adult';
     const bands = typeof age === 'string' ? [age] : age.pick.map(([band]) => band);
     return bands.some(band => band === 'adult' || band === 'elderly');
   }).map(role => role.id);

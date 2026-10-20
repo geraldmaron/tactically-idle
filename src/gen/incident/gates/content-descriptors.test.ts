@@ -17,7 +17,8 @@ describe('content descriptors (docs/content-rating.md)', () => {
 
 // Negative controls on a fixture this test owns: one node, one choice, one situation per case.
 const outcome = (extra: Partial<TreeOutcome>): TreeOutcome => ({ text: 'x', next: { ending: 'done' }, ...extra });
-function fixture(adverse: TreeOutcome[], situation: Partial<TreeSituation> = {}, age: IncidentTemplate['cast'][number]['person']['age'] = 'adult', clockHarm = false): IncidentTemplate {
+type Person = IncidentTemplate['cast'][number]['person'];
+function fixture(adverse: TreeOutcome[], situation: Partial<TreeSituation> = {}, age: Person['age'] = 'adult', clockHarm = false, identity?: Person['identity'], override?: Partial<Person>): IncidentTemplate {
   const sit = (index: number): TreeSituation => ({ note: `s${index}`, truth: { armed: index !== 1 }, ...situation });
   const tree = {
     type: 'hostage_crisis', root: 'start', facts: { armed: { label: 'a', claim: 'a', confirmed: 'a', disproved: 'a' } },
@@ -27,7 +28,8 @@ function fixture(adverse: TreeOutcome[], situation: Partial<TreeSituation> = {},
     endings: { done: {}, handed_over: {} },
   } as unknown as CallTree;
   const clocks = clockHarm ? [{ id: 'c', onOut: { harm: 'wounded' } }] : [];
-  return { type: 'hostage_crisis', tree, cast: [{ id: 'subjects', keyRoles: ['subject'], person: { age } }], situations: [0, 1, 2].map(index => ({ index, clocks })) } as unknown as IncidentTemplate;
+  return { type: 'hostage_crisis', tree, cast: [{ id: 'subjects', keyRoles: ['subject'], person: { age, ...identity ? { identity } : {} } }],
+    situations: [0, 1, 2].map(index => ({ index, clocks, ...override ? { people: { subject: override } } : {} })) } as unknown as IncidentTemplate;
 }
 const FORCE = (noFatal?: true): TreeOutcome => ({ text: 'x', force: { on: 'subject', next: { hurt: { ending: 'done' }, none: { ending: 'done' } }, ...noFatal ? { noFatal } : {} } });
 
@@ -65,5 +67,13 @@ describe('descriptor gate', () => {
     expect(descriptorFindings(fixture([FORCE(true)], { descriptors: full, selfHarmScreened: '  ' }))).toHaveLength(3);
     expect(adultNoFatalSubjects(fixture([FORCE(true)], {}, 'teen'), 0)).toEqual([]);
     expect(adultNoFatalSubjects(fixture([FORCE(true)], {}, { pick: [['teen', 50], ['adult', 50]] }), 0)).toEqual(['subject']);
+  });
+
+  it('reads drawn years before the age band, and the situation override before the slot, as drawInstance does', () => {
+    // Codex review 2026-10-20: a teen band with adult years compiles an adult.
+    expect(adultNoFatalSubjects(fixture([FORCE(true)], {}, 'teen', false, { years: { min: 20, max: 30 } }), 0)).toEqual(['subject']);
+    expect(adultNoFatalSubjects(fixture([FORCE(true)], {}, 'adult', false, { years: { min: 14, max: 17 } }), 0)).toEqual([]);
+    expect(adultNoFatalSubjects(fixture([FORCE(true)], {}, 'teen', false, undefined, { identity: { years: { min: 16, max: 19 } } }), 0)).toEqual(['subject']);
+    expect(adultNoFatalSubjects(fixture([FORCE(true)], {}, 'adult', false, undefined, { age: 'teen' }), 0)).toEqual([]);
   });
 });
