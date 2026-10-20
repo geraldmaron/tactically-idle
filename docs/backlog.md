@@ -142,22 +142,9 @@ the crossed coverage walk pass, a separate reader records D1 to D9, fingerprints
 deliberately, and the owner has read three paths aloud and approved the bible as calibrated.
 
 
-### outcome-calibration-drift: Outcome scores drifted from the hand-set numbers after sidearms
-Tags: job=command; journeys=chance-not-script; probes=none (scoring calibration, not a favorable-chance input); lane=engine
-Needs: start=none; integrate=none; ship=none
-
-`src/sim/outcome-score.test.ts` caps the trust error against the retired hand-set numbers at 0.75.
-The hostage depth pilot (`hostage-depth-pilot`) moves it to 0.756. Since sidearms on day one (ec7ba79, #79) `main` sits at exactly 0.750: hostage rose from 0.38 to
-0.83, while armed is 0.90 and rescue 1.02; the old barricade (0.24) holds the average down. The new
-barricade fits better on its own (0.43) but replaces those rows, so its branch reads 0.80 and fails.
-Measured 2026-10-19 with the test's own sample. Done: either recalibrate the score so the hostage,
-armed and rescue trees are back near the 0.48 fit, or record why sidearms rightly moved the
-hand-set comparison and set a new ceiling with the owner's sign-off; then the barricade branch
-passes.
-
 ### barricade-model-first: Write the barricade call model-first
 Tags: job=command; journeys=answer-a-call, choices-branch; probes=blueprint-building, blueprint-locked; lane=calls
-Needs: start=hostage-depth-pilot (the owner read); integrate=barricade-tooling-fixes, outcome-calibration-drift; ship=none
+Needs: start=hostage-depth-pilot (the owner read); integrate=barricade-tooling-fixes; ship=none
 
 Under `depth-bible`: template, design sheet in `docs/calls/` (the parked sheet reworked to the depth rules), tree, separate review including D1 to D9. The old
 tree has 2 `team` moves out of about 37 choices (armed 13, hostage 8, rescue 8), and a different
@@ -211,13 +198,6 @@ Needs: start=none; integrate=none; ship=none
 Filed in `docs/calls/hostage-signature-design.md`: R-G2 a group role the player meets, and R-G3 with
 N15 and N16 count-conditioned briefing lines and ending addenda. R-G1 shipped with `intel-odds` (#45, #48), R-G4 shipped with `clock-runout-routing` (#46, #56); N6, N7, N9 and N21 shipped in #64. Done: each request works in
 the hostage call and the call's fingerprints are recaptured deliberately.
-
-### hostage-review-leftovers: Hostage review leftover B9
-Tags: job=command; journeys=answer-a-call; probes=none (prose); lane=deferred
-Needs: start=none (waits on the owner's ruling, design question 10); integrate=none; ship=none
-
-The B9 owner-condition replay leak: the stage 2 cue still identifies the situation. NF3 to NF8 and
-the N8 and N20 skill fixes shipped in #44.
 
 ### crisis-content-note: Content note and 988 line
 Tags: job=command; journeys=answer-a-call; probes=none (text); lane=deferred
@@ -326,7 +306,7 @@ Keep one.
 
 ### worn-kit: Each officer wears their own kit, and it protects the officer who wears it
 Tags: job=build; journeys=hire-and-equip, team-moves-odds; probes=items-none; lane=engine
-Needs: start=none (owner approves this proposal); integrate=outcome-calibration-drift (measure on a settled calibration); ship=none
+Needs: start=none (owner approves this proposal); integrate=none; ship=none
 
 Proposed 2026-10-19, not yet approved. Every item is a pooled `ItemUnit`. Protection counts once
 per action, best unit of its group (`src/sim/resolution.ts` best-of-group,
@@ -364,9 +344,7 @@ What it moves:
 - **Compiled fingerprints:** none expected, because protection is read when the call is played,
   not compiled. If an implementation adds a compiled gear rule, the fingerprints move and the lead
   recaptures them on purpose.
-- **`outcome-calibration-drift`:** fewer serious officer injuries raise trust on fire-heavy
-  endings, and the hostage call is already furthest from the hand-set numbers. Measure the trust
-  error with the test's own sample before and after. No ceiling rises because of this item.
+- **Outcome score:** the ranking gate in `src/sim/outcome-score.test.ts` holds.
 - **`items-none`:** the probe strips pooled gear only, since worn kit is not a loadout choice.
   Re-measure. Floors never fall.
 
@@ -466,7 +444,7 @@ Optional.
 - **Barricade building family:** keep apartments (`apartment_unit_g2`) or not.
 - **"Goes to review" ending line** (E2.1) in the barricade call.
 - **Hostage review calls:** O4 custody wording, O1 armed-lane words, N19 time charge on all-night
-  holds, the 6-decision stage-3 chain, the E3 count read, and B9.
+  holds, the 6-decision stage-3 chain, and the E3 count read.
 - **Domain-model defaults D1 to D5** stand unless changed: no explosives, a fled subject's follow-up
   call, groups above 8 as a later mode, 24h review after a shooting, concessions within policy.
 - **Barricade on apartments:** with the child in a bedroom, `apartment_unit_g2` hosts the barricade
