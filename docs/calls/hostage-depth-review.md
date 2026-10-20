@@ -275,3 +275,92 @@ Writing review record
 - Owner decisions surfaced: D7 pick, O2 and R5 (E4 support line), O4 (custody), B9 (replay leak)
 - Verdicts: approve 0, edit 1, reject 0, recorded at not yet recorded (no pull request open)
 ```
+
+## 13. Re-check (2026-10-19, after e9a77b7)
+
+Same separate reader, same rules. I re-read only the passes the answers touch: the transcript
+read, the depth gates, previews on the new choice, honesty on the new prompt variants and
+epilogues, and the lie. The source was commit e9a77b7 "Answer the depth review of One Last
+Signature", with its response table in docs/calls/hostage-signature-design.md ("Review response").
+The read surface is still exported text plus source. No browser.
+
+Gates:
+
+- `bun scripts/check-strings.ts hostage_crisis` **exit 1**. The longest-names "they" binding fails
+  `ngram`: "stay where they are" (4 words) appears in both offer.exchange[0] and
+  both_inside.free_others.adverse[0] (RB1). The distinct-names "he" and "she" bindings exit 0.
+  The advisories are tense-mix on own_up.adverse[2], owner_speaker.favorable[2] (s2) and
+  last_day.favorable[2] (s3). All are reported speech, so all are false positives. 'flat' is
+  also flagged, and is a false positive.
+- `npx vitest run src/gen/incident/trees-v13`: exit 0, "Test Files 12 passed (12), Tests 180
+  passed (180)", 393 s. The test suite does not run the string checker, so it stayed green
+  while the checker was red.
+
+### Closed
+
+| Finding | Status | Evidence |
+|---|---|---|
+| B1 | closed | last_day favorable preview: 'You hear the day {taker} keeps starting, and then he decides about {owner}.' This holds in s3 |
+| B2 | closed | group_out_dawn epilogue: '{others} came out at first light still wearing the shop apron.' This is true on both paths |
+| B3 | closed for owner_collapsed, reopened in new form for entry_hurt (RF2) | owner_collapsed epilogue: 'The till drawer was still open when they carried {owner} out. Nobody had counted it.' |
+| F1 | closed | talking.owner_speaker (onlyIf notMarks owner_heard) carries all three reframes to every path that reaches talking |
+| F2 | closed | The talking and standoff variants read owner_admits and camera_said, with transcripts. RB3 covers one false clause |
+| F3 | closed, residual note RN5 | foundOut now sits on owner_speaker (all bands), ask_owner adverse and his_pace favorable KEEPS. The dead last_day and his_door addenda are gone. ask_owner is now only reachable after owner_heard, so it can't skip the break |
+| F4 | closed | The take_account foundOut now leads the adverse band |
+| F6 | closed for the lone call, note RN3 | The offer, out_back_door, out_six_years, both_inside, fired_on and owner_down lines no longer restate their prompts |
+| F7 | closed | No taker transcript line names the owner (checked by grep). This also makes the owner_killed_taker_hurt epilogue true |
+| F8, F9, F13, F14, F15, F16, F17, F18 | closed | Applied as given, with small wording changes |
+| F11, F12 | closed | All 20 epilogues now land on a named person. The asks-or-tells frame is down to 4 of 20 |
+| F19 | closed for everyone_out, note RN4 | epilogueIf exists (types.ts, compile.ts). everyone_out carries 'It took her two tries to start.' (owner_admits) and the camera_said line |
+| F20 | closed | commitments.ts: an entry leaves a lie open. Once the taker is out, the debrief reads 'The lie told to {taker} held.', which is true, because no text showed him find out |
+| N1 | closed | The negotiator now asks 'What happened between you two?' |
+| N10 | closed | The checker false positives were cleared in the first pass |
+
+### Still open
+
+```
+[fix before ship] F5 hostage_crisis, group calls | one_door.choices | sees no temptation in any group draw; the response says a promise can't be made to a group (compile.ts groupOutcome) | rule D6 | fix as request 'commitments to a counted group, broken by the cascade', then the data in F5 | route engineering, then swat-call-design; owner if it should wait
+[fix before ship] F10 hostage_crisis, withdrawn | standoff.promptIf[0], standoff.choices, threat.promptIf | the negotiator now asks the direct question, and the answer 'Doesn’t matter.' is itself a risk sign; no standoff choice answers it; pull_back ('the call ends there') stays visible; wait_silence's RAISED branch sets withdrawn and goes to threat, where no variant asks | rule E4.4, E4.0 | fix as data a standoff choice onlyIf marks withdrawn, 'Stay on with {taker.him}', summary '{lead} keeps {taker.first} talking about who {taker.he} still sees on Sundays. {owner.first} waits inside the whole time.'; pull_back onlyIf notMarks withdrawn; a threat promptIf on withdrawn that carries the same question | route swat-call-design
+```
+
+Notes still open from the first pass: N2 to N9 and N11 to N15, unchanged.
+
+### New findings
+
+```
+[block] RB1 hostage_crisis, they binding | offer.exchange[0] against both_inside.free_others.adverse[0] | sees 'The courier can go. They stay where they are.' beside '…orders Wren to stay where they are.'; check:strings exit 1 | rule gate ngram | fix as data offer.exchange[0] 'The courier can go. Not {owner.him}.' | route swat-call-prose
+[block] RB2 hostage_crisis, lone, after the lie breaks | standoff.promptIf (marks lied_sign) | sees '{taker} keeps asking when {owner} will sign the pad.' right after own_up ('says he knew it, and leaves the pen lying on the pad'), own_up mixed, or a foundOut that sends the call to standoff (take_account, ask_owner, his_pace); lied_sign is never cleared when the lie breaks | rule H11 (the next screen contradicts the last result) | fix as data set mark lie_found wherever will_sign breaks (foundOut, own_up); give the existing variant notMarks lie_found; add a variant when marks lie_found: '{taker.first} has turned the pad face down on the counter.' | route swat-call-design
+[block] RB3 hostage_crisis, s1 | standoff.promptIf (marks owner_admits) | sees '…but he hasn’t hung up.' after his_pace adverse ('puts the phone down and doesn’t pick up again') or ask_owner adverse quiet ('stops picking up'); the owner_admits variant outranks silent | rule H11 | fix as data '{taker.first} stopped making offers after {owner.first} spoke.' | route swat-call-prose
+[fix before ship] RF1 hostage_crisis | talking.owner_speaker.summary | sees '{lead} has {taker} hold the receiver out to {owner}.' with no sign the owner chose to speak; owner_voice said 'if she wants to' | rule E12 (a held person speaks when they choose to), E13 | fix as data '{lead} asks whether {owner.first} wants to speak, with {taker.first} holding the receiver. {taker.first} hears whatever {owner.he} {owner~says|say} about the till.' | route swat-call-prose
+[fix before ship] RF2 hostage_crisis, entry paths with serious harm | endings.entry_hurt.epilogue | sees '…not to the officers and not at home.', which implies she went home, a recovery (this reader's own proposed data in B3 caused it) | rule E11.2 | fix as data '{owner.first} hasn’t said {taker.first}’s name since, not to the officers and not to the nurse who asked.' | route swat-call-prose
+[note] RN1 hostage_crisis, s2 and s3 | talking.owner_speaker.outcomes.favorable | sees the favorable band go to standoff with the taker provoked and objective 8, barely above mixed (4); the reveal is its only payoff | rule fake-choice 9 (watch) | fix as data none required; consider objective 10 and a resultLabel that names the reveal | route swat-call-design
+[note] RN2 hostage_crisis, s3 | talking.promptIf (camera_said) exchange[0] | sees 'It was going back Friday.', which echoes the D7 candidate 'I’d have had it back by Friday.' (last_day); the two never share a path, but the line loses its weight | rule D7 | fix as data keep Friday in one place; talking camera_said 'Rent was due. That’s all it was.' | route swat-call-prose, owner pick
+[note] RN3 hostage_crisis | offer.prompt, offer.promptIf[0] | sees the lone call's offer stated only in the transcript (the prompt is now 'picked up on the first callback'); if the transcript block clamps at 390px, the stage has no stated offer. The group variant still restates the offer in its transcript | rule restatement, unseen surface | fix as data none until the rendered read; check the transcript block in the lab | route swat-writing-review (rendered read)
+[note] RN4 hostage_crisis | endings.*.epilogueIf | sees reframe variants only on everyone_out and none for s2 (the kid); the camera_said line 'never gave it to anyone' brushes the evidence question (O4); standoff paths have no reframe door (owner_speaker sits in talking only) | rule D8, D9 | fix as data an s2 variant on everyone_out when marks owner_unwell and owner_heard: '{owner.first}’s kid opened the shop on Monday. {owner.first} stayed in the back.' | route swat-call-prose, owner for O4
+[note] RN5 hostage_crisis, lone, lied_sign | talking.his_pace mixed and adverse | sees the lie neither break nor come up on these bands; it stays open into held endings, and the debrief is silent about it | rule D6 (watch) | fix as data foundOut on his_pace mixed KEEPS ('Near midnight {taker.first} asks {owner.first} to sign. {owner.He} {owner~says|say} {owner.he} never agreed to.') | route swat-call-design
+[note] RN6 hostage_crisis, lone | debrief after the lie and an entry | sees 'The lie told to {taker} held.', which is true, because no text showed him find out | rule H10 | fix as data none, recorded as clear | route none
+```
+
+### Depth gates on re-check
+
+| Gate | Result |
+|---|---|
+| D1 | pass. The taker's marker (never naming the owner) holds in every transcript line |
+| D2 | pass |
+| D3 | pass. The head-in-hands picture is cut from his_pace |
+| D4 | pass within the call. The cross-call mix still can't run |
+| D5 | pass. The out_keys summaries now carry a value |
+| D6 | pass in lone calls (the lie breaks on owner_speaker, take_account, ask_owner and his_pace). Fail in group calls (F5) |
+| D7 | owner pick pending. Same three candidates, see RN2 |
+| D8 | fail on one string (RF2). Otherwise all 20 epilogues are named, true and varied |
+| D9 | pass. owner_speaker reaches the reframe on every talking path. Standoff paths are still blind (RN4) |
+
+### Re-check verdict
+
+```
+Verdict hostage_crisis "One Last Signature" v13, depth re-check | edit | block 3 new (RB1 to RB3), 0 open from the first pass | fix before ship 2 open (F5, F10), 2 new (RF1, RF2) | note 13 open, 6 new | fingerprints recapture yes
+```
+
+All three new blocks are one-string or one-mark data fixes. RB1 is a red gate, so this can't ship
+until check:strings exits 0 again. Once RB1 to RB3, RF1 and RF2 land, the call is ready for the
+owner's read-aloud of three paths. F5 needs engineering, and F10 needs one design choice.

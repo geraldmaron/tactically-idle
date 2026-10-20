@@ -93,6 +93,17 @@ but forgettable, and no gate can fail a call for that. Order: `depth-bible` and 
 with `deception-commitments`, then `hostage-depth-pilot`, then an owner read before any other call
 is rewritten. Plan of record: `docs/scenario-depth.md`.
 
+### mark-plan-reads-when: The mark planner ignores an outcome's own condition
+Tags: job=command; journeys=choices-branch; probes=none (compile-time pruning, not an odds input); lane=engine
+Needs: start=none; integrate=none; ship=none
+
+`prunePlan` (src/gen/incident/trees-v13/compile.ts) counts a mark as settable when any outcome of
+a reachable choice sets it, even when that outcome's own `when` can never hold in the call. The
+compile then drops the outcome, and `validateStoryBindings` fails a prompt that reads the mark as
+undeclared. Found with the hostage pilot's `lie_found` (set only behind `lied_sign`, which group
+calls can't set), worked around with a count condition. Done: settable marks respect the
+outcome's `when`, and a fixture test shows a prompt variant pruned in the call that can't set it.
+
 ### depth-bible: Depth rules a call can fail with zero defects
 Tags: job=command; journeys=choices-branch; probes=none (writing rules and review gates); lane=calls
 Needs: start=none; integrate=none; ship=none

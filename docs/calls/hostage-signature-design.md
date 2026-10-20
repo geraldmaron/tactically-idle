@@ -1067,3 +1067,11 @@ Side effects measured: situation 3 now has 6010 explorer states, so the lab's EX
 8000; the owner clock test's policy seed moved from 687 to 825; the outcome-score calibration
 reads trust MAE 0.754 against its 0.75 ceiling (main sat at exactly 0.750), which is the open
 owner decision in `outcome-calibration-drift`.
+
+### Re-check response (2026-10-19)
+
+RB1 to RB3, RF1 and RF2 fixed as the reader gave them, with checker-driven wording changes. F10:
+a standoff choice `stay_on` answers "Doesn't matter." (E4.4), pull_back hides while the taker is
+withdrawn, and the threat node asks the direct question too. RB2's `lie_found` prompt variant is
+lone only, because the mark planner ignores an outcome's own condition (backlog
+`mark-plan-reads-when`). F5 (no temptation in group calls) stays open.

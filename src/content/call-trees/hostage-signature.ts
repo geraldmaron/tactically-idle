@@ -42,7 +42,7 @@ const LONE = { count: { role: 'others', max: 0 } } as const;
 /** The lie (dilemma pattern 15): the team told the taker the owner would sign. Any of the page and
  * door choices at the counter can bring the owner to the phone to say it, and on an adverse result
  * the taker hears that the promise was empty. */
-const foundOut = (text: string, extra: Partial<TreeOutcome> = {}): TreeOutcome => ({ when: { marks: ['lied_sign'] }, breaks: ['will_sign'], moves: { taker: 'provoked' }, text, ...extra });
+const foundOut = (text: string, extra: Partial<TreeOutcome> = {}): TreeOutcome => ({ when: { marks: ['lied_sign'] }, breaks: ['will_sign'], mark: ['lie_found'], moves: { taker: 'provoked' }, text, ...extra });
 
 const RAISED: TreeIf = { fact: 'raised', is: true };
 const CALM: TreeIf = { fact: 'raised', is: false };
@@ -150,7 +150,7 @@ export const HOSTAGE_SIGNATURE: CallTree = {
     // ------------------------------------------------------------------ stage 1
     { id: 'offer', stage: 'assess',
       prompt: 'The 911 call came from the counter phone. {taker.first} picked up on the first callback.',
-      exchange: [{ by: 'taker', line: 'The courier can go. {owner.He} {owner~stays|stay} where {owner.he} {owner~is|are}.' }, { by: 'negotiator', line: 'What happened between you two?' }, { by: 'taker', line: 'Ask {owner.him}. {owner.He} {owner~knows|know}.' }],
+      exchange: [{ by: 'taker', line: 'The courier can go. Not {owner.him}.' }, { by: 'negotiator', line: 'What happened between you two?' }, { by: 'taker', line: 'Ask {owner.him}. {owner.He} {owner~knows|know}.' }],
       promptIf: [{ when: GROUP, prompt: '{taker.first} will free {courier.first} and keep {owner.first}. {others}, off the same shift, {others#stands|stand} by the door.',
         exchange: [{ by: 'taker', line: 'Courier walks. {owner.He} {owner~doesn’t|don’t}.' }, { by: 'radio', line: 'More of them by the door with {taker.him}. Can’t see hands yet.' }, { by: 'taker', line: '{owner.He} {owner~knows|know}. Ask {owner.him}.' }] }],
       choices: [
@@ -525,16 +525,16 @@ export const HOSTAGE_SIGNATURE: CallTree = {
           outcomes: {
             favorable: [
               { if: LETS_GO, text: '{taker.first} doesn’t answer for a long while. Then {taker.he} {taker~points|point} {owner.first} to the street door.', exchange: [{ by: 'taker', line: 'First true thing anybody’s said to me all day.' }],
-                breaks: ['will_sign'], reveal: ['lets_go'], safe: ['owner'], moves: { taker: 'honest' }, next: { node: 'last_one' }, objective: 45 },
-              { if: KEEPS, text: '{taker.first} says {taker.he} knew it, and leaves the pen lying on the pad.', breaks: ['will_sign'], reveal: ['lets_go'], moves: { taker: 'honest' }, next: { node: 'standoff' }, objective: 8 },
+                breaks: ['will_sign'], mark: ['lie_found'], reveal: ['lets_go'], safe: ['owner'], moves: { taker: 'honest' }, next: { node: 'last_one' }, objective: 45 },
+              { if: KEEPS, text: '{taker.first} says {taker.he} knew it, and leaves the pen lying on the pad.', breaks: ['will_sign'], mark: ['lie_found'], reveal: ['lets_go'], moves: { taker: 'honest' }, next: { node: 'standoff' }, objective: 8 },
             ],
-            mixed: [{ text: '{taker.first} says every word from the team is worth nothing now. {owner.first} stays at the till.', breaks: ['will_sign'], moves: { taker: 'provoked' }, next: { node: 'standoff' }, objective: 4 }],
+            mixed: [{ text: '{taker.first} says every word from the team is worth nothing now. {owner.first} stays at the till.', breaks: ['will_sign'], mark: ['lie_found'], moves: { taker: 'provoked' }, next: { node: 'standoff' }, objective: 4 }],
             adverse: escalate({
               lead: '{taker.first} hears that there was never going to be a signature.',
               threat: '{taker.He} {taker~turns|turn} the handgun on {owner.first}, as if {owner.he} had lied too.',
               anyway: '{taker.He} {taker~has|have} been lied to once too often today. {owner.first} is looking down the barrel.',
               quiet: '{taker.first} drops the receiver on the counter and walks away from it.',
-              extra: { breaks: ['will_sign'], moves: { taker: 'provoked' }, pressure: 8 } }),
+              extra: { breaks: ['will_sign'], mark: ['lie_found'], moves: { taker: 'provoked' }, pressure: 8 } }),
           } },
         { id: 'take_account', title: 'Take down {taker.his} account', icon: 'handover', talksTo: 'taker', check: check(TALK), minutes: 6, onlyIf: { notMarks: ['account'] }, authority: { concede: 'statement' },
           modifiers: [{ label: '{courier.first} filled you in', mark: 'knows_story', value: 6 }, { label: '{owner.first} spoke for {owner.himself}', mark: 'owner_heard', value: 4 },
@@ -562,7 +562,7 @@ export const HOSTAGE_SIGNATURE: CallTree = {
         // The reframe in stage 3 (review F1): the owner on the speaker, with the taker hearing every word.
         { id: 'owner_speaker', title: 'Put {owner.first} on the speaker', icon: 'radio', check: check(TALK, 2), minutes: 4, onlyIf: { notMarks: ['owner_heard'] },
           modifiers: [{ label: '{taker.His} account is written down', mark: 'account', value: 6 }],
-          summary: '{lead} has {taker.first} hold the receiver out to {owner.first}. {taker.first} hears whatever {owner.he} {owner~says|say} about the till first.',
+          summary: '{lead} asks whether {owner.first} wants to speak, with {taker.first} holding the receiver. {taker.first} hears whatever {owner.he} {owner~says|say} about the till.',
           preview: { favorable: '{owner.first} talks about that drawer, and {taker.first} answers {owner.him}.', mixed: '{owner.first} starts to talk, then the receiver is pulled back.', adverse: '{taker.first} keeps the phone from {owner.first}. The handgun is a foot from {owner.him}.' },
           outcomes: {
             favorable: [
@@ -754,8 +754,9 @@ export const HOSTAGE_SIGNATURE: CallTree = {
         // Withdrawal is a self-harm sign (E4, the escalation palette): the negotiator asks the direct question.
         { when: { marks: ['withdrawn'] }, prompt: '{taker.first} has stopped asking for anything. {owner.first} hasn’t moved.',
           exchange: [{ by: 'negotiator', line: 'Are you thinking about hurting yourself today?' }, { by: 'taker', line: 'Doesn’t matter.' }] },
+        { when: { ...LONE, marks: ['lie_found'] }, prompt: '{taker.first} knows about the lie now. {taker.He} {taker~has|have} swept the pad onto the floor.' },
         { when: { marks: ['lied_sign'] }, prompt: '{taker.first} keeps asking when {owner.first} will sign the pad.' },
-        { when: { marks: ['owner_admits'] }, prompt: '{taker.first} stopped making offers after {owner.first} spoke, but {taker.he} {taker~hasn’t|haven’t} hung up.' },
+        { when: { marks: ['owner_admits'] }, prompt: '{taker.first} stopped making offers after {owner.first} spoke.' },
         { when: { marks: ['camera_said'] }, prompt: '{taker.first} won’t look toward the till since the camera came up.', exchange: [{ by: 'taker', line: 'Nobody was supposed to see that.' }] },
         { when: { marks: ['owner_unwell'] }, prompt: '{owner.first} is breathing hard behind the till, and {taker.first} has stopped making offers.' },
         { when: { marks: ['owner_hidden'], notMarks: ['owner_back'] }, prompt: '{owner.first} is still out of sight behind the shelves, and {taker.first} won’t talk terms anymore.' },
@@ -809,7 +810,24 @@ export const HOSTAGE_SIGNATURE: CallTree = {
                 '{courier.first} is still waiting on the boxes.', '{owner.first} has slid off the stool and isn’t getting up.', [CALM, HOLDING]),
             ],
           } },
-        { id: 'pull_back', title: 'Pull back to the corner', icon: 'handover', check: check(MOVE, -20), minutes: 2,
+        // E4.4: when the taker has withdrawn, the call stays with the person (review F10).
+        { id: 'stay_on', title: 'Stay on with {taker.him}', icon: 'radio', talksTo: 'taker', check: check(HOLD, -4), minutes: 15, onlyIf: { marks: ['withdrawn'] },
+          summary: '{lead} asks {taker.first} who {taker.he} still {taker~sees|see} on Sundays, and keeps asking. {owner.first} waits inside the whole time.',
+          preview: { favorable: '{taker.first} talks about the people still in {taker.his} life, and decides about {owner.first}.', mixed: 'You get one-word answers, and {owner.first} never leaves the stool.', adverse: '{taker.first} goes silent on you, with {owner.first} an arm’s length away.' },
+          outcomes: {
+            favorable: [
+              { if: LETS_GO, text: 'Sunday dinners, a cousin, a dog that died. Then {taker.he} {taker~asks|ask} whether the medic out front is for {taker.him} too, and lets {owner.first} go.',
+                exchange: [{ by: 'negotiator', line: 'The medic’s there for anybody who needs one.' }], reveal: ['lets_go'], safe: ['owner'], moves: { taker: 'heard' }, next: { node: 'last_one' }, objective: 40 },
+              courierToo('{courier.first} walks out a few steps behind {owner.first}.', { if: LETS_GO }),
+              ...heldEnd({ if: KEEPS, text: 'The Sunday stories run out before {taker.first} does. {taker.first} doesn’t hang up, and {owner.first} hasn’t left the till.', reveal: ['lets_go'], moves: { taker: 'heard' }, objective: 10 },
+                '{courier.first} sits it out by the door.', '{owner.first} has slipped down behind the counter.', [KEEPS]),
+            ],
+            mixed: heldEnd({ text: '{taker.first} answers in single words, but {taker.he} {taker~keeps|keep} the line open.', moves: { taker: 'heard' }, objective: 6 },
+              'Through all of it, {courier.first} sits near the door.', '{owner.first} goes down behind the register within the hour.'),
+            adverse: heldEnd({ text: '{taker.first} stops answering halfway through a sentence.', pressure: 6 },
+              '{courier.first} is still in there too.', 'Then {owner.first} slumps against the till and doesn’t sit back up.'),
+          } },
+        { id: 'pull_back', title: 'Pull back to the corner', icon: 'handover', check: check(MOVE, -20), minutes: 2, onlyIf: { notMarks: ['withdrawn'] },
           summary: 'Your squad falls back a block, and the call ends there. {owner.first} is left with {taker.first}.',
           preview: { favorable: 'You hold the corner, and {owner.first} remains inside.', mixed: 'From the corner, you keep the block shut. {owner.first} stays with {taker.first}.', adverse: 'You give up the glass and nobody gets {owner.first} out.' },
           outcomes: {
@@ -825,6 +843,8 @@ export const HOSTAGE_SIGNATURE: CallTree = {
       prompt: '{owner.first} has gone still since {taker.first} raised the handgun toward {owner.him}.',
       exchange: [{ by: 'radio', line: 'Side window. Handgun’s pointed at the owner. Holding.' }, { by: 'owner', line: '{taker.first}. Look at me.' }],
       promptIf: [
+        { when: { marks: ['withdrawn'] }, prompt: '{taker.first} wants nothing from anyone now, and {owner.first} is the one the handgun points at.',
+          exchange: [{ by: 'negotiator', line: 'Are you planning to hurt yourself?' }, { by: 'taker', line: 'Just keep everybody back.' }] },
         { when: { notSafe: ['courier'] }, prompt: 'The handgun is pointed at {owner.first}. {courier.first} is pressed against the stacked boxes.' },
         { when: GROUP_IN, prompt: '{owner.first} is pinned against the counter by {taker.first}. {others} {others#has|have} backed against the shelves.' },
         { when: { marks: ['team_close'] }, prompt: '{owner.first} is staring at what {taker.first} is holding. Your squad is a few steps away.' },
@@ -1076,7 +1096,7 @@ export const HOSTAGE_SIGNATURE: CallTree = {
       epilogue: '{owner.first} sold the shop that spring. {owner.He} never stood behind that counter again.' },
     entry_hurt: { title: 'Out, but hurt', disposition: 'resolved',
       summary: '{owner.first} is getting care at the curb, hurt in the entry. {courier.first} is safe. Officers are holding {taker.first}. {owner.first} asks someone to lock up for {owner.him}.',
-      epilogue: '{owner.first} hasn’t said {taker.first}’s name since, not to the officers and not at home.' },
+      epilogue: '{owner.first} hasn’t said {taker.first}’s name since, not to the officers and not to the nurse who asked.' },
     went_in_for_owner: { title: 'Carried out', disposition: 'resolved',
       summary: 'The team went in for {owner.first}, who is in the ambulance now. {courier.first} is unhurt. {taker.first} was taken without a scratch.',
       epilogue: '{owner.first} asked the nurse whether {taker.first} was hurt. Nobody had thought to tell {owner.him}.' },
