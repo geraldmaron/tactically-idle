@@ -10,6 +10,8 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import type { ReactNode } from 'react';
 import '../../../../ui/app.css';
 import '../../../../ui/screens/ops-visual.css';
+// The game's skin, so the frame shows the player's real screen (plates, stamps, panels).
+import '../../../../ui/skin.css';
 import { NOW } from '../../../../gen/incident/gates/engine-driver';
 import { briefing, builtForScenario, decisionViews, lastResolution, pendingDebrief } from '../../../../sim/operation-selectors';
 import { responseFailurePlan } from '../../../../sim/response-failure';
@@ -31,7 +33,8 @@ import { liveScreen } from '../../../../ui/screens/live-model';
 import type { ActionSelection, Override } from '../../../../ui/screens/live-model';
 import { ActionSheet, LiveView, RoomSheet } from '../../../../ui/screens/LiveView';
 import { focusActingSquad, toggleActingSquad, toggleSupportingSquad } from '../../../../ui/screens/operation-squads';
-import { LastDecisionPeek, OperationFeedback } from '../../../../ui/screens/OperationFeedback';
+import { OperationFeedback } from '../../../../ui/screens/OperationFeedback';
+import { sceneFor } from '../../../../ui/art/Plates';
 import { PrepBriefing } from '../../../../ui/screens/PrepBriefing';
 import { SituationPanel } from '../../../../ui/screens/SituationPanel';
 import { SupportContext } from '../../../../ui/screens/SupportContext';
@@ -59,7 +62,7 @@ export function GameFrame(p: {
   tabs: Map<string, number>; selectedId: string | null; hoverId: string | null; playing: boolean;
   /** Bumped when a choice is picked outside the frame: its card scrolls into view, as a player would scroll to it. */
   reveal: { id: string; seq: number } | null;
-  onReview(id: string): void; onConfirm(id: string): void; onFail(): void;
+  onReview(id: string): void; onConfirm(id: string, lead?: string): void; onFail(): void;
   toast: FrameToast | null; onToastDone(): void; force: ForcePick | null; onForce(band: OutcomeBand | 'roll'): void; onForceCancel(): void;
 }) {
   const fitBox = useRef<HTMLDivElement>(null);
@@ -194,7 +197,7 @@ export function GameFrame(p: {
  * the phone frame; the true-device page (`?frame=player`) draws it full window. */
 export function GameApp(p: {
   state: GameState; screen: FrameScreen; names: boolean;
-  onReview(id: string): void; onConfirm(id: string): void; onFail(): void;
+  onReview(id: string): void; onConfirm(id: string, lead?: string): void; onFail(): void;
   toast: FrameToast | null; onToastDone(): void;
 }) {
   const [overlay, setOverlay] = useState<HTMLElement | null>(null);
@@ -293,9 +296,23 @@ function ForcePicker({ pick, onPick, onCancel }: { pick: ForcePick; onPick(band:
 
 // ---------------------------------------------------------------- the game's screens
 
+/** The frame's own Confirm, waiting for the lab to commit it (rolled, or forced from the band picker). */
+export interface LabConfirm { actionId: string; decisions: number }
+
+/** The revision a new state opens the result beat on, or null for the decide beat. Only the frame's
+ * own Confirm opens it, once its decision is the one decision added and the call is still running
+ * (a call-ending decision goes to the debrief). A lab step, a rewind or a replay starts on the
+ * decide beat, as does a cancelled band picker followed by some other move. */
+export function labResultOf(confirmed: LabConfirm | null, state: GameState): number | null {
+  const run = state.activeRun;
+  const last = run?.history.at(-1);
+  if (!confirmed || !run || run.status !== 'active' || run.stage === 'debrief' || !last) return null;
+  return run.history.length === confirmed.decisions + 1 && last.actionId === confirmed.actionId ? last.revision : null;
+}
+
 /** OpsLive's wiring with the lab's moves in place of the store: one selector block (liveScreen),
  * the game's LiveView, its review sheet and room sheet, its result record and situation panel. */
-function LiveScreen({ state, onReview, onConfirm,  onFail }: { state: GameState; onReview(id: string): void; onConfirm(id: string): void; onFail(): void }) {
+function LiveScreen({ state, onReview, onConfirm,  onFail }: { state: GameState; onReview(id: string): void; onConfirm(id: string, lead?: string): void; onFail(): void }) {
   const run = state.activeRun!;
   const [focusId, setFocusId] = useState<SquadId | null>(() => run.history.at(-1)?.actingSquadIds[0] ?? null);
   const [selection, setSelection] = useState<ActionSelection | null>(null);
@@ -312,19 +329,30 @@ function LiveScreen({ state, onReview, onConfirm,  onFail }: { state: GameState;
     return { revision: r.revision, spaceIds: [r.targetId, ...r.knowledgeChanges.map(k => k.factId)].filter((x): x is Id => !!x) };
   }, [state]);
 
-  // A new frame (a step, a rewind) starts with nothing under review, as after a commit in the game.
+  // The result beat (docs/call-presentation.md), as OpsLive keeps it: the revision the frame's own
+  // Confirm just committed, read on its own before the next decision shows.
+  const [resultOf, setResultOf] = useState<number | null>(null);
+  const confirmed = useRef<LabConfirm | null>(null);
+
+  // A new frame (a step, a rewind) starts with nothing under review, as after a commit in the game,
+  // and on the decide beat unless it is the frame's own Confirm landing.
   const shownState = useRef(state);
   if (shownState.current !== state) {
     shownState.current = state;
     if (selection || override || panel !== 'none') { setSelection(null); setOverride(null); setActiveOfficer(null); setPanel('none'); }
+    const next = labResultOf(confirmed.current, state);
+    confirmed.current = null;
+    if (next !== resultOf) setResultOf(next);
   }
   const screen = liveScreen(state, NOW, { focusId, selection, override, floor, activeOfficer, selectedSpaceId: selSpace, lastChange, showRooms, detailsOpen: panel === 'action' });
   const targetFloor = screen?.review.targetFloor ?? null;
   useEffect(() => { if (targetFloor !== null) setFloor(targetFloor); }, [screen?.review.view?.id, targetFloor]);
   if (!screen) return <div className="page"><p className="dim">Operation location unavailable.</p></div>;
   const { model, review } = screen;
-  const { deployed, focus, view, acting, support, actionRule, maxActing, resupply, alternatives, scenario, spaceById, targetLabel, availableMembers, actorUnavailable, floorOf } = review;
+  const { deployed, focus, view, acting, support, actionRule, maxActing, resupply, lead, bestFit, leadOrder, leadOfficerId, leadMarks, leadBlend, leadCerts, alternatives, scenario, spaceById, targetLabel, availableMembers, actorUnavailable, floorOf } = review;
   const decisions = decisionViews(state);
+  const beat = resultOf !== null && decisions.at(-1)?.revision === resultOf ? 'result' : 'decide';
+  const nextStage = model.progress.stages.find(step => step.state === 'current')?.label;
   const failurePlan = responseFailurePlan(state);
 
   const pickAction = (id: Id) => {
@@ -342,12 +370,17 @@ function LiveScreen({ state, onReview, onConfirm,  onFail }: { state: GameState;
   const confirm = () => {
     if (!view?.eligible || panel !== 'action') return;
     setPanel('none');
-    onConfirm(view.id);
+    confirmed.current = { actionId: view.id, decisions: run.history.length };
+    onConfirm(view.id, leadOfficerId);
   };
+
 
   return (
     <LiveView
       {...model}
+      beat={beat}
+      onContinue={() => setResultOf(null)}
+      continueLabel={nextStage ? `Continue to ${nextStage}` : 'Continue'}
       onFocusSquad={id => { if (view && actorUnavailable(id)) return; setFocusId(id); setActiveOfficer(null); if (view) setOverride({ actionId: view.id, ...focusActingSquad({ acting, support }, id) }); }}
       onSelectAction={selectAction}
 
@@ -357,8 +390,8 @@ function LiveScreen({ state, onReview, onConfirm,  onFail }: { state: GameState;
       onToggleRooms={() => setShowRooms(value => !value)}
       onCancel={() => {}}
       onOpenDetails={() => setPanel(panel === 'action' ? 'none' : 'action')}
-      lastDecision={<LastDecisionPeek decisions={decisions} onReveal={() => document.querySelector('.lab-frame-device .operation-feedback')?.scrollIntoView({ block: 'start' })} />}
-      feedback={<OperationFeedback officers={state.officers} decisions={decisions} explicitCompletion={(scenario?.version ?? 0) >= 4} onOpenLog={() => setPanel('none')} />}
+      feedback={<OperationFeedback officers={state.officers} decisions={decisions} folded={beat === 'decide'} explicitCompletion={(scenario?.version ?? 0) >= 4} currentPrompt={model.progress.prompt} onOpenLog={() => setPanel('none')} />}
+      scene={sceneFor(scenario?.incident?.type)}
       situation={scenario && <SituationPanel scenario={scenario} run={run} />}
       supportContext={scenario && <><IncidentPeopleStatus scenario={scenario} run={run} state={state} />
         <SupportContext scenario={scenario} run={run} actions={model.actions} open={panel === 'support'} onOpen={() => setPanel('support')} onClose={() => setPanel('none')}
@@ -380,7 +413,7 @@ function LiveScreen({ state, onReview, onConfirm,  onFail }: { state: GameState;
         acting={acting}
         support={support}
         onToggleActing={id => { if (!view || (!acting.includes(id) && actorUnavailable(id))) return; const next = toggleActingSquad({ acting, support }, id, maxActing); setOverride({ actionId: view.id, ...next }); setFocusId(next.acting.includes(id) ? id : next.acting[0]); }}
-        onToggleSupport={id => { if (!view?.support || (!support.includes(id) && availableMembers(id).length === 0)) return; setOverride({ actionId: view.id, ...toggleSupportingSquad({ acting, support }, id, view.support.maxSquads) }); }}
+        onToggleSupport={id => { if (!view?.support || (!support.includes(id) && availableMembers(id).length === 0)) return; setOverride({ actionId: view.id, ...toggleSupportingSquad({ acting, support }, id, view.support.maxSquads), ...(leadOfficerId ? { lead: leadOfficerId } : {}) }); }}
         maxActing={maxActing}
         squadPositions={Object.fromEntries(run.squadTasks.map(task => [task.squadId, spaceById.get(task.positionId)?.label ?? task.positionId]))}
         unavailableActors={deployed.filter(squad => actorUnavailable(squad.id)).map(squad => squad.id)}
@@ -388,6 +421,16 @@ function LiveScreen({ state, onReview, onConfirm,  onFail }: { state: GameState;
         participantNames={view?.officerIds.map(id => state.officers[id]).filter(officer => !!officer).map(officer => `${officer.firstName} ${officer.surname}`) ?? []}
         supportTask={actionRule?.support ? `${actionRule.support.label} at ${spaceById.get(actionRule.support.coverSpaceId)?.label ?? actionRule.support.coverSpaceId}` : null}
         targetLabel={targetLabel}
+        officers={state.officers}
+        lead={lead}
+        bestFit={bestFit}
+        leadOrder={leadOrder}
+        leadMarks={leadMarks}
+        leadBlend={leadBlend}
+        leadCerts={leadCerts}
+        // Read-only here until a lab move carries the lead (LabMove has no lead field): a swap the
+        // lab previewed but rolled with the best fit would show odds the step never used.
+        onPickLead={undefined}
         onConfirm={confirm}
         resupply={resupply}
         resupplyMinutes={(run.resupplies ?? []).reduce((sum, delivery) => sum + delivery.minutes, 0)}

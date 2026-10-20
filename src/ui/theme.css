@@ -39,6 +39,13 @@
   --font-cond: 'Barlow Condensed', 'Arial Narrow', sans-serif;
   --font-ui: 'Barlow', system-ui, -apple-system, sans-serif;
   --font-marker: 'Kalam', 'Comic Sans MS', cursive;
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  /* the night-shift skin (skin.css): case-file manila, panel depth */
+  --manila: #b39a6c;
+  --manila-ink: #2a2113;
+  --edge-hi: rgba(255, 255, 255, 0.07);
+  --shadow-card: 0 1px 0 rgba(0, 0, 0, 0.5), 0 10px 24px -12px rgba(0, 0, 0, 0.75);
+  --panel-grad: linear-gradient(180deg, rgba(34, 48, 71, 0.72), rgba(19, 28, 42, 0.92));
 
   --radius: 8px;
   --touch: 44px;
@@ -63,6 +70,17 @@ body,
 button {
   font: inherit;
   color: inherit;
+}
+/* Game chrome is tapped and held, not read: no text selection or iOS callout on a long press.
+   Prose, inputs and anything marked .selectable stay selectable. */
+.app button,
+.app [role="button"],
+.app [role="tab"],
+.app nav,
+.app summary {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
 }
 @media (prefers-reduced-motion: reduce) {
   *,

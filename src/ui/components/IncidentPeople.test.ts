@@ -20,7 +20,7 @@ const result = (): DebriefResult => ({
   disposition: 'relief_partial', completionAchieved: false, remainingTasks: ['Finish the medical transfer.'],
   objective: { score: 100, label: 'Resolved' }, civilianSafety: { score: 100, label: 'Everyone safe' },
   officerCondition: [{ officerId: 'off_chen', stressBefore: 12, stressAfter: 12, xpGained: 0 }],
-  informationPreserved: [], resources: [], unitWear: [], trustDelta: 0, fundingReward: 0, devPointReward: 0, causes: [],
+  informationPreserved: [], resources: [], unitWear: [], trustDelta: 0, fundingReward: 0, causes: [],
 });
 beforeEach(() => { state = makeState(); });
 

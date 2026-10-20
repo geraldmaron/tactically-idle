@@ -71,23 +71,20 @@ describe('squad arrangement review', () => {
     const first = renderToStaticMarkup(createElement(SquadOptimizer, { open: true, onClose: () => {} }));
     expect(first).toContain('aria-label="Unlock Noor Vale" aria-pressed="true"');
     expect(first).toContain('aria-label="Unlock squad B, Bravo" aria-pressed="true"');
-    expect(first).toContain('1 saved');
+    expect(first).toContain('Officer locks<span class="disclosure-count">1</span>');
     expect(first).not.toContain('disabled="">Undo last arrangement');
     const second = renderToStaticMarkup(createElement(SquadOptimizer, { open: true, onClose: () => {} }));
     expect(second).toEqual(first);
   });
 
-  it('excludes the whole squad when a member has an operation assignment without an active run', () => {
+  it('keeps a squad with an officer out on a call selectable and says who stays put', () => {
     state.activeRun = null;
     state.officers.off_vale.assignment = { kind: 'operation', runId: 'away-run' };
     const html = renderToStaticMarkup(createElement(SquadOptimizer, { open: true, onClose: () => {} }));
     const alpha = html.match(/<input[^>]*aria-label="Include squad A, Alpha"[^>]*>/)?.[0];
-    const bravo = html.match(/<input[^>]*aria-label="Include squad B, Bravo"[^>]*>/)?.[0];
-    expect(alpha).toContain('disabled=""');
-    expect(alpha).not.toContain('checked=""');
-    expect(bravo).not.toContain('disabled=""');
-    expect(bravo).toContain('checked=""');
-    expect(html).toContain('Deployed, stays fixed');
+    expect(alpha).not.toContain('disabled=""');
+    expect(alpha).toContain('checked=""');
+    expect(html).toContain('On a call, officers out stay put');
   });
 
   it('keeps the undo control visible with the current reason when restoring would be unsafe', () => {

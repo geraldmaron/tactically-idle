@@ -267,10 +267,6 @@
   stroke-linejoin: round;
   stroke-opacity: 0.96;
 }
-.bp-mloop-2 {
-  stroke-width: 0.2px;
-  stroke-opacity: 0.8;
-}
 .bp-mline {
   fill: none;
   stroke-width: 0.26px;
@@ -417,9 +413,6 @@
   stroke-dashoffset: 1;
   animation: bp-draw 0.9s cubic-bezier(0.3, 0.6, 0.3, 1) forwards;
 }
-.bp-mloop-2.bp-draw {
-  animation-delay: 0.18s;
-}
 .bp-fade {
   animation: bp-fade 0.5s ease-out 0.45s both;
 }
@@ -481,9 +474,11 @@
   gap: 0;
   opacity: 0.8;
 }
-.bp-zoomctl:hover,
 .bp-zoomctl:focus-within {
   opacity: 1;
+}
+@media (hover: hover) {
+  .bp-zoomctl:hover { opacity: 1; }
 }
 .bp-zbtn {
   width: var(--touch);

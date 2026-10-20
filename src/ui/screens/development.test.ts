@@ -5,15 +5,14 @@ import { DEV_NODES } from '../../content/dev-tree';
 import { createInitialState } from '../../sim/department';
 import { DEVELOP_HANDLERS } from '../../sim/develop';
 import { nodeOptions } from '../../sim/department-selectors';
-import { DevelopmentDetail, DevelopmentTile, DevelopScreen, filterDevelopmentOptions, layoutBranch, tileColumns, tileState } from './Develop';
+import { DevelopmentDetail, DevelopmentTile, DevelopScreen, filterDevelopmentOptions, nextDevelopment, nodeSummary, tileState, trackRows } from './Develop';
 
 const NOW = Date.UTC(2026, 9, 3, 12);
 const state = createInitialState(NOW, 1);
-state.department.devPoints = 100;
+
 state.department.funding = 100_000;
-vi.mock('../store', () => ({ useGame: () => state, useDevelopmentBudget: () => ({ totalDP: state.department.devPoints }), unlockDevelopment: vi.fn() }));
+vi.mock('../store', () => ({ useGame: () => state, send: vi.fn() }));
 vi.mock('../components/toast', () => ({ useToast: () => ({ notify: vi.fn() }) }));
-vi.mock('../components/PointPacks', () => ({ PointPacks: () => null }));
 vi.mock('../components/Sheet', () => ({ Sheet: ({ open, title, children, footer }: { open: boolean; title: string; children: ReactNode; footer?: ReactNode }) => open ? createElement('section', { role: 'dialog', 'aria-label': title }, children, footer) : null }));
 function option(nodeId: string, tier = 0) {
   const sample = structuredClone(state);
@@ -25,26 +24,27 @@ function detail(nodeId: string, tier = 0, patch = {}) {
 }
 
 describe('development browsing and shared detail', () => {
-  it('renders compact stats, branch tabs with progress, a ready rail and one tile per development', () => {
+  it('renders stats with rates, a Next card, branch tabs and the highlighted branch as one track (develop-track)', () => {
     const html = renderToStaticMarkup(createElement(DevelopScreen, { highlightedNode: 'personnel_academy', highlightRequest: 2 }));
-    expect(html).toContain('aria-label="100 development points"');
-    expect(html).toContain('Get Points');
+    expect(html).toContain('aria-label="$100,000 funding');
+    expect(html).not.toMatch(/development points|Get Points|\bDP\b/);
+    expect(html).toContain('Free at Level 3');
     expect(html).toContain('aria-label="Development branches"');
-    expect(html).not.toContain('aria-label="Development ownership"');
-    expect(html).toContain('aria-label="Staff, 0 of 8 owned"');
-    expect(html).toContain('Ready to buy');
-    expect(html).toContain('Expanded barracks');
-    expect(html).toMatch(/data-development-node="personnel_academy"[^>]*class="dev-tile store-node-highlight"/);
-    expect((html.match(/data-development-node=/g) ?? [])).toHaveLength(Object.keys(DEV_NODES).length);
-    expect(html).not.toMatch(/earned \+|test DP|department level/i);
+    expect(html).toContain('aria-label="Staff, 0 of 8 owned');
+    expect(html).toContain('Next up');
+    expect(html).toContain('class="dev-track"');
+    expect(html).toMatch(/data-development-node="personnel_academy"[^>]*class="dev-node store-node-highlight"/);
+    const staff = Object.values(DEV_NODES).filter((node) => node.branch === 'personnel').length;
+    expect((html.match(/data-development-node=/g) ?? [])).toHaveLength(staff);
+    expect(html).not.toMatch(/earned \+|test DP/i);
   });
 
   it('feeds the ready rail with genuinely affordable developments, scoped by branch', () => {
     const sample = structuredClone(state);
     DEVELOP_HANDLERS.unlockNode(sample, 'personnel_academy', 1);
     DEVELOP_HANDLERS.unlockNode(sample, 'intel_records', 1);
-    sample.department.devPoints = 3;
-    sample.department.funding = 3000;
+
+    sample.department.funding = 6000;
     const options = nodeOptions(sample);
     expect(filterDevelopmentOptions(options, 'all', 'owned').map((entry) => entry.node.id)).toEqual(['personnel_academy', 'intel_records']);
     const available = filterDevelopmentOptions(options, 'all', 'available').map((entry) => entry.node.id);
@@ -55,49 +55,55 @@ describe('development browsing and shared detail', () => {
     expect(filterDevelopmentOptions(options, 'wellbeing', 'owned')).toEqual([]);
   });
 
-  it('fits three tile columns at 320 and four at 390', () => {
-    expect(tileColumns(288)).toBe(3);
-    expect(tileColumns(358)).toBe(4);
+  it('lays a branch out as one track: each development right after what it needs, one step deeper', () => {
+    for (const branch of ['personnel', 'field', 'intel', 'logistics', 'wellbeing'] as const) {
+      const nodes = nodeOptions(state).filter((entry) => entry.node.branch === branch);
+      const rows = trackRows(nodes);
+      expect(rows.map((row) => row.option.node.id).sort()).toEqual(nodes.map((entry) => entry.node.id).sort());
+      rows.forEach((row, index) => {
+        if (!row.parentId) { expect(row.depth).toBe(0); return; }
+        const parent = rows.findIndex((r) => r.option.node.id === row.parentId);
+        expect(parent).toBeLessThan(index);
+        expect(row.depth).toBe(rows[parent].depth + 1);
+      });
+    }
+    const intel = trackRows(nodeOptions(state).filter((entry) => entry.node.branch === 'intel'));
+    const drone = intel.find((row) => row.option.node.id === 'intel_drone')!;
+    expect(drone.parentId).toBe('intel_thermal');
   });
 
-  it('lays each branch out as a tree: chains left to right, a second child under its parent, no overlaps', () => {
-    for (const columns of [3, 4]) {
-      for (const branch of ['personnel', 'field', 'intel', 'logistics', 'wellbeing'] as const) {
-        const nodes = nodeOptions(state).filter((entry) => entry.node.branch === branch);
-        const cells = layoutBranch(nodes, columns);
-        expect(cells).toHaveLength(nodes.length);
-        expect(new Set(cells.map((cell) => `${cell.row}:${cell.col}`)).size).toBe(cells.length);
-        expect(cells.every((cell) => cell.col >= 0 && cell.col < columns)).toBe(true);
-        // The staff branch holds eight developments (four of them Command Staff hires): three rows at three columns.
-        expect(Math.max(...cells.map((cell) => cell.row)) + 1).toBeLessThanOrEqual(3);
-        // Every development whose prerequisite is in the branch is drawn connected to it.
-        for (const cell of cells) if (cell.option.node.requires.some((id) => nodes.some((entry) => entry.node.id === id))) expect(cell.link).not.toBeNull();
-      }
-      const field = layoutBranch(nodeOptions(state).filter((entry) => entry.node.branch === 'field'), columns);
-      const at = (id: string) => field.find((cell) => cell.option.node.id === id)!;
-      expect([at('field_response_program').row, at('field_response_program').col]).toEqual([at('field_entry_course').row, at('field_entry_course').col + 1]);
-      expect(at('field_specialist_response').link).toBe('left');
-      expect(at('field_controlled_access')).toMatchObject({ row: at('field_entry_course').row + 1, col: at('field_entry_course').col, link: 'up' });
-    }
+  it('points at the cheapest development that can be bought now, else the cheapest that is open', () => {
+    const options = nodeOptions(state);
+    const next = nextDevelopment(options)!;
+    expect(next.quote.ok).toBe(true);
+    for (const other of options.filter((entry) => entry.quote.ok)) expect(next.quote.cost!.funding).toBeLessThanOrEqual(other.quote.cost!.funding);
+    const broke = structuredClone(state);
+    broke.department.funding = 0;
+
+    const open = nextDevelopment(nodeOptions(broke))!;
+    expect(open.status).not.toBe('locked');
+    expect(open.quote.ok).toBe(false);
+    expect(nodeSummary(option('intel_drone'))).toMatch(/^Unlocks Camera drone/);
   });
 
   it('shows state, tier pips and cost on a tile, with the full story in its label', () => {
-    const budget = { dp: 100, funding: 100_000 };
+    const budget = { funding: 100_000 };
     const tiered = renderToStaticMarkup(createElement(DevelopmentTile, { option: option('personnel_academy', 1), budget, highlighted: false, onOpen: () => {} }));
     expect(tiered).toContain('data-state="ready"');
-    expect(tiered).toContain('Training academy. Ready to buy. Tier 1 of 3. Next costs 4 DP and $4,000');
-    expect((tiered.match(/<i[ >]/g) ?? [])).toHaveLength(3);
+    expect(tiered).toContain('Training academy. Ready to buy. Tier 1 of 3. Next costs $7,200. Or granted at Level 5, 1 of 5');
+    expect(tiered).toContain('Free at Level 5<b>1 of 5</b>');
+    expect(((tiered.match(/<span class="dev-pips">(.*?)<\/span>/)?.[1] ?? '').match(/<i[ >]/g) ?? [])).toHaveLength(3);
     expect(tiered).toContain('<i data-on="yes"></i><i></i><i></i>');
     expect((tiered.match(/<button/g) ?? [])).toHaveLength(1);
-    const locked = renderToStaticMarkup(createElement(DevelopmentTile, { option: option('intel_drone'), link: 'left', budget, highlighted: false, onOpen: () => {} }));
+    const locked = renderToStaticMarkup(createElement(DevelopmentTile, { option: option('intel_drone'), budget, highlighted: false, onOpen: () => {} }));
     expect(locked).toContain('data-state="locked"');
-    expect(locked).toContain('data-link="left"');
+    expect(locked).toContain('Needs Thermal imaging');
     expect(locked).toContain('Locked, needs Thermal imaging');
     const broke = structuredClone(state);
     broke.department.funding = 0;
-    const short = renderToStaticMarkup(createElement(DevelopmentTile, { option: nodeOptions(broke).find((entry) => entry.node.id === 'personnel_academy')!, budget: { dp: 100, funding: 0 }, highlighted: false, onOpen: () => {} }));
+    const short = renderToStaticMarkup(createElement(DevelopmentTile, { option: nodeOptions(broke).find((entry) => entry.node.id === 'personnel_academy')!, budget: { funding: 0 }, highlighted: false, onOpen: () => {} }));
     expect(short).toContain('Needs more funding');
-    expect(short).toMatch(/<span data-short="yes">\$2,500<\/span>/);
+    expect(short).toMatch(/<span data-short="yes">\$4,900<\/span>/);
     const owned = option('personnel_negotiation', 1);
     expect(tileState(owned)).toBe('owned');
     expect(renderToStaticMarkup(createElement(DevelopmentTile, { option: owned, budget, highlighted: false, onOpen: () => {} }))).toContain('Negotiation training. Owned');
@@ -108,7 +114,7 @@ describe('development browsing and shared detail', () => {
     expect(academy).toContain('role="dialog" aria-label="Training academy"');
     expect(academy).toContain('1 total training slot');
     expect(academy).toContain('2 total training slots');
-    for (const line of ['3 DP · $2,500', '4 DP · $4,000', '6 DP · $6,500', 'Tier ladder', 'Current', 'Open Training', 'Upgrade to tier I']) expect(academy).toContain(line);
+    for (const line of ['$4,900 or Level 3', '$7,200 or Level 5', '$11.3K or Level 7', 'Tier ladder', 'Current', 'Open Training', 'Buy tier I', 'Buy now', 'Or free', 'Free at Level 3']) expect(academy).toContain(line);
     expect(academy).not.toContain('Needs first');
     expect(academy).not.toContain('Open Gear');
     const manager = detail('logistics_equipment_manager');
@@ -130,8 +136,8 @@ describe('development browsing and shared detail', () => {
     expect(html).toContain('+$120/h funding');
     expect(html).toContain('+$200/h funding');
     expect(html).toMatch(/data-state="current" aria-current="step"><span class="dev-ladder-tier">II</);
-    expect(html).toContain('Upgrade to tier III');
-    expect(html).toContain('5 DP · $6,000');
+    expect(html).toContain('Buy tier III');
+    expect(html).toContain('Free at Level 8');
   });
 
   it('removes the purchase CTA at max tier and keeps one-time programs complete', () => {
@@ -139,7 +145,7 @@ describe('development browsing and shared detail', () => {
     expect(html).toMatch(/data-state="current" aria-current="step"><span class="dev-ladder-tier">III</);
     expect(html).toContain('x2 faster');
     expect(html).toContain('Fully upgraded');
-    expect(html).not.toContain('Upgrade to tier');
+    expect(html).not.toContain('Buy tier');
     const program = detail('personnel_negotiation', 1);
     expect(program).toContain('Program owned');
     expect(program).not.toContain('Tier ladder');
@@ -154,7 +160,7 @@ describe('development browsing and shared detail', () => {
     sample.department.funding = 0;
     const unavailable = nodeOptions(sample).find((entry) => entry.node.id === 'personnel_academy')!;
     const html = detail('personnel_academy', 0, { option: unavailable, failure: 'Development changed; review this tier.' });
-    expect(html).toContain('Needs $2,500');
+    expect(html).toContain('Needs $4,900');
     expect(html).toContain('disabled=""');
     expect(html).toContain('role="alert"');
     expect(html).toContain('Development changed; review this tier.');

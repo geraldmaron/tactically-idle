@@ -1,5 +1,5 @@
-// Pure shared development read model. UI, simulation, and campaign wallet quote
-// the same next purchase, without creating a dependency on the settlement loop.
+// Pure shared development read model. UI and simulation quote the same next purchase,
+// without creating a dependency on the settlement loop.
 import { DEV_NODES } from '../content/dev-tree';
 import type { DevelopmentNode, DevelopmentTier, GameState, Id, NodeEffect } from './types';
 
@@ -11,7 +11,7 @@ export function maxDevelopmentTier(node: DevelopmentNode): number {
 
 export function developmentTierDefinition(node: DevelopmentNode, tier: number): DevelopmentTier | null {
   if (!Number.isInteger(tier) || tier < 1 || tier > maxDevelopmentTier(node)) return null;
-  return node.tiers?.[tier - 1] ?? { cost: node.cost, effects: node.effects };
+  return node.tiers?.[tier - 1] ?? { cost: node.cost, grant: node.grant, effects: node.effects };
 }
 
 /** Current purchases record their explicit tier. */
@@ -61,8 +61,6 @@ export function quoteDevelopment(state: GameState, nodeId: Id, expectedTier?: nu
     reason = `Development changed. ${node.name} is ${currentTier ? `at tier ${tierLabel(currentTier)}` : 'not owned'}; review tier ${tierLabel(targetTier)} before buying.`;
   } else if (missingPrerequisites.length) {
     reason = `Requires ${missingPrerequisites.map((id) => DEV_NODES[id]?.name ?? id).join(', ')}`;
-  } else if (state.department.devPoints < next!.cost.dp) {
-    reason = `Needs ${next!.cost.dp} development points (have ${Math.floor(state.department.devPoints * 10) / 10})`;
   } else if (state.department.funding < next!.cost.funding) {
     reason = `Needs ${fundingLabel(next!.cost.funding)} (have ${fundingLabel(state.department.funding)})`;
   }

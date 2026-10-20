@@ -6,7 +6,7 @@ import type { IncidentTemplate, SituationModel } from './types';
 // door) is never concedable: family never goes on the line.
 export const BARRICADE_TEMPLATE: IncidentTemplate = {
   type: 'barricaded',
-  label: 'Protective response',
+  label: 'Barricade',
   tree,
   cast: [
     { id: 'subjects', kind: 'subject', count: { min: 1, max: 1 }, keyRoles: ['subject'], person: {

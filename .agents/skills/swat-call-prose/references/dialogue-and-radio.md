@@ -91,6 +91,38 @@ ten-codes, which differ by agency. No war words.
 Release in one line. When something happens fast, the radio says it once and
 stops. "He’s out. He’s sitting down." The next line belongs to the medic.
 
+## The transcript (depth surfaces, 2026-10-19)
+
+The transcript is where the voices live now: `exchange` on a node, a prompt variant or an outcome.
+Each line is `{ by, line }`. The UI prints the speaker's name beside the line, so the line has no
+quotation marks, no speaker tag and no colon. Speech in narration fields keeps the rules above.
+
+- **Two to four lines at a decision, one to three in a result.** A transcript is a beat, not a
+  scene. The last line carries the pressure into the choice.
+- **Every speaker sounds like one person.** Use the voice markers on the person card (D4). The
+  subject's diction moves with their meters across the call: clipped and hostile early, longer
+  and slower once heard, flat when withdrawing. The same line pattern never serves two people.
+- **The negotiator speaks as the player's voice.** Use the stairway's moves (swat-call-design
+  psychology.md): a label, a mirror, a pause, an open question, a boundary. The negotiator never
+  promises what command hasn't approved, except in a choice written as a lie (E12.6), and never
+  narrates the plan.
+- **A held person speaks too.** The owner, the courier and the child get lines that are theirs:
+  what they fear, what they notice, what they say to the subject.
+- **Radio stays radio.** Position, status, need. It can also carry what the team sees that the
+  subject can't (lens L1).
+- **No line explains.** Nobody states their motive, their diagnosis or the hidden truth. A line
+  can lie, deflect or go quiet, and the next line shows it.
+- **Transcript lines are sourced.** The speaker is the source, so an accusation in their mouth
+  is their framing ("You called me a thief in front of them."), and fragments, shouts and feeling
+  words are allowed (E17). Stock spoken lines are still banned.
+- **The worst bound line fits 90 characters.**
+
+1. Before (narration) "Desmond says nobody leaves until Ruth signs." After, as a transcript:
+   "Desmond: Six years. One page. That's all I want." then "Negotiator: Six years at that
+   counter." (The UI draws the names. The data holds only the words.)
+2. Before "The owner is scared." After "Ruth: I don't have my glasses. I can't sign
+   what I can't read."
+
 ## Contact channels and who stands where
 
 Contact with a person inside runs only through these channels.

@@ -11,9 +11,11 @@ import { simNow } from './calendar';
 import { fullName } from './officer';
 import { createUnit } from './equipment';
 import { quoteDevelopment } from './development-tiers';
+import { applyGrants, applyTier } from './grants';
 import { MANAGERS } from './command-staff';
 import { tunable } from './tuning';
 import { courseFee } from './staff-pool';
+import { postFunding } from './ledger';
 
 /** Tunable (sim/tuning.ts). */
 export const DEVELOP_TUNING = tunable('DEVELOP_TUNING', {
@@ -68,20 +70,11 @@ export function nodeCheck(state: GameState, node: DevelopmentNode): NodeCheck {
 function unlockNode(d: GameState, nodeId: Id, expectedTier = 1): HandlerResult {
   const quote = quoteDevelopment(d, nodeId, expectedTier);
   if (!quote.ok) return refusal(quote.reason ?? 'Cannot buy this development');
-  const { node, cost, targetTier, effects, currentEffects } = quote;
-  const dep = d.department;
-  dep.devPoints -= cost!.dp;
-  dep.funding -= cost!.funding;
-  dep.developmentTiers ??= {};
-  dep.developmentTiers[node!.id] = targetTier!;
-  if (!dep.unlockedNodes.includes(node!.id)) dep.unlockedNodes.push(node!.id);
-  // Persist only the difference: upgrading never replays purchased capacities.
-  for (const kind of ['rosterCap', 'trainingSlots'] as const) {
-    const total = (list: NodeEffect[]) => list.reduce((sum, effect) => sum + (effect.kind === kind ? effect.delta : 0), 0);
-    const difference = total(effects) - total(currentEffects);
-    if (kind === 'rosterCap') dep.rosterCap += difference;
-    else dep.trainingSlots += difference;
-  }
+  const { node, cost, targetTier } = quote;
+  postFunding(d.department, -cost!.funding, 'development', `${node!.name} ${['I', 'II', 'III', 'IV', 'V'][targetTier! - 1] ?? targetTier}`, simNow(d));
+  applyTier(d, node!.id, targetTier!);
+  // A purchase can own the last prerequisite of a development whose milestone already holds.
+  applyGrants(d, simNow(d));
   return OK;
 }
 
@@ -108,6 +101,7 @@ export function courseCheck(state: GameState, course: Course, officer: Officer |
   if (officer) {
     if (officer.assignment?.kind === 'operation') return no(`${fullName(officer)} is deployed`);
     if (officer.assignment?.kind === 'training') return no(`${fullName(officer)} is already in training`);
+    if (officer.assignment?.kind === 'detail') return no(`${fullName(officer)} is on an instructor detail`);
     const missing = (course.requiresCerts ?? []).filter((cert) => !officer.certs.includes(cert));
     if (missing.length) return no(`Requires prior qualification: ${missing.map((cert) => cert.replaceAll('_', ' ')).join(', ')}`);
     const { cert, rating } = course.grants;
@@ -145,7 +139,7 @@ function startCourse(d: GameState, officerId: Id, courseId: Id): HandlerResult {
   const check = courseCheck(d, course, officer);
   if (!check.ok) return refusal(check.reason ?? 'Cannot start this course');
   const t = simNow(d);
-  d.department.funding -= courseFee(d, course.cost);
+  postFunding(d.department, -courseFee(d, course.cost), 'training', `${course.name} for ${officer.surname}`, t);
   officer.assignment = { kind: 'training', courseId, startedAt: t, endsAt: t + Math.round(course.hours * HOUR_MS) };
   return OK;
 }
@@ -176,9 +170,9 @@ function buyItem(d: GameState, itemId: Id, qty: number): HandlerResult {
   if (!Number.isInteger(qty) || qty < 1 || qty > DEVELOP_TUNING.maxPurchase) return refusal(`Quantity must be a whole number from 1 to ${DEVELOP_TUNING.maxPurchase}`);
   const check = itemCheck(d, item, qty);
   if (!check.ok) return refusal(check.reason ?? 'Cannot buy this item');
-  d.department.funding -= item.cost * qty;
   // Every purchase is individual units: condition 100, their own wear rate, and a shelf life for consumables.
   const now = simNow(d);
+  postFunding(d.department, -item.cost * qty, 'purchase', qty > 1 ? `${qty} ${item.name}` : item.name, now);
   for (let i = 0; i < qty; i++) createUnit(d, itemId, now);
   return OK;
 }

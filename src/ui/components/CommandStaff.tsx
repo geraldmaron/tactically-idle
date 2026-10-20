@@ -103,7 +103,7 @@ export function ManagerSheet({ id, g, now, onClose, inGear = false }: { id: Mana
             {id === 'training_sergeant' && <TrainingSergeantPolicy g={g} />}
             {id === 'peer_support_lead' && <PeerSupportPolicy g={g} />}
             {id === 'recruiter' && <RecruiterPolicy g={g} />}
-            {id === 'quartermaster' && <QuartermasterPolicy g={g} onOpenGear={inGear ? undefined : () => { onClose(); nav.setGearSection('inventory'); }} />}
+            {id === 'quartermaster' && <QuartermasterPolicy g={g} onOpenGear={inGear ? undefined : () => { onClose(); nav.go('gear'); }} />}
             <ReplaceCard id={id} g={g} name={personName(view)!} severance={staffSeverance(holder)} />
           </>}
       <section className="staff-log" aria-label={`${profile.title} activity log`}>
@@ -188,7 +188,7 @@ function ReplaceCard({ id, g, name, severance }: { id: ManagerId; g: GameState; 
 
 function HireCard({ view, onHire }: { view: ManagerView; onHire: () => void }) {
   return <div className="staff-hire">
-    {view.hire && <div className="chips"><Chip icon="chart">{view.hire.dp} DP</Chip>{view.hire.funding > 0 && <Chip icon="cash">{moneyFull(view.hire.funding)}</Chip>}</div>}
+    {view.hire && <div className="chips"><Chip icon="cash">{moneyFull(view.hire.funding)}</Chip></div>}
     {view.hire?.reason && <p className="reason">{view.hire.reason}</p>}
     <p className="dim">Opening the post puts three candidates on offer. You choose who to hire.</p>
     <Button variant="primary" block onClick={onHire}>Open the post in Develop</Button>

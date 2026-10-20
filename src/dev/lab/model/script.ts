@@ -321,7 +321,7 @@ export function scriptSections(tree: CallTree, rows: readonly ScriptRow[], nodeT
     const node = row.row.path ? nodes.get(row.row.path) : undefined;
     if (node) {
       node.rows.push(row);
-      if (where === `${node.id}.prompt` || where.startsWith(`${node.id}.promptIf[`)) { node.prompts.push(row); continue; }
+      if (where === `${node.id}.prompt` || where.startsWith(`${node.id}.promptIf[`) || where.startsWith(`${node.id}.exchange[`)) { node.prompts.push(row); continue; }
       const choiceId = row.row.action ?? where.slice(node.id.length + 1).split('.')[0];
       let choice = node.choices.find(entry => entry.choice === choiceId);
       if (!choice) node.choices.push(choice = { choice: choiceId, title: null, summary: null, modifiers: [],

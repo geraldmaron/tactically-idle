@@ -1,3 +1,4 @@
+import { learnedXp } from './career';
 import { describe, expect, it } from 'vitest';
 import { createInitialState } from './department';
 import { dispatch } from './game';
@@ -33,7 +34,7 @@ function refused(state: GameState, cmd: Command, now = T0): string {
 /** A funded department with the post open and its first pool on offer. */
 function opened(id: ManagerId, seed = 12345): GameState {
   let s = createInitialState(T0, seed);
-  s.department.devPoints = 50;
+
   s.department.funding = 50_000;
   for (const nodeId of NODES[id]) s = ok(s, { type: 'unlockNode', nodeId });
   return s;
@@ -148,7 +149,7 @@ describe('levers change the loop they name', () => {
     const started = ok(s, { type: 'startCourse', officerId, courseId: course.id });
     expect(started.department.funding).toBe(before - Math.round(course.cost * 0.8));
     const done = ok(started, { type: 'tick' }, T0 + Math.ceil(course.hours) * HOUR_MS);
-    expect(done.officers[officerId].xp - xp).toBe(Math.round(courseXpGain(course.hours) * 1.2));
+    expect(done.officers[officerId].xp - xp).toBe(learnedXp(s.officers[officerId], courseXpGain(course.hours) * 1.2));
   });
 
   it('Quartermaster: cheaper servicing and less wear on top of the post tier', () => {

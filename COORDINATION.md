@@ -22,7 +22,7 @@ needed.
 
 | Lane | Owns |
 |---|---|
-| engine | `src/sim/`, `src/gen/`, `src/commerce/`, `src/content/items.ts`, `src/content/capabilities.ts`, `src/content/scenario-types.ts`, `src/content/locations/`, `src/content/materials.ts`, `src/content/call-trees/types.ts`, `src/content/incidents/types.ts`, `src/architecture/wiring.ts` |
+| engine | `src/sim/`, `src/gen/`, `src/content/items.ts`, `src/content/capabilities.ts`, `src/content/scenario-types.ts`, `src/content/locations/`, `src/content/materials.ts`, `src/content/call-trees/types.ts`, `src/content/incidents/types.ts`, `src/architecture/wiring.ts` |
 | calls | `src/content/` (the rest: call trees, incidents, scenarios, officers, personas, recruits, courses, certs, unlocks, development tree), `docs/calls/`, `.agents/skills/swat-*/` |
 | tooling | `src/gen/incident/gates/`, `src/gen/incident/trees-v13/*.test.ts`, `src/gen/incident/trees-v13/balance.ts`, `src/dev/`, `src/lab-entry.ts`, `scripts/`, `.github/workflows/`, `package.json` scripts |
 | interface | `src/ui/`, `src/main.tsx`, `src/harness.tsx`, `public/`, `scripts/validate-art.mjs` |

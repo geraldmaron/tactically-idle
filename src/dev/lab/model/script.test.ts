@@ -54,7 +54,7 @@ describe('variant space', () => {
 
   it('reads hostage group sizes from the cast slot', () => {
     expect(groupSizes(hostage)).toEqual({ others: [0, 1, 2] });
-    expect(variantSpace(hostage.tree, hostage, 0)).toHaveLength(4 * 3 * 3 * 3);
+    expect(variantSpace(hostage.tree, hostage, 0)).toHaveLength(4 * 3 * 3 * 4);
   });
 });
 

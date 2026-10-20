@@ -390,7 +390,7 @@ export const HOUSE_TREE: CallTree = {
     handed_over: { title: 'No step left to take', disposition: 'unresolved', remainingTasks: ['Get everyone out of the house safely'],
       summary: 'Command still holds the street, and the call is still open. The team has no step left that it can take from here.' },
   },
-  rewards: { funding: 2400, devPoints: 3, trust: 6, xp: 45 },
+  rewards: { funding: 2400, trust: 6, xp: 45 },
 };
 
 export const HOUSE_TEMPLATE: IncidentTemplate = {

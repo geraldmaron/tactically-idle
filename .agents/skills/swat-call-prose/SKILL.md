@@ -94,18 +94,23 @@ wins. The full table, clamps, field reuse and tense rules are in [references/sur
 | Surface | Field | Hard limit | House target | Shape |
 |---|---|---|---|---|
 | Card title | title | 34 chars | 1 to 3 words | a place, object or person |
-| Card hook | summary | none | 100 chars bound, first sentence 14 words | person and want in five words, then the danger |
+| Card hook | summary | none | 145 chars bound, first sentence 14 words | person and want in five words, then the danger |
 | Pressure label | pressureLabel | none | 2 to 4 words | whose safety, then what runs out |
 | Dispatch reason | dispatchReason | 240 | 2 sentences | who called, what they want the team for |
 | Known, unknown | known[], unknown[] | 260 | 12 words | source, claim, how they know |
 | Map marker | markers | 10 chars | 1 word | the claim, uppercase, ? while reported |
 | Map task | action task | 12 chars, counted | 1 to 3 words | where the team goes |
-| Stage prompt | prompt | 120 | 18 words | the new fact, then the pressure |
+| Cold open | coldOpen | 900 | 150 words | the scene before the call: place, history, what happened |
+| Who they are | role profile | 300 | 50 words | one person's visible past |
+| Stage prompt | prompt | 300 | 50 words | the new fact, what it means for a named person, the pressure |
 | Choice title | action title | 60 | 30 chars | verb, object, qualifier |
-| Choice summary | action summary | 230, locked 80 | 20 words | the act, then its cost |
+| Choice summary | action summary | 350, locked 80 | 60 words | the act, who it touches, what it risks |
+| Pull and cost | choice pull, cost | 140 each | 22 words | why a player wants it; who pays |
 | Outcome preview | outcomePreview per band | none | 20 words | how well the team does it |
-| Result line | outcome effect text | 240 | 30 words | who did what, what changed, one tense |
-| Ending | title, summary | 60, 240 | 35 words | who is safe, who is not, one detail |
+| Result line | outcome effect text | 450 | 80 words | the act, the reaction, what it changed |
+| Ending | title, summary | 60, 400 | 70 words | who is safe, who is not, one detail |
+| Transcript | node, promptIf and outcome exchange | 90 a line | 2 to 4 lines, 15 words | the voices, speaker named by the UI |
+| Epilogue | ending epilogue | 200 | 30 words | the after, on one named person |
 | Modifier, support, cert, gear | modifiers[].label, support.label, support.task, certBonus.label, equipment[].label | none | 6 words | the reason, in the world |
 
 Coverage. Every writer-owned field of every action, fact, ending, objective,

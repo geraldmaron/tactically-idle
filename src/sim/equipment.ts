@@ -3,11 +3,13 @@
 // owns the time side: every owned unit ages by perDay x wearRate per game day, and
 // servicing / shelf-life expiry are events the settlement walks in time order.
 // Wear is linear in time, so splitting a span at any boundary changes nothing.
-import type { GameState, HandlerResult, Id, ItemDefinition, ItemUnit, ShiftReport, UnitStatus } from './types';
+import type { GameState, HandlerResult, Id, ItemDefinition, ItemUnit, Officer, ShiftReport, UnitStatus } from './types';
+import { issueKit } from '../content/issue-kit';
 import { ITEMS } from '../content/items';
 import { CALENDAR } from './calendar';
-import { next } from './rng';
+import { hashSeed, next } from './rng';
 import { tunable } from './tuning';
+import { postFunding } from './ledger';
 
 const REAL_HOUR_MS = 3_600_000;
 
@@ -65,6 +67,8 @@ export interface UnitSeed {
   /** Game days since acquisition. */
   ageDays?: number;
   uses?: number;
+  /** A fixed 0..1 draw for the wear rate instead of the department's dice. */
+  wearRoll?: number;
 }
 
 /**
@@ -74,9 +78,13 @@ export interface UnitSeed {
  */
 export function createUnit(d: GameState, itemId: Id, now: number, seed: UnitSeed = {}, historicalDefinition?: ItemDefinition): ItemUnit {
   const def = historicalDefinition ?? ITEMS[itemId];
-  const r = next(d.rngState);
-  d.rngState = r.state;
-  const wearRate = Math.round((EQUIPMENT_TUNING.wearRateMin + r.value * (EQUIPMENT_TUNING.wearRateMax - EQUIPMENT_TUNING.wearRateMin)) * 1000) / 1000;
+  let roll = seed.wearRoll;
+  if (roll === undefined) {
+    const r = next(d.rngState);
+    d.rngState = r.state;
+    roll = r.value;
+  }
+  const wearRate = Math.round((EQUIPMENT_TUNING.wearRateMin + roll * (EQUIPMENT_TUNING.wearRateMax - EQUIPMENT_TUNING.wearRateMin)) * 1000) / 1000;
   const n = d.nextId++;
   const prefix = SERIAL_PREFIX[itemId] ?? itemId.slice(0, 2).toUpperCase();
   const ageDays = seed.ageDays ?? 0;
@@ -100,8 +108,11 @@ export function createUnit(d: GameState, itemId: Id, now: number, seed: UnitSeed
   return unit;
 }
 
-/** Starting stock: varied condition and age so wear is visible from day one. */
-const STARTING_UNITS: Record<Id, UnitSeed[]> = {
+/** Start-up grant: every starting officer's issue kit (content/issue-kit.ts) plus department kit.
+ * Seeds give varied condition and age so wear is visible from day one; an item with more units
+ * than seeds starts the rest new. */
+const DEPARTMENT_KIT: Record<Id, number> = { throw_phone: 1, ballistic_shield: 2, trauma_kit: 4 };
+const STARTING_SEEDS: Record<Id, UnitSeed[]> = {
   // One radio sits close to unreliable (45): about 90 game days at its wear rate.
   radio_kit: [
     { condition: 96, ageDays: 40, uses: 3 },
@@ -116,10 +127,17 @@ const STARTING_UNITS: Record<Id, UnitSeed[]> = {
     { condition: 69, ageDays: 500, uses: 20 },
   ],
   throw_phone: [{ condition: 81, ageDays: 150, uses: 4 }],
-  // Issued from the first day: the starting entry-trained officers can choose force on the first call.
   service_sidearm: [
     { condition: 90, ageDays: 500, uses: 10 },
     { condition: 82, ageDays: 650, uses: 18 },
+  ],
+  // Issued to everyone; the oldest is due for service soon. Fixed draws keep the department's dice
+  // where they were before light protection joined the grant.
+  light_protection: [
+    { condition: 92, ageDays: 180, uses: 5, wearRoll: 0.42 },
+    { condition: 86, ageDays: 360, uses: 11, wearRoll: 0.67 },
+    { condition: 74, ageDays: 620, uses: 19, wearRoll: 0.31 },
+    { condition: 63, ageDays: 900, uses: 26, wearRoll: 0.85 },
   ],
   ballistic_shield: [
     { condition: 93, ageDays: 400, uses: 6 },
@@ -128,12 +146,30 @@ const STARTING_UNITS: Record<Id, UnitSeed[]> = {
   door_ram: [{ condition: 85, ageDays: 600, uses: 12 }],
   // Consumables derive condition from age; trauma kits do not fade, only expire (540 days).
   trauma_kit: [{ ageDays: 20 }, { ageDays: 90 }, { ageDays: 150 }, { ageDays: 260 }, { ageDays: 350 }, { ageDays: 490 }],
-  // Batteries fade fastest: the oldest is ~25 days from unreliable (50).
 };
 
+/** Spare stock beyond the seeded units: serviceable, a few years in the store room. */
+const SPARE_SEED: UnitSeed = { condition: 70, ageDays: 720, uses: 6 };
+
+/** How many of each item the start-up grant holds for this roster. */
+export function startingGrant(officers: Iterable<Pick<Officer, 'role' | 'certs'>>): Record<Id, number> {
+  const grant: Record<Id, number> = { ...DEPARTMENT_KIT };
+  for (const o of officers) for (const itemId of issueKit(o)) grant[itemId] = (grant[itemId] ?? 0) + 1;
+  return grant;
+}
+
 export function createStartingUnits(d: GameState, now: number): void {
-  for (const [itemId, seeds] of Object.entries(STARTING_UNITS)) {
-    for (const seed of seeds) createUnit(d, itemId, now, seed);
+  const grant = startingGrant(Object.values(d.officers));
+  // The seeded units come first, in seed order, on the department's dice as they always have. Kit
+  // beyond the seeds is older spare stock with its own fixed draw, so how much a department starts
+  // with never moves the dice its recruits, board and later purchases use.
+  for (const [itemId, seeds] of Object.entries(STARTING_SEEDS)) {
+    for (const seed of seeds.slice(0, grant[itemId] ?? 0)) createUnit(d, itemId, now, seed);
+  }
+  for (const itemId of Object.keys(grant).sort()) {
+    for (let i = STARTING_SEEDS[itemId]?.length ?? 0; i < grant[itemId]; i++) {
+      createUnit(d, itemId, now, { ...SPARE_SEED, wearRoll: next(hashSeed(`start-grant:${itemId}:${i}`)).value });
+    }
   }
 }
 
@@ -276,7 +312,7 @@ export function beginService(d: GameState, unitId: Id, now: number, upkeep: Upke
   const c = serviceCheck(d, unitId, now, upkeep);
   if (!c.ok) return { ok: false, reason: c.reason ?? 'Cannot service this unit' };
   const u = d.units[unitId];
-  d.department.funding -= c.cost;
+  postFunding(d.department, -c.cost, 'service', `Service for ${ITEMS[u.itemId]?.name ?? u.serial}`, now);
   u.status = 'service';
   u.serviceUntil = now + c.hours * REAL_HOUR_MS;
   u.lastWearAt = now;
@@ -293,7 +329,7 @@ function scrapUnit(d: GameState, unitId: Id): HandlerResult {
   const u = d.units[unitId];
   u.status = 'scrapped';
   u.serviceUntil = null;
-  d.department.funding += c.salvage;
+  postFunding(d.department, c.salvage, 'salvage', `Salvage from ${ITEMS[u.itemId]?.name ?? u.serial}`, d.department.clockHighWater);
   return { ok: true };
 }
 

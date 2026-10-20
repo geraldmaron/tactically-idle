@@ -51,6 +51,8 @@ export function callStringRows(authored: CallTree, bind: (text: string) => strin
   };
   add('card.title', 'title', tree.title);
   add('card.summary', 'hook', tree.summary);
+  add('card.coldOpen', 'cold_open', tree.coldOpen);
+  for (const role of tree.roles) add(`briefing.who.${role.id}`, 'profile', role.profile);
   add('card.pressure', 'pressure_label', tree.pressureLabel);
   add('briefing.dispatch', 'dispatch', tree.briefing.dispatchReason);
   tree.briefing.known.forEach((line, i) => add(`briefing.known[${i}]`, 'known', line));
@@ -67,15 +69,24 @@ export function callStringRows(authored: CallTree, bind: (text: string) => strin
   for (const node of tree.nodes) {
     if (nodes && !nodes.has(node.id)) continue;
     add(`${node.id}.prompt`, 'prompt', node.prompt, { stage: node.stage, path: node.id });
-    (node.promptIf ?? []).forEach((entry, i) => add(`${node.id}.promptIf[${i}]`, 'prompt', entry.prompt, { stage: node.stage, path: node.id }));
+    (node.exchange ?? []).forEach((line, i) => add(`${node.id}.exchange[${i}]`, 'exchange', line.line, { stage: node.stage, path: node.id }));
+    (node.promptIf ?? []).forEach((entry, i) => {
+      add(`${node.id}.promptIf[${i}]`, 'prompt', entry.prompt, { stage: node.stage, path: node.id });
+      (entry.exchange ?? []).forEach((line, j) => add(`${node.id}.promptIf[${i}].exchange[${j}]`, 'exchange', line.line, { stage: node.stage, path: node.id }));
+    });
     for (const choice of node.choices) {
       const base = { stage: node.stage, action: choice.id, path: node.id };
       add(`${node.id}.${choice.id}.title`, 'choice_title', choice.title, base);
       add(`${node.id}.${choice.id}.summary`, 'summary', choice.summary, base);
+      add(`${node.id}.${choice.id}.pull`, 'pull', choice.pull, base);
+      add(`${node.id}.${choice.id}.cost`, 'cost', choice.cost, base);
       for (const band of BANDS) add(`${node.id}.${choice.id}.preview.${band}`, 'preview', choice.preview[band], { ...base, band });
       (choice.modifiers ?? []).forEach((modifier, i) => add(`${node.id}.${choice.id}.modifier[${i}]`, 'modifier', modifier.label, base));
       for (const band of BANDS) choice.outcomes[band].forEach((outcome, i) => {
-        for (const situation of situationsFor(tree, outcome)) add(`${node.id}.${choice.id}.${band}[${i}]`, 'result', outcome.text, { ...base, band }, situation);
+        for (const situation of situationsFor(tree, outcome)) {
+          add(`${node.id}.${choice.id}.${band}[${i}]`, 'result', outcome.text, { ...base, band }, situation);
+          (outcome.exchange ?? []).forEach((line, j) => add(`${node.id}.${choice.id}.${band}[${i}].exchange[${j}]`, 'exchange_result', line.line, { ...base, band }, situation));
+        }
       });
     }
   }
@@ -83,6 +94,8 @@ export function callStringRows(authored: CallTree, bind: (text: string) => strin
     if (endings && !endings.has(id)) continue;
     add(`ending.${id}.title`, 'ending_title', ending.title);
     add(`ending.${id}.summary`, 'ending_summary', ending.summary);
+    add(`ending.${id}.epilogue`, 'epilogue', ending.epilogue);
+    (ending.epilogueIf ?? []).forEach((entry, i) => add(`ending.${id}.epilogueIf[${i}]`, 'epilogue', entry.epilogue));
     (ending.remainingTasks ?? []).forEach((task, i) => add(`ending.${id}.task[${i}]`, 'still_needed', task));
   }
   // Clocks (content/incidents): the label on the player's panel and each cue line the engine adds

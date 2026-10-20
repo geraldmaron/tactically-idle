@@ -6,7 +6,7 @@ New live deployments automatically load one usable owned radio for each officer 
 
 ## Equipment manager
 
-Hire the equipment manager through Gear or the Logistics development branch for $2,500 and 3 development points. This is a one-time department upgrade. Reusable equipment then wears 20% more slowly, both over time and when used; service prices are 25% lower, rounded upward to whole funding units. Consumables retain normal aging, expiry and use. Existing paid repairs are not repriced or refunded.
+Hire the equipment manager through Gear or the Logistics development branch for $4,900, or free once the department has resolved 8 calls. This is a one-time department upgrade. Reusable equipment then wears 20% more slowly, both over time and when used; service prices are 25% lower, rounded upward to whole funding units. Consumables retain normal aging, expiry and use. Existing paid repairs are not repriced or refunded.
 
 Automatic servicing starts paused. On Gear, the player can explicitly enable an hourly ceiling or pause it again. Each clock hour, while within the normal 24-hour unattended economy window, the manager considers idle equipment below 75% condition, worst first. It spends at most the chosen ceiling, keeps $1,000 in reserve and starts an automatic job only while fewer than two repairs are underway, counting manual jobs. The player can order additional manual repairs separately. Deployed/reserved equipment and consumables are excluded. Working radios needed by assigned officers stay available; failed radios and spare radios can be repaired. Pausing stops new repair orders; paid work finishes normally. Shift reports show the charges and serials sent for service.
 

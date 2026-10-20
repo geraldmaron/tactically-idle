@@ -10,6 +10,7 @@ import { floorCount } from '../blueprint/floors';
 import { Chip } from './ui';
 import { Icon } from '../icons';
 import type { IconName } from '../icons';
+import { Disclosure } from './Disclosure';
 
 type Tone = 'neutral' | 'amber' | 'mint' | 'danger' | 'warn' | 'blue';
 
@@ -214,7 +215,7 @@ export function EnvChips({ env }: { env: EnvironmentDefinition }) {
   const important = relevantEnvironmentChips(env);
   const rest = environmentChips(env).filter(chip => !important.some(shown => shown.key === chip.key));
   const list = (chips: EnvChip[], label: string) => <ul className="envchips" aria-label={label}>{chips.map(c => <li key={c.key}><Chip tone={c.tone} icon={c.icon} title={c.title}>{c.label}</Chip></li>)}</ul>;
-  return <>{list(important, 'Scene conditions')}{rest.length > 0 && <details className="scene-condition-details"><summary>Other reported conditions</summary>{list(rest, 'Other reported conditions')}</details>}</>;
+  return <>{list(important, 'Scene conditions')}{rest.length > 0 && <Disclosure name="scene-conditions" className="scene-condition-details" summary="Other reported conditions" count={rest.length}>{list(rest, 'Other reported conditions')}</Disclosure>}</>;
 }
 
 // ---------------------------------------------------------------- calm countdown

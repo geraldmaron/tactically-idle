@@ -2,6 +2,7 @@
 // each Ops screen in GamePeopleProvider, which reads the "Color names by role" preference; the
 // Scenario Lab uses PeopleProvider directly with its own `names` switch. With no lexicon (switch
 // off, or outside any provider) PeopleText renders the plain string, so there is no other path.
+// Names in prose never carry a symbol; PeopleGlyph is for labels only.
 import { createContext, useContext, useEffect, useState } from 'react';
 import type { JSX, ReactNode } from 'react';
 import { peopleLabel, segmentPeople, type Lexicon, type LexiconEntry, type PeopleKind } from './lexicon';
@@ -38,8 +39,9 @@ export function usePeopleEntry(id: string | null | undefined): LexiconEntry | nu
   return (id && lexicon?.entries.find((entry) => entry.id === id)) || null;
 }
 
-/** The mark before a person's first mention in a text block (spec 8.2). Inside a colored name it
- * takes the name's color; `tone` colors it by kind on its own (person tiles). */
+/** A person's kind as a mark, for places where a name stands alone as a label: person tiles and
+ * legends. Never inside running text (owner, 2026-10-20: "The symbols should not appear in prose");
+ * there the name carries its kind by color and weight. `tone` colors it by kind. */
 export function PeopleGlyph({ kind, tone = false }: { kind: PeopleKind; tone?: boolean }) {
   return <svg className={`people-glyph${tone ? ' people-glyph-tone' : ''}`} data-kind={tone ? kind : undefined} viewBox="0 0 10 10" width="10" height="10" aria-hidden="true" focusable="false">
     {kind === 'subject' && <path d="M5 .8 9.2 5 5 9.2.8 5Z" fill="currentColor" />}
@@ -57,10 +59,9 @@ export function PeopleText({ text }: { text: string }): JSX.Element {
   if (!parts.some((part) => part.person)) return <>{text}</>;
   return <>{parts.map((part, index) => {
     if (!part.person) return part.text;
-    const { id, kind, first } = part.person;
+    const { id, kind } = part.person;
     const squad = kind === 'officer' ? lexicon.entries.find((entry) => entry.id === id)?.squad : undefined;
-    return <span key={index} className="people-name" data-kind={kind} data-person={id} title={peopleLabel(kind, squad)}>
-      {first && <PeopleGlyph kind={kind} />}{part.text}
-    </span>;
+    // Prose gets no mark: the name's color and weight say who they are.
+    return <span key={index} className="people-name" data-kind={kind} data-person={id} title={peopleLabel(kind, squad)}>{part.text}</span>;
   })}</>;
 }

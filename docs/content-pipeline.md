@@ -81,7 +81,8 @@ Reviewer checklist:
 2. Compare situations (the Director's situation cards, or Compare situations on the path rail): does anything before the truth comes out give it away?
 3. Are the people, rooms and building plausible together? Step Script's cast carousel and read at least two building families.
 4. Are the endings honest about what the team did, and silent about what it didn't?
-5. Is it non-graphic, and does it keep allegations apart from facts?
+5. Does it keep wound anatomy and method off the card (E16), and allegations apart from facts?
+6. Does it pass the depth gates D1 to D9 (`docs/scenario-depth.md`)?
 
 Record **approve**, **edit** (as a data change to the package, then rerun the gates) or **reject** as the drawer's call verdict and in the pull request. Edits go back as data, never as compiler special cases.
 

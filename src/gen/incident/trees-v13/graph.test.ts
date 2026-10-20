@@ -16,7 +16,7 @@ const fanOuts = (template: IncidentTemplate, via: 'force' | 'cascade') =>
 describe('call graph: structure', () => {
   it('fans each force and cascade outcome out by drawn result', () => {
     expect(fanOuts(hostage, 'force')).toBe(3);
-    expect(fanOuts(hostage, 'cascade')).toBe(8);
+    expect(fanOuts(hostage, 'cascade')).toBe(10);
     const cascade = callGraph(hostage.tree).edges.filter(edge => edge.via === 'cascade');
     expect(new Set(cascade.map(edge => edge.drawn))).toEqual(new Set(['all', 'some', 'none']));
     const force = callGraph(INCIDENT_TEMPLATES.active_armed_incident!.tree).edges.filter(edge => edge.via === 'force');

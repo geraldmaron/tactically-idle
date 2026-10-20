@@ -58,7 +58,10 @@ describe('public high-risk preparation intel', () => {
     try {
       const scenario = getScenario(id)!;
       const html = renderToStaticMarkup(createElement(OpsPrepare, { scenarioId: id, onCancel: () => {} }));
-      const peopleSection = html.slice(html.indexOf('People</h3>'), html.indexOf('Threat information</h3>'));
+      // The rebuilt briefing: the threat leads, then who is inside, then the orders.
+      const peopleSection = html.slice(html.indexOf('Who’s inside</h3>'), html.indexOf('Your orders</h3>'));
+      // A call with a reported weapon leads with it; a rescue with none has no threat section.
+      if (html.includes('The threat</h3>')) expect(html.indexOf('The threat</h3>')).toBeLessThan(html.indexOf('Who’s inside</h3>'));
       for (const person of scenario.civilianOutcomes!) expect(peopleSection).toContain(person.label);
       expect(html).not.toContain('Nobody reported');
       expect(html).not.toContain('No weapon reported');

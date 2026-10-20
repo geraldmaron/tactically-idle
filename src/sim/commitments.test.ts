@@ -44,6 +44,25 @@ describe('commitments: the rule', () => {
     expect(Object.keys(r.commitments!)).toHaveLength(1);
   });
 
+  it('a lie breaks when an outcome says the person found out, and holds if they come out first (deception-commitments)', () => {
+    const lie = action({ id: 'tell_her_signs', deceives: true });
+    const told: OutcomeEffect[] = [{ promise: { id: 'will_sign', personId: 'taker', kind: 'lie' }, text: 'He frees the courier.' }];
+    const found = step(run(), lie, 'favorable', told);
+    expect(found).toEqual([]);
+    const r = run();
+    step(r, lie, 'favorable', told);
+    expect(step(r, action({ id: 'read_page' }), 'adverse', [{ breaks: ['will_sign'], text: 'She says she never agreed to sign.' }]))
+      .toEqual([{ id: 'will_sign', status: 'broken' }]);
+    expect(r.meters!.taker.moved?.promise_broken).toBeDefined();
+    const held = run();
+    step(held, lie, 'favorable', told);
+    expect(step(held, action({ id: 'walk' }), 'favorable', [], [], ['out:taker'])).toEqual([{ id: 'will_sign', status: 'kept' }]);
+    const entered = run();
+    step(entered, lie, 'favorable', told);
+    expect(step(entered, entry)).toEqual([]);
+    expect(entered.commitments!.will_sign.status).toBe('open');
+  });
+
   it('break when the team goes in, and the subject hears it', () => {
     const r = run();
     step(r, concession);
@@ -102,9 +121,11 @@ describe('commitments in play', () => {
         const entered = after.some(decision => actions.get(decision.actionId)?.authority?.kind === 'entry');
         const forced = after.some(decision => decision.committed?.drawn?.some(record => record.model === 'team_force' && record.personId === commitment.personId));
         const out = run.flags.includes(`out:${commitment.personId}`) || run.flags.includes(`safe:${commitment.personId}`);
-        if (commitment.status === 'broken') expect(entered || forced).toBe(true);
+        // A lie breaks only when the person finds out (an outcome's `breaks`), never on an entry or force.
+        const lie = commitment.kind === 'lie';
+        if (commitment.status === 'broken' && !lie) expect(entered || forced).toBe(true);
         if (commitment.status === 'kept') expect(out).toBe(true);
-        if (commitment.status === 'open') expect(out || entered || forced).toBe(false);
+        if (commitment.status === 'open') expect(out || (!lie && (entered || forced))).toBe(false);
         if (commitment.status !== 'open' && run.meters?.[commitment.personId]) expect(run.meters[commitment.personId].moved[commitment.status === 'kept' ? 'promise_kept' : 'promise_broken']).toBeDefined();
       }
       // Every run must load, gunfire and force included (their draws are counted on load).

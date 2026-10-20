@@ -2,76 +2,62 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { createInitialState } from '../../sim/department';
-import { applyXpGrowth } from '../../sim/career';
+import { creditXp } from '../../sim/ranks';
+import { RANK_TUNING } from '../../content/ranks';
 import type { Officer } from '../../sim/types';
-import { OfficerProgress, officerGrowth } from './OfficerProgress';
+import { OfficerProgress, RankLadder, officerGrowth } from './OfficerProgress';
 
-function officer(years = 1): Officer {
+function officer(xp = 200): Officer {
   const o = structuredClone(createInitialState(Date.UTC(2026, 9, 3), 1).officers.off_chen);
-  o.serviceStartDay = -years * 365;
-  o.bornDay = -25 * 365;
-  o.career = { operations: 0, favorable: 0, adverse: 0 };
   o.role = 'comms';
   o.ratings.communication = 60;
-  o.xp = 130;
-  o.xpBanked = 100;
+  o.ratings.composure = 50;
+  o.traits = [];
+  o.xp = xp;
+  delete o.promotions;
   return o;
 }
 
-const render = (o: Officer) => renderToStaticMarkup(createElement(OfficerProgress, { officer: o, day: 0 }));
+const render = (o: Officer) => renderToStaticMarkup(createElement(OfficerProgress, { officer: o }));
 
-describe('real officer rating progress', () => {
-  it('shows the unconverted bank, a named rating and lifetime XP without inventing a level', () => {
-    const o = officer();
+describe('officer rank progress (officer-ranks)', () => {
+  it('shows the rank, the XP to the next one and what that promotion gives, without changing the officer', () => {
+    const o = officer(200);
     const before = structuredClone(o);
     const html = render(o);
-    expect(html).toContain('Communication');
-    expect(html).toContain('30 / 77 XP');
-    expect(html).toContain('47 XP to +1');
-    expect(html).toContain('130 total XP');
-    expect(html).toContain('XP toward the next communication point 30 of 77 XP; 47 XP remaining');
-    expect(html).not.toMatch(/level|rank up/i);
+    expect(html).toContain('Officer');
+    expect(html).toContain('250 XP to Corporal');
+    expect(html).toContain('50 / 300');
+    expect(html).toContain('Corporal brings communication +3, earns steady, wage +$2/h');
+    expect(html).toContain('50 of 300 XP toward Corporal; 250 XP to go');
     expect(o).toEqual(before);
   });
 
-  it.each([[1, 77], [4, 100], [10, 118], [20, 143]])('matches engine conversion at %i service years', (years, threshold) => {
-    const o = officer(years);
-    o.xp = o.xpBanked! + threshold - 1;
-    expect(officerGrowth(o, 0)).toMatchObject({ threshold, earned: threshold - 1, remaining: 1, current: 60 });
-    expect(applyXpGrowth(o, 0)).toBe(0);
-    o.xp++;
-    expect(applyXpGrowth(o, 0)).toBe(1);
-    expect(officerGrowth(o, 0)).toMatchObject({ current: 61, earned: 0, remaining: threshold, progress: 0 });
+  it('matches the engine: one XP short shows one to go, and the award that crosses promotes', () => {
+    const o = officer(RANK_TUNING.xp[3] - 1);
+    expect(officerGrowth(o)).toMatchObject({ rank: 'corporal', next: 'sergeant', toGo: 1 });
+    const promotions = creditXp(o, 1, { label: 'after a test call', day: 10 });
+    expect(promotions.map((p) => p.rank)).toEqual(['sergeant']);
+    expect(officerGrowth(o)).toMatchObject({ rank: 'sergeant', next: 'lieutenant', progress: 0 });
   });
 
-  it.each([90, 95])('does not promise another XP rating point when the current rating is %i', (rating) => {
-    const o = officer();
-    o.ratings.communication = rating;
-    o.xp = 800;
+  it('says XP stops at the top rank and promises nothing more', () => {
+    const o = officer(RANK_TUNING.xp[4]);
     const html = render(o);
-    expect(html).toContain('Experience can’t raise this skill further');
-    expect(html).toContain('Experience can raise this skill up to 90.');
-    expect(html).toContain('800 total XP');
-    expect(html).not.toContain('to +1');
+    expect(html).toContain('Lieutenant');
+    expect(html).toContain('Top rank. XP no longer rises.');
     expect(html).not.toContain('role="img"');
-    expect(applyXpGrowth(o, 0)).toBe(0);
+    expect(creditXp(o, 500, { label: 'x', day: 0 })).toEqual([]);
+    expect(o.xp).toBe(RANK_TUNING.xp[4]);
   });
 
-  it('handles an empty bank without implying zero-XP gains or a completed point', () => {
-    const o = officer();
-    o.xp = 0;
-    o.xpBanked = 0;
-    expect(render(o)).toContain('0 / 77 XP');
-    expect(render(o)).toContain('77 XP to +1');
-    expect(render(o)).not.toContain('Rating point ready');
-  });
-
-  it('does not fabricate progress for legacy records without career dates or history', () => {
-    for (const key of ['career', 'bornDay', 'serviceStartDay'] as const) {
-      const o = officer();
-      delete (o as unknown as Record<string, unknown>)[key];
-      expect(officerGrowth(o, 0)).toBeNull();
-      expect(render(o)).toBe('');
-    }
+  it('draws the ladder with the cause of a rank reached in play', () => {
+    const o = officer(RANK_TUNING.xp[2] - 5);
+    creditXp(o, 10, { label: 'after Barricade on Wren Court', day: 400 });
+    const html = renderToStaticMarkup(createElement(RankLadder, { officer: o }));
+    for (const title of ['Probationary Officer', 'Officer', 'Corporal', 'Sergeant', 'Lieutenant']) expect(html).toContain(title);
+    expect(html).toContain('Made 5 Feb 2027, after Barricade on Wren Court');
+    expect(html).toContain('aria-current="step"');
+    expect((html.match(/data-state="next"/g) ?? [])).toHaveLength(1);
   });
 });
