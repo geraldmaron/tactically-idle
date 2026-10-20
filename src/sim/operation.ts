@@ -519,7 +519,7 @@ export interface StepTrace {
 
 /** Re-derive each committed decision's deltas from stored bands. Deterministic. */
 export function traceRun(scenario: ScenarioDefinition, run: OperationRun): { steps: StepTrace[]; end: Pick<OperationRun, 'knowledge' | 'flags' | 'pressure' | 'objective' | 'civilianSafety' | 'clock'> } {
-  const sim: Pick<OperationRun, 'knowledge' | 'flags' | 'pressure' | 'objective' | 'civilianSafety' | 'clock' | 'clocks' | 'personCasualties' | 'officerCasualties' | 'meters' | 'commitments'> = { knowledge: initialKnowledge(scenario), flags: [], pressure: scenario.pressure.start, objective: 0, civilianSafety: 100, clock: 0,
+  const sim: Pick<OperationRun, 'knowledge' | 'flags' | 'pressure' | 'objective' | 'civilianSafety' | 'clock' | 'clocks' | 'personCasualties' | 'officerCasualties' | 'meters' | 'commitments'> = { knowledge: initialKnowledge(scenario), flags: [...run.crew ?? []], pressure: scenario.pressure.start, objective: 0, civilianSafety: 100, clock: 0,
     ...(initialClocks(scenario) ? { clocks: initialClocks(scenario) } : {}), ...(initialMeters(scenario) ? { meters: initialMeters(scenario) } : {}) };
   const actions = new Map(scenarioActions(scenario).map((a) => [a.id, a]));
   const steps: StepTrace[] = [];
@@ -836,7 +836,8 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
       for (const oid of deployRoster(draft, sid, ctx.now).goes) draft.officers[oid].assignment = { kind: 'operation', runId };
     }
     // Who went: their traits and experience open choices and shape results (sim/crew.ts).
-    run.flags.push(...crewFlags(draft, run));
+    run.crew = crewFlags(draft, run);
+    run.flags.push(...run.crew);
     draft.activeRun = run;
     takeIncident(draft, scenario.id);
     return { ok: true };
