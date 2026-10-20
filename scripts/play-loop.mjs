@@ -67,6 +67,8 @@ export async function playLiveCalls(page, { baseURL = 'http://127.0.0.1:5174', w
       await overflow(`${label} prepare upper floor`);
       await page.getByRole('tab', { name: /^Ground floor/ }).click();
     }
+    // Prepare opens on the briefing; the squads are on the team step, reached as a player would.
+    await page.getByRole('button', { name: 'Choose team', exact: true }).click();
     // The squad range is read from the screen, as the player reads it: "Takes 1 squad" or "Takes 1 to 2 squads".
     const takes = (await page.getByText(/^Takes \d+( to \d+)? squads?\./).first().innerText()).match(/Takes (\d+)(?: to (\d+))?/);
     const range = { min: Number(takes[1]), max: Number(takes[2] ?? takes[1]) };
@@ -118,7 +120,9 @@ export async function playLiveCalls(page, { baseURL = 'http://127.0.0.1:5174', w
       const current = await state(); if (current.activeRun?.status !== 'active') break;
       const available = page.locator('.call-grid .callbtn:not(.callbtn-off)');
       if (await available.count()) {
-        await available.first().click();
+        // A weighed choice opens for reading when its text is tapped; its own Review button selects it.
+        const card = available.first(), review = card.locator('.callbtn-review');
+        await (await review.count() ? review : card).click();
         const confirm = page.getByRole('button', { name: /^Confirm:/ });
         assert.equal(await confirm.isEnabled(), true, `${label}: selected available action must be confirmable`);
         await confirm.click();
@@ -165,6 +169,10 @@ export async function playLiveCalls(page, { baseURL = 'http://127.0.0.1:5174', w
     const view = page.locator('.opboard', { has: page.getByRole('button', { name: 'Prepare', exact: true }) }).nth(index);
     assert.match(await view.innerText(), /New kind of call/, `${card.type}: board card shows the badge`);
     if (discovered.length === 0) await capture('board-new-kind', view);
+    // The page clock is fixed, so the welcome-back sheet stays armed and opens on the first shift
+    // report; a player reads it and taps Continue.
+    const welcome = page.locator('.welcome-sheet');
+    if (await welcome.count()) await welcome.getByRole('button', { name: 'Continue', exact: true }).click();
     await view.getByRole('button', { name: 'Prepare', exact: true }).click();
     const { after, result } = await play(`${card.type} live`);
     Object.assign(result, { type: card.type, kind: 'incident' });
