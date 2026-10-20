@@ -194,6 +194,9 @@ describe('explicit completion evidence in current and archived results', () => {
     const marks = (d: DebriefResult) => renderToStaticMarkup(createElement(DebriefContents, { result: d, officers: {} })).match(/aria-label="(No commendation[^"]*|Commendation[^"]*)"/)?.[1];
     expect(marks(safe)).toBe('Commendation 3 of 3');
     expect(marks({ ...safe, forceLines: [{ text: 'Two officers took hold of him.' }] })).toBe('Commendation 2 of 3, capped because force was used');
+    expect(marks({ ...safe, disposition: 'unresolved', completionAchieved: false, civilianSafety: { score: 100, label: 'Everyone safe' } })).toBe('Commendation 1 of 3, capped because the call is not resolved');
+    expect(marks({ ...safe, completionAchieved: false })).toBe('Commendation 1 of 3, capped because the call is not resolved');
+    expect(marks({ ...safe, disposition: 'followup_agreed' })).toBe('Commendation 2 of 3, capped because the call is only partly resolved');
     expect(marks({ ...safe, personCasualties: [{ personId: 'p1', personRole: 'subject', label: 'Yusuf Kowalczyk', severity: 'fatal', at: 0, care: 'deceased', causeRevision: 1 }] })).toBe('No commendation: someone died on this call');
   });
 });

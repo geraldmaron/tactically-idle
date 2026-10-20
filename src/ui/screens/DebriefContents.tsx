@@ -46,14 +46,19 @@ export function DebriefContents({ result: d, officers, scenario, reality = true,
   // screen stays muted: nothing about a death is celebrated.
   const death = (d.personCasualties ?? []).some((person) => person.severity === 'fatal');
   const forced = (d.forceLines?.length ?? 0) > 0;
-  const marks = death ? 0 : Math.min(worst >= 80 ? 3 : worst >= 50 ? 2 : 1, forced ? 2 : 3);
+  // An open call is not a success however safe it stayed: unresolved or explicitly incomplete
+  // earns one mark, and a partial close or agreed follow-up at most two.
+  const open = d.disposition === 'unresolved' || d.completionAchieved === false;
+  const partial = d.disposition === 'relief_partial' || d.disposition === 'followup_agreed';
+  const cap = open ? 1 : forced || partial ? 2 : 3;
+  const marks = death ? 0 : Math.min(worst >= 80 ? 3 : worst >= 50 ? 2 : 1, cap);
   const stamp = d.disposition ? STAMP[d.disposition] : null;
   return <>
     <div className={`debrief-hero debrief-hero-${tone}${scene ? ' plate' : ''}`}>
       <PlateArt src={scene} />
       {stamp && <span className={`stamp stamp-${stamp.tone} debrief-stamp`} aria-hidden="true">{stamp.text}</span>}
       <span className="kicker">DEBRIEF</span>
-      <span className={`result-marks${death ? ' result-marks-muted' : ''}`} role="img" aria-label={death ? 'No commendation: someone died on this call' : `Commendation ${marks} of 3${forced && worst >= 80 ? ', capped because force was used' : ''}`}>
+      <span className={`result-marks${death ? ' result-marks-muted' : ''}`} role="img" aria-label={death ? 'No commendation: someone died on this call' : `Commendation ${marks} of 3${cap < 3 && worst >= 80 ? open ? ', capped because the call is not resolved' : forced ? ', capped because force was used' : ', capped because the call is only partly resolved' : ''}`}>
         {[1, 2, 3].map((n) => <i key={n} data-on={n <= marks || undefined} />)}
       </span>
       <h2 className="debrief-title">{d.endingTitle}</h2>
