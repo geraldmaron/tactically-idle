@@ -178,7 +178,7 @@ describe('explore', () => {
   }, 60000);
 
   it('reaches where a requirement holds (an outcome\'s state), and says when nothing does', () => {
-    const target = { prompt: ['talking', 0] as [string, number] };
+    const target = { prompt: ['talking', 1] as [string, number] };
     const req = labRequirementTree(s.tree, target);
     const found = explore(start, { req, target });
     expect(found.path).not.toBeNull();
