@@ -198,6 +198,12 @@ describe('calibration against the retired hand-set numbers', () => {
       points: score.points - sum(commitments.map(line => line.trust)), strain: score.strain - sum(commitments.map(line => line.strain)) };
   });
 
+  // The calibration is measured at zero dither: the shift at each timer setting is recorded apart,
+  // in dither-balance.test.ts.
+  it('plays at zero dither', () => {
+    for (const row of rows) expect(row.state.activeRun!.history.filter(decision => decision.ditherMinutes), row.type).toEqual([]);
+  });
+
   it('every ending a call reaches is in the fixture', () => {
     for (const row of rows) expect(row.authored, `${row.type} ${row.ending}`).toBeDefined();
   });

@@ -28,11 +28,14 @@ export const CLOCK_RULES_V1 = tunable('CLOCK_RULES_V1', {
   /** Dither minutes (docs/call-pressure.md), per timer setting; Off never adds any. Real time on an
    * open decision starts counting after a reading floor: `floorSeconds`, plus a second for every
    * `readingCharsPerSecond` characters of the stage's text (0: the floor doesn't scale). After it,
-   * each real minute is `gameMinutesPerRealMinute` game minutes. Relaxed lets a player read a long
-   * stage at their own pace and then gives a minute a minute; Standard starts soon and runs at four. */
+   * each real minute is `gameMinutesPerRealMinute` game minutes. Relaxed reads at about 180 words a
+   * minute before counting, then two game minutes a minute; Standard starts soon and runs at three.
+   * Measured 2026-10-20 (dither-balance.test.ts): a Relaxed player who takes a minute a decision
+   * loses nothing, one who takes two loses under two game minutes a decision and no ending changed;
+   * at Standard a minute a decision costs two to three game minutes. */
   dither: {
-    relaxed: { floorSeconds: 10, readingCharsPerSecond: 12, gameMinutesPerRealMinute: 1 },
-    standard: { floorSeconds: 8, readingCharsPerSecond: 0, gameMinutesPerRealMinute: 4 },
+    relaxed: { floorSeconds: 10, readingCharsPerSecond: 15, gameMinutesPerRealMinute: 2 },
+    standard: { floorSeconds: 8, readingCharsPerSecond: 0, gameMinutesPerRealMinute: 3 },
   } as Record<Exclude<TimerSetting, 'off'>, { floorSeconds: number; readingCharsPerSecond: number; gameMinutesPerRealMinute: number }>,
 }, { guard: (next) => Object.entries(next.dither).some(([, rule]) => !(rule.floorSeconds >= 0 && rule.readingCharsPerSecond >= 0 && rule.gameMinutesPerRealMinute >= 0))
   ? 'dither floors, reading speeds and rates must be 0 or more' : null });
