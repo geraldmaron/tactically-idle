@@ -1,5 +1,3 @@
-.squad-arrangement-entry { display: flex; justify-content: flex-end; margin: 0 0 12px; }
-.squad-arrangement-entry .btn { min-height: 44px; white-space: normal; }
 .squad-optimizer { overflow-wrap: anywhere; }
 .squad-optimizer p { margin: 6px 0; line-height: 1.45; }
 .squad-optimizer h3, .squad-optimizer h4, .squad-optimizer h5 { margin: 0 0 6px; }

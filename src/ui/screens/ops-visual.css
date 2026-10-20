@@ -36,7 +36,6 @@
 .optile .newbadge { top: -9px; right: 12px; padding: 1px 7px 1px 5px; font-size: 11px; }
 .optile-foot { display: flex; align-items: center; gap: 10px; min-width: 0; margin-top: 1px; }
 .optile-foot .optile-go { flex-shrink: 0; min-width: 116px; }
-.optile-standing { display: inline-flex; align-items: center; gap: 5px; flex: 1 1 auto; min-width: 0; font-family: var(--font-cond); font-size: 13px; font-weight: 600; letter-spacing: 0.04em; color: var(--muted); }
 .timebar { display: grid; gap: 4px; flex: 1 1 auto; min-width: 0; }
 .timebar-track { display: block; height: 5px; border-radius: 3px; background: rgba(255, 255, 255, 0.1); overflow: hidden; }
 .timebar-track i { display: block; height: 100%; border-radius: inherit; background: var(--mint); }
@@ -126,10 +125,6 @@
 .prepare .autohint { margin: 0; font-size: 12.5px; line-height: 1.35; }
 
 .prep-squad-workspace { display: grid; gap: 8px; }
-.prepare .prep-deployment-summary { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 6px; margin: 0; padding: 0; list-style: none; }
-.prepare .prep-deployment-summary li { display: flex; align-items: center; gap: 7px; min-width: 0; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; background: rgba(8, 13, 24, 0.4); }
-.prepare .prep-deployment-summary li > span:last-child { display: grid; min-width: 0; font-size: 13px; }
-.prepare .prep-deployment-summary small { color: var(--text-dim); font-size: 11.5px; overflow-wrap: anywhere; }
 .prepare .prepsquad { gap: 8px; }
 .prepare .prepsquad-head { flex-wrap: nowrap; min-width: 0; }
 .prepare .prepsquad-head strong { flex: 1 1 auto; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }

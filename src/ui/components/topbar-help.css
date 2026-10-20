@@ -25,10 +25,3 @@
 .department-stat-help p { margin: 0; line-height: 1.5; }
 .department-stat-help .department-stat-value { font: 600 32px/1.2 var(--font-cond); }
 .department-stat-value > span { display: inline-block; color: var(--text-dim); font: 400 14px/1.3 var(--font-ui); }
-.department-stat-budget { display: grid; gap: 10px; margin: 0; }
-.department-stat-budget > div { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; font-size: 14px; }
-.department-stat-budget dt { color: var(--text-dim); }
-.department-stat-budget dd { margin: 0; font-variant-numeric: tabular-nums; }
-.department-stat-budget .department-stat-subtotal { padding-block: 10px; border-block: 1px solid var(--line); }
-.department-stat-subtotal dt { color: var(--text); }
-.department-stat-help .department-stat-note { color: var(--text-dim); font-size: 13px; }

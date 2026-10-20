@@ -14,7 +14,6 @@
 .dev-head .dev-get { margin-left: auto; flex: 0 0 auto; white-space: nowrap; }
 
 .dev-label { display: flex; align-items: baseline; gap: 6px; margin: 0; font: 700 12px/1.2 var(--font-cond); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
-.dev-label-count { color: var(--amber-2); font-variant-numeric: tabular-nums; }
 .dev-label-note { font-weight: 500; letter-spacing: 0.02em; text-transform: none; font-family: var(--font-ui); }
 
 .dev-next { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px; min-height: 64px; padding: 10px 12px; border: 1px solid var(--line-strong); border-radius: var(--radius); background: var(--panel-2); color: var(--text); font: inherit; text-align: left; cursor: pointer; }
@@ -23,9 +22,6 @@
 .dev-next-main { display: grid; gap: 2px; min-width: 0; }
 .dev-next-main strong { font: 700 17px/1.15 var(--font-cond); letter-spacing: 0.02em; }
 .dev-next-fx { font-size: 12.5px; color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.dev-next-cost { display: grid; justify-items: end; font: 600 13px/1.25 var(--font-cond); color: var(--text-dim); font-variant-numeric: tabular-nums; }
-.dev-next-state { margin-top: 3px; padding: 1px 8px; border-radius: 999px; background: var(--panel-3, var(--panel)); color: var(--text-dim); font-size: 11px; }
-.dev-next-ready .dev-next-state { background: var(--amber-2); color: var(--amber-ink); }
 .dev-rail-ready { color: var(--amber-2); }
 .dev-branch-blurb { margin: 0; font-size: 13px; }
 

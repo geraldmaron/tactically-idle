@@ -156,9 +156,6 @@
 .saved-debrief-content { display: grid; gap: 10px; min-width: 0; }
 .saved-debrief-content .chip { white-space: normal; max-width: 100%; overflow-wrap: anywhere; }
 .saved-debrief-content .debrief-narrative { margin: 0; }
-.saved-debrief-log-title { margin: 8px 0 0; font-size: 17px; }
-.saved-debrief-totals .drows { padding-inline: 0; border: 0; }
-.debrief-row > .btn { align-self: flex-start; white-space: normal; max-width: 100%; }
 @media (max-width: 350px) {
   .operation-feedback { margin-inline: 12px; }
   .debrief > .operation-feedback { margin-inline: 0; }
