@@ -438,16 +438,21 @@ export function advanceTime(run: Pick<OperationRun, 'clock' | 'pressure' | 'civi
  * the v13 engine-only branches: clocks at the end of the decision's minutes (`clockBase`, the
  * team's minutes: sim/clocks.ts teamMinutes), and the subjects' meters as they stand at the start
  * of the decision (escalation, sim/meters.ts). */
-export function matchedEffects(action: ActionDefinition, band: OutcomeBand, run: Pick<OperationRun, 'knowledge' | 'flags' | 'pressure'> & Partial<Pick<OperationRun, 'clocks' | 'meters'>>, scenario: ScenarioDefinition, clockBase?: number): OutcomeEffect[] {
+export function matchedEffects(action: ActionDefinition, band: OutcomeBand, run: Pick<OperationRun, 'knowledge' | 'flags' | 'pressure'> & Partial<Pick<OperationRun, 'clocks' | 'meters'>>, scenario: ScenarioDefinition, clockBase?: number, dither = 0): OutcomeEffect[] {
   // The decision point's threat (NodeThreat): a decision that takes its minutes, travel and the band's
   // delay included, lets it happen. Its effects are addenda; they never route, so where the call
   // goes still rests on the choice and the truth. One place, so a replay matches the live commit.
   const threat = action.threat && clockBase !== undefined && clockBase >= action.threat.minutes
     ? action.threat.effects.filter((effect) => conditionHolds(effect.when, run)) : [];
+  // The subject's push-back (TreePushback): each line whose stall threshold the decision's dither
+  // reached fires once, as the effect's spoken line and marks, beside the threat. The decision
+  // records its dither, so a replay reads the same lines; a decision with none replays as before.
+  const pushback = dither > 0 ? (action.threat?.pushback ?? []).filter((line) => line.at <= dither)
+    .flatMap((line) => line.effects.filter((effect) => conditionHolds(effect.when, run))) : [];
   return [...matchedOutcomeIndices(action, band, run, scenario, clockBase).map((index) => {
     const effect = action.outcomes[band][index];
     return effect.reveal?.length ? { ...effect, knowledge: [...effect.knowledge ?? [], ...effect.reveal.map((factId) => ({ factId, status: scenario.facts.find((fact) => fact.id === factId)?.truth ? 'confirmed' as const : 'disproved' as const }))] } : effect;
-  }), ...threat];
+  }), ...threat, ...pushback];
 }
 
 /** Which of the band's authored outcomes apply (their indices, in order): matchedEffects' filter. */
@@ -540,7 +545,7 @@ export function traceRun(scenario: ScenarioDefinition, run: OperationRun): { ste
     const a = actions.get(h.actionId) ?? null;
     // Who led this decision, as the commit saw it (the stored lead flags).
     sim.flags = [...sim.flags.filter((flag) => !flag.startsWith(LEAD_PREFIX)), ...h.leadFlags ?? []];
-    const matched = a ? matchedEffects(a, h.band, sim, scenario, h.clockBaseMinutes) : [];
+    const matched = a ? matchedEffects(a, h.band, sim, scenario, h.clockBaseMinutes, h.ditherMinutes ?? 0) : [];
     const pressure0 = sim.pressure;
     const obj0 = sim.objective;
     const civ0 = sim.civilianSafety;
@@ -915,7 +920,7 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     const band = bandFor(ev.margin, sample);
     // Clock forks read the decision's own minutes, travel and forcing included (sim/clocks.ts).
     const clockBaseMinutes = teamMinutes(ev, action, band) + dither;
-    let matched = matchedEffects(action, band, run, scenario, clockBaseMinutes);
+    let matched = matchedEffects(action, band, run, scenario, clockBaseMinutes, dither);
     // v13: drawn consequences (a subject firing at the team, the team's force) settle now, each
     // with its own saved sample, into the variant effects they choose (sim/drawn-effects.ts).
     const drawnContext = { state: draft, run, scenario, acting: ev.acting, participantIds: ev.participantIds, unitsOf: availableUnits };

@@ -1160,7 +1160,20 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
     const deadly = (threat.mark ?? []).filter(mark => tree.threatMarks?.[mark]);
     if (deadly.length) throw new Error(`${node.id}: a threat may not set the threat-to-life mark ${deadly.join(', ')} (E12.4)`);
     const { label, minutes, text, mark, moves: threatMoves, pressure, civilian } = threat;
-    return { threat: { label, minutes, effects: effectsFor(node, { text, ...(mark ? { mark } : {}), ...(threatMoves ? { moves: threatMoves } : {}), ...(pressure ? { pressure } : {}), ...(civilian ? { civilian } : {}) }) } };
+    // Push-back lines (docs/call-pressure.md): none where the situation declares suicide_self_harm
+    // (E4), so the compiled call carries nothing for the engine to fire there.
+    const lines = situation.descriptors?.includes('suicide_self_harm') ? [] : threat.pushback ?? [];
+    const seenIds = new Set<string>();
+    for (const line of threat.pushback ?? []) {
+      if (!line.id || seenIds.has(line.id)) throw new Error(`${node.id}: a push-back line needs a unique id`);
+      seenIds.add(line.id);
+      if (!(line.at > 0 && line.at < minutes)) throw new Error(`${node.id}: push-back ${line.id} fires at ${line.at}, which is not above 0 and below the threat's ${minutes} minutes`);
+      if (TREE_VOICES[line.by as keyof typeof TREE_VOICES]) throw new Error(`${node.id}: push-back ${line.id} is spoken by a voice (${line.by}), not by the subject`);
+      const toLife = (line.mark ?? []).filter(entry => tree.threatMarks?.[entry]);
+      if (toLife.length) throw new Error(`${node.id}: push-back ${line.id} may not set the threat-to-life mark ${toLife.join(', ')} (E12.4)`);
+    }
+    const pushback = lines.map(line => ({ id: line.id, at: line.at, effects: effectsFor(node, { text: '', exchange: [{ by: line.by, line: line.line }], ...(line.mark ? { mark: line.mark } : {}) }) }));
+    return { threat: { label, minutes, effects: effectsFor(node, { text, ...(mark ? { mark } : {}), ...(threatMoves ? { moves: threatMoves } : {}), ...(pressure ? { pressure } : {}), ...(civilian ? { civilian } : {}) }), ...(pushback.length ? { pushback } : {}) } };
   };
 
   const actionFor = (node: TreeNode, choice: TreeChoice): ActionDefinition => {

@@ -260,7 +260,11 @@ export interface ActionDefinition {
   deceives?: true;
   /** This decision point's threat (NodeThreat). When the decision takes `minutes` or longer, travel
    * and the band's delay included, its effects apply: the line the player reads and what it costs. */
-  threat?: NodeThreat & { effects: OutcomeEffect[] };
+  threat?: NodeThreat & { effects: OutcomeEffect[];
+    /** Push-back lines (TreePushback), each as the effect it applies once the stall reaches `at`
+     * dither minutes. Empty or absent: the threat stays silent. Stripped in a situation that
+     * declares `suicide_self_harm` (compile.ts). */
+    pushback?: { id: string; at: number; effects: OutcomeEffect[] }[] };
   /** V13: what draws a player to the choice, and what it costs, one line each. */
   weighing?: { pull: string; cost: string };
   /** Full archetype route rechecked against current openings at action evaluation. */

@@ -399,6 +399,27 @@ export interface TreeThreat {
   moves?: Record<string, TreeMove | TreeMove[]>;
   pressure?: number;
   civilian?: number;
+  /** The subject pushes back when the team stalls (docs/call-pressure.md, "Push-back lines"). Each
+   * line is written for this subject and this moment, never drawn from a shared pool. Optional: a
+   * threat without lines stays silent and its bar still drains. */
+  pushback?: TreePushback[];
+}
+
+/** One push-back line on a threat. It fires once, when the stall the player spent on the decision
+ * (dither minutes) reaches `at`, which is always before the threat itself lands (`at` below the
+ * threat's `minutes`). It is spoken by a role or group, may set a mark later choices read, and
+ * is never played in a situation that declares `suicide_self_harm`: nobody addresses the player's
+ * absence where a person is at risk (E4). The line obeys swat-call-prose like any spoken line. */
+export interface TreePushback {
+  /** Unique within the threat. */
+  id: string;
+  /** Dither minutes at which it fires: above 0, below the threat's `minutes`. */
+  at: number;
+  /** The speaking role, or a group (its first member); never a voice like radio. */
+  by: string;
+  line: string;
+  /** Marks it sets, readable by later choices. Never a threat-to-life mark. */
+  mark?: string[];
 }
 
 export interface TreeEnding {

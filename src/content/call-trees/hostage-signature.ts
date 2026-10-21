@@ -162,7 +162,10 @@ export const HOSTAGE_SIGNATURE: CallTree = {
   nodes: [
     // ------------------------------------------------------------------ stage 1
     { id: 'offer', stage: 'assess',
-      threat: { label: '{courier.first} edges for the door', minutes: 4, text: '{courier.first} takes a half step toward the street door, and {taker.first} catches the strap of {courier.his} bag and pulls {courier.him} back.', pressure: 4 },
+      threat: { label: '{courier.first} edges for the door', minutes: 4, text: '{courier.first} takes a half step toward the street door, and {taker.first} catches the strap of {courier.his} bag and pulls {courier.him} back.', pressure: 4,
+        // PLACEHOLDER: wiring test only. Every hostage situation declares suicide_self_harm, so the
+        // compiler strips this and it never plays; the real lines are written by the prose session.
+        pushback: [{ id: 'placeholder', at: 2, by: 'taker', line: 'PLACEHOLDER push-back line.' }] },
       prompt: 'The 911 call came from the counter phone, and {taker.first} picked up on the first callback. From the corner your squad can see {owner.first} on a stool at the till and {courier.first} in the doorway with a parcel under one arm. One of them is a stranger. The other is the reason {taker.first} came back.',
       exchange: [{ by: 'taker', line: 'The courier can go. Not {owner.him}.' }, { by: 'negotiator', line: 'What happened between you two?' }, { by: 'taker', line: 'Ask {owner.him}. {owner.He} {owner~knows|know}.' }],
       promptIf: [{ when: GROUP, prompt: '{others}, off the same shift, {others#stands|stand} by the door in work clothes, as if the shift never ended. {taker.first} has the counter phone. {owner.first} sits by the till, and {courier.first} is caught at the door between all of them.',
