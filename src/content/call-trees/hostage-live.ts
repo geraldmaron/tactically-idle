@@ -435,7 +435,7 @@ export const HOSTAGE_LIVE: CallTree = {
       ],
       choices: [
         // Not after command cut the stream: there is no stream to walk out on.
-        { id: 'walk_live', title: 'Let {rider.him} walk out on the stream', icon: 'door', walks: 'manager', talksTo: 'rider', check: check(TALK, 0), minutes: 6, onlyIf: { notMarks: ['lie_found', 'cut'] },
+        { id: 'walk_live', title: 'Let {rider.him} walk out on the stream', icon: 'door', walks: 'manager', talksTo: 'rider', check: check(TALK, 0), minutes: 6, onlyIf: { notMarks: ['lie_found', 'cut', 'stream_off'] },
           modifiers: [{ label: 'The camera is on the wall', mark: 'phone_wall', value: -4 }],
           favors: [STEADY_ON_CAMERA],
           summary: '{lead} agrees that {rider.first} walks out with the phone filming, so everyone watching can see nobody hurt {rider.him} after. {manager.first} goes first. Every step your squad takes is on thousands of phones and the {outlet_short} camera, and {rider.first} has never been more watched.',
@@ -562,9 +562,9 @@ export const HOSTAGE_LIVE: CallTree = {
           preview: { favorable: '{rider.first} ends the stream and keeps talking to you.', mixed: '{rider.first} ends it, and the silence is worse.', adverse: '{rider.first} won’t look away from the comments, and the handgun comes up.' },
           outcomes: {
             favorable: [{ text: '{rider.first} ends the stream {rider.himself}, with one thumb, in the middle of a comment. Then {rider.he} {rider~sets|set} the phone down on the register and {rider~asks|ask} the negotiator, very quietly, what happens to people who lie to everyone.',
-              stabilize: ['stream'], mark: ['ended_it'], moves: { rider: 'honest' }, next: { node: 'way_out' }, objective: 20, pressure: -10 }],
+              stabilize: ['stream'], mark: ['ended_it', 'stream_off'], moves: { rider: 'honest' }, next: { node: 'way_out' }, objective: 20, pressure: -10 }],
             mixed: [{ text: '{rider.first} ends the stream. Then {rider.he} {rider~stands|stand} in the quiet store with nothing to say to anybody, for a long time.',
-              stabilize: ['stream'], moves: { rider: 'heard' }, next: { node: 'way_out' }, objective: 12 }],
+              stabilize: ['stream'], mark: ['stream_off'], moves: { rider: 'heard' }, next: { node: 'way_out' }, objective: 12 }],
             adverse: escalate({
               lead: '{rider.first} keeps scrolling. The comments are the only thing {rider.he} {rider~looks|look} at.',
               threat: 'Then {rider.he} {rider~raises|raise} the handgun at {manager.first}, as if {manager.first} wrote all of them.',
@@ -776,7 +776,7 @@ export const HOSTAGE_LIVE: CallTree = {
       epilogue: 'The clip of {rider.first} walking out had more views by morning than the stream ever did.',
       epilogueIf: [
         { when: { marks: ['admitted'] }, epilogue: '{rider.first}’s account was back on {delivery_app} by Friday. {rider.He} didn’t log in.' },
-        { when: { marks: ['exposed'] }, epilogue: '{friend.first} drove {rider.first}’s scooter home and left the key with the neighbor, as {friend.he} said {friend.he} would.' },
+        { when: { marks: ['exposed', 'friend_promise'] }, epilogue: '{friend.first} drove {rider.first}’s scooter home and left the key with the neighbor, as {friend.he} said {friend.he} would.' },
       ] },
     out_quiet: { title: 'Nobody filmed it', disposition: 'resolved',
       summary: '{manager.first} and {clerk.first} are safe outside. {rider.first} walked out to the team with nobody filming, the one way {rider.he} said {rider.he} wouldn’t, and officers have {rider.him}. The phone is face down on the register with the stream still saying LIVE.',
