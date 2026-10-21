@@ -11,7 +11,4 @@
 .situation-body li + li { margin-top: 3px; }
 .situation-facts { padding-left: 0 !important; list-style: none; }
 .situation-facts li { display: flex; justify-content: space-between; gap: 10px; }
-.situation-facts strong { flex-shrink: 0; font-weight: 600; }
-.situation-facts [data-status="confirmed"] strong { color: var(--mint); }
-.situation-facts [data-status="reported"] strong { color: var(--amber-2); }
-.situation-facts [data-status="disproved"] strong { color: var(--muted); }
+.situation-facts .chip { flex-shrink: 0; }

@@ -3,13 +3,13 @@
 // do, and what nobody knows yet. Rendered from props alone so the Scenario Lab shows the player's
 // real briefing. Only what the player is told at dispatch: intel.ts never reads truth. Store-free.
 import type { JSX } from 'react';
+import { FactStatusChip } from '../components/FactStatusChip';
 import type { Briefing } from '../../sim/operation-selectors';
 import type { ScenarioDefinition } from '../../sim/scenario-types';
 import type { BuiltLocation, KnowledgeStatus } from '../../sim/types';
 import { DifficultyChip, EnvChips } from '../components/incident';
 import { personInitials } from '../components/IncidentPeople';
 import { Icon } from '../icons';
-import type { IconName } from '../icons';
 import { PeopleGlyph, PeopleText, usePeopleEntry } from '../people/PeopleText';
 import { peopleLabel } from '../people/lexicon';
 import { IncidentBriefContext } from './SupportContext';
@@ -48,7 +48,7 @@ export function PrepBriefing({ scenario, brief, intel }: { scenario: ScenarioDef
 
       {brief.unknown.length > 0 && <section className="pb-block pb-unknown" aria-labelledby="pb-unknown-h">
         <h3 id="pb-unknown-h" className="pb-h"><Icon name="question" size={15} />Nobody knows yet</h3>
-        <ul>{brief.unknown.map((text, index) => <li key={index}><PeopleText text={text} /></li>)}</ul>
+        <ul>{brief.unknown.map((text, index) => <li key={index}><Icon name="question" size={14} className="pb-unknown-icon" /><span><PeopleText text={text} /></span></li>)}</ul>
       </section>}
 
       {(intel.difficulty || intel.environment) && <section className="pb-block pb-conditions" aria-label="Conditions">
@@ -74,32 +74,26 @@ export function PrepBriefing({ scenario, brief, intel }: { scenario: ScenarioDef
 /** One person on scene as a card: who they are, and where the team thinks they are. */
 function PersonCard({ personId, name, who, status, where }: { personId: string; name: string; who?: string; status?: KnowledgeStatus; where?: string | null }) {
   const entry = usePeopleEntry(personId);
-  const c = status ? confidence(status) : null;
   return <li className="pb-person" data-kind={entry?.kind}>
     <span className="pb-avatar" aria-hidden="true" title={entry ? peopleLabel(entry.kind, entry.squad) : undefined}>{personInitials(name)}</span>
     <div className="pb-person-text">
       <strong>{entry && <PeopleGlyph kind={entry.kind} tone />}{name}</strong>
       {who && <p><PeopleText text={who} /></p>}
-      {c && <span className={`pb-where tone-${c.tone}`}><Icon name={c.icon} size={12} />{c.label}{where ? ` · ${where}` : ''}</span>}
+      {status && <span className="pb-where"><FactStatusChip status={status} />{where && <span className="pb-where-place"><Icon name="pin" size={12} />{where}</span>}</span>}
     </div>
   </li>;
 }
 
 /** One weapon report: what, who holds it, where, and how sure dispatch is. */
 function ThreatRow({ line }: { line: IntelLine }) {
-  const c = confidence(line.status);
   return <li className="pb-threat-row">
     <span className="pb-threat-icon" aria-hidden="true"><Icon name="warning" size={18} /></span>
     <div>
       <strong>{line.label}{line.where ? <span className="dim"> · {line.where}</span> : null}</strong>
       <p><PeopleText text={line.claim} /></p>
-      <span className={`pb-where tone-${c.tone}`}><Icon name={c.icon} size={12} />{c.label}{line.source ? ` · ${line.source}` : ''}</span>
+      <span className="pb-where"><FactStatusChip status={line.status} />{line.source && <span className="pb-where-place"><Icon name="chat" size={12} />Reported by {line.source}</span>}</span>
     </div>
   </li>;
 }
 
-function confidence(status: KnowledgeStatus): { label: string; tone: 'mint' | 'amber' | 'danger'; icon: IconName } {
-  if (status === 'confirmed') return { label: 'Confirmed', tone: 'mint', icon: 'check' };
-  if (status === 'disproved') return { label: 'Ruled out', tone: 'danger', icon: 'x' };
-  return { label: 'Unverified', tone: 'amber', icon: 'question' };
-}
+

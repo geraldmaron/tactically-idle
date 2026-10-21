@@ -5,6 +5,7 @@ import { PeopleText } from '../people/PeopleText';
 import './situation-panel.css';
 import { WhoTheyAre } from '../components/DepthBrief';
 import { Disclosure } from '../components/Disclosure';
+import { FactStatusChip } from '../components/FactStatusChip';
 
 const STATUS_LABEL: Partial<Record<KnowledgeStatus, string>> = { reported: 'Reported', confirmed: 'Confirmed', disproved: 'Ruled out' };
 
@@ -27,7 +28,7 @@ export function SituationPanel({ scenario, run }: { scenario: ScenarioDefinition
             <ul className="situation-facts">
               {established.map((fact) => {
                 const status = run.knowledge[fact.id] ?? fact.initial;
-                return <li key={fact.id} data-status={status}><span>{fact.label}</span><strong>{STATUS_LABEL[status]}</strong></li>;
+                return <li key={fact.id} data-status={status}><span>{fact.label}</span><FactStatusChip status={status} /></li>;
               })}
             </ul>
           </div>
