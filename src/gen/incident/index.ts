@@ -7,6 +7,7 @@ import { furnishedFamilyId } from '../building/furnishing';
 import type { IncidentSpec, IncidentType, ScenarioDefinition } from '../../sim/scenario-types';
 import { buildLocation } from '../../sim/location';
 import { hashSeed, next, pick } from '../../sim/rng';
+import { scenarioRecipe } from '../../content/scenario-recipes';
 import { ALL_BUILDING_FAMILIES, isProceduralFamily } from '../building';
 
 export interface IncidentTypeInfo {
@@ -89,12 +90,21 @@ function generateIncidentAt(spec: IncidentSpec, given?: IncidentTemplate): Scena
 
 export function drawIncidentSpec(
   rngState: number,
-  ctx: { level: number; trust: number; avoidFamilies?: readonly string[]; avoidTypes?: readonly IncidentType[]; recentTypes?: readonly IncidentType[]; unlockedTypes?: readonly IncidentType[]; typeWeights?: Partial<Record<IncidentType, number>> },
+  ctx: { level: number; trust: number; avoidFamilies?: readonly string[]; avoidTypes?: readonly IncidentType[]; recentTypes?: readonly IncidentType[]; unlockedTypes?: readonly IncidentType[]; typeWeights?: Partial<Record<IncidentType, number>>;
+    /** The situations the player's content settings leave drawable, per kind (sim/incidents.ts
+     * drawableSituations). Given, a kind with none is out of the draw with no fallback, and a seed
+     * whose situation is out is re-keyed to the next one that is in, without drawing more from the
+     * stream. Absent, nothing is filtered and the draw is the same as before it existed. */
+    situations?: Partial<Record<IncidentType, readonly (0 | 1 | 2)[]>> },
 ): { spec: IncidentSpec; state: number } {
   let pool = SCENARIO_TYPES.flatMap(info => Array.from({ length: info.type === 'barricaded' ? 4 : 3 }, () => info));
   if (ctx.unlockedTypes) {
     const open = pool.filter(info => ctx.unlockedTypes!.includes(info.type));
     if (open.length) pool = open;
+  }
+  if (ctx.situations) {
+    pool = pool.filter(info => ctx.situations![info.type]?.length);
+    if (!pool.length) throw new Error('No kind of call is drawable with these content settings');
   }
   const unused = pool.filter(info => !ctx.avoidTypes?.includes(info.type));
   if (unused.length) pool = unused;
@@ -114,5 +124,13 @@ export function drawIncidentSpec(
   const tier = next(seed.state);
   const cap = Math.max(1, Math.min(5, 1 + Math.floor(ctx.level / 2), ctx.trust < 40 ? 2 : 5));
   const spec: IncidentSpec = { type: info.type, familyId, buildingSeed: Math.floor(building.value * 0x100000000), seed: Math.floor(seed.value * 0x100000000), tier: 1 + Math.floor(tier.value * cap), contentVersion: INCIDENT_CONTENT_VERSION };
+  const allowed = ctx.situations?.[info.type];
+  if (allowed) {
+    const drawnSeed = spec.seed;
+    for (let k = 1; !allowed.includes(scenarioRecipe(spec).variant); k++) {
+      if (k > 256) throw new Error(`No seed re-key reaches an allowed ${info.type} situation`);
+      spec.seed = hashSeed(`${drawnSeed}:content-filter:${k}`);
+    }
+  }
   return { spec, state: tier.state };
 }
