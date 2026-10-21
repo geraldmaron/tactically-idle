@@ -10,6 +10,13 @@ import { deserialize, serialize } from './save';
 import { getScenario } from './scenario-registry';
 import type { IncidentType } from './scenario-types';
 import type { CompletionDisposition, GameState } from './types';
+import { INCIDENT_TEMPLATES } from '../content/incidents';
+
+// The score is measured on the calls with no gauge that fills: the audience shift is recorded apart
+// (fill-clocks.test.ts). Left out here before anything compiles, so every run below plays without them.
+for (const template of Object.values(INCIDENT_TEMPLATES)) for (const situation of template!.situations) {
+  if (situation.clocks) situation.clocks = situation.clocks.filter((clock) => clock.direction !== 'fill');
+}
 
 // M2 slice 4 (docs/incident-domain-model.md §9): a v13 call is scored from people's end states in
 // priority-of-life order, the force used, commitments and time. The weights replaced hand-set
