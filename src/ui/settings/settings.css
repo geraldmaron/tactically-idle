@@ -256,3 +256,11 @@
   line-height: 1.45;
   color: var(--text-dim);
 }
+
+/* On the narrowest phones the longest warning still fits two lines, unclamped. */
+@container game (max-width: 340px) {
+  .optile-warning {
+    padding: 6px 8px;
+    font-size: 13px;
+  }
+}
