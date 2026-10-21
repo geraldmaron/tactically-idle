@@ -344,7 +344,7 @@ export function clockRoute(tree: CallTree, to: TreeNext, seed: number): Pick<Out
  * what the static checks (strings, lint, the graph) count as reachable from every node. A clock the
  * story runs by itself never routes. */
 export function templateClockNexts(template: Pick<IncidentTemplate, 'situations'>): TreeNext[] {
-  const all = template.situations.flatMap(situation => (situation.clocks ?? []).filter(clock => !clock.story).flatMap(clock => clock.onOut?.next ? [clock.onOut.next] : []));
+  const all = template.situations.flatMap(situation => (situation.clocks ?? []).filter(clock => !clock.story).flatMap(clock => [...clock.onOut?.next ? [clock.onOut.next] : [], ...clock.onFull?.next ? [clock.onFull.next] : []]));
   return [...new Map(all.map(next => [JSON.stringify(next), next])).values()];
 }
 

@@ -6,7 +6,7 @@
 //
 // Milestone 1 describes today's calls faithfully and changes no odds: a field the engine does not
 // read yet is listed in WIRED as false, and the lab says so beside it.
-import type { Armament, Disposition, IncidentType, Intent, PoliceAwareness, Readiness } from '../../sim/scenario-types';
+import type { Armament, Disposition, IncidentType, Intent, MeterEvent, PoliceAwareness, Readiness } from '../../sim/scenario-types';
 import type { Id, RoomType, Vec } from '../../sim/types';
 import type { StreetVantage } from '../../sim/sightlines';
 import type { CallTree, TreeMoveTo, TreeNext } from '../call-trees/types';
@@ -109,10 +109,17 @@ export interface Clock {
   kind: 'medical' | 'structural' | 'battery' | 'supply' | 'deadline' | 'light' | 'crowd' | 'intoxication';
   /** Whose clock it is, when it belongs to a person: it stops once they are out. */
   owner?: Id;
-  /** Remaining, 0 to 100, at the start of the call. */
+  /** 'drain' (the default) runs down; 'fill' rises (a crowd filming, a subject streaming): its cues
+   * are listed lowest first, it has `onFull` where a drain has `onOut`, and `if: { clock, low | out }`
+   * reads it as its first cue heard (low) and full (out). See ClockDef.direction. */
+  direction?: 'drain' | 'fill';
+  /** Remaining, 0 to 100, at the start of the call (a fill: how full). */
   start: number;
-  /** Points lost per minute, before the per-call spread. */
+  /** Points lost per minute (a fill: gained), before the per-call spread. */
   ratePerMin: number;
+  /** Flags that slow it while set, each with the rate that applies (ClockDef.rateFlags). A choice
+   * sets one through a mark's flag; the slowest matching rate wins. */
+  rateFlags?: { flag: string; ratePerMin: number }[];
   /** Each call draws the rate within this fraction either side (0.25: 75% to 125%). */
   rateSpread?: number;
   /** Whether the team can know the rate before it shows (a full tank says so; a door doesn't). */
@@ -122,7 +129,9 @@ export interface Clock {
    * is already set, or whose fact is already settled, stays silent. */
   cues: { at: number; text: string; mark?: string; reveal?: boolean;
     /** Moves people as this cue passes (R-B3), keyed by the cue's `mark`, which it then needs. */
-    moveTo?: TreeMoveTo }[];
+    moveTo?: TreeMoveTo;
+    /** Meter events it moves a subject by as it passes (`watched`: they know a camera is on them). */
+    moves?: { personId: string; event: MeterEvent }[] }[];
   /** The tree fact whose claim this clock answers ("whether the door will hold"). */
   factKey?: string;
   /** Once low, command won't wait for talking to work (sim/authorization.ts): completes "Command
@@ -137,6 +146,8 @@ export interface Clock {
    * or safe; the target's prompt follows the outcome's text. The target is a last-stage node (never
    * the root) or an ending. A node there may be reached only this way: the compiler keeps it. */
   onOut?: { harm?: 'wounded' | 'serious'; mark?: string; next?: TreeNext };
+  /** What a fill reaching 100 does: `onOut`'s shape, for a clock with `direction: 'fill'`. */
+  onFull?: { harm?: 'wounded' | 'serious'; mark?: string; next?: TreeNext };
 }
 
 // ---------------------------------------------------------------- conditions
