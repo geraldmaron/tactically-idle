@@ -23,14 +23,11 @@ describe('People at this call: subjects and clocks', () => {
     expect(html).not.toContain('data-clock');
   });
 
-  it('shows the subject once heard, and the owner’s condition once its first sign is seen', () => {
-    const after = applyMove(start, { kind: 'decide', actionId: choiceActionId('hostage_crisis', 'offer', 'hear_him'), band: 'favorable' })!;
-    // However quick the first exchange was, the owner's first sign has now been seen.
-    after.activeRun!.clocks = { ...after.activeRun!.clocks, owner_condition: { value: 50, cued: 1 } };
+  // Going Live has no running-down clock (its stream fills), so the clock tile has no call to show
+  // it on; the subject half still runs.
+  it('shows the subject once the team has heard them', () => {
+    const after = applyMove(start, { kind: 'decide', actionId: choiceActionId('hostage_crisis', 'going_live', 'on_stream'), band: 'favorable' })!;
     const html = render(after);
     expect(html).toContain('data-subject-stance');
-    expect(html).toContain('data-clock="owner_condition"');
-    expect(html).toContain('Running low');
-    expect(html).toContain('get down from the stool and sit on the tiles');
   });
 });

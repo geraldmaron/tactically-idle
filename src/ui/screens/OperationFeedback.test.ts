@@ -4,14 +4,16 @@ import { describe, expect, it, vi } from 'vitest';
 import type { ActionView, DebriefResult, DecisionView } from '../../sim/types';
 import { apply, makeState, NOW, setRun, startRun, withCallOnBoard } from '../../sim/test-fixtures';
 import { registerCapabilityFixtures } from '../../sim/fixtures/capability-scenarios';
-import { actionViews, currentBuilt, decisionViews, pendingDebrief, previewAction, spaceViews, stageProgress } from '../../sim/operation-selectors';
+import { actionViews, briefing, currentBuilt, decisionViews, pendingDebrief, previewAction, spaceViews, stageProgress } from '../../sim/operation-selectors';
 import { planActionResupply } from '../../sim/equipment-resupply';
 import { ActionSheet, LiveView, PersonRow, revealStageStep, StageSteps, type LiveViewProps } from './LiveView';
 import { DecisionCard, OperationFeedback, OperationLogContents, OutcomeForecast } from './OperationFeedback';
 import { OpsDebrief, SavedDebriefContents, SavedDebriefReview } from './OpsDebrief';
 import { Debriefs } from './HQ';
-import { drawIncidentSpec, generateIncident } from '../../gen/incident';
+import { generateIncident } from '../../gen/incident';
 import { startGateRun } from '../../gen/incident/gates/engine-driver';
+import { fixtureCalls } from '../../gen/incident/trees-v13/house-call-fixture';
+import { ARMED_TEMPLATE } from '../../gen/incident/trees-v13/armed-fixture';
 import { outcomePercentages, visibleDecisions } from './liveModels';
 
 let state = makeState();
@@ -320,8 +322,8 @@ describe('persistent decision results', () => {
   });
 
   it('renders the ending summary and preserves the saved log in the real debrief', () => {
-    const scenario = generateIncident({ type: 'barricaded', familyId: 'cedar_close', buildingSeed: 7, seed: 3, tier: 1, contentVersion: 13 });
-    state = startRun(withCallOnBoard(makeState(), scenario.id), scenario.id, ['A']);
+    const scenario = generateIncident({ type: 'hostage_crisis', familyId: 'market_row', buildingSeed: 7, seed: 3, tier: 1, contentVersion: 13 });
+    state = startRun(withCallOnBoard(makeState(), scenario.id), scenario.id, ['A'], { positions: { A: briefing(scenario.id).entries[0].id } });
     for (let step = 0; step < 12 && state.activeRun?.status === 'active'; step++) {
       const chosen = actionViews(state, NOW, 'A').find((view) => view.eligible);
       expect(chosen).toBeDefined();
@@ -487,7 +489,8 @@ describe('command’s answer on a choice (sim/authorization.ts)', () => {
     expect(opened).not.toContain('operation-command-line');
   });
   it('carries a real call’s approval from the engine to the card', () => {
-    const s = generateIncident(drawIncidentSpec(1312, { level: 10, trust: 90, unlockedTypes: ['active_armed_incident'] }).spec);
+    // Going Live opens on talk, so the frozen armed fixture supplies an entry command can approve.
+    const [s] = fixtureCalls(ARMED_TEMPLATE, 1, 1312, 'armed', 2);
     const views = actionViews(startGateRun(s.id, 719), NOW, 'A');
     const entry = views.find(view => view.authority?.allowed);
     expect(entry, 'an approved entry at the first decision of the armed call').toBeDefined();

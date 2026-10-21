@@ -86,6 +86,8 @@ export const OWNERSHIP: readonly { glob: string; layer: Layer; system: System }[
   { glob: '/src/content/scenarios/**', layer: 'catalog', system: 'scenario' },
   { glob: '/src/content/scenario-*.ts', layer: 'catalog', system: 'scenario' },
   { glob: '/src/content/unlocks.ts', layer: 'catalog', system: 'scenario' },
+  // The city's invented names (apps, the stream site, the news) that call text binds.
+  { glob: '/src/content/world.ts', layer: 'catalog', system: 'scenario' },
   { glob: '/src/content/traits.ts', layer: 'catalog', system: 'officer' },
   { glob: '/src/content/items.ts', layer: 'catalog', system: 'item' },
   { glob: '/src/content/capabilities.ts', layer: 'catalog', system: 'item' },

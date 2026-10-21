@@ -126,17 +126,17 @@ export const WIRING: readonly Probe[] = [
     evidence: '`reputationContributor` adds a named line to contact and pressure checks (people have heard of the department) and to execution checks (the team has drilled it), capped at REPUTATION_TUNING.maxPoints (src/sim/reputation.ts). Observation, medical and coordination checks never respond, so the probe counts only the kinds it reaches. Measured 2026-10-20: 96 of 96 sampled contact, pressure and execution choices, every tree.',
   },
   {
-    id: 'officer-traits', system: 'officer', input: 'Officer traits (squad A all calm voices)', direction: 'up', status: 'live', minShare: 0, kinds: ['contact'],
+    id: 'officer-traits', system: 'officer', input: 'Officer traits (squad A all calm voices)', direction: 'up', status: 'live', minShare: 1, kinds: ['contact'],
     perturb: state => edit(state, draft => { for (const officer of squadOfficers(draft)) officer.traits = ['calm_voice']; }),
     evidence: 'Trait effects are data (src/content/traits.ts TRAIT_EFFECTS), each with its condition; the resolver names every one that holds (src/sim/resolution.ts). A calm voice reaches contact checks only, and a choice can favor it on top (ActionDefinition.favors).',
   },
   {
-    id: 'officer-role', system: 'officer', input: 'Officer role (squad A all negotiators by training)', direction: 'up', status: 'live', minShare: 0, kinds: ['contact'],
+    id: 'officer-role', system: 'officer', input: 'Officer role (squad A all negotiators by training)', direction: 'up', status: 'live', minShare: 0.9, kinds: ['contact'],
     perturb: state => edit(state, draft => { for (const officer of squadOfficers(draft)) officer.role = 'comms'; }),
-    evidence: 'ROLE_CHECKS (src/content/traits.ts): a seat trained for the check adds a small named line. Officers already in that role don\'t move, so the share is below 1 by design.',
+    evidence: 'ROLE_CHECKS (src/content/traits.ts): a seat trained for the check adds a small named line. Officers already in that role don\'t move, so the floor sits below 1. Measured 2026-10-21: 18 of 18 on Going Live.',
   },
   {
-    id: 'officer-history', system: 'officer', input: 'Calls like this one worked before (squad A, four each)', direction: 'up', status: 'live', minShare: 0, everyTree: true,
+    id: 'officer-history', system: 'officer', input: 'Calls like this one worked before (squad A, four each)', direction: 'up', status: 'live', minShare: 1, everyTree: true,
     perturb: state => edit(state, draft => {
       const type = getScenario(draft.activeRun!.scenarioId)!.incident!.type;
       for (const officer of squadOfficers(draft)) officer.career.byType = { ...officer.career.byType, [type]: 4 };
@@ -144,7 +144,7 @@ export const WIRING: readonly Probe[] = [
     evidence: 'Officer.career.byType counts each type at debrief (src/sim/operation.ts); the resolver credits it as familiarity, capped (TYPE_HISTORY, src/content/traits.ts).',
   },
   {
-    id: 'source-pull', system: 'scenario', input: 'Pressure sources (every source nearly full, its first cue heard)', direction: 'down', status: 'live', minShare: 0, kinds: ['contact', 'pressure', 'coordination', 'execution'],
+    id: 'source-pull', system: 'scenario', input: 'Pressure sources (every source nearly full, its first cue heard)', direction: 'down', status: 'live', minShare: 1, kinds: ['contact', 'pressure', 'coordination', 'execution'],
     perturb: state => edit(state, draft => {
       const scenario = getScenario(draft.activeRun!.scenarioId)!;
       for (const def of scenario.clocks ?? []) if (def.source?.odds && draft.activeRun!.clocks?.[def.id]) draft.activeRun!.clocks[def.id] = { value: 95, cued: Math.max(1, draft.activeRun!.clocks[def.id].cued) };

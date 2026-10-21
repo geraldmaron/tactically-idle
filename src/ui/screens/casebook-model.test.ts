@@ -14,6 +14,7 @@ import { getScenario } from '../../sim/scenario-registry';
 import type { ScenarioSituation } from '../../content/scenario-recipes';
 import type { IncidentType } from '../../sim/scenario-types';
 import { scenarioFloorCount } from '../components/incident';
+import { CALL_TREES } from '../../content/call-trees';
 
 /** The first building seed from 7 whose generated call stays on the chosen building type. */
 function hostedCall(type: IncidentType, familyId: string, situation: ScenarioSituation) {
@@ -25,10 +26,10 @@ function hostedCall(type: IncidentType, familyId: string, situation: ScenarioSit
 }
 
 describe('casebook situations on v10 recipes', () => {
-  it('offers six neutral situations per framework and finds each through the public generator', () => {
+  it('offers two pacings of each of the call\'s situations and finds each through the public generator', () => {
     for (const info of SCENARIO_TYPES) {
       const situations = scenarioSituations(info.type);
-      expect(situations, info.type).toHaveLength(6);
+      expect(situations, info.type).toHaveLength(2 * CALL_TREES[info.type]!.situations.length);
       for (const situation of situations) {
         const spec = specForSituation(info.type, info.families.at(-1)!, situation, 11);
         expect(spec.contentVersion).toBe(13);
@@ -38,60 +39,52 @@ describe('casebook situations on v10 recipes', () => {
   });
 
   it('reports the floors of the building actually used', () => {
-    const situation = scenarioSituations('barricaded')[0];
-    expect(scenarioFloorCount(hostedCall('barricaded', 'two_storey_house_g2', situation))).toBe(2);
-    expect(scenarioFloorCount(hostedCall('barricaded', 'cedar_close', situation))).toBe(1);
+    const situation = scenarioSituations('hostage_crisis')[0];
+    // The corner store has the flat upstairs; the others are one floor.
+    expect(scenarioFloorCount(hostedCall('hostage_crisis', 'corner_store_flat_g2', situation))).toBe(2);
+    expect(scenarioFloorCount(hostedCall('hostage_crisis', 'market_row', situation))).toBe(1);
   });
 });
 
 describe('casebook rows', () => {
   const T0 = Date.UTC(2026, 9, 6, 15, 0, 0);
-  const takeBarricade = (state: ReturnType<typeof createInitialState>) => {
-    const spec = { ...specForSituation('barricaded', 'two_storey_house_g2', { variant: 1, characteristic: 'ordinary' }, 9), contentVersion: 13 };
+  const TOTAL = CALL_TREES.hostage_crisis!.situations.length;
+  const takeHostage = (state: ReturnType<typeof createInitialState>) => {
+    const spec = { ...specForSituation('hostage_crisis', 'market_row', { variant: 1, characteristic: 'ordinary' }, 9), contentVersion: 13 };
     const id = incidentId(spec);
-    state.incidents.unshift({ id, type: 'barricaded', familyId: spec.familyId, tier: spec.tier, arrivedAt: T0, expiresAt: T0 + 3_600_000, seen: true });
+    state.incidents.unshift({ id, type: 'hostage_crisis', familyId: spec.familyId, tier: spec.tier, arrivedAt: T0, expiresAt: T0 + 3_600_000, seen: true });
     takeIncident(state, id);
     return id;
   };
 
-  it('shows locked frameworks as requirements and undiscovered ones as counts, never content', () => {
+  // With one curated call there is no locked framework to show; the lock row is covered again when
+  // a call needs a certification (backlog next-curated-calls).
+  it('shows undiscovered frameworks as counts, never content', () => {
     const state = createInitialState(T0, 3);
     const rows = casebookRows(state);
-    const rescue = rows.find((row) => row.type === 'protected_rescue')!;
-    expect(rescue).toEqual({ type: 'protected_rescue', label: 'Protected rescue', settings: ['homes'], families: rescue.families, situationsTotal: 3, status: 'locked', missing: ['An officer certified in Vehicle operations'] });
-    // Frameworks retired from dispatch and never met have no row. A new department is level 1:
-    // the level-1 frameworks its roster qualifies for are dispatched; rescue still needs a driver
-    // (sidearms are issued from the first day, so the armed incident is dispatched).
     const dispatchable = SCENARIO_TYPES.map((info) => info.type);
     expect(rows.map((row) => row.type)).toEqual(dispatchable);
-    const levelOne = dispatchable.filter((type) => unlockRule(type).level === 1 && type !== 'protected_rescue');
-    expect(rows.filter((row) => row.status === 'unfound').map((row) => row.type)).toEqual(levelOne);
+    expect(rows.filter((row) => row.status === 'unfound').map((row) => row.type)).toEqual(dispatchable.filter((type) => unlockRule(type).level === 1));
     for (const row of rows) expect(Object.keys(row).sort()).toEqual(row.status === 'locked' ? ['families', 'label', 'missing', 'settings', 'situationsTotal', 'status', 'type'] : ['families', 'label', 'settings', 'situationsTotal', 'status', 'type']);
     const html = renderToStaticMarkup(createElement(Casebook, { state }));
-    expect(html).toContain('Not yet dispatched to your department');
-    expect(html).toContain('An officer certified in Vehicle operations');
-    // Every dispatched kind of call opens at level 1; locks name capabilities, never a level.
-    expect(html).not.toContain('Service sidearm, Compact carbine or Response shotgun in stock');
     expect(html).not.toContain('Department level');
     expect(html).toContain(`0 of ${dispatchable.length}</strong> kinds of call found`);
-    const rescueTitles = scenarioSituations('protected_rescue').map((situation) => hostedCall('protected_rescue', 'juniper_court_v1', situation)!.title);
-    for (const title of rescueTitles) expect(html).not.toContain(title);
+    const titles = scenarioSituations('hostage_crisis').map((situation) => hostedCall('hostage_crisis', 'market_row', situation)?.title).filter(Boolean);
+    for (const title of titles) expect(html).not.toContain(title!);
   });
 
   it('lists a dispatched recipe with its situation count, best result and building type, and filters rows', () => {
     const state = createInitialState(T0, 3);
-    takeBarricade(state);
+    takeHostage(state);
     const rows = casebookRows(state);
-    const barricade = rows.find((row) => row.type === 'barricaded')!;
-    expect(barricade).toMatchObject({ status: 'found', situationsTotal: 3, buildings: ['two_storey_house_g2'], situations: [{ variant: 1, pacings: [{ variant: 1, characteristic: 'ordinary' }] }] });
-    const locked = SCENARIO_TYPES.map((info) => info.type).filter((type) => (unlockRule(type).level > 1 || type === 'protected_rescue'));
-    expect(casebookTotals(rows)).toMatchObject({ frameworksFound: 1, situationsFound: 1, locked: locked.length });
+    const hostage = rows.find((row) => row.type === 'hostage_crisis')!;
+    expect(hostage).toMatchObject({ status: 'found', situationsTotal: TOTAL, buildings: ['market_row'], situations: [{ variant: 1, pacings: [{ variant: 1, characteristic: 'ordinary' }] }] });
+    expect(casebookTotals(rows)).toMatchObject({ frameworksFound: 1, situationsFound: 1, locked: 0 });
     expect(filterRows(rows, { type: 'all', setting: 'businesses', status: 'all' }).every((row) => row.settings.includes('businesses'))).toBe(true);
-    expect(filterRows(rows, { type: 'all', setting: 'all', status: 'found' }).map((row) => row.type)).toEqual(['barricaded']);
-    expect(filterRows(rows, { type: 'all', setting: 'all', status: 'locked' }).map((row) => row.type)).toEqual(locked);
+    expect(filterRows(rows, { type: 'all', setting: 'all', status: 'found' }).map((row) => row.type)).toEqual(['hostage_crisis']);
+    expect(filterRows(rows, { type: 'all', setting: 'all', status: 'locked' })).toEqual([]);
     const html = renderToStaticMarkup(createElement(Casebook, { state }));
-    expect(html).toContain('1 of 3');
-    expect(html).toContain('2 more situations to find');
+    expect(html).toContain(`1 of ${TOTAL}`);
+    expect(html).toContain(TOTAL - 1 === 1 ? '1 more situation to find' : `${TOTAL - 1} more situations to find`);
   });
-
 });

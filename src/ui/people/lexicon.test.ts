@@ -9,7 +9,8 @@ import type { IncidentTemplate } from '../../content/incidents/types';
 import { CIVILIAN_FIRST_NAMES, CIVILIAN_SURNAMES } from '../../content/call-trees/civilian-names';
 import { bindRoleSegments, drawTreeCast, memberId, type CastIdentity } from '../../gen/incident/trees-v13/compile';
 import { callStringRows } from '../../gen/incident/trees-v13/strings';
-import { generateIncident } from '../../gen/incident';
+import { fixtureCalls } from '../../gen/incident/trees-v13/house-call-fixture';
+import { GROUP_TEMPLATE } from '../../gen/incident/trees-v13/group-fixture';
 import { getBuilt } from '../../sim/resolution';
 import type { IncidentSpec, ScenarioDefinition } from '../../sim/scenario-types';
 import { buildLexicon, formsInText, lexiconFor, segmentPeople, type Lexicon, type LexiconOfficer } from './lexicon';
@@ -90,8 +91,8 @@ function colored(text: string, lex: Lexicon): Span[] {
 }
 
 describe('people lexicon against the binder oracle', () => {
-  it('covers the four call trees', () => {
-    expect(TEMPLATES.map(template => template.type).sort()).toEqual(['active_armed_incident', 'barricaded', 'hostage_crisis', 'protected_rescue']);
+  it('covers every call tree', () => {
+    expect(TEMPLATES.map(template => template.type).sort()).toEqual(Object.keys(INCIDENT_TEMPLATES).sort());
   });
 
   for (const template of TEMPLATES) {
@@ -211,13 +212,12 @@ describe('people lexicon rules', () => {
 });
 
 describe('lexiconFor on generated calls', () => {
-  /** A hostage call whose group drew followers. */
+  /** A call whose group drew followers. Going Live has no counted group, so the engine's group
+   * fixture hosts it. */
   function hostageWithFollowers(): ScenarioDefinition {
-    for (let seed = 1; seed < 400; seed++) {
-      const scenario = generateIncident({ type: 'hostage_crisis', familyId: 'market_row', buildingSeed: 7, seed, tier: 2, contentVersion: 13 });
+    for (const scenario of fixtureCalls(GROUP_TEMPLATE, 40, 1, 'lexicon-group', 2))
       if (scenario.incidentPeople?.some(person => person.group?.role === 'follower' || person.group?.role === 'lookout')) return scenario;
-    }
-    throw new Error('no hostage call with followers in 400 seeds');
+    throw new Error('no group call with followers in 40 draws');
   }
   const scenario = hostageWithFollowers();
   const officers: LexiconOfficer[] = [{ id: 'off_a', firstName: 'Wen', surname: 'Liu', squad: 'A' }];
