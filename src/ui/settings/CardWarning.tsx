@@ -1,20 +1,24 @@
-import { CONTENT_DESCRIPTORS, type ContentDescriptor } from '../../content/content-descriptors';
+import { AVOIDABLE_THEMES, type ContentDescriptor } from '../../content/content-descriptors';
 import { callTreeAt } from '../../content/call-trees';
-import { scenarioRecipe } from '../../content/scenario-recipes';
 import { parseIncidentId } from '../../gen/incident';
 import { CARD_THEME_WORDS, CARD_WARNING_TEXT } from './labels';
 import { useSettings } from './SettingsControls';
 
-/** The descriptors of the situation a generated call card will play, in list order. A card that
- * isn't a generated call has none. */
+/** The order a card names themes in: the avoidable ones first, then the rest. */
+const CARD_ORDER: readonly ContentDescriptor[] = [...AVOIDABLE_THEMES, 'death', 'police_gunfire', 'injury'];
+
+/** The themes a call card names: the union over every situation of the call, never the drawn one,
+ * so the card can't tell the player which situation they drew (a death that exists in only one
+ * situation would give it away). The board filter still works per situation. A card that isn't a
+ * generated call has none. */
 export function cardDescriptors(cardId: string): ContentDescriptor[] {
   const spec = parseIncidentId(cardId);
   if (!spec) return [];
-  const own = callTreeAt(spec.type)?.situations[scenarioRecipe(spec).variant]?.descriptors ?? [];
-  return CONTENT_DESCRIPTORS.filter((d) => own.includes(d));
+  const all = new Set((callTreeAt(spec.type)?.situations ?? []).flatMap((situation) => situation.descriptors ?? []));
+  return CARD_ORDER.filter((d) => all.has(d));
 }
 
-/** The call card's warning: the themes the call involves in plain words, then a line saying the
+/** The call card's warning: the themes the call can involve in plain words, then a line saying the
  * call can be left alone. Shown when the player keeps warnings on. */
 export function CardWarning({ descriptors }: { descriptors: readonly ContentDescriptor[] }) {
   const on = useSettings().cardWarnings === 'all';

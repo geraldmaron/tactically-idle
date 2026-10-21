@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { callTreeAt } from '../../content/call-trees';
 import { AVOIDABLE_THEMES } from '../../content/content-descriptors';
 import { scenarioRecipe } from '../../content/scenario-recipes';
-import { parseIncidentId } from '../../gen/incident';
+import { incidentId, parseIncidentId } from '../../gen/incident';
 import { CampaignSlots } from '../../sim/campaign-slots';
 import { createInitialState } from '../../sim/department';
 import { dispatch } from '../../sim/game';
@@ -18,6 +18,7 @@ import { CARD_THEME_WORDS, CARD_WARNING_TEXT } from './labels';
 import { resetSettingsMemory, updateSettings } from './prefs';
 import { timerSetting } from '../timer';
 
+const ORDER = [...AVOIDABLE_THEMES, 'death', 'police_gunfire', 'injury'];
 const NOW = Date.UTC(2026, 0, 5, 12, 0, 0);
 const AVOID_SELF_HARM: ContentExclusion = { avoid: ['suicide_self_harm'] };
 const descriptorsOf = (id: string) => {
@@ -94,6 +95,20 @@ describe('the call card warning', () => {
     expect(renderToStaticMarkup(createElement(CardWarning, { descriptors: ['death'] }))).toBe('');
     updateSettings({ cardWarnings: 'all' });
     expect(renderToStaticMarkup(createElement(CardWarning, { descriptors: [] }))).not.toContain(CARD_WARNING_TEXT.involves);
+  });
+
+  it('shows the same warning for every situation of a call, in the avoidable-first order', () => {
+    const spec = parseIncidentId(stateWithAvoidableCard().incidents[0].id)!;
+    const byVariant = new Map<number, string>();
+    for (let seed = 1; seed < 600 && byVariant.size < 2; seed++) {
+      const id = incidentId({ ...spec, seed });
+      const variant = scenarioRecipe({ ...spec, seed }).variant;
+      if (!byVariant.has(variant)) byVariant.set(variant, renderToStaticMarkup(createElement(CardWarning, { descriptors: cardDescriptors(id) })));
+    }
+    expect(byVariant.size).toBeGreaterThan(1);
+    expect(new Set(byVariant.values()).size).toBe(1);
+    const all = cardDescriptors(incidentId(spec));
+    expect(all).toEqual([...all].sort((a, b) => ORDER.indexOf(a) - ORDER.indexOf(b)));
   });
 
   it('an id that is not a generated call has no themes', () => {
