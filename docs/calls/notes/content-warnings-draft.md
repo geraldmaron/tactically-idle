@@ -1,6 +1,7 @@
 # Content warnings, support and push-back lines: draft for owner approval
 
-DRAFT, 2026-10-20. Nothing here ships until the owner approves it. Written under
+Sections 1 to 3 APPROVED by the owner as drafted, 2026-10-20, with the three decisions below.
+Section 4 (push-back lines) is a DRAFT under the revised rule and is not approved yet. Written under
 `.agents/skills/swat-call-prose` (strings) and checked with `.agents/skills/swat-writing-review`
 as a self-read, plus a separate Codex read (end of file). Design source: `docs/content-rating.md`
 ("Warnings and support", "First launch and Settings") and `docs/call-pressure.md`
@@ -10,7 +11,11 @@ as a self-read, plus a separate Codex read (end of file). Design source: `docs/c
 Curly apostrophes are used below, as call data holds them. `src/ui/settings/labels.ts` writes
 straight ones today; whoever moves these into code follows that file's convention.
 
-## Decisions the owner needs to make
+## Owner decisions, 2026-10-20
+
+The owner's answers, in their words: "Allow on these four" (the word suicide), "Whole call"
+(warning scope), "Approve as drafted" (sections 1 to 3), and "Revisit the self-harm rule"
+(push-back from people other than the person at risk). The questions as they were put:
 
 1. **The word "suicide" on these surfaces.** The prose lint bans `suicid\w*` in call text
    (`UNSAFE_DETAIL` in `src/gen/incident/gates/prose-lint.ts`; E4.10, kept by E17). The card

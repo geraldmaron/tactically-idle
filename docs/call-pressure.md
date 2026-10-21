@@ -88,18 +88,23 @@ Accessibility sources, checked 2026-10-20:
 
 ## Push-back lines
 
-When dither crosses a threshold before the threat lands, the subject reacts. The design reuses the
-clock-cue shape (`advanceClocks` and `cueEffects`, `src/sim/clocks.ts`): the cue fires once, carries
-a line, and can set a mark that later choices read.
+When dither crosses a threshold before the threat lands, someone on scene reacts. The design reuses
+the clock-cue shape (`advanceClocks` and `cueEffects`, `src/sim/clocks.ts`): the cue fires once,
+carries a line, and can set a mark that later choices read.
 
-- **The lines are written on the threat, per subject.** Each line is in that subject's voice and
+- **The lines are written on the threat, per speaker.** Each line is in its speaker's voice and
   names something on the scene. They are written under `swat-call-prose`. There is no global pool
   of lines like "You're ignoring me!!!", because a shared pool repeats across calls, ignores who is
   speaking, and breaks the house rules on stock lines.
 - **Optional.** A threat without lines stays silent, and the bar still drains.
-- **Suppressed in crisis situations.** In a situation with `suicide_self_harm`
-  (`docs/content-rating.md`), nobody addresses the player's absence. A person at risk blaming the
-  player for looking away is the guilt-driven pressure that the ethics screen (E4) rules out.
+- **When it fires.** At half the threat's minutes of dither, rounded down, and never before 2. A
+  threat of 2 minutes or less has no line. A line whose threat has already landed when the player
+  comes back is dropped, so nobody returns to a complaint and its consequence at once.
+- **Crisis situations (owner, 2026-10-20).** In a situation with `suicide_self_harm`
+  (`docs/content-rating.md`), the person at risk never speaks a push-back line. Others on scene
+  may, under E4: no line blames the player for the at-risk person's harm, and no line presses
+  guilt about looking away. The gate checks the speaker. The rule replaces an earlier one that
+  silenced everyone in those situations, which left the hostage call with no lines at all.
 
 ## Interruptions and nudges
 

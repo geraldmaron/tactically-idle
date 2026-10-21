@@ -105,6 +105,15 @@ drafted for the owner's approval, and none of it ships until the owner approves 
 - **In the debrief** of any situation with `suicide_self_harm`, the support line from E4.7 always
   shows, whatever the setting.
 - **In Settings**, a Support entry is always available with the same line.
+- **Push-back lines** (`docs/call-pressure.md`): in a situation with `suicide_self_harm`, the
+  person at risk never speaks one. Others on scene may, as long as no line blames the player for
+  that person's harm or presses guilt about looking away (owner, 2026-10-20).
+
+Owner decisions on the wording, 2026-10-20: the word "suicide" is allowed on the card warning, the
+launch advisory, Settings and the debrief support line, and nowhere else in player text (the prose
+lint still bans it in call text). The card warns with the whole call's descriptors, the union of
+its situations, never the drawn situation's, so it can't give away the hidden truth. The wording
+in `docs/calls/notes/content-warnings-draft.md` sections 1 to 3 is approved as drafted.
 
 ## First launch and Settings
 
