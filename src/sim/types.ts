@@ -665,6 +665,9 @@ export interface DecisionResolution {
     openingChanges?: { openingId: Id; state: OpeningState }[];
     /** V13 lines spoken in this result, frozen at commit (call-surfaces). */
     exchange?: { speaker: string; line: string }[];
+    /** What the live screen already showed while the player decided (the stall's beats, cues and
+     * the threat's landing), kept out of `consequences` and `exchange` so the result tells it once. */
+    heard?: { speaker?: string; line: string }[];
   };
   /** Run revision this decision was applied to. */
   revision: number;
@@ -731,6 +734,8 @@ export interface LapseRecord {
     personCasualties?: PersonCasualtyRecord[];
     /** What the scene said while the time ran (the threat's beats). */
     exchange?: { speaker: string; line: string }[];
+    /** What the live screen already showed while the time ran (DecisionResolution.committed.heard). */
+    heard?: { speaker?: string; line: string }[];
   };
 }
 
@@ -945,6 +950,8 @@ export interface DecisionView {
   consequences: string[];
   /** Lines spoken in this result (call-surfaces). */
   exchange?: { speaker: string; line: string }[];
+  /** What the live screen showed while the player decided, told once and folded. */
+  heard?: { speaker?: string; line: string }[];
   endingTitle: string | null;
 }
 

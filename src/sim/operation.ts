@@ -9,7 +9,7 @@ import { applyIncidentConsequences, applyPersonConsequences, civilianOutcomeView
 import { protectedOfficerEffects } from './force-risk';
 import { drawnKeys, forceSuppliesSpent, resolveDrawn } from './drawn-effects';
 import { withVariants } from '../gen/incident/drawn-model';
-import { advanceClocks, audienceFactor, bumpClocks, CLOCK_RULES_V1, clockConditionsHold, clockErrors, clockOutEffects, cueEffects, decisionMinutes, ditherCap, filling, fillGauge, fillPressureRate, fillViews, forkMinutes, initialClocks, landingEffects, lapsedThreat, lapseEffects, stalledRun, teamMinutes, threatById } from './clocks';
+import { advanceClocks, audienceFactor, bumpClocks, CLOCK_RULES_V1, clockConditionsHold, clockErrors, clockOutEffects, cueEffects, decisionMinutes, ditherCap, filling, fillGauge, fillPressureRate, fillViews, forkMinutes, initialClocks, landingEffects, lapsedThreat, lapseEffects, openThreat, stalledRun, stallFeed, teamMinutes, threatById } from './clocks';
 import { applyMoves, driftMeters, initialMeters, meterConditionsHold } from './meters';
 import { applyCommitments } from './commitments';
 import { forceLines, OUTCOME_SCORE_V1, scoreCall } from './outcome-score';
@@ -684,6 +684,7 @@ export function decisionViewsFor(state: GameState, run: OperationRun, scenario: 
       consequences: committed ? [...committed.consequences] : step.effects.map((effect) => effect.text).filter((text): text is string => !!text),
       ...((committed ? committed.exchange : step.effects.flatMap(effect => effect.exchange ?? []))?.length
         ? { exchange: (committed?.exchange ?? step.effects.flatMap(effect => effect.exchange ?? [])).map(line => ({ ...line })) } : {}),
+      ...(committed?.heard?.length ? { heard: committed.heard.map(line => ({ ...line })) } : {}),
       ...(committed?.officerCasualties !== undefined ? { officerCasualties: committed.officerCasualties.map(person => ({ ...person })) } : {}),
       ...(committed?.forceOutcome ? { forceOutcome: { ...committed.forceOutcome } } : {}),
       ...(committed?.personCasualties ? { personCasualties: committed.personCasualties.map(person => ({ ...person })) } : {}),
@@ -691,6 +692,18 @@ export function decisionViewsFor(state: GameState, run: OperationRun, scenario: 
     };
   });
 }
+
+/** What the live screen already showed while the player decided (sim/clocks.ts stallFeed: the
+ * beats and cues the stall reached, then the threat's landing once it did), read before the commit
+ * changes anything. The result names these once, folded, instead of telling them again. */
+function heardLive(scenario: ScenarioDefinition, run: OperationRun, dither: number, lead: string): { speaker?: string; line: string }[] {
+  if (!(dither > 0)) return [];
+  const lines: { speaker?: string; line: string }[] = stallFeed(scenario, run, dither).map(line => line.kind === 'beat' ? { speaker: (line.speaker ?? '').replace('{lead}', lead), line: line.text } : { line: line.text });
+  const threat = openThreat(scenario, run);
+  if (threat && dither >= threat.minutes) for (const effect of threat.effects) if (effect.text && conditionHolds(effect.when, run)) lines.push({ line: effect.text });
+  return lines;
+}
+const notHeard = (heard: readonly { line: string }[]) => { const said = new Set(heard.map(entry => entry.line)); return (line: string) => !said.has(line); };
 
 /** The log's line for a lapse: nobody chose, so no band, strain, supplies or contributors. */
 export const LAPSE_TITLE = (label: string) => `No call made: ${label}`;
@@ -704,6 +717,7 @@ function lapseView(scenario: ScenarioDefinition, record: LapseRecord): DecisionV
     knowledgeChanges: record.knowledgeChanges.map((change) => ({ ...change, label: scenario.facts.find((fact) => fact.id === change.factId)?.label ?? change.factId })),
     contributors: [], consequences: [...committed.consequences],
     ...(committed.exchange?.length ? { exchange: committed.exchange.map(line => ({ ...line })) } : {}),
+    ...(committed.heard?.length ? { heard: committed.heard.map(line => ({ ...line })) } : {}),
     ...(committed.personCasualties ? { personCasualties: committed.personCasualties.map(person => ({ ...person })) } : {}),
     endingTitle: committed.endingTitle,
   };
@@ -1024,6 +1038,7 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     const ev = evaluateAction(input);
     if (!ev.eligible) return fail(ev.reason ?? 'Not available');
     if (cmd.leadOfficerId && ev.participantIds[0] !== cmd.leadOfficerId) return fail('That officer is not taking part in this decision');
+    const heard = heardLive(scenario, run, dither, (ev.leadId && draft.officers[ev.leadId]?.surname) || 'Negotiator');
     // Who leads is part of the story: results can read the lead's traits and experience
     // (TreeState.lead → lead:<trait>, lead:band_<band>), replaced at every decision.
     run.flags = [...run.flags.filter((flag) => !flag.startsWith(LEAD_PREFIX)), ...leadFlags(draft, run, ev.participantIds[0])];
@@ -1198,12 +1213,15 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     const stageNote = settleStage(run, scenario, stage, nextStage, ending);
     const resultLabel = (harmResultLabel(personConsequences?.records ?? [], incidentConsequences?.records ?? []))
       ?? actionResultLabel(action, band);
+    // Lines spoken in this result, less the beats the live screen already played.
+    const said = matched.flatMap(effect => effect.exchange ?? []).map(line => ({ ...line, speaker: line.speaker.replace('{lead}', (ev.leadId && draft.officers[ev.leadId]?.surname) || 'Negotiator') }))
+      .filter(line => notHeard(heard)(line.line));
     resolution.committed = {
       objectiveDelta: round1(run.objective - before.objective),
       civilianSafetyDelta: round1(run.civilianSafety - before.civilianSafety),
       pressureDelta: round1(run.pressure - before.pressure),
       consequences: [
-        ...texts,
+        ...texts.filter(notHeard(heard)),
         ...matched.flatMap((effect) => (effect.openings ?? []).map((change) => {
           const opening = built.location.openings.find((candidate) => candidate.id === change.openingId);
           return opening ? `${spaceLabel(built, opening.a)} to ${spaceLabel(built, opening.b)}: ${change.state}.` : `${change.openingId.replaceAll('_', ' ')}: ${change.state}.`;
@@ -1217,7 +1235,8 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
       ...(incidentConsequences ? { officerCasualties: incidentConsequences.records } : {}),
       ...(personConsequences ? { personCasualties: personConsequences.records } : {}),
       ...(ev.protectionUsed ? { protectionUsed: { ...ev.protectionUsed } } : {}),
-      ...(matched.some(effect => effect.exchange?.length) ? { exchange: matched.flatMap(effect => effect.exchange ?? []).map(line => ({ ...line, speaker: line.speaker.replace('{lead}', (ev.leadId && draft.officers[ev.leadId]?.surname) || 'Negotiator') })) } : {}),
+      ...(said.length ? { exchange: said } : {}),
+      ...(heard.length ? { heard } : {}),
       ...(drawn.records.length ? { drawn: drawn.records.map(record => ({ ...record })) } : {}),
     };
     resolution.explanation = explain(draft, scenario, ev, band, texts, timeCost, t.civilianLoss, knowledgeChanges, consumed, strain, stageNote, fillNote, fillStrainMult);
@@ -1241,6 +1260,7 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     // The whole window was stall: one sample for the department's habits (sim/player-profile.ts).
     recordStall(draft.department, 1);
     const minutes = threat.minutes;
+    const heard = heardLive(scenario, run, minutes, 'Negotiator');
     const matched = lapseEffects(scenario, threat, run);
     const before = { objective: run.objective, civilianSafety: run.civilianSafety, pressure: run.pressure };
     const clocksBefore = run.clocks;
@@ -1264,7 +1284,7 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     const route = matched[0] && threat.timeout?.includes(matched[0]) && matched[0].text ? [matched[0].text] : [];
     const cueTexts = cues.effects.map((effect) => effect.text).filter((text): text is string => !!text);
     const texts = [...landing, ...route, ...personConsequences.text, ...cueTexts];
-    const exchange = matched.flatMap((effect) => effect.exchange ?? []).map((line) => ({ ...line, speaker: line.speaker.replace('{lead}', 'Negotiator') }));
+    const exchange = matched.flatMap((effect) => effect.exchange ?? []).map((line) => ({ ...line, speaker: line.speaker.replace('{lead}', 'Negotiator') })).filter((line) => notHeard(heard)(line.line));
     const record: LapseRecord = {
       kind: 'lapse', revision: run.revision, stage, threatId: threat.id, label: threat.label, timeCost: minutes,
       knowledgeChanges: changes, explanation: [],
@@ -1280,10 +1300,11 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
       objectiveDelta: round1(run.objective - before.objective),
       civilianSafetyDelta: round1(run.civilianSafety - before.civilianSafety),
       pressureDelta: round1(run.pressure - before.pressure),
-      consequences: [...texts, ...((run.stage as OperationRun['stage']) !== 'debrief' ? [`Next: ${currentStoryPrompt(scenario, run)}`] : [])],
+      consequences: [...texts.filter(notHeard(heard)), ...((run.stage as OperationRun['stage']) !== 'debrief' ? [`Next: ${currentStoryPrompt(scenario, run)}`] : [])],
       endingTitle: run.endingId ? scenario.endings[run.endingId]?.title ?? run.endingId : null,
       ...(personConsequences.records.length ? { personCasualties: personConsequences.records } : {}),
       ...(exchange.length ? { exchange } : {}),
+      ...(heard.length ? { heard } : {}),
     };
     record.explanation = [`${LAPSE_TITLE(threat.label)}.`, ...texts, `Took ${minutes} min.`,
       ...(t.civilianLoss > 0 ? [`Time pressure is past ${scenario.pressure.threshold}: civilian safety fell ${t.civilianLoss}.`] : []), ...(stageNote ? [stageNote] : [])];

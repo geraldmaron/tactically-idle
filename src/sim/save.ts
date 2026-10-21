@@ -99,6 +99,7 @@ function validDecision(d: unknown): boolean {
       && (d.committed.personCasualties === undefined || isList(d.committed.personCasualties, validPersonCasualtyRecord))
       && (d.committed.protectionUsed === undefined || isObj(d.committed.protectionUsed) && strings(d.committed.protectionUsed, ['itemId', 'unitId']))
       && (d.committed.exchange === undefined || isList(d.committed.exchange, (line) => isObj(line) && strings(line, ['speaker', 'line'])))
+      && (d.committed.heard === undefined || isList(d.committed.heard, (line) => isObj(line) && isStr(line.line) && (line.speaker === undefined || isStr(line.speaker))))
       && (d.committed.drawn === undefined || isList(d.committed.drawn, (r) => isObj(r) && oneOf(r.model, ['incoming_fire', 'team_force', 'cascade']) && strings(r, ['personId', 'key']) && (r.reason === undefined || isStr(r.reason))))
       && (d.committed.officerCasualties === undefined || isList(d.committed.officerCasualties, validCasualtyRecord))));
 }
@@ -112,7 +113,8 @@ function validLapse(d: Record<string, unknown>): boolean {
     && isObj(committed) && numbers(committed, ['objectiveDelta', 'civilianSafetyDelta', 'pressureDelta']) && isStrings(committed.consequences)
     && (committed.endingTitle === null || isStr(committed.endingTitle))
     && (committed.personCasualties === undefined || isList(committed.personCasualties, validPersonCasualtyRecord))
-    && (committed.exchange === undefined || isList(committed.exchange, (line) => isObj(line) && strings(line, ['speaker', 'line'])));
+    && (committed.exchange === undefined || isList(committed.exchange, (line) => isObj(line) && strings(line, ['speaker', 'line'])))
+    && (committed.heard === undefined || isList(committed.heard, (line) => isObj(line) && isStr(line.line) && (line.speaker === undefined || isStr(line.speaker))));
 }
 const validHistoryEntry = (d: unknown): boolean => isObj(d) && (d.kind === 'lapse' ? validLapse(d) : d.kind === undefined && validDecision(d));
 

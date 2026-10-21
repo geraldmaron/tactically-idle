@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import type { ActionView, DecisionView, KnowledgeStatus, OutcomeBand, RiskBand } from '../../sim/types';
+import type { ActionView, DecisionView, OutcomeBand, RiskBand } from '../../sim/types';
 import { Button, Chip } from '../components/ui';
+import { FactStatusChip } from '../components/FactStatusChip';
 import { Sheet } from '../components/Sheet';
 import { ResultPortrait, type DebriefOfficers } from '../components/DebriefResults';
-import { STRESS_LABEL, StressDisplay, StressGuide, changeText } from '../components/StressDisplay';
+import { STRESS_LABEL, StressDisplay, StressGuide } from '../components/StressDisplay';
 import { stressBand } from '../../sim/officer';
 import { opMinutes, signed } from '../format';
 import { outcomePercentages } from './liveModels';
@@ -21,7 +22,6 @@ const RESULT_TONE = { favorable: 'mint', mixed: 'amber', adverse: 'danger' } as 
 const LAPSE_WORD = 'Time ran out';
 const resultWord = (d: DecisionView) => d.forceOutcome ? 'Task and harm recorded' : d.resultLabel ?? (d.band ? RESULT_LABEL[d.band] : LAPSE_WORD);
 const cardKind = (d: DecisionView) => d.forceOutcome ? 'force' : d.resultLabel ? 'event' : d.band ?? 'lapse';
-const KNOWLEDGE_LABEL: Record<KnowledgeStatus, string> = { unknown: 'Unknown', reported: 'Reported, unconfirmed', confirmed: 'Confirmed', disproved: 'Ruled out' };
 
 /** The three outcome chances as one segmented bar. The words carry the numbers; the bar is the shape. */
 export function OddsBar({ likelihood, mini = false }: { likelihood: ActionView['likelihood']; mini?: boolean }) {
@@ -69,11 +69,15 @@ export function DecisionCard({ decision: d, full = false, officers = {}, explici
   const narrative = d.consequences.filter((line) => !line.startsWith('Next: '));
   const next = d.consequences.filter((line) => line.startsWith('Next: ') && line.slice(6).trim() !== currentPrompt?.trim());
   const fallback = narrative.length === 0 ? d.explanation.find((line) => line.trim()) : undefined;
+  const reasons = extraReasons(d);
+  // Each thing is told once (owner 2026-10-21): the story, what was said, one row of what changed,
+  // and why it went this way behind one toggle. The saved explanation stays in the record for the
+  // Lab, never on the card, since it retells the story and the numbers.
   return (
     <article className={`decision-card decision-${cardKind(d)}`} aria-label={`${d.title}: ${d.forceOutcome ? 'task and harm recorded' : resultWord(d)}`}>
       <header className="decision-heading">
         <div><span className="decision-stage">{d.stageLabel}</span><h3>{d.title}</h3></div>
-        <Chip tone={d.forceOutcome || d.resultLabel ? 'neutral' : d.band ? RESULT_TONE[d.band] : 'amber'}>{d.forceOutcome && d.band ? `Task check: ${RESULT_LABEL[d.band].toLowerCase()}` : resultWord(d)}</Chip>
+        <ResultPill decision={d} />
       </header>
       {d.forceOutcome && <section className={`force-result force-result-${d.forceOutcome.severity}`} aria-label="Recorded harm">
         <h4>Recorded harm</h4>
@@ -82,53 +86,64 @@ export function DecisionCard({ decision: d, full = false, officers = {}, explici
       </section>}
       {narrative.length > 0 ? <ul className="decision-narrative">{narrative.map((line, index) => <li key={index}><PeopleText text={line} /></li>)}</ul> : fallback ? <p className="decision-lead"><PeopleText text={fallback} /></p> : null}
       <Transcript lines={d.exchange} />
-      <DecisionChanges decision={d} complete={full} explicitCompletion={explicitCompletion} />
-      <DecisionEffects decision={d} complete={full} />
-      {full ? <DecisionStress decision={d} officers={officers} complete /> : <DecisionStressChips decision={d} officers={officers} />}
+      {!!d.heard?.length && <Disclosure name="decision-heard" className="decision-heard" open={full} icon="radio" summary="While you decided" count={d.heard.length}>
+        <Transcript lines={d.heard.map((line) => ({ speaker: line.speaker ?? '', line: line.line }))} />
+      </Disclosure>}
+      <DecisionPills decision={d} officers={officers} complete={full} explicitCompletion={explicitCompletion} />
+      {full && <DecisionStress decision={d} officers={officers} complete />}
       {next.length > 0 && <div className="decision-next">{next.map((line, index) => <p key={index}><PeopleText text={line} /></p>)}</div>}
       {d.endingTitle && <p className="decision-next"><strong>Operation ended:</strong> {d.endingTitle}</p>}
-      <Disclosure name="decision-record" className="decision-causes decision-record" open={full} summary="Details and reasons">
-        {d.resultLabel && <p>Recorded check: {d.band}. Time, supplies and stress are recorded below.</p>}
-        {!full && <>
-          <h4>Recorded changes</h4>
-          <DecisionChanges decision={d} complete />
-          <DecisionEffects decision={d} complete />
-          <DecisionStress decision={d} officers={officers} complete />
-        </>}
-        {d.explanation.length > 0 && <><h4>Recorded explanation</h4><ul>{d.explanation.map((line, index) => <li key={index}>{line}</li>)}</ul></>}
-        {d.contributors.length > 0 && <>
-          <h4>What affected the result</h4>
-          <p>These numbers show how much each factor helped or hindered this choice. They are not experience rewards or percentage chances.</p>
-          <ul>{d.contributors.map((contributor, index) => <li key={index}>{contributor.label}: {signed(contributor.value, 1)} points</li>)}</ul>
-        </>}
-        <h4>What do the scores mean?</h4>
-        {explicitCompletion ? <p>The recorded call progress score is separate from completion. Completion depends on the work done and any agreed transfer of responsibility. Civilian safety tracks how safely the call has gone, from 0 to 100.</p> : <p>Call progress shows how much of the call has been resolved. Civilian safety tracks how safely it has gone. Both run from 0 to 100; higher is better.</p>}
-        <p>Pressure runs from 0 to 100; lower is better. Delays and setbacks can raise it and make the situation harder. A lower safety score does not by itself mean someone was injured.</p>
-      </Disclosure>
+      {(d.contributors.length > 0 || reasons.length > 0) && <Disclosure name="decision-record" className="decision-causes decision-record" open={full} summary="Why it went this way">
+        {d.resultLabel && d.band && <p>Task check: {RESULT_LABEL[d.band].toLowerCase()}.</p>}
+        {reasons.length > 0 && <ul>{reasons.map((line, index) => <li key={index}>{line}</li>)}</ul>}
+        <p>How much each factor helped or hindered this choice, in points. They are not experience or percentage chances.</p>
+        <ul>{d.contributors.map((contributor, index) => <li key={index}>{contributor.label}: {signed(contributor.value, 1)} points</li>)}</ul>
+        {explicitCompletion ? <p>Call progress is separate from completion, which depends on the work done and any agreed transfer of responsibility. Civilian safety runs from 0 to 100; pressure too, and lower is better.</p> : <p>Call progress and civilian safety run from 0 to 100, higher is better; pressure too, and lower is better.</p>}
+      </Disclosure>}
     </article>
   );
 }
 
-/** Time and nonzero changes stay visible; the complete record also includes unchanged scores. */
-function DecisionChanges({ decision: d, complete = false, explicitCompletion = false }: { decision: DecisionView; complete?: boolean; explicitCompletion?: boolean }) {
-  const changes = [
-    { label: 'Time', value: d.timeCost, text: `+${opMinutes(d.timeCost)}`, tone: '' },
-    ...(!explicitCompletion || complete ? [{ label: 'Call progress', value: d.objectiveDelta, text: signed(d.objectiveDelta, 1), tone: d.objectiveDelta > 0 ? 'tone-mint' : d.objectiveDelta < 0 ? 'tone-danger' : '' }] : []),
-    { label: 'Civilian safety', value: d.civilianSafetyDelta, text: signed(d.civilianSafetyDelta, 1), tone: d.civilianSafetyDelta > 0 ? 'tone-mint' : d.civilianSafetyDelta < 0 ? 'tone-danger' : '' },
-    { label: 'Pressure', value: d.pressureDelta, text: signed(d.pressureDelta, 1), tone: d.pressureDelta < 0 ? 'tone-mint' : d.pressureDelta > 0 ? 'tone-warn' : '' },
-  ].filter((change) => complete || change.label === 'Time' || change.value !== 0);
-  return <dl className="decision-metrics" aria-label={complete ? 'Recorded changes' : 'What changed'}>
-    {changes.map((change) => <div key={change.label}><dt>{change.label}</dt><dd className={change.tone}>{change.text}</dd></div>)}
-  </dl>;
+/** The saved explanation's lines that say something the card doesn't already: a camera's strain,
+ * civilian safety lost to time, a protection that held. The title, the story, the minutes, the
+ * helped and held lines, supplies, facts and strain are told elsewhere on the card. */
+const TOLD = /^(Took |Helped most|Held back by|Most strain|Used \d|No call made|Moved on to |Ending: )|: now /;
+function extraReasons(d: DecisionView): string[] {
+  const told = new Set([...d.consequences, ...(d.heard ?? []).map((line) => line.line)]);
+  return d.explanation.slice(1).filter((line) => !told.has(line) && !TOLD.test(line));
 }
 
-function DecisionEffects({ decision: d, complete = false }: { decision: DecisionView; complete?: boolean }) {
-  const supplies = d.supplies.filter((item) => complete || item.qty !== 0);
-  if (!complete && !supplies.length && !d.knowledgeChanges.length) return null;
-  return <div className="decision-effects">
-    {(complete || supplies.length > 0) && <div><strong>Supplies used</strong><p>{supplies.length ? supplies.map((item) => `${item.qty} × ${item.label}`).join(', ') : 'None'}</p></div>}
-    {(complete || d.knowledgeChanges.length > 0) && <div><strong>What you learned</strong>{d.knowledgeChanges.length ? <ul>{d.knowledgeChanges.map((fact) => <li key={fact.factId}>{fact.label}: {KNOWLEDGE_LABEL[fact.status]}</li>)}</ul> : <p>No knowledge changes recorded.</p>}</div>}
-  </div>;
+const RESULT_ICON = { favorable: 'check', mixed: 'warning', adverse: 'x' } as const;
+/** The outcome as one pill with an icon: the band, an authored event, or the time running out. */
+function ResultPill({ decision: d }: { decision: DecisionView }) {
+  if (d.lapse) return <Chip tone="amber" icon="hourglass">{LAPSE_WORD}</Chip>;
+  if (d.forceOutcome && d.band) return <Chip tone="neutral" icon="flag">Task check: {RESULT_LABEL[d.band].toLowerCase()}</Chip>;
+  if (d.resultLabel) return <Chip tone="neutral" icon="flag">{d.resultLabel}</Chip>;
+  return d.band ? <Chip tone={RESULT_TONE[d.band]} icon={RESULT_ICON[d.band]}>{RESULT_LABEL[d.band]}</Chip> : null;
+}
+
+/** What changed, as one row of pills: the time, every score that moved, each fact learned, the
+ * supplies used, and officers whose stress crossed a range. The log (`complete`) shows every score,
+ * moved or not; the full stress readings sit under it there. */
+function DecisionPills({ decision: d, officers, complete = false, explicitCompletion = false }: { decision: DecisionView; officers: DebriefOfficers; complete?: boolean; explicitCompletion?: boolean }) {
+  const scores = [
+    ...(!explicitCompletion || complete ? [{ label: 'Call progress', value: d.objectiveDelta, good: d.objectiveDelta > 0 }] : []),
+    { label: 'Civilian safety', value: d.civilianSafetyDelta, good: d.civilianSafetyDelta > 0 },
+    { label: 'Pressure', value: d.pressureDelta, good: d.pressureDelta < 0 },
+  ].filter((score) => complete || score.value !== 0);
+  const crossings = complete ? [] : d.stressDeltas.flatMap((row) => {
+    if (row.stressBefore === undefined || row.stressAfter === undefined || stressBand(row.stressBefore) === stressBand(row.stressAfter)) return [];
+    return [{ id: row.officerId, name: officers[row.officerId]?.surname ?? row.label, band: STRESS_LABEL[stressBand(row.stressAfter)].toLowerCase(), worse: row.stressAfter > row.stressBefore }];
+  });
+  const legacy = !complete && !d.actualStressDeltas ? d.stressDeltas.filter((row) => row.delta !== 0) : [];
+  return <ul className="decision-pills" aria-label={complete ? 'Recorded changes' : 'What changed'}>
+    <li><Chip icon="clock">+{opMinutes(d.timeCost)}</Chip></li>
+    {scores.map((score) => <li key={score.label}><Chip tone={score.value === 0 ? 'neutral' : score.good ? 'mint' : score.label === 'Pressure' ? 'warn' : 'danger'}>{score.label} {signed(score.value, 1)}</Chip></li>)}
+    {d.knowledgeChanges.map((fact) => <li key={fact.factId}><FactStatusChip status={fact.status} label={fact.label} /></li>)}
+    {d.supplies.filter((item) => complete || item.qty !== 0).map((item) => <li key={item.itemId}><Chip icon="box">{item.qty} × {item.label}</Chip></li>)}
+    {crossings.map((row) => <li key={row.id}><Chip tone={row.worse ? 'warn' : 'mint'} icon="pulse">{row.name} now {row.band}</Chip></li>)}
+    {legacy.map((row) => <li key={row.officerId}><Chip tone="warn" icon="pulse">{row.label} {signed(row.delta, 1)} recorded strain</Chip></li>)}
+  </ul>;
 }
 
 export function OperationLogContents({ decisions, officers = {}, explicitCompletion = false }: { decisions: DecisionView[]; officers?: DebriefOfficers; explicitCompletion?: boolean }) {
@@ -153,12 +168,11 @@ export function OperationFeedback({ decisions, ended = false, onOpenLog, officer
   const live = <p className="sr-only" role="status" aria-live="polite">{announcement}</p>;
   if (!last) return live;
   const card = <DecisionCard key={last.revision} decision={last} officers={officers} explicitCompletion={explicitCompletion} currentPrompt={currentPrompt} />;
-  const outcome = resultWord(last);
   return (
     <section className={`operation-feedback${folded ? ' operation-feedback-folded' : ''}`} aria-label="Operation feedback">
       {live}
       <div className="operation-feedback-heading"><h2>{folded ? 'Last decision' : 'What happened'}</h2><Button variant="ghost" size="sm" className="operation-log-trigger" onClick={() => { onOpenLog?.(); setOpen(true); }} aria-haspopup="dialog" aria-expanded={open}>Decision log ({decisions.length})</Button></div>
-      {folded ? <Disclosure key={last.revision} name="last-decision" className={`last-decision last-decision-${cardKind(last)}`} summary={last.title} hint={`${last.stageLabel} · ${outcome}`}>{card}</Disclosure> : card}
+      {folded ? <Disclosure key={last.revision} name="last-decision" className={`last-decision last-decision-${cardKind(last)}`} summary={<><ResultPill decision={last} /> {last.title}</>}>{card}</Disclosure> : card}
       <Sheet open={open} onClose={() => setOpen(false)} title="Decision log" className="operation-log-sheet" footer={<Button block onClick={() => setOpen(false)}>{ended ? 'Return to debrief' : 'Return to operation'}</Button>}>
         <OperationLogContents decisions={decisions} officers={officers} explicitCompletion={explicitCompletion} />
       </Sheet>
@@ -189,27 +203,3 @@ function DecisionStress({ decision: d, officers, complete = false }: { decision:
   </section>;
 }
 
-/** Live summary: one compact chip per officer whose stress changed, so the next decision stays
- * close. A crossed stress range is called out; the gauges stay in the details and the log. */
-function DecisionStressChips({ decision: d, officers }: { decision: DecisionView; officers: DebriefOfficers }) {
-  const changed = d.stressDeltas.filter((row) => row.delta !== 0);
-  if (!changed.length) return null;
-  return <section className="decision-stress decision-stress-compact" aria-label={d.actualStressDeltas ? 'Officer stress' : 'Recorded strain'}>
-    <h4>{d.actualStressDeltas ? 'Stress on the team' : 'Recorded strain'}</h4>
-    <ul className="decision-stress-chips">{changed.map((row) => {
-      const person = officers[row.officerId];
-      const known = row.stressBefore !== undefined && row.stressAfter !== undefined;
-      // A saved change without readings stays exact; there is no reading to round it against.
-      const change = known ? changeText(row.stressBefore!, row.stressAfter!) : { text: `${signed(row.delta, 1)} ${d.actualStressDeltas ? 'stress' : 'recorded strain'}`, direction: Math.sign(row.delta) };
-      const crossed = known && stressBand(row.stressBefore!) !== stressBand(row.stressAfter!) ? STRESS_LABEL[stressBand(row.stressAfter!)] : null;
-      return <li key={row.officerId} data-crossed={crossed ? 'yes' : undefined}>
-        <ResultPortrait officerId={row.officerId} officers={officers} size={28} />
-        <span className="decision-stress-chip-name">{person?.surname ?? row.label}</span>
-        <strong className={change.direction > 0 ? 'tone-warn' : change.direction < 0 ? 'tone-mint' : ''}>{change.text}</strong>
-        {crossed && <span className="decision-stress-crossing">Now {crossed.toLowerCase()}</span>}
-      </li>;
-    })}</ul>
-    {d.actualStressDeltas && changed.some((row) => row.stressAfter === undefined) && <p className="decision-legacy-note">Only the stress change was saved for this older decision.</p>}
-    {!d.actualStressDeltas && <p className="decision-legacy-note">Older record: strain may differ from the applied change.</p>}
-  </section>;
-}

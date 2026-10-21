@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { FactStatusChip } from '../components/FactStatusChip';
 import type { ReactNode } from 'react';
 import type {
   ActionView,
@@ -546,37 +547,6 @@ export function revealStageStep(strip: HTMLOListElement, step: HTMLLIElement) {
 
 // ---------------------------------------------------------------- status chip
 
-export function StatusChip({ status }: { status: SpaceView['status'] }) {
-  switch (status) {
-    case 'confirmed':
-      return (
-        <Chip tone="mint" icon="check">
-          Confirmed
-        </Chip>
-      );
-    case 'unknown':
-      return (
-        <Chip tone="amber" icon="question">
-          Unknown
-        </Chip>
-      );
-    case 'reported':
-      return (
-        <Chip tone="amber" icon="question">
-          Reported
-        </Chip>
-      );
-    case 'disproved':
-      return (
-        <Chip tone="danger" icon="x">
-          Disproved
-        </Chip>
-      );
-    default:
-      return <Chip>Not tracked</Chip>;
-  }
-}
-
 // ---------------------------------------------------------------- action detail sheet
 
 export interface ActionSheetProps {
@@ -940,7 +910,7 @@ export function RoomSheet(p: RoomSheetProps) {
               <Chip icon={roomIcon(type)}>{ROOM_TYPE_LABEL[type] ?? type}</Chip>
             )}
             {floorCount(loc) > 1 && <Chip icon="layers">{floorName(d?.floor ?? loc.rooms.find((r) => r.id === s.id)?.floor ?? 0)}</Chip>}
-            <StatusChip status={s.status} />
+            <FactStatusChip status={s.status} />
           </span>
         ) : undefined
       }
@@ -1083,7 +1053,7 @@ export function PersonRow({ m }: { m: SpaceView['people'][number] }) {
       <div className="person-top">
         <Icon name={meta.icon === 'question' ? 'user' : meta.icon} size={16} />
         <strong>{m.label}</strong>
-        <StatusChip status={m.status} />
+        <FactStatusChip status={m.status} />
         <span className="dim">{confirmed ? 'Position confirmed' : 'Approximate position'}</span>
       </div>
       {m.condition && <p className={`person-condition person-condition-${m.condition}`}><Icon name={m.condition === 'deceased' ? 'x' : 'bandage'} size={14} />{m.condition === 'deceased' ? 'Deceased' : 'Injured'}</p>}
@@ -1116,7 +1086,7 @@ function FactCard({ f, actions, onPick }: { f: FactView; actions: ActionView[]; 
       <div className="fact-top">
         <Icon name={f.status === 'confirmed' ? 'check' : f.status === 'disproved' ? 'x' : 'question'} size={18} />
         <strong>{f.label}</strong>
-        <StatusChip status={f.status} />
+        <FactStatusChip status={f.status} />
       </div>
       <p className="fact-claim">{f.claim}</p>
       {f.source && (

@@ -58,9 +58,7 @@ it('shows an authored completed event without a contradictory failure badge, pre
   expect(visible).not.toContain('Went badly');
   expect(visible).toContain('Civilian safety');
   expect(visible).toContain('-2');
-  expect(visible).toContain('Supplies used');
-  expect(visible).toContain('Stress on the team');
-  expect(html).toContain('Recorded check: adverse');
+  expect(html).toContain('Task check: went badly');
   expect(saved).toEqual(before);
 });
 
@@ -224,7 +222,7 @@ describe('reviewing a decision', () => {
 describe('persistent decision results', () => {
   it('keeps actual changes and specific consequences visible after the toast is gone', () => {
     const html = render(createElement(OperationFeedback, { decisions: [decision()] }));
-    for (const expected of ['What happened', 'Had complications', 'The patient received aid, but the route is still unresolved.', '+8 min', 'Call progress', '+12', 'Civilian safety', '-4', 'Pressure', '+5', 'Officer stress', '+1.5 stress', '1 × Trauma supplies', 'Patient condition: Confirmed', 'Decision log (1)']) expect(html).toContain(expected);
+    for (const expected of ['What happened', 'Had complications', 'The patient received aid, but the route is still unresolved.', '+8 min', 'Call progress', '+12', 'Civilian safety', '-4', 'Pressure', '+5', '1 × Trauma supplies', 'Patient condition', 'Decision log (1)']) expect(html).toContain(expected);
     expect(html).toContain('aria-haspopup="dialog"');
     expect(html).toContain('aria-expanded="false"');
     expect(html).not.toContain('role="dialog"');
@@ -236,25 +234,26 @@ describe('persistent decision results', () => {
     expect(html).toContain('2 decisions, in order');
     expect(html.indexOf('Decision 1')).toBeLessThan(html.indexOf('Decision 2'));
     for (const expected of ['Ortiz', '+3 stress', 'Chen', '+1.5 stress', 'The delay leaves the squad with less time.', 'Pressure reduced the margin.', 'Ortiz medical rating', 'Operation ended:', 'Assistance completed']) expect(html).toContain(expected);
+    // Each thing is told once: the story isn't retold from the saved explanation.
+    expect(html.split('The delay leaves the squad with less time.').length - 1).toBe(2);
   });
 
   it('shows the engine\'s camera strain line from a gauge that fills in the recorded explanation', () => {
     const line = 'Cameras on the scene (The crowd with phones at 60) added 24% to everyone\'s strain.';
-    const html = render(createElement(OperationLogContents, { decisions: [decision({ explanation: [line] })] }));
+    const html = render(createElement(OperationLogContents, { decisions: [decision({ explanation: ['Prepare medical access only partly worked (Squad A).', line] })] }));
     expect(html.replace(/&#x27;/g, "'")).toContain(line);
   });
 
-  it('keeps no-change sections in the record while a quiet result leads with its saved consequence and time', () => {
+  it('leads a quiet result with its saved consequence and time, and shows no empty changes', () => {
     const quiet = decision({ timeCost: .5, objectiveDelta: 0, civilianSafetyDelta: 0, pressureDelta: 0, stressDeltas: [], supplies: [], knowledgeChanges: [], consequences: ['The resident agrees to speak at the door.'], explanation: ['The resident agrees to speak at the door.'] });
     const before = structuredClone(quiet);
     const html = render(createElement(DecisionCard, { decision: quiet, explicitCompletion: true }));
     const visible = defaultResult(html);
     expect(visible).toContain('The resident agrees to speak at the door.');
     expect(visible).toContain('+0.5 min');
-    expect(visible.match(/<dt>/g)).toHaveLength(1);
     for (const absent of ['Civilian safety', 'Pressure', 'Supplies used', 'What you learned', 'Stress on the team', 'No change', 'Nothing new']) expect(visible).not.toContain(absent);
     expect(html).toContain('<details class="disclosure decision-causes decision-record" data-disclosure="decision-record">');
-    for (const saved of ['Civilian safety', 'Pressure', 'Supplies used', 'None', 'No knowledge changes recorded.', 'No change to officer stress.']) expect(html).toContain(saved);
+    expect(html.split('The resident agrees to speak at the door.').length - 1, 'told once').toBe(1);
     expect(quiet).toEqual(before);
   });
 
@@ -268,10 +267,8 @@ describe('persistent decision results', () => {
     const visible = defaultResult(html);
     for (const line of saved.consequences) expect(visible).toContain(line);
     expect(visible.indexOf(saved.consequences[1])).toBeLessThan(visible.indexOf('aria-label="What changed"'));
-    for (const expected of ['Son waiting outside: Confirmed', 'Fire in the kitchen: Ruled out', '1 × Trauma supplies', '+8 min', '-4', '+5', '+1.5 stress']) expect(visible).toContain(expected);
-    expect(visible).not.toContain('Helped most');
-    expect(visible).not.toContain('Most strain');
-    for (const line of saved.explanation) expect(html).toContain(line);
+    for (const expected of ['Son waiting outside', 'confirmed', 'Fire in the kitchen', 'ruled out', '1 × Trauma supplies', '+8 min', '-4', '+5']) expect(visible).toContain(expected);
+    for (const told of ['Helped most', 'Most strain']) expect(html).not.toContain(told);
     expect(html).toContain('Ortiz medical rating: +12 points');
     expect(visible).not.toContain('Operation ended');
   });
@@ -279,12 +276,10 @@ describe('persistent decision results', () => {
   it('retains exact legacy deltas without claiming unknown stress levels or an injury from scores alone', () => {
     const old = decision({ actualStressDeltas: false, stressDeltas: [{ officerId: 'off_chen', label: 'Chen', delta: 2 }], supplies: [], knowledgeChanges: [], consequences: ['The route stays open.'] });
     const visible = defaultResult(render(createElement(DecisionCard, { decision: old })));
-    for (const expected of ['Recorded strain', '+2 recorded strain', 'Older record: strain may differ from the applied change.', '-4']) expect(visible).toContain(expected);
+    for (const expected of ['+2 recorded strain', '-4']) expect(visible).toContain(expected);
     for (const absent of ['Officer stress', 'stress-scale', 'Low stress', 'injured', 'Nothing new']) expect(visible).not.toContain(absent);
     const emptyOld = render(createElement(DecisionCard, { decision: { ...old, stressDeltas: [] } }));
-    expect(defaultResult(emptyOld)).not.toContain('Recorded strain');
-    expect(emptyOld).toContain('No strain entries were saved.');
-    expect(emptyOld).not.toContain('No change to officer stress.');
+    expect(emptyOld).not.toContain('recorded strain');
   });
 
   it('preserves zero-delta officer snapshots and all evidence in the expanded full log', () => {
@@ -294,15 +289,14 @@ describe('persistent decision results', () => {
     const log = render(createElement(OperationLogContents, { decisions: [saved], explicitCompletion: true }));
     expect(log).toContain('Each choice records the time, supplies and changes it caused.');
     expect(log).toContain('<details class="disclosure decision-causes decision-record" data-disclosure="decision-record" open="">');
-    for (const line of saved.explanation) expect(log).toContain(line);
-    for (const expected of ['Call progress', 'Civilian safety', 'Pressure', 'before 80, change 0', 'Needs rest', 'No knowledge changes recorded.', 'Supplies used', 'None', 'Ortiz medical rating: +12 points']) expect(log).toContain(expected);
+    for (const expected of ['Call progress', 'Civilian safety', 'Pressure', 'before 80, change 0', 'Needs rest', 'Ortiz medical rating: +12 points']) expect(log).toContain(expected);
   });
 
   it('keeps current completion separate from recorded numeric progress without changing legacy feedback', () => {
     const html = render(createElement(DecisionCard, { decision: decision(), explicitCompletion: true }));
     expect(defaultResult(html)).not.toContain('Call progress');
     expect(html).toContain('Call progress');
-    expect(html).toContain('Completion depends on the work done');
+    expect(html).toContain('depends on the work done');
     expect(defaultResult(html)).toContain('The patient received aid, but the route is still unresolved.');
     expect(defaultResult(html)).toContain('Civilian safety');
     expect(defaultResult(render(createElement(DecisionCard, { decision: decision() })))).toContain('Call progress');

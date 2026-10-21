@@ -69,8 +69,11 @@ describe('a threat that runs out with no choice made', () => {
     // The result beat names the indecision, the threat's line, the inaction and the new moment.
     expect(lapse.explanation[0]).toBe(`No call made: ${threat.label}.`);
     const landing = threat.effects.map(effect => effect.text).find(Boolean)!;
-    expect(lapse.committed.consequences[0]).toBe(landing);
-    expect(lapse.committed.consequences).toContain(threat.timeout![0].text);
+    // The landing and the beats played live in the comms log: told once, folded, never retold.
+    expect(lapse.committed.heard?.map(line => line.line)).toContain(landing);
+    expect(lapse.committed.consequences).not.toContain(landing);
+    expect(lapse.committed.consequences[0]).toBe(threat.timeout![0].text);
+    expect(lapse.committed.exchange ?? []).toEqual([]);
     expect(lapse.committed.consequences.at(-1)).toMatch(/^Next: /);
     const views = decisionViewsFor(after, next, scenarioOf(after));
     expect(views.at(-1)).toMatchObject({ lapse: true, band: null, title: `No call made: ${threat.label}`, stressDeltas: [] });
