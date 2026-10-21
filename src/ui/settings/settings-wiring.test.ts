@@ -1,0 +1,119 @@
+// The saved settings reach the game: avoided themes leave the draw and clear the board, the timer
+// setting is the one dither reads (Off adds none), a card names its situation's themes and says it
+// can be left alone, and the threat bar drains with the stall.
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { callTreeAt } from '../../content/call-trees';
+import { AVOIDABLE_THEMES } from '../../content/content-descriptors';
+import { scenarioRecipe } from '../../content/scenario-recipes';
+import { parseIncidentId } from '../../gen/incident';
+import { CampaignSlots } from '../../sim/campaign-slots';
+import { createInitialState } from '../../sim/department';
+import { dispatch } from '../../sim/game';
+import { cardFits, type ContentExclusion } from '../../sim/incidents';
+import { ThreatPill } from '../screens/LiveView';
+import { CardWarning, cardDescriptors } from './CardWarning';
+import { CARD_THEME_WORDS, CARD_WARNING_TEXT } from './labels';
+import { resetSettingsMemory, updateSettings } from './prefs';
+import { timerSetting } from '../timer';
+
+const NOW = Date.UTC(2026, 0, 5, 12, 0, 0);
+const AVOID_SELF_HARM: ContentExclusion = { avoid: ['suicide_self_harm'] };
+const descriptorsOf = (id: string) => {
+  const spec = parseIncidentId(id)!;
+  return callTreeAt(spec.type)?.situations[scenarioRecipe(spec).variant]?.descriptors ?? [];
+};
+const storage = () => {
+  const data = new Map<string, string>();
+  return { getItem: (k: string) => data.get(k) ?? null, setItem: (k: string, v: string) => { data.set(k, v); } };
+};
+beforeEach(() => { Object.defineProperty(globalThis, 'localStorage', { value: storage(), configurable: true }); resetSettingsMemory(); });
+afterEach(() => { delete (globalThis as { localStorage?: unknown }).localStorage; resetSettingsMemory(); });
+
+/** A seeded campaign whose unfiltered board holds a call that carries suicide and self-harm. */
+function stateWithAvoidableCard() {
+  for (let seed = 1; seed < 400; seed++) {
+    const state = createInitialState(NOW, seed);
+    if (state.incidents.some((card) => descriptorsOf(card.id).includes('suicide_self_harm'))) return state;
+  }
+  throw new Error('no seed put a self-harm call on the board');
+}
+
+describe('avoided themes reach the board', () => {
+  it('a tick with the exclusion clears the cards that no longer fit, and keeps the rest', () => {
+    const state = stateWithAvoidableCard();
+    const kept = state.incidents.filter((card) => !descriptorsOf(card.id).includes('suicide_self_harm')).map((card) => card.id);
+    expect(state.incidents.length).toBeGreaterThan(kept.length);
+    const next = dispatch(state, { type: 'tick' }, { now: NOW + 1000, exclusion: AVOID_SELF_HARM }).state;
+    expect(next.incidents.some((card) => descriptorsOf(card.id).includes('suicide_self_harm'))).toBe(false);
+    for (const id of kept) expect(next.incidents.some((card) => card.id === id)).toBe(true);
+    expect(next.incidents.every((card) => cardFits(card, AVOID_SELF_HARM))).toBe(true);
+  });
+
+  it('later arrivals never carry an avoided theme', () => {
+    let state = createInitialState(NOW, 7, { avoid: [...AVOIDABLE_THEMES] });
+    for (let hour = 1; hour <= 24 * 6; hour++) {
+      state = dispatch(state, { type: 'tick' }, { now: NOW + hour * 3_600_000, exclusion: { avoid: [...AVOIDABLE_THEMES] } }).state;
+      for (const card of state.incidents) for (const theme of AVOIDABLE_THEMES) expect(descriptorsOf(card.id)).not.toContain(theme);
+    }
+  });
+
+  it('the campaign store passes its exclusion to ticks and to a new game', () => {
+    const slots = new CampaignSlots(null, NOW, () => 3);
+    slots.exclusion = AVOID_SELF_HARM;
+    slots.send({ type: 'tick' }, NOW + 1000, false);
+    expect(slots.getSnapshot().state.incidents.every((card) => cardFits(card, AVOID_SELF_HARM))).toBe(true);
+  });
+});
+
+describe('the saved timer is the one dither reads', () => {
+  it('follows the preference', () => {
+    expect(timerSetting()).toBe('relaxed');
+    updateSettings({ timer: 'off' });
+    expect(timerSetting()).toBe('off');
+    updateSettings({ timer: 'standard' });
+    expect(timerSetting()).toBe('standard');
+  });
+});
+
+describe('the call card warning', () => {
+  it('names the situation themes in plain words and says leaving costs nothing', () => {
+    const state = stateWithAvoidableCard();
+    const card = state.incidents.find((c) => descriptorsOf(c.id).includes('suicide_self_harm'))!;
+    const descriptors = cardDescriptors(card.id);
+    expect(descriptors).toContain('suicide_self_harm');
+    const html = renderToStaticMarkup(createElement(CardWarning, { descriptors }));
+    expect(html).toContain(CARD_WARNING_TEXT.involves);
+    for (const d of descriptors) expect(html).toContain(CARD_THEME_WORDS[d]);
+    expect(html).toContain('cost you nothing');
+  });
+
+  it('is gone when the player turns warnings off, and has no theme line for a call without any', () => {
+    updateSettings({ cardWarnings: 'none' });
+    expect(renderToStaticMarkup(createElement(CardWarning, { descriptors: ['death'] }))).toBe('');
+    updateSettings({ cardWarnings: 'all' });
+    expect(renderToStaticMarkup(createElement(CardWarning, { descriptors: [] }))).not.toContain(CARD_WARNING_TEXT.involves);
+  });
+
+  it('an id that is not a generated call has no themes', () => {
+    expect(cardDescriptors('maple_street')).toEqual([]);
+  });
+});
+
+describe('the threat bar', () => {
+  const bar = (dither?: number) => renderToStaticMarkup(createElement(ThreatPill, { label: 'The count reaches zero', minutes: 8, dither }));
+  it('shows the minutes left after the stall, in the text and the bar', () => {
+    expect(bar()).toContain('8 min');
+    expect(bar()).toContain('width:100%');
+    const half = bar(4);
+    expect(half).toContain('4 min');
+    expect(half).toContain('width:50%');
+    expect(half).toContain('aria-valuenow="4"');
+    expect(half).toContain('Threat: The count reaches zero in 4 minutes');
+  });
+  it('is empty at the cap and never negative', () => {
+    expect(bar(8)).toContain('width:0%');
+    expect(bar(20)).toContain('0 min');
+  });
+});
