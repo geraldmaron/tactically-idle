@@ -8,7 +8,7 @@ import { applyIncidentConsequences, applyPersonConsequences, civilianOutcomeView
 import { protectedOfficerEffects } from './force-risk';
 import { drawnKeys, forceSuppliesSpent, resolveDrawn } from './drawn-effects';
 import { withVariants } from '../gen/incident/drawn-model';
-import { advanceClocks, clockConditionsHold, clockErrors, clockOutEffects, cueEffects, decisionMinutes, ditherCap, forkMinutes, initialClocks, teamMinutes } from './clocks';
+import { advanceClocks, audienceFactor, CLOCK_RULES_V1, clockConditionsHold, clockErrors, clockOutEffects, cueEffects, decisionMinutes, ditherCap, filling, fillGauge, fillPressureRate, fillViews, forkMinutes, initialClocks, teamMinutes } from './clocks';
 import { applyMoves, driftMeters, initialMeters, meterConditionsHold } from './meters';
 import { applyCommitments } from './commitments';
 import { forceLines, OUTCOME_SCORE_V1, scoreCall } from './outcome-score';
@@ -419,18 +419,28 @@ function makeRun(state: GameState, built: BuiltLocation, scenario: ScenarioDefin
 
 /** Advance operation time: pressure rises; civilian safety falls above the threshold; v13 clocks run
  * down, and the cues they pass come back as effects for the caller to apply (applyClockCues). */
-export function advanceTime(run: Pick<OperationRun, 'clock' | 'pressure' | 'civilianSafety'> & Partial<Pick<OperationRun, 'clocks' | 'flags' | 'meters'>>, s: ScenarioDefinition, minutes: number): { civilianLoss: number; crossed: boolean; cues: OutcomeEffect[] } {
+export function advanceTime(run: Pick<OperationRun, 'clock' | 'pressure' | 'civilianSafety'> & Partial<Pick<OperationRun, 'clocks' | 'flags' | 'meters' | 'fillPeak'>>, s: ScenarioDefinition, minutes: number): { civilianLoss: number; crossed: boolean; cues: OutcomeEffect[] } {
   const m = s.pressure;
   const p0 = run.pressure;
+  // A gauge that fills pushes the call too (sim/clocks.ts fillPressureRate): its pressure counts in
+  // the minutes above the threshold as the call's own does. Zero for a call with no gauge, so the
+  // sum is the call's own rate exactly.
+  const rate = m.perMinute + fillPressureRate(s, run.clocks, run.flags ?? [], minutes);
   let over = 0;
   if (p0 >= m.threshold) over = minutes;
-  else if (m.perMinute > 0) over = Math.max(0, minutes - (m.threshold - p0) / m.perMinute);
+  else if (rate > 0) over = Math.max(0, minutes - (m.threshold - p0) / rate);
   const loss = round1(over * m.civilianPerMinute);
   run.clock = round1(run.clock + minutes);
-  run.pressure = round1(clamp(p0 + m.perMinute * minutes, 0, 100));
+  run.pressure = round1(clamp(p0 + rate * minutes, 0, 100));
   run.civilianSafety = round1(clamp(run.civilianSafety - loss, 0, 100));
   if (run.meters) { run.meters = structuredClone(run.meters); driftMeters(run, s, minutes); }
   const cues = run.clocks && run.flags ? advanceClocks(run as Pick<OperationRun, 'clocks' | 'flags'>, s, minutes) : [];
+  // The highest a gauge reaches once its first cue is heard is kept for the debrief's audience
+  // factor: one the team has not been warned of changes nothing. Calls with none are untouched.
+  if (run.clocks && s.clocks?.some(filling)) {
+    const heard = s.clocks.filter(def => filling(def) && (run.clocks![def.id]?.cued ?? 0) > 0).map(def => run.clocks![def.id].value);
+    if (heard.length) run.fillPeak = Math.max(run.fillPeak ?? 0, ...heard);
+  }
   return { civilianLoss: loss, crossed: p0 < m.threshold && run.pressure >= m.threshold, cues };
 }
 
@@ -517,9 +527,13 @@ function applyEffects(
 }
 
 /** Apply the cues a stretch of time fired (advanceTime): marks, and the facts they settle. */
-export function applyClockCues(run: Pick<OperationRun, 'knowledge' | 'flags' | 'pressure' | 'objective' | 'civilianSafety'>, scenario: ScenarioDefinition, fired: OutcomeEffect[]): { effects: OutcomeEffect[]; changes: { factId: Id; status: KnowledgeStatus }[] } {
+export function applyClockCues(run: Pick<OperationRun, 'knowledge' | 'flags' | 'pressure' | 'objective' | 'civilianSafety'> & Partial<Pick<OperationRun, 'meters'>>, scenario: ScenarioDefinition, fired: OutcomeEffect[]): { effects: OutcomeEffect[]; changes: { factId: Id; status: KnowledgeStatus }[] } {
   const effects = cueEffects(fired, scenario, run);
-  return { effects, changes: applyEffects(run, effects).changes };
+  const changes = applyEffects(run, effects).changes;
+  // A cue can move a subject (a gauge that fills: `watched`), wherever the time passed: a commit, a
+  // resupply and their replays all come through here, so it happens exactly once.
+  applyMoves(run, scenario, effects);
+  return { effects, changes };
 }
 
 export interface StepTrace {
@@ -674,6 +688,8 @@ function explain(
   consumed: { itemId: Id; qty: number }[],
   strain: Record<Id, number>,
   stageNote: string | null,
+  fillNote: string | null = null,
+  fillMult = 1,
 ): string[] {
   const out: string[] = [];
   const who = ev.acting.map(squadLabel).join(' + ') + (ev.support.length ? ` with ${ev.support.map(squadLabel).join(' + ')}` : '');
@@ -693,6 +709,7 @@ function explain(
   for (const c of consumed) out.push(`Used ${c.qty} ${ITEMS[c.itemId]?.name.toLowerCase() ?? c.itemId}.`);
   const top = Object.entries(strain).sort((a, b) => b[1] - a[1])[0];
   if (top && top[1] >= 1) out.push(`Most strain: ${state.officers[top[0]]?.surname ?? top[0]} (+${top[1]}).`);
+  if (fillNote) out.push(`Cameras on the scene (${fillNote}) added ${Math.round((fillMult - 1) * 100)}% to everyone's strain.`);
   if (stageNote) out.push(stageNote);
   return out;
 }
@@ -754,7 +771,8 @@ export function computeDebrief(state: GameState, run: OperationRun): DebriefResu
   // resources: settle on a throwaway clone so preview and commit agree.
   const { resources, unitWear } = settleRun(structuredClone(state), run.id, unitsUsedTotals(run), departmentUpkeep(state));
 
-  const proposedTrust = run.responseFailure ? -2 : score ? score.trust : Math.round(scenario.rewards.trust * (2 * factor - 1)) + ending.trustAdjust;
+  // Gauges that fill make the result count for more, either way (the scored path carries it as a line).
+  const proposedTrust = run.responseFailure ? -2 : score ? score.trust : Math.round((Math.round(scenario.rewards.trust * (2 * factor - 1)) + ending.trustAdjust) * audienceFactor(run.fillPeak));
   const trustDelta = clamp(state.department.trust + proposedTrust, 0, 100) - state.department.trust;
   const fundingReward = run.responseFailure ? 0 : Math.round(scenario.rewards.funding * (0.4 + 0.6 * factor));
   // Department service (save v7), shown on the debrief before it closes and added at close.
@@ -941,7 +959,11 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     const before = { objective: run.objective, civilianSafety: run.civilianSafety, pressure: run.pressure };
     const extra = matched.reduce((s, e) => s + (e.extraMinutes ?? 0), 0);
     const timeCost = decisionMinutes(teamMinutes(ev, action, band, storyRouteUsed) + dither, extra, action);
-    const strain = strainFor(input, ev, band);
+    // Gauges that fill add to everyone's strain, scaled by how full they are before this decision
+    // (a gauge bites only once its first cue is heard); the breakdown says so below.
+    const fillStrainMult = 1 + CLOCK_RULES_V1.fill.strain * fillGauge(scenario, run.clocks);
+    const fillNote = fillStrainMult > 1 ? fillViews(scenario, run).filter(view => view.effect).map(view => `${view.label} at ${Math.round(view.value)}`).join(', ') : null;
+    const strain = strainFor(input, ev, band, fillStrainMult);
 
     const clocksBefore = run.clocks;
     const t = advanceTime(run, scenario, timeCost);
@@ -1108,7 +1130,7 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
       ...(matched.some(effect => effect.exchange?.length) ? { exchange: matched.flatMap(effect => effect.exchange ?? []).map(line => ({ ...line, speaker: line.speaker.replace('{lead}', (ev.leadId && draft.officers[ev.leadId]?.surname) || 'Negotiator') })) } : {}),
       ...(drawn.records.length ? { drawn: drawn.records.map(record => ({ ...record })) } : {}),
     };
-    resolution.explanation = explain(draft, scenario, ev, band, texts, timeCost, t.civilianLoss, knowledgeChanges, consumed, strain, stageNote);
+    resolution.explanation = explain(draft, scenario, ev, band, texts, timeCost, t.civilianLoss, knowledgeChanges, consumed, strain, stageNote, fillNote, fillStrainMult);
     return { ok: true };
   },
 

@@ -1,4 +1,5 @@
 import type { ActionDefinition, OutcomeEffect, ScenarioDefinition } from './scenario-types';
+import { endOf } from './clocks';
 import type { CivilianOutcomeView, GameState, Id, OfficerCasualtyRecord, OperationRun, OutcomeBand, PersonCasualtyRecord } from './types';
 import { withVariants } from '../gen/incident/drawn-model';
 import { protectedOfficerEffects, selectedProtection } from './force-risk';
@@ -283,7 +284,7 @@ export function validPersonConsequences(run: OperationRun, scenario: ScenarioDef
     // or one a clock running out records on its owner (sim/clocks.ts clockOutEffects).
     const actualRecords = decision.committed.personCasualties ?? [];
     const possible = [...withVariants(action.outcomes[decision.band]).flatMap(effect => effect.personHarm ?? []),
-      ...((scenario.clocks ?? []).flatMap(clock => clock.onOut?.harm && clock.owner ? [{ personId: clock.owner, severity: clock.onOut.harm }] : []))];
+      ...((scenario.clocks ?? []).flatMap(clock => endOf(clock)?.harm && clock.owner ? [{ personId: clock.owner, severity: endOf(clock)!.harm! }] : []))];
     for (const record of actualRecords.slice(events.length)) {
       if (!possible.some(harm => harm.personId === record.personId && harm.severity === record.severity)) break;
       const binding = scenario.story?.bindings.people[record.personId];

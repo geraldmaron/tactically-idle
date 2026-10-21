@@ -758,6 +758,9 @@ export interface OperationRun {
   /** When the open decision opened (the start, or the last commit), on the department's clock. A
    * close and resume reads the same time, so time away counts once (sim/clocks.ts openDither). */
   decisionOpenedAt: number;
+  /** The highest any gauge that fills reached in this call, 0 to 100 (sim/clocks.ts); absent in a
+   * call with none. The debrief's audience factor reads it. */
+  fillPeak?: number;
 }
 
 export interface ResponseFailureRecord {

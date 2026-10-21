@@ -19,7 +19,7 @@ import { RANK_IDS } from '../content/ranks';
 export const SAVE_KEY = 'tactically-idle/save';
 
 /** Version written by this build. Other versions are rejected. */
-export const CURRENT_SAVE_VERSION = 13;
+export const CURRENT_SAVE_VERSION = 14;
 
 export interface SaveStorage {
   getItem(key: string): string | null;
@@ -146,6 +146,7 @@ function validRun(r: unknown): boolean {
   if (r.clocks !== undefined && (!isObj(r.clocks) || !Object.values(r.clocks).every((c) => isObj(c) && within(c.value) && Number.isSafeInteger(c.cued) && (c.cued as number) >= 0))) return false;
   if (r.meters !== undefined && (!isObj(r.meters) || !Object.values(r.meters).every((m) => isObj(m) && within(m.agitation) && within(m.rapport)
     && isObj(m.moved) && Object.values(m.moved).every((v) => isObj(v) && numbers(v, ['agitation', 'rapport']))))) return false;
+  if (r.fillPeak !== undefined && !(isNum(r.fillPeak) && r.fillPeak >= 0 && r.fillPeak <= 100)) return false;
   if (r.crew !== undefined && !isStrings(r.crew)) return false;
   if (r.commitments !== undefined && (!isObj(r.commitments) || !Object.values(r.commitments).every((c) => isObj(c) && strings(c, ['personId', 'kind'])
     && numbers(c, ['madeAt', 'revision']) && oneOf(c.status, ['open', 'kept', 'broken'])))) return false;

@@ -33,7 +33,7 @@ export function reachableOutcomes(template: IncidentTemplate, situation: Situati
   const byId = new Map(tree.nodes.map(node => [node.id, node]));
   const land = (next: TreeNext): string[] => 'node' in next ? [next.node] : 'turn' in next ? tree.turns?.[next.turn] ?? [] : [];
   const fromClocks = (template.situations.find(model => model.index === situation)?.clocks ?? [])
-    .flatMap(clock => !clock.story && clock.onOut?.next ? land(clock.onOut.next) : []);
+    .flatMap(clock => !clock.story ? [clock.onOut?.next, clock.onFull?.next].flatMap(next => next ? land(next) : []) : []);
   const seen = new Set([tree.root, ...fromClocks]);
   const found: { node: string; choice: string; band: OutcomeBand; outcome: TreeOutcome }[] = [];
   for (const queue = [...seen]; queue.length;) {
@@ -55,7 +55,7 @@ export function reachableOutcomes(template: IncidentTemplate, situation: Situati
  * `police_gunfire`: any reachable force outcome. */
 export function derivedDescriptors(template: IncidentTemplate, situation: Situation): ContentDescriptor[] {
   const outcomes = reachableOutcomes(template, situation).map(entry => entry.outcome);
-  const clockHarm = (template.situations.find(model => model.index === situation)?.clocks ?? []).some(clock => clock.onOut?.harm);
+  const clockHarm = (template.situations.find(model => model.index === situation)?.clocks ?? []).some(clock => clock.onOut?.harm || clock.onFull?.harm);
   const found = new Set<ContentDescriptor>();
   for (const outcome of outcomes) {
     const harms = Object.values(outcome.harm ?? {});
