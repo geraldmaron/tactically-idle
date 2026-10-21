@@ -516,6 +516,16 @@ export const HOSTAGE_SIGNATURE: CallTree = {
               quiet: 'The blinds stay down, and nobody picks up.',
               extra: { mark: ['team_close'], moves: { taker: ['team_seen', 'provoked'], others: 'team_seen' }, pressure: 8 } }),
           } },
+        { id: 'tape_back', title: 'Move the tape back', icon: 'perimeter', check: check(MOVE), minutes: 8,
+          summary: 'Patrol walks the tape and the regulars back to the next corner, where their phones can’t see the door. While the street moves, nobody on the line is talking to {taker.first}, and {taker.he} can watch all of it through the glass.',
+          pull: 'Fewer phones on the door, and fewer people watching every mistake.',
+          cost: 'Nobody answers {taker.first} while patrol moves the street, and {taker.he} can see the uniforms move.',
+          preview: { favorable: 'The regulars go back a block, and their phones lose the door.', mixed: 'Patrol clears the curb, but {taker.first} watches the line move and asks what it means.', adverse: 'The regulars won’t give up the curb, and {taker.first} sees uniforms bunching at the tape.' },
+          outcomes: {
+            favorable: [{ text: 'Patrol walks the tape back to the next corner, and the regulars go with it. Their phones are still up, but too far off to see the door. Inside, {taker.first} lets the phone ring while the street moves.', mark: ['tape_back'], next: { node: 'talking' }, objective: 4 }],
+            mixed: [{ text: 'Patrol shifts the line a block down the street. {taker.first} watches every step of it through the glass and asks the negotiator whether the street is being cleared for something.', mark: ['tape_back'], moves: { taker: 'team_seen' }, next: { node: 'talking' }, pressure: 3 }],
+            adverse: [{ text: 'Nobody at the tape wants to move, and patrol spends the minutes arguing with them. {taker.first} sees the uniforms bunch up outside and stops answering.', moves: { taker: 'team_seen' }, next: { node: 'standoff' }, pressure: 5 }],
+          } },
         { id: 'free_others', title: 'Give {others.first} a way out', icon: 'door', talksTo: 'others', check: check(TALK, 2), minutes: 4, onlyIf: GROUP_IN, certBonus: { cert: 'deescalation', value: 6, label: 'De-escalation training' },
           summary: '{lead} tells {others} directly that the front door is open to {others.him}, and that walking out now is the best thing {others.he} could do for {taker.first}. They came to vouch for a friend. {taker.first} hears you pulling {taker.his} people away.',
           pull: 'Fewer people inside, and fewer who might back {taker.first} up.',
@@ -1002,16 +1012,8 @@ export const HOSTAGE_SIGNATURE: CallTree = {
         // Gauges that fill (docs/call-pressure.md, docs/calls/notes/hostage-livestream-design.md): the
         // crowd's phones at the tape and the taker's own stream. Each choice slows or stops one, and the
         // price is the bargaining itself: the call goes to the standoff either way.
-        { id: 'tape_back', title: 'Move the tape back', icon: 'perimeter', check: check(MOVE), minutes: 8,
-          summary: 'Patrol walks the tape and the regulars back to the next corner, where their phones can’t see the door. While the street moves, nobody on the line is talking to {taker.first}, and {taker.he} can watch all of it through the glass.',
-          pull: 'Fewer phones on the door, and fewer people watching every mistake.',
-          cost: 'The talk with {taker.first} stalls while patrol moves the street.',
-          preview: { favorable: 'The regulars go back a block, and their phones lose the door.', mixed: 'Patrol clears the curb, but {taker.first} watches the line move and asks what it means.', adverse: 'The regulars won’t give up the curb, and {taker.first} sees uniforms bunching at the tape.' },
-          outcomes: {
-            favorable: [{ text: 'Patrol walks the tape back to the next corner, and the regulars go with it. Their phones are still up, but too far off to see the door. Inside, {taker.first} lets the phone ring while the street moves.', mark: ['tape_back'], next: { node: 'standoff' }, objective: 4 }],
-            mixed: [{ text: 'Patrol shifts the line a block down the street. {taker.first} watches every step of it through the glass and asks the negotiator whether the street is being cleared for something.', mark: ['tape_back'], moves: { taker: 'team_seen' }, next: { node: 'standoff' }, pressure: 3 }],
-            adverse: [{ text: 'Nobody at the tape wants to move, and patrol spends the minutes arguing with them. {taker.first} sees the uniforms bunch up outside and stops answering.', moves: { taker: 'team_seen' }, next: { node: 'standoff' }, pressure: 5 }],
-          } },
+        // A gauge that fills: asking the taker to stop streaming stops or slows it, at the price of the
+        // bargaining (the call goes to the standoff on every band) and the taker's trust.
         { id: 'phone_down', title: 'Ask {taker.him} to stop streaming', icon: 'radio', talksTo: 'taker', check: check(TALK, 2), minutes: 4, onlyIf: { marks: ['taker_live'] }, certBonus: NEGOTIATOR,
           summary: '{lead} asks {taker.first} to set the phone aside and talk only on the line. To {taker.first} it sounds like one more person telling {taker.him} to keep quiet. Whatever {taker.he} {taker~was|were} building with you goes cold.',
           pull: 'Nobody watching {taker.first} turn this into a show.',
