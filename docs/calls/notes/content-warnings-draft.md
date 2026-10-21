@@ -37,7 +37,7 @@ first choice.
 
 - Hostage: `death` is reachable only in situation 3, where the taker won't let the owner go. A
   card reading "death" tells the player which situation they drew.
-- Barricade: `police_gunfire` (worded "police use of force" below) is reachable only in situation 3,
+- Barricade: `police_gunfire` is reachable only in situation 3,
   where the subject won't come out.
 
 This is a block under swat-writing-review gate 7 (any pre-check field that differs across
@@ -54,7 +54,7 @@ nothing a player can avoid.
 | `child_at_risk` | a child in danger | What the player will meet, not the mechanism |
 | `domestic_violence` | domestic violence | The plain term. The call shows the pattern (E5); the card names the topic |
 | `death` | death | |
-| `police_gunfire` | police use of force | The force draw is less-lethal or firearm by gear, so "gunfire" can be wrong on the card. Same words as the advisory |
+| `police_gunfire` | police gunfire | The descriptor's own meaning. The force draw can be less-lethal by gear, but gunfire is possible wherever the descriptor is set, so the warning is true (Codex finding 1) |
 | `injury` | injury | |
 
 ### Combining several on one card
@@ -62,33 +62,35 @@ nothing a player can avoid.
 1. One line, opening "Involves", then the phrases joined with commas and a final "and", no serial
    comma ("A, B and C"), ending in a period.
 2. Order: the avoidable themes first in `AVOIDABLE_THEMES` order (suicide risk, a child in danger,
-   domestic violence), then death, police use of force, injury. A player scanning for a theme they
+   domestic violence), then death, police gunfire, injury. A player scanning for a theme they
    care about finds it first.
 3. At most two lines at 390px. The board hook is 13.5px and clamps at 3 lines, about 50 characters
-   a line (`.optile .opboard-summary`, `src/ui/screens/ops-visual.css`). The longest card today is
-   92 characters, two lines. Never clamp a warning: if a future call needs more than two lines, the
+   a line (`.optile .opboard-summary`, `src/ui/screens/ops-visual.css`), less the card's padding
+   and badge. The longest card today is 87 characters, so about two lines; unverified until
+   rendered. Never clamp a warning: if a future call needs more than two lines, the
    card shows the line in full and the hook clamps instead.
 4. No warning line when a call carries no descriptor.
 
-Why "Involves" and not "This call involves": the full sentence takes the barricade line to 102
-characters, a third line on the narrowest card. The subject is the card itself.
+Why "Involves" and not "This call involves": the full sentence takes the barricade line to 97
+characters, likely a third line on the narrowest card. The subject is the card itself.
 
 The four cards today (union of each call's situations):
 
 | Call | Warning line | Characters |
 |---|---|---|
-| One Last Signature (hostage) | Involves suicide risk, death, police use of force and injury. | 61 |
-| Behind the Bathroom Door (barricade) | Involves suicide risk, a child in danger, domestic violence, police use of force and injury. | 92 |
-| After the Noise (armed) | Involves death, police use of force and injury. | 47 |
+| One Last Signature (hostage) | Involves suicide risk, death, police gunfire and injury. | 56 |
+| Behind the Bathroom Door (barricade) | Involves suicide risk, a child in danger, domestic violence, police gunfire and injury. | 87 |
+| After the Noise (armed) | Involves death, police gunfire and injury. | 42 |
 | My Chair Comes Too (rescue) | Involves death and injury. | 26 |
 
 ### Leaving a call costs nothing
 
 Under the warning, on every card that carries one:
 
-> Leaving this call on the board costs you nothing.
+> No penalty for skipping this call.
 
-49 characters, one line. True today: a card the player ignores expires silently and is never
+34 characters, so one line on a phone card; unverified until rendered, and it sits outside any
+clamp. True today: a card the player ignores expires silently and is never
 penalized (`src/sim/incidents.ts`, header comment). If novelty or reputation weighting ever starts
 charging for ignored cards, this line becomes false and has to change with it.
 
@@ -100,12 +102,12 @@ Reviewed against the draft on `claude/ui-settings-bdfcf6`, `src/ui/settings/labe
 | Key | Current | Proposed | Reason |
 |---|---|---|---|
 | `advisoryIntro` | You run a police tactical team. Its calls deal with these themes. | You run a police tactical team. Its calls include these themes. | "Deal with" is vaguer than it needs to be |
-| `leaveCalls` | You can always leave a call on the board. Calls you don't take end on their own and cost you nothing. | You can leave any call on the board. A call you don’t take ends on its own and costs you nothing. | One subject per sentence, no "always" |
-| `notAgeCheck` | The choices below are your own preferences. They are not an age check, and nothing here is verified. | The choices below are your preferences, not an age check. Nothing here is verified. | Same facts, one sentence shorter |
+| `leaveCalls` | You can always leave a call on the board. Calls you don't take end on their own and cost you nothing. | You can leave any call on the board. Calls expire without a penalty. | "End on their own" read as the incident resolving; the card only expires (Codex finding 2) |
+| `notAgeCheck` | The choices below are your own preferences. They are not an age check, and nothing here is verified. | These settings are your preferences. We don’t check your age. | "Nothing here is verified" could read as doubting the warnings or the support details (Codex finding 3) |
 | `acknowledgeHint` | Tick the box above to continue. | Check the box above to continue. | "Tick" is British (American word choice, swat-call-prose rule 10) |
 | `changeLater` | You can change these later in Settings, from the saves button at the top of the screen. Settings also lists where to find support. | You can change these later in Settings, from the saves button at the top of the screen. Settings also has a Support entry. | Names the entry the player will look for |
-| new `avoidMechanics` | none | Death, injury and police use of force run through most calls. Warnings name them, but you can’t avoid them. | Says why three of the six advisory themes have no switch, so the missing toggles don't read as a bug. Shown under the avoid list |
-| `ADVISORY_THEMES` | Police use of force, Death, Injury, Suicide risk, Children in danger, Domestic violence | Suicide risk, Children in danger, Domestic violence, Death, Police use of force, Injury | Same order as the card warning |
+| new `avoidMechanics` | none | Death, injury and police gunfire run through most calls. Warnings name them, but you can’t avoid them. | Says why three of the six advisory themes have no switch, so the missing toggles don't read as a bug. Shown under the avoid list |
+| `ADVISORY_THEMES` | Police use of force, Death, Injury, Suicide risk, Children in danger, Domestic violence | Suicide risk, Children in danger, Domestic violence, Death, Police use of force, including gunfire, Injury | Same order as the card warning. The advisory keeps the broader "use of force" and names gunfire in it |
 | `THEME_LABELS.child_at_risk.name` | A child at risk | A child in danger | Same words as the card and the advisory |
 
 Kept as drafted: the kicker, title, acknowledgement, continue button, the warning and timer labels,
@@ -128,7 +130,7 @@ A named directory can be added once one is checked.
 | `heading` | Support |
 | `lead` (new) | If a call brings something up for you, or you’re thinking about suicide, you can talk to someone. |
 | `us` | In the US, call or text 988 to reach the 988 Suicide & Crisis Lifeline. It’s free and confidential, at any hour. |
-| `elsewhere` | Outside the US, contact your local emergency services or a crisis line where you live. |
+| `elsewhere` | Outside the US, contact a crisis line where you live. If you’re in immediate danger, contact local emergency services. |
 | buttons | Call 988 · Text 988 · Chat online (opens chat.988lifeline.org) |
 
 Changes from the UI draft: the name matches the Lifeline's own ("&", not "and"), the free,
@@ -138,10 +140,13 @@ only.
 
 ### Debrief support line (situations with `suicide_self_harm`, whatever the warning setting)
 
-> If this call brought something up for you, call or text 988 in the US, at any hour. Elsewhere,
-> contact local emergency or crisis services.
+> If this call brought something up for you, you can call or text 988 in the US, at any hour.
+> Outside the US, contact a local crisis line. If you’re in immediate danger, contact local
+> emergency services.
 
-This is the E4.7 draft, tightened, with "at any hour" from the site. It names no outcome, so it
+This is the E4.7 draft, with "at any hour" from the site, and crisis support kept apart from
+emergency services, so nobody reads the police as the first place to turn (Codex finding 4). The
+debrief shows it in full, never clamped. It names no outcome, so it
 reads the same after every ending, including the ones where the subject walks out.
 
 ## 4. Push-back lines
@@ -189,13 +194,17 @@ armed and rescue trees have none yet (`grep "threat: {"` over `src/content/call-
 
 ### Threshold rule, for when lines are written
 
-Suggested: a push-back fires when dither reaches half the threat's minutes, rounded down, and never
-before 2 dither minutes. Examples: 3-minute threat at 2, 4 at 2, 5 at 2, 10 at 5. Reasons:
+Suggested: for a threat longer than 2 minutes, one push-back fires when dither reaches half the
+threat's minutes, rounded down, and never before 2 dither minutes. A threat of 2 minutes or less
+stays silent. On resume after time away, a push-back whose threat has already landed is dropped,
+so a player never comes back to a complaint and its consequence at once (Codex finding 5).
+Examples: 3-minute threat at 2, 4 at 2, 5 at 2, 10 at 5. Reasons:
 
 - It always fires before the threat lands, so the line works as a warning, and the threat it
   warns about is a cue the player saw (swat-call-design's cue-trace rule).
-- Two minutes clears the Relaxed reading floor on any stage, so a player still reading the prompt
-  never hears a subject complain.
+- At Relaxed, dither starts only after the reading floor, so the 2 minutes come on top of it. Whether
+  that is enough for every player to finish a stage at 390px needs testing; it is not a guarantee
+  (Codex finding 6).
 - One line per threat, fired once, like a clock cue.
 
 ## 5. Review record (self-read, plus the Codex read below)
@@ -216,26 +225,47 @@ Writing review record (scaled: UI strings, no call text)
 - Ethics: answered | E4.1 no method 0 hits; E4.7 support line and content warning present; E4.9 language: no "committed", no "attempt"; E4.10 "suicide" outside the lint, owner decision 1; E5 named as a topic only
 - Batch audit: not applicable | 16 strings
 - Engine gates: not applicable | no code or content changed in this branch
-- Tells checked: answered | written-voice voice-check.py on the export: 0 dashes, 0 stock, 0 tics, 0 triads; 1 spelling candidate (box), a real word
-- Findings: 1 block (spoiler, data fix proposed), 0 fix before ship, 2 notes (card ngram by design; "suicide" owner decision)
+- Tells checked: answered | written-voice voice-check.py on the revised export: 0 dashes, 0 stock, 0 tics, 0 triads; 1 spelling candidate (box), a real word
+- Findings: self-read 1 block (spoiler, data fix proposed); Codex 6 fix before ship and 1 note, all applied; 2 notes stand (repeated danger line kept on purpose; "suicide" owner decision)
 - Owner decisions surfaced: "suicide" on UI surfaces; warn per call; push-back for rescue civilians
-- Verdict: edit | block 1 with data fix | fix before ship 0 | note 2 | fingerprints recapture no
+- Verdict: edit | block 1 with data fix | fix before ship 0 open (6 applied) | note 2 | fingerprints recapture no
 ```
 
 String checker: `python3 .agents/skills/swat-call-prose/scripts/game_string_checks.py` with the live
-lint source, 16 strings, exit 1. What fired, and why each stands:
+lint source, rerun on the 15 revised strings after the Codex edits, exit 1. What fired, and why each
+stands:
 
 - `unsafe` x4, "suicide" in two card lines and two support strings. Matches `UNSAFE_DETAIL`
   (`suicid\w*`). The lint enforces it on call text only, through `npm run check:strings`; these
   surfaces sit outside it. Owner decision 1 above, with the fallback wording.
-- `ngram` x2, "police use of force and injury" across the card lines. They are built from fixed
-  phrases by one rule, so the repeat is the design. Note.
-- `address-mix` x10 and `over-target` x11. The checker has no surface key for UI chrome, so the
+- `repeat` and `ngram` x1, "If you’re in immediate danger, contact local emergency services." in
+  both the Support entry and the debrief line. Kept word for word on purpose: the same guidance in
+  two places should read the same (swat-call-prose rule 12). Note.
+- `address-mix` x8 and `over-target` x9. The checker has no surface key for UI chrome, so the
   strings ran under the `debrief` key, whose rules are written for ending text. They address the
   player as "you" on purpose. Not findings.
 - Clean: dash 0, colon 0, stock 0, feeling 0, policy-voice 0, word-choice 0, sentence-long 0,
-  triad 0. Sentence lengths 4 to 18 words.
+  triad 0. Sentence lengths 4 to 20 words. Cadence reads FLAT (variation 0.49) across 15 unrelated
+  UI strings, which share no reading path. Reported, not chased.
+- written-voice `voice-check.py` on the export: 0 dashes, 0 stock phrases, 0 banned tics, 0 triads,
+  1 spelling candidate ("box"), a real word.
 
 ## 6. Separate read (Codex)
 
-Pending; filled in below once the read returns.
+Codex task, configured default model, read-only, fresh thread, 2026-10-20, on commit 5b93661. It
+read the skills and docs named above, then the draft as exported text (not rendered). Verdict: edit.
+It confirmed the per-call union leaks nothing, the "costs nothing" claim against
+`applyIncidentsDue`, and the push-back conclusions against the trees; found no dashes, colons,
+British words or E4.9 labels; and left "suicide" on these surfaces as the owner's decision.
+
+| # | Codex finding | Severity | My verdict | What changed |
+|---|---|---|---|---|
+| 1 | "police use of force" is too broad to warn about gunfire | fix before ship | accepted with a change | Card uses "police gunfire" (shorter than the proposed "police force, including gunfire"); the advisory keeps "Police use of force, including gunfire" |
+| 2 | "ends on its own" suggests the incident resolves | fix before ship | accepted | `leaveCalls` says calls expire without a penalty |
+| 3 | "Nothing here is verified" has unclear scope | fix before ship | accepted | "These settings are your preferences. We don’t check your age." |
+| 4 | Support lines put emergency services beside crisis support without saying when | fix before ship | accepted | Crisis line first, emergency services only for immediate danger, in both the Support entry and the debrief line |
+| 5 | Threshold rule fails for threats of 2 minutes or less, and on resume | fix before ship | accepted | Short threats stay silent; a push-back whose threat already landed is dropped on resume |
+| 6 | "Two minutes clears the reading floor" is unsupported | fix before ship | accepted | Rationale now says dither starts after the floor and the margin needs testing |
+| 7 | Card length claims unverified; shorter leave line | note | accepted | Leave line is "No penalty for skipping this call."; every width claim marked unverified until rendered |
+
+After these edits the string checker was rerun on the revised strings (section 5).
