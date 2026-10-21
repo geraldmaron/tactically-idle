@@ -31,7 +31,7 @@ import { deployRoster, runRoster } from './squads';
 import { getScenario } from './scenario-registry';
 import { ITEMS } from '../content/items';
 import { availableUnits, builtFor, evaluateAction, getBuilt, RESOLUTION_TUNING, squadLabel, tagNames, type Evaluation } from './resolution';
-import { ditherCap, teamMinutes } from './clocks';
+import { ditherCap, stalledRun, teamMinutes } from './clocks';
 import { conditionHolds } from './conditions';
 import { checkStart, computeDebrief, defaultSupport, evaluateDefault, decisionViewsFor, matchedEffects, matchedOutcomeIndices } from './operation';
 import { drawnDistribution, type DrawnDistribution } from './drawn-effects';
@@ -500,7 +500,9 @@ function toView(state: GameState, run: OperationRun, a: ActionDefinition, ev: Ev
     consequenceLevel: a.consequenceLevel ?? inferredConsequenceLevel(a),
     outcomePreview: { ...(a.outcomePreview ?? defaultOutcomePreview(a)) },
     suppliesRequired: expectedSupplies(a, ev),
-    ...durationPreview(a, ev, run, dither),
+    // The card shows the choice's own minutes; the stall shows once, on the threat's bar, so the two
+    // read side by side (owner, 2026-10-20). The threat bands above still count the stall.
+    ...durationPreview(a, ev, run),
     travelMinutes: ev.travelMinutes,
     ...(a.timeLabel ? { timeLabel: a.timeLabel } : {}),
     contributors: ev.contributors,
@@ -511,17 +513,19 @@ function toView(state: GameState, run: OperationRun, a: ActionDefinition, ev: Ev
 }
 
 /** Actions for the current stage. focusSquadId sets the default acting squad. `dither` is the open
- * decision's stall in game minutes (sim/clocks.ts openDither): the cards' minutes and threat tags read
- * it, so a preview shows what a commit now would charge. Zero by default: gates and replays never stall. */
+ * decision's stall in game minutes (sim/clocks.ts openDither): the odds and the threat bands read it,
+ * so a preview shows what a commit now would bring; the minutes stay the choice's own. Zero by default: gates and replays never stall. */
 export function actionViews(state: GameState, _now: number, focusSquadId: SquadId | null, dither = 0): ActionView[] {
   const run = state.activeRun;
   if (!run || run.status !== 'active' || run.stage === 'debrief') return [];
   const s = getScenario(run.scenarioId);
   if (!s) return [];
   const built = builtFor(run.locationFamilyId, run.locationSeed, run.flags);
+  const stall = cappedDither(s, run, dither);
   return s.stages[run.stage].actions.filter((a) => !isGenericResponseExit(s, a) && conditionHolds(a.visibleWhen, run)).map((a) => {
-    const { ev, alternates } = evaluateDefault(state, run, s, built, a, focusSquadId);
-    return toView(state, run, a, ev, alternates, cappedDither(s, run, dither));
+    // The odds read the call as the stall has left it so far, as a commit now would (sim/clocks.ts stalledRun).
+    const { ev, alternates } = evaluateDefault(state, stalledRun(s, run, stall), s, built, a, focusSquadId);
+    return toView(state, run, a, ev, alternates, stall);
   });
 }
 
@@ -546,8 +550,9 @@ export function previewAction(
   const a = s?.stages[run.stage].actions.find((x) => x.id === actionId);
   if (!s || !a || !conditionHolds(a.visibleWhen, run)) return null;
   const built = builtFor(run.locationFamilyId, run.locationSeed, run.flags);
-  const ev = evaluateAction({ state, run, scenario: s, action: a, built, acting: actingSquadIds, support: supportSquadIds, ...(lead ? { lead } : {}) });
-  return toView(state, run, a, ev, [], cappedDither(s, run, dither));
+  const stall = cappedDither(s, run, dither);
+  const ev = evaluateAction({ state, run: stalledRun(s, run, stall), scenario: s, action: a, built, acting: actingSquadIds, support: supportSquadIds, ...(lead ? { lead } : {}) });
+  return toView(state, run, a, ev, [], stall);
 }
 
 // ---------------------------------------------------------------- prep and debrief
@@ -581,9 +586,11 @@ export function drawnDistributionAt(state: GameState, actionId: string, band: Ou
   const action = scenario?.stages[run.stage].actions.find((a) => a.id === actionId);
   if (!scenario || !action) return [];
   const built = builtFor(run.locationFamilyId, run.locationSeed, run.flags);
-  const ev = acting ? evaluateAction({ state, run, scenario, action, built, acting, support: defaultSupport(run, action, acting) })
-    : evaluateDefault(state, run, scenario, built, action, null).ev;
-  const clockBase = teamMinutes(ev, action, band) + cappedDither(scenario, run, dither);
+  const stall = cappedDither(scenario, run, dither);
+  const stalled = stalledRun(scenario, run, stall);
+  const ev = acting ? evaluateAction({ state, run: stalled, scenario, action, built, acting, support: defaultSupport(run, action, acting) })
+    : evaluateDefault(state, stalled, scenario, built, action, null).ev;
+  const clockBase = teamMinutes(ev, action, band) + stall;
   const indices = matchedOutcomeIndices(action, band, run, scenario, clockBase);
   return drawnDistribution(matchedEffects(action, band, run, scenario, clockBase), { state, run, scenario, acting: ev.acting, participantIds: ev.participantIds, unitsOf: availableUnits })
     .map((entry) => ({ ...entry, effect: indices[entry.effect] }));

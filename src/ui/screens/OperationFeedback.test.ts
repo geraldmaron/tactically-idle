@@ -519,8 +519,8 @@ describe('the live call on one screen, in two beats (docs/call-presentation.md)'
     const strip = html.indexOf('class="live-bar live-strip"'), scene = html.indexOf('aria-label="The scene"'), map = html.indexOf('class="live-map live-map-compact"');
     const prompt = html.indexOf('How will you verify the report before committing?'), choice = html.indexOf('aria-label="Review Prepare medical access"');
     expect(strip).toBeGreaterThan(-1);
-    expect(html.indexOf('class="threat-pill"')).toBeGreaterThan(strip);
-    expect(html.indexOf('class="threat-pill"')).toBeLessThan(scene);
+    expect(html.indexOf('class="threat-pill ')).toBeGreaterThan(strip);
+    expect(html.indexOf('class="threat-pill ')).toBeLessThan(scene);
     expect(scene).toBeLessThan(map);
     expect(map).toBeLessThan(prompt);
     expect(html.indexOf('class="live-squad-faces"')).toBeLessThan(prompt);
@@ -533,7 +533,7 @@ describe('the live call on one screen, in two beats (docs/call-presentation.md)'
     expect(html).toContain('What happened');
     expect(html).toContain('Continue to The till');
     expect(html).not.toContain('Review Prepare medical access');
-    expect(html).not.toContain('class="threat-pill"');
+    expect(html).not.toContain('class="threat-pill ');
   });
 
   it('folds the last result to one row on the decide beat, the full record inside', () => {

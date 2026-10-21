@@ -54,8 +54,29 @@ minutes** at a rate set by the timer setting. Time away from the app accrues at 
 3. **The cap.** Dither on one decision stops at the open threat's `minutes`. A long absence can land
    that threat, but never more than one, and never a clock run-out that the threat alone wouldn't
    reach. Without a cap, a night away would end the call.
-4. **The previews stay honest.** As dither grows, `threatTag` and the odds read the dither minutes,
-   so the player watches choices turn "Too slow" before committing. No change is hidden.
+4. **The previews stay honest.** As dither grows, the odds and each card's minutes read the dither,
+   so the player watches choices turn too slow before committing. No change is hidden. The threat
+   has one display, the strip's bar; a card's minutes turn red when the threat lands even if the
+   choice goes well, amber when only a worse result lets it land (owner, 2026-10-20: no "Too slow"
+   tag repeats the bar).
+5. **A stall raises pressure, and the odds read it live** (owner, 2026-10-20). Each stalled game
+   minute adds `CLOCK_RULES_V1.stallPressurePerMinute` (3) on top of the call's own rate and its
+   gauges'. `stalledRun` (`src/sim/clocks.ts`) is the call as the stall has left it: the cards, the
+   pressure meter and the commit's roll and strain all read it, so the odds the player watches fall
+   are the odds the commit uses. The commit adds the stall's own pressure once; its minutes still
+   pass through the decision's time. A 4 to 10 minute stall moves a choice 2 to 10 points.
+6. **Zero lands the threat, on the screen and in the metrics** (owner, 2026-10-20). When the stall
+   reaches the threat's minutes the threat has happened: the strip shows the line the player reads
+   when it happens, and the projection counts its effects at once (`landingEffects`,
+   `src/sim/clocks.ts`): its pressure, and its moves on the subjects. A threat that names no moves
+   gives every subject who keeps meters `THREAT_LANDING_EVENT` (provoked: agitation up,
+   rapport down), so it always reaches the person kept waiting; that agitation feeds the
+   conversation odds and the stance branches (`src/sim/meters.ts`). The commit that follows applies
+   the same landing once and gives every officer on it `CLOCK_RULES_V1.threat.strain` more strain.
+   A slow choice that lands the threat costs exactly the same.
+7. **The result beat doesn't count.** A commit sets `OperationRun.decisionPending`; while it is set
+   no stall accrues. The `openDecision` command clears it when the next decision shows (Continue,
+   or a reload that comes back on the decision), once per decision and only forward.
 
 ## The bar
 
@@ -63,13 +84,25 @@ minutes** at a rate set by the timer setting. Time away from the app accrues at 
 "5 min" text show the same number, so the player sees one clock. When the bar is empty, the threat
 lands on any choice the player commits.
 
+**One pressure at a time** (owner, 2026-10-20). The strip shows a single pressure: the threat or a
+gauge that fills, whichever bites soonest in game minutes (`leadingPressure`,
+`src/ui/screens/fill-gauge.ts`). A threat bites when its minutes run out, a gauge at its next unheard
+cue. A stopped or full gauge shows only when nothing else is open. Gauges move with the stall too.
+The pressure reads calm, then warn under half its window, then critical in its last quarter or last
+minute: heavier colour, a glow, and a two-beat flash as it tips over. It never loops, since the game
+keeps one looping signal (`src/ui/motion.test.ts`).
+
 ## Settings
+
+The owner asked for a drain with no start and stop (2026-10-20), so the reading floor is gone: the
+bar moves from the moment the decision shows, and Relaxed runs slower instead. Off still adds
+nothing, which is what meets WCAG 2.2.1 and the reading-pace guideline below.
 
 | Setting | Reading floor before dither starts | Rate |
 |---|---|---|
 | Off | none, no dither ever | 0 |
-| Relaxed (default) | scales with the length of the stage text | slow |
-| Standard | short | full |
+| Relaxed (default) | none | 1 game minute a real minute |
+| Standard | none | 2 game minutes a real minute |
 
 The rates and floors go in `src/sim/tuning.json`. The setting persists outside the versioned save,
 using the same approach as the content filters in `docs/content-rating.md`.
@@ -142,7 +175,7 @@ phone, stopped or slowed by asking the taker to stop streaming.
 
 ## Scenario Lab
 
-The play surface gets a dither slider. A designer can watch which choices turn "Too slow" at each
+The play surface gets a dither slider. A designer can watch which choices turn too slow at each
 setting, and check that no stage becomes a guaranteed threat at Relaxed.
 
 ## Balance risk

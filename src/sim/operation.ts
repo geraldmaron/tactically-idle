@@ -8,7 +8,7 @@ import { applyIncidentConsequences, applyPersonConsequences, civilianOutcomeView
 import { protectedOfficerEffects } from './force-risk';
 import { drawnKeys, forceSuppliesSpent, resolveDrawn } from './drawn-effects';
 import { withVariants } from '../gen/incident/drawn-model';
-import { advanceClocks, audienceFactor, CLOCK_RULES_V1, clockConditionsHold, clockErrors, clockOutEffects, cueEffects, decisionMinutes, ditherCap, filling, fillGauge, fillPressureRate, fillViews, forkMinutes, initialClocks, teamMinutes } from './clocks';
+import { advanceClocks, audienceFactor, CLOCK_RULES_V1, clockConditionsHold, clockErrors, clockOutEffects, cueEffects, decisionMinutes, ditherCap, filling, fillGauge, fillPressureRate, fillViews, forkMinutes, initialClocks, landingEffects, stalledRun, teamMinutes } from './clocks';
 import { applyMoves, driftMeters, initialMeters, meterConditionsHold } from './meters';
 import { applyCommitments } from './commitments';
 import { forceLines, OUTCOME_SCORE_V1, scoreCall } from './outcome-score';
@@ -452,8 +452,9 @@ export function matchedEffects(action: ActionDefinition, band: OutcomeBand, run:
   // The decision point's threat (NodeThreat): a decision that takes its minutes, travel and the band's
   // delay included, lets it happen. Its effects are addenda; they never route, so where the call
   // goes still rests on the choice and the truth. One place, so a replay matches the live commit.
+  // Landing reaches the subjects too (sim/clocks.ts landingEffects), as the stall's projection showed.
   const threat = action.threat && clockBase !== undefined && clockBase >= action.threat.minutes
-    ? action.threat.effects.filter((effect) => conditionHolds(effect.when, run)) : [];
+    ? landingEffects(scenario, action.threat.effects.filter((effect) => conditionHolds(effect.when, run))) : [];
   // The subject's push-back (TreePushback): each line whose stall threshold the decision's dither
   // reached fires once, as the effect's spoken line and marks, beside the threat. The decision
   // records its dither, so a replay reads the same lines; a decision with none replays as before.
@@ -880,6 +881,16 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     return { ok: true };
   },
 
+  /** The player has read the result and the next decision shows: its stall starts now. Once per
+   * decision, and only forward, so it can never take back time already counted. */
+  openDecision(draft, cmd, ctx) {
+    const run = draft.activeRun;
+    if (!run || run.status !== 'active' || run.revision !== cmd.revision || !run.decisionPending) return fail('No decision waiting to open');
+    run.decisionOpenedAt = Math.max(run.decisionOpenedAt, ctx.now, draft.department.clockHighWater);
+    delete run.decisionPending;
+    return { ok: true };
+  },
+
   cancelOperation(draft, _cmd, ctx) {
     const run = draft.activeRun;
     if (!run) return fail('No operation to cancel');
@@ -917,14 +928,15 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     // Older UI callers use decide; they receive the same free navigation semantics.
     if (cmd.actingSquadIds.some((s) => cmd.supportSquadIds.includes(s))) return fail('A squad cannot both act and support');
     const built = builtFor(run.locationFamilyId, run.locationSeed, run.flags);
-    const input = { state: draft, run, scenario, action, built, acting: cmd.actingSquadIds, support: cmd.supportSquadIds, ...(cmd.leadOfficerId ? { lead: cmd.leadOfficerId } : {}) };
-    const ev = evaluateAction(input);
-    if (!ev.eligible) return fail(ev.reason ?? 'Not available');
-    if (cmd.leadOfficerId && ev.participantIds[0] !== cmd.leadOfficerId) return fail('That officer is not taking part in this decision');
     if (cmd.ditherMinutes !== undefined && !(Number.isFinite(cmd.ditherMinutes) && cmd.ditherMinutes >= 0)) return fail('Dither minutes must be 0 or more');
     // The stall's minutes (docs/call-pressure.md), stopped at the open threat. They join the
     // decision's own minutes below, so clocks, cues and the threat move through the one path.
     const dither = Math.min(ditherCap(scenario, run), Math.floor((cmd.ditherMinutes ?? 0) * 10) / 10);
+    // The odds read the call as the stall left it (sim/clocks.ts stalledRun), as the card showed them.
+    const input = { state: draft, run: stalledRun(scenario, run, dither), scenario, action, built, acting: cmd.actingSquadIds, support: cmd.supportSquadIds, ...(cmd.leadOfficerId ? { lead: cmd.leadOfficerId } : {}) };
+    const ev = evaluateAction(input);
+    if (!ev.eligible) return fail(ev.reason ?? 'Not available');
+    if (cmd.leadOfficerId && ev.participantIds[0] !== cmd.leadOfficerId) return fail('That officer is not taking part in this decision');
     // Who leads is part of the story: results can read the lead's traits and experience
     // (TreeState.lead → lead:<trait>, lead:band_<band>), replaced at every decision.
     run.flags = [...run.flags.filter((flag) => !flag.startsWith(LEAD_PREFIX)), ...leadFlags(draft, run, ev.participantIds[0])];
@@ -961,11 +973,16 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     const timeCost = decisionMinutes(teamMinutes(ev, action, band, storyRouteUsed) + dither, extra, action);
     // Gauges that fill add to everyone's strain, scaled by how full they are before this decision
     // (a gauge bites only once its first cue is heard); the breakdown says so below.
-    const fillStrainMult = 1 + CLOCK_RULES_V1.fill.strain * fillGauge(scenario, run.clocks);
-    const fillNote = fillStrainMult > 1 ? fillViews(scenario, run).filter(view => view.effect).map(view => `${view.label} at ${Math.round(view.value)}`).join(', ') : null;
-    const strain = strainFor(input, ev, band, fillStrainMult);
+    const stalled = stalledRun(scenario, run, dither);
+    // A threat that lands on this decision weighs on everyone on it (CLOCK_RULES_V1.threat.strain).
+    const landed = !!action.threat && clockBaseMinutes >= action.threat.minutes;
+    const fillStrainMult = (1 + CLOCK_RULES_V1.fill.strain * fillGauge(scenario, stalled.clocks)) * (landed ? 1 + CLOCK_RULES_V1.threat.strain : 1);
+    const fillNote = fillStrainMult > 1 ? fillViews(scenario, stalled).filter(view => view.effect).map(view => `${view.label} at ${Math.round(view.value)}`).join(', ') : null;
+    const strain = strainFor({ ...input, run: stalled }, ev, band, fillStrainMult);
 
     const clocksBefore = run.clocks;
+    // The stall's own pressure lands once, before its minutes pass with the decision's (stalledRun).
+    if (dither > 0) run.pressure = round1(clamp(run.pressure + CLOCK_RULES_V1.stallPressurePerMinute * dither, 0, 100));
     const t = advanceTime(run, scenario, timeCost);
     t.civilianLoss = round1(before.civilianSafety - run.civilianSafety);
     // Who the team sees, read before the outcome moves anyone (sim/sightings.ts).
@@ -1076,8 +1093,9 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     };
     run.history.push(resolution);
     run.revision += 1;
-    // The next decision opens now.
+    // The next decision opens now, and its stall waits while the result is read (openDecision).
     run.decisionOpenedAt = Math.max(ctx.now, draft.department.clockHighWater);
+    run.decisionPending = true;
 
     // stage transition (the committed decision is already in history)
     let stageNote: string | null = null;

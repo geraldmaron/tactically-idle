@@ -38,7 +38,7 @@ import type { IconName } from '../icons';
 import { feetInches, opMinutes, signed, sqft } from '../format';
 import { CONSEQUENCE_LABEL, OddsBar, OutcomeForecast } from './OperationFeedback';
 import { DecisionList, LeadFace, RATING_SHORT } from './DecisionList';
-import { fillEffectLine, liveFillViews, reachByAction } from './fill-gauge';
+import { fillEffectLine, fillMinutesToBite, leadingPressure, liveFillViews, pressureUrgency, reachByAction, threatLandingText } from './fill-gauge';
 import type { FillView } from '../../sim/clocks';
 import { CONTRIBUTOR_GROUPS } from './contributor-groups';
 import { GamePeopleProvider, PeopleText } from '../people/PeopleText';
@@ -102,7 +102,7 @@ export interface LiveViewProps {
   failedResponse?: ReactNode;
   /** Overlay sheets (action detail, room sheet, cancel confirm) rendered by the container. */
   children?: ReactNode;
-  /** A hot call (sim/authorization.ts isHotCall): the call bar says "Lights and sirens". */
+  /** A hot call (sim/authorization.ts isHotCall): the call bar's light bar flashes red and blue. */
   sirens?: boolean;
   /** Which beat of the call shows (docs/call-presentation.md): the decision, or the result of the
    * one just confirmed, with a Continue button. Left out, the decision. */
@@ -154,8 +154,9 @@ export function LiveView(p: LiveViewProps) {
   const toggleFold = () => { const next = mapShown; setMapFolded(next); writeMapFolded(next); };
   const stageNumber = p.progress.stages.findIndex((step) => step.state === 'current') + 1;
   const threat = beat === 'decide' ? p.progress.threat ?? null : null;
-  // Gauges that fill keep running through the result, so they stay in the strip on both beats.
-  const gauges = liveFillViews(p.g);
+  // Gauges that fill keep running through the result, so they stay in the strip on both beats. The
+  // strip shows one pressure, the one that bites soonest (fill-gauge.ts leadingPressure).
+  const pressure = leadingPressure(threat, p.dither ?? 0, liveFillViews(p.g, p.dither ?? 0));
   const reach = reachByAction(p.g, available.map((action) => action.id));
   const casualties = p.g.activeRun?.officerCasualties ?? {};
   const focusTask = focus ? p.squadTasks.find((task) => task.squadId === focus.id) : undefined;
@@ -206,8 +207,8 @@ export function LiveView(p: LiveViewProps) {
 
   const screen = (
     <div className={`live live-one live-beat-${beat}${mapFull ? ' live-map-full-open' : ''}`}>
-      {/* The call's name scrolls away; the strip under it stays pinned: where the call is, the threat,
-          and every gauge that fills. */}
+      {/* The call's name scrolls away; the strip under it stays pinned: where the call is and the one
+          pressure that bites soonest, the threat or a gauge that fills. */}
       <header className="live-head">
         <div className="live-strip-head">
           <button type="button" className="live-title" onClick={() => setBriefingOpen(true)} aria-haspopup="dialog" aria-expanded={briefingOpen}>
@@ -227,14 +228,14 @@ export function LiveView(p: LiveViewProps) {
         <p className="live-sub">
           <span className="live-flag"><i className="live-dot-amber" aria-hidden="true" />LIVE</span>
           <span>{p.subtitle}</span>
-          {p.sirens && <span className="live-hot"><Icon name="car" size={13} />Lights and sirens</span>}
+          {p.sirens && <span className="live-lightbar" role="img" aria-label="Lights and sirens"><i /><i /></span>}
           {p.canCancel && <button type="button" className="linkbtn live-cancel" onClick={p.onCancel} aria-label="Cancel operation">Cancel</button>}
         </p>
       </header>
       <div className="live-bar live-strip">
         <StageSteps progress={p.progress} />
-        {threat && <ThreatPill label={threat.label} minutes={threat.minutes} dither={p.dither} />}
-        {gauges.map((view) => <FillGauge key={view.id} view={view} />)}
+        {pressure?.kind === 'threat' && <ThreatPill label={pressure.label} minutes={pressure.minutes} dither={p.dither} landed={pressure.left <= 0 ? threatLandingText(p.g) : null} />}
+        {pressure?.kind === 'fill' && <FillGauge view={pressure.view} />}
       </div>
 
       {/* The scene: the map (compact, foldable, or full screen) and the squad, above the story. */}
@@ -342,17 +343,26 @@ export function LiveView(p: LiveViewProps) {
  * (docs/call-pressure.md), so the minutes left are `minutes - dither` and the bar and the text show
  * the same number. An empty bar means the threat lands on any choice. The bar only changes width
  * when the stall moves, and never animates under reduced motion. */
-export function ThreatPill({ label, minutes, dither = 0 }: { label: string; minutes: number; dither?: number }) {
+export function ThreatPill({ label, minutes, dither = 0, landed = null }: { label: string; minutes: number; dither?: number;
+  /** At zero the threat has landed: the line the player reads when it happens (fill-gauge.ts threatLandingText). */
+  landed?: string | null }) {
   const left = Math.max(0, minutes - Math.max(0, dither));
   const shown = Math.ceil(left);
   const share = minutes > 0 ? Math.max(0, Math.min(1, left / minutes)) : 0;
-  return <p className="threat-pill" aria-label={`Threat: ${label} in ${shown} ${shown === 1 ? 'minute' : 'minutes'}`}>
+  const urgency = pressureUrgency({ kind: 'threat', label, minutes, left });
+  // At zero the bar gives way to what happened: it lands on any commit, and the cards' odds already
+  // count it (sim/clocks.ts stalledRun).
+  if (left <= 0 && landed) return <p className="threat-pill pressure-critical threat-pill-landed" role="status" aria-label={`${label}. It happened`}>
+    <Icon name="hourglass" size={14} />
+    <span className="threat-pill-label"><PeopleText text={landed} /></span>
+  </p>;
+  return <p className={`threat-pill pressure-${urgency}`} aria-label={`Threat: ${label} in ${shown} ${shown === 1 ? 'minute' : 'minutes'}`}>
     <Icon name="hourglass" size={14} />
     <span className="threat-pill-label">{label}</span>
     <span className="threat-pill-sep" aria-hidden="true">·</span>
     <b className="threat-pill-min">{shown} min</b>
     <span className="threat-pill-bar" role="meter" aria-label="Minutes left before the threat lands" aria-valuemin={0} aria-valuemax={minutes} aria-valuenow={shown} aria-valuetext={`${shown} of ${minutes} minutes`}>
-      <i style={{ width: `${Math.round(share * 100)}%` }} />
+      <i style={{ width: `${(share * 100).toFixed(2)}%` }} />
     </span>
   </p>;
 }
@@ -364,7 +374,8 @@ export function ThreatPill({ label, minutes, dither = 0 }: { label: string; minu
 export function FillGauge({ view }: { view: FillView }) {
   const state = view.full ? 'Full' : view.stopped ? 'Stopped' : view.slowed ? 'Slowed' : null;
   const value = Math.round(view.value);
-  return <div className={`fill-gauge${view.stopped ? ' fill-gauge-stopped' : ''}`} data-fill={view.id} role="group" aria-label={`${view.label}: ${value} of 100${state ? `, ${state.toLowerCase()}` : ''}`}>
+  const urgency = pressureUrgency({ kind: 'fill', view, left: fillMinutesToBite(view) });
+  return <div className={`fill-gauge pressure-${urgency}${view.stopped ? ' fill-gauge-stopped' : ''}`} data-fill={view.id} role="group" aria-label={`${view.label}: ${value} of 100${state ? `, ${state.toLowerCase()}` : ''}`}>
     <p className="fill-gauge-head">
       <Icon name="crowd" size={14} />
       <span className="fill-gauge-label">{view.label}</span>

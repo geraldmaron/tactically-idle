@@ -3,7 +3,7 @@
 // decision's minutes, the replay that reads it back, and the previews that show it before a commit.
 import { describe, expect, it } from 'vitest';
 import { CALL_TREES } from '../content/call-trees';
-import { CLOCK_RULES_V1, ditherCap, ditherMinutes, openDither } from './clocks';
+import { CLOCK_RULES_V1, ditherCap, ditherMinutes, openDither, openThreat, stalledRun, THREAT_LANDING_EVENT } from './clocks';
 import { traceRun } from './operation';
 import { actionViews, previewAction } from './operation-selectors';
 import { deserialize, serialize } from './save';
@@ -22,19 +22,17 @@ describe('ditherMinutes', () => {
     expect(ditherMinutes({ ...base, timer: 'off', now: NOW + 600 * MIN })).toBe(0);
   });
 
-  it('counts nothing before the reading floor, then the setting’s rate', () => {
+  it('runs at the setting’s rate from the moment the decision shows, with no pause and no steps', () => {
     const { relaxed, standard } = CLOCK_RULES_V1.dither;
-    const floor = relaxed.floorSeconds + 240 / relaxed.readingCharsPerSecond;
     const at = (seconds: number, timer: 'relaxed' | 'standard', textLength = 240) => ditherMinutes({ ...base, timer, textLength, now: NOW + seconds * SEC });
-    expect(at(floor, 'relaxed')).toBe(0);
-    expect(at(floor + 120, 'relaxed')).toBe(2 * relaxed.gameMinutesPerRealMinute);
-    // Standard's floor is short and doesn't scale with the text.
-    expect(at(standard.floorSeconds + 30, 'standard', 5000)).toBe(0.5 * standard.gameMinutesPerRealMinute);
-  });
-
-  it('scales the Relaxed floor with the text', () => {
-    const at = (textLength: number) => ditherMinutes({ ...base, timer: 'relaxed', textLength, now: NOW + 90 * SEC });
-    expect(at(0)).toBeGreaterThan(at(600));
+    // No reading floor (owner, 2026-10-20): the drain never holds, then starts.
+    expect(relaxed.floorSeconds).toBe(0);
+    expect(standard.floorSeconds).toBe(0);
+    expect(at(1, 'relaxed')).toBeGreaterThan(0);
+    expect(at(120, 'relaxed')).toBeCloseTo(2 * relaxed.gameMinutesPerRealMinute, 5);
+    expect(at(30, 'standard', 5000)).toBeCloseTo(0.5 * standard.gameMinutesPerRealMinute, 5);
+    // Every second moves it: a continuous bar, not tenths.
+    expect(at(2, 'relaxed')).toBeGreaterThan(at(1, 'relaxed'));
   });
 
   it('stops at the cap, never falls as time runs on, and is zero for a time before the open', () => {
@@ -120,10 +118,47 @@ describe('a commit with dither', () => {
     for (const entry of actionViews(state, NOW, 'A', cap).filter(item => item.threat)) expect(entry.threat!.bands).toEqual(['favorable', 'mixed', 'adverse']);
     const reviewed = previewAction(state, NOW, view.id, view.actingSquadIds, view.supportSquadIds, undefined, cap)!;
     if (reviewed.threat) expect(reviewed.threat.bands).toContain('favorable');
-    expect(reviewed.timeRange!.min).toBeGreaterThanOrEqual(cap);
+    // The card keeps the choice's own minutes; the stall shows on the bar.
+    expect(reviewed.timeRange).toEqual(previewAction(state, NOW, view.id, view.actingSquadIds, view.supportSquadIds)!.timeRange);
     const committed = decide(cap).state.activeRun!;
     const landed = scenario.stages.assess.actions.find(action => action.id === view.id)!.threat;
     if (landed) expect(committed.history[0].clockBaseMinutes).toBeGreaterThanOrEqual(landed.minutes);
+  });
+
+  it('lowers the odds as the stall grows, and the commit carries the stall’s pressure once', () => {
+    const odds = (stall: number) => actionViews(state, NOW, 'A', stall).find(entry => entry.id === view.id)!.likelihood.favorable;
+    expect(odds(0)).toBe(view.likelihood.favorable);
+    expect(odds(cap)).toBeLessThan(odds(0));
+    expect(odds(cap / 2)).toBeLessThanOrEqual(odds(0));
+    expect(odds(cap)).toBeLessThanOrEqual(odds(cap / 2));
+    expect(stalledRun(scenario, run, 0)).toBe(run);
+    expect(stalledRun(scenario, run, 2).pressure).toBeGreaterThanOrEqual(run.pressure + 2 * CLOCK_RULES_V1.stallPressurePerMinute);
+    const plain = decide().state.activeRun!, stalled = decide(2).state.activeRun!;
+    expect(stalled.pressure - plain.pressure).toBeGreaterThanOrEqual(2 * CLOCK_RULES_V1.stallPressurePerMinute);
+  });
+
+  it('waits while the result is read, and starts the next stall when the decision shows', () => {
+    const after = decide(0, NOW + 5 * MIN).state;
+    const next = after.activeRun!;
+    expect(next.decisionPending).toBe(true);
+    expect(openDither(scenario, next, after.department.clockHighWater, NOW + 60 * MIN, 'standard')).toBe(0);
+    expect(apply(after, { type: 'openDecision', revision: next.revision + 1 }, NOW + 6 * MIN).result.ok).toBe(false);
+    const opened = apply(after, { type: 'openDecision', revision: next.revision }, NOW + 6 * MIN).state;
+    expect(opened.activeRun!.decisionPending).toBeUndefined();
+    expect(opened.activeRun!.decisionOpenedAt).toBe(NOW + 6 * MIN);
+    expect(apply(opened, { type: 'openDecision', revision: next.revision }, NOW + 9 * MIN).result.ok).toBe(false);
+  });
+
+  it('lands the threat on the screen at zero: pressure, and every subject kept waiting', () => {
+    const threat = openThreat(scenario, run)!;
+    expect(threat).toBeTruthy();
+    const before = stalledRun(scenario, run, threat.minutes - 0.1), at = stalledRun(scenario, run, threat.minutes);
+    const subjects = Object.keys(run.meters ?? {});
+    for (const id of subjects) expect(at.meters![id].agitation).toBeGreaterThan(before.meters![id].agitation);
+    expect(at.pressure).toBeGreaterThan(before.pressure);
+    // The commit applies the same landing once: the subjects end where the screen showed them.
+    const committed = decide(cap).state.activeRun!;
+    for (const id of subjects) expect(committed.meters![id].moved[THREAT_LANDING_EVENT]).toBeDefined();
   });
 
   it('replays from the record: the trace ends where the commit did', () => {

@@ -758,6 +758,8 @@ export interface OperationRun {
   /** When the open decision opened (the start, or the last commit), on the department's clock. A
    * close and resume reads the same time, so time away counts once (sim/clocks.ts openDither). */
   decisionOpenedAt: number;
+  /** Set at a commit while its result is on screen; the next decision's stall starts at openDecision. */
+  decisionPending?: true;
   /** The highest any gauge that fills reached in this call, 0 to 100 (sim/clocks.ts); absent in a
    * call with none. The debrief's audience factor reads it. */
   fillPeak?: number;
@@ -1153,6 +1155,8 @@ export type Command =
       staging?: Partial<Record<SquadId, Id>>;
     }
   | { type: 'cancelOperation' }
+  /** The next decision shows after its result was read (sim/clocks.ts openDither). */
+  | { type: 'openDecision'; revision: number }
   | { type: 'endFailedResponse'; runId: Id; revision: number }
   | { type: 'resupplyAction'; actionId: Id; actingSquadIds: SquadId[]; supportSquadIds: SquadId[] }
   /** `leadOfficerId`: the officer the player sends to lead this decision, one of those taking part.
@@ -1220,7 +1224,7 @@ export type DepartmentCommandType =
   | 'dismissStaff'
   | 'refreshStaffPool';
 
-export type OperationCommandType = 'startOperation' | 'cancelOperation' | 'endFailedResponse' | 'decide' | 'closeDebrief';
+export type OperationCommandType = 'startOperation' | 'cancelOperation' | 'openDecision' | 'endFailedResponse' | 'decide' | 'closeDebrief';
 
 export interface SaveEnvelope {
   saveVersion: number;

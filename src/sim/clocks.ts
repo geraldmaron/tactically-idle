@@ -12,7 +12,8 @@
 // decision, with its owner still inside once that decision's own outcome has applied, records harm
 // to the owner (unless the outcome already hurt them) and sets a mark the tree's prompts read. The
 // record and the text then agree: the debrief and the score see the harm like any authored harm.
-import type { ActionDefinition, ClockCondition, ClockDef, OutcomeEffect, ScenarioDefinition } from './scenario-types';
+import type { ActionDefinition, ClockCondition, ClockDef, MeterEvent, OutcomeEffect, ScenarioDefinition } from './scenario-types';
+import { applyMoves } from './meters';
 import type { Id, OperationRun, OutcomeBand } from './types';
 import { RESOLUTION_TUNING } from './resolution';
 import { tunable } from './tuning';
@@ -31,19 +32,27 @@ export const CLOCK_RULES_V1 = tunable('CLOCK_RULES_V1', {
    * the call's trust result counts, either way, per full peak gauge (0.5: a peak of 80 counts 40%
    * more). `pressurePerMinute`: points of call pressure a full gauge adds each minute. */
   fill: { strain: 0.4, audienceGain: 0.5, pressurePerMinute: 0.5 },
+  /** Points of call pressure each stalled game minute adds on top of the call's own rate: the scene
+   * reads the hesitation. The odds and strain read it the moment it accrues (stalledRun), and the
+   * commit adds it once. */
+  stallPressurePerMinute: 3,
+  /** A decision point's threat when it lands, by the stall or by a slow choice (landingEffects):
+   * every officer on the commit takes `strain` more strain (0.3: 30%). The projection shows the
+   * landing the moment the stall reaches zero (stalledRun); the commit applies it once. */
+  threat: { strain: 0.3 },
   /** Dither minutes (docs/call-pressure.md), per timer setting; Off never adds any. Real time on an
    * open decision starts counting after a reading floor: `floorSeconds`, plus a second for every
    * `readingCharsPerSecond` characters of the stage's text (0: the floor doesn't scale). After it,
    * each real minute is `gameMinutesPerRealMinute` game minutes. Relaxed reads at about 180 words a
    * minute before counting, then two game minutes a minute; Standard starts soon and runs at three.
-   * Measured 2026-10-20 (dither-balance.test.ts): a Relaxed player who takes a minute a decision
-   * loses nothing, one who takes two loses under two game minutes a decision and no ending changed;
-   * at Standard a minute a decision costs two to three game minutes. */
+   * The owner asked for a drain with no start and stop (2026-10-20), so neither setting has a reading
+   * floor now: the bar moves from the moment the decision shows, and Relaxed is slower instead. The
+   * result beat doesn't count (OperationRun.decisionPending). Re-measure in dither-balance.test.ts. */
   dither: {
-    relaxed: { floorSeconds: 10, readingCharsPerSecond: 15, gameMinutesPerRealMinute: 2 },
-    standard: { floorSeconds: 8, readingCharsPerSecond: 0, gameMinutesPerRealMinute: 3 },
+    relaxed: { floorSeconds: 0, readingCharsPerSecond: 0, gameMinutesPerRealMinute: 1 },
+    standard: { floorSeconds: 0, readingCharsPerSecond: 0, gameMinutesPerRealMinute: 2 },
   } as Record<Exclude<TimerSetting, 'off'>, { floorSeconds: number; readingCharsPerSecond: number; gameMinutesPerRealMinute: number }>,
-}, { guard: (next) => next.fill.strain < 0 || next.fill.audienceGain < 0 || next.fill.pressurePerMinute < 0 ? 'fill strain, audience gain and pressure must be 0 or more'
+}, { guard: (next) => next.stallPressurePerMinute < 0 || next.threat.strain < 0 ? 'stall pressure and threat strain must be 0 or more' : next.fill.strain < 0 || next.fill.audienceGain < 0 || next.fill.pressurePerMinute < 0 ? 'fill strain, audience gain and pressure must be 0 or more'
   : Object.entries(next.dither).some(([, rule]) => !(rule.floorSeconds >= 0 && rule.readingCharsPerSecond >= 0 && rule.gameMinutesPerRealMinute >= 0))
   ? 'dither floors, reading speeds and rates must be 0 or more' : null });
 
@@ -129,13 +138,14 @@ export interface DitherInput {
  * reading floor; it stops at `cap`. Time away from the app counts like time on screen, because
  * `openedAt` is saved with the operation; a moved-back clock gives a smaller `now`, so callers pass
  * the department's high-water time. Floored to tenths, so the preview never shows more than the
- * commit would charge a moment later. */
+ * commit would charge a moment later once floored. */
 export function ditherMinutes({ openedAt, now, timer, textLength, cap }: DitherInput): number {
   if (timer === 'off' || !(cap > 0) || !Number.isFinite(openedAt) || !Number.isFinite(now)) return 0;
   const rule = CLOCK_RULES_V1.dither[timer];
   const floor = rule.floorSeconds + (rule.readingCharsPerSecond > 0 ? Math.max(0, textLength) / rule.readingCharsPerSecond : 0);
   const counted = Math.max(0, (now - openedAt) / 1000 - floor);
-  return Math.min(cap, Math.floor(counted / 60 * rule.gameMinutesPerRealMinute * 10) / 10);
+  // Unrounded, so the bar moves continuously; the commit and the cards floor to tenths.
+  return Math.min(cap, counted / 60 * rule.gameMinutesPerRealMinute);
 }
 
 /** Minutes until a running clock's next unheard cue: 0 once every cue is heard, Infinity when the
@@ -176,8 +186,62 @@ export function decisionTextLength(scenario: ScenarioDefinition, run: Pick<Opera
  * against the department's high-water time, so a device clock moved backward never reduces it, and
  * time it already counted is never counted again. */
 export function openDither(scenario: ScenarioDefinition, run: OperationRun, highWater: number, now: number, timer: TimerSetting): number {
-  if (run.status !== 'active' || run.decisionOpenedAt === undefined) return 0;
+  // While the last result is on screen the next decision hasn't shown, so nothing counts.
+  if (run.status !== 'active' || run.decisionOpenedAt === undefined || run.decisionPending) return 0;
   return ditherMinutes({ openedAt: run.decisionOpenedAt, now: Math.max(now, highWater), timer, textLength: decisionTextLength(scenario, run), cap: ditherCap(scenario, run) });
+}
+
+/** The open decision point's threat with its effects: the first visible choice that carries one
+ * (every choice at a point carries the same threat). Null when the point has none. */
+export function openThreat(scenario: ScenarioDefinition, run: Pick<OperationRun, 'stage' | 'flags' | 'knowledge' | 'pressure'>): NonNullable<ActionDefinition['threat']> | null {
+  if (run.stage === 'debrief') return null;
+  return scenario.stages[run.stage].actions.find(action => action.threat && conditionHolds(action.visibleWhen, run))?.threat ?? null;
+}
+
+/** The meter event a landing threat gives every subject who keeps meters, when the threat names no
+ * moves of its own: they were kept waiting, which METERS_V1.events.provoked covers. */
+export const THREAT_LANDING_EVENT: MeterEvent = 'provoked';
+
+/** What a threat does when it lands: its authored effects, and when none of them moves a subject,
+ * THREAT_LANDING_EVENT on every subject who keeps meters, so a threat always reaches the
+ * person the team kept waiting. One place, so the projection and the commit agree. */
+export function landingEffects(scenario: Pick<ScenarioDefinition, 'incidentPeople'>, effects: readonly OutcomeEffect[]): OutcomeEffect[] {
+  if (effects.some(effect => effect.moves?.length)) return [...effects];
+  const subjects = (scenario.incidentPeople ?? []).filter(person => person.meters);
+  return subjects.length ? [...effects, { moves: subjects.map(person => ({ personId: person.id, event: THREAT_LANDING_EVENT })) }] : [...effects];
+}
+
+type StallRun = Pick<OperationRun, 'pressure' | 'clocks' | 'flags' | 'stage' | 'knowledge'> & Partial<Pick<OperationRun, 'meters'>>;
+
+/** The call once the open decision's stall has passed (docs/call-pressure.md, "The previews stay
+ * honest"): pressure risen by the stall's own rate, the call's and its gauges' over `dither` minutes,
+ * and each gauge that fills moved on, with no new cue heard until a commit. Once the stall reaches
+ * the threat's minutes the threat has landed: its pressure and its moves on the subjects count too
+ * (landingEffects). The odds and strain read this, so stalling makes the choice harder before the
+ * team moves, and the screen shows it as it happens. The commit applies all of it once, through its
+ * own path. Zero returns `run`. */
+export function stalledRun<R extends StallRun>(scenario: Pick<ScenarioDefinition, 'clocks' | 'pressure' | 'stages' | 'incidentPeople'>, run: R, dither: number): R {
+  if (!(dither > 0)) return run;
+  const rate = scenario.pressure.perMinute + CLOCK_RULES_V1.stallPressurePerMinute + fillPressureRate(scenario, run.clocks, run.flags, dither);
+  let pressure = run.pressure + rate * dither;
+  let clocks = run.clocks;
+  if (clocks && scenario.clocks?.some(filling)) {
+    clocks = { ...clocks };
+    for (const def of scenario.clocks) {
+      const state = clocks[def.id];
+      if (filling(def) && state) clocks[def.id] = { value: stepClock(def, state, dither, run.flags).value, cued: state.cued };
+    }
+  }
+  let meters = run.meters;
+  const threat = openThreat(scenario as ScenarioDefinition, run);
+  if (threat && dither >= threat.minutes) {
+    const landed = landingEffects(scenario, threat.effects.filter(effect => conditionHolds(effect.when, run)));
+    pressure += landed.reduce((sum, effect) => sum + (effect.pressure ?? 0), 0);
+    const moved = { meters };
+    applyMoves(moved, scenario as ScenarioDefinition, landed);
+    meters = moved.meters;
+  }
+  return { ...run, pressure: round1(Math.max(0, Math.min(100, pressure))), clocks, ...(meters ? { meters } : {}) };
 }
 
 /** Whether an outcome's clock conditions hold at the end of its own minutes. */

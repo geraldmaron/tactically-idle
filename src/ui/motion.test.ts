@@ -1,6 +1,6 @@
-// The game has one motion signal (docs/call-presentation.md): a slow amber ring on the Ops nav
-// button meaning "a call is waiting on you, somewhere you aren't looking". Nothing else pulses,
-// blinks or loops. This reads every stylesheet under src/ui and fails on any other repeating
+// The game has two motion signals (docs/call-presentation.md): a slow amber ring on the Ops nav
+// button meaning "a call is waiting on you, somewhere you aren't looking", and the light bar on a
+// hot call (owner, 2026-10-20). Nothing else pulses, blinks or loops. This reads every stylesheet under src/ui and fails on any other repeating
 // animation, so a new pulse has to argue its way into the doc first.
 import { describe, expect, it } from 'vitest';
 import { stylesheetsUnder } from '../dev/lab/css-rules';
@@ -20,8 +20,12 @@ function loops(): string[] {
 }
 
 describe('one motion signal', () => {
-  it('loops only the waiting-on-you ring on the Ops nav button', () => {
-    expect(loops()).toEqual(['app.css: .live-dot']);
+  it('loops only the waiting-on-you ring and a hot call\u2019s light bar', () => {
+    expect(loops()).toEqual(['app.css: .live-dot', 'screens/live-call.css: .live-lightbar i:first-child', 'screens/live-call.css: .live-lightbar i:last-child']);
+  });
+
+  it('holds the light bar steady under reduced motion', () => {
+    expect(SHEETS['screens/live-call.css']).toMatch(/@media \(prefers-reduced-motion: reduce\) \{\s*\.live-lightbar i \{ animation: none !important; \}/);
   });
 
   it('keeps the ring still under reduced motion', () => {

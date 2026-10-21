@@ -15,6 +15,7 @@ import '../../../../ui/screens/ops-visual.css';
 import '../../../../ui/skin.css';
 import { NOW } from '../../../../gen/incident/gates/engine-driver';
 import { briefing, builtForScenario, decisionViews, lastResolution, pendingDebrief } from '../../../../sim/operation-selectors';
+import { isHotCall } from '../../../../sim/authorization';
 import { CLOCK_RULES_V1, decisionTextLength, ditherCap, fillViews } from '../../../../sim/clocks';
 import { responseFailurePlan } from '../../../../sim/response-failure';
 import { getScenario } from '../../../../sim/scenario-registry';
@@ -206,7 +207,7 @@ function realTimeFor(minutes: number, timer: 'relaxed' | 'standard', textLength:
 }
 
 /** The stall slider: the open decision's dither in game minutes, up to its cap (the threat's
- * minutes). The frame's cards preview it, so a designer sees which choices turn "Too slow" and how
+ * minutes). The frame's cards preview it, so a designer sees which choices turn too slow (their minutes go red) and how
  * long a player at each timer setting waits to get there. The lab's own commits don't carry it. */
 function StallSlider({ state, dither, onChange }: { state: GameState; dither: number; onChange(minutes: number): void }) {
   const run = state.activeRun;
@@ -432,6 +433,8 @@ function LiveScreen({ state, onReview, onConfirm, onFail, dither }: { state: Gam
   return (
     <LiveView
       {...model}
+      dither={dither}
+      sirens={!!scenario && run.status === 'active' && run.stage !== 'debrief' && isHotCall(scenario, run)}
       beat={beat}
       onContinue={() => setResultOf(null)}
       continueLabel={nextStage ? `Continue to ${nextStage}` : 'Continue'}

@@ -5,6 +5,7 @@ import { planActionResupply } from '../../sim/equipment-resupply';
 import type { ActionResupplyPlan } from '../../sim/equipment-resupply';
 import { incidentOfficerUnavailable } from '../../sim/incident-consequences';
 import { getScenario } from '../../sim/scenario-registry';
+import { stalledRun } from '../../sim/clocks';
 import { runRoster } from '../../sim/squads';
 import { leadFlags } from '../../sim/crew';
 import { LEAD_PREFIX } from '../../sim/crew-flags';
@@ -155,7 +156,8 @@ export function liveScreen(g: GameState, now: number, ui: LiveUiState): { model:
     environment: scenario?.environment ?? null,
     lastChange: ui.lastChange ?? null,
     showRooms: ui.showRooms ?? false,
-    clock: run.clock, pressure: run.pressure,
+    // The meter rises with the stall as the odds do (sim/clocks.ts stalledRun).
+    clock: run.clock, pressure: scenario ? stalledRun(scenario, run, ui.dither ?? 0).pressure : run.pressure,
     canCancel: run.history.length === 0 && !run.resupplies?.length,
     detailsOpen: ui.detailsOpen ?? false,
   };

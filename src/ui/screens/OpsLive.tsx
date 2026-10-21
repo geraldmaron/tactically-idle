@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getState, useGame } from '../store';
+import { getState, send, useGame } from '../store';
 import { liveDither } from '../timer';
 import { decisionViews, lastResolution } from '../../sim/operation-selectors';
 import type { Id, SquadId } from '../../sim/types';
@@ -61,6 +61,11 @@ export function OpsLive() {
   const decisions = decisionViews(g);
   const beat = resultOf !== null && decisions.at(-1)?.revision === resultOf ? 'result' : 'decide';
   const nextStage = screen?.model.progress.stages.find((step) => step.state === 'current')?.label;
+  // The next decision's stall starts when it shows, not while its result is read (sim/clocks.ts
+  // openDither). Also covers a reload during the result, which comes back on the decision.
+  useEffect(() => {
+    if (beat === 'decide' && run.status === 'active' && run.decisionPending) send({ type: 'openDecision', revision: run.revision });
+  }, [beat, run.status, run.decisionPending, run.revision]);
   const failurePlan = responseFailurePlan(g);
   // Follow the selected action: when its target is on another floor, show that floor.
   const targetFloor = screen?.review.targetFloor ?? null;

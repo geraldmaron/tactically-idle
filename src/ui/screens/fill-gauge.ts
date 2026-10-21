@@ -2,7 +2,7 @@
 // store-free, so the game's call screen and the Scenario Lab read the same views and the same words.
 // The engine's view is fillViews (sim/clocks.ts); this file adds the plain-words effect line and which
 // choices stop or slow a gauge. No effect is hidden: the line names every effect the engine applies.
-import { effectiveRate, fillViews, type FillView } from '../../sim/clocks';
+import { effectiveRate, fillViews, openThreat, stalledRun, type FillView } from '../../sim/clocks';
 import { stableFlag } from '../../sim/conditions';
 import { getScenario } from '../../sim/scenario-registry';
 import type { ScenarioDefinition } from '../../sim/scenario-types';
@@ -18,11 +18,49 @@ export function fillEffectLine(effect: FillEffect): string {
   return parts.join(' · ');
 }
 
-/** The call's gauges that fill, as they stand now. Empty with no live call or none. */
-export function liveFillViews(g: GameState): FillView[] {
+/** The call's gauges that fill, as they stand now: moved on by the open decision's stall (`dither`,
+ * ui/timer.ts liveDither), with no cue heard until a commit. Empty with no live call or none. */
+export function liveFillViews(g: GameState, dither = 0): FillView[] {
   const run = g.activeRun;
   const scenario = run ? getScenario(run.scenarioId) : null;
-  return run && scenario && run.status === 'active' ? fillViews(scenario, run) : [];
+  return run && scenario && run.status === 'active' ? fillViews(scenario, stalledRun(scenario, run, dither)) : [];
+}
+
+/** The one pressure the strip shows: the threat or a gauge that fills, whichever bites soonest in
+ * game minutes. A threat bites when its minutes run out; a gauge at its next unheard cue, or when
+ * full once every cue is heard. A stopped or full gauge has nothing coming, so it shows only when
+ * nothing else does. Ties go to the threat, the stage's own clock. */
+export type LeadingPressure =
+  | { kind: 'threat'; label: string; minutes: number; left: number }
+  | { kind: 'fill'; view: FillView; left: number };
+
+export function fillMinutesToBite(view: FillView): number {
+  if (view.stopped || view.full || view.ratePerMin <= 0) return Infinity;
+  const next = view.cues.find((cue) => !cue.heard)?.at ?? 100;
+  return Math.max(0, next - view.value) / view.ratePerMin;
+}
+
+export function leadingPressure(threat: { label: string; minutes: number } | null, dither: number, fills: readonly FillView[]): LeadingPressure | null {
+  const candidates: LeadingPressure[] = [
+    ...(threat ? [{ kind: 'threat' as const, label: threat.label, minutes: threat.minutes, left: Math.max(0, threat.minutes - Math.max(0, dither)) }] : []),
+    ...fills.map((view) => ({ kind: 'fill' as const, view, left: fillMinutesToBite(view) })),
+  ];
+  if (!candidates.length) return null;
+  const soonest = candidates.reduce((best, next) => next.left < best.left ? next : best);
+  if (Number.isFinite(soonest.left) || soonest.kind === 'threat') return soonest;
+  // Nothing is coming: show the fullest gauge, so what the call carries stays in view.
+  return candidates.reduce((best, next) => next.kind === 'fill' && best.kind === 'fill' && next.view.value > best.view.value ? next : best);
+}
+
+/** How loud the pressure reads: calm, then warn under half its window, then critical in the last
+ * quarter or the last minute. A gauge reads by how full it is. */
+export function pressureUrgency(pressure: LeadingPressure): 'calm' | 'warn' | 'critical' {
+  if (pressure.kind === 'threat') {
+    const share = pressure.minutes > 0 ? pressure.left / pressure.minutes : 0;
+    return share <= 0.25 || pressure.left <= 1 ? 'critical' : share <= 0.5 ? 'warn' : 'calm';
+  }
+  if (pressure.view.stopped) return 'calm';
+  return pressure.view.value >= 75 || pressure.left <= 1 ? 'critical' : pressure.view.value >= 40 ? 'warn' : 'calm';
 }
 
 export interface GaugeReach { label: string; effect: 'stops' | 'slows'; bands: OutcomeBand[] }
@@ -58,4 +96,13 @@ export function reachByAction(g: GameState, actionIds: readonly Id[]): Record<Id
   const out: Record<Id, GaugeReach[]> = {};
   for (const id of actionIds) { const reach = gaugeReach(scenario, run.flags, id); if (reach.length) out[id] = reach; }
   return out;
+}
+
+/** The line the player reads when the open decision's threat lands (its first effect with text), so
+ * the strip can show what happened the moment the stall reaches zero. Null with no threat. */
+export function threatLandingText(g: GameState): string | null {
+  const run = g.activeRun;
+  const scenario = run ? getScenario(run.scenarioId) : null;
+  if (!run || !scenario || run.status !== 'active') return null;
+  return openThreat(scenario, run)?.effects.find((effect) => effect.when === undefined && effect.text)?.text ?? null;
 }

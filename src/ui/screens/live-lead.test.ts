@@ -47,12 +47,14 @@ describe('choice cards', () => {
     expect(leadLine(shared, undefined)).toBeNull();
   });
 
-  it('renders the lead line and both threat tags on real cards', () => {
+  it('renders the lead line on real cards, and colours the minutes instead of tagging the threat', () => {
     const slow = { ...shared, id: 'slow', threat: { label: 'He stops answering', bands: ['favorable', 'mixed', 'adverse'] as const } } as ActionView;
     const risk = { ...shared, id: 'risk', weighing: undefined, threat: { label: 'He stops answering', bands: ['adverse'] as const } } as ActionView;
     const html = renderToStaticMarkup(createElement(DecisionList, { prompt: 'What now?', actions: [slow, risk], selectedId: null, expanded: false, officers: hostage.officers, onSelect: () => {}, onExpand: () => {} }));
-    expect(html).toContain('Too slow: He stops answering');
-    expect(html).toContain('Risk: He stops answering');
+    // The strip's bar is the threat's one display (owner, 2026-10-20): no tag repeats it on a card.
+    expect(html).not.toContain('callbtn-threat');
+    expect(html).toContain('callbtn-time callbtn-time-slow');
+    expect(html).toContain('callbtn-time callbtn-time-risk');
     expect(html.match(/class="callbtn-lead"/g)).toHaveLength(2);
     // The face is a span, so it can sit inside the card's button.
     expect(html).not.toMatch(/<button[^>]*class="callbtn[^"]*"[^>]*>(?:(?!<\/button>).)*<div/);

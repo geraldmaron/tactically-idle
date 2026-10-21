@@ -100,6 +100,11 @@ you, somewhere you aren't looking."**
 - It never appears in the reading area. Prose, prompts, choices and results never move.
 - Under reduced motion the ring is a still amber halo with the same meaning and label.
 
+**The second signal: lights and sirens** (owner, 2026-10-20). A hot call shows a small red and
+blue light bar in the call bar instead of a "Lights and sirens" tag. Each light flashes once a 0.8 s
+cycle, 2.5 flashes a second in all, under the WCAG 2.3.1 three-flash limit, and the bar is far
+smaller than the flash area that rule counts. Under reduced motion both lights hold steady.
+
 Everything else that blinked is replaced by a still form:
 
 | Was | Now |

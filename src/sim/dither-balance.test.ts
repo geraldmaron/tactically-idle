@@ -3,8 +3,8 @@
 // (outcome-score.test.ts plays through balance.ts, which never stalls). This test plays the same
 // calls with a player who spends a fixed real time on every decision, at each timer setting, and
 // records how the outcomes shift against zero dither: the numbers the rates in CLOCK_RULES_V1.dither
-// were chosen against. Same calls, same dice, same picks (the odds don't read dither), so the only
-// difference is the minutes.
+// were chosen against. Same calls and dice; the stall's minutes and its pressure (the odds read it,
+// sim/clocks.ts stalledRun) are the only difference, and a pick changes only where they reorder the odds.
 import { describe, expect, it } from 'vitest';
 import { CALL_TREES } from '../content/call-trees';
 import type { CallTree } from '../content/call-trees/types';
@@ -30,6 +30,8 @@ function play(scenarioId: string, seed: number, timer: TimerSetting | null, seco
   const dither: number[] = [];
   let tooSlowEverywhere = 0;
   for (let step = 0; step < 30; step++) {
+    // The player reads the result, then the decision shows and its stall starts (openDecision).
+    if (state.activeRun?.decisionPending) state = apply(state, { type: 'openDecision', revision: state.activeRun.revision }, state.activeRun.decisionOpenedAt).state;
     const run = state.activeRun!;
     if (run.status !== 'active' || run.stage === 'debrief') break;
     const scenario = getScenario(run.scenarioId)!;

@@ -1,8 +1,9 @@
 // The live call's choice cards (moved from LiveView.tsx), one list for the game and the Scenario
 // Lab: the stage prompt, the count, at most five cards (the selected one kept) with Show all, and
 // `data-action-id` on each card so the lab can annotate the player's real cards. Store-free. Each
-// available card names who would lead it and their number for it, and says when the decision point's
-// threat would land on it (ActionView.threat).
+// available card names who would lead it and their number for it. The threat itself shows once, as
+// the strip's bar (owner, 2026-10-20: no tag repeats it); a card's minutes turn red when the threat
+// would land on it even if it goes well, amber when only a worse result lets it land.
 import { Fragment, useState } from 'react';
 import type { JSX, ReactNode } from 'react';
 import type { ActionView, Id, Officer, RatingKey } from '../../sim/types';
@@ -51,14 +52,20 @@ export function LeadFace({ officer, size = 22 }: { officer: LeadOfficer; size?: 
   </span>;
 }
 
-/** The lead's face and number, and the threat tag: one wrapping row under the card text. */
+/** A choice's minutes, coloured by the threat (threatTag) instead of a tag beside them; the words
+ * stay for screen readers. */
+function ChoiceTime({ a }: { a: ActionView }) {
+  const threat = threatTag(a);
+  const text = a.timeLabel ?? `~${opMinutes(a.timeCost)}`;
+  return threat ? <span className={`callbtn-time callbtn-time-${threat.kind}`} title={threat.text}>{text}<span className="sr-only">, {threat.kind === 'slow' ? 'too slow, the threat lands' : 'the threat can land'}</span></span> : <>{text}</>;
+}
+
+/** The lead's face and number: one wrapping row under the card text. */
 function CardMeta({ a, officers, reach = [] }: { a: ActionView; officers?: Readonly<Record<Id, LeadOfficer>>; reach?: GaugeReach[] }) {
   const lead = a.eligible ? leadLine(a, officers) : null;
-  const threat = threatTag(a);
-  if (!lead && !threat && !reach.length) return null;
+  if (!lead && !reach.length) return null;
   return <span className="callbtn-meta">
     {lead && <span className="callbtn-lead" aria-label={`Leads: ${lead.text}`}><LeadFace officer={lead.officer} /><span>{lead.text}</span></span>}
-    {threat && <span className={`callbtn-threat callbtn-threat-${threat.kind}`}><Icon name="hourglass" size={12} />{threat.text}</span>}
     {reach.map((r) => <span key={`${r.label}:${r.effect}`} className="callbtn-gauge"><Icon name="crowd" size={12} />{gaugeReachTag(r)}</span>)}
   </span>;
 }
@@ -124,7 +131,7 @@ export function DecisionList({ prompt, exchange, actions, selectedId, expanded, 
                 <CardMeta a={a} officers={officers} reach={reach?.[a.id]} />
                 {a.eligible && <span className="callbtn-forecast">
                   {!a.eventResult && <OddsBar likelihood={a.likelihood} mini />}
-                  <span className="callbtn-forecast-text">{a.timeLabel ?? `~${opMinutes(a.timeCost)}`} · {!a.eventResult ? `${outcomePercentages(a.likelihood).favorable}% chance to go well · ` : ''}<span className={`callbtn-harm callbtn-harm-${a.consequenceLevel}`}>possible harm: {CONSEQUENCE_LABEL[a.consequenceLevel].toLowerCase()}</span></span>
+                  <span className="callbtn-forecast-text"><ChoiceTime a={a} /> · {!a.eventResult ? `${outcomePercentages(a.likelihood).favorable}% chance to go well · ` : ''}<span className={`callbtn-harm callbtn-harm-${a.consequenceLevel}`}>possible harm: {CONSEQUENCE_LABEL[a.consequenceLevel].toLowerCase()}</span></span>
                 </span>}
               </span>
             </button>}
@@ -141,7 +148,7 @@ export function DecisionList({ prompt, exchange, actions, selectedId, expanded, 
 function Forecast({ a }: { a: ActionView }) {
   return <span className="callbtn-forecast">
     {!a.eventResult && <OddsBar likelihood={a.likelihood} mini />}
-    <span className="callbtn-forecast-text">{a.timeLabel ?? `~${opMinutes(a.timeCost)}`} · {!a.eventResult ? `${outcomePercentages(a.likelihood).favorable}% chance to go well · ` : ''}<span className={`callbtn-harm callbtn-harm-${a.consequenceLevel}`}>possible harm: {CONSEQUENCE_LABEL[a.consequenceLevel].toLowerCase()}</span></span>
+    <span className="callbtn-forecast-text"><ChoiceTime a={a} /> · {!a.eventResult ? `${outcomePercentages(a.likelihood).favorable}% chance to go well · ` : ''}<span className={`callbtn-harm callbtn-harm-${a.consequenceLevel}`}>possible harm: {CONSEQUENCE_LABEL[a.consequenceLevel].toLowerCase()}</span></span>
   </span>;
 }
 
@@ -167,11 +174,11 @@ function WeighedChoice({ action: a, on, open, officers, reach, onToggle, onRevie
     </div>}
     {a.authority?.allowed && <span className="callbtn-command"><Icon name="radio" size={12} />{a.authority.reason}</span>}
     {a.deceives && <span className="callbtn-command callbtn-deceive"><Icon name="radio" size={12} />Command hasn’t approved this</span>}
-    {/* Like harm, who leads and the threat are never folded away. */}
+    {/* Like harm, who leads is never folded away. */}
     <CardMeta a={a} officers={officers} reach={reach} />
     {open && <Forecast a={a} />}
     <button type="button" className="callbtn-review" aria-pressed={on} aria-label={`Review ${a.title}`} onClick={onReview}>
-      {!open && <span className="callbtn-review-odds">{a.timeLabel ?? `~${opMinutes(a.timeCost)}`}{!a.eventResult ? ` · ${outcomePercentages(a.likelihood).favorable}% to go well` : ''} · <span className={`callbtn-harm callbtn-harm-${a.consequenceLevel}`}>harm {CONSEQUENCE_LABEL[a.consequenceLevel].toLowerCase()}</span></span>}
+      {!open && <span className="callbtn-review-odds"><ChoiceTime a={a} />{!a.eventResult ? ` · ${outcomePercentages(a.likelihood).favorable}% to go well` : ''} · <span className={`callbtn-harm callbtn-harm-${a.consequenceLevel}`}>harm {CONSEQUENCE_LABEL[a.consequenceLevel].toLowerCase()}</span></span>}
       <span className="callbtn-review-label">Review<Icon name="chevronRight" size={14} /></span>
     </button>
   </div>;

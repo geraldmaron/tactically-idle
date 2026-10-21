@@ -13,7 +13,7 @@ import { NOW } from '../../sim/test-fixtures';
 import type { ActionView } from '../../sim/types';
 import { liveDecisions } from './live-model';
 import { DecisionList } from './DecisionList';
-import { fillEffectLine, gaugeReach, gaugeReachTag } from './fill-gauge';
+import { fillEffectLine, fillMinutesToBite, gaugeReach, gaugeReachTag, leadingPressure, pressureUrgency } from './fill-gauge';
 import { FillGauge } from './LiveView';
 import { DebriefScore } from '../components/DebriefResults';
 
@@ -103,5 +103,27 @@ describe('what the engine says about a gauge afterwards', () => {
     ];
     const out = renderToStaticMarkup(createElement(DebriefScore, { debrief: { scoreLines: lines, trustDelta: 6, strainDelta: 0, disposition: 'resolved' } as never }));
     expect(out).toContain('Cameras on the scene made the result count for 40% more.');
+  });
+});
+
+describe('the strip shows one pressure', () => {
+  const threat = { label: 'The table goes against the door', minutes: 8 };
+  it('picks whichever bites soonest in game minutes, the threat on a tie', () => {
+    // 10 to the first cue at 5 a minute: 4 minutes.
+    expect(fillMinutesToBite(view({ value: 10, cued: 0 }))).toBe(4);
+    expect(leadingPressure(threat, 0, [view({ value: 10, cued: 0 })])).toMatchObject({ kind: 'fill', left: 4 });
+    expect(leadingPressure(threat, 5, [view({ value: 10, cued: 0 })])).toMatchObject({ kind: 'threat', left: 3 });
+    expect(leadingPressure({ ...threat, minutes: 4 }, 0, [view({ value: 10, cued: 0 })])).toMatchObject({ kind: 'threat' });
+  });
+  it('never puts a stopped gauge ahead of a threat, and shows it alone when nothing else is open', () => {
+    const stopped = view({ value: 50, cued: 1 }, [stableFlag('crowd')]);
+    expect(leadingPressure(threat, 7.5, [stopped])).toMatchObject({ kind: 'threat' });
+    expect(leadingPressure(null, 0, [stopped])).toMatchObject({ kind: 'fill' });
+    expect(leadingPressure(null, 0, [])).toBeNull();
+  });
+  it('reads louder as the window closes', () => {
+    const at = (left: number) => pressureUrgency({ kind: 'threat', label: threat.label, minutes: 8, left });
+    expect([at(8), at(4), at(2), at(0)]).toEqual(['calm', 'warn', 'critical', 'critical']);
+    expect(pressureUrgency({ kind: 'fill', view: view({ value: 80, cued: 2 }), left: 4 })).toBe('critical');
   });
 });
