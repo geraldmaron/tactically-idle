@@ -732,5 +732,5 @@ export const BARRICADE_BOXES: CallTree = {
     handed_over: { title: 'Handed to command', disposition: 'unresolved', remainingTasks: ['Get everyone out of the house safely'],
       summary: 'Command takes over the scene, and the call stays open. {sibling.first} waits at the tape with the sale papers.' },
   },
-  rewards: { funding: 2400, devPoints: 3, trust: 6, xp: 45 },
+  rewards: { funding: 2400, trust: 6, xp: 45 },
 };
