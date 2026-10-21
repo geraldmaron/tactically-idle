@@ -1,52 +1,65 @@
-import { BARRICADE_ORDER as tree } from '../call-trees/barricade-order';
-import type { IncidentTemplate, SituationModel } from './types';
+import { BARRICADE_BOXES as tree } from '../call-trees/barricade-boxes';
+import type { Clock, IncidentTemplate, SituationModel } from './types';
 
-// Behind the Bathroom Door as data. A barricade: he holds nobody; the son is trapped, hiding, and
-// whether the subject knows he is there is the first hidden truth. What he wants (her, at the
-// door) is never concedable: family never goes on the line.
+// Everything Goes Back as data (docs/calls/barricade-design.md). A barricade: the subject holds
+// nobody. A mover is hiding in a bedroom, and whether the subject knows is the first hidden truth;
+// whether the subject walks out once the list of the parent's things is taken down is the second.
+// What the subject wants, nothing else carried out, is never concedable; the list is.
+//
+// Nothing public differs by situation (design row L): the subject's volatility and the demand are
+// drawn the same way in all three, and the boxes clock runs at one rate everywhere.
+
+/** The subject carrying boxes back in, room by room, toward the mover's door. The cue moves the
+ * subject to that door where the team can see it; running out sends the call to `found`. */
+const BOXES: Clock = {
+  id: 'boxes', label: 'Boxes going back in', kind: 'deadline', owner: 'mover', start: 60, ratePerMin: 1, rateSpread: 0.3, rateKnown: false,
+  cues: [{ at: 45, text: 'Through the wall, the team hears {subject.first} drop a box by {mover.first}’s door.', mark: 'in_hall',
+    moveTo: { subject: { to: { doorOf: 'mover' }, seen: true } } }],
+  onOut: { mark: 'found', next: { node: 'found' } },
+};
+
+const DEMANDS = [
+  { kind: 'person' as const, text: 'Nothing else carried out of the house', concedable: false },
+  { kind: 'statement' as const, text: 'A list of the things {subject.he} {subject~wants|want} kept, passed to {sibling.first}', concedable: true },
+];
+
 export const BARRICADE_TEMPLATE: IncidentTemplate = {
   type: 'barricaded',
   label: 'Barricade',
   tree,
   cast: [
     { id: 'subjects', kind: 'subject', count: { min: 1, max: 1 }, keyRoles: ['subject'], person: {
-      label: '{ex.his} ex-partner', age: 'adult', activity: 'barricaded',
-      threat: { disposition: 'agitated', intent: 'barricade', awareness: 'aware', readiness: 'brandished' },
+      label: 'the late owner’s {subject^son|daughter|child}', age: 'adult', activity: 'barricaded',
+      threat: { disposition: 'agitated', intent: 'barricade', awareness: 'aware', readiness: 'carried' },
       weapons: [{ kind: 'long_gun', real: 'real', where: 'in_hand', visible: true }],
-      record: { warrant: 'unknown', priorViolence: 'unknown', protectiveOrder: true },
-      // A rifle owner: some practice is likely. The self-harm screen applies (E4.5).
-      proficiency: { pick: [['untrained', 30], ['some', 50], ['trained', 20]] }, noDeathOnCard: true,
-      demands: [{ kind: 'person', text: 'For {ex.first} to come to the door and talk to {subject.him}', concedable: false }],
-      meters: { agitation: 70, rapport: 5, fatigue: 10, intoxication: 0, resolve: 60 },
+      // The parent's hunting piece: some practice is likely. The self-harm screen applies (E4.5).
+      proficiency: { pick: [['untrained', 35], ['some', 50], ['trained', 15]] }, noDeathOnCard: true,
+      volatility: { pick: [['steady', 40], ['shifting', 40], ['volatile', 20]] },
+      demands: DEMANDS,
+      meters: { agitation: 65, rapport: 5, fatigue: 15, intoxication: 0, resolve: 60 },
       knowledge: {
         presence: { status: 'confirmed', source: 'Responding patrol' },
-        weapons: { status: 'reported', source: 'Responding patrol', value: 'rifle', learnedBy: 'f_rifle' },
-        record: { status: 'reported', source: 'Dispatch', value: 'protective order' },
-        demands: { status: 'reported', source: 'Shouted at the window', value: 'to talk to {ex.him}' },
+        weapons: { status: 'reported', source: 'Responding patrol', value: 'a long weapon', learnedBy: 'f_weapon' },
+        demands: { status: 'reported', source: 'The crew’s driver', value: 'nothing else carried out' },
       },
     } },
-    { id: 'trapped', kind: 'trapped', count: { min: 1, max: 1 }, keyRoles: ['child'], person: {
-      label: 'the child in the bathroom', age: 'teen', identity: { years: { min: 9, max: 17 } }, relationshipToSubject: 'acquaintance', meters: { condition: 100, composure: 45 },
+    { id: 'trapped', kind: 'trapped', count: { min: 1, max: 1 }, keyRoles: ['mover'], person: {
+      label: 'the mover in the bedroom', age: 'adult', meters: { condition: 100, composure: 45 },
       knowledge: {
-        presence: { status: 'reported', source: '{ex.first}, {child.his} {ex^father|mother|parent}', value: 'in the bathroom' },
-        awareness: { status: 'unknown', source: 'Nobody yet', learnedBy: 'f_knows_son' },
+        presence: { status: 'reported', source: 'The crew’s driver', value: 'in a bedroom closet' },
+        awareness: { status: 'unknown', source: 'Nobody yet', learnedBy: 'f_knows_mover' },
       },
     } },
-    { id: 'reporting', kind: 'reporting_party', count: { min: 1, max: 1 }, keyRoles: ['ex'], person: {
-      label: 'the resident', age: 'adult', relationshipToSubject: 'former_partner',
+    { id: 'reporting', kind: 'reporting_party', count: { min: 1, max: 1 }, keyRoles: ['sibling'], person: {
+      label: 'the sibling who sold the house', age: 'adult', relationshipToSubject: 'family',
       knowledge: { presence: { status: 'confirmed', source: 'With patrol' } },
     } },
   ],
   conditions: { timeOfDay: 'dusk', power: 'on', weather: 'clear', crowd: 1 },
   situations: ([
-    { index: 0, people: { child: { subjectAware: false }, subject: { volatility: 'steady',
-      demands: [{ kind: 'person', text: 'For {ex.first} to come to the door and talk to {subject.him}', concedable: false }, { kind: 'statement', text: 'A written message for {ex.first}, in the report', concedable: true }] } } },
-    { index: 1, people: { child: { subjectAware: true }, subject: { volatility: 'shifting',
-      demands: [{ kind: 'person', text: 'For {ex.first} to come to the door and talk to {subject.him}', concedable: false }, { kind: 'statement', text: 'A written message for {ex.first}, in the report', concedable: true }] } } },
-    { index: 2, people: { child: { subjectAware: true }, subject: { volatility: 'volatile', threat: { disposition: 'hostile', intent: 'barricade', awareness: 'aware', readiness: 'brandished' } } } },
-  // The phone battery: the tree's own outcomes still run it down (son_dark), so it stays a story
-  // clock until those outcomes read it.
-  ] satisfies SituationModel[]).map((situation): SituationModel => ({ ...situation, clocks: [{ id: 'son_phone', label: '{child.first}’s phone battery', kind: 'battery' as const, owner: 'child', start: 12, ratePerMin: 0.3, rateKnown: true, story: true,
-    cues: [{ at: 2, text: '{child.first}’s last text says {child.his} battery is at 2 percent.' }] }] })),
+    { index: 0, people: { mover: { subjectAware: false } } },
+    { index: 1, people: { mover: { subjectAware: true } } },
+    { index: 2, people: { mover: { subjectAware: true } } },
+  ] satisfies SituationModel[]).map((situation): SituationModel => ({ ...situation, clocks: [BOXES] })),
   complications: [],
 };

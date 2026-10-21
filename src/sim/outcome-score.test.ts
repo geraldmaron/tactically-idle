@@ -29,7 +29,12 @@ const AUTHORED: Partial<Record<IncidentType, Record<string, [trust: number, stra
     // the taker hurt is owner_killed's.
     group_out: [3, -2, 'resolved'], group_out_dawn: [2, 1, 'resolved'], stayers_held: [1, 1, 'relief_partial'],
     went_in_for_owner: [-2, 4, 'resolved'], went_in_taker_hurt: [-4, 7, 'resolved'], owner_left_down: [-3, 5, 'relief_partial'], held_both_down: [-4, 6, 'relief_partial'], owner_killed_taker_hurt: [-6, 9, 'relief_partial'] },
-  barricaded: { everyone_out: [3, -2, 'resolved'], out_by_morning: [2, 1, 'resolved'], son_out_held: [1, 1, 'relief_partial'], held_with_son: [-3, 4, 'relief_partial'], entry_clean: [0, 2, 'resolved'], entry_subject_hurt: [-2, 4, 'resolved'], entry_son_hurt: [-3, 5, 'resolved'], son_beaten: [-4, 6, 'relief_partial'], subject_shot: [-4, 7, 'resolved'], handed_over: [-2, 3, 'unresolved'] },
+  // Everything Goes Back (docs/calls/barricade-design.md) replaced Behind the Bathroom Door; each row is
+  // the closest retired barricade ending's: the walk-outs are everyone_out's, out after a long night is
+  // out_by_morning's, the mover out and the subject inside is son_out_held's, the mover held (in the
+  // closet or found in the room) is held_with_son's, the mover hurt in the entry is entry_son_hurt's,
+  // and the subject hurt by force is subject_shot's.
+  barricaded: { everyone_out: [3, -2, 'resolved'], walked_them_out: [3, -2, 'resolved'], out_after_dark: [2, 1, 'resolved'], mover_out_held: [1, 1, 'relief_partial'], held_with_mover: [-3, 4, 'relief_partial'], held_found: [-3, 4, 'relief_partial'], entry_clean: [0, 2, 'resolved'], entry_subject_hurt: [-2, 4, 'resolved'], entry_mover_hurt: [-3, 5, 'resolved'], subject_hurt_force: [-4, 7, 'resolved'], handed_over: [-2, 3, 'unresolved'] },
   active_armed_incident: { everyone_out: [3, -1, 'resolved'], out_by_morning: [2, 1, 'resolved'], taken: [1, 2, 'resolved'], subject_shot: [-2, 4, 'resolved'], subject_killed: [-4, 7, 'resolved'], worker_hurt: [-2, 4, 'resolved'], worker_killed: [-6, 9, 'relief_partial'], held_inside: [-3, 5, 'relief_partial'], alone_inside: [1, 2, 'relief_partial'], handed_over: [-2, 3, 'unresolved'] },
   protected_rescue: { out_together: [3, -1, 'resolved'], slow_out: [2, 1, 'resolved'], out_carried: [1, 2, 'resolved'], out_without_chair: [0, 2, 'resolved'], resident_hurt: [-2, 4, 'resolved'], resident_killed: [-6, 9, 'relief_partial'], tank_ran_out: [-6, 9, 'relief_partial'], still_inside: [-1, 3, 'relief_partial'], handed_over: [-2, 3, 'unresolved'] },
 };
