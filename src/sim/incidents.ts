@@ -18,7 +18,7 @@ import type { IncidentType } from './scenario-types';
 import { tunable } from './tuning';
 import { callTreeAt } from '../content/call-trees';
 import { scenarioRecipe } from '../content/scenario-recipes';
-import type { AvoidableTheme, ContentDescriptor } from '../content/content-descriptors';
+import type { ContentDescriptor } from '../content/content-descriptors';
 
 /** Content v11 gates board draws by capability and weights unseen frameworks first. */
 
@@ -46,10 +46,9 @@ export const INCIDENT_TUNING = tunable('INCIDENT_TUNING', {
 
 // ---------------------------------------------------------------- content filter
 
-/** What the player keeps off the board (docs/content-rating.md): the avoidable themes they turned
- * off. A situation carrying any of them is left out. A pure input: the store owns the setting and
- * passes it in. */
-export interface ContentExclusion { avoid: readonly AvoidableTheme[] }
+/** What the player keeps off the board (docs/content-rating.md): any set of descriptors. A situation
+ * carrying any of them is left out. A pure input: the store owns the setting and passes it in. */
+export interface ContentExclusion { avoid: readonly ContentDescriptor[] }
 
 /** The descriptors an exclusion rules out. */
 export function excludedDescriptors(exclusion: ContentExclusion): Set<ContentDescriptor> {

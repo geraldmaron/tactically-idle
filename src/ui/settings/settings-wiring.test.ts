@@ -5,7 +5,6 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { callTreeAt } from '../../content/call-trees';
-import { AVOIDABLE_THEMES } from '../../content/content-descriptors';
 import { scenarioRecipe } from '../../content/scenario-recipes';
 import { incidentId, parseIncidentId } from '../../gen/incident';
 import { CampaignSlots } from '../../sim/campaign-slots';
@@ -14,12 +13,12 @@ import { dispatch } from '../../sim/game';
 import { cardFits, type ContentExclusion } from '../../sim/incidents';
 import { ThreatPill } from '../screens/LiveView';
 import { CardWarning, cardDescriptors } from './CardWarning';
-import { CARD_THEME_WORDS, CARD_WARNING_TEXT, joinThemes } from './labels';
+import { CARD_THEME_WORDS, CARD_WARNING_TEXT, THEME_ORDER, joinThemes } from './labels';
 import { DebriefSupport, debriefNeedsSupport } from './DebriefSupport';
 import { resetSettingsMemory, updateSettings } from './prefs';
 import { timerSetting } from '../timer';
 
-const ORDER = [...AVOIDABLE_THEMES, 'death', 'police_gunfire', 'injury'];
+const THEMES = ['suicide_self_harm', 'child_at_risk', 'domestic_violence'] as const;
 const NOW = Date.UTC(2026, 0, 5, 12, 0, 0);
 const AVOID_SELF_HARM: ContentExclusion = { avoid: ['suicide_self_harm'] };
 const descriptorsOf = (id: string) => {
@@ -54,10 +53,10 @@ describe('avoided themes reach the board', () => {
   });
 
   it('later arrivals never carry an avoided theme', () => {
-    let state = createInitialState(NOW, 7, { avoid: [...AVOIDABLE_THEMES] });
+    let state = createInitialState(NOW, 7, { avoid: [...THEMES] });
     for (let hour = 1; hour <= 24 * 6; hour++) {
-      state = dispatch(state, { type: 'tick' }, { now: NOW + hour * 3_600_000, exclusion: { avoid: [...AVOIDABLE_THEMES] } }).state;
-      for (const card of state.incidents) for (const theme of AVOIDABLE_THEMES) expect(descriptorsOf(card.id)).not.toContain(theme);
+      state = dispatch(state, { type: 'tick' }, { now: NOW + hour * 3_600_000, exclusion: { avoid: [...THEMES] } }).state;
+      for (const card of state.incidents) for (const theme of THEMES) expect(descriptorsOf(card.id)).not.toContain(theme);
     }
   });
 
@@ -110,7 +109,7 @@ describe('the call card warning', () => {
     expect(byVariant.size).toBeGreaterThan(1);
     expect(new Set(byVariant.values()).size).toBe(1);
     const all = cardDescriptors(incidentId(spec));
-    expect(all).toEqual([...all].sort((a, b) => ORDER.indexOf(a) - ORDER.indexOf(b)));
+    expect(all).toEqual([...all].sort((a, b) => THEME_ORDER.indexOf(a) - THEME_ORDER.indexOf(b)));
   });
 
   it('joins the themes with commas and a last "and", no serial comma, and names a call\'s own set', () => {

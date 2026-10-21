@@ -1,11 +1,8 @@
-import { AVOIDABLE_THEMES, type ContentDescriptor } from '../../content/content-descriptors';
+import type { ContentDescriptor } from '../../content/content-descriptors';
 import { callTreeAt } from '../../content/call-trees';
 import { parseIncidentId } from '../../gen/incident';
-import { CARD_THEME_WORDS, CARD_WARNING_TEXT, joinThemes } from './labels';
+import { CARD_THEME_WORDS, CARD_WARNING_TEXT, THEME_ORDER, joinThemes } from './labels';
 import { useSettings } from './SettingsControls';
-
-/** The order a card names themes in: the avoidable ones first, then the rest. */
-const CARD_ORDER: readonly ContentDescriptor[] = [...AVOIDABLE_THEMES, 'death', 'police_gunfire', 'injury'];
 
 /** The themes a call card names: the union over every situation of the call, never the drawn one,
  * so the card can't tell the player which situation they drew (a death that exists in only one
@@ -15,7 +12,7 @@ export function cardDescriptors(cardId: string): ContentDescriptor[] {
   const spec = parseIncidentId(cardId);
   if (!spec) return [];
   const all = new Set((callTreeAt(spec.type)?.situations ?? []).flatMap((situation) => situation.descriptors ?? []));
-  return CARD_ORDER.filter((d) => all.has(d));
+  return THEME_ORDER.filter((d) => all.has(d));
 }
 
 /** The call card's warning: one line naming the themes the call can involve, then a line saying

@@ -4,9 +4,11 @@
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
-import { AVOIDABLE_THEMES, CONTENT_DESCRIPTORS } from '../../content/content-descriptors';
+import { CONTENT_DESCRIPTORS, type ContentDescriptor } from '../../content/content-descriptors';
+import { drawableKinds } from '../../sim/incidents';
+import { blockedAlone, canAvoid, leavesCalls } from './avoidable';
 import { FirstRun } from './FirstRun';
-import { ADVISORY_THEMES, CARD_THEME_WORDS, CARD_WARNING_TEXT, SETTINGS_TEXT, SUPPORT_TEXT, THEME_LABELS, TIMER_LABELS, WARNING_LABELS, settingsSummary } from './labels';
+import { ADVISORY_THEMES, CARD_THEME_WORDS, CARD_WARNING_TEXT, SETTINGS_TEXT, SUPPORT_TEXT, THEME_LABELS, THEME_ORDER, TIMER_LABELS, WARNING_LABELS, reasonText, settingsSummary } from './labels';
 import { DEFAULT_SETTINGS } from './prefs';
 import { SettingsControls } from './SettingsControls';
 
@@ -26,9 +28,9 @@ describe('settings labels', () => {
     for (const label of allLabels) expect(label, label).not.toMatch(/\b(ESRB|PEGI|IARC|Teen|Everyone|Adults Only|Core|Mature)\b|\bM\b|\b1[268]\+?\b/);
   });
 
-  it('offer exactly the three avoidable themes, each a real descriptor', () => {
-    expect([...AVOIDABLE_THEMES]).toEqual(['suicide_self_harm', 'child_at_risk', 'domestic_violence']);
-    for (const theme of AVOIDABLE_THEMES) expect(CONTENT_DESCRIPTORS).toContain(theme);
+  it('offer a switch for every descriptor, in the card order', () => {
+    expect([...THEME_ORDER].sort()).toEqual([...CONTENT_DESCRIPTORS].sort());
+    expect(Object.keys(THEME_LABELS).sort()).toEqual([...CONTENT_DESCRIPTORS].sort());
   });
 
   it('sum up the settings in one line', () => {
@@ -38,28 +40,59 @@ describe('settings labels', () => {
 });
 
 describe('settings screens', () => {
-  it('the advisory names every theme, says it is no age check, and keeps continue off until the tick', () => {
+  it('the advisory names every theme, says it is no age check, and has one Continue button that works at once', () => {
     const html = renderToStaticMarkup(createElement(FirstRun));
     const shown = text(html);
     for (const theme of ADVISORY_THEMES) expect(shown).toContain(theme);
     expect(shown).toContain(SETTINGS_TEXT.notAgeCheck);
     expect(shown).toContain(SETTINGS_TEXT.leaveCalls);
-    expect(shown).toContain(SETTINGS_TEXT.acknowledge);
-    expect(html).toMatch(new RegExp(`<button[^>]*disabled=""[^>]*>${SETTINGS_TEXT.continue}</button>`));
+    expect(html).not.toContain('first-run-ack');
+    expect(html.match(new RegExp(`<button[^>]*>${SETTINGS_TEXT.continue}</button>`))?.[0]).not.toContain('disabled');
   });
 
-  it('offers toggles for the avoidable themes only, plus the warning and timer choices', () => {
+  it('offers a switch for all six descriptors, plus the warning and timer choices', () => {
     const html = renderToStaticMarkup(createElement(SettingsControls, { value: { ...DEFAULT_SETTINGS, avoidThemes: ['domestic_violence'] }, onChange: () => {} }));
-    expect(html.match(/type="checkbox"/g)).toHaveLength(3);
-    expect(html.match(/checked=""/g)).toHaveLength(1);
-    for (const theme of AVOIDABLE_THEMES) expect(text(html)).toContain(THEME_LABELS[theme].name);
-    for (const word of ['Death', 'Injury', 'Police gunfire']) expect(html).not.toContain(`<strong>${word}</strong>`);
+    expect(html.match(/type="checkbox"/g)).toHaveLength(6);
+    for (const theme of CONTENT_DESCRIPTORS) expect(text(html)).toContain(THEME_LABELS[theme].name);
     for (const l of [...Object.values(WARNING_LABELS), ...Object.values(TIMER_LABELS)]) expect(text(html)).toContain(l.name);
+    expect(html).not.toContain(SETTINGS_TEXT.avoidHeading.replace('themes', 'mechanics'));
+  });
+
+  it('disables a switch that would leave no calls and says why under it, in both wordings', () => {
+    expect(blockedAlone('injury')).toBe(true);
+    const alone = renderToStaticMarkup(createElement(SettingsControls, { value: DEFAULT_SETTINGS, onChange: () => {} }));
+    expect(text(alone)).toContain(reasonText('injury', true));
+    expect(text(alone)).toContain('Every call can involve injury, so turning this off would leave no calls.');
+    expect(alone.match(/disabled=""/g)?.length).toBeGreaterThanOrEqual(1);
+    // A blocked switch that is already on can be turned off; one blocked only by the other choices gets the other line.
+    const stuck = CONTENT_DESCRIPTORS.find((d) => !blockedAlone(d) && !canAvoid(THEME_ORDER.filter((x) => x !== d && !blockedAlone(x)), d));
+    if (stuck) {
+      const others = THEME_ORDER.filter((x) => x !== stuck && !blockedAlone(x));
+      expect(text(renderToStaticMarkup(createElement(SettingsControls, { value: { ...DEFAULT_SETTINGS, avoidThemes: others }, onChange: () => {} })))).toContain(reasonText(stuck, false));
+    }
+  });
+
+  it('no reachable set of switches leaves the board with no calls, and a disabled switch can not be turned on', () => {
+    const seen = new Set<string>();
+    const walk = (current: ContentDescriptor[]) => {
+      const key = [...current].sort().join();
+      if (seen.has(key)) return;
+      seen.add(key);
+      expect(leavesCalls(current), key).toBe(true);
+      expect(drawableKinds({ avoid: current }).length, key).toBeGreaterThan(0);
+      for (const d of CONTENT_DESCRIPTORS) {
+        if (current.includes(d)) continue;
+        if (canAvoid(current, d)) walk([...current, d]);
+        else expect(leavesCalls([...current, d]), `${key} + ${d}`).toBe(false);
+      }
+    };
+    walk([]);
+    expect(seen.size).toBeGreaterThan(1);
   });
 
   it('shows the approved lead, 988 line and chat button in Settings', () => {
     const html = renderToStaticMarkup(createElement(SettingsSheet, { open: true, onClose: () => {} }));
-    for (const line of [SUPPORT_TEXT.lead, SUPPORT_TEXT.us, SETTINGS_TEXT.avoidMechanics]) expect(text(html)).toContain(line);
+    for (const line of [SUPPORT_TEXT.lead, SUPPORT_TEXT.us]) expect(text(html)).toContain(line);
     expect(html).toContain('href="https://chat.988lifeline.org"');
     expect(text(html)).toContain('Chat online');
   });

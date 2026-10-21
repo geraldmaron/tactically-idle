@@ -3,14 +3,21 @@
 // rest named as warnings only. House rules: no em or en dashes, no spaced hyphens, no colons, and no
 // ESRB or PEGI names (docs/content-rating.md).
 
-import type { AvoidableTheme, ContentDescriptor } from '../../content/content-descriptors';
+import type { ContentDescriptor } from '../../content/content-descriptors';
 import type { TimerSetting } from '../../sim/timer-setting';
 import type { CardWarningSetting } from './prefs';
 
-export const THEME_LABELS: Readonly<Record<AvoidableTheme, { name: string; detail: string }>> = {
+/** The order themes appear in on the card and in the avoid list: the sensitive themes first, then
+ * what runs through most calls. */
+export const THEME_ORDER: readonly ContentDescriptor[] = ['suicide_self_harm', 'child_at_risk', 'domestic_violence', 'death', 'police_gunfire', 'injury'];
+
+export const THEME_LABELS: Readonly<Record<ContentDescriptor, { name: string; detail: string }>> = {
   suicide_self_harm: { name: 'Suicide and self-harm', detail: 'A person on scene is at risk of hurting themselves.' },
   child_at_risk: { name: 'A child in danger', detail: 'A child is inside or in danger.' },
   domestic_violence: { name: 'Domestic violence', detail: 'Harm between partners or family members drives the call.' },
+  death: { name: 'Death', detail: 'Someone can die on the call.' },
+  police_gunfire: { name: 'Police gunfire', detail: 'Your team can open fire.' },
+  injury: { name: 'Injury', detail: 'An officer or a civilian can be hurt.' },
 };
 
 /** The themes a call card names, in plain words, for every descriptor. Never plot. Owner approved
@@ -30,6 +37,13 @@ export const CARD_WARNING_TEXT = {
   involves: 'Involves',
   leaveIt: 'No penalty for skipping this call.',
 } as const;
+
+/** Why a switch can't be turned on: the board would be left with no call to draw. */
+export function reasonText(descriptor: ContentDescriptor, alone: boolean): string {
+  return alone
+    ? `Every call can involve ${CARD_THEME_WORDS[descriptor]}, so turning this off would leave no calls.`
+    : 'With your other choices, turning this off would leave no calls.';
+}
 
 /** "A", "A and B", "A, B and C". */
 export function joinThemes(words: readonly string[]): string {
@@ -56,16 +70,13 @@ export const SETTINGS_TEXT = {
   advisoryIntro: 'You run a police tactical team. Its calls include these themes.',
   leaveCalls: 'You can leave any call on the board. Calls expire without a penalty.',
   notAgeCheck: 'These settings are your preferences. We don\'t check your age.',
-  acknowledge: 'I have read this',
-  acknowledgeHint: 'Check the box above to continue.',
   continue: 'Continue to headquarters',
   changeLater: 'You can change these later in Settings, from the saves button at the top of the screen. Settings also has a Support entry.',
   settingsTitle: 'Settings',
   settingsSubtitle: 'Kept in this browser, apart from your saves',
   openSettings: 'Settings',
   avoidHeading: 'Avoid these themes',
-  avoidHint: 'Calls built around a theme you switch on here stay off your board.',
-  avoidMechanics: 'Death, injury and police gunfire run through most calls. Warnings name them, but you can\'t avoid them.',
+  avoidHint: 'Calls with a theme you switch on here stay off your board.',
   warningsHeading: 'Call card warnings',
   timerHeading: 'Call timer',
   timerHint: 'How fast time on the call moves while a decision waits on you.',
@@ -87,7 +98,7 @@ export const SUPPORT_TEXT = {
 } as const;
 
 /** One line summing up the settings, for the button that opens them. */
-export function settingsSummary(s: { avoidThemes: readonly AvoidableTheme[]; cardWarnings: CardWarningSetting; timer: TimerSetting }): string {
+export function settingsSummary(s: { avoidThemes: readonly ContentDescriptor[]; cardWarnings: CardWarningSetting; timer: TimerSetting }): string {
   const n = s.avoidThemes.length;
   return [n ? `${n} ${n === 1 ? 'theme' : 'themes'} avoided` : null, s.cardWarnings === 'all' ? 'Warnings on' : 'Warnings off', `Timer ${TIMER_LABELS[s.timer].name.toLowerCase()}`]
     .filter(Boolean).join(' · ');
