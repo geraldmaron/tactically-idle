@@ -6,6 +6,9 @@ import { describe, expect, it } from 'vitest';
 import { compileFixtureCall } from '../gen/incident/gates/fixture-call';
 import { startGateRun, withDraftScenario } from '../gen/incident/gates/engine-driver';
 import { GROUP_TEMPLATE } from '../gen/incident/trees-v13/group-fixture';
+import { validExternalSupportState } from './external-support';
+import { initialMeters } from './meters';
+import type { OutcomeEffect } from './scenario-types';
 import { CALL_TREES } from '../content/call-trees';
 import { drawCalls, playToEnd } from '../gen/incident/trees-v13/balance';
 import { advanceClocks, audienceFactor, CLOCK_RULES_V1, clockErrors, clockOutEffects, clockViews, ditherCap, effectiveRate, fillGauge, fillViews, initialClocks, stepClock } from './clocks';
@@ -293,5 +296,26 @@ describe('gaps the review found', () => {
     const first = stepClock(def, initialClocks({ clocks: [def] } as ScenarioDefinition)!.crowd, 2, []);
     expect(first).toEqual({ value: 99.5, cued: 1 });
     expect(stepClock(def, first, 2, []).value).toBe(100);
+  });
+});
+
+describe('the save check replays a cue’s meter moves', () => {
+  it('a later consequence gated on the agitation a cue raised still reloads', () => {
+    const base = compileFixtureCall(GROUP_TEMPLATE, 0);
+    const person = base.incidentPeople!.find(entry => entry.meters)!;
+    const def = fill({ start: 20, ratePerMin: 10, cues: [{ at: 30, text: 'Phones come up.', moves: [{ personId: person.id, event: 'watched' }] }] });
+    // Every choice after the first: an officer is hurt only where the subject is already wound up
+    // past what the call starts at, which only the cue's move reaches.
+    const need = initialMeters(base)![person.id].agitation + 1;
+    const gated: OutcomeEffect = { text: 'A shot goes wide.', meters: [{ personId: person.id, agitationAtLeast: need, is: true }], officerHarm: { severity: 'wounded', label: 'Wounded on the call at {place}' } };
+    const stages = Object.fromEntries(Object.entries(base.stages).map(([stage, value]) => [stage, { ...value, actions: value.actions.map(action => ({ ...action,
+      outcomes: Object.fromEntries(Object.entries(action.outcomes).map(([band, list]) => [band, [...list, gated]])) as typeof action.outcomes })) }])) as ScenarioDefinition['stages'];
+    const scenario = { ...base, id: `${base.id}-gated`, clocks: [def], stages };
+    withDraftScenario(scenario, id => {
+      const second = decide(decide(startGateRun(id, 719)));
+      const run = second.activeRun!;
+      expect(run.meters![person.id].moved.watched).toBeDefined();
+      expect(validExternalSupportState(run, getScenario(id)!), 'the replay agrees').toBe(true);
+    });
   });
 });

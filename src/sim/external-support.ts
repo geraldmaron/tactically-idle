@@ -191,7 +191,8 @@ export function validExternalSupportState(run: OperationRun, scenario: ScenarioD
   // Built once, and only if a look follows a person (observingAction).
   let built: ReturnType<typeof buildLocation> | undefined;
   const building = () => built ??= buildLocation(scenario.locationFamilyId, scenario.locationSeed);
-  const applyCues = (cues: OutcomeEffect[]) => { for (const cue of cues) for (const flag of cue.setFlags ?? []) publicState.flags = withFlag(publicState.flags, flag); };
+  // A cue's flags land, and its meter moves (a gauge that fills: `watched`) move the subjects, as applyClockCues does.
+  const applyCues = (cues: OutcomeEffect[]) => { for (const cue of cues) for (const flag of cue.setFlags ?? []) publicState.flags = withFlag(publicState.flags, flag); applyMoves(moved, scenario, cues); };
   // v13: meter branches read the subjects' meters at the start of each decision; outcomes and
   // commitments move them after it (sim/meters.ts, sim/commitments.ts).
   const moved: Pick<OperationRun, 'meters'> & Partial<Pick<OperationRun, 'commitments'>> = { meters: initialMeters(scenario) };

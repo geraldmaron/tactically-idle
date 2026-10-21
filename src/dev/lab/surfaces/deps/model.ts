@@ -109,16 +109,16 @@ export function siteWords(site: Site, _tree: CallTree, side: 'writers' | 'reader
   const cond = site.conditional ? (names.cond ? names.cond(site.conditional) : site.conditional) : null;
   const at = cond?.replace(/^at /, '');
   const DOES: Partial<Record<Site['field'], string>> = side === 'writers' ? {
-    'outcome.mark': 'sets it', 'fire.mark': 'sets it when an officer is hit', 'clock.cue.mark': `sets it when the clock falls to ${at}`, 'clock.onOut.mark': 'sets it when the clock runs out',
+    'outcome.mark': 'sets it', 'fire.mark': 'sets it when an officer is hit', 'clock.cue.mark': `sets it when the clock falls to ${at}`, 'clock.onOut.mark': 'sets it when the clock runs out', 'clock.onFull.mark': 'sets it when the gauge fills',
     'outcome.safe': 'brings them out safe', 'outcome.out': 'brings them out', 'force.out': 'force brings them out (drawn)', 'cascade.out': 'followers come out (drawn)',
     'outcome.reveal': 'settles it', 'clock.cue.reveal': `settles it when the clock falls to ${at}`, 'fact.public': 'on the card from the start', 'outcome.moves': 'moves their meters',
     'outcome.promise': 'makes the promise', 'authority.concede': 'command concession', 'outcome.harm': 'harms them', 'outcome.officer': 'an officer is hurt',
-    'fire.harm': 'an officer may be hit (drawn)', 'force.harm': 'force may hurt them (drawn)', 'clock.onOut.harm': 'harms them when the clock runs out',
+    'fire.harm': 'an officer may be hit (drawn)', 'force.harm': 'force may hurt them (drawn)', 'clock.onOut.harm': 'harms them when the clock runs out', 'clock.onFull.harm': 'harms them when the gauge fills',
     'outcome.objective': 'moves the objective', 'outcome.civilian': 'moves civilian safety', 'outcome.pressure': 'adds pressure', 'choice.minutes': `spends time (${cond ?? 'minutes'})`, draw: 'drawn per call',
   } : {
     'promptIf.when': `shows prompt variant ${(site.promptIf ?? 0) + 1} ${when}`, onlyIf: `offers the choice only ${when}`, 'outcome.when': `uses this line only ${when}`,
     'outcome.if': `routes on it (${cond})`, modifier: `changes the odds (${cond})`, threatMarks: 'lets command approve force', 'carries.knownFrom': 'shows a carried item on the map',
-    'fact.threat': 'lets command approve force once believed', 'clock.urgent': 'makes the clock urgent', 'clock.onOut.mark': 'runs out at zero', 'clock.onOut.harm': 'runs out at zero',
+    'fact.threat': 'lets command approve force once believed', 'clock.urgent': 'makes the clock urgent', 'clock.onOut.mark': 'runs out at zero', 'clock.onOut.harm': 'runs out at zero', 'clock.onFull.mark': 'fills to full', 'clock.onFull.harm': 'fills to full',
     'next.turn': 'routes to the drawn turn', engine: cond ?? 'read by the engine',
   };
   const does = DOES[site.field] ?? site.field;
