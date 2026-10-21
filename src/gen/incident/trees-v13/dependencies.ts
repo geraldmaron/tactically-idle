@@ -7,7 +7,7 @@
 // then the template's clocks in every situation (a cue's mark and a clock running out write marks
 // and harm too). A clock the story still runs by itself is left out: the engine never runs it.
 import type { CallTree, TreeChoice, TreeIf, TreeNext, TreeOutcome, TreeState } from '../../../content/call-trees/types';
-import type { IncidentTemplate } from '../../../content/incidents/types';
+import type { Clock, IncidentTemplate } from '../../../content/incidents/types';
 import type { MeterStance } from '../../../sim/scenario-types';
 import type { OutcomeBand } from '../../../sim/types';
 import { clockMarksOf } from '../instance';
@@ -16,9 +16,9 @@ import { choiceActionId, outcomeNexts, prunePlan, reachableWithin, templateClock
 export type StateKey = `mark:${string}` | `safe:${string}` | `out:${string}` | `fact:${string}` | `clock:${string}` | `meter:${string}`
   | `promise:${string}` | `harm:${string}` | `count:${string}` | `turn:${string}` | 'situation'
   | 'scalar:objective' | 'scalar:civilian' | 'scalar:pressure';
-export type SiteField = 'outcome.mark' | 'fire.mark' | 'clock.cue.mark' | 'clock.onOut.mark' | 'outcome.safe' | 'outcome.out'
+export type SiteField = 'outcome.mark' | 'fire.mark' | 'clock.cue.mark' | 'clock.onOut.mark' | 'clock.onFull.mark' | 'outcome.safe' | 'outcome.out'
   | 'force.out' | 'cascade.out' | 'outcome.reveal' | 'clock.cue.reveal' | 'fact.public' | 'outcome.moves' | 'outcome.promise'
-  | 'authority.concede' | 'outcome.harm' | 'outcome.officer' | 'fire.harm' | 'force.harm' | 'clock.onOut.harm'
+  | 'authority.concede' | 'outcome.harm' | 'outcome.officer' | 'fire.harm' | 'force.harm' | 'clock.onOut.harm' | 'clock.onFull.harm'
   | 'outcome.objective' | 'outcome.civilian' | 'outcome.pressure' | 'choice.minutes' | 'draw'
   | 'promptIf.when' | 'onlyIf' | 'outcome.when' | 'outcome.if' | 'modifier' | 'threatMarks' | 'carries.knownFrom'
   | 'fact.threat' | 'clock.urgent' | 'next.turn' | 'engine';
@@ -97,10 +97,14 @@ export function countCombos(template: IncidentTemplate): Record<string, number>[
 /** Marks any situation's clocks can set by themselves: settable for every static check. */
 const templateClockMarks = (template: IncidentTemplate): string[] => [...new Set(template.situations.flatMap(situation => clockMarksOf(situation.clocks ?? [])))];
 
-/** Each clock of any situation that sends the call somewhere when it runs out, for requirementTree. */
+/** What a clock reaching its end does: running out, or (a gauge that fills) filling. */
+const endOfClock = (clock: Pick<Clock, 'direction' | 'onOut' | 'onFull'>) => clock.direction === 'fill' ? clock.onFull : clock.onOut;
+
+/** Each clock of any situation that sends the call somewhere when it runs out (a fill: when it is
+ * full, which the tree reads as `out`), for requirementTree. */
 export const templateClockRoutes = (template: IncidentTemplate): { clock: string; next: TreeNext }[] =>
-  [...new Map(template.situations.flatMap(situation => (situation.clocks ?? []).filter(clock => !clock.story && clock.onOut?.next)
-    .map(clock => [`${clock.id}:${JSON.stringify(clock.onOut!.next)}`, { clock: clock.id, next: clock.onOut!.next! }] as const))).values()];
+  [...new Map(template.situations.flatMap(situation => (situation.clocks ?? []).filter(clock => !clock.story && endOfClock(clock)?.next)
+    .map(clock => [`${clock.id}:${JSON.stringify(endOfClock(clock)!.next)}`, { clock: clock.id, next: endOfClock(clock)!.next! }] as const))).values()];
 
 /** A count condition as text: "others ≥ 1", "others 1 to 2". */
 function countText(count: NonNullable<TreeState['count']>): string {
@@ -217,10 +221,12 @@ export function dependencyIndex(template: IncidentTemplate): DependencyIndex {
       if (cue.reveal && clock.factKey) write(`fact:${clock.factKey}`, { ...at, field: 'clock.cue.reveal', conditional: `at ${cue.at}` });
     }
     if (clock.urgent) read(`clock:${clock.id}`, { ...at, field: 'clock.urgent' });
-    if (clock.onOut) {
-      read(`clock:${clock.id}`, { ...at, field: clock.onOut.mark ? 'clock.onOut.mark' : 'clock.onOut.harm' });
-      if (clock.onOut.mark) write(`mark:${clock.onOut.mark}`, { ...at, field: 'clock.onOut.mark' });
-      if (clock.onOut.harm && clock.owner) write(`harm:${clock.owner}`, { ...at, field: 'clock.onOut.harm', conditional: clock.onOut.harm });
+    const end = endOfClock(clock), fills = clock.direction === 'fill';
+    if (end) {
+      const markField = fills ? 'clock.onFull.mark' : 'clock.onOut.mark', harmField = fills ? 'clock.onFull.harm' : 'clock.onOut.harm';
+      read(`clock:${clock.id}`, { ...at, field: end.mark ? markField : harmField });
+      if (end.mark) write(`mark:${end.mark}`, { ...at, field: markField });
+      if (end.harm && clock.owner) write(`harm:${clock.owner}`, { ...at, field: harmField, conditional: end.harm });
     }
   }
 
@@ -307,6 +313,9 @@ export function lintTree(template: IncidentTemplate, index: DependencyIndex = de
     const onOut = writers.filter(site => site.field === 'clock.onOut.mark');
     if (onOut.length)
       add({ code: 'clock_writer', severity: 'info', key, sites: onOut, message: `${label} is also set when ${[...new Set(onOut.map(site => site.clock))].join(' or ')} runs out.` }, key);
+    const onFull = writers.filter(site => site.field === 'clock.onFull.mark');
+    if (onFull.length)
+      add({ code: 'clock_writer', severity: 'info', key, sites: onFull, message: `${label} is also set when ${[...new Set(onFull.map(site => site.clock))].join(' or ')} fills.` }, key);
   }
 
   // Reachability and pruning, over every group size the template draws and every turn.
