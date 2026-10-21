@@ -406,9 +406,10 @@ two squads and a Lab check of the shared screens.
 Tags: job=command; journeys=answer-a-call; probes=none (layout); lane=interface
 Needs: start=none; integrate=none; ship=none
 
-Build 4A (compact whole-building scene beside the faces) and 4B (map folded from stage 2), and 7A
-against 7B (Barlow against a reading serif), behind a dev setting, and run the comparison in
-`docs/ops-experience.md` ("How the comparisons get decided"). Ship the winners, delete the others.
+4A (compact whole-building scene beside the faces), 4B (map folded from stage 2) and the reading
+serif are built behind the dev switch (`src/ui/settings/candidates.ts`). The owner runs the
+comparison in `docs/ops-experience.md` ("How the comparisons get decided"). Then ship the winners,
+delete the losers' rules from `candidates.css` and remove the switch.
 
 ### onboarding: A first call that teaches the loop
 Tags: job=command; journeys=answer-a-call; probes=none (teaching flow); lane=deferred

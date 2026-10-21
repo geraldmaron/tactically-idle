@@ -122,8 +122,35 @@ Mockups at 390x844 are in [captures/ops-experience](captures/ops-experience/), d
 
 ## How the comparisons get decided
 
-For each of 4A against 4B, and 7A against 7B, build both behind a dev setting and play *Going
-Live* through all three stages twice. Check at 390x844 and at 320x568, with 200% text, with two
+Both comparisons are built for dev builds only (`npm run dev`), in
+`src/ui/settings/candidates.ts` with their styles in `candidates.css`. Production always shows
+today's layout and face.
+
+- **Switch:** a pink DEV switch sits bottom-left on the live call. Its first set is Now, 4A or 4B,
+  its second Sans or Serif, and every tap applies at once. A link can open on a candidate too, for
+  example `http://localhost:5173/?layout=compact&face=serif`, with `layout` set to `now`,
+  `compact` or `folded`. The choice is kept in localStorage (`ti-dev-candidates`), never in the save.
+- **4A (`compact`):** the whole building at 112px beside the squad. The map never folds. The
+  stream ticker sits on one row with one chat line. On scene moves below the prompt.
+- **4B (`folded`):** the map folds to its header from stage 2. It opens for the stage on Show map,
+  and it opens itself after a result that changed the scene.
+- **Serif:** Source Serif 4 on the cold open, prompts, results, transcripts and the debrief's
+  ending. It loads only when a dev build picks it.
+
+Measured at 390x844 on a fresh *Going Live* run, to the top of each element in scrolled pixels:
+
+| | Prompt, stage 1 | First choice, stage 1 | Prompt, stage 2 | First choice, stage 2 |
+| --- | --- | --- | --- | --- |
+| Now | 819 | 1,282 | 916 | 1,296 |
+| 4A | 464 | 1,069 | 561 | 1,083 |
+| 4B | 819 | 1,282 | 730 | 1,110 |
+| 4A with serif | 464 | 1,069 | 561 | 1,109 |
+
+4A puts the prompt on the first screen at both stages. No candidate gets the first choice there
+yet: the transcript, the On scene log and What matters now still sit between the prompt and the
+cards. Folding or moving those is the next lever if 4A wins.
+
+For each of 4A against 4B, and 7A against 7B, play *Going Live* through all three stages twice. Check at 390x844 and at 320x568, with 200% text, with two
 squads deployed, and once with a threat that lands. The owner judges three things:
 
 - Can they say who acts, who is in danger, and which choices the stream makes harder, without
