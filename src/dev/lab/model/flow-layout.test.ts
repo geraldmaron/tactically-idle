@@ -150,13 +150,13 @@ describe('reach', () => {
   const graph = callOf(s);
 
   it('keeps zero-reach vertices at minimum size and grows reached endings', () => {
-    const tally: ReachTally = { ...emptyTally(), runs: 10, endings: { everyone_out: { n: 10, weights: { death: 0, hurt: 0, unresolved: 0, costly: 0, clean: 10 } } } };
+    const tally: ReachTally = { ...emptyTally(), runs: 10, endings: { out_on_camera: { n: 10, weights: { death: 0, hurt: 0, unresolved: 0, costly: 0, clean: 10 } } } };
     const l = layout(graph, { tally });
     const endings = Object.values(l.boxes).filter(b => b.kind === 'ending');
     const min = Math.min(...endings.map(b => b.h));
-    expect(l.boxes['ending:everyone_out'].h).toBeGreaterThan(min);
-    for (const b of endings) if (b.id !== 'ending:everyone_out') { expect(b.h).toBe(min); expect(b.n).toBe(0); }
-    expect(l.boxes['ending:everyone_out'].weight).toBe('clean');
+    expect(l.boxes['ending:out_on_camera'].h).toBeGreaterThan(min);
+    for (const b of endings) if (b.id !== 'ending:out_on_camera') { expect(b.h).toBe(min); expect(b.n).toBe(0); }
+    expect(l.boxes['ending:out_on_camera'].weight).toBe('clean');
     // Never-reached endings stay on the canvas, at minimum height.
     expect(endings.length).toBe(graph.vertices.filter(v => v.kind === 'ending' && v.inCall).length);
     // Structure mode ignores the tally's sizes.
@@ -194,13 +194,13 @@ describe('expanding a node', () => {
   it('inserts a column of its choices, and its ribbons leave from the choices', () => {
     const s = open(REFERENCE.hostage_crisis);
     const graph = callOf(s);
-    const plain = layout(graph), open_ = layout(graph, { expanded: new Set(['talking']) });
+    const plain = layout(graph), open_ = layout(graph, { expanded: new Set(['on_air']) });
     const choices = Object.values(open_.boxes).filter(b => b.kind === 'choice');
-    expect(choices.length).toBe(graph.choices.filter(c => c.node === 'talking' && c.inCall).length);
+    expect(choices.length).toBe(graph.choices.filter(c => c.node === 'on_air' && c.inCall).length);
     expect(open_.width).toBeGreaterThan(plain.width);
-    expect(open_.paths.some(p => p.from === 'node:talking' && p.kind === 'ribbon')).toBe(false);
-    expect(open_.paths.filter(p => p.from === 'node:talking' && p.kind === 'choice')).toHaveLength(choices.length);
-    for (const c of choices) expect(c.x).toBeGreaterThan(open_.boxes['node:talking'].x);
+    expect(open_.paths.some(p => p.from === 'node:on_air' && p.kind === 'ribbon')).toBe(false);
+    expect(open_.paths.filter(p => p.from === 'node:on_air' && p.kind === 'choice')).toHaveLength(choices.length);
+    for (const c of choices) expect(c.x).toBeGreaterThan(open_.boxes['node:on_air'].x);
   });
 });
 
@@ -208,7 +208,7 @@ describe('tracing and keys', () => {
   const graph = callOf(open(REFERENCE.hostage_crisis));
   const l = layout(graph);
   it('a backward cone from an ending reaches the root; a forward cone from the root reaches every drawn ending', () => {
-    const cone = traceCone(l, 'ending:everyone_out', 'up');
+    const cone = traceCone(l, 'ending:out_on_camera', 'up');
     expect(cone.boxes.has(`node:${graph.root}`)).toBe(true);
     const down = traceCone(l, `node:${graph.root}`, 'down');
     for (const b of Object.values(l.boxes)) if (b.kind === 'ending' && !b.ghost && l.paths.some(p => p.to === b.id)) expect(down.boxes.has(b.id), b.id).toBe(true);
@@ -226,11 +226,18 @@ describe('tracing and keys', () => {
 describe('authoredEndingClass', () => {
   it('puts killing endings in death and unresolved dispositions below clean', () => {
     const hostage = authoredEndingClass(INCIDENT_TEMPLATES.hostage_crisis!.tree);
-    expect(hostage.everyone_out).toBe('clean');
-    expect(hostage.owner_killed).toBe('death');
+    expect(hostage.out_on_camera).toBe('clean');
+    expect(hostage.manager_killed).toBe('death');
     expect(hostage.handed_over).toBe('unresolved');
-    const armed = authoredEndingClass(INCIDENT_TEMPLATES.active_armed_incident!.tree);
-    expect(armed.subject_killed).toBe('death');
+    expect(hostage.held_both).toBe('unresolved');
+  });
+
+  it('puts an ending reached by force on the subject in death when the same outcome kills someone else', () => {
+    // Going in at the threat: the rider fires (harm manager fatal) and the team's force decides the
+    // ending; on the force's hurt branch the manager has still died. Fails today: the hurt branch
+    // takes 'hurt' and drops the outcome's own fatal harm (flow-layout.ts authoredEndingClass).
+    const hostage = authoredEndingClass(INCIDENT_TEMPLATES.hostage_crisis!.tree);
+    expect(hostage.manager_killed_rider_hurt).toBe('death');
   });
 });
 

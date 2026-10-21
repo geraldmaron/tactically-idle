@@ -515,7 +515,7 @@ function Inspector({ row, tree, names, lex, prevRows, changed, since, findings, 
   notesOn: ReviewNote[]; castName: (i: number) => string; onNote: () => void; onPlay: (goal: Goal) => void; onPlayScreen: (screen: 'card' | 'brief') => void; onWhy: () => void; onFlow: (node: string) => void }) {
   const goal = rowGoal(row, tree);
   const before = prevRows?.find(entry => entry.row.where === row.row.where);
-  const situations = ([0, 1, 2] as const).map(i => {
+  const situations = tree.situations.map((_, i) => i as 0 | 1 | 2).map(i => {
     const found = callStringRowsFor(tree, row.row.where, i);
     return found;
   });

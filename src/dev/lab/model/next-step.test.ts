@@ -7,13 +7,16 @@ import { lastDecisionView } from '../../../sim/operation-selectors';
 import type { OutcomeBand } from '../../../sim/types';
 import { parseLabUrl } from '../url';
 import { explore } from './explore';
+import { CALL_TREES } from '../../../content/call-trees';
+import type { IncidentType } from '../../../sim/scenario-types';
 import { aimsDrawn, compareSituations, nextStep, previewBand, sessionAt } from './next-step';
 import { currentFrame, openSession, replayTokens, stepSession } from './session';
 import type { Session } from './session';
 import { BANDS, pathChance, whereIs, xrayChoices } from './xray';
 
 const REFERENCE = 'type=hostage_crisis&family=market_row&seed=7&tier=2&variant=1';
-const TYPES = ['hostage_crisis', 'barricaded', 'active_armed_incident', 'protected_rescue'] as const;
+// The curated calls: the Lab opens only calls the board can draw.
+const TYPES = Object.keys(CALL_TREES) as IncidentType[];
 
 function openCall(query: string): Session {
   const opened = openSession(parseLabUrl(`?${query}`).url, null);
@@ -35,9 +38,9 @@ describe('nextStep', () => {
     });
   }
 
-  it('sums to 1 at hostage talking, where drawn results split some bands', () => {
+  it('sums to 1 at hostage on_air, where drawn results split some bands', () => {
     const s0 = openCall(REFERENCE);
-    const s = replayTokens(s0, explore(s0.frames[0].state, { node: 'talking' }).path!);
+    const s = replayTokens(s0, explore(s0.frames[0].state, { node: 'on_air' }).path!);
     for (const x of xrayChoices(s, currentFrame(s), dependencyIndex(s.template)))
       expect(nextStep(x).reduce((sum, entry) => sum + entry.p, 0)).toBeCloseTo(1, 9);
   });
@@ -73,7 +76,7 @@ describe('previewBand', () => {
 
   it('says which drawn result a forced band settled on, with the natural odds of each', () => {
     const t = openCall(REFERENCE);
-    const talking = replayTokens(t, explore(t.frames[0].state, { node: 'talking' }).path!);
+    const talking = replayTokens(t, explore(t.frames[0].state, { node: 'on_air' }).path!);
     const at = currentFrame(talking);
     const drawnRow = xrayChoices(talking, at, dependencyIndex(talking.template)).flatMap(x => BANDS.map(band => ({ x, band })))
       .find(({ x, band }) => x.bands[band].possible && x.bands[band].drawn.length > 0);
@@ -116,7 +119,7 @@ describe('pathChance over a played path', () => {
 });
 
 describe('compareSituations', () => {
-  it('replays the picks under the two other situations, keeping turns and group sizes', () => {
+  it('replays the picks under every other situation, keeping the turns', () => {
     const u = parseLabUrl(`?${REFERENCE}`).url;
     let s = openCall(REFERENCE);
     for (const band of ['favorable', 'favorable'] as const) {
@@ -126,7 +129,8 @@ describe('compareSituations', () => {
       s = next;
     }
     const runs = compareSituations(s, u);
-    expect(runs.map(run => run.situation)).toEqual([0, 2]);
+    expect(runs.map(run => run.situation)).toEqual(s.tree.situations.map((_, i) => i).filter(i => i !== s.situation));
+    expect(runs.length).toBeGreaterThan(0);
     for (const run of runs) {
       expect(run.error).toBeNull();
       expect(run.call).not.toBeNull();
@@ -136,9 +140,7 @@ describe('compareSituations', () => {
       const other = openSession({ ...u, call: { ...u.call!, call: run.call, id: null } }, null);
       if (!('frames' in other)) throw new Error(other.message);
       expect(other.situation).toBe(run.situation);
-      // Group sizes are kept; the call's other compile-time facts (callCounts) may differ by seed.
-      const sizes = (counts: Record<string, number>) => Object.fromEntries(Object.keys(s.tree.groups ?? {}).map(group => [group, counts[group]]));
-      expect(sizes(other.counts)).toEqual(sizes(s.counts));
+      // The group-size check is removed: Going Live has no counted groups, so there is no size to keep.
       expect(other.turnDrawn).toEqual(s.turnDrawn);
     }
   });

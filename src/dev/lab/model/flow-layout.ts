@@ -85,7 +85,8 @@ export function authoredEndingClass(tree: CallTree): Record<string, Weight> {
     if (o.next) { if (own) hit(o.next, own); continue; }
     if (o.force) {
       if (!o.force.noFatal) hit(o.force.next.fatal ?? o.force.next.hurt, 'death');
-      hit(o.force.next.hurt, 'hurt');
+      // The outcome's own harm lands on every branch the force takes.
+      hit(o.force.next.hurt, own ? worse(own, 'hurt') : 'hurt');
       if (own) hit(o.force.next.none, own);
     }
     if (o.cascade && own) for (const next of Object.values(o.cascade.next)) hit(next, own);

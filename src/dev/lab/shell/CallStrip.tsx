@@ -150,11 +150,11 @@ export function CallStrip() {
   ) });
 
   chips.push({ key: 'situation', node: (
-    <StripChip label={draw.call !== null && !session ? <>Call seed <b>{draw.call}</b></> : <>Situation <b>{situation + 1}</b> of 3</>} title="Situation and call seed" wide director={director('draw')}>
+    <StripChip label={draw.call !== null && !session ? <>Call seed <b>{draw.call}</b></> : <>Situation <b>{situation + 1}</b> of {tree?.situations.length ?? 3}</>} title="Situation and call seed" wide director={director('draw')}>
       <span className="lab-field">
         <span className="lab-field-label">Situation (hidden truth)</span>
         <SegmentedControl label="Situation" value={situation}
-          options={[0, 1, 2].map(i => ({ value: i, label: `Situation ${i + 1}` }))}
+          options={(tree?.situations ?? [0, 1, 2]).map((_, i) => ({ value: i, label: `Situation ${i + 1}` }))}
           onChange={variant => { if (variant !== situation) seek({ variant: variant as LabCall['variant'] }); }} />
       </span>
       <SeedField label="Exact call seed (cast and rooms; the situation follows it)" value={draw.call} placeholder="None" onCommit={seed => setDraw({ call: seed })} />

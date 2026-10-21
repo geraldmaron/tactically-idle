@@ -5,7 +5,9 @@ import { INCIDENT_TEMPLATES } from '../../../../content/incidents';
 import type { IncidentTemplate } from '../../../../content/incidents/types';
 import { dependencyIndex, lintTree } from '../../../../gen/incident/trees-v13/dependencies';
 import type { ReqTarget } from '../../../../gen/incident/trees-v13/dependencies';
-import { armedWithoutHitMark } from '../../../../gen/incident/trees-v13/never-offered-fixture';
+import { CALL_TREES } from '../../../../content/call-trees';
+import { ARMED_TEMPLATE } from '../../../../gen/incident/trees-v13/armed-fixture';
+import { armedWithoutHitMark, HIT_FIXTURE } from '../../../../gen/incident/trees-v13/never-offered-fixture';
 import { CLOCK_FIXTURE_IDS, clockFixtureTemplate } from '../../../../gen/incident/gates/clock-fixture';
 import { certFixtureTemplate } from '../../../../gen/incident/gates/fixture-call';
 import { mutedFindings, muteNote } from '../../model/notes';
@@ -32,8 +34,9 @@ describe('lint in words (J6)', () => {
     expect(LINT_LABEL.clock_writer).toBeTruthy();
   });
 
-  it('armed: officer_down is set only by a drawn result', () => {
-    const lint = lintTree(T('active_armed_incident'));
+  it('armed fixture: officer_down is set only by a drawn result', () => {
+    // Going Live sets no mark from a drawn result, so the frozen armed fixture carries the case.
+    const lint = lintTree(ARMED_TEMPLATE);
     expect(lint.find(f => f.key === 'mark:officer_down')?.code).toBe('drawn_only');
     expect(LINT_LABEL.drawn_only).toBe('Set only by a drawn result');
   });
@@ -50,7 +53,8 @@ describe('lint in words (J6)', () => {
     const never = lintTree(armed).find(f => f.code === 'never_offered')!;
     const read = humanizeFinding(never, names(armed), dependencyIndex(armed));
     expect(read).not.toMatch(/treat_ours|officer_down/);
-    expect(read).toMatch(/^Pinned › .+ is never offered: officer down can never be set in this call/);
+    expect(read.startsWith(`${names(armed).node(HIT_FIXTURE.node)} › `)).toBe(true);
+    expect(read).toMatch(/^.+ › .+ is never offered: officer down can never be set in this call/);
   });
 
   it('names and explains every code', () => {
@@ -73,7 +77,8 @@ describe('lint in words (J6)', () => {
 });
 
 describe('keys', () => {
-  for (const type of ['hostage_crisis', 'barricaded', 'active_armed_incident', 'protected_rescue'] as const) it(`${type}: every key once, grouped by kind in order`, () => {
+  // The curated calls: the Lab opens only calls the board can draw.
+  for (const type of Object.keys(CALL_TREES) as (keyof typeof INCIDENT_TEMPLATES)[]) it(`${type}: every key once, grouped by kind in order`, () => {
     const index = dependencyIndex(T(type));
     const groups = groupKeys(index);
     expect(groups.flatMap(group => group.keys.map(entry => entry.key))).toEqual([...index.keys.keys()]);
@@ -89,7 +94,7 @@ describe('keys', () => {
   });
 
   it('keeps the engine’s own reads apart from the tree’s', () => {
-    const entry = dependencyIndex(T('hostage_crisis')).keys.get('safe:courier')!;
+    const entry = dependencyIndex(T('hostage_crisis')).keys.get('safe:clerk')!;
     expect(engineReaders(entry).length).toBe(1);
     expect(treeReaders(entry).every(site => site.field !== 'engine')).toBe(true);
   });
@@ -133,13 +138,13 @@ describe('conditions in words', () => {
   it('reads facts, clocks, marks, roles and meters by name, and keeps numbers', () => {
     const template = T('hostage_crisis');
     const index = dependencyIndex(template);
-    const read = (text: string) => humanizeCondition(text, template.tree, index, t => t.replace(/\{(\w+)\.first\}/g, (_m, id: string) => id.toUpperCase()), () => 'The shop owner’s condition');
-    expect(read('lets_go = true and owner_condition out')).toBe('TAKER’s terms for OWNER: true and the shop owner’s condition has run out');
-    expect(read('raised = false and taker breaking')).toBe('The view of the counter: false and the former employee is breaking');
+    const read = (text: string) => humanizeCondition(text, template.tree, index, t => t.replace(/\{(\w+)\.first\}/g, (_m, id: string) => id.toUpperCase()), () => 'The stream’s count');
+    expect(read('rider_clear = true and stream out')).toBe('Who took the bag: true and the stream’s count has run out');
+    expect(read('raised = false and rider breaking')).toBe('The view of the counter: false and the delivery rider is breaking');
     // A mark by name, read from an owned fixture so a content change can't remove it.
     const fixture = clockFixtureTemplate();
     expect(humanizeCondition(`no mark ${CLOCK_FIXTURE_IDS.outMark}`, fixture.tree, dependencyIndex(fixture), t => t, () => '')).toBe('not: courier bolts');
-    expect(read('courier not safe')).toMatch(/^the .+ not yet out safe$/);
+    expect(read('clerk not safe')).toMatch(/^the .+ not yet out safe$/);
     expect(read('odds +8')).toBe('odds +8');
     expect(read('at 55')).toBe('at 55');
   });
@@ -161,12 +166,12 @@ describe('Why targets', () => {
   it('round-trips every target through a URL selection', () => {
     const hostage = T('hostage_crisis').tree;
     const targets: ReqTarget[] = [
-      { choice: ['offer', hostage.nodes[0].choices[0].id] }, { ending: 'owner_killed' }, { node: 'talking' },
-      { prompt: ['talking', 0] }, { outcome: ['offer', hostage.nodes[0].choices[0].id, 'adverse', 0] },
+      { choice: ['going_live', hostage.nodes[0].choices[0].id] }, { ending: 'manager_killed' }, { node: 'on_air' },
+      { prompt: ['on_air', 0] }, { outcome: ['going_live', hostage.nodes[0].choices[0].id, 'adverse', 0] },
     ];
     for (const target of targets) expect(selectionTarget(targetSelection(target), hostage)).toEqual(target);
-    expect(selectionTarget({ kind: 'band', node: 'offer', choice: hostage.nodes[0].choices[0].id, band: 'mixed' }, hostage)).toEqual({ choice: ['offer', hostage.nodes[0].choices[0].id] });
+    expect(selectionTarget({ kind: 'band', node: 'going_live', choice: hostage.nodes[0].choices[0].id, band: 'mixed' }, hostage)).toEqual({ choice: ['going_live', hostage.nodes[0].choices[0].id] });
     expect(selectionTarget({ kind: 'string', row: 'briefing.known[0]' }, hostage)).toBeNull();
-    expect(selectionTarget({ kind: 'choice', node: 'offer', choice: 'nope' }, hostage)).toBeNull();
+    expect(selectionTarget({ kind: 'choice', node: 'going_live', choice: 'nope' }, hostage)).toBeNull();
   });
 });

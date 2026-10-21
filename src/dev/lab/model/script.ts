@@ -48,7 +48,7 @@ export function variantSpace(tree: CallTree, template: IncidentTemplate, casts: 
   for (const [group, members] of Object.entries(tree.turns ?? {})) turns = turns.flatMap(t => members.map(member => ({ ...t, [group]: member })));
   const counts = countCombos(template);
   const out: Variant[] = [];
-  for (const t of turns) for (const situation of [0, 1, 2] as const) for (const c of counts) for (const pronouns of PRONOUN_SETS)
+  for (const t of turns) for (const situation of template.tree.situations.map((_, i) => i as 0 | 1 | 2)) for (const c of counts) for (const pronouns of PRONOUN_SETS)
     out.push({ pronouns, counts: { ...c }, situation, turns: { ...t }, cast: casts });
   return out;
 }

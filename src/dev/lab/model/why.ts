@@ -32,7 +32,7 @@ export type Verdict = 'pass' | 'fail' | 'unknown';
  * (null when the clause doesn't depend on the hidden truth). `draw`: what the call's draw needs
  * ("needs others ≥ 1; this call has 0"), null when the draw doesn't decide it. `writers`: the sites
  * that set the state key a clause reads. */
-export interface EvaluatedReq { node: ReqNode; label: string; now: Verdict; bySituation: [Verdict, Verdict, Verdict] | null;
+export interface EvaluatedReq { node: ReqNode; label: string; now: Verdict; bySituation: Verdict[] | null;
   draw: string | null; writers: Site[]; children: EvaluatedReq[] }
 export type Fix = { kind: 'grant-cert'; cert: string } | { kind: 'seek-squad'; cert: string } | { kind: 'find-path'; goal: Goal } | { kind: 'seek-draw'; want: DrawWant };
 
@@ -160,9 +160,9 @@ export function leafNow(leaf: ReqLeaf, state: GameState, ctx: ReqContext, view?:
   }
 }
 
-function leafBySituation(leaf: ReqLeaf, tree: CallTree): [Verdict, Verdict, Verdict] | null {
+function leafBySituation(leaf: ReqLeaf, tree: CallTree): Verdict[] | null {
   if (leaf.kind !== 'fact') return null;
-  return [0, 1, 2].map(i => { const truth = truthOf(tree, leaf.fact, i); return truth === undefined ? 'unknown' : verdict(truth === leaf.is); }) as [Verdict, Verdict, Verdict];
+  return tree.situations.map((_, i) => { const truth = truthOf(tree, leaf.fact, i); return truth === undefined ? 'unknown' : verdict(truth === leaf.is); });
 }
 
 function leafDraw(leaf: ReqLeaf, ctx: ReqContext, now: Verdict): string | null {
@@ -206,7 +206,7 @@ function evaluate(node: ReqNode, state: GameState, ctx: ReqContext, deps: Depend
   const children = ('all' in node ? node.all : node.any).map(child => evaluate(child, state, ctx, deps, view));
   const now = combine(kind, children.map(child => child.now));
   const bySituation = children.some(child => child.bySituation)
-    ? [0, 1, 2].map(i => combine(kind, children.map(child => child.bySituation?.[i] ?? child.now))) as [Verdict, Verdict, Verdict] : null;
+    ? ctx.tree.situations.map((_, i) => combine(kind, children.map(child => child.bySituation?.[i] ?? child.now))) : null;
   const label = kind === 'all' ? (children.length ? 'All of these' : 'Always') : children.length ? 'Any one of these' : 'Reached only when no choice is left';
   // The exhausted-choices fallback (`handed_over`) has no authored edge: it is never known ahead.
   return { node, label, now: kind === 'any' && !children.length ? 'unknown' : now, bySituation, draw: null, writers: [], children };

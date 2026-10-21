@@ -18,33 +18,33 @@ describe('labels', () => {
   it('names string rows by where the player meets them', () => {
     expect(rowLabel('card.summary', bound, hostage.tree)).toBe('Call card · hook');
     expect(rowLabel('briefing.known[1]', bound, hostage.tree)).toBe('Briefing · known 2');
-    expect(rowLabel('offer.prompt', bound, hostage.tree)).toBe('Offer · prompt');
-    expect(rowLabel('talking.promptIf[0]', bound, hostage.tree)).toBe('Talking · prompt variant 1');
-    expect(rowLabel('offer.take_courier.preview.adverse', bound, hostage.tree)).toBe(`Offer › ${bound.choice('offer', 'take_courier')} · preview, goes badly`);
-    expect(rowLabel('offer.take_courier.mixed[0]@s2', bound, hostage.tree)).toBe(`Offer › ${bound.choice('offer', 'take_courier')} · complications, line 1 (situation 2)`);
+    expect(rowLabel('going_live.prompt', bound, hostage.tree)).toBe('Going live · prompt');
+    expect(rowLabel('on_air.promptIf[0]', bound, hostage.tree)).toBe('On air · prompt variant 1');
+    expect(rowLabel('going_live.on_stream.preview.adverse', bound, hostage.tree)).toBe(`Going live › ${bound.choice('going_live', 'on_stream')} · preview, goes badly`);
+    expect(rowLabel('going_live.on_stream.mixed[0]@s2', bound, hostage.tree)).toBe(`Going live › ${bound.choice('going_live', 'on_stream')} · complications, line 1 (situation 2)`);
     expect(rowLabel('ending.handed_over.task[0]', bound, hostage.tree)).toMatch(/^Ending · .+ · still needed 1$/);
   });
 
   it('binds titles for the call in focus, and falls back to role nouns', () => {
-    expect(bound.choice('offer', 'take_courier')).not.toMatch(/[{}]/);
-    expect(plain.choice('offer', 'take_courier')).toMatch(/courier/i);
-    expect(plain.choice('offer', 'take_courier')).not.toMatch(/[{}]/);
+    expect(bound.choice('going_live', 'on_stream')).not.toMatch(/[{}]/);
+    expect(plain.choice('going_live', 'clerk_out')).toMatch(/clerk/i);
+    expect(plain.choice('going_live', 'clerk_out')).not.toMatch(/[{}]/);
   });
 
   it('says what a note is about', () => {
     const deps = dependencyIndex(hostage);
     expect(anchorLabel('call', bound, hostage.tree, deps)).toBe('The whole call');
-    expect(anchorLabel('choice:offer/take_courier', bound, hostage.tree, deps)).toBe(`Offer › ${bound.choice('offer', 'take_courier')}`);
-    expect(anchorLabel('band:offer/take_courier/mixed', bound, hostage.tree, deps)).toMatch(/· complications$/);
-    expect(anchorLabel('key:mark:turned', bound, hostage.tree, deps)).toBe('The former employee turned the handgun on the owner');
-    expect(anchorLabel('string:offer.prompt', bound, hostage.tree, deps)).toBe('Offer · prompt');
+    expect(anchorLabel('choice:going_live/on_stream', bound, hostage.tree, deps)).toBe(`Going live › ${bound.choice('going_live', 'on_stream')}`);
+    expect(anchorLabel('band:going_live/on_stream/mixed', bound, hostage.tree, deps)).toMatch(/· complications$/);
+    expect(anchorLabel('key:mark:turned', bound, hostage.tree, deps)).toBe('The delivery rider turned the handgun on the night manager');
+    expect(anchorLabel('string:going_live.prompt', bound, hostage.tree, deps)).toBe('Going live · prompt');
   });
 
   it('quotes what the player reads, with the lead officer marked', () => {
-    const sees = anchorSees('choice:offer/take_courier', bound, hostage.tree);
+    const sees = anchorSees('choice:going_live/on_stream', bound, hostage.tree);
     expect(sees).toContain(' / ');
     expect(sees).toContain('[lead officer]');
     expect(sees).not.toMatch(/\{/);
-    expect(anchorSees('string:offer.take_courier.preview.mixed', bound, hostage.tree)).toBe(sessionBinder(opened)(hostage.tree.nodes[0].choices[0].preview.mixed));
+    expect(anchorSees('string:going_live.on_stream.preview.mixed', bound, hostage.tree)).toBe(sessionBinder(opened)(hostage.tree.nodes[0].choices[0].preview.mixed));
   });
 });

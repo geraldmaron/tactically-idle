@@ -12,8 +12,8 @@ const TEMPLATES = Object.values(INCIDENT_TEMPLATES) as IncidentTemplate[];
 describe('endings with the same title', () => {
   const hostage = INCIDENT_TEMPLATES.hostage_crisis as IncidentTemplate;
   it('get their first remaining task as a crumb; every other ending keeps its title alone', () => {
-    expect(endingTwinCrumb(hostage.tree, 'held_inside')).toBeNull();
-    expect(endingListTitle(hostage.tree, 'held_inside', text => text)).toBe(hostage.tree.endings.held_inside.title);
+    expect(endingTwinCrumb(hostage.tree, 'held_counter')).toBeNull();
+    expect(endingListTitle(hostage.tree, 'held_counter', text => text)).toBe(hostage.tree.endings.held_counter.title);
   });
   for (const template of TEMPLATES) {
     it(`lists every ending of ${template.type} under a title of its own`, () => {

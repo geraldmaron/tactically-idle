@@ -135,7 +135,7 @@ const placeKey = (to: RouteTarget | null) => !to ? 'none' : to.kind === 'node' ?
 /** Replays this session's path under each other situation. A call opened from the game has no
  * reference draw to vary, so it gets an error row per situation. */
 export function compareSituations(s: Session, u: LabUrl): SituationRun[] {
-  const others = ([0, 1, 2] as const).filter(v => v !== s.situation);
+  const others = s.tree.situations.map((_, i) => i as 0 | 1 | 2).filter(v => v !== s.situation);
   const tokens = sessionTokens(s);
   const steps = s.frames.length - 1;
   const here = s.frames.map(frame => placeKey(whereIs(s, frame.state)));

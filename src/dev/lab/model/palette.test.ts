@@ -5,6 +5,7 @@ import { dependencyIndex } from '../../../gen/incident/trees-v13/dependencies';
 import type { StringRow } from '../../../gen/incident/trees-v13/strings';
 import type { FieldMeta } from '../../../sim/tuning-meta';
 import { parseLabUrl } from '../url';
+import { CALL_TREES } from '../../../content/call-trees';
 import { foldText, paletteItems, searchPalette } from './palette';
 import { openSession, sessionBinder } from './session';
 import type { Session } from './session';
@@ -20,11 +21,11 @@ function open(query: string): Session {
 }
 
 describe('paletteItems', () => {
-  it('always offers the four calls and every surface', () => {
+  it('always offers every curated call and every surface', () => {
     const items = paletteItems({ session: null, deps: null, rows: null, fields: [] });
-    expect(items.filter(item => item.kind === 'call').map(item => item.id).sort()).toEqual(['active_armed_incident', 'barricaded', 'hostage_crisis', 'protected_rescue']);
+    expect(items.filter(item => item.kind === 'call').map(item => item.id).sort()).toEqual(Object.keys(CALL_TREES).sort());
     expect(items.filter(item => item.kind === 'surface')).toHaveLength(7);
-    expect(items.find(item => item.id === 'hostage_crisis')).toMatchObject({ title: 'One Last Signature', go: { tab: 'play', path: '' } });
+    expect(items.find(item => item.id === 'hostage_crisis')).toMatchObject({ title: CALL_TREES.hostage_crisis!.title, go: { tab: 'play', path: '' } });
   });
 
   it('indexes a call\'s nodes, choices and endings with bound titles, unique ids, and where to play', () => {
@@ -35,16 +36,16 @@ describe('paletteItems', () => {
     for (const item of items) { expect(ids.has(`${item.kind}:${item.id}`), `${item.kind}:${item.id}`).toBe(false); ids.add(`${item.kind}:${item.id}`); }
     const nodes = items.filter(item => item.kind === 'node');
     expect(nodes).toHaveLength(s.tree.nodes.length);
-    expect(nodes.find(item => item.id === 'talking')).toMatchObject({ title: 'Talking', go: { tab: 'play', node: 'talking' }, play: { node: 'talking' } });
+    expect(nodes.find(item => item.id === 'on_air')).toMatchObject({ title: 'On air', go: { tab: 'play', node: 'on_air' }, play: { node: 'on_air' } });
     expect(items.filter(item => item.kind === 'choice')).toHaveLength(s.tree.nodes.reduce((n, node) => n + node.choices.length, 0));
-    const choice = items.find(item => item.id === 'talking/take_account')!;
+    const choice = items.find(item => item.id === 'on_air/team_glass')!;
     expect(choice.title).not.toMatch(/\{/);
-    expect(choice.title).toBe(sessionBinder(s)('Take down {taker.his} account'));
-    expect(choice.crumb).toBe(`${s.tree.stageLabels[s.tree.nodes.find(node => node.id === 'talking')!.stage]} › Talking`);
-    expect(choice.play).toEqual({ offered: 't13_hostage_crisis_talking_take_account' });
-    const ending = items.find(item => item.kind === 'ending' && item.id === 'owner_killed')!;
+    expect(choice.title).toBe(sessionBinder(s)('Move your squad up to the glass'));
+    expect(choice.crumb).toBe(`${s.tree.stageLabels[s.tree.nodes.find(node => node.id === 'on_air')!.stage]} › On air`);
+    expect(choice.play).toEqual({ offered: 't13_hostage_crisis_on_air_team_glass' });
+    const ending = items.find(item => item.kind === 'ending' && item.id === 'manager_killed')!;
     expect(ending.title).not.toMatch(/\{/);
-    expect(ending).toMatchObject({ go: { sel: { kind: 'ending', ending: 'owner_killed' } }, play: { ending: 'owner_killed' } });
+    expect(ending).toMatchObject({ go: { sel: { kind: 'ending', ending: 'manager_killed' } }, play: { ending: 'manager_killed' } });
     expect(items.filter(item => item.kind === 'key')).toHaveLength(deps.keys.size);
     expect(items.find(item => item.kind === 'key' && item.id === 'mark:turned')).toMatchObject({ crumb: 'State · mark:turned', go: { tab: 'deps' } });
     expect(items.find(item => item.kind === 'row')).toMatchObject({ id: 'talking.prompt@s2', go: { tab: 'script', sel: { kind: 'string', row: 'talking.prompt@s2' } }, play: { node: 'talking' } });
@@ -57,11 +58,11 @@ describe('searchPalette', () => {
   const items = paletteItems({ session: s, deps: dependencyIndex(s.template), rows: [ROW], fields: [FIELD] });
 
   it('matches raw ids as well as bound titles, best first', () => {
-    expect(searchPalette(items, 'owner_killed')[0]).toMatchObject({ kind: 'ending', id: 'owner_killed' });
-    expect(searchPalette(items, 'owner killed')[0]).toMatchObject({ kind: 'ending', id: 'owner_killed' });
-    expect(searchPalette(items, 'talking')[0]).toMatchObject({ kind: 'node', id: 'talking' });
-    const title = items.find(item => item.id === 'talking/take_account')!.title;
-    expect(searchPalette(items, title)[0].id).toBe('talking/take_account');
+    expect(searchPalette(items, 'manager_killed')[0]).toMatchObject({ kind: 'ending', id: 'manager_killed' });
+    expect(searchPalette(items, 'manager killed')[0]).toMatchObject({ kind: 'ending', id: 'manager_killed' });
+    expect(searchPalette(items, 'on_air')[0]).toMatchObject({ kind: 'node', id: 'on_air' });
+    const title = items.find(item => item.id === 'on_air/team_glass')!.title;
+    expect(searchPalette(items, title)[0].id).toBe('on_air/team_glass');
     expect(searchPalette(items, 'RESOLUTION_TUNING.favorableAt')[0]).toMatchObject({ kind: 'field' });
     expect(searchPalette(items, 'mark:turned')[0]).toMatchObject({ kind: 'key', id: 'mark:turned' });
   });

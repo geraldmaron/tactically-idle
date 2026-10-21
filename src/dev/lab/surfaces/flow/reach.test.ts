@@ -69,7 +69,7 @@ describe('reachPlan and whoOf', () => {
     expect(reachPlan(urlOf(`${REF}&scope=step`), ended)).toHaveProperty('reason');
   });
   it('names lab grants with the squad', () => {
-    const granted = open(`type=protected_rescue&certs=vehicle_operations`);
+    const granted = open(`type=hostage_crisis&certs=vehicle_operations`);
     expect(whoOf(granted, 'call')).toBe('squad A (719) + vehicle operations (lab grant)');
   });
 });

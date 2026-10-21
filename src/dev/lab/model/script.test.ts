@@ -47,15 +47,13 @@ describe('variant space', () => {
     const space = variantSpace(tree, template, 0);
     const sizes = Object.values(groupSizes(template)).map(list => list.length);
     const turns = Object.values(tree.turns ?? {}).map(members => members.length);
-    expect(space).toHaveLength(PRONOUN_SETS.length * product(sizes) * 3 * product(turns));
+    expect(space).toHaveLength(PRONOUN_SETS.length * product(sizes) * tree.situations.length * product(turns));
     expect(new Set(space.map(variantKey)).size).toBe(space.length);
     expect(space.every(v => v.cast === 0)).toBe(true);
   });
 
-  it('reads hostage group sizes from the cast slot', () => {
-    expect(groupSizes(hostage)).toEqual({ others: [0, 1, 2] });
-    expect(variantSpace(hostage.tree, hostage, 0)).toHaveLength(4 * 3 * 3 * 4);
-  });
+  // 'reads hostage group sizes from the cast slot' is removed: Going Live has no counted group, so
+  // there is no group size to read.
 });
 
 describe('rows', () => {
@@ -97,14 +95,14 @@ describe('rows', () => {
       [Object.values(longest.cast)[0].firstName, Object.values(longest.cast)[0].surname, 'Fox', 'Pheasant']);
   });
 
-  it('grows a group with stand-in names the call does not use, and sets everyone’s pronouns', () => {
-    const bound = castFor(s.tree, own, { pronouns: 'they', counts: { others: 2 } });
-    expect(bound.groups.others).toEqual(['others_1', 'others_2']);
-    expect(bound.standIns.length).toBe(2 - (own.groups.others?.length ?? 0));
+  // Growing a group with stand-in names is removed: Going Live has no counted group to grow.
+  it('sets everyone’s pronouns, and keeps every first name its own', () => {
+    const bound = castFor(s.tree, own, { pronouns: 'they', counts: s.counts });
+    expect(Object.keys(bound.cast).sort()).toEqual(s.tree.roles.map(role => role.id).sort());
     const firsts = Object.values(bound.cast).map(who => who.firstName);
     expect(new Set(firsts).size).toBe(firsts.length);
     expect(Object.values(bound.cast).every(who => who.pronouns === 'they')).toBe(true);
-    const rows = bindRows(variantRows(s.tree, { counts: { others: 2 }, situation: s.situation, turns: s.turnDrawn }), bound);
+    const rows = bindRows(variantRows(s.tree, { counts: s.counts, situation: s.situation, turns: s.turnDrawn }), bound);
     expect(rows.every(row => !row.error)).toBe(true);
   });
 
@@ -119,7 +117,7 @@ describe('rows', () => {
     expect(sections[1].id).toBe(hostage.tree.root);
     expect(sections.flatMap(section => section.rows)).toHaveLength(rows.length);
     const first = sections[1].choices[0];
-    expect(first.title?.row.where).toBe(`offer.${first.choice}.title`);
+    expect(first.title?.row.where).toBe(`going_live.${first.choice}.title`);
     expect(first.bands.map(band => band.band)).toEqual(['favorable', 'mixed', 'adverse']);
     expect(first.bands.every(band => band.preview && band.outcomes.length > 0)).toBe(true);
   });
@@ -167,14 +165,8 @@ describe('changed in this variant', () => {
     expect(goneRows(prev, next)).toHaveLength(0);
   });
 
-  it('a new group size shows the rows it adds and says which rows went', () => {
-    const one = rowsFor(s.tree, at({ counts: { others: 1 } }), [own], longest);
-    const none = rowsFor(s.tree, at({ counts: { others: 0 } }), [own], longest);
-    const added = changedRows(none, one);
-    const added0 = [...added.entries()].filter(([key]) => !none.some(row => row.key === key));
-    for (const [, ranges] of added0) expect(ranges).toHaveLength(1);
-    expect(goneRows(one, none).length).toBeGreaterThan(0);
-  });
+  // 'a new group size shows the rows it adds and says which rows went' is removed: Going Live has no
+  // counted group, so no group size can add or drop a row.
 });
 
 describe('matcher audit', () => {
@@ -205,15 +197,15 @@ describe('matcher audit', () => {
     const rows = rowsFor(s.tree, v, [own], longestSample(hostage));
     const lex = lexiconForCast(s.tree, bound);
     // A matcher that finds nothing misses every colorable name; one that names the wrong person is a false match.
-    const taker = bound.cast.taker;
-    const withName = rows.filter(row => row.parts.some(part => part.role === 'taker' && part.text === taker.firstName));
+    const rider = bound.cast.rider;
+    const withName = rows.filter(row => row.parts.some(part => part.role === 'rider' && part.text === rider.firstName));
     expect(withName.length).toBeGreaterThan(0);
     const blind = matcherAudit(withName, () => ({ ...lex, pattern: /(?!)/gu }));
-    expect(blind.missed.some(hit => hit.expected === 'taker' && hit.text === taker.firstName)).toBe(true);
+    expect(blind.missed.some(hit => hit.expected === 'rider' && hit.text === rider.firstName)).toBe(true);
     expect(blind.falseMatches).toEqual([]);
-    const renamed = { ...lex, entries: lex.entries.map(entry => entry.id === 'taker' ? { ...entry, id: 'owner' } : entry) };
+    const renamed = { ...lex, entries: lex.entries.map(entry => entry.id === 'rider' ? { ...entry, id: 'manager' } : entry) };
     const wrong = matcherAudit(withName, () => renamed);
-    expect(wrong.falseMatches.some(hit => hit.got === 'owner' && hit.expected === 'taker')).toBe(true);
+    expect(wrong.falseMatches.some(hit => hit.got === 'manager' && hit.expected === 'rider')).toBe(true);
   });
 });
 

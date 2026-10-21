@@ -27,7 +27,10 @@ describe('seekCallSeed', () => {
         ...[...new Set(countCombos(template).flatMap(combo => Object.entries(combo).map(entry => JSON.stringify(entry))))]
           .map(text => JSON.parse(text) as [string, number]).map(([group, n]) => ({ counts: { [group]: n } })),
       ];
-      expect(wants.length).toBeGreaterThan(1);
+      // One want per turn member and per group size the call can draw (Going Live: its one turn member).
+      const members = Object.values(template.tree.turns ?? {}).reduce((n, list) => n + list.length, 0);
+      expect(wants.length).toBeGreaterThanOrEqual(members);
+      expect(wants.length).toBeGreaterThan(0);
       for (const want of wants) {
         const found = seekCallSeed(template.type, at, want);
         expect(found, JSON.stringify(want)).not.toBeNull();
@@ -62,14 +65,17 @@ describe('seekCallSeed', () => {
 
   it('with no base call, steps through seeds with a situation from `from` (the casts job)', () => {
     const template = INCIDENT_TEMPLATES.hostage_crisis!;
+    // The call's last situation, so the search can't stop on the default draw.
+    const variant = (template.tree.situations.length - 1) as 0 | 1 | 2;
+    expect(variant).toBeGreaterThan(0);
     const seeds: number[] = [];
     for (let from = 1; seeds.length < 4; from = seeds[seeds.length - 1] + 1) {
-      const found = seekCallSeed('hostage_crisis', { family: 'market_row', seed: 7, tier: 2 }, { variant: 2 }, { from });
+      const found = seekCallSeed('hostage_crisis', { family: 'market_row', seed: 7, tier: 2 }, { variant }, { from });
       expect(found!.changed).toEqual([]);
       seeds.push(found!.call);
     }
     expect(new Set(seeds).size).toBe(4);
-    for (const call of seeds) expect(drawOf(template, { type: 'hostage_crisis', familyId: 'market_row', buildingSeed: 7, seed: call, tier: 2, contentVersion: 13 }).variant).toBe(2);
+    for (const call of seeds) expect(drawOf(template, { type: 'hostage_crisis', familyId: 'market_row', buildingSeed: 7, seed: call, tier: 2, contentVersion: 13 }).variant).toBe(variant);
   });
 });
 

@@ -91,7 +91,7 @@ function OutcomesReady({ session }: { session: Session }) {
     if (scope === 'type') return null;
     try {
       const clockMarks = clockMarksOf(session.instance.clocks);
-      return [0, 1, 2].map(s => new Set<string>(truthReach(callGraph(tree, { counts: session.counts, seed: session.resolved.spec?.seed, situation: s as 0 | 1 | 2, clockMarks, clockNexts: situationClockNexts(session.template, s as 0 | 1 | 2) }), tree)));
+      return tree.situations.map((_, s) => new Set<string>(truthReach(callGraph(tree, { counts: session.counts, seed: session.resolved.spec?.seed, situation: s as 0 | 1 | 2, clockMarks, clockNexts: situationClockNexts(session.template, s as 0 | 1 | 2) }), tree)));
     } catch { return null; }
   }, [scope, session.instance, tree]);
   const cards = useMemo(() => endingCards({ tree, graph, tally: reach.tally, typeTally, scope, endingClass, shortest, bySituation })

@@ -374,23 +374,23 @@ function BowTie({ entry, names, tree, session, frame, lint, onSelectKey }: { ent
   // A line whose hidden-truth condition fails in this call's situation can't happen here: say so on
   // tape, and offer a draw where it can instead of a path that doesn't exist.
   const situations = useMemo(() => {
-    const out = new Map<Site, [Verdict, Verdict, Verdict]>();
+    const out = new Map<Site, Verdict[]>();
     if (!session || !frame) return out;
     for (const site of [...entry.writers, ...entry.readers]) {
       if (!site.node || !site.choice || !site.band || site.outcome === undefined) continue;
       const target: ReqTarget = { outcome: [site.node, site.choice, site.band, site.outcome] };
       try {
         // Only the hidden-truth clauses decide the situation: AND their per-situation verdicts.
-        const facts: [Verdict, Verdict, Verdict][] = [];
+        const facts: Verdict[][] = [];
         const walk = (e: EvaluatedReq) => { if ('leaf' in e.node && e.bySituation) facts.push(e.bySituation); e.children.forEach(walk); };
         walk(evaluateReq(labRequirementTree(tree, target), session, frame, deps, target).root);
-        if (facts.length) out.set(site, [0, 1, 2].map(i => facts.some(v => v[i] === 'fail') ? 'fail' : facts.every(v => v[i] === 'pass') ? 'pass' : 'unknown') as [Verdict, Verdict, Verdict]);
+        if (facts.length) out.set(site, tree.situations.map((_, i) => facts.some(v => v[i] === 'fail') ? 'fail' : facts.every(v => v[i] === 'pass') ? 'pass' : 'unknown'));
       } catch { /* a site the tree no longer has */ }
     }
     return out;
   }, [entry, session?.key, frame, tree, deps]);
   const offSituation = (site: Site) => { const v = situations.get(site); return session && v && v[session.situation] === 'fail' ? v : null; };
-  const seekSituation = (verdicts: [Verdict, Verdict, Verdict]) => {
+  const seekSituation = (verdicts: Verdict[]) => {
     const at = verdicts.findIndex(v => v === 'pass');
     if (!url.call || !session || at < 0) return;
     const found = seekCallSeed(url.call.type, { family: url.call.family, seed: url.call.seed, tier: url.call.tier, call: session.resolved.spec?.seed }, { variant: at as 0 | 1 | 2 });
@@ -598,7 +598,7 @@ function WhyTracer({ target, onPick, names, tree, session, frame, deps, onSelect
   );
 }
 
-function SituationTape({ verdicts, current }: { verdicts: [Verdict, Verdict, Verdict]; current: number | null }) {
+function SituationTape({ verdicts, current }: { verdicts: Verdict[]; current: number | null }) {
   return (
     <span className="lab-dwhy-tape" title="Hidden truth: whether this holds in each of the three situations">
       {verdicts.map((verdict, i) => (

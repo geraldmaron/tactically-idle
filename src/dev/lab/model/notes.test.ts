@@ -32,60 +32,60 @@ function edited(edit: (t: IncidentTemplate) => void): IncidentTemplate {
 }
 
 describe('anchors', () => {
-  const offer = hostage.tree.nodes.find(node => node.id === 'offer')!;
+  const offer = hostage.tree.nodes.find(node => node.id === 'going_live')!;
   const choice = offer.choices[0];
   const lint = lintTree(hostage);
   const selections: Selection[] = [
-    { kind: 'node', node: 'offer' },
-    { kind: 'choice', node: 'offer', choice: choice.id },
-    { kind: 'band', node: 'offer', choice: choice.id, band: 'mixed' },
+    { kind: 'node', node: 'going_live' },
+    { kind: 'choice', node: 'going_live', choice: choice.id },
+    { kind: 'band', node: 'going_live', choice: choice.id, band: 'mixed' },
     { kind: 'ending', ending: 'handed_over' },
     { kind: 'key', key: 'mark:turned' },
-    { kind: 'string', row: `offer.${choice.id}.preview.adverse` },
+    { kind: 'string', row: `going_live.${choice.id}.preview.adverse` },
     { kind: 'field', path: 'RESOLUTION_TUNING.favorableAt' },
     { kind: 'finding', id: lint[0].id },
   ];
 
   it('anchors every selection kind as it reads in the URL, and reads its text back', () => {
     expect(selections.map(anchorFor)).toEqual([
-      'node:offer', `choice:offer/${choice.id}`, `band:offer/${choice.id}/mixed`, 'ending:handed_over', 'key:mark:turned',
-      `string:offer.${choice.id}.preview.adverse`, 'field:RESOLUTION_TUNING.favorableAt', `finding:${lint[0].id}`,
+      'node:going_live', `choice:going_live/${choice.id}`, `band:going_live/${choice.id}/mixed`, 'ending:handed_over', 'key:mark:turned',
+      `string:going_live.${choice.id}.preview.adverse`, 'field:RESOLUTION_TUNING.favorableAt', `finding:${lint[0].id}`,
     ]);
     for (const sel of selections) {
       expect(parseSelection(anchorFor(sel))).toEqual(sel);
       expect(anchorText(anchorFor(sel), { template: hostage }), anchorFor(sel)).toBeTruthy();
     }
-    expect(anchorText(`choice:offer/${choice.id}`, { template: hostage })).toContain(choice.preview.adverse);
-    expect(anchorText(`string:offer.${choice.id}.preview.adverse`, { template: hostage })).toBe(choice.preview.adverse);
+    expect(anchorText(`choice:going_live/${choice.id}`, { template: hostage })).toContain(choice.preview.adverse);
+    expect(anchorText(`string:going_live.${choice.id}.preview.adverse`, { template: hostage })).toBe(choice.preview.adverse);
     expect(anchorText(CALL_ANCHOR, { template: hostage })).toContain(hostage.tree.title);
   });
 
   it('names the field path a finding row carries', () => {
     expect(selections.map(sel => fieldPath(anchorFor(sel)))).toEqual([
-      'offer.prompt', `offer.${choice.id}`, `offer.${choice.id}.mixed`, 'ending.handed_over', 'state mark:turned',
-      `offer.${choice.id}.preview.adverse`, 'RESOLUTION_TUNING.favorableAt', `lint ${lint[0].id}`,
+      'going_live.prompt', `going_live.${choice.id}`, `going_live.${choice.id}.mixed`, 'ending.handed_over', 'state mark:turned',
+      `going_live.${choice.id}.preview.adverse`, 'RESOLUTION_TUNING.favorableAt', `lint ${lint[0].id}`,
     ]);
   });
 
   it('pins a note on the row it is about, and covers the rows under it', () => {
-    expect(pinRow(`choice:offer/${choice.id}`)).toBe(`offer.${choice.id}.title`);
-    expect(pinRow(`band:offer/${choice.id}/adverse`)).toBe(`offer.${choice.id}.preview.adverse`);
+    expect(pinRow(`choice:going_live/${choice.id}`)).toBe(`going_live.${choice.id}.title`);
+    expect(pinRow(`band:going_live/${choice.id}/adverse`)).toBe(`going_live.${choice.id}.preview.adverse`);
     expect(pinRow('string:talking.promptIf[1]@s2')).toBe('talking.promptIf[1]');
     expect(pinRow('key:mark:turned')).toBeNull();
-    expect(anchorCovers(`choice:offer/${choice.id}`, `offer.${choice.id}.adverse[0]`)).toBe(true);
-    expect(anchorCovers(`choice:offer/${choice.id}`, 'offer.prompt')).toBe(false);
-    expect(anchorCovers(`band:offer/${choice.id}/adverse`, `offer.${choice.id}.adverse[1]`)).toBe(true);
-    expect(anchorCovers(`band:offer/${choice.id}/adverse`, `offer.${choice.id}.mixed[0]`)).toBe(false);
-    expect(anchorCovers('node:offer', `offer.${choice.id}.title`)).toBe(true);
-    expect(anchorNode(`band:offer/${choice.id}/adverse`)).toBe('offer');
+    expect(anchorCovers(`choice:going_live/${choice.id}`, `going_live.${choice.id}.adverse[0]`)).toBe(true);
+    expect(anchorCovers(`choice:going_live/${choice.id}`, 'going_live.prompt')).toBe(false);
+    expect(anchorCovers(`band:going_live/${choice.id}/adverse`, `going_live.${choice.id}.adverse[1]`)).toBe(true);
+    expect(anchorCovers(`band:going_live/${choice.id}/adverse`, `going_live.${choice.id}.mixed[0]`)).toBe(false);
+    expect(anchorCovers('node:going_live', `going_live.${choice.id}.title`)).toBe(true);
+    expect(anchorNode(`band:going_live/${choice.id}/adverse`)).toBe('going_live');
     expect(anchorNode('string:talking.promptIf[1]')).toBe('talking');
     expect(anchorNode('string:briefing.known[0]')).toBeNull();
   });
 });
 
 describe('note status', () => {
-  const choice = hostage.tree.nodes.find(node => node.id === 'offer')!.choices[0];
-  const anchor = `choice:offer/${choice.id}`;
+  const choice = hostage.tree.nodes.find(node => node.id === 'going_live')!.choices[0];
+  const anchor = `choice:going_live/${choice.id}`;
   const n = note(anchor);
 
   it('is current while the anchored text is unchanged', () => {
@@ -93,15 +93,15 @@ describe('note status', () => {
   });
 
   it('is changed when one word of the anchored string changes', () => {
-    const t = edited(copy => { const c = copy.tree.nodes.find(node => node.id === 'offer')!.choices[0]; c.preview.mixed = c.preview.mixed.replace(/\w+/, 'Somehow'); });
+    const t = edited(copy => { const c = copy.tree.nodes.find(node => node.id === 'going_live')!.choices[0]; c.preview.mixed = c.preview.mixed.replace(/\w+/, 'Somehow'); });
     expect(noteStatus(n, a => anchorText(a, { template: t }))).toBe('changed');
     // A note on another choice is untouched by that edit.
-    const other = note(`choice:offer/${hostage.tree.nodes.find(node => node.id === 'offer')!.choices[1].id}`);
+    const other = note(`choice:going_live/${hostage.tree.nodes.find(node => node.id === 'going_live')!.choices[1].id}`);
     expect(noteStatus(other, a => anchorText(a, { template: t }))).toBe('current');
   });
 
   it('is orphaned when the anchor is gone', () => {
-    const t = edited(copy => { const offer = copy.tree.nodes.find(node => node.id === 'offer')!; offer.choices = offer.choices.slice(1); });
+    const t = edited(copy => { const offer = copy.tree.nodes.find(node => node.id === 'going_live')!; offer.choices = offer.choices.slice(1); });
     expect(noteStatus(n, a => anchorText(a, { template: t }))).toBe('orphaned');
     expect(noteStatus(note('ending:nowhere'), a => anchorText(a, { template: hostage }))).toBe('orphaned');
     expect(noteStatus(note('finding:dead_write:mark:nothing'), a => anchorText(a, { template: hostage }))).toBe('orphaned');
@@ -132,7 +132,7 @@ describe('muting lint', () => {
     expect(muted.anchor).toBe('finding:threat_only:mark:turned');
     expect(muted.severity).toBe('accepted');
     expect(muted.text).toBe('Kept: command approval is the point of this mark.');
-    const file: NotesFile = withNote({ v: 1, type: 'hostage_crisis', verdict: null, notes: [note('node:offer')] }, muted);
+    const file: NotesFile = withNote({ v: 1, type: 'hostage_crisis', verdict: null, notes: [note('node:going_live')] }, muted);
     expect([...mutedFindings(file).keys()]).toEqual([finding.id]);
     expect(noteStatus(muted, a => anchorText(a, { template: hostage }))).toBe('current');
     expect(withoutNote(file, muted.id).notes).toHaveLength(1);
@@ -141,7 +141,7 @@ describe('muting lint', () => {
 
 describe('merging after the file changed on disk', () => {
   it('keeps what this page added, changed or removed, and everything else from disk', () => {
-    const a = note('node:offer'), b = note('node:talking'), c = note('ending:owner_killed');
+    const a = note('node:going_live'), b = note('node:on_air'), c = note('ending:manager_killed');
     const base: NotesFile = { v: 1, type: 'hostage_crisis', verdict: null, notes: [a, b] };
     // This page edits a, removes b and adds c.
     const mine: NotesFile = { ...base, notes: [{ ...a, text: 'Edited here.' }, c] };
@@ -158,7 +158,7 @@ describe('merging after the file changed on disk', () => {
 
   it('keeps every note of a page that read its notes from this browser (review finding notes-kept-in-browser-hidden)', () => {
     // The drawer merges against an empty base when its notes came from this browser, not the file.
-    const kept = note('node:offer'), added = note('node:talking'), other = note('node:fired_on');
+    const kept = note('node:going_live'), added = note('node:on_air'), other = note('node:fired_on');
     const mine: NotesFile = { v: 1, type: 'hostage_crisis', verdict: null, notes: [kept, added] };
     const disk: NotesFile = { v: 1, type: 'hostage_crisis', verdict: null, notes: [other] };
     expect(mergeNotes(emptyNotes('hostage_crisis'), mine, disk).notes.map(entry => entry.id)).toEqual([other.id, kept.id, added.id]);
@@ -170,8 +170,8 @@ describe('merging after the file changed on disk', () => {
 
 describe('notes kept in this browser (review finding notes-kept-in-browser-hidden)', () => {
   it('offers notes the browser holds that the file lacks, whether the old lab left them or a save while the server was down', () => {
-    const inFile = note('node:offer'), sameText = { ...note('node:talking'), id: 'n-other-id' }, onlyHere = note('ending:owner_killed'), old = { ...note('node:fired_on'), id: 'old-0' };
-    const file: NotesFile = { v: 1, type: 'hostage_crisis', verdict: null, notes: [inFile, note('node:talking')] };
+    const inFile = note('node:going_live'), sameText = { ...note('node:on_air'), id: 'n-other-id' }, onlyHere = note('ending:manager_killed'), old = { ...note('node:fired_on'), id: 'old-0' };
+    const file: NotesFile = { v: 1, type: 'hostage_crisis', verdict: null, notes: [inFile, note('node:on_air')] };
     const browser: NotesFile = { v: 1, type: 'hostage_crisis', verdict: null, notes: [inFile, sameText, onlyHere, old] };
     expect(browserOnlyNotes(file, browser).map(entry => entry.id)).toEqual([onlyHere.id, old.id]);
     expect(browserOnlyNotes(file, emptyNotes('hostage_crisis'))).toEqual([]);
@@ -184,31 +184,31 @@ describe('notes kept in this browser (review finding notes-kept-in-browser-hidde
 describe('export', () => {
   // swat-writing-review/SKILL.md:332-334
   const ROW = /^\[(block|fix before freeze|note)\] [^|]+ \| [^|]+ \| sees '[^']*(?:'[^|]*)?' \| rule [^|]+ \| fix as data '[^|]*' \| route (swat-call-design|swat-call-prose|swat-officer-stories|engineering|owner)$/;
-  const choice = hostage.tree.nodes.find(node => node.id === 'offer')!.choices[0];
+  const choice = hostage.tree.nodes.find(node => node.id === 'going_live')!.choices[0];
 
   it('writes one row per note in the review skill shape', () => {
-    const row = findingRow(note(`choice:offer/${choice.id}`));
+    const row = findingRow(note(`choice:going_live/${choice.id}`));
     expect(row).toMatch(ROW);
-    expect(row).toBe(`[fix before freeze] hostage_crisis, s2, market_row seed 7 call 2 | offer.${choice.id} | sees 'Walk Ana out first.' | rule fake-choice 4 | fix as data 'Walk Ana out now.' | route swat-call-prose`);
+    expect(row).toBe(`[fix before freeze] hostage_crisis, s2, market_row seed 7 call 2 | going_live.${choice.id} | sees 'Walk Ana out first.' | rule fake-choice 4 | fix as data 'Walk Ana out now.' | route swat-call-prose`);
   });
 
   it('keeps a row on one line with no stray column bars', () => {
-    const row = findingRow(note('node:offer', { sees: 'Line one.\nLine two | three', fix: 'A\nB', severity: 'block', route: 'swat-call-design' }));
+    const row = findingRow(note('node:going_live', { sees: 'Line one.\nLine two | three', fix: 'A\nB', severity: 'block', route: 'swat-call-design' }));
     expect(row).toMatch(ROW);
     expect(row.split('\n')).toHaveLength(1);
     expect(row).toContain("sees 'Line one. / Line two / three'");
   });
 
   it('names an id-only draw by its id', () => {
-    expect(drawText(note('node:offer', { url: 'http://x/lab?id=gen:hostage_crisis:market_row:7:2:2:13' }))).toBe('hostage_crisis, s2, gen:hostage_crisis:market_row:7:2:2:13');
+    expect(drawText(note('node:going_live', { url: 'http://x/lab?id=gen:hostage_crisis:market_row:7:2:2:13' }))).toBe('hostage_crisis, s2, gen:hostage_crisis:market_row:7:2:2:13');
   });
 
   it('exports the verdict line, rows blockers first, links, and lint kept on purpose', () => {
     // A lint finding to keep on purpose, from an owned fixture so a content change can't remove it.
     const finding = lintTree(clockFixtureTemplate()).find(entry => entry.code === 'clock_writer')!;
     const file: NotesFile = { v: 1, type: 'hostage_crisis', verdict: { value: 'edit', at: 5 }, notes: [
-      note('node:offer', { id: 'a', severity: 'note', at: 1 }),
-      note(`choice:offer/${choice.id}`, { id: 'b', severity: 'block', at: 2, route: 'swat-call-design' }),
+      note('node:going_live', { id: 'a', severity: 'note', at: 1 }),
+      note(`choice:going_live/${choice.id}`, { id: 'b', severity: 'block', at: 2, route: 'swat-call-design' }),
       muteNote(finding, 'The owner collapsing is meant to set it.', { type: 'hostage_crisis', url: URL, draw: { situation: 0, call: 1 } }),
     ] };
     const md = findingsMarkdown(file, 'One Last Signature', n => `<${n.url}>`);

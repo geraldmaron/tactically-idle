@@ -3,7 +3,8 @@ import { dependencyIndex } from '../../../gen/incident/trees-v13/dependencies';
 import { runtimeImports, SOURCES } from '../../import-graph';
 import { parseLabUrl } from '../url';
 import { compareInstances, instanceUrl, pairRows } from './compare';
-import { currentFrame, openSession, stepSession } from './session';
+import { explore } from './explore';
+import { currentFrame, openSession, replayTokens } from './session';
 import type { Session } from './session';
 import { xrayChoices } from './xray';
 import type { ChoiceXray } from './xray';
@@ -15,6 +16,16 @@ function openCall(query: string): { s: Session; u: ReturnType<typeof parseLabUrl
   const s = openSession(u, null);
   if (!('frames' in s)) throw new Error(`could not open ${query}: ${s.message}`);
   return { s, u };
+}
+
+/** The call opened and walked to the threat node, where going in is offered. */
+function atThreat(query: string): { s: Session; u: ReturnType<typeof parseLabUrl>['url'] } {
+  const { s, u } = openCall(query);
+  const found = explore(s.frames[0].state, { node: 'threat' });
+  if (!found.path) throw new Error(`no path to threat in ${query}`);
+  const reached = replayTokens(s, found.path);
+  if (reached.stopped) throw new Error(reached.stopped.why);
+  return { s: reached, u };
 }
 
 describe('compareInstances', () => {
@@ -51,26 +62,22 @@ describe('compareInstances', () => {
   });
 
   it('shows gear: a choice that asks for gear loses odds when B carries nothing, as the items-none probe measures', () => {
-    // Day one already stocks what these opening choices ask for, so Every item moves nothing and No
-    // items is the comparison that shows the gear (src/architecture/wiring.ts, items-none).
-    const { s, u } = openCall('type=protected_rescue');
+    // Going in at the threat counts a shield up front (equipment), so No items is the comparison that
+    // shows the gear (src/architecture/wiring.ts, items-none).
+    const { s, u } = atThreat(`${REFERENCE}&certs=entry_team`);
     const deps = dependencyIndex(s.template);
-    const none = compareInstances(s, u, { kit: 'none' }, 0, deps);
-    const goGet = none.rows.find(row => row.actionId.endsWith('_go_get'))!;
-    expect(goGet.delta!.likelihood.favorable).toBeLessThan(0);
-    expect(goGet.groups.map(group => group.id)).toContain('equipment');
-    const full = compareInstances(s, u, { kit: 'full' }, 0, deps);
-    expect(full.rows.find(row => row.actionId.endsWith('_go_get'))!.delta!.likelihood.favorable).toBe(0);
+    const at = s.frames.length - 1;
+    const none = compareInstances(s, u, { kit: 'none' }, at, deps);
+    const goIn = none.rows.find(row => row.actionId.endsWith('_go_in'))!;
+    expect(goIn.delta!.likelihood.favorable).toBeLessThan(0);
+    expect(goIn.groups.map(group => group.id)).toContain('equipment');
+    const full = compareInstances(s, u, { kit: 'full' }, at, deps);
+    expect(full.rows.find(row => row.actionId.endsWith('_go_in'))!.delta!.likelihood.favorable).toBe(0);
     expect(none.changed).toEqual(['kit No items']);
   });
 
-  it('locks a choice whose gear B lacks', () => {
-    const { s, u } = openCall('type=active_armed_incident');
-    const announce = compareInstances(s, u, { kit: 'none' }, 0, dependencyIndex(s.template)).rows.find(row => row.actionId.endsWith('_announce'))!;
-    expect(announce.a!.eligible).toBe(true);
-    expect(announce.b!.eligible).toBe(false);
-    expect(announce.delta).toBeNull();
-  });
+  // 'locks a choice whose gear B lacks' is removed: no Going Live choice requires gear, so no choice
+  // can lock on kit.
 
   it('shows a squad change in the rating groups', () => {
     const { s, u } = openCall(REFERENCE);
@@ -78,29 +85,9 @@ describe('compareInstances', () => {
     expect(c.rows.some(row => row.groups.some(group => group.id === 'rating'))).toBe(true);
   });
 
-  it('marks a choice B locks and gives no delta for it', () => {
-    const { s, u } = openCall('type=protected_rescue&certs=vehicle_operations');
-    const c = compareInstances(s, u, { certs: [] }, 0, dependencyIndex(s.template));
-    const vehicle = c.rows.find(row => row.actionId.endsWith('_vehicle'))!;
-    expect(vehicle.a!.eligible).toBe(true);
-    expect(vehicle.b!.eligible).toBe(false);
-    expect(vehicle.b!.reason).toMatch(/vehicle operator/);
-    expect(vehicle.delta).toBeNull();
-  });
-
-  it("stops at the step B refuses, with the engine's reason, and pairs no rows", () => {
-    const opened = openCall('type=protected_rescue&certs=vehicle_operations');
-    const u = opened.u;
-    let s = opened.s;
-    const vehicle = currentFrame(s).views.find(view => view.id.endsWith('_vehicle'))!;
-    const next = stepSession(s, { kind: 'decide', actionId: vehicle.id, band: 'favorable' });
-    if ('refused' in next) throw new Error(next.refused);
-    s = next;
-    const c = compareInstances(s, u, { certs: [] }, 1, dependencyIndex(s.template));
-    expect(c.divergence).toMatchObject({ kind: 'stopped', step: 1 });
-    expect(c.divergence!.kind === 'stopped' && c.divergence!.why).toMatch(/vehicle operator/);
-    expect(c.rows).toEqual([]);
-  });
+  // 'marks a choice B locks and gives no delta for it' and 'stops at the step B refuses' are removed:
+  // Going Live's only lock is go_in's entry_team cert, every reference squad already holds it (lab
+  // grants only add), and no choice requires gear, so no instance B can lock or refuse a step.
 
   it('refuses a call from the game, which keeps its own draw', () => {
     const { s, u } = openCall(REFERENCE);

@@ -56,9 +56,9 @@ describe('simLint', () => {
     const found = simLint(tally({ locked: {
       'talking/take_account': { offered: 37, locked: 37, reasons: { 'Needs a crisis negotiator': 30, 'Command refuses': 7 } },
       'talking/write_now': { offered: 40, locked: 12, reasons: { x: 12 } },
-      t13_hostage_crisis_offer_hear_him: { offered: 5, locked: 5, reasons: {} },
+      t13_hostage_crisis_going_live_on_stream: { offered: 5, locked: 5, reasons: {} },
     } }), graph, SCOPE, s.tree).filter(f => f.code === 'locked_for_squad');
-    expect(found.map(f => f.id).sort()).toEqual(['locked_for_squad:offer/hear_him', 'locked_for_squad:talking/take_account']);
+    expect(found.map(f => f.id).sort()).toEqual(['locked_for_squad:going_live/on_stream', 'locked_for_squad:talking/take_account']);
     const account = found.find(f => f.id.endsWith('take_account'))!;
     expect(account).toMatchObject({ severity: 'info', node: 'talking', sites: [{ node: 'talking', choice: 'take_account', field: 'engine' }] });
     expect(account.message).toContain('37 visits');

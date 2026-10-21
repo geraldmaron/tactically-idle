@@ -8,9 +8,6 @@ import { labRequirementTree, sessionClockNexts } from './clocks';
 import { availableMoves, NOW } from '../../../gen/incident/gates/engine-driver';
 import { clockMarksOf } from '../../../gen/incident/instance';
 import { choiceActionId } from '../../../gen/incident/trees-v13/compile';
-import { dependencyIndex } from '../../../gen/incident/trees-v13/dependencies';
-import type { Site } from '../../../gen/incident/trees-v13/dependencies';
-import type { TreeIf } from '../../../content/call-trees/types';
 import { callGraph } from '../../../gen/incident/trees-v13/graph';
 import type { CallGraph } from '../../../gen/incident/trees-v13/graph';
 import type { GameState } from '../../../sim/types';
@@ -65,12 +62,21 @@ describe('explore', () => {
       expect(path).not.toMatch(/~roll/);
     }
     const missing = inCallEndings(graph).filter(ending => !(ending in all.endings!));
-    // Measured 2026-10-09 (situation 2 of 3, lets_go true): 12 of the 16 endings in the call.
-    expect(Object.keys(all.endings!)).toHaveLength(12);
-    expect(missing).toEqual(['handed_over', 'owner_beaten', 'owner_killed', 'owner_killed_taker_hurt']);
-    // The owner dies or is beaten only where the taker won't trade (lets_go false); here he will.
-    expect(s.tree.situations[s.situation]!.truth.lets_go).toBe(true);
-    for (const ending of ['owner_beaten', 'owner_killed', 'owner_killed_taker_hurt']) expect(blockedByTruth(graph, ending, 'lets_go')).toBe(true);
+    // Situation 2 of 2 (raised true): every ending the call keeps but the failed-response fallback.
+    expect(s.tree.situations[s.situation]!.truth.raised).toBe(true);
+    expect(missing).toEqual(['handed_over']);
+    expect(Object.keys(all.endings!)).toHaveLength(inCallEndings(graph).length - 1);
+    // Where the handgun never comes up (raised false), the endings that need it are missing, and
+    // every route into each needs raised.
+    const calm = open(REFERENCE.replace('variant=1', 'variant=0'));
+    expect(calm.tree.situations[calm.situation]!.truth.raised).toBe(false);
+    const calmGraph = graphOf(calm);
+    const calmAll = explore(calm.frames[0].state, null);
+    expect(calmAll.truncated).toBe(false);
+    const calmMissing = inCallEndings(calmGraph).filter(ending => !(ending in calmAll.endings!));
+    const needRaised = calmMissing.filter(ending => ending !== 'handed_over');
+    expect(needRaised).toEqual(expect.arrayContaining(['manager_killed', 'manager_killed_rider_hurt']));
+    for (const ending of needRaised) expect(blockedByTruth(calmGraph, ending, 'raised')).toBe(true);
     // handed_over is the failed-response fallback: no state in this call leaves the player without a move.
     expect(explore(start, null, { holds: noMoveLeft })).toMatchObject({ path: null, truncated: false });
     // A goal stops at the shortest path to it.
@@ -80,45 +86,23 @@ describe('explore', () => {
     expect(one.states).toBeLessThanOrEqual(all.states);
   }, 120000);
 
-  it('reaches the owner killed in the situation where the taker won\'t trade, by aiming the team\'s force', () => {
+  it('reaches the manager killed in the situation where the handgun comes up, by aiming the team\'s force', () => {
     // Firing needs a carried sidearm and an officer qualified for it (sim/force-risk.ts qualifiedForceUnit).
-    const keeps = open(`${REFERENCE.replace('variant=1', 'variant=2')}&kit=full&certs=entry_team`);
-    expect(keeps.tree.situations[keeps.situation]!.truth.lets_go).toBe(false);
+    const keeps = open(`${REFERENCE}&kit=full&certs=entry_team`);
+    expect(keeps.tree.situations[keeps.situation]!.truth.raised).toBe(true);
     const graph = graphOf(keeps);
     const all = explore(keeps.frames[0].state, null);
     expect(all.truncated).toBe(false);
     expect(all.states).toBeLessThan(EXPLORE_CAP);
     const missing = inCallEndings(graph).filter(ending => !(ending in all.endings!));
-    // The rest need the taker to trade (lets_go true) or something only a clock this situation
-    // doesn't have brings about (the owner's heart clock: where it sends the call, the marks only it
-    // writes, it running out); or no move to be left. Read from the call, not named, so a content
-    // change to that clock's route or marks moves the test with it.
+    // The retired hostage call proved here that endings only a clock this situation lacks brings
+    // about were missing. Every Going Live situation runs the same clocks, so none is absent and
+    // nothing waits on one: only the fallback is missing, and no state leaves no move.
     const ids = new Set(keeps.instance.clocks.map(clock => clock.id));
-    const absent = keeps.template.situations.flatMap(entry => entry.clocks ?? []).filter(clock => !clock.story && !ids.has(clock.id));
-    expect(absent.length).toBeGreaterThan(0);
-    const absentIds = new Set(absent.map(clock => clock.id));
-    const theirNodes = new Set(absent.flatMap(clock => clock.onOut?.next && 'node' in clock.onOut.next ? [clock.onOut.next.node] : []));
-    const deps = dependencyIndex(keeps.template);
-    // A writer only that clock enables: the clock itself, or an outcome that holds only once it ran out.
-    const needsItOut = (site: Site) => {
-      if (site.clock) return absentIds.has(site.clock);
-      const outcome = site.node && site.choice && site.band && site.outcome !== undefined
-        ? keeps.tree.nodes.find(node => node.id === site.node)?.choices.find(choice => choice.id === site.choice)?.outcomes[site.band][site.outcome] : undefined;
-      return ([] as TreeIf[]).concat(outcome?.if ?? []).some(entry => 'out' in entry && entry.out && absentIds.has(entry.clock));
-    };
-    const theirMarks = new Set([...deps.keys.entries()].filter(([key, entry]) => key.startsWith('mark:') && entry.writers.length > 0
-      && entry.writers.every(needsItOut)).map(([key]) => key.slice(5)));
-    const needsAbsentClock = (edge: CallGraph['edges'][number]) => theirNodes.has(edge.node)
-      || edge.conditions.some(c => (c.kind === 'state' && !!c.state.marks?.some(mark => theirMarks.has(mark))) || (c.kind === 'clock' && absentIds.has(c.clock) && c.is));
-    const blocked = (ending: string) => graph.edges.filter(edge => edge.inCall && edge.to === `ending:${ending}`)
-      .every(edge => needsAbsentClock(edge) || edge.conditions.some(c => c.kind === 'fact' && c.holds === false));
-    expect(missing).toContain('handed_over');
-    expect(missing.filter(e => e !== 'handed_over')).toEqual(inCallEndings(graph).filter(e => e !== 'handed_over' && blocked(e)));
-    // One complete walk: no state is at a node only that clock reaches or has a mark only it
-    // writes, and none leaves no move.
-    const absentReached = (state: GameState) => [...theirMarks].some(mark => !!state.activeRun?.flags.includes(`mark:${mark}`)) || theirNodes.has(nodeAt(state, keeps.tree) ?? '') || noMoveLeft(state);
-    expect(explore(keeps.frames[0].state, null, { holds: absentReached })).toMatchObject({ path: null, truncated: false });
-    for (const [ending, force] of [['owner_killed', 'firearm:none'], ['owner_killed_taker_hurt', null]] as const) {
+    expect(keeps.template.situations.flatMap(entry => entry.clocks ?? []).filter(clock => !clock.story && !ids.has(clock.id))).toEqual([]);
+    expect(missing).toEqual(['handed_over']);
+    expect(explore(keeps.frames[0].state, null, { holds: noMoveLeft })).toMatchObject({ path: null, truncated: false });
+    for (const [ending, force] of [['manager_killed', 'firearm:none'], ['manager_killed_rider_hurt', null]] as const) {
       const path = all.endings![ending];
       expect(path).toBeDefined();
       expect(path).not.toMatch(/~roll/);
@@ -161,11 +145,11 @@ describe('explore', () => {
   }, 120000);
 
   it('reaches a node, a choice on offer and an eligible choice', () => {
-    const toNode = explore(start, { node: 'talking' });
+    const toNode = explore(start, { node: 'on_air' });
     expect(toNode.path).not.toBeNull();
-    expect(nodeAt(replayed(s, toNode.path!), s.tree)).toBe('talking');
+    expect(nodeAt(replayed(s, toNode.path!), s.tree)).toBe('on_air');
     expect(explore(start, { node: s.tree.root }).path).toBe('');
-    const id = choiceActionId('hostage_crisis', 'talking', 'take_account');
+    const id = choiceActionId('hostage_crisis', 'on_air', 'team_glass');
     for (const goal of [{ offered: id }, { eligible: id }]) {
       const found = explore(start, goal);
       expect(found.path).not.toBeNull();
@@ -173,16 +157,16 @@ describe('explore', () => {
       expect(view).toBeDefined();
       if ('eligible' in goal) expect(view!.eligible).toBe(true);
     }
-    const flags = explore(start, { flags: ['at:talking'] });
+    const flags = explore(start, { flags: ['at:on_air'] });
     expect(flags.path).toBe(toNode.path);
   }, 60000);
 
   it('reaches where a requirement holds (an outcome\'s state), and says when nothing does', () => {
-    const target = { prompt: ['talking', 1] as [string, number] };
+    const target = { prompt: ['on_air', 1] as [string, number] };
     const req = labRequirementTree(s.tree, target);
     const found = explore(start, { req, target });
     expect(found.path).not.toBeNull();
-    expect(nodeAt(replayed(s, found.path!), s.tree)).toBe('talking');
+    expect(nodeAt(replayed(s, found.path!), s.tree)).toBe('on_air');
     // No such state: the walk ends without a path, untruncated.
     const none = explore(start, { flags: ['mark:not_a_mark'] });
     expect(none).toMatchObject({ path: null, truncated: false });
@@ -195,12 +179,12 @@ describe('explore', () => {
     const stopped = explore(start, null, { shouldStop: () => ++calls > 5 });
     expect(stopped.truncated).toBe(true);
     expect(stopped.states).toBe(5);
-    const sliced = createExplorer(start, { node: 'talking' });
+    const sliced = createExplorer(start, { node: 'on_air' });
     let progress = sliced.step(0);
     let slices = 1;
     while (!progress.done) { progress = sliced.step(1); slices++; }
     expect(slices).toBeGreaterThan(1);
-    expect(progress.path).toBe(explore(start, { node: 'talking' }).path);
+    expect(progress.path).toBe(explore(start, { node: 'on_air' }).path);
   }, 60000);
 });
 

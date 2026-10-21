@@ -55,7 +55,7 @@ export function endingCards(input: { tree: CallTree; graph: CallGraph; tally: Re
     const n = reached?.n ?? 0;
     // The exhausted-choices fallback has no authored route in, and is in every call.
     const inCall = scope === 'type' || (!!vertex?.inCall && (id === 'handed_over' || !!reach?.has(`ending:${id}`)));
-    const situations = bySituation ? [0, 1, 2].filter(s => bySituation[s]?.has(`ending:${id}`)) : [];
+    const situations = bySituation ? tree.situations.map((_, i) => i).filter(s => bySituation[s]?.has(`ending:${id}`)) : [];
     let reason: string | null = null;
     if (!inCall) {
       if (vertex && !vertex.inCall) reason = vertex.pruned ?? 'Not in this call.';
@@ -122,7 +122,7 @@ export function drawFor(template: IncidentTemplate, ending: string, current: { c
   let turnCombos: Record<string, string>[] = [{}];
   for (const [group, members] of groups) turnCombos = turnCombos.flatMap(combo => members.map(member => ({ ...combo, [group]: member })));
   const candidates: { counts: Record<string, number>; turns: Record<string, string>; situation: 0 | 1 | 2; changes: number }[] = [];
-  for (const counts of countCombos(template)) for (const turns of turnCombos) for (const situation of [0, 1, 2] as const) {
+  for (const counts of countCombos(template)) for (const turns of turnCombos) for (const situation of tree.situations.map((_, i) => i as 0 | 1 | 2)) {
     const changes = Object.keys(counts).filter(g => counts[g] !== current.counts[g]).length + Object.keys(turns).filter(g => turns[g] !== current.turns[g]).length
       + (situation !== current.situation ? 1 : 0);
     candidates.push({ counts, turns, situation, changes });
