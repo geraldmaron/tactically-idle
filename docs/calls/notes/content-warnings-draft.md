@@ -183,7 +183,7 @@ excluded, is in this file's history (commit 6d97111).
 |---|---|---|---|---|---|---|
 | offer | 4 | 2 | taker | Courier. I can see you looking at the door. | on the counter phone; the courier inside can hear | the courier edging for the door |
 | out_back_door | 4 | 2 | radio | Alley door. Handle’s turning again. Nobody out. | the team watching the alley door | the alley door opening |
-| out_keys | 5 | 2 | courier | When I left, {taker.he} {taker~was|were} lining up the twenties. | outside behind the patrol car | the count at the till |
+| out_keys | 5 | 2 | courier | When I left, {taker.he} {taker~was\|were} lining up the twenties. | outside behind the patrol car | the count at the till |
 | out_six_years | 4 | 2 | courier | Eleven stops left. My van’s still running at the curb. | outside by the cruiser, bag still on | the courier pressing patrol about the van |
 | out_cousin | 4 | 2 | cousin | That glass. {taker.He} can’t see my face from back here. | at the tape, in uniform from the depot | the cousin going for the step |
 | both_inside | 5 | 2 | radio | Front glass. Hand on the blinds. Need another view. | the team at the corner, on the front glass | the blinds |
