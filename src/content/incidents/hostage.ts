@@ -15,17 +15,17 @@ import type { Clock, IncidentTemplate, PersonSpec, Weapon } from './types';
  * Their effects (strain, call pressure, a bigger trust swing either way) start at each one's first
  * cue. Moving the tape back slows the crowd; the taker's stream stops or slows when they put the
  * phone down, and stops for good once they are out. */
-const CROWD_STREAM: Clock = { id: 'crowd_stream', label: 'Phones at the tape', kind: 'crowd', direction: 'fill', start: 0, ratePerMin: 1, rateSpread: 0.2, rateKnown: false,
-  rateFlags: [{ flag: 'mark:tape_back', ratePerMin: 0.5 }],
+const CROWD_STREAM: Clock = { id: 'crowd_stream', label: 'Phones at the tape', kind: 'crowd', direction: 'fill', start: 0, ratePerMin: 0.5, rateSpread: 0.2, rateKnown: false,
+  rateFlags: [{ flag: 'mark:tape_back', ratePerMin: 0.2 }],
   cues: [
-    { at: 15, text: 'At the tape a regular is filming the shop front and telling someone on the phone what happened here.' },
+    { at: 25, text: 'At the tape a regular is filming the shop front and telling someone on the phone what happened here.' },
     { at: 40, text: 'The people at the tape pass one phone around and read the comments under it out loud. Somebody says a thousand people are watching.' },
     { at: 70, text: 'A TV station’s van pulls up at the corner. The regulars start filming the reporter as well as the shop.' },
   ] };
-const TAKER_LIVE: Clock = { id: 'taker_live', label: '{taker.first}’s stream', kind: 'crowd', direction: 'fill', owner: 'taker', start: 0, ratePerMin: 0.75, rateSpread: 0.25, rateKnown: false,
-  rateFlags: [{ flag: 'mark:phone_turned', ratePerMin: 0.3 }],
+const TAKER_LIVE: Clock = { id: 'taker_live', label: '{taker.first}’s stream', kind: 'crowd', direction: 'fill', owner: 'taker', start: 0, ratePerMin: 0.4, rateSpread: 0.25, rateKnown: false,
+  rateFlags: [{ flag: 'mark:phone_turned', ratePerMin: 0.15 }],
   cues: [
-    { at: 25, text: '{taker.first} props {owner.first}’s phone against the register, screen out, and starts telling it about the till.', mark: 'taker_live', moves: [{ personId: 'taker', event: 'watched' }] },
+    { at: 35, text: '{taker.first} props {owner.first}’s phone against the register, screen out, and starts telling it about the till.', mark: 'taker_live', moves: [{ personId: 'taker', event: 'watched' }] },
     { at: 50, text: '{taker.first} reads names off the phone’s screen out loud, people from the neighborhood, and answers them one at a time.', moves: [{ personId: 'taker', event: 'watched' }] },
     { at: 80, text: '{taker.first} turns the phone so it faces {owner.first} and tells the people watching to take a good look.', moves: [{ personId: 'taker', event: 'watched' }] },
   ] };
