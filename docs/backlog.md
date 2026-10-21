@@ -282,7 +282,7 @@ factor on trust and the camera strain; reduced motion respected; checked at 390x
 the running app.
 
 ### hostage-livestream: The crowd and the taker go live on the hostage call
-Tags: job=command; journeys=new:audience-raises-stakes, choices-branch; probes=none (text and clocks; the fill effects are tuning); lane=calls
+Tags: job=command; journeys=new:audience-raises-stakes, choices-branch; probes=none (text and clocks, the fill effects are tuning); lane=calls
 Needs: start=none; integrate=fill-gauge-ui (the player sees the gauge before the lines ship); ship=none
 
 Design in `docs/calls/notes/hostage-livestream-design.md`. Authored on `claude/content-warnings-draft`:
