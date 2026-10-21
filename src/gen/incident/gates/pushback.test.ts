@@ -43,11 +43,11 @@ function compile(t: IncidentTemplate): ScenarioDefinition {
 const rootChoice = (scenario: ScenarioDefinition) => scenario.stages.assess.actions.find(action => action.threat)!;
 
 describe('the push-back gate', () => {
-  it('passes every shipping call, and the hostage placeholder is stripped from every situation', () => {
+  it('passes every shipping call, and no shipped threat carries a line in a self-harm situation', () => {
     for (const t of Object.values(INCIDENT_TEMPLATES)) expect(pushbackFindings(t!), t!.type).toEqual([]);
-    const hostage = INCIDENT_TEMPLATES.hostage_crisis!;
-    expect(hostage.tree.nodes.some(node => node.threat?.pushback?.some(line => line.line.startsWith('PLACEHOLDER')))).toBe(true);
-    expect(hostage.tree.situations.every(situation => situation.descriptors?.includes('suicide_self_harm'))).toBe(true);
+    // Every hostage and barricade situation declares the theme, so no line can play there today.
+    for (const type of ['hostage_crisis', 'barricaded'] as const)
+      expect(INCIDENT_TEMPLATES[type]!.tree.situations.every(situation => situation.descriptors?.includes('suicide_self_harm')), type).toBe(true);
   });
 
   it('fails a compiled self-harm situation that still carries lines (negative control)', () => {
