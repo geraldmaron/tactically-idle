@@ -153,11 +153,11 @@ under as is are was were be been being it its it's this that these those he she 
 their theirs you your we our i me my not no nobody one two three who what where when why how all any some
 has have had do does did can could will would may might must still just now so than too very there here
 says said say tells told asks asked""".split())
-LINT_NAMES = ["UNSAFE_DETAIL", "ACCUSATION", "HEDGE", "SETTLED", "NEGATED", "META_PHRASING"]
+LINT_NAMES = ["UNSAFE_DETAIL", "SUICIDE_METHOD", "ACCUSATION", "HEDGE", "SETTLED", "NEGATED", "META_PHRASING"]
 # opener-share is reported, never blocking. Chasing it produced inverted syntax in proof round 2.
 BLOCKING = ("over-limit", "sentence-lint", "dash", "placeholder", "missing-band", "marker-name",
             "marker-judge", "ngram", "path-echo", "address-mix", "clock-mix",
-            "unsafe", "accusation", "settled", "meta", "stock-spoken", "inversion", "fronted",
+            "unsafe", "method", "accusation", "settled", "meta", "stock-spoken", "inversion", "fronted",
             "nothing-alone", "fragments", "fragment-open", "mechanic", "vague-preview", "ending-status",
             "role-position", "threat-it", "tape-subject", "aphorism")
 
@@ -224,7 +224,6 @@ def main():
     cast = {c.lower() for c in a.cast}
     keep = [k.lower() for k in a.keep]
     counts = collections.Counter()
-    policy = []
     result_tense = collections.Counter()
     fragment_only = []
     speech_tags = collections.Counter()
@@ -367,9 +366,9 @@ def main():
             if re.search(r"\b" + re.escape(w) + r"\b", bare):
                 flag("word-choice", row, f"'{w}' reads British, use {swap}")
         if lint:
-            for name in ("UNSAFE_DETAIL", "META_PHRASING"):
+            for name, kind in (("UNSAFE_DETAIL", "unsafe"), ("SUICIDE_METHOD", "method"), ("META_PHRASING", "meta")):
                 if lint.get(name) and (m := lint[name].search(text)):
-                    flag("unsafe" if name == "UNSAFE_DETAIL" else "meta", row, m.group(0))
+                    flag(kind, row, m.group(0))
             for s in sentences(text):
                 neg = lint.get("NEGATED") and lint["NEGATED"].search(s)
                 if pre and surface not in SPOKEN and lint.get("ACCUSATION") and (m := lint["ACCUSATION"].search(s)):
@@ -377,10 +376,6 @@ def main():
                         flag("accusation", row, f"'{m.group(0)}' needs a source in the sentence")
                 if lint.get("SETTLED") and (m := lint["SETTLED"].search(s)) and not neg:
                     flag("settled", row, m.group(0))
-        for m in re.finditer(r"\b(weapon|armed|gun\w*|die|died|dead|dying|hurt|killed?)\b", bare):
-            if not re.search(r"\b(no|not|never|without|empty)\b", bare):
-                hits = [n for n in ("UNSAFE_DETAIL", "ACCUSATION", "SETTLED") if lint.get(n) and lint[n].search(m.group(0))]
-                policy.append((row["where"], row["situation"], m.group(0), "matches " + "+".join(hits) if hits else "matches none"))
 
     # Call-level counts from the row pass.
     if len(fragment_only) > FRAGMENT_CAP:
@@ -549,15 +544,12 @@ def main():
     if len(triads) > 3:
         counts["triad"] += 1
 
-    # Lint policy collisions for the owner.
-    print("lint policy candidates (affirmative harm or weapon words, owner decision): "
-          + (", ".join(f"{w}@{where}/{s} ({res})" for where, s, w, res in policy[:20]) or "none"))
     keys = ["over-limit", "over-target", "locked-clamp", "sentence-lint", "sentence-long", "dash", "colon",
             "semicolon", "exclamation", "apostrophe", "stock", "stock-spoken", "feeling", "sheet-term",
             "engine-word", "policy-voice", "defer", "delay-only", "word-choice", "weapon-speech",
             "placeholder", "missing-band", "marker-name", "marker-judge", "repeat", "ngram", "motif",
             "path-repeat", "path-echo", "address-mix", "clock-mix", "cost-template", "lead-thin",
-            "opener-share", "cadence-flat", "triad", "unsafe", "meta", "accusation", "settled", "surface",
+            "opener-share", "cadence-flat", "triad", "unsafe", "method", "meta", "accusation", "settled", "surface",
             "inversion", "fronted", "nothing-alone", "fragments", "fragment-open", "narrator-hedge",
             "mechanic", "vague-preview", "ending-status", "tape-subject", "aphorism", "threat-it",
             "role-position", "it-check", "tense-mix", "tense-call", "speech-tag", "negation-openers"]
