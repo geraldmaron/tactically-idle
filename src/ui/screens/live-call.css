@@ -187,7 +187,7 @@
 
 /* Pressure sources (LiveFeed.tsx SourceTicker): a live count beside the drain, not one pressure at a
  * time (owner 2026-10-21). Two sources sit side by side at phone width; reactions float up out of
- * each and fade. The count's wobble is the game's one looping signal while a call is open, so the
+ * each and fade. The count's refresh is the game's one looping signal while a call is open, so the
  * reactions are one-shot and stop under reduced motion. */
 .live .live-sources { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 6px; margin-top: 4px; }
 .live .source-ticker { position: relative; display: grid; row-gap: 4px; min-width: 0; padding: 6px 10px 7px; border: 1px solid rgba(243, 180, 50, 0.55); border-radius: 10px; background: linear-gradient(90deg, rgba(243, 180, 50, 0.2), rgba(243, 180, 50, 0.06)); color: #ffe9bd; }
@@ -206,7 +206,11 @@
 .live .source-ticker-stopped .source-ticker-bar i { background: var(--mint); }
 .live .source-ticker .fill-gauge-tick { top: -2px; height: 10px; }
 .live .source-reactions { position: relative; height: 34px; margin-top: 1px; overflow: hidden; pointer-events: none; -webkit-mask-image: linear-gradient(180deg, transparent, #000 45%); mask-image: linear-gradient(180deg, transparent, #000 45%); }
-.live .source-reaction { position: absolute; left: 0; bottom: 0; max-width: 100%; padding: 1px 6px; border-radius: 8px; background: rgba(10, 14, 22, 0.7); color: #f2f4f8; font: 500 11.5px/1.35 var(--font-ui); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; animation: reaction-float 3.2s ease-out 1 forwards; }
+.live .source-reaction { position: absolute; left: 0; bottom: 0; max-width: 100%; padding: 1px 6px; border-radius: 8px; background: rgba(10, 14, 22, 0.7); color: #f2f4f8; font: 500 11.5px/1.35 var(--font-ui); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; animation: reaction-float 3.6s ease-out 1 forwards; }
+/* The handle reads first and quieter, like a stream app's chat; a join is the handle alone, dimmer. */
+.live .source-reaction-who { font-weight: 700; color: #ffc078; }
+.live .source-reaction-join { color: rgba(242, 244, 248, 0.6); }
+.live .source-reaction-join .source-reaction-who { color: rgba(255, 192, 120, 0.75); }
 .live .source-lane-1 { left: 8%; }
 .live .source-lane-2 { left: 16%; }
 @keyframes reaction-float { 0% { opacity: 0; transform: translateY(14px); } 12% { opacity: 1; transform: translateY(0); } 70% { opacity: 0.95; } 100% { opacity: 0; transform: translateY(-22px); } }

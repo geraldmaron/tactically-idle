@@ -241,7 +241,7 @@ export function LiveView(p: LiveViewProps) {
         <StageSteps progress={p.progress} />
         {pressure?.kind === 'threat' && <ThreatPill label={pressure.label} minutes={pressure.minutes} dither={p.dither} />}
         {fills.length > 0 && <div className="live-sources">
-          {fills.map((view) => view.count || view.reactions ? <SourceTicker key={view.id} view={view} /> : <FillGauge key={view.id} view={view} />)}
+          {fills.map((view) => view.count || view.reactions ? <SourceTicker key={view.id} view={view} runKey={p.g.activeRun?.id} /> : <FillGauge key={view.id} view={view} />)}
         </div>}
       </div>
 
@@ -390,7 +390,7 @@ const CHECK_WORDS: Record<CheckKind, string> = {
 
 /** What matters now (DecisionList WhatMattersNow): the stage's threat, and the pressure source
  * pulling hardest on the odds, or the fullest one while none pulls yet. It names the source and
- * leaves the number to the ticker beside it, whose count wobbles: two different counts on one screen
+ * leaves the number to the ticker beside it, whose count refreshes and churns: two different counts on one screen
  * read as a bug. */
 export function guidanceFor(g: LiveViewProps['g'], threat: { label: string; left: number } | null, fills: readonly FillView[]): Guidance {
   const run = g.activeRun;

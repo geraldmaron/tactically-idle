@@ -99,21 +99,26 @@ stays 0 to 100 in the sim; the source says how the scene reads it.
   `OutcomeEffect.clockBump`): a news van parks, the stream is cut.
 - **Odds.** Once its first cue is heard, a source takes up to `atFull` points off the checks it
   weighs on, named on the card with its count ("Lee’s stream: 2,431 watching").
-- **Reactions.** Pools by cue, and a spike pool, float up out of the source on the strip. They are
-  presentation only. They are written per call under `swat-call-prose`: viewers are people, so no gore
-  and no cheering force.
+- **Reactions.** Pools by cue, and a spike pool, float up out of the source on the strip, each line
+  under a generated handle (`commenterHandle`, `src/content/world.ts`). They are presentation only
+  (`src/ui/screens/live-chat.ts`). A line shows at most once a run, so each cue's pool holds at least
+  16 lines and the spike pool 8; once a pool is spent the chat thins to people joining while the count
+  climbs. They are written per call under `swat-call-prose` ("Viewer chat"), and
+  `src/content/incidents/reactions.test.ts` checks the pool sizes and wording rules: viewers are
+  people, so no gore and no cheering force.
 
 The older fill effects still apply from a source's first cue: strain on officers at a commit, call
 pressure a minute, and the debrief's audience factor on trust (`CLOCK_RULES_V1.fill`).
 
 ## The strip and the sensory layer
 
-- The threat's drain, then every source as a ticker: the label, a count that eases toward the sim's
-  value and wobbles about 3% either way, a bar with a tick at each cue, and the odds pull.
+- The threat's drain, then every source as a ticker: the label, a count that refreshes every second
+  or two like a stream app's (part of the way to the sim's value each time, a few people joining or
+  leaving, never more than 3% from it once caught up), a bar with a tick at each cue, and the odds pull.
 - A comms log above the choices, newest at the bottom, each new line keyed by a radio squelch. It
   holds its box before the first line and scrolls inside it, and the threat's landing joins it.
 - The frame glows red at the top in the threat's warn half and all round in its last quarter.
 - Sound (`src/ui/audio/live-audio.ts`): squelch, a phone tick when a source jumps, a crowd murmur at
   the crowd's level, and a heartbeat in the last quarter. All synthesized, so there are no clips to
   license. Vibration on jumps and beats, where the phone has it.
-- The count's wobble is the call's one looping signal (`src/ui/motion.test.ts`).
+- The count's refresh is the call's one looping signal (`src/ui/motion.test.ts`).

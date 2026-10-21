@@ -29,13 +29,30 @@ const STREAM: Clock = { id: 'stream', label: '{rider.first}’s stream', kind: '
     // more pair of eyes on the stockroom door and the glass, so moving anyone unseen gets harder.
     odds: { kinds: ['contact', 'pressure', 'coordination'], atFull: 7 },
     reactions: {
+      // One pool per cue heard, each line shown at most once a run (ui/screens/live-chat.ts), so
+      // every pool holds at least REACTION_FLOOR lines (reactions.test.ts). The chat grows with the
+      // count: the rider's own followers, then the handgun on camera, then the drivers' group, then
+      // strangers off the {outlet} repost.
       byCue: [
-        ['{rider.first} you good??', 'where is this', 'is that the place on 9th', 'they did you so dirty', 'stay safe bro', 'say it louder'],
-        ['wait is that real', 'put it down man', 'cops everywhere outside', 'make her say it', 'this is crazy', 'my order from there was late too'],
-        ['twelve cop cars, i counted', 'just let her go', 'he never stole from anybody', 'why is the camera shaking', 'they gonna rush it', 'i know that store'],
-        ['{outlet_short} is here', 'this is not how you prove it', 'turn it off', 'somebody call his mom', 'everybody calm down', 'i used to see him every night'],
+        ['{rider.first} you good??', 'where is this', 'is that the place on 9th', 'they did you so dirty', 'stay safe {rider.first}', 'say it louder',
+          'why is it so dark in there', 'is this a prank', 'just got here what happened', 'they cut me off too last year', 'who is that by the cooler',
+          'my battery is at 9 percent i cant leave now', 'turn the brightness up', '{rider.first} answer your phone', 'i got deactivated the same way',
+          'post the order number', 'why are there lights flashing outside', 'is that your scooter out front'],
+        ['wait is that real', 'put it down please', 'cops everywhere outside', 'make {manager.first} say it', 'this is crazy', 'my order from there was late too',
+          'this is not the way {rider.first}', 'somebody report the stream', 'reporting does nothing they never take stuff down', 'i can hear sirens from my apartment',
+          'is anyone else in there', 'whoever is by the register looks terrified', 'just walk out {rider.first}', 'why is nobody talking about the clerk',
+          '{manager.first} just say it and this ends', 'clipping this', 'my cousin works two blocks from there', 'nobody post where this is ok'],
+        ['twelve cop cars, i counted', 'just let them go', '{rider.first} never took anything from anybody', 'why is the camera shaking', 'they gonna rush it', 'i know that store',
+          'came here from the drivers group', 'half the east side drivers are watching this', 'we all know {delivery_app} does this to people',
+          'that does not make the handgun ok', 'i deliver there every friday', 'the whole block is taped off now', 'praying for everybody in that store',
+          'stop reading the comments {rider.first}', '{rider.first} needs a lawyer not a camera', 'who is the one in the apron',
+          'my kids are asking what i am watching', 'this has more viewers than the game'],
+        ['{outlet_short} is here', 'this is not how you prove it', 'turn it off', 'somebody call {rider.first}’s mom', 'everybody calm down', 'i used to see {rider.first} every night',
+          'saw the {outlet_short} post', 'whats going on why is this trending', 'i dont even know who this is but please put it down', 'my mom just called me about this',
+          'watching from three states away', 'the {outlet_short} comments are so much worse', 'nobody here knows the whole story', 'the clerk didnt sign up for this',
+          'how is this still up', 'please let everybody walk out', 'everyone in there is somebody’s kid', 'i hope the negotiator is good'],
       ],
-      spike: ['WHAT', 'did he just', 'oh no', 'is everybody ok', 'nooo'],
+      spike: ['WHAT', 'oh no', 'is everybody ok', 'nooo', 'wait what just happened', 'what was that', 'NO', 'hello??', 'i cant look', 'somebody say something'],
     },
   } };
 

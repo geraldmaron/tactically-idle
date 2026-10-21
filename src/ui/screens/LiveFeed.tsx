@@ -1,8 +1,8 @@
 // The live decision (docs/call-pressure.md, "The live decision"): the scene keeps moving while the
 // player weighs a choice. Pressure sources tick as a count someone on scene would see, with what the
 // people watching are saying floating past, and the comms log carries what is said on scene as it is
-// said. The numbers come from the sim's projection (sim/clocks.ts stalledRun, stallFeed); the
-// wobble on a count and the timing of the floating reactions are presentation only and never reach
+// said. The numbers come from the sim's projection (sim/clocks.ts stalledRun, stallFeed); how a
+// count refreshes and who says what in the chat (live-chat.ts) are presentation only and never reach
 // the sim, so a replay or the Scenario Lab reads exactly what the cards did.
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
@@ -11,81 +11,89 @@ import { formatCount } from '../../sim/pressure-sources';
 import { Icon } from '../icons';
 import { PeopleText } from '../people/PeopleText';
 import { buzz, playSquelch, playTick } from '../audio/live-audio';
+import { chatGapMs, chatHandle, countRefreshMs, drawChatLine, nextLiveCount } from './live-chat';
 
 const reducedMotion = () => typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
-/** A small seeded generator, so each source wobbles and picks reactions in its own steady pattern. */
+/** A small seeded generator, so each source refreshes and picks its chat in its own steady pattern. */
 function rng(seed: number) {
   let s = seed % 2147483647 || 1;
   return () => (s = (s * 16807) % 2147483647) / 2147483647;
 }
 const hash = (text: string) => [...text].reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) | 0, 7) >>> 0;
 
-interface Floating { key: number; text: string; lane: number }
+interface Floating { key: number; who: string; text: string | null; lane: number }
 
-/** One pressure source on the strip: its count, rising toward where the sim has it and wobbling
- * a few percent either way like a live count does, and the reactions of the people watching. A jump
- * (a bump, a cue, the threat landing) bursts the reactions and ticks. */
-export function SourceTicker({ view }: { view: FillView }) {
-  const target = view.count?.value ?? view.value;
+/** One pressure source on the strip: its count, refreshing every second or two toward where the sim
+ * has it the way a stream app's count does (live-chat.ts nextLiveCount), and the chat of the people
+ * watching, each line under a handle and never read twice on one run (`runKey`). Once a cue's lines
+ * are spent the chat thins to people joining while the count climbs. A jump (a bump, a cue, the
+ * threat landing) bursts the chat and ticks. */
+export function SourceTicker({ view, runKey = 'preview' }: { view: FillView; runKey?: string }) {
+  const target = Math.round(view.count?.value ?? view.value);
   const [shown, setShown] = useState(target);
   const [floating, setFloating] = useState<Floating[]>([]);
   const last = useRef(target);
   const keyRef = useRef(0);
-  const random = useRef(rng(hash(view.id)));
+  const said = useRef(0);
+  const random = useRef(rng(hash(`${runKey}:${view.id}`)));
   const reduced = reducedMotion();
 
-  // The count eases toward the sim's value and wobbles about it: an audience is never one number.
-  // One loop for the ticker's life; it reads the latest target from a ref, so ticks don't restart it.
+  // The count refreshes on its own clock and reads the latest target from a ref, so the sim's ticks
+  // don't restart it.
   const targetRef = useRef(target);
   targetRef.current = target;
   const counted = !!view.count;
   useEffect(() => {
-    if (reduced) return;
-    let frame = 0;
-    let current = targetRef.current;
-    const started = performance.now();
-    const phase = random.current() * 6;
-    const step = (t: number) => {
-      current += (targetRef.current - current) * 0.06;
-      const k = (t - started) / 1000;
-      const wobble = counted ? 1 + 0.025 * Math.sin(k * 1.3 + phase) * Math.sin(k * 0.37 + phase * 2) + 0.008 * Math.sin(k * 5.1) : 1;
-      setShown(current * wobble);
-      frame = requestAnimationFrame(step);
+    if (reduced || !counted) return;
+    let timer = 0;
+    const refresh = () => {
+      setShown(now => nextLiveCount(now, targetRef.current, random.current));
+      timer = window.setTimeout(refresh, countRefreshMs(random.current));
     };
-    frame = requestAnimationFrame(step);
-    return () => cancelAnimationFrame(frame);
+    timer = window.setTimeout(refresh, countRefreshMs(random.current));
+    return () => window.clearTimeout(timer);
   }, [reduced, counted]);
-  if (reduced && shown !== target) setShown(target);
+  if ((reduced || !counted) && shown !== target) setShown(target);
 
-  // Reactions: one every second or two, faster as it fills, a burst when it jumps. Keyed on the pool's
-  // text and the gauge in tenths, since the view itself is rebuilt on every tick.
+  const float = (text: string | null, lane: number) => {
+    const key = ++keyRef.current;
+    const who = chatHandle(runKey, view.id, said.current++);
+    setFloating(list => [...list.slice(-4), { key, who, text, lane }]);
+    window.setTimeout(() => setFloating(list => list.filter(item => item.key !== key)), reduced ? 4000 : 3600);
+  };
+
+  // The chat: a line every few seconds, quicker as it fills, each drawn once per run. Keyed on the
+  // pool's text and the gauge in tenths, since the view itself is rebuilt on every tick.
   const poolKey = (view.reactions?.pool ?? []).join('\n');
   const pace = Math.round(view.value / 10);
+  const rising = useRef(target);
   useEffect(() => {
     const pool = poolKey ? poolKey.split('\n') : [];
     if (!pool.length || view.stopped) return;
-    const add = (text: string) => {
-      const key = ++keyRef.current;
-      setFloating(list => [...list.slice(-5), { key, text, lane: Math.floor(random.current() * 3) }]);
-      window.setTimeout(() => setFloating(list => list.filter(item => item.key !== key)), reduced ? 4000 : 3200);
+    let timer = 0;
+    const next = () => {
+      const line = drawChatLine(runKey, view.id, pool, random.current);
+      const climbing = targetRef.current > rising.current;
+      rising.current = targetRef.current;
+      if (line) float(line, Math.floor(random.current() * 3));
+      else if (climbing) float(null, Math.floor(random.current() * 3));
+      timer = window.setTimeout(next, chatGapMs(pace * 10, random.current));
     };
-    const gap = Math.max(700, 2600 - pace * 180);
-    add(pool[Math.floor(random.current() * pool.length)]);
-    const timer = window.setInterval(() => add(pool[Math.floor(random.current() * pool.length)]), gap);
-    return () => window.clearInterval(timer);
-  }, [poolKey, pace, view.stopped, reduced]);
+    timer = window.setTimeout(next, chatGapMs(pace * 10, random.current) / 2);
+    return () => window.clearTimeout(timer);
+  }, [poolKey, pace, view.stopped, reduced, runKey]);
 
   useEffect(() => {
     const before = last.current;
     last.current = target;
     if (!(target > before * 1.08 + 1)) return;
-    const burst = view.reactions?.spike?.length ? view.reactions.spike : view.reactions?.pool ?? [];
-    burst.slice(0, 3).forEach((text, i) => window.setTimeout(() => {
-      const key = ++keyRef.current;
-      setFloating(list => [...list.slice(-5), { key, text, lane: i % 3 }]);
-      window.setTimeout(() => setFloating(list => list.filter(item => item.key !== key)), 3200);
-    }, i * 260));
+    const spike = view.reactions?.spike ?? [];
+    const pool = view.reactions?.pool ?? [];
+    [0, 1, 2].forEach(i => window.setTimeout(() => {
+      const line = drawChatLine(runKey, `${view.id}:spike`, spike, random.current) ?? drawChatLine(runKey, view.id, pool, random.current);
+      float(line, i % 3);
+    }, i * 420));
     playTick();
     buzz(25);
   }, [target]);
@@ -100,14 +108,16 @@ export function SourceTicker({ view }: { view: FillView }) {
       <span className={`source-ticker-pull${view.oddsPull ? '' : ' source-ticker-pull-none'}`} title="Taken off the checks it weighs on" aria-hidden={view.oddsPull ? undefined : true}>−{view.oddsPull || 0}</span>
     </p>
     {/* The number and its unit wrap apart, never inside the number, and the digits are tabular,
-        so the wobble never changes the ticker's height. */}
+        so a refresh never changes the ticker's height. */}
     <p className="source-ticker-count" aria-hidden="true"><b>{number}</b> <span>{view.count ? unit : 'of 100'}</span></p>
     <span className="source-ticker-bar" aria-hidden="true">
       <i style={{ width: `${Math.max(0, Math.min(100, view.value))}%` }} />
       {view.cues.map(cue => <em key={cue.at} className={cue.heard ? 'fill-gauge-tick fill-gauge-heard' : 'fill-gauge-tick'} style={{ left: `${cue.at}%` }} />)}
     </span>
     <div className="source-reactions" aria-hidden="true">
-      {floating.map(item => <span key={item.key} className={`source-reaction source-lane-${item.lane}`}><PeopleText text={item.text} /></span>)}
+      {floating.map(item => <span key={item.key} className={`source-reaction source-lane-${item.lane}${item.text === null ? ' source-reaction-join' : ''}`}>
+        <b className="source-reaction-who">{item.who}</b> {item.text === null ? 'joined' : <PeopleText text={item.text} />}
+      </span>)}
     </div>
   </div>;
 }

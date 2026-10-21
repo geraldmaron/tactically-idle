@@ -188,7 +188,7 @@ Tags: job=command; journeys=none (pacing decision); probes=none (time); lane=eng
 Needs: start=none; integrate=none; ship=none
 
 Dither stops at the open threat's minutes (`ditherCap`, `src/sim/clocks.ts`), so after a threat lands
-the sources' sim values freeze; only the count's wobble and the reactions keep moving. Decide whether
+the sources' sim values freeze; only the count's refresh churn and the chat keep moving. Decide whether
 sources keep rising past the cap (bounded, say to twice the threat's minutes) so pressure stays live,
 and measure it in `dither-balance.test.ts`.
 
