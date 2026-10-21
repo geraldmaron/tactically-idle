@@ -1,5 +1,5 @@
-// The depth register's optional fields (call-depth): a weighed choice collapses to title and cost
-// with its own Review button; the cold open and "Who they are" render only when authored, and a
+// The depth register's optional fields (call-depth): a weighed choice's card is its title and cost,
+// one tap to review; the cold open and "Who they are" render only when authored, and a
 // call without them renders exactly as before.
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
@@ -19,15 +19,16 @@ const noop = () => {};
 const render = (actions: ActionView[]) => renderToStaticMarkup(createElement(DecisionList, { prompt: 'What now?', actions, selectedId: null, expanded: false, onSelect: noop, onExpand: noop }));
 
 describe('weighed choices (choice-weighing)', () => {
-  it('collapses to the title and the cost, keeps harm in view, and reviews from its own button', () => {
+  it('shows the title and the cost, keeps harm in view, and reviews from the one card button', () => {
     const html = render([weighed, ...plain.slice(1)]);
     expect(html).toContain('data-action-id="weighed"');
     expect(html).toContain('<span class="callbtn-cost">The owner stays alone with him.</span>');
     expect(html).not.toContain('The full summary of the choice.');
     expect(html).not.toContain('The pull:');
-    expect(html).toMatch(/class="callbtn-expand" aria-expanded="false"/);
-    expect(html).toMatch(/class="callbtn-review" aria-pressed="false" aria-label="Review [^"]+"/);
-    expect(html).toMatch(/callbtn-harm callbtn-harm-\w+">harm /);
+    expect(html).not.toContain('callbtn-expand');
+    expect(html).not.toContain('callbtn-review');
+    expect(html).toMatch(/<button type="button" class="callbtn callbtn-weighed" data-action-id="weighed" aria-pressed="false" aria-label="Review [^"]+"/);
+    expect(html).toMatch(/callbtn-harm callbtn-harm-\w+">possible harm: /);
   });
 
   it('leaves a choice without a pull and cost exactly as it was', () => {
