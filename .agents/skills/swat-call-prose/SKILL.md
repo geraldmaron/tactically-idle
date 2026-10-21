@@ -286,15 +286,19 @@ skill's ledger-backed templates, in slots swat-call-design reserved.
 
 ## 7. Tension inside the lint, and the ethics line
 
-The prose lint (`npm run check:strings` runs it on every call) bans graphic
-injury, weapon specifics and procedure (UNSAFE_DETAIL), unchecked accusations,
-settled guilt and meta phrasing. Read the live lists in prose-lint.ts. A word
-that slips past a pattern is a gap, never a license.
+The prose lint (`npm run check:strings` runs it on every call) bans wound
+anatomy and gore (UNSAFE_DETAIL, E7), suicide method detail (SUICIDE_METHOD,
+E4.1), unchecked accusations, settled guilt and meta phrasing. Read the live
+lists in prose-lint.ts. Weapons, death, injury, procedure, restraint and the
+word "suicide" are allowed since the content rules audit of 2026-10-20: the
+settings filter keeps those topics off the board of a player who doesn't want
+them (docs/calls/notes/content-rules-audit.md). A word that slips past a
+pattern is a gap, never a license.
 
 Report regex results verbatim, with the lane enforcing now, the lane that
 would enforce if the lint were extended, and a lint-safe fallback, as
-vocabulary-and-lint.md shows. Affirmative weapon mentions and subject death
-lines go on the Lint policy collisions line even when the regex passes them.
+vocabulary-and-lint.md shows. A word a rule bans that the regex misses goes on
+the Lint policy collisions line.
 
 Ethics rules constrain what happens. They are never narrated. Write no line
 whose only job is to show the team complied ("Nobody promises him anything",
@@ -453,7 +457,7 @@ Call prose record
 - Tells: answered | feelings 0 <script and read>, policy voice 0 <script and read>, stock spoken 0 <script and read>, narrator hedges 0, address mix 0 | script only, not read <families | none>
 - String checks: answered | <command> exit <code> | opener share <word n%>, cadence <cv, OK | FLAT because> | written-voice <ran | not installed>
 - {lead} uses: answered | <n> across stages <list>
-- Lint policy collisions (owner decision, not blocker): <string, word, regex result verbatim, lane enforcing now, lane that would enforce, lint-safe fallback | none>
+- Lint policy collisions (a rule the regex misses, not blocker): <string, word, rule, regex result verbatim, lint-safe fallback | none>
 - Ethics line: answered | rules applied <E numbers> from <sibling rulebook | inline minimum>
 - Gates: answered | <command> exit <code> | not run <reason>
 - Punch-up: answered | seven passes done, ending written last

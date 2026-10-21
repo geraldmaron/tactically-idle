@@ -329,7 +329,7 @@ swat-call-design. Cite by name if its numbering differs.
 5. Oversight can be right (E10). A complaint or review is never an obstacle to a good officer.
 6. No officer death, and civilian harm never becomes an officer's flaw (rule 11 above).
 7. Nothing credits an entry the ethics screen flags (E12 talk to entry without a visible threat
-   and approval, E4 entry on a self-directed subject). Cite the screen line on the sheet.
+   and command's approval). Cite the screen line on the sheet.
 
 Tally loss, fear, injury and strain lines per officer and per culture field, and flag any officer
 above twice the median. Check every civilian cast against the deployed squads. Lines that touch

@@ -210,11 +210,11 @@ Five authenticity checks the rulebook states and the proof drafts failed.
    arrives, medics forward of the cordon, or family at the tape talking to the subject is a
    finding under E12.2 and E12.3, routed to swat-call-design when structural and swat-call-prose
    when one line misplaces someone.
-5. Death on the card. In a call the sheet marks as crisis (E4.0), any ending title, summary or
-   result that states a death is a block under E4.5, whatever a rulebook example shows. If an
-   example in the rulebook contradicts its own rule, file a consistency finding to
-   swat-call-design against the rulebook as well. Never park the contradiction as an owner
-   decision when the rule is plain.
+5. Crisis deaths. In a call the sheet marks as crisis (E4.0), a death may be shown since E4.5 was
+   lifted (2026-10-20), but any line that shows the act or its method is a block under E4.1, and
+   any that frames the death as peace, reunion or revenge is a block under E4.2. If an example in
+   the rulebook contradicts its own rule, file a consistency finding to swat-call-design against
+   the rulebook as well. Never park the contradiction as an owner decision when the rule is plain.
 
 ## 13. Engine side effects that punish restraint (pass five)
 

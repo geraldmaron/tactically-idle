@@ -88,12 +88,13 @@ reported missing, the file changed shape, so read it and say so in the record.
 
 It exits 1 when a blocking check fires. Blocking checks are over-limit,
 sentence-lint, dash, placeholder, missing-band, marker-name, marker-judge,
-ngram, path-echo, address-mix, clock-mix, stock-spoken, unsafe, accusation,
+ngram, path-echo, address-mix, clock-mix, stock-spoken, unsafe, method, accusation,
 settled, meta, inversion, fronted (above 1 per call), nothing-alone,
 fragments, fragment-open, mechanic, vague-preview, ending-status,
 role-position, threat-it, tape-subject and aphorism. Opener share and cadence
 are reported, never blocking. An unsafe, accusation or settled hit the owner
-has accepted is flagged to the owner instead of fixed.
+has accepted is flagged to the owner instead of fixed. A method hit is never
+accepted (E4.1).
 
 ## 3. Optional, written-voice's checker
 
@@ -149,7 +150,7 @@ The vendored script already covers the tells game strings need.
 | speech-tag | 6 or fewer per speaker | quote the line that matters instead of tagging paraphrase |
 | tape-subject, aphorism | 0 | the tape is a place. No slogan, chiasmus or "no X, just Y" |
 | rule-of-three | 3 or fewer | break some lists into two or four |
-| lint policy candidates | listed | each goes on the Lint policy collisions line |
+| method | 0 | suicide method detail (SUICIDE_METHOD, E4.1); never accepted, rewrite to what the person says |
 
 Opener share and cadence count only when the call has 10 or more sentences.
 A FLAT verdict is never just read. Vary sentence length in results and

@@ -50,7 +50,8 @@ read on 2026-10-06.
 
 | List | What it catches | Applies where | How to keep the tension |
 |---|---|---|---|
-| UNSAFE_DETAIL | injury, weapon, death, restraint and medical procedure words | every call string, before and after the check | write the decision and its cost, see the table below |
+| UNSAFE_DETAIL | wound anatomy and gore (E7) | every call string | see the table below |
+| SUICIDE_METHOD | suicide means, amounts and acts (E4.1) | every call string | see the table below |
 | ACCUSATION | theft, break-in, burglar, assault, threaten, suspect, intruder, trespass and kin | any pre-check sentence without a hedge or a negation | put the source in the same sentence, "the neighbor says", "reported" |
 | SETTLED | arrest, charged with, convicted, guilty, caught the | anywhere, unless negated | "Nobody is arrested." or say who takes over |
 | META_PHRASING | this scenario, the player, fictional, is claimed, in-game | everywhere | stay in the world and say what happened |
@@ -107,19 +108,18 @@ Speech may say "That’s six" inside quotation marks. Never write an absolute
 time ("arrives at 2:10") in a call with no fixed start time. Say the
 interval instead.
 
-## Lint-safe ways to say hard things
+## What the lint still bans, and what to write
 
-| Banned family | Write instead |
-|---|---|
-| gun, firearm, pistol, rifle, shotgun, ammunition, bullet | "armed", "a weapon", "something in his right hand", "patrol says there may be a weapon" |
-| knife, knives, blade | same as above |
-| shoot, shot dead, kill | the sound and its stop, "a bang from the back, then nothing" |
-| blood, bleed, wound, wounded, gore | "hurt", "injured", "can’t stand on that leg", "the medic wants a crew now" |
-| unconscious, not breathing, CPR, chest compressions, defibrillator | "not responding", "the medic starts working on him", "the crew takes over" |
-| restrain, handcuff, taser, baton, pepper spray, chokehold | "patrol takes over", "he leaves with patrol" |
-| suicide, overdose | what the person says, "says she doesn’t want to be alive", and the medic's need, never a method |
-| fracture, broken bone, concussion | "can’t put weight on it", "asks the same question twice" |
-| dosage, milligrams, tourniquet | never, in any lane |
+The content rules audit (2026-10-20, owner) lifted the topic bans the settings
+filter now covers. Weapon nouns, "shoot", "kill", "shot dead", "unconscious",
+"not breathing", CPR and other procedure words, restraint words, fracture and
+concussion, ammunition and "suicide" are all allowed in player text. Write them
+plainly when they are the true word. Two families stay banned.
+
+| Banned family | Rule | Write instead |
+|---|---|---|
+| blood, bleed, gore, gory | E7, no wound anatomy (AGENTS.md "Grounded") | "hurt", "can’t stand on that leg", "the medic wants a crew now" |
+| overdose, dosage, milligrams, lethal dose, sleeping pills, noose, hanged himself, slit or cut wrists, carbon monoxide | E4.1, suicide method detail | what the person says, "says she doesn’t want to be alive", and the medic's need, never a means, amount or act |
 
 When a lane-safe generic noun such as "weapon" must recur, use it at most
 twice on any one path. Carry the threat through position and action, "his
@@ -170,12 +170,10 @@ extended, and write the lint-safe fallback beside it, so the owner can choose
 either without another writing pass. A word outside every regex is an owner
 policy question, not a lint collision, and the record says which.
 
-The UNSAFE_DETAIL source comment allows "weapon" only in a negative report.
-Treat every affirmative weapon mention ("patrol saw a weapon in his hand") as
-an owner decision even though the regex passes it. The same holds for subject
-death lines ("may die", "died at the scene") under E7 and E9. If the call
-needs the lint extended, mark each string that would fail under it. All of these go on the record's Lint policy collisions
-line, which never blocks handoff on its own.
+Affirmative weapon mentions and death lines are no longer owner decisions
+(O1, revised 2026-10-20). A line that breaks a kept rule (E4.1, E7) without
+matching the regex goes on the record's Lint policy collisions line, which
+never blocks handoff on its own.
 
 ## Gaps are not licenses
 
@@ -185,15 +183,14 @@ word that slips past a pattern while carrying the banned meaning, and flag
 every exception to the owner in the prose record. A lint that misses a word is a finding for engineering, never a way
 around the rule.
 
-## Open owner decisions
+## Owner decisions, settled
 
-Two questions belong to the owner, so a writer flags them and never settles
-them alone.
-
-1. Whether armed calls may use plain clinical words the
-   prose lint bans ("bleeding from the arm", "not breathing").
-2. Where a crisis support line appears, if anywhere. 988 is a US-only line,
-   and no surface for it exists today.
+1. Clinical words. Settled 2026-10-20: plain procedure words ("not
+   breathing", CPR) are allowed; wound anatomy ("bleeding from the arm") stays
+   banned under E7.
+2. The crisis support line. Settled 2026-10-20: the call-card warning, the
+   Settings Support entry and the debrief line of every `suicide_self_harm`
+   situation (docs/content-rating.md).
 
 ## Binding hazards
 

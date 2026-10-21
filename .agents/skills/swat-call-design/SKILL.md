@@ -161,7 +161,7 @@ The rules.
 - The tactical team must be earned in player text (E12.1). If the briefing cannot quote a line
   for each activation condition, this is a patrol, crisis officer or EMS call.
 - Self-harm risk is judged from risk signs, never only from words said (E4). When present,
-  E4.2 to E4.5, E4.7 and E12.5 apply. Row C places every role against the advantage line and
+  E4.1 to E4.4a and E4.7 to E4.9 apply, and the situation declares `suicide_self_harm`. Row C places every role against the advantage line and
   writes threat values in the engine's enum spelling (engine-map.md section 2, E12.2).
 
 ## 4. The hook
@@ -375,8 +375,8 @@ missing, say so and apply this list as written.
 3. E3 Identity never signals danger. "Clear" needs a batch tally of the subject role across
    seeds. Until then the slot reads "pending batch tally".
 4. E4 Crisis rules, whenever weapon access meets a loss event and a refusal. Not applicable
-   needs a person-card reason. E4.5 overrides E2.1, so no death card. The sheet holds a drafted
-   content note and support line (E4.7), or the record is incomplete.
+   needs a person-card reason. No method detail (E4.1), no death as a release (E4.2). Every
+   crisis situation declares `suicide_self_harm` (E4.7), or the record is incomplete.
 5. E5 Domestic abuse is a pattern of control, with a named victim who has a life.
 6. E6 Forced entry costs someone, and the sheet says who. Entry against any refusal, of care or
    of entry, carries command's reason line, and so does a re-entry.
@@ -390,7 +390,7 @@ missing, say so and apply this list as written.
     can do, and no held person bargains. A clock alone never creates the threat.
 13. E12.5 No force or entry without a visible threat to life. An impasse alone never opens it.
     Row F lists each force and entry action's `visibleWhen` per situation with the quoted
-    threat line. A self-directed crisis situation shows no force option.
+    threat line. A threat to the subject's own life counts, with command's reason.
 
 ## 11. Engineering requests
 
@@ -449,7 +449,7 @@ Call design record
 - Dilemma per stage (row F): 1 <good vs good>, 2 <...>, 3 <...>; checklist 1 to 10 clean; options exclusive
 - Dominance grid (row F): per stage and variant <none beaten>; phantom costs 0; costs quoted <n>; minutes rule <pass>; payoff column filled
 - Action rows (row F): <n> rows, incomplete 0; helpers searched <symbols>; behavior reversed <none | which, why>
-- Force and entry gates (row F): <n> actions; visibleWhen per situation listed; threat lines quoted; self-directed situations with force visible 0
+- Force and entry gates (row F): <n> actions; visibleWhen per situation listed; threat lines quoted
 - Stage exits and context prompts (row F): <n> orders, dead ends 0; <n> prompts with exact Conditions, shadowed 0
 - Turn (row G): planted in <field> ("<fragment>"), revealed in <field>, reprices <choice>
 - Consequence matrix (row H): <n> actions, <n> cells, empty 0, mixed-equals-favorable-plus-time 0, cues traced
@@ -465,7 +465,7 @@ Call design record
 - Depth plan: lenses <L, L>; reframes s1 <scene>, s2, s3; palette <mechanisms, max per path>; temptation <choice, cue, break>; voices <roles with exchange lines>; epilogues <n of n endings>
 - Ethics screen (row M): E1 to E10, E12.1 to E12.5 <clear | finding, per line>; E4 <applies | screened, reason>
 - E3 tally (row M): clear, <seeds, subject-role distribution> | pending batch tally
-- Crisis checks (row M): E4.5 vs E2.1 checked; content note "<draft>"; support line "<draft>"; pending O2, R5 | E4 screened
+- Crisis checks (row M): E4.1 method 0; E4.2 release 0; `suicide_self_harm` declared on <situations> | E4 screened, <reason>
 - Concessions (row M): <option, approved by, what the team delivers, held person not a party> | none
 - Officer slots (row N): reserved in <briefing | debrief | none>; no branch depends on one; placeholders in player strings 0
 - Requests and owner decisions (row O): <none | R numbers, with build links>; <O number, exact strings with field paths | none>

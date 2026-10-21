@@ -102,10 +102,10 @@ Question. Does every line pass the rulebook in ../swat-call-design/references/et
 - Fix before ship. A loaded word with a plain replacement, such as war vocabulary or a hostage
   label on a barricade with no hostage.
 - Block. Any red line. A method, force as the reward, identity as a danger signal, gore, a crisis
-  death on the card, a real incident retold, restraint punished (including by a generated debrief
+  death shown as a release, a real incident retold, restraint punished (including by a generated debrief
   line), a negotiator relaying a third party's unverified allegation, or a tactical call-out the
   player text does not earn. So is an entry opened by a clock or a count of failed talks alone,
-  an entry on a subject whose threat is only to himself, a fastest force path with no visible
+  an entry with no command reason, a fastest force path with no visible
   threat to life and no command reason quoted before it, and an ending titled after what the
   team did not do (C11).
 
@@ -115,7 +115,7 @@ missing. Cite it as "inline <n>". On 2026-10-06 the rulebook's E1 to E10 ran in 
 1. No manual. No entry methods, munitions or ways to defeat police.
 2. Force is never the reward. The best grade goes to everyone walking out.
 3. Identity never signals danger. Threat comes only from behavior.
-4. Crisis rules apply. No method, no death on the card, the person is the stake.
+4. Crisis rules apply. No method, no death as a release, the person is the stake.
 5. Domestic abuse is a pattern of control, with a named victim who has a life.
 6. Forced entry costs someone, and the text shows who.
 7. No gore. Injuries are brief and plain, seen through the medic.

@@ -331,16 +331,16 @@ House target. No group's share in an armed, blamed or harmed slot runs above twi
 share. Over target goes to a human reviewer with route owner, to swat-call-design for the cast
 plan, and to engineering when the draw itself is skewed.
 
-## 6. Crisis frequency
+## 6. Crisis tagging
 
-A crisis call is one where a person may harm themselves. Tag by reading, since no field marks it.
+A crisis call is one where a person may harm themselves. The per-shift cap was lifted on
+2026-10-20 (E4.6): a player who doesn't want these calls filters `suicide_self_harm`. What the
+batch checks now is the tag.
 
-1. If you can play or script several shifts, count crisis calls per shift. House target is at
-   most one, never two in one shift.
-2. If you cannot, record "not measured" with the reason, count crisis types in scope, and file a
-   note asking engineering for a shift sampler.
-3. Every crisis call keeps death off the card, with "transported in critical condition" as the
-   worst shown outcome, per ../swat-call-design/references/ethics-and-authenticity.md.
+1. Every situation a reader judges to be a crisis carries `suicide_self_harm`
+   (`situations[*].descriptors`). A crisis situation without it is fix before ship, routed to
+   swat-call-design: the card would not warn and the filter would not reach it.
+2. No crisis line shows a method (E4.1) or a death as a release (E4.2).
 
 ## 7. Officer pressure spread
 
@@ -408,7 +408,7 @@ Batch audit <scope>, sample <calls> calls and <strings> strings, from <sheet URL
 | Roster surnames in civilian casts | | 0 against the visible roster (the name gate should hold this at 0) | |
 | Pool first names outside the cast | | 0 | |
 | Identity-by-role skew | | no group over 2x its expected share in armed, blamed or harmed roles | |
-| Crisis calls per shift | | at most 1 | |
+| Crisis situations without `suicide_self_harm` | | 0 | |
 | Officer pressure spread | | no officer over 2x the mean | |
 | Spelling in unlinted data | | 0 | |
 | Dashes and colons in game text | | 0 outside fixed formats | |

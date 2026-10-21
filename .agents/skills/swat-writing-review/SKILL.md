@@ -284,7 +284,7 @@ Four checks the proof rounds showed are easy to self-certify, so each needs quot
 4. Fastest force path. In each situation, quote the line showing a life visibly threatened or a
    real impasse, and command's reason, both before the entry option appears. Either missing is a
    block to swat-call-design under E12 and E4.0. Also list who stands where after the call-out,
-   and block any death on the card of a crisis call (E4.5).
+   and block any line in a crisis call that shows a method (E4.1) or a death as a release (E4.2).
 
 Details, the positions sweep and observed cases are in path-and-honesty-checks.md sections 12
 and 13.

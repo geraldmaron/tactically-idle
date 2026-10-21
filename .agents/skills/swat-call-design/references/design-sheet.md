@@ -114,8 +114,7 @@ L. Variant plan
 
 M. Ethics screen: E1 <clear | finding> ... E10 <...>; E4 <applies | screened, reason>;
    E3 <clear, tally <seeds, subject-role distribution> | pending batch tally>;
-   E4.5 vs E2.1 checked <yes>; crisis drafts (E4.7) content note "<...>", support line "<...>",
-   pending O2 and R5;
+   E4.1 method <clear>; E4.2 release <clear>; `suicide_self_harm` declared on <situations>;
    E12.1 <quoted lines>; E12.2 to E12.4 <clear | finding>; E12.5 <force gate rows in F>;
    Concessions <option id, who approves, what the team delivers, no held person a party>;
    Owner decisions (O1) <exact strings with field paths>
