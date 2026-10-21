@@ -289,9 +289,11 @@ Run from the repo root.
 
 Lint lists that collide with tactical writing.
 
-- `UNSAFE_DETAIL` bans words such as gun, firearm, knife, blood, wound, shoot, stab and ammunition
-  in lint-checked prose. It can miss compounds such as handgun and gunfire. That is a gap, never
-  a license.
+- `UNSAFE_DETAIL` bans blood and gore words (E7). `SUICIDE_METHOD` blocks suicide method
+  phrasings and `METHOD_REVIEW` flags ambiguous method words for a read (E4.1). Weapon, death,
+  injury, procedure and restraint words are allowed since the content rules audit of 2026-10-20
+  (docs/calls/notes/content-rules-audit.md). A phrasing a pattern misses is a gap, never a
+  license.
 - Accusation words (theft, intruder, suspect, assault, threaten, abuse) need a source, a hedge
   or a negation before the check. Arrest, charged, convicted and guilty appear only negated.
 

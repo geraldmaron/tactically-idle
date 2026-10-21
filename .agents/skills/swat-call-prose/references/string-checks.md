@@ -150,7 +150,8 @@ The vendored script already covers the tells game strings need.
 | speech-tag | 6 or fewer per speaker | quote the line that matters instead of tagging paraphrase |
 | tape-subject, aphorism | 0 | the tape is a place. No slogan, chiasmus or "no X, just Y" |
 | rule-of-three | 3 or fewer | break some lists into two or four |
-| method | 0 | suicide method detail (SUICIDE_METHOD, E4.1); never accepted, rewrite to what the person says |
+| method | 0 | suicide method phrasing (SUICIDE_METHOD, E4.1); never accepted, rewrite to what the person says |
+| method-review | each read | a word that may name a method (METHOD_REVIEW); a person rewrites it or records why it is not a method |
 
 Opener share and cadence count only when the call has 10 or more sentences.
 A FLAT verdict is never just read. Vary sentence length in results and

@@ -390,7 +390,7 @@ missing, say so and apply this list as written.
     can do, and no held person bargains. A clock alone never creates the threat.
 13. E12.5 No force or entry without a visible threat to life. An impasse alone never opens it.
     Row F lists each force and entry action's `visibleWhen` per situation with the quoted
-    threat line. A threat to the subject's own life counts, with command's reason.
+    threat line. A self-directed crisis situation shows no force option.
 
 ## 11. Engineering requests
 
@@ -449,7 +449,7 @@ Call design record
 - Dilemma per stage (row F): 1 <good vs good>, 2 <...>, 3 <...>; checklist 1 to 10 clean; options exclusive
 - Dominance grid (row F): per stage and variant <none beaten>; phantom costs 0; costs quoted <n>; minutes rule <pass>; payoff column filled
 - Action rows (row F): <n> rows, incomplete 0; helpers searched <symbols>; behavior reversed <none | which, why>
-- Force and entry gates (row F): <n> actions; visibleWhen per situation listed; threat lines quoted
+- Force and entry gates (row F): <n> actions; visibleWhen per situation listed; threat lines quoted; self-directed situations with force visible 0
 - Stage exits and context prompts (row F): <n> orders, dead ends 0; <n> prompts with exact Conditions, shadowed 0
 - Turn (row G): planted in <field> ("<fragment>"), revealed in <field>, reprices <choice>
 - Consequence matrix (row H): <n> actions, <n> cells, empty 0, mixed-equals-favorable-plus-time 0, cues traced

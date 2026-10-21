@@ -287,8 +287,9 @@ skill's ledger-backed templates, in slots swat-call-design reserved.
 ## 7. Tension inside the lint, and the ethics line
 
 The prose lint (`npm run check:strings` runs it on every call) bans wound
-anatomy and gore (UNSAFE_DETAIL, E7), suicide method detail (SUICIDE_METHOD,
-E4.1), unchecked accusations, settled guilt and meta phrasing. Read the live
+anatomy and gore (UNSAFE_DETAIL, E7), suicide method phrasings (SUICIDE_METHOD,
+E4.1), unchecked accusations, settled guilt and meta phrasing, and flags
+ambiguous method words for a read (METHOD_REVIEW). Read the live
 lists in prose-lint.ts. Weapons, death, injury, procedure, restraint and the
 word "suicide" are allowed since the content rules audit of 2026-10-20: the
 settings filter keeps those topics off the board of a player who doesn't want
@@ -457,7 +458,7 @@ Call prose record
 - Tells: answered | feelings 0 <script and read>, policy voice 0 <script and read>, stock spoken 0 <script and read>, narrator hedges 0, address mix 0 | script only, not read <families | none>
 - String checks: answered | <command> exit <code> | opener share <word n%>, cadence <cv, OK | FLAT because> | written-voice <ran | not installed>
 - {lead} uses: answered | <n> across stages <list>
-- Lint policy collisions (a rule the regex misses, not blocker): <string, word, rule, regex result verbatim, lint-safe fallback | none>
+- Lint policy collisions (kept rules the regex misses, and method-review reads; any unresolved E4.1 or E7 hit blocks handoff): <string, word, rule, regex result verbatim, rewritten to | not a method because | none>
 - Ethics line: answered | rules applied <E numbers> from <sibling rulebook | inline minimum>
 - Gates: answered | <command> exit <code> | not run <reason>
 - Punch-up: answered | seven passes done, ending written last

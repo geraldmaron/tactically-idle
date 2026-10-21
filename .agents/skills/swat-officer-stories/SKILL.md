@@ -298,7 +298,8 @@ Strain is a recoverable job injury, supported and written with dignity. Never wr
 
 An injury label names the event and the place, plain, with no body detail. Shape, "<what happened>
 <during | while> <the task or place>", with the civilian named by role ("Fall at the doorway while
-meeting the resident"). The prose lint bans "wound" and weapon nouns, so write the event instead.
+meeting the resident"). Write the event, not the body (E7): the lint still bans blood and gore
+words, though weapon nouns and "wounded" are allowed.
 
 A shift report entry runs 15 words at most. The UI prints the name first, so the detail must not
 repeat it. A leaning entry opens with the behavior the player saw, then the choice. Progress
@@ -329,7 +330,7 @@ swat-call-design. Cite by name if its numbering differs.
 5. Oversight can be right (E10). A complaint or review is never an obstacle to a good officer.
 6. No officer death, and civilian harm never becomes an officer's flaw (rule 11 above).
 7. Nothing credits an entry the ethics screen flags (E12 talk to entry without a visible threat
-   and command's approval). Cite the screen line on the sheet.
+   and approval, E4 entry on a self-directed subject). Cite the screen line on the sheet.
 
 Tally loss, fear, injury and strain lines per officer and per culture field, and flag any officer
 above twice the median. Check every civilian cast against the deployed squads. Lines that touch

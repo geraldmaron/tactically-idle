@@ -83,14 +83,16 @@ be remembered. E4 also applies as a screen whenever weapon access meets a loss e
   call that never asks reads false. The record slot is "applies" or "screened, <reason>",
   never a bare n/a.
 
-- E4.1 Suicide method detail (kept by the owner, 2026-10-20, when the topic rules below were
+- E4.1 Suicide method detail (kept by the owner, 2026-10-20, when the topic rule E4.5 was
   lifted). "Armed" and "hurt himself" are enough. Never name pills, amounts, means, where they
   came from, or an unusual method, and never show the act. Never imply a new act of self-harm
   between beats. If his condition worsens off-screen, the text ties it to the injury already
   disclosed ("The medic says the injury from before is worse."). Why it stays when the settings
-  filter covers the topic: method detail is the one part of a suicide portrayal tied to imitation
-  in the evidence [AU8][AU9], and it harms a reader whether or not they chose the topic. The
-  prose lint enforces it (`SUICIDE_METHOD`, `src/gen/incident/gates/prose-lint.ts`), with a test.
+  filter covers the topic: the drama guidance this rulebook cites [AU8][AU9] singles out method
+  detail as a risk to vulnerable readers, and that risk doesn't depend on whether they chose the
+  topic. The prose lint screens for it (`SUICIDE_METHOD` blocks, `METHOD_REVIEW` asks for a read,
+  `src/gen/incident/gates/prose-lint.ts`), but a regex can't catch every phrasing, so a human
+  method read in swat-writing-review is still required on every crisis call.
 - E4.2 Never a release, a reward or a single cause. Death brings no peace, reunion or revenge.
   Give two or three stressors, lightly.
 - E4.3 The person is the stake. Name them. Their survival is the win condition.
@@ -107,8 +109,10 @@ be remembered. E4 also applies as a screen whenever weapon access meets a loss e
   holds: the act is never shown, and E4.2 still holds: the death is never a release. Today's trees
   still spare their crisis subjects with `noFatal`; changing that is a content change, made on
   purpose with a fingerprint recapture.
-- E4.6 Lifted 2026-10-20 (owner, settings filtering). It capped crisis calls at one per shift. A
-  player who doesn't want them filters `suicide_self_harm`.
+- E4.6 Frequency cap. A run of these stories can make it seem normal. Cap crisis calls across
+  variants and never put two in one shift (house; no engine field yet). Kept by the content
+  rules audit of 2026-10-20: a filter decides whether a player meets these calls, not how often.
+  Lifting it is a separate spacing decision for the owner.
 - E4.7 Point to help. Every crisis situation carries the `suicide_self_harm` descriptor, which
   puts a warning on the call card and the support line in its debrief (`docs/content-rating.md`,
   wording approved 2026-10-20 in `docs/calls/notes/content-warnings-draft.md`). In the US that is
@@ -161,8 +165,8 @@ The usual demand is to be left alone [AU3].
 ### E7. No gore
 
 Injuries are brief and plain, seen through what the medic does. Stakes come from who is at
-risk, never from wounds [TV1]. The prose lint bans clinical words outright (see engine-map.md
-section 6). Plain labels such as "Wounded during the urgent response" show the register.
+risk, never from wounds [TV1]. The prose lint bans blood and gore words (`UNSAFE_DETAIL`, see
+engine-map.md section 6); plain procedure words were allowed on 2026-10-20. Plain labels such as "Wounded during the urgent response" show the register.
 
 ### E8. Composites only
 
@@ -262,9 +266,11 @@ excuses abuse.
   visible only under a `Condition` that shows a life visibly threatened. That is a confirmed
   injury, silence after a stated harm, or a threat to a named third party, each set by a truth
   branch whose text shows it. Any flag that makes such an option visible, including a derived
-  either-or flag, requires that threat flag. A threat to the subject's own life counts as a threat
-  to life here, and the option still needs command's reason (lifted 2026-10-20: a self-directed
-  situation used to show no force option at all). In every situation where the
+  either-or flag, requires that threat flag. When E4 applies and a situation's truth is
+  self-directed, no force option is visible in it. Talk failure there leads to a partial ending
+  with named responsibility, or to a medical or containment hold. This clause is how the game
+  responds to a crisis, not whether a crisis appears, so the content rules audit of 2026-10-20
+  kept it. In every situation where the
   subject is talking and the truth shows no threat to life, the entry option is hidden. The
   summary or the context prompt that unlocks entry names command's reason in one line. No
   player-facing line justifies entry by elapsed time ("too long", "has waited", "out of time").
@@ -346,8 +352,9 @@ What does not change, and why:
 - E2, force is never the reward. Darker makes force cost more, never pay more.
 - E3, identity never signals danger. Darker raises the stakes of prejudice.
 - E4's method, framing and language rules (E4.1 to E4.4a, E4.7 to E4.9). Safe messaging exists
-  because portrayals change real behavior [AU8][AU9]. The topic rules E4.5 and E4.6 were lifted
-  on 2026-10-20, because the settings filter now keeps the topic off a player's board.
+  because portrayals change real behavior [AU8][AU9]. E4.6 and the E12.5 crisis clause too. The
+  topic rule E4.5 was lifted on 2026-10-20, because the settings filter now keeps the topic off a
+  player's board.
 - E7, no wound anatomy. Blood and wounds as anatomy stay off the card (AGENTS.md, "Grounded").
   They add no psychology. Procedure and restraint words were lifted on 2026-10-20: injury and
   police force are filterable, and naming them plainly is not anatomy.
@@ -367,7 +374,7 @@ writing. A verdict changes the rule here, in swat-call-prose and in `game_string
 | Rule | Verdict | Reason |
 |---|---|---|
 | UNSAFE_DETAIL weapon nouns, `shoot`, `kill`, `wound`, `wounded`, `unconscious`, `not breathing` | Drop from the ban | E16. The call must name the threat object anyway, and the barricade already failed the gate on "rifle" |
-| UNSAFE_DETAIL gore, anatomy, procedure, restraint holds, ammunition, `shot dead`, `suicide`, `overdose` | Keep (2026-10-19). Revised 2026-10-20: blood and gore words kept (E7); procedure, restraint, ammunition, `shot dead`, `stab`, fracture and `suicide` lifted; method words moved to `SUICIDE_METHOD` (E4.1). Audit: `docs/calls/notes/content-rules-audit.md` | E1, E4.1, E4.9 and E7 |
+| UNSAFE_DETAIL gore, anatomy, procedure, restraint holds, ammunition, `shot dead`, `suicide`, `overdose` | Keep (2026-10-19). Revised 2026-10-20: blood and gore words kept (E7); procedure, restraint, ammunition, `shot dead`, `stab`, fracture and `suicide` lifted; method phrasings moved to `SUICIDE_METHOD` (blocking) and ambiguous method words to `METHOD_REVIEW` (read by a person) (E4.1). Audit: `docs/calls/notes/content-rules-audit.md` | E1, E4.1, E4.9 and E7 |
 | ACCUSATION words inside a transcript line | Relax: the speaker is the source | "You called me a thief" is the speaker's own framing, already sourced by the speaker format |
 | ACCUSATION in narration before a check | Keep | Spoiler and honesty rule (E11) |
 | Speech-tag cap, 6 per person per call | Keep for narration. Transcript lines don't count | The cap catches a tic. Speech now lives in the transcript |

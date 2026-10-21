@@ -116,8 +116,10 @@ drafted for the owner's approval, and none of it ships until the owner approves 
   2026-10-20).
 
 Owner decisions on the wording, 2026-10-20: the word "suicide" is allowed on the card warning, the
-launch advisory, Settings and the debrief support line, and nowhere else in player text (the prose
-lint still bans it in call text). The card warns with the whole call's descriptors, the union of
+launch advisory, Settings and the debrief support line. Later the same day the owner-approved content
+rules audit (`docs/calls/notes/content-rules-audit.md`) allowed it in call text too, which supersedes
+"nowhere else"; ethics E4.9 still governs how it is used, and suicide method detail stays banned
+(E4.1). The card warns with the whole call's descriptors, the union of
 its situations, never the drawn situation's, so it can't give away the hidden truth. The wording
 in `docs/calls/notes/content-warnings-draft.md` sections 1 to 3 is approved as drafted.
 

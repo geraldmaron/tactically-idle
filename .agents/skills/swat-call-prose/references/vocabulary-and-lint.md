@@ -51,7 +51,8 @@ read on 2026-10-06.
 | List | What it catches | Applies where | How to keep the tension |
 |---|---|---|---|
 | UNSAFE_DETAIL | wound anatomy and gore (E7) | every call string | see the table below |
-| SUICIDE_METHOD | suicide means, amounts and acts (E4.1) | every call string | see the table below |
+| SUICIDE_METHOD | suicide method phrasings (E4.1), blocking | every call string | see the table below |
+| METHOD_REVIEW | words that may name a method (overdose, dosage, sleeping pills), report only | every call string | a person reads each hit |
 | ACCUSATION | theft, break-in, burglar, assault, threaten, suspect, intruder, trespass and kin | any pre-check sentence without a hedge or a negation | put the source in the same sentence, "the neighbor says", "reported" |
 | SETTLED | arrest, charged with, convicted, guilty, caught the | anywhere, unless negated | "Nobody is arrested." or say who takes over |
 | META_PHRASING | this scenario, the player, fictional, is claimed, in-game | everywhere | stay in the world and say what happened |
@@ -119,7 +120,7 @@ plainly when they are the true word. Two families stay banned.
 | Banned family | Rule | Write instead |
 |---|---|---|
 | blood, bleed, gore, gory | E7, no wound anatomy (AGENTS.md "Grounded") | "hurt", "can’t stand on that leg", "the medic wants a crew now" |
-| overdose, dosage, milligrams, lethal dose, sleeping pills, noose, hanged himself, slit or cut wrists, carbon monoxide | E4.1, suicide method detail | what the person says, "says she doesn’t want to be alive", and the medic's need, never a means, amount or act |
+| lethal dose, noose, pills to die, hanged or drowned or shot or cut himself, slit or cut wrists, jumped off a bridge or roof (blocked); overdose, dosage, milligrams, sleeping pills, carbon monoxide (read by a person) | E4.1, suicide method detail | what the person says, "says she doesn’t want to be alive", and the medic's need, never a means, amount or act |
 
 When a lane-safe generic noun such as "weapon" must recur, use it at most
 twice on any one path. Carry the threat through position and action, "his
@@ -171,16 +172,18 @@ either without another writing pass. A word outside every regex is an owner
 policy question, not a lint collision, and the record says which.
 
 Affirmative weapon mentions and death lines are no longer owner decisions
-(O1, revised 2026-10-20). A line that breaks a kept rule (E4.1, E7) without
-matching the regex goes on the record's Lint policy collisions line, which
-never blocks handoff on its own.
+(O1, revised 2026-10-20). A `METHOD_REVIEW` hit is read by a person and either
+rewritten or recorded as not a method, with the reason. A line that breaks a
+kept rule (E4.1, E7) without matching the regex is rewritten before handoff:
+the regex is a screen, the rule is what blocks. The record's Lint policy
+collisions line lists each one and what it became.
 
 ## Gaps are not licenses
 
-The weapon pattern matches whole words, so compound words such as "handgun"
-and "gunfire" pass it, and the call trees already use both in places. Avoid any
-word that slips past a pattern while carrying the banned meaning, and flag
-every exception to the owner in the prose record. A lint that misses a word is a finding for engineering, never a way
+The patterns match whole words and set phrasings, so a reworded method ("took
+everything in the cabinet") or a compound can slip past them. Avoid any
+phrasing that carries a banned meaning (E4.1, E7) whatever the regex says, and
+record each one in the prose record. A lint that misses a word is a finding for engineering, never a way
 around the rule.
 
 ## Owner decisions, settled
