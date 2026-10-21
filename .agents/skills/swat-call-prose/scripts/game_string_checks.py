@@ -95,6 +95,16 @@ TAPE_SUBJECT = re.compile(r"\bthe tape (sees|saw|films|filmed|watches|watched|he
 # Slogans in place of a person acting.
 APHORISM = re.compile(r"\bno [\w" + "’" + r"' ]{1,20}, just\b|\bevery (minute|second|hour)\b[^.]*\bis an? (minute|second|hour)\b|"
                       r"\bno more waiting\b|\bwaiting on (silence|quiet)\b", re.I)
+# Machine-writing tells a regex can catch reliably (docs/calls/notes/going-live-ai-tells.md, owner
+# 2026-10-21): the narrator captioning what a gesture means instead of letting it stand. Narrow on
+# purpose: an anticipation clause, a milestone stamp, an "as if" explanation, the "It also" menu
+# template. Spoken lines are exempt (people talk like this); the wider families stay a human read.
+AI_TELL = [
+    (re.compile(r"\bbefore (?:anyone|anybody|whoever|any of them) (?:has |had )?(?:asked|said|told|spoken|noticed)\b|\bwithout being (?:asked|told)\b", re.I), "anticipation clause; let the act stand without a caption"),
+    (re.compile(r"\bfor the first time\b", re.I), "milestone stamp; say what happens"),
+    (re.compile(r"\bas if\b", re.I), "an 'as if' explanation; report the act"),
+    (re.compile(r"(?:^|[.!?]\s+)It also\b"), "the 'It also' menu template; name the cost as an event"),
+]
 # Verb-first inversion and moved-predicate fragments, the opener-share dodge.
 INVERSION = re.compile(r"^(Out|In|Down|Up|Inside|Back|Away|Off|Over|Gone) (comes|came|goes|went|walks|walked|steps|stepped|drops|dropped|falls|fell)\b")
 MOVED_FRAGMENT = re.compile(r"^(Out|In|Down|Up|Inside|Gone|Gone inside|Back|Away)[.]$")
@@ -159,7 +169,7 @@ BLOCKING = ("over-limit", "sentence-lint", "dash", "placeholder", "missing-band"
             "marker-judge", "ngram", "path-echo", "address-mix", "clock-mix",
             "unsafe", "method", "accusation", "settled", "meta", "stock-spoken", "inversion", "fronted",
             "nothing-alone", "fragments", "fragment-open", "mechanic", "vague-preview", "ending-status",
-            "role-position", "threat-it", "tape-subject", "aphorism")
+            "role-position", "threat-it", "tape-subject", "aphorism", "ai-tell")
 
 
 def sentences(text):
@@ -293,6 +303,10 @@ def main():
             flag("mechanic", row, f"'{MECHANIC.search(bare).group(0)}'; say who waits or what does not happen")
         if TAPE_SUBJECT.search(bare):
             flag("tape-subject", row, "the tape is a place; name the people at it")
+        if surface not in SPOKEN:
+            for pattern, why in AI_TELL:
+                if (m := pattern.search(bare)):
+                    flag("ai-tell", row, f"'{m.group(0).strip()}' {why}")
         if APHORISM.search(bare) and surface in ("summary", "preview", "prompt", "result", "ending_summary"):
             flag("aphorism", row, f"'{APHORISM.search(bare).group(0)}'; a person doing a visible act instead")
         if THREAT_IT.search(bare):
@@ -551,7 +565,7 @@ def main():
             "path-repeat", "path-echo", "address-mix", "clock-mix", "cost-template", "lead-thin",
             "opener-share", "cadence-flat", "triad", "unsafe", "method", "method-review", "meta", "accusation", "settled", "surface",
             "inversion", "fronted", "nothing-alone", "fragments", "fragment-open", "narrator-hedge",
-            "mechanic", "vague-preview", "ending-status", "tape-subject", "aphorism", "threat-it",
+            "mechanic", "vague-preview", "ending-status", "tape-subject", "aphorism", "ai-tell", "threat-it",
             "role-position", "it-check", "tense-mix", "tense-call", "speech-tag", "negation-openers"]
     print("summary " + ", ".join(f"{k} {counts[k]}" for k in keys) + f", strings {len(rows)}")
     if a.write_txt:
