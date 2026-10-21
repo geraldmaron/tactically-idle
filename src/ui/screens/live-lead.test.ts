@@ -62,7 +62,7 @@ describe('choice cards', () => {
 
   it('shows the threat as one still line: label and minutes', () => {
     const html = renderToStaticMarkup(createElement(ThreatPill, { label: 'The count reaches zero', minutes: 6 }));
-    expect(html.replace(/<[^>]+>/g, '')).toBe('The count reaches zero·6 min');
+    expect(html.replace(/<[^>]+>/g, '')).toBe('The count reaches zero·\u20076 min');
     expect(html).toContain('aria-label="Threat: The count reaches zero in 6 minutes"');
   });
 });

@@ -103,7 +103,8 @@ pressure a minute, and the debrief's audience factor on trust (`CLOCK_RULES_V1.f
 
 - The threat's drain, then every source as a ticker: the label, a count that eases toward the sim's
   value and wobbles about 3% either way, a bar with a tick at each cue, and the odds pull.
-- A comms log above the choices, newest first, each new line keyed by a radio squelch.
+- A comms log above the choices, newest at the bottom, each new line keyed by a radio squelch. It
+  holds its box before the first line and scrolls inside it, and the threat's landing joins it.
 - The frame glows red at the top in the threat's warn half and all round in its last quarter.
 - Sound (`src/ui/audio/live-audio.ts`): squelch, a phone tick when a source jumps, a crowd murmur at
   the crowd's level, and a heartbeat in the last quarter. All synthesized, so there are no clips to

@@ -37,11 +37,14 @@ import { Icon, actionIcon, materialIcon, roomIcon } from '../icons';
 import type { IconName } from '../icons';
 import { feetInches, opMinutes, signed, sqft } from '../format';
 import { CONSEQUENCE_LABEL, OddsBar, OutcomeForecast } from './OperationFeedback';
-import { DecisionList, LeadFace, RATING_SHORT } from './DecisionList';
+import { DecisionList, LeadFace, RATING_SHORT, WhatMattersNow, NOW_LABEL, padDigits, type Guidance } from './DecisionList';
 import { fillEffectLine, fillMinutesToBite, leadingPressure, liveFillViews, liveStallFeed, pressureUrgency, reachByAction, threatLandingText, landingSubjects, type LandingSubject } from './fill-gauge';
 import { CommsLog, SourceTicker } from './LiveFeed';
 import { STANCE_LABEL } from '../components/IncidentPeople';
 import type { FillView } from '../../sim/clocks';
+import { formatCount } from '../../sim/pressure-sources';
+import type { CheckKind } from '../../sim/scenario-types';
+import { getScenario } from '../../sim/scenario-registry';
 import { CONTRIBUTOR_GROUPS } from './contributor-groups';
 import { GamePeopleProvider, PeopleText } from '../people/PeopleText';
 import type { Lexicon } from '../people/lexicon';
@@ -143,11 +146,8 @@ export function LiveView(p: LiveViewProps) {
   const [mapFolded, setMapFolded] = useState(readMapFolded);
   const [briefingOpen, setBriefingOpen] = useState(false);
   const [officerOpen, setOfficerOpen] = useState<Id | null>(null);
-  // The choice the player is reading (an opened card): the map shows where it happens.
-  const [previewId, setPreviewId] = useState<Id | null>(null);
   const expanded = expandedStage === p.progress.stage;
   const available = p.actions.map((action) => action.id === sel?.id ? sel : action);
-  const previewed = previewId ? available.find((action) => action.id === previewId) ?? null : null;
   // Renderer props that may not be declared yet (floor tabs, environment overlay). Spread so this compiles either way.
   const blueprintExtras = { floor: p.floor, onFloorChange: p.onFloorChange, environment: p.environment ?? undefined };
   const changed = !!p.lastChange?.spaceIds.length;
@@ -162,6 +162,8 @@ export function LiveView(p: LiveViewProps) {
   const fills = liveFillViews(p.g, p.dither ?? 0);
   const pressure = leadingPressure(threat, p.dither ?? 0, []);
   const comms = beat === 'decide' ? liveStallFeed(p.g, p.dither ?? 0) : [];
+  const landed = pressure?.kind === 'threat' && pressure.left <= 0 ? threatLandingText(p.g) : null;
+  const subjects = landed ? landingSubjects(p.g, p.dither ?? 0) : [];
   const reach = reachByAction(p.g, available.map((action) => action.id));
   const casualties = p.g.activeRun?.officerCasualties ?? {};
   const focusTask = focus ? p.squadTasks.find((task) => task.squadId === focus.id) : undefined;
@@ -174,7 +176,6 @@ export function LiveView(p: LiveViewProps) {
   if (beatSeen !== beatKey) {
     setBeatSeen(beatKey);
     if (mapFull) setMapFull(false);
-    if (previewId) setPreviewId(null);
   }
 
   const squadRow = <div className="live-squad" aria-label={focus ? `Squad ${focus.id}, ${focus.name}` : 'Your team'}>
@@ -239,7 +240,7 @@ export function LiveView(p: LiveViewProps) {
       </header>
       <div className="live-bar live-strip">
         <StageSteps progress={p.progress} />
-        {pressure?.kind === 'threat' && <ThreatPill label={pressure.label} minutes={pressure.minutes} dither={p.dither} landed={pressure.left <= 0 ? threatLandingText(p.g) : null} subjects={pressure.left <= 0 ? landingSubjects(p.g, p.dither ?? 0) : []} />}
+        {pressure?.kind === 'threat' && <ThreatPill label={pressure.label} minutes={pressure.minutes} dither={p.dither} />}
         {fills.length > 0 && <div className="live-sources">
           {fills.map((view) => view.count || view.reactions ? <SourceTicker key={view.id} view={view} /> : <FillGauge key={view.id} view={view} />)}
         </div>}
@@ -274,7 +275,7 @@ export function LiveView(p: LiveViewProps) {
                 highlightSpaceIds={p.highlightSpaceIds}
                 onSelectSpace={p.onSelectSpace}
                 lastChange={p.lastChange}
-                overlays={sel?.overlays ?? previewed?.overlays}
+                overlays={sel?.overlays}
                 showMaterials={materials}
                 {...blueprintExtras}
               />
@@ -307,19 +308,15 @@ export function LiveView(p: LiveViewProps) {
           </div>}
         </> : <>
           {p.feedback}
-          <CommsLog lines={comms} />
+          <CommsLog lines={comms} landed={landed ? <ThreatLanded text={landed} subjects={subjects} /> : null} />
           <section className="call operation-choices" aria-label="Your call">
+            {/* Tapping a card opens its review; tapping the reviewed card again closes it. */}
             <p className="call-head">
               <span className="call-label">{stageNumber > 0 ? `Stage ${stageNumber} of ${p.progress.stages.length}` : 'Your next decision'}</span>
-              {sel && (
-                <button type="button" className="call-details" onClick={p.onOpenDetails} aria-expanded={p.detailsOpen}>
-                  Review decision
-                  <Icon name="chevronDown" size={14} />
-                </button>
-              )}
             </p>
             <DecisionList prompt={p.progress.prompt} exchange={p.progress.exchange} actions={available} reach={reach} selectedId={sel?.id ?? null} expanded={expanded} officers={p.g.officers}
-              onSelect={p.onSelectAction} onPreview={setPreviewId} onExpand={() => setExpandedStage(expanded ? null : p.progress.stage)} />
+              guidance={<WhatMattersNow {...guidanceFor(p.g, pressure?.kind === 'threat' ? pressure : null, fills)} />}
+              onSelect={p.onSelectAction} onExpand={() => setExpandedStage(expanded ? null : p.progress.stage)} />
           </section>
           {p.failedResponse}
           {p.supportContext}
@@ -350,21 +347,32 @@ export function LiveView(p: LiveViewProps) {
  * min", over a bar. `minutes` is what the threat allows; `dither` is the stall so far
  * (docs/call-pressure.md), so the minutes left are `minutes - dither` and the bar and the text show
  * the same number. An empty bar means the threat lands on any choice. The bar only changes width
- * when the stall moves, and never animates under reduced motion. */
-export function ThreatPill({ label, minutes, dither = 0, landed = null, subjects = [] }: { label: string; minutes: number; dither?: number;
-  /** At zero the threat has landed: the line the player reads when it happens (fill-gauge.ts threatLandingText). */
-  landed?: string | null;
-  /** The subjects it wound up (fill-gauge.ts landingSubjects), each with their agitation's rise. */
-  subjects?: readonly LandingSubject[] }) {
+ * when the stall moves, and never animates under reduced motion. At zero the pill keeps its shape
+ * and reads "Now"; what happened joins the comms log (ThreatLanded), so the pinned strip
+ * never changes height and nothing under it moves (owner, 2026-10-21). */
+export function ThreatPill({ label, minutes, dither = 0 }: { label: string; minutes: number; dither?: number }) {
   const left = Math.max(0, minutes - Math.max(0, dither));
   const shown = Math.ceil(left);
   const share = minutes > 0 ? Math.max(0, Math.min(1, left / minutes)) : 0;
   const urgency = pressureUrgency({ kind: 'threat', label, minutes, left });
-  // At zero the bar gives way to what happened: it lands on any commit, and the cards' odds already
-  // count it (sim/clocks.ts stalledRun).
-  if (left <= 0 && landed) return <p className="threat-pill pressure-critical threat-pill-landed" role="status" aria-label={`${label}. It happened`}>
+  return <p className={`threat-pill pressure-${urgency}${left <= 0 ? ' threat-pill-landed' : ''}`} role={left <= 0 ? 'status' : undefined}
+    aria-label={left <= 0 ? `${label}. It happened` : `Threat: ${label} in ${shown} ${shown === 1 ? 'minute' : 'minutes'}`}>
     <Icon name="hourglass" size={14} />
-    <span className="threat-pill-label"><PeopleText text={landed} /></span>
+    <span className="threat-pill-label"><PeopleText text={label} /></span>
+    <span className="threat-pill-sep" aria-hidden="true">·</span>
+    <b className="threat-pill-min">{left <= 0 ? NOW_LABEL : `${padDigits(shown, 2)} min`}</b>
+    <span className="threat-pill-bar" role="meter" aria-label="Minutes left before the threat lands" aria-valuemin={0} aria-valuemax={minutes} aria-valuenow={shown} aria-valuetext={`${shown} of ${minutes} minutes`}>
+      <i style={{ width: `${(share * 100).toFixed(2)}%` }} />
+    </span>
+  </p>;
+}
+
+/** What the threat did when it landed (fill-gauge.ts threatLandingText), with the subjects it wound
+ * up and their agitation’s rise, which grows in once (no loop). It joins the comms log, which scrolls
+ * inside its own box. */
+export function ThreatLanded({ text, subjects }: { text: string; subjects: readonly LandingSubject[] }) {
+  return <div className="threat-landed">
+    <p className="threat-landed-text"><Icon name="hourglass" size={13} /><PeopleText text={text} /></p>
     {subjects.length > 0 && <span className="threat-pill-subjects">{subjects.map((subject) =>
       <span key={subject.id} className="threat-subject" data-subject-stance={subject.stance}>
         <span className="threat-subject-name"><PeopleText text={subject.label} /> · {STANCE_LABEL[subject.stance]}</span>
@@ -373,16 +381,31 @@ export function ThreatPill({ label, minutes, dither = 0, landed = null, subjects
           <b style={{ left: `${subject.before}%`, width: `${Math.max(1, subject.after - subject.before)}%` }} />
         </span>
       </span>)}</span>}
-  </p>;
-  return <p className={`threat-pill pressure-${urgency}`} aria-label={`Threat: ${label} in ${shown} ${shown === 1 ? 'minute' : 'minutes'}`}>
-    <Icon name="hourglass" size={14} />
-    <span className="threat-pill-label">{label}</span>
-    <span className="threat-pill-sep" aria-hidden="true">·</span>
-    <b className="threat-pill-min">{shown} min</b>
-    <span className="threat-pill-bar" role="meter" aria-label="Minutes left before the threat lands" aria-valuemin={0} aria-valuemax={minutes} aria-valuenow={shown} aria-valuetext={`${shown} of ${minutes} minutes`}>
-      <i style={{ width: `${(share * 100).toFixed(2)}%` }} />
-    </span>
-  </p>;
+  </div>;
+}
+
+/** The checks a pressure source weighs on, in the words a card would use. */
+const CHECK_WORDS: Record<CheckKind, string> = {
+  contact: 'talking', observation: 'watching', execution: 'moving in', pressure: 'keeping calm', medical: 'medical work', coordination: 'working together',
+};
+
+/** What matters now (DecisionList WhatMattersNow): the stage's threat, and the pressure source
+ * pulling hardest on the odds, or the fullest one while none pulls yet. Its count is the sim's, not
+ * the ticker's wobble, so the line moves only when the call does. */
+export function guidanceFor(g: LiveViewProps['g'], threat: { label: string; left: number } | null, fills: readonly FillView[]): Guidance {
+  const run = g.activeRun;
+  const clocks = run ? getScenario(run.scenarioId)?.clocks ?? [] : [];
+  const sources = fills.filter((view) => view.count);
+  const top = sources.reduce<FillView | null>((best, view) => !best || (view.oddsPull ?? 0) > (best.oddsPull ?? 0)
+    || ((view.oddsPull ?? 0) === (best.oddsPull ?? 0) && !best.oddsPull && view.value > best.value) ? view : best, null);
+  const kinds = clocks.find((def) => def.id === top?.id)?.source?.odds?.kinds ?? [];
+  const words = kinds.map((kind) => CHECK_WORDS[kind]);
+  const checks = words.length > 1 ? `${words.slice(0, -1).join(', ')} and ${words.at(-1)} are harder` : `${words[0] ?? 'every check'} is harder`;
+  const pull = top?.oddsPull ?? 0;
+  return {
+    threat: threat ? { label: threat.label, left: threat.left } : null,
+    factor: top?.count ? { count: `${formatCount(top.count.value)} ${top.count.unit}`, pull, effect: pull > 0 ? checks.charAt(0).toUpperCase() + checks.slice(1) : 'No pull on the odds yet' } : null,
+  };
 }
 
 /** A gauge that fills (a crowd filming, a subject streaming), in the threat pill's family: the label,
@@ -584,6 +607,26 @@ export interface ActionSheetProps {
 
 export function ActionSheet(p: ActionSheetProps) {
   const v = p.view;
+  const shown = p.open && !!v;
+  const modal = !!p.onBackToSupport;
+  // A card opens this sheet without trapping focus (the map stays live), so focus moves to its title
+  // for the keyboard and the screen reader, and goes back to the card that opened it when it closes.
+  // A modal sheet (from care and support) does both itself (components/sheet-focus.ts).
+  useEffect(() => {
+    if (!shown || modal || typeof document === 'undefined') return;
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const frame = requestAnimationFrame(() => {
+      const title = document.querySelector<HTMLElement>('.operation-action-sheet .sheet-title');
+      if (!title) return;
+      title.tabIndex = -1;
+      title.focus({ preventScroll: true });
+    });
+    return () => {
+      cancelAnimationFrame(frame);
+      const active = document.activeElement;
+      if (opener?.isConnected && (!active || active === document.body || active.closest('.operation-action-sheet'))) opener.focus({ preventScroll: true });
+    };
+  }, [shown, modal, v?.id]);
   const availableAlternative = p.all.find((action) => action.id !== v?.id && action.eligible);
   const names = (ids: SquadId[]) => ids.map((id) => p.squads.find((s) => s.id === id)?.name ?? id);
   const squadText = p.acting.length === 0 ? 'No squad' : p.acting.length === 1 ? `Squad ${p.acting[0]}` : `Squads ${p.acting.join(' + ')}`;
@@ -623,6 +666,11 @@ export function ActionSheet(p: ActionSheetProps) {
           {p.preview}
           {p.squads.length > 1 && <ActionSquadAssignment {...p} view={v} />}
           {v.summary !== v.outcomePreview.favorable && <p className="operation-action-summary"><PeopleText text={v.summary} /></p>}
+          {/* A weighed choice's pull and cost, read here since its card shows only the cost. */}
+          {v.weighing && <dl className="action-sheet-weigh">
+            <div><dt>The pull</dt><dd><PeopleText text={v.weighing.pull} /></dd></div>
+            <div className="action-sheet-weigh-cost"><dt>The cost</dt><dd><PeopleText text={v.weighing.cost} /></dd></div>
+          </dl>}
           {p.officers && v.eligible && <LeadPicker view={v} officers={p.officers} lead={p.lead ?? v.officerIds[0] ?? null} bestFit={p.bestFit ?? null} order={p.leadOrder} marks={p.leadMarks ?? []} blend={p.leadBlend ?? []} certs={p.leadCerts ?? []} onPick={p.onPickLead} />}
           {v.eligible && v.authority?.allowed && <p className="operation-command-line"><Icon name="radio" size={14} />{v.authority.reason}</p>}
           <div className="chips action-glance">

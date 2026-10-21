@@ -4,7 +4,8 @@
 // said. The numbers come from the sim's projection (sim/clocks.ts stalledRun, stallFeed); the
 // wobble on a count and the timing of the floating reactions are presentation only and never reach
 // the sim, so a replay or the Scenario Lab reads exactly what the cards did.
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
 import type { FillView, StallLine } from '../../sim/clocks';
 import { formatCount } from '../../sim/pressure-sources';
 import { Icon } from '../icons';
@@ -90,14 +91,17 @@ export function SourceTicker({ view }: { view: FillView }) {
   }, [target]);
 
   const unit = view.count?.unit;
-  const label = view.count ? `${formatCount(shown)} ${unit}` : `${Math.round(view.value)} of 100`;
+  const number = view.count ? formatCount(shown) : `${Math.round(view.value)}`;
   return <div className={`source-ticker${view.stopped ? ' source-ticker-stopped' : ''}`} data-source={view.id} role="group" aria-label={`${view.label}: ${view.count ? `${formatCount(target)} ${unit}` : `${Math.round(view.value)} of 100`}${view.stopped ? ', stopped' : ''}`}>
     <p className="source-ticker-head">
       <i className={`source-live-dot${view.stopped ? ' source-live-off' : ''}`} aria-hidden="true" />
       <span className="source-ticker-label"><PeopleText text={view.label} /></span>
-      {view.oddsPull ? <span className="source-ticker-pull" title="Taken off the checks it weighs on">−{view.oddsPull}</span> : null}
+      {/* Always in the row, hidden until it pulls, so a long label wraps once and never rewraps. */}
+      <span className={`source-ticker-pull${view.oddsPull ? '' : ' source-ticker-pull-none'}`} title="Taken off the checks it weighs on" aria-hidden={view.oddsPull ? undefined : true}>−{view.oddsPull || 0}</span>
     </p>
-    <b className="source-ticker-count" aria-hidden="true">{label}</b>
+    {/* The number and its unit wrap apart, never inside the number, and the digits are tabular,
+        so the wobble never changes the ticker's height. */}
+    <p className="source-ticker-count" aria-hidden="true"><b>{number}</b> <span>{view.count ? unit : 'of 100'}</span></p>
     <span className="source-ticker-bar" aria-hidden="true">
       <i style={{ width: `${Math.max(0, Math.min(100, view.value))}%` }} />
       {view.cues.map(cue => <em key={cue.at} className={cue.heard ? 'fill-gauge-tick fill-gauge-heard' : 'fill-gauge-tick'} style={{ left: `${cue.at}%` }} />)}
@@ -108,11 +112,21 @@ export function SourceTicker({ view }: { view: FillView }) {
   </div>;
 }
 
-/** What is said on scene while the player decides, newest first: beats in their speaker's voice and
- * the cues the clocks pass. Each new line keys the radio. */
-export function CommsLog({ lines }: { lines: readonly StallLine[] }) {
+/** What is said on scene while the player decides, oldest first like a radio log: beats in their
+ * speaker's voice and the cues the clocks pass, with what the threat did (`landed`) at the moment it
+ * lands. Each new line keys the radio. The log holds its box from the decision's first render, before
+ * anything is said, and new lines join at the bottom and scroll it there (while the player hasn't
+ * scrolled back), so no line already shown ever moves and nothing under the log does either (owner,
+ * 2026-10-21). */
+export function CommsLog({ lines, landed = null }: { lines: readonly StallLine[]; landed?: ReactNode }) {
   const seen = useRef(new Set<string>());
   const [fresh, setFresh] = useState<Set<string>>(new Set());
+  const list = useRef<HTMLUListElement>(null);
+  const following = useRef(true);
+  // Where the landing sits: after the lines said before it.
+  const landedAt = useRef<number | null>(null);
+  if (!landed) landedAt.current = null;
+  else if (landedAt.current === null) landedAt.current = lines.length;
   useEffect(() => {
     const added = lines.filter(line => !seen.current.has(line.id));
     if (!added.length) return;
@@ -123,15 +137,24 @@ export function CommsLog({ lines }: { lines: readonly StallLine[] }) {
     const timer = window.setTimeout(() => setFresh(new Set()), 1600);
     return () => window.clearTimeout(timer);
   }, [lines]);
-  if (!lines.length) return null;
-  const shown = [...lines].reverse().slice(0, 4);
-  return <section className="comms-log" aria-label="On scene, while you decide" aria-live="polite">
+  useLayoutEffect(() => {
+    const el = list.current;
+    if (el && following.current) el.scrollTop = el.scrollHeight;
+  }, [lines.length, !!landed]);
+  const at = landedAt.current ?? lines.length;
+  const line = (entry: StallLine) => <li key={entry.id} className={`comms-line comms-${entry.kind}${fresh.has(entry.id) ? ' comms-fresh' : ''}`}>
+    {entry.speaker && <b className="comms-speaker"><PeopleText text={entry.speaker} /></b>}
+    <span className="comms-text"><PeopleText text={entry.text} /></span>
+  </li>;
+  return <section className="comms-log" aria-label="On scene, while you decide">
     <p className="comms-log-head"><Icon name="radio" size={13} />On scene</p>
-    <ul>
-      {shown.map(line => <li key={line.id} className={`comms-line comms-${line.kind}${fresh.has(line.id) ? ' comms-fresh' : ''}`}>
-        {line.speaker && <b className="comms-speaker"><PeopleText text={line.speaker} /></b>}
-        <span className="comms-text"><PeopleText text={line.text} /></span>
-      </li>)}
+    {/* Focusable so a keyboard can scroll it; polite, so each new line is read once. */}
+    <ul ref={list} className="comms-log-lines" tabIndex={0} aria-live="polite" aria-label="Radio and what the team hears, newest last"
+      onScroll={(event) => { const el = event.currentTarget; following.current = el.scrollHeight - el.scrollTop - el.clientHeight < 8; }}>
+      {lines.slice(0, at).map(line)}
+      {landed && <li className="comms-line comms-landed">{landed}</li>}
+      {lines.slice(at).map(line)}
+      {!landed && !lines.length && <li className="comms-line comms-quiet">Nothing on the radio yet.</li>}
     </ul>
   </section>;
 }

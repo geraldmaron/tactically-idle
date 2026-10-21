@@ -3,7 +3,9 @@
 // `data-action-id` on each card so the lab can annotate the player's real cards. Store-free. Each
 // available card names who would lead it and their number for it. The threat itself shows once, as
 // the strip's bar (owner, 2026-10-20: no tag repeats it); a card's minutes turn red when the threat
-// would land on it even if it goes well, amber when only a worse result lets it land.
+// would land on it even if it goes well, amber when only a worse result lets it land. What every card
+// shares (the threat, the source pulling hardest) sits once above them in What matters now, and a
+// tap on a card opens its review (owner, 2026-10-21).
 import { Fragment, useState } from 'react';
 import type { JSX, ReactNode } from 'react';
 import type { ActionView, Id, Officer, RatingKey } from '../../sim/types';
@@ -12,7 +14,7 @@ import { Icon, actionIcon } from '../icons';
 import { opMinutes } from '../format';
 import { PeopleText } from '../people/PeopleText';
 import { Transcript, type SpokenLine } from '../components/Transcript';
-import { CONSEQUENCE_LABEL, OddsBar } from './OperationFeedback';
+import { CONSEQUENCE_LABEL } from './OperationFeedback';
 import { outcomePercentages, visibleDecisions } from './liveModels';
 import { gaugeReachTag, type GaugeReach } from './fill-gauge';
 import { currentPortraitKey, portraitSource } from '../portraits/Portrait';
@@ -70,30 +72,54 @@ function CardMeta({ a, officers, reach = [] }: { a: ActionView; officers?: Reado
   </span>;
 }
 
+/** The shared context every card would otherwise repeat, once above the cards: the stage's threat
+ * and the live factor pulling hardest on the odds (owner, 2026-10-21). Its rows keep their place
+ * while the numbers move, so nothing under it shifts. */
+export interface Guidance {
+  /** The stage's threat and the minutes left (0 once it has landed). */
+  threat: { label: string; left: number } | null;
+  /** The pressure source pulling hardest, or the one running when none pulls yet. */
+  factor: { count: string; pull: number; effect: string } | null;
+}
+
+export function WhatMattersNow({ threat, factor }: Guidance): JSX.Element | null {
+  if (!threat && !factor) return null;
+  return <section className="matters-now" aria-label="What matters now">
+    <h3 className="matters-now-head">What matters now</h3>
+    <dl className="matters-now-rows">
+      {threat && <div className="matters-now-row matters-now-threat">
+        <dt className="sr-only">Threat</dt>
+        <dd><Icon name="hourglass" size={14} /><span className="matters-now-text"><PeopleText text={threat.label} /></span>
+          <b className="matters-now-num">{threat.left > 0 ? `${padDigits(Math.ceil(threat.left), 2)} min` : NOW_LABEL}</b></dd>
+      </div>}
+      {factor && <div className="matters-now-row matters-now-factor">
+        <dt className="sr-only">Pulling on the odds</dt>
+        <dd><Icon name="crowd" size={14} /><span className="matters-now-text"><b className="matters-now-count">{factor.count}</b> <span className="matters-now-sub">{factor.effect}</span></span>
+          <b className="matters-now-num">{factor.pull > 0 ? `−${factor.pull}` : ''}</b></dd>
+      </div>}
+    </dl>
+  </section>;
+}
+
 /** `actions` are the stage's choices as the player sees them, with any reviewed choice already
- * forecast for its chosen squads. */
-export function DecisionList({ prompt, exchange, actions, selectedId, expanded, officers, reach, team, onSelect, onPreview, onExpand }: { reach?: Record<Id, GaugeReach[]>; prompt: string; exchange?: readonly SpokenLine[]; actions: ActionView[]; selectedId: Id | null; expanded: boolean;
+ * forecast for its chosen squads. Tapping a card opens its review sheet (owner, 2026-10-21: one tap
+ * to review, no separate expand); the pull and the full reading live in the sheet. */
+export function DecisionList({ prompt, exchange, actions, selectedId, expanded, officers, reach, team, guidance, onSelect, onExpand }: { reach?: Record<Id, GaugeReach[]>; prompt: string; exchange?: readonly SpokenLine[]; actions: ActionView[]; selectedId: Id | null; expanded: boolean;
   /** The deployed officers, for each card's lead line; left out, cards show no lead. */
   officers?: Readonly<Record<Id, LeadOfficer>>;
   /** Who's on it, set between the moment and the choices, because every card names one of them to lead. */
   team?: ReactNode;
+  /** What matters now, above the cards. */
+  guidance?: ReactNode;
   onSelect(id: Id): void;
-  /** The choice the player opened to read, or null when they close it: the live call shows where it
-   * happens on the map (docs/call-presentation.md, "One screen"). */
-  onPreview?(id: Id | null): void;
   onExpand(): void }): JSX.Element {
   const decisions = visibleDecisions(actions, selectedId, expanded);
-  const [opened, setOpened] = useState<ReadonlySet<Id>>(() => new Set());
-  const toggle = (id: Id) => {
-    const opening = !opened.has(id);
-    setOpened((prev) => { const next = new Set(prev); if (next.has(id)) next.delete(id); else next.add(id); return next; });
-    onPreview?.(opening ? id : null);
-  };
   const open = actions.filter((action) => action.eligible).length;
   return <>
     {prompt && <p className="operation-stage-prompt"><PeopleText text={prompt} /></p>}
     <Transcript lines={exchange} label="On the line" />
     {team}
+    {guidance}
     {actions.length > 0 && <h3 className="operation-choice-count">Your call<span>{open} open{actions.length > open ? ` · ${actions.length - open} locked` : ''}</span></h3>}
     {actions.length === 0 ? (
       <p className="call-empty">No decisions available right now.</p>
@@ -103,15 +129,17 @@ export function DecisionList({ prompt, exchange, actions, selectedId, expanded, 
           const on = selectedId === a.id;
           // Available choices lead as full cards; unavailable ones follow as slim rows that stay reviewable.
           const firstLocked = !a.eligible && (index === 0 || decisions[index - 1].eligible);
+          const forecast = `choice-forecast-${a.id}`;
           return (
             <Fragment key={a.id}>
             {firstLocked && <p className="call-locked-label"><Icon name="lock" size={13} />Unavailable now</p>}
-            {a.eligible && a.weighing ? <WeighedChoice action={a} on={on} open={opened.has(a.id)} officers={officers} reach={reach?.[a.id]} onToggle={() => toggle(a.id)} onReview={() => onSelect(a.id)} /> : <button
+            <button
               type="button"
-              className={`callbtn${on ? ' callbtn-on' : ''}${a.eligible ? '' : ' callbtn-off'}`}
+              className={`callbtn${on ? ' callbtn-on' : ''}${a.eligible ? '' : ' callbtn-off'}${a.eligible && a.weighing ? ' callbtn-weighed' : ''}`}
               data-action-id={a.id}
               aria-pressed={on}
               aria-label={`Review ${a.title}${a.eligible ? '' : ': requirements unmet'}`}
+              aria-describedby={a.eligible ? forecast : undefined}
               onClick={() => onSelect(a.id)}
             >
               <Icon name={a.eligible ? actionIcon(a.icon) : 'lock'} size={!a.eligible ? 16 : actions.length > 2 ? 24 : 30} className="callbtn-icon" />
@@ -122,19 +150,20 @@ export function DecisionList({ prompt, exchange, actions, selectedId, expanded, 
                     <>
                       <Icon name="lock" size={11} /> <PeopleText text={a.reason} />
                     </>
+                  ) : a.weighing ? (
+                    // A weighed choice reads as its cost; the pull and the full summary are in the sheet.
+                    <span className="callbtn-cost"><PeopleText text={a.weighing.cost} /></span>
                   ) : (
                     <PeopleText text={a.summary} />
                   )}
                 </span>
                 {a.eligible && a.authority?.allowed && <span className="callbtn-command"><Icon name="radio" size={12} />{a.authority.reason}</span>}
                 {a.eligible && a.deceives && <span className="callbtn-command callbtn-deceive"><Icon name="radio" size={12} />Command hasn’t approved this</span>}
+                {/* Who leads and possible harm are never folded away. */}
                 <CardMeta a={a} officers={officers} reach={reach?.[a.id]} />
-                {a.eligible && <span className="callbtn-forecast">
-                  {!a.eventResult && <OddsBar likelihood={a.likelihood} mini />}
-                  <span className="callbtn-forecast-text"><ChoiceTime a={a} /> · {!a.eventResult ? `${outcomePercentages(a.likelihood).favorable}% chance to go well · ` : ''}<span className={`callbtn-harm callbtn-harm-${a.consequenceLevel}`}>possible harm: {CONSEQUENCE_LABEL[a.consequenceLevel].toLowerCase()}</span></span>
-                </span>}
+                {a.eligible && <Forecast a={a} id={forecast} />}
               </span>
-            </button>}
+            </button>
             </Fragment>
           );
         })}
@@ -144,42 +173,30 @@ export function DecisionList({ prompt, exchange, actions, selectedId, expanded, 
   </>;
 }
 
-/** The odds and time line every available choice shows. */
-function Forecast({ a }: { a: ActionView }) {
-  return <span className="callbtn-forecast">
-    {!a.eventResult && <OddsBar likelihood={a.likelihood} mini />}
-    <span className="callbtn-forecast-text"><ChoiceTime a={a} /> · {!a.eventResult ? `${outcomePercentages(a.likelihood).favorable}% chance to go well · ` : ''}<span className={`callbtn-harm callbtn-harm-${a.consequenceLevel}`}>possible harm: {CONSEQUENCE_LABEL[a.consequenceLevel].toLowerCase()}</span></span>
+/** A number padded to `width` digits with figure spaces, which are a digit wide in tabular type and
+ * never collapse: a live number then keeps its width and its place as it ticks from 10 to 9. */
+export const padDigits = (n: number, width: number) => String(n).padStart(width, '\u2007');
+/** "Now" in the minutes' place once the threat lands, padded to the width of "12 min" in the
+ * monospaced digits it replaces, so it takes the same box and nothing beside it moves. */
+export const NOW_LABEL = 'Now'.padStart(6, '\u2007');
+
+/** The card's odds as a thin bar whose three bands all start at its left edge, stacked: as the stall
+ * moves the odds, each band only grows or shrinks, so no band moves (a flex row of bands would slide
+ * the later two, which the browser counts as a layout shift). */
+function CardOdds({ likelihood }: Pick<ActionView, 'likelihood'>) {
+  const p = outcomePercentages(likelihood);
+  return <span className="odds-bar odds-bar-mini odds-stack" role="img" aria-label={`${p.favorable}% goes well, ${p.mixed}% complications, ${p.adverse}% goes badly`}>
+    <i className="odds-adverse" style={{ width: '100%' }} />
+    <i className="odds-mixed" style={{ width: `${p.favorable + p.mixed}%` }} />
+    <i className="odds-favorable" style={{ width: `${p.favorable}%` }} />
   </span>;
 }
 
-/** A choice with a pull and a cost (choice-weighing). Collapsed it is the title and the cost, so
- * several choices fit a phone screen; tapping the text opens the full summary, the pull, the cost
- * and the odds in place. Possible harm stays on the collapsed card (harm is never folded). Review is its own 44px button on every card, so reviewing never takes an
- * extra tap: expanding is for reading, Review is for deciding. */
-function WeighedChoice({ action: a, on, open, officers, reach, onToggle, onReview }: { action: ActionView; on: boolean; open: boolean; officers?: Readonly<Record<Id, LeadOfficer>>; reach?: GaugeReach[]; onToggle(): void; onReview(): void }) {
-  const panel = `choice-weigh-${a.id}`;
-  return <div className={`callbtn callbtn-weighed${on ? ' callbtn-on' : ''}${open ? ' callbtn-open' : ''}`} data-action-id={a.id}>
-    <button type="button" className="callbtn-expand" aria-expanded={open} aria-controls={panel} onClick={onToggle}>
-      <Icon name={actionIcon(a.icon)} size={24} className="callbtn-icon" />
-      <span className="callbtn-text">
-        <span className="callbtn-title"><PeopleText text={a.title} /></span>
-        {!open && <span className="callbtn-cost"><PeopleText text={a.weighing!.cost} /></span>}
-      </span>
-      <Icon name={open ? 'chevronUp' : 'chevronDown'} size={16} className="callbtn-chevron" />
-    </button>
-    {open && <div id={panel} className="callbtn-weigh">
-      <p className="callbtn-full"><PeopleText text={a.summary} /></p>
-      <p className="callbtn-weigh-line"><b>The pull:</b> <PeopleText text={a.weighing!.pull} /></p>
-      <p className="callbtn-weigh-line callbtn-weigh-cost"><b>The cost:</b> <PeopleText text={a.weighing!.cost} /></p>
-    </div>}
-    {a.authority?.allowed && <span className="callbtn-command"><Icon name="radio" size={12} />{a.authority.reason}</span>}
-    {a.deceives && <span className="callbtn-command callbtn-deceive"><Icon name="radio" size={12} />Command hasn’t approved this</span>}
-    {/* Like harm, who leads is never folded away. */}
-    <CardMeta a={a} officers={officers} reach={reach} />
-    {open && <Forecast a={a} />}
-    <button type="button" className="callbtn-review" aria-pressed={on} aria-label={`Review ${a.title}`} onClick={onReview}>
-      {!open && <span className="callbtn-review-odds"><ChoiceTime a={a} />{!a.eventResult ? ` · ${outcomePercentages(a.likelihood).favorable}% to go well` : ''} · <span className={`callbtn-harm callbtn-harm-${a.consequenceLevel}`}>harm {CONSEQUENCE_LABEL[a.consequenceLevel].toLowerCase()}</span></span>}
-      <span className="callbtn-review-label">Review<Icon name="chevronRight" size={14} /></span>
-    </button>
-  </div>;
+/** The odds, time and possible harm every available choice shows. The chance holds a fixed width of
+ * tabular digits, so the line never rewraps as the stall moves it. */
+function Forecast({ a, id }: { a: ActionView; id: string }) {
+  return <span className="callbtn-forecast">
+    {!a.eventResult && <CardOdds likelihood={a.likelihood} />}
+    <span className="callbtn-forecast-text" id={id}><ChoiceTime a={a} /> · {!a.eventResult ? `${padDigits(outcomePercentages(a.likelihood).favorable, 2)}% chance to go well · ` : ''}<span className={`callbtn-harm callbtn-harm-${a.consequenceLevel}`}>possible harm: {CONSEQUENCE_LABEL[a.consequenceLevel].toLowerCase()}</span></span>
+  </span>;
 }
