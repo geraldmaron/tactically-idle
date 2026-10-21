@@ -393,7 +393,7 @@ export function ThreatPill({ label, minutes, dither = 0 }: { label: string; minu
  * inside its own box. */
 export function ThreatLanded({ text, subjects }: { text: string; subjects: readonly LandingSubject[] }) {
   return <div className="threat-landed">
-    <p className="threat-landed-text"><Icon name="hourglass" size={13} /><PeopleText text={text} /></p>
+    <p className="threat-landed-text"><Icon name="hourglass" size={13} /><span><PeopleText text={text} /></span></p>
     {subjects.length > 0 && <span className="threat-pill-subjects">{subjects.map((subject) =>
       <span key={subject.id} className="threat-subject" data-subject-stance={subject.stance}>
         <span className="threat-subject-name"><PeopleText text={subject.label} /> · {STANCE_LABEL[subject.stance]}</span>

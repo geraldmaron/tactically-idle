@@ -183,14 +183,37 @@ would show, beats on every threat, a trait the call favors, and physical acts th
 and the kit. A type returns to the board only with its call (`CALL_TREES`). Done per call: the same
 gates and review as Going Live.
 
-### after-landing: What the scene does once a threat has landed
+### after-landing: When the threat's time runs out, the call moves on and logs the indecision
 Tags: job=command; journeys=none (pacing decision); probes=none (time); lane=engine
-Needs: start=none; integrate=none; ship=none
+Needs: start=none (owner answers below); integrate=none; ship=none
 
-Dither stops at the open threat's minutes (`ditherCap`, `src/sim/clocks.ts`), so after a threat lands
-the sources' sim values freeze; only the count's refresh churn and the chat keep moving. Decide whether
-sources keep rising past the cap (bounded, say to twice the threat's minutes) so pressure stays live,
-and measure it in `dither-balance.test.ts`.
+Owner, 2026-10-21: when a threat's timer runs out "a thing" should happen, the next outcome, logged
+as indecision. Today the landing is only projected (`stalledRun`); nothing is committed until a
+choice, and dither stops at the threat so the scene freezes. Proposed: an engine `lapse` event that
+commits the stall when the drain empties, records it in the log ("No call made: <threat>"), shows
+it as a result beat, then reopens the point without that threat.
+
+Codex adversarial review (gpt-6.1-sol, 2026-10-21), verdict needs validation. Must hold:
+- One settlement rule shared by lapse and decide, guarded by run revision, decision identity,
+  pending state and a spent threat; stale commands are refused, never applied after.
+- Timer Off never lapses, but a slow choice still lands an unspent threat by its own minutes. The
+  timer setting reaches the engine explicitly (it isn't in `Ctx` today). Timing must keep running
+  while the player is on another tab, and respect the hidden-app pause.
+- One mutation path: don't commit `stalledRun` and then advance time again. A clock-out during the
+  lapse can route or end the call, so reopening isn't unconditional.
+- History gets a lapse entry kind with no action, band or sample; saves validate it; the Lab's moves,
+  rewind and links replay it deterministically (`GameFrame.tsx`, `model/call.ts`, `lab-handoff.ts`,
+  `traceRun`).
+- The threat is spent for every reader (matchedEffects, the strain test, card warnings, the cap),
+  keyed by a stable threat id (NodeThreat has none).
+- The result beat persists across reload (today `resultOf` is local UI state).
+- Strain from waiting is a new rule over every deployed officer, not the focused squad, and is
+  measured for balance. No tactical XP credit for a lapse. One `recordStall` sample per window.
+- Continued inaction needs a policy: after one lapse the next clock cue would freeze the scene again.
+
+Owner decisions needed before start: (1) does the van's lapse reopen the same choices with its costs
+shown, or must it route to an authored next node (calls lane content), (2) what continued inaction
+does after one lapse, (3) whether waiting strains the team.
 
 ### one-card-board: The board with one curated kind
 Tags: job=command; journeys=answer-a-call; probes=none (board pacing); lane=engine
