@@ -154,6 +154,8 @@ describe('the threat bar', () => {
   });
   it('is empty at the cap and never negative', () => {
     expect(bar(8)).toMatch(/width:0(\.0+)?%/);
-    expect(bar(20)).toContain('0 min');
+    // Past the cap the pill says the threat landed, and never shows negative minutes.
+    expect(bar(20)).toContain('threat-pill-landed');
+    expect(bar(20)).not.toMatch(/-\d+ min/);
   });
 });
