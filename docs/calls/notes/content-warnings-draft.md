@@ -156,92 +156,95 @@ reads the same after every ending, including the ones where the subject walks ou
 
 ## 4. Push-back lines (DRAFT, not yet approved)
 
-### The rule, as revised by the owner on 2026-10-20
+### The rule (owner, 2026-10-20)
 
-In a situation with `suicide_self_harm`, the person at risk never speaks a push-back line. Others
-on scene may, under E4: no line blames the player for the at-risk person's harm, and no line
-presses guilt about looking away (`docs/call-pressure.md`, "Push-back lines"). All three hostage
-situations carry `suicide_self_harm` because of the taker, so no line below is the taker's, and
-every speaker is someone else on scene: the courier, the owner, the cousin, the regular, or the
-team on the radio.
+Any speaker may have a push-back line, the taker included. Lines are not suppressed by situation;
+a player who doesn't want the hostage call's themes filters them in Settings
+(`docs/call-pressure.md`, `docs/content-rating.md`). The lines still follow `swat-call-prose` and
+the prose lint as they stand. An earlier draft of this section, written while the taker was
+excluded, is in this file's history (commit 6d97111).
 
 ### How the lines work
 
-- One line per threat, fired once when dither reaches the threshold: half the threat's minutes,
-  rounded down, never under 2. No hostage threat is 2 minutes or less, so every threat gets one.
-- Each line is a transcript line (`{ by, line }`, the shape of `TreeLine`): no quotation marks,
-  no speaker tag, the UI prints the name. The field it lands in is engine-dither's to name; this
-  draft assumes one line and one threshold on each `TreeThreat`.
-- A line never mentions the player, the time spent deciding or anyone looking away. It reacts to
-  what is happening on scene, and it foreshadows the threat it sits on, so when the threat lands
-  the player has already heard it coming (the cue-trace rule in swat-call-design).
-- A line holds in every state that reaches its node. The speaker is in the same place in every
-  prompt variant of that node, and the line names nothing a variant contradicts.
+- One line per threat, fired once when dither reaches half the threat's minutes, rounded down,
+  never under 2. No hostage threat is 2 minutes or less, so every threat gets one.
+- Each line is a transcript line (`{ by, line }`, the shape of `TreeLine`): no quotation marks, no
+  speaker tag, the UI prints the name. The field it lands in is engine-dither's to name.
+- A line reacts to the scene and foreshadows its threat, so when the threat lands the player has
+  already heard it coming (swat-call-design's cue-trace rule). It never talks about the player
+  taking their time.
+- The taker speaks only at nodes where they are on the phone in every prompt variant (offer,
+  talking, threat, owner_down). Where a variant has the line cut or silent (out_keys, both_inside,
+  standoff, out_cousin), someone else speaks.
 
 ### The lines
 
 | Node | Threat minutes | Threshold | Speaker | Line | Where the speaker is | What it warns of |
 |---|---|---|---|---|---|---|
-| offer | 4 | 2 | courier | The van’s running out front. I left it running. | inside, in the doorway; heard over the open counter phone | the courier edging for the door |
+| offer | 4 | 2 | taker | The courier keeps looking at the door. Not yet. | on the counter phone with the negotiator | the courier edging for the door |
 | out_back_door | 4 | 2 | radio | Alley door. Handle’s turning again. Nobody out. | the team watching the alley door | the alley door opening |
-| out_keys | 5 | 2 | courier | When I left, {taker.he} had the till drawer open. | outside behind the patrol car, talking to the negotiator | the count at the till |
-| out_six_years | 4 | 2 | courier | My dispatcher’s called four times. What do I tell them? | outside by the cruiser, bag still on | the courier pressing patrol about the van |
-| out_cousin | 4 | 2 | cousin | Let me go up to the glass. {taker.He}’ll know it’s me. | at the tape, in uniform from the depot | the cousin going for the step |
-| both_inside | 5 | 2 | radio | Front glass. Blinds coming down. Losing our view. | the team at the corner, watching the front glass | the blinds |
+| out_keys | 5 | 2 | courier | When I left, {taker.he} had the till drawer open. | outside behind the patrol car | the count at the till |
+| out_six_years | 4 | 2 | courier | Eleven stops left. My van’s still running at the curb. | outside by the cruiser, bag still on | the courier pressing patrol about the van |
+| out_cousin | 4 | 2 | cousin | That glass. {taker.He} can’t see my face from back here. | at the tape, in uniform from the depot | the cousin going for the step |
+| both_inside | 5 | 2 | radio | Front glass. Blinds coming down. Losing our view. | the team at the corner, on the front glass | the blinds |
 | his_side | 5 | 2 | owner | I don’t have my ledger. I can’t give the count from memory. | inside at the counter; heard over the phone, as in the node’s own exchange | the count read aloud again |
 | one_door | 3 | 2 | courier | {taker.He} {taker~has|have} looked up at that clock six times now. | inside by the door; heard over the phone | the deadline on the clock |
-| talking | 5 | 2 | regular | People back here are getting their phones out. | at the tape with the other regulars | the filming |
+| talking | 5 | 2 | taker | Who’s that out front with the phone up? | on the phone with the negotiator | the filming |
 | standoff | 10 | 5 | regular | It’ll be dark soon. {owner.first} never stays open past dark. | at the tape | dark |
-| threat | 3 | 2 | radio | More units inbound with sirens on. Need them cut. | the team, asking command | the sirens |
-| fired_on | 5 | 2 | cousin | Every window on this block is open, with people hanging out of them. | at the tape | the neighbors at their windows |
-| owner_down | 4 | 2 | radio | The taker’s yelling for a medic. Door’s still bolted. | the team at the corner, with the medic | the taker shouting down the phone |
-| last_one | 5 | 2 | owner | Every night {taker.first} sat down back there to count the drawer. | outside in a blanket from the medic | the taker sitting down out of sight |
-| stayed_behind | 5 | 2 | radio | Near the till. Voices going up inside. | the team watching the glass | the argument inside |
-| nobody_followed | 5 | 2 | regular | Hear that scraping? Somebody’s dragging the big table. | at the tape; nine years of mornings in the place | the table across the door |
+| threat | 3 | 2 | taker | Shut those sirens off. I hear every one of them. | on the phone, the handgun on the owner | the sirens |
+| fired_on | 5 | 2 | cousin | Curtains keep moving upstairs. More faces at the windows. | at the tape | the neighbors at their windows |
+| owner_down | 4 | 2 | taker | {owner.first} won’t answer me. Where’s that ambulance? | shouting into the phone | the shouting getting louder |
+| last_one | 5 | 2 | owner | When the rush got bad, {taker.first} would sit down where nobody could see. | outside in a blanket from the medic | the taker sitting down out of sight |
+| stayed_behind | 5 | 2 | radio | Till. One coworker keeps looking back toward the door. | the team on the glass | the argument inside |
+| nobody_followed | 5 | 2 | radio | Front door. Movement by the big table. | the team on the front door | the table across the door |
 
-Lengths are 38 to 68 characters with the longest pool first names bound and pronouns bound as
-"they", inside the 90-character transcript budget. Speakers across the call: courier 4, radio 5,
-regular 3, owner 2, cousin 2.
+Lengths are 38 to 71 characters with the longest pool first names bound and pronouns bound as
+"they", inside the 90-character transcript budget. Speakers: taker 4, radio 4, courier 3, owner 2,
+cousin 2, regular 1.
 
-### E4 screen, line by line
+### Ethics screen, line by line
+
+The settings filter now covers the call's themes, so E4 no longer silences anyone. The rules on
+how a crisis is written still hold inside any line:
 
 | Check | Result |
 |---|---|
-| The taker never speaks a push-back line | 0 of 16 lines are the taker's |
-| No line blames the player for the taker's harm | 0. No line mentions the taker's safety, and none is addressed to the player |
-| No guilt about looking away | 0. No line mentions time passing on the player's side, waiting, or anyone being ignored |
-| E4.1 no method | 0 method words. The handgun is never named in these lines |
-| E4.2 no single cause, no release | 0. One line touches the taker's past (the nightly count, at last_one), as a habit, never a reason |
-| E4.3 the person is the stake | The last_one line is the owner remembering the taker's nightly count, a person, not a threat |
+| E4.1 no method | 0 method words; the handgun is never named in these lines |
+| E4.2 no single cause, no release | 0. The taker's four lines are about the courier, the filming, the sirens and the owner, never about themselves |
 | E4.9 language | 0 hits on the avoid list |
-| Lines near the at-risk person's worst moments (threat, owner_down, last_one) | Spoken by the team or the owner, about the scene (sirens, the bolted door, the habit), never about what the taker might do to themselves |
+| E2, force never the reward | 0. No line praises or urges force |
+| E12.4, a clock never creates the threat | Each line foreshadows a threat already in the tree; none sets a threat mark |
 
 ### Prose gates on these lines
 
-String checker (`game_string_checks.py`, live lint source), 16 lines bound as "they": exit 0.
-Dash 0, colon 0, stock-spoken 0, feeling 0, engine-word 0, word-choice 0, weapon-speech 0, unsafe 0.
-Cadence FLAT (0.53) across 16 lines that never share a path. Reported, not chased.
+String checker (`game_string_checks.py`, live lint source), 16 lines bound as "they": exit 0. Dash 0,
+colon 0, stock-spoken 0, feeling 0, engine-word 0, word-choice 0, weapon-speech 0, unsafe 0.
 
 Path check: each line placed on its node's path (prompt, the node's exchange, the line, then the
-threat's text) and checked for echoes. Three echoes in my first draft were rewritten (the clock
-over the register, on the floor, by the register). Now path-echo 0. The checker's other hits on
-those paths are all in existing tree text, not these lines: "flat" in the talking prompt and
-"leaning" in the fired_on threat, worth a later prose pass.
+threat's text). One echo ("at the tape" in the talking line) was rewritten; path-echo 0. The other
+checker hits on those paths are in existing tree text: "flat" in the talking prompt, "leaning" in
+the fired_on threat, past tense in the out_cousin threat, and "asks patrol" in the out_six_years
+threat. Worth a later prose pass on the tree.
 
-Continuity by hand: the standoff line first said the owner "always has the lights on by now",
-which assumed the shop lights were off, and nothing in the tree says so. It now says the owner
-never stays open past dark. The nobody_followed line first placed the table "from the window";
-the tree only says a table, so the line says "the big table".
+written-voice `voice-check.py`: 0 dashes, 0 stock phrases, 0 tics, 0 triads. Spelling candidates are
+the two bound names and "coworker", a real word.
 
-written-voice `voice-check.py`: 0 dashes, 0 stock phrases, 0 tics, 0 triads. Spelling candidates
-are the two bound names only.
+### First Codex read (lines from commit 6d97111) and what changed
 
-### What the lines need from engine-dither
+Codex, configured default model, read-only, 2026-10-20. Verdict: edit. It found no line that blamed
+the player, pressed guilt, carried method detail or a stock line, and confirmed every threshold.
 
-- A field on `TreeThreat` holding one `{ by, line }` and its threshold in dither minutes.
-- The gate that refuses a line whose speaker is the at-risk subject in a `suicide_self_harm`
-  situation (owner rule above). For this call that is the taker.
-- The resume rule: a line whose threat has already landed is dropped.
+| # | Node | Finding | Severity | My verdict | Now |
+|---|---|---|---|---|---|
+| 1 to 3 | offer, out_back_door, out_keys | Placement and foreshadowing hold | note | retained, except offer, which now goes to the taker for more pressure | see table |
+| 4 | out_six_years | The courier's phone may still be inside, so they can't know about four calls; the line asks the negotiator a question | fix before ship | accepted | “Eleven stops left. My van’s still running at the curb.” |
+| 5 | out_cousin | "Let me" asks the team for permission | fix before ship | accepted | “That glass. {taker.He} can’t see my face from back here.” |
+| 6 to 11 | both_inside, his_side, one_door, talking, standoff, threat | Placement and foreshadowing hold | note | retained, except talking and threat, which now go to the taker | see table |
+| 12 | fired_on | The line announces the whole threat before it lands | fix before ship | accepted, "glass" changed to "windows" so it can't be read as the shop front | “Curtains keep moving upstairs. More faces at the windows.” |
+| 13 | owner_down | Both facts already in the prompt; the missing cue is the shouting getting louder | fix before ship | accepted, with a different line: the taker's own voice is the cue | “{owner.first} won’t answer me. Where’s that ambulance?” |
+| 14 | last_one | Foreshadows a work habit more than sitting down out of sight | note | accepted, with a different line from the owner | “When the rush got bad, {taker.first} would sit down where nobody could see.” |
+| 15 | stayed_behind | No listening channel established, and "voices" is wrong when one coworker stays. The tree's own threat text has the same count problem | fix before ship | accepted. The threat text's count problem is a finding for the tree | “Till. One coworker keeps looking back toward the door.” |
+| 16 | nobody_followed | Audibility from the tape not established; "dragging" starts the threat itself | fix before ship | accepted, radio, without Codex's plural "coworkers", which is wrong with one member | “Front door. Movement by the big table.” |
 
 ## 5. Review record (self-read, plus the Codex read below)
 
@@ -256,7 +259,7 @@ Writing review record (scaled: UI strings, no call text)
 - Cold read: answered | 4 cards read for topic only; each names what a player could meet, none names an event, ending or person
 - Path and choice read: not applicable | no choices
 - Choice table: not applicable | no choices
-- Table read: answered | 16 push-back lines read per speaker and in node order; voice breaks 0; stock lines 0
+- Table read: answered | 16 push-back lines read per speaker and in node order; voice breaks 0; stock lines 0; taker lines only at nodes where the phone is open in every variant
 - Spoilers and honesty: answered | leaks 1 (per-situation warning, block, fix as data in section 1); invented outcomes 0; "costs you nothing" checked against src/sim/incidents.ts
 - Ethics: answered | E4.1 no method 0 hits; E4.7 support line and content warning present; E4.9 language: no "committed", no "attempt"; E4.10 "suicide" outside the lint, owner decision 1; E5 named as a topic only
 - Batch audit: not applicable | 16 strings
