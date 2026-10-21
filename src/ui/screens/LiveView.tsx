@@ -38,6 +38,8 @@ import type { IconName } from '../icons';
 import { feetInches, opMinutes, signed, sqft } from '../format';
 import { CONSEQUENCE_LABEL, OddsBar, OutcomeForecast } from './OperationFeedback';
 import { DecisionList, LeadFace, RATING_SHORT } from './DecisionList';
+import { fillEffectLine, liveFillViews, reachByAction } from './fill-gauge';
+import type { FillView } from '../../sim/clocks';
 import { CONTRIBUTOR_GROUPS } from './contributor-groups';
 import { GamePeopleProvider, PeopleText } from '../people/PeopleText';
 import type { Lexicon } from '../people/lexicon';
@@ -141,6 +143,9 @@ export function LiveView(p: LiveViewProps) {
   };
   const stageNumber = p.progress.stages.findIndex((step) => step.state === 'current') + 1;
   const threat = beat === 'decide' && tab === 'call' ? p.progress.threat ?? null : null;
+  // Gauges that fill sit beside the threat, with the same visibility: while the player decides.
+  const gauges = beat === 'decide' && tab === 'call' ? liveFillViews(p.g) : [];
+  const reach = reachByAction(p.g, available.map((action) => action.id));
   const casualties = p.g.activeRun?.officerCasualties ?? {};
   // A new result always opens on the Call view, even when the choice was picked from the Scene.
   const beatKey = `${beat}:${p.lastChange?.revision ?? ''}`;
@@ -188,6 +193,7 @@ export function LiveView(p: LiveViewProps) {
       <div className="live-bar">
         <StageSteps progress={p.progress} />
         {threat && <ThreatPill label={threat.label} minutes={threat.minutes} dither={p.dither} />}
+        {gauges.map((view) => <FillGauge key={view.id} view={view} />)}
         <div className="live-switch" role="tablist" aria-label="Live call">
           {([['call', 'Call', 'flag'], ['scene', 'Scene', 'blueprint']] as const).map(([id, label, icon]) => (
             <button key={id} type="button" role="tab" id={`live-tab-${id}`} aria-controls={`live-panel-${id}`} aria-selected={tab === id} className={`live-switch-btn${tab === id ? ' live-switch-on' : ''}`} onClick={() => show(id)}>
@@ -216,7 +222,7 @@ export function LiveView(p: LiveViewProps) {
                 </button>
               )}
             </p>
-            <DecisionList prompt={p.progress.prompt} exchange={p.progress.exchange} actions={available} selectedId={sel?.id ?? null} expanded={expanded} officers={p.g.officers} onSelect={p.onSelectAction} onExpand={() => setExpandedStage(expanded ? null : p.progress.stage)}
+            <DecisionList prompt={p.progress.prompt} exchange={p.progress.exchange} actions={available} reach={reach} selectedId={sel?.id ?? null} expanded={expanded} officers={p.g.officers} onSelect={p.onSelectAction} onExpand={() => setExpandedStage(expanded ? null : p.progress.stage)}
               team={<section className="live-team" aria-label="Who's on it">
                 <h3 className="live-team-h"><Icon name="people" size={14} />{focus ? `Squad ${focus.id} · ${focus.name}` : 'Your team'}</h3>
                 {multi && <div className="live-squad-rail operation-squad-focus">
@@ -355,6 +361,28 @@ export function ThreatPill({ label, minutes, dither = 0 }: { label: string; minu
       <i style={{ width: `${Math.round(share * 100)}%` }} />
     </span>
   </p>;
+}
+
+/** A gauge that fills (a crowd filming, a subject streaming), in the threat pill's family: the label,
+ * a bar that fills with a tick at each cue (heard ones marked), the state when it is stopped, slowed
+ * or full, and, once its first cue is heard, one line naming everything it now does. The bar changes
+ * width only when the gauge moves and never animates under reduced motion. */
+export function FillGauge({ view }: { view: FillView }) {
+  const state = view.full ? 'Full' : view.stopped ? 'Stopped' : view.slowed ? 'Slowed' : null;
+  const value = Math.round(view.value);
+  return <div className={`fill-gauge${view.stopped ? ' fill-gauge-stopped' : ''}`} data-fill={view.id} role="group" aria-label={`${view.label}: ${value} of 100${state ? `, ${state.toLowerCase()}` : ''}`}>
+    <p className="fill-gauge-head">
+      <Icon name="crowd" size={14} />
+      <span className="fill-gauge-label">{view.label}</span>
+      {state && <b className="fill-gauge-state">{state}</b>}
+    </p>
+    <span className="fill-gauge-bar" role="meter" aria-label={`${view.label} fills`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={value}
+      aria-valuetext={`${value} of 100. ${view.cues.filter((cue) => cue.heard).length} of ${view.cues.length} warnings heard`}>
+      <i style={{ width: `${Math.max(0, Math.min(100, view.value))}%` }} />
+      {view.cues.map((cue) => <em key={cue.at} className={cue.heard ? 'fill-gauge-tick fill-gauge-heard' : 'fill-gauge-tick'} style={{ left: `${cue.at}%` }} aria-hidden="true" />)}
+    </span>
+    {view.effect && <p className="fill-gauge-effect">{fillEffectLine(view.effect)}</p>}
+  </div>;
 }
 
 function pressureWord(v: number): string {

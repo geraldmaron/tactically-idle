@@ -6,6 +6,7 @@
 // `.app`, an overlay layer draws the lab's marks over the device: numbered tabs on the choice cards,
 // a blueprint wash on the hovered one, tape tags beside people when the hidden truth is shown, and the
 // band picker after a forced Confirm. The overlay is progressive: a missing hook draws nothing.
+import { fillEffectLine } from '../../../../ui/screens/fill-gauge';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import '../../../../ui/app.css';
@@ -215,7 +216,7 @@ function StallSlider({ state, dither, onChange }: { state: GameState; dither: nu
   // Gauges that fill, as the call stands: how full, which cues are heard, and what they do now.
   const gauges = fillViews(scenario, run).map(view => (
     <span key={view.id} className="lab-chip" title={`A gauge that fills: ${view.cues.map(cue => `${cue.at}${cue.heard ? ' (heard)' : ''}`).join(', ')}. ${view.stopped ? 'Stopped. ' : view.slowed ? 'Slowed. ' : ''}Its effects begin once its first cue is heard.`}>
-      {view.label} {Math.round(view.value)}{view.full ? ' (full)' : ''}{view.effect ? ` · strain +${view.effect.strainPercent}% · trust swings ${view.effect.trustPercent}% more` : ' · no effect yet'}
+      {view.label} {Math.round(view.value)}{view.full ? ' (full)' : ''}{view.effect ? ` · ${fillEffectLine(view.effect)}` : ' · no effect yet'}
     </span>));
   if (!(cap > 0)) return <p className="lab-frame-chips"><span className="lab-chip">No threat or running clock here: a stall costs nothing</span>{gauges}</p>;
   const shown = Math.min(dither, cap);

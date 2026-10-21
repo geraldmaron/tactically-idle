@@ -13,6 +13,7 @@ import { PeopleText } from '../people/PeopleText';
 import { Transcript, type SpokenLine } from '../components/Transcript';
 import { CONSEQUENCE_LABEL, OddsBar } from './OperationFeedback';
 import { outcomePercentages, visibleDecisions } from './liveModels';
+import { gaugeReachTag, type GaugeReach } from './fill-gauge';
 import { currentPortraitKey, portraitSource } from '../portraits/Portrait';
 
 /** The officer facts a lead line reads. */
@@ -51,19 +52,20 @@ export function LeadFace({ officer, size = 22 }: { officer: LeadOfficer; size?: 
 }
 
 /** The lead's face and number, and the threat tag: one wrapping row under the card text. */
-function CardMeta({ a, officers }: { a: ActionView; officers?: Readonly<Record<Id, LeadOfficer>> }) {
+function CardMeta({ a, officers, reach = [] }: { a: ActionView; officers?: Readonly<Record<Id, LeadOfficer>>; reach?: GaugeReach[] }) {
   const lead = a.eligible ? leadLine(a, officers) : null;
   const threat = threatTag(a);
-  if (!lead && !threat) return null;
+  if (!lead && !threat && !reach.length) return null;
   return <span className="callbtn-meta">
     {lead && <span className="callbtn-lead" aria-label={`Leads: ${lead.text}`}><LeadFace officer={lead.officer} /><span>{lead.text}</span></span>}
     {threat && <span className={`callbtn-threat callbtn-threat-${threat.kind}`}><Icon name="hourglass" size={12} />{threat.text}</span>}
+    {reach.map((r) => <span key={`${r.label}:${r.effect}`} className="callbtn-gauge"><Icon name="crowd" size={12} />{gaugeReachTag(r)}</span>)}
   </span>;
 }
 
 /** `actions` are the stage's choices as the player sees them, with any reviewed choice already
  * forecast for its chosen squads. */
-export function DecisionList({ prompt, exchange, actions, selectedId, expanded, officers, team, onSelect, onExpand }: { prompt: string; exchange?: readonly SpokenLine[]; actions: ActionView[]; selectedId: Id | null; expanded: boolean;
+export function DecisionList({ prompt, exchange, actions, selectedId, expanded, officers, reach, team, onSelect, onExpand }: { reach?: Record<Id, GaugeReach[]>; prompt: string; exchange?: readonly SpokenLine[]; actions: ActionView[]; selectedId: Id | null; expanded: boolean;
   /** The deployed officers, for each card's lead line; left out, cards show no lead. */
   officers?: Readonly<Record<Id, LeadOfficer>>;
   /** Who's on it, set between the moment and the choices, because every card names one of them to lead. */
@@ -89,7 +91,7 @@ export function DecisionList({ prompt, exchange, actions, selectedId, expanded, 
           return (
             <Fragment key={a.id}>
             {firstLocked && <p className="call-locked-label"><Icon name="lock" size={13} />Unavailable now</p>}
-            {a.eligible && a.weighing ? <WeighedChoice action={a} on={on} open={opened.has(a.id)} officers={officers} onToggle={() => toggle(a.id)} onReview={() => onSelect(a.id)} /> : <button
+            {a.eligible && a.weighing ? <WeighedChoice action={a} on={on} open={opened.has(a.id)} officers={officers} reach={reach?.[a.id]} onToggle={() => toggle(a.id)} onReview={() => onSelect(a.id)} /> : <button
               type="button"
               className={`callbtn${on ? ' callbtn-on' : ''}${a.eligible ? '' : ' callbtn-off'}`}
               data-action-id={a.id}
@@ -111,7 +113,7 @@ export function DecisionList({ prompt, exchange, actions, selectedId, expanded, 
                 </span>
                 {a.eligible && a.authority?.allowed && <span className="callbtn-command"><Icon name="radio" size={12} />{a.authority.reason}</span>}
                 {a.eligible && a.deceives && <span className="callbtn-command callbtn-deceive"><Icon name="radio" size={12} />Command hasn’t approved this</span>}
-                <CardMeta a={a} officers={officers} />
+                <CardMeta a={a} officers={officers} reach={reach?.[a.id]} />
                 {a.eligible && <span className="callbtn-forecast">
                   {!a.eventResult && <OddsBar likelihood={a.likelihood} mini />}
                   <span className="callbtn-forecast-text">{a.timeLabel ?? `~${opMinutes(a.timeCost)}`} · {!a.eventResult ? `${outcomePercentages(a.likelihood).favorable}% chance to go well · ` : ''}<span className={`callbtn-harm callbtn-harm-${a.consequenceLevel}`}>possible harm: {CONSEQUENCE_LABEL[a.consequenceLevel].toLowerCase()}</span></span>
@@ -139,7 +141,7 @@ function Forecast({ a }: { a: ActionView }) {
  * several choices fit a phone screen; tapping the text opens the full summary, the pull, the cost
  * and the odds in place. Possible harm stays on the collapsed card (harm is never folded). Review is its own 44px button on every card, so reviewing never takes an
  * extra tap: expanding is for reading, Review is for deciding. */
-function WeighedChoice({ action: a, on, open, officers, onToggle, onReview }: { action: ActionView; on: boolean; open: boolean; officers?: Readonly<Record<Id, LeadOfficer>>; onToggle(): void; onReview(): void }) {
+function WeighedChoice({ action: a, on, open, officers, reach, onToggle, onReview }: { action: ActionView; on: boolean; open: boolean; officers?: Readonly<Record<Id, LeadOfficer>>; reach?: GaugeReach[]; onToggle(): void; onReview(): void }) {
   const panel = `choice-weigh-${a.id}`;
   return <div className={`callbtn callbtn-weighed${on ? ' callbtn-on' : ''}${open ? ' callbtn-open' : ''}`} data-action-id={a.id}>
     <button type="button" className="callbtn-expand" aria-expanded={open} aria-controls={panel} onClick={onToggle}>
@@ -158,7 +160,7 @@ function WeighedChoice({ action: a, on, open, officers, onToggle, onReview }: { 
     {a.authority?.allowed && <span className="callbtn-command"><Icon name="radio" size={12} />{a.authority.reason}</span>}
     {a.deceives && <span className="callbtn-command callbtn-deceive"><Icon name="radio" size={12} />Command hasn’t approved this</span>}
     {/* Like harm, who leads and the threat are never folded away. */}
-    <CardMeta a={a} officers={officers} />
+    <CardMeta a={a} officers={officers} reach={reach} />
     {open && <Forecast a={a} />}
     <button type="button" className="callbtn-review" aria-pressed={on} aria-label={`Review ${a.title}`} onClick={onReview}>
       {!open && <span className="callbtn-review-odds">{a.timeLabel ?? `~${opMinutes(a.timeCost)}`}{!a.eventResult ? ` · ${outcomePercentages(a.likelihood).favorable}% to go well` : ''} · <span className={`callbtn-harm callbtn-harm-${a.consequenceLevel}`}>harm {CONSEQUENCE_LABEL[a.consequenceLevel].toLowerCase()}</span></span>}

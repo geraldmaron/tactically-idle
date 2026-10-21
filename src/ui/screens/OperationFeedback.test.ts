@@ -236,6 +236,12 @@ describe('persistent decision results', () => {
     for (const expected of ['Ortiz', '+3 stress', 'Chen', '+1.5 stress', 'The delay leaves the squad with less time.', 'Pressure reduced the margin.', 'Ortiz medical rating', 'Operation ended:', 'Assistance completed']) expect(html).toContain(expected);
   });
 
+  it('shows the engine\'s camera strain line from a gauge that fills in the recorded explanation', () => {
+    const line = 'Cameras on the scene (The crowd with phones at 60) added 24% to everyone\'s strain.';
+    const html = render(createElement(OperationLogContents, { decisions: [decision({ explanation: [line] })] }));
+    expect(html.replace(/&#x27;/g, "'")).toContain(line);
+  });
+
   it('keeps no-change sections in the record while a quiet result leads with its saved consequence and time', () => {
     const quiet = decision({ timeCost: .5, objectiveDelta: 0, civilianSafetyDelta: 0, pressureDelta: 0, stressDeltas: [], supplies: [], knowledgeChanges: [], consequences: ['The resident agrees to speak at the door.'], explanation: ['The resident agrees to speak at the door.'] });
     const before = structuredClone(quiet);
