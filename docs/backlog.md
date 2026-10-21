@@ -389,6 +389,27 @@ profile get a `swat-writing-review` read.
 
 ## Player experience
 
+### ops-experience-now: Put the right thing first on the board, Prepare, review and result
+Tags: job=command; journeys=answer-a-call; probes=none (layout); lane=interface
+Needs: start=none; integrate=none; ship=none
+
+From `docs/ops-experience.md` (accepted with controls): the result beat opens on the result and any
+harm, then facts, injuries, supplies and stress-band crossings (the final decision too); the review
+sheet reads cost and the three previews before the map, keeping every control; the brief opens on
+the orders and the threat with the cold open whole and a Map chip in the header; Team & gear shows
+each squad's kit as an inspectable summary over today's workspace; the board card drops to about
+290px with the hook, warning, fitness, pay and expiry kept, and a type mark that isn't a padlock.
+Done when the captures in the doc are retaken from the game at 390x844 and 320x568, with 200% text,
+two squads and a Lab check of the shared screens.
+
+### ops-experience-compare: The owner compares the decide-beat and reading-face candidates
+Tags: job=command; journeys=answer-a-call; probes=none (layout); lane=interface
+Needs: start=none; integrate=none; ship=none
+
+Build 4A (compact whole-building scene beside the faces) and 4B (map folded from stage 2), and 7A
+against 7B (Barlow against a reading serif), behind a dev setting, and run the comparison in
+`docs/ops-experience.md` ("How the comparisons get decided"). Ship the winners, delete the others.
+
 ### onboarding: A first call that teaches the loop
 Tags: job=command; journeys=answer-a-call; probes=none (teaching flow); lane=deferred
 Needs: start=none; integrate=none; ship=none

@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ops experience mockups</title>
+<!-- Static mockups for docs/ops-experience.md. Tokens copied from src/ui/theme.css. Not shipped. -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+:root {
+  --bg: #0b111c; --panel: #131c2a; --panel-2: #1a2535; --panel-3: #223047; --line: #2b3b54; --line-strong: #3a4f6e;
+  --text: #e9eef6; --text-dim: #aab7ca; --muted: #7d8da6; --amber: #f3b432; --amber-ink: #1b1404; --mint: #3fd08e;
+  --danger: #ff6b5a; --warn: #ff9f43; --paper: #1f55b8; --paper-deep: #17469d; --subject: #b99cff; --civilian: #ffa6da; --officer: #9cc4ff;
+  --cond: 'Barlow Condensed', 'Arial Narrow', sans-serif; --ui: 'Barlow', system-ui, sans-serif; --mono: 'IBM Plex Mono', monospace;
+  --read: 'Barlow', system-ui, sans-serif;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: #2a2f38; display: flex; flex-wrap: wrap; gap: 24px; padding: 24px; font-family: var(--ui); color: var(--text); }
+.phone { width: 390px; height: 844px; background: var(--bg); position: relative; overflow: hidden; display: flex; flex-direction: column; }
+.phone.serif { --read: 'Source Serif 4', Georgia, serif; }
+.label { position: absolute; bottom: 70px; left: 12px; background: #ff2e88; color: #fff; font: 600 11px var(--mono); padding: 3px 8px; z-index: 9; }
+.scroll { flex: 1; overflow: hidden; padding: 0 16px; }
+.nav { height: 64px; border-top: 1px solid var(--line); background: #0e1624; display: grid; grid-template-columns: repeat(5, 1fr); align-items: center; text-align: center; font: 600 11px var(--cond); letter-spacing: .08em; color: var(--muted); }
+.nav .on { color: var(--amber); }
+.footer { padding: 10px 16px 12px; border-top: 1px solid var(--line); background: rgba(14,22,36,.96); }
+.btn { display: block; width: 100%; height: 48px; border: 0; border-radius: 8px; background: var(--amber); color: var(--amber-ink); font: 700 17px var(--cond); letter-spacing: .06em; text-transform: uppercase; }
+.btn.ghost { background: transparent; border: 1px solid var(--line-strong); color: var(--text); }
+.row2 { display: grid; grid-template-columns: 1fr 2fr; gap: 8px; }
+.kicker { font: 600 11px var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+h1 { font: 700 26px var(--cond); letter-spacing: .02em; margin: 2px 0 0; text-transform: uppercase; }
+h2 { font: 600 15px var(--ui); margin: 18px 0 8px; color: var(--text); }
+.s { color: var(--subject); font-weight: 700; } .c { color: var(--civilian); font-weight: 600; } .o { color: var(--officer); font-family: var(--cond); font-weight: 600; font-size: 1.05em; }
+.read { font-family: var(--read); font-size: 17.5px; line-height: 1.5; color: var(--text); margin: 0; }
+.dim { color: var(--text-dim); } .muted { color: var(--muted); }
+.chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 999px; border: 1px solid var(--line-strong); font: 500 12px var(--ui); color: var(--text-dim); }
+.chip.harm-low { border-color: rgba(63,208,142,.5); color: var(--mint); } .chip.harm-mod { border-color: rgba(255,159,67,.5); color: var(--warn); } .chip.harm-high { border-color: rgba(255,107,90,.6); color: var(--danger); }
+.raised { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
+.odds { display: flex; height: 6px; border-radius: 3px; overflow: hidden; width: 140px; } .odds i { display: block; }
+.face { width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(160deg, #4a5a74, #24324a); border: 2px solid var(--mint); flex: none; }
+.face.warn { border-color: var(--amber); }
+.map { background: var(--paper); background-image: linear-gradient(rgba(255,255,255,.09) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.09) 1px, transparent 1px); background-size: 12px 12px; border-radius: 8px; position: relative; overflow: hidden; }
+.map b { position: absolute; border: 2px solid rgba(243,247,255,.8); }
+.map em { position: absolute; font: 600 9px var(--mono); color: #f3f7ff; font-style: normal; }
+.dot { position: absolute; width: 10px; height: 10px; border-radius: 50%; }
+.strip { padding: 8px 16px 10px; background: #0e1624; border-bottom: 1px solid var(--line); }
+.steps { display: flex; gap: 6px; align-items: center; font: 600 11px var(--cond); letter-spacing: .08em; color: var(--muted); }
+.steps i { flex: 1; height: 3px; border-radius: 2px; background: var(--line-strong); } .steps i.done { background: var(--mint); } .steps i.now { background: var(--amber); }
+.drain { margin-top: 8px; display: flex; align-items: center; gap: 8px; }
+.drain .bar { flex: 1; height: 6px; border-radius: 3px; background: rgba(255,107,90,.18); overflow: hidden; } .drain .bar i { display: block; height: 100%; background: var(--danger); }
+.src { margin-top: 6px; display: flex; align-items: center; gap: 8px; font: 500 13px var(--ui); }
+.src .bar { flex: 1; height: 4px; border-radius: 2px; background: rgba(0,0,0,.35); } .src .bar i { display: block; height: 100%; background: linear-gradient(90deg, var(--amber), #ff7a3c); }
+.pull { font: 700 12px var(--mono); color: #ffd8d1; background: rgba(255,59,48,.3); padding: 0 5px; border-radius: 4px; }
+.choice { padding: 12px; margin-bottom: 8px; }
+.choice h3 { margin: 0 0 4px; font: 600 18px var(--cond); letter-spacing: .01em; }
+.choice p { margin: 0 0 8px; font: 400 14px/1.4 var(--ui); color: var(--text-dim); }
+.meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font: 500 12px var(--ui); color: var(--muted); }
+.note { position: absolute; left: 12px; right: 12px; bottom: 96px; background: #ff2e88; color: #fff; font: 500 12px/1.35 var(--ui); padding: 6px 8px; border-radius: 6px; z-index: 8; }
+.sheet { position: absolute; left: 0; right: 0; bottom: 0; top: 120px; background: var(--panel-2); border-radius: 16px 16px 0 0; border-top: 1px solid var(--line-strong); display: flex; flex-direction: column; }
+.sheet .body { flex: 1; overflow: hidden; padding: 14px 16px; }
+.band { display: grid; grid-template-columns: 74px 1fr; gap: 8px; padding: 8px 0; border-top: 1px solid var(--line); font: 400 14px/1.4 var(--ui); }
+.band b { font: 600 12px var(--mono); letter-spacing: .06em; text-transform: uppercase; }
+.radio { margin-top: 12px; padding: 8px 10px; border-left: 3px solid var(--line-strong); font: 400 14px/1.4 var(--ui); color: var(--text-dim); height: 66px; overflow: hidden; }
+.radio b { color: var(--text); font-family: var(--cond); letter-spacing: .04em; margin-right: 6px; }
+.shade { position: absolute; inset: 0 0 724px 0; background: rgba(0,0,0,.45); }
+</style>
+</head>
+<body>
+
+<!-- 1. Board card: compact, keeps hook, warning, eligibility, pay, expiry; type glyph is not a padlock -->
+<section class="phone" id="board">
+  <span class="label">1 · Board card, shortened</span>
+  <div class="strip" style="border:0;padding-top:14px"><div class="kicker">Dispatch</div><h1>Call-outs</h1><p class="dim" style="margin:4px 0 0;font-size:14px">3 live · next call in about 1h 16m</p></div>
+  <div class="scroll">
+    <div class="raised" style="padding:12px;margin-top:12px">
+      <div style="display:flex;gap:10px;align-items:center">
+        <div style="width:40px;height:40px;border-radius:8px;border:1px solid var(--line-strong);display:grid;place-items:center;font:700 13px var(--cond);color:var(--amber)">HC</div>
+        <div><div class="kicker" style="color:var(--amber)">Hostage crisis · Call 6615</div><div style="font:700 21px var(--cond);text-transform:uppercase">Going live</div></div>
+        <span class="chip" style="margin-left:auto">New kind</span>
+      </div>
+      <p style="margin:10px 0 8px;font:400 15px/1.45 var(--ui)"><span class="s">Darby</span> wants one sentence said on camera. The night manager is on the floor behind the counter, and <span class="s">Darby</span> is holding a handgun and a phone.</p>
+      <p style="margin:0 0 10px;font:400 13px/1.4 var(--ui);color:var(--text-dim)"><b style="color:var(--text)">Involves</b> suicide risk, death, police gunfire, injury</p>
+      <div class="meta" style="margin-bottom:10px"><span>Corner store · 2 floors</span><span>·</span><span>1 squad, Alpha ready</span><span>·</span><span style="color:var(--text)">$2,600 · 45 XP</span></div>
+      <div style="display:flex;align-items:center;gap:10px"><div style="flex:1"><div style="height:4px;border-radius:2px;background:var(--line)"><i style="display:block;width:90%;height:100%;background:var(--mint);border-radius:2px"></i></div><div class="muted" style="font-size:12px;margin-top:4px">10h 43m left</div></div><button class="btn" style="width:130px">Prepare</button></div>
+    </div>
+    <div class="raised" style="padding:12px;margin-top:10px;opacity:.9">
+      <div style="display:flex;gap:10px;align-items:center"><div style="width:40px;height:40px;border-radius:8px;border:1px solid var(--line-strong);display:grid;place-items:center;font:700 13px var(--cond);color:var(--amber)">HC</div><div><div class="kicker" style="color:var(--amber)">Hostage crisis · Call 3387</div><div style="font:700 21px var(--cond);text-transform:uppercase">Going live</div></div></div>
+      <p style="margin:10px 0 0;font:400 15px/1.45 var(--ui)"><span class="s">Teodor</span> wants one sentence said on camera. The night manager is on the floor behind the counter...</p>
+    </div>
+  </div>
+  <div class="note">One card is ~290px instead of ~420px. Hook, warning, fitness, pay and expiry stay on the card (owner decisions). "No penalty for skipping" moves to the board's header once. The type mark is a letter badge, not a padlock.</div>
+  <div class="nav"><span>HQ</span><span>SQUAD</span><span class="on">OPS</span><span>DEVELOP</span><span>GEAR</span></div>
+</section>
+
+<!-- 2. Brief: orders and map access first, the cold open whole -->
+<section class="phone" id="brief">
+  <span class="label">2 · Brief, orders up front</span>
+  <div class="strip" style="padding-top:12px"><span class="muted" style="font:600 12px var(--cond);letter-spacing:.08em">‹ OPERATIONS</span><div style="display:flex;align-items:end;justify-content:space-between"><div><div class="kicker" style="color:var(--amber)">Call 6615</div><h1>Going live</h1></div><span class="chip">Map · 2 floors</span></div>
+    <div class="steps" style="margin-top:10px">BRIEF <i class="now"></i> TEAM &amp; GEAR <i></i></div></div>
+  <div class="scroll">
+    <div class="raised" style="padding:12px;margin-top:12px;border-color:rgba(243,180,50,.45)">
+      <div class="kicker" style="color:var(--amber)">Your orders</div>
+      <ol style="margin:6px 0 0;padding-left:20px;font:500 15px/1.6 var(--ui)"><li>Get <span class="c">Sunita</span> out</li><li>Get <span class="c">Reuben</span> out</li><li>Bring <span class="s">Darby</span> out alive</li></ol>
+      <div class="meta" style="margin-top:8px"><span style="color:var(--danger)">Handgun, held by Darby, shop floor</span><span>· reported by patrol</span></div>
+    </div>
+    <h2 class="kicker" style="margin-top:16px">Before the call</h2>
+    <p class="read">On Tuesday Hotbag sent <span class="s">Darby</span> one line. Account deactivated after a customer complaint. The complaint came from Market Row Stores, about a bag of food that left the counter at 11:40 and never reached the door it was paid for. <span class="s">Darby</span> rode past Market Row Stores every night after that, then stopped riding at all. Tonight they walked in at the end of the shift...</p>
+  </div>
+  <div class="note" style="bottom:166px">Orders and the threat (holder, place, source) lead, so a skimmer still knows the mission. The cold open stays whole and unclamped below it; people, unknowns and the building follow in today's order. The map is one tap from the header at any point.</div>
+  <div class="footer"><div class="row2"><button class="btn ghost">Cancel</button><button class="btn">Choose team</button></div></div>
+  <div class="nav"><span>HQ</span><span>SQUAD</span><span class="on">OPS</span><span>DEVELOP</span><span>GEAR</span></div>
+</section>
+
+<!-- 3. Team & gear: inspectable kit summary -->
+<section class="phone" id="team">
+  <span class="label">3 · Team, kit as a summary</span>
+  <div class="strip" style="padding-top:12px"><div class="kicker" style="color:var(--amber)">Call 6615</div><h1>Going live</h1><div class="steps" style="margin-top:10px">BRIEF <i class="done"></i> TEAM &amp; GEAR <i class="now"></i></div></div>
+  <div class="scroll">
+    <h2>Takes 1 to 3 squads</h2>
+    <div class="raised" style="padding:12px;border-color:var(--amber)">
+      <div style="display:flex;align-items:center;gap:8px"><b style="font:700 18px var(--cond);color:var(--amber)">A</b><b style="font:700 18px var(--cond)">ALPHA</b><span class="muted" style="margin-left:auto;font-size:13px">4 of 4 ready</span></div>
+      <div style="display:flex;gap:6px;margin:10px 0"><i class="face"></i><i class="face"></i><i class="face"></i><i class="face warn"></i></div>
+      <div class="kicker" style="margin-bottom:6px">Kit for this call</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px"><span class="chip">Radio headset ×4</span><span class="chip">Throw phone</span><span class="chip">Loud hailer</span><span class="chip">Trauma kit</span><span class="chip harm-mod">Shield: 1 left in stock</span></div>
+      <p class="dim" style="font-size:13px;margin:10px 0 6px">Starts at <b style="color:var(--text)">High street</b> · stages at the <b style="color:var(--text)">shop floor door</b></p>
+      <div style="display:flex;gap:8px"><button class="btn ghost" style="height:40px;font-size:14px">Adjust kit</button><button class="btn ghost" style="height:40px;font-size:14px">Change staging</button></div>
+    </div>
+    <div class="raised" style="padding:12px;margin-top:10px"><div style="display:flex;align-items:center;gap:8px"><b style="font:700 18px var(--cond);color:var(--muted)">B</b><b style="font:700 18px var(--cond)">BRAVO</b><span class="muted" style="margin-left:auto;font-size:13px">4 of 4 ready · tap to add</span></div></div>
+    <div class="raised" style="padding:12px;margin-top:10px"><span class="dim">Support vehicle</span><span class="muted" style="float:right">None · 0 ready</span></div>
+  </div>
+  <div class="note" style="bottom:166px">Allocation per squad stays explicit and inspectable; shortages show on the card. Adjust kit opens today's workspace with every stepper, preset (when unlocked) and undo. Start position and staging stay two labeled controls, with a map tap as an alternative.</div>
+  <div class="footer"><div class="row2"><button class="btn ghost">Brief</button><button class="btn">Deploy</button></div></div>
+  <div class="nav"><span>HQ</span><span>SQUAD</span><span class="on">OPS</span><span>DEVELOP</span><span>GEAR</span></div>
+</section>
+
+<!-- 4a. Decide beat: candidate A (scene compact, story above choices) -->
+<section class="phone" id="decide-a">
+  <span class="label">4A · Decide, compact scene</span>
+  <div class="strip">
+    <div style="display:flex;justify-content:space-between;align-items:center"><b style="font:700 18px var(--cond)">GOING LIVE</b><span class="muted" style="font:500 12px var(--mono)">STAGE 2 OF 3 · THE BAG</span></div>
+    <div class="drain"><span style="font:600 14px var(--cond);color:#ffd8d1">The comments turn</span><div class="bar"><i style="width:82%"></i></div><b style="font:600 15px var(--mono)">9 min</b></div>
+    <div class="src"><span><span class="s">Darby</span>’s stream</span><div class="bar"><i style="width:34%"></i></div><b style="font:600 13px var(--mono)">916</b><span class="pull">−2</span></div>
+  </div>
+  <div class="scroll" style="padding-top:10px">
+    <div style="display:flex;gap:10px;align-items:stretch">
+      <div class="map" style="width:150px;height:96px"><b style="left:20px;top:14px;width:100px;height:64px"></b><b style="left:70px;top:14px;width:50px;height:30px"></b><i class="dot" style="left:56px;top:46px;background:var(--subject)"></i><i class="dot" style="left:96px;top:24px;background:var(--civilian)"></i><i class="dot" style="left:40px;top:84px;background:var(--amber)"></i><em style="right:4px;top:2px">FULL MAP</em></div>
+      <div style="flex:1"><div class="muted" style="font-size:12px">Squad A at High street</div><div style="display:flex;gap:4px;margin-top:6px"><i class="face"></i><i class="face"></i><i class="face"></i><i class="face warn"></i></div><div class="muted" style="font-size:12px;margin-top:6px">Last: Talk on the stream · went well ›</div></div>
+    </div>
+    <p class="read" style="margin-top:12px"><span class="s">Darby</span> has said what they want, out loud, for the stream. One sentence from <span class="c">Reuben</span>, then they walk. <span class="c">Reuben</span> hasn’t said anything since.</p>
+    <div class="radio" style="height:44px"><b>DARBY</b>Tell them. Tell them what you told Hotbag.</div>
+    <div class="raised choice" style="margin-top:10px"><h3>Let <span class="c">Reuben</span> answer on camera</h3><p>Whatever Reuben says goes out live before you can weigh it.</p><div class="meta"><i class="face" style="width:20px;height:20px;border-width:1px"></i><span>Chen · Comms 82</span><div class="odds"><i style="width:67%;background:var(--mint)"></i><i style="width:20%;background:var(--amber)"></i><i style="width:13%;background:var(--danger)"></i></div><b style="color:var(--text)">67%</b><span class="chip harm-high">Harm high</span></div></div>
+  </div>
+  <div class="note">Candidate A: the whole building at 150px beside the faces (not cropped), the prompt and the first choice on screen. Comms keeps a reserved box so lines never move the choices.</div>
+  <div class="nav"><span>HQ</span><span>SQUAD</span><span class="on">OPS</span><span>DEVELOP</span><span>GEAR</span></div>
+</section>
+
+<!-- 4b. Decide beat: candidate B (today's order, scene folded by default on stage 2+) -->
+<section class="phone" id="decide-b">
+  <span class="label">4B · Decide, scene folded</span>
+  <div class="strip">
+    <div style="display:flex;justify-content:space-between;align-items:center"><b style="font:700 18px var(--cond)">GOING LIVE</b><span class="muted" style="font:500 12px var(--mono)">STAGE 2 OF 3 · THE BAG</span></div>
+    <div class="drain"><span style="font:600 14px var(--cond);color:#ffd8d1">The comments turn</span><div class="bar"><i style="width:82%"></i></div><b style="font:600 15px var(--mono)">9 min</b></div>
+    <div class="src"><span><span class="s">Darby</span>’s stream</span><div class="bar"><i style="width:34%"></i></div><b style="font:600 13px var(--mono)">916</b><span class="pull">−2</span></div>
+  </div>
+  <div class="scroll" style="padding-top:10px">
+    <div class="raised" style="padding:8px 10px;display:flex;align-items:center;gap:8px"><span class="dim" style="font-size:13px">Squad A at High street</span><div style="display:flex;gap:3px;margin-left:auto"><i class="face" style="width:22px;height:22px"></i><i class="face" style="width:22px;height:22px"></i><i class="face" style="width:22px;height:22px"></i><i class="face warn" style="width:22px;height:22px"></i></div><span class="chip">Map</span></div>
+    <p class="read" style="margin-top:12px"><span class="s">Darby</span> has said what they want, out loud, for the stream. One sentence from <span class="c">Reuben</span>, then they walk. <span class="c">Reuben</span> hasn’t said anything since.</p>
+    <div class="radio" style="height:44px"><b>DARBY</b>Tell them. Tell them what you told Hotbag.</div>
+    <div class="raised" style="padding:10px;margin-top:10px;font-size:13px"><span class="kicker">What matters now</span><div style="margin-top:4px" class="dim">Talking, keeping calm and working together are harder while 916 watch</div></div>
+    <div class="raised choice" style="margin-top:10px"><h3>Let <span class="c">Reuben</span> answer on camera</h3><p>Whatever Reuben says goes out live before you can weigh it.</p><div class="meta"><span>Chen · Comms 82</span><b style="color:var(--text)">67%</b><span class="chip harm-high">Harm high</span></div></div>
+  </div>
+  <div class="note">Candidate B: today's structure with the map folded to its header from stage 2 on (it reopens itself when a result changes the scene, as now). Smallest change; keeps What matters now.</div>
+  <div class="nav"><span>HQ</span><span>SQUAD</span><span class="on">OPS</span><span>DEVELOP</span><span>GEAR</span></div>
+</section>
+
+<!-- 5. Review sheet: cost and outcomes before the map -->
+<section class="phone" id="review">
+  <span class="label" style="bottom:auto;top:92px">5 · Review, outcomes first</span>
+  <div class="strip"><b style="font:700 18px var(--cond)">GOING LIVE</b><div class="drain"><span style="font:600 14px var(--cond);color:#ffd8d1">The comments turn</span><div class="bar"><i style="width:82%"></i></div><b style="font:600 15px var(--mono)">9 min</b></div></div>
+  <div class="shade" style="inset:0"></div>
+  <div class="sheet">
+    <div class="body">
+      <div style="display:flex;justify-content:space-between"><h3 style="margin:0;font:700 22px var(--cond);text-transform:uppercase">Let Reuben answer on camera</h3><span class="muted">✕</span></div>
+      <div class="meta" style="margin:8px 0 10px"><div class="odds" style="width:180px"><i style="width:67%;background:var(--mint)"></i><i style="width:20%;background:var(--amber)"></i><i style="width:13%;background:var(--danger)"></i></div><b style="color:var(--text)">67%</b><span class="chip harm-high">Harm high</span><span>~5 min</span></div>
+      <div class="band"><b style="color:var(--danger)">Cost</b><span>Whatever <span class="c">Reuben</span> says goes out live before you can weigh it.</span></div>
+      <div class="band"><b style="color:var(--mint)">Goes well</b><span><span class="c">Reuben</span> says it in one breath, to the camera.</span></div>
+      <div class="band"><b style="color:var(--amber)">Mixed</b><span><span class="c">Reuben</span> says it, and the stream reads every word back to <span class="s">Darby</span>.</span></div>
+      <div class="band"><b style="color:var(--danger)">Goes badly</b><span><span class="s">Darby</span> turns the handgun toward the counter while the count climbs.</span></div>
+      <div class="band"><b class="muted">Acting</b><span>Squad A · lead <span class="o">Chen</span> (Comms 82) <span class="chip" style="margin-left:4px">Change</span></span></div>
+      <div style="display:flex;gap:10px;align-items:center;margin-top:8px"><div class="map" style="width:120px;height:74px"><b style="left:14px;top:10px;width:80px;height:50px;border-color:var(--amber)"></b></div><span class="dim" style="font-size:13px">Happens at the register, shop floor. Full map ›</span></div>
+    </div>
+    <div class="footer"><button class="btn">Confirm: let Reuben answer</button></div>
+  </div>
+  <div class="note" style="bottom:104px">Cost and the three previews are read before the map. Squads, lead, requirements, authorization and resupply stay in the sheet (functional controls); the map stays as a labeled inset with the room lit.</div>
+</section>
+
+<!-- 6. Result beat: result prose first -->
+<section class="phone" id="result">
+  <span class="label">6 · Result first</span>
+  <div class="strip">
+    <div style="display:flex;justify-content:space-between;align-items:center"><b style="font:700 18px var(--cond)">GOING LIVE</b><span class="muted" style="font:500 12px var(--mono)">STAGE 2 OF 3 · DONE</span></div>
+    <div class="src"><span><span class="s">Darby</span>’s stream</span><div class="bar"><i style="width:48%"></i></div><b style="font:600 13px var(--mono)">1,150</b><span class="pull">−2</span></div>
+  </div>
+  <div class="scroll" style="padding-top:12px">
+    <div class="kicker" style="color:var(--mint)">Let Reuben answer on camera · went well</div>
+    <p class="read" style="margin-top:8px"><span class="c">Reuben</span> gets up by the cooler handle and faces the phone. They say it in one breath, and then look at the stockroom door, and the whole stream watches them look.</p>
+    <div class="radio" style="height:auto"><b>REUBEN</b>You didn’t take it. I knew you didn’t.</div>
+    <h2 class="kicker" style="margin-top:14px">What changed</h2>
+    <div class="band"><b class="muted">Learned</b><span>Who took the bag: confirmed</span></div>
+    <div class="band"><b class="muted">Team</b><span style="display:flex;gap:6px;align-items:center"><i class="face" style="width:22px;height:22px"></i><i class="face" style="width:22px;height:22px"></i><i class="face" style="width:22px;height:22px"></i><i class="face" style="width:22px;height:22px"></i><span class="dim">all still Ready</span></span></div>
+    <div class="band"><b class="muted">Scene</b><span>Nobody moved · <span class="dim">Details ›</span></span></div>
+  </div>
+  <div class="note" style="bottom:166px">Result prose and any recorded harm sit right under the strip. Changes follow: facts, injuries and supplies first, stress as the engine's named bands (only crossings called out), the map when a room changed. Raw numbers fold into Details.</div>
+  <div class="footer"><button class="btn">Continue to way out ›</button></div>
+  <div class="nav"><span>HQ</span><span>SQUAD</span><span class="on">OPS</span><span>DEVELOP</span><span>GEAR</span></div>
+</section>
+
+<!-- 7. Reading face comparison: same prompt, current face vs serif -->
+<section class="phone" id="type-ui">
+  <span class="label">7A · Reading face: Barlow (now)</span>
+  <div class="scroll" style="padding-top:40px">
+    <div class="kicker">Stage 1 of 3 · On the stream</div>
+    <p class="read" style="margin-top:10px"><span class="c">Reuben</span> is on the floor by the drinks cooler, eyes on the stockroom door and not the handgun. <span class="c">Sunita</span> stands in that doorway, still holding a case of water.</p>
+    <div class="radio" style="height:auto;margin-top:16px"><b>DARBY</b>Four hundred people know I didn’t take the bag.</div>
+  </div>
+</section>
+<section class="phone serif" id="type-serif">
+  <span class="label">7B · Reading face: Source Serif 4</span>
+  <div class="scroll" style="padding-top:40px">
+    <div class="kicker">Stage 1 of 3 · On the stream</div>
+    <p class="read" style="margin-top:10px"><span class="c">Reuben</span> is on the floor by the drinks cooler, eyes on the stockroom door and not the handgun. <span class="c">Sunita</span> stands in that doorway, still holding a case of water.</p>
+    <div class="radio" style="height:auto;margin-top:16px"><b>DARBY</b>Four hundred people know I didn’t take the bag.</div>
+  </div>
+</section>
+
+</body>
+</html>
