@@ -107,7 +107,8 @@ describe('team moves', () => {
   it('walks someone out alone with the squad staying put, and an escort ends outside with them', () => {
     for (const s of calls('hostage_crisis', 3)) {
       // The manager walks out alone: no team move, a route of their own.
-      const alone = actionOf(s, 'way_out', 'manager_first');
+      // Going Live cut manager_first; walk_dark sends the manager out alone the same way.
+      const alone = actionOf(s, 'way_out', 'walk_dark');
       expect(alone.approach).toBe('none');
       expect(alone.storyRoute).toBeTruthy();
       // The clerk's escort: the squad goes in for them and ends outside with them.

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { CALL_TREES, CALL_TREE_CONTENT_VERSION } from '../../../content/call-trees';
 import { CIVILIAN_FIRST_NAMES, CIVILIAN_SURNAMES } from '../../../content/call-trees/civilian-names';
+import { WORLD_TOKENS } from '../../../content/world';
 import personas from '../../../content/personas.json';
 import type { CallTree, TreeChoice, TreeNext, TreeOutcome } from '../../../content/call-trees/types';
 import { TACTICAL_FRAMEWORKS } from '../../../content/unlocks';
@@ -244,6 +245,8 @@ describe('call trees: text for whoever is drawn, at every group size', () => {
           // The selectors fill {lead} in a choice's summary and its pull and cost (operation-selectors leadIn).
           if (token === 'lead') { expect(['choice.summary', 'choice.pull', 'choice.cost'], `{lead} in ${field}: "${text}"`).toContain(field); continue; }
           if (token === 'place' || token === 'scene') { expect(part).toBeUndefined(); continue; }
+          // The city's names (content/world.ts) bind bare, like {place}.
+          if (WORLD_TOKENS.includes(token) && !part && singular === undefined && heForm === undefined && oneForm === undefined) continue;
           if (part === 'room') { expect(roles.has(token) || groups.has(token), `unknown room token {${token}.room}`).toBe(true); continue; }
           expect(roles.has(token) || groups.has(token), `unknown token {${token}} in "${text}"`).toBe(true);
           if (part) expect(['first', 'last', 'age', 'he', 'him', 'his', 'hers', 'himself', ...groups.has(token) ? ['n'] : []]).toContain(part.toLowerCase());

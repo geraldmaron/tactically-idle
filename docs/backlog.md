@@ -209,6 +209,15 @@ pool leans toward it (training spend draws candidates who want to learn) and gra
 department's posture, each a small named multiplier with a cap and a test; the funding probe stays at
 zero.
 
+### city-canon-per-save: Each save draws its own city's names
+Tags: job=command; journeys=none (text); probes=none (text); lane=calls
+Needs: start=none; integrate=none; ship=none
+
+`src/content/world.ts` binds one fixed canon (Hotbag, Loopcast, Metro 6 News) on every call, so the
+names stay the same across calls. When a second curated call uses them, draw the canon once per save
+from the pools, store it in the save, and pass it to the binder through `IncidentSpec`. Done when two
+saves can name different apps, and every call in one save names the same ones.
+
 ### profile-surface: The player sees how the city reads the department
 Tags: job=command; journeys=none (department loop); probes=none (display); lane=interface
 Needs: start=none; integrate=none; ship=none

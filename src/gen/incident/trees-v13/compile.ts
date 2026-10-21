@@ -3,6 +3,7 @@ import { TREE_VOICES } from '../../../content/call-trees/types';
 import type { IncidentTemplate } from '../../../content/incidents/types';
 import { CIVILIAN_FIRST_NAMES, CIVILIAN_SURNAMES } from '../../../content/call-trees/civilian-names';
 import { scenarioRecipe } from '../../../content/scenario-recipes';
+import { worldFor } from '../../../content/world';
 import { hashIndex, hashSeed } from '../../../sim/rng';
 import { tierRewardMultiplier } from '../../../content/incidents/rewards';
 import type { ActionDefinition, ClockCondition, Condition, FactDefinition, IncidentSpec, MeterCondition, MeterStance, OutcomeEffect, ScenarioDefinition, SpokenLine, StageDefinition, StoryAnchor, StoryPersonBinding } from '../../../sim/scenario-types';
@@ -94,11 +95,12 @@ export interface BoundPart { text: string; role?: string; group?: string }
 const TOKEN_SCAN = new RegExp(TOKEN.source, TOKEN.flags);
 
 /** One token's bound parts; throws on an unknown token, as binding always has. */
-function bindToken(token: RegExpMatchArray, text: string, cast: Record<string, CastIdentity>, place: string, rooms: Record<string, string>, groups: Record<string, readonly string[]>): BoundPart[] {
+function bindToken(token: RegExpMatchArray, text: string, cast: Record<string, CastIdentity>, place: string, rooms: Record<string, string>, groups: Record<string, readonly string[]>, world: Record<string, string>): BoundPart[] {
   const [match, role, part, singular, plural, heForm, sheForm, theyForm, oneForm, manyForm] = token as unknown as [string, string, ...(string | undefined)[]];
   const bare = !part && singular === undefined && heForm === undefined && oneForm === undefined;
   if (ENGINE_TOKENS.has(role) && bare) return [{ text: match }];
   if (role === 'place' && bare && place) return [{ text: place }];
+  if (bare && !cast[role] && world[role] !== undefined) return [{ text: world[role] }];
   if (role === 'scene' && bare && rooms.scene) return [{ text: rooms.scene }];
   if (part === 'room' && rooms[role]) return [{ text: rooms[role] }];
   if (groups[role]) {
@@ -147,7 +149,7 @@ function bindToken(token: RegExpMatchArray, text: string, cast: Record<string, C
 /** Bind a string as bindRoleTokens does, keeping which person each name came from: the oracle for
  * the people-name matcher (src/ui/people/lexicon.ts) and the lab's Script. Adjacent plain parts are
  * merged and empty parts dropped, so joining the texts gives exactly bindRoleTokens' output. */
-export function bindRoleSegments(text: string, cast: Record<string, CastIdentity>, place = '', rooms: Record<string, string> = {}, groups: Record<string, readonly string[]> = {}): BoundPart[] {
+export function bindRoleSegments(text: string, cast: Record<string, CastIdentity>, place = '', rooms: Record<string, string> = {}, groups: Record<string, readonly string[]> = {}, world: Record<string, string> = worldFor(0)): BoundPart[] {
   const parts: BoundPart[] = [];
   const add = (next: BoundPart) => {
     if (!next.text) return;
@@ -158,7 +160,7 @@ export function bindRoleSegments(text: string, cast: Record<string, CastIdentity
   let at = 0;
   for (const token of text.matchAll(TOKEN_SCAN)) {
     add({ text: text.slice(at, token.index) });
-    for (const part of bindToken(token, text, cast, place, rooms, groups)) add(part);
+    for (const part of bindToken(token, text, cast, place, rooms, groups, world)) add(part);
     at = token.index! + token[0].length;
   }
   add({ text: text.slice(at) });
@@ -169,8 +171,8 @@ export function bindRoleSegments(text: string, cast: Record<string, CastIdentity
  * error, never silent text. `groups` maps each counted role to its members' ids, in order: a group
  * token in a call with no members is an error too, because count conditions keep that text out of
  * lone calls. */
-export function bindRoleTokens(text: string, cast: Record<string, CastIdentity>, place = '', rooms: Record<string, string> = {}, groups: Record<string, readonly string[]> = {}): string {
-  return bindRoleSegments(text, cast, place, rooms, groups).map(part => part.text).join('');
+export function bindRoleTokens(text: string, cast: Record<string, CastIdentity>, place = '', rooms: Record<string, string> = {}, groups: Record<string, readonly string[]> = {}, world: Record<string, string> = worldFor(0)): string {
+  return bindRoleSegments(text, cast, place, rooms, groups, world).map(part => part.text).join('');
 }
 
 /** Public state as an engine condition. A group in `safe` means every member is safe, in `notSafe`
@@ -492,6 +494,8 @@ export interface PlacedCast {
   /** Per role placed inside, which ways out of its starting room this building gives (placeCast,
    * R-B2), for `TreeState.exitVia`. */
   exits?: Record<string, { window: boolean }>;
+  /** The world tokens' text on this call: the city's canon and the drawn commenter (content/world.ts). */
+  world?: Record<string, string>;
 }
 
 /** The door the team comes through into a room: the middle of the first opening on its walking
@@ -620,7 +624,7 @@ export function placeCast(tree: CallTree, built: BuiltLocation, spec: IncidentSp
     ...Object.entries(tree.groups ?? {}).filter(([, def]) => roomOf[def.leader] !== undefined && roomOf[def.leader] !== outside)
       .map(([group, def]) => [group, above(roomOf[def.leader])]),
   ]);
-  return { recipe, situation, outside, room, roomOf, routes, routeName, anchors, cast, groups, upstairs, exits };
+  return { recipe, situation, outside, room, roomOf, routes, routeName, anchors, cast, groups, upstairs, exits, world: worldFor(spec.seed) };
 }
 
 /** The first opening on a route out that joins a room to the outside: the door it leaves the
@@ -670,7 +674,7 @@ export function textBinder(tree: CallTree, built: BuiltLocation, placed: PlacedC
   const roomLabel = (id: string) => (built.location.rooms.find(entry => entry.id === id)?.label ?? 'room').toLowerCase();
   const rooms = { scene: roomLabel(room.id), ...Object.fromEntries(tree.roles.filter(role => role.place !== 'offsite' && roomOf[role.id] !== outside).map(role => [role.id, roomLabel(roomOf[role.id])])),
     ...Object.fromEntries(Object.entries(groups).flatMap(([group, ids]) => ids.length ? [[group, roomLabel(roomOf[ids[0]])], ...ids.map(id => [id, roomLabel(roomOf[id])])] : [])) };
-  return text => bindRoleTokens(text, cast, built.location.name, rooms, groups);
+  return text => bindRoleTokens(text, cast, built.location.name, rooms, groups, placed.world);
 }
 
 /** `clockNexts`: where this call's clocks send it when they run out (Clock.onOut.next), so a node

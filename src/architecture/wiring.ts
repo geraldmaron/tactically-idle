@@ -149,7 +149,7 @@ export const WIRING: readonly Probe[] = [
       const scenario = getScenario(draft.activeRun!.scenarioId)!;
       for (const def of scenario.clocks ?? []) if (def.source?.odds && draft.activeRun!.clocks?.[def.id]) draft.activeRun!.clocks[def.id] = { value: 95, cued: Math.max(1, draft.activeRun!.clocks[def.id].cued) };
     }),
-    evidence: 'PressureSource.odds (src/sim/pressure-sources.ts sourceOdds): a source whose first cue is heard takes points off the checks it weighs on, named with its count. The stream weighs on contact and pressure, the riders at the tape on coordination and execution.',
+    evidence: 'PressureSource.odds (src/sim/pressure-sources.ts sourceOdds): a source whose first cue is heard takes points off the checks it weighs on, named with its count. In Going Live the stream weighs on contact, pressure and coordination.',
   },
   {
     id: 'funding-balance', system: 'metric', input: 'Funding (the department ten million richer)', direction: 'any', status: 'gap', minShare: 0,

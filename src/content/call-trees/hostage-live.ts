@@ -1,10 +1,10 @@
 import type { CallTree, TreeChoice, TreeIf, TreeNext, TreeOutcome, TreeState } from './types';
 
 // Going Live, the first curated call (design sheet: docs/calls/going-live-design.md). A delivery
-// rider the app cut off over a stolen order holds the night manager at the pickup counter of
-// {place} and streams it. The rider wants one sentence said on camera: that the rider didn't take
-// the order. The stream is the rider's shield and the rider's trap. Every viewer makes it safer to
-// stay and harder to back down, and the riders massing at the tape are the same audience in person.
+// rider {delivery_app} cut off over a stolen order holds the night manager at the pickup counter of
+// {place} and streams it on {stream_app}. The rider wants one sentence said on camera: that the
+// rider didn't take the order. The stream is the rider's shield and the rider's trap. Every viewer
+// makes it safer to stay and harder to back down.
 //
 // Hidden truth: who took the order (rider_clear), and whether being refused on camera turns the
 // handgun on the manager (raised). Each situation reframes a scene the player has already watched:
@@ -13,10 +13,10 @@ import type { CallTree, TreeChoice, TreeIf, TreeNext, TreeOutcome, TreeState } f
 // in the second, the rider took it, and the four hundred people who believe otherwise are the reason
 // the rider can't stop. A rider past breaking point (meters) can turn the handgun anyway in stage 3.
 //
-// Pressure sources (src/content/incidents/hostage.ts): the stream's count and the riders at the
-// tape. Talking on the stream feeds the count; cutting it costs the rider's trust and the riders'
-// patience; turning the camera to the wall slows it. The beats on each threat are what the scene
-// says while the player decides.
+// Pressure source (src/content/incidents/hostage.ts): the stream's count. Talking on the stream
+// feeds it; cutting it costs the rider's trust; turning the camera to the wall slows it. The news
+// arrives through the stream's own events (the {outlet} repost cue, the van on the threats). The
+// beats on each threat are what the scene says while the player decides.
 //
 // Self-harm screen (E4): applies to the rider. Cut off from the only income, accused in public, a
 // handgun, a refusal. No path shows the rider's death (noDeathOnCard, force noFatal); the negotiator
@@ -26,8 +26,11 @@ const TALK = { kind: 'contact', ratings: [{ key: 'communication', weight: 0.75 }
 const HOLD = { kind: 'contact', ratings: [{ key: 'composure', weight: 0.6 }, { key: 'communication', weight: 0.4 }] } as const;
 const ASK = { kind: 'observation', ratings: [{ key: 'awareness', weight: 0.6 }, { key: 'communication', weight: 0.4 }] } as const;
 const MOVE = { kind: 'coordination', ratings: [{ key: 'coordination', weight: 0.6 }, { key: 'composure', weight: 0.4 }] } as const;
+/** Leverage on the rider: taking something away to make them talk. The bigger the audience, the
+ * harder it is to take (the stream's odds pull reads contact and pressure). */
+const PRESS = { kind: 'pressure', ratings: [{ key: 'composure', weight: 0.5 }, { key: 'coordination', weight: 0.5 }] } as const;
 const ENTER = { kind: 'execution', ratings: [{ key: 'coordination', weight: 0.4 }, { key: 'composure', weight: 0.35 }, { key: 'shooting', weight: 0.25 }] } as const;
-const check = (base: typeof TALK | typeof HOLD | typeof ASK | typeof MOVE | typeof ENTER, difficulty = 0): TreeChoice['check'] =>
+const check = (base: typeof TALK | typeof HOLD | typeof ASK | typeof MOVE | typeof PRESS | typeof ENTER, difficulty = 0): TreeChoice['check'] =>
   ({ kind: base.kind, ratings: base.ratings.map(rating => ({ ...rating })), difficulty });
 
 const RAISED: TreeIf = { fact: 'raised', is: true };
@@ -39,6 +42,8 @@ const TOOK: TreeIf = { fact: 'rider_clear', is: false };
 
 /** A crisis negotiator on the call: talk that turns on the words goes better. */
 const NEGOTIATOR = { cert: 'crisis_negotiation', value: 6, label: 'Negotiation training' } as const;
+/** A surveillance officer moves the squad up where the rider won't see it. */
+const SURVEILLANCE = { cert: 'surveillance', value: 6, label: 'Surveillance training' } as const;
 /** A steady officer doesn't speed up for the camera (content/traits.ts). */
 const STEADY_ON_CAMERA = { trait: 'steady' as const, value: 4, label: 'doesn’t speed up for the camera' };
 const CALM_ON_CAMERA = { trait: 'calm_voice' as const, value: 3, label: 'sounds the same to two thousand strangers' };
@@ -83,27 +88,27 @@ export const HOSTAGE_LIVE: CallTree = {
   title: 'Going Live',
   roles: [
     { id: 'rider', label: 'delivery rider', pronouns: 'he', kind: 'subject',
-      profile: '{rider.first} picked up from {place} five nights a week for two years. The app cut {rider.him} off on Tuesday over an order that never arrived. {rider.His} stream has four hundred followers, most of them other riders, and {rider.he} {rider~posts|post} to it from a phone mount on the handlebars.',
+      profile: '{rider.first} picked up from {place} five nights a week for two years. {delivery_app} cut {rider.him} off on Tuesday over an order that never arrived. {rider.His} {stream_app} channel has four hundred followers, most of them other riders, and {rider.he} {rider~posts|post} to it from a phone mount on the handlebars.',
       carries: { label: 'Handgun', glyph: 'weapon', knownFrom: 'handgun' } },
     { id: 'manager', label: 'night manager', pronouns: 'she', kind: 'civilian',
       profile: '{manager.first} runs the night shift at {place} and filed the complaint that got {rider.first} cut off. {manager.He} {manager~writes|write} the pickup times on a whiteboard by the register in green marker, because the red one ran dry in the spring.' },
     { id: 'clerk', label: 'clerk', pronouns: 'he', kind: 'civilian',
       profile: '{clerk.first} is nineteen and stocks the coolers on the night shift. {manager.first} got {clerk.him} the job. {clerk.He} {clerk~was|were} at the register the night the order went missing.' },
     { id: 'friend', label: 'rider friend', pronouns: 'he', kind: 'bystander', place: 'outside',
-      profile: '{friend.first} rides the same zone as {rider.first} and came straight from a drop when the stream started. {friend.He} {friend~is|are} at the tape on a scooter with the engine still running, typing in the comments with one thumb.' },
+      profile: '{friend.first} rides the same zone as {rider.first} and came straight from a drop when the stream started. {friend.He} {friend~waits|wait} at the patrol line on a scooter with the engine still running, typing in the comments with one thumb.' },
   ],
   // A pickup counter: a shop floor, a sales floor or a bar.
   families: ['market_row', 'corner_store_flat_g2', 'bar_restaurant_g2'],
   scene: { setting: 'business', rooms: ['retail'], crowd: 2, timeOfDay: 'night' },
   summary: '{rider.first} wants one sentence said on camera. The night manager is on the floor behind the counter, and {rider.first} is holding a handgun and a phone.',
-  coldOpen: 'On Tuesday the app sent {rider.first} one line. Account deactivated after a customer complaint. The complaint came from {place}, about a bag of food that left the counter at 11:40 and never reached the door it was paid for. {rider.first} rode past {place} every night after that, then stopped riding at all. Tonight {rider.he} walked in at the end of the shift, set {rider.his} phone against the register with the camera on, and asked {manager.first} to say it. {manager.first} wouldn’t. Then {rider.first} took the handgun out of {rider.his} jacket. {clerk.first} was by the stockroom door with a case of water in {clerk.his} arms and hasn’t put it down.',
+  coldOpen: 'On Tuesday {delivery_app} sent {rider.first} one line. Account deactivated after a customer complaint. The complaint came from {place}, about a bag of food that left the counter at 11:40 and never reached the door it was paid for. {rider.first} rode past {place} every night after that, then stopped riding at all. Tonight {rider.he} walked in at the end of the shift, set {rider.his} phone against the register with the camera on, and asked {manager.first} to say it. {manager.first} wouldn’t. Then {rider.first} took the handgun out of {rider.his} jacket. {clerk.first} was by the stockroom door with a case of water in {clerk.his} arms and hasn’t put it down.',
   pressureLabel: '{manager.first} on camera',
   pressure: { start: 18, perMinute: 0.15, threshold: 85, civilianPerMinute: 0.5 },
   briefing: {
     dispatchReason: '{clerk.first} called 911 from the stockroom with the phone held against {clerk.his} chest. A rider the store got cut off is back with a handgun and won’t let {manager.first} or {clerk.first} leave.',
     known: [
       '{clerk.first} told the dispatcher, “{rider.He} {rider~wants|want} {manager.first} to say it on the stream.”',
-      'Patrol counts more than four hundred people watching {rider.first}’s stream.',
+      'Patrol counts more than four hundred people watching {rider.first}’s stream on {stream_app}.',
       '{clerk.first} says {manager.first} is sitting on the floor behind the register, out of the camera.',
       'The store’s complaint says the bag left the counter at 11:40 and never arrived.',
     ],
@@ -139,13 +144,15 @@ export const HOSTAGE_LIVE: CallTree = {
   nodes: [
     // ------------------------------------------------------------------ stage 1
     { id: 'going_live', stage: 'assess',
-      threat: { label: 'The address goes out', minutes: 11, text: 'Someone in the comments posts the address of {place}, and the first scooters turn onto the block with their horns going.', pressure: 4, bump: { tape_riders: 15, stream: 8 },
+      // The address threat: a named commenter posts where the store is. The beats are the comments
+      // closing in on it, read out by the rider, so the countdown is the guess getting warmer.
+      threat: { label: 'Address posted by {handle}', minutes: 11, text: 'A comment from {handle} puts the street address of {place} under the picture. {rider.first} reads it out loud. The count jumps as people share it, and patrol starts turning cars away at the corner.', pressure: 4, bump: { stream: 10 },
         beats: [
-          { id: 'scooters', at: 1.2, by: 'radio', line: 'East side. Six scooters at the tape, more coming.', bump: { tape_riders: 6 } },
-          { id: 'see_them', at: 2.6, by: 'rider', line: 'You see them out there? Those are my people.', bump: { stream: 6 } },
-          { id: 'manager_low', at: 4.2, by: 'manager', line: 'Nobody out there pays your rent, {rider.first}.', moves: { rider: 'provoked' }, bump: { stream: 5 } },
+          { id: 'where_is_this', at: 1.2, by: 'rider', line: 'Somebody called {handle} wants to know where this is. Should I tell them?', bump: { stream: 4 } },
+          { id: 'manager_low', at: 3.4, by: 'manager', line: 'Nobody watching that pays your rent, {rider.first}.', moves: { rider: 'provoked' }, bump: { stream: 5 } },
+          { id: 'cross_streets', at: 6.8, by: 'radio', line: 'Comments are guessing the cross streets. One guess is right.', bump: { stream: 6 } },
         ] },
-      prompt: 'The callback rings on {rider.first}’s phone, and {rider.he} {rider~answers|answer} it on the stream. From the corner your squad can see the phone propped against the register, screen lit, and {manager.first} on the floor with {manager.his} back to the drinks cooler. {clerk.first} is by the stockroom door, still holding a case of water.',
+      prompt: 'The callback rings on {rider.first}’s phone, and {rider.he} {rider~answers|answer} it on the stream. {manager.first} is on the floor by the drinks cooler, eyes on the stockroom door and not the handgun. {clerk.first} stands in that doorway, still holding a case of water.',
       exchange: [{ by: 'rider', line: 'Say hi. Everybody’s here.' }, { by: 'negotiator', line: 'Who’s everybody?' }, { by: 'rider', line: 'Four hundred people who know I didn’t take it.' }],
       choices: [
         { id: 'on_stream', title: 'Talk to {rider.him} on the stream', icon: 'radio', talksTo: 'rider', check: check(TALK), minutes: 4, certBonus: NEGOTIATOR, favors: [CALM_ON_CAMERA],
@@ -154,7 +161,7 @@ export const HOSTAGE_LIVE: CallTree = {
           cost: 'Every word goes out live, and the count climbs while you talk.',
           preview: { favorable: '{rider.first} tells you what {rider.he} {rider~wants|want}, out loud, for the stream.', mixed: '{rider.first} talks to the comments instead of to you.', adverse: '{rider.first} turns the phone on {manager.first}, and the handgun could follow it.' },
           outcomes: {
-            favorable: [{ text: '{rider.first} answers every question the negotiator asks, but faces the phone to do it. The bag left at 11:40. {rider.He} {rider~was|were} two blocks away, at a red light, and the app has the timestamp. {rider.He} {rider~wants|want} {manager.first} to say on camera that {rider.he} didn’t take it. Then {rider.he} {rider~walks|walk} out. That’s all.',
+            favorable: [{ text: '{rider.first} answers every question the negotiator asks, but faces the phone to do it. The bag left at 11:40. {rider.He} {rider~was|were} two blocks away, at a red light, and {delivery_app} has the timestamp. {rider.He} {rider~wants|want} {manager.first} to say on camera that {rider.he} didn’t take it. Then {rider.he} {rider~walks|walk} out. That’s all.',
               exchange: [{ by: 'rider', line: 'One sentence. Then I walk.' }], mark: ['terms'], moves: { rider: 'heard' }, bump: { stream: 10 }, next: { node: 'on_air' }, objective: 15 }],
             mixed: [{ text: '{rider.first} reads the negotiator’s questions back to the comments and answers the comments instead. A rider in the chat types that the police are stalling. {rider.first} reads that one out too, slower.',
               mark: ['performing'], moves: { rider: 'heard' }, bump: { stream: 14 }, next: { node: 'on_air' }, objective: 8 }],
@@ -165,42 +172,8 @@ export const HOSTAGE_LIVE: CallTree = {
               quietNext: { node: 'on_air' },
               extra: { mark: ['performing'], moves: { rider: 'provoked' }, bump: { stream: 16 }, pressure: 8 } }),
           } },
-        // Off the stream: a voice through the glass, which the street hears and the phone barely does.
-        { id: 'hail', title: 'Call to {rider.him} through the glass', icon: 'radio', team: { signal: { channel: 'voice', to: 'rider' } }, talksTo: 'rider', check: check(TALK, 2), minutes: 4, favors: [STEADY_ON_CAMERA],
-          summary: '{lead} calls to {rider.first} through the front glass on the hailer, off the phone, so the stream picks up a voice from the street and not a conversation. Every rider at the tape hears all of it instead. {rider.first} has to come to the window to answer, in front of everyone.',
-          pull: 'Talk without the stream hearing every word.',
-          cost: 'The whole street hears it, and {rider.first} answers from the window.',
-          preview: { favorable: '{rider.first} comes to the glass and talks to you, not the phone.', mixed: '{rider.first} answers, and the riders at the tape answer louder.', adverse: '{rider.first} brings {manager.first} to the window with {rider.him}, and the handgun could come up.' },
-          outcomes: {
-            favorable: [{ text: '{rider.first} comes to the glass and answers through it, with the phone left on the register behind {rider.him}. The stream gets {rider.his} back and a voice too far away to make out. Close up, {rider.first} is younger than the stream makes {rider.him} look, and {rider.he} {rider~keeps|keep} wiping {rider.his} face with {rider.his} sleeve.',
-              exchange: [{ by: 'rider', line: 'Why aren’t you calling the phone?' }, { by: 'negotiator', line: 'Because this is between you and me.' }], mark: ['terms'], moves: { rider: 'contact' }, next: { node: 'on_air' }, objective: 12, pressure: -3 }],
-            mixed: [{ text: '{rider.first} answers from the glass, and every rider at the tape answers too, horns and all. The negotiator can’t hear half of it. Somebody in the chat says the cops are shouting at {rider.first} now.',
-              mark: ['performing'], moves: { rider: 'heard' }, bump: { tape_riders: 10, stream: 8 }, next: { node: 'on_air' }, objective: 6 }],
-            adverse: escalate({
-              lead: '{rider.first} comes to the window with {manager.first} by the arm, so the street can see who {rider.he} {rider~has|have}.',
-              threat: 'Then {rider.he} {rider~presses|press} the handgun to {manager.first}’s side against the glass.',
-              quiet: '{rider.first} lets go of {manager.first} at the window and goes back to the phone without a word.',
-              quietNext: { node: 'on_air' },
-              extra: { moves: { rider: 'provoked' }, bump: { tape_riders: 14, stream: 10 }, pressure: 8 } }),
-          } },
-        { id: 'cut_feed', title: 'Have command take the stream down', icon: 'handover', check: check(MOVE, 2), minutes: 6, tempo: 'waiting', consequenceLevel: 'moderate',
-          summary: 'Command asks the platform to end {rider.first}’s stream, and your squad waits on a company two time zones away. When it goes, it goes in front of {rider.first}, mid-sentence. {friend.first} and every rider at the tape lose the only window they had, and they will know who closed it.',
-          pull: 'No audience to perform for, and no count climbing.',
-          cost: '{rider.first} watches the screen go black, and the riders at the tape know who did it.',
-          preview: { favorable: 'The stream ends, and {rider.first} has only you to talk to.', mixed: 'The stream ends and comes back on another phone.', adverse: '{rider.first} watches it cut out, and {manager.first} could pay for it.' },
-          outcomes: {
-            favorable: [{ text: 'The stream drops while {rider.first} is mid-sentence. {rider.He} {rider~taps|tap} the phone, then the counter, then {rider~picks|pick} up the callback on the first ring and {rider~asks|ask} for it back. {rider.He} {rider~doesn’t|don’t} shout. At the tape, the horns start up in long blasts.',
-              exchange: [{ by: 'rider', line: 'Put it back. Put it back and I’ll talk.' }], mark: ['cut'], stabilize: ['stream'], bump: { stream: -100, tape_riders: 12 }, moves: { rider: 'provoked' }, next: { node: 'off_air' }, objective: 10, pressure: 4 }],
-            mixed: [{ text: 'The stream goes black, and ninety seconds later it is back, on {clerk.first}’s phone, taken out of {clerk.his} apron pocket. The count starts again from a few dozen and climbs fast, because everyone who was watching is looking for it.',
-              mark: ['second_phone', 'performing'], bump: { stream: -40, tape_riders: 8 }, moves: { rider: 'provoked' }, next: { node: 'on_air' }, objective: 4, pressure: 6 }],
-            adverse: escalate({
-              lead: '{rider.first} watches the stream die on the screen and turns slowly to the window where your squad stands.',
-              threat: '{rider.first} drags {manager.first} up by the collar and puts the handgun to {manager.his} side, in the window, for nobody.',
-              quiet: '{rider.first} sweeps the phone off the counter and stands over {manager.first}, breathing hard, not answering.',
-              extra: { mark: ['cut'], stabilize: ['stream'], bump: { stream: -100, tape_riders: 15 }, moves: { rider: 'provoked' }, pressure: 10 } }),
-          } },
-        { id: 'clerk_out', title: 'Get {clerk.first} out the back', icon: 'door', walks: 'clerk', team: { to: 'escort' }, check: check(MOVE, -4), minutes: 3, consequenceLevel: 'moderate',
-          summary: '{lead} takes two of your squad in through the stockroom to bring {clerk.first} out while the camera faces the counter. It is one person out, fast. If the stream catches the stockroom door swing, {rider.first} learns from two thousand strangers that you move behind {rider.his} back.',
+        { id: 'clerk_out', title: 'Get {clerk.first} out the back', icon: 'door', walks: 'clerk', team: { to: 'escort' }, check: check(MOVE, -4), minutes: 4, consequenceLevel: 'moderate',
+          summary: '{lead} takes two of your squad in through the stockroom to bring {clerk.first} out while the camera faces the counter. It is one person out, fast. If the stream catches the stockroom door swing, {rider.first} learns from strangers that you move behind {rider.his} back.',
           pull: 'One person out now, while the camera points the other way.',
           cost: 'If the stream sees it, {rider.first} sees you working behind {rider.him}.',
           preview: { favorable: '{clerk.first} gets out the back without the stream seeing.', mixed: '{clerk.first} gets out, and the comments see the door move.', adverse: '{clerk.first} freezes in the doorway in front of the camera, and {rider.first} could fire.' },
@@ -210,18 +183,18 @@ export const HOSTAGE_LIVE: CallTree = {
             mixed: [{ text: '{clerk.first} gets out, but the stockroom door swings shut behind {clerk.him} in the corner of the stream. The comments fill with it before {rider.first} turns around. {rider.He} {rider~reads|read} them, then {rider~looks|look} at the door for a long time.',
               safe: ['clerk'], mark: ['seen_back'], moves: { rider: 'team_seen' }, bump: { stream: 12 }, next: { turn: 'clerk_out' }, objective: 25, pressure: 4 }],
             adverse: [{ text: '{clerk.first} gets one step through the stockroom door and stops, with the case of water still in {clerk.his} arms, in the middle of the picture. {rider.first} sees {clerk.him} on the phone before {rider.he} {rider~sees|see} {clerk.him} in the room. {rider.He} {rider~fires|fire} into the ceiling tiles, and {clerk.first} drops to the floor where {clerk.he} {clerk~stands|stand}.',
-              mark: ['shot_inside'], moves: { rider: 'shots' }, bump: { stream: 25, tape_riders: 12 }, next: { node: 'threat' }, pressure: 14, civilian: -6 },
+              mark: ['shot_inside'], moves: { rider: 'shots' }, bump: { stream: 25 }, next: { node: 'threat' }, pressure: 14, civilian: -6 },
               { text: 'A panel of the ceiling light comes down with the tiles and lands a foot from {clerk.first}’s head.' }],
           } },
         { id: 'watch_feed', title: 'Watch the counter before you answer', icon: 'search', team: { to: { vantage: 'scene' }, signal: { channel: 'visual', to: 'rider' } }, check: check(ASK), minutes: 3, consequenceLevel: 'moderate',
-          certBonus: { cert: 'surveillance', value: 6, label: 'Surveillance training' },
-          summary: '{lead} lets the callback ring out while your squad watches the counter from the corner, glass in front and the stream on a tablet beside it. You see the room two ways, the way {rider.first} wants it seen and the way it is. {rider.first} sees an unanswered phone and two thousand people asking why.',
+          certBonus: SURVEILLANCE,
+          summary: '{lead} lets the callback ring out while your squad watches the counter from the corner, glass in front and the stream on a tablet beside it. You see the room two ways, the way {rider.first} wants it seen and the way it is. {rider.first} sees an unanswered phone and four hundred people asking why.',
           pull: 'See the room before you say a word into it.',
           cost: 'An unanswered phone, on camera, with the chat asking why.',
           preview: { favorable: 'You see the handgun, the floor and who looks where.', mixed: 'You see the counter, and the chat sees the police watching.', adverse: '{rider.first} takes the silence as the answer, and {manager.first} could pay for it.' },
           outcomes: {
             favorable: [
-              { text: 'From the corner the team watches the counter for a full minute, the glass and the tablet side by side. The handgun is in {rider.first}’s right hand, finger off the trigger, pointed at the floor. {manager.first} isn’t watching the handgun. {manager.He} {manager~looks|look} at the stockroom door every few seconds, at {clerk.first}, and away again.',
+              { text: 'From the corner the team watches the counter for a full minute, the glass and the tablet side by side. The handgun is in {rider.first}’s right hand, finger off the trigger, pointed at the floor. {manager.first} looks at the stockroom door every few seconds, at {clerk.first}, and away again before {rider.first} can follow the look.',
                 reveal: ['handgun'], mark: ['glance', 'looked'], moves: { rider: 'contact' }, next: { node: 'on_air' }, objective: 10 },
               { when: { lead: ['observant'] }, text: 'The squad’s sharpest pair of eyes notices the whiteboard by the register. One pickup time is wiped out with a thumb.' },
             ],
@@ -241,14 +214,12 @@ export const HOSTAGE_LIVE: CallTree = {
       threat: { label: 'The comments turn', minutes: 11, text: 'The comments start to turn. People ask why {rider.first} needs a handgun if {rider.he} didn’t take anything, and {rider.first} reads every one of them out loud.', pressure: 5, mark: ['turned_chat'], moves: { rider: 'provoked' }, bump: { stream: 10 },
         beats: [
           { id: 'friend_types', at: 1.4, by: 'rider', line: '{friend.first} says come out, I got you. {friend.first}, I can’t.' },
-          { id: 'count_two', at: 2.8, by: 'radio', line: 'Stream just passed two thousand. Van from the news is two blocks out.', bump: { stream: 6 } },
+          { id: 'count_two', at: 2.8, by: 'radio', line: 'Stream just passed two thousand. A {outlet_short} van is two blocks out.', bump: { stream: 6 } },
           { id: 'manager_asks', at: 3.9, by: 'manager', line: 'Can I stand up? My knees, {rider.first}.', moves: { rider: 'contact' } },
         ] },
       prompt: 'The phone is still propped against the register, and the count under the picture keeps climbing. {rider.first} stands between the camera and {manager.first}, close enough to touch the screen. {rider.He} {rider~wants|want} {manager.first} to say one sentence to it.',
-      exchange: [{ by: 'rider', line: 'Tell them. Tell them what you told the app.' }, { by: 'manager', line: 'Not with that in your hand.' }],
+      exchange: [{ by: 'rider', line: 'Tell them. Tell them what you told {delivery_app}.' }, { by: 'manager', line: 'Not with that in your hand.' }],
       promptIf: [
-        { when: { marks: ['second_phone'] }, prompt: 'The stream is back on {clerk.first}’s phone, held up in {rider.first}’s left hand, shaking a little. The count is climbing faster than it did the first time.',
-          exchange: [{ by: 'rider', line: 'You can’t turn off two phones.' }, { by: 'negotiator', line: 'I don’t want to turn anything off. I want to hear you.' }] },
         { when: { marks: ['terms'] }, prompt: '{rider.first} has said what {rider.he} {rider~wants|want}, out loud, for the stream. One sentence from {manager.first}, then {rider.he} {rider~walks|walk}. {manager.first} hasn’t said anything since.' },
         { when: { marks: ['glance'] }, prompt: 'Through the glass, {manager.first} keeps looking at the stockroom door, and on the tablet the count under the picture keeps climbing.' },
       ],
@@ -276,7 +247,7 @@ export const HOSTAGE_LIVE: CallTree = {
               extra: { mark: ['performing'], moves: { rider: 'provoked' }, bump: { stream: 18 }, pressure: 10 } }),
           } },
         { id: 'camera_wall', title: 'Ask {rider.him} to turn the camera to the wall', icon: 'radio', talksTo: 'rider', check: check(TALK, 2), minutes: 4, certBonus: NEGOTIATOR, favors: [STEADY_ON_CAMERA],
-          summary: '{lead} asks {rider.first} to turn the phone toward the wall and keep the sound on, so the people watching can hear and nobody can perform. You are asking {rider.first} to trust you over two thousand strangers who already believe {rider.him}. {friend.first} at the tape will see the picture go to plaster.',
+          summary: '{lead} asks {rider.first} to turn the phone toward the wall and keep the sound on, so the people watching can hear and nobody can perform. You are asking {rider.first} to trust you over two thousand strangers who already believe {rider.him}, and they will watch the picture go to plaster.',
           pull: 'The count slows, and {rider.first} talks to you instead of to them.',
           cost: '{rider.first} gives up the witnesses {rider.he} came here for, on your word.',
           preview: { favorable: 'The camera faces the wall, and {rider.first} talks to you.', mixed: 'The camera turns, and turns back when the comments object.', adverse: '{rider.first} hears a trick, and {manager.first} could pay for it.' },
@@ -295,14 +266,33 @@ export const HOSTAGE_LIVE: CallTree = {
               quietNext: { node: 'way_out' },
               extra: { mark: ['performing'], moves: { rider: 'provoked' }, bump: { stream: 12 }, pressure: 8 } }),
           } },
+        // Command can end the stream; the rider can't stop it, and will know who did.
+        { id: 'cut_feed', title: 'Have command take the stream down', icon: 'handover', check: check(PRESS, 2), minutes: 6, tempo: 'waiting', consequenceLevel: 'moderate',
+          summary: 'Command asks {stream_app} to end {rider.first}’s stream, and your squad waits on a company two time zones away. When it goes, it goes in front of {rider.first}, mid-sentence. Two thousand people lose the picture {rider.he} came here to give them, and {rider.first} will know who closed it.',
+          pull: 'No audience to perform for, and no count climbing.',
+          cost: '{rider.first} watches the screen go black and knows who did it.',
+          preview: { favorable: 'The stream ends, and {rider.first} has only you to talk to.', mixed: 'The stream ends and comes back on another phone, faster.', adverse: '{rider.first} watches it cut out, and {manager.first} could pay for it.' },
+          outcomes: {
+            favorable: [{ text: 'The stream drops while {rider.first} is mid-sentence. {rider.He} {rider~taps|tap} the phone, then the counter, then {rider~picks|pick} up the callback on the first ring and {rider~asks|ask} for it back. {rider.He} {rider~doesn’t|don’t} shout.',
+              exchange: [{ by: 'rider', line: 'Put it back. Put it back and I’ll talk.' }], mark: ['cut'], stabilize: ['stream'], bump: { stream: -100 }, moves: { rider: 'provoked' }, next: { node: 'off_air' }, objective: 10, pressure: 4 }],
+            mixed: [{ text: 'The stream goes black. {rider.first} makes {clerk.first} hand over the phone from {clerk.his} apron, and ninety seconds later the stream is back on it. The old viewers are hunting for it, and the count climbs faster than the first time.',
+              exchange: [{ by: 'rider', line: 'You can’t turn off two phones.' }], mark: ['performing'], bump: { stream: -30 }, moves: { rider: 'provoked' }, next: { node: 'way_out' }, objective: 4, pressure: 6 }],
+            adverse: escalate({
+              lead: '{rider.first} watches the stream die on the screen and turns slowly to the window where the squad stands.',
+              threat: '{rider.first} drags {manager.first} up by the collar and puts the handgun to {manager.his} side, in the window, for nobody.',
+              quiet: '{rider.first} sweeps the phone off the counter and stands over {manager.first}, breathing hard, not answering.',
+              extra: { mark: ['cut'], stabilize: ['stream'], bump: { stream: -100 }, moves: { rider: 'provoked' }, pressure: 10 } }),
+          } },
+        // The same act as watching from the corner, so not after it.
         { id: 'team_glass', title: 'Move your squad up to the glass', icon: 'perimeter', team: { to: { vantage: 'scene' }, signal: { channel: 'visual', to: 'rider' } }, check: check(MOVE), minutes: 3, consequenceLevel: 'moderate', onlyIf: { notMarks: ['looked'] },
+          certBonus: SURVEILLANCE,
           summary: '{lead} moves your squad up to the front glass, close enough to reach {manager.first} in seconds and to see exactly where the handgun is. The stream sees it too. Two thousand people watch helmets arrive at the window, and so does {rider.first}.',
           pull: 'Close enough to reach {manager.first}, and eyes on the handgun.',
           cost: 'The stream watches your squad move in, and {rider.first} watches the stream.',
           preview: { favorable: 'Your squad is at the glass with eyes on the handgun.', mixed: 'Your squad is at the glass, and the stream is full of it.', adverse: '{rider.first} sees helmets on the stream, and {manager.first} could pay for it.' },
           outcomes: {
             favorable: [
-              { text: 'The squad settles at either side of the front glass without a sound anyone inside could name. The handgun is in {rider.first}’s right hand, low. {manager.first} is two steps from the door. The stream shows the street and nothing on it.',
+              { text: 'The squad settles at either side of the front glass without a sound anyone inside could name. The handgun is in {rider.first}’s right hand, low. {manager.first} is a few steps from the door. The stream shows the street and nothing on it.',
                 reveal: ['handgun'], mark: ['team_close'], next: { node: 'way_out' }, objective: 10 },
               { when: { lead: ['observant'] }, text: 'The squad’s sharpest pair of eyes counts the steps from the cooler to the door. Four.' },
             ],
@@ -315,36 +305,19 @@ export const HOSTAGE_LIVE: CallTree = {
               quietNext: { node: 'way_out' },
               extra: { mark: ['team_close', 'performing'], moves: { rider: 'team_seen' }, bump: { stream: 16 }, pressure: 8 } }),
           } },
-        { id: 'friend_line', title: 'Put {friend.first} on the line', icon: 'radio', talksTo: 'rider', check: check(TALK, -2), minutes: 5,
-          summary: '{friend.first} has been typing in the comments from the tape since the stream started. {lead} hands {friend.him} the phone at the patrol line and stands beside {friend.him}. {friend.first} knows {rider.first}. {friend.first} also knows nothing about what {rider.first} is holding, and will say whatever comes, live.',
-          pull: 'A voice {rider.first} trusts more than any of yours.',
-          cost: 'A friend who can say the one wrong thing, on the stream.',
-          preview: { favorable: '{friend.first} gets {rider.first} talking about walking out.', mixed: '{friend.first} gets through, then argues with the comments.', adverse: '{friend.first} says something that sends {rider.first} back behind {manager.first}.' },
-          outcomes: {
-            favorable: [{ text: '{friend.first} doesn’t ask {rider.first} anything. {friend.He} {friend~tells|tell} {rider.him} where {friend.he} {friend~is|are} parked and that the scooter is still running, and that every rider at the tape will be standing there when {rider.first} comes out, so nobody can say what happened after.',
-              exchange: [{ by: 'friend', line: 'We’re all here. Everybody sees you walk out.' }], mark: ['friend_promise'], moves: { rider: 'heard' }, bump: { tape_riders: 8 }, next: { node: 'way_out' }, objective: 15, pressure: -4 }],
-            mixed: [{ text: '{friend.first} gets two sentences through to {rider.first}, then starts answering the comments calling {rider.first} a thief, one by one, louder each time. The negotiator takes the phone back.',
-              mark: ['performing'], moves: { rider: 'heard' }, bump: { stream: 8, tape_riders: 6 }, next: { node: 'way_out' }, objective: 6 }],
-            adverse: escalate({
-              lead: '{friend.first} tells {rider.first} to come out before the police shoot {rider.him}, and the riders at the tape hear it and start shouting it too.',
-              threat: '{rider.first} pulls {manager.first} up off the floor and holds {manager.him} between {rider.himself} and the window, the handgun at {manager.his} side.',
-              quiet: '{rider.first} backs away from the window and drags the phone with {rider.him}, out of the street’s sight.',
-              quietNext: { node: 'way_out' },
-              extra: { moves: { rider: 'provoked' }, bump: { stream: 10, tape_riders: 15 }, pressure: 10 } }),
-          } },
       ] },
 
     // ------------------------------------------------------------------ stage 2: the stream is down
     { id: 'off_air', stage: 'adapt',
-      threat: { label: '{rider.first} stands over {manager.first}', minutes: 12, text: '{rider.first} stops pacing and stands over {manager.first}, close, and asks {manager.him} the same question again and again in the same flat voice.', pressure: 6, moves: { rider: 'provoked' }, bump: { tape_riders: 8 },
+      threat: { label: '{rider.first} stands over {manager.first}', minutes: 12, text: '{rider.first} stops pacing and stands over {manager.first}, close, and asks {manager.him} the same question again and again in the same flat voice.', pressure: 6, moves: { rider: 'provoked' },
         beats: [
-          { id: 'horns', at: 1.5, by: 'radio', line: 'Tape’s pushing. Forty riders, maybe more. Horns nonstop.', bump: { tape_riders: 8 } },
+          { id: 'stops_twice', at: 1.5, by: 'radio', line: 'Window. Subject stopped by the manager again. Second time.' },
           { id: 'no_one', at: 3.1, by: 'rider', line: 'Nobody can see this now. You get that?' },
         ] },
-      prompt: 'There is no stream now, and no count. {rider.first} paces the length of the counter, and every time {rider.he} {rider~passes|pass} {manager.first} {rider.he} {rider~stops|stop}. Outside, the horns at the tape haven’t stopped since the picture went dark.',
+      prompt: 'There is no stream now, and no count. {rider.first} paces the length of the counter, and every time {rider.he} {rider~passes|pass} {manager.first} {rider.he} {rider~stops|stop}. The store is quiet enough to hear the cooler hum.',
       exchange: [{ by: 'rider', line: 'Now it’s just us. That what you wanted?' }, { by: 'negotiator', line: 'I wanted to hear you without four hundred people in the way.' }],
       promptIf: [
-        { when: { marks: ['cut'] }, prompt: 'Command took the stream down. {rider.first} keeps picking up the dead phone and putting it back against the register, as if the picture might come back on its own. Outside, the horns at the tape haven’t stopped since it went dark.',
+        { when: { marks: ['cut'] }, prompt: 'Command took the stream down. {rider.first} keeps picking up the dead phone and putting it back against the register, as if the picture might come back on its own.',
           exchange: [{ by: 'rider', line: 'You did that. You took them away.' }, { by: 'negotiator', line: 'I did. I want to hear you without them.' }] },
         { when: { notSafe: ['clerk'] }, prompt: 'No stream, no count. {rider.first} paces between {manager.first} on the floor and {clerk.first}, still frozen by the stockroom door with the case of water.' },
       ],
@@ -355,11 +328,11 @@ export const HOSTAGE_LIVE: CallTree = {
           cost: '{rider.first} hears that you took away the only people on {rider.his} side.',
           preview: { favorable: '{rider.first} talks to you, and {manager.first} could walk out.', mixed: '{rider.first} believes you and hates it.', adverse: '{rider.first} hears an enemy, and {manager.first} is the one in reach.' },
           outcomes: {
-            favorable: [{ text: '{rider.first} is quiet for long enough that the team checks the line. Then {rider.he} {rider~says|say} nobody has told {rider.him} anything straight since the app did. {rider.He} {rider~tells|tell} the negotiator about the red light and the timestamp, slowly, the way {rider.he} must have told it to the stream a hundred times. Then, without being asked, {rider.he} {rider~tells|tell} {manager.first} to get up and go. {manager.first} goes.',
+            favorable: [{ text: '{rider.first} is quiet for long enough that the team checks the line. Then {rider.he} {rider~says|say} nobody has told {rider.him} anything straight since {delivery_app} did. {rider.He} {rider~tells|tell} the negotiator about the red light and the timestamp, slowly, the way {rider.he} must have told it to the stream a hundred times. Then, without being asked, {rider.he} {rider~tells|tell} {manager.first} to get up and go. {manager.first} goes.',
               safe: ['manager'], mark: ['terms', 'still_armed'], moves: { rider: 'honest' }, next: { node: 'last_word' }, objective: 40, pressure: -6 },
               clerkToo('{clerk.first} goes out the front with {manager.him}.'),
               { when: { lead: ['calm_voice'] }, text: 'Near the end {rider.first} says the negotiator is the first person since Tuesday who didn’t sound like a form.' }],
-            mixed: [{ text: '{rider.first} believes the negotiator. That is the problem. {rider.He} {rider~says|say} the police are just like the app, a message you can’t answer, and {rider~goes|go} back to pacing. But {rider.he} {rider~keeps|keep} the line open.',
+            mixed: [{ text: '{rider.first} believes the negotiator. That is the problem. {rider.He} {rider~says|say} the police are just like {delivery_app}, a message you can’t answer, and {rider~goes|go} back to pacing. But {rider.he} {rider~keeps|keep} the line open.',
               moves: { rider: 'heard' }, next: { node: 'way_out' }, objective: 8 }],
             adverse: escalate({
               lead: '{rider.first} drops the phone on the counter and says the negotiator is the last voice {rider.he} {rider~wants|want} to hear.',
@@ -368,22 +341,27 @@ export const HOSTAGE_LIVE: CallTree = {
               quietNext: { node: 'way_out' },
               extra: { moves: { rider: 'provoked' }, pressure: 8 } }),
           } },
-        { id: 'push_tape', title: 'Push the tape back a block', icon: 'perimeter', check: check(MOVE), minutes: 5, consequenceLevel: 'moderate',
-          summary: '{lead} sends half your squad to the tape to move the riders back a block, scooters and all, so the horns stop reaching the counter. The street gets quieter and the perimeter gets wider. The riders will film every officer who moves them, and {friend.first} is in the front row.',
-          pull: 'Quiet on the street, and fewer people to perform for when it ends.',
-          cost: 'Half your squad on crowd work, filmed by every rider they move.',
-          preview: { favorable: 'The riders move back, and the horns stop reaching the counter.', mixed: 'The riders move, filming every step of it.', adverse: 'The tape turns into a shoving match, {friend.first} ends up on the ground, and {rider.first} hears all of it.' },
+        // Off the stream the squad can move unseen, and the rider just said why that frightens them.
+        { id: 'move_up_dark', title: 'Move your squad up while nobody films', icon: 'perimeter', team: { to: { vantage: 'scene' }, signal: { channel: 'visual', to: 'rider' } }, check: check(MOVE, 2), minutes: 4, consequenceLevel: 'moderate',
+          certBonus: SURVEILLANCE,
+          summary: '{lead} walks your squad up the dark sidewalk to the store while no stream can show it, near enough to get a hand on {manager.first} through the door. {rider.first} just said nobody can see this now. One helmet in the dark glass, and {manager.first} is the person beside {rider.him}.',
+          pull: 'A hand on {manager.first} at the door, and nobody filming the move.',
+          cost: '{rider.first} could catch a helmet in the glass, with {manager.first} in reach.',
+          preview: { favorable: 'Your squad reaches the door unseen, with eyes on the handgun.', mixed: '{rider.first} catches one helmet in the dark and stops over {manager.first}.', adverse: '{rider.first} sees helmets with no camera on, and the handgun could turn on {manager.first}.' },
           outcomes: {
-            favorable: [{ text: 'The riders go back a block, slowly, filming the whole way. {friend.first} goes last and asks an officer to tell {rider.first} {friend.he} {friend~is|are} still there. Inside, without the horns, {rider.first} stops pacing and picks up the phone.',
-              mark: ['tape_back'], bump: { tape_riders: -15 }, moves: { rider: 'contact' }, next: { node: 'way_out' }, objective: 10, pressure: -4 }],
-            mixed: [{ text: 'The riders move back, every one of them filming the officers moving them. Within a minute the footage is in other streams. {rider.first} watches it on {rider.his} own phone.',
-              mark: ['tape_back'], bump: { tape_riders: -6, stream: 10 }, next: { node: 'way_out' }, objective: 6, pressure: 2 }],
+            favorable: [
+              { text: 'The squad comes up the sidewalk in the dark and splits to both sides of the door. The handgun hangs at {rider.first}’s side. {manager.first} is on the floor by the cooler, looking toward the stockroom every time {rider.first} turns away.',
+                reveal: ['handgun'], mark: ['team_close'], next: { node: 'way_out' }, objective: 10 },
+              { when: { lead: ['observant'] }, text: 'The squad’s best spotter reads the whiteboard by the register through the glass. One pickup time on it has been smudged off.' },
+            ],
+            mixed: [{ text: 'The squad reaches the glass, and the edge of a helmet catches the light from the drinks cooler. {rider.first} stops over {manager.first} and asks the negotiator who is at the window.',
+              reveal: ['handgun'], mark: ['team_close'], moves: { rider: 'team_seen' }, next: { node: 'way_out' }, objective: 6, pressure: 4 }],
             adverse: escalate({
-              lead: 'A rider won’t move a scooter and an officer moves it for {friend.him}, and then the whole front row is pushing. {friend.first} goes down under a tipped scooter and gets up swinging. {rider.first} hears all of it through the glass.',
-              threat: '{rider.first} hauls {manager.first} to the window and holds the handgun to {manager.him} where the riders can see.',
+              lead: '{rider.first} sees two helmets in the dark glass and stops pacing. {rider.He} {rider~says|say} nobody is filming now, so nobody will see what happens next.',
+              threat: '{rider.first} hauls {manager.first} up off the floor and holds the handgun to {manager.his} side, facing the window.',
               quiet: '{rider.first} kills the lights inside and stands in the dark by the register.',
               quietNext: { node: 'way_out' },
-              extra: { moves: { rider: 'provoked' }, bump: { tape_riders: 18 }, pressure: 10 } }),
+              extra: { mark: ['team_close'], moves: { rider: 'team_seen' }, pressure: 10 } }),
           } },
       ] },
 
@@ -406,7 +384,7 @@ export const HOSTAGE_LIVE: CallTree = {
           preview: { favorable: 'You hear what happened at the register at 11:40.', mixed: '{clerk.first} starts to answer and asks for {manager.first} instead.', adverse: '{clerk.first} shuts down, and the stream goes on without you.' },
           outcomes: {
             favorable: [
-              { if: CLEAR, text: '{clerk.first} says it to the bumper, not to the negotiator. {clerk.He} took the bag. {clerk.He} {clerk~was|were} hungry and the drop was late, and {manager.first} found the receipt in {clerk.his} apron the next day and called the app about the rider instead.',
+              { if: CLEAR, text: '{clerk.first} says it to the bumper, not to the negotiator. {clerk.He} took the bag. {clerk.He} {clerk~was|were} hungry and the drop was late, and {manager.first} found the receipt in {clerk.his} apron the next day and called {delivery_app} about the rider instead.',
                 exchange: [{ by: 'clerk', line: '{manager.He} said they’d never fire me if it was the rider.' }], reveal: ['rider_clear'], mark: ['knows_truth'], next: { node: 'way_out' }, objective: 15 },
               { if: TOOK, text: '{clerk.first} says {rider.first} came back at 11:50, after the drop failed, and took the bag off the counter while {clerk.he} {clerk~was|were} in the stockroom. {clerk.He} watched it on the store camera. {manager.first} kept the clip.',
                 exchange: [{ by: 'clerk', line: 'I didn’t say anything. I didn’t want {rider.him} to get in trouble.' }], reveal: ['rider_clear'], mark: ['knows_truth'], next: { node: 'way_out' }, objective: 12 },
@@ -438,40 +416,42 @@ export const HOSTAGE_LIVE: CallTree = {
 
     // ------------------------------------------------------------------ stage 3
     { id: 'way_out', stage: 'resolve',
-      threat: { label: 'The news van parks', minutes: 12, text: 'A news van parks at the corner with its mast going up, and the stream’s count jumps by a thousand while {rider.first} watches the number.', pressure: 5, bump: { stream: 18, tape_riders: 8 },
+      threat: { label: 'The {outlet_short} van parks', minutes: 12, text: 'A {outlet_short} van parks at the corner with its mast going up, and the stream’s count jumps by a thousand while {rider.first} watches the number.', pressure: 5, bump: { stream: 18 },
         beats: [
           { id: 'medic', at: 1.8, by: 'radio', line: 'Medic staged at the corner. Ready when you are.' },
           { id: 'how_out', at: 3.4, by: 'rider', line: 'If I walk out, do I walk out on camera? Yes or no.', bump: { stream: 5 } },
-          { id: 'riders_chant', at: 4.6, by: 'radio', line: 'Riders are chanting the name. News is filming the riders.', bump: { tape_riders: 6 } },
+          { id: 'camera_door', at: 4.6, by: 'radio', line: 'Van crew has a camera on the front door. Lights up.', bump: { stream: 4 } },
         ] },
-      prompt: '{rider.first} is talking about coming out now, but not about how. The phone is still on the register. {manager.first} is still on the floor by the cooler, and every rider at the tape has a phone up, waiting for the door.',
+      prompt: '{rider.first} is talking about coming out now, but not about how. The phone is still on the register. {manager.first} is still on the floor by the cooler, and outside a camera on the corner is pointed at the door.',
       exchange: [{ by: 'rider', line: 'I come out on camera or I don’t come out.' }, { by: 'negotiator', line: 'Tell me why the camera matters.' }, { by: 'rider', line: 'Because then you can’t say what happened.' }],
       promptIf: [
         { when: { marks: ['admitted'] }, prompt: '{manager.first} said it on camera. The comments haven’t stopped since. {rider.first} keeps looking at the number, and at the door, and at the stockroom.',
           exchange: [{ by: 'rider', line: 'You heard it. Everybody heard it.' }, { by: 'negotiator', line: 'Everybody heard it. Now let’s get you out.' }] },
         { when: { marks: ['exposed'] }, prompt: 'The stream heard {manager.first} say it, and {rider.first} has stopped arguing with the comments. {rider.He} {rider~talks|talk} about coming out like someone talking about a place {rider.he} {rider~has|have} never been.',
           exchange: [{ by: 'rider', line: 'If I walk out, they all watch me walk out.' }, { by: 'negotiator', line: 'Then they watch you walk out. That’s all they see.' }] },
-        { when: { marks: ['news_on'] }, prompt: 'A news account is carrying the stream now. {rider.first} is talking about coming out, but {rider.his} eyes keep going to the number, which has an extra digit since the news picked it up.' },
+        { when: { marks: ['news_on'] }, prompt: '{outlet} is carrying the stream now. {rider.first} is talking about coming out, but {rider.his} eyes keep going to the number, which has gained a digit since the repost.' },
         { when: { marks: ['phone_wall'] }, prompt: 'The phone faces the calendar on the wall, and the speaker murmurs with comments nobody reads. {rider.first} talks to the negotiator now, mostly.' },
         { when: { marks: ['lied_clerk'] }, prompt: '{rider.first} believes {clerk.first} is on {rider.his} side. {rider.He} {rider~keeps|keep} asking when {clerk.first} will say it on the stream.' },
       ],
       choices: [
-        { id: 'walk_live', title: 'Let {rider.him} walk out on the stream', icon: 'door', walks: 'manager', talksTo: 'rider', check: check(TALK, -2), minutes: 6, onlyIf: { notMarks: ['lie_found'] },
-          modifiers: [{ label: '{friend.first} promised the riders would be there', mark: 'friend_promise', value: 5 }, { label: 'The camera is on the wall', mark: 'phone_wall', value: -4 }],
+        // Not after command cut the stream: there is no stream to walk out on.
+        { id: 'walk_live', title: 'Let {rider.him} walk out on the stream', icon: 'door', walks: 'manager', talksTo: 'rider', check: check(TALK, 0), minutes: 6, onlyIf: { notMarks: ['lie_found', 'cut'] },
+          modifiers: [{ label: 'The camera is on the wall', mark: 'phone_wall', value: -4 }],
           favors: [STEADY_ON_CAMERA],
-          summary: '{lead} agrees that {rider.first} walks out with the phone filming, so everyone watching can see nobody hurt {rider.him} after. {manager.first} goes first. Every step your squad takes is on thousands of phones, the riders at the tape are a crowd waiting for a moment, and {rider.first} has never been more watched.',
+          summary: '{lead} agrees that {rider.first} walks out with the phone filming, so everyone watching can see nobody hurt {rider.him} after. {manager.first} goes first. Every step your squad takes is on thousands of phones and the {outlet_short} camera, and {rider.first} has never been more watched.',
           pull: '{rider.first} walks out the way {rider.he} {rider~asks|ask}, where nobody can lie about it.',
-          cost: 'Every move your squad makes, live, in front of a crowd waiting for one.',
-          preview: { favorable: '{manager.first} walks out, then {rider.first}, on camera, empty-handed.', mixed: '{rider.first} comes out to a crowd that surges at the tape, and someone at the front is hurt in it.', adverse: '{rider.first} performs for the camera at the door, and the handgun comes up with it.' },
+          cost: 'Every move your squad makes, live, with the {outlet_short} camera on the door.',
+          preview: { favorable: '{manager.first} walks out, then {rider.first}, on camera, empty-handed.', mixed: '{manager.first} walks out, and {rider.first} sees the camera and backs inside, armed.', adverse: '{rider.first} performs for the camera at the door, and the handgun comes up with it.' },
           outcomes: {
             favorable: [
-              { text: '{manager.first} goes out first, holding the door frame. Then {rider.first} walks out holding the phone up in front of {rider.him}, filming {rider.his} own empty right hand, the way the negotiator tells {rider.him} to. Two officers take {rider.him} on the sidewalk in front of the camera, slowly, and the riders at the tape cheer, not for anyone in particular.',
+              { text: '{manager.first} goes out first, holding the door frame. Then {rider.first} walks out holding the phone up in front of {rider.him}, filming {rider.his} own empty right hand, the way the negotiator tells {rider.him} to. Two officers take {rider.him} on the sidewalk in front of the {outlet_short} camera, slowly, while the stream’s count climbs higher than it has all night.',
                 safe: ['manager'], out: ['rider'], next: { ending: 'out_on_camera' }, objective: 75, pressure: -12 },
               clerkToo('{clerk.first} comes out of the stockroom a minute before, with nobody filming.'),
             ],
             mixed: [
-              { text: '{manager.first} gets out, and {rider.first} follows, but the riders see {rider.him} on the step and push the tape. For half a minute the officers taking {rider.first} are also holding back forty people with phones. {friend.first} is shoved into a parked scooter at the front and goes down hard on one knee.',
-                safe: ['manager'], out: ['rider'], harm: { friend: 'wounded' }, bump: { tape_riders: 15 }, next: { ending: 'out_on_camera' }, objective: 60, pressure: 4 },
+              { text: '{manager.first} gets out. On the step {rider.first} sees the van’s light come up on the corner and backs inside with the phone held high. The handgun is back in {rider.his} hand by the register.',
+                safe: ['manager'], mark: ['still_armed', 'performing'], bump: { stream: 12 }, next: { node: 'last_word' }, objective: 40, pressure: 4 },
+              foundOut('Then a comment comes up under the picture from {clerk.first}’s own account. It says {clerk.first} never told anyone {rider.first} was clear. {rider.first} reads it out loud twice.', { if: TOOK }),
               clerkToo('{clerk.first} is out first.'),
             ],
             adverse: escalate({
@@ -480,7 +460,7 @@ export const HOSTAGE_LIVE: CallTree = {
               anyway: 'The comments are screaming. {rider.first} turns from the door with the handgun up and puts it on {manager.first}.',
               quiet: '{rider.first} backs inside and closes the door on the street, still filming.',
               quietNext: { node: 'last_word' },
-              extra: { mark: ['performing'], moves: { rider: 'provoked' }, bump: { stream: 20, tape_riders: 10 }, pressure: 10 } }),
+              extra: { mark: ['performing'], moves: { rider: 'provoked' }, bump: { stream: 20 }, pressure: 10 } }),
           } },
         { id: 'walk_dark', title: 'Phone face down, then walk', icon: 'door', walks: 'manager', talksTo: 'rider', check: check(TALK, 1), minutes: 5,
           modifiers: [{ label: 'The camera is already on the wall', mark: 'phone_wall', value: 6 }, { label: '{rider.first} is playing to the chat', mark: 'performing', value: -5 }],
@@ -503,35 +483,9 @@ export const HOSTAGE_LIVE: CallTree = {
             adverse: heldEnd({ text: '{rider.first} says {rider.he} {rider~knows|know} what happens to people nobody is filming, and sits down behind the counter beside {manager.first}, the phone in one hand and the handgun in the other.', moves: { rider: 'provoked' }, objective: 10 },
               '{clerk.first} is still by the stockroom door.'),
           } },
-        { id: 'manager_first', title: 'Ask for {manager.first} before anything', icon: 'radio', walks: 'manager', talksTo: 'rider', check: check(TALK, 0), minutes: 4, onlyIf: { notMarks: ['lie_found'] },
-          modifiers: [{ label: '{manager.first} said it on camera', mark: 'admitted', value: 6 }],
-          summary: '{lead} asks {rider.first} to let {manager.first} walk out now, before anyone talks about how {rider.first} comes out. It gets the person in the most danger out first. It also takes away the only witness {rider.first} has to what happened at 11:40, and {rider.he} {rider~knows|know} it.',
-          pull: '{manager.first} out of reach of the handgun, before anything else.',
-          cost: '{rider.first} loses the last witness to {rider.his} side of the night.',
-          preview: { favorable: '{manager.first} walks out, and {rider.first} is alone with the phone.', mixed: '{manager.first} gets out, and {rider.first} turns the camera on {rider.himself}.', adverse: '{rider.first} hears you choosing {manager.first} over {rider.him}, and the handgun could come up.' },
-          outcomes: {
-            favorable: [
-              { text: '{rider.first} looks at {manager.first} for a long moment and steps back from the cooler. {manager.first} gets up on {manager.his} own and walks to the door without looking at the phone. At the door {manager.he} {manager~stops|stop}, and {manager~doesn’t|don’t} turn around, and {manager~goes|go}.',
-                safe: ['manager'], mark: ['still_armed'], moves: { rider: 'released' }, next: { node: 'last_word' }, objective: 40 },
-              clerkToo('{clerk.first} goes out behind {manager.him}.'),
-            ],
-            mixed: [
-              { text: '{manager.first} gets out. {rider.first} turns the camera around onto {rider.himself} and tells the stream that now there is nobody left to lie about {rider.him}, which isn’t true, and {rider.he} {rider~knows|know} it.',
-                safe: ['manager'], mark: ['still_armed', 'performing'], bump: { stream: 10 }, next: { node: 'last_word' }, objective: 35 },
-              foundOut('Then a comment comes up from {clerk.first}’s account, typed in the back of a patrol car. It says {clerk.first} never said anything about {rider.first}. {rider.first} reads it out loud twice.', { if: TOOK }),
-              clerkToo('{clerk.first} is out the back before {manager.him}.'),
-            ],
-            adverse: escalate({
-              lead: '{rider.first} hears that the police want {manager.first} safe and {rider.him} alone, and says so, to the camera.',
-              threat: '{rider.first} grabs {manager.first} by the arm and holds the handgun to {manager.his} ribs.',
-              anyway: '{rider.first} is past listening. {rider.He} {rider~yanks|yank} {manager.first} close and points the handgun at {manager.him}.',
-              quiet: '{rider.first} sits down on the floor beside {manager.first} and won’t answer anyone.',
-              quietNext: { node: 'last_word' },
-              extra: { moves: { rider: 'provoked' }, bump: { stream: 10 }, pressure: 8 } }),
-          } },
         // The lie found out (temptation). Only on the branch where the team said the clerk backs the rider.
         { id: 'own_lie', title: 'Tell {rider.him} the truth about {clerk.first}', icon: 'radio', talksTo: 'rider', check: check(TALK, 0), minutes: 4, onlyIf: { marks: ['lied_clerk'], notMarks: ['lie_found'] },
-          summary: '{lead} tells {rider.first} that nobody asked {clerk.first} anything before the team said {clerk.first} backed {rider.him}. It is the right thing to say, and the worst moment to say it, with the news van parked at the corner and {rider.first} sitting down for the first time all night.',
+          summary: '{lead} tells {rider.first} that nobody asked {clerk.first} anything before the team said {clerk.first} backed {rider.him}. It is the right thing to say, and the worst moment to say it, with the {outlet_short} van parked at the corner and {rider.first} sitting down for the first time all night.',
           pull: 'Take back a promise before it breaks on its own, live.',
           cost: '{rider.first} hears that the one good thing tonight was made up.',
           preview: { favorable: '{rider.first} takes it, and keeps talking to you.', mixed: '{rider.first} stands up again and asks the stream what to do.', adverse: '{rider.first} hears one more lie, and the handgun could come up at {manager.first}.' },
@@ -541,7 +495,7 @@ export const HOSTAGE_LIVE: CallTree = {
             mixed: [{ text: '{rider.first} stands up and asks the stream whether {rider.he} should believe the police now. The comments answer in a hundred ways at once.',
               breaks: ['clerk_backs'], mark: ['performing'], moves: { rider: 'heard' }, bump: { stream: 10 }, next: { node: 'last_word' }, objective: 10 }],
             adverse: escalate({
-              lead: '{rider.first} says everybody lies to {rider.him}, the app, the store, the police, and says it to the camera.',
+              lead: '{rider.first} says everybody lies to {rider.him}, {delivery_app}, the store, the police, and says it to the camera.',
               threat: '{rider.first} turns the handgun on {manager.first} and keeps it there.',
               anyway: '{rider.first} is shaking. {rider.He} {rider~points|point} the handgun at {manager.first} anyway.',
               quiet: '{rider.first} puts the phone in {rider.his} jacket, still streaming, and sits with {rider.his} back to the counter.',
@@ -550,13 +504,13 @@ export const HOSTAGE_LIVE: CallTree = {
           } },
         // Only after the rider ended the stream and asked what happens to people who lie to everyone.
         { id: 'honest_next', title: 'Tell {rider.him} what happens next', icon: 'radio', walks: 'manager', talksTo: 'rider', check: check(TALK, -2), minutes: 5, onlyIf: { marks: ['ended_it'] }, certBonus: NEGOTIATOR,
-          summary: '{lead} answers the question {rider.first} asked, straight. A charge for tonight, the app gone for good, and people who will remember the stream longer than {rider.first} will. Nobody can promise anything kinder. It is the first answer all night that isn’t a trick, and it isn’t a comfort either.',
+          summary: '{lead} answers the question {rider.first} asked, straight. A charge for tonight, {delivery_app} gone for good, and people who will remember the stream longer than {rider.first} will. Nobody can promise anything kinder. It is the first answer all night that isn’t a trick, and it isn’t a comfort either.',
           pull: 'The truth to someone who just stopped lying.',
           cost: 'An answer with nothing soft in it, to someone already on the floor.',
           preview: { favorable: '{rider.first} lets {manager.first} go and walks out to you.', mixed: '{rider.first} lets {manager.first} go and stays inside with the answer.', adverse: '{rider.first} hears there is nothing left, and stays behind the counter with {manager.first}.' },
           outcomes: {
             favorable: [
-              { text: '{rider.first} listens to all of it without a word. Then {rider.he} {rider~tells|tell} {manager.first} to go, and {manager.first} goes, and a minute later {rider.first} walks out after {manager.him} with empty hands and asks an officer whether {friend.first} is still at the tape.',
+              { text: '{rider.first} listens to all of it without a word. Then {rider.he} {rider~tells|tell} {manager.first} to go, and {manager.first} goes, and a minute later {rider.first} walks out after {manager.him} with empty hands and asks an officer whether {friend.first} is still outside.',
                 safe: ['manager'], out: ['rider'], next: { ending: 'out_quiet' }, objective: 75, pressure: -10 },
               clerkToo('{clerk.first} is let out the back first.'),
             ],
@@ -568,8 +522,8 @@ export const HOSTAGE_LIVE: CallTree = {
             adverse: heldEnd({ text: '{rider.first} says that is what {rider.he} thought, and sits down beside {manager.first} on the floor, and doesn’t say anything else for a long time.', objective: 10 },
               '{clerk.first} is still by the stockroom door.'),
           } },
-        { id: 'wait_night', title: 'Hold the block and wait', icon: 'wait', check: check(HOLD, -6), minutes: 45, span: 'All night',
-          summary: 'Command keeps the block shut and lets the night run. The stream will run with it, and the count, and the riders at the tape. {rider.first} gets as long as {rider.he} {rider~needs|need}. So does {manager.first}, on the floor by the cooler, the whole time.',
+        { id: 'wait_night', title: 'Hold the block and wait', icon: 'wait', check: check(HOLD, -2), minutes: 45, span: 'All night',
+          summary: 'Command keeps the block shut and lets the night run. The stream will run with it, and the count, and the {outlet_short} van on the corner. {rider.first} gets as long as {rider.he} {rider~needs|need}. So does {manager.first}, on the floor by the cooler, the whole time.',
           pull: 'Time, which costs nothing you can see right now.',
           cost: '{manager.first} spends the night on the floor in front of a camera.',
           preview: { favorable: '{rider.first} lets {manager.first} go and comes out before dawn.', mixed: 'The door opens as it gets light.', adverse: 'The shift ends with {manager.first} still on the floor inside.' },
@@ -620,30 +574,30 @@ export const HOSTAGE_LIVE: CallTree = {
               extra: { moves: { rider: 'provoked' }, bump: { stream: 10 }, pressure: 8 } }),
           } },
         { id: 'friend_stays', title: 'Let {friend.first} tell {rider.him} {friend.he} {friend~is|are} still here', icon: 'radio', talksTo: 'rider', check: check(TALK, -2), minutes: 5,
-          summary: '{friend.first} has watched the stream turn from the tape, on {friend.his} own phone. {lead} lets {friend.him} call {rider.first} and say one thing, and stands beside {friend.him} for it. {friend.first} might be the one person who hasn’t changed sides. Or {friend.he} might ask the question everyone else is asking.',
+          summary: '{friend.first} has watched the stream turn from the patrol line, on {friend.his} own phone. {lead} lets {friend.him} call {rider.first} and say one thing, and stands beside {friend.him} for it. {friend.first} might be the one person who hasn’t changed sides. Or {friend.he} might ask the question everyone else is asking.',
           pull: 'One person who hasn’t turned, when everyone else has.',
           cost: '{friend.first} might ask {rider.first} if it’s true, live.',
           preview: { favorable: '{friend.first} gets through, and {rider.first} lets {manager.first} go.', mixed: '{friend.first} asks if it’s true, and {rider.first} doesn’t answer.', adverse: '{friend.first} says the wrong thing, and {rider.first} turns toward {manager.first}.' },
           outcomes: {
-            favorable: [{ text: '{friend.first} doesn’t mention the bag. {friend.He} {friend~says|say} {friend.he} will drive {rider.first}’s scooter home and leave the key with {rider.his} neighbor, and that {friend.he} {friend~is|are} still at the tape. {rider.first} asks {friend.him} to stay there.',
+            favorable: [{ text: '{friend.first} doesn’t mention the bag. {friend.He} {friend~says|say} {friend.he} will drive {rider.first}’s scooter home and leave the key with {rider.his} neighbor, and that {friend.he} {friend~is|are} still outside. {rider.first} asks {friend.him} to stay there.',
               exchange: [{ by: 'friend', line: 'I’m still here. I’m not going anywhere till you’re out.' }], safe: ['manager'], mark: ['friend_promise', 'still_armed'], moves: { rider: 'heard' }, next: { node: 'last_word' }, objective: 40 },
               { text: 'Then {rider.first} tells {manager.first} to get up and go, without looking at {manager.him}.' },
               clerkToo('{clerk.first} goes out the front behind {manager.him}.')],
             mixed: [{ text: '{friend.first} asks whether it’s true. {rider.first} doesn’t answer, and doesn’t hang up either.',
               moves: { rider: 'heard' }, next: { node: 'way_out' }, objective: 8 }],
             adverse: escalate({
-              lead: '{friend.first} says {rider.first} made all of them look like thieves, and the riders at the tape hear it.',
+              lead: '{friend.first} says {rider.first} made every rider in the city look like a thief, out loud, on the stream.',
               threat: '{rider.first} turns and puts the handgun on {manager.first}, close.',
               anyway: '{rider.first} turns and puts the handgun on {manager.first}, though no one inside said a word.',
               quiet: '{rider.first} throws the phone across the floor. It lands face down, still live.',
               quietNext: { node: 'last_word' },
-              extra: { moves: { rider: 'provoked' }, bump: { tape_riders: 12 }, pressure: 8 } }),
+              extra: { moves: { rider: 'provoked' }, bump: { stream: 10 }, pressure: 8 } }),
           } },
       ] },
 
     // ------------------------------------------------------------------ stage 3: the handgun is up
     { id: 'threat', stage: 'resolve',
-      threat: { label: 'The news goes live', minutes: 10, text: 'The news van goes live from the corner, and the stream’s count doubles in a minute. {rider.first} sees it happen on the screen.', pressure: 6, bump: { stream: 20 } },
+      threat: { label: 'The {outlet_short} van goes live', minutes: 10, text: 'The {outlet_short} van goes live from the corner, and the stream’s count doubles in a minute. {rider.first} sees it happen on the screen.', pressure: 6, bump: { stream: 20 } },
       prompt: 'The handgun is pointed at {manager.first}, and the phone on the register is pointed at both of them. {manager.first} has gone still. {manager.His} eyes are on {rider.first}’s face, not the handgun.',
       exchange: [{ by: 'radio', line: 'Window. Handgun on the manager. Holding.' }, { by: 'manager', line: '{rider.first}. They’re all watching you.' }],
       promptIf: [
@@ -668,7 +622,7 @@ export const HOSTAGE_LIVE: CallTree = {
                 safe: ['manager'], mark: ['still_armed'], moves: { rider: 'released' }, next: { node: 'last_word' }, objective: 40 },
               clerkToo('{clerk.first} is out before {manager.him}.'),
             ],
-            adverse: [{ text: 'A shot goes through the front window as {rider.first} spins toward it. Glass catches the negotiator across the forearm on the way down behind the patrol car, and {manager.first} is still inside.', officer: 'wounded', fire: { from: 'rider' }, mark: ['shot_inside'], moves: { rider: 'shots' }, bump: { stream: 25, tape_riders: 15 }, next: { node: 'fired_on' }, pressure: 10 }],
+            adverse: [{ text: 'A shot goes through the front window as {rider.first} spins toward it. Glass catches the negotiator across the forearm on the way down behind the patrol car, and {manager.first} is still inside.', officer: 'wounded', fire: { from: 'rider' }, mark: ['shot_inside'], moves: { rider: 'shots' }, bump: { stream: 25 }, next: { node: 'fired_on' }, pressure: 10 }],
           } },
         { id: 'go_in', title: 'Send the team in', icon: 'shield', team: { to: 'scene', entry: 'rider' }, check: check(ENTER, 8), minutes: 2, stress: 6, tempo: 'urgent', consequenceLevel: 'severe',
           requires: { certs: ['entry_team'] }, authority: 'entry', equipment: [{ tag: 'shield', value: 6, label: 'Shield up front' }],
@@ -700,7 +654,7 @@ export const HOSTAGE_LIVE: CallTree = {
           preview: { favorable: 'With no picture and nobody in view, the handgun comes down.', mixed: '{rider.first} puts the handgun down but won’t let {manager.first} go.', adverse: 'The handgun stays where it is in the dark, and nobody is close by if {rider.first} hurts {manager.first}.' },
           outcomes: {
             favorable: [
-              { text: 'The lights go, the stream goes, and the street goes quiet but for the horns a block back. After a minute {rider.first} calls out in the dark, asking where everybody went, and tells {manager.first} to go while nobody can see.', safe: ['manager'], mark: ['still_armed'], stabilize: ['stream'], moves: { rider: 'released' }, next: { node: 'last_word' }, objective: 40 },
+              { text: 'The lights go, the stream goes, and the street goes quiet but for the generator on the {outlet_short} van. After a minute {rider.first} calls out in the dark, asking where everybody went, and tells {manager.first} to go while nobody can see.', safe: ['manager'], mark: ['still_armed'], stabilize: ['stream'], moves: { rider: 'released' }, next: { node: 'last_word' }, objective: 40 },
               clerkToo('{clerk.first} feels {clerk.his} way out with {manager.him}.'),
             ],
             mixed: heldEnd({ text: 'In the dark the handgun comes down, but {manager.first} isn’t let go. The block stays sealed.', stabilize: ['stream'], objective: 15 },
@@ -774,23 +728,23 @@ export const HOSTAGE_LIVE: CallTree = {
       ],
       choices: [
         { id: 'out_front', title: 'Talk {rider.him} out the front', icon: 'radio', talksTo: 'rider', check: check(TALK, 4), minutes: 6,
-          modifiers: [{ label: 'The handgun is still in reach', mark: 'still_armed', value: -8 }, { label: '{friend.first} is still at the tape', mark: 'friend_promise', value: 4 }],
-          summary: '{lead} tells {rider.first} exactly how to come out, one step at a time, hands open, through the front door and past the news van and every phone at the tape. It is the plainest way out, and the most public. {friend.first} is out there.',
+          modifiers: [{ label: 'The handgun is still in reach', mark: 'still_armed', value: -8 }, { label: '{friend.first} is waiting outside', mark: 'friend_promise', value: 4 }],
+          summary: '{lead} tells {rider.first} exactly how to come out, one step at a time, hands open, through the front door and past the {outlet_short} van and its camera. It is the plainest way out, and the most public. {friend.first} is out there.',
           pull: 'Simple instructions, in plain view.',
-          cost: 'The whole street and the news film {rider.first} walking out.',
+          cost: 'The {outlet_short} camera films {rider.first} walking out.',
           preview: { favorable: '{rider.first} walks out the front with empty hands.', mixed: '{rider.first} stalls in the doorway with the street filming, then comes out.', adverse: '{rider.first} won’t walk out where the street can see, and stays behind the counter.' },
           outcomes: {
-            favorable: [{ when: { safe: ['manager'] }, text: '{rider.first} steps out with {rider.his} hands open, the way the negotiator tells {rider.him}, and stops on the step to look for {friend.first} at the tape. {friend.first} lifts a hand. Officers take {rider.first} by the arms.', out: ['rider'], next: { ending: 'out_on_camera' }, objective: 30 },
+            favorable: [{ when: { safe: ['manager'] }, text: '{rider.first} steps out with {rider.his} hands open, the way the negotiator tells {rider.him}, and stops on the step to look for {friend.first} across the street. {friend.first} lifts a hand. Officers take {rider.first} by the arms.', out: ['rider'], next: { ending: 'out_on_camera' }, objective: 30 },
               { when: { notSafe: ['manager'] }, text: '{manager.first} goes out first, and {rider.first} follows with {rider.his} hands open. Officers take {rider.first} on the step.', safe: ['manager'], out: ['rider'], next: { ending: 'out_on_camera' }, objective: 60 }],
-            mixed: [{ when: { safe: ['manager'] }, text: '{rider.first} stands inside the glass for twenty minutes, then steps out past the news camera. Two officers meet {rider.him} on the step.', out: ['rider'], next: { ending: 'out_on_camera' }, objective: 25, minutes: 15 },
+            mixed: [{ when: { safe: ['manager'] }, text: '{rider.first} stands inside the glass for twenty minutes, then steps out past the {outlet_short} camera. Two officers meet {rider.him} on the step.', out: ['rider'], next: { ending: 'out_on_camera' }, objective: 25, minutes: 15 },
               { when: { notSafe: ['manager'] }, text: '{rider.first} lets {manager.first} go after twenty minutes at the glass, and comes out after {manager.him}.', safe: ['manager'], out: ['rider'], next: { ending: 'out_on_camera' }, objective: 50, minutes: 15 }],
-            adverse: [{ when: { safe: ['manager'] }, text: '{rider.first} isn’t walking out in front of a news van, {rider.he} {rider~says|say}, and sits back down behind the counter.', next: { ending: 'rider_held' }, objective: 5 },
-              ...heldEnd({ when: MANAGER_IN, text: '{rider.first} won’t come out in front of the news van, or let {manager.first} go either.', objective: 5 }, '{clerk.first} is still by the stockroom door.', [], MANAGER_IN)],
+            adverse: [{ when: { safe: ['manager'] }, text: '{rider.first} isn’t walking out in front of a TV camera, {rider.he} {rider~says|say}, and sits back down behind the counter.', next: { ending: 'rider_held' }, objective: 5 },
+              ...heldEnd({ when: MANAGER_IN, text: '{rider.first} won’t come out in front of the {outlet_short} van, or let {manager.first} go either.', objective: 5 }, '{clerk.first} is still by the stockroom door.', [], MANAGER_IN)],
           } },
         { id: 'out_back', title: 'Bring {rider.him} out through the stockroom', icon: 'door', team: { to: { vantage: 'scene' }, signal: { channel: 'voice', to: 'rider' } }, talksTo: 'rider', check: check(TALK, 2), minutes: 5,
           modifiers: [{ label: 'The handgun is still in reach', mark: 'still_armed', value: -8 }],
-          summary: '{lead} brings {rider.first} out the back, through the stockroom, away from the news van and the riders and the phones. It keeps {rider.his} face off the late news. It also means walking out to the police with nobody watching, the one thing {rider.first} said {rider.he} wouldn’t do.',
-          pull: 'Keep {rider.his} face off the news.',
+          summary: '{lead} brings {rider.first} out the back, through the stockroom, away from the {outlet_short} van and its camera. It keeps {rider.his} face off the late broadcast. It also means walking out to the police with nobody watching, the one thing {rider.first} said {rider.he} wouldn’t do.',
+          pull: 'Keep {rider.his} face off {outlet_short}.',
           cost: 'Out the back, unseen, the way {rider.first} was afraid of.',
           preview: { favorable: '{rider.first} comes out the back with nothing in {rider.his} hands.', mixed: '{rider.first} comes out the back, filming {rider.himself} the whole way.', adverse: '{rider.first} stops in the stockroom and goes back to the counter.' },
           outcomes: {
@@ -821,13 +775,13 @@ export const HOSTAGE_LIVE: CallTree = {
       summary: '{manager.first} and {clerk.first} are safe outside, and {manager.first} was out before {rider.first} was. {rider.first} walked out where everyone could see, and officers have {rider.him} now. The phone was still filming from the register when the last officer left.',
       epilogue: 'The clip of {rider.first} walking out had more views by morning than the stream ever did.',
       epilogueIf: [
-        { when: { marks: ['admitted'] }, epilogue: '{rider.first}’s account was back on the app by Friday. {rider.He} didn’t log in.' },
+        { when: { marks: ['admitted'] }, epilogue: '{rider.first}’s account was back on {delivery_app} by Friday. {rider.He} didn’t log in.' },
         { when: { marks: ['exposed'] }, epilogue: '{friend.first} drove {rider.first}’s scooter home and left the key with the neighbor, as {friend.he} said {friend.he} would.' },
       ] },
     out_quiet: { title: 'Nobody filmed it', disposition: 'resolved',
       summary: '{manager.first} and {clerk.first} are safe outside. {rider.first} walked out to the team with nobody filming, the one way {rider.he} said {rider.he} wouldn’t, and officers have {rider.him}. The phone is face down on the register with the stream still saying LIVE.',
-      epilogue: '{friend.first} waited at the tape until the patrol car carrying {rider.first} turned the corner.',
-      epilogueIf: [{ when: { marks: ['admitted'] }, epilogue: '{manager.first} called the app on Monday and asked how to take a complaint back.' }] },
+      epilogue: '{friend.first} waited at the patrol line until the patrol car carrying {rider.first} turned the corner.',
+      epilogueIf: [{ when: { marks: ['admitted'] }, epilogue: '{manager.first} called {delivery_app} on Monday and asked how to take a complaint back.' }] },
     out_by_dawn: { title: 'Out by morning', disposition: 'resolved',
       summary: '{manager.first} and {clerk.first} have been outside for hours, on the back step of the ambulance. {rider.first} came out after the long night and is in the team’s hands. {place} won’t open today.',
       epilogue: '{manager.first} asked twice in the night whether anyone had brought {rider.first} something to eat.' },
@@ -848,7 +802,7 @@ export const HOSTAGE_LIVE: CallTree = {
       epilogue: '{manager.first} told the medic it was {manager.his} fault. The medic didn’t ask what was.' },
     rider_held: { title: 'Behind the counter', disposition: 'relief_partial', remainingTasks: ['Talk {rider.first} out of {place}'],
       summary: '{manager.first} and {clerk.first} are out of harm’s way. {rider.first} is holding out behind the counter with the handgun and the phone, and patrol keeps the street shut. The count on the stream is still going.',
-      epilogue: 'Some of the riders stayed at the tape all night. {friend.first} was the last one there.' },
+      epilogue: '{friend.first} stayed at the patrol line all night with the scooter’s engine off.' },
     held_counter: { title: 'Still on the floor', disposition: 'relief_partial', remainingTasks: ['Get {manager.first} out from behind the counter', 'Bring {rider.first} out alive'],
       summary: 'Command holds the street, with the team at the perimeter. {manager.first} is still on the floor inside with {rider.first} and the handgun, and the team calls the phone on the register every half hour.',
       epilogue: '{manager.first}’s green marker stayed on the counter all night with its cap off.' },

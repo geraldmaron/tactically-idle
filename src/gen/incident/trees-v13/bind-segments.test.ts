@@ -9,6 +9,9 @@ import { CASCADE_LINES, countWord, FIRE_LINES, FORCE_LINES, asRole, listOf } fro
 import type { IncidentTemplate } from '../../../content/incidents/types';
 import { bindRoleSegments, bindRoleTokens, memberId, TOKEN, type CastIdentity } from './compile';
 import { callStringRows } from './strings';
+import { worldFor } from '../../../content/world';
+
+const WORLD = worldFor(0);
 
 // ---------------------------------------------------------------- frozen reference
 // bindRoleTokens as it was before it became the join of bindRoleSegments (compile.ts, 2026-10-08).
@@ -109,7 +112,8 @@ describe('bindRoleSegments', () => {
       let named = 0;
       for (const row of rows) {
         const parts = bindRoleSegments(row.text, cast, place, rooms, groups);
-        const bound = referenceBind(row.text, cast, place, rooms, groups);
+        // The frozen binder predates world tokens (content/world.ts): fill them in first, as the binder does.
+        const bound = referenceBind(row.text.replace(/\{(\w+)\}/g, (match, id: string) => WORLD[id] ?? match), cast, place, rooms, groups);
         expect(parts.map(part => part.text).join(''), row.where).toBe(bound);
         expect(bindRoleTokens(row.text, cast, place, rooms, groups), row.where).toBe(bound);
         for (const [i, part] of parts.entries()) {
