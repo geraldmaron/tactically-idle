@@ -16,6 +16,7 @@ import { buildLexicon, segmentPeople } from '../../../ui/people/lexicon';
 import type { Lexicon } from '../../../ui/people/lexicon';
 import type { StageId } from '../../../sim/types';
 import type { CastSample } from '../jobs/protocol';
+import { worldFor } from '../../../content/world';
 import { treeSituationClockNexts } from './clocks';
 import { changedWords, stringRowKey } from './snapshots';
 
@@ -75,7 +76,7 @@ export function variantRowsKey(v: Variant): string {
 /** The longest-names cast (strings.ts, the one `npm run check:strings` binds) as a cast sample. */
 export function longestSample(template: IncidentTemplate): CastSample {
   const { cast, groups, rooms, place } = longestNamesCast(template);
-  return { call: -1, cast, groups, place, rooms };
+  return { call: -1, cast, groups, place, rooms, world: worldFor(0) };
 }
 
 /** A small deterministic hash for picking stand-in names. */
@@ -86,6 +87,8 @@ function hash(text: string): number {
 }
 
 export interface BoundCast { cast: Record<string, CastIdentity>; groups: Record<string, string[]>; rooms: Record<string, string>; place: string; counts: Record<string, number>;
+  /** The call's world names ({handle} and the rest), as the compiler binds them. */
+  world: Record<string, string>;
   /** Members this variant needed that the sampled call didn't have: named here, never by the game. */
   standIns: string[] }
 
@@ -125,7 +128,7 @@ export function castFor(tree: CallTree, sample: CastSample, v: Pick<Variant, 'pr
     counts[group] = n;
   }
   if (v.pronouns !== 'drawn') for (const who of Object.values(cast)) who.pronouns = v.pronouns;
-  return { cast, groups, rooms, place: sample.place, counts, standIns };
+  return { cast, groups, rooms, place: sample.place, counts, standIns, world: sample.world };
 }
 
 /** Public kind per person, as the compiler writes the story bindings (bystanders are people at the
@@ -205,7 +208,7 @@ export function variantRows(tree: CallTree, v: Pick<Variant, 'counts' | 'situati
 export function bindRows(rows: readonly StringRow[], bound: BoundCast): ScriptRow[] {
   return rows.map(row => {
     try {
-      const parts = bindRoleSegments(row.text, bound.cast, bound.place, bound.rooms, bound.groups);
+      const parts = bindRoleSegments(row.text, bound.cast, bound.place, bound.rooms, bound.groups, bound.world);
       return { key: stringRowKey(row), row, text: parts.map(part => part.text).join(''), parts };
     } catch (error) {
       return { key: stringRowKey(row), row, text: row.text, parts: [{ text: row.text }], error: error instanceof Error ? error.message : String(error) };
@@ -321,7 +324,9 @@ export function scriptSections(tree: CallTree, rows: readonly ScriptRow[], nodeT
     const node = row.row.path ? nodes.get(row.row.path) : undefined;
     if (node) {
       node.rows.push(row);
-      if (where === `${node.id}.prompt` || where.startsWith(`${node.id}.promptIf[`) || where.startsWith(`${node.id}.exchange[`)) { node.prompts.push(row); continue; }
+      if (where === `${node.id}.prompt` || where.startsWith(`${node.id}.promptIf[`) || where.startsWith(`${node.id}.exchange[`)
+        // The threat's lines are the scene the player reads with the prompt, not a choice.
+        || where.startsWith(`${node.id}.threat.`)) { node.prompts.push(row); continue; }
       const choiceId = row.row.action ?? where.slice(node.id.length + 1).split('.')[0];
       let choice = node.choices.find(entry => entry.choice === choiceId);
       if (!choice) node.choices.push(choice = { choice: choiceId, title: null, summary: null, modifiers: [],

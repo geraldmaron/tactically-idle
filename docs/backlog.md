@@ -183,38 +183,6 @@ would show, beats on every threat, a trait the call favors, and physical acts th
 and the kit. A type returns to the board only with its call (`CALL_TREES`). Done per call: the same
 gates and review as Going Live.
 
-### after-landing: When the threat's time runs out, the call moves on and logs the indecision
-Tags: job=command; journeys=none (pacing decision); probes=none (time); lane=engine
-Needs: start=none (owner answers below); integrate=none; ship=none
-
-Owner, 2026-10-21: when a threat's timer runs out "a thing" should happen, the next outcome, logged
-as indecision. Today the landing is only projected (`stalledRun`); nothing is committed until a
-choice, and dither stops at the threat so the scene freezes. Proposed: an engine `lapse` event that
-commits the stall when the drain empties, records it in the log ("No call made: <threat>"), shows
-it as a result beat, then reopens the point without that threat.
-
-Codex adversarial review (gpt-6.1-sol, 2026-10-21), verdict needs validation. Must hold:
-- One settlement rule shared by lapse and decide, guarded by run revision, decision identity,
-  pending state and a spent threat; stale commands are refused, never applied after.
-- Timer Off never lapses, but a slow choice still lands an unspent threat by its own minutes. The
-  timer setting reaches the engine explicitly (it isn't in `Ctx` today). Timing must keep running
-  while the player is on another tab, and respect the hidden-app pause.
-- One mutation path: don't commit `stalledRun` and then advance time again. A clock-out during the
-  lapse can route or end the call, so reopening isn't unconditional.
-- History gets a lapse entry kind with no action, band or sample; saves validate it; the Lab's moves,
-  rewind and links replay it deterministically (`GameFrame.tsx`, `model/call.ts`, `lab-handoff.ts`,
-  `traceRun`).
-- The threat is spent for every reader (matchedEffects, the strain test, card warnings, the cap),
-  keyed by a stable threat id (NodeThreat has none).
-- The result beat persists across reload (today `resultOf` is local UI state).
-- Strain from waiting is a new rule over every deployed officer, not the focused squad, and is
-  measured for balance. No tactical XP credit for a lapse. One `recordStall` sample per window.
-- Continued inaction needs a policy: after one lapse the next clock cue would freeze the scene again.
-
-Owner decisions needed before start: (1) does the van's lapse reopen the same choices with its costs
-shown, or must it route to an authored next node (calls lane content), (2) what continued inaction
-does after one lapse, (3) whether waiting strains the team.
-
 ### one-card-board: The board with one curated kind
 Tags: job=command; journeys=answer-a-call; probes=none (board pacing); lane=engine
 Needs: start=none; integrate=none; ship=none
@@ -248,6 +216,15 @@ Needs: start=none; integrate=none; ship=none
 A short HQ panel names the department's name (posture), its habit on the clock (stall), its spend mix
 and its form, each with the one thing it changes (`docs/player-profile.md`). An eased card says
 "a quieter call while the team recovers" (`IncidentCard.eased`).
+
+### lab-flow-timeouts: The Lab's Flow draws where a threat runs out to
+Tags: job=command; journeys=none (tooling); probes=none (tooling); lane=tooling
+Needs: start=none; integrate=none; ship=none
+
+`callGraph` (`src/gen/incident/trees-v13/graph.ts`) lists each threat's run-out route as
+`timeoutRoutes`, and `truthReach` follows them, but the Flow layout draws only choice edges, so the
+nine Going Live run-out moments show as nodes with nothing leading in. Draw each route as its own
+dashed edge from the node whose threat runs out, labeled with the threat.
 
 ### lab-live-window: The Scenario Lab plays the live decision
 Tags: job=command; journeys=none (tooling); probes=none (tooling); lane=tooling

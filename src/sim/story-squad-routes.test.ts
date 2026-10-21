@@ -1,3 +1,4 @@
+import { decisionsOf } from './types';
 import { describe, expect, it } from 'vitest';
 import { CALL_TREES } from '../content/call-trees';
 import { drawCalls, playCalls, type PlayStep } from '../gen/incident/trees-v13/balance';
@@ -20,7 +21,7 @@ describe('squad movement on current call trees', () => {
     expect(movements.length).toBeGreaterThan(0);
     for (const { before, after, choice } of movements) {
       expect(after.activeRun!.clock).toBeGreaterThan(before.activeRun!.clock);
-      expect(after.activeRun!.history.at(-1)!.targetId).toBe(choice.targetId);
+      expect(decisionsOf(after.activeRun!.history).at(-1)!.targetId).toBe(choice.targetId);
       for (const squadId of choice.actingSquadIds) expect(standingOf(builtFor(after.activeRun!.locationFamilyId, after.activeRun!.locationSeed, after.activeRun!.flags), after.activeRun!.squadTasks.find(task => task.squadId === squadId)!)).not.toBeNull();
       expect(deserialize(serialize(after, NOW))?.activeRun).toEqual(after.activeRun);
     }

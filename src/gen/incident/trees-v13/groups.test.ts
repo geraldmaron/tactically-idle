@@ -2,6 +2,7 @@
 // The fixture call (group-fixture.ts) is compiled on a real building with 0 to 3 others beside the
 // taker, and every count is held to the same rules as a key role: placed, story-bound, read by the
 // engine, its text bound for whoever is drawn, and a surrender that cascades through the saves.
+import { decisionsOf } from '../../../sim/types';
 import { describe, expect, it } from 'vitest';
 import { GROUP_TEMPLATE, GROUP_TREE } from './group-fixture';
 import { generateIncident } from '../index';
@@ -225,7 +226,7 @@ describe('groups: a surrender cascades', () => {
           state = applyNaturalMove(state, { kind: 'decide', actionId: choiceActionId('hostage_crisis', 'open', 'call') });
           state = state && applyNaturalMove(state, { kind: 'decide', actionId: choiceActionId('hostage_crisis', 'talk', 'ask_out') });
           if (!state?.activeRun) continue;
-          const decision = state.activeRun.history[state.activeRun.history.length - 1];
+          const decision = decisionsOf(state.activeRun.history)[state.activeRun.history.length - 1];
           const record = decision.committed?.drawn?.find(entry => entry.model === 'cascade');
           expect(loads(state), `save after ${id} seed ${seed}`).toBe(true);
           if (!record) continue;

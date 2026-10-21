@@ -393,7 +393,7 @@ export function personTruth(person: IncidentPersonDef): string {
 
 /** One step of the shown path (and the steps a rewind stepped back over, `ahead`): where it was
  * taken, which choice, how it came out, what was drawn, and the prompt the player read there. */
-export interface PathStep { index: number; node: string | null; nodeTitle: string; choiceTitle: string; kind: 'decide' | 'roll' | 'continue' | 'fail';
+export interface PathStep { index: number; node: string | null; nodeTitle: string; choiceTitle: string; kind: 'decide' | 'roll' | 'continue' | 'fail' | 'lapse';
   band: OutcomeBand | null; drawn: string[]; forced: boolean; prompt: string; ahead: boolean }
 
 export function pathSteps(s: Session): PathStep[] {
@@ -406,7 +406,7 @@ export function pathSteps(s: Session): PathStep[] {
     const action = s.scenario.stages.assess.actions.concat(s.scenario.stages.adapt.actions, s.scenario.stages.resolve.actions).find(entry => entry.id === actionId);
     return {
       index: i + 1, node, nodeTitle: tree ? humanizeNode(tree).title : 'Next stage', kind: frame.move?.kind ?? 'decide',
-      choiceTitle: action?.title ?? (frame.move?.kind === 'fail' ? 'Failed response' : actionId),
+      choiceTitle: action?.title ?? (frame.move?.kind === 'fail' ? 'Failed response' : frame.move?.kind === 'lapse' ? 'No call made' : actionId),
       band: frame.band, drawn: frame.drawn, forced: frame.forced, prompt: stageProgress(before).prompt, ahead: i + 1 >= s.frames.length,
     };
   });
@@ -498,10 +498,11 @@ export function weightsWanted(rows: readonly ChoiceXray[], aiming: boolean): { k
 }
 
 /** The steps taken in the player's game before a handed-over session's first frame, titled. */
-export function priorSteps(s: Session): { nodeTitle: string; choiceTitle: string; band: OutcomeBand; drawn: string[] }[] {
+export function priorSteps(s: Session): { nodeTitle: string; choiceTitle: string; band: OutcomeBand | null; drawn: string[] }[] {
   const actions = s.scenario.stages.assess.actions.concat(s.scenario.stages.adapt.actions, s.scenario.stages.resolve.actions);
   return s.prior.map(step => {
     const node = s.tree.nodes.find(entry => entry.id === step.node);
-    return { nodeTitle: node ? humanizeNode(node).title : step.node, choiceTitle: actions.find(entry => entry.id === step.actionId)?.title ?? step.choice, band: step.band, drawn: step.drawn };
+    const choiceTitle = step.choice === 'lapse' ? 'No call made' : actions.find(entry => entry.id === step.actionId)?.title ?? step.choice;
+    return { nodeTitle: node ? humanizeNode(node).title : step.node, choiceTitle, band: step.band, drawn: step.drawn };
   });
 }

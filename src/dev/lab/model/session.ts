@@ -23,7 +23,8 @@ import { buildLocation } from '../../../sim/location';
 import { getScenario } from '../../../sim/scenario-registry';
 import type { ScenarioDefinition } from '../../../sim/scenario-types';
 import { tuningHash } from '../../../sim/tuning';
-import type { ActionView, BuiltLocation, DecisionResolution, GameState, OutcomeBand, SquadId } from '../../../sim/types';
+import type { ActionView, BuiltLocation, GameState, HistoryEntry, OutcomeBand, SquadId } from '../../../sim/types';
+import { isLapse } from '../../../sim/types';
 import type { LabHandoff } from '../../../ui/lab-handoff';
 import { liveDecisions } from '../../../ui/screens/live-model';
 import type { LabUrl } from '../types';
@@ -48,7 +49,8 @@ export interface Frame { state: GameState; move: LabMove | null; views: ActionVi
   pBand: number | null; drawn: string[]; pDrawn: number | null; forced: boolean }
 /** A decision taken before the session's first frame: in the player's game (handoff), or replayed
  * from the link's `hist` when the snapshot is gone. */
-export interface PriorStep { actionId: string; node: string; choice: string; band: OutcomeBand; drawn: string[] }
+/** A lapse (the time ran out with no choice made) has no band and the choice `lapse`. */
+export interface PriorStep { actionId: string; node: string; choice: string; band: OutcomeBand | null; drawn: string[] }
 /** `key`: callKey plus the tuning hash the call was opened under (a patch change reopens it).
  * `stopped`: the last replay's first refused step (1-based), its token and the engine's reason.
  * Extra fields (spec 9.3 lets owners add them): `ahead` (frames a rewind stepped back over, next
@@ -69,7 +71,7 @@ const decodeToken = (token: string): LabMove | null => decodePath(token)[0] ?? n
 const sameMove = (a: LabMove | null, b: LabMove): boolean => !!a && moveToken(a) === moveToken(b);
 
 /** The drawn results a committed decision settled, as `${model}:${key}`. */
-export const drawnOf = (h: DecisionResolution | undefined): string[] => h?.committed?.drawn?.map(d => `${d.model}:${d.key}`) ?? [];
+export const drawnOf = (h: HistoryEntry | undefined): string[] => !h || isLapse(h) ? [] : h.committed?.drawn?.map(d => `${d.model}:${d.key}`) ?? [];
 
 const situationOf = (index: number): 0 | 1 | 2 => (index === 1 || index === 2 ? index : 0);
 
@@ -88,7 +90,8 @@ function frameOf(state: GameState, move: LabMove | null, before: Frame | null): 
   const views = liveDecisions(state, NOW, focusSquad(state));
   if (!move || !before) return { state, move: null, views, band: null, pBand: null, drawn: [], pDrawn: null, forced: false };
   const decided = move.kind === 'decide' || move.kind === 'roll';
-  const h = decided ? state.activeRun?.history.at(-1) : undefined;
+  const last = decided ? state.activeRun?.history.at(-1) : undefined;
+  const h = last && !isLapse(last) ? last : undefined;
   const band = h?.band ?? null;
   const offered = before.views.find(view => view.id === move.actionId);
   const keys = h?.committed?.drawn?.map(record => record.key) ?? [];
@@ -117,6 +120,10 @@ function drawnRefusal(title: string, band: OutcomeBand, dists: readonly DrawnDis
 function advance(scenario: ScenarioDefinition, from: Frame, move: LabMove): Frame | { refused: string } {
   const run = from.state.activeRun;
   if (!run || run.status !== 'active' || run.stage === 'debrief') return { refused: 'The call has ended. Rewind to take another step.' };
+  if (move.kind === 'lapse') {
+    const after = applyMove(from.state, { kind: 'lapse', actionId: move.actionId });
+    return after ? frameOf(after, move, from) : { refused: `Letting the time run out isn't possible here: this decision point's threat isn't ${move.actionId}, or it has nowhere to go.` };
+  }
   const title = actionTitle(scenario, move.actionId);
   if (move.kind === 'decide' || move.kind === 'roll') {
     const view = from.views.find(entry => entry.id === move.actionId);
@@ -191,9 +198,10 @@ export function playPath(start: GameState, tokens: string): { frames: Frame[]; s
   return playTokens(scenario, [first], tokensOf(tokens), 0);
 }
 
-function priorOf(tree: CallTree, history: readonly DecisionResolution[]): PriorStep[] {
+function priorOf(tree: CallTree, history: readonly HistoryEntry[]): PriorStep[] {
   const index = choiceIndex(tree);
   return history.map(h => {
+    if (isLapse(h)) return { actionId: h.threatId, node: h.threatId, choice: 'lapse', band: null, drawn: [] };
     const parts = index.get(h.actionId);
     return { actionId: h.actionId, node: parts?.node ?? '', choice: parts?.choice ?? h.actionId, band: h.band, drawn: drawnOf(h) };
   });
@@ -246,7 +254,8 @@ export function openSession(u: LabUrl, handoff: LabHandoff | null): Session | Op
         const played = replayHistory(scenario, frameOf(start, null, null), hist);
         const index = choiceIndex(tree);
         start = played.frames[played.frames.length - 1].state;
-        prior = played.frames.slice(1).flatMap(frame => {
+        prior = played.frames.slice(1).flatMap((frame): PriorStep[] => {
+          if (frame.move?.kind === 'lapse') return [{ actionId: frame.move.actionId, node: frame.move.actionId, choice: 'lapse', band: null, drawn: [] }];
           if (!frame.move || !frame.band) return [];
           const parts = index.get(frame.move.actionId);
           return [{ actionId: frame.move.actionId, node: parts?.node ?? '', choice: parts?.choice ?? frame.move.actionId, band: frame.band, drawn: frame.drawn }];

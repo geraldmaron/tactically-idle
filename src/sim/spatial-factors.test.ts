@@ -1,3 +1,4 @@
+import { decisionsOf } from './types';
 import { withReservedRadios } from './test-fixtures';
 import { describe, expect, it } from 'vitest';
 import type { BuiltLocation, Contributor, GameState, Id, LocationDefinition, SquadId, Vec } from './types';
@@ -249,7 +250,7 @@ describe('unit condition: the specific unit used sets effectiveness, and wear is
     worn.units[radioB].wearRate = 1.25;
     const r = apply(worn, { type: 'decide', actionId: 'mu_two_point', actingSquadIds: ['A'], supportSquadIds: ['B'] });
     expect(r.result.ok).toBe(true);
-    const used = r.state.activeRun!.history[0].unitsUsed;
+    const used = decisionsOf(r.state.activeRun!.history)[0].unitsUsed;
     expect(used).toContain(radioB);
     expect(used).toContain(r.state.reservations.find((x) => x.squadId === 'A' && x.itemId === 'radio_kit')!.unitId);
     // finish the run and settle

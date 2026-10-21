@@ -39,3 +39,9 @@ export const lostFlag = (role: string) => `lost:${role}`;
 /** The flag a result sets to hold a clock steady (TreeOutcome.stabilize): a medic at the person.
  * Kernel-level, so the compiler that writes it and the clock that reads it share one spelling. */
 export const stableFlag = (clockId: string) => `stable:${clockId}`;
+/** A decision point's threat (NodeThreat.id) that ran out with no choice made (the engine's lapse):
+ * spent for every reader, so it never lands twice. */
+export const spentFlag = (threatId: string) => `spent:${threatId}`;
+/** The threat still to come: null when there is none or a lapse spent it. */
+export const liveThreat = <T extends { id: string }>(threat: T | null | undefined, flags: readonly string[]): T | null =>
+  threat && !flags.includes(spentFlag(threat.id)) ? threat : null;

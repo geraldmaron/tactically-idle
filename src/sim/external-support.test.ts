@@ -1,3 +1,4 @@
+import { decisionsOf } from './types';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { SCENARIOS } from '../content/scenarios';
 import type { ActionDefinition, Condition, OutcomeEffect, ScenarioDefinition } from './scenario-types';
@@ -110,7 +111,7 @@ describe('external support responsibility lifecycle', () => {
     expect(view.timeRange).toEqual({ min: remaining, max: remaining });
     state = decide(state, 'wait_medical');
     expect(state.activeRun!.clock).toBe(availableAt);
-    expect(state.activeRun!.history.at(-1)!.timeCost).toBe(remaining);
+    expect(decisionsOf(state.activeRun!.history).at(-1)!.timeCost).toBe(remaining);
     expect(externalSupportViews(SCENARIOS[ID], state.activeRun!)[0].status).toBe('available');
     refused(state, 'wait_medical');
     const accepted = decide(state, 'accept_medical');
@@ -164,12 +165,12 @@ describe('external support responsibility lifecycle', () => {
       (s) => { s.activeRun!.externalSupport!.medical.acceptedAt = 0; },
       (s) => { s.activeRun!.externalSupport!.other = { requestedAt: 0, availableAt: 0, acceptedAt: 0 }; },
       (s) => { delete s.activeRun!.externalSupport; },
-      (s) => { s.activeRun!.history[0].committed!.externalSupport = []; },
-      (s) => { s.activeRun!.history[0].committed!.externalSupport![0].at += 1; },
-      (s) => { s.activeRun!.history[0].committed!.externalSupport![0].kind = 'accepted'; },
+      (s) => { decisionsOf(s.activeRun!.history)[0].committed!.externalSupport = []; },
+      (s) => { decisionsOf(s.activeRun!.history)[0].committed!.externalSupport![0].at += 1; },
+      (s) => { decisionsOf(s.activeRun!.history)[0].committed!.externalSupport![0].kind = 'accepted'; },
       (s) => { s.activeRun!.clock += 1; },
       (s) => { s.activeRun!.rngState += 1; },
-      (s) => { s.activeRun!.history[0].sample = 0.5; },
+      (s) => { decisionsOf(s.activeRun!.history)[0].sample = 0.5; },
     ];
     for (const corrupt of corruptions) {
       const bad = structuredClone(state);
@@ -294,7 +295,7 @@ describe('v5 public conditions on support effects', () => {
     refused(state, 'conditional_escort');
     refused(state, 'request_alias');
     expect(state.activeRun!.externalSupport).toEqual(requested);
-    expect(state.activeRun!.history.flatMap(record => record.committed!.externalSupport!)).toHaveLength(1);
+    expect(decisionsOf(state.activeRun!.history).flatMap(record => record.committed!.externalSupport!)).toHaveLength(1);
     expect(state.activeRun!.externalSupport!.medical.acceptedAt).toBeNull();
     expect(state.activeRun!.objective).toBe(0);
     expect(validExternalSupportState(state.activeRun!, SCENARIOS[CONDITIONAL_ID])).toBe(true);
@@ -318,14 +319,14 @@ describe('a wait the player stalls on (dither-minutes)', () => {
     const remaining = Math.round((requested.activeRun!.externalSupport!.medical.availableAt! - requested.activeRun!.clock) * 10) / 10;
     const result = apply(requested, { type: 'decide', actionId: 'wait_medical', actingSquadIds: ['A'], supportSquadIds: [], ditherMinutes: 2 });
     expect(result.result).toEqual({ ok: true });
-    const decision = result.state.activeRun!.history.at(-1)!;
+    const decision = decisionsOf(result.state.activeRun!.history).at(-1)!;
     expect(decision.ditherMinutes).toBe(2);
     expect(decision.timeCost).toBe(Math.round((remaining + 2) * 10) / 10);
     expect(validExternalSupportState(result.state.activeRun!, SCENARIOS[CLOCKED])).toBe(true);
     expect(deserialize(serialize(result.state, NOW))).not.toBeNull();
     // Without a stall the wait is the remainder, as before.
     const plain = decide(requested, 'wait_medical');
-    expect(plain.activeRun!.history.at(-1)!.timeCost).toBe(remaining);
+    expect(decisionsOf(plain.activeRun!.history).at(-1)!.timeCost).toBe(remaining);
     expect(deserialize(serialize(plain, NOW))).not.toBeNull();
   });
 });

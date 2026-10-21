@@ -130,7 +130,7 @@ describe('runJob', () => {
       const instance = instanceOf(scenario, built)!, placed = instance.placed;
       expect(scenario.incident).toBeDefined();
       const counts = memberCounts(placed);
-      const ours = callStringRows(tree, text => bindRoleTokens(text, sample.cast, sample.place, sample.rooms, sample.groups), counts, clockNextsOf(instance.clocks));
+      const ours = callStringRows(tree, text => bindRoleTokens(text, sample.cast, sample.place, sample.rooms, sample.groups, sample.world), counts, clockNextsOf(instance.clocks));
       const compiler = callStringRows(tree, textBinder(tree, built, placed), counts, clockNextsOf(instance.clocks));
       expect(ours.map(row => row.text)).toEqual(compiler.map(row => row.text));
       expect(ours.length).toBeGreaterThan(20);

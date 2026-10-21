@@ -1,3 +1,4 @@
+import { decisionsOf } from './types';
 import { describe, expect, it } from 'vitest';
 import { applyMove, availableMoves, NOW, startGateRun } from '../gen/incident/gates/engine-driver';
 import { cascadeChance, cascadeDistribution, drawnDistribution, incomingFireDistribution, incomingFireOdds, resolveDrawn, type DrawnContext } from './drawn-effects';
@@ -155,7 +156,7 @@ describe('drawnDistributionAt', () => {
               const odds = drawnDistributionAt(state, move.actionId, move.band!, view.actingSquadIds);
               const after = applyMove(state, move, views);
               if (!after) continue;
-              const records = after.activeRun!.history.at(-1)!.committed?.drawn ?? [];
+              const records = decisionsOf(after.activeRun!.history).at(-1)!.committed?.drawn ?? [];
               expect(records.map(record => record.model)).toEqual(odds.map(entry => entry.model));
               records.forEach((record, k) => {
                 expect(odds[k].results.find(result => result.key === record.key)?.p ?? 0, `${move.actionId} ${move.band} ${record.key}`).toBeGreaterThan(0);

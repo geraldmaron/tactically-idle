@@ -13,6 +13,8 @@ import { getScenario } from '../../../sim/scenario-registry';
 import type { ScenarioDefinition } from '../../../sim/scenario-types';
 import { apply, NOW, startCmd, stockKit } from '../../../sim/test-fixtures';
 import type { ActionView, CertId, GameState, Id, OutcomeBand } from '../../../sim/types';
+import { isLapse } from '../../../sim/types';
+import { lapsedThreat, openThreat } from '../../../sim/clocks';
 
 /** Drives the real operation engine for the content gates.
  * - Distinctness exploration aims each decision at an outcome band by choosing the run's
@@ -81,13 +83,37 @@ export function startGateRun(scenarioId: string, campaignSeed = 719, opts: GateR
 /** `drawn` (Scenario Lab only): with a band, the drawn result each drawn effect of that band
  * settles on, as compiled variant keys in the band's effect order (`['firearm:none', 'wounded']`,
  * `['follows+stays']`). Without it a forced band takes whatever drawn result its sample brings. */
-export interface Move { kind: 'decide' | 'fail'; actionId: string; band?: OutcomeBand; drawn?: readonly string[] }
+/** `lapse`: the open decision point's time runs out with no choice made; `actionId` is the threat's
+ * id (NodeThreat.id). */
+export interface Move { kind: 'decide' | 'fail' | 'lapse'; actionId: string; band?: OutcomeBand; drawn?: readonly string[] }
+
+/** The timer a driven lapse runs at. The stall is an input (OperationRun.decisionOpenedAt) and the
+ * engine caps it at the threat's minutes, so the rate never changes what the lapse does. */
+export const LAPSE_TIMER = 'standard' as const;
+
+/** `state` with its open decision's window run out by NOW: opened a day earlier, nothing pending or
+ * paused. The same as waiting, without moving the department's clock. */
+export function withLapsedWindow(state: GameState): GameState {
+  const run = state.activeRun!;
+  const { decisionPending: _pending, decisionPausedAt: _paused, ...rest } = run;
+  return { ...state, activeRun: { ...rest, decisionOpenedAt: Math.max(NOW, state.department.clockHighWater) - 24 * 3600_000 } };
+}
+
+/** The open decision point's threat when letting it run out would move the call (it has a timeout). */
+export function lapseMove(state: GameState): Move | null {
+  const run = state.activeRun;
+  const scenario = run && run.status === 'active' ? getScenario(run.scenarioId) : null;
+  const threat = run && scenario ? openThreat(scenario, run) : null;
+  return threat?.timeout?.length ? { kind: 'lapse', actionId: threat.id } : null;
+}
 /** Every move the engine allows from here, with each reachable band of each eligible action.
  * Pass the state's views when already computed; evaluating them is the expensive part. */
 export function availableMoves(state: GameState, views: ActionView[] = actionViews(state, NOW, 'A')): Move[] {
   const moves: Move[] = [];
   for (const view of views.filter(view => view.eligible))
     for (const band of ['favorable', 'mixed', 'adverse'] as const) if (sampleFor(view, band) !== null) moves.push({ kind: 'decide', actionId: view.id, band });
+  const lapse = lapseMove(state);
+  if (lapse) moves.push(lapse);
   if (!moves.length && responseFailurePlan(state)) moves.push({ kind: 'fail', actionId: 'response_failure' });
   return moves;
 }
@@ -102,6 +128,15 @@ export function withDice(state: GameState, rngState: number): GameState {
 }
 
 export function applyMove(state: GameState, move: Move, views?: ActionView[]): GameState | null {
+  if (move.kind === 'lapse') {
+    const run = state.activeRun;
+    const ready = run ? withLapsedWindow(state) : null;
+    const scenario = run ? getScenario(run.scenarioId) : null;
+    const due = ready && scenario ? lapsedThreat(scenario, ready.activeRun!, ready.department.clockHighWater, NOW, LAPSE_TIMER) : null;
+    if (!run || !ready || due?.id !== move.actionId) return null;
+    const result = apply(ready, { type: 'lapse', revision: run.revision, threatId: move.actionId }, NOW, { timer: LAPSE_TIMER });
+    return result.result.ok ? result.state : null;
+  }
   if (move.kind === 'fail') {
     const plan = responseFailurePlan(state);
     const result = plan && apply(state, { type: 'endFailedResponse', runId: plan.runId, revision: plan.revision });
@@ -112,7 +147,8 @@ export function applyMove(state: GameState, move: Move, views?: ActionView[]): G
   if (!view || sample === null || sample === undefined) return null;
   if (move.drawn?.length) return applyAimedDrawn(state, view, move.band!, move.drawn);
   const result = apply(withDice(state, stateForSample(sample)), { type: 'decide', actionId: view.id, actingSquadIds: view.actingSquadIds, supportSquadIds: view.supportSquadIds });
-  if (!result.result.ok || result.state.activeRun!.history.at(-1)?.band !== move.band) return null;
+  const h = result.state.activeRun!.history.at(-1);
+  if (!result.result.ok || isLapse(h) || h?.band !== move.band) return null;
   return result.state;
 }
 
@@ -211,6 +247,7 @@ function applyAimedDrawn(state: GameState, view: ActionView, band: OutcomeBand, 
     const result = apply(withDice(state, k), { type: 'decide', actionId: view.id, actingSquadIds: view.actingSquadIds, supportSquadIds: view.supportSquadIds });
     if (!result.result.ok) return null;
     const h = result.state.activeRun!.history.at(-1);
+    if (isLapse(h)) return null;
     const got = h?.committed?.drawn?.map(record => record.key) ?? [];
     if (h?.band === band && got.length === keys.length && got.every((key, i) => key === keys[i])) return result.state;
     from = k + 1;
@@ -223,7 +260,9 @@ function applyAimedDrawn(state: GameState, view: ActionView, band: OutcomeBand, 
  * chance times the drawn results' (1 for continuations and the failed-response report). */
 export function aimedMoves(state: GameState, views: ActionView[] = actionViews(state, NOW, 'A')): (Move & { p: number })[] {
   const byId = new Map(views.map(view => [view.id, view]));
-  return availableMoves(state, views).flatMap(move => {
+  // A lapse is the player not choosing, not a result with a chance: the Lab's explore and x-ray
+  // walk the choices (the call-tree gates walk the lapses through availableMoves).
+  return availableMoves(state, views).filter(move => move.kind !== 'lapse').flatMap(move => {
     const view = move.kind === 'decide' ? byId.get(move.actionId) : undefined;
     if (!view || !move.band) return [{ ...move, p: 1 }];
     const pBand = view.likelihood[move.band];

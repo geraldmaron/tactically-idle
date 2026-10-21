@@ -4,6 +4,7 @@
 // belief are read apart: sightings and incoming fire read where they are; the odds and the force
 // rules read where the team believes they are. Exercised on the engine's house call (a frozen
 // barricade, trees-v13/house-fixture.ts).
+import { decisionsOf } from '../../sim/types';
 import { describe, expect, it } from 'vitest';
 import type { CallTree, TreeMoveTo } from '../../content/call-trees/types';
 import type { IncidentTemplate } from '../../content/incidents/types';
@@ -441,7 +442,7 @@ describe('in real play, with a save and reload after every decision', () => {
     const t = template({ first: { subject: HALL }, watch: true });
     // A seed whose dice block the second choice is skipped; the one that passes ran every check in play.
     const tryPlay = (seed: number) => { try { return play(t, seed).after[1]; } catch { return undefined; } };
-    const seen = [719, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(tryPlay).find(state => state?.activeRun!.history.at(-1)!.band === 'favorable');
+    const seen = [719, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(tryPlay).find(state => decisionsOf(state?.activeRun?.history).at(-1)?.band === 'favorable');
     expect(seen, 'a seed where the look goes well').toBeDefined();
     expect(seen!.activeRun!.flags.some(flag => flag.startsWith('seen:subject:'))).toBe(true);
   });

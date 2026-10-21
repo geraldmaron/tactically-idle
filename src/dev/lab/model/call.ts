@@ -173,9 +173,10 @@ export function startLabRun(id: string, kit: Kit, campaignSeed = 719): GameState
  * stage continuation, or the failed-response report. An aimed decision may also name its drawn
  * results (`drawn`): compiled variant keys in the band's effect order (`['firearm:none']`,
  * `['wounded']`, `['follows+stays']`); without them the band's sample fixes them. */
-export interface LabMove { kind: 'decide' | 'roll' | 'fail'; actionId: string; band?: OutcomeBand; drawn?: string[] }
+export interface LabMove { kind: 'decide' | 'roll' | 'fail' | 'lapse'; actionId: string; band?: OutcomeBand; drawn?: string[] }
 
-/** Path tokens: `actionId~band`, `actionId~roll|continue|fail`, and an aimed decision's drawn
+/** Path tokens: `actionId~band`, `actionId~roll|continue|fail`, `threatId~lapse` (the decision
+ * point's time runs out with no choice made, the threat named by its node), and an aimed decision's drawn
  * results after its band, each after a `/`: `actionId~adverse/firearm:none/wounded`. No action id,
  * band or drawn key contains `/`, and the URL keeps it unescaped. A cascade key's `+` is written `.`
  * (`follows.stays`), since a query string reads `+` as a space; `.`, `+` and a space all read back
@@ -193,7 +194,7 @@ export function decodePath(text: string): LabMove[] {
       return [{ kind: 'decide', actionId, band: tail, ...drawn.length ? { drawn: drawn.map(key => key.trim().replace(/[. ]/g, '+')) } : {} }];
     }
     if (drawn.length) return [];
-    if (tail === 'roll' || tail === 'fail') return [{ kind: tail, actionId }];
+    if (tail === 'roll' || tail === 'fail' || tail === 'lapse') return [{ kind: tail, actionId }];
     return [];
   });
 }

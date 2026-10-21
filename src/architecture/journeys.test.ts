@@ -1,4 +1,5 @@
 // The cross-system journeys from journeys.ts, played headless through the real dispatcher.
+import { decisionsOf } from '../sim/types';
 import { describe, expect, it } from 'vitest';
 import { CALL_TREES } from '../content/call-trees';
 import { ITEMS } from '../content/items';
@@ -78,7 +79,7 @@ describe('journeys', () => {
         draft.activeRun!.rngState = (Math.imul(k + 1, 2654435761) >>> 0) || 1;
         const out = send(draft, { type: 'decide', actionId: view.id, actingSquadIds: view.actingSquadIds, supportSquadIds: view.supportSquadIds });
         expect(out.result, `${tree.type}: ${view.id}`).toEqual({ ok: true });
-        if (out.state.activeRun!.history.at(-1)!.band === 'favorable') favorable++;
+        if (decisionsOf(out.state.activeRun!.history).at(-1)!.band === 'favorable') favorable++;
       }
       // Four standard errors at p = 0.5 and n = 400 is 0.1.
       expect(Math.abs(favorable / ROLLS - view.likelihood.favorable), `${tree.type}: ${view.id} shown ${view.likelihood.favorable.toFixed(3)}, rolled ${(favorable / ROLLS).toFixed(3)}`).toBeLessThan(0.1);

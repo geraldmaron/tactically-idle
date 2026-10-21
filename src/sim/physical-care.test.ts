@@ -1,3 +1,4 @@
+import { decisionsOf } from './types';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { SCENARIOS } from '../content/scenarios';
 
@@ -91,7 +92,7 @@ describe('physical care follows public patients and actual acting squads', () =>
     state = choose(state, 'aid', ['B']);
     expect(state.activeRun!.squadTasks.find(task => task.squadId === 'B')).toMatchObject({ positionId: patient.spaceId, at: patient.at });
     expect(state.activeRun!.squadTasks.find(task => task.squadId === 'A')).toEqual(aBefore);
-    expect(state.activeRun!.history.at(-1)!.itemsConsumed.filter(use => use.itemId === 'trauma_kit')).toEqual([{ itemId: 'trauma_kit', qty: 1 }]);
+    expect(decisionsOf(state.activeRun!.history).at(-1)!.itemsConsumed.filter(use => use.itemId === 'trauma_kit')).toEqual([{ itemId: 'trauma_kit', qty: 1 }]);
     expect(deserialize(serialize(state, NOW))?.activeRun).toEqual(state.activeRun);
   });
 
@@ -139,7 +140,7 @@ describe('physical care follows public patients and actual acting squads', () =>
     state = choose(state, 'escort_patient', ['B']);
     expect(state.activeRun!.squadTasks.find(task => task.squadId === 'B')!.positionId).toBe('kitchen');
     for (const id of ev.storySquadOpenedIds!) expect(state.activeRun!.flags).toContain(openingFlag(id, 'open'));
-    expect(state.activeRun!.history.at(-1)!.committed!.openingChanges).toHaveLength(ev.storySquadOpenedIds!.length);
+    expect(decisionsOf(state.activeRun!.history).at(-1)!.committed!.openingChanges).toHaveLength(ev.storySquadOpenedIds!.length);
     expect(state.activeRun!.externalSupport!.ambulance.acceptedAt).not.toBeNull();
   });
 
@@ -179,7 +180,7 @@ describe('officer field care and medical transport', () => {
   it('keeps the committed injury position independent and rejects a relocated casualty on reload', () => {
     const state = choose(started(), 'injure');
     const casualty = Object.values(state.activeRun!.officerCasualties!)[0];
-    const committed = state.activeRun!.history[0].committed!.officerCasualties![0];
+    const committed = decisionsOf(state.activeRun!.history)[0].committed!.officerCasualties![0];
     const position = structuredClone(committed.position);
     casualty.position!.at.x += 1;
     expect(committed.position).toEqual(position);

@@ -11,7 +11,7 @@ import { CURRENT_SAVE_VERSION } from './save';
 import { createPersonnel } from './personnel';
 // Test GameState builder for operation tests. Independent of department.ts so the
 // operation engine can be exercised without the department simulation.
-import type { CertId, Command, DebriefResult, GameState, HandlerResult, Id, ItemUnit, Officer, Ratings, Role, SquadId, StageId, TraitId } from './types';
+import type { CertId, Command, Ctx, DebriefResult, GameState, HandlerResult, Id, ItemUnit, Officer, Ratings, Role, SquadId, StageId, TraitId } from './types';
 import { OPERATION_HANDLERS } from './operation';
 import { actionViews, pendingDebrief } from './operation-selectors';
 import { CALENDAR } from './calendar';
@@ -338,10 +338,10 @@ export function startWithKit(state: GameState, scenarioId: Id, squadIds: SquadId
 }
 
 /** Run one operation handler as a transaction (like dispatch, without the department tick). */
-export function apply(state: GameState, cmd: Command, now = NOW): { state: GameState; result: HandlerResult } {
+export function apply(state: GameState, cmd: Command, now = NOW, ctx: Omit<Ctx, 'now'> = {}): { state: GameState; result: HandlerResult } {
   const draft = structuredClone(state);
-  const handler = (OPERATION_HANDLERS as unknown as Record<string, (d: GameState, c: Command, x: { now: number }) => HandlerResult>)[cmd.type];
-  const result = handler(draft, cmd, { now });
+  const handler = (OPERATION_HANDLERS as unknown as Record<string, (d: GameState, c: Command, x: Ctx) => HandlerResult>)[cmd.type];
+  const result = handler(draft, cmd, { now, ...ctx });
   return result.ok ? { state: draft, result } : { state, result };
 }
 

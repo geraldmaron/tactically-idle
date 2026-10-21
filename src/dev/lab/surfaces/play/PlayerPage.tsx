@@ -3,6 +3,7 @@
 // as on a phone. It opens the call from its own URL and replays the URL path on saved tuning (never
 // the lab's unsaved patch). Nothing passes between it and the lab: a Confirm here rolls the run's own
 // dice on this page only.
+import { isLapse } from '../../../../sim/types';
 import { useCallback, useEffect, useState } from 'react';
 import { applyTuningPatch } from '../../../../sim/tuning';
 import { readLabHandoff } from '../../../../ui/lab-handoff';
@@ -43,7 +44,8 @@ export function PlayerPage({ url }: { url: LabUrl }) {
     const next = stepSession(session, move);
     if ('refused' in next) { setToast({ id: Date.now(), title: next.refused, tone: 'error' }); return; }
     setOpened({ session: next });
-    const h = currentFrame(next).state.activeRun?.history.at(-1);
+    const last = currentFrame(next).state.activeRun?.history.at(-1);
+    const h = last && !isLapse(last) ? last : undefined;
     if (move.kind === 'roll' && h?.committed?.resultLabel) setToast({ id: Date.now(), title: h.committed.resultLabel, tone: 'info' });
   }, [session]);
 

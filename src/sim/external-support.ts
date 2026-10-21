@@ -4,10 +4,11 @@ import { sightings } from './sightings';
 import { observingAction } from './story-people';
 import { buildLocation } from './location';
 import type { CompletionDisposition, DebriefResult, ExternalSupportEvent, ExternalSupportState, OfficerCasualtyRecord, OperationRun, PersonCasualtyRecord } from './types';
+import { decisionsOf, isLapse } from './types';
 import { next } from './rng';
 import { syncCasualtyFlags, syncPersonCasualtyFlags } from './incident-consequences';
 import { protectedOfficerEffects } from './force-risk';
-import { advanceClocks, clockConditionsHold, clockOutEffects, forkMinutes, initialClocks } from './clocks';
+import { advanceClocks, bumpClocks, clockConditionsHold, clockOutEffects, forkMinutes, initialClocks, lapseEffects, threatById } from './clocks';
 import { applyMoves, driftMeters, initialMeters, meterConditionsHold } from './meters';
 import { applyCommitments } from './commitments';
 
@@ -200,11 +201,39 @@ export function validExternalSupportState(run: OperationRun, scenario: ScenarioD
   const decisions = new Set<string>();
   if (!Number.isSafeInteger(run.rngState) || run.rngState < 0 || run.rngState > 0xffffffff) return false;
   // Mulberry32 advances by a fixed uint32 increment. Check the whole saved sample sequence.
-  const forceDraws = run.history.filter(decision => decision.committed?.forceOutcome).length;
+  const forceDraws = decisionsOf(run.history).filter(decision => decision.committed?.forceOutcome).length;
   // v13 drawn consequences (sim/drawn-effects.ts) take one saved sample each, after the decision's own.
-  const drawnDraws = run.history.reduce((sum, decision) => sum + (decision.committed?.drawn?.length ?? 0), 0);
-  let rngState = (run.rngState - Math.imul(run.history.length + forceDraws + drawnDraws, 0x6d2b79f5)) >>> 0;
+  const drawnDraws = decisionsOf(run.history).reduce((sum, decision) => sum + (decision.committed?.drawn?.length ?? 0), 0);
+  let rngState = (run.rngState - Math.imul(decisionsOf(run.history).length + forceDraws + drawnDraws, 0x6d2b79f5)) >>> 0;
   for (const decision of run.history) {
+    // A lapse (the time ran out with no choice made) draws nothing and calls no service: its minutes,
+    // its route and landing, its cues and clock outs move the public state as the commit moved it.
+    if (isLapse(decision)) {
+      const threat = threatById(scenario, decision.threatId);
+      if (!threat || decision.timeCost !== threat.minutes) return false;
+      const effects = lapseEffects(scenario, threat, publicState);
+      clock = round1(clock + decision.timeCost);
+      const { before: clocksBefore, cues } = passTime(decision.timeCost);
+      for (const effect of effects) {
+        for (const flag of effect.setFlags ?? []) publicState.flags = withFlag(publicState.flags, flag);
+        for (const flag of effect.clearFlags ?? []) publicState.flags = publicState.flags.filter((entry) => entry !== flag);
+        // The landing and beats jump the pressure sources after the window's minutes, as the commit does.
+        if (effect.clockBump?.length && timed.clocks) timed.clocks = bumpClocks(timed.clocks, effect.clockBump);
+      }
+      applyCues(cues);
+      for (const out of clockOutEffects(scenario, clocksBefore, timed.clocks, publicState, effects)) {
+        for (const flag of out.setFlags ?? []) publicState.flags = withFlag(publicState.flags, flag);
+        for (const flag of out.clearFlags ?? []) publicState.flags = publicState.flags.filter((entry) => entry !== flag);
+      }
+      applyMoves(moved, scenario, effects);
+      for (const person of decision.committed.personCasualties ?? []) personCasualties[person.personId] = { ...person };
+      const peopleState = { flags: publicState.flags, personCasualties };
+      syncPersonCasualtyFlags(peopleState, scenario);
+      publicState.flags = peopleState.flags;
+      for (const change of decision.knowledgeChanges) publicState.knowledge[change.factId] = change.status;
+      publicState.pressure = round1(publicState.pressure + decision.committed.pressureDelta);
+      continue;
+    }
     if (!Number.isFinite(decision.timeCost) || decision.timeCost <= 0) return false;
     const beforeClock = clock;
     clock = round1(clock + decision.timeCost);

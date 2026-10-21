@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react';
 import type { Command, GameState, HandlerResult } from '../sim/types';
-import { liveDither } from './timer';
+import { dueLapse, liveDither } from './timer';
 import { CampaignSlots } from '../sim/campaign-slots';
 import { withSaveLock } from '../sim/save-lock';
 import { createSaveEnvironment } from './save-environment';
@@ -31,7 +31,8 @@ if (environment.temporary && typeof window !== 'undefined' && window.parent !== 
 if (!locks && !isResponsivePreview) campaigns.reportStorageIssue('Safe local saving is unavailable in this browser. You can read or export existing saves; use a current browser to save progress.');
 // The themes the player keeps off the board go to every settlement and every new game
 // (sim/incidents.ts ContentExclusion); changing them clears the cards that no longer fit.
-const syncExclusion = () => { campaigns.exclusion = { avoid: readSettings().avoidThemes }; };
+// The timer setting goes with every command too, so the engine reads a run-out at the screen's rate.
+const syncExclusion = () => { campaigns.exclusion = { avoid: readSettings().avoidThemes }; campaigns.timer = readSettings().timer; };
 syncExclusion();
 let pendingSave: Promise<unknown> = Promise.resolve();
 function serialized<T>(action: () => T): Promise<T> {
@@ -57,6 +58,22 @@ export function send(cmd: Command): HandlerResult {
   notify();
   if (result.ok && campaigns.getSnapshot().activeSlotId) void serialized(() => { campaigns.save(Date.now()); notify(); }).catch(lockFailure);
   return result;
+}
+
+/** A stall counts only while the player can see it (owner 2026-10-21): hiding the app pauses the
+ * open decision and coming back resumes it, moved on by the time away. The store owns it, so it
+ * holds on every screen, not only the live call's. */
+function syncDecisionVisibility(): void {
+  const run = getState().activeRun;
+  if (!run || run.status !== 'active' || typeof document === 'undefined') return;
+  if (document.visibilityState === 'hidden' && !run.decisionPending && run.decisionPausedAt === undefined) send({ type: 'pauseDecision', revision: run.revision });
+  if (document.visibilityState === 'visible' && run.decisionPausedAt !== undefined) send({ type: 'resumeDecision', revision: run.revision });
+}
+
+/** Settle the open decision's run-out when it is due (ui/timer.ts dueLapse), whatever screen shows. */
+export function settleLapse(): void {
+  const lapse = dueLapse(getState(), Date.now());
+  if (lapse) send(lapse);
 }
 
 export function getState(): GameState {
@@ -113,14 +130,15 @@ if (typeof window !== 'undefined') {
   if (campaigns.getSnapshot().activeSlotId) void serialized(() => { campaigns.save(Date.now()); notify(); }).catch(lockFailure);
   send({ type: 'tick' });
   subscribeSettings(() => { syncExclusion(); send({ type: 'tick' }); });
-  window.setInterval(() => send({ type: 'tick' }), TICK_MS);
+  window.setInterval(() => { send({ type: 'tick' }); settleLapse(); }, TICK_MS);
   window.addEventListener('beforeunload', (event) => {
     if (campaigns.getSnapshot().dirty) { event.preventDefault(); event.returnValue = ''; }
   });
   // iOS often skips beforeunload and may kill a hidden tab, so settle and save the moment the page
   // hides instead of waiting for the next tick.
-  document.addEventListener('visibilitychange', () => send({ type: 'tick' }));
-  window.addEventListener('pagehide', () => send({ type: 'tick' }));
+  syncDecisionVisibility();
+  document.addEventListener('visibilitychange', () => { syncDecisionVisibility(); send({ type: 'tick' }); });
+  window.addEventListener('pagehide', () => { syncDecisionVisibility(); send({ type: 'tick' }); });
   window.addEventListener('storage', (event) => {
     if (event.key === 'tactically-idle/campaign-slots') {
       campaigns.reportStorageIssue('Saves changed in another tab. Reload to see them before making further changes. This tab will not overwrite them.');

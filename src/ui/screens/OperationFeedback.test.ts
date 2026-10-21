@@ -508,7 +508,7 @@ it.each(['reported', 'confirmed'] as const)('uses a public %s weapon item withou
 });
 
 describe('the live call on one screen, in two beats (docs/call-presentation.md)', () => {
-  const threat = { label: 'Indigo edges for the door', minutes: 4 };
+  const threat = { id: 'door', label: 'Indigo edges for the door', minutes: 4 };
   const props = (patch: Partial<LiveViewProps> = {}): LiveViewProps => {
     const base = liveProps([action()], null);
     return { ...base, progress: { ...base.progress, threat }, ...patch };

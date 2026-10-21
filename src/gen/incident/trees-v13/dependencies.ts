@@ -16,7 +16,7 @@ import { choiceActionId, outcomeNexts, prunePlan, reachableWithin, templateClock
 export type StateKey = `mark:${string}` | `safe:${string}` | `out:${string}` | `fact:${string}` | `clock:${string}` | `meter:${string}`
   | `promise:${string}` | `harm:${string}` | `count:${string}` | `turn:${string}` | 'situation'
   | 'scalar:objective' | 'scalar:civilian' | 'scalar:pressure';
-export type SiteField = 'outcome.mark' | 'fire.mark' | 'clock.cue.mark' | 'clock.onOut.mark' | 'clock.onFull.mark' | 'clock.rateFlags' | 'outcome.safe' | 'outcome.out'
+export type SiteField = 'outcome.mark' | 'fire.mark' | 'threat.mark' | 'beat.mark' | 'clock.cue.mark' | 'clock.onOut.mark' | 'clock.onFull.mark' | 'clock.rateFlags' | 'outcome.safe' | 'outcome.out'
   | 'force.out' | 'cascade.out' | 'outcome.reveal' | 'clock.cue.reveal' | 'fact.public' | 'outcome.moves' | 'outcome.promise'
   | 'authority.concede' | 'outcome.harm' | 'outcome.officer' | 'fire.harm' | 'force.harm' | 'clock.onOut.harm' | 'clock.onFull.harm'
   | 'outcome.objective' | 'outcome.civilian' | 'outcome.pressure' | 'choice.minutes' | 'draw'
@@ -173,6 +173,10 @@ export function dependencyIndex(template: IncidentTemplate): DependencyIndex {
 
   for (const node of tree.nodes) {
     (node.promptIf ?? []).forEach((entry, promptIf) => readState(entry.when, { node: node.id, promptIf }, 'promptIf.when'));
+    // A decision point's threat sets its marks when it lands, by a slow choice or by running out,
+    // and a beat when the stall reaches it.
+    for (const mark of node.threat?.mark ?? []) write(`mark:${mark}`, { node: node.id, field: 'threat.mark', conditional: `when ${node.threat!.label} lands` });
+    for (const beat of node.threat?.beats ?? []) for (const mark of beat.mark ?? []) write(`mark:${mark}`, { node: node.id, field: 'beat.mark', conditional: `at ${beat.at} min of stall` });
     for (const choice of node.choices) {
       const at = { node: node.id, choice: choice.id };
       readState(choice.onlyIf, at, 'onlyIf');

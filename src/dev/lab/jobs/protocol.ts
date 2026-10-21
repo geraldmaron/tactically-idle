@@ -20,7 +20,8 @@ export type Goal = { node: string } | { ending: string } | { flags: string[] } |
  * margin window is under 1%: sampleFor in gates/engine-driver.ts), so the walk didn't follow them and
  * can't say it covered every state the call reaches. */
 export interface ExploreResult { path: string | null; states: number; truncated: boolean; unforced?: number }
-export interface CastSample { call: number; cast: Record<string, CastIdentity>; groups: Record<string, readonly string[]>; place: string; rooms: Record<string, string> }
+/** `world`: the call's world names ({handle} and the rest, content/world.ts worldFor), as the compiler binds them. */
+export interface CastSample { call: number; cast: Record<string, CastIdentity>; groups: Record<string, readonly string[]>; place: string; rooms: Record<string, string>; world: Record<string, string> }
 
 export type LabJob =
   | { kind: 'reach-call'; start: StartRef; firstChoice?: string; style: Policy; runs: [from: number, to: number] }

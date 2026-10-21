@@ -13,6 +13,7 @@ import type { CallResult, PlayStep, Weight } from '../../../gen/incident/trees-v
 import { choiceIndex, drawnRoute, matchKey } from '../../../gen/incident/trees-v13/graph';
 import { hashSeed } from '../../../sim/rng';
 import type { OutcomeBand } from '../../../sim/types';
+import { isLapse } from '../../../sim/types';
 import { flatness } from '../model/call';
 import { nodeAt } from '../model/session';
 
@@ -81,7 +82,7 @@ export function recordStep(tree: CallTree, step: PlayStep): StepRecord {
   const node = nodeAt(step.before, tree) ?? '?';
   const run = step.after.activeRun;
   const h = run?.history.at(-1);
-  if (!run || !h) throw new Error(`recordStep: ${step.choice.id} left no decision in the run's history`);
+  if (!run || !h || isLapse(h)) throw new Error(`recordStep: ${step.choice.id} left no decision in the run's history`);
   const before = new Set(step.before.activeRun?.flags ?? []);
   const flat = flatness(step.views);
   return {

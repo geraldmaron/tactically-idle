@@ -1,3 +1,4 @@
+import { decisionsOf } from './types';
 import { responseFailurePlan } from './response-failure';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { SCENARIOS } from '../content/scenarios';
@@ -77,7 +78,7 @@ describe('injury changes the team, care choices and saved aftermath', () => {
     const record = state.activeRun!.officerCasualties!.off_brooks;
     expect(record.care).toBe('stabilized');
     expect(record.recoveryUntil).toBe(NOW + INJURY_RECOVERY_HOURS.serious * 3_600_000 * .8);
-    expect(state.activeRun!.history.at(-1)!.itemsConsumed).toEqual([{ itemId: 'trauma_kit', qty: 1 }]);
+    expect(decisionsOf(state.activeRun!.history).at(-1)!.itemsConsumed).toEqual([{ itemId: 'trauma_kit', qty: 1 }]);
     expect(state.activeRun!.flags).toContain('casualty:awaiting_transport');
     expect(state.activeRun!.flags).not.toContain('casualty:untreated');
     expect(incidentOfficerUnavailable(state, state.activeRun!, 'off_brooks')).toBe(true);
@@ -110,7 +111,7 @@ describe('injury changes the team, care choices and saved aftermath', () => {
     for (const change of [
       (copy: GameState) => { copy.activeRun!.officerCasualties!.off_brooks.recoveryUntil = Number.NaN; },
       (copy: GameState) => { copy.activeRun!.officerCasualties = {}; },
-      (copy: GameState) => { copy.activeRun!.history[0].committed!.officerCasualties = []; copy.activeRun!.officerCasualties = {}; },
+      (copy: GameState) => { decisionsOf(copy.activeRun!.history)[0].committed!.officerCasualties = []; copy.activeRun!.officerCasualties = {}; },
       (copy: GameState) => { copy.activeRun!.officerCasualties!.off_brooks.care = 'evacuated'; },
       (copy: GameState) => { copy.activeRun!.flags = []; },
       (copy: GameState) => { copy.officers.off_brooks.injury = null; },

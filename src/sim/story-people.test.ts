@@ -1,3 +1,4 @@
+import { decisionsOf } from './types';
 import { bandFor } from './resolution';
 import { next } from './rng';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -176,11 +177,11 @@ describe('bound story people project existing committed state', () => {
     expect(actionViews(state, NOW, 'A')[0].targetId).toBe(outside.spaceId);
     expect(spaceViews(state).find(space => space.id === inside.spaceId)!.actionIds).not.toContain(care.id);
     expect(spaceViews(state).find(space => space.id === outside.spaceId)!.actionIds).toContain(care.id);
-    const priorHistory = structuredClone(state.activeRun!.history);
+    const priorHistory = structuredClone(decisionsOf(state.activeRun!.history));
     const committed = apply(state, { type: 'decide', actionId: care.id, actingSquadIds: ['A'], supportSquadIds: [] });
     expect(committed.result).toEqual({ ok: true });
-    expect(committed.state.activeRun!.history.at(-1)!.targetId).toBe(outside.spaceId);
-    expect(committed.state.activeRun!.history.slice(0, priorHistory.length)).toEqual(priorHistory);
+    expect(decisionsOf(committed.state.activeRun!.history).at(-1)!.targetId).toBe(outside.spaceId);
+    expect(decisionsOf(committed.state.activeRun!.history).slice(0, priorHistory.length)).toEqual(priorHistory);
     expect(care.targetId).toBe(inside.spaceId);
   });
 
@@ -193,7 +194,7 @@ describe('bound story people project existing committed state', () => {
     expect(loaded).not.toBeNull();
     expect({ spaces: spaceViews(loaded), people: storyPeoplePublic(scenario, built, loaded.activeRun!), props: storyPropsPublic(scenario, built, loaded.activeRun!), actions: actionViews(loaded, NOW, 'A') }).toEqual(expected);
     expect(state).toEqual(before);
-    expect(loaded.activeRun!.history).toEqual(before.activeRun!.history);
+    expect(decisionsOf(loaded.activeRun!.history)).toEqual(decisionsOf(before.activeRun!.history));
     expect(loaded.activeRun!.rngState).toBe(before.activeRun!.rngState);
   });
 
@@ -227,7 +228,7 @@ describe('bound story people project existing committed state', () => {
     const declined = apply(state, { type: 'decide', actionId: care.id, actingSquadIds: ['A'], supportSquadIds: [] });
     expect(declined.result).toEqual({ ok: true });
     expect(builtFor(scenario.locationFamilyId, scenario.locationSeed, declined.state.activeRun!.flags).location.openings.find(opening => opening.id === lockedId)!.state).toBe('locked');
-    const decline = declined.state.activeRun!.history.at(-1)!;
+    const decline = decisionsOf(declined.state.activeRun!.history).at(-1)!;
     expect(decline.timeCost).toBe(Math.round((locked.timeBase - locked.storyMovementMinutes!) * ({ favorable: 1, mixed: 1.2, adverse: 1.5 })[decline.band] * 10) / 10);
     for (const band of ['favorable', 'mixed', 'adverse'] as const) care.outcomes[band] = [{ setFlags: ['alex_released'] }];
     const moved = apply(state, { type: 'decide', actionId: care.id, actingSquadIds: ['A'], supportSquadIds: [] });
@@ -304,12 +305,12 @@ describe('bound story people project existing committed state', () => {
     const declined = apply(state, { type: 'decide', actionId: care.id, actingSquadIds: ['A'], supportSquadIds: [] });
     expect(declined.result).toEqual({ ok: true });
     expect(builtFor(scenario.locationFamilyId, scenario.locationSeed, declined.state.activeRun!.flags).location.openings.find(opening => opening.id === exit.id)!.state).toBe('open');
-    expect(declined.state.activeRun!.history.at(-1)!.committed!.openingChanges).toBeUndefined();
+    expect(decisionsOf(declined.state.activeRun!.history).at(-1)!.committed!.openingChanges).toBeUndefined();
     for (const band of ['favorable', 'mixed', 'adverse'] as const) care.outcomes[band] = [{ setFlags: ['alex_released'], storyExitState: 'locked', openings: [{ openingId: exit.id, state: 'closed' }] }];
     const moved = apply(state, { type: 'decide', actionId: care.id, actingSquadIds: ['A'], supportSquadIds: [] });
     expect(moved.result).toEqual({ ok: true });
     expect(builtFor(scenario.locationFamilyId, scenario.locationSeed, moved.state.activeRun!.flags).location.openings.find(opening => opening.id === exit.id)!.state).toBe('closed');
-    expect(moved.state.activeRun!.history.at(-1)!.committed!.openingChanges).toEqual([{ openingId: exit.id, state: 'closed' }]);
+    expect(decisionsOf(moved.state.activeRun!.history).at(-1)!.committed!.openingChanges).toEqual([{ openingId: exit.id, state: 'closed' }]);
   });
 });
 

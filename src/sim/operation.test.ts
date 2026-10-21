@@ -1,3 +1,4 @@
+import { decisionsOf } from './types';
 import { describe, expect, it } from 'vitest';
 import type { GameState, Id, OutcomeBand, SquadId } from './types';
 import { dispatch } from './game';
@@ -30,7 +31,7 @@ function seedFor(scenario: Id, squads: SquadId[], action: Id, band: OutcomeBand,
     let s = startRun(makeState({ rngState: 500 + i * 131, squadC: squads.includes('C') }), scenario, squads);
     if (prep) s = prep(s);
     const r = decideView(s, action);
-    if (r.result.ok && r.state.activeRun!.history[0].band === band) return s;
+    if (r.result.ok && decisionsOf(r.state.activeRun!.history)[0].band === band) return s;
   }
   throw new Error(`no seed gives ${band} for ${action}`);
 }
@@ -266,7 +267,7 @@ describe('time pressure versus uncertainty (acceptance 4)', () => {
   it('pressure rises with operation minutes and civilian safety falls only past the threshold', () => {
     const s = startRun(makeState(), 'ms_urgent', ['A']);
     const r = decideView(s, 'mu_survey_house').state.activeRun!;
-    const res = r.history[0];
+    const res = decisionsOf(r.history)[0];
     expect(r.clock).toBe(res.timeCost);
     expect(r.pressure).toBeCloseTo(SCENARIOS.ms_urgent.pressure.start + SCENARIOS.ms_urgent.pressure.perMinute * res.timeCost, 0);
     expect(res.timeCost).toBeGreaterThan(15);
@@ -361,9 +362,9 @@ describe('joint operations (acceptance 18)', () => {
     // Three distinct vantage squads end up in different places, each with its own task label.
     expect(new Set(r.squadTasks.map((t) => t.positionId)).size).toBeGreaterThan(1);
     expect(r.squadTasks.every((t) => t.task === 'Watch')).toBe(true);
-    const strain = r.history[0].stressDeltas;
+    const strain = decisionsOf(r.history)[0].stressDeltas;
     expect(Object.keys(strain)).toHaveLength(12);
-    const solo2 = apply(start1, { type: 'decide', actionId: 'ms_perimeter_watch', actingSquadIds: ['A'], supportSquadIds: [] }).state.activeRun!.history[0].stressDeltas;
+    const solo2 = decisionsOf(apply(start1, { type: 'decide', actionId: 'ms_perimeter_watch', actingSquadIds: ['A'], supportSquadIds: [] }).state.activeRun!.history)[0].stressDeltas;
     const total = (d: Record<Id, number>) => Object.values(d).reduce((a, b) => a + b, 0);
     expect(total(strain)).toBeGreaterThan(total(solo2));
   });
@@ -406,18 +407,18 @@ describe('joint operations (acceptance 18)', () => {
       const c = structuredClone(s);
       c.activeRun!.rngState = 40 + i * 977;
       const r = apply(c, { type: 'decide', actionId: 'mu_two_point', actingSquadIds: ['A'], supportSquadIds: ['B'] });
-      if (r.result.ok && r.state.activeRun!.history[0].band === 'favorable') after = r.state;
+      if (r.result.ok && decisionsOf(r.state.activeRun!.history)[0].band === 'favorable') after = r.state;
     }
     expect(after).not.toBeNull();
     const run = after!.activeRun!;
     expect(run.flags).toContain('two_point_set');
     expect(run.flags).toContain(openingFlag('d_back', 'open'));
     expect(run.squadTasks.find((t) => t.squadId === 'B')).toMatchObject({ positionId: 'kitchen', task: 'Back door' });
-    const strain = run.history[0].stressDeltas;
+    const strain = decisionsOf(run.history)[0].stressDeltas;
     expect(Object.keys(strain)).toHaveLength(8);
     expect(strain.off_okafor).toBeGreaterThan(0);
     expect(run.stage).toBe('resolve');
-    expect(run.history[0].supportSquadIds).toEqual(['B']);
+    expect(decisionsOf(run.history)[0].supportSquadIds).toEqual(['B']);
   });
 });
 
@@ -494,8 +495,8 @@ describe('integrity (acceptance 11)', () => {
     const s = seedFor('ms_occupancy', ['A'], 'ms_gather', 'adverse');
     const r = decideView(s, 'ms_gather').state.activeRun!;
     expect(r.status).toBe('active');
-    expect(r.history[0].timeCost).toBeGreaterThan(0);
-    expect(r.history[0].knowledgeChanges).toEqual([]);
+    expect(decisionsOf(r.history)[0].timeCost).toBeGreaterThan(0);
+    expect(decisionsOf(r.history)[0].knowledgeChanges).toEqual([]);
     expect(r.stage).toBe('assess');
   });
 
@@ -506,13 +507,13 @@ describe('integrity (acceptance 11)', () => {
     for (let i = 0; i < 400 && !hit; i++) {
       const s = startRun(makeState({ rngState: 900 + i * 131 }), 'ms_occupancy', ['A'], { loadouts });
       const b = decideView(s, 'ms_gather');
-      if (b.result.ok && b.state.activeRun!.history[0].band === 'adverse') hit = b.state;
+      if (b.result.ok && decisionsOf(b.state.activeRun!.history)[0].band === 'adverse') hit = b.state;
     }
     expect(hit).not.toBeNull();
     const run = hit!.activeRun!;
     expect(run.stage).toBe('assess');
     expect(run.status).toBe('active');
-    expect(run.history).toHaveLength(1);
+    expect(decisionsOf(run.history)).toHaveLength(1);
   });
 
   it('a JSON round trip mid-run then deciding gives the same result as deciding directly (no reroll)', () => {
@@ -528,10 +529,10 @@ describe('integrity (acceptance 11)', () => {
     const direct = act(first);
     const viaSave = act(reloaded);
     expect(viaSave).toEqual(direct);
-    const a = direct.activeRun!.history;
-    expect(a[a.length - 1].sample).toBe(viaSave.activeRun!.history[a.length - 1].sample);
+    const a = decisionsOf(direct.activeRun!.history);
+    expect(a[a.length - 1].sample).toBe(decisionsOf(viaSave.activeRun!.history)[a.length - 1].sample);
     // The first decision's stored sample and band are untouched by later play.
-    expect(direct.activeRun!.history[0]).toEqual(first.activeRun!.history[0]);
+    expect(decisionsOf(direct.activeRun!.history)[0]).toEqual(decisionsOf(first.activeRun!.history)[0]);
     // Reading views never consumes randomness.
     const rng = first.activeRun!.rngState;
     actionViews(first, NOW, 'A');
@@ -542,7 +543,7 @@ describe('integrity (acceptance 11)', () => {
   it('every decision stores its inputs, sample, band and explanation, and bumps the revision', () => {
     const s = startRun(makeState(), 'ms_occupancy', ['A']);
     const r = decideView(s, 'ms_contact').state.activeRun!;
-    const h = r.history[0];
+    const h = decisionsOf(r.history)[0];
     expect(r.revision).toBe(1);
     expect(h.revision).toBe(0);
     expect(h.sample).toBeGreaterThanOrEqual(0);

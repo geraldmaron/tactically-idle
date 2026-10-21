@@ -1,3 +1,4 @@
+import { decisionsOf } from './types';
 import { describe, expect, it } from 'vitest';
 import { applyMove, availableMoves, drawnAt, NOW, startGateRun } from '../gen/incident/gates/engine-driver';
 import { FORCE_REASONS } from '../content/incidents/lines';
@@ -36,18 +37,18 @@ describe('current armed call force equipment', () => {
     const { view, forces, after } = forceDecision(startGateRun(scenario().id, 719, { items }));
     expect(view.forceRisk).toBeUndefined(); // Retired authored preview, never a phantom firearm.
     expect(forces.flatMap(dist => dist.results).every(result => result.key.startsWith('hands:'))).toBe(true);
-    const force = after.activeRun!.history.at(-1)!.committed!.drawn!.find(record => record.model === 'team_force')!;
+    const force = decisionsOf(after.activeRun!.history).at(-1)!.committed!.drawn!.find(record => record.model === 'team_force')!;
     expect(force.key).toMatch(/^hands:/);
     expect(force.reason).toContain(FORCE_REASONS.no_firearm);
     expect(computeDebrief(after, after.activeRun!)!.forceLines).toContainEqual(expect.objectContaining({ reason: force.reason }));
-    expect(after.activeRun!.history.at(-1)!.committed!.forceOutcome).toBeUndefined();
+    expect(decisionsOf(after.activeRun!.history).at(-1)!.committed!.forceOutcome).toBeUndefined();
   });
 
   it('fires when an acting officer is qualified and the squad carries a serviceable sidearm', () => {
     const { view, forces, after } = forceDecision(startGateRun(scenario().id, 719, { items: ['service_sidearm'], certs: ['entry_team'] }));
     expect(view.forceRisk).toBeUndefined();
     expect(forces.flatMap(dist => dist.results).every(result => result.key.startsWith('firearm:'))).toBe(true);
-    expect(after.activeRun!.history.at(-1)!.committed!.drawn).toContainEqual(expect.objectContaining({ model: 'team_force', key: expect.stringMatching(/^firearm:/) }));
+    expect(decisionsOf(after.activeRun!.history).at(-1)!.committed!.drawn).toContainEqual(expect.objectContaining({ model: 'team_force', key: expect.stringMatching(/^firearm:/) }));
   });
 
   it.each(['unqualified', 'broken', 'expired', 'servicing'] as const)('falls back from a carried sidearm when %s', fault => {
@@ -61,7 +62,7 @@ describe('current armed call force equipment', () => {
     }
     const { forces, after } = forceDecision(state);
     expect(forces.flatMap(dist => dist.results).some(result => result.key.startsWith('firearm:'))).toBe(false);
-    expect(after.activeRun!.history.at(-1)!.committed!.drawn!.find(record => record.model === 'team_force')!.key).toMatch(/^hands:/);
+    expect(decisionsOf(after.activeRun!.history).at(-1)!.committed!.drawn!.find(record => record.model === 'team_force')!.key).toMatch(/^hands:/);
   });
 
   it('requires the qualified officer to participate for every tool', () => {
@@ -101,7 +102,7 @@ describe('current armed call force equipment', () => {
     it('spends one cartridge when the device is used, and says so', () => {
       const { state } = inReach(['energy_cartridge']);
       const { after } = forceDecision(state);
-      const decision = after.activeRun!.history.at(-1)!;
+      const decision = decisionsOf(after.activeRun!.history).at(-1)!;
       expect(decision.committed!.drawn!.find(record => record.model === 'team_force')!.key).toMatch(/^less_lethal_device:/);
       expect(decision.itemsConsumed).toContainEqual({ itemId: 'energy_cartridge', qty: 1 });
       expect(decision.unitsUsed.filter(id => after.units[id].itemId === 'energy_cartridge')).toHaveLength(1);

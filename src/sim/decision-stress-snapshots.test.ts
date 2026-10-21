@@ -1,3 +1,4 @@
+import { decisionsOf } from './types';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { SCENARIOS } from '../content/scenarios';
 import { HOUR_MS, settle } from './economy';
@@ -63,7 +64,7 @@ describe('decision-time stress snapshots', () => {
     const state = started();
     for (const id of state.squads[0].officerIds) state.officers[id].stress = before;
     const resolved = decide(state);
-    const record = resolved.activeRun!.history[0];
+    const record = decisionsOf(resolved.activeRun!.history)[0];
     expect(Object.keys(record.stressLevels!)).toEqual(Object.keys(record.stressDeltas));
     expect(lastDecisionView(resolved)!.actualStressDeltas).toBe(true);
     for (const row of lastDecisionView(resolved)!.stressDeltas) {
@@ -76,12 +77,12 @@ describe('decision-time stress snapshots', () => {
 
   it('retains detached snapshots through later decisions, debrief settlement, rest and reload', () => {
     let state = decide(started());
-    const firstRecord = structuredClone(state.activeRun!.history[0]);
+    const firstRecord = structuredClone(decisionsOf(state.activeRun!.history)[0]);
     const firstView = structuredClone(decisionViews(state)[0]);
     const detached = decisionViews(state)[0];
     detached.stressDeltas[0].stressAfter = 99;
     detached.stressDeltas[0].stressBefore = 98;
-    expect(state.activeRun!.history[0]).toEqual(firstRecord);
+    expect(decisionsOf(state.activeRun!.history)[0]).toEqual(firstRecord);
     state = decide(state);
     expect(state.officers.off_chen.stress).toBeGreaterThan(firstRecord.stressLevels!.off_chen.stressAfter);
     expect(decisionViews(state)[0]).toEqual(firstView);
@@ -92,7 +93,7 @@ describe('decision-time stress snapshots', () => {
     expect(closed.result).toEqual({ ok: true });
     expect(closed.state.officers.off_chen.stress).toBe(stressBeforeClose + 5);
     expect(closed.state.debriefs[0].decisions).toEqual(views);
-    expect(state.activeRun!.history[0]).toEqual(firstRecord);
+    expect(decisionsOf(state.activeRun!.history)[0]).toEqual(firstRecord);
     closed.state.squads[0].duty = 'rest';
     settle(closed.state, NOW + HOUR_MS);
     expect(closed.state.officers.off_chen.stress).toBeLessThan(stressBeforeClose + 5);
@@ -116,7 +117,7 @@ describe('saved stress snapshot validation', () => {
 
   it.each(invalidPairs)('rejects invalid active-run snapshot: %s', (_label, pair) => {
     const state = decide(started());
-    (state.activeRun!.history[0].stressLevels as Record<string, unknown>).off_chen = pair;
+    (decisionsOf(state.activeRun!.history)[0].stressLevels as Record<string, unknown>).off_chen = pair;
     expect(deserialize(serialize(state, NOW))).toBeNull();
   });
 
@@ -132,10 +133,10 @@ describe('saved stress snapshot validation', () => {
   it('rejects orphan or missing officer snapshots when the optional map is present', () => {
     const state = decide(started());
     const missing = structuredClone(state);
-    delete missing.activeRun!.history[0].stressLevels!.off_chen;
+    delete decisionsOf(missing.activeRun!.history)[0].stressLevels!.off_chen;
     expect(deserialize(serialize(missing, NOW))).toBeNull();
     const orphan = structuredClone(state);
-    orphan.activeRun!.history[0].stressLevels!.off_ghost = { stressBefore: 0, stressAfter: 2 };
+    decisionsOf(orphan.activeRun!.history)[0].stressLevels!.off_ghost = { stressBefore: 0, stressAfter: 2 };
     expect(deserialize(serialize(orphan, NOW))).toBeNull();
   });
 });

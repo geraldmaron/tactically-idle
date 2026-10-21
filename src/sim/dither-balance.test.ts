@@ -5,6 +5,7 @@
 // records how the outcomes shift against zero dither: the numbers the rates in CLOCK_RULES_V1.dither
 // were chosen against. Same calls and dice; the stall's minutes and its pressure (the odds read it,
 // sim/clocks.ts stalledRun) are the only difference, and a pick changes only where they reorder the odds.
+import { decisionsOf } from './types';
 import { describe, expect, it } from 'vitest';
 import { CALL_TREES } from '../content/call-trees';
 import type { CallTree } from '../content/call-trees/types';
@@ -44,7 +45,7 @@ function play(scenarioId: string, seed: number, timer: TimerSetting | null, seco
     const choice = [...views].sort((a, b) => b.likelihood.favorable - a.likelihood.favorable || a.id.localeCompare(b.id))[0];
     const next = apply(state, { type: 'decide', actionId: choice.id, actingSquadIds: choice.actingSquadIds, supportSquadIds: choice.supportSquadIds, ...(stall > 0 ? { ditherMinutes: stall } : {}) }, at);
     if (!next.result.ok) break;
-    dither.push(next.state.activeRun!.history.at(-1)!.ditherMinutes ?? 0);
+    dither.push(decisionsOf(next.state.activeRun!.history).at(-1)!.ditherMinutes ?? 0);
     state = next.state;
   }
   return { state, dither, tooSlowEverywhere };

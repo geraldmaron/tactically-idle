@@ -3,6 +3,7 @@
 // requirement; each path replays move for move. Endings a call's graph lists but the walk can't reach
 // are named with the reason, proven: the situation's hidden truth, a squad without a certification,
 // a clock that never runs out in this call, or a player never left without a move.
+import { decisionsOf } from '../../../sim/types';
 import { describe, expect, it } from 'vitest';
 import { labRequirementTree, sessionClockNexts } from './clocks';
 import { availableMoves, NOW } from '../../../gen/incident/gates/engine-driver';
@@ -112,7 +113,7 @@ describe('explore', () => {
       else expect(last.drawn![0]).toMatch(/^firearm:(wounded|serious)$/);
       const end = replayed(keeps, path).activeRun!;
       expect(end.endingId).toBe(ending);
-      expect(end.history.at(-1)!.committed!.drawn!.map(d => d.key)).toEqual(last.drawn);
+      expect(decisionsOf(end.history).at(-1)!.committed!.drawn!.map(d => d.key)).toEqual(last.drawn);
       // A goal finds the same path, as Play here does.
       expect(explore(keeps.frames[0].state, { ending }).path).toBe(path);
     }

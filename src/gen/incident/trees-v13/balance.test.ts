@@ -1,3 +1,4 @@
+import { decisionsOf } from '../../../sim/types';
 import { describe, expect, it } from 'vitest';
 import { CALL_TREES } from '../../../content/call-trees';
 import type { CallTree } from '../../../content/call-trees/types';
@@ -71,7 +72,7 @@ describe('balance play', () => {
       const steps: PlayStep[] = [];
       const optioned = playToEnd(scenarioId, policy, seed, { start: startGateRun(scenarioId, seed), rollSeed: seed, maxSteps: 30, onStep: step => steps.push(step) });
       expect(JSON.stringify(optioned), `${scenarioId} ${policy}`).toBe(JSON.stringify(plain));
-      expect(steps.map(step => step.choice.id)).toEqual(plain.activeRun!.history.map(entry => entry.actionId));
+      expect(steps.map(step => step.choice.id)).toEqual(decisionsOf(plain.activeRun!.history).map(entry => entry.actionId));
       steps.forEach((step, i) => { expect(step.after).toBe(steps[i + 1]?.before ?? optioned); expect(step.views.some(view => view.id === step.choice.id)).toBe(true); });
     }
   }, 120000);
@@ -80,10 +81,10 @@ describe('balance play', () => {
     const { scenarioId, seed } = calls[0];
     const start = startGateRun(scenarioId, seed);
     const plain = playToEnd(scenarioId, 'random', seed);
-    const first = plain.activeRun!.history[0].actionId;
+    const first = decisionsOf(plain.activeRun!.history)[0].actionId;
     expect(JSON.stringify(playToEnd(scenarioId, 'random', seed, { start, firstChoice: first }))).toBe(JSON.stringify(plain));
     expect(playToEnd(scenarioId, 'random', seed, { start, firstChoice: 'not_a_choice' })).toBe(start);
-    expect(playToEnd(scenarioId, 'random', seed, { start, maxSteps: 1 }).activeRun!.history).toHaveLength(1);
+    expect(decisionsOf(playToEnd(scenarioId, 'random', seed, { start, maxSteps: 1 }).activeRun!.history)).toHaveLength(1);
     expect(JSON.stringify(start)).toBe(JSON.stringify(startGateRun(scenarioId, seed)));
   });
 

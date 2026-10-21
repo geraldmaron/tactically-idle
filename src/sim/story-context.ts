@@ -1,6 +1,6 @@
 import type { NodeThreat, ScenarioDefinition, SpokenLine } from './scenario-types';
 import type { OperationRun } from './types';
-import { conditionHolds } from './conditions';
+import { conditionHolds, liveThreat } from './conditions';
 
 /** Reading a dilemma never consumes time, changes a run or reveals sampled truth. */
 export function currentStoryPrompt(scenario: ScenarioDefinition, run: Pick<OperationRun, 'stage' | 'endingId' | 'knowledge' | 'flags' | 'pressure'>): string {
@@ -33,5 +33,6 @@ export function currentStoryExchange(scenario: ScenarioDefinition, run: Pick<Ope
 export function currentStoryThreat(scenario: ScenarioDefinition, run: Pick<OperationRun, 'stage' | 'flags' | 'knowledge' | 'pressure'>): NodeThreat | null {
   if (run.stage === 'debrief' || run.flags.some(flag => flag.startsWith('completion_pending:'))) return null;
   const contextual = scenario.stages[run.stage].contextPrompts?.find(entry => conditionHolds(entry.when, run));
-  return contextual?.threat ? { ...contextual.threat } : null;
+  const threat = liveThreat(contextual?.threat, run.flags);
+  return threat ? { ...threat } : null;
 }

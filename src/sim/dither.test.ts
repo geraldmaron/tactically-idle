@@ -1,6 +1,7 @@
 // dither-minutes (docs/call-pressure.md): a stall on an open decision costs game minutes. The pure
 // function, the cap, the saved open time, the commit that records the stall and folds it into the
 // decision's minutes, the replay that reads it back, and the previews that show it before a commit.
+import { decisionsOf } from './types';
 import { describe, expect, it } from 'vitest';
 import { CALL_TREES } from '../content/call-trees';
 import { CLOCK_RULES_V1, ditherCap, ditherMinutes, openDither, openThreat, stalledRun, THREAT_LANDING_EVENT } from './clocks';
@@ -88,8 +89,8 @@ describe('a commit with dither', () => {
     supportSquadIds: view.supportSquadIds, ...(ditherMinutes === undefined ? {} : { ditherMinutes }) }, at);
 
   it('adds the stall to the decision’s minutes and records it beside the band', () => {
-    const plain = decide().state.activeRun!.history[0];
-    const stalled = decide(2).state.activeRun!.history[0];
+    const plain = decisionsOf(decide().state.activeRun!.history)[0];
+    const stalled = decisionsOf(decide(2).state.activeRun!.history)[0];
     expect(plain.ditherMinutes).toBeUndefined();
     expect(stalled.band).toBe(plain.band);
     expect(stalled.ditherMinutes).toBe(2);
@@ -98,7 +99,7 @@ describe('a commit with dither', () => {
   });
 
   it('stops at the open threat however long the stall', () => {
-    expect(decide(10_000).state.activeRun!.history[0].ditherMinutes).toBe(cap);
+    expect(decisionsOf(decide(10_000).state.activeRun!.history)[0].ditherMinutes).toBe(cap);
   });
 
   it('refuses a stall that is not a number of minutes', () => {
@@ -122,7 +123,7 @@ describe('a commit with dither', () => {
     expect(reviewed.timeRange).toEqual(previewAction(state, NOW, view.id, view.actingSquadIds, view.supportSquadIds)!.timeRange);
     const committed = decide(cap).state.activeRun!;
     const landed = scenario.stages.assess.actions.find(action => action.id === view.id)!.threat;
-    if (landed) expect(committed.history[0].clockBaseMinutes).toBeGreaterThanOrEqual(landed.minutes);
+    if (landed) expect(decisionsOf(committed.history)[0].clockBaseMinutes).toBeGreaterThanOrEqual(landed.minutes);
   });
 
   it('lowers the odds as the stall grows, and the commit carries the stall’s pressure once', () => {
@@ -175,9 +176,9 @@ describe('a commit with dither', () => {
     const after = decide(2).state;
     const loaded = deserialize(serialize(after, NOW))!;
     expect(loaded.activeRun!.decisionOpenedAt).toBe(after.activeRun!.decisionOpenedAt);
-    expect(loaded.activeRun!.history[0].ditherMinutes).toBe(2);
+    expect(decisionsOf(loaded.activeRun!.history)[0].ditherMinutes).toBe(2);
     const bad = structuredClone(after);
-    bad.activeRun!.history[0].ditherMinutes = bad.activeRun!.history[0].clockBaseMinutes + 1;
+    decisionsOf(bad.activeRun!.history)[0].ditherMinutes = decisionsOf(bad.activeRun!.history)[0].clockBaseMinutes + 1;
     expect(deserialize(serialize(bad, NOW))).toBeNull();
     const missing = structuredClone(after) as unknown as { activeRun: Record<string, unknown> };
     delete missing.activeRun.decisionOpenedAt;

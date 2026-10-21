@@ -1,11 +1,11 @@
 // The call timer as the game reads it (docs/call-pressure.md): the player's timer setting and the
 // open decision's stall at that setting. Pure, so the live screen and the store's commit path read
 // the same minutes.
-import { openDither } from '../sim/clocks';
+import { lapsedThreat, openDither } from '../sim/clocks';
 import { getScenario } from '../sim/scenario-registry';
 import type { TimerSetting } from '../sim/timer-setting';
 import { readSettings } from './settings/prefs';
-import type { GameState } from '../sim/types';
+import type { Command, GameState } from '../sim/types';
 
 /** The player's call timer setting, from the saved preference (ui/settings/prefs.ts). The one
  * place the game reads it. Off adds no dither. */
@@ -19,4 +19,14 @@ export function liveDither(state: GameState, now: number): number {
   const run = state.activeRun;
   const scenario = run ? getScenario(run.scenarioId) : null;
   return run && scenario ? openDither(scenario, run, state.department.clockHighWater, now, timerSetting()) : 0;
+}
+
+/** The lapse the open decision is due now, as the command that settles it, or null while there is
+ * time (sim/clocks.ts lapsedThreat, the rule the engine checks again). The store's tick and the live
+ * screen both send it, so the call moves on whichever screen the player is on. */
+export function dueLapse(state: GameState, now: number): Extract<Command, { type: 'lapse' }> | null {
+  const run = state.activeRun;
+  const scenario = run ? getScenario(run.scenarioId) : null;
+  const threat = run && scenario ? lapsedThreat(scenario, run, state.department.clockHighWater, now, timerSetting()) : null;
+  return run && threat ? { type: 'lapse', revision: run.revision, threatId: threat.id } : null;
 }

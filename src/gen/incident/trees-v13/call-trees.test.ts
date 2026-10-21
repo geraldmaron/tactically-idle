@@ -14,7 +14,7 @@ import type { OutcomeBand } from '../../../sim/types';
 import { applyMove, availableMoves, NOW, startGateRun } from '../gates/engine-driver';
 import { drawIncidentSpec, generateIncident, INCIDENT_CONTENT_VERSION } from '../index';
 import { specForSituation } from '../gates/catalog';
-import { bindRoleTokens, choiceActionId, memberId, outcomeNexts, reachableWithin, templateClockNexts, TOKEN, treeForCounts } from './compile';
+import { bindRoleTokens, choiceActionId, memberId, outcomeNexts, reachableWithin, templateClockNexts, timeoutNexts, TOKEN, treeForCounts } from './compile';
 import { asRole, CASCADE_LINES, FIRE_LINES, FORCE_LINES } from '../../../content/incidents/lines';
 import { INCIDENT_TEMPLATES } from '../../../content/incidents';
 import type { Clock, IncidentTemplate } from '../../../content/incidents/types';
@@ -49,8 +49,12 @@ function reachedFromRoot(tree: CallTree, clockTargets: readonly TreeNext[]): Set
   const byId = new Map(tree.nodes.map(node => [node.id, node]));
   const seen = new Set([tree.root]), queue = [tree.root];
   for (const target of clockTargets.flatMap(next => targets(tree, next))) if (!seen.has(target)) { seen.add(target); queue.push(target); }
-  while (queue.length) for (const choice of byId.get(queue.shift()!)?.choices ?? []) for (const outcome of outcomesOf(choice))
-    for (const target of nextsOf(outcome).flatMap(next => targets(tree, next))) if (!seen.has(target)) { seen.add(target); queue.push(target); }
+  while (queue.length) {
+    const node = byId.get(queue.shift()!);
+    // A threat that runs out with no choice made moves the call too (TreeTimeout).
+    const nexts = [...(node?.choices ?? []).flatMap(choice => outcomesOf(choice).flatMap(nextsOf)), ...node ? timeoutNexts(node) : []];
+    for (const target of nexts.flatMap(next => targets(tree, next))) if (!seen.has(target)) { seen.add(target); queue.push(target); }
+  }
   return seen;
 }
 /** Every combination of group sizes the template allows: [{}] for a tree without groups. */
@@ -177,6 +181,31 @@ describe('call trees: authoring rules', () => {
           }
         }
       }
+    });
+
+    // Owner 2026-10-21: when a threat's time runs out the call moves on and logs the indecision, so a
+    // curated call never freezes on an empty drain. Every route goes forward, never to the root, and
+    // letting every threat run out in a row ends the call.
+    it('sends every threat that runs out forward, and letting every one run out ends the call', () => {
+      for (const node of tree.nodes) {
+        if (!node.threat) continue;
+        expect(node.threat.timeout, `${node.id}: its threat has nowhere to go when the time runs out`).toBeDefined();
+        for (const next of timeoutNexts(node)) {
+          if ('ending' in next) { expect(tree.endings[next.ending], next.ending).toBeDefined(); continue; }
+          for (const target of targets(tree, next)) {
+            const to = nodeById.get(target);
+            expect(to, `${node.id} runs out to ${target}`).toBeDefined();
+            expect(target === node.id || target === tree.root, `${node.id} runs out back to ${target}`).toBe(false);
+            expect(STAGE_ORDER.indexOf(to!.stage)).toBeGreaterThanOrEqual(STAGE_ORDER.indexOf(node.stage));
+          }
+        }
+      }
+      const endsWithin = (id: string, seen: Set<string>): boolean => {
+        const node = nodeById.get(id);
+        if (!node?.threat?.timeout || seen.has(id)) return false;
+        return timeoutNexts(node).every(next => 'ending' in next || targets(tree, next).every(target => endsWithin(target, new Set([...seen, id]))));
+      };
+      for (const node of tree.nodes) expect(endsWithin(node.id, new Set()), `${node.id}: running out again and again never ends the call`).toBe(true);
     });
 
     it('reaches every node from the root, by choices or by a clock that can run out', () => {

@@ -1,6 +1,7 @@
 // The live call's pressure pieces (pressure engine, 2026-10-20): who leads each choice and their number
 // for it, the decision point's threat on the cards and in the pinned call bar, and the review sheet's lead
 // swap. The swap previews what decide would commit, and the commit carries the pick.
+import { decisionsOf } from '../../sim/types';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
@@ -85,7 +86,7 @@ describe('who leads (live-model)', () => {
     expect(review.view!.officerIds[0]).toBe(pick);
     expect(review.leadMarks.some((mark) => mark.startsWith('band_'))).toBe(true);
     const done = apply(hostage, { type: 'decide', actionId: shared.id, actingSquadIds: ['A'], supportSquadIds: [], leadOfficerId: review.leadOfficerId });
-    expect(done.state.activeRun!.history.at(-1)!.officerIds[0]).toBe(pick);
+    expect(decisionsOf(done.state.activeRun!.history).at(-1)!.officerIds[0]).toBe(pick);
   });
 
   it('falls back to the best fit when the pick is not taking part, so the sheet and the commit agree', () => {

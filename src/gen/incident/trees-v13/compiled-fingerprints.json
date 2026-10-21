@@ -1,14 +1,14 @@
 {
-  "gen:hostage_crisis:market_row:7:3:2:13": "201f0df3bc0f1f0a97408aa3214d8acb415fbb499bc58c4b9c85a8303e7c6244",
-  "gen:hostage_crisis:market_row:7:11:2:13": "433e3d63ee5ff557450b9ba17d54e7143b3e5b3ddd85bcf5bdc08755e1bc36cf",
-  "gen:hostage_crisis:market_row:19:29:2:13": "dcd0a176f13004fbf4e1566423a5cc7e9c7ae69c35c766759e8192e82bd6594e",
-  "gen:hostage_crisis:market_row:23:47:2:13": "6bc9dd42ddae46ecd664244a9ab61c523f049e794e991b4fef43560bc4aca68f",
-  "gen:hostage_crisis:corner_store_flat_g2:7:3:2:13": "770a57ac47d9fe6c64046ee38299ba39b47e07b4e6d891918600b0841ce46482",
-  "gen:hostage_crisis:corner_store_flat_g2:7:11:2:13": "a512e25a1b5d1749b5ba7e73fb2f1b8b8103f5a8267b87d00a4fd1592803fef9",
-  "gen:hostage_crisis:corner_store_flat_g2:19:29:2:13": "eaa0cfccc0e88c69625ceadba2772924cf21d33fb57c40a01402b1403ec24b9b",
-  "gen:hostage_crisis:corner_store_flat_g2:23:47:2:13": "52740bc530de8b8750ebb361dd96067569ac59857e9ff616f2bee5bd6e567f82",
-  "gen:hostage_crisis:bar_restaurant_g2:7:3:2:13": "bd1e04429d394bd040b83ef009dbd75db94511588fbd4b94313718f5ae7fb7e3",
-  "gen:hostage_crisis:bar_restaurant_g2:7:11:2:13": "914f3a06b5061aa44a1a683630fab2dc8f7a34b0025726eec3bd5e9742d17e54",
-  "gen:hostage_crisis:bar_restaurant_g2:19:29:2:13": "2f86dc48e492fcaf9b381259a9371c8e6ae58a9cadbfc10a89c35f0a2e35afee",
-  "gen:hostage_crisis:bar_restaurant_g2:23:47:2:13": "2e654c826c4a7b10cbb7ee8e7bfd86e6812f06a7993f088812b52a6a0eda9a55"
+  "gen:hostage_crisis:market_row:7:3:2:13": "4a67efdaa0a224b71ef6676bbbec17b18a6e3e64ca68f724daadc6939532d04d",
+  "gen:hostage_crisis:market_row:7:11:2:13": "d396bd4918239563f75c4b02cd5dbd3de35804f6e0a332209589802e5a52d9b0",
+  "gen:hostage_crisis:market_row:19:29:2:13": "56bbf941560feb8c6de80e24e75cd81ca5547de5353a0763fdc6eeec26b8f68b",
+  "gen:hostage_crisis:market_row:23:47:2:13": "5b868f2bc1b6270a750bae1f08eb58094db49892de4dff03083d456880981534",
+  "gen:hostage_crisis:corner_store_flat_g2:7:3:2:13": "24d599bab508b7a2adaf173796f4907877f9858fc5e3a56209b3d0649a89f537",
+  "gen:hostage_crisis:corner_store_flat_g2:7:11:2:13": "f80ef487d2ddf1a8ea3a3ea4d29b50a6b2e6581e0967405c0347b379b71ea13c",
+  "gen:hostage_crisis:corner_store_flat_g2:19:29:2:13": "a5d1cc3453ea5cac4151bacda538f9a6f373bc00408bd5e0c0e914d83170b15f",
+  "gen:hostage_crisis:corner_store_flat_g2:23:47:2:13": "d224f46a1b892115cc8c85f70bd8bce26025526461fef874ea37c014465b79fe",
+  "gen:hostage_crisis:bar_restaurant_g2:7:3:2:13": "2abd5bece621adabc80d41ae1983e27eadef53380467cef37c31a50bb2dd4e2d",
+  "gen:hostage_crisis:bar_restaurant_g2:7:11:2:13": "c27d7d0127181e64a596bb2328908ce0dea0dd10b437090c853a5058702f18a1",
+  "gen:hostage_crisis:bar_restaurant_g2:19:29:2:13": "d1d89ef71aa25c9f10e3944f31a52daf02493c126f4b1a1d5db96d64bdd53ba1",
+  "gen:hostage_crisis:bar_restaurant_g2:23:47:2:13": "79b2e2d2a7e1480a5d912299d907e79764e74f3f7dd89f529dbd0724f8248e7d"
 }

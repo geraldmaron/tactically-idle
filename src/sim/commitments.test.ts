@@ -1,3 +1,4 @@
+import { decisionsOf } from './types';
 import { describe, expect, it } from 'vitest';
 import { CALL_TREES } from '../content/call-trees';
 import { drawCalls, playToEnd, POLICIES } from '../gen/incident/trees-v13/balance';
@@ -117,7 +118,7 @@ describe('commitments in play', () => {
       for (const commitment of Object.values(run.commitments ?? {})) {
         made++;
         seen[commitment.status]++;
-        const after = run.history.filter(decision => decision.revision >= commitment.revision);
+        const after = decisionsOf(run.history).filter(decision => decision.revision >= commitment.revision);
         const entered = after.some(decision => actions.get(decision.actionId)?.authority?.kind === 'entry');
         const forced = after.some(decision => decision.committed?.drawn?.some(record => record.model === 'team_force' && record.personId === commitment.personId));
         const out = run.flags.includes(`out:${commitment.personId}`) || run.flags.includes(`safe:${commitment.personId}`);

@@ -9,7 +9,7 @@ import { applyIncidentConsequences, applyPersonConsequences, civilianOutcomeView
 import { protectedOfficerEffects } from './force-risk';
 import { drawnKeys, forceSuppliesSpent, resolveDrawn } from './drawn-effects';
 import { withVariants } from '../gen/incident/drawn-model';
-import { advanceClocks, audienceFactor, bumpClocks, CLOCK_RULES_V1, clockConditionsHold, clockErrors, clockOutEffects, cueEffects, decisionMinutes, ditherCap, filling, fillGauge, fillPressureRate, fillViews, forkMinutes, initialClocks, landingEffects, stalledRun, teamMinutes } from './clocks';
+import { advanceClocks, audienceFactor, bumpClocks, CLOCK_RULES_V1, clockConditionsHold, clockErrors, clockOutEffects, cueEffects, decisionMinutes, ditherCap, filling, fillGauge, fillPressureRate, fillViews, forkMinutes, initialClocks, landingEffects, lapsedThreat, lapseEffects, stalledRun, teamMinutes, threatById } from './clocks';
 import { applyMoves, driftMeters, initialMeters, meterConditionsHold } from './meters';
 import { applyCommitments } from './commitments';
 import { forceLines, OUTCOME_SCORE_V1, scoreCall } from './outcome-score';
@@ -30,8 +30,10 @@ import type {
   HandlerMap,
   ItemUnit,
   HandlerResult,
+  HistoryEntry,
   Id,
   KnowledgeStatus,
+  LapseRecord,
   OperationCommandType,
   OperationRun,
   OutcomeBand,
@@ -42,6 +44,7 @@ import type {
 } from './types';
 import type { ActionDefinition, OutcomeEffect, ScenarioDefinition } from './scenario-types';
 import { scenarioActions } from './scenario-types';
+import { decisionsOf, isLapse } from './types';
 import { getScenario } from './scenario-registry';
 import { INCIDENT_TUNING, takeIncident } from './incidents';
 import { foldDebriefs } from './casebook';
@@ -69,7 +72,7 @@ import {
   strainFor,
   type Evaluation,
 } from './resolution';
-import { conditionHolds, stableFlag, withFlag } from './conditions';
+import { conditionHolds, liveThreat, stableFlag, withFlag } from './conditions';
 import { departmentUpkeep } from './equipment-manager-policy';
 import { vantageZones } from './sightlines';
 import { sightings } from './sightings';
@@ -457,12 +460,14 @@ export function matchedEffects(action: ActionDefinition, band: OutcomeBand, run:
   // delay included, lets it happen. Its effects are addenda; they never route, so where the call
   // goes still rests on the choice and the truth. One place, so a replay matches the live commit.
   // Landing reaches the subjects too (sim/clocks.ts landingEffects), as the stall's projection showed.
-  const threat = action.threat && clockBase !== undefined && clockBase >= action.threat.minutes
-    ? landingEffects(scenario, action.threat.effects.filter((effect) => conditionHolds(effect.when, run))) : [];
+  // A threat a lapse already spent never lands again.
+  const live = liveThreat(action.threat, run.flags);
+  const threat = live && clockBase !== undefined && clockBase >= live.minutes
+    ? landingEffects(scenario, live.effects.filter((effect) => conditionHolds(effect.when, run))) : [];
   // The beats (TreeBeat): each one whose stall threshold the decision's dither reached fires once,
   // as its spoken line, marks, moves and bumps, beside the threat. The decision records its dither,
   // so a replay reads the same beats; a decision with none replays as before.
-  const beats = dither > 0 ? (action.threat?.beats ?? []).filter((line) => line.at <= dither)
+  const beats = dither > 0 ? (live?.beats ?? []).filter((line) => line.at <= dither)
     .flatMap((line) => line.effects.filter((effect) => conditionHolds(effect.when, run))) : [];
   return [...matchedOutcomeIndices(action, band, run, scenario, clockBase).map((index) => {
     const effect = action.outcomes[band][index];
@@ -543,9 +548,11 @@ export function applyClockCues(run: Pick<OperationRun, 'knowledge' | 'flags' | '
 }
 
 export interface StepTrace {
-  resolution: DecisionResolution;
+  resolution: HistoryEntry;
+  /** Null for a lapse, and for a decision whose action this content no longer has. */
   action: ActionDefinition | null;
-  band: OutcomeBand;
+  /** Null for a lapse: nobody chose. */
+  band: OutcomeBand | null;
   objectiveDelta: number;
   civilianDelta: number;
   pressureDelta: number;
@@ -562,6 +569,7 @@ export function traceRun(scenario: ScenarioDefinition, run: OperationRun): { ste
   const steps: StepTrace[] = [];
   for (const resupply of run.resupplies ?? []) applyClockCues(sim, scenario, advanceTime(sim, scenario, resupply.minutes).cues);
   for (const h of run.history) {
+    if (isLapse(h)) { steps.push(traceLapse(scenario, sim, h)); continue; }
     const a = actions.get(h.actionId) ?? null;
     // Who led this decision, as the commit saw it (the stored lead flags).
     sim.flags = [...sim.flags.filter((flag) => !flag.startsWith(LEAD_PREFIX)), ...h.leadFlags ?? []];
@@ -619,10 +627,37 @@ export function traceRun(scenario: ScenarioDefinition, run: OperationRun): { ste
   return { steps, end: sim };
 }
 
+/** Replay one lapse on the trace's state as the commit applied it (OPERATION_HANDLERS.lapse): the
+ * stall's pressure, the window's minutes, the route and the landing, the cues and the clock outs.
+ * The saved deltas and knowledge changes are authoritative, as a decision's are. */
+function traceLapse(scenario: ScenarioDefinition, sim: Pick<OperationRun, 'knowledge' | 'flags' | 'pressure' | 'objective' | 'civilianSafety' | 'clock' | 'clocks' | 'personCasualties' | 'meters'>, h: LapseRecord): StepTrace {
+  const threat = threatById(scenario, h.threatId);
+  const matched = threat ? lapseEffects(scenario, threat, sim) : [];
+  const pressure0 = sim.pressure, obj0 = sim.objective, civ0 = sim.civilianSafety;
+  const clocksBefore = sim.clocks;
+  sim.flags = sim.flags.filter((flag) => !flag.startsWith(LEAD_PREFIX));
+  sim.pressure = round1(clamp(sim.pressure + CLOCK_RULES_V1.stallPressurePerMinute * h.timeCost, 0, 100));
+  const timed = advanceTime(sim, scenario, h.timeCost);
+  const civAfterTime = sim.civilianSafety;
+  applyEffects(sim, matched);
+  applyClockCues(sim, scenario, timed.cues);
+  applyEffects(sim, clockOutEffects(scenario, clocksBefore, sim.clocks, sim, matched));
+  applyMoves(sim, scenario, matched);
+  for (const person of h.committed.personCasualties ?? []) { sim.personCasualties ??= {}; sim.personCasualties[person.personId] = { ...person }; }
+  syncPersonCasualtyFlags(sim, scenario);
+  sim.objective = round1(clamp(obj0 + h.committed.objectiveDelta, 0, 100));
+  sim.civilianSafety = round1(clamp(civ0 + h.committed.civilianSafetyDelta, 0, 100));
+  sim.pressure = round1(clamp(pressure0 + h.committed.pressureDelta, 0, 100));
+  for (const change of h.knowledgeChanges) sim.knowledge[change.factId] = change.status;
+  return { resolution: h, action: null, band: null, objectiveDelta: round1(sim.objective - obj0), pressureDelta: round1(sim.pressure - pressure0),
+    civilianDelta: round1(sim.civilianSafety - civ0), pressureLoss: round1(civ0 - civAfterTime), effects: matched };
+}
+
 /** Build a detached display snapshot from a versioned trace; safe to retain after closing the run. */
 export function decisionViewsFor(state: GameState, run: OperationRun, scenario: ScenarioDefinition, steps = traceRun(scenario, run).steps): DecisionView[] {
-  return steps.map((step) => {
+  return steps.map((step): DecisionView => {
     const record = step.resolution;
+    if (isLapse(record)) return lapseView(scenario, record);
     const committed = record.committed;
     const ending = [...step.effects].reverse().find((effect) => effect.ending)?.ending ?? (record === run.history.at(-1) ? run.endingId : null);
     return {
@@ -655,6 +690,23 @@ export function decisionViewsFor(state: GameState, run: OperationRun, scenario: 
       endingTitle: committed ? committed.endingTitle : (ending ? scenario.endings[ending]?.title ?? ending : null),
     };
   });
+}
+
+/** The log's line for a lapse: nobody chose, so no band, strain, supplies or contributors. */
+export const LAPSE_TITLE = (label: string) => `No call made: ${label}`;
+function lapseView(scenario: ScenarioDefinition, record: LapseRecord): DecisionView {
+  const committed = record.committed;
+  return {
+    revision: record.revision, actionId: record.threatId, title: LAPSE_TITLE(record.label), stageLabel: scenario.stages[record.stage].label,
+    band: null, lapse: true, explanation: [...record.explanation], timeCost: record.timeCost,
+    objectiveDelta: committed.objectiveDelta, civilianSafetyDelta: committed.civilianSafetyDelta, pressureDelta: committed.pressureDelta,
+    actualStressDeltas: true, stressDeltas: [], supplies: [],
+    knowledgeChanges: record.knowledgeChanges.map((change) => ({ ...change, label: scenario.facts.find((fact) => fact.id === change.factId)?.label ?? change.factId })),
+    contributors: [], consequences: [...committed.consequences],
+    ...(committed.exchange?.length ? { exchange: committed.exchange.map(line => ({ ...line })) } : {}),
+    ...(committed.personCasualties ? { personCasualties: committed.personCasualties.map(person => ({ ...person })) } : {}),
+    endingTitle: committed.endingTitle,
+  };
 }
 
 // ---------------------------------------------------------------- squad choice helpers
@@ -755,7 +807,8 @@ export function computeDebrief(state: GameState, run: OperationRun): DebriefResu
   // officers: stress from decisions is already on the officer; the ending adds its strain.
   const delta: Record<Id, number> = {};
   const participation: Record<Id, number> = {};
-  for (const h of run.history) {
+  // A lapse strains nobody and nobody took part in it, so it adds no experience either.
+  for (const h of decisionsOf(run.history)) {
     for (const [id, d] of Object.entries(h.stressDeltas)) delta[id] = (delta[id] ?? 0) + d;
     for (const id of h.officerIds) participation[id] = (participation[id] ?? 0) + 1;
   }
@@ -767,7 +820,8 @@ export function computeDebrief(state: GameState, run: OperationRun): DebriefResu
       const after = clamp(round1(o.stress + endingStrain), 0, 100);
       const before = clamp(round1(o.stress - (delta[id] ?? 0)), 0, 100);
       const share = Math.min(1, 0.4 + 0.3 * (participation[id] ?? 0));
-      const xp = run.responseFailure ? 0 : learnedXp(o, scenario.rewards.xp * share * (0.5 + 0.5 * factor));
+      // A call nobody acted in (every decision ran out) teaches nothing: no tactical experience.
+      const xp = run.responseFailure || !decisionsOf(run.history).length ? 0 : learnedXp(o, scenario.rewards.xp * share * (0.5 + 0.5 * factor));
       // The promotions closing this debrief brings, worked on a copy so the preview is what close applies.
       const promotions = creditXp(structuredClone(o), xp, { label: '', day: 0 }).map((p) => ({ rank: p.rank, line: promotionText(p) }));
       officerCondition.push({ officerId: id, stressBefore: before, stressAfter: after, xpGained: xp, ...(promotions.length ? { promotions } : {}) });
@@ -827,17 +881,19 @@ export function computeDebrief(state: GameState, run: OperationRun): DebriefResu
 
 /** Every specific unit the run's decisions used, once each. */
 export function unitsUsedTotals(run: OperationRun): Id[] {
-  return [...new Set([...run.history.flatMap((h) => h.unitsUsed), ...(run.resupplies ?? []).flatMap((r) => r.supportUnitId ? [r.supportUnitId] : [])])];
+  return [...new Set([...decisionsOf(run.history).flatMap((h) => h.unitsUsed), ...(run.resupplies ?? []).flatMap((r) => r.supportUnitId ? [r.supportUnitId] : [])])];
 }
 
 function debriefCauses(scenario: ScenarioDefinition, run: OperationRun, steps: StepTrace[]): string[] {
   const scored: { w: number; text: string }[] = [];
   for (const s of steps) {
     const texts = s.effects.map((e) => e.text).filter((t): t is string => Boolean(t));
-    const title = s.action?.title ?? s.resolution.actionId;
-    const knowledge = s.resolution.knowledgeChanges.length;
-    const w = Math.abs(s.objectiveDelta) + Math.abs(s.civilianDelta - 0) + 4 * knowledge + (s.band === 'adverse' ? 4 : 0);
-    const text = texts.length ? `${title}: ${texts.join(' ')}` : `${title} ${BAND_WORD[s.band]}.`;
+    const record = s.resolution;
+    const title = isLapse(record) ? LAPSE_TITLE(record.label) : s.action?.title ?? record.actionId;
+    const knowledge = record.knowledgeChanges.length;
+    // Indecision weighs like a setback: the debrief names it (owner 2026-10-21).
+    const w = Math.abs(s.objectiveDelta) + Math.abs(s.civilianDelta - 0) + 4 * knowledge + (s.band === 'adverse' || isLapse(record) ? 4 : 0);
+    const text = isLapse(record) ? `${title}. ${texts.join(' ')}`.trim() : texts.length ? `${title}: ${texts.join(' ')}` : `${title} ${BAND_WORD[s.band ?? 'mixed']}.`;
     scored.push({ w, text });
     if (s.pressureLoss > 0) scored.push({ w: s.pressureLoss + 2, text: `Time pressure passed ${scenario.pressure.threshold} during "${title}", costing ${s.pressureLoss} civilian safety.` });
   }
@@ -945,6 +1001,11 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     const scenario = getScenario(run.scenarioId);
     if (!scenario) return fail('Unknown scenario');
     const stage = run.stage;
+    // A choice made on a screen the call has moved past (a lapse, another commit) is refused.
+    if (cmd.revision !== undefined && cmd.revision !== run.revision) return fail('The call moved on before that choice reached it');
+    // Once the decision point's time has run out the lapse settles it, never a late choice
+    // (sim/clocks.ts lapsedThreat, the one rule both read).
+    if (lapsedThreat(scenario, run, draft.department.clockHighWater, ctx.now, ctx.timer ?? 'off')) return fail('Time ran out on this decision before the choice was made');
     const action = scenario.stages[stage].actions.find((a) => a.id === cmd.actionId);
     if (!action) return fail('That option is not available at this stage');
     if (isGenericResponseExit(scenario, action)) return fail('This generic exit is retired. Continue the scene, or review the failed-response report if no usable plan remains.');
@@ -1004,7 +1065,8 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     // (a gauge bites only once its first cue is heard); the breakdown says so below.
     const stalled = stalledRun(scenario, run, dither);
     // A threat that lands on this decision weighs on everyone on it (CLOCK_RULES_V1.threat.strain).
-    const landed = !!action.threat && clockBaseMinutes >= action.threat.minutes;
+    const live = liveThreat(action.threat, run.flags);
+    const landed = !!live && clockBaseMinutes >= live.minutes;
     const fillStrainMult = (1 + CLOCK_RULES_V1.fill.strain * fillGauge(scenario, stalled.clocks)) * (landed ? 1 + CLOCK_RULES_V1.threat.strain : 1);
     const fillNote = fillStrainMult > 1 ? fillViews(scenario, stalled).filter(view => view.effect).map(view => `${view.label} at ${Math.round(view.value)}`).join(', ') : null;
     const strain = strainFor({ ...input, run: stalled }, ev, band, fillStrainMult);
@@ -1133,32 +1195,7 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     run.decisionPending = true;
 
     // stage transition (the committed decision is already in history)
-    let stageNote: string | null = null;
-    const pendingPrefix = 'completion_pending:';
-    const intendedEnding = ending ?? (run.flags.find(flag => flag.startsWith(pendingPrefix) && !!scenario.endings[flag.slice(pendingPrefix.length)])?.slice(pendingPrefix.length));
-    if (intendedEnding) {
-      const declared = scenario.endings[intendedEnding];
-      const completion = declared ? completionEvidence(scenario, run, declared) : undefined;
-      const incomplete = completion && ['resolved', 'care_accepted', 'followup_agreed'].includes(declared.disposition ?? '') && !completion.completionAchieved;
-      // A call tree (v13) ends where it says it ends. Outstanding harm still costs completion:
-      // completionEvidence marks the ending partial and lists who still needs care.
-      const treeEnding = !!declared && !!completion && completion.disposition === 'relief_partial';
-      if (incomplete && !treeEnding) {
-        run.flags = [...run.flags.filter(flag => !flag.startsWith(pendingPrefix)), `${pendingPrefix}${intendedEnding}`];
-        run.stage = 'resolve';
-        stageNote = 'The completed step is retained. Outstanding care and scene duties keep the call open.';
-      } else {
-        run.flags = run.flags.filter(flag => !flag.startsWith(pendingPrefix));
-        const finalEnding = incomplete && !treeEnding ? FALLBACK_ENDING : intendedEnding;
-        run.stage = 'debrief';
-        run.status = 'debrief';
-        run.endingId = finalEnding;
-        stageNote = `Ending: ${scenario.endings[finalEnding]?.title ?? finalEnding}.`;
-      }
-    } else {
-      if (nextStage) run.stage = nextStage;
-      if (run.stage !== stage) stageNote = `Moved on to ${scenario.stages[run.stage as StageId].label}.`;
-    }
+    const stageNote = settleStage(run, scenario, stage, nextStage, ending);
     const resultLabel = (harmResultLabel(personConsequences?.records ?? [], incidentConsequences?.records ?? []))
       ?? actionResultLabel(action, band);
     resolution.committed = {
@@ -1171,7 +1208,7 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
           const opening = built.location.openings.find((candidate) => candidate.id === change.openingId);
           return opening ? `${spaceLabel(built, opening.a)} to ${spaceLabel(built, opening.b)}: ${change.state}.` : `${change.openingId.replaceAll('_', ' ')}: ${change.state}.`;
         })),
-        ...(run.stage !== 'debrief' ? [`Next: ${currentStoryPrompt(scenario, run)}`] : []),
+        ...((run.stage as OperationRun['stage']) !== 'debrief' ? [`Next: ${currentStoryPrompt(scenario, run)}`] : []),
       ],
       endingTitle: run.endingId ? scenario.endings[run.endingId]?.title ?? run.endingId : null,
       ...(resultLabel ? { resultLabel } : {}),
@@ -1184,6 +1221,72 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
       ...(drawn.records.length ? { drawn: drawn.records.map(record => ({ ...record })) } : {}),
     };
     resolution.explanation = explain(draft, scenario, ev, band, texts, timeCost, t.civilianLoss, knowledgeChanges, consumed, strain, stageNote, fillNote, fillStrainMult);
+    return { ok: true };
+  },
+
+  /** The open decision point's time ran out with no choice made (docs/call-pressure.md, "When the
+   * time runs out"). Settled only when lapsedThreat says so, on the revision and threat the screen
+   * showed: the threat lands with its full window, the call moves to the moment its timeout names
+   * (a clock running out on the way can still route or end it first, as with a decision), and the
+   * record says nobody chose. No roll, no strain, no experience. */
+  lapse(draft, cmd, ctx) {
+    const run = draft.activeRun;
+    if (!run || run.status !== 'active' || run.stage === 'debrief') return fail('No decision is open');
+    if (run.revision !== cmd.revision) return fail('The call moved on before the time ran out');
+    const scenario = getScenario(run.scenarioId);
+    if (!scenario) return fail('Unknown scenario');
+    const threat = lapsedThreat(scenario, run, draft.department.clockHighWater, ctx.now, ctx.timer ?? 'off');
+    if (!threat || threat.id !== cmd.threatId) return fail('There is still time on this decision');
+    const stage = run.stage;
+    // The whole window was stall: one sample for the department's habits (sim/player-profile.ts).
+    recordStall(draft.department, 1);
+    const minutes = threat.minutes;
+    const matched = lapseEffects(scenario, threat, run);
+    const before = { objective: run.objective, civilianSafety: run.civilianSafety, pressure: run.pressure };
+    const clocksBefore = run.clocks;
+    // Nobody led this one, so no lead's traits are read in it.
+    run.flags = run.flags.filter((flag) => !flag.startsWith(LEAD_PREFIX));
+    // The same path a decision's stall takes (decide): its pressure once, then its minutes.
+    run.pressure = round1(clamp(run.pressure + CLOCK_RULES_V1.stallPressurePerMinute * minutes, 0, 100));
+    const t = advanceTime(run, scenario, minutes);
+    const { changes, stage: routeStage, ending: routeEnding } = applyEffects(run, matched);
+    const cues = applyClockCues(run, scenario, t.cues);
+    changes.push(...cues.changes);
+    const outs = clockOutEffects(scenario, clocksBefore, run.clocks, run, matched);
+    const routed = applyEffects(run, outs);
+    changes.push(...routed.changes);
+    applyMoves(run, scenario, matched);
+    const personConsequences = applyPersonConsequences(run, scenario, null, null, outs);
+    const nextStage = routed.ending ? null : routed.stage ?? routeStage;
+    const ending = routed.ending ?? routeEnding;
+
+    const landing = threat.effects.map((effect) => effect.text).filter((text): text is string => !!text);
+    const route = matched[0] && threat.timeout?.includes(matched[0]) && matched[0].text ? [matched[0].text] : [];
+    const cueTexts = cues.effects.map((effect) => effect.text).filter((text): text is string => !!text);
+    const texts = [...landing, ...route, ...personConsequences.text, ...cueTexts];
+    const exchange = matched.flatMap((effect) => effect.exchange ?? []).map((line) => ({ ...line, speaker: line.speaker.replace('{lead}', 'Negotiator') }));
+    const record: LapseRecord = {
+      kind: 'lapse', revision: run.revision, stage, threatId: threat.id, label: threat.label, timeCost: minutes,
+      knowledgeChanges: changes, explanation: [],
+      committed: { objectiveDelta: 0, civilianSafetyDelta: 0, pressureDelta: 0, consequences: [], endingTitle: null },
+    };
+    run.history.push(record);
+    run.revision += 1;
+    run.decisionOpenedAt = Math.max(ctx.now, draft.department.clockHighWater);
+    delete run.decisionPausedAt;
+    run.decisionPending = true;
+    const stageNote = settleStage(run, scenario, stage, nextStage, ending);
+    record.committed = {
+      objectiveDelta: round1(run.objective - before.objective),
+      civilianSafetyDelta: round1(run.civilianSafety - before.civilianSafety),
+      pressureDelta: round1(run.pressure - before.pressure),
+      consequences: [...texts, ...((run.stage as OperationRun['stage']) !== 'debrief' ? [`Next: ${currentStoryPrompt(scenario, run)}`] : [])],
+      endingTitle: run.endingId ? scenario.endings[run.endingId]?.title ?? run.endingId : null,
+      ...(personConsequences.records.length ? { personCasualties: personConsequences.records } : {}),
+      ...(exchange.length ? { exchange } : {}),
+    };
+    record.explanation = [`${LAPSE_TITLE(threat.label)}.`, ...texts, `Took ${minutes} min.`,
+      ...(t.civilianLoss > 0 ? [`Time pressure is past ${scenario.pressure.threshold}: civilian safety fell ${t.civilianLoss}.`] : []), ...(stageNote ? [stageNote] : [])];
     return { ok: true };
   },
 
@@ -1231,6 +1334,39 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     return { ok: true };
   },
 };
+
+/** Where the call stands once a commit has applied (a decision or a lapse, already in history): an
+ * ending it reached, the next stage, or still here. The one place both settle, returning the line
+ * the result adds. */
+function settleStage(run: OperationRun, scenario: ScenarioDefinition, stage: StageId, nextStage: StageId | null | undefined, ending: Id | null | undefined): string | null {
+  let stageNote: string | null = null;
+  const pendingPrefix = 'completion_pending:';
+  const intendedEnding = ending ?? (run.flags.find(flag => flag.startsWith(pendingPrefix) && !!scenario.endings[flag.slice(pendingPrefix.length)])?.slice(pendingPrefix.length));
+  if (intendedEnding) {
+    const declared = scenario.endings[intendedEnding];
+    const completion = declared ? completionEvidence(scenario, run, declared) : undefined;
+    const incomplete = completion && ['resolved', 'care_accepted', 'followup_agreed'].includes(declared.disposition ?? '') && !completion.completionAchieved;
+    // A call tree (v13) ends where it says it ends. Outstanding harm still costs completion:
+    // completionEvidence marks the ending partial and lists who still needs care.
+    const treeEnding = !!declared && !!completion && completion.disposition === 'relief_partial';
+    if (incomplete && !treeEnding) {
+      run.flags = [...run.flags.filter(flag => !flag.startsWith(pendingPrefix)), `${pendingPrefix}${intendedEnding}`];
+      run.stage = 'resolve';
+      stageNote = 'The completed step is retained. Outstanding care and scene duties keep the call open.';
+    } else {
+      run.flags = run.flags.filter(flag => !flag.startsWith(pendingPrefix));
+      const finalEnding = incomplete && !treeEnding ? FALLBACK_ENDING : intendedEnding;
+      run.stage = 'debrief';
+      run.status = 'debrief';
+      run.endingId = finalEnding;
+      stageNote = `Ending: ${scenario.endings[finalEnding]?.title ?? finalEnding}.`;
+    }
+  } else {
+    if (nextStage) run.stage = nextStage;
+    if (run.stage !== stage) stageNote = `Moved on to ${scenario.stages[run.stage as StageId].label}.`;
+  }
+  return stageNote;
+}
 
 /** Every way a run ends comes through here, so queued squad moves apply once its officers are back. */
 function clearAssignments(draft: GameState, run: OperationRun): void {

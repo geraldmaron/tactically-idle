@@ -703,6 +703,43 @@ export interface DecisionResolution {
   explanation: string[];
 }
 
+/** A decision point whose time ran out with no choice made (the engine's `lapse`, docs/
+ * call-pressure.md "When the time runs out"): the threat landed and the call moved to the moment
+ * written for continued inaction. It has no action, band or sample, since nobody chose and nothing
+ * was rolled, and no strain or experience lands on anyone for it. */
+export interface LapseRecord {
+  kind: 'lapse';
+  /** Run revision this lapse was applied to. */
+  revision: number;
+  stage: StageId;
+  /** The threat that ran out (NodeThreat.id), and its label as the drain showed it. */
+  threatId: Id;
+  label: string;
+  /** Game minutes the window ran: the threat's minutes, all of it stall. */
+  timeCost: number;
+  knowledgeChanges: { factId: Id; status: KnowledgeStatus }[];
+  explanation: string[];
+  /** What the lapse changed, saved as the decisions' committed record is, so the debrief and every
+   * replay read the same numbers. */
+  committed: {
+    objectiveDelta: number;
+    civilianSafetyDelta: number;
+    pressureDelta: number;
+    consequences: string[];
+    endingTitle: string | null;
+    /** Harm a clock running out during the window recorded (ClockDef.onOut). */
+    personCasualties?: PersonCasualtyRecord[];
+    /** What the scene said while the time ran (the threat's beats). */
+    exchange?: { speaker: string; line: string }[];
+  };
+}
+
+/** A call's record, in order: committed decisions and lapses. */
+export type HistoryEntry = DecisionResolution | LapseRecord;
+export const isLapse = (entry: HistoryEntry | undefined): entry is LapseRecord => (entry as LapseRecord | undefined)?.kind === 'lapse';
+/** The committed decisions alone, for readers about who acted and what they used. */
+export const decisionsOf = (history: readonly HistoryEntry[] | undefined): DecisionResolution[] => (history ?? []).filter((entry): entry is DecisionResolution => !isLapse(entry));
+
 export interface OperationRun {
   id: Id;
   scenarioId: Id;
@@ -745,7 +782,7 @@ export interface OperationRun {
   objective: number;
   /** 0..100 civilian safety. */
   civilianSafety: number;
-  history: DecisionResolution[];
+  history: HistoryEntry[];
   /** Explicit failed-response report; never adds progress, an invented receiver or a random roll. */
   responseFailure?: ResponseFailureRecord;
   /** Pre-decision deliveries at exterior staging; distinct from tactical outcomes. */
@@ -881,10 +918,14 @@ export interface PersonCasualtyRecord {
 
 export interface DecisionView {
   revision: number;
+  /** The action, or for a lapse the threat that ran out (NodeThreat.id). */
   actionId: Id;
   title: string;
   stageLabel: string;
-  band: OutcomeBand;
+  /** Null for a lapse: nobody chose, and nothing was rolled. */
+  band: OutcomeBand | null;
+  /** The decision point's time ran out with no choice made (LapseRecord). */
+  lapse?: true;
   resultLabel?: string;
   /** Present for committed records; isolated fixtures can derive the result label. */
   officerCasualties?: OfficerCasualtyRecord[];
@@ -1180,7 +1221,11 @@ export type Command =
    * Without it the best fit leads (cert holders first, then aptitude). */
   | { type: 'decide'; actionId: Id; actingSquadIds: SquadId[]; supportSquadIds: SquadId[]; leadOfficerId?: Id;
     /** Game minutes the stall cost (sim/clocks.ts openDither); the engine caps it at the open threat. */
-    ditherMinutes?: number }
+    ditherMinutes?: number;
+    /** The run revision the choice was made on. When given, a choice made on an older screen is refused. */
+    revision?: number }
+  /** The open decision point's time ran out with no choice made (sim/clocks.ts lapsedThreat). */
+  | { type: 'lapse'; revision: number; threatId: Id }
   | { type: 'closeDebrief' };
 
 export type CommandType = Command['type'];
@@ -1191,6 +1236,10 @@ export interface Ctx {
   /** The descriptors the player keeps off the board (sim/incidents.ts ContentExclusion). The store
    * passes the saved preference; without it the board draws unfiltered. */
   exclusion?: { avoid: readonly ContentDescriptor[] };
+  /** The player's call timer setting (ui/settings/prefs.ts), so the engine reads whether a decision
+   * point's time has run out at the rate the screen showed. Without it the engine treats the timer
+   * as Off: nothing lapses. */
+  timer?: import('./timer-setting').TimerSetting;
 }
 
 export type HandlerResult = { ok: true } | { ok: false; reason: string };
@@ -1241,7 +1290,7 @@ export type DepartmentCommandType =
   | 'dismissStaff'
   | 'refreshStaffPool';
 
-export type OperationCommandType = 'startOperation' | 'cancelOperation' | 'openDecision' | 'pauseDecision' | 'resumeDecision' | 'endFailedResponse' | 'decide' | 'closeDebrief';
+export type OperationCommandType = 'startOperation' | 'cancelOperation' | 'openDecision' | 'pauseDecision' | 'resumeDecision' | 'endFailedResponse' | 'decide' | 'lapse' | 'closeDebrief';
 
 export interface SaveEnvelope {
   saveVersion: number;

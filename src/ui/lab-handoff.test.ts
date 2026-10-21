@@ -1,5 +1,6 @@
 // "Open in lab" hands the lab the exact game state under a one-shot key; the URL carries the key and
 // the run's decisions as path tokens for the fallback replay.
+import { decisionsOf } from '../sim/types';
 import { describe, expect, it } from 'vitest';
 import { startGateRun } from '../gen/incident/gates/engine-driver';
 import { apply, makeState, NOW } from '../sim/test-fixtures';
@@ -39,14 +40,14 @@ describe('lab handoff', () => {
   const run = state.activeRun!;
 
   it('writes the run\'s decisions as action~band tokens', () => {
-    expect(run.history).toHaveLength(2);
-    expect(historyTokens(run)).toBe(run.history.map(step => `${step.actionId}~${step.band}`).join(','));
+    expect(decisionsOf(run.history)).toHaveLength(2);
+    expect(historyTokens(run)).toBe(decisionsOf(run.history).map(step => `${step.actionId}~${step.band}`).join(','));
     expect(historyTokens(run)).toMatch(/^t13_hostage_crisis_\w+~(favorable|mixed|adverse),t13_hostage_crisis_\w+~(favorable|mixed|adverse)$/);
     expect(historyTokens(startGateRun(HOSTAGE).activeRun!)).toBe('');
   });
 
   it('adds each decision\'s drawn results after its band, a cascade\'s + written as a dot', () => {
-    const [first] = run.history;
+    const [first] = decisionsOf(run.history);
     const drawn = [{ model: 'team_force' as const, personId: 'taker', key: 'firearm:none' }, { model: 'cascade' as const, personId: 'others', key: 'follows+stays' }];
     const withDrawn = { ...run, history: [{ ...first, committed: { ...first.committed!, drawn } }] };
     expect(historyTokens(withDrawn)).toBe(`${first.actionId}~${first.band}/firearm:none/follows.stays`);

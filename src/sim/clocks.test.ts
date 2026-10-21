@@ -1,3 +1,4 @@
+import { decisionsOf } from './types';
 import { describe, expect, it } from 'vitest';
 import { generateIncident } from '../gen/incident';
 import { specForSituation } from '../gen/incident/gates/catalog';
@@ -107,7 +108,7 @@ describe('clocks: in the calls', () => {
     expect(run.flags).toContain('at:standoff');
     expect(run.flags).toContain('mark:door_weak');
     expect(run.knowledge.f_door_holds).toBe('disproved');
-    expect(run.history.at(-1)!.committed!.consequences.join(' ')).toContain(silent.s.clocks!.find(c => c.id === 'door')!.cues[0].text);
+    expect(decisionsOf(run.history).at(-1)!.committed!.consequences.join(' ')).toContain(silent.s.clocks!.find(c => c.id === 'door')!.cues[0].text);
     // A door that holds never gives, however long the wait.
     const holding = at('active_armed_incident', 'market_row', 0, 'dug_in', 'adapt', {});
     expect(decide(holding.state, 'active_armed_incident', 'dug_in', 'dug_wait').flags).toContain('at:standoff');
@@ -117,7 +118,7 @@ describe('clocks: in the calls', () => {
     const short = at('protected_rescue', 'cedar_close', 2, 'their_terms', 'adapt', {});
     const run = decide(short.state, 'protected_rescue', 'their_terms', 'stay_in');
     expect(run.flags).toContain('mark:running_low');
-    const lines = run.history.at(-1)!.committed!.consequences.join(' ');
+    const lines = decisionsOf(run.history).at(-1)!.committed!.consequences.join(' ');
     expect(lines.match(/in the red/g)?.length, 'the outcome and the cue say it once between them').toBe(1);
     const full = at('protected_rescue', 'cedar_close', 0, 'their_terms', 'adapt', {});
     expect(decide(full.state, 'protected_rescue', 'their_terms', 'stay_in').flags).not.toContain('mark:running_low');
@@ -207,7 +208,7 @@ describe('clocks: running out where no fork reads it', () => {
       }
       expect(state, 'the long wait was reached').not.toBeNull();
       const run = state!.activeRun!;
-      const wait = run.history.at(-1)!;
+      const wait = decisionsOf(run.history).at(-1)!;
       expect(wait.actionId).toBe(choiceActionId('protected_rescue', 'their_terms', 'stay_in'));
       // Recorded on the decision whose minutes ran it out, and the tree's prompts can read it.
       expect(run.personCasualties?.resident).toMatchObject({ severity: 'serious', care: 'needed', causeRevision: wait.revision });

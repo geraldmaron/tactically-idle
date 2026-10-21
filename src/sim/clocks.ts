@@ -14,11 +14,12 @@
 // record and the text then agree: the debrief and the score see the harm like any authored harm.
 import { sourceCount } from './pressure-sources';
 import type { ActionDefinition, ClockCondition, ClockDef, MeterEvent, OutcomeEffect, ScenarioDefinition, SpokenLine } from './scenario-types';
+import { scenarioActions } from './scenario-types';
 import { applyMoves } from './meters';
 import type { Id, OperationRun, OutcomeBand } from './types';
 import { RESOLUTION_TUNING } from './resolution';
 import { tunable } from './tuning';
-import { conditionHolds, stableFlag, withFlag } from './conditions';
+import { conditionHolds, liveThreat, spentFlag, stableFlag, withFlag } from './conditions';
 import { currentStoryExchange, currentStoryPrompt, currentStoryThreat } from './story-context';
 import type { TimerSetting } from './timer-setting';
 
@@ -222,7 +223,32 @@ export function openDither(scenario: ScenarioDefinition, run: OperationRun, high
  * (every choice at a point carries the same threat). Null when the point has none. */
 export function openThreat(scenario: ScenarioDefinition, run: Pick<OperationRun, 'stage' | 'flags' | 'knowledge' | 'pressure'>): NonNullable<ActionDefinition['threat']> | null {
   if (run.stage === 'debrief') return null;
-  return scenario.stages[run.stage].actions.find(action => action.threat && conditionHolds(action.visibleWhen, run))?.threat ?? null;
+  return liveThreat(scenario.stages[run.stage].actions.find(action => action.threat && conditionHolds(action.visibleWhen, run))?.threat, run.flags);
+}
+
+/** The one rule that says a decision point's time has run out (docs/call-pressure.md, "When the
+ * time runs out"): its threat is live and has somewhere to go, the timer isn't Off, and the stall
+ * at `now` has reached the threat's minutes. The lapse settles only then, and a choice is refused
+ * from then on, so the two can never both commit one window. Null while there is time. */
+export function lapsedThreat(scenario: ScenarioDefinition, run: OperationRun, highWater: number, now: number, timer: TimerSetting): NonNullable<ActionDefinition['threat']> | null {
+  if (timer === 'off' || run.status !== 'active' || run.decisionPending) return null;
+  const threat = openThreat(scenario, run);
+  if (!threat?.timeout?.length) return null;
+  return openDither(scenario, run, highWater, now, timer) >= threat.minutes ? threat : null;
+}
+
+/** A decision point's threat by its id (NodeThreat.id), from any of its choices. */
+export function threatById(scenario: ScenarioDefinition, threatId: Id): NonNullable<ActionDefinition['threat']> | null {
+  return scenarioActions(scenario).find(action => action.threat?.id === threatId)?.threat ?? null;
+}
+
+/** What a lapse applies (sim/clocks.ts lapsedThreat): the first run-out route whose state holds, the
+ * threat's landing with every beat its full window reached, and the spent mark, in that order, as a
+ * decision's outcome comes before its threat. One place, so the commit and every replay agree. */
+export function lapseEffects(scenario: Pick<ScenarioDefinition, 'incidentPeople'>, threat: NonNullable<ActionDefinition['threat']>, run: Pick<OperationRun, 'knowledge' | 'flags' | 'pressure'>): OutcomeEffect[] {
+  const route = (threat.timeout ?? []).find(effect => conditionHolds(effect.when, run));
+  const beats = (threat.beats ?? []).filter(beat => beat.at <= threat.minutes).flatMap(beat => beat.effects.filter(effect => conditionHolds(effect.when, run)));
+  return [...route ? [route] : [], ...landingEffects(scenario, threat.effects.filter(effect => conditionHolds(effect.when, run))), ...beats, { setFlags: [spentFlag(threat.id)] }];
 }
 
 /** The meter event a landing threat gives every subject who keeps meters, when the threat names no

@@ -41,6 +41,7 @@ export function mapScenarioText(input: ScenarioDefinition, text: (value: string)
         for (const effect of a.threat.effects) fields(effect, ['text']);
         // Push-back lines are spoken lines: bind their speaker and words like any exchange.
         for (const effect of (a.threat.beats ?? []).flatMap(line => line.effects)) { fields(effect, ['text']); lines(effect.exchange); }
+        for (const effect of a.threat.timeout ?? []) fields(effect, ['text']);
       }
       if (a.support) fields(a.support, ['label', 'task']);
       if (a.spatial) fields(a.spatial, ['noun']);

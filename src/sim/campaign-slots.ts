@@ -1,5 +1,6 @@
 import { createInitialState } from './department';
 import type { ContentExclusion } from './incidents';
+import type { TimerSetting } from './timer-setting';
 import { dispatch } from './game';
 import { randomCampaignSeed } from './personnel';
 import { deserialize, serialize, type SaveStorage } from './save';
@@ -92,6 +93,8 @@ export class CampaignSlots {
   private snapshot: CampaignSnapshot;
   /** The themes the player keeps off the board; the store keeps it current (ui/store.ts). */
   exclusion: ContentExclusion | undefined;
+  /** The player's call timer setting, passed to every command (Ctx.timer). Off when unset. */
+  timer: TimerSetting | undefined;
 
   constructor(private storage: SaveStorage | null, now: number, private seedFactory = randomCampaignSeed) {
     this.state = createInitialState(now, seedFactory());
@@ -188,7 +191,7 @@ export class CampaignSlots {
 
   send(command: Command, now: number, persist = true): HandlerResult {
     let result;
-    try { result = dispatch(this.state, command, { now, exclusion: this.exclusion }); }
+    try { result = dispatch(this.state, command, { now, exclusion: this.exclusion, ...(this.timer ? { timer: this.timer } : {}) }); }
     catch { this.reportStorageIssue('This campaign could not advance. Its previous save is untouched. Export the current game or load a readable backup.'); return failure(this.issue!); }
     if (!result.result.ok) return result.result;
     this.state = result.state;

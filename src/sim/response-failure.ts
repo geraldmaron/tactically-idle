@@ -1,6 +1,7 @@
 import type { ActionDefinition, ScenarioDefinition } from './scenario-types';
 import { runRoster } from './squads';
 import type { GameState, OperationRun, ResponseFailureRecord, SquadId } from './types';
+import { decisionsOf } from './types';
 import { getScenario } from './scenario-registry';
 import { builtFor, evaluateAction } from './resolution';
 import { conditionHolds } from './conditions';
@@ -37,7 +38,7 @@ export function responseFailurePlan(state: GameState): ResponseFailurePlan | nul
     const built = builtFor(run.locationFamilyId, run.locationSeed, run.flags);
     for (const action of scenario.stages[run.stage].actions) {
       if (isGenericResponseExit(scenario, action) || !conditionHolds(action.visibleWhen, run)
-        || run.history.some(decision => decision.stage === run.stage && decision.actionId === action.id)) continue;
+        || decisionsOf(run.history).some(decision => decision.stage === run.stage && decision.actionId === action.id)) continue;
       for (const acting of subsets(run.squadIds, action.maxActing ?? 1).filter(group => group.length)) {
         const supports = action.support ? subsets(run.squadIds.filter(id => !acting.includes(id)), action.support.maxSquads) : [[]];
         for (const support of supports) {
@@ -97,7 +98,7 @@ export function validResponseFailure(run: OperationRun, scenario: ScenarioDefini
     const id = pending[0].slice('completion_pending:'.length);
     if (pending.length !== 1 || run.status !== 'active' || run.stage !== 'resolve'
       || !['resolved', 'care_accepted', 'followup_agreed'].includes(scenario.endings[id]?.disposition ?? '')
-      || !run.history.some(decision => scenario.stages[decision.stage].actions.find(action => action.id === decision.actionId)?.outcomes[decision.band].some(effect => effect.ending === id))) return false;
+      || !decisionsOf(run.history).some(decision => scenario.stages[decision.stage].actions.find(action => action.id === decision.actionId)?.outcomes[decision.band].some(effect => effect.ending === id))) return false;
   }
   const record = run.responseFailure;
   if (record === undefined) return true;

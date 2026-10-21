@@ -2,6 +2,7 @@
 // compiled into the engine's SupportRule. The controls: the supporting squad goes to that point on
 // the map, the card and the breakdown name its task, and every support choice also works with one
 // squad. Exercised on the group fixture; the joint-operation journey at the end plays the shipping barricade.
+import { decisionsOf } from '../../sim/types';
 import { describe, expect, it } from 'vitest';
 import type { CallTree, TreeChoice } from '../../content/call-trees/types';
 import type { IncidentTemplate } from '../../content/incidents/types';
@@ -16,6 +17,7 @@ import { reachableOverGround } from '../../sim/spatial-factors';
 import { NOW, startWithKit } from '../../sim/test-fixtures';
 import type { GameState } from '../../sim/types';
 import { withDraftScenario } from './gates/engine-driver';
+import { CLOCK_RULES_V1 } from '../../sim/clocks';
 import { generateIncident } from './index';
 import { compileIncident, hostedSpec } from './instance';
 import { findStoryRoute } from './story-bindings';
@@ -226,7 +228,7 @@ function playJoint(id: string): boolean {
     supported = withSupport;
   }
   if (!supported) return false;
-  const decision = state.activeRun!.history.at(-1)!;
+  const decision = decisionsOf(state.activeRun!.history).at(-1)!;
   expect(decision).toMatchObject({ actionId: supported.id, actingSquadIds: ['A'], supportSquadIds: ['B'] });
   expect(decision.inputs.some(input => input.source === 'support' && input.value > 0), 'the supporting squad counted').toBe(true);
   const rule = supported.support!;
@@ -243,3 +245,35 @@ function playJoint(id: string): boolean {
   expect(closed.state.activeRun).toBeNull();
   return true;
 }
+
+// When the time runs out with two squads deployed (docs/call-pressure.md, "When the time runs out"):
+// the call moves on, the support point is untouched, and nobody on either squad takes strain.
+describe('a lapse with two squads deployed', () => {
+  const lapsing = compile(template(tree => {
+    const talk = tree.nodes.find(node => node.id === 'talk')!;
+    talk.choices.find(choice => choice.id === 'hold')!.support = AT_GLASS;
+    talk.threat = { label: '{taker.first} stops answering', minutes: 9, text: '{taker.first} puts the phone down on the counter.', pressure: 4, timeout: { text: 'Nobody calls back.', next: { node: 'final' } } };
+  }));
+  it('moves the call on and strains neither squad', () => withDraftScenario(lapsing, scenarioId => {
+    let state = atTalk(scenarioId, ['A', 'B']);
+    state = send(state, { type: 'openDecision', revision: state.activeRun!.revision }).state;
+    const tasks = structuredClone(state.activeRun!.squadTasks);
+    const due = NOW + 9 / CLOCK_RULES_V1.dither.standard.gameMinutesPerRealMinute * 60_000 + 1000;
+    const done = dispatch(state, { type: 'lapse', revision: state.activeRun!.revision, threatId: 'talk' }, { now: due, timer: 'standard' });
+    expect(done.result).toEqual({ ok: true });
+    const run = done.state.activeRun!;
+    expect(run.squadIds).toEqual(['A', 'B']);
+    expect(run.flags).toContain('at:final');
+    expect(run.squadTasks, 'nobody moved: nobody chose').toEqual(tasks);
+    for (const id of Object.keys(state.officers)) expect(done.state.officers[id].stress).toBe(state.officers[id].stress);
+    expect(deserialize(serialize(done.state, due))?.activeRun?.history.at(-1)).toMatchObject({ kind: 'lapse', threatId: 'talk' });
+  }));
+});
+
+describe('a timeout the compiler refuses', () => {
+  it('ends the call only at an ending the tree has', () => {
+    expect(() => compile(template(tree => {
+      tree.nodes.find(node => node.id === 'talk')!.threat = { label: 'Quiet', minutes: 9, text: 'The line goes quiet.', timeout: { text: 'Nobody calls back.', next: { ending: 'no_such_ending' } } };
+    }))).toThrow(/unknown ending no_such_ending/);
+  });
+});

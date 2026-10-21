@@ -1,6 +1,7 @@
 import type { ActionDefinition, OutcomeEffect, ScenarioDefinition } from './scenario-types';
 import { endOf } from './clocks';
 import type { CivilianOutcomeView, GameState, Id, OfficerCasualtyRecord, OperationRun, OutcomeBand, PersonCasualtyRecord } from './types';
+import { decisionsOf, isLapse } from './types';
 import { withVariants } from '../gen/incident/drawn-model';
 import { protectedOfficerEffects, selectedProtection } from './force-risk';
 import { ITEMS } from '../content/items';
@@ -216,7 +217,7 @@ function authoredHarm(run: Pick<OperationRun, 'personCasualties' | 'clock' | 're
   return out;
 }
 
-export function applyPersonConsequences(run: OperationRun, scenario: ScenarioDefinition, action: ActionDefinition, band: OutcomeBand, effects: OutcomeEffect[]): { records: PersonCasualtyRecord[]; text: string[] } {
+export function applyPersonConsequences(run: OperationRun, scenario: ScenarioDefinition, action: ActionDefinition | null, band: OutcomeBand | null, effects: OutcomeEffect[]): { records: PersonCasualtyRecord[]; text: string[] } {
   const records: PersonCasualtyRecord[] = [];
   const text: string[] = [];
 
@@ -226,7 +227,8 @@ export function applyPersonConsequences(run: OperationRun, scenario: ScenarioDef
     records.push({ ...event });
     run.civilianSafety = Math.max(0, Math.round((run.civilianSafety - HARM_PENALTY[event.severity]) * 10) / 10);
   }
-  const care = action.personCare;
+  // A lapse (no action) records harm only: nobody gave care.
+  const care = action?.personCare;
   const person = care ? run.personCasualties?.[care.personId] : undefined;
   if (care && person && person.severity !== 'fatal') {
     if (care.kind === 'stabilize' && person.care === 'needed' && band !== 'adverse') {
@@ -261,6 +263,16 @@ export function validPersonConsequences(run: OperationRun, scenario: ScenarioDef
   let clock = (run.resupplies ?? []).reduce((sum, delivery) => Math.round((sum + delivery.minutes) * 10) / 10, 0);
   for (const decision of run.history) {
     clock = Math.round((clock + decision.timeCost) * 10) / 10;
+    // A lapse uses no gear and gives no care: only a clock running out in its window can hurt anyone.
+    if (isLapse(decision)) {
+      for (const record of decision.committed.personCasualties ?? []) {
+        const binding = scenario.story?.bindings.people[record.personId];
+        const clockHarm = (scenario.clocks ?? []).some(def => def.owner === record.personId && endOf(def)?.harm === record.severity);
+        if (!binding || !clockHarm || !validPersonCasualtyRecord(record) || record.at !== clock || record.causeRevision !== decision.revision) return false;
+        expected[record.personId] = { ...record };
+      }
+      continue;
+    }
     const action = scenario.stages[decision.stage].actions.find(candidate => candidate.id === decision.actionId);
     if (!action || !decision.committed) return false;
     if (decision.committed.forceOutcome || personCasualtyActionIssue({ personCasualties: expected }, scenario, action)) return false;
@@ -317,7 +329,7 @@ export function validPersonConsequences(run: OperationRun, scenario: ScenarioDef
 /** Validate immutable saved injury snapshots, their transitions and the final public flags. */
 export function validIncidentConsequences(run: OperationRun, scenario: ScenarioDefinition, officers: GameState['officers'], squads: GameState['squads'], now: number): boolean {
 
-  if (run.officerCasualties === undefined) return !run.history.some(decision => decision.committed?.officerCasualties?.length);
+  if (run.officerCasualties === undefined) return !decisionsOf(run.history).some(decision => decision.committed?.officerCasualties?.length);
   if (!run.officerCasualties || typeof run.officerCasualties !== 'object' || Array.isArray(run.officerCasualties)) return false;
   const expected: Record<Id, OfficerCasualtyRecord> = {};
   // Who Deploy sent (runRoster): the squad's officers assigned to this run.
@@ -326,6 +338,8 @@ export function validIncidentConsequences(run: OperationRun, scenario: ScenarioD
   let clock = (run.resupplies ?? []).reduce((sum, delivery) => Math.round((sum + delivery.minutes) * 10) / 10, 0);
   for (const decision of run.history) {
     clock = Math.round((clock + decision.timeCost) * 10) / 10;
+    // A lapse hurts no officer: no one acted.
+    if (isLapse(decision)) continue;
     const action = scenario.stages[decision.stage].actions.find(candidate => candidate.id === decision.actionId);
     if (!action) return false;
     const possible = protectedOfficerEffects(withVariants(action.outcomes[decision.band]), decision.committed?.protectionUsed);

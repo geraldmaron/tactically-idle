@@ -1,4 +1,4 @@
-import type { CallTree, TreeChoice, TreeIf, TreeLine, TreeMove, TreeMoveTo, TreeNext, TreeNode, TreeOutcome, TreePlace, TreeState } from '../../../content/call-trees/types';
+import type { CallTree, TreeChoice, TreeIf, TreeLine, TreeMove, TreeMoveTo, TreeNext, TreeNode, TreeOutcome, TreePlace, TreeState, TreeTimeout } from '../../../content/call-trees/types';
 import { TREE_VOICES } from '../../../content/call-trees/types';
 import type { IncidentTemplate } from '../../../content/incidents/types';
 import { CIVILIAN_FIRST_NAMES, CIVILIAN_SURNAMES } from '../../../content/call-trees/civilian-names';
@@ -363,6 +363,18 @@ export function outcomeNexts(outcome: TreeOutcome, counts?: Record<string, numbe
   return [];
 }
 
+/** Where a threat's run-out can send the call (TreeTimeout): every `nextIf` route, then `next`. */
+export function timeoutNexts(node: Pick<TreeNode, 'threat'>): TreeNext[] {
+  const timeout = node.threat?.timeout;
+  return timeout ? [...(timeout.nextIf ?? []).map(entry => entry.next), timeout.next] : [];
+}
+
+/** Everywhere a node can send the call: each choice's outcomes on every band, and its threat's
+ * run-out routes. */
+export function nodeNexts(node: TreeNode, counts?: Record<string, number>): TreeNext[] {
+  return [...node.choices.flatMap(choice => BANDS.flatMap(band => choice.outcomes[band].flatMap(outcome => outcomeNexts(outcome, counts)))), ...timeoutNexts(node)];
+}
+
 /** What a call with these group sizes can reach from the root, through every turn any call can draw:
  * its nodes and endings (with the exhausted-choices fallback). For strings and gates; a compiled
  * call reaches only its own turns (reachableNodes). */
@@ -374,11 +386,13 @@ export function reachableWithin(tree: CallTree, counts: Record<string, number>, 
     if ('ending' in next) { endings.add(next.ending); continue; }
     for (const id of 'turn' in next ? tree.turns?.[next.turn] ?? [] : [next.node]) if (!nodes.has(id)) { nodes.add(id); queue.push(id); }
   }
-  for (; queue.length;) for (const choice of byId.get(queue.shift()!)?.choices ?? []) for (const band of BANDS)
-    for (const outcome of choice.outcomes[band]) for (const next of outcomeNexts(outcome, counts)) {
+  for (; queue.length;) {
+    const node = byId.get(queue.shift()!);
+    for (const next of node ? nodeNexts(node, counts) : []) {
       if ('ending' in next) { endings.add(next.ending); continue; }
       for (const id of 'turn' in next ? tree.turns?.[next.turn] ?? [] : [next.node]) if (!nodes.has(id)) { nodes.add(id); queue.push(id); }
     }
+  }
   return { nodes, endings };
 }
 
@@ -391,7 +405,7 @@ export function reachableNodes(tree: CallTree, seed: number, counts?: Record<str
   while (queue.length) {
     const node = byId.get(queue.shift()!);
     if (!node) continue;
-    for (const choice of node.choices) for (const band of BANDS) for (const outcome of choice.outcomes[band]) for (const to of outcomeNexts(outcome, counts)) {
+    for (const to of nodeNexts(node, counts)) {
       const next = resolveNext(tree, to, seed);
       if ('node' in next && !seen.has(next.node)) { seen.add(next.node); queue.push(next.node); }
     }
@@ -772,7 +786,8 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
   // part). The tree's count conditions are already settled, so `possible` reads marks and safety.
   // The marks a stalled decision's push-back lines set count as settable: over every node, which
   // only keeps more conditions.
-  const beatMarks = tree.nodes.flatMap(node => (node.threat?.beats ?? []).flatMap(line => line.mark ?? []));
+  // So do the marks a threat sets when it lands.
+  const beatMarks = tree.nodes.flatMap(node => [...(node.threat?.beats ?? []).flatMap(line => line.mark ?? []), ...node.threat?.mark ?? []]);
   const plan = prunePlan(tree, callCounts({ groups, armed: placed.armed, upstairs: placed.upstairs, exits: placed.exits }), [...clockMarks, ...beatMarks], spec.seed, clockNexts);
   const settable = { marks: plan.settableMarks, safe: plan.settableSafe };
   const possible = plan.possible;
@@ -1180,7 +1195,25 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
     }
     const beats = lines.map(line => ({ id: line.id, at: line.at, effects: effectsFor(node, { text: '', exchange: [{ by: line.by, line: line.line }],
       ...(line.mark ? { mark: line.mark } : {}), ...(line.moves ? { moves: line.moves } : {}), ...(line.bump ? { bump: line.bump } : {}) }) }));
-    return { threat: { label, minutes, effects: effectsFor(node, { text, ...(mark ? { mark } : {}), ...(threatMoves ? { moves: threatMoves } : {}), ...(pressure ? { pressure } : {}), ...(civilian ? { civilian } : {}), ...(bump ? { bump } : {}) }), ...(beats.length ? { beats } : {}) } };
+    const timeout = threat.timeout ? timeoutFor(node, threat.timeout) : [];
+    return { threat: { id: node.id, label, minutes, effects: effectsFor(node, { text, ...(mark ? { mark } : {}), ...(threatMoves ? { moves: threatMoves } : {}), ...(pressure ? { pressure } : {}), ...(civilian ? { civilian } : {}), ...(bump ? { bump } : {}) }),
+      ...(beats.length ? { beats } : {}), ...(timeout.length ? { timeout } : {}) } };
+  };
+  /** A threat's run-out route (TreeTimeout) as the engine's lapse applies it: one effect per route,
+   * `nextIf` first, each with the moment's line, so the first whose state holds moves the call. Like
+   * the threat it harms nobody and fires nothing (the type has no field for either), and like a
+   * choice it never goes back to its own node, the root or an earlier stage. */
+  const timeoutFor = (node: TreeNode, timeout: TreeTimeout): OutcomeEffect[] => {
+    if (!timeout.text.trim()) throw new Error(`${node.id}: a threat's timeout needs the line the player reads`);
+    const routes = [...(timeout.nextIf ?? []).filter(entry => possible(entry.when)), { next: timeout.next }];
+    return routes.map(entry => {
+      const target = resolveNext(tree, entry.next, spec.seed);
+      if ('node' in target && target.node === tree.root) throw new Error(`${node.id}: a threat's timeout goes back to the root`);
+      if ('ending' in target && !tree.endings[target.ending] && target.ending !== 'handed_over') throw new Error(`${node.id}: a threat's timeout ends the call at unknown ending ${target.ending}`);
+      const go = routing(node, entry.next);
+      const when = 'when' in entry ? stateCondition(trim(entry.when), groups) : undefined;
+      return { text: timeout.text, ...go, ...(when && (when.flags || when.notFlags) ? { when } : {}) };
+    });
   };
 
   const actionFor = (node: TreeNode, choice: TreeChoice): ActionDefinition => {
@@ -1233,7 +1266,7 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
     if (!here.length) throw new Error(`${tree.type}: no reachable node in ${stage}`);
     const contextPrompts = here.flatMap(node => {
       const at = node.id === tree.root ? { notFlags: [TREE_STARTED] } : { flags: [nodeFlag(node.id)] };
-      const threatShown = node.threat ? { threat: { label: node.threat.label, minutes: node.threat.minutes } } : {};
+      const threatShown = node.threat ? { threat: { id: node.id, label: node.threat.label, minutes: node.threat.minutes } } : {};
       return [
         ...(node.promptIf ?? []).filter(entry => possible(entry.when)).map(entry => {
           const exchange = spoken(entry.exchange ?? node.exchange, `${node.id} prompt variant`);
@@ -1252,7 +1285,9 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
   s.squadRange = { min: 1, max: Math.min(3, Math.max(1, ...Object.values(s.stages).flatMap(stage => stage.actions.map(squadsPutToWork)))) };
 
   // Only the endings this call's actions can reach, plus the exhausted-choices fallback.
-  const reachableEndings = new Set(['handed_over', ...clockNexts.map(to => resolveNext(tree, to, spec.seed)).flatMap(next => 'ending' in next ? [next.ending] : []), ...Object.values(s.stages).flatMap(stage => stage.actions.flatMap(action => withVariants(Object.values(action.outcomes).flat()).flatMap(effect => effect.ending ? [effect.ending] : [])))]);
+  const reachableEndings = new Set(['handed_over', ...clockNexts.map(to => resolveNext(tree, to, spec.seed)).flatMap(next => 'ending' in next ? [next.ending] : []), ...Object.values(s.stages).flatMap(stage => stage.actions.flatMap(action => withVariants(Object.values(action.outcomes).flat()).flatMap(effect => effect.ending ? [effect.ending] : []))),
+    // Where a threat running out with no choice made ends the call.
+    ...Object.values(s.stages).flatMap(stage => stage.actions.flatMap(action => (action.threat?.timeout ?? []).flatMap(effect => effect.ending ? [effect.ending] : [])))]);
   s.endings = Object.fromEntries(Object.entries(tree.endings).filter(([id]) => reachableEndings.has(id)).map(([id, ending]) => [id, {
     // A v13 debrief scores trust and strain from people's end states (sim/outcome-score.ts).
     id, title: ending.title, summary: ending.summary, trustAdjust: 0, strain: 0, disposition: ending.disposition,

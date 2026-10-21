@@ -39,8 +39,8 @@ export function PathRail(p: {
           {p.prior.map((step, i) => (
             <li key={`prior-${i}`} className="lab-path-item">
               {i > 0 && <span className="lab-path-link" aria-hidden="true" />}
-              <span className="lab-path-chip lab-path-prior" title={`Played in your game: ${step.choiceTitle}, ${BAND_WORD[step.band]}`}>
-                <span className="lab-path-node">{step.nodeTitle}</span><span className="lab-path-choice">{step.choiceTitle}</span><BandGlyph band={step.band} size={12} />
+              <span className="lab-path-chip lab-path-prior" title={`Played in your game: ${step.choiceTitle}${step.band ? `, ${BAND_WORD[step.band]}` : ', the time ran out'}`}>
+                <span className="lab-path-node">{step.nodeTitle}</span><span className="lab-path-choice">{step.choiceTitle}</span>{step.band && <BandGlyph band={step.band} size={12} />}
               </span>
             </li>
           ))}

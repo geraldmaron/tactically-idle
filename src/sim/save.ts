@@ -9,6 +9,7 @@ import { ITEMS } from '../content/items';
 import { COURSES } from '../content/courses';
 import { DEV_NODES } from '../content/dev-tree';
 import { getScenario } from './scenario-registry';
+import { scenarioActions } from './scenario-types';
 import { parseIncidentId, INCIDENT_CONTENT_VERSION } from '../gen/incident';
 import { maxDevelopmentTier } from './development-tiers';
 import { normalizeSquadArrangementState } from './squad-optimizer';
@@ -102,9 +103,22 @@ function validDecision(d: unknown): boolean {
       && (d.committed.officerCasualties === undefined || isList(d.committed.officerCasualties, validCasualtyRecord))));
 }
 
+/** A lapse (LapseRecord): nobody chose, so it carries no action, band, sample, squads or strain. */
+function validLapse(d: Record<string, unknown>): boolean {
+  const committed = d.committed;
+  return numbers(d, ['revision', 'timeCost']) && (d.timeCost as number) > 0 && strings(d, ['threatId', 'label']) && oneOf(d.stage, STAGES)
+    && ['actionId', 'band', 'sample', 'actingSquadIds', 'officerIds', 'stressDeltas', 'unitsUsed', 'itemsConsumed'].every((key) => d[key] === undefined)
+    && isStrings(d.explanation) && isList(d.knowledgeChanges, (k) => isObj(k) && isStr(k.factId) && oneOf(k.status, KNOWLEDGE))
+    && isObj(committed) && numbers(committed, ['objectiveDelta', 'civilianSafetyDelta', 'pressureDelta']) && isStrings(committed.consequences)
+    && (committed.endingTitle === null || isStr(committed.endingTitle))
+    && (committed.personCasualties === undefined || isList(committed.personCasualties, validPersonCasualtyRecord))
+    && (committed.exchange === undefined || isList(committed.exchange, (line) => isObj(line) && strings(line, ['speaker', 'line'])));
+}
+const validHistoryEntry = (d: unknown): boolean => isObj(d) && (d.kind === 'lapse' ? validLapse(d) : d.kind === undefined && validDecision(d));
+
 function validDecisionView(d: unknown): boolean {
   return isObj(d) && strings(d, ['actionId', 'title', 'stageLabel']) && numbers(d, ['revision', 'timeCost', 'objectiveDelta', 'civilianSafetyDelta', 'pressureDelta'])
-    && oneOf(d.band, ['favorable', 'mixed', 'adverse']) && isBool(d.actualStressDeltas) && isStrings(d.explanation) && isStrings(d.consequences)
+    && (d.lapse === true ? d.band === null : d.lapse === undefined && oneOf(d.band, ['favorable', 'mixed', 'adverse'])) && isBool(d.actualStressDeltas) && isStrings(d.explanation) && isStrings(d.consequences)
     && (d.officerCasualties === undefined || isList(d.officerCasualties, validCasualtyRecord))
     && (d.exchange === undefined || isList(d.exchange, (line) => isObj(line) && strings(line, ['speaker', 'line'])))
     && (d.forceOutcome === undefined || validForceOutcome(d.forceOutcome))
@@ -135,7 +149,7 @@ function validRun(r: unknown): boolean {
     || !isList(r.squadIds, (id) => oneOf(id, SQUAD_IDS)) || r.squadIds.length === 0
     || new Set(r.squadIds).size !== r.squadIds.length || !isStrings(r.reservationIds) || !isStrings(r.flags)
     || !isObj(r.knowledge) || !Object.values(r.knowledge).every((status) => oneOf(status, KNOWLEDGE))
-    || !isList(r.history, validDecision)) return false;
+    || !isList(r.history, validHistoryEntry)) return false;
   if (!isList(r.squadTasks, (t) => isObj(t) && oneOf(t.squadId, SQUAD_IDS) && strings(t, ['positionId', 'task'])
     && (t.stagingId === null || isStr(t.stagingId)) && (t.at === null || validPoint(t.at)))) return false;
   for (const key of ['people', 'lastSeen']) {
@@ -176,6 +190,9 @@ function validRun(r: unknown): boolean {
       && (r.civilianSafety as number) >= 0 && (r.civilianSafety as number) <= 100
       && (r.pressure as number) >= 0 && (r.pressure as number) <= 100
       && r.history.every((entry, index) => (entry as Record<string, unknown>).revision === index + ((r.resupplies as unknown[] | undefined)?.length ?? 0))
+      // A lapse names a threat this call has, that has somewhere to go, and ran its whole window.
+      && r.history.every((entry) => (entry as Record<string, unknown>).kind !== 'lapse' || scenarioActions(scenario).some((action) => action.threat?.id === (entry as Record<string, unknown>).threatId
+        && !!action.threat?.timeout?.length && action.threat?.minutes === (entry as Record<string, unknown>).timeCost && action.stage === (entry as Record<string, unknown>).stage))
       && (r.status === 'active' ? r.stage !== 'debrief' && r.endingId === null : r.stage === 'debrief' && isStr(r.endingId) && !!scenario.endings[r.endingId]));
 }
 

@@ -1,4 +1,4 @@
-import type { CallTree, TreeChoice, TreeIf, TreeNext, TreeOutcome, TreeState } from './types';
+import type { CallTree, TreeChoice, TreeIf, TreeNext, TreeOutcome, TreeState, TreeTimeout } from './types';
 
 // Going Live, the first curated call (design sheet: docs/calls/going-live-design.md). A delivery
 // rider {delivery_app} cut off over a stolen order holds the night manager at the pickup counter of
@@ -79,6 +79,11 @@ const heldEnd = (lead: TreeOutcome, clerkLine: string, also: TreeIf[] = [], stat
 };
 const MANAGER_IN: TreeState = { notSafe: ['manager'] };
 
+/** A stage 3 moment run out with no choice made (owner 2026-10-21): command takes the street and
+ * holds it, and the held ending names who is still inside. */
+const holdTheNight = (text: string): TreeTimeout => ({ text, next: { ending: 'rider_held' },
+  nextIf: [{ when: { notSafe: ['manager', 'clerk'] }, next: { ending: 'held_both' } }, { when: MANAGER_IN, next: { ending: 'held_counter' } }] });
+
 /** The lie (dilemma pattern 15): the team told the rider the clerk backs the rider's story. When it
  * isn't true, the rider hears that on the stream, from the clerk's own phone. */
 const foundOut = (text: string, extra: Partial<TreeOutcome> = {}): TreeOutcome => ({ when: { marks: ['lied_clerk'] }, breaks: ['clerk_backs'], mark: ['lie_found'], moves: { rider: 'provoked' }, bump: { stream: 12 }, text, ...extra });
@@ -151,7 +156,8 @@ export const HOSTAGE_LIVE: CallTree = {
           { id: 'where_is_this', at: 1.2, by: 'rider', line: 'Somebody called {handle} wants to know where this is. Should I tell them?', bump: { stream: 4 } },
           { id: 'manager_low', at: 3.4, by: 'manager', line: 'Nobody watching that pays your rent, {rider.first}.', moves: { rider: 'provoked' }, bump: { stream: 5 } },
           { id: 'cross_streets', at: 6.8, by: 'radio', line: 'Comments are guessing the cross streets. One guess is right.', bump: { stream: 6 } },
-        ] },
+        ],
+        timeout: { text: 'Nobody calls the register back. {rider.first} stops waiting on the police and asks the comments what to do next.', next: { node: 'address_out' } } },
       prompt: 'The callback rings beside the register, and {rider.first} lets it ring on the stream. {manager.first} is on the floor by the drinks cooler, eyes on the stockroom door and not the handgun. {clerk.first} stands in that doorway, still holding a case of water.',
       exchange: [{ by: 'rider', line: 'Four hundred people know I didn’t take the bag.' }, { by: 'radio', line: 'Phone still ringing. Handgun at the counter.' }],
       choices: [
@@ -216,7 +222,8 @@ export const HOSTAGE_LIVE: CallTree = {
           { id: 'friend_types', at: 1.4, by: 'rider', line: '{friend.first} says come out, I got you. {friend.first}, I can’t.' },
           { id: 'count_two', at: 2.8, by: 'radio', line: 'Stream just passed two thousand. A {outlet_short} van is two blocks out.', bump: { stream: 6 } },
           { id: 'manager_asks', at: 3.9, by: 'manager', line: 'Can I stand up? My knees, {rider.first}.', moves: { rider: 'contact' } },
-        ] },
+        ],
+        timeout: { text: 'Nobody outside says a word back to the chat, and {rider.first} takes that as an answer too.', next: { node: 'chat_turned' } } },
       prompt: 'The phone is still propped against the register, and the count under the picture keeps climbing. {rider.first} stands between the camera and {manager.first}, close enough to touch the screen. {rider.He} {rider~wants|want} {manager.first} to say one sentence to it.',
       exchange: [{ by: 'rider', line: 'Tell them. Tell them what you told {delivery_app}.' }, { by: 'manager', line: 'Not with that in your hand.' }],
       promptIf: [
@@ -313,7 +320,8 @@ export const HOSTAGE_LIVE: CallTree = {
         beats: [
           { id: 'stops_twice', at: 1.5, by: 'radio', line: 'Window. Subject stopped by the manager again. Second time.' },
           { id: 'no_one', at: 3.1, by: 'rider', line: 'Nobody can see this now. You get that?' },
-        ] },
+        ],
+        timeout: { text: 'Nobody calls the register. {rider.first} asks the same question a dozen times, and on the last one {manager.first} lifts {manager.his} head.', next: { node: 'same_question' } } },
       prompt: 'There is no stream now, and no count. {rider.first} paces the length of the counter, and every time {rider.he} {rider~passes|pass} {manager.first} {rider.he} {rider~stops|stop}. The store is quiet enough to hear the cooler hum.',
       exchange: [{ by: 'rider', line: 'Now it’s just us. That what you wanted?' }, { by: 'negotiator', line: 'I wanted to hear you without four hundred people in the way.' }],
       promptIf: [
@@ -371,7 +379,8 @@ export const HOSTAGE_LIVE: CallTree = {
         beats: [
           { id: 'clerk_shakes', at: 1.6, by: 'clerk', line: 'Is {manager.first} okay? Just tell me {manager.first} is okay.' },
           { id: 'rider_asks', at: 3.2, by: 'rider', line: 'Where’s the kid? Somebody took the kid.', moves: { rider: 'team_seen' }, bump: { stream: 6 } },
-        ] },
+        ],
+        timeout: { text: 'Nobody picks up, and the ringing stops. {clerk.first} asks the officer holding the phone to try {manager.first} back.', next: { node: 'phone_rings' } } },
       prompt: '{clerk.first} is behind the patrol car with a blanket on {clerk.his} shoulders and {clerk.his} eyes on the stream on an officer’s phone. {clerk.He} {clerk~keeps|keep} saying {clerk.he} didn’t say anything to anybody. Nobody asked {clerk.him} to.',
       exchange: [{ by: 'negotiator', line: 'What didn’t you say?' }, { by: 'clerk', line: 'About the bag. About that night.' }],
       promptIf: [{ when: { marks: ['seen_back'] }, prompt: '{clerk.first} is out, and the stream saw the stockroom door move. {rider.first} keeps asking the comments where the kid went.',
@@ -418,10 +427,11 @@ export const HOSTAGE_LIVE: CallTree = {
     { id: 'way_out', stage: 'resolve',
       threat: { label: 'The {outlet_short} van parks', minutes: 12, text: 'A {outlet_short} van parks at the corner, and its crew raises a light on the front door. {rider.first} watches it from behind the counter.', pressure: 5, bump: { stream: 18 },
         beats: [
-          { id: 'medic', at: 1.8, by: 'radio', line: 'Medic staged at the corner. Ready when you are.' },
+          { id: 'medic', at: 1.8, by: 'radio', line: 'Medic staged down the block. Ready when you are.' },
           { id: 'how_out', at: 3.4, by: 'rider', line: 'If I walk out, do I walk out on camera? Yes or no.', bump: { stream: 5 } },
           { id: 'camera_door', at: 4.6, by: 'radio', line: 'Van crew has a camera on the front door. Lights up.', bump: { stream: 4 } },
-        ] },
+        ],
+        timeout: { text: 'Nobody gives {rider.first} a yes or a no about walking out on camera.', next: { node: 'van_light' } } },
       prompt: '{rider.first} is talking about coming out now, but not about how. The phone is still on the register. {manager.first} is still on the floor by the cooler, and outside a camera on the corner is pointed at the door.',
       exchange: [{ by: 'rider', line: 'I come out on camera or I don’t come out.' }, { by: 'negotiator', line: 'Tell me why the camera matters.' }, { by: 'rider', line: 'Because then you can’t say what happened.' }],
       promptIf: [
@@ -432,6 +442,7 @@ export const HOSTAGE_LIVE: CallTree = {
         { when: { marks: ['news_on'] }, prompt: '{outlet} is carrying the stream now. {rider.first} is talking about coming out, but {rider.his} eyes keep going to the number, which has gained a digit since the repost.' },
         { when: { marks: ['phone_wall'] }, prompt: 'The phone faces the calendar on the wall, and the speaker murmurs with comments nobody reads. {rider.first} talks to the negotiator now, mostly.' },
         { when: { marks: ['lied_clerk'] }, prompt: '{rider.first} believes {clerk.first} is on {rider.his} side. {rider.He} {rider~keeps|keep} asking when {clerk.first} will say it on the stream.' },
+        { when: { marks: ['turned_chat'] }, prompt: '{rider.first} is on {rider.his} feet by the register with the phone and the handgun, and the comments are still calling {rider.him} a liar. For the first time {rider.he} {rider~asks|ask} the line how a person would even walk out of here.' },
       ],
       choices: [
         // Not after command cut the stream: there is no stream to walk out on.
@@ -551,7 +562,8 @@ export const HOSTAGE_LIVE: CallTree = {
         beats: [
           { id: 'thief', at: 1.2, by: 'radio', line: 'Comments are calling the subject a thief now. Lots of them.' },
           { id: 'rider_quiet', at: 2.6, by: 'rider', line: 'They were all on my side. Every one of them.' },
-        ] },
+        ],
+        timeout: { text: 'Nobody reaches {rider.first} while the clip goes around. {rider.He} {rider~watches|watch} it again, and then again.', next: { node: 'clip_going' } } },
       prompt: '{manager.first} said it on camera, and the stream heard it. {rider.first} isn’t reading the comments anymore. {rider.He} {rider~stands|stand} at the register looking at the phone, not at {manager.first}, the handgun hanging at {rider.his} side.',
       exchange: [{ by: 'negotiator', line: 'Are you thinking about hurting yourself?' }, { by: 'rider', line: 'I’m thinking everybody saw that.' }],
       choices: [
@@ -597,7 +609,8 @@ export const HOSTAGE_LIVE: CallTree = {
 
     // ------------------------------------------------------------------ stage 3: the handgun is up
     { id: 'threat', stage: 'resolve',
-      threat: { label: 'The {outlet_short} van goes live', minutes: 10, text: 'The {outlet_short} van goes live from the corner, and the stream’s count doubles in a minute. {rider.first} sees it happen on the screen.', pressure: 6, bump: { stream: 20 } },
+      threat: { label: 'The {outlet_short} van goes live', minutes: 10, text: 'The {outlet_short} van goes live from the corner, and the stream’s count doubles in a minute. {rider.first} sees it happen on the screen.', pressure: 6, bump: { stream: 20 },
+        timeout: { text: 'Nobody outside makes a move while the broadcast runs.', next: { node: 'on_the_news' } } },
       prompt: 'The handgun is pointed at {manager.first}, and the phone on the register is pointed at both of them. {manager.first} has gone still. {manager.His} eyes are on {rider.first}’s face, not the handgun.',
       exchange: [{ by: 'radio', line: 'Window. Handgun on the manager. Holding.' }, { by: 'manager', line: '{rider.first}. They’re all watching you.' }],
       promptIf: [
@@ -668,7 +681,8 @@ export const HOSTAGE_LIVE: CallTree = {
           } },
       ] },
     { id: 'fired_on', stage: 'resolve',
-      threat: { label: 'A call from home', minutes: 10, text: '{rider.first}’s phone lights up with a call from home. {rider.He} {rider~holds|hold} it up so the stream can see who is calling, and doesn’t answer it.', pressure: 8, bump: { stream: 15 } },
+      threat: { label: 'A call from home', minutes: 10, text: '{rider.first}’s phone lights up with a call from home. {rider.He} {rider~holds|hold} it up so the stream can see who is calling, and doesn’t answer it.', pressure: 8, bump: { stream: 15 },
+        timeout: { text: 'Nobody gets through to {rider.first} while the phone rings.', next: { node: 'home_again' } } },
       prompt: 'The front window has a hole in it, and {rider.first} is behind the counter with {manager.first}. The phone is still propped on the register. Thousands of people just watched the shot.',
       exchange: [{ by: 'radio', line: 'Shot fired through the window. Nobody hit outside.' }, { by: 'rider', line: 'I didn’t mean it. I didn’t mean that.' }],
       choices: [
@@ -719,7 +733,8 @@ export const HOSTAGE_LIVE: CallTree = {
 
     // ------------------------------------------------------------------ stage 3: the manager is out
     { id: 'last_word', stage: 'resolve',
-      threat: { label: '{rider.first} sits down', minutes: 13, text: '{rider.first} sits on the floor behind the counter, out of sight of the window, and turns the phone so it films the ceiling.', pressure: 4 },
+      threat: { label: '{rider.first} sits down', minutes: 13, text: '{rider.first} sits down behind the counter, out of sight of the window, and turns the phone so it films the ceiling.', pressure: 4,
+        timeout: { text: 'Nobody gets {rider.first} to say anything for a long time.', next: { node: 'ceiling' } } },
       prompt: '{manager.first} is outside with the medic, in a gray blanket. {rider.first} is alone behind the counter with the phone and the count, and the only thing left to decide is how {rider.he} {rider~walks|walk} out of {place}.',
       exchange: [{ by: 'rider', line: 'Everybody’s waiting to see what I do.' }, { by: 'negotiator', line: 'Then let’s give them something boring.' }],
       promptIf: [
@@ -769,17 +784,441 @@ export const HOSTAGE_LIVE: CallTree = {
               ...heldEnd({ when: MANAGER_IN, text: 'The shift changes with {manager.first} still on the floor beside {rider.first}.' }, '{clerk.first} hasn’t moved from the stockroom door either.', [], MANAGER_IN)],
           } },
       ] },
+
+    // ------------------------------------------------------------------ run-out moments
+    // When a threat's drain empties with no choice made, the call moves here (TreeTimeout, owner
+    // 2026-10-21). Each moment is continued inaction made concrete: the scene the threat started has
+    // gone on without the team, and its own threat carries the call forward or ends it held.
+    // Design sheet: docs/calls/going-live-lapses.md.
+
+    // stage 1: the address is out
+    { id: 'address_out', stage: 'assess',
+      threat: { label: 'Someone reaches the glass', minutes: 12, text: 'Someone from the corner gets past the tape and up to the front glass, holding a phone pressed to it to film inside. Patrol pulls them back, and the stream shows both.', pressure: 5, moves: { rider: 'provoked' }, bump: { stream: 12 },
+        beats: [
+          { id: 'past_tape', at: 3.2, by: 'radio', line: 'Somebody on foot slipped the line at the corner. Patrol has them.', bump: { stream: 4 } },
+          { id: 'see_store', at: 6.6, by: 'rider', line: 'Somebody out there says they can see the store. Is that true?' },
+        ],
+        timeout: { text: 'The line from outside stays quiet. {rider.first} turns {rider.his} back on the window and talks only to the phone.', next: { node: 'on_air' } } },
+      prompt: 'The address is under the picture, and two cars have stopped at the corner with phones held out the windows. Patrol is waving them on. {rider.first} reads each new comment out loud, slower than the last, and {manager.first} still won’t look at the handgun.',
+      exchange: [{ by: 'rider', line: 'They’re here. Some of them actually came.' }, { by: 'radio', line: 'Corner. More on foot now, phones up.' }],
+      choices: [
+        { id: 'call_back', title: 'Call {rider.him} back now', icon: 'radio', talksTo: 'rider', check: check(TALK, 2), minutes: 4, certBonus: NEGOTIATOR, favors: [CALM_ON_CAMERA],
+          summary: '{lead} calls the register again after the first call rang out, and has to start with why the police went quiet. {rider.first} has had the comments for company since, and the people at the corner hear every word on their own phones.',
+          pull: 'The line to {rider.first} is still open, for now.',
+          cost: '{rider.first} starts by asking why the police let it ring.',
+          preview: { favorable: '{rider.first} picks up and tells you what {rider.he} {rider~wants|want}.', mixed: '{rider.first} answers, then talks to the corner instead of you.', adverse: '{rider.first} tells the comments what the late call means, with the handgun close to {manager.first}.' },
+          outcomes: {
+            favorable: [{ text: '{rider.first} picks up on the fourth ring and says the police took their time. Then {rider.he} {rider~tells|tell} the negotiator all of it, the bag at 11:40, the red light, the timestamp, and the one sentence {rider.he} came for.',
+              exchange: [{ by: 'rider', line: 'Say it took you this long because you were busy.' }], mark: ['terms'], moves: { rider: 'heard' }, bump: { stream: 8 }, next: { node: 'on_air' }, objective: 12 }],
+            mixed: [{ text: '{rider.first} picks up and talks over the negotiator to the people at the corner, waving at the front glass. A car horn answers {rider.him} from the street.',
+              mark: ['performing'], moves: { rider: 'heard' }, bump: { stream: 12 }, next: { node: 'on_air' }, objective: 6 }],
+            adverse: escalate({
+              lead: '{rider.first} lets the negotiator talk for a while, then tells the comments the police only call when a crowd shows up.',
+              threat: '{rider.first} brings the handgun up at {manager.first} and holds the phone beside it, so the corner can see both.',
+              quiet: '{rider.first} hangs up and props the phone higher, toward the street.',
+              quietNext: { node: 'on_air' },
+              extra: { mark: ['performing'], moves: { rider: 'provoked' }, bump: { stream: 14 }, pressure: 8 } }),
+          } },
+        { id: 'take_down', title: 'Shut the stream down now', icon: 'handover', check: check(PRESS, 4), minutes: 6, tempo: 'waiting', consequenceLevel: 'moderate',
+          summary: 'The address is out and strangers are pulling up, so command asks {stream_app} to end the stream before anyone else drives over. Your squad waits on the company while the corner fills. {rider.first} loses the picture mid-sentence and learns it from the screen.',
+          pull: 'Nobody else finds the store from the stream.',
+          cost: 'You end {rider.first}’s stream before you have said a word to {rider.him}.',
+          preview: { favorable: 'The stream ends, and the corner stops filling.', mixed: 'The stream dies, and {manager.first}’s phone brings it back.', adverse: '{rider.first} sees the screen go dark and could turn the handgun on {manager.first}.' },
+          outcomes: {
+            favorable: [{ text: 'The picture on the phone goes black while {rider.first} is reading. The cars at the corner pull away one by one. When the negotiator calls, {rider.first} answers before it rings twice.',
+              exchange: [{ by: 'rider', line: 'Who turned it off? Was that you?' }], mark: ['cut'], stabilize: ['stream'], bump: { stream: -100 }, moves: { rider: 'provoked' }, next: { node: 'off_air' }, objective: 8, pressure: 2 }],
+            mixed: [{ text: 'The stream goes black for a minute. Then {rider.first} has {manager.first}’s phone out of {manager.his} pocket and the stream back on it before the corner notices it was gone.',
+              mark: ['performing'], bump: { stream: -30 }, moves: { rider: 'provoked' }, next: { node: 'on_air' }, objective: 3, pressure: 6 }],
+            adverse: escalate({
+              lead: '{rider.first} watches the picture die and says the police care more about the cars outside than about {rider.him}.',
+              threat: '{rider.first} pulls {manager.first} up against the counter with the handgun under {manager.his} arm, facing the street.',
+              quiet: '{rider.first} throws the dead phone at the stockroom door and stands over {manager.first}, not answering.',
+              extra: { mark: ['cut'], stabilize: ['stream'], bump: { stream: -100 }, moves: { rider: 'provoked' }, pressure: 10 } }),
+          } },
+      ] },
+
+    // stage 2: the comments turned, and nobody answered them
+    { id: 'chat_turned', stage: 'adapt',
+      threat: { label: 'The chat starts guessing', minutes: 11, text: 'The chat starts guessing about the handgun, where {rider.first} got it and whether the police will use theirs. The count jumps with each guess, and {rider.first} answers them one by one, to the camera.', pressure: 6, moves: { rider: 'provoked' }, bump: { stream: 12 },
+        beats: [
+          { id: 'three_k', at: 3.0, by: 'radio', line: 'Count just passed three thousand. Still climbing.', bump: { stream: 4 } },
+          { id: 'knees', at: 6.2, by: 'manager', line: '{rider.first}. My knees. Please.', moves: { rider: 'contact' } },
+        ],
+        timeout: { text: 'Still no word from outside. {rider.first} runs out of guesses to answer and stands up, still holding the phone and the handgun.', next: { node: 'way_out' } } },
+      prompt: '{rider.first} has turned the comments on {manager.first}. {rider.He} {rider~crouches|crouch} by the cooler and {rider~reads|read} the worst of them into {manager.first}’s face, as if {manager.first} wrote them.',
+      exchange: [{ by: 'rider', line: 'This one says I took it. Tell them who took it.' }, { by: 'manager', line: 'I can’t read it from down here.' }],
+      choices: [
+        { id: 'say_true', title: 'Say one true thing to the stream', icon: 'radio', talksTo: 'rider', check: check(TALK, 2), minutes: 3, certBonus: NEGOTIATOR, favors: [STEADY_ON_CAMERA],
+          summary: '{lead} asks {rider.first} for ten seconds on speaker and tells the stream two true things. Nobody inside is hurt. The police are on the line and listening. It gives the chat something to argue with besides {rider.first}, and it puts a police voice on a stream {rider.first} built to be heard.',
+          pull: 'Something true in the comments, said from your side of the glass.',
+          cost: 'A police voice on the one channel {rider.first} still controls.',
+          preview: { favorable: '{rider.first} turns from {manager.first} back to the phone, and the comments slow.', mixed: 'The comments argue with you, and {rider.first} reads the worst ones out.', adverse: '{rider.first} grabs the stream back from you, with {manager.first} in reach of the handgun.' },
+          outcomes: {
+            favorable: [{ text: 'The negotiator says the two things and stops. For a few seconds the comments are about the police instead of {rider.first}. {rider.first} stands up from the cooler and talks to the line, not the chat, for the first time in minutes.',
+              moves: { rider: 'heard' }, bump: { stream: -6 }, next: { node: 'way_out' }, objective: 12, pressure: -4 }],
+            mixed: [{ text: 'The comments fill with people arguing about the negotiator’s voice. {rider.first} reads the angriest ones out, standing between the phone and {manager.first} again.',
+              mark: ['performing'], moves: { rider: 'heard' }, bump: { stream: 8 }, next: { node: 'way_out' }, objective: 5 }],
+            adverse: escalate({
+              lead: '{rider.first} grabs the phone off the register before the negotiator finishes and tells the stream the police are reading from a script.',
+              threat: '{rider.first} swings the handgun to {manager.first} and asks the chat whether that sounds scripted.',
+              quiet: '{rider.first} mutes the speaker and goes back to reading, quieter now.',
+              quietNext: { node: 'way_out' },
+              extra: { mark: ['performing'], moves: { rider: 'provoked' }, bump: { stream: 14 }, pressure: 8 } }),
+          } },
+        { id: 'let_go_now', title: 'Ask {rider.him} to free {manager.first} now', icon: 'door', talksTo: 'rider', check: check(TALK, 6), minutes: 4, consequenceLevel: 'high',
+          summary: '{lead} tells {rider.first} that now is the moment to let {manager.first} walk out, with the chat against {rider.him}. The stream will see {rider.first} do it. Nothing else gets {manager.first} clear as soon. It also asks {rider.first} to give up the one person {rider.he} came to hear say it.',
+          pull: '{manager.first} out of reach of the handgun, now.',
+          cost: '{rider.first} hands over {rider.his} only witness, with the chat calling {rider.him} a liar.',
+          preview: { favorable: '{rider.first} steps aside, and {manager.first} makes it out the front.', mixed: '{rider.first} says no and keeps {manager.first} by the cooler.', adverse: '{rider.first} hears a trick, and {manager.first} is the one in front of the handgun.' },
+          outcomes: {
+            favorable: [{ text: '{rider.first} looks at the comments, then at {manager.first}, and steps back from the cooler. {manager.first} gets up by the handle and walks to the door without looking back. Two officers take {manager.him} by the arms on the step.',
+              safe: ['manager'], mark: ['still_armed'], moves: { rider: 'released' }, next: { node: 'last_word' }, objective: 40, pressure: -6 },
+              clerkToo('{clerk.first} goes out the front a step behind {manager.him}.')],
+            mixed: [{ text: '{rider.first} says {manager.first} stays until {manager.he} {manager~says|say} it. {manager.first} doesn’t say it. The handgun stays low, by {rider.first}’s leg.',
+              moves: { rider: 'heard' }, next: { node: 'way_out' }, objective: 5 }],
+            adverse: escalate({
+              lead: '{rider.first} reads the request back to the chat and asks them what the police want with {manager.first}.',
+              threat: '{rider.first} puts the handgun on {manager.first} and says now nobody is leaving.',
+              quiet: '{rider.first} drops down beside {manager.first}, between {manager.him} and the door.',
+              quietNext: { node: 'way_out' },
+              extra: { moves: { rider: 'provoked' }, bump: { stream: 10 }, pressure: 8 } }),
+          } },
+      ] },
+
+    // stage 2: the same question, unanswered from outside
+    { id: 'same_question', stage: 'adapt',
+      threat: { label: '{manager.first} answers', minutes: 12, text: '{manager.first} says something short, and {rider.first} stands up fast and paces from the register to the cooler and back, twice. The words stay inside the store.', pressure: 6, moves: { rider: 'provoked' },
+        beats: [
+          { id: 'both_quiet', at: 3.4, by: 'radio', line: 'They’re both quiet. Subject hasn’t moved.' },
+          { id: 'slower', at: 6.8, by: 'rider', line: 'Say it again. Slower this time.' },
+        ],
+        timeout: { text: 'The words never reach the street. {rider.first} sits on the counter facing the stockroom and starts talking about coming out.', next: { node: 'way_out' } } },
+      prompt: '{manager.first} has started to answer {rider.first}’s question, too low for anyone outside to hear. {rider.first} is crouched beside {manager.him} with the handgun on {rider.his} knee, listening.',
+      promptIf: [{ when: { notSafe: ['clerk'] }, prompt: '{clerk.first} is frozen at the stockroom door, watching {manager.first} whisper an answer to {rider.first}. Nobody outside can hear a word of it, and the handgun is on {rider.first}’s knee.' }],
+      exchange: [{ by: 'radio', line: 'Window. Subject crouched by the manager. Can’t hear them.' }, { by: 'negotiator', line: '{rider.first}, I’m on the line when you want it.' }],
+      choices: [
+        { id: 'answer_it', title: 'Answer the question yourself', icon: 'radio', talksTo: 'rider', check: check(TALK, 2), minutes: 4, certBonus: NEGOTIATOR,
+          summary: '{lead} takes the question {rider.first} keeps asking {manager.first} and answers it on the line. Nobody outside knows yet who took the bag, and nobody will pretend to. It pulls {rider.first} away from {manager.first}. It also means the police can’t give {rider.first} the sentence either.',
+          pull: '{rider.first} argues with you instead of standing over {manager.first}.',
+          cost: '{rider.first} hears that nobody outside can clear {rider.his} name tonight.',
+          preview: { favorable: '{rider.first} stands up from {manager.first} and argues with you instead.', mixed: '{rider.first} listens, then goes back to {manager.first}.', adverse: '{rider.first} hears one more door shut, an arm’s length from {manager.first} with the handgun.' },
+          outcomes: {
+            favorable: [{ text: '{rider.first} stands up to argue and walks away from {manager.first} to do it, all the way to the register. For a minute it is just {rider.first} and the negotiator, shouting and then not shouting.',
+              moves: { rider: 'honest' }, next: { node: 'way_out' }, objective: 12, pressure: -4 }],
+            mixed: [{ text: '{rider.first} hears the answer out and doesn’t argue. Then {rider.he} {rider~crouches|crouch} by {manager.first} again and asks {manager.him} the question one more time.',
+              moves: { rider: 'heard' }, next: { node: 'way_out' }, objective: 4 }],
+            adverse: escalate({
+              lead: '{rider.first} laughs at the answer and says that is what {delivery_app} told {rider.him} too.',
+              threat: 'Then {rider.he} {rider~presses|press} the handgun against {manager.first}’s knee and says somebody here knows.',
+              quiet: '{rider.first} hangs up and stays crouched there, not asking anything now.',
+              quietNext: { node: 'way_out' },
+              extra: { moves: { rider: 'provoked' }, pressure: 8 } }),
+          } },
+        { id: 'to_the_door', title: 'Bring your squad to the front door', icon: 'perimeter', team: { to: { vantage: 'scene' }, signal: { channel: 'visual', to: 'rider' } }, check: check(MOVE, 4), minutes: 4, consequenceLevel: 'moderate',
+          certBonus: SURVEILLANCE,
+          summary: '{lead} brings your squad up to both sides of the entrance while {rider.first} has {rider.his} back to it. If {manager.first} moves first, the team has {manager.him}. If {rider.first} turns around, the first thing {rider.he} {rider~sees|see} is helmets, with {manager.first} at {rider.his} feet.',
+          pull: 'A way out for {manager.first} that doesn’t wait on {rider.first}.',
+          cost: '{rider.first} could turn and find helmets, with {manager.first} in reach.',
+          preview: { favorable: '{manager.first} sees you through the glass and gets to the door first.', mixed: 'Your squad is in place, and {rider.first} catches a sound on the step.', adverse: '{rider.first} turns and sees you, and {manager.first} could be the one the handgun finds.' },
+          outcomes: {
+            favorable: [{ text: '{manager.first} sees the helmets through the glass and moves on {manager.his} hands and knees while {rider.first} faces the counter. The door opens from outside. Officers have {manager.first} out on the sidewalk before {rider.first} turns around.',
+              safe: ['manager'], reveal: ['handgun'], mark: ['team_close', 'still_armed'], next: { node: 'last_word' }, objective: 40 },
+              clerkToo('{clerk.first} gets out through the stockroom while {rider.first} is at the front.')],
+            mixed: [{ text: 'The squad gets to the door, and a boot scrapes the step. {rider.first} turns, sees nothing in the dark glass, and pulls {manager.first} back behind the counter.',
+              reveal: ['handgun'], mark: ['team_close'], moves: { rider: 'team_seen' }, next: { node: 'way_out' }, objective: 4, pressure: 4 }],
+            adverse: escalate({
+              lead: '{rider.first} turns at a sound and sees two helmets at the door.',
+              threat: '{rider.first} hauls {manager.first} to {manager.his} feet as a shield, the handgun at {manager.his} back.',
+              quiet: '{rider.first} backs away from the door with {manager.first} and switches off the lights over the counter.',
+              quietNext: { node: 'way_out' },
+              extra: { mark: ['team_close'], moves: { rider: 'team_seen' }, pressure: 10 } }),
+          } },
+      ] },
+
+    // stage 2: the clerk is out, and the call from inside went unanswered
+    { id: 'phone_rings', stage: 'adapt',
+      threat: { label: 'A text from inside', minutes: 11, text: 'The calls stop, and a text comes up from {manager.first}’s number instead. It asks if the kid is okay. {clerk.first} reads it before the officer can turn the screen away.', pressure: 4, bump: { stream: 4 },
+        beats: [{ id: 'why_not', at: 3.2, by: 'clerk', line: 'Why won’t anybody pick up? It’s {manager.first}.' }],
+        timeout: { text: 'The text sits unanswered on the officer’s screen. {clerk.first} waits by the patrol car in the blanket, and inside, {rider.first} puts {manager.first}’s phone face down.', next: { node: 'way_out' } } },
+      prompt: '{manager.first}’s number is calling {clerk.first}’s phone again, in an officer’s hand behind the patrol car. {clerk.first} is standing with {clerk.his} hand out for it. Inside, {rider.first} has {manager.first}’s phone to {rider.his} ear.',
+      exchange: [{ by: 'clerk', line: 'That’s {manager.first}’s phone. Let me get it.' }, { by: 'radio', line: 'Subject has the manager’s phone up. Waiting on us.' }],
+      choices: [
+        { id: 'clerk_answers', title: 'Let {clerk.first} answer it', icon: 'radio', talksTo: 'clerk', check: check(ASK), minutes: 3,
+          summary: '{lead} hands {clerk.first} the phone and stays at {clerk.his} shoulder. Whoever is on the other end hears {clerk.first}, nineteen and shaking. You can’t take back anything {clerk.first} says about the night the bag went missing.',
+          pull: 'The one voice both of them inside want to hear.',
+          cost: '{clerk.first}, nineteen, answers it with nothing between {clerk.him} and the call.',
+          preview: { favorable: '{rider.first} lets {manager.first} speak, and you hear what {manager.first} tells {clerk.first}.', mixed: '{clerk.first} answers and can’t get a word out.', adverse: '{clerk.first} says the wrong thing to {rider.first}, and {manager.first} is the nearest person to the handgun.' },
+          outcomes: {
+            // Only this choice opens the turn here: the clerk on the line is who the manager talks to.
+            favorable: [
+              { if: CLEAR, text: 'It is {rider.first} on the line, asking if {clerk.first} is hurt. Then {rider.first} holds the phone down to {manager.first}, and {manager.first} tells {clerk.first} to say nothing about the receipt. The negotiator at {clerk.first}’s shoulder hears every word.',
+                exchange: [{ by: 'manager', line: 'Not a word. You hear me? Not one.' }], reveal: ['rider_clear'], mark: ['knows_truth'], moves: { rider: 'contact' }, next: { node: 'way_out' }, objective: 12, pressure: -4 },
+              { if: TOOK, text: '{rider.first} is on the line and wants to know if {clerk.first} is hurt. When the phone goes down to {manager.first}, {manager.first} tells {clerk.first} to keep the store camera clip safe, whatever happens. Every word reaches the negotiator at {clerk.first}’s side.',
+                exchange: [{ by: 'manager', line: 'Keep the clip from the camera. Don’t give it to anyone.' }], reveal: ['rider_clear'], mark: ['knows_truth'], moves: { rider: 'contact' }, next: { node: 'way_out' }, objective: 12, pressure: -4 },
+            ],
+            mixed: [{ text: '{clerk.first} gets as far as hello and then just breathes into the phone. {rider.first} says {clerk.first}’s name twice and hangs up.',
+              moves: { rider: 'heard' }, next: { node: 'way_out' }, objective: 4 }],
+            adverse: escalate({
+              lead: '{clerk.first} tells {rider.first} never to come back to the store, and {rider.first} hears every word.',
+              threat: 'Then {rider.he} {rider~drops|drop} {manager.first}’s phone and stands over {manager.first} with the handgun pointed down at {manager.him}.',
+              quiet: '{rider.first} ends the call and throws {manager.first}’s phone into the cooler.',
+              quietNext: { node: 'way_out' },
+              extra: { moves: { rider: 'provoked' }, bump: { stream: 8 }, pressure: 8 } }),
+          } },
+        { id: 'take_call', title: 'Answer it yourself', icon: 'radio', talksTo: 'rider', check: check(TALK, 2), minutes: 3, certBonus: NEGOTIATOR, favors: [CALM_ON_CAMERA],
+          summary: '{lead} takes the phone from the officer, answers it and asks for {rider.first} by name. It keeps {clerk.first} out of it. It also tells {rider.first} the police have {clerk.first}’s phone, and so {clerk.first}, and {rider.first} will want to know what {clerk.first} has said.',
+          pull: '{clerk.first} stays out of the call entirely.',
+          cost: '{rider.first} learns the police have {clerk.first}, and starts asking questions.',
+          preview: { favorable: '{rider.first} lets {manager.first} go once you say {clerk.first} is safe.', mixed: '{rider.first} asks only about {clerk.first} and won’t talk about {manager.first}.', adverse: '{rider.first} decides {clerk.first} has talked and takes it out on {manager.first}, handgun in hand.' },
+          outcomes: {
+            favorable: [{ text: '{rider.first} wants to know where {clerk.first} is. The negotiator says behind a patrol car with a blanket, and nothing else. {rider.first} is quiet, then says {manager.first} can leave. {manager.first} comes out with {manager.his} hands where the team can see them.',
+              safe: ['manager'], mark: ['still_armed'], moves: { rider: 'heard' }, next: { node: 'last_word' }, objective: 38, pressure: -6 }],
+            mixed: [{ text: '{rider.first} asks what {clerk.first} has been saying to the police, three times, and gets the same answer three times. {rider.first} doesn’t mention {manager.first} once.',
+              moves: { rider: 'heard' }, next: { node: 'way_out' }, objective: 5 }],
+            adverse: escalate({
+              lead: '{rider.first} says the police wouldn’t have {clerk.first}’s phone unless {clerk.first} had talked.',
+              threat: '{rider.first} levels the handgun at {manager.first} and wants to know what {clerk.first} said.',
+              quiet: '{rider.first} hangs up and stops answering {manager.first}’s phone at all.',
+              quietNext: { node: 'way_out' },
+              extra: { moves: { rider: 'provoked' }, pressure: 8 } }),
+          } },
+      ] },
+
+    // stage 3: the van parked, and nobody answered about the camera
+    { id: 'van_light', stage: 'resolve',
+      threat: { label: 'The reporter comes to the tape', minutes: 13, text: 'The {outlet_short} reporter walks up to the patrol line with a microphone and calls {rider.first}’s name toward the door, live. {rider.first} hears it from the street, through the glass.', pressure: 6, moves: { rider: 'provoked' }, bump: { stream: 14 },
+        beats: [
+          { id: 'reporter', at: 3.6, by: 'radio', line: 'Reporter is at the tape, asking for the subject by name.' },
+          { id: 'my_name', at: 7.2, by: 'rider', line: 'They know my name out there now. Everybody does.' },
+        ],
+        timeout: holdTheNight('The reporter gets no answer, and neither does {rider.first}. Command takes the street back from the cameras and settles in to wait out the night.') },
+      prompt: '{rider.first} has the van’s live picture of the store open on {rider.his} phone, with the light on the door glowing in it. {rider.He} {rider~wants|want} the reporter on the line, not the police. {manager.first} hasn’t moved from beside the cooler.',
+      exchange: [{ by: 'rider', line: 'Get me the reporter. I’ll say it to them.' }, { by: 'negotiator', line: 'Say it to me first. I’m the one listening.' }],
+      choices: [
+        { id: 'van_back', title: 'Have command move the van back', icon: 'handover', check: check(PRESS, 2), minutes: 6, tempo: 'waiting', consequenceLevel: 'moderate',
+          summary: 'Command asks the {outlet_short} crew to kill the light and back the van past the corner, and your squad waits while they argue about it. Without the light there is nothing at the door to walk out into. {rider.first} will watch the camera leave and know who sent it away.',
+          pull: 'No light on the entrance for {rider.first} to perform in.',
+          cost: '{rider.first} watches the one real camera leave because you asked.',
+          preview: { favorable: 'The light goes off, and {rider.first} lets {manager.first} walk out.', mixed: 'The van backs off, and its long lens stays on the door.', adverse: '{rider.first} sees the light die and could aim the handgun at {manager.first}.' },
+          outcomes: {
+            favorable: [{ text: 'The light on the door goes off, and the van backs out of the picture. {rider.first} watches it go on {rider.his} phone, then puts the phone down and tells {manager.first} to leave while there is nobody to see it. {manager.first} goes.',
+              safe: ['manager'], mark: ['still_armed'], moves: { rider: 'heard' }, next: { node: 'last_word' }, objective: 40, pressure: -8 },
+              clerkToo('{clerk.first} comes out the back a minute later.')],
+            mixed: [{ text: 'The van backs off to the corner, but the crew keeps a long lens on the door from there. {rider.first} finds the lens on the {outlet_short} picture and shows {manager.first}.',
+              mark: ['performing'], bump: { stream: 6 }, next: { node: 'last_word' }, objective: 6 }],
+            adverse: escalate({
+              lead: '{rider.first} watches the light go off on {rider.his} phone and says the police just sent away the only witness.',
+              threat: '{rider.first} lifts the handgun to {manager.first} and says somebody had better see this, then.',
+              anyway: '{rider.first} is shouting at the dark door. {rider.He} {rider~swings|swing} around with the handgun and {rider~holds|hold} it on {manager.first}.',
+              quiet: '{rider.first} pulls {manager.first} down out of sight of the door and stops answering the line.',
+              quietNext: { node: 'last_word' },
+              extra: { mark: ['performing'], moves: { rider: 'provoked' }, bump: { stream: 10 }, pressure: 8 } }),
+          } },
+        { id: 'reporter_call', title: 'Let {rider.him} call the reporter', icon: 'radio', talksTo: 'rider', check: check(TALK, 6), minutes: 5, consequenceLevel: 'high', favors: [STEADY_ON_CAMERA],
+          summary: 'Command okays it, and {lead} gets the reporter’s number from the crew and lets {rider.first} call it from the register, with the negotiator still on the other phone. {rider.first} gets to say it to someone with a real camera. Whatever {rider.he} {rider~says|say} goes out on the late news, and so does the handgun in {rider.his} hand.',
+          pull: '{rider.first} says it to the one listener {rider.he} {rider~trusts|trust} tonight.',
+          cost: 'The late news carries {rider.first}, the handgun and whatever {rider.he} {rider~says|say}.',
+          preview: { favorable: '{rider.first} says it to the reporter, lets {manager.first} out and walks out after {manager.him}.', mixed: '{rider.first} talks on air for a long time, and {manager.first} stays inside.', adverse: 'The reporter asks about the handgun on air, and {rider.first} could turn it on {manager.first}.' },
+          outcomes: {
+            favorable: [{ text: '{rider.first} gives the reporter the timestamp and the two blocks, in order, without stopping. Then {rider.he} {rider~sends|send} {manager.first} out, {rider~leaves|leave} the handgun by the phone and {rider~walks|walk} into the {outlet_short} light with empty hands. Two officers meet {rider.him} at the curb.',
+              safe: ['manager'], out: ['rider'], next: { ending: 'out_on_camera' }, objective: 75, pressure: -12 },
+              clerkToo('{clerk.first} goes out through the stockroom before them.')],
+            mixed: [{ text: '{rider.first} stays on with the reporter for twenty minutes and tells it twice. When the reporter brings up the handgun on air, {rider.first} hangs up and sits down with it behind the counter, beside {manager.first}.',
+              mark: ['performing'], bump: { stream: 10 }, next: { node: 'last_word' }, objective: 8 }],
+            adverse: escalate({
+              lead: 'The reporter asks on air whether the handgun is loaded, and {rider.first} hears the question twice, once from the phone and once from the street.',
+              threat: '{rider.first} answers by pointing the handgun at {manager.first}.',
+              anyway: '{rider.first} hangs up on the reporter and swings the handgun toward {manager.first}.',
+              quiet: '{rider.first} turns the phone over so its screen faces the counter, and won’t say why.',
+              quietNext: { node: 'last_word' },
+              extra: { moves: { rider: 'provoked' }, bump: { stream: 16 }, pressure: 10 } }),
+          } },
+      ] },
+
+    // stage 3: the clip goes around, and nobody reached the rider
+    { id: 'clip_going', stage: 'resolve',
+      threat: { label: '{rider.first} stops answering', minutes: 12, text: 'The clip reaches {delivery_app}’s own account, reposted with a line about rider safety. {rider.first} reads it once, puts the phone face down and stops answering to {rider.his} name.', pressure: 6, moves: { rider: 'provoked' },
+        beats: [
+          { id: 'sitting', at: 3.0, by: 'radio', line: 'Subject sitting. Handgun up top, in reach.' },
+          { id: 'still_here', at: 6.4, by: 'negotiator', line: '{rider.first}, I can hear the clip playing. Turn it down so I can hear you.' },
+        ],
+        timeout: holdTheNight('{rider.first} never answers. Command holds the block for a long night and keeps the line open.') },
+      prompt: 'The clip of {manager.first}’s sentence is on accounts {rider.first} has never heard of, and {rider.first} has stopped reading any of them. The handgun lies next to the phone, near {rider.his} right hand. {manager.first} lies still beside the drinks, watching {rider.first}’s hands.',
+      exchange: [{ by: 'negotiator', line: 'Tell me what tomorrow looks like for you.' }, { by: 'rider', line: 'There isn’t an after. You saw the clip.' }],
+      choices: [
+        { id: 'stay_with', title: 'Stay on the line with {rider.him}', icon: 'radio', talksTo: 'rider', check: check(HOLD, 2), minutes: 5, certBonus: NEGOTIATOR, favors: [CALM_ON_CAMERA],
+          summary: '{lead} stops asking for anything and keeps the line open, saying {rider.first}’s name every so often and asking how {rider.he} {rider~is|are} doing. It asks nothing of {rider.first}, and it has no end you can see. {manager.first} stays down by the cooler until it does.',
+          pull: 'Someone on the line who wants nothing from {rider.first}.',
+          cost: 'Hours, maybe, with {manager.first} a step from the handgun.',
+          preview: { favorable: '{rider.first} answers, and lets {manager.first} go.', mixed: '{rider.first} answers you and keeps {manager.first} where {manager.he} {manager~is|are}.', adverse: '{rider.first} goes quiet with the handgun in reach, then turns it on {manager.first}.' },
+          outcomes: {
+            favorable: [{ text: 'After a long time {rider.first} says the negotiator sounds tired. The negotiator says yes. {rider.first} tells {manager.first} to go home, and {manager.first} walks out the front.',
+              safe: ['manager'], mark: ['still_armed'], moves: { rider: 'released' }, next: { node: 'last_word' }, objective: 40, pressure: -8 },
+              clerkToo('{clerk.first} follows {manager.him} to the door.')],
+            mixed: [{ text: '{rider.first} starts answering, a word at a time. {rider.He} {rider~asks|ask} whether {friend.first} is still outside, and doesn’t say anything about {manager.first}.',
+              moves: { rider: 'heard' }, next: { node: 'last_word' }, objective: 8 }],
+            adverse: escalate({
+              lead: '{rider.first} lets the phone slide off {rider.his} knee and doesn’t pick it up again.',
+              threat: '{rider.first} stands up and points the handgun at {manager.first}, saying {manager.he} started all of it.',
+              anyway: '{rider.first} lurches to {rider.his} feet, and the handgun ends up on {manager.first}.',
+              quiet: '{rider.first} stays down on the floor, quiet, and leaves the handgun where it is.',
+              quietNext: { node: 'last_word' },
+              extra: { moves: { rider: 'provoked' }, pressure: 8 } }),
+          } },
+        { id: 'out_now', title: 'Get {manager.first} out while {rider.he} {rider~watches|watch}', icon: 'door', team: { to: { vantage: 'scene' }, signal: { channel: 'visual', to: 'manager' } }, check: check(MOVE, 4), minutes: 4, consequenceLevel: 'high',
+          certBonus: SURVEILLANCE,
+          summary: '{lead} catches {manager.first}’s eye through the glass and signals {manager.him} to the door while {rider.first} watches the clip. Your squad waits at the door to pull {manager.first} through. If {rider.first} turns {rider.his} head, {manager.first} is between {rider.him} and the door, and the handgun is on the counter by {rider.his} hand.',
+          pull: '{manager.first} out of the room while {rider.first} is watching the clip.',
+          cost: 'If {rider.first} glances over, {manager.first} is caught halfway.',
+          preview: { favorable: '{manager.first} reaches the door, and the team pulls {manager.him} out.', mixed: '{manager.first} gets out, and {rider.first} barricades the door behind {manager.him}.', adverse: '{rider.first} sees {manager.first} halfway across and reaches for the handgun.' },
+          outcomes: {
+            favorable: [{ text: '{manager.first} gets up without a sound and walks to the door in six steps. The team pulls {manager.him} through it. {rider.first} lifts {rider.his} head at the click of the latch and goes back to the clip.',
+              safe: ['manager'], mark: ['still_armed', 'team_close'], next: { node: 'last_word' }, objective: 40 },
+              clerkToo('{clerk.first} slips past the cooler and out the back while the door is open.')],
+            mixed: [{ text: '{manager.first} gets out. {rider.first} hears the door and gets there a second later, locks it, and drags a rack of chips across it. Then {rider.he} {rider~goes|go} back to the counter, the handgun in {rider.his} hand.',
+              safe: ['manager'], moves: { rider: 'team_seen' }, next: { ending: 'rider_held' }, objective: 30 },
+              clerkToo('{clerk.first} gets through the stockroom before the door locks.')],
+            adverse: escalate({
+              lead: '{rider.first} looks up from the clip with {manager.first} halfway to the door.',
+              threat: '{rider.first} grabs the handgun off the counter and holds the barrel on {manager.first}’s back.',
+              anyway: '{rider.first} has the handgun on {manager.first} before {manager.he} {manager~reaches|reach} the door.',
+              quiet: '{manager.first} stops and sits back down by the cooler, and {rider.first} watches {manager.him} do it.',
+              quietNext: { node: 'last_word' },
+              extra: { moves: { rider: 'team_seen' }, pressure: 10 } }),
+          } },
+      ] },
+
+    // stage 3: the handgun is up, and the van went live while nobody moved
+    { id: 'on_the_news', stage: 'resolve',
+      threat: { label: 'The anchor reads {rider.his} name', minutes: 11, text: 'On the broadcast the anchor reads out {rider.first}’s full name and the name of {place}. {rider.first} hears {rider.his} own name come out of the phone on the register.', pressure: 6, moves: { rider: 'provoked' }, bump: { stream: 12 },
+        beats: [{ id: 'no_change', at: 4.0, by: 'radio', line: 'Handgun still on the manager. No change.' }],
+        timeout: holdTheNight('The broadcast runs on with every officer where they stood. Command seals the block and waits for the handgun to come down.') },
+      prompt: 'The handgun is still on {manager.first}, and now it is on the {outlet_short} broadcast too. {rider.first} keeps looking from {manager.first} to the phone, where {rider.he} can watch {rider.himself} hold it.',
+      promptIf: [{ when: { marks: ['shot_inside'] }, prompt: 'The ceiling tiles over the counter have a hole in them, and the {outlet_short} broadcast is showing it. The handgun is on {manager.first}, and {rider.first} keeps checking the phone to see {rider.himself} there.' }],
+      exchange: [{ by: 'rider', line: 'Look. I’m on {outlet_short} now.' }, { by: 'manager', line: 'Then put it down where they can see.' }],
+      choices: [
+        { id: 'talk_manager', title: 'Talk to {manager.first}, not {rider.first}', icon: 'radio', talksTo: 'manager', check: check(HOLD, 4), minutes: 3, certBonus: NEGOTIATOR, favors: [CALM_ON_CAMERA],
+          summary: '{lead} speaks only to {manager.first} on the speaker, slowly, telling {manager.him} to breathe and keep {manager.his} eyes on {rider.first}’s face. It steadies the one person nobody has talked to all night. It also leaves {rider.first} holding a handgun while the police talk past {rider.him}.',
+          pull: '{manager.first}, steady, is the one thing {rider.first} watches.',
+          cost: '{rider.first} hears the police talk past {rider.him}, on {outlet_short}.',
+          preview: { favorable: 'The handgun comes down, and {rider.first} lets {manager.first} go.', mixed: '{rider.first} lowers the handgun but keeps {manager.first} on the floor.', adverse: '{rider.first} shouts over you, and the handgun could go off.' },
+          outcomes: {
+            favorable: [{ text: '{manager.first} breathes when the negotiator says to and looks at {rider.first} the whole time. After a minute {rider.first} lowers the handgun to the counter and tells {manager.first} to go. {manager.first} crawls to the door and out.',
+              safe: ['manager'], mark: ['still_armed'], moves: { rider: 'released' }, next: { node: 'last_word' }, objective: 40, pressure: -10 },
+              clerkToo('{clerk.first} gets out the back behind {manager.him}.')],
+            mixed: [{ text: 'The handgun comes down to the counter, slowly. {rider.first} sits on the floor next to {manager.first} and says {manager.first} can go when the broadcast stops.',
+              moves: { rider: 'heard' }, next: { node: 'last_word' }, objective: 10 }],
+            adverse: [{ text: '{rider.first} shouts over the speaker that {manager.first} can talk for {manager.himself}. Then {rider.he} {rider~fires|fire} a shot through the front window toward the {outlet_short} light. The glass lands on an empty sidewalk.',
+              mark: ['shot_inside'], moves: { rider: 'shots' }, bump: { stream: 25 }, next: { node: 'fired_on' }, pressure: 12, civilian: -6 }],
+          } },
+        { id: 'freeze', title: 'Freeze every officer and wait', icon: 'wait', check: check(HOLD, -2), minutes: 8, consequenceLevel: 'moderate',
+          summary: 'Command tells {rider.first} on the line that every officer outside will stand still until {rider.he} {rider~speaks|speak}, and holds them there. Nothing outside gives {rider.first} a reason to move, and nothing gives {rider.him} a reason to stop. If the handgun goes off, nobody is nearer to {manager.first} than the front glass.',
+          pull: 'Nothing outside for {rider.first} to react to.',
+          cost: 'Nobody near {manager.first} if the handgun goes off.',
+          preview: { favorable: '{rider.first} turns off the broadcast and sends {manager.first} out.', mixed: 'The handgun stays up, and nobody inside answers the line.', adverse: 'The handgun goes off in the store, with nobody near {manager.first}.' },
+          outcomes: {
+            favorable: [{ text: 'Eight minutes pass with nobody moving. Then {rider.first} turns the {outlet_short} picture off on {rider.his} phone, sets the handgun down and tells {manager.first} to get out. {manager.first} does.',
+              safe: ['manager'], mark: ['still_armed'], moves: { rider: 'released' }, next: { node: 'last_word' }, objective: 38 },
+              clerkToo('{clerk.first} follows {manager.him} out the back way.')],
+            mixed: heldEnd({ text: 'The handgun stays up for an hour, then most of another. Nobody inside answers the line.', objective: 8 },
+              '{clerk.first} hasn’t made a sound from the stockroom.'),
+            adverse: [{ text: '{rider.first} turns at a noise from the street and fires through the front window. Glass comes down on the sidewalk, and the {outlet_short} crew gets down behind the van, unhurt.',
+              mark: ['shot_inside'], moves: { rider: 'shots' }, bump: { stream: 25 }, next: { node: 'fired_on' }, pressure: 12, civilian: -6 }],
+          } },
+      ] },
+
+    // stage 3: the shot, the call from home, and nobody got through
+    { id: 'home_again', stage: 'resolve',
+      threat: { label: 'Home stops ringing', minutes: 12, text: 'The calls from home stop. {rider.first} looks at the dark screen for a long time, then at the hole in the front window.', pressure: 5, moves: { rider: 'provoked' },
+        beats: [{ id: 'same_number', at: 3.4, by: 'radio', line: 'Same number calling again. Subject isn’t picking up.' }],
+        timeout: holdTheNight('The phone stays in {rider.first}’s hand, unanswered. Command holds the street, and the team settles in behind the cars for the night.') },
+      prompt: 'The call from home went unanswered, then started again. {rider.first} holds the phone out at arm’s length with the screen to the window, the handgun low in {rider.his} other hand. {manager.first} hasn’t moved from the floor since the shot.',
+      exchange: [{ by: 'rider', line: 'That’s home. What am I supposed to tell them?' }, { by: 'negotiator', line: 'Then let them hear you’re all right.' }],
+      choices: [
+        { id: 'pick_up', title: 'Ask {rider.him} to answer the call', icon: 'radio', talksTo: 'rider', check: check(TALK, 6), minutes: 4, stress: 4, certBonus: NEGOTIATOR, favors: [CALM_ON_CAMERA],
+          summary: '{lead} asks {rider.first} to pick up the call from home and tell whoever it is that {rider.he} {rider~is|are} all right. It is the first voice tonight that wants nothing from {rider.first}. It is also somebody who may know about the shot already, and the handgun is still an arm’s length from {manager.first}.',
+          pull: 'A voice from home that isn’t asking for anything.',
+          cost: '{rider.first} talks to home, a reach away from {manager.first} and the handgun.',
+          preview: { favorable: '{rider.first} answers, sends {manager.first} out first, then follows.', mixed: '{rider.first} answers, then hangs up and keeps {manager.first} there.', adverse: '{rider.first} lets it ring out and stays down beside {manager.first} with the handgun.' },
+          outcomes: {
+            favorable: [{ text: '{rider.first} answers on the last ring and listens more than {rider.he} {rider~talks|talk}. Halfway through {rider.he} {rider~lays|lay} the handgun down by the register and {rider~points|point} {manager.first} at the door. Once {manager.first} is past the patrol car, {rider.first} leaves the phone behind and follows, palms out.',
+              exchange: [{ by: 'rider', line: 'I know. I know. I didn’t mean it.' }], safe: ['manager'], out: ['rider'], moves: { rider: 'released' }, next: { ending: 'out_on_camera' }, objective: 70, pressure: -12 },
+              clerkToo('{clerk.first} goes out the back while {rider.first} is on the phone.')],
+            mixed: [{ text: '{rider.first} answers and says it was an accident, twice, then hangs up before whoever it is can answer. {manager.first} stays on the floor where {manager.he} {manager~is|are}.',
+              moves: { rider: 'heard' }, next: { node: 'last_word' }, objective: 8 }],
+            adverse: heldEnd({ text: '{rider.first} lets the phone ring out and slides down to the floor next to {manager.first}, the handgun across {rider.his} knees.', moves: { rider: 'provoked' }, objective: 5 },
+              '{clerk.first} hasn’t come out of the stockroom.'),
+          } },
+        { id: 'pull_back', title: 'Pull every helmet out of sight', icon: 'perimeter', check: check(MOVE, -2), minutes: 5, consequenceLevel: 'moderate',
+          summary: '{lead} pulls your squad back behind the cars so nothing in the broken window reminds {rider.first} of the shot. It gives {rider.first} room to answer the call, or not, with nobody watching. It also leaves {manager.first} with no officer near the door.',
+          pull: 'Nothing at the window for {rider.first} to aim at.',
+          cost: '{manager.first} has no officer near the door if it goes wrong.',
+          preview: { favorable: '{rider.first} sends {manager.first} out and stays inside with the handgun.', mixed: '{rider.first} keeps {manager.first} down, away from the window.', adverse: '{rider.first} takes the empty window as a trick and settles in beside {manager.first}, armed.' },
+          outcomes: {
+            favorable: [{ text: 'With the window empty, {rider.first} answers the call and waves {manager.first} to the door without looking up. {manager.first} goes. {rider.first} keeps to the corner by the cooler with the handgun, still listening.',
+              safe: ['manager'], mark: ['still_armed'], next: { node: 'last_word' }, objective: 40, pressure: -8 },
+              clerkToo('{clerk.first} goes out after {manager.him}.')],
+            mixed: [{ text: '{rider.first} lets the call ring out and keeps {manager.first} on the floor, but stops watching the window.',
+              next: { node: 'last_word' }, objective: 8 }],
+            adverse: heldEnd({ text: '{rider.first} calls the empty window a trick and won’t come out from behind the counter, or let {manager.first} up.', moves: { rider: 'provoked' }, objective: 5 },
+              '{clerk.first} hasn’t left the stockroom doorway.'),
+          } },
+      ] },
+
+    // stage 3: the rider sat down out of sight, and nobody got an answer
+    { id: 'ceiling', stage: 'resolve',
+      threat: { label: 'The line goes quiet', minutes: 13, text: 'The line stops carrying anything at all, even breathing. Through the glass the glow on the ceiling hasn’t moved.', pressure: 5,
+        beats: [
+          { id: 'tap', at: 4.2, by: 'negotiator', line: 'I heard that. Do it again if it was you.' },
+          { id: 'no_movement', at: 8.0, by: 'radio', line: 'Still no movement behind the counter.' },
+        ],
+        timeout: holdTheNight('The line stays quiet until the shift changes, then carries one cough. Command keeps the street shut and the line open until morning.') },
+      prompt: '{rider.first} hasn’t come up from behind the counter. Every few minutes {rider.he} {rider~says|say} something too quiet for the line to carry, and the phone beside {rider.him} lights the ceiling.',
+      promptIf: [{ when: { notSafe: ['manager'] }, prompt: '{rider.first} and {manager.first} are both down behind the counter where no window reaches. The phone between them lights the ceiling. Neither of them answers the line.' }],
+      exchange: [{ by: 'radio', line: 'Counter. No visual on the subject. Holding.' }, { by: 'negotiator', line: '{rider.first}. Just tap the phone if you can hear me.' }],
+      choices: [
+        { id: 'say_name', title: 'Keep saying {rider.his} name', icon: 'radio', talksTo: 'rider', check: check(HOLD), minutes: 6, certBonus: NEGOTIATOR, favors: [STEADY_ON_CAMERA],
+          summary: '{lead} says {rider.first}’s name into the line once a minute and nothing else. It asks nothing of {rider.first} but an answer. It also means nobody can see what {rider.first} is doing behind the counter, for as long as it takes.',
+          pull: 'One thing {rider.first} only has to answer.',
+          cost: 'No one sees what {rider.first} is doing back there.',
+          preview: { favorable: '{rider.first} answers and walks out to you, hands open.', mixed: '{rider.first} answers but stays behind the counter.', adverse: '{rider.first} never answers, and the handgun is still beside {rider.him}.' },
+          outcomes: {
+            favorable: [{ when: { safe: ['manager'] }, text: 'On the ninth time {rider.first} says yeah. On the twelfth {rider.he} {rider~stands|stand} up, {rider~turns|turn} the phone over on the register and {rider~comes|come} out to the officers, hands open.', out: ['rider'], next: { ending: 'out_quiet' }, objective: 30 },
+              { when: MANAGER_IN, text: 'After nine tries {rider.first} answers. Then {rider.he} {rider~sends|send} {manager.first} out first, {rider~leaves|leave} the phone on the counter, screen down, and {rider~follows|follow} {manager.him} out.', safe: ['manager'], out: ['rider'], next: { ending: 'out_quiet' }, objective: 60 },
+              clerkToo('{clerk.first} is sent out the back ahead of them.')],
+            mixed: [{ when: { safe: ['manager'] }, text: '{rider.first} answers once, to say {rider.he} {rider~is|are} listening. After that {rider.he} {rider~stays|stay} where {rider.he} {rider~is|are} until the shift changes.', next: { ending: 'rider_held' }, objective: 5 },
+              ...heldEnd({ when: MANAGER_IN, text: '{rider.first} answers that much, and keeps {manager.first} down next to {rider.him}.', objective: 5 }, '{clerk.first} is still somewhere in the stockroom.', [], MANAGER_IN)],
+            adverse: [{ when: { safe: ['manager'] }, text: '{rider.first} doesn’t answer the name, or anything after it. The phone keeps filming the ceiling.', next: { ending: 'rider_held' } },
+              ...heldEnd({ when: MANAGER_IN, text: 'Neither of them says a word back.' }, '{clerk.first} makes no sound from the stockroom.', [], MANAGER_IN)],
+          } },
+        { id: 'back_step', title: 'Bring your squad to the back door', icon: 'door', team: { to: { vantage: 'scene' }, signal: { channel: 'voice', to: 'rider' } }, talksTo: 'rider', check: check(MOVE, 6), minutes: 5,
+          certBonus: SURVEILLANCE,
+          summary: '{lead} brings your squad around behind the store, a few steps from where {rider.first} sits, near enough to hear {rider.him} breathe. If {rider.first} decides to come out, the team is right there. If {rider.he} {rider~hears|hear} the team first, the handgun is within reach.',
+          pull: 'Hands at the back door the moment {rider.first} wants out.',
+          cost: '{rider.first} could hear boots outside, with the handgun beside {rider.him}.',
+          preview: { favorable: '{rider.first} crawls to the back door and out to you.', mixed: '{rider.first} hears you and goes out the front, toward the camera.', adverse: '{rider.first} hears boots and pulls back behind the counter, handgun in hand.' },
+          outcomes: {
+            favorable: [{ when: { safe: ['manager'] }, text: '{rider.first} picks up a sound at the back door and says don’t come in. The negotiator says nobody will. A minute later the back door opens from inside. The phone lies screen down on the register behind {rider.first}, who {rider~crawls|crawl} out on {rider.his} knees with empty hands.', out: ['rider'], next: { ending: 'out_quiet' }, objective: 30 },
+              { when: MANAGER_IN, text: '{rider.first} pushes {manager.first} toward the back first. The team takes {manager.first} out, and {rider.first} crawls after {manager.him} without the phone.', safe: ['manager'], out: ['rider'], next: { ending: 'out_quiet' }, objective: 60 },
+              clerkToo('{clerk.first} is out of the stockroom first.')],
+            mixed: [{ when: { safe: ['manager'] }, text: '{rider.first} hears the team at the back and walks out the front instead, slowly, toward the camera on the corner. The phone stays on the register, filming the door. Officers take {rider.him} on the step.', out: ['rider'], next: { ending: 'out_on_camera' }, objective: 26 },
+              { when: MANAGER_IN, text: '{rider.first} sends {manager.first} ahead of {rider.him}, props the phone up facing the entrance, and follows {manager.first} out toward the corner. Officers have {rider.him} at the curb.', safe: ['manager'], out: ['rider'], next: { ending: 'out_on_camera' }, objective: 55 },
+              clerkToo('{clerk.first} is out the back first.')],
+            adverse: [{ when: { safe: ['manager'] }, text: '{rider.first} hears a boot on the back step and scrambles away from the door, handgun in hand. Nobody gets a word out of {rider.him} after that.', next: { ending: 'rider_held' } },
+              ...heldEnd({ when: MANAGER_IN, text: '{rider.first} catches the sound of boots and pulls {manager.first} down behind the counter.' }, '{clerk.first} stays hidden in the stockroom.', [], MANAGER_IN)],
+          } },
+      ] },
   ],
   endings: {
     out_on_camera: { title: 'Out on camera', disposition: 'resolved',
-      summary: '{manager.first} and {clerk.first} are safe outside, and {manager.first} was out before {rider.first} was. {rider.first} walked out where everyone could see, and officers have {rider.him} now. The phone was still filming from the register when the last officer left.',
+      summary: '{manager.first} and {clerk.first} are safe outside, and {manager.first} was out before {rider.first} was. {rider.first} walked out where everyone could see, and officers have {rider.him} now. The phone was still on the register, screen lit, when the last officer left.',
       epilogue: 'The clip of {rider.first} walking out had more views by morning than the stream ever did.',
       epilogueIf: [
         { when: { marks: ['admitted'] }, epilogue: '{rider.first}’s account was back on {delivery_app} by Friday. {rider.He} didn’t log in.' },
         { when: { marks: ['exposed', 'friend_promise'] }, epilogue: '{friend.first} drove {rider.first}’s scooter home and left the key with the neighbor, as {friend.he} said {friend.he} would.' },
       ] },
     out_quiet: { title: 'Nobody filmed it', disposition: 'resolved',
-      summary: '{manager.first} and {clerk.first} are safe outside. {rider.first} walked out to the team with nobody filming, the one way {rider.he} said {rider.he} wouldn’t, and officers have {rider.him}. The phone is face down on the register with the stream still saying LIVE.',
+      summary: '{manager.first} and {clerk.first} are safe outside. {rider.first} walked out to the team with nobody filming, the one way {rider.he} said {rider.he} wouldn’t, and officers have {rider.him}. The phone is face down on the register.',
       epilogue: '{friend.first} waited at the patrol line until the patrol car carrying {rider.first} turned the corner.',
       epilogueIf: [{ when: { marks: ['admitted'] }, epilogue: '{manager.first} called {delivery_app} on Monday and asked how to take a complaint back.' }] },
     out_by_dawn: { title: 'Out by morning', disposition: 'resolved',
@@ -801,14 +1240,14 @@ export const HOSTAGE_LIVE: CallTree = {
       summary: 'Medics have {manager.first}, hurt in the dark. {clerk.first} is safe. {rider.first} is still behind the counter with the handgun, and the street stays shut.',
       epilogue: '{manager.first} told the medic it was {manager.his} fault. The medic didn’t ask what was.' },
     rider_held: { title: 'Behind the counter', disposition: 'relief_partial', remainingTasks: ['Talk {rider.first} out of {place}'],
-      summary: '{manager.first} and {clerk.first} are out of harm’s way. {rider.first} is holding out behind the counter with the handgun and the phone, and patrol keeps the street shut. The count on the stream is still going.',
+      summary: '{manager.first} and {clerk.first} are out of harm’s way. {rider.first} is holding out behind the counter with the handgun and the phone, and patrol keeps the street shut. The phone is still in {rider.his} hand.',
       epilogue: '{friend.first} switched the scooter’s engine off and waited at the patrol line.' },
     held_counter: { title: 'Still on the floor', disposition: 'relief_partial', remainingTasks: ['Get {manager.first} out from behind the counter', 'Bring {rider.first} out alive'],
-      summary: 'Command holds the street, with the team at the perimeter. {manager.first} is still on the floor inside with {rider.first} and the handgun, and the team calls the phone on the register every half hour.',
+      summary: 'Command holds the street, with the team at the perimeter. {manager.first} is still on the floor inside with {rider.first} and the handgun, and the team keeps the line to the register open.',
       epilogue: '{manager.first}’s green marker stayed on the counter all night with its cap off.' },
     held_both: { title: 'Both still inside', disposition: 'relief_partial',
       remainingTasks: ['Bring {clerk.first} out', 'Get {manager.first} out from behind the counter', 'Talk {rider.first} into putting the handgun down'],
-      summary: 'Patrol has the block sealed. {clerk.first} and {manager.first} are both still in there with {rider.first}, who is armed, and the stream is still running.',
+      summary: 'Patrol has the block sealed. {clerk.first} and {manager.first} are both still in there with {rider.first}, who is armed, with the phone still lit beside the register.',
       epilogue: '{clerk.first} held the case of water until an officer finally took it from {clerk.him} at dawn.' },
     handed_over: { title: 'No step left to take', disposition: 'unresolved', remainingTasks: ['Get everyone out safely'],
       summary: 'Command still holds the street, and the call is still open. The team has no step left that it can take from here.',

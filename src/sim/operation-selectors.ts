@@ -24,6 +24,7 @@ import type {
   SquadId,
   StageId,
 } from './types';
+import { decisionsOf, isLapse } from './types';
 import type { ActionDefinition, FactDefinition, NodeThreat, ScenarioDefinition } from './scenario-types';
 import { scenarioActions } from './scenario-types';
 import { SCENARIO_ORDER } from '../content/scenarios';
@@ -32,7 +33,7 @@ import { getScenario } from './scenario-registry';
 import { ITEMS } from '../content/items';
 import { availableUnits, builtFor, evaluateAction, getBuilt, RESOLUTION_TUNING, squadLabel, tagNames, type Evaluation } from './resolution';
 import { ditherCap, stalledRun, teamMinutes } from './clocks';
-import { conditionHolds } from './conditions';
+import { conditionHolds, liveThreat } from './conditions';
 import { checkStart, computeDebrief, defaultSupport, evaluateDefault, decisionViewsFor, matchedEffects, matchedOutcomeIndices } from './operation';
 import { drawnDistribution, type DrawnDistribution } from './drawn-effects';
 import { approxPoint, spaceLabel } from './spatial-factors';
@@ -216,7 +217,7 @@ function verifyActionsFor(s: ScenarioDefinition, factId: Id, run: OperationRun |
     );
     if (!settles) continue;
     let availableNow = false;
-    if (run && state && run.status === 'active' && run.stage === a.stage && !run.history.some((h) => h.stage === a.stage && h.actionId === a.id)) {
+    if (run && state && run.status === 'active' && run.stage === a.stage && !decisionsOf(run.history).some((h) => h.stage === a.stage && h.actionId === a.id)) {
       availableNow = run.squadIds.some((sq) => evaluateAction({ state, run, scenario: s, action: a, built, acting: [sq], support: defaultSupport(run, a, [sq]) }).eligible);
     }
     out.push({ actionId: a.id, title: a.title, stage: a.stage, availableNow });
@@ -294,7 +295,7 @@ function visibleTargets(state: GameState, run: OperationRun, s: ScenarioDefiniti
   const out = new Map<Id, Id[]>();
   if (run.status !== 'active' || run.stage === 'debrief') return out;
   for (const a of s.stages[run.stage].actions) {
-    if (run.history.some((h) => h.stage === run.stage && h.actionId === a.id)) continue;
+    if (decisionsOf(run.history).some((h) => h.stage === run.stage && h.actionId === a.id)) continue;
     if (isTargetHidden(a, run)) continue;
     const followsPerson = !!a.storyTargetPersonId;
     const person = followsPerson ? storyActionTarget(s, a, built, run) : null;
@@ -478,7 +479,7 @@ function toView(state: GameState, run: OperationRun, a: ActionDefinition, ev: Ev
     ...(ev.authority ? { authority: { ...ev.authority } } : {}),
     ...(a.deceives ? { deceives: true as const } : {}),
     // The stall so far counts toward the threat as the commit counts it (decide's clockBaseMinutes).
-    ...(a.threat ? { threat: { label: a.threat.label, bands: (['favorable', 'mixed', 'adverse'] as const).filter((band) => teamMinutes(ev, a, band) + dither >= a.threat!.minutes) } } : {}),
+    ...(liveThreat(a.threat, run.flags) ? { threat: { label: a.threat!.label, bands: (['favorable', 'mixed', 'adverse'] as const).filter((band) => teamMinutes(ev, a, band) + dither >= a.threat!.minutes) } } : {}),
     ...(a.weighing ? { weighing: { pull: leadIn(a.weighing.pull, ev, state), cost: leadIn(a.weighing.cost, ev, state) } } : {}),
     ...keyRatingOf(a),
     ...leadReadsOf(a),
@@ -573,7 +574,8 @@ export function pendingDebrief(state: GameState): DebriefResult | null {
 
 /** Last committed decision, for the result toast and map animation. */
 export function lastResolution(state: GameState): DecisionResolution | null {
-  return state.activeRun?.history.at(-1) ?? null;
+  const last = state.activeRun?.history.at(-1);
+  return last && !isLapse(last) ? last : null;
 }
 
 /** For each drawn effect decide() would settle if this action came out `band` now, every result it

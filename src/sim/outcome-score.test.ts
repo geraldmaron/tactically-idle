@@ -1,3 +1,4 @@
+import { decisionsOf } from './types';
 import { describe, expect, it } from 'vitest';
 import { CALL_TREES } from '../content/call-trees';
 import { drawCalls, playToEnd, POLICIES, type Policy } from '../gen/incident/trees-v13/balance';
@@ -212,7 +213,7 @@ describe('calibration against the retired hand-set numbers', () => {
   // The calibration is measured at zero dither: the shift at each timer setting is recorded apart,
   // in dither-balance.test.ts.
   it('plays at zero dither', () => {
-    for (const row of rows) expect(row.state.activeRun!.history.filter(decision => decision.ditherMinutes), row.type).toEqual([]);
+    for (const row of rows) expect(decisionsOf(row.state.activeRun!.history).filter(decision => decision.ditherMinutes), row.type).toEqual([]);
     // ...and with no gauge that fills (fill-clocks.test.ts records the audience shift apart).
     for (const row of rows) expect(row.state.activeRun!.fillPeak, row.type).toBeUndefined();
   });
@@ -302,11 +303,11 @@ describe('the v13 debrief', () => {
   it('says which force the team used, on whom, and why', () => {
     // Going Live reaches force only on a rare entry; the frozen armed call reaches it often.
     const armed = callsOfKind('active_armed_incident', 10, 4242).flatMap((call, i) => POLICIES.map(policy => ({ state: playToEnd(call.id, policy, i + 1) })));
-    const forced = [...played(10), ...armed].filter(({ state }) => state.activeRun?.history.some(decision => decision.committed?.drawn?.some(record => record.model === 'team_force')));
+    const forced = [...played(10), ...armed].filter(({ state }) => decisionsOf(state.activeRun?.history).some(decision => decision.committed?.drawn?.some(record => record.model === 'team_force')));
     expect(forced.length).toBeGreaterThan(0);
     for (const { state } of forced) {
       const run = state.activeRun!, scenario = getScenario(run.scenarioId)!;
-      const records = run.history.flatMap(decision => decision.committed?.drawn ?? []).filter(record => record.model === 'team_force');
+      const records = decisionsOf(run.history).flatMap(decision => decision.committed?.drawn ?? []).filter(record => record.model === 'team_force');
       const lines = computeDebrief(state, run)!.forceLines!;
       expect(lines).toHaveLength(records.length);
       records.forEach((record, index) => {

@@ -109,7 +109,7 @@ export function siteWords(site: Site, _tree: CallTree, side: 'writers' | 'reader
   const cond = site.conditional ? (names.cond ? names.cond(site.conditional) : site.conditional) : null;
   const at = cond?.replace(/^at /, '');
   const DOES: Partial<Record<Site['field'], string>> = side === 'writers' ? {
-    'outcome.mark': 'sets it', 'fire.mark': 'sets it when an officer is hit', 'clock.cue.mark': `sets it when the clock falls to ${at}`, 'clock.onOut.mark': 'sets it when the clock runs out', 'clock.onFull.mark': 'sets it when the gauge fills',
+    'outcome.mark': 'sets it', 'fire.mark': 'sets it when an officer is hit', 'threat.mark': 'sets it when the threat lands', 'beat.mark': 'sets it when the stall reaches the line', 'clock.cue.mark': `sets it when the clock falls to ${at}`, 'clock.onOut.mark': 'sets it when the clock runs out', 'clock.onFull.mark': 'sets it when the gauge fills',
     'outcome.safe': 'brings them out safe', 'outcome.out': 'brings them out', 'force.out': 'force brings them out (drawn)', 'cascade.out': 'followers come out (drawn)',
     'outcome.reveal': 'settles it', 'clock.cue.reveal': `settles it when the clock falls to ${at}`, 'fact.public': 'on the card from the start', 'outcome.moves': 'moves their meters',
     'outcome.promise': 'makes the promise', 'authority.concede': 'command concession', 'outcome.harm': 'harms them', 'outcome.officer': 'an officer is hurt',

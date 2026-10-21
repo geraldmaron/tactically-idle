@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
-import { getState, send, useGame } from '../store';
+import { getState, send, settleLapse, useGame } from '../store';
 import { liveDither } from '../timer';
 import { playHeartbeat, setMurmur, stopLiveAudio, unlockAudio } from '../audio/live-audio';
 import { liveFillViews } from './fill-gauge';
 import { stalledRun } from '../../sim/clocks';
 import { decisionViews, lastResolution } from '../../sim/operation-selectors';
 import type { Id, SquadId } from '../../sim/types';
+import { decisionsOf } from '../../sim/types';
 import { useToast } from '../components/toast';
 import { Sheet } from '../components/Sheet';
 import { Button } from '../components/ui';
@@ -35,7 +36,7 @@ export function OpsLive() {
   const { act } = useToast();
   const run = g.activeRun!;
 
-  const [focusId, setFocusId] = useState<SquadId | null>(() => run.history.at(-1)?.actingSquadIds[0] ?? null);
+  const [focusId, setFocusId] = useState<SquadId | null>(() => decisionsOf(run.history).at(-1)?.actingSquadIds[0] ?? null);
   const [selection, setSelection] = useState<ActionSelection | null>(null);
   const [activeOfficer, setActiveOfficer] = useState<Id | null>(null);
   const [selSpace, setSelSpace] = useState<Id | null>(null);
@@ -47,32 +48,19 @@ export function OpsLive() {
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [confirmFailure, setConfirmFailure] = useState<{ runId: Id; revision: number } | null>(null);
   const [floor, setFloor] = useState(0);
-  // The result beat: the revision just confirmed, read on its own before the next decision shows.
-  const [resultOf, setResultOf] = useState<number | null>(null);
 
   // One selector block for the game and the Scenario Lab (live-model.ts).
   // The stall so far (docs/call-pressure.md): the cards show it and the commit charges what they showed.
   // The scene moves while the player decides (docs/call-pressure.md, "The live decision"), so the
   // screen reads the clock four times a second (the store's own tick is every five).
+  // When the drain runs out with no choice made the call moves on (docs/call-pressure.md, "When the
+  // time runs out"); the store's own tick settles it on any other screen.
   const [, setSecond] = useState(0);
   useEffect(() => {
-    const timer = window.setInterval(() => setSecond((n) => n + 1), 250);
+    const timer = window.setInterval(() => { settleLapse(); setSecond((n) => n + 1); }, 250);
     return () => window.clearInterval(timer);
   }, []);
-  // A stall counts only while the player can see it (owner 2026-10-21): hiding the app pauses the
-  // open decision and coming back resumes it, moved on by the time away.
-  useEffect(() => {
-    const onVisibility = () => {
-      const current = getState().activeRun;
-      if (!current || current.status !== 'active') return;
-      if (document.visibilityState === 'hidden' && !current.decisionPending && current.decisionPausedAt === undefined) send({ type: 'pauseDecision', revision: current.revision });
-      if (document.visibilityState === 'visible' && current.decisionPausedAt !== undefined) send({ type: 'resumeDecision', revision: current.revision });
-    };
-    onVisibility();
-    document.addEventListener('visibilitychange', onVisibility);
-    window.addEventListener('pagehide', onVisibility);
-    return () => { document.removeEventListener('visibilitychange', onVisibility); window.removeEventListener('pagehide', onVisibility); };
-  }, []);
+  // Hiding the app pauses the open decision; the store owns that on every screen (ui/store.ts).
   // Sound starts on the first touch (browsers refuse it before) and fades out when the call ends.
   useEffect(() => {
     const unlock = () => unlockAudio();
@@ -82,13 +70,18 @@ export function OpsLive() {
   const dither = liveDither(g, now);
   const screen = liveScreen(g, now, { focusId, selection, override, floor, activeOfficer, selectedSpaceId: selSpace, lastChange, showRooms, detailsOpen: panel === 'action', dither });
   const decisions = decisionViews(g);
-  const beat = resultOf !== null && decisions.at(-1)?.revision === resultOf ? 'result' : 'decide';
+  // The result beat is the saved run's: a commit or a lapse leaves its result pending until the player
+  // reads on, so a reload mid-result comes back on the result.
+  const beat = run.status === 'active' && run.decisionPending && decisions.length > 0 ? 'result' : 'decide';
   const nextStage = screen?.model.progress.stages.find((step) => step.state === 'current')?.label;
-  // The next decision's stall starts when it shows, not while its result is read (sim/clocks.ts
-  // openDither). Also covers a reload during the result, which comes back on the decision.
+  // Older states could carry a pending decision with no result to read: open it at once.
   useEffect(() => {
-    if (beat === 'decide' && run.status === 'active' && run.decisionPending) send({ type: 'openDecision', revision: run.revision });
-  }, [beat, run.status, run.decisionPending, run.revision]);
+    if (run.status === 'active' && run.decisionPending && decisions.length === 0) send({ type: 'openDecision', revision: run.revision });
+  }, [run.status, run.decisionPending, run.revision, decisions.length]);
+  // A result that lands while the screen shows (a lapse) starts at the top of the call, as a commit's does.
+  useEffect(() => {
+    if (beat === 'result' && typeof requestAnimationFrame === 'function') requestAnimationFrame(revealLastDecision);
+  }, [beat, run.revision]);
   // The heartbeat in a threat's last quarter, and the crowd's murmur at its level.
   const threatOpen = screen?.model.progress.threat ?? null;
   const threatShare = threatOpen && beat === 'decide' ? Math.max(0, threatOpen.minutes - dither) / threatOpen.minutes : 1;
@@ -163,7 +156,7 @@ export function OpsLive() {
     const currentRun = getState().activeRun;
     // A second tap from the same rendered choice must not commit another decision.
     if (!view?.eligible || panel !== 'action' || currentRun?.id !== run.id || currentRun.stage !== run.stage || currentRun.revision !== run.revision || currentRun.status !== 'active') return;
-    const res = act({ type: 'decide', actionId: view.id, actingSquadIds: acting, supportSquadIds: support, ...(leadOfficerId ? { leadOfficerId } : {}), ditherMinutes: dither });
+    const res = act({ type: 'decide', actionId: view.id, actingSquadIds: acting, supportSquadIds: support, ...(leadOfficerId ? { leadOfficerId } : {}), ditherMinutes: dither, revision: run.revision });
     if (!res.ok) return;
     const r = lastResolution(getState());
     setPanel('none');
@@ -174,11 +167,6 @@ export function OpsLive() {
       const ids = new Set(spaces.map((s) => s.id));
       const spaceIds = [r.targetId, ...r.knowledgeChanges.map((k) => k.factId)].filter((x): x is Id => !!x && ids.has(x));
       setLastChange({ revision: r.revision, spaceIds });
-      // The result gets its own beat. When the decision ends the call the debrief shows it instead.
-      if (getState().activeRun?.status === 'active') {
-        setResultOf(r.revision);
-        if (typeof requestAnimationFrame === 'function') requestAnimationFrame(revealLastDecision);
-      }
     }
   };
 
@@ -189,7 +177,9 @@ export function OpsLive() {
       sirens={hot}
       beat={beat}
       onContinue={() => {
-        setResultOf(null);
+        // The next decision's stall starts when it shows, not while its result is read (openDither).
+        const current = getState().activeRun;
+        if (current?.status === 'active' && current.decisionPending) send({ type: 'openDecision', revision: current.revision });
         if (typeof requestAnimationFrame === 'function') requestAnimationFrame(revealLastDecision);
       }}
       continueLabel={nextStage ? `Continue to ${nextStage}` : 'Continue'}

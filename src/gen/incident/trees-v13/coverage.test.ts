@@ -1,3 +1,4 @@
+import { decisionsOf } from '../../../sim/types';
 import { describe, expect, it } from 'vitest';
 import { CALL_TREES } from '../../../content/call-trees';
 import type { CallTree } from '../../../content/call-trees/types';
@@ -193,7 +194,7 @@ function drawnSteers(state: GameState, view: ActionView, band: OutcomeBand, samp
   } else if (drawn.model === 'team_force') {
     const person = scenario.incidentPeople?.find(entry => entry.id === drawn.on);
     const probe = applySteered(state, view, band, table[0].rngState);
-    const profile = probe?.activeRun!.history.at(-1)?.committed?.drawn?.[0]?.key.split(':')[0] as ForceProfile | undefined;
+    const profile = decisionsOf(probe?.activeRun?.history).at(-1)?.committed?.drawn?.[0]?.key.split(':')[0] as ForceProfile | undefined;
     if (profile) keyOf = second => drawnKey('team_force', teamForceSeverity(person, profile, second), profile);
   }
   if (!keyOf) return table.map(entry => entry.rngState);
@@ -203,7 +204,7 @@ function drawnSteers(state: GameState, view: ActionView, band: OutcomeBand, samp
 }
 function applySteered(state: GameState, view: ActionView, band: OutcomeBand, rngState: number): GameState | null {
   const result = apply(withDice(state, rngState), { type: 'decide', actionId: view.id, actingSquadIds: view.actingSquadIds, supportSquadIds: view.supportSquadIds }, NOW);
-  return result.result.ok && result.state.activeRun!.history.at(-1)?.band === band ? result.state : null;
+  return result.result.ok && decisionsOf(result.state.activeRun!.history).at(-1)?.band === band ? result.state : null;
 }
 
 interface Coverage { gaps: string[]; starts: number; states: number; commits: number; drawnWalked: number; ended: number; ms: number;
@@ -226,7 +227,7 @@ function walk(tree: CallTree, starts: Start[] = startsFor(tree), around: (start:
       const key = stateKey(after, thresholds);
       if (seen.has(key)) return false;
       seen.add(key); queue.push(after);
-      for (const record of after.activeRun!.history.at(-1)?.committed?.drawn ?? []) drawnSeen.add(`${record.model}:${record.key}`);
+      for (const record of decisionsOf(after.activeRun!.history).at(-1)?.committed?.drawn ?? []) drawnSeen.add(`${record.model}:${record.key}`);
       return true;
     };
     while (queue.length) {

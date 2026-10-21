@@ -216,7 +216,9 @@ describe('tracing and keys', () => {
   it('arrow keys move along paths and within a column', () => {
     const right = neighbourBox(l, `node:${graph.root}`, 'ArrowRight');
     expect(right && l.boxes[right].x).toBeGreaterThan(l.boxes[`node:${graph.root}`].x);
-    expect(neighbourBox(l, right!, 'ArrowLeft')).toBe(`node:${graph.root}`);
+    // Back along a path into it: the root, or another node that leads there (a busy node has many).
+    const back = neighbourBox(l, right!, 'ArrowLeft');
+    expect(back === `node:${graph.root}` || l.paths.some(p => p.from === back && p.to === right), `${right} back to ${back}`).toBe(true);
     const column = Object.values(l.boxes).filter(b => b.kind === 'ending').sort((a, b) => a.y - b.y);
     expect(neighbourBox(l, column[0].id, 'ArrowDown')).toBe(column[1].id);
     expect(neighbourBox(l, column[0].id, 'ArrowUp')).toBeNull();

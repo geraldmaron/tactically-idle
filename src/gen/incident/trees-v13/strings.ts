@@ -74,6 +74,15 @@ export function callStringRows(authored: CallTree, bind: (text: string) => strin
       add(`${node.id}.promptIf[${i}]`, 'prompt', entry.prompt, { stage: node.stage, path: node.id });
       (entry.exchange ?? []).forEach((line, j) => add(`${node.id}.promptIf[${i}].exchange[${j}]`, 'exchange', line.line, { stage: node.stage, path: node.id }));
     });
+    // The threat: the line it lands with, what the scene says while the player weighs it, and what
+    // the call does when nobody chooses. Its drain label sums up its own landing line, so it isn't
+    // a row (the repeat checks would read the summary as an echo).
+    if (node.threat) {
+      const at = { stage: node.stage, path: node.id };
+      add(`${node.id}.threat.text`, 'result', node.threat.text, at);
+      (node.threat.beats ?? []).forEach(beat => add(`${node.id}.threat.beat.${beat.id}`, 'exchange_result', beat.line, at));
+      add(`${node.id}.threat.timeout`, 'result', node.threat.timeout?.text, at);
+    }
     for (const choice of node.choices) {
       const base = { stage: node.stage, action: choice.id, path: node.id };
       add(`${node.id}.${choice.id}.title`, 'choice_title', choice.title, base);

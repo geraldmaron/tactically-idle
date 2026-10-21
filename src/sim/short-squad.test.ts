@@ -2,6 +2,7 @@
 // the officers who aren't ready stay home. Deploy, the squad card and the board agree on it; the
 // officer left home never acts, takes strain or shows in the debrief; and the odds use who goes, so
 // a squad short its injured officer reads exactly as the same squad without that officer.
+import { decisionsOf } from './types';
 import { describe, expect, it } from 'vitest';
 import { squadReadiness } from './department-selectors';
 import { actionViews, prepCheck, scenarioCards } from './operation-selectors';
@@ -63,7 +64,7 @@ describe('journey short-squad: a squad short an injured officer deploys without 
       expect(r.result.ok).toBe(true);
       state = r.state;
     }
-    const history = state.activeRun!.history;
+    const history = decisionsOf(state.activeRun!.history);
     expect(history.length).toBeGreaterThan(0);
     for (const decision of history) {
       expect(decision.officerIds).not.toContain(HOME);

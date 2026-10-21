@@ -1,3 +1,4 @@
+import { decisionsOf } from '../../sim/types';
 import { SCENARIOS } from '../../content/scenarios';
 import { buildLocation } from '../../sim/location';
 import { Children, createElement, isValidElement, type ReactElement, type ReactNode } from 'react';
@@ -75,7 +76,7 @@ describe('multi-squad review and commitment', () => {
     expect(reviewed.sheet.view!.eligible).toBe(true);
     reviewed.sheet.onConfirm(); reviewed.sheet.onConfirm();
     expect(hooks.act).toHaveBeenCalledTimes(1);
-    expect(hooks.state!.activeRun!.history[0].actingSquadIds).toEqual(['B']);
+    expect(decisionsOf(hooks.state!.activeRun!.history)[0].actingSquadIds).toEqual(['B']);
     expect(live().view.selectedAction).toBeNull();
   });
 

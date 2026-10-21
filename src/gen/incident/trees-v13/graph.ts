@@ -10,7 +10,7 @@ import type { CallTree, TreeIf, TreeNext, TreeNode, TreeOutcome, TreeState } fro
 import { cascadeResult, type CascadeState } from '../drawn-model';
 import type { MeterStance } from '../../../sim/scenario-types';
 import type { OutcomeBand, StageId } from '../../../sim/types';
-import { choiceActionId, countHolds, outcomeNexts, prunePlan, resolveNext, type PrunePlan } from './compile';
+import { choiceActionId, countHolds, nodeNexts, prunePlan, resolveNext, timeoutNexts, type PrunePlan } from './compile';
 import { sentenceCase } from './dependencies';
 
 export type VertexId = `node:${string}` | `ending:${string}` | `turn:${string}`;
@@ -30,7 +30,10 @@ export interface GraphEdge { id: string; node: string; choice: string; band: Out
 /** `turnDrawn`: the node each turn group drew in this call, or null without a seed. */
 /** `clockRoutes`: where a clock running out sends the call, from any node (R-G4). They aren't edges,
  * since no choice takes them: they mark a node or ending in the call and seed truthReach. */
-export interface CallGraph { root: string; vertices: GraphVertex[]; choices: GraphChoice[]; edges: GraphEdge[]; turnDrawn: Record<string, string | null>; clockRoutes?: VertexId[] }
+/** `timeoutRoutes`: where a threat running out with no choice made sends the call from its node
+ * (TreeTimeout). No choice takes them either, so they aren't edges; truthReach follows them. */
+export interface TimeoutRoute { node: string; to: VertexId; inCall: boolean }
+export interface CallGraph { root: string; vertices: GraphVertex[]; choices: GraphChoice[]; edges: GraphEdge[]; turnDrawn: Record<string, string | null>; clockRoutes?: VertexId[]; timeoutRoutes?: TimeoutRoute[] }
 
 const BANDS: readonly OutcomeBand[] = ['favorable', 'mixed', 'adverse'];
 const vertexOf = (next: TreeNext): VertexId => 'node' in next ? `node:${next.node}` : 'ending' in next ? `ending:${next.ending}` : `turn:${next.turn}`;
@@ -47,11 +50,10 @@ function reachable(tree: CallTree, counts: Record<string, number> | undefined, s
   const byId = new Map(tree.nodes.map(node => [node.id, node]));
   const fromClocks = clockNexts.flatMap(next => landing(tree, next, seed));
   const seen = new Set([tree.root, ...fromClocks]);
-  for (const queue = [tree.root, ...fromClocks]; queue.length;) for (const choice of byId.get(queue.shift()!)?.choices ?? []) for (const band of BANDS)
-    for (const outcome of choice.outcomes[band]) for (const next of outcomeNexts(outcome, counts)) {
-      const targets = 'turn' in next ? seed !== undefined ? [(resolveNext(tree, next, seed) as { node: string }).node] : tree.turns?.[next.turn] ?? [] : 'node' in next ? [next.node] : [];
-      for (const id of targets) if (!seen.has(id)) { seen.add(id); queue.push(id); }
-    }
+  for (const queue = [tree.root, ...fromClocks]; queue.length;) {
+    const node = byId.get(queue.shift()!);
+    for (const next of node ? nodeNexts(node, counts) : []) for (const id of landing(tree, next, seed)) if (!seen.has(id)) { seen.add(id); queue.push(id); }
+  }
   return seen;
 }
 
@@ -116,11 +118,14 @@ export function callGraph(tree: CallTree, opts: { counts?: Record<string, number
     });
   }
 
+  const timeoutRoutes: TimeoutRoute[] = tree.nodes.flatMap(node => timeoutNexts(node).map(next => ({ node: node.id, to: vertexOf(next), inCall: reach.has(node.id) })));
+
   // Why a vertex is out of this call: its turn drew another node, or every edge into it is out.
   const outReason = (id: VertexId, member?: string): string => {
     if (member) for (const [group, nodes] of Object.entries(tree.turns ?? {})) if (nodes.includes(member) && turnDrawn[group] && turnDrawn[group] !== member)
       return `not drawn here (this call drew ${sentenceCase(turnDrawn[group]!).toLowerCase()})`;
     const sources = edges.filter(edge => edge.to === id || (member && edge.to.startsWith('turn:') && tree.turns?.[edge.to.slice(5)]?.includes(member)));
+    if (!sources.length && timeoutRoutes.some(route => route.to === id)) return 'only reached when time runs out at a node this call doesn’t reach';
     if (!sources.length) return clockNexts.length ? 'no choice or clock leads here' : 'no choice leads here';
     const near = sources.find(edge => reach.has(edge.node) && edge.pruned);
     return near ? `only reached by routes this call drops (${near.pruned})` : 'only reached from nodes this call doesn’t reach';
@@ -131,16 +136,17 @@ export function callGraph(tree: CallTree, opts: { counts?: Record<string, number
       return { id: `node:${node.id}`, kind: 'node', treeId: node.id, stage: node.stage, inCall, ...inCall ? {} : { pruned: outReason(`node:${node.id}`, node.id) } };
     }),
     ...Object.entries(tree.turns ?? {}).map(([group, members]): GraphVertex => {
-      const inCall = edges.some(edge => edge.inCall && edge.to === `turn:${group}`);
+      const inCall = edges.some(edge => edge.inCall && edge.to === `turn:${group}`) || timeoutRoutes.some(route => route.inCall && route.to === `turn:${group}`);
       return { id: `turn:${group}`, kind: 'turn', treeId: group, members: [...members], inCall, ...inCall ? {} : { pruned: outReason(`turn:${group}`) } };
     }),
     ...Object.keys(tree.endings).map((ending): GraphVertex => {
       // The exhausted-choices fallback is in every call (compile.ts).
-      const inCall = ending === 'handed_over' || clockRoutes.includes(`ending:${ending}`) || edges.some(edge => edge.inCall && edge.to === `ending:${ending}`);
+      const inCall = ending === 'handed_over' || clockRoutes.includes(`ending:${ending}`) || edges.some(edge => edge.inCall && edge.to === `ending:${ending}`)
+        || timeoutRoutes.some(route => route.inCall && route.to === `ending:${ending}`);
       return { id: `ending:${ending}`, kind: 'ending', treeId: ending, inCall, ...inCall ? {} : { pruned: outReason(`ending:${ending}`) } };
     }),
   ];
-  return { root: tree.root, vertices, choices, edges, turnDrawn, clockRoutes };
+  return { root: tree.root, vertices, choices, edges, turnDrawn, clockRoutes, ...timeoutRoutes.length ? { timeoutRoutes } : {} };
 }
 
 /** Vertices reachable from the root, or from where a clock sends the call, over in-call edges whose
@@ -153,7 +159,8 @@ export function truthReach(graph: CallGraph, tree: CallTree): ReadonlySet<Vertex
     const at = queue.shift()!;
     const out = at.startsWith('turn:')
       ? (tree.turns?.[at.slice(5)] ?? []).filter(id => graph.turnDrawn[at.slice(5)] === null || graph.turnDrawn[at.slice(5)] === id).map(id => `node:${id}` as VertexId)
-      : graph.edges.filter(edge => `node:${edge.node}` === at && edge.inCall && edge.conditions.every(c => c.kind !== 'fact' || c.holds !== false)).map(edge => edge.to);
+      : [...graph.edges.filter(edge => `node:${edge.node}` === at && edge.inCall && edge.conditions.every(c => c.kind !== 'fact' || c.holds !== false)).map(edge => edge.to),
+        ...(graph.timeoutRoutes ?? []).filter(route => `node:${route.node}` === at && route.inCall).map(route => route.to)];
     for (const id of out) if (!seen.has(id)) { seen.add(id); queue.push(id); }
   }
   return seen;

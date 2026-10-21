@@ -45,6 +45,7 @@ import type {
   SquadId,
   Vec,
 } from './types';
+import { decisionsOf } from './types';
 import type { ActionDefinition, AuthorityResult, CheckKind, Condition, EquipmentEffect, ScenarioDefinition, IncidentPersonDef, Tempo } from './scenario-types';
 import { buildLocation, deriveLocation } from './location';
 import { conditionFraction, EXPERIENCE_TUNING, highRiskAllowed } from './officer';
@@ -265,7 +266,7 @@ export function riskBand(pFavorable: number): RiskBand {
 
 /** Units a squad still holds in a run: its reservations minus consumables already used by committed decisions. */
 export function availableUnits(state: GameState, run: OperationRun, sq: SquadId): ItemUnit[] {
-  const spent = new Set(run.history.flatMap((h) => h.unitsUsed));
+  const spent = new Set(decisionsOf(run.history).flatMap((h) => h.unitsUsed));
   return squadUnits(state, run.id, sq).filter((u) => ITEMS[u.itemId] && !(ITEMS[u.itemId].kind === 'consumable' && spent.has(u.id))
     && (u.expiresAt === null || u.expiresAt > state.department.clockHighWater));
 }
@@ -577,7 +578,7 @@ export function evaluateAction(input: EvalInput): Evaluation {
   });
 
   // ---- squad validity
-  if (run.history.some((h) => h.stage === action.stage && h.actionId === action.id)) return blank('Already tried this stage');
+  if (decisionsOf(run.history).some((h) => h.stage === action.stage && h.actionId === action.id)) return blank('Already tried this stage');
   if (!conditionHolds(action.visibleWhen, run)) return blank('That option does not fit the current situation');
   if (care.issue) return blank(care.issue);
   if (followsPerson && !target) return blank('The person has no known location at the scene');

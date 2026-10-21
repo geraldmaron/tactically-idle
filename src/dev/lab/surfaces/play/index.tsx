@@ -5,6 +5,7 @@
 // forced, through the shell's step), the toast the game shows after a commit, "Where this leads"
 // runs, and the keys. Every number and route comes from the model files (model/xray, next-step,
 // dilemma) over the engine.
+import { isLapse } from '../../../../sim/types';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { sampleFor } from '../../../../gen/incident/gates/engine-driver';
 import { choiceActionId } from '../../../../gen/incident/trees-v13/compile';
@@ -107,7 +108,8 @@ function Play({ session }: { session: Session }) {
     if (sameCall && frames.length === before.frames.length + 1 && commonPrefix(before.frames, frames) === before.frames.length - 1) {
       // One step: the new chip slides in and the game's toast names the result.
       setFresh(last);
-      const h = frames[last].state.activeRun?.history.at(-1);
+      const entry = frames[last].state.activeRun?.history.at(-1);
+      const h = entry && !isLapse(entry) ? entry : undefined;
       const band = frames[last].band;
       if (band) setToast({ id: Date.now(), title: h?.committed?.resultLabel ?? RESULT[band].title, tone: h?.committed?.resultLabel ? 'info' : RESULT[band].tone });
       return;
@@ -323,7 +325,8 @@ function Play({ session }: { session: Session }) {
         <GameFrame state={frame.state} screen={screen} width={url.width} zoom={url.zoom} names={url.names} truth={url.truth}
           tabs={tabs} selectedId={url.xray ? selectedId : null} hoverId={hoverId} playing={!!play} reveal={reveal}
           onReview={id => select(id, true)} onConfirm={confirm} onFail={() => move({ kind: 'fail', actionId: 'response_failure' })}
-          toast={toast} onToastDone={() => setToast(null)} force={force} onForce={band => force && (band === 'roll' ? roll(force.actionId) : forceBand(force.actionId, band))} onForceCancel={() => setForce(null)} />
+          toast={toast} onToastDone={() => setToast(null)} force={force} onForce={band => force && (band === 'roll' ? roll(force.actionId) : forceBand(force.actionId, band))} onForceCancel={() => setForce(null)}
+          onLapse={threatId => move({ kind: 'lapse', actionId: threatId })} />
       </div>
       {url.xray && (
         <aside className="lab-play-rail" aria-label="X-ray" ref={railRef}>

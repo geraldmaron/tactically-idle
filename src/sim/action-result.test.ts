@@ -1,3 +1,4 @@
+import { decisionsOf } from './types';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { SCENARIOS } from '../content/scenarios';
 import { actionEventResult, actionResultLabel } from './action-result';
@@ -117,7 +118,7 @@ describe('current operation result integration', () => {
     expect(view.suppliesRequired).toContainEqual({ label: 'Trauma kit', qty: 1 });
     const before = structuredClone(state);
     const finished = commit(state, action);
-    const record = finished.activeRun!.history[0];
+    const record = decisionsOf(finished.activeRun!.history)[0];
     expect(record.band).toBe('adverse');
     expect(record.committed?.resultLabel).toBe('Result recorded');
     expect(record.timeCost).toBeGreaterThan(0);
@@ -130,7 +131,7 @@ describe('current operation result integration', () => {
     const { eventResult: _eventResult, ...effortView } = view;
     expect(baselineView).toEqual(effortView);
     const baseline = commit(state, action);
-    delete finished.activeRun!.history[0].committed!.resultLabel;
+    delete decisionsOf(finished.activeRun!.history)[0].committed!.resultLabel;
     expect(finished).toEqual(baseline);
     expect(state).toEqual(before);
   });

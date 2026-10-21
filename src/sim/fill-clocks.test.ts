@@ -2,6 +2,7 @@
 // rate, cues fire as it reaches them, it never fills before a cue is heard, a flag stops or slows it,
 // and while its first cue is heard it adds strain at a commit, call pressure each minute, and makes
 // the trust result count for more either way. A clock that drains runs byte for byte as before.
+import { decisionsOf } from './types';
 import { describe, expect, it } from 'vitest';
 import { compileFixtureCall } from '../gen/incident/gates/fixture-call';
 import { startGateRun, withDraftScenario } from '../gen/incident/gates/engine-driver';
@@ -136,7 +137,7 @@ describe('what a gauge does in a call', () => {
   it('adds strain at a commit, scaled by the gauge, and says so', () => {
     const withGauge = withDraftScenario(hosted([loud]), id => decide(startGateRun(id, 719)));
     const without = withDraftScenario(hosted([]), id => decide(startGateRun(id, 719)));
-    const a = withGauge.activeRun!.history[0], b = without.activeRun!.history[0];
+    const a = decisionsOf(withGauge.activeRun!.history)[0], b = decisionsOf(without.activeRun!.history)[0];
     expect(a.band).toBe(b.band);
     for (const id of Object.keys(b.stressDeltas)) expect(a.stressDeltas[id], id).toBeGreaterThanOrEqual(b.stressDeltas[id]);
     expect(Object.keys(b.stressDeltas).some(id => a.stressDeltas[id] > b.stressDeltas[id])).toBe(true);
@@ -147,7 +148,7 @@ describe('what a gauge does in a call', () => {
   it('adds no strain before the first cue is heard', () => {
     const quiet = withDraftScenario(hosted([fill({ start: 5, ratePerMin: 0.1 })]), id => decide(startGateRun(id, 719)));
     const without = withDraftScenario(hosted([]), id => decide(startGateRun(id, 719)));
-    expect(quiet.activeRun!.history[0].stressDeltas).toEqual(without.activeRun!.history[0].stressDeltas);
+    expect(decisionsOf(quiet.activeRun!.history)[0].stressDeltas).toEqual(decisionsOf(without.activeRun!.history)[0].stressDeltas);
   });
 
   it('feeds call pressure each minute, and keeps the peak', () => {

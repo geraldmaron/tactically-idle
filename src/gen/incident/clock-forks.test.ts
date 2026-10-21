@@ -2,6 +2,7 @@
 // through the building and forcing a door included (sim/clocks.ts teamMinutes and decisionMinutes,
 // one formula for the commit and the fork). The decision saves its team minutes, so a replay reads
 // what the commit read. Exercised on the group fixture with a clock built for it.
+import { decisionsOf } from '../../sim/types';
 import { describe, expect, it } from 'vitest';
 import type { CallTree, TreeChoice } from '../../content/call-trees/types';
 import type { Clock, IncidentTemplate } from '../../content/incidents/types';
@@ -73,13 +74,13 @@ function measure(scenarioId: string, flags: string[] = [], campaign = 719) {
 function walkRunsOut(scenarioId: string, flags: string[] = []) {
   const scenario = getScenario(scenarioId)!;
   let after: GameState | null = null, team = NaN;
-  for (let campaign = 1; campaign < 200 && after?.activeRun!.history.at(-1)!.band !== 'favorable'; campaign++) {
+  for (let campaign = 1; campaign < 200 && decisionsOf(after?.activeRun?.history).at(-1)?.band !== 'favorable'; campaign++) {
     const measured = measure(scenarioId, flags, campaign);
     team = measured.team;
     after = applyNaturalMove(measured.state, { kind: 'decide', actionId: id('talk', 'to_counter') });
   }
-  expect(after?.activeRun!.history.at(-1)!.band, 'a favorable roll').toBe('favorable');
-  const run = after!.activeRun!, decision = run.history.at(-1)!;
+  expect(decisionsOf(after?.activeRun?.history).at(-1)?.band, 'a favorable roll').toBe('favorable');
+  const run = after!.activeRun!, decision = decisionsOf(run.history).at(-1)!;
   expect(decision.clockBaseMinutes).toBe(team);
   expect(run.stage, 'the fork read the clock as out').toBe('debrief');
   expect(run.flags).toContain('end:handed_over');
@@ -92,7 +93,7 @@ function walkRunsOut(scenarioId: string, flags: string[] = []) {
   delete copy.activeRun!.sourceIncident;
   const back = deserialize(serialize(copy, NOW))!;
   expect(back, 'the save loads').not.toBeNull();
-  expect(back.activeRun!.history.at(-1)!.clockBaseMinutes).toBe(team);
+  expect(decisionsOf(back.activeRun!.history).at(-1)!.clockBaseMinutes).toBe(team);
   expect(own(traceRun(scenario, back.activeRun!).end.flags)).toEqual(own(run.flags));
 }
 
@@ -159,7 +160,7 @@ describe('the saved team minutes match the live evaluation', () => {
       playToEnd(scenarioId, policy, seed, { onStep: ({ before, choice, after }) => {
         const run = before.activeRun!, scenario = getScenario(run.scenarioId)!;
         const action = scenario.stages[run.stage as StageId].actions.find(entry => entry.id === choice.id)!;
-        const decision = after.activeRun!.history.at(-1)!;
+        const decision = decisionsOf(after.activeRun!.history).at(-1)!;
         const ev = evaluateAction({ state: before, run, scenario, action, built: builtFor(run.locationFamilyId, run.locationSeed, run.flags), acting: decision.actingSquadIds, support: decision.supportSquadIds });
         expect(decision.clockBaseMinutes, `${scenarioId} ${choice.id}`).toBe(teamMinutes(ev, action, decision.band));
         checked++;
@@ -177,7 +178,7 @@ function residualFlips(policies = POLICIES, calls = 4): { decisions: number; wit
     playToEnd(scenarioId, policy, seed, { onStep: ({ before, after }) => {
       tally.decisions++;
       const run = before.activeRun!, scenario = getScenario(run.scenarioId)!;
-      const decision = after.activeRun!.history.at(-1)!;
+      const decision = decisionsOf(after.activeRun!.history).at(-1)!;
       const action = scenario.stages[run.stage as StageId].actions.find(entry => entry.id === decision.actionId)!;
       const forks = action.outcomes[decision.band].filter(effect => effect.clocks?.length);
       if (!forks.length || !run.clocks) return;

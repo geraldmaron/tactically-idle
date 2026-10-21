@@ -88,7 +88,9 @@ describe('keys', () => {
 
   it('filters by label or raw key, ignoring case and accents', () => {
     const index = dependencyIndex(T('hostage_crisis'));
-    expect(groupKeys(index, 'TURNED').flatMap(group => group.keys.map(entry => entry.key))).toEqual(['mark:turned']);
+    const turned = groupKeys(index, 'TURNED').flatMap(group => group.keys.map(entry => entry.key));
+    expect(turned).toContain('mark:turned');
+    expect(turned.every(key => key.includes('turned'))).toBe(true);
     expect(groupKeys(index, 'mark:turn').flatMap(group => group.keys.map(entry => entry.key))).toContain('mark:turned');
     expect(groupKeys(index, 'zzz')).toEqual([]);
   });

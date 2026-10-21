@@ -16,10 +16,11 @@ import '../../../../ui/skin.css';
 import { NOW } from '../../../../gen/incident/gates/engine-driver';
 import { briefing, builtForScenario, decisionViews, lastResolution, pendingDebrief } from '../../../../sim/operation-selectors';
 import { isHotCall } from '../../../../sim/authorization';
-import { CLOCK_RULES_V1, decisionTextLength, ditherCap, fillViews, stalledRun } from '../../../../sim/clocks';
+import { CLOCK_RULES_V1, decisionTextLength, ditherCap, fillViews, openThreat, stalledRun } from '../../../../sim/clocks';
 import { responseFailurePlan } from '../../../../sim/response-failure';
 import { getScenario } from '../../../../sim/scenario-registry';
 import type { GameState, Id, OutcomeBand, SquadId } from '../../../../sim/types';
+import { decisionsOf, isLapse } from '../../../../sim/types';
 import { DepartmentContext } from '../../../../ui/components/department-context';
 import { IncidentPeopleStatus } from '../../../../ui/components/IncidentPeople';
 import { OverlayRootContext, Sheet } from '../../../../ui/components/Sheet';
@@ -67,6 +68,8 @@ export function GameFrame(p: {
   reveal: { id: string; seq: number } | null;
   onReview(id: string): void; onConfirm(id: string, lead?: string): void; onFail(): void;
   toast: FrameToast | null; onToastDone(): void; force: ForcePick | null; onForce(band: OutcomeBand | 'roll'): void; onForceCancel(): void;
+  /** Let the open decision point's time run out (the engine's lapse), from the stall slider. */
+  onLapse?(threatId: string): void;
 }) {
   const fitBox = useRef<HTMLDivElement>(null);
   const slot = useRef<HTMLDivElement>(null);
@@ -75,6 +78,9 @@ export function GameFrame(p: {
   const [marks, setMarks] = useState<Marks>(NO_MARKS);
   // The stall slider (docs/call-pressure.md): game minutes the player has spent on the open decision.
   const [dither, setDither] = useState(0);
+  // A new decision starts with no stall, as the game's does.
+  const revision = p.state.activeRun?.revision;
+  useEffect(() => { setDither(0); }, [revision]);
   const short = useMedia(SHORT_WINDOW);
   const width = p.width, height = DEVICE[p.width];
   const run = p.state.activeRun;
@@ -193,7 +199,7 @@ export function GameFrame(p: {
         {p.truth && <span className="lab-chip lab-frame-legend"><span className="lab-tag lab-tag-tape">tape</span> the player can't see this</span>}
         {short && <span className="lab-chip lab-chip-warn">Window under 701 px tall: the game's short-screen rules are on</span>}
       </p>
-      {p.screen === 'live' && <StallSlider state={p.state} dither={dither} onChange={setDither} />}
+      {p.screen === 'live' && <StallSlider state={p.state} dither={dither} onChange={setDither} onLapse={p.onLapse} />}
     </div>
   );
 }
@@ -209,7 +215,7 @@ function realTimeFor(minutes: number, timer: 'relaxed' | 'standard', textLength:
 /** The stall slider: the open decision's dither in game minutes, up to its cap (the threat's
  * minutes). The frame's cards preview it, so a designer sees which choices turn too slow (their minutes go red) and how
  * long a player at each timer setting waits to get there. The lab's own commits don't carry it. */
-function StallSlider({ state, dither, onChange }: { state: GameState; dither: number; onChange(minutes: number): void }) {
+function StallSlider({ state, dither, onChange, onLapse }: { state: GameState; dither: number; onChange(minutes: number): void; onLapse?(threatId: string): void }) {
   const run = state.activeRun;
   const scenario = run ? getScenario(run.scenarioId) : null;
   if (!run || !scenario || run.status !== 'active' || run.stage === 'debrief') return null;
@@ -222,6 +228,7 @@ function StallSlider({ state, dither, onChange }: { state: GameState; dither: nu
   if (!(cap > 0)) return <p className="lab-frame-chips"><span className="lab-chip">No threat or running clock here: a stall costs nothing</span>{gauges}</p>;
   const shown = Math.min(dither, cap);
   const text = decisionTextLength(scenario, run);
+  const threat = openThreat(scenario, run);
   // The threat's push-back lines.
   const lines = (scenario.stages[run.stage].actions.find(action => action.threat?.beats?.length)?.threat?.beats ?? [])
     .map(line => ({ id: line.id, at: line.at, text: line.effects.flatMap(effect => effect.exchange ?? []).map(spoken => spoken.line).join(' ') }));
@@ -234,6 +241,10 @@ function StallSlider({ state, dither, onChange }: { state: GameState; dither: nu
       <span className="lab-chip" title="Real time on this decision before the stall reaches the slider: the reading floor, then the setting's rate">
         Relaxed {realTimeFor(shown, 'relaxed', text)} · Standard {realTimeFor(shown, 'standard', text)}
       </span>
+      {threat?.timeout?.length && onLapse && shown >= threat.minutes ? (
+        <button type="button" className="lab-button lab-chip-warn" onClick={() => onLapse(threat.id)}
+          title="The drain is empty: commit it as indecision, as the game does, and move to the moment the threat's timeout names.">Let the time run out</button>
+      ) : null}
       {gauges}
       {lines.map(line => (
         <span key={line.id} className={cx('lab-chip', shown >= line.at ? 'lab-chip-warn' : '')}
@@ -358,10 +369,13 @@ export interface LabConfirm { actionId: string; decisions: number }
  * own Confirm opens it, once its decision is the one decision added and the call is still running
  * (a call-ending decision goes to the debrief). A lab step, a rewind or a replay starts on the
  * decide beat, as does a cancelled band picker followed by some other move. */
-export function labResultOf(confirmed: LabConfirm | null, state: GameState): number | null {
+export function labResultOf(confirmed: LabConfirm | null, state: GameState, previous?: GameState): number | null {
   const run = state.activeRun;
   const last = run?.history.at(-1);
-  if (!confirmed || !run || run.status !== 'active' || run.stage === 'debrief' || !last) return null;
+  if (!run || run.status !== 'active' || run.stage === 'debrief' || !last) return null;
+  // A lapse let run from the stall slider is the one entry added: its result shows as a commit's does.
+  if (isLapse(last)) return previous?.activeRun?.id === run.id && run.history.length === previous.activeRun.history.length + 1 ? last.revision : null;
+  if (!confirmed) return null;
   return run.history.length === confirmed.decisions + 1 && last.actionId === confirmed.actionId ? last.revision : null;
 }
 
@@ -369,7 +383,7 @@ export function labResultOf(confirmed: LabConfirm | null, state: GameState): num
  * the game's LiveView, its review sheet and room sheet, its result record and situation panel. */
 function LiveScreen({ state, onReview, onConfirm, onFail, dither }: { state: GameState; onReview(id: string): void; onConfirm(id: string, lead?: string): void; onFail(): void; dither: number }) {
   const run = state.activeRun!;
-  const [focusId, setFocusId] = useState<SquadId | null>(() => run.history.at(-1)?.actingSquadIds[0] ?? null);
+  const [focusId, setFocusId] = useState<SquadId | null>(() => decisionsOf(run.history).at(-1)?.actingSquadIds[0] ?? null);
   const [selection, setSelection] = useState<ActionSelection | null>(null);
   const [activeOfficer, setActiveOfficer] = useState<Id | null>(null);
   const [selSpace, setSelSpace] = useState<Id | null>(null);
@@ -393,9 +407,10 @@ function LiveScreen({ state, onReview, onConfirm, onFail, dither }: { state: Gam
   // and on the decide beat unless it is the frame's own Confirm landing.
   const shownState = useRef(state);
   if (shownState.current !== state) {
+    const previous = shownState.current;
     shownState.current = state;
     if (selection || override || panel !== 'none') { setSelection(null); setOverride(null); setActiveOfficer(null); setPanel('none'); }
-    const next = labResultOf(confirmed.current, state);
+    const next = labResultOf(confirmed.current, state, previous);
     confirmed.current = null;
     if (next !== resultOf) setResultOf(next);
   }

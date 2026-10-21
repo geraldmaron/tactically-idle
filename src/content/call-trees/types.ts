@@ -387,7 +387,8 @@ export interface TreeNode {
   /** What gets worse while the player decides here (owner 2026-10-20: every decision point has one).
    * A choice whose time reaches `minutes`, travel and its band's delay included, lets it happen: the
    * line and its costs are added to that result. It raises costs and urgency; it never harms anyone,
-   * fires, or sets a threat-to-life mark (E12.4), and it never routes. */
+   * fires, or sets a threat-to-life mark (E12.4), and a choice that lets it land still goes where
+   * the choice goes. Only its `timeout`, when nobody chooses at all, routes the call. */
   threat?: TreeThreat;
   choices: TreeChoice[];
 }
@@ -410,6 +411,21 @@ export interface TreeThreat {
    * written for this moment, never drawn from a shared pool. Optional: a threat without beats stays
    * silent and its bar still drains. */
   beats?: TreeBeat[];
+  /** Where the call goes when the drain runs out with no choice made (owner 2026-10-21, docs/
+   * call-pressure.md "When the time runs out"): the threat lands, the debrief logs the indecision,
+   * and the call moves to a moment written for continued inaction. A threat without one only drains. */
+  timeout?: TreeTimeout;
+}
+
+/** A threat's run-out route. Like the threat it never harms anyone or fires, and it sets no mark:
+ * the moment it leads to does the pressing, with its own threat or by ending the call. */
+export interface TreeTimeout {
+  /** What the minutes nobody used look like on scene, read in the result after the threat's line. */
+  text: string;
+  /** The moment the call moves to: never this node, the root or an earlier stage. */
+  next: TreeNext;
+  /** Replaces `next` in that public state, first match wins: a held ending names who is inside. */
+  nextIf?: { when: TreeState; next: TreeNext }[];
 }
 
 /** One beat on a threat: the scene moving while the player weighs it. It fires once, live on

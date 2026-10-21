@@ -241,6 +241,10 @@ export function validateStoryBindings(scenario: ScenarioDefinition, built: Built
       ...['needed', 'stabilized', 'accepted', 'deceased'].map(care => `person_care:${person.id}:${care}`),
     ])]),
     ...effects.flatMap(effect => [...effect.setFlags ?? [], ...effect.clearFlags ?? []]),
+    // A decision point's threat sets flags when it lands, its beats when the stall reaches them, and
+    // its run-out route when the time runs out with no choice made (sim/operation.ts lapse).
+    ...actions.flatMap(action => [...action.threat?.effects ?? [], ...(action.threat?.beats ?? []).flatMap(beat => beat.effects), ...action.threat?.timeout ?? []])
+      .flatMap(effect => [...effect.setFlags ?? [], ...effect.clearFlags ?? []]),
     // Set by the engine, not an authored effect (R-B3): a sighting's seen flag for a move, and a clock cue's mark.
     ...people.flatMap(person => person.transitions.flatMap(transition => (transition.when.flags ?? []).filter(flag => flag.startsWith(seenFlag(person.id, ''))))),
     ...people.filter(person => person.transitions.some(transition => transition.when.flags?.some(flag => flag.startsWith(seenFlag(person.id, ''))))).map(person => lostFlag(person.id)),

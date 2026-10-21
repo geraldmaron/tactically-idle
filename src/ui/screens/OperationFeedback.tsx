@@ -17,6 +17,10 @@ export const RESULT_LABEL: Record<OutcomeBand, string> = { favorable: 'Went well
 export const FORECAST_LABEL: Record<OutcomeBand, string> = { favorable: 'Goes well', mixed: 'Complications', adverse: 'Goes badly' };
 export const CONSEQUENCE_LABEL: Record<RiskBand, string> = { low: 'Low', moderate: 'Moderate', high: 'High', severe: 'Severe' };
 const RESULT_TONE = { favorable: 'mint', mixed: 'amber', adverse: 'danger' } as const;
+/** A lapse (no choice made in time) has no band: the log says the time ran out instead. */
+const LAPSE_WORD = 'Time ran out';
+const resultWord = (d: DecisionView) => d.forceOutcome ? 'Task and harm recorded' : d.resultLabel ?? (d.band ? RESULT_LABEL[d.band] : LAPSE_WORD);
+const cardKind = (d: DecisionView) => d.forceOutcome ? 'force' : d.resultLabel ? 'event' : d.band ?? 'lapse';
 const KNOWLEDGE_LABEL: Record<KnowledgeStatus, string> = { unknown: 'Unknown', reported: 'Reported, unconfirmed', confirmed: 'Confirmed', disproved: 'Ruled out' };
 
 /** The three outcome chances as one segmented bar. The words carry the numbers; the bar is the shape. */
@@ -66,10 +70,10 @@ export function DecisionCard({ decision: d, full = false, officers = {}, explici
   const next = d.consequences.filter((line) => line.startsWith('Next: ') && line.slice(6).trim() !== currentPrompt?.trim());
   const fallback = narrative.length === 0 ? d.explanation.find((line) => line.trim()) : undefined;
   return (
-    <article className={`decision-card decision-${d.forceOutcome ? 'force' : d.resultLabel ? 'event' : d.band}`} aria-label={`${d.title}: ${d.forceOutcome ? 'task and harm recorded' : d.resultLabel ?? RESULT_LABEL[d.band]}`}>
+    <article className={`decision-card decision-${cardKind(d)}`} aria-label={`${d.title}: ${d.forceOutcome ? 'task and harm recorded' : resultWord(d)}`}>
       <header className="decision-heading">
         <div><span className="decision-stage">{d.stageLabel}</span><h3>{d.title}</h3></div>
-        <Chip tone={d.forceOutcome || d.resultLabel ? 'neutral' : RESULT_TONE[d.band]}>{d.forceOutcome ? `Task check: ${RESULT_LABEL[d.band].toLowerCase()}` : d.resultLabel ?? RESULT_LABEL[d.band]}</Chip>
+        <Chip tone={d.forceOutcome || d.resultLabel ? 'neutral' : d.band ? RESULT_TONE[d.band] : 'amber'}>{d.forceOutcome && d.band ? `Task check: ${RESULT_LABEL[d.band].toLowerCase()}` : resultWord(d)}</Chip>
       </header>
       {d.forceOutcome && <section className={`force-result force-result-${d.forceOutcome.severity}`} aria-label="Recorded harm">
         <h4>Recorded harm</h4>
@@ -130,8 +134,8 @@ function DecisionEffects({ decision: d, complete = false }: { decision: Decision
 export function OperationLogContents({ decisions, officers = {}, explicitCompletion = false }: { decisions: DecisionView[]; officers?: DebriefOfficers; explicitCompletion?: boolean }) {
   return (
     <div className="operation-log-content">
-      <p className="operation-note">{decisions.length} decision{decisions.length === 1 ? '' : 's'}, in order. Each choice records the time, supplies and changes it caused.</p>
-      <ol className="operation-log-list">{decisions.map((decision, index) => <li key={decision.revision}><span className="decision-number">Decision {index + 1}</span><DecisionCard decision={decision} officers={officers} explicitCompletion={explicitCompletion} full /></li>)}</ol>
+      <p className="operation-note">{decisions.length} decision{decisions.length === 1 ? '' : 's'}, in order. Each choice records the time, supplies and changes it caused. A decision nobody made in time is logged as the time running out.</p>
+      <ol className="operation-log-list">{decisions.map((decision, index) => <li key={decision.revision}><span className="decision-number">{decision.lapse ? `Decision ${index + 1}, not made` : `Decision ${index + 1}`}</span><DecisionCard decision={decision} officers={officers} explicitCompletion={explicitCompletion} full /></li>)}</ol>
     </div>
   );
 }
@@ -145,16 +149,16 @@ export function OperationFeedback({ decisions, ended = false, onOpenLog, officer
   const last = decisions.at(-1);
   // A polite live region that is always rendered, so each new result is announced even when it is
   // the first: the scene scrolls to the result, and this says what it was.
-  const announcement = last ? `${last.title}: ${last.forceOutcome ? 'task and harm recorded' : last.resultLabel ?? RESULT_LABEL[last.band]}. ${last.consequences.find((line) => !line.startsWith('Next: ')) ?? ''}` : '';
+  const announcement = last ? `${last.title}: ${last.forceOutcome ? 'task and harm recorded' : resultWord(last)}. ${last.consequences.find((line) => !line.startsWith('Next: ')) ?? ''}` : '';
   const live = <p className="sr-only" role="status" aria-live="polite">{announcement}</p>;
   if (!last) return live;
   const card = <DecisionCard key={last.revision} decision={last} officers={officers} explicitCompletion={explicitCompletion} currentPrompt={currentPrompt} />;
-  const outcome = last.forceOutcome ? 'Task and harm recorded' : last.resultLabel ?? RESULT_LABEL[last.band];
+  const outcome = resultWord(last);
   return (
     <section className={`operation-feedback${folded ? ' operation-feedback-folded' : ''}`} aria-label="Operation feedback">
       {live}
       <div className="operation-feedback-heading"><h2>{folded ? 'Last decision' : 'What happened'}</h2><Button variant="ghost" size="sm" className="operation-log-trigger" onClick={() => { onOpenLog?.(); setOpen(true); }} aria-haspopup="dialog" aria-expanded={open}>Decision log ({decisions.length})</Button></div>
-      {folded ? <Disclosure key={last.revision} name="last-decision" className={`last-decision last-decision-${last.forceOutcome ? 'force' : last.resultLabel ? 'event' : last.band}`} summary={last.title} hint={`${last.stageLabel} · ${outcome}`}>{card}</Disclosure> : card}
+      {folded ? <Disclosure key={last.revision} name="last-decision" className={`last-decision last-decision-${cardKind(last)}`} summary={last.title} hint={`${last.stageLabel} · ${outcome}`}>{card}</Disclosure> : card}
       <Sheet open={open} onClose={() => setOpen(false)} title="Decision log" className="operation-log-sheet" footer={<Button block onClick={() => setOpen(false)}>{ended ? 'Return to debrief' : 'Return to operation'}</Button>}>
         <OperationLogContents decisions={decisions} officers={officers} explicitCompletion={explicitCompletion} />
       </Sheet>

@@ -1,3 +1,4 @@
+import { worldFor } from '../../../content/world';
 // What a lab worker does with each job (spec 9.5), as plain functions Node can test. lab.worker.ts is
 // a thin shell around createJobHost; the tests run the same host in-process.
 //
@@ -211,7 +212,7 @@ export function castSample(type: IncidentType, family: string, seed: number, tie
     ...Object.fromEntries(template.tree.roles.filter(role => role.place !== 'offsite' && roomOf[role.id] !== outside).map(role => [role.id, roomLabel(roomOf[role.id])])),
     ...Object.fromEntries(Object.entries(groups).flatMap(([group, ids]) => ids.length ? [[group, roomLabel(roomOf[ids[0]])], ...ids.map(id => [id, roomLabel(roomOf[id])])] : [])),
   };
-  return { call, cast, groups, place: built.location.name, rooms };
+  return { call, cast, groups, place: built.location.name, rooms, world: placed.world ?? worldFor(call) };
 }
 
 async function casts(job: Extract<LabJob, { kind: 'casts' }>, ctx: RunnerContext): Promise<JobResult> {

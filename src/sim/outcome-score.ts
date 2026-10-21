@@ -13,6 +13,7 @@ import { civilianOutcomeViews } from './incident-consequences';
 import { scenarioActions } from './scenario-types';
 import type { IncidentPersonDef, OutcomeEffect, ScenarioDefinition } from './scenario-types';
 import type { CompletionDisposition, Id, OperationRun } from './types';
+import { decisionsOf } from './types';
 import { tunable } from './tuning';
 import { audienceFactor } from './clocks';
 
@@ -153,7 +154,7 @@ export function endStates(scenario: ScenarioDefinition, run: ScoreRun, opts: Sco
 
 /** Every use of force by the team on the call, in order. */
 function forceUses(scenario: ScenarioDefinition, run: Pick<OperationRun, 'history'>): ForceUse[] {
-  return run.history.flatMap(decision => (decision.committed?.drawn ?? []).filter(record => record.model === 'team_force').map(record => {
+  return decisionsOf(run.history).flatMap(decision => (decision.committed?.drawn ?? []).filter(record => record.model === 'team_force').map(record => {
     const [profile, severity] = record.key.split(':') as [ForceProfileKey, ForceSeverityKey];
     return { personId: record.personId, label: personLabel(scenario, record.personId), profile, severity, ...(record.reason ? { reason: record.reason } : {}), revision: decision.revision };
   }));
@@ -162,7 +163,7 @@ function forceUses(scenario: ScenarioDefinition, run: Pick<OperationRun, 'histor
 /** How many times the team went in on command's authority. */
 function entriesTaken(scenario: ScenarioDefinition, run: Pick<OperationRun, 'history'>): number {
   const actions = new Map(scenarioActions(scenario).map(action => [action.id, action]));
-  return run.history.filter(decision => actions.get(decision.actionId)?.authority?.kind === 'entry').length;
+  return decisionsOf(run.history).filter(decision => actions.get(decision.actionId)?.authority?.kind === 'entry').length;
 }
 
 export interface ScoreInputs {

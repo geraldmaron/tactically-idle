@@ -2,7 +2,7 @@
 
 How a call pushes on a player who is deciding: the scene keeps moving, the people watching are
 counted, and the odds the cards show are the odds the commit uses. Built on 2026-10-21. Open work
-is `after-landing`, `lab-live-window` and `profile-surface` in `docs/backlog.md`.
+is `lab-flow-timeouts`, `lab-live-window` and `profile-surface` in `docs/backlog.md`.
 
 Owner decisions:
 
@@ -14,6 +14,8 @@ Owner decisions:
 - A crowd or a stream shows as a live count beside the drain, with the watchers' chat under it
   (2026-10-21). Every source shows, not one pressure at a time.
 - Sound and vibration are on by default, with a mute in Settings (2026-10-21).
+- When a threat's time runs out with no choice made, the call moves on to a moment written for it,
+  and the log and debrief record the indecision (2026-10-21). Waiting strains nobody (below).
 
 ## Why it works this way
 
@@ -43,8 +45,8 @@ dither minutes at the setting's rate (`CLOCK_RULES_V1.dither`, `src/sim/clocks.t
    through one path (`decisionMinutes`, then `advanceTime`).
 2. **The record.** The dither is saved with the decision, so a replay, the Scenario Lab and the
    fingerprints read it.
-3. **The cap.** Dither on one decision stops at the open threat's minutes. Since the sources' sim
-   values stop there too, the open question is `after-landing`.
+3. **The cap.** Dither on one decision stops at the open threat's minutes. Reaching it is the lapse
+   (below): the call doesn't sit at the cap.
 4. **Pause.** `pauseDecision` and `resumeDecision` (`src/sim/operation.ts`) stop the stall while the
    app is hidden and move the decision's start on by the time away (`OperationRun.decisionPausedAt`).
 5. **A stall raises pressure**, `CLOCK_RULES_V1.stallPressurePerMinute` a game minute on top of the
@@ -122,3 +124,48 @@ pressure a minute, and the debrief's audience factor on trust (`CLOCK_RULES_V1.f
   the crowd's level, and a heartbeat in the last quarter. All synthesized, so there are no clips to
   license. Vibration on jumps and beats, where the phone has it.
 - The count's refresh is the call's one looping signal (`src/ui/motion.test.ts`).
+
+## When the time runs out
+
+A decision point's threat can carry a `timeout` (`TreeTimeout`, `src/content/call-trees/types.ts`):
+the moment the call moves to when the drain empties with no choice made. The engine settles it with
+a `lapse` (`OPERATION_HANDLERS.lapse`, `src/sim/operation.ts`).
+
+1. **One rule.** `lapsedThreat` (`src/sim/clocks.ts`) says the time has run out: a live threat with
+   a timeout, a timer that isn't Off, and a stall at its minutes. A lapse commits only then, and a
+   choice is refused from then on, so a lapse and a late choice never both settle one window. Both
+   carry the run revision they were made on (`decide` takes it as `revision`), and a stale one is
+   refused. The timer reaches the engine as `Ctx.timer`, which the store passes with every command.
+2. **Timer Off never lapses.** With no stall there is nothing to run out, and a slow choice still
+   lands an unspent threat by its own minutes, as before.
+3. **One path.** The lapse spends the window as a decision spends its stall: the stall's pressure
+   once, then the minutes through `advanceTime`, then the route, the landing and every beat
+   (`lapseEffects`), the cues, and the clock outs, which can still route or end the call first.
+   The stage change goes through `settleStage`, the transition a decision uses.
+4. **The record.** History holds a `LapseRecord` (`kind: 'lapse'`): the threat's id and label and
+   the minutes, with no action, band, sample, squads or strain. Saves validate it against the
+   call's threats; `traceRun`, the save validators and the Lab replay it in order. Its path token
+   is `<threat id>~lapse`.
+5. **Spent.** The threat's id (`NodeThreat.id`, the node's id) is marked spent (`spentFlag`), and
+   every reader (the cap, the landing, the strain, the card warning) skips a spent threat.
+6. **The result beat** names it: "No call made: <threat>", the threat's line, what the minutes
+   nobody used looked like, and the new moment's prompt. The beat is the saved run's
+   (`decisionPending`), so a reload mid-result comes back on the result.
+7. **Waiting strains nobody.** A lapse adds no strain and no experience to any deployed officer:
+   its cost lands on the call (pressure, the threat's effects, a worse moment), and the next
+   commit's strain reads the higher pressure. A call nobody acted in at all (every decision ran
+   out) gives no tactical experience. Nothing here is a balance number to tune.
+8. **It always moves.** A run-out moment has its own threat and timeout; in stage 3 they end the
+   call held (`rider_held`, `held_counter`, `held_both` by who is still inside). The call-tree gates
+   fail a curated call with a threat that has nowhere to go, a route back to its node, the root or
+   an earlier stage, or a chain of run-outs that never ends. Going Live's nine moments are designed
+   in `docs/calls/going-live-lapses.md`.
+
+The store's tick and the live screen both send a due lapse (`dueLapse`, `src/ui/timer.ts`), so the
+call moves on whatever screen the player is on. The store also owns the hidden-app pause, so hiding
+the app from any screen stops the drain.
+
+A lapse's result waits to be read, like any result: no time counts while it shows, so a player who
+walks away comes back to the result, not to a call that ran itself to an ending. Continued inaction
+means not choosing at each decision the player sees (Codex review, 2026-10-21, finding 1, kept on
+purpose).

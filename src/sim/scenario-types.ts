@@ -266,7 +266,11 @@ export interface ActionDefinition {
     /** Beats (TreeBeat), each as the effect it applies once the stall reaches `at` dither minutes:
      * live in the projection (sim/clocks.ts stalledRun), and with the commit. Empty or absent: the
      * threat stays silent. */
-    beats?: { id: string; at: number; effects: OutcomeEffect[] }[] };
+    beats?: { id: string; at: number; effects: OutcomeEffect[] }[];
+    /** Where the call goes when the drain runs out with no choice made (TreeTimeout, the engine's
+     * `lapse`): the first effect whose `when` holds routes the call, with its text and marks. The
+     * last has no `when`. Absent: the threat only drains. */
+    timeout?: OutcomeEffect[] };
   /** V13: what draws a player to the choice, and what it costs, one line each. */
   weighing?: { pull: string; cost: string };
   /** Full archetype route rechecked against current openings at action evaluation. */
@@ -359,6 +363,8 @@ export interface ActionDefinition {
 /** What gets worse while the player decides (scenario pressure work, owner 2026-10-20): every
  * decision point has one. A choice slow enough to reach `minutes` lets it happen. */
 export interface NodeThreat {
+  /** Stable within the call (the node's id): a lapse names the threat it settled. */
+  id: string;
   /** What happens, in a few words ("The count reaches zero"). */
   label: string;
   /** Minutes the player has here before it happens. */

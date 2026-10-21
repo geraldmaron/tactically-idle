@@ -1,6 +1,7 @@
 // The lab's run model on the real engine: opening the call a link draws, stepping with forced or
 // natural bands, rewinding, replaying a path (keeping its valid prefix), opening a handed-over game
 // state, and reopening under a tuning patch.
+import { decisionsOf } from '../../../sim/types';
 import { afterEach, describe, expect, it } from 'vitest';
 import { aimedDrawnState, drawnAt, drawnChance, drawnCombos, NOW, sampleFor } from '../../../gen/incident/gates/engine-driver';
 import { bandProbabilities } from '../../../sim/resolution';
@@ -102,7 +103,7 @@ describe('stepping', () => {
         landed++;
         const last = currentFrame(next);
         expect(last.band).toBe(band);
-        expect(last.state.activeRun!.history.at(-1)!.band).toBe(band);
+        expect(decisionsOf(last.state.activeRun!.history).at(-1)!.band).toBe(band);
         expect(last.forced).toBe(true);
         expect(last.pBand).toBeCloseTo(view.likelihood[band], 9);
       }
@@ -148,9 +149,9 @@ describe('stepping', () => {
       const frame = s.frames[i], before = s.frames[i - 1];
       const view = before.views.find(entry => entry.id === frame.move!.actionId)!;
       expect(frame.forced).toBe(false);
-      expect(frame.band).toBe(frame.state.activeRun!.history.at(-1)!.band);
+      expect(frame.band).toBe(decisionsOf(frame.state.activeRun!.history).at(-1)!.band);
       expect(frame.pBand).toBe(view.likelihood[frame.band!]);
-      expect(frame.drawn).toEqual((frame.state.activeRun!.history.at(-1)!.committed?.drawn ?? []).map(d => `${d.model}:${d.key}`));
+      expect(frame.drawn).toEqual((decisionsOf(frame.state.activeRun!.history).at(-1)!.committed?.drawn ?? []).map(d => `${d.model}:${d.key}`));
     }
   });
 
@@ -184,7 +185,7 @@ describe('aimed drawn results', () => {
       for (const combo of dists.length ? drawnCombos(dists) : []) {
         const next = stepSession(s, { kind: 'decide', actionId: view.id, band, drawn: combo.keys });
         if ('refused' in next) throw new Error(`${view.id}~${band}/${combo.keys.join('/')}: ${next.refused}`);
-        const last = currentFrame(next), h = last.state.activeRun!.history.at(-1)!;
+        const last = currentFrame(next), h = decisionsOf(last.state.activeRun!.history).at(-1)!;
         expect(h.band).toBe(band);
         expect(h.committed!.drawn!.map(d => d.key)).toEqual(combo.keys);
         expect(last.drawn).toEqual(h.committed!.drawn!.map(d => `${d.model}:${d.key}`));
@@ -266,7 +267,7 @@ describe('aimed drawn results', () => {
       for (let i = 1; i < path.frames.length; i++) {
         const frame = path.frames[i], prior = path.frames[i - 1];
         const view = prior.views.find(entry => entry.id === frame.move!.actionId)!;
-        const keys = frame.state.activeRun!.history.at(-1)!.committed?.drawn?.map(d => d.key) ?? [];
+        const keys = decisionsOf(frame.state.activeRun!.history).at(-1)!.committed?.drawn?.map(d => d.key) ?? [];
         const pDrawn = keys.length ? drawnChance(drawnAt(prior.state, view, frame.band!), keys) : 1;
         expect(frame.pDrawn).toBeCloseTo(pDrawn, 12);
         expect(frame.pDrawn).toBeGreaterThan(0);
@@ -353,21 +354,21 @@ describe('handoff', () => {
     expect(s.frames).toHaveLength(1);
     expect(s.frames[0].state).toBe(state);
     expect(s.squad).toEqual({ kind: 'game', at: NOW });
-    expect(s.prior.map(p => `${p.actionId}~${p.band}`)).toEqual(run.history.map(h => `${h.actionId}~${h.band}`));
+    expect(s.prior.map(p => `${p.actionId}~${p.band}`)).toEqual(decisionsOf(run.history).map(h => `${h.actionId}~${h.band}`));
     expect(s.prior.every(p => p.node && p.choice)).toBe(true);
     expect(s.note).toBeNull();
     // Steps from there play on the game's state.
     const on = rollOn(s, 1);
-    expect(currentFrame(on).state.activeRun!.history).toHaveLength(run.history.length + 1);
+    expect(decisionsOf(currentFrame(on).state.activeRun!.history)).toHaveLength(run.history.length + 1);
   });
 
   it('replays the game\'s moves with forced bands on the reference squad when the snapshot is gone', () => {
     const state = gameState(), run = state.activeRun!;
-    const hist = run.history.map(h => `${h.actionId}~${h.band}`).join(',');
+    const hist = decisionsOf(run.history).map(h => `${h.actionId}~${h.band}`).join(',');
     const s = open(`id=${run.scenarioId}&handoff=gone&hist=${hist}`);
     expect(s.squad).toMatchObject({ kind: 'reference', seed: 719 });
     expect(s.prior.map(p => `${p.actionId}~${p.band}`).join(',')).toBe(hist);
-    expect(s.frames[0].state.activeRun!.history.map(h => h.band)).toEqual(run.history.map(h => h.band));
+    expect(decisionsOf(s.frames[0].state.activeRun!.history).map(h => h.band)).toEqual(decisionsOf(run.history).map(h => h.band));
     expect(s.note).toContain('The game snapshot for this link has expired.');
     expect(sessionTokens(s)).toBe('');
   });

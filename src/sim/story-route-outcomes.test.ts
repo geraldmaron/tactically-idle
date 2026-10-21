@@ -1,3 +1,4 @@
+import { decisionsOf } from './types';
 import { describe, expect, it } from 'vitest';
 import { CALL_TREES } from '../content/call-trees';
 import { drawCalls, playCalls, type PlayStep } from '../gen/incident/trees-v13/balance';
@@ -28,7 +29,7 @@ describe('current call-tree movement routes', () => {
       const ev = evaluateAction({ state, run, scenario, action, built: builtFor(run.locationFamilyId, run.locationSeed, run.flags), acting: step.choice.actingSquadIds, support: step.choice.supportSquadIds });
       if (!ev.eligible) continue;
       const after = applyMove(state, { kind: 'decide', actionId: action.id, band: 'favorable' });
-      if (!after || !after.activeRun!.history.at(-1)!.committed?.openingChanges?.some(change => change.openingId === door && change.state === 'open')) continue;
+      if (!after || !decisionsOf(after.activeRun!.history).at(-1)!.committed?.openingChanges?.some(change => change.openingId === door && change.state === 'open')) continue;
       expect(builtFor(run.locationFamilyId, run.locationSeed, after.activeRun!.flags).location.openings.find(o => o.id === door)!.state).toBe('open');
       // The hypothetical lock is not part of the issued path. Check the actual played run's persistence.
       expect(deserialize(serialize(step.after, NOW))?.activeRun).toEqual(step.after.activeRun);

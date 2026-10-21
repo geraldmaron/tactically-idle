@@ -5,6 +5,7 @@
 // Pure apart from the storage it is given: no store import.
 import { deserialize, serialize } from '../sim/save';
 import type { GameState, OperationRun } from '../sim/types';
+import { isLapse } from '../sim/types';
 
 export interface LabHandoff { v: 1; at: number; scenarioId: string; state: GameState; screen: 'live' | 'debrief' }
 /** The part of Storage this module uses, so tests can pass a fake. */
@@ -27,6 +28,8 @@ function defaultStorage(): HandoffStorage | null {
  * `+` is written `.`, as the lab writes it), so a fallback replay can aim the same results. Current calls change stage through outcome effects, so their decisions replay their paths. */
 export function historyTokens(run: OperationRun): string {
   return run.history.map((step) => {
+    // A lapse replays as the threat running out (the lab's `threatId~lapse`).
+    if (isLapse(step)) return `${step.threatId}~lapse`;
     const drawn = step.committed?.drawn?.map(result => result.key.replace(/\+/g, '.')) ?? [];
     return `${step.actionId}~${step.band}${drawn.length ? `/${drawn.join('/')}` : ''}`;
   }).join(',');

@@ -1,3 +1,4 @@
+import { decisionsOf } from './types';
 import { responseFailurePlan } from './response-failure';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { SCENARIOS } from '../content/scenarios';
@@ -61,7 +62,7 @@ describe('committed current decisions', () => {
     const before = structuredClone(state);
     state = decide(state, 'recover');
     const run = state.activeRun!;
-    const record = run.history.at(-1)!;
+    const record = decisionsOf(run.history).at(-1)!;
     expect(record.committed).toMatchObject({ objectiveDelta: 3, civilianSafetyDelta: -4, pressureDelta: -100, endingTitle: null });
     expect(record.timeCost).toBe(round(run.clock - before.activeRun!.clock));
     expect(record.timeCost).toBeGreaterThanOrEqual(31);
@@ -151,12 +152,12 @@ describe('committed current decisions', () => {
     SCENARIOS[ID].endings.handed_over.strain = 5;
     const state = decide(decide(started(), 'prime'), 'finish');
     state.officers.off_chen.stress = 99;
-    const history = structuredClone(state.activeRun!.history);
+    const history = structuredClone(decisionsOf(state.activeRun!.history));
     const debrief = pendingDebrief(state)!;
     expect(debrief.causes[0]).toContain('Ending adjustment at close: Chen +1 strain');
     const closed = apply(state, { type: 'closeDebrief' });
     expect(closed.state.officers.off_chen.stress).toBe(100);
-    expect(state.activeRun!.history).toEqual(history);
+    expect(decisionsOf(state.activeRun!.history)).toEqual(history);
     expect(closed.state.debriefs[0].decisions).toEqual(decisionViews(state));
   });
 });
@@ -200,7 +201,7 @@ describe('public previews and committed truth', () => {
     const initial = started();
     const preview = previewAction(initial, NOW, 'probe', ['A'], [])!;
     const state = decide(initial, 'probe');
-    const record = state.activeRun!.history[0];
+    const record = decisionsOf(state.activeRun!.history)[0];
     expect(record.knowledgeChanges).toContainEqual({ factId: FACT, status: truth ? 'confirmed' : 'disproved' });
     expect(record.committed?.consequences.join(' ')).toContain(truth ? 'CONFIRMED PRIVATE BRANCH' : 'DISPROVED PRIVATE BRANCH');
     expect(record.committed?.consequences.join(' ')).not.toContain(truth ? 'DISPROVED PRIVATE BRANCH' : 'CONFIRMED PRIVATE BRANCH');
@@ -221,7 +222,7 @@ describe('public previews and committed truth', () => {
 
   it('returns detached public metadata, so rendering cannot mutate the durable log or authored previews', () => {
     const state = decide(started(), 'prime');
-    const record = state.activeRun!.history[0];
+    const record = decisionsOf(state.activeRun!.history)[0];
     const original = structuredClone(record);
     decisionViews(state)[0].consequences.push('UI-only note');
     const view = previewAction(state, NOW, 'recover', ['A'], [])!;
