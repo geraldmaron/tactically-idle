@@ -50,11 +50,18 @@ dither minutes at the setting's rate (`CLOCK_RULES_V1.dither`, `src/sim/clocks.t
 5. **A stall raises pressure**, `CLOCK_RULES_V1.stallPressurePerMinute` a game minute on top of the
    call's own rate and its sources'.
 
-| Setting | Rate | A 6-minute threat lands after |
+Going Live's threats run 10 to 13 game minutes: each stage's fastest choice plus 8, so a player
+who reads for 30 seconds at Relaxed still has a choice that lands in time.
+
+| Setting | Rate | A Going Live threat (10 to 13 minutes) lands after |
 |---|---|---|
 | Off | none | never |
-| Relaxed (default) | 5 game minutes a real minute | 72 seconds |
-| Standard | 10 game minutes a real minute | 36 seconds |
+| Relaxed (default) | 5 game minutes a real minute | 2 to 2.6 minutes |
+| Standard | 10 game minutes a real minute | 60 to 78 seconds |
+
+The owner's target was a threat that drains in 60 to 90 seconds at Relaxed (2026-10-21). That only
+holds at Standard today: shorter threats at Relaxed left a 60-second reader with no choice that
+lands in time. Which one gives way is the owner's call.
 
 Accessibility sources, checked 2026-10-20: WCAG 2.2.1 Timing Adjustable is met by letting the player
 turn the limit off ([W3C](https://www.w3.org/WAI/WCAG22/Understanding/timing-adjustable.html)), and
