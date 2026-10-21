@@ -38,7 +38,7 @@ threat ("The regulars start filming") now reads as more of them joining.
 | Choice | Where | Title | Minutes | Favorable | Mixed | Adverse | Named cost |
 |---|---|---|---|---|---|---|---|
 | `tape_back` | `both_inside` (every choice there leads on to `talking` or `standoff`) | Move the tape back | 8 | tape moves, crowd slowed (`tape_back`), on to `talking` | slowed, but the taker saw it (`team_seen`, pressure 3), on to `talking` | regulars won't move, not slowed (`team_seen`, pressure 5), to `standoff` | nobody answers the taker while patrol moves the street |
-| `phone_down` | `talking`, only once `taker_live` is heard | Ask {taker.him} to stop streaming | 4 | phone face down, stream stopped (`stabilize`, `phone_down`) | phone to the wall, stream slowed (`phone_turned`) | phone pressed to the glass, stream goes on (pressure 4) | `provoked` on every band, and the call goes to `standoff` on every band |
+| `phone_down` | `talking`, only once `taker_live` is heard | Ask {taker.him} to stop streaming | 4 | phone face down, stream stopped (`stabilize`, `phone_down`) | phone to the wall, stream slowed (`phone_to_wall`) | phone pressed to the glass, stream goes on (pressure 4) | `provoked` on every band, and the call goes to `standoff` on every band |
 
 Why a player picks each: when the call is going badly, the audience multiplies the trust loss and
 the strain, so slowing or stopping it protects the department and the officers; when it is going
