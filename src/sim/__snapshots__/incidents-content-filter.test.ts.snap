@@ -8,7 +8,11 @@ exports[`content exclusion > walks every combination of avoided themes: a kept s
       1,
       2,
     ],
-    "barricaded": [],
+    "barricaded": [
+      0,
+      1,
+      2,
+    ],
     "hostage_crisis": [
       0,
       1,
@@ -26,7 +30,11 @@ exports[`content exclusion > walks every combination of avoided themes: a kept s
       1,
       2,
     ],
-    "barricaded": [],
+    "barricaded": [
+      0,
+      1,
+      2,
+    ],
     "hostage_crisis": [
       0,
       1,
@@ -53,7 +61,11 @@ exports[`content exclusion > walks every combination of avoided themes: a kept s
   },
   "avoid death, child_at_risk": {
     "active_armed_incident": [],
-    "barricaded": [],
+    "barricaded": [
+      0,
+      1,
+      2,
+    ],
     "hostage_crisis": [
       0,
       1,
@@ -62,7 +74,11 @@ exports[`content exclusion > walks every combination of avoided themes: a kept s
   },
   "avoid death, child_at_risk, domestic_violence": {
     "active_armed_incident": [],
-    "barricaded": [],
+    "barricaded": [
+      0,
+      1,
+      2,
+    ],
     "hostage_crisis": [
       0,
       1,
@@ -71,7 +87,11 @@ exports[`content exclusion > walks every combination of avoided themes: a kept s
   },
   "avoid death, domestic_violence": {
     "active_armed_incident": [],
-    "barricaded": [],
+    "barricaded": [
+      0,
+      1,
+      2,
+    ],
     "hostage_crisis": [
       0,
       1,
@@ -139,7 +159,10 @@ exports[`content exclusion > walks every combination of avoided themes: a kept s
   },
   "avoid death, police_gunfire, child_at_risk": {
     "active_armed_incident": [],
-    "barricaded": [],
+    "barricaded": [
+      0,
+      1,
+    ],
     "hostage_crisis": [
       0,
     ],
@@ -147,7 +170,10 @@ exports[`content exclusion > walks every combination of avoided themes: a kept s
   },
   "avoid death, police_gunfire, child_at_risk, domestic_violence": {
     "active_armed_incident": [],
-    "barricaded": [],
+    "barricaded": [
+      0,
+      1,
+    ],
     "hostage_crisis": [
       0,
     ],
@@ -155,7 +181,10 @@ exports[`content exclusion > walks every combination of avoided themes: a kept s
   },
   "avoid death, police_gunfire, domestic_violence": {
     "active_armed_incident": [],
-    "barricaded": [],
+    "barricaded": [
+      0,
+      1,
+    ],
     "hostage_crisis": [
       0,
     ],
@@ -263,7 +292,11 @@ exports[`content exclusion > walks every combination of avoided themes: a kept s
       1,
       2,
     ],
-    "barricaded": [],
+    "barricaded": [
+      0,
+      1,
+      2,
+    ],
     "hostage_crisis": [
       0,
       1,
@@ -362,7 +395,10 @@ exports[`content exclusion > walks every combination of avoided themes: a kept s
   },
   "avoid police_gunfire, child_at_risk": {
     "active_armed_incident": [],
-    "barricaded": [],
+    "barricaded": [
+      0,
+      1,
+    ],
     "hostage_crisis": [
       0,
     ],
@@ -374,7 +410,10 @@ exports[`content exclusion > walks every combination of avoided themes: a kept s
   },
   "avoid police_gunfire, child_at_risk, domestic_violence": {
     "active_armed_incident": [],
-    "barricaded": [],
+    "barricaded": [
+      0,
+      1,
+    ],
     "hostage_crisis": [
       0,
     ],
@@ -386,7 +425,10 @@ exports[`content exclusion > walks every combination of avoided themes: a kept s
   },
   "avoid police_gunfire, domestic_violence": {
     "active_armed_incident": [],
-    "barricaded": [],
+    "barricaded": [
+      0,
+      1,
+    ],
     "hostage_crisis": [
       0,
     ],

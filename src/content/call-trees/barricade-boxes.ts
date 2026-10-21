@@ -133,9 +133,9 @@ export const BARRICADE_BOXES: CallTree = {
       confirmed: '{subject.first} says a written list is enough to bring {subject.him} out.', disproved: '{subject.first} says {subject.he} {subject~stays|stay} in the house, list or no list.' },
   },
   situations: [
-    { note: '{subject.He} {subject~thinks|think} the movers all left and {subject~wants|want} the list kept. Taken down, it brings {subject.him} out.', truth: { knows_mover: false, comes_out: true } },
-    { note: '{subject.He} {subject~knows|know} the mover is in the closet and lets them be. The list still brings {subject.him} out.', truth: { knows_mover: true, comes_out: true } },
-    { note: '{subject.He} {subject~knows|know} the mover is there and won’t leave the house, list or no list. Pressed, {subject.he} {subject~goes|go} to that door.', truth: { knows_mover: true, comes_out: false } },
+    { note: '{subject.He} {subject~thinks|think} the movers all left and {subject~wants|want} the list kept. Taken down, it brings {subject.him} out.', truth: { knows_mover: false, comes_out: true }, descriptors: ['suicide_self_harm', 'injury'] },
+    { note: '{subject.He} {subject~knows|know} the mover is in the closet and lets them be. The list still brings {subject.him} out.', truth: { knows_mover: true, comes_out: true }, descriptors: ['suicide_self_harm', 'injury'] },
+    { note: '{subject.He} {subject~knows|know} the mover is there and won’t leave the house, list or no list. Pressed, {subject.he} {subject~goes|go} to that door.', truth: { knows_mover: true, comes_out: false }, descriptors: ['suicide_self_harm', 'injury', 'police_gunfire'] },
   ],
   turns: { inside: ['turn_list', 'turn_hall', 'turn_text'] },
   difficulty: { base: 40, perTier: 4 },
