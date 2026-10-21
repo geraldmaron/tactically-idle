@@ -173,33 +173,33 @@ excluded, is in this file's history (commit 6d97111).
 - A line reacts to the scene and foreshadows its threat, so when the threat lands the player has
   already heard it coming (swat-call-design's cue-trace rule). It never talks about the player
   taking their time.
-- The taker speaks only at nodes where they are on the phone in every prompt variant (offer,
-  talking, threat, owner_down). Where a variant has the line cut or silent (out_keys, both_inside,
-  standoff, out_cousin), someone else speaks.
+- The taker speaks only at nodes where they are on the phone on every route in (offer, one_door,
+  talking, owner_down). Where some route arrives with the line cut, silent or unanswered (out_keys,
+  both_inside, standoff, out_cousin, threat), someone else speaks.
 
 ### The lines
 
 | Node | Threat minutes | Threshold | Speaker | Line | Where the speaker is | What it warns of |
 |---|---|---|---|---|---|---|
-| offer | 4 | 2 | taker | The courier keeps looking at the door. Not yet. | on the counter phone with the negotiator | the courier edging for the door |
+| offer | 4 | 2 | taker | Courier. I can see you looking at the door. | on the counter phone; the courier inside can hear | the courier edging for the door |
 | out_back_door | 4 | 2 | radio | Alley door. Handle’s turning again. Nobody out. | the team watching the alley door | the alley door opening |
-| out_keys | 5 | 2 | courier | When I left, {taker.he} had the till drawer open. | outside behind the patrol car | the count at the till |
+| out_keys | 5 | 2 | courier | When I left, {taker.he} {taker~was|were} lining up the twenties. | outside behind the patrol car | the count at the till |
 | out_six_years | 4 | 2 | courier | Eleven stops left. My van’s still running at the curb. | outside by the cruiser, bag still on | the courier pressing patrol about the van |
 | out_cousin | 4 | 2 | cousin | That glass. {taker.He} can’t see my face from back here. | at the tape, in uniform from the depot | the cousin going for the step |
-| both_inside | 5 | 2 | radio | Front glass. Blinds coming down. Losing our view. | the team at the corner, on the front glass | the blinds |
+| both_inside | 5 | 2 | radio | Front glass. Hand on the blinds. Need another view. | the team at the corner, on the front glass | the blinds |
 | his_side | 5 | 2 | owner | I don’t have my ledger. I can’t give the count from memory. | inside at the counter; heard over the phone, as in the node’s own exchange | the count read aloud again |
-| one_door | 3 | 2 | courier | {taker.He} {taker~has|have} looked up at that clock six times now. | inside by the door; heard over the phone | the deadline on the clock |
-| talking | 5 | 2 | taker | Who’s that out front with the phone up? | on the phone with the negotiator | the filming |
+| one_door | 3 | 2 | taker | Courier. That door’s open now. It won’t stay open. | on the receiver in every variant | the deadline on the clock |
+| talking | 5 | 2 | taker | Keep those phones away from the glass. | on the phone with the negotiator | the filming |
 | standoff | 10 | 5 | regular | It’ll be dark soon. {owner.first} never stays open past dark. | at the tape | dark |
-| threat | 3 | 2 | taker | Shut those sirens off. I hear every one of them. | on the phone, the handgun on the owner | the sirens |
+| threat | 3 | 2 | radio | More units inbound with sirens on. Need them cut. | the team, asking command | the sirens |
 | fired_on | 5 | 2 | cousin | Curtains keep moving upstairs. More faces at the windows. | at the tape | the neighbors at their windows |
-| owner_down | 4 | 2 | taker | {owner.first} won’t answer me. Where’s that ambulance? | shouting into the phone | the shouting getting louder |
+| owner_down | 4 | 2 | taker | I said an ambulance. Stop asking me questions. | shouting into the phone | the shouting getting louder |
 | last_one | 5 | 2 | owner | When the rush got bad, {taker.first} would sit down where nobody could see. | outside in a blanket from the medic | the taker sitting down out of sight |
-| stayed_behind | 5 | 2 | radio | Till. One coworker keeps looking back toward the door. | the team on the glass | the argument inside |
-| nobody_followed | 5 | 2 | radio | Front door. Movement by the big table. | the team on the front door | the table across the door |
+| stayed_behind | 5 | 2 | radio | Till. One coworker watching the exit. Need contact. | the team on the glass | the argument inside |
+| nobody_followed | 5 | 2 | radio | Front door. Hands on the table. Keep the exit clear. | the team on the front door | the table across the door |
 
 Lengths are 38 to 71 characters with the longest pool first names bound and pronouns bound as
-"they", inside the 90-character transcript budget. Speakers: taker 4, radio 4, courier 3, owner 2,
+"they", inside the 90-character transcript budget. Speakers: radio 5, taker 4, courier 2, owner 2,
 cousin 2, regular 1.
 
 ### Ethics screen, line by line
@@ -210,15 +210,16 @@ how a crisis is written still hold inside any line:
 | Check | Result |
 |---|---|
 | E4.1 no method | 0 method words; the handgun is never named in these lines |
-| E4.2 no single cause, no release | 0. The taker's four lines are about the courier, the filming, the sirens and the owner, never about themselves |
+| E4.2 no single cause, no release | 0. The taker's four lines are about the courier, the door, the filming and the ambulance, never about themselves |
 | E4.9 language | 0 hits on the avoid list |
 | E2, force never the reward | 0. No line praises or urges force |
 | E12.4, a clock never creates the threat | Each line foreshadows a threat already in the tree; none sets a threat mark |
 
 ### Prose gates on these lines
 
-String checker (`game_string_checks.py`, live lint source), 16 lines bound as "they": exit 0. Dash 0,
-colon 0, stock-spoken 0, feeling 0, engine-word 0, word-choice 0, weapon-speech 0, unsafe 0.
+String checker (`game_string_checks.py`, live lint source), the final 16 lines bound as "they": exit
+0. Dash 0, colon 0, stock-spoken 0, feeling 0, engine-word 0, word-choice 0, weapon-speech 0, unsafe 0.
+Binding as "they" caught one agreement slip ("they was"), fixed with a verb token.
 
 Path check: each line placed on its node's path (prompt, the node's exchange, the line, then the
 threat's text). One echo ("at the tape" in the talking line) was rewritten; path-echo 0. The other
@@ -228,6 +229,25 @@ threat. Worth a later prose pass on the tree.
 
 written-voice `voice-check.py`: 0 dashes, 0 stock phrases, 0 tics, 0 triads. Spelling candidates are
 the two bound names and "coworker", a real word.
+
+### Second Codex read (lines from commit b4d5f92) and what changed
+
+Codex, configured default model, read-only, fresh thread, 2026-10-20. Verdict: edit, one block. It
+found no civilian saying weapon, no method detail, no stock line and no E4.2 or E4.9 problem.
+
+| # | Node | Finding | Severity | My verdict | Now |
+|---|---|---|---|---|---|
+| 1 | offer | "Not yet" seems to take back the taker's own "The courier can go" | fix before ship | accepted | “Courier. I can see you looking at the door.” |
+| 2 | out_back_door | Radio line has no need | fix before ship | rejected. The tree's own radio lines report status without a need ("Courier sat back down. Can’t see the taker’s hands."), and "Need cover" adds nothing the team doesn't already have | unchanged |
+| 3 | out_keys | An open drawer is a weak cue for the count | fix before ship | accepted | “When I left, {taker.he} {taker~was\|were} lining up the twenties.” |
+| 4, 5, 7, 10, 12, 14 | out_six_years, out_cousin, his_side, standoff, fired_on, last_one | Hold in every variant | note | retained | unchanged |
+| 6 | both_inside | The line starts the threat's action | fix before ship | accepted | “Front glass. Hand on the blinds. Need another view.” |
+| 8 | one_door | No channel for the team to hear the courier; "that clock" leans on context | fix before ship | accepted, with a different taker line: Codex's "Watch the clock over the register" echoes the threat text word for word | “Courier. That door’s open now. It won’t stay open.” |
+| 9 | talking | The taker "hasn’t looked toward the street" in the cousin_seen variant | fix before ship | accepted | “Keep those phones away from the glass.” |
+| 11 | threat | **Block.** The phone is not open on every route in (one route arrives with it ringing unanswered) | block | accepted; the radio line Codex approved in the first read returns | “More units inbound with sirens on. Need them cut.” |
+| 13 | owner_down | The line repeats the prompt's beat | fix before ship | accepted | “I said an ambulance. Stop asking me questions.” |
+| 15 | stayed_behind | No need; and the tree's threat text ("the ones who stayed arguing") is wrong when one coworker stays | fix before ship | accepted for the line. The threat text's count problem is a finding for the tree, routed to swat-call-design: it needs a one-member variant | “Till. One coworker watching the exit. Need contact.” |
+| 16 | nobody_followed | "Movement" is vague | fix before ship | accepted | “Front door. Hands on the table. Keep the exit clear.” |
 
 ### First Codex read (lines from commit 6d97111) and what changed
 
