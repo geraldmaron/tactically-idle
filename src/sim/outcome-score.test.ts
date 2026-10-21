@@ -202,6 +202,8 @@ describe('calibration against the retired hand-set numbers', () => {
   // in dither-balance.test.ts.
   it('plays at zero dither', () => {
     for (const row of rows) expect(row.state.activeRun!.history.filter(decision => decision.ditherMinutes), row.type).toEqual([]);
+    // ...and with no gauge that fills (fill-clocks.test.ts records the audience shift apart).
+    for (const row of rows) expect(row.state.activeRun!.fillPeak, row.type).toBeUndefined();
   });
 
   it('every ending a call reaches is in the fixture', () => {

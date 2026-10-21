@@ -80,7 +80,7 @@ const BANDS = { favorable: 'goes well', mixed: 'partly works', adverse: 'goes ba
 const CHECKS = { contact: 'talking', observation: 'watching', execution: 'entries and force', pressure: 'holding the line', medical: 'medical work', coordination: 'coordination' };
 const WEAPONS = { handgun: 'handgun', long_gun: 'rifle', shotgun: 'shotgun', edged: 'blade', blunt: 'blunt weapon', improvised: 'improvised weapon', unknown: 'unknown weapon' };
 const PROFILES = { firearm: 'Firearm', less_lethal_device: 'Less-lethal device', less_lethal_impact: 'Impact launcher', hands: 'By hand' };
-const EVENTS = { heard: 'heard out', contact: 'contact', honest: 'told plainly', provoked: 'provoked', team_seen: 'sees the team close', shots: 'shots', released: 'lets someone go', promise_kept: 'promise kept', promise_broken: 'promise broken' };
+const EVENTS = { heard: 'heard out', contact: 'contact', honest: 'told plainly', provoked: 'provoked', team_seen: 'sees the team close', shots: 'shots', released: 'lets someone go', promise_kept: 'promise kept', promise_broken: 'promise broken', watched: 'knows a camera is on them' };
 const PAIR = ['trust', 'strain'] as const;
 const pair = (label: string, help: string): Spec => ({ label, help: `${help} Trust for the department, strain the deployed officers carry home.`, items: PAIR, min: -10, max: 10, step: 0.25, unit: 'points' });
 
@@ -163,6 +163,9 @@ export const TUNING_META: readonly FieldMeta[] = [
   }),
   ...table('CLOCK_RULES_V1', { group: 'time', mode: 'live' }, {
     floor: { label: 'Clock stops short at', help: 'Where a clock stops in a decision that would run it out before any of its cues was heard, so a warning always comes first.', min: 0.1, max: 10, step: 0.1, unit: 'clock points' },
+    'fill.strain': { label: 'Camera strain', help: 'Extra strain each officer takes at a commit per full gauge that fills (a crowd filming, a subject streaming), as a share of that strain: 0.4 at a gauge of 50 adds 20%. Shown in the decision\u2019s breakdown.', min: 0, max: 2, step: 0.05, unit: 'x per full gauge' },
+    'fill.audienceGain': { label: 'Audience gain', help: 'How much more the call\u2019s trust result counts, either way, per full peak gauge: 0.5 at a peak of 80 counts 40% more. Shown as a debrief line.', min: 0, max: 2, step: 0.05, unit: 'x per full gauge' },
+    'fill.pressurePerMinute': { label: 'Camera pressure', help: 'Points of call pressure a full gauge adds each minute, once its first cue is heard.', min: 0, max: 5, step: 0.1, unit: 'points/min' },
     'dither.relaxed.floorSeconds': { label: 'Relaxed: reading floor', help: 'Real seconds on an open decision before a stall counts at the Relaxed timer setting (docs/call-pressure.md).', min: 0, max: 300, step: 1, unit: 's' },
     'dither.relaxed.readingCharsPerSecond': { label: 'Relaxed: reading speed', help: 'Characters of stage text a second the reading floor adds time for; 0 keeps the floor fixed.', min: 0, max: 60, step: 1, unit: 'chars/s' },
     'dither.relaxed.gameMinutesPerRealMinute': { label: 'Relaxed: stall rate', help: 'Game minutes a real minute adds to the open decision after the floor, up to the open threat.', min: 0, max: 20, step: 0.5, unit: 'min/min' },

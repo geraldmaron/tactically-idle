@@ -1317,7 +1317,7 @@ export function evaluateAction(input: EvalInput): Evaluation {
  * 50 adds 5% per 5 years, a rookie adds 15% under pressure, and distance into the
  * room raises strain for the officers taking part in an entry.
  */
-export function strainFor(input: EvalInput, ev: Evaluation, band: OutcomeBand): Record<Id, number> {
+export function strainFor(input: EvalInput, ev: Evaluation, band: OutcomeBand, fillMult = 1): Record<Id, number> {
   const { state, run, action } = input;
   const T = RESOLUTION_TUNING;
   const E = EXPERIENCE_TUNING;
@@ -1345,6 +1345,8 @@ export function strainFor(input: EvalInput, ev: Evaluation, band: OutcomeBand): 
       if (pressured && experienceBand(o) === 'rookie') m *= E.rookieStrain;
       m *= ageStrainMult(ageYears(o, day));
       if (ev.participantIds.includes(id)) m *= ev.exposureMult;
+      // Gauges that fill (sim/clocks.ts fillGauge): everyone on scene carries the camera's weight.
+      m *= fillMult;
       out[id] = round1(base * w * extra * m);
     }
   }
