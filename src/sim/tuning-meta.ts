@@ -35,7 +35,7 @@ export const PINNED_BY: Readonly<Record<string, readonly string[]>> = {
   SPATIAL_TUNING: [...sim('spatial-factors'), BALANCE],
   ROSTER_TUNING: sim('department', 'career'),
   INCIDENT_TUNING: sim('incidents'),
-  CLOCK_RULES_V1: [...sim('clocks'), BALANCE],
+  CLOCK_RULES_V1: [...sim('clocks', 'dither', 'dither-balance'), BALANCE],
   FORCE_RISK_V1: [...sim('force-risk'), BALANCE],
   CAREER_TUNING: [...sim('career', 'consolidation', 'economy', 'external-support'), 'src/ui/components/OfficerProgress.test.ts'],
   LEARNING_MULTIPLIER: [...sim('career', 'ranks'), 'src/ui/components/OfficerProgress.test.ts'],
@@ -163,6 +163,12 @@ export const TUNING_META: readonly FieldMeta[] = [
   }),
   ...table('CLOCK_RULES_V1', { group: 'time', mode: 'live' }, {
     floor: { label: 'Clock stops short at', help: 'Where a clock stops in a decision that would run it out before any of its cues was heard, so a warning always comes first.', min: 0.1, max: 10, step: 0.1, unit: 'clock points' },
+    'dither.relaxed.floorSeconds': { label: 'Relaxed: reading floor', help: 'Real seconds on an open decision before a stall counts at the Relaxed timer setting (docs/call-pressure.md).', min: 0, max: 300, step: 1, unit: 's' },
+    'dither.relaxed.readingCharsPerSecond': { label: 'Relaxed: reading speed', help: 'Characters of stage text a second the reading floor adds time for; 0 keeps the floor fixed.', min: 0, max: 60, step: 1, unit: 'chars/s' },
+    'dither.relaxed.gameMinutesPerRealMinute': { label: 'Relaxed: stall rate', help: 'Game minutes a real minute adds to the open decision after the floor, up to the open threat.', min: 0, max: 20, step: 0.5, unit: 'min/min' },
+    'dither.standard.floorSeconds': { label: 'Standard: reading floor', help: 'Real seconds on an open decision before a stall counts at the Standard timer setting (docs/call-pressure.md).', min: 0, max: 300, step: 1, unit: 's' },
+    'dither.standard.readingCharsPerSecond': { label: 'Standard: reading speed', help: 'Characters of stage text a second the reading floor adds time for; 0 keeps the floor fixed.', min: 0, max: 60, step: 1, unit: 'chars/s' },
+    'dither.standard.gameMinutesPerRealMinute': { label: 'Standard: stall rate', help: 'Game minutes a real minute adds to the open decision after the floor, up to the open threat.', min: 0, max: 20, step: 0.5, unit: 'min/min' },
   }),
   ...table('FORCE_RISK_V1', { group: 'harm', mode: 'live' }, Object.fromEntries(Object.entries(PROFILES).flatMap(([key, name]) => [
     [`${key}.fatal`, key === 'hands'

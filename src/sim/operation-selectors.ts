@@ -31,7 +31,7 @@ import { deployRoster, runRoster } from './squads';
 import { getScenario } from './scenario-registry';
 import { ITEMS } from '../content/items';
 import { availableUnits, builtFor, evaluateAction, getBuilt, RESOLUTION_TUNING, squadLabel, tagNames, type Evaluation } from './resolution';
-import { teamMinutes } from './clocks';
+import { ditherCap, teamMinutes } from './clocks';
 import { conditionHolds } from './conditions';
 import { checkStart, computeDebrief, defaultSupport, evaluateDefault, decisionViewsFor, matchedEffects, matchedOutcomeIndices } from './operation';
 import { drawnDistribution, type DrawnDistribution } from './drawn-effects';
@@ -405,13 +405,17 @@ function expectedSupplies(action: ActionDefinition, ev: Evaluation): ActionView[
   return [...used].map(([label, qty]) => ({ label, qty }));
 }
 
+/** A stall as decide() charges it: tenths, at least zero, stopped at the open decision's cap. */
+const cappedDither = (scenario: ScenarioDefinition, run: OperationRun, dither: number) =>
+  Number.isFinite(dither) && dither > 0 ? Math.min(ditherCap(scenario, run), Math.floor(dither * 10) / 10) : 0;
+
 /** A choice's time on the card. The range spans every band, with a hidden truth branch's possible
  * delay counted in the bounds only, never picked for the preview. The estimate weights each band's
  * planned time (route plus publicly known delays, added after the band multiplier as on commit)
  * by its chance, and is clamped into the range so the two never disagree. */
-export function durationPreview(action: ActionDefinition, ev: Evaluation, run: OperationRun): Pick<ActionView, 'timeCost' | 'timeRange'> {
-  if (action.awaitSupport) return { timeCost: ev.timeBase, timeRange: { min: ev.timeBase, max: ev.timeBase } };
-  const round = (n: number) => Math.round(Math.max(0.5, n) * 10) / 10;
+export function durationPreview(action: ActionDefinition, ev: Evaluation, run: OperationRun, dither = 0): Pick<ActionView, 'timeCost' | 'timeRange'> {
+  if (action.awaitSupport) return { timeCost: ev.timeBase + dither, timeRange: { min: ev.timeBase + dither, max: ev.timeBase + dither } };
+  const round = (n: number) => Math.round(Math.max(0.5, n + dither) * 10) / 10;
   const chance = { favorable: ev.pFavorable, mixed: Math.max(0, 1 - ev.pFavorable - ev.pAdverse), adverse: ev.pAdverse };
   let expected = 0;
   const limits = (['favorable', 'mixed', 'adverse'] as const).flatMap((band) => {
@@ -464,7 +468,7 @@ function leadReadsOf(a: ActionDefinition): Pick<ActionView, 'leadReads'> {
   return marks.size ? { leadReads: [...marks].sort() } : {};
 }
 
-function toView(state: GameState, run: OperationRun, a: ActionDefinition, ev: Evaluation, alternates: SquadId[]): ActionView {
+function toView(state: GameState, run: OperationRun, a: ActionDefinition, ev: Evaluation, alternates: SquadId[], dither: number): ActionView {
   const hidden = isTargetHidden(a, run);
   const eventResult = actionEventResult(a);
   let reason = ev.reason;
@@ -473,7 +477,8 @@ function toView(state: GameState, run: OperationRun, a: ActionDefinition, ev: Ev
     ...(eventResult ? { eventResult } : {}),
     ...(ev.authority ? { authority: { ...ev.authority } } : {}),
     ...(a.deceives ? { deceives: true as const } : {}),
-    ...(a.threat ? { threat: { label: a.threat.label, bands: (['favorable', 'mixed', 'adverse'] as const).filter((band) => teamMinutes(ev, a, band) >= a.threat!.minutes) } } : {}),
+    // The stall so far counts toward the threat as the commit counts it (decide's clockBaseMinutes).
+    ...(a.threat ? { threat: { label: a.threat.label, bands: (['favorable', 'mixed', 'adverse'] as const).filter((band) => teamMinutes(ev, a, band) + dither >= a.threat!.minutes) } } : {}),
     ...(a.weighing ? { weighing: { pull: leadIn(a.weighing.pull, ev, state), cost: leadIn(a.weighing.cost, ev, state) } } : {}),
     ...keyRatingOf(a),
     ...leadReadsOf(a),
@@ -495,7 +500,7 @@ function toView(state: GameState, run: OperationRun, a: ActionDefinition, ev: Ev
     consequenceLevel: a.consequenceLevel ?? inferredConsequenceLevel(a),
     outcomePreview: { ...(a.outcomePreview ?? defaultOutcomePreview(a)) },
     suppliesRequired: expectedSupplies(a, ev),
-    ...durationPreview(a, ev, run),
+    ...durationPreview(a, ev, run, dither),
     travelMinutes: ev.travelMinutes,
     ...(a.timeLabel ? { timeLabel: a.timeLabel } : {}),
     contributors: ev.contributors,
@@ -505,8 +510,10 @@ function toView(state: GameState, run: OperationRun, a: ActionDefinition, ev: Ev
   };
 }
 
-/** Actions for the current stage. focusSquadId sets the default acting squad. */
-export function actionViews(state: GameState, _now: number, focusSquadId: SquadId | null): ActionView[] {
+/** Actions for the current stage. focusSquadId sets the default acting squad. `dither` is the open
+ * decision's stall in game minutes (sim/clocks.ts openDither): the cards' minutes and threat tags read
+ * it, so a preview shows what a commit now would charge. Zero by default: gates and replays never stall. */
+export function actionViews(state: GameState, _now: number, focusSquadId: SquadId | null, dither = 0): ActionView[] {
   const run = state.activeRun;
   if (!run || run.status !== 'active' || run.stage === 'debrief') return [];
   const s = getScenario(run.scenarioId);
@@ -514,7 +521,7 @@ export function actionViews(state: GameState, _now: number, focusSquadId: SquadI
   const built = builtFor(run.locationFamilyId, run.locationSeed, run.flags);
   return s.stages[run.stage].actions.filter((a) => !isGenericResponseExit(s, a) && conditionHolds(a.visibleWhen, run)).map((a) => {
     const { ev, alternates } = evaluateDefault(state, run, s, built, a, focusSquadId);
-    return toView(state, run, a, ev, alternates);
+    return toView(state, run, a, ev, alternates, cappedDither(s, run, dither));
   });
 }
 
@@ -530,6 +537,8 @@ export function previewAction(
   supportSquadIds: SquadId[],
   /** The officer the player sends to lead (decide's leadOfficerId); honored only among those taking part. */
   lead?: Id,
+  /** The open decision's stall in game minutes, as actionViews reads it. */
+  dither = 0,
 ): ActionView | null {
   const run = state.activeRun;
   if (!run || run.status !== 'active' || run.stage === 'debrief') return null;
@@ -538,7 +547,7 @@ export function previewAction(
   if (!s || !a || !conditionHolds(a.visibleWhen, run)) return null;
   const built = builtFor(run.locationFamilyId, run.locationSeed, run.flags);
   const ev = evaluateAction({ state, run, scenario: s, action: a, built, acting: actingSquadIds, support: supportSquadIds, ...(lead ? { lead } : {}) });
-  return toView(state, run, a, ev, []);
+  return toView(state, run, a, ev, [], cappedDither(s, run, dither));
 }
 
 // ---------------------------------------------------------------- prep and debrief
@@ -565,7 +574,7 @@ export function lastResolution(state: GameState): DecisionResolution | null {
  * is the outcome's index in the band's authored list. The squads are `acting` with the default
  * support, or the game's default pick (the best eligible squad) when not given. Engine only: the
  * player never sees these odds. Empty when no call is running or the action isn't at this stage. */
-export function drawnDistributionAt(state: GameState, actionId: string, band: OutcomeBand, acting?: SquadId[]): DrawnDistribution[] {
+export function drawnDistributionAt(state: GameState, actionId: string, band: OutcomeBand, acting?: SquadId[], dither = 0): DrawnDistribution[] {
   const run = state.activeRun;
   if (!run || run.status !== 'active' || run.stage === 'debrief') return [];
   const scenario = getScenario(run.scenarioId);
@@ -574,7 +583,7 @@ export function drawnDistributionAt(state: GameState, actionId: string, band: Ou
   const built = builtFor(run.locationFamilyId, run.locationSeed, run.flags);
   const ev = acting ? evaluateAction({ state, run, scenario, action, built, acting, support: defaultSupport(run, action, acting) })
     : evaluateDefault(state, run, scenario, built, action, null).ev;
-  const clockBase = teamMinutes(ev, action, band);
+  const clockBase = teamMinutes(ev, action, band) + cappedDither(scenario, run, dither);
   const indices = matchedOutcomeIndices(action, band, run, scenario, clockBase);
   return drawnDistribution(matchedEffects(action, band, run, scenario, clockBase), { state, run, scenario, acting: ev.acting, participantIds: ev.participantIds, unitsOf: availableUnits })
     .map((entry) => ({ ...entry, effect: indices[entry.effect] }));

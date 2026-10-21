@@ -301,3 +301,31 @@ describe('v5 public conditions on support effects', () => {
     expect(deserialize(serialize(state, NOW))!.activeRun).toEqual(state.activeRun);
   });
 });
+
+describe('a wait the player stalls on (dither-minutes)', () => {
+  const CLOCKED = 'test_external_support_clocked';
+  beforeAll(() => {
+    const scenario = definition();
+    scenario.id = CLOCKED;
+    // A running clock gives the decision a stall cap (sim/clocks.ts ditherCap).
+    scenario.clocks = [{ id: 'light', label: 'Daylight', kind: 'light', start: 100, ratePerMin: 1, rateKnown: true, cues: [{ at: 50, text: 'The light is going.' }] }];
+    SCENARIOS[CLOCKED] = scenario;
+  });
+  afterAll(() => { delete SCENARIOS[CLOCKED]; });
+
+  it('takes the remaining wait plus the stall, and the save reloads', () => {
+    const requested = decide(started(CLOCKED), 'request_medical');
+    const remaining = Math.round((requested.activeRun!.externalSupport!.medical.availableAt! - requested.activeRun!.clock) * 10) / 10;
+    const result = apply(requested, { type: 'decide', actionId: 'wait_medical', actingSquadIds: ['A'], supportSquadIds: [], ditherMinutes: 2 });
+    expect(result.result).toEqual({ ok: true });
+    const decision = result.state.activeRun!.history.at(-1)!;
+    expect(decision.ditherMinutes).toBe(2);
+    expect(decision.timeCost).toBe(Math.round((remaining + 2) * 10) / 10);
+    expect(validExternalSupportState(result.state.activeRun!, SCENARIOS[CLOCKED])).toBe(true);
+    expect(deserialize(serialize(result.state, NOW))).not.toBeNull();
+    // Without a stall the wait is the remainder, as before.
+    const plain = decide(requested, 'wait_medical');
+    expect(plain.activeRun!.history.at(-1)!.timeCost).toBe(remaining);
+    expect(deserialize(serialize(plain, NOW))).not.toBeNull();
+  });
+});
