@@ -1,6 +1,6 @@
 // Push-back lines (docs/call-pressure.md): they fire once when the stall reaches their threshold,
-// replay from the decision's recorded dither, stay silent without lines, and are never played in a
-// situation that declares suicide_self_harm. Negative controls run on the group fixture this test owns.
+// replay from the decision's recorded dither, stay silent without lines, and are not suppressed by
+// any situation (owner decision 2026-10-20). Controls run on the group fixture this test owns.
 import { describe, expect, it } from 'vitest';
 import type { CallTree, TreeThreat } from '../../../content/call-trees/types';
 import { INCIDENT_TEMPLATES } from '../../../content/incidents';
@@ -17,14 +17,14 @@ import { compileIncident, hostedSpec } from '../instance';
 import { choiceActionId } from '../trees-v13/compile';
 import { GROUP_TEMPLATE, GROUP_TREE } from '../trees-v13/group-fixture';
 import { startGateRun, withDraftScenario } from './engine-driver';
-import { carriedPushback, pushbackDataFindings, pushbackFindings } from './pushback';
+import { pushbackDataFindings, pushbackFindings } from './pushback';
 
 const THREAT: TreeThreat = {
   label: 'The courier edges for the door', minutes: 4, text: 'The courier takes a half step toward the street door.',
   pushback: [{ id: 'first', at: 1.5, by: 'taker', line: 'Test line from the taker.', mark: ['taker_pressed'] }, { id: 'second', at: 3, by: 'courier', line: 'Test line from the courier.' }],
 };
 
-function template(threat: TreeThreat | undefined, selfHarm: boolean): IncidentTemplate {
+function template(threat: TreeThreat | undefined, selfHarm = false): IncidentTemplate {
   const tree: CallTree = structuredClone(GROUP_TREE);
   if (threat) tree.nodes.find(node => node.id === tree.root)!.threat = structuredClone(threat);
   tree.situations = tree.situations.map(situation => ({ ...situation, descriptors: selfHarm ? ['suicide_self_harm'] : [] })) as CallTree['situations'];
@@ -40,24 +40,21 @@ function compile(t: IncidentTemplate): ScenarioDefinition {
   throw new Error('No seed hosts the fixture');
 }
 
+/** The compiled push-back line ids. */
+const carriedPushback = (scenario: ScenarioDefinition) => Object.values(scenario.stages).flatMap(stage => stage.actions).flatMap(action => (action.threat?.pushback ?? []).map(line => line.id));
 const rootChoice = (scenario: ScenarioDefinition) => scenario.stages.assess.actions.find(action => action.threat)!;
 
 describe('the push-back gate', () => {
-  it('passes every shipping call, and no shipped threat carries a line in a self-harm situation', () => {
+  it('passes every shipping call', () => {
     for (const t of Object.values(INCIDENT_TEMPLATES)) expect(pushbackFindings(t!), t!.type).toEqual([]);
-    // Every hostage and barricade situation declares the theme, so no line can play there today.
-    for (const type of ['hostage_crisis', 'barricaded'] as const)
-      expect(INCIDENT_TEMPLATES[type]!.tree.situations.every(situation => situation.descriptors?.includes('suicide_self_harm')), type).toBe(true);
   });
 
-  it('fails a compiled self-harm situation that still carries lines (negative control)', () => {
-    const t = template(THREAT, true);
-    // The compiler strips them, so the gate passes; the same data in a situation without the theme
-    // compiles with its lines, and the check the gate runs finds them.
-    expect(pushbackFindings(t)).toEqual([]);
-    expect(carriedPushback(compile(t))).toEqual([]);
-    expect(carriedPushback(compile(template(THREAT, false))).length).toBeGreaterThan(0);
-    expect(rootChoice(compile(template(THREAT, false))).threat!.pushback).toHaveLength(2);
+  it('compiles the lines the same in a situation that declares suicide_self_harm', () => {
+    const ids = (t: IncidentTemplate) => [...new Set(carriedPushback(compile(t)))].sort();
+    expect(ids(template(THREAT, true))).toEqual(['first', 'second']);
+    expect(ids(template(THREAT, false))).toEqual(['first', 'second']);
+    expect(pushbackFindings(template(THREAT, true))).toEqual([]);
+    expect(rootChoice(compile(template(THREAT, true))).threat!.pushback).toHaveLength(2);
   });
 
   it('holds a line to its rules', () => {
@@ -101,11 +98,19 @@ describe('a push-back line in play', () => {
     });
   });
 
-  it('stays silent for a threat without lines, and in a self-harm situation', () => {
-    for (const quiet of [template({ ...THREAT, pushback: undefined }, false), template(THREAT, true)]) withDraftScenario(compile(quiet), sid => {
+  it('stays silent for a threat without lines', () => {
+    withDraftScenario(compile(template({ ...THREAT, pushback: undefined }, false)), sid => {
       const after = decide(startGateRun(sid, 719), 4);
       expect(spoken(after)).toEqual([]);
       expect(after.activeRun!.flags).not.toContain('mark:taker_pressed');
+    });
+  });
+
+  it('plays the lines in a self-harm situation too', () => {
+    withDraftScenario(compile(template(THREAT, true)), sid => {
+      const after = decide(startGateRun(sid, 719), 4);
+      expect(spoken(after)).toEqual(['Test line from the taker.', 'Test line from the courier.']);
+      expect(after.activeRun!.flags).toContain('mark:taker_pressed');
     });
   });
 });
@@ -128,10 +133,5 @@ describe('what a push-back line reads and sets', () => {
     expect(actions.some(action => action.id === choiceActionId('hostage_crisis', 'talk', 'needs_pressed'))).toBe(true);
     const guarded = actions.find(action => action.id === choiceActionId('hostage_crisis', 'talk', 'unless_pressed'))!;
     expect(guarded.visibleWhen?.notFlags ?? [], 'the guard on a mark that can now be set stays').toContain('mark:taker_pressed');
-    // Where the situation strips the lines, nothing sets the mark: the choice that needs it is dropped.
-    const stripped = template(THREAT, true);
-    const strippedTalk = stripped.tree.nodes.find(node => node.id === 'talk')!;
-    strippedTalk.choices[0] = { ...strippedTalk.choices[0], id: 'needs_pressed', onlyIf: { marks: ['taker_pressed'] } };
-    expect(Object.values(compile(stripped).stages).flatMap(stage => stage.actions).some(action => action.id === choiceActionId('hostage_crisis', 'talk', 'needs_pressed'))).toBe(false);
   });
 });

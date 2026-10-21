@@ -262,8 +262,7 @@ export interface ActionDefinition {
    * and the band's delay included, its effects apply: the line the player reads and what it costs. */
   threat?: NodeThreat & { effects: OutcomeEffect[];
     /** Push-back lines (TreePushback), each as the effect it applies once the stall reaches `at`
-     * dither minutes. Empty or absent: the threat stays silent. Stripped in a situation that
-     * declares `suicide_self_harm` (compile.ts). */
+     * dither minutes. Empty or absent: the threat stays silent. */
     pushback?: { id: string; at: number; effects: OutcomeEffect[] }[] };
   /** V13: what draws a player to the choice, and what it costs, one line each. */
   weighing?: { pull: string; cost: string };

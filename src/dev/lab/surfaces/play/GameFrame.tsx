@@ -215,7 +215,7 @@ function StallSlider({ state, dither, onChange }: { state: GameState; dither: nu
   if (!(cap > 0)) return <p className="lab-frame-chips"><span className="lab-chip">No threat or running clock here: a stall costs nothing</span></p>;
   const shown = Math.min(dither, cap);
   const text = decisionTextLength(scenario, run);
-  // The threat's push-back lines (compile.ts: none where the situation declares suicide_self_harm).
+  // The threat's push-back lines.
   const lines = (scenario.stages[run.stage].actions.find(action => action.threat?.pushback?.length)?.threat?.pushback ?? [])
     .map(line => ({ id: line.id, at: line.at, text: line.effects.flatMap(effect => effect.exchange ?? []).map(spoken => spoken.line).join(' ') }));
   return (
@@ -229,7 +229,7 @@ function StallSlider({ state, dither, onChange }: { state: GameState; dither: nu
       </span>
       {lines.map(line => (
         <span key={line.id} className={cx('lab-chip', shown >= line.at ? 'lab-chip-warn' : '')}
-          title={`The subject's push-back line ${line.id}: fires once when the stall reaches ${line.at} min (Relaxed after ${realTimeFor(line.at, 'relaxed', text)}, Standard after ${realTimeFor(line.at, 'standard', text)} of real time). Not played in a situation that declares suicide_self_harm.`}>
+          title={`The subject's push-back line ${line.id}: fires once when the stall reaches ${line.at} min (Relaxed after ${realTimeFor(line.at, 'relaxed', text)}, Standard after ${realTimeFor(line.at, 'standard', text)} of real time).`}>
           {shown >= line.at ? 'Fires' : 'Would fire'} at {line.at} min: {line.text}
         </span>
       ))}

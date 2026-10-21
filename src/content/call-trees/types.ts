@@ -407,9 +407,10 @@ export interface TreeThreat {
 
 /** One push-back line on a threat. It fires once, when the stall the player spent on the decision
  * (dither minutes) reaches `at`, which is always before the threat itself lands (`at` below the
- * threat's `minutes`). It is spoken by a role or group, may set a mark later choices read, and
- * is never played in a situation that declares `suicide_self_harm`: nobody addresses the player's
- * absence where a person is at risk (E4). The line obeys swat-call-prose like any spoken line. */
+ * threat's `minutes`). It is spoken by a role or group, and may set a mark later choices read. No
+ * situation suppresses it (owner decision 2026-10-20): players filter calls by content setting, and
+ * the timer Off means no stall and so no lines. The line obeys swat-call-prose like any spoken
+ * line. */
 export interface TreePushback {
   /** Unique within the threat. */
   id: string;

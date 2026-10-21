@@ -765,9 +765,9 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
   // Marks and releases this call can actually set (prunePlan). A condition that needs one it can
   // never set is never true here (drop it); one that needs it absent is always true (strip that
   // part). The tree's count conditions are already settled, so `possible` reads marks and safety.
-  // The marks a stalled decision's push-back lines set count as settable, except where the situation
-  // strips the lines (suicide_self_harm): over every node, which only keeps more conditions.
-  const pushbackMarks = situation.descriptors?.includes('suicide_self_harm') ? [] : tree.nodes.flatMap(node => (node.threat?.pushback ?? []).flatMap(line => line.mark ?? []));
+  // The marks a stalled decision's push-back lines set count as settable: over every node, which
+  // only keeps more conditions.
+  const pushbackMarks = tree.nodes.flatMap(node => (node.threat?.pushback ?? []).flatMap(line => line.mark ?? []));
   const plan = prunePlan(tree, callCounts({ groups, armed: placed.armed, upstairs: placed.upstairs, exits: placed.exits }), [...clockMarks, ...pushbackMarks], spec.seed, clockNexts);
   const settable = { marks: plan.settableMarks, safe: plan.settableSafe };
   const possible = plan.possible;
@@ -1163,9 +1163,7 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
     const deadly = (threat.mark ?? []).filter(mark => tree.threatMarks?.[mark]);
     if (deadly.length) throw new Error(`${node.id}: a threat may not set the threat-to-life mark ${deadly.join(', ')} (E12.4)`);
     const { label, minutes, text, mark, moves: threatMoves, pressure, civilian } = threat;
-    // Push-back lines (docs/call-pressure.md): none where the situation declares suicide_self_harm
-    // (E4), so the compiled call carries nothing for the engine to fire there.
-    const lines = situation.descriptors?.includes('suicide_self_harm') ? [] : threat.pushback ?? [];
+    const lines = threat.pushback ?? [];
     const seenIds = new Set<string>();
     for (const line of threat.pushback ?? []) {
       if (!line.id || seenIds.has(line.id)) throw new Error(`${node.id}: a push-back line needs a unique id`);
