@@ -3,7 +3,7 @@
 // holds that each leaves the board drawable; the draw tests check the filter holds on a real board,
 // and that avoiding nothing leaves the draw exactly as it was.
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { AVOIDABLE_THEMES } from '../content/content-descriptors';
+import { CONTENT_DESCRIPTORS, type ContentDescriptor } from '../content/content-descriptors';
 import { callTreeAt } from '../content/call-trees';
 import { scenarioRecipe } from '../content/scenario-recipes';
 import { SCENARIO_TYPES } from '../content/scenario-types';
@@ -28,8 +28,10 @@ beforeEach(() => {
 const T0 = Date.UTC(2026, 0, 5, 12, 0, 0);
 const HOUR = 3_600_000;
 
-/** Every subset of the avoidable themes, in list order. */
-const COMBOS: ContentExclusion[] = Array.from({ length: 1 << AVOIDABLE_THEMES.length }, (_, mask) => ({ avoid: AVOIDABLE_THEMES.filter((_, i) => mask & (1 << i)) }));
+/** Every subset of the descriptors, in list order. */
+const COMBOS: ContentExclusion[] = Array.from({ length: 1 << CONTENT_DESCRIPTORS.length }, (_, mask) => ({ avoid: CONTENT_DESCRIPTORS.filter((_, i) => mask & (1 << i)) }));
+/** The sensitive themes together: a set the board survives. */
+const THEMES: ContentDescriptor[] = ['suicide_self_harm', 'child_at_risk', 'domestic_violence'];
 const label = (e: ContentExclusion) => (e.avoid.length ? `avoid ${e.avoid.join(', ')}` : 'avoid nothing');
 
 /** Every card a campaign's board shows over `days`, as (type, situation) pairs. */
@@ -64,7 +66,7 @@ describe('content exclusion', () => {
           const carries = (tree.situations[index].descriptors ?? []).some((d) => out.has(d));
           expect(kept[type].includes(index), `${label(exclusion)} ${type} ${index}`).toBe(!carries);
         }
-        for (const more of AVOIDABLE_THEMES) {
+        for (const more of CONTENT_DESCRIPTORS) {
           const wider = drawableSituations({ avoid: [...exclusion.avoid, more] })[type];
           expect(wider.every((index) => kept[type].includes(index))).toBe(true);
         }
@@ -77,13 +79,19 @@ describe('content exclusion', () => {
     expect(table).toMatchSnapshot();
   });
 
-  it('leaves at least two kinds drawable whatever the player avoids', () => {
-    for (const exclusion of COMBOS) expect(drawableKinds(exclusion).length, label(exclusion)).toBeGreaterThanOrEqual(2);
+  it('lets the board draw with the sensitive themes avoided, and records which single descriptors empty it', () => {
+    expect(drawableKinds({ avoid: THEMES }).length).toBeGreaterThan(0);
+    const emptying = CONTENT_DESCRIPTORS.filter((d) => drawableKinds({ avoid: [d] }).length === 0);
+    expect(emptying).toMatchInlineSnapshot(`
+      [
+        "injury",
+      ]
+    `);
   });
 });
 
 describe('a filtered board', () => {
-  const AVOID_ALL: ContentExclusion = { avoid: [...AVOIDABLE_THEMES] };
+  const AVOID_ALL: ContentExclusion = { avoid: THEMES };
 
   it('draws only situations the exclusion keeps, and never a kind left with none', () => {
     const kept = drawableSituations(AVOID_ALL);

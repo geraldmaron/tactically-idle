@@ -17,7 +17,7 @@ import { recoveryDuty } from './squads';
 import type { DutyRates } from './squad-optimizer';
 import { ageRecoveryFactor, applyCareerDue, awardXp, learnedXp, nextCareerEventTime } from './career';
 import { applyUnitDue, applyUnitWear, createUnit, nextUnitEventTime, ownedCount } from './equipment';
-import { applyIncidentsDue, nextIncidentEventTime } from './incidents';
+import { applyIncidentsDue, nextIncidentEventTime, type ContentExclusion } from './incidents';
 import { runEquipmentMaintenance } from './equipment-manager';
 import { departmentUpkeep, maintenanceBudget } from './equipment-manager-policy';
 import { commandStaffActive, commandStaffSalaries, logQuartermaster, runCommandStaff } from './command-staff';
@@ -241,7 +241,7 @@ function runRestock(d: GameState, acc: Acc, t: number): void {
  * settlement, so scheduled career events (anniversaries, birthdays) in (prev, t] are
  * processed exactly once.
  */
-function applyDue(d: GameState, prev: number, t: number, acc: Acc, restock: boolean): void {
+function applyDue(d: GameState, prev: number, t: number, acc: Acc, restock: boolean, exclusion?: ContentExclusion): void {
   const due = Object.values(d.officers)
     .filter((o) => o.assignment?.kind === 'training' && o.assignment.endsAt <= t)
     .sort((a, b) => {
@@ -265,7 +265,7 @@ function applyDue(d: GameState, prev: number, t: number, acc: Acc, restock: bool
     logQuartermaster(d, t, maintenance.started, maintenance.spent, acc.restock - restockBefore);
     runCommandStaff(d, t);
   }
-  applyIncidentsDue(d, prev, t);
+  applyIncidentsDue(d, prev, t, exclusion);
 }
 
 function nextEventTime(d: GameState, t: number, T: number, W: number, restockActive: boolean): number {
@@ -301,7 +301,7 @@ function recover(d: GameState, hours: number, t: number): void {
  * Settle department time up to max(now, clockHighWater). Mutates the draft.
  * Moving the clock backward grants nothing. Idempotent for equal times.
  */
-export function settle(d: GameState, now: number): void {
+export function settle(d: GameState, now: number, exclusion?: ContentExclusion): void {
   const dep = d.department;
   const T = Math.max(now, dep.clockHighWater);
   const L = dep.lastSettledAt;
@@ -329,7 +329,7 @@ export function settle(d: GameState, now: number): void {
   );
 
   const I = ECONOMY_TUNING.restockIntervalMs;
-  applyDue(d, L, L, acc, false);
+  applyDue(d, L, L, acc, false, exclusion);
   let t = L;
   while (t < T) {
     const restockActive = hasEffect(d, 'restockRules') || maintenanceBudget(d) > 0 || commandStaffActive(d);
@@ -350,7 +350,7 @@ export function settle(d: GameState, now: number): void {
     recover(d, (e - t) / HOUR_MS, t);
     applyUnitWear(d, t, e, acc.equipment, departmentUpkeep(d));
 
-    applyDue(d, t, e, acc, restockActive && e % I === 0 && e <= W);
+    applyDue(d, t, e, acc, restockActive && e % I === 0 && e <= W, exclusion);
     t = e;
   }
 

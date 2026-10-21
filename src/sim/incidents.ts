@@ -17,7 +17,8 @@ import { reputationWeights } from './reputation';
 import type { IncidentType } from './scenario-types';
 import { tunable } from './tuning';
 import { callTreeAt } from '../content/call-trees';
-import type { AvoidableTheme, ContentDescriptor } from '../content/content-descriptors';
+import { scenarioRecipe } from '../content/scenario-recipes';
+import type { ContentDescriptor } from '../content/content-descriptors';
 
 /** Content v11 gates board draws by capability and weights unseen frameworks first. */
 
@@ -45,10 +46,9 @@ export const INCIDENT_TUNING = tunable('INCIDENT_TUNING', {
 
 // ---------------------------------------------------------------- content filter
 
-/** What the player keeps off the board (docs/content-rating.md): the avoidable themes they turned
- * off. A situation carrying any of them is left out. A pure input: the store owns the setting and
- * passes it in. */
-export interface ContentExclusion { avoid: readonly AvoidableTheme[] }
+/** What the player keeps off the board (docs/content-rating.md): any set of descriptors. A situation
+ * carrying any of them is left out. A pure input: the store owns the setting and passes it in. */
+export interface ContentExclusion { avoid: readonly ContentDescriptor[] }
 
 /** The descriptors an exclusion rules out. */
 export function excludedDescriptors(exclusion: ContentExclusion): Set<ContentDescriptor> {
@@ -74,6 +74,21 @@ export function drawableSituations(exclusion: ContentExclusion): Record<Incident
 export function drawableKinds(exclusion: ContentExclusion): IncidentType[] {
   const situations = drawableSituations(exclusion);
   return SCENARIO_TYPES.map(({ type }) => type).filter(type => situations[type].length > 0);
+}
+
+/** Whether a card's situation survives an exclusion. A card that can't be read stays. */
+export function cardFits(card: IncidentCard, exclusion: ContentExclusion): boolean {
+  const spec = parseIncidentId(card.id);
+  if (!spec) return true;
+  return drawableSituations(exclusion)[spec.type].includes(scenarioRecipe(spec).variant as SituationIndex);
+}
+
+/** Clear the cards the player's content settings no longer allow. A call in progress is not on
+ * the board and finishes. */
+export function dropExcludedCards(d: GameState, exclusion: ContentExclusion): void {
+  if (!exclusion.avoid.length) return;
+  const kept = board(d).filter(card => cardFits(card, exclusion));
+  if (kept.length !== board(d).length) d.incidents = kept;
 }
 
 /** Department plus the one field this module adds (JSON-safe, optional like candidateRefreshedAt). */

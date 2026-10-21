@@ -13,7 +13,6 @@ import { emptyNotes } from '../../model/endpoints';
 import { gateVerdicts } from '../../model/gate-view';
 import type { GateRun } from '../../model/gate-view';
 import { ageText, checkLabel, checksFor, descriptorLabel, endingWeights, findingSite, findingsFeed, gateHeadline, gateLine, gateTally, glyphRun, humanizeFinding, randomResults, severityCounts, situationContent, usuallyOf } from './calls-model';
-import { AVOIDABLE_THEMES, type ContentDescriptor } from '../../../../content/content-descriptors';
 
 const result = (weight: Weight, ending: string, officersHurt = 0): CallResult => ({ weight, ending, minutes: 30, officersHurt, peopleHurt: 0, deaths: 0, decisions: 3 });
 
@@ -116,14 +115,13 @@ describe('findings feed', () => {
 });
 
 describe('situation content descriptors', () => {
-  it('lists each situation of every call with its declared descriptors, marks derived and avoidable, and misses nothing', () => {
+  it('lists each situation of every call with its declared descriptors, marks derived, and misses nothing', () => {
     for (const template of Object.values(INCIDENT_TEMPLATES)) {
       const rows = situationContent(template!);
       expect(rows.map(row => row.index)).toEqual([0, 1, 2]);
       for (const row of rows) {
         expect(row.missing, `${template!.type} ${row.index}`).toEqual([]);
         expect(row.tags.map(tag => tag.descriptor)).toEqual(template!.tree.situations[row.index].descriptors ?? []);
-        for (const tag of row.tags) expect(tag.avoidable).toBe((AVOIDABLE_THEMES as readonly ContentDescriptor[]).includes(tag.descriptor));
         expect(row.note).not.toMatch(/\{/);
       }
     }

@@ -8,6 +8,7 @@ import type { SquadArrangementLockTarget, SquadArrangementProposal, SquadArrange
 import type { CommandStaffState, ManagerId, ManagerPolicyPatch } from './command-staff';
 import type { RankId } from './ranks';
 import type { UnlockRule } from '../content/unlocks';
+import type { ContentDescriptor } from '../content/content-descriptors';
 
 export type Id = string;
 
@@ -1166,6 +1167,9 @@ export type CommandType = Command['type'];
 export interface Ctx {
   /** Wall clock in epoch ms, injected for determinism. */
   now: number;
+  /** The descriptors the player keeps off the board (sim/incidents.ts ContentExclusion). The store
+   * passes the saved preference; without it the board draws unfiltered. */
+  exclusion?: { avoid: readonly ContentDescriptor[] };
 }
 
 export type HandlerResult = { ok: true } | { ok: false; reason: string };

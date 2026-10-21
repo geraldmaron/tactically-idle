@@ -205,9 +205,8 @@ function CallCard({ template, verdicts, progress, usually, endings, lint, notes,
 }
 
 /** Each situation's content descriptors (docs/content-rating.md): what the board filter reads. A
- * derived one is set by the tree's own outcomes, a declared one by the designer's ethics screen; an
- * avoidable one is a theme a player can keep off the board (the rest only warn). One the tree derives but the list leaves out is
- * shown as missing, as the content gate fails it. */
+ * derived one is set by the tree's own outcomes, a declared one by the designer's ethics screen. One
+ * the tree derives but the list leaves out is shown as missing, as the content gate fails it. */
 function Content({ template }: { template: IncidentTemplate }) {
   const rows = useMemo(() => situationContent(template), [template]);
   return (
@@ -219,8 +218,8 @@ function Content({ template }: { template: IncidentTemplate }) {
             <span className="lab-calls-content-sit" title={row.note}>Situation {row.index + 1}</span>
             <span className="lab-calls-content-tags">
               {row.tags.map(tag => (
-                <span key={tag.descriptor} data-descriptor={tag.descriptor} className={cx('lab-calls-content-tag', tag.avoidable && 'lab-calls-content-avoidable')}
-                  title={`${tag.derived ? 'Derived from the tree' : 'Declared by the designer'}${tag.avoidable ? '; a player can avoid it' : '; warns only'}`}>
+                <span key={tag.descriptor} data-descriptor={tag.descriptor} className="lab-calls-content-tag"
+                  title={tag.derived ? 'Derived from the tree' : 'Declared by the designer'}>
                   {descriptorLabel(tag.descriptor)}{tag.derived ? '' : ' *'}
                 </span>
               ))}

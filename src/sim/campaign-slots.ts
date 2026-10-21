@@ -1,4 +1,5 @@
 import { createInitialState } from './department';
+import type { ContentExclusion } from './incidents';
 import { dispatch } from './game';
 import { randomCampaignSeed } from './personnel';
 import { deserialize, serialize, type SaveStorage } from './save';
@@ -89,6 +90,8 @@ export class CampaignSlots {
   private session = 0;
   private dirty = true;
   private snapshot: CampaignSnapshot;
+  /** The themes the player keeps off the board; the store keeps it current (ui/store.ts). */
+  exclusion: ContentExclusion | undefined;
 
   constructor(private storage: SaveStorage | null, now: number, private seedFactory = randomCampaignSeed) {
     this.state = createInitialState(now, seedFactory());
@@ -171,7 +174,7 @@ export class CampaignSlots {
 
   send(command: Command, now: number, persist = true): HandlerResult {
     let result;
-    try { result = dispatch(this.state, command, { now }); }
+    try { result = dispatch(this.state, command, { now, exclusion: this.exclusion }); }
     catch { this.reportStorageIssue('This campaign could not advance. Its previous save is untouched. Export the current game or load a readable backup.'); return failure(this.issue!); }
     if (!result.result.ok) return result.result;
     this.state = result.state;
@@ -219,7 +222,7 @@ export class CampaignSlots {
     if (this.library.slots[id - 1] && !overwrite) return failure('Confirm before replacing an occupied slot.');
     return this.attempt(() => {
       const next = this.withCurrent(now);
-      const state = createInitialState(now, this.seedFactory());
+      const state = createInitialState(now, this.seedFactory(), this.exclusion);
       next.slots[id - 1] = { campaignId: newLocalId(), name: cleanName(name, id), createdAt: now, savedAt: now, data: serialize(state, now) };
       next.activeSlotId = id;
       this.write(next);
