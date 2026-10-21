@@ -11,7 +11,7 @@ import type { Weight } from '../../../gen/incident/trees-v13/balance';
 import { labRequirementTree, treeClockRoutes } from './clocks';
 import type { DependencyIndex, ReqNode, Site, StateKey } from '../../../gen/incident/trees-v13/dependencies';
 import { choiceIndex, humanizeNode } from '../../../gen/incident/trees-v13/graph';
-import { clockViews, decisionMinutes, forkMinutes, stepClock, teamMinutes } from '../../../sim/clocks';
+import { clockViews, decisionMinutes, endOf, filling, forkMinutes, stepClock, teamMinutes } from '../../../sim/clocks';
 import type { DrawnResult } from '../../../sim/drawn-effects';
 import { matchedOutcomeIndices } from '../../../sim/operation';
 import { drawnDistributionAt, pendingDebrief, stageProgress } from '../../../sim/operation-selectors';
@@ -187,7 +187,8 @@ export function bandMinutes(_scenario: ScenarioDefinition, action: ActionDefinit
 const ownerTaken = (owner: string, effects: readonly OutcomeEffect[]) =>
   effects.some(effect => effect.personHarm?.some(harm => harm.personId === owner) || effect.setFlags?.some(flag => flag === `safe:${owner}` || flag === `out:${owner}`));
 
-/** Harm a clock running out during this band does to its owner (ClockDef.onOut), as the commit
+/** Harm a clock reaching its end during this band does to its owner (ClockDef.onOut, or onFull for a
+ * gauge that fills), as the commit
  * applies it after the band's own outcome (clockOutEffects): the clock passes zero over the band's
  * minutes, its owner is still inside after the outcome, and the outcome doesn't already hurt them.
  * `sure`: whatever the minutes come to and whatever is drawn; `maybe`: only for some. */
@@ -196,9 +197,10 @@ export function clockOutHarm(scenario: ScenarioDefinition, run: OperationRun, mi
   const sure: string[] = [], maybe: string[] = [];
   if (!run.clocks || !scenario.clocks?.length) return { sure, maybe };
   for (const def of scenario.clocks) {
-    const owner = def.owner, severity = def.onOut?.harm, before = run.clocks[def.id];
-    if (!owner || !severity || !before || before.value <= 0) continue;
-    const outAfter = (t: number) => stepClock(def, before, t, run.flags).value <= 0;
+    const owner = def.owner, severity = endOf(def)?.harm, before = run.clocks[def.id];
+    const done = (value: number) => filling(def) ? value >= 100 : value <= 0;
+    if (!owner || !severity || !before || done(before.value)) continue;
+    const outAfter = (t: number) => done(stepClock(def, before, t, run.flags).value);
     if (!outAfter(minutes[1])) continue;
     // Flags after the outcome: an outcome that gets the owner out stops the harm; one that hurts
     // them owns it.
