@@ -69,7 +69,7 @@ import {
   strainFor,
   type Evaluation,
 } from './resolution';
-import { conditionHolds, withFlag } from './conditions';
+import { conditionHolds, stableFlag, withFlag } from './conditions';
 import { departmentUpkeep } from './equipment-manager-policy';
 import { vantageZones } from './sightlines';
 import { sightings } from './sightings';
@@ -1092,10 +1092,15 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
 
     const knowledgeChanges = changes;
     const protectedWound = ev.protectionUsed && matched.some(effect => effect.officerHarm?.severity === 'serious');
-    const texts = [...matched.map((e) => e.text).filter((x): x is string => Boolean(x)),
+    // A cue from a clock this outcome stops was heard while the decision played out, before the
+    // stop, so it reads first ("Metro 6 reposts the stream" before "Silas ends the stream"). The
+    // effects keep their order; only the words do.
+    const stopped = new Set((scenario.clocks ?? []).filter(def => matched.some(effect => effect.setFlags?.includes(stableFlag(def.id)))).flatMap(def => def.cues.map(cue => cue.text)));
+    const cueTexts = cues.effects.map((e) => e.text).filter((x): x is string => Boolean(x));
+    const texts = [...cueTexts.filter(text => stopped.has(text)), ...matched.map((e) => e.text).filter((x): x is string => Boolean(x)),
       ...(protectedWound ? [`${ITEMS[ev.protectionUsed!.itemId].name} limited the officer's serious injury to a wound. Care and transport are still needed.`] : []),
       ...incidentConsequences?.text ?? [], ...personConsequences?.text ?? [],
-      ...cues.effects.map((e) => e.text).filter((x): x is string => Boolean(x))];
+      ...cueTexts.filter(text => !stopped.has(text))];
     const resolution: DecisionResolution = {
       revision: run.revision,
       stage,

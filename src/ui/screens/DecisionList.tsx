@@ -79,7 +79,7 @@ export interface Guidance {
   /** The stage's threat and the minutes left (0 once it has landed). */
   threat: { label: string; left: number } | null;
   /** The pressure source pulling hardest, or the one running when none pulls yet. */
-  factor: { count: string; pull: number; effect: string } | null;
+  factor: { source: string; pull: number; effect: string } | null;
 }
 
 export function WhatMattersNow({ threat, factor }: Guidance): JSX.Element | null {
@@ -94,7 +94,7 @@ export function WhatMattersNow({ threat, factor }: Guidance): JSX.Element | null
       </div>}
       {factor && <div className="matters-now-row matters-now-factor">
         <dt className="sr-only">Pulling on the odds</dt>
-        <dd><Icon name="crowd" size={14} /><span className="matters-now-text"><b className="matters-now-count">{factor.count}</b> <span className="matters-now-sub">{factor.effect}</span></span>
+        <dd><Icon name="crowd" size={14} /><span className="matters-now-text"><b className="matters-now-count"><PeopleText text={factor.source} /></b> <span className="matters-now-sub">{factor.effect}</span></span>
           <b className="matters-now-num">{factor.pull > 0 ? `−${factor.pull}` : ''}</b></dd>
       </div>}
     </dl>

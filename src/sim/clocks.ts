@@ -275,11 +275,22 @@ export function stalledRun<R extends StallRun>(scenario: Pick<ScenarioDefinition
   effects.push(...stallBeats(scenario, run, dither).flatMap(beat => beat.effects));
   const threat = openThreat(scenario as ScenarioDefinition, run);
   if (threat && dither >= threat.minutes) effects.push(...landingEffects(scenario, threat.effects.filter(effect => conditionHolds(effect.when, run))));
-  for (const effect of effects) {
-    for (const flag of effect.setFlags ?? []) flags = withFlag(flags, flag);
-    if (effect.clearFlags?.length) flags = flags.filter(flag => !effect.clearFlags!.includes(flag));
-    pressure += effect.pressure ?? 0;
-    if (effect.clockBump?.length && clocks) clocks = bumpClocks(clocks, effect.clockBump);
+  const settle = (list: readonly OutcomeEffect[]) => {
+    for (const effect of list) {
+      for (const flag of effect.setFlags ?? []) flags = withFlag(flags, flag);
+      if (effect.clearFlags?.length) flags = flags.filter(flag => !effect.clearFlags!.includes(flag));
+      pressure += effect.pressure ?? 0;
+      if (effect.clockBump?.length && clocks) clocks = bumpClocks(clocks, effect.clockBump);
+    }
+  };
+  settle(effects);
+  // A bump can carry a gauge past a cue with no time passing; that cue is heard too.
+  if (clocks && effects.some(effect => effect.clockBump?.length)) {
+    const bumped = { clocks, flags };
+    const heard = cueBumped(bumped, scenario);
+    clocks = bumped.clocks;
+    settle(heard);
+    effects.push(...heard);
   }
   const moved = { meters: run.meters };
   applyMoves(moved, scenario as ScenarioDefinition, effects);
@@ -296,20 +307,35 @@ export interface StallLine { id: string; at: number; kind: 'beat' | 'cue'; speak
 export function stallFeed(scenario: Pick<ScenarioDefinition, 'clocks' | 'stages'>, run: Pick<OperationRun, 'stage' | 'flags' | 'knowledge' | 'pressure' | 'clocks'>, dither: number): StallLine[] {
   if (!(dither > 0)) return [];
   const lines: StallLine[] = [];
-  for (const beat of stallBeats(scenario, run, dither)) {
+  const beats = stallBeats(scenario, run, dither);
+  for (const beat of beats) {
     beat.effects.flatMap(effect => effect.exchange ?? []).forEach((spoken: SpokenLine, index) =>
       lines.push({ id: `beat:${beat.id}:${index}`, at: beat.at, kind: 'beat', speaker: spoken.speaker, text: spoken.line }));
   }
+  // Bumps in the order they land: each beat's, then the threat's landing at its minutes.
+  const threat = openThreat(scenario as ScenarioDefinition, run as OperationRun);
+  const bumps = [...beats.map(beat => ({ at: beat.at, effects: beat.effects })),
+    ...(threat && dither >= threat.minutes ? [{ at: threat.minutes, effects: threat.effects.filter(effect => conditionHolds(effect.when, run)) }] : [])];
   for (const def of scenario.clocks ?? []) {
     const state = run.clocks?.[def.id];
     if (!state || stopped(def, run.flags)) continue;
     const rate = effectiveRate(def, run.flags);
-    if (!(rate > 0)) continue;
-    const after = stepClock(def, state, dither, run.flags);
+    const after = rate > 0 ? stepClock(def, state, dither, run.flags) : { ...state };
     def.cues.slice(state.cued, after.cued).forEach((cue, offset) => {
       const at = Math.max(0, (filling(def) ? cue.at - state.value : state.value - cue.at) / rate);
       lines.push({ id: `cue:${def.id}:${state.cued + offset}`, at: Math.min(dither, round1(at)), kind: 'cue', text: cue.text, clockId: def.id });
     });
+    // A cue a bump carried the gauge past (stalledRun hears it too): it lands with that bump.
+    let cued = after.cued;
+    let pushed = 0;
+    for (const bump of bumps.sort((x, y) => x.at - y.at)) {
+      pushed += bump.effects.flatMap(effect => effect.clockBump ?? []).filter(entry => entry.clockId === def.id).reduce((sum, entry) => sum + entry.by, 0);
+      const value = stepClock(def, state, bump.at, run.flags).value + pushed;
+      while (cued < def.cues.length && (filling(def) ? value >= def.cues[cued].at : value <= def.cues[cued].at)) {
+        lines.push({ id: `cue:${def.id}:${cued}`, at: Math.min(dither, round1(bump.at)), kind: 'cue', text: def.cues[cued].text, clockId: def.id });
+        cued++;
+      }
+    }
   }
   return lines.sort((a, b) => a.at - b.at || a.id.localeCompare(b.id));
 }
@@ -337,14 +363,37 @@ export function advanceClocks(run: Pick<OperationRun, 'clocks' | 'flags'>, scena
     if (!before) continue;
     const after = stepClock(def, before, minutes, run.flags);
     next[def.id] = after;
-    for (const cue of def.cues.slice(before.cued, after.cued)) fired.push({
-      text: cue.text,
-      ...(cue.mark || cue.setFlags?.length ? { setFlags: [...cue.mark ? [`mark:${cue.mark}`] : [], ...cue.setFlags ?? []] } : {}),
-      ...(cue.moves?.length ? { moves: cue.moves.map(move => ({ ...move })) } : {}),
-      ...(cue.reveal && def.factId ? { reveal: [def.factId] } : {}),
-    });
+    fired.push(...cuesBetween(def, before.cued, after.cued));
   }
   // A new record: callers project time on shallow copies of the run.
+  run.clocks = next;
+  return fired;
+}
+
+/** The effects of `def`'s cues from index `from` up to `to`. */
+function cuesBetween(def: ClockDef, from: number, to: number): OutcomeEffect[] {
+  return def.cues.slice(from, to).map(cue => ({
+    text: cue.text,
+    ...(cue.mark || cue.setFlags?.length ? { setFlags: [...cue.mark ? [`mark:${cue.mark}`] : [], ...cue.setFlags ?? []] } : {}),
+    ...(cue.moves?.length ? { moves: cue.moves.map(move => ({ ...move })) } : {}),
+    ...(cue.reveal && def.factId ? { reveal: [def.factId] } : {}),
+  }));
+}
+
+/** Cues a bump carried a clock past without any time passing (a beat, a landing, an outcome's
+ * clockBump): heard now, so the count, its pull and its tick agree. Running clocks only. */
+export function cueBumped(run: Pick<OperationRun, 'clocks' | 'flags'>, scenario: Pick<ScenarioDefinition, 'clocks'>): OutcomeEffect[] {
+  if (!run.clocks || !scenario.clocks?.length) return [];
+  const next: NonNullable<OperationRun['clocks']> = { ...run.clocks };
+  const fired: OutcomeEffect[] = [];
+  for (const def of scenario.clocks) {
+    const state = run.clocks[def.id];
+    if (!state || stopped(def, run.flags)) continue;
+    const reached = def.cues.filter(cue => filling(def) ? state.value >= cue.at : state.value <= cue.at).length;
+    if (reached <= state.cued) continue;
+    next[def.id] = { ...state, cued: reached };
+    fired.push(...cuesBetween(def, state.cued, reached));
+  }
   run.clocks = next;
   return fired;
 }

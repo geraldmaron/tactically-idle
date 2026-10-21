@@ -69,11 +69,13 @@ describe('DecisionList', () => {
   });
 
   it('puts What matters now above the cards, with the threat and the strongest pull', () => {
-    const guidance = createElement(WhatMattersNow, { threat: { label: 'He fires at the door', left: 6.2 }, factor: { count: '1,240 watching', pull: 4, effect: 'Talking is harder' } });
+    const guidance = createElement(WhatMattersNow, { threat: { label: 'He fires at the door', left: 6.2 }, factor: { source: 'The stream', pull: 4, effect: 'Talking is harder' } });
     const html = renderToStaticMarkup(createElement(DecisionList, { prompt: 'What now?', actions: NINE, selectedId: null, expanded: false, guidance, onSelect: noop, onExpand: noop }));
     expect(html.indexOf('What matters now')).toBeLessThan(html.indexOf('data-action-id'));
     expect(html).toContain('He fires at the door</span><b class="matters-now-num">\u20077 min</b>');
-    expect(html).toContain('<b class="matters-now-count">1,240 watching</b> <span class="matters-now-sub">Talking is harder</span></span><b class="matters-now-num">−4</b>');
+    expect(html).toContain('<b class="matters-now-count">The stream</b> <span class="matters-now-sub">Talking is harder</span></span><b class="matters-now-num">−4</b>');
+    // The count lives in the ticker only, so the block never shows a second, different number.
+    expect(html).not.toMatch(/matters-now-count">[\d,]+/);
     const landed = renderToStaticMarkup(createElement(WhatMattersNow, { threat: { label: 'He fires', left: 0 }, factor: null }));
     expect(landed).toContain('<b class="matters-now-num">\u2007\u2007\u2007Now</b>');
     expect(renderToStaticMarkup(createElement(WhatMattersNow, { threat: null, factor: null }))).toBe('');

@@ -42,7 +42,6 @@ import { fillEffectLine, fillMinutesToBite, leadingPressure, liveFillViews, live
 import { CommsLog, SourceTicker } from './LiveFeed';
 import { STANCE_LABEL } from '../components/IncidentPeople';
 import type { FillView } from '../../sim/clocks';
-import { formatCount } from '../../sim/pressure-sources';
 import type { CheckKind } from '../../sim/scenario-types';
 import { getScenario } from '../../sim/scenario-registry';
 import { CONTRIBUTOR_GROUPS } from './contributor-groups';
@@ -390,8 +389,9 @@ const CHECK_WORDS: Record<CheckKind, string> = {
 };
 
 /** What matters now (DecisionList WhatMattersNow): the stage's threat, and the pressure source
- * pulling hardest on the odds, or the fullest one while none pulls yet. Its count is the sim's, not
- * the ticker's wobble, so the line moves only when the call does. */
+ * pulling hardest on the odds, or the fullest one while none pulls yet. It names the source and
+ * leaves the number to the ticker beside it, whose count wobbles: two different counts on one screen
+ * read as a bug. */
 export function guidanceFor(g: LiveViewProps['g'], threat: { label: string; left: number } | null, fills: readonly FillView[]): Guidance {
   const run = g.activeRun;
   const clocks = run ? getScenario(run.scenarioId)?.clocks ?? [] : [];
@@ -404,7 +404,7 @@ export function guidanceFor(g: LiveViewProps['g'], threat: { label: string; left
   const pull = top?.oddsPull ?? 0;
   return {
     threat: threat ? { label: threat.label, left: threat.left } : null,
-    factor: top?.count ? { count: `${formatCount(top.count.value)} ${top.count.unit}`, pull, effect: pull > 0 ? checks.charAt(0).toUpperCase() + checks.slice(1) : 'No pull on the odds yet' } : null,
+    factor: top?.count ? { source: top.label, pull, effect: pull > 0 ? checks.charAt(0).toUpperCase() + checks.slice(1) : 'No pull on the odds yet' } : null,
   };
 }
 
