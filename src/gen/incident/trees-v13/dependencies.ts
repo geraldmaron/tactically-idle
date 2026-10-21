@@ -16,9 +16,9 @@ import { choiceActionId, outcomeNexts, prunePlan, reachableWithin, templateClock
 export type StateKey = `mark:${string}` | `safe:${string}` | `out:${string}` | `fact:${string}` | `clock:${string}` | `meter:${string}`
   | `promise:${string}` | `harm:${string}` | `count:${string}` | `turn:${string}` | 'situation'
   | 'scalar:objective' | 'scalar:civilian' | 'scalar:pressure';
-export type SiteField = 'outcome.mark' | 'fire.mark' | 'clock.cue.mark' | 'clock.onOut.mark' | 'outcome.safe' | 'outcome.out'
+export type SiteField = 'outcome.mark' | 'fire.mark' | 'clock.cue.mark' | 'clock.onOut.mark' | 'clock.onFull.mark' | 'clock.rateFlags' | 'outcome.safe' | 'outcome.out'
   | 'force.out' | 'cascade.out' | 'outcome.reveal' | 'clock.cue.reveal' | 'fact.public' | 'outcome.moves' | 'outcome.promise'
-  | 'authority.concede' | 'outcome.harm' | 'outcome.officer' | 'fire.harm' | 'force.harm' | 'clock.onOut.harm'
+  | 'authority.concede' | 'outcome.harm' | 'outcome.officer' | 'fire.harm' | 'force.harm' | 'clock.onOut.harm' | 'clock.onFull.harm'
   | 'outcome.objective' | 'outcome.civilian' | 'outcome.pressure' | 'choice.minutes' | 'draw'
   | 'promptIf.when' | 'onlyIf' | 'outcome.when' | 'outcome.if' | 'modifier' | 'threatMarks' | 'carries.knownFrom'
   | 'fact.threat' | 'clock.urgent' | 'next.turn' | 'engine';
@@ -99,8 +99,8 @@ const templateClockMarks = (template: IncidentTemplate): string[] => [...new Set
 
 /** Each clock of any situation that sends the call somewhere when it runs out, for requirementTree. */
 export const templateClockRoutes = (template: IncidentTemplate): { clock: string; next: TreeNext }[] =>
-  [...new Map(template.situations.flatMap(situation => (situation.clocks ?? []).filter(clock => !clock.story && clock.onOut?.next)
-    .map(clock => [`${clock.id}:${JSON.stringify(clock.onOut!.next)}`, { clock: clock.id, next: clock.onOut!.next! }] as const))).values()];
+  [...new Map(template.situations.flatMap(situation => (situation.clocks ?? []).filter(clock => !clock.story)
+    .flatMap(clock => [clock.onOut?.next, clock.onFull?.next].flatMap(next => next ? [[`${clock.id}:${JSON.stringify(next)}`, { clock: clock.id, next }] as const] : [])))).values()];
 
 /** A count condition as text: "others ≥ 1", "others 1 to 2". */
 function countText(count: NonNullable<TreeState['count']>): string {
@@ -222,6 +222,14 @@ export function dependencyIndex(template: IncidentTemplate): DependencyIndex {
       if (clock.onOut.mark) write(`mark:${clock.onOut.mark}`, { ...at, field: 'clock.onOut.mark' });
       if (clock.onOut.harm && clock.owner) write(`harm:${clock.owner}`, { ...at, field: 'clock.onOut.harm', conditional: clock.onOut.harm });
     }
+    // A fill's onFull mirrors a drain's onOut, and a rate flag that names a mark reads it: the engine
+    // slows the gauge while the mark is set (ClockDef.rateFlags).
+    if (clock.onFull) {
+      read(`clock:${clock.id}`, { ...at, field: clock.onFull.mark ? 'clock.onFull.mark' : 'clock.onFull.harm' });
+      if (clock.onFull.mark) write(`mark:${clock.onFull.mark}`, { ...at, field: 'clock.onFull.mark' });
+      if (clock.onFull.harm && clock.owner) write(`harm:${clock.owner}`, { ...at, field: 'clock.onFull.harm', conditional: clock.onFull.harm });
+    }
+    for (const entry of clock.rateFlags ?? []) if (entry.flag.startsWith('mark:')) read(entry.flag as StateKey, { ...at, field: 'clock.rateFlags', conditional: `${entry.ratePerMin} a minute` });
   }
 
   // What the engine itself reads (scoring, the map, promises, odds, the debrief).

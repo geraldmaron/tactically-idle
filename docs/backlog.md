@@ -266,10 +266,30 @@ running app.
 Tags: job=command; journeys=new:stalling-costs-minutes; probes=none (text); lane=calls
 Needs: start=dither-minutes; integrate=none; ship=none
 
-Design in `docs/call-pressure.md`. Done: a threat can carry per-subject lines that fire once as a cue
+Design in `docs/call-pressure.md`. Done: a threat can carry per-speaker lines that fire once as a cue
 when dither crosses a threshold, written under `swat-call-prose` and reviewed under
-`swat-writing-review`; no global line pool; suppressed in any situation with `suicide_self_harm`;
-the hostage threats carry lines.
+`swat-writing-review`; no global line pool; not suppressed by situation (owner, 2026-10-20); the
+hostage threats carry lines (drafted in `docs/calls/notes/content-warnings-draft.md`, section 4).
+
+### fill-gauge-ui: A gauge that fills shows on the live call
+Tags: job=command; journeys=new:audience-raises-stakes; probes=none (display); lane=interface
+Needs: start=none; integrate=none; ship=none
+
+Design in `docs/call-pressure.md` ("Gauges that fill"). Done: a fill clock renders beside
+`ThreatPill` as a pill with its label, a bar that fills, the effect it has now named, and a marker at
+each cue; a choice that stops or slows a fill says so in its preview; the debrief shows the audience
+factor on trust and the camera strain; reduced motion respected; checked at 390x844 and 320x568 in
+the running app.
+
+### hostage-livestream: The crowd and the taker go live on the hostage call
+Tags: job=command; journeys=new:audience-raises-stakes, choices-branch; probes=none (text and clocks; the fill effects are tuning); lane=calls
+Needs: start=none; integrate=fill-gauge-ui (the player sees the gauge before the lines ship); ship=none
+
+Design in `docs/calls/notes/hostage-livestream-design.md`. Authored on `claude/content-warnings-draft`:
+two fills in all three situations (the regulars' phones at the tape; the taker's stream on the owner's
+phone, with `watched` moves) and two choices at `talking` that slow or stop them at the price of the
+bargaining. Done: the owner approves the lines; a separate `swat-writing-review` read; the Lab shows
+both gauges filling under dither and a stop choice freezing one.
 
 ### aftermath: Casualty, care and aftermath
 Tags: job=command; journeys=new:aftermath-follows; probes=none (consequences after the call); lane=deferred

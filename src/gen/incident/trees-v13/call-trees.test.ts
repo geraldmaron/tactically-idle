@@ -327,8 +327,15 @@ describe('call trees: clocks (content/incidents, sim/clocks.ts)', () => {
 
     it('cues that settle a fact say what the situation says, and lead with a warning before running out', () => {
       for (const { situation, clock } of clocks) {
-        expect(clock.cues.some(cue => cue.at > 0), `${clock.id} has no warning before it runs out`).toBe(true);
-        expect(clock.cues.every((cue, i) => i === 0 || cue.at <= clock.cues[i - 1].at), `${clock.id} cues highest first`).toBe(true);
+        // A drain warns before it runs out, cues highest first; a fill warns before it fills, cues
+        // lowest first (ClockDef.direction).
+        if (clock.direction === 'fill') {
+          expect(clock.cues.some(cue => cue.at < 100), `${clock.id} has no warning before it fills`).toBe(true);
+          expect(clock.cues.every((cue, i) => i === 0 || cue.at >= clock.cues[i - 1].at), `${clock.id} cues lowest first`).toBe(true);
+        } else {
+          expect(clock.cues.some(cue => cue.at > 0), `${clock.id} has no warning before it runs out`).toBe(true);
+          expect(clock.cues.every((cue, i) => i === 0 || cue.at <= clock.cues[i - 1].at), `${clock.id} cues highest first`).toBe(true);
+        }
         for (const cue of clock.cues.filter(entry => entry.reveal)) {
           const fact = tree.facts[clock.factKey!];
           const truth = fact.truth ?? tree.situations[situation.index].truth[clock.factKey!];

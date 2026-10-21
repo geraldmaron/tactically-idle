@@ -105,6 +105,32 @@ carries a line, and can set a mark that later choices read.
   those calls off the board (`docs/content-rating.md`). The lines still follow `swat-call-prose`
   and the prose lint as they stand.
 
+## Gauges that fill
+
+Threats drain; some pressures rise instead (owner, 2026-10-20): a crowd filming the scene, or the
+subject going live. A fill is a clock with `direction: 'fill'` (`ClockDef`, `src/sim/scenario-types.ts`;
+the content side is `Clock` in `src/content/incidents/types.ts`). It runs on the same game minutes as
+everything else, so dither moves it too.
+
+- **How it rises.** It starts at `start` and gains `ratePerMin` a minute. Its cues are listed lowest
+  first and fire as it reaches them; `onFull` does at 100 what a drain's `onOut` does at 0. Like a
+  drain that never runs out before a cue was heard, a fill never fills before one was heard in an
+  earlier decision (`src/sim/clocks.ts`).
+- **What it does, from its first cue.** Officers on scene take extra strain in proportion to the
+  gauge, it adds to call pressure each minute, and the debrief multiplies the call's trust result
+  by `1 + peak/100 × 0.5`, so a call handled well on camera earns more trust and one handled badly
+  loses more (`CLOCK_RULES_V1.fill`, `src/sim/clocks.ts`). A cue can also move a subject with the
+  `watched` meter event.
+- **Stopping and slowing.** A choice stops a fill with `stabilize` (the stable flag) or slows it by
+  setting a mark named in the clock's `rateFlags` (the slowest matching rate wins). Every such choice
+  says what it costs in its summary, and the cost is real on every band.
+- **Cued before it bites.** A fill's effects start at its first cue, so the line the player reads is
+  the warning. Nothing about a fill is hidden.
+
+The hostage call carries the first two (`docs/calls/notes/hostage-livestream-design.md`): the
+regulars' phones at the tape, slowed by moving the tape back, and the taker's stream on the owner's
+phone, stopped or slowed by asking the taker to stop streaming.
+
 ## Interruptions and nudges
 
 - Backgrounding the app pauses nothing at Relaxed or Standard; only Off stops dither. The cap is

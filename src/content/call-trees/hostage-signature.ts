@@ -999,6 +999,29 @@ export const HOSTAGE_SIGNATURE: CallTree = {
                 extra: { moves: { taker: 'team_seen' }, pressure: 8 } }),
             ],
           } },
+        // Gauges that fill (docs/call-pressure.md, docs/calls/notes/hostage-livestream-design.md): the
+        // crowd's phones at the tape and the taker's own stream. Each choice slows or stops one, and the
+        // price is the bargaining itself: the call goes to the standoff either way.
+        { id: 'tape_back', title: 'Move the tape back', icon: 'perimeter', check: check(MOVE), minutes: 8,
+          summary: 'Patrol walks the tape and the regulars back to the next corner, where their phones can’t see the door. While the street moves, nobody on the line is talking to {taker.first}, and {taker.he} can watch all of it through the glass.',
+          pull: 'Fewer phones on the door, and fewer people watching every mistake.',
+          cost: 'The talk with {taker.first} stalls while patrol moves the street.',
+          preview: { favorable: 'The regulars go back a block, and their phones lose the door.', mixed: 'Patrol clears the curb, but {taker.first} watches the line move and asks what it means.', adverse: 'The regulars won’t give up the curb, and {taker.first} sees uniforms bunching at the tape.' },
+          outcomes: {
+            favorable: [{ text: 'Patrol walks the tape back to the next corner, and the regulars go with it. Their phones are still up, but too far off to see the door. Inside, {taker.first} lets the phone ring while the street moves.', mark: ['tape_back'], next: { node: 'standoff' }, objective: 4 }],
+            mixed: [{ text: 'Patrol shifts the line a block down the street. {taker.first} watches every step of it through the glass and asks the negotiator whether the street is being cleared for something.', mark: ['tape_back'], moves: { taker: 'team_seen' }, next: { node: 'standoff' }, pressure: 3 }],
+            adverse: [{ text: 'Nobody at the tape wants to move, and patrol spends the minutes arguing with them. {taker.first} sees the uniforms bunch up outside and stops answering.', moves: { taker: 'team_seen' }, next: { node: 'standoff' }, pressure: 5 }],
+          } },
+        { id: 'phone_down', title: 'Ask {taker.him} to stop streaming', icon: 'radio', talksTo: 'taker', check: check(TALK, 2), minutes: 4, onlyIf: { marks: ['taker_live'] }, certBonus: NEGOTIATOR,
+          summary: '{lead} asks {taker.first} to set the phone aside and talk only on the line. To {taker.first} it sounds like one more person telling {taker.him} to keep quiet. Whatever {taker.he} {taker~was|were} building with you goes cold.',
+          pull: 'Nobody watching {taker.first} turn this into a show.',
+          cost: '{taker.first} trusts the negotiator less for asking.',
+          preview: { favorable: '{taker.first} lays the phone face down and answers in fewer words after that.', mixed: '{taker.first} turns the phone to the wall but keeps talking to it.', adverse: '{taker.first} holds the phone up to the glass and talks to it louder than to you.' },
+          outcomes: {
+            favorable: [{ text: '{taker.first} takes the phone off the register and lays it face down by the till. After that {taker.he} {taker~answers|answer} the negotiator with as few words as {taker.he} can.', stabilize: ['taker_live'], mark: ['phone_down'], moves: { taker: 'provoked' }, next: { node: 'standoff' }, objective: 4 }],
+            mixed: [{ text: '{taker.first} turns the phone to face the wall, still live, and keeps talking into it between answers.', mark: ['phone_turned'], moves: { taker: 'provoked' }, next: { node: 'standoff' } }],
+            adverse: [{ text: '{taker.first} presses the phone against the glass so the people watching can see the street. {taker.He} {taker~talks|talk} to them louder than to the negotiator.', moves: { taker: 'provoked' }, next: { node: 'standoff' }, pressure: 4 }],
+          } },
         { id: 'his_pace', title: 'Let {taker.first} set the pace', icon: 'wait', talksTo: 'taker', check: check(HOLD, -6), minutes: 30, span: 'Hours',
           summary: '{lead} stays on the line as long as {taker.first} wants, hours if it takes hours, and lets {taker.him} set every pace. {owner.first} spends every one of those hours behind the counter.',
           pull: 'Time on your side, and nothing forced.',
@@ -1035,6 +1058,10 @@ export const HOSTAGE_SIGNATURE: CallTree = {
         // Withdrawal is a self-harm sign (E4, the escalation palette): the negotiator asks the direct question.
         { when: { marks: ['withdrawn'] }, prompt: '{taker.first} has stopped asking for anything. {owner.first} hasn’t moved.',
           exchange: [{ by: 'negotiator', line: 'Are you thinking about hurting yourself today?' }, { by: 'taker', line: 'Doesn’t matter.' }] },
+        // After a choice on the gauges that fill (talking: tape_back, phone_down).
+        { when: { marks: ['phone_down'] }, prompt: '{taker.first}’s phone lies face down by the till, and {taker.he} {taker~answers|answer} the negotiator in single words now. {owner.first} watches the phone, not {taker.first}.' },
+        { when: { marks: ['phone_turned'] }, prompt: '{taker.first} has the phone turned to the wall, still live, and talks to it more than to the negotiator. {owner.first} keeps both hands on the counter.' },
+        { when: { marks: ['tape_back'] }, prompt: 'Patrol has the regulars back at the next corner with their phones still up. Inside, {taker.first} stopped answering while the street moved, and {owner.first} sits very straight on the stool.' },
         { when: { ...LONE, marks: ['lie_found'] }, prompt: '{taker.first} knows about the lie now. {taker.He} {taker~has|have} swept the pad onto the floor.' },
         { when: { marks: ['lied_sign'] }, prompt: '{taker.first} keeps asking when {owner.first} will sign the pad.' },
         { when: { marks: ['owner_admits'] }, prompt: '{taker.first} stopped making offers after {owner.first} spoke.' },

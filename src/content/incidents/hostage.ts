@@ -1,5 +1,5 @@
 import { HOSTAGE_SIGNATURE as tree } from '../call-trees/hostage-signature';
-import type { IncidentTemplate, PersonSpec, Weapon } from './types';
+import type { Clock, IncidentTemplate, PersonSpec, Weapon } from './types';
 
 // One Last Signature as data (design sheet: docs/calls/hostage-signature-design.md). The taker holds
 // the owner because the grievance is with them (an expressive hold, so this is a victim incident),
@@ -9,6 +9,26 @@ import type { IncidentTemplate, PersonSpec, Weapon } from './types';
 //
 // One to three people come in: the taker, and up to two coworkers from the last shift who came to
 // back the taker's story (the counted group `others`). A lone taker stays the most common call.
+
+/** Gauges that fill (docs/call-pressure.md, docs/calls/notes/hostage-livestream-design.md), the same in
+ * every situation: the regulars' phones at the tape, and the taker going live on the owner's phone.
+ * Their effects (strain, call pressure, a bigger trust swing either way) start at each one's first
+ * cue. Moving the tape back slows the crowd; the taker's stream stops or slows when they put the
+ * phone down, and stops for good once they are out. */
+const CROWD_STREAM: Clock = { id: 'crowd_stream', label: 'Phones at the tape', kind: 'crowd', direction: 'fill', start: 0, ratePerMin: 1.5, rateSpread: 0.2, rateKnown: false,
+  rateFlags: [{ flag: 'mark:tape_back', ratePerMin: 0.5 }],
+  cues: [
+    { at: 10, text: 'At the tape a regular is filming the shop front and telling someone on the phone what happened here.' },
+    { at: 40, text: 'The people at the tape pass one phone around and read the comments under it out loud. Somebody says a thousand people are watching.' },
+    { at: 70, text: 'A TV station’s van pulls up at the corner. The regulars start filming the reporter as well as the shop.' },
+  ] };
+const TAKER_LIVE: Clock = { id: 'taker_live', label: '{taker.first}’s stream', kind: 'crowd', direction: 'fill', owner: 'taker', start: 0, ratePerMin: 1, rateSpread: 0.25, rateKnown: false,
+  rateFlags: [{ flag: 'mark:phone_turned', ratePerMin: 0.4 }],
+  cues: [
+    { at: 20, text: '{taker.first} props {owner.first}’s phone against the register, screen out, and starts telling it about the till.', mark: 'taker_live', moves: [{ personId: 'taker', event: 'watched' }] },
+    { at: 50, text: '{taker.first} reads names off the phone’s screen out loud, people from the neighborhood, and answers them one at a time.', moves: [{ personId: 'taker', event: 'watched' }] },
+    { at: 80, text: '{taker.first} turns the phone so it faces {owner.first} and tells the people watching to take a good look.', moves: [{ personId: 'taker', event: 'watched' }] },
+  ] };
 
 const HANDGUN: Weapon = { kind: 'handgun', real: 'real', where: 'in_hand', visible: true };
 /** Something heavy from behind the counter. Only the taker brought a handgun. */
@@ -86,7 +106,7 @@ export const HOSTAGE_TEMPLATE: IncidentTemplate = {
   conditions: { timeOfDay: 'day', power: 'on', weather: 'clear', crowd: 1 },
   situations: [
     // Steady or shifting: a taker who would trade can still be pushed past breaking point.
-    { index: 0, people: { taker: { ...TAKER, volatility: { pick: [['steady', 50], ['shifting', 50]] } }, others: OTHERS({ min: 0.55, max: 0.9 }) } },
+    { index: 0, people: { taker: { ...TAKER, volatility: { pick: [['steady', 50], ['shifting', 50]] } }, others: OTHERS({ min: 0.55, max: 0.9 }) }, clocks: [CROWD_STREAM, TAKER_LIVE] },
     // The owner's heart: a medical clock, about forty minutes to an hour (±25%). The team sees the
     // first sign through the glass a few minutes in, and command will approve going in from then.
     // The long holds fork on it; anywhere else running out records the collapse and moves the call
@@ -97,12 +117,12 @@ export const HOSTAGE_TEMPLATE: IncidentTemplate = {
         cues: [{ at: 55, text: 'Through the glass, the team sees {owner.first} get down from the stool and sit on the tiles.', mark: 'owner_unwell' }],
         // Running out where no fork reads it moves the call to owner_down (R-G4): an ending the decision
         // reached stands (heldEnd reads the clock itself), and an owner already out moves nothing (sim/clocks.ts).
-        onOut: { harm: 'serious', next: { node: 'owner_down' } } }] },
+        onOut: { harm: 'serious', next: { node: 'owner_down' } } }, CROWD_STREAM, TAKER_LIVE] },
     { index: 2, people: {
       taker: { ...TAKER, volatility: 'volatile', threat: { disposition: 'hostile', intent: 'barricade', awareness: 'aware', readiness: 'brandished' },
         demands: [{ kind: 'statement', text: '{owner.His} signature on a statement clearing {taker.him}, and nothing less', concedable: false }] },
       // The taker has stopped listening to them; they freeze when the taker walks.
-      others: OTHERS({ min: 0.1, max: 0.45 }) } },
+      others: OTHERS({ min: 0.1, max: 0.45 }) }, clocks: [CROWD_STREAM, TAKER_LIVE] },
   ],
   complications: [],
 };
