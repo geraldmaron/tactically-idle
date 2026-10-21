@@ -246,7 +246,7 @@ export function validateStoryBindings(scenario: ScenarioDefinition, built: Built
     ...people.filter(person => person.transitions.some(transition => transition.when.flags?.some(flag => flag.startsWith(seenFlag(person.id, ''))))).map(person => lostFlag(person.id)),
     ...(scenario.clocks ?? []).flatMap(clock => clock.cues.flatMap(cue => [...cue.mark ? [`mark:${cue.mark}`] : [], ...cue.setFlags ?? []])),
     // A clock's run-out sets its mark and its route's flags (sim/clocks.ts clockOutEffects).
-    ...(scenario.clocks ?? []).flatMap(clock => [...clock.onOut?.mark ? [`mark:${clock.onOut.mark}`] : [], ...clock.onOut?.route?.setFlags ?? [], ...clock.onOut?.route?.clearFlags ?? []]), ...engineFlags,
+    ...(scenario.clocks ?? []).flatMap(clock => { const end = clock.direction === 'fill' ? clock.onFull : clock.onOut; return [...end?.mark ? [`mark:${end.mark}`] : [], ...end?.route?.setFlags ?? [], ...end?.route?.clearFlags ?? []]; }), ...engineFlags,
     // The crew on the run (sim/crew.ts) is set by the engine at the start of every call.
     ...CREW_FLAGS,
     ...LEAD_FLAGS,

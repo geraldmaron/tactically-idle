@@ -14,6 +14,7 @@ import { scenarioActions } from './scenario-types';
 import type { IncidentPersonDef, OutcomeEffect, ScenarioDefinition } from './scenario-types';
 import type { CompletionDisposition, Id, OperationRun } from './types';
 import { tunable } from './tuning';
+import { audienceFactor } from './clocks';
 
 /** Where a person is when the call ends. `fled` is not reachable yet (containment, §5). */
 export type EndState = 'safe' | 'released' | 'hurt' | 'killed' | 'inside' | 'in_hand' | 'fled';
@@ -85,7 +86,7 @@ export interface ForceUse { personId: Id; label: string; profile: ForceProfileKe
 /** The effects one committed decision applied (operation.ts traceRun), to tell a release apart. */
 export interface ScoreStep { effects: readonly OutcomeEffect[] }
 
-export type ScoreRun = Pick<OperationRun, 'flags' | 'knowledge' | 'personCasualties' | 'officerCasualties' | 'history' | 'clock' | 'objective' | 'endingId'>
+export type ScoreRun = Pick<OperationRun, 'flags' | 'knowledge' | 'personCasualties' | 'officerCasualties' | 'history' | 'clock' | 'objective' | 'endingId'> & Partial<Pick<OperationRun, 'fillPeak'>>
   & Partial<Pick<OperationRun, 'commitments' | 'responseFailure'>>;
 export type OfficerNames = Record<Id, { firstName: string; surname: string } | undefined>;
 export interface ScoreOptions { officers?: OfficerNames; steps?: readonly ScoreStep[] }
@@ -173,6 +174,8 @@ export interface ScoreInputs {
   objective: number;
   /** The call ran out of steps (the fallback ending), or the response failed. */
   ranOut: boolean;
+  /** The highest a gauge that fills reached, 0 to 100: it makes the trust result count for more. */
+  audience?: number;
 }
 
 function scoreInputs(scenario: ScenarioDefinition, run: ScoreRun, opts: ScoreOptions = {}): ScoreInputs {
@@ -184,6 +187,7 @@ function scoreInputs(scenario: ScenarioDefinition, run: ScoreRun, opts: ScoreOpt
     minutes: run.clock,
     objective: run.objective,
     ranOut: !!run.responseFailure || run.endingId === RAN_OUT_ENDING,
+    ...(run.fillPeak ? { audience: run.fillPeak } : {}),
   };
 }
 
@@ -284,8 +288,11 @@ export function scoreFrom(inputs: ScoreInputs, rewardsTrust: number): CallScore 
   const disposition = dispositionOf(inputs);
   const raw = clamp01(W.factor.base + W.factor.perPoint * points + W.factor.objective * (inputs.objective - 50) / 50);
   const factor = Math.round(1000 * (disposition === 'resolved' ? raw : Math.min(W.factor.unfinishedMax, raw))) / 1000;
-  const trust = Math.round(rewardsTrust * (2 * factor - 1) + points);
-  lines.unshift({ key: 'result', text: RESULT_TEXT[disposition], trust: round1(trust - points), strain: 0 });
+  const plain = Math.round(rewardsTrust * (2 * factor - 1) + points);
+  lines.unshift({ key: 'result', text: RESULT_TEXT[disposition], trust: round1(plain - points), strain: 0 });
+  // Cameras make the result count for more, either way: the sign is kept, and the extra is a line.
+  const trust = Math.round(plain * audienceFactor(inputs.audience));
+  if (trust !== plain) lines.splice(1, 0, { key: 'audience', text: `Cameras on the scene made the result count for ${Math.round((audienceFactor(inputs.audience) - 1) * 100)}% more.`, trust: trust - plain, strain: 0 });
   return { disposition, points, trust, strain, factor, lines };
 }
 

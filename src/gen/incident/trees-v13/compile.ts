@@ -344,7 +344,7 @@ export function clockRoute(tree: CallTree, to: TreeNext, seed: number): Pick<Out
  * what the static checks (strings, lint, the graph) count as reachable from every node. A clock the
  * story runs by itself never routes. */
 export function templateClockNexts(template: Pick<IncidentTemplate, 'situations'>): TreeNext[] {
-  const all = template.situations.flatMap(situation => (situation.clocks ?? []).filter(clock => !clock.story).flatMap(clock => clock.onOut?.next ? [clock.onOut.next] : []));
+  const all = template.situations.flatMap(situation => (situation.clocks ?? []).filter(clock => !clock.story).flatMap(clock => [...clock.onOut?.next ? [clock.onOut.next] : [], ...clock.onFull?.next ? [clock.onFull.next] : []]));
   return [...new Map(all.map(next => [JSON.stringify(next), next])).values()];
 }
 
@@ -765,7 +765,10 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
   // Marks and releases this call can actually set (prunePlan). A condition that needs one it can
   // never set is never true here (drop it); one that needs it absent is always true (strip that
   // part). The tree's count conditions are already settled, so `possible` reads marks and safety.
-  const plan = prunePlan(tree, callCounts({ groups, armed: placed.armed, upstairs: placed.upstairs, exits: placed.exits }), clockMarks, spec.seed, clockNexts);
+  // The marks a stalled decision's push-back lines set count as settable: over every node, which
+  // only keeps more conditions.
+  const pushbackMarks = tree.nodes.flatMap(node => (node.threat?.pushback ?? []).flatMap(line => line.mark ?? []));
+  const plan = prunePlan(tree, callCounts({ groups, armed: placed.armed, upstairs: placed.upstairs, exits: placed.exits }), [...clockMarks, ...pushbackMarks], spec.seed, clockNexts);
   const settable = { marks: plan.settableMarks, safe: plan.settableSafe };
   const possible = plan.possible;
   const trim = (state: TreeState | undefined): TreeState | undefined => state && {
@@ -1160,7 +1163,18 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
     const deadly = (threat.mark ?? []).filter(mark => tree.threatMarks?.[mark]);
     if (deadly.length) throw new Error(`${node.id}: a threat may not set the threat-to-life mark ${deadly.join(', ')} (E12.4)`);
     const { label, minutes, text, mark, moves: threatMoves, pressure, civilian } = threat;
-    return { threat: { label, minutes, effects: effectsFor(node, { text, ...(mark ? { mark } : {}), ...(threatMoves ? { moves: threatMoves } : {}), ...(pressure ? { pressure } : {}), ...(civilian ? { civilian } : {}) }) } };
+    const lines = threat.pushback ?? [];
+    const seenIds = new Set<string>();
+    for (const line of threat.pushback ?? []) {
+      if (!line.id || seenIds.has(line.id)) throw new Error(`${node.id}: a push-back line needs a unique id`);
+      seenIds.add(line.id);
+      if (!(line.at > 0 && line.at < minutes)) throw new Error(`${node.id}: push-back ${line.id} fires at ${line.at}, which is not above 0 and below the threat's ${minutes} minutes`);
+      if (TREE_VOICES[line.by as keyof typeof TREE_VOICES]) throw new Error(`${node.id}: push-back ${line.id} is spoken by a voice (${line.by}), not by the subject`);
+      const toLife = (line.mark ?? []).filter(entry => tree.threatMarks?.[entry]);
+      if (toLife.length) throw new Error(`${node.id}: push-back ${line.id} may not set the threat-to-life mark ${toLife.join(', ')} (E12.4)`);
+    }
+    const pushback = lines.map(line => ({ id: line.id, at: line.at, effects: effectsFor(node, { text: '', exchange: [{ by: line.by, line: line.line }], ...(line.mark ? { mark: line.mark } : {}) }) }));
+    return { threat: { label, minutes, effects: effectsFor(node, { text, ...(mark ? { mark } : {}), ...(threatMoves ? { moves: threatMoves } : {}), ...(pressure ? { pressure } : {}), ...(civilian ? { civilian } : {}) }), ...(pushback.length ? { pushback } : {}) } };
   };
 
   const actionFor = (node: TreeNode, choice: TreeChoice): ActionDefinition => {
@@ -1204,7 +1218,7 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
 
   // TreeState.armed reads the drawn cast: text behind it must wait for a look into the group's room.
   const leaks = armedRevealErrors(authored, nodes, (node, choice) => movement(node, choice).observes ?? [],
-    group => roomOf[authored.groups?.[group]?.leader ?? ''], clockMarks);
+    group => roomOf[authored.groups?.[group]?.leader ?? ''], [...clockMarks, ...pushbackMarks]);
   if (leaks.length) throw new Error(leaks.join('\n'));
 
   s.stages = Object.fromEntries(STAGES.map(stage => {
@@ -1242,7 +1256,7 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
   }]));
 
   const bound = mapScenarioText(s, textBinder(tree, built, placed));
-  const errors = validateStoryBindings(bound, built, [...clockMarks.map(markFlag), ...cueFlags]);
+  const errors = validateStoryBindings(bound, built, [...clockMarks.map(markFlag), ...pushbackMarks.map(markFlag), ...cueFlags]);
   if (errors.length) throw new Error(errors.join('\n'));
   return bound;
 }

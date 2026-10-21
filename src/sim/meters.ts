@@ -29,6 +29,8 @@ export const METERS_V1 = tunable('METERS_V1', {
     promise_kept: { agitation: -4, rapport: 8 },
     /** The team went back on what command promised them. */
     promise_broken: { agitation: 12, rapport: -15 },
+    /** They know a camera is on them (a crowd filming, their own stream): performing for it. */
+    watched: { agitation: 6, rapport: -2 },
   } satisfies Record<MeterEvent, SubjectMeters>,
   volatility: { steady: 0.6, shifting: 1, volatile: 1.5 },
   /** What time alone does, per minute of the call, scaled by volatility like an event. A subject the

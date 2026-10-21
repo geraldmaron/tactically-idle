@@ -260,7 +260,10 @@ export interface ActionDefinition {
   deceives?: true;
   /** This decision point's threat (NodeThreat). When the decision takes `minutes` or longer, travel
    * and the band's delay included, its effects apply: the line the player reads and what it costs. */
-  threat?: NodeThreat & { effects: OutcomeEffect[] };
+  threat?: NodeThreat & { effects: OutcomeEffect[];
+    /** Push-back lines (TreePushback), each as the effect it applies once the stall reaches `at`
+     * dither minutes. Empty or absent: the threat stays silent. */
+    pushback?: { id: string; at: number; effects: OutcomeEffect[] }[] };
   /** V13: what draws a player to the choice, and what it costs, one line each. */
   weighing?: { pull: string; cost: string };
   /** Full archetype route rechecked against current openings at action evaluation. */
@@ -408,8 +411,8 @@ export interface ScenarioRewards {
  * one saved sample; each member's draw comes from a stream it seeds (sim/drawn-effects.ts). */
 export type DrawnModel = { model: 'incoming_fire'; from: Id } | { model: 'team_force'; on: Id } | { model: 'cascade'; on: Id; members: Id[] };
 
-/** A v13 clock (docs/incident-domain-model.md §3, sim/clocks.ts): something that runs down on the
- * operation's minutes, at a rate the situation sets. */
+/** A v13 clock (docs/incident-domain-model.md §3, sim/clocks.ts): something that runs down, or fills
+ * (`direction`), on the operation's minutes, at a rate the situation sets. */
 export interface ClockDef {
   id: Id;
   /** Bound plain label ("Ana’s spare tank"). */
@@ -417,14 +420,24 @@ export interface ClockDef {
   kind: 'medical' | 'structural' | 'battery' | 'supply' | 'deadline' | 'light' | 'crowd' | 'intoxication';
   /** The person whose clock it is: it stops once they are out of the building. */
   owner?: Id;
+  /** 'drain' (the default) runs down from `start`; 'fill' rises from it (a crowd filming, a subject
+   * streaming), and `ratePerMin` is points gained a minute. A fill's cues are listed lowest first and
+   * fire as the value reaches them. On a fill, 'low' (a clock condition) means its first cue has been
+   * heard and 'out' means it is full. */
+  direction?: 'drain' | 'fill';
   /** 0 to 100 at the start of the call. */
   start: number;
   ratePerMin: number;
+  /** Flags that change the rate while set (a choice that slows it sets one through `setFlags`): the
+   * slowest matching `ratePerMin` applies. A stable flag still stops the clock outright. */
+  rateFlags?: { flag: string; ratePerMin: number }[];
   /** The team can know how fast it runs before it shows (a gauge, a battery percentage). */
   rateKnown: boolean;
-  /** Highest first. Each fires once as the clock passes it: a line the team hears, and optionally a
-   * mark (public state) and the settling of the fact this clock stands for. */
+  /** Highest first (a fill: lowest first). Each fires once as the clock passes it: a line the team
+   * hears, and optionally a mark (public state) and the settling of the fact this clock stands for. */
   cues: { at: number; text: string; mark?: string; reveal?: boolean;
+    /** Meter events this cue moves a subject by (`watched`: someone who knows they are on camera). */
+    moves?: { personId: Id; event: MeterEvent }[];
     /** Flags the cue sets besides its mark: the move flags of a cue that moves someone (R-B3,
      * compiled from Clock.cues[].moveTo). Absent on every other cue. */
     setFlags?: string[] }[];
@@ -442,6 +455,8 @@ export interface ClockDef {
      * of the last-stage node or ending it reaches. Applied after the decision's own outcome, never
      * when that outcome ended the call or when the owner is out or safe. */
     route?: Pick<OutcomeEffect, 'setFlags' | 'clearFlags' | 'stage' | 'ending'> };
+  /** What a fill reaching 100 does where no fork reads it: `onOut` for a fill clock, the same shape. */
+  onFull?: ClockDef['onOut'];
 }
 export interface ClockCondition { clockId: Id; state: 'low' | 'out'; is: boolean }
 /** How a subject sounds to the team (sim/meters.ts stanceOf). 'unheard' until the first event. */
@@ -468,7 +483,7 @@ export interface AuthorityResult { allowed: boolean; rule: string; reason: strin
 export interface ThreatEvidence { factId?: Id; flag?: string; because: string }
 
 /** Standard events that move a subject's meters (sim/meters.ts). */
-export type MeterEvent = 'heard' | 'contact' | 'honest' | 'provoked' | 'team_seen' | 'shots' | 'released' | 'promise_kept' | 'promise_broken';
+export type MeterEvent = 'heard' | 'contact' | 'honest' | 'provoked' | 'team_seen' | 'shots' | 'released' | 'promise_kept' | 'promise_broken' | 'watched';
 export interface SubjectMeters { agitation: number; rapport: number }
 
 /** One person of a v13 incident instance (gen/incident/instance.ts), compiled for the engine. Who

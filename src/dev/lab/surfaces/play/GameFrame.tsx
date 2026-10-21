@@ -14,7 +14,7 @@ import '../../../../ui/screens/ops-visual.css';
 import '../../../../ui/skin.css';
 import { NOW } from '../../../../gen/incident/gates/engine-driver';
 import { briefing, builtForScenario, decisionViews, lastResolution, pendingDebrief } from '../../../../sim/operation-selectors';
-import { CLOCK_RULES_V1, decisionTextLength, ditherCap } from '../../../../sim/clocks';
+import { CLOCK_RULES_V1, decisionTextLength, ditherCap, fillViews } from '../../../../sim/clocks';
 import { responseFailurePlan } from '../../../../sim/response-failure';
 import { getScenario } from '../../../../sim/scenario-registry';
 import type { GameState, Id, OutcomeBand, SquadId } from '../../../../sim/types';
@@ -212,9 +212,17 @@ function StallSlider({ state, dither, onChange }: { state: GameState; dither: nu
   const scenario = run ? getScenario(run.scenarioId) : null;
   if (!run || !scenario || run.status !== 'active' || run.stage === 'debrief') return null;
   const cap = ditherCap(scenario, run);
-  if (!(cap > 0)) return <p className="lab-frame-chips"><span className="lab-chip">No threat or running clock here: a stall costs nothing</span></p>;
+  // Gauges that fill, as the call stands: how full, which cues are heard, and what they do now.
+  const gauges = fillViews(scenario, run).map(view => (
+    <span key={view.id} className="lab-chip" title={`A gauge that fills: ${view.cues.map(cue => `${cue.at}${cue.heard ? ' (heard)' : ''}`).join(', ')}. ${view.stopped ? 'Stopped. ' : view.slowed ? 'Slowed. ' : ''}Its effects begin once its first cue is heard.`}>
+      {view.label} {Math.round(view.value)}{view.full ? ' (full)' : ''}{view.effect ? ` · strain +${view.effect.strainPercent}% · trust swings ${view.effect.trustPercent}% more` : ' · no effect yet'}
+    </span>));
+  if (!(cap > 0)) return <p className="lab-frame-chips"><span className="lab-chip">No threat or running clock here: a stall costs nothing</span>{gauges}</p>;
   const shown = Math.min(dither, cap);
   const text = decisionTextLength(scenario, run);
+  // The threat's push-back lines.
+  const lines = (scenario.stages[run.stage].actions.find(action => action.threat?.pushback?.length)?.threat?.pushback ?? [])
+    .map(line => ({ id: line.id, at: line.at, text: line.effects.flatMap(effect => effect.exchange ?? []).map(spoken => spoken.line).join(' ') }));
   return (
     <p className="lab-frame-chips">
       <label className="lab-chip" title="Game minutes the player has stalled on this decision. The cards preview it; the lab's commits don't carry it.">
@@ -224,6 +232,13 @@ function StallSlider({ state, dither, onChange }: { state: GameState; dither: nu
       <span className="lab-chip" title="Real time on this decision before the stall reaches the slider: the reading floor, then the setting's rate">
         Relaxed {realTimeFor(shown, 'relaxed', text)} · Standard {realTimeFor(shown, 'standard', text)}
       </span>
+      {gauges}
+      {lines.map(line => (
+        <span key={line.id} className={cx('lab-chip', shown >= line.at ? 'lab-chip-warn' : '')}
+          title={`The subject's push-back line ${line.id}: fires once when the stall reaches ${line.at} min (Relaxed after ${realTimeFor(line.at, 'relaxed', text)}, Standard after ${realTimeFor(line.at, 'standard', text)} of real time).`}>
+          {shown >= line.at ? 'Fires' : 'Would fire'} at {line.at} min: {line.text}
+        </span>
+      ))}
     </p>
   );
 }

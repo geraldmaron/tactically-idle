@@ -109,13 +109,13 @@ function cueMoveFlags(clockId: string, index: number, moveTo: TreeMoveTo): strin
 
 /** Where the clocks the engine runs send the call when they run out (Clock.onOut.next). */
 export function clockNextsOf(clocks: readonly Clock[]): TreeNext[] {
-  return clocks.filter(clock => !clock.story).flatMap(clock => clock.onOut?.next ? [clock.onOut.next] : []);
+  return clocks.filter(clock => !clock.story).flatMap(clock => [...clock.onOut?.next ? [clock.onOut.next] : [], ...clock.onFull?.next ? [clock.onFull.next] : []]);
 }
 
 /** Marks a call's clocks can set by themselves (cues, running out): settable for the compiler's
  * pruning even when no outcome sets them. A clock the story still runs by itself sets none. */
 export function clockMarksOf(clocks: readonly Clock[]): string[] {
-  return clocks.filter(clock => !clock.story).flatMap(clock => [...clock.cues.flatMap(cue => cue.mark ? [cue.mark] : []), ...clock.onOut?.mark ? [clock.onOut.mark] : []]);
+  return clocks.filter(clock => !clock.story).flatMap(clock => [...clock.cues.flatMap(cue => cue.mark ? [cue.mark] : []), ...clock.onOut?.mark ? [clock.onOut.mark] : [], ...clock.onFull?.mark ? [clock.onFull.mark] : []]);
 }
 
 /** One call from a template on this building. Throws when the building can't host it, exactly as
@@ -242,17 +242,22 @@ function clocksFor(instance: IncidentInstance, bind: (text: string) => string, f
     const factId = clock.factKey ? treeFactId(clock.factKey) : undefined;
     return {
       id: clock.id, label: bind(clock.label), kind: clock.kind, ...(clock.owner ? { owner: clock.owner } : {}),
+      ...(clock.direction === 'fill' ? { direction: 'fill' as const } : {}),
       start: clock.start, ratePerMin: clock.ratePerMin, rateKnown: clock.rateKnown,
+      ...(clock.rateFlags?.length ? { rateFlags: clock.rateFlags.map(entry => ({ ...entry })) } : {}),
       cues: clock.cues.map((cue, index) => {
         // Cue flags are the compiler's (a cue's moves): authored content never sets them directly.
         if ('setFlags' in cue || 'clearFlags' in cue) throw new Error(`Clock ${clock.id}: cue ${index + 1} sets flags directly; author a moveTo or a mark instead`);
         return { at: cue.at, text: bind(cue.text), ...(cue.mark ? { mark: cue.mark } : {}), ...(cue.reveal ? { reveal: true } : {}),
-        ...(cue.moveTo ? { setFlags: cueMoveFlags(clock.id, index, cue.moveTo) } : {}) };
+        ...(cue.moveTo ? { setFlags: cueMoveFlags(clock.id, index, cue.moveTo) } : {}),
+        ...(cue.moves?.length ? { moves: cue.moves.map(move => ({ ...move })) } : {}) };
       }),
       ...(factId && factIds.has(factId) ? { factId } : {}),
       ...(clock.urgent ? { urgent: bind(clock.urgent) } : {}),
       ...(clock.onOut ? { onOut: { ...(clock.onOut.harm ? { harm: clock.onOut.harm } : {}), ...(clock.onOut.mark ? { mark: clock.onOut.mark } : {}),
         ...(clock.onOut.next ? { route: clockRoute(tree, clock.onOut.next, instance.spec.seed) } : {}) } } : {}),
+      ...(clock.onFull ? { onFull: { ...(clock.onFull.harm ? { harm: clock.onFull.harm } : {}), ...(clock.onFull.mark ? { mark: clock.onFull.mark } : {}),
+        ...(clock.onFull.next ? { route: clockRoute(tree, clock.onFull.next, instance.spec.seed) } : {}) } } : {}),
     };
   });
 }
