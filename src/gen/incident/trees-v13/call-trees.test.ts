@@ -135,7 +135,8 @@ describe('call trees: civilian names', () => {
 
 describe('call trees: authoring rules', () => {
   it('dispatches only tactical frameworks, and every tree is one of them', () => {
-    expect(SCENARIO_TYPES.map(info => info.type).sort()).toEqual([...TACTICAL_FRAMEWORKS].sort());
+    // The board carries the curated calls only (docs/backlog.md `curated-calls`): each a tactical framework.
+    for (const info of SCENARIO_TYPES) expect(TACTICAL_FRAMEWORKS.has(info.type), info.type).toBe(true);
     for (const tree of TREES) expect(TACTICAL_FRAMEWORKS.has(tree.type), tree.type).toBe(true);
     expect(INCIDENT_CONTENT_VERSION).toBeGreaterThanOrEqual(CALL_TREE_CONTENT_VERSION);
   });
@@ -389,7 +390,7 @@ describe('call trees: every path through the engine', () => {
     let leftovers = 0, deadEnds = 0, twoNodes = 0, ended = 0;
     // Authority (sim/authorization.ts): a choice the call offers must be authorized somewhere it is offered.
     const offered = new Set<string>(), authorized = new Set<string>();
-    for (const variant of [0, 1, 2] as const) {
+    for (const variant of tree.situations.map((_, i) => i as 0 | 1 | 2)) {
       const start = startGateRun(generateIncident(specForSituation(tree.type, family, variant)).id);
       const queue = [start], seen = new Set([key(start)]);
       while (queue.length) {

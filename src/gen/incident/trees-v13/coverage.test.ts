@@ -81,7 +81,7 @@ function startsFor(tree: CallTree): Start[] {
   const groups = Object.values(tree.turns ?? {});
   const clocked = (variant: number) => (INCIDENT_TEMPLATES[tree.type]?.situations[variant]?.clocks ?? []).some(clock => !clock.story);
   const targets = new Map<string, number>();
-  for (const variant of [0, 1, 2]) {
+  for (const variant of tree.situations.map((_, i) => i)) {
     for (const pacing of ['ordinary', 'deliberate_answers']) targets.set(`${variant}/${pacing}`, 1);
     for (const node of groups.flat()) targets.set(`${variant}/${node}`, clocked(variant) ? SEEDS_PER_START : 1);
   }

@@ -48,9 +48,10 @@ describe('call graph: structure', () => {
 
   it('says whether each fact condition holds in the given situation', () => {
     const tree = hostage.tree;
-    for (const situation of [0, 1, 2] as const) for (const edge of callGraph(tree, { situation }).edges) for (const c of edge.conditions) if (c.kind === 'fact')
+    const situations = tree.situations.map((_, i) => i as 0 | 1 | 2);
+    for (const situation of situations) for (const edge of callGraph(tree, { situation }).edges) for (const c of edge.conditions) if (c.kind === 'fact')
       expect(c.holds).toBe((tree.facts[c.fact].truth ?? tree.situations[situation]!.truth[c.fact]) === c.is);
-    const reach = [0, 1, 2].map(situation => truthReach(callGraph(tree, { situation: situation as 0 | 1 | 2 }), tree));
+    const reach = situations.map(situation => truthReach(callGraph(tree, { situation }), tree));
     for (const set of reach) expect(set.has('ending:handed_over') || set.size > 1).toBe(true);
   });
 });

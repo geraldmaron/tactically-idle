@@ -72,7 +72,8 @@ describe('current generated incidents', () => {
     for (const seed of [1, 12345, 9876, 4294967295]) {
       const state = createInitialState(NOW, seed);
       const cards = state.incidents.length;
-      expect(cards).toBeGreaterThan(1);
+      // One live call per kind: a board with one curated kind holds one card.
+      expect(cards).toBeGreaterThanOrEqual(1);
       expect(new Set(state.incidents.map(c => c.type)).size).toBe(cards);
       expect(new Set(state.incidents.map(c => c.familyId)).size).toBe(cards);
       expect(scenarioCards(state, NOW).filter(c => c.id.startsWith('gen:'))).toHaveLength(cards);

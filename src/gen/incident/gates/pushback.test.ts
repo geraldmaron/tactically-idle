@@ -61,7 +61,7 @@ describe('the push-back gate', () => {
     const bad = (beats: TreeThreat["beats"]) => pushbackDataFindings(template({ ...THREAT, beats }, false).tree).map(finding => finding.message);
     expect(bad([{ id: 'a', at: 4, by: 'taker', line: 'x' }]).join()).toContain('below the threat');
     expect(bad([{ id: 'a', at: 0, by: 'taker', line: 'x' }]).join()).toContain('above 0');
-    expect(bad([{ id: 'a', at: 1, by: 'nobody', line: 'x' }]).join()).toContain('no role or group');
+    expect(bad([{ id: 'a', at: 1, by: 'nobody', line: 'x' }]).join()).toContain('no role, group or voice');
     expect(bad([{ id: 'a', at: 1, by: 'taker', line: 'x' }, { id: 'a', at: 2, by: 'taker', line: 'y' }]).join()).toContain('unique id');
     expect(() => compile(template({ ...THREAT, beats: [{ id: 'a', at: 5, by: 'taker', line: 'x' }] }, false))).toThrow();
   });

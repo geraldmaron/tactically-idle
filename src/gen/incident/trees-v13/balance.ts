@@ -2,6 +2,7 @@
 // a day-one roster (a different campaign, so a different squad, for every call), under several
 // player styles, and count how calls end. Used by the balance gate and by `npm run balance`-style
 // dev runs. Nothing here is a simulation of the engine: every step is a dispatched decision.
+import { CALL_TREES } from '../../../content/call-trees';
 import type { CallTree } from '../../../content/call-trees/types';
 import { traceRun } from '../../../sim/operation';
 import { actionViews } from '../../../sim/operation-selectors';
@@ -160,7 +161,8 @@ export interface GateCheck { id: string; label: string; type: IncidentType; styl
 const GATE_LABELS: Record<GateMetric, string> = {
   clean: 'Clean endings', bad: 'Unresolved, hurt or dead', harm: 'Someone hurt or killed', death: 'Someone killed', officerHurt: 'An officer hurt',
 };
-const GATE_TYPES: readonly IncidentType[] = ['hostage_crisis', 'barricaded', 'active_armed_incident', 'protected_rescue'];
+/** The curated calls on the board (content/call-trees CALL_TREES): a type with no call has nothing to gate. */
+const GATE_TYPES: readonly IncidentType[] = (['hostage_crisis', 'barricaded', 'active_armed_incident', 'protected_rescue'] as const).filter(type => !!CALL_TREES[type]);
 /** Harm and death bands per call type, for the random style. */
 const GATE_BANDS: Record<string, { harm: [number, number]; death: [number, number] }> = {
   hostage_crisis: { harm: [0.03, 0.3], death: [0, 0.08] },
@@ -190,10 +192,12 @@ export const GATE_SUITE: readonly GateCheck[] = [
       gateCheck(type, 'random', 60, 'death', { min: GATE_BANDS[type].death[0], max: GATE_BANDS[type].death[1] }, why),
     ];
   }),
-  gateCheck('active_armed_incident', 'fast', 60, 'officerHurt', { min: 0.25 }, 'Rushing an armed subject hurts officers.'),
-  gateCheck('active_armed_incident', 'patient', 60, 'officerHurt', { max: 0.05 }, 'Waiting an armed subject out keeps officers safe.'),
-  gateCheck('active_armed_incident', 'patient', 60, 'harm', { min: 0.05 }, 'Waiting is not free either: when the door is splitting, the wait is what kills the person behind it.'),
-  gateCheck('protected_rescue', 'patient', 60, 'harm', { min: 0.15 }, 'Waiting out a rescue costs the resident when their oxygen is short.'),
+  ...[
+    gateCheck('active_armed_incident', 'fast', 60, 'officerHurt', { min: 0.25 }, 'Rushing an armed subject hurts officers.'),
+    gateCheck('active_armed_incident', 'patient', 60, 'officerHurt', { max: 0.05 }, 'Waiting an armed subject out keeps officers safe.'),
+    gateCheck('active_armed_incident', 'patient', 60, 'harm', { min: 0.05 }, 'Waiting is not free either: when the door is splitting, the wait is what kills the person behind it.'),
+    gateCheck('protected_rescue', 'patient', 60, 'harm', { min: 0.15 }, 'Waiting out a rescue costs the resident when their oxygen is short.'),
+  ].filter(check => GATE_TYPES.includes(check.type)),
   ...GATE_TYPES.map(type => gateCheck(type, 'best_odds', 40, 'clean', { max: 0.75 }, 'No style of play guarantees a clean ending.')),
 ];
 

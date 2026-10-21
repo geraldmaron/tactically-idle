@@ -1,128 +1,119 @@
-import { HOSTAGE_SIGNATURE as tree } from '../call-trees/hostage-signature';
+import { HOSTAGE_LIVE as tree } from '../call-trees/hostage-live';
 import type { Clock, IncidentTemplate, PersonSpec, Weapon } from './types';
 
-// One Last Signature as data (design sheet: docs/calls/hostage-signature-design.md). The taker holds
-// the owner because the grievance is with them (an expressive hold, so this is a victim incident),
-// and the courier only because the courier was there (incidental). The demand is a written account,
-// which command can give; in the third situation it is the owner's signature and nothing less, which
-// nobody can.
+// Going Live as data (design sheet: docs/calls/going-live-design.md). The rider holds the manager
+// because the grievance is with them (an expressive hold, so the manager is a victim) and the clerk
+// only because the clerk was there (incidental). The demand is one sentence said on camera, which
+// nobody on the team can say for anyone.
 //
-// One to three people come in: the taker, and up to two coworkers from the last shift who came to
-// back the taker's story (the counted group `others`). A lone taker stays the most common call.
+// The two pressure sources (docs/call-pressure.md, "Pressure sources"):
+// - The stream: the rider's own phone, propped on the register. Talking on it feeds it, a turn to the
+//   wall slows it, the chat turning on the rider and the rider playing to it speed it up, and command
+//   or the rider can end it. The more people watch, the harder talk and pressure checks get, because
+//   the rider can't be seen to back down.
+// - The riders at the tape: the same audience in person, on scooters. Moving the tape back a block
+//   slows it. The bigger the crowd, the harder the team's own coordination is.
 
-/** Gauges that fill (docs/call-pressure.md, docs/calls/notes/hostage-livestream-design.md), the same in
- * every situation: the regulars' phones at the tape, and the taker going live on the owner's phone.
- * Their effects (strain, call pressure, a bigger trust swing either way) start at each one's first
- * cue. Moving the tape back slows the crowd; the taker's stream stops or slows when they put the
- * phone down, and stops for good once they are out. */
-const CROWD_STREAM: Clock = { id: 'crowd_stream', label: 'Phones at the tape', kind: 'crowd', direction: 'fill', start: 0, ratePerMin: 0.5, rateSpread: 0.2, rateKnown: false,
+/** The rider's stream, counted the way the phone counts it. */
+const STREAM: Clock = { id: 'stream', label: '{rider.first}’s stream', kind: 'crowd', direction: 'fill', owner: 'rider', start: 8, ratePerMin: 1.1, rateSpread: 0.2, rateKnown: false,
+  rateFlags: [{ flag: 'mark:phone_wall', ratePerMin: 0.2 }],
+  cues: [
+    { at: 22, text: '{rider.first} reads a comment out loud. Someone wants to know if the handgun is real. {rider.He} {rider~holds|hold} it up to the camera to show them.', moves: [{ personId: 'rider', event: 'watched' }] },
+    { at: 48, text: 'Another rider shares the stream to a group of a few thousand drivers, and the count under the picture jumps twice in a minute.', moves: [{ personId: 'rider', event: 'watched' }] },
+    { at: 76, text: 'A local news account reposts the stream. {rider.first} reads its name off the screen, then reads it again.', mark: 'news_on', moves: [{ personId: 'rider', event: 'watched' }] },
+  ],
+  source: {
+    count: { from: 380, to: 42000, unit: 'watching' },
+    surges: [{ flag: 'mark:performing', ratePerMin: 2.2 }, { flag: 'mark:turned_chat', ratePerMin: 2 }],
+    odds: { kinds: ['contact', 'pressure'], atFull: 7 },
+    reactions: {
+      byCue: [
+        ['{rider.first} you good??', 'where is this', 'is that the place on 9th', 'they did you so dirty', 'stay safe bro', 'say it louder'],
+        ['wait is that real', 'put it down man', 'cops everywhere outside', 'make her say it', 'this is crazy', 'my order from there was late too'],
+        ['twelve cop cars, i counted', 'just let her go', 'he never stole from anybody', 'why is the camera shaking', 'they gonna rush it', 'riders pull up'],
+        ['news is here', 'this is not how you prove it', 'turn it off', 'somebody call his mom', 'everybody calm down', 'i used to see him every night'],
+      ],
+      spike: ['WHAT', 'did he just', 'oh no', 'is everybody ok', 'nooo'],
+    },
+  } };
+
+/** The riders massing at the tape: the stream's audience, in person. */
+const TAPE: Clock = { id: 'tape_riders', label: 'Riders at the tape', kind: 'crowd', direction: 'fill', start: 6, ratePerMin: 0.8, rateSpread: 0.2, rateKnown: false,
   rateFlags: [{ flag: 'mark:tape_back', ratePerMin: 0.2 }],
   cues: [
-    { at: 25, text: 'At the tape a regular streams the shop front live. People watching send questions about the people inside.' },
-    { at: 40, text: 'The people at the tape pass one phone around and read the comments under it out loud. Somebody says a thousand people are watching.' },
-    { at: 70, text: 'A TV station’s van pulls up at the corner. The regulars start filming the reporter as well as the shop.' },
-  ] };
-const TAKER_LIVE: Clock = { id: 'taker_live', label: '{taker.first}’s stream', kind: 'crowd', direction: 'fill', owner: 'taker', start: 0, ratePerMin: 0.4, rateSpread: 0.25, rateKnown: false,
-  rateFlags: [{ flag: 'mark:phone_to_wall', ratePerMin: 0.15 }],
-  cues: [
-    { at: 35, text: '{taker.first} props {owner.first}’s phone against the register and starts a livestream about the till.', mark: 'taker_live', moves: [{ personId: 'taker', event: 'watched' }] },
-    { at: 50, text: '{taker.first} reads names off the phone’s screen out loud, people from the neighborhood, and answers them one at a time.', moves: [{ personId: 'taker', event: 'watched' }] },
-    { at: 80, text: '{taker.first} turns the phone so it faces {owner.first} and tells the people watching to take a good look.', moves: [{ personId: 'taker', event: 'watched' }] },
-  ] };
+    { at: 26, text: 'Scooters line both curbs on the east side, engines idling, horns going in short bursts.' },
+    { at: 52, text: 'The riders at the tape start chanting {rider.first}’s name. Some of them are streaming the chant.', moves: [{ personId: 'rider', event: 'watched' }] },
+    { at: 80, text: 'Somebody at the tape throws a water bottle at the patrol line. It lands short, and the riders around them step away from them.' },
+  ],
+  source: {
+    count: { from: 6, to: 280, unit: 'at the tape' },
+    odds: { kinds: ['coordination', 'execution'], atFull: 6 },
+    reactions: {
+      byCue: [
+        ['horn', 'horn horn', 'that’s my guy', 'who called the cops'],
+        ['let him out', 'we see you', 'nobody touch him', 'film everything'],
+        ['say his name', 'we’re not leaving', 'back up, back up', 'they moving the tape'],
+        ['everybody chill', 'not like this', 'somebody get the bottle guy', 'keep filming'],
+      ],
+      spike: ['HORNS', 'oh no', 'everybody back'],
+    },
+  } };
 
 const HANDGUN: Weapon = { kind: 'handgun', real: 'real', where: 'in_hand', visible: true };
-/** Something heavy from behind the counter. Only the taker brought a handgun. */
-const HEAVY: Weapon = { kind: 'blunt', real: 'real', where: 'in_hand', visible: true };
 
-/** The taker in every situation: the handgun, the statement, and what patrol and the 911 call said. */
-const TAKER: Partial<PersonSpec> = {
-  label: 'former employee',
+/** The rider in every situation: the handgun, the stream, and what patrol and the 911 call said. */
+const RIDER: Partial<PersonSpec> = {
+  label: 'delivery rider',
   weapons: [HANDGUN],
-  // Six years behind a counter, not a range: mostly untrained.
-  proficiency: { pick: [['untrained', 60], ['some', 32], ['trained', 8]] },
-  demands: [{ kind: 'statement', text: 'A written account that {taker.he} took nothing from the till', concedable: true }],
-  meters: { agitation: 60, rapport: 10, fatigue: 20, intoxication: 0, resolve: 60 },
+  // Two years on a scooter, not a range: mostly untrained.
+  proficiency: { pick: [['untrained', 65], ['some', 30], ['trained', 5]] },
+  demands: [{ kind: 'statement', text: '{manager.first} saying on camera that {rider.he} didn’t take the bag', concedable: false }],
+  meters: { agitation: 58, rapport: 8, fatigue: 25, intoxication: 0, resolve: 62 },
   knowledge: {
-    presence: { status: 'confirmed', source: 'Responding patrol' },
+    presence: { status: 'confirmed', source: 'The stream' },
     weapons: { status: 'reported', source: 'Responding patrol', value: 'handgun', learnedBy: 'f_handgun' },
-    demands: { status: 'reported', source: 'The 911 call', value: 'a statement clearing {taker.him}', learnedBy: 'f_lets_go' },
+    demands: { status: 'reported', source: 'The 911 call', value: 'the manager saying it on camera', learnedBy: 'f_rider_clear' },
     disposition: { status: 'unknown', source: 'Nobody yet', learnedBy: 'f_raised' },
   },
 };
-
-/** The others: coworkers from the last shift, how tightly the taker holds them set per situation. No
- * demand of their own, and something heavy in hand or nothing. */
-const OTHERS = (influence: { min: number; max: number }): Partial<PersonSpec> => ({
-  label: 'coworker from the last shift',
-  weapons: { pick: [[[], 60], [[HEAVY], 40]] },
-  proficiency: 'untrained',
-  volatility: 'shifting',
-  demands: [],
-  relationshipToSubject: 'coworker',
-  threat: { disposition: 'distressed', intent: 'barricade', awareness: 'aware', readiness: 'carried' },
-  meters: { agitation: 55, rapport: 10, fatigue: 20, intoxication: 0, resolve: 30 },
-  knowledge: { presence: { status: 'reported', source: 'Responding patrol' } },
-  group: { role: { pick: [['follower', 70], ['lookout', 30]] }, influence },
-});
 
 export const HOSTAGE_TEMPLATE: IncidentTemplate = {
   type: 'hostage_crisis',
   label: 'Hostage crisis',
   tree,
   cast: [
-    // 1 to 3 people: a lone taker 55%, a pair 30%, three 15% (argued in the design sheet, row L).
-    { id: 'subjects', kind: 'subject', count: { min: 1, max: 3, weights: [55, 30, 15] }, keyRoles: ['taker'], person: {
-      label: 'former employee', age: 'adult', activity: 'holding',
+    { id: 'subjects', kind: 'subject', count: { min: 1, max: 1 }, keyRoles: ['rider'], person: {
+      label: 'delivery rider', age: 'adult', activity: 'holding',
       threat: { disposition: 'agitated', intent: 'barricade', awareness: 'aware', readiness: 'brandished' },
       record: { warrant: 'unknown', priorViolence: 'unknown' },
-      // The self-harm screen applies to the taker (E4); the others are screened in conservatively.
+      // The self-harm screen applies to the rider (E4).
       noDeathOnCard: true,
-      knowledge: { presence: { status: 'reported', source: 'Responding patrol' } },
-      group: { role: { pick: [['follower', 70], ['lookout', 30]] }, influence: { min: 0.4, max: 0.8 } },
+      knowledge: { presence: { status: 'confirmed', source: 'The stream' } },
     } },
-    { id: 'hostages', kind: 'hostage', count: { min: 1, max: 1 }, keyRoles: ['courier'], person: {
-      label: 'courier', age: 'adult',
-      hold: { by: 'taker', kind: 'incidental', restraint: 'watched', relationship: 'stranger' },
-      relationshipToSubject: 'stranger', meters: { condition: 100, composure: 60 },
-      knowledge: { presence: { status: 'reported', source: 'Dispatch' }, position: { status: 'reported', source: 'Dispatch', value: 'by the door' } },
+    { id: 'hostages', kind: 'hostage', count: { min: 1, max: 1 }, keyRoles: ['clerk'], person: {
+      label: 'clerk', age: 'adult',
+      hold: { by: 'rider', kind: 'incidental', restraint: 'watched', relationship: 'stranger' },
+      relationshipToSubject: 'stranger', meters: { condition: 100, composure: 45 },
+      knowledge: { presence: { status: 'reported', source: 'The 911 call' }, position: { status: 'reported', source: 'The 911 call', value: 'by the stockroom door' } },
     } },
-    { id: 'victims', kind: 'victim', count: { min: 1, max: 1 }, keyRoles: ['owner'], person: {
-      label: 'owner', age: 'adult',
-      hold: { by: 'taker', kind: 'expressive', restraint: 'watched', relationship: 'employer' },
-      relationshipToSubject: 'employer', meters: { condition: 100, composure: 50 },
-      knowledge: { presence: { status: 'reported', source: 'Dispatch' }, needs: { status: 'unknown', source: 'Nobody yet', learnedBy: 'f_owner_faint' } },
+    { id: 'victims', kind: 'victim', count: { min: 1, max: 1 }, keyRoles: ['manager'], person: {
+      label: 'night manager', age: 'adult',
+      hold: { by: 'rider', kind: 'expressive', restraint: 'watched', relationship: 'acquaintance' },
+      relationshipToSubject: 'acquaintance', meters: { condition: 100, composure: 55 },
+      knowledge: { presence: { status: 'confirmed', source: 'The stream' } },
     } },
-    // Outside with patrol, and able to speak on the line as a gamble (owner 2026-10-19: family and
-    // regulars may carry words, at a real risk). The cousin is the taker's emergency contact.
-    { id: 'kin', kind: 'bystander', count: { min: 1, max: 1 }, keyRoles: ['cousin'], person: {
-      label: 'cousin', age: 'adult', relationshipToSubject: 'family',
-      knowledge: { presence: { status: 'confirmed', source: 'With patrol' } },
-    } },
-    { id: 'regulars', kind: 'bystander', count: { min: 1, max: 1 }, keyRoles: ['regular'], person: {
-      label: 'regular', age: 'adult', relationshipToSubject: 'customer',
+    // At the tape with the riders, typing in the comments. Can speak on the line as a gamble.
+    { id: 'kin', kind: 'bystander', count: { min: 1, max: 1 }, keyRoles: ['friend'], person: {
+      label: 'rider friend', age: 'adult', relationshipToSubject: 'coworker',
       knowledge: { presence: { status: 'confirmed', source: 'At the tape' } },
     } },
   ],
-  conditions: { timeOfDay: 'day', power: 'on', weather: 'clear', crowd: 1 },
+  conditions: { timeOfDay: 'night', power: 'on', weather: 'clear', crowd: 2 },
   situations: [
-    // Steady or shifting: a taker who would trade can still be pushed past breaking point.
-    { index: 0, people: { taker: { ...TAKER, volatility: { pick: [['steady', 50], ['shifting', 50]] } }, others: OTHERS({ min: 0.55, max: 0.9 }) }, clocks: [CROWD_STREAM, TAKER_LIVE] },
-    // The owner's heart: a medical clock, about forty minutes to an hour (±25%). The team sees the
-    // first sign through the glass a few minutes in, and command will approve going in from then.
-    // The long holds fork on it; anywhere else running out records the collapse and moves the call
-    // to owner_down. The node, not a mark, carries the collapse from there.
-    { index: 1, people: { taker: { ...TAKER, volatility: 'volatile' }, others: OTHERS({ min: 0.4, max: 0.8 }), owner: { needs: ['cardiac'], meters: { condition: 60, composure: 40 } } },
-      clocks: [{ id: 'owner_condition', label: '{owner.first}’s condition', kind: 'medical', owner: 'owner', start: 60, ratePerMin: 1.2, rateSpread: 0.25, rateKnown: false, factKey: 'owner_faint',
-        urgent: '{owner.first} is down on the tiles behind the counter and can’t wait',
-        cues: [{ at: 55, text: 'Through the glass, the team sees {owner.first} get down from the stool and sit on the tiles.', mark: 'owner_unwell' }],
-        // Running out where no fork reads it moves the call to owner_down (R-G4): an ending the decision
-        // reached stands (heldEnd reads the clock itself), and an owner already out moves nothing (sim/clocks.ts).
-        onOut: { harm: 'serious', next: { node: 'owner_down' } } }, CROWD_STREAM, TAKER_LIVE] },
-    { index: 2, people: {
-      taker: { ...TAKER, volatility: 'volatile', threat: { disposition: 'hostile', intent: 'barricade', awareness: 'aware', readiness: 'brandished' },
-        demands: [{ kind: 'statement', text: '{owner.His} signature on a statement clearing {taker.him}, and nothing less', concedable: false }] },
-      // The taker has stopped listening to them; they freeze when the taker walks.
-      others: OTHERS({ min: 0.1, max: 0.45 }) }, clocks: [CROWD_STREAM, TAKER_LIVE] },
+    // The clerk took the bag; a refusal leaves the rider pacing.
+    { index: 0, people: { rider: { ...RIDER, volatility: { pick: [['steady', 45], ['shifting', 55]] } } }, clocks: [STREAM, TAPE] },
+    // The rider took it; a refusal on camera turns the handgun on the manager.
+    { index: 1, people: { rider: { ...RIDER, volatility: 'volatile', threat: { disposition: 'hostile', intent: 'barricade', awareness: 'aware', readiness: 'brandished' } } }, clocks: [STREAM, TAPE] },
   ],
   complications: [],
 };
