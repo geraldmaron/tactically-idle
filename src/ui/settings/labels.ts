@@ -3,20 +3,32 @@
 // rest named as warnings only. House rules: no em or en dashes, no spaced hyphens, no colons, and no
 // ESRB or PEGI names (docs/content-rating.md).
 
-import type { ContentDescriptor } from '../../content/content-descriptors';
+import type { AvoidableTheme, ContentDescriptor } from '../../content/content-descriptors';
 import type { TimerSetting } from '../../sim/timer-setting';
 import type { CardWarningSetting } from './prefs';
-
-/** The themes a player can keep off the board. Switch to `AVOIDABLE_THEMES` from
- * src/content/content-descriptors.ts once the descriptors branch lands; this copy stands in until then. */
-export const AVOIDABLE_THEMES = ['suicide_self_harm', 'child_at_risk', 'domestic_violence'] as const satisfies readonly ContentDescriptor[];
-export type AvoidableTheme = (typeof AVOIDABLE_THEMES)[number];
 
 export const THEME_LABELS: Readonly<Record<AvoidableTheme, { name: string; detail: string }>> = {
   suicide_self_harm: { name: 'Suicide and self-harm', detail: 'A person on scene is at risk of hurting themselves.' },
   child_at_risk: { name: 'A child at risk', detail: 'A child is inside or in danger.' },
   domestic_violence: { name: 'Domestic violence', detail: 'Harm between partners or family members drives the call.' },
 };
+
+/** DRAFT for owner approval (an Opus session rewrites the wording later): the themes a call card
+ * names, in plain words, for every descriptor. Never plot. */
+export const CARD_THEME_WORDS: Readonly<Record<ContentDescriptor, string>> = {
+  death: 'death',
+  suicide_self_harm: 'suicide risk',
+  injury: 'injury',
+  police_gunfire: 'police use of force',
+  child_at_risk: 'a child in danger',
+  domestic_violence: 'domestic violence',
+};
+
+/** DRAFT for owner approval: the call card's warning line and the reassurance under it. */
+export const CARD_WARNING_TEXT = {
+  involves: 'Involves',
+  leaveIt: 'You can leave this call. Calls you don\'t take end on their own and cost you nothing.',
+} as const;
 
 /** What the game contains, named plainly on the launch advisory. */
 export const ADVISORY_THEMES = ['Police use of force', 'Death', 'Injury', 'Suicide risk', 'Children in danger', 'Domestic violence'] as const;

@@ -4,9 +4,9 @@
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
-import { CONTENT_DESCRIPTORS } from '../../content/content-descriptors';
+import { AVOIDABLE_THEMES, CONTENT_DESCRIPTORS } from '../../content/content-descriptors';
 import { FirstRun } from './FirstRun';
-import { ADVISORY_THEMES, AVOIDABLE_THEMES, SETTINGS_TEXT, SUPPORT_TEXT, THEME_LABELS, TIMER_LABELS, WARNING_LABELS, settingsSummary } from './labels';
+import { ADVISORY_THEMES, SETTINGS_TEXT, SUPPORT_TEXT, THEME_LABELS, TIMER_LABELS, WARNING_LABELS, settingsSummary } from './labels';
 import { DEFAULT_SETTINGS } from './prefs';
 import { SettingsControls } from './SettingsControls';
 

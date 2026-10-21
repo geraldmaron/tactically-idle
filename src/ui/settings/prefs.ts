@@ -7,7 +7,7 @@
 // Pure: no React, no store. The plain read functions at the bottom are what the engine wiring calls.
 
 import { DEFAULT_TIMER_SETTING, TIMER_SETTINGS, type TimerSetting } from '../../sim/timer-setting';
-import { AVOIDABLE_THEMES, type AvoidableTheme } from './labels';
+import { AVOIDABLE_THEMES, type AvoidableTheme } from '../../content/content-descriptors';
 
 export const SETTINGS_KEY = 'ti-settings';
 

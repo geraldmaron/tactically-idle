@@ -2,7 +2,8 @@ import { useSyncExternalStore } from 'react';
 import { TIMER_SETTINGS } from '../../sim/timer-setting';
 import { Segmented } from '../components/ui';
 import { CARD_WARNING_SETTINGS, readSettings, subscribeSettings, type PlayerSettings } from './prefs';
-import { AVOIDABLE_THEMES, SETTINGS_TEXT, SUPPORT_TEXT, THEME_LABELS, TIMER_LABELS, WARNING_LABELS } from './labels';
+import { AVOIDABLE_THEMES } from '../../content/content-descriptors';
+import { SETTINGS_TEXT, SUPPORT_TEXT, THEME_LABELS, TIMER_LABELS, WARNING_LABELS } from './labels';
 import './settings.css';
 
 /** The saved settings, re-rendering on every change made on this page. */
