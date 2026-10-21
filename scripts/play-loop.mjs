@@ -28,7 +28,7 @@ export async function playLiveCalls(page, { baseURL = 'http://127.0.0.1:5174', w
   // A fresh browser opens on the launch advisory; the player keeps the default settings and continues.
   const firstRun = page.locator('.first-run');
   await firstRun.waitFor();
-  assert.match(await firstRun.innerText(), /not an age check/);
+  assert.match(await firstRun.innerText(), /We don.t check your age/);
   await overflow('launch advisory');
   await capture('first-run');
   const proceed = firstRun.getByRole('button', { name: 'Continue to headquarters', exact: true });
