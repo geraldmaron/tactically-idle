@@ -25,6 +25,12 @@ import type { TimerSetting } from './timer-setting';
 export const CLOCK_RULES_V1 = tunable('CLOCK_RULES_V1', {
   /** Where a clock stops in a decision that would run it out before any cue was heard. */
   floor: 1,
+  /** Gauges that fill (a crowd filming, a subject streaming; ClockDef.direction 'fill'). A fill bites
+   * only once its first cue has been heard. `strain`: extra strain per officer at a commit, as a
+   * share of the strain, per full gauge (0.4: a gauge at 50 adds 20%). `audienceGain`: how much more
+   * the call's trust result counts, either way, per full peak gauge (0.5: a peak of 80 counts 40%
+   * more). `pressurePerMinute`: points of call pressure a full gauge adds each minute. */
+  fill: { strain: 0.4, audienceGain: 0.5, pressurePerMinute: 0.5 },
   /** Dither minutes (docs/call-pressure.md), per timer setting; Off never adds any. Real time on an
    * open decision starts counting after a reading floor: `floorSeconds`, plus a second for every
    * `readingCharsPerSecond` characters of the stage's text (0: the floor doesn't scale). After it,
@@ -37,7 +43,8 @@ export const CLOCK_RULES_V1 = tunable('CLOCK_RULES_V1', {
     relaxed: { floorSeconds: 10, readingCharsPerSecond: 15, gameMinutesPerRealMinute: 2 },
     standard: { floorSeconds: 8, readingCharsPerSecond: 0, gameMinutesPerRealMinute: 3 },
   } as Record<Exclude<TimerSetting, 'off'>, { floorSeconds: number; readingCharsPerSecond: number; gameMinutesPerRealMinute: number }>,
-}, { guard: (next) => Object.entries(next.dither).some(([, rule]) => !(rule.floorSeconds >= 0 && rule.readingCharsPerSecond >= 0 && rule.gameMinutesPerRealMinute >= 0))
+}, { guard: (next) => next.fill.strain < 0 || next.fill.audienceGain < 0 || next.fill.pressurePerMinute < 0 ? 'fill strain, audience gain and pressure must be 0 or more'
+  : Object.entries(next.dither).some(([, rule]) => !(rule.floorSeconds >= 0 && rule.readingCharsPerSecond >= 0 && rule.gameMinutesPerRealMinute >= 0))
   ? 'dither floors, reading speeds and rates must be 0 or more' : null });
 
 export type ClockState = NonNullable<OperationRun['clocks']>[Id];
@@ -45,7 +52,17 @@ const round1 = (n: number) => Math.round(n * 10) / 10;
 
 export function initialClocks(scenario: ScenarioDefinition): OperationRun['clocks'] {
   if (!scenario.clocks?.length) return undefined;
-  return Object.fromEntries(scenario.clocks.map(def => [def.id, { value: def.start, cued: def.cues.filter(cue => def.start <= cue.at).length }]));
+  return Object.fromEntries(scenario.clocks.map(def => [def.id, { value: def.start, cued: def.cues.filter(cue => filling(def) ? def.start >= cue.at : def.start <= cue.at).length }]));
+}
+
+/** A gauge that fills rather than runs down. */
+export const filling = (def: Pick<ClockDef, 'direction'>) => def.direction === 'fill';
+
+/** How fast a clock moves now: its rate, or the slowest rate a set flag gives it (a choice that
+ * slows it). Without `rateFlags` it is `ratePerMin`, so a clock that has none runs as it always did. */
+export function effectiveRate(def: ClockDef, flags: readonly string[]): number {
+  const slowed = (def.rateFlags ?? []).filter(entry => flags.includes(entry.flag)).map(entry => entry.ratePerMin);
+  return slowed.length ? Math.min(def.ratePerMin, ...slowed) : def.ratePerMin;
 }
 
 /** A clock stops once the person it belongs to is out of the building, or once someone holds it steady. */
@@ -55,7 +72,13 @@ const stopped = (def: ClockDef, flags: readonly string[]) => flags.includes(stab
 /** Where a clock will be after `minutes` more, and how many of its cues will have fired. */
 export function stepClock(def: ClockDef, state: ClockState, minutes: number, flags: readonly string[]): ClockState {
   if (stopped(def, flags) || minutes <= 0) return { ...state };
-  let value = round1(Math.max(0, state.value - def.ratePerMin * minutes));
+  if (filling(def)) {
+    // The mirror of a clock running out: a fill never fills before a cue is heard.
+    let up = round1(Math.min(100, state.value + effectiveRate(def, flags) * minutes));
+    if (up >= 100 && state.cued === 0) up = 100 - CLOCK_RULES_V1.floor;
+    return { value: up, cued: Math.max(state.cued, def.cues.filter(cue => up >= cue.at).length) };
+  }
+  let value = round1(Math.max(0, state.value - effectiveRate(def, flags) * minutes));
   if (value <= 0 && state.cued === 0) value = CLOCK_RULES_V1.floor;
   return { value, cued: Math.max(state.cued, def.cues.filter(cue => value <= cue.at).length) };
 }
@@ -63,7 +86,7 @@ export function stepClock(def: ClockDef, state: ClockState, minutes: number, fla
 export interface ClockRead { value: number; low: boolean; out: boolean }
 function readClock(def: ClockDef | undefined, state: ClockState | undefined): ClockRead {
   if (!def || !state) return { value: 100, low: false, out: false };
-  return { value: state.value, low: state.cued > 0, out: state.value <= 0 };
+  return { value: state.value, low: state.cued > 0, out: filling(def) ? state.value >= 100 : state.value <= 0 };
 }
 
 /** The team's minutes for a decision at its band before any outcome adds to them: travel through
@@ -117,9 +140,11 @@ export function ditherMinutes({ openedAt, now, timer, textLength, cap }: DitherI
 /** Minutes until a running clock's next unheard cue: 0 once every cue is heard, Infinity when the
  * clock isn't running. */
 function minutesToNextCue(def: ClockDef, state: ClockState, flags: readonly string[]): number {
-  if (stopped(def, flags) || !(def.ratePerMin > 0)) return Infinity;
+  const rate = effectiveRate(def, flags);
+  if (stopped(def, flags) || !(rate > 0)) return Infinity;
   const cue = def.cues[state.cued];
-  return cue ? Math.max(0, (state.value - cue.at) / def.ratePerMin) : 0;
+  if (!cue) return 0;
+  return Math.max(0, (filling(def) ? cue.at - state.value : state.value - cue.at) / rate);
 }
 
 /** Where dither stops on the open decision (docs/call-pressure.md, "The cap"): the decision point's
@@ -180,6 +205,7 @@ export function advanceClocks(run: Pick<OperationRun, 'clocks' | 'flags'>, scena
     for (const cue of def.cues.slice(before.cued, after.cued)) fired.push({
       text: cue.text,
       ...(cue.mark || cue.setFlags?.length ? { setFlags: [...cue.mark ? [`mark:${cue.mark}`] : [], ...cue.setFlags ?? []] } : {}),
+      ...(cue.moves?.length ? { moves: cue.moves.map(move => ({ ...move })) } : {}),
       ...(cue.reveal && def.factId ? { reveal: [def.factId] } : {}),
     });
   }
@@ -205,8 +231,13 @@ export function cueEffects(fired: OutcomeEffect[], scenario: ScenarioDefinition,
 /** Clocks that ran out between two states of the run: above zero before, out after. A clock whose
  * owner was already out at the start did not run (stepClock), so it never runs out here. */
 function clocksRunOut(scenario: ScenarioDefinition, before: OperationRun['clocks'], after: OperationRun['clocks']): ClockDef[] {
-  return (scenario.clocks ?? []).filter(def => (before?.[def.id]?.value ?? 0) > 0 && (after?.[def.id]?.value ?? 1) <= 0);
+  return (scenario.clocks ?? []).filter(def => filling(def)
+    ? (before?.[def.id]?.value ?? 100) < 100 && (after?.[def.id]?.value ?? 0) >= 100
+    : (before?.[def.id]?.value ?? 0) > 0 && (after?.[def.id]?.value ?? 1) <= 0);
 }
+
+/** What a clock reaching its end does: running out, or (a fill) filling. */
+export const endOf = (def: Pick<ClockDef, 'direction' | 'onOut' | 'onFull'>) => filling(def) ? def.onFull : def.onOut;
 
 /** What the clocks that ran out during a decision do where no fork reads them (ClockDef.onOut),
  * applied after the decision's own outcome and its cues. `run.flags` are the flags after the
@@ -227,21 +258,22 @@ export function clockOutEffects(scenario: ScenarioDefinition, before: OperationR
   const ended = matched.some(effect => effect.ending);
   let routed = false;
   return clocksRunOut(scenario, before, after).flatMap((def): OutcomeEffect[] => {
-    if (!def.onOut) return [];
+    const end = endOf(def);
+    if (!end) return [];
     const owner = def.owner;
     const hurt = !!owner && matched.some(effect => effect.personHarm?.some(harm => harm.personId === owner));
-    const harm = def.onOut.harm && owner && !stopped(def, run.flags) && !hurt ? { personHarm: [{ personId: owner, severity: def.onOut.harm }] } : {};
-    const route = def.onOut.route;
+    const harm = end.harm && owner && !stopped(def, run.flags) && !hurt ? { personHarm: [{ personId: owner, severity: end.harm }] } : {};
+    const route = end.route;
     const moves = !!route && !routed && !ended && !stopped(def, run.flags);
     if (moves) routed = true;
-    const setFlags = [...(def.onOut.mark ? [`mark:${def.onOut.mark}`] : []), ...(moves ? route!.setFlags ?? [] : [])];
+    const setFlags = [...(end.mark ? [`mark:${end.mark}`] : []), ...(moves ? route!.setFlags ?? [] : [])];
     const effect: OutcomeEffect = { ...harm, ...(setFlags.length ? { setFlags } : {}),
       ...(moves && route!.clearFlags ? { clearFlags: [...route!.clearFlags] } : {}), ...(moves && route!.stage ? { stage: route!.stage } : {}), ...(moves && route!.ending ? { ending: route!.ending } : {}) };
     return Object.keys(effect).length ? [effect] : [];
   });
 }
 
-export interface ClockView { id: Id; label: string; kind: ClockDef['kind']; owner?: Id; value: number; low: boolean; out: boolean; stopped: boolean;
+export interface ClockView { id: Id; label: string; kind: ClockDef['kind']; owner?: Id; direction?: 'fill'; value: number; low: boolean; out: boolean; stopped: boolean;
   /** The last cue the team heard, or nothing yet. */
   latest: string | null;
   /** Minutes left at the current rate, when the team can know the rate. */
@@ -252,9 +284,63 @@ export function clockViews(scenario: ScenarioDefinition, run: Pick<OperationRun,
     const state = run.clocks?.[def.id];
     if (!state) return [];
     const read = readClock(def, state);
-    return [{ id: def.id, label: def.label, kind: def.kind, ...(def.owner ? { owner: def.owner } : {}), value: read.value, low: read.low, out: read.out,
+    return [{ id: def.id, label: def.label, kind: def.kind, ...(def.owner ? { owner: def.owner } : {}), ...(filling(def) ? { direction: 'fill' as const } : {}), value: read.value, low: read.low, out: read.out,
       stopped: stopped(def, run.flags), latest: state.cued > 0 ? def.cues[state.cued - 1].text : null,
-      minutesLeft: def.rateKnown && def.ratePerMin > 0 ? Math.round(read.value / def.ratePerMin) : null }];
+      minutesLeft: !filling(def) && def.rateKnown && def.ratePerMin > 0 ? Math.round(read.value / def.ratePerMin) : null }];
+  });
+}
+
+/** What a gauge that fills does now, shown beside it so no effect is hidden: percents (of an
+ * officer's strain at a commit, and of the call's trust result either way) and call pressure per
+ * minute. Null until its first cue has been heard. */
+export interface FillEffect { strainPercent: number; trustPercent: number; pressurePerMinute: number }
+
+/** A gauge that fills, as the screen draws it. */
+export interface FillView {
+  id: Id; label: string; kind: ClockDef['kind']; owner?: Id; direction: 'fill';
+  value: number; full: boolean; stopped: boolean;
+  /** A set flag has slowed it below its authored rate. */
+  slowed: boolean;
+  /** Points a minute now (0 when stopped), and minutes to full at that rate, when the team can know it. */
+  ratePerMin: number; minutesToFull: number | null;
+  /** Every cue, lowest first, with whether the team has heard it. */
+  cues: { at: number; text: string; heard: boolean }[];
+  latest: string | null;
+  effect: FillEffect | null }
+
+/** The share of a full gauge that bites now: the sum over gauges whose first cue was heard, each
+ * as value over 100. Zero with no fills, so a call without them is unchanged. */
+export function fillGauge(scenario: Pick<ScenarioDefinition, 'clocks'>, clocks: OperationRun['clocks']): number {
+  let sum = 0;
+  for (const def of scenario.clocks ?? []) {
+    const state = clocks?.[def.id];
+    if (filling(def) && state && state.cued > 0) sum += state.value / 100;
+  }
+  return sum;
+}
+
+/** How much more the call's trust result counts, either way, for the highest a gauge reached. 1 with none. */
+export const audienceFactor = (peak: number | undefined) => 1 + Math.max(0, Math.min(100, peak ?? 0)) / 100 * CLOCK_RULES_V1.fill.audienceGain;
+
+/** The effect a gauge at `value` has, given the call's peak so far. */
+const fillEffect = (value: number, peak: number): FillEffect => ({
+  strainPercent: Math.round(CLOCK_RULES_V1.fill.strain * value),
+  trustPercent: Math.round((audienceFactor(Math.max(peak, value)) - 1) * 100),
+  pressurePerMinute: Math.round(CLOCK_RULES_V1.fill.pressurePerMinute * value) / 100,
+});
+
+export function fillViews(scenario: ScenarioDefinition, run: Pick<OperationRun, 'clocks' | 'flags'> & Partial<Pick<OperationRun, 'fillPeak'>>): FillView[] {
+  return (scenario.clocks ?? []).flatMap(def => {
+    const state = run.clocks?.[def.id];
+    if (!filling(def) || !state) return [];
+    const on = !stopped(def, run.flags);
+    const rate = on ? effectiveRate(def, run.flags) : 0;
+    return [{ id: def.id, label: def.label, kind: def.kind, ...(def.owner ? { owner: def.owner } : {}), direction: 'fill' as const,
+      value: state.value, full: state.value >= 100, stopped: !on, slowed: on && rate < def.ratePerMin, ratePerMin: rate,
+      minutesToFull: def.rateKnown && rate > 0 ? Math.round((100 - state.value) / rate) : null,
+      cues: def.cues.map((cue, index) => ({ at: cue.at, text: cue.text, heard: index < state.cued })),
+      latest: state.cued > 0 ? def.cues[state.cued - 1].text : null,
+      effect: state.cued > 0 ? fillEffect(state.value, run.fillPeak ?? 0) : null }];
   });
 }
 
@@ -262,12 +348,17 @@ export function clockViews(scenario: ScenarioDefinition, run: Pick<OperationRun,
 export function clockErrors(scenario: ScenarioDefinition): string[] {
   const errs: string[] = [];
   for (const def of scenario.clocks ?? []) {
-    if (!(def.start > 0 && def.start <= 100) || !(def.ratePerMin >= 0)) errs.push(`${scenario.id}: clock ${def.id} needs a start in 0 to 100 and a rate of 0 or more`);
-    if (!def.cues.some(cue => cue.at > 0)) errs.push(`${scenario.id}: clock ${def.id} needs a cue before it runs out`);
-    if (def.cues.some((cue, i) => i > 0 && cue.at > def.cues[i - 1].at)) errs.push(`${scenario.id}: clock ${def.id} lists its cues highest first`);
+    const fill = filling(def);
+    if (!(fill ? def.start >= 0 && def.start < 100 : def.start > 0 && def.start <= 100) || !(def.ratePerMin >= 0)) errs.push(`${scenario.id}: clock ${def.id} needs a start in ${fill ? '0 to under 100' : '0 to 100'} and a rate of 0 or more`);
+    if (!def.cues.some(cue => fill ? cue.at < 100 : cue.at > 0)) errs.push(`${scenario.id}: clock ${def.id} needs a cue before it ${fill ? 'fills' : 'runs out'}`);
+    if (def.cues.some((cue, i) => i > 0 && (fill ? cue.at < def.cues[i - 1].at : cue.at > def.cues[i - 1].at))) errs.push(`${scenario.id}: clock ${def.id} lists its cues ${fill ? 'lowest' : 'highest'} first`);
+    if ((def.rateFlags ?? []).some(entry => !(entry.ratePerMin >= 0))) errs.push(`${scenario.id}: clock ${def.id} has a slowed rate below 0`);
+    if (!fill && def.onFull) errs.push(`${scenario.id}: clock ${def.id} runs down, so it has no onFull`);
+    if (fill && def.onOut) errs.push(`${scenario.id}: clock ${def.id} fills, so it has onFull, not onOut`);
     if (def.factId && !scenario.facts.some(fact => fact.id === def.factId)) errs.push(`${scenario.id}: clock ${def.id} answers unknown fact ${def.factId}`);
     if (def.cues.some(cue => cue.reveal) && !def.factId) errs.push(`${scenario.id}: clock ${def.id} reveals with no fact`);
-    if (def.onOut?.harm && !(def.owner && scenario.story?.bindings.people[def.owner])) errs.push(`${scenario.id}: clock ${def.id} harms on running out, but has no story-bound owner`);
+    const end = endOf(def);
+    if (end?.harm && !(def.owner && scenario.story?.bindings.people[def.owner])) errs.push(`${scenario.id}: clock ${def.id} harms on ${fill ? 'filling' : 'running out'}, but has no story-bound owner`);
   }
   return errs;
 }
