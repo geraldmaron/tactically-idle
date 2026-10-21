@@ -7,6 +7,8 @@ import { signalBetween } from '../../sim/spatial';
 import { routeBetween } from '../../sim/routes';
 import type { BuiltLocation, Vec } from '../../sim/types';
 import { drawIncidentSpec, generateIncident, INCIDENT_TYPES } from './index';
+import { HOUSE_TEMPLATE } from './trees-v13/house-fixture';
+import { SCENARIOS } from '../../content/scenarios';
 
 function freeOfFurniture(built: BuiltLocation, spaceId: string, point: Vec): boolean {
   return !built.location.objects.some(object => {
@@ -88,7 +90,10 @@ describe('versioned residential structures', () => {
 describe('current residential placement', () => {
   it.each(RESIDENTIAL_FAMILIES)('$id places people without furniture collisions', family => {
     for (let seed = 0; seed < 100; seed++) {
-      const scenario = generateIncident({ type: 'barricaded', familyId: family.id, buildingSeed: seed, seed, tier: 1 + seed % 5, contentVersion: 13 });
+      // The engine's own house call (an owned fixture), so the placement check never depends on a
+      // shipping call's families.
+      const call = generateIncident({ type: 'barricaded', familyId: family.id, buildingSeed: seed, seed, tier: 1 + seed % 5, contentVersion: 13 }, HOUSE_TEMPLATE);
+      const scenario = (SCENARIOS[`house:${call.id}`] ??= { ...call, id: `house:${call.id}` });
       const built = builtForScenario(scenario.id);
       for (const person of Object.values(scenario.story!.bindings.people)) {
         const at = person.initial;

@@ -2,6 +2,7 @@
 // with each name tagged by the person it came from. These tests hold it to two things on every
 // string of every call tree, under three casts: the parts join to exactly what binding produced
 // before segments existed (a frozen copy below), and every tagged part is a name of that person.
+import { CALL_TREES } from '../../../content/call-trees';
 import { describe, expect, it } from 'vitest';
 import { INCIDENT_TEMPLATES } from '../../../content/incidents';
 import { CASCADE_LINES, countWord, FIRE_LINES, FORCE_LINES, asRole, listOf } from '../../../content/incidents/lines';
@@ -96,8 +97,8 @@ const formsOf = (who: CastIdentity) => [who.firstName, who.surname, `${who.first
 const TEMPLATES = Object.values(INCIDENT_TEMPLATES).filter((template): template is IncidentTemplate => !!template?.tree);
 
 describe('bindRoleSegments', () => {
-  it('covers the four call trees', () => {
-    expect(TEMPLATES.map(template => template.type).sort()).toEqual(['active_armed_incident', 'barricaded', 'hostage_crisis', 'protected_rescue']);
+  it('covers every curated call tree', () => {
+    expect(TEMPLATES.map(template => template.type).sort()).toEqual(Object.keys(CALL_TREES).sort());
   });
 
   for (const template of TEMPLATES) for (const draw of DRAWS) {

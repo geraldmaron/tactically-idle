@@ -14,14 +14,14 @@ function recipe(type: IncidentType, familyId: string, variant: 0 | 1 | 2, charac
   return { id: `${type}/${familyId}/${variant}/${characteristic}`, type, familyId, variant, characteristic };
 }
 export type ScenarioSituation = Pick<ScenarioRecipe, 'variant' | 'characteristic'>;
-export function scenarioSituations(type: IncidentType): ScenarioSituation[] {
-  const tree = CALL_TREES[type];
-  if (!tree) return [];
-  return ([0, 1, 2] as const).filter(variant => variant < tree.situations.length).flatMap(variant => (['deliberate_answers', 'ordinary'] as const).map(characteristic => ({ variant, characteristic })));
+/** `count`: the call's own number of situations (a template's tree); by default the curated call's,
+ * or three for a type with none (the engine tests' own templates). */
+export function scenarioSituations(type: IncidentType, count: number = CALL_TREES[type]?.situations.length ?? 3): ScenarioSituation[] {
+  return ([0, 1, 2] as const).filter(variant => variant < count).flatMap(variant => (['deliberate_answers', 'ordinary'] as const).map(characteristic => ({ variant, characteristic })));
 }
 /** Situation and pacing depend on the call seed, independently of building hosting. */
-export function scenarioRecipe(spec: IncidentSpec): ScenarioRecipe {
-  const situations = scenarioSituations(spec.type);
+export function scenarioRecipe(spec: IncidentSpec, count?: number): ScenarioRecipe {
+  const situations = scenarioSituations(spec.type, count);
   if (!situations.length) throw new Error(`No recipe for ${spec.type}`);
   const picked = situations[hashSeed(`${spec.seed}:recipe-v10`) % situations.length];
   return recipe(spec.type, spec.familyId, picked.variant, picked.characteristic);

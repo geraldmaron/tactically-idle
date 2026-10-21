@@ -155,7 +155,7 @@ describe('a clock fork reads the decision’s full minutes', () => {
 describe('the saved team minutes match the live evaluation', () => {
   it('on sampled plays of every shipping call, each committed decision saved the minutes its evaluation computed', () => {
     let checked = 0;
-    for (const tree of Object.values(CALL_TREES)) for (const { scenarioId, seed } of drawCalls(tree!, 3, 3)) for (const policy of POLICIES.slice(0, 2)) {
+    for (const tree of Object.values(CALL_TREES)) for (const { scenarioId, seed } of drawCalls(tree!, 3, 8)) for (const policy of POLICIES.slice(0, 2)) {
       playToEnd(scenarioId, policy, seed, { onStep: ({ before, choice, after }) => {
         const run = before.activeRun!, scenario = getScenario(run.scenarioId)!;
         const action = scenario.stages[run.stage as StageId].actions.find(entry => entry.id === choice.id)!;
@@ -201,6 +201,10 @@ describe('what the fork still leaves out', () => {
   // across a fork's edge, it's time for the fixed point.
   it('a walk or another outcome’s extra minutes rarely carries a clock out after a fork read it running', () => {
     const tally = residualFlips(POLICIES, 6);
+    // A shipping call with no clock fork leaves the tripwire nothing to watch.
+    const forking = Object.values(CALL_TREES).some(tree => tree!.nodes.some(node => node.choices.some(choice =>
+      (['favorable', 'mixed', 'adverse'] as const).some(band => choice.outcomes[band].some(outcome => ([] as unknown[]).concat(outcome.if ?? []).some(entry => typeof entry === 'object' && entry !== null && 'clock' in entry))))));
+    if (!forking) { expect(tally.withClockFork).toBe(0); return; }
     expect(tally.withClockFork, 'decisions with a clock fork').toBeGreaterThan(30);
     expect(tally.flipped / tally.withClockFork, JSON.stringify(tally)).toBeLessThan(0.01);
   }, 120_000);

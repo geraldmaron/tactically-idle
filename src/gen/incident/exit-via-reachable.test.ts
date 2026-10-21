@@ -15,6 +15,7 @@ import { compileIncident, drawInstance, hostedSpec } from './instance';
 import { findStoryRoute, windowExit } from './story-bindings';
 import { choiceActionId, exitKey, viaRouteName } from './trees-v13/compile';
 import { GROUP_TEMPLATE, GROUP_TREE } from './trees-v13/group-fixture';
+import { HOUSE_TEMPLATE } from './trees-v13/house-fixture';
 
 /** The families the barricade lists: houses and flats, where a bedroom may have a window out. */
 const HOUSES = ['cedar_close', 'harbour_court', 'willow_terrace_v1', 'ash_grove_v1', 'juniper_court_v1', 'bungalow_g2', 'two_storey_house_g2', 'semi_detached_g2', 'apartment_unit_g2'];
@@ -41,7 +42,8 @@ function host(t: IncidentTemplate, family: string, building: number): Hosted | s
   let error = 'no call seed';
   for (let seed = 1; seed < 12; seed++) {
     let base;
-    try { base = generateIncident({ type: 'barricaded', familyId: family, buildingSeed: building, seed, tier: 2, contentVersion: 13 }); } catch { continue; }
+    // The frame (a hosted house call) comes from the engine's own house fixture.
+    try { base = generateIncident({ type: 'barricaded', familyId: family, buildingSeed: building, seed, tier: 2, contentVersion: 13 }, HOUSE_TEMPLATE); } catch { continue; }
     const { clocks: _c, incidentPeople: _p, threats: _t, ...frame } = base;
     const spec = hostedSpec(frame), built = buildLocation(frame.locationFamilyId, frame.locationSeed);
     try {

@@ -122,7 +122,7 @@ export function clockMarksOf(clocks: readonly Clock[]): string[] {
  * the compiler does, so hosting moves the call to another seed. */
 export function drawInstance(template: IncidentTemplate, built: BuiltLocation, spec: IncidentSpec): IncidentInstance {
   const tree = template.tree;
-  const situationIndex = scenarioRecipe(spec).variant;
+  const situationIndex = scenarioRecipe(spec, tree.situations.length).variant;
   const model = template.situations.find(entry => entry.index === situationIndex);
   // A situation can set a group's members together ('others').
   const groupOfSlot = new Map(Object.entries(tree.groups ?? {}).map(([group, def]) => [def.slot, group]));
@@ -358,8 +358,9 @@ export function compileIncident(scenario: ScenarioDefinition, built: BuiltLocati
 }
 
 /** The instance behind a generated call-tree scenario, on the building it was compiled for. */
-export function instanceOf(s: ScenarioDefinition, built: BuiltLocation): IncidentInstance | null {
-  const template = s.incident ? templateAt(s.incident.type) : undefined;
+export function instanceOf(s: ScenarioDefinition, built: BuiltLocation, given?: IncidentTemplate): IncidentInstance | null {
+  // `given`: a test's own template (an engine fixture), which the board doesn't carry.
+  const template = given ?? (s.incident ? templateAt(s.incident.type) : undefined);
   return template && s.incident ? drawInstance(template, built, hostedSpec(s)) : null;
 }
 

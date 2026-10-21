@@ -24,24 +24,26 @@ describe('path state key', () => {
   });
 
   it('tells apart states that differ only by a subject’s stance', () => {
-    expect(start.activeRun!.meters?.taker).toBeDefined();
-    const heard = edit(run => { run.meters!.taker.moved = { heard: { agitation: 0, rapport: 0 } }; });
-    const breaking = edit(run => { run.meters!.taker.moved = { heard: { agitation: 0, rapport: 0 } }; run.meters!.taker.agitation = 90; });
-    expect(stanceOf(heard.activeRun!.meters!.taker)).not.toBe(stanceOf(start.activeRun!.meters!.taker));
-    expect(stanceOf(breaking.activeRun!.meters!.taker)).toBe('breaking');
+    expect(start.activeRun!.meters?.rider).toBeDefined();
+    const heard = edit(run => { run.meters!.rider.moved = { heard: { agitation: 0, rapport: 0 } }; });
+    const breaking = edit(run => { run.meters!.rider.moved = { heard: { agitation: 0, rapport: 0 } }; run.meters!.rider.agitation = 90; });
+    expect(stanceOf(heard.activeRun!.meters!.rider)).not.toBe(stanceOf(start.activeRun!.meters!.rider));
+    expect(stanceOf(breaking.activeRun!.meters!.rider)).toBe('breaking');
     expect(new Set([start, heard, breaking].map(pathStateKey)).size).toBe(3);
     // A move inside the same stance is the same place.
-    expect(pathStateKey(edit(run => { run.meters!.taker.rapport += 1; }))).toBe(pathStateKey(start));
+    expect(pathStateKey(edit(run => { run.meters!.rider.rapport += 1; }))).toBe(pathStateKey(start));
   });
 
-  it('tells apart states that differ only by a clock cue, running out, or ten minutes of clock', () => {
+  it('tells apart states that differ only by a clock cue or a gauge filling, and not by its level', () => {
     const clock = Object.keys(start.activeRun!.clocks ?? {})[0];
-    expect(clock).toBe('owner_condition');
+    expect(clock).toBe('stream');
+    // The stream fills: it is out (full) at 100, and ten minutes on is higher, not lower.
     const cued = edit(run => { run.clocks![clock].cued += 1; });
-    const out = edit(run => { run.clocks![clock].value = 0; });
-    const later = edit(run => { run.clocks![clock].value -= 10; });
-    expect(new Set([start, cued, out, later].map(pathStateKey)).size).toBe(4);
-    expect(pathStateKey(edit(run => { run.clocks![clock].value -= 0.1; }))).toBe(pathStateKey(edit(run => { run.clocks![clock].value -= 0.2; })));
+    const out = edit(run => { run.clocks![clock].value = 100; });
+    const later = edit(run => { run.clocks![clock].value += 10; });
+    // A gauge that fills is placed by its cues and whether it is full, not by its level (path-key.ts).
+    expect(new Set([start, cued, out].map(pathStateKey)).size).toBe(3);
+    expect(pathStateKey(later)).toBe(pathStateKey(start));
   });
 
   it('tells apart an ending from another with the same flags', () => {

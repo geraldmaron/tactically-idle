@@ -212,7 +212,7 @@ describe('version 3 validation and squad D', () => {
     badCard.state.incidents[0].expiresAt = 'soon';
     expect(deserialize(JSON.stringify(badCard))).toBeNull();
     const dupes = good();
-    dupes.state.incidents[1].id = dupes.state.incidents[0].id;
+    dupes.state.incidents.push({ ...dupes.state.incidents[0] });
     expect(deserialize(JSON.stringify(dupes))).toBeNull();
     const badSchedule = good();
     badSchedule.state.department.nextIncidentAt = 'later';

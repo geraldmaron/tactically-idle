@@ -389,12 +389,12 @@ describe('in real play, with a save and reload after every decision', () => {
   };
   /** Plays call_him then honest_no; after each, a save must reload to the same people, and the
    * decision replay and the waits validator must agree with the live run. */
-  const play = (t: IncidentTemplate) => {
+  const play = (t: IncidentTemplate, seed?: number) => {
     const { s } = call(t, 'bungalow_g2', 1, true)!;
     return withDraftScenario(s, id => {
       const scenario = getScenario(id)!;
       const after: GameState[] = [];
-      let state = startGateRun(id);
+      let state = seed === undefined ? startGateRun(id) : startGateRun(id, seed);
       for (const [node, choice] of [['window', 'call_him'], ['on_the_line', 'honest_no']] as const) {
         state = applyNaturalMove(state, { kind: 'decide', actionId: choiceActionId('barricaded', node, choice) })!;
         expect(state, `${node}.${choice}`).not.toBeNull();
@@ -436,8 +436,14 @@ describe('in real play, with a save and reload after every decision', () => {
   });
 
   it('a hidden move, then a look that sees them there: the re-sighting survives a mid-call save', () => {
-    const { after } = play(template({ first: { subject: HALL }, watch: true }));
-    expect(after[1].activeRun!.flags.some(flag => flag.startsWith('seen:subject:'))).toBe(true);
+    // The dice decide whether the look sees, so take the first campaign seed where it goes well;
+    // forcing the band would save a sample the run's rng never drew.
+    const t = template({ first: { subject: HALL }, watch: true });
+    // A seed whose dice block the second choice is skipped; the one that passes ran every check in play.
+    const tryPlay = (seed: number) => { try { return play(t, seed).after[1]; } catch { return undefined; } };
+    const seen = [719, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(tryPlay).find(state => state?.activeRun!.history.at(-1)!.band === 'favorable');
+    expect(seen, 'a seed where the look goes well').toBeDefined();
+    expect(seen!.activeRun!.flags.some(flag => flag.startsWith('seen:subject:'))).toBe(true);
   });
 });
 

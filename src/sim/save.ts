@@ -121,7 +121,9 @@ function validDecisionView(d: unknown): boolean {
 function validIncident(c: unknown): c is Record<string, unknown> {
   if (!isObj(c) || !strings(c, ['id', 'type', 'familyId']) || !numbers(c, ['tier', 'arrivedAt', 'expiresAt']) || !isBool(c.seen)) return false;
   if (c.newKind !== undefined && !isBool(c.newKind)) return false;
-  const spec = parseIncidentId(c.id as string);
+  if (c.eased !== undefined && c.eased !== true) return false;
+  // A generated call, or one the registry holds (an authored call, or a test's own).
+  const spec = parseIncidentId(c.id as string) ?? getScenario(c.id as string)?.incident ?? null;
   return !!spec && spec.type === c.type && spec.familyId === c.familyId && spec.tier === c.tier;
 }
 
@@ -148,6 +150,8 @@ function validRun(r: unknown): boolean {
     && isObj(m.moved) && Object.values(m.moved).every((v) => isObj(v) && numbers(v, ['agitation', 'rapport']))))) return false;
   if (r.fillPeak !== undefined && !(isNum(r.fillPeak) && r.fillPeak >= 0 && r.fillPeak <= 100)) return false;
   if (r.decisionPending !== undefined && r.decisionPending !== true) return false;
+  if (r.decisionPausedAt !== undefined && !isNum(r.decisionPausedAt)) return false;
+  if (r.sourceStart !== undefined && (!isObj(r.sourceStart) || !Object.values(r.sourceStart).every(within))) return false;
   if (r.crew !== undefined && !isStrings(r.crew)) return false;
   if (r.commitments !== undefined && (!isObj(r.commitments) || !Object.values(r.commitments).every((c) => isObj(c) && strings(c, ['personId', 'kind'])
     && numbers(c, ['madeAt', 'revision']) && oneOf(c.status, ['open', 'kept', 'broken'])))) return false;
@@ -255,6 +259,7 @@ function validBase(s: unknown): s is Record<string, unknown> {
   if (!Number.isSafeInteger(dep.callsResolved) || (dep.callsResolved as number) < 0 || !isList(dep.grants, validGrant)) return false;
   if (dep.candidateRefreshedAt !== undefined && !isNum(dep.candidateRefreshedAt)) return false;
   if (dep.reputation !== undefined && !(isObj(dep.reputation) && isNum(dep.reputation.lean) && Math.abs(dep.reputation.lean) <= 1 && isNum(dep.reputation.choices) && dep.reputation.choices >= 0)) return false;
+  if (dep.habits !== undefined && !(isObj(dep.habits) && isNum(dep.habits.stall) && dep.habits.stall >= 0 && dep.habits.stall <= 1 && isNum(dep.habits.decisions) && dep.habits.decisions >= 0)) return false;
   if (dep.ledger !== undefined && !isList(dep.ledger, (e) => isObj(e) && numbers(e, ['seq', 'at', 'amount', 'before', 'after']) && isStr(e.label) && (e.latest === undefined || isNum(e.latest))
     && oneOf(e.kind, ['payout', 'signing', 'severance', 'purchase', 'training', 'development', 'service', 'salvage', 'restock', 'staff', 'detail']))) return false;
   if (dep.service !== undefined && (!Number.isSafeInteger(dep.service) || (dep.service as number) < 0)) return false;

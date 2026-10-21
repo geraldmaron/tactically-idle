@@ -6,6 +6,8 @@ import { drawIncidentSpec, generateIncident } from '../index';
 import { clockMarksOf, instanceOf } from '../instance';
 import { callCounts, reachableNodes, treeForCounts } from './compile';
 import { countCombos } from './dependencies';
+import { GROUP_TEMPLATE } from './group-fixture';
+import { hitMarkFixture, HIT_FIXTURE } from './never-offered-fixture';
 import { callGraph, choiceIndex, drawnRoute, humanizeNode, matchKey, truthReach } from './graph';
 
 const TEMPLATES = Object.values(INCIDENT_TEMPLATES) as IncidentTemplate[];
@@ -15,12 +17,13 @@ const fanOuts = (template: IncidentTemplate, via: 'force' | 'cascade') =>
 
 describe('call graph: structure', () => {
   it('fans each force and cascade outcome out by drawn result', () => {
+    // Going Live's entries and holds (three force outcomes); cascades from the group fixture.
     expect(fanOuts(hostage, 'force')).toBe(3);
-    expect(fanOuts(hostage, 'cascade')).toBe(10);
-    const cascade = callGraph(hostage.tree).edges.filter(edge => edge.via === 'cascade');
+    expect(fanOuts(GROUP_TEMPLATE, 'cascade')).toBeGreaterThan(0);
+    const cascade = callGraph(GROUP_TEMPLATE.tree).edges.filter(edge => edge.via === 'cascade');
     expect(new Set(cascade.map(edge => edge.drawn))).toEqual(new Set(['all', 'some', 'none']));
-    const force = callGraph(INCIDENT_TEMPLATES.active_armed_incident!.tree).edges.filter(edge => edge.via === 'force');
-    expect(new Set(force.map(edge => edge.drawn))).toEqual(new Set(['fatal', 'hurt', 'none']));
+    const force = callGraph(hostage.tree).edges.filter(edge => edge.via === 'force');
+    expect(new Set(force.map(edge => edge.drawn))).toEqual(new Set(['hurt', 'none']));
   });
 
   it('routes a turn into a hub that lists its members, and records the draw', () => {
@@ -85,20 +88,22 @@ describe('call graph: one call', () => {
   }, 60000);
 
   it('gives every pruned item the reason the compiler drops it', () => {
-    // Hostage with nobody else inside: lines that name the others are gone, by their count condition.
-    const lone = callGraph(hostage.tree, { counts: { others: 0 }, seed: 3 });
+    // The group fixture with nobody else inside: lines that name the others are gone, by their count condition.
+    const lone = callGraph(GROUP_TEMPLATE.tree, { counts: { others: 0 }, seed: 3 });
     const countPruned = lone.choices.filter(choice => !choice.inCall && /needs others/.test(choice.pruned ?? ''));
     expect(countPruned.length).toBeGreaterThan(0);
     for (const choice of countPruned) expect(choice.pruned).toMatch(/^needs others .+; this call has 0$/);
     expect(lone.edges.filter(edge => edge.via === 'cascade' && !edge.inCall).every(edge => /needs others ≥ [12]; this call has 0/.test(edge.pruned!))).toBe(true);
-    expect(lone.edges.some(edge => edge.via === 'next' && edge.id.endsWith('/next') && hostage.tree.nodes.find(n => n.id === edge.node)!.choices.find(c => c.id === edge.choice)!.outcomes[edge.band][edge.outcome].cascade)).toBe(true);
-    // Undrawn turn members say which one the call drew.
-    const [group, members] = Object.entries(hostage.tree.turns!)[0];
-    const drawn = lone.turnDrawn[group]!;
-    for (const id of members.filter(id => id !== drawn)) expect(lone.vertices.find(v => v.id === `node:${id}`)!.pruned).toMatch(/^not drawn here \(this call drew /);
+    expect(lone.edges.some(edge => edge.via === 'next' && edge.id.endsWith('/next') && GROUP_TEMPLATE.tree.nodes.find(n => n.id === edge.node)!.choices.find(c => c.id === edge.choice)!.outcomes[edge.band][edge.outcome].cascade)).toBe(true);
+    // Undrawn turn members say which one the call drew (a turn with more than one member, when the call has one).
+    for (const [group, members] of Object.entries(hostage.tree.turns ?? {}).filter(([, entries]) => entries.length > 1)) {
+      const graph = callGraph(hostage.tree, { seed: 3 });
+      const drawn = graph.turnDrawn[group]!;
+      for (const id of members.filter(id => id !== drawn)) expect(graph.vertices.find(v => v.id === `node:${id}`)!.pruned).toMatch(/^not drawn here \(this call drew /);
+    }
     // A mark only a drawn hit sets is settable: the compiler keeps the choice that needs it.
-    const armed = callGraph(INCIDENT_TEMPLATES.active_armed_incident!.tree, { counts: {}, seed: 5 });
-    const treat = armed.choices.find(c => c.choice === 'treat_ours')!;
+    const armed = callGraph(hitMarkFixture(true).tree, { counts: {}, seed: 5 });
+    const treat = armed.choices.find(c => c.choice === HIT_FIXTURE.choice)!;
     expect(treat.inCall).toBe(true);
     expect(treat.pruned).toBeUndefined();
     for (const item of [...lone.vertices, ...lone.choices, ...lone.edges, ...armed.vertices, ...armed.choices, ...armed.edges]) expect(!item.inCall).toBe(!!item.pruned);

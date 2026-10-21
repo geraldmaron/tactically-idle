@@ -61,27 +61,29 @@ describe('compiled calls carry the gear their choices bring', () => {
         if (derivedGear(choice).watch) expect(action.capabilities?.rules, action.id).toContain(WATCH_CAPABILITY);
       }
     }
-    expect(checked).toBeGreaterThan(50);
+    // Going Live has 31 choices, nearly all compiled into a call drawn at tier 3.
+    expect(checked).toBeGreaterThan(20);
   });
 });
 
 describe('the hailer only carries as far as its range', () => {
-  // The armed call's announcement needs a hailer, and the derived hailer reaches the shooter only
-  // within the item's range: from the cars it is open, from a block away it closes with the reason.
-  const [{ scenarioId }] = drawCalls(CALL_TREES.active_armed_incident!, 3, 1);
+  // Going Live's call through the glass needs a hailer, and the derived hailer reaches the rider only
+  // within the item's range: from the corner it is open, from a block away it closes with the reason.
+  const [{ scenarioId }] = drawCalls(CALL_TREES.hostage_crisis!, 3, 1);
   const announce = (far: boolean) => {
     const state = startGateRun(scenarioId);
     if (far) for (const task of state.activeRun!.squadTasks) { const at = task.at ?? { x: 0, y: 0 }; task.stagingId = null; task.at = { x: at.x + 1000, y: at.y + 1000 }; }
-    return actionViews(state, NOW, 'A').find(view => view.id === 't13_active_armed_incident_shots_announce')!;
+    return actionViews(state, NOW, 'A').find(view => view.id === 't13_hostage_crisis_going_live_hail')!;
   };
 
   it('is open from where the squad deploys', () => {
     expect(announce(false).eligible).toBe(true);
   });
 
-  it('closes, with the out-of-range reason, when the squad stands beyond it', () => {
-    const view = announce(true);
-    expect(view.eligible).toBe(false);
-    expect(view.reason).toMatch(/^Loud hailer: target \d+ ft away, max/);
+  it('stops helping, and the call gets harder, when the squad stands beyond it', () => {
+    // The hailer is the call's bonus, not a requirement: a voice can still carry without it.
+    const near = announce(false), far = announce(true);
+    expect(far.eligible).toBe(true);
+    expect(far.likelihood.favorable).toBeLessThan(near.likelihood.favorable);
   });
 });

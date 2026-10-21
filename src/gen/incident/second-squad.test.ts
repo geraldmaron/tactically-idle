@@ -133,13 +133,7 @@ describe('a second squad supports from a named point (R-B4)', () => {
   it('on every building the barricade lists, the point is outside, on an opening of the named room, and reachable from the street', () => {
     // The house call (a frozen barricade, trees-v13/house-fixture.ts) with support on the walk-out under the barking (a
     // vantage on the subject's room) and on every entry (the exit).
-    const barricade = HOUSE_TEMPLATE;
-    const tree: CallTree = structuredClone(barricade.tree);
-    for (const choice of tree.nodes.flatMap(node => node.choices)) {
-      if (choice.id === 'under_barking') choice.support = { at: { vantage: 'subject' }, label: 'holding the front window' };
-      if (choice.id === 'go_in') choice.support = { at: 'exit', label: 'holding the back step' };
-    }
-    const t = { ...barricade, tree };
+    const t = supportHouse(), tree = t.tree;
     let hosted = 0;
     for (const family of tree.families ?? []) for (let building = 1; building <= 10; building++) {
       let call: ScenarioDefinition | null = null, b: ReturnType<typeof buildLocation> | null = null;
@@ -177,53 +171,75 @@ describe('a second squad supports from a named point (R-B4)', () => {
   });
 });
 
+/** The house call (a frozen barricade, trees-v13/house-fixture.ts) with support on the walk-out under
+ * the barking (a vantage on the subject's room) and on every entry (the exit). */
+function supportHouse(): IncidentTemplate {
+  const tree: CallTree = structuredClone(HOUSE_TEMPLATE.tree);
+  for (const choice of tree.nodes.flatMap(node => node.choices)) {
+    if (choice.id === 'under_barking') choice.support = { at: { vantage: 'subject' }, label: 'holding the front window' };
+    if (choice.id === 'go_in') choice.support = { at: 'exit', label: 'holding the back step' };
+  }
+  return { ...HOUSE_TEMPLATE, tree };
+}
+
 // The joint-operation journey (architecture/journeys.ts), played headless through the real
-// dispatcher on the shipping barricade: the walk-out holds the front window and the entries hold
-// the front door, so a second squad has a named point on the call.
+// dispatcher on the engine's own house call with support points: the walk-out holds the front window
+// and the entries hold the back step, so a second squad has a named point on the call.
 describe('journey joint-operation', () => {
   it('two squads deploy, the second supports from the named point, the call saves mid-way and ends in a closed debrief', () => {
+    const t = supportHouse();
     for (let seed = 1; seed < 40; seed++) {
-      let base;
-      try { base = generateIncident({ type: 'barricaded', familyId: 'cedar_close', buildingSeed: 3, seed, tier: 2, contentVersion: 13 }); } catch { continue; }
-      const scenario = getScenario(base.id)!;
-      expect(scenario.squadRange.max, 'the barricade deploys two squads').toBe(2);
-      const b = buildLocation(base.locationFamilyId, base.locationSeed);
-      const entry = b.location.entries[0];
-      let state = startWithKit(createInitialState(NOW, 4242), base.id, ['A', 'B'], { positions: { A: entry, B: entry } });
-      expect(state.activeRun!.squadIds).toEqual(['A', 'B']);
-      // The first eligible choice at each node, until one names a point for the second squad.
-      let supported: ActionDefinition | undefined;
-      for (let step = 0; step < 12 && !supported; step++) {
-        const run = state.activeRun!;
-        if (run.stage === 'debrief') break;
-        const views = actionViews(state, NOW, 'A').filter(view => view.eligible);
-        const defs = scenario.stages[run.stage].actions;
-        const withSupport = views.map(view => defs.find(def => def.id === view.id)!).find(def => def.support);
-        const next = withSupport ?? defs.find(def => def.id === views[0]?.id);
-        if (!next) break;
-        const done = send(state, { type: 'decide', actionId: next.id, actingSquadIds: ['A'], supportSquadIds: withSupport ? ['B'] : [] });
-        expect(done.result).toEqual({ ok: true });
-        state = done.state;
-        supported = withSupport;
-      }
-      if (!supported) continue;
-      const decision = state.activeRun!.history.at(-1)!;
-      expect(decision).toMatchObject({ actionId: supported.id, actingSquadIds: ['A'], supportSquadIds: ['B'] });
-      expect(decision.inputs.some(input => input.source === 'support' && input.value > 0), 'the supporting squad counted').toBe(true);
-      const rule = supported.support!;
-      const task = state.activeRun!.squadTasks.find(entry => entry.squadId === 'B')!;
-      expect(task.positionId, 'on the map at the named point').toBe(rule.coverSpaceId);
-      // Mid-call, with the second squad at its point, the campaign saves and loads to the same state.
-      const reloaded = deserialize(serialize(state, NOW))!;
-      expect(reloaded, 'the save loads').not.toBeNull();
-      expect(reloaded.activeRun!.squadTasks).toEqual(state.activeRun!.squadTasks);
-      const ended = reloaded.activeRun!.stage === 'debrief' ? reloaded : playToEnd(base.id, 'random', 4242, { start: reloaded });
-      expect(ended.activeRun?.stage, 'the call reached its debrief').toBe('debrief');
-      const closed = send(ended, { type: 'closeDebrief' });
-      expect(closed.result).toEqual({ ok: true });
-      expect(closed.state.activeRun).toBeNull();
-      return;
+      let hosted;
+      try { hosted = generateIncident({ type: 'barricaded', familyId: 'cedar_close', buildingSeed: 3, seed, tier: 2, contentVersion: 13 }, HOUSE_TEMPLATE); } catch { continue; }
+      const { clocks: _c, incidentPeople: _p, threats: _t, ...frame } = hosted;
+      let call: ScenarioDefinition;
+      try { call = compileIncident({ ...frame, id: `joint-${seed}`, incident: hostedSpec(frame) }, buildLocation(frame.locationFamilyId, frame.locationSeed), t); } catch { continue; }
+      const done = withDraftScenario(call, id => playJoint(id));
+      if (done) return;
     }
-    throw new Error('No barricade seed reached a support choice');
+    throw new Error('No house seed reached a support choice');
   });
 });
+
+/** Plays the joint operation on a registered call. False when no support choice came up. */
+function playJoint(id: string): boolean {
+  const base = getScenario(id)!;
+  const scenario = base;
+  expect(scenario.squadRange.max, 'the barricade deploys two squads').toBe(2);
+  const b = buildLocation(base.locationFamilyId, base.locationSeed);
+  const entry = b.location.entries[0];
+  let state = startWithKit(createInitialState(NOW, 4242), base.id, ['A', 'B'], { positions: { A: entry, B: entry } });
+  expect(state.activeRun!.squadIds).toEqual(['A', 'B']);
+  // The first eligible choice at each node, until one names a point for the second squad.
+  let supported: ActionDefinition | undefined;
+  for (let step = 0; step < 12 && !supported; step++) {
+    const run = state.activeRun!;
+    if (run.stage === 'debrief') break;
+    const views = actionViews(state, NOW, 'A').filter(view => view.eligible);
+    const defs = scenario.stages[run.stage].actions;
+    const withSupport = views.map(view => defs.find(def => def.id === view.id)!).find(def => def.support);
+    const next = withSupport ?? defs.find(def => def.id === views[0]?.id);
+    if (!next) break;
+    const done = send(state, { type: 'decide', actionId: next.id, actingSquadIds: ['A'], supportSquadIds: withSupport ? ['B'] : [] });
+    expect(done.result).toEqual({ ok: true });
+    state = done.state;
+    supported = withSupport;
+  }
+  if (!supported) return false;
+  const decision = state.activeRun!.history.at(-1)!;
+  expect(decision).toMatchObject({ actionId: supported.id, actingSquadIds: ['A'], supportSquadIds: ['B'] });
+  expect(decision.inputs.some(input => input.source === 'support' && input.value > 0), 'the supporting squad counted').toBe(true);
+  const rule = supported.support!;
+  const task = state.activeRun!.squadTasks.find(entry => entry.squadId === 'B')!;
+  expect(task.positionId, 'on the map at the named point').toBe(rule.coverSpaceId);
+  // Mid-call, with the second squad at its point, the campaign saves and loads to the same state.
+  const reloaded = deserialize(serialize(state, NOW))!;
+  expect(reloaded, 'the save loads').not.toBeNull();
+  expect(reloaded.activeRun!.squadTasks).toEqual(state.activeRun!.squadTasks);
+  const ended = reloaded.activeRun!.stage === 'debrief' ? reloaded : playToEnd(base.id, 'random', 4242, { start: reloaded });
+  expect(ended.activeRun?.stage, 'the call reached its debrief').toBe('debrief');
+  const closed = send(ended, { type: 'closeDebrief' });
+  expect(closed.result).toEqual({ ok: true });
+  expect(closed.state.activeRun).toBeNull();
+  return true;
+}

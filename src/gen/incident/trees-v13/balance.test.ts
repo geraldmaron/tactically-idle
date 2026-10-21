@@ -3,28 +3,29 @@ import { CALL_TREES } from '../../../content/call-trees';
 import type { CallTree } from '../../../content/call-trees/types';
 import type { IncidentType } from '../../../sim/scenario-types';
 import { startGateRun } from '../gates/engine-driver';
-import { drawCalls, GATE_SUITE, gateJobs, gateMetric, gatePasses, measure, playCall, playCalls, playToEnd, runMetric, summarize, WEIGHTS,
+import { drawCalls, GATE_CATALOG, GATE_SUITE, gateJobs, gateMetric, gatePasses, measure, playCall, playCalls, playToEnd, runMetric, summarize, WEIGHTS,
   type CallResult, type Distribution, type GateMetric, type PlayStep, type Weight } from './balance';
 
 const tree = (type: IncidentType) => CALL_TREES[type]!;
 const TYPES = Object.keys(CALL_TREES) as IncidentType[];
 
 describe('balance gate definition', () => {
-  it('has the 24 checks of the gate, in 11 jobs', () => {
-    expect(GATE_SUITE).toHaveLength(24);
-    expect(new Set(GATE_SUITE.map(check => check.id)).size).toBe(24);
-    expect(gateJobs(GATE_SUITE)).toHaveLength(11);
+  it('has the 24 checks of the gate, in 11 jobs, and runs those of the curated calls', () => {
+    expect(GATE_CATALOG).toHaveLength(24);
+    expect(new Set(GATE_CATALOG.map(check => check.id)).size).toBe(24);
+    expect(gateJobs(GATE_CATALOG)).toHaveLength(11);
+    expect(GATE_SUITE).toEqual(GATE_CATALOG.filter(check => TYPES.includes(check.type)));
     expect(gateJobs()).toEqual(gateJobs(GATE_SUITE));
-    for (const check of GATE_SUITE) expect(check.tier).toBe(2);
-    expect(GATE_SUITE.filter(check => check.style === 'best_odds').every(check => check.calls === 40 && check.metric === 'clean' && check.max === 0.75)).toBe(true);
+    for (const check of GATE_CATALOG) expect(check.tier).toBe(2);
+    expect(GATE_CATALOG.filter(check => check.style === 'best_odds').every(check => check.calls === 40 && check.metric === 'clean' && check.max === 0.75)).toBe(true);
   });
 
   it('holds the bands the gate has always held', () => {
     const band = (type: string, style: string, metric: GateMetric) => {
-      const check = GATE_SUITE.find(entry => entry.type === type && entry.style === style && entry.metric === metric)!;
+      const check = GATE_CATALOG.find(entry => entry.type === type && entry.style === style && entry.metric === metric)!;
       return [check.min, check.max];
     };
-    for (const type of TYPES) {
+    for (const type of ['hostage_crisis', 'barricaded', 'active_armed_incident', 'protected_rescue']) {
       expect(band(type, 'random', 'clean')).toEqual([0.15, 0.6]);
       expect(band(type, 'random', 'bad')).toEqual([0.15, 0.65]);
     }
@@ -102,12 +103,12 @@ describe('balance play', () => {
       return { calls: n, weights: Object.fromEntries(WEIGHTS.map(weight => [weight, share(weights[weight])])) as Record<Weight, number>,
         endings: Object.fromEntries(Object.entries(endings).map(([ending, k]) => [ending, share(k)])), officerHurtRate: share(officerCalls), meanMinutes: Math.round(minutes / n) };
     };
-    for (const type of ['barricaded', 'protected_rescue'] as const) {
+    for (const type of TYPES) {
       expect(measure(tree(type), 2, 'random', 8)).toEqual(reference(tree(type), 'random', 8));
       expect(summarize(playCalls(tree(type), 'patient', drawCalls(tree(type), 2, 8, 1)))).toEqual(reference(tree(type), 'patient', 8));
     }
     const seen: number[] = [];
-    const results = playCalls(tree('barricaded'), 'random', drawCalls(tree('barricaded'), 2, 4, 1), (result, steps, index) => {
+    const results = playCalls(tree('hostage_crisis'), 'random', drawCalls(tree('hostage_crisis'), 2, 4, 1), (result, steps, index) => {
       seen.push(index);
       expect(steps).toHaveLength(result.decisions);
     });

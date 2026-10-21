@@ -12,9 +12,19 @@ import type { GameState } from '../../../sim/types';
 import { applyMove, NOW, startGateRun } from '../gates/engine-driver';
 import { instanceOf } from '../instance';
 import { drawCalls } from './balance';
+import type { IncidentTemplate } from '../../../content/incidents/types';
+import { ARMED_TEMPLATE } from './armed-fixture';
+import { RESCUE_TEMPLATE } from './rescue-fixture';
+import { fixtureCalls } from './house-call-fixture';
 import { choiceActionId, doorOut, TEAM_MOVES } from './compile';
 
-const calls = (type: keyof typeof CALL_TREES, n = 6) => drawCalls(CALL_TREES[type]!, 2, n).map(({ scenarioId }) => getScenario(scenarioId)!);
+// The retired armed and rescue calls live on as frozen engine fixtures; the hostage call ships.
+const FIXTURES: Partial<Record<string, IncidentTemplate>> = { active_armed_incident: ARMED_TEMPLATE, protected_rescue: RESCUE_TEMPLATE };
+const calls = (type: keyof typeof CALL_TREES, n = 6) => {
+  const fixture = FIXTURES[type];
+  return fixture ? fixtureCalls(fixture, n, 7919 * 1 + 2, type, 2) : drawCalls(CALL_TREES[type]!, 2, n).map(({ scenarioId }) => getScenario(scenarioId)!);
+};
+const treeOf = (type: keyof typeof CALL_TREES) => FIXTURES[type]?.tree ?? CALL_TREES[type]!;
 const actionOf = (s: ScenarioDefinition, node: string, choice: string): ActionDefinition =>
   Object.values(s.stages).flatMap(stage => stage.actions).find(action => action.id === choiceActionId(s.incident!.type, node, choice))!;
 const positionOf = (state: GameState) => state.activeRun!.squadTasks.find(task => task.squadId === 'A')!.positionId;
@@ -28,7 +38,7 @@ describe('team moves', () => {
   it('compiles an entry into a route to the room it names, with the entry exposure and the room to clear', () => {
     for (const s of calls('active_armed_incident')) {
       const built = buildLocation(s.locationFamilyId, s.locationSeed);
-      const placed = instanceOf(s, built)!.placed;
+      const placed = instanceOf(s, built, FIXTURES[s.incident!.type])!.placed;
       const go = actionOf(s, 'shots', 'go_now');
       expect(go.approach).toBe('path');
       expect(go.targetId).toBe(placed.roomOf.shooter);
@@ -48,18 +58,18 @@ describe('team moves', () => {
       const outside = positionOf(start);
       const id = choiceActionId(s.incident!.type, 'shots', 'go_now');
       const built = buildLocation(s.locationFamilyId, s.locationSeed);
-      expect(positionOf(commit(start, id, 'favorable'))).toBe(instanceOf(s, built)!.placed.roomOf.shooter);
+      expect(positionOf(commit(start, id, 'favorable'))).toBe(instanceOf(s, built, FIXTURES[s.incident!.type])!.placed.roomOf.shooter);
       expect(positionOf(commit(start, id, 'adverse'))).toBe(outside);
     }
   });
 
   it('sees into the room it enters, and a room it watches by sight, never through a wall by voice', () => {
-    const all = (Object.keys(CALL_TREES) as (keyof typeof CALL_TREES)[]).flatMap(type => calls(type, 3));
+    const all = ([...Object.keys(CALL_TREES), ...Object.keys(FIXTURES)] as (keyof typeof CALL_TREES)[]).flatMap(type => calls(type, 3));
     let entries = 0, watched = 0;
     for (const s of all) {
       const built = buildLocation(s.locationFamilyId, s.locationSeed);
-      const placed = instanceOf(s, built)!.placed;
-      const tree = CALL_TREES[s.incident!.type]!;
+      const placed = instanceOf(s, built, FIXTURES[s.incident!.type])!.placed;
+      const tree = treeOf(s.incident!.type as keyof typeof CALL_TREES);
       for (const node of tree.nodes) for (const choice of node.choices) {
         const action = Object.values(s.stages).flatMap(stage => stage.actions).find(entry => entry.id === choiceActionId(tree.type, node.id, choice.id));
         if (!action) continue;
@@ -96,14 +106,18 @@ describe('team moves', () => {
 
   it('walks someone out alone with the squad staying put, and an escort ends outside with them', () => {
     for (const s of calls('hostage_crisis', 3)) {
-      const take = actionOf(s, 'offer', 'take_courier');
-      expect(take.approach).toBe('none');
-      expect(take.storyRoute).toBeTruthy();
-      const start = startGateRun(s.id);
-      expect(positionOf(commit(start, take.id, 'favorable'))).toBe(positionOf(start));
+      // The manager walks out alone: no team move, a route of their own.
+      const alone = actionOf(s, 'way_out', 'manager_first');
+      expect(alone.approach).toBe('none');
+      expect(alone.storyRoute).toBeTruthy();
+      // The clerk's escort: the squad goes in for them and ends outside with them.
+      const placed = instanceOf(s, buildLocation(s.locationFamilyId, s.locationSeed))!.placed;
+      const escort = actionOf(s, 'going_live', 'clerk_out');
+      expect(escort.approach).toBe('path');
+      expect(escort.endsAt).toEqual({ spaceId: placed.outside, at: placed.anchors.clerk.outside });
     }
     for (const s of calls('protected_rescue', 3)) {
-      const placed = instanceOf(s, buildLocation(s.locationFamilyId, s.locationSeed))!.placed;
+      const placed = instanceOf(s, buildLocation(s.locationFamilyId, s.locationSeed), FIXTURES[s.incident!.type])!.placed;
       const carry = actionOf(s, 'at_the_door', 'carry');
       expect(carry.approach).toBe('path');
       expect(carry.endsAt).toEqual({ spaceId: placed.outside, at: placed.anchors.resident.outside });
@@ -133,7 +147,7 @@ describe('the building and the conditions', () => {
     const seen: boolean[][] = [[], [], []];
     for (const s of calls('protected_rescue', 24)) {
       const built = buildLocation(s.locationFamilyId, s.locationSeed);
-      const instance = instanceOf(s, built)!;
+      const instance = instanceOf(s, built, FIXTURES[s.incident!.type])!;
       const fact = s.facts.find(entry => entry.id === 'f_sees_door')!;
       const door = doorOut(built, instance.placed.routes[instance.placed.routeName('resident')].openingIds)!;
       expect(fact.truth).toBe(sightFromStreet(built, instance.placed.outside, instance.placed.vantages!.shooter, door.id).clear);

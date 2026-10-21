@@ -24,6 +24,12 @@ export const INCIDENT_TYPES = SCENARIO_TYPES;
 export function incidentId(spec: IncidentSpec): string {
   return `gen:${spec.type}:${spec.familyId}:${spec.buildingSeed}:${spec.seed}:${spec.tier}:${spec.contentVersion}`;
 }
+/** The ID's shape and version only, for a test's own template (generateIncident's `template`). */
+function parsesAs(id: string): boolean {
+  const m = /^gen:([a-z_]+):([a-z0-9_]+):(\d+):(\d+):(\d+):(\d+)$/.exec(id);
+  return !!m && Number(m[6]) === INCIDENT_CONTENT_VERSION && Number(m[5]) >= 1 && Number(m[5]) <= 5;
+}
+
 export function parseIncidentId(id: string): IncidentSpec | null {
   const m = /^gen:([a-z_]+):([a-z0-9_]+):(\d+):(\d+):(\d+):(\d+)$/.exec(id);
   if (!m) return null;
@@ -47,7 +53,7 @@ export function generateIncident(spec: IncidentSpec, template?: IncidentTemplate
   if (!isProceduralFamily(spec.familyId)) return generateIncidentAt(spec, template);
   const places: Pick<IncidentSpec, 'familyId' | 'buildingSeed'>[] = [{ familyId: spec.familyId, buildingSeed: spec.buildingSeed }];
   for (let attempt = 1; attempt < HOSTING_SEEDS; attempt++) places.push({ familyId: spec.familyId, buildingSeed: hashSeed(`${spec.buildingSeed}:${spec.seed}:host-v10:${attempt}`) });
-  const authored = SCENARIO_TYPES.find(info => info.type === spec.type)?.families.filter(id => !isProceduralFamily(id)) ?? [];
+  const authored = (template?.tree.families ?? SCENARIO_TYPES.find(info => info.type === spec.type)?.families ?? []).filter(id => !isProceduralFamily(id));
   const start = authored.length ? hashSeed(`${spec.seed}:host-v10:authored`) % authored.length : 0;
   for (let k = 0; k < authored.length; k++) places.push({ familyId: authored[(start + k) % authored.length], buildingSeed: spec.buildingSeed });
   let failure: unknown = new Error('Unsupported incident and building combination');
@@ -61,7 +67,8 @@ export function generateIncident(spec: IncidentSpec, template?: IncidentTemplate
 }
 
 function generateIncidentAt(spec: IncidentSpec, given?: IncidentTemplate): ScenarioDefinition {
-  if (!parseIncidentId(incidentId(spec))) throw new Error('Invalid incident specification');
+  // A test's own template hosts on its own families, whether or not its type is on the board.
+  if (given ? !parsesAs(incidentId(spec)) || !given.tree.families.includes(spec.familyId) : !parseIncidentId(incidentId(spec))) throw new Error('Invalid incident specification');
   const locationFamilyId = furnishedFamilyId(spec.familyId);
   const built = buildLocation(locationFamilyId, spec.buildingSeed);
   if (built.issues.some((i) => i.severity === 'error')) throw new Error('Incident location is invalid');

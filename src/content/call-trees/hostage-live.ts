@@ -166,8 +166,8 @@ export const HOSTAGE_LIVE: CallTree = {
               extra: { mark: ['performing'], moves: { rider: 'provoked' }, bump: { stream: 16 }, pressure: 8 } }),
           } },
         // Off the stream: a voice through the glass, which the street hears and the phone barely does.
-        { id: 'hail', title: 'Call to {rider.him} through the glass', icon: 'radio', team: { to: { vantage: 'scene' }, signal: { channel: 'voice', to: 'rider' } }, talksTo: 'rider', check: check(TALK, 2), minutes: 4, favors: [STEADY_ON_CAMERA],
-          summary: '{lead} calls to {rider.first} through the front glass from the corner, off the phone, so the stream picks up a voice from the street and not a conversation. Every rider at the tape hears all of it instead. {rider.first} has to come to the window to answer, in front of everyone.',
+        { id: 'hail', title: 'Call to {rider.him} through the glass', icon: 'radio', team: { signal: { channel: 'voice', to: 'rider' } }, talksTo: 'rider', check: check(TALK, 2), minutes: 4, favors: [STEADY_ON_CAMERA],
+          summary: '{lead} calls to {rider.first} through the front glass on the hailer, off the phone, so the stream picks up a voice from the street and not a conversation. Every rider at the tape hears all of it instead. {rider.first} has to come to the window to answer, in front of everyone.',
           pull: 'Talk without the stream hearing every word.',
           cost: 'The whole street hears it, and {rider.first} answers from the window.',
           preview: { favorable: '{rider.first} comes to the glass and talks to you, not the phone.', mixed: '{rider.first} answers, and the riders at the tape answer louder.', adverse: '{rider.first} brings {manager.first} to the window with {rider.him}, and the handgun could come up.' },
@@ -693,7 +693,7 @@ export const HOSTAGE_LIVE: CallTree = {
               clerkToo('{clerk.first} slips out the back in the struggle.'),
             ],
           } },
-        { id: 'go_dark', title: 'Kill the lights and the stream', icon: 'wait', check: check(HOLD, -2), minutes: 8,
+        { id: 'go_dark', title: 'Kill the lights and the stream', icon: 'wait', check: check(MOVE, -2), minutes: 8,
           summary: 'Command cuts the power to {place} and takes the stream down with it, and every officer steps back out of sight. No picture, no count, nobody at the window to aim at. Also nobody close enough to help {manager.first} if it goes wrong in the dark.',
           pull: 'Take away the audience and the target in one move.',
           cost: 'Nobody is close enough to reach {manager.first} in the dark.',
@@ -714,7 +714,7 @@ export const HOSTAGE_LIVE: CallTree = {
           } },
       ] },
     { id: 'fired_on', stage: 'resolve',
-      threat: { label: 'The second shot', minutes: 3, text: '{rider.first} fires again, into the floor this time, and the stream shows the dust come up off the tile.', pressure: 8, bump: { stream: 15 } },
+      threat: { label: 'A call from home', minutes: 3, text: '{rider.first}’s phone lights up with a call from home. {rider.He} {rider~holds|hold} it up so the stream can see who is calling, and doesn’t answer it.', pressure: 8, bump: { stream: 15 } },
       prompt: 'The front window has a hole in it, and {rider.first} is behind the counter with {manager.first}. The phone is still propped on the register. Thousands of people just watched the shot.',
       exchange: [{ by: 'radio', line: 'Shot fired through the window. Nobody hit outside.' }, { by: 'rider', line: 'I didn’t mean it. I didn’t mean that.' }],
       choices: [

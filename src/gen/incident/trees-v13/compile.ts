@@ -513,7 +513,7 @@ export function doorInto(built: BuiltLocation, spaceId: string, outside: string)
 export function placeCast(tree: CallTree, built: BuiltLocation, spec: IncidentSpec, draws: CastDraw = {}, members: Record<string, number> = {}): PlacedCast {
   const settings = ([] as string[]).concat(tree.scene.setting);
   if (!settings.includes(built.location.setting)) throw new Error(`${tree.type} needs a ${settings.join(' or ')} building`);
-  const recipe = scenarioRecipe(spec);
+  const recipe = scenarioRecipe(spec, tree.situations.length);
   const situation = tree.situations[recipe.variant];
   if (!situation) throw new Error(`${tree.type} has no situation ${recipe.variant}`);
   const outside = built.location.entries[0];
