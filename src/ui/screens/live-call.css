@@ -84,3 +84,8 @@
 
 /* Toasts never cover a pinned footer (Deploy, Continue): they move to the top while one shows. */
 .app:has(.screen .stickyfoot) > .toasts { top: 10px; bottom: auto; }
+/* The threat pill's drain bar: the minutes left after the stall, on its own row under the label. */
+.live .threat-pill { flex-wrap: wrap; }
+.live .threat-pill-bar { flex: 1 0 100%; height: 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.14); overflow: hidden; }
+.live .threat-pill-bar i { display: block; height: 100%; border-radius: 3px; background: var(--danger); transition: width 1s linear; }
+@media (prefers-reduced-motion: reduce) { .live .threat-pill-bar i { transition: none; } }
