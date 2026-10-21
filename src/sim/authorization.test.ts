@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { COMMAND_LINES } from '../content/incidents/lines';
-import { drawIncidentSpec, generateIncident } from '../gen/incident';
 import { NOW, startGateRun } from '../gen/incident/gates/engine-driver';
 import { AUTHORIZATION_V1, authorize, isHotCall, readForceThreat } from './authorization';
 import { buildLocation } from './location';
@@ -10,6 +9,7 @@ import { getScenario } from './scenario-registry';
 import { CONCESSIONS_ALLOWED } from './scenario-types';
 import type { ClockDef, ConcessionKind, IncidentPersonDef, IncidentType, ScenarioDefinition } from './scenario-types';
 import type { KnowledgeStatus, OperationRun, StageId } from './types';
+import { callsOfKind } from './test-fixtures';
 
 // M2 slice 4 (docs/incident-domain-model.md §7): one rule table for entry, concessions and deadly
 // force, read from what the team believes, with the line command says.
@@ -109,16 +109,8 @@ describe('authorization: deadly force reads beliefs', () => {
 
 // ---------------------------------------------------------------- in the calls
 
-function calls(type: IncidentType, n: number, seed = 1312): ScenarioDefinition[] {
-  const out: ScenarioDefinition[] = [];
-  let state = seed;
-  for (let i = 0; i < n; i++) {
-    const drawn = drawIncidentSpec(state, { level: 10, trust: 90, unlockedTypes: [type] });
-    state = drawn.state;
-    out.push(generateIncident(drawn.spec));
-  }
-  return out;
-}
+// Shipping calls, and the retired kinds from their frozen engine fixtures.
+const calls = (type: IncidentType, n: number, seed = 1312): ScenarioDefinition[] => callsOfKind(type, n, seed);
 
 describe('authorization in evaluation', () => {
   const types: IncidentType[] = ['active_armed_incident', 'barricaded', 'hostage_crisis', 'protected_rescue'];

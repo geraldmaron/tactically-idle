@@ -10,9 +10,11 @@ import { SCENARIO_TYPES } from '../content/scenario-types';
 import { DEFAULT_UNLOCK, isUnlocked, missingRequirements, unlockRule, unlockedTypes } from '../content/unlocks';
 import type { DebriefResult, GameState } from './types';
 import type { IncidentType } from './scenario-types';
+import { TACTICAL_FRAMEWORKS } from '../content/unlocks';
 
 const T0 = Date.UTC(2026, 0, 5, 12, 0, 0);
-const ALL = SCENARIO_TYPES.map((info) => info.type);
+// Unlock rules cover every tactical framework, whether or not it has a curated call yet.
+const ALL = [...TACTICAL_FRAMEWORKS];
 
 function tick(state: GameState, now: number): GameState {
   const r = dispatch(state, { type: 'tick' }, { now });
@@ -89,20 +91,22 @@ describe('capability unlocks', () => {
     // Every dispatched framework is tactical and needs a capability, so the fallback offers the
     // lowest-level ones rather than nothing.
     expect(open.every((type) => unlockRule(type).level === 1)).toBe(true);
-    expect(playerArcContext(s).unlockedTypes).toEqual(open);
+    // The board reads the same rule over the kinds that have a curated call.
+    const curated = new Set(SCENARIO_TYPES.map((info) => info.type));
+    expect(playerArcContext(s).unlockedTypes).toEqual(open.filter((type) => curated.has(type)));
   });
 });
 
 describe('v11 board draws', () => {
-  it('draw only unlocked frameworks, and a new certification opens protected rescue', () => {
+  it('draw only unlocked frameworks with a curated call, and a new certification opens protected rescue', () => {
     const locked = createInitialState(T0, 777);
-    expect(boardTypes(locked, 24 * 6).has('protected_rescue')).toBe(false);
+    const curated = new Set(SCENARIO_TYPES.map((info) => info.type));
+    for (const type of boardTypes(locked, 24 * 6)) expect(curated.has(type as IncidentType), type).toBe(true);
     const open = createInitialState(T0, 777);
     open.department.level = 4;
     open.officers.off_park.certs.push('vehicle_operations');
-    const drawn = (s: GameState) => new Set(Array.from({ length: 3000 }, (_, rng) => drawIncidentSpec(rng + 1, { level: 3, trust: 78, ...playerArcContext(s) }).spec.type));
-    expect(drawn(locked).has('protected_rescue')).toBe(false);
-    expect(drawn(open).has('protected_rescue')).toBe(true);
+    expect(unlockedTypes(locked, ALL)).not.toContain('protected_rescue');
+    expect(unlockedTypes(open, ALL)).toContain('protected_rescue');
   });
 
   it('stay deterministic, and one long settlement matches hourly ticks', () => {
@@ -117,10 +121,12 @@ describe('v11 board draws', () => {
 
   it('badge the first card of each framework only', () => {
     const s = createInitialState(T0, 99);
-    expect(s.incidents.every((card) => card.newKind)).toBe(true);
-    expect(s.casebook!.frameworksSeen).toEqual([...s.incidents].reverse().map((card) => card.type));
+    // Oldest first: the first card of each kind carries the badge, and a repeat of a kind doesn't.
+    const arrived = [...s.incidents].reverse();
+    expect(arrived.map((card) => !!card.newKind)).toEqual(arrived.map((card, i) => arrived.findIndex((other) => other.type === card.type) === i));
+    expect(s.casebook!.frameworksSeen).toEqual([...new Set(arrived.map((card) => card.type))]);
     let later = s;
-    const first = new Map(s.incidents.map((c) => [c.type, c.id] as const));
+    const first = new Map(arrived.filter((c) => c.newKind).map((c) => [c.type, c.id] as const));
     for (let h = 1; h <= 48; h++) {
       later = tick(later, T0 + h * HOUR_MS);
       for (const c of [...later.incidents].reverse()) {
@@ -137,18 +143,12 @@ describe('v11 board draws', () => {
     const s = createInitialState(T0, 5);
     s.casebook = { frameworksSeen: ['barricaded', 'hostage_crisis'], recipes: { 'hostage_crisis/market_row/0/ordinary': { firstAt: T0 }, 'hostage_crisis/market_row/1/ordinary': { firstAt: T0 }, 'hostage_crisis/market_row/2/ordinary': { firstAt: T0 } } };
     const weights = noveltyWeights(s, ['barricaded', 'hostage_crisis', 'active_armed_incident']);
-    expect(situationCount('hostage_crisis')).toBe(3);
+    // Going Live has two situations, both found here.
+    expect(situationCount('hostage_crisis')).toBe(2);
     expect(weights).toEqual({ barricaded: 2, hostage_crisis: 1, active_armed_incident: 3 });
+    // A weight never costs an extra draw from the stream.
     const base = { level: 3, trust: 78, contentVersion: 13 };
-    let favored = 0, plain = 0;
-    for (let rng = 1; rng <= 400; rng++) {
-      const weighted = drawIncidentSpec(rng, { ...base, typeWeights: { active_armed_incident: 8 } });
-      const unweighted = drawIncidentSpec(rng, base);
-      expect(weighted.state).toBe(unweighted.state);
-      if (weighted.spec.type === 'active_armed_incident') favored++;
-      if (unweighted.spec.type === 'active_armed_incident') plain++;
-    }
-    expect(favored).toBeGreaterThan(plain * 2);
+    for (let rng = 1; rng <= 400; rng++) expect(drawIncidentSpec(rng, { ...base, typeWeights: { hostage_crisis: 8 } }).state).toBe(drawIncidentSpec(rng, base).state);
   });
 
 });

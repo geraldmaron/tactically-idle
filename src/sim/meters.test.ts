@@ -67,19 +67,19 @@ describe('meters: in the calls', () => {
   const odds = (actionSuffix: string, meters: NonNullable<OperationRun['meters']>[string] | null, patch: (scenario: ScenarioDefinition) => void = () => {}) => {
     const state = startGateRun(s.id, 719);
     const run = structuredClone(state.activeRun!);
-    if (meters) run.meters = { taker: meters };
+    if (meters) run.meters = { rider: meters };
     const scenario = structuredClone(s);
     patch(scenario);
     const action = Object.values(scenario.stages).flatMap(stage => stage.actions).find(entry => entry.id.endsWith(actionSuffix))!;
     const ev = evaluateAction({ state, run, scenario, action, built, acting: ['A'], support: [] });
     return { p: ev.pFavorable, labels: ev.contributors.map(c => c.label) };
   };
-  const volatility = s.incidentPeople!.find(person => person.id === 'taker')!.volatility!;
+  const volatility = s.incidentPeople!.find(person => person.id === 'rider')!.volatility!;
 
   it('make talking to the subject easier after the team heard them out, and harder after it provoked them', () => {
-    const start = odds('_offer_ask_both', null);
-    const heard = odds('_offer_ask_both', after(volatility, 'heard'));
-    const provoked = odds('_offer_ask_both', after(volatility, 'provoked'));
+    const start = odds('_going_live_on_stream', null);
+    const heard = odds('_going_live_on_stream', after(volatility, 'heard'));
+    const provoked = odds('_going_live_on_stream', after(volatility, 'provoked'));
     expect(heard.p).toBeGreaterThan(start.p);
     expect(provoked.p).toBeLessThan(start.p);
     expect(heard.labels.some(label => label.endsWith('is talking to you more'))).toBe(true);
@@ -87,13 +87,13 @@ describe('meters: in the calls', () => {
 
   it('leave a conversation with someone else, and work that is not a conversation, alone', () => {
     const moved = after(volatility, 'provoked');
-    const elsewhere = odds('_offer_ask_both', moved, scenario => {
-      for (const action of Object.values(scenario.stages).flatMap(stage => stage.actions)) if (action.id.endsWith('_offer_ask_both')) action.talksTo = 'courier';
+    const elsewhere = odds('_going_live_on_stream', moved, scenario => {
+      for (const action of Object.values(scenario.stages).flatMap(stage => stage.actions)) if (action.id.endsWith('_going_live_on_stream')) action.talksTo = 'manager';
     });
-    expect(elsewhere.p).toBe(odds('_offer_ask_both', null, scenario => {
-      for (const action of Object.values(scenario.stages).flatMap(stage => stage.actions)) if (action.id.endsWith('_offer_ask_both')) action.talksTo = 'courier';
+    expect(elsewhere.p).toBe(odds('_going_live_on_stream', null, scenario => {
+      for (const action of Object.values(scenario.stages).flatMap(stage => stage.actions)) if (action.id.endsWith('_going_live_on_stream')) action.talksTo = 'manager';
     }).p);
-    expect(odds('_offer_take_courier', moved).p).toBe(odds('_offer_take_courier', null).p);
+    expect(odds('_going_live_clerk_out', moved).p).toBe(odds('_going_live_clerk_out', null).p);
   });
 });
 

@@ -2,12 +2,14 @@ import { describe, expect, it } from 'vitest';
 import { CALL_TREES } from '../content/call-trees';
 import { scenarioRecipe } from '../content/scenario-recipes';
 import { INCIDENT_CONTENT_VERSION, incidentId } from '../gen/incident';
-import { boardShortages, callNeeds, callNeedsOf } from './board-suggestions';
+import { boardShortages, callNeeds, callNeedsOf, shortagesFor } from './board-suggestions';
 import { createInitialState } from './department';
 import { createUnit } from './equipment';
 import { getScenario } from './scenario-registry';
 import type { IncidentSpec, IncidentType } from './scenario-types';
 import type { GameState } from './types';
+import { ARMED_TEMPLATE } from '../gen/incident/trees-v13/armed-fixture';
+import { RESCUE_TEMPLATE } from '../gen/incident/trees-v13/rescue-fixture';
 
 const NOW = 1_800_000_000_000;
 const TYPES = Object.keys(CALL_TREES) as IncidentType[];
@@ -39,7 +41,7 @@ describe('board shortages read nothing hidden', () => {
       lists.add(JSON.stringify(boardShortages(state, incidentId(s), NOW)));
     }
     // The sample really varied the hidden truth: all three situations and more than one truth pattern.
-    expect(situations.size).toBe(3);
+    expect(situations.size).toBe(tree.situations.length);
     expect(hidden.size).toBeGreaterThan(1);
     // Calls whose tree reads a weapon must have drawn both armed and unarmed casts here.
     if (JSON.stringify(tree).includes('"armed"')) expect(weapons.size).toBeGreaterThan(1);
@@ -51,7 +53,7 @@ describe('board shortages read nothing hidden', () => {
     // A locked door makes an entry tool save time, never a need, so it is not a shortage. When
     // building-gated choices land (R-B1 upper floors, R-B2 window exits), prune callNeeds by the
     // drawn building and turn this into a test that the building can change the list.
-    const type: IncidentType = 'barricaded';
+    const type: IncidentType = 'hostage_crisis';
     const state = bare();
     const lists = new Set(CALL_TREES[type]!.families.flatMap((familyId) => [11, 12, 13].map((buildingSeed) => {
       const id = incidentId(spec(type, familyId, buildingSeed, 5));
@@ -76,13 +78,16 @@ describe('what counts as short', () => {
   const callOf = (type: IncidentType) => incidentId(spec(type, CALL_TREES[type]!.families[0], 4242, 3));
 
   it('lists the call kind’s required qualifications and gear', () => {
-    expect(callNeeds('active_armed_incident')).toEqual({ certs: ['entry_team'], gear: [{ itemIds: ['loud_hailer'], label: 'Loud hailer', need: 1 }] });
-    expect(callNeeds('protected_rescue').certs).toEqual(['vehicle_operations']);
+    // Going Live's entries need an entry team; the frozen armed call also needs a hailer, and the
+    // frozen rescue a driver.
+    expect(callNeeds('hostage_crisis')).toEqual({ certs: ['entry_team'], gear: [] });
+    expect(callNeedsOf(ARMED_TEMPLATE.tree)).toEqual({ certs: ['entry_team'], gear: [{ itemIds: ['loud_hailer'], label: 'Loud hailer', need: 1 }] });
+    expect(callNeedsOf(RESCUE_TEMPLATE.tree).certs).toEqual(['vehicle_operations']);
   });
 
   it('counts a qualification only for officers who could deploy now', () => {
     const state = bare();
-    const id = callOf('barricaded');
+    const id = callOf('hostage_crisis');
     const holder = Object.values(state.officers).find((o) => o.squadId)!;
     holder.certs = ['entry_team'];
     expect(boardShortages(state, id, NOW)).toEqual([]);
@@ -97,10 +102,11 @@ describe('what counts as short', () => {
   });
 
   it('shows gear only while fewer units are ready than one squad needs, qualifications first', () => {
+    // The needs of the frozen armed call, which needed a hailer.
     const state = bare();
-    const id = callOf('active_armed_incident');
-    expect(boardShortages(state, id, NOW).map((x) => x.kind === 'cert' ? x.id : x.label)).toEqual(['entry_team', 'Loud hailer']);
+    const needs = callNeedsOf(ARMED_TEMPLATE.tree);
+    expect(shortagesFor(state, needs, NOW).map((x) => x.kind === 'cert' ? x.id : x.label)).toEqual(['entry_team', 'Loud hailer']);
     createUnit(state, 'loud_hailer', NOW, { condition: 100, ageDays: 0 });
-    expect(boardShortages(state, id, NOW).map((x) => x.kind === 'cert' ? x.id : x.label)).toEqual(['entry_team']);
+    expect(shortagesFor(state, needs, NOW).map((x) => x.kind === 'cert' ? x.id : x.label)).toEqual(['entry_team']);
   });
 });

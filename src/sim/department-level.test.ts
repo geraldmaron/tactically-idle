@@ -47,7 +47,7 @@ describe('department level from service', () => {
   it('names what the next level opens, by framework label only', () => {
     // Only tactical calls are dispatched, and all of them open from level 1 with the capability
     // each needs, so no later level names a new kind of call.
-    expect(frameworksOpeningAt(1)).toContain('active armed incident (with a certified officer and the right equipment)');
+    expect(frameworksOpeningAt(1)).toContain('hostage crisis (with a certified officer)');
     expect(frameworksOpeningAt(2)).toEqual([]);
     expect(frameworksOpeningAt(3)).toEqual([]);
     expect(frameworksOpeningAt(4)).toEqual([]);
@@ -58,10 +58,10 @@ describe('department level from service', () => {
 describe('earning service on a live call', () => {
   /** Play a live v12 call to its debrief with the run's own dice, as a player would. */
   function playLive(seed: number): { before: GameState; after: GameState } {
-    const id = incidentId(specForSituation('barricaded', 'cedar_close', 1));
+    const id = incidentId(specForSituation('hostage_crisis', 'market_row', 1));
     const s = getScenario(id)!;
     const before = createInitialState(NOW, seed);
-    before.incidents = [{ id, type: 'barricaded', familyId: 'cedar_close', tier: s.incident!.tier, arrivedAt: NOW, expiresAt: NOW + 3_600_000, seen: false }];
+    before.incidents = [{ id, type: 'hostage_crisis', familyId: 'market_row', tier: s.incident!.tier, arrivedAt: NOW, expiresAt: NOW + 3_600_000, seen: false }];
     const entry = buildLocation(s.locationFamilyId, s.locationSeed).location.entries[0];
     let state = apply(before, startCmd(id, ['A'], { positions: { A: entry }, loadouts: { A: {} } })).state;
     expect(state.activeRun?.scenarioId).toBe(id);

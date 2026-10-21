@@ -1,3 +1,11 @@
+import { SCENARIOS } from '../content/scenarios';
+import { templateAt } from '../content/incidents';
+import type { IncidentTemplate } from '../content/incidents/types';
+import { drawIncidentSpec, generateIncident } from '../gen/incident';
+import { fixtureCalls } from '../gen/incident/trees-v13/house-call-fixture';
+import { HOUSE_TEMPLATE } from '../gen/incident/trees-v13/house-fixture';
+import { ARMED_TEMPLATE } from '../gen/incident/trees-v13/armed-fixture';
+import { RESCUE_TEMPLATE } from '../gen/incident/trees-v13/rescue-fixture';
 import { xpForService } from '../content/ranks';
 import { CURRENT_SAVE_VERSION } from './save';
 import { createPersonnel } from './personnel';
@@ -9,7 +17,7 @@ import { actionViews, pendingDebrief } from './operation-selectors';
 import { CALENDAR } from './calendar';
 import { getBuilt } from './resolution';
 import { getScenario } from './scenario-registry';
-import type { IncidentSpec } from './scenario-types';
+import type { IncidentSpec, ScenarioDefinition } from './scenario-types';
 import { incidentId } from '../gen/incident';
 import { defaultStagingFor, centroidOf } from './spatial-factors';
 import { ITEMS } from '../content/items';
@@ -247,7 +255,36 @@ const TEST_CALLS = {
   hostage: { type: 'hostage_crisis', familyId: 'market_row', buildingSeed: 7, seed: 7, tier: 2, contentVersion: 13 },
   rescue: { type: 'protected_rescue', familyId: 'juniper_court_v1', buildingSeed: 7, seed: 0, tier: 2, contentVersion: 13 },
 } satisfies Record<string, IncidentSpec>;
-export const testCallId = (name: keyof typeof TEST_CALLS): Id => incidentId(TEST_CALLS[name]);
+/** The retired kinds of call, hosted from the engine's frozen fixtures under their generated ids, so
+ * a test can still render or play one. Registered on first use. */
+const FIXTURE_TEMPLATES: Partial<Record<IncidentSpec['type'], IncidentTemplate>> = { barricaded: HOUSE_TEMPLATE, active_armed_incident: ARMED_TEMPLATE, protected_rescue: RESCUE_TEMPLATE };
+export const testCallId = (name: keyof typeof TEST_CALLS): Id => fixtureIncident(TEST_CALLS[name]).id;
+
+/** A call for `spec`: generated from the shipping call of its kind, or for a retired kind from its
+ * frozen fixture, registered under the generated id so the engine resolves it like any call. */
+export function fixtureIncident(spec: IncidentSpec): ScenarioDefinition {
+  if (templateAt(spec.type)) return generateIncident(spec);
+  const id = incidentId(spec);
+  return SCENARIOS[id] ??= generateIncident(spec, FIXTURE_TEMPLATES[spec.type]);
+}
+
+/** `n` calls of a kind: drawn by the board's own draw for a shipping kind, or hosted from the
+ * frozen fixture for a retired one (registered). */
+export function callsOfKind(type: IncidentSpec['type'], n: number, seed = 1312): ScenarioDefinition[] {
+  const fixture = templateAt(type) ? undefined : FIXTURE_TEMPLATES[type];
+  if (fixture) return fixtureCalls(fixture, n, seed, type);
+  const out: ScenarioDefinition[] = [];
+  let state = seed;
+  for (let i = 0; i < n; i++) {
+    const drawn = drawIncidentSpec(state, { level: 10, trust: 90, unlockedTypes: [type] });
+    state = drawn.state;
+    out.push(generateIncident(drawn.spec));
+  }
+  return out;
+}
+
+/** The frozen fixture's call tree for a retired kind, or the shipping one. */
+export const treeFor = (type: IncidentSpec['type']) => templateAt(type)?.tree ?? FIXTURE_TEMPLATES[type]!.tree;
 
 /** Put a generated call on the board so a live start can take it. Authored scenarios and
  * calls already on the board are left as they are. */

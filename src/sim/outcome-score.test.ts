@@ -3,7 +3,7 @@ import { CALL_TREES } from '../content/call-trees';
 import { drawCalls, playToEnd, POLICIES, type Policy } from '../gen/incident/trees-v13/balance';
 import { serviceEarned } from './department-level';
 import { completionEvidence } from './external-support';
-import { apply } from './test-fixtures';
+import { apply, callsOfKind } from './test-fixtures';
 import { computeDebrief, outcomeFactor, traceRun } from './operation';
 import { dispositionOf, endStates, forceLines, OUTCOME_SCORE_V1, scoreCall, scoreFrom, type PersonEnd, type ScoreInputs } from './outcome-score';
 import { deserialize, serialize } from './save';
@@ -28,14 +28,13 @@ for (const template of Object.values(INCIDENT_TEMPLATES)) for (const situation o
  * in content/call-trees on 2026-10-07. The trust and strain are retired from the trees; the
  * disposition is still authored there and must agree with the scored one. */
 const AUTHORED: Partial<Record<IncidentType, Record<string, [trust: number, strain: number, disposition: CompletionDisposition]>>> = {
-  hostage_crisis: { everyone_out: [3, -2, 'resolved'], out_the_back: [3, -2, 'resolved'], out_by_dawn: [2, 1, 'resolved'], entry_clean: [0, 2, 'resolved'], entry_hurt: [-2, 4, 'resolved'], owner_collapsed: [-2, 4, 'relief_partial'], owner_beaten: [-4, 6, 'relief_partial'], owner_killed: [-6, 9, 'relief_partial'], taker_held: [1, 1, 'relief_partial'], held_inside: [-2, 3, 'relief_partial'], held_both: [-3, 4, 'relief_partial'], handed_over: [-2, 3, 'unresolved'],
-    // Endings the slice 5 pilot added never had hand-set numbers (docs/calls/hostage-signature-design.md).
-    // Each row is the closest retired ending's: the group's ends are the surrender's, the collapsed
-    // owner's entries are entry_hurt's and the barricade's subject_shot, the owner left down is held
-    // inside with the owner hurt (held_both_down is held_both with the owner hurt), and a death with
-    // the taker hurt is owner_killed's.
-    group_out: [3, -2, 'resolved'], group_out_dawn: [2, 1, 'resolved'], stayers_held: [1, 1, 'relief_partial'],
-    went_in_for_owner: [-2, 4, 'resolved'], went_in_taker_hurt: [-4, 7, 'resolved'], owner_left_down: [-3, 5, 'relief_partial'], held_both_down: [-4, 6, 'relief_partial'], owner_killed_taker_hurt: [-6, 9, 'relief_partial'] },
+  // Going Live (2026-10-21) never had hand-set numbers; each row is the closest retired hostage
+  // ending's: walking out on camera is everyone_out's, out with nobody filming is out_the_back's, the
+  // manager struck in the dark is owner_beaten's, the rider holding out alone is taker_held's, and the
+  // held endings and the deaths keep their names' rows.
+  hostage_crisis: { out_on_camera: [3, -2, 'resolved'], out_quiet: [3, -2, 'resolved'], out_by_dawn: [2, 1, 'resolved'], entry_clean: [0, 2, 'resolved'], entry_hurt: [-2, 4, 'resolved'],
+    manager_hurt_inside: [-4, 6, 'relief_partial'], manager_killed: [-6, 9, 'relief_partial'], manager_killed_rider_hurt: [-6, 9, 'relief_partial'], rider_held: [1, 1, 'relief_partial'],
+    held_counter: [-2, 3, 'relief_partial'], held_both: [-3, 4, 'relief_partial'], handed_over: [-2, 3, 'unresolved'] },
   // Everything Goes Back (docs/calls/barricade-design.md) replaced Behind the Bathroom Door; each row is
   // the closest retired barricade ending's: the walk-outs are everyone_out's, out after a long night is
   // out_by_morning's, the mover out and the subject inside is son_out_held's, the mover held (in the
@@ -301,7 +300,9 @@ describe('the v13 debrief', () => {
   });
 
   it('says which force the team used, on whom, and why', () => {
-    const forced = played(10).filter(({ state }) => state.activeRun?.history.some(decision => decision.committed?.drawn?.some(record => record.model === 'team_force')));
+    // Going Live reaches force only on a rare entry; the frozen armed call reaches it often.
+    const armed = callsOfKind('active_armed_incident', 10, 4242).flatMap((call, i) => POLICIES.map(policy => ({ state: playToEnd(call.id, policy, i + 1) })));
+    const forced = [...played(10), ...armed].filter(({ state }) => state.activeRun?.history.some(decision => decision.committed?.drawn?.some(record => record.model === 'team_force')));
     expect(forced.length).toBeGreaterThan(0);
     for (const { state } of forced) {
       const run = state.activeRun!, scenario = getScenario(run.scenarioId)!;

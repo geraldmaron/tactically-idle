@@ -192,7 +192,9 @@ describe('arrivals and expiry are event-ordered', () => {
       s = ok(s, { type: 'tick' }, t);
       max = Math.max(max, s.incidents.length);
     }
-    expect(max).toBe(Math.min(INCIDENT_TUNING.boardMax, EVERY_TYPE.length));
+    // One card per kind, or the full board while the catalog has fewer kinds than the opening cards.
+    const oneEach = EVERY_TYPE.length >= INCIDENT_TUNING.initialCount;
+    expect(max).toBe(oneEach ? Math.min(INCIDENT_TUNING.boardMax, EVERY_TYPE.length) : INCIDENT_TUNING.boardMax);
   });
 
   it('expires silently: no report line, no trust or funding penalty, and the card is gone at its time', () => {
@@ -247,6 +249,15 @@ describe('one live call per kind of call (v13)', () => {
     draw.mockImplementation(realDraw);
     let s = createInitialState(T0);
     const unlocked = playerArcContext(s).unlockedTypes;
+    // A catalog with fewer kinds than the opening cards fills the board, never with the same call twice.
+    if (EVERY_TYPE.length < INCIDENT_TUNING.initialCount) {
+      expect(s.incidents.length).toBe(INCIDENT_TUNING.initialCount);
+      for (const t of every(T0, T0 + 48 * HOUR_MS, HOUR_MS)) {
+        s = ok(s, { type: 'tick' }, t);
+        expect(new Set(s.incidents.map((c) => c.id)).size, 'never the same call twice').toBe(s.incidents.length);
+      }
+      return;
+    }
     expect(s.incidents.length).toBe(Math.min(INCIDENT_TUNING.initialCount, unlocked.length));
     for (const t of every(T0, T0 + 48 * HOUR_MS, HOUR_MS)) {
       s = ok(s, { type: 'tick' }, t);

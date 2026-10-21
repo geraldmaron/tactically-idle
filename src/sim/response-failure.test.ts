@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { generateIncident, INCIDENT_TYPES } from '../gen/incident';
 import { isGenericResponseExit, responseFailurePlan } from './response-failure';
-import { apply, NOW, startRun } from './test-fixtures';
+import { apply, fixtureIncident, NOW, startRun } from './test-fixtures';
 import { createInitialState } from './department';
 import type { ScenarioDefinition } from './scenario-types';
 
@@ -16,7 +16,8 @@ function running(s: ScenarioDefinition): GameState {
   return startRun(state, s.id, ['A'], { positions: { A: builtFor(s.locationFamilyId, s.locationSeed, []).location.entries[0] }, loadouts: { A: {} } });
 }
 function armed(seed = 1, version = 13): GameState {
-  const s = generateIncident({ type: 'active_armed_incident', familyId: 'market_row', buildingSeed: 7, seed, tier: 2, contentVersion: version });
+  // The retired armed call, from its frozen engine fixture.
+  const s = fixtureIncident({ type: 'active_armed_incident', familyId: 'market_row', buildingSeed: 7, seed, tier: 2, contentVersion: version });
   return running(s);
 }
 

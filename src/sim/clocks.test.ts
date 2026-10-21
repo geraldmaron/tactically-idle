@@ -15,6 +15,7 @@ import { CLOCK_RULES_V1, clockConditionsHold, clockOutEffects, cueEffects, advan
 import { deserialize, serialize } from './save';
 import type { ClockDef, IncidentType, ScenarioDefinition } from './scenario-types';
 import type { GameState, StageId } from './types';
+import { fixtureIncident } from './test-fixtures';
 
 // M2 slice 3 (docs/incident-domain-model.md §3): what runs down on the operation's minutes.
 
@@ -80,7 +81,8 @@ function fixtureCall(template: IncidentTemplate): ScenarioDefinition {
 }
 
 function at(type: IncidentType, family: string, variant: 0 | 1 | 2, node: string, stage: StageId, clocks: Record<string, { value: number; cued: number }>, clock = 10): { state: GameState; s: ScenarioDefinition } {
-  const s = generateIncident(specForSituation(type, family, variant));
+  // The retired armed and rescue calls run from their frozen engine fixtures (test-fixtures.ts).
+  const s = fixtureIncident(specForSituation(type, family, variant));
   const state = startGateRun(s.id, 719);
   const run = state.activeRun!;
   run.flags = ['tree:started', `at:${node}`];
@@ -149,9 +151,10 @@ describe('clocks: in the calls', () => {
 
   it('keep a save valid with clocks and meters mid-call', () => {
     const s = generateIncident(specForSituation('hostage_crisis', 'market_row', 1));
-    const after = applyMove(startGateRun(s.id, 719), { kind: 'decide', actionId: choiceActionId('hostage_crisis', 'offer', 'hear_him'), band: 'favorable' })!;
-    expect(after.activeRun!.meters?.taker?.moved.heard).toBeDefined();
-    expect(after.activeRun!.clocks?.owner_condition?.value).toBeLessThan(60);
+    const before = startGateRun(s.id, 719);
+    const after = applyMove(before, { kind: 'decide', actionId: choiceActionId('hostage_crisis', 'going_live', 'on_stream'), band: 'favorable' })!;
+    expect(after.activeRun!.meters?.rider?.moved.heard).toBeDefined();
+    expect(after.activeRun!.clocks?.stream?.value).toBeGreaterThan(before.activeRun!.clocks!.stream.value);
     const loaded = deserialize(serialize(after, 1));
     expect(loaded?.activeRun?.clocks).toEqual(after.activeRun!.clocks);
     expect(loaded?.activeRun?.meters).toEqual(after.activeRun!.meters);
@@ -181,7 +184,7 @@ describe('clocks: running out where no fork reads it', () => {
 
   it('a short tank that runs out in a long wait hurts the resident inside; the score, the debrief and the save agree', () => {
     // The rescue's short tank, already in the red at the start, so the first long wait runs it out.
-    const base = generateIncident(specForSituation('protected_rescue', 'cedar_close', 2));
+    const base = fixtureIncident(specForSituation('protected_rescue', 'cedar_close', 2));
     const draft: ScenarioDefinition = structuredClone(base);
     draft.clocks = draft.clocks!.map(clock => clock.id === 'oxygen' ? { ...clock, start: 25 } : clock);
     expect(draft.clocks.find(clock => clock.id === 'oxygen')!.onOut).toEqual({ harm: 'serious', mark: 'tank_empty' });

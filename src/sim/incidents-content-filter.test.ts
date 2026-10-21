@@ -30,8 +30,11 @@ const HOUR = 3_600_000;
 
 /** Every subset of the descriptors, in list order. */
 const COMBOS: ContentExclusion[] = Array.from({ length: 1 << CONTENT_DESCRIPTORS.length }, (_, mask) => ({ avoid: CONTENT_DESCRIPTORS.filter((_, i) => mask & (1 << i)) }));
-/** The sensitive themes together: a set the board survives. */
-const THEMES: ContentDescriptor[] = ['suicide_self_harm', 'child_at_risk', 'domestic_violence'];
+/** The sensitive themes the board survives together: those no curated call carries in every
+ * situation (Going Live carries suicide risk in both, so avoiding it would empty the board, and the
+ * setting refuses that). */
+const THEMES: ContentDescriptor[] = (['suicide_self_harm', 'child_at_risk', 'domestic_violence'] as ContentDescriptor[])
+  .filter((descriptor) => drawableKinds({ avoid: [descriptor] }).length > 0);
 const label = (e: ContentExclusion) => (e.avoid.length ? `avoid ${e.avoid.join(', ')}` : 'avoid nothing');
 
 /** Every card a campaign's board shows over `days`, as (type, situation) pairs. */
@@ -52,7 +55,7 @@ describe('content exclusion', () => {
   });
 
   it('with nothing ruled out, every situation of every kind stays drawable', () => {
-    expect(drawableSituations({ avoid: [] })).toEqual(Object.fromEntries(EVERY_TYPE.map((type) => [type, [0, 1, 2]])));
+    expect(drawableSituations({ avoid: [] })).toEqual(Object.fromEntries(EVERY_TYPE.map((type) => [type, callTreeAt(type)!.situations.map((_, i) => i)])));
   });
 
   it('walks every combination of avoided themes: a kept situation carries nothing avoided, and avoiding more never keeps more', () => {
@@ -62,7 +65,7 @@ describe('content exclusion', () => {
       const out = excludedDescriptors(exclusion);
       for (const type of EVERY_TYPE) {
         const tree = callTreeAt(type)!;
-        for (const index of [0, 1, 2] as const) {
+        for (const index of tree.situations.map((_, i) => i as 0 | 1 | 2)) {
           const carries = (tree.situations[index]?.descriptors ?? []).some((d) => out.has(d));
           expect(kept[type].includes(index), `${label(exclusion)} ${type} ${index}`).toBe(!carries);
         }
@@ -84,7 +87,9 @@ describe('content exclusion', () => {
     const emptying = CONTENT_DESCRIPTORS.filter((d) => drawableKinds({ avoid: [d] }).length === 0);
     expect(emptying).toMatchInlineSnapshot(`
       [
+        "suicide_self_harm",
         "injury",
+        "police_gunfire",
       ]
     `);
   });

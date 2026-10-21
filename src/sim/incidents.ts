@@ -162,9 +162,12 @@ function drawCard(d: GameState, at: number, exclusion?: ContentExclusion): Incid
   const id = incidentId(spec);
   const cards = board(d);
   if (cards.some((c) => c.id === id) || d.activeRun?.scenarioId === id) return null;
-  // From v13 the board holds one live call per kind of call, never the kind in progress, so a
-  // department with two kinds unlocked sees at most two call-outs instead of the same call twice.
-  if ((cards.some((c) => c.type === spec.type) || activeStory?.type === spec.type)) return null;
+  // The board holds one live call per kind of call, never the kind in progress, so a department
+  // with two kinds unlocked sees two call-outs instead of the same call twice. While the curated
+  // catalog has fewer kinds than the board's opening cards (owner 2026-10-21, `one-card-board`), a
+  // kind may hold more than one card, each on another building (avoidFamilies), so the board fills.
+  const oneEach = SCENARIO_TYPES.length >= INCIDENT_TUNING.initialCount;
+  if (oneEach && (cards.some((c) => c.type === spec.type) || activeStory?.type === spec.type)) return null;
   const card: IncidentCard = {
     id,
     type: spec.type,

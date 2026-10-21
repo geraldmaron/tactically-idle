@@ -57,6 +57,7 @@ export const PINNED_BY: Readonly<Record<string, readonly string[]>> = {
   LEARNING_APTITUDE: sim('officer-value', 'career'),
   DETAIL_TUNING: sim('officer-value'),
   REPUTATION_TUNING: [...sim('reputation'), 'src/architecture/wiring.test.ts', BALANCE],
+  PROFILE_TUNING: [...sim('player-profile'), BALANCE],
 };
 
 type Spec = { label: string; help: string; group?: TuningGroup; mode?: ReadMode; min?: number; max?: number; step?: number; unit?: string; why?: string; items?: readonly string[] };
@@ -405,6 +406,14 @@ export const TUNING_META: readonly FieldMeta[] = [
     deadZone: { label: 'Reputation dead zone', help: 'A lean smaller than this reads as no reputation.', min: 0, max: 0.9, step: 0.05, unit: '×' },
     ...each('pull', { force: 'going in hard', assertive: 'pushing the pace', patient: 'waiting it out', talk: 'talking first' }, name => ({ label: `Reputation pull for ${name}`, help: 'Where a choice of this posture pulls the lean, from -1 (talks first) to +1 (goes in hard).', group: 'odds', min: -1, max: 1, step: 0.1, unit: '×' })),
     board: { label: 'Reputation board tilt', help: 'At a full lean, the kinds of call the name draws weigh up to 1 + this.', min: 0, max: 2, step: 0.1, unit: '×' },
+  }),
+  ...table('PROFILE_TUNING', { group: 'odds', mode: 'live' }, {
+    stallWeight: { label: 'Stall habit memory', help: 'How far one decision moves the stall habit: about the last 1/weight decisions count.', min: 0.01, max: 0.5, step: 0.01, unit: '×' },
+    warmup: { label: 'Stall habit warmup', help: 'Decisions before the stall habit counts.', min: 0, max: 30, step: 1, unit: 'decisions' },
+    comebackStreak: { label: 'Comeback after', help: 'Bad results in a row before the next call is drawn a tier lower, said on its card.', min: 1, max: 10, step: 1, unit: 'calls' },
+    'sourceStart.hardName': { label: 'Audience for a hard name', help: 'Gauge points a pressure source starts higher by at a full lean for going in hard.', min: 0, max: 40, step: 1, unit: 'points' },
+    'sourceStart.stallHabit': { label: 'Audience for a stalling habit', help: 'Gauge points a pressure source starts higher by for a department that always lets stand-offs run.', min: 0, max: 40, step: 1, unit: 'points' },
+    spendWindow: { label: 'Spend mix window', help: 'Spending entries in the ledger the spend mix reads, newest first.', mode: 'display', min: 5, max: 200, step: 5, unit: 'entries' },
   }),
 ];
 

@@ -3,584 +3,216 @@
 exports[`content exclusion > walks every combination of avoided themes: a kept situation carries nothing avoided, and avoiding more never keeps more 1`] = `
 {
   "avoid child_at_risk": {
-    "active_armed_incident": [
-      0,
-      1,
-      2,
-    ],
-    "barricaded": [
-      0,
-      1,
-      2,
-    ],
     "hostage_crisis": [
       0,
       1,
-      2,
-    ],
-    "protected_rescue": [
-      0,
-      1,
-      2,
     ],
   },
   "avoid child_at_risk, domestic_violence": {
-    "active_armed_incident": [
-      0,
-      1,
-      2,
-    ],
-    "barricaded": [
-      0,
-      1,
-      2,
-    ],
     "hostage_crisis": [
       0,
       1,
-      2,
-    ],
-    "protected_rescue": [
-      0,
-      1,
-      2,
     ],
   },
   "avoid death": {
-    "active_armed_incident": [],
-    "barricaded": [
-      0,
-      1,
-      2,
-    ],
     "hostage_crisis": [
       0,
-      1,
     ],
-    "protected_rescue": [],
   },
   "avoid death, child_at_risk": {
-    "active_armed_incident": [],
-    "barricaded": [
-      0,
-      1,
-      2,
-    ],
     "hostage_crisis": [
       0,
-      1,
     ],
-    "protected_rescue": [],
   },
   "avoid death, child_at_risk, domestic_violence": {
-    "active_armed_incident": [],
-    "barricaded": [
-      0,
-      1,
-      2,
-    ],
     "hostage_crisis": [
       0,
-      1,
     ],
-    "protected_rescue": [],
   },
   "avoid death, domestic_violence": {
-    "active_armed_incident": [],
-    "barricaded": [
-      0,
-      1,
-      2,
-    ],
     "hostage_crisis": [
       0,
-      1,
     ],
-    "protected_rescue": [],
   },
   "avoid death, injury": {
-    "active_armed_incident": [],
-    "barricaded": [],
     "hostage_crisis": [],
-    "protected_rescue": [],
   },
   "avoid death, injury, child_at_risk": {
-    "active_armed_incident": [],
-    "barricaded": [],
     "hostage_crisis": [],
-    "protected_rescue": [],
   },
   "avoid death, injury, child_at_risk, domestic_violence": {
-    "active_armed_incident": [],
-    "barricaded": [],
     "hostage_crisis": [],
-    "protected_rescue": [],
   },
   "avoid death, injury, domestic_violence": {
-    "active_armed_incident": [],
-    "barricaded": [],
     "hostage_crisis": [],
-    "protected_rescue": [],
   },
   "avoid death, injury, police_gunfire": {
-    "active_armed_incident": [],
-    "barricaded": [],
     "hostage_crisis": [],
-    "protected_rescue": [],
   },
   "avoid death, injury, police_gunfire, child_at_risk": {
-    "active_armed_incident": [],
-    "barricaded": [],
     "hostage_crisis": [],
-    "protected_rescue": [],
   },
   "avoid death, injury, police_gunfire, child_at_risk, domestic_violence": {
-    "active_armed_incident": [],
-    "barricaded": [],
     "hostage_crisis": [],
-    "protected_rescue": [],
   },
   "avoid death, injury, police_gunfire, domestic_violence": {
-    "active_armed_incident": [],
-    "barricaded": [],
     "hostage_crisis": [],
-    "protected_rescue": [],
   },
   "avoid death, police_gunfire": {
-    "active_armed_incident": [],
-    "barricaded": [
-      0,
-      1,
-    ],
-    "hostage_crisis": [
-      0,
-    ],
-    "protected_rescue": [],
+    "hostage_crisis": [],
   },
   "avoid death, police_gunfire, child_at_risk": {
-    "active_armed_incident": [],
-    "barricaded": [
-      0,
-      1,
-    ],
-    "hostage_crisis": [
-      0,
-    ],
-    "protected_rescue": [],
+    "hostage_crisis": [],
   },
   "avoid death, police_gunfire, child_at_risk, domestic_violence": {
-    "active_armed_incident": [],
-    "barricaded": [
-      0,
-      1,
-    ],
-    "hostage_crisis": [
-      0,
-    ],
-    "protected_rescue": [],
+    "hostage_crisis": [],
   },
   "avoid death, police_gunfire, domestic_violence": {
-    "active_armed_incident": [],
-    "barricaded": [
-      0,
-      1,
-    ],
-    "hostage_crisis": [
-      0,
-    ],
-    "protected_rescue": [],
+    "hostage_crisis": [],
   },
   "avoid death, suicide_self_harm": {
-    "active_armed_incident": [],
-    "barricaded": [],
     "hostage_crisis": [],
-    "protected_rescue": [],
   },
   "avoid death, suicide_self_harm, child_at_risk": {
-    "active_armed_incident": [],
-    "barricaded": [],
     "hostage_crisis": [],
-    "protected_rescue": [],
   },
   "avoid death, suicide_self_harm, child_at_risk, domestic_violence": {
-    "active_armed_incident": [],
-    "barricaded": [],
     "hostage_crisis": [],
-    "protected_rescue": [],
   },
   "avoid death, suicide_self_harm, domestic_violence": {
-    "active_armed_incident": [],
-    "barricaded": [],
     "hostage_crisis": [],
-    "protected_rescue": [],
   },
   "avoid death, suicide_self_harm, injury": {
-    "active_armed_incident": [],
-    "barricaded": [],
     "hostage_crisis": [],
-    "protected_rescue": [],
   },
   "avoid death, suicide_self_harm, injury, child_at_risk": {
-    "active_armed_incident": [],
-    "barricaded": [],
     "hostage_crisis": [],
-    "protected_rescue": [],
   },
   "avoid death, suicide_self_harm, injury, child_at_risk, domestic_violence": {
-    "active_armed_incident": [],
-    "barricaded": [],
     "hostage_crisis": [],
-    "protected_rescue": [],
   },
   "avoid death, suicide_self_harm, injury, domestic_violence": {
-    "active_armed_incident": [],
-    "barricaded": [],
     "hostage_crisis": [],
-    "protected_rescue": [],
   },
   "avoid death, suicide_self_harm, injury, police_gunfire": {
-    "active_armed_incident": [],
-    "barricaded": [],
     "hostage_crisis": [],
-    "protected_rescue": [],
   },
   "avoid death, suicide_self_harm, injury, police_gunfire, child_at_risk": {
-    "active_armed_incident": [],
-    "barricaded": [],
     "hostage_crisis": [],
-    "protected_rescue": [],
   },
   "avoid death, suicide_self_harm, injury, police_gunfire, child_at_risk, domestic_violence": {
-    "active_armed_incident": [],
-    "barricaded": [],
     "hostage_crisis": [],
-    "protected_rescue": [],
   },
   "avoid death, suicide_self_harm, injury, police_gunfire, domestic_violence": {
-    "active_armed_incident": [],
-    "barricaded": [],
     "hostage_crisis": [],
-    "protected_rescue": [],
   },
   "avoid death, suicide_self_harm, police_gunfire": {
-    "active_armed_incident": [],
-    "barricaded": [],
     "hostage_crisis": [],
-    "protected_rescue": [],
   },
   "avoid death, suicide_self_harm, police_gunfire, child_at_risk": {
-    "active_armed_incident": [],
-    "barricaded": [],
     "hostage_crisis": [],
-    "protected_rescue": [],
   },
   "avoid death, suicide_self_harm, police_gunfire, child_at_risk, domestic_violence": {
-    "active_armed_incident": [],
-    "barricaded": [],
     "hostage_crisis": [],
-    "protected_rescue": [],
   },
   "avoid death, suicide_self_harm, police_gunfire, domestic_violence": {
-    "active_armed_incident": [],
-    "barricaded": [],
     "hostage_crisis": [],
-    "protected_rescue": [],
   },
   "avoid domestic_violence": {
-    "active_armed_incident": [
-      0,
-      1,
-      2,
-    ],
-    "barricaded": [
-      0,
-      1,
-      2,
-    ],
     "hostage_crisis": [
       0,
       1,
-      2,
-    ],
-    "protected_rescue": [
-      0,
-      1,
-      2,
     ],
   },
   "avoid injury": {
-    "active_armed_incident": [],
-    "barricaded": [],
     "hostage_crisis": [],
-    "protected_rescue": [],
   },
   "avoid injury, child_at_risk": {
-    "active_armed_incident": [],
-    "barricaded": [],
     "hostage_crisis": [],
-    "protected_rescue": [],
   },
   "avoid injury, child_at_risk, domestic_violence": {
-    "active_armed_incident": [],
-    "barricaded": [],
     "hostage_crisis": [],
-    "protected_rescue": [],
   },
   "avoid injury, domestic_violence": {
-    "active_armed_incident": [],
-    "barricaded": [],
     "hostage_crisis": [],
-    "protected_rescue": [],
   },
   "avoid injury, police_gunfire": {
-    "active_armed_incident": [],
-    "barricaded": [],
     "hostage_crisis": [],
-    "protected_rescue": [],
   },
   "avoid injury, police_gunfire, child_at_risk": {
-    "active_armed_incident": [],
-    "barricaded": [],
     "hostage_crisis": [],
-    "protected_rescue": [],
   },
   "avoid injury, police_gunfire, child_at_risk, domestic_violence": {
-    "active_armed_incident": [],
-    "barricaded": [],
     "hostage_crisis": [],
-    "protected_rescue": [],
   },
   "avoid injury, police_gunfire, domestic_violence": {
-    "active_armed_incident": [],
-    "barricaded": [],
     "hostage_crisis": [],
-    "protected_rescue": [],
   },
   "avoid nothing": {
-    "active_armed_incident": [
-      0,
-      1,
-      2,
-    ],
-    "barricaded": [
-      0,
-      1,
-      2,
-    ],
     "hostage_crisis": [
       0,
       1,
-      2,
-    ],
-    "protected_rescue": [
-      0,
-      1,
-      2,
     ],
   },
   "avoid police_gunfire": {
-    "active_armed_incident": [],
-    "barricaded": [
-      0,
-      1,
-    ],
-    "hostage_crisis": [
-      0,
-    ],
-    "protected_rescue": [
-      0,
-      1,
-      2,
-    ],
+    "hostage_crisis": [],
   },
   "avoid police_gunfire, child_at_risk": {
-    "active_armed_incident": [],
-    "barricaded": [
-      0,
-      1,
-    ],
-    "hostage_crisis": [
-      0,
-    ],
-    "protected_rescue": [
-      0,
-      1,
-      2,
-    ],
+    "hostage_crisis": [],
   },
   "avoid police_gunfire, child_at_risk, domestic_violence": {
-    "active_armed_incident": [],
-    "barricaded": [
-      0,
-      1,
-    ],
-    "hostage_crisis": [
-      0,
-    ],
-    "protected_rescue": [
-      0,
-      1,
-      2,
-    ],
+    "hostage_crisis": [],
   },
   "avoid police_gunfire, domestic_violence": {
-    "active_armed_incident": [],
-    "barricaded": [
-      0,
-      1,
-    ],
-    "hostage_crisis": [
-      0,
-    ],
-    "protected_rescue": [
-      0,
-      1,
-      2,
-    ],
+    "hostage_crisis": [],
   },
   "avoid suicide_self_harm": {
-    "active_armed_incident": [
-      0,
-      1,
-      2,
-    ],
-    "barricaded": [],
     "hostage_crisis": [],
-    "protected_rescue": [
-      0,
-      1,
-      2,
-    ],
   },
   "avoid suicide_self_harm, child_at_risk": {
-    "active_armed_incident": [
-      0,
-      1,
-      2,
-    ],
-    "barricaded": [],
     "hostage_crisis": [],
-    "protected_rescue": [
-      0,
-      1,
-      2,
-    ],
   },
   "avoid suicide_self_harm, child_at_risk, domestic_violence": {
-    "active_armed_incident": [
-      0,
-      1,
-      2,
-    ],
-    "barricaded": [],
     "hostage_crisis": [],
-    "protected_rescue": [
-      0,
-      1,
-      2,
-    ],
   },
   "avoid suicide_self_harm, domestic_violence": {
-    "active_armed_incident": [
-      0,
-      1,
-      2,
-    ],
-    "barricaded": [],
     "hostage_crisis": [],
-    "protected_rescue": [
-      0,
-      1,
-      2,
-    ],
   },
   "avoid suicide_self_harm, injury": {
-    "active_armed_incident": [],
-    "barricaded": [],
     "hostage_crisis": [],
-    "protected_rescue": [],
   },
   "avoid suicide_self_harm, injury, child_at_risk": {
-    "active_armed_incident": [],
-    "barricaded": [],
     "hostage_crisis": [],
-    "protected_rescue": [],
   },
   "avoid suicide_self_harm, injury, child_at_risk, domestic_violence": {
-    "active_armed_incident": [],
-    "barricaded": [],
     "hostage_crisis": [],
-    "protected_rescue": [],
   },
   "avoid suicide_self_harm, injury, domestic_violence": {
-    "active_armed_incident": [],
-    "barricaded": [],
     "hostage_crisis": [],
-    "protected_rescue": [],
   },
   "avoid suicide_self_harm, injury, police_gunfire": {
-    "active_armed_incident": [],
-    "barricaded": [],
     "hostage_crisis": [],
-    "protected_rescue": [],
   },
   "avoid suicide_self_harm, injury, police_gunfire, child_at_risk": {
-    "active_armed_incident": [],
-    "barricaded": [],
     "hostage_crisis": [],
-    "protected_rescue": [],
   },
   "avoid suicide_self_harm, injury, police_gunfire, child_at_risk, domestic_violence": {
-    "active_armed_incident": [],
-    "barricaded": [],
     "hostage_crisis": [],
-    "protected_rescue": [],
   },
   "avoid suicide_self_harm, injury, police_gunfire, domestic_violence": {
-    "active_armed_incident": [],
-    "barricaded": [],
     "hostage_crisis": [],
-    "protected_rescue": [],
   },
   "avoid suicide_self_harm, police_gunfire": {
-    "active_armed_incident": [],
-    "barricaded": [],
     "hostage_crisis": [],
-    "protected_rescue": [
-      0,
-      1,
-      2,
-    ],
   },
   "avoid suicide_self_harm, police_gunfire, child_at_risk": {
-    "active_armed_incident": [],
-    "barricaded": [],
     "hostage_crisis": [],
-    "protected_rescue": [
-      0,
-      1,
-      2,
-    ],
   },
   "avoid suicide_self_harm, police_gunfire, child_at_risk, domestic_violence": {
-    "active_armed_incident": [],
-    "barricaded": [],
     "hostage_crisis": [],
-    "protected_rescue": [
-      0,
-      1,
-      2,
-    ],
   },
   "avoid suicide_self_harm, police_gunfire, domestic_violence": {
-    "active_armed_incident": [],
-    "barricaded": [],
     "hostage_crisis": [],
-    "protected_rescue": [
-      0,
-      1,
-      2,
-    ],
   },
 }
 `;

@@ -5,11 +5,14 @@ import { builtFor, evaluateAction, openingFlag } from './resolution';
 import { getScenario } from './scenario-registry';
 import { scenarioActions } from './scenario-types';
 import { deserialize, serialize } from './save';
-import { NOW } from './test-fixtures';
+import { callsOfKind, NOW } from './test-fixtures';
+import { ARMED_TEMPLATE } from '../gen/incident/trees-v13/armed-fixture';
 import { standingOf } from './spatial-factors';
 
 const steps: PlayStep[] = [];
-for (const tree of Object.values(CALL_TREES)) playCalls(tree!, 'random', drawCalls(tree!, 2, 4), (_result, path) => steps.push(...path));
+for (const tree of Object.values(CALL_TREES)) playCalls(tree!, 'random', drawCalls(tree!, 2, 8), (_result, path) => steps.push(...path));
+// The frozen armed call moves the team into the building on most paths.
+playCalls(ARMED_TEMPLATE.tree, 'random', callsOfKind('active_armed_incident', 4, 4242).map((call, i) => ({ scenarioId: call.id, seed: i + 1 })), (_result, path) => steps.push(...path));
 const movements = steps.filter(step => scenarioActions(getScenario(step.before.activeRun!.scenarioId)!).find(a => a.id === step.choice.id)?.approach === 'path');
 
 describe('squad movement on current call trees', () => {

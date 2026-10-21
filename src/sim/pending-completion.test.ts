@@ -3,14 +3,14 @@ import { CALL_TREES } from '../content/call-trees';
 import { drawCalls, playToEnd, POLICIES } from '../gen/incident/trees-v13/balance';
 import { computeDebrief } from './operation';
 import { deserialize, serialize } from './save';
-import { apply, NOW } from './test-fixtures';
+import { apply, callsOfKind, NOW } from './test-fixtures';
 import type { GameState } from './types';
 
 const harmed: GameState[] = [];
-for (const tree of Object.values(CALL_TREES)) for (const { scenarioId, seed } of drawCalls(tree!, 2, 8)) for (const policy of POLICIES) {
-  const state = playToEnd(scenarioId, policy, seed);
-  if (state.activeRun!.status === 'debrief' && Object.keys(state.activeRun!.personCasualties ?? {}).length) harmed.push(state);
-}
+const keep = (state: GameState) => { if (state.activeRun!.status === 'debrief' && Object.keys(state.activeRun!.personCasualties ?? {}).length) harmed.push(state); };
+for (const tree of Object.values(CALL_TREES)) for (const { scenarioId, seed } of drawCalls(tree!, 2, 8)) for (const policy of POLICIES) keep(playToEnd(scenarioId, policy, seed));
+// The frozen armed call hurts people far more often than the curated calls do.
+callsOfKind('active_armed_incident', 8, 4242).forEach((call, i) => { for (const policy of POLICIES) keep(playToEnd(call.id, policy, i + 1)); });
 
 describe('current completion preserves actual harm and care duties', () => {
   it('retains every casualty and its care state when a call ends and reloads', () => {

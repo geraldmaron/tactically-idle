@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { drawIncidentSpec, generateIncident } from '../gen/incident';
 import { applyMove, availableMoves, NOW, startGateRun } from '../gen/incident/gates/engine-driver';
 // The engine's house call (a frozen barricade), not the shipping barricade: these rules are keyed on
 // the barricade type and the subject, never on the calls lane's ids.
@@ -15,20 +14,13 @@ import { withTuning } from './tuning';
 import type { IncidentPersonDef } from './scenario-types';
 import type { ScenarioDefinition } from './scenario-types';
 import type { IncidentType } from './scenario-types';
+import { callsOfKind } from './test-fixtures';
 
 // M2 sensitivity gate (docs/incident-domain-model.md): the same action on the same call, with one
 // thing about the people or the building changed, gets different odds, for a labelled reason.
 
-function calls(type: IncidentType, n: number, seed = 5150): ScenarioDefinition[] {
-  const out: ScenarioDefinition[] = [];
-  let state = seed;
-  for (let i = 0; i < n; i++) {
-    const drawn = drawIncidentSpec(state, { level: 10, trust: 90, unlockedTypes: [type] });
-    state = drawn.state;
-    out.push(generateIncident(drawn.spec));
-  }
-  return out;
-}
+// Shipping calls, and the retired armed call from its frozen engine fixture.
+const calls = (type: IncidentType, n: number, seed = 5150): ScenarioDefinition[] => callsOfKind(type, n, seed);
 
 function odds(s: ScenarioDefinition, actionSuffix: string, change: (scenario: ScenarioDefinition, knowledge: Record<string, string>, flags: string[]) => void = () => {}) {
   const state = startGateRun(s.id, 719);
@@ -60,8 +52,8 @@ describe('incident factors: the people and the building change the odds', () => 
     expect(unknown.p).not.toBe(reported.p);
     const hostage = calls('hostage_crisis', 12).find(entry => entry.incidentPeople?.some(person => person.threat?.disposition === 'hostile' && person.dispositionFactId))!;
     const taker = hostage.incidentPeople!.find(person => person.threat)!;
-    const hidden = odds(hostage, '_offer_ask_both');
-    const revealed = odds(hostage, '_offer_ask_both', (_, knowledge) => { knowledge[taker.dispositionFactId!] = 'confirmed'; });
+    const hidden = odds(hostage, '_going_live_on_stream');
+    const revealed = odds(hostage, '_going_live_on_stream', (_, knowledge) => { knowledge[taker.dispositionFactId!] = 'confirmed'; });
     expect(revealed.p).toBeLessThan(hidden.p);
   });
 
@@ -238,7 +230,7 @@ describe('intel-odds: with one subject, how close a move comes to them (R-B5)', 
   const lone = calls('hostage_crisis', 30).find(s => s.incidentPeople!.filter(person => person.threat).length === 1)!;
   const built = buildLocation(lone.locationFamilyId, lone.locationSeed);
   const taker = lone.incidentPeople!.find(person => person.threat)!;
-  const walk = Object.values(lone.stages).flatMap(stage => stage.actions).find(entry => entry.id.endsWith('_offer_take_courier'))!;
+  const walk = Object.values(lone.stages).flatMap(stage => stage.actions).find(entry => entry.id.endsWith('_going_live_clerk_out'))!;
   const route = lone.story!.bindings.routes[walk.storyRoute!];
   const byId = new Map(built.location.openings.map(opening => [opening.id, opening]));
   const touched = new Set([route.fromSpaceId, ...route.openingIds.flatMap(id => [byId.get(id)!.a, byId.get(id)!.b])]);
@@ -247,18 +239,18 @@ describe('intel-odds: with one subject, how close a move comes to them (R-B5)', 
   const move = (spaceId: string) => (scenario: ScenarioDefinition) => { scenario.incidentPeople!.find(person => person.id === taker.id)!.spaceId = spaceId; };
 
   it('a walk-out past the subject’s room meets the full seat; one that keeps away meets less', () => {
-    expect(lone, 'a hostage call with the taker alone').toBeDefined();
-    expect(away, 'a room neither on nor next to the courier’s way out').toBeDefined();
-    const near = odds(lone, '_offer_take_courier', move(route.fromSpaceId));
-    const far = odds(lone, '_offer_take_courier', move(away!.id));
+    expect(lone, 'a hostage call with the rider alone').toBeDefined();
+    expect(away, 'a room neither on nor next to the clerk’s way out').toBeDefined();
+    const near = odds(lone, '_going_live_clerk_out', move(route.fromSpaceId));
+    const far = odds(lone, '_going_live_clerk_out', move(away!.id));
     expect(far.p).toBeGreaterThan(near.p);
     expect(near.labels.some(label => label.endsWith('in a room this work reaches'))).toBe(true);
     expect(far.labels.some(label => label.endsWith('away from the rooms this work reaches'))).toBe(true);
   });
 
   it('a phone call, which moves nobody, is never weighed by it', () => {
-    const near = odds(lone, '_offer_hear_him', move(route.fromSpaceId));
-    const far = odds(lone, '_offer_hear_him', move(away!.id));
+    const near = odds(lone, '_going_live_on_stream', move(route.fromSpaceId));
+    const far = odds(lone, '_going_live_on_stream', move(away!.id));
     expect(far.labels.some(label => label.includes('this work reaches'))).toBe(false);
     expect(near.labels.some(label => label.includes('this work reaches'))).toBe(false);
   });

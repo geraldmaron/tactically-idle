@@ -68,8 +68,11 @@ export function callNeedsOf(tree: CallTree | undefined): CallNeeds {
  */
 export function boardShortages(state: GameState, scenarioId: Id, now: number): BoardShortage[] {
   const type = getScenario(scenarioId)?.incident?.type;
-  if (!type) return [];
-  const needs = callNeeds(type);
+  return type ? shortagesFor(state, callNeeds(type), now) : [];
+}
+
+/** What the department is short of for these needs (boardShortages, for one call's needs). */
+export function shortagesFor(state: GameState, needs: CallNeeds, now: number): BoardShortage[] {
   const certs = needs.certs.map((id) => ({ kind: 'cert' as const, id, have: deployableHolders(state, id, now) })).filter((c) => c.have === 0);
   const gear = needs.gear.map((g) => ({ kind: 'gear' as const, ...g, have: g.itemIds.reduce((n, id) => n + autoEquipReadyUnits(state, id, now).length, 0) })).filter((g) => g.have < g.need);
   return [...certs, ...gear];

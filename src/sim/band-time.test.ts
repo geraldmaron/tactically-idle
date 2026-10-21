@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { drawIncidentSpec, generateIncident } from '../gen/incident';
 import { applyMove, NOW, sampleFor, startGateRun } from '../gen/incident/gates/engine-driver';
 import { CLOCK_RULES_V1, forkMinutes } from './clocks';
 import { withVariants } from '../gen/incident/drawn-model';
@@ -9,6 +8,7 @@ import { getScenario } from './scenario-registry';
 import type { ActionDefinition } from './scenario-types';
 import { withTuning, type TuningPatch } from './tuning';
 import type { OutcomeBand } from './types';
+import { callsOfKind } from './test-fixtures';
 
 // A choice's minutes per band live in one table, RESOLUTION_TUNING.bandTime: the commit charges
 // them, the preview shows them (expected time and range), and the clock lookahead reads them.
@@ -21,7 +21,7 @@ const round1 = (n: number) => Math.round(n * 10) / 10;
 function plainStarts() {
   const out: { id: string; actionId: string; band: OutcomeBand }[] = [];
   for (const type of ['barricaded', 'hostage_crisis', 'protected_rescue'] as const) {
-    const id = generateIncident(drawIncidentSpec(41, { level: 10, trust: 90, unlockedTypes: [type] }).spec).id;
+    const id = callsOfKind(type, 1, 41)[0].id;
     const state = startGateRun(id, 719);
     const scenario = getScenario(id)!;
     for (const view of actionViews(state, NOW, 'A').filter(entry => entry.eligible)) {

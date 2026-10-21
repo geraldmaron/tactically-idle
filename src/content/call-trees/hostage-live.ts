@@ -139,7 +139,7 @@ export const HOSTAGE_LIVE: CallTree = {
   nodes: [
     // ------------------------------------------------------------------ stage 1
     { id: 'going_live', stage: 'assess',
-      threat: { label: 'The address goes out', minutes: 6, text: 'Someone in the comments posts the address of {place}, and the first scooters turn onto the block with their horns going.', pressure: 4, bump: { tape_riders: 15, stream: 8 },
+      threat: { label: 'The address goes out', minutes: 11, text: 'Someone in the comments posts the address of {place}, and the first scooters turn onto the block with their horns going.', pressure: 4, bump: { tape_riders: 15, stream: 8 },
         beats: [
           { id: 'scooters', at: 1.2, by: 'radio', line: 'East side. Six scooters at the tape, more coming.', bump: { tape_riders: 6 } },
           { id: 'see_them', at: 2.6, by: 'rider', line: 'You see them out there? Those are my people.', bump: { stream: 6 } },
@@ -238,7 +238,7 @@ export const HOSTAGE_LIVE: CallTree = {
 
     // ------------------------------------------------------------------ stage 2: the stream is up
     { id: 'on_air', stage: 'adapt',
-      threat: { label: 'The comments turn', minutes: 5, text: 'The comments start to turn. People ask why {rider.first} needs a handgun if {rider.he} didn’t take anything, and {rider.first} reads every one of them out loud.', pressure: 5, mark: ['turned_chat'], moves: { rider: 'provoked' }, bump: { stream: 10 },
+      threat: { label: 'The comments turn', minutes: 11, text: 'The comments start to turn. People ask why {rider.first} needs a handgun if {rider.he} didn’t take anything, and {rider.first} reads every one of them out loud.', pressure: 5, mark: ['turned_chat'], moves: { rider: 'provoked' }, bump: { stream: 10 },
         beats: [
           { id: 'friend_types', at: 1.4, by: 'rider', line: '{friend.first} says come out, I got you. {friend.first}, I can’t.' },
           { id: 'count_two', at: 2.8, by: 'radio', line: 'Stream just passed two thousand. Van from the news is two blocks out.', bump: { stream: 6 } },
@@ -336,7 +336,7 @@ export const HOSTAGE_LIVE: CallTree = {
 
     // ------------------------------------------------------------------ stage 2: the stream is down
     { id: 'off_air', stage: 'adapt',
-      threat: { label: '{rider.first} stands over {manager.first}', minutes: 5, text: '{rider.first} stops pacing and stands over {manager.first}, close, and asks {manager.him} the same question again and again in the same flat voice.', pressure: 6, moves: { rider: 'provoked' }, bump: { tape_riders: 8 },
+      threat: { label: '{rider.first} stands over {manager.first}', minutes: 12, text: '{rider.first} stops pacing and stands over {manager.first}, close, and asks {manager.him} the same question again and again in the same flat voice.', pressure: 6, moves: { rider: 'provoked' }, bump: { tape_riders: 8 },
         beats: [
           { id: 'horns', at: 1.5, by: 'radio', line: 'Tape’s pushing. Forty riders, maybe more. Horns nonstop.', bump: { tape_riders: 8 } },
           { id: 'no_one', at: 3.1, by: 'rider', line: 'Nobody can see this now. You get that?' },
@@ -389,7 +389,7 @@ export const HOSTAGE_LIVE: CallTree = {
 
     // ------------------------------------------------------------------ stage 2: the clerk is out (the turn)
     { id: 'clerk_talks', stage: 'adapt',
-      threat: { label: 'The clerk’s phone lights up', minutes: 5, text: '{clerk.first}’s phone buzzes in an officer’s hand. It is {manager.first}’s number, calling from inside.', pressure: 4, bump: { stream: 6 },
+      threat: { label: 'The clerk’s phone lights up', minutes: 10, text: '{clerk.first}’s phone buzzes in an officer’s hand. It is {manager.first}’s number, calling from inside.', pressure: 4, bump: { stream: 6 },
         beats: [
           { id: 'clerk_shakes', at: 1.6, by: 'clerk', line: 'Is {manager.first} okay? Just tell me {manager.first} is okay.' },
           { id: 'rider_asks', at: 3.2, by: 'rider', line: 'Where’s the kid? Somebody took the kid.', moves: { rider: 'team_seen' }, bump: { stream: 6 } },
@@ -417,16 +417,16 @@ export const HOSTAGE_LIVE: CallTree = {
               bump: { stream: 10 }, next: { node: 'way_out' }, objective: 3, pressure: 4 }],
           } },
         // The temptation (dilemma pattern 15): a story that ends the stand-off, if it is true.
-        { id: 'say_clerk_backs', title: 'Tell {rider.him} {clerk.first} backs {rider.him}', icon: 'radio', talksTo: 'rider', check: check(TALK, 4), minutes: 2, consequenceLevel: 'high',
+        { id: 'say_clerk_backs', title: 'Tell {rider.him} {clerk.first} backs {rider.him}', icon: 'radio', talksTo: 'rider', deceives: true, check: check(TALK, 4), minutes: 2, consequenceLevel: 'high',
           summary: '{lead} tells {rider.first} that {clerk.first} is outside and saying {rider.first} didn’t take the bag. Nobody has asked {clerk.first} that. It is the sentence {rider.first} came for, offered before anyone knows if it is true. If it isn’t, {rider.first} hears that too, on the stream.',
           pull: 'The words {rider.first} came for, before anyone else has to say them.',
           cost: 'A promise the team can’t check, and two thousand people who will.',
           preview: { favorable: 'Once {rider.first} hears it, {rider.he} {rider~starts|start} talking about walking out.', mixed: '{rider.first} wants to hear it from {clerk.first}.', adverse: '{rider.first} finds out the story isn’t true, live, and the handgun could come up.' },
           outcomes: {
             favorable: [{ text: '{rider.first} asks the negotiator to say it again, slower, and then says it to the camera {rider.himself}. {rider.His} voice goes up at the end, like a question. For the first time since your squad arrived, {rider.he} {rider~sits|sit} down.',
-              promise: { id: 'clerk_backs', to: 'rider' }, mark: ['lied_clerk'], moves: { rider: 'released' }, next: { node: 'way_out' }, objective: 15, pressure: -8 }],
+              promise: { id: 'clerk_backs', to: 'rider', kind: 'lie' }, mark: ['lied_clerk'], moves: { rider: 'released' }, next: { node: 'way_out' }, objective: 15, pressure: -8 }],
             mixed: [{ text: '{rider.first} wants {clerk.first} to say it, on the stream, in {clerk.his} own voice. The negotiator says {clerk.first} is with the medic. {rider.first} says {rider.he} {rider~can|can} wait.',
-              promise: { id: 'clerk_backs', to: 'rider' }, mark: ['lied_clerk'], moves: { rider: 'heard' }, next: { node: 'way_out' }, objective: 8 }],
+              promise: { id: 'clerk_backs', to: 'rider', kind: 'lie' }, mark: ['lied_clerk'], moves: { rider: 'heard' }, next: { node: 'way_out' }, objective: 8 }],
             adverse: escalate({
               lead: 'A comment comes up on the stream from {clerk.first}’s own account, typed in the back of the patrol car. Nobody told {clerk.him} to stop. {rider.first} reads it out loud.',
               threat: '{rider.first} turns the handgun on {manager.first} and tells the camera this is what the police do.',
@@ -438,7 +438,7 @@ export const HOSTAGE_LIVE: CallTree = {
 
     // ------------------------------------------------------------------ stage 3
     { id: 'way_out', stage: 'resolve',
-      threat: { label: 'The news van parks', minutes: 6, text: 'A news van parks at the corner with its mast going up, and the stream’s count jumps by a thousand while {rider.first} watches the number.', pressure: 5, bump: { stream: 18, tape_riders: 8 },
+      threat: { label: 'The news van parks', minutes: 12, text: 'A news van parks at the corner with its mast going up, and the stream’s count jumps by a thousand while {rider.first} watches the number.', pressure: 5, bump: { stream: 18, tape_riders: 8 },
         beats: [
           { id: 'medic', at: 1.8, by: 'radio', line: 'Medic staged at the corner. Ready when you are.' },
           { id: 'how_out', at: 3.4, by: 'rider', line: 'If I walk out, do I walk out on camera? Yes or no.', bump: { stream: 5 } },
@@ -593,7 +593,7 @@ export const HOSTAGE_LIVE: CallTree = {
 
     // ------------------------------------------------------------------ stage 3: exposed on camera (situation 2)
     { id: 'cornered', stage: 'resolve',
-      threat: { label: 'The count keeps climbing', minutes: 4, text: 'The count passes five thousand. Somebody has clipped {manager.first}’s sentence and it is going around on its own, faster than the stream.', pressure: 6, moves: { rider: 'provoked' }, bump: { stream: 15 },
+      threat: { label: 'The count keeps climbing', minutes: 13, text: 'The count passes five thousand. Somebody has clipped {manager.first}’s sentence and it is going around on its own, faster than the stream.', pressure: 6, moves: { rider: 'provoked' }, bump: { stream: 15 },
         beats: [
           { id: 'thief', at: 1.2, by: 'radio', line: 'Comments are calling the subject a thief now. Lots of them.' },
           { id: 'rider_quiet', at: 2.6, by: 'rider', line: 'They were all on my side. Every one of them.' },
@@ -643,7 +643,7 @@ export const HOSTAGE_LIVE: CallTree = {
 
     // ------------------------------------------------------------------ stage 3: the handgun is up
     { id: 'threat', stage: 'resolve',
-      threat: { label: 'The news goes live', minutes: 3, text: 'The news van goes live from the corner, and the stream’s count doubles in a minute. {rider.first} sees it happen on the screen.', pressure: 6, bump: { stream: 20 } },
+      threat: { label: 'The news goes live', minutes: 10, text: 'The news van goes live from the corner, and the stream’s count doubles in a minute. {rider.first} sees it happen on the screen.', pressure: 6, bump: { stream: 20 } },
       prompt: 'The handgun is pointed at {manager.first}, and the phone on the register is pointed at both of them. {manager.first} has gone still. {manager.His} eyes are on {rider.first}’s face, not the handgun.',
       exchange: [{ by: 'radio', line: 'Window. Handgun on the manager. Holding.' }, { by: 'manager', line: '{rider.first}. They’re all watching you.' }],
       promptIf: [
@@ -714,7 +714,7 @@ export const HOSTAGE_LIVE: CallTree = {
           } },
       ] },
     { id: 'fired_on', stage: 'resolve',
-      threat: { label: 'A call from home', minutes: 3, text: '{rider.first}’s phone lights up with a call from home. {rider.He} {rider~holds|hold} it up so the stream can see who is calling, and doesn’t answer it.', pressure: 8, bump: { stream: 15 } },
+      threat: { label: 'A call from home', minutes: 10, text: '{rider.first}’s phone lights up with a call from home. {rider.He} {rider~holds|hold} it up so the stream can see who is calling, and doesn’t answer it.', pressure: 8, bump: { stream: 15 } },
       prompt: 'The front window has a hole in it, and {rider.first} is behind the counter with {manager.first}. The phone is still propped on the register. Thousands of people just watched the shot.',
       exchange: [{ by: 'radio', line: 'Shot fired through the window. Nobody hit outside.' }, { by: 'rider', line: 'I didn’t mean it. I didn’t mean that.' }],
       choices: [
@@ -765,7 +765,7 @@ export const HOSTAGE_LIVE: CallTree = {
 
     // ------------------------------------------------------------------ stage 3: the manager is out
     { id: 'last_word', stage: 'resolve',
-      threat: { label: '{rider.first} sits down', minutes: 5, text: '{rider.first} sits on the floor behind the counter, out of sight of the window, and turns the phone so it films the ceiling.', pressure: 4 },
+      threat: { label: '{rider.first} sits down', minutes: 13, text: '{rider.first} sits on the floor behind the counter, out of sight of the window, and turns the phone so it films the ceiling.', pressure: 4 },
       prompt: '{manager.first} is outside with the medic, in a gray blanket. {rider.first} is alone behind the counter with the phone and the count, and the only thing left to decide is how {rider.he} {rider~walks|walk} out of {place}.',
       exchange: [{ by: 'rider', line: 'Everybody’s waiting to see what I do.' }, { by: 'negotiator', line: 'Then let’s give them something boring.' }],
       promptIf: [

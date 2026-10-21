@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { generateIncident } from '../gen/incident';
 import { applyMove, availableMoves, drawnAt, NOW, startGateRun } from '../gen/incident/gates/engine-driver';
 import { FORCE_REASONS } from '../content/incidents/lines';
 import { qualifiedForceUnit } from './force-risk';
@@ -8,8 +7,9 @@ import { computeDebrief } from './operation';
 import { makeUnit } from './test-fixtures';
 import type { GameState } from './types';
 import { departmentUpkeep } from './equipment-manager-policy';
+import { fixtureIncident } from './test-fixtures';
 
-const scenario = () => generateIncident({ type: 'active_armed_incident', familyId: 'market_row', buildingSeed: 7, seed: 3, tier: 2, contentVersion: 13 });
+const scenario = () => fixtureIncident({ type: 'active_armed_incident', familyId: 'market_row', buildingSeed: 7, seed: 3, tier: 2, contentVersion: 13 });
 
 /** Reach force through actual choices, without inventing a node, threat or participant. */
 function forceDecision(start: GameState) {
@@ -79,7 +79,7 @@ describe('current armed call force equipment', () => {
 
   describe('less-lethal supplies', () => {
     const device = (key: string) => key.startsWith('less_lethal_device:');
-    const armed = (seed: number) => generateIncident({ type: 'active_armed_incident', familyId: 'market_row', buildingSeed: 7, seed, tier: 2, contentVersion: 13 });
+    const armed = (seed: number) => fixtureIncident({ type: 'active_armed_incident', familyId: 'market_row', buildingSeed: 7, seed, tier: 2, contentVersion: 13 });
     const kit = (seed: number, supplies: string[]) => startGateRun(armed(seed).id, 719, { items: ['conducted_energy_device', ...supplies], certs: ['less_lethal'] });
     /** The first call seed whose reachable force decision is within the device's reach. */
     function inReach(supplies: string[]) {

@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { drawIncidentSpec, generateIncident } from '../gen/incident';
 import { applyMove, availableMoves, NOW, startGateRun } from '../gen/incident/gates/engine-driver';
 import { cascadeChance, cascadeDistribution, drawnDistribution, incomingFireDistribution, incomingFireOdds, resolveDrawn, type DrawnContext } from './drawn-effects';
 import { FORCE_RISK_V1, forceDistribution, type ForceRiskProfile } from './force-risk';
@@ -8,6 +7,7 @@ import { makeUnit } from './test-fixtures';
 import { getScenario } from './scenario-registry';
 import type { IncidentPersonDef, OutcomeEffect, ScenarioDefinition } from './scenario-types';
 import type { GameState, OperationRun, OutcomeBand, StageId } from './types';
+import { callsOfKind } from './test-fixtures';
 
 // The drawn-result odds the lab shows come from the same plans resolveDrawn samples
 // (sim/drawn-effects.ts drawPlan). Each distribution is checked against resolveDrawn itself, run on
@@ -141,12 +141,10 @@ describe('cascade odds', () => {
 describe('drawnDistributionAt', () => {
   it('lists, for real calls, every drawn result a commit then records', () => {
     let checked = 0;
+    // The frozen armed call fires early and often; Going Live fires later.
     for (const type of ['active_armed_incident', 'hostage_crisis'] as const) {
-      let rng = 99;
-      for (let i = 0; i < 3; i++) {
-        const drawn = drawIncidentSpec(rng, { level: 10, trust: 90, unlockedTypes: [type] });
-        rng = drawn.state;
-        let frontier: GameState[] = [startGateRun(generateIncident(drawn.spec).id, 719)];
+      for (const call of callsOfKind(type, 3, 99)) {
+        let frontier: GameState[] = [startGateRun(call.id, 719)];
         for (let depth = 0; depth < 3 && frontier.length; depth++) {
           const next: GameState[] = [];
           for (const state of frontier.slice(0, 2)) {
@@ -176,7 +174,7 @@ describe('drawnDistributionAt', () => {
   }, 120_000);
 
   it('is empty with no call running, for an action not at this stage, and for a band with nothing drawn', () => {
-    const state = startGateRun(generateIncident(drawIncidentSpec(99, { level: 10, trust: 90, unlockedTypes: ['barricaded'] }).spec).id, 719);
+    const state = startGateRun(callsOfKind('hostage_crisis', 1, 99)[0].id, 719);
     expect(drawnDistributionAt({ ...state, activeRun: null }, 'x', 'favorable')).toEqual([]);
     expect(drawnDistributionAt(state, 'not_an_action', 'favorable')).toEqual([]);
   });
