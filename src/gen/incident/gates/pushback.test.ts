@@ -73,7 +73,9 @@ describe('a push-back line in play', () => {
     const view = actionViews(state, NOW, 'A').find(entry => entry.eligible)!;
     return apply(state, { type: 'decide', actionId: view.id, actingSquadIds: view.actingSquadIds, supportSquadIds: view.supportSquadIds, ...(dither === undefined ? {} : { ditherMinutes: dither }) }).state;
   };
-  const spoken = (state: ReturnType<typeof decide>) => (state.activeRun!.history.at(-1)!.committed?.exchange ?? []).map(line => line.line);
+  // A beat the stall reached was heard live, so the record keeps it as heard, not as the result's
+  // own transcript (told once, owner 2026-10-21).
+  const spoken = (state: ReturnType<typeof decide>) => { const c = state.activeRun!.history.at(-1)!.committed; return [...(c?.heard ?? []).filter(line => line.speaker), ...c?.exchange ?? []].map(line => line.line); };
 
   it('fires the lines the stall reached, once, with their marks, and replays them', () => {
     withDraftScenario(s, sid => {
