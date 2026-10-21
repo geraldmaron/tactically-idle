@@ -14,6 +14,7 @@ import { CallTile } from './CallTile';
 import { ScreenBanner } from '../art/Plates';
 import { GamePeopleProvider } from '../people/PeopleText';
 import { lexiconFor } from '../people/lexicon';
+import { CardWarning, cardDescriptors } from '../settings/CardWarning';
 import './ops-visual.css';
 
 /**
@@ -116,6 +117,7 @@ function IncidentCardView({ g, entry, now, isNew, squadCount, onPrepare }: { g: 
       <CallTile card={card} scenario={scenario} isNew={isNew} familyId={scenario?.locationFamilyId ?? spec?.familyId ?? incident.familyId} type={spec?.type ?? incident.type} tier={spec?.tier ?? incident.tier}
         facts={incident.newKind && <Chip tone="amber" icon="star">New kind of call</Chip>}
         short={short}
+        contentNote={<CardWarning descriptors={cardDescriptors(incident.id)} />}
         warning={<Eligibility card={card} squadCount={squadCount} />}
         footer={<>
           <TimeLeftBar arrivedAt={incident.arrivedAt} expiresAt={incident.expiresAt} now={now} />

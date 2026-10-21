@@ -223,3 +223,24 @@
   gap: 2px;
   font-size: 15px;
 }
+
+/* The call card's warning (CardWarning). */
+.optile-warning {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 8px 10px;
+  border-left: 3px solid var(--warn);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  background: var(--panel);
+  font-size: 14px;
+  line-height: 1.35;
+  color: var(--text-dim);
+}
+.optile-warning p {
+  margin: 0;
+}
+.optile-warning strong {
+  color: var(--text);
+}

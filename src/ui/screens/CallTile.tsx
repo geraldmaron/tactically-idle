@@ -17,8 +17,8 @@ import { money } from '../format';
 /** A compact call tile: a type badge with tier pips, the title and place, a two-line summary, a fact
  * row and a footer with the time left and Prepare. The full brief lives on the Prepare screen.
  * The board also passes legacy cards, which can lack a scenario, family, type or tier. */
-export function CallTile({ card, scenario, familyId, type, tier, isNew = false, facts, footer, warning, short = [] }: { card: ScenarioCard; scenario: ScenarioDefinition | null; familyId: string | null; type: IncidentType | string | null; tier: number | null;
-  isNew?: boolean; facts?: ReactNode; footer?: ReactNode; warning?: ReactNode; short?: BoardShortage[] }): JSX.Element {
+export function CallTile({ card, scenario, familyId, type, tier, isNew = false, facts, footer, warning, contentNote, short = [] }: { card: ScenarioCard; scenario: ScenarioDefinition | null; familyId: string | null; type: IncidentType | string | null; tier: number | null;
+  isNew?: boolean; facts?: ReactNode; footer?: ReactNode; warning?: ReactNode; contentNote?: ReactNode; short?: BoardShortage[] }): JSX.Element {
   const meta = incidentMeta(type);
   const blurb = familyBlurb(familyId);
   const diff = scenario?.difficulty;
@@ -48,6 +48,7 @@ export function CallTile({ card, scenario, familyId, type, tier, isNew = false, 
         {isNew && <span className="newbadge stamp stamp-amber">New</span>}
       </div>
       <p className="opboard-summary"><PeopleText text={card.summary} /></p>
+      {contentNote}
       <div className="chips opboard-facts">
         {diff && <DifficultyChip band={diff.band} />}
         <Chip icon="people">{card.squadRange.min === card.squadRange.max ? `${card.squadRange.min} squad` : `${card.squadRange.min}–${card.squadRange.max} squads`}</Chip>
