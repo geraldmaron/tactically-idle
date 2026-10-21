@@ -155,7 +155,7 @@ describe('a clock fork reads the decision’s full minutes', () => {
 describe('the saved team minutes match the live evaluation', () => {
   it('on sampled plays of every shipping call, each committed decision saved the minutes its evaluation computed', () => {
     let checked = 0;
-    for (const tree of Object.values(CALL_TREES)) for (const { scenarioId, seed } of drawCalls(tree!, 3, 8)) for (const policy of POLICIES.slice(0, 2)) {
+    for (const tree of Object.values(CALL_TREES)) for (const { scenarioId, seed } of drawCalls(tree!, 3, 12)) for (const policy of POLICIES.slice(0, 2)) {
       playToEnd(scenarioId, policy, seed, { onStep: ({ before, choice, after }) => {
         const run = before.activeRun!, scenario = getScenario(run.scenarioId)!;
         const action = scenario.stages[run.stage as StageId].actions.find(entry => entry.id === choice.id)!;

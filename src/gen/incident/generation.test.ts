@@ -1,3 +1,4 @@
+import { SCENARIO_TYPES } from '../../content/scenario-types';
 import { CALL_TREES } from '../../content/call-trees';
 import { drawCalls, playToEnd } from './trees-v13/balance';
 import { describe, expect, it } from 'vitest';
@@ -72,9 +73,10 @@ describe('current generated incidents', () => {
     for (const seed of [1, 12345, 9876, 4294967295]) {
       const state = createInitialState(NOW, seed);
       const cards = state.incidents.length;
-      // One live call per kind: a board with one curated kind holds one card.
+      // One live call per kind once there are as many kinds as cards; with one curated kind the
+      // board repeats it (sim/incidents.ts), still on distinct buildings.
       expect(cards).toBeGreaterThanOrEqual(1);
-      expect(new Set(state.incidents.map(c => c.type)).size).toBe(cards);
+      expect(new Set(state.incidents.map(c => c.type)).size).toBe(Math.min(cards, SCENARIO_TYPES.length));
       expect(new Set(state.incidents.map(c => c.familyId)).size).toBe(cards);
       expect(scenarioCards(state, NOW).filter(c => c.id.startsWith('gen:'))).toHaveLength(cards);
     }

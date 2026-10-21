@@ -5,6 +5,8 @@ import { actionViews } from '../../sim/operation-selectors';
 import { NOW } from '../../sim/test-fixtures';
 import { startGateRun } from './gates/engine-driver';
 import { drawCalls } from './trees-v13/balance';
+import { fixtureCalls } from './trees-v13/house-call-fixture';
+import { ARMED_TEMPLATE } from './trees-v13/armed-fixture';
 import { derivedGear, GEAR_BY_ACTION, gearFor, WATCH_CAPABILITY } from './action-gear';
 
 describe('gear by what a choice physically does', () => {
@@ -67,23 +69,24 @@ describe('compiled calls carry the gear their choices bring', () => {
 });
 
 describe('the hailer only carries as far as its range', () => {
-  // Going Live's call through the glass needs a hailer, and the derived hailer reaches the rider only
-  // within the item's range: from the corner it is open, from a block away it closes with the reason.
-  const [{ scenarioId }] = drawCalls(CALL_TREES.hostage_crisis!, 3, 1);
+  // A voice sent through the walls derives a hailer, which reaches the subject only within the item's
+  // range. Going Live's voice choices sit past its first stage, so the frozen armed fixture's opening
+  // announcement carries the case.
+  const [{ id: scenarioId }] = fixtureCalls(ARMED_TEMPLATE, 1, 1, 'hailer', 3);
   const announce = (far: boolean) => {
     const state = startGateRun(scenarioId);
     if (far) for (const task of state.activeRun!.squadTasks) { const at = task.at ?? { x: 0, y: 0 }; task.stagingId = null; task.at = { x: at.x + 1000, y: at.y + 1000 }; }
-    return actionViews(state, NOW, 'A').find(view => view.id === 't13_hostage_crisis_going_live_hail')!;
+    return actionViews(state, NOW, 'A').find(view => view.id.endsWith('_shots_announce'))!;
   };
 
   it('is open from where the squad deploys', () => {
     expect(announce(false).eligible).toBe(true);
   });
 
-  it('stops helping, and the call gets harder, when the squad stands beyond it', () => {
-    // The hailer is the call's bonus, not a requirement: a voice can still carry without it.
-    const near = announce(false), far = announce(true);
-    expect(far.eligible).toBe(true);
-    expect(far.likelihood.favorable).toBeLessThan(near.likelihood.favorable);
+  it('closes, with the reason, when the squad stands beyond it', () => {
+    // The announcement requires the hailer, so out of range it closes instead of only getting harder.
+    const far = announce(true);
+    expect(far.eligible).toBe(false);
+    expect(far.reason).toBeTruthy();
   });
 });
