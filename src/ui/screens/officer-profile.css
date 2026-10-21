@@ -1,0 +1,28 @@
+/* Officer profile (officer-profile): hero, cost and value strip, readiness, three tabs, footer. */
+.profile { display: grid; gap: 12px; min-width: 0; }
+.profile-hero { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; align-items: center; }
+.profile-portrait { position: relative; }
+.profile-portrait img, .profile-portrait canvas { border-radius: 12px; }
+.profile-leader { position: absolute; right: -4px; top: -4px; display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--amber-2); color: var(--amber-ink); }
+.profile-id { display: grid; gap: 6px; min-width: 0; }
+.profile-facts { display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 0; font-size: 13px; color: var(--text-dim); }
+.profile-facts span { display: inline-flex; align-items: center; gap: 4px; }
+.profile-value, .profile-record { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 0; }
+.profile-value > div, .profile-record > div { display: grid; gap: 2px; padding: 8px 10px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel-2); min-width: 0; }
+.profile-value dt, .profile-record dt { font-family: var(--font-cond); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-dim); }
+.profile-value dd, .profile-record dd { margin: 0; font-family: var(--font-cond); font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.profile-ready { display: grid; gap: 6px; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius); }
+.profile-ready > .chip { justify-self: start; }
+.profile-avail { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 13px; }
+.profile-panel { min-width: 0; }
+.profile-stack { display: grid; gap: 14px; min-width: 0; }
+.profile-stack section { display: grid; gap: 6px; min-width: 0; }
+.profile-head { margin: 0; font-family: var(--font-cond); font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-dim); }
+.profile-traits { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.profile-traits li { display: grid; gap: 2px; font-size: 13px; }
+.profile-traits strong { display: inline-flex; align-items: center; gap: 4px; }
+.profile-traits span { color: var(--text-dim); }
+.profile-actions { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; gap: 8px; }
+.profile-actions .btn { min-height: 44px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.profile-dismiss p { margin: 0 0 8px; }
+.profile-traits .profile-trait-origin { font-size: 12px; color: var(--mint); }

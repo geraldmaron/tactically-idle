@@ -1,0 +1,138 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`content exclusion > walks every combination of avoided themes: a kept situation carries nothing avoided, and avoiding more never keeps more 1`] = `
+{
+  "avoid child_at_risk": {
+    "active_armed_incident": [
+      0,
+      1,
+      2,
+    ],
+    "barricaded": [],
+    "hostage_crisis": [
+      0,
+      1,
+      2,
+    ],
+    "protected_rescue": [
+      0,
+      1,
+      2,
+    ],
+  },
+  "avoid child_at_risk, domestic_violence": {
+    "active_armed_incident": [
+      0,
+      1,
+      2,
+    ],
+    "barricaded": [],
+    "hostage_crisis": [
+      0,
+      1,
+      2,
+    ],
+    "protected_rescue": [
+      0,
+      1,
+      2,
+    ],
+  },
+  "avoid domestic_violence": {
+    "active_armed_incident": [
+      0,
+      1,
+      2,
+    ],
+    "barricaded": [],
+    "hostage_crisis": [
+      0,
+      1,
+      2,
+    ],
+    "protected_rescue": [
+      0,
+      1,
+      2,
+    ],
+  },
+  "avoid nothing": {
+    "active_armed_incident": [
+      0,
+      1,
+      2,
+    ],
+    "barricaded": [
+      0,
+      1,
+      2,
+    ],
+    "hostage_crisis": [
+      0,
+      1,
+      2,
+    ],
+    "protected_rescue": [
+      0,
+      1,
+      2,
+    ],
+  },
+  "avoid suicide_self_harm": {
+    "active_armed_incident": [
+      0,
+      1,
+      2,
+    ],
+    "barricaded": [],
+    "hostage_crisis": [],
+    "protected_rescue": [
+      0,
+      1,
+      2,
+    ],
+  },
+  "avoid suicide_self_harm, child_at_risk": {
+    "active_armed_incident": [
+      0,
+      1,
+      2,
+    ],
+    "barricaded": [],
+    "hostage_crisis": [],
+    "protected_rescue": [
+      0,
+      1,
+      2,
+    ],
+  },
+  "avoid suicide_self_harm, child_at_risk, domestic_violence": {
+    "active_armed_incident": [
+      0,
+      1,
+      2,
+    ],
+    "barricaded": [],
+    "hostage_crisis": [],
+    "protected_rescue": [
+      0,
+      1,
+      2,
+    ],
+  },
+  "avoid suicide_self_harm, domestic_violence": {
+    "active_armed_incident": [
+      0,
+      1,
+      2,
+    ],
+    "barricaded": [],
+    "hostage_crisis": [],
+    "protected_rescue": [
+      0,
+      1,
+      2,
+    ],
+  },
+}
+`;

@@ -1,3 +1,4 @@
+import { xpForService } from '../content/ranks';
 import { CURRENT_SAVE_VERSION } from './save';
 import { createPersonnel } from './personnel';
 // Test GameState builder for operation tests. Independent of department.ts so the
@@ -58,7 +59,8 @@ function makeOfficer(
     certs,
     traits,
     wage: 20,
-    xp: 0,
+    // Rank follows service, as it does for starting officers and recruits.
+    xp: xpForService(career.service),
     stress: 0,
     injury: null,
     squadId,
@@ -78,6 +80,7 @@ export function setCareer(state: GameState, officerId: Id, career: CareerSpec): 
   o.bornDay = DAY0 - career.age * YEAR;
   o.serviceStartDay = DAY0 - career.service * YEAR;
   o.career = { operations: career.ops ?? 0, favorable: 0, adverse: 0 };
+  o.xp = xpForService(career.service);
   return s;
 }
 
@@ -181,7 +184,8 @@ export function makeState(opts: FixtureOptions = {}): GameState {
     department: {
       name: 'Westhaven Department',
       funding: 12400,
-      devPoints: 3,
+      callsResolved: 0,
+      grants: [],
       trust: 78,
       level: 3,
       rosterCap: 12,

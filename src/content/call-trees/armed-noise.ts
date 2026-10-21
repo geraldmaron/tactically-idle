@@ -73,9 +73,9 @@ export const ARMED_NOISE: CallTree = {
       confirmed: '{shooter.first} wants out once {shooter.he} {shooter~knows|know} {shooter.he} {shooter~is|are} caught.', disproved: '{shooter.first} digs in once {shooter.he} {shooter~knows|know} the team is outside.' },
   },
   situations: [
-    { note: 'The door holds, and {shooter.he} {shooter~wants|want} out once {shooter.he} {shooter~knows|know} {shooter.he} {shooter~is|are} caught.', truth: { door_holds: true, gives_up: true } },
-    { note: 'The door holds, and {shooter.he} {shooter~digs|dig} in at the counter once {shooter.he} {shooter~knows|know}.', truth: { door_holds: true, gives_up: false } },
-    { note: 'The frame is splitting, and {shooter.he} won’t stop. Every minute counts.', truth: { door_holds: false, gives_up: false } },
+    { note: 'The door holds, and {shooter.he} {shooter~wants|want} out once {shooter.he} {shooter~knows|know} {shooter.he} {shooter~is|are} caught.', truth: { door_holds: true, gives_up: true }, descriptors: ['death', 'injury', 'police_gunfire'] },
+    { note: 'The door holds, and {shooter.he} {shooter~digs|dig} in at the counter once {shooter.he} {shooter~knows|know}.', truth: { door_holds: true, gives_up: false }, descriptors: ['death', 'injury', 'police_gunfire'] },
+    { note: 'The frame is splitting, and {shooter.he} won’t stop. Every minute counts.', truth: { door_holds: false, gives_up: false }, descriptors: ['death', 'injury', 'police_gunfire'] },
   ],
   turns: { inside: ['quiet_till', 'shelf_door'] },
   difficulty: { base: 34, perTier: 3 },
@@ -444,5 +444,5 @@ export const ARMED_NOISE: CallTree = {
     handed_over: { title: 'No step left to take', disposition: 'unresolved', remainingTasks: ['Get everyone out of {place} safely'],
       summary: 'Command still holds the street, and the call is still open. The team has no step left that it can take from here.' },
   },
-  rewards: { funding: 3200, devPoints: 4, trust: 8, xp: 55 },
+  rewards: { funding: 3200, trust: 8, xp: 55 },
 };

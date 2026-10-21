@@ -94,6 +94,13 @@ export function availableMoves(state: GameState, views: ActionView[] = actionVie
 
 /** Apply one move through the dispatcher. Returns null when the engine refuses it or the
  * sampled band differs from the one aimed at. */
+/** `state` with the run's dice set to `rngState`, for a decide through `apply`. A shallow copy is
+ * enough because `apply` deep-clones before the handler runs; a deep clone here doubled the cost of
+ * every commit in the coverage walk. */
+export function withDice(state: GameState, rngState: number): GameState {
+  return { ...state, activeRun: { ...state.activeRun!, rngState } };
+}
+
 export function applyMove(state: GameState, move: Move, views?: ActionView[]): GameState | null {
   if (move.kind === 'fail') {
     const plan = responseFailurePlan(state);
@@ -104,9 +111,7 @@ export function applyMove(state: GameState, move: Move, views?: ActionView[]): G
   const sample = view && sampleFor(view, move.band!);
   if (!view || sample === null || sample === undefined) return null;
   if (move.drawn?.length) return applyAimedDrawn(state, view, move.band!, move.drawn);
-  const aimed = structuredClone(state);
-  aimed.activeRun!.rngState = stateForSample(sample);
-  const result = apply(aimed, { type: 'decide', actionId: view.id, actingSquadIds: view.actingSquadIds, supportSquadIds: view.supportSquadIds });
+  const result = apply(withDice(state, stateForSample(sample)), { type: 'decide', actionId: view.id, actingSquadIds: view.actingSquadIds, supportSquadIds: view.supportSquadIds });
   if (!result.result.ok || result.state.activeRun!.history.at(-1)?.band !== move.band) return null;
   return result.state;
 }
@@ -203,9 +208,7 @@ function applyAimedDrawn(state: GameState, view: ActionView, band: OutcomeBand, 
   for (let tries = 0, from = 1; tries < 4; tries++) {
     const k = aimedDrawnState(state, view, band, keys, from);
     if (k === null) return null;
-    const aimed = structuredClone(state);
-    aimed.activeRun!.rngState = k;
-    const result = apply(aimed, { type: 'decide', actionId: view.id, actingSquadIds: view.actingSquadIds, supportSquadIds: view.supportSquadIds });
+    const result = apply(withDice(state, k), { type: 'decide', actionId: view.id, actingSquadIds: view.actingSquadIds, supportSquadIds: view.supportSquadIds });
     if (!result.result.ok) return null;
     const h = result.state.activeRun!.history.at(-1);
     const got = h?.committed?.drawn?.map(record => record.key) ?? [];

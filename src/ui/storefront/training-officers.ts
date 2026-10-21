@@ -41,6 +41,7 @@ export function trainingOfficerCondition(officer: Officer, now: number): string 
   const conditions: string[] = [];
   if (officer.assignment?.kind === 'operation') conditions.push('Deployed');
   if (officer.assignment?.kind === 'training') conditions.push('In training');
+  if (officer.assignment?.kind === 'detail') conditions.push('On an instructor detail');
   if (officer.injury && officer.injury.until > now) conditions.push(`Injured: ${officer.injury.label}`);
   if (!conditions.length) conditions.push(BAND_SHORT[stressBand(officer.stress)]);
   return conditions.join(' · ');

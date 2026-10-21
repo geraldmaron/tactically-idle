@@ -31,6 +31,8 @@ import { developmentTier, effectiveDevelopmentEffects, quoteDevelopment } from '
 import { EQUIPMENT_MANAGER, maintenanceBudget } from './equipment-manager-policy';
 import { setMaintenanceBudget } from './equipment-manager';
 import { courseFee, drawStaffPool, emptyPost, staffLever, staffPostOf, STAFF_LEVERS, STAFF_POOL, type StaffCandidate, type StaffHolder, type StaffPost } from './staff-pool';
+import { postFunding } from './ledger';
+import { milestoneView } from './grants';
 
 // ---------------------------------------------------------------- shapes
 
@@ -339,7 +341,7 @@ function runTrainingSergeant(d: GameState, t: number): void {
     if (!pick.officer) return;
     const course = COURSES[pick.courseId];
     const fee = courseFee(d, course.cost);
-    d.department.funding -= fee;
+    postFunding(d.department, -fee, 'training', `${course.name} for ${pick.officer.surname}`, t);
     pick.officer.assignment = { kind: 'training', courseId: course.id, startedAt: t, endsAt: t + Math.round(course.hours * HOUR_MS) };
     log(ts.log, t, `Enrolled ${fullName(pick.officer)} in ${course.name} (${money(fee)})`);
   }
@@ -363,7 +365,7 @@ function runPeerSupport(d: GameState, t: number): void {
   for (const officer of supportQueue(d).slice(0, sessionsPerHour)) {
     if (decide(d.department.funding - sessionCost) < ps.policy.reserve) return;
     const before = Math.floor(decide(officer.stress));
-    d.department.funding -= sessionCost;
+    postFunding(d.department, -sessionCost, 'staff', 'Peer support sessions', t);
     officer.stress = Math.max(0, officer.stress - relief);
     log(ps.log, t, `Peer support for ${fullName(officer)}: stress ${before} to ${Math.floor(decide(officer.stress))} (${money(sessionCost)})`);
   }
@@ -574,7 +576,7 @@ export function hireStaff(d: GameState, managerId: ManagerId, candidateId: Id): 
   const post = staffOn(d)[managerId].post;
   const candidate = post.pool.find((c) => c.id === candidateId)!;
   const t = simNow(d);
-  d.department.funding -= candidate.signingCost;
+  postFunding(d.department, -candidate.signingCost, 'signing', `Signed ${candidate.person.firstName} ${candidate.person.surname}, ${MANAGERS[managerId].title}`, t);
   post.holder = { ...structuredClone(candidate), hiredAt: t };
   post.pool = [];
   log(staffOn(d)[managerId].log, t, `${candidate.person.firstName} ${candidate.person.surname} signed on (${money(candidate.signingCost)})`);
@@ -598,7 +600,7 @@ export function dismissStaff(d: GameState, managerId: ManagerId): HandlerResult 
     const result = setMaintenanceBudget(d, 0);
     if (!result.ok) return result;
   }
-  d.department.funding -= severance;
+  postFunding(d.department, -severance, 'severance', `Severance for ${holder.person.firstName} ${holder.person.surname}`, t);
   const post = staffOn(d)[managerId].post;
   post.holder = null;
   log(staffOn(d)[managerId].log, t, `${holder.person.firstName} ${holder.person.surname} left the post${severance ? ` (${money(severance)} severance)` : ''}`);
@@ -641,7 +643,7 @@ export interface ManagerView {
   /** One plain line on what the manager is doing or waiting for. */
   activity: string;
   /** Develop price of the hire, and why it cannot be bought yet. */
-  hire: { dp: number; funding: number; reason: string | null } | null;
+  hire: { funding: number; reason: string | null } | null;
 }
 
 /** Lever lines for a person in or offered a post, in the post's own terms. */
@@ -698,7 +700,7 @@ export function managerView(state: GameState, id: ManagerId): ManagerView {
     activity: hired ? activityOf(state, id, on) : open ? `${staffPostOf(state, id).pool.length} candidates to choose from`
       : quote?.missingPrerequisites.length
         ? `Needs ${quote.missingPrerequisites.map((nodeId) => DEV_NODES[nodeId]?.name ?? nodeId).join(', ')} first`
-        : cost ? `Open the post in Develop: ${cost.dp} DP${cost.funding ? ` + ${money(cost.funding)}` : ''}` : 'Not open',
+        : cost ? `Open the post in Develop for ${money(cost.funding)}, or reach ${milestoneView(state, DEV_NODES[profile.nodeId].grant).label.replace(/^Level/, 'level').replace(/^Trust/, 'trust')}` : 'Not open',
     hire: open || !cost ? null : { ...cost, reason: quote?.reason ?? null },
   };
 }

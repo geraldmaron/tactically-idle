@@ -16,7 +16,7 @@ export async function playLiveCalls(page, { baseURL = 'http://127.0.0.1:5174', w
   await page.setViewportSize({ width, height });
   const errors = []; page.on('pageerror', error => errors.push(String(error)));
   page.on('dialog', dialog => dialog.accept());
-  await page.goto(baseURL); await page.locator('nav').waitFor();
+  await page.goto(baseURL);
   const state = () => page.evaluate(() => window.__ti.getState());
   const overflow = async (where) => assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `horizontal overflow: ${where}`);
   const capture = async (name, locator) => {
@@ -25,6 +25,18 @@ export async function playLiveCalls(page, { baseURL = 'http://127.0.0.1:5174', w
     if (locator) { await locator.scrollIntoViewIfNeeded(); await locator.screenshot({ path: `${captureDir}/${name}-${width}.png` }); }
     else await page.screenshot({ path: `${captureDir}/${name}-${width}.png` });
   };
+  // A fresh browser opens on the launch advisory. Continue stays off until the player ticks that they
+  // read it; the player keeps the default settings.
+  const firstRun = page.locator('.first-run');
+  await firstRun.waitFor();
+  assert.match(await firstRun.innerText(), /not an age check/);
+  await overflow('launch advisory');
+  await capture('first-run');
+  const proceed = firstRun.getByRole('button', { name: 'Continue to headquarters', exact: true });
+  assert.equal(await proceed.isDisabled(), true, 'continue waits for the acknowledgement');
+  await firstRun.getByText('I have read this', { exact: true }).click();
+  await proceed.click();
+  await page.locator('nav').waitFor();
   const results = [];
   await page.locator('nav').getByText('Ops', { exact: true }).click();
   const casebook = page.locator('.casebook-card');
@@ -67,6 +79,8 @@ export async function playLiveCalls(page, { baseURL = 'http://127.0.0.1:5174', w
       await overflow(`${label} prepare upper floor`);
       await page.getByRole('tab', { name: /^Ground floor/ }).click();
     }
+    // Prepare opens on the briefing; the squads are on the team step, reached as a player would.
+    await page.getByRole('button', { name: 'Choose team', exact: true }).click();
     // The squad range is read from the screen, as the player reads it: "Takes 1 squad" or "Takes 1 to 2 squads".
     const takes = (await page.getByText(/^Takes \d+( to \d+)? squads?\./).first().innerText()).match(/Takes (\d+)(?: to (\d+))?/);
     const range = { min: Number(takes[1]), max: Number(takes[2] ?? takes[1]) };
@@ -104,6 +118,8 @@ export async function playLiveCalls(page, { baseURL = 'http://127.0.0.1:5174', w
     const used = started.activeRun.squadIds.length;
     if (floors === 2) {
       // People and markers upstairs are only drawn on the upper floor; the tab must reach them.
+      // The map is on the live call's Scene view.
+      await page.getByRole('tab', { name: 'Scene', exact: true }).click();
       const tab = page.getByRole('tab', { name: /^Upper floor/ });
       const known = /known (person|people)/.test(await tab.getAttribute('aria-label'));
       await tab.click();
@@ -112,13 +128,23 @@ export async function playLiveCalls(page, { baseURL = 'http://127.0.0.1:5174', w
       await overflow(`${label} live upper floor`);
       await capture(`${label.replace(/\W+/g, '-')}-live-upper`);
       await page.getByRole('tab', { name: /^Ground floor/ }).click();
+      await page.getByRole('tab', { name: 'Call', exact: true }).click();
     }
     let steps = 0;
     for (; steps < 60; steps++) {
       const current = await state(); if (current.activeRun?.status !== 'active') break;
       const available = page.locator('.call-grid .callbtn:not(.callbtn-off)');
+      // After a confirm the result has its own beat; Continue reveals the next decision.
+      const proceed = page.locator('.live-continue button');
+      if (await proceed.count()) {
+        await proceed.click();
+        await page.locator('.call-grid').waitFor();
+        continue;
+      }
       if (await available.count()) {
-        await available.first().click();
+        // A weighed choice opens for reading when its text is tapped; its own Review button selects it.
+        const card = available.first(), review = card.locator('.callbtn-review');
+        await (await review.count() ? review : card).click();
         const confirm = page.getByRole('button', { name: /^Confirm:/ });
         assert.equal(await confirm.isEnabled(), true, `${label}: selected available action must be confirmable`);
         await confirm.click();
@@ -165,6 +191,10 @@ export async function playLiveCalls(page, { baseURL = 'http://127.0.0.1:5174', w
     const view = page.locator('.opboard', { has: page.getByRole('button', { name: 'Prepare', exact: true }) }).nth(index);
     assert.match(await view.innerText(), /New kind of call/, `${card.type}: board card shows the badge`);
     if (discovered.length === 0) await capture('board-new-kind', view);
+    // The page clock is fixed, so the welcome-back sheet stays armed and opens on the first shift
+    // report; a player reads it and taps Continue.
+    const welcome = page.locator('.welcome-sheet');
+    if (await welcome.count()) await welcome.getByRole('button', { name: 'Continue', exact: true }).click();
     await view.getByRole('button', { name: 'Prepare', exact: true }).click();
     const { after, result } = await play(`${card.type} live`);
     Object.assign(result, { type: card.type, kind: 'incident' });

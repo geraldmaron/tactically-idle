@@ -6,6 +6,7 @@ import { RATING_META, ROLE_META, type StatusKey } from '../components/labels';
 export function officerStatus(officer: Officer, now: number): StatusKey {
   if (officer.injury && officer.injury.until > now) return 'injured';
   if (officer.assignment?.kind === 'training') return 'training';
+  if (officer.assignment?.kind === 'detail') return 'detail';
   if (officer.assignment?.kind === 'operation') return 'deployed';
   return stressBand(officer.stress);
 }

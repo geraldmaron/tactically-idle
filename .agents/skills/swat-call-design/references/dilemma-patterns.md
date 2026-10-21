@@ -1,7 +1,7 @@
 # Dilemma patterns
 
-This file holds the canonical fake-choice checklist and 14 dilemma patterns that fit
-three-stage calls. swat-call-design and swat-writing-review each repeat the checklist word for
+This file holds the canonical fake-choice checklist, 15 dilemma patterns that fit three-stage
+calls, and the escalation palette. swat-call-design and swat-writing-review each repeat the checklist word for
 word. If a copy drifts, this one wins, and review files the drift as a consistency finding.
 
 Every worked line below fits the budgets in swat-call-prose and the word lists in `prose-lint.ts` (checked by
@@ -212,8 +212,9 @@ weak dilemma.
 - B. "Ask command before you answer." Two quiet minutes on the line while you wait.
 - Adverse for A. "He says that isn’t enough and hangs up. It rings twice before he answers
   again."
-- Trap and repair. A free promise. No option may promise more than command approved, so the
-  cost lives in what can be offered.
+- Trap and repair. A free promise. An honest option may promise no more than command approved,
+  so the cost lives in what can be offered. A promise past that is a lie, and it follows
+  pattern 15.
 
 ### 8. Release one now against the agreement that covers everyone
 
@@ -323,6 +324,54 @@ weak dilemma.
 - Trap and repair. The follow-up is free. Price the squad's time and show the next call
   waiting.
 
+### 15. The temptation: a lie or a promise past command
+
+- Goods. Care for the person a lie frees now, against the fairness and trust every later step
+  runs on. The player chooses between a sure gain now and a debt they can see coming.
+- Lever and lane. `deceives` on the choice (engine lane, `deception-commitments`): it makes a
+  commitment command never approved. It breaks when the promised thing is still undelivered
+  where the tree says it must be, and later choices read `kept` or `broken`.
+- Rules.
+  - The summary says plainly that it is a lie, or that command can't deliver it. The player is
+    never tricked into lying.
+  - The favorable band is better than any honest option's favorable band right now. Otherwise
+    nobody is tempted.
+  - The break has a visible cue before it bites (a prompt, a transcript line, a person asking
+    for the thing). The gate fails a deception without one.
+  - The break changes what the player can do next: an option locks, a person stops trusting the
+    negotiator, or an ending turns.
+  - At most one deception per stage. Never lie to a hostage about their own safety in a way that
+    makes them act against it.
+- Stage and turn. Stage 1 or 2 for the lie, stage 3 for the break.
+- Prompt. "He'll free the courier the moment the owner agrees to sign. She hasn't."
+- A. "Tell him she'll sign." Command can't deliver it. The courier walks now, and he will ask to
+  see the page.
+- B. "Tell him the truth: she won't." The courier may stay on the boxes.
+- Adverse for A at the break. "He asks the owner to read it out. She says she never agreed, and
+  the line goes dead."
+- Trap and repair. The lie is the best choice on every axis, or its cost lands somewhere the
+  player never saw. Price the break in a person, not a number, and cue it first.
+
+## The escalation palette
+
+When a result goes badly, the reason it goes badly is part of the story. A call draws its
+adverse escalations from at least four of these, and repeats no one of them more than twice on
+a path (D3). Each one asks for a different answer, so the stage 3 options can differ by which
+one is in play.
+
+| Mechanism | What tips the person | What answers it | Example result |
+|---|---|---|---|
+| Shame spiral | The wound touched in front of others | Privacy, an apology from the right person | "The regulars at the tape can hear every word. He stops answering." |
+| The crowd | Being watched: a chant, a phone held up | Moving the audience, a face-saving exit | "A phone goes up at the tape, and he moves to the window." |
+| The partner | Someone beside them pushing | Separating them, talking to the partner | "His coworker says something low, and he picks the handgun back up." |
+| Lost control | Something done without their say | Giving back a small control | "The bolt was his. When it turns from outside, he shouts." |
+| A deadline passing | A time they set runs out | A reason to reset it they can accept | "Six o'clock comes. He said six." |
+| The call from home | Family on the line or at the tape | Using or blocking the contact, at a cost | "His daughter's name comes up on his phone. He doesn't answer it." |
+| Bargaining collapse | The deal they built falls apart | A smaller deal, honestly offered | "The page is finished. She still won't sign it." |
+| Withdrawal | They stop caring what happens | Something they still care about | "He says it doesn't matter now. He sounds calm." |
+
+Withdrawal in an armed or weapon-reaching person is a self-harm sign. It brings in E4 in full.
+
 ## A worked pair
 
 Stage 3 of the Iris sheet (design-sheet.md), after the check finds Iris on the floor asking the
@@ -345,3 +394,5 @@ Both options can end the call on their favorable band, which every stage 3 optio
 | "Bring the crew up now" at stage 3, worst odds, slower, and its best result resolves nothing | 3, a trap at the commit beat | Move the setup step to stage 1 as a precaution, or cut it |
 | "Put the entry team at the back door" as an optional stage 2 step that costs trust | 6, readiness written as a hawkish choice and its absence as restraint | Containment is the default (E12). Make the trade how close and how visible, "Move the team up to the back door, where Lewis may hear them" |
 | "Offer to send his side to the board" | 3 and E12, a promise the team cannot keep | "Take down his account for command to pass on", with command's approval in the summary |
+| "Tell him she'll sign" written as an ordinary offer | 3 and 8, a lie presented as honest, with no cost in sight | Write it as pattern 15: the summary says command can't deliver it, and its break is cued before it lands |
+| A threat beat used on every adverse result ("the handgun comes up at her") | 5 and 10 across the call, one psychology | Draw each adverse escalation from the palette below, at most twice per path (D3) |

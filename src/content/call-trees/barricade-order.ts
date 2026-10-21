@@ -84,9 +84,9 @@ export const BARRICADE_ORDER: CallTree = {
       confirmed: '{subject.first} will come out if someone takes down what {subject.he} {subject~wants|want} {ex.first} to know.', disproved: '{subject.first} says {subject.he} {subject~stays|stay} until {ex.first} comes to the door.' },
   },
   situations: [
-    { note: '{subject.He} {subject~thinks|think} the house is empty and {subject~wants|want} to be heard. A written message will bring {subject.him} out.', truth: { knows_son: false, comes_out: true } },
-    { note: '{subject.He} {subject~knows|know} the {child^boy|girl|kid} is there and would never say so first. A written message will still bring {subject.him} out.', truth: { knows_son: true, comes_out: true } },
-    { note: '{subject.He} {subject~knows|know} the {child^boy|girl|kid} is there and won’t leave without seeing {ex.him}. Pressed, {subject.he} {subject~goes|go} to the bathroom door.', truth: { knows_son: true, comes_out: false } },
+    { note: '{subject.He} {subject~thinks|think} the house is empty and {subject~wants|want} to be heard. A written message will bring {subject.him} out.', truth: { knows_son: false, comes_out: true }, descriptors: ['suicide_self_harm', 'injury', 'child_at_risk', 'domestic_violence'] },
+    { note: '{subject.He} {subject~knows|know} the {child^boy|girl|kid} is there and would never say so first. A written message will still bring {subject.him} out.', truth: { knows_son: true, comes_out: true }, descriptors: ['suicide_self_harm', 'injury', 'child_at_risk', 'domestic_violence'] },
+    { note: '{subject.He} {subject~knows|know} the {child^boy|girl|kid} is there and won’t leave without seeing {ex.him}. Pressed, {subject.he} {subject~goes|go} to the bathroom door.', truth: { knows_son: true, comes_out: false }, descriptors: ['suicide_self_harm', 'injury', 'police_gunfire', 'child_at_risk', 'domestic_violence'] },
   ],
   turns: { quiet: ['quiet_dog', 'quiet_battery', 'quiet_her_phone'] },
   difficulty: { base: 40, perTier: 4 },
@@ -384,5 +384,5 @@ export const BARRICADE_ORDER: CallTree = {
     handed_over: { title: 'No step left to take', disposition: 'unresolved', remainingTasks: ['Get everyone out of the house safely'],
       summary: 'Command still holds the street, and the call is still open. The team has no step left that it can take from here.' },
   },
-  rewards: { funding: 2400, devPoints: 3, trust: 6, xp: 45 },
+  rewards: { funding: 2400, trust: 6, xp: 45 },
 };

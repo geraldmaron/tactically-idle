@@ -35,3 +35,7 @@ export function withFlag(flags: string[], flag: string): string[] {
 /** The team looked where it last saw `role` and found the spot empty (sightings.ts): the place shows
  * as where they were last seen until the team sees them again. Only what the team observed sets it. */
 export const lostFlag = (role: string) => `lost:${role}`;
+
+/** The flag a result sets to hold a clock steady (TreeOutcome.stabilize): a medic at the person.
+ * Kernel-level, so the compiler that writes it and the clock that reads it share one spelling. */
+export const stableFlag = (clockId: string) => `stable:${clockId}`;

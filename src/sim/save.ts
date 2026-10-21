@@ -13,11 +13,13 @@ import { parseIncidentId, INCIDENT_CONTENT_VERSION } from '../gen/incident';
 import { maxDevelopmentTier } from './development-tiers';
 import { normalizeSquadArrangementState } from './squad-optimizer';
 import { validResponseFailure } from './response-failure';
+import { validPromotions } from './ranks';
+import { RANK_IDS } from '../content/ranks';
 
 export const SAVE_KEY = 'tactically-idle/save';
 
 /** Version written by this build. Other versions are rejected. */
-export const CURRENT_SAVE_VERSION = 10;
+export const CURRENT_SAVE_VERSION = 13;
 
 export interface SaveStorage {
   getItem(key: string): string | null;
@@ -59,21 +61,26 @@ const CERTS = ['crisis_negotiation', 'entry_team', 'advanced_first_aid', 'survei
 const TRAITS = ['steady', 'observant', 'mentor', 'impatient', 'calm_voice', 'rookie'];
 const KNOWLEDGE = ['unknown', 'reported', 'confirmed', 'disproved'];
 const STAGES = ['assess', 'adapt', 'resolve'];
-const CONTRIBUTOR_SOURCES = ['rating', 'condition', 'trait', 'equipment', 'space', 'support', 'familiarity', 'preparation', 'difficulty', 'pressure'];
+const CONTRIBUTOR_SOURCES = ['rating', 'condition', 'trait', 'equipment', 'space', 'support', 'familiarity', 'preparation', 'difficulty', 'pressure', 'reputation'];
+
+const validGrant = (g: unknown) => isObj(g) && isStr(g.nodeId) && Object.hasOwn(DEV_NODES, g.nodeId) && Number.isInteger(g.tier)
+  && (g.tier as number) >= 1 && (g.tier as number) <= maxDevelopmentTier(DEV_NODES[g.nodeId as string]) && isNum(g.at) && isStr(g.milestone);
 
 function validReport(r: unknown): boolean {
-  return isObj(r) && numbers(r, ['from', 'to', 'accruedHours', 'gross', 'wages', 'operating', 'restockSpend', 'net', 'devPoints'])
+  return isObj(r) && numbers(r, ['from', 'to', 'accruedHours', 'gross', 'wages', 'operating', 'restockSpend', 'net'])
+    && (r.grants === undefined || isList(r.grants, validGrant))
     && (r.maintenanceSpend === undefined || (isNum(r.maintenanceSpend) && r.maintenanceSpend >= 0))
     && (r.maintenanceStarted === undefined || isStrings(r.maintenanceStarted))
     && isBool(r.capped) && isStrings(r.recovered) && isStrings(r.shortages)
     && isList(r.completedCourses, (c) => isObj(c) && strings(c, ['officerId', 'courseId']))
     && isList(r.equipment, (e) => isObj(e) && isStr(e.unitId) && oneOf(e.event, ['unreliable', 'failed', 'expired', 'serviced']))
     && isList(r.personnel, (p) => isObj(p) && strings(p, ['officerId', 'detail'])
-      && oneOf(p.event, ['retirement_announced', 'retired', 'anniversary', 'birthday']));
+      && oneOf(p.event, ['retirement_announced', 'retired', 'anniversary', 'birthday', 'promoted']));
 }
 
 function validDecision(d: unknown): boolean {
   return isObj(d) && numbers(d, ['revision', 'score', 'difficulty', 'sample', 'timeCost', 'clockBaseMinutes']) && (d.clockBaseMinutes as number) >= 0
+    && (d.ditherMinutes === undefined || (isNum(d.ditherMinutes) && d.ditherMinutes > 0 && d.ditherMinutes <= (d.clockBaseMinutes as number)))
     && isStr(d.actionId) && oneOf(d.stage, STAGES) && oneOf(d.band, ['favorable', 'mixed', 'adverse'])
     && isList(d.actingSquadIds, (id) => oneOf(id, SQUAD_IDS)) && isList(d.supportSquadIds, (id) => oneOf(id, SQUAD_IDS))
     && isStrings(d.officerIds) && (d.targetId === null || isStr(d.targetId)) && validNumericRecord(d.stressDeltas)
@@ -90,6 +97,7 @@ function validDecision(d: unknown): boolean {
       && (d.committed.forceOutcome === undefined || validForceOutcome(d.committed.forceOutcome))
       && (d.committed.personCasualties === undefined || isList(d.committed.personCasualties, validPersonCasualtyRecord))
       && (d.committed.protectionUsed === undefined || isObj(d.committed.protectionUsed) && strings(d.committed.protectionUsed, ['itemId', 'unitId']))
+      && (d.committed.exchange === undefined || isList(d.committed.exchange, (line) => isObj(line) && strings(line, ['speaker', 'line'])))
       && (d.committed.drawn === undefined || isList(d.committed.drawn, (r) => isObj(r) && oneOf(r.model, ['incoming_fire', 'team_force', 'cascade']) && strings(r, ['personId', 'key']) && (r.reason === undefined || isStr(r.reason))))
       && (d.committed.officerCasualties === undefined || isList(d.committed.officerCasualties, validCasualtyRecord))));
 }
@@ -98,6 +106,7 @@ function validDecisionView(d: unknown): boolean {
   return isObj(d) && strings(d, ['actionId', 'title', 'stageLabel']) && numbers(d, ['revision', 'timeCost', 'objectiveDelta', 'civilianSafetyDelta', 'pressureDelta'])
     && oneOf(d.band, ['favorable', 'mixed', 'adverse']) && isBool(d.actualStressDeltas) && isStrings(d.explanation) && isStrings(d.consequences)
     && (d.officerCasualties === undefined || isList(d.officerCasualties, validCasualtyRecord))
+    && (d.exchange === undefined || isList(d.exchange, (line) => isObj(line) && strings(line, ['speaker', 'line'])))
     && (d.forceOutcome === undefined || validForceOutcome(d.forceOutcome))
     && (d.personCasualties === undefined || isList(d.personCasualties, validPersonCasualtyRecord))
     && (d.endingTitle === null || isStr(d.endingTitle))
@@ -118,7 +127,7 @@ function validIncident(c: unknown): c is Record<string, unknown> {
 
 function validRun(r: unknown): boolean {
   if (!isObj(r) || !strings(r, ['id', 'scenarioId', 'locationFamilyId'])
-    || !numbers(r, ['scenarioVersion', 'locationSeed', 'contentVersion', 'rngState', 'clock', 'pressure', 'objective', 'civilianSafety', 'revision', 'startedAt'])
+    || !numbers(r, ['scenarioVersion', 'locationSeed', 'contentVersion', 'rngState', 'clock', 'pressure', 'objective', 'civilianSafety', 'revision', 'startedAt', 'decisionOpenedAt'])
     || !isBool(r.settled) || !oneOf(r.stage, [...STAGES, 'debrief'])
     || !oneOf(r.status, ['active', 'debrief', 'closed']) || !(r.endingId === null || isStr(r.endingId))
     || !isList(r.squadIds, (id) => oneOf(id, SQUAD_IDS)) || r.squadIds.length === 0
@@ -137,6 +146,7 @@ function validRun(r: unknown): boolean {
   if (r.clocks !== undefined && (!isObj(r.clocks) || !Object.values(r.clocks).every((c) => isObj(c) && within(c.value) && Number.isSafeInteger(c.cued) && (c.cued as number) >= 0))) return false;
   if (r.meters !== undefined && (!isObj(r.meters) || !Object.values(r.meters).every((m) => isObj(m) && within(m.agitation) && within(m.rapport)
     && isObj(m.moved) && Object.values(m.moved).every((v) => isObj(v) && numbers(v, ['agitation', 'rapport']))))) return false;
+  if (r.crew !== undefined && !isStrings(r.crew)) return false;
   if (r.commitments !== undefined && (!isObj(r.commitments) || !Object.values(r.commitments).every((c) => isObj(c) && strings(c, ['personId', 'kind'])
     && numbers(c, ['madeAt', 'revision']) && oneOf(c.status, ['open', 'kept', 'broken'])))) return false;
   if (r.supportUnitIds !== undefined && (!isStrings(r.supportUnitIds) || r.supportUnitIds.length > 1)) return false;
@@ -165,13 +175,14 @@ function validRun(r: unknown): boolean {
 
 function validDebrief(d: unknown): boolean {
   return isObj(d) && strings(d, ['runId', 'scenarioId', 'endingId', 'endingTitle'])
-    && numbers(d, ['trustDelta', 'fundingReward', 'devPointReward']) && isStrings(d.causes)
+    && numbers(d, ['trustDelta', 'fundingReward']) && isStrings(d.causes)
     && [d.objective, d.civilianSafety].every((v) => isObj(v) && isNum(v.score) && isStr(v.label))
-    && isList(d.officerCondition, (o) => isObj(o) && isStr(o.officerId) && numbers(o, ['stressBefore', 'stressAfter', 'xpGained']))
+    && isList(d.officerCondition, (o) => isObj(o) && isStr(o.officerId) && numbers(o, ['stressBefore', 'stressAfter', 'xpGained'])
+      && (o.promotions === undefined || isList(o.promotions, (p) => isObj(p) && oneOf(p.rank, RANK_IDS) && isStr(p.line))))
     && isList(d.informationPreserved, (f) => isObj(f) && strings(f, ['factId', 'label']) && oneOf(f.status, KNOWLEDGE))
     && isList(d.resources, (i) => isObj(i) && isStr(i.itemId) && numbers(i, ['used', 'returned']))
     && isList(d.unitWear, (u) => isObj(u) && strings(u, ['unitId', 'itemId', 'serial']) && numbers(u, ['before', 'after']))
-    && (d.endingSummary === undefined || isStr(d.endingSummary)) && (d.decisions === undefined || isList(d.decisions, validDecisionView))
+    && (d.endingSummary === undefined || isStr(d.endingSummary)) && (d.endingEpilogue === undefined || isStr(d.endingEpilogue)) && (d.decisions === undefined || isList(d.decisions, validDecisionView))
     && (d.officerCasualties === undefined || isList(d.officerCasualties, validCasualtyRecord))
     && (d.personCasualties === undefined || isList(d.personCasualties, validPersonCasualtyRecord))
     && (d.civilianOutcomes === undefined || isList(d.civilianOutcomes, person => isObj(person) && strings(person, ['id', 'label']) && oneOf(person.status, ['unaccounted', 'needs_help', 'safe', 'injured_needs_care', 'care_accepted', 'accounted_elsewhere', 'deceased'])))
@@ -201,15 +212,16 @@ function validOfficer(o: unknown, key: string): boolean {
   if (o.assignment !== null) {
     const a = o.assignment;
     const training = isObj(a) && a.kind === 'training' && isStr(a.courseId) && Object.hasOwn(COURSES, a.courseId) && isNum(a.startedAt) && isNum(a.endsAt);
+    const detail = isObj(a) && a.kind === 'detail' && isNum(a.startedAt) && isNum(a.endsAt) && isNum(a.fee) && a.fee >= 0;
     const op = isObj(a) && a.kind === 'operation' && isStr(a.runId);
-    if (!training && !op) return false;
+    if (!training && !detail && !op) return false;
   }
-  if ((o.xpBanked !== undefined && !isNum(o.xpBanked))
-    || (o.highStressSince !== undefined && o.highStressSince !== null && !isNum(o.highStressSince))
+  if (!validPromotions(o.promotions) || (o.xp as number) < 0) return false;
+  if ((o.highStressSince !== undefined && o.highStressSince !== null && !isNum(o.highStressSince))
     || (o.lastRunCounted !== undefined && o.lastRunCounted !== null && !isStr(o.lastRunCounted))) return false;
   if (!isNum(o.bornDay) || !isNum(o.serviceStartDay)) return false;
   const c = o.career;
-  if (!isObj(c) || !isNum(c.operations) || !isNum(c.favorable) || !isNum(c.adverse)) return false;
+  if (!isObj(c) || !isNum(c.operations) || !isNum(c.favorable) || !isNum(c.adverse) || (c.earned !== undefined && !isNum(c.earned))) return false;
   if (o.retirement !== null) {
     const r = o.retirement;
     if (!isObj(r) || !isNum(r.day) || !isNum(r.announcedDay) || typeof r.extended !== 'boolean') return false;
@@ -233,12 +245,16 @@ function validBase(s: unknown): s is Record<string, unknown> {
   if (!isObj(s)) return false;
   const dep = s.department;
   if (!isObj(dep)) return false;
-  const depNums = ['funding', 'devPoints', 'trust', 'level', 'rosterCap', 'trainingSlots', 'lastSettledAt', 'lastInteractionAt', 'clockHighWater'];
+  const depNums = ['funding', 'trust', 'level', 'rosterCap', 'trainingSlots', 'lastSettledAt', 'lastInteractionAt', 'clockHighWater'];
   if (!isStr(dep.name) || !depNums.every((k) => isNum(dep[k]))) return false;
   if (!isNum(dep.calendarEpoch)) return false;
   if (!isStrings(dep.unlockedNodes) || !dep.unlockedNodes.every((id) => Object.hasOwn(DEV_NODES, id))
     || !isList(dep.restockRules, (r) => isObj(r) && isStr(r.itemId) && Object.hasOwn(ITEMS, r.itemId) && numbers(r, ['target', 'budgetCeiling']))) return false;
+  if (!Number.isSafeInteger(dep.callsResolved) || (dep.callsResolved as number) < 0 || !isList(dep.grants, validGrant)) return false;
   if (dep.candidateRefreshedAt !== undefined && !isNum(dep.candidateRefreshedAt)) return false;
+  if (dep.reputation !== undefined && !(isObj(dep.reputation) && isNum(dep.reputation.lean) && Math.abs(dep.reputation.lean) <= 1 && isNum(dep.reputation.choices) && dep.reputation.choices >= 0)) return false;
+  if (dep.ledger !== undefined && !isList(dep.ledger, (e) => isObj(e) && numbers(e, ['seq', 'at', 'amount', 'before', 'after']) && isStr(e.label) && (e.latest === undefined || isNum(e.latest))
+    && oneOf(e.kind, ['payout', 'signing', 'severance', 'purchase', 'training', 'development', 'service', 'salvage', 'restock', 'staff', 'detail']))) return false;
   if (dep.service !== undefined && (!Number.isSafeInteger(dep.service) || (dep.service as number) < 0)) return false;
   if (dep.maintenanceBudgetPerHour !== undefined && (!isNum(dep.maintenanceBudgetPerHour) || !Number.isInteger(dep.maintenanceBudgetPerHour) || dep.maintenanceBudgetPerHour < 0 || dep.maintenanceBudgetPerHour > 500)) return false;
   if (!isObj(s.officers)) return false;
@@ -296,6 +312,8 @@ function validState(s: unknown): s is GameState {
   if (!validIncidents(s)) return false;
   if (!validCasebook(s.casebook)) return false;
   if (!validCommandStaff(s.commandStaff)) return false;
+  if (s.pendingSquadMoves !== undefined && !isList(s.pendingSquadMoves, (m) => isObj(m) && isStr(m.officerId) && isNum(m.queuedAt)
+    && (m.squadId === null || oneOf(m.squadId, SQUAD_IDS)) && (m.dropped === undefined || isStr(m.dropped)))) return false;
   if (s.report !== null && !validReport(s.report)) return false;
   if (s.activeRun !== null && !validRun(s.activeRun)) return false;
   if (s.activeRun !== null && !validIncidentConsequences(s.activeRun as unknown as OperationRun, getScenario((s.activeRun as unknown as OperationRun).scenarioId)!, s.officers as GameState['officers'], s.squads as GameState['squads'], (s.department as GameState['department']).clockHighWater)) return false;

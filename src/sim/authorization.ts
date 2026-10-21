@@ -66,6 +66,13 @@ function seenThreat(scenario: ScenarioDefinition, run: Beliefs): ThreatEvidence 
   return best;
 }
 
+/** A hot call: someone is held, or the team has seen a threat to life (the same evidence that
+ * approves entry). Read by the live screen for its lights and sirens, so they never run on a call
+ * command would not let the team go in on. */
+export function isHotCall(scenario: Pick<ScenarioDefinition, 'threats' | 'incidentPeople'>, run: Beliefs): boolean {
+  return (scenario.incidentPeople ?? []).some((p) => p.kind === 'hostage' || !!p.hold) || !!seenThreat(scenario as ScenarioDefinition, run);
+}
+
 /** A clock that won't wait for talking: urgent, its first cue heard, its owner still inside. */
 function urgentClock(scenario: ScenarioDefinition, run: Pick<OperationRun, 'clocks' | 'flags'>): ClockDef | undefined {
   const views = clockViews(scenario, run);

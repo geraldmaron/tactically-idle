@@ -2,12 +2,8 @@
 .casebook-card p { margin: 0; }
 .casebook-totals { font-size: 14px; color: var(--muted); overflow-wrap: anywhere; }
 .casebook-totals strong { color: var(--text); }
-.casebook-filters {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
-  gap: 8px;
-}
-.casebook-filters .field select { width: 100%; }
+.casebook-filters { display: grid; gap: 8px; min-width: 0; }
+.casebook-shown { font-size: 12px; }
 .casebook-rows {
   display: flex;
   flex-direction: column;

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { getState, useGame } from '../store';
+import { liveDither } from '../timer';
 import { decisionViews, lastResolution } from '../../sim/operation-selectors';
 import type { Id, SquadId } from '../../sim/types';
 import { useToast } from '../components/toast';
@@ -7,24 +8,27 @@ import { Sheet } from '../components/Sheet';
 import { Button } from '../components/ui';
 import { OpenInLab } from '../components/OpenInLab';
 import { ActionSheet, LiveView, RoomSheet } from './LiveView';
-import { LastDecisionPeek, OperationFeedback, RESULT_LABEL } from './OperationFeedback';
+import { OperationFeedback } from './OperationFeedback';
+import { sceneFor } from '../art/Plates';
 import { SituationPanel } from './SituationPanel';
 import { SupportContext } from './SupportContext';
 import { IncidentPeopleStatus } from '../components/IncidentPeople';
-import { focusActingSquad, toggleActingSquad, toggleSupportingSquad } from './operation-squads';
+import { focusActingSquad, pickLead, toggleActingSquad, toggleSupportingSquad } from './operation-squads';
 import { responseFailurePlan } from '../../sim/response-failure';
 import { liveScreen, type ActionSelection, type Override } from './live-model';
 import { lexiconFor } from '../people/lexicon';
+import { runRoster } from '../../sim/squads';
+import { isHotCall } from '../../sim/authorization';
 
-/** Scroll the saved result into view without moving focus away from the player's place. */
+/** A beat change (result, then the next decision) starts at the top of the call. */
 function revealLastDecision() {
-  document.querySelector('.operation-feedback')?.scrollIntoView({ block: 'start', behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+  document.querySelector('.live')?.scrollIntoView({ block: 'start', behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
 }
 
 export function OpsLive() {
   const g = useGame();
   const now = Date.now();
-  const { act, notify } = useToast();
+  const { act } = useToast();
   const run = g.activeRun!;
 
   const [focusId, setFocusId] = useState<SquadId | null>(() => run.history.at(-1)?.actingSquadIds[0] ?? null);
@@ -39,10 +43,16 @@ export function OpsLive() {
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [confirmFailure, setConfirmFailure] = useState<{ runId: Id; revision: number } | null>(null);
   const [floor, setFloor] = useState(0);
+  // The result beat: the revision just confirmed, read on its own before the next decision shows.
+  const [resultOf, setResultOf] = useState<number | null>(null);
 
   // One selector block for the game and the Scenario Lab (live-model.ts).
-  const screen = liveScreen(g, now, { focusId, selection, override, floor, activeOfficer, selectedSpaceId: selSpace, lastChange, showRooms, detailsOpen: panel === 'action' });
+  // The stall so far (docs/call-pressure.md): the cards show it and the commit charges what they showed.
+  const dither = liveDither(g, now);
+  const screen = liveScreen(g, now, { focusId, selection, override, floor, activeOfficer, selectedSpaceId: selSpace, lastChange, showRooms, detailsOpen: panel === 'action', dither });
   const decisions = decisionViews(g);
+  const beat = resultOf !== null && decisions.at(-1)?.revision === resultOf ? 'result' : 'decide';
+  const nextStage = screen?.model.progress.stages.find((step) => step.state === 'current')?.label;
   const failurePlan = responseFailurePlan(g);
   // Follow the selected action: when its target is on another floor, show that floor.
   const targetFloor = screen?.review.targetFloor ?? null;
@@ -50,13 +60,20 @@ export function OpsLive() {
     if (targetFloor !== null) setFloor(targetFloor);
   }, [screen?.review.view?.id, targetFloor]);
 
+  // Lights and sirens while a hot call runs; one short buzz the moment they start, where supported.
+  const scenarioDef = screen?.review.scenario;
+  const hot = !!scenarioDef && run.status === 'active' && run.stage !== 'debrief' && isHotCall(scenarioDef, run);
+  useEffect(() => {
+    if (hot && typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') navigator.vibrate(30);
+  }, [hot]);
+
   if (!screen) return <div className="page"><p className="dim">Operation location unavailable.</p></div>;
   const { model, review } = screen;
-  const { deployed, focus, view, acting, support, actionRule, maxActing, resupply, alternatives, scenario, spaceById, targetLabel, availableMembers, actorUnavailable, floorOf } = review;
+  const { deployed, focus, view, acting, support, actionRule, maxActing, resupply, lead, bestFit, leadOrder, leadOfficerId, leadMarks, leadBlend, leadCerts, alternatives, scenario, spaceById, targetLabel, availableMembers, actorUnavailable, floorOf } = review;
   const actions = model.actions;
   const spaces = model.spaces;
   // The deployed officers, by squad, for the names in this call's text.
-  const people = scenario ? lexiconFor(scenario, run, deployed.flatMap((squad) => squad.officerIds.flatMap((id) => g.officers[id] ? [{ ...g.officers[id], squad: squad.id }] : []))) : null;
+  const people = scenario ? lexiconFor(scenario, run, deployed.flatMap((squad) => runRoster(g, run, squad.id).flatMap((id) => g.officers[id] ? [{ ...g.officers[id], squad: squad.id }] : []))) : null;
 
   const pickAction = (id: Id) => {
     if (view?.id === id || !actions.some((action) => action.id === id) || run.stage === 'debrief') return;
@@ -85,14 +102,20 @@ export function OpsLive() {
   };
   const toggleSupport = (id: SquadId) => {
     if (!view?.support || (!support.includes(id) && availableMembers(id).length === 0)) return;
-    setOverride({ actionId: view.id, ...toggleSupportingSquad({ acting, support }, id, view.support.maxSquads) });
+    // Support doesn't change who takes part, so the lead pick stays.
+    setOverride({ actionId: view.id, ...toggleSupportingSquad({ acting, support }, id, view.support.maxSquads), ...(leadOfficerId ? { lead: leadOfficerId } : {}) });
+  };
+  const chooseLead = (id: Id) => {
+    if (!view) return;
+    const next = pickLead(view.officerIds, bestFit, leadOfficerId, id);
+    setOverride({ actionId: view.id, acting, support, ...(next ? { lead: next } : {}) });
   };
 
   const confirm = () => {
     const currentRun = getState().activeRun;
     // A second tap from the same rendered choice must not commit another decision.
     if (!view?.eligible || panel !== 'action' || currentRun?.id !== run.id || currentRun.stage !== run.stage || currentRun.revision !== run.revision || currentRun.status !== 'active') return;
-    const res = act({ type: 'decide', actionId: view.id, actingSquadIds: acting, supportSquadIds: support });
+    const res = act({ type: 'decide', actionId: view.id, actingSquadIds: acting, supportSquadIds: support, ...(leadOfficerId ? { leadOfficerId } : {}), ditherMinutes: dither });
     if (!res.ok) return;
     const r = lastResolution(getState());
     setPanel('none');
@@ -103,15 +126,24 @@ export function OpsLive() {
       const ids = new Set(spaces.map((s) => s.id));
       const spaceIds = [r.targetId, ...r.knowledgeChanges.map((k) => k.factId)].filter((x): x is Id => !!x && ids.has(x));
       setLastChange({ revision: r.revision, spaceIds });
-      // When the decision ends the call the debrief already shows the result; there is nothing to reveal.
-      const ended = getState().activeRun?.stage === 'debrief';
-      notify(r.committed?.resultLabel ?? RESULT_LABEL[r.band], { tone: r.committed?.resultLabel ? 'info' : r.band === 'adverse' ? 'error' : r.band === 'favorable' ? 'ok' : 'amber', ...(ended ? {} : { lines: ['Tap to see what happened and what changed.'], onSelect: revealLastDecision }) });
+      // The result gets its own beat. When the decision ends the call the debrief shows it instead.
+      if (getState().activeRun?.status === 'active') {
+        setResultOf(r.revision);
+        if (typeof requestAnimationFrame === 'function') requestAnimationFrame(revealLastDecision);
+      }
     }
   };
 
   return (
     <LiveView
       {...model}
+      sirens={hot}
+      beat={beat}
+      onContinue={() => {
+        setResultOf(null);
+        if (typeof requestAnimationFrame === 'function') requestAnimationFrame(revealLastDecision);
+      }}
+      continueLabel={nextStage ? `Continue to ${nextStage}` : 'Continue'}
       people={people}
       onFocusSquad={(id) => {
         if (view && actorUnavailable(id)) return;
@@ -131,8 +163,8 @@ export function OpsLive() {
       onToggleRooms={() => setShowRooms((v) => !v)}
       onCancel={() => setConfirmCancel(true)}
       onOpenDetails={() => { setActionFromSupport(false); setPanel(panel === 'action' ? 'none' : 'action'); }}
-      lastDecision={<LastDecisionPeek decisions={decisions} onReveal={revealLastDecision} />}
-      feedback={<OperationFeedback officers={g.officers} decisions={decisions} explicitCompletion={(scenario?.version ?? 0) >= 4} onOpenLog={() => setPanel('none')} />}
+      feedback={<OperationFeedback officers={g.officers} decisions={decisions} folded={beat === 'decide'} explicitCompletion={(scenario?.version ?? 0) >= 4} currentPrompt={model.progress.prompt} onOpenLog={() => setPanel('none')} />}
+      scene={sceneFor(scenario?.incident?.type)}
       situation={scenario && <SituationPanel scenario={scenario} run={run} />}
       supportContext={scenario && <><IncidentPeopleStatus scenario={scenario} run={run} state={g} /><SupportContext scenario={scenario} run={run} actions={actions} open={panel === 'support'} onOpen={() => setPanel('support')} onClose={() => setPanel('none')} onPickAction={(id) => {
         setActionFromSupport(true);
@@ -165,6 +197,14 @@ export function OpsLive() {
         participantNames={view?.officerIds.map(id => g.officers[id]).filter(officer => !!officer).map(officer => `${officer.firstName} ${officer.surname}`) ?? []}
         supportTask={actionRule?.support ? `${actionRule.support.label} at ${spaceById.get(actionRule.support.coverSpaceId)?.label ?? actionRule.support.coverSpaceId}` : null}
         targetLabel={targetLabel}
+        officers={g.officers}
+        lead={lead}
+        bestFit={bestFit}
+        leadOrder={leadOrder}
+        leadMarks={leadMarks}
+        leadBlend={leadBlend}
+        leadCerts={leadCerts}
+        onPickLead={chooseLead}
         onConfirm={confirm}
         resupply={resupply}
         resupplyMinutes={(run.resupplies ?? []).reduce((sum, delivery) => sum + delivery.minutes, 0)}
@@ -212,7 +252,7 @@ export function OpsLive() {
           <h3>Still unresolved</h3>
           <ul className="bullets">{failurePlan.remainingTasks.map(task => <li key={task}>{task}</li>)}</ul>
           <p>{failurePlan.consequence}</p>
-          <p className="note note-warn">No incident funding, development points or completion experience. Department trust falls by 2.</p>
+          <p className="note note-warn">No incident funding or completion experience. Department trust falls by 2.</p>
         </>}
       </Sheet>
       <Sheet

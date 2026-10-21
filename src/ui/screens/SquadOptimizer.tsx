@@ -19,6 +19,7 @@ import { Icon } from '../icons';
 import { getCampaignSnapshot, getState, useCampaigns, useGame } from '../store';
 import { officerList } from './helpers';
 import './squad-optimizer.css';
+import { Disclosure } from '../components/Disclosure';
 
 function squadName(state: GameState, squadId: SquadId | null): string {
   if (!squadId) return 'Unassigned';
@@ -42,7 +43,7 @@ function SquadOptimizerSession({ open, onClose, campaignId, session }: { open: b
   const state = useGame();
   const { act } = useToast();
   const [options, setOptions] = useState<SquadOptimizerOptions>(() => ({
-    squadIds: state.squads.filter((squad) => !squadDeployed(state, squad.id)).map((squad) => squad.id),
+    squadIds: state.squads.map((squad) => squad.id),
     includeUnassigned: false,
     preserveLeaders: true,
   }));
@@ -52,7 +53,7 @@ function SquadOptimizerSession({ open, onClose, campaignId, session }: { open: b
   const saved = squadArrangementState(state);
   const undoCheck = saved.undo ? undoSquadArrangementCheck(state) : null;
   const stale = !!preview?.proposal && preview.proposal.token !== squadArrangementToken(state);
-  const selectedIds = options.squadIds.filter((id) => state.squads.some((squad) => squad.id === id) && !squadDeployed(state, id));
+  const selectedIds = options.squadIds.filter((id) => state.squads.some((squad) => squad.id === id));
 
   useEffect(() => {
     if (!open) { setPreview(null); setMessage(''); }
@@ -70,7 +71,7 @@ function SquadOptimizerSession({ open, onClose, campaignId, session }: { open: b
   const close = () => { setPreview(null); setMessage(''); onClose(); };
   const makePreview = () => {
     const current = getState();
-    const squadIds = options.squadIds.filter((id) => current.squads.some((squad) => squad.id === id) && !squadDeployed(current, id));
+    const squadIds = options.squadIds.filter((id) => current.squads.some((squad) => squad.id === id));
     setPreview(planSquadArrangement(current, { ...options, squadIds }, dutyRates()));
     setMessage('');
   };
@@ -103,12 +104,11 @@ function SquadOptimizerSession({ open, onClose, campaignId, session }: { open: b
   }>
     <div className="arrangement-intro">
       <p>Balances skills, qualifications and fitness across squads.</p>
-      <details className="arrangement-method">
-        <summary>How suggestions work</summary>
-        <p className="dim">Keeps squad duties and existing headcounts; opted-in unassigned officers can fill vacancies. Injured, training, deployed and recovering officers stay in place, as do entire deployed squads.</p>
+      <Disclosure name="arrangement-method" className="arrangement-method" summary="How suggestions work">
+        <p className="dim">Keeps squad duties and existing headcounts; opted-in unassigned officers can fill vacancies. Injured, training and recovering officers stay in place, and so does anyone out on a call. The rest of a deployed squad can still be arranged.</p>
         <p className="dim">Looks for useful skills, qualifications and officers fit for duty across your squads. It favors fewer moves when choices are otherwise similar. This is a suggestion; another arrangement may work better.</p>
         <p className="dim">Each skill score shows the strongest available officer after stress is taken into account. A score of 50 or more counts as covered for this suggestion; it does not guarantee a good result. Officers with stress 60 or higher sit out high-risk work.</p>
-      </details>
+      </Disclosure>
     </div>
 
     <fieldset className="arrangement-options">
@@ -132,8 +132,8 @@ function SquadOptimizerSession({ open, onClose, campaignId, session }: { open: b
           const locked = saved.squadLocks.includes(squad.id);
           return <div key={squad.id} className="arrangement-squad-option">
             <label className="arrangement-check">
-              <input type="checkbox" aria-label={`Include squad ${squad.id}, ${squad.name}`} checked={selectedIds.includes(squad.id)} disabled={deployed} onChange={(event) => updateOptions({ squadIds: event.target.checked ? [...options.squadIds.filter((id) => id !== squad.id), squad.id] : options.squadIds.filter((id) => id !== squad.id) })} />
-              <span><strong>{squadName(state, squad.id)}</strong><FaceStack state={state} ids={squad.officerIds} leaderId={squad.leaderId} /><small>{squad.officerIds.length} officers · {DUTY_META[squad.duty].label}{deployed ? ' · Deployed, stays fixed' : locked ? ' · Locked, stays fixed' : ''}</small></span>
+              <input type="checkbox" aria-label={`Include squad ${squad.id}, ${squad.name}`} checked={selectedIds.includes(squad.id)} onChange={(event) => updateOptions({ squadIds: event.target.checked ? [...options.squadIds.filter((id) => id !== squad.id), squad.id] : options.squadIds.filter((id) => id !== squad.id) })} />
+              <span><strong>{squadName(state, squad.id)}</strong><FaceStack state={state} ids={squad.officerIds} leaderId={squad.leaderId} /><small>{squad.officerIds.length} officers · {DUTY_META[squad.duty].label}{deployed ? ' · On a call, officers out stay put' : ''}{locked ? ' · Locked, stays fixed' : ''}</small></span>
             </label>
             <Button aria-label={`${locked ? 'Unlock' : 'Lock'} squad ${squad.id}, ${squad.name}`} aria-pressed={locked} onClick={() => act({ type: 'setSquadArrangementLock', target: { kind: 'squad', squadId: squad.id }, locked: !locked })}><Icon name={locked ? 'lock' : 'unlock'} size={16} />{locked ? 'Locked' : 'Lock'}</Button>
           </div>;
@@ -142,8 +142,7 @@ function SquadOptimizerSession({ open, onClose, campaignId, session }: { open: b
       {selectedIds.length === 0 && <p className="tone-amber" role="status">Select at least one available squad to preview an arrangement.</p>}
     </fieldset>
 
-    <details className="arrangement-locks">
-      <summary>Officer locks <span className="dim">{saved.officerLocks.length} saved</span></summary>
+    <Disclosure name="arrangement-locks" className="arrangement-locks" summary="Officer locks" count={saved.officerLocks.length}>
       <p className="dim">Locks are saved with this campaign and stay active when you reopen this sheet. Locked officers keep their current squad or unassigned position and their current leadership status: leaders stay leaders, and other locked officers are not promoted.</p>
       <ul className="arrangement-officer-locks">
         {officerList(state).map((officer) => {
@@ -155,7 +154,7 @@ function SquadOptimizerSession({ open, onClose, campaignId, session }: { open: b
           </li>;
         })}
       </ul>
-    </details>
+    </Disclosure>
 
     <section className="arrangement-undo" aria-label="Last arrangement">
       <p className="dim">{saved.undo ? 'Undo restores the previous rosters and leaders while it is still safe.' : 'Applying an arrangement saves an undo point.'}</p>

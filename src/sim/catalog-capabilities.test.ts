@@ -74,7 +74,7 @@ describe('bounded catalog and common gates', () => {
     expect(evaluateCapabilities(input).applied).toHaveLength(0);
   });
   it('buying each new program never grants a cert; prerequisite certification is checked separately', () => {
-    const state = makeState(); state.department.devPoints = 100; state.department.funding = 100000;
+    const state = makeState();state.department.funding = 100000;
     state.department.unlockedNodes = ['field_entry_course', 'field_response_program'];
     for (const id of state.department.unlockedNodes) state.department.developmentTiers[id] ??= 1;
     const before = structuredClone(state.officers);

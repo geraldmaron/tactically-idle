@@ -1,10 +1,10 @@
 import { useSyncExternalStore } from 'react';
 import type { Command, GameState, HandlerResult } from '../sim/types';
+import { liveDither } from './timer';
 import { CampaignSlots } from '../sim/campaign-slots';
 import { withSaveLock } from '../sim/save-lock';
 import { createSaveEnvironment } from './save-environment';
 import { initializeQaCampaign } from './qa-campaign';
-import { newLocalId, type MockOutcome, type MockProvider } from '../commerce/types';
 
 // Single game store. All mutations go through sim/game.dispatch as transactions.
 
@@ -44,7 +44,11 @@ function lockFailure(): HandlerResult {
 }
 
 export function send(cmd: Command): HandlerResult {
-  const result = campaigns.send(cmd, Date.now(), false);
+  const now = Date.now();
+  // A commit carries its stall (ui/timer.ts). The live screen passes the minutes it showed; any
+  // other caller gets the stall as of now.
+  const sent = cmd.type === 'decide' && cmd.ditherMinutes === undefined ? { ...cmd, ditherMinutes: liveDither(getState(), now) } : cmd;
+  const result = campaigns.send(sent, now, false);
   notify();
   if (result.ok && campaigns.getSnapshot().activeSlotId) void serialized(() => { campaigns.save(Date.now()); notify(); }).catch(lockFailure);
   return result;
@@ -100,71 +104,19 @@ export function useCampaigns() {
   return useSyncExternalStore(subscribe, getCampaignSnapshot, getCampaignSnapshot);
 }
 
-export function useDevelopmentBudget() { return useCampaigns().developmentBudget; }
-export function unlockDevelopment(nodeId: string, expectedTier = 1): Promise<HandlerResult> {
-  return serialized(() => { const result = campaigns.unlockDevelopment(nodeId, Date.now(), expectedTier); notify(); return result; }).catch(lockFailure);
-}
-
-export type TestStoreAction =
-  | { type: 'resolve'; key: string; outcome: MockOutcome }
-  | { type: 'complete' | 'refund'; key: string }
-  | { type: 'allocate'; campaignId: string; milliDP: number }
-  | { type: 'unassign'; campaignId: string }
-  | { type: 'reconcile' };
-export const canUseTestStore = !!locks || isResponsivePreview;
-export async function claimPointPack(productId: string, campaignId: string, requestId = newLocalId()): Promise<HandlerResult> {
-  if (!canUseTestStore) return { ok: false, reason: 'This browser cannot safely save point claims. Use a current browser.' };
-  const started = await serialized(() => { const result = campaigns.beginPointClaim(productId, requestId, campaignId, Date.now()); notify(); return result; }).catch(lockFailure);
-  if (!started.ok) return started;
-  return serialized(() => { const result = campaigns.finishPointClaim(`mock:apple:${requestId}`, Date.now()); notify(); return result; }).catch(lockFailure);
-}
-export function resumePointPacks(): Promise<HandlerResult> {
-  if (!canUseTestStore) return Promise.resolve({ ok: false, reason: 'Point claims require safe local saving.' });
-  return serialized(() => { const result = campaigns.resumePointClaims(Date.now()); notify(); return result; }).catch(lockFailure);
-}
-export function claimSavedPoints(campaignId: string): Promise<HandlerResult> {
-  if (!canUseTestStore) return Promise.resolve({ ok: false, reason: 'Point claims require safe local saving.' });
-  return serialized(() => { const result = campaigns.claimHeldPoints(campaignId, Date.now()); notify(); return result; }).catch(lockFailure);
-}
-export function manageTestStore(action: TestStoreAction): Promise<HandlerResult> {
-  if (!canUseTestStore) return Promise.resolve({ ok: false, reason: 'This browser cannot safely lock local test purchases. Use a current browser; existing saves can still be exported.' });
-  return serialized(() => {
-    const now = Date.now(); let result: HandlerResult;
-    switch (action.type) {
-      case 'resolve': result = campaigns.resolvePurchase(action.key, action.outcome, now); break;
-      case 'complete': result = campaigns.completePurchase(action.key, now); break;
-      case 'refund': result = campaigns.refundPurchase(action.key, now); break;
-      case 'allocate': result = campaigns.allocatePurchase(action.campaignId, action.milliDP, now); break;
-      case 'unassign': result = campaigns.unassignPurchase(action.campaignId, now); break;
-      case 'reconcile': result = campaigns.reconcilePurchases(now); break;
-    }
-    notify(); return result;
-  }).catch(lockFailure);
-}
-
-/** Each stage is durable before the adapter can finish it. Replays reuse the original receipt. */
-export async function simulateTestPurchase(provider: MockProvider, productId: string, outcome: MockOutcome, requestId = newLocalId()): Promise<HandlerResult> {
-  if (!canUseTestStore) return { ok: false, reason: 'Safe local test purchases require browser save locks.' };
-  const started = await serialized(() => { const result = campaigns.beginPurchase(provider, productId, requestId, Date.now()); notify(); return result; }).catch(lockFailure);
-  if (!started.ok) return started;
-  const key = `mock:${provider}:${requestId}`;
-  const resolved = await manageTestStore({ type: 'resolve', key, outcome });
-  if (!resolved.ok || outcome !== 'success') return resolved;
-  return manageTestStore({ type: 'complete', key });
-}
-
 if (typeof window !== 'undefined') {
   if (campaigns.getSnapshot().activeSlotId) void serialized(() => { campaigns.save(Date.now()); notify(); }).catch(lockFailure);
   window.setInterval(() => send({ type: 'tick' }), TICK_MS);
   window.addEventListener('beforeunload', (event) => {
     if (campaigns.getSnapshot().dirty) { event.preventDefault(); event.returnValue = ''; }
   });
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') send({ type: 'tick' });
-  });
+  // iOS often skips beforeunload and may kill a hidden tab, so settle and save the moment the page
+  // hides instead of waiting for the next tick.
+  document.addEventListener('visibilitychange', () => send({ type: 'tick' }));
+  window.addEventListener('pagehide', () => send({ type: 'tick' }));
   window.addEventListener('storage', (event) => {
     if (event.key === 'tactically-idle/campaign-slots') {
-      campaigns.reportStorageIssue('Saves or test purchases changed in another tab. Reload to see them before making further changes. This tab will not overwrite them.');
+      campaigns.reportStorageIssue('Saves changed in another tab. Reload to see them before making further changes. This tab will not overwrite them.');
       notify();
     }
   });

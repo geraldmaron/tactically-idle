@@ -8,7 +8,6 @@ import { useToast } from '../components/toast';
 import { DUTY_META, RATING_META, ROLE_META, ratingTone } from '../components/labels';
 import { Icon } from '../icons';
 import { SQUAD_IDS } from '../../sim/types';
-import { OfficerSheet } from './OfficerSheet';
 import { Recruit } from './Recruit';
 import { officerList, staysHomeLine } from './helpers';
 import { useNav } from '../components/nav';
@@ -19,6 +18,7 @@ import { Portrait } from '../portraits/Portrait';
 import { StressDisplay } from '../components/StressDisplay';
 import { ROSTER_FILTER_LABEL, ROSTER_SORT_LABEL, filterRoster, squadCoverage, sortRoster, type RosterFilter, type RosterSort } from './squad-model';
 import './squad-visual.css';
+import { ScreenBanner } from '../art/Plates';
 
 const DEFAULT_NAMES = ['Alpha', 'Bravo', 'Charlie', 'Delta'];
 
@@ -26,7 +26,7 @@ export function SquadScreen() {
   const g = useGame();
   const nav = useNav();
   const setSel = (squadId: SquadId) => nav.updateSquadView({ type: 'select', squadId });
-  const [officerId, setOfficerId] = useState<Id | null>(null);
+  const setOfficerId = (id: Id) => nav.openOfficer(id);
   const [creating, setCreating] = useState(false);
   const [arranging, setArranging] = useState(false);
   const { notify } = useToast();
@@ -37,6 +37,7 @@ export function SquadScreen() {
 
   return (
     <div className="page squad-page">
+      <ScreenBanner id="squad" kicker="The team" title="Squad" line={`${officerList(g).length} officers · ${g.squads.length} squads`} />
       <ChoiceRail value={nav.squadSection} kind="navigation" label="Squad sections" grow onChange={nav.setSquadSection} options={[
         { value: 'roster', label: 'Roster' }, { value: 'training', label: 'Training' },
       ]} />
@@ -61,11 +62,12 @@ export function SquadScreen() {
         >
           <Icon name="plus" size={18} />
         </button>
-        <button type="button" className="squad-add-control squad-arrange-control" aria-label="Arrange squads" disabled={g.squads.length === 0} onClick={() => { setOfficerId(null); setArranging(true); }}>
+        <button type="button" className="squad-add-control squad-arrange-control" aria-label="Arrange squads" disabled={g.squads.length === 0} onClick={() => { nav.closeOfficer(); setArranging(true); }}>
           <Icon name="nodes" size={16} /><span>Arrange</span>
         </button>
       </div>
       {creating && <CreateSquad count={g.squads.length} onDone={(id) => { setCreating(false); if (id) setSel(id); }} />}
+      <QueuedMoves />
 
       <div id="selected-squad-panel" role="tabpanel" aria-labelledby={active ? `selected-squad-panel-tab-${active.id}` : undefined} aria-label={active ? undefined : 'Squads'} tabIndex={0}>{active ? (
         <SquadPanel key={active.id} squad={active} onOpen={setOfficerId} />
@@ -88,7 +90,6 @@ export function SquadScreen() {
       <RosterGrid onOpen={setOfficerId} />
 
       <Recruit />
-      <OfficerSheet officerId={officerId} onClose={() => setOfficerId(null)} />
       {arranging && <SquadOptimizer open onClose={() => setArranging(false)} />}
       </>}
     </div>
@@ -247,6 +248,38 @@ export function SquadCoverageStrip({ members }: { members: Officer[] }) {
         })}
       </ul></div>
     </div>
+  );
+}
+
+/** Squad moves waiting for a call to end, and moves that could not apply when it did. */
+function QueuedMoves() {
+  const g = useGame();
+  const { act } = useToast();
+  const moves = g.pendingSquadMoves ?? [];
+  if (!moves.length) return null;
+  const squadName = (id: SquadId | null) => id ? g.squads.find((s) => s.id === id)?.name ?? `Squad ${id}` : 'Unassigned';
+  return (
+    <section className="card squad-queue" aria-labelledby="squad-queue-h">
+      <h2 id="squad-queue-h" className="squad-block-title"><Icon name="clock" size={16} />After the call <span className="squad-block-count">{moves.length}</span></h2>
+      <ul className="squad-queue-list">
+        {moves.map((m) => {
+          const o = g.officers[m.officerId];
+          const who = o ? o.surname : 'Former officer';
+          return (
+            <li key={m.officerId} className={m.dropped ? 'squad-queue-dropped' : undefined}>
+              <span className="squad-queue-move">
+                <strong>{who}</strong>
+                <span>{o?.squadId ? squadName(o.squadId) : 'Unassigned'}<span aria-hidden="true"> → </span>{squadName(m.squadId)}</span>
+                {m.dropped && <span className="squad-queue-reason"><Icon name="warning" size={12} />Not moved. {m.dropped}</span>}
+              </span>
+              <Button size="sm" variant="ghost" aria-label={`${m.dropped ? 'Clear' : 'Cancel'} the move for ${who}`} onClick={() => act({ type: 'cancelPendingSquadMove', officerId: m.officerId }, m.dropped ? undefined : 'Move cancelled')}>
+                {m.dropped ? 'Clear' : 'Cancel'}
+              </Button>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
   );
 }
 

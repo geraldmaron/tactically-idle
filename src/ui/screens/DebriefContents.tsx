@@ -4,7 +4,8 @@
 import type { JSX, ReactNode } from 'react';
 import { useMemo } from 'react';
 import { builtForScenario } from '../../sim/operation-selectors';
-import type { DebriefResult, DecisionView, KnowledgeStatus } from '../../sim/types';
+import type { CompletionDisposition, DebriefResult, DecisionView, KnowledgeStatus } from '../../sim/types';
+import { PlateArt, sceneFor } from '../art/Plates';
 import type { PersonDefinition, ScenarioDefinition } from '../../sim/scenario-types';
 import { getScenario } from '../../sim/scenario-registry';
 import { getBuilt } from '../../sim/resolution';
@@ -20,6 +21,13 @@ import { signed } from '../format';
 import { OperationLogContents } from './OperationFeedback';
 import { PersonCasualtyList } from '../components/IncidentPeople';
 import { PeopleText } from '../people/PeopleText';
+import { Disclosure } from '../components/Disclosure';
+
+/** The case-file stamp for each way a call can close. Decorative; the title and scores say it. */
+const STAMP: Record<CompletionDisposition, { text: string; tone: 'mint' | 'amber' | 'danger' }> = {
+  resolved: { text: 'Closed', tone: 'mint' }, care_accepted: { text: 'Closed', tone: 'mint' }, followup_agreed: { text: 'Follow up', tone: 'amber' },
+  relief_partial: { text: 'Open', tone: 'amber' }, unresolved: { text: 'Unresolved', tone: 'danger' },
+};
 
 /** What OpsDebrief shows inside its scrolling page. `decisions` defaults to the saved log;
  * `reality` (default on) keeps "What was really there"; `heroAction` sits under the hero summary. */
@@ -27,11 +35,35 @@ export function DebriefContents({ result: d, officers, scenario, reality = true,
   decisions?: DecisionView[]; heroAction?: ReactNode }): JSX.Element {
   const worst = d.disposition ? d.civilianSafety.score : Math.min(d.objective.score, d.civilianSafety.score);
   const tone = worst >= 80 ? 'good' : worst >= 50 ? 'mixed' : 'poor';
+  // The epilogue is the call's last human beat: what is true afterward, set apart from the scores.
+  // Frozen on the saved result, so an archived debrief keeps it; older results fall back to the call.
+  const epilogue = d.endingEpilogue ?? scenario?.endings[d.endingId]?.epilogue;
+  // The call's scene closes the case behind the ending, with a stamp for how it closed.
+  const scene = sceneFor(scenario?.incident?.type);
+  // The result screen's grade, the way mission results show stars: marks from the call's safety
+  // score. That score does not count the team's own force, so any use of force caps the grade at
+  // two: the third mark is for talking everyone out (E2). A death takes the marks away and the
+  // screen stays muted: nothing about a death is celebrated.
+  const death = (d.personCasualties ?? []).some((person) => person.severity === 'fatal');
+  const forced = (d.forceLines?.length ?? 0) > 0;
+  // An open call is not a success however safe it stayed: unresolved or explicitly incomplete
+  // earns one mark, and a partial close or agreed follow-up at most two.
+  const open = d.disposition === 'unresolved' || d.completionAchieved === false;
+  const partial = d.disposition === 'relief_partial' || d.disposition === 'followup_agreed';
+  const cap = open ? 1 : forced || partial ? 2 : 3;
+  const marks = death ? 0 : Math.min(worst >= 80 ? 3 : worst >= 50 ? 2 : 1, cap);
+  const stamp = d.disposition ? STAMP[d.disposition] : null;
   return <>
-    <div className={`debrief-hero debrief-hero-${tone}`}>
+    <div className={`debrief-hero debrief-hero-${tone}${scene ? ' plate' : ''}`}>
+      <PlateArt src={scene} />
+      {stamp && <span className={`stamp stamp-${stamp.tone} debrief-stamp`} aria-hidden="true">{stamp.text}</span>}
       <span className="kicker">DEBRIEF</span>
+      <span className={`result-marks${death ? ' result-marks-muted' : ''}`} role="img" aria-label={death ? 'No commendation: someone died on this call' : `Commendation ${marks} of 3${cap < 3 && worst >= 80 ? open ? ', capped because the call is not resolved' : forced ? ', capped because force was used' : ', capped because the call is only partly resolved' : ''}`}>
+        {[1, 2, 3].map((n) => <i key={n} data-on={n <= marks || undefined} />)}
+      </span>
       <h2 className="debrief-title">{d.endingTitle}</h2>
       {d.endingSummary && <p className="debrief-narrative"><PeopleText text={d.endingSummary} /></p>}
+      {epilogue && <p className="debrief-epilogue"><PeopleText text={epilogue} /></p>}
       {heroAction}
     </div>
     <DebriefSummary debrief={d} />
@@ -49,12 +81,12 @@ export function DebriefEvidence({ debrief: d, decisions, officers, scenario, rea
   const worn = (d.unitWear ?? []).filter((row) => row.itemId !== 'battery_pack' && row.after < row.before).length;
   return <Card className="result-evidence">
     <SubHead icon="list">Review the operation</SubHead>
-    {d.causes.length > 0 && <details className="result-disclosure"><summary>Why this outcome · {d.causes.length} reasons</summary><ol className="causes">{d.causes.map((cause, index) => <li key={index}><PeopleText text={cause} /></li>)}</ol></details>}
-    <details className="result-disclosure"><summary>Decision log{decisions.length > 0 ? ` (${decisions.length})` : ''}</summary>
+    {d.causes.length > 0 && <Disclosure name="debrief-causes" className="result-disclosure" summary="Why this outcome" count={d.causes.length}><ol className="causes">{d.causes.map((cause, index) => <li key={index}><PeopleText text={cause} /></li>)}</ol></Disclosure>}
+    <Disclosure name="debrief-decisions" className="result-disclosure" summary="Decision log" count={decisions.length || undefined}>
       {decisions.length ? <OperationLogContents decisions={decisions} officers={officers} explicitCompletion={!!d.disposition} /> : <p className="operation-note">No per-decision log is stored for this operation. The saved result and causes are shown above.</p>}
-    </details>
-    <details className="result-disclosure"><summary>Information &amp; reality</summary><Information d={d} />{reality && <Reality d={d} scenario={scenario} />}</details>
-    <details className="result-disclosure"><summary>Supplies &amp; equipment{used > 0 || worn > 0 ? ` · ${used} used · ${worn} worn` : ' · unchanged'}</summary><Supplies d={d} /></details>
+    </Disclosure>
+    <Disclosure name="debrief-reality" className="result-disclosure" summary="Information and reality"><Information d={d} />{reality && <Reality d={d} scenario={scenario} />}</Disclosure>
+    <Disclosure name="debrief-supplies" className="result-disclosure" summary="Supplies and equipment" hint={used > 0 || worn > 0 ? `${used} used, ${worn} worn` : 'Unchanged'}><Supplies d={d} /></Disclosure>
   </Card>;
 }
 

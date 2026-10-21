@@ -18,7 +18,8 @@ const NINE: ActionView[] = Array.from({ length: 9 }, (_, i) => ({ ...real[0], id
 const noop = () => {};
 const render = (actions: ActionView[], selectedId: string | null = null, expanded = false) =>
   renderToStaticMarkup(createElement(DecisionList, { prompt: 'What now?', actions, selectedId, expanded, onSelect: noop, onExpand: noop }));
-const cards = (html: string) => [...html.matchAll(/<button[^>]*class="callbtn[^"]*"[^>]*>/g)].map(match => match[0]);
+/** Each choice card: a plain card is a button, a weighed one (pull and cost) a div holding two. */
+const cards = (html: string) => [...html.matchAll(/<(?:button|div)[^>]*class="callbtn(?: [^"]*)?"[^>]*>/g)].map(match => match[0]);
 const ids = (html: string) => cards(html).map(card => /data-action-id="([^"]+)"/.exec(card)?.[1] ?? null);
 
 describe('DecisionList', () => {
@@ -34,7 +35,7 @@ describe('DecisionList', () => {
     expect(cards(short)).toHaveLength(5);
     expect(ids(short).every(id => id !== null)).toBe(true);
     expect(short).toContain('Show all 9 choices');
-    expect(short).toContain('6 available · 3 unavailable.');
+    expect(short).toContain('Your call<span>6 open · 3 locked</span>');
     const all = render(NINE, null, true);
     expect(ids(all)).toEqual(NINE.map(a => a.id));
     expect(all).toContain('Show fewer choices');

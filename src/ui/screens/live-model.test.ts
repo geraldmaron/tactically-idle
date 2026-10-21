@@ -10,6 +10,7 @@ import { getScenario } from '../../sim/scenario-registry';
 import { apply, makeState, NOW, setRun, startRun, startWithKit } from '../../sim/test-fixtures';
 import type { GameState, Id, SquadId } from '../../sim/types';
 import { floorCount } from '../blueprint/floors';
+import { dispatch } from '../../sim/game';
 import { cardFor } from './helpers';
 import { liveDecisions, liveScreen, liveViewModel, type LiveUiState } from './live-model';
 
@@ -128,5 +129,19 @@ describe('live view model', () => {
     expectSame(hostage, stale);
     expect(liveScreen(makeState(), NOW, idle())).toBeNull();
     expect(() => liveViewModel(makeState(), NOW, idle())).toThrow('No live call');
+  });
+});
+
+describe('who went, not who is in the squad now (run-roster)', () => {
+  it('leaves an officer who joins a deployed squad mid-call out of the live roster and fit counts', () => {
+    const base = makeState();
+    base.officers.off_vale.injury = { label: 'Sprained wrist', until: NOW + 24 * 3600_000 };
+    let s = startRun(base, 'ms_occupancy', ['A']);
+    s = dispatch(s, { type: 'assignToSquad', officerId: 'off_vale', squadId: null }, { now: NOW }).state;
+    s = dispatch(s, { type: 'assignToSquad', officerId: 'off_park', squadId: 'A' }, { now: NOW }).state;
+    expect(s.squads.find((q) => q.id === 'A')!.officerIds).toContain('off_park');
+    const screen = liveScreen(s, NOW, { focusId: 'A', selection: null, override: null, floor: 0 })!;
+    expect(screen.model.officers.map((o) => o.id)).not.toContain('off_park');
+    expect(screen.review.availableMembers('A')).not.toContain('off_park');
   });
 });

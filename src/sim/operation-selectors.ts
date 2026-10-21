@@ -1,7 +1,7 @@
 import { actionEquipmentRequirements, capabilityRuleEffect, effectiveSupplies, normalizedActionConsumption, operatorQualified, planningEquipmentContext } from './equipment-requirements';
 import { LAST_SEEN_LINES } from '../content/incidents/lines';
 import { isGenericResponseExit } from './response-failure';
-import { currentStoryPrompt } from './story-context';
+import { currentStoryExchange, currentStoryPrompt, currentStoryThreat } from './story-context';
 import { hydrateStoryAction, storyActionTarget, storyPublicScenario, storyPropsKnown } from './story-people';
 // Operation selectors consumed by the UI. Everything here is derived from game
 // state and content; nothing mutates. Export names and signatures are a contract.
@@ -19,24 +19,26 @@ import type {
   OperationRun,
   OutcomeBand,
   PersonMark,
+  RatingKey,
   SpaceView,
   SquadId,
   StageId,
 } from './types';
-import type { ActionDefinition, FactDefinition, ScenarioDefinition } from './scenario-types';
+import type { ActionDefinition, FactDefinition, NodeThreat, ScenarioDefinition } from './scenario-types';
 import { scenarioActions } from './scenario-types';
 import { SCENARIO_ORDER } from '../content/scenarios';
-import { deployRoster } from './squads';
+import { deployRoster, runRoster } from './squads';
 import { getScenario } from './scenario-registry';
 import { ITEMS } from '../content/items';
 import { availableUnits, builtFor, evaluateAction, getBuilt, RESOLUTION_TUNING, squadLabel, tagNames, type Evaluation } from './resolution';
-import { teamMinutes } from './clocks';
+import { ditherCap, teamMinutes } from './clocks';
 import { conditionHolds } from './conditions';
 import { checkStart, computeDebrief, defaultSupport, evaluateDefault, decisionViewsFor, matchedEffects, matchedOutcomeIndices } from './operation';
 import { drawnDistribution, type DrawnDistribution } from './drawn-effects';
 import { approxPoint, spaceLabel } from './spatial-factors';
 import { actionEventResult } from './action-result';
 import { CERT_HOLDER } from '../content/certs';
+import { LEAD_PREFIX } from './crew-flags';
 
 export interface ScenarioCard {
   id: Id;
@@ -68,6 +70,10 @@ export interface Briefing {
 
 export interface StageProgress {
   prompt: string;
+  /** Lines spoken with the prompt (call-surfaces). */
+  exchange?: { speaker: string; line: string }[];
+  /** What gets worse while the player decides here, and how many minutes they have. */
+  threat?: NodeThreat | null;
   stage: StageId | 'debrief';
   index: number;
   stages: { id: StageId; label: string; state: 'done' | 'current' | 'todo' }[];
@@ -323,6 +329,12 @@ export function spaceViews(state: GameState): SpaceView[] {
   return buildSpaceViews(s, builtFor(run.locationFamilyId, run.locationSeed, run.flags), run.knowledge, run, state);
 }
 
+/** The surname of the run's lead: the first deployed officer of its first squad. */
+function runLeadSurname(state: GameState, run: OperationRun): string {
+  for (const squadId of run.squadIds) for (const id of runRoster(state, run, squadId)) if (state.officers[id]) return state.officers[id].surname;
+  return 'Negotiator';
+}
+
 export function stageProgress(state: GameState): StageProgress {
   const run = state.activeRun;
   const s = run ? getScenario(run.scenarioId) : null;
@@ -331,6 +343,9 @@ export function stageProgress(state: GameState): StageProgress {
   return {
     stage,
     prompt: s && run ? currentStoryPrompt(s, run) : '',
+    // The negotiator's lines are the lead officer's: the first deployed officer on the run.
+    exchange: s && run ? currentStoryExchange(s, run).map(line => ({ ...line, speaker: line.speaker.replace('{lead}', runLeadSurname(state, run)) })) : [],
+    threat: s && run ? currentStoryThreat(s, run) : null,
     index: cur,
     stages: STAGE_ORDER.map((id, i) => ({
       id,
@@ -352,6 +367,12 @@ function requirementLine(a: ActionDefinition): string {
   if (parts.length === 0) return 'No special requirements';
   const line = parts.join(' + ');
   return line.charAt(0).toUpperCase() + line.slice(1);
+}
+
+/** `{lead}` filled with the lead officer's surname, as the summary does. */
+function leadIn(text: string, ev: Evaluation, state: GameState): string {
+  const lead = ev.leadId ? state.officers[ev.leadId]?.surname : undefined;
+  return text.replace(/\{lead\}/g, lead ?? 'Squad');
 }
 
 function summaryFor(a: ActionDefinition, ev: Evaluation, state: GameState): string {
@@ -384,13 +405,17 @@ function expectedSupplies(action: ActionDefinition, ev: Evaluation): ActionView[
   return [...used].map(([label, qty]) => ({ label, qty }));
 }
 
+/** A stall as decide() charges it: tenths, at least zero, stopped at the open decision's cap. */
+const cappedDither = (scenario: ScenarioDefinition, run: OperationRun, dither: number) =>
+  Number.isFinite(dither) && dither > 0 ? Math.min(ditherCap(scenario, run), Math.floor(dither * 10) / 10) : 0;
+
 /** A choice's time on the card. The range spans every band, with a hidden truth branch's possible
  * delay counted in the bounds only, never picked for the preview. The estimate weights each band's
  * planned time (route plus publicly known delays, added after the band multiplier as on commit)
  * by its chance, and is clamped into the range so the two never disagree. */
-export function durationPreview(action: ActionDefinition, ev: Evaluation, run: OperationRun): Pick<ActionView, 'timeCost' | 'timeRange'> {
-  if (action.awaitSupport) return { timeCost: ev.timeBase, timeRange: { min: ev.timeBase, max: ev.timeBase } };
-  const round = (n: number) => Math.round(Math.max(0.5, n) * 10) / 10;
+export function durationPreview(action: ActionDefinition, ev: Evaluation, run: OperationRun, dither = 0): Pick<ActionView, 'timeCost' | 'timeRange'> {
+  if (action.awaitSupport) return { timeCost: ev.timeBase + dither, timeRange: { min: ev.timeBase + dither, max: ev.timeBase + dither } };
+  const round = (n: number) => Math.round(Math.max(0.5, n + dither) * 10) / 10;
   const chance = { favorable: ev.pFavorable, mixed: Math.max(0, 1 - ev.pFavorable - ev.pAdverse), adverse: ev.pAdverse };
   let expected = 0;
   const limits = (['favorable', 'mixed', 'adverse'] as const).flatMap((band) => {
@@ -425,7 +450,25 @@ function inferredConsequenceLevel(action: ActionDefinition): ActionView['consequ
   return safetyLoss >= 18 ? 'severe' : safetyLoss >= 10 ? 'high' : safetyLoss > 0 || action.stressBase >= 5 ? 'moderate' : 'low';
 }
 
-function toView(state: GameState, run: OperationRun, a: ActionDefinition, ev: Evaluation, alternates: SquadId[]): ActionView {
+/** The rating a choice leans on most (its heaviest weight; shooting only on an execution check, as
+ * the aptitude counts it), so the card can show the lead's number for it. */
+function keyRatingOf(a: ActionDefinition): Pick<ActionView, 'keyRating'> {
+  if (a.commandOnly) return {};
+  const key = a.check.ratings.filter((r) => r.weight > 0 && (r.key !== 'shooting' || a.check.kind === 'execution'))
+    .reduce<{ key: RatingKey; weight: number } | null>((best, r) => !best || r.weight > best.weight ? r : best, null)?.key;
+  return key ? { keyRating: key } : {};
+}
+
+/** The lead marks (trait ids, band_<band>) this choice's results read (TreeState.lead), so the review
+ * can say whose traits change how it reads before the player picks who leads. */
+function leadReadsOf(a: ActionDefinition): Pick<ActionView, 'leadReads'> {
+  const marks = new Set((['favorable', 'mixed', 'adverse'] as const).flatMap((band) => a.outcomes[band])
+    .flatMap((effect) => [...effect.when?.flags ?? [], ...effect.when?.notFlags ?? []])
+    .filter((flag) => flag.startsWith(LEAD_PREFIX)).map((flag) => flag.slice(LEAD_PREFIX.length)));
+  return marks.size ? { leadReads: [...marks].sort() } : {};
+}
+
+function toView(state: GameState, run: OperationRun, a: ActionDefinition, ev: Evaluation, alternates: SquadId[], dither: number): ActionView {
   const hidden = isTargetHidden(a, run);
   const eventResult = actionEventResult(a);
   let reason = ev.reason;
@@ -433,6 +476,12 @@ function toView(state: GameState, run: OperationRun, a: ActionDefinition, ev: Ev
   return {
     ...(eventResult ? { eventResult } : {}),
     ...(ev.authority ? { authority: { ...ev.authority } } : {}),
+    ...(a.deceives ? { deceives: true as const } : {}),
+    // The stall so far counts toward the threat as the commit counts it (decide's clockBaseMinutes).
+    ...(a.threat ? { threat: { label: a.threat.label, bands: (['favorable', 'mixed', 'adverse'] as const).filter((band) => teamMinutes(ev, a, band) + dither >= a.threat!.minutes) } } : {}),
+    ...(a.weighing ? { weighing: { pull: leadIn(a.weighing.pull, ev, state), cost: leadIn(a.weighing.cost, ev, state) } } : {}),
+    ...keyRatingOf(a),
+    ...leadReadsOf(a),
     id: a.id,
     stage: a.stage,
     title: a.title,
@@ -451,7 +500,7 @@ function toView(state: GameState, run: OperationRun, a: ActionDefinition, ev: Ev
     consequenceLevel: a.consequenceLevel ?? inferredConsequenceLevel(a),
     outcomePreview: { ...(a.outcomePreview ?? defaultOutcomePreview(a)) },
     suppliesRequired: expectedSupplies(a, ev),
-    ...durationPreview(a, ev, run),
+    ...durationPreview(a, ev, run, dither),
     travelMinutes: ev.travelMinutes,
     ...(a.timeLabel ? { timeLabel: a.timeLabel } : {}),
     contributors: ev.contributors,
@@ -461,8 +510,10 @@ function toView(state: GameState, run: OperationRun, a: ActionDefinition, ev: Ev
   };
 }
 
-/** Actions for the current stage. focusSquadId sets the default acting squad. */
-export function actionViews(state: GameState, _now: number, focusSquadId: SquadId | null): ActionView[] {
+/** Actions for the current stage. focusSquadId sets the default acting squad. `dither` is the open
+ * decision's stall in game minutes (sim/clocks.ts openDither): the cards' minutes and threat tags read
+ * it, so a preview shows what a commit now would charge. Zero by default: gates and replays never stall. */
+export function actionViews(state: GameState, _now: number, focusSquadId: SquadId | null, dither = 0): ActionView[] {
   const run = state.activeRun;
   if (!run || run.status !== 'active' || run.stage === 'debrief') return [];
   const s = getScenario(run.scenarioId);
@@ -470,7 +521,7 @@ export function actionViews(state: GameState, _now: number, focusSquadId: SquadI
   const built = builtFor(run.locationFamilyId, run.locationSeed, run.flags);
   return s.stages[run.stage].actions.filter((a) => !isGenericResponseExit(s, a) && conditionHolds(a.visibleWhen, run)).map((a) => {
     const { ev, alternates } = evaluateDefault(state, run, s, built, a, focusSquadId);
-    return toView(state, run, a, ev, alternates);
+    return toView(state, run, a, ev, alternates, cappedDither(s, run, dither));
   });
 }
 
@@ -484,6 +535,10 @@ export function previewAction(
   actionId: Id,
   actingSquadIds: SquadId[],
   supportSquadIds: SquadId[],
+  /** The officer the player sends to lead (decide's leadOfficerId); honored only among those taking part. */
+  lead?: Id,
+  /** The open decision's stall in game minutes, as actionViews reads it. */
+  dither = 0,
 ): ActionView | null {
   const run = state.activeRun;
   if (!run || run.status !== 'active' || run.stage === 'debrief') return null;
@@ -491,8 +546,8 @@ export function previewAction(
   const a = s?.stages[run.stage].actions.find((x) => x.id === actionId);
   if (!s || !a || !conditionHolds(a.visibleWhen, run)) return null;
   const built = builtFor(run.locationFamilyId, run.locationSeed, run.flags);
-  const ev = evaluateAction({ state, run, scenario: s, action: a, built, acting: actingSquadIds, support: supportSquadIds });
-  return toView(state, run, a, ev, []);
+  const ev = evaluateAction({ state, run, scenario: s, action: a, built, acting: actingSquadIds, support: supportSquadIds, ...(lead ? { lead } : {}) });
+  return toView(state, run, a, ev, [], cappedDither(s, run, dither));
 }
 
 // ---------------------------------------------------------------- prep and debrief
@@ -519,7 +574,7 @@ export function lastResolution(state: GameState): DecisionResolution | null {
  * is the outcome's index in the band's authored list. The squads are `acting` with the default
  * support, or the game's default pick (the best eligible squad) when not given. Engine only: the
  * player never sees these odds. Empty when no call is running or the action isn't at this stage. */
-export function drawnDistributionAt(state: GameState, actionId: string, band: OutcomeBand, acting?: SquadId[]): DrawnDistribution[] {
+export function drawnDistributionAt(state: GameState, actionId: string, band: OutcomeBand, acting?: SquadId[], dither = 0): DrawnDistribution[] {
   const run = state.activeRun;
   if (!run || run.status !== 'active' || run.stage === 'debrief') return [];
   const scenario = getScenario(run.scenarioId);
@@ -528,7 +583,7 @@ export function drawnDistributionAt(state: GameState, actionId: string, band: Ou
   const built = builtFor(run.locationFamilyId, run.locationSeed, run.flags);
   const ev = acting ? evaluateAction({ state, run, scenario, action, built, acting, support: defaultSupport(run, action, acting) })
     : evaluateDefault(state, run, scenario, built, action, null).ev;
-  const clockBase = teamMinutes(ev, action, band);
+  const clockBase = teamMinutes(ev, action, band) + cappedDither(scenario, run, dither);
   const indices = matchedOutcomeIndices(action, band, run, scenario, clockBase);
   return drawnDistribution(matchedEffects(action, band, run, scenario, clockBase), { state, run, scenario, acting: ev.acting, participantIds: ev.participantIds, unitsOf: availableUnits })
     .map((entry) => ({ ...entry, effect: indices[entry.effect] }));

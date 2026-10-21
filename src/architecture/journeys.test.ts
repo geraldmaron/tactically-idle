@@ -17,6 +17,10 @@ import type { Command } from '../sim/types';
 import type { IncidentType } from '../sim/scenario-types';
 import type { GameState } from '../sim/types';
 import { JOURNEYS } from './journeys';
+import { computeDebrief } from '../sim/operation';
+import { ROLE_MAIN_RATING, rankOf } from '../sim/ranks';
+import { RANK_IDS, rankXp } from '../content/ranks';
+import { serviceForLevel } from '../sim/department-level';
 
 const trees = Object.values(CALL_TREES).map(tree => tree!);
 // Vite leaves the importing file out of its own glob, so this file counts itself.
@@ -94,6 +98,42 @@ describe('journeys', () => {
     expect(bought, 'something on the shelf is affordable and buyable').toBeDefined();
     expect(bought!.out.state.department.funding).toBe(hired.state.department.funding - bought!.item.cost);
     expect(Object.keys(bought!.out.state.units).length).toBe(Object.keys(hired.state.units).length + 1);
+  });
+
+  it('officer-promotes: closing a call promotes an officer one XP short, raising their main rating and wage', () => {
+    const { scenarioId } = drawCalls(trees[0], 3, 1)[0];
+    const ended = playToEnd(scenarioId, 'random', 7);
+    const preview = computeDebrief(ended, ended.activeRun!)!;
+    const earner = preview.officerCondition.find(c => c.xpGained > 0 && rankOf(ended.officers[c.officerId]) !== 'lieutenant')!;
+    expect(earner, 'someone on the call earns XP').toBeDefined();
+    const o = ended.officers[earner.officerId];
+    const next = RANK_IDS[RANK_IDS.indexOf(rankOf(o)) + 1];
+    o.xp = rankXp(next) - 1;
+    const key = ROLE_MAIN_RATING[o.role];
+    const before = { rating: o.ratings[key], wage: o.wage };
+    const debrief = computeDebrief(ended, ended.activeRun!)!;
+    expect(debrief.officerCondition.find(c => c.officerId === o.id)!.promotions?.map(p => p.rank)).toEqual([next]);
+    const closed = send(ended, { type: 'closeDebrief' });
+    const after = closed.state.officers[o.id];
+    expect(rankOf(after)).toBe(next);
+    expect(after.ratings[key]).toBeGreaterThan(before.rating);
+    expect(after.wage).toBeGreaterThan(before.wage);
+    expect(after.promotions?.at(-1)).toMatchObject({ rank: next });
+    expect(closed.state.report!.personnel.some(p => p.event === 'promoted' && p.officerId === o.id)).toBe(true);
+  });
+
+  it('milestone-grants: a call that lifts the department to level 2 grants the level 2 developments free', () => {
+    const { scenarioId } = drawCalls(trees[0], 3, 1)[0];
+    const ended = playToEnd(scenarioId, 'random', 7);
+    ended.department.service = serviceForLevel(2) - 1;
+    const funding = ended.department.funding;
+    const payout = computeDebrief(ended, ended.activeRun!)!.fundingReward;
+    const closed = send(ended, { type: 'closeDebrief' });
+    expect(closed.state.department.level).toBeGreaterThanOrEqual(2);
+    const granted = closed.state.department.grants.map(grant => grant.nodeId);
+    expect(granted).toEqual(expect.arrayContaining(['personnel_recruiting', 'field_entry_course', 'wellbeing_peer_support']));
+    expect(closed.state.department.funding).toBe(funding + payout);
+    expect(closed.state.report!.grants?.length).toBe(granted.length);
   });
 
   it('debrief-explains: every committed decision in the debrief names its result and why', () => {

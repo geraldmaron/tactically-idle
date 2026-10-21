@@ -7,6 +7,8 @@ import type { CallResult, GateCheck, GateJob, Weight } from '../../../../gen/inc
 import { plainTokens, sentenceCase } from '../../../../gen/incident/trees-v13/dependencies';
 import type { DependencyIndex, LintFinding } from '../../../../gen/incident/trees-v13/dependencies';
 import type { IncidentTemplate } from '../../../../content/incidents/types';
+import { AVOIDABLE_THEMES, CONTENT_DESCRIPTORS, type ContentDescriptor } from '../../../../content/content-descriptors';
+import { derivedDescriptors } from '../../../../gen/incident/gates/content-descriptors';
 import type { IncidentType } from '../../../../sim/scenario-types';
 import type { ReachTally } from '../../jobs/tally';
 import type { GateRun, GateVerdict } from '../../model/gate-view';
@@ -167,3 +169,28 @@ export function readIds(text: string, template: IncidentTemplate, deps: Dependen
     return word;
   });
 }
+
+// ---------------------------------------------------------------- content descriptors
+
+/** One situation's content descriptors (docs/content-rating.md), for the card's Content row: each
+ * descriptor it declares, whether the tree derives it and whether a player can avoid it, any
+ * the tree derives that the list leaves out (the content gate fails on those), and the E4 screen
+ * reason when there is one. `note` is the authoring note in role nouns. */
+export interface SituationContent { index: 0 | 1 | 2; note: string; tags: { descriptor: ContentDescriptor; derived: boolean; avoidable: boolean }[]; missing: ContentDescriptor[]; screened: string | null }
+
+export function situationContent(template: IncidentTemplate): SituationContent[] {
+  return ([0, 1, 2] as const).map(index => {
+    const situation = template.tree.situations[index];
+    let derived: ContentDescriptor[] = [];
+    try { derived = derivedDescriptors(template, index); } catch { derived = []; }
+    const declared = new Set(situation.descriptors ?? []);
+    return {
+      index, note: plainTokens(situation.note, template.tree),
+      tags: CONTENT_DESCRIPTORS.filter(d => declared.has(d)).map(descriptor => ({ descriptor, derived: derived.includes(descriptor), avoidable: (AVOIDABLE_THEMES as readonly ContentDescriptor[]).includes(descriptor) })),
+      missing: derived.filter(d => !declared.has(d)), screened: situation.selfHarmScreened ?? null,
+    };
+  });
+}
+
+/** A descriptor in words: "police gunfire", "suicide or self-harm". */
+export const descriptorLabel = (descriptor: ContentDescriptor): string => descriptor === 'suicide_self_harm' ? 'suicide or self-harm' : descriptor.replace(/_/g, ' ');

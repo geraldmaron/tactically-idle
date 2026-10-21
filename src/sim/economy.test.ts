@@ -45,7 +45,6 @@ function scenario(): GameState {
 
 function expectEquivalent(a: GameState, b: GameState) {
   expect(a.department.funding).toBeCloseTo(b.department.funding, 3);
-  expect(a.department.devPoints).toBeCloseTo(b.department.devPoints, 6);
   expect(a.department.lastSettledAt).toBe(b.department.lastSettledAt);
   expect(Object.keys(a.units).sort()).toEqual(Object.keys(b.units).sort());
   for (const id of Object.keys(a.units)) {
@@ -116,7 +115,6 @@ describe('offline equivalence', () => {
     expect(s.report!.wages).toBeCloseTo(1520, 3);
     expect(s.report!.operating).toBeCloseTo(800, 3);
     expect(s.report!.net).toBeCloseTo(2480, 3);
-    expect(s.report!.devPoints).toBeCloseTo(1, 6);
   });
 
   it('short settlements do not make a report; acknowledgeReport clears one', () => {
@@ -136,7 +134,6 @@ describe('funding cap', () => {
     const at30 = ok(start, { type: 'tick' }, T0 + 30 * HOUR_MS);
     expect(at30.department.funding).toBeCloseTo(at24.department.funding, 3);
     expect(at30.department.funding).toBeCloseTo(12400 + 24 * 620, 3);
-    expect(at30.department.devPoints).toBeCloseTo(3 + 24 * 0.25, 6);
     expect(at30.report).toMatchObject({ capped: true, accruedHours: 24 });
     expect(at24.report).toMatchObject({ capped: false });
   });
@@ -192,7 +189,6 @@ describe('time safety', () => {
     const snapshot = structuredClone(s);
     s = ok(s, { type: 'tick' }, T0 + 1 * HOUR_MS);
     expect(s.department.funding).toBe(snapshot.department.funding);
-    expect(s.department.devPoints).toBe(snapshot.department.devPoints);
     expect(s.department.clockHighWater).toBe(T0 + 2 * HOUR_MS);
     s = ok(s, { type: 'tick' }, T0 + 2 * HOUR_MS);
     expect(s).toEqual(snapshot);
@@ -333,5 +329,20 @@ describe('restock rules', () => {
     expect(s.department.restockRules).toEqual([]);
     const r = dispatch(s, { type: 'setRestockRule', rule: { itemId: 'trauma_kit', remove: true } }, { now: T0 });
     expect(r.result.ok).toBe(false);
+  });
+});
+
+describe('officer rates', () => {
+  it('splits the hourly money by officer, and patrol shares sum to the department patrol line', async () => {
+    const { officerRates } = await import('./economy');
+    const g = establishedDepartment(T0);
+    const t = g.department.clockHighWater;
+    const rows = Object.values(officerRates(g, t));
+    expect(rows.length).toBe(Object.keys(g.officers).length);
+    expect(rows.reduce((s, r) => s + r.patrol, 0)).toBe(ratesAt(g, t).patrol);
+    expect(rows.reduce((s, r) => s + r.wage, 0)).toBe(ratesAt(g, t).wages);
+    for (const r of rows) expect(r.net).toBeCloseTo(r.patrol + r.detail - r.wage);
+    // Wages differ, so officers on the same duty net different amounts.
+    expect(new Set(rows.map((r) => r.net)).size).toBeGreaterThan(1);
   });
 });

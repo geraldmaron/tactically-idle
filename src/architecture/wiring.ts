@@ -16,6 +16,7 @@ import { openingFlag } from '../sim/resolution';
 import { actionViews } from '../sim/operation-selectors';
 import { NOW } from '../sim/test-fixtures';
 import type { GameState, RatingKey } from '../sim/types';
+import type { CheckKind } from '../sim/scenario-types';
 import type { System } from './manifest';
 
 export interface Probe {
@@ -34,6 +35,9 @@ export interface Probe {
   minShare: number;
   /** Live: every call tree must have at least one responsive choice. */
   everyTree?: boolean;
+  /** Only choices of these check kinds count: the input reaches no other kind by design, so a menu
+   * that adds a look or a move doesn't read as lost wiring. */
+  kinds?: readonly CheckKind[];
   /** Gap: what is missing and where it was found. */
   gap?: string;
   evidence: string;
@@ -73,6 +77,11 @@ export const WIRING: readonly Probe[] = [
     evidence: '`conditionFraction` takes strain off each rating (src/sim/officer.ts)',
   },
   {
+    id: 'officer-certs', system: 'officer', input: 'Certificates (squad A holds none)', direction: 'down', status: 'live', minShare: 0.086,
+    perturb: state => edit(state, draft => { for (const officer of squadOfficers(draft)) officer.certs = []; }),
+    evidence: 'A choice with a certBonus credits the first officer taking part who holds it (src/sim/resolution.ts): a crisis negotiator on the talk, an advanced first aider on care, a surveillance specialist on a watch (owner 2026-10-20: the certificates finally matter). Measured 2026-10-20: 10 of 115 sampled choices, all hostage; the legacy trees carry none yet.',
+  },
+  {
     id: 'items-none', system: 'item', input: 'Carried equipment (squad A deploys with nothing)', direction: 'down', status: 'live', minShare: 0.2, openingOnly: true,
     perturb: (_state, restart) => restart({ items: [] }),
     evidence: 'A choice gets the gear its physical act asks for (src/gen/incident/action-gear.ts): a shield when the team goes in, the hailer for a voice through the walls, observation aids for a watch from outside, plus any gear the choice authors. Phone calls, texts, waits and walk-outs ask nothing of carried gear, and radios are standard issue, so neither responds. Measured 2026-10-18: 6 of 30 opening choices.',
@@ -110,6 +119,11 @@ export const WIRING: readonly Probe[] = [
       }
     }),
     evidence: 'A weapon held only on report costs a share of the threat on top (THREAT_TUNING.unconfirmed, src/sim/threat.ts), and an entry or a look into a room goes better once the team has seen where the armed person in it is (INTEL_V1.knownPosition, src/sim/incident-factors.ts). Confirming either takes the cost off or adds the credit. Measured 2026-10-18: 97 of 117 sampled choices.',
+  },
+  {
+    id: 'reputation-lean', system: 'metric', input: 'Department reputation (a full name for going in hard)', direction: 'any', status: 'live', minShare: 1, everyTree: true, kinds: ['contact', 'pressure', 'execution'],
+    perturb: state => edit(state, draft => { draft.department.reputation = { lean: 1, choices: 100 }; }),
+    evidence: '`reputationContributor` adds a named line to contact and pressure checks (people have heard of the department) and to execution checks (the team has drilled it), capped at REPUTATION_TUNING.maxPoints (src/sim/reputation.ts). Observation, medical and coordination checks never respond, so the probe counts only the kinds it reaches. Measured 2026-10-20: 96 of 96 sampled contact, pressure and execution choices, every tree.',
   },
   {
     id: 'metric-pressure', system: 'scenario', input: 'Time pressure on the call (pressure 95)', direction: 'down', status: 'live', minShare: 1, everyTree: true,
@@ -160,9 +174,11 @@ export function measureWiring(probes: readonly Probe[] = WIRING, points: readonl
       const restart = (opts?: Parameters<typeof startGateRun>[2], scenarioId = point.scenarioId) => baseline(startGateRun(scenarioId, 719, opts));
       const before = odds(base), after = odds(probe.perturb(base, restart));
       const tree = (byTree[point.type] ??= { choices: 0, moved: 0 });
+      const kindOf = probe.kinds ? new Map(Object.values(getScenario(point.scenarioId)!.stages).flatMap(stage => stage.actions).map(action => [action.id, action.check.kind])) : null;
       for (const [id, b] of before) {
         const a = after.get(id);
         if (!b.eligible) continue;
+        if (kindOf && !probe.kinds!.includes(kindOf.get(id)!)) continue;
         if (!a || !a.eligible) { flips++; continue; }
         tree.choices++;
         const delta = a.favorable - b.favorable;

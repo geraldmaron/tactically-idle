@@ -13,8 +13,11 @@ import { drawIncidentSpec, incidentId, parseIncidentId } from '../gen/incident';
 import { SCENARIO_TYPES } from '../content/scenario-types';
 import { unlockedTypes } from '../content/unlocks';
 import { noveltyWeights, recordArrival, recordDispatch } from './casebook';
+import { reputationWeights } from './reputation';
 import type { IncidentType } from './scenario-types';
 import { tunable } from './tuning';
+import { callTreeAt } from '../content/call-trees';
+import type { AvoidableTheme, ContentDescriptor } from '../content/content-descriptors';
 
 /** Content v11 gates board draws by capability and weights unseen frameworks first. */
 
@@ -39,6 +42,39 @@ export const INCIDENT_TUNING = tunable('INCIDENT_TUNING', {
 }, { guard: next => next.minIntervalMs <= 0 || next.minIntervalMs > next.maxIntervalMs ? 'Arrival gaps need 0 < minIntervalMs ≤ maxIntervalMs.'
   : next.minLifetimeMs <= 0 || next.minLifetimeMs > next.maxLifetimeMs ? 'Card lifetimes need 0 < minLifetimeMs ≤ maxLifetimeMs.' : null });
 
+
+// ---------------------------------------------------------------- content filter
+
+/** What the player keeps off the board (docs/content-rating.md): the avoidable themes they turned
+ * off. A situation carrying any of them is left out. A pure input: the store owns the setting and
+ * passes it in. */
+export interface ContentExclusion { avoid: readonly AvoidableTheme[] }
+
+/** The descriptors an exclusion rules out. */
+export function excludedDescriptors(exclusion: ContentExclusion): Set<ContentDescriptor> {
+  return new Set<ContentDescriptor>(exclusion.avoid);
+}
+
+const SITUATIONS = [0, 1, 2] as const;
+type SituationIndex = (typeof SITUATIONS)[number];
+
+/** Per kind of call, the situations an exclusion leaves drawable. A situation is drawn whole or not
+ * at all, read from its declared descriptors (the content gate holds them to what the tree derives).
+ * A kind with no call tree has no descriptors and stays whole. */
+export function drawableSituations(exclusion: ContentExclusion): Record<IncidentType, SituationIndex[]> {
+  const out = excludedDescriptors(exclusion);
+  return Object.fromEntries(SCENARIO_TYPES.map(({ type }) => {
+    const tree = callTreeAt(type);
+    return [type, SITUATIONS.filter(index => !(tree?.situations[index].descriptors ?? []).some(descriptor => out.has(descriptor)))];
+  })) as Record<IncidentType, SituationIndex[]>;
+}
+
+/** The kinds of call that can still reach the board under an exclusion, in SCENARIO_TYPES order.
+ * Unlocks aside: a caller intersects these with what the department has unlocked. */
+export function drawableKinds(exclusion: ContentExclusion): IncidentType[] {
+  const situations = drawableSituations(exclusion);
+  return SCENARIO_TYPES.map(({ type }) => type).filter(type => situations[type].length > 0);
+}
 
 /** Department plus the one field this module adds (JSON-safe, optional like candidateRefreshedAt). */
 type DepartmentExt = Department & { nextIncidentAt?: number };
@@ -82,15 +118,25 @@ export function takeIncident(d: GameState, id: Id): IncidentCard | null {
  * Draw one spec from the department PRNG and add its card, arriving at `at`.
  * Returns false (after still advancing the PRNG deterministically) when the id is
  * already on the board or is the active run's scenario.
+ *
+ * `exclusion` leaves out the situations the player's content settings rule out, and any kind left
+ * with none. When no kind the department can draw is left, nothing is drawn and the PRNG doesn't
+ * move. Without one the draw is exactly the unfiltered draw.
  */
-function drawCard(d: GameState, at: number): IncidentCard | null {
+function drawCard(d: GameState, at: number, exclusion?: ContentExclusion): IncidentCard | null {
   const dep = d.department;
+  const situations = exclusion ? drawableSituations(exclusion) : undefined;
   const run = d.activeRun;
   const activeStory = run ? parseIncidentId(run.scenarioId) : null;
   const avoidTypes = [...board(d).flatMap(card => { const spec = parseIncidentId(card.id); return spec ? [spec.type] : []; }), ...(activeStory ? [activeStory.type] : [])];
   const recentTypes = d.debriefs.slice(0, 2).flatMap(report => { const spec = parseIncidentId(report.scenarioId); return spec ? [spec.type] : []; });
   const arc = playerArcContext(d);
-  const drawn = drawIncidentSpec(d.rngState, { level: dep.level, trust: dep.trust, avoidFamilies: [...board(d).map((c) => c.familyId), ...(run ? [activeStory?.familyId ?? run.locationFamilyId] : [])], ...(avoidTypes ? { avoidTypes } : {}), ...(recentTypes ? { recentTypes } : {}), ...arc });
+  if (situations) {
+    // The draw's own unlock rule: the unlocked kinds, or every kind when none is unlocked.
+    const open = SCENARIO_TYPES.map((info) => info.type).filter((type) => arc.unlockedTypes.includes(type));
+    if (!(open.length ? open : SCENARIO_TYPES.map((info) => info.type)).some((type) => situations[type].length)) return null;
+  }
+  const drawn = drawIncidentSpec(d.rngState, { level: dep.level, trust: dep.trust, avoidFamilies: [...board(d).map((c) => c.familyId), ...(run ? [activeStory?.familyId ?? run.locationFamilyId] : [])], ...(avoidTypes ? { avoidTypes } : {}), ...(recentTypes ? { recentTypes } : {}), ...arc, ...(situations ? { situations } : {}) });
   const spec = { ...drawn.spec, tier: Math.min(5, Math.max(1, Math.round(drawn.spec.tier))) };
   const life = drawBetween(drawn.state, INCIDENT_TUNING.minLifetimeMs, INCIDENT_TUNING.maxLifetimeMs);
   d.rngState = life.state;
@@ -118,7 +164,7 @@ function drawCard(d: GameState, at: number): IncidentCard | null {
 export function playerArcContext(d: GameState): { unlockedTypes: IncidentType[]; typeWeights: Partial<Record<IncidentType, number>> } {
   const types = SCENARIO_TYPES.map((info) => info.type);
   const open = unlockedTypes(d, types);
-  return { unlockedTypes: open, typeWeights: noveltyWeights(d, open) };
+  return { unlockedTypes: open, typeWeights: reputationWeights(d.department, noveltyWeights(d, open)) };
 }
 
 /** Draw the gap to the following arrival and store the new schedule. */
@@ -131,14 +177,14 @@ function scheduleAfter(d: GameState, from: number): void {
 /**
  * Fill the board with `count` cards arriving at `now` and start the schedule.
  * Used for a new game. Deterministic in
- * (rngState, level, trust, now).
+ * (rngState, level, trust, now). `exclusion`: the player's content settings (drawCard).
  */
-export function seedIncidentBoard(d: GameState, now: number, count: number = INCIDENT_TUNING.initialCount): void {
+export function seedIncidentBoard(d: GameState, now: number, count: number = INCIDENT_TUNING.initialCount, exclusion?: ContentExclusion): void {
   board(d).length = 0;
   let attempts = 0;
   while (board(d).length < count && attempts < count * 8) {
     attempts++;
-    drawCard(d, now);
+    drawCard(d, now, exclusion);
   }
   scheduleAfter(d, now);
 }
@@ -147,9 +193,10 @@ export function seedIncidentBoard(d: GameState, now: number, count: number = INC
  * Apply every board event due at or before `t`: arrivals in schedule order (each
  * after the expiries that precede it), then final expiries, and drop the card of
  * the run in progress. `_prev` is unused: arrivals follow the stored schedule, not
- * the sweep; it keeps the signature parallel to the other settlement hooks.
+ * the sweep; it keeps the signature parallel to the other settlement hooks. `exclusion`: the
+ * player's content settings (drawCard).
  */
-export function applyIncidentsDue(d: GameState, _prev: number, t: number): void {
+export function applyIncidentsDue(d: GameState, _prev: number, t: number, exclusion?: ContentExclusion): void {
   if (nextIncidentAt(d) === null) {
     // A state without a schedule (older fixture or hand-built save): start one from the
     // settled clock without consuming the PRNG, so existing sequences are not disturbed.
@@ -161,7 +208,7 @@ export function applyIncidentsDue(d: GameState, _prev: number, t: number): void 
   while (at <= t) {
     // Slots freed by expiry before this arrival count before it.
     d.incidents = board(d).filter((c) => c.expiresAt > at);
-    if (board(d).length < INCIDENT_TUNING.boardMax) drawCard(d, at);
+    if (board(d).length < INCIDENT_TUNING.boardMax) drawCard(d, at, exclusion);
     scheduleAfter(d, at);
     at = nextIncidentAt(d)!;
   }

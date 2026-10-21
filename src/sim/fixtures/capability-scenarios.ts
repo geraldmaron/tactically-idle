@@ -66,7 +66,7 @@ function exercise(id: string, title: string, timeOfDay: 'day' | 'night', familyI
       completed: { id: 'completed', disposition: 'resolved', completion: { pressureAtLeast: 0 }, title: 'Exercise completed', summary: 'Review the score, time and safety explanations to compare options.', trustAdjust: 0, strain: 0 },
       handed_over: { id: 'handed_over', disposition: 'unresolved', title: 'Safe handover', summary: 'The team passed on what it knew without forcing an uncertain outcome.', trustAdjust: 0, strain: 0 },
     },
-    rewards: { funding: 0, devPoints: 0, trust: 0, xp: 0 },
+    rewards: { funding: 0, trust: 0, xp: 0 },
   };
 }
 

@@ -2,11 +2,13 @@ import { describe, expect, it } from 'vitest';
 import { dispatch } from './game';
 import { establishedDepartment as createInitialState } from './department-test-fixtures';
 import { ECONOMY_TUNING, HOUR_MS, ratesAt, recoveryRate, candidatePoolSize } from './economy';
-import { CALENDAR, experienceBand, formatGameDate, gameDay } from './calendar';
+import { CALENDAR, formatGameDate, gameDay } from './calendar';
+import { experienceBand, rankOf } from './ranks';
+import { RANK_TUNING, xpForService } from '../content/ranks';
 import {
   CAREER_TUNING,
   ageRecoveryFactor,
-  applyXpGrowth,
+  learnedXp,
   countNewDebriefs,
   debriefBand,
   recentAdverse,
@@ -55,14 +57,14 @@ function debrief(runId: string, officerIds: string[], objective: number, safety:
     unitWear: [],
     trustDelta: 0,
     fundingReward: 0,
-    devPointReward: 0,
+   
     causes: [],
   };
 }
 
 describe('starting careers', () => {
   const s = createInitialState(T0);
-  const band = (id: string) => experienceBand(s.officers[id], 0);
+  const band = (id: string) => experienceBand(s.officers[id]);
   const age = (id: string) => -s.officers[id].bornDay / DAYS;
   const service = (id: string) => -s.officers[id].serviceStartDay / DAYS;
 
@@ -83,6 +85,14 @@ describe('starting careers', () => {
     expect(band('off_ortiz')).toBe('developing');
     expect(new Set(Object.keys(s.officers).map(band))).toEqual(new Set(['rookie', 'developing', 'seasoned', 'veteran']));
     expect(s.officers.off_okafor.retirement).toBeNull();
+  });
+
+  it('places every starting officer at the rank their service years give, with that rank\'s XP', () => {
+    for (const o of Object.values(s.officers)) expect(o.xp).toBe(xpForService(-o.serviceStartDay / DAYS));
+    expect(rankOf(s.officers.off_park)).toBe('probationary');
+    expect(rankOf(s.officers.off_okafor)).toBe('lieutenant');
+    expect(rankOf(s.officers.off_brooks)).toBe('sergeant');
+    for (const o of Object.values(s.officers)) expect(o.promotions).toBeUndefined();
   });
 
   it('starts the calendar on 1 January 2026', () => {
@@ -115,43 +125,42 @@ describe('age and learning', () => {
     expect(recoveryRate(s, o, at(5.1))).toBeCloseTo(3 * 0.99, 9);
   });
 
-  it('xp becomes rating growth scaled by experience band: rookies faster, veterans slower', () => {
+  it('an award teaches more by band: rookies take in more, veterans less', () => {
     const s = createInitialState(T0);
-    const park = s.officers.off_park; // rookie medic: 100/1.3 = 77 xp per point
-    const medical = park.ratings.medical;
-    park.xp += 76;
-    expect(applyXpGrowth(park, 0)).toBe(0);
-    park.xp += 1;
-    expect(applyXpGrowth(park, 0)).toBe(1);
-    expect(park.ratings.medical).toBe(medical + 1);
-
-    const okafor = s.officers.off_okafor; // veteran lead: 100/0.7 = 143 xp per point
-    const coordination = okafor.ratings.coordination;
-    okafor.xp += 142;
-    expect(applyXpGrowth(okafor, 0)).toBe(0);
-    okafor.xp += 1;
-    expect(applyXpGrowth(okafor, 0)).toBe(1);
-    expect(okafor.ratings.coordination).toBe(coordination + 1);
-    // The same 100 xp is worth more to a rookie than to a veteran.
-    const gain = (id: string) => {
-      const x = createInitialState(T0).officers[id];
-      x.xp += 300;
-      return applyXpGrowth(x, 0);
-    };
-    expect(gain('off_park')).toBeGreaterThan(gain('off_okafor'));
+    // Hold aptitude at 1 (mean composure and awareness 50) so only the band moves the rate here;
+    // officer-value.test.ts covers aptitude.
+    for (const o of Object.values(s.officers)) o.ratings.composure = o.ratings.awareness = 50;
+    expect(learnedXp(s.officers.off_park, 100)).toBe(130);
+    expect(learnedXp(s.officers.off_ortiz, 100)).toBe(100);
+    expect(learnedXp(s.officers.off_brooks, 100)).toBe(85);
+    // Okafor is at the top rank: XP is capped, so nothing more is taken in.
+    expect(learnedXp(s.officers.off_okafor, 100)).toBe(0);
   });
 
-  it('starting xp is already banked: nobody jumps on the first tick', () => {
+  it('nobody is promoted or changes ratings on the first ticks', () => {
     const s = createInitialState(T0);
     const next = tick(s, 3);
-    for (const id of Object.keys(s.officers)) expect(next.officers[id].ratings).toEqual(s.officers[id].ratings);
+    for (const id of Object.keys(s.officers)) {
+      expect(next.officers[id].ratings).toEqual(s.officers[id].ratings);
+      expect(next.officers[id].xp).toBe(s.officers[id].xp);
+    }
   });
 
-  it('xp earned (here, from a finished course) converts to growth during settlement', () => {
+  it('a finished course awards XP through the one helper and can promote, with a shift report line', () => {
     const s = createInitialState(T0);
-    s.officers.off_park.xp += 80; // a debrief would add this; settlement banks it
+    const park = s.officers.off_park;
+    park.xp = RANK_TUNING.xp[1] - 1;
+    park.traits = ['rookie'];
+    park.assignment = { kind: 'training', courseId: 'first_aid_course', startedAt: T0, endsAt: T0 + HOUR_MS / 2 };
+    const medical = park.ratings.medical, wage = park.wage;
     const next = tick(s, 1);
-    expect(next.officers.off_park.ratings.medical).toBe(s.officers.off_park.ratings.medical + 1);
+    const after = next.officers.off_park;
+    expect(rankOf(after)).toBe('officer');
+    expect(after.traits).not.toContain('rookie');
+    expect(after.ratings.medical).toBeGreaterThanOrEqual(Math.min(95, medical + RANK_TUNING.mainBoost[1]));
+    expect(after.wage).toBe(wage + RANK_TUNING.wageStep[1]);
+    expect(after.promotions).toEqual([{ rank: 'officer', day: expect.any(Number), cause: expect.stringMatching(/^on finishing the /) }]);
+    expect(next.report!.personnel.find((p) => p.event === 'promoted')!.detail).toMatch(/promoted to Officer on finishing the .*no longer rookie/i);
   });
 });
 
@@ -531,7 +540,7 @@ describe('recruits', () => {
       c,
       age: (day - c.officer.bornDay) / DAYS,
       service: (day - c.officer.serviceStartDay) / DAYS,
-      band: experienceBand(c.officer, day),
+      band: experienceBand(c.officer),
     }));
     for (const x of info) {
       expect(x.age).toBeGreaterThanOrEqual(21);
@@ -584,18 +593,20 @@ describe('careerInfo', () => {
   it('describes a rookie and a seasoned officer, and tells the service-retirement horizon', () => {
     const park = careerInfo(s, 'off_park', T0)!;
     expect(park.experienceLabel).toBe('Rookie');
-    expect(park.effects.join(' ')).toMatch(/learns fast/);
+    expect(park.effects.join(' ')).toMatch(/takes 30% more from each call/);
+    expect(park.nextRank).toMatchObject({ rank: 'officer', title: 'Officer' });
     expect(park.effects.some((e) => /Recovers/.test(e))).toBe(false);
     expect(park.outlook).toMatch(/Mandatory retirement in 36 years \(age 60\)/);
     expect(park.outlook).toMatch(/after 25 years of service \(in 2[45] years\)/);
     expect(careerInfo(s, 'nobody', T0)).toBeNull();
   });
 
-  it('experience bands move with service time', () => {
+  it('experience bands follow rank, not the calendar', () => {
     const brooks = careerInfo(s, 'off_brooks', T0)!;
-    expect(brooks.experience).toBe('seasoned');
-    // About a year later Brooks crosses 15 effective years and becomes a veteran.
-    expect(careerInfo(s, 'off_brooks', at(400))!.experience).toBe('veteran');
+    expect(brooks).toMatchObject({ experience: 'seasoned', rank: 'sergeant', rankTitle: 'Sergeant' });
+    // A year on, Brooks has more service but no more XP, so still a seasoned sergeant.
+    expect(careerInfo(s, 'off_brooks', at(400))!).toMatchObject({ experience: 'seasoned', rank: 'sergeant' });
+    expect(careerInfo(s, 'off_okafor', T0)!.nextRank).toBeNull();
   });
 });
 

@@ -25,6 +25,20 @@ export function signedMoney(n: number): string {
   return `${v > 0 ? '+' : '-'}${money(Math.abs(v))}`;
 }
 
+/** An hourly amount as a signed rate per minute: +$25/min, +$2.5/min, -$0.8/min. */
+export function ratePerMinute(perHourAmount: number): string {
+  const m = perHourAmount / 60;
+  const a = Math.abs(m);
+  if (a < 0.05) return '$0/min';
+  const body = a >= 10 ? money(a) : `$${a.toFixed(1)}`;
+  return `${m > 0 ? '+' : '-'}${body}/min`;
+}
+
+/** The live balance: whole dollars so accrual is visible every few seconds, compact past a million. */
+export function liveMoney(n: number): string {
+  return Math.abs(n) >= 1_000_000 ? `${n < 0 ? '-' : ''}$${(Math.abs(n) / 1_000_000).toFixed(2)}M` : moneyFull(n);
+}
+
 /** +$620/h */
 export function rate(n: number): string {
   return `${signedMoney(n)}/h`;

@@ -10,8 +10,7 @@ export function MaterialGuide() {
   const materials = (manifest.readyIds as string[]).filter((id): id is WallMaterial => id in WALLS && !failed.includes(id));
   if (!materials.length) return null;
   return (
-    <details className="material-guide">
-      <summary>Construction reference</summary>
+    <div className="material-guide">
       <p className="dim">Field samples for recognizing wall materials. Use the plan’s labeled symbols for tactical information.</p>
       <div className="material-guide-grid">
         {materials.map((id) => (
@@ -21,6 +20,6 @@ export function MaterialGuide() {
           </figure>
         ))}
       </div>
-    </details>
+    </div>
   );
 }

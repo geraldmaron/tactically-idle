@@ -25,7 +25,7 @@ const DEMANDS = [
 
 export const BARRICADE_TEMPLATE: IncidentTemplate = {
   type: 'barricaded',
-  label: 'Protective response',
+  label: 'Barricade',
   tree,
   cast: [
     { id: 'subjects', kind: 'subject', count: { min: 1, max: 1 }, keyRoles: ['subject'], person: {

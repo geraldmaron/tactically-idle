@@ -61,9 +61,9 @@ describe('dependency index', () => {
       expect(label, key).not.toMatch(/[{}]/);
       expect(label, key).toMatch(/^[A-Z]/);
     }
-    expect(entry('hostage_crisis', 'mark:turned')!.label).toBe('The former employee turned the handgun on the shop owner');
+    expect(entry('hostage_crisis', 'mark:turned')!.label).toBe('The former employee turned the handgun on the owner');
     expect(roleNoun(template('barricaded').tree, 'child')).toBe('child');
-    expect(plainTokens('{taker.He} {taker~keeps|keep} {owner.first} in the {scene}', template('hostage_crisis').tree)).toBe('They keep the shop owner in the scene');
+    expect(plainTokens('{taker.He} {taker~keeps|keep} {owner.first} in the {scene}', template('hostage_crisis').tree)).toBe('They keep the owner in the scene');
   });
 
   it('gives every site a stable key, and the same index on every walk', () => {

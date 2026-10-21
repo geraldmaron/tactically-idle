@@ -29,14 +29,15 @@ afterEach(() => {
 const install = (storage: unknown) => Object.defineProperty(globalThis, 'localStorage', { value: storage, configurable: true, writable: true });
 
 describe('PeopleText', () => {
-  it('wraps each colored name in a data-kind span with its hover label, a glyph on first mention', () => {
+  it('wraps each colored name in a data-kind span with its hover label, and no symbol in prose', () => {
     const html = render(createElement(PeopleProvider, { lexicon, children: createElement(PeopleText, { text: TEXT }) }));
     expect(html).toContain('<span class="people-name" data-kind="officer" data-person="off_chen" title="Squad A">');
     expect(html).toContain('data-kind="civilian" data-person="courier" title="Civilian"');
     expect(html).toContain('data-kind="subject" data-person="taker" title="Subject"');
     expect(html.match(/class="people-name"/g)).toHaveLength(4);
-    // One glyph per person: Tamar's second mention has none.
-    expect(html.match(/class="people-glyph"/g)).toHaveLength(3);
+    // Owner, 2026-10-20: "The symbols should not appear in prose."
+    expect(html).not.toContain('people-glyph');
+    expect(html).not.toContain('<svg');
     expect(text(html)).toBe(TEXT);
   });
 
@@ -68,5 +69,22 @@ describe('PeopleText', () => {
     expect(peopleColorOn()).toBe(false);
     setPeopleColor(true);
     expect(peopleColorOn()).toBe(true);
+  });
+});
+
+// Every surface that sets call text goes through PeopleText (or the lab's script view, which copies
+// its markup), so a symbol in prose can only come back through one of these files or through a new
+// caller of PeopleGlyph. The glyph stays only where a name stands alone as a label.
+const SOURCES = import.meta.glob(['/src/**/*.tsx'], { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
+// Person tiles in the game, and the lab's people list: a name standing alone as a label.
+const LABEL_USERS = ['/src/dev/lab/surfaces/play/XrayRail.tsx', '/src/ui/components/IncidentPeople.tsx', '/src/ui/screens/PrepBriefing.tsx'];
+
+describe('no symbol inside prose', () => {
+  it('uses PeopleGlyph only on person labels, never inside a people-name span', () => {
+    const users = Object.entries(SOURCES).filter(([, src]) => /<PeopleGlyph\b/.test(src)).map(([file]) => file).sort();
+    expect(users).toEqual(LABEL_USERS);
+    for (const [file, src] of Object.entries(SOURCES)) {
+      expect(src, file).not.toMatch(/className="people-name"[^>]*>[^<]*\{[^}]*<PeopleGlyph/);
+    }
   });
 });

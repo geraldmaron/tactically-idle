@@ -8,11 +8,13 @@ import { applyIncidentConsequences, applyPersonConsequences, civilianOutcomeView
 import { protectedOfficerEffects } from './force-risk';
 import { drawnKeys, forceSuppliesSpent, resolveDrawn } from './drawn-effects';
 import { withVariants } from '../gen/incident/drawn-model';
-import { advanceClocks, clockConditionsHold, clockErrors, clockOutEffects, cueEffects, decisionMinutes, forkMinutes, initialClocks, teamMinutes } from './clocks';
+import { advanceClocks, clockConditionsHold, clockErrors, clockOutEffects, cueEffects, decisionMinutes, ditherCap, forkMinutes, initialClocks, teamMinutes } from './clocks';
 import { applyMoves, driftMeters, initialMeters, meterConditionsHold } from './meters';
 import { applyCommitments } from './commitments';
 import { forceLines, OUTCOME_SCORE_V1, scoreCall } from './outcome-score';
-import { CAREER_TUNING } from './career';
+import { CAREER_TUNING, awardXp, learnedXp, promotionText } from './career';
+import { creditXp } from './ranks';
+import { applyGrants } from './grants';
 import { applyExternalSupportEffects, completionEvidence, COMPLETION_DISPOSITIONS, hasCompletionConditions, MAX_EXTERNAL_RESPONSE_MINUTES, savedDrawnEffects } from './external-support';
 // Operation engine: start, cancel, decide, closeDebrief. The run record is the
 // save: every committed decision stores its sample and result, so resuming never
@@ -47,6 +49,9 @@ import { ITEMS } from '../content/items';
 import { hashSeed, next } from './rng';
 import { fullName } from './officer';
 import { deployRoster, runRoster } from './squads';
+import { flushSquadMoves } from './roster';
+import { crewFlags, leadFlags } from './crew';
+import { LEAD_PREFIX } from './crew-flags';
 import { releaseRun, reserveLoadouts, settleRun, squadUnits } from './inventory';
 import { withStandardRadios } from './standard-kit';
 import { spaceAt, stagingPointById } from './spatial';
@@ -67,6 +72,8 @@ import { conditionHolds, withFlag } from './conditions';
 import { departmentUpkeep } from './equipment-manager-policy';
 import { vantageZones } from './sightlines';
 import { sightings } from './sightings';
+import { postFunding } from './ledger';
+import { postureOf, recordPosture } from './reputation';
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
 const clamp = (n: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, n));
@@ -404,6 +411,7 @@ function makeRun(state: GameState, built: BuiltLocation, scenario: ScenarioDefin
     endingId: null,
     settled: false,
     startedAt: now,
+    decisionOpenedAt: Math.max(now, state.department.clockHighWater),
   };
 }
 
@@ -431,10 +439,15 @@ export function advanceTime(run: Pick<OperationRun, 'clock' | 'pressure' | 'civi
  * team's minutes: sim/clocks.ts teamMinutes), and the subjects' meters as they stand at the start
  * of the decision (escalation, sim/meters.ts). */
 export function matchedEffects(action: ActionDefinition, band: OutcomeBand, run: Pick<OperationRun, 'knowledge' | 'flags' | 'pressure'> & Partial<Pick<OperationRun, 'clocks' | 'meters'>>, scenario: ScenarioDefinition, clockBase?: number): OutcomeEffect[] {
-  return matchedOutcomeIndices(action, band, run, scenario, clockBase).map((index) => {
+  // The decision point's threat (NodeThreat): a decision that takes its minutes, travel and the band's
+  // delay included, lets it happen. Its effects are addenda; they never route, so where the call
+  // goes still rests on the choice and the truth. One place, so a replay matches the live commit.
+  const threat = action.threat && clockBase !== undefined && clockBase >= action.threat.minutes
+    ? action.threat.effects.filter((effect) => conditionHolds(effect.when, run)) : [];
+  return [...matchedOutcomeIndices(action, band, run, scenario, clockBase).map((index) => {
     const effect = action.outcomes[band][index];
     return effect.reveal?.length ? { ...effect, knowledge: [...effect.knowledge ?? [], ...effect.reveal.map((factId) => ({ factId, status: scenario.facts.find((fact) => fact.id === factId)?.truth ? 'confirmed' as const : 'disproved' as const }))] } : effect;
-  });
+  }), ...threat];
 }
 
 /** Which of the band's authored outcomes apply (their indices, in order): matchedEffects' filter. */
@@ -518,13 +531,15 @@ export interface StepTrace {
 
 /** Re-derive each committed decision's deltas from stored bands. Deterministic. */
 export function traceRun(scenario: ScenarioDefinition, run: OperationRun): { steps: StepTrace[]; end: Pick<OperationRun, 'knowledge' | 'flags' | 'pressure' | 'objective' | 'civilianSafety' | 'clock'> } {
-  const sim: Pick<OperationRun, 'knowledge' | 'flags' | 'pressure' | 'objective' | 'civilianSafety' | 'clock' | 'clocks' | 'personCasualties' | 'officerCasualties' | 'meters' | 'commitments'> = { knowledge: initialKnowledge(scenario), flags: [], pressure: scenario.pressure.start, objective: 0, civilianSafety: 100, clock: 0,
+  const sim: Pick<OperationRun, 'knowledge' | 'flags' | 'pressure' | 'objective' | 'civilianSafety' | 'clock' | 'clocks' | 'personCasualties' | 'officerCasualties' | 'meters' | 'commitments'> = { knowledge: initialKnowledge(scenario), flags: [...run.crew ?? []], pressure: scenario.pressure.start, objective: 0, civilianSafety: 100, clock: 0,
     ...(initialClocks(scenario) ? { clocks: initialClocks(scenario) } : {}), ...(initialMeters(scenario) ? { meters: initialMeters(scenario) } : {}) };
   const actions = new Map(scenarioActions(scenario).map((a) => [a.id, a]));
   const steps: StepTrace[] = [];
   for (const resupply of run.resupplies ?? []) applyClockCues(sim, scenario, advanceTime(sim, scenario, resupply.minutes).cues);
   for (const h of run.history) {
     const a = actions.get(h.actionId) ?? null;
+    // Who led this decision, as the commit saw it (the stored lead flags).
+    sim.flags = [...sim.flags.filter((flag) => !flag.startsWith(LEAD_PREFIX)), ...h.leadFlags ?? []];
     const matched = a ? matchedEffects(a, h.band, sim, scenario, h.clockBaseMinutes) : [];
     const pressure0 = sim.pressure;
     const obj0 = sim.objective;
@@ -607,6 +622,8 @@ export function decisionViewsFor(state: GameState, run: OperationRun, scenario: 
       knowledgeChanges: record.knowledgeChanges.map((change) => ({ ...change, label: scenario.facts.find((fact) => fact.id === change.factId)?.label ?? change.factId })),
       contributors: record.inputs.map((input) => ({ ...input })),
       consequences: committed ? [...committed.consequences] : step.effects.map((effect) => effect.text).filter((text): text is string => !!text),
+      ...((committed ? committed.exchange : step.effects.flatMap(effect => effect.exchange ?? []))?.length
+        ? { exchange: (committed?.exchange ?? step.effects.flatMap(effect => effect.exchange ?? [])).map(line => ({ ...line })) } : {}),
       ...(committed?.officerCasualties !== undefined ? { officerCasualties: committed.officerCasualties.map(person => ({ ...person })) } : {}),
       ...(committed?.forceOutcome ? { forceOutcome: { ...committed.forceOutcome } } : {}),
       ...(committed?.personCasualties ? { personCasualties: committed.personCasualties.map(person => ({ ...person })) } : {}),
@@ -722,8 +739,10 @@ export function computeDebrief(state: GameState, run: OperationRun): DebriefResu
       const after = clamp(round1(o.stress + endingStrain), 0, 100);
       const before = clamp(round1(o.stress - (delta[id] ?? 0)), 0, 100);
       const share = Math.min(1, 0.4 + 0.3 * (participation[id] ?? 0));
-      const xp = run.responseFailure ? 0 : Math.round(scenario.rewards.xp * share * (0.5 + 0.5 * factor));
-      officerCondition.push({ officerId: id, stressBefore: before, stressAfter: after, xpGained: xp });
+      const xp = run.responseFailure ? 0 : learnedXp(o, scenario.rewards.xp * share * (0.5 + 0.5 * factor));
+      // The promotions closing this debrief brings, worked on a copy so the preview is what close applies.
+      const promotions = creditXp(structuredClone(o), xp, { label: '', day: 0 }).map((p) => ({ rank: p.rank, line: promotionText(p) }));
+      officerCondition.push({ officerId: id, stressBefore: before, stressAfter: after, xpGained: xp, ...(promotions.length ? { promotions } : {}) });
     }
   }
 
@@ -733,7 +752,6 @@ export function computeDebrief(state: GameState, run: OperationRun): DebriefResu
   const proposedTrust = run.responseFailure ? -2 : score ? score.trust : Math.round(scenario.rewards.trust * (2 * factor - 1)) + ending.trustAdjust;
   const trustDelta = clamp(state.department.trust + proposedTrust, 0, 100) - state.department.trust;
   const fundingReward = run.responseFailure ? 0 : Math.round(scenario.rewards.funding * (0.4 + 0.6 * factor));
-  const devPointReward = run.responseFailure ? 0 : factor >= 0.6 && (!completion || completion.completionAchieved) ? scenario.rewards.devPoints : factor >= 0.4 ? Math.floor(scenario.rewards.devPoints / 2) : 0;
   // Department service (save v7), shown on the debrief before it closes and added at close.
   const service = serviceEarned({ completed: completion?.completionAchieved ?? factor >= CAREER_TUNING.favorableAt, failed: !!run.responseFailure }, scenario.incident?.tier ?? 1);
   const levelAfter = service === null ? state.department.level : Math.max(state.department.level, levelForService(departmentService(state.department) + service));
@@ -748,6 +766,8 @@ export function computeDebrief(state: GameState, run: OperationRun): DebriefResu
     if (closingStrain.length) causes.unshift(`Ending adjustment at close: ${closingStrain.map((officer) => `${state.officers[officer.officerId]?.surname ?? officer.officerId} ${officer.delta > 0 ? '+' : ''}${officer.delta} strain`).join('; ')}.`);
   }
 
+  // The ending's epilogue, or the first variant whose state holds at the end of the call (E11.2).
+  const epilogue = ending.epilogueIf?.find(entry => conditionHolds(entry.when, run))?.epilogue ?? ending.epilogue;
   return {
     runId: run.id,
     scenarioId: run.scenarioId,
@@ -755,6 +775,7 @@ export function computeDebrief(state: GameState, run: OperationRun): DebriefResu
     endingTitle: ending.title,
     decisions: decisionViewsFor(state, run, scenario, steps),
     ...({ endingSummary: ending.summary }),
+    ...(epilogue ? { endingEpilogue: epilogue } : {}),
     ...completion,
     ...(run.responseFailure ? { disposition: 'unresolved' as const, completionAchieved: false, remainingTasks: run.responseFailure.remainingTasks } : {}),
     ...({ officerCasualties: Object.values(run.officerCasualties ?? {}).map(person => ({ ...person })), civilianOutcomes: civilianOutcomeViews(scenario, run) }),
@@ -769,7 +790,6 @@ export function computeDebrief(state: GameState, run: OperationRun): DebriefResu
     unitWear,
     trustDelta,
     fundingReward,
-    devPointReward,
     ...(service !== null ? { serviceEarned: service } : {}),
     ...(levelAfter > state.department.level ? { levelReached: levelAfter } : {}),
     causes: causes.slice(0, 7),
@@ -829,6 +849,9 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     for (const sid of cmd.squadIds) {
       for (const oid of deployRoster(draft, sid, ctx.now).goes) draft.officers[oid].assignment = { kind: 'operation', runId };
     }
+    // Who went: their traits and experience open choices and shape results (sim/crew.ts).
+    run.crew = crewFlags(draft, run);
+    run.flags.push(...run.crew);
     draft.activeRun = run;
     takeIncident(draft, scenario.id);
     return { ok: true };
@@ -858,7 +881,7 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     return { ok: true };
   },
 
-  decide(draft, cmd) {
+  decide(draft, cmd, ctx) {
     const run = draft.activeRun;
     if (!run) return fail('No operation in progress');
     if (run.status !== 'active' || run.stage === 'debrief') return fail('The operation is over; close the debrief');
@@ -871,17 +894,27 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     // Older UI callers use decide; they receive the same free navigation semantics.
     if (cmd.actingSquadIds.some((s) => cmd.supportSquadIds.includes(s))) return fail('A squad cannot both act and support');
     const built = builtFor(run.locationFamilyId, run.locationSeed, run.flags);
-    const input = { state: draft, run, scenario, action, built, acting: cmd.actingSquadIds, support: cmd.supportSquadIds };
+    const input = { state: draft, run, scenario, action, built, acting: cmd.actingSquadIds, support: cmd.supportSquadIds, ...(cmd.leadOfficerId ? { lead: cmd.leadOfficerId } : {}) };
     const ev = evaluateAction(input);
     if (!ev.eligible) return fail(ev.reason ?? 'Not available');
+    if (cmd.leadOfficerId && ev.participantIds[0] !== cmd.leadOfficerId) return fail('That officer is not taking part in this decision');
+    if (cmd.ditherMinutes !== undefined && !(Number.isFinite(cmd.ditherMinutes) && cmd.ditherMinutes >= 0)) return fail('Dither minutes must be 0 or more');
+    // The stall's minutes (docs/call-pressure.md), stopped at the open threat. They join the
+    // decision's own minutes below, so clocks, cues and the threat move through the one path.
+    const dither = Math.min(ditherCap(scenario, run), Math.floor((cmd.ditherMinutes ?? 0) * 10) / 10);
+    // Who leads is part of the story: results can read the lead's traits and experience
+    // (TreeState.lead → lead:<trait>, lead:band_<band>), replaced at every decision.
+    run.flags = [...run.flags.filter((flag) => !flag.startsWith(LEAD_PREFIX)), ...leadFlags(draft, run, ev.participantIds[0])];
 
+    // The department becomes known for how it works (sim/reputation.ts).
+    recordPosture(draft.department, postureOf(action));
     // One saved sample per committed decision.
     const r = next(run.rngState);
     run.rngState = r.state;
     const sample = r.value;
     const band = bandFor(ev.margin, sample);
     // Clock forks read the decision's own minutes, travel and forcing included (sim/clocks.ts).
-    const clockBaseMinutes = teamMinutes(ev, action, band);
+    const clockBaseMinutes = teamMinutes(ev, action, band) + dither;
     let matched = matchedEffects(action, band, run, scenario, clockBaseMinutes);
     // v13: drawn consequences (a subject firing at the team, the team's force) settle now, each
     // with its own saved sample, into the variant effects they choose (sim/drawn-effects.ts).
@@ -902,7 +935,7 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     const openingChanges = new Map<Id, OpeningState>(matched.flatMap(effect => (effect.openings ?? []).map(change => [change.openingId, change.state] as const)));
     const before = { objective: run.objective, civilianSafety: run.civilianSafety, pressure: run.pressure };
     const extra = matched.reduce((s, e) => s + (e.extraMinutes ?? 0), 0);
-    const timeCost = decisionMinutes(teamMinutes(ev, action, band, storyRouteUsed), extra, action);
+    const timeCost = decisionMinutes(teamMinutes(ev, action, band, storyRouteUsed) + dither, extra, action);
     const strain = strainFor(input, ev, band);
 
     const clocksBefore = run.clocks;
@@ -997,6 +1030,7 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
       actingSquadIds: [...ev.acting],
       supportSquadIds: [...ev.support],
       officerIds: [...ev.participantIds],
+      leadFlags: run.flags.filter((flag) => flag.startsWith(LEAD_PREFIX)),
       targetId: ev.action.targetId,
       inputs: ev.contributors,
       score: ev.score,
@@ -1005,6 +1039,7 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
       band,
       timeCost,
       clockBaseMinutes,
+      ...(dither > 0 ? { ditherMinutes: dither } : {}),
       stressDeltas: strain,
       stressLevels,
       itemsConsumed: consumed,
@@ -1014,6 +1049,8 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     };
     run.history.push(resolution);
     run.revision += 1;
+    // The next decision opens now.
+    run.decisionOpenedAt = Math.max(ctx.now, draft.department.clockHighWater);
 
     // stage transition (the committed decision is already in history)
     let stageNote: string | null = null;
@@ -1063,6 +1100,7 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
       ...(incidentConsequences ? { officerCasualties: incidentConsequences.records } : {}),
       ...(personConsequences ? { personCasualties: personConsequences.records } : {}),
       ...(ev.protectionUsed ? { protectionUsed: { ...ev.protectionUsed } } : {}),
+      ...(matched.some(effect => effect.exchange?.length) ? { exchange: matched.flatMap(effect => effect.exchange ?? []).map(line => ({ ...line, speaker: line.speaker.replace('{lead}', (ev.leadId && draft.officers[ev.leadId]?.surname) || 'Negotiator') })) } : {}),
       ...(drawn.records.length ? { drawn: drawn.records.map(record => ({ ...record })) } : {}),
     };
     resolution.explanation = explain(draft, scenario, ev, band, texts, timeCost, t.civilianLoss, knowledgeChanges, consumed, strain, stageNote);
@@ -1084,14 +1122,16 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     // v13 careers read the same scored factor the debrief paid out (sim/outcome-score.ts).
     const factor = scenario!.incidentPeople?.length && !run.responseFailure ? scoreCall(scenario!, run, { officers: draft.officers, steps: traceRun(scenario!, run).steps }).factor : outcomeFactor(run);
     const verdict: 'favorable' | 'adverse' | null = factor >= CAREER_TUNING.favorableAt && (result.completionAchieved) ? 'favorable' : factor < CAREER_TUNING.adverseBelow ? 'adverse' : null;
-    draft.department.funding += result.fundingReward;
-    draft.department.devPoints += result.devPointReward;
+    postFunding(draft.department, result.fundingReward, 'payout', `Call payout, ${scenario?.title ?? result.endingTitle}`, draft.department.clockHighWater);
     draft.department.trust = clamp(draft.department.trust + result.trustDelta, 0, 100);
     if (result.serviceEarned !== undefined) addService(draft.department, result.serviceEarned);
+    if (!run.responseFailure && (result.completionAchieved ?? factor >= CAREER_TUNING.favorableAt)) draft.department.callsResolved = (draft.department.callsResolved ?? 0) + 1;
+    const payoutShare = result.officerCondition.length ? result.fundingReward / result.officerCondition.length : 0;
     for (const oc of result.officerCondition) {
       const o = draft.officers[oc.officerId];
       if (!o) continue;
-      o.xp += oc.xpGained;
+      o.career.earned = (o.career.earned ?? 0) + payoutShare;
+      awardXp(draft, o, oc.xpGained, `after ${scenario?.title ?? result.endingTitle}`, draft.department.clockHighWater);
       o.stress = oc.stressAfter;
       o.career.operations += 1;
       if (verdict) o.career[verdict] += 1;
@@ -1103,15 +1143,19 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     // Fold now, not only at the next dispatch: the state keeps ten debriefs, so a later run
     // could otherwise push a best result out before it is recorded.
     foldDebriefs(draft, draft.department.clockHighWater);
+    // Level, trust and resolved calls only move here, so this is where milestones are met.
+    applyGrants(draft, draft.department.clockHighWater);
     draft.activeRun = null;
     return { ok: true };
   },
 };
 
+/** Every way a run ends comes through here, so queued squad moves apply once its officers are back. */
 function clearAssignments(draft: GameState, run: OperationRun): void {
   for (const o of Object.values(draft.officers)) {
     if (o.assignment?.kind === 'operation' && o.assignment.runId === run.id) o.assignment = null;
   }
+  flushSquadMoves(draft);
 }
 
 /** End a run without settling it: no rewards, its reservations and officers are released,

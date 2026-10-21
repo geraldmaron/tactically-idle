@@ -19,17 +19,21 @@ When work resumes, calls and tooling restart as fresh sessions from their hand-o
 
 | Lane | Branch | In flight | Declared touches |
 |---|---|---|---|
-| engine | `claude/engine-resume`, PR #79 (open); parked `claude/engine-barricade-blockers` at 965859b | Resumed 2026-10-19: shipped `clock-only-marks`, `manager-pronouns`, `sidearms-day-one`, `less-lethal-cartridges`, `short-squad-ui`, the engine side of `peer-support-lead`, `recruiter` and `meters-drift`, the `e2e-in-ci` workflow, owner UI feedback (HQ money and status row, tabs, briefing focus, live officer strip) and the Command Staff hiring pool (`docs/staff-hiring.md`, save version 10). Waiting on owner answers: `patrol-work` (`docs/patrol-work.md`). Scenario items stay paused | none |
-| calls | `claude/calls-barricade-tree` at 9b2847e (parked, stopped) | Stopped at the checkpoint. Parked: the new tree after the first writing review and the prose pass (check:strings exits 0), calibration rows for the new endings (trust floor unchanged), and the joint-operation journey switched to the barricade. Not done: the Codex retirement review and the reviewer's re-read (stopped before their verdicts), deleting barricade-order.ts, the turn_hall.watch change, the intel-floor list, civilian-hit lines and design-doc records | none |
-| tooling | parked as draft PRs #76 (rescue pins) and #77 (barricade blockers) | Stopped at the checkpoint before `e2e-in-ci`: context too heavy. Hand-over brief written for a fresh tooling session | none |
+| engine | none in flight; `claude/engine-barricade-blockers` lands in #80 | #79 merged 2026-10-19 (sidearms, cartridges, Command Staff hiring pool, meter drift, owner UI feedback). Open: `outcome-calibration-drift` (found while reconciling the barricade), `patrol-work` waits on owner answers. Scenario items stay paused | none |
+| calls | `claude/calls-barricade-tree` (up to date with `main` and #80, not merged) | Parked. Blocked on `outcome-calibration-drift` (its branch reads trust MAE 0.80 against 0.75) and on its open writing review: the Codex retirement review and the reviewer's re-read. Also not done: deleting barricade-order.ts, the turn_hall.watch change, the intel-floor list, civilian-hit lines and design-doc records | none |
+| tooling | draft PRs #76 and #77 land through #80 | Rescue pins and the barricade tree's tooling blockers are reconciled with `main`. Left on `barricade-tooling-fixes`: confirm the Flow endings at 390 and 430 | none |
 | interface | closed | The Command Staff cards and candidate compare shipped on `claude/engine-resume` (owner request) | none |
 
 ## Branches and worktrees (reconciled 2026-10-19)
 
-Every merged or patch-equivalent branch is deleted, locally and on GitHub, and every extra worktree
-is removed. What remains: `main`, `claude/engine-resume` (PR #79) and the four parked branches named
-in the table (`claude/calls-barricade-tree`, `claude/engine-barricade-blockers`, and the draft PRs
-#76 and #77). Fresh lane sessions start new worktrees from `main`.
+Merged and patch-equivalent branches are deleted locally and on GitHub, and extra worktrees are
+removed. #79 and #80 merged. What stays: `main`; `claude/calls-barricade-tree`, which waits on
+`outcome-calibration-drift` and its writing review; and `claude/department-ux-pass` (lead, owner
+request 2026-10-19), one branch for the department UX pass across engine and interface files while
+no lane runs: squad edits during a call, the funding ledger and live finance view, starter kit,
+one Disclosure, the Armory, the hire contract, the Develop track, officer learning and instructor
+details, and the officer profile. Save version 11. It touches `src/content/recruits.ts` (calls lane)
+for the issue-kit price; the calls lane rebases on it before its next content change.
 
 ## Ordering on shared files
 

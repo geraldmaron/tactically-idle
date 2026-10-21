@@ -1,4 +1,4 @@
-import type { SquadId } from '../../sim/types';
+import type { Id, SquadId } from '../../sim/types';
 
 export interface SquadSelection {
   acting: SquadId[];
@@ -30,4 +30,11 @@ export function toggleDeploymentSquad(chosen: SquadId[], id: SquadId, maxSquads:
   if (chosen.includes(id)) return chosen.filter(squad => squad !== id);
   if (maxSquads === 1) return [id];
   return chosen.length >= maxSquads ? chosen : [...chosen, id].sort();
+}
+
+/** The lead pick after a tap on a face among those taking part: the engine's best fit clears the pick
+ * (the default needs no override), anyone else taking part becomes it, and anyone else is ignored. */
+export function pickLead(participants: readonly Id[], bestFit: Id | null, current: Id | undefined, id: Id): Id | undefined {
+  if (!participants.includes(id)) return current;
+  return id === bestFit ? undefined : id;
 }

@@ -67,10 +67,20 @@ export const HOSTAGE_TEMPLATE: IncidentTemplate = {
       knowledge: { presence: { status: 'reported', source: 'Dispatch' }, position: { status: 'reported', source: 'Dispatch', value: 'by the door' } },
     } },
     { id: 'victims', kind: 'victim', count: { min: 1, max: 1 }, keyRoles: ['owner'], person: {
-      label: 'shop owner', age: 'adult',
+      label: 'owner', age: 'adult',
       hold: { by: 'taker', kind: 'expressive', restraint: 'watched', relationship: 'employer' },
       relationshipToSubject: 'employer', meters: { condition: 100, composure: 50 },
       knowledge: { presence: { status: 'reported', source: 'Dispatch' }, needs: { status: 'unknown', source: 'Nobody yet', learnedBy: 'f_owner_faint' } },
+    } },
+    // Outside with patrol, and able to speak on the line as a gamble (owner 2026-10-19: family and
+    // regulars may carry words, at a real risk). The cousin is the taker's emergency contact.
+    { id: 'kin', kind: 'bystander', count: { min: 1, max: 1 }, keyRoles: ['cousin'], person: {
+      label: 'cousin', age: 'adult', relationshipToSubject: 'family',
+      knowledge: { presence: { status: 'confirmed', source: 'With patrol' } },
+    } },
+    { id: 'regulars', kind: 'bystander', count: { min: 1, max: 1 }, keyRoles: ['regular'], person: {
+      label: 'regular', age: 'adult', relationshipToSubject: 'customer',
+      knowledge: { presence: { status: 'confirmed', source: 'At the tape' } },
     } },
   ],
   conditions: { timeOfDay: 'day', power: 'on', weather: 'clear', crowd: 1 },

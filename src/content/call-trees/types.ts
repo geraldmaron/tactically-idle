@@ -1,5 +1,6 @@
 import type { ActionDefinition, ActionRequirements, CheckKind, ConcessionKind, IncidentType, MeterStance, PressureModel, RatingWeight } from '../../sim/scenario-types';
 import type { CompletionDisposition, OutcomeBand, RoomType, StageId } from '../../sim/types';
+import type { ContentDescriptor } from '../content-descriptors';
 
 /** Call trees (content v13, docs/call-trees-v13.md).
  *
@@ -34,6 +35,16 @@ import type { CompletionDisposition, OutcomeBand, RoomType, StageId } from '../.
 export interface TreeState {
   marks?: string[];
   notMarks?: string[];
+  /** Who the team brought (sim/crew.ts): a trait ('observant', 'calm_voice', 'impatient', 'rookie',
+   * 'mentor', 'steady') or an experience band ('band_veteran') some deployed officer has. Settled
+   * when the call starts, so a choice behind it is simply there or not for this team. */
+  crew?: string[];
+  notCrew?: string[];
+  /** Who leads the decision being resolved (sim/crew.ts leadFlags): the same trait and band names,
+   * for the one officer the player sent. Read in outcome `when` only, so a result can be written for
+   * the rookie who got seen at the glass or the calm voice who bought a minute. */
+  lead?: string[];
+  notLead?: string[];
   safe?: string[];
   notSafe?: string[];
   /** The size of a counted group, which is fixed per call: the compiler keeps this outcome, prompt
@@ -95,6 +106,9 @@ export interface TreeRole {
     floor?: 'ground' | 'upper' | 'any' };
   /** Roles in one group share a drawn surname (a couple, a parent and child). */
   surnameGroup?: string;
+  /** Who they are before today (the briefing's "Who they are", depth gate D10): one to three
+   * sentences of past the player can see, never the private logic and never a hidden truth. */
+  profile?: string;
   /** 'chair': this person leaves only along a step-free route wide enough for a wheelchair. */
   mobility?: 'walking' | 'chair';
   /** A carried prop shown on the map once the named public fact is reported. */
@@ -130,6 +144,16 @@ export interface TreeSituation {
   /** Authoring note, never shown. */
   note: string;
   truth: Record<string, boolean>;
+  /** What a player can meet in this situation (docs/content-rating.md), from the closed list. The
+   * board leaves out a situation carrying a descriptor the player turned off. The list holds every
+   * descriptor the tree derives here (`death`, `injury`, `police_gunfire`; gates/content-descriptors.ts
+   * fails when one is missing) plus the themes the data can't see, declared by the designer through
+   * the swat-call-design ethics screen (`suicide_self_harm`, `child_at_risk`, `domestic_violence`). */
+  descriptors?: ContentDescriptor[];
+  /** Why an adult subject this situation spares with `noFatal` force is not at risk of harming
+   * themselves, when `descriptors` leaves out `suicide_self_harm` (the E4 screen's "screened,
+   * <reason>"). Authoring record, never shown. */
+  selfHarmScreened?: string;
 }
 
 /** Where an outcome sends the call: a node, an ending, or one node of a turn group drawn per call. */
@@ -154,6 +178,14 @@ export type TreeNext = { node: string } | { ending: string } | { turn: string };
 export type TreeIf = { fact: string; is: boolean } | { clock: string; low: boolean } | { clock: string; out: boolean }
   | { meter: string; stance?: MeterStance | MeterStance[]; agitationAtLeast?: number; is?: boolean };
 
+/** One spoken line of a transcript (call-surfaces): who says it and the words, with no quotation
+ * marks and no speaker tag in the line. `by` is a role (or a group, meaning its first member), or
+ * one of the voices the call always has: 'negotiator', 'radio' or 'dispatch'. The UI prints the
+ * speaker's name beside the line. Two to four lines make an exchange. */
+export interface TreeLine { by: string; line: string }
+// The negotiator is the lead officer on the line: the engine fills {lead} with their surname.
+export const TREE_VOICES = { negotiator: '{lead}', radio: 'Radio', dispatch: 'Dispatch' } as const;
+
 /** Standard events that move a subject's agitation and rapport (sim/meters.ts). */
 export type TreeMove = 'heard' | 'contact' | 'honest' | 'provoked' | 'team_seen' | 'shots' | 'released';
 
@@ -174,7 +206,13 @@ export interface TreeOutcome {
   mark?: string[];
   /** Command commits to something a person asked for (sim/commitments.ts): kept or broken by what
    * the team does to them afterwards. `id` is unique in the call; `to` is the role. */
-  promise?: { id: string; to: string; kind?: ConcessionKind | 'promise' };
+  promise?: { id: string; to: string; kind?: ConcessionKind | 'promise' | 'lie' };
+  /** Commitments this outcome breaks (deception-commitments): the person learns the promise was
+   * empty. Write the discovery in `text`, so the break is never silent. A `lie` promise needs at
+   * least one reachable outcome that breaks it. */
+  breaks?: string[];
+  /** Lines spoken in this result, shown under it as a transcript. */
+  exchange?: TreeLine[];
   /** What this outcome does to a subject's agitation and rapport: the subject's role, and the
    * event. The engine scales it by the subject's volatility, and every later conversation with
    * them shows it on the card. Replaces mood marks like "stung" and "heard". A group moves every
@@ -213,6 +251,9 @@ export interface TreeOutcome {
   objective?: number;
   civilian?: number;
   pressure?: number;
+  /** Clocks this result holds steady (a template clock id, 'owner_condition'): a medic or a hand on
+   * the person stops the clock where it stands, so it never runs out on this call. */
+  stabilize?: string[];
   /** Extra operation minutes on top of the choice's own minutes. */
   minutes?: number;
   /** The team falls back: on this path the squad ends the choice where it started it, not where
@@ -261,6 +302,17 @@ export interface TreeChoice {
   /** Offered only in this public state. */
   onlyIf?: TreeState;
   requires?: Pick<ActionRequirements, 'certs' | 'anyTags' | 'allTags' | 'minSquads'>;
+  /** What draws a player to this choice, and what it costs, each one plain line shown with the
+   * choice (the depth register, owner 2026-10-19). Both or neither. */
+  pull?: string;
+  cost?: string;
+  /** The choice is a lie, or a promise command never approved (dilemma pattern 15, E12.6). The
+   * card says command hasn't approved it. Its outcomes carry the `lie` promise they make. */
+  deceives?: true;
+  /** A certificate that makes this choice go better when an officer taking part holds it (resolution
+   * credits the first holder): 'crisis_negotiation' on a talk, 'advanced_first_aid' on care.
+   * `label` names it in the odds breakdown. Assets change how a call goes, not only whether. */
+  certBonus?: ActionDefinition['certBonus'];
   /** What this choice asks command for (sim/authorization.ts): an entry, or a concession. The
    * engine locks it with the generated reason until the rule allows it, and the card carries the
    * generated command line, so the summary never says "Command approves it because …" itself. */
@@ -322,9 +374,31 @@ export interface TreeNode {
   stage: StageId;
   /** The situation the player faces at this node. */
   prompt: string;
-  /** Replaces `prompt` in that public state; the first match wins. */
-  promptIf?: { when: TreeState; prompt: string }[];
+  /** Lines spoken as the player reaches this decision, shown with the prompt as a transcript. */
+  exchange?: TreeLine[];
+  /** Replaces `prompt` in that public state; the first match wins. Its `exchange` replaces the
+   * node's when given (`[]` for none); without one the node's exchange shows. */
+  promptIf?: { when: TreeState; prompt: string; exchange?: TreeLine[] }[];
+  /** What gets worse while the player decides here (owner 2026-10-20: every decision point has one).
+   * A choice whose time reaches `minutes`, travel and its band's delay included, lets it happen: the
+   * line and its costs are added to that result. It raises costs and urgency; it never harms anyone,
+   * fires, or sets a threat-to-life mark (E12.4), and it never routes. */
+  threat?: TreeThreat;
   choices: TreeChoice[];
+}
+
+export interface TreeThreat {
+  /** What happens, in a few words, shown with the prompt ("The count reaches zero"). */
+  label: string;
+  /** Minutes the player has here. */
+  minutes: number;
+  /** The line the player reads when it happens. */
+  text: string;
+  /** What it costs: marks later options read, moves on a subject's temper, pressure, civilian safety. */
+  mark?: string[];
+  moves?: Record<string, TreeMove | TreeMove[]>;
+  pressure?: number;
+  civilian?: number;
 }
 
 export interface TreeEnding {
@@ -334,6 +408,12 @@ export interface TreeEnding {
    * states (sim/outcome-score.ts), and a gate checks they agree. */
   disposition: CompletionDisposition;
   remainingTasks?: string[];
+  /** What is true after the call, told as fiction may tell it (E11.2): true on every path that
+   * reaches this ending, putting the cost or the grace on one named person. */
+  epilogue?: string;
+  /** Replaces `epilogue` in that public state at the end of the call (marks and who is out); the
+   * first match wins. It carries a reframe into the after (review F19). */
+  epilogueIf?: { when: TreeState; epilogue: string }[];
 }
 
 export interface CallTree {
@@ -352,6 +432,9 @@ export interface CallTree {
   scene: { setting: TreeSetting | TreeSetting[]; rooms: RoomType[]; timeOfDay?: 'day' | 'dusk' | 'night'; crowd?: 0 | 1 | 2 };
   /** Card hook. */
   summary: string;
+  /** The scene before the call, read once before the briefing: the place, the people and what
+   * happened before the team was called (the depth register, owner 2026-10-19). */
+  coldOpen?: string;
   pressureLabel: string;
   pressure: PressureModel;
   briefing: { dispatchReason: string; known: string[]; unknown: string[]; responsibilities: string[] };
@@ -369,5 +452,5 @@ export interface CallTree {
   /** Base check difficulty is base + perTier x tier (default 31 + 3 x tier); a choice's
    * `check.difficulty` is added to it. Set from the balance gate, never by feel. */
   difficulty?: { base: number; perTier: number };
-  rewards: { funding: number; devPoints: number; trust: number; xp: number };
+  rewards: { funding: number; trust: number; xp: number };
 }
