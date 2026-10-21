@@ -1,21 +1,18 @@
-// Design candidates the owner compares before one ships (docs/ops-experience.md, "How the comparisons
+// Design candidates the owner compares before one ships. The decide-beat layouts were settled on
+// 2026-10-21 (4B, the map folded from stage 2); the reading face is still open (docs/ops-experience.md, "How the comparisons
 // get decided"). Dev builds only: production always reads the current design. Kept in localStorage
 // beside the player's settings, never in the save, and read in try/catch like prefs.ts. A URL
-// parameter (?layout=compact&face=serif) sets them too, so a comparison link opens on a candidate.
+// parameter (?face=serif) sets it too, so a comparison link opens on a candidate.
 import { useSyncExternalStore } from 'react';
 
-/** The live decide beat's scene: today's (`now`), 4A (`compact`: the whole building small beside
- * the squad, the story above the fold) or 4B (`folded`: the map folded to its header from stage 2). */
-export const DECIDE_LAYOUTS = ['now', 'compact', 'folded'] as const;
-export type DecideLayout = (typeof DECIDE_LAYOUTS)[number];
 /** The story text's face: Barlow (`sans`, today) or Source Serif 4 (`serif`). */
 export const READING_FACES = ['sans', 'serif'] as const;
 export type ReadingFace = (typeof READING_FACES)[number];
 
-export interface DesignCandidates { layout: DecideLayout; face: ReadingFace }
+export interface DesignCandidates { face: ReadingFace }
 
 export const CANDIDATES_KEY = 'ti-dev-candidates';
-const CURRENT: DesignCandidates = Object.freeze({ layout: 'now', face: 'sans' });
+const CURRENT: DesignCandidates = Object.freeze({ face: 'sans' });
 const listeners = new Set<() => void>();
 let cache: { raw: string | null; value: DesignCandidates } | null = null;
 let memory: DesignCandidates | null = null;
@@ -25,7 +22,7 @@ const pick = <T extends string>(allowed: readonly T[], value: unknown, fallback:
 export function parseCandidates(raw: string | null): DesignCandidates {
   let data: Record<string, unknown> = {};
   try { const parsed: unknown = raw ? JSON.parse(raw) : null; if (parsed && typeof parsed === 'object') data = parsed as Record<string, unknown>; } catch { /* defaults */ }
-  return { layout: pick(DECIDE_LAYOUTS, data.layout, CURRENT.layout), face: pick(READING_FACES, data.face, CURRENT.face) };
+  return { face: pick(READING_FACES, data.face, CURRENT.face) };
 }
 
 /** The candidates in view: the current design outside dev builds. */
@@ -71,12 +68,11 @@ function loadSerif(): void {
   document.head.appendChild(link);
 }
 
-/** Dev builds: a ?layout= or ?face= parameter sets the candidate on load, and a stored serif loads. */
+/** Dev builds: a ?face= parameter sets the candidate on load, and a stored serif loads. */
 export function initCandidates(): void {
   if (!import.meta.env.DEV || typeof location === 'undefined') return;
   const params = new URLSearchParams(location.search);
   const patch: Partial<DesignCandidates> = {};
-  if (params.has('layout')) patch.layout = pick(DECIDE_LAYOUTS, params.get('layout'), CURRENT.layout);
   if (params.has('face')) patch.face = pick(READING_FACES, params.get('face'), CURRENT.face);
   if (Object.keys(patch).length) updateCandidates(patch);
   else applyFace(readCandidates().face);

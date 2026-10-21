@@ -402,14 +402,14 @@ each squad's kit as an inspectable summary over today's workspace; the board car
 Done when the captures in the doc are retaken from the game at 390x844 and 320x568, with 200% text,
 two squads and a Lab check of the shared screens.
 
-### ops-experience-compare: The owner compares the decide-beat and reading-face candidates
+### ops-experience-compare: The owner judges the reading serif
 Tags: job=command; journeys=answer-a-call; probes=none (layout); lane=interface
 Needs: start=none; integrate=none; ship=none
 
-4A (compact whole-building scene beside the faces), 4B (map folded from stage 2) and the reading
-serif are built behind the dev switch (`src/ui/settings/candidates.ts`). The owner runs the
-comparison in `docs/ops-experience.md` ("How the comparisons get decided"). Then ship the winners,
-delete the losers' rules from `candidates.css` and remove the switch.
+The decide-beat layout is settled (4B, refined, 2026-10-21). The serif is still behind the dev
+switch (`src/ui/settings/candidates.ts`). The owner compares it as `docs/ops-experience.md` says
+("The reading face: still open"). Then ship the winner, delete the loser's rule from
+`candidates.css` and remove the switch.
 
 ### onboarding: A first call that teaches the loop
 Tags: job=command; journeys=answer-a-call; probes=none (teaching flow); lane=deferred

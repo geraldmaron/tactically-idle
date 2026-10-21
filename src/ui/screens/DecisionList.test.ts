@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 import { startGateRun } from '../../gen/incident/gates/engine-driver';
 import { NOW } from '../../sim/test-fixtures';
 import type { ActionView } from '../../sim/types';
-import { DecisionList, WhatMattersNow } from './DecisionList';
+import { DecisionList } from './DecisionList';
 import { liveDecisions } from './live-model';
 
 /** A real v13 hostage call (the Ops board's first card for the QA department on 2026-10-08). */
@@ -68,16 +68,9 @@ describe('DecisionList', () => {
     expect(cards(html).find(card => card.includes('choice_8'))).not.toContain('aria-describedby');
   });
 
-  it('puts What matters now above the cards, with the threat and the strongest pull', () => {
-    const guidance = createElement(WhatMattersNow, { threat: { label: 'He fires at the door', left: 6.2 }, factor: { source: 'The stream', pull: 4, effect: 'Talking is harder' } });
-    const html = renderToStaticMarkup(createElement(DecisionList, { prompt: 'What now?', actions: NINE, selectedId: null, expanded: false, guidance, onSelect: noop, onExpand: noop }));
-    expect(html.indexOf('What matters now')).toBeLessThan(html.indexOf('data-action-id'));
-    expect(html).toContain('He fires at the door</span><b class="matters-now-num">\u20077 min</b>');
-    expect(html).toContain('<b class="matters-now-count">The stream</b> <span class="matters-now-sub">Talking is harder</span></span><b class="matters-now-num">−4</b>');
-    // The count lives in the ticker only, so the block never shows a second, different number.
-    expect(html).not.toMatch(/matters-now-count">[\d,]+/);
-    const landed = renderToStaticMarkup(createElement(WhatMattersNow, { threat: { label: 'He fires', left: 0 }, factor: null }));
-    expect(landed).toContain('<b class="matters-now-num">\u2007\u2007\u2007Now</b>');
-    expect(renderToStaticMarkup(createElement(WhatMattersNow, { threat: null, factor: null }))).toBe('');
+  it('puts what is said on scene between the prompt and the cards', () => {
+    const html = renderToStaticMarkup(createElement(DecisionList, { prompt: 'What now?', actions: NINE, selectedId: null, expanded: false, guidance: createElement('section', { className: 'comms-log' }), onSelect: noop, onExpand: noop }));
+    expect(html.indexOf('What now?')).toBeLessThan(html.indexOf('comms-log'));
+    expect(html.indexOf('comms-log')).toBeLessThan(html.indexOf('data-action-id'));
   });
 });

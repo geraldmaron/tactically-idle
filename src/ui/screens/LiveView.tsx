@@ -37,11 +37,10 @@ import { Icon, actionIcon, materialIcon, roomIcon } from '../icons';
 import type { IconName } from '../icons';
 import { feetInches, opMinutes, signed, sqft } from '../format';
 import { CONSEQUENCE_LABEL, OddsBar, OutcomeForecast } from './OperationFeedback';
-import { DecisionList, LeadFace, RATING_SHORT, WhatMattersNow, NOW_LABEL, padDigits, type Guidance } from './DecisionList';
+import { DecisionList, LeadFace, RATING_SHORT, NOW_LABEL, padDigits } from './DecisionList';
 import { fillEffectLine, fillMinutesToBite, leadingPressure, liveFillViews, liveStallFeed, pressureUrgency, reachByAction, threatLandingText, landingSubjects, type LandingSubject } from './fill-gauge';
 import { CommsLog, SourceTicker } from './LiveFeed';
 import { CandidateSwitch, SHOW_CANDIDATE_SWITCH } from '../settings/CandidateSwitch';
-import { useCandidates } from '../settings/candidates';
 import { STANCE_LABEL } from '../components/IncidentPeople';
 import type { FillView } from '../../sim/clocks';
 import type { CheckKind } from '../../sim/scenario-types';
@@ -145,9 +144,8 @@ export function LiveView(p: LiveViewProps) {
   const [expandedStage, setExpandedStage] = useState<string | null>(null);
   const [mapFull, setMapFull] = useState(false);
   const [mapFolded, setMapFolded] = useState(readMapFolded);
-  // Design candidates under comparison (settings/candidates.ts; docs/ops-experience.md). 4B folds
-  // the map from stage 2 unless the player opens it for the stage; 4A never folds it.
-  const candidates = useCandidates();
+  // From stage 2 the map folds to its header unless the player opens it for that stage (owner chose
+  // 4B, 2026-10-21, docs/ops-experience.md); stage 1 keeps the player's remembered choice.
   const [stageMap, setStageMap] = useState<{ stage: string; open: boolean } | null>(null);
   const [briefingOpen, setBriefingOpen] = useState(false);
   const [officerOpen, setOfficerOpen] = useState<Id | null>(null);
@@ -159,16 +157,13 @@ export function LiveView(p: LiveViewProps) {
   // A folded map opens itself on a result that changed the scene, so the player sees what moved.
   const stageNumber = p.progress.stages.findIndex((step) => step.state === 'current') + 1;
   const stageOpen = stageMap?.stage === p.progress.stage ? stageMap.open : null;
-  const folded = candidates.layout === 'compact' ? false
-    : candidates.layout === 'folded' && stageNumber >= 2 ? !(stageOpen ?? false)
-    : mapFolded;
+  const folded = stageNumber >= 2 ? !(stageOpen ?? false) : mapFolded;
   const mapShown = mapFull || !folded || (beat === 'result' && changed);
   const toggleFold = () => {
     const next = mapShown;
-    if (candidates.layout === 'folded' && stageNumber >= 2) setStageMap({ stage: p.progress.stage, open: !next });
+    if (stageNumber >= 2) setStageMap({ stage: p.progress.stage, open: !next });
     else { setMapFolded(next); writeMapFolded(next); }
   };
-  const compact = candidates.layout === 'compact';
   const threat = beat === 'decide' ? p.progress.threat ?? null : null;
   // Gauges that fill keep running through the result, so they stay in the strip on both beats. The
   // strip shows the threat, the decision's own clock, and every pressure source as it runs (owner
@@ -192,7 +187,7 @@ export function LiveView(p: LiveViewProps) {
     if (mapFull) setMapFull(false);
   }
 
-  // 4A reads the prompt first, then what was said on scene, then the choices.
+  // What is said on scene while the player decides, read after the prompt and before the choices.
   const commsLog = <CommsLog lines={comms} landed={landed ? <ThreatLanded text={landed} subjects={subjects} /> : null} />;
 
   const squadRow = <div className="live-squad" aria-label={focus ? `Squad ${focus.id}, ${focus.name}` : 'Your team'}>
@@ -229,7 +224,7 @@ export function LiveView(p: LiveViewProps) {
   </div>;
 
   const screen = (
-    <div className={`live live-one live-beat-${beat} live-layout-${candidates.layout}${mapFull ? ' live-map-full-open' : ''}${pressure?.kind === 'threat' ? ` live-urgency-${pressureUrgency(pressure)}` : ''}`}>
+    <div className={`live live-one live-beat-${beat}${mapFull ? ' live-map-full-open' : ''}${pressure?.kind === 'threat' ? ` live-urgency-${pressureUrgency(pressure)}` : ''}`}>
       {/* The call's name scrolls away; the strip under it stays pinned: where the call is and the one
           pressure that bites soonest, the threat or a gauge that fills. */}
       <header className="live-head">
@@ -260,7 +255,7 @@ export function LiveView(p: LiveViewProps) {
         <StageSteps progress={p.progress} />
         {pressure?.kind === 'threat' && <ThreatPill label={pressure.label} minutes={pressure.minutes} dither={p.dither} />}
         {fills.length > 0 && <div className="live-sources">
-          {fills.map((view) => view.count || view.reactions ? <SourceTicker key={view.id} view={view} runKey={p.g.activeRun?.id} /> : <FillGauge key={view.id} view={view} />)}
+          {fills.map((view) => view.count || view.reactions ? <SourceTicker key={view.id} view={view} runKey={p.g.activeRun?.id} effect={sourceEffect(p.g, view)} /> : <FillGauge key={view.id} view={view} />)}
         </div>}
       </div>
 
@@ -270,7 +265,7 @@ export function LiveView(p: LiveViewProps) {
           <span className="live-scene-where"><Icon name="pin" size={14} />{whereLine}{changed && beat === 'result' && <span className="live-scene-changed">Map changed</span>}</span>
           <span className="live-scene-actions">
             {!mapFull && <button type="button" className="hud-btn hud-btn-quiet" onClick={() => setMapFull(true)}><Icon name="blueprint" size={15} />Full map</button>}
-            {!mapFull && !compact && <button type="button" className="hud-btn hud-btn-quiet" onClick={toggleFold} aria-expanded={mapShown} aria-controls="live-map">
+            {!mapFull && <button type="button" className="hud-btn hud-btn-quiet" onClick={toggleFold} aria-expanded={mapShown} aria-controls="live-map">
               <Icon name={mapShown ? 'chevronUp' : 'chevronDown'} size={15} />{mapShown ? 'Hide map' : 'Show map'}
             </button>}
           </span>
@@ -326,14 +321,13 @@ export function LiveView(p: LiveViewProps) {
           </div>}
         </> : <>
           {p.feedback}
-          {!compact && commsLog}
           <section className="call operation-choices" aria-label="Your call">
-            {/* Tapping a card opens its review; tapping the reviewed card again closes it. */}
-            <p className="call-head">
-              <span className="call-label">{stageNumber > 0 ? `Stage ${stageNumber} of ${p.progress.stages.length}` : 'Your next decision'}</span>
-            </p>
+            {/* One order on every stage (owner, 2026-10-21): the prompt and what was said, then what is
+                said on scene while you decide, then the choices. The stage rail names the stage, and
+                the strip carries the threat and what each source does to the odds, so neither repeats
+                here. Tapping a card opens its review; tapping the reviewed card again closes it. */}
             <DecisionList prompt={p.progress.prompt} exchange={p.progress.exchange} actions={available} reach={reach} selectedId={sel?.id ?? null} expanded={expanded} officers={p.g.officers}
-              guidance={<>{compact && commsLog}<WhatMattersNow {...guidanceFor(p.g, pressure?.kind === 'threat' ? pressure : null, fills)} /></>}
+              guidance={commsLog}
               onSelect={p.onSelectAction} onExpand={() => setExpandedStage(expanded ? null : p.progress.stage)} />
           </section>
           {p.failedResponse}
@@ -407,24 +401,16 @@ const CHECK_WORDS: Record<CheckKind, string> = {
   contact: 'talking', observation: 'watching', execution: 'moving in', pressure: 'keeping calm', medical: 'medical work', coordination: 'working together',
 };
 
-/** What matters now (DecisionList WhatMattersNow): the stage's threat, and the pressure source
- * pulling hardest on the odds, or the fullest one while none pulls yet. It names the source and
- * leaves the number to the ticker beside it, whose count refreshes and churns: two different counts on one screen
- * read as a bug. */
-export function guidanceFor(g: LiveViewProps['g'], threat: { label: string; left: number } | null, fills: readonly FillView[]): Guidance {
+/** What a pressure source does to the odds, in words, for its ticker: the checks it makes harder once
+ * its first cue is heard ("Talking, keeping calm and working together are harder"), or null while it
+ * pulls nothing. The count and the pull are on the ticker already, so this is the only line it adds. */
+export function sourceEffect(g: LiveViewProps['g'], view: FillView): string | null {
+  if (!view.count || !(view.oddsPull ?? 0)) return null;
   const run = g.activeRun;
-  const clocks = run ? getScenario(run.scenarioId)?.clocks ?? [] : [];
-  const sources = fills.filter((view) => view.count);
-  const top = sources.reduce<FillView | null>((best, view) => !best || (view.oddsPull ?? 0) > (best.oddsPull ?? 0)
-    || ((view.oddsPull ?? 0) === (best.oddsPull ?? 0) && !best.oddsPull && view.value > best.value) ? view : best, null);
-  const kinds = clocks.find((def) => def.id === top?.id)?.source?.odds?.kinds ?? [];
+  const kinds = (run ? getScenario(run.scenarioId)?.clocks ?? [] : []).find((def) => def.id === view.id)?.source?.odds?.kinds ?? [];
   const words = kinds.map((kind) => CHECK_WORDS[kind]);
   const checks = words.length > 1 ? `${words.slice(0, -1).join(', ')} and ${words.at(-1)} are harder` : `${words[0] ?? 'every check'} is harder`;
-  const pull = top?.oddsPull ?? 0;
-  return {
-    threat: threat ? { label: threat.label, left: threat.left } : null,
-    factor: top?.count ? { source: top.label, pull, effect: pull > 0 ? checks.charAt(0).toUpperCase() + checks.slice(1) : 'No pull on the odds yet' } : null,
-  };
+  return checks.charAt(0).toUpperCase() + checks.slice(1);
 }
 
 /** A gauge that fills (a crowd filming, a subject streaming), in the threat pill's family: the label,

@@ -11,7 +11,7 @@ Owner decisions:
 - A stage's threat lands after 60 to 90 real seconds at Relaxed (2026-10-21).
 - Nothing counts while the app is hidden (2026-10-21, reversing "time away counts").
 - The screen changes while the player decides, not only at a commit (2026-10-21).
-- A crowd or a stream shows as a live count beside the drain, with reactions floating past
+- A crowd or a stream shows as a live count beside the drain, with the watchers' chat under it
   (2026-10-21). Every source shows, not one pressure at a time.
 - Sound and vibration are on by default, with a mute in Settings (2026-10-21).
 
@@ -99,7 +99,7 @@ stays 0 to 100 in the sim; the source says how the scene reads it.
   `OutcomeEffect.clockBump`): a news van parks, the stream is cut.
 - **Odds.** Once its first cue is heard, a source takes up to `atFull` points off the checks it
   weighs on, named on the card with its count ("Lee’s stream: 2,431 watching").
-- **Reactions.** Pools by cue, and a spike pool, float up out of the source on the strip, each line
+- **Reactions.** Pools by cue, and a spike pool, play as a two-line chat under the source on the strip, each line
   under a generated handle (`commenterHandle`, `src/content/world.ts`). They are presentation only
   (`src/ui/screens/live-chat.ts`). A line shows at most once a run, so each cue's pool holds at least
   16 lines and the spike pool 8; once a pool is spent the chat thins to people joining while the count

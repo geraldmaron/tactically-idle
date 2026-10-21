@@ -87,8 +87,6 @@
 
 /* The decide beat: the stage kicker, then the moment, then the people, then the choices. */
 .live .operation-choices { margin-top: 4px; }
-.live .operation-choices .call-head { margin: 0 0 6px; }
-.live .operation-choices .call-label { font: 600 12px/1.2 var(--font-mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
 .live .operation-choices .operation-stage-prompt { margin: 0 0 12px; padding-left: 12px; font-size: 17.5px; line-height: 1.5; }
 .live .operation-choices .operation-choice-count { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin: 16px 0 8px; font: 700 14px/1.2 var(--font-cond); letter-spacing: 0.1em; text-transform: uppercase; color: var(--amber-2); }
 .live .operation-choices .operation-choice-count span { font: 500 12.5px/1.2 var(--font-ui); letter-spacing: 0; text-transform: none; color: var(--text-dim); }
@@ -205,18 +203,22 @@
 .live .source-ticker-bar i { display: block; height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--amber), #ff7a3c); transition: width 0.6s linear; }
 .live .source-ticker-stopped .source-ticker-bar i { background: var(--mint); }
 .live .source-ticker .fill-gauge-tick { top: -2px; height: 10px; }
-.live .source-reactions { position: relative; height: 34px; margin-top: 1px; overflow: hidden; pointer-events: none; -webkit-mask-image: linear-gradient(180deg, transparent, #000 45%); mask-image: linear-gradient(180deg, transparent, #000 45%); }
-.live .source-reaction { position: absolute; left: 0; bottom: 0; max-width: 100%; padding: 1px 6px; border-radius: 8px; background: rgba(10, 14, 22, 0.7); color: #f2f4f8; font: 500 11.5px/1.35 var(--font-ui); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; animation: reaction-float 3.6s ease-out 1 forwards; }
+/* The chat (owner, 2026-10-21: easy to read): two steady lines, newest at the bottom, each on one
+ * line at a readable size. A new line slides up once; nothing fades out from under the reader, and
+ * the box keeps its height so nothing below it moves. */
+.live .source-reactions { display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; height: calc(2 * 1.35em + 2px); margin-top: 2px; overflow: hidden; pointer-events: none; font: 500 13px/1.35 var(--font-ui); }
+.live .source-reaction { display: block; min-width: 0; color: #f2f4f8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.live .source-reaction:last-child { animation: chat-in 0.25s ease-out 1; }
+.live .source-reaction:not(:last-child) { color: rgba(242, 244, 248, 0.72); }
 /* The handle reads first and quieter, like a stream app's chat; a join is the handle alone, dimmer. */
-.live .source-reaction-who { font-weight: 700; color: #ffc078; }
+.live .source-reaction-who { margin-right: 5px; font-weight: 700; color: #ffc078; }
 .live .source-reaction-join { color: rgba(242, 244, 248, 0.6); }
 .live .source-reaction-join .source-reaction-who { color: rgba(255, 192, 120, 0.75); }
-.live .source-lane-1 { left: 8%; }
-.live .source-lane-2 { left: 16%; }
-@keyframes reaction-float { 0% { opacity: 0; transform: translateY(14px); } 12% { opacity: 1; transform: translateY(0); } 70% { opacity: 0.95; } 100% { opacity: 0; transform: translateY(-22px); } }
+/* What the source does to the odds, in words, under its bar. */
+.live .source-ticker-effect { margin: 1px 0 0; font: 500 12.5px/1.3 var(--font-ui); color: #ffd8b0; }
+@keyframes chat-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) {
-  .live .source-reaction { animation: none; opacity: 0.9; }
-  .live .source-reaction:not(:last-child) { display: none; }
+  .live .source-reaction:last-child { animation: none; }
   .live .source-ticker-bar i { transition: none; }
 }
 
@@ -249,7 +251,7 @@
 .live.live-urgency-warn::before { box-shadow: inset 0 18px 22px -16px rgba(255, 59, 48, 0.55); }
 .live.live-urgency-critical::before { box-shadow: inset 0 0 38px 4px rgba(255, 40, 30, 0.42); }
 
-/* Live numbers keep their width: the threat's minutes, each card's chance, and What matters now all
+/* Live numbers keep their width: the threat's minutes, each card's chance and each source's count
  * use tabular digits in a box wide enough for their longest value, so a label beside them never
  * rewraps as they tick (owner, 2026-10-21: nothing moves the page while a decision is open). */
 .live .callbtn-forecast-text { font-variant-numeric: tabular-nums; }
@@ -257,20 +259,6 @@
 .live .odds-stack { position: relative; display: block; }
 .live .odds-stack i { position: absolute; top: 0; bottom: 0; left: 0; min-width: 0; }
 
-/* What matters now (DecisionList WhatMattersNow): the threat and the source pulling hardest, once,
- * above the cards. Each row keeps its icon, its text and a right-hand number column; the text sits
- * in a two-line minimum so the count growing a digit never adds a line. */
-.live .matters-now { margin: 14px 0 0; padding: 8px 10px 9px; border: 1px solid rgba(243, 180, 50, 0.4); border-radius: 10px; background: rgba(243, 180, 50, 0.07); }
-.live .matters-now-head { margin: 0 0 6px; font: 700 12px/1.2 var(--font-cond); letter-spacing: 0.12em; text-transform: uppercase; color: var(--amber-2); }
-.live .matters-now-rows { display: grid; gap: 6px; margin: 0; }
-.live .matters-now-row dd { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: start; column-gap: 8px; margin: 0; min-height: calc(2 * 1.35em); font: 500 14px/1.35 var(--font-ui); color: var(--text); }
-.live .matters-now-row dd > .icon { margin-top: 2px; color: var(--amber); }
-.live .matters-now-threat dd > .icon { color: #ff6b57; }
-.live .matters-now-text { min-width: 0; overflow-wrap: anywhere; }
-.live .matters-now-count { display: block; font: 700 15px/1.35 var(--font-mono); font-variant-numeric: tabular-nums; white-space: nowrap; color: #fff; }
-.live .matters-now-sub { display: block; color: var(--text-dim); }
-.live .matters-now-num { min-width: 6ch; font: 700 15px/1.35 var(--font-mono); font-variant-numeric: tabular-nums; white-space: nowrap; color: #fff; }
-.live .matters-now-threat .matters-now-num { color: #ffd8d1; }
 
 /* One tap per card: a weighed choice is a single button like the rest, its cost in place of the
  * summary (the pull and the full reading are in the review sheet). */

@@ -1,6 +1,6 @@
 // The live decision (docs/call-pressure.md, "The live decision"): the scene keeps moving while the
 // player weighs a choice. Pressure sources tick as a count someone on scene would see, with what the
-// people watching are saying floating past, and the comms log carries what is said on scene as it is
+// people watching are saying in a two-line chat under it, and the comms log carries what is said on scene as it is
 // said. The numbers come from the sim's projection (sim/clocks.ts stalledRun, stallFeed); how a
 // count refreshes and who says what in the chat (live-chat.ts) are presentation only and never reach
 // the sim, so a replay or the Scenario Lab reads exactly what the cards did.
@@ -22,17 +22,21 @@ function rng(seed: number) {
 }
 const hash = (text: string) => [...text].reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) | 0, 7) >>> 0;
 
-interface Floating { key: number; who: string; text: string | null; lane: number }
+interface ChatLine { key: number; who: string; text: string | null }
+
+/** Lines the chat keeps on screen: the newest at the bottom, the one before it above, and nothing
+ * fades out from under the reader (owner, 2026-10-21: the chat has to be easy to read). */
+const CHAT_LINES = 2;
 
 /** One pressure source on the strip: its count, refreshing every second or two toward where the sim
  * has it the way a stream app's count does (live-chat.ts nextLiveCount), and the chat of the people
  * watching, each line under a handle and never read twice on one run (`runKey`). Once a cue's lines
  * are spent the chat thins to people joining while the count climbs. A jump (a bump, a cue, the
  * threat landing) bursts the chat and ticks. */
-export function SourceTicker({ view, runKey = 'preview' }: { view: FillView; runKey?: string }) {
+export function SourceTicker({ view, runKey = 'preview', effect = null }: { view: FillView; runKey?: string; effect?: string | null }) {
   const target = Math.round(view.count?.value ?? view.value);
   const [shown, setShown] = useState(target);
-  const [floating, setFloating] = useState<Floating[]>([]);
+  const [chat, setChat] = useState<ChatLine[]>([]);
   const last = useRef(target);
   const keyRef = useRef(0);
   const said = useRef(0);
@@ -56,11 +60,10 @@ export function SourceTicker({ view, runKey = 'preview' }: { view: FillView; run
   }, [reduced, counted]);
   if ((reduced || !counted) && shown !== target) setShown(target);
 
-  const float = (text: string | null, lane: number) => {
+  const say = (text: string | null) => {
     const key = ++keyRef.current;
     const who = chatHandle(runKey, view.id, said.current++);
-    setFloating(list => [...list.slice(-4), { key, who, text, lane }]);
-    window.setTimeout(() => setFloating(list => list.filter(item => item.key !== key)), reduced ? 4000 : 3600);
+    setChat(list => [...list.slice(1 - CHAT_LINES), { key, who, text }]);
   };
 
   // The chat: a line every few seconds, quicker as it fills, each drawn once per run. Keyed on the
@@ -76,8 +79,8 @@ export function SourceTicker({ view, runKey = 'preview' }: { view: FillView; run
       const line = drawChatLine(runKey, view.id, pool, random.current);
       const climbing = targetRef.current > rising.current;
       rising.current = targetRef.current;
-      if (line) float(line, Math.floor(random.current() * 3));
-      else if (climbing) float(null, Math.floor(random.current() * 3));
+      if (line) say(line);
+      else if (climbing) say(null);
       timer = window.setTimeout(next, chatGapMs(pace * 10, random.current));
     };
     timer = window.setTimeout(next, chatGapMs(pace * 10, random.current) / 2);
@@ -90,10 +93,11 @@ export function SourceTicker({ view, runKey = 'preview' }: { view: FillView; run
     if (!(target > before * 1.08 + 1)) return;
     const spike = view.reactions?.spike ?? [];
     const pool = view.reactions?.pool ?? [];
-    [0, 1, 2].forEach(i => window.setTimeout(() => {
+    // Two lines, far enough apart that the first is read before the second pushes it up.
+    [0, 1].forEach(i => window.setTimeout(() => {
       const line = drawChatLine(runKey, `${view.id}:spike`, spike, random.current) ?? drawChatLine(runKey, view.id, pool, random.current);
-      float(line, i % 3);
-    }, i * 420));
+      say(line);
+    }, i * 1600));
     playTick();
     buzz(25);
   }, [target]);
@@ -114,8 +118,9 @@ export function SourceTicker({ view, runKey = 'preview' }: { view: FillView; run
       <i style={{ width: `${Math.max(0, Math.min(100, view.value))}%` }} />
       {view.cues.map(cue => <em key={cue.at} className={cue.heard ? 'fill-gauge-tick fill-gauge-heard' : 'fill-gauge-tick'} style={{ left: `${cue.at}%` }} />)}
     </span>
+    {effect && <p className="source-ticker-effect">{effect}</p>}
     <div className="source-reactions" aria-hidden="true">
-      {floating.map(item => <span key={item.key} className={`source-reaction source-lane-${item.lane}${item.text === null ? ' source-reaction-join' : ''}`}>
+      {chat.map(item => <span key={item.key} className={`source-reaction${item.text === null ? ' source-reaction-join' : ''}`}>
         <b className="source-reaction-who">{item.who}</b> {item.text === null ? 'joined' : <PeopleText text={item.text} />}
       </span>)}
     </div>

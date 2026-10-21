@@ -6,35 +6,8 @@
 .candidate-switch-set button { min-width: 44px; min-height: 30px; padding: 0 8px; border: 0; background: transparent; color: var(--text-dim); font: inherit; cursor: pointer; }
 .candidate-switch-set button[aria-checked="true"] { background: var(--amber); color: var(--amber-ink); }
 
-/* 4A: the whole building small beside the squad, so the story starts on the first screen. */
-.live.live-layout-compact .live-scene { grid-template-columns: minmax(0, 46%) minmax(0, 1fr); grid-template-areas: "map head" "map squad"; align-items: start; column-gap: 10px; }
-.live.live-layout-compact .live-scene-head { grid-area: head; }
-.live.live-layout-compact .live-scene-head .live-scene-where { font-size: 12px; }
-.live.live-layout-compact .live-map:not(.live-map-full) { grid-area: map; }
-.live.live-layout-compact .live-squad { grid-area: squad; }
-.app .live.live-layout-compact .live-map-compact .live-map-inner > .bp-root { grid-template-rows: auto 112px auto auto; }
-.live.live-layout-compact .live-map-compact .bp-floors, .live.live-layout-compact .live-map-compact [role="tablist"] { transform: scale(0.8); transform-origin: left top; }
-.live.live-layout-compact .live-squad-faces { gap: 3px; }
-.live.live-layout-compact .live-squad-face { padding: 3px 2px; }
-.live.live-layout-compact .live-squad-face .lead-face { width: 28px; height: 28px; }
-.live.live-layout-compact .live-squad-name { max-width: 100%; overflow: hidden; font-size: 11px; white-space: nowrap; text-overflow: ellipsis; overflow-wrap: normal; }
-.live.live-layout-compact .live-squad-name .live-team-leader { display: none; }
-.live.live-layout-compact .live-squad-stress { font-size: 10px; }
-.live.live-layout-compact .operation-choices .comms-log { margin-top: 2px; }
-
 /* Reading face: Source Serif 4 on the story text everywhere it appears. */
 .reading-face-serif :is(.operation-stage-prompt, .cold-open-text, .decision-narrative, .decision-lead, .debrief-narrative, .debrief-epilogue, .transcript-line) {
   font-family: 'Source Serif 4', Georgia, serif;
 }
 
-/* 4A also slims the strip: each source on one row (label, count, pull), its chat one line under it. */
-.live.live-layout-compact .source-ticker { row-gap: 3px; padding-block: 5px; }
-.live.live-layout-compact .source-ticker { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "head count" "bar bar" "chat chat"; column-gap: 8px; }
-.live.live-layout-compact .source-ticker-head { grid-area: head; }
-.live.live-layout-compact .source-ticker-count { grid-area: count; display: block; line-height: 1.1; }
-.live.live-layout-compact .source-ticker-bar { grid-area: bar; }
-.live.live-layout-compact .source-reactions { grid-area: chat; }
-.live.live-layout-compact .source-ticker-count b { font-size: 16px; }
-.live.live-layout-compact .source-ticker-count span { font-size: 11px; }
-.live.live-layout-compact .source-reactions { height: 20px; }
-.live.live-layout-compact .source-reaction:not(:last-child) { display: none; }

@@ -61,7 +61,7 @@ and how each one was handled.
 | Board as 96px rows, with the hook, warning and pay in a sheet | Players have to open each call to compare. The 3-line hook, the visible pay and warnings that are on by default are owner decisions | Rejected | Shorter cards that keep all of those (mockup 1) |
 | Brief map first, with the cold open folded to 3 lines | A skimmer deploys without the person's motive, and the main draw becomes optional | Rejected | Orders and the threat first, the cold open whole, the map one tap from the header (mockup 2) |
 | Kit as defaults | Scarce gear goes to the wrong squad, and a chip row hides shortages and gated actions | Accepted with controls | A summary per squad showing allocation and shortages. Adjust opens today's workspace with presets (still gated by their unlock) and undo. Start position and staging stay two labeled controls. Up to three squads (mockup 3) |
-| Story first, with a cropped scene strip and What matters now deleted | A crop hides another squad or a civilian, and a 2-line radio excerpt drops a beat. Both reverse documented owner decisions | Needs validation | Two candidates for the owner to compare (mockups 4A and 4B). What matters now and the per-card leads stay |
+| Story first, with a cropped scene strip and What matters now deleted | A crop hides another squad or a civilian, and a 2-line radio excerpt drops a beat. Both reverse documented owner decisions | Needs validation | Owner compared 4A and 4B in the game and chose 4B, refined (below). The per-card leads stay; What matters now went as a duplicate at the owner's request |
 | Review with outcomes first | Requirements, the lead, authorization and resupply are controls, not reference | Accepted with controls | Cost and previews first, every control kept, the map as a labeled inset (mockup 5) |
 | Result first | A "Changed" summary of adjectives hides an injury or a used supply | Accepted with controls | The result and any recorded harm first, then facts, injuries, supplies and stress-band crossings. Raw numbers fold into Details. The final decision, which goes straight to the debrief, gets the same order (mockup 6) |
 | After-action report with Rest and Back actions | Rest before settlement leaves officers assigned and the rewards unpaid | Accepted with controls | Close settles first (`closeDebrief`). A Rest offer follows, for anyone strained or worse, and it respects the Watch Commander's policy. Archived reports stay action-free |
@@ -120,42 +120,47 @@ Mockups at 390x844 are in [captures/ops-experience](captures/ops-experience/), d
 7. **Reading face** (`type-ui.png`, `type-serif.png`). The same stage 1 prompt in Barlow (now)
    and in Source Serif 4.
 
-## How the comparisons get decided
+## The decide beat: 4B, refined (owner, 2026-10-21)
 
-Both comparisons are built for dev builds only (`npm run dev`), in
-`src/ui/settings/candidates.ts` with their styles in `candidates.css`. Production always shows
-today's layout and face.
+The owner compared 4A and 4B in the game and chose 4B, with three refinements: the stream's chat
+has to be easy to read, the information comes in one order on every stage, and nothing is said
+twice. 4A is removed. The live call now reads, top to bottom:
 
-- **Switch:** a pink DEV switch sits bottom-left on the live call. Its first set is Now, 4A or 4B,
-  its second Sans or Serif, and every tap applies at once. A link can open on a candidate too, for
-  example `http://localhost:5173/?layout=compact&face=serif`, with `layout` set to `now`,
-  `compact` or `folded`. The choice is kept in localStorage (`ti-dev-candidates`), never in the save.
-- **4A (`compact`):** the whole building at 112px beside the squad. The map never folds. The
-  stream ticker sits on one row with one chat line. On scene moves below the prompt.
-- **4B (`folded`):** the map folds to its header from stage 2. It opens for the stage on Show map,
-  and it opens itself after a result that changed the scene.
-- **Serif:** Source Serif 4 on the cold open, prompts, results, transcripts and the debrief's
-  ending. It loads only when a dev build picks it.
+1. **Strip** (pinned): the stage rail, the threat with its drain, and each pressure source. A
+   source shows its count, its pull on the odds as a number, the checks it makes harder in words
+   ("Talking, keeping calm and working together are harder"), and its chat.
+2. **Scene:** where the squad is, the map and the squad's faces. From stage 2 the map folds to its
+   header unless the player opens it for that stage. It still opens itself after a result that
+   changed the scene. Stage 1 keeps the player's remembered choice.
+3. **Last decision**, folded to one row.
+4. **The moment:** the prompt and the transcript.
+5. **On scene:** what is said while the player decides, in its reserved box.
+6. **The choices.**
 
-Measured at 390x844 on a fresh *Going Live* run, to the top of each element in scrolled pixels:
+Removed as duplicates: *What matters now* (its threat repeated the strip, and its pull now lives on
+the ticker) and the "Stage 2 of 3" kicker (the rail names the stage). This reverses the 2026-10-21
+*What matters now* decision in game-ux-direction.md.
 
-| | Prompt, stage 1 | First choice, stage 1 | Prompt, stage 2 | First choice, stage 2 |
-| --- | --- | --- | --- | --- |
-| Now | 819 | 1,282 | 916 | 1,296 |
-| 4A | 464 | 1,069 | 561 | 1,083 |
-| 4B | 819 | 1,282 | 730 | 1,110 |
-| 4A with serif | 464 | 1,069 | 561 | 1,109 |
+**The chat** is two steady lines under the source, newest at the bottom, at 13px. A new line slides
+up once; nothing fades out from under the reader. Lines come every few seconds, and a jump adds two
+lines 1.6 seconds apart instead of a burst of three. The box keeps its height, so nothing below it
+moves.
 
-4A puts the prompt on the first screen at both stages. No candidate gets the first choice there
-yet: the transcript, the On scene log and What matters now still sit between the prompt and the
-cards. Folding or moving those is the next lever if 4A wins.
+Measured at 390x844 on a fresh *Going Live* run (scrolled pixels to the top of each element):
 
-For each of 4A against 4B, and 7A against 7B, play *Going Live* through all three stages twice. Check at 390x844 and at 320x568, with 200% text, with two
-squads deployed, and once with a threat that lands. The owner judges three things:
+| | Prompt | On scene | First choice |
+| --- | --- | --- | --- |
+| Stage 1 (map open) | 706 | 1,004 | 1,175 |
+| Stage 2 (map folded) | 586 | 809 | 979 |
 
-- Can they say who acts, who is in danger, and which choices the stream makes harder, without
-  scrolling?
-- Does anything move while they read?
-- Does the prose read better? This one is for 7 only.
+Before the refinement the first choice sat at 1,282 and 1,296. The result beat's text still starts
+under the scene; moving it up is `ops-experience-now`.
 
-Record the verdict in this doc and delete the losing candidate.
+## The reading face: still open
+
+Dev builds keep a pink DEV switch at the bottom-left of the live call, with Sans and Serif. A link
+can open on the serif too (`http://localhost:5173/?face=serif`). The serif is Source Serif 4 on the
+cold open, prompts, results, transcripts and the debrief's ending. It loads only when picked, and
+production keeps Barlow. The choice is kept in localStorage (`ti-dev-candidates`), never in the save
+(`src/ui/settings/candidates.ts`). Judge it on the same prompt at 390x844 and 320x568, and at 200%
+text. Then record the verdict here, delete the loser and remove the switch.

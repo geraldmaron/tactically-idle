@@ -72,35 +72,6 @@ function CardMeta({ a, officers, reach = [] }: { a: ActionView; officers?: Reado
   </span>;
 }
 
-/** The shared context every card would otherwise repeat, once above the cards: the stage's threat
- * and the live factor pulling hardest on the odds (owner, 2026-10-21). Its rows keep their place
- * while the numbers move, so nothing under it shifts. */
-export interface Guidance {
-  /** The stage's threat and the minutes left (0 once it has landed). */
-  threat: { label: string; left: number } | null;
-  /** The pressure source pulling hardest, or the one running when none pulls yet. */
-  factor: { source: string; pull: number; effect: string } | null;
-}
-
-export function WhatMattersNow({ threat, factor }: Guidance): JSX.Element | null {
-  if (!threat && !factor) return null;
-  return <section className="matters-now" aria-label="What matters now">
-    <h3 className="matters-now-head">What matters now</h3>
-    <dl className="matters-now-rows">
-      {threat && <div className="matters-now-row matters-now-threat">
-        <dt className="sr-only">Threat</dt>
-        <dd><Icon name="hourglass" size={14} /><span className="matters-now-text"><PeopleText text={threat.label} /></span>
-          <b className="matters-now-num">{threat.left > 0 ? `${padDigits(Math.ceil(threat.left), 2)} min` : NOW_LABEL}</b></dd>
-      </div>}
-      {factor && <div className="matters-now-row matters-now-factor">
-        <dt className="sr-only">Pulling on the odds</dt>
-        <dd><Icon name="crowd" size={14} /><span className="matters-now-text"><b className="matters-now-count"><PeopleText text={factor.source} /></b> <span className="matters-now-sub">{factor.effect}</span></span>
-          <b className="matters-now-num">{factor.pull > 0 ? `−${factor.pull}` : ''}</b></dd>
-      </div>}
-    </dl>
-  </section>;
-}
-
 /** `actions` are the stage's choices as the player sees them, with any reviewed choice already
  * forecast for its chosen squads. Tapping a card opens its review sheet (owner, 2026-10-21: one tap
  * to review, no separate expand); the pull and the full reading live in the sheet. */
