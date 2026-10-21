@@ -16,7 +16,7 @@ import '../../../../ui/skin.css';
 import { NOW } from '../../../../gen/incident/gates/engine-driver';
 import { briefing, builtForScenario, decisionViews, lastResolution, pendingDebrief } from '../../../../sim/operation-selectors';
 import { isHotCall } from '../../../../sim/authorization';
-import { CLOCK_RULES_V1, decisionTextLength, ditherCap, fillViews } from '../../../../sim/clocks';
+import { CLOCK_RULES_V1, decisionTextLength, ditherCap, fillViews, stalledRun } from '../../../../sim/clocks';
 import { responseFailurePlan } from '../../../../sim/response-failure';
 import { getScenario } from '../../../../sim/scenario-registry';
 import type { GameState, Id, OutcomeBand, SquadId } from '../../../../sim/types';
@@ -450,7 +450,7 @@ function LiveScreen({ state, onReview, onConfirm, onFail, dither }: { state: Gam
       feedback={<OperationFeedback officers={state.officers} decisions={decisions} folded={beat === 'decide'} explicitCompletion={(scenario?.version ?? 0) >= 4} currentPrompt={model.progress.prompt} onOpenLog={() => setPanel('none')} />}
       scene={sceneFor(scenario?.incident?.type)}
       situation={scenario && <SituationPanel scenario={scenario} run={run} />}
-      supportContext={scenario && <><IncidentPeopleStatus scenario={scenario} run={run} state={state} />
+      supportContext={scenario && <><IncidentPeopleStatus scenario={scenario} run={{ ...run, meters: stalledRun(scenario, run, dither).meters }} state={state} />
         <SupportContext scenario={scenario} run={run} actions={model.actions} open={panel === 'support'} onOpen={() => setPanel('support')} onClose={() => setPanel('none')}
           onPickAction={id => { pickAction(id); setPanel('action'); }} /></>}
       failedResponse={failurePlan && <section className="call operation-failed-response" aria-label="Failed response">

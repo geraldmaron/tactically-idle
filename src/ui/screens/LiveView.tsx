@@ -38,7 +38,8 @@ import type { IconName } from '../icons';
 import { feetInches, opMinutes, signed, sqft } from '../format';
 import { CONSEQUENCE_LABEL, OddsBar, OutcomeForecast } from './OperationFeedback';
 import { DecisionList, LeadFace, RATING_SHORT } from './DecisionList';
-import { fillEffectLine, fillMinutesToBite, leadingPressure, liveFillViews, pressureUrgency, reachByAction, threatLandingText } from './fill-gauge';
+import { fillEffectLine, fillMinutesToBite, leadingPressure, liveFillViews, pressureUrgency, reachByAction, threatLandingText, landingSubjects, type LandingSubject } from './fill-gauge';
+import { STANCE_LABEL } from '../components/IncidentPeople';
 import type { FillView } from '../../sim/clocks';
 import { CONTRIBUTOR_GROUPS } from './contributor-groups';
 import { GamePeopleProvider, PeopleText } from '../people/PeopleText';
@@ -234,7 +235,7 @@ export function LiveView(p: LiveViewProps) {
       </header>
       <div className="live-bar live-strip">
         <StageSteps progress={p.progress} />
-        {pressure?.kind === 'threat' && <ThreatPill label={pressure.label} minutes={pressure.minutes} dither={p.dither} landed={pressure.left <= 0 ? threatLandingText(p.g) : null} />}
+        {pressure?.kind === 'threat' && <ThreatPill label={pressure.label} minutes={pressure.minutes} dither={p.dither} landed={pressure.left <= 0 ? threatLandingText(p.g) : null} subjects={pressure.left <= 0 ? landingSubjects(p.g, p.dither ?? 0) : []} />}
         {pressure?.kind === 'fill' && <FillGauge view={pressure.view} />}
       </div>
 
@@ -343,9 +344,11 @@ export function LiveView(p: LiveViewProps) {
  * (docs/call-pressure.md), so the minutes left are `minutes - dither` and the bar and the text show
  * the same number. An empty bar means the threat lands on any choice. The bar only changes width
  * when the stall moves, and never animates under reduced motion. */
-export function ThreatPill({ label, minutes, dither = 0, landed = null }: { label: string; minutes: number; dither?: number;
+export function ThreatPill({ label, minutes, dither = 0, landed = null, subjects = [] }: { label: string; minutes: number; dither?: number;
   /** At zero the threat has landed: the line the player reads when it happens (fill-gauge.ts threatLandingText). */
-  landed?: string | null }) {
+  landed?: string | null;
+  /** The subjects it wound up (fill-gauge.ts landingSubjects), each with their agitation's rise. */
+  subjects?: readonly LandingSubject[] }) {
   const left = Math.max(0, minutes - Math.max(0, dither));
   const shown = Math.ceil(left);
   const share = minutes > 0 ? Math.max(0, Math.min(1, left / minutes)) : 0;
@@ -355,6 +358,14 @@ export function ThreatPill({ label, minutes, dither = 0, landed = null }: { labe
   if (left <= 0 && landed) return <p className="threat-pill pressure-critical threat-pill-landed" role="status" aria-label={`${label}. It happened`}>
     <Icon name="hourglass" size={14} />
     <span className="threat-pill-label"><PeopleText text={landed} /></span>
+    {subjects.length > 0 && <span className="threat-pill-subjects">{subjects.map((subject) =>
+      <span key={subject.id} className="threat-subject" data-subject-stance={subject.stance}>
+        <span className="threat-subject-name"><PeopleText text={subject.label} /> · {STANCE_LABEL[subject.stance]}</span>
+        <span className="threat-subject-bar" role="meter" aria-label={`${subject.label} is more worked up`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(subject.after)}>
+          <i style={{ width: `${subject.before}%` }} />
+          <b style={{ left: `${subject.before}%`, width: `${Math.max(1, subject.after - subject.before)}%` }} />
+        </span>
+      </span>)}</span>}
   </p>;
   return <p className={`threat-pill pressure-${urgency}`} aria-label={`Threat: ${label} in ${shown} ${shown === 1 ? 'minute' : 'minutes'}`}>
     <Icon name="hourglass" size={14} />

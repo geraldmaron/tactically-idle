@@ -5,6 +5,7 @@
 import { effectiveRate, fillViews, openThreat, stalledRun, type FillView } from '../../sim/clocks';
 import { stableFlag } from '../../sim/conditions';
 import { getScenario } from '../../sim/scenario-registry';
+import { stanceOf, type Stance } from '../../sim/meters';
 import type { ScenarioDefinition } from '../../sim/scenario-types';
 import type { GameState, Id, OutcomeBand } from '../../sim/types';
 
@@ -105,4 +106,27 @@ export function threatLandingText(g: GameState): string | null {
   const scenario = run ? getScenario(run.scenarioId) : null;
   if (!run || !scenario || run.status !== 'active') return null;
   return openThreat(scenario, run)?.effects.find((effect) => effect.when === undefined && effect.text)?.text ?? null;
+}
+
+/** A subject the landed threat moved: who, how they sound now, and their agitation before and after
+ * (0 to 100). The strip shows it the moment the stall reaches zero, so the cost lands on a named
+ * person and not only in the odds. */
+export interface LandingSubject { id: Id; label: string; stance: Exclude<Stance, 'unheard'>; before: number; after: number }
+
+/** Subjects whose agitation the landed threat raised, as the projection has them (sim/clocks.ts
+ * stalledRun). Empty until the stall reaches the threat, and for a call with no subjects. */
+export function landingSubjects(g: GameState, dither: number): LandingSubject[] {
+  const run = g.activeRun;
+  const scenario = run ? getScenario(run.scenarioId) : null;
+  if (!run || !scenario || run.status !== 'active' || !run.meters) return [];
+  const threat = openThreat(scenario, run);
+  if (!threat || !(dither >= threat.minutes)) return [];
+  const projected = stalledRun(scenario, run, dither).meters ?? {};
+  return Object.entries(projected).flatMap(([id, meters]) => {
+    const person = scenario.incidentPeople?.find((entry) => entry.id === id);
+    const before = run.meters?.[id]?.agitation ?? meters.agitation;
+    const stance = stanceOf(meters);
+    return person && stance !== 'unheard' && !run.flags.includes(`out:${id}`) && meters.agitation > before
+      ? [{ id, label: person.label, stance, before, after: meters.agitation }] : [];
+  });
 }

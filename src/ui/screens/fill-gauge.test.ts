@@ -13,7 +13,11 @@ import { NOW } from '../../sim/test-fixtures';
 import type { ActionView } from '../../sim/types';
 import { liveDecisions } from './live-model';
 import { DecisionList } from './DecisionList';
-import { fillEffectLine, fillMinutesToBite, gaugeReach, gaugeReachTag, leadingPressure, pressureUrgency } from './fill-gauge';
+import { fillEffectLine, fillMinutesToBite, gaugeReach, gaugeReachTag, landingSubjects, leadingPressure, pressureUrgency } from './fill-gauge';
+import { CALL_TREES } from '../../content/call-trees';
+import { drawCalls } from '../../gen/incident/trees-v13/balance';
+import { openThreat } from '../../sim/clocks';
+import { getScenario } from '../../sim/scenario-registry';
 import { FillGauge } from './LiveView';
 import { DebriefScore } from '../components/DebriefResults';
 
@@ -125,5 +129,17 @@ describe('the strip shows one pressure', () => {
     const at = (left: number) => pressureUrgency({ kind: 'threat', label: threat.label, minutes: 8, left });
     expect([at(8), at(4), at(2), at(0)]).toEqual(['calm', 'warn', 'critical', 'critical']);
     expect(pressureUrgency({ kind: 'fill', view: view({ value: 80, cued: 2 }), left: 4 })).toBe('critical');
+  });
+});
+
+describe('the subject when the threat lands', () => {
+  const [call] = drawCalls(CALL_TREES.hostage_crisis!, 1, 1, 1);
+  const state = startGateRun(call.scenarioId, call.seed);
+  const minutes = openThreat(getScenario(state.activeRun!.scenarioId)!, state.activeRun!)!.minutes;
+  it('names nobody before zero, and at zero names each subject it wound up, with the rise', () => {
+    expect(landingSubjects(state, minutes - 0.1)).toEqual([]);
+    const landed = landingSubjects(state, minutes);
+    expect(landed.length).toBeGreaterThan(0);
+    for (const subject of landed) expect(subject.after).toBeGreaterThan(subject.before);
   });
 });

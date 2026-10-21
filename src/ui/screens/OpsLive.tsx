@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { getState, send, useGame } from '../store';
 import { liveDither } from '../timer';
+import { stalledRun } from '../../sim/clocks';
 import { decisionViews, lastResolution } from '../../sim/operation-selectors';
 import type { Id, SquadId } from '../../sim/types';
 import { useToast } from '../components/toast';
@@ -181,7 +182,8 @@ export function OpsLive() {
       scene={sceneFor(scenario?.incident?.type)}
       // The briefing sheet holds the reference: the call's briefing and who has been located. The map
       // shows where they are; the story column keeps only what helps the next decision.
-      situation={scenario && <><SituationPanel scenario={scenario} run={run} /><IncidentPeopleStatus scenario={scenario} run={run} state={g} /></>}
+      // The people panel reads the subjects as the stall has left them, so it agrees with the strip.
+      situation={scenario && <><SituationPanel scenario={scenario} run={run} /><IncidentPeopleStatus scenario={scenario} run={{ ...run, meters: stalledRun(scenario, run, dither).meters }} state={g} /></>}
       supportContext={scenario && <><SupportContext scenario={scenario} run={run} actions={actions} open={panel === 'support'} onOpen={() => setPanel('support')} onClose={() => setPanel('none')} onPickAction={(id) => {
         setActionFromSupport(true);
         pickAction(id);

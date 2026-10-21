@@ -73,7 +73,9 @@ minutes** at a rate set by the timer setting. Time away from the app accrues at 
    rapport down), so it always reaches the person kept waiting; that agitation feeds the
    conversation odds and the stance branches (`src/sim/meters.ts`). The commit that follows applies
    the same landing once and gives every officer on it `CLOCK_RULES_V1.threat.strain` more strain.
-   A slow choice that lands the threat costs exactly the same.
+   A slow choice that lands the threat costs exactly the same. The strip names each subject it wound
+   up, with their stance and an agitation bar whose rise shows in bright red (`landingSubjects`,
+   `src/ui/screens/fill-gauge.ts`), and the briefing's people panel reads the same projection.
 7. **The result beat doesn't count.** A commit sets `OperationRun.decisionPending`; while it is set
    no stall accrues. The `openDecision` command clears it when the next decision shows (Continue,
    or a reload that comes back on the decision), once per decision and only forward.
