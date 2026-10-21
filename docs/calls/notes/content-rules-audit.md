@@ -75,7 +75,7 @@ method.") is lead-owned and binds every lane, so wound anatomy stays banned.
 
 | Rule | Action | Reason |
 |---|---|---|
-| E4.1 Suicide method detail | Renamed and given its reason in the rulebook. Two lint patterns in `prose-lint.ts`: `SUICIDE_METHOD` blocks phrasings that can only mean a method (lethal dose, noose, pills to die, hanged, drowned, shot, cut or poisoned oneself, slit or cut wrists, jumped off a bridge or roof), flagged `method`, never accepted; `METHOD_REVIEW` reports words that may name a method but also appear in ordinary text (overdose, dosage, milligrams, sleeping pills, carbon monoxide), flagged `method-review` for a person to read. `prose-lint.test.ts` covers blocked phrasings, near misses ("heart pills", "hangs up", "the carbon monoxide alarm", "her sleeping pills from the pharmacy"), and runs the Python checker on real rows. The regex is a screen: swat-writing-review still reads every crisis call for method | The drama guidance the rulebook cites (Samaritans, AU8; Everymind Mindframe, AU9) singles out method detail as a risk to vulnerable readers, and that risk doesn't depend on whether they chose the topic, so a filter can't cover it |
+| E4.1 Suicide method detail | Renamed and given its reason in the rulebook. Two lint patterns in `prose-lint.ts`: `SUICIDE_METHOD` blocks phrasings with a self-directed method in them (lethal dose, noose, pills to die or to kill oneself, hanged or drowned oneself, shot oneself in the head, slit or cut wrists), flagged `method`, never accepted; `METHOD_REVIEW` reports words and phrasings that may name a method but also appear in ordinary medical, household or movement text (overdose, dosage, milligrams, sleeping pills, carbon monoxide, cut, shot, stabbed or poisoned oneself, jumped off a bridge, roof or garage), flagged `method-review` for a person to read. `prose-lint.test.ts` covers blocked phrasings, near misses ("heart pills", "hangs up", "the carbon monoxide alarm", "her sleeping pills from the pharmacy"), and runs the Python checker on real rows. The regex is a screen: swat-writing-review still reads every crisis call for method | The drama guidance the rulebook cites (Samaritans, AU8; Everymind Mindframe, AU9) singles out method detail as a risk to vulnerable readers, and that risk doesn't depend on whether they chose the topic, so a filter can't cover it |
 
 ## Effect on content
 
@@ -114,3 +114,22 @@ ammunition and procedure words fit class (a), and found no kept rule that should
 | 8 | Coverage claims ignore that `injury` is disabled and that derived descriptors read outcomes, not prose | fix before ship | accepted | Batch audit item 5 requires declaring a descriptor the prose shows but the data doesn't derive; the procedure, restraint, stab and death rows state these limits |
 | 9 | `docs/content-rating.md` still said "suicide" nowhere else | fix before ship | accepted | Recorded that the audit supersedes "nowhere else", with E4.9 and E4.1 still holding |
 | 10 | "Method detail is the one part tied to imitation" overstates; SETTLED doesn't catch "handcuffed" | note | accepted | Evidence claim qualified in E4.1 and this table; the custody answer now names the human read |
+
+### Second Codex read, on the fixes (0dfa9dc to 68ea323)
+
+Codex, configured default model, read-only, fresh thread, 2026-10-20. Verdict: **reject**, narrower:
+findings 1, 2, 9 and 10 resolved, 3 resolved for the reported cases, 4 to 8 partly resolved, and one
+new regression.
+
+| # | Finding | Severity | My verdict | What changed |
+|---|---|---|---|---|
+| 3 | "shoot his own head" and "jump off the parking garage" match neither pattern | note | accepted | "shoot his own head" and "shot himself in the head" block; jumps from a garage, tower or cliff go to review |
+| 4 | The blocking pattern still blocks ordinary text: "pills to kill the pain", "tablets to kill bacteria", "the medic cut herself on the broken window", "patrol jumped from the roof" | fix before ship | accepted | Blocking now needs a self-directed method (pills to die or to kill oneself, hanged or drowned oneself, wrists). Reflexive cut, shot, stab and poison, and jumps from a height, moved to review. All four lines are negative tests |
+| 5 | The non-blocking checker test didn't assert exit 0 | note | accepted | Asserted |
+| 6 | engine-map R10 let a fatal force draw kill a crisis subject "like any other", ignoring the restored E12.5 clause | fix before ship | accepted | R10 now applies only where E12.5 lets force be offered, never in a self-directed situation |
+| 7 | vocabulary-and-lint still called any word outside the regex an owner policy question | fix before ship | accepted | Only a word no written rule covers is an owner question; a rule break is rewritten whatever the regex says |
+| 8 | swat-call-prose section 7 still said the filter keeps every listed topic off the board | fix before ship | accepted | It now says the card warns, the filter works where it can (injury disabled), and prose-only content declares its descriptor |
+| 11 | Restoring the self-directed rule dropped the rubric's separate "entry with no command reason" blocker | fix before ship | accepted | Both blockers are in the rubric |
+
+No third Codex read was run. These fixes are checked by `prose-lint.test.ts` (71 tests, including the
+four false positives as negative cases and the checker run on rows) and by `npm run check:strings`.

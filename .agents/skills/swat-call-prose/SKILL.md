@@ -292,8 +292,12 @@ E4.1), unchecked accusations, settled guilt and meta phrasing, and flags
 ambiguous method words for a read (METHOD_REVIEW). Read the live
 lists in prose-lint.ts. Weapons, death, injury, procedure, restraint and the
 word "suicide" are allowed since the content rules audit of 2026-10-20: the
-settings filter keeps those topics off the board of a player who doesn't want
-them (docs/calls/notes/content-rules-audit.md). A word that slips past a
+call card warns of them, and the settings filter keeps them off the board of a
+player who doesn't want them where it can (the `injury` switch stays disabled
+while filtering it would empty the board). Derived descriptors read the modeled
+outcomes, not the words, so a situation whose prose shows a death, an injury or
+police force the data doesn't model declares that descriptor
+(docs/calls/notes/content-rules-audit.md). A word that slips past a
 pattern is a gap, never a license.
 
 Report regex results verbatim, with the lane enforcing now, the lane that

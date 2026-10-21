@@ -14,9 +14,9 @@ const readFileSync = (path: string) => fs.readFileSync(path, 'utf8');
 
 describe('suicide method detail stays banned (ethics E4.1)', () => {
   it.each([
-    'a lethal dose', 'a noose in the garage', 'he hanged himself', 'they tried to hang themselves', 'He shot himself.',
-    'She tried to drown herself.', 'He cut himself again.', 'she slit her wrists', 'He cut his own wrist.',
-    'He took pills to kill himself.', 'enough pills to die', 'She jumped off the bridge.', 'He wanted to jump from the roof.',
+    'a lethal dose', 'a noose in the garage', 'he hanged himself', 'they tried to hang themselves', 'He shot himself in the head.',
+    'He says he will shoot his own head.', 'She tried to drown herself.', 'she slit her wrists', 'He cut his own wrist.',
+    'He took pills to kill himself.', 'enough pills to die', 'pills to end it all',
   ])('blocks %j', text => expect(SUICIDE_METHOD.test(text)).toBe(true));
 
   it.each([
@@ -24,11 +24,15 @@ describe('suicide method detail stays banned (ethics E4.1)', () => {
     'He takes his heart pills at noon.', 'The courier hangs up.', 'The coat hangs on the stool.', 'She cut the cord.',
     'He is at risk of suicide.', 'He jumped the fence.', 'The crew checks the carbon monoxide alarm.',
     'She needs her sleeping pills from the pharmacy.', 'The medic checks the dosage on her prescription.',
+    'She takes pills to kill the pain.', 'The pharmacy has tablets to kill bacteria.', 'The medic cut herself on the broken window.',
+    'Patrol jumped from the roof to the adjoining balcony.', 'He cut himself again.', 'She jumped off the bridge.',
   ])('does not block %j', text => expect(SUICIDE_METHOD.test(text)).toBe(false));
 
   it.each([
     'He took an overdose.', 'She says it was 40 milligrams.', 'The medic checks the dosage on her prescription.',
     'She needs her sleeping pills from the pharmacy.', 'The crew checks the carbon monoxide alarm.',
+    'He cut himself again.', 'The medic cut herself on the broken window.', 'She jumped off the bridge.',
+    'He says he will jump off the parking garage.', 'Patrol jumped from the roof to the adjoining balcony.', 'He shot himself.',
   ])('asks for a human read on %j', text => expect(METHOD_REVIEW.test(text)).toBe(true));
 });
 
@@ -97,5 +101,6 @@ describe('the string checker on real rows', () => {
     expect(count(out.stdout, 'method-review')).toBe(1);
     expect(count(out.stdout, 'method')).toBe(0);
     expect(count(out.stdout, 'unsafe')).toBe(0);
+    expect(out.status).toBe(0);
   });
 });

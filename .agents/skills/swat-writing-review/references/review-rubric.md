@@ -105,7 +105,8 @@ Question. Does every line pass the rulebook in ../swat-call-design/references/et
   death shown as a release, a real incident retold, restraint punished (including by a generated debrief
   line), a negotiator relaying a third party's unverified allegation, or a tactical call-out the
   player text does not earn. So is an entry opened by a clock or a count of failed talks alone,
-  an entry on a subject whose threat is only to himself, a fastest force path with no visible
+  an entry with no command reason, an entry on a subject whose threat is only to himself, a
+  fastest force path with no visible
   threat to life and no command reason quoted before it, and an ending titled after what the
   team did not do (C11).
 

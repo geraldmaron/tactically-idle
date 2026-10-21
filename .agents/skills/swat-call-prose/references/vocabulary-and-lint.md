@@ -168,8 +168,9 @@ UNSAFE_DETAIL" or "matches none", and name what enforces it now (the
 prose lint through `npm run check:strings`). For a word the lint passes but a
 rule would catch, also name the check that would enforce it if the lint is
 extended, and write the lint-safe fallback beside it, so the owner can choose
-either without another writing pass. A word outside every regex is an owner
-policy question, not a lint collision, and the record says which.
+either without another writing pass. A word outside every regex that no
+written rule covers is an owner policy question, and the record says so. A
+line that breaks a written rule is rewritten whatever the regex says.
 
 Affirmative weapon mentions and death lines are no longer owner decisions
 (O1, revised 2026-10-20). A `METHOD_REVIEW` hit is read by a person and either

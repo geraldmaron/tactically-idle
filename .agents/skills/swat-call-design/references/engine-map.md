@@ -329,5 +329,6 @@ as history.
 - R7. A prose-lint extension for dashes, colons, stock phrases, repeated sentences across
   calls and the compound-word loophole.
 - R9. A per-type characteristic opt-out, so a crisis call draws only `ordinary` pacing.
-- R10. Retired 2026-10-20 with E4.5. A fatal force draw on a crisis subject may reach a death
-  ending like any other; `noFatal` stays available when a call's design wants it.
+- R10. Retired 2026-10-20 with E4.5. Where E12.5 lets force be offered against a crisis subject
+  (a threat to someone else's life, never a self-directed situation), a fatal force draw may reach
+  a death ending like any other; `noFatal` stays available when a call's design wants it.
