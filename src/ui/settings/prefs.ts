@@ -21,6 +21,8 @@ export interface PlayerSettings {
   avoidThemes: ContentDescriptor[];
   cardWarnings: CardWarningSetting;
   timer: TimerSetting;
+  /** Live call sound and vibration (owner 2026-10-21: on by default, with a mute). */
+  sound: boolean;
   /** Set once the player has read the launch advisory and continued. */
   firstRunDone: boolean;
 }
@@ -29,6 +31,7 @@ export const DEFAULT_SETTINGS: Readonly<PlayerSettings> = Object.freeze({
   avoidThemes: [],
   cardWarnings: 'all',
   timer: DEFAULT_TIMER_SETTING,
+  sound: true,
   firstRunDone: false,
 });
 
@@ -52,6 +55,7 @@ export function parseSettings(raw: string | null): PlayerSettings {
     avoidThemes: sanitizeAvoid(data.avoidThemes),
     cardWarnings: pick(CARD_WARNING_SETTINGS, data.cardWarnings, DEFAULT_SETTINGS.cardWarnings),
     timer: pick(TIMER_SETTINGS, data.timer, DEFAULT_SETTINGS.timer),
+    sound: data.sound !== false,
     firstRunDone: data.firstRunDone === true,
   };
 }
@@ -98,3 +102,4 @@ export const avoidedThemes = (): readonly ContentDescriptor[] => readSettings().
 export const cardWarningsOn = (): boolean => readSettings().cardWarnings === 'all';
 export const timerSetting = (): TimerSetting => readSettings().timer;
 export const firstRunDone = (): boolean => readSettings().firstRunDone;
+export const soundOn = (): boolean => readSettings().sound;

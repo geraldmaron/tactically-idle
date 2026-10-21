@@ -258,7 +258,7 @@ function Script({ template, session }: { template: IncidentTemplate; session: Se
           ))}
           <div className="lab-script-ctl">
             <span className="lab-field-label">Situation</span>
-            <SegmentedControl label="Situation" size="small" value={v.situation} onChange={situation => setVariant({ situation })} options={([0, 1, 2] as const).map(i => ({ value: i, label: String(i + 1), title: tree.situations[i].note }))} />
+            <SegmentedControl label="Situation" size="small" value={v.situation} onChange={situation => setVariant({ situation })} options={tree.situations.map((situation, i) => ({ value: i as 0 | 1 | 2, label: String(i + 1), title: situation.note }))} />
           </div>
           {Object.entries(tree.turns ?? {}).map(([group, members]) => (
             <label key={group} className="lab-script-ctl">

@@ -7,6 +7,7 @@
 // through scenario-registry; settlement never builds one.
 //
 // This module must not import economy.ts (economy imports it).
+import { comebackTier, playerProfile } from './player-profile';
 import type { Department, GameState, HandlerResult, Id, IncidentCard } from './types';
 import { next } from './rng';
 import { drawIncidentSpec, incidentId, parseIncidentId } from '../gen/incident';
@@ -65,7 +66,7 @@ export function drawableSituations(exclusion: ContentExclusion): Record<Incident
   const out = excludedDescriptors(exclusion);
   return Object.fromEntries(SCENARIO_TYPES.map(({ type }) => {
     const tree = callTreeAt(type);
-    return [type, SITUATIONS.filter(index => !(tree?.situations[index].descriptors ?? []).some(descriptor => out.has(descriptor)))];
+    return [type, SITUATIONS.filter(index => (!tree || index < tree.situations.length) && !(tree?.situations[index]?.descriptors ?? []).some(descriptor => out.has(descriptor)))];
   })) as Record<IncidentType, SituationIndex[]>;
 }
 
@@ -152,7 +153,10 @@ function drawCard(d: GameState, at: number, exclusion?: ContentExclusion): Incid
     if (!(open.length ? open : SCENARIO_TYPES.map((info) => info.type)).some((type) => situations[type].length)) return null;
   }
   const drawn = drawIncidentSpec(d.rngState, { level: dep.level, trust: dep.trust, avoidFamilies: [...board(d).map((c) => c.familyId), ...(run ? [activeStory?.familyId ?? run.locationFamilyId] : [])], ...(avoidTypes ? { avoidTypes } : {}), ...(recentTypes ? { recentTypes } : {}), ...arc, ...(situations ? { situations } : {}) });
-  const spec = { ...drawn.spec, tier: Math.min(5, Math.max(1, Math.round(drawn.spec.tier))) };
+  // After a run of bad results the next call comes in a tier lower, and its card says why
+  // (sim/player-profile.ts comebackTier).
+  const comeback = comebackTier(playerProfile(d), Math.min(5, Math.max(1, Math.round(drawn.spec.tier))));
+  const spec = { ...drawn.spec, tier: comeback.tier };
   const life = drawBetween(drawn.state, INCIDENT_TUNING.minLifetimeMs, INCIDENT_TUNING.maxLifetimeMs);
   d.rngState = life.state;
   const id = incidentId(spec);
@@ -169,6 +173,7 @@ function drawCard(d: GameState, at: number, exclusion?: ContentExclusion): Incid
     arrivedAt: at,
     expiresAt: at + life.ms,
     seen: false,
+    ...(comeback.eased ? { eased: true as const } : {}),
   };
   if (recordArrival(d, spec.type)) card.newKind = true;
   cards.unshift(card); // newest first

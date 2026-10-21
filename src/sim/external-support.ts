@@ -177,7 +177,7 @@ export function validExternalSupportState(run: OperationRun, scenario: ScenarioD
   const publicState: PublicRun = { knowledge: Object.fromEntries(scenario.facts.map((fact) => [fact.id, fact.initial])), flags: [], pressure: scenario.pressure.start };
   for (const delivery of run.resupplies ?? []) publicState.pressure = round1(Math.max(0, Math.min(100, publicState.pressure + scenario.pressure.perMinute * delivery.minutes)));
   // v13: clock forks read the clocks as the engine ran them, and cues set marks (sim/clocks.ts).
-  const timed = { clocks: initialClocks(scenario), flags: publicState.flags };
+  const timed = { clocks: initialClocks(scenario, run.sourceStart), flags: publicState.flags };
   /** Runs the clocks; returns the clocks as they were before and the cues that fired. Their flags
    * land when the caller applies them: at once between decisions, after the outcome in a decision,
    * as the commit applies them (R-B3: a cue's move and an outcome's move keep the commit's order). */

@@ -6,7 +6,7 @@
 //
 // Milestone 1 describes today's calls faithfully and changes no odds: a field the engine does not
 // read yet is listed in WIRED as false, and the lab says so beside it.
-import type { Armament, Disposition, IncidentType, Intent, MeterEvent, PoliceAwareness, Readiness } from '../../sim/scenario-types';
+import type { Armament, Disposition, IncidentType, Intent, MeterEvent, PoliceAwareness, PressureSource, Readiness } from '../../sim/scenario-types';
 import type { Id, RoomType, Vec } from '../../sim/types';
 import type { StreetVantage } from '../../sim/sightlines';
 import type { CallTree, TreeMoveTo, TreeNext } from '../call-trees/types';
@@ -148,6 +148,8 @@ export interface Clock {
   onOut?: { harm?: 'wounded' | 'serious'; mark?: string; next?: TreeNext };
   /** What a fill reaching 100 does: `onOut`'s shape, for a clock with `direction: 'fill'`. */
   onFull?: { harm?: 'wounded' | 'serious'; mark?: string; next?: TreeNext };
+  /** A pressure source (docs/call-pressure.md, "Pressure sources"), on a clock that fills. */
+  source?: PressureSource;
 }
 
 // ---------------------------------------------------------------- conditions

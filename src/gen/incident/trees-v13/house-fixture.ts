@@ -1,6 +1,6 @@
 // Frozen 2026-10-18 test copy; never edit to track content.
 // An engine-owned house call: the barricade tree and template as they stood on 2026-10-18
-// (content/call-trees/barricade-order.ts and content/incidents/barricade.ts), frozen here so the
+// (the retired barricade-order call and its template), frozen here so the
 // engine's tests of moves, window exits, upstairs facts, waits and meters keep a stable call while
 // the calls lane replaces the shipping barricade. Not player content: its text is never shown.
 import type { CallTree, TreeChoice, TreeOutcome } from '../../../content/call-trees/types';

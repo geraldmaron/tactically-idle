@@ -21,7 +21,7 @@ import { pushbackDataFindings, pushbackFindings } from './pushback';
 
 const THREAT: TreeThreat = {
   label: 'The courier edges for the door', minutes: 4, text: 'The courier takes a half step toward the street door.',
-  pushback: [{ id: 'first', at: 1.5, by: 'taker', line: 'Test line from the taker.', mark: ['taker_pressed'] }, { id: 'second', at: 3, by: 'courier', line: 'Test line from the courier.' }],
+  beats: [{ id: 'first', at: 1.5, by: 'taker', line: 'Test line from the taker.', mark: ['taker_pressed'] }, { id: 'second', at: 3, by: 'courier', line: 'Test line from the courier.' }],
 };
 
 function template(threat: TreeThreat | undefined, selfHarm = false): IncidentTemplate {
@@ -41,7 +41,7 @@ function compile(t: IncidentTemplate): ScenarioDefinition {
 }
 
 /** The compiled push-back line ids. */
-const carriedPushback = (scenario: ScenarioDefinition) => Object.values(scenario.stages).flatMap(stage => stage.actions).flatMap(action => (action.threat?.pushback ?? []).map(line => line.id));
+const carriedPushback = (scenario: ScenarioDefinition) => Object.values(scenario.stages).flatMap(stage => stage.actions).flatMap(action => (action.threat?.beats ?? []).map(line => line.id));
 const rootChoice = (scenario: ScenarioDefinition) => scenario.stages.assess.actions.find(action => action.threat)!;
 
 describe('the push-back gate', () => {
@@ -54,16 +54,16 @@ describe('the push-back gate', () => {
     expect(ids(template(THREAT, true))).toEqual(['first', 'second']);
     expect(ids(template(THREAT, false))).toEqual(['first', 'second']);
     expect(pushbackFindings(template(THREAT, true))).toEqual([]);
-    expect(rootChoice(compile(template(THREAT, true))).threat!.pushback).toHaveLength(2);
+    expect(rootChoice(compile(template(THREAT, true))).threat!.beats).toHaveLength(2);
   });
 
   it('holds a line to its rules', () => {
-    const bad = (pushback: TreeThreat['pushback']) => pushbackDataFindings(template({ ...THREAT, pushback }, false).tree).map(finding => finding.message);
+    const bad = (beats: TreeThreat["beats"]) => pushbackDataFindings(template({ ...THREAT, beats }, false).tree).map(finding => finding.message);
     expect(bad([{ id: 'a', at: 4, by: 'taker', line: 'x' }]).join()).toContain('below the threat');
     expect(bad([{ id: 'a', at: 0, by: 'taker', line: 'x' }]).join()).toContain('above 0');
     expect(bad([{ id: 'a', at: 1, by: 'nobody', line: 'x' }]).join()).toContain('no role or group');
     expect(bad([{ id: 'a', at: 1, by: 'taker', line: 'x' }, { id: 'a', at: 2, by: 'taker', line: 'y' }]).join()).toContain('unique id');
-    expect(() => compile(template({ ...THREAT, pushback: [{ id: 'a', at: 5, by: 'taker', line: 'x' }] }, false))).toThrow();
+    expect(() => compile(template({ ...THREAT, beats: [{ id: 'a', at: 5, by: 'taker', line: 'x' }] }, false))).toThrow();
   });
 });
 
@@ -99,7 +99,7 @@ describe('a push-back line in play', () => {
   });
 
   it('stays silent for a threat without lines', () => {
-    withDraftScenario(compile(template({ ...THREAT, pushback: undefined }, false)), sid => {
+    withDraftScenario(compile(template({ ...THREAT, beats: undefined }, false)), sid => {
       const after = decide(startGateRun(sid, 719), 4);
       expect(spoken(after)).toEqual([]);
       expect(after.activeRun!.flags).not.toContain('mark:taker_pressed');
@@ -117,8 +117,8 @@ describe('a push-back line in play', () => {
 
 describe('what a push-back line reads and sets', () => {
   it('binds the speaker and the words to the cast', () => {
-    const t = template({ ...THREAT, pushback: [{ id: 'bound', at: 1, by: 'taker', line: '{courier.first} is not leaving.' }] }, false);
-    const lines = rootChoice(compile(t)).threat!.pushback![0].effects.flatMap(effect => effect.exchange ?? []);
+    const t = template({ ...THREAT, beats: [{ id: 'bound', at: 1, by: 'taker', line: '{courier.first} is not leaving.' }] }, false);
+    const lines = rootChoice(compile(t)).threat!.beats![0].effects.flatMap(effect => effect.exchange ?? []);
     expect(lines).toHaveLength(1);
     expect(lines[0].speaker).not.toContain('{');
     expect(lines[0].line).not.toContain('{');

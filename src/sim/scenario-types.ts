@@ -1,7 +1,7 @@
 // Scenario schema for the operation engine. Owned by the operation module.
 // A ScenarioDefinition is static authored content; everything that changes during
 // play lives in OperationRun (types.ts). See docs/operation-model.md.
-import type { CapabilityId, CertId, CompletionDisposition, Id, KnowledgeStatus, OpeningState, OutcomeBand, RatingKey, RiskBand, StageId, Vec } from './types';
+import type { CapabilityId, CertId, CompletionDisposition, Id, KnowledgeStatus, OpeningState, OutcomeBand, RatingKey, RiskBand, StageId, TraitId, Vec } from './types';
 import type { Channel } from './spatial';
 
 export type ActionIcon =
@@ -175,6 +175,8 @@ export interface SupportRule {
 export interface SpokenLine { speaker: string; line: string }
 
 export interface OutcomeEffect {
+  /** Pressure sources (clocks that fill) jumped by `by` points, clamped to 0..100. */
+  clockBump?: { clockId: Id; by: number }[];
   /** Fictional person-level injury; selected from actual participants, without an extra random draw. */
   officerHarm?: { severity: 'wounded' | 'serious'; label: string };
   /** V13: an authored injury or death of a bound person (civilian or subject), recorded like a
@@ -261,9 +263,10 @@ export interface ActionDefinition {
   /** This decision point's threat (NodeThreat). When the decision takes `minutes` or longer, travel
    * and the band's delay included, its effects apply: the line the player reads and what it costs. */
   threat?: NodeThreat & { effects: OutcomeEffect[];
-    /** Push-back lines (TreePushback), each as the effect it applies once the stall reaches `at`
-     * dither minutes. Empty or absent: the threat stays silent. */
-    pushback?: { id: string; at: number; effects: OutcomeEffect[] }[] };
+    /** Beats (TreeBeat), each as the effect it applies once the stall reaches `at` dither minutes:
+     * live in the projection (sim/clocks.ts stalledRun), and with the commit. Empty or absent: the
+     * threat stays silent. */
+    beats?: { id: string; at: number; effects: OutcomeEffect[] }[] };
   /** V13: what draws a player to the choice, and what it costs, one line each. */
   weighing?: { pull: string; cost: string };
   /** Full archetype route rechecked against current openings at action evaluation. */
@@ -298,6 +301,10 @@ export interface ActionDefinition {
   requires: ActionRequirements;
   check: { kind: CheckKind; ratings: RatingWeight[]; difficulty: number };
   tempo?: Tempo;
+  /** The trait this moment asks for (TreeChoice.favors): an officer on the decision who has it adds
+   * `value` points at the first seat, named on the card with `label` ("has talked people down on
+   * camera before"). */
+  favors?: { trait: TraitId; value: number; label: string }[];
   /** A long hold's span ('Hours', 'All night'), shown in place of estimated minutes. The clock
    * still advances by minutes, so pressure and civilian safety stay fair to the wait (v13). */
   timeLabel?: string;
@@ -457,6 +464,28 @@ export interface ClockDef {
     route?: Pick<OutcomeEffect, 'setFlags' | 'clearFlags' | 'stage' | 'ending'> };
   /** What a fill reaching 100 does where no fork reads it: `onOut` for a fill clock, the same shape. */
   onFull?: ClockDef['onOut'];
+  /** A pressure source (docs/call-pressure.md, "Pressure sources"), on a clock that fills. */
+  source?: PressureSource;
+}
+
+/** What makes a gauge that fills a pressure source the player can feel (docs/call-pressure.md,
+ * "Pressure sources"): a number someone on scene would see, rates that follow the scene, a pull on
+ * the odds the cards name, and what the people watching say. The gauge stays 0..100 in the sim;
+ * everything here reads it, so replay and the Lab are unchanged. */
+export interface PressureSource {
+  /** How the gauge reads as a count: `from` at 0 rising to `to` at 100 on a curve (exponential
+   * when both are above 0, so it climbs the way an audience does), shown with `unit` ("watching"). */
+  count?: { from: number; to: number; unit: string };
+  /** Flags that speed it while set (the taker breaking, a shout on the stream): the fastest matching
+   * rate applies, unless a slowing flag (ClockDef.rateFlags) is set, which always wins. */
+  surges?: { flag: string; ratePerMin: number }[];
+  /** Its pull on the odds once its first cue is heard: up to `atFull` points off checks of these
+   * kinds, in proportion to the gauge, named on the card with the count. */
+  odds?: { kinds: CheckKind[]; atFull: number };
+  /** What the people watching say, floated on screen while it runs (presentation only, never the
+   * sim). `byCue[i]` is the pool once `i` cues are heard (0: before the first); `spike` plays in a
+   * burst when the gauge jumps. Written per call under swat-call-prose. */
+  reactions?: { byCue: string[][]; spike?: string[] };
 }
 export interface ClockCondition { clockId: Id; state: 'low' | 'out'; is: boolean }
 /** How a subject sounds to the team (sim/meters.ts stanceOf). 'unheard' until the first event. */

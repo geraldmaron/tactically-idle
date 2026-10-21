@@ -69,7 +69,7 @@ describe('explore', () => {
     expect(Object.keys(all.endings!)).toHaveLength(12);
     expect(missing).toEqual(['handed_over', 'owner_beaten', 'owner_killed', 'owner_killed_taker_hurt']);
     // The owner dies or is beaten only where the taker won't trade (lets_go false); here he will.
-    expect(s.tree.situations[s.situation].truth.lets_go).toBe(true);
+    expect(s.tree.situations[s.situation]!.truth.lets_go).toBe(true);
     for (const ending of ['owner_beaten', 'owner_killed', 'owner_killed_taker_hurt']) expect(blockedByTruth(graph, ending, 'lets_go')).toBe(true);
     // handed_over is the failed-response fallback: no state in this call leaves the player without a move.
     expect(explore(start, null, { holds: noMoveLeft })).toMatchObject({ path: null, truncated: false });
@@ -83,7 +83,7 @@ describe('explore', () => {
   it('reaches the owner killed in the situation where the taker won\'t trade, by aiming the team\'s force', () => {
     // Firing needs a carried sidearm and an officer qualified for it (sim/force-risk.ts qualifiedForceUnit).
     const keeps = open(`${REFERENCE.replace('variant=1', 'variant=2')}&kit=full&certs=entry_team`);
-    expect(keeps.tree.situations[keeps.situation].truth.lets_go).toBe(false);
+    expect(keeps.tree.situations[keeps.situation]!.truth.lets_go).toBe(false);
     const graph = graphOf(keeps);
     const all = explore(keeps.frames[0].state, null);
     expect(all.truncated).toBe(false);

@@ -190,6 +190,9 @@ export const TREE_VOICES = { negotiator: '{lead}', radio: 'Radio', dispatch: 'Di
 export type TreeMove = 'heard' | 'contact' | 'honest' | 'provoked' | 'team_seen' | 'shots' | 'released';
 
 export interface TreeOutcome {
+  /** Points a pressure source (a clock that fills, by id) jumps by, either way: the news van pulls
+   * up (+15), the taker puts the phone face down (-30). */
+  bump?: Record<string, number>;
   /** Engine-only branch on hidden truth or a clock, read when the decision commits. Never
    * previewed. Several conditions must all hold. */
   if?: TreeIf | TreeIf[];
@@ -272,6 +275,8 @@ export interface TreeChoice {
   summary: string;
   preview: Record<OutcomeBand, string>;
   icon: ActionDefinition['icon'];
+  /** The trait this moment asks for (ActionDefinition.favors), with the card's line for it. */
+  favors?: ActionDefinition['favors'];
   check: { kind: CheckKind; ratings: RatingWeight[]; difficulty?: number };
   /** Operation minutes the choice takes on the clean path. */
   minutes: number;
@@ -399,28 +404,37 @@ export interface TreeThreat {
   moves?: Record<string, TreeMove | TreeMove[]>;
   pressure?: number;
   civilian?: number;
-  /** The subject pushes back when the team stalls (docs/call-pressure.md, "Push-back lines"). Each
-   * line is written for this subject and this moment, never drawn from a shared pool. Optional: a
-   * threat without lines stays silent and its bar still drains. */
-  pushback?: TreePushback[];
+  /** Pressure sources it jumps when it lands (TreeOutcome.bump). */
+  bump?: Record<string, number>;
+  /** What happens on scene while the player decides (docs/call-pressure.md, "Beats"). Each line is
+   * written for this moment, never drawn from a shared pool. Optional: a threat without beats stays
+   * silent and its bar still drains. */
+  beats?: TreeBeat[];
 }
 
-/** One push-back line on a threat. It fires once, when the stall the player spent on the decision
- * (dither minutes) reaches `at`, which is always before the threat itself lands (`at` below the
- * threat's `minutes`). It is spoken by a role or group, and may set a mark later choices read. No
+/** One beat on a threat: the scene moving while the player weighs it. It fires once, live on
+ * screen, when the stall the player spent on the decision (dither minutes) reaches `at`, which is
+ * always before the threat itself lands (`at` below the threat's `minutes`). The projection the
+ * cards read applies it at once (sim/clocks.ts stalledRun), and the commit applies it with the
+ * decision, so a beat can close a choice (a mark the choice's `when` excludes) or open one. No
  * situation suppresses it (owner decision 2026-10-20): players filter calls by content setting, and
- * the timer Off means no stall and so no lines. The line obeys swat-call-prose like any spoken
+ * the timer Off means no stall and so no beats. The line obeys swat-call-prose like any spoken
  * line. */
-export interface TreePushback {
+export interface TreeBeat {
   /** Unique within the threat. */
   id: string;
   /** Dither minutes at which it fires: above 0, below the threat's `minutes`. */
   at: number;
-  /** The speaking role, or a group (its first member); never a voice like radio. */
+  /** Who says it: a role, a group (its first member), or a voice (TREE_VOICES: radio, dispatch,
+   * the negotiator). */
   by: string;
   line: string;
   /** Marks it sets, readable by later choices. Never a threat-to-life mark. */
   mark?: string[];
+  /** How it moves the subjects' tempers. */
+  moves?: Record<string, TreeMove | TreeMove[]>;
+  /** Pressure sources it jumps (TreeOutcome.bump). */
+  bump?: Record<string, number>;
 }
 
 export interface TreeEnding {
@@ -463,7 +477,8 @@ export interface CallTree {
   stageLabels: Record<StageId, string>;
   objectives: { id: string; label: string }[];
   facts: Record<string, TreeFact>;
-  situations: [TreeSituation, TreeSituation, TreeSituation];
+  /** One to three situations, each a different hidden truth on the same cast. */
+  situations: [TreeSituation] | [TreeSituation, TreeSituation] | [TreeSituation, TreeSituation, TreeSituation];
   /** Turn groups: one node per group is drawn per call. */
   turns?: Record<string, string[]>;
   /** The first node. */

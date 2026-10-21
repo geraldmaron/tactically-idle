@@ -2,7 +2,7 @@
 // store-free, so the game's call screen and the Scenario Lab read the same views and the same words.
 // The engine's view is fillViews (sim/clocks.ts); this file adds the plain-words effect line and which
 // choices stop or slow a gauge. No effect is hidden: the line names every effect the engine applies.
-import { effectiveRate, fillViews, openThreat, stalledRun, type FillView } from '../../sim/clocks';
+import { effectiveRate, fillViews, openThreat, stalledRun, stallFeed, type FillView, type StallLine } from '../../sim/clocks';
 import { stableFlag } from '../../sim/conditions';
 import { getScenario } from '../../sim/scenario-registry';
 import { stanceOf, type Stance } from '../../sim/meters';
@@ -20,11 +20,19 @@ export function fillEffectLine(effect: FillEffect): string {
 }
 
 /** The call's gauges that fill, as they stand now: moved on by the open decision's stall (`dither`,
- * ui/timer.ts liveDither), with no cue heard until a commit. Empty with no live call or none. */
+ * ui/timer.ts liveDither), their cues heard as they pass. Empty with no live call or none. */
 export function liveFillViews(g: GameState, dither = 0): FillView[] {
   const run = g.activeRun;
   const scenario = run ? getScenario(run.scenarioId) : null;
   return run && scenario && run.status === 'active' ? fillViews(scenario, stalledRun(scenario, run, dither)) : [];
+}
+
+/** What was said and heard on scene during the open decision's stall (sim/clocks.ts stallFeed), for
+ * the comms log. Empty with no live call. */
+export function liveStallFeed(g: GameState, dither = 0): StallLine[] {
+  const run = g.activeRun;
+  const scenario = run ? getScenario(run.scenarioId) : null;
+  return run && scenario && run.status === 'active' && run.stage !== 'debrief' ? stallFeed(scenario, run, dither) : [];
 }
 
 /** The one pressure the strip shows: the threat or a gauge that fills, whichever bites soonest in

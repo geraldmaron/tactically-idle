@@ -15,7 +15,7 @@ import { hashIndex, hashSeed } from '../../sim/rng';
 import { nearestOpening } from '../../sim/spatial';
 import { coverOnLine } from '../../sim/cover';
 import { streetVantage } from '../../sim/sightlines';
-import type { ClockDef, FactDefinition, IncidentPersonDef, IncidentSpec, ScenarioDefinition } from '../../sim/scenario-types';
+import type { ClockDef, FactDefinition, IncidentPersonDef, IncidentSpec, PressureSource, ScenarioDefinition } from '../../sim/scenario-types';
 import type { BuiltLocation, Id, Vec } from '../../sim/types';
 
 export interface IncidentInstance {
@@ -237,6 +237,19 @@ function drawClock(clock: Clock, seed: number): Clock {
 
 /** The instance's clocks as the engine runs them (sim/clocks.ts), text bound for this call. A clock
  * the story still runs by itself stays in the instance for the lab, and out of the engine. */
+/** A clock's pressure source with its text bound to the call (names in reactions). Surge and slow
+ * flags are marks, as `rateFlags` are. */
+function sourceFor(clock: Clock, bind: (text: string) => string): PressureSource {
+  const source = clock.source!;
+  if (clock.direction !== 'fill') throw new Error(`Clock ${clock.id}: only a clock that fills can be a pressure source`);
+  return {
+    ...(source.count ? { count: { ...source.count } } : {}),
+    ...(source.surges?.length ? { surges: source.surges.map(entry => ({ ...entry })) } : {}),
+    ...(source.odds ? { odds: { kinds: [...source.odds.kinds], atFull: source.odds.atFull } } : {}),
+    ...(source.reactions ? { reactions: { byCue: source.reactions.byCue.map(pool => pool.map(bind)), ...(source.reactions.spike ? { spike: source.reactions.spike.map(bind) } : {}) } } : {}),
+  };
+}
+
 function clocksFor(instance: IncidentInstance, bind: (text: string) => string, factIds: ReadonlySet<string>, tree: CallTree): ClockDef[] {
   return instance.clocks.filter(clock => !clock.story).map(clock => {
     const factId = clock.factKey ? treeFactId(clock.factKey) : undefined;
@@ -256,6 +269,7 @@ function clocksFor(instance: IncidentInstance, bind: (text: string) => string, f
       ...(clock.urgent ? { urgent: bind(clock.urgent) } : {}),
       ...(clock.onOut ? { onOut: { ...(clock.onOut.harm ? { harm: clock.onOut.harm } : {}), ...(clock.onOut.mark ? { mark: clock.onOut.mark } : {}),
         ...(clock.onOut.next ? { route: clockRoute(tree, clock.onOut.next, instance.spec.seed) } : {}) } } : {}),
+      ...(clock.source ? { source: sourceFor(clock, bind) } : {}),
       ...(clock.onFull ? { onFull: { ...(clock.onFull.harm ? { harm: clock.onFull.harm } : {}), ...(clock.onFull.mark ? { mark: clock.onFull.mark } : {}),
         ...(clock.onFull.next ? { route: clockRoute(tree, clock.onFull.next, instance.spec.seed) } : {}) } } : {}),
     };

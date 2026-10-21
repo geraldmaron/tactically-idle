@@ -179,8 +179,8 @@ export function readIds(text: string, template: IncidentTemplate, deps: Dependen
 export interface SituationContent { index: 0 | 1 | 2; note: string; tags: { descriptor: ContentDescriptor; derived: boolean }[]; missing: ContentDescriptor[]; screened: string | null }
 
 export function situationContent(template: IncidentTemplate): SituationContent[] {
-  return ([0, 1, 2] as const).map(index => {
-    const situation = template.tree.situations[index];
+  return template.tree.situations.map((situation, i) => {
+    const index = i as 0 | 1 | 2;
     let derived: ContentDescriptor[] = [];
     try { derived = derivedDescriptors(template, index); } catch { derived = []; }
     const declared = new Set(situation.descriptors ?? []);

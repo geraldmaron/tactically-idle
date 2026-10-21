@@ -22,7 +22,7 @@ export function reachableOutcomes(template: IncidentTemplate, situation: Situati
   const clocks = new Set((template.situations.find(model => model.index === situation)?.clocks ?? []).map(clock => clock.id));
   const holds = (entry: TreeIf) => {
     if ('fact' in entry) {
-      const truth = tree.facts[entry.fact]?.truth ?? tree.situations[situation].truth[entry.fact];
+      const truth = tree.facts[entry.fact]?.truth ?? tree.situations[situation]?.truth[entry.fact];
       return truth === undefined || truth === entry.is;
     }
     // A clock this call doesn't have is never low or out.
@@ -94,13 +94,14 @@ export interface DescriptorFinding { type: string; situation: Situation; message
  * situation with no list declares nothing. */
 export function descriptorFindings(template: IncidentTemplate): DescriptorFinding[] {
   const tree: CallTree = template.tree;
-  return ([0, 1, 2] as const).flatMap(situation => {
-    const declared = new Set(tree.situations[situation].descriptors ?? []);
+  return tree.situations.flatMap((entry, index) => {
+    const situation = index as Situation;
+    const declared = new Set(entry.descriptors ?? []);
     const findings: DescriptorFinding[] = [];
     const missing = derivedDescriptors(template, situation).filter(descriptor => !declared.has(descriptor));
     if (missing.length) findings.push({ type: tree.type, situation, message: `situation ${situation} leaves out ${missing.join(', ')}, which its data derives` });
     const spared = adultNoFatalSubjects(template, situation);
-    if (spared.length && !declared.has('suicide_self_harm') && !tree.situations[situation].selfHarmScreened?.trim())
+    if (spared.length && !declared.has('suicide_self_harm') && !entry.selfHarmScreened?.trim())
       findings.push({ type: tree.type, situation, message: `situation ${situation} spares ${spared.join(', ')} with noFatal force but declares neither suicide_self_harm nor a selfHarmScreened reason` });
     const unknown = [...declared].filter(descriptor => !(CONTENT_DESCRIPTORS as readonly string[]).includes(descriptor));
     if (unknown.length) findings.push({ type: tree.type, situation, message: `situation ${situation} declares ${unknown.join(', ')}, which is not a content descriptor` });

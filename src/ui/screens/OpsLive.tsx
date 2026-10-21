@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { getState, send, useGame } from '../store';
 import { liveDither } from '../timer';
+import { playHeartbeat, setMurmur, stopLiveAudio, unlockAudio } from '../audio/live-audio';
+import { liveFillViews } from './fill-gauge';
 import { stalledRun } from '../../sim/clocks';
 import { decisionViews, lastResolution } from '../../sim/operation-selectors';
 import type { Id, SquadId } from '../../sim/types';
@@ -50,12 +52,32 @@ export function OpsLive() {
 
   // One selector block for the game and the Scenario Lab (live-model.ts).
   // The stall so far (docs/call-pressure.md): the cards show it and the commit charges what they showed.
-  // The threat's bar drains with the stall, so the screen reads the clock once a second while a
-  // decision is open (the store's own tick is every five).
+  // The scene moves while the player decides (docs/call-pressure.md, "The live decision"), so the
+  // screen reads the clock four times a second (the store's own tick is every five).
   const [, setSecond] = useState(0);
   useEffect(() => {
-    const timer = window.setInterval(() => setSecond((n) => n + 1), 1000);
+    const timer = window.setInterval(() => setSecond((n) => n + 1), 250);
     return () => window.clearInterval(timer);
+  }, []);
+  // A stall counts only while the player can see it (owner 2026-10-21): hiding the app pauses the
+  // open decision and coming back resumes it, moved on by the time away.
+  useEffect(() => {
+    const onVisibility = () => {
+      const current = getState().activeRun;
+      if (!current || current.status !== 'active') return;
+      if (document.visibilityState === 'hidden' && !current.decisionPending && current.decisionPausedAt === undefined) send({ type: 'pauseDecision', revision: current.revision });
+      if (document.visibilityState === 'visible' && current.decisionPausedAt !== undefined) send({ type: 'resumeDecision', revision: current.revision });
+    };
+    onVisibility();
+    document.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener('pagehide', onVisibility);
+    return () => { document.removeEventListener('visibilitychange', onVisibility); window.removeEventListener('pagehide', onVisibility); };
+  }, []);
+  // Sound starts on the first touch (browsers refuse it before) and fades out when the call ends.
+  useEffect(() => {
+    const unlock = () => unlockAudio();
+    window.addEventListener('pointerdown', unlock, { once: true });
+    return () => { window.removeEventListener('pointerdown', unlock); stopLiveAudio(); };
   }, []);
   const dither = liveDither(g, now);
   const screen = liveScreen(g, now, { focusId, selection, override, floor, activeOfficer, selectedSpaceId: selSpace, lastChange, showRooms, detailsOpen: panel === 'action', dither });
@@ -67,6 +89,18 @@ export function OpsLive() {
   useEffect(() => {
     if (beat === 'decide' && run.status === 'active' && run.decisionPending) send({ type: 'openDecision', revision: run.revision });
   }, [beat, run.status, run.decisionPending, run.revision]);
+  // The heartbeat in a threat's last quarter, and the crowd's murmur at its level.
+  const threatOpen = screen?.model.progress.threat ?? null;
+  const threatShare = threatOpen && beat === 'decide' ? Math.max(0, threatOpen.minutes - dither) / threatOpen.minutes : 1;
+  const heartbeat = beat === 'decide' && threatShare > 0 && threatShare <= 0.25;
+  useEffect(() => {
+    if (!heartbeat) return;
+    playHeartbeat();
+    const timer = window.setInterval(playHeartbeat, 1000);
+    return () => window.clearInterval(timer);
+  }, [heartbeat]);
+  const crowdLevel = liveFillViews(g, dither).filter((view) => view.kind === 'crowd' && !view.owner).reduce((max, view) => Math.max(max, view.value / 100), 0);
+  useEffect(() => { setMurmur(run.status === 'active' ? crowdLevel : 0); }, [Math.round(crowdLevel * 20), run.status]);
   const failurePlan = responseFailurePlan(g);
   // Follow the selected action: when its target is on another floor, show that floor.
   const targetFloor = screen?.review.targetFloor ?? null;

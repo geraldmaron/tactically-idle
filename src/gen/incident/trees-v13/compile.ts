@@ -515,6 +515,7 @@ export function placeCast(tree: CallTree, built: BuiltLocation, spec: IncidentSp
   if (!settings.includes(built.location.setting)) throw new Error(`${tree.type} needs a ${settings.join(' or ')} building`);
   const recipe = scenarioRecipe(spec);
   const situation = tree.situations[recipe.variant];
+  if (!situation) throw new Error(`${tree.type} has no situation ${recipe.variant}`);
   const outside = built.location.entries[0];
   // Room types are tried in order of fit, so a shop call lands on the shop floor, not a cooler.
   const room = tree.scene.rooms.reduce<ReturnType<typeof selectStoryRoom>>((found, type) =>
@@ -767,8 +768,8 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
   // part). The tree's count conditions are already settled, so `possible` reads marks and safety.
   // The marks a stalled decision's push-back lines set count as settable: over every node, which
   // only keeps more conditions.
-  const pushbackMarks = tree.nodes.flatMap(node => (node.threat?.pushback ?? []).flatMap(line => line.mark ?? []));
-  const plan = prunePlan(tree, callCounts({ groups, armed: placed.armed, upstairs: placed.upstairs, exits: placed.exits }), [...clockMarks, ...pushbackMarks], spec.seed, clockNexts);
+  const beatMarks = tree.nodes.flatMap(node => (node.threat?.beats ?? []).flatMap(line => line.mark ?? []));
+  const plan = prunePlan(tree, callCounts({ groups, armed: placed.armed, upstairs: placed.upstairs, exits: placed.exits }), [...clockMarks, ...beatMarks], spec.seed, clockNexts);
   const settable = { marks: plan.settableMarks, safe: plan.settableSafe };
   const possible = plan.possible;
   const trim = (state: TreeState | undefined): TreeState | undefined => state && {
@@ -1071,6 +1072,7 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
       ...(outcome.objective ? { objective: outcome.objective } : {}),
       ...(outcome.civilian ? { civilian: outcome.civilian } : {}),
       ...(outcome.pressure ? { pressure: outcome.pressure } : {}),
+      ...(outcome.bump ? { clockBump: Object.entries(outcome.bump).map(([clockId, by]) => ({ clockId, by })) } : {}),
       ...(outcome.minutes ? { extraMinutes: outcome.minutes } : {}),
       ...(outcome.back ? { fallBack: true as const } : {}),
       ...(next ? 'node' in next ? { stage: nextStage } : { ending: next.ending } : {}),
@@ -1162,19 +1164,19 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
     if (!(threat.minutes > 0)) throw new Error(`${node.id}: a threat needs minutes above zero`);
     const deadly = (threat.mark ?? []).filter(mark => tree.threatMarks?.[mark]);
     if (deadly.length) throw new Error(`${node.id}: a threat may not set the threat-to-life mark ${deadly.join(', ')} (E12.4)`);
-    const { label, minutes, text, mark, moves: threatMoves, pressure, civilian } = threat;
-    const lines = threat.pushback ?? [];
+    const { label, minutes, text, mark, moves: threatMoves, pressure, civilian, bump } = threat;
+    const lines = threat.beats ?? [];
     const seenIds = new Set<string>();
-    for (const line of threat.pushback ?? []) {
-      if (!line.id || seenIds.has(line.id)) throw new Error(`${node.id}: a push-back line needs a unique id`);
+    for (const line of lines) {
+      if (!line.id || seenIds.has(line.id)) throw new Error(`${node.id}: a beat needs a unique id`);
       seenIds.add(line.id);
-      if (!(line.at > 0 && line.at < minutes)) throw new Error(`${node.id}: push-back ${line.id} fires at ${line.at}, which is not above 0 and below the threat's ${minutes} minutes`);
-      if (TREE_VOICES[line.by as keyof typeof TREE_VOICES]) throw new Error(`${node.id}: push-back ${line.id} is spoken by a voice (${line.by}), not by the subject`);
+      if (!(line.at > 0 && line.at < minutes)) throw new Error(`${node.id}: beat ${line.id} fires at ${line.at}, which is not above 0 and below the threat's ${minutes} minutes`);
       const toLife = (line.mark ?? []).filter(entry => tree.threatMarks?.[entry]);
-      if (toLife.length) throw new Error(`${node.id}: push-back ${line.id} may not set the threat-to-life mark ${toLife.join(', ')} (E12.4)`);
+      if (toLife.length) throw new Error(`${node.id}: beat ${line.id} may not set the threat-to-life mark ${toLife.join(', ')} (E12.4)`);
     }
-    const pushback = lines.map(line => ({ id: line.id, at: line.at, effects: effectsFor(node, { text: '', exchange: [{ by: line.by, line: line.line }], ...(line.mark ? { mark: line.mark } : {}) }) }));
-    return { threat: { label, minutes, effects: effectsFor(node, { text, ...(mark ? { mark } : {}), ...(threatMoves ? { moves: threatMoves } : {}), ...(pressure ? { pressure } : {}), ...(civilian ? { civilian } : {}) }), ...(pushback.length ? { pushback } : {}) } };
+    const beats = lines.map(line => ({ id: line.id, at: line.at, effects: effectsFor(node, { text: '', exchange: [{ by: line.by, line: line.line }],
+      ...(line.mark ? { mark: line.mark } : {}), ...(line.moves ? { moves: line.moves } : {}), ...(line.bump ? { bump: line.bump } : {}) }) }));
+    return { threat: { label, minutes, effects: effectsFor(node, { text, ...(mark ? { mark } : {}), ...(threatMoves ? { moves: threatMoves } : {}), ...(pressure ? { pressure } : {}), ...(civilian ? { civilian } : {}), ...(bump ? { bump } : {}) }), ...(beats.length ? { beats } : {}) } };
   };
 
   const actionFor = (node: TreeNode, choice: TreeChoice): ActionDefinition => {
@@ -1197,6 +1199,7 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
       outcomePreview: { ...choice.preview },
       consequenceLevel: choice.consequenceLevel ?? 'low',
       ...(choice.tempo ? { tempo: choice.tempo } : {}),
+      ...(choice.favors?.length ? { favors: choice.favors.map(favor => ({ ...favor })) } : {}),
       ...(choice.span ? { timeLabel: choice.span } : {}),
       ...gearFor(choice),
       ...(modifiers.length ? { modifiers: modifiers.map(m => ({ label: m.label, when: { flags: [markFlag(m.mark)] }, source: m.value < 0 ? 'difficulty' as const : 'preparation' as const, value: Math.abs(m.value) })) } : {}),
@@ -1218,7 +1221,7 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
 
   // TreeState.armed reads the drawn cast: text behind it must wait for a look into the group's room.
   const leaks = armedRevealErrors(authored, nodes, (node, choice) => movement(node, choice).observes ?? [],
-    group => roomOf[authored.groups?.[group]?.leader ?? ''], [...clockMarks, ...pushbackMarks]);
+    group => roomOf[authored.groups?.[group]?.leader ?? ''], [...clockMarks, ...beatMarks]);
   if (leaks.length) throw new Error(leaks.join('\n'));
 
   s.stages = Object.fromEntries(STAGES.map(stage => {
@@ -1256,7 +1259,7 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
   }]));
 
   const bound = mapScenarioText(s, textBinder(tree, built, placed));
-  const errors = validateStoryBindings(bound, built, [...clockMarks.map(markFlag), ...pushbackMarks.map(markFlag), ...cueFlags]);
+  const errors = validateStoryBindings(bound, built, [...clockMarks.map(markFlag), ...beatMarks.map(markFlag), ...cueFlags]);
   if (errors.length) throw new Error(errors.join('\n'));
   return bound;
 }

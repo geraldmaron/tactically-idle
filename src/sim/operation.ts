@@ -1,3 +1,4 @@
+import { playerProfile, recordStall, sourceStarts } from './player-profile';
 import { reserveSupportVehicle, supportStartCheck } from './support-vehicles';
 import { isGenericResponseExit, responseFailurePlan } from './response-failure';
 import { currentStoryPrompt } from './story-context';
@@ -8,7 +9,7 @@ import { applyIncidentConsequences, applyPersonConsequences, civilianOutcomeView
 import { protectedOfficerEffects } from './force-risk';
 import { drawnKeys, forceSuppliesSpent, resolveDrawn } from './drawn-effects';
 import { withVariants } from '../gen/incident/drawn-model';
-import { advanceClocks, audienceFactor, CLOCK_RULES_V1, clockConditionsHold, clockErrors, clockOutEffects, cueEffects, decisionMinutes, ditherCap, filling, fillGauge, fillPressureRate, fillViews, forkMinutes, initialClocks, landingEffects, stalledRun, teamMinutes } from './clocks';
+import { advanceClocks, audienceFactor, bumpClocks, CLOCK_RULES_V1, clockConditionsHold, clockErrors, clockOutEffects, cueEffects, decisionMinutes, ditherCap, filling, fillGauge, fillPressureRate, fillViews, forkMinutes, initialClocks, landingEffects, stalledRun, teamMinutes } from './clocks';
 import { applyMoves, driftMeters, initialMeters, meterConditionsHold } from './meters';
 import { applyCommitments } from './commitments';
 import { forceLines, OUTCOME_SCORE_V1, scoreCall } from './outcome-score';
@@ -376,6 +377,8 @@ function resolveStart(built: BuiltLocation, cmd: StartCmd, sid: SquadId): { posi
 }
 
 function makeRun(state: GameState, built: BuiltLocation, scenario: ScenarioDefinition, cmd: StartCmd, runId: Id, rngState: number, now: number): OperationRun {
+  // The department's name and habits move where the pressure sources start (sim/player-profile.ts).
+  const sourceStart = sourceStarts(scenario, playerProfile(state));
   return {
     id: runId,
     scenarioId: scenario.id,
@@ -400,7 +403,8 @@ function makeRun(state: GameState, built: BuiltLocation, scenario: ScenarioDefin
     flags: [],
     ...({ externalSupport: {} }),
     clock: 0,
-    ...(initialClocks(scenario) ? { clocks: initialClocks(scenario) } : {}),
+    ...(sourceStart ? { sourceStart } : {}),
+    ...(initialClocks(scenario, sourceStart) ? { clocks: initialClocks(scenario, sourceStart) } : {}),
     ...(initialMeters(scenario) ? { meters: initialMeters(scenario) } : {}),
     pressure: scenario.pressure.start,
     objective: 0,
@@ -455,15 +459,15 @@ export function matchedEffects(action: ActionDefinition, band: OutcomeBand, run:
   // Landing reaches the subjects too (sim/clocks.ts landingEffects), as the stall's projection showed.
   const threat = action.threat && clockBase !== undefined && clockBase >= action.threat.minutes
     ? landingEffects(scenario, action.threat.effects.filter((effect) => conditionHolds(effect.when, run))) : [];
-  // The subject's push-back (TreePushback): each line whose stall threshold the decision's dither
-  // reached fires once, as the effect's spoken line and marks, beside the threat. The decision
-  // records its dither, so a replay reads the same lines; a decision with none replays as before.
-  const pushback = dither > 0 ? (action.threat?.pushback ?? []).filter((line) => line.at <= dither)
+  // The beats (TreeBeat): each one whose stall threshold the decision's dither reached fires once,
+  // as its spoken line, marks, moves and bumps, beside the threat. The decision records its dither,
+  // so a replay reads the same beats; a decision with none replays as before.
+  const beats = dither > 0 ? (action.threat?.beats ?? []).filter((line) => line.at <= dither)
     .flatMap((line) => line.effects.filter((effect) => conditionHolds(effect.when, run))) : [];
   return [...matchedOutcomeIndices(action, band, run, scenario, clockBase).map((index) => {
     const effect = action.outcomes[band][index];
     return effect.reveal?.length ? { ...effect, knowledge: [...effect.knowledge ?? [], ...effect.reveal.map((factId) => ({ factId, status: scenario.facts.find((fact) => fact.id === factId)?.truth ? 'confirmed' as const : 'disproved' as const }))] } : effect;
-  }), ...threat, ...pushback];
+  }), ...threat, ...beats];
 }
 
 /** Which of the band's authored outcomes apply (their indices, in order): matchedEffects' filter. */
@@ -498,7 +502,7 @@ const RANK: Record<KnowledgeStatus, number> = { unknown: 0, reported: 1, confirm
 
 /** Apply matched effects to run state. Knowledge only moves forward. */
 function applyEffects(
-  run: Pick<OperationRun, 'knowledge' | 'flags' | 'pressure' | 'objective' | 'civilianSafety'>,
+  run: Pick<OperationRun, 'knowledge' | 'flags' | 'pressure' | 'objective' | 'civilianSafety'> & Partial<Pick<OperationRun, 'clocks'>>,
   effects: OutcomeEffect[],
 ): { changes: { factId: Id; status: KnowledgeStatus }[]; stage: StageId | null; ending: Id | null } {
   const changes: { factId: Id; status: KnowledgeStatus }[] = [];
@@ -521,6 +525,7 @@ function applyEffects(
     if (e.objective) run.objective = round1(clamp(run.objective + e.objective, 0, 100));
     if (e.civilian) run.civilianSafety = round1(clamp(run.civilianSafety + e.civilian, 0, 100));
     if (e.pressure) run.pressure = round1(clamp(run.pressure + e.pressure, 0, 100));
+    if (e.clockBump?.length && run.clocks) run.clocks = bumpClocks(run.clocks, e.clockBump);
     if (e.stage) stage = e.stage;
     if (e.ending) ending = e.ending;
   }
@@ -552,7 +557,7 @@ export interface StepTrace {
 /** Re-derive each committed decision's deltas from stored bands. Deterministic. */
 export function traceRun(scenario: ScenarioDefinition, run: OperationRun): { steps: StepTrace[]; end: Pick<OperationRun, 'knowledge' | 'flags' | 'pressure' | 'objective' | 'civilianSafety' | 'clock'> } {
   const sim: Pick<OperationRun, 'knowledge' | 'flags' | 'pressure' | 'objective' | 'civilianSafety' | 'clock' | 'clocks' | 'personCasualties' | 'officerCasualties' | 'meters' | 'commitments'> = { knowledge: initialKnowledge(scenario), flags: [...run.crew ?? []], pressure: scenario.pressure.start, objective: 0, civilianSafety: 100, clock: 0,
-    ...(initialClocks(scenario) ? { clocks: initialClocks(scenario) } : {}), ...(initialMeters(scenario) ? { meters: initialMeters(scenario) } : {}) };
+    ...(initialClocks(scenario, run.sourceStart) ? { clocks: initialClocks(scenario, run.sourceStart) } : {}), ...(initialMeters(scenario) ? { meters: initialMeters(scenario) } : {}) };
   const actions = new Map(scenarioActions(scenario).map((a) => [a.id, a]));
   const steps: StepTrace[] = [];
   for (const resupply of run.resupplies ?? []) applyClockCues(sim, scenario, advanceTime(sim, scenario, resupply.minutes).cues);
@@ -888,6 +893,24 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     if (!run || run.status !== 'active' || run.revision !== cmd.revision || !run.decisionPending) return fail('No decision waiting to open');
     run.decisionOpenedAt = Math.max(run.decisionOpenedAt, ctx.now, draft.department.clockHighWater);
     delete run.decisionPending;
+    delete run.decisionPausedAt;
+    return { ok: true };
+  },
+
+  /** The app is hidden with a decision open: its stall stops here (sim/clocks.ts openDither). */
+  pauseDecision(draft, cmd, ctx) {
+    const run = draft.activeRun;
+    if (!run || run.status !== 'active' || run.revision !== cmd.revision || run.decisionPending || run.decisionPausedAt !== undefined) return fail('No running decision to pause');
+    run.decisionPausedAt = Math.max(ctx.now, draft.department.clockHighWater);
+    return { ok: true };
+  },
+
+  /** The app is back: the decision opened later by the time away, so that time never counts. */
+  resumeDecision(draft, cmd, ctx) {
+    const run = draft.activeRun;
+    if (!run || run.status !== 'active' || run.revision !== cmd.revision || run.decisionPausedAt === undefined) return fail('No paused decision to resume');
+    run.decisionOpenedAt += Math.max(0, Math.max(ctx.now, draft.department.clockHighWater) - run.decisionPausedAt);
+    delete run.decisionPausedAt;
     return { ok: true };
   },
 
@@ -933,7 +956,10 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     // decision's own minutes below, so clocks, cues and the threat move through the one path.
     const dither = Math.min(ditherCap(scenario, run), Math.floor((cmd.ditherMinutes ?? 0) * 10) / 10);
     // The odds read the call as the stall left it (sim/clocks.ts stalledRun), as the card showed them.
-    const input = { state: draft, run: stalledRun(scenario, run, dither), scenario, action, built, acting: cmd.actingSquadIds, support: cmd.supportSquadIds, ...(cmd.leadOfficerId ? { lead: cmd.leadOfficerId } : {}) };
+    const stalledInput = stalledRun(scenario, run, dither);
+    // A beat during the stall can close a choice (docs/call-pressure.md, "Beats"): the scene moved on.
+    if (!conditionHolds(action.visibleWhen, stalledInput)) return fail('That option closed while you were deciding');
+    const input = { state: draft, run: stalledInput, scenario, action, built, acting: cmd.actingSquadIds, support: cmd.supportSquadIds, ...(cmd.leadOfficerId ? { lead: cmd.leadOfficerId } : {}) };
     const ev = evaluateAction(input);
     if (!ev.eligible) return fail(ev.reason ?? 'Not available');
     if (cmd.leadOfficerId && ev.participantIds[0] !== cmd.leadOfficerId) return fail('That officer is not taking part in this decision');
@@ -941,8 +967,11 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     // (TreeState.lead → lead:<trait>, lead:band_<band>), replaced at every decision.
     run.flags = [...run.flags.filter((flag) => !flag.startsWith(LEAD_PREFIX)), ...leadFlags(draft, run, ev.participantIds[0])];
 
-    // The department becomes known for how it works (sim/reputation.ts).
+    // The department becomes known for how it works (sim/reputation.ts), and how long it takes to
+    // decide (sim/player-profile.ts).
     recordPosture(draft.department, postureOf(action));
+    const window = ditherCap(scenario, run);
+    if (window > 0) recordStall(draft.department, dither / window);
     // One saved sample per committed decision.
     const r = next(run.rngState);
     run.rngState = r.state;
@@ -1095,6 +1124,7 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     run.revision += 1;
     // The next decision opens now, and its stall waits while the result is read (openDecision).
     run.decisionOpenedAt = Math.max(ctx.now, draft.department.clockHighWater);
+    delete run.decisionPausedAt;
     run.decisionPending = true;
 
     // stage transition (the committed decision is already in history)
@@ -1180,6 +1210,8 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
       o.stress = oc.stressAfter;
       o.career.operations += 1;
       if (verdict) o.career[verdict] += 1;
+      const type = scenario?.incident?.type;
+      if (type) o.career.byType = { ...o.career.byType, [type]: (o.career.byType?.[type] ?? 0) + 1 };
     }
     clearAssignments(draft, run);
     run.settled = true;

@@ -38,7 +38,8 @@ import type { IconName } from '../icons';
 import { feetInches, opMinutes, signed, sqft } from '../format';
 import { CONSEQUENCE_LABEL, OddsBar, OutcomeForecast } from './OperationFeedback';
 import { DecisionList, LeadFace, RATING_SHORT } from './DecisionList';
-import { fillEffectLine, fillMinutesToBite, leadingPressure, liveFillViews, pressureUrgency, reachByAction, threatLandingText, landingSubjects, type LandingSubject } from './fill-gauge';
+import { fillEffectLine, fillMinutesToBite, leadingPressure, liveFillViews, liveStallFeed, pressureUrgency, reachByAction, threatLandingText, landingSubjects, type LandingSubject } from './fill-gauge';
+import { CommsLog, SourceTicker } from './LiveFeed';
 import { STANCE_LABEL } from '../components/IncidentPeople';
 import type { FillView } from '../../sim/clocks';
 import { CONTRIBUTOR_GROUPS } from './contributor-groups';
@@ -156,8 +157,11 @@ export function LiveView(p: LiveViewProps) {
   const stageNumber = p.progress.stages.findIndex((step) => step.state === 'current') + 1;
   const threat = beat === 'decide' ? p.progress.threat ?? null : null;
   // Gauges that fill keep running through the result, so they stay in the strip on both beats. The
-  // strip shows one pressure, the one that bites soonest (fill-gauge.ts leadingPressure).
-  const pressure = leadingPressure(threat, p.dither ?? 0, liveFillViews(p.g, p.dither ?? 0));
+  // strip shows the threat, the decision's own clock, and every pressure source as it runs (owner
+  // 2026-10-21: the crowd and the stream count live beside the drain, not one pressure at a time).
+  const fills = liveFillViews(p.g, p.dither ?? 0);
+  const pressure = leadingPressure(threat, p.dither ?? 0, []);
+  const comms = beat === 'decide' ? liveStallFeed(p.g, p.dither ?? 0) : [];
   const reach = reachByAction(p.g, available.map((action) => action.id));
   const casualties = p.g.activeRun?.officerCasualties ?? {};
   const focusTask = focus ? p.squadTasks.find((task) => task.squadId === focus.id) : undefined;
@@ -207,7 +211,7 @@ export function LiveView(p: LiveViewProps) {
   </div>;
 
   const screen = (
-    <div className={`live live-one live-beat-${beat}${mapFull ? ' live-map-full-open' : ''}`}>
+    <div className={`live live-one live-beat-${beat}${mapFull ? ' live-map-full-open' : ''}${pressure?.kind === 'threat' ? ` live-urgency-${pressureUrgency(pressure)}` : ''}`}>
       {/* The call's name scrolls away; the strip under it stays pinned: where the call is and the one
           pressure that bites soonest, the threat or a gauge that fills. */}
       <header className="live-head">
@@ -236,7 +240,9 @@ export function LiveView(p: LiveViewProps) {
       <div className="live-bar live-strip">
         <StageSteps progress={p.progress} />
         {pressure?.kind === 'threat' && <ThreatPill label={pressure.label} minutes={pressure.minutes} dither={p.dither} landed={pressure.left <= 0 ? threatLandingText(p.g) : null} subjects={pressure.left <= 0 ? landingSubjects(p.g, p.dither ?? 0) : []} />}
-        {pressure?.kind === 'fill' && <FillGauge view={pressure.view} />}
+        {fills.length > 0 && <div className="live-sources">
+          {fills.map((view) => view.count || view.reactions ? <SourceTicker key={view.id} view={view} /> : <FillGauge key={view.id} view={view} />)}
+        </div>}
       </div>
 
       {/* The scene: the map (compact, foldable, or full screen) and the squad, above the story. */}
@@ -301,6 +307,7 @@ export function LiveView(p: LiveViewProps) {
           </div>}
         </> : <>
           {p.feedback}
+          <CommsLog lines={comms} />
           <section className="call operation-choices" aria-label="Your call">
             <p className="call-head">
               <span className="call-label">{stageNumber > 0 ? `Stage ${stageNumber} of ${p.progress.stages.length}` : 'Your next decision'}</span>

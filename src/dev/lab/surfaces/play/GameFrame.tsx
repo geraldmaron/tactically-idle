@@ -223,7 +223,7 @@ function StallSlider({ state, dither, onChange }: { state: GameState; dither: nu
   const shown = Math.min(dither, cap);
   const text = decisionTextLength(scenario, run);
   // The threat's push-back lines.
-  const lines = (scenario.stages[run.stage].actions.find(action => action.threat?.pushback?.length)?.threat?.pushback ?? [])
+  const lines = (scenario.stages[run.stage].actions.find(action => action.threat?.beats?.length)?.threat?.beats ?? [])
     .map(line => ({ id: line.id, at: line.at, text: line.effects.flatMap(effect => effect.exchange ?? []).map(spoken => spoken.line).join(' ') }));
   return (
     <p className="lab-frame-chips">

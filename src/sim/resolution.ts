@@ -1,3 +1,5 @@
+import { sourceOdds } from './pressure-sources';
+import { ROLE_CHECKS, TRAIT_EFFECTS, TRAIT_PRESSURE_SHIELD, TYPE_HISTORY, type TraitWhen } from '../content/traits';
 import { actionEquipmentRequirements, effectiveTags, normalizedActionConsumption, operatorQualified, orderActionParticipants } from './equipment-requirements';
 import { LAST_SEEN_LINES } from '../content/incidents/lines';
 import { casualtyActionIssue, incidentOfficerUnavailable, personCasualtyActionIssue } from './incident-consequences';
@@ -43,7 +45,7 @@ import type {
   SquadId,
   Vec,
 } from './types';
-import type { ActionDefinition, AuthorityResult, CheckKind, Condition, EquipmentEffect, ScenarioDefinition, IncidentPersonDef } from './scenario-types';
+import type { ActionDefinition, AuthorityResult, CheckKind, Condition, EquipmentEffect, ScenarioDefinition, IncidentPersonDef, Tempo } from './scenario-types';
 import { buildLocation, deriveLocation } from './location';
 import { conditionFraction, EXPERIENCE_TUNING, highRiskAllowed } from './officer';
 import { CERT_HOLDER, isCertId } from '../content/certs';
@@ -742,6 +744,9 @@ export function evaluateAction(input: EvalInput): Evaluation {
       modContribs.push({ label: m.label, value: m.value, source: m.source });
     }
   }
+  // Pressure sources (sim/pressure-sources.ts): the audience, the crowd, the stream, named with the
+  // count the strip shows, on the kinds of check the call says they weigh on.
+  for (const pull of sourceOdds(scenario, run, action.check.kind)) modContribs.push({ label: pull.label, value: pull.value, source: 'pressure', ref: pull.clockId });
   // v13: the people in the incident and where they stand (sim/incident-factors.ts).
   // The odds read where the team believes everyone is now, once someone has moved (R-B3).
   const incident = incidentFactors(scenarioWithPeopleNow(scenario, built, run, 'belief'), built, run, action, participants);
@@ -762,6 +767,8 @@ export function evaluateAction(input: EvalInput): Evaluation {
     if (runRoster(state, run, sq).some((id) => !incidentOfficerUnavailable(state, run, id) && state.officers[id]?.traits.includes('mentor'))) mentorSquads.add(sq);
   }
   const hasUnresolvedReport = Object.values(run.knowledge).includes('reported');
+  // The fullest pressure source whose first cue is heard: how watched the team is (content/traits.ts).
+  const watched = Math.max(0, ...(scenario.clocks ?? []).filter(def => def.source && (run.clocks?.[def.id]?.cued ?? 0) > 0).map(def => run.clocks![def.id].value));
   const lead = participants[0] ?? null;
   participants.forEach((o, i) => {
     const seat = T.seats[i] ?? T.seats[T.seats.length - 1];
@@ -775,27 +782,27 @@ export function evaluateAction(input: EvalInput): Evaluation {
     });
     const lost = base * conditionFraction(o.stress);
     if (lost >= 0.05) contributors.push({ label: `${o.surname}: strain (${Math.round(o.stress)})`, value: round1(-lost), source: 'condition', ref: o.id });
-    const pen = seat * T.pressureMax * pLevel * sens * (1 - T.composureShield * (o.ratings.composure / 100));
+    // Composure limits time pressure, and a trait like `steady` limits it further (content/traits.ts).
+    const shield = Math.min(1, T.composureShield * (o.ratings.composure / 100) + Math.max(0, ...o.traits.map(trait => TRAIT_PRESSURE_SHIELD[trait] ?? 0)));
+    const pen = seat * T.pressureMax * pLevel * sens * (1 - shield);
     if (pen >= 0.05)
-      contributors.push({ label: `${o.surname}: time pressure (composure ${o.ratings.composure} limits it)`, value: round1(-pen), source: 'pressure', ref: o.id });
-    // Traits apply only when their documented condition is present.
-    if (o.traits.includes('calm_voice') && kind === 'contact') contributors.push({ label: `${o.surname}: calm voice on the line`, value: round1(6 * seat), source: 'trait', ref: o.id });
-    if (o.traits.includes('observant') && kind === 'observation' && hasUnresolvedReport)
-      contributors.push({ label: `${o.surname}: observant, spots inconsistent reports`, value: round1(6 * seat), source: 'trait', ref: o.id });
-    if (o.traits.includes('impatient')) {
-      if (action.tempo === 'waiting') contributors.push({ label: `${o.surname}: impatient, poor at waiting`, value: round1(-5 * seat), source: 'trait', ref: o.id });
-      else if (run.pressure >= 50) contributors.push({ label: `${o.surname}: impatient, sharper under pressure`, value: round1(4 * seat), source: 'trait', ref: o.id });
+      contributors.push({ label: `${o.surname}: time pressure (${o.traits.some(trait => TRAIT_PRESSURE_SHIELD[trait]) ? 'steady, and ' : ''}composure ${o.ratings.composure} limits it)`, value: round1(-pen), source: 'pressure', ref: o.id });
+    // Traits apply only when their condition holds (content/traits.ts), and the card names each one.
+    const sq = squadOf.get(o.id);
+    const mentored = sq ? mentorSquads.has(sq) : false;
+    for (const effect of TRAIT_EFFECTS) {
+      if (!o.traits.includes(effect.trait) || !traitWhenHolds(effect.when, { kind, tempo: action.tempo, pressure: run.pressure, unresolvedReport: hasUnresolvedReport, mentored, watched })) continue;
+      contributors.push({ label: `${o.surname}: ${effect.label}`, value: round1(effect.value * seat), source: 'trait', ref: o.id });
     }
-    if (o.traits.includes('rookie')) {
-      const sq = squadOf.get(o.id);
-      const mentored = sq ? mentorSquads.has(sq) : false;
-      contributors.push({
-        label: mentored ? `${o.surname}: rookie, steadied by a mentor` : `${o.surname}: rookie, still learning`,
-        value: round1((mentored ? -1 : -4) * seat),
-        source: 'trait',
-        ref: o.id,
-      });
+    // A call can single out who it needs (ActionDefinition.favors): the trait the moment asks for.
+    for (const favor of action.favors ?? []) {
+      if (o.traits.includes(favor.trait)) contributors.push({ label: `${o.surname}: ${favor.label}`, value: round1(favor.value * seat), source: 'trait', ref: o.id });
     }
+    // The seat the officer trained for, and calls of this kind they have worked before.
+    const role = ROLE_CHECKS[o.role];
+    if (role?.kinds.includes(kind)) contributors.push({ label: `${o.surname}: ${role.label}`, value: round1(role.value * seat), source: 'familiarity', ref: o.id });
+    const worked = scenario.incident ? o.career.byType?.[scenario.incident.type] ?? 0 : 0;
+    if (worked > 0) contributors.push({ label: `${o.surname}: worked ${worked} call${worked === 1 ? '' : 's'} like this`, value: round1(Math.min(TYPE_HISTORY.cap, worked * TYPE_HISTORY.perCall) * seat), source: 'familiarity', ref: o.id });
     // Experience band, read from the officer's rank (sim/ranks.ts).
     const band = experienceBand(o);
     if (pressured) {
@@ -1397,4 +1404,16 @@ export function scenarioWithPeopleNow(scenario: ScenarioDefinition, built: Built
     return { ...rest, spaceId: now.spaceId, at: now.at, ...(now.cover ? { cover: now.cover } : {}), ...(now.doorFt !== undefined ? { doorFt: now.doorFt } : {}) };
   });
   return changed ? { ...scenario, incidentPeople } : scenario;
+}
+
+/** Whether a trait effect's condition holds on this check (content/traits.ts). */
+export function traitWhenHolds(when: TraitWhen, at: { kind: CheckKind; tempo?: Tempo; pressure: number; unresolvedReport: boolean; mentored: boolean; watched: number }): boolean {
+  if (when.kinds && !when.kinds.includes(at.kind)) return false;
+  if (when.tempo && !(at.tempo && when.tempo.includes(at.tempo))) return false;
+  if (when.notTempo && at.tempo && when.notTempo.includes(at.tempo)) return false;
+  if (when.pressureAtLeast !== undefined && at.pressure < when.pressureAtLeast) return false;
+  if (when.unresolvedReport && !at.unresolvedReport) return false;
+  if (when.mentored !== undefined && when.mentored !== at.mentored) return false;
+  if (when.watchedAtLeast !== undefined && at.watched < when.watchedAtLeast) return false;
+  return true;
 }

@@ -522,9 +522,11 @@ export function actionViews(state: GameState, _now: number, focusSquadId: SquadI
   if (!s) return [];
   const built = builtFor(run.locationFamilyId, run.locationSeed, run.flags);
   const stall = cappedDither(s, run, dither);
-  return s.stages[run.stage].actions.filter((a) => !isGenericResponseExit(s, a) && conditionHolds(a.visibleWhen, run)).map((a) => {
-    // The odds read the call as the stall has left it so far, as a commit now would (sim/clocks.ts stalledRun).
-    const { ev, alternates } = evaluateDefault(state, stalledRun(s, run, stall), s, built, a, focusSquadId);
+  // The scene as the stall has left it so far (sim/clocks.ts stalledRun): a beat can close a choice
+  // or open one, and the odds read it as a commit now would.
+  const stalled = stalledRun(s, run, stall);
+  return s.stages[run.stage].actions.filter((a) => !isGenericResponseExit(s, a) && conditionHolds(a.visibleWhen, stalled)).map((a) => {
+    const { ev, alternates } = evaluateDefault(state, stalled, s, built, a, focusSquadId);
     return toView(state, run, a, ev, alternates, stall);
   });
 }
@@ -548,7 +550,7 @@ export function previewAction(
   if (!run || run.status !== 'active' || run.stage === 'debrief') return null;
   const s = getScenario(run.scenarioId);
   const a = s?.stages[run.stage].actions.find((x) => x.id === actionId);
-  if (!s || !a || !conditionHolds(a.visibleWhen, run)) return null;
+  if (!s || !a || !conditionHolds(a.visibleWhen, stalledRun(s, run, cappedDither(s, run, dither)))) return null;
   const built = builtFor(run.locationFamilyId, run.locationSeed, run.flags);
   const stall = cappedDither(s, run, dither);
   const ev = evaluateAction({ state, run: stalledRun(s, run, stall), scenario: s, action: a, built, acting: actingSquadIds, support: supportSquadIds, ...(lead ? { lead } : {}) });

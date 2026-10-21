@@ -51,6 +51,13 @@ export function SettingsControls({ value, onChange }: { value: PlayerSettings; o
         options={TIMER_SETTINGS.map((s) => ({ value: s, label: TIMER_LABELS[s].name }))} />
       <p className="settings-detail" aria-live="polite">{TIMER_LABELS[value.timer].detail}</p>
     </fieldset>
+
+    <fieldset className="settings-group">
+      <legend className="settings-heading">{t.soundHeading}</legend>
+      <p className="settings-hint">{t.soundHint}</p>
+      <Segmented label={t.soundHeading} value={value.sound ? 'on' : 'off'} onChange={(sound) => onChange({ sound: sound === 'on' })}
+        options={[{ value: 'on', label: t.soundOn }, { value: 'off', label: t.soundOff }]} />
+    </fieldset>
   </div>;
 }
 

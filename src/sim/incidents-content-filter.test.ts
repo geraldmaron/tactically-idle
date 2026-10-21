@@ -63,7 +63,7 @@ describe('content exclusion', () => {
       for (const type of EVERY_TYPE) {
         const tree = callTreeAt(type)!;
         for (const index of [0, 1, 2] as const) {
-          const carries = (tree.situations[index].descriptors ?? []).some((d) => out.has(d));
+          const carries = (tree.situations[index]?.descriptors ?? []).some((d) => out.has(d));
           expect(kept[type].includes(index), `${label(exclusion)} ${type} ${index}`).toBe(!carries);
         }
         for (const more of CONTENT_DESCRIPTORS) {

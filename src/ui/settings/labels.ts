@@ -60,8 +60,8 @@ export const WARNING_LABELS: Readonly<Record<CardWarningSetting, { name: string;
 
 export const TIMER_LABELS: Readonly<Record<TimerSetting, { name: string; detail: string }>> = {
   off: { name: 'Off', detail: 'Take as long as you like. Waiting on a decision never costs time on the call.' },
-  relaxed: { name: 'Relaxed', detail: 'Time to read every stage first, then waiting slowly costs time on the call.' },
-  standard: { name: 'Standard', detail: 'A short moment to read, then waiting costs time on the call at full speed.' },
+  relaxed: { name: 'Relaxed', detail: 'The scene keeps moving while you decide. A stage\'s threat lands after about a minute. It stops while the game is in the background.' },
+  standard: { name: 'Standard', detail: 'The scene moves twice as fast. A stage\'s threat lands after about half a minute. It stops while the game is in the background.' },
 };
 
 export const SETTINGS_TEXT = {
@@ -80,6 +80,10 @@ export const SETTINGS_TEXT = {
   warningsHeading: 'Call card warnings',
   timerHeading: 'Call timer',
   timerHint: 'How fast time on the call moves while a decision waits on you.',
+  soundHeading: 'Call sound',
+  soundHint: 'Radio, the crowd and a heartbeat when time runs short. Vibration too, where your phone has it.',
+  soundOn: 'On',
+  soundOff: 'Muted',
 } as const;
 
 /** Support details, shown in Settings at all times and as the debrief line on any situation with

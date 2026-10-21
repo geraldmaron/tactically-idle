@@ -12,12 +12,13 @@
 // decision, with its owner still inside once that decision's own outcome has applied, records harm
 // to the owner (unless the outcome already hurt them) and sets a mark the tree's prompts read. The
 // record and the text then agree: the debrief and the score see the harm like any authored harm.
-import type { ActionDefinition, ClockCondition, ClockDef, MeterEvent, OutcomeEffect, ScenarioDefinition } from './scenario-types';
+import { sourceCount } from './pressure-sources';
+import type { ActionDefinition, ClockCondition, ClockDef, MeterEvent, OutcomeEffect, ScenarioDefinition, SpokenLine } from './scenario-types';
 import { applyMoves } from './meters';
 import type { Id, OperationRun, OutcomeBand } from './types';
 import { RESOLUTION_TUNING } from './resolution';
 import { tunable } from './tuning';
-import { conditionHolds, stableFlag } from './conditions';
+import { conditionHolds, stableFlag, withFlag } from './conditions';
 import { currentStoryExchange, currentStoryPrompt, currentStoryThreat } from './story-context';
 import type { TimerSetting } from './timer-setting';
 
@@ -48,9 +49,11 @@ export const CLOCK_RULES_V1 = tunable('CLOCK_RULES_V1', {
    * The owner asked for a drain with no start and stop (2026-10-20), so neither setting has a reading
    * floor now: the bar moves from the moment the decision shows, and Relaxed is slower instead. The
    * result beat doesn't count (OperationRun.decisionPending). Re-measure in dither-balance.test.ts. */
+  // Owner 2026-10-21: a stage's threat (5 to 7 game minutes) drains in 60 to 90 real seconds at
+  // Relaxed, about twice as fast at Standard, and nothing counts while the app is hidden.
   dither: {
-    relaxed: { floorSeconds: 0, readingCharsPerSecond: 0, gameMinutesPerRealMinute: 1 },
-    standard: { floorSeconds: 0, readingCharsPerSecond: 0, gameMinutesPerRealMinute: 2 },
+    relaxed: { floorSeconds: 0, readingCharsPerSecond: 0, gameMinutesPerRealMinute: 5 },
+    standard: { floorSeconds: 0, readingCharsPerSecond: 0, gameMinutesPerRealMinute: 10 },
   } as Record<Exclude<TimerSetting, 'off'>, { floorSeconds: number; readingCharsPerSecond: number; gameMinutesPerRealMinute: number }>,
 }, { guard: (next) => next.stallPressurePerMinute < 0 || next.threat.strain < 0 ? 'stall pressure and threat strain must be 0 or more' : next.fill.strain < 0 || next.fill.audienceGain < 0 || next.fill.pressurePerMinute < 0 ? 'fill strain, audience gain and pressure must be 0 or more'
   : Object.entries(next.dither).some(([, rule]) => !(rule.floorSeconds >= 0 && rule.readingCharsPerSecond >= 0 && rule.gameMinutesPerRealMinute >= 0))
@@ -59,20 +62,40 @@ export const CLOCK_RULES_V1 = tunable('CLOCK_RULES_V1', {
 export type ClockState = NonNullable<OperationRun['clocks']>[Id];
 const round1 = (n: number) => Math.round(n * 10) / 10;
 
-export function initialClocks(scenario: ScenarioDefinition): OperationRun['clocks'] {
+/** The clocks as a call starts. `sourceStart` (OperationRun.sourceStart) moves a pressure source's
+ * start for this department's call (sim/player-profile.ts). */
+export function initialClocks(scenario: ScenarioDefinition, sourceStart?: Record<Id, number>): OperationRun['clocks'] {
   if (!scenario.clocks?.length) return undefined;
-  return Object.fromEntries(scenario.clocks.map(def => [def.id, { value: def.start, cued: def.cues.filter(cue => filling(def) ? def.start >= cue.at : def.start <= cue.at).length }]));
+  return Object.fromEntries(scenario.clocks.map(def => {
+    const start = sourceStart?.[def.id] ?? def.start;
+    return [def.id, { value: start, cued: def.cues.filter(cue => filling(def) ? start >= cue.at : start <= cue.at).length }];
+  }));
 }
 
 /** A gauge that fills rather than runs down. */
 export const filling = (def: Pick<ClockDef, 'direction'>) => def.direction === 'fill';
 
 /** How fast a clock moves now: its rate, or the slowest rate a set flag gives it (a choice that
- * slows it). Without `rateFlags` it is `ratePerMin`, so a clock that has none runs as it always did. */
+ * slows it). A pressure source's surge (PressureSource.surges) speeds it while its flag is set and
+ * nothing slows it. Without either it is `ratePerMin`, so a clock that has none runs as it always did. */
 export function effectiveRate(def: ClockDef, flags: readonly string[]): number {
   const slowed = (def.rateFlags ?? []).filter(entry => flags.includes(entry.flag)).map(entry => entry.ratePerMin);
-  return slowed.length ? Math.min(def.ratePerMin, ...slowed) : def.ratePerMin;
+  if (slowed.length) return Math.min(def.ratePerMin, ...slowed);
+  const surged = (def.source?.surges ?? []).filter(entry => flags.includes(entry.flag)).map(entry => entry.ratePerMin);
+  return surged.length ? Math.max(def.ratePerMin, ...surged) : def.ratePerMin;
 }
+
+/** Pressure sources jumped by an effect (OutcomeEffect.clockBump), each clamped to 0..100. Cues the
+ * jump passes fire with the next stretch of time, as a rise would bring them. */
+export function bumpClocks(clocks: NonNullable<OperationRun['clocks']>, bumps: readonly { clockId: Id; by: number }[]): NonNullable<OperationRun['clocks']> {
+  const next = { ...clocks };
+  for (const { clockId, by } of bumps) {
+    const state = next[clockId];
+    if (state) next[clockId] = { ...state, value: round1(Math.max(0, Math.min(100, state.value + by))) };
+  }
+  return next;
+}
+
 
 /** A clock stops once the person it belongs to is out of the building, or once someone holds it steady. */
 const stopped = (def: ClockDef, flags: readonly string[]) => flags.includes(stableFlag(def.id))
@@ -131,6 +154,8 @@ export interface DitherInput {
   textLength: number;
   /** Where dither stops (ditherCap). */
   cap: number;
+  /** While the app is hidden (OperationRun.decisionPausedAt): time after it doesn't count. */
+  pausedAt?: number;
 }
 
 /** Game minutes a stall on an open decision has cost so far. Pure: the same inputs always give the
@@ -139,11 +164,12 @@ export interface DitherInput {
  * `openedAt` is saved with the operation; a moved-back clock gives a smaller `now`, so callers pass
  * the department's high-water time. Floored to tenths, so the preview never shows more than the
  * commit would charge a moment later once floored. */
-export function ditherMinutes({ openedAt, now, timer, textLength, cap }: DitherInput): number {
+export function ditherMinutes({ openedAt, now, timer, textLength, cap, pausedAt }: DitherInput): number {
   if (timer === 'off' || !(cap > 0) || !Number.isFinite(openedAt) || !Number.isFinite(now)) return 0;
   const rule = CLOCK_RULES_V1.dither[timer];
   const floor = rule.floorSeconds + (rule.readingCharsPerSecond > 0 ? Math.max(0, textLength) / rule.readingCharsPerSecond : 0);
-  const counted = Math.max(0, (now - openedAt) / 1000 - floor);
+  const end = pausedAt !== undefined && Number.isFinite(pausedAt) ? Math.min(now, pausedAt) : now;
+  const counted = Math.max(0, (end - openedAt) / 1000 - floor);
   // Unrounded, so the bar moves continuously; the commit and the cards floor to tenths.
   return Math.min(cap, counted / 60 * rule.gameMinutesPerRealMinute);
 }
@@ -188,7 +214,8 @@ export function decisionTextLength(scenario: ScenarioDefinition, run: Pick<Opera
 export function openDither(scenario: ScenarioDefinition, run: OperationRun, highWater: number, now: number, timer: TimerSetting): number {
   // While the last result is on screen the next decision hasn't shown, so nothing counts.
   if (run.status !== 'active' || run.decisionOpenedAt === undefined || run.decisionPending) return 0;
-  return ditherMinutes({ openedAt: run.decisionOpenedAt, now: Math.max(now, highWater), timer, textLength: decisionTextLength(scenario, run), cap: ditherCap(scenario, run) });
+  return ditherMinutes({ openedAt: run.decisionOpenedAt, now: Math.max(now, highWater), timer, textLength: decisionTextLength(scenario, run), cap: ditherCap(scenario, run),
+    ...(run.decisionPausedAt !== undefined ? { pausedAt: run.decisionPausedAt } : {}) });
 }
 
 /** The open decision point's threat with its effects: the first visible choice that carries one
@@ -213,35 +240,78 @@ export function landingEffects(scenario: Pick<ScenarioDefinition, 'incidentPeopl
 
 type StallRun = Pick<OperationRun, 'pressure' | 'clocks' | 'flags' | 'stage' | 'knowledge'> & Partial<Pick<OperationRun, 'meters'>>;
 
+/** The open decision's beats the stall has reached (TreeBeat), in order, with the effects that
+ * hold in the call as it stands. */
+export function stallBeats(scenario: Pick<ScenarioDefinition, 'stages'>, run: Pick<OperationRun, 'stage' | 'flags' | 'knowledge' | 'pressure'>, dither: number): { id: string; at: number; effects: OutcomeEffect[] }[] {
+  if (!(dither > 0)) return [];
+  const threat = openThreat(scenario as ScenarioDefinition, run);
+  return (threat?.beats ?? []).filter(beat => beat.at <= dither).sort((a, b) => a.at - b.at)
+    .map(beat => ({ ...beat, effects: beat.effects.filter(effect => conditionHolds(effect.when, run)) }));
+}
+
 /** The call once the open decision's stall has passed (docs/call-pressure.md, "The previews stay
- * honest"): pressure risen by the stall's own rate, the call's and its gauges' over `dither` minutes,
- * and each gauge that fills moved on, with no new cue heard until a commit. Once the stall reaches
- * the threat's minutes the threat has landed: its pressure and its moves on the subjects count too
- * (landingEffects). The odds and strain read this, so stalling makes the choice harder before the
- * team moves, and the screen shows it as it happens. The commit applies all of it once, through its
- * own path. Zero returns `run`. */
+ * honest", "The live decision"): the scene doesn't wait for the player.
+ * - Pressure has risen by the stall's own rate, the call's and its gauges' over `dither` minutes.
+ * - Every clock has moved on, and the cues it passed are heard now: their marks set and their
+ *   moves on the subjects made, so the cards read a scene that kept going.
+ * - The beats the stall reached have happened: their marks (a beat can close a choice), moves and
+ *   bumps to the pressure sources.
+ * - Once the stall reaches the threat's minutes the threat has landed: its pressure, bumps and moves.
+ * The odds and strain read this, so stalling makes the choice harder before the team moves, and the
+ * screen shows it as it happens. The commit applies all of it once, through its own path (cues
+ * through advanceTime, beats and the threat through matchedEffects). Zero returns `run`. */
 export function stalledRun<R extends StallRun>(scenario: Pick<ScenarioDefinition, 'clocks' | 'pressure' | 'stages' | 'incidentPeople'>, run: R, dither: number): R {
   if (!(dither > 0)) return run;
   const rate = scenario.pressure.perMinute + CLOCK_RULES_V1.stallPressurePerMinute + fillPressureRate(scenario, run.clocks, run.flags, dither);
   let pressure = run.pressure + rate * dither;
+  let flags = run.flags;
+  const effects: OutcomeEffect[] = [];
   let clocks = run.clocks;
-  if (clocks && scenario.clocks?.some(filling)) {
-    clocks = { ...clocks };
-    for (const def of scenario.clocks) {
-      const state = clocks[def.id];
-      if (filling(def) && state) clocks[def.id] = { value: stepClock(def, state, dither, run.flags).value, cued: state.cued };
-    }
+  if (clocks && scenario.clocks?.length) {
+    const moved = { clocks: { ...clocks }, flags };
+    effects.push(...advanceClocks(moved, scenario as ScenarioDefinition, dither));
+    clocks = moved.clocks;
   }
-  let meters = run.meters;
+  effects.push(...stallBeats(scenario, run, dither).flatMap(beat => beat.effects));
   const threat = openThreat(scenario as ScenarioDefinition, run);
-  if (threat && dither >= threat.minutes) {
-    const landed = landingEffects(scenario, threat.effects.filter(effect => conditionHolds(effect.when, run)));
-    pressure += landed.reduce((sum, effect) => sum + (effect.pressure ?? 0), 0);
-    const moved = { meters };
-    applyMoves(moved, scenario as ScenarioDefinition, landed);
-    meters = moved.meters;
+  if (threat && dither >= threat.minutes) effects.push(...landingEffects(scenario, threat.effects.filter(effect => conditionHolds(effect.when, run))));
+  for (const effect of effects) {
+    for (const flag of effect.setFlags ?? []) flags = withFlag(flags, flag);
+    if (effect.clearFlags?.length) flags = flags.filter(flag => !effect.clearFlags!.includes(flag));
+    pressure += effect.pressure ?? 0;
+    if (effect.clockBump?.length && clocks) clocks = bumpClocks(clocks, effect.clockBump);
   }
-  return { ...run, pressure: round1(Math.max(0, Math.min(100, pressure))), clocks, ...(meters ? { meters } : {}) };
+  const moved = { meters: run.meters };
+  applyMoves(moved, scenario as ScenarioDefinition, effects);
+  return { ...run, pressure: round1(Math.max(0, Math.min(100, pressure))), flags, clocks, ...(moved.meters ? { meters: moved.meters } : {}) };
+}
+
+/** One thing that happened on scene while the player weighed the open decision, for the live comms
+ * log: a beat's spoken line, or a cue a clock passed. `at` is in dither minutes. */
+export interface StallLine { id: string; at: number; kind: 'beat' | 'cue'; speaker?: string; text: string; clockId?: Id }
+
+/** What the comms log shows at this stall, in the order it happened: every beat reached and every
+ * cue a clock passed (its time from the clock's rate as the decision opened). Bound text, so the
+ * screen shows it as is. */
+export function stallFeed(scenario: Pick<ScenarioDefinition, 'clocks' | 'stages'>, run: Pick<OperationRun, 'stage' | 'flags' | 'knowledge' | 'pressure' | 'clocks'>, dither: number): StallLine[] {
+  if (!(dither > 0)) return [];
+  const lines: StallLine[] = [];
+  for (const beat of stallBeats(scenario, run, dither)) {
+    beat.effects.flatMap(effect => effect.exchange ?? []).forEach((spoken: SpokenLine, index) =>
+      lines.push({ id: `beat:${beat.id}:${index}`, at: beat.at, kind: 'beat', speaker: spoken.speaker, text: spoken.line }));
+  }
+  for (const def of scenario.clocks ?? []) {
+    const state = run.clocks?.[def.id];
+    if (!state || stopped(def, run.flags)) continue;
+    const rate = effectiveRate(def, run.flags);
+    if (!(rate > 0)) continue;
+    const after = stepClock(def, state, dither, run.flags);
+    def.cues.slice(state.cued, after.cued).forEach((cue, offset) => {
+      const at = Math.max(0, (filling(def) ? cue.at - state.value : state.value - cue.at) / rate);
+      lines.push({ id: `cue:${def.id}:${state.cued + offset}`, at: Math.min(dither, round1(at)), kind: 'cue', text: cue.text, clockId: def.id });
+    });
+  }
+  return lines.sort((a, b) => a.at - b.at || a.id.localeCompare(b.id));
 }
 
 /** Whether an outcome's clock conditions hold at the end of its own minutes. */
@@ -371,7 +441,13 @@ export interface FillView {
   /** Every cue, lowest first, with whether the team has heard it. */
   cues: { at: number; text: string; heard: boolean }[];
   latest: string | null;
-  effect: FillEffect | null }
+  effect: FillEffect | null;
+  /** A pressure source's count (PressureSource.count), what the strip shows instead of 0..100. */
+  count?: { value: number; unit: string };
+  /** What the people watching are saying now (PressureSource.reactions), for the floating feed. */
+  reactions?: { pool: readonly string[]; spike: readonly string[] };
+  /** Points off the checks it weighs on now, when it has an odds pull (PressureSource.odds). */
+  oddsPull?: number }
 
 /** Call pressure the gauges that fill add each minute over the next `minutes`: their gauge as the
  * stretch ends (a gauge whose first cue is heard by then), times `pressurePerMinute`. Zero with no
@@ -415,7 +491,10 @@ export function fillViews(scenario: ScenarioDefinition, run: Pick<OperationRun, 
       minutesToFull: def.rateKnown && rate > 0 ? Math.round((100 - state.value) / rate) : null,
       cues: def.cues.map((cue, index) => ({ at: cue.at, text: cue.text, heard: index < state.cued })),
       latest: state.cued > 0 ? def.cues[state.cued - 1].text : null,
-      effect: state.cued > 0 ? fillEffect(state.value, run.fillPeak ?? 0) : null }];
+      effect: state.cued > 0 ? fillEffect(state.value, run.fillPeak ?? 0) : null,
+      ...(def.source?.count ? { count: { value: sourceCount(def, state.value)!, unit: def.source.count.unit } } : {}),
+      ...(def.source?.reactions ? { reactions: { pool: def.source.reactions.byCue[Math.min(state.cued, def.source.reactions.byCue.length - 1)] ?? [], spike: def.source.reactions.spike ?? [] } } : {}),
+      ...(def.source?.odds && state.cued > 0 ? { oddsPull: Math.round(def.source.odds.atFull * state.value / 100) } : {}) }];
   });
 }
 

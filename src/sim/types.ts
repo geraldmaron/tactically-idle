@@ -324,7 +324,9 @@ export interface Officer {
   serviceStartDay: number;
   /** `earned`: funding this officer brought in through call payouts (an equal share of each
    * payout among the officers on the call) and instructor detail fees. */
-  career: { operations: number; favorable: number; adverse: number; earned?: number };
+  /** `byType`: calls of each incident type this officer has worked here (the odds read it as
+   * familiarity, content/traits.ts TYPE_HISTORY). */
+  career: { operations: number; favorable: number; adverse: number; earned?: number; byType?: Record<string, number> };
   /** Announced retirement; the officer leaves on `day`. Forecastable, never instant. */
   retirement: { day: number; reason: 'age' | 'service' | 'burnout'; announcedDay: number; extended: boolean } | null;
   /** Ranks reached in play (save v12), oldest first, each with the call, course or detail that
@@ -531,6 +533,9 @@ export interface Department {
   /** How the department is known to work (src/sim/reputation.ts): lean -1 talks first .. +1 goes in
    * hard, a moving average of committed choices, and how many choices it has seen. */
   reputation?: { lean: number; choices: number };
+  /** How the player decides (src/sim/player-profile.ts): `stall`, 0..1, a moving average of the
+   * share of each decision's threat window they let run, over `decisions` committed decisions. */
+  habits?: { stall: number; decisions: number };
   /** Live calls closed resolved (save v12), counted for development milestones. */
   callsResolved: number;
   /** Developments granted by a milestone (save v12), oldest first. */
@@ -760,6 +765,12 @@ export interface OperationRun {
   decisionOpenedAt: number;
   /** Set at a commit while its result is on screen; the next decision's stall starts at openDecision. */
   decisionPending?: true;
+  /** When the app was hidden with this decision open (owner 2026-10-21: a stall counts only while the
+   * player can see it). resumeDecision moves `decisionOpenedAt` on by the time away and clears it. */
+  decisionPausedAt?: number;
+  /** Where the pressure sources started on this call, when the department's name and habits moved
+   * them (sim/player-profile.ts sourceStarts). Replays start from it. */
+  sourceStart?: Record<Id, number>;
   /** The highest any gauge that fills reached in this call, 0 to 100 (sim/clocks.ts); absent in a
    * call with none. The debrief's audience factor reads it. */
   fillPeak?: number;
@@ -1025,6 +1036,9 @@ export interface IncidentCard {
   seen: boolean;
   /** Content v11+: the first card of a framework this campaign has ever been sent (save v6). */
   newKind?: boolean;
+  /** Drawn a tier lower after a run of bad results (sim/player-profile.ts comebackTier); the card
+   * says so. */
+  eased?: true;
 }
 
 /** Best result on a live call of one recipe. Ranked by completion, then objective, then safety. */
@@ -1157,6 +1171,9 @@ export type Command =
   | { type: 'cancelOperation' }
   /** The next decision shows after its result was read (sim/clocks.ts openDither). */
   | { type: 'openDecision'; revision: number }
+  /** The app was hidden, or came back, with a decision open: the stall stops and starts with it. */
+  | { type: 'pauseDecision'; revision: number }
+  | { type: 'resumeDecision'; revision: number }
   | { type: 'endFailedResponse'; runId: Id; revision: number }
   | { type: 'resupplyAction'; actionId: Id; actingSquadIds: SquadId[]; supportSquadIds: SquadId[] }
   /** `leadOfficerId`: the officer the player sends to lead this decision, one of those taking part.
@@ -1224,7 +1241,7 @@ export type DepartmentCommandType =
   | 'dismissStaff'
   | 'refreshStaffPool';
 
-export type OperationCommandType = 'startOperation' | 'cancelOperation' | 'openDecision' | 'endFailedResponse' | 'decide' | 'closeDebrief';
+export type OperationCommandType = 'startOperation' | 'cancelOperation' | 'openDecision' | 'pauseDecision' | 'resumeDecision' | 'endFailedResponse' | 'decide' | 'closeDebrief';
 
 export interface SaveEnvelope {
   saveVersion: number;

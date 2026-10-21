@@ -121,7 +121,7 @@ describe('situation content descriptors', () => {
       expect(rows.map(row => row.index)).toEqual([0, 1, 2]);
       for (const row of rows) {
         expect(row.missing, `${template!.type} ${row.index}`).toEqual([]);
-        expect(row.tags.map(tag => tag.descriptor)).toEqual(template!.tree.situations[row.index].descriptors ?? []);
+        expect(row.tags.map(tag => tag.descriptor)).toEqual(template!.tree.situations[row.index]!.descriptors ?? []);
         expect(row.note).not.toMatch(/\{/);
       }
     }
