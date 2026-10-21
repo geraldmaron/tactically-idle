@@ -103,11 +103,16 @@ describe('ten local campaign slots', () => {
     const original = JSON.stringify(library); storage.setItem(SLOTS_KEY, original);
     const restored = new CampaignSlots(storage, T0);
     expect(restored.getSnapshot().slots[0]?.valid).toBe(false);
-    expect(restored.getSnapshot().activeSlotId).toBeNull();
+    // The fresh campaign autosaves from the start in the first empty slot; the old one is kept.
+    expect(restored.getSnapshot().activeSlotId).toBe(2);
+    expect(restored.getSnapshot().dirty).toBe(false);
     expect(restored.getSnapshot().issue).toContain('different game version');
+    expect(restored.getSnapshot().issue).toContain('slot 2');
     expect(restored.load(1, T0, true)).toMatchObject({ ok: false, reason: expect.stringContaining('Start a new campaign') });
-    expect(storage.getItem(SLOTS_KEY)).toBe(original);
-    expect(restored.importGame(2, 'Old', library.slots[0].data, T0)).toMatchObject({ ok: false, reason: expect.stringContaining('different game version') });
+    expect(JSON.parse(storage.getItem(SLOTS_KEY)!).slots[0]).toEqual(JSON.parse(original).slots[0]);
+    restored.send({ type: 'tick' }, T0 + 5000);
+    expect(JSON.parse(storage.getItem(SLOTS_KEY)!).slots[1].savedAt).toBe(T0 + 5000);
+    expect(restored.importGame(3, 'Old', library.slots[0].data, T0)).toMatchObject({ ok: false, reason: expect.stringContaining('different game version') });
   });
   it('never overwrites an unreadable library, even during automatic ticks', () => {
     const storage = memory(); storage.setItem(SLOTS_KEY, '{broken');

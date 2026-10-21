@@ -110,13 +110,11 @@ export class CampaignSlots {
           if (loaded) {
             try { this.state = dispatch(loaded, { type: 'tick' }, { now }).state; }
             catch {
-              this.library = { ...library, activeSlotId: null };
-              this.issue = 'The active save could not be resumed. Its original data is untouched. Load another slot or export the save library for recovery.';
+              this.adoptFreeSlot(library, now, 'The active save could not be resumed. Its original data is untouched.', 'Load another slot or export the save library for recovery.');
             }
           }
           else {
-            this.library = { ...library, activeSlotId: null };
-            this.issue = 'The active save is unreadable or uses a different game version. Start a new campaign or load a current save. Existing saves are untouched.';
+            this.adoptFreeSlot(library, now, 'The active save is unreadable or uses a different game version. Existing saves are untouched.', 'Start a new campaign or load a current save.');
           }
         }
       } else {
@@ -128,6 +126,22 @@ export class CampaignSlots {
       this.issue = 'Local saving is unavailable or storage is full. Your current game is only in memory; existing saves are untouched.';
     }
     this.snapshot = this.makeSnapshot();
+  }
+
+  /** The active save can't be played, so the fresh campaign takes the first empty slot and autosaves
+   * from the start; the old save stays as it was. With every slot full it stays in memory until the
+   * player picks a slot. */
+  private adoptFreeSlot(library: SlotLibrary, now: number, reason: string, fallback: string): void {
+    const free = library.slots.findIndex((slot) => !slot);
+    if (free < 0) {
+      this.library = { ...library, activeSlotId: null };
+      this.issue = `${reason} ${fallback}`;
+      return;
+    }
+    const slots = [...library.slots];
+    slots[free] = this.record(`Campaign ${free + 1}`, now);
+    this.write({ ...library, activeSlotId: free + 1, slots });
+    this.issue = `${reason} A new campaign started in slot ${free + 1} and saves automatically.`;
   }
 
   getSnapshot = (): CampaignSnapshot => this.snapshot;
