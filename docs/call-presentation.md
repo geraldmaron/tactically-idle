@@ -75,8 +75,9 @@ transcript, then the choices. Opening a card to read it previews it on the map. 
 opens with a small map of where the choice happens, because by the time the player reviews, the
 scene's map has scrolled away. Care and support follow the choices.
 
-**Story, result beat.** The result at full size with Continue pinned; the strip and the scene stay,
-so the player sees on the map what the choice changed.
+**Story, result beat.** The result first, right under the strip, told once (docs/ops-experience.md,
+"The result beat: one telling"), with Continue pinned. The scene folds under it to one line with a
+*Map changed* pill, and opens on a tap.
 
 **Reference, in place.** The briefing (with who has been located) in a sheet from the title, a room
 from the map, an officer from their face. The separate people list is gone: the map shows them.

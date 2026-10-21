@@ -49,14 +49,14 @@ describe('decision stress history', () => {
   it('keeps saved readings even when the current officer later changes condition', () => {
     const a = establishedDepartment(0, 1).officers, b = structuredClone(a);
     b.off_chen.stress = 99;
-    const show = (officers: typeof a) => renderToStaticMarkup(createElement(DecisionCard, { decision: d, officers }));
+    const show = (officers: typeof a) => renderToStaticMarkup(createElement(DecisionCard, { decision: d, officers, full: true }));
     expect(show(a)).toBe(show(b));
     expect(show(a)).toContain('before 29, change +2');
     expect(show(a)).toContain('File portrait of Mei Chen');
   });
   it('does not reconstruct missing old levels from current condition', () => {
     const old = { ...d, stressDeltas: [{ officerId: 'off_chen', label: 'Chen', delta: 2 }] };
-    const html = renderToStaticMarkup(createElement(DecisionCard, { decision: old, officers: establishedDepartment(0, 1).officers }));
+    const html = renderToStaticMarkup(createElement(DecisionCard, { decision: old, officers: establishedDepartment(0, 1).officers, full: true }));
     expect(html).toContain('+2 stress');
     expect(html).toContain('Only the stress change was saved');
     expect(html).not.toContain('stress-scale');

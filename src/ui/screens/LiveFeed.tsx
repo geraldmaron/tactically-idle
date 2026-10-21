@@ -33,7 +33,8 @@ const CHAT_LINES = 2;
  * watching, each line under a handle and never read twice on one run (`runKey`). Once a cue's lines
  * are spent the chat thins to people joining while the count climbs. A jump (a bump, a cue, the
  * threat landing) bursts the chat and ticks. */
-export function SourceTicker({ view, runKey = 'preview', effect = null }: { view: FillView; runKey?: string; effect?: string | null }) {
+/** `chat`: the viewers' lines under the count, live texture for the decide beat; off on the result. */
+export function SourceTicker({ view, runKey = 'preview', effect = null, chat: showChat = true }: { view: FillView; runKey?: string; effect?: string | null; chat?: boolean }) {
   const target = Math.round(view.count?.value ?? view.value);
   const [shown, setShown] = useState(target);
   const [chat, setChat] = useState<ChatLine[]>([]);
@@ -119,11 +120,11 @@ export function SourceTicker({ view, runKey = 'preview', effect = null }: { view
       {view.cues.map(cue => <em key={cue.at} className={cue.heard ? 'fill-gauge-tick fill-gauge-heard' : 'fill-gauge-tick'} style={{ left: `${cue.at}%` }} />)}
     </span>
     {effect && <p className="source-ticker-effect">{effect}</p>}
-    <div className="source-reactions" aria-hidden="true">
+    {showChat && <div className="source-reactions" aria-hidden="true">
       {chat.map(item => <span key={item.key} className={`source-reaction${item.text === null ? ' source-reaction-join' : ''}`}>
         <b className="source-reaction-who">{item.who}</b> {item.text === null ? 'joined' : <PeopleText text={item.text} />}
       </span>)}
-    </div>
+    </div>}
   </div>;
 }
 

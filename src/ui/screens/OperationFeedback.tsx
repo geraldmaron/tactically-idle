@@ -110,7 +110,7 @@ export function DecisionCard({ decision: d, full = false, officers = {}, explici
 const TOLD = /^(Took |Helped most|Held back by|Most strain|Used \d|No call made|Moved on to |Ending: )|: now /;
 function extraReasons(d: DecisionView): string[] {
   const told = new Set([...d.consequences, ...(d.heard ?? []).map((line) => line.line)]);
-  return d.explanation.slice(1).filter((line) => !told.has(line) && !TOLD.test(line));
+  return d.explanation.filter((line) => !told.has(line) && !TOLD.test(line) && !line.startsWith(`${d.title} `));
 }
 
 const RESULT_ICON = { favorable: 'check', mixed: 'warning', adverse: 'x' } as const;

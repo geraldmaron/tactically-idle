@@ -160,8 +160,11 @@ export function LiveView(p: LiveViewProps) {
   const stageNumber = p.progress.stages.findIndex((step) => step.state === 'current') + 1;
   const stageOpen = stageMap?.stage === p.progress.stage ? stageMap.open : null;
   const folded = stageNumber >= 2 ? !(stageOpen ?? false) : mapFolded;
-  const mapShown = mapFull || !folded || (beat === 'result' && changed);
+  // The result beat leads with the story; its scene stays folded to one line until opened.
+  const [sceneOpen, setSceneOpen] = useState(false);
+  const mapShown = mapFull || (beat === 'result' ? sceneOpen : !folded);
   const toggleFold = () => {
+    if (beat === 'result') { setSceneOpen(!sceneOpen); return; }
     const next = mapShown;
     if (stageNumber >= 2) setStageMap({ stage: p.progress.stage, open: !next });
     else { setMapFolded(next); writeMapFolded(next); }
@@ -194,6 +197,7 @@ export function LiveView(p: LiveViewProps) {
   if (beatSeen !== beatKey) {
     setBeatSeen(beatKey);
     if (mapFull) setMapFull(false);
+    if (sceneOpen) setSceneOpen(false);
   }
 
   // What is said on scene while the player decides, read after the prompt and before the choices.
@@ -232,6 +236,28 @@ export function LiveView(p: LiveViewProps) {
     </ul>
   </div>;
 
+  // The story: the decision and its choices, or the result of the last one.
+  const story = <div className="live-story">
+        {beat === 'result' ? <>          {p.feedback}
+          {p.onContinue && <div className="stickyfoot live-continue">
+            <Button variant="primary" block onClick={p.onContinue}>{p.continueLabel ?? 'Continue'}<Icon name="chevronRight" size={18} /></Button>
+          </div>}
+        </> : <>
+          {p.feedback}
+          <section className="call operation-choices" aria-label="Your call">
+            {/* One order on every stage (owner, 2026-10-21): the prompt and what was said, then what is
+                said on scene while you decide, then the choices. The stage rail names the stage, and
+                the strip carries the threat and what each source does to the odds, so neither repeats
+                here. Tapping a card opens its review; tapping the reviewed card again closes it. */}
+            <DecisionList prompt={p.progress.prompt} exchange={p.progress.exchange} actions={available} reach={reach} selectedId={sel?.id ?? null} expanded={expanded} officers={p.g.officers}
+              guidance={commsLog}
+              onSelect={p.onSelectAction} onExpand={() => setExpandedStage(expanded ? null : p.progress.stage)} />
+          </section>
+          {p.failedResponse}
+          {p.supportContext}
+        </>}
+      </div>;
+
   const screen = (
     <div className={`live live-one live-beat-${beat}${mapFull ? ' live-map-full-open' : ''}${pressure?.kind === 'threat' ? ` live-urgency-${pressureUrgency(pressure)}` : ''}`}>
       {/* The call's name scrolls away; the strip under it stays pinned: where the call is and the one
@@ -265,14 +291,16 @@ export function LiveView(p: LiveViewProps) {
         <StageSteps progress={p.progress} />
         {pressure?.kind === 'threat' && <ThreatPill label={pressure.label} minutes={pressure.minutes} dither={p.dither} />}
         {fills.length > 0 && <div className="live-sources">
-          {fills.map((view) => view.count || view.reactions ? <SourceTicker key={view.id} view={view} runKey={p.g.activeRun?.id} effect={sourceEffect(p.g, view)} /> : <FillGauge key={view.id} view={view} />)}
+          {fills.map((view) => view.count || view.reactions ? <SourceTicker key={view.id} view={view} runKey={p.g.activeRun?.id} effect={sourceEffect(p.g, view)} chat={beat === 'decide'} /> : <FillGauge key={view.id} view={view} />)}
         </div>}
       </div>
 
-      {/* The scene: the map (compact, foldable, or full screen) and the squad, above the story. */}
+      {beat === 'result' && story}
+      {/* The scene: the map (compact, foldable, or full screen) and the squad, above the story on the
+          decide beat and folded under it on the result beat. */}
       <section className="live-scene" aria-label="The scene">
         <div className="live-scene-head">
-          <span className="live-scene-where"><Icon name="pin" size={14} />{whereLine}{changed && beat === 'result' && <span className="live-scene-changed">Map changed</span>}</span>
+          <span className="live-scene-where"><Icon name="pin" size={14} />{whereLine}{changed && beat === 'result' && <Chip tone="amber" icon="blueprint">Map changed</Chip>}</span>
           <span className="live-scene-actions">
             {!mapFull && <button type="button" className="hud-btn hud-btn-quiet" onClick={() => setMapFull(true)}><Icon name="blueprint" size={15} />Full map</button>}
             {!mapFull && <button type="button" className="hud-btn hud-btn-quiet" onClick={toggleFold} aria-expanded={mapShown} aria-controls="live-map">
@@ -319,31 +347,9 @@ export function LiveView(p: LiveViewProps) {
             <p>Dashed amber people are reports at approximate positions. Mint people have a confirmed position. Small item symbols stay beside their holder; amber items are still reported, even when the person is confirmed. An absent weapon symbol does not mean unarmed. Tap a room or use Rooms to inspect names, conditions and items.</p>
           </div>
         </Sheet>
-        {squadRow}
+        {(beat === 'decide' || sceneOpen) && squadRow}
       </section>
-
-      {/* The story: the decision and its choices, or the result of the last one. */}
-      <div className="live-story">
-        {beat === 'result' ? <>
-          {p.feedback}
-          {p.onContinue && <div className="stickyfoot live-continue">
-            <Button variant="primary" block onClick={p.onContinue}>{p.continueLabel ?? 'Continue'}<Icon name="chevronRight" size={18} /></Button>
-          </div>}
-        </> : <>
-          {p.feedback}
-          <section className="call operation-choices" aria-label="Your call">
-            {/* One order on every stage (owner, 2026-10-21): the prompt and what was said, then what is
-                said on scene while you decide, then the choices. The stage rail names the stage, and
-                the strip carries the threat and what each source does to the odds, so neither repeats
-                here. Tapping a card opens its review; tapping the reviewed card again closes it. */}
-            <DecisionList prompt={p.progress.prompt} exchange={p.progress.exchange} actions={available} reach={reach} selectedId={sel?.id ?? null} expanded={expanded} officers={p.g.officers}
-              guidance={commsLog}
-              onSelect={p.onSelectAction} onExpand={() => setExpandedStage(expanded ? null : p.progress.stage)} />
-          </section>
-          {p.failedResponse}
-          {p.supportContext}
-        </>}
-      </div>
+      {beat === 'decide' && story}
 
       <Sheet open={briefingOpen} onClose={() => setBriefingOpen(false)} title="Briefing">
         <div className="live-briefing">{p.situation}</div>

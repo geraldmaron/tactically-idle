@@ -393,8 +393,8 @@ profile get a `swat-writing-review` read.
 Tags: job=command; journeys=answer-a-call; probes=none (layout); lane=interface
 Needs: start=none; integrate=none; ship=none
 
-From `docs/ops-experience.md` (accepted with controls): the result beat opens on the result and any
-harm, then facts, injuries, supplies and stress-band crossings (the final decision too); the review
+From `docs/ops-experience.md` (accepted with controls). Done: the result beat opens on the result
+under the strip, tells each thing once and folds the scene below it. Open: the review
 sheet reads cost and the three previews before the map, keeping every control; the brief opens on
 the orders and the threat with the cold open whole and a Map chip in the header; Team & gear shows
 each squad's kit as an inspectable summary over today's workspace; the board card drops to about

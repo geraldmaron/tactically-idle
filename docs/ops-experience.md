@@ -153,8 +153,18 @@ Measured at 390x844 on a fresh *Going Live* run (scrolled pixels to the top of e
 | Stage 1 (map open) | 706 | 1,004 | 1,175 |
 | Stage 2 (map folded) | 586 | 809 | 979 |
 
-Before the refinement the first choice sat at 1,282 and 1,296. The result beat's text still starts
-under the scene; moving it up is `ops-experience-now`.
+Before the refinement the first choice sat at 1,282 and 1,296.
+
+## The result beat: one telling (owner, 2026-10-21)
+
+The player found the result told three and four times and the page all over the place. The result
+beat now reads, under the strip: the result with its pill, the story, what was said, one row of
+pills for what changed (time, moved scores, facts learned, supplies, stress crossings), then one
+collapsed *Why it went this way* (the odds breakdown and only the reasons told nowhere else), then
+Continue. Lines the comms log already played while the player decided are folded into one *While you
+decided* row, never retold. The scene sits under the story as one line (where the squad is, a *Map
+changed* pill) and opens on a tap. The source ticker keeps its count but not its chat on this beat.
+The decision log holds the full record: every score, every officer's stress reading.
 
 ## The reading face: still open
 
