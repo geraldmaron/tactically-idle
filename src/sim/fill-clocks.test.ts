@@ -9,7 +9,7 @@ import { GROUP_TEMPLATE } from '../gen/incident/trees-v13/group-fixture';
 import { CALL_TREES } from '../content/call-trees';
 import { drawCalls, playToEnd } from '../gen/incident/trees-v13/balance';
 import { advanceClocks, audienceFactor, CLOCK_RULES_V1, clockErrors, clockOutEffects, clockViews, ditherCap, effectiveRate, fillGauge, fillViews, initialClocks, stepClock } from './clocks';
-import { advanceTime, traceRun } from './operation';
+import { advanceTime, applyClockCues, traceRun } from './operation';
 import { actionViews } from './operation-selectors';
 import { scoreCall, scoreFrom, type ScoreInputs } from './outcome-score';
 import { deserialize, serialize } from './save';
@@ -256,5 +256,42 @@ describe('the audience shift on real calls (recorded for tuning)', () => {
     // At the largest peak, no call's trust moves by more than the gain allows.
     const gain = CLOCK_RULES_V1.fill.audienceGain;
     trustAt(100).forEach((t, i) => expect(Math.abs(t - base[i])).toBeLessThanOrEqual(Math.ceil(Math.abs(base[i]) * gain) + 1));
+  });
+});
+
+describe('gaps the review found', () => {
+  const scenarioWith = (def: ClockDef) => ({ pressure: { start: 0, perMinute: 0, threshold: 50, civilianPerMinute: 1 }, clocks: [def] }) as unknown as ScenarioDefinition;
+
+  it('a gauge’s pressure counts toward civilian loss across the threshold', () => {
+    const def = fill({ start: 80, ratePerMin: 0, cues: [{ at: 50, text: 'Phones.' }] });
+    const run = { clock: 0, pressure: 49, civilianSafety: 100, clocks: { crowd: { value: 80, cued: 1 } }, flags: [] as string[] };
+    const timed = advanceTime(run, scenarioWith(def), 10);
+    expect(run.pressure).toBe(53);
+    // 0.4 a minute from 49 reaches 50 after 2.5 minutes: 7.5 minutes over.
+    expect(timed.civilianLoss).toBe(7.5);
+    expect(timed.crossed).toBe(true);
+  });
+
+  it('a gauge nobody has been warned of changes neither the peak nor the debrief', () => {
+    const def = fill({ start: 80, ratePerMin: 0, cues: [{ at: 90, text: 'Phones.' }] });
+    const run: Parameters<typeof advanceTime>[0] = { clock: 0, pressure: 0, civilianSafety: 100, clocks: { crowd: { value: 80, cued: 0 } }, flags: [] };
+    advanceTime(run, scenarioWith(def), 5);
+    expect(run.fillPeak).toBeUndefined();
+    expect(run.pressure).toBe(0);
+  });
+
+  it('a cue’s meter moves apply wherever time passes, once', () => {
+    const scenario = { facts: [], incidentPeople: [{ id: 'p', volatility: 'shifting' }] } as unknown as ScenarioDefinition;
+    const run = { knowledge: {}, flags: [] as string[], pressure: 0, objective: 0, civilianSafety: 100, meters: { p: { agitation: 20, rapport: 20, moved: {} as Record<string, { agitation: number; rapport: number }> } } };
+    applyClockCues(run, scenario, [{ text: 'Phones.', moves: [{ personId: 'p', event: 'watched' }] }]);
+    expect(run.meters.p.moved.watched).toBeDefined();
+    expect(run.meters.p.agitation).toBe(26);
+  });
+
+  it('a fill whose first cue sits just under 100 still gets there', () => {
+    const def = fill({ start: 50, ratePerMin: 100, cues: [{ at: 99.5, text: 'Everyone is filming.' }] });
+    const first = stepClock(def, initialClocks({ clocks: [def] } as ScenarioDefinition)!.crowd, 2, []);
+    expect(first).toEqual({ value: 99.5, cued: 1 });
+    expect(stepClock(def, first, 2, []).value).toBe(100);
   });
 });

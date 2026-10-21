@@ -8,7 +8,7 @@ import { applyIncidentConsequences, applyPersonConsequences, civilianOutcomeView
 import { protectedOfficerEffects } from './force-risk';
 import { drawnKeys, forceSuppliesSpent, resolveDrawn } from './drawn-effects';
 import { withVariants } from '../gen/incident/drawn-model';
-import { advanceClocks, audienceFactor, CLOCK_RULES_V1, clockConditionsHold, clockErrors, clockOutEffects, cueEffects, decisionMinutes, ditherCap, filling, fillGauge, fillViews, forkMinutes, initialClocks, teamMinutes } from './clocks';
+import { advanceClocks, audienceFactor, CLOCK_RULES_V1, clockConditionsHold, clockErrors, clockOutEffects, cueEffects, decisionMinutes, ditherCap, filling, fillGauge, fillPressureRate, fillViews, forkMinutes, initialClocks, teamMinutes } from './clocks';
 import { applyMoves, driftMeters, initialMeters, meterConditionsHold } from './meters';
 import { applyCommitments } from './commitments';
 import { forceLines, OUTCOME_SCORE_V1, scoreCall } from './outcome-score';
@@ -422,21 +422,24 @@ function makeRun(state: GameState, built: BuiltLocation, scenario: ScenarioDefin
 export function advanceTime(run: Pick<OperationRun, 'clock' | 'pressure' | 'civilianSafety'> & Partial<Pick<OperationRun, 'clocks' | 'flags' | 'meters' | 'fillPeak'>>, s: ScenarioDefinition, minutes: number): { civilianLoss: number; crossed: boolean; cues: OutcomeEffect[] } {
   const m = s.pressure;
   const p0 = run.pressure;
+  // A gauge that fills pushes the call too (sim/clocks.ts fillPressureRate): its pressure counts in
+  // the minutes above the threshold as the call's own does. Zero for a call with no gauge, so the
+  // sum is the call's own rate exactly.
+  const rate = m.perMinute + fillPressureRate(s, run.clocks, run.flags ?? [], minutes);
   let over = 0;
   if (p0 >= m.threshold) over = minutes;
-  else if (m.perMinute > 0) over = Math.max(0, minutes - (m.threshold - p0) / m.perMinute);
+  else if (rate > 0) over = Math.max(0, minutes - (m.threshold - p0) / rate);
   const loss = round1(over * m.civilianPerMinute);
   run.clock = round1(run.clock + minutes);
-  run.pressure = round1(clamp(p0 + m.perMinute * minutes, 0, 100));
+  run.pressure = round1(clamp(p0 + rate * minutes, 0, 100));
   run.civilianSafety = round1(clamp(run.civilianSafety - loss, 0, 100));
   if (run.meters) { run.meters = structuredClone(run.meters); driftMeters(run, s, minutes); }
   const cues = run.clocks && run.flags ? advanceClocks(run as Pick<OperationRun, 'clocks' | 'flags'>, s, minutes) : [];
-  // A gauge that fills pushes the call: pressure per minute while its first cue is heard, and the
-  // highest it reaches is kept for the debrief's audience factor. Calls with none are untouched.
+  // The highest a gauge reaches once its first cue is heard is kept for the debrief's audience
+  // factor: one the team has not been warned of changes nothing. Calls with none are untouched.
   if (run.clocks && s.clocks?.some(filling)) {
-    const gauge = fillGauge(s, run.clocks);
-    if (gauge > 0) run.pressure = round1(clamp(run.pressure + CLOCK_RULES_V1.fill.pressurePerMinute * minutes * gauge, 0, 100));
-    run.fillPeak = Math.max(run.fillPeak ?? 0, ...s.clocks.filter(filling).map(def => run.clocks![def.id]?.value ?? 0));
+    const heard = s.clocks.filter(def => filling(def) && (run.clocks![def.id]?.cued ?? 0) > 0).map(def => run.clocks![def.id].value);
+    if (heard.length) run.fillPeak = Math.max(run.fillPeak ?? 0, ...heard);
   }
   return { civilianLoss: loss, crossed: p0 < m.threshold && run.pressure >= m.threshold, cues };
 }
@@ -524,9 +527,13 @@ function applyEffects(
 }
 
 /** Apply the cues a stretch of time fired (advanceTime): marks, and the facts they settle. */
-export function applyClockCues(run: Pick<OperationRun, 'knowledge' | 'flags' | 'pressure' | 'objective' | 'civilianSafety'>, scenario: ScenarioDefinition, fired: OutcomeEffect[]): { effects: OutcomeEffect[]; changes: { factId: Id; status: KnowledgeStatus }[] } {
+export function applyClockCues(run: Pick<OperationRun, 'knowledge' | 'flags' | 'pressure' | 'objective' | 'civilianSafety'> & Partial<Pick<OperationRun, 'meters'>>, scenario: ScenarioDefinition, fired: OutcomeEffect[]): { effects: OutcomeEffect[]; changes: { factId: Id; status: KnowledgeStatus }[] } {
   const effects = cueEffects(fired, scenario, run);
-  return { effects, changes: applyEffects(run, effects).changes };
+  const changes = applyEffects(run, effects).changes;
+  // A cue can move a subject (a gauge that fills: `watched`), wherever the time passed: a commit, a
+  // resupply and their replays all come through here, so it happens exactly once.
+  applyMoves(run, scenario, effects);
+  return { effects, changes };
 }
 
 export interface StepTrace {
@@ -567,11 +574,10 @@ export function traceRun(scenario: ScenarioDefinition, run: OperationRun): { ste
     const seen = a ? sightings(scenario, sim, observingAction(scenario, () => getBuilt(scenario.locationFamilyId, scenario.locationSeed), sim, a), h.band, applied) : null;
     if (seen) applyEffects(sim, [seen]);
     applyEffects(sim, applied);
-    const cued = applyClockCues(sim, scenario, timed.cues);
+    applyClockCues(sim, scenario, timed.cues);
     {
       applyEffects(sim, clockOutEffects(scenario, clocksBefore, sim.clocks, sim, applied));
-      // A cue can move a subject too (a gauge that fills: `watched`), after the outcome's own moves.
-      applyMoves(sim, scenario, [...applied, ...cued.effects]);
+      applyMoves(sim, scenario, applied);
       if (a) {
         const view = { flags: sim.flags, clock: sim.clock, revision: h.revision, meters: sim.meters, commitments: sim.commitments };
         applyCommitments(view, scenario, a, h.band, applied, h.committed?.drawn ?? [], h.revision);
@@ -981,7 +987,7 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     changes.push(...routed.changes);
     const nextStage = routed.ending ? null : routed.stage ?? outcomeStage;
     const ending = routed.ending ?? outcomeEnding;
-    applyMoves(run, scenario, [...matched, ...cues.effects]);
+    applyMoves(run, scenario, matched);
     // v13: what command gave a person its word on is made, kept or broken by this decision (sim/commitments.ts).
     applyCommitments(run, scenario, action, band, matched, drawn.records, run.revision);
     // Bound v5 movement records opened locks once; explicit outcome changes retain priority.

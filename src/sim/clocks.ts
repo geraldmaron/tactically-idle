@@ -75,7 +75,8 @@ export function stepClock(def: ClockDef, state: ClockState, minutes: number, fla
   if (filling(def)) {
     // The mirror of a clock running out: a fill never fills before a cue is heard.
     let up = round1(Math.min(100, state.value + effectiveRate(def, flags) * minutes));
-    if (up >= 100 && state.cued === 0) up = 100 - CLOCK_RULES_V1.floor;
+    // It stops just short, or at its first cue when that is higher, so the warning can be heard.
+    if (up >= 100 && state.cued === 0) up = Math.max(100 - CLOCK_RULES_V1.floor, def.cues[0]?.at ?? 0);
     return { value: up, cued: Math.max(state.cued, def.cues.filter(cue => up >= cue.at).length) };
   }
   let value = round1(Math.max(0, state.value - effectiveRate(def, flags) * minutes));
@@ -307,6 +308,16 @@ export interface FillView {
   cues: { at: number; text: string; heard: boolean }[];
   latest: string | null;
   effect: FillEffect | null }
+
+/** Call pressure the gauges that fill add each minute over the next `minutes`: their gauge as the
+ * stretch ends (a gauge whose first cue is heard by then), times `pressurePerMinute`. Zero with no
+ * gauge. */
+export function fillPressureRate(scenario: Pick<ScenarioDefinition, 'clocks'>, clocks: OperationRun['clocks'], flags: readonly string[], minutes: number): number {
+  if (!clocks || !scenario.clocks?.some(filling)) return 0;
+  const after: NonNullable<OperationRun['clocks']> = { ...clocks };
+  for (const def of scenario.clocks) if (filling(def) && clocks[def.id]) after[def.id] = stepClock(def, clocks[def.id], minutes, flags);
+  return CLOCK_RULES_V1.fill.pressurePerMinute * fillGauge(scenario, after);
+}
 
 /** The share of a full gauge that bites now: the sum over gauges whose first cue was heard, each
  * as value over 100. Zero with no fills, so a call without them is unchanged. */
