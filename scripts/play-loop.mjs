@@ -116,8 +116,7 @@ export async function playLiveCalls(page, { baseURL = 'http://127.0.0.1:5174', w
     const used = started.activeRun.squadIds.length;
     if (floors === 2) {
       // People and markers upstairs are only drawn on the upper floor; the tab must reach them.
-      // The map is on the live call's Scene view.
-      await page.getByRole('tab', { name: 'Scene', exact: true }).click();
+      // The map sits on the one-screen live call, above the story.
       const tab = page.getByRole('tab', { name: /^Upper floor/ });
       const known = /known (person|people)/.test(await tab.getAttribute('aria-label'));
       await tab.click();
@@ -126,7 +125,6 @@ export async function playLiveCalls(page, { baseURL = 'http://127.0.0.1:5174', w
       await overflow(`${label} live upper floor`);
       await capture(`${label.replace(/\W+/g, '-')}-live-upper`);
       await page.getByRole('tab', { name: /^Ground floor/ }).click();
-      await page.getByRole('tab', { name: 'Call', exact: true }).click();
     }
     let steps = 0;
     for (; steps < 60; steps++) {

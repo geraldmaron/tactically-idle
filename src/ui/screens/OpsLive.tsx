@@ -8,6 +8,7 @@ import { Sheet } from '../components/Sheet';
 import { Button } from '../components/ui';
 import { OpenInLab } from '../components/OpenInLab';
 import { ActionSheet, LiveView, RoomSheet } from './LiveView';
+import { Blueprint } from '../blueprint/Blueprint';
 import { OperationFeedback } from './OperationFeedback';
 import { sceneFor } from '../art/Plates';
 import { SituationPanel } from './SituationPanel';
@@ -173,8 +174,10 @@ export function OpsLive() {
       onOpenDetails={() => { setActionFromSupport(false); setPanel(panel === 'action' ? 'none' : 'action'); }}
       feedback={<OperationFeedback officers={g.officers} decisions={decisions} folded={beat === 'decide'} explicitCompletion={(scenario?.version ?? 0) >= 4} currentPrompt={model.progress.prompt} onOpenLog={() => setPanel('none')} />}
       scene={sceneFor(scenario?.incident?.type)}
-      situation={scenario && <SituationPanel scenario={scenario} run={run} />}
-      supportContext={scenario && <><IncidentPeopleStatus scenario={scenario} run={run} state={g} /><SupportContext scenario={scenario} run={run} actions={actions} open={panel === 'support'} onOpen={() => setPanel('support')} onClose={() => setPanel('none')} onPickAction={(id) => {
+      // The briefing sheet holds the reference: the call's briefing and who has been located. The map
+      // shows where they are; the story column keeps only what helps the next decision.
+      situation={scenario && <><SituationPanel scenario={scenario} run={run} /><IncidentPeopleStatus scenario={scenario} run={run} state={g} /></>}
+      supportContext={scenario && <><SupportContext scenario={scenario} run={run} actions={actions} open={panel === 'support'} onOpen={() => setPanel('support')} onClose={() => setPanel('none')} onPickAction={(id) => {
         setActionFromSupport(true);
         pickAction(id);
         setPanel('action');
@@ -188,6 +191,11 @@ export function OpsLive() {
     >
       <ActionSheet
         open={panel === 'action'}
+        preview={view && <div className="action-sheet-map" aria-label={`Where ${view.title} happens`}>
+          <Blueprint built={model.built} spaces={model.spaces} squadTasks={model.squadTasks} selectedSpaceId={null} focusSquadId={model.focusSquadId}
+            highlightSpaceIds={model.highlightSpaceIds} onSelectSpace={() => undefined} lastChange={null} overlays={view.overlays} showMaterials={false}
+            floor={model.floor} onFloorChange={setFloor} environment={model.environment ?? undefined} />
+        </div>}
         onBackToSupport={actionFromSupport ? () => setPanel('support') : undefined}
         onClose={() => setPanel('none')}
         view={view}

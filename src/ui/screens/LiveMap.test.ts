@@ -33,13 +33,16 @@ function fixture() {
     showRooms: false, onToggleRooms: () => { props.showRooms = !props.showRooms; },
     clock: 10.2, pressure: 15, canCancel: true, onCancel: noop, onOpenDetails: noop, detailsOpen: false,
   };
-  const render = () => {
+  // The display buttons live on the full-screen map (docs/call-presentation.md, "One screen"): open it.
+  // LiveView's useState order puts the full-map flag fourth (materials, key, expanded stage, full map).
+  const render = (full = true) => {
     hooks.cursor = 0;
+    hooks.values[3] = full;
     const all = descendants(LiveView(props));
-    const map = all.find((element) => element.props.className === 'live-map')!;
-    const controls = all.find((element) => element.props['aria-label'] === 'Map display')!;
+    const map = all.find((element) => String(element.props.className ?? '').startsWith('live-map '))!;
+    const controls = all.find((element) => element.props['aria-label'] === 'Map display');
     // Display toggles; the map key button opens a sheet and is checked on its own.
-    const buttons = descendants(controls.props.children).filter((element) => element.type === 'button' && !String(element.props.className ?? '').includes('map-key-btn'));
+    const buttons = descendants(controls?.props.children).filter((element) => element.type === 'button' && !String(element.props.className ?? '').includes('map-key-btn'));
     const drawing = all.find((element) => element.type === Blueprint) as ReactElement<Parameters<typeof Blueprint>[0]> | undefined;
     const rooms = all.find((element) => element.type === RoomList) as ReactElement<Parameters<typeof RoomList>[0]> | undefined;
     return { map, controls, buttons, drawing, rooms };
@@ -50,15 +53,23 @@ function fixture() {
 beforeEach(() => { hooks.values = []; hooks.cursor = 0; });
 
 describe('live map display controls', () => {
+  it('keeps the compact map free of display buttons: they open with the full-screen map', () => {
+    const { render } = fixture();
+    const view = render(false);
+    expect(view.map.props.className).toBe('live-map live-map-compact');
+    expect(view.controls).toBeUndefined();
+    expect(view.drawing).toBeDefined();
+  });
+
   it('keeps the display buttons outside the drawable surface in both views', () => {
     const { props, render } = fixture();
     for (const showRooms of [false, true]) {
       props.showRooms = showRooms;
       const view = render();
       const children = Children.toArray(view.map.props.children).filter(isValidElement) as Element[];
-      // The clock and pressure moved to the pinned call title, so the map holds only the drawing and its controls.
-      expect(children.map((element) => element.props.className)).toEqual(['live-map-inner', 'map-hud map-actions']);
-      expect(children[1].props).toBe(view.controls.props);
+      // The full-screen map holds its head (where, Close), the drawing and its controls.
+      expect(children.map((element) => element.props.className)).toEqual(['live-map-full-head', 'live-map-inner', 'map-hud map-actions']);
+      expect(children[2].props).toBe(view.controls!.props);
       expect(descendants(children[0].props.children).some((element) => element.props['aria-label'] === 'Map display')).toBe(false);
       expect(view.buttons).toHaveLength(showRooms ? 1 : 2);
     }

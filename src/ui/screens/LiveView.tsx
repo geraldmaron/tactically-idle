@@ -43,7 +43,6 @@ import type { FillView } from '../../sim/clocks';
 import { CONTRIBUTOR_GROUPS } from './contributor-groups';
 import { GamePeopleProvider, PeopleText } from '../people/PeopleText';
 import type { Lexicon } from '../people/lexicon';
-import { PlateArt } from '../art/Plates';
 import './operation-squads.css';
 import './ops-visual.css';
 import './live-call.css';
@@ -116,10 +115,20 @@ export interface LiveViewProps {
   people?: Lexicon | null;
 }
 
-/** The two halves of the live call (docs/call-presentation.md): the Call, read in story order, and
- * the Scene, consulted for reference. */
-export type LiveTab = 'call' | 'scene';
+/** Whether the player folded the scene's map down to one line, kept per browser (a convenience: a
+ * blocked store just means the map starts open). */
+const MAP_FOLD_KEY = 'ti.live.mapFolded';
+function readMapFolded(): boolean {
+  try { return typeof localStorage !== 'undefined' && localStorage.getItem(MAP_FOLD_KEY) === '1'; } catch { return false; }
+}
+function writeMapFolded(folded: boolean): void {
+  try { if (typeof localStorage !== 'undefined') localStorage.setItem(MAP_FOLD_KEY, folded ? '1' : '0'); } catch { /* the choice just isn't remembered */ }
+}
 
+/** The live call as one screen (docs/call-presentation.md, "One screen"): a pinned strip with
+ * everything that runs down or builds up, the scene's map and the squad, then the story and the
+ * choices, or the result of the last one. Reference opens in place: the briefing from the title, a
+ * room from the map, an officer from their face. Nothing switches views. */
 export function LiveView(p: LiveViewProps) {
   const focus = p.deployedSquads.find((s) => s.id === p.focusSquadId) ?? p.deployedSquads[0] ?? null;
   const sel = p.selectedAction;
@@ -128,83 +137,161 @@ export function LiveView(p: LiveViewProps) {
   const [materials, setMaterials] = useState(false);
   const [mapKey, setMapKey] = useState(false);
   const [expandedStage, setExpandedStage] = useState<string | null>(null);
-  const [tab, setTab] = useState<LiveTab>('call');
-  // The Scene switch carries a dot while the last decision changed the map and the player hasn't looked.
-  const [seenChange, setSeenChange] = useState<number | null>(null);
+  const [mapFull, setMapFull] = useState(false);
+  const [mapFolded, setMapFolded] = useState(readMapFolded);
+  const [briefingOpen, setBriefingOpen] = useState(false);
+  const [officerOpen, setOfficerOpen] = useState<Id | null>(null);
+  // The choice the player is reading (an opened card): the map shows where it happens.
+  const [previewId, setPreviewId] = useState<Id | null>(null);
   const expanded = expandedStage === p.progress.stage;
   const available = p.actions.map((action) => action.id === sel?.id ? sel : action);
+  const previewed = previewId ? available.find((action) => action.id === previewId) ?? null : null;
   // Renderer props that may not be declared yet (floor tabs, environment overlay). Spread so this compiles either way.
   const blueprintExtras = { floor: p.floor, onFloorChange: p.onFloorChange, environment: p.environment ?? undefined };
-  const changed = !!p.lastChange?.spaceIds.length && seenChange !== p.lastChange.revision;
-  const sceneDot = changed && tab !== 'scene';
-  const show = (next: LiveTab) => {
-    setTab(next);
-    if (next === 'scene' && p.lastChange) setSeenChange(p.lastChange.revision);
-  };
+  const changed = !!p.lastChange?.spaceIds.length;
+  // A folded map opens itself on a result that changed the scene, so the player sees what moved.
+  const mapShown = mapFull || !mapFolded || (beat === 'result' && changed);
+  const toggleFold = () => { const next = mapShown; setMapFolded(next); writeMapFolded(next); };
   const stageNumber = p.progress.stages.findIndex((step) => step.state === 'current') + 1;
-  const threat = beat === 'decide' && tab === 'call' ? p.progress.threat ?? null : null;
-  // Gauges that fill sit beside the threat, with the same visibility: while the player decides.
-  const gauges = beat === 'decide' && tab === 'call' ? liveFillViews(p.g) : [];
+  const threat = beat === 'decide' ? p.progress.threat ?? null : null;
+  // Gauges that fill keep running through the result, so they stay in the strip on both beats.
+  const gauges = liveFillViews(p.g);
   const reach = reachByAction(p.g, available.map((action) => action.id));
   const casualties = p.g.activeRun?.officerCasualties ?? {};
-  // A new result always opens on the Call view, even when the choice was picked from the Scene.
+  const focusTask = focus ? p.squadTasks.find((task) => task.squadId === focus.id) : undefined;
+  const focusWhere = p.spaces.find((space) => space.id === focusTask?.positionId)?.label ?? focusTask?.positionId;
+  const whereLine = focus ? `Squad ${focus.id}${focusWhere ? ` at ${focusWhere}` : ''}` : 'The scene';
+  const officerShown = officerOpen ? p.officers.find((o) => o.id === officerOpen) ?? null : null;
+  // A new beat starts on the story, with the full map closed.
   const beatKey = `${beat}:${p.lastChange?.revision ?? ''}`;
   const [beatSeen, setBeatSeen] = useState(beatKey);
   if (beatSeen !== beatKey) {
     setBeatSeen(beatKey);
-    if (tab !== 'call') setTab('call');
+    if (mapFull) setMapFull(false);
+    if (previewId) setPreviewId(null);
   }
 
+  const squadRow = <div className="live-squad" aria-label={focus ? `Squad ${focus.id}, ${focus.name}` : 'Your team'}>
+    {multi && <div className="live-squad-rail operation-squad-focus">
+      <ChoiceRail value={focus?.id ?? p.deployedSquads[0].id} kind="tabs" label="Squad for next decision" panelId="live-squad-faces" onChange={p.onFocusSquad} options={p.deployedSquads.map((s) => {
+        // In the field, readiness means members still fit for high-risk work (not deploy eligibility).
+        const went = p.g.activeRun ? runRoster(p.g, p.g.activeRun, s.id) : s.officerIds;
+        const fit = went.filter((id) => p.g.officers[id] && highRiskAllowed(p.g.officers[id]) && (!p.g.activeRun || !incidentOfficerUnavailable(p.g, p.g.activeRun, id))).length;
+        const task = p.squadTasks.find(task => task.squadId === s.id);
+        const location = p.spaces.find(space => space.id === task?.positionId)?.label ?? task?.positionId;
+        const unavailable = p.unavailableSquadIds?.includes(s.id) && s.id !== focus?.id;
+        return { value: s.id, disabled: unavailable, accessibleLabel: `Squad ${s.id}, ${s.name}, ${fit} of ${went.length} fit${location ? `, at ${location}` : ''}${unavailable ? ', unavailable for this decision' : ''}`,
+          label: <><b>{s.id}</b><span className="squad-tab-detail"><span className="squad-tab-name">{s.name}</span>{location && <small>{location}</small>}</span><span className="choice-rail-count">{fit}/{went.length} fit</span></> };
+      })} />
+      <p className="operation-squad-hint">{sel ? `Reviewing with ${sel.actingSquadIds.map(id => `Squad ${id}`).join(' + ')}. Switching here changes who acts.` : 'Choose who acts, then review a decision. Pick support in the review.'}</p>
+    </div>}
+    <ul className="live-squad-faces" id="live-squad-faces" role={multi ? 'tabpanel' : undefined}>
+      {p.officers.map((o) => {
+        const casualty = casualties[o.id];
+        const band = stressBand(o.stress);
+        const acting = !casualty && (sel?.officerIds.includes(o.id) ?? false);
+        return <li key={o.id}>
+          <button type="button" className={`live-squad-face${casualty ? ' live-squad-out' : ''}${acting ? ' live-squad-acting' : ''}`} onClick={() => { setOfficerOpen(o.id); p.onSelectOfficer(o.id); }}
+            aria-label={`${o.firstName} ${o.surname}${focus?.leaderId === o.id ? ', leads the squad' : ''}, ${casualty ? `injured: ${casualty.label}, out of action` : `stress ${whole(o.stress)}, ${STRESS_LABEL[band].toLowerCase()}`}. Open their card`}>
+            <LeadFace officer={o} size={36} />
+            <span className="live-squad-name">{o.surname}{focus?.leaderId === o.id && <Icon name="star" size={10} className="live-team-leader" />}</span>
+            {casualty ? <span className="live-squad-stress stress-recovery">Out of action</span>
+              : <span className={`live-squad-stress lead-choice-stress stress-${band}`}>{whole(o.stress)}</span>}
+          </button>
+        </li>;
+      })}
+      {p.officers.length === 0 && <li className="strip-empty">No officers in this squad.</li>}
+    </ul>
+  </div>;
+
   const screen = (
-    <div className={`live live-beat-${beat}`}>
-      {/* The call's name scrolls away; the bar under it stays pinned: where the call is, the two
-          views, and the one threat. */}
-      <header className={`live-head${p.scene ? ' plate' : ''}`}>
-        {p.scene && <PlateArt src={p.scene} />}
-        <div className="live-id">
-          <h2 className="live-name">{p.title}</h2>
-          <p className="live-sub">
-            <span className="live-flag">
-              <i className="live-dot-amber" aria-hidden="true" />
-              LIVE
+    <div className={`live live-one live-beat-${beat}${mapFull ? ' live-map-full-open' : ''}`}>
+      {/* The call's name scrolls away; the strip under it stays pinned: where the call is, the threat,
+          and every gauge that fills. */}
+      <header className="live-head">
+        <div className="live-strip-head">
+          <button type="button" className="live-title" onClick={() => setBriefingOpen(true)} aria-haspopup="dialog" aria-expanded={briefingOpen}>
+            <span className="live-name">{p.title}</span>
+            <span className="live-title-more"><Icon name="info" size={13} />Briefing</span>
+          </button>
+          <span className="live-status" aria-label="Operation time and pressure">
+            <span className="hud-pill"><Icon name="clock" size={13} />{opMinutes(p.clock)}</span>
+            <span className="hud-pill" title="Situation pressure">
+              <span className="pmeter" role="img" aria-label={`Pressure ${Math.round(p.pressure)} of 100`}>
+                <i style={{ width: `${Math.max(4, Math.min(100, p.pressure))}%` }} />
+              </span>
+              <span>{pressureWord(p.pressure)}</span>
             </span>
-            <span>{p.subtitle}</span>
-            {p.sirens && <span className="live-hot"><Icon name="car" size={13} />Lights and sirens</span>}
-            {p.canCancel && (
-              <button type="button" className="linkbtn live-cancel" onClick={p.onCancel} aria-label="Cancel operation">
-                Cancel
-              </button>
-            )}
-          </p>
-        </div>
-        <div className="live-status" aria-label="Operation time and pressure">
-          <span className="hud-pill">
-            <Icon name="clock" size={14} />
-            {opMinutes(p.clock)}
-          </span>
-          <span className="hud-pill" title="Situation pressure">
-            <span className="pmeter" role="img" aria-label={`Pressure ${Math.round(p.pressure)} of 100`}>
-              <i style={{ width: `${Math.max(4, Math.min(100, p.pressure))}%` }} />
-            </span>
-            <span>{pressureWord(p.pressure)}</span>
           </span>
         </div>
+        <p className="live-sub">
+          <span className="live-flag"><i className="live-dot-amber" aria-hidden="true" />LIVE</span>
+          <span>{p.subtitle}</span>
+          {p.sirens && <span className="live-hot"><Icon name="car" size={13} />Lights and sirens</span>}
+          {p.canCancel && <button type="button" className="linkbtn live-cancel" onClick={p.onCancel} aria-label="Cancel operation">Cancel</button>}
+        </p>
       </header>
-      <div className="live-bar">
+      <div className="live-bar live-strip">
         <StageSteps progress={p.progress} />
         {threat && <ThreatPill label={threat.label} minutes={threat.minutes} dither={p.dither} />}
         {gauges.map((view) => <FillGauge key={view.id} view={view} />)}
-        <div className="live-switch" role="tablist" aria-label="Live call">
-          {([['call', 'Call', 'flag'], ['scene', 'Scene', 'blueprint']] as const).map(([id, label, icon]) => (
-            <button key={id} type="button" role="tab" id={`live-tab-${id}`} aria-controls={`live-panel-${id}`} aria-selected={tab === id} className={`live-switch-btn${tab === id ? ' live-switch-on' : ''}`} onClick={() => show(id)}>
-              <Icon name={icon} size={15} />{label}
-              {id === 'scene' && sceneDot && <span className="navdot live-switch-dot" role="img" aria-label="The map changed" />}
-            </button>
-          ))}
-        </div>
       </div>
 
-      <div className="live-panel live-panel-call" id="live-panel-call" role="tabpanel" aria-labelledby="live-tab-call" hidden={tab !== 'call'}>
+      {/* The scene: the map (compact, foldable, or full screen) and the squad, above the story. */}
+      <section className="live-scene" aria-label="The scene">
+        <div className="live-scene-head">
+          <span className="live-scene-where"><Icon name="pin" size={14} />{whereLine}{changed && beat === 'result' && <span className="live-scene-changed">Map changed</span>}</span>
+          <span className="live-scene-actions">
+            {!mapFull && <button type="button" className="hud-btn hud-btn-quiet" onClick={() => setMapFull(true)}><Icon name="blueprint" size={15} />Full map</button>}
+            {!mapFull && <button type="button" className="hud-btn hud-btn-quiet" onClick={toggleFold} aria-expanded={mapShown} aria-controls="live-map">
+              <Icon name={mapShown ? 'chevronUp' : 'chevronDown'} size={15} />{mapShown ? 'Hide map' : 'Show map'}
+            </button>}
+          </span>
+        </div>
+        <div className={`live-map${mapFull ? ' live-map-full' : ' live-map-compact'}`} id="live-map" hidden={!mapShown} role={mapFull ? 'dialog' : undefined} aria-modal={mapFull || undefined} aria-label={mapFull ? 'Map of the scene' : undefined}>
+          {mapFull && <div className="live-map-full-head">
+            <span className="live-scene-where"><Icon name="pin" size={14} />{whereLine}</span>
+            <button type="button" className="hud-btn" onClick={() => setMapFull(false)} aria-label="Close the map"><Icon name="x" size={16} />Close</button>
+          </div>}
+          <div className="live-map-inner">
+            {mapFull && p.showRooms ? (
+              <RoomList built={p.built} spaces={p.spaces} selectedSpaceId={p.selectedSpaceId} onSelectSpace={p.onSelectSpace} />
+            ) : (
+              <Blueprint
+                built={p.built}
+                spaces={p.spaces}
+                squadTasks={p.squadTasks}
+                selectedSpaceId={p.selectedSpaceId}
+                focusSquadId={focus?.id ?? null}
+                highlightSpaceIds={p.highlightSpaceIds}
+                onSelectSpace={p.onSelectSpace}
+                lastChange={p.lastChange}
+                overlays={sel?.overlays ?? previewed?.overlays}
+                showMaterials={materials}
+                {...blueprintExtras}
+              />
+            )}
+          </div>
+          {mapFull && <div className="map-hud map-actions" role="group" aria-label="Map display">
+            <button type="button" className="hud-btn hud-btn-quiet map-key-btn" aria-label="Map key and inspection help" aria-haspopup="dialog" aria-expanded={mapKey} onClick={() => setMapKey(true)}><Icon name="info" size={16} />Key</button>
+            {!p.showRooms && <button type="button" className="hud-btn" onClick={() => setMaterials((v) => !v)} aria-pressed={materials}><Icon name="layers" size={16} />Materials</button>}
+            <button type="button" className="hud-btn" onClick={p.onToggleRooms} aria-pressed={p.showRooms}><Icon name={p.showRooms ? 'blueprint' : 'list'} size={16} />{p.showRooms ? 'Map' : 'Rooms'}</button>
+          </div>}
+        </div>
+        <Sheet open={mapKey} onClose={() => setMapKey(false)} title="Map key" modal={false} maxHeight="short">
+          <div className="map-key-body" aria-label="Map legend">
+            <span className="map-key-items">
+              <span><Icon name="user" size={18} className="lg-q legend-reported-person" />Reported</span>
+              <span><Icon name="user" size={18} className="lg-ok" />Confirmed</span>
+            </span>
+            <p>Dashed amber people are reports at approximate positions. Mint people have a confirmed position. Small item symbols stay beside their holder; amber items are still reported, even when the person is confirmed. An absent weapon symbol does not mean unarmed. Tap a room or use Rooms to inspect names, conditions and items.</p>
+          </div>
+        </Sheet>
+        {squadRow}
+      </section>
+
+      {/* The story: the decision and its choices, or the result of the last one. */}
+      <div className="live-story">
         {beat === 'result' ? <>
           {p.feedback}
           {p.onContinue && <div className="stickyfoot live-continue">
@@ -222,121 +309,28 @@ export function LiveView(p: LiveViewProps) {
                 </button>
               )}
             </p>
-            <DecisionList prompt={p.progress.prompt} exchange={p.progress.exchange} actions={available} reach={reach} selectedId={sel?.id ?? null} expanded={expanded} officers={p.g.officers} onSelect={p.onSelectAction} onExpand={() => setExpandedStage(expanded ? null : p.progress.stage)}
-              team={<section className="live-team" aria-label="Who's on it">
-                <h3 className="live-team-h"><Icon name="people" size={14} />{focus ? `Squad ${focus.id} · ${focus.name}` : 'Your team'}</h3>
-                {multi && <div className="live-squad-rail operation-squad-focus">
-                  <ChoiceRail value={focus?.id ?? p.deployedSquads[0].id} kind="tabs" label="Squad for next decision" panelId="live-team-faces" onChange={p.onFocusSquad} options={p.deployedSquads.map((s) => {
-                    // In the field, readiness means members still fit for high-risk work (not deploy eligibility).
-                    const went = p.g.activeRun ? runRoster(p.g, p.g.activeRun, s.id) : s.officerIds;
-                    const fit = went.filter((id) => p.g.officers[id] && highRiskAllowed(p.g.officers[id]) && (!p.g.activeRun || !incidentOfficerUnavailable(p.g, p.g.activeRun, id))).length;
-                    const task = p.squadTasks.find(task => task.squadId === s.id);
-                    const location = p.spaces.find(space => space.id === task?.positionId)?.label ?? task?.positionId;
-                    const unavailable = p.unavailableSquadIds?.includes(s.id) && s.id !== focus?.id;
-                    return { value: s.id, disabled: unavailable, accessibleLabel: `Squad ${s.id}, ${s.name}, ${fit} of ${went.length} fit${location ? `, at ${location}` : ''}${unavailable ? ', unavailable for this decision' : ''}`,
-                      label: <><b>{s.id}</b><span className="squad-tab-detail"><span className="squad-tab-name">{s.name}</span>{location && <small>{location}</small>}</span><span className="choice-rail-count">{fit}/{went.length} fit</span></> };
-                  })} />
-                  <p className="operation-squad-hint">{sel ? `Reviewing with ${sel.actingSquadIds.map(id => `Squad ${id}`).join(' + ')}. Switching here changes who acts.` : 'Choose who acts, then review a decision. Pick support in the review.'}</p>
-                </div>}
-                <ul className="live-team-faces" id="live-team-faces" role={multi ? 'tabpanel' : undefined}>
-                  {p.officers.map((o) => {
-                    const casualty = casualties[o.id];
-                    const band = stressBand(o.stress);
-                    return <li key={o.id} className={`live-team-face${casualty ? ' live-team-out' : ''}`}>
-                      <LeadFace officer={o} size={40} />
-                      <span className="live-team-name">{o.surname}{focus?.leaderId === o.id && <Icon name="star" size={11} className="live-team-leader" />}</span>
-                      {casualty ? <span className="live-team-stress stress-recovery">Out of action</span>
-                        : <span className={`live-team-stress lead-choice-stress stress-${band}`} aria-label={`Stress ${whole(o.stress)}, ${STRESS_LABEL[band].toLowerCase()}`}>Stress {whole(o.stress)}</span>}
-                    </li>;
-                  })}
-                  {p.officers.length === 0 && <li className="strip-empty">No officers in this squad.</li>}
-                </ul>
-              </section>} />
+            <DecisionList prompt={p.progress.prompt} exchange={p.progress.exchange} actions={available} reach={reach} selectedId={sel?.id ?? null} expanded={expanded} officers={p.g.officers}
+              onSelect={p.onSelectAction} onPreview={setPreviewId} onExpand={() => setExpandedStage(expanded ? null : p.progress.stage)} />
           </section>
           {p.failedResponse}
+          {p.supportContext}
         </>}
       </div>
 
-      <div className="live-panel live-panel-scene" id="live-panel-scene" role="tabpanel" aria-labelledby="live-tab-scene" hidden={tab !== 'scene'}>
-        {p.situation}
-        <div className="live-map">
-          <div className="live-map-inner">
-            {p.showRooms ? (
-              <RoomList built={p.built} spaces={p.spaces} selectedSpaceId={p.selectedSpaceId} onSelectSpace={p.onSelectSpace} />
-            ) : (
-              <Blueprint
-                built={p.built}
-                spaces={p.spaces}
-                squadTasks={p.squadTasks}
-                selectedSpaceId={p.selectedSpaceId}
-                focusSquadId={focus?.id ?? null}
-                highlightSpaceIds={p.highlightSpaceIds}
-                onSelectSpace={p.onSelectSpace}
-                lastChange={p.lastChange}
-                overlays={sel?.overlays}
-                showMaterials={materials}
-                {...blueprintExtras}
-              />
-            )}
-          </div>
-          <div className="map-hud map-actions" role="group" aria-label="Map display">
-            {/* The map labels reported people in place, so the key is on demand instead of a permanent row. */}
-            <button type="button" className="hud-btn hud-btn-quiet map-key-btn" aria-label="Map key and inspection help" aria-haspopup="dialog" aria-expanded={mapKey} onClick={() => setMapKey(true)}><Icon name="info" size={16} />Key</button>
-            <Sheet open={mapKey} onClose={() => setMapKey(false)} title="Map key" modal={false} maxHeight="short">
-              <div className="map-key-body" aria-label="Map legend">
-                <span className="map-key-items">
-                  <span><Icon name="user" size={18} className="lg-q legend-reported-person" />Reported</span>
-                  <span><Icon name="user" size={18} className="lg-ok" />Confirmed</span>
-                </span>
-                <p>Dashed amber people are reports at approximate positions. Mint people have a confirmed position. Small item symbols stay beside their holder; amber items are still reported, even when the person is confirmed. An absent weapon symbol does not mean unarmed. Tap a room or use Rooms to inspect names, conditions and items.</p>
-              </div>
-            </Sheet>
-            {!p.showRooms && (
-              <button type="button" className="hud-btn" onClick={() => setMaterials((v) => !v)} aria-pressed={materials}>
-                <Icon name="layers" size={16} />
-                Materials
-              </button>
-            )}
-            <button type="button" className="hud-btn" onClick={p.onToggleRooms} aria-pressed={p.showRooms}>
-              <Icon name={p.showRooms ? 'blueprint' : 'list'} size={16} />
-              {p.showRooms ? 'Map' : 'Rooms'}
-            </button>
-          </div>
-        </div>
-
-        <div className="strip" id="deployed-officer-strip" aria-label={focus ? `${focus.name} officers` : 'Officers'}>
-          {p.officers.map((o) => {
-            const casualty = casualties[o.id];
-            const acting = !casualty && (sel?.officerIds.includes(o.id) ?? false);
-            const active = p.activeOfficerId === o.id;
-            const cap = !casualty && active && sel ? capabilityFor(sel, o) : null;
-            return (
-              <OfficerCard
-                key={o.id}
-                officer={o}
-                now={p.now}
-                incidentInjury={casualty?.label}
-                note={casualty ? 'Out of action' : undefined}
-                selected={active}
-                onClick={() => p.onSelectOfficer(o.id)}
-                leader={focus?.leaderId === o.id}
-                chip={
-                  cap ? (
-                    <span className={`capchip${cap.value < 0 ? ' capchip-neg' : ''}`}>
-                      {cap.text}
-                    </span>
-                  ) : acting ? (
-                    <span className="capchip capchip-quiet">{sel?.officerIds[0] === o.id ? 'Leads' : 'Taking part'}</span>
-                  ) : undefined
-                }
-              />
-            );
-          })}
-          {p.officers.length === 0 && <p className="strip-empty">No officers in this squad.</p>}
-        </div>
-
-        {p.supportContext}
-      </div>
+      <Sheet open={briefingOpen} onClose={() => setBriefingOpen(false)} title="Briefing">
+        <div className="live-briefing">{p.situation}</div>
+      </Sheet>
+      <Sheet open={!!officerShown} onClose={() => setOfficerOpen(null)} title={officerShown ? `${officerShown.firstName} ${officerShown.surname}` : 'Officer'} maxHeight="short">
+        {officerShown && (() => {
+          const casualty = casualties[officerShown.id];
+          const cap = !casualty && sel ? capabilityFor(sel, officerShown) : null;
+          return <div className="live-officer-card">
+            <OfficerCard officer={officerShown} now={p.now} incidentInjury={casualty?.label} note={casualty ? 'Out of action' : undefined} selected leader={focus?.leaderId === officerShown.id}
+              chip={cap ? <span className={`capchip${cap.value < 0 ? ' capchip-neg' : ''}`}>{cap.text}</span> : undefined} />
+            {sel && !casualty && <p className="dim">{sel.officerIds[0] === officerShown.id ? `Leads ${sel.title}.` : sel.officerIds.includes(officerShown.id) ? `Taking part in ${sel.title}.` : `Not on ${sel.title}.`}</p>}
+          </div>;
+        })()}
+      </Sheet>
       {p.children}
     </div>
   );
@@ -514,6 +508,9 @@ export function StatusChip({ status }: { status: SpaceView['status'] }) {
 // ---------------------------------------------------------------- action detail sheet
 
 export interface ActionSheetProps {
+  /** A small map of where the choice happens (its overlays), shown first: on the one-screen call the
+   * scene's map has usually scrolled away by the time the player reviews (docs/call-presentation.md). */
+  preview?: ReactNode;
   /** Support-origin reviews keep the contextual modal route and a clear Back action. */
   onBackToSupport?: () => void;
   open: boolean;
@@ -594,6 +591,7 @@ export function ActionSheet(p: ActionSheetProps) {
       {v && (
         <div className="adetail">
           {p.onBackToSupport && <Button variant="ghost" onClick={p.onBackToSupport}>Back to care &amp; support</Button>}
+          {p.preview}
           {p.squads.length > 1 && <ActionSquadAssignment {...p} view={v} />}
           {v.summary !== v.outcomePreview.favorable && <p className="operation-action-summary"><PeopleText text={v.summary} /></p>}
           {p.officers && v.eligible && <LeadPicker view={v} officers={p.officers} lead={p.lead ?? v.officerIds[0] ?? null} bestFit={p.bestFit ?? null} order={p.leadOrder} marks={p.leadMarks ?? []} blend={p.leadBlend ?? []} certs={p.leadCerts ?? []} onPick={p.onPickLead} />}

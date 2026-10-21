@@ -49,37 +49,40 @@ The live call now alternates two beats, and the reference material moves out of 
    └── the call ends ──▶ Debrief ──Close──▶ Board
 ```
 
-### The live call
+### The live call: one screen (owner, 2026-10-20)
 
-**Call bar (pinned).** One compact block that never scrolls away: the title, LIVE, the clock and
-pressure, the stage rail, and a two-way switch between **Call** and **Scene**. On the decide beat
-the decision point's threat sits in the bar as a full-width line ("Indigo edges for the door · 4
-min"), so it stays in view while the player reads the choices and while the review sheet is open.
-It is the only place the threat is shown; each card's "Too slow" or "Risk" tag points back to it.
+The first redesign split the live call into a Call view and a Scene view. The owner rejected the
+split the same day, and the reason it was accepted no longer held: the threat now drains in real
+time (dither, `docs/call-pressure.md`) and gauges fill, so the pressure, the place and the decision
+belong on one screen. The live call is now one column with no view switch, in two beats.
 
-**Call view, decide beat**, top to bottom in story order:
+**Head (scrolls away).** The call's name, which opens the briefing sheet; LIVE, the call's type,
+Lights and sirens on a hot call, and Cancel; the clock and pressure pills.
 
-1. *Last decision*, folded to one row ("Walk Indigo out now · Went badly"), opening in place to the
-   full record. The player has just read it on the result beat.
-2. The stage kicker ("Stage 2 of 3") and the prompt as the hero prose, unclamped.
-3. The transcript, "On the line".
-4. **Who's on it**: the squad's faces with name, stress and the leader, and the squad picker when
-   more than one squad is deployed. It sits directly above the choices because every card names
-   one of these people as its lead, and the review sheet lets the player swap the lead.
-5. The choices, unclamped. No instruction line: the cards say what they do.
+**Strip (pinned).** The stage rail, the decision point's threat with its draining bar (decide beat
+only), and a slim row for each gauge that fills (both beats, since gauges keep running). Everything
+that runs down or builds up is in one place. On a short screen the stage labels hide and the rows
+slim down; nothing is dropped.
 
-**Call view, result beat.** After a confirm the view becomes the result: stage and choice, the
-band, the narrative, the transcript of what was said, what changed, stress on the team, and a
-pinned **Continue** button naming the next stage ("Continue to The till"). Continue reveals the next
-prompt, its threat and its choices together, at the top of the view. When the decision ends the
-call, the debrief opens instead, as before.
+**Scene.** Where the squad is ("Squad A at High street", and "Map changed" after a result that moved
+something), the map in a short window showing the whole building, and the squad's faces once each,
+with stress, tapping through to that officer's full card. The map folds to its one-line header
+(remembered per browser) and opens itself on a result that changed the scene. Full map lays the
+same map over the call, with the key, materials and rooms, so its pan and zoom survive.
 
-**Scene view.** Everything the player consults rather than reads: the full briefing (never
-clamped), the map with its key, materials and rooms, the full officer cards, the people at the call,
-and care and support. The map stays mounted while hidden, so its pan and zoom survive the switch.
-The Scene switch carries a static dot when the last decision changed something on the map.
+**Story, decide beat.** The last decision folded to a row, the stage kicker, the prompt, the
+transcript, then the choices. Opening a card to read it previews it on the map. The review sheet
+opens with a small map of where the choice happens, because by the time the player reviews, the
+scene's map has scrolled away. Care and support follow the choices.
 
-The floating Next decision button is gone: nothing sits between the player and the choices anymore.
+**Story, result beat.** The result at full size with Continue pinned; the strip and the scene stay,
+so the player sees on the map what the choice changed.
+
+**Reference, in place.** The briefing (with who has been located) in a sheet from the title, a room
+from the map, an officer from their face. The separate people list is gone: the map shows them.
+
+The app's department header hides during a live call to give the call its height back; the save
+warning stays.
 
 ### Prepare and debrief
 
@@ -124,12 +127,15 @@ Owner, 2026-10-20: "The symbols should not appear in prose." A name inside runni
   controls.** The Continue button names the next stage, so it is a reveal rather than a speed bump;
   the last result is one tap away above the prompt on the decide beat; the log keeps every result;
   and a reload lands on the decide beat with nothing lost, because results are saved on the run.
-- **Call and Scene split. Strongest failure:** the map stops being seen, and the spatial facts
-  (who is where, what changed) stop informing choices. **Alternative:** the single column with the
-  map below the choices. **Verdict: accepted with controls.** Each card already says what it targets
-  and the review sheet names the place; the Scene switch shows a dot when the last decision changed
-  the map; room taps from Scene still open actions; and the map stays mounted, so returning to it
-  costs nothing.
+- **Call and Scene split (superseded 2026-10-20 by one screen). Strongest failure:** the map stops
+  being seen, and the spatial facts (who is where, what changed) stop informing choices.
+  **Alternative:** the single column with the map below the choices. **Verdict then: accepted with
+  controls.** The one-screen layout replaced it once the threat drained in real time.
+- **One screen. Strongest failure:** the map and squad take about 230px the story text used to
+  have, and the writing is the main draw. **Alternative:** story first, map below the choices, which
+  the audit found lets the choices scroll away from the map. **Verdict: accepted with controls.**
+  The map folds to one line and remembers it; the review sheet carries its own map so the choice is
+  seen in place; the head scrolls away so only the strip stays pinned.
 - **Threat in the pinned bar. Strongest failure:** a pinned danger-toned line reads as an alarm
   that never stops. **Alternative:** keep the threat beside the stage label in the flow. **Verdict:
   accepted.** It shows only on the decide beat, it is still, and it is the one fact that changes

@@ -504,23 +504,28 @@ it.each(['reported', 'confirmed'] as const)('uses a public %s weapon item withou
   expect(html).not.toContain('Armament not known');
 });
 
-describe('the live call in two beats (docs/call-presentation.md)', () => {
+describe('the live call on one screen, in two beats (docs/call-presentation.md)', () => {
   const threat = { label: 'Indigo edges for the door', minutes: 4 };
   const props = (patch: Partial<LiveViewProps> = {}): LiveViewProps => {
     const base = liveProps([action()], null);
     return { ...base, progress: { ...base.progress, threat }, ...patch };
   };
 
-  it('decides with the threat pinned, the team above the choices, and the scene held apart', () => {
+  it('decides on one screen: the threat pinned, then the scene and the squad, then the moment and the choices', () => {
     const html = render(createElement(LiveView, props()));
-    const call = html.slice(html.indexOf('id="live-panel-call"'), html.indexOf('id="live-panel-scene"'));
-    expect(html.indexOf('class="threat-pill"')).toBeLessThan(html.indexOf('id="live-panel-call"'));
+    expect(html).not.toContain('role="tablist"');
+    expect(html).not.toContain('role="tabpanel"');
     expect(html).toContain('aria-label="Threat: Indigo edges for the door in 4 minutes"');
-    expect(call.indexOf('How will you verify the report before committing?')).toBeLessThan(call.indexOf('aria-label="Who&#x27;s on it"'));
-    expect(call.indexOf('aria-label="Who&#x27;s on it"')).toBeLessThan(call.indexOf('aria-label="Review Prepare medical access"'));
-    expect(call).not.toContain('class="live-map"');
-    expect(html).toMatch(/id="live-panel-scene"[^>]*hidden=""/);
-    expect(html).toContain('class="live-map"');
+    const strip = html.indexOf('class="live-bar live-strip"'), scene = html.indexOf('aria-label="The scene"'), map = html.indexOf('class="live-map live-map-compact"');
+    const prompt = html.indexOf('How will you verify the report before committing?'), choice = html.indexOf('aria-label="Review Prepare medical access"');
+    expect(strip).toBeGreaterThan(-1);
+    expect(html.indexOf('class="threat-pill"')).toBeGreaterThan(strip);
+    expect(html.indexOf('class="threat-pill"')).toBeLessThan(scene);
+    expect(scene).toBeLessThan(map);
+    expect(map).toBeLessThan(prompt);
+    expect(html.indexOf('class="live-squad-faces"')).toBeLessThan(prompt);
+    expect(prompt).toBeLessThan(choice);
+    expect(html).not.toMatch(/id="live-map"[^>]*hidden=""/);
   });
 
   it('reads the result on its own beat, with no choices and no threat until Continue', () => {

@@ -32,7 +32,8 @@ const act = vi.fn((command: Parameters<typeof apply>[1]) => {
 vi.mock('../store', () => ({ useGame: () => state, getState: () => state }));
 vi.mock('../components/toast', () => ({ useToast: () => ({ act, notify: vi.fn() }) }));
 const render = () => { hooks.cursor = 0; return OpsLive(); };
-const supportOf = (view: ReturnType<typeof render>) => view.props.supportContext.props.children[1].props;
+// The support panel is the support block's only child: who has been located moved to the briefing sheet.
+const supportOf = (view: ReturnType<typeof render>) => view.props.supportContext.props.children.props;
 
 beforeEach(() => {
   hooks.values = [];

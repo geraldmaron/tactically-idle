@@ -65,15 +65,23 @@ function CardMeta({ a, officers, reach = [] }: { a: ActionView; officers?: Reado
 
 /** `actions` are the stage's choices as the player sees them, with any reviewed choice already
  * forecast for its chosen squads. */
-export function DecisionList({ prompt, exchange, actions, selectedId, expanded, officers, reach, team, onSelect, onExpand }: { reach?: Record<Id, GaugeReach[]>; prompt: string; exchange?: readonly SpokenLine[]; actions: ActionView[]; selectedId: Id | null; expanded: boolean;
+export function DecisionList({ prompt, exchange, actions, selectedId, expanded, officers, reach, team, onSelect, onPreview, onExpand }: { reach?: Record<Id, GaugeReach[]>; prompt: string; exchange?: readonly SpokenLine[]; actions: ActionView[]; selectedId: Id | null; expanded: boolean;
   /** The deployed officers, for each card's lead line; left out, cards show no lead. */
   officers?: Readonly<Record<Id, LeadOfficer>>;
   /** Who's on it, set between the moment and the choices, because every card names one of them to lead. */
   team?: ReactNode;
-  onSelect(id: Id): void; onExpand(): void }): JSX.Element {
+  onSelect(id: Id): void;
+  /** The choice the player opened to read, or null when they close it: the live call shows where it
+   * happens on the map (docs/call-presentation.md, "One screen"). */
+  onPreview?(id: Id | null): void;
+  onExpand(): void }): JSX.Element {
   const decisions = visibleDecisions(actions, selectedId, expanded);
   const [opened, setOpened] = useState<ReadonlySet<Id>>(() => new Set());
-  const toggle = (id: Id) => setOpened((prev) => { const next = new Set(prev); if (next.has(id)) next.delete(id); else next.add(id); return next; });
+  const toggle = (id: Id) => {
+    const opening = !opened.has(id);
+    setOpened((prev) => { const next = new Set(prev); if (next.has(id)) next.delete(id); else next.add(id); return next; });
+    onPreview?.(opening ? id : null);
+  };
   const open = actions.filter((action) => action.eligible).length;
   return <>
     {prompt && <p className="operation-stage-prompt"><PeopleText text={prompt} /></p>}

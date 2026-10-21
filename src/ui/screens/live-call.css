@@ -1,48 +1,75 @@
-/* The live call as two beats and two views (docs/call-presentation.md). The call bar is pinned;
-   the Call view reads in story order (last decision, stage, prompt, transcript, who's on it,
-   choices); the Scene view holds the briefing, map, team and people. Nothing here moves on its
-   own: the game's one motion signal lives on the Ops nav button (app.css .live-dot). */
+/* The live call as one screen in two beats (docs/call-presentation.md, "One screen"): a pinned strip
+   (name, stage, threat, gauges), the scene (map and squad), then the story (the decision and its
+   choices, or the result). Reference opens in place, in sheets. Nothing here moves on its own: the
+   game's one motion signal lives on the Ops nav button (app.css .live-dot). */
 
-/* ---- the call's head (scrolls) and the pinned bar */
-.live .live-head { display: flex; align-items: flex-start; gap: 8px; min-width: 0; padding: 10px var(--gutter) 6px; background: #0b111c; }
-.app .live .live-head.plate::after { background: linear-gradient(90deg, rgba(8, 13, 22, 0.95) 0%, rgba(8, 13, 22, 0.75) 55%, rgba(8, 13, 22, 0.5) 100%), linear-gradient(0deg, rgba(11, 17, 28, 1) 0%, transparent 70%); }
-.app .live .live-head.plate .plate-art { object-position: center 40%; opacity: 0.8; }
-.live .live-id { flex: 1 1 auto; min-width: 0; }
-.live .live-name { font-size: 22px; line-height: 1.05; overflow-wrap: anywhere; }
-.live .live-sub { margin-top: 4px; gap: 4px 10px; font-size: 12px; }
-.live .live-sub .live-cancel { margin-left: 0; }
+/* ---- one pinned strip: the call's name, where it is, and everything that runs down or builds up */
+.app:has(.live-one) .topbar { display: none; }
+.live .live-head { padding: 10px var(--gutter) 6px; background: #0b111c; display: grid; gap: 4px; }
+.live .live-strip { position: sticky; top: 0; z-index: 6; display: grid; gap: 3px; padding: 4px var(--gutter) 6px; border-bottom: 1px solid var(--line); background: #0d1524; box-shadow: 0 8px 18px -12px rgba(0, 0, 0, 0.9); }
+.live .live-strip-head { display: flex; align-items: flex-start; gap: 8px; min-width: 0; }
+.live .live-title { display: grid; flex: 1 1 auto; min-width: 0; padding: 0; border: 0; background: none; color: var(--text); text-align: left; cursor: pointer; }
+.live .live-title:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+.live .live-name { font: 700 19px/1.1 var(--font-cond); letter-spacing: 0.02em; text-transform: uppercase; overflow-wrap: anywhere; }
+.live .live-title-more { display: inline-flex; align-items: center; gap: 4px; margin-top: 2px; font: 600 12px/1.2 var(--font-ui); color: var(--amber-2); }
+.live .live-sub { display: flex; flex-wrap: wrap; align-items: center; margin: 0; gap: 2px 10px; font-size: 12px; color: var(--text-dim); }
+.live .live-sub .live-cancel { margin-left: auto; }
 .live-hot { display: inline-flex; align-items: center; gap: 4px; color: #ffb4aa; font-weight: 600; }
-.live .live-status { display: flex; flex: 0 0 auto; flex-direction: column; align-items: flex-end; gap: 4px; }
-.live .live-status .hud-pill { padding: 2px 8px; font-size: 12.5px; }
-.live .live-bar { position: sticky; top: 0; z-index: 6; display: grid; gap: 2px; padding: 4px var(--gutter) 0; border-bottom: 1px solid var(--line); background: #0d1524; box-shadow: 0 8px 18px -12px rgba(0, 0, 0, 0.9); }
+.live .live-status { display: flex; flex: 0 0 auto; flex-direction: column; align-items: flex-end; gap: 3px; }
+.live .live-status .hud-pill { padding: 2px 8px; font-size: 12px; }
 .live .steps { padding: 2px 2px 0; }
 .live .step { gap: 2px; }
-.live .step-track { height: 14px; }
-.live .step-line { top: 6px; }
-.live .step-dot { width: 14px; height: 14px; margin-left: -7px; }
-.live .step-label { font-size: 11px; }
+.live .step-track { height: 12px; }
+.live .step-line { top: 5px; }
+.live .step-dot { width: 12px; height: 12px; margin-left: -6px; }
+.live .step-label { font-size: 10.5px; }
 .live .step-current .step-dot { box-shadow: none; }
 
-/* Call / Scene: two case-file tabs on the bar's bottom edge. */
-.live-switch { display: flex; align-items: flex-end; gap: 4px; }
-.live-switch-btn { position: relative; display: inline-flex; flex: 1 1 0; justify-content: center; align-items: center; gap: 6px; min-height: 40px; padding: 0 14px; border: 1px solid transparent; border-bottom: 0; border-radius: 8px 8px 0 0; background: transparent; color: var(--text-dim); font: 700 14px/1 var(--font-cond); letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer; }
-.live-switch-btn:focus-visible { outline: 2px solid var(--amber); outline-offset: -2px; }
-.live-switch-on { border-color: var(--line); background: var(--bg); color: var(--amber-2); margin-bottom: -1px; padding-bottom: 1px; }
-.live-switch-dot { position: static; margin-left: 2px; }
-
-/* The decision point's threat, under the tabs while the player decides. Still: its place and tone carry it. */
-.live .threat-pill { display: flex; align-items: center; gap: 7px; margin: 4px 0 2px; padding: 6px 10px; min-height: 36px; border: 1px solid rgba(255, 107, 87, 0.5); border-radius: 8px; background: linear-gradient(90deg, rgba(255, 107, 87, 0.2), rgba(255, 107, 87, 0.08)); color: #ffd8d1; font: 600 15px/1.25 var(--font-cond); letter-spacing: 0.02em; }
+/* The decision point's threat, in the strip while the player decides. Still: its place and tone carry it. */
+.live .threat-pill { display: flex; align-items: center; gap: 7px; margin: 2px 0 0; padding: 5px 10px; min-height: 32px; border: 1px solid rgba(255, 107, 87, 0.5); border-radius: 8px; background: linear-gradient(90deg, rgba(255, 107, 87, 0.2), rgba(255, 107, 87, 0.08)); color: #ffd8d1; font: 600 14.5px/1.25 var(--font-cond); letter-spacing: 0.02em; }
 .live .threat-pill-label { flex: 1 1 auto; white-space: normal; overflow: visible; }
 .live .threat-pill-sep { display: none; }
-.live .threat-pill-min { font-size: 16px; }
+.live .threat-pill-min { font-size: 15.5px; }
 
-/* ---- the views */
-.live-panel { display: flex; flex-direction: column; min-width: 0; padding-bottom: 20px; }
-.live-panel[hidden] { display: none; }
-.live-panel-call { flex: 1 0 auto; }
-.live-panel-scene { gap: 12px; padding-top: 12px; }
-.live-panel-scene .situation { margin: 0 var(--gutter); }
-.live-panel-scene > .strip { padding-top: 0; }
+/* ---- the scene: the map and the squad, between the strip and the story */
+.live-scene { display: grid; gap: 6px; padding: 8px var(--gutter) 0; }
+.live-scene-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 8px; min-width: 0; }
+.live-scene-where { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; min-width: 0; font: 600 13px/1.25 var(--font-cond); letter-spacing: 0.04em; color: var(--text-dim); }
+.live-scene-where .icon { color: var(--amber); }
+.live-scene-changed { padding: 1px 6px; border: 1px solid rgba(63, 208, 142, 0.5); border-radius: 999px; color: #cdf5e1; font-size: 11.5px; letter-spacing: 0.06em; text-transform: uppercase; }
+.live-scene-actions { display: inline-flex; gap: 4px; }
+.live-scene-actions .hud-btn { min-height: 34px; padding: 0 10px; font-size: 12.5px; }
+.live .live-map { margin: 0; }
+.live .live-map[hidden] { display: none; }
+/* Compact: the whole building in a short window, with no map controls. Tap a room to open it. */
+.app .live-map-compact .live-map-inner > .bp-root { grid-template-rows: auto clamp(150px, 46vw, 220px) auto auto; }
+.app .live-map-compact .bp-zoomctl, .app .live-map-compact .bp-nav-help, .app .live-map-compact .bp-key { display: none; }
+.live .live-map-compact { min-height: 0; }
+/* Full screen: the same map, so its pan and zoom survive, laid over the call. */
+.live .live-map-full { position: fixed; inset: 0; z-index: 40; min-height: 0; margin: 0; border-radius: 0; display: flex; flex-direction: column; background: var(--paper-deep); }
+.live-map-full-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px var(--gutter); background: #0d1524; border-bottom: 1px solid var(--line); }
+.live .live-map-full .live-map-inner { flex: 1 1 auto; overflow: auto; }
+.app .live-map-full .live-map-inner > .bp-root { grid-template-rows: auto minmax(240px, calc(100svh - 220px)) auto auto; }
+.live-map-full-open .live-strip { z-index: 5; }
+
+/* The squad: each face once, with stress; tap one for their card. */
+.live-squad { display: grid; gap: 6px; }
+.live-squad .live-squad-rail.operation-squad-focus { padding: 0; margin: 0; }
+.live-squad-faces { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; margin: 0; padding: 0; list-style: none; }
+.live-squad-face { display: grid; justify-items: center; gap: 2px; width: 100%; min-height: 44px; padding: 5px 4px; border: 1px solid var(--line); border-radius: 8px; background: rgba(8, 13, 24, 0.4); color: var(--text); text-align: center; cursor: pointer; }
+.live-squad-face:focus-visible { outline: 2px solid var(--amber); outline-offset: 1px; }
+.live-squad-acting { border-color: rgba(243, 180, 50, 0.6); }
+.live-squad-name { display: inline-flex; align-items: center; justify-content: center; gap: 3px; max-width: 100%; font: 600 12.5px/1.15 var(--font-cond); overflow-wrap: anywhere; }
+.live-squad-stress { font-size: 11px; line-height: 1.15; }
+.live-squad-stress.stress-recovery:not(.lead-choice-stress) { color: var(--danger); }
+.live-squad-out .lead-face { opacity: 0.5; filter: grayscale(1); }
+.live-team-leader { color: var(--amber-2); }
+@media (max-width: 360px) { .live-squad-faces { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* ---- the story: the decision and its choices, or the result */
+.live-story { display: flex; flex: 1 0 auto; flex-direction: column; min-width: 0; padding-bottom: 20px; }
+.live-briefing .situation { margin: 0; }
+.live-officer-card { display: grid; gap: 8px; }
 
 /* The decide beat: the stage kicker, then the moment, then the people, then the choices. */
 .live .operation-choices { margin-top: 4px; }
@@ -51,18 +78,6 @@
 .live .operation-choices .operation-stage-prompt { margin: 0 0 12px; padding-left: 12px; font-size: 17.5px; line-height: 1.5; }
 .live .operation-choices .operation-choice-count { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin: 16px 0 8px; font: 700 14px/1.2 var(--font-cond); letter-spacing: 0.1em; text-transform: uppercase; color: var(--amber-2); }
 .live .operation-choices .operation-choice-count span { font: 500 12.5px/1.2 var(--font-ui); letter-spacing: 0; text-transform: none; color: var(--text-dim); }
-
-/* Who's on it: the squad's faces directly above the choices that name them as leads. */
-.live-team { margin: 4px 0 0; padding: 10px 10px 8px; border: 1px solid var(--line); border-radius: var(--radius); background: rgba(8, 13, 24, 0.4); }
-.live-team-h { display: flex; align-items: center; gap: 6px; margin: 0 0 8px; font: 600 12px/1.2 var(--font-mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-dim); }
-.live-team .live-squad-rail.operation-squad-focus { padding: 0; margin: 0 0 8px; }
-.live-team-faces { display: grid; grid-template-columns: repeat(auto-fit, minmax(68px, 1fr)); gap: 6px; margin: 0; padding: 0; list-style: none; }
-.live-team-face { display: grid; justify-items: center; gap: 2px; min-width: 0; text-align: center; }
-.live-team-name { display: inline-flex; align-items: center; gap: 3px; max-width: 100%; font: 600 13px/1.2 var(--font-cond); color: var(--text); overflow-wrap: anywhere; }
-.live-team-leader { color: var(--amber-2); }
-.live-team-out .lead-face { opacity: 0.5; filter: grayscale(1); }
-.live-team-stress { font-size: 11.5px; }
-.live-team-stress.stress-recovery:not(.lead-choice-stress) { color: var(--danger); }
 
 /* Last decision: one row above the stage, opening in place to the full record. */
 .live .operation-feedback-folded { margin: 12px var(--gutter) 4px; }
@@ -91,9 +106,9 @@
 @media (prefers-reduced-motion: reduce) { .live .threat-pill-bar i { transition: none; } }
 /* A gauge that fills (FillGauge), in the threat pill's family: label, a bar that fills with a tick at
  * each cue, a state word, and the line naming what it now does. */
-.live .fill-gauge { display: flex; flex-direction: column; gap: 5px; margin: 4px 0 2px; padding: 6px 10px; min-height: 36px; border: 1px solid rgba(243, 180, 50, 0.5); border-radius: 8px; background: linear-gradient(90deg, rgba(243, 180, 50, 0.18), rgba(243, 180, 50, 0.06)); color: #ffe9bd; font: 600 15px/1.25 var(--font-cond); letter-spacing: 0.02em; }
+.live .fill-gauge { display: grid; grid-template-columns: minmax(0, auto) minmax(64px, 1fr); align-items: center; column-gap: 10px; row-gap: 3px; margin: 2px 0 0; padding: 4px 10px; min-height: 30px; border: 1px solid rgba(243, 180, 50, 0.5); border-radius: 8px; background: linear-gradient(90deg, rgba(243, 180, 50, 0.18), rgba(243, 180, 50, 0.06)); color: #ffe9bd; font: 600 15px/1.25 var(--font-cond); letter-spacing: 0.02em; }
 .live .fill-gauge-stopped { border-color: rgba(63, 208, 142, 0.5); background: linear-gradient(90deg, rgba(63, 208, 142, 0.16), rgba(63, 208, 142, 0.05)); color: #cdf5e1; }
-.live .fill-gauge-head { display: flex; align-items: center; gap: 7px; margin: 0; }
+.live .fill-gauge-head { display: flex; align-items: center; gap: 6px; margin: 0; min-width: 0; font-size: 14px; }
 .live .fill-gauge-head .icon { flex: 0 0 auto; color: var(--amber); }
 .live .fill-gauge-label { flex: 1 1 auto; white-space: normal; }
 .live .fill-gauge-state { flex: 0 0 auto; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; }
@@ -102,7 +117,22 @@
 .live .fill-gauge-stopped .fill-gauge-bar i { background: var(--mint); }
 .live .fill-gauge-tick { position: absolute; top: -3px; width: 2px; height: 14px; margin-left: -1px; border-radius: 1px; background: rgba(255, 255, 255, 0.45); }
 .live .fill-gauge-heard { background: #fff; box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4); }
-.live .fill-gauge-effect { margin: 0; font: 500 14px/1.3 var(--font-ui); letter-spacing: 0; color: var(--text); }
+.live .fill-gauge-effect { grid-column: 1 / -1; margin: 0; font: 500 12.5px/1.3 var(--font-ui); letter-spacing: 0; color: var(--text); }
 @media (prefers-reduced-motion: reduce) { .live .fill-gauge-bar i { transition: none; } }
 .callbtn-gauge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border: 1px solid rgba(243, 180, 50, 0.5); border-radius: 999px; background: rgba(243, 180, 50, 0.12); color: #ffe9bd; font: 600 13px/1.15 var(--font-cond); letter-spacing: 0.02em; }
 .callbtn-gauge .icon { color: var(--amber); }
+/* The review sheet's map: where this choice happens, at a glance (the scene's map has scrolled away). */
+.app .action-sheet-map { container-type: inline-size; position: relative; margin: 0 0 10px; overflow: hidden; border-radius: 8px; background: var(--paper-deep); }
+.app .action-sheet-map > .bp-root { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: auto clamp(130px, 40vw, 180px) auto auto; height: auto; aspect-ratio: auto !important; }
+.app .action-sheet-map .bp-root > .bp-canvas { position: relative; inset: auto; grid-area: 2 / 1 / 3 / -1; min-width: 0; min-height: 0; }
+.app .action-sheet-map .bp-floor-controls { position: static; grid-area: 1 / 1 / 2 / -1; }
+.app .action-sheet-map .bp-zoomctl, .app .action-sheet-map .bp-nav-help, .app .action-sheet-map .bp-key { display: none; }
+/* Short screens: the strip keeps every pressure but gives back height (dots without labels, slim rows). */
+@media (max-height: 700px) {
+  .live .live-strip { gap: 2px; padding-bottom: 4px; }
+  .live .live-strip .step-label { display: none; }
+  .live .threat-pill { min-height: 28px; padding: 3px 8px; font-size: 13.5px; }
+  .live .threat-pill-min { font-size: 14px; }
+  .live .fill-gauge { min-height: 24px; padding: 2px 8px; }
+  .live .fill-gauge-head { font-size: 13px; }
+}
