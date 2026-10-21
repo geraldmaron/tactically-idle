@@ -5,6 +5,7 @@ import { CampaignSlots } from '../sim/campaign-slots';
 import { withSaveLock } from '../sim/save-lock';
 import { createSaveEnvironment } from './save-environment';
 import { initializeQaCampaign } from './qa-campaign';
+import { readSettings, subscribeSettings } from './settings/prefs';
 
 // Single game store. All mutations go through sim/game.dispatch as transactions.
 
@@ -28,6 +29,10 @@ if (environment.temporary && typeof window !== 'undefined' && window.parent !== 
   if (initialized && !initialized.ok) campaigns.reportStorageIssue(initialized.reason);
 }
 if (!locks && !isResponsivePreview) campaigns.reportStorageIssue('Safe local saving is unavailable in this browser. You can read or export existing saves; use a current browser to save progress.');
+// The themes the player keeps off the board go to every settlement and every new game
+// (sim/incidents.ts ContentExclusion); changing them clears the cards that no longer fit.
+const syncExclusion = () => { campaigns.exclusion = { avoid: readSettings().avoidThemes }; };
+syncExclusion();
 let pendingSave: Promise<unknown> = Promise.resolve();
 function serialized<T>(action: () => T): Promise<T> {
   const result = pendingSave.then(() => withSaveLock(locks, action));
@@ -106,6 +111,8 @@ export function useCampaigns() {
 
 if (typeof window !== 'undefined') {
   if (campaigns.getSnapshot().activeSlotId) void serialized(() => { campaigns.save(Date.now()); notify(); }).catch(lockFailure);
+  send({ type: 'tick' });
+  subscribeSettings(() => { syncExclusion(); send({ type: 'tick' }); });
   window.setInterval(() => send({ type: 'tick' }), TICK_MS);
   window.addEventListener('beforeunload', (event) => {
     if (campaigns.getSnapshot().dirty) { event.preventDefault(); event.returnValue = ''; }

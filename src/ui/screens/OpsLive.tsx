@@ -48,6 +48,13 @@ export function OpsLive() {
 
   // One selector block for the game and the Scenario Lab (live-model.ts).
   // The stall so far (docs/call-pressure.md): the cards show it and the commit charges what they showed.
+  // The threat's bar drains with the stall, so the screen reads the clock once a second while a
+  // decision is open (the store's own tick is every five).
+  const [, setSecond] = useState(0);
+  useEffect(() => {
+    const timer = window.setInterval(() => setSecond((n) => n + 1), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
   const dither = liveDither(g, now);
   const screen = liveScreen(g, now, { focusId, selection, override, floor, activeOfficer, selectedSpaceId: selSpace, lastChange, showRooms, detailsOpen: panel === 'action', dither });
   const decisions = decisionViews(g);
@@ -137,6 +144,7 @@ export function OpsLive() {
   return (
     <LiveView
       {...model}
+      dither={dither}
       sirens={hot}
       beat={beat}
       onContinue={() => {

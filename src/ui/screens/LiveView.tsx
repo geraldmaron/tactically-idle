@@ -57,6 +57,8 @@ export interface LiveViewProps {
   /** e.g. 'RESIDENTIAL / OP 0141' */
   subtitle: string;
   progress: StageProgress;
+  /** The open decision's stall in game minutes; the threat pill's bar drains by it. */
+  dither?: number;
   built: BuiltLocation;
   spaces: SpaceView[];
   squadTasks: SquadTask[];
@@ -185,7 +187,7 @@ export function LiveView(p: LiveViewProps) {
       </header>
       <div className="live-bar">
         <StageSteps progress={p.progress} />
-        {threat && <ThreatPill label={threat.label} minutes={threat.minutes} />}
+        {threat && <ThreatPill label={threat.label} minutes={threat.minutes} dither={p.dither} />}
         <div className="live-switch" role="tablist" aria-label="Live call">
           {([['call', 'Call', 'flag'], ['scene', 'Scene', 'blueprint']] as const).map(([id, label, icon]) => (
             <button key={id} type="button" role="tab" id={`live-tab-${id}`} aria-controls={`live-panel-${id}`} aria-selected={tab === id} className={`live-switch-btn${tab === id ? ' live-switch-on' : ''}`} onClick={() => show(id)}>
@@ -336,14 +338,22 @@ export function LiveView(p: LiveViewProps) {
 }
 
 /** The decision point's threat, pinned under the call bar while the player decides: "<label> · <n>
- * min". The minutes are what a choice may take before it lands; each card's tag says whether it
- * would. Still, never animated: nothing changes until the player chooses. */
-export function ThreatPill({ label, minutes }: { label: string; minutes: number }) {
-  return <p className="threat-pill" aria-label={`Threat: ${label} in ${minutes} minutes`}>
+ * min", over a bar. `minutes` is what the threat allows; `dither` is the stall so far
+ * (docs/call-pressure.md), so the minutes left are `minutes - dither` and the bar and the text show
+ * the same number. An empty bar means the threat lands on any choice. The bar only changes width
+ * when the stall moves, and never animates under reduced motion. */
+export function ThreatPill({ label, minutes, dither = 0 }: { label: string; minutes: number; dither?: number }) {
+  const left = Math.max(0, minutes - Math.max(0, dither));
+  const shown = Math.ceil(left);
+  const share = minutes > 0 ? Math.max(0, Math.min(1, left / minutes)) : 0;
+  return <p className="threat-pill" aria-label={`Threat: ${label} in ${shown} ${shown === 1 ? 'minute' : 'minutes'}`}>
     <Icon name="hourglass" size={14} />
     <span className="threat-pill-label">{label}</span>
     <span className="threat-pill-sep" aria-hidden="true">·</span>
-    <b className="threat-pill-min">{minutes} min</b>
+    <b className="threat-pill-min">{shown} min</b>
+    <span className="threat-pill-bar" role="meter" aria-label="Minutes left before the threat lands" aria-valuemin={0} aria-valuemax={minutes} aria-valuenow={shown} aria-valuetext={`${shown} of ${minutes} minutes`}>
+      <i style={{ width: `${Math.round(share * 100)}%` }} />
+    </span>
   </p>;
 }
 

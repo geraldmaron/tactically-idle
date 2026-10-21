@@ -25,16 +25,14 @@ export async function playLiveCalls(page, { baseURL = 'http://127.0.0.1:5174', w
     if (locator) { await locator.scrollIntoViewIfNeeded(); await locator.screenshot({ path: `${captureDir}/${name}-${width}.png` }); }
     else await page.screenshot({ path: `${captureDir}/${name}-${width}.png` });
   };
-  // A fresh browser opens on the launch advisory. Continue stays off until the player ticks that they
-  // read it; the player keeps the default settings.
+  // A fresh browser opens on the launch advisory; the player keeps the default settings and continues.
   const firstRun = page.locator('.first-run');
   await firstRun.waitFor();
-  assert.match(await firstRun.innerText(), /not an age check/);
+  assert.match(await firstRun.innerText(), /We don.t check your age/);
   await overflow('launch advisory');
   await capture('first-run');
   const proceed = firstRun.getByRole('button', { name: 'Continue to headquarters', exact: true });
-  assert.equal(await proceed.isDisabled(), true, 'continue waits for the acknowledgement');
-  await firstRun.getByText('I have read this', { exact: true }).click();
+  assert.equal(await proceed.isEnabled(), true, 'the advisory has one Continue button');
   await proceed.click();
   await page.locator('nav').waitFor();
   const results = [];

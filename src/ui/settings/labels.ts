@@ -7,19 +7,51 @@ import type { ContentDescriptor } from '../../content/content-descriptors';
 import type { TimerSetting } from '../../sim/timer-setting';
 import type { CardWarningSetting } from './prefs';
 
-/** The themes a player can keep off the board. Switch to `AVOIDABLE_THEMES` from
- * src/content/content-descriptors.ts once the descriptors branch lands; this copy stands in until then. */
-export const AVOIDABLE_THEMES = ['suicide_self_harm', 'child_at_risk', 'domestic_violence'] as const satisfies readonly ContentDescriptor[];
-export type AvoidableTheme = (typeof AVOIDABLE_THEMES)[number];
+/** The order themes appear in on the card and in the avoid list: the sensitive themes first, then
+ * what runs through most calls. */
+export const THEME_ORDER: readonly ContentDescriptor[] = ['suicide_self_harm', 'child_at_risk', 'domestic_violence', 'death', 'police_gunfire', 'injury'];
 
-export const THEME_LABELS: Readonly<Record<AvoidableTheme, { name: string; detail: string }>> = {
+export const THEME_LABELS: Readonly<Record<ContentDescriptor, { name: string; detail: string }>> = {
   suicide_self_harm: { name: 'Suicide and self-harm', detail: 'A person on scene is at risk of hurting themselves.' },
-  child_at_risk: { name: 'A child at risk', detail: 'A child is inside or in danger.' },
+  child_at_risk: { name: 'A child in danger', detail: 'A child is inside or in danger.' },
   domestic_violence: { name: 'Domestic violence', detail: 'Harm between partners or family members drives the call.' },
+  death: { name: 'Death', detail: 'Someone can die on the call.' },
+  police_gunfire: { name: 'Police gunfire', detail: 'Your team can open fire.' },
+  injury: { name: 'Injury', detail: 'An officer or a civilian can be hurt.' },
 };
 
+/** The themes a call card names, in plain words, for every descriptor. Never plot. Owner approved
+ * the wording 2026-10-20 (docs/calls/notes/content-warnings-draft.md). */
+export const CARD_THEME_WORDS: Readonly<Record<ContentDescriptor, string>> = {
+  death: 'death',
+  suicide_self_harm: 'suicide risk',
+  injury: 'injury',
+  police_gunfire: 'police gunfire',
+  child_at_risk: 'a child in danger',
+  domestic_violence: 'domestic violence',
+};
+
+/** The call card's warning line and the reassurance under it. The line is "Involves A, B and C.",
+ * no serial comma. */
+export const CARD_WARNING_TEXT = {
+  involves: 'Involves',
+  leaveIt: 'No penalty for skipping this call.',
+} as const;
+
+/** Why a switch can't be turned on: the board would be left with no call to draw. */
+export function reasonText(descriptor: ContentDescriptor, alone: boolean): string {
+  return alone
+    ? `Every call can involve ${CARD_THEME_WORDS[descriptor]}, so turning this off would leave no calls.`
+    : 'With your other choices, turning this off would leave no calls.';
+}
+
+/** "A", "A and B", "A, B and C". */
+export function joinThemes(words: readonly string[]): string {
+  return words.length < 2 ? words.join('') : `${words.slice(0, -1).join(', ')} and ${words[words.length - 1]}`;
+}
+
 /** What the game contains, named plainly on the launch advisory. */
-export const ADVISORY_THEMES = ['Police use of force', 'Death', 'Injury', 'Suicide risk', 'Children in danger', 'Domestic violence'] as const;
+export const ADVISORY_THEMES = ['Suicide risk', 'Children in danger', 'Domestic violence', 'Death', 'Police use of force, including gunfire', 'Injury'] as const;
 
 export const WARNING_LABELS: Readonly<Record<CardWarningSetting, { name: string; detail: string }>> = {
   all: { name: 'Warn me', detail: 'Each call card names the themes it involves before you accept it. It never says what happens.' },
@@ -35,34 +67,38 @@ export const TIMER_LABELS: Readonly<Record<TimerSetting, { name: string; detail:
 export const SETTINGS_TEXT = {
   advisoryKicker: 'Before your first shift',
   advisoryTitle: 'What this game shows',
-  advisoryIntro: 'You run a police tactical team. Its calls deal with these themes.',
-  leaveCalls: 'You can always leave a call on the board. Calls you don\'t take end on their own and cost you nothing.',
-  notAgeCheck: 'The choices below are your own preferences. They are not an age check, and nothing here is verified.',
-  acknowledge: 'I have read this',
-  acknowledgeHint: 'Tick the box above to continue.',
+  advisoryIntro: 'You run a police tactical team. Its calls include these themes.',
+  leaveCalls: 'You can leave any call on the board. Calls expire without a penalty.',
+  notAgeCheck: 'These settings are your preferences. We don\'t check your age.',
   continue: 'Continue to headquarters',
-  changeLater: 'You can change these later in Settings, from the saves button at the top of the screen. Settings also lists where to find support.',
+  changeLater: 'You can change these later in Settings, from the saves button at the top of the screen. Settings also has a Support entry.',
   settingsTitle: 'Settings',
   settingsSubtitle: 'Kept in this browser, apart from your saves',
   openSettings: 'Settings',
   avoidHeading: 'Avoid these themes',
-  avoidHint: 'Calls built around a theme you switch on here stay off your board.',
+  avoidHint: 'Calls with a theme you switch on here stay off your board.',
   warningsHeading: 'Call card warnings',
   timerHeading: 'Call timer',
   timerHint: 'How fast time on the call moves while a decision waits on you.',
 } as const;
 
-/** DRAFT for owner approval: support details shown in Settings at all times. */
+/** Support details, shown in Settings at all times and as the debrief line on any situation with
+ * suicide or self-harm. 988 wording checked at 988lifeline.org on 2026-10-20; owner approved the
+ * strings and the word "suicide" on these surfaces. */
 export const SUPPORT_TEXT = {
   heading: 'Support',
-  us: 'If a call brings up something hard, or you are thinking about suicide, the 988 Suicide and Crisis Lifeline is there in the US. Call or text 988.',
-  elsewhere: 'Outside the US, contact your local emergency services or a crisis line where you live.',
+  lead: 'If a call brings something up for you, or you\'re thinking about suicide, you can talk to someone.',
+  us: 'In the US, call or text 988 to reach the 988 Suicide & Crisis Lifeline. It\'s free and confidential, at any hour.',
+  elsewhere: 'Outside the US, contact a crisis line where you live. If you\'re in immediate danger, contact local emergency services.',
   call: 'Call 988',
   text: 'Text 988',
+  chat: 'Chat online',
+  chatUrl: 'https://chat.988lifeline.org',
+  debrief: 'If this call brought something up for you, you can call or text 988 in the US, at any hour. Outside the US, contact a local crisis line. If you\'re in immediate danger, contact local emergency services.',
 } as const;
 
 /** One line summing up the settings, for the button that opens them. */
-export function settingsSummary(s: { avoidThemes: readonly AvoidableTheme[]; cardWarnings: CardWarningSetting; timer: TimerSetting }): string {
+export function settingsSummary(s: { avoidThemes: readonly ContentDescriptor[]; cardWarnings: CardWarningSetting; timer: TimerSetting }): string {
   const n = s.avoidThemes.length;
   return [n ? `${n} ${n === 1 ? 'theme' : 'themes'} avoided` : null, s.cardWarnings === 'all' ? 'Warnings on' : 'Warnings off', `Timer ${TIMER_LABELS[s.timer].name.toLowerCase()}`]
     .filter(Boolean).join(' · ');

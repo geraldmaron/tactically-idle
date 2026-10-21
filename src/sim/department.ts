@@ -8,7 +8,7 @@ import { fillCandidates, ROSTER_HANDLERS } from './roster';
 import { RECRUIT_TUNING } from '../content/recruits';
 import { CURRENT_SAVE_VERSION } from './save';
 import { createPersonnel } from './personnel';
-import { INCIDENT_HANDLERS, seedIncidentBoard } from './incidents';
+import { INCIDENT_HANDLERS, dropExcludedCards, seedIncidentBoard, type ContentExclusion } from './incidents';
 import { setMaintenanceBudget } from './equipment-manager';
 import { START_LEVEL } from './department-level';
 import { INCIDENT_CONTENT_VERSION } from '../gen/incident';
@@ -57,7 +57,8 @@ function setRestockRule(d: GameState, rule: { itemId: Id; target: number; budget
 
 export const DEPARTMENT_HANDLERS: HandlerMap<DepartmentCommandType> = {
   tick: (d, _cmd, ctx) => {
-    settle(d, ctx.now);
+    if (ctx.exclusion) dropExcludedCards(d, ctx.exclusion);
+    settle(d, ctx.now, ctx.exclusion);
     return { ok: true };
   },
   acknowledgeReport: (d) => {
@@ -95,7 +96,7 @@ export const DEPARTMENT_HANDLERS: HandlerMap<DepartmentCommandType> = {
   refreshStaffPool: (d, c) => COMMAND_STAFF_HANDLERS.refreshStaffPool(d, c.managerId),
 };
 
-export function createInitialState(now: number, campaignSeed = 12345): GameState {
+export function createInitialState(now: number, campaignSeed = 12345, exclusion?: ContentExclusion): GameState {
   const officers = startingOfficers(now, campaignSeed);
   const state: GameState = {
     saveVersion: CURRENT_SAVE_VERSION,
@@ -139,7 +140,7 @@ export function createInitialState(now: number, campaignSeed = 12345): GameState
   // Three generated incidents are waiting from the first minute (the authored Maple Street
   // scenarios stay available alongside them). Seeded after the candidates so the starting
   // recruit pool is unchanged.
-  seedIncidentBoard(state, now);
+  seedIncidentBoard(state, now, undefined, exclusion);
   // The first free candidate search is available immediately.
   (state.department as { candidateRefreshedAt?: number }).candidateRefreshedAt = now - RECRUIT_TUNING.refreshCooldownMs;
   return state;

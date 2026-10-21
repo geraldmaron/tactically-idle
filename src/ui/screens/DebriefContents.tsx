@@ -1,6 +1,7 @@
 // The debrief's contents (moved from OpsDebrief): the hero, the result, the people, the score and
 // the review, including "What was really there", the one place truth is shown. Rendered from props
 // alone so the Scenario Lab shows the player's real debrief. Store-free.
+import { DebriefSupport } from '../settings/DebriefSupport';
 import type { JSX, ReactNode } from 'react';
 import { useMemo } from 'react';
 import { builtForScenario } from '../../sim/operation-selectors';
@@ -66,6 +67,7 @@ export function DebriefContents({ result: d, officers, scenario, reality = true,
       {epilogue && <p className="debrief-epilogue"><PeopleText text={epilogue} /></p>}
       {heroAction}
     </div>
+    <DebriefSupport scenarioId={d.scenarioId} />
     <DebriefSummary debrief={d} />
     <DebriefScore debrief={d} />
     <PersonCasualtyList casualties={(d.personCasualties ?? []).filter((person) => !(d.civilianOutcomes ?? []).some((civilian) => civilian.id === person.personId))} />

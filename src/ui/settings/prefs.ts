@@ -1,5 +1,5 @@
 // The player's settings (docs/content-rating.md "First run and settings", docs/call-pressure.md
-// "Settings"; owner redesign 2026-10-20 after Xbox Accessibility Guideline 123): the themes to keep
+// "Settings"; owner redesign 2026-10-20 after Xbox Accessibility Guideline 123): the descriptors to keep
 // off the board, whether call cards carry theme warnings, and the call timer. Kept in localStorage
 // outside the versioned save, so they survive a save rejected on a version bump, and read and
 // written in try/catch like src/ui/people/prefs.ts. When storage refuses the write (a sandboxed
@@ -7,7 +7,8 @@
 // Pure: no React, no store. The plain read functions at the bottom are what the engine wiring calls.
 
 import { DEFAULT_TIMER_SETTING, TIMER_SETTINGS, type TimerSetting } from '../../sim/timer-setting';
-import { AVOIDABLE_THEMES, type AvoidableTheme } from './labels';
+import type { ContentDescriptor } from '../../content/content-descriptors';
+import { sanitizeAvoid } from './avoidable';
 
 export const SETTINGS_KEY = 'ti-settings';
 
@@ -16,8 +17,8 @@ export const CARD_WARNING_SETTINGS = ['all', 'none'] as const;
 export type CardWarningSetting = (typeof CARD_WARNING_SETTINGS)[number];
 
 export interface PlayerSettings {
-  /** Themes kept off the board. Only the avoidable ones; the rest are warnings only. */
-  avoidThemes: AvoidableTheme[];
+  /** Descriptors kept off the board: any set that leaves a kind of call to draw. */
+  avoidThemes: ContentDescriptor[];
   cardWarnings: CardWarningSetting;
   timer: TimerSetting;
   /** Set once the player has read the launch advisory and continued. */
@@ -47,9 +48,8 @@ export function parseSettings(raw: string | null): PlayerSettings {
     const parsed: unknown = raw ? JSON.parse(raw) : null;
     if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) data = parsed as Record<string, unknown>;
   } catch { /* unreadable: defaults */ }
-  const avoid = data.avoidThemes;
   return {
-    avoidThemes: Array.isArray(avoid) ? AVOIDABLE_THEMES.filter((t) => avoid.includes(t)) : [],
+    avoidThemes: sanitizeAvoid(data.avoidThemes),
     cardWarnings: pick(CARD_WARNING_SETTINGS, data.cardWarnings, DEFAULT_SETTINGS.cardWarnings),
     timer: pick(TIMER_SETTINGS, data.timer, DEFAULT_SETTINGS.timer),
     firstRunDone: data.firstRunDone === true,
@@ -94,7 +94,7 @@ export function resetSettingsMemory(): void {
 // Plain reads for the engine wiring (board filtering, call card warnings, dither).
 
 /** The themes the board leaves out. */
-export const avoidedThemes = (): readonly AvoidableTheme[] => readSettings().avoidThemes;
+export const avoidedThemes = (): readonly ContentDescriptor[] => readSettings().avoidThemes;
 export const cardWarningsOn = (): boolean => readSettings().cardWarnings === 'all';
 export const timerSetting = (): TimerSetting => readSettings().timer;
 export const firstRunDone = (): boolean => readSettings().firstRunDone;

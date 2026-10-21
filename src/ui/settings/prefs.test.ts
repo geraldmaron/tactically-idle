@@ -53,11 +53,19 @@ describe('player settings', () => {
     expect(listener).toHaveBeenCalledOnce();
   });
 
-  it('falls back field by field on unknown or broken stored values, and only avoids avoidable themes', () => {
+  it('falls back field by field on unknown or broken stored values, and drops a descriptor that would leave no calls', () => {
     expect(parseSettings('not json')).toEqual(DEFAULT_SETTINGS);
     expect(parseSettings('[1,2]')).toEqual(DEFAULT_SETTINGS);
-    expect(parseSettings(JSON.stringify({ tier: 'core', avoidThemes: ['death', 'injury', 'child_at_risk', 7], cardWarnings: 'flagged', timer: 'standard', firstRunDone: 'yes' })))
-      .toEqual({ ...DEFAULT_SETTINGS, avoidThemes: ['child_at_risk'], timer: 'standard' });
+    expect(parseSettings(JSON.stringify({ tier: 'core', avoidThemes: ['death', 'gore', 'child_at_risk', 7], cardWarnings: 'flagged', timer: 'standard', firstRunDone: 'yes' })))
+      .toEqual({ ...DEFAULT_SETTINGS, avoidThemes: ['death', 'child_at_risk'], timer: 'standard' });
+    // A stored set that would leave no calls is cleaned up, not trusted.
+    expect(parseSettings(JSON.stringify({ avoidThemes: ['injury'] })).avoidThemes).toEqual([]);
+  });
+
+  it('refuses to save a switch that would leave no calls', () => {
+    install(fakeStorage());
+    updateSettings({ avoidThemes: ['injury', 'death'] });
+    expect(avoidedThemes()).toEqual(['death']);
   });
 
   it('keeps the choice in memory when storage refuses, and starts from defaults when it cannot read', () => {
