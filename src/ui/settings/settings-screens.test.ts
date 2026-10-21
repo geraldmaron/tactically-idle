@@ -6,16 +6,16 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 import { AVOIDABLE_THEMES, CONTENT_DESCRIPTORS } from '../../content/content-descriptors';
 import { FirstRun } from './FirstRun';
-import { ADVISORY_THEMES, SETTINGS_TEXT, SUPPORT_TEXT, THEME_LABELS, TIMER_LABELS, WARNING_LABELS, settingsSummary } from './labels';
+import { ADVISORY_THEMES, CARD_THEME_WORDS, CARD_WARNING_TEXT, SETTINGS_TEXT, SUPPORT_TEXT, THEME_LABELS, TIMER_LABELS, WARNING_LABELS, settingsSummary } from './labels';
 import { DEFAULT_SETTINGS } from './prefs';
 import { SettingsControls } from './SettingsControls';
 
 vi.mock('../components/Sheet', () => ({ Sheet: ({ open, title, children }: { open: boolean; title: string; children: unknown }) => open ? createElement('section', { role: 'dialog', 'aria-label': title }, children as never) : null }));
 const { SettingsSheet } = await import('./SettingsSheet');
 
-const text = (html: string) => html.replace(/<[^>]+>/g, ' ').replace(/&#x27;/g, "'").replace(/\s+/g, ' ');
+const text = (html: string) => html.replace(/<[^>]+>/g, ' ').replace(/&#x27;/g, "'").replace(/&amp;/g, '&').replace(/\s+/g, ' ');
 const allLabels = [THEME_LABELS, WARNING_LABELS, TIMER_LABELS].flatMap((group) => Object.values(group).flatMap((l) => [l.name, l.detail]))
-  .concat(Object.values(SETTINGS_TEXT), Object.values(SUPPORT_TEXT), ADVISORY_THEMES);
+  .concat(Object.values(SETTINGS_TEXT), Object.entries(SUPPORT_TEXT).filter(([key]) => key !== 'chatUrl').map(([, text]) => text), ADVISORY_THEMES, Object.values(CARD_THEME_WORDS), Object.values(CARD_WARNING_TEXT));
 
 describe('settings labels', () => {
   it('keep the house rules: no em or en dashes, no spaced hyphens, no colons', () => {
@@ -53,8 +53,15 @@ describe('settings screens', () => {
     expect(html.match(/type="checkbox"/g)).toHaveLength(3);
     expect(html.match(/checked=""/g)).toHaveLength(1);
     for (const theme of AVOIDABLE_THEMES) expect(text(html)).toContain(THEME_LABELS[theme].name);
-    for (const word of ['Death', 'Injury', 'Police gunfire']) expect(text(html)).not.toContain(word);
+    for (const word of ['Death', 'Injury', 'Police gunfire']) expect(html).not.toContain(`<strong>${word}</strong>`);
     for (const l of [...Object.values(WARNING_LABELS), ...Object.values(TIMER_LABELS)]) expect(text(html)).toContain(l.name);
+  });
+
+  it('shows the approved lead, 988 line and chat button in Settings', () => {
+    const html = renderToStaticMarkup(createElement(SettingsSheet, { open: true, onClose: () => {} }));
+    for (const line of [SUPPORT_TEXT.lead, SUPPORT_TEXT.us, SETTINGS_TEXT.avoidMechanics]) expect(text(html)).toContain(line);
+    expect(html).toContain('href="https://chat.988lifeline.org"');
+    expect(text(html)).toContain('Chat online');
   });
 
   it('settings always lead with support, call and text links to 988 and a line for outside the US', () => {

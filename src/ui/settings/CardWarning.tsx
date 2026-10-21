@@ -1,7 +1,7 @@
 import { AVOIDABLE_THEMES, type ContentDescriptor } from '../../content/content-descriptors';
 import { callTreeAt } from '../../content/call-trees';
 import { parseIncidentId } from '../../gen/incident';
-import { CARD_THEME_WORDS, CARD_WARNING_TEXT } from './labels';
+import { CARD_THEME_WORDS, CARD_WARNING_TEXT, joinThemes } from './labels';
 import { useSettings } from './SettingsControls';
 
 /** The order a card names themes in: the avoidable ones first, then the rest. */
@@ -18,13 +18,14 @@ export function cardDescriptors(cardId: string): ContentDescriptor[] {
   return CARD_ORDER.filter((d) => all.has(d));
 }
 
-/** The call card's warning: the themes the call can involve in plain words, then a line saying the
- * call can be left alone. Shown when the player keeps warnings on. */
+/** The call card's warning: one line naming the themes the call can involve, then a line saying
+ * skipping it costs nothing. Shown when the player keeps warnings on, and never when the call has no
+ * theme to name. Never clamped. */
 export function CardWarning({ descriptors }: { descriptors: readonly ContentDescriptor[] }) {
   const on = useSettings().cardWarnings === 'all';
-  if (!on) return null;
+  if (!on || descriptors.length === 0) return null;
   return <div className="optile-warning" role="note">
-    {descriptors.length > 0 && <p><strong>{CARD_WARNING_TEXT.involves}</strong> {descriptors.map((d) => CARD_THEME_WORDS[d]).join(', ')}.</p>}
+    <p><strong>{CARD_WARNING_TEXT.involves}</strong> {joinThemes(descriptors.map((d) => CARD_THEME_WORDS[d]))}.</p>
     <p className="dim">{CARD_WARNING_TEXT.leaveIt}</p>
   </div>;
 }

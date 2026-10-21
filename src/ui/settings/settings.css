@@ -184,7 +184,7 @@
 }
 .settings-support-actions {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
   gap: 8px;
 }
 .settings-support-actions .btn {
@@ -243,4 +243,16 @@
 }
 .optile-warning strong {
   color: var(--text);
+}
+
+/* The support line closing the debrief of a call that touched suicide or self-harm. */
+.debrief-support {
+  margin: 0;
+  padding: 10px 12px;
+  border-left: 3px solid var(--mint);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  background: var(--panel);
+  font-size: 15px;
+  line-height: 1.45;
+  color: var(--text-dim);
 }

@@ -14,7 +14,8 @@ import { dispatch } from '../../sim/game';
 import { cardFits, type ContentExclusion } from '../../sim/incidents';
 import { ThreatPill } from '../screens/LiveView';
 import { CardWarning, cardDescriptors } from './CardWarning';
-import { CARD_THEME_WORDS, CARD_WARNING_TEXT } from './labels';
+import { CARD_THEME_WORDS, CARD_WARNING_TEXT, joinThemes } from './labels';
+import { DebriefSupport, debriefNeedsSupport } from './DebriefSupport';
 import { resetSettingsMemory, updateSettings } from './prefs';
 import { timerSetting } from '../timer';
 
@@ -87,7 +88,8 @@ describe('the call card warning', () => {
     const html = renderToStaticMarkup(createElement(CardWarning, { descriptors }));
     expect(html).toContain(CARD_WARNING_TEXT.involves);
     for (const d of descriptors) expect(html).toContain(CARD_THEME_WORDS[d]);
-    expect(html).toContain('cost you nothing');
+    expect(html).toContain(CARD_WARNING_TEXT.leaveIt);
+    expect(html).toContain('No penalty for skipping this call.');
   });
 
   it('is gone when the player turns warnings off, and has no theme line for a call without any', () => {
@@ -111,8 +113,32 @@ describe('the call card warning', () => {
     expect(all).toEqual([...all].sort((a, b) => ORDER.indexOf(a) - ORDER.indexOf(b)));
   });
 
+  it('joins the themes with commas and a last "and", no serial comma, and names a call\'s own set', () => {
+    expect(joinThemes(['death'])).toBe('death');
+    expect(joinThemes(['injury', 'death'])).toBe('injury and death');
+    expect(joinThemes(['a', 'b', 'c'])).toBe('a, b and c');
+    const barricade = cardDescriptors(incidentId({ ...parseIncidentId(stateWithAvoidableCard().incidents.find((c) => c.type === 'barricaded')?.id ?? stateWithAvoidableCard().incidents[0].id)! }));
+    expect(joinThemes(barricade.map((d) => CARD_THEME_WORDS[d]))).toMatch(/^suicide risk/);
+  });
+
+  it('a call with no theme to name shows nothing, not even the leave line', () => {
+    expect(renderToStaticMarkup(createElement(CardWarning, { descriptors: [] }))).toBe('');
+  });
+
   it('an id that is not a generated call has no themes', () => {
     expect(cardDescriptors('maple_street')).toEqual([]);
+  });
+});
+
+describe('the debrief support line', () => {
+  it('shows on a situation with suicide or self-harm, whatever the warning setting, and not on one without', () => {
+    const state = stateWithAvoidableCard();
+    const withIt = state.incidents.find((c) => descriptorsOf(c.id).includes('suicide_self_harm'))!;
+    updateSettings({ cardWarnings: 'none' });
+    expect(debriefNeedsSupport(withIt.id)).toBe(true);
+    expect(renderToStaticMarkup(createElement(DebriefSupport, { scenarioId: withIt.id }))).toContain('call or text 988 in the US');
+    expect(debriefNeedsSupport('maple_street')).toBe(false);
+    expect(renderToStaticMarkup(createElement(DebriefSupport, { scenarioId: 'maple_street' }))).toBe('');
   });
 });
 

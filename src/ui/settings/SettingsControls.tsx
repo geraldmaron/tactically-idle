@@ -28,6 +28,7 @@ export function SettingsControls({ value, onChange }: { value: PlayerSettings; o
           </label>
         </li>)}
       </ul>
+      <p className="settings-hint">{t.avoidMechanics}</p>
     </fieldset>
 
     <fieldset className="settings-group">
@@ -52,10 +53,12 @@ export function SupportPanel() {
   const s = SUPPORT_TEXT;
   return <section className="settings-support" aria-labelledby="settings-support-title">
     <h3 id="settings-support-title" className="settings-heading">{s.heading}</h3>
+    <p>{s.lead}</p>
     <p>{s.us}</p>
     <div className="settings-support-actions">
       <a className="btn btn-secondary btn-md" href="tel:988">{s.call}</a>
       <a className="btn btn-secondary btn-md" href="sms:988">{s.text}</a>
+      <a className="btn btn-secondary btn-md" href={s.chatUrl} target="_blank" rel="noreferrer">{s.chat}</a>
     </div>
     <p>{s.elsewhere}</p>
   </section>;
