@@ -16,7 +16,7 @@ export async function playLiveCalls(page, { baseURL = 'http://127.0.0.1:5174', w
   await page.setViewportSize({ width, height });
   const errors = []; page.on('pageerror', error => errors.push(String(error)));
   page.on('dialog', dialog => dialog.accept());
-  await page.goto(baseURL); await page.locator('nav').waitFor();
+  await page.goto(baseURL);
   const state = () => page.evaluate(() => window.__ti.getState());
   const overflow = async (where) => assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `horizontal overflow: ${where}`);
   const capture = async (name, locator) => {
@@ -25,6 +25,18 @@ export async function playLiveCalls(page, { baseURL = 'http://127.0.0.1:5174', w
     if (locator) { await locator.scrollIntoViewIfNeeded(); await locator.screenshot({ path: `${captureDir}/${name}-${width}.png` }); }
     else await page.screenshot({ path: `${captureDir}/${name}-${width}.png` });
   };
+  // A fresh browser opens on the launch advisory. Continue stays off until the player ticks that they
+  // read it; the player keeps the default settings.
+  const firstRun = page.locator('.first-run');
+  await firstRun.waitFor();
+  assert.match(await firstRun.innerText(), /not an age check/);
+  await overflow('launch advisory');
+  await capture('first-run');
+  const proceed = firstRun.getByRole('button', { name: 'Continue to headquarters', exact: true });
+  assert.equal(await proceed.isDisabled(), true, 'continue waits for the acknowledgement');
+  await firstRun.getByText('I have read this', { exact: true }).click();
+  await proceed.click();
+  await page.locator('nav').waitFor();
   const results = [];
   await page.locator('nav').getByText('Ops', { exact: true }).click();
   const casebook = page.locator('.casebook-card');

@@ -22,10 +22,20 @@ import { WelcomeBack } from './components/WelcomeBack';
 import { GrantToasts } from './components/GrantToasts';
 import { useCampaigns, useGame } from './store';
 import { DepartmentContext } from './components/department-context';
+import { FirstRun } from './settings/FirstRun';
+import { SettingsSheet } from './settings/SettingsSheet';
+import { useSettings } from './settings/SettingsControls';
 
 export function App() {
   const saved = useCampaigns();
-  return <GameShell key={saved.session} />;
+  return <FirstRunGate key={saved.session} />;
+}
+
+/** The first launch asks for the player's settings before the department opens. Keyed by session
+ * in App, so New and Load still remount the shell. */
+function FirstRunGate() {
+  if (!useSettings().firstRunDone) return <div className="stage"><div className="app" style={TEXTURES}><FirstRun /></div></div>;
+  return <GameShell />;
 }
 
 /** The department for store-free components (OfficerCard's aged portraits). Only this provider
@@ -42,6 +52,7 @@ function GameShell() {
   const nav = usePlayerNavigation();
   const { tab } = nav;
   const [savesOpen, setSavesOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [overlay, setOverlay] = useState<HTMLElement | null>(null);
 
   return (
@@ -62,7 +73,8 @@ function GameShell() {
                   {tab === 'gear' && <GearScreen />}
                 </main>
                 <BottomNav />
-                <SaveManager open={savesOpen} onClose={() => setSavesOpen(false)} />
+                <SaveManager open={savesOpen} onClose={() => setSavesOpen(false)} onOpenSettings={() => { setSavesOpen(false); setSettingsOpen(true); }} />
+                <SettingsSheet open={settingsOpen} onClose={() => setSettingsOpen(false)} />
                 <OfficerSheet officerId={nav.officerId} onClose={nav.closeOfficer} />
                 <WelcomeBack />
                 <GrantToasts />
