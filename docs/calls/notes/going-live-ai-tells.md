@@ -82,3 +82,13 @@ The rewriter’s ten rules, in priority order. Afters demonstrate the move, not 
 8. **Count evidence, not choreography.** “walks to the door in six steps” → “walks to the door.”
 9. **Break slogan symmetry.** “No audience, no show, nothing to perform” → “The exit won’t be filmed.”
 10. **Name threatened harm.** “{manager.first} could pay for it” → “If Rider raises the handgun, Manager is in front of it.”
+
+## Second Codex pass, 2026-10-21
+
+Verdict edit. Applied all eleven findings: soft adverse previews on `clip_going.stay_with` and
+`on_air.camera_wall` now name the handgun and the manager; the stream cue at 22 no longer has the
+rider perform for the camera; `way_out.wait_night` and the `news_on` prompt no longer claim a live
+stream that a cut path has ended; `threat.go_dark` and `E.manager_killed` say what happened without
+staging; `threat.go_dark.preview.mixed`, `last_word.let_him_sit.cost`, `last_word.out_back.mixed[2]`
+and `way_out`'s exchange were made plain; the three "gets as far as" results were rewritten. Three
+replacements were reworded again to clear the n-gram and path-echo checks (`check:strings` exits 0).
