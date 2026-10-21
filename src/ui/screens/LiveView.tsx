@@ -41,6 +41,7 @@ import { DecisionList, LeadFace, RATING_SHORT, NOW_LABEL, padDigits } from './De
 import { fillEffectLine, fillMinutesToBite, leadingPressure, liveFillViews, liveStallFeed, pressureUrgency, reachByAction, threatLandingText, landingSubjects, type LandingSubject } from './fill-gauge';
 import { CommsLog, SourceTicker } from './LiveFeed';
 import { CandidateSwitch, SHOW_CANDIDATE_SWITCH } from '../settings/CandidateSwitch';
+import { readSettings } from '../settings/prefs';
 import { STANCE_LABEL } from '../components/IncidentPeople';
 import type { FillView } from '../../sim/clocks';
 import type { CheckKind } from '../../sim/scenario-types';
@@ -170,6 +171,13 @@ export function LiveView(p: LiveViewProps) {
   // 2026-10-21: the crowd and the stream count live beside the drain, not one pressure at a time).
   const fills = liveFillViews(p.g, p.dither ?? 0);
   const pressure = leadingPressure(threat, p.dither ?? 0, []);
+  // A hot call's lights sweep across the strip and the top of the scene, red then blue, as hard as
+  // the pressure biting hardest: the threat's drain or a source filling (owner, 2026-10-21: stress in
+  // the decision). Off with the Flashing lights setting; still under reduced motion (live-call.css).
+  const washLevel = p.sirens && readSettings().flashing ? strongest([
+    ...(pressure?.kind === 'threat' ? [pressureUrgency(pressure)] : []),
+    ...fills.map((view) => pressureUrgency({ kind: 'fill', view, left: fillMinutesToBite(view) })),
+  ]) : null;
   const comms = beat === 'decide' ? liveStallFeed(p.g, p.dither ?? 0) : [];
   const landed = pressure?.kind === 'threat' && pressure.left <= 0 ? threatLandingText(p.g) : null;
   const subjects = landed ? landingSubjects(p.g, p.dither ?? 0) : [];
@@ -252,6 +260,7 @@ export function LiveView(p: LiveViewProps) {
         {SHOW_CANDIDATE_SWITCH && <CandidateSwitch />}
       </header>
       <div className="live-bar live-strip">
+        {washLevel && <span className={`live-wash live-wash-${washLevel}`} aria-hidden="true"><i /><i /></span>}
         <StageSteps progress={p.progress} />
         {pressure?.kind === 'threat' && <ThreatPill label={pressure.label} minutes={pressure.minutes} dither={p.dither} />}
         {fills.length > 0 && <div className="live-sources">
@@ -400,6 +409,12 @@ export function ThreatLanded({ text, subjects }: { text: string; subjects: reado
 const CHECK_WORDS: Record<CheckKind, string> = {
   contact: 'talking', observation: 'watching', execution: 'moving in', pressure: 'keeping calm', medical: 'medical work', coordination: 'working together',
 };
+
+const URGENCY_ORDER = ['calm', 'warn', 'critical'] as const;
+/** The most urgent of the pressures on screen; calm with none. */
+function strongest(levels: readonly (typeof URGENCY_ORDER)[number][]): (typeof URGENCY_ORDER)[number] {
+  return levels.reduce<(typeof URGENCY_ORDER)[number]>((best, next) => URGENCY_ORDER.indexOf(next) > URGENCY_ORDER.indexOf(best) ? next : best, 'calm');
+}
 
 /** What a pressure source does to the odds, in words, for its ticker: the checks it makes harder once
  * its first cue is heard ("Talking, keeping calm and working together are harder"), or null while it

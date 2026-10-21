@@ -16,7 +16,7 @@ syntax tree (`src/dev/import-graph.ts`, with the parser Vite ships), and a dynam
 | scenario | 10 | 3060 | kernel, world, catalog | Turns a drawn call into a playable definition: cast, placement on the blueprint, compiled tree. |
 | engine | 67 | 14769 | kernel, world, catalog, scenario | Game rules and state: department, economy, operations, resolution, outcomes, saves. |
 | qa | 38 | 6008 | kernel, world, catalog, scenario, engine | Content gates, balance measurement, fixtures and test support. Never loaded by the game. |
-| ui | 132 | 18067 | kernel, world, catalog, scenario, engine | Player screens, the blueprint renderer, portraits and the store that dispatches commands. |
+| ui | 132 | 18099 | kernel, world, catalog, scenario, engine | Player screens, the blueprint renderer, portraits and the store that dispatches commands. |
 | lab | 101 | 17649 | kernel, world, catalog, scenario, engine, qa, ui | The dev-only Scenario Lab and dev sheets. Reads everything, never ships. |
 | shell | 3 | 375 | kernel, world, catalog, engine, ui, lab | Entry points that choose which app to mount. |
 
@@ -30,7 +30,7 @@ syntax tree (`src/dev/import-graph.ts`, with the parser Vite ships), and a dynam
 | item | 7 | 1408 | What they carry: the item catalog, ratings and capabilities, force risk, inventory and wear. |
 | scenario | 67 | 14559 | What happens: call trees, placement on the blueprint, choices, chance per choice, branches and clocks, and the call-time logistics (loadouts, resupply, outside support) that read the items. |
 | metric | 29 | 5018 | What it meant: outcome scoring, harm, debriefs, department reputation, money and progression, and the Command Staff who run the department. |
-| platform | 227 | 36183 | Everything that serves the systems above: records, randomness, saves, the store, screens and tooling. |
+| platform | 227 | 36215 | Everything that serves the systems above: records, randomness, saves, the store, screens and tooling. |
 
 ## System dependency chain
 

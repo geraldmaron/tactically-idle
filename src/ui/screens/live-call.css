@@ -29,6 +29,29 @@
   .live-lightbar i:first-child { background: #ff3b30; }
   .live-lightbar i:last-child { background: #3b7bff; }
 }
+/* The light wash (owner, 2026-10-21): on a hot call the lights run as a sequence across the pinned
+ * strip and fade into the top of the scene, so the decision is made under them. A soft red band
+ * sweeps left to right, then a blue one right to left; a cycle is one red and one blue pass, so any
+ * point sees two gradual flashes a cycle, at most 1.25 a second at critical (WCAG 2.3.1 allows 3),
+ * and the bands are soft gradients at low strength, never a full-screen change. The level follows
+ * the pressure biting hardest (LiveView washLevel). Off with the Flashing lights setting; under
+ * reduced motion the lights hold still as a faint red and blue edge. */
+.live .live-strip { overflow: visible; }
+.live-wash { position: absolute; left: 0; right: 0; top: 0; bottom: -140px; z-index: 2; overflow: hidden; pointer-events: none; mix-blend-mode: screen;
+  -webkit-mask-image: linear-gradient(180deg, #000 55%, transparent); mask-image: linear-gradient(180deg, #000 55%, transparent); }
+.live-wash i { position: absolute; top: -10%; bottom: -10%; left: 0; width: 75%; opacity: 0; will-change: transform, opacity; }
+.live-wash i:first-child { background: radial-gradient(ellipse 50% 60% at 50% 40%, rgba(255, 59, 48, 1), rgba(255, 59, 48, 0)); animation: wash-red var(--wash-cycle, 2.4s) ease-in-out infinite; }
+.live-wash i:last-child { background: radial-gradient(ellipse 50% 60% at 50% 40%, rgba(90, 150, 255, 1), rgba(90, 150, 255, 0)); animation: wash-blue var(--wash-cycle, 2.4s) ease-in-out infinite; }
+.live-wash-calm { --wash-cycle: 2.4s; --wash-peak: 0.26; }
+.live-wash-warn { --wash-cycle: 2s; --wash-peak: 0.38; }
+.live-wash-critical { --wash-cycle: 1.6s; --wash-peak: 0.5; }
+@keyframes wash-red { 0% { transform: translateX(-90%); opacity: 0; } 10% { opacity: var(--wash-peak, 0.2); } 42% { opacity: var(--wash-peak, 0.2); } 50%, 100% { transform: translateX(150%); opacity: 0; } }
+@keyframes wash-blue { 0%, 50% { transform: translateX(150%); opacity: 0; } 60% { opacity: var(--wash-peak, 0.2); } 92% { opacity: var(--wash-peak, 0.2); } 100% { transform: translateX(-90%); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .live-wash i { animation: none !important; opacity: 0.1; }
+  .live-wash i:first-child { transform: translateX(-45%); }
+  .live-wash i:last-child { transform: translateX(70%); }
+}
 .live .live-status { display: flex; flex: 0 0 auto; flex-direction: column; align-items: flex-end; gap: 3px; }
 .live .live-status .hud-pill { padding: 2px 8px; font-size: 12px; }
 .live .steps { padding: 2px 2px 0; }

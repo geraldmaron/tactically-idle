@@ -23,6 +23,9 @@ export interface PlayerSettings {
   timer: TimerSetting;
   /** Live call sound and vibration (owner 2026-10-21: on by default, with a mute). */
   sound: boolean;
+  /** The red and blue light sweep across the top of a hot call (live-call.css .live-wash). On by
+   * default and offered at first run; off holds the lights still (photosensitivity). */
+  flashing: boolean;
   /** Set once the player has read the launch advisory and continued. */
   firstRunDone: boolean;
 }
@@ -32,6 +35,7 @@ export const DEFAULT_SETTINGS: Readonly<PlayerSettings> = Object.freeze({
   cardWarnings: 'all',
   timer: DEFAULT_TIMER_SETTING,
   sound: true,
+  flashing: true,
   firstRunDone: false,
 });
 
@@ -56,6 +60,7 @@ export function parseSettings(raw: string | null): PlayerSettings {
     cardWarnings: pick(CARD_WARNING_SETTINGS, data.cardWarnings, DEFAULT_SETTINGS.cardWarnings),
     timer: pick(TIMER_SETTINGS, data.timer, DEFAULT_SETTINGS.timer),
     sound: data.sound !== false,
+    flashing: data.flashing !== false,
     firstRunDone: data.firstRunDone === true,
   };
 }
@@ -103,3 +108,4 @@ export const cardWarningsOn = (): boolean => readSettings().cardWarnings === 'al
 export const timerSetting = (): TimerSetting => readSettings().timer;
 export const firstRunDone = (): boolean => readSettings().firstRunDone;
 export const soundOn = (): boolean => readSettings().sound;
+export const flashingOn = (): boolean => readSettings().flashing;

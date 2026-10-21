@@ -19,7 +19,7 @@ describe('player settings', () => {
 
   it('starts at the signed-off defaults: nothing avoided, card warnings on, Relaxed timer', () => {
     install(fakeStorage());
-    expect(readSettings()).toEqual({ avoidThemes: [], cardWarnings: 'all', timer: 'relaxed', sound: true, firstRunDone: false });
+    expect(readSettings()).toEqual({ avoidThemes: [], cardWarnings: 'all', timer: 'relaxed', sound: true, flashing: true, firstRunDone: false });
     expect([avoidedThemes(), cardWarningsOn(), timerSetting(), firstRunDone()]).toEqual([[], true, 'relaxed', false]);
   });
 
@@ -32,7 +32,7 @@ describe('player settings', () => {
     expect(JSON.parse(storage.data.get(SETTINGS_KEY)!)).toMatchObject({ cardWarnings: 'none', timer: 'off' });
     // Going Live, the only call, carries suicide_self_harm in every situation, so avoiding it would
     // leave nothing to draw and the saved list drops it.
-    expect(readSettings()).toEqual({ avoidThemes: ['domestic_violence'], cardWarnings: 'none', timer: 'off', sound: true, firstRunDone: true });
+    expect(readSettings()).toEqual({ avoidThemes: ['domestic_violence'], cardWarnings: 'none', timer: 'off', sound: true, flashing: true, firstRunDone: true });
     expect(cardWarningsOn()).toBe(false);
   });
 

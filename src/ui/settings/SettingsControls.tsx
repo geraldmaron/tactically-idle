@@ -58,6 +58,13 @@ export function SettingsControls({ value, onChange }: { value: PlayerSettings; o
       <Segmented label={t.soundHeading} value={value.sound ? 'on' : 'off'} onChange={(sound) => onChange({ sound: sound === 'on' })}
         options={[{ value: 'on', label: t.soundOn }, { value: 'off', label: t.soundOff }]} />
     </fieldset>
+
+    <fieldset className="settings-group">
+      <legend className="settings-heading">{t.flashingHeading}</legend>
+      <p className="settings-hint">{t.flashingHint}</p>
+      <Segmented label={t.flashingHeading} value={value.flashing ? 'on' : 'off'} onChange={(flashing) => onChange({ flashing: flashing === 'on' })}
+        options={[{ value: 'on', label: t.flashingOn }, { value: 'off', label: t.flashingOff }]} />
+    </fieldset>
   </div>;
 }
 

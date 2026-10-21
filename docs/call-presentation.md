@@ -105,6 +105,15 @@ blue light bar in the call bar instead of a "Lights and sirens" tag. Each light 
 cycle, 2.5 flashes a second in all, under the WCAG 2.3.1 three-flash limit, and the bar is far
 smaller than the flash area that rule counts. Under reduced motion both lights hold steady.
 
+**The light wash** (owner, 2026-10-21). The lights on a hot call also run as a sequence across the
+pinned strip and fade into the top of the scene, so the decision is made under them, in concert
+with the stream and the threat. A soft red band sweeps left to right, then a blue one right to left.
+Its speed and strength follow the pressure biting hardest (the threat's drain or a source filling):
+calm a 2.4 s cycle, warn 2 s, critical 1.6 s. Each cycle is one red and one blue pass, so any point
+sees at most 1.25 gradual flashes a second, under the WCAG 2.3.1 three-flash limit
+(`src/ui/motion.test.ts` checks every cycle). The **Flashing lights** setting, offered at first run
+and in Settings, turns it off; under reduced motion it holds still as a faint red and blue edge.
+
 Everything else that blinked is replaced by a still form:
 
 | Was | Now |

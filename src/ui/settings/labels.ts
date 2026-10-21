@@ -84,6 +84,10 @@ export const SETTINGS_TEXT = {
   soundHint: 'Radio, the crowd and a heartbeat when time runs short. Vibration too, where your phone has it.',
   soundOn: 'On',
   soundOff: 'Muted',
+  flashingHeading: 'Flashing lights',
+  flashingHint: 'On a hot call, red and blue lights sweep across the top of the screen, faster as the pressure builds. Turn them off if flashing light bothers you.',
+  flashingOn: 'On',
+  flashingOff: 'Off',
 } as const;
 
 /** Support details, shown in Settings at all times and as the debrief line on any situation with
