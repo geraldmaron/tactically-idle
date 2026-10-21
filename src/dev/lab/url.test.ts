@@ -37,7 +37,7 @@ describe('the hostage reference call', () => {
 
 describe('deep links from docs and skills (verify-and-shell.md "Docs to update")', () => {
   it('?type=<type> opens Play on the default draw of each call tree', () => {
-    for (const type of ['hostage_crisis', 'barricaded', 'active_armed_incident', 'protected_rescue'] as const) {
+    for (const type of ['hostage_crisis'] as const) {
       const { url, notices } = parse(`?type=${type}`);
       expect(url.tab).toBe('play');
       expect(url.call).toEqual(defaultCall(type));
@@ -128,8 +128,8 @@ describe('the story sheet URL contract (current-lab.md "Soft URL contract")', ()
   });
 
   it('limits the building to the families the tree fits', () => {
-    expect(parse('?type=protected_rescue&family=market_row').url.call?.family).toBe('cedar_close');
-    expect(parse('?type=protected_rescue&family=bungalow_g2').url.call?.family).toBe('bungalow_g2');
+    expect(parse('?type=hostage_crisis&family=cedar_close').url.call?.family).toBe('market_row');
+    expect(parse('?type=hostage_crisis&family=bar_restaurant_g2').url.call?.family).toBe('bar_restaurant_g2');
   });
 
   it('view=gates and journeys=1 retire to Calls with the gate notice, dropping their params', () => {

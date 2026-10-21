@@ -37,7 +37,7 @@ const tallyOf = (result: JobResult) => { if (result.kind !== 'reach') throw new 
 afterAll(() => { applyTuningPatch({}); });
 
 describe('runJob', () => {
-  const barricade = open('type=barricaded');
+  const barricade = open('type=hostage_crisis');
 
   it('a this-type tally summarizes exactly as measure() does', async () => {
     const result = await runJob({ kind: 'reach-type', type: 'hostage_crisis', tier: 2, style: 'random', calls: 6 }, ctx());
@@ -50,12 +50,12 @@ describe('runJob', () => {
   }, 120000);
 
   it('a gate job equals measure() and plays the drawn calls in order; a shorter job is the longer one\'s prefix', async () => {
-    const tree = CALL_TREES.barricaded!;
-    const long = await runJob({ kind: 'gate', job: { type: 'barricaded', style: 'random', calls: 8, tier: 2 } }, ctx());
+    const tree = CALL_TREES.hostage_crisis!;
+    const long = await runJob({ kind: 'gate', job: { type: 'hostage_crisis', style: 'random', calls: 8, tier: 2 } }, ctx());
     if (long.kind !== 'gate') throw new Error(long.kind);
     expect(long.distribution).toEqual(measure(tree, 2, 'random', 8));
     expect(long.results).toEqual(playCalls(tree, 'random', drawCalls(tree, 2, 8, 1)));
-    const short = await runJob({ kind: 'gate', job: { type: 'barricaded', style: 'random', calls: 5, tier: 2 } }, ctx());
+    const short = await runJob({ kind: 'gate', job: { type: 'hostage_crisis', style: 'random', calls: 5, tier: 2 } }, ctx());
     if (short.kind !== 'gate') throw new Error(short.kind);
     expect(short.results).toEqual(long.results.slice(0, 5));
   }, 120000);
@@ -92,7 +92,7 @@ describe('runJob', () => {
     stop = false;
     const gateDone: number[] = [];
     // A drawn call costs about CALL_COST runs, so a population job yields every chunk / CALL_COST calls.
-    const gate = runJob({ kind: 'gate', job: { type: 'barricaded', style: 'random', calls: 8, tier: 2 } }, ctx({
+    const gate = runJob({ kind: 'gate', job: { type: 'hostage_crisis', style: 'random', calls: 8, tier: 2 } }, ctx({
       yieldEvery: 3 * CALL_COST, shouldStop: () => stop, progress: n => { gateDone.push(n); stop = true; },
     }));
     await expect(gate).rejects.toThrow(CANCELLED);
@@ -117,15 +117,15 @@ describe('runJob', () => {
   }, 120000);
 
   it('casts: the first calls with the situation, each binding every string row exactly as the compiler does', async () => {
-    const result = await runJob({ kind: 'casts', type: 'barricaded', family: barricade.resolved.spec!.familyId, seed: barricade.resolved.spec!.buildingSeed,
+    const result = await runJob({ kind: 'casts', type: 'hostage_crisis', family: barricade.resolved.spec!.familyId, seed: barricade.resolved.spec!.buildingSeed,
       tier: 2, variant: 0, n: 3 }, ctx());
     if (result.kind !== 'casts') throw new Error(result.kind);
     expect(result.casts).toHaveLength(3);
     expect(result.casts.map(c => c.call)).toEqual([...result.casts.map(c => c.call)].sort((a, b) => a - b));
-    const tree = CALL_TREES.barricaded!;
+    const tree = CALL_TREES.hostage_crisis!;
     for (const sample of result.casts) {
       const spec = barricade.resolved.spec!;
-      const scenario = getScenario(incidentId({ type: 'barricaded', familyId: spec.familyId, buildingSeed: spec.buildingSeed, seed: sample.call, tier: 2, contentVersion: INCIDENT_CONTENT_VERSION }))!;
+      const scenario = getScenario(incidentId({ type: 'hostage_crisis', familyId: spec.familyId, buildingSeed: spec.buildingSeed, seed: sample.call, tier: 2, contentVersion: INCIDENT_CONTENT_VERSION }))!;
       const built = buildLocation(scenario.locationFamilyId, scenario.locationSeed);
       const instance = instanceOf(scenario, built)!, placed = instance.placed;
       expect(scenario.incident).toBeDefined();
@@ -139,7 +139,7 @@ describe('runJob', () => {
 });
 
 describe('createJobHost', () => {
-  const rescue = open('type=protected_rescue');
+  const rescue = open('type=hostage_crisis');
   /** Sends requests to a host and collects its events per request id. */
   function host() {
     const events: JobEvent[] = [];

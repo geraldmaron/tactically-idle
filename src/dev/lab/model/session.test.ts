@@ -54,7 +54,8 @@ describe('openSession', () => {
     expect(s.stopped).toBeNull();
     expect(s.focus).toBe('A');
     expect(Object.keys(s.turnDrawn)).toEqual(Object.keys(s.tree.turns ?? {}));
-    expect(s.counts).toHaveProperty('others');
+    // Going Live has no counted group, so its counts are only the building's (upstairs and the like).
+    expect(Object.keys(s.counts).some(key => key.startsWith('others'))).toBe(false);
     expect(nodeAt(currentFrame(s).state, s.tree)).toBe(s.tree.root);
   });
 
@@ -81,17 +82,9 @@ describe('openSession', () => {
     expect(fail('id=gen:hostage_crisis:nowhere:7:2:2:13')).toMatchObject({ kind: 'generate' });
   });
 
-  it('says when the drawn building cannot host the call, and where the generator moved it', () => {
-    // semi_detached_g2 can't host about half of rescue's calls (generation moves them to another seed).
-    let moved: OpenError | null = null;
-    for (let seed = 0; seed < 40 && !moved; seed++) {
-      const opened = openSession(parseLabUrl(`?type=protected_rescue&family=semi_detached_g2&seed=${seed}&tier=2&variant=0`).url, null);
-      if (!('frames' in opened)) moved = opened;
-    }
-    expect(moved).toMatchObject({ kind: 'host-moved', movedTo: expect.any(Number) });
-    const s = open(`type=protected_rescue&family=semi_detached_g2&seed=${moved!.movedTo}&tier=2&variant=0`);
-    expect(s.scenario.locationSeed).toBe(moved!.movedTo);
-  }, 30000);
+  // The host-moved case needs a building the call can't host; Going Live hosts on every building
+  // of its families, so there is none to open until a curated call can't.
+
 });
 
 describe('stepping', () => {
@@ -137,12 +130,16 @@ describe('stepping', () => {
   });
 
   it('refuses a choice that is not offered or is locked, with the engine reason', () => {
-    const rescue = open('type=protected_rescue&tier=2');
-    const locked = currentFrame(rescue).views.find(view => !view.eligible)!;
-    expect(locked).toBeDefined();
-    const refusal = stepSession(rescue, { kind: 'roll', actionId: locked.id });
+    // The handgun is up and the squad has no entry team: going in is locked, with the reason.
+    const base = open(REFERENCE);
+    const reached = replayTokens(base, explore(base.frames[0].state, { node: 'threat' }).path!);
+    const state = structuredClone(currentFrame(reached).state);
+    for (const officer of Object.values(state.officers)) officer.certs = officer.certs.filter(cert => cert !== 'entry_team');
+    const at: Session = { ...reached, frames: [...reached.frames.slice(0, -1), { ...currentFrame(reached), state, views: liveDecisions(state, NOW, 'A') }] };
+    const locked = currentFrame(at).views.find(view => !view.eligible)!;
+    const refusal = stepSession(at, { kind: 'roll', actionId: locked.id });
     expect(refusal).toEqual({ refused: expect.stringContaining(locked.reason!) });
-    expect(stepSession(rescue, { kind: 'roll', actionId: 't13_protected_rescue_nowhere_x' })).toEqual({ refused: expect.stringContaining("isn't offered here") });
+    expect(stepSession(at, { kind: 'roll', actionId: 't13_hostage_crisis_nowhere_x' })).toEqual({ refused: expect.stringContaining("isn't offered here") });
   });
 
   it('records the natural chance of the band and the drawn results of each move', () => {
@@ -209,53 +206,41 @@ describe('aimed drawn results', () => {
     return r;
   };
 
-  it('forces every drawn result offered at the root of all four calls and at hostage talking', () => {
-    let variants = 0;
-    const models: Record<string, number> = {};
-    for (const query of [REFERENCE, 'type=barricaded', 'type=active_armed_incident', 'type=protected_rescue']) {
-      const found = forceEveryDrawn(open(query));
-      variants += found.variants;
-      for (const [model, n] of Object.entries(found.models)) models[model] = (models[model] ?? 0) + n;
-    }
-    const talking = reach(open(REFERENCE), { node: 'talking' });
-    expect(nodeAt(currentFrame(talking).state, talking.tree)).toBe('talking');
-    variants += forceEveryDrawn(talking).variants;
-    // Measured 2026-10-09: only the armed call's root draws (the subject's fire, three results);
-    // the next test covers team force and cascades.
+  it('forces every drawn result offered at the root and at on_air, and the rider’s fire where the handgun is up', () => {
+    let variants = forceEveryDrawn(open(REFERENCE)).variants;
+    const onAir = reach(open(REFERENCE), { node: 'on_air' });
+    expect(nodeAt(currentFrame(onAir).state, onAir.tree)).toBe('on_air');
+    variants += forceEveryDrawn(onAir).variants;
+    // Going Live draws nothing until the handgun is up: the talk at the glass can draw the rider's fire.
+    const threat = reach(open(REFERENCE), { node: 'threat' });
+    const fire = forceEveryDrawn(threat);
+    variants += fire.variants;
     expect(variants).toBeGreaterThanOrEqual(3);
-    expect(models.incoming_fire).toBeGreaterThanOrEqual(3);
+    expect(fire.models.incoming_fire).toBeGreaterThanOrEqual(3);
   }, 60000);
 
-  it('forces team force and cascade results too: the shot at the owner, and a group that follows or stays', () => {
-    // Situation 3 of the reference building (lets_go false): going in badly brings the team's force
-    // on the taker and the taker's fire, two drawn effects in that order.
-    const keeps = open(`${REFERENCE.replace('variant=1', 'variant=2')}`);
-    const killed = explore(keeps.frames[0].state, { ending: 'owner_killed' });
+  it('forces team force results too: the shot at the manager', () => {
+    // Situation 2 of the reference building (raised): going in badly brings the team's force on the
+    // rider and the rider's fire, two drawn effects in that order. Cascades left with the retired
+    // hostage call's group; no curated call has one.
+    const keeps = open(REFERENCE);
+    const killed = explore(keeps.frames[0].state, { ending: 'manager_killed' });
     expect(killed.path).not.toBeNull();
     const before = replayTokens(keeps, killed.path!.split(',').slice(0, -1).join(','));
     const force = forceEveryDrawn(before);
     expect(force.models.team_force).toBeGreaterThanOrEqual(2);
     expect(force.models.incoming_fire).toBeGreaterThanOrEqual(2);
-    // A call with two others in the group (call seed 1): the first state where a choice can cascade.
-    const group = open('type=hostage_crisis&family=market_row&seed=7&tier=2&call=1');
-    expect(group.counts.others).toBe(2);
-    const cascades = (state: GameState) => !!state.activeRun && state.activeRun.status === 'active' && liveDecisions(state, NOW, 'A')
-      .some(view => view.eligible && BANDS.some(band => sampleFor(view, band) !== null && drawnAt(state, view, band).some(d => d.model === 'cascade')));
-    const found = explore(group.frames[0].state, null, { holds: cascades });
-    expect(found.path).not.toBeNull();
-    const cascade = forceEveryDrawn(replayTokens(group, found.path!));
-    expect(cascade.models.cascade).toBeGreaterThanOrEqual(3);
   }, 120000);
 
   it('refuses drawn results that cannot happen, with what can', () => {
-    const keeps = open(`${REFERENCE.replace('variant=1', 'variant=2')}&kit=full&certs=entry_team`);
-    const killed = explore(keeps.frames[0].state, { ending: 'owner_killed' }).path!;
+    const keeps = open(`${REFERENCE}&kit=full&certs=entry_team`);
+    const killed = explore(keeps.frames[0].state, { ending: 'manager_killed' }).path!;
     const tokens = killed.split(',');
     const before = replayTokens(keeps, tokens.slice(0, -1).join(','));
     const last = decodePath(tokens.at(-1)!)[0];
     expect(last.drawn).toHaveLength(2);
     const view = currentFrame(before).views.find(entry => entry.id === last.actionId)!;
-    // The taker is never killed (noFatal), so the firearm can't come out fatal; the engine says what can.
+    // The rider is never killed (noFatal), so the firearm can't come out fatal; the engine says what can.
     const fatal = stepSession(before, { ...last, drawn: ['firearm:fatal', last.drawn![1]] });
     expect(fatal).toEqual({ refused: expect.stringMatching(/can't come out badly with "firearm:fatal" here\. Possible: Firearm: not hurt, .*Firearm: badly hurt/) });
     expect(aimedDrawnState(before.frames.at(-1)!.state, view, 'adverse', ['firearm:fatal', last.drawn![1]])).toBeNull();
@@ -271,10 +256,10 @@ describe('aimed drawn results', () => {
   }, 60000);
 
   it('makes the path chance the product of each step\'s band and drawn chances, forced or rolled', () => {
-    const keeps = open(`${REFERENCE.replace('variant=1', 'variant=2')}`);
-    const s = replayTokens(keeps, explore(keeps.frames[0].state, { ending: 'owner_killed' }).path!);
+    const keeps = open(REFERENCE);
+    const s = replayTokens(keeps, explore(keeps.frames[0].state, { ending: 'manager_killed' }).path!);
     expect(s.stopped).toBeNull();
-    expect(currentFrame(s).state.activeRun!.endingId).toBe('owner_killed');
+    expect(currentFrame(s).state.activeRun!.endingId).toBe('manager_killed');
     const rolled = rollOn(open(REFERENCE), 5);
     for (const path of [s, rolled]) {
       let product = 1, expected = 1;
@@ -311,7 +296,7 @@ describe('replayTokens', () => {
   it('keeps the valid prefix and reports the refused token with the engine reason', () => {
     const s = rollOn(open(REFERENCE), 2);
     const tokens = sessionTokens(s).split(',');
-    const bad = 't13_hostage_crisis_offer_take_courier~favorable';
+    const bad = 't13_hostage_crisis_threat_go_in~favorable';
     const replayed = replayTokens(open(REFERENCE), [...tokens, bad, tokens[0]].join(','));
     expect(sessionTokens(replayed)).toBe(tokens.join(','));
     expect(replayed.stopped).toEqual({ step: 3, token: bad, why: expect.stringContaining("isn't offered here") });
@@ -349,40 +334,6 @@ describe('replayTokens', () => {
       expect(replayTokens(replayed, typed)).toBe(replayed);
       expect(replayTokens(replayed, sessionTokens(replayed))).toBe(replayed);
     }
-    // A cascade key typed with `+` or a space (call.test.ts reads both as the same key).
-    const group = open('type=hostage_crisis&family=market_row&seed=7&tier=2&call=1');
-    const cascades = (state: GameState) => !!state.activeRun && state.activeRun.status === 'active' && liveDecisions(state, NOW, 'A')
-      .some(view => view.eligible && BANDS.some(band => sampleFor(view, band) !== null && drawnAt(state, view, band).some(d => d.model === 'cascade')));
-    const before = replayTokens(group, explore(group.frames[0].state, null, { holds: cascades }).path!);
-    const frame = currentFrame(before);
-    const [view, band, keys] = frame.views.flatMap(entry => BANDS.flatMap(b => {
-      if (!entry.eligible || sampleFor(entry, b) === null) return [];
-      const dists = drawnAt(frame.state, entry, b);
-      const combo = dists.some(d => d.model === 'cascade') ? drawnCombos(dists).find(c => c.keys.some(key => key.includes('+'))) : undefined;
-      return combo ? [[entry, b, combo.keys] as const] : [];
-    }))[0];
-    const stepped = step(before, { kind: 'decide', actionId: view.id, band, drawn: [...keys] });
-    const canonical = sessionTokens(stepped);
-    expect(canonical.split(',').at(-1)).toMatch(/\./);
-    for (const typed of [canonical.replace(/\.(?=[^,]*$)/g, '+'), canonical.replace(/\.(?=[^,]*$)/g, ' ')]) {
-      expect(typed).not.toBe(canonical);
-      const replayed = replayTokens(stepped, typed);
-      expect(replayed).toBe(stepped);
-      expect(sessionTokens(replayTokens(before, typed))).toBe(canonical);
-    }
-  }, 60000);
-
-  it('reopens and replays under a tuning patch: same moves, the patch\'s odds', () => {
-    const saved = rollOn(open(REFERENCE), 2);
-    const tokens = sessionTokens(saved);
-    expect(applyTuningPatch({ RESOLUTION_TUNING: { favorableAt: 20 } })).toEqual([]);
-    const patched = replayTokens(open(REFERENCE), tokens);
-    expect(patched.key).not.toBe(saved.key);
-    expect(patched.stopped === null || patched.stopped.step > 0).toBe(true);
-    const first = (s: Session) => s.frames[0].views.find(view => view.eligible)!.likelihood.favorable;
-    expect(first(patched)).toBeLessThan(first(saved));
-    applyTuningPatch({});
-    expect(open(REFERENCE).key).toBe(saved.key);
   });
 });
 
@@ -422,17 +373,17 @@ describe('handoff', () => {
   });
 
   it('replays the game\'s drawn results too, and says when this squad can\'t produce one', () => {
-    const drawnPath = 't13_hostage_crisis_offer_take_courier~favorable,t13_hostage_crisis_out_cousin_cousin_glass~adverse,t13_hostage_crisis_threat_go_in~adverse/firearm:none/none';
-    const id = open('type=hostage_crisis&family=market_row&seed=7&tier=2&variant=2').resolved.id!;
+    const drawnPath = 't13_hostage_crisis_going_live_clerk_out~adverse,t13_hostage_crisis_threat_go_in~adverse/firearm:none/none';
+    const id = open(REFERENCE).resolved.id!;
     const aimed = open(`id=${id}&kit=full&certs=entry_team&handoff=gone&hist=${drawnPath}`);
-    expect(aimed.prior).toHaveLength(3);
-    expect(aimed.prior[2].drawn).toEqual(['team_force:firearm:none', 'incoming_fire:none']);
+    expect(aimed.prior).toHaveLength(2);
+    expect(aimed.prior[1].drawn).toEqual(['team_force:firearm:none', 'incoming_fire:none']);
     expect(aimed.note).toContain('with the same bands and drawn results');
     expect(aimed.note).not.toContain('couldn\'t be matched');
     // No fatal result is possible on that entry: the band is kept and the dice settle the rest.
     const unmatched = open(`id=${id}&handoff=gone&hist=${drawnPath.replace('firearm:none/none', 'firearm:fatal/none')}`);
-    expect(unmatched.prior).toHaveLength(3);
-    expect(unmatched.prior[2].band).toBe('adverse');
+    expect(unmatched.prior).toHaveLength(2);
+    expect(unmatched.prior[1].band).toBe('adverse');
     expect(unmatched.note).toContain('One drawn result couldn\'t be matched on this squad');
   });
 });

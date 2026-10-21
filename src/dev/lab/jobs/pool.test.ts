@@ -52,7 +52,7 @@ afterEach(() => { delete globals.sessionStorage; });
 // The in-process workers share this realm's tuning tables.
 afterAll(() => { applyTuningPatch({}); });
 
-const barricade = open('type=barricaded');
+const barricade = open('type=hostage_crisis');
 const start: StartRef = { kind: 'fresh', scenarioId: barricade.scenario.id, kit: 'day1', squad: { seed: 719, certs: [] } };
 const opts = { patch: {}, contentKey: barricade.contentKey };
 const reachCall = (runs: [number, number]): LabJob => ({ kind: 'reach-call', start, style: 'random', runs });
@@ -118,7 +118,7 @@ describe('createPool', () => {
 
   it('keeps this-type and gate results in sessionStorage, so a new pool paints them without running', async () => {
     globals.sessionStorage = fakeStorage();
-    const job: LabJob = { kind: 'reach-type', type: 'barricaded', tier: 2, style: 'random', calls: 2 };
+    const job: LabJob = { kind: 'reach-type', type: 'hostage_crisis', tier: 2, style: 'random', calls: 2 };
     const first = workers();
     const result = await createPool(2, first.spawn).run(job, opts).promise;
     const second = workers();
@@ -157,18 +157,16 @@ describe('createPool', () => {
     pool.dispose();
   }, 120000);
 
-  it('sends a call type\'s this-type and gate jobs to the same worker, other types to others', async () => {
+  // With one curated call there is no second type to route elsewhere; the same-worker half still holds.
+  it('sends a call type\'s this-type and gate jobs to the same worker', async () => {
     const w = workers();
     const pool = createPool(3, w.spawn);
-    const typeJob = (type: 'barricaded' | 'protected_rescue', calls: number): LabJob => ({ kind: 'reach-type', type, tier: 2, style: 'random', calls });
     await Promise.all([
-      pool.run(typeJob('barricaded', 1), opts).promise, pool.run(typeJob('protected_rescue', 1), opts).promise,
-      pool.run({ kind: 'gate', job: { type: 'barricaded', style: 'random', calls: 2, tier: 2 } }, opts).promise,
+      pool.run({ kind: 'reach-type', type: 'hostage_crisis', tier: 2, style: 'random', calls: 1 }, opts).promise,
+      pool.run({ kind: 'gate', job: { type: 'hostage_crisis', style: 'random', calls: 2, tier: 2 } }, opts).promise,
     ]);
     const portOf = (match: (job: LabJob) => boolean) => w.ports.findIndex(port => port.posted.some(m => !('cancel' in m) && match(m.job)));
-    const barricadeType = portOf(job => job.kind === 'reach-type' && job.type === 'barricaded');
-    expect(portOf(job => job.kind === 'gate')).toBe(barricadeType);
-    expect(portOf(job => job.kind === 'reach-type' && job.type === 'protected_rescue')).not.toBe(barricadeType);
+    expect(portOf(job => job.kind === 'gate')).toBe(portOf(job => job.kind === 'reach-type'));
     pool.dispose();
   }, 120000);
 

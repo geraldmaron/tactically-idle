@@ -7,7 +7,7 @@ import { GATE_SUITE, gateJobs } from '../../../../gen/incident/trees-v13/balance
 import type { CallResult, Weight } from '../../../../gen/incident/trees-v13/balance';
 import { dependencyIndex, lintTree } from '../../../../gen/incident/trees-v13/dependencies';
 import { CLOCK_FIXTURE_IDS, clockFixtureTemplate } from '../../../../gen/incident/gates/clock-fixture';
-import { armedWithoutHitMark } from '../../../../gen/incident/trees-v13/never-offered-fixture';
+import { armedWithoutHitMark, HIT_FIXTURE } from '../../../../gen/incident/trees-v13/never-offered-fixture';
 import { emptyTally } from '../../jobs/tally';
 import { emptyNotes } from '../../model/endpoints';
 import { gateVerdicts } from '../../model/gate-view';
@@ -17,26 +17,26 @@ import { ageText, checkLabel, checksFor, descriptorLabel, endingWeights, finding
 const result = (weight: Weight, ending: string, officersHurt = 0): CallResult => ({ weight, ending, minutes: 30, officersHurt, peopleHurt: 0, deaths: 0, decisions: 3 });
 
 describe('gate checks per call', () => {
-  it('splits the 24 checks 5, 5, 8 and 6, and labels the non-random styles', () => {
-    expect(['hostage_crisis', 'barricaded', 'active_armed_incident', 'protected_rescue'].map(t => checksFor(t as never).length)).toEqual([5, 5, 8, 6]);
-    expect(checksFor('hostage_crisis').length + checksFor('barricaded').length + checksFor('active_armed_incident').length + checksFor('protected_rescue').length).toBe(GATE_SUITE.length);
+  it('splits the suite\'s checks by call, five for a call with no style-specific checks, and labels the non-random styles', () => {
+    expect(checksFor('hostage_crisis').length).toBe(5);
+    expect(['hostage_crisis', 'barricaded', 'active_armed_incident', 'protected_rescue'].reduce((n, t) => n + checksFor(t as never).length, 0)).toBe(GATE_SUITE.length);
     expect(checkLabel(GATE_SUITE.find(c => c.id === 'hostage_crisis.best_odds.clean')!)).toBe('Clean endings · best odds');
     expect(checkLabel(GATE_SUITE.find(c => c.id === 'hostage_crisis.random.clean')!)).toBe('Clean endings');
   });
   it('says how the gate stands in words', () => {
-    expect(gateLine(gateTally(gateVerdicts([])))).toBe('Not run (24 checks)');
+    expect(gateLine(gateTally(gateVerdicts([])))).toBe(`Not run (${GATE_SUITE.length} checks)`);
     const runs: GateRun[] = gateJobs().map(job => ({ job, side: 'saved', results: Array.from({ length: job.calls }, (_, i) => result(i % 3 === 0 ? 'clean' : i % 3 === 1 ? 'costly' : 'unresolved', 'x', job.style === 'fast' ? 1 : 0)) }));
     const verdicts = gateVerdicts(runs);
     const t = gateTally(verdicts);
-    expect(t.total).toBe(24);
+    expect(t.total).toBe(GATE_SUITE.length);
     expect(t.notRun).toBe(0);
-    expect(gateLine(t)).toMatch(/^\d+ of 24 pass(, \d+ fails?)?$/);
-    expect(gateLine(gateTally(gateVerdicts(runs.slice(0, 1))))).toMatch(/^4 of 24 run: /);
+    expect(gateLine(t)).toMatch(new RegExp(`^\\d+ of ${GATE_SUITE.length} pass(, \\d+ fails?)?$`));
+    expect(gateLine(gateTally(gateVerdicts(runs.slice(0, 1))))).toMatch(new RegExp(`^4 of ${GATE_SUITE.length} run: `));
   });
   it('names the side a headline speaks for, and never passes a pending patch on the saved side (review finding gate-pending-verdict-from-saved)', () => {
     const runs: GateRun[] = gateJobs().map(job => ({ job, side: 'saved', results: Array.from({ length: job.calls }, (_, i) => result(i % 3 === 0 ? 'clean' : i % 3 === 1 ? 'costly' : 'unresolved', 'x', job.style === 'fast' ? 1 : 0)) }));
     const saved = gateHeadline(gateVerdicts(runs), false);
-    expect(saved.text).toMatch(/^Saved tuning: \d+ of 24 pass/);
+    expect(saved.text).toMatch(new RegExp(`^Saved tuning: \\d+ of ${GATE_SUITE.length} pass`));
     expect(saved.tone).not.toBeNull();
     // A pending patch with only the cached saved side: the saved count, said to be the saved one.
     const waiting = gateHeadline(gateVerdicts(runs, undefined, true), true);
@@ -50,8 +50,8 @@ describe('gate checks per call', () => {
     expect(gateHeadline(gateVerdicts(both, undefined, true), true).text).toBe(`Unsaved tuning: ${gateLine(gateTally(gateVerdicts(runs)))}`);
     expect(gateHeadline(gateVerdicts(both, undefined, true), true, false).text).toBe(gateLine(gateTally(gateVerdicts(runs))));
     // Nothing run at all.
-    expect(gateHeadline(gateVerdicts([], undefined, true), true).text).toBe('Unsaved tuning: Not run (24 checks)');
-    expect(gateHeadline(gateVerdicts([]), false)).toEqual({ text: 'Saved tuning: Not run (24 checks)', tone: null });
+    expect(gateHeadline(gateVerdicts([], undefined, true), true).text).toBe(`Unsaved tuning: Not run (${GATE_SUITE.length} checks)`);
+    expect(gateHeadline(gateVerdicts([]), false)).toEqual({ text: `Saved tuning: Not run (${GATE_SUITE.length} checks)`, tone: null });
   });
   it('ages read in minutes and hours, with the cache named', () => {
     expect(ageText(1000, 1000 + 20_000, true)).toBe('from cache, just now');
@@ -94,19 +94,20 @@ describe('findings feed', () => {
     const rows = findingsFeed([{ type: 'hostage_crisis', findings: hostageLint, notes: muted }, { type: 'active_armed_incident', findings: armedLint, notes: null }]);
     expect(rows.map(row => row.finding.severity).slice(0, 2)).toEqual(['error', 'warn']);
     expect(rows[rows.length - 1].muted).toBe('Known: by design');
-    expect(severityCounts(rows)).toEqual({ error: 1, warn: 1, info: hostageLint.length - 1 });
+    // The fixture is the hostage call with one choice added, so it carries the call's own notes too.
+    expect(severityCounts(rows)).toEqual({ error: 1, warn: 1, info: armedLint.filter(f => f.severity === 'info').length + hostageLint.length - 1 });
   });
   it('links each finding to where it lives', () => {
-    expect(findingSite(never)).toEqual({ tab: 'flow', sel: { kind: 'node', node: 'pinned' } });
+    expect(findingSite(never)).toEqual({ tab: 'flow', sel: { kind: 'node', node: HIT_FIXTURE.node } });
     const keyed = hostageLint.find(f => f.key)!;
     expect(findingSite(keyed)).toEqual({ tab: 'deps', sel: { kind: 'key', key: keyed.key } });
   });
   it('reads raw ids as names', () => {
     const words = humanizeFinding(never, armed, dependencyIndex(armed));
-    const choice = armed.tree.nodes.find(n => n.id === 'pinned')!.choices.find(c => c.id === 'treat_ours')!;
-    expect(words.where).toBe(`Pinned › ${choice.title}`);
+    const choice = armed.tree.nodes.find(n => n.id === HIT_FIXTURE.node)!.choices.find(c => c.id === HIT_FIXTURE.choice)!;
+    expect(words.where).toBe(`Threat › ${choice.title}`);
     expect(words.message).not.toMatch(/treat_ours|officer_down/);
-    expect(words.message).toContain(`“${choice.title}” at Pinned`);
+    expect(words.message).toContain(`“${choice.title}” at Threat`);
     // A clock writer from an owned fixture, so a content change can't remove it.
     const fixture = clockFixtureTemplate();
     const clock = lintTree(fixture).find(f => f.code === 'clock_writer')!;
@@ -118,7 +119,7 @@ describe('situation content descriptors', () => {
   it('lists each situation of every call with its declared descriptors, marks derived, and misses nothing', () => {
     for (const template of Object.values(INCIDENT_TEMPLATES)) {
       const rows = situationContent(template!);
-      expect(rows.map(row => row.index)).toEqual([0, 1, 2]);
+      expect(rows.map(row => row.index)).toEqual(template!.tree.situations.map((_, i) => i));
       for (const row of rows) {
         expect(row.missing, `${template!.type} ${row.index}`).toEqual([]);
         expect(row.tags.map(tag => tag.descriptor)).toEqual(template!.tree.situations[row.index]!.descriptors ?? []);
@@ -128,9 +129,12 @@ describe('situation content descriptors', () => {
   });
 
   it('shows a descriptor the tree derives but the list leaves out as missing', () => {
-    const template = INCIDENT_TEMPLATES.active_armed_incident!;
+    const template = INCIDENT_TEMPLATES.hostage_crisis!;
     const bare = { ...template, tree: { ...template.tree, situations: template.tree.situations.map(s => ({ ...s, descriptors: [] })) as unknown as typeof template.tree.situations } };
-    expect(situationContent(bare)[0].missing).toEqual(['death', 'injury', 'police_gunfire']);
+    const missing = situationContent(bare)[0].missing;
+    // What the tree derives (the walk_live wound) shows as missing; declared extras aren't derived.
+    expect(missing).toContain('injury');
+    for (const d of missing) expect(template.tree.situations[0]!.descriptors).toContain(d);
     expect(descriptorLabel('suicide_self_harm')).toBe('suicide or self-harm');
     expect(descriptorLabel('police_gunfire')).toBe('police gunfire');
   });

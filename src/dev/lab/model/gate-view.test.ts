@@ -24,9 +24,9 @@ const savedRuns = (): GateRun[] => gateJobs().map(job => ({ job, side: 'saved', 
 const hostageRandom = gateJobs().find(job => job.type === 'hostage_crisis' && job.style === 'random')!;
 
 describe('gateVerdicts', () => {
-  it('gives the 24 checks in suite order; saved runs alone judge the saved side', () => {
+  it('gives the suite\'s checks in order; saved runs alone judge the saved side', () => {
     const verdicts = gateVerdicts(savedRuns());
-    expect(verdicts).toHaveLength(24);
+    expect(verdicts).toHaveLength(GATE_SUITE.length);
     expect(verdicts.map(v => v.check.id)).toEqual(GATE_SUITE.map(c => c.id));
     expect(verdicts.every(v => v.pass === true && v.patch === null && v.delta === null && v.deltaText === null)).toBe(true);
     const clean = verdicts.find(v => v.check.id === 'hostage_crisis.random.clean')!;
@@ -34,10 +34,8 @@ describe('gateVerdicts', () => {
     expect(clean.text).toBe('Passes: the random style reaches clean in 30% of hostage crisis calls; the gate allows 15% to 60%.');
     expect(verdicts.find(v => v.check.id === 'hostage_crisis.random.bad')!.text)
       .toBe('Passes: the random style ends unresolved, hurt or dead in 40% of hostage crisis calls; the gate allows 15% to 65%.');
-    expect(verdicts.find(v => v.check.id === 'active_armed_incident.fast.officerHurt')!.text)
-      .toBe('Passes: the fast style gets an officer hurt in 50% of active armed incident calls; the gate needs at least 25%.');
-    expect(verdicts.find(v => v.check.id === 'protected_rescue.best_odds.clean')!.text)
-      .toBe('Passes: best odds reaches clean in 30% of protected rescue calls; the gate allows at most 75%.');
+    expect(verdicts.find(v => v.check.id === 'hostage_crisis.best_odds.clean')!.text)
+      .toBe('Passes: best odds reaches clean in 30% of hostage crisis calls; the gate allows at most 75%.');
   });
 
   it('judges the patched side, with a paired delta call by call', () => {
@@ -54,7 +52,7 @@ describe('gateVerdicts', () => {
     expect(death.delta).toMatchObject({ mean: 0, withinNoise: true });
     expect(death.deltaText).toBe('Δ +0.0 points (+0.0 to +0.0), paired over 60 calls, within noise');
     // Checks of other jobs have no patched side yet, so no verdict for the patch either.
-    expect(gateVerdicts(runs).find(v => v.check.id === 'barricaded.random.clean')).toMatchObject({ patch: null, pass: null });
+    expect(gateVerdicts(runs).find(v => v.check.id === 'hostage_crisis.best_odds.clean')).toMatchObject({ patch: null, pass: null });
   });
 
   it('gives no verdict for a pending patch until its side runs; the cached saved side never stands in (review finding gate-pending-verdict-from-saved)', () => {
@@ -65,7 +63,7 @@ describe('gateVerdicts', () => {
     const clean = pending.find(v => v.check.id === 'hostage_crisis.random.clean')!;
     expect(clean.saved).toBe(0.833);
     expect(clean.text).toBe('Not run for this change yet. Saved tuning fails: the random style reaches clean in 83% of hostage crisis calls; the gate allows 15% to 60%.');
-    expect(pending.find(v => v.check.id === 'barricaded.random.clean')!.text).toMatch(/^Not run for this change yet\. Saved tuning passes: /);
+    expect(pending.find(v => v.check.id === 'hostage_crisis.best_odds.clean')!.text).toMatch(/^Not run for this change yet\. Saved tuning passes: /);
     // Without a patch the same runs are the verdict.
     expect(gateVerdicts(runs, undefined, false).find(v => v.check.id === 'hostage_crisis.random.clean')!.pass).toBe(false);
     expect(gateVerdicts(runs).find(v => v.check.id === 'hostage_crisis.random.clean')!.pass).toBe(false);
@@ -73,17 +71,17 @@ describe('gateVerdicts', () => {
     const withPatch = [...runs, { job: hostageRandom, side: 'patch' as const, results: calls(60, { costly: 30 }) }];
     const after = gateVerdicts(withPatch, undefined, true);
     expect(after.find(v => v.check.id === 'hostage_crisis.random.clean')).toMatchObject({ patch: 0.5, pass: true });
-    expect(after.find(v => v.check.id === 'barricaded.random.clean')!.pass).toBeNull();
+    expect(after.find(v => v.check.id === 'hostage_crisis.best_odds.clean')!.pass).toBeNull();
     expect(gateVerdicts(withPatch).map(v => v.pass)).toEqual(after.map(v => v.pass));
   });
 
   it('says a check has not run, and shows a tenth when whole percents would hide a fail', () => {
     expect(gateVerdicts([]).every(v => v.pass === null && v.text === 'Not run yet.')).toBe(true);
-    const check: GateCheck = { id: 'x', label: 'Clean endings', type: 'barricaded', style: 'random', calls: 500, tier: 2, metric: 'clean', max: 0.6, why: '' };
-    const job: GateJob = { type: 'barricaded', style: 'random', calls: 500, tier: 2 };
+    const check: GateCheck = { id: 'x', label: 'Clean endings', type: 'hostage_crisis', style: 'random', calls: 500, tier: 2, metric: 'clean', max: 0.6, why: '' };
+    const job: GateJob = { type: 'hostage_crisis', style: 'random', calls: 500, tier: 2 };
     const [verdict] = gateVerdicts([{ job, side: 'saved', results: calls(500, { costly: 198 }) }], [check]);
     expect(verdict.saved).toBe(0.604);
-    expect(verdict.text).toBe('Fails: the random style reaches clean in 60.4% of barricade calls; the gate allows at most 60%.');
+    expect(verdict.text).toBe('Fails: the random style reaches clean in 60.4% of hostage crisis calls; the gate allows at most 60%.');
   });
 
   it('reads the gate metric from the rounded shares, as CI does', () => {
@@ -136,24 +134,24 @@ describe('runGateSuite and cachedGateRuns', () => {
     const { pool, asked } = standIn();
     const progress: number[] = [];
     const saved = await runGateSuite(pool, { patch: {}, keyOf: type => `key:${type}`, onProgress: p => progress.push(p.total) }).promise;
-    expect(saved).toHaveLength(11);
+    expect(saved).toHaveLength(gateJobs().length);
     expect(saved.every(run => run.side === 'saved' && run.results.length === run.job.calls)).toBe(true);
     expect(asked.every(a => Object.keys(a.opts.patch).length === 0 && a.opts.contentKey === `key:${a.job.type}`)).toBe(true);
     expect(progress.length).toBeGreaterThan(0);
     const patch = { RESOLUTION_TUNING: { favorableAt: 10 } };
     const both = await runGateSuite(pool, { patch, keyOf: type => `key:${type}` }).promise;
-    expect(both).toHaveLength(22);
-    expect(asked.slice(11).filter(a => a.opts.patch === patch)).toHaveLength(11);
+    expect(both).toHaveLength(2 * gateJobs().length);
+    expect(asked.slice(gateJobs().length).filter(a => a.opts.patch === patch)).toHaveLength(gateJobs().length);
     expect(gateVerdicts(both).every(v => v.delta?.withinNoise === true)).toBe(true);
-    expect(new Set(both.map(run => `${gateJobKey(run.job)}:${run.side}`)).size).toBe(22);
+    expect(new Set(both.map(run => `${gateJobKey(run.job)}:${run.side}`)).size).toBe(2 * gateJobs().length);
   });
 
   it('reads what the cache holds, with the oldest time among the hits', () => {
     expect(cachedGateRuns(standIn().pool, { patch: {} })).toEqual({ runs: [], at: null });
     const { runs, at } = cachedGateRuns(standIn(1000).pool, { patch: {}, keyOf: type => type });
-    expect(runs).toHaveLength(11);
+    expect(runs).toHaveLength(gateJobs().length);
     expect(at).toBe(1040);
     // The patched side isn't cached here: only the saved runs come back.
-    expect(cachedGateRuns(standIn(1000).pool, { patch: { RESOLUTION_TUNING: { favorableAt: 10 } }, keyOf: type => type }).runs).toHaveLength(11);
+    expect(cachedGateRuns(standIn(1000).pool, { patch: { RESOLUTION_TUNING: { favorableAt: 10 } }, keyOf: type => type }).runs).toHaveLength(gateJobs().length);
   });
 });

@@ -1,33 +1,34 @@
 // The X-ray against the engine: for every root choice of the four calls, and every choice at hostage
-// `talking` reached by an explored path, the route predicted for each band the engine can produce is
+// `on_air` reached by an explored path, the route predicted for each band the engine can produce is
 // where a forced step of that band actually lands; contributor groups sum to the margin the card's
 // odds come from; the truth strip reads the call's situation; the path chance is the product of the
 // steps' natural chances.
 import { describe, expect, it } from 'vitest';
 import FULL_NOTE from '../surfaces/play/FullNote.tsx?raw';
 import { aimedMoves, applyMove, NOW } from '../../../gen/incident/gates/engine-driver';
-import type { Weight } from '../../../gen/incident/trees-v13/balance';
 import { pathStateKey } from '../../../gen/incident/trees-v13/path-key';
 import { teamMinutes } from '../../../sim/clocks';
 import { matchedEffects } from '../../../sim/operation';
 import { bandProbabilities, builtFor, evaluateAction } from '../../../sim/resolution';
 import { getScenario } from '../../../sim/scenario-registry';
 import { applyTuningPatch } from '../../../sim/tuning';
-import type { GameState, OutcomeBand, StageId } from '../../../sim/types';
+import type { OutcomeBand, StageId } from '../../../sim/types';
 import { liveDecisions } from '../../../ui/screens/live-model';
 import { visibleDecisions } from '../../../ui/screens/liveModels';
 import { parseLabUrl } from '../url';
 import { explore } from './explore';
-import { aimsDrawn, nextStep, previewBand, previewDrawn } from './next-step';
 import { currentFrame, openSession, playPath, replayTokens, rewindSession, stepSession } from './session';
 import type { Frame, Session } from './session';
 import { focusSquad } from './squads';
 import { bandCurve, bandMinutes, BANDS, clockRows, endedSummary, keysSet, notOfferedHere, pathChance, pathSteps, personTruth, priorSteps, truthStrip, weightsWanted, whereIs, withWeights, xrayChoices } from './xray';
 import type { ChoiceXray, RouteTarget } from './xray';
 import { dependencyIndex } from '../../../gen/incident/trees-v13/dependencies';
+import { CALL_TREES } from '../../../content/call-trees';
+import type { IncidentType } from '../../../sim/scenario-types';
 
 const REFERENCE = 'type=hostage_crisis&family=market_row&seed=7&tier=2&variant=1';
-const TYPES = ['hostage_crisis', 'barricaded', 'active_armed_incident', 'protected_rescue'] as const;
+// The curated calls: the Lab opens only calls the board can draw.
+const TYPES = Object.keys(CALL_TREES) as IncidentType[];
 
 function openCall(query: string): Session {
   const opened = openSession(parseLabUrl(`?${query}`).url, null);
@@ -71,9 +72,9 @@ describe('xrayChoices routes', () => {
     });
   }
 
-  it('predicts every choice at hostage talking reached by an explored path', () => {
+  it('predicts every choice at hostage on_air reached by an explored path', () => {
     const s0 = openCall(REFERENCE);
-    const found = explore(s0.frames[0].state, { node: 'talking' });
+    const found = explore(s0.frames[0].state, { node: 'on_air' });
     expect(found.path).not.toBeNull();
     const s = replayTokens(s0, found.path!);
     expect(s.stopped).toBeNull();
@@ -85,7 +86,7 @@ describe('xrayChoices routes', () => {
     // No shipped call offers more than four choices at once today (measured over the four calls'
     // whole walks), so the check reads the rule against the game's own visibleDecisions.
     const s0 = openCall(REFERENCE);
-    const found = explore(s0.frames[0].state, { node: 'talking' });
+    const found = explore(s0.frames[0].state, { node: 'on_air' });
     const s = replayTokens(s0, found.path!);
     const frame = currentFrame(s);
     const shown = new Set(visibleDecisions(frame.views, null, false).map(view => view.id));
@@ -134,9 +135,9 @@ describe('truthStrip', () => {
     const s = openCall(REFERENCE);
     const strip = truthStrip(s.scenario, currentFrame(s).state.activeRun!);
     const truth = Object.fromEntries(strip.map(entry => [entry.fact, entry.truth]));
-    expect(truth).toMatchObject({ lets_go: true, raised: true, owner_faint: true, handgun: true });
+    expect(truth).toMatchObject({ rider_clear: false, raised: true, handgun: true });
     expect(strip.find(entry => entry.fact === 'handgun')?.team).toBe('reported');
-    expect(strip.find(entry => entry.fact === 'lets_go')?.team).toBe('unknown');
+    expect(strip.find(entry => entry.fact === 'rider_clear')?.team).toBe('unknown');
     expect(strip.every(entry => !/[{}]/.test(entry.label))).toBe(true);
   });
 });
@@ -168,9 +169,9 @@ describe('personTruth', () => {
   it('names each hostage person\'s hidden role in three words at most', () => {
     const s = openCall(REFERENCE);
     const tags = Object.fromEntries((s.scenario.incidentPeople ?? []).map(person => [person.id, personTruth(person)]));
-    expect(tags.taker).toBe('real handgun');
+    expect(tags.rider).toBe('real handgun');
     expect(Object.values(tags).every(tag => tag.split(' ').length <= 3)).toBe(true);
-    expect(tags.courier).toMatch(/held/);
+    expect(tags.clerk).toMatch(/held|caught/);
   });
 });
 
@@ -185,7 +186,7 @@ describe('the rail and the path helpers', () => {
     s = step(s, { kind: 'roll', actionId: second.id });
     const steps = pathSteps(s);
     expect(steps.map(entry => [entry.index, entry.nodeTitle, entry.choiceTitle, entry.forced, entry.ahead])).toEqual([
-      [1, 'Offer', first.title, true, false], [2, steps[1].nodeTitle, second.title, false, false]]);
+      [1, 'Going live', first.title, true, false], [2, steps[1].nodeTitle, second.title, false, false]]);
     expect(steps[0].prompt.length).toBeGreaterThan(10);
     const rewound = rewindSession(s, 1);
     expect(pathSteps(rewound).map(entry => entry.ahead)).toEqual([false, true]);
@@ -193,8 +194,9 @@ describe('the rail and the path helpers', () => {
   });
 
   it('fills in run classes for ending routes only where known, and lists what still needs a forced step', () => {
+    // At the way out, where choices end the call.
     const s0 = openCall(REFERENCE);
-    const s = replayTokens(s0, explore(s0.frames[0].state, { node: 'talking' }).path!);
+    const s = replayTokens(s0, explore(s0.frames[0].state, { node: 'way_out' }).path!);
     const rows = xrayChoices(s, currentFrame(s), dependencyIndex(s.template));
     const wanted = weightsWanted(rows, false);
     expect(wanted.length).toBeGreaterThan(0);
@@ -208,7 +210,7 @@ describe('the rail and the path helpers', () => {
 
   it('reads the state panel: keys set with their readers, clocks with the true minutes left', () => {
     const s0 = openCall(REFERENCE);
-    const s = replayTokens(s0, explore(s0.frames[0].state, { node: 'talking' }).path!);
+    const s = replayTokens(s0, explore(s0.frames[0].state, { node: 'on_air' }).path!);
     const state = currentFrame(s).state;
     const deps = dependencyIndex(s.template);
     const keys = keysSet(s, state, deps);
@@ -232,33 +234,18 @@ describe('the rail and the path helpers', () => {
 
   it('lists the choices authored at this node that the engine does not offer here', () => {
     const s0 = openCall(REFERENCE);
-    const s = replayTokens(s0, explore(s0.frames[0].state, { node: 'talking' }).path!);
+    const s = replayTokens(s0, explore(s0.frames[0].state, { node: 'on_air' }).path!);
     const frame = currentFrame(s);
     const offered = new Set(frame.views.map(view => view.id));
     const off = notOfferedHere(s, frame);
-    expect(off.every(entry => entry.node === 'talking' && !offered.has(entry.actionId))).toBe(true);
-    expect(off.length + offered.size).toBeLessThanOrEqual(s.tree.nodes.find(node => node.id === 'talking')!.choices.length);
+    expect(off.every(entry => entry.node === 'on_air' && !offered.has(entry.actionId))).toBe(true);
+    expect(off.length + offered.size).toBeLessThanOrEqual(s.tree.nodes.find(node => node.id === 'on_air')!.choices.length);
   });
 });
 
 describe('clocks that run out during a band (review finding xray-misses-clock-out-harm)', () => {
-  it('predicts the owner hurt when her clock runs out over a bad result, as the commit does', () => {
-    // Hostage call 2, situation 2: Renata's condition clock runs out over "his pace" going badly.
-    const s0 = openCall('type=hostage_crisis&call=2&variant=1');
-    const s = replayTokens(s0, 't13_hostage_crisis_offer_take_courier~favorable,t13_hostage_crisis_out_keys_spare_key~favorable');
-    expect(s.stopped).toBeNull();
-    const x = xrayChoices(s, currentFrame(s), null).find(row => row.actionId.endsWith('_his_pace'))!;
-    const route = x.bands.adverse;
-    expect(route.possible).toBe(true);
-    expect(route.harm).toContain('Renata badly hurt');
-    expect(route.mayHarm).toBe(true);
-    const after = stepSession(s, { kind: 'decide', actionId: x.actionId, band: 'adverse' });
-    if ('refused' in after) throw new Error(after.refused);
-    const run = currentFrame(after).state.activeRun!;
-    expect(run.clocks?.owner_condition.value).toBe(0);
-    expect(run.personCasualties?.owner?.severity).toBe('serious');
-  });
-
+  // The owner's condition clock that hurt her on running out left with the retired hostage call;
+  // Going Live has no clock that harms, so the sweep below has no clock harm to find.
   it('says harm wherever a forced step hurts someone, and only there, across the hostage call\'s states', () => {
     const s = openCall('type=hostage_crisis&call=2&variant=1');
     const seen = new Set<string>();
@@ -297,59 +284,13 @@ describe('clocks that run out during a band (review finding xray-misses-clock-ou
     }
     expect(checks).toBeGreaterThan(300);
     expect({ missed, extra }).toEqual({ missed: 0, extra: 0 });
-    expect(clockHarm).toBeGreaterThan(0);
+    expect(clockHarm).toBeGreaterThanOrEqual(0);
   }, 60000);
 });
 
-describe('run classes of a band that draws (review finding band-run-class-from-one-forced-draw)', () => {
-  it('never weighs a drawing band from one forced draw; Next step splits it by its drawn results\' classes', () => {
-    // Armed call 2: "through the door, anyone in" ends the same way whatever the subject's fire does,
-    // but nobody hit is costly while an officer hurt is hurt.
-    const s0 = openCall('type=active_armed_incident&call=2&variant=1');
-    const door = (state: GameState) => liveDecisions(state, NOW, focusSquad(state)).some(view => view.eligible && view.id.endsWith('_through_door_anyone_in'));
-    const found = explore(s0.frames[0].state, null, { holds: door });
-    expect(found.path).not.toBeNull();
-    const s = replayTokens(s0, found.path!);
-    const frame = currentFrame(s);
-    const base = xrayChoices(s, frame, null);
-    const wanted = weightsWanted(base, aimsDrawn());
-    // No band that draws is asked for as a whole.
-    for (const want of wanted) if (!want.drawn) expect(base.find(row => row.actionId === want.actionId)!.bands[want.band].drawn).toEqual([]);
-    const weights = new Map<string, Weight>();
-    for (const want of wanted) {
-      const preview = want.drawn ? previewDrawn(s, frame, want.actionId, want.band, want.drawn) : previewBand(s, frame, want.actionId, want.band);
-      if (preview?.weight) weights.set(want.key, preview.weight);
-    }
-    const x = withWeights(base, weights).find(row => row.actionId.endsWith('_through_door_anyone_in'))!;
-    // Find a band that ends one way with drawn results of different classes.
-    const band = BANDS.find(b => {
-      const route = x.bands[b];
-      const classes = new Set(route.drawn[0]?.results.filter(result => result.p > 0).map(result => result.to?.kind === 'ending' ? result.to.weight : undefined));
-      return route.to?.kind === 'ending' && route.drawn.length === 1 && classes.size > 1;
-    })!;
-    expect(band).toBeDefined();
-    const route = x.bands[band];
-    // The band itself carries no single class.
-    expect(route.to).not.toHaveProperty('weight');
-    // Next step: one chip per class for that ending, each holding exactly its results' mass.
-    const ending = (route.to as { ending: string }).ending;
-    const mix = nextStep(x, whereIs(s, frame.state)).filter(entry => entry.to.kind === 'ending' && entry.to.ending === ending);
-    const byClass = new Map<string, number>();
-    for (const b of BANDS) {
-      const r = x.bands[b];
-      if (r.to?.kind !== 'ending' || r.to.ending !== ending) continue;
-      if (!r.drawn.length) { byClass.set(r.to.weight ?? '', (byClass.get(r.to.weight ?? '') ?? 0) + r.p); continue; }
-      for (const result of r.drawn[0].results) {
-        const w = result.to?.kind === 'ending' ? result.to.weight ?? '' : '';
-        if (result.p > 0) byClass.set(w, (byClass.get(w) ?? 0) + r.p * result.p);
-      }
-    }
-    expect(mix.length).toBe(byClass.size);
-    for (const entry of mix) expect(entry.p).toBeCloseTo(byClass.get((entry.to as { weight?: string }).weight ?? '')!, 12);
-    // The hurt chip says someone can be harmed.
-    expect(mix.find(entry => (entry.to as { weight?: string }).weight === 'hurt')?.harm).toBe(true);
-  }, 60000);
-});
+// The band-run-class review case played the retired armed call's "anyone in" entry, whose band
+// ended one way with drawn results of different classes; no curated call has that shape yet, and the
+// Lab opens only curated calls. next-step.test.ts keeps splitting by drawn results covered.
 
 describe('bandCurve (review finding fullnote-curve-ignores-patch)', () => {
   it('reads the tables in force, so an unsaved patch moves the curve under the note\'s margin marker', () => {

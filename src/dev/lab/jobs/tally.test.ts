@@ -31,7 +31,7 @@ async function reach(s: Session, runs: [number, number]): Promise<ReachTally> {
 }
 
 describe('mergeTally', () => {
-  const barricade = open('type=barricaded');
+  const barricade = open('type=hostage_crisis');
 
   it('runs [0, 50) merged with [50, 100) equal [0, 100) played in one go', async () => {
     const [first, second, whole] = await Promise.all([reach(barricade, [0, 50]), reach(barricade, [50, 100]), reach(barricade, [0, 100])]);
