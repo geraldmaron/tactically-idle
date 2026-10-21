@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react';
 import type { Command, GameState, HandlerResult } from '../sim/types';
+import { liveDither } from './timer';
 import { CampaignSlots } from '../sim/campaign-slots';
 import { withSaveLock } from '../sim/save-lock';
 import { createSaveEnvironment } from './save-environment';
@@ -43,7 +44,11 @@ function lockFailure(): HandlerResult {
 }
 
 export function send(cmd: Command): HandlerResult {
-  const result = campaigns.send(cmd, Date.now(), false);
+  const now = Date.now();
+  // A commit carries its stall (ui/timer.ts). The live screen passes the minutes it showed; any
+  // other caller gets the stall as of now.
+  const sent = cmd.type === 'decide' && cmd.ditherMinutes === undefined ? { ...cmd, ditherMinutes: liveDither(getState(), now) } : cmd;
+  const result = campaigns.send(sent, now, false);
   notify();
   if (result.ok && campaigns.getSnapshot().activeSlotId) void serialized(() => { campaigns.save(Date.now()); notify(); }).catch(lockFailure);
   return result;

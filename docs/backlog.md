@@ -201,12 +201,14 @@ the hostage call and the call's fingerprints are recaptured deliberately.
 
 ### crisis-content-note: Content note and 988 line
 Tags: job=command; journeys=answer-a-call; probes=none (text); lane=deferred
-Needs: start=content-descriptors (waits on the owner's wording too); integrate=none; ship=none
+Needs: start=content-descriptors; integrate=none; ship=none
 
-Shown for the hostage and barricade calls once the owner settles the wording (see decisions).
-Where it appears is proposed in `docs/content-rating.md` (Content notes): a topic-only note on the
-call card, governed by the player's note setting, and the E4.7 support line in the debrief of
-every situation with `suicide_self_harm`, whatever the setting.
+Shown for the hostage and barricade calls. The wording is drafted for the owner's approval, and
+nothing ships before the owner approves it (see decisions).
+Where it appears is set in `docs/content-rating.md` (Warnings and support): a topic-only warning on
+the call card, on by default, which also says leaving a call costs nothing; the E4.7 support line in
+the debrief of every situation with `suicide_self_harm`, whatever the setting; and a Support entry
+in Settings, always available.
 
 ### content-descriptors: Each situation says what it contains
 Tags: job=command; journeys=answer-a-call; probes=none (metadata, not a chance input); lane=engine
@@ -219,15 +221,16 @@ descriptor, or when an adult subject with `noFatal` force outcomes has neither `
 nor a recorded reason; the four existing trees tagged (calls lane writes the declared ones); the
 Scenario Lab's Calls surface shows each situation's descriptors.
 
-### content-filter-draw: Players keep topics off the board
+### content-filter-draw: Players keep avoided themes off the board
 Tags: job=command; journeys=answer-a-call, new:board-respects-filters; probes=none (selection, not a chance input); lane=interface
 Needs: start=content-descriptors; integrate=none; ship=none
 
-Design in `docs/content-rating.md`. Done: tier and topic preferences persisted outside the save
-(extending `src/ui/people/prefs.ts`); a first-run screen and a Settings screen for them; `drawCard`
-skips excluded situations and drops a kind with none left; changing a setting clears cards that no
-longer fit while a call in progress finishes; a test walks every filter combination and the
-Settings screen warns when one leaves no kind drawable; fingerprints stay pinned unfiltered.
+Design in `docs/content-rating.md`. Done: the avoided themes (`suicide_self_harm`,
+`child_at_risk`, `domestic_violence`), the warning setting and the timer persisted outside the save
+(extending `src/ui/people/prefs.ts`); a first-launch advisory and a Settings screen with a Support
+entry; `drawCard` skips situations carrying an avoided theme and drops a kind with none left;
+changing the list clears cards that no longer fit while a call in progress finishes; a test asserts
+every combination leaves at least two kinds drawable; fingerprints stay pinned with nothing avoided.
 
 ### calls-per-kind: More than one call for each kind
 Tags: job=command; journeys=answer-a-call, choices-branch; probes=none (each call joins the existing probes); lane=engine
@@ -240,7 +243,7 @@ fingerprints and Lab handle a list. Distinct from `new-call-types`, which adds k
 
 ### dither-minutes: Stalling on a decision costs game minutes
 Tags: job=command; journeys=new:stalling-costs-minutes; probes=none (time, not a favorable-chance input); lane=engine
-Needs: start=none (the stage threats on `claude/reconcile-main` must be on `main`); integrate=none; ship=none
+Needs: start=none; integrate=none; ship=none
 
 Design in `docs/call-pressure.md`. Done: real time on an open decision with a threat or running
 clock accrues dither minutes at the timer setting's rate after its reading floor; the dither is
@@ -502,9 +505,8 @@ Optional.
 
 - **Death endings:** a human read of `owner_killed`, `worker_killed`, the armed `subject_killed`,
   `resident_killed` and `tank_ran_out`.
-- **Content note and 988 line wording** for the hostage and barricade calls. Placement is proposed
-  in `docs/content-rating.md`; the tier names, descriptor list and note default there need sign-off. "Standard" currently names
-  both a content tier and a timer setting (`docs/call-pressure.md`); one of them needs a new name.
+- **Content note and 988 line wording** for the hostage and barricade calls: a session drafts it
+  (`crisis-content-note`) and the owner approves it before anything ships.
 - **E12:** whether a team holding outside an active shooter fits the game.
 - **Barricade building family:** keep apartments (`apartment_unit_g2`) or not.
 - **"Goes to review" ending line** (E2.1) in the barricade call.
@@ -537,3 +539,9 @@ Decided 2026-10-20 (progression): development points are removed and every devel
 or is granted free at a milestone (`src/sim/grants.ts`); officers hold real US police ranks from
 Probationary Officer to Lieutenant, XP stops at Lieutenant, and the experience band is read from the
 rank (`src/content/ranks.ts`, `src/sim/ranks.ts`).
+Decided 2026-10-20 (content rating): the six descriptors in `docs/content-rating.md` stand as
+written; the call-card warning defaults to on; the timer keeps Off, Relaxed and Standard; the
+warning and 988 line wording is drafted for the owner's review, and nothing ships before approval.
+Later that day, after research against Xbox Accessibility Guideline 123, the owner dropped the
+content tiers and the death, injury and gunfire toggles: those three are warnings only, and players
+avoid themes (self-harm, child at risk, domestic violence) instead, so the board never empties.

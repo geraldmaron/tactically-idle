@@ -28,7 +28,7 @@ import { useNarrow } from '../../shell/media';
 import type { LabUrl, NotesFile, Surface } from '../../types';
 import { defaultCall } from '../../url';
 import { cx, Glyph, LintGlyph, modalOpen, ProgressLine, StackBar, WeightGlyph } from '../../viz';
-import { ageText, endingWeights, findingSite, findingsFeed, gateHeadline, humanizeFinding, randomResults, severityCounts, usuallyOf, WEIGHTS_BEST_FIRST } from './calls-model';
+import { ageText, descriptorLabel, endingWeights, findingSite, findingsFeed, gateHeadline, humanizeFinding, randomResults, severityCounts, situationContent, usuallyOf, WEIGHTS_BEST_FIRST } from './calls-model';
 import type { FeedRow, Usually } from './calls-model';
 import { useGate } from './gate-store';
 import { GateRows } from './GateRows';
@@ -182,6 +182,7 @@ function CallCard({ template, verdicts, progress, usually, endings, lint, notes,
           <span className="lab-calls-usually-pop">random style · {usually.n} calls · this type</span>
         </> : <span className="lab-muted">Not run. Run the gate, or open Outcomes for this call.</span>}
       </div>
+      <Content template={template} />
       <div className="lab-calls-checks">
         <span className="lab-calls-row-label">CI gate</span>
         <GateRows verdicts={checks} progress={progress} compact onOpen={onCheck} />
@@ -200,6 +201,38 @@ function CallCard({ template, verdicts, progress, usually, endings, lint, notes,
         </span>
       </footer>
     </article>
+  );
+}
+
+/** Each situation's content descriptors (docs/content-rating.md): what the board filter reads. A
+ * derived one is set by the tree's own outcomes, a declared one by the designer's ethics screen; an
+ * avoidable one is a theme a player can keep off the board (the rest only warn). One the tree derives but the list leaves out is
+ * shown as missing, as the content gate fails it. */
+function Content({ template }: { template: IncidentTemplate }) {
+  const rows = useMemo(() => situationContent(template), [template]);
+  return (
+    <div className="lab-calls-content">
+      <span className="lab-calls-row-label">Content</span>
+      <ul className="lab-calls-content-list" aria-label={`Content descriptors of ${template.tree.title}, by situation`}>
+        {rows.map(row => (
+          <li key={row.index} className="lab-calls-content-row" data-situation={row.index}>
+            <span className="lab-calls-content-sit" title={row.note}>Situation {row.index + 1}</span>
+            <span className="lab-calls-content-tags">
+              {row.tags.map(tag => (
+                <span key={tag.descriptor} data-descriptor={tag.descriptor} className={cx('lab-calls-content-tag', tag.avoidable && 'lab-calls-content-avoidable')}
+                  title={`${tag.derived ? 'Derived from the tree' : 'Declared by the designer'}${tag.avoidable ? '; a player can avoid it' : '; warns only'}`}>
+                  {descriptorLabel(tag.descriptor)}{tag.derived ? '' : ' *'}
+                </span>
+              ))}
+              {row.tags.length === 0 && <span className="lab-muted">None declared</span>}
+              {row.missing.length > 0 && <span className="lab-calls-fail" data-missing>Missing: {row.missing.map(descriptorLabel).join(', ')}</span>}
+              {row.screened && <span className="lab-calls-content-screened" title={row.screened}>E4 screened</span>}
+            </span>
+          </li>
+        ))}
+      </ul>
+      <span className="lab-calls-content-key">* declared by the designer · bordered: a player can avoid it</span>
+    </div>
   );
 }
 

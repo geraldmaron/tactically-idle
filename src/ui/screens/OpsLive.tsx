@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { getState, useGame } from '../store';
+import { liveDither } from '../timer';
 import { decisionViews, lastResolution } from '../../sim/operation-selectors';
 import type { Id, SquadId } from '../../sim/types';
 import { useToast } from '../components/toast';
@@ -46,7 +47,9 @@ export function OpsLive() {
   const [resultOf, setResultOf] = useState<number | null>(null);
 
   // One selector block for the game and the Scenario Lab (live-model.ts).
-  const screen = liveScreen(g, now, { focusId, selection, override, floor, activeOfficer, selectedSpaceId: selSpace, lastChange, showRooms, detailsOpen: panel === 'action' });
+  // The stall so far (docs/call-pressure.md): the cards show it and the commit charges what they showed.
+  const dither = liveDither(g, now);
+  const screen = liveScreen(g, now, { focusId, selection, override, floor, activeOfficer, selectedSpaceId: selSpace, lastChange, showRooms, detailsOpen: panel === 'action', dither });
   const decisions = decisionViews(g);
   const beat = resultOf !== null && decisions.at(-1)?.revision === resultOf ? 'result' : 'decide';
   const nextStage = screen?.model.progress.stages.find((step) => step.state === 'current')?.label;
@@ -112,7 +115,7 @@ export function OpsLive() {
     const currentRun = getState().activeRun;
     // A second tap from the same rendered choice must not commit another decision.
     if (!view?.eligible || panel !== 'action' || currentRun?.id !== run.id || currentRun.stage !== run.stage || currentRun.revision !== run.revision || currentRun.status !== 'active') return;
-    const res = act({ type: 'decide', actionId: view.id, actingSquadIds: acting, supportSquadIds: support, ...(leadOfficerId ? { leadOfficerId } : {}) });
+    const res = act({ type: 'decide', actionId: view.id, actingSquadIds: acting, supportSquadIds: support, ...(leadOfficerId ? { leadOfficerId } : {}), ditherMinutes: dither });
     if (!res.ok) return;
     const r = lastResolution(getState());
     setPanel('none');

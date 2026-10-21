@@ -36,7 +36,7 @@ The browser implementation uses the approved mockup as its visual baseline. Repe
 
 ### Product decisions
 
-The browser game uses portrait presentation, local saves, fictional people and grounded, non-graphic calls. A content tier and topic filters are proposed but not built: players would choose a tier and turn topics off, and the store rating stays the owner's Mature target. The design is [content rating](docs/content-rating.md). Release scope, commercial choices and device targets belong to the [backlog owner decisions](docs/backlog.md#owner-decisions). Balance values are tunable.
+The browser game uses portrait presentation, local saves, fictional people and grounded, non-graphic calls. Calls warn about their topics on the card, a launch advisory names the game's themes, and players can avoid three themes (self-harm, child at risk, domestic violence); this is being built, and the store rating stays the owner's Mature target. The design is [content warnings](docs/content-rating.md). Release scope, commercial choices and device targets belong to the [backlog owner decisions](docs/backlog.md#owner-decisions). Balance values are tunable.
 
 ## Intended players and observable outcomes
 

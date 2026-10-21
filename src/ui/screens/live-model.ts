@@ -16,8 +16,8 @@ import type { LiveViewProps } from './LiveView';
 
 /** The player's choice list: OpsLive.tsx:76-77, one copy for the game and the lab. Each choice is
  * forecast for the focused squad alone, with no supporting squads. */
-export function liveDecisions(g: GameState, now: number, focus: SquadId | null): ActionView[] {
-  return actionViews(g, now, focus).map((action) => previewAction(g, now, action.id, focus ? [focus] : [], []) ?? action);
+export function liveDecisions(g: GameState, now: number, focus: SquadId | null, dither = 0): ActionView[] {
+  return actionViews(g, now, focus, dither).map((action) => previewAction(g, now, action.id, focus ? [focus] : [], [], undefined, dither) ?? action);
 }
 
 export interface ActionSelection { runId: Id; stage: StageId; actionId: Id }
@@ -37,6 +37,9 @@ export interface LiveUiState {
   lastChange?: { revision: number; spaceIds: Id[] } | null;
   showRooms?: boolean;
   detailsOpen?: boolean;
+  /** The open decision's stall in game minutes (store.ts liveDither, or the Lab's slider): the
+   * cards' minutes and threat tags count it. Zero when left out. */
+  dither?: number;
 }
 
 type LiveCallbacks = 'onFocusSquad' | 'onSelectAction' | 'onContinueStage' | 'onSelectOfficer' | 'onSelectSpace' | 'onFloorChange' | 'onToggleRooms' | 'onCancel' | 'onOpenDetails';
@@ -94,11 +97,12 @@ export function liveScreen(g: GameState, now: number, ui: LiveUiState): { model:
   const progress = stageProgress(g);
   // Forecast the visibly focused squad without assigning supporting squads.
   // A decision remains unselected until the player opens it for review.
-  const actions = liveDecisions(g, now, focus?.id ?? null);
+  const dither = ui.dither ?? 0;
+  const actions = liveDecisions(g, now, focus?.id ?? null, dither);
   const selectedId = ui.selection?.runId === run.id && ui.selection.stage === run.stage ? ui.selection.actionId : null;
   const base = actions.find((a) => a.id === selectedId) ?? null;
   const ov = ui.override && base && ui.override.actionId === base.id ? ui.override : null;
-  const view = base && ov ? (previewAction(g, now, base.id, ov.acting, ov.support, ov.lead) ?? base) : base;
+  const view = base && ov ? (previewAction(g, now, base.id, ov.acting, ov.support, ov.lead, dither) ?? base) : base;
   // A pick the engine didn't honor (no longer taking part) falls back to the best fit, so the
   // sheet and the commit never disagree about who leads.
   const lead = view?.officerIds[0] ?? null;
@@ -111,7 +115,7 @@ export function liveScreen(g: GameState, now: number, ui: LiveUiState): { model:
   const resupply = view && !view.eligible ? planActionResupply(g, now, view.id, acting, support) : null;
   const alternatives = view && !view.eligible ? deployed
     .filter((s) => !acting.includes(s.id))
-    .map((s) => previewAction(g, now, view.id, [s.id], support.filter((id) => id !== s.id)))
+    .map((s) => previewAction(g, now, view.id, [s.id], support.filter((id) => id !== s.id), undefined, dither))
     .filter((a): a is NonNullable<typeof a> => !!a?.eligible) : [];
 
   // Who went, not who is in the squad now: officers can join a deployed squad mid-call (run-roster).

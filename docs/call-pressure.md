@@ -13,7 +13,7 @@ The owner made these decisions on 2026-10-20:
 
 ## Where this starts
 
-Stage threats are on `claude/reconcile-main` and not on `main` yet. They have to merge first.
+Stage threats are on `main`.
 
 - `TreeThreat` (`src/content/call-trees/types.ts`) holds `label`, `minutes`, `text`, and optional
   `mark`, `moves` and `pressure`.

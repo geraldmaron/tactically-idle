@@ -24,7 +24,9 @@ export const RATING_SHORT: Record<RatingKey, string> = {
 };
 
 /** How the decision point's threat sits on one choice: it lands even when the choice goes well
- * ('slow'), only when it goes partly or badly ('risk'), or not at all. */
+ * ('slow'), only when it goes partly or badly ('risk'), or not at all. The bands count the open
+ * decision's stall (sim/operation-selectors.ts, docs/call-pressure.md), so a choice turns "Too slow"
+ * while the player waits, before anything is committed. */
 export function threatTag(a: Pick<ActionView, 'threat'>): { kind: 'slow' | 'risk'; text: string } | null {
   if (!a.threat?.bands.length) return null;
   return a.threat.bands.includes('favorable') ? { kind: 'slow', text: `Too slow: ${a.threat.label}` } : { kind: 'risk', text: `Risk: ${a.threat.label}` };

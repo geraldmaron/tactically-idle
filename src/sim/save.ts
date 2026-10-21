@@ -19,7 +19,7 @@ import { RANK_IDS } from '../content/ranks';
 export const SAVE_KEY = 'tactically-idle/save';
 
 /** Version written by this build. Other versions are rejected. */
-export const CURRENT_SAVE_VERSION = 12;
+export const CURRENT_SAVE_VERSION = 13;
 
 export interface SaveStorage {
   getItem(key: string): string | null;
@@ -80,6 +80,7 @@ function validReport(r: unknown): boolean {
 
 function validDecision(d: unknown): boolean {
   return isObj(d) && numbers(d, ['revision', 'score', 'difficulty', 'sample', 'timeCost', 'clockBaseMinutes']) && (d.clockBaseMinutes as number) >= 0
+    && (d.ditherMinutes === undefined || (isNum(d.ditherMinutes) && d.ditherMinutes > 0 && d.ditherMinutes <= (d.clockBaseMinutes as number)))
     && isStr(d.actionId) && oneOf(d.stage, STAGES) && oneOf(d.band, ['favorable', 'mixed', 'adverse'])
     && isList(d.actingSquadIds, (id) => oneOf(id, SQUAD_IDS)) && isList(d.supportSquadIds, (id) => oneOf(id, SQUAD_IDS))
     && isStrings(d.officerIds) && (d.targetId === null || isStr(d.targetId)) && validNumericRecord(d.stressDeltas)
@@ -126,7 +127,7 @@ function validIncident(c: unknown): c is Record<string, unknown> {
 
 function validRun(r: unknown): boolean {
   if (!isObj(r) || !strings(r, ['id', 'scenarioId', 'locationFamilyId'])
-    || !numbers(r, ['scenarioVersion', 'locationSeed', 'contentVersion', 'rngState', 'clock', 'pressure', 'objective', 'civilianSafety', 'revision', 'startedAt'])
+    || !numbers(r, ['scenarioVersion', 'locationSeed', 'contentVersion', 'rngState', 'clock', 'pressure', 'objective', 'civilianSafety', 'revision', 'startedAt', 'decisionOpenedAt'])
     || !isBool(r.settled) || !oneOf(r.stage, [...STAGES, 'debrief'])
     || !oneOf(r.status, ['active', 'debrief', 'closed']) || !(r.endingId === null || isStr(r.endingId))
     || !isList(r.squadIds, (id) => oneOf(id, SQUAD_IDS)) || r.squadIds.length === 0

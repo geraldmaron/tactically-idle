@@ -14,6 +14,7 @@ import '../../../../ui/screens/ops-visual.css';
 import '../../../../ui/skin.css';
 import { NOW } from '../../../../gen/incident/gates/engine-driver';
 import { briefing, builtForScenario, decisionViews, lastResolution, pendingDebrief } from '../../../../sim/operation-selectors';
+import { CLOCK_RULES_V1, decisionTextLength, ditherCap } from '../../../../sim/clocks';
 import { responseFailurePlan } from '../../../../sim/response-failure';
 import { getScenario } from '../../../../sim/scenario-registry';
 import type { GameState, Id, OutcomeBand, SquadId } from '../../../../sim/types';
@@ -70,6 +71,8 @@ export function GameFrame(p: {
   const device = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
   const [marks, setMarks] = useState<Marks>(NO_MARKS);
+  // The stall slider (docs/call-pressure.md): game minutes the player has spent on the open decision.
+  const [dither, setDither] = useState(0);
   const short = useMedia(SHORT_WINDOW);
   const width = p.width, height = DEVICE[p.width];
   const run = p.state.activeRun;
@@ -159,7 +162,7 @@ export function GameFrame(p: {
         <div className="lab-frame-slot" ref={slot} style={{ width: width * scale, height: height * scale }}>
           <div className={cx('lab-frame-device', p.playing && 'lab-frame-playing')} ref={device} style={{ width, height, transform: `translateZ(0) scale(${scale})` }} data-width={width}>
             <GameApp state={p.state} screen={p.screen} names={p.names} onReview={p.onReview} onConfirm={p.onConfirm} onFail={p.onFail}
-              toast={p.toast} onToastDone={p.onToastDone} />
+              toast={p.toast} onToastDone={p.onToastDone} dither={dither} />
           </div>
           <div className="lab-frame-overlay" aria-hidden={!p.force}>
             {marks.cards.filter(card => card.visible && p.tabs.has(card.id)).map(card => (
@@ -188,7 +191,40 @@ export function GameFrame(p: {
         {p.truth && <span className="lab-chip lab-frame-legend"><span className="lab-tag lab-tag-tape">tape</span> the player can't see this</span>}
         {short && <span className="lab-chip lab-chip-warn">Window under 701 px tall: the game's short-screen rules are on</span>}
       </p>
+      {p.screen === 'live' && <StallSlider state={p.state} dither={dither} onChange={setDither} />}
     </div>
+  );
+}
+
+/** Real time a player at `timer` spends on the open decision before its stall reaches `minutes`. */
+function realTimeFor(minutes: number, timer: 'relaxed' | 'standard', textLength: number): string {
+  const rule = CLOCK_RULES_V1.dither[timer];
+  if (!(rule.gameMinutesPerRealMinute > 0)) return 'never';
+  const seconds = Math.round(rule.floorSeconds + (rule.readingCharsPerSecond > 0 ? textLength / rule.readingCharsPerSecond : 0) + minutes / rule.gameMinutesPerRealMinute * 60);
+  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+}
+
+/** The stall slider: the open decision's dither in game minutes, up to its cap (the threat's
+ * minutes). The frame's cards preview it, so a designer sees which choices turn "Too slow" and how
+ * long a player at each timer setting waits to get there. The lab's own commits don't carry it. */
+function StallSlider({ state, dither, onChange }: { state: GameState; dither: number; onChange(minutes: number): void }) {
+  const run = state.activeRun;
+  const scenario = run ? getScenario(run.scenarioId) : null;
+  if (!run || !scenario || run.status !== 'active' || run.stage === 'debrief') return null;
+  const cap = ditherCap(scenario, run);
+  if (!(cap > 0)) return <p className="lab-frame-chips"><span className="lab-chip">No threat or running clock here: a stall costs nothing</span></p>;
+  const shown = Math.min(dither, cap);
+  const text = decisionTextLength(scenario, run);
+  return (
+    <p className="lab-frame-chips">
+      <label className="lab-chip" title="Game minutes the player has stalled on this decision. The cards preview it; the lab's commits don't carry it.">
+        Stall <input type="range" min={0} max={cap} step={0.1} value={shown} onChange={event => onChange(Number(event.target.value))} aria-label="Stall in game minutes" />
+        {shown.toFixed(1)} of {cap} min
+      </label>
+      <span className="lab-chip" title="Real time on this decision before the stall reaches the slider: the reading floor, then the setting's rate">
+        Relaxed {realTimeFor(shown, 'relaxed', text)} · Standard {realTimeFor(shown, 'standard', text)}
+      </span>
+    </p>
   );
 }
 
@@ -199,6 +235,8 @@ export function GameApp(p: {
   state: GameState; screen: FrameScreen; names: boolean;
   onReview(id: string): void; onConfirm(id: string, lead?: string): void; onFail(): void;
   toast: FrameToast | null; onToastDone(): void;
+  /** The stall the live screen previews, in game minutes (the Play slider); zero when left out. */
+  dither?: number;
 }) {
   const [overlay, setOverlay] = useState<HTMLElement | null>(null);
   const run = p.state.activeRun;
@@ -222,7 +260,7 @@ export function GameApp(p: {
   else if (p.screen === 'debrief') body = <DebriefScreen state={p.state} />;
   else if (run.status !== 'active' || run.stage === 'debrief') body = <div className="page"><p className="dim">The call has ended. Rewind a step to see the live screen.</p></div>;
   // The live screen stays mounted across steps, as the game's does: the map updates in place.
-  else body = <LiveScreen state={p.state} onReview={p.onReview} onConfirm={p.onConfirm} onFail={p.onFail} />;
+  else body = <LiveScreen state={p.state} onReview={p.onReview} onConfirm={p.onConfirm} onFail={p.onFail} dither={p.dither ?? 0} />;
 
   return (
     <div className="app">
@@ -312,7 +350,7 @@ export function labResultOf(confirmed: LabConfirm | null, state: GameState): num
 
 /** OpsLive's wiring with the lab's moves in place of the store: one selector block (liveScreen),
  * the game's LiveView, its review sheet and room sheet, its result record and situation panel. */
-function LiveScreen({ state, onReview, onConfirm,  onFail }: { state: GameState; onReview(id: string): void; onConfirm(id: string, lead?: string): void; onFail(): void }) {
+function LiveScreen({ state, onReview, onConfirm, onFail, dither }: { state: GameState; onReview(id: string): void; onConfirm(id: string, lead?: string): void; onFail(): void; dither: number }) {
   const run = state.activeRun!;
   const [focusId, setFocusId] = useState<SquadId | null>(() => run.history.at(-1)?.actingSquadIds[0] ?? null);
   const [selection, setSelection] = useState<ActionSelection | null>(null);
@@ -344,7 +382,7 @@ function LiveScreen({ state, onReview, onConfirm,  onFail }: { state: GameState;
     confirmed.current = null;
     if (next !== resultOf) setResultOf(next);
   }
-  const screen = liveScreen(state, NOW, { focusId, selection, override, floor, activeOfficer, selectedSpaceId: selSpace, lastChange, showRooms, detailsOpen: panel === 'action' });
+  const screen = liveScreen(state, NOW, { focusId, selection, override, floor, activeOfficer, selectedSpaceId: selSpace, lastChange, showRooms, detailsOpen: panel === 'action', dither });
   const targetFloor = screen?.review.targetFloor ?? null;
   useEffect(() => { if (targetFloor !== null) setFloor(targetFloor); }, [screen?.review.view?.id, targetFloor]);
   if (!screen) return <div className="page"><p className="dim">Operation location unavailable.</p></div>;
