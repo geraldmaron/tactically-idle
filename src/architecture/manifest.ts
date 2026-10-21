@@ -86,6 +86,7 @@ export const OWNERSHIP: readonly { glob: string; layer: Layer; system: System }[
   { glob: '/src/content/scenarios/**', layer: 'catalog', system: 'scenario' },
   { glob: '/src/content/scenario-*.ts', layer: 'catalog', system: 'scenario' },
   { glob: '/src/content/unlocks.ts', layer: 'catalog', system: 'scenario' },
+  { glob: '/src/content/traits.ts', layer: 'catalog', system: 'officer' },
   { glob: '/src/content/items.ts', layer: 'catalog', system: 'item' },
   { glob: '/src/content/capabilities.ts', layer: 'catalog', system: 'item' },
   // What each officer brings: chosen from the item catalog by role and certification (starter-kit).
@@ -136,6 +137,8 @@ export const OWNERSHIP: readonly { glob: string; layer: Layer; system: System }[
   { glob: '/src/sim/grants.ts', layer: 'engine', system: 'metric' },
   { glob: '/src/sim/casebook.ts', layer: 'engine', system: 'metric' },
   { glob: '/src/sim/reputation.ts', layer: 'engine', system: 'metric' },
+  { glob: '/src/sim/player-profile.ts', layer: 'engine', system: 'metric' },
+  { glob: '/src/sim/pressure-sources.ts', layer: 'engine', system: 'scenario' },
   { glob: '/src/sim/clocks.ts', layer: 'engine', system: 'scenario' },
   { glob: '/src/sim/timer-setting.ts', layer: 'engine', system: 'scenario' },
   // Agitation and rapport are a subject's temper.

@@ -206,7 +206,7 @@ by eye against this file's two prose rules and the stock phrases you can name.
   an ordering, never a choice; route it to a new node that says what changed.
 - A held ending names who is still inside. When a person can be inside or out on the paths that
   reach it, split the outcome by `when: { safe | notSafe }` into two endings
-  (`hostage-signature.ts`, `held` and `held_both`).
+  (`hostage-live.ts`, `held_counter` and `held_both`).
 - A subject who shoots at the team moves the call to a decision node (`fired_on`: go in harder,
   or hold and call him), never straight to a held ending.
 - A preview names the worst result its band can produce in any situation, and promises nothing

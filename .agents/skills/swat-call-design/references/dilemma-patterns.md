@@ -220,7 +220,7 @@ weak dilemma.
 
 - Goods. Care for one person now, against fairness to everyone still inside.
 - Lever and lane. Release steps as `out` and `safe` on outcomes with a `promise`, as in
-  `hostage-signature.ts`.
+  `hostage-live.ts`.
 - Stage and turn. Stage 2. Once one person leaves, the one left behind changes the math.
 - Prompt. "He will let the courier go now if the owner stays. The courier is at the door with
   his bag."

@@ -18,20 +18,19 @@ measures the odds wiring; its floors rise as these items land.
 
 ### offsite-fire: Gunfire from outside the building uses the incoming-fire model
 Tags: job=command; journeys=chance-not-script; probes=none (adds a drawn harm result, not a favorable-chance input); lane=engine
-Needs: start=none (the rescue design sheet states the request); integrate=none; ship=none
+Needs: start=none; integrate=none; ship=none
 
-The rescue shooter is offsite (`src/content/call-trees/rescue-chair.ts`), instance compilation
+A shooter outside the building (the retired rescue call had one) can't fire: instance compilation
 leaves offsite people out of the incident (`src/gen/incident/instance.ts`), and incoming fire needs
-an incident person with a threat profile (`src/sim/operation.ts`). The rescue design sheet
-(`docs/calls/rescue-design.md`, section O) splits this into R-R1 (the shooter as an incident person
-on the plan), R-R2 (one exposure that draws fire at each person in it) and R-R3 (fire odds from where
-each target really is and for how long, a new incoming-fire version). Done: a threat outside the
-building can fire on the team and on civilians through the drawn incoming-fire result, with its
-sightline from the generated building, and R-R1 to R-R3 work in the rescue call.
+an incident person with a threat profile (`src/sim/operation.ts`). The work splits into the shooter
+as an incident person on the plan, one exposure that draws fire at each person in it, and fire odds
+from where each target really is and for how long. Done: a threat outside the building can fire on
+the team and on civilians through the drawn incoming-fire result, with its sightline from the
+generated building, used by the curated rescue call (`next-curated-calls`).
 
 ### second-squad: A second squad can act
 Tags: job=build; journeys=joint-operation; probes=none (squad count is not a probe input yet); lane=engine
-Needs: start=none; integrate=none; ship=barricade-model-first (a call authors the choices)
+Needs: start=none; integrate=none; ship=none
 
 Every v13 choice puts one squad to work (`squadsPutToWork`), and evaluation always supplies one
 acting squad (`src/sim/operation.ts`) though the engine has `maxActing`, `support` and
@@ -61,37 +60,12 @@ so the window exit is pruned on all 90 sampled calls. The pruning is correct; a 
 reach is likely a layout defect. Done: find what blocks it, and either fix the layout (if a person
 should be able to reach that window) or record why it's blocked by design.
 
-### armed-max: Text can say a look found empty hands
-Tags: job=command; journeys=chance-not-script; probes=none (text condition); lane=engine
-Needs: start=none; integrate=none; ship=none
-
-From the hostage armed line's writing review: `TreeState.armed` takes `min` only, so after a look
-into the room an unarmed group gets no line at all, which the review flags as a fake-choice risk
-(the look pays nothing visible). Done: `TreeState.armed` takes `max` (including `max: 0`), under the
-same compile-time reveal rule, with a test, so the hostage call can say the hands were empty. In
-the same item: `armedRevealErrors` also checks variants the compiler prunes, which forced the
-hostage call to set `saw_inside` on the lone-only `team_glass` as a workaround (#48). Check only
-the variants that can occur, and tell the calls lane so it can drop the workaround.
-
-### rescue-engine-requests: Outcomes that change the scene
-Tags: job=command; journeys=choices-branch; probes=blueprint-building; lane=engine
-Needs: start=none; integrate=none; ship=none
-
-Requests R-R4 to R-R8 in `docs/calls/rescue-design.md`: R-R4 an outcome places cover (the rescue
-vehicle between the shooter and the porch), R-R5 an escort by the front or the back door, R-R6 an
-outcome changes a clock's rate, R-R7 an outcome sets a named exterior door's state, R-R8 the light
-at an outdoor place counts. R-R5 overlaps the barricade's window exit (R-B2): design one exit-route
-field for both. Each adds a field to an interface file, so each needs the lead's approval and a
-Codex review; prefer one general outcome shape over five call-specific ones where the review
-supports it. Done: each works in the rescue call, and R-R6 is checked against `src/sim/clocks.ts`,
-which the sheet did not re-read.
-
 ## Next: calls and the incident model
 
-The scenario depth program (owner, 2026-10-19) comes first in this section: the calls are correct
-but forgettable, and no gate can fail a call for that. Order: `depth-bible` and `call-surfaces`
-with `deception-commitments`, then `hostage-depth-pilot`, then an owner read before any other call
-is rewritten. Plan of record: `docs/scenario-depth.md`.
+The calls were rebuilt from zero on 2026-10-21 (owner): every old call is deleted, and the board
+carries curated calls only, starting with Going Live (`going-live-review`), then
+`next-curated-calls`. The depth rules (`depth-bible`, `call-surfaces`, `deception-commitments`,
+`docs/scenario-depth.md`) apply to each one.
 
 ### mark-plan-reads-when: The mark planner ignores an outcome's own condition
 Tags: job=command; journeys=choices-branch; probes=none (compile-time pruning, not an odds input); lane=engine
@@ -132,49 +106,6 @@ undelivered where the tree says it must be, moves the person's meters (`promise_
 in the score. Later choices can read whether it was kept or broken. Done: a gate fails a deception
 whose break has no visible cue, and a test shows a lie that helps now and costs later.
 
-### hostage-depth-pilot: Rebuild One Last Signature to the depth rules
-Tags: job=command; journeys=answer-a-call, choices-branch; probes=none (a rewrite of an existing call, whose probes keep their floors); lane=calls
-Needs: start=depth-bible; integrate=call-surfaces, deception-commitments; ship=none (waits on the owner read)
-
-Open after the separate review: a temptation in group calls (F5, a promise can't be made to a group today). A redesign, not a polish: situations that reframe the taker, a temptation, an escalation palette,
-voices for the owner, courier and negotiator, and an epilogue on every ending. Done: the gates and
-the crossed coverage walk pass, a separate reader records D1 to D9, fingerprints are recaptured
-deliberately, and the owner has read three paths aloud and approved the bible as calibrated.
-
-
-### barricade-model-first: Write the barricade call model-first
-Tags: job=command; journeys=answer-a-call, choices-branch; probes=blueprint-building, blueprint-locked; lane=calls
-Needs: start=hostage-depth-pilot (the owner read); integrate=barricade-tooling-fixes; ship=none
-
-Under `depth-bible`: template, design sheet in `docs/calls/` (the parked sheet reworked to the depth rules), tree, separate review including D1 to D9. The old
-tree has 2 `team` moves out of about 37 choices (armed 13, hostage 8, rescue 8), and a different
-building changes 6 of 33 opening choices (`blueprint-building`, floor 0.18). Done: the new call
-makes physical moves through the building, both blueprint floors rise, `npm run check:strings`
-passes on it, it passes coverage, balance and the separate review, and the old
-`barricade-order` tree is retired. It authors the support choices from `second-squad` (R-B4), so
-the barricade reaches `squadRange` 2, and the `joint-operation` journey test switches from its
-fixture to this call. The old barricade's outcome-score calibration row retires with it, so
-this call adds a calibration row for its own endings (`src/sim/outcome-score.test.ts`). If a building fact (R-B1 upstairs, R-B2 window) first gates a required
-need here, `src/sim/board-suggestions.ts` reads it (public building facts only), with a test that a
-different building changes the board's list. R-B1 to R-B3 shipped in #51, #59 and #61. The design sheet (`docs/calls/barricade-design.md`, "Everything
-Goes Back") lists its engine requests; tree data waits on them. The `items-none` share at openings
-grows here too, since most of today's openings are phone calls that carry no gear.
-
-### rescue-model-first: Write the rescue call model-first
-Tags: job=command; journeys=answer-a-call, choices-branch; probes=blueprint-building; lane=calls
-Needs: start=hostage-depth-pilot (the owner read); integrate=offsite-fire, rescue-engine-requests; ship=none
-
-Same pipeline as the barricade, under `depth-bible`; the design sheet is `docs/calls/rescue-design.md` and is reworked to it. Done: it passes D1 to D9, rescue gunfire comes from the drawn incoming-fire result,
-not harm authored per branch; `npm run check:strings` passes on it; it passes coverage, balance
-and review; and the old `rescue-chair` tree is retired.
-
-### armed-model-first: Write the armed-incident call model-first
-Tags: job=command; journeys=answer-a-call, choices-branch; probes=subject-armament; lane=calls
-Needs: start=barricade-model-first; integrate=none; ship=none
-
-Same pipeline, under `depth-bible`. Done: `npm run check:strings` passes on it, it passes D1 to D9, it passes coverage, balance and review,
-and the old `armed-noise` tree is retired.
-
 ### civilian-hit-lines: Lines for a civilian hit by fire
 Tags: job=command; journeys=chance-not-script; probes=none (text); lane=calls
 Needs: start=none; integrate=none; ship=none
@@ -185,19 +116,11 @@ through the prose skill and a separate review, before that PR merges.
 
 ### complications: Complication modules
 Tags: job=command; journeys=choices-branch; probes=none (modules change situations, not a probe input); lane=calls
-Needs: start=barricade-model-first; integrate=none; ship=none
+Needs: start=none; integrate=none; ship=none
 
 Child, dog, second subject, medical bystander, crowd, power out, reinforced door, intoxication.
 Every template has `complications: []` today. Each module that needs a new person or state goes to
 the engine lane as a request first.
-
-### hostage-engine-requests: Hostage engine requests
-Tags: job=command; journeys=answer-a-call; probes=none (text, not odds); lane=engine
-Needs: start=none; integrate=none; ship=none
-
-Filed in `docs/calls/hostage-signature-design.md`: R-G2 a group role the player meets, and R-G3 with
-N15 and N16 count-conditioned briefing lines and ending addenda. R-G1 shipped with `intel-odds` (#45, #48), R-G4 shipped with `clock-runout-routing` (#46, #56); N6, N7, N9 and N21 shipped in #64. Done: each request works in
-the hostage call and the call's fingerprints are recaptured deliberately.
 
 ### crisis-content-note: Content note and 988 line
 Tags: job=command; journeys=answer-a-call; probes=none (text); lane=deferred
@@ -234,62 +157,72 @@ every combination leaves at least two kinds drawable; fingerprints stay pinned w
 
 ### calls-per-kind: More than one call for each kind
 Tags: job=command; journeys=answer-a-call, choices-branch; probes=none (each call joins the existing probes); lane=engine
-Needs: start=barricade-model-first; integrate=none; ship=none
+Needs: start=none; integrate=none; ship=none
 
 `CALL_TREES` maps each kind to one tree (`src/content/call-trees/index.ts`), so every hostage call
 is the same call, and a content filter that rules out its situations removes the kind. Done: a kind
 holds several trees, the draw picks among those the filters allow, and the content version,
 fingerprints and Lab handle a list. Distinct from `new-call-types`, which adds kinds.
 
-### dither-minutes: Stalling on a decision costs game minutes
-Tags: job=command; journeys=new:stalling-costs-minutes; probes=none (time, not a favorable-chance input); lane=engine
+### going-live-review: A separate read of Going Live before it ships
+Tags: job=command; journeys=choices-branch, chance-not-script; probes=none (text); lane=calls
 Needs: start=none; integrate=none; ship=none
 
-Design in `docs/call-pressure.md`. Done: real time on an open decision with a threat or running
-clock accrues dither minutes at the timer setting's rate after its reading floor; the dither is
-recorded with the decision and added to its minutes on commit, capped at the open threat's minutes;
-replay reads it from the record; time away survives a close and resume once, and a backward
-device clock never reduces or repeats it; previews and `threatTag` read it live; rates in
-`src/sim/tuning.json`; a Lab slider; outcome-score calibration runs at zero dither and a separate
-test records the shift at each setting.
+`src/content/call-trees/hostage-live.ts`, sheet `docs/calls/going-live-design.md`. Done: a
+`swat-writing-review` verdict from a separate reader on the bound text at 390px in the Lab (Play and
+Script), a Codex cold read, `npm run check:strings` clean, the reactions pools in
+`src/content/incidents/hostage.ts` read for tone (viewers are people too: no cheering force), and
+the owner's read of the two situations and the manager's death endings.
 
-### threat-drain-bar: The threat pill drains
-Tags: job=command; journeys=new:stalling-costs-minutes; probes=none (display); lane=interface
-Needs: start=dither-minutes; integrate=none; ship=none
+### next-curated-calls: Barricade, armed and rescue as curated calls
+Tags: job=command; journeys=choices-branch, chance-not-script; probes=officer-traits, source-pull; lane=calls
+Needs: start=going-live-review (the first call sets the bar); integrate=none; ship=none
 
-Design in `docs/call-pressure.md`. Done: `ThreatPill` shows a bar of the threat's minutes left after
-dither, matching its minute text; choices turn "Too slow" as it drains; the Off, Relaxed and
-Standard timer setting sits in Settings beside the content filters; checked at 390x844 in the
-running app.
+Each written fresh on the live-decision model, one at a time: pressure sources with a count the scene
+would show, beats on every threat, a trait the call favors, and physical acts that read the building
+and the kit. A type returns to the board only with its call (`CALL_TREES`). Done per call: the same
+gates and review as Going Live.
 
-### threat-agitation-lines: The subject reacts when the team stalls
-Tags: job=command; journeys=new:stalling-costs-minutes; probes=none (text); lane=calls
-Needs: start=dither-minutes; integrate=none; ship=none
-
-Design in `docs/call-pressure.md`. Done: a threat can carry per-speaker lines that fire once as a cue
-when dither crosses a threshold, written under `swat-call-prose` and reviewed under
-`swat-writing-review`; no global line pool; not suppressed by situation (owner, 2026-10-20); the
-hostage threats carry lines (drafted in `docs/calls/notes/content-warnings-draft.md`, section 4).
-
-### fill-gauge-ui: A gauge that fills shows on the live call
-Tags: job=command; journeys=new:audience-raises-stakes; probes=none (display); lane=interface
+### after-landing: What the scene does once a threat has landed
+Tags: job=command; journeys=none (pacing decision); probes=none (time); lane=engine
 Needs: start=none; integrate=none; ship=none
 
-Design in `docs/call-pressure.md` ("Gauges that fill"). Done: a fill clock renders beside
-`ThreatPill` as a pill with its label, a bar that fills, the effect it has now named, and a marker at
-each cue; a choice that stops or slows a fill says so in its preview; the debrief shows the audience
-factor on trust and the camera strain; reduced motion respected; checked at 390x844 and 320x568 in
-the running app.
+Dither stops at the open threat's minutes (`ditherCap`, `src/sim/clocks.ts`), so after a threat lands
+the sources' sim values freeze; only the count's wobble and the reactions keep moving. Decide whether
+sources keep rising past the cap (bounded, say to twice the threat's minutes) so pressure stays live,
+and measure it in `dither-balance.test.ts`.
 
-### hostage-livestream: The crowd and the taker go live on the hostage call
-Tags: job=command; journeys=new:audience-raises-stakes, choices-branch; probes=none (text and clocks, the fill effects are tuning); lane=calls
-Needs: start=none; integrate=fill-gauge-ui (the player sees the gauge before the lines ship); ship=none
+### one-card-board: The board with one curated kind
+Tags: job=command; journeys=answer-a-call; probes=none (board pacing); lane=engine
+Needs: start=none; integrate=none; ship=none
 
-Design in `docs/calls/notes/hostage-livestream-design.md`. Authored on `claude/content-warnings-draft`:
-two fills in all three situations (the regulars' phones at the tape; the taker's stream on the owner's
-phone, with `watched` moves) and two choices at `talking` that slow or stop them at the price of the
-bargaining. Done: the owner approves the lines; a separate `swat-writing-review` read; the Lab shows
-both gauges filling under dither and a stop choice freezing one.
+The board keeps one live call per kind (`drawCard`, `src/sim/incidents.ts`), so with one curated kind
+it never shows more than one card. Decide whether one kind may hold two cards (different buildings
+and situations) until more calls exist.
+
+### spend-mix-readers: What the department spends on shapes who applies and who funds it
+Tags: job=command; journeys=none (department loop); probes=funding-balance (stays a gap); lane=engine
+Needs: start=none; integrate=none; ship=none
+
+`playerProfile` (`src/sim/player-profile.ts`) derives the spend mix from the ledger. Done: the recruit
+pool leans toward it (training spend draws candidates who want to learn) and grants lean toward the
+department's posture, each a small named multiplier with a cap and a test; the funding probe stays at
+zero.
+
+### profile-surface: The player sees how the city reads the department
+Tags: job=command; journeys=none (department loop); probes=none (display); lane=interface
+Needs: start=none; integrate=none; ship=none
+
+A short HQ panel names the department's name (posture), its habit on the clock (stall), its spend mix
+and its form, each with the one thing it changes (`docs/player-profile.md`). An eased card says
+"a quieter call while the team recovers" (`IncidentCard.eased`).
+
+### lab-live-window: The Scenario Lab plays the live decision
+Tags: job=command; journeys=none (tooling); probes=none (tooling); lane=tooling
+Needs: start=none; integrate=none; ship=none
+
+The Play surface's dither slider shows beats in a comms column and each source's count; style bots
+(talker, breacher, staller) report pass rates per style for each curated call.
 
 ### aftermath: Casualty, care and aftermath
 Tags: job=command; journeys=new:aftermath-follows; probes=none (consequences after the call); lane=deferred
@@ -300,7 +233,7 @@ warrant call (D2), which also needs content and dispatch work.
 
 ### new-call-types: New call types
 Tags: job=command; journeys=answer-a-call; probes=none (each call joins the existing probes); lane=deferred
-Needs: start=barricade-model-first; integrate=none; ship=none
+Needs: start=none; integrate=none; ship=none
 
 High-risk warrant, robbery in progress, crisis barricade, vehicle standoff, built model-first. The
 standoff needs a roadside building family.
@@ -336,22 +269,9 @@ that the drawn incoming-fire distribution changes with the building. Done: a pai
 over every fire-carrying choice shows the hit share differs where the sightline does, as a
 trees-v13 test.
 
-### barricade-tooling-fixes: Tooling fixes the new barricade needs
-Tags: job=understand; journeys=choices-branch; probes=none (tooling); lane=tooling
-Needs: start=none; integrate=none; ship=none
-
-From the same run: `src/gen/incident/trees-v13/graph.test.ts` passes `memberCounts` where it needs
-`callCounts`, so upstairs facts never settle; and the lab's Flow endings column overflows with the
-new barricade's 11 endings (`src/dev/lab/model/flow-layout.test.ts`). Done: the graph test reads
-compile-time facts, and the lab shows every ending at 390 and 430.
-
-Shipped in #80: the graph test reads `callCounts`, and `flow-layout.test.ts` checks the endings
-column at Fit's legibility floor (900x596). Left: confirm every ending row is reachable at 390 and
-430 with the new barricade loaded.
-
 ### scale-gates: Scale gates (M6)
 Tags: job=command; journeys=answer-a-call, choices-branch; probes=none (gates); lane=tooling
-Needs: start=none; integrate=none; ship=barricade-model-first, rescue-model-first, armed-model-first
+Needs: start=none; integrate=none; ship=none
 
 Every signature class over K seeds (generate, bind, validate, agree, walk, coverage, writing),
 balance per template and incident class, the domain model's invariants as code, its stress-test
@@ -360,7 +280,7 @@ replacement calls.
 
 ### strings-gate: `npm run check:strings` joins verify and CI
 Tags: job=command; journeys=answer-a-call; probes=none (tooling); lane=tooling
-Needs: start=none; integrate=barricade-model-first, rescue-model-first, armed-model-first; ship=none
+Needs: start=none; integrate=none; ship=none
 
 It exits 1 today only on the barricade, armed and rescue trees, which the model-first calls
 replace. Its output isn't deterministic either: two runs on the same commit (main, 2026-10-18) list
@@ -462,7 +382,7 @@ profile get a `swat-writing-review` read.
 
 ### onboarding: A first call that teaches the loop
 Tags: job=command; journeys=answer-a-call; probes=none (teaching flow); lane=deferred
-Needs: start=barricade-model-first (needs validation: choosing and guaranteeing a teaching call may need generation work); integrate=none; ship=none
+Needs: start=none; integrate=none; ship=none
 
 ### familiarity-priorities: Team familiarity and a change-priorities action
 Tags: job=build; journeys=none (no call uses either yet); probes=none (not wired); lane=deferred
@@ -472,7 +392,7 @@ Neither is used by any call.
 
 ### playtests: Playtests and real-device checks
 Tags: job=command; journeys=answer-a-call, save-round-trip; probes=none (testing); lane=deferred
-Needs: start=barricade-model-first; integrate=none; ship=none
+Needs: start=none; integrate=none; ship=none
 
 First-time players, and a real iOS and Android phone, including keyboard and text zoom. Includes
 the rendered save-slot rejection message, never seen.
@@ -515,16 +435,9 @@ calls for a patient one. The labels passed `game_string_checks.py` but have had 
 `swat-writing-review` read. Done: that read, a playtest of whether players notice the line, and a
 decision on whether the lean needs a player-facing explanation (the HQ or the debrief).
 
-### audio-haptics: Audio and haptics
-Tags: job=command; journeys=none (optional polish); probes=none (polish); lane=deferred
-Needs: start=none; integrate=none; ship=none
-
-Optional.
-
 ## Owner decisions
 
-- **Death endings:** a human read of `owner_killed`, `worker_killed`, the armed `subject_killed`,
-  `resident_killed` and `tank_ran_out`.
+- **Death endings:** a human read of Going Live's `manager_killed` and `manager_killed_rider_hurt`.
 - **Content note and 988 line wording** for the hostage and barricade calls: a session drafts it
   (`crisis-content-note`) and the owner approves it before anything ships.
 - **E12:** whether a team holding outside an active shooter fits the game.

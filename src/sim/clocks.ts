@@ -380,7 +380,7 @@ export const endOf = (def: Pick<ClockDef, 'direction' | 'onOut' | 'onFull'>) => 
  * are still inside and the decision's own effects (`matched`, drawn variants included) don't
  * already hurt them: an outcome that narrates the collapse owns it.
  *
- * The route (R-G4, precedence from docs/calls/barricade-design.md row H) moves the call, after
+ * The route (R-G4, precedence from the retired barricade design, row H) moves the call, after
  * the outcome, only when:
  * 1. the decision's own outcome didn't end the call (an ending stands; the mark is still set);
  * 2. the owner isn't out or safe once the outcome applied (the clock has stopped).

@@ -4,7 +4,7 @@
 
 The resolution pipeline uses `threatFx` and `relevantSubjects` from `src/sim/threat.ts` through `src/sim/incident-factors.ts`, fed by the incident instance. Story bindings remain the person-position source; the parallel legacy person model is not revived.
 
-M1 delivered incident templates, seeded instances, per-person identity binding and the Scenario Lab. M2 connected people and place to the odds, incoming fire and team force, clocks and meters, authorization, commitments, scoring, counted groups, cascades and resolve-then-narrate coverage. The hostage pilot, "One Last Signature", was written model-first with one to three subjects. Its design and review history are in [hostage-signature-design.md](calls/hostage-signature-design.md) and [hostage-signature-review.md](calls/hostage-signature-review.md). The Lab now lives at `/lab`; `npm run check:strings` and the Lab use the skill's existing Python string checker.
+M1 delivered incident templates, seeded instances, per-person identity binding and the Scenario Lab. M2 connected people and place to the odds, incoming fire and team force, clocks and meters, authorization, commitments, scoring, counted groups, cascades and resolve-then-narrate coverage. Every call was deleted on 2026-10-21 and the board now carries curated calls only, starting with "Going Live" (`src/content/call-trees/hostage-live.ts`, sheet `docs/calls/going-live-design.md`), written for the live decision and pressure sources in `docs/call-pressure.md`.
 
 Identity is drawn per person, never by role. Names and pronouns do not affect mechanics, and minors are never killed. Current force requires a carried firearm and a qualified officer; rescue sightlines use building geometry in `src/sim/sightlines.ts`.
 

@@ -22,7 +22,7 @@ layer, the hand-authored stories and their compiler files. All of those were del
 | `src/gen/incident/gates/prose-lint.ts` (`UNSAFE_DETAIL`) | Word lists |
 | `src/sim/scenario-types.ts` (`ScenarioDefinition`, `EndingDefinition`) | Compiled fields, dispositions, the trust comment |
 | `src/ui/screens/situation-panel.css` (`situation-summary`) | The three-line clamp at 14 px |
-| `src/content/call-trees/hostage-signature.ts` (and the other call trees) | Held and held_both endings, release steps |
+| `src/content/call-trees/hostage-live.ts` (the curated calls) | Held and held_both endings, release steps |
 | `docs/content-pipeline.md`, `docs/call-trees-v13.md` | Agent brief template, gates, review, fingerprint policy |
 | The retired typed burglary and false_intruder calls at v12, compiled 2026-10-06 | Worked sheet B (dated evidence, no path) |
 
