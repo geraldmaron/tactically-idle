@@ -197,7 +197,7 @@
 .live .source-ticker-stopped { border-color: rgba(63, 208, 142, 0.5); background: linear-gradient(90deg, rgba(63, 208, 142, 0.16), rgba(63, 208, 142, 0.05)); color: #cdf5e1; }
 .live .source-ticker-head { display: flex; align-items: baseline; gap: 6px; margin: 0; min-width: 0; font: 600 13px/1.2 var(--font-cond); letter-spacing: 0.02em; }
 .live .source-ticker-label { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.live .source-ticker-count { flex: 0 0 auto; font: 700 17px/1 var(--font-mono); font-variant-numeric: tabular-nums; color: #fff; }
+.live .source-ticker-count { display: block; font: 700 20px/1 var(--font-mono); font-variant-numeric: tabular-nums; letter-spacing: -0.02em; color: #fff; }
 .live .source-ticker-pull { flex: 0 0 auto; padding: 1px 5px; border-radius: 4px; background: rgba(255, 59, 48, 0.3); color: #ffd8d1; font: 700 12px/1.2 var(--font-mono); }
 .live .source-live-dot { flex: 0 0 auto; width: 7px; height: 7px; border-radius: 50%; background: #ff3b30; box-shadow: 0 0 6px rgba(255, 59, 48, 0.9); align-self: center; }
 .live .source-live-off { background: var(--mint); box-shadow: none; }
@@ -205,12 +205,11 @@
 .live .source-ticker-bar i { display: block; height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--amber), #ff7a3c); transition: width 0.6s linear; }
 .live .source-ticker-stopped .source-ticker-bar i { background: var(--mint); }
 .live .source-ticker .fill-gauge-tick { top: -2px; height: 10px; }
-.live .source-reactions { position: absolute; left: 0; right: 0; bottom: 100%; height: 0; pointer-events: none; overflow: visible; }
-.live .source-reaction { position: absolute; bottom: 0; max-width: 92%; padding: 2px 7px; border-radius: 9px; background: rgba(10, 14, 22, 0.82); box-shadow: 0 1px 0 rgba(255, 255, 255, 0.08) inset; color: #f2f4f8; font: 500 12px/1.3 var(--font-ui); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; animation: reaction-float 3.2s ease-out 1 forwards; }
-.live .source-lane-0 { left: 4px; }
-.live .source-lane-1 { left: 22%; }
-.live .source-lane-2 { right: 4px; }
-@keyframes reaction-float { 0% { opacity: 0; transform: translateY(6px); } 12% { opacity: 1; } 75% { opacity: 0.9; } 100% { opacity: 0; transform: translateY(-46px); } }
+.live .source-reactions { position: relative; height: 34px; margin-top: 1px; overflow: hidden; pointer-events: none; -webkit-mask-image: linear-gradient(180deg, transparent, #000 45%); mask-image: linear-gradient(180deg, transparent, #000 45%); }
+.live .source-reaction { position: absolute; left: 0; bottom: 0; max-width: 100%; padding: 1px 6px; border-radius: 8px; background: rgba(10, 14, 22, 0.7); color: #f2f4f8; font: 500 11.5px/1.35 var(--font-ui); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; animation: reaction-float 3.2s ease-out 1 forwards; }
+.live .source-lane-1 { left: 8%; }
+.live .source-lane-2 { left: 16%; }
+@keyframes reaction-float { 0% { opacity: 0; transform: translateY(14px); } 12% { opacity: 1; transform: translateY(0); } 70% { opacity: 0.95; } 100% { opacity: 0; transform: translateY(-22px); } }
 @media (prefers-reduced-motion: reduce) {
   .live .source-reaction { animation: none; opacity: 0.9; }
   .live .source-reaction:not(:last-child) { display: none; }

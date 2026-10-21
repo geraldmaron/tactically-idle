@@ -35,35 +35,45 @@ export function SourceTicker({ view }: { view: FillView }) {
   const reduced = reducedMotion();
 
   // The count eases toward the sim's value and wobbles about it: an audience is never one number.
+  // One loop for the ticker's life; it reads the latest target from a ref, so ticks don't restart it.
+  const targetRef = useRef(target);
+  targetRef.current = target;
+  const counted = !!view.count;
   useEffect(() => {
-    if (reduced) { setShown(target); return; }
+    if (reduced) return;
     let frame = 0;
-    let current = shown;
+    let current = targetRef.current;
     const started = performance.now();
+    const phase = random.current() * 6;
     const step = (t: number) => {
-      current += (target - current) * 0.08;
-      const wobble = view.count ? 1 + 0.03 * Math.sin((t - started) / 700 + random.current() * 0.6) * Math.sin((t - started) / 1900) : 1;
+      current += (targetRef.current - current) * 0.06;
+      const k = (t - started) / 1000;
+      const wobble = counted ? 1 + 0.025 * Math.sin(k * 1.3 + phase) * Math.sin(k * 0.37 + phase * 2) + 0.008 * Math.sin(k * 5.1) : 1;
       setShown(current * wobble);
       frame = requestAnimationFrame(step);
     };
     frame = requestAnimationFrame(step);
     return () => cancelAnimationFrame(frame);
-    // The loop reads `target` fresh on each change; `shown` only seeds it.
-  }, [target, reduced, view.count]);
+  }, [reduced, counted]);
+  if (reduced && shown !== target) setShown(target);
 
-  // Reactions: one every second or two, faster as it fills, a burst when it jumps.
+  // Reactions: one every second or two, faster as it fills, a burst when it jumps. Keyed on the pool's
+  // text and the gauge in tenths, since the view itself is rebuilt on every tick.
+  const poolKey = (view.reactions?.pool ?? []).join('\n');
+  const pace = Math.round(view.value / 10);
   useEffect(() => {
-    const pool = view.reactions?.pool ?? [];
+    const pool = poolKey ? poolKey.split('\n') : [];
     if (!pool.length || view.stopped) return;
     const add = (text: string) => {
       const key = ++keyRef.current;
       setFloating(list => [...list.slice(-5), { key, text, lane: Math.floor(random.current() * 3) }]);
       window.setTimeout(() => setFloating(list => list.filter(item => item.key !== key)), reduced ? 4000 : 3200);
     };
-    const gap = Math.max(700, 2600 - view.value * 18);
+    const gap = Math.max(700, 2600 - pace * 180);
+    add(pool[Math.floor(random.current() * pool.length)]);
     const timer = window.setInterval(() => add(pool[Math.floor(random.current() * pool.length)]), gap);
     return () => window.clearInterval(timer);
-  }, [view.reactions, view.value, view.stopped, reduced]);
+  }, [poolKey, pace, view.stopped, reduced]);
 
   useEffect(() => {
     const before = last.current;
@@ -85,9 +95,9 @@ export function SourceTicker({ view }: { view: FillView }) {
     <p className="source-ticker-head">
       <i className={`source-live-dot${view.stopped ? ' source-live-off' : ''}`} aria-hidden="true" />
       <span className="source-ticker-label"><PeopleText text={view.label} /></span>
-      <b className="source-ticker-count" aria-hidden="true">{label}</b>
       {view.oddsPull ? <span className="source-ticker-pull" title="Taken off the checks it weighs on">−{view.oddsPull}</span> : null}
     </p>
+    <b className="source-ticker-count" aria-hidden="true">{label}</b>
     <span className="source-ticker-bar" aria-hidden="true">
       <i style={{ width: `${Math.max(0, Math.min(100, view.value))}%` }} />
       {view.cues.map(cue => <em key={cue.at} className={cue.heard ? 'fill-gauge-tick fill-gauge-heard' : 'fill-gauge-tick'} style={{ left: `${cue.at}%` }} />)}
