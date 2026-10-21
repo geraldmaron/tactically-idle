@@ -153,7 +153,7 @@ under as is are was were be been being it its it's this that these those he she 
 their theirs you your we our i me my not no nobody one two three who what where when why how all any some
 has have had do does did can could will would may might must still just now so than too very there here
 says said say tells told asks asked""".split())
-LINT_NAMES = ["UNSAFE_DETAIL", "SUICIDE_METHOD", "ACCUSATION", "HEDGE", "SETTLED", "NEGATED", "META_PHRASING"]
+LINT_NAMES = ["UNSAFE_DETAIL", "SUICIDE_METHOD", "METHOD_REVIEW", "ACCUSATION", "HEDGE", "SETTLED", "NEGATED", "META_PHRASING"]
 # opener-share is reported, never blocking. Chasing it produced inverted syntax in proof round 2.
 BLOCKING = ("over-limit", "sentence-lint", "dash", "placeholder", "missing-band", "marker-name",
             "marker-judge", "ngram", "path-echo", "address-mix", "clock-mix",
@@ -366,7 +366,7 @@ def main():
             if re.search(r"\b" + re.escape(w) + r"\b", bare):
                 flag("word-choice", row, f"'{w}' reads British, use {swap}")
         if lint:
-            for name, kind in (("UNSAFE_DETAIL", "unsafe"), ("SUICIDE_METHOD", "method"), ("META_PHRASING", "meta")):
+            for name, kind in (("UNSAFE_DETAIL", "unsafe"), ("SUICIDE_METHOD", "method"), ("METHOD_REVIEW", "method-review"), ("META_PHRASING", "meta")):
                 if lint.get(name) and (m := lint[name].search(text)):
                     flag(kind, row, m.group(0))
             for s in sentences(text):
@@ -549,7 +549,7 @@ def main():
             "engine-word", "policy-voice", "defer", "delay-only", "word-choice", "weapon-speech",
             "placeholder", "missing-band", "marker-name", "marker-judge", "repeat", "ngram", "motif",
             "path-repeat", "path-echo", "address-mix", "clock-mix", "cost-template", "lead-thin",
-            "opener-share", "cadence-flat", "triad", "unsafe", "method", "meta", "accusation", "settled", "surface",
+            "opener-share", "cadence-flat", "triad", "unsafe", "method", "method-review", "meta", "accusation", "settled", "surface",
             "inversion", "fronted", "nothing-alone", "fragments", "fragment-open", "narrator-hedge",
             "mechanic", "vague-preview", "ending-status", "tape-subject", "aphorism", "threat-it",
             "role-position", "it-check", "tense-mix", "tense-call", "speech-tag", "negation-openers"]
