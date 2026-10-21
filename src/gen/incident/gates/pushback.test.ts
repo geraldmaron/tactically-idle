@@ -109,3 +109,29 @@ describe('a push-back line in play', () => {
     });
   });
 });
+
+describe('what a push-back line reads and sets', () => {
+  it('binds the speaker and the words to the cast', () => {
+    const t = template({ ...THREAT, pushback: [{ id: 'bound', at: 1, by: 'taker', line: '{courier.first} is not leaving.' }] }, false);
+    const lines = rootChoice(compile(t)).threat!.pushback![0].effects.flatMap(effect => effect.exchange ?? []);
+    expect(lines).toHaveLength(1);
+    expect(lines[0].speaker).not.toContain('{');
+    expect(lines[0].line).not.toContain('{');
+  });
+
+  it('keeps a choice that needs a mark only a push-back line sets, and a notMarks guard on it', () => {
+    const t = template(THREAT, false);
+    const talk = t.tree.nodes.find(node => node.id === 'talk')!;
+    talk.choices[0] = { ...talk.choices[0], id: 'needs_pressed', onlyIf: { marks: ['taker_pressed'] } };
+    talk.choices.push({ ...structuredClone(talk.choices[0]), id: 'unless_pressed', onlyIf: { notMarks: ['taker_pressed'] } });
+    const actions = Object.values(compile(t).stages).flatMap(stage => stage.actions);
+    expect(actions.some(action => action.id === choiceActionId('hostage_crisis', 'talk', 'needs_pressed'))).toBe(true);
+    const guarded = actions.find(action => action.id === choiceActionId('hostage_crisis', 'talk', 'unless_pressed'))!;
+    expect(guarded.visibleWhen?.notFlags ?? [], 'the guard on a mark that can now be set stays').toContain('mark:taker_pressed');
+    // Where the situation strips the lines, nothing sets the mark: the choice that needs it is dropped.
+    const stripped = template(THREAT, true);
+    const strippedTalk = stripped.tree.nodes.find(node => node.id === 'talk')!;
+    strippedTalk.choices[0] = { ...strippedTalk.choices[0], id: 'needs_pressed', onlyIf: { marks: ['taker_pressed'] } };
+    expect(Object.values(compile(stripped).stages).flatMap(stage => stage.actions).some(action => action.id === choiceActionId('hostage_crisis', 'talk', 'needs_pressed'))).toBe(false);
+  });
+});

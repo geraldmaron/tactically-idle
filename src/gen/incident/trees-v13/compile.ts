@@ -765,7 +765,10 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
   // Marks and releases this call can actually set (prunePlan). A condition that needs one it can
   // never set is never true here (drop it); one that needs it absent is always true (strip that
   // part). The tree's count conditions are already settled, so `possible` reads marks and safety.
-  const plan = prunePlan(tree, callCounts({ groups, armed: placed.armed, upstairs: placed.upstairs, exits: placed.exits }), clockMarks, spec.seed, clockNexts);
+  // The marks a stalled decision's push-back lines set count as settable, except where the situation
+  // strips the lines (suicide_self_harm): over every node, which only keeps more conditions.
+  const pushbackMarks = situation.descriptors?.includes('suicide_self_harm') ? [] : tree.nodes.flatMap(node => (node.threat?.pushback ?? []).flatMap(line => line.mark ?? []));
+  const plan = prunePlan(tree, callCounts({ groups, armed: placed.armed, upstairs: placed.upstairs, exits: placed.exits }), [...clockMarks, ...pushbackMarks], spec.seed, clockNexts);
   const settable = { marks: plan.settableMarks, safe: plan.settableSafe };
   const possible = plan.possible;
   const trim = (state: TreeState | undefined): TreeState | undefined => state && {
@@ -1217,7 +1220,7 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
 
   // TreeState.armed reads the drawn cast: text behind it must wait for a look into the group's room.
   const leaks = armedRevealErrors(authored, nodes, (node, choice) => movement(node, choice).observes ?? [],
-    group => roomOf[authored.groups?.[group]?.leader ?? ''], clockMarks);
+    group => roomOf[authored.groups?.[group]?.leader ?? ''], [...clockMarks, ...pushbackMarks]);
   if (leaks.length) throw new Error(leaks.join('\n'));
 
   s.stages = Object.fromEntries(STAGES.map(stage => {
@@ -1255,7 +1258,7 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
   }]));
 
   const bound = mapScenarioText(s, textBinder(tree, built, placed));
-  const errors = validateStoryBindings(bound, built, [...clockMarks.map(markFlag), ...cueFlags]);
+  const errors = validateStoryBindings(bound, built, [...clockMarks.map(markFlag), ...pushbackMarks.map(markFlag), ...cueFlags]);
   if (errors.length) throw new Error(errors.join('\n'));
   return bound;
 }

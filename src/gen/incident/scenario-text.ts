@@ -36,7 +36,12 @@ export function mapScenarioText(input: ScenarioDefinition, text: (value: string)
       for (const opening of a.requires.openings ?? []) fields(opening, ['blockedReason', 'lockedNote']);
       for (const list of [a.equipment, a.modifiers]) for (const item of list ?? []) fields(item, ['label']);
       if (a.certBonus) fields(a.certBonus, ['label']);
-      if (a.threat) { fields(a.threat, ['label']); for (const effect of a.threat.effects) fields(effect, ['text']); }
+      if (a.threat) {
+        fields(a.threat, ['label']);
+        for (const effect of a.threat.effects) fields(effect, ['text']);
+        // Push-back lines are spoken lines: bind their speaker and words like any exchange.
+        for (const effect of (a.threat.pushback ?? []).flatMap(line => line.effects)) { fields(effect, ['text']); lines(effect.exchange); }
+      }
       if (a.support) fields(a.support, ['label', 'task']);
       if (a.spatial) fields(a.spatial, ['noun']);
       // Drawn consequences (v13) carry their own effects per result: bind those too.
