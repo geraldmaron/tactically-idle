@@ -100,11 +100,10 @@ carries a line, and can set a mark that later choices read.
 - **When it fires.** At half the threat's minutes of dither, rounded down, and never before 2. A
   threat of 2 minutes or less has no line. A line whose threat has already landed when the player
   comes back is dropped, so nobody returns to a complaint and its consequence at once.
-- **Crisis situations (owner, 2026-10-20).** In a situation with `suicide_self_harm`
-  (`docs/content-rating.md`), the person at risk never speaks a push-back line. Others on scene
-  may, under E4: no line blames the player for the at-risk person's harm, and no line presses
-  guilt about looking away. The gate checks the speaker. The rule replaces an earlier one that
-  silenced everyone in those situations, which left the hostage call with no lines at all.
+- **Any speaker (owner, 2026-10-20).** Lines are not suppressed by situation. The subject may
+  speak one, a person at risk of self-harm included; the settings filter is how a player keeps
+  those calls off the board (`docs/content-rating.md`). The lines still follow `swat-call-prose`
+  and the prose lint as they stand.
 
 ## Interruptions and nudges
 

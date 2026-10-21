@@ -1,4 +1,4 @@
-# Content warnings and avoided themes
+# Content warnings and filters
 
 How a call says what it contains, how the game warns before a hard call, and how a player keeps the
 themes they don't want off the board. Work items are `content-descriptors`, `content-filter-draw`,
@@ -6,8 +6,11 @@ themes they don't want off the board. Work items are `content-descriptors`, `con
 
 Owner decisions, 2026-10-20: the six descriptors below stand as written, and the call-card warning
 defaults to on. Later the same day the owner replaced the Core and Mature tiers and the per-topic
-toggles with the system below, after the descriptor work showed the Core tier, or turning off
-`injury`, left no call on the board (104 of 128 combinations were empty).
+toggles with three avoidable themes, after the descriptor work showed the Core tier, or turning off
+`injury`, left no call on the board (104 of 128 combinations were empty). Later still the owner made
+filtering the main control with fewer barriers: every descriptor can be filtered, a switch is
+disabled only when turning it on would leave no call drawable, the advisory has no checkbox, and
+push-back lines are not suppressed by situation (2026-10-20).
 
 ## Why there is no tier
 
@@ -18,9 +21,10 @@ not stated on that page: a player's setting does not lower the store rating, bec
 still ships in the app.
 
 An in-game tier would answer the age question a second time, and a tier only works when enough calls
-fit it. Death, injury and police gunfire are mechanics every current call can reach, so a tier or
-toggle that removes them removes the game. A tier can return later as a preset over the avoided
-themes, once `calls-per-kind` adds calls written for it.
+fit it. Death, injury and police gunfire are mechanics most current calls reach, so a tier that
+removes them removes the game. Each filter switch guards against that on its own: it is disabled
+when turning it on would leave no call. A tier can return later as a preset over the filters, once
+`calls-per-kind` adds calls written for it.
 
 ## What standard practice asks for
 
@@ -33,10 +37,10 @@ developers to remove content.
 
 | Tool | This game |
 |---|---|
-| Launch advisory (Psychonauts 2, Hellblade) | First launch names the game's themes plainly and needs a deliberate tap to pass |
+| Launch advisory (Psychonauts 2, Hellblade) | First launch names the game's themes plainly, with the filters beside them |
 | Per-event warning, on by default (Ikenfell) | A one-line warning on each call card naming its topics |
 | Skip without blocking progress | Ignoring a call costs nothing: board calls expire silently, never penalised (`src/sim/incidents.ts`) |
-| Remove an element, keep play | Avoided themes leave those situations off the board |
+| Remove an element, keep play | Filtered descriptors leave those situations off the board |
 | Support resources any time | A Support entry in Settings, plus the debrief line after crisis calls |
 
 ## Descriptors
@@ -44,11 +48,11 @@ developers to remove content.
 A closed list in `src/content/content-descriptors.ts`. Adding one means editing this table and that
 file, never a free-text tag.
 
-| Descriptor | Means | Player can avoid | Source | Nearest ESRB descriptor |
+| Descriptor | Means | Player can filter | Source | Nearest ESRB descriptor |
 |---|---|---|---|---|
-| `death` | Someone can die in a reachable ending or force draw | no, warning only | derived | Violence or Intense Violence |
-| `injury` | Someone can be hurt, officer or civilian | no, warning only | derived | Violence |
-| `police_gunfire` | The team can fire | no, warning only | derived | Violence |
+| `death` | Someone can die in a reachable ending or force draw | yes | derived | Violence or Intense Violence |
+| `injury` | Someone can be hurt, officer or civilian | yes | derived | Violence |
+| `police_gunfire` | The team can fire | yes | derived | Violence |
 | `suicide_self_harm` | A subject at risk of harming themselves (ethics row B, E4) | yes | declared, cross-checked | none; ESRB has no such descriptor |
 | `child_at_risk` | A child is inside or in danger | yes | declared | none |
 | `domestic_violence` | Harm between partners or family drives the call | yes | declared | Violent References |
@@ -56,9 +60,11 @@ file, never a free-text tag.
 ESRB names checked against its [ratings guide](https://www.esrb.org/ratings-guide/) on
 2026-10-20. The mapping is there to answer the store questionnaire from data, not to rate calls.
 
-Avoidable themes are subject matter a call is about. The others are what the sim does on every call,
-so they are warned about and never filtered. Every combination of avoided themes must leave at least
-two call kinds drawable; a test enforces it.
+Every descriptor can be filtered in Settings. A switch is disabled, with a line saying why, only when
+turning it on would leave no call drawable given the switches already on; `drawableKinds`
+(`src/sim/incidents.ts`) answers that question for the screen. With today's four calls, filtering
+`injury` alone empties the board, so its switch stays disabled until `calls-per-kind` adds a call
+without it. A test walks every combination and records what stays drawable.
 
 ## Unit of rating: the situation
 
@@ -83,12 +89,12 @@ the union of its situations'. No text is swapped mid-call: a situation is drawn 
 ## Filtering the board
 
 `drawCard` (`src/sim/incidents.ts`) is the one place a call reaches the board. It leaves out
-situations carrying an avoided theme, and a kind with no situation left leaves the draw.
+situations carrying a filtered descriptor, and a kind with no situation left leaves the draw.
 
-- Changing the avoid list removes cards already on the board that no longer fit. A call in progress
+- Changing the filters removes cards already on the board that no longer fit. A call in progress
   finishes.
-- Avoided themes change the draw stream for that player. The compiled fingerprints stay pinned with
-  nothing avoided, and each combination has its own draw test.
+- Filters change the draw stream for that player. The compiled fingerprints stay pinned with
+  nothing filtered, and each combination has its own draw test.
 - More trees per kind (`calls-per-kind`) widens what stays drawable, and is the variety the owner
   asked for: several hostage, barricade, armed and rescue calls, not one each.
 
@@ -105,9 +111,9 @@ drafted for the owner's approval, and none of it ships until the owner approves 
 - **In the debrief** of any situation with `suicide_self_harm`, the support line from E4.7 always
   shows, whatever the setting.
 - **In Settings**, a Support entry is always available with the same line.
-- **Push-back lines** (`docs/call-pressure.md`): in a situation with `suicide_self_harm`, the
-  person at risk never speaks one. Others on scene may, as long as no line blames the player for
-  that person's harm or presses guilt about looking away (owner, 2026-10-20).
+- **Push-back lines** (`docs/call-pressure.md`) are not suppressed by situation. Any speaker may have
+  one, the subject included. A player who doesn't want a call's themes filters them (owner,
+  2026-10-20).
 
 Owner decisions on the wording, 2026-10-20: the word "suicide" is allowed on the card warning, the
 launch advisory, Settings and the debrief support line, and nowhere else in player text (the prose
@@ -118,8 +124,9 @@ in `docs/calls/notes/content-warnings-draft.md` sections 1 to 3 is approved as d
 ## First launch and Settings
 
 At first launch an advisory names the game's themes plainly, says the settings are the player's
-preference and not an age check, and needs a deliberate tap to pass. It sets the avoided themes, the
-warning setting and the call timer (`docs/call-pressure.md`). The same controls live in Settings.
+preference and not an age check, and continues with one button: no checkbox. It sets the filters,
+the warning setting and the call timer (`docs/call-pressure.md`). The same controls live in
+Settings.
 
 Preferences persist in localStorage outside the versioned save, extending the pattern in
 `src/ui/people/prefs.ts`, so they survive a save being rejected on a version bump.
