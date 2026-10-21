@@ -3,13 +3,14 @@
 // the same minutes.
 import { openDither } from '../sim/clocks';
 import { getScenario } from '../sim/scenario-registry';
-import { DEFAULT_TIMER_SETTING, type TimerSetting } from '../sim/timer-setting';
+import type { TimerSetting } from '../sim/timer-setting';
+import { readSettings } from './settings/prefs';
 import type { GameState } from '../sim/types';
 
-/** The player's call timer setting. The one place the game reads it: the lead will point this at
- * the saved preference when the Settings screen lands. */
+/** The player's call timer setting, from the saved preference (ui/settings/prefs.ts). The one
+ * place the game reads it. Off adds no dither. */
 export function timerSetting(): TimerSetting {
-  return DEFAULT_TIMER_SETTING;
+  return readSettings().timer;
 }
 
 /** The open decision's stall in game minutes at `now` (sim/clocks.ts openDither), at the player's
