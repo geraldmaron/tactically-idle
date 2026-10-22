@@ -71,6 +71,18 @@ The Going Live teardown merged (docs only, 6806a26, backlog 30b4a77): verdict re
 design; the depth-mesh method stands at "needs validation". All six sessions started this round are idle
 with their work merged.
 
+## Wave 3 (2026-10-22)
+
+| Session | Model | Item | Writes only |
+|---|---|---|---|
+| path-measures (local_6131d480) | Sonnet | `path-measures` | `scripts/`, measure and test files in `src/gen/incident/trees-v13/` (not compile.ts or content), `src/dev/` exports, `package.json` scripts |
+| going-live-spine (local_adf5bbed) | Opus, structure passes only | `going-live-spine` | `src/content/call-trees/hostage-live.ts`, `docs/calls/going-live-design.md`, `docs/calls/notes/going-live-spine.md` |
+
+The spine gates on `check:paths` once it lands (the lead tells it), and stops before prose; Sonnet prose
+passes follow from its briefs. Owner target: every balance style reaches the turn in at least 50% of
+drawn calls. Lead context 46% on 2026-10-22: the lead rotates at the next quiet point (COORDINATION.md
+"Context rotation").
+
 ## Locks outside normal ownership
 
 None. live-chat-immersion merged (ad0d329, `npm run verify` 2,992 tests on the merged tip, lead played a
