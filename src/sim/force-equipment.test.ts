@@ -9,6 +9,7 @@ import { makeUnit } from './test-fixtures';
 import type { GameState } from './types';
 import { departmentUpkeep } from './equipment-manager-policy';
 import { fixtureIncident } from './test-fixtures';
+import { basicUnits, isBasicUnit } from './basic-kit';
 
 const scenario = () => fixtureIncident({ type: 'active_armed_incident', familyId: 'market_row', buildingSeed: 7, seed: 3, tier: 2, contentVersion: 13 });
 
@@ -33,15 +34,20 @@ function forceDecision(start: GameState) {
 }
 
 describe('current armed call force equipment', () => {
-  it.each([{ items: [] }, { items: ['radio_kit'] }])('never fires with only $items carried, in previews or the commit', ({ items }) => {
-    const { view, forces, after } = forceDecision(startGateRun(scenario().id, 719, { items }));
-    expect(view.forceRisk).toBeUndefined(); // Retired authored preview, never a phantom firearm.
-    expect(forces.flatMap(dist => dist.results).every(result => result.key.startsWith('hands:'))).toBe(true);
-    const force = decisionsOf(after.activeRun!.history).at(-1)!.committed!.drawn!.find(record => record.model === 'team_force')!;
-    expect(force.key).toMatch(/^hands:/);
-    expect(force.reason).toContain(FORCE_REASONS.no_firearm);
+  // Every officer carries a sidearm (basic-kit.ts), with no certification: nothing packed, nobody
+  // entry-trained, and the squad can still fire. The built-in sidearm is never worn or counted as used.
+  it('fires the basic sidearm with nothing packed and no entry training, in previews and the commit', () => {
+    const state = startGateRun(scenario().id, 719, { items: [] });
+    for (const officer of Object.values(state.officers)) officer.certs = [];
+    const { view, forces, after } = forceDecision(state);
+    expect(view.forceRisk).toBeUndefined(); // Retired authored preview.
+    expect(forces.flatMap(dist => dist.results).every(result => result.key.startsWith('firearm:'))).toBe(true);
+    const decision = decisionsOf(after.activeRun!.history).at(-1)!;
+    const force = decision.committed!.drawn!.find(record => record.model === 'team_force')!;
+    expect(force.key).toMatch(/^firearm:/);
+    expect(force.reason).not.toContain(FORCE_REASONS.no_firearm);
     expect(computeDebrief(after, after.activeRun!)!.forceLines).toContainEqual(expect.objectContaining({ reason: force.reason }));
-    expect(decisionsOf(after.activeRun!.history).at(-1)!.committed!.forceOutcome).toBeUndefined();
+    expect(decision.unitsUsed.filter(isBasicUnit)).toEqual([]);
   });
 
   it('fires when an acting officer is qualified and the squad carries a serviceable sidearm', () => {
@@ -51,18 +57,18 @@ describe('current armed call force equipment', () => {
     expect(decisionsOf(after.activeRun!.history).at(-1)!.committed!.drawn).toContainEqual(expect.objectContaining({ model: 'team_force', key: expect.stringMatching(/^firearm:/) }));
   });
 
-  it.each(['unqualified', 'broken', 'expired', 'servicing'] as const)('falls back from a carried sidearm when %s', fault => {
-    const state = startGateRun(scenario().id, 719, { items: ['service_sidearm'], certs: ['entry_team'] });
-    if (fault === 'unqualified') for (const officer of Object.values(state.officers)) officer.certs = [];
-    // The department starts with sidearms issued (sidearms-day-one), so the fault applies to every one.
-    for (const unit of Object.values(state.units).filter(unit => unit.itemId === 'service_sidearm')) {
-      if (fault === 'broken') unit.condition = 0;
-      if (fault === 'expired') unit.expiresAt = state.department.clockHighWater;
-      if (fault === 'servicing') unit.status = 'service';
-    }
-    const { forces, after } = forceDecision(state);
-    expect(forces.flatMap(dist => dist.results).some(result => result.key.startsWith('firearm:'))).toBe(false);
-    expect(decisionsOf(after.activeRun!.history).at(-1)!.committed!.drawn!.find(record => record.model === 'team_force')!.key).toMatch(/^hands:/);
+  // A packed firearm that cannot be used gives way to the basic sidearm every squad carries, which
+  // never breaks, expires or goes in for service.
+  it.each(['unqualified', 'broken', 'expired', 'servicing'] as const)('falls back from a carried shotgun to the basic sidearm when %s', fault => {
+    const state = startGateRun(scenario().id, 719, { items: [], certs: ['entry_team'] });
+    const officer = state.squads.find(squad => squad.id === 'A')!.officerIds[0];
+    if (fault === 'unqualified') state.officers[officer].certs = [];
+    const shotgun = makeUnit('response_shotgun', 1);
+    if (fault === 'broken') shotgun.condition = 0;
+    if (fault === 'expired') shotgun.expiresAt = state.department.clockHighWater;
+    if (fault === 'servicing') shotgun.status = 'service';
+    expect(qualifiedForceUnit(state, 'firearm', [shotgun], [officer], departmentUpkeep(state))).toBeUndefined();
+    expect(qualifiedForceUnit(state, 'firearm', [shotgun, ...basicUnits('A')], [officer], departmentUpkeep(state))?.id).toMatch(/^basic:A:/);
   });
 
   it('requires the qualified officer to participate for every tool', () => {

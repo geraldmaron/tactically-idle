@@ -118,7 +118,7 @@ describe('corrupt saves', () => {
     expect(deserialize(mutate((e) => (e.state.officers.off_chen.ratings = {})))).toBeNull();
     expect(deserialize(mutate((e) => (e.state.squads[0].officerIds = ['off_ghost'])))).toBeNull();
     expect(deserialize(mutate((e) => (e.state.squads[0].leaderId = 'off_reyes')))).toBeNull();
-    expect(deserialize(mutate((e) => (e.state.units.unit_1.condition = null)))).toBeNull();
+    expect(deserialize(mutate((e) => (e.state.units[Object.keys(e.state.units)[0]].condition = null)))).toBeNull();
     expect(deserialize(mutate((e) => (e.saveVersion = 99)))).toBeNull();
     expect(deserialize(mutate((e) => (e.saveVersion = 0)))).toBeNull();
     expect(deserialize(JSON.stringify(good))).not.toBeNull();
@@ -135,17 +135,17 @@ describe('corrupt saves', () => {
       ['empty report', (s) => { s.report = {}; }],
       ['report courses', (s) => { s.report.completedCourses = [null]; }],
       ['report recovered', (s) => { s.report.recovered = {}; }],
-      ['equipment event', (s) => { s.report.equipment = [{ unitId: 'unit_1', event: 'lost' }]; }],
+      ['equipment event', (s) => { s.report.equipment = [{ unitId: Object.keys(s.units)[0], event: 'lost' }]; }],
       ['personnel event', (s) => { s.report.personnel = [{ officerId: 'off_chen', event: 'unknown', detail: 'Unknown' }]; }],
       ['restock entry', (s) => { s.department.restockRules = [null]; }],
       ['unlocked entry', (s) => { s.department.unlockedNodes = [{}]; }],
       ['prototype development node', (s) => { s.department.unlockedNodes = ['__proto__']; }],
       ['prototype training course', (s) => { s.officers.off_chen.assignment = { kind: 'training', courseId: '__proto__', startedAt: T0, endsAt: T0 }; }],
-      ['loadout quantity', (s) => { s.squads[0].loadoutPreset = { radio_kit: {} }; }],
+      ['loadout quantity', (s) => { s.squads[0].loadoutPreset = { loud_hailer: {} }; }],
       ['officer role', (s) => { s.officers.off_chen.role = 'unknown'; }],
       ['officer trait', (s) => { s.officers.off_chen.traits = ['unknown']; }],
       ['officer certificate', (s) => { s.officers.off_chen.certs = [null]; }],
-      ['unknown unit item', (s) => { s.units.unit_1.itemId = 'missing'; }],
+      ['unknown unit item', (s) => { s.units[Object.keys(s.units)[0]].itemId = 'missing'; }],
       ['prototype officer reference', (s) => { s.squads[0].officerIds.push('__proto__'); }],
       ['unknown incident', (s) => { s.incidents[0].id = 'gen:unknown:maple_street:1:1:1:1'; }],
       ['empty debrief', (s) => { s.debriefs = [{}]; }],
@@ -232,7 +232,7 @@ describe('version 3 validation and squad D', () => {
 describe('current version boundary', () => {
   it('rejects every historical or future envelope and state version without migrating', () => {
     const current = JSON.parse(serialize(createInitialState(T0), T0));
-    for (const [field, values] of [['saveVersion', [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 16]], ['contentVersion', [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14]]] as const) {
+    for (const [field, values] of [['saveVersion', [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 17]], ['contentVersion', [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14]]] as const) {
       for (const value of values) for (const target of ['envelope', 'state'] as const) {
         const bad = structuredClone(current);
         if (target === 'envelope') bad[field] = value; else bad.state[field] = value;

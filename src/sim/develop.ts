@@ -1,6 +1,7 @@
 // Development tree, courses, and the store. Unlocking a node never qualifies an
 // officer: certifications and rating gains are granted only when a course finishes
 // (economy.settle), so completion is time-ordered.
+import { isBasicKit } from './basic-kit';
 import type { Course, DevelopmentNode, GameState, HandlerResult, Id, ItemDefinition, NodeEffect, Officer } from './types';
 import { DEV_NODES } from '../content/dev-tree';
 import { COURSES, COURSE_RATING_CEILING } from '../content/courses';
@@ -154,6 +155,7 @@ export interface ItemCheck {
 export function itemCheck(state: GameState, item: ItemDefinition, qty: number): ItemCheck {
   if (!Number.isInteger(qty) || qty < 1 || qty > DEVELOP_TUNING.maxPurchase) return { ok: false, reason: `Quantity must be a whole number from 1 to ${DEVELOP_TUNING.maxPurchase}` };
   if (item.supportOnly && qty !== 1) return { ok: false, reason: 'Buy one support vehicle at a time' };
+  if (isBasicKit(item.id)) return { ok: false, reason: 'Every officer already carries this' };
   if (item.requiresNode && !isNodeUnlocked(state, item.requiresNode)) {
     return { ok: false, reason: `Requires ${DEV_NODES[item.requiresNode]?.name ?? item.requiresNode}` };
   }

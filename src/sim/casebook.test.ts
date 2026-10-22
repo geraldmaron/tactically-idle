@@ -48,39 +48,29 @@ describe('capability unlocks', () => {
     expect(s.department.level).toBe(1);
     const open = (level: number) => { s.department.level = level; return ALL.filter((type) => isUnlocked(s, type)); };
     // Tactical calls open from the first day for a roster holding their capability; the
-    // starting roster has no vehicle-trained officer for protected rescue. Sidearms are issued
-    // from the first day (sidearms-day-one), so the armed incident's urgent response is open too.
+    // starting roster has no vehicle-trained officer for protected rescue. Every officer carries a
+    // sidearm (basic-kit.ts), so the armed incident's urgent response is open with no firearm in stock.
     expect(open(1)).toEqual(ALL.filter((type) => unlockRule(type).level === 1 && type !== 'protected_rescue'));
     expect(open(1)).toEqual(expect.arrayContaining(['barricaded', 'hostage_crisis', 'active_armed_incident']));
+    expect(Object.values(s.units).some((unit) => unit.itemId === 'service_sidearm')).toBe(false);
     expect(missingRequirements(s, 'active_armed_incident')).toEqual({});
-    // Without a response firearm in stock the call waits again.
-    for (const unit of Object.values(s.units).filter((unit) => unit.itemId === 'service_sidearm')) unit.status = 'scrapped';
-    expect(missingRequirements(s, 'active_armed_incident')).toEqual({ anyItem: ['service_sidearm', 'compact_carbine', 'response_shotgun'] });
-    const shield = Object.values(s.units).find((unit) => unit.itemId === 'ballistic_shield')!;
-    s.units.test_sidearm = { ...shield, id: 'test_sidearm', itemId: 'service_sidearm' };
-    expect(isUnlocked(s, 'active_armed_incident')).toBe(true);
-    expect(open(1)).toContain('active_armed_incident');
+    expect(unlockRule('active_armed_incident').anyItem).toBeUndefined();
     expect(open(5)).toEqual(expect.arrayContaining(['barricaded', 'active_armed_incident', 'hostage_crisis']));
   });
 
-  it('gates specialist calls on certification and equipment, and unknown frameworks on level', () => {
+  it('gates specialist calls on certification, and unknown frameworks on level', () => {
     const s = createInitialState(T0);
     s.department.level = 10;
-    for (const unit of Object.values(s.units).filter((unit) => unit.itemId === 'service_sidearm')) unit.status = 'scrapped';
     for (const officer of Object.values(s.officers)) officer.certs = officer.certs.filter((cert) => cert !== 'entry_team' && cert !== 'crisis_negotiation');
-    expect(missingRequirements(s, 'active_armed_incident')).toEqual({ anyCert: ['entry_team', 'less_lethal'], anyItem: ['service_sidearm', 'compact_carbine', 'response_shotgun'] });
+    // Training alone gates the armed incident: every officer is armed (basic-kit.ts).
+    expect(missingRequirements(s, 'active_armed_incident')).toEqual({ anyCert: ['entry_team', 'less_lethal'] });
     expect(missingRequirements(s, 'hostage_crisis')).toEqual({ anyCert: ['crisis_negotiation'] });
     expect(missingRequirements(s, 'barricaded')).toEqual({ anyCert: ['crisis_negotiation', 'deescalation'] });
     s.officers.off_park.certs.push('less_lethal');
-    expect(missingRequirements(s, 'active_armed_incident')).toEqual({ anyItem: ['service_sidearm', 'compact_carbine', 'response_shotgun'] });
-    const shield = Object.values(s.units).find((unit) => unit.itemId === 'ballistic_shield')!;
-    s.units.test_carbine = { ...shield, id: 'test_carbine', itemId: 'compact_carbine' };
     expect(missingRequirements(s, 'active_armed_incident')).toEqual({});
-    s.units.test_carbine.status = 'scrapped';
-    expect(missingRequirements(s, 'active_armed_incident')).toEqual({ anyItem: ['service_sidearm', 'compact_carbine', 'response_shotgun'] });
     expect(unlockRule('holding' as IncidentType)).toBe(DEFAULT_UNLOCK);
     s.department.level = 1;
-    expect(missingRequirements(s, 'active_armed_incident').anyItem).toContain('service_sidearm');
+    expect(missingRequirements(s, 'active_armed_incident').anyItem).toBeUndefined();
   });
 
   it('never strands a department with nothing unlocked', () => {

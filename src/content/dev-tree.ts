@@ -258,17 +258,13 @@ export const DEV_NODES: Record<Id, DevelopmentNode> = {
     "id": "field_response_program",
     "branch": "field",
     "name": "Protective response program",
-    "description": "Makes carbines and response shotguns available to buy. Weapons still require an officer trained for entry team duty. Sidearms and light protective kits are issued from the first day.",
+    "description": "Makes response shotguns available to buy, the first response upgrade. Officers must complete entry team training before using them. Every officer already carries a sidearm, a carbine and light body armor.",
     cost: { funding: 2600 },
     grant: { level: 1, resolved: 12 },
     "requires": [
         "field_entry_course"
     ],
     "effects": [
-        {
-            "kind": "unlockItem",
-            "itemId": "compact_carbine"
-        },
         {
             "kind": "unlockItem",
             "itemId": "response_shotgun"

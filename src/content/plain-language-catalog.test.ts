@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { ITEMS } from './items';
 import { DEV_NODES } from './dev-tree';
 import { hashSeed } from '../sim/rng';
+import { BASIC_KIT } from '../sim/basic-kit';
 
 // Capture taken before the copy pass. Only player-facing prose is excluded;
 // IDs, aliases, prices, training gates, tags, supplies, wear and effects are kept.
@@ -18,11 +19,14 @@ const itemCopy = (id: string) => {
 
 describe('plain-language equipment and programs', () => {
   it('keeps every equipment and development mechanic unchanged by the copy pass', () => {
-    expect(hashSeed(JSON.stringify(mechanics(ITEMS)))).toBe(3763580165);
+    // Recaptured 2026-10-21 for basic kit: the sidearm and carbine lost their entry_team gate, and the
+    // carbine its program unlock (sim/basic-kit.ts).
+    expect(hashSeed(JSON.stringify(mechanics(ITEMS)))).toBe(1745093258);
     // Command Staff hires were added after the capture; their mechanics are covered by command-staff.test.ts.
-    // Recaptured 2026-10-20 when development points were removed and every tier gained a cash price and a milestone.
+    // Recaptured 2026-10-20 when development points were removed and every tier gained a cash price and a milestone,
+    // and 2026-10-21 when the Protective response program stopped unlocking the carbine (basic kit).
     const captured = Object.fromEntries(Object.entries(DEV_NODES).filter(([, node]) => !node.effects.some((effect) => effect.kind === 'commandStaff')));
-    expect(hashSeed(JSON.stringify(mechanics(captured)))).toBe(2935013264);
+    expect(hashSeed(JSON.stringify(mechanics(captured)))).toBe(1613456375);
   });
 
   it('explains an everyday purpose before presenting game-score details', () => {
@@ -77,19 +81,23 @@ describe('plain-language equipment and programs', () => {
   it('retains the exact numeric bonuses as secondary details', () => {
     const bonuses: [string, string[]][] = [
       ['observation_binoculars', ['+4']], ['inspection_camera', ['+6']], ['portable_light', ['up to 5']],
-      ['radio_relay', ['up to 5']], ['light_protection', ['+4']], ['rescue_shield', ['+5']],
-      ['service_sidearm', ['+3']], ['compact_carbine', ['+6']], ['response_shotgun', ['+5', '+2']],
+      ['radio_relay', ['up to 5']], ['rescue_shield', ['+5']], ['response_shotgun', ['+6', '+3']],
       ['precision_support', ['+7']], ['conducted_energy_device', ['+4']], ['impact_launcher', ['+5']],
       ['support_van', ['from 3 minutes to 2']], ['armored_rescue_vehicle', ['+8']], ['command_van', ['+5']],
       ['rescue_spreader', ['+5', '2 extra minutes']], ['door_charge', ['+5', '1 minute faster', '+8 pressure']],
     ];
     for (const [id, details] of bonuses) for (const detail of details) expect(ITEMS[id].helpsWith!.slice(1).join(' '), id).toContain(detail);
+    // Basic kit adds no score (sim/basic-kit.ts), so its copy names no bonus.
+    for (const id of BASIC_KIT) {
+      expect(ITEMS[id].helpsWith![0], id).toMatch(/^Basic kit: every officer carries one/);
+      expect(itemCopy(id), id).not.toMatch(/\+\d/);
+    }
   });
 
   it('names what programs make available and keeps officer training separate', () => {
     const programs: [string, RegExp][] = [
       ['field_less_lethal', /devices, launchers and their supplies/],
-      ['field_response_program', /carbines and response shotguns/],
+      ['field_response_program', /response shotguns/],
       ['field_specialist_response', /precision support rifles/],
       ['field_controlled_access', /hydraulic rescue tools and single-use door charges/],
       ['logistics_field_support', /support vans, command vans and radio relays/],

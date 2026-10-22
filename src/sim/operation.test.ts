@@ -18,6 +18,7 @@ import {
 import { traceRun } from './operation';
 import { openingFlag } from './resolution';
 import { apply, makeState, NOW, playPolicy, setRun, startCmd, startRun, unitId, type Policy } from './test-fixtures';
+import { isBasicKit } from './basic-kit';
 
 const view = (s: GameState, id: Id, focus: SquadId | null = 'A') => actionViews(s, NOW, focus).find((v) => v.id === id)!;
 const decideView = (s: GameState, id: Id, focus: SquadId | null = 'A') => {
@@ -342,10 +343,10 @@ describe('joint operations (acceptance 18)', () => {
     // Each squad holds its own distinct reservation.
     const items = (r: ReturnType<typeof play>, sq: SquadId) => r.start.reservations.filter((x) => x.squadId === sq).map((x) => x.itemId).sort();
     expect(items(three, 'A')).not.toEqual(items(three, 'C'));
-    // Twelve officers carry twelve distinct physical radios.
-    const radios = three.start.reservations.filter((x) => x.itemId === 'radio_kit').map((x) => x.unitId);
-    expect(radios).toHaveLength(12);
-    expect(new Set(radios).size).toBe(12);
+    // Every reservation is a distinct physical unit; basic kit is part of each officer and never reserved.
+    const reserved = three.start.reservations.map((x) => x.unitId);
+    expect(new Set(reserved).size).toBe(reserved.length);
+    expect(three.start.reservations.filter((x) => isBasicKit(x.itemId))).toEqual([]);
   });
 
   it('three squads give wider cover and more strain exposure, not automatic success', () => {

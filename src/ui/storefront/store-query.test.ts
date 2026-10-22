@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { ITEMS } from '../../content/items';
 import { DEV_NODES } from '../../content/dev-tree';
 import { itemCheck } from '../../sim/develop';
+import { BASIC_KIT } from '../../sim/basic-kit';
 import { makeState, NOW } from '../../sim/test-fixtures';
 import { activeEquipmentFilterCount, catalogEntries, DEFAULT_EQUIPMENT_QUERY, equipmentFacets, queryEquipment, type CatalogEntry, type EquipmentQuery } from './store-query';
 
@@ -12,7 +13,9 @@ describe('store catalog queries', () => {
   it('keeps the entire playable catalog discoverable, including zero-owned and locked equipment', () => {
     const state = makeState();
     const entries = catalogEntries(state);
-    expect(entries).toHaveLength(Object.keys(ITEMS).length);
+    // Basic kit is part of every officer (basic-kit.ts): never stocked, bought or listed.
+    expect(entries).toHaveLength(Object.keys(ITEMS).length - BASIC_KIT.length);
+    for (const id of BASIC_KIT) expect(ids(entries)).not.toContain(id);
     expect(ids(entries)).not.toContain('battery_pack');
     expect(ids(queryEquipment(entries, query()))).toContain('armored_rescue_vehicle');
     const locked = entries.find((row) => row.item.id === 'armored_rescue_vehicle')!;
@@ -35,9 +38,9 @@ describe('store catalog queries', () => {
     const state = makeState();
     state.department.funding = 500;
     const entries = catalogEntries(state);
-    expect(ids(queryEquipment(entries, query({ search: 'radio', category: 'comms', availability: 'buy_now', affordable: true, ownership: 'owned' })))).toEqual(['radio_kit']);
-    expect(queryEquipment(entries, query({ search: 'radio', category: 'vehicles', affordable: true, ownership: 'owned' }))).toEqual([]);
-    expect(queryEquipment(entries, query({ search: 'radio', category: 'comms', ownership: 'not_owned', availability: 'buy_now' }))).toEqual([]);
+    expect(ids(queryEquipment(entries, query({ search: 'hailer', category: 'comms', availability: 'buy_now', affordable: true, ownership: 'owned' })))).toEqual(['loud_hailer']);
+    expect(queryEquipment(entries, query({ search: 'hailer', category: 'vehicles', affordable: true, ownership: 'owned' }))).toEqual([]);
+    expect(queryEquipment(entries, query({ search: 'hailer', category: 'comms', ownership: 'not_owned', availability: 'buy_now' }))).toEqual([]);
   });
 
   it('keeps unlock, affordability, certification and ready stock independent', () => {
@@ -54,7 +57,7 @@ describe('store catalog queries', () => {
 
   it('counts each facet with every other filter still applied', () => {
     const entries = catalogEntries(makeState());
-    const selection = query({ search: 'radio', category: 'vehicles', ownership: 'owned' });
+    const selection = query({ search: 'hailer', category: 'vehicles', ownership: 'owned' });
     const facets = equipmentFacets(entries, selection);
     expect(queryEquipment(entries, selection)).toHaveLength(0);
     expect(facets.categories.comms).toBe(1);
@@ -86,19 +89,19 @@ describe('store catalog queries', () => {
   it('flags shortages against ready units and explicit targets, not simply unowned catalog entries', () => {
     const state = makeState({ inventory: { trauma_kit: 0 } });
     state.department.restockRules.push({ itemId: 'trauma_kit', target: 3, budgetCeiling: ITEMS.trauma_kit.cost * 3 });
-    const radio = Object.values(state.units).filter((unit) => unit.itemId === 'radio_kit');
-    for (const unit of radio) { unit.status = 'service'; unit.serviceUntil = NOW + 60_000; }
+    const hailers = Object.values(state.units).filter((unit) => unit.itemId === 'loud_hailer');
+    for (const unit of hailers) { unit.status = 'service'; unit.serviceUntil = NOW + 60_000; }
     const entries = catalogEntries(state);
     const shortages = ids(queryEquipment(entries, query({ ownership: 'replenish' })));
     expect(shortages).toContain('trauma_kit');
-    expect(shortages).toContain('radio_kit');
+    expect(shortages).toContain('loud_hailer');
     expect(shortages).not.toContain('armored_rescue_vehicle');
   });
 
   it('clear defaults remove every filter and restore the complete catalog', () => {
     expect(activeEquipmentFilterCount(query({ search: 'test', category: 'comms', availability: 'locked', affordable: true, ownership: 'owned' }))).toBe(5);
     expect(activeEquipmentFilterCount(DEFAULT_EQUIPMENT_QUERY)).toBe(0);
-    expect(queryEquipment(catalogEntries(makeState()), DEFAULT_EQUIPMENT_QUERY)).toHaveLength(Object.keys(ITEMS).length);
+    expect(queryEquipment(catalogEntries(makeState()), DEFAULT_EQUIPMENT_QUERY)).toHaveLength(Object.keys(ITEMS).length - BASIC_KIT.length);
   });
 
   it('checks the exact integer quantity and combined funding, with one vehicle per purchase', () => {

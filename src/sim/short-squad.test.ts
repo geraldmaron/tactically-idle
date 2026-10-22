@@ -103,15 +103,18 @@ describe('journey short-squad: a squad short an injured officer deploys without 
   it('Auto-equip equips a short squad for the officers who go', () => {
     const plan = autoLoadout(shortA(), 'ms_occupancy', ['A'], NOW);
     expect(plan.warnings.filter(line => line.includes('no equipment added'))).toEqual([]);
-    expect(plan.loadouts.A?.radio_kit).toBe(3);
+    expect(plan.units.A?.length).toBeGreaterThan(0);
+    const without = shortA();
+    const a = without.squads.find(squad => squad.id === 'A')!;
+    a.officerIds = a.officerIds.filter(id => id !== HOME);
+    without.officers[HOME].squadId = null;
+    const crewOnly = autoLoadout(without, 'ms_occupancy', ['A'], NOW);
+    expect(plan.loadouts).toEqual(crewOnly.loadouts);
+    expect(plan.units).toEqual(crewOnly.units);
   });
 
-  it('takes one radio for each officer who goes, so three radios send a squad of three', () => {
-    const s = shortA();
-    const r = apply(s, startCmd('ms_occupancy', ['A'], { loadouts: { A: { radio_kit: 3 } } }));
-    expect(r.result.ok).toBe(true);
-    expect(r.state.reservations.filter(entry => entry.itemId === 'radio_kit')).toHaveLength(3);
-  });
+  // The old "one radio per officer who goes" case is gone: basic kit is part of every officer
+  // (basic-kit.ts), so Deploy never counts radios; the first case above covers the short deploy.
 
   it('a support vehicle needs a qualified driver who goes', () => {
     const withDriver = (hurt: boolean) => {

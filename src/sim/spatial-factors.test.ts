@@ -1,5 +1,4 @@
 import { decisionsOf } from './types';
-import { withReservedRadios } from './test-fixtures';
 import { describe, expect, it } from 'vitest';
 import type { BuiltLocation, Contributor, GameState, Id, LocationDefinition, SquadId, Vec } from './types';
 import type { ActionDefinition, ScenarioDefinition } from './scenario-types';
@@ -222,42 +221,44 @@ describe('equipment range', () => {
 });
 
 describe('unit condition: the specific unit used sets effectiveness, and wear is per unit', () => {
-  const joint = () => {
-    const s = withReservedRadios(setRun(startRun(makeState(), 'ms_urgent', ['A', 'B']), { stage: 'adapt' }), { A: 1, B: 1 });
-    const radioB = s.reservations.find((r) => r.squadId === 'B' && r.itemId === 'radio_kit')!.unitId;
-    return { s, radioB };
+  // Radios are basic kit, built in at full condition and never worn (basic-kit.ts): a packed shield
+  // carries these cases.
+  const entry = () => {
+    const s = setRun(startRun(makeState(), 'ms_occupancy', ['A']), { stage: 'resolve', flags: ['in_contact'] });
+    const shield = s.reservations.find((r) => r.squadId === 'A' && r.itemId === 'ballistic_shield')!.unitId;
+    return { s, shield };
   };
 
-  it('a worn radio lowers the link contributor and adds a separate malfunction-risk contributor', () => {
-    const { s, radioB } = joint();
-    const healthy = evalAction(setUnitCondition(s, radioB, 90), 'mu_two_point', ['A'], ['B'], undefined, urg);
-    const worn = evalAction(setUnitCondition(s, radioB, 30), 'mu_two_point', ['A'], ['B'], undefined, urg);
-    const link = (e: Evaluation) => find(e, /Squad B link/, 'equipment')!;
-    expect(link(worn).value).toBeLessThan(link(healthy).value);
+  it('a worn shield lowers its contributor and adds a separate malfunction-risk contributor', () => {
+    const { s, shield } = entry();
+    const healthy = evalAction(setUnitCondition(s, shield, 90), 'ms_controlled_entry', ['A']);
+    const worn = evalAction(setUnitCondition(s, shield, 30), 'ms_controlled_entry', ['A']);
+    const cover = (e: Evaluation) => find(e, /^Ballistic shield:/, 'equipment')!;
+    expect(cover(worn).value).toBeLessThan(cover(healthy).value);
     const risk = (e: Evaluation) => e.contributors.find((c) => /malfunction risk/.test(c.label));
     expect(risk(healthy)).toBeUndefined();
     expect(risk(worn)!.value).toBeLessThan(0);
-    expect(risk(worn)!.ref).toBe(radioB);
+    expect(risk(worn)!.ref).toBe(shield);
     expect(worn.margin).toBeLessThan(healthy.margin);
-    // The coordination share and everything else is untouched.
-    const keep = (e: Evaluation) => e.contributors.filter((c) => !/Squad B link|malfunction/.test(c.label));
+    // Everything else is untouched.
+    const keep = (e: Evaluation) => e.contributors.filter((c) => !/^Ballistic shield|malfunction/.test(c.label));
     expect(keep(worn)).toEqual(keep(healthy));
   });
 
   it('records the specific units used, and settlement wears only those, scaled by each unit’s wear rate', () => {
-    const { s, radioB } = joint();
-    const worn = structuredClone(setUnitCondition(s, radioB, 30));
-    worn.units[radioB].wearRate = 1.25;
-    const r = apply(worn, { type: 'decide', actionId: 'mu_two_point', actingSquadIds: ['A'], supportSquadIds: ['B'] });
+    const { s, shield } = entry();
+    const worn = structuredClone(setUnitCondition(s, shield, 30));
+    worn.units[shield].wearRate = 1.25;
+    const r = apply(worn, { type: 'decide', actionId: 'ms_controlled_entry', actingSquadIds: ['A'], supportSquadIds: [] });
     expect(r.result.ok).toBe(true);
     const used = decisionsOf(r.state.activeRun!.history)[0].unitsUsed;
-    expect(used).toContain(radioB);
-    expect(used).toContain(r.state.reservations.find((x) => x.squadId === 'A' && x.itemId === 'radio_kit')!.unitId);
+    expect(used).toContain(shield);
+    expect(used.some((id) => id.startsWith('basic:'))).toBe(false);
     // finish the run and settle
-    const done = playPolicy(r.state, { adapt: ['mu_stage_medic'], resolve: ['mu_handover'] }, 'A');
-    const wear = done.debrief.unitWear.find((w) => w.unitId === radioB)!;
+    const done = playPolicy(r.state, {}, 'A');
+    const wear = done.debrief.unitWear.find((w) => w.unitId === shield)!;
     expect(wear.before).toBe(30);
-    expect(wear.after).toBeCloseTo(30 - ITEMS.radio_kit.wear.perUse * 1.25, 1);
+    expect(wear.after).toBeCloseTo(30 - ITEMS.ballistic_shield.wear.perUse * 1.25, 1);
     // Units that were reserved but unused (the shields, the second hailer) are untouched.
     for (const u of Object.values(done.state.units)) if (!done.debrief.unitWear.some((w) => w.unitId === u.id)) expect(u.condition).toBe(worn.units[u.id].condition);
     expect(done.debrief.unitWear.every((w) => used.includes(w.unitId) || done.state.debriefs[0].unitWear.some((x) => x.unitId === w.unitId))).toBe(true);
@@ -343,17 +344,16 @@ describe('entry and movement', () => {
     expect(evalAction(s, 'ms_controlled_entry', ['A']).participantIds).toHaveLength(1);
   });
 
-  it('the supporting squad’s radio link falls with distance and walls, and without radios only voice range counts', () => {
+  it('the supporting squad’s radio link falls with distance and walls', () => {
     const s = setRun(startRun(makeState(), 'ms_occupancy', ['A', 'B']), { stage: 'resolve' });
     const link = (st: GameState) => find(evalAction(st, 'ms_controlled_entry', ['A'], ['B']), /Squad B link/, 'equipment')!;
     const nearLink = link(s);
     const farLink = link(setRun(s, { positions: { B: 'back_yard' } }));
     expect(nearLink.value).toBeGreaterThan(farLink.value);
-    const noRadios = withReservedRadios(startRun(makeState(), 'ms_occupancy', ['A', 'B'], { loadouts: { A: { throw_phone: 1 }, B: { door_ram: 1 } } }), { A: 0, B: 0 });
-    const dull = link(setRun(noRadios, { stage: 'resolve', positions: { B: 'back_yard' } }));
-    expect(dull.label).toMatch(/no radios/);
-    expect(dull.label).toMatch(/out of voice range/);
-    expect(dull.value).toBe(0);
+    // Every squad carries radios (basic-kit.ts), so the link is always radio to radio; the old
+    // "no radios, voice range only" case can no longer happen.
+    expect(nearLink.label).toMatch(/radios linked/);
+    expect(farLink.label).toMatch(/radios linked/);
   });
 });
 

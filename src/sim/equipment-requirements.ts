@@ -1,5 +1,6 @@
 // Shared public requirements for planning, preparation, delivery and live gates.
 // No inventory mutations, hidden fact truth, people positions or RNG are read.
+import { isBasicKit } from './basic-kit';
 import { deployRoster, runRoster } from './squads';
 import { ITEMS } from '../content/items';
 import type { ActionDefinition, ScenarioDefinition } from './scenario-types';
@@ -124,8 +125,9 @@ export function capabilityRuleEffect(item: ItemDefinition, cap: CapabilityId, in
       break;
     case 'authorized_response':
       out.group = item.category === 'protection' ? 'personal_protection' : 'response_class';
-      out.value = item.id === 'light_protection' ? 4 : item.id === 'service_sidearm' ? 3 : item.id === 'compact_carbine' ? 6 : context.responseContext === 'constrained' ? 5 : 2;
-      out.minutes = ['compact_carbine', 'response_shotgun'].includes(item.id) ? 1 : 0;
+      // Basic kit meets the requirement and adds nothing; advanced response gear carries the bonus.
+      out.value = isBasicKit(item.id) ? 0 : context.responseContext === 'constrained' ? 6 : 3;
+      out.minutes = item.id === 'response_shotgun' ? 1 : 0;
       if (action.check.kind !== 'execution') out.reason = 'Response equipment only contributes to declared protective-response actions';
       break;
     case 'specialist_support':

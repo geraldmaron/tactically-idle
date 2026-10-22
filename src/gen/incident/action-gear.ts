@@ -3,9 +3,9 @@
 // The compiler adds it to the action's own `equipment` and `capabilities`, so carried gear moves the
 // odds wherever it bears, and the loadout planner and the briefing recommend it there.
 //
-// A phone call, a text or a wait asks nothing of carried gear, so it gets none. Radio headsets
-// are standard issue on every officer (sim/standard-kit.ts), not a choice, so they add nothing
-// here: a bonus on them would raise every call alike. What a choice
+// A phone call, a text or a wait asks nothing of carried gear, so it gets none. Basic kit (radio,
+// sidearm, carbine, light body armor) is part of every officer (sim/basic-kit.ts), not a choice,
+// so it adds nothing here: a bonus on it would raise every call alike. What a choice
 // authors itself wins: a derived effect is dropped when an authored one has its tag or group.
 import type { TreeChoice } from '../../content/call-trees/types';
 import type { ActionCapabilities, EquipmentEffect } from '../../sim/scenario-types';

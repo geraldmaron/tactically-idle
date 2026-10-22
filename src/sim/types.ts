@@ -520,7 +520,7 @@ export interface LedgerEntry {
  * a timed power-up, or a real purchase. */
 export type MultiplierSource = 'upgrade' | 'powerup' | 'entitlement';
 
-/** A multiplier the department holds (save v15), copied from its registry entry when granted. */
+/** A multiplier the department holds (save v16), copied from its registry entry when granted. */
 export interface ActiveMultiplier {
   id: Id;
   source: MultiplierSource;
@@ -531,7 +531,7 @@ export interface ActiveMultiplier {
   expiresAt?: number;
 }
 
-/** Desk taps (save v15, sim/department-taps.ts): the refill-limited allowance and the multipliers. */
+/** Desk taps (save v16, sim/department-taps.ts): the refill-limited allowance and the multipliers. */
 export interface TapState {
   /** Taps the books can still credit as of `at`; refills with game time up to a burst. */
   credit: number;
@@ -587,7 +587,7 @@ export interface Department {
   candidateRefreshedAt?: number;
   /** Epoch ms of game-calendar day 0 (see src/sim/calendar.ts). */
   calendarEpoch: number;
-  /** Desk taps and their multipliers (save v15). Optional for fixtures; absent reads as no taps yet. */
+  /** Desk taps and their multipliers (save v16). Optional for fixtures; absent reads as no taps yet. */
   taps?: TapState;
 }
 

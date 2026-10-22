@@ -35,7 +35,6 @@ export function HQ() {
   const campaign = saved.slots.find((slot) => slot?.campaignId === saved.campaignId);
   const attention: { text: string; action: string; tab: 'ops' | 'squad' | 'gear' | 'develop' }[] = [];
   if (overview.board.expiringSoon) attention.push({ text: `${overview.board.expiringSoon} incident${overview.board.expiringSoon === 1 ? '' : 's'} closing soon`, action:'Review calls',tab:'ops' });
-  if (overview.radios.shortage) attention.push({ text:`All idle squads need ${overview.radios.required} radios; ${overview.radios.available} usable in stock`,action:'Review equipment',tab:'gear' });
   if (overview.unavailable) attention.push({ text:`${overview.unavailable} officer${overview.unavailable === 1 ? '' : 's'} unavailable for deployment`,action:'Review squad',tab:'squad' });
   if (overview.emptySeats) attention.push({ text:`${overview.emptySeats} open seats across staffed idle squads`,action:'Arrange squads',tab:'squad' });
   if (b.net < 0) attention.push({ text:`Current duties spend ${money(Math.abs(b.net))} more per hour than they earn`,action:'Review duties',tab:'squad' });
@@ -49,7 +48,7 @@ export function HQ() {
         { id: 'dispatch', label: 'Dispatch', icon: 'pin', status: g.activeRun ? 'Call in progress' : overview.board.expiringSoon ? `${overview.board.expiringSoon} closing soon` : plural(overview.board.count, 'call'), alert: !!g.activeRun || overview.board.newCount > 0 || overview.board.expiringSoon > 0, onOpen: () => nav.go('ops') },
         { id: 'training', label: 'Training', icon: 'mortarboard', status: `${Math.max(0, overview.trainingSlots - overview.training)} of ${overview.trainingSlots} places free`, onOpen: () => nav.openTraining() },
         { id: 'lockers', label: 'Roster', icon: 'people', status: `${overview.deployable} of ${overview.totalOfficers} ready`, alert: overview.unavailable > 0 && overview.deployable === 0, onOpen: () => nav.setSquadSection('roster') },
-        { id: 'armory', label: 'Armory', icon: 'box', status: overview.radios.shortage ? 'Radios short' : 'Stocked', alert: !!overview.radios.shortage, onOpen: () => nav.go('gear') },
+        { id: 'armory', label: 'Armory', icon: 'box', status: 'Stocked', onOpen: () => nav.go('gear') },
         { id: 'briefing', label: 'Planning', icon: 'chart', status: 'Upgrades', onOpen: () => nav.go('develop') },
         { id: 'garage', label: 'Duties', icon: 'patrol', status: `${rate(b.net)} net`, alert: b.net < 0, onOpen: () => document.getElementById('hq-duties')?.scrollIntoView({ block: 'start', behavior: 'smooth' }) },
       ]} />

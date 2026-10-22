@@ -21,7 +21,7 @@ import { MAX_COMBINED_MULTIPLIER, MAX_MULTIPLIER_FACTOR, MAX_MULTIPLIERS, combin
 export const SAVE_KEY = 'tactically-idle/save';
 
 /** Version written by this build. Other versions are rejected. */
-export const CURRENT_SAVE_VERSION = 15;
+export const CURRENT_SAVE_VERSION = 16;
 
 export interface SaveStorage {
   getItem(key: string): string | null;

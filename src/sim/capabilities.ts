@@ -1,5 +1,6 @@
 // All effects below are fictional score/time rules. Only public action context and
 // player knowledge are read: compatibility never asks a hidden fact for its truth.
+import { isBasicUnit } from './basic-kit';
 import { runRoster } from './squads';
 import { CAPABILITIES } from '../content/capabilities';
 import { incidentOfficerUnavailable } from './incident-consequences';
@@ -136,6 +137,7 @@ export function evaluateCapabilities(input: CapabilityInput): CapabilityResult {
   }
   for (const pick of byGroup.values()) {
     out.applied.push({ capabilityId: pick.capabilityId, itemId: pick.item.id, unitId: pick.unit.id, value: pick.value, group: pick.group, minutes: pick.minutes });
+    if (isBasicUnit(pick.unit.id)) continue; // carried by everyone: meets a requirement, adds nothing
     out.contributors.push({ label: `${pick.item.name}: ${CAPABILITIES[pick.capabilityId].name}`, value: pick.value, source: 'equipment', ref: pick.item.id });
     out.details.push(`${pick.item.name}: ${pick.value >= 0 ? '+' : ''}${pick.value} contextual points${pick.minutes ? `, ${pick.minutes > 0 ? '+' : ''}${pick.minutes} game min` : ''}.`);
     out.minutes += pick.minutes;
