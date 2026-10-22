@@ -422,7 +422,6 @@ function LiveScreen({ state, onReview, onConfirm, onFail, dither }: { state: Gam
   const { deployed, focus, view, acting, support, actionRule, maxActing, resupply, lead, bestFit, leadOrder, leadOfficerId, leadMarks, leadBlend, leadCerts, alternatives, scenario, spaceById, targetLabel, availableMembers, actorUnavailable, floorOf } = review;
   const decisions = decisionViews(state);
   const beat = resultOf !== null && decisions.at(-1)?.revision === resultOf ? 'result' : 'decide';
-  const nextStage = model.progress.stages.find(step => step.state === 'current')?.label;
   const failurePlan = responseFailurePlan(state);
 
   const pickAction = (id: Id) => {
@@ -452,7 +451,7 @@ function LiveScreen({ state, onReview, onConfirm, onFail, dither }: { state: Gam
       sirens={!!scenario && run.status === 'active' && run.stage !== 'debrief' && isHotCall(scenario, run)}
       beat={beat}
       onContinue={() => setResultOf(null)}
-      continueLabel={nextStage ? `Continue to ${nextStage}` : 'Continue'}
+      continueLabel="Continue"
       onFocusSquad={id => { if (view && actorUnavailable(id)) return; setFocusId(id); setActiveOfficer(null); if (view) setOverride({ actionId: view.id, ...focusActingSquad({ acting, support }, id) }); }}
       onSelectAction={selectAction}
 
@@ -527,8 +526,7 @@ function CardScreen({ state }: { state: GameState }) {
   if (!card || !scenario) return <div className="page"><p className="dim">No board card for this call.</p></div>;
   return (
     <div className="page">
-      <CallTile card={card} scenario={scenario} familyId={scenario.locationFamilyId} type={scenario.incident?.type ?? null} tier={scenario.incident?.tier ?? null}
-        footer={<Button variant="primary" className="optile-go">Prepare</Button>} />
+      <CallTile card={card} scenario={scenario} familyId={scenario.locationFamilyId} type={scenario.incident?.type ?? null} tier={scenario.incident?.tier ?? null} />
     </div>
   );
 }
