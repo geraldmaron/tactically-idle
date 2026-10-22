@@ -11,6 +11,12 @@ Merged so far: #36 (coordination rules), #37 (`e2e-script`),
 
 ## Lead (from 2026-10-22)
 
+Local `main` was fast-forwarded to the integration tip on 2026-10-22 (owner: "reconcile and merge these into
+main locally"); nothing pushed. The code there passed `npm run verify` and the e2e at 3c840ca. Still outside
+main on purpose: the Going Live chain (`claude/hopeful-pike-69bdac`, under writing review, old-call tests not
+yet rewritten) and ui-gates (`claude/quizzical-fermi-734e3c`, in progress). The lead keeps main equal to the
+integration branch after each merge.
+
 The session "Project coordination handoff" leads, on `claude/angry-edison-cae68b` in
 `.claude/worktrees/angry-edison-cae68b` (local, unpushed: owner keeps everything local until one
 final verified push). It plans and merges; Sonnet and Haiku sessions build; Codex (default model)
