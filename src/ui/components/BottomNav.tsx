@@ -41,7 +41,7 @@ export function BottomNav() {
             onClick={() => open(t.id)}
           >
             <span className="navlabel">
-              {t.label}
+              <span>{t.label}</span>
               {/* The one motion signal: a call or its debrief waits and the player is looking elsewhere. */}
               {t.id === 'ops' && live && !on && <span className="live-dot" role="img" aria-label={g.activeRun?.status === 'debrief' ? 'A debrief is waiting' : 'A call is waiting on you'} />}
               {t.id === 'ops' && !live && fresh > 0 && !on && (
