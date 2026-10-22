@@ -150,6 +150,16 @@ ui-leftovers merged (92cdf72, re-render cead5e2): `npm run verify` 3,018 tests, 
 the merged tip; the lead played HQ's oldest-call Open at 390x844 on 5182 (fresh context) and it lands on
 Going Live's brief. Its session waits for the owner's go to archive.
 
+## UI polish (2026-10-22, owner request)
+
+Astra (owner's request) audited 261 fixed-seed frames at 320, 390 and 430: findings, rules R1 to R18 and an
+eight-package plan in `side-session-notes/local_0ef35909-1f92-43ed-b124-d0236bd4f320/ui-audit/astra-findings.md`.
+Backlog `ui-gates`, `ui-primitives`, `ui-surfaces`. Wave A, proposed as cards: ui-gates (Sonnet, test files,
+`capture.mjs`, `scripts/check-ui.mjs`, `package.json` scripts, generated `src/ui/ui-debt.json`, port 5174) and
+ui-primitives (Sonnet, `theme.css`, `app.css`, `skin.css`, `player-navigation.css`, `components/ui.tsx`,
+`Sheet.tsx`, `sheet-viewport.css`, `icons.tsx`, `icons/kit.*`, port 5175). Wave B (packages P2 to P8) starts
+once both merge. The lead regenerates `ui-debt.json` at every merge.
+
 ## Locks outside normal ownership
 
 None. live-chat-immersion merged (ad0d329, `npm run verify` 2,992 tests on the merged tip, lead played a

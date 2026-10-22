@@ -123,7 +123,8 @@ accepted with controls, needs validation, rejected) and what happened to each co
 
 ## Codex
 
-- Use Codex's configured default model (`~/.codex/config.toml`). Never pass `--model gpt-6-astra`.
+- Use Codex's configured default model (`~/.codex/config.toml`). Pass `--model gpt-6-astra` only when the
+  owner asks for Astra by name (first used 2026-10-22 for the visual UI audit).
 - Depth 1: a Codex run never calls back into Claude, and a lane doesn't start sessions of its own.
 - Reviews are read-only. Codex writes code only through `task --write` inside the lane's own files.
 
