@@ -118,9 +118,9 @@ Needs: start=live-chat-build; integrate=none; ship=none
 `check:strings` never sees chat lines (`scripts/check-strings.ts` has no reactions input): add a `--chat`
 mode to `game_string_checks.py` that runs only the dash, colon, gendered, length and banned-word checks.
 The Lab's Stall scrubber names the chat phase and the next three thread lines, and Script lists each
-threat's threads in order. Also from the teardown: a stream cue's text never plays after the stream has
-stopped. Done: a chat line with a dash fails `check:strings`, and the Lab shows the phase at three stall
-points.
+threat's threads in order. A stream cue's text never playing after the stream has stopped is part of
+`threat-after-close`. Done: a chat line with a dash fails `check:strings`, and the
+Lab shows the phase at three stall points.
 
 ### live-chat-memory: The chat remembers the player's last choice
 Tags: job=command; journeys=none (text and presentation); probes=none (text and presentation); lane=engine
@@ -197,6 +197,52 @@ Needs: start=none; integrate=none; ship=none
 is the same call, and a content filter that rules out its situations removes the kind. Done: a kind
 holds several trees, the draw picks among those the filters allow, and the content version,
 fingerprints and Lab handle a list. Distinct from `new-call-types`, which adds kinds.
+
+### going-live-spine: Going Live rebuilt structure first
+Tags: job=command; journeys=choices-branch, chance-not-script; probes=none (content structure); lane=calls
+Needs: start=none (owner sets the turn-reach target); integrate=path-measures; ship=going-live-review
+
+The 2026-10-22 teardown (`docs/calls/notes/going-live-teardown.md`) and Codex's separate read both say
+reject, back to `swat-call-design`: one escalation used 34 times (the handgun on the manager); the
+best-odds player learns who took the bag in 0 of 300 drawn calls; `raised` always equals not
+`rider_clear`, so the first adverse roll answers the only unknown; the exit is asked twice
+(`way_out`, `last_word`); the lie is free in situation 1; previews false on a truth; threats land
+after the result that closed their scene; the clerk leaves free in 30 of 43 lines. Rebuild per
+`docs/calls/depth-mesh-method.md`: spine and consequence graph gated on engine measures before prose.
+Done: those blocks closed as data (escalations from four or more mechanisms, no more than two per
+path; truths decoupled or the coupling priced; one exit decision; the lie charged in both situations;
+the turn reachable by every balance style; previews true in every situation), the `path-measures`
+report attached, and a separate review.
+
+### path-measures: Path-level measures for a call
+Tags: job=command; journeys=choices-branch, chance-not-script; probes=none (report, not an odds input); lane=tooling
+Needs: start=none; integrate=none; ship=none
+
+`npm run check:paths -- <type>` reuses `src/gen/incident/trees-v13/graph.ts`, `path-key.ts`,
+`src/gen/incident/gates/engine-driver.ts`, `balance.ts` and the Lab's dilemma rows, and reports per call:
+adverse routes to a named node per path, fact reach per balance style, dominance with the payoff grid at
+first and median arrival, and 4-word cross-stage echoes on played paths. Done: each measure has a bad
+fixture that must fail; report-only until the owner sets thresholds.
+
+### threat-after-close: A threat never lands after the result that ended its scene
+Tags: job=command; journeys=answer-a-call; probes=none (ordering, not odds); lane=engine
+Needs: start=none; integrate=none; ship=none
+
+Seen in the lead's play and the teardown: after `cut_feed` the result has viewers "turn" on a stream that
+just ended, and after `wait_night` the rider "watches the light from behind the counter" after walking out.
+Done: a threat or clock cue whose text describes a scene the committed result ended does not commit after
+it, shown by a test on Going Live's `wait_night` and `cut_feed` paths. Folds in the cue-after-stop rule
+listed under `live-chat-tooling`.
+
+### mesh-trial: Compare the depth mesh with one author under the same gates
+Tags: job=command; journeys=choices-branch; probes=none (process); lane=lead
+Needs: start=path-measures; integrate=none; ship=none
+
+`docs/calls/depth-mesh-method.md` stands at "needs validation" after Codex's 19 findings: its gates are
+hypotheses until each has a bad fixture, and the single-author rival is untested. Done: one call built
+twice to the same brief and budget, once by the mesh and once by one author in several passes, both
+held to `path-measures`; the owner reads three paths of each blind, and the record keeps tokens, lead
+time and amendment rounds.
 
 ### going-live-review: A separate read of Going Live before it ships
 Tags: job=command; journeys=choices-branch, chance-not-script; probes=none (text); lane=calls
