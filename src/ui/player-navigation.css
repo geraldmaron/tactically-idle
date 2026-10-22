@@ -39,7 +39,9 @@
 .flow-back > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .flow-back:focus-visible, .flow-title:focus-visible { outline: 2px solid var(--act); outline-offset: -2px; }
 @media (hover: hover) { .flow-back:hover { color: var(--t1); } }
-.flow-title { flex: 0 1 auto; min-width: 0; margin: 0; font: 600 var(--s18)/1.15 var(--f-title); color: var(--t1); text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.flow-title { flex: 0 1 auto; display: flex; align-items: center; justify-content: center; gap: var(--sp2); min-width: 0; margin: 0; font: 600 var(--s18)/1.15 var(--f-title); color: var(--t1); text-align: center; white-space: nowrap; }
+.flow-title-icon { flex: none; display: inline-flex; }
+.flow-title-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .flow-title:focus { outline: none; }
 .flow-trailing { flex: 1 1 0; min-width: 0; display: flex; justify-content: flex-end; }
 
@@ -54,6 +56,8 @@
 .resource-bar .stats { flex: 1 1 auto; margin: 0; justify-content: flex-start; flex-wrap: nowrap; gap: 0; }
 .resource-bar .stats > li { display: flex; min-width: 0; }
 .resource-bar .stat { position: relative; height: 44px; padding: 0 var(--sp2); border: 0; border-radius: var(--r1); background: none; color: var(--t1); font: 600 var(--s14)/1 var(--f-ui); font-variant-numeric: tabular-nums; white-space: nowrap; cursor: pointer; }
+.resource-bar .stat { display: inline-flex; align-items: center; justify-content: center; gap: 4px; min-width: var(--touch); }
+.resource-bar .res-icon { flex: none; opacity: 0.85; }
 .resource-bar .stat-rate { color: var(--good-text, var(--good)); font-weight: 500; }
 .resource-bar .stat-rate.stat-neg { color: var(--harm-text, var(--harm)); }
 .resource-bar .stat-trust, .resource-bar .stat-level { color: var(--t2); font-weight: 500; }
@@ -62,16 +66,19 @@
 .resource-bar button:focus-visible { outline: 2px solid var(--act); outline-offset: -2px; }
 @media (hover: hover) { .resource-bar button:hover { background: rgba(255, 255, 255, .05); } }
 @container game (max-width: 359px) {
-  .resource-bar .stat { padding: 0 6px; }
+  /* At 320 the icons carry trust and level (the buttons keep their full aria-labels). */
+  .resource-bar .res-word { display: none; }
+  .resource-bar .stat { padding: 0 4px; gap: 3px; }
   .app .resource-bar { padding: 0 2px 0 0; gap: 0; }
 }
 
 .chrome-foot > .bottomnav { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-.bottomnav .navbtn { gap: 0; }
+.bottomnav .navbtn { gap: 3px; }
 .bottomnav .navlabel { position: relative; font: 600 var(--s14)/1 var(--f-ui); }
-.bottomnav .navbadge { top: -12px; right: -16px; min-width: 18px; height: 18px; padding: 0 4px; border: 0; box-sizing: border-box; font: 700 var(--s12)/1 var(--f-ui); background: var(--act); color: var(--act-ink); }
-.bottomnav .live-dot { top: -6px; right: -12px; }
-.bottomnav .navdot { top: -5px; right: -10px; background: var(--act); }
+.bottomnav .navicon .icon { display: block; }
+.bottomnav .navbadge { top: -8px; right: -12px; min-width: 18px; height: 18px; padding: 0 4px; border: 0; box-sizing: border-box; font: 700 var(--s12)/1 var(--f-ui); background: var(--act); color: var(--act-ink); }
+.bottomnav .live-dot { top: -4px; right: -6px; }
+.bottomnav .navdot { top: -3px; right: -5px; background: var(--act); }
 
 /* Overflow (components/Overflow.tsx): a quiet More control and its menu. */
 .overflow { position: relative; flex: none; }

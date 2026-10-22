@@ -3,7 +3,8 @@ import { useMemo, useState } from 'react';
 import './casebook.css';
 import type { CasebookBest, GameState } from '../../sim/types';
 import { Card, Chip, Section } from '../components/ui';
-import { familyLabel, incidentMeta } from '../components/incident';
+import { familyLabel } from '../components/incident';
+import { CallTypeBadge } from '../icons/CallTypeBadge';
 import { Icon } from '../icons';
 import { casebookRows, casebookTotals, filterRows } from './casebook-model';
 import type { CasebookFilter, CasebookRow } from './casebook-model';
@@ -50,10 +51,9 @@ function SituationPips({ found, total }: { found: number; total: number }) {
 }
 
 function CasebookRowView({ row }: { row: CasebookRow }) {
-  const icon = incidentMeta(row.type).icon;
   if (row.status === 'locked') return <li className="casebook-row casebook-locked" data-status="locked" data-type={row.type}>
     <div className="casebook-row-head">
-      <span className="casebook-icon"><Icon name="lock" size={15} /></span>
+      <span className="casebook-icon"><CallTypeBadge type={row.type} size={40} medallion /><Icon name="lock" size={13} className="casebook-lock" /></span>
       <span className="casebook-name">{row.label}</span>
     </div>
     <div className="casebook-meter"><Chip tone="warn">Locked</Chip></div>
@@ -62,7 +62,7 @@ function CasebookRowView({ row }: { row: CasebookRow }) {
   </li>;
   if (row.status === 'unfound') return <li className="casebook-row" data-status="unfound" data-type={row.type}>
     <div className="casebook-row-head">
-      <span className="casebook-icon"><Icon name={icon} size={15} /></span>
+      <span className="casebook-icon"><CallTypeBadge type={row.type} size={40} medallion /></span>
       <span className="casebook-name">{row.label}</span>
     </div>
     <div className="casebook-meter"><SituationPips found={0} total={row.situationsTotal} /><Chip>0 of {row.situationsTotal}</Chip></div>
@@ -71,7 +71,7 @@ function CasebookRowView({ row }: { row: CasebookRow }) {
   const left = row.situationsTotal - row.situations.length;
   return <li className="casebook-row casebook-found" data-status="found" data-type={row.type}>
     <div className="casebook-row-head">
-      <span className="casebook-icon"><Icon name={icon} size={15} /></span>
+      <span className="casebook-icon"><CallTypeBadge type={row.type} size={40} medallion /></span>
       <span className="casebook-name">{row.label}</span>
     </div>
     <div className="casebook-meter"><SituationPips found={row.situations.length} total={row.situationsTotal} /><Chip tone="mint">{row.situations.length} of {row.situationsTotal}</Chip></div>

@@ -29,6 +29,7 @@ import { useToast } from '../components/toast';
 import { Sheet } from '../components/Sheet';
 import { UNIT_STATE_META, unitStateOf } from '../components/labels';
 import { Icon } from '../icons';
+import { CallTypeBadge } from '../icons/CallTypeBadge';
 import type { IconName } from '../icons';
 import { pct } from '../format';
 import { cardFor, hasNodeEffect, staysHomeLine } from './helpers';
@@ -301,7 +302,7 @@ export function OpsPrepare({ scenarioId, step = 'brief', onCancel }: { scenarioI
 
   const deployStep = <>
     <section className="cl-section" aria-labelledby="cl-who-h">
-      <div className="cl-section-head"><h2 id="cl-who-h" className="cl-section-title">Who goes</h2><span className="cl-section-aside">{takes}</span></div>
+      <div className="cl-section-head"><h2 id="cl-who-h" className="cl-section-title"><Icon name="people" size={18} />Who goes</h2><span className="cl-section-aside">{takes}</span></div>
       {g.squads.length === 0 ? <p className="dim">Create a squad on the Squad tab first.</p> : <div className="cl-squads" role="group" aria-label="Squads">
         {g.squads.map((s) => {
           const r = squadReadiness(g, s.id, now);
@@ -334,14 +335,14 @@ export function OpsPrepare({ scenarioId, step = 'brief', onCancel }: { scenarioI
       const way = goingIn(sid);
       return <section key={sid} className="cl-section cl-squad-plan" aria-label={`${squadName(sid)} plan`} data-squad={sid}>
         <div className="cl-section-head">
-          <h2 className="cl-section-title">{squadName(sid)} carries</h2>
+          <h2 className="cl-section-title"><Icon name="box" size={18} />{squadName(sid)} carries</h2>
           <button type="button" className="cl-link" data-squad={sid} onClick={() => setSheet({ kind: 'kit', squad: sid })} aria-label={`Adjust what ${squadName(sid)} carries`}>Adjust</button>
         </div>
         {index === 0 && <p className="cl-basic-kit">{BASIC_KIT_LINE}</p>}
-        {kit.length > 0 ? <ul className="cl-kit" aria-label={`${squadName(sid)} kit`}>{kit.map((item) => <li key={item.id} className={`cl-kit-chip cl-kit-${item.tone}`}>{item.text}</li>)}</ul>
+        {kit.length > 0 ? <ul className="cl-kit" aria-label={`${squadName(sid)} kit`}>{kit.map((item) => <li key={item.id} className={`cl-kit-chip cl-kit-${item.tone}`}><GearArt itemId={item.id} size={22} />{item.text}</li>)}</ul>
           : <p className="cl-muted">Nothing from the Armory.</p>}
         <div className="cl-section-head">
-          <h3 className="cl-section-title">{chosen.length > 1 ? `${squadName(sid)} goes in` : 'Going in'}</h3>
+          <h3 className="cl-section-title"><Icon name="door" size={18} />{chosen.length > 1 ? `${squadName(sid)} goes in` : 'Going in'}</h3>
           <button type="button" className="cl-link" data-squad={sid} onClick={() => setSheet({ kind: 'going', squad: sid })} aria-label={`Change where ${squadName(sid)} goes in`}>Change</button>
         </div>
         <p className="cl-going"><strong>{way.title}</strong>{way.detail && <span>{way.detail}</span>}</p>
@@ -387,7 +388,7 @@ export function OpsPrepare({ scenarioId, step = 'brief', onCancel }: { scenarioI
     : <ActionBar className="cl-actions" summary={<><span className={`cl-tone-${footStatus.tone}`}>{footStatus.text}</span><span>{title} · {chosen.length} of {range.max} squad{range.max > 1 ? 's' : ''}</span></>}
       primary={{ label: chosen.length ? `Deploy ${names}` : 'Deploy', disabled: !check.ok, onClick: deploy }} />;
   const screen = (
-    <FlowScreen title={step === 'brief' ? title : 'Deploy'} backLabel={step === 'brief' ? 'Calls' : 'Brief'} onBack={back} footer={footer}
+    <FlowScreen title={step === 'brief' ? title : 'Deploy'} icon={step === 'brief' ? <CallTypeBadge type={scenario?.incident?.type} size={24} /> : <Icon name="people" size={20} />} backLabel={step === 'brief' ? 'Calls' : 'Brief'} onBack={back} footer={footer}
       trailing={step === 'brief' ? <Button size="sm" className="cl-map-chip" onClick={() => setSheet({ kind: 'map' })} aria-haspopup="dialog">Map</Button> : undefined}>
       <div className="page cl-flow-body prepare" data-step={step}>{step === 'brief' ? briefStep : deployStep}</div>
 

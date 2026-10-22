@@ -9,7 +9,9 @@ contact sheets [visual-kit-390.jpg](captures/visual-kit/visual-kit-390.jpg) and
 | --- | --- | --- |
 | Icons | `src/ui/icons.tsx` | `<Icon name size title? />`, 168 line glyphs |
 | Name tables | `src/ui/icons/kit.ts` | `TAB_ICON`, `RESOURCE_ICON`, `SKILL_ICON`, `OFFICER_STATUS_ICON`, `OUTCOME_ICON`, `GEAR_CATEGORY_ICON`, `GEAR_SOURCE_ICON`, `BRANCH_ICON`, `CALL_TYPE_ICON`, keyed by the sim's own ids |
-| Call-type badges | `src/ui/icons/CallTypeBadge.tsx` | `<CallTypeBadge type size label? />` |
+| Call-type badges | `src/ui/icons/CallTypeBadge.tsx` | `<CallTypeBadge type size label? medallion? />` |
+| Call-type medallions | `src/ui/art/Medallions.tsx`, `public/art/medallions/` | painted discs, used by `CallTypeBadge` at 40px and up ([medallions README](art/medallions/README.md)) |
+| Tab-root plate | `src/ui/art/TabPlate.tsx`, `src/ui/art/tab-plates.ts` | `<TabPlate tab title meta? />`: the room's banner at `--plate-h`, the tab icon and name, no kicker or paragraph |
 | Status and outcome marks | `src/ui/icons/marks.tsx` | `<StatusMark status />`, `<OutcomeMark band label />` |
 | Empty-state spots | `src/ui/icons/spots.tsx` | `<Spot name width? />` |
 | Kit styles | `src/ui/icons/kit.css` | imported by the components; class-scoped |
@@ -164,19 +166,28 @@ Amber appears only where the empty state is the player's move.
 The spot is decorative; the screen writes the line under it (follow the player-facing writing
 rules in `AGENTS.md`).
 
-## Adopting the kit (wave 2)
+## Where the kit is used
 
-- `components/labels.ts` still maps skills, branches and statuses to the older glyphs (`bullseye`,
-  `nodes`, `compass` and so on). Switch `RATING_META`, `ROLE_META`, `BRANCH_META` and
-  `STATUS_META` icons to `SKILL_ICON`, `BRANCH_ICON` and `OFFICER_STATUS_ICON` when those screens
-  are restyled, then drop any old glyph nothing uses.
-- `CallTile`, `Casebook` and `OpsPrepare` already read `incidentMeta(type).icon`, so they show the new
-  call-type marks now; swapping their badge markup for `CallTypeBadge` is the screen work.
-- The four call-type hues are the only colours `kit.css` defines. Move them into `theme.css` as
-  tokens when the ui-system tokens land.
+`src/ui/visual-floors.test.ts` lists each obligation by name, with its production screen and fixture
+state, and fails when a screen loses a picture it is owed. The list only grows.
 
-## Deferred
+- **Tab roots.** HQ, Calls, Officers and Build each open on a `TabPlate`. The height is one token,
+  `--plate-h` in `theme.css` (96px; the owner's candidates are 72, 96 and 128), and which tabs carry
+  one is `TAB_PLATES` in `art/tab-plates.ts`. A tab that drops its plate drops its obligation with it.
+- **Tabs and bar.** The four tabs draw `TAB_ICON`; funds, rate, trust and level draw `RESOURCE_ICON`.
+- **Rows.** Every officer row leads with a face and ends in a `StatusMark`. Training courses lead
+  with their emblem, upgrades with gear or emblem art, Armory tiles with gear art, call cards with
+  their scene and type badge, Casebook rows and result tiles with the type badge or medallion.
+  Skill, role and branch icons come from `SKILL_ICON` and `BRANCH_ICON` through `components/labels.ts`.
+- **Headed steps.** The brief leads with the call-type badge, deploy and the debrief with a kit icon;
+  "Your orders", "Who goes", "carries", "Going in" and "Review the operation" each start with an icon.
+  The debrief hero carries the call's medallion.
+- **Empty states.** `EmptyState` takes `spot`; every empty state in the player screens passes one.
 
-Painted call-type medallions to match the scene plates. The SVG badges read at every size from 20px
-up, and no image generator was available for a pack that would pass `docs/art/ART-DELIVERY.md`,
-so no raster files were added.
+Still open: `HQ` duty rows lead with a squad letter, not a picture.
+
+## Medallions
+
+Painted call-type discs matching the scene plates, delivered 2026-10-22: see
+[art/medallions/README.md](art/medallions/README.md). The SVG badges remain the small-size and
+fallback form.

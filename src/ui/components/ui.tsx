@@ -1,6 +1,8 @@
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
 import { Icon } from '../icons';
 import type { IconName } from '../icons';
+import { Spot } from '../icons/spots';
+import type { SpotName } from '../icons/spots';
 import { RATING_META, STATUS_META, ratingTone } from './labels';
 import type { RatingKey } from '../../sim/types';
 import type { StatusKey } from './labels';
@@ -142,10 +144,10 @@ export function ActionBar({ summary, primary, quiet, className }: {
   );
 }
 
-export function EmptyState({ icon = 'info', title, children }: { icon?: IconName; title: string; children?: ReactNode }) {
+export function EmptyState({ spot, icon = 'info', title, children }: { /** The kit's picture for this screen (icons/spots.tsx); the icon is the fallback for one with none. */ spot?: SpotName; icon?: IconName; title: string; children?: ReactNode }) {
   return (
     <div className="empty">
-      <Icon name={icon} size={26} />
+      {spot ? <Spot name={spot} width={128} /> : <Icon name={icon} size={26} />}
       <strong>{title}</strong>
       {children && <span>{children}</span>}
     </div>

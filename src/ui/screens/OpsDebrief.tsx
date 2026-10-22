@@ -1,4 +1,5 @@
 import { useGame } from '../store';
+import { Icon } from '../icons';
 import { decisionViews, pendingDebrief } from '../../sim/operation-selectors';
 import type { DebriefResult } from '../../sim/types';
 import { getScenario } from '../../sim/scenario-registry';
@@ -44,7 +45,7 @@ export function OpsDebrief() {
   const d = pendingDebrief(g);
   const done = () => { if (act({ type: 'closeDebrief' }).ok) callFlow.close(); };
   const footer = <ActionBar className="cl-actions" primary={{ label: 'Done', onClick: done }} />;
-  if (!d) return <FlowScreen title="Debrief" footer={footer}>
+  if (!d) return <FlowScreen title="Debrief" icon={<Icon name="flag" size={20} />} footer={footer}>
     <div className="page cl-flow-body"><p className="dim">The call is over. The debrief is not available yet.</p></div>
   </FlowScreen>;
   const decisions = d.decisions ?? decisionViews(g);
@@ -54,7 +55,7 @@ export function OpsDebrief() {
   const deployed = g.squads.filter((squad) => run?.squadIds.includes(squad.id));
   const people = scenario ? lexiconFor(scenario, run, deployed.flatMap((squad) => (run ? runRoster(g, run, squad.id) : squad.officerIds).flatMap((id) => g.officers[id] ? [{ ...g.officers[id], squad: squad.id }] : []))) : null;
   // A flow with no Back (components/chrome.tsx): the shell draws the head and Done.
-  return <GamePeopleProvider lexicon={people}><FlowScreen title="Debrief" footer={footer}>
+  return <GamePeopleProvider lexicon={people}><FlowScreen title="Debrief" icon={<Icon name="flag" size={20} />} footer={footer}>
     <div className="page debrief cl-flow-body">
       <DebriefContents result={d} officers={g.officers} decisions={decisions} scenario={scenario ?? undefined} heroAction={import.meta.env.DEV && <OpenInLab getState={() => g} />} />
     </div>

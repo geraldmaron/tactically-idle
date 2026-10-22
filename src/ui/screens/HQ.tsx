@@ -14,12 +14,16 @@ import { Button, EmptyState, Row, Section } from '../components/ui';
 import { useNav } from '../components/nav';
 import { DUTIES, DUTY_META } from '../components/labels';
 import { Icon } from '../icons';
+import { CallTypeBadge } from '../icons/CallTypeBadge';
+import { OutcomeMark } from '../icons/marks';
+import { getScenario } from '../../sim/scenario-registry';
 import { duration, perHour, plural, signedMoney } from '../format';
 import { scenarioTitle } from './helpers';
 import { SavedDebriefReview } from './OpsDebrief';
 import { ScoreRing } from '../components/DebriefResults';
 import { CommandStaff } from '../components/CommandStaff';
 import { Hub, type HubPin } from '../components/Hub';
+import { TabPlate } from '../art/TabPlate';
 import { ShiftReportCard } from '../components/ShiftReport';
 import { TapEarn } from '../components/TapEarn';
 
@@ -39,12 +43,9 @@ export function HQ() {
   const scrollToDuty = () => document.getElementById('hq-duties')?.scrollIntoView({ block: 'start', behavior: 'smooth' });
   return (
     <>
+    <TabPlate tab="hq" level={1} title={g.department.name} meta={formatGameDate(gameDay(g, at))} />
     <Hub pins={hubPins(g, overview, nav)} />
     <div className="page hq-page">
-      <header className="hq-sign">
-        <h1 className="hq-title">{g.department.name}</h1>
-        <p className="hq-date">{formatGameDate(gameDay(g, at))}</p>
-      </header>
       <YourMove g={g} overview={overview} now={now} onDuty={scrollToDuty} />
       {g.report && <Row className="hq-report" title="Shift report" detail={reportSummary(g.report)} onClick={() => setReportOpen(true)} trail={<span className="hq-link">Review</span>} label={`Shift report: ${reportSummary(g.report)}. Review`} />}
       <DutySection squads={g.squads} g={g} />
@@ -130,7 +131,7 @@ function DutySection({ squads, g }: { squads: Squad[]; g: GameState }) {
     <section id="hq-duties" className="hq-duties" aria-labelledby="hq-duties-h">
       <div className="hq-head"><h2 id="hq-duties-h" className="section-title">On duty</h2><span className="hq-head-note">Duty sets income and recovery</span></div>
       {squads.length === 0 ? (
-        <EmptyState icon="people" title="No squads yet">
+        <EmptyState spot="openSlot" title="No squads yet">
           Create a squad on the Officers tab.
           <Button size="sm" onClick={() => go('squad')}>Open Officers</Button>
         </EmptyState>
@@ -174,7 +175,7 @@ export function Debriefs({ g, now }: { g: GameState; now: number }) {
   return (
     <Section title="Recent results">
       {g.debriefs.length === 0 ? (
-        <EmptyState icon="intel" title="No results yet">
+        <EmptyState spot="noDebriefs" title="No results yet">
           Finished calls appear here with their results and causes.
         </EmptyState>
       ) : (
@@ -195,6 +196,8 @@ export function Debriefs({ g, now }: { g: GameState; now: number }) {
 function DebriefTile({ g, d, now, open, onOpen }: { g: GameState; d: GameState['debriefs'][number]; now: number; open: boolean; onOpen: () => void }) {
   const worst = Math.min(d.objective.score, d.civilianSafety.score);
   const tone = worst >= 80 ? 'good' : worst >= 50 ? 'mixed' : 'poor';
+  const band = tone === 'good' ? 'favorable' : tone === 'mixed' ? 'mixed' : 'adverse';
+  const type = getScenario(d.scenarioId)?.incident?.type;
   const team = d.officerCondition.map((row) => g.officers[row.officerId]).filter((officer): officer is NonNullable<typeof officer> => !!officer).slice(0, 4);
   return (
     <button type="button" className={`debrief-tile debrief-tile-${tone}`} onClick={onOpen} aria-haspopup="dialog" aria-expanded={open} aria-label={`Review result: ${d.endingTitle}`}>
@@ -203,9 +206,9 @@ function DebriefTile({ g, d, now, open, onOpen }: { g: GameState; d: GameState['
         <ScoreRing value={d.civilianSafety.score}><Icon name="civilian" size={14} /></ScoreRing>
       </span>
       <span className="debrief-tile-main">
-        <span className="debrief-tile-kicker">{scenarioTitle(g, d.scenarioId, now)}</span>
+        <span className="debrief-tile-kicker">{type && <CallTypeBadge type={type} size={18} />}{scenarioTitle(g, d.scenarioId, now)}</span>
         <strong className="debrief-tile-title">{d.endingTitle}</strong>
-        <span className="debrief-tile-sub">Objective {d.objective.label.toLowerCase()} · Civilians {d.civilianSafety.label.toLowerCase()}</span>
+        <span className="debrief-tile-sub"><OutcomeMark band={band} label={`${d.objective.label}`} showLabel={false} size={14} />Objective {d.objective.label.toLowerCase()} · Civilians {d.civilianSafety.label.toLowerCase()}</span>
         <span className="debrief-tile-foot">
           {team.length > 0 && <span className="debrief-team" aria-hidden="true">{team.map((officer) => <span key={officer.id} className="debrief-team-face"><Portrait officer={officer} size={24} /></span>)}</span>}
           <span className="debrief-reward tone-mint"><Icon name="cash" size={13} />{signedMoney(d.fundingReward)}</span>

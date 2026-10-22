@@ -53,7 +53,7 @@ export function UnitList({ itemId }: { itemId: Id }) {
         Wears {Math.round(w.perUse * wearMultiplier * 100) / 100} per use and {Math.round(w.perDay * wearMultiplier * 1000) / 1000} per game day, adjusted by each unit's wear rate. Unreliable below {w.unreliableBelow}; needs service at {w.failAt} or lower.{wearMultiplier < 1 && ' Quartermaster wear reduction included.'}
       </p>
       {views.length === 0 ? (
-        <EmptyState icon="box" title="No units to show">
+        <EmptyState spot="nothingInStock" title="No units to show">
           Buy this item to add a unit.
         </EmptyState>
       ) : (

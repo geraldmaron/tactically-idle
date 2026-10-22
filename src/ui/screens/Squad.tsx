@@ -9,6 +9,7 @@ import { useToast } from '../components/toast';
 import { DUTY_META } from '../components/labels';
 import { Icon } from '../icons';
 import { SQUAD_IDS } from '../../sim/types';
+import { TabPlate } from '../art/TabPlate';
 import { Recruit } from './Recruit';
 import { officerList, staysHomeLine } from './helpers';
 import { useNav } from '../components/nav';
@@ -25,7 +26,8 @@ const DEFAULT_NAMES = ['Alpha', 'Bravo', 'Charlie', 'Delta'];
  * place an officer is moved between squads or made leader; Arrange proposes a whole arrangement. */
 export function SquadScreen() {
   const nav = useNav();
-  return (
+  return (<>
+    <TabPlate tab="officers" title="Officers" />
     <div className="page squad-page officers-page">
       <ChoiceRail value={nav.squadSection} kind="navigation" label="Officers sections" grow onChange={nav.setSquadSection} options={[
         { value: 'squads', label: 'Squads' }, { value: 'roster', label: 'Roster' }, { value: 'hire', label: 'Hire' }, { value: 'training', label: 'Training' },
@@ -35,7 +37,7 @@ export function SquadScreen() {
         : nav.squadSection === 'roster' ? <RosterList onOpen={nav.openOfficer} />
         : <SquadsView />}
     </div>
-  );
+  </>);
 }
 
 function SquadsView() {
@@ -52,7 +54,7 @@ function SquadsView() {
       <h2 className="section-title">{g.squads.length === 1 ? '1 squad' : `${g.squads.length} squads`}</h2>
       {g.squads.length > 0 && <button type="button" className="text-link" onClick={() => { nav.closeOfficer(); setArranging(true); }}>Arrange</button>}
     </div>
-    {g.squads.length === 0 && <EmptyState icon="people" title="No squads yet">Create up to four squads, then open an officer to put them in one.</EmptyState>}
+    {g.squads.length === 0 && <EmptyState spot="openSlot" title="No squads yet">Create up to four squads, then open an officer to put them in one.</EmptyState>}
     {g.squads.map((squad) => <SquadPanel key={squad.id} squad={squad} onOpen={nav.openOfficer} />)}
     {unassigned.length > 0 && <section className="squad-block" aria-labelledby="squad-bench-h">
       <div className="squad-block-head">

@@ -35,7 +35,7 @@ export function PrepBriefing({ scenario, brief, intel, aside }: { scenario: Scen
           who is inside, what is unknown and the conditions. */}
       <section className="pb-block pb-orders-panel" aria-labelledby="pb-orders-h">
         <div className="pb-h-row">
-          <h3 id="pb-orders-h" className="pb-h">Your orders</h3>
+          <h3 id="pb-orders-h" className="pb-h"><Icon name="flag" size={15} />Your orders</h3>
           {aside && <span className="pb-h-aside">{aside}</span>}
         </div>
         {brief.objectives.length ? <ol className="pb-orders">{brief.objectives.map((text, index) => <li key={index}><span className="pb-order-n" aria-hidden="true">{index + 1}</span><span><PeopleText text={text} /></span></li>)}</ol> : <p className="dim">No orders listed.</p>}
