@@ -31,7 +31,7 @@ const FOUND = '{taker.first} asks to see the signed page, and there is none.';
 
 /** The group fixture with a lie at `talk`, and at `final` a threat whose run-out ends the call. The
  * lie is also found out by a choice at `final` unless `onlyTimeout` leaves the run-out as its one
- * breaking route. */
+ * route that could. */
 function treeWith(timeout: Partial<TreeTimeout>, onlyTimeout = false): CallTree {
   return { ...GROUP_TREE, nodes: GROUP_TREE.nodes.map(node => {
     if (node.id === 'talk') return { ...node, choices: [...node.choices, LIE] };
@@ -122,12 +122,12 @@ describe('a threat that runs out with a lie standing', () => {
   });
 });
 
-describe('the static check counts a timeout as a way to find a lie out', () => {
-  it('passes when the run-out is the lie’s only breaking route', () => {
-    expect(deceptionErrors(treeWith({ breaks: ['signs'] }, true))).toEqual([]);
+describe('the static check on a timeout that breaks a commitment', () => {
+  it('passes beside an outcome that also finds the lie out', () => {
+    expect(deceptionErrors(treeWith({ breaks: ['signs'] }))).toEqual([]);
   });
-  it('still refuses a lie nothing finds out', () => {
-    expect(deceptionErrors(treeWith({}, true))).toEqual(['hostage_crisis: the lie signs is never found out; add an outcome that breaks it']);
+  it('does not let the run-out stand in for that outcome, since the timer can be Off', () => {
+    expect(deceptionErrors(treeWith({ breaks: ['signs'] }, true))).toEqual(['hostage_crisis: the lie signs is never found out; add an outcome that breaks it']);
   });
   it('refuses a timeout that breaks a promise the call never makes', () => {
     expect(deceptionErrors(treeWith({ breaks: ['nothing'] }))).toContain('hostage_crisis: an outcome breaks nothing, which no outcome promises');

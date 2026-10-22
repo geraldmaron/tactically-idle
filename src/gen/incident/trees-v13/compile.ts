@@ -225,8 +225,8 @@ export function armedRevealErrors(authored: CallTree, nodes: readonly TreeNode[]
 
 /** Authoring errors in a call's lies (deception-commitments, dilemma pattern 15): a `lie` promise is
  * made only by a choice marked `deceives`, every `deceives` choice makes one, every lie can be found
- * out by an outcome that names it in `breaks` and says so in its text, and `breaks` names only
- * promises the call makes. */
+ * out by an outcome that names it in `breaks` and says so in its text (a threat's timeout alone
+ * doesn't count: the timer can be Off), and `breaks` names only promises the call makes. */
 export function deceptionErrors(tree: CallTree): string[] {
   const errors: string[] = [];
   const promises = new Set<string>(), lies = new Set<string>(), broken = new Set<string>();
@@ -245,13 +245,16 @@ export function deceptionErrors(tree: CallTree): string[] {
     }
     if (choice.deceives && !made) errors.push(`${tree.type}: ${node.id}.${choice.id} is marked deceives but makes no lie promise`);
   }
-  // A threat's run-out can find a lie out too (TreeTimeout.breaks); its `text` is the line the player reads.
+  // A threat's run-out can find a promise out too (TreeTimeout.breaks), but never stands in for an
+  // outcome on a lie: with the timer Off nothing lapses, so a lie needs a route that doesn't wait on it.
+  // `text` is the line the player reads.
+  const lapsed = new Set<string>();
   for (const node of tree.nodes) for (const id of node.threat?.timeout?.breaks ?? []) {
-    broken.add(id);
+    lapsed.add(id);
     if (!node.threat!.timeout!.text.trim()) errors.push(`${tree.type}: ${node.id} timeout: breaking ${id} needs text that says the person found out`);
   }
   for (const id of lies) if (!broken.has(id)) errors.push(`${tree.type}: the lie ${id} is never found out; add an outcome that breaks it`);
-  for (const id of broken) if (!promises.has(id)) errors.push(`${tree.type}: an outcome breaks ${id}, which no outcome promises`);
+  for (const id of [...broken, ...lapsed]) if (!promises.has(id)) errors.push(`${tree.type}: an outcome breaks ${id}, which no outcome promises`);
   return errors;
 }
 
