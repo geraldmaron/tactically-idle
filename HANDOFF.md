@@ -83,6 +83,12 @@ passes follow from its briefs. Owner target: every balance style reaches the tur
 drawn calls. Lead context 46% on 2026-10-22: the lead rotates at the next quiet point (COORDINATION.md
 "Context rotation").
 
+Wave 3 result (2026-10-22): path-measures merged (8576e09, verify 3,010 tests). The spine is done with
+its structural passes on `claude/going-live-spine-25ad3c` (123efc8, not merged, placeholder text); the
+lead re-ran `check:paths` there and every style clears the 50% target. Next steps are in backlog
+`going-live-spine`. The lead hands over at this quiet point; the note is
+`side-session-notes/local_0ef35909-1f92-43ed-b124-d0236bd4f320/coordinator-handover.md`.
+
 ## Locks outside normal ownership
 
 None. live-chat-immersion merged (ad0d329, `npm run verify` 2,992 tests on the merged tip, lead played a
