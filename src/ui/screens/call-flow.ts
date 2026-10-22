@@ -53,6 +53,13 @@ export function createCallFlow(history: HistoryPort | null) {
     }
     emit();
   };
+  const updateDraft = (scenarioId: Id, update: (draft: PrepareDraft) => PrepareDraft) => {
+    const before = drafts[scenarioId] ?? EMPTY_DRAFT;
+    const after = update(before);
+    if (after === before) return;
+    drafts = { ...drafts, [scenarioId]: after };
+    emit();
+  };
   const same = (a: OpenCall | null, b: OpenCall | null) => a?.scenarioId === b?.scenarioId && a?.step === b?.step;
   return {
     getSnapshot: () => snapshot,
@@ -89,12 +96,13 @@ export function createCallFlow(history: HistoryPort | null) {
       emit();
     },
     draft: (scenarioId: Id): PrepareDraft => drafts[scenarioId] ?? EMPTY_DRAFT,
-    updateDraft(scenarioId: Id, update: (draft: PrepareDraft) => PrepareDraft) {
-      const before = drafts[scenarioId] ?? EMPTY_DRAFT;
-      const after = update(before);
-      if (after === before) return;
-      drafts = { ...drafts, [scenarioId]: after };
-      emit();
+    updateDraft,
+    /** One draft field as [value, set], where set takes a value or an update from the latest draft. */
+    field<K extends keyof PrepareDraft>(scenarioId: Id, draft: PrepareDraft, key: K): [PrepareDraft[K], (next: PrepareDraft[K] | ((previous: PrepareDraft[K]) => PrepareDraft[K])) => void] {
+      return [draft[key], (next) => updateDraft(scenarioId, (current) => {
+        const value = typeof next === 'function' ? (next as (previous: PrepareDraft[K]) => PrepareDraft[K])(current[key]) : next;
+        return Object.is(value, current[key]) ? current : { ...current, [key]: value };
+      })];
     },
     /** Drafts for calls no longer on the board are dropped. */
     prune(onBoard: (scenarioId: Id) => boolean) {
@@ -124,10 +132,5 @@ export function useCallFlow() {
   return useSyncExternalStore(callFlow.subscribe, callFlow.getSnapshot, callFlow.getSnapshot);
 }
 
-/** One draft field as [value, set], where set takes a value or an update from the latest draft. */
-export function draftField<K extends keyof PrepareDraft>(scenarioId: Id, draft: PrepareDraft, key: K): [PrepareDraft[K], (next: PrepareDraft[K] | ((previous: PrepareDraft[K]) => PrepareDraft[K])) => void] {
-  return [draft[key], (next) => callFlow.updateDraft(scenarioId, (current) => {
-    const value = typeof next === 'function' ? (next as (previous: PrepareDraft[K]) => PrepareDraft[K])(current[key]) : next;
-    return Object.is(value, current[key]) ? current : { ...current, [key]: value };
-  })];
-}
+/** One draft field of the game's flow as [value, set] (CallFlow.field). */
+export const draftField = callFlow.field;

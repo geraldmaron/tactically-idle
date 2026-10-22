@@ -20,8 +20,8 @@ describe('the ops board: tactical call-outs only', () => {
     const incidents = state.incidents;
     state.incidents = [];
     try {
-      const html = renderToStaticMarkup(createElement(OpsBoard, { onPrepare: () => {} }));
-      expect(html).toContain('No call-outs right now');
+      const html = renderToStaticMarkup(createElement(OpsBoard, { onOpen: () => {} }));
+      expect(html).toContain('No calls right now');
       expect(html).not.toContain('Standing assignments');
       expect(html).not.toContain('>Prepare</button>');
       expect(boardEntries(state, NOW)).toEqual([]);
@@ -36,9 +36,9 @@ describe('the ops board: tactical call-outs only', () => {
 
   it('still prepares an authored scenario as an ordinary deployment', () => {
     vi.spyOn(Date, 'now').mockReturnValue(NOW);
-    // The briefing step leads to the team step, which deploys.
+    // The brief leads to the deploy step, which deploys; Deploy names the squads once chosen.
     expect(renderToStaticMarkup(createElement(OpsPrepare, { scenarioId: 'ms_occupancy', onCancel: () => {} }))).toMatch(/>Choose team<\/button>/);
-    const html = renderToStaticMarkup(createElement(OpsPrepare, { scenarioId: 'ms_occupancy', onCancel: () => {}, initialStep: 'team' }));
+    const html = renderToStaticMarkup(createElement(OpsPrepare, { scenarioId: 'ms_occupancy', onCancel: () => {}, step: 'deploy' }));
     expect(html).toMatch(/>Deploy<\/button>/);
     expect(html).not.toContain('type="checkbox"');
   });

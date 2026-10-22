@@ -9,13 +9,13 @@ import { previewAction } from '../../sim/operation-selectors';
 import { getScenario } from '../../sim/scenario-registry';
 import { scenarioActions } from '../../sim/scenario-types';
 import type { Command, GameState, SquadId } from '../../sim/types';
-import { ChoiceRail } from '../components/ChoiceRail';
 import { Sheet, type SheetProps } from '../components/Sheet';
 import { Button, Stepper } from '../components/ui';
 import { ActionSheet, ActionSquadAssignment, type ActionSheetProps, type LiveViewProps } from './LiveView';
 import { OpsLive } from './OpsLive';
 import { OpsPrepare } from './OpsPrepare';
 import { SupportPreparation } from './SupportPreparation';
+import { callFlow } from './call-flow';
 import { focusActingSquad, toggleActingSquad, toggleDeploymentSquad, toggleSupportingSquad } from './operation-squads';
 
 const hooks = vi.hoisted(() => ({ values: [] as unknown[], cursor: 0, state: null as GameState | null, act: vi.fn(), notify: vi.fn() }));
@@ -43,15 +43,20 @@ function live() {
 }
 function prepare() {
   hooks.cursor = 0;
-  const nodes = descendants(OpsPrepare({ scenarioId: 'ms_occupancy', onCancel: () => {}, initialStep: 'team' }));
+  const nodes = descendants(OpsPrepare({ scenarioId: 'ms_occupancy', onCancel: () => {}, step: 'deploy' }));
   const command = (nodes.find(node => node.type === SupportPreparation) as ReactElement<Parameters<typeof SupportPreparation>[0]>).props.cmd;
-  const rail = nodes.find(node => node.type === ChoiceRail) as ReactElement<Parameters<typeof ChoiceRail<SquadId>>[0]> | undefined;
-  const choose = (id: SquadId) => (nodes.find(node => node.type === 'button' && node.props.className?.toString().startsWith('pickcard') && descendants(node.props.children).some(child => child.props.className === 'squad-badge' && child.props.children === id))!.props.onClick as () => void)();
+  const button = (label: string, id: SquadId) => nodes.find(node => node.type === 'button' && node.props.children === label && node.props['data-squad'] === id)!.props.onClick as () => void;
+  const choose = (id: SquadId) => (nodes.find(node => node.type === 'button' && node.props.className?.toString().startsWith('cl-squad') && node.props['data-squad'] === id)!.props.onClick as () => void)();
+  /** Open a squad's Adjust sheet (its kit) or Change sheet (its way in). */
+  const adjust = (id: SquadId) => button('Adjust', id)();
+  const change = (id: SquadId) => button('Change', id)();
+  const open = nodes.find(node => node.props.className?.toString().includes('cl-kit-workspace'))?.props['data-squad'] as SquadId | undefined;
   const quantity = (name: string) => (nodes.find(node => node.type === Stepper && node.props.label === name) as ReactElement<Parameters<typeof Stepper>[0]>).props;
-  return { nodes, command, rail: rail?.props, choose, quantity };
+  return { nodes, command, choose, adjust, change, open, quantity };
 }
 
 beforeEach(() => {
+  callFlow.close('ms_occupancy');
   hooks.values = []; hooks.cursor = 0; hooks.state = makeState({ squadC: true }); hooks.act.mockReset(); hooks.notify.mockReset();
   vi.spyOn(Date, 'now').mockReturnValue(NOW);
   hooks.act.mockImplementation((command: Command) => {
@@ -142,7 +147,7 @@ describe('multi-squad review and commitment', () => {
     const html = renderToStaticMarkup(createElement(ActionSquadAssignment, { ...sheet, view: sheet.view! }));
     expect(html).toContain('At Front');
     expect(html).toContain('Mara Chen');
-    expect(html).toContain('Squad B remains at');
+    expect(html).toContain('Bravo stays at');
     expect(html).toContain('time and strain');
   });
 
@@ -180,26 +185,28 @@ describe('multi-squad review and commitment', () => {
 describe('preparing several squads from shared stock', () => {
   it('preserves exact manual quantities, deliberate zeroes, positions and unit assignments across repeated tab changes', () => {
     prepare().choose('A'); prepare().choose('B');
-    expect(prepare().rail!.value).toBe('B');
-    prepare().rail!.onChange('A');
+    expect(prepare().open, 'no kit sheet until Adjust').toBeUndefined();
+    prepare().adjust('A');
+    expect(prepare().open).toBe('A');
     prepare().quantity('Trauma kit').onChange(2);
     prepare().quantity('Door ram').onChange(0);
+    prepare().change('A');
     const select = prepare().nodes.find(node => node.type === 'select')!;
     (select.props.onChange as (event: { target: { value: string } }) => void)({ target: { value: 'side_yard_e' } });
     const first = structuredClone(prepare().command);
-    prepare().rail!.onChange('B');
+    prepare().adjust('B');
     expect(prepare().quantity('Trauma kit').max).toBe(Object.values(hooks.state!.units).filter(unit => unit.itemId === 'trauma_kit').length - 2);
     prepare().quantity('Trauma kit').onChange(1);
     const both = structuredClone(prepare().command);
-    for (let i = 0; i < 3; i++) { prepare().rail!.onChange('A'); prepare().rail!.onChange('B'); }
+    for (let i = 0; i < 3; i++) { prepare().adjust('A'); prepare().change('A'); prepare().adjust('B'); prepare().change('B'); }
     expect(prepare().command).toEqual(both);
     expect(both.positions!.A).toBe('side_yard_e');
     expect(both.loadouts.A).toEqual(first.loadouts.A);
     expect(both.units!.A).toEqual(first.units!.A);
     expect(both.units!.A!.some(id => both.units!.B!.includes(id))).toBe(false);
-    prepare().rail!.onChange('A');
+    prepare().adjust('A');
     expect(prepare().quantity('Door ram').value).toBe(0);
-    const auto = prepare().nodes.find(node => node.type === Button && node.props['aria-label'] === 'Auto-equip squad A')!;
+    const auto = prepare().nodes.find(node => node.type === Button && node.props['aria-label'] === 'Auto-equip Alpha')!;
     (auto.props.onClick as () => void)();
     expect(prepare().quantity('Door ram').value).toBe(0);
     expect(prepare().command.loadouts.B).toEqual(both.loadouts.B);

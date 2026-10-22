@@ -36,7 +36,9 @@ export async function playLiveCalls(page, { baseURL = 'http://127.0.0.1:5174', w
   await proceed.click();
   await page.locator('nav').waitFor();
   const results = [];
-  await page.locator('nav').getByText('Ops', { exact: true }).click();
+  // The calls tab: its accessible name contains "Calls" (the desk's four tabs; "Ops" before them).
+  const callsTab = page.locator('nav').getByRole('button', { name: /Calls|^Ops$/ }).first();
+  await callsTab.click();
   const casebook = page.locator('.casebook-card');
   await casebook.waitFor();
   const row = (type) => casebook.locator(`.casebook-row[data-type="${type}"]`);
@@ -63,35 +65,49 @@ export async function playLiveCalls(page, { baseURL = 'http://127.0.0.1:5174', w
   await overflow('casebook with locked row');
   await capture('casebook-locked', locked.first());
 
-  // Prepare -> squads -> deploy -> choices until the debrief -> close.
-  const play = async (label) => {
+  // Open the call -> brief -> Choose team -> Deploy -> choices until the debrief -> Done.
+  const play = async (label, { stepOut = false } = {}) => {
     const before = await state();
-    const upperTab = page.getByRole('tab', { name: /^Upper floor/ });
-    await page.locator('.prep-kicker').waitFor();
+    await page.locator('.cl-flow[data-step="brief"]').waitFor();
+    // The brief leads with the orders; the map is one tap away, in the head.
+    assert.equal(await page.locator('.cl-flow .pb-orders-panel').count(), 1, `${label}: the brief opens on the orders`);
     assert.equal(await page.locator('.prepare .toggle input[type="checkbox"]').count(), 0, `${label}: preparation has no mode switch`);
+    await page.locator('.cl-head').getByRole('button', { name: 'Map', exact: true }).click();
+    const upperTab = page.locator('.cl-map-sheet').getByRole('tab', { name: /^Upper floor/ });
+    await page.locator('.cl-map-sheet').waitFor();
     const floors = await upperTab.count() ? 2 : 1;
     if (floors === 2) {
-      assert.match(await page.locator('.prep-kicker').innerText(), /2\sfloors/, `${label}: preparation names the floors`);
       await upperTab.click();
       assert.equal(await upperTab.getAttribute('aria-selected'), 'true');
-      await overflow(`${label} prepare upper floor`);
-      await page.getByRole('tab', { name: /^Ground floor/ }).click();
+      await overflow(`${label} brief map upper floor`);
+      await page.locator('.cl-map-sheet').getByRole('tab', { name: /^Ground floor/ }).click();
     }
-    // Prepare opens on the briefing; the squads are on the team step, reached as a player would.
+    await page.keyboard.press('Escape');
+    if (await page.locator('.cl-map-sheet').count()) await page.locator('.cl-map-sheet').getByRole('button', { name: /close/i }).first().click();
+    // Choose team, then Back keeps the draft: the step and the squads survive the head's Back and Forward.
     await page.getByRole('button', { name: 'Choose team', exact: true }).click();
+    await page.locator('.cl-flow[data-step="deploy"]').waitFor();
     // The squad range is read from the screen, as the player reads it: "Takes 1 squad" or "Takes 1 to 2 squads".
-    const takes = (await page.getByText(/^Takes \d+( to \d+)? squads?\./).first().innerText()).match(/Takes (\d+)(?: to (\d+))?/);
+    const takes = (await page.locator('.cl-section-aside').first().innerText()).match(/Takes (\d+)(?: to (\d+))?/);
     const range = { min: Number(takes[1]), max: Number(takes[2] ?? takes[1]) };
     // A squad deploys with the officers who are fit and the rest stay home (short-squad-deploys), so
     // any card not marked "not deployable" will do; the squads with the most officers ready go first,
     // as a player would after an injury ("Squad B, Bravo, 3 of 4 ready").
-    const cards = await page.locator('.squadpick button[aria-label^="Squad "]').evaluateAll(buttons => buttons.map((button, index) => ({ index, label: button.getAttribute('aria-label') ?? '' })));
+    const cards = await page.locator('.cl-squads button.cl-squad').evaluateAll(buttons => buttons.map((button, index) => ({ index, label: button.getAttribute('aria-label') ?? '' })));
     const readyOf = card => Number(/, (\d+) of \d+ ready/.exec(card.label)?.[1] ?? 0);
     const fit = cards.filter(card => readyOf(card) >= 1 && !card.label.includes('not deployable')).sort((x, y) => readyOf(y) - readyOf(x));
     const pick = Math.min(range.max, fit.length);
     assert.ok(pick >= range.min, `${label}: ${range.min} squad${range.min > 1 ? 's' : ''} able to deploy; the cards read ${cards.map(card => `"${card.label}"`).join(', ')}`);
-    for (const card of fit.slice(0, pick)) await page.locator('.squadpick button[aria-label^="Squad "]').nth(card.index).click();
-    assert.equal(await page.locator('.squadpick button[aria-pressed="true"]').count(), pick, `${label}: ${pick} squad${pick > 1 ? 's' : ''} chosen`);
+    for (const card of fit.slice(0, pick)) await page.locator('.cl-squads button.cl-squad').nth(card.index).click();
+    assert.equal(await page.locator('.cl-squads button[aria-pressed="true"]').count(), pick, `${label}: ${pick} squad${pick > 1 ? 's' : ''} chosen`);
+    // Back to the brief and Forward again: the chosen squads are still chosen (the exit table).
+    await page.locator('.cl-head-back').click();
+    await page.locator('.cl-flow[data-step="brief"]').waitFor();
+    await page.goForward();
+    await page.locator('.cl-flow[data-step="deploy"]').waitFor();
+    assert.equal(await page.locator('.cl-squads button[aria-pressed="true"]').count(), pick, `${label}: the draft survives Back and Forward`);
+    // Each chosen squad's kit is a summary with Adjust; Deploy names the squads by name.
+    assert.equal(await page.locator('.cl-squad-plan').count(), pick, `${label}: a kit summary per chosen squad`);
     // Standard radios come from owned stock, one per officer. A short squad is equipped by
     // buying the missing radios on this screen, as a player would.
     const buyRadios = page.getByRole('button', { name: /^Buy \d+ radios? · / });
@@ -103,7 +119,7 @@ export async function playLiveCalls(page, { baseURL = 'http://127.0.0.1:5174', w
         Object.values(before.units).filter(unit => unit.itemId === 'radio_kit').length + boughtRadios);
       await overflow(`${label} prepare after buying radios`);
     }
-    const deploy = page.getByRole('button', { name: 'Deploy', exact: true });
+    const deploy = page.getByRole('button', { name: /^Deploy [A-Z]/ });
     // Wait for the screen to settle before judging Deploy (a slow render under load is not a refusal),
     // and when it stays off, say what the Prepare screen says.
     let enabled = false;
@@ -114,6 +130,16 @@ export async function playLiveCalls(page, { baseURL = 'http://127.0.0.1:5174', w
     const started = await state();
     assert.ok(started.activeRun.reservationIds.length > 0, `${label}: a live run reserves owned equipment`);
     const used = started.activeRun.squadIds.length;
+    if (stepOut) {
+      // Step out leaves the call without cancelling it: the decision pauses and only the call resumes it.
+      await page.getByRole('button', { name: 'Step out', exact: true }).click();
+      await page.waitForFunction(() => window.__ti.getState().activeRun?.decisionPausedAt !== undefined);
+      assert.equal(await page.locator('.live').count(), 0, `${label}: Step out leaves the call`);
+      assert.equal((await state()).activeRun?.status, 'active', `${label}: Step out never cancels`);
+      await callsTab.click();
+      await page.locator('.call-grid').waitFor();
+      await page.waitForFunction(() => window.__ti.getState().activeRun?.decisionPausedAt === undefined);
+    }
     if (floors === 2) {
       // People and markers upstairs are only drawn on the upper floor; the tab must reach them.
       // The map sits on the one-screen live call, above the story.
@@ -141,7 +167,7 @@ export async function playLiveCalls(page, { baseURL = 'http://127.0.0.1:5174', w
         // A weighed choice opens for reading when its text is tapped; its own Review button selects it.
         const card = available.first(), review = card.locator('.callbtn-review');
         await (await review.count() ? review : card).click();
-        const confirm = page.getByRole('button', { name: /^Confirm:/ });
+        const confirm = page.getByRole('button', { name: /^Confirm / });
         assert.equal(await confirm.isEnabled(), true, `${label}: selected available action must be confirmable`);
         await confirm.click();
       } else if (await page.locator('.operation-continuations button').count()) {
@@ -159,10 +185,11 @@ export async function playLiveCalls(page, { baseURL = 'http://127.0.0.1:5174', w
       await overflow(`${label} live step ${steps}`);
     }
     const ended = await state(); assert.equal(ended.activeRun?.status, 'debrief', `${label}: bounded ending`);
-    assert.equal(await page.locator('.debrief-hero .kicker').innerText(), 'DEBRIEF', `${label}: the debrief is a live result`);
+    assert.equal(await page.locator('.cl-head-title').innerText(), 'Debrief', `${label}: the debrief is a live result`);
+    assert.equal(await page.locator('.cl-head-back').count(), 0, `${label}: the debrief has no Back`);
     assert.equal(await page.locator('.result-rewards').count(), 1, `${label}: the debrief lists its rewards`);
     await overflow(`${label} debrief`);
-    await page.getByRole('button', { name: 'Close debrief', exact: true }).click();
+    await page.getByRole('button', { name: 'Done', exact: true }).click();
     await casebook.waitFor();
     const after = await state(); assert.equal(after.activeRun, null);
     // Every operation is live: it earns department service and settles its equipment.
@@ -184,15 +211,15 @@ export async function playLiveCalls(page, { baseURL = 'http://127.0.0.1:5174', w
     const index = now.incidents.filter(c => c.expiresAt > Date.now()).findIndex(c => c.id === card.id);
     if (index < 0) continue;
     assert.equal(card.newKind, true, `${card.type}: first call of its framework is marked new`);
-    const view = page.locator('.opboard', { has: page.getByRole('button', { name: 'Prepare', exact: true }) }).nth(index);
+    const view = page.locator('.cl-card').nth(index);
     assert.match(await view.innerText(), /New kind of call/, `${card.type}: board card shows the badge`);
     if (discovered.length === 0) await capture('board-new-kind', view);
     // The page clock is fixed, so the welcome-back sheet stays armed and opens on the first shift
     // report; a player reads it and taps Continue.
     const welcome = page.locator('.welcome-sheet');
     if (await welcome.count()) await welcome.getByRole('button', { name: 'Continue', exact: true }).click();
-    await view.getByRole('button', { name: 'Prepare', exact: true }).click();
-    const { after, result } = await play(`${card.type} live`);
+    await view.locator('.cl-card-button').click();
+    const { after, result } = await play(`${card.type} live`, { stepOut: discovered.length === 0 });
     Object.assign(result, { type: card.type, kind: 'incident' });
     const keys = Object.keys(after.casebook.recipes).filter(key => key.startsWith(`${card.type}/`));
     assert.equal(keys.length, 1, `${card.type}: dispatch discovered one recipe`);
@@ -209,9 +236,9 @@ export async function playLiveCalls(page, { baseURL = 'http://127.0.0.1:5174', w
   await capture('casebook', casebook);
 
   // 3. With the incidents taken the board is empty: no standing assignments, only the next arrival.
-  assert.match(await page.locator('.opboard-count').innerText(), /No call-outs right now/);
+  assert.match(await page.locator('.cl-board-count').innerText(), /No calls waiting/);
   assert.equal(await page.getByText('Standing assignments').count(), 0, 'the board has no standing assignments');
-  assert.equal(await page.getByRole('button', { name: 'Prepare', exact: true }).count(), 0, 'nothing left to prepare');
+  assert.equal(await page.locator('.cl-card-button').count(), 0, 'nothing left to open');
   await overflow('empty board');
   await page.evaluate(() => scrollTo(0, 0));
   await capture('board-empty');

@@ -8,7 +8,6 @@ import { decisionViews, lastResolution } from '../../sim/operation-selectors';
 import type { Id, SquadId } from '../../sim/types';
 import { decisionsOf } from '../../sim/types';
 import { useToast } from '../components/toast';
-import { useNav } from '../components/nav';
 import { Sheet } from '../components/Sheet';
 import { Button } from '../components/ui';
 import { OpenInLab } from '../components/OpenInLab';
@@ -31,11 +30,11 @@ function revealLastDecision() {
   document.querySelector('.live')?.scrollIntoView({ block: 'start', behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
 }
 
-export function OpsLive() {
+/** `onStepOut` leaves the call for HQ without cancelling it (Ops.tsx passes the shell's navigation). */
+export function OpsLive({ onStepOut }: { onStepOut?: () => void } = {}) {
   const g = useGame();
   const now = Date.now();
   const { act } = useToast();
-  const nav = useNav();
   const run = g.activeRun!;
 
   const [focusId, setFocusId] = useState<SquadId | null>(() => decisionsOf(run.history).at(-1)?.actingSquadIds[0] ?? null);
@@ -209,7 +208,7 @@ export function OpsLive() {
       onFloorChange={setFloor}
       onToggleRooms={() => setShowRooms((v) => !v)}
       onCancel={() => setConfirmCancel(true)}
-      onStepOut={() => nav.go('hq')}
+      onStepOut={onStepOut}
       onOpenDetails={() => { setActionFromSupport(false); setPanel(panel === 'action' ? 'none' : 'action'); }}
       feedback={<OperationFeedback officers={g.officers} decisions={decisions} folded={beat === 'decide'} explicitCompletion={(scenario?.version ?? 0) >= 4} currentPrompt={model.progress.prompt} onOpenLog={() => setPanel('none')} />}
       scene={sceneFor(scenario?.incident?.type)}

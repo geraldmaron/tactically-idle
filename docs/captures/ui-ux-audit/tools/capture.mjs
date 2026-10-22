@@ -37,12 +37,18 @@ function probe() {
     .slice(0, 5).map((el) => `${el.tagName.toLowerCase()}.${[...el.classList].join('.')}`);
   const h = (sel) => { const el = [...document.querySelectorAll(sel)].find(visible); return el ? Math.round(el.getBoundingClientRect().height) : 0; };
   const primary = [...document.querySelectorAll('.btn-primary')].find(visible);
+  // Covered: another element (a raised tab, a toast, a footer) sits on the primary's centre.
+  const covered = (el) => { const r = el.getBoundingClientRect(); const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return !!hit && hit !== el && !el.contains(hit); };
+  // The visible body of an open sheet, between its head and its footer.
+  const sheetBody = [...document.querySelectorAll('.sheet .sheet-body')].find(visible);
+  const sheetBodyVisible = sheetBody ? (() => { const r = sheetBody.getBoundingClientRect(); return Math.round(Math.min(r.bottom, vh) - Math.max(r.top, 0)); })() : null;
   return {
     viewport: `${vw}x${vh}`,
     docOverflow: document.documentElement.scrollWidth > vw,
     overflowing,
-    chrome: { topbar: h('.topbar'), bottomnav: h('.bottomnav'), sheetFoot: h('.sheet-foot'), stickyFoot: h('.prep-foot, .live-continue, .debrief-foot, .sticky-foot, .opfoot') },
-    primary: primary ? { label: label(primary), top: Math.round(primary.getBoundingClientRect().top) } : null,
+    chrome: { topbar: h('.topbar'), bottomnav: h('.bottomnav'), sheetFoot: h('.sheet-foot'), stickyFoot: h('.prep-foot, .live-continue, .debrief-foot, .sticky-foot, .opfoot, .cl-flow-foot, .action-bar'), flowHead: h('.cl-head, .flow-head') },
+    primary: primary ? { label: label(primary), top: Math.round(primary.getBoundingClientRect().top), covered: covered(primary) } : null,
+    sheetBodyVisible,
     smallTargets: small.length, smallTargetSamples: small.slice(0, 8),
     smallText: texts.length, smallTextSizes: [...new Set(texts.map((t) => t.px))].sort((a, b) => a - b), smallTextSamples: texts.slice(0, 8),
   };
@@ -110,15 +116,18 @@ async function main() {
     for (const [n, name] of [['14-restock-sheet', 'Restock rules'], ['15-presets-sheet', 'Loadout presets']]) await step(n, async () => { await page.getByRole('button', { name: new RegExp(name) }).first().click(); await shot(n, { segments: 2 }); await closeSheet(); });
     await step('saves', async () => { await page.locator('.topbar button').last().click(); await shot('16-saves-sheet', { segments: 3 });
       await page.locator('.settings-entry').click(); await page.waitForTimeout(300); await shot('17-settings-sheet', { segments: 3 }); await closeSheet(); await closeSheet(); });
-    await step('board', async () => { await tab('Ops'); await page.locator('.opboard').first().waitFor(); await shot('18-board', { segments: 5 }); });
-    await step('brief', async () => { await page.getByRole('button', { name: 'Prepare', exact: true }).first().click(); await page.locator('.prep-kicker').waitFor(); await shot('19-prepare-brief', { segments: 5 }); });
+    // The calls tab is "Calls" with the desk's four tabs and "Ops" before them.
+    const callsTab = () => page.locator('nav').getByRole('button', { name: /Calls|^Ops$/ }).first().click();
+    await step('board', async () => { await callsTab(); await page.locator('.cl-card').first().waitFor(); await shot('18-board', { segments: 5 }); });
+    await step('brief', async () => { await page.locator('.cl-card-button').first().click(); await page.locator('.cl-flow[data-step="brief"]').waitFor(); await shot('19-prepare-brief', { segments: 5 });
+      await page.locator('.cl-head').getByRole('button', { name: 'Map', exact: true }).click(); await shot('19b-brief-map-sheet', { segments: 1 }); await closeSheet(); });
     await step('team', async () => { await page.getByRole('button', { name: 'Choose team', exact: true }).click(); await shot('20-prepare-team-empty', { segments: 2 });
-      await page.locator('.squadpick button[aria-label^="Squad "]').first().click(); await shot('21-prepare-team-picked', { segments: 6 });
-      const buy = page.getByRole('button', { name: /^Buy \d+ radios? · / }); if (await buy.count()) { await buy.first().click(); await page.waitForTimeout(400); } });
-    await step('live', async () => { await page.getByRole('button', { name: 'Deploy', exact: true }).click(); await page.locator('.call-grid').waitFor(); await shot('22-live-decide-1', { segments: 4 });
+      await page.locator('.cl-squads button.cl-squad').first().click(); await shot('21-prepare-team-picked', { segments: 6 });
+      await page.locator('.cl-squad-plan .cl-link').first().click(); await shot('21b-kit-sheet', { segments: 2 }); await closeSheet(); });
+    await step('live', async () => { await page.getByRole('button', { name: /^Deploy [A-Z]/ }).click(); await page.locator('.call-grid').waitFor(); await shot('22-live-decide-1', { segments: 4 });
       const card = page.locator('.call-grid .callbtn:not(.callbtn-off)').first(); const review = card.locator('.callbtn-review');
       await (await review.count() ? review : card).click(); await shot('23-review-sheet', { segments: 3 });
-      await page.getByRole('button', { name: /^Confirm:/ }).click(); await shot('24-result-beat', { segments: 3 }); });
+      await page.getByRole('button', { name: /^Confirm / }).click(); await shot('24-result-beat', { segments: 3 }); });
     await step('live-rest', async () => {
       let n = 0, stage = 2;
       for (; n < 40; n++) {
@@ -127,13 +136,13 @@ async function main() {
         const proceed = page.locator('.live-continue button');
         if (await proceed.count()) { await proceed.click(); await page.locator('.call-grid').waitFor(); if (stage <= 3) await shot(`25-live-decide-${stage++}`, { segments: 3 }); continue; }
         const card = page.locator('.call-grid .callbtn:not(.callbtn-off)').first();
-        if (await card.count()) { const review = card.locator('.callbtn-review'); await (await review.count() ? review : card).click(); await page.getByRole('button', { name: /^Confirm:/ }).click(); await page.waitForTimeout(300); continue; }
+        if (await card.count()) { const review = card.locator('.callbtn-review'); await (await review.count() ? review : card).click(); await page.getByRole('button', { name: /^Confirm / }).click(); await page.waitForTimeout(300); continue; }
         const cont = page.locator('.operation-continuations button'); if (await cont.count()) { await cont.first().click(); continue; }
         break;
       }
-      await page.getByRole('button', { name: 'Close debrief', exact: true }).waitFor({ timeout: 8000 });
+      await page.getByRole('button', { name: 'Done', exact: true }).waitFor({ timeout: 8000 });
       await shot('26-debrief', { segments: 6 });
-      await page.getByRole('button', { name: 'Close debrief', exact: true }).click(); await page.waitForTimeout(400);
+      await page.getByRole('button', { name: 'Done', exact: true }).click(); await page.waitForTimeout(400);
       await shot('27-board-after', { segments: 3 }); });
     await step('hq-after', async () => { await tab('HQ'); await shot('28-hq-after-call', { segments: 5 }); });
     await context.close();

@@ -335,14 +335,14 @@ export function OpsPrepare({ scenarioId, step = 'brief', onCancel }: { scenarioI
       return <section key={sid} className="cl-section cl-squad-plan" aria-label={`${squadName(sid)} plan`} data-squad={sid}>
         <div className="cl-section-head">
           <h2 className="cl-section-title">{squadName(sid)} carries</h2>
-          <button type="button" className="cl-link" onClick={() => setSheet({ kind: 'kit', squad: sid })} aria-label={`Adjust what ${squadName(sid)} carries`}>Adjust</button>
+          <button type="button" className="cl-link" data-squad={sid} onClick={() => setSheet({ kind: 'kit', squad: sid })} aria-label={`Adjust what ${squadName(sid)} carries`}>Adjust</button>
         </div>
         {index === 0 && <p className="cl-basic-kit">{BASIC_KIT_LINE}</p>}
         {kit.length > 0 ? <ul className="cl-kit" aria-label={`${squadName(sid)} kit`}>{kit.map((item) => <li key={item.id} className={`cl-kit-chip cl-kit-${item.tone}`}>{item.text}</li>)}</ul>
           : <p className="cl-muted">Nothing from the Armory.</p>}
         <div className="cl-section-head">
           <h3 className="cl-section-title">{chosen.length > 1 ? `${squadName(sid)} goes in` : 'Going in'}</h3>
-          <button type="button" className="cl-link" onClick={() => setSheet({ kind: 'going', squad: sid })} aria-label={`Change where ${squadName(sid)} goes in`}>Change</button>
+          <button type="button" className="cl-link" data-squad={sid} onClick={() => setSheet({ kind: 'going', squad: sid })} aria-label={`Change where ${squadName(sid)} goes in`}>Change</button>
         </div>
         <p className="cl-going"><strong>{way.title}</strong>{way.detail && <span>{way.detail}</span>}</p>
       </section>;
@@ -416,7 +416,7 @@ export function OpsPrepare({ scenarioId, step = 'brief', onCancel }: { scenarioI
     const note = autoNote[sid];
     const unreliable = Object.values(picks[sid] ?? {}).flat()
       .filter((u) => unitStateOf(u.condition, ITEMS[u.itemId].wear) !== 'Good' && unitStateOf(u.condition, ITEMS[u.itemId].wear) !== 'Worn');
-    return <section className="prepsquad cl-kit-workspace" aria-label={`${squad.name} kit`}>
+    return <section className="prepsquad cl-kit-workspace" aria-label={`${squad.name} kit`} data-squad={sid}>
       <div className="prepsquad-head">
         {autoUndo && <Button size="sm" onClick={undoAuto}>Undo auto-equip</Button>}
         <Button size="sm" icon="wand" onClick={() => runAuto(sid)} aria-label={`Auto-equip ${squad.name}`} title="Fills gear from stock you own. Nothing is bought.">Auto-equip</Button>
@@ -467,7 +467,7 @@ export function OpsPrepare({ scenarioId, step = 'brief', onCancel }: { scenarioI
     const way = goingIn(sid);
     // A new starting position drops a staging point chosen for the old one.
     const pickPosition = (id: Id) => { setPositions((p) => ({ ...p, [sid]: id })); setStaging((st) => omit(st, sid)); };
-    return <section className="cl-going-workspace" aria-label={`${squadName(sid)} way in`}>
+    return <section className="cl-going-workspace" aria-label={`${squadName(sid)} way in`} data-squad={sid}>
       <label className="field">
         <span className="field-label"><Icon name="pin" size={14} />Starting position</span>
         <select value={way.position ?? ''} onChange={(e) => pickPosition(e.target.value)} disabled={brief.entries.length === 0}>

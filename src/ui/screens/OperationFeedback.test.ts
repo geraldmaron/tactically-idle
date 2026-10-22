@@ -134,23 +134,26 @@ describe('reviewing a decision', () => {
 
   it('separates high consequence severity from a favorable forecast and preserves authored possibilities', () => {
     const html = render(createElement(OutcomeForecast, { action: action() }));
-    expect(html).toContain('73% chance');
-    expect(html).toContain('19% chance');
-    expect(html).toContain('8% chance');
-    expect(html).toContain('Possible harm: high');
+    expect(html).toContain('>73%<');
+    expect(html).toContain('>19%<');
+    expect(html).toContain('>8%<');
     expect(html).toContain('Prepare aid without losing access.');
     expect(html).toContain('Medical access remains unresolved.');
-    expect(html).toContain('Even when a choice goes well, there may be more work to do');
     expect(html).not.toContain('Low risk');
+    // The harm is said once, in the review's action bar, not beside the outcomes.
+    expect(html).not.toContain('harm');
+    expect(render(sheet(action()))).toContain('Harm high');
   });
 
   it('shows public duration bounds and exact supplies before the primary confirmation', () => {
     const html = render(sheet(action()));
-    expect(html).toContain('Estimated time: 5 min');
-    expect(html).toContain('4–8 min depending on the result.');
+    // The estimate once, in the action bar's summary; the range, which depends on the result, in the sheet.
+    expect(html).toContain('about 5 min');
+    expect(html).not.toContain('Estimated time');
+    expect(html).toContain('Takes 4–8 min depending on the result.');
     expect(html).toContain('Supplies used when confirmed');
     expect(html).toContain('1 × Trauma supplies');
-    expect(html.indexOf('1 × Trauma supplies')).toBeLessThan(html.indexOf('Confirm: Prepare medical access'));
+    expect(html.indexOf('1 × Trauma supplies')).toBeLessThan(html.indexOf('aria-label="Confirm Prepare medical access"'));
     expect(html).toContain('<footer><div class="operation-commit">');
     expect(html).toContain('btn-primary');
     expect(html).toContain('role="region"');
@@ -160,7 +163,7 @@ describe('reviewing a decision', () => {
     const html = render(createElement(ActionSheet, { ...sheet(action()).props, onBackToSupport: noop }));
     expect(html).toContain('role="dialog"');
     expect(html).toContain('Back to care &amp; support');
-    expect(html).toContain('Confirm: Prepare medical access');
+    expect(html).toContain('aria-label="Confirm Prepare medical access">Confirm<');
   });
 
   it('keeps locked actions inspectable, explains the blocker and offers an available alternative', () => {
@@ -169,7 +172,7 @@ describe('reviewing a decision', () => {
     const html = render(sheet(locked, [locked, alternative]));
     expect(html).toContain('Needs a qualified medic. Squad A has none');
     expect(html).toContain('Available now: Reassess the report');
-    expect(html).toMatch(/<button[^>]+disabled=""[^>]*>Confirm: Prepare medical access/);
+    expect(html).toMatch(/<button[^>]+disabled=""[^>]*aria-label="Confirm Prepare medical access">Confirm</);
     expect(html).toContain('Check what is missing to see the chances for this choice.');
     expect(html).not.toContain('% chance');
   });
@@ -180,8 +183,8 @@ describe('reviewing a decision', () => {
     expect(html).toContain('How will you verify the report before committing?');
     for (let index = 1; index <= 5; index++) expect(html).toContain(`aria-label="Review Decision ${index}"`);
     expect(html).not.toContain('Show all');
-    expect(html).toContain('73% chance to go well');
-    expect(html).toContain('possible harm: high');
+    expect(html).toContain('73% goes well');
+    expect(html).toContain('Harm high');
   });
 
   it('keeps exact owned equipment and delivery consequences in the locked action sheet', () => {
@@ -191,10 +194,10 @@ describe('reviewing a decision', () => {
     expect(resupply.ok).toBe(true);
     const html = render(createElement(ActionSheet, { ...sheet(view).props, resupply, onResupply: noop }));
     expect(html).toContain('Equipment from stores');
-    expect(html).toContain(`Squad A: Throw phone · ${resupply.items[0].serial}`);
+    expect(html).toContain(`Alpha: Throw phone · ${resupply.items[0].serial}`);
     expect(html).toContain('Equip Throw phone · +3 min');
     expect(html).toContain('You can no longer cancel after delivery.');
-    expect(html).toMatch(/<button[^>]+disabled=""[^>]*>Confirm:/);
+    expect(html).toMatch(/<button[^>]+disabled=""[^>]*>Confirm</);
   });
 
   it('does not present equipment delivery as a solution to a missing qualification', () => {
@@ -213,7 +216,7 @@ describe('reviewing a decision', () => {
     const base = action();
     const selected = action({ likelihood: { favorable: .9, mixed: .08, adverse: .02 }, timeCost: 3 });
     const html = render(createElement(LiveView, liveProps([base], selected)));
-    expect(html).toContain('90% chance to go well');
+    expect(html).toContain('90% goes well');
     expect(html).not.toContain('73% chance to go well');
     expect(html).toContain('~3 min');
   });
@@ -332,7 +335,7 @@ describe('persistent decision results', () => {
     expect(debrief.endingSummary).toBeTruthy();
     expect(html.replace(/<[^>]*>/g, '')).toContain(debrief.endingSummary);
     expect(html).toContain(`Decision log<span class="disclosure-count">${decisionViews(state).length}</span>`);
-    expect(html).toContain('Close debrief');
+    expect(html).toContain('>Done<');
     expect(html).not.toContain('Battery pack');
     const closed = apply(state, { type: 'closeDebrief' });
     expect(closed.result.ok).toBe(true);
@@ -342,7 +345,7 @@ describe('persistent decision results', () => {
     const review = render(createElement(SavedDebriefReview, { debrief: saved, officers: closed.state.officers, onClose: noop }));
     expect(review.replace(/<[^>]*>/g, '')).toContain(saved.endingSummary);
     expect(review).toContain(`${saved.decisions!.length} decisions`);
-    expect(review).toContain('Return to HQ');
+    expect(review).toContain('>Done<');
     expect(review).toContain('role="dialog"');
     const hq = render(createElement(Debriefs, { g: closed.state, now: NOW }));
     expect(hq).toContain('Review result');
@@ -399,7 +402,7 @@ describe('operation stage rail', () => {
       ],
     } }));
     expect(html).toContain('aria-label="Operation stages" tabindex="0"');
-    expect(html).toContain('THE PROMISED CONVERSATION');
+    expect(html).toContain('>The promised conversation<');
     expect(html.match(/aria-current="step"/g)).toHaveLength(1);
     expect(html).toContain('step-current" aria-current="step"');
     expect(html).not.toContain('<button');

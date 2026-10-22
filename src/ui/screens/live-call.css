@@ -189,7 +189,7 @@
 .live .threat-subject-bar b { position: absolute; top: 0; height: 100%; background: var(--siren-r); box-shadow: 0 0 8px rgba(255, 59, 48, 0.9); transform-origin: left; animation: agitation-rise 0.6s ease-out 1; }
 @keyframes agitation-rise { from { transform: scaleX(0); } }
 @media (prefers-reduced-motion: reduce) { .live .threat-subject-bar b { animation: none; } }
-.callbtn-gauge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border: 1px solid rgba(245, 155, 66, 0.5); border-radius: 999px; background: rgba(245, 155, 66, 0.12); color: var(--warn-text); font: 600 13px/1.15 var(--font-cond); letter-spacing: 0.02em; }
+.callbtn-gauge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border: 1px solid rgba(245, 155, 66, 0.5); border-radius: 999px; background: rgba(245, 155, 66, 0.12); color: var(--warn-text); font: 600 var(--s14)/1.15 var(--f-ui); }
 .callbtn-gauge .icon { color: var(--warn); }
 /* The review sheet's map: where this choice happens, at a glance (the scene's map has scrolled away). */
 .app .action-sheet-map { container-type: inline-size; position: relative; margin: 0 0 10px; overflow: hidden; border-radius: 8px; background: var(--paper-deep); }

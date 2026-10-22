@@ -6,6 +6,7 @@ import { OpsLive } from './OpsLive';
 import { OpsDebrief } from './OpsDebrief';
 import { callFlow, useCallFlow } from './call-flow';
 import { cardFor } from './helpers';
+import { useNav } from '../components/nav';
 
 /** The Calls destination. Mode follows state: a live call or its debrief first, then the call the
  * player opened (call-flow.ts, which keeps its step and draft across Back and detours), then the
@@ -13,6 +14,7 @@ import { cardFor } from './helpers';
 export function OpsScreen() {
   const g = useGame();
   const { open } = useCallFlow();
+  const nav = useNav();
   const run = g.activeRun;
   const now = Date.now();
   const onBoard = (id: string) => !!cardFor(g, id, now);
@@ -28,7 +30,7 @@ export function OpsScreen() {
     const screen = document.querySelector<HTMLElement>('main.screen-ops');
     if (screen) screen.scrollTop = 0;
   }, [surface, run?.id]);
-  if (run?.status === 'active') return <OpsLive />;
+  if (run?.status === 'active') return <OpsLive onStepOut={() => nav.go('hq')} />;
   if (run?.status === 'debrief') return <OpsDebrief />;
   if (prep) return <OpsPrepare scenarioId={prep.scenarioId} step={prep.step} />;
   return <OpsBoard onOpen={(id) => callFlow.openCall(id)} />;

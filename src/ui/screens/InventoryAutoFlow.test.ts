@@ -4,9 +4,9 @@ import { makeState, NOW, unitId } from '../../sim/test-fixtures';
 import { OpsPrepare } from './OpsPrepare';
 import { SupportPreparation } from './SupportPreparation';
 import { Button, Stepper } from '../components/ui';
-import { ChoiceRail } from '../components/ChoiceRail';
 import type { StartOperationCommand } from '../../sim/operation-selectors';
 import type { SquadId } from '../../sim/types';
+import { callFlow } from './call-flow';
 
 const hooks = vi.hoisted(() => ({ values: [] as unknown[], cursor: 0 }));
 vi.mock('react', async (importOriginal) => ({
@@ -31,27 +31,33 @@ function nodes(node: ReactNode): Element[] {
   if (!isValidElement<Record<string, any>>(node)) return [];
   return [node, ...nodes(node.props.children)];
 }
-const render = () => { hooks.cursor = 0; return OpsPrepare({ scenarioId: 'ms_occupancy', onCancel: () => {}, initialStep: 'team' }); };
+const render = () => { hooks.cursor = 0; return OpsPrepare({ scenarioId: 'ms_occupancy', onCancel: () => {}, step: 'deploy' }); };
 const find = (root: ReactNode, test: (element: Element) => boolean) => {
   const element = nodes(root).find(test);
   if (!element) throw new Error('Expected preparation control was not found');
   return element;
 };
-const squad = (sid: string) => find(render(), (element) => element.props['aria-label'] === `Squad ${sid} setup`);
-const toggleSquad = (sid: string) => find(render(), (element) => element.type === 'button' && element.key === sid && element.props.className?.startsWith('pickcard')).props.onClick();
+/** A squad's kit workspace, open in its Adjust sheet. */
+const squad = (sid: string) => find(render(), (element) => element.props.className?.toString().includes('cl-kit-workspace') && element.props['data-squad'] === sid);
+const toggleSquad = (sid: string) => find(render(), (element) => element.type === 'button' && element.props.className?.toString().startsWith('cl-squad') && element.props['data-squad'] === sid).props.onClick();
+/** Open a squad's Adjust sheet: only that squad's kit shows. */
 const selectSetup = (sid: SquadId) => {
-  const rail = find(render(), (element) => element.type === ChoiceRail && element.props.label === 'Squad setup');
-  rail.props.onChange(sid);
-  expect(find(render(), (element) => element.type === ChoiceRail && element.props.label === 'Squad setup').props.value).toBe(sid);
-  expect(squad(sid).props.role).toBe('tabpanel');
+  find(render(), (element) => element.type === 'button' && element.props.children === 'Adjust' && element.props['data-squad'] === sid).props.onClick();
+  expect(squad(sid)).toBeDefined();
+};
+/** Open a squad's Change sheet, for its starting position and staging. */
+const goingIn = (sid: SquadId) => {
+  find(render(), (element) => element.type === 'button' && element.props.children === 'Change' && element.props['data-squad'] === sid).props.onClick();
+  return find(render(), (element) => element.props.className === 'cl-going-workspace' && element.props['data-squad'] === sid);
 };
 const quantity = (sid: string, label: string) => find(squad(sid), (element) => element.type === Stepper && element.props.label === label).props;
-const auto = (sid: string) => find(squad(sid), (element) => element.type === Button && element.props['aria-label'] === `Auto-equip squad ${sid}`).props;
+const auto = (sid: string) => find(squad(sid), (element) => element.type === Button && element.props.icon === 'wand').props;
 const command = (): StartOperationCommand => find(render(), (element) => element.type === SupportPreparation).props.cmd;
 const undo = () => find(render(), (element) => element.type === Button && element.props.children === 'Undo auto-equip').props.onClick();
 
 beforeEach(() => {
   hooks.values = [];
+  callFlow.close('ms_occupancy');
   state = makeState();
   act.mockClear();
   vi.spyOn(Date, 'now').mockReturnValue(NOW);
@@ -62,15 +68,15 @@ describe('Auto-equip squad inventory controls', () => {
   it('only updates the requested squad inventory and keeps manual zeros, exact units, positions and support choices', () => {
     toggleSquad('A');
     toggleSquad('B');
-    expect(squad('B')).toBeDefined();
-    expect(nodes(render()).some(element => element.props['aria-label'] === 'Squad A setup')).toBe(false);
+    selectSetup('B');
+    expect(nodes(render()).some(element => element.props.className?.toString().includes('cl-kit-workspace') && element.props['data-squad'] === 'A')).toBe(false);
     selectSetup('A');
     quantity('A', 'Throw phone').onChange(0);
     quantity('A', 'Trauma kit').onChange(1);
     selectSetup('B');
     quantity('B', 'Throw phone').onChange(1);
+    find(goingIn('A'), (element) => element.type === 'select').props.onChange({ target: { value: 'side_yard_e' } });
     selectSetup('A');
-    find(squad('A'), (element) => element.type === 'select').props.onChange({ target: { value: 'side_yard_e' } });
     find(render(), (element) => element.type === SupportPreparation).props.onSelect(unitId('support_van'));
     const before = structuredClone(command());
     const stateBefore = structuredClone(state);
@@ -103,10 +109,11 @@ describe('Auto-equip squad inventory controls', () => {
   it('repeated Auto-equip keeps the allocation and the original undo point', () => {
     toggleSquad('A');
     const before = structuredClone(command());
+    selectSetup('A');
     const firstControl = auto('A');
-    // The squad card shows a short visible label; the accessible name keeps the squad.
+    // The kit sheet shows a short visible label; the accessible name keeps the squad.
     expect(firstControl.children).toBe('Auto-equip');
-    expect(firstControl['aria-label']).toBe('Auto-equip squad A');
+    expect(firstControl['aria-label']).toBe(`Auto-equip ${state.squads.find((s) => s.id === 'A')!.name}`);
     firstControl.onClick();
     const equipped = structuredClone(command());
     firstControl.onClick();
@@ -120,6 +127,7 @@ describe('Auto-equip squad inventory controls', () => {
 
   it('keeps later manual changes and clears an undo that would replace them', () => {
     toggleSquad('A');
+    selectSetup('A');
     auto('A').onClick();
     quantity('A', 'Throw phone').onChange(0);
     expect(nodes(render()).some((element) => element.props.children === 'Undo auto-equip')).toBe(false);
@@ -135,6 +143,7 @@ describe('Auto-equip squad inventory controls', () => {
     state.units[unitId('loud_hailer')].condition = 0;
     toggleSquad('A');
     toggleSquad('B');
+    selectSetup('B');
     quantity('B', 'Throw phone').onChange(1);
     selectSetup('A');
     auto('A').onClick();
@@ -149,9 +158,10 @@ describe('Auto-equip squad inventory controls', () => {
     expect(act).not.toHaveBeenCalled();
   });
 
-  it('offers auto-equip only on a chosen squad’s card', () => {
+  it('offers auto-equip only in a chosen squad’s kit', () => {
     expect(nodes(render()).some((element) => element.type === Button && element.props.icon === 'wand')).toBe(false);
     toggleSquad('A');
+    selectSetup('A');
     expect(auto('A').children).toBe('Auto-equip');
     expect(act).not.toHaveBeenCalled();
   });

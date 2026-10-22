@@ -48,8 +48,9 @@ function referenceProps(g: GameState, now: number, ui: LiveUiState) {
   const actorUnavailable = (id: SquadId) => !actionRule?.commandOnly && availableMembers(id).length === 0;
   const environment = scenario?.environment ?? null;
   const floors = built ? floorCount(built.location) : 1;
-  const title = (card?.title ?? built?.location.name ?? run.scenarioId.replace(/_/g, ' ')).toUpperCase();
-  const subtitle = `${(card?.setting ?? built?.location.setting ?? '').toUpperCase()} / ${card?.code ?? 'OP'}`;
+  const title = card?.title ?? built?.location.name ?? run.scenarioId.replace(/_/g, ' ');
+  const setting = card?.setting ?? built?.location.setting ?? '';
+  const subtitle = `${setting.charAt(0).toUpperCase()}${setting.slice(1)} · ${card?.code ?? 'OP'}`;
   return {
     props: {
       g, now, title, subtitle, progress, built, spaces, squadTasks: run.squadTasks, deployedSquads: deployed, focusSquadId: focus?.id ?? null,

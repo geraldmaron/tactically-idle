@@ -8,6 +8,8 @@ import { OpsDebrief } from './OpsDebrief';
 
 const hooks = vi.hoisted(() => ({
   prep: null as string | null,
+  /** Whether the opened call is still on the board (startOperation takes it off). */
+  onBoard: true,
   state: { activeRun: null as { status: 'active' | 'debrief'; revision: number; clock: number; stage: string } | null },
   dependencies: undefined as DependencyList | undefined,
   effects: [] as EffectCallback[],
@@ -15,7 +17,7 @@ const hooks = vi.hoisted(() => ({
 
 vi.mock('react', async (importOriginal) => ({
   ...await importOriginal<typeof import('react')>(),
-  useState: () => [hooks.prep, (next: string | null) => { hooks.prep = next; }],
+  useEffect: () => {},
   // The node suite has no DOM renderer. Commit the component's actual layout
   // effect only when its dependencies change, as React does between renders.
   useLayoutEffect: (effect: EffectCallback, dependencies?: DependencyList) => {
@@ -25,6 +27,12 @@ vi.mock('react', async (importOriginal) => ({
   },
 }));
 vi.mock('../store', () => ({ useGame: () => hooks.state }));
+vi.mock('../components/nav', () => ({ useNav: () => ({ go: () => {} }) }));
+vi.mock('./helpers', () => ({ cardFor: () => hooks.onBoard ? {} : null }));
+vi.mock('./call-flow', () => ({
+  useCallFlow: () => ({ open: hooks.prep ? { scenarioId: hooks.prep, step: 'brief' } : null, drafts: {} }),
+  callFlow: { openCall: (id: string) => { hooks.prep = id; }, prune: () => {} },
+}));
 vi.mock('./OpsBoard', () => ({ OpsBoard: () => null }));
 vi.mock('./OpsPrepare', () => ({ OpsPrepare: () => null }));
 vi.mock('./OpsLive', () => ({ OpsLive: () => null }));
@@ -45,6 +53,7 @@ function fixture() {
 
 beforeEach(() => {
   hooks.prep = null;
+  hooks.onBoard = true;
   hooks.state = { activeRun: null };
   hooks.dependencies = undefined;
   hooks.effects = [];
@@ -59,13 +68,14 @@ describe('operation surface scroll transitions', () => {
     expect(screen.scrollTop).toBe(0);
 
     screen.scrollTop = 1400;
-    board.props.onPrepare('ms_occupancy');
+    board.props.onOpen('ms_occupancy');
     const preparation = render();
     expect(preparation.type).toBe(OpsPrepare);
     expect(screen.scrollTop).toBe(0);
 
     screen.scrollTop = 1700;
     hooks.state.activeRun = { status: 'active', revision: 0, clock: 0, stage: 'arrival' };
+    hooks.onBoard = false;
     expect(render().type).toBe(OpsLive);
     expect(screen.scrollTop).toBe(0);
 
@@ -79,7 +89,6 @@ describe('operation surface scroll transitions', () => {
     hooks.state.activeRun = null;
     // Closing results must return to the library, not the stale preparation.
     expect(render().type).toBe(OpsBoard);
-    expect(hooks.prep).toBeNull();
     expect(screen.scrollTop).toBe(0);
   });
 

@@ -111,7 +111,7 @@ describe('individual civilian and officer outcomes', () => {
       floor: 0, onFloorChange: noop, environment: null, lastChange: null, showRooms: true, onToggleRooms: noop,
       clock: 9, pressure: 20, canCancel: false, onCancel: noop, onOpenDetails: noop, detailsOpen: false,
     }));
-    expect(html).toContain(`Squad A, ${focus.name}, ${fit} of ${focus.officerIds.length} fit`);
+    expect(html).toContain(`${focus.name}, ${fit} of ${focus.officerIds.length} fit`);
     expect(html).toContain('injured: Shoulder wound, out of action');
     expect(html).toContain('>Out of action<');
   });

@@ -64,7 +64,7 @@ describe('DecisionList', () => {
     const open = cards(html).find(card => card.includes('data-action-id="weighed"'))!;
     expect(open).toContain('aria-label="Review Choice 1"');
     expect(open).toContain('aria-describedby="choice-forecast-weighed"');
-    expect(html).toMatch(/id="choice-forecast-weighed">[^]*possible harm: /);
+    expect(html).toMatch(/id="choice-forecast-weighed">[^]*Harm \w+/);
     expect(cards(html).find(card => card.includes('choice_8'))).not.toContain('aria-describedby');
   });
 
