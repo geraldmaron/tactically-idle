@@ -188,6 +188,16 @@ describe('paid details strain the free patrol officers', () => {
     expect(detailRoom(s, at).block).toBe('at-line');
   });
 
+  it('counts an officer once even if listed in two patrol squads', () => {
+    const s = createInitialState(T0);
+    const a = s.squads.find((sq) => sq.duty === 'patrol')!;
+    const b = s.squads.find((sq) => sq !== a)!;
+    b.duty = 'patrol';
+    b.officerIds = [...b.officerIds, a.officerIds[0]];
+    const ids = [...new Set([...a.officerIds, ...b.officerIds])];
+    expect(detailRoom(s, T0).room).toBeCloseTo(ids.reduce((sum, id) => sum + Math.max(0, DETAIL_STRAIN_LINE - s.officers[id].stress), 0), 9);
+  });
+
   it('pays nothing with no squad on patrol', () => {
     const s = createInitialState(T0);
     for (const sq of s.squads) sq.duty = 'standby';

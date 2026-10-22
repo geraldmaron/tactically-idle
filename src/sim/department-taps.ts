@@ -168,7 +168,8 @@ export interface DetailRoom {
 export function detailRoom(state: Pick<GameState, 'squads' | 'officers'>, at: number): DetailRoom {
   const line = DETAIL_STRAIN_LINE;
   const patrol = state.squads.filter((sq) => sq.duty === 'patrol');
-  const free = patrol.flatMap((sq) => sq.officerIds).map((id) => state.officers[id])
+  // Each officer once, even if a malformed roster lists them in two patrol squads.
+  const free = [...new Set(patrol.flatMap((sq) => sq.officerIds))].map((id) => state.officers[id])
     .filter((o): o is Officer => !!o && !o.assignment && !(o.injury && o.injury.until > at));
   const under = free.filter((o) => o.stress < line);
   const room = under.reduce((sum, o) => sum + (line - o.stress), 0);
