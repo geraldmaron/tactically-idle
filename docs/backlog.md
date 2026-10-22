@@ -416,7 +416,7 @@ waits on owner answers 2 and 3 listed there (1 is answered: patrol pay stays fla
 
 ### worn-kit: Light body armor protects the officer who wears it
 Tags: job=build; journeys=team-moves-odds; probes=none (changes harm severity, not a chance input); lane=engine
-Needs: start=none (owner approves this proposal); integrate=none; ship=none
+Needs: start=none; integrate=none; ship=none
 
 Basic kit is part of every officer since 2026-10-21 (`src/sim/basic-kit.ts`), so the stock and
 wear half of the old proposal is done. What is left: light body armor does nothing on a call. It
@@ -464,8 +464,9 @@ private compare page (an Artifact) shows, at 390 and 320 and from one fixed-seed
 2. The decide beat and a debrief in the current face and in the candidate serif behind the dev
    switch (`src/ui/settings/candidates.ts`, `docs/ops-experience.md` "The reading face: still open").
 
-Done: the owner's two picks recorded under Owner decisions; the plate token set to the pick; the
-serif winner shipped, the loser's rule deleted from `candidates.css` and the switch removed.
+Owner's picks (2026-10-22): the plate stays 96px on all four tabs (already `--plate-h` and `TAB_PLATES`), and
+the reading face stays the sans. Done: the serif rule deleted from `candidates.css`, the dev switch removed,
+and the compare captures retired.
 
 ### tap-multiplier-content: Upgrades and power-ups that raise desk tap pay
 Tags: job=build; journeys=hire-and-equip; probes=none (department income, not call odds); lane=engine
@@ -479,13 +480,14 @@ play; `rewarded-ads` adds watching an ad as a second way, and `real-purchases` a
 entitlements. Show the combined multiplier and any running power-up near the desk, and decide
 whether owned upgrades pick up a later rebalance. Beyond the base it waits on `detail-strain-drain`, and it
 stays inside the budgets in `docs/monetization.md` section 3 (upgrades up to x1.4, earned power-ups up to x2
-including the ad's +0.5, a reachable stack of at most x7). Done: upgrades and power-ups each have at least
+including the ad's +0.5, a reachable stack of at most x7). Owner, 2026-10-22: a multiplier gives no strain
+advantage, so each tap's strain scales with the combined multiplier and pay per strain stays constant. Done: upgrades and power-ups each have at least
 one entry, a test proves each raises tap pay, the ceiling test builds the largest reachable holding through
 `combinedFactor`, and the player can see what is active.
 
 ### detail-strain-drain: Strain from paid details drains at the patrol rate on every duty
 Tags: job=build; journeys=hire-and-equip; probes=none (department economy, not call odds); lane=engine
-Needs: start=none (owner picks option B in `docs/monetization.md` section 3); integrate=none; ship=none
+Needs: start=none; integrate=none; ship=none
 
 `docs/monetization.md` section 3: resting recovers 6 stress an hour against patrol's 1, the recovery
 upgrade doubles both and duty changes are free, so "rest, then tap" beats "patrol and tap" once the tap
@@ -560,8 +562,8 @@ Needs: start=detail-strain-drain; integrate=none; ship=store-wrap (App Store and
 
 Owner decisions: free to play with purchases (2026-10-19); development points and point packs
 removed (2026-10-20); real-money income multipliers are sold in the store (2026-10-22). A Store
-surface lists the two multipliers in `docs/monetization.md` section 7 (`desk-overtime` +0.5, about $2.99;
-`desk-overtime-plus` +1, about $4.99; non-consumable, per account; the entitlement kind capped at x2.5);
+surface lists the two multipliers in `docs/monetization.md` section 7 (`desk-overtime` +0.5, $2.99;
+`desk-overtime-plus` +1, $4.99 (owner, 2026-10-22); non-consumable, per account; the entitlement kind capped at x2.5);
 billing goes through RevenueCat (`@revenuecat/purchases-capacitor`) behind an adapter whose only output is a
 `VerifiedEntitlements` branded type, with Restore in the Store and in Settings. Resolve RevenueCat's receipt
 validation and refund notifications before building. A purchase grants an entitlement
@@ -608,15 +610,19 @@ decision on whether the lean needs a player-facing explanation (the HQ or the de
   on 22 of 30 seeds (the rest are rejected because the first room off the bedroom is the living
   room). This bears on the existing barricade building-family decision above.
 - **Later scope:** districts, career stories, simultaneous tactical incidents.
-- **Monetization** (`docs/monetization.md` section 13): 1 option B for detail strain (blocks every
-  multiplier beyond the base); 2 accept that a multiplier lowers the strain needed for equal pay; 3
-  entitlements per account (recommended) or per slot; 4 whether the ad's x1.5 for 10 minutes is too small; 5
-  first-room stock; 6 a funding fallback when an offer would be empty; 7 confirm no server analytics; 8 a
-  mediation network later; 9 the $2.99 and $4.99 price points; 10 personalised ads ever.
-- **Chat lines on the strip:** the live strip shows 2 lines (`CHAT_LINES`, the owner's 2026-10-21
-  "easy to read"); a pile-on reads better in 3 at 390x844, or the thread could open in its own view.
-- **The tab-root plate** that `visual-story` brought back (its height and whether every tab gets
-  one) and **the reading serif**: picked from one compare page (`owner-visual-picks`).
+- **The older call-content questions above** (death endings, the 988 note, E12, the barricade family, the
+  review line, the hostage review calls) predate the Going Live rebuild: the lead re-triages them after
+  Going Live's prose lands, drops what the rebuild made moot, and brings the rest with drafts to read
+  (owner, 2026-10-22).
+
+Decided 2026-10-22 (owner answers): option B for paid-detail strain (`detail-strain-drain`); a multiplier
+gives no strain advantage, so each tap's strain scales with the combined multiplier and pay per strain is
+constant (the multiplier saves taps); entitlements per account; the ad's x1.5 for 10 minutes ships and
+playtests judge its size; the first room scales with multipliers; an offer that would pay nothing is not
+shown; no server analytics; AdMob alone and non-personalized at launch, personalized ads later as an opt-in
+with ATT and UMP work; prices $2.99 and $4.99; the tab plate stays 96px on all four tabs and the reading
+face stays the sans (`owner-visual-picks`); the live strip keeps 2 chat lines; `worn-kit` approved;
+Going Live's prose passes start.
 
 Decided 2026-10-22 (Going Live): the rebuild (`going-live-spine`) must let every balance style reach
 the turn in at least 50% of drawn calls.

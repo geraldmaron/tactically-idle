@@ -473,6 +473,10 @@ you in a call.
 
 ## 13. Open owner questions
 
+Answered by the owner on 2026-10-22: B; no strain advantage (strain per tap scales with the multiplier); per
+account; playtests judge the ad; the first room scales; no empty offer; no server; AdMob alone, personalized
+later as an opt-in; $2.99 and $4.99. The record is under "Owner decisions" in `docs/backlog.md`.
+
 1. **The economy precondition.** Approve option B in section 3 (an engine change so detail strain drains at the
    patrol rate on any duty, with no rest bonus), or choose A or C? Without B, no sold multiplier ships.
 2. **The strain route.** A multiplier lowers the strain needed for the same pay, and strain below the line costs
