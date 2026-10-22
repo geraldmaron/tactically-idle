@@ -247,7 +247,7 @@ describe('diminishing returns and support', () => {
   it('a supporting squad contributes according to where it is and how it is linked', () => {
     const base = setRun(startRun(makeState(), 'ms_occupancy', ['A', 'B']), { stage: 'resolve', flags: ['in_contact'] });
     // A supporting squad's total is its coordination share plus its radio link.
-    const sup = (e: Evaluation) => e.contributors.filter((c) => (c.source === 'support' || c.source === 'equipment') && c.ref !== undefined && /Squad B/.test(c.label) && c.value > 0).reduce((t, c) => t + c.value, 0);
+    const sup = (e: Evaluation) => e.contributors.filter((c) => (c.source === 'support' || c.source === 'equipment') && c.ref !== undefined && /Bravo/.test(c.label) && c.value > 0).reduce((t, c) => t + c.value, 0);
     const near = evalAction(base, occ, 'ms_controlled_entry', ['A'], ['B']); // B starts in the east side yard
     const far = evalAction(setRun(base, { positions: { B: 'back_yard' } }), occ, 'ms_controlled_entry', ['A'], ['B']);
     expect(sup(near)).toBeGreaterThan(sup(far));

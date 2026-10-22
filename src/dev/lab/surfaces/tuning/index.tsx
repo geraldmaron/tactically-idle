@@ -16,7 +16,7 @@ import { getPath, MACRO_DIALS, mergePatches, setPath, unsetPath } from '../../mo
 import type { GateVerdict } from '../../model/gate-view';
 import { currentFrame, nodeAt, sessionBinder } from '../../model/session';
 import type { Session } from '../../model/session';
-import { squadLine } from '../../model/squads';
+import { referenceSquadName, squadLine } from '../../model/squads';
 import { isTyping } from '../../shell/keys';
 import { callKey, parseLabUrl } from '../../url';
 import { ConfirmSheet, cx, Glyph, modalOpen, Toast } from '../../viz';
@@ -141,13 +141,13 @@ export default function TuningSurface() {
     try { return instantTier(frame.state, openSession.focus, NOW, tuning.patch); } catch { return []; }
   }, [frame?.state, tuning.hash]);
   const moment: Moment = useMemo(() => {
-    if (!url.call) return { status: 'none', rows: [], where: '', who: 'squad A' };
-    if (!openSession || !frame) return { status: call.status === 'loading' ? 'loading' : 'none', rows: [], where: '', who: 'squad A' };
+    if (!url.call) return { status: 'none', rows: [], where: '', who: referenceSquadName() };
+    if (!openSession || !frame) return { status: call.status === 'loading' ? 'loading' : 'none', rows: [], where: '', who: referenceSquadName() };
     const node = nodeAt(frame.state, openSession.tree);
     const treeNode = node ? openSession.tree.nodes.find(entry => entry.id === node) : null;
     let title = node ?? 'the end of the call';
     try { if (treeNode) title = humanizeNode(treeNode, sessionBinder(openSession)).title; } catch { /* keep the id */ }
-    const who = squadLine(frame.state, openSession.squad).label.replace(/^Squad/, 'squad').replace(/^Your/, 'your');
+    const who = squadLine(frame.state, openSession.squad).label;
     return { status: rows.length ? 'ready' : 'ended', rows, where: `${title}, step ${openSession.frames.length}`, who };
   }, [rows, openSession, frame, call.status, url.call]);
   const pickReference = () => navigate({ call: parseLabUrl(REFERENCE_CALL).url.call, path: '', node: null, sel: null, handoff: null, hist: '' });

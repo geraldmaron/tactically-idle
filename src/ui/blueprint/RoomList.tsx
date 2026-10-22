@@ -2,9 +2,12 @@
 import type { BuiltLocation, Id, KnowledgeStatus, PersonMark, SpaceView } from '../../sim/types';
 import './blueprint.css';
 import { armamentText } from './layout';
+import { joinSquadNames, squadNamesOf, type SquadNameRow } from '../../sim/squad-names';
 
 export interface RoomListProps {
   spaces: SpaceView[];
+  /** The department's squads, so a room reads the names the player gave. */
+  squads: readonly SquadNameRow[];
   built: BuiltLocation;
   selectedSpaceId: Id | null;
   onSelectSpace?: (id: Id) => void;
@@ -36,7 +39,7 @@ export function personDescription(person: PersonMark): string {
   return parts.join(' · ');
 }
 
-export function RoomList({ spaces, built, selectedSpaceId, onSelectSpace, className }: RoomListProps) {
+export function RoomList({ spaces, squads, built, selectedSpaceId, onSelectSpace, className }: RoomListProps) {
   const loc = built.location;
   const order = [...loc.rooms.map((r) => r.id), ...loc.zones.map((z) => z.id)];
   const zoneIds = new Set(loc.zones.map((z) => z.id));
@@ -66,7 +69,7 @@ export function RoomList({ spaces, built, selectedSpaceId, onSelectSpace, classN
               <span className="bp-roomlist-meta">
                 {d ? `${Math.round(d.area)} sq ft · capacity ${d.capacity}` : 'Size unknown'}
                 {' · '}
-                {s.squadsHere.length ? `Squad${s.squadsHere.length > 1 ? 's' : ''} ${s.squadsHere.join(', ')}` : 'No squads'}
+                {s.squadsHere.length ? `${joinSquadNames(squadNamesOf(squads, s.squadsHere))} here` : 'No squads'}
                 {s.marker ? ` · Note: ${s.marker.text}${s.marker.subtext ? ` (${s.marker.subtext})` : ''}` : ''}
               </span>
               {s.people.filter((person) => person.status !== 'unknown').map((person) => <span className="bp-roomlist-person" key={person.id}>{personDescription(person)}</span>)}

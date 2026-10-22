@@ -346,7 +346,7 @@ describe('entry and movement', () => {
 
   it('the supporting squad’s radio link falls with distance and walls', () => {
     const s = setRun(startRun(makeState(), 'ms_occupancy', ['A', 'B']), { stage: 'resolve' });
-    const link = (st: GameState) => find(evalAction(st, 'ms_controlled_entry', ['A'], ['B']), /Squad B link/, 'equipment')!;
+    const link = (st: GameState) => find(evalAction(st, 'ms_controlled_entry', ['A'], ['B']), /Bravo link/, 'equipment')!;
     const nearLink = link(s);
     const farLink = link(setRun(s, { positions: { B: 'back_yard' } }));
     expect(nearLink.value).toBeGreaterThan(farLink.value);

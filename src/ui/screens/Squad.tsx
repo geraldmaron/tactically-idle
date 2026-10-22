@@ -16,6 +16,7 @@ import { useNav } from '../components/nav';
 import { TrainingStore } from '../storefront/TrainingStore';
 import { SquadOptimizer } from './SquadOptimizer';
 import { ChoiceRail } from '../components/ChoiceRail';
+import { squadName as squadNameOf } from '../../sim/squad-names';
 import { ROSTER_FILTER_LABEL, ROSTER_SORT_LABEL, filterRoster, sortRoster, type RosterFilter, type RosterSort } from './squad-model';
 import './squad-visual.css';
 
@@ -172,7 +173,7 @@ function QueuedMoves() {
   const { act } = useToast();
   const moves = g.pendingSquadMoves ?? [];
   if (!moves.length) return null;
-  const squadName = (id: SquadId | null) => id ? g.squads.find((s) => s.id === id)?.name ?? `Squad ${id}` : 'Unassigned';
+  const squadName = (id: SquadId | null) => id ? squadNameOf(g.squads, id) : 'Unassigned';
   return (
     <section className="card squad-queue" aria-labelledby="squad-queue-h">
       <h2 id="squad-queue-h" className="squad-block-title"><Icon name="clock" size={16} />After the call <span className="squad-block-count">{moves.length}</span></h2>

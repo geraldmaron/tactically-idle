@@ -327,12 +327,13 @@ export function LiveView(p: LiveViewProps) {
           </div>}
           <div className="live-map-inner">
             {mapFull && p.showRooms ? (
-              <RoomList built={p.built} spaces={p.spaces} selectedSpaceId={p.selectedSpaceId} onSelectSpace={p.onSelectSpace} />
+              <RoomList built={p.built} spaces={p.spaces} squads={p.g.squads} selectedSpaceId={p.selectedSpaceId} onSelectSpace={p.onSelectSpace} />
             ) : (
               <Blueprint
                 built={p.built}
                 spaces={p.spaces}
                 squadTasks={p.squadTasks}
+                squads={p.g.squads}
                 selectedSpaceId={p.selectedSpaceId}
                 focusSquadId={focus?.id ?? null}
                 highlightSpaceIds={p.highlightSpaceIds}

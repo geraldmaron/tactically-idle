@@ -35,7 +35,7 @@ describe('the reference squad', () => {
     expect(squad.officerIds.map(id => state.officers[id].surname)).toEqual(['Singh', 'Aung', 'Vann', 'Moretti']);
     expect(focusSquad(state)).toBe('A');
     const line = squadLine(state, { kind: 'reference', seed: 719, certs: [] });
-    expect(line.label).toBe('Squad A (719)');
+    expect(line.label).toBe('Alpha (719)');
     expect(line.officers.map(o => o.name)).toEqual(['Harjit Singh', 'May Thiri Aung', 'Dara Vann', 'Francesca Moretti']);
     expect(line.officers[0].certs).toEqual(['crisis_negotiation']);
     expect(line.grants).toEqual([]);
@@ -71,8 +71,8 @@ describe('the reference squad', () => {
     expect(granted.officers[first].certs).toEqual([...plain.officers[first].certs, cert]);
     expect(granted.activeRun!.rngState).toBe(plain.activeRun!.rngState);
     expect({ ...granted, officers: plain.officers }).toEqual(plain);
-    expect(squadLine(granted, { kind: 'reference', seed: 719, certs: [cert] }).label).toBe(`Squad A (719) + ${certWords(cert)} (lab grant)`);
-    expect(squadLine(granted, { kind: 'game', at: NOW }).label).toBe('Your squad (from game)');
+    expect(squadLine(granted, { kind: 'reference', seed: 719, certs: [cert] }).label).toBe(`Alpha (719) + ${certWords(cert)} (lab grant)`);
+    expect(squadLine(granted, { kind: 'game', at: NOW }).label).toBe('Alpha (from game)');
   });
 
   // A choice that needs a cert squad A lacks, on a shipped call that has one and on the fixture.

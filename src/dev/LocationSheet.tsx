@@ -157,7 +157,7 @@ function Cell({ familyId, seed, floor, furnished, chrome }: { familyId: string; 
         {!built && <p className="ls-empty">buildLocation threw</p>}
         {built && missingFloor && <p className="ls-empty">Single storey: no upper floor</p>}
         {built && !missingFloor && (
-          <Blueprint built={built} spaces={spaces} squadTasks={[]} selectedSpaceId={null} focusSquadId={null} floor={floor} className={chrome ? undefined : 'ls-static'} />
+          <Blueprint built={built} spaces={spaces} squadTasks={[]} squads={[]} selectedSpaceId={null} focusSquadId={null} floor={floor} className={chrome ? undefined : 'ls-static'} />
         )}
       </div>
       <figcaption>

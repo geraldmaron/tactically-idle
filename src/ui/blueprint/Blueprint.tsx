@@ -25,12 +25,15 @@ import { floorBadges, floorCount, floorGeometry, floorKnowledge, floorWord } fro
 import { FloorTabs } from './FloorTabs';
 import { StairGhosts, StairLayer } from './stairs';
 import { PlanLabel } from './labels';
+import { joinSquadNames, squadNamesOf, type SquadNameRow } from '../../sim/squad-names';
 
 export interface BlueprintProps {
   built: BuiltLocation;
   /** Player-knowledge view per space (labels, markers, squads, targetable actions). */
   spaces: SpaceView[];
   squadTasks: SquadTask[];
+  /** The department's squads, id and name: the text alternative names a squad as the player named it. The drawn squad tokens stay letter badges. */
+  squads: readonly SquadNameRow[];
   selectedSpaceId: Id | null;
   focusSquadId: SquadId | null;
   /** Spaces targeted by the currently selected action. */
@@ -61,7 +64,7 @@ function unionRect(a: Rect, b: Rect): Rect {
   return { x, y, w: Math.max(a.x + a.w, b.x + b.w) - x, h: Math.max(a.y + a.h, b.y + b.h) - y };
 }
 
-export function Blueprint({ built: allBuilt, spaces: allSpaces, squadTasks: allSquadTasks, selectedSpaceId, focusSquadId, highlightSpaceIds, onSelectSpace, lastChange, overlays: allOverlays, showMaterials, className, floor: controlledFloor, onFloorChange }: BlueprintProps) {
+export function Blueprint({ built: allBuilt, spaces: allSpaces, squadTasks: allSquadTasks, squads, selectedSpaceId, focusSquadId, highlightSpaceIds, onSelectSpace, lastChange, overlays: allOverlays, showMaterials, className, floor: controlledFloor, onFloorChange }: BlueprintProps) {
   const uid = useId().replace(/[^a-zA-Z0-9]/g, '');
   const [localFloor, setLocalFloor] = useState({ location: allBuilt.location.id, floor: 0 });
   const count = floorCount(allBuilt.location);
@@ -191,7 +194,7 @@ export function Blueprint({ built: allBuilt, spaces: allSpaces, squadTasks: allS
     const label = v?.label ?? 'Unlabelled space';
     const parts = [label, v ? statusWord(v.status) : 'No report'];
     if (d) parts.push(`${Math.round(d.area)} square feet`);
-    if (v?.squadsHere.length) parts.push(`Squad ${v.squadsHere.join(', ')} here`);
+    if (v?.squadsHere.length) parts.push(`${joinSquadNames(squadNamesOf(squads, v.squadsHere))} here`);
     if (v?.marker) parts.push(v.marker.subtext ? `${v.marker.text} ${v.marker.subtext}` : v.marker.text);
     for (const p of v?.people ?? []) {
       const description = personDescription(p);
@@ -373,7 +376,7 @@ export function Blueprint({ built: allBuilt, spaces: allSpaces, squadTasks: allS
               <span aria-hidden="true">×</span>
             </button>
           </div>
-          <RoomList built={built} spaces={spaces.filter((s) => choices.includes(s.id))} selectedSpaceId={selectedSpaceId} onSelectSpace={pick} className="bp-chooser-list" />
+          <RoomList built={built} squads={squads} spaces={spaces.filter((s) => choices.includes(s.id))} selectedSpaceId={selectedSpaceId} onSelectSpace={pick} className="bp-chooser-list" />
         </div>
       )}
 

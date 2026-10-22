@@ -22,7 +22,7 @@ import { seekCallSeed } from '../../model/seek';
 import { labRequirementTree } from '../../model/clocks';
 import { currentFrame, nodeAt, sessionBinder } from '../../model/session';
 import type { Frame, Session } from '../../model/session';
-import { certWords } from '../../model/squads';
+import { certWords, referenceSquadName, referenceWho } from '../../model/squads';
 import { evaluateReq, leafKey } from '../../model/why';
 import type { EvaluatedReq, Fix, Verdict } from '../../model/why';
 import { cx, Glyph, LintGlyph, SegmentedControl } from '../../viz';
@@ -39,8 +39,6 @@ import type { SiteWords } from './model';
 import './deps.css';
 
 const BAND_GLYPH = { favorable: 'well', mixed: 'mixed', adverse: 'badly' } as const;
-/** The reference squad as every number names it (spec 5, rule 10). */
-const squadName = (seed: number, certs: readonly string[]) => `squad A (${seed})${certs.length ? ` + ${certs.map(certWords).join(', ')} (lab grant)` : ''}`;
 /** Site cards shown on each side before "Show all". */
 const SIDE_CAP = 8;
 
@@ -442,7 +440,7 @@ function BowTie({ entry, names, tree, session, frame, lint, onSelectKey }: { ent
           {status && <p className={cx('lab-knot-status', status.set && 'lab-knot-set')}><Glyph name={status.set ? 'clean' : 'dot'} size={12} />{status.text}</p>}
           <p className="lab-knot-share">
             {share !== null && reach ? (() => {
-              const t = probText(share, { face: 'sim', scope: 'this call', who: squadName(url.squad, url.certs), style: reach.style, runs: reach.tally.runs, pending: reach.pending }, wilson(setRuns, reach.tally.runs), setRuns);
+              const t = probText(share, { face: 'sim', scope: 'this call', who: referenceWho(url.squad, url.certs), style: reach.style, runs: reach.tally.runs, pending: reach.pending }, wilson(setRuns, reach.tally.runs), setRuns);
               return <span className="lab-knot-share-in" title={t.plain}>
                 <span><b className={cx(t.muted && 'lab-muted')}>{t.value}</b> of runs set it</span>
                 <span className={cx('lab-pill', reach.pending && 'lab-pending-mark')}>{t.pill.map((seg, i) => <span key={i} className="lab-pill-seg">{seg}</span>)}</span>
@@ -503,7 +501,7 @@ function WhyTracer({ target, onPick, names, tree, session, frame, deps, onSelect
       jobs.run({ kind: 'seek-squad', cert: fix.cert, from: 1, limit: 500 }, { patch: tuning.patch, contentKey: session.contentKey, cache: 'memory' }).promise.then(result => {
         if (result.kind !== 'seek-squad') return;
         setSquadSeek({ cert: fix.cert, seed: result.seed, busy: false,
-          text: result.seed === null ? `None in seeds 1 to ${result.tried}: no squad A there holds ${certWords(fix.cert)}.` : `Squad seed ${result.seed} has ${certWords(fix.cert)} in squad A.` });
+          text: result.seed === null ? `None in seeds 1 to ${result.tried}: no day-one ${referenceSquadName()} there holds ${certWords(fix.cert)}.` : `Squad seed ${result.seed} has ${certWords(fix.cert)} in ${referenceSquadName()}.` });
       }, error => setSquadSeek({ cert: fix.cert, seed: null, busy: false, text: `The search stopped: ${error instanceof Error ? error.message : String(error)}` }));
       return;
     }
@@ -532,7 +530,7 @@ function WhyTracer({ target, onPick, names, tree, session, frame, deps, onSelect
 
   const fixLabel = (fix: Fix): string => {
     switch (fix.kind) {
-      case 'grant-cert': return `Grant ${certWords(fix.cert)} to squad A (lab)`;
+      case 'grant-cert': return `Grant ${certWords(fix.cert)} to ${referenceSquadName()} (lab)`;
       case 'seek-squad': return `Find a squad seed with ${certWords(fix.cert)}`;
       case 'seek-draw': {
         const want = fix.want;

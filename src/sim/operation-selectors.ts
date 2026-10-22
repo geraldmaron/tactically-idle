@@ -31,7 +31,7 @@ import { SCENARIO_ORDER } from '../content/scenarios';
 import { deployRoster, runRoster } from './squads';
 import { getScenario } from './scenario-registry';
 import { ITEMS } from '../content/items';
-import { availableUnits, builtFor, evaluateAction, getBuilt, RESOLUTION_TUNING, squadLabel, tagNames, type Evaluation } from './resolution';
+import { availableUnits, builtFor, evaluateAction, getBuilt, RESOLUTION_TUNING, tagNames, type Evaluation } from './resolution';
 import { ditherCap, stalledRun, teamMinutes } from './clocks';
 import { conditionHolds, liveThreat } from './conditions';
 import { checkStart, computeDebrief, defaultSupport, evaluateDefault, decisionViewsFor, matchedEffects, matchedOutcomeIndices } from './operation';
@@ -41,6 +41,7 @@ import { actionEventResult } from './action-result';
 import { CERT_HOLDER } from '../content/certs';
 import { LEAD_PREFIX } from './crew-flags';
 import type { TimerSetting } from './timer-setting';
+import { joinSquadNames, squadNamesOf } from './squad-names';
 
 export interface ScenarioCard {
   id: Id;
@@ -103,13 +104,13 @@ export function scenarioCards(state: GameState, now: number): ScenarioCard[] {
     const why: string[] = [];
     for (const squad of state.squads) {
       if (squad.officerIds.length === 0) {
-        why.push(`${squadLabel(squad.id)} has no officers`);
+        why.push(`${squad.name} has no officers`);
         continue;
       }
       // A squad deploys with whoever is ready; the rest stay home (short-squad-deploys).
       const roster = deployRoster(state, squad.id, now);
       const blocker = roster.goes.length ? null : `nobody is ready (${roster.staysHome.map(entry => entry.reason).join('; ')})`;
-      if (blocker) why.push(`${squadLabel(squad.id)}: ${blocker}`);
+      if (blocker) why.push(`${squad.name}: ${blocker}`);
       else eligible.push(squad.id);
     }
     if (state.activeRun) issues.push('An operation is already in progress');
@@ -474,7 +475,7 @@ function toView(state: GameState, run: OperationRun, a: ActionDefinition, ev: Ev
   const hidden = isTargetHidden(a, run);
   const eventResult = actionEventResult(a);
   let reason = ev.reason;
-  if (reason && alternates.length > 0) reason = `${reason}. ${alternates.map(squadLabel).join(' and ')} can.`;
+  if (reason && alternates.length > 0) reason = `${reason}. ${joinSquadNames(squadNamesOf(state.squads, alternates))} can.`;
   return {
     ...(eventResult ? { eventResult } : {}),
     ...(ev.authority ? { authority: { ...ev.authority } } : {}),

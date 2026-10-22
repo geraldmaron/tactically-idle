@@ -271,7 +271,7 @@ export function GameApp(p: {
   const scenario = run ? getScenario(run.scenarioId) : null;
   const officers = useMemo(() => {
     if (!run) return [];
-    return p.state.squads.filter(squad => run.squadIds.includes(squad.id)).flatMap(squad => squad.officerIds.flatMap(id => p.state.officers[id] ? [{ ...p.state.officers[id], squad: squad.id }] : []));
+    return p.state.squads.filter(squad => run.squadIds.includes(squad.id)).flatMap(squad => squad.officerIds.flatMap(id => p.state.officers[id] ? [{ ...p.state.officers[id], squad: squad.id, squadName: squad.name }] : []));
   }, [p.state, run]);
   const lexicon = useMemo(() => (p.names && scenario ? lexiconFor(scenario, run ?? null, officers) : null), [p.names, scenario, run, officers]);
   // The game's ToastView times itself from its item and callback, so both stay the same object

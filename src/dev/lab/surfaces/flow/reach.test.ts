@@ -50,7 +50,7 @@ describe('reachPlan and whoOf', () => {
     if (!('job' in plan)) throw new Error(plan.reason);
     expect(plan.contentKey).toBe(s.contentKey);
     expect(plan.job).toEqual({ kind: 'reach-call', start: { kind: 'fresh', scenarioId: s.scenario.id, kit: 'day1', squad: { seed: 719, certs: [] } }, style: 'random', runs: [0, RUN_DEFAULTS.call] });
-    expect(whoOf(s, 'call')).toBe('squad A (719)');
+    expect(whoOf(s, 'call')).toBe('Alpha (719)');
     expect(whoOf(s, 'type')).toBe('day-one squads vary per call');
   });
   it('this type: the drawn population at the call’s tier, keyed by the type’s content', () => {
@@ -70,7 +70,7 @@ describe('reachPlan and whoOf', () => {
   });
   it('names lab grants with the squad', () => {
     const granted = open(`type=hostage_crisis&certs=vehicle_operations`);
-    expect(whoOf(granted, 'call')).toBe('squad A (719) + vehicle operations (lab grant)');
+    expect(whoOf(granted, 'call')).toBe('Alpha (719) + vehicle operations (lab grant)');
   });
 });
 

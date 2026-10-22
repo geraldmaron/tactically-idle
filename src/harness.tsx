@@ -1,4 +1,5 @@
 // Visual QA entry point: /harness.html. Separate from normal game navigation.
+import type { SquadNameRow } from './sim/squad-names';
 import { StrictMode, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import './ui/theme.css';
@@ -41,6 +42,9 @@ function stagingFor(built: BuiltLocation, openingId: Id, spaceId: Id): { id: Id 
   const sign = inside(probe) ? 1 : -1;
   return { id: null, at: { x: mid.x + n.x * 1.6 * sign, y: mid.y + n.y * 1.6 * sign } };
 }
+
+/** The sample's two squads, matching `here` below, so the text alternatives read names and not letters. */
+const HARNESS_SQUADS: readonly SquadNameRow[] = [{ id: 'A', name: 'Alpha' }, { id: 'B', name: 'Bravo' }];
 
 /** Player-knowledge views for the sample: every space known by name, several with annotations and people. */
 function sampleSpaces(built: BuiltLocation, withPeople = true): SpaceView[] {
@@ -146,6 +150,7 @@ function Column({ title, width, seed, materials = false, overlay = 'none' }: { t
         built={built}
         spaces={spaces}
         squadTasks={tasks}
+        squads={HARNESS_SQUADS}
         selectedSpaceId={selected}
         focusSquadId="A"
         highlightSpaceIds={['hall']}
@@ -290,7 +295,7 @@ function Harness() {
         <Column title="Cedar Close, seed 0, 288 px" width={288} seed={0} materials overlay="blocked" />
         <section className="h-col" style={{ width: 358 }}>
           <h2>RoomList (text alternative)</h2>
-          <RoomList spaces={spaces} built={built} selectedSpaceId={sel} onSelectSpace={setSel} />
+          <RoomList spaces={spaces} squads={HARNESS_SQUADS} built={built} selectedSpaceId={sel} onSelectSpace={setSel} />
         </section>
         <PortraitGrid />
       </div>

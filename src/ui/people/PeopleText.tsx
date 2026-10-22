@@ -60,7 +60,7 @@ export function PeopleText({ text }: { text: string }): JSX.Element {
   return <>{parts.map((part, index) => {
     if (!part.person) return part.text;
     const { id, kind } = part.person;
-    const squad = kind === 'officer' ? lexicon.entries.find((entry) => entry.id === id)?.squad : undefined;
+    const squad = kind === 'officer' ? lexicon.entries.find((entry) => entry.id === id)?.squadName : undefined;
     // Prose gets no mark: the name's color and weight say who they are.
     return <span key={index} className="people-name" data-kind={kind} data-person={id} title={peopleLabel(kind, squad)}>{part.text}</span>;
   })}</>;

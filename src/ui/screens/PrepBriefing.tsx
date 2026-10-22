@@ -81,7 +81,7 @@ export function PrepBriefing({ scenario, brief, intel, aside }: { scenario: Scen
 function PersonCard({ personId, name, role, who, status, where }: { personId: string; name: string; role?: string; who?: string; status?: KnowledgeStatus; where?: string | null }) {
   const entry = usePeopleEntry(personId);
   return <li className="pb-person" data-kind={entry?.kind}>
-    <span className="pb-avatar" aria-hidden="true" title={entry ? peopleLabel(entry.kind, entry.squad) : undefined}>{personInitials(name)}</span>
+    <span className="pb-avatar" aria-hidden="true" title={entry ? peopleLabel(entry.kind, entry.squadName) : undefined}>{personInitials(name)}</span>
     <div className="pb-person-text">
       <strong>{entry && <PeopleGlyph kind={entry.kind} tone />}{name}</strong>
       {role && <span className="pb-role">{role}</span>}

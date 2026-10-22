@@ -1,4 +1,5 @@
-// The lab's squads (spec 3.2, Director "Squad"): the reference squad is day-one squad A of a campaign
+// The lab's squads (spec 3.2, Director "Squad"): the reference squad is day-one squad A (named by the
+// starting squads, "Alpha") of a campaign
 // seed (719 by default: Singh, Aung, Vann, Moretti), with lab cert grants to its first officer, so a
 // choice behind a cert no day-one squad holds (rescue's vehicle operations) can be played. A call
 // opened from the game keeps the game's own squads instead. Every start goes through the content
@@ -10,9 +11,19 @@ import type { Kit, LabUrl } from '../types';
 import { KIT_ITEMS_FULL } from './call';
 import type { SquadSource } from './session';
 import { isCertId } from '../../../content/certs';
+import { startingSquads } from '../../../content/officers';
+import { joinSquadNames, squadName } from '../../../sim/squad-names';
 
 /** "vehicle_operations" → "vehicle operations", as the call strip writes grants. */
 export const certWords = (cert: string): string => cert.replace(/_/g, ' ');
+
+/** What the reference squad is called: squad A of a new campaign, as the starting squads name it. */
+export const referenceSquadName = (): string => squadName(startingSquads(), 'A');
+
+/** The reference squad as every number names it: "Alpha (719) + vehicle operations (lab grant)". */
+export function referenceWho(seed: number, certs: readonly string[], name = referenceSquadName()): string {
+  return `${name} (${seed})${certs.length ? ` + ${certs.map(certWords).join(', ')} (lab grant)` : ''}`;
+}
 
 /** The reference squad the URL asks for: campaign seed and lab grants (known certs only, once each). */
 export function squadOf(u: LabUrl): SquadSpec {
@@ -33,8 +44,9 @@ export function focusSquad(state: GameState): SquadId {
   return (run && state.squads.find(squad => run.squadIds.includes(squad.id))?.id) ?? 'A';
 }
 
-/** What the Director's squad section shows: "Squad A (719) + vehicle operations (lab grant)" or
- * "Your squad (from game)", each officer with the certs they hold, and the lab grants that took. */
+/** What the Director's squad section shows: "Alpha (719) + vehicle operations (lab grant)" or, from a
+ * game, "Alpha and Bravo (from game)" with the names the player gave; each officer with the certs
+ * they hold, and the lab grants that took. */
 export function squadLine(state: GameState, source: SquadSource): { label: string; officers: { id: string; name: string; certs: string[] }[]; grants: string[] } {
   const deployed = source.kind === 'game' && state.activeRun ? state.activeRun.squadIds : ['A'];
   const squads = state.squads.filter(squad => deployed.includes(squad.id));
@@ -42,8 +54,7 @@ export function squadLine(state: GameState, source: SquadSource): { label: strin
     const officer = state.officers[id];
     return officer ? [{ id, name: `${officer.firstName} ${officer.surname}`, certs: [...officer.certs] }] : [];
   }));
-  if (source.kind === 'game') return { label: 'Your squad (from game)', officers, grants: [] };
+  if (source.kind === 'game') return { label: `${joinSquadNames(squads.map(squad => squad.name))} (from game)`, officers, grants: [] };
   const grants = [...new Set(source.certs.filter(isCertId))];
-  const label = `Squad A (${source.seed})${grants.length ? ` + ${grants.map(certWords).join(', ')} (lab grant)` : ''}`;
-  return { label, officers, grants };
+  return { label: referenceWho(source.seed, grants, squadName(state.squads, 'A')), officers, grants };
 }

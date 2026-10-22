@@ -19,7 +19,8 @@ import { RoomList } from './RoomList';
 
 const build = (location: LocationDefinition): BuiltLocation => ({ location, derived: deriveLocation(location), issues: [] });
 const views = (loc: LocationDefinition): SpaceView[] => [...loc.rooms, ...loc.zones].map((s) => ({ id: s.id, label: s.label, status: 'none', marker: null, squadsHere: [], facts: [], people: [], actionIds: [] }));
-const markup = (built: BuiltLocation, spaces: SpaceView[], floor = 0) => renderToStaticMarkup(createElement(Blueprint, { built, spaces, squadTasks: [], selectedSpaceId: null, focusSquadId: null, floor }));
+const SQUADS = [{ id: 'A' as const, name: 'Night Owls' }, { id: 'B' as const, name: 'Harbor Unit' }];
+const markup = (built: BuiltLocation, spaces: SpaceView[], floor = 0) => renderToStaticMarkup(createElement(Blueprint, { built, spaces, squadTasks: [], squads: SQUADS, selectedSpaceId: null, focusSquadId: null, floor }));
 
 describe('blueprint label rendering', () => {
   it('renders long room names with the wrapping and type size that actually fit their room', () => {
@@ -240,7 +241,7 @@ describe('public people and carried items', () => {
     expect(html).toContain('Canvas bag (reported)');
     expect(html.match(/data-carried=/g)).toHaveLength(3);
     expect(html).toContain('Mara Bell');
-    const textMap = renderToStaticMarkup(createElement(RoomList, { built, spaces, selectedSpaceId: null }));
+    const textMap = renderToStaticMarkup(createElement(RoomList, { built, spaces, squads: SQUADS, selectedSpaceId: null }));
     expect(textMap).toContain('Mara Bell · position confirmed');
     expect(textMap).toContain('Cracked phone (reported)');
     expect(textMap).toContain('Canvas bag (reported)');
@@ -309,5 +310,24 @@ describe('map box sizing', () => {
     expect(hw).toBeCloseTo((frame.h + 7) / (frame.w + 7), 3);
     expect(html).toContain('bp-dims');
     expect(html).not.toContain('bp-chooser');
+  });
+});
+
+describe('squad names in the text alternatives', () => {
+  const loc = structuredClone(VALID_TINY);
+  const built = build(loc);
+  const here = (squadsHere: SpaceView['squadsHere']): SpaceView[] => views(loc).map((v, i) => (i === 0 ? { ...v, squadsHere } : v));
+
+  it('names the squads in a room as the player named them, with no letter left', () => {
+    const html = markup(built, here(['A', 'B']));
+    expect(html).toContain('Night Owls and Harbor Unit here');
+    expect(html).not.toMatch(/Squad [AB]\b/);
+  });
+
+  it('the room list does the same, and a squad called "Night Squad" gets no prefix glued on', () => {
+    const list = renderToStaticMarkup(createElement(RoomList, { built, spaces: here(['A']), squads: [{ id: 'A', name: 'Night Squad' }], selectedSpaceId: null }));
+    expect(list).toContain('Night Squad here');
+    expect(list).not.toContain('Squad Night Squad');
+    expect(list).not.toContain('Squads');
   });
 });

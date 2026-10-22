@@ -123,7 +123,7 @@ export function OpsLive({ onStepOut }: { onStepOut?: () => void } = {}) {
   const actions = model.actions;
   const spaces = model.spaces;
   // The deployed officers, by squad, for the names in this call's text.
-  const people = scenario ? lexiconFor(scenario, run, deployed.flatMap((squad) => runRoster(g, run, squad.id).flatMap((id) => g.officers[id] ? [{ ...g.officers[id], squad: squad.id }] : []))) : null;
+  const people = scenario ? lexiconFor(scenario, run, deployed.flatMap((squad) => runRoster(g, run, squad.id).flatMap((id) => g.officers[id] ? [{ ...g.officers[id], squad: squad.id, squadName: squad.name }] : []))) : null;
 
   const pickAction = (id: Id) => {
     if (view?.id === id || !actions.some((action) => action.id === id) || run.stage === 'debrief') return;
@@ -235,7 +235,7 @@ export function OpsLive({ onStepOut }: { onStepOut?: () => void } = {}) {
       <ActionSheet
         open={panel === 'action'}
         preview={view && <div className="action-sheet-map" aria-label={`Where ${view.title} happens`}>
-          <Blueprint built={model.built} spaces={model.spaces} squadTasks={model.squadTasks} selectedSpaceId={null} focusSquadId={model.focusSquadId}
+          <Blueprint built={model.built} spaces={model.spaces} squadTasks={model.squadTasks} squads={g.squads} selectedSpaceId={null} focusSquadId={model.focusSquadId}
             highlightSpaceIds={model.highlightSpaceIds} onSelectSpace={() => undefined} lastChange={null} overlays={view.overlays} showMaterials={false}
             floor={model.floor} onFloorChange={setFloor} environment={model.environment ?? undefined} />
         </div>}

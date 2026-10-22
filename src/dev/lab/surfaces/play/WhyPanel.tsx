@@ -8,7 +8,7 @@ import type { DependencyIndex, ReqNode } from '../../../../gen/incident/trees-v1
 import { DRAW_NOTICE, useLab } from '../../context';
 import { SQUAD_SEEK_LIMIT, seekCallSeed } from '../../model/seek';
 import type { Frame, Session } from '../../model/session';
-import { certWords } from '../../model/squads';
+import { certWords, referenceSquadName } from '../../model/squads';
 import { evaluateReq } from '../../model/why';
 import type { EvaluatedReq, Fix, Verdict } from '../../model/why';
 import { cx, Glyph } from '../../viz';
@@ -81,7 +81,7 @@ export function WhyPanel({ session, frame, deps, req, target, reason }: {
       jobs.run({ kind: 'seek-squad', cert: fix.cert, from: 1, limit: SQUAD_SEEK_LIMIT }, { patch: tuning.patch, contentKey: session.contentKey }).promise.then(result => {
         if (result.kind !== 'seek-squad') return;
         setSquadSeek(result.seed === null
-          ? { cert: fix.cert, seed: null, text: `None in seeds 1 to ${result.tried}: no day-one squad A there holds ${certWords(fix.cert)}.` }
+          ? { cert: fix.cert, seed: null, text: `None in seeds 1 to ${result.tried}: no day-one ${referenceSquadName()} there holds ${certWords(fix.cert)}.` }
           : { cert: fix.cert, seed: result.seed, text: `Squad seed ${result.seed} holds ${certWords(fix.cert)}.` });
       }, error => { setSquadSeek(null); notify(`Finding a squad seed failed: ${error instanceof Error ? error.message : String(error)}`); });
       return;
@@ -95,10 +95,10 @@ export function WhyPanel({ session, frame, deps, req, target, reason }: {
     if (found.changed.length) notify(`Also changed: ${found.changed.join('; ')}.`, undefined, DRAW_NOTICE);
   };
 
-  const label = (fix: Fix) => fix.kind === 'grant-cert' ? `Grant to squad A (lab): ${certWords(fix.cert)}` : fix.kind === 'seek-squad' ? 'Find a squad seed'
+  const label = (fix: Fix) => fix.kind === 'grant-cert' ? `Grant to ${referenceSquadName()} (lab): ${certWords(fix.cert)}` : fix.kind === 'seek-squad' ? 'Find a squad seed'
     : fix.kind === 'find-path' ? 'Find a path here' : 'Find a draw';
-  const help = (fix: Fix) => fix.kind === 'grant-cert' ? 'Adds the cert to squad A’s first officer for this lab session; it is labeled everywhere.'
-    : fix.kind === 'seek-squad' ? `Looks through campaign seeds 1 to ${SQUAD_SEEK_LIMIT} for a day-one squad A that holds it.`
+  const help = (fix: Fix) => fix.kind === 'grant-cert' ? `Adds the cert to ${referenceSquadName()}’s first officer for this lab session; it is labeled everywhere.`
+    : fix.kind === 'seek-squad' ? `Looks through campaign seeds 1 to ${SQUAD_SEEK_LIMIT} for a day-one ${referenceSquadName()} that holds it.`
       : fix.kind === 'find-path' ? 'Plays the shortest path to a state where it holds.' : 'Moves to the nearest call seed whose draw has it, keeping the rest.';
 
   return (
