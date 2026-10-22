@@ -69,7 +69,14 @@ kit-adoption ratchet counts named obligations per screen, not a global icon coun
 
 ## Locks outside normal ownership
 
-None.
+live-chat-immersion (`live-chat-build`, approved 2026-10-22) holds, until it merges:
+`src/content/call-trees/types.ts`, `src/sim/scenario-types.ts`, `src/content/incidents/types.ts`
+(interface files, approved with controls), `src/gen/incident/trees-v13/compile.ts`,
+`src/gen/incident/instance.ts`, `src/sim/clocks.ts`, `src/ui/screens/fill-gauge.ts`, one pass-through
+in `src/ui/screens/LiveView.tsx`, `STREAM.source.reactions` in `src/content/incidents/hostage.ts`,
+`src/content/world.ts` (`HANDLE_WORDS`), and a viewer-chat carve-out in
+`.agents/skills/swat-writing-review/`. The squad-names session, if started, asks before editing
+`LiveView.tsx` or `scenario-types.ts`.
 
 
 ## Open questions for the owner
