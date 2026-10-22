@@ -655,14 +655,11 @@
   },
   "R2.flush": {
    "target": 0,
-   "total": 9,
+   "total": 6,
    "counts": {
     "02-hq@320": 1,
     "02-hq@390": 1,
     "02-hq@430": 1,
-    "26-debrief@320": 1,
-    "26-debrief@390": 1,
-    "26-debrief@430": 1,
     "28-hq-after-call@320": 1,
     "28-hq-after-call@390": 1,
     "28-hq-after-call@430": 1
