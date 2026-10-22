@@ -303,7 +303,7 @@ export function LiveView(p: LiveViewProps) {
         <StageSteps progress={p.progress} />
         {pressure?.kind === 'threat' && <ThreatPill label={pressure.label} minutes={pressure.minutes} dither={p.dither} />}
         {fills.length > 0 && <div className="live-sources">
-          {fills.map((view) => view.count || view.reactions ? <SourceTicker key={view.id} view={view} runKey={p.g.activeRun?.id} effect={sourceEffect(p.g, view)} chat={beat === 'decide'} /> : <FillGauge key={view.id} view={view} />)}
+          {fills.map((view) => view.count || view.reactions ? <SourceTicker key={view.id} view={view} runKey={p.g.activeRun?.id} effect={sourceEffect(p.g, view)} chat={beat === 'decide'} threat={p.progress.threat ?? null} dither={p.dither ?? 0} /> : <FillGauge key={view.id} view={view} />)}
         </div>}
       </div>
 

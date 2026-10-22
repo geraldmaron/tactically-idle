@@ -1,4 +1,4 @@
-import type { CallTree, TreeChoice, TreeIf, TreeLine, TreeMove, TreeMoveTo, TreeNext, TreeNode, TreeOutcome, TreePlace, TreeState, TreeTimeout } from '../../../content/call-trees/types';
+import type { CallTree, ChatLine, TreeChoice, TreeIf, TreeLine, TreeMove, TreeMoveTo, TreeNext, TreeNode, TreeOutcome, TreePlace, TreeState, TreeTimeout } from '../../../content/call-trees/types';
 import { TREE_VOICES } from '../../../content/call-trees/types';
 import type { IncidentTemplate } from '../../../content/incidents/types';
 import { CIVILIAN_FIRST_NAMES, CIVILIAN_SURNAMES } from '../../../content/call-trees/civilian-names';
@@ -6,7 +6,7 @@ import { scenarioRecipe } from '../../../content/scenario-recipes';
 import { worldFor } from '../../../content/world';
 import { hashIndex, hashSeed } from '../../../sim/rng';
 import { tierRewardMultiplier } from '../../../content/incidents/rewards';
-import type { ActionDefinition, ClockCondition, Condition, FactDefinition, IncidentSpec, MeterCondition, MeterStance, OutcomeEffect, ScenarioDefinition, SpokenLine, StageDefinition, StoryAnchor, StoryPersonBinding } from '../../../sim/scenario-types';
+import type { ActionDefinition, ChatLineDef, ClockCondition, Condition, FactDefinition, IncidentSpec, MeterCondition, MeterStance, NodeThreat, OutcomeEffect, ScenarioDefinition, SpokenLine, StageDefinition, StoryAnchor, StoryPersonBinding } from '../../../sim/scenario-types';
 import { squadsPutToWork } from '../../../sim/scenario-types';
 import { findStoryRoute, selectStoryRoom, storyPoint, validateStoryBindings, windowExit } from '../story-bindings';
 import { cueMoveKey, movedFlag, seenFlag, stableFlag } from '../../../sim/conditions';
@@ -1177,6 +1177,32 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
 
   /** A decision point's threat (TreeNode.threat) as the engine runs it: its line and costs, applied
    * when a decision here runs long (sim/operation.ts). It may raise costs, never harm or route. */
+  /** A threat's chat (ThreatChat) as the strip plays it: presentation only, so it rides on the shown
+   * threat and no effect reads it. A line's speaker is a role of this call or the world's `{handle}`,
+   * and `after` is a beat of the same threat, turned into that beat's minute. A threat that names a
+   * `{handle}` ends its imminent thread on that commenter's own line. */
+  const chatFor = (node: TreeNode): Pick<NodeThreat, 'chat'> => {
+    const chat = node.threat?.chat;
+    if (chat === undefined) return {};
+    if (chat === false) return { chat: false };
+    const threat = node.threat!;
+    const beatAt = new Map((threat.beats ?? []).map(beat => [beat.id, beat.at]));
+    const roleIds = new Set(tree.roles.map(role => role.id));
+    const phase = (name: 'early' | 'closing' | 'imminent'): ChatLineDef[] => chat[name].map((entry: ChatLine, index) => {
+      const where = `${node.id}: chat ${name}[${index}]`;
+      const line = typeof entry === 'string' ? { text: entry } : entry;
+      if (!line.text.trim()) throw new Error(`${where} has no text`);
+      if (line.by !== undefined) {
+        const role = /^\{([a-z_]+)\.first\}$/.exec(line.by)?.[1];
+        if (line.by !== '{handle}' && !(role && roleIds.has(role))) throw new Error(`${where} is by "${line.by}", which is neither {handle} nor a role's {role.first}`);
+      }
+      if (line.after !== undefined && !beatAt.has(line.after)) throw new Error(`${where} waits for beat "${line.after}", which is not a beat of this threat`);
+      return { text: line.text, ...(line.by !== undefined ? { by: line.by } : {}), ...(line.after !== undefined ? { afterMin: beatAt.get(line.after)! } : {}) };
+    });
+    const built = { early: phase('early'), closing: phase('closing'), imminent: phase('imminent') };
+    if (`${threat.label} ${threat.text}`.includes('{handle}') && built.imminent.at(-1)?.by !== '{handle}') throw new Error(`${node.id}: the threat names a {handle}, so its last imminent chat line must be by {handle}`);
+    return { chat: built };
+  };
   const threatFor = (node: TreeNode): Pick<ActionDefinition, 'threat'> => {
     const threat = node.threat;
     if (!threat) return {};
@@ -1266,7 +1292,7 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
     if (!here.length) throw new Error(`${tree.type}: no reachable node in ${stage}`);
     const contextPrompts = here.flatMap(node => {
       const at = node.id === tree.root ? { notFlags: [TREE_STARTED] } : { flags: [nodeFlag(node.id)] };
-      const threatShown = node.threat ? { threat: { id: node.id, label: node.threat.label, minutes: node.threat.minutes } } : {};
+      const threatShown = node.threat ? { threat: { id: node.id, label: node.threat.label, minutes: node.threat.minutes, ...chatFor(node) } } : {};
       return [
         ...(node.promptIf ?? []).filter(entry => possible(entry.when)).map(entry => {
           const exchange = spoken(entry.exchange ?? node.exchange, `${node.id} prompt variant`);

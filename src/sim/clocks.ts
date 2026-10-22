@@ -519,8 +519,11 @@ export interface FillView {
   effect: FillEffect | null;
   /** A pressure source's count (PressureSource.count), what the strip shows instead of 0..100. */
   count?: { value: number; unit: string };
-  /** What the people watching are saying now (PressureSource.reactions), for the floating feed. */
-  reactions?: { pool: readonly string[]; spike: readonly string[] };
+  /** The rate is above its authored rate, a surge flag being set (the rider playing to the chat). */
+  surged: boolean;
+  /** What the people watching are saying now (PressureSource.reactions), for the floating feed:
+   * the cue pool, the spike pool and the pools played once when the stream's state begins. */
+  reactions?: { pool: readonly string[]; spike: readonly string[]; stopped: readonly string[]; slowed: readonly string[]; surged: readonly string[]; dropped: readonly string[] };
   /** Points off the checks it weighs on now, when it has an odds pull (PressureSource.odds). */
   oddsPull?: number }
 
@@ -562,13 +565,14 @@ export function fillViews(scenario: ScenarioDefinition, run: Pick<OperationRun, 
     const on = !stopped(def, run.flags);
     const rate = on ? effectiveRate(def, run.flags) : 0;
     return [{ id: def.id, label: def.label, kind: def.kind, ...(def.owner ? { owner: def.owner } : {}), direction: 'fill' as const,
-      value: state.value, full: state.value >= 100, stopped: !on, slowed: on && rate < def.ratePerMin, ratePerMin: rate,
+      value: state.value, full: state.value >= 100, stopped: !on, slowed: on && rate < def.ratePerMin, surged: on && rate > def.ratePerMin, ratePerMin: rate,
       minutesToFull: def.rateKnown && rate > 0 ? Math.round((100 - state.value) / rate) : null,
       cues: def.cues.map((cue, index) => ({ at: cue.at, text: cue.text, heard: index < state.cued })),
       latest: state.cued > 0 ? def.cues[state.cued - 1].text : null,
       effect: state.cued > 0 ? fillEffect(state.value, run.fillPeak ?? 0) : null,
       ...(def.source?.count ? { count: { value: sourceCount(def, state.value)!, unit: def.source.count.unit } } : {}),
-      ...(def.source?.reactions ? { reactions: { pool: def.source.reactions.byCue[Math.min(state.cued, def.source.reactions.byCue.length - 1)] ?? [], spike: def.source.reactions.spike ?? [] } } : {}),
+      ...(def.source?.reactions ? { reactions: { pool: def.source.reactions.byCue[Math.min(state.cued, def.source.reactions.byCue.length - 1)] ?? [], spike: def.source.reactions.spike ?? [],
+        stopped: def.source.reactions.stopped ?? [], slowed: def.source.reactions.slowed ?? [], surged: def.source.reactions.surged ?? [], dropped: def.source.reactions.dropped ?? [] } } : {}),
       ...(def.source?.odds && state.cued > 0 ? { oddsPull: Math.round(def.source.odds.atFull * state.value / 100) } : {}) }];
   });
 }

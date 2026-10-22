@@ -157,6 +157,16 @@ scene in order. Checks by kind of speaker follow.
 
 Log breaks as rows of speaker, line as written, break, rule.
 
+Viewer chat (a call whose stream carries one). Open the call on Play, scrub the Stall to each of the
+three phases of every threat, and read the two lines the strip shows, then the thread in order
+(rules and numbers in ../swat-call-prose/references/live-chat.md). Check each of these and log a
+row for each break: the first line of the thread carries the threat; each line stands alone; the
+thread narrows (or does the arc its threat calls for) and stops one step short of the landing text;
+a beat is dramatized in its phase, behind its `after`; the poster's line is last in imminent; no
+line states a hidden fact as certain, tells anyone to go to the scene or presses the hostage or the
+rider; no emoji beside harm or on a line that confirms a guess; the register is rough, short and
+mixed, not polite and balanced. Typos in chat are not a finding.
+
 ## 9. The ending, last and alone
 
 Read each ending on its own after everything else, as the line the player will remember.

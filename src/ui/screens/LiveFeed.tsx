@@ -7,11 +7,12 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { FillView, StallLine } from '../../sim/clocks';
+import type { NodeThreat } from '../../sim/scenario-types';
 import { formatCount } from '../../sim/pressure-sources';
 import { Icon } from '../icons';
 import { PeopleText } from '../people/PeopleText';
 import { buzz, playSquelch, playTick } from '../audio/live-audio';
-import { chatGapMs, chatHandle, countRefreshMs, drawChatLine, nextLiveCount } from './live-chat';
+import { CHAT_FADE_MS, chatGapMs, chatPhase, chatTick, countRefreshMs, drawChatLine, drawStateLine, nextChatHandle, nextLiveCount, seenCount, seenState } from './live-chat';
 
 const reducedMotion = () => typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
@@ -22,7 +23,7 @@ function rng(seed: number) {
 }
 const hash = (text: string) => [...text].reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) | 0, 7) >>> 0;
 
-interface ChatLine { key: number; who: string; text: string | null }
+interface ChatLine { key: number; who: string; text: string | null; at: number }
 
 /** Lines the chat keeps on screen: the newest at the bottom, the one before it above, and nothing
  * fades out from under the reader (owner, 2026-10-21: the chat has to be easy to read). */
@@ -30,18 +31,24 @@ const CHAT_LINES = 2;
 
 /** One pressure source on the strip: its count, refreshing every second or two toward where the sim
  * has it the way a stream app's count does (live-chat.ts nextLiveCount), and the chat of the people
- * watching, each line under a handle and never read twice on one run (`runKey`). Once a cue's lines
- * are spent the chat thins to people joining while the count climbs. A jump (a bump, a cue, the
- * threat landing) bursts the chat and ticks. */
+ * watching, each line under a handle and never read twice on one run (`runKey`).
+ *
+ * The chat follows the pressure (docs/call-pressure.md, "Chat that follows the pressure"). While a
+ * decision shows, the open threat's thread for the drain's phase plays in written order, with one
+ * tick in four of filler from the cue pool and none in imminent. What began while the chat was
+ * hidden (the stream stopped, slowed, surged, or its count fell) plays first, in its own pool, and
+ * a stopped stream then goes quiet. A spent chat plays joins, and a line fades after 12 seconds.
+ * A jump (a bump, a cue, the threat landing) bursts the chat and ticks. Nothing here reaches the
+ * sim, and nothing is drawn while the chat is hidden. */
 /** `chat`: the viewers' lines under the count, live texture for the decide beat; off on the result. */
-export function SourceTicker({ view, runKey = 'preview', effect = null, chat: showChat = true }: { view: FillView; runKey?: string; effect?: string | null; chat?: boolean }) {
+export function SourceTicker({ view, runKey = 'preview', effect = null, chat: showChat = true, threat = null, dither = 0 }: { view: FillView; runKey?: string; effect?: string | null; chat?: boolean; threat?: NodeThreat | null; dither?: number }) {
   const target = Math.round(view.count?.value ?? view.value);
   const [shown, setShown] = useState(target);
   const [chat, setChat] = useState<ChatLine[]>([]);
   const last = useRef(target);
   const keyRef = useRef(0);
-  const said = useRef(0);
   const random = useRef(rng(hash(`${runKey}:${view.id}`)));
+  const chatRandom = useRef(rng(hash(`${runKey}:${view.id}:chat`)));
   const reduced = reducedMotion();
 
   // The count refreshes on its own clock and reads the latest target from a ref, so the sim's ticks
@@ -61,44 +68,91 @@ export function SourceTicker({ view, runKey = 'preview', effect = null, chat: sh
   }, [reduced, counted]);
   if ((reduced || !counted) && shown !== target) setShown(target);
 
-  const say = (text: string | null) => {
+  const say = (text: string | null, by?: string) => {
     const key = ++keyRef.current;
-    const who = chatHandle(runKey, view.id, said.current++);
-    setChat(list => [...list.slice(1 - CHAT_LINES), { key, who, text }]);
+    const who = by ?? nextChatHandle(runKey, view.id);
+    setChat(list => [...list.slice(1 - CHAT_LINES), { key, who, text, at: Date.now() }]);
   };
 
-  // The chat: a line every few seconds, quicker as it fills, each drawn once per run. Keyed on the
-  // pool's text and the gauge in tenths, since the view itself is rebuilt on every tick.
-  const poolKey = (view.reactions?.pool ?? []).join('\n');
-  const pace = Math.round(view.value / 10);
-  const rising = useRef(target);
+  // The latest of everything the tick reads, so a tick never restarts the loop.
+  const threatId = threat?.id ?? '';
+  const minutes = threat?.minutes ?? 0;
+  const thread = threat && threat.chat ? threat.chat : null;
+  const streamDown = threat?.chat === false;
+  const latest = useRef({ dither, fill: view.value, thread, minutes, stopped: view.stopped, streamDown, view });
+  latest.current = { dither, fill: view.value, thread, minutes, stopped: view.stopped, streamDown, view };
+  const queue = useRef<string[]>([]);
+  const phase = chatPhase(dither, minutes);
+  const state = view.stopped ? 'stopped' : view.slowed ? 'slowed' : view.surged ? 'surged' : 'none';
+
+  // A new decision starts a new thread: the lines on screen and anything queued are the last one's.
+  useEffect(() => { setChat([]); queue.current = []; }, [threatId]);
+
+  // What began while the chat was hidden, or while it showed: the stream's state, in its own pool.
   useEffect(() => {
+    if (!showChat) return;
+    const before = seenState(runKey, view.id, state);
+    if (state === 'none' || before === state) return;
+    const pool = view.reactions?.[state] ?? [];
+    for (let line = drawStateLine(runKey, view.id, state, pool); line; line = drawStateLine(runKey, view.id, state, pool)) queue.current.push(line);
+  }, [state, showChat, runKey]);
+
+  // The chat: a line every few seconds, quicker as the threat closes. The first line of a phase
+  // plays as the drain enters it. Keyed on the pool's text, since the view is rebuilt on every tick.
+  const poolKey = (view.reactions?.pool ?? []).join('\n');
+  const spare = useRef({ n: 0 });
+  useEffect(() => {
+    if (!showChat) return;
     const pool = poolKey ? poolKey.split('\n') : [];
-    if (!pool.length || view.stopped) return;
     let timer = 0;
     const next = () => {
-      const line = drawChatLine(runKey, view.id, pool, random.current);
-      const climbing = targetRef.current > rising.current;
-      rising.current = targetRef.current;
-      if (line) say(line);
-      else if (climbing) say(null);
-      timer = window.setTimeout(next, chatGapMs(pace * 10, random.current));
+      const now = latest.current;
+      const p = chatPhase(now.dither, now.minutes);
+      const tick = chatTick({ runKey, sourceId: view.id, threatId, thread: now.thread, dither: now.dither, minutes: now.minutes, stopped: now.stopped, streamDown: now.streamDown,
+        pool, queue: queue.current, random: chatRandom.current, spare: spare.current });
+      if (tick) say(tick.text, tick.by);
+      timer = window.setTimeout(next, chatGapMs(now.fill, chatRandom.current, p));
     };
-    timer = window.setTimeout(next, chatGapMs(pace * 10, random.current) / 2);
+    timer = window.setTimeout(next, 0);
     return () => window.clearTimeout(timer);
-  }, [poolKey, pace, view.stopped, reduced, runKey]);
+  }, [poolKey, phase, threatId, showChat, runKey, reduced]);
+
+  // A visible line fades after a while, so a spent chat never freezes on stale lines.
+  useEffect(() => {
+    const timer = window.setInterval(() => setChat(list => { const now = Date.now(); const kept = list.filter(item => now - item.at < CHAT_FADE_MS); return kept.length === list.length ? list : kept; }), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  // A jump in the count the chat saw: a burst of the spike pool, or the dropped pool when the count
+  // falls by a seventh or more. Compared with the last count a visible chat saw, so a jump that
+  // came while it was hidden is read when it shows again.
+  useEffect(() => {
+    if (!showChat) return;
+    const before = seenCount(runKey, view.id, target);
+    if (before === null) return;
+    const reactions = view.reactions;
+    if (target < before * 6 / 7) {
+      // A stopped stream outranks a falling count: its own lines play and the dropped pool doesn't.
+      if (!view.stopped) for (let line = drawStateLine(runKey, view.id, 'dropped', reactions?.dropped ?? []); line; line = drawStateLine(runKey, view.id, 'dropped', reactions?.dropped ?? [])) queue.current.push(line);
+      return;
+    }
+    if (!(target > before * 1.08 + 1)) return;
+    // Two lines, far enough apart that the first is read before the second pushes it up.
+    [0, 1].forEach(i => burst.current.push(window.setTimeout(() => {
+      const line = drawChatLine(runKey, `${view.id}:spike`, reactions?.spike ?? [], chatRandom.current) ?? drawChatLine(runKey, view.id, reactions?.pool ?? [], chatRandom.current);
+      say(line);
+    }, i * 1600)));
+  }, [target, showChat]);
+
+  // A burst belongs to the decision that showed it: a result hiding the chat, or a new decision,
+  // cancels what hasn't played, so nothing is consumed unseen or shown late beside the next thread.
+  const burst = useRef<number[]>([]);
+  useEffect(() => () => { burst.current.forEach(id => window.clearTimeout(id)); burst.current = []; }, [showChat, threatId]);
 
   useEffect(() => {
     const before = last.current;
     last.current = target;
     if (!(target > before * 1.08 + 1)) return;
-    const spike = view.reactions?.spike ?? [];
-    const pool = view.reactions?.pool ?? [];
-    // Two lines, far enough apart that the first is read before the second pushes it up.
-    [0, 1].forEach(i => window.setTimeout(() => {
-      const line = drawChatLine(runKey, `${view.id}:spike`, spike, random.current) ?? drawChatLine(runKey, view.id, pool, random.current);
-      say(line);
-    }, i * 1600));
     playTick();
     buzz(25);
   }, [target]);

@@ -246,7 +246,8 @@ function sourceFor(clock: Clock, bind: (text: string) => string): PressureSource
     ...(source.count ? { count: { ...source.count } } : {}),
     ...(source.surges?.length ? { surges: source.surges.map(entry => ({ ...entry })) } : {}),
     ...(source.odds ? { odds: { kinds: [...source.odds.kinds], atFull: source.odds.atFull } } : {}),
-    ...(source.reactions ? { reactions: { byCue: source.reactions.byCue.map(pool => pool.map(bind)), ...(source.reactions.spike ? { spike: source.reactions.spike.map(bind) } : {}) } } : {}),
+    ...(source.reactions ? { reactions: { byCue: source.reactions.byCue.map(pool => pool.map(bind)),
+      ...Object.fromEntries((['spike', 'stopped', 'slowed', 'surged', 'dropped'] as const).filter(key => source.reactions![key]).map(key => [key, source.reactions![key]!.map(bind)])) } } : {}),
   };
 }
 

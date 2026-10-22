@@ -13,6 +13,9 @@ Owner decisions:
 - The screen changes while the player decides, not only at a commit (2026-10-21).
 - A crowd or a stream shows as a live count beside the drain, with the watchers' chat under it
   (2026-10-21). Every source shows, not one pressure at a time.
+- The chat builds toward the threat on the gauge, so a threat about viewers shows viewers doing it
+  (2026-10-22). It reads like a real live chat, written per subject and never drawn from a global
+  pool. Specified below, not yet built.
 - Sound and vibration are on by default, with a mute in Settings (2026-10-21).
 - When a threat's time runs out with no choice made, the call moves on to a moment written for it,
   and the log and debrief record the indecision (2026-10-21). Waiting strains nobody (below).
@@ -106,11 +109,130 @@ stays 0 to 100 in the sim; the source says how the scene reads it.
   (`src/ui/screens/live-chat.ts`). A line shows at most once a run, so each cue's pool holds at least
   16 lines and the spike pool 8; once a pool is spent the chat thins to people joining while the count
   climbs. They are written per call under `swat-call-prose` ("Viewer chat"), and
-  `src/content/incidents/reactions.test.ts` checks the pool sizes and wording rules: viewers are
-  people, so no gore and no cheering force.
+  `src/content/incidents/reactions.test.ts` checks pool sizes, length, banned characters, gendered
+  words and three lint patterns. It does not check tone: that viewers are people, with no gore and no
+  cheering force, is a read (`swat-writing-review`). Today the chat reads only the source's cue count. The
+  rule that ties it to the open threat is below, under "Chat that follows the pressure".
 
 The older fill effects still apply from a source's first cue: strain on officers at a commit, call
 pressure a minute, and the debrief's audience factor on trust (`CLOCK_RULES_V1.fill`).
+
+## Chat that follows the pressure
+
+**Status.** Built 2026-10-22 for Going Live. The shape is `TreeThreat.chat` and the state pools on
+`PressureSource.reactions` (`src/content/call-trees/types.ts`, `src/sim/scenario-types.ts`), bound by
+the compiler (`chatFor` in `trees-v13/compile.ts`), and played by `src/ui/screens/live-chat.ts`
+(`chatTick`) through `SourceTicker`. The gates are in `src/content/incidents/chat.test.ts`. A
+`chat` rides on the shown threat and no effect reads it, so a call compiles to the same mechanics with
+and without it (a test says so). The writing rules are in `swat-call-prose`
+(`references/live-chat.md`). Still open: `chatIf`, a `{street}` token, the checker's chat mode, the
+Lab's phase view and the cue-after-stop rule (backlog).
+
+**Why.** A gauge that says viewers are closing in on the store's address, with ten minutes left,
+promises something the chat has to show. Measured on Going Live 2026-10-22, the chat read the
+stream's cue count and nothing else. One minute before "Address posted by itskatlun" landed, the
+chat was saying "my order from there was late too", and the named poster never typed a word.
+
+**The rule.** The chat has two keys, and every line the strip shows comes from one of them.
+
+1. **The open threat and how far it has drained.** The drain is the stall over the threat's
+   minutes. It has three phases, in thirds: early (under a third), closing (a third up to two
+   thirds) and imminent (two thirds to the landing). Each phase has its own ordered thread, written
+   for that threat.
+   - Early: the thing is noticed. Someone asks the question and one viewer is curious.
+   - Closing: what the viewers know gets narrower and more certain, and someone objects.
+   - Imminent: it is about to happen. Pile-ons, objections, and the poster's own line.
+   The arc depends on the threat. A threat about viewers finding something out (the address, the
+   clip) narrows. A threat about the rider (stands over the manager, a call from home) is the chat
+   reacting to what the camera shows or stops showing. A threat about the news is the viewers
+   noticing it. The reference lists the arcs (`live-chat.md`).
+2. **The source's state.** Short pools for the moment the stream is stopped (cut), slowed (the
+   camera turned to the wall), surged (the rider playing to the chat) or dropped (the count falls
+   by a seventh or more, as when a second phone takes over).
+
+**Timing.** A phase lasts a third of the threat: 20 to 26 seconds at Standard, 40 to 52 at Relaxed
+(10 to 13 game minutes). At the strip's pace (one line every 2.2 to 5 seconds, 1.6 at the least) a
+phase has about 8 ticks at Standard and 15 at Relaxed. So:
+
+- A thread holds 5 to 7 lines a phase. Three ticks in four play the thread, one plays filler from
+  the cue pool. In imminent there is no filler.
+- The first line of a phase plays as the drain enters it, not after a gap, and every line stays up
+  at least 2.4 seconds.
+- Each thread's first line carries the threat (a question, a guess, a name), because a player who
+  reads for 20 seconds at Relaxed is still in early. Off-topic lines come after it.
+- The last line of imminent is the reserved slot, and the poster's line when the threat names one.
+  It plays when the drain passes nine tenths and is never skipped. Earlier lines the drain has
+  passed are dropped, so the chat is never behind the gauge.
+- A line may carry `after: <beat id>`. It doesn't play until that beat has fired. A line that says
+  what a beat reveals carries it, and that is how a viewer's guess stays behind the radio's report.
+
+**Precedence.** One state at a time wins, in this order: stopped, then the state pools (dropped,
+slowed, surged) at their onset, then the thread, then filler. A state pool plays in order once at
+onset and then the thread resumes. After a stop the chat goes quiet, so a threat on a node that can
+only be reached once the stream is stopped has no thread and says so (`chat: false`, which a gate
+checks against the call graph). A stop also ends any cue text the comms log would still play from
+the dead stream (teardown finding 16).
+
+**Lifecycle.** The chat plays only while the decision is shown. A result hides it, and nothing
+is consumed while it is hidden: no line is marked seen, and a state pool waits for the next
+decision. The ticker is keyed by decision, so a new node starts a new thread with the visible lines
+cleared. A spent chat never freezes on two stale lines. Once the thread and the cue pool are spent,
+joins play on a timer, whether or not the count is climbing, and a visible line fades after 12
+seconds. The chat is presentation, so a reload or a replay shows a fresh chat, never the same one:
+the sim and the Lab reproduce the call, not the chat. Within a run a speaker's handle is kept with
+its line, so a remount never gives one handle two lines.
+
+**What a thread may say.**
+
+- **It reaches the threat's own noun and stops one step short.** A thread about an address names
+  the corner and the shop next door. It never states the landing. The landing is the threat's text
+  and nothing else says it. When a beat already reports an earlier piece of the same event, the beat
+  and the landing are reconciled before any chat is written (the teardown's findings 16 and 17 are
+  two such). A thread dramatizes a beat in the phase it fires in, behind its `after`.
+- **The named poster speaks.** When a threat's label or text names a `{handle}` commenter, that
+  commenter's own line is the last line of imminent, under that handle.
+- **It knows what a viewer knows.** The picture and sound of the rider's phone, the comments, the
+  news, the courier at the tape and the viewers near the scene. It doesn't know radio traffic,
+  officers' positions the camera can't see, or any hidden fact. The chat is public and identical in
+  every situation. A viewer may repeat a belief the call has already put on the page as the
+  audience's belief and may be wrong. A viewer never states a new hidden fact as certain.
+- **It stays inside the ethics.** No line glorifies the subject or force, dares or tells anyone to
+  hurt anyone, jokes about harm to a named person, names a method or says the rider should hurt
+  themselves or anyone else (E2, E4.1, E4.9, E7, E16). No line pressures the hostage to give in to
+  the demand, or the rider to carry on, so "make her say it" and "say it louder" are out. Nobody
+  tells the others to go to the scene. A line that reports someone going is allowed, and the chat
+  answers it. The self-harm rules stand and the 988 line stays in the debrief (E4.7). Emoji are
+  judged against the event and the lines beside them, not only the line (the reference lists them).
+- **It reads like a live chat.** Short lines, handles, joins, a regular acting as moderator, repeats
+  and pile-ons, emoji on some lines, rare typos. The writing rules and the numbers are in
+  `swat-call-prose` (`references/live-chat.md`).
+
+**What the engine has, and what it doesn't yet:**
+
+- Built: `TreeThreat.chat` with the three phase threads (or `false`), `PressureSource.reactions`
+  with `stopped`, `slowed`, `surged` and `dropped` pools, a chat line that carries its speaker and an
+  `after`, and `FillView.surged`. A bad speaker (not a role of the call or `{handle}`), a bad `after`,
+  or a threat that names a `{handle}` and doesn't end on that commenter's line throws at compile.
+  `FillView.stopped` also means the owner is safe or out (`sim/clocks.ts`), so a stop pool reads as
+  "the stream went dark".
+- `chat: false` is used on the two Going Live nodes that are only reached once the stream is down.
+  Nothing yet checks that against the call graph.
+- Later, `chatIf` on a threat: extra early lines when an earlier choice's mark is set, so the chat
+  remembers that the door was seen or the lie was found (the same `when` shape as `promptIf`).
+- A `{street}` token for the front street's name, so viewers can guess a street that matches the
+  map. Until it exists, chat names no street.
+
+**What a gate can and can't check.** The gates in `src/content/incidents/chat.test.ts` cover shape and
+wording: every
+reachable-with-the-stream threat has all three phases at their floor, line length in graphemes, the
+banned characters and words, no repeated line or four-word run across the call's whole chat, the
+emoji allow list and share, no emoji beside a harm word, the poster's line present and last, `after`
+naming a real beat, and a state pool wherever any effect (a choice, a beat or a threat) can stop,
+slow, surge or drop the stream. A playback test at both timer speeds checks that the first on-topic
+line plays within 3 seconds, the reserved line plays before the landing, and no thread line plays
+after its phase. Gates cannot judge whether a thread reads as real, whether it narrows, whether a
+line leaks the outcome or a hidden fact, whether a beat is dramatized, or whether an emoji
+trivializes. Those are the writer's read and `swat-writing-review`'s chat read.
 
 ## The strip and the sensory layer
 

@@ -369,7 +369,15 @@ export interface NodeThreat {
   label: string;
   /** Minutes the player has here before it happens. */
   minutes: number;
+  /** What the viewers say as it drains (ThreatChat, bound for this call). Presentation only. `false`:
+   * no chat here, the stream being down. */
+  chat?: ThreatChatDef | false;
 }
+
+/** A viewer's line, bound: `by` is the speaker's name when it isn't a generated handle, and
+ * `afterMin` the dither minute the line waits for (its beat's `at`). */
+export interface ChatLineDef { text: string; by?: string; afterMin?: number }
+export interface ThreatChatDef { early: ChatLineDef[]; closing: ChatLineDef[]; imminent: ChatLineDef[] }
 
 export interface StageDefinition {
   id: StageId;
@@ -490,8 +498,10 @@ export interface PressureSource {
   odds?: { kinds: CheckKind[]; atFull: number };
   /** What the people watching say, floated on screen while it runs (presentation only, never the
    * sim). `byCue[i]` is the pool once `i` cues are heard (0: before the first); `spike` plays in a
-   * burst when the gauge jumps. Written per call under swat-call-prose. */
-  reactions?: { byCue: string[][]; spike?: string[] };
+   * burst when the gauge jumps. `stopped`, `slowed`, `surged` and `dropped` play once, in order, when
+   * the stream is cut, turned down, played to, or its count falls by a seventh or more. Written per
+   * call under swat-call-prose (references/live-chat.md). */
+  reactions?: { byCue: string[][]; spike?: string[]; stopped?: string[]; slowed?: string[]; surged?: string[]; dropped?: string[] };
 }
 export interface ClockCondition { clockId: Id; state: 'low' | 'out'; is: boolean }
 /** How a subject sounds to the team (sim/meters.ts stanceOf). 'unheard' until the first event. */

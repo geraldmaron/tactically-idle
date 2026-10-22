@@ -228,6 +228,9 @@ rule. The per-speaker checks are in references/table-read-protocol.md, in short 
   (runner pattern G13 in references/cliche-and-copaganda.md), no melodrama beats (G14), no
   inverted or fronted sentences used to dodge a name opener (G15), and no weapon carried by an
   "it" without its noun in the same string (G16).
+- Viewer chat is the exception to "no phonetic spelling": its rare typos are the register
+  (../swat-call-prose/references/live-chat.md). Read it as its own surface in the Lab on Play with
+  the Stall scrubber at each phase (table-read-protocol.md section 8, "Viewer chat").
 
 Read the ending last and on its own. It names a person's state and one lasting detail. A last
 sentence that states a lesson is a sermon.

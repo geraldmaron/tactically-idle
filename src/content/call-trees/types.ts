@@ -415,7 +415,22 @@ export interface TreeThreat {
    * call-pressure.md "When the time runs out"): the threat lands, the debrief logs the indecision,
    * and the call moves to a moment written for continued inaction. A threat without one only drains. */
   timeout?: TreeTimeout;
+  /** What the viewers say as this threat drains (docs/call-pressure.md, "Chat that follows the
+   * pressure"): presentation only, never read by a mechanic. `false` on a node the call reaches only
+   * once the stream has stopped, where there is no chat. Written per threat under swat-call-prose
+   * (references/live-chat.md). */
+  chat?: ThreatChat | false;
 }
+
+/** A viewer's line: plain text under a generated handle, or text with its speaker (`by`: a role's
+ * `{role.first}` or the world's `{handle}`), and with `after`, the id of a beat of the same threat
+ * the line waits for. */
+export type ChatLine = string | { text: string; by?: string; after?: string };
+
+/** A threat's chat in the thirds of its drain: early under a third, closing to two thirds, imminent
+ * after. Each is an ordered thread, played once each. When the threat names a `{handle}`, the last
+ * imminent line is that commenter's own. */
+export interface ThreatChat { early: ChatLine[]; closing: ChatLine[]; imminent: ChatLine[] }
 
 /** A threat's run-out route. Like the threat it never harms anyone or fires, and it sets no mark:
  * the moment it leads to does the pressing, with its own threat or by ending the call. */

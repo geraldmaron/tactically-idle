@@ -23,7 +23,7 @@ export const OUTLETS: readonly Outlet[] = [
 export const HANDLE_NAMES = ['dre', 'kev', 'monique', 'ollie', 'bev', 'tomas', 'sal', 'jaz', 'nia', 'marco', 'deshawn', 'lupe',
   'kenji', 'rosa', 'tay', 'bri', 'eli', 'ana', 'quinn', 'dev', 'hank', 'mo', 'lena', 'rico', 'tasha', 'yusuf', 'gabe', 'ivy',
   'omar', 'jo', 'priya', 'luis', 'shay', 'ben', 'kat', 'theo', 'mags', 'reggie', 'dani', 'pete', 'nadia', 'cass', 'vinnie', 'fern'] as const;
-export const HANDLE_WORDS = ['nightowl', 'thirdshift', 'kerbside', 'sidestreet', 'twowheel', 'latebus', 'cornerstore', 'curbside',
+export const HANDLE_WORDS = ['nightowl', 'thirdshift', 'sidewalk', 'sidestreet', 'twowheel', 'latebus', 'cornerstore', 'curbside',
   'overtime', 'lowbattery', 'rainjacket', 'scooter', 'hotplate', 'doubleshift', 'lunchrush', 'eastside', 'westend', 'ninthst',
   'busstop', 'laundromat', 'graveyard', 'tacotruck', 'dashcam', 'pothole', 'backseat', 'paydayloan', 'noodles', 'flatwhite'] as const;
 const HANDLE_SHAPES: ((name: string, word: string, n: number) => string)[] = [
