@@ -44,17 +44,18 @@ describe('shared variants', () => {
     expect(html(createElement(Card, { onClick: () => undefined, disabled: true, children: 'x' }))).toContain('<button type="button" class="card card-link card-disabled"');
   });
 
-  it('gives rows selected and disabled states and flags a row with no lead', () => {
+  it('gives rows selected and disabled states and flags a row whose lead is empty', () => {
     const lead = createElement('span', null, 'L');
     expect(html(createElement(Row, { title: 'Name', lead, selected: true }))).toContain('ui-row-selected');
     expect(html(createElement(Row, { title: 'Name', lead, disabled: true, onClick: () => undefined }))).toContain('ui-row-disabled');
     expect(html(createElement(Row, { title: 'Name', lead }))).not.toContain('data-lead');
-    expect(html(createElement(Row, { title: 'Name' }))).toContain('data-lead="none"');
+    expect(html(createElement(Row, { title: 'Name', lead: null }))).toContain('data-lead="none"');
   });
 
-  it('flags a section without an icon', () => {
-    expect(html(createElement(Section, { title: 'A', icon: 'info', children: 'x' }))).not.toContain('data-lead');
-    expect(html(createElement(Section, { title: 'A', children: 'x' }))).toContain('data-lead="none"');
+  it('draws the section icon its API requires', () => {
+    const section = html(createElement(Section, { title: 'A', icon: 'info', children: 'x' }));
+    expect(section).not.toContain('data-lead');
+    expect(section).toContain('width="20"');
   });
 
   it('names the five type styles', () => {

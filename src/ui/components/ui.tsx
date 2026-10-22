@@ -93,8 +93,7 @@ export function Text({ kind, as: Tag = 'span', className, children }: {
 }
 
 /** A titled block. The heading is 14px in sentence case, with a quiet count or a link at the right.
- * Give it the `icon` its peers carry; a Section without one renders `data-lead="none"`, which the
- * visual gates count. */
+ * The `icon` is required, as a Row's `lead` is (docs/visual-kit.md). */
 export function Section({
   title,
   action,
@@ -110,7 +109,8 @@ export function Section({
   children: ReactNode;
   id?: string;
   hint?: ReactNode;
-  icon?: IconName;
+  /** Required: the picture its peers carry. */
+  icon: IconName;
 }) {
   return (
     <section className="section" aria-labelledby={id} data-lead={icon ? undefined : 'none'}>
@@ -150,10 +150,11 @@ export function Card({ children, className, tone, selected, disabled, onClick, l
 
 /** A list row with a hairline: a lead (face, art or a kit mark), a title and a line, and a trailing
  * value or chevron. With onClick the whole row is the button. Every row leads with a picture
- * (docs/visual-kit.md); a row without one renders `data-lead="none"`, which the visual gates count.
+ * (docs/visual-kit.md); a falsy lead still renders `data-lead="none"`, which the visual gates count.
  * `selected` and `disabled` are the shared states. */
 export function Row({ lead, title, detail, trail, onClick, className, label, selected, disabled }: {
-  lead?: ReactNode;
+  /** Required: a face, art or a kit mark. Registered art is a node like any other. */
+  lead: ReactNode;
   title: ReactNode;
   detail?: ReactNode;
   trail?: ReactNode;
