@@ -43,7 +43,7 @@ export interface LiveUiState {
   dither?: number;
 }
 
-type LiveCallbacks = 'onFocusSquad' | 'onSelectAction' | 'onContinueStage' | 'onSelectOfficer' | 'onSelectSpace' | 'onFloorChange' | 'onToggleRooms' | 'onCancel' | 'onOpenDetails';
+type LiveCallbacks = 'onFocusSquad' | 'onSelectAction' | 'onContinueStage' | 'onSelectOfficer' | 'onSelectSpace' | 'onFloorChange' | 'onToggleRooms' | 'onCancel' | 'onOpenDetails' | 'onStepOut';
 type LiveSlots = 'feedback' | 'supportContext' | 'situation' | 'lastDecision' | 'failedResponse' | 'children' | 'people';
 /** Every LiveView prop that is data: everything but the callbacks, the slots and the people lexicon. */
 export type LiveViewModel = Omit<LiveViewProps, LiveCallbacks | LiveSlots>;
@@ -140,8 +140,9 @@ export function liveScreen(g: GameState, now: number, ui: LiveUiState): { model:
     if (!id) return null;
     return built.derived.spaces[id]?.floor ?? built.location.rooms.find((r) => r.id === id)?.floor ?? 0;
   };
-  const title = (card?.title ?? built.location.name ?? run.scenarioId.replace(/_/g, ' ')).toUpperCase();
-  const subtitle = `${(card?.setting ?? built.location.setting ?? '').toUpperCase()} / ${card?.code ?? 'OP'}`;
+  const title = card?.title ?? built.location.name ?? run.scenarioId.replace(/_/g, ' ');
+  const setting = card?.setting ?? built.location.setting ?? '';
+  const subtitle = `${setting.charAt(0).toUpperCase()}${setting.slice(1)} · ${card?.code ?? 'OP'}`;
   const spaceById = new Map(spaces.map((s) => [s.id, s]));
   const targetLabel = view?.targetId ? (spaceById.get(view.targetId)?.label ?? built.location.rooms.find((r) => r.id === view.targetId)?.label ?? null) : null;
 

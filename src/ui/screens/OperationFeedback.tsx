@@ -31,17 +31,15 @@ export function OddsBar({ likelihood, mini = false }: { likelihood: ActionView['
   </span>;
 }
 
-/** Public forecasts only. The engine owns the odds and the authored consequence descriptions. */
+/** Public forecasts only. The engine owns the odds and the authored consequence descriptions. The
+ * three outcomes as rows, each with its chance once (docs/ui-ux-audit.md: the card has the bar, the
+ * review has the rows); the harm is in the action bar's summary, not here. */
 export function OutcomeForecast({ action }: { action: ActionView }) {
   const percentages = outcomePercentages(action.likelihood);
   const commonEvent = action.eventResult && new Set(Object.values(action.outcomePreview)).size === 1;
   return (
     <section className="outcome-forecast" aria-label="Possible outcomes">
-      <div className="outcome-forecast-heading">
-        <h3>{action.forceRisk ? 'Task outcome' : commonEvent ? 'Expected event' : 'What could happen'}</h3>
-        <span className={`consequence-level consequence-${action.consequenceLevel}`}>Possible harm: {CONSEQUENCE_LABEL[action.consequenceLevel].toLowerCase()}</span>
-      </div>
-      {!commonEvent && action.eligible && !action.eventResult && <OddsBar likelihood={action.likelihood} />}
+      <h3 className={action.forceRisk || commonEvent ? 'outcome-forecast-title' : 'sr-only'}>{action.forceRisk ? 'Task outcome' : commonEvent ? 'Expected event' : 'What could happen'}</h3>
       {action.forceRisk && <section className="force-risk" aria-label="Risk from force">
         <h4>{ITEMS[action.forceRisk.itemId]?.name ?? 'Selected equipment'} · {action.forceRisk.personLabel}</h4>
         <p>{action.forceRisk.summary}</p>
@@ -51,12 +49,12 @@ export function OutcomeForecast({ action }: { action: ActionView }) {
       <ul className="outcome-options">
         {(['favorable', 'mixed', 'adverse'] as const).map((band) => (
           <li key={band} className={`outcome-option outcome-${band}`}>
-            <div><strong>{action.eventResult ? ({ favorable: 'Smoothly', mixed: 'With delays', adverse: 'With difficulty' } as const)[band] : FORECAST_LABEL[band]}</strong>{action.eligible && <span>{percentages[band]}% chance</span>}</div>
+            <div><strong>{action.eventResult ? ({ favorable: 'Smoothly', mixed: 'With delays', adverse: 'With difficulty' } as const)[band] : FORECAST_LABEL[band]}</strong>{action.eligible && !action.eventResult && <span className="outcome-chance">{percentages[band]}%</span>}</div>
             <p><PeopleText text={action.outcomePreview[band]} /></p>
           </li>
         ))}
       </ul>
-      <p className="operation-note outcome-forecast-note">{action.eventResult ? 'The event is established. These checks describe how the step unfolds and its costs.' : action.eligible ? 'Chances depend on your team and what you know. Even when a choice goes well, there may be more work to do.' : 'Check what is missing to see the chances for this choice.'} Possible harm describes how badly things could go.</p>
+      {(action.eventResult || !action.eligible) && <p className="operation-note outcome-forecast-note">{action.eventResult ? 'The event is established. These checks describe how the step unfolds and its costs.' : 'Check what is missing to see the chances for this choice.'}</p>}
       </>}
     </section>
   );

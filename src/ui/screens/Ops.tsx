@@ -1,26 +1,35 @@
-import { useLayoutEffect, useState } from 'react';
+import { useEffect, useLayoutEffect } from 'react';
 import { useGame } from '../store';
-import type { Id } from '../../sim/types';
 import { OpsBoard } from './OpsBoard';
 import { OpsPrepare } from './OpsPrepare';
 import { OpsLive } from './OpsLive';
 import { OpsDebrief } from './OpsDebrief';
+import { callFlow, useCallFlow } from './call-flow';
+import { cardFor } from './helpers';
 
-/** Ops destination. Mode follows state: board, prepare, live, or debrief. */
+/** The Calls destination. Mode follows state: a live call or its debrief first, then the call the
+ * player opened (call-flow.ts, which keeps its step and draft across Back and detours), then the
+ * board. A call that has left the board opens nothing. */
 export function OpsScreen() {
   const g = useGame();
-  const [prep, setPrep] = useState<Id | null>(null);
+  const { open } = useCallFlow();
   const run = g.activeRun;
-  const surface = run?.status === 'active' ? 'live' : run?.status === 'debrief' ? 'debrief' : prep ? 'prepare' : 'board';
+  const now = Date.now();
+  const onBoard = (id: string) => !!cardFor(g, id, now);
+  const prep = open && !run && onBoard(open.scenarioId) ? open : null;
+  const surface = run?.status === 'active' ? 'live' : run?.status === 'debrief' ? 'debrief' : prep ? `prepare-${prep.step}` : 'board';
+  useEffect(() => {
+    callFlow.prune(onBoard);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [g.incidents]);
   useLayoutEffect(() => {
-    if (run) setPrep(null);
-    // App keeps this scroll owner mounted between operation surfaces. Reset before
-    // paint, without remounting the live map or reacting to ticks and decisions.
+    // App keeps this scroll owner mounted between call surfaces. Reset before paint, without
+    // remounting the live map or reacting to ticks and decisions.
     const screen = document.querySelector<HTMLElement>('main.screen-ops');
     if (screen) screen.scrollTop = 0;
   }, [surface, run?.id]);
   if (run?.status === 'active') return <OpsLive />;
   if (run?.status === 'debrief') return <OpsDebrief />;
-  if (prep) return <OpsPrepare scenarioId={prep} onCancel={() => setPrep(null)} />;
-  return <OpsBoard onPrepare={setPrep} />;
+  if (prep) return <OpsPrepare scenarioId={prep.scenarioId} step={prep.step} />;
+  return <OpsBoard onOpen={(id) => callFlow.openCall(id)} />;
 }

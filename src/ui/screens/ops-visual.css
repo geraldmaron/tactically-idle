@@ -1,3 +1,4 @@
+@import "./calls.css";
 /* Ops flow as compact, visual surfaces (board, prepare, live, review, debrief), in the direction of
    gear-visual.css and development.css: art and badges first, numbers as shapes, detail on demand. */
 
@@ -190,7 +191,7 @@
 .operation-choices .callbtn-title { font-size: 16px; line-height: 1.2; }
 .operation-choices .callbtn:not(.callbtn-off) .callbtn-sum { font-size: 13.5px; line-height: 1.4; }
 .operation-choices .callbtn-forecast { display: grid; gap: 4px; margin-top: 3px; }
-.callbtn-forecast-text { font-size: 12px; line-height: 1.35; }
+.callbtn-forecast-text { display: flex; flex-wrap: wrap; gap: var(--sp1) var(--sp4); font-size: var(--s14); line-height: 1.35; }
 .callbtn-harm-high { color: var(--warn); }
 .callbtn-harm-severe { color: var(--danger); font-weight: 600; }
 .callbtn-on .callbtn-harm { color: inherit; }
@@ -203,28 +204,35 @@
 .odds-bar-mini { height: 5px; max-width: 160px; border-radius: 3px; }
 .callbtn-on .odds-bar-mini { box-shadow: 0 0 0 1px rgba(27, 20, 4, 0.5); }
 
-/* the review sheet: chances as a bar, harm as a pill, requirements and supplies as chips */
-.operation-action-sheet .adetail { gap: 8px; }
-.operation-action-sheet .operation-action-summary { font-size: 14px; }
-.operation-action-sheet .action-glance { gap: 5px; }
-.operation-action-sheet .operation-time-range { margin: -2px 0 0; font-size: 12px; }
-.operation-action-sheet .outcome-forecast { display: grid; gap: 8px; padding: 10px 0; margin: 0; }
-.operation-action-sheet .outcome-forecast-heading { margin: 0; }
-.operation-action-sheet .odds-bar { height: 20px; }
-.consequence-level { display: inline-flex; align-items: center; padding: 2px 9px; border: 1px solid var(--line-strong); border-radius: 999px; font-weight: 600; }
-.consequence-low { color: var(--mint); border-color: rgba(63, 208, 142, 0.5); }
-.consequence-moderate { color: var(--warn); border-color: rgba(245, 155, 66, 0.5); }
-.consequence-high { border-color: rgba(255, 159, 67, 0.6); background: rgba(255, 159, 67, 0.08); }
-.consequence-severe { border-color: rgba(255, 107, 90, 0.7); background: rgba(255, 107, 90, 0.1); }
-.operation-action-sheet .outcome-options { gap: 5px; }
-.operation-action-sheet .outcome-option { padding: 7px 9px; }
-.operation-action-sheet .outcome-option > div { font-size: 13px; }
-.operation-action-sheet .outcome-option > div span { font-weight: 700; color: var(--text); }
-.operation-action-sheet .outcome-option p { margin-top: 3px; font-size: 13px; line-height: 1.38; color: var(--text-dim); }
-.outcome-forecast-note { margin: 0 !important; font-size: 12px !important; }
-.operation-action-sheet .operation-costs { gap: 6px; margin: 0; }
-.operation-action-sheet .operation-costs dd.chips { gap: 5px; }
-.operation-action-sheet .operation-costs dt { font-family: var(--font-cond); font-size: 12px; }
+/* the review sheet: the cost, the three outcomes as rows with their chance, then the controls.
+   Decision text (odds, harm, time, lead values, the summary) is 14px or more. */
+.operation-action-sheet .adetail { gap: var(--sp3); }
+.operation-action-sheet .operation-action-summary { margin: 0; font-size: var(--s16); line-height: 1.45; }
+.operation-action-sheet .operation-time-range { margin: calc(-1 * var(--sp2)) 0 0; font-size: var(--s14); color: var(--t2); }
+.operation-action-sheet .outcome-forecast { display: grid; gap: 0; padding: 0; margin: 0; border: 0; }
+.operation-action-sheet .outcome-options { gap: 0; }
+.operation-action-sheet .outcome-option { padding: var(--sp3) 0; border: 0; border-bottom: 1px solid var(--hair); border-radius: 0; background: none; }
+.operation-action-sheet .outcome-option > div { font-size: var(--s16); }
+.operation-action-sheet .outcome-favorable strong { color: var(--good-text); }
+.operation-action-sheet .outcome-mixed strong { color: var(--warn-text); }
+.operation-action-sheet .outcome-adverse strong { color: var(--harm-text); }
+.operation-action-sheet .outcome-chance { font-weight: 700; color: var(--t1) !important; }
+.operation-action-sheet .outcome-option p { margin-top: var(--sp1); font-size: var(--s16); line-height: 1.45; color: var(--t1); }
+.outcome-forecast-title { margin: 0; font-size: var(--s16); }
+.action-sheet-where { display: flex; align-items: center; gap: var(--sp1); margin: 0; font-size: var(--s14); color: var(--t2); }
+.action-sheet-locked { display: inline-flex; align-items: center; gap: var(--sp1); font-size: var(--s14); color: var(--warn-text); }
+.consequence-level { display: inline-flex; align-items: center; font-weight: 600; }
+.consequence-low { color: var(--good-text); }
+.consequence-moderate { color: var(--warn-text); }
+.consequence-high { color: var(--warn-text); }
+.consequence-severe { color: var(--harm-text); }
+.outcome-forecast-note { margin: 0 !important; font-size: var(--s14) !important; }
+.operation-action-sheet .operation-costs { gap: var(--sp2); margin: 0; }
+.operation-action-sheet .operation-costs dd.chips { gap: var(--sp1); }
+.operation-action-sheet .operation-costs dt { font-size: var(--s14); color: var(--t2); }
+.operation-action-sheet .operation-commit-meta { display: flex; justify-content: space-between; gap: var(--sp3); margin: 0 0 var(--sp2); font-size: var(--s14); color: var(--t2); }
+.operation-action-sheet .operation-commit-meta > span:first-child { min-width: 0; }
+.operation-action-sheet .operation-commit-meta .consequence-level { flex: 0 0 auto; }
 
 @media (max-width: 359px) {
   .live .live-name { font-size: 21px; }
@@ -346,7 +354,7 @@
 .operation-choices .call-head .call-label { flex: 0 1 auto; min-width: 0; }
 .operation-choices .call-head .threat-pill { flex: 0 1 auto; margin-right: auto; }
 
-.callbtn-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin-top: 4px; font-size: 12px; line-height: 1.3; }
+.callbtn-meta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp1) var(--sp3); margin-top: var(--sp1); font-size: var(--s14); line-height: 1.3; }
 .callbtn-weighed > .callbtn-meta { margin: 0 11px; }
 .callbtn-lead { display: inline-flex; align-items: center; gap: 6px; min-width: 0; color: var(--t-plate); font-variant-numeric: tabular-nums; }
 .lead-face { position: relative; display: inline-grid; place-items: center; flex: 0 0 auto; overflow: hidden; border-radius: 50%; background: linear-gradient(160deg, var(--ink-3) 0%, var(--ink-1) 100%); box-shadow: 0 0 0 1px rgba(158, 184, 212, 0.35); }

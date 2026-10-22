@@ -1,0 +1,101 @@
+/* A call, from the board to the debrief (docs/ui-ux-audit.md, Desk and Street). Tokens only. */
+
+/* ------------------------------------------------------------ board */
+.cl-board { display: flex; flex-direction: column; gap: var(--sp3); }
+.cl-board-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--sp3); flex-wrap: wrap; padding-top: var(--sp2); }
+.cl-board-count { margin: 0; font: 600 var(--s18)/1.2 var(--f-ui); color: var(--t2); }
+.cl-board-meta { display: inline-flex; align-items: center; gap: var(--sp3); margin: 0; font-size: var(--s14); color: var(--t2); }
+.cl-board-next { display: inline-flex; align-items: center; gap: var(--sp1); }
+.cl-board-link { display: inline-flex; align-items: center; min-height: var(--touch); color: var(--t1); font-weight: 600; text-decoration: underline; text-underline-offset: 4px; }
+.cl-board-note { margin: calc(-1 * var(--sp2)) 0 0; font-size: var(--s14); color: var(--t3); }
+.cl-board-list { display: flex; flex-direction: column; gap: var(--sp4); }
+.cl-board-casebook { scroll-margin-top: var(--sp4); }
+
+.cl-card { position: relative; border: 1px solid var(--hair-2); border-radius: var(--r2); background: var(--ink-1); overflow: hidden; }
+.cl-card-open:hover { border-color: var(--t3); }
+.cl-card-open:focus-within { outline: 2px solid var(--act); outline-offset: 2px; }
+.cl-card-scene { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--sp2); min-height: 104px; padding: var(--sp3); border-bottom: 1px solid var(--hair); }
+.cl-card-scene.plate::after { background: linear-gradient(0deg, rgba(8, 13, 22, 0.6) 0%, rgba(8, 13, 22, 0.1) 70%); }
+.cl-card-type, .cl-card-left { display: inline-flex; align-items: center; gap: var(--sp2); padding: var(--sp1) var(--sp2); border-radius: var(--r1); background: rgba(8, 13, 22, 0.62); color: var(--t1); font-size: var(--s14); font-weight: 600; }
+.cl-card-type .ct-badge-label { font-size: var(--s14); }
+.cl-card-setting { display: inline-flex; align-items: center; gap: var(--sp1); text-transform: capitalize; }
+.cl-card-left { font-variant-numeric: tabular-nums; }
+.cl-card-newmark { position: absolute; top: var(--sp3); right: var(--sp3); padding: 2px var(--sp2); border-radius: var(--r1); background: rgba(8, 13, 22, 0.62); color: var(--act-text); font-size: var(--s12); font-weight: 700; }
+.cl-card-body { display: flex; flex-direction: column; gap: var(--sp2); padding: var(--sp3) var(--sp4) var(--sp3); }
+.cl-card-title { margin: 0; font: 600 var(--s22)/1.15 var(--f-title); color: var(--t1); overflow-wrap: anywhere; }
+.cl-card-button { all: unset; cursor: pointer; }
+/* The whole card is the tap target; the title's button stretches over it. */
+.cl-card-button::after { content: ''; position: absolute; inset: 0; z-index: 1; }
+.cl-card-button:focus-visible { outline: none; }
+.cl-card-place { margin: calc(-1 * var(--sp1)) 0 0; font-size: var(--s14); color: var(--t2); }
+.cl-card-hook { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; margin: 0; font-size: var(--s16); line-height: 1.45; color: var(--t1); }
+.cl-card-warning { margin: 0; font-size: var(--s14); color: var(--t3); }
+.cl-card-facts { display: flex; flex-wrap: wrap; gap: var(--sp1); }
+.cl-card-fact { display: inline-flex; align-items: center; gap: var(--sp1); font-size: var(--s14); color: var(--t2); }
+.cl-card-issue { display: flex; align-items: flex-start; gap: var(--sp1); margin: 0; font-size: var(--s14); color: var(--warn-text); }
+.cl-card-issue .icon { flex: 0 0 auto; margin-top: 2px; }
+.cl-card-foot { display: flex; align-items: center; gap: var(--sp2); min-height: var(--touch); padding-top: var(--sp1); }
+.cl-card-ready { display: inline-flex; align-items: center; gap: var(--sp2); flex: 1 1 auto; min-width: 0; font-size: var(--s14); color: var(--t2); }
+.cl-ready-badges { display: inline-flex; gap: var(--sp1); }
+.cl-ready-badges .squad-badge { width: 28px; height: 28px; font-size: var(--s14); }
+.cl-ready-text { min-width: 0; }
+.cl-card-pay { display: inline-flex; align-items: baseline; gap: var(--sp2); flex: 0 0 auto; font-size: var(--s14); color: var(--t2); font-variant-numeric: tabular-nums; }
+.cl-card-pay b { font-size: var(--s16); color: var(--t1); }
+.cl-card-chevron { flex: 0 0 auto; color: var(--t3); }
+.cl-card .optile-bring { position: relative; z-index: 2; }
+.cl-warn { color: var(--warn-text); }
+
+/* ------------------------------------------------------------ a pushed flow: head, body, action bar */
+.cl-flow { flex: 1 0 auto; display: flex; flex-direction: column; min-height: 100%; }
+.cl-head { position: sticky; top: 0; z-index: 6; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: var(--sp2); min-height: 52px; padding: 0 var(--gutter); background: var(--ink-1); border-bottom: 1px solid var(--hair); }
+.cl-head-side { display: flex; align-items: center; min-width: 0; }
+.cl-head-end { justify-content: flex-end; }
+.cl-head-back { display: inline-flex; align-items: center; gap: 2px; min-height: var(--touch); margin-left: calc(-1 * var(--sp2)); padding: 0 var(--sp2); border: 0; background: none; color: var(--t2); font: 500 var(--s16)/1 var(--f-ui); cursor: pointer; }
+.cl-head-back:hover { color: var(--t1); }
+.cl-head-title { margin: 0; max-width: 60vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 600 var(--s18)/1.2 var(--f-title); color: var(--t1); text-align: center; }
+.cl-head-title:focus { outline: none; }
+.cl-head-title:focus-visible { outline: 2px solid var(--act); outline-offset: 4px; }
+.cl-head-chip { min-height: var(--touch); min-width: 64px; padding: 0 var(--sp4); border: 1px solid var(--hair-2); border-radius: 999px; background: transparent; color: var(--t1); font: 600 var(--s14)/1 var(--f-ui); cursor: pointer; }
+.cl-flow-body { flex: 1 0 auto; gap: var(--sp5); padding-top: var(--sp4); }
+.cl-flow-foot { position: sticky; bottom: 0; z-index: 5; }
+.cl-flow-foot .action-bar-summary { display: flex; justify-content: space-between; gap: var(--sp3); }
+.cl-flow-foot .action-bar-summary > span:last-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: right; }
+.cl-tone-good { color: var(--good-text); }
+.cl-tone-warn { color: var(--warn-text); }
+.cl-tone-act { color: var(--act-text); }
+
+/* ------------------------------------------------------------ deploy */
+.cl-section { display: flex; flex-direction: column; gap: var(--sp2); }
+.cl-section-head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp3); min-height: var(--touch); }
+.cl-section-title { margin: 0; font: 600 var(--s16)/1.3 var(--f-ui); color: var(--t2); }
+.cl-section-aside { font-size: var(--s14); color: var(--t3); }
+.cl-link { min-height: var(--touch); padding: 0 var(--sp1); border: 0; background: none; color: var(--t1); font: 600 var(--s16)/1 var(--f-ui); text-decoration: underline; text-underline-offset: 4px; cursor: pointer; }
+.cl-squads { display: flex; flex-direction: column; margin: 0 calc(-1 * var(--gutter)); }
+.cl-squad { display: flex; align-items: center; gap: var(--sp3); min-height: 64px; padding: var(--sp2) var(--gutter); border: 0; border-bottom: 1px solid var(--hair); background: transparent; color: var(--t1); text-align: left; cursor: pointer; }
+.cl-squad:first-child { border-top: 1px solid var(--hair); }
+.cl-squad-on { background: var(--act-soft); box-shadow: inset 3px 0 0 var(--act); }
+.cl-squad-on .squad-badge { background: var(--act); border-color: var(--act); color: var(--act-ink); }
+.cl-squad:disabled { opacity: 0.55; cursor: default; }
+.cl-squad-main { display: flex; flex-direction: column; gap: 2px; flex: 1 1 auto; min-width: 0; }
+.cl-squad-main strong { font-size: var(--s18); }
+.cl-squad-main > span { font-size: var(--s14); color: var(--t2); }
+.cl-squad-main > span.cl-warn { color: var(--warn-text); }
+.cl-faces { display: inline-flex; flex: 0 0 auto; }
+.cl-face { margin-left: -8px; border-radius: 50%; box-shadow: 0 0 0 2px var(--ink-0); overflow: hidden; line-height: 0; }
+.cl-basic-kit { margin: 0; font-size: var(--s14); color: var(--t2); }
+.cl-muted { margin: 0; font-size: var(--s14); color: var(--t3); }
+.cl-kit { display: flex; flex-wrap: wrap; gap: var(--sp2); margin: 0; padding: 0; list-style: none; }
+.cl-kit-chip { display: inline-flex; align-items: center; min-height: 32px; padding: 0 var(--sp3); border-radius: 999px; border: 1px solid var(--hair-2); background: var(--ink-2); font-size: var(--s14); font-weight: 600; color: var(--t1); }
+.cl-kit-short { background: transparent; color: var(--t2); font-weight: 500; border-style: dashed; }
+.cl-kit-warn { border-color: var(--warn); color: var(--warn-text); }
+.cl-going { display: flex; flex-direction: column; gap: 2px; margin: 0; }
+.cl-going strong { font-size: var(--s16); color: var(--t1); }
+.cl-going span { font-size: var(--s14); color: var(--t2); }
+.cl-kit-workspace .prepsquad-head { display: flex; flex-wrap: wrap; gap: var(--sp2); }
+.cl-going-workspace { display: flex; flex-direction: column; gap: var(--sp3); }
+
+/* ------------------------------------------------------------ live call */
+.live-continue-note { margin: 0 0 var(--sp2); font-size: var(--s14); color: var(--t2); }
+.live-scene-where .squad-badge { width: 28px; height: 28px; font-size: var(--s14); }
+.assignment-choice strong { display: inline-flex; align-items: center; gap: var(--sp2); font-size: var(--s14); }
+.assignment-choice .squad-badge { width: 24px; height: 24px; font-size: var(--s14); }

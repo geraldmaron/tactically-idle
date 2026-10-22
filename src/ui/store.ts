@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from 'react';
 import type { Command, GameState, HandlerResult } from '../sim/types';
 import { dueLapse, liveDither } from './timer';
+import { decisionPauseCommand } from './decision-pause';
 import { CampaignSlots } from '../sim/campaign-slots';
 import { withSaveLock } from '../sim/save-lock';
 import { createSaveEnvironment } from './save-environment';
@@ -60,14 +61,25 @@ export function send(cmd: Command): HandlerResult {
   return result;
 }
 
-/** A stall counts only while the player can see it (owner 2026-10-21): hiding the app pauses the
- * open decision and coming back resumes it, moved on by the time away. The store owns it, so it
- * holds on every screen, not only the live call's. */
-function syncDecisionVisibility(): void {
-  const run = getState().activeRun;
-  if (!run || run.status !== 'active' || typeof document === 'undefined') return;
-  if (document.visibilityState === 'hidden' && !run.decisionPending && run.decisionPausedAt === undefined) send({ type: 'pauseDecision', revision: run.revision });
-  if (document.visibilityState === 'visible' && run.decisionPausedAt !== undefined) send({ type: 'resumeDecision', revision: run.revision });
+/** Whether the live call is on screen: OpsLive says so while it is mounted (setLiveCallShown). */
+let liveCallShown = false;
+
+/** A stall counts only while the player can see it (owner 2026-10-21): the live call is on screen and
+ * the page is visible (ui/decision-pause.ts). Hiding the app or stepping off the call pauses the open
+ * decision; only coming back to the call resumes it, moved on by the time away. The store owns it, so
+ * it holds on every screen, and visibility alone never resumes a call the player stepped out of. */
+function syncDecisionPause(): void {
+  if (typeof document === 'undefined') return;
+  const command = decisionPauseCommand(getState(), { callShown: liveCallShown, pageVisible: document.visibilityState === 'visible' });
+  if (command) send(command);
+}
+
+/** OpsLive mounts and unmounts the live call. Leaving it pauses the decision once the commit is done,
+ * so a remount in the same commit (StrictMode, a re-key) sends nothing. */
+export function setLiveCallShown(shown: boolean): void {
+  liveCallShown = shown;
+  if (shown) syncDecisionPause();
+  else queueMicrotask(syncDecisionPause);
 }
 
 /** Settle the open decision's run-out when it is due (ui/timer.ts dueLapse), whatever screen shows. */
@@ -136,9 +148,9 @@ if (typeof window !== 'undefined') {
   });
   // iOS often skips beforeunload and may kill a hidden tab, so settle and save the moment the page
   // hides instead of waiting for the next tick.
-  syncDecisionVisibility();
-  document.addEventListener('visibilitychange', () => { syncDecisionVisibility(); send({ type: 'tick' }); });
-  window.addEventListener('pagehide', () => { syncDecisionVisibility(); send({ type: 'tick' }); });
+  syncDecisionPause();
+  document.addEventListener('visibilitychange', () => { syncDecisionPause(); send({ type: 'tick' }); });
+  window.addEventListener('pagehide', () => { syncDecisionPause(); send({ type: 'tick' }); });
   window.addEventListener('storage', (event) => {
     if (event.key === 'tactically-idle/campaign-slots') {
       campaigns.reportStorageIssue('Saves changed in another tab. Reload to see them before making further changes. This tab will not overwrite them.');

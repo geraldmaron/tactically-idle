@@ -7,13 +7,15 @@
 .app:has(.live-one) .topbar { display: none; }
 .live .live-head { padding: 10px var(--gutter) 6px; background: var(--ink-0); display: grid; gap: 4px; }
 .live .live-strip { position: sticky; top: 0; z-index: 6; display: grid; gap: 3px; padding: 4px var(--gutter) 6px; border-bottom: 1px solid var(--line); background: var(--ink-1); box-shadow: 0 8px 18px -12px rgba(0, 0, 0, 0.9); }
-.live .live-strip-head { display: flex; align-items: flex-start; gap: 8px; min-width: 0; }
+.live .live-strip-head { display: flex; align-items: center; gap: var(--sp2); min-width: 0; }
+.live .live-stepout { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 2px; min-height: var(--touch); margin-left: calc(-1 * var(--sp2)); padding: 0 var(--sp2); border: 0; background: none; color: var(--t2); font: 500 var(--s16)/1 var(--f-ui); cursor: pointer; }
+.live .live-stepout:hover { color: var(--t1); }
 .live .live-title { display: grid; flex: 1 1 auto; min-width: 0; padding: 0; border: 0; background: none; color: var(--text); text-align: left; cursor: pointer; }
 .live .live-title:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
-.live .live-name { font: 700 19px/1.1 var(--font-cond); letter-spacing: 0.02em; overflow-wrap: anywhere; }
-.live .live-title-more { display: inline-flex; align-items: center; gap: 4px; margin-top: 2px; font: 600 12px/1.2 var(--font-ui); color: var(--t2); }
-.live .live-sub { display: flex; flex-wrap: wrap; align-items: center; margin: 0; gap: 2px 10px; font-size: 12px; color: var(--text-dim); }
-.live .live-sub .live-cancel { margin-left: auto; }
+.live .live-name { font: 600 var(--s18)/1.15 var(--f-title); overflow-wrap: anywhere; }
+.live .live-title-more { display: inline-flex; align-items: center; gap: 4px; margin-top: 2px; font: 600 var(--s14)/1.2 var(--f-ui); color: var(--t2); }
+.live .live-sub { display: flex; flex-wrap: wrap; align-items: center; margin: 0; gap: var(--sp1) var(--sp3); font-size: var(--s14); color: var(--t2); }
+.live .live-strip-head .live-cancel { flex: 0 0 auto; margin-left: auto; }
 /* Lights and sirens on a hot call (owner, 2026-10-20): a small red and blue light bar in the call bar,
  * the game's second looping signal (motion.test.ts, docs/call-presentation.md). Each light flashes
  * once a cycle, red then blue, 2.5 flashes a second in all: under the WCAG 2.3.1 three-flash limit,
@@ -52,8 +54,8 @@
   .live-wash i:first-child { transform: translateX(-45%); }
   .live-wash i:last-child { transform: translateX(70%); }
 }
-.live .live-status { display: flex; flex: 0 0 auto; flex-direction: column; align-items: flex-end; gap: 3px; }
-.live .live-status .hud-pill { padding: 2px 8px; font-size: 12px; }
+.live .live-status { display: inline-flex; flex: 0 0 auto; align-items: center; gap: var(--sp1); margin-left: auto; }
+.live .live-status .hud-pill { padding: 2px 8px; font-size: var(--s14); }
 .live .steps { padding: 2px 2px 0; }
 .live .step { gap: 2px; }
 .live .step-track { height: 12px; }
@@ -287,11 +289,11 @@
  * summary (the pull and the full reading are in the review sheet). */
 .live .operation-choices .callbtn-weighed { display: flex; padding: 9px 11px; cursor: pointer; }
 .live .callbtn-weighed .callbtn-cost { display: block; margin-top: 0; }
-.action-sheet-weigh { display: grid; gap: 6px; margin: 0 0 10px; }
-.action-sheet-weigh > div { display: grid; gap: 2px; }
-.action-sheet-weigh dt { font: 700 12.5px/1.2 var(--font-cond); color: var(--t2); }
-.action-sheet-weigh-cost dt { color: var(--harm-text); }
-.action-sheet-weigh dd { margin: 0; font-size: 14px; line-height: 1.5; color: var(--t1); }
+.action-sheet-weigh { display: grid; gap: var(--sp2); margin: 0; }
+.action-sheet-weigh > div { display: block; font-size: var(--s16); line-height: 1.45; }
+.action-sheet-weigh dt { display: inline; margin-right: var(--sp1); font-weight: 700; color: var(--t1); }
+.action-sheet-weigh-cost dt { color: var(--t1); }
+.action-sheet-weigh dd { display: inline; margin: 0; color: var(--t2); }
 
 /* At 200% text a phone is about 420px tall, and the pinned strip would cover most of it: below that
  * height the strip scrolls with the page instead, so the cards stay reachable. */

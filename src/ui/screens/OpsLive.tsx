@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getState, send, settleLapse, useGame } from '../store';
+import { getState, send, setLiveCallShown, settleLapse, useGame } from '../store';
 import { liveDither } from '../timer';
 import { playHeartbeat, setMurmur, stopLiveAudio, unlockAudio } from '../audio/live-audio';
 import { liveFillViews } from './fill-gauge';
@@ -8,6 +8,7 @@ import { decisionViews, lastResolution } from '../../sim/operation-selectors';
 import type { Id, SquadId } from '../../sim/types';
 import { decisionsOf } from '../../sim/types';
 import { useToast } from '../components/toast';
+import { useNav } from '../components/nav';
 import { Sheet } from '../components/Sheet';
 import { Button } from '../components/ui';
 import { OpenInLab } from '../components/OpenInLab';
@@ -34,6 +35,7 @@ export function OpsLive() {
   const g = useGame();
   const now = Date.now();
   const { act } = useToast();
+  const nav = useNav();
   const run = g.activeRun!;
 
   const [focusId, setFocusId] = useState<SquadId | null>(() => decisionsOf(run.history).at(-1)?.actingSquadIds[0] ?? null);
@@ -54,13 +56,18 @@ export function OpsLive() {
   // The scene moves while the player decides (docs/call-pressure.md, "The live decision"), so the
   // screen reads the clock four times a second (the store's own tick is every five).
   // When the drain runs out with no choice made the call moves on (docs/call-pressure.md, "When the
-  // time runs out"); the store's own tick settles it on any other screen.
+  // time runs out"). Off this screen the decision is paused, so nothing runs out there.
   const [, setSecond] = useState(0);
   useEffect(() => {
     const timer = window.setInterval(() => { settleLapse(); setSecond((n) => n + 1); }, 250);
     return () => window.clearInterval(timer);
   }, []);
-  // Hiding the app pauses the open decision; the store owns that on every screen (ui/store.ts).
+  // The open decision's stall runs only while this screen shows and the page is visible; stepping
+  // off the call pauses it and coming back resumes it (ui/decision-pause.ts, owned by the store).
+  useEffect(() => {
+    setLiveCallShown(true);
+    return () => setLiveCallShown(false);
+  }, []);
   // Sound starts on the first touch (browsers refuse it before) and fades out when the call ends.
   useEffect(() => {
     const unlock = () => unlockAudio();
@@ -108,7 +115,7 @@ export function OpsLive() {
     if (hot && typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') navigator.vibrate(30);
   }, [hot]);
 
-  if (!screen) return <div className="page"><p className="dim">Operation location unavailable.</p></div>;
+  if (!screen) return <div className="page"><p className="dim">This call's building is unavailable.</p></div>;
   const { model, review } = screen;
   const { deployed, focus, view, acting, support, actionRule, maxActing, resupply, lead, bestFit, leadOrder, leadOfficerId, leadMarks, leadBlend, leadCerts, alternatives, scenario, spaceById, targetLabel, availableMembers, actorUnavailable, floorOf } = review;
   const actions = model.actions;
@@ -182,7 +189,8 @@ export function OpsLive() {
         if (current?.status === 'active' && current.decisionPending) send({ type: 'openDecision', revision: current.revision });
         if (typeof requestAnimationFrame === 'function') requestAnimationFrame(revealLastDecision);
       }}
-      continueLabel={nextStage ? `Continue to ${nextStage}` : 'Continue'}
+      continueLabel="Continue"
+      continueNote={nextStage ? `Next: ${nextStage}` : undefined}
       people={people}
       onFocusSquad={(id) => {
         if (view && actorUnavailable(id)) return;
@@ -201,6 +209,7 @@ export function OpsLive() {
       onFloorChange={setFloor}
       onToggleRooms={() => setShowRooms((v) => !v)}
       onCancel={() => setConfirmCancel(true)}
+      onStepOut={() => nav.go('hq')}
       onOpenDetails={() => { setActionFromSupport(false); setPanel(panel === 'action' ? 'none' : 'action'); }}
       feedback={<OperationFeedback officers={g.officers} decisions={decisions} folded={beat === 'decide'} explicitCompletion={(scenario?.version ?? 0) >= 4} currentPrompt={model.progress.prompt} onOpenLog={() => setPanel('none')} />}
       scene={sceneFor(scenario?.incident?.type)}
@@ -305,17 +314,17 @@ export function OpsLive() {
       <Sheet
         open={confirmCancel}
         onClose={() => setConfirmCancel(false)}
-        title="Cancel this operation?"
+        title="Cancel this call?"
         footer={
           <div className="row-actions">
             <Button onClick={() => setConfirmCancel(false)}>Keep going</Button>
             <Button
               variant="danger"
               onClick={() => {
-                if (act({ type: 'cancelOperation' }, 'Operation canceled. Gear released.').ok) setConfirmCancel(false);
+                if (act({ type: 'cancelOperation' }, 'Call canceled. Gear released.').ok) setConfirmCancel(false);
               }}
             >
-              Cancel operation
+              Cancel the call
             </Button>
           </div>
         }

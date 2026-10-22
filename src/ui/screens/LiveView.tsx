@@ -37,7 +37,8 @@ import { describeConstruction } from '../../sim/spatial';
 import { Icon, actionIcon, materialIcon, roomIcon } from '../icons';
 import type { IconName } from '../icons';
 import { feetInches, opMinutes, signed, sqft } from '../format';
-import { CONSEQUENCE_LABEL, OddsBar, OutcomeForecast } from './OperationFeedback';
+import { CONSEQUENCE_LABEL, OutcomeForecast } from './OperationFeedback';
+import { joinNames, squadName } from './operation-squads';
 import { DecisionList, LeadFace, RATING_SHORT, NOW_LABEL, padDigits } from './DecisionList';
 import { fillEffectLine, fillMinutesToBite, leadingPressure, liveFillViews, liveStallFeed, pressureUrgency, reachByAction, threatLandingText, landingSubjects, type LandingSubject } from './fill-gauge';
 import { CommsLog, SourceTicker } from './LiveFeed';
@@ -62,7 +63,7 @@ export interface LiveViewProps {
   g: GameState;
   now: number;
   title: string;
-  /** e.g. 'RESIDENTIAL / OP 0141' */
+  /** e.g. 'Residential · OP 0141' */
   subtitle: string;
   progress: StageProgress;
   /** The open decision's stall in game minutes; the threat pill's bar drains by it. */
@@ -96,6 +97,8 @@ export interface LiveViewProps {
   pressure: number;
   canCancel: boolean;
   onCancel: () => void;
+  /** Leave the call without cancelling it (OpsLive); the Lab leaves it out and shows no Step out. */
+  onStepOut?: () => void;
   onOpenDetails: () => void;
   detailsOpen: boolean;
   feedback?: ReactNode;
@@ -117,6 +120,8 @@ export interface LiveViewProps {
   /** Ends the result beat; shown as a pinned button labeled `continueLabel`. */
   onContinue?: () => void;
   continueLabel?: string;
+  /** Above Continue: what comes next ("Next: On the stream"). */
+  continueNote?: string;
   /** The game's people lexicon for this call: names are colored while "Color names by role" is on.
    * Left out (the Scenario Lab), the surrounding PeopleProvider decides. */
   people?: Lexicon | null;
@@ -189,7 +194,7 @@ export function LiveView(p: LiveViewProps) {
   const casualties = p.g.activeRun?.officerCasualties ?? {};
   const focusTask = focus ? p.squadTasks.find((task) => task.squadId === focus.id) : undefined;
   const focusWhere = p.spaces.find((space) => space.id === focusTask?.positionId)?.label ?? focusTask?.positionId;
-  const whereLine = focus ? `Squad ${focus.id}${focusWhere ? ` at ${focusWhere}` : ''}` : 'The scene';
+  const whereLine = focus ? `${focus.name}${focusWhere ? ` at ${focusWhere}` : ''}` : 'The scene';
   const officerShown = officerOpen ? p.officers.find((o) => o.id === officerOpen) ?? null : null;
   // A new beat starts on the story, with the full map closed.
   const beatKey = `${beat}:${p.lastChange?.revision ?? ''}`;
@@ -203,7 +208,7 @@ export function LiveView(p: LiveViewProps) {
   // What is said on scene while the player decides, read after the prompt and before the choices.
   const commsLog = <CommsLog lines={comms} landed={landed ? <ThreatLanded text={landed} subjects={subjects} /> : null} />;
 
-  const squadRow = <div className="live-squad" aria-label={focus ? `Squad ${focus.id}, ${focus.name}` : 'Your team'}>
+  const squadRow = <div className="live-squad" aria-label={focus ? focus.name : 'Your team'}>
     {multi && <div className="live-squad-rail operation-squad-focus">
       <ChoiceRail value={focus?.id ?? p.deployedSquads[0].id} kind="tabs" label="Squad for next decision" panelId="live-squad-faces" onChange={p.onFocusSquad} options={p.deployedSquads.map((s) => {
         // In the field, readiness means members still fit for high-risk work (not deploy eligibility).
@@ -212,10 +217,10 @@ export function LiveView(p: LiveViewProps) {
         const task = p.squadTasks.find(task => task.squadId === s.id);
         const location = p.spaces.find(space => space.id === task?.positionId)?.label ?? task?.positionId;
         const unavailable = p.unavailableSquadIds?.includes(s.id) && s.id !== focus?.id;
-        return { value: s.id, disabled: unavailable, accessibleLabel: `Squad ${s.id}, ${s.name}, ${fit} of ${went.length} fit${location ? `, at ${location}` : ''}${unavailable ? ', unavailable for this decision' : ''}`,
+        return { value: s.id, disabled: unavailable, accessibleLabel: `${s.name}, ${fit} of ${went.length} fit${location ? `, at ${location}` : ''}${unavailable ? ', unavailable for this decision' : ''}`,
           label: <><b>{s.id}</b><span className="squad-tab-detail"><span className="squad-tab-name">{s.name}</span>{location && <small>{location}</small>}</span><span className="choice-rail-count">{fit}/{went.length} fit</span></> };
       })} />
-      <p className="operation-squad-hint">{sel ? `Reviewing with ${sel.actingSquadIds.map(id => `Squad ${id}`).join(' + ')}. Switching here changes who acts.` : 'Choose who acts, then review a decision. Pick support in the review.'}</p>
+      <p className="operation-squad-hint">{sel ? `Reviewing with ${joinNames(sel.actingSquadIds.map(id => squadName(p.deployedSquads, id)))}. Switching here changes who acts.` : 'Choose who acts, then review a decision. Pick support in the review.'}</p>
     </div>}
     <ul className="live-squad-faces" id="live-squad-faces" role={multi ? 'tabpanel' : undefined}>
       {p.officers.map((o) => {
@@ -240,7 +245,8 @@ export function LiveView(p: LiveViewProps) {
   const story = <div className="live-story">
         {beat === 'result' ? <>          {p.feedback}
           {p.onContinue && <div className="stickyfoot live-continue">
-            <Button variant="primary" block onClick={p.onContinue}>{p.continueLabel ?? 'Continue'}<Icon name="chevronRight" size={18} /></Button>
+            {p.continueNote && <p className="live-continue-note">{p.continueNote}</p>}
+            <Button variant="primary" block onClick={p.onContinue}>{p.continueLabel ?? 'Continue'}</Button>
           </div>}
         </> : <>
           {p.feedback}
@@ -264,12 +270,21 @@ export function LiveView(p: LiveViewProps) {
           pressure that bites soonest, the threat or a gauge that fills. */}
       <header className="live-head">
         <div className="live-strip-head">
+          {/* Step out leaves the call without cancelling it; the call waits, paused, until the player
+              comes back (ui/decision-pause.ts). The Lab has no way out, so it shows none. */}
+          {p.onStepOut && <button type="button" className="live-stepout" onClick={p.onStepOut}><Icon name="chevronLeft" size={18} />Step out</button>}
           <button type="button" className="live-title" onClick={() => setBriefingOpen(true)} aria-haspopup="dialog" aria-expanded={briefingOpen}>
             <span className="live-name">{p.title}</span>
-            <span className="live-title-more"><Icon name="info" size={13} />Briefing</span>
+            <span className="live-title-more"><Icon name="info" size={14} />Briefing</span>
           </button>
-          <span className="live-status" aria-label="Operation time and pressure">
-            <span className="hud-pill"><Icon name="clock" size={13} />{opMinutes(p.clock)}</span>
+          {p.canCancel && <button type="button" className="linkbtn live-cancel" onClick={p.onCancel} aria-label="Cancel the call">Cancel</button>}
+        </div>
+        <p className="live-sub">
+          <span className="live-flag"><i className="live-dot-amber" aria-hidden="true" />Live</span>
+          <span>{p.subtitle}</span>
+          {p.sirens && <span className="live-lightbar" role="img" aria-label="Lights and sirens"><i /><i /></span>}
+          <span className="live-status" aria-label="Call time and pressure">
+            <span className="hud-pill"><Icon name="clock" size={14} />{opMinutes(p.clock)}</span>
             <span className="hud-pill" title="Situation pressure">
               <span className="pmeter" role="img" aria-label={`Pressure ${Math.round(p.pressure)} of 100`}>
                 <i style={{ width: `${Math.max(4, Math.min(100, p.pressure))}%` }} />
@@ -277,12 +292,6 @@ export function LiveView(p: LiveViewProps) {
               <span>{pressureWord(p.pressure)}</span>
             </span>
           </span>
-        </div>
-        <p className="live-sub">
-          <span className="live-flag"><i className="live-dot-amber" aria-hidden="true" />LIVE</span>
-          <span>{p.subtitle}</span>
-          {p.sirens && <span className="live-lightbar" role="img" aria-label="Lights and sirens"><i /><i /></span>}
-          {p.canCancel && <button type="button" className="linkbtn live-cancel" onClick={p.onCancel} aria-label="Cancel operation">Cancel</button>}
         </p>
         {SHOW_CANDIDATE_SWITCH && <CandidateSwitch />}
       </header>
@@ -300,7 +309,7 @@ export function LiveView(p: LiveViewProps) {
           decide beat and folded under it on the result beat. */}
       <section className="live-scene" aria-label="The scene">
         <div className="live-scene-head">
-          <span className="live-scene-where"><Icon name="pin" size={14} />{whereLine}{changed && beat === 'result' && <Chip tone="amber" icon="blueprint">Map changed</Chip>}</span>
+          <span className="live-scene-where">{focus ? <span className="squad-badge" aria-hidden="true">{focus.id}</span> : <Icon name="pin" size={14} />}{whereLine}{changed && beat === 'result' && <Chip tone="amber" icon="blueprint">Map changed</Chip>}</span>
           <span className="live-scene-actions">
             {!mapFull && <button type="button" className="hud-btn hud-btn-quiet" onClick={() => setMapFull(true)}><Icon name="blueprint" size={15} />Full map</button>}
             {!mapFull && <button type="button" className="hud-btn hud-btn-quiet" onClick={toggleFold} aria-expanded={mapShown} aria-controls="live-map">
@@ -535,7 +544,7 @@ export function StageSteps({ progress }: { progress: StageProgress }) {
             <span className={`step-line${i === 0 ? ' step-line-hide' : ''}${s.state !== 'todo' ? ' step-line-on' : ''}`} />
             <span className="step-dot">{s.state === 'done' && <Icon name="check" size={9} strokeWidth={3.2} />}</span>
           </span>
-          <span className="step-label">{s.label.toUpperCase()}</span>
+          <span className="step-label">{s.label}</span>
           <span className="sr-only">{s.state === 'done' ? ' complete' : s.state === 'current' ? ' current' : ' upcoming'}</span>
         </li>
       ))}
@@ -624,9 +633,11 @@ export function ActionSheet(p: ActionSheetProps) {
     };
   }, [shown, modal, v?.id]);
   const availableAlternative = p.all.find((action) => action.id !== v?.id && action.eligible);
-  const names = (ids: SquadId[]) => ids.map((id) => p.squads.find((s) => s.id === id)?.name ?? id);
-  const squadText = p.acting.length === 0 ? 'No squad' : p.acting.length === 1 ? `Squad ${p.acting[0]}` : `Squads ${p.acting.join(' + ')}`;
-  const supportingText = p.support.length ? ` · Support: ${p.support.join(' + ')}` : '';
+  const names = (ids: SquadId[]) => ids.map((id) => squadName(p.squads, id));
+  // The action bar's summary (docs/ui-ux-audit.md): who acts, the time and the supplies, with the
+  // harm beside them. The card shows the same estimate and harm; the sheet doesn't repeat them.
+  const squadText = p.acting.length === 0 ? 'No squad' : joinNames(names(p.acting));
+  const supportingText = p.support.length ? `, ${joinNames(names(p.support))} supporting` : '';
   const resupplyNames = p.resupply?.items.reduce((list, item) => {
     const row = list.find((entry) => entry.id === item.itemId);
     if (row) row.qty += 1;
@@ -641,16 +652,16 @@ export function ActionSheet(p: ActionSheetProps) {
       maxHeight="short"
       className="operation-action-sheet"
       title={v ? v.title : ''}
-      subtitle={v ? <span className="action-sheet-glance">
-        {v.eligible && !v.eventResult ? <OddsBar likelihood={v.likelihood} /> : <span className="action-sheet-locked"><Icon name={v.eligible ? 'flag' : 'lock'} size={13} />{v.eligible ? 'Set event' : 'Requirements unmet'}</span>}
-        <span className={`consequence-level consequence-${v.consequenceLevel}`}>Harm {CONSEQUENCE_LABEL[v.consequenceLevel].toLowerCase()}</span>
-      </span> : undefined}
+      subtitle={v && !v.eligible ? <span className="action-sheet-locked"><Icon name="lock" size={14} />Requirements unmet</span> : undefined}
       footer={
         v && (
           <div className="operation-commit">
-            <p className="operation-commit-meta">Acting: {squadText}{supportingText} · Est. {v.timeLabel ?? opMinutes(v.timeCost)}{v.suppliesRequired.length ? ` · ${v.suppliesRequired.reduce((total, item) => total + item.qty, 0)} supplies` : ' · No supplies'}</p>
-            <Button variant="primary" block disabled={!v.eligible || p.acting.length === 0} onClick={p.onConfirm}>
-              Confirm: {v.title}
+            <p className="operation-commit-meta">
+              <span>{squadText}{supportingText} · about {v.timeLabel ?? opMinutes(v.timeCost)} · {v.suppliesRequired.length ? `${v.suppliesRequired.reduce((total, item) => total + item.qty, 0)} supplies` : 'no supplies'}</span>
+              <span className={`consequence-level consequence-${v.consequenceLevel}`}>Harm {CONSEQUENCE_LABEL[v.consequenceLevel].toLowerCase()}</span>
+            </p>
+            <Button variant="primary" block disabled={!v.eligible || p.acting.length === 0} onClick={p.onConfirm} aria-label={`Confirm ${v.title}`}>
+              Confirm
             </Button>
           </div>
         )
@@ -659,23 +670,19 @@ export function ActionSheet(p: ActionSheetProps) {
       {v && (
         <div className="adetail">
           {p.onBackToSupport && <Button variant="ghost" onClick={p.onBackToSupport}>Back to care &amp; support</Button>}
-          {p.preview}
+          {/* Cost and the three outcomes first (docs/ops-experience.md, Review), then who acts and
+              leads, then the map and the rest. Every control stays. */}
+          {v.weighing ? <dl className="action-sheet-weigh">
+            <div className="action-sheet-weigh-cost"><dt>The cost.</dt><dd><PeopleText text={v.weighing.cost} /></dd></div>
+            <div><dt>The pull.</dt><dd><PeopleText text={v.weighing.pull} /></dd></div>
+          </dl> : v.summary !== v.outcomePreview.favorable && <p className="operation-action-summary"><PeopleText text={v.summary} /></p>}
+          <OutcomeForecast action={v} />
+          {v.timeRange && !v.timeLabel && v.timeRange.min !== v.timeRange.max && <p className="operation-note operation-time-range">Takes {v.timeRange.min}–{opMinutes(v.timeRange.max)} depending on the result.</p>}
           {p.squads.length > 1 && <ActionSquadAssignment {...p} view={v} />}
-          {v.summary !== v.outcomePreview.favorable && <p className="operation-action-summary"><PeopleText text={v.summary} /></p>}
-          {/* A weighed choice's pull and cost, read here since its card shows only the cost. */}
-          {v.weighing && <dl className="action-sheet-weigh">
-            <div><dt>The pull</dt><dd><PeopleText text={v.weighing.pull} /></dd></div>
-            <div className="action-sheet-weigh-cost"><dt>The cost</dt><dd><PeopleText text={v.weighing.cost} /></dd></div>
-          </dl>}
           {p.officers && v.eligible && <LeadPicker view={v} officers={p.officers} lead={p.lead ?? v.officerIds[0] ?? null} bestFit={p.bestFit ?? null} order={p.leadOrder} marks={p.leadMarks ?? []} blend={p.leadBlend ?? []} certs={p.leadCerts ?? []} onPick={p.onPickLead} />}
           {v.eligible && v.authority?.allowed && <p className="operation-command-line"><Icon name="radio" size={14} />{v.authority.reason}</p>}
-          <div className="chips action-glance">
-            <Chip icon="clock">Estimated time: {v.timeLabel ?? opMinutes(v.timeCost)}</Chip>
-            {p.targetLabel && <Chip icon="pin">{p.targetLabel}</Chip>}
-            {names(p.support).length > 0 && <Chip tone="blue" icon="handover">Support: {names(p.support).join(', ')}</Chip>}
-          </div>
-          {v.timeRange && !v.timeLabel && <p className="operation-note operation-time-range">{v.timeRange.min === v.timeRange.max ? `${opMinutes(v.timeRange.min)} for any outcome.` : `${v.timeRange.min}–${opMinutes(v.timeRange.max)} depending on the result.`}</p>}
-          <OutcomeForecast action={v} />
+          {p.targetLabel && <p className="action-sheet-where"><Icon name="pin" size={14} />{p.targetLabel}</p>}
+          {p.preview}
           <dl className="operation-costs">
             <div><dt>Requirements</dt><dd className="chips">{requirementParts(v.requirementLine).map((part) => <Chip key={part} tone={v.eligible ? 'mint' : 'neutral'} icon={v.eligible ? 'check' : 'list'}>{part}</Chip>)}</dd></div>
             <div><dt>Supplies used when confirmed</dt><dd className="chips">{v.suppliesRequired.length ? v.suppliesRequired.map((item) => <Chip key={item.label} icon="box">{`${item.qty} × ${item.label}`}</Chip>) : <Chip>None</Chip>}</dd></div>
@@ -694,7 +701,7 @@ export function ActionSheet(p: ActionSheetProps) {
                   {p.resupply.ok ? (
                     <>
                       <ul className="action-resolution-items">
-                        {p.resupply.items.map((item) => <li key={item.unitId}>Squad {item.squadId}: {item.name} · {item.serial}</li>)}
+                        {p.resupply.items.map((item) => <li key={item.unitId}>{squadName(p.squads, item.squadId)}: {item.name} · {item.serial}</li>)}
                       </ul>
                       <p className="action-resolution-note dim">Only the listed equipment is delivered to your chosen squads from owned stock. Your decision and squad choices stay selected for review.</p>
                       <p className="action-resolution-note dim">Available while staged outside, before your first decision. Delivery takes {p.resupply.minutes} minutes, raises pressure and commits this operation. You can no longer cancel after delivery.</p>
@@ -708,7 +715,7 @@ export function ActionSheet(p: ActionSheetProps) {
                   <strong className="action-resolution-title">Ready to act</strong>
                   <p className="action-resolution-note dim">These deployed squads meet this action’s requirements.</p>
                   <div className="action-resolution-actions">
-                    {p.alternatives.map((candidate) => <Button key={candidate.actingSquadIds.join('-')} onClick={() => p.onUseAlternative?.(candidate)}>Use Squad {candidate.actingSquadIds.join(' + ')} · {names(candidate.actingSquadIds).join(' + ')}</Button>)}
+                    {p.alternatives.map((candidate) => <Button key={candidate.actingSquadIds.join('-')} onClick={() => p.onUseAlternative?.(candidate)}>Use {joinNames(names(candidate.actingSquadIds))}</Button>)}
                   </div>
                 </>
               )}
@@ -849,7 +856,7 @@ export function ActionSquadAssignment(p: ActionSheetProps & { view: ActionView }
           const full = maxActing > 1 && p.acting.length >= maxActing;
           return <button key={squad.id} type="button" className={`pill assignment-choice${selected ? ' pill-on' : ''}`} aria-pressed={selected}
             disabled={!selected && (unavailable || full)} onClick={() => p.onToggleActing(squad.id)}>
-            <strong>{squad.id} · {squad.name}{selected ? ' · Acting' : ''}</strong>
+            <strong><span className="squad-badge" aria-hidden="true">{squad.id}</span>{squad.name}{selected ? ' acts' : ''}</strong>
             {p.squadPositions?.[squad.id] && <small>At {p.squadPositions[squad.id]}</small>}
             {unavailable && <small>All officers out of action</small>}
           </button>;
@@ -865,7 +872,7 @@ export function ActionSquadAssignment(p: ActionSheetProps & { view: ActionView }
           const unavailable = p.unavailableSupport?.includes(squad.id);
           return <button key={squad.id} type="button" className={`pill assignment-choice${selected ? ' pill-on' : ''}`} aria-pressed={selected}
             disabled={!selected && (unavailable || p.support.length >= p.view.support!.maxSquads)} onClick={() => p.onToggleSupport(squad.id)}>
-            <strong>{squad.id} · {squad.name}{selected ? ' · Supporting' : ''}</strong>
+            <strong><span className="squad-badge" aria-hidden="true">{squad.id}</span>{squad.name}{selected ? ' supports' : ''}</strong>
             {p.squadPositions?.[squad.id] && <small>At {p.squadPositions[squad.id]}</small>}
             {unavailable && <small>All officers out of action</small>}
           </button>;
@@ -874,7 +881,7 @@ export function ActionSquadAssignment(p: ActionSheetProps & { view: ActionView }
       </div>
     </div>}
     {p.participantNames && <p className="operation-squad-participants"><strong>Acting officers:</strong> {p.participantNames.length ? p.participantNames.join(', ') : 'No field participants'}</p>}
-    {remaining.length > 0 && <p className="operation-squad-hint">{remaining.map(squad => `Squad ${squad.id} remains${p.squadPositions?.[squad.id] ? ` at ${p.squadPositions[squad.id]}` : ' in position'}`).join('. ')}. All deployed squads still face time and strain.</p>}
+    {remaining.length > 0 && <p className="operation-squad-hint">{remaining.map(squad => `${squad.name} stays${p.squadPositions?.[squad.id] ? ` at ${p.squadPositions[squad.id]}` : ' in position'}`).join('. ')}. All deployed squads still face time and strain.</p>}
   </section>;
 }
 
@@ -999,7 +1006,7 @@ export function RoomSheet(p: RoomSheetProps) {
             <div className="chips">
               {s.squadsHere.map((id) => (
                 <Chip key={id} tone="blue" icon="people">
-                  {id} · {p.squads.find((q) => q.id === id)?.name ?? id}
+                  {squadName(p.squads, id)}
                 </Chip>
               ))}
             </div>

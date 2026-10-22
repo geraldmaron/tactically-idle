@@ -38,3 +38,14 @@ export function pickLead(participants: readonly Id[], bestFit: Id | null, curren
   if (!participants.includes(id)) return current;
   return id === bestFit ? undefined : id;
 }
+
+/** A squad as the player names it everywhere on a call: its name ("Alpha"), never "Squad A". The
+ * letter is the badge beside it. */
+export function squadName(squads: readonly { id: SquadId; name: string }[], id: SquadId): string {
+  return squads.find((squad) => squad.id === id)?.name ?? id;
+}
+
+/** "Alpha", "Alpha and Bravo", "Alpha, Bravo and Charlie". */
+export function joinNames(names: readonly string[]): string {
+  return names.length < 2 ? names[0] ?? '' : `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`;
+}

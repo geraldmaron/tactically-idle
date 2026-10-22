@@ -59,7 +59,7 @@ export function LeadFace({ officer, size = 22 }: { officer: LeadOfficer; size?: 
 function ChoiceTime({ a }: { a: ActionView }) {
   const threat = threatTag(a);
   const text = a.timeLabel ?? `~${opMinutes(a.timeCost)}`;
-  return threat ? <span className={`callbtn-time callbtn-time-${threat.kind}`} title={threat.text}>{text}<span className="sr-only">, {threat.kind === 'slow' ? 'too slow, the threat lands' : 'the threat can land'}</span></span> : <>{text}</>;
+  return threat ? <span className={`callbtn-time callbtn-time-${threat.kind}`} title={threat.text}>{text}<span className="sr-only">, {threat.kind === 'slow' ? 'too slow, the threat lands' : 'the threat can land'}</span></span> : <span>{text}</span>;
 }
 
 /** The lead's face and number: one wrapping row under the card text. */
@@ -163,11 +163,16 @@ function CardOdds({ likelihood }: Pick<ActionView, 'likelihood'>) {
   </span>;
 }
 
-/** The odds, time and possible harm every available choice shows. The chance holds a fixed width of
- * tabular digits, so the line never rewraps as the stall moves it. */
+/** The odds, harm and time every available choice shows, once each (docs/ui-ux-audit.md): the bar,
+ * then "90% goes well · Harm low · ~4 min". The chance holds a fixed width of tabular digits, so the
+ * line never rewraps as the stall moves it. */
 function Forecast({ a, id }: { a: ActionView; id: string }) {
   return <span className="callbtn-forecast">
     {!a.eventResult && <CardOdds likelihood={a.likelihood} />}
-    <span className="callbtn-forecast-text" id={id}><ChoiceTime a={a} /> · {!a.eventResult ? `${padDigits(outcomePercentages(a.likelihood).favorable, 2)}% chance to go well · ` : ''}<span className={`callbtn-harm callbtn-harm-${a.consequenceLevel}`}>possible harm: {CONSEQUENCE_LABEL[a.consequenceLevel].toLowerCase()}</span></span>
+    <span className="callbtn-forecast-text" id={id}>
+      {!a.eventResult && <span>{padDigits(outcomePercentages(a.likelihood).favorable, 2)}% goes well</span>}
+      <span className={`callbtn-harm callbtn-harm-${a.consequenceLevel}`}>Harm {CONSEQUENCE_LABEL[a.consequenceLevel].toLowerCase()}</span>
+      <ChoiceTime a={a} />
+    </span>
   </span>;
 }

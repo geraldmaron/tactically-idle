@@ -2,7 +2,7 @@
 // choosing a team, in the order they need it: who is inside, what the threat is, what the team must
 // do, and what is still unknown. Rendered from props alone so the Scenario Lab shows the player's
 // real briefing. Only what the player is told at dispatch: intel.ts never reads truth. Store-free.
-import type { JSX } from 'react';
+import type { JSX, ReactNode } from 'react';
 import { FactStatusChip } from '../components/FactStatusChip';
 import type { Briefing } from '../../sim/operation-selectors';
 import type { ScenarioDefinition } from '../../sim/scenario-types';
@@ -15,10 +15,13 @@ import { peopleLabel } from '../people/lexicon';
 import { IncidentBriefContext } from './SupportContext';
 import type { Intel, IntelLine } from './intel';
 import { Disclosure } from '../components/Disclosure';
+import { ColdOpen } from '../components/DepthBrief';
 import './prep-briefing.css';
 
 /** `built` is the call's building as the player sees it; the briefing reads it through `intel`. */
-export function PrepBriefing({ scenario, brief, intel }: { scenario: ScenarioDefinition | null | undefined; built: BuiltLocation; brief: Briefing; intel: Intel }): JSX.Element {
+export function PrepBriefing({ scenario, brief, intel, aside }: { scenario: ScenarioDefinition | null | undefined; built: BuiltLocation; brief: Briefing; intel: Intel;
+  /** Beside the orders' heading: the step ("Step 1 of 2"). */
+  aside?: ReactNode }): JSX.Element {
   const knownRest = brief.known.filter((k) => !intel.covered.has(k));
   // A person report is the person's location fact; the story binding says whose.
   const personOf = new Map(Object.values(scenario?.story?.bindings.people ?? {}).map((person) => [person.locationFactId, person.id]));
@@ -28,10 +31,18 @@ export function PrepBriefing({ scenario, brief, intel }: { scenario: ScenarioDef
   const unplaced = (scenario?.briefing.people ?? []).filter((person) => !reported.has(person.personId));
   return (
     <div className="pb">
-      {intel.threats.length > 0 && <section className="pb-block pb-threat" aria-labelledby="pb-threat-h">
-        <h3 id="pb-threat-h" className="pb-h"><Icon name="warning" size={15} />The threat</h3>
-        <ul className="pb-threats">{intel.threats.map((line) => <ThreatRow key={line.id} line={line} />)}</ul>
-      </section>}
+      {/* Orders and the threat first (docs/ops-experience.md, Brief), then the cold open whole, then
+          who is inside, what is unknown and the conditions. */}
+      <section className="pb-block pb-orders-panel" aria-labelledby="pb-orders-h">
+        <div className="pb-h-row">
+          <h3 id="pb-orders-h" className="pb-h">Your orders</h3>
+          {aside && <span className="pb-h-aside">{aside}</span>}
+        </div>
+        {brief.objectives.length ? <ol className="pb-orders">{brief.objectives.map((text, index) => <li key={index}><span className="pb-order-n" aria-hidden="true">{index + 1}</span><span><PeopleText text={text} /></span></li>)}</ol> : <p className="dim">No orders listed.</p>}
+        {intel.threats.length > 0 && <ul className="pb-threats" aria-label="The threat">{intel.threats.map((line) => <ThreatRow key={line.id} line={line} />)}</ul>}
+      </section>
+
+      <ColdOpen text={scenario?.coldOpen} className="pb-cold-open" />
 
       {(intel.people.length > 0 || unplaced.length > 0) && <section className="pb-block" aria-labelledby="pb-people-h">
         <h3 id="pb-people-h" className="pb-h"><Icon name="people" size={15} />Who’s inside</h3>
@@ -40,11 +51,6 @@ export function PrepBriefing({ scenario, brief, intel }: { scenario: ScenarioDef
           {unplaced.map((person) => <PersonCard key={person.personId} personId={person.personId} name={person.name} role={person.role} who={person.text} />)}
         </ul>
       </section>}
-
-      <section className="pb-block" aria-labelledby="pb-orders-h">
-        <h3 id="pb-orders-h" className="pb-h"><Icon name="flag" size={15} />Your orders</h3>
-        {brief.objectives.length ? <ol className="pb-orders">{brief.objectives.map((text, index) => <li key={index}><span className="pb-order-n" aria-hidden="true">{index + 1}</span><span><PeopleText text={text} /></span></li>)}</ol> : <p className="dim">No orders listed.</p>}
-      </section>
 
       {brief.unknown.length > 0 && <section className="pb-block pb-unknown" aria-labelledby="pb-unknown-h">
         <h3 id="pb-unknown-h" className="pb-h"><Icon name="search" size={15} />Still unknown</h3>
@@ -85,16 +91,13 @@ function PersonCard({ personId, name, role, who, status, where }: { personId: st
   </li>;
 }
 
-/** One weapon report: what, who holds it, where, and how sure dispatch is. */
+/** One weapon report in one line: what the report says and where, then who said it and how sure. */
 function ThreatRow({ line }: { line: IntelLine }) {
   return <li className="pb-threat-row">
-    <span className="pb-threat-icon" aria-hidden="true"><Icon name="warning" size={18} /></span>
+    <Icon name="warning" size={18} className="pb-threat-icon" />
     <div>
-      <strong>{line.label}{line.where ? <span className="dim"> · {line.where}</span> : null}</strong>
-      <p><PeopleText text={line.claim} /></p>
-      <span className="pb-where"><FactStatusChip status={line.status} />{line.source && <span className="pb-where-place"><Icon name="chat" size={12} />Reported by {line.source}</span>}</span>
+      <p className="pb-threat-claim"><PeopleText text={line.claim.replace(/\.$/, '')} />{line.where ? <span className="pb-threat-where"> · {line.where}</span> : null}</p>
+      <p className="pb-threat-source">{line.source ? `Reported by ${line.source}. ` : ''}<FactStatusChip status={line.status} /></p>
     </div>
   </li>;
 }
-
-

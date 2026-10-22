@@ -1,4 +1,5 @@
-import { useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
+import type { ReactNode } from 'react';
 import { useGame } from '../store';
 import {
   briefing,
@@ -21,12 +22,11 @@ import { getScenario } from '../../sim/scenario-registry';
 import type { Id, ItemUnit, SquadId, StagingPoint } from '../../sim/types';
 import { Blueprint } from '../blueprint/Blueprint';
 import { floorCount } from '../blueprint/floors';
-import { Button, Card, Section, Stepper, SubHead } from '../components/ui';
-import { familyBlurb, incidentMeta } from '../components/incident';
-import { PlateArt, sceneFor } from '../art/Plates';
+import { ActionBar, Button, Stepper, SubHead } from '../components/ui';
 import { Portrait } from '../portraits/Portrait';
 import { GearArt } from '../art/GearArt';
 import { useToast } from '../components/toast';
+import { Sheet } from '../components/Sheet';
 import { UNIT_STATE_META, unitStateOf } from '../components/labels';
 import { Icon } from '../icons';
 import type { IconName } from '../icons';
@@ -34,16 +34,16 @@ import { pct } from '../format';
 import { cardFor, hasNodeEffect, staysHomeLine } from './helpers';
 import { planAuto, preparationEquipmentFix } from './autoPlan';
 import { scenarioActions } from '../../sim/scenario-types';
-import type { AutoNote, Explicit, Loadouts } from './autoPlan';
+import type { Loadouts } from './autoPlan';
 import { buildIntel } from './intel';
 import { handCarriedLoadout, SupportPreparation } from './SupportPreparation';
 import { PrepBriefing } from './PrepBriefing';
-import { ColdOpen } from '../components/DepthBrief';
 import { GamePeopleProvider } from '../people/PeopleText';
 import { lexiconFor } from '../people/lexicon';
 import { preparationOptions } from './preparation-options';
-import { ChoiceRail } from '../components/ChoiceRail';
-import { toggleDeploymentSquad } from './operation-squads';
+import { joinNames, squadName as nameOf, toggleDeploymentSquad } from './operation-squads';
+import { callFlow, draftField, type FlowStep } from './call-flow';
+import { CallHead } from './CallHead';
 import './preparation-options.css';
 import './operation-squads.css';
 import './ops-visual.css';
@@ -51,13 +51,11 @@ import { departmentUpkeep } from '../../sim/equipment-manager-policy';
 import { Disclosure } from '../components/Disclosure';
 import { timerSetting } from '../timer';
 
-/** `initialStep` opens on the team step, for tests and a return from the Lab; players start on the briefing. */
-export function OpsPrepare({ scenarioId, onCancel, initialStep = 'brief' }: { scenarioId: Id; onCancel: () => void; initialStep?: 'brief' | 'team' }) {
-  const pageRef = useRef<HTMLDivElement>(null);
-  useLayoutEffect(() => {
-    const screen = pageRef.current?.closest('.screen');
-    if (screen) screen.scrollTop = 0;
-  }, [scenarioId]);
+/** A call before it goes live, as a pushed flow in two steps (docs/ui-ux-audit.md): the brief, then
+ * who goes and what they carry. The step and the draft live in call-flow.ts, outside this screen,
+ * so Back, browser Back and a detour to another tab keep them. `onCancel` replaces the flow's Back
+ * (tests and the Lab). */
+export function OpsPrepare({ scenarioId, step = 'brief', onCancel }: { scenarioId: Id; step?: FlowStep; onCancel?: () => void }) {
   const g = useGame();
   const now = Date.now();
   const { act, notify } = useToast();
@@ -68,27 +66,23 @@ export function OpsPrepare({ scenarioId, onCancel, initialStep = 'brief' }: { sc
   const intel = useMemo(() => buildIntel(scenario, built), [scenario, built]);
   const store = storeOptions(g);
   const presets = hasNodeEffect(g, 'loadoutPresets');
+  const back = onCancel ?? (() => callFlow.back());
 
-  // Two steps, the mission-prep pattern: read the call, then choose who goes and what they carry.
-  const [step, setStep] = useState<'brief' | 'team'>(initialStep);
-  const [chosen, setChosen] = useState<SquadId[]>([]);
-  const [setupSquad, setSetupSquad] = useState<SquadId | null>(null);
-  const visibleSquad = setupSquad && chosen.includes(setupSquad) ? setupSquad : chosen[0] ?? null;
+  // The draft (call-flow.ts): read fresh on every render, written through the flow's store.
+  const draft = callFlow.draft(scenarioId);
+  const [chosen, setChosen] = draftField(scenarioId, draft, 'chosen');
+  const [positions, setPositions] = draftField(scenarioId, draft, 'positions');
+  const [optionalLoadouts, setLoadouts] = draftField(scenarioId, draft, 'loadouts');
+  const [explicit, setExplicit] = draftField(scenarioId, draft, 'explicit');
+  const [autoNote, setAutoNote] = draftField(scenarioId, draft, 'autoNote');
+  const [autoWarnings, setAutoWarnings] = draftField(scenarioId, draft, 'autoWarnings');
+  const [autoUndo, setAutoUndo] = draftField(scenarioId, draft, 'autoUndo');
+  const [staging, setStaging] = draftField(scenarioId, draft, 'staging');
+  const [supportUnitId, setSupportUnitId] = draftField(scenarioId, draft, 'supportUnitId');
+  const [floor, setFloor] = draftField(scenarioId, draft, 'floor');
+  // Which sheet is open: the brief's map, a squad's kit (Adjust) or its way in (Change).
+  const [sheet, setSheet] = useState<{ kind: 'map' } | { kind: 'kit' | 'going'; squad: SquadId } | null>(null);
   const brief = useMemo(() => briefing(scenarioId, g, chosen), [scenarioId, g, chosen]);
-  const [positions, setPositions] = useState<Partial<Record<SquadId, Id>>>({});
-  const [optionalLoadouts, setLoadouts] = useState<Loadouts>({});
-  const [explicit, setExplicit] = useState<Explicit>({});
-  const [autoNote, setAutoNote] = useState<Partial<Record<SquadId, AutoNote>>>({});
-  const [autoWarnings, setAutoWarnings] = useState<string[]>([]);
-  const [autoUndo, setAutoUndo] = useState<{
-    loadouts: Loadouts;
-    explicit: Explicit;
-    notes: Partial<Record<SquadId, AutoNote>>;
-    warnings: string[];
-  } | null>(null);
-  const [staging, setStaging] = useState<Partial<Record<SquadId, Id>>>({});
-  const [supportUnitId, setSupportUnitId] = useState<Id | null>(null);
-  const [floor, setFloor] = useState(0);
 
   const loadouts = useMemo<Loadouts>(() => {
     const next = { ...optionalLoadouts };
@@ -97,10 +91,12 @@ export function OpsPrepare({ scenarioId, onCancel, initialStep = 'brief' }: { sc
   }, [optionalLoadouts, chosen]);
 
   const range = card?.squadRange ?? scenario?.squadRange ?? { min: 1, max: 3 };
+  const maxSquads = Math.min(range.max, 3);
   const defaultEntry = brief.entries[0]?.id;
   const floors = floorCount(built.location);
   // Renderer props that may not be declared yet (floor tabs, environment overlay). Spread so this compiles either way.
   const blueprintExtras = { floor: Math.min(floor, floors - 1), onFloorChange: setFloor, environment: intel.environment ?? undefined };
+  const squadName = (sid: SquadId) => nameOf(g.squads, sid);
 
   /** Staging points available from a squad's starting zone. */
   const pointsFor = (sid: SquadId): StagingPoint[] => {
@@ -173,9 +169,7 @@ export function OpsPrepare({ scenarioId, onCancel, initialStep = 'brief' }: { sc
 
   const toggleSquad = (id: SquadId) => {
     setAutoUndo(null);
-    const next = toggleDeploymentSquad(chosen, id, Math.min(range.max, 3));
-    setChosen(next);
-    if (next.includes(id)) setSetupSquad(id);
+    setChosen(toggleDeploymentSquad(chosen, id, maxSquads));
   };
 
   /** Quantity of an item already allocated to every chosen squad except `except`. */
@@ -257,9 +251,8 @@ export function OpsPrepare({ scenarioId, onCancel, initialStep = 'brief' }: { sc
     setAutoUndo(null);
     setLoadouts((current) => ({ ...current, [fix.sid]: fix.plan.loadout }));
     setExplicit((current) => ({ ...current, [fix.sid]: fix.plan.explicit }));
-    setSetupSquad(fix.sid);
     touch(fix.sid);
-    notify(`Equipped ${fix.plan.label} on squad ${fix.sid} from stock`, { tone: 'ok' });
+    notify(`Equipped ${fix.plan.label} on ${squadName(fix.sid)} from stock`, { tone: 'ok' });
   };
 
   const preparation = scenario ? preparationOptions({
@@ -267,326 +260,241 @@ export function OpsPrepare({ scenarioId, onCancel, initialStep = 'brief' }: { sc
   }) : null;
   const visibleWarnings = preparation?.warnings ?? check.warnings;
 
-  const deploy = () => act(cmd, 'Squads deployed');
+  // The call goes live with no toast: the live call itself says so, and a toast would sit on the strip.
+  const deploy = () => { if (act(cmd).ok) callFlow.close(scenarioId); };
 
-  const incidentType = scenario?.incident?.type ?? null;
-  const familyId = scenario?.locationFamilyId ?? scenario?.incident?.familyId ?? null;
-  const kicker = [incidentType ? incidentMeta(incidentType).label : null, familyBlurb(familyId), floors > 1 ? `${floors}\u00a0floors` : null].filter(Boolean).join(' · ');
-
-  const squadName = (sid: SquadId) => g.squads.find((squad) => squad.id === sid)?.name ?? sid;
-  const footStatus: { text: string; tone: 'mint' | 'amber' | 'warn'; icon: IconName } = chosen.length === 0
-    ? { text: 'Choose a squad to deploy', tone: 'amber', icon: 'people' }
+  const title = card?.title ?? scenarioId.replace(/_/g, ' ');
+  const names = joinNames(chosen.map(squadName));
+  const footStatus = chosen.length === 0
+    ? { text: 'Choose who goes', tone: 'act' }
     : check.issues.length > 0
-      ? { text: check.issues.length === 1 && check.issues[0].length <= 48 ? check.issues[0] : `${check.issues.length} ${check.issues.length === 1 ? 'thing' : 'things'} to fix before deploying`, tone: 'warn', icon: 'lock' }
+      ? { text: check.issues.length === 1 && check.issues[0].length <= 48 ? check.issues[0] : `${check.issues.length} ${check.issues.length === 1 ? 'thing' : 'things'} to fix first`, tone: 'warn' }
       : visibleWarnings.length > 0
-        ? { text: `Ready · ${visibleWarnings.length} ${visibleWarnings.length === 1 ? 'warning' : 'warnings'} to review`, tone: 'amber', icon: 'warning' }
-        : { text: `Ready · ${chosen.map(squadName).join(' + ')}`, tone: 'mint', icon: 'check' };
+        ? { text: `Ready, ${visibleWarnings.length} ${visibleWarnings.length === 1 ? 'warning' : 'warnings'}`, tone: 'act' }
+        : { text: 'Ready', tone: 'good' };
+  const takes = `Takes ${range.min === range.max ? range.min : `${range.min} to ${range.max}`} squad${range.max > 1 ? 's' : ''}`;
 
-  const screen = (
-    <div className="page prepare" ref={pageRef}>
-      <div className="prep-head">
-        <button type="button" className="back" onClick={onCancel}>
-          <Icon name="chevronLeft" size={18} />
-          Operations
-        </button>
-        <div className="prep-title plate plate-grain">
-          <PlateArt src={sceneFor(incidentType ?? undefined)} />
-          <span className="prep-title-badge" aria-hidden="true"><Icon name={incidentType ? incidentMeta(incidentType).icon : 'pin'} size={22} /></span>
-          <span className="prep-title-text">
-            <span className="opboard-code mono">{card?.code ?? 'OP'}</span>
-            <h2 className="live-name">{(card?.title ?? scenarioId.replace(/_/g, ' ')).toUpperCase()}</h2>
-            {kicker && <p className="prep-kicker">{kicker}</p>}
-          </span>
-        </div>
-      </div>
+  /** A squad's kit for the summary: what it takes from the Armory, and what it is short of. */
+  const kitOf = (sid: SquadId): { id: Id; text: string; tone: 'on' | 'warn' | 'short' }[] => store.filter((o: StoreOption) => !o.item.supportOnly && (o.owned > 0 || brief.usefulItemIds.includes(o.item.id))).flatMap((o): { id: Id; text: string; tone: 'on' | 'warn' | 'short' }[] => {
+    const qty = loadouts[sid]?.[o.item.id] ?? 0;
+    const units = picks[sid]?.[o.item.id] ?? [];
+    const free = Math.max(0, readyOf(o.item.id) - allocated(o.item.id, sid));
+    if (qty > 0) return [{ id: o.item.id, text: units.length < qty ? `${o.item.name} ${units.length} of ${qty} ready` : `${o.item.name} ×${qty}`, tone: units.length < qty ? 'warn' as const : 'on' as const }];
+    if (brief.usefulItemIds.includes(o.item.id) && free === 0) return [{ id: o.item.id, text: `${o.item.name}, none free`, tone: 'short' as const }];
+    return [];
+  });
 
-      <div className="prep-steps" role="tablist" aria-label="Preparation steps">
-        {([['brief', 'Briefing'], ['team', 'Team & gear']] as const).map(([id, label], index) => (
-          <button key={id} type="button" role="tab" aria-selected={step === id} className={`prep-step${step === id ? ' prep-step-on' : ''}`} onClick={() => { setStep(id); pageRef.current?.scrollIntoView({ block: 'start' }); }}>
-            <span className="prep-step-n">{index + 1}</span>{label}
-            {id === 'team' && chosen.length > 0 && <span className="prep-step-count">{chosen.map((sid) => sid).join('+')}</span>}
-          </button>
-        ))}
-      </div>
+  /** Where a squad starts and the door it stages at, in words. */
+  const goingIn = (sid: SquadId) => {
+    const position = positions[sid] ?? defaultEntry;
+    const entry = brief.entries.find((en) => en.id === position);
+    const points = pointsFor(sid);
+    const nearest = position ? defaultStagingFor(built, position) : null;
+    const pickedId = cmd.staging?.[sid] ?? nearest?.id ?? null;
+    const label = stageLabels(built, points, position).find(({ point }) => point.id === pickedId);
+    return { position, entry, points, nearest, pickedId, title: entry?.label ?? 'No way in listed', detail: label ? `${label.title}${pickedId === nearest?.id ? ', nearest door' : ''}` : null };
+  };
 
-      {step === 'brief' && <>
-        <ColdOpen text={scenario?.coldOpen} className="prep-cold-open" />
-        <PrepBriefing scenario={scenario} built={built} brief={brief} intel={intel} />
-        <section className="pb-block" aria-labelledby="prep-map-h">
-          <h3 id="prep-map-h" className="pb-h"><Icon name="blueprint" size={15} />The building</h3>
-          <div className="prep-map" aria-label="Location preview">
-            <Blueprint built={built} spaces={spaces} squadTasks={[]} selectedSpaceId={null} focusSquadId={null} {...blueprintExtras} />
-          </div>
-        </section>
-      </>}
+  const briefStep = <>
+    <PrepBriefing scenario={scenario} built={built} brief={brief} intel={intel} aside="Step 1 of 2" />
+  </>;
 
-      {step === 'team' && <>
-
-      <Section title="Squads" icon="people" hint={`Takes ${range.min === range.max ? range.min : `${range.min} to ${range.max}`} squad${range.max > 1 ? 's' : ''}. Tap to choose.`}>
-        {g.squads.length === 0 ? (
-          <Card>
-            <p className="dim">Create a squad on the Squad tab first.</p>
-          </Card>
-        ) : (
-          <>
-            <div className="squadpick">
-              {g.squads.map((s) => {
-                const r = squadReadiness(g, s.id, now);
-                const on = chosen.includes(s.id);
-                const members = s.officerIds.map((id) => g.officers[id]).filter((officer) => !!officer);
-                return (
-                  <button key={s.id} type="button" className={`pickcard${on ? ' pickcard-on' : ''}${r.deployable ? '' : ' pickcard-blocked'}`} aria-pressed={on}
-                    aria-label={`Squad ${s.id}, ${s.name}, ${r.ready} of ${r.total} ready${r.deployable ? '' : ', not deployable'}${r.issues[0] ? `, ${r.issues[0]}` : ''}`}
-                    disabled={!on && range.max > 1 && chosen.length >= Math.min(range.max, 3)} onClick={() => toggleSquad(s.id)}>
-                    <span className="pickcard-top">
-                      <span className="squad-badge">{s.id}</span>
-                      <strong className="pickcard-name">{s.name}</strong>
-                      <span className="pickcard-check">{on && <Icon name="check" size={16} />}</span>
-                    </span>
-                    <span className="pickcard-faces" aria-hidden="true">
-                      {members.slice(0, 4).map((officer) => <span key={officer.id} className="pickcard-face"><Portrait officer={officer} size={30} /></span>)}
-                      {members.length > 4 && <b>+{members.length - 4}</b>}
-                    </span>
-                    <span className="pickcard-ready" aria-hidden="true">
-                      <span className="pickcard-bar">{Array.from({ length: r.total }, (_, i) => <i key={i} className={i < r.ready ? 'on' : undefined} />)}</span>
-                      <span className={r.deployable ? 'tone-mint' : 'tone-warn'}>{r.ready}/{r.total} ready</span>
-                    </span>
-                    {r.deployable && r.staysHome.length > 0 && <span className="pickcard-issue">{staysHomeLine(g, r.staysHome)}</span>}
-                    {r.issues.slice(0, 1).map((i, k) => (
-                      <span key={k} className="pickcard-issue">
-                        {i}
-                      </span>
-                    ))}
-                  </button>
-                );
-              })}
-            </div>
-            {autoWarnings.length > 0 && (
-              <div className="autowarn" aria-live="polite">
-                {autoWarnings.map((w, i) => (
-                  <p key={i} className="note note-amber">
-                    <Icon name="warning" size={16} />
-                    {w}
-                  </p>
-                ))}
-              </div>
-            )}
-          </>
-        )}
-      </Section>
-
-      {chosen.length > 0 && <div className="prep-squad-workspace">
-        {chosen.length > 1 && <>
-        <ChoiceRail value={visibleSquad!} kind="tabs" label="Squad setup" panelId="squad-setup-panel" onChange={setSetupSquad}
-          options={chosen.map(sid => {
-            const extra = Object.entries(loadouts[sid] ?? {}).reduce((total, [, qty]) => total + qty, 0);
-            const entry = brief.entries.find(entry => entry.id === (positions[sid] ?? defaultEntry));
-            return { value: sid, label: <><b>{sid}</b><span className="squad-tab-detail"><span className="squad-tab-name">{squadName(sid)}</span><small>{entry?.label ?? 'Choose position'} · {extra} extra</small></span></>, accessibleLabel: `Set up squad ${sid}, ${squadName(sid)}, ${entry?.label ?? 'no position'}, ${extra} extra items` };
-          })} />
-          <p className="operation-squad-hint">Switching tabs keeps each squad's setup. All squads share your stock.</p></>}
-      {(visibleSquad ? [visibleSquad] : []).map((sid) => {
-        const squad = g.squads.find((s) => s.id === sid)!;
-        const hasPreset = Object.values(handCarriedLoadout(squad.loadoutPreset)).some((q) => q > 0);
-        const visible = store.filter((o: StoreOption) => !o.item.supportOnly
-          && (o.owned > 0 || brief.usefulItemIds.includes(o.item.id)));
-        const points = pointsFor(sid);
-        const position = positions[sid] ?? defaultEntry;
-        const nearest = position ? defaultStagingFor(built, position) : null;
-        const chosenPoint = cmd.staging?.[sid] ?? null;
-        const pickedPoint = chosenPoint ?? nearest?.id ?? null;
-        // A new starting position drops a staging point chosen for the old one.
-        const pickPosition = (id: Id) => { setPositions((p) => ({ ...p, [sid]: id })); setStaging((st) => omit(st, sid)); };
-        const note = autoNote[sid];
-        const unreliable = Object.values(picks[sid] ?? {})
-          .flat()
-          .filter((u) => unitStateOf(u.condition, ITEMS[u.itemId].wear) !== 'Good' && unitStateOf(u.condition, ITEMS[u.itemId].wear) !== 'Worn');
-        return (
-          <section key={sid} id="squad-setup-panel" role={chosen.length > 1 ? 'tabpanel' : undefined} aria-labelledby={chosen.length > 1 ? `squad-setup-panel-tab-${sid}` : undefined} className="card prepsquad" aria-label={`Squad ${sid} setup`}>
-            <div className="prepsquad-head">
-              <span className="squad-badge">{sid}</span>
-              <strong>{squad.name}</strong>
-              <span className="prepsquad-auto">
-                {autoUndo && <Button size="sm" onClick={undoAuto}>Undo auto-equip</Button>}
-                <Button size="sm" icon="wand" onClick={() => runAuto(sid)} aria-label={`Auto-equip squad ${sid}`} title="Fills gear from stock you own. Nothing is bought.">
-                  Auto-equip
-                </Button>
+  const deployStep = <>
+    <section className="cl-section" aria-labelledby="cl-who-h">
+      <div className="cl-section-head"><h2 id="cl-who-h" className="cl-section-title">Who goes</h2><span className="cl-section-aside">{takes}</span></div>
+      {g.squads.length === 0 ? <p className="dim">Create a squad on the Squad tab first.</p> : <div className="cl-squads" role="group" aria-label="Squads">
+        {g.squads.map((s) => {
+          const r = squadReadiness(g, s.id, now);
+          const on = chosen.includes(s.id);
+          const members = s.officerIds.map((id) => g.officers[id]).filter((officer) => !!officer);
+          const detail = r.deployable && r.staysHome.length > 0 ? staysHomeLine(g, r.staysHome) : r.issues[0];
+          return (
+            <button key={s.id} type="button" className={`cl-squad${on ? ' cl-squad-on' : ''}${r.deployable ? '' : ' cl-squad-blocked'}`} aria-pressed={on} data-squad={s.id}
+              aria-label={`${s.name}, ${r.ready} of ${r.total} ready${r.deployable ? '' : ', not deployable'}${detail ? `, ${detail}` : ''}`}
+              disabled={!on && maxSquads > 1 && chosen.length >= maxSquads} onClick={() => toggleSquad(s.id)}>
+              <span className="squad-badge">{s.id}</span>
+              <span className="cl-squad-main">
+                <strong>{s.name}</strong>
+                <span className={r.deployable ? undefined : 'cl-warn'}>{r.ready} of {r.total} ready{detail ? `, ${detail.charAt(0).toLowerCase()}${detail.slice(1)}` : ''}</span>
               </span>
-            </div>
-            {note && (
-              <Disclosure name="autoequip-notes" className="autonote" icon="wand" summary="Auto-equip notes" count={note.lines.length} hint={note.edited ? 'You changed this' : undefined}>
-                {note.lines.length > 0 ? (
-                  <ul>
-                    {note.lines.map((l, i) => (
-                      <li key={i}>{l}</li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="dim">Current choices kept. No extra gear added.</p>
-                )}
-              </Disclosure>
-            )}
-            <label className="field">
-              <span className="field-label">
-                <Icon name="pin" size={14} />
-                Starting position
+              <span className="cl-faces" aria-hidden="true">
+                {members.slice(0, 4).map((officer) => <span key={officer.id} className="cl-face"><Portrait officer={officer} size={30} /></span>)}
               </span>
-              <select
-                value={positions[sid] ?? defaultEntry ?? ''}
-                onChange={(e) => pickPosition(e.target.value)}
-                disabled={brief.entries.length === 0}
-              >
-                {brief.entries.length === 0 && <option value="">No entries listed</option>}
-                {brief.entries.map((en) => (
-                  <option key={en.id} value={en.id}>
-                    {en.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            {brief.entries.length > 0 && <div className="prep-map prep-map-team" aria-label="Starting positions on the building map">
-              <Blueprint built={built} spaces={spaces} squadTasks={[]} selectedSpaceId={position ?? null} focusSquadId={null}
-                highlightSpaceIds={brief.entries.map((entry) => entry.id)} onSelectSpace={(id) => { if (brief.entries.some((entry) => entry.id === id)) pickPosition(id); }} {...blueprintExtras} />
-            </div>}
-            {points.length > 0 && (
-              <div className="field">
-                <span className="field-label" id={`stage-${sid}`}>
-                  <Icon name="door" size={14} />
-                  Staging point
-                </span>
-                <div className="stagelist" role="radiogroup" aria-labelledby={`stage-${sid}`}>
-                  {stageLabels(built, points, position).map(({ point, title, sub, icon }) => (
-                    <StageOption key={point.id} on={pickedPoint === point.id} icon={icon} title={title} sub={point.id === nearest?.id ? 'Nearest door' : sub}
-                      onPick={() => setStaging((st) => point.id === nearest?.id ? omit(st, sid) : ({ ...st, [sid]: point.id }))} />
-                  ))}
-                </div>
-              </div>
-            )}
-            <div className="prepsquad-lo">
-              <SubHead icon="box">Loadout</SubHead>
-              {hasPreset && presets.unlocked && (
-                <Button size="sm" onClick={() => applyPreset(sid)}>
-                  Apply preset
-                </Button>
-              )}
-            </div>
-            <p className="dim prep-basic-kit">{BASIC_KIT_LINE}</p>
-            {visible.length === 0 ? (
-              <p className="dim">No equipment in stock. Buy gear on the Gear tab.</p>
-            ) : (
-              <ul className="loadout prep-items">
-                {visible.map((o) => {
-                  const free = Math.max(0, readyOf(o.item.id) - allocated(o.item.id, sid));
-                  const others = allocated(o.item.id, sid);
-                  const qty = loadouts[sid]?.[o.item.id] ?? 0;
-                  const useful = brief.usefulItemIds.includes(o.item.id);
-                  const units = picks[sid]?.[o.item.id] ?? [];
-                  return (
-                    <li key={o.item.id} className={`lo prep-item${useful ? ' lo-useful' : ''}${qty > 0 ? ' prep-item-on' : ''}`}>
-                      <span className="prep-item-art" aria-hidden="true">
-                        <GearArt itemId={o.item.id} size={34} />
-                        {qty > 0 && <b className="prep-item-qty">×{qty}</b>}
-                      </span>
-                      <span className="prep-item-main">
-                        <strong>{o.item.name}</strong>
-                        <span className="prep-item-sub">
-                          {`${free} free${others ? ` · ${others} with other squads` : ''}`}
-                          {useful && <span className="prep-item-useful"><Icon name="star" size={11} />Useful</span>}
-                        </span>
-                      </span>
-                      <span className="prep-item-ctl">
-                        <Stepper label={o.item.name} value={qty} max={Math.max(qty, free)} onChange={(n) => setQty(sid, o.item.id, Math.min(n, Math.max(qty, free)))} />
-                      </span>
-                      {(units.length > 0 || units.length < qty) && (
-                        <ul className="lo-units" aria-label={`Units taking ${o.item.name}`}>
-                          {units.map((u) => {
-                            const condition = projectedCondition(g, u, Math.max(now, g.department.clockHighWater), departmentUpkeep(g));
-                            const state = unitStateOf(condition, o.item.wear);
-                            const meta = UNIT_STATE_META[state];
-                            return (
-                              <li key={u.id} className={`lo-unit lo-unit-${meta.tone}`} title={`${u.serial} · ${Math.round(condition)}% · ${state}`}>
-                                <Icon name={meta.icon} size={12} />
-                                <b>{u.serial}</b>
-                                <span>
-                                  {Math.round(condition)}%{meta.tone === 'bad' ? ` · ${state} · ${pct(unitEffectiveness({ ...u, condition }, o.item))} effect` : ''}
-                                </span>
-                              </li>
-                            );
-                          })}
-                          {units.length < qty && (
-                            <li className="lo-unit lo-unit-bad lo-unit-missing">
-                              <Icon name="warning" size={12} />
-                              <span>{qty - units.length} units missing; only {units.length} of {qty} ready.</span>
-                            </li>
-                          )}
-                        </ul>
-                      )}
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-            {unreliable.length > 0 && (
-              <p className="note note-amber">
-                <Icon name="warning" size={16} />
-                {unreliable.map((u) => u.serial).join(', ')} {unreliable.length === 1 ? 'is' : 'are'} unreliable, with reduced effect and a chance to fail. Service {unreliable.length === 1 ? 'it' : 'them'} on the Gear tab or take a better unit.
-              </p>
-            )}
-          </section>
-        );
-      })}
-      </div>}
-
-      <SupportPreparation state={g} now={now} cmd={cmd} built={built} onSelect={setSupportUnitId} />
-
-      {!!preparation?.equipment.length && <Disclosure name="prep-equipment" className="prep-equipment-options" summary="Optional equipment to review" count={preparation.equipment.length}>
-        <p>These bundles open up more choices. You can deploy without them; each decision shows its needs when it comes up.</p>
-        <ul>{preparation.equipment.map(({ key, label, fix }) => <li key={key}>
-          <strong>{label}</strong>
-          <p className="dim">Optional equipment for squad {fix.sid}. Scene requirements are checked when you choose an action.</p>
-          {fix.plan.issue ? <p>{fix.plan.issue}</p> : <Button size="sm" icon="box" onClick={() => equipPreparationFix(fix)}>Equip {fix.plan.label} on squad {fix.sid}</Button>}
-        </li>)}</ul>
-      </Disclosure>}
-
-      {(check.issues.length > 0 || visibleWarnings.length > 0) && <div className="prepcheck" aria-live="polite">
-        {check.issues.map((i, k) => (
-          <p key={`i${k}`} className="note note-warn">
-            <Icon name="lock" size={16} />
-            {i}
-          </p>
-        ))}
-        {visibleWarnings.map((w, k) => {
-          const fix = preparationFix(w);
-          return <div key={`w${k}`} className="prepcheck-warning">
-            <p className="note note-amber"><Icon name="warning" size={16} />{w}</p>
-            {fix?.plan.issue && <p className="dim">{fix.plan.issue}</p>}
-            {!!fix?.plan.prerequisites.length && <p className="dim">Also needed: {fix.plan.prerequisites.join('; ')}.</p>}
-            {fix && !fix.plan.issue && fix.plan.added > 0 && <Button size="sm" icon="box" onClick={() => equipPreparationFix(fix)}>Equip {fix.plan.label} on squad {fix.sid}</Button>}
-          </div>;
+            </button>
+          );
         })}
       </div>}
+      {autoWarnings.length > 0 && <div className="autowarn" aria-live="polite">
+        {autoWarnings.map((w, i) => <p key={i} className="note note-amber"><Icon name="warning" size={16} />{w}</p>)}
+      </div>}
+    </section>
 
-      </>}
+    {chosen.map((sid, index) => {
+      const kit = kitOf(sid);
+      const way = goingIn(sid);
+      return <section key={sid} className="cl-section cl-squad-plan" aria-label={`${squadName(sid)} plan`} data-squad={sid}>
+        <div className="cl-section-head">
+          <h2 className="cl-section-title">{squadName(sid)} carries</h2>
+          <button type="button" className="cl-link" onClick={() => setSheet({ kind: 'kit', squad: sid })} aria-label={`Adjust what ${squadName(sid)} carries`}>Adjust</button>
+        </div>
+        {index === 0 && <p className="cl-basic-kit">{BASIC_KIT_LINE}</p>}
+        {kit.length > 0 ? <ul className="cl-kit" aria-label={`${squadName(sid)} kit`}>{kit.map((item) => <li key={item.id} className={`cl-kit-chip cl-kit-${item.tone}`}>{item.text}</li>)}</ul>
+          : <p className="cl-muted">Nothing from the Armory.</p>}
+        <div className="cl-section-head">
+          <h3 className="cl-section-title">{chosen.length > 1 ? `${squadName(sid)} goes in` : 'Going in'}</h3>
+          <button type="button" className="cl-link" onClick={() => setSheet({ kind: 'going', squad: sid })} aria-label={`Change where ${squadName(sid)} goes in`}>Change</button>
+        </div>
+        <p className="cl-going"><strong>{way.title}</strong>{way.detail && <span>{way.detail}</span>}</p>
+      </section>;
+    })}
 
-      <div className="stickyfoot prepfoot">
-        {step === 'brief' ? <>
-          <p className="prepfoot-status tone-amber"><Icon name="intel" size={15} /><span>Read the call, then choose who goes</span></p>
-          <Button onClick={onCancel}>Cancel</Button>
-          <Button variant="primary" onClick={() => { setStep('team'); pageRef.current?.scrollIntoView({ block: 'start' }); }}>Choose team</Button>
-        </> : <>
-          <p className={`prepfoot-status tone-${footStatus.tone}`}><Icon name={footStatus.icon} size={15} /><span>{footStatus.text}</span></p>
-          <Button onClick={() => setStep('brief')}>Briefing</Button>
-          <Button variant="primary" disabled={!check.ok} onClick={deploy}>
-            Deploy
-          </Button>
-        </>}
+    {chosen.length > 0 && brief.entries.length > 0 && <div className="prep-map prep-map-team" aria-label="Where the team goes in">
+      <Blueprint built={built} spaces={spaces} squadTasks={[]} selectedSpaceId={null} focusSquadId={null}
+        highlightSpaceIds={chosen.map((sid) => positions[sid] ?? defaultEntry).filter((id): id is Id => !!id)} {...blueprintExtras} />
+    </div>}
+
+    <SupportPreparation state={g} now={now} cmd={cmd} built={built} onSelect={setSupportUnitId} />
+
+    {!!preparation?.equipment.length && <Disclosure name="prep-equipment" className="prep-equipment-options" summary="Optional equipment to review" count={preparation.equipment.length}>
+      <p>These bundles open up more choices. You can deploy without them; each decision shows its needs when it comes up.</p>
+      <ul>{preparation.equipment.map(({ key, label, fix }) => <li key={key}>
+        <strong>{label}</strong>
+        <p className="dim">Optional equipment for {squadName(fix.sid)}. Scene requirements are checked when you choose an action.</p>
+        {fix.plan.issue ? <p>{fix.plan.issue}</p> : <Button size="sm" icon="box" onClick={() => equipPreparationFix(fix)}>Equip {fix.plan.label} on {squadName(fix.sid)}</Button>}
+      </li>)}</ul>
+    </Disclosure>}
+
+    {(check.issues.length > 0 || visibleWarnings.length > 0) && <div className="prepcheck" aria-live="polite">
+      {check.issues.map((i, k) => <p key={`i${k}`} className="note note-warn"><Icon name="lock" size={16} />{i}</p>)}
+      {visibleWarnings.map((w, k) => {
+        const fix = preparationFix(w);
+        return <div key={`w${k}`} className="prepcheck-warning">
+          <p className="note note-amber"><Icon name="warning" size={16} />{w}</p>
+          {fix?.plan.issue && <p className="dim">{fix.plan.issue}</p>}
+          {!!fix?.plan.prerequisites.length && <p className="dim">Also needed: {fix.plan.prerequisites.join('; ')}.</p>}
+          {fix && !fix.plan.issue && fix.plan.added > 0 && <Button size="sm" icon="box" onClick={() => equipPreparationFix(fix)}>Equip {fix.plan.label} on {squadName(fix.sid)}</Button>}
+        </div>;
+      })}
+    </div>}
+  </>;
+
+  const kitSquad = sheet?.kind === 'kit' && chosen.includes(sheet.squad) ? sheet.squad : null;
+  const goingSquad = sheet?.kind === 'going' && chosen.includes(sheet.squad) ? sheet.squad : null;
+
+  const screen = (
+    <div className="cl-flow prepare" data-step={step}>
+      <CallHead back={{ label: step === 'brief' ? 'Calls' : 'Brief', onClick: back }} title={step === 'brief' ? title : 'Deploy'}
+        action={step === 'brief' ? <button type="button" className="cl-head-chip" onClick={() => setSheet({ kind: 'map' })} aria-haspopup="dialog">Map</button> : undefined} />
+      <div className="page cl-flow-body">{step === 'brief' ? briefStep : deployStep}</div>
+      <div className="cl-flow-foot">
+        {step === 'brief'
+          ? <ActionBar primary={{ label: 'Choose team', onClick: () => callFlow.goStep('deploy') }} />
+          : <ActionBar summary={<><span className={`cl-tone-${footStatus.tone}`}>{footStatus.text}</span><span>{title} · {chosen.length} of {range.max} squad{range.max > 1 ? 's' : ''}</span></>}
+            primary={{ label: chosen.length ? `Deploy ${names}` : 'Deploy', disabled: !check.ok, onClick: deploy }} />}
       </div>
+
+      <Sheet open={sheet?.kind === 'map'} onClose={() => setSheet(null)} title="The building" className="cl-map-sheet">
+        <div className="prep-map" aria-label="Location preview">
+          <Blueprint built={built} spaces={spaces} squadTasks={[]} selectedSpaceId={null} focusSquadId={null} {...blueprintExtras} />
+        </div>
+      </Sheet>
+      <Sheet open={!!kitSquad} onClose={() => setSheet(null)} title={kitSquad ? `${squadName(kitSquad)} carries` : 'Kit'} footer={<Button variant="primary" block onClick={() => setSheet(null)}>Done</Button>}>
+        {kitSquad && kitWorkspace(kitSquad)}
+      </Sheet>
+      <Sheet open={!!goingSquad} onClose={() => setSheet(null)} title={goingSquad ? `Where ${squadName(goingSquad)} goes in` : 'Going in'} footer={<Button variant="primary" block onClick={() => setSheet(null)}>Done</Button>}>
+        {goingSquad && goingInWorkspace(goingSquad)}
+      </Sheet>
     </div>
   );
+
+  /** Today's kit workspace for one squad, in the Adjust sheet: auto-equip and undo, a preset, and a
+   * stepper per pooled item with the exact units it takes. */
+  function kitWorkspace(sid: SquadId): ReactNode {
+    const squad = g.squads.find((s) => s.id === sid)!;
+    const hasPreset = Object.values(handCarriedLoadout(squad.loadoutPreset)).some((q) => q > 0);
+    const visible = store.filter((o: StoreOption) => !o.item.supportOnly && (o.owned > 0 || brief.usefulItemIds.includes(o.item.id)));
+    const note = autoNote[sid];
+    const unreliable = Object.values(picks[sid] ?? {}).flat()
+      .filter((u) => unitStateOf(u.condition, ITEMS[u.itemId].wear) !== 'Good' && unitStateOf(u.condition, ITEMS[u.itemId].wear) !== 'Worn');
+    return <section className="prepsquad cl-kit-workspace" aria-label={`${squad.name} kit`}>
+      <div className="prepsquad-head">
+        {autoUndo && <Button size="sm" onClick={undoAuto}>Undo auto-equip</Button>}
+        <Button size="sm" icon="wand" onClick={() => runAuto(sid)} aria-label={`Auto-equip ${squad.name}`} title="Fills gear from stock you own. Nothing is bought.">Auto-equip</Button>
+        {hasPreset && presets.unlocked && <Button size="sm" onClick={() => applyPreset(sid)}>Apply preset</Button>}
+      </div>
+      {note && <Disclosure name="autoequip-notes" className="autonote" icon="wand" summary="Auto-equip notes" count={note.lines.length} hint={note.edited ? 'You changed this' : undefined}>
+        {note.lines.length > 0 ? <ul>{note.lines.map((l, i) => <li key={i}>{l}</li>)}</ul> : <p className="dim">Current choices kept. No extra gear added.</p>}
+      </Disclosure>}
+      <p className="cl-basic-kit">{BASIC_KIT_LINE}</p>
+      <SubHead icon="box">From the Armory</SubHead>
+      {visible.length === 0 ? <p className="dim">No equipment in stock. Buy gear on the Gear tab.</p> : <ul className="loadout prep-items">
+        {visible.map((o) => {
+          const free = Math.max(0, readyOf(o.item.id) - allocated(o.item.id, sid));
+          const others = allocated(o.item.id, sid);
+          const qty = loadouts[sid]?.[o.item.id] ?? 0;
+          const useful = brief.usefulItemIds.includes(o.item.id);
+          const units = picks[sid]?.[o.item.id] ?? [];
+          return <li key={o.item.id} className={`lo prep-item${useful ? ' lo-useful' : ''}${qty > 0 ? ' prep-item-on' : ''}`}>
+            <span className="prep-item-art" aria-hidden="true"><GearArt itemId={o.item.id} size={34} />{qty > 0 && <b className="prep-item-qty">×{qty}</b>}</span>
+            <span className="prep-item-main">
+              <strong>{o.item.name}</strong>
+              <span className="prep-item-sub">{`${free} free${others ? ` · ${others} with other squads` : ''}`}{useful && <span className="prep-item-useful"><Icon name="star" size={11} />Useful</span>}</span>
+            </span>
+            <span className="prep-item-ctl"><Stepper label={o.item.name} value={qty} max={Math.max(qty, free)} onChange={(n) => setQty(sid, o.item.id, Math.min(n, Math.max(qty, free)))} /></span>
+            {(units.length > 0 || units.length < qty) && <ul className="lo-units" aria-label={`Units taking ${o.item.name}`}>
+              {units.map((u) => {
+                const condition = projectedCondition(g, u, Math.max(now, g.department.clockHighWater), departmentUpkeep(g));
+                const state = unitStateOf(condition, o.item.wear);
+                const meta = UNIT_STATE_META[state];
+                return <li key={u.id} className={`lo-unit lo-unit-${meta.tone}`} title={`${u.serial} · ${Math.round(condition)}% · ${state}`}>
+                  <Icon name={meta.icon} size={12} /><b>{u.serial}</b>
+                  <span>{Math.round(condition)}%{meta.tone === 'bad' ? ` · ${state} · ${pct(unitEffectiveness({ ...u, condition }, o.item))} effect` : ''}</span>
+                </li>;
+              })}
+              {units.length < qty && <li className="lo-unit lo-unit-bad lo-unit-missing"><Icon name="warning" size={12} /><span>{qty - units.length} units missing; only {units.length} of {qty} ready.</span></li>}
+            </ul>}
+          </li>;
+        })}
+      </ul>}
+      {unreliable.length > 0 && <p className="note note-amber"><Icon name="warning" size={16} />
+        {unreliable.map((u) => u.serial).join(', ')} {unreliable.length === 1 ? 'is' : 'are'} unreliable, with reduced effect and a chance to fail. Service {unreliable.length === 1 ? 'it' : 'them'} on the Gear tab or take a better unit.
+      </p>}
+    </section>;
+  }
+
+  /** Where one squad starts and the door it stages at, in the Change sheet. */
+  function goingInWorkspace(sid: SquadId): ReactNode {
+    const way = goingIn(sid);
+    // A new starting position drops a staging point chosen for the old one.
+    const pickPosition = (id: Id) => { setPositions((p) => ({ ...p, [sid]: id })); setStaging((st) => omit(st, sid)); };
+    return <section className="cl-going-workspace" aria-label={`${squadName(sid)} way in`}>
+      <label className="field">
+        <span className="field-label"><Icon name="pin" size={14} />Starting position</span>
+        <select value={way.position ?? ''} onChange={(e) => pickPosition(e.target.value)} disabled={brief.entries.length === 0}>
+          {brief.entries.length === 0 && <option value="">No entries listed</option>}
+          {brief.entries.map((en) => <option key={en.id} value={en.id}>{en.label}</option>)}
+        </select>
+      </label>
+      {brief.entries.length > 0 && <div className="prep-map prep-map-team" aria-label="Starting positions on the building map">
+        <Blueprint built={built} spaces={spaces} squadTasks={[]} selectedSpaceId={way.position ?? null} focusSquadId={null}
+          highlightSpaceIds={brief.entries.map((entry) => entry.id)} onSelectSpace={(id) => { if (brief.entries.some((entry) => entry.id === id)) pickPosition(id); }} {...blueprintExtras} />
+      </div>}
+      {way.points.length > 0 && <div className="field">
+        <span className="field-label" id={`stage-${sid}`}><Icon name="door" size={14} />Staging point</span>
+        <div className="stagelist" role="radiogroup" aria-labelledby={`stage-${sid}`}>
+          {stageLabels(built, way.points, way.position).map(({ point, title: pointTitle, sub, icon }) => (
+            <StageOption key={point.id} on={way.pickedId === point.id} icon={icon} title={pointTitle} sub={point.id === way.nearest?.id ? 'Nearest door' : sub}
+              onPick={() => setStaging((st) => point.id === way.nearest?.id ? omit(st, sid) : ({ ...st, [sid]: point.id }))} />
+          ))}
+        </div>
+      </div>}
+    </section>;
+  }
+
   // Names in the briefing, by public kind; nobody is deployed yet.
   return <GamePeopleProvider lexicon={scenario ? lexiconFor(scenario, null, []) : null}>{screen}</GamePeopleProvider>;
 }
 
-/** Confidence word for a briefing line: never stronger than the report. */
 function omit<T extends Record<string, unknown>>(o: T, key: string): T {
   const { [key]: _drop, ...rest } = o;
   return rest as T;

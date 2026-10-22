@@ -1,71 +1,70 @@
 // A call's board card (moved from OpsBoard), rendered from props alone so the Scenario Lab shows
-// the player's real card. Store-free. Its styles are app.css and ops-visual.css, which the board
-// (and the lab's frame) load; importing them here would move them in the game's cascade.
+// the player's real card. Store-free. Its styles are calls.css, which the board (and the lab's frame)
+// load; importing them here would move them in the game's cascade.
 import type { JSX, ReactNode } from 'react';
 import type { ScenarioCard } from '../../sim/operation-selectors';
 import type { BoardShortage } from '../../sim/board-suggestions';
 import { CERT_NAME } from '../../content/certs';
 import { CERT_ICON } from '../components/labels';
 import type { IncidentType, ScenarioDefinition } from '../../sim/scenario-types';
-import { Card, Chip } from '../components/ui';
-import { DifficultyChip, FloorsChip, TierChevrons, familyBlurb, incidentMeta, scenarioFloorCount, settingIcon } from '../components/incident';
+import { familyBlurb, scenarioFloorCount, settingIcon } from '../components/incident';
+import { CallTypeBadge } from '../icons/CallTypeBadge';
 import { Icon, itemIcon } from '../icons';
 import { PeopleText } from '../people/PeopleText';
 import { PlateArt, sceneFor } from '../art/Plates';
 import { money } from '../format';
 
-/** A compact call tile: a type badge with tier pips, the title and place, a two-line summary, a fact
- * row and a footer with the time left and Prepare. The full brief lives on the Prepare screen.
- * The board also passes legacy cards, which can lack a scenario, family, type or tier. */
-export function CallTile({ card, scenario, familyId, type, tier, isNew = false, facts, footer, warning, contentNote, short = [] }: { card: ScenarioCard; scenario: ScenarioDefinition | null; familyId: string | null; type: IncidentType | string | null; tier: number | null;
-  isNew?: boolean; facts?: ReactNode; footer?: ReactNode; warning?: ReactNode; contentNote?: ReactNode; short?: BoardShortage[] }): JSX.Element {
-  const meta = incidentMeta(type);
+const DIFFICULTY_WORD = { low: 'Low', moderate: 'Moderate', high: 'High', severe: 'Severe' } as const;
+
+/** A call on the board (docs/ui-ux-audit.md, "Calls"): the scene with the call type and the time
+ * left, the title and place, the three-line hook, one warning line, then who can go and what it
+ * pays on one row. The whole card opens the call (`onOpen`), so there is no Prepare button. The
+ * board also passes legacy cards, which can lack a scenario, family, type or tier. */
+export function CallTile({ card, scenario, familyId, type, isNew = false, facts, footer, warning, contentNote, short = [], timeLeft, readiness, onOpen }: { card: ScenarioCard; scenario: ScenarioDefinition | null; familyId: string | null; type: IncidentType | string | null; tier: number | null;
+  isNew?: boolean; facts?: ReactNode; footer?: ReactNode; warning?: ReactNode; contentNote?: ReactNode; short?: BoardShortage[];
+  /** "7h 48m left", on the scene. */
+  timeLeft?: ReactNode;
+  /** Who can go: "Alpha ready · 1 squad", with the letter badge. */
+  readiness?: ReactNode;
+  onOpen?: () => void }): JSX.Element {
   const blurb = familyBlurb(familyId);
   const diff = scenario?.difficulty;
   const floors = scenarioFloorCount(scenario);
+  const place = [blurb, floors > 1 ? `${floors} floors` : null, card.variantLabel !== card.title ? card.variantLabel : null].filter(Boolean).join(' · ');
+  const pay = scenario?.rewards;
   return (
-    <Card className={`opboard optile${isNew ? ' opboard-new' : ''}`}>
-      {/* The scene: the call type's painted plate behind the type, case number and title. */}
-      <div className="optile-top plate optile-scene">
+    <article className={`cl-card${isNew ? ' cl-card-new' : ''}${onOpen ? ' cl-card-open' : ''}`} data-call-id={card.id}>
+      <div className="cl-card-scene plate">
         <PlateArt src={sceneFor(type ?? undefined)} />
-        <span className={`optile-badge optile-band-${diff?.band ?? 'none'}`}>
-          <Icon name={type ? meta.icon : settingIcon(card.setting)} size={22} />
-          {tier !== null && <TierChevrons tier={tier} />}
+        <span className="cl-card-type">
+          {type ? <CallTypeBadge type={type} size={24} label /> : <span className="cl-card-setting"><Icon name={settingIcon(card.setting)} size={18} />{card.setting}</span>}
         </span>
-        <div className="optile-main">
-          <div className="opboard-head">
-            <span className="opboard-kind">{type ? meta.label : card.setting.toUpperCase()}</span>
-            <span className="opboard-code mono">{card.code}</span>
-          </div>
-          <h3 className="opboard-title">{card.title}</h3>
-          {blurb && (
-            <p className="opboard-where">
-              <Icon name={settingIcon(card.setting)} size={13} />
-              <span>{blurb}</span>
-            </p>
-          )}
-        </div>
-        {isNew && <span className="newbadge stamp stamp-amber">New</span>}
+        {timeLeft && <span className="cl-card-left">{timeLeft}</span>}
+        {isNew && <span className="cl-card-newmark">New</span>}
       </div>
-      <p className="opboard-summary"><PeopleText text={card.summary} /></p>
-      {contentNote}
-      <div className="chips opboard-facts">
-        {diff && <DifficultyChip band={diff.band} />}
-        <Chip icon="people">{card.squadRange.min === card.squadRange.max ? `${card.squadRange.min} squad` : `${card.squadRange.min}–${card.squadRange.max} squads`}</Chip>
-        <FloorsChip floors={floors} />
-        {card.variantLabel !== card.title && <Chip>{card.variantLabel}</Chip>}
-        {(!scenario) && <Chip icon="clock">{card.pressureLabel}</Chip>}
-        {facts}
+      <div className="cl-card-body">
+        <h3 className="cl-card-title">
+          {onOpen ? <button type="button" className="cl-card-button" onClick={onOpen} aria-label={`Open ${card.title}${blurb ? `, ${blurb}` : ''}`}>{card.title}</button> : card.title}
+        </h3>
+        {(place || diff) && <p className="cl-card-place">{place}{place && diff ? ' · ' : ''}{diff ? `${DIFFICULTY_WORD[diff.band]} difficulty` : ''}</p>}
+        <p className="cl-card-hook"><PeopleText text={card.summary} /></p>
+        {contentNote}
+        {(facts || !scenario) && <div className="cl-card-facts">
+          {!scenario && <span className="cl-card-fact"><Icon name="clock" size={14} />{card.pressureLabel}</span>}
+          {facts}
+        </div>}
+        <BringRow short={short} />
+        {warning}
+        {(readiness || pay || onOpen) && <div className="cl-card-foot">
+          <span className="cl-card-ready">{readiness}</span>
+          {pay && <span className="cl-card-pay" aria-label={`Pays up to ${money(pay.funding)} and ${pay.xp} experience. How the call ends sets what it pays.`}>
+            <b aria-hidden="true">{money(pay.funding)}</b><span aria-hidden="true">{pay.xp} XP</span>
+          </span>}
+          {onOpen && <Icon name="chevronRight" size={18} className="cl-card-chevron" />}
+        </div>}
+        {footer}
       </div>
-      {scenario?.rewards && <p className="optile-rewards" aria-label={`Pays up to ${money(scenario.rewards.funding)} and ${scenario.rewards.xp} experience. How the call ends sets what it pays.`}>
-        <span className="optile-rewards-label" aria-hidden="true">Up to</span>
-        <span aria-hidden="true"><Icon name="cash" size={14} />{money(scenario.rewards.funding)}</span>
-        <span aria-hidden="true"><Icon name="star" size={14} />{scenario.rewards.xp} XP</span>
-      </p>}
-      <BringRow short={short} />
-      {warning}
-      <div className="optile-foot">{footer}</div>
-    </Card>
+    </article>
   );
 }
 
