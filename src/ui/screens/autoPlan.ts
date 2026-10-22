@@ -104,9 +104,10 @@ export function planPreparationEquipment(args: {
   const requirements = actionEquipmentRequirements(action);
   if (new Set(chosen).size < requirements.minSquads) return finish([], action.requires.minSquads?.reason ?? 'This capability needs at least two participating squads');
   const operators = qualifiedOfficers(state, [squadId], action);
-  if (!operators.length) return finish([], `No officer in Squad ${squadId} can take part in this action`);
+  const name = state.squads.find((squad) => squad.id === squadId)?.name ?? squadId;
+  if (!operators.length) return finish([], `No officer in ${name} can take part in this action`);
   const missingCerts = requirements.certs.filter((cert) => !operators.some((officer) => officer.certs.includes(cert)));
-  if (missingCerts.length) return finish([], `Needs a ${missingCerts.map((cert) => CERT_HOLDER[cert] ?? cert).join(' and a ')} in Squad ${squadId}`);
+  if (missingCerts.length) return finish([], `Needs a ${missingCerts.map((cert) => CERT_HOLDER[cert] ?? cert).join(' and a ')} in ${name}`);
   for (const group of requirements.groups) {
     const items = group.itemIds.map((id) => ITEMS[id]);
     if (items.length && !items.some((item) => operatorQualified(state, squadId, action, item))) {
