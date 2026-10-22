@@ -8,10 +8,10 @@ import { squadDeployed } from '../../sim/squads';
 import { Sheet } from '../components/Sheet';
 import { Portrait } from '../portraits/Portrait';
 import './hq-overview.css';
-import type { GameState, SquadDuty, Squad, SquadId } from '../../sim/types';
+import type { GameState, Id, SquadDuty, Squad, SquadId } from '../../sim/types';
 import { commandStaffOf, managerView } from '../../sim/command-staff';
 import { Button, EmptyState, Row, Section } from '../components/ui';
-import { useNav } from '../components/nav';
+import { useNav, type NavApi } from '../components/nav';
 import { DUTIES, DUTY_META } from '../components/labels';
 import { Icon } from '../icons';
 import { CallTypeBadge } from '../icons/CallTypeBadge';
@@ -19,6 +19,7 @@ import { OutcomeMark } from '../icons/marks';
 import { getScenario } from '../../sim/scenario-registry';
 import { duration, perHour, plural, signedMoney } from '../format';
 import { scenarioTitle } from './helpers';
+import { callFlow } from './call-flow';
 import { SavedDebriefReview } from './OpsDebrief';
 import { ScoreRing } from '../components/DebriefResults';
 import { CommandStaff } from '../components/CommandStaff';
@@ -78,6 +79,12 @@ function hubPins(g: GameState, overview: Overview, nav: Nav): HubPin[] {
   return pins;
 }
 
+/** Open one call's brief from HQ: the Calls tab, then the brief through `callFlow.openCall`, the path a board card takes. */
+export function openCallBrief(nav: Pick<NavApi, 'go'>, scenarioId: Id) {
+  nav.go('ops');
+  callFlow.openCall(scenarioId);
+}
+
 /** The one "your move" card: the call that waits, else what keeps squads home, else money. */
 function YourMove({ g, overview, now, onDuty }: { g: GameState; overview: Overview; now: number; onDuty: () => void }) {
   const nav = useNav();
@@ -93,7 +100,7 @@ function YourMove({ g, overview, now, onDuty }: { g: GameState; overview: Overvi
       : { title: `${title} is live`, line: `${plural(run.squadIds.length, 'squad')} on scene.`, action: 'Return', onAct: () => nav.go('ops') };
   } else {
     const oldest = [...(g.incidents ?? [])].filter((card) => card.expiresAt > t).sort((a, b) => a.expiresAt - b.expiresAt)[0];
-    if (oldest) move = { title: `${scenarioTitle(g, oldest.id, now)} is the oldest call`, line: `Expires in ${duration(oldest.expiresAt - t)}. ${readyLine}`, action: 'Open', onAct: () => nav.go('ops') };
+    if (oldest) move = { title: `${scenarioTitle(g, oldest.id, now)} is the oldest call`, line: `Expires in ${duration(oldest.expiresAt - t)}. ${readyLine}`, action: 'Open', onAct: () => openCallBrief(nav, oldest.id) };
     else if (overview.squads.length > 0 && ready.length === 0) move = { title: 'No squad can deploy', line: 'Open Officers to see who is out and why.', action: 'Officers', onAct: () => nav.go('squad') };
     else if (overview.budget.net < 0) move = { title: 'Duty costs more than it earns', line: `Funding falls ${perHour(Math.abs(overview.budget.net))}. Put a squad on patrol.`, action: 'Duty', onAct: onDuty };
   }
