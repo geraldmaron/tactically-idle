@@ -133,3 +133,47 @@ The lead keeps `HANDOFF.md` current: each lane's session, branch, items in fligh
 touches and any lock on a file outside normal ownership. Before writing, a lane sends the lead its
 expected touches, including tests, producers and assets. The lead resolves overlaps before work
 starts and again when a lane's scope changes.
+
+## Context rotation
+
+A session is replaced by a fresh one before its context degrades the work. Every turn rereads the
+whole context, so a full window costs more per turn, keeps stale facts (old commit ids, superseded
+decisions) beside current ones, and loses detail silently when it auto-compacts.
+
+**Measure.** `get_usage` (the app's session tools) reports each session's context as a percent of
+its window. A lane checks its own at every item boundary and puts the number in its READY report.
+The lead checks a lane's number before handing it more work, and its own at every merge.
+
+**When.** These are starting defaults; the lead tunes them from what the reports show.
+
+| Signal | Action |
+|---|---|
+| Item done and context at 40% or more | Rotate before the next item |
+| Context at 60% or more mid-item | Commit, write the note, rotate now |
+| The session has auto-compacted (a summary replaced earlier turns) | Rotate at the next commit |
+
+**How a lane rotates.**
+
+1. Commit everything on its branch. No work stays uncommitted.
+2. Write a rotation note in the lead's notes folder (`side-session-notes/<lead session id>/<lane>-rotation-<n>.md`):
+   item and backlog id; branch and last commit; done, with the command that proved each part; not
+   done; verification not yet run; open findings with their verdicts; file touches; decisions taken
+   and why; the next three steps.
+3. Message the lead "ROTATE" with the note's path, then stop.
+4. The lead starts the successor fresh on the same model, cut from the predecessor's branch tip,
+   with the original brief plus "read the rotation note first". It updates `HANDOFF.md`, and
+   archives the predecessor once the successor confirms it has the note.
+
+**How the lead rotates.** Only at a quiet point: no lane mid-turn, every READY merged or listed.
+A lane's end-of-turn notes go to the session that started it, so a running lane would report to a
+lead that's gone.
+
+1. Bring `HANDOFF.md` and the backlog up to date, and commit.
+2. Write `side-session-notes/<lead session id>/coordinator-handover.md`: the integration branch and
+   tip; each lane's session id, branch, state and context percent; merges pending and their
+   checks; open owner questions; and the usage budget (`get_usage` plan limits).
+3. Start the successor lead fresh, from the integration branch, titled "Project coordination
+   handoff". Lanes address the lead by that title, so the name carries over. Its first step is
+   to read this file, `HANDOFF.md` and the handover note.
+4. Tell each idle lane the new lead's session id, then archive the old lead. While both exist the
+   title matches two sessions, so lanes message the id until the old lead is archived.
