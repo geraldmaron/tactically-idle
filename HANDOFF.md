@@ -17,6 +17,10 @@ final verified push). It plans and merges; Sonnet and Haiku sessions build; Code
 challenges, tests and generates art. Earlier leads ("UI/UX audit and mobile-first plan", "Project
 patterns review and antipatterns") stand down.
 
+Current lead: local_57697767-1f17-4edc-9de5-edbdf721af55, from the 2026-10-22 rotation (took over
+from local_0ef35909, which is archived once the owner agrees). Every idle lane has been told this id;
+until the old lead is archived the title matches two sessions, so lanes message the id.
+
 The branch holds everything: the Desk and Street redesign, paid details (save version 17), the
 Standard-only stall lift, the hook-pattern research and every earlier branch (reconciled
 2026-10-22; nothing local or on GitHub is missing from it). `npm run verify` passed at 70ae94b;
