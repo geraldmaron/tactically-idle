@@ -3,12 +3,12 @@
    the only colours defined here (move them into theme.css when the ui-system tokens land). */
 
 /* ---- call-type badges: shape, hue and mark per type */
-.ct-badge { display: inline-flex; align-items: center; gap: 8px; min-width: 0; vertical-align: middle; --ct: var(--text-dim); --ct-ink: var(--bg); }
+.ct-badge { display: inline-flex; align-items: center; gap: var(--sp2); min-width: 0; vertical-align: middle; --ct: var(--text-dim); --ct-ink: var(--bg); }
 .ct-badge-shape { flex: none; display: block; overflow: visible; }
 .ct-badge-fill { fill: var(--ct); stroke: var(--ct); }
 .ct-badge-mark { color: var(--ct-ink); }
 .ct-medallion { flex: none; display: block; border-radius: 50%; object-fit: contain; }
-.ct-badge-label { font: 600 14px/1.2 var(--font-ui); color: var(--text); min-width: 0; overflow-wrap: anywhere; }
+.ct-badge-label { font: 600 var(--s14)/1.2 var(--font-ui); color: var(--text); min-width: 0; overflow-wrap: anywhere; }
 .ct-badge--hostage { --ct: var(--ct-hostage); }
 .ct-badge--barricade { --ct: var(--ct-barricade); }
 .ct-badge--armed { --ct: var(--ct-armed); }
@@ -16,11 +16,11 @@
 .ct-badge--unknown { --ct: var(--line-strong); --ct-ink: var(--text); }
 
 /* ---- status and outcome marks: silhouette plus label, colour only reinforces */
-.kit-mark { display: inline-flex; align-items: center; gap: 6px; min-width: 0; vertical-align: middle; color: var(--text); --mk: var(--text-dim); }
+.kit-mark { display: inline-flex; align-items: center; gap: var(--sp2); min-width: 0; vertical-align: middle; color: var(--text); --mk: var(--text-dim); }
 .kit-mark-art { flex: none; display: block; overflow: visible; }
 .kit-mark-shape { fill: var(--mk); stroke: var(--mk); stroke-width: 0; }
 .kit-mark-cut { fill: none; stroke: var(--bg); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-.kit-mark-label { font: 500 14px/1.2 var(--font-ui); color: var(--text); min-width: 0; }
+.kit-mark-label { font: 500 var(--s14)/1.2 var(--font-ui); color: var(--text); min-width: 0; }
 .kit-mark--ready, .kit-mark--favorable { --mk: var(--mint); }
 .kit-mark--strained, .kit-mark--overloaded, .kit-mark--mixed, .kit-mark--retiring { --mk: var(--warn); }
 .kit-mark--recovery, .kit-mark--injured, .kit-mark--adverse { --mk: var(--danger); }

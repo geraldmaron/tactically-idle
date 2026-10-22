@@ -888,21 +888,38 @@ export function iconPaths(name: IconName): ReactNode {
   return PATHS[name];
 }
 
+/** The kit's icon contract (docs/visual-kit.md, "Icon rules"): three sizes and one stroke. 16 sits
+ * inline with 12 to 14px text, 20 leads rows, chips and buttons, 24 belongs to tabs and the resource bar. */
+export const ICON_SIZE = { sm: 16, md: 20, lg: 24 } as const;
+export type IconSizeName = keyof typeof ICON_SIZE;
+export const ICON_STROKE = 1.75;
+
+/** A named kit size, or a pixel size. Pixel sizes still compile while screens move to the names; a
+ * size outside 16, 20 and 24 is a gate violation (R9), kept only for registered artwork. */
+export type IconSize = IconSizeName | number;
+
+export function iconPx(size: IconSize): number {
+  return typeof size === 'number' ? size : ICON_SIZE[size];
+}
+
 export interface IconProps {
   name: IconName;
-  size?: number;
+  /** `sm` (16), `md` (20) or `lg` (24). Defaults to `lg`. */
+  size?: IconSize;
   className?: string;
   /** Accessible label. Omit for purely decorative icons. */
   title?: string;
+  /** The kit stroke is `ICON_STROKE`. Override only for registered artwork. */
   strokeWidth?: number;
 }
 
-export function Icon({ name, size = 24, className, title, strokeWidth = 1.75 }: IconProps) {
+export function Icon({ name, size = 'lg', className, title, strokeWidth = ICON_STROKE }: IconProps) {
+  const px = iconPx(size);
   return (
     <svg
       className={className ? `icon ${className}` : 'icon'}
-      width={size}
-      height={size}
+      width={px}
+      height={px}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"

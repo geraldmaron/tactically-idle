@@ -78,7 +78,7 @@ export function Sheet({ open, onClose, title, subtitle, children, footer, modal 
             {subtitle && <div className="sheet-sub">{subtitle}</div>}
           </div>
           <button type="button" className="icon-btn" onClick={onClose} aria-label="Close">
-            <Icon name="x" size={20} />
+            <Icon name="x" size="md" />
           </button>
         </header>
         <div className="sheet-body">{children}</div>

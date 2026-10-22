@@ -20,12 +20,16 @@
   color: var(--t2);
 }
 .stamp-amber { color: var(--t1); }
-.stamp-mint { color: var(--good); }
-.stamp-danger { color: var(--harm); }
+.stamp-mint,
+.stamp-good { color: var(--good); }
+.stamp-danger,
+.stamp-harm { color: var(--harm); }
+.stamp-warn { color: var(--warn-text); }
+.stamp .icon { flex: none; margin-right: var(--sp1); }
 /* A manila file tab sitting on a card's top edge (the welcome-back file). */
 .file-tab {
-  display: inline-flex; align-items: center; gap: 6px; align-self: flex-start;
-  margin: -12px 0 2px -12px; padding: 3px 12px 3px 12px; border-radius: var(--r2) 0 var(--r1) 0;
+  display: inline-flex; align-items: center; gap: var(--sp2); align-self: flex-start;
+  margin: -12px 0 var(--sp1) -12px; padding: var(--sp1) var(--sp3) var(--sp1) var(--sp3); border-radius: var(--r2) 0 var(--r1) 0;
   background-color: var(--manila); background-image: var(--tex-manila, none); background-size: 256px;
   background-blend-mode: multiply; color: var(--manila-ink);
   font: 600 var(--s12)/1.3 var(--f-ui);
@@ -36,29 +40,29 @@
 .plate { position: relative; overflow: hidden; isolation: isolate; background: linear-gradient(135deg, var(--ink-2), var(--ink-0)); }
 .plate > .plate-art { position: absolute; inset: 0; z-index: -2; width: 100%; height: 100%; object-fit: cover; object-position: center right; }
 .plate::after { content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
-  background: linear-gradient(90deg, rgba(8, 13, 22, 0.92) 0%, rgba(8, 13, 22, 0.62) 46%, rgba(8, 13, 22, 0.18) 100%),
-              linear-gradient(0deg, rgba(8, 13, 22, 0.85) 0%, transparent 55%); }
+  background: linear-gradient(90deg, color-mix(in srgb, var(--ink-0) 92%, transparent) 0%, color-mix(in srgb, var(--ink-0) 62%, transparent) 46%, color-mix(in srgb, var(--ink-0) 18%, transparent) 100%),
+              linear-gradient(0deg, color-mix(in srgb, var(--ink-0) 85%, transparent) 0%, transparent 55%); }
 .plate-grain::before { content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none; opacity: 0.25; mix-blend-mode: overlay; background-image: var(--tex-paper, none); background-size: 256px; }
 
 /* The screen banner at the top of a tab: painted room, title, a one-line status. */
-.screen-banner { display: flex; flex-direction: column; justify-content: flex-end; gap: 4px; min-height: 132px; padding: 16px var(--gutter) 14px; border-bottom: 1px solid var(--hair); }
-.screen-banner-kicker { font: 500 var(--s12)/1.2 var(--f-ui); color: var(--t-plate); text-shadow: 0 1px 6px rgba(0, 0, 0, 0.9); }
-.screen-banner-title { margin: 0; font: 600 var(--s28)/1.1 var(--f-title); color: var(--t1); text-shadow: 0 2px 12px rgba(0, 0, 0, 0.8); overflow-wrap: anywhere; }
-.screen-banner-line { margin: 0; font-size: 14px; line-height: 1.35; color: var(--t-plate); text-shadow: 0 1px 8px rgba(0, 0, 0, 0.9); }
+.screen-banner { display: flex; flex-direction: column; justify-content: flex-end; gap: var(--sp1); min-height: 132px; padding: var(--sp4) var(--gutter) var(--sp4); border-bottom: 1px solid var(--hair); }
+.screen-banner-kicker { font: 500 var(--s12)/1.2 var(--f-ui); color: var(--t-plate); text-shadow: 0 1px 6px color-mix(in srgb, var(--black) 90%, transparent); }
+.screen-banner-title { margin: 0; font: 600 var(--s28)/1.1 var(--f-title); color: var(--t1); text-shadow: 0 2px 12px color-mix(in srgb, var(--black) 80%, transparent); overflow-wrap: anywhere; }
+.screen-banner-line { margin: 0; font-size: var(--s14); line-height: 1.35; color: var(--t-plate); text-shadow: 0 1px 8px color-mix(in srgb, var(--black) 90%, transparent); }
 @media (max-width: 340px) { .screen-banner { min-height: 112px; } .screen-banner-title { font-size: var(--s22); } }
 /* The tab-root plate: the room's painting at --plate-h, the tab icon and name on it, one quiet chip. */
 .tab-plate { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--sp3); box-sizing: border-box; height: var(--plate-h); padding: 0 var(--gutter) var(--sp3); border-bottom: 1px solid var(--hair); }
-.tab-plate-title { display: inline-flex; align-items: center; gap: var(--sp2); min-width: 0; margin: 0; font: 600 var(--s22)/1.1 var(--f-title); color: var(--t1); text-shadow: 0 2px 12px rgba(0, 0, 0, 0.8); overflow-wrap: anywhere; }
+.tab-plate-title { display: inline-flex; align-items: center; gap: var(--sp2); min-width: 0; margin: 0; font: 600 var(--s22)/1.1 var(--f-title); color: var(--t1); text-shadow: 0 2px 12px color-mix(in srgb, var(--black) 80%, transparent); overflow-wrap: anywhere; }
 .tab-plate-title .icon { flex: none; }
-.tab-plate-meta { flex: none; font: 500 var(--s14)/1.2 var(--f-ui); color: var(--t-plate); text-shadow: 0 1px 8px rgba(0, 0, 0, 0.9); }
+.tab-plate-meta { flex: none; font: 500 var(--s14)/1.2 var(--f-ui); color: var(--t-plate); text-shadow: 0 1px 8px color-mix(in srgb, var(--black) 90%, transparent); }
 
 @media (prefers-reduced-motion: reduce) { .btn { transition: none; } }
 
 /* ------------------------------------------------------------ HQ (the return job) */
 /* The glance group is a stack of its own tiles, not a box around boxes. */
-.hq-page .hq-identity { display: grid; gap: 10px; padding: 0; border: 0; background: none; }
+.hq-page .hq-identity { display: grid; gap: var(--sp3); padding: 0; border: 0; background: none; }
 .hq-page .hq-identity > * { margin: 0; }
-.hq-away { border-color: rgba(179, 154, 108, 0.5) !important; background: linear-gradient(180deg, rgba(179, 154, 108, 0.1), var(--ink-1)) !important; }
+.hq-away { border-color: color-mix(in srgb, var(--manila) 50%, transparent) !important; background: linear-gradient(180deg, color-mix(in srgb, var(--manila) 10%, transparent), var(--ink-1)) !important; }
 .hq-away .file-tab { flex: 0 0 auto; margin-bottom: 0; }
 .hq-away > div { flex-basis: 100%; }
 .hq-attention > div { border-left: 3px solid var(--act) !important; background: var(--ink-1) !important; }
@@ -66,9 +70,9 @@
 /* ------------------------------------------------------------ Prepare, Live and Debrief heads */
 /* The call's scene runs edge to edge behind its title through the whole call journey. */
 .app .debrief-hero.plate { padding-top: 64px; }
-.app .debrief-hero.plate .debrief-title { text-shadow: 0 2px 12px rgba(0, 0, 0, 0.9); }
-.app .debrief-hero.plate .debrief-narrative { color: var(--t1); text-shadow: 0 1px 8px rgba(0, 0, 0, 0.9); }
-.debrief-stamp { position: absolute; top: 16px; right: 16px; padding: 4px 10px; }
+.app .debrief-hero.plate .debrief-title { text-shadow: 0 2px 12px color-mix(in srgb, var(--black) 90%, transparent); }
+.app .debrief-hero.plate .debrief-narrative { color: var(--t1); text-shadow: 0 1px 8px color-mix(in srgb, var(--black) 90%, transparent); }
+.debrief-stamp { position: absolute; top: 16px; right: 16px; padding: var(--sp1) var(--sp3); }
 
 /* A banner opening a padded page bleeds to the frame edges. */
 .page > .screen-banner:first-child { margin: -12px calc(-1 * var(--gutter)) 0; }
@@ -82,20 +86,20 @@
   display: grid; place-items: center; width: 56px; height: 56px; margin-top: -26px; border-radius: 50%;
   background: radial-gradient(circle at 50% 30%, var(--act-hi), var(--amber) 60%, var(--act-lo));
   color: var(--amber-ink); border: 3px solid var(--ink-0);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(243, 180, 50, 0.5), inset 0 2px 0 rgba(255, 245, 210, 0.6);
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--black) 60%, transparent), 0 0 0 1px color-mix(in srgb, var(--act) 50%, transparent), inset 0 2px 0 color-mix(in srgb, var(--act-text) 60%, transparent);
 }
 .navbtn-primary .navicon .icon { filter: none; }
 .navbtn-primary.navbtn-on::before { display: none; }
-.navbtn-primary.navbtn-on .navicon { box-shadow: 0 6px 18px rgba(243, 180, 50, 0.45), 0 0 0 2px var(--amber-2), inset 0 2px 0 rgba(255, 245, 210, 0.6); }
-.navbtn-primary .navlabel { margin-top: 2px; }
+.navbtn-primary.navbtn-on .navicon { box-shadow: 0 6px 18px color-mix(in srgb, var(--act) 45%, transparent), 0 0 0 2px var(--amber-2), inset 0 2px 0 color-mix(in srgb, var(--act-text) 60%, transparent); }
+.navbtn-primary .navlabel { margin-top: var(--sp1); }
 .navbtn-primary .live-dot { top: 2px; right: 2px; background: var(--danger); border-color: var(--ink-0); }
 .navbtn-primary .navbadge { top: -2px; right: -4px; }
 .navdot { position: absolute; top: -1px; right: -4px; width: 9px; height: 9px; border-radius: 50%; background: var(--danger); border: 2px solid var(--ink-0); }
 
 /* The result grade: three marks, filled from the outcome score; a death leaves them empty and grey. */
-.result-marks { display: inline-flex; gap: 6px; margin: 2px 0 4px; }
-.result-marks i { width: 26px; height: 26px; clip-path: polygon(50% 0, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%); background: rgba(255, 255, 255, 0.14); }
+.result-marks { display: inline-flex; gap: var(--sp2); margin: var(--sp1) 0 var(--sp1); }
+.result-marks i { width: 26px; height: 26px; clip-path: polygon(50% 0, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%); background: color-mix(in srgb, var(--white) 14%, transparent); }
 .result-marks i[data-on] { background: var(--t1); animation: mark-in .5s ease-out backwards; }
 .result-marks i[data-on]:nth-child(2) { animation-delay: .15s; } .result-marks i[data-on]:nth-child(3) { animation-delay: .3s; }
-.result-marks-muted i { background: rgba(170, 183, 202, 0.18); }
+.result-marks-muted i { background: color-mix(in srgb, var(--t2) 18%, transparent); }
 @keyframes mark-in { from { opacity: 0; } to { opacity: 1; } }

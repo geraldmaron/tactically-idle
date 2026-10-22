@@ -398,7 +398,7 @@ export function ThreatPill({ label, minutes, dither = 0 }: { label: string; minu
   const urgency = pressureUrgency({ kind: 'threat', label, minutes, left });
   return <p className={`threat-pill pressure-${urgency}${left <= 0 ? ' threat-pill-landed' : ''}`} role={left <= 0 ? 'status' : undefined}
     aria-label={left <= 0 ? `${label}. It happened` : `Threat: ${label} in ${shown} ${shown === 1 ? 'minute' : 'minutes'}`}>
-    <Icon name="hourglass" size={14} />
+    <Icon name="hourglass" size="md" />
     <span className="threat-pill-label"><PeopleText text={label} /></span>
     <span className="threat-pill-sep" aria-hidden="true">·</span>
     <b className="threat-pill-min">{left <= 0 ? NOW_LABEL : `${padDigits(shown, 2)} min`}</b>
@@ -458,7 +458,7 @@ export function FillGauge({ view }: { view: FillView }) {
   const urgency = pressureUrgency({ kind: 'fill', view, left: fillMinutesToBite(view) });
   return <div className={`fill-gauge pressure-${urgency}${view.stopped ? ' fill-gauge-stopped' : ''}`} data-fill={view.id} role="group" aria-label={`${view.label}: ${value} of 100${state ? `, ${state.toLowerCase()}` : ''}`}>
     <p className="fill-gauge-head">
-      <Icon name="crowd" size={14} />
+      <Icon name="crowd" size="md" />
       <span className="fill-gauge-label">{view.label}</span>
       {state && <b className="fill-gauge-state">{state}</b>}
     </p>

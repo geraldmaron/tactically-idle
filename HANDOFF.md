@@ -11,6 +11,12 @@ Merged so far: #36 (coordination rules), #37 (`e2e-script`),
 
 ## Lead (from 2026-10-22)
 
+Local `main` was fast-forwarded to the integration tip on 2026-10-22 (owner: "reconcile and merge these into
+main locally"); nothing pushed. The code there passed `npm run verify` and the e2e at 3c840ca. Still outside
+main on purpose: the Going Live chain (`claude/hopeful-pike-69bdac`, under writing review, old-call tests not
+yet rewritten) and ui-gates (`claude/quizzical-fermi-734e3c`, in progress). The lead keeps main equal to the
+integration branch after each merge.
+
 The session "Project coordination handoff" leads, on `claude/angry-edison-cae68b` in
 `.claude/worktrees/angry-edison-cae68b` (local, unpushed: owner keeps everything local until one
 final verified push). It plans and merges; Sonnet and Haiku sessions build; Codex (default model)
@@ -130,8 +136,12 @@ Owner's go for prose (2026-10-22): layers run one at a time, each cut from
 the previous tip. P4a scene: prose-scene (local_31193569, Sonnet), from 8d8a0fc, writes only strings in
 `hostage-live.ts` and `hostage.ts` plus its record; brief `going-live-spine/prose-p4a-brief.md`. P4a READY at
 4a5242f on `claude/prose-scene-6a2c7c` (worktree folder `frosty-goldwasser-fee639`): strings only, no data
-moved, check:strings clean in its fields. P4b menu is proposed as a card for the owner to start (brief
-`going-live-spine/prose-p4b-brief.md`, cut from 4a5242f). Then
+moved, check:strings clean in its fields. P4b menu READY at bc69268 on `claude/trusting-pasteur-41bc4e`; P4c
+consequences READY at 853b510 on `claude/happy-wilson-6259de` (no data moved, compiled-tree diff identical,
+check:paths unchanged). P5 is folded into the integration edit (Opus): READY at 6e4d34f on
+`claude/hopeful-pike-69bdac`, check:strings exits 0, no data moved (blanked-string generation byte identical),
+check:paths unchanged. The separate writing review is proposed as a card (brief
+`going-live-spine/writing-review-brief.md`). Then
 P4c consequences (P3 folded in), P5 chat variants, one integration edit, `swat-writing-review` by a separate
 reader, the old call's tests, then merge.
 
@@ -159,6 +169,13 @@ Backlog `ui-gates`, `ui-primitives`, `ui-surfaces`. Wave A, proposed as cards: u
 ui-primitives (Sonnet, `theme.css`, `app.css`, `skin.css`, `player-navigation.css`, `components/ui.tsx`,
 `Sheet.tsx`, `sheet-viewport.css`, `icons.tsx`, `icons/kit.*`, port 5175). Wave B (packages P2 to P8) starts
 once both merge. The lead regenerates `ui-debt.json` at every merge.
+
+ui-primitives merged (2c8d943; small-text ceiling 307 to 275 and architecture re-render 3c840ca): verify
+3,051 tests, art, build and no-lab green; e2e 6 live calls at 390 and 320; Codex approved 7f2cc57 (not
+re-run on 7375045, the owner's direct ask that made `Row.lead` and `Section.icon` required and touched 8
+call sites in `SettingsSheet.tsx`, `HQ.tsx`, `Recruit.tsx` plus `LiveView.tsx` and `live-call.css`). The lead
+looked at the merged captures (`ui-audit/after-primitives/`): chips keep their inset; the Menu's switch rows
+still lack leads (P5). Its dev servers on 5175 and 5176 are its own; it stops them when told.
 
 ## Locks outside normal ownership
 

@@ -88,13 +88,13 @@ D1 to D9 in the review rubric, all inside the four `swat-*` skills. Done: the sk
 the string checker and prose lint match the verdicts, and AGENTS.md's player-facing writing rules
 say the same.
 
-### call-surfaces: Radio transcript, ending epilogue and a 3-line board hook
+### call-surfaces: Radio transcript, ending epilogue and a board hook
 Tags: job=command; journeys=answer-a-call; probes=none (text surfaces, not odds inputs); lane=engine
 Needs: start=none; integrate=none; ship=none
 
 `TreeNode.exchange` and `TreeOutcome.exchange` (two to four spoken lines with a speaker), and
 `TreeEnding.epilogue`, compiled with name binding, budgeted in the string checker and rendered in
-the live call and the debrief. The Ops board hook clamps at 3 lines (owner decision B5, 2026-10-19).
+the live call and the debrief. The Ops board hook shows in full (owner, 2026-10-22, replacing the 3-line clamp of decision B5).
 Done: a call that authors them shows them at 390x844, and the checker fails an over-budget line.
 
 ### live-chat-build: Finish the read of Going Live's chat
@@ -470,29 +470,20 @@ error states. Debt lives in a generated baseline (`npm run ui:baseline`) that on
 regenerates at each merge; rules Astra marks hard zero start as ratchets at today's count. Done: every rule
 has a gate, `npm run verify` and `npm run check:ui` pass on today's UI, and a negative control fails each rule.
 
-### ui-primitives: Shared components and tokens carry the polish
-Tags: job=command; journeys=answer-a-call, hire-and-equip; probes=none (layout and type); lane=interface
-Needs: start=none; integrate=ui-gates; ship=none
-
-Astra's package P1: `theme.css`, `app.css` (all of it), `skin.css`, `player-navigation.css`,
-`components/ui.tsx`, `components/Sheet.tsx`, `components/sheet-viewport.css`, `icons.tsx`, `icons/kit.ts`,
-`icons/kit.css`. Chip insets for wrapped labels (R15), the 320 action-bar gutter matching the content gutter
-(R2), contrast tokens (`--t3` on `--ink-2` is 4.46:1, R14), semantic type styles, shared card, row, chip and
-state variants including loading and error, and the icon size and stroke contract. Screen packages ask this
-lane for any `app.css` change. Done: the shared failures in R2, R14 and R15 at zero, R1, R7, R8 and R9 debt
-lower, and the captures at three widths show no regressions.
-
 ### ui-surfaces: Every screen passes the gates
 Tags: job=command; journeys=answer-a-call, hire-and-equip, debrief-explains; probes=none (layout and art); lane=interface
-Needs: start=ui-gates, ui-primitives; integrate=none; ship=none
+Needs: start=ui-gates; integrate=none; ship=none
 
 Astra's packages P2 to P8, one builder each, no shared files: P2 HQ, finance and command staff; P3 squads,
 officer sheet, hire, arrange and training; P4 Build, upgrades and Armory (essential-copy clamps, hidden
 glyphs, actionable locked states that name Build, Upgrades); P5 first run, settings and saves (one theme
-switch, menu leads, shared save cards); P6 board, brief and deploy (full hooks, Map and basic-kit visuals);
+switch, leads on the Menu's switch rows to match its link rows, shared save cards, and tighten Saves and
+Training, which grew taller when 13px prose went to 14px); P6 board, brief and deploy (the hook shown in full with no clamp, owner 2026-10-22; Map and basic-kit visuals);
 P7 live call, review, result and debrief (compact strip and empty radio, keeping the agreed order in
 `docs/ops-experience.md`, a reachable first choice, outcome and resource marks); P8 portraits, art and the
-blueprint (literal colors, art sizing, fallback floors). File lists per package are in `side-session-notes/local_0ef35909-1f92-43ed-b124-d0236bd4f320/ui-audit/astra-findings.md`. Done: each
+blueprint (literal colors, art sizing, fallback floors). The shared tokens, variants, `LoadingState`,
+`ErrorState`, semantic type classes, `ICON_SIZE` and required `Row.lead` and `Section.icon` landed with
+ui-primitives (2026-10-22). File lists per package are in `side-session-notes/local_0ef35909-1f92-43ed-b124-d0236bd4f320/ui-audit/astra-findings.md`. Done: each
 package's surfaces pass every gate at 320, 390 and 430, a fixed-seed sweep compared with the 2026-10-22
 captures, and a closing Astra read of the after set.
 
@@ -666,7 +657,7 @@ constant (the multiplier saves taps); entitlements per account; the ad's x1.5 fo
 playtests judge its size; the first room scales with multipliers; an offer that would pay nothing is not
 shown; no server analytics; AdMob alone and non-personalized at launch, personalized ads later as an opt-in
 with ATT and UMP work; prices $2.99 and $4.99; the tab plate stays 96px on all four tabs and the reading
-face stays the sans (`owner-visual-picks`); the live strip keeps 2 chat lines; `worn-kit` approved;
+face stays the sans (`owner-visual-picks`); the live strip keeps 2 chat lines; the board hook shows in full, no 3-line clamp; `worn-kit` approved;
 Going Live's prose passes start.
 
 Decided 2026-10-22 (Going Live): the rebuild (`going-live-spine`) must let every balance style reach
@@ -684,7 +675,7 @@ with harm counts as resolved (already so in `dispositionOf`); an entry breaks ev
 the crisis cap stays report-only until playtests.
 
 Decided 2026-10-19 (scenario depth): scenario work resumes as the depth program above; the board
-hook clamps at 3 lines; text gets new surfaces (transcript, epilogue) rather than larger budgets
+hook clamps at 3 lines (replaced 2026-10-22: the hook shows in full); text gets new surfaces (transcript, epilogue) rather than larger budgets
 everywhere; the player may lie or promise without approval, at a real cost; the tone goes darker,
 with the self-harm safe-messaging rules, E2 and E3 kept (`docs/scenario-depth.md`).
 Also decided 2026-10-19: ship by wrapping the web app for iOS and Android; free to play with

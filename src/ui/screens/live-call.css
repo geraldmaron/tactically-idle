@@ -157,7 +157,6 @@
  * a thick bar, and a tone that climbs from calm through warn to critical as its window closes.
  * Critical flashes twice as it tips over and then holds its glow: the game loops one signal only. */
 .live .threat-pill, .live .fill-gauge { min-height: 44px; padding: 7px 12px 8px; border-width: 2px; border-radius: 10px; row-gap: 6px; transition: border-color 0.4s, background-color 0.4s, box-shadow 0.4s; }
-.live .threat-pill .icon, .live .fill-gauge-head .icon { width: 18px; height: 18px; }
 .live .threat-pill-label { font-size: 16px; }
 .live .threat-pill-min { font: 700 22px/1 var(--font-mono); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; color: var(--white); }
 .live .fill-gauge-head { font-size: 16px; }

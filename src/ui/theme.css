@@ -13,7 +13,7 @@
   /* Text. --t-plate is secondary text set on painted art, a step brighter than --t2 for the scrim. */
   --t1: #eef2f7;
   --t2: #aab5c5;
-  --t3: #7a879c;
+  --t3: #8a97ac; /* 5.5:1 on --ink-2 and 4.8:1 on --ink-3, the lightest card, so muted text clears 4.5:1 on every surface */
   --t-plate: #ccd5e1;
   --white: #fff;
   --black: #000;

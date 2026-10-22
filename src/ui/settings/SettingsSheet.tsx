@@ -51,19 +51,19 @@ function MenuHome({ settings, onPage, onOpenSaves }: { settings: PlayerSettings;
   const status = campaignStatus(saved);
   const slot = saved.activeSlotId ? saved.slots[saved.activeSlotId - 1] : null;
   const peopleColor = usePeopleColor();
-  const chevron = <Icon name="chevronRight" size={18} />;
+  const chevron = <Icon name="chevronRight" size="md" />;
   return <div className="menu-home">
     <section className="menu-group" aria-labelledby="menu-campaign">
       <h3 id="menu-campaign" className="menu-heading">{MENU_TEXT.campaign}</h3>
-      <Row className={`menu-row${status.attention ? ' menu-row-attention' : ''}`} title={slot?.name ?? status.name}
+      <Row className={`menu-row${status.attention ? ' menu-row-attention' : ''}`} lead={<Icon name="bookmark" size="md" />} title={slot?.name ?? status.name}
         detail={slot ? `Slot ${saved.activeSlotId} · ${status.detail}` : status.detail}
         trail={<button type="button" className="menu-link" onClick={onOpenSaves}>{MENU_TEXT.saves}</button>} />
     </section>
     <section className="menu-group" aria-labelledby="menu-settings">
       <h3 id="menu-settings" className="menu-heading">{SETTINGS_TEXT.settingsTitle}</h3>
-      <Row className="menu-row" title={MENU_TEXT.themes} detail={avoidSummary(settings.avoidThemes)} trail={chevron} onClick={() => onPage('themes')} />
-      <Row className="menu-row" title={SETTINGS_TEXT.warningsHeading} detail={WARNING_LABELS[settings.cardWarnings].name} trail={chevron} onClick={() => onPage('warnings')} />
-      <Row className="menu-row" title={SETTINGS_TEXT.timerHeading} detail={TIMER_LABELS[settings.timer].name} trail={chevron} onClick={() => onPage('timer')} />
+      <Row className="menu-row" lead={<Icon name="eye" size="md" />} title={MENU_TEXT.themes} detail={avoidSummary(settings.avoidThemes)} trail={chevron} onClick={() => onPage('themes')} />
+      <Row className="menu-row" lead={<Icon name="warning" size="md" />} title={SETTINGS_TEXT.warningsHeading} detail={WARNING_LABELS[settings.cardWarnings].name} trail={chevron} onClick={() => onPage('warnings')} />
+      <Row className="menu-row" lead={<Icon name="clock" size="md" />} title={SETTINGS_TEXT.timerHeading} detail={TIMER_LABELS[settings.timer].name} trail={chevron} onClick={() => onPage('timer')} />
       <MenuSwitch label={SETTINGS_TEXT.soundHeading} checked={settings.sound} onChange={(sound) => updateSettings({ sound })} />
       <MenuSwitch label={SETTINGS_TEXT.flashingHeading} checked={settings.flashing} onChange={(flashing) => updateSettings({ flashing })} />
       {/* A display preference kept in this browser, not in the save (src/ui/people). */}
@@ -71,7 +71,7 @@ function MenuHome({ settings, onPage, onOpenSaves }: { settings: PlayerSettings;
     </section>
     <section className="menu-group" aria-labelledby="menu-support">
       <h3 id="menu-support" className="menu-heading">{MENU_TEXT.support}</h3>
-      <Row className="menu-row" title={MENU_TEXT.talk} detail={MENU_TEXT.talkDetail} trail={chevron} onClick={() => onPage('support')} />
+      <Row className="menu-row" lead={<Icon name="heart" size="md" />} title={MENU_TEXT.talk} detail={MENU_TEXT.talkDetail} trail={chevron} onClick={() => onPage('support')} />
     </section>
     <p className="menu-note">{SETTINGS_TEXT.settingsSubtitle}</p>
   </div>;

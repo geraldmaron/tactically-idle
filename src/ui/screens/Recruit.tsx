@@ -57,6 +57,7 @@ export function Recruit() {
   return (
     <Section
       title="Candidates"
+      icon="idcard"
       id="recruit-h"
       action={<RecruitRefresh />}
       hint={full ? `Roster full at ${roster}/${g.department.rosterCap}. Dismiss someone or expand capacity to hire.` : `Roster ${roster}/${g.department.rosterCap}. Each hire adds their wage every hour.`}

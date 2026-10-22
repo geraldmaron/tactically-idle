@@ -48,7 +48,7 @@ export function HQ() {
     <Hub pins={hubPins(g, overview, nav)} />
     <div className="page hq-page">
       <YourMove g={g} overview={overview} now={now} onDuty={scrollToDuty} />
-      {g.report && <Row className="hq-report" title="Shift report" detail={reportSummary(g.report)} onClick={() => setReportOpen(true)} trail={<span className="hq-link">Review</span>} label={`Shift report: ${reportSummary(g.report)}. Review`} />}
+      {g.report && <Row className="hq-report" lead={<Icon name="dossier" size="md" />} title="Shift report" detail={reportSummary(g.report)} onClick={() => setReportOpen(true)} trail={<span className="hq-link">Review</span>} label={`Shift report: ${reportSummary(g.report)}. Review`} />}
       <DutySection squads={g.squads} g={g} />
       <TapEarn />
       <CommandStaff />
@@ -180,7 +180,7 @@ export function Debriefs({ g, now }: { g: GameState; now: number }) {
   const [expanded, setExpanded] = useState(false);
   const selected = g.debriefs.find((debrief) => debrief.runId === selectedId) ?? null;
   return (
-    <Section title="Recent results">
+    <Section title="Recent results" icon="chart">
       {g.debriefs.length === 0 ? (
         <EmptyState spot="noDebriefs" title="No results yet">
           Finished calls appear here with their results and causes.
