@@ -2,6 +2,7 @@
 // state at a width (R2, R4, R6, R7, R9, R12, R13, R14, R15, R18), plus the two rules that judge a whole
 // frame or the whole walk: R16 (the first choice is reachable) and R17 (every state was captured).
 import { FIRST_CHOICE_BUDGET, STATES } from './manifest.mjs';
+import { compareCounts } from './ratchet.mjs';
 
 export const RENDERED_RULES = {
   'R2.gutter': 'content blocks that miss the surface gutter',
@@ -64,7 +65,8 @@ export function coverage(report, widths, failures = []) {
     }
     for (const msg of r.errors ?? []) bad.set(`page-error@${width}|${String(msg).slice(0, 60)}`, String(msg).slice(0, 160));
   }
-  for (const f of failures) bad.set(`step ${f}`, 'a walk step failed');
+  // A failed step is keyed `step <name>@<width>` so the width filter of a partial run keeps it.
+  for (const f of failures) { const [width, ...name] = f.split(' '); bad.set(`step ${name.join(' ')}@${width}`, 'a walk step failed'); }
   return bad;
 }
 
@@ -74,4 +76,16 @@ export function countsOf(agg, extra = {}) {
   for (const [rule, byKey] of Object.entries(agg)) counts[rule] = Object.fromEntries(Object.entries(byKey).map(([k, m]) => [k, m.size]));
   for (const [rule, byKey] of Object.entries(extra)) counts[rule] = { ...(counts[rule] ?? {}), ...byKey };
   return counts;
+}
+
+/** Compare rendered counts with the baseline: [{ rule, kind: 'rose' | 'fell', lines }]. Only the widths a run walked count. */
+export function compareRendered(counts, baseline, widths) {
+  const problems = [];
+  const only = (key) => widths.some((w) => key.includes(`@${w}`));
+  for (const rule of Object.keys(RENDERED_RULES)) {
+    const { rose, fell } = compareCounts(counts[rule] ?? {}, baseline.rendered?.[rule]?.counts, { only });
+    if (rose.length) problems.push({ rule, kind: 'rose', lines: rose });
+    if (fell.length) problems.push({ rule, kind: 'fell', lines: fell });
+  }
+  return problems;
 }

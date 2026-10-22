@@ -7,8 +7,8 @@ import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { STATIC_RULES, collectStatic, countByFile } from './ui-gates/static.mjs';
-import { FELL_HELP, RAISED_HELP, compareCounts, entry, readBaseline, writeBaseline } from './ui-gates/ratchet.mjs';
-import { RENDERED_RULES, aggregate, countsOf, coverage, firstChoiceVerdict } from './ui-gates/evaluate.mjs';
+import { FELL_HELP, RAISED_HELP, entry, readBaseline, writeBaseline } from './ui-gates/ratchet.mjs';
+import { RENDERED_RULES, aggregate, compareRendered, countsOf, coverage, firstChoiceVerdict } from './ui-gates/evaluate.mjs';
 import { STATES, WIDTHS } from './ui-gates/manifest.mjs';
 import { runControls } from './ui-gates/controls.mjs';
 import { walk } from '../docs/captures/ui-ux-audit/tools/capture.mjs';
@@ -49,17 +49,6 @@ function renderedCounts(result, widths) {
   }
   for (const [key, why] of coverage(report, widths, failures)) { extra.R17[key] = 1; detail[`R17 ${key}`] = why; }
   return { counts: countsOf(agg, extra), agg, detail };
-}
-
-function compareRendered(counts, baseline, widths) {
-  const problems = [];
-  const only = (key) => widths.some((w) => key.includes(`@${w}`));
-  for (const rule of Object.keys(RENDERED_RULES)) {
-    const { rose, fell } = compareCounts(counts[rule] ?? {}, baseline.rendered[rule]?.counts, { only });
-    if (rose.length) problems.push({ rule, kind: 'rose', lines: rose });
-    if (fell.length) problems.push({ rule, kind: 'fell', lines: fell });
-  }
-  return problems;
 }
 
 async function main() {

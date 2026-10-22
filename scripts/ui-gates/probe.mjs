@@ -32,8 +32,9 @@ export async function probe(cfg) {
   // ---- geometry
   const opacityOf = (el) => { let o = 1; for (let a = el; a && a !== document.documentElement; a = a.parentElement) o *= Number(cs(a).opacity); return o; };
   const clips = (s, axis) => (axis === 'x' ? s.overflowX : s.overflowY) !== 'visible';
-  /** The part of an element's box that is on screen: inside the viewport and every clipping ancestor. */
-  const visibleRect = (el) => {
+  /** The part of an element's box left after the ancestors whose overflow `test` accepts, and the viewport
+   * when `clamp` is set. Absolute and fixed boxes skip the ancestors that are not their containing block. */
+  const clipRectBy = (el, test, clamp) => {
     const r = rectOf(el);
     let l = r.left, t = r.top, rr = r.right, b = r.bottom;
     let needPositioned = cs(el).position === 'absolute', needTransform = cs(el).position === 'fixed';
@@ -42,18 +43,20 @@ export async function probe(cfg) {
       const bypass = (needPositioned && s.position === 'static' && s.transform === 'none') || (needTransform && s.transform === 'none' && s.contain === 'none' && s.filter === 'none');
       if (!bypass) {
         needPositioned = false; needTransform = false;
-        if (clips(s, 'x') || clips(s, 'y')) {
+        if (test(s.overflowX) || test(s.overflowY)) {
           const ar = rectOf(a);
-          if (clips(s, 'x')) { l = Math.max(l, ar.left + parseFloat(s.borderLeftWidth)); rr = Math.min(rr, ar.right - parseFloat(s.borderRightWidth)); }
-          if (clips(s, 'y')) { t = Math.max(t, ar.top + parseFloat(s.borderTopWidth)); b = Math.min(b, ar.bottom - parseFloat(s.borderBottomWidth)); }
+          if (test(s.overflowX)) { l = Math.max(l, ar.left + parseFloat(s.borderLeftWidth)); rr = Math.min(rr, ar.right - parseFloat(s.borderRightWidth)); }
+          if (test(s.overflowY)) { t = Math.max(t, ar.top + parseFloat(s.borderTopWidth)); b = Math.min(b, ar.bottom - parseFloat(s.borderBottomWidth)); }
         }
       }
       if (s.position === 'absolute') needPositioned = true;
       if (s.position === 'fixed') needTransform = true;
     }
-    l = Math.max(l, 0); t = Math.max(t, 0); rr = Math.min(rr, vw); b = Math.min(b, vh);
+    if (clamp) { l = Math.max(l, 0); t = Math.max(t, 0); rr = Math.min(rr, vw); b = Math.min(b, vh); }
     return rr - l > 0 && b - t > 0 ? { left: l, top: t, right: rr, bottom: b, width: rr - l, height: b - t } : null;
   };
+  /** The part of an element's box that is on screen: inside the viewport and every clipping ancestor. */
+  const visibleRect = (el) => clipRectBy(el, (o) => o !== 'visible', true);
   const shown = (el) => {
     const s = cs(el);
     if (s.display === 'none' || s.visibility === 'hidden' || s.visibility === 'collapse') return false;
@@ -139,7 +142,6 @@ export async function probe(cfg) {
       const r = rectOf(el);
       if (!fully(el)) { stats.targetsPartial++; continue; }
       stats.targetsTested++;
-      tested.push(idOf(el));
       const labels = el.labels ? [...el.labels] : [];
       const own = (hit) => !!hit && (hit === el || el.contains(hit) || labels.some((l) => l === hit || l.contains(hit)));
       const hitAt = (x, y) => { const h = document.elementFromPoint(x, y); return own(h); };
@@ -152,6 +154,7 @@ export async function probe(cfg) {
         if (isPinned && !el.closest('.chrome-foot, .chrome-head, .sheet-foot')) { stats.targetsPartial++; pinned.push(idOf(el)); continue; }
         add('R6', idOf(el), `covered at its centre (${Math.round(r.width)}x${Math.round(r.height)})`); continue;
       }
+      tested.push(idOf(el));
       let ew = r.width, eh = r.height;
       // Five points (the centre and four corners pulled in past a rounded radius) prove the whole box is
       // the control's; when one is not, or the box is under 44px, measure how far the control reaches.
@@ -216,6 +219,19 @@ export async function probe(cfg) {
       if (clamp && clamp !== 'none' && el.scrollHeight > el.clientHeight + 1) add('R12.truncated', idOf(el), `line clamp ${clamp} hides ${el.scrollHeight - el.clientHeight}px of copy`);
       else if (clipsY && el.scrollHeight > el.clientHeight + 1 && s.overflowY !== 'auto' && s.overflowY !== 'scroll') add('R12.truncated', idOf(el), `overflow ${s.overflowY} hides ${el.scrollHeight - el.clientHeight}px of copy`);
       else if (s.textOverflow === 'ellipsis' && clipsX && el.scrollWidth > el.clientWidth + 1) add('R12.truncated', idOf(el), 'ellipsis hides copy');
+    }
+    // Copy that a parent which does not scroll cuts off, on either axis (a fixed-height card hiding its last
+    // lines). What a scroll container already hides is scrolling, so the words are first narrowed to
+    // the scrollers' view and only then held against the parents that clip for good.
+    for (const el of textEls) {
+      const w = wordsRect(el);
+      if (!w) continue;
+      const soft = clipRectBy(el, (o) => o === 'auto' || o === 'scroll', false);
+      const hard = clipRectBy(el, (o) => o === 'hidden' || o === 'clip', false);
+      const view = soft ? { left: Math.max(w.left, soft.left), top: Math.max(w.top, soft.top), right: Math.min(w.right, soft.right), bottom: Math.min(w.bottom, soft.bottom) } : w;
+      if (!hard) { add('R12.truncated', idOf(el), 'all of its copy is cut by a parent that does not scroll'); continue; }
+      const over = Math.max(hard.top - view.top, view.bottom - hard.bottom, hard.left - view.left, view.right - hard.right);
+      if (over > 1.5 && view.right > view.left && view.bottom > view.top) add('R12.truncated', idOf(el), `${Math.round(over)}px of its copy is cut by a parent that does not scroll`);
     }
   });
 
@@ -325,10 +341,14 @@ export async function probe(cfg) {
       let card = null;
       for (let a = leaf.parentElement; a && a !== root; a = a.parentElement) if (cardLike(a)) { card = a; break; }
       if (!card) continue;
-      const cr = rectOf(card), s = cs(card), lr = rectOf(leaf);
+      const cr = rectOf(card), s = cs(card);
+      // Words are measured by their own range, so a block paragraph that spans the card does not hide
+      // that its words touch the border. Only a picture that fills the card (art) is exempt from the inset.
+      const isText = textEls.includes(leaf);
+      const lr = isText ? wordsRect(leaf) : rectOf(leaf);
+      if (!lr) continue;
       const inner = cr.left + parseFloat(s.borderLeftWidth), innerRight = cr.right - parseFloat(s.borderRightWidth);
-      const full = lr.width >= innerRight - inner - 4;
-      if (full) continue;
+      if (!isText && lr.width >= innerRight - inner - 4) continue;
       if (lr.left - inner < cfg.flushInset - 0.01 && lr.left - inner > -1) add('R2.flush', idOf(card), `${leaf.tagName.toLowerCase()} starts ${Math.round((lr.left - inner) * 10) / 10}px from the left edge of its card`);
       else if (innerRight - lr.right < cfg.flushInset - 0.01 && innerRight - lr.right > -1 && lr.width > 12) add('R2.flush', idOf(card), `${leaf.tagName.toLowerCase()} ends ${Math.round((innerRight - lr.right) * 10) / 10}px from the right edge of its card`);
     }

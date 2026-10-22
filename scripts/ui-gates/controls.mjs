@@ -2,7 +2,7 @@
 // and a sibling page that must not. `npm run check:ui` runs them first, so a probe that has gone blind
 // fails before it is allowed to say the UI is clean.
 import { PROBE_CFG } from './manifest.mjs';
-import { aggregate, coverage, firstChoiceVerdict } from './evaluate.mjs';
+import { aggregate, compareRendered, countsOf, coverage, firstChoiceVerdict } from './evaluate.mjs';
 import { probe } from './probe.mjs';
 
 const BASE = `<style>*{box-sizing:border-box}body{margin:0;background:#101820;color:#e8eef5;font:14px/1.3 system-ui}</style>`;
@@ -16,10 +16,12 @@ export const CONTROLS = [
   { rule: 'R2.gutter', bad: false, name: 'aligned and full-bleed blocks', html: app('<div class="page"><div>Aligned block</div><div style="margin:0 -16px">Full bleed</div></div>', '.page{padding:0 16px}') },
   { rule: 'R2.flush', bad: true, name: 'a glyph against its card border', html: app(`<div class="card" style="margin:16px;border:1px solid #567;border-radius:8px">${ICON}<span>Watch Commander</span></div>`) },
   { rule: 'R2.flush', bad: false, name: 'a glyph inset in its card', html: app(`<div class="card" style="margin:16px;padding:12px;border:1px solid #567;border-radius:8px">${ICON}<span>Watch Commander</span></div>`) },
+  { rule: 'R2.flush', bad: true, name: 'a full-width paragraph with no padding in a bordered card', html: app('<div class="card" style="margin:16px;border:1px solid #567;border-radius:8px"><p style="margin:0">Words that run straight up to the border of the card they sit in and wrap to another line.</p></div>') },
   { rule: 'R4.rendered', bad: true, name: 'a heading that opens with words', html: app('<h3>Skills</h3>') },
   { rule: 'R4.rendered', bad: false, name: 'a heading that opens with an icon', html: app(`<h3>${ICON}Skills</h3>`) },
   { rule: 'R6', bad: true, name: 'a 30px button', html: app('<button style="width:30px;height:30px">x</button>') },
   { rule: 'R6', bad: true, name: 'a 44px button covered along one side', html: app('<button style="width:60px;height:44px;margin:20px">Go</button><div style="position:fixed;left:0;top:0;width:100%;height:30px;background:#222"></div>') },
+  { rule: 'R6', bad: true, name: 'a button a pinned bar covers at every scroll position', html: app('<button style="width:120px;height:44px;margin:20px 20px 0">Go</button><div style="position:fixed;left:0;top:0;width:100%;height:60px;background:#222" class="sheet-foot"></div>') },
   { rule: 'R6', bad: false, name: 'a 24px checkbox inside a 48px label', html: app('<label style="display:flex;align-items:center;min-height:48px;min-width:48px;padding:12px"><input type="checkbox" style="margin:0"></label>') },
   { rule: 'R6', bad: false, name: 'a rounded 44px button', html: app('<button style="width:44px;height:44px;border-radius:12px">x</button>') },
   { rule: 'R7.floor', bad: true, name: 'text at 11px', html: app('<p style="font-size:11px">Tiny</p>') },
@@ -33,6 +35,8 @@ export const CONTROLS = [
   { rule: 'R12.clipped', bad: true, name: 'a label cut off by a hidden-overflow box', html: app('<div style="width:100px;overflow:hidden"><button style="width:160px;min-height:44px;margin-left:30px">Long label here</button></div>') },
   { rule: 'R12.clipped', bad: false, name: 'a rail that scrolls sideways', html: app('<div style="width:200px;overflow-x:auto;display:flex"><button style="flex:none;width:160px;min-height:44px">One</button><button style="flex:none;width:160px;min-height:44px">Two</button></div>') },
   { rule: 'R12.truncated', bad: true, name: 'copy cut by a three-line clamp', html: app('<p style="display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;width:200px">A long hook that needs more than three lines at this width because it keeps going about the courier and the building and the door and the stairs and the lights.</p>') },
+  { rule: 'R12.truncated', bad: true, name: 'copy cut by a fixed-height parent that does not scroll', html: app('<div style="height:20px;overflow:hidden"><p style="margin:0">One line of copy that fits.<br>A second line that the parent hides.<br>A third line that the parent hides too.</p></div>') },
+  { rule: 'R12.truncated', bad: false, name: 'copy inside a scrolling parent', html: app('<div style="height:20px;overflow-y:auto"><p style="margin:0">One line of copy that fits.<br>A second line.<br>A third line.</p></div>') },
   { rule: 'R12.truncated', bad: false, name: 'copy that fits its box', html: app('<p style="display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;width:300px">Short hook.</p>') },
   { rule: 'R13', bad: true, name: 'text under a side inset', insets: { top: 0, right: 44, bottom: 0, left: 44 }, html: app('<p style="margin:0">Under the notch</p>') },
   { rule: 'R13', bad: false, name: 'text inside a side inset', insets: { top: 0, right: 44, bottom: 0, left: 44 }, html: app('<p style="margin:0;padding:0 env(safe-area-inset-right) 0 env(safe-area-inset-left)">Clear of the notch</p>') },
@@ -56,7 +60,10 @@ const pure = [
   ['R6', false, 'a button a pinned bar covers until the page scrolls', () => aggregate([{ name: 's', width: 390, probe: { findings: [], pinned: ['b'], tested: [] }, insets: {} }, { name: 's', width: 390, probe: { findings: [], pinned: [], tested: ['b'] }, insets: {} }]).R6 === undefined],
   ['R17', true, 'a registered state that was not captured', () => coverage({ 390: { errors: [] } }, [390]).size > 0],
   ['R17', true, 'a scrollable state never scrolled to its end', () => coverage({ 390: { '02-hq': { scrollHeight: 2000, clientHeight: 700, segments: [{ atEnd: false, probe: { errors: [] } }] }, errors: [] } }, [390]).has('02-hq@390')],
-  ['R17', true, 'a failed walk step', () => coverage({ 390: { errors: [] } }, [390], ['390 board']).has('step 390 board')],
+  ['R17', true, 'a failed walk step survives the width filter', () => {
+    const bad = coverage({ 390: { errors: [] } }, [390], ['390 board']);
+    return compareRendered(countsOf({}, { R17: Object.fromEntries([...bad.keys()].map((k) => [k, 1])) }), { rendered: {} }, [390]).some((p) => p.rule === 'R17' && p.lines.some((l) => l.startsWith('step board@390')));
+  }],
 ];
 
 /** Run every control. Returns { failed: string[], ran: number }. */
@@ -74,7 +81,9 @@ export async function runControls({ chromium, executablePath }) {
       await page.setContent(c.html);
       await page.waitForTimeout(40);
       const result = await page.evaluate(probe, { ...PROBE_CFG, ...(c.rule === 'R13' ? { only: 'R13', insets: c.insets, atStart: true, atEnd: true } : {}) });
-      const hits = result.findings.filter((f) => f.rule === c.rule);
+      // The verdict goes through the same aggregation the walk uses, so a blind spot there fails a control too.
+      const frame = c.rule === 'R13' ? { name: 'control', width: 390, probe: { findings: [], tested: [], pinned: [] }, insets: { fixture: result.findings } } : { name: 'control', width: 390, probe: result, insets: {} };
+      const hits = [...(aggregate([frame])[c.rule]?.['control@390']?.entries() ?? [])].map(([, detail]) => ({ detail }));
       if (result.errors.length) failed.push(`${c.rule} "${c.name}": the probe failed: ${result.errors.join('; ')}`);
       else if (c.bad && !hits.length) failed.push(`${c.rule} "${c.name}": the probe did not catch it`);
       else if (!c.bad && hits.length) failed.push(`${c.rule} "${c.name}": the probe flagged a clean page: ${hits.map((h) => h.detail).join('; ')}`);
