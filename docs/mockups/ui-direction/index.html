@@ -1,0 +1,395 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UI direction mockups</title>
+<!-- Static mockups for docs/ui-ux-audit.md ("Desk and Street"). Not shipped. Art from public/art;
+     call text is Going Live's as played on 2026-10-21; portraits are illustrative, not matched to names. -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+:root {
+  /* Ground and surfaces: low chroma slate. Elevation only on sheets. */
+  --ink-0: #0a0e14; --ink-1: #111821; --ink-2: #18212d; --ink-3: #202b3a;
+  --hair: #242f3e; --hair-2: #33415a;
+  /* Text */
+  --t1: #eef2f7; --t2: #aab5c5; --t3: #7a879c;
+  /* Roles. Amber is the player's move and nothing else. */
+  --act: #f2b234; --act-ink: #1a1203; --act-soft: rgba(242,178,52,.12);
+  --good: #45cf8f; --harm: #ff6a57; --warn: #f59b42;
+  --siren-r: #ff3b3b; --siren-b: #3d7dff; /* a live call only */
+  --map: #1f55b8;
+  --subject: #b99cff; --civilian: #ffa6da; --officer: #9cc4ff;
+  /* Type: three families, six sizes */
+  --f-ui: 'Barlow', system-ui, sans-serif; --f-title: 'Barlow Condensed', 'Arial Narrow', sans-serif; --f-read: 'Source Serif 4', Georgia, serif;
+  --s12: 12px; --s14: 14px; --s16: 16px; --s18: 18px; --s22: 22px; --s28: 28px;
+  /* Space and radius */
+  --sp1: 4px; --sp2: 8px; --sp3: 12px; --sp4: 16px; --sp5: 24px; --sp6: 32px;
+  --r1: 6px; --r2: 12px; --r3: 20px;
+  --w: 390px; --h: 844px;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: #2a2f38; display: flex; flex-wrap: wrap; gap: 24px; padding: 24px; font-family: var(--f-ui); color: var(--t1); }
+body.narrow { --w: 320px; --h: 568px; }
+img { display: block; }
+.phone { width: var(--w); height: var(--h); background: var(--ink-0); position: relative; overflow: hidden; display: flex; flex-direction: column; font-size: var(--s14); line-height: 1.4; }
+.tag { position: absolute; top: 6px; right: 6px; z-index: 30; background: #ff2e88; color: #fff; font: 600 11px var(--f-ui); padding: 2px 6px; border-radius: 4px; }
+.scroll { flex: 1; overflow: hidden; }
+.pad { padding: 0 var(--sp4); }
+
+/* Desk chrome: one 44px resource bar and four equal tabs */
+.bar { height: 44px; flex: none; display: flex; align-items: center; gap: var(--sp4); padding: 0 var(--sp4); border-bottom: 1px solid var(--hair); background: var(--ink-1); font: 600 var(--s14) var(--f-ui); font-variant-numeric: tabular-nums; }
+.bar .rate { color: var(--good); font-weight: 500; }
+.bar .sp { flex: 1; }
+.bar .lv { color: var(--t2); font-weight: 500; }
+.ico { width: 18px; height: 18px; flex: none; }
+.menu { width: 44px; height: 44px; margin-right: -12px; display: grid; place-items: center; color: var(--t2); }
+.tabs { height: 60px; flex: none; display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--hair); background: var(--ink-1); }
+.tabs div { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font: 600 12px var(--f-ui); color: var(--t3); position: relative; }
+.tabs .on { color: var(--t1); }
+.tabs .on::before { content: ''; position: absolute; top: -1px; left: 28%; right: 28%; height: 2px; background: var(--t1); border-radius: 2px; }
+.tabs .count { position: absolute; top: 7px; left: 54%; min-width: 18px; height: 18px; border-radius: 9px; background: var(--act); color: var(--act-ink); font: 700 11px var(--f-ui); display: grid; place-items: center; padding: 0 4px; }
+.tabs .ring { box-shadow: 0 0 0 2px var(--siren-r); border-radius: 50%; }
+
+/* Flow chrome: back, title and one action bar; no tabs */
+.head { height: 52px; flex: none; display: flex; align-items: center; gap: var(--sp2); padding: 0 var(--sp4) 0 var(--sp2); border-bottom: 1px solid var(--hair); background: var(--ink-1); }
+.back { height: 44px; display: flex; align-items: center; gap: 2px; color: var(--t2); font: 500 var(--s14) var(--f-ui); padding: 0 var(--sp2); }
+.head .title { flex: 1; font: 600 var(--s18) var(--f-title); text-align: center; margin-right: 52px; }
+.head .chip { margin-left: auto; }
+.actionbar { flex: none; padding: var(--sp3) var(--sp4) calc(var(--sp3) + 8px); border-top: 1px solid var(--hair); background: var(--ink-1); }
+.actionbar .why { font: 500 var(--s12) var(--f-ui); color: var(--t2); margin-bottom: var(--sp2); display: flex; justify-content: space-between; }
+.btn { height: 48px; width: 100%; border: 0; border-radius: var(--r2); background: var(--act); color: var(--act-ink); font: 700 var(--s16) var(--f-ui); display: flex; align-items: center; justify-content: center; gap: var(--sp2); }
+.btn.quiet { background: transparent; color: var(--t1); border: 1px solid var(--hair-2); }
+.btn.small { height: 44px; width: auto; padding: 0 var(--sp4); font-size: var(--s14); }
+.link { color: var(--t1); font-weight: 600; text-decoration: underline; text-decoration-color: var(--hair-2); text-underline-offset: 3px; }
+
+/* Shared anatomy */
+h1 { font: 600 var(--s28)/1.1 var(--f-title); margin: 0; }
+h2 { font: 600 var(--s14) var(--f-ui); color: var(--t2); margin: var(--sp5) 0 var(--sp2); display: flex; justify-content: space-between; align-items: baseline; }
+h2 small { font-weight: 500; color: var(--t3); font-size: var(--s12); }
+h3 { font: 600 var(--s22)/1.15 var(--f-title); margin: 0; }
+.t2 { color: var(--t2); } .t3 { color: var(--t3); }
+.meta { font: 500 var(--s12) var(--f-ui); color: var(--t2); display: flex; gap: var(--sp3); flex-wrap: wrap; align-items: center; }
+.row { display: flex; align-items: center; gap: var(--sp3); min-height: 56px; padding: var(--sp2) 0; border-bottom: 1px solid var(--hair); }
+.row .main { flex: 1; min-width: 0; }
+.row .main > b { display: block; font: 600 var(--s16) var(--f-ui); }
+.row .main > span { display: block; color: var(--t2); font-size: var(--s14); }
+.chev { color: var(--t3); font-size: 18px; }
+.card { background: var(--ink-1); border: 1px solid var(--hair); border-radius: var(--r2); overflow: hidden; }
+.chip { display: inline-flex; align-items: center; gap: 4px; height: 28px; padding: 0 10px; border-radius: 14px; border: 1px solid var(--hair-2); font: 500 var(--s12) var(--f-ui); color: var(--t2); white-space: nowrap; }
+.chip.good { color: var(--good); border-color: rgba(69,207,143,.4); }
+.chip.harm { color: var(--harm); border-color: rgba(255,106,87,.45); }
+.chip.on { background: var(--ink-3); color: var(--t1); border-color: var(--hair-2); }
+.seg { display: flex; gap: var(--sp1); padding: var(--sp1); background: var(--ink-1); border: 1px solid var(--hair); border-radius: var(--r2); margin: var(--sp3) 0; }
+.seg div { flex: 1; height: 36px; display: grid; place-items: center; border-radius: 9px; font: 600 var(--s14) var(--f-ui); color: var(--t2); }
+.seg .on { background: var(--ink-3); color: var(--t1); }
+.face { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; object-position: center 20%; flex: none; background: var(--ink-3); }
+.face.sm { width: 28px; height: 28px; }
+.face.lg { width: 56px; height: 56px; }
+.faces { display: flex; } .faces .face { margin-right: -8px; border: 2px solid var(--ink-1); }
+.meter { height: 4px; border-radius: 2px; background: var(--ink-3); overflow: hidden; } .meter i { display: block; height: 100%; background: var(--good); }
+.badge { width: 24px; height: 24px; border-radius: 6px; display: grid; place-items: center; font: 700 13px var(--f-title); background: var(--ink-3); color: var(--t1); flex: none; }
+.odds { display: flex; height: 6px; border-radius: 3px; overflow: hidden; } .odds i { display: block; }
+.read { font: 400 var(--s18)/1.5 var(--f-read); margin: 0; }
+.s { color: var(--subject); font-weight: 600; } .c { color: var(--civilian); font-weight: 600; } .o { color: var(--officer); font-weight: 600; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--act); display: inline-block; }
+
+/* Street: the live call */
+.street { background: #07090d; }
+.strip { flex: none; background: linear-gradient(180deg, rgba(255,59,59,.10), rgba(61,125,255,.06) 60%, transparent), var(--ink-1); border-bottom: 1px solid var(--hair); padding: 0 var(--sp4) var(--sp3); }
+.strip .top { height: 48px; display: flex; align-items: center; gap: var(--sp2); }
+.stepout { height: 44px; display: flex; align-items: center; gap: 4px; color: var(--t2); font: 500 var(--s14) var(--f-ui); margin-left: -6px; }
+.rail { flex: 1; display: flex; gap: 6px; align-items: center; font: 600 var(--s12) var(--f-ui); color: var(--t3); justify-content: center; }
+.rail i { width: 18px; height: 3px; border-radius: 2px; background: var(--hair-2); } .rail i.done { background: var(--good); } .rail i.now { background: var(--t1); }
+.rail b { color: var(--t1); }
+.threat { display: flex; align-items: center; gap: var(--sp2); font: 600 var(--s14) var(--f-ui); }
+.threat .bar2 { flex: 1; height: 4px; border-radius: 2px; background: rgba(255,106,87,.2); } .threat .bar2 i { display: block; height: 100%; background: var(--harm); border-radius: 2px; }
+.threat .min { font-variant-numeric: tabular-nums; color: var(--harm); }
+.ticker { margin-top: var(--sp2); display: grid; grid-template-columns: auto 1fr; gap: 2px var(--sp2); font: 500 var(--s14) var(--f-ui); }
+.ticker .n { font: 600 var(--s18) var(--f-title); font-variant-numeric: tabular-nums; }
+.ticker .chat { grid-column: 1 / -1; color: var(--t2); font-size: var(--s14); height: 20px; overflow: hidden; }
+.ticker .chat b { color: var(--t3); font-weight: 600; margin-right: 6px; }
+.scene { display: flex; align-items: center; gap: var(--sp2); height: 48px; border-bottom: 1px solid var(--hair); color: var(--t2); font-size: var(--s14); }
+.choice { padding: var(--sp3) var(--sp4); margin-bottom: var(--sp2); }
+.choice h4 { font: 600 var(--s18) var(--f-ui); margin: 0 0 2px; }
+.choice p { margin: 0 0 var(--sp2); color: var(--t2); font-size: var(--s14); }
+.choice .who { display: flex; align-items: center; gap: var(--sp2); font: 500 var(--s14) var(--f-ui); }
+.choice .odds { margin: var(--sp2) 0 6px; }
+.sheet { position: absolute; left: 0; right: 0; bottom: 0; background: var(--ink-2); border-radius: var(--r3) var(--r3) 0 0; border-top: 1px solid var(--hair-2); display: flex; flex-direction: column; box-shadow: 0 -12px 40px rgba(0,0,0,.5); z-index: 10; }
+.sheet .grab { width: 40px; height: 4px; border-radius: 2px; background: var(--hair-2); margin: 8px auto 4px; }
+.sheet .shead { display: flex; align-items: flex-start; gap: var(--sp2); padding: var(--sp2) var(--sp4) var(--sp3); }
+.sheet .shead h3 { flex: 1; }
+.x { width: 44px; height: 44px; margin: -10px -12px 0 0; display: grid; place-items: center; color: var(--t2); font-size: 22px; }
+.sheet .body { flex: 1; overflow: hidden; padding: 0 var(--sp4); }
+.scrim { position: absolute; inset: 0; background: rgba(4,6,10,.62); z-index: 9; }
+.band { display: grid; grid-template-columns: 1fr auto; gap: 2px var(--sp3); padding: var(--sp3) 0; border-bottom: 1px solid var(--hair); }
+.band b { font: 600 var(--s14) var(--f-ui); } .band .pct { font: 600 var(--s14) var(--f-ui); font-variant-numeric: tabular-nums; }
+.band p { grid-column: 1 / -1; margin: 0; color: var(--t2); }
+.plate { position: relative; height: 132px; background-size: cover; background-position: center; }
+.plate::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(10,14,20,.05), rgba(10,14,20,.85)); }
+.plate .over { position: absolute; left: var(--sp4); right: var(--sp4); bottom: var(--sp3); z-index: 1; }
+.typemark { display: inline-flex; align-items: center; gap: 6px; font: 600 var(--s12) var(--f-ui); color: var(--t1); background: rgba(10,14,20,.7); padding: 4px 8px; border-radius: var(--r1); }
+.typemark i { font-style: normal; width: 18px; height: 18px; border-radius: 4px; background: var(--subject); color: #160c2b; display: grid; place-items: center; font: 700 12px var(--f-title); }
+.tile { background: var(--ink-1); border: 1px solid var(--hair); border-radius: var(--r2); padding: var(--sp3); display: flex; flex-direction: column; gap: 6px; }
+.tile img { width: 100%; aspect-ratio: 1; object-fit: contain; background: radial-gradient(circle at 50% 40%, #1d3f86, #142b5e); border-radius: var(--r1); }
+.tile b { font: 600 var(--s14) var(--f-ui); line-height: 1.2; }
+.tile .meta { gap: 6px; }
+.grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp2); }
+body.narrow .grid3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.locked { opacity: .5; }
+.toggle { width: 44px; height: 26px; border-radius: 13px; background: var(--ink-3); position: relative; flex: none; } .toggle::after { content: ''; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: var(--t3); }
+.toggle.on { background: var(--good); } .toggle.on::after { left: 21px; background: #fff; }
+.next { background: var(--act-soft); border: 1px solid rgba(242,178,52,.35); border-radius: var(--r2); padding: var(--sp3); display: flex; gap: var(--sp3); align-items: center; }
+.medal { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; flex: none; background: var(--ink-3); }
+.prog { display: flex; align-items: center; gap: var(--sp2); font: 500 var(--s12) var(--f-ui); color: var(--t2); margin-top: 4px; } .prog .meter { flex: 1; max-width: 120px; }
+.hub { position: relative; height: 300px; background: url(../../../public/art/plates/hub_hq.webp) center 30% / cover; }
+.hub::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(10,14,20,0) 55%, var(--ink-0)); }
+.pin { position: absolute; z-index: 1; display: flex; align-items: center; gap: 6px; height: 32px; padding: 0 10px; border-radius: 16px; background: rgba(10,14,20,.82); border: 1px solid var(--hair-2); font: 600 var(--s12) var(--f-ui); }
+.pin.act { border-color: var(--act); }
+</style>
+</head>
+<body>
+
+<!-- 1. HQ: a status picture, not a second nav -->
+<section class="phone" id="hq">
+  <div class="bar"><span>$12,400</span><span class="rate">+$620/h</span><span class="t2">Trust 78</span><span class="sp"></span><span class="lv">Level 1</span><span class="menu">☰</span></div>
+  <div class="scroll">
+    <div class="hub">
+      <div class="pin act" style="left:16px;top:52px"><span class="dot"></span>3 calls waiting</div>
+      <div class="pin" style="right:16px;top:150px">Bravo resting</div>
+      <div class="pin" style="left:16px;top:232px">1 officer strained</div>
+    </div>
+    <div class="pad">
+      <h1 style="margin-top:-8px">Westhaven</h1>
+      <div class="meta" style="margin-top:4px">Night shift · 1 Jan 2026</div>
+      <div class="next" style="margin-top:var(--sp4)">
+        <div style="flex:1"><b style="font:600 16px var(--f-ui)">Going Live is the oldest call</b><div class="t2">Expires in 7h 48m. Alpha is ready.</div></div>
+        <span class="btn small">Open</span>
+      </div>
+      <h2>On duty <small>Duty sets income and recovery</small></h2>
+      <div class="row"><span class="badge">A</span><div class="main"><b>Alpha</b><span>Patrol · 4 of 4 ready</span></div><span class="chip">Patrol</span></div>
+      <div class="row"><span class="badge">B</span><div class="main"><b>Bravo</b><span>Rest · 3 of 4 ready</span></div><span class="chip">Rest</span></div>
+      <h2>Command staff <small>0 of 5 hired</small></h2>
+      <div class="row"><img class="face" src="../../../public/art/managers/watch_commander.webp" alt=""><div class="main"><b>Watch Commander</b><span>Hire in Build for $1,600</span></div><span class="chev">›</span></div>
+    </div>
+  </div>
+  <div class="tabs"><div class="on">HQ</div><div>Calls<span class="count">3</span></div><div>Officers</div><div>Build</div></div>
+</section>
+
+<!-- 2. Calls board: the card is the tap target; no button per card -->
+<section class="phone" id="board">
+  <div class="bar"><span>$12,400</span><span class="rate">+$620/h</span><span class="t2">Trust 78</span><span class="sp"></span><span class="lv">Level 1</span><span class="menu">☰</span></div>
+  <div class="scroll pad">
+    <h2 style="margin-top:var(--sp4)">3 calls waiting <small>Next in 47m · <span class="link">Casebook</span></small></h2>
+    <div class="card" style="margin-bottom:var(--sp3)">
+      <div class="plate" style="background-image:url(../../../public/art/plates/scene_hostage_crisis.webp)"><div class="over" style="display:flex;justify-content:space-between;align-items:flex-end"><span class="typemark"><i>H</i>Hostage crisis</span><span class="typemark">7h 48m left</span></div></div>
+      <div style="padding:var(--sp3) var(--sp4) var(--sp4)">
+        <h3>Going Live</h3>
+        <div class="meta" style="margin:2px 0 var(--sp2)">Corner store, stockroom and delivery lane</div>
+        <p style="margin:0 0 var(--sp2)"><span class="s">Zoltan</span>, a Hotbag courier, wants one sentence said on his stream. The night manager is on the floor by the counter, and <span class="s">Zoltan</span> has a handgun.</p>
+        <div class="t3" style="font-size:var(--s12);margin-bottom:var(--sp3)">Involves suicide risk, death, police gunfire and injury.</div>
+        <div style="display:flex;align-items:center;gap:var(--sp2)"><span class="badge">A</span><span class="t2" style="flex:1">Alpha ready · 1 squad</span><b>$2,600</b><span class="chev">›</span></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="plate" style="background-image:url(../../../public/art/plates/scene_hostage_crisis.webp);background-position:center 70%"><div class="over" style="display:flex;justify-content:space-between;align-items:flex-end"><span class="typemark"><i>H</i>Hostage crisis</span><span class="typemark">8h 19m left</span></div></div>
+      <div style="padding:var(--sp3) var(--sp4)"><h3>Going Live</h3><div class="meta">Bar or restaurant</div></div>
+    </div>
+  </div>
+  <div class="tabs"><div>HQ</div><div class="on">Calls</div><div>Officers</div><div>Build</div></div>
+</section>
+
+<!-- 3. Brief: a pushed flow, orders and threat first, cold open whole -->
+<section class="phone" id="brief">
+  <div class="head"><span class="back">‹ Calls</span><span class="title">Going Live</span><span class="chip">Map</span></div>
+  <div class="scroll pad">
+    <h2 style="margin-top:var(--sp4)">Your orders <small>Step 1 of 2</small></h2>
+    <div class="row" style="min-height:44px"><span class="badge">1</span><div class="main"><b>Get <span class="c">Esperanza</span> out</b></div></div>
+    <div class="row" style="min-height:44px"><span class="badge">2</span><div class="main"><b>Get <span class="c">Bartosz</span> out</b></div></div>
+    <div class="row" style="min-height:44px"><span class="badge">3</span><div class="main"><b>Bring <span class="s">Zoltan</span> out alive</b></div></div>
+    <div class="row" style="border:0"><span style="color:var(--harm);font-size:20px">▲</span><div class="main"><b style="font-size:14px"><span class="s">Zoltan</span> has a handgun, shop floor</b><span>Reported by the responding patrol. Unverified.</span></div></div>
+    <h2>Before the call</h2>
+    <p class="read"><span class="s">Zoltan</span> was a courier for Hotbag, a food delivery app, and picked up orders at Market Row Stores most nights. On Tuesday Hotbag closed his account. <span class="c">Bartosz</span>, the night manager, had reported that a bag <span class="s">Zoltan</span> picked up at 11:40 never reached the customer.</p>
+  </div>
+  <div class="actionbar"><button class="btn">Choose team</button></div>
+</section>
+
+<!-- 4. Deploy: kit as a summary per squad; worn kit not shown as stock -->
+<section class="phone" id="deploy">
+  <div class="head"><span class="back">‹ Brief</span><span class="title">Deploy</span></div>
+  <div class="scroll pad">
+    <h2 style="margin-top:var(--sp4)">Who goes <small>Takes 1 squad</small></h2>
+    <div class="row" style="background:var(--act-soft);margin:0 -16px;padding:8px 16px;border-color:rgba(242,178,52,.3)"><span class="badge" style="background:var(--act);color:var(--act-ink)">A</span><div class="main"><b>Alpha</b><span>4 of 4 ready</span></div><div class="faces"><img class="face sm" src="../../../public/art/portraits/person_012.webp"><img class="face sm" src="../../../public/art/portraits/person_027.webp"><img class="face sm" src="../../../public/art/portraits/person_041.webp"><img class="face sm" src="../../../public/art/portraits/person_063.webp"></div></div>
+    <div class="row"><span class="badge">B</span><div class="main"><b>Bravo</b><span>3 of 4 ready, Suleiman strained</span></div></div>
+    <h2>Alpha carries <small><span class="link">Adjust</span></small></h2>
+    <div class="t2" style="margin-bottom:var(--sp2)">Every officer wears a radio, sidearm and light protection.</div>
+    <div style="display:flex;gap:var(--sp2);flex-wrap:wrap"><span class="chip on">Loud hailer ×1</span><span class="chip on">Trauma kit ×1</span><span class="chip">Throw phone, none free</span></div>
+    <h2>Going in <small><span class="link">Change</span></small></h2>
+    <div class="row" style="border:0"><div class="main"><b>High street, shop floor door</b><span>Nearest door to the subject</span></div></div>
+    <div style="height:128px;border-radius:var(--r2);background:var(--map);background-image:linear-gradient(rgba(255,255,255,.08) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.08) 1px,transparent 1px);background-size:12px 12px;position:relative;overflow:hidden;font:600 10px var(--f-ui);color:#eef4ff">
+      <div style="position:absolute;left:18%;top:10%;width:30%;height:34%;border:2px solid rgba(238,244,255,.85)"></div><span style="position:absolute;left:22%;top:20%">STOCKROOM</span>
+      <div style="position:absolute;left:18%;top:44%;width:62%;height:38%;border:2px solid rgba(238,244,255,.85)"></div><span style="position:absolute;left:36%;top:58%">SHOP FLOOR</span>
+      <div style="position:absolute;left:10%;right:10%;bottom:4%;height:14%;border:2px solid var(--good);background:rgba(69,207,143,.18)"></div><span style="position:absolute;left:44%;bottom:6%;background:var(--act);color:var(--act-ink);padding:0 4px;border-radius:3px">FRONT</span>
+    </div>
+  </div>
+  <div class="actionbar"><div class="why"><span>Ready</span><span>Going Live · 1 of 1 squad</span></div><button class="btn">Deploy Alpha</button></div>
+</section>
+
+<!-- 5. Decide: Street register. Strip replaces the bar; Step out replaces the tabs -->
+<section class="phone street" id="decide">
+  <div class="strip">
+    <div class="top"><span class="stepout">‹ Step out</span><div class="rail"><i class="done"></i><b>On the stream</b><i class="now"></i><i></i></div><span class="t2" style="font-size:12px">1 of 3</span></div>
+    <div class="threat"><span>Address posted by itshankdas</span><span class="bar2"><i style="width:82%"></i></span><span class="min">11 min</span></div>
+    <div class="ticker"><span><span class="s">Zoltan</span>'s stream</span><span class="t2" style="text-align:right"><span class="n">554</span> watching</span><div class="chat"><b>lena762</b>they cut me off last year too</div></div>
+  </div>
+  <div class="scroll pad">
+    <div class="scene"><span class="badge">A</span><span style="flex:1">Alpha at High street</span><span class="link">Map</span></div>
+    <p class="read" style="margin:var(--sp4) 0">The negotiator is calling the register phone. <span class="s">Zoltan</span> lets it ring and keeps streaming. <span class="c">Bartosz</span> sits on the floor by the drinks cooler.</p>
+    <div class="card choice"><h4>Talk to him on the stream</h4><p>Four hundred strangers hear every question you ask.</p>
+      <div class="who"><img class="face sm" src="../../../public/art/portraits/person_012.webp"><span><span class="o">Ellis</span> leads · Comms 82</span></div>
+      <div class="odds"><i style="width:90%;background:var(--good)"></i><i style="width:6%;background:var(--warn)"></i><i style="width:4%;background:var(--harm)"></i></div>
+      <div class="meta"><span>90% goes well</span><span>Harm low</span><span>4 min</span></div></div>
+    <div class="card choice"><h4>Get <span class="c">Esperanza</span> out the back</h4><p>The comments may spot the stockroom door before <span class="s">Zoltan</span> does.</p>
+      <div class="who"><img class="face sm" src="../../../public/art/portraits/person_012.webp"><span><span class="o">Ellis</span> leads · Coord 70</span></div>
+      <div class="odds"><i style="width:67%;background:var(--good)"></i><i style="width:20%;background:var(--warn)"></i><i style="width:13%;background:var(--harm)"></i></div>
+      <div class="meta"><span>67% goes well</span><span>Harm moderate</span><span>6 min</span></div></div>
+  </div>
+</section>
+
+<!-- 6. Review: cost and the three outcomes before anything else -->
+<section class="phone street" id="review">
+  <div class="strip"><div class="top"><span class="stepout">‹ Step out</span><div class="rail"><i class="done"></i><b>On the stream</b><i class="now"></i><i></i></div><span class="t2" style="font-size:12px">1 of 3</span></div>
+    <div class="threat"><span>Address posted by itshankdas</span><span class="bar2"><i style="width:82%"></i></span><span class="min">11 min</span></div></div>
+  <div class="scrim"></div>
+  <div class="sheet" style="top:120px">
+    <div class="grab"></div>
+    <div class="shead"><h3>Talk to him on the stream</h3><span class="x">×</span></div>
+    <div class="body">
+      <div class="t2" style="margin-bottom:var(--sp2)"><b style="color:var(--t1)">The cost.</b> Four hundred strangers hear every question you ask.</div>
+      <div class="band"><b style="color:var(--good)">Goes well</b><span class="pct">90%</span><p><span class="s">Zoltan</span> tells you what he came for, out loud.</p></div>
+      <div class="band"><b style="color:var(--warn)">Complications</b><span class="pct">6%</span><p><span class="s">Zoltan</span> answers the comments instead of you.</p></div>
+      <div class="band"><b style="color:var(--harm)">Goes badly</b><span class="pct">4%</span><p><span class="s">Zoltan</span> turns the camera on <span class="c">Bartosz</span>, the handgun in his hand.</p></div>
+      <h2>Who leads <small>Comms and composure</small></h2>
+      <div style="display:flex;gap:var(--sp3)"><div style="text-align:center"><img class="face lg" style="box-shadow:0 0 0 2px var(--act)" src="../../../public/art/portraits/person_012.webp"><div style="font-size:12px;margin-top:4px">Ellis 82</div></div><div style="text-align:center"><img class="face lg" src="../../../public/art/portraits/person_041.webp"><div style="font-size:12px;margin-top:4px" class="t2">Raman 58</div></div><div style="text-align:center"><img class="face lg" src="../../../public/art/portraits/person_027.webp"><div style="font-size:12px;margin-top:4px" class="t2">Nasser 46</div></div></div>
+    </div>
+    <div class="actionbar"><div class="why"><span>Alpha · about 4 min · no supplies</span><span style="color:var(--good)">Harm low</span></div><button class="btn">Confirm</button></div>
+  </div>
+</section>
+
+<!-- 7. Debrief: the ending, then what changed, then one Done -->
+<section class="phone" id="debrief">
+  <div class="head"><span class="back">‹ Calls</span><span class="title">Debrief</span></div>
+  <div class="scroll">
+    <div class="plate" style="height:150px;background-image:url(../../../public/art/plates/scene_hostage_crisis.webp)"><div class="over"><div style="color:var(--act);font-size:20px;letter-spacing:4px">★★★</div><h1>Out with the team</h1></div></div>
+    <div class="pad">
+      <p class="read" style="margin:var(--sp3) 0"><span class="s">Zoltan</span> came out to the team with the phone left inside, and officers have him. <span class="c">Bartosz</span> and <span class="c">Esperanza</span> are safe.</p>
+      <h2>What changed</h2>
+      <div class="row" style="min-height:44px"><div class="main">Bartosz and Esperanza out safe</div><span style="color:var(--good)">+3 trust</span></div>
+      <div class="row" style="min-height:44px"><div class="main">Funding for the call</div><b>+$2,600</b></div>
+      <div class="row"><div class="faces"><img class="face sm" src="../../../public/art/portraits/person_012.webp"><img class="face sm" src="../../../public/art/portraits/person_027.webp"><img class="face sm" src="../../../public/art/portraits/person_041.webp"><img class="face sm" src="../../../public/art/portraits/person_063.webp"></div><div class="main" style="margin-left:12px"><b style="font-size:14px">Alpha +181 XP</b><span>Raman crossed into strained</span></div><span class="chev">›</span></div>
+      <div class="row" style="min-height:44px"><div class="main t2">Why it went this way</div><span class="chev">⌄</span></div>
+    </div>
+  </div>
+  <div class="actionbar"><button class="btn">Done</button></div>
+</section>
+
+<!-- 8. Officers: rows that scale to 320, one squad block, one roster -->
+<section class="phone" id="officers">
+  <div class="bar"><span>$12,400</span><span class="rate">+$620/h</span><span class="t2">Trust 78</span><span class="sp"></span><span class="lv">Level 1</span><span class="menu">☰</span></div>
+  <div class="scroll pad">
+    <div class="seg"><div class="on">Squads</div><div>Roster</div><div>Hire</div><div>Training</div></div>
+    <h2><span style="display:flex;gap:8px;align-items:center;color:var(--t1)"><span class="badge">A</span>Alpha</span><small>Patrol · 4 of 4 ready · <span class="link">Arrange</span></small></h2>
+    <div class="row"><img class="face" src="../../../public/art/portraits/person_012.webp"><div class="main"><b>Cpl. Jordan Ellis</b><span>Communication · stress 11</span></div><span class="chip good">Ready</span></div>
+    <div class="row"><img class="face" src="../../../public/art/portraits/person_027.webp"><div class="main"><b>Sgt. Nasser ★</b><span>Leader · stress 17</span></div><span class="chip good">Ready</span></div>
+    <div class="row"><img class="face" src="../../../public/art/portraits/person_041.webp"><div class="main"><b>Cpl. Raman</b><span>Medical · stress 7</span></div><span class="chip good">Ready</span></div>
+    <div class="row"><img class="face" src="../../../public/art/portraits/person_063.webp"><div class="main"><b>Cpl. Santoso</b><span>Observation · stress 21</span></div><span class="chip good">Ready</span></div>
+    <h2><span style="display:flex;gap:8px;align-items:center;color:var(--t1)"><span class="badge">B</span>Bravo</span><small>Rest · 3 of 4 ready</small></h2>
+    <div class="row"><img class="face" src="../../../public/art/portraits/person_077.webp"><div class="main"><b>Cpl. Suleiman</b><span>Observation · stress 64</span></div><span class="chip" style="color:var(--warn);border-color:rgba(245,155,66,.45)">Strained</span></div>
+  </div>
+  <div class="tabs"><div>HQ</div><div>Calls<span class="count">3</span></div><div class="on">Officers</div><div>Build</div></div>
+</section>
+
+<!-- 9. Officer sheet: one readiness line, destructive action out of the footer -->
+<section class="phone" id="officer">
+  <div class="bar"><span>$12,400</span><span class="rate">+$620/h</span><span class="t2">Trust 78</span><span class="sp"></span><span class="lv">Level 1</span><span class="menu">☰</span></div>
+  <div class="scrim"></div>
+  <div class="sheet" style="top:96px">
+    <div class="grab"></div>
+    <div class="shead"><img class="face lg" style="width:72px;height:72px;border-radius:var(--r2)" src="../../../public/art/portraits/person_012.webp"><div style="flex:1"><h3>Cpl. Jordan Ellis</h3><div class="meta" style="margin-top:4px"><span>Communication</span><span>Alpha</span><span>Age 28</span></div><div style="margin-top:6px"><span class="chip good">Ready · stress 11</span></div></div><span class="x">×</span></div>
+    <div class="body">
+      <div class="seg" style="margin-top:0"><div class="on">Overview</div><div>Career</div><div>Care</div></div>
+      <div style="display:flex;justify-content:space-between;font-weight:600"><span>Corporal</span><span class="t2">450 of 1,000 XP to Sergeant</span></div>
+      <div class="meter" style="margin:6px 0 var(--sp4)"><i style="width:45%;background:var(--t1)"></i></div>
+      <div class="row" style="min-height:36px"><div class="main">Communication</div><b>82</b></div>
+      <div class="row" style="min-height:36px"><div class="main">Composure</div><b>70</b></div>
+      <div class="row" style="min-height:36px"><div class="main">Coordination</div><b>70</b></div>
+      <div class="row" style="min-height:36px"><div class="main">Awareness</div><b>65</b></div>
+      <div class="row" style="min-height:36px"><div class="main">Shooting</div><b>47</b></div>
+      <div class="row" style="min-height:36px;border:0"><div class="main">Wage</div><span class="t2">$48/h</span></div>
+    </div>
+    <div class="actionbar" style="display:flex;gap:var(--sp2)"><button class="btn">Send to training</button><button class="btn quiet" style="width:56px;flex:none">⋯</button></div>
+  </div>
+</section>
+
+<!-- 10. Build, Upgrades: amber on the one Next card only -->
+<section class="phone" id="upgrades">
+  <div class="bar"><span>$12,400</span><span class="rate">+$620/h</span><span class="t2">Trust 78</span><span class="sp"></span><span class="lv">Level 1</span><span class="menu">☰</span></div>
+  <div class="scroll pad">
+    <div class="seg"><div class="on">Upgrades</div><div>Armory</div></div>
+    <div class="next"><img class="medal" src="../../../public/art/emblems/branch_logistics.webp"><div style="flex:1"><b style="font:600 16px var(--f-ui)">Saved equipment sets</b><div class="t2">Loadout presets per squad</div><div class="prog">Free at 3 calls <span class="meter"><i style="width:0%"></i></span> 0 of 3</div></div><span class="btn small">$1,300</span></div>
+    <div style="display:flex;flex-wrap:wrap;gap:var(--sp2);margin:var(--sp4) 0 var(--sp2)"><span class="chip">People</span><span class="chip">Field</span><span class="chip">Intel</span><span class="chip on">Equipment</span><span class="chip">Wellbeing</span></div>
+    <div class="row"><img class="medal" src="../../../public/art/emblems/branch_logistics.webp"><div class="main"><b>Equipment manager</b><span>Cheaper repairs, slower wear</span><div class="prog">Free at 8 calls <span class="meter"><i style="width:0%"></i></span></div></div><b>$4,900</b></div>
+    <div class="row locked"><img class="medal" src="../../../public/art/emblems/branch_logistics.webp"><div class="main"><b>Supply restocking</b><span>Needs Saved equipment sets</span></div><span class="t2">$2,500</span></div>
+    <div class="row"><img class="medal" src="../../../public/art/emblems/branch_field.webp"><div class="main"><b>Field support program</b><span>Support van and command van</span><div class="prog">Free at 6 calls <span class="meter"><i style="width:0%"></i></span></div></div><b>$3,100</b></div>
+    <div class="row locked"><img class="medal" src="../../../public/art/emblems/branch_field.webp"><div class="main"><b>Armored rescue support</b><span>Needs Field support program</span></div><span class="t2">$4,900</span></div>
+  </div>
+  <div class="tabs"><div>HQ</div><div>Calls<span class="count">3</span></div><div>Officers</div><div class="on">Build<span class="count" style="background:var(--t1);min-width:8px;height:8px;top:12px;left:60%"></span></div></div>
+</section>
+
+<!-- 11. Build, Armory: pooled specialist gear only, prices quiet -->
+<section class="phone" id="armory">
+  <div class="bar"><span>$12,400</span><span class="rate">+$620/h</span><span class="t2">Trust 78</span><span class="sp"></span><span class="lv">Level 1</span><span class="menu">☰</span></div>
+  <div class="scroll pad">
+    <div class="seg"><div>Upgrades</div><div class="on">Armory</div></div>
+    <div class="row" style="border:0;min-height:44px"><div class="main t2">Worn kit: 8 radios, 8 sidearms, 8 light kits. <span class="link">By officer</span></div></div>
+    <div style="display:flex;gap:var(--sp2);margin-bottom:var(--sp3)"><span class="chip on">All</span><span class="chip">Owned</span><span class="chip">Needs service</span><span class="chip">Can buy</span></div>
+    <div class="grid3">
+      <div class="tile"><img src="../../../public/art/gear/loud_hailer.webp"><b>Loud hailer</b><div class="meta"><span>×2 ready</span></div></div>
+      <div class="tile"><img src="../../../public/art/gear/observation_binoculars.webp"><b>Binoculars</b><div class="meta"><span>×2 ready</span></div></div>
+      <div class="tile"><img src="../../../public/art/gear/ballistic_shield.webp"><b>Ballistic shield</b><div class="meta"><span>×2 ready</span></div></div>
+      <div class="tile"><img src="../../../public/art/gear/door_ram.webp"><b>Door ram</b><div class="meta"><span>×1 ready</span></div></div>
+      <div class="tile"><img src="../../../public/art/gear/trauma_kit.webp"><b>Trauma kit</b><div class="meta"><span style="color:var(--warn)">×6, 1 worn</span></div></div>
+      <div class="tile"><img src="../../../public/art/gear/throw_phone.webp"><b>Throw phone</b><div class="meta"><span>$900</span></div></div>
+      <div class="tile locked"><img src="../../../public/art/gear/camera_drone.webp"><b>Camera drone</b><div class="meta"><span>Locked</span></div></div>
+      <div class="tile locked"><img src="../../../public/art/gear/thermal_imager.webp"><b>Thermal imager</b><div class="meta"><span>Locked</span></div></div>
+      <div class="tile locked"><img src="../../../public/art/gear/support_van.webp"><b>Support van</b><div class="meta"><span>Locked</span></div></div>
+    </div>
+  </div>
+  <div class="tabs"><div>HQ</div><div>Calls<span class="count">3</span></div><div>Officers</div><div class="on">Build</div></div>
+</section>
+
+<!-- 12. Menu: settings, saves and support in one sheet -->
+<section class="phone" id="menu">
+  <div class="bar"><span>$12,400</span><span class="rate">+$620/h</span><span class="t2">Trust 78</span><span class="sp"></span><span class="lv">Level 1</span><span class="menu">☰</span></div>
+  <div class="scrim"></div>
+  <div class="sheet" style="top:72px">
+    <div class="grab"></div>
+    <div class="shead"><h3>Menu</h3><span class="x">×</span></div>
+    <div class="body">
+      <h2 style="margin-top:0">Campaign</h2>
+      <div class="row"><div class="main"><b>Campaign 1</b><span>Slot 1 · saved just now</span></div><span class="link">Saves</span></div>
+      <h2>Settings</h2>
+      <div class="row"><div class="main"><b>Themes to avoid</b><span>None avoided</span></div><span class="chev">›</span></div>
+      <div class="row"><div class="main"><b>Call card warnings</b><span>Warn me</span></div><span class="chev">›</span></div>
+      <div class="row"><div class="main"><b>Call timer</b><span>Relaxed</span></div><span class="chev">›</span></div>
+      <div class="row"><div class="main"><b>Call sound</b></div><span class="toggle on"></span></div>
+      <div class="row"><div class="main"><b>Flashing lights</b></div><span class="toggle on"></span></div>
+      <div class="row"><div class="main"><b>Color names by role</b></div><span class="toggle on"></span></div>
+      <h2>Support</h2>
+      <div class="row" style="border:0"><div class="main"><b>Talk to someone</b><span>988 in the US, any hour</span></div><span class="chev">›</span></div>
+    </div>
+  </div>
+</section>
+
+</body>
+</html>
