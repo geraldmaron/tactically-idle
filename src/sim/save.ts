@@ -33,6 +33,19 @@ export function serialize(state: GameState, now: number): string {
   return JSON.stringify(env);
 }
 
+/** The state as a stored snapshot must hold it (owner 2026-10-21: a stall counts only while the
+ * player can see it). An open decision that is running is paused at `at`, so the time until the
+ * snapshot loads never counts. It returns a copy and leaves `state` alone: the live, visible call
+ * keeps running, and only the stored bytes carry the pause. Time already counted stays counted
+ * (openDither stops at the pause), a decision already paused keeps its pause, and a result still
+ * on screen has no stall to freeze. Department progress is untouched, so offline income still
+ * settles on load. The pause time follows pauseDecision: never before the department's clock. */
+export function freezeStall(state: GameState, at: number): GameState {
+  const run = state.activeRun;
+  if (!run || run.status !== 'active' || run.decisionPending || run.decisionPausedAt !== undefined) return state;
+  return { ...state, activeRun: { ...run, decisionPausedAt: Math.max(at, state.department.clockHighWater) } };
+}
+
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 const isStr = (v: unknown): v is string => typeof v === 'string';
@@ -279,6 +292,22 @@ function validTaps(t: unknown): boolean {
   }) && t.multipliers.length <= MAX_MULTIPLIERS && combinedFactor(t.multipliers as ActiveMultiplier[]) <= MAX_COMBINED_MULTIPLIER;
 }
 
+/** The roster agrees with itself: a squad lists an officer once, no officer sits in two squads, and
+ * each officer's own squad reference names the squad that lists them (null when none does). Only
+ * the live roster is checked. A move queued during a call (pendingSquadMoves) leaves membership
+ * as it was until the call ends, so it never reaches this rule, and the squad arrangement's undo
+ * records hold topologies of their own (squad-optimizer.ts) that this does not touch. */
+function validMembership(officers: Record<string, unknown>, squads: Record<string, unknown>[]): boolean {
+  const home = new Map<string, string>();
+  for (const sq of squads) {
+    for (const id of sq.officerIds as string[]) {
+      if (home.has(id)) return false;
+      home.set(id, sq.id as string);
+    }
+  }
+  return Object.entries(officers).every(([id, o]) => (o as { squadId: string | null }).squadId === (home.get(id) ?? null));
+}
+
 /** Structural checks shared by every version. */
 function validBase(s: unknown): s is Record<string, unknown> {
   if (!isObj(s)) return false;
@@ -310,6 +339,7 @@ function validBase(s: unknown): s is Record<string, unknown> {
     if (!Array.isArray(sq.officerIds) || !sq.officerIds.every((id) => isStr(id) && Object.hasOwn(officers, id))) return false;
     if (sq.leaderId !== null && !(isStr(sq.leaderId) && sq.officerIds.includes(sq.leaderId))) return false;
   }
+  if (!validMembership(officers, s.squads as Record<string, unknown>[])) return false;
   if (!Array.isArray(s.candidates)) return false;
   for (const c of s.candidates as unknown[]) {
     if (!isObj(c) || !isStr(c.id) || !isNum(c.signingCost) || !isNum(c.expiresAt) || typeof c.shortlisted !== 'boolean') return false;
@@ -388,6 +418,15 @@ export function deserialize(text: string): GameState | null {
     normalizeSquadArrangementState(raw.state);
     return raw.state;
   } catch { return null; }
+}
+
+/** A stored snapshot as the game resumes it: `deserialize`, with a stall that was still running
+ * when it was saved frozen at the envelope's own save time. Saves written since the stall freeze
+ * already hold the pause, so this changes them not at all; one from before it (the page killed
+ * before the page-hide save) stops counting where it was saved instead of at load. */
+export function loadStored(text: string): GameState | null {
+  const state = deserialize(text);
+  return state ? freezeStall(state, (JSON.parse(text) as { savedAt: number }).savedAt) : null;
 }
 
 export function saveGame(state: GameState, now: number, storage: SaveStorage = localStorage): void {

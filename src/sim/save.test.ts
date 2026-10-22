@@ -5,7 +5,7 @@ import { SAVE_KEY, deserialize, loadGame, saveGame, serialize, type SaveStorage 
 import { HOUR_MS } from './economy';
 import type { Command, GameState } from './types';
 import { actionViews, briefing } from './operation-selectors';
-import { playPolicy, startCmd } from './test-fixtures';
+import { makeState, NOW, playPolicy, startCmd, startRun, testCallId, withCallOnBoard } from './test-fixtures';
 
 const T0 = Date.UTC(2026, 0, 5, 12, 0, 0);
 
@@ -228,6 +228,74 @@ describe('version 3 validation and squad D', () => {
 });
 
 
+
+describe('roster membership', () => {
+  const good = () => JSON.parse(serialize(createInitialState(T0), T0));
+  const squad = (e: ReturnType<typeof good>, id: string) => e.state.squads.find((q: { id: string }) => q.id === id);
+  const loads = (e: unknown) => deserialize(JSON.stringify(e)) !== null;
+
+  it('loads a roster that agrees with itself', () => {
+    expect(loads(good())).toBe(true);
+  });
+
+  it('refuses a squad that lists one officer twice', () => {
+    const e = good();
+    const alpha = squad(e, 'A');
+    alpha.officerIds.push(alpha.officerIds[1]);
+    expect(loads(e)).toBe(false);
+  });
+
+  it('refuses an officer listed in two squads', () => {
+    const e = good();
+    const alpha = squad(e, 'A');
+    squad(e, 'B').officerIds.push(alpha.officerIds[1]);
+    expect(loads(e)).toBe(false);
+  });
+
+  it('refuses an officer whose own squad reference disagrees with the squad that lists them', () => {
+    const wrongSquad = good();
+    const id = squad(wrongSquad, 'A').officerIds[1];
+    wrongSquad.state.officers[id].squadId = 'B';
+    expect(loads(wrongSquad)).toBe(false);
+
+    const noReference = good();
+    noReference.state.officers[squad(noReference, 'A').officerIds[1]].squadId = null;
+    expect(loads(noReference)).toBe(false);
+
+    const unlisted = good();
+    const alpha = squad(unlisted, 'A');
+    const left = alpha.officerIds.pop();
+    expect(alpha.leaderId).not.toBe(left);
+    expect(loads(unlisted)).toBe(false);
+  });
+
+  it('keeps a move queued during a call loading, with membership unchanged', () => {
+    const callId = testCallId('barricade');
+    const running = startRun(withCallOnBoard(makeState(), callId), callId, ['A']);
+    const mover = 'off_brooks';
+    expect(running.officers[mover].assignment?.kind).toBe('operation');
+    const queued = ok(running, { type: 'assignToSquad', officerId: mover, squadId: 'B' }, NOW);
+    expect(queued.pendingSquadMoves).toMatchObject([{ officerId: mover, squadId: 'B' }]);
+    expect(queued.officers[mover].squadId).toBe('A');
+    const loaded = deserialize(serialize(queued, NOW));
+    expect(loaded).toEqual(queued);
+    expect(loaded!.squads.find((q) => q.id === 'A')!.officerIds).toContain(mover);
+    // A queued move out of every squad loads too.
+    const toNone = ok(running, { type: 'assignToSquad', officerId: mover, squadId: null }, NOW);
+    expect(deserialize(serialize(toNone, NOW))).toEqual(toNone);
+  });
+
+  it('does not hold the squad arrangement history to the live roster rule', () => {
+    const e = good();
+    const [a, b] = [squad(e, 'A').officerIds[0], squad(e, 'B').officerIds[0]];
+    const doubled = { squads: [{ squadId: 'A', officerIds: [a, b], leaderId: a }, { squadId: 'B', officerIds: [b], leaderId: b }], unassignedIds: [] };
+    e.state.squadArrangement = { officerLocks: [], squadLocks: [], undo: { before: doubled, after: doubled } };
+    const loaded = deserialize(JSON.stringify(e));
+    // The unusable history record is dropped on read; the roster beside it still loads.
+    expect(loaded).not.toBeNull();
+    expect(loaded!.squads.map((q) => q.officerIds)).toEqual(e.state.squads.map((q: { officerIds: string[] }) => q.officerIds));
+  });
+});
 
 describe('current version boundary', () => {
   it('rejects every historical or future envelope and state version without migrating', () => {
