@@ -137,7 +137,7 @@ describe('rendered player destinations and persistent drafts', () => {
     expect(html).toContain('class="qm-card qm-card-not_hired"');
     expect(html).toContain('Open the post in Develop');
     // Owned items show stock on the same tile that buys more; detail lives in each item's sheet.
-    expect(html).toMatch(/class="inv-tile store-tile[^"]*"[^>]* aria-label="Radio headset[^"]+\d+ owned, \d+ ready, condition \d+%/);
+    expect(html).toMatch(/class="inv-tile store-tile[^"]*"[^>]* aria-label="Loud hailer[^"]+\d+ owned, \d+ ready, condition \d+%/);
     expect(html).toContain('<strong>Restock rules</strong>');
     expect(html).toContain('<strong>Loadout presets</strong>');
     expect(html).not.toContain('Hire manager');

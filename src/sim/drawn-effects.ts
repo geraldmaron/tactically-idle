@@ -81,10 +81,11 @@ export const TEAM_FORCE_V1 = tunable('TEAM_FORCE_V1', {
 /** `rule` is a short machine id: the profile, then what decided it ('firearm:gun', 'hands:cover'). */
 export interface ForceChoice { profile: ForceProfile; rule: string; reason: string }
 
-/** The firearm only on an imminent threat to life an officer can see (readForceThreat). Otherwise
- * less-lethal when the acting squads carry it with a trained officer, the person is in range and
- * nothing rules it out. Otherwise the team takes the person by hand. The reason, for the debrief,
- * says what the team could see and why that tool. */
+/** Less-lethal first (owner 2026-10-21): when the acting squads carry it with a trained officer and
+ * its supply, the person is in range and nothing rules it out, even on a deadly threat. Otherwise
+ * the firearm, only on an imminent threat to life an officer can see (readForceThreat); every
+ * officer carries one (basic-kit.ts). Otherwise the team takes the person by hand. The reason, for
+ * the debrief, says what the team could see and why that tool. */
 export function teamForceProfile(state: GameState, run: OperationRun, scenario: ScenarioDefinition, acting: SquadId[], participantIds: Id[], personId: Id,
   unitsOf: (state: GameState, run: OperationRun, squad: SquadId) => ItemUnit[]): ForceChoice {
   const person = scenario.incidentPeople?.find(entry => entry.id === personId);
@@ -95,14 +96,16 @@ export function teamForceProfile(state: GameState, run: OperationRun, scenario: 
   const deadlyReason = threat.rule === 'force:gun'
     ? fill(FORCE_REASONS.deadly.gun).replace('{weapon}', person.weapon?.kind === 'long_gun' ? 'a rifle' : person.weapon?.kind === 'shotgun' ? 'a shotgun' : 'a handgun')
     : fill(FORCE_REASONS.deadly.reach, (threat.deadly ? threat.near?.label : undefined) ?? FORCE_REASONS.theTeam);
-  if (threat.deadly && qualifiedForceUnit(state, 'firearm', units, participantIds, departmentUpkeep(state))) return threat.rule === 'force:gun'
-    ? { profile: 'firearm', rule: 'firearm:gun', reason: deadlyReason }
-    : { profile: 'firearm', rule: 'firearm:reach', reason: deadlyReason };
-  const seen = threat.deadly ? `${deadlyReason} ${FORCE_REASONS.no_firearm}` : fill(FORCE_REASONS.threat[threat.rule.slice('force:'.length) as keyof typeof FORCE_REASONS.threat]);
-  const hands = (why: keyof typeof FORCE_REASONS.tool, near?: string): ForceChoice => ({ profile: 'hands', rule: `hands:${why}`, reason: `${seen} ${fill(FORCE_REASONS.tool[why], near)}` });
-  if (person.cover?.grade === 'hard') return hands('cover');
+  const firearm = threat.deadly && !!qualifiedForceUnit(state, 'firearm', units, participantIds, departmentUpkeep(state));
+  const seen = !threat.deadly ? fill(FORCE_REASONS.threat[threat.rule.slice('force:'.length) as keyof typeof FORCE_REASONS.threat])
+    : firearm ? deadlyReason : `${deadlyReason} ${FORCE_REASONS.no_firearm}`;
+  // When no less-lethal tool can be used: the firearm on a deadly threat, else hands.
+  const fallback = (why: keyof typeof FORCE_REASONS.tool, near?: string): ForceChoice => firearm
+    ? { profile: 'firearm', rule: threat.rule === 'force:gun' ? 'firearm:gun' : 'firearm:reach', reason: deadlyReason }
+    : { profile: 'hands', rule: `hands:${why}`, reason: `${seen} ${fill(FORCE_REASONS.tool[why], near)}` };
+  if (person.cover?.grade === 'hard') return fallback('cover');
   const close = peopleNear(scenario, run, person, TEAM_FORCE_V1.bystanderFt)[0];
-  if (close) return hands('bystander', close.label);
+  if (close) return fallback('bystander', close.label);
   let carriedAny = false;
   for (const profile of ['less_lethal_impact', 'less_lethal_device'] as const) {
     const carried = qualifiedForceUnit(state, profile, units, participantIds, departmentUpkeep(state));
@@ -112,7 +115,7 @@ export function teamForceProfile(state: GameState, run: OperationRun, scenario: 
     if (person.doorFt !== undefined && person.doorFt > TEAM_FORCE_V1.rangeFt[profile]) continue;
     return { profile, rule: `${profile}:in_range`, reason: `${seen} ${fill(FORCE_REASONS.tool[profile])}` };
   }
-  return hands(carriedAny ? 'out_of_range' : 'none_carried');
+  return fallback(carriedAny ? 'out_of_range' : 'none_carried');
 }
 
 /** A person who is never killed (noFatal) is seriously hurt by a sample that would kill (forceCuts). */

@@ -37,26 +37,26 @@ describe('auto-equip local campaign integration', () => {
     expect(JSON.parse(storage.getItem(SLOTS_KEY)!).slots[0]).toEqual(slotOneBefore);
   });
 
-  it('starts with a radio for every officer, so both squads deploy on day one (starter-kit)', () => {
+  it('deploys both squads on day one with nothing packed, since basic kit is part of every officer (starter-kit)', () => {
     const values = new Map<string, string>();
     const storage = { getItem: (key: string) => values.get(key) ?? null, setItem: (key: string, value: string) => { values.set(key, value); } };
     const saves = new CampaignSlots(storage, NOW, () => 72);
     expect(saves.newGame(2, 'Standard kit QA', NOW).ok).toBe(true);
     const slotOne = JSON.parse(storage.getItem(SLOTS_KEY)!).slots[0];
     const before = saves.getSnapshot().state;
-    expect(Object.values(before.units).filter((unit) => unit.itemId === 'radio_kit')).toHaveLength(Object.keys(before.officers).length);
+    expect(Object.values(before.units).filter((unit) => unit.itemId === 'radio_kit')).toHaveLength(0);
     const scenarioId = SCENARIO_ORDER[0];
     const positions = { A: briefing(scenarioId).entries[0].id, B: briefing(scenarioId).entries[0].id };
     const command = { type: 'startOperation' as const, scenarioId, squadIds: ['A' as const, 'B' as const], positions, loadouts: {} };
     expect(saves.send(command, NOW).ok).toBe(true);
     const deployed = saves.getSnapshot().state;
     expect(deployed.department.funding).toBe(before.department.funding);
-    expect(deployed.reservations).toHaveLength(8);
-    expect(new Set(deployed.reservations.map((reservation) => reservation.unitId)).size).toBe(8);
+    expect(deployed.activeRun).not.toBeNull();
+    expect(deployed.reservations).toEqual([]);
     const restored = new CampaignSlots(storage, NOW, () => 99);
-    expect(restored.getSnapshot().state.reservations).toEqual(deployed.reservations);
+    expect(restored.getSnapshot().state.activeRun).toEqual(deployed.activeRun);
     expect(restored.send({ type: 'cancelOperation' }, NOW).ok).toBe(true);
-    expect(restored.getSnapshot().state.reservations).toEqual([]);
+    expect(restored.getSnapshot().state.activeRun).toBeNull();
     expect(JSON.parse(storage.getItem(SLOTS_KEY)!).slots[0]).toEqual(slotOne);
   });
 

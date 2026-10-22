@@ -76,9 +76,11 @@ describe('incoming fire odds', () => {
 describe('team force odds', () => {
   const knife = (patch: Partial<IncidentPersonDef> = {}) => subject({ threat: { armament: 'edged', readiness: 'brandished', disposition: 'agitated', intent: 'harm_others', awareness: 'aware' }, weapon: { kind: 'edged', real: 'real' }, ...patch });
   const deviceOnly = () => [makeUnit('conducted_energy_device', 2), makeUnit('energy_cartridge', 5)];
+  // Less-lethal comes first when it can be used, so the firearm rows carry only the sidearm.
+  const sidearmOnly = () => [makeUnit('service_sidearm', 3)];
   it.each([
-    ['firearm', subject(), UNITS],
-    ['firearm', subject({ noFatal: true }), UNITS],
+    ['firearm', subject(), sidearmOnly],
+    ['firearm', subject({ noFatal: true }), sidearmOnly],
     ['less_lethal_impact', knife({ doorFt: 40 }), UNITS],
     ['less_lethal_device', knife({ doorFt: 12 }), deviceOnly],
     ['hands', knife({ doorFt: 40, cover: { objectId: 'o', label: 'counter', grade: 'hard' } }), UNITS],

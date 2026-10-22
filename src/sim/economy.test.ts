@@ -37,9 +37,9 @@ function scenario(): GameState {
   let s = createInitialState(T0);
   s = ok(s, { type: 'startCourse', officerId: 'off_chen', courseId: 'communication_refresher' }, T0); // 4h, patrol officer
   s.officers.off_vale.injury = { label: 'sprain', until: T0 + 1.7 * HOUR_MS };
-  const radio = firstUnit(s, 'radio_kit');
-  radio.status = 'service';
-  radio.serviceUntil = T0 + 2.5 * HOUR_MS;
+  const hailer = firstUnit(s, 'loud_hailer');
+  hailer.status = 'service';
+  hailer.serviceUntil = T0 + 2.5 * HOUR_MS;
   return s;
 }
 
@@ -95,7 +95,7 @@ describe('offline equivalence', () => {
       expect(online.officers.off_chen.assignment).toBeNull();
       expect(online.officers.off_chen.ratings.communication).toBe(start.officers.off_chen.ratings.communication + 3);
       expect(offline.officers.off_vale.injury).toBeNull();
-      expect(firstUnit(offline, 'radio_kit').status).toBe('ready');
+      expect(firstUnit(offline, 'loud_hailer').status).toBe('ready');
     }, 15_000);
   }
 

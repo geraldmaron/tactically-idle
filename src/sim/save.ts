@@ -20,7 +20,7 @@ import { RANK_IDS } from '../content/ranks';
 export const SAVE_KEY = 'tactically-idle/save';
 
 /** Version written by this build. Other versions are rejected. */
-export const CURRENT_SAVE_VERSION = 14;
+export const CURRENT_SAVE_VERSION = 15;
 
 export interface SaveStorage {
   getItem(key: string): string | null;

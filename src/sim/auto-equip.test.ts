@@ -53,9 +53,10 @@ describe('auto-equip owned inventory', () => {
     const before = structuredClone(s);
     const plan = autoLoadout(s, 'ms_occupancy', ['A', 'B'], NOW + CALENDAR.gameDayMs);
     expect(plan.added).toBe(0);
-    expect(plan.loadouts).toEqual({ A: { radio_kit: 4 }, B: { radio_kit: 4 } });
+    expect(plan.loadouts).toEqual({ A: {}, B: {} });
     expect(plan.units).toEqual({ A: [], B: [] });
-    expect(plan.warnings.join(' ')).toMatch(/8 officers need 8 Radio headsets; only 0 usable/i);
+    // Basic kit is part of every officer (basic-kit.ts): never packed, never short.
+    expect(plan.warnings.join(' ')).not.toMatch(/Radio headset/i);
     expect(plan.warnings.join(' ')).toMatch(/Thermal imager/);
     expect(s).toEqual(before);
   });
@@ -71,19 +72,20 @@ describe('auto-equip owned inventory', () => {
     expect(plan.warnings.join(' ')).toMatch(/no officers/);
     expect(plan.warnings.join(' ')).toMatch(/mandatory recovery/);
     expect(plan.warnings.join(' ')).toMatch(/does not exist/);
-    // Squad B is short Reyes, who is in training: it is equipped for the three who go (short-squad-deploys).
+    // Squad B is short Reyes, who is in training: it is still equipped for the three who go (short-squad-deploys).
     expect(plan.warnings.join(' ')).not.toMatch(/training/);
-    expect(plan.loadouts.B?.radio_kit).toBe(3);
+    expect(plan.units.B?.length).toBeGreaterThan(0);
   });
 
   it('packs real distinct useful units and bounds reusable equipment without a slot cap', () => {
     const s = makeState({ inventory: { thermal_imager: 3, camera_drone: 3 } });
     const plan = autoLoadout(s, 'ms_occupancy', ['A', 'B'], NOW);
     expect(plan.added).toBeGreaterThan(4);
-    expect(plan.loadouts.A).toMatchObject({ throw_phone: 1, radio_kit: 4, thermal_imager: 1 });
-    expect(plan.loadouts.B).toMatchObject({ radio_kit: 4, thermal_imager: 1 });
+    expect(plan.loadouts.A).toMatchObject({ throw_phone: 1, thermal_imager: 1 });
+    expect(plan.loadouts.B).toMatchObject({ thermal_imager: 1 });
     for (const quantities of Object.values(plan.loadouts)) {
-      for (const [itemId, qty] of Object.entries(quantities)) if (ITEMS[itemId].kind === 'equipment') expect(qty).toBe(itemId === 'radio_kit' ? 4 : 1);
+      for (const [itemId, qty] of Object.entries(quantities)) if (ITEMS[itemId].kind === 'equipment') expect(qty).toBe(1);
+      expect(quantities.radio_kit).toBeUndefined(); // Basic kit is never packed.
       expect(quantities.camera_drone).toBeUndefined(); // No drone action in this scenario.
       expect(quantities.trauma_kit).toBeUndefined(); // No medical use here.
     }
@@ -106,10 +108,10 @@ describe('auto-equip owned inventory', () => {
     const scenarioId = scenarioWith([contact]);
     const s = makeState();
     const full = autoLoadout(s, scenarioId, ['A'], NOW);
-    expect(full.loadouts.A).toEqual({ radio_kit: 4, throw_phone: 1 });
+    expect(full.loadouts.A).toEqual({ throw_phone: 1 });
     delete s.units[unitId('throw_phone')];
     const fallback = autoLoadout(s, scenarioId, ['A'], NOW);
-    expect(fallback.loadouts.A).toEqual({ radio_kit: 4, loud_hailer: 1 });
+    expect(fallback.loadouts.A).toEqual({ loud_hailer: 1 });
     expect(fallback.warnings).toEqual([]);
   });
 
@@ -131,7 +133,7 @@ describe('auto-equip owned inventory', () => {
     const scenarioId = scenarioWith([thermal({ consumes: [{ tag: 'battery', qty: 2 }] })]);
     const s = onlyUnits(makeState(), [makeUnit('thermal_imager', 1)]);
     const plan = autoLoadout(s, scenarioId, ['A'], NOW);
-    expect(plan.loadouts.A).toEqual({ radio_kit: 4, thermal_imager: 1 });
+    expect(plan.loadouts.A).toEqual({ thermal_imager: 1 });
     expect(plan.warnings.join(' ')).not.toMatch(/battery/i);
     expect(plan.units.A).toEqual([unitId('thermal_imager')]);
   });
@@ -161,41 +163,39 @@ describe('auto-equip owned inventory', () => {
 });
 
 describe('manual choices, repeat clicks, and current stock', () => {
-  it('preserves optional quantities and zeros while assigning standard radios by condition', () => {
-    const s = makeState({ inventory: { thermal_imager: 1 } });
-    const radio = unitId('radio_kit', 6);
-    s.units[radio].condition = 35;
+  it('preserves optional quantities and zeros, and never packs basic kit even when asked', () => {
+    const s = makeState({ inventory: { thermal_imager: 1, radio_kit: 1 } });
+    const radio = unitId('radio_kit');
     const plan = autoLoadout(s, 'ms_occupancy', ['A', 'B'], NOW, {
       loadouts: { A: { radio_kit: 2, throw_phone: 0, thermal_imager: 0 } },
       units: { A: [radio] },
     });
-    expect(plan.loadouts.A).toMatchObject({ radio_kit: 4, throw_phone: 0, thermal_imager: 0 });
-    expect(plan.units.A).not.toContain(radio);
-    expect(plan.units.A?.filter((id) => s.units[id].itemId === 'radio_kit')).toHaveLength(4);
+    expect(plan.loadouts.A).toMatchObject({ throw_phone: 0, thermal_imager: 0 });
+    expect(plan.loadouts.A?.radio_kit).toBeUndefined();
+    expect(Object.values(plan.units).flat()).not.toContain(radio);
     assertActualUnits(s, plan);
   });
 
   it('preserves unmet manual quantities and reports their exact shortage without fabricated IDs', () => {
-    const s = onlyUnits(makeState(), [makeUnit('radio_kit', 1)]);
-    const plan = autoLoadout(s, 'ms_occupancy', ['A'], NOW, { loadouts: { A: { radio_kit: 4 } } });
-    expect(plan.loadouts.A?.radio_kit).toBe(4);
-    expect(plan.units.A).toEqual([unitId('radio_kit')]);
-    expect(plan.warnings.join(' ')).toMatch(/4 officers need 4 Radio headsets; only 1 usable/);
+    const s = onlyUnits(makeState(), [makeUnit('loud_hailer', 1)]);
+    const plan = autoLoadout(s, 'ms_occupancy', ['A'], NOW, { loadouts: { A: { loud_hailer: 4 } } });
+    expect(plan.loadouts.A?.loud_hailer).toBe(4);
+    expect(plan.units.A).toEqual([unitId('loud_hailer')]);
+    expect(plan.warnings.join(' ')).toMatch(/requested 4 Loud hailer; only 1 usable unit available/i);
     expect(s.department.funding).toBe(12400);
   });
 
   it('changes only target squads while reserving other squads exact picks and quantities', () => {
-    const s = makeState({ inventory: { thermal_imager: 1, radio_kit: 2 } });
-    const otherRadio = unitId('radio_kit', 2);
+    const s = makeState({ inventory: { thermal_imager: 1 } });
+    const otherHailer = unitId('loud_hailer', 2);
     const otherThermal = unitId('thermal_imager');
-    const options = { targets: ['A'] as SquadId[], loadouts: { B: { radio_kit: 2, thermal_imager: 1 } }, units: { B: [otherRadio, otherThermal] } };
+    const options = { targets: ['A'] as SquadId[], loadouts: { B: { loud_hailer: 1, thermal_imager: 1 } }, units: { B: [otherHailer, otherThermal] } };
     const before = structuredClone(options);
     const plan = autoLoadout(s, 'ms_occupancy', ['A', 'B'], NOW, options);
     expect(Object.keys(plan.loadouts)).toEqual(['A']);
     expect(Object.keys(plan.units)).toEqual(['A']);
-    expect(plan.loadouts.A?.radio_kit).toBe(4);
     expect(plan.loadouts.A?.thermal_imager).toBeUndefined();
-    expect(plan.units.A).toContain(otherRadio); // Radios are automatic; optional exact picks stay with their squad.
+    expect(plan.units.A).not.toContain(otherHailer); // Exact picks stay with their squad.
     expect(plan.units.A).not.toContain(otherThermal);
     expect(options).toEqual(before);
   });
@@ -236,22 +236,22 @@ describe('manual choices, repeat clicks, and current stock', () => {
 
   it('filters reservations, status, exact expiry and projected failure using the high-water clock', () => {
     const s = onlyUnits(makeState(), [
-      makeUnit('radio_kit', 1, { condition: 90 }),
-      makeUnit('radio_kit', 2, { status: 'service' }),
-      makeUnit('radio_kit', 3, { status: 'reserved' }),
-      makeUnit('radio_kit', 4, { status: 'expired' }),
-      makeUnit('radio_kit', 5, { status: 'scrapped' }),
-      makeUnit('radio_kit', 6, { condition: ITEMS.radio_kit.wear.failAt }),
-      makeUnit('radio_kit', 7, { expiresAt: NOW }),
-      makeUnit('radio_kit', 8, { condition: 16 }),
-      makeUnit('radio_kit', 9, { condition: 30 }),
-      makeUnit('radio_kit', 10),
+      makeUnit('loud_hailer', 1, { condition: 90 }),
+      makeUnit('loud_hailer', 2, { status: 'service' }),
+      makeUnit('loud_hailer', 3, { status: 'reserved' }),
+      makeUnit('loud_hailer', 4, { status: 'expired' }),
+      makeUnit('loud_hailer', 5, { status: 'scrapped' }),
+      makeUnit('loud_hailer', 6, { condition: ITEMS.loud_hailer.wear.failAt }),
+      makeUnit('loud_hailer', 7, { expiresAt: NOW }),
+      makeUnit('loud_hailer', 8, { condition: 10.4 }), // fails within the 10 projected days
+      makeUnit('loud_hailer', 9, { condition: 30 }),
+      makeUnit('loud_hailer', 10),
     ]);
-    s.reservations.push({ id: 'r', runId: 'existing', squadId: 'B', itemId: 'radio_kit', unitId: unitId('radio_kit', 10) });
-    expect(autoEquipReadyUnits(s, 'radio_kit', NOW + 10 * CALENDAR.gameDayMs).map((u) => u.id)).toEqual([unitId('radio_kit', 1), unitId('radio_kit', 9)]);
-    expect(autoEquipReadyUnits(s, 'radio_kit', NOW - 1000).map((u) => u.id)).not.toContain(unitId('radio_kit', 7));
+    s.reservations.push({ id: 'r', runId: 'existing', squadId: 'B', itemId: 'loud_hailer', unitId: unitId('loud_hailer', 10) });
+    expect(autoEquipReadyUnits(s, 'loud_hailer', NOW + 10 * CALENDAR.gameDayMs).map((u) => u.id)).toEqual([unitId('loud_hailer', 1), unitId('loud_hailer', 9)]);
+    expect(autoEquipReadyUnits(s, 'loud_hailer', NOW - 1000).map((u) => u.id)).not.toContain(unitId('loud_hailer', 7));
     const plan = autoLoadout(s, 'ms_occupancy', ['A', 'B'], NOW + 10 * CALENDAR.gameDayMs);
-    expect(Object.values(plan.units).flat().sort()).toEqual([unitId('radio_kit', 1), unitId('radio_kit', 9)].sort());
+    expect(Object.values(plan.units).flat().sort()).toEqual([unitId('loud_hailer', 1), unitId('loud_hailer', 9)].sort());
   });
 
   it('does not inspect hidden truth when choosing equipment or explaining it', () => {

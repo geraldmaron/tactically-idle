@@ -319,60 +319,27 @@ Needs: start=none; integrate=none; ship=none
 The Squad screen and the Armory both edit `squad.loadoutPreset` (`src/ui/screens/Squad.tsx`).
 Keep one.
 
-### worn-kit: Each officer wears their own kit, and it protects the officer who wears it
-Tags: job=build; journeys=hire-and-equip, team-moves-odds; probes=items-none; lane=engine
+### worn-kit: Light body armor protects the officer who wears it
+Tags: job=build; journeys=team-moves-odds; probes=none (changes harm severity, not a chance input); lane=engine
 Needs: start=none (owner approves this proposal); integrate=none; ship=none
 
-Proposed 2026-10-19, not yet approved. Every item is a pooled `ItemUnit`. Protection counts once
-per action, best unit of its group (`src/sim/resolution.ts` best-of-group,
-`src/sim/force-risk.ts` `selectedProtection`), and only on actions that declare
-`authorized_response` or `medical_exposure` (`src/sim/equipment-requirements.ts`). No v13 call
-tree declares either, so in shipped calls the light protective kit every officer now gets
-(`src/content/issue-kit.ts`) does nothing, and eight kits would score the same as one where it did.
-Radios already show the right pattern: `src/sim/standard-kit.ts` gives one per deploying officer,
-outside the loadout, and `src/gen/incident/action-gear.ts` gives them no score bonus because a bonus
-everyone has raises every call alike.
+Basic kit is part of every officer since 2026-10-21 (`src/sim/basic-kit.ts`), so the stock and
+wear half of the old proposal is done. What is left: light body armor does nothing on a call. It
+adds no score, by decision, and it never reaches `selectedProtection` (`src/sim/force-risk.ts`)
+because built-in units are kept out of a decision's uses.
 
-Recommendation:
-1. **Worn kit is a class of item.** Radio headset, light protective kit and service sidearm are
-   worn. Everything else (shields, ram, binoculars, drone, less-lethal, consumables) stays pooled.
-2. **Each worn unit belongs to one officer.** It is issued on hire, goes where they go, and comes
-   back to the pool when they leave. Deploy reserves it with the officer. Generalize
-   `standard-kit.ts` from radios to all worn kit, rather than adding a second mechanism. Loadouts
-   and `squad.loadoutPreset` hold pooled gear only, which makes `squad-preset-editor` smaller.
-3. **Protection acts on the officer, not the score.** Light protection loses its +4 on
-   `authorized_response`. Instead, where harm lands on a named officer
-   (`applyIncidentConsequences` in `src/sim/incident-consequences.ts`, which covers authored
-   `officerHarm` and the drawn incoming-fire result), that officer's own serviceable kit turns a
-   serious injury into a wound, as `protectedOfficerEffects` does today for one kit per action.
-   Light kit converts handgun, edged, blunt and improvised hits only, never a long gun, so a
-   heavier vest has room to be a purchase later.
-4. **Wear is per officer.** A worn unit takes `perUse` wear on each deployment and `perDay` as
-   now. The Gear tab and officer profile show whose kit is near failing. A failed vest protects
-   nothing, and its officer still deploys, flagged on the roster.
-5. **Sidearms follow the shooter.** The firearm draw takes the acting officer's own sidearm
-   instead of the first qualified unit in the squad (`qualifiedForceUnit`).
+Recommendation: where harm lands on a named officer (`applyIncidentConsequences` in
+`src/sim/incident-consequences.ts`, authored `officerHarm` and the drawn incoming-fire result),
+the officer's armor turns a serious handgun, edged, blunt or improvised hit into a wound. It never
+converts a long-gun hit. Shields and rescue shields keep their own protection on their actions.
 
-What it moves:
-- **Odds:** choice chances barely move, since no v13 choice reads `authorized_response`. Officer
-  harm severity does move on every call with incoming fire.
-- **Compiled fingerprints:** none expected, because protection is read when the call is played,
-  not compiled. If an implementation adds a compiled gear rule, the fingerprints move and the lead
-  recaptures them on purpose.
-- **Outcome score:** the ranking gate in `src/sim/outcome-score.test.ts` holds.
-- **`items-none`:** the probe strips pooled gear only, since worn kit is not a loadout choice.
-  Re-measure. Floors never fall.
+Strongest objection: if every officer always has working armor, serious injury from handgun fire
+mostly disappears, and with it a band of consequence the calls write lines for. Control: long-gun
+hits stay serious, and the writing review checks that "badly hurt" lines still occur at a rate
+players notice.
 
-Strongest objection: if every officer always wears working protection, serious injury from
-handgun fire mostly disappears, and with it a band of consequence the calls write lines for. The
-vest also becomes an upkeep tax rather than a decision. Controls: worn kit wears and fails per
-officer, so neglected kit shows up in harm. Long-gun hits stay serious. The writing review checks
-that the "badly hurt" lines still occur at a rate players notice.
-
-Done: worn units carry their officer and the deploy and save paths keep them together. Protection
-converts harm only for the officer wearing the kit, with tests for a worn-out vest and a long-gun
-hit. The Gear tab shows worn kit by officer. The trust error and `items-none` are re-measured and
-recorded in the PR. `npm run verify` passes.
+Done: armor converts harm only for the officer hit, with tests for a handgun and a long-gun hit;
+the outcome-score ranking gate holds; `npm run verify` passes.
 
 ### progression-pacing: Measure rank and milestone pacing, and read the promotion lines
 Tags: job=build; journeys=officer-promotes, milestone-grants; probes=none (pacing, not a chance input); lane=engine
@@ -486,7 +453,7 @@ decision on whether the lean needs a player-facing explanation (the HQ or the de
 
 Decided 2026-10-19: scenario work is paused (the barricade is parked on its branch); a squad can
 deploy short of injured officers (`short-squad-deploys`); sidearms from day one
-(`sidearms-day-one`, shipped: two sidearms are issued at the start and `entry_team` stays the force certification, which both starting squads hold); every officer is issued a light protective kit, at the start and on hire, and the Protective response program now unlocks only the carbine and shotgun; keep the compiled fingerprints and the cross-engine check; a call resolved
+(`sidearms-day-one`, shipped, then superseded on 2026-10-21 by basic kit: see below); keep the compiled fingerprints and the cross-engine check; a call resolved
 with harm counts as resolved (already so in `dispositionOf`); an entry breaks every open commitment
 (already so in `src/sim/commitments.ts`); build the Peer Support Lead, the Recruiter and patrol work;
 the crisis cap stays report-only until playtests.
@@ -509,3 +476,12 @@ warning and 988 line wording is drafted for the owner's review, and nothing ship
 Later that day, after research against Xbox Accessibility Guideline 123, the owner dropped the
 content tiers and the death, injury and gunfire toggles: those three are warnings only, and players
 avoid themes (self-harm, child at risk, domestic violence) instead, so the board never empties.
+Decided 2026-10-21 (basic kit): every officer carries a radio headset, a service sidearm, a carbine
+and light body armor as part of the officer (`src/sim/basic-kit.ts`): no certification, no unlock,
+no stock, no wear, no shortage and no score bonus. Bonuses and progression sit on advanced gear: the
+Protective response program unlocks the response shotgun only (+6 in tight spaces, +3 in the open),
+the precision rifle and less-lethal tiers stand, and `entry_team` gates entry training, not carrying
+a weapon. Deploys never wait on radios. The department's starting dice and ids are unchanged.
+Less-lethal first: when a trained officer carries a less-lethal tool with its supply, the person is
+in range and nothing rules it out, the team uses it even on a deadly threat, and the firearm is the
+fallback (`teamForceProfile` in `src/sim/drawn-effects.ts`).

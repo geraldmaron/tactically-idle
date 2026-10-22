@@ -26,7 +26,8 @@ const UNLOCK_RULES: Partial<Record<IncidentType, UnlockRule>> = {
   // protected rescue still waits for a vehicle-trained officer.
   barricaded: { level: 1, anyCert: ['crisis_negotiation', 'deescalation'] },
   // The urgent response needs an entry-qualified officer with a response firearm, so the call waits for one.
-  active_armed_incident: { level: 1, anyCert: ['entry_team', 'less_lethal'], anyItem: ['service_sidearm', 'compact_carbine', 'response_shotgun'] },
+  // Every officer is armed (sim/basic-kit.ts), so only the training gates the call.
+  active_armed_incident: { level: 1, anyCert: ['entry_team', 'less_lethal'] },
   protected_rescue: { level: 1, anyCert: ['vehicle_operations'] },
   hostage_crisis: { level: 1, anyCert: ['crisis_negotiation'] },
 };

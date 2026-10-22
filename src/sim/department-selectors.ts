@@ -1,5 +1,6 @@
 // Read-only views of department state for the UI. Export names and signatures are
 // a fixed contract; the bodies here preview exactly what the handlers will do.
+import { isBasicKit } from './basic-kit';
 import type {
   Candidate,
   Course,
@@ -225,7 +226,8 @@ export function nodeOptions(state: GameState): NodeOption[] {
 export function storeOptions(state: GameState): StoreOption[] {
   const upkeep = departmentUpkeep(state);
   const now = state.department.clockHighWater;
-  return Object.values(ITEMS).map((item) => {
+  // Basic kit is part of every officer (basic-kit.ts): never stocked, bought or listed.
+  return Object.values(ITEMS).filter((item) => !isBasicKit(item.id)).map((item) => {
     const units = Object.values(state.units).filter((u) => u.itemId === item.id && u.status !== 'scrapped');
     const ready = readyUnits(state, item.id, upkeep);
     const conditions = units.filter((u) => u.status !== 'expired').map((u) => projectedCondition(state, u, now, upkeep));

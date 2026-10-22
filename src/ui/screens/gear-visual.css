@@ -122,6 +122,7 @@
 
 /* Armory (gear-armory): header stats, the Quartermaster and the standing tools above one list. */
 .armory-head { display: grid; gap: 10px; margin-bottom: 12px; min-width: 0; }
+.armory-basic { margin: 0; font-size: 13px; line-height: 1.4; }
 .armory-tools { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 .armory-tool {
   display: flex; align-items: center; gap: 8px; min-height: 52px; min-width: 0; padding: 8px 10px; border: 1px solid var(--line);

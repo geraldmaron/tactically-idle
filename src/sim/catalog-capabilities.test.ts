@@ -12,6 +12,7 @@ import { makeState, makeUnit, NOW, startRun } from './test-fixtures';
 import { registerCapabilityFixtures } from './fixtures/capability-scenarios';
 import { autoLoadout } from './auto-equip';
 import { CURRENT_SAVE_VERSION, serialize, deserialize } from './save';
+import { basicUnits, isBasicKit } from './basic-kit';
 import type { CapabilityId, CertId } from './types';
 
 registerCapabilityFixtures();
@@ -64,7 +65,7 @@ describe('bounded catalog and common gates', () => {
     expect(DEV_NODES.intel_thermal.description).toBe(THERMAL_DESCRIPTION);
     expect(ITEMS.thermal_imager.description).toBe(THERMAL_DESCRIPTION);
   });
-  it.each(additions)('%s contributes in its declared context, and contributes nothing on a routine contact action', (id, cap) => {
+  it.each(additions.filter(([id]) => !isBasicKit(id)))('%s contributes in its declared context, and contributes nothing on a routine contact action', (id, cap) => {
     const input = context(id, cap);
     const result = evaluateCapabilities(input);
     expect(result.reasons, id).toEqual([]);
@@ -72,6 +73,18 @@ describe('bounded catalog and common gates', () => {
     expect(result.uses.some((u) => u.itemId === id)).toBe(true);
     input.action.capabilities = { rules: [] }; input.action.check.kind = 'contact';
     expect(evaluateCapabilities(input).applied).toHaveLength(0);
+  });
+  // Basic kit (basic-kit.ts): every squad carries a built-in unit that meets the requirement and adds nothing.
+  it.each(additions.filter(([id]) => isBasicKit(id)))('basic %s meets a required %s without contributing, wear or use', (id, cap) => {
+    const input = context(id, cap);
+    input.units.A = basicUnits('A').filter((u) => u.itemId === id);
+    const result = evaluateCapabilities(input);
+    expect(result.reasons, id).toEqual([]);
+    expect(result.applied.find((p) => p.itemId === id)?.value, id).toBe(0);
+    expect(result.contributors.filter((c) => c.ref === id)).toEqual([]);
+    expect(result.uses.some((u) => u.itemId === id)).toBe(false);
+    input.units.A = [];
+    expect(evaluateCapabilities(input).reasons).not.toEqual([]);
   });
   it('buying each new program never grants a cert; prerequisite certification is checked separately', () => {
     const state = makeState();state.department.funding = 100000;
@@ -124,12 +137,13 @@ describe('context, material and safety consequences', () => {
     for (const gap of [0, .7, 3, 8]) { input.radioDeficit = gap; expect(evaluateCapabilities(input).applied[0]?.value ?? 0).toBe(Math.min(gap, 5)); }
   });
   it('one response class wins, duplicates do not stack, worn stock contributes less and bad stock is unusable', () => {
-    const input = context('compact_carbine', 'authorized_response');
-    input.units.A!.push(makeUnit('compact_carbine', 2), makeUnit('service_sidearm', 1), makeUnit('response_shotgun', 1));
+    const input = context('response_shotgun', 'authorized_response');
+    input.units.A!.push(makeUnit('response_shotgun', 2), ...basicUnits('A'));
     const full = evaluateCapabilities(input);
     expect(full.applied.filter((p) => p.group === 'response_class')).toHaveLength(1);
-    expect(full.applied[0].value).toBe(6);
-    input.units.A = [makeUnit('compact_carbine', 1, { condition: 20 })];
+    expect(full.applied.find((p) => p.group === 'response_class')).toMatchObject({ itemId: 'response_shotgun', value: 6 });
+    input.units.A = [makeUnit('response_shotgun', 1, { condition: 20 })];
+    expect(evaluateCapabilities(input).applied[0].value).toBeGreaterThan(0);
     expect(evaluateCapabilities(input).applied[0].value).toBeLessThan(6);
     for (const status of ['service', 'scrapped', 'expired'] as const) {
       input.units.A![0].status = status; expect(evaluateCapabilities(input).applied).toHaveLength(0);
