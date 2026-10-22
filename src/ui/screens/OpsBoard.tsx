@@ -17,6 +17,7 @@ import { cardDescriptors } from '../settings/CardWarning';
 import { CARD_THEME_WORDS, CARD_WARNING_TEXT, joinThemes } from '../settings/labels';
 import { useSettings } from '../settings/SettingsControls';
 import { joinNames, squadName } from './operation-squads';
+import { callFlow } from './call-flow';
 import './ops-visual.css';
 
 /**
@@ -33,6 +34,11 @@ export function OpsBoard({ onOpen }: { onOpen: (id: Id) => void }) {
   const note = boardNote(g, now);
   const fresh = useFreshIncidents(g);
   const arrival = note.line ?? (note.nextAt ? `Next ${relativeTime(note.nextAt, now)}` : null);
+  // Back from a call's brief returns focus to its card (docs/ui-ux-audit.md, exit table).
+  useEffect(() => {
+    const id = callFlow.takeOpener();
+    if (id) document.querySelector<HTMLElement>(`.cl-card[data-call-id="${CSS.escape(id)}"] .cl-card-button`)?.focus();
+  }, []);
 
   return (
     <div className="page cl-board">

@@ -40,6 +40,8 @@ interface FlowEntry { open: OpenCall | null; pushed?: boolean }
 export function createCallFlow(history: HistoryPort | null) {
   let open: OpenCall | null = null;
   let drafts: Record<Id, PrepareDraft> = {};
+  // The call last opened from the board, so focus returns to its card after Back.
+  let opener: Id | null = null;
   const listeners = new Set<() => void>();
   let snapshot: { open: OpenCall | null; drafts: Record<Id, PrepareDraft> } = { open, drafts };
   const emit = () => { snapshot = { open, drafts }; listeners.forEach((l) => l()); };
@@ -66,6 +68,7 @@ export function createCallFlow(history: HistoryPort | null) {
     subscribe(listener: () => void) { listeners.add(listener); return () => { listeners.delete(listener); }; },
     /** Open a call from the board on its brief. Its draft, if any, is kept. */
     openCall(scenarioId: Id) {
+      opener = scenarioId;
       if (same(open, { scenarioId, step: 'brief' })) return;
       write({ scenarioId, step: 'brief' }, 'push');
     },
@@ -84,6 +87,7 @@ export function createCallFlow(history: HistoryPort | null) {
     },
     /** The call went live (or is gone): leave the flow and drop its draft. */
     close(scenarioId?: Id) {
+      opener = null;
       if (scenarioId) { const { [scenarioId]: _gone, ...rest } = drafts; drafts = rest; }
       if (open && (!scenarioId || open.scenarioId === scenarioId)) write(null, 'replace');
       else emit();
@@ -104,6 +108,8 @@ export function createCallFlow(history: HistoryPort | null) {
         return Object.is(value, current[key]) ? current : { ...current, [key]: value };
       })];
     },
+    /** The call whose card should take focus back on the board, once. */
+    takeOpener(): Id | null { const id = opener; opener = null; return id; },
     /** Drafts for calls no longer on the board are dropped. */
     prune(onBoard: (scenarioId: Id) => boolean) {
       const keep = Object.fromEntries(Object.entries(drafts).filter(([id]) => onBoard(id)));
