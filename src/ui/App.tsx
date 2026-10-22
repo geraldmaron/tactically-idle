@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import './app.css';
 import './player-navigation.css';
@@ -9,6 +9,7 @@ import { BottomNav } from './components/BottomNav';
 import { ToastProvider } from './components/toast';
 import { OverlayRootContext } from './components/Sheet';
 import { NavContext, usePlayerNavigation } from './components/nav';
+import { ChromeProvider, useChromeShell } from './components/chrome';
 import { Button } from './components/ui';
 import { ITEMS } from '../content/items';
 import { HQ } from './screens/HQ';
@@ -54,15 +55,22 @@ function GameShell() {
   const [savesOpen, setSavesOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [overlay, setOverlay] = useState<HTMLElement | null>(null);
+  const chrome = useChromeShell();
+  const { mode } = chrome.api;
+  const [app, setApp] = useState<HTMLDivElement | null>(null);
+  useChromeInsets(app, chrome.api.head, chrome.api.foot);
 
   return (
     <div className="stage">
-      <div className="app" style={TEXTURES}>
+      <div className="app" style={TEXTURES} ref={setApp} data-chrome={mode}>
         <NavContext.Provider value={nav}>
+          <ChromeProvider value={chrome.api}>
           <DepartmentScope>
             <OverlayRootContext.Provider value={overlay}>
               <ToastProvider>
-                <TopBar onOpenSaves={() => setSavesOpen(true)} />
+                <div className="chrome-head" ref={chrome.setHead}>
+                  {mode === 'desk' && <TopBar onOpenSaves={() => setSavesOpen(true)} />}
+                </div>
                 <SaveWarning onOpen={() => setSavesOpen(true)} />
                 <main className={`screen screen-${tab}`} key={tab}>
                   {nav.returnToItem && <div className="player-return"><Button onClick={nav.returnToEquipment}>Back to item · {ITEMS[nav.returnToItem]?.name ?? 'Equipment'}</Button></div>}
@@ -72,7 +80,9 @@ function GameShell() {
                   {tab === 'develop' && <DevelopScreen highlightedNode={nav.developmentNode} highlightRequest={nav.developmentRequest} />}
                   {tab === 'gear' && <GearScreen />}
                 </main>
-                <BottomNav />
+                <div className="chrome-foot" ref={chrome.setFoot}>
+                  {mode === 'desk' && <BottomNav />}
+                </div>
                 <SaveManager open={savesOpen} onClose={() => setSavesOpen(false)} onOpenSettings={() => { setSavesOpen(false); setSettingsOpen(true); }} />
                 <SettingsSheet open={settingsOpen} onClose={() => setSettingsOpen(false)} />
                 <OfficerSheet officerId={nav.officerId} onClose={nav.closeOfficer} />
@@ -81,9 +91,29 @@ function GameShell() {
               </ToastProvider>
             </OverlayRootContext.Provider>
           </DepartmentScope>
+          </ChromeProvider>
         </NavContext.Provider>
         <div className="overlay-root" ref={setOverlay} />
       </div>
     </div>
   );
+}
+
+/** The heights of the head and foot slots as `--chrome-head-h` and `--chrome-foot-h`, so toasts
+ * stand clear of both. `--nav-h` keeps its old meaning (the foot without the safe area), so
+ * nonmodal sheets sit above whatever holds the foot. */
+function useChromeInsets(app: HTMLElement | null, head: HTMLElement | null, foot: HTMLElement | null) {
+  useEffect(() => {
+    if (!app || !head || !foot || typeof ResizeObserver === 'undefined') return;
+    const update = () => {
+      app.style.setProperty('--chrome-head-h', `${head.offsetHeight}px`);
+      app.style.setProperty('--chrome-foot-h', `${foot.offsetHeight}px`);
+      app.style.setProperty('--nav-h', `calc(${foot.offsetHeight}px - env(safe-area-inset-bottom))`);
+    };
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(head);
+    observer.observe(foot);
+    return () => observer.disconnect();
+  }, [app, head, foot]);
 }

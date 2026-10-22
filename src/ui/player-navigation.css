@@ -23,3 +23,28 @@
 .store-training .field input, .store-training .field select { width: 100%; min-width: 0; min-height: 44px; }
 .training-heading { margin: 0; }
 .training-course-highlight { outline: 2px solid var(--amber); outline-offset: 2px; }
+
+/* The chrome contract (components/chrome.tsx): a head slot and a foot slot around the screen. The
+   shell draws the resource bar and tabs in them on desk screens; a flow puts its head and action
+   bar there; a focus screen leaves them empty or fills them itself. */
+.chrome-head { flex: none; position: relative; z-index: 8; }
+.chrome-foot { flex: none; position: relative; z-index: 9; padding-bottom: env(safe-area-inset-bottom); background: var(--ink-1); }
+.chrome-foot:empty { background: none; }
+/* The foot is measured into --nav-h, so nothing in it may size itself from that variable. */
+.chrome-foot > .bottomnav { flex: none; height: 60px; box-sizing: border-box; padding-bottom: 0; }
+.chrome-foot > .action-bar { padding-bottom: var(--sp3); }
+
+.flow-head { height: 52px; display: flex; align-items: center; gap: var(--sp2); padding: 0 var(--sp4) 0 var(--sp1); border-bottom: 1px solid var(--hair); background: var(--ink-1); }
+.flow-back { flex: 1 1 0; min-width: 0; height: 44px; display: inline-flex; align-items: center; gap: 2px; padding: 0 var(--sp2); border: 0; border-radius: var(--r1); background: none; color: var(--t2); font: 500 var(--s14)/1 var(--f-ui); cursor: pointer; }
+.flow-back > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.flow-back:focus-visible, .flow-title:focus-visible { outline: 2px solid var(--act); outline-offset: -2px; }
+@media (hover: hover) { .flow-back:hover { color: var(--t1); } }
+.flow-title { flex: 0 1 auto; min-width: 0; margin: 0; font: 600 var(--s18)/1.15 var(--f-title); color: var(--t1); text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.flow-title:focus { outline: none; }
+.flow-trailing { flex: 1 1 0; min-width: 0; display: flex; justify-content: flex-end; }
+
+/* Toasts stand between the head and the foot, whatever fills them. With a footed sheet open they
+   move to the top of that space, clear of the sheet's buttons. */
+.toast-layer { position: absolute; left: 0; right: 0; top: var(--chrome-head-h, 0px); bottom: var(--chrome-foot-h, 0px); z-index: 40; pointer-events: none; }
+.app .toast-layer > .toasts { position: absolute; top: auto; bottom: 10px; left: 12px; right: 12px; }
+.app:has(.overlay-root .sheet .sheet-foot) .toast-layer > .toasts { top: 10px; bottom: auto; }
