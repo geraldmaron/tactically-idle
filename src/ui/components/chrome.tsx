@@ -58,7 +58,9 @@ export function ChromeFoot({ children }: { children: ReactNode }) {
 
 export interface FlowHeadProps {
   title: ReactNode;
-  onBack: () => void;
+  /** Leave it out for a flow with no way back (the debrief: Done settles, then leaves). The head
+   * then draws no Back and the title stays centred. */
+  onBack?: () => void;
   /** Where Back goes, in words ("Calls"). Defaults to "Back". */
   backLabel?: string;
   /** One quiet control at the right of the head, for example Map. */
@@ -68,7 +70,7 @@ export interface FlowHeadProps {
 /** A pushed flow: the brief, deploy, the debrief, a hire. The head (back, title, one trailing
  * control) replaces the resource bar, the tabs go, and `footer` (one ActionBar) takes their place.
  * The children scroll in the screen as usual. Pass `onBack` that keeps any draft: Back never
- * discards the player's choices, and a debrief settles before it leaves. */
+ * discards the player's choices. A debrief passes no `onBack`: it settles before it leaves. */
 export function FlowScreen({ footer, children, ...head }: FlowHeadProps & { footer?: ReactNode; children: ReactNode }) {
   const chrome = useContext(ChromeContext);
   useChromeMode('flow');
@@ -88,10 +90,10 @@ export function FlowHead({ title, onBack, backLabel = 'Back', trailing }: FlowHe
   useEffect(() => { titleRef.current?.focus({ preventScroll: true }); }, [key]);
   return (
     <header className="flow-head">
-      <button type="button" className="flow-back" onClick={onBack} aria-label={backLabel === 'Back' ? 'Back' : `Back to ${backLabel}`}>
+      {onBack ? <button type="button" className="flow-back" onClick={onBack} aria-label={backLabel === 'Back' ? 'Back' : `Back to ${backLabel}`}>
         <Icon name="chevronLeft" size={18} />
         <span>{backLabel}</span>
-      </button>
+      </button> : <span className="flow-back flow-back-none" aria-hidden="true" />}
       <h1 className="flow-title" ref={titleRef} tabIndex={-1}>{title}</h1>
       <span className="flow-trailing">{trailing}</span>
     </header>

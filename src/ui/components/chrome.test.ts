@@ -11,6 +11,12 @@ describe('chrome contract', () => {
     expect(html).toContain('>Map</button>');
   });
 
+  it('draws no Back when a flow has no way back, keeping the title centred', () => {
+    const html = renderToStaticMarkup(createElement(FlowHead, { title: 'Debrief' }));
+    expect(html).not.toContain('<button');
+    expect(html).toContain('<span class="flow-back flow-back-none" aria-hidden="true"></span><h1 class="flow-title" tabindex="-1">Debrief</h1>');
+  });
+
   it('keeps a flow body in the screen when the shell has no slots yet', () => {
     const register = vi.fn(() => () => {});
     const html = renderToStaticMarkup(createElement(ChromeProvider, { value: { mode: 'desk', head: null, foot: null, register } },
