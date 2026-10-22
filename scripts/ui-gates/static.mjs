@@ -228,9 +228,9 @@ const OUTCOME_ICON_USE = /OUTCOME_ICON/;
  * basicKit glyph in its element or the one around it; a status or outcome icon is drawn by StatusMark
  * and OutcomeMark (icons/marks.tsx), never by hand. */
 export function kitSemanticsFindings(file, tsx) {
-  if (/^src\/ui\/icons\//.test(file) || NOT_UI_SOURCE.test(file)) return { basicKit: [], status: [], outcome: [] };
+  if (/^src\/ui\/icons\//.test(file) || NOT_UI_SOURCE.test(file)) return { basicKit: [], status: [], outcome: [], forecast: [] };
   const { src, elements, lineOf } = scanJsx(tsx);
-  const basicKit = [], status = [], outcome = [];
+  const basicKit = [], status = [], outcome = [], forecast = [];
   const seen = new Set();
   for (const m of src.matchAll(/basic kit|\bBASIC_KIT_LINE\b/gi)) {
     if (elements.some((e) => m.index >= e.start && m.index < e.openEnd)) continue;
@@ -249,11 +249,18 @@ export function kitSemanticsFindings(file, tsx) {
     if (!BASIC_GLYPH.test(around)) basicKit.push({ file, line: lineOf(m.index), text: `"${m[0]}" without the basicKit glyph` });
   }
   for (const el of elements) {
+    // An outcome row (a forecast band) opens with the kit's mark, so favorable, mixed and adverse read at a glance.
+    if (!el.selfClosing && /\boutcome-option\b/.test(el.attrs.className?.value ?? '')) {
+      const first = firstChild(childrenOf(src, el));
+      const inner = firstChild(childrenOf(src, el).replace(/^\s*<div[^>]*>/, ''));
+      const lead = [first, inner].find((c) => c.kind === 'element' && isVisualName(c.name));
+      if (!lead) forecast.push({ file, line: el.line, text: `<${el.name} className="${(el.attrs.className?.value ?? '').slice(0, 30)}"> has no outcome mark` });
+    }
     if (el.name !== 'Icon' || !el.attrs.name) continue;
     if (STATUS_ICON_USE.test(el.attrs.name.value)) status.push({ file, line: el.line, text: `<Icon name={${el.attrs.name.value.slice(0, 40)}}> draws status by hand` });
     if (OUTCOME_ICON_USE.test(el.attrs.name.value)) outcome.push({ file, line: el.line, text: `<Icon name={${el.attrs.name.value.slice(0, 40)}}> draws an outcome by hand` });
   }
-  return { basicKit, status, outcome };
+  return { basicKit, status, outcome, forecast };
 }
 
 // ------------------------------------------------------------------------------------------- R10
@@ -373,6 +380,7 @@ export const STATIC_RULES = {
   'R5.basic-kit': '"Basic kit" shown without the basicKit glyph',
   'R5.status': 'officer status drawn by hand, not by StatusMark',
   'R5.outcome': 'outcome drawn by hand, not by OutcomeMark',
+  'R5.forecast': 'outcome rows that open with words, not an OutcomeMark',
   'R7.sub14': 'font-size declarations under 14px (CSS)',
   'R7.floor': 'font sizes under 12px (CSS and TSX)',
   'R7.dynamic': 'inline fontSize formulas that need a classified floor (TSX)',
@@ -418,7 +426,7 @@ export function collectStatic(root) {
     const leads = leadFindings(file, text);
     add('R4.heading', leads.heading); add('R4.section', leads.section); add('R4.row', leads.row);
     const kit = kitSemanticsFindings(file, text);
-    add('R5.basic-kit', kit.basicKit); add('R5.status', kit.status); add('R5.outcome', kit.outcome);
+    add('R5.basic-kit', kit.basicKit); add('R5.status', kit.status); add('R5.outcome', kit.outcome); add('R5.forecast', kit.forecast);
     add('R10.switch', switchFindings(file, text));
     const states = stateFindings(file, text);
     add('R11.empty', states.empty); add('R11.error', states.error);

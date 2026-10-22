@@ -93,6 +93,8 @@ describe('ui gates (static): each detector fails what it owns', () => {
     expect([bad.basicKit.length, bad.status.length, bad.outcome.length]).toEqual([2, 1, 1]);
     const good = kitSemanticsFindings(TSX, ui('<p><Icon name={GEAR_SOURCE_ICON.basic} size={20} />{BASIC_KIT_LINE}</p><Sheet subtitle="Basic kit goes with every officer" />'));
     expect([good.basicKit.length, good.status.length, good.outcome.length]).toEqual([0, 0, 0]);
+    expect(kitSemanticsFindings(TSX, ui('<li className="outcome-option"><div><strong>Smoothly</strong></div></li>')).forecast, 'a forecast row without its mark').toHaveLength(1);
+    expect(kitSemanticsFindings(TSX, ui('<li className="outcome-option"><div><OutcomeMark band="favorable" /><strong>Smoothly</strong></div></li>')).forecast).toEqual([]);
   });
 
   it('R7 flags text under the floors in CSS and TSX', () => {

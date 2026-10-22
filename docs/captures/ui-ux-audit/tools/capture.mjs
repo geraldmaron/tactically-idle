@@ -18,7 +18,7 @@ const CHROME = process.env.CHROME_PATH ?? '/Applications/Google Chrome.app/Conte
 
 /** Locate the scroll owner of the active surface and mark it. */
 const scroller = (page) => page.evaluate(() => {
-  const sheets = [...document.querySelectorAll('.sheet')];
+  const sheets = [...document.querySelectorAll('.sheet, [role=dialog][aria-modal=true]')];
   const scope = sheets.length ? sheets[sheets.length - 1] : document;
   const cands = [...scope.querySelectorAll('.sheet-body, .sheet, .debrief, .debrief-layout, main.screen, main, .app')].concat(sheets.length ? [scope] : []).filter((el) => el.scrollHeight - el.clientHeight > 4 && getComputedStyle(el).overflowY !== 'visible');
   const el = sheets.length ? cands.find((c) => c.matches('.sheet-body')) ?? cands[0] : cands.sort((a, b) => (b.scrollHeight - b.clientHeight) - (a.scrollHeight - a.clientHeight))[0];
@@ -142,11 +142,14 @@ export async function walk({ repo, baseURL, widths = WIDTHS, outDir = null, onFr
       await step('board', async () => { await tab('Calls'); await page.locator('.cl-card').first().waitFor(); await shot('18-board', { segments: 5 }); });
       // A call card opens its brief directly (no Prepare button); the first call on a fresh board may bring the welcome sheet.
       await step('brief', async () => { const welcome = page.locator('.welcome-sheet'); if (await welcome.count()) await welcome.getByRole('button', { name: 'Continue', exact: true }).click();
-        await page.locator('.cl-card-button').first().click(); await page.locator('.cl-flow-body[data-step="brief"]').waitFor(); await shot('19-prepare-brief', { segments: 5 }); });
+        await page.locator('.cl-card-button').first().click(); await page.locator('.cl-flow-body[data-step="brief"]').waitFor(); await shot('19-prepare-brief', { segments: 5 });
+        await page.locator('.cl-map-chip').click(); await page.locator('.cl-map-sheet').waitFor(); await shot('19b-brief-map-sheet', { segments: 2 }); await closeSheet(); });
       await step('team', async () => { await page.getByRole('button', { name: 'Choose team', exact: true }).click(); await shot('20-prepare-team-empty', { segments: 2 });
         await page.locator('.cl-squads button.cl-squad:not([aria-label*="not deployable"]):not([aria-label*=" 0 of "])').first().click(); await shot('21-prepare-team-picked', { segments: 6 });
         const buy = page.getByRole('button', { name: /^Buy \d+ radios? · / }); if (await buy.count()) { await buy.first().click(); await page.waitForTimeout(400); } });
       await step('live', async () => { await page.getByRole('button', { name: /^Deploy [A-Z]/ }).click(); await page.locator('.call-grid').waitFor(); await shot('22-live-decide-1', { segments: 4 });
+        await page.getByRole('button', { name: 'Full map', exact: true }).click(); await page.locator('.live-map-full').waitFor(); await shot('22b-live-full-map', { segments: 1 });
+        await page.getByRole('button', { name: 'Close the map' }).click(); await page.waitForTimeout(300);
         const card = page.locator('.call-grid .callbtn:not(.callbtn-off)').first(); const review = card.locator('.callbtn-review');
         await (await review.count() ? review : card).click(); await shot('23-review-sheet', { segments: 3 });
         await page.getByRole('button', { name: /^Confirm / }).click(); await shot('24-result-beat', { segments: 3 }); });
@@ -178,10 +181,15 @@ export async function walk({ repo, baseURL, widths = WIDTHS, outDir = null, onFr
         await page.locator('.resource-bar .menu-btn').click(); await page.waitForTimeout(300); await page.locator('.menu-sheet .menu-link').click(); await page.waitForTimeout(400);
         // Storage refuses the write, as a full or blocked browser does, so "Save now" fails and says why.
         await page.evaluate(() => { window.__realSetItem = Storage.prototype.setItem; Storage.prototype.setItem = function () { throw new DOMException('The quota has been exceeded.', 'QuotaExceededError'); }; });
-        await page.getByRole('button', { name: 'Save now', exact: true }).click(); await page.waitForTimeout(500);
-        await page.evaluate(() => { Storage.prototype.setItem = window.__realSetItem; });
-        if (!await page.locator('.sheet [role=alert]').count()) throw new Error('the save error did not show');
-        await shot('31-saves-error', { segments: 2 }); await closeSheet(); });
+        try {
+          await page.getByRole('button', { name: 'Save now', exact: true }).click(); await page.waitForTimeout(500);
+          if (!await page.locator('.sheet [role=alert]').count()) throw new Error('the save error did not show');
+          // Storage keeps refusing until the shot is taken, or the next autosave would clear the message mid-walk.
+          await shot('31-saves-error', { segments: 2 });
+        } finally {
+          await page.evaluate(() => { Storage.prototype.setItem = window.__realSetItem; });
+        }
+        await closeSheet(); });
       await context.close();
     }
   } finally {

@@ -13,7 +13,7 @@ export function iconFindings(file: string, tsx: string): { size: Finding[]; stro
 export function iconCssFindings(file: string, css: string): Finding[];
 export function leadFindings(file: string, tsx: string): { heading: Finding[]; section: Finding[]; row: Finding[] };
 export function hiddenGlyphFindings(file: string, css: string): Finding[];
-export function kitSemanticsFindings(file: string, tsx: string): { basicKit: Finding[]; status: Finding[]; outcome: Finding[] };
+export function kitSemanticsFindings(file: string, tsx: string): { basicKit: Finding[]; status: Finding[]; outcome: Finding[]; forecast: Finding[] };
 export function variantFindings(file: string, css: string): { redefinition: Finding[]; badge: Finding[] };
 export function switchFindings(file: string, tsx: string): Finding[];
 export function stateFindings(file: string, tsx: string): { empty: Finding[]; error: Finding[] };

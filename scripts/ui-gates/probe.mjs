@@ -21,7 +21,7 @@ export async function probe(cfg) {
   const cache = new Map();
   const cs = (el) => { let s = cache.get(el); if (!s) { s = getComputedStyle(el); cache.set(el, s); } return s; };
   const rectOf = (el) => el.getBoundingClientRect();
-  const sheets = [...document.querySelectorAll('.sheet')].filter((s) => { const r = rectOf(s); return r.width > 0 && r.height > 0 && cs(s).visibility !== 'hidden' && cs(s).display !== 'none'; });
+  const sheets = [...document.querySelectorAll('.sheet, [role=dialog][aria-modal=true]')].filter((s) => { const r = rectOf(s); return r.width > 0 && r.height > 0 && cs(s).visibility !== 'hidden' && cs(s).display !== 'none'; });
   const app = document.querySelector('.app') ?? document.body;
   const root = sheets.length ? sheets[sheets.length - 1] : app;
   const surface = sheets.length ? 'sheet' : 'screen';
