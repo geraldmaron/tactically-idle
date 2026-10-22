@@ -37,9 +37,11 @@ export const TAP_TUNING = tunable('TAP_TUNING', {
     : !(t.maxPerSecond > 0) ? 'The tap rate must be above zero.'
     : !(t.burstSeconds > 0) ? 'The burst must hold some taps.'
     : !(t.maxPerSecond * t.burstSeconds >= 1) ? 'The burst must hold at least one whole tap, or no tap ever counts.'
-    : !(t.stressPerDollar > 0) ? 'Paid details must cost the officers some strain.' : null,
+    : !(t.base * t.stressPerDollar >= MIN_STRAIN_PER_TAP) ? `A tap must strain the officers at least ${MIN_STRAIN_PER_TAP}, or details would pay without costing anything.` : null,
 });
 
+/** The least strain one tap may cost, well above the rounding spreadStrain ignores. */
+export const MIN_STRAIN_PER_TAP = 0.001;
 /** The most taps one command may carry; a larger batch is refused, not trimmed. */
 export const MAX_TAP_BATCH = 1000;
 /** No one multiplier may exceed this, the combined multiplier may not exceed MAX_COMBINED_MULTIPLIER,
@@ -168,8 +170,9 @@ export interface DetailRoom {
 export function detailRoom(state: Pick<GameState, 'squads' | 'officers'>, at: number): DetailRoom {
   const line = DETAIL_STRAIN_LINE;
   const patrol = state.squads.filter((sq) => sq.duty === 'patrol');
-  // Each officer once, even if a malformed roster lists them in two patrol squads.
-  const free = [...new Set(patrol.flatMap((sq) => sq.officerIds))].map((id) => state.officers[id])
+  // Each officer once, and only in the squad they belong to, so a malformed roster that also lists a
+  // standby or resting officer under a patrol squad can't strain them.
+  const free = [...new Set(patrol.flatMap((sq) => sq.officerIds.filter((id) => state.officers[id]?.squadId === sq.id)))].map((id) => state.officers[id])
     .filter((o): o is Officer => !!o && !o.assignment && !(o.injury && o.injury.until > at));
   const under = free.filter((o) => o.stress < line);
   const room = under.reduce((sum, o) => sum + (line - o.stress), 0);

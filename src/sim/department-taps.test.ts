@@ -188,6 +188,31 @@ describe('paid details strain the free patrol officers', () => {
     expect(detailRoom(s, at).block).toBe('at-line');
   });
 
+  it('never strains an officer listed under a patrol squad they do not belong to (third pass)', () => {
+    const s = createInitialState(T0);
+    const a = s.squads.find((sq) => sq.duty === 'patrol')!;
+    const b = s.squads.find((sq) => sq !== a)!;
+    const outsider = b.officerIds[0];
+    a.officerIds = [...a.officerIds, outsider];
+    const r = tap(s, 20);
+    expect(r.state.officers[outsider].stress).toBe(s.officers[outsider].stress);
+    expect(detailRoom(s, T0).officerIds).not.toContain(outsider);
+  });
+
+  it('refuses tuning that would let a tap cost no real strain (third pass)', () => {
+    expect(validatePatch({ TAP_TUNING: { stressPerDollar: 1e-10 } }).length).toBeGreaterThan(0);
+    expect(validatePatch({ TAP_TUNING: { stressPerDollar: 0.01 } })).toEqual([]);
+  });
+
+  it('strains the same for single taps as for one batch', () => {
+    let single = createInitialState(T0);
+    for (let i = 0; i < 20; i++) single = tap(single, 1, T0 + i * 100).state;
+    // The batch settles to the same moment, so recovery matches and only the strain differs.
+    const batch = send(tap(createInitialState(T0), 20).state, { type: 'tick' }, T0 + 1900).state;
+    const sum = (g: GameState) => Object.values(g.officers).reduce((t, o) => t + o.stress, 0);
+    expect(sum(single)).toBeCloseTo(sum(batch), 9);
+  });
+
   it('counts an officer once even if listed in two patrol squads', () => {
     const s = createInitialState(T0);
     const a = s.squads.find((sq) => sq.duty === 'patrol')!;
