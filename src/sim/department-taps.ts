@@ -25,13 +25,17 @@ export const TAP_TUNING = tunable('TAP_TUNING', {
 }, {
   guard: (t) => !(t.base > 0) ? 'One tap must credit more than nothing.'
     : !(t.maxPerSecond > 0) ? 'The tap rate must be above zero.'
-    : !(t.burstSeconds > 0) ? 'The burst must hold some taps.' : null,
+    : !(t.burstSeconds > 0) ? 'The burst must hold some taps.'
+    : !(t.maxPerSecond * t.burstSeconds >= 1) ? 'The burst must hold at least one whole tap, or no tap ever counts.' : null,
 });
 
 /** The most taps one command may carry; a larger batch is refused, not trimmed. */
 export const MAX_TAP_BATCH = 1000;
-/** No multiplier may exceed this, so a bad entry or save can't overflow the books. */
+/** No one multiplier may exceed this, the combined multiplier may not exceed MAX_COMBINED_MULTIPLIER,
+ * and a department holds at most MAX_MULTIPLIERS, so a bad entry or save can't overflow the books. */
 export const MAX_MULTIPLIER_FACTOR = 1000;
+export const MAX_COMBINED_MULTIPLIER = 100_000;
+export const MAX_MULTIPLIERS = 64;
 
 export const LEDGER_TAP_LABEL = 'Desk paperwork';
 
@@ -75,7 +79,10 @@ export function grantMultiplier(taps: TapState, def: MultiplierDef, at: number):
   const held = taps.multipliers.find((m) => m.id === def.id);
   const next: ActiveMultiplier = { id: def.id, source: def.source, factor: def.factor, grantedAt: at };
   if (def.source === 'powerup') next.expiresAt = Math.max(held?.expiresAt ?? 0, at) + def.durationMs!;
-  taps.multipliers = [...taps.multipliers.filter((m) => m.id !== def.id), next];
+  const multipliers = [...taps.multipliers.filter((m) => m.id !== def.id), next];
+  if (multipliers.length > MAX_MULTIPLIERS) return { ok: false, reason: `A department holds at most ${MAX_MULTIPLIERS} multipliers` };
+  if (!(combinedFactor(multipliers) <= MAX_COMBINED_MULTIPLIER)) return { ok: false, reason: `Multipliers may not combine past ${MAX_COMBINED_MULTIPLIER}` };
+  taps.multipliers = multipliers;
   return { ok: true };
 }
 
@@ -96,8 +103,13 @@ export function dropExpiredMultipliers(dep: Department, at: number): void {
 /** The combined multiplier at `at`: within a kind the bonuses add (×2 and ×1.5 make ×2.5), and the
  * kinds multiply (an upgrade ×2 and a power-up ×2 make ×4). */
 export function tapMultiplier(dep: Department, at: number): number {
+  return combinedFactor((dep.taps?.multipliers ?? []).filter((m) => counts(m, at)));
+}
+
+/** `multipliers` combined by tapMultiplier's rule, whatever their expiry. */
+export function combinedFactor(multipliers: readonly Pick<ActiveMultiplier, 'source' | 'factor'>[]): number {
   const bonus: Partial<Record<MultiplierSource, number>> = {};
-  for (const m of dep.taps?.multipliers ?? []) if (counts(m, at)) bonus[m.source] = (bonus[m.source] ?? 0) + m.factor - 1;
+  for (const m of multipliers) bonus[m.source] = (bonus[m.source] ?? 0) + m.factor - 1;
   return Object.values(bonus).reduce((product, b) => product * Math.max(0, 1 + b), 1);
 }
 
@@ -120,9 +132,14 @@ export function tapEarn(dep: Department, count: number, at: number): HandlerResu
   const allowance = tapAllowance(dep, at);
   const credited = Math.min(count, Math.floor(allowance));
   if (credited < 1) return { ok: false, reason: 'The desk is keeping up as fast as it can' };
+  const amount = credited * tapValue(dep, at);
+  const last = dep.ledger?.at(-1);
+  if (!Number.isFinite(amount) || !Number.isFinite(dep.funding + amount) || (last?.kind === 'tap' && !Number.isFinite(last.amount + amount))) {
+    return { ok: false, reason: 'The books cannot take that much' };
+  }
   const taps = (dep.taps ??= createTapState(at));
   taps.credit = allowance - credited;
   taps.at = Math.max(taps.at, at);
-  postFunding(dep, credited * tapValue(dep, at), 'tap', LEDGER_TAP_LABEL, at, { foldAcrossAccrual: true });
+  postFunding(dep, amount, 'tap', LEDGER_TAP_LABEL, at, { foldAcrossAccrual: true });
   return { ok: true };
 }

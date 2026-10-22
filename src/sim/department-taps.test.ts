@@ -6,8 +6,9 @@ import { createInitialState } from './department';
 import { dispatch } from './game';
 import { deserialize, serialize } from './save';
 import { HOUR_MS } from './economy';
+import { validatePatch } from './tuning';
 import {
-  LEDGER_TAP_LABEL, MAX_TAP_BATCH, TAP_MULTIPLIERS, TAP_TUNING, grantEntitlement, grantMultiplier, tapAllowance, tapValue,
+  LEDGER_TAP_LABEL, MAX_COMBINED_MULTIPLIER, MAX_MULTIPLIER_FACTOR, MAX_TAP_BATCH, TAP_MULTIPLIERS, TAP_TUNING, grantEntitlement, grantMultiplier, tapAllowance, tapValue,
   type MultiplierDef,
 } from './department-taps';
 import type { Command, GameState } from './types';
@@ -97,6 +98,34 @@ describe('multipliers', () => {
     expect(grantEntitlement(taps, 'missing', T0).ok).toBe(false);
     expect(grantEntitlement(taps, 'supporter_pack', T0, FIXTURES).ok).toBe(true);
     expect(taps.multipliers.map((m) => m.id)).toEqual(['base', 'supporter_pack']);
+  });
+});
+
+describe('overflow guards (Codex review)', () => {
+  it('refuses a grant that would combine past the limit, and a save that holds one', () => {
+    const s = createInitialState(T0);
+    const taps = s.department.taps!;
+    let refused = false;
+    for (let i = 0; i < 300 && !refused; i++) refused = !grantMultiplier(taps, { id: `big_${i % 3}_${i}`, source: (['upgrade', 'powerup', 'entitlement'] as const)[i % 3], factor: MAX_MULTIPLIER_FACTOR, ...(i % 3 === 1 ? { durationMs: 60_000 } : {}) }, T0).ok;
+    expect(refused).toBe(true);
+    expect(tapValue(s.department, T0)).toBeLessThanOrEqual(MAX_COMBINED_MULTIPLIER * TAP_TUNING.base);
+    for (let i = 0; i < 9; i++) expect(Number.isFinite(tap(s, 20, T0 + i * 1000).state.department.funding)).toBe(true);
+    const crafted = structuredClone(s);
+    crafted.department.taps!.multipliers = Array.from({ length: 40 }, (_, i) => ({ id: `x${i}`, source: (['upgrade', 'entitlement'] as const)[i % 2], factor: MAX_MULTIPLIER_FACTOR, grantedAt: T0 }));
+    expect(deserialize(serialize(crafted, T0))).toBeNull();
+  });
+
+  it('refuses a tap whose credit would leave the books non-finite, spending no allowance', () => {
+    const s = createInitialState(T0);
+    s.department.funding = Number.POSITIVE_INFINITY;
+    const r = tap(s, 20);
+    expect(r.result.ok).toBe(false);
+    expect(r.state).toBe(s);
+  });
+
+  it('refuses tuning whose burst holds less than one whole tap', () => {
+    expect(validatePatch({ TAP_TUNING: { maxPerSecond: 1, burstSeconds: 0.25 } }).length).toBeGreaterThan(0);
+    expect(validatePatch({ TAP_TUNING: { maxPerSecond: 4, burstSeconds: 0.25 } })).toEqual([]);
   });
 });
 

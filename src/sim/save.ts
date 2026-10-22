@@ -1,6 +1,6 @@
 import { parseRecipeKey } from './casebook';
 import { validCommandStaff } from './command-staff';
-import type { GameState, OperationRun, SaveEnvelope } from './types';
+import type { ActiveMultiplier, GameState, OperationRun, SaveEnvelope } from './types';
 import { COMPLETION_DISPOSITIONS, validExternalSupportState } from './external-support';
 import { validCasualtyRecord, validIncidentConsequences, validPersonCasualtyRecord, validPersonConsequences } from './incident-consequences';
 import { validForceOutcome } from './force-risk';
@@ -16,7 +16,7 @@ import { normalizeSquadArrangementState } from './squad-optimizer';
 import { validResponseFailure } from './response-failure';
 import { validPromotions } from './ranks';
 import { RANK_IDS } from '../content/ranks';
-import { MAX_MULTIPLIER_FACTOR } from './department-taps';
+import { MAX_COMBINED_MULTIPLIER, MAX_MULTIPLIER_FACTOR, MAX_MULTIPLIERS, combinedFactor } from './department-taps';
 
 export const SAVE_KEY = 'tactically-idle/save';
 
@@ -276,7 +276,7 @@ function validTaps(t: unknown): boolean {
     ids.add(m.id);
     if ((m.factor as number) <= 0 || (m.factor as number) > MAX_MULTIPLIER_FACTOR) return false;
     return m.source === 'powerup' ? isNum(m.expiresAt) : m.expiresAt === undefined;
-  });
+  }) && t.multipliers.length <= MAX_MULTIPLIERS && combinedFactor(t.multipliers as ActiveMultiplier[]) <= MAX_COMBINED_MULTIPLIER;
 }
 
 /** Structural checks shared by every version. */
