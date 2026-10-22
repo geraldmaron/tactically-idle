@@ -12,6 +12,7 @@ import { actionConsumptionForItems, actionEquipmentRequirements, capabilityRuleE
 import { scenarioActions } from './scenario-types';
 import { getScenario } from './scenario-registry';
 import { departmentUpkeep } from './equipment-manager-policy';
+import { squadName } from './squad-names';
 
 export interface AutoLoadout {
   loadouts: Partial<Record<SquadId, Record<Id, number>>>;
@@ -53,7 +54,7 @@ export function autoLoadout(state: GameState, scenarioId: Id, squadIds: SquadId[
   const picks: Partial<Record<SquadId, ItemUnit[]>> = {};
   const officers: Partial<Record<SquadId, Officer[]>> = {};
   const warnings = new Map<string, string>();
-  const label = (sid: SquadId) => state.squads.find((s) => s.id === sid)?.name ?? `Squad ${sid}`;
+  const label = (sid: SquadId) => squadName(state.squads, sid);
   const warn = (key: string, message: string) => warnings.set(key, message);
   const locked = (sid: SquadId, itemId: Id) => Object.hasOwn(options.loadouts?.[sid] ?? {}, itemId);
   const upkeep = departmentUpkeep(state);

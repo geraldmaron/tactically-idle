@@ -17,7 +17,7 @@ import { cachedGateRuns, gateVerdicts, runGateSuite } from '../../model/gate-vie
 import type { GateRun, GateVerdict } from '../../model/gate-view';
 import { percent, styleLabel, weightLabel } from '../../model/label';
 import type { Session } from '../../model/session';
-import { squadOf } from '../../model/squads';
+import { referenceSquadName, squadLine, squadOf } from '../../model/squads';
 import { Bullet, cx, Glyph, ProgressLine, StackBar, WeightGlyph } from '../../viz';
 import type { StackPart } from '../../viz';
 import { circled } from './Curve';
@@ -57,7 +57,7 @@ export function InstantTier({ moment, pending, onPickCall }: { moment: Moment; p
   const moved = moment.rows.filter(row => row.moved).length;
   return (
     <section className="lab-ttier" aria-label="Instant: this moment">
-      <TierHead title="Instant" pill={['now', moment.who || 'squad A', 'engine']} pending={pending && moved > 0} />
+      <TierHead title="Instant" pill={['now', moment.who || referenceSquadName(), 'engine']} pending={pending && moved > 0} />
       {moment.status === 'none' && (
         <div className="lab-ttier-empty">
           <p>Open a call to see how this change moves the odds of the choices in front of the player.</p>
@@ -139,7 +139,7 @@ export function QuickTier({ session, hash, patch, empty }: { session: Session | 
     return () => { live = false; window.clearTimeout(timer); handle?.cancel(); };
   }, [startKey, hash]);
 
-  const who = session ? (session.squad.kind === 'game' ? 'your squad (from game)' : `squad A (${url.squad})`) : 'squad A';
+  const who = session ? squadLine(session.frames[0].state, session.squad).label : referenceSquadName();
   const pill = ['this call', who, styleLabel('random'), `${RUN_DEFAULTS.quick} runs`, ...empty ? [] : ['paired']];
   return (
     <section className={cx('lab-ttier', !empty && state.status === 'done' && 'lab-ttier-pending')} aria-label="Quick check: this call">

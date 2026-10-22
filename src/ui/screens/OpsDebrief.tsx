@@ -53,7 +53,7 @@ export function OpsDebrief() {
   const scenario = getScenario(d.scenarioId);
   // The call's people and the squads that went in, for the names in the debrief.
   const deployed = g.squads.filter((squad) => run?.squadIds.includes(squad.id));
-  const people = scenario ? lexiconFor(scenario, run, deployed.flatMap((squad) => (run ? runRoster(g, run, squad.id) : squad.officerIds).flatMap((id) => g.officers[id] ? [{ ...g.officers[id], squad: squad.id }] : []))) : null;
+  const people = scenario ? lexiconFor(scenario, run, deployed.flatMap((squad) => (run ? runRoster(g, run, squad.id) : squad.officerIds).flatMap((id) => g.officers[id] ? [{ ...g.officers[id], squad: squad.id, squadName: squad.name }] : []))) : null;
   // A flow with no Back (components/chrome.tsx): the shell draws the head and Done.
   return <GamePeopleProvider lexicon={people}><FlowScreen title="Debrief" icon={<Icon name="flag" size={20} />} footer={footer}>
     <div className="page debrief cl-flow-body">

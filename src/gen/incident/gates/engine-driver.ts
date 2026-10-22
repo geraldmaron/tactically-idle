@@ -15,6 +15,7 @@ import { apply, NOW, startCmd, stockKit } from '../../../sim/test-fixtures';
 import type { ActionView, CertId, GameState, Id, OutcomeBand } from '../../../sim/types';
 import { isLapse } from '../../../sim/types';
 import { lapsedThreat, openThreat } from '../../../sim/clocks';
+import { squadName } from '../../../sim/squad-names';
 
 /** Drives the real operation engine for the content gates.
  * - Distinctness exploration aims each decision at an outcome band by choosing the run's
@@ -70,7 +71,7 @@ export function startGateRun(scenarioId: string, campaignSeed = 719, opts: GateR
   if (s.incident) before.incidents = [{ id: s.id, type: s.incident.type, familyId: s.incident.familyId, tier: s.incident.tier, arrivedAt: NOW, expiresAt: NOW + 3600000, seen: false }];
   const first = before.squads.find(squad => squad.id === 'A')?.officerIds[0];
   const officer = first === undefined ? undefined : before.officers[first];
-  if (opts.certs?.length && !officer) throw new Error('Squad A has no officer to grant certifications to');
+  if (opts.certs?.length && !officer) throw new Error(`${squadName(before.squads, 'A')} has no officer to grant certifications to`);
   // Certs live on the officer record only; granting them draws nothing, so the dice are unchanged.
   if (officer) for (const cert of opts.certs ?? []) if (!officer.certs.includes(cert)) officer.certs = [...officer.certs, cert];
   const kit = opts.items ? stockKit(before, ['A'], [...opts.items]) : stockKit(before, ['A']);

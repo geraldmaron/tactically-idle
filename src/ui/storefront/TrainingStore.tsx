@@ -21,6 +21,7 @@ import { createTrainingChooserNavigation, type TrainingChoice, type TrainingEnro
 import './training-store.css';
 import '../screens/squad-visual.css';
 import { CERT_NAME } from '../../content/certs';
+import { squadName } from '../../sim/squad-names';
 
 /** Apply a deep link once; returning from Develop keeps the officer and search the player edited. */
 export function trainingDraftForRequest(draft: TrainingDraft, focus: TrainingFocus, request: number): TrainingDraft {
@@ -270,10 +271,11 @@ function TrainingGain({ course, officer, compact = false }: { course: Course; of
 export function TrainingOfficerCard({ candidate: { officer, option }, now, selected, onSelect }: { candidate: TrainingCandidate; now: number; selected?: boolean; onSelect?: () => void }) {
   const keys = trainingRatingKeys(option.course);
   const gain = trainingRatingGain(option.course, officer);
+  const { squads } = useGame();
   return <article className={`training-officer-card${selected ? ' training-officer-selected' : ''}${option.available ? '' : ' training-officer-unavailable'}`} data-training-candidate={officer.id} tabIndex={-1} aria-label={`${fullName(officer)}, ${option.available ? 'can enrol' : 'unavailable'}`}>
     <div className="training-person">
       <Portrait officer={officer} size={44} className="training-portrait" />
-      <div className="training-person-name"><strong>{fullName(officer)}</strong><span className="dim"><Icon name={ROLE_META[officer.role].icon} size={12} /> {ROLE_META[officer.role].label}{officer.squadId ? ` · Squad ${officer.squadId}` : ' · Unassigned'}</span><span className="training-condition">{trainingOfficerCondition(officer, now)}</span></div>
+      <div className="training-person-name"><strong>{fullName(officer)}</strong><span className="dim"><Icon name={ROLE_META[officer.role].icon} size={12} /> {ROLE_META[officer.role].label}{officer.squadId ? ` · ${squadName(squads, officer.squadId)}` : ' · Unassigned'}</span><span className="training-condition">{trainingOfficerCondition(officer, now)}</span></div>
       <StressDisplay value={officer.stress} compact />
       {onSelect && <Button size="sm" variant={option.available ? 'primary' : 'secondary'} disabled={!option.available} onClick={onSelect} aria-label={`Select ${fullName(officer)} for ${option.course.name}`} className="training-select">Select</Button>}
       {selected && !onSelect && <span className="training-selected-label">Selected</span>}

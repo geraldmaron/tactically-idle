@@ -84,6 +84,7 @@ import { tunable } from './tuning';
 import { reputationContributor } from './reputation';
 import { conditionHolds } from './conditions';
 import { departmentUpkeep } from './equipment-manager-policy';
+import { joinSquadNames, squadName } from './squad-names';
 
 /** Tunable (sim/tuning.ts). The guard keeps the forced-band tails, the span and the band thresholds
  * usable: forced bands aim at setback/2 and 1 - luck/2, so neither tail may vanish. */
@@ -169,7 +170,6 @@ const RATING_LABEL: Record<RatingKey, string> = {
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
 const clamp = (n: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, n));
-export const squadLabel = (id: SquadId) => `Squad ${id}`;
 /** "Needs a crisis negotiator", "Needs an advanced first aider": what a locked card says it lacks. */
 function certNeed(cert: string): string {
   const label = isCertId(cert) ? CERT_HOLDER[cert] : cert.replace(/_/g, ' ');
@@ -451,11 +451,6 @@ export function tagNames(tags: string[]): string {
   return names(out);
 }
 
-function listSquads(ids: SquadId[]): string {
-  if (ids.length === 1) return squadLabel(ids[0]);
-  return ids.map(squadLabel).join(' and ');
-}
-
 /** Experience pressure applies on pressure-kind checks and whenever the situation is tense. */
 function underPressure(run: Pick<OperationRun, 'pressure'>, kind: CheckKind): boolean {
   return kind === 'pressure' || run.pressure >= EXPERIENCE_TUNING.pressureOn;
@@ -500,6 +495,8 @@ interface Plan {
 
 export function evaluateAction(input: EvalInput): Evaluation {
   const { state, built } = input;
+  const squadLabel = (id: SquadId) => squadName(state.squads, id);
+  const listSquads = (ids: SquadId[]) => joinSquadNames(ids.map(squadLabel));
   let { run, scenario, action } = input;
   const care = physicalCare(scenario, built, run, action, state);
   action = care.action;

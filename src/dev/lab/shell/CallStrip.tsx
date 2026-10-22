@@ -20,7 +20,7 @@ import type { Session } from '../model/session';
 import { currentFrame } from '../model/session';
 import { seekBase, seekCallSeed } from '../model/seek';
 import type { DrawWant } from '../model/seek';
-import { squadLine } from '../model/squads';
+import { referenceSquadName, squadLine } from '../model/squads';
 import { glyphRun, usuallyOf, WEIGHTS_BEST_FIRST } from '../surfaces/calls/calls-model';
 import type { Usually } from '../surfaces/calls/calls-model';
 import { useGate } from '../surfaces/calls/gate-store';
@@ -176,13 +176,13 @@ export function CallStrip() {
   ) });
 
   const grants = url.certs.map(words);
-  // With the call open, the label is the session's own ("Your squad (from game)" on a game handoff).
+  // With the call open, the label is the session's own (the deployed squads' names and "from game" on a game handoff).
   const line = session ? squadLine(currentFrame(session).state, session.squad) : null;
   const squadLabel = line ? line.label
-    : <>Squad A (<b>{url.squad}</b>){grants.length > 0 && <span className="lab-strip-grant"> + {grants.join(', ')} (lab grant)</span>}</>;
+    : <>{referenceSquadName()} (<b>{url.squad}</b>){grants.length > 0 && <span className="lab-strip-grant"> + {grants.join(', ')} (lab grant)</span>}</>;
   chips.push({ key: 'squad', node: (
     <StripChip label={squadLabel} title={session?.squad.kind === 'game' ? 'Squad from your game' : 'Reference squad'} wide director={director('squad')}>
-      <SeedField label="Campaign seed (day-one squad A)" value={url.squad} onCommit={squad => navigate({ squad })} />
+      <SeedField label={`Campaign seed (day-one ${referenceSquadName()})`} value={url.squad} onCommit={squad => navigate({ squad })} />
       {url.squad !== REFERENCE_SQUAD && <button type="button" className="lab-button lab-button-quiet" onClick={() => navigate({ squad: REFERENCE_SQUAD })}>Use reference squad {REFERENCE_SQUAD}</button>}
       <span className="lab-field">
         <span className="lab-field-label">Lab cert grants (first officer)</span>

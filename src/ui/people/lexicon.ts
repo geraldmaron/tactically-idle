@@ -7,7 +7,7 @@ import type { ScenarioDefinition } from '../../sim/scenario-types';
 import type { OperationRun, SquadId } from '../../sim/types';
 
 export type PeopleKind = 'subject' | 'civilian' | 'person' | 'officer' | 'withheld';
-export interface LexiconEntry { id: string; kind: PeopleKind; forms: string[]; squad?: SquadId }
+export interface LexiconEntry { id: string; kind: PeopleKind; forms: string[]; squad?: SquadId; /** The squad as the player named it, for the hover and screen-reader label. */ squadName?: string }
 export interface Lexicon {
   entries: LexiconEntry[];
   places: string[];
@@ -18,19 +18,19 @@ export interface Lexicon {
    * colored one, and then left plain. */
   masked?: string[];
 }
-export interface LexiconOfficer { id: string; firstName: string; surname: string; squad: SquadId }
+export interface LexiconOfficer { id: string; firstName: string; surname: string; squad: SquadId; /** The squad's name as the player set it (squadName in sim/squad-names). */ squadName: string }
 
 /** The public kinds a story binding can carry, as the colors read them. Hostage, victim and
  * trapped are not public kinds; held people are civilians (spec 8.4, rule 4). */
 const PUBLIC_KIND: Record<string, PeopleKind> = { subject: 'subject', civilian: 'civilian', patient: 'civilian', person: 'person' };
 
 /** The hover label and screen-reader word for each kind (spec 8.2). */
-export function peopleLabel(kind: PeopleKind, squad?: SquadId): string {
+export function peopleLabel(kind: PeopleKind, squadName?: string): string {
   switch (kind) {
     case 'subject': return 'Subject';
     case 'civilian': return 'Civilian';
     case 'person': return 'Person at the scene';
-    case 'officer': return squad ? `Squad ${squad}` : 'Officer';
+    case 'officer': return squadName || 'Officer';
     case 'withheld': return 'Named; role not confirmed';
   }
 }
@@ -60,12 +60,12 @@ const formsOf = (who: { firstName: string; surname: string }) =>
 export function buildLexicon(input: { cast: Record<string, { firstName: string; surname: string }>;
   publicKind: Record<string, string | undefined>; withheld: ReadonlySet<string>; located: ReadonlySet<string>;
   officers: readonly LexiconOfficer[]; places: readonly string[]; words?: readonly string[] }): Lexicon {
-  const people: { id: string; kind: PeopleKind | null; forms: string[]; squad?: SquadId }[] = [];
+  const people: { id: string; kind: PeopleKind | null; forms: string[]; squad?: SquadId; squadName?: string }[] = [];
   for (const [id, who] of Object.entries(input.cast)) {
     const known = input.withheld.has(id) ? 'withheld' : PUBLIC_KIND[input.publicKind[id] ?? ''] ?? null;
     people.push({ id, kind: known && input.located.has(id) ? known : null, forms: formsOf(who) });
   }
-  for (const officer of input.officers) people.push({ id: officer.id, kind: 'officer', forms: formsOf(officer), squad: officer.squad });
+  for (const officer of input.officers) people.push({ id: officer.id, kind: 'officer', forms: formsOf(officer), squad: officer.squad, squadName: officer.squadName });
 
   const owners = new Map<string, Set<string>>();
   for (const word of input.words ?? []) owners.set(keyOf(word), new Set(['(the call’s own text)']));
@@ -79,7 +79,7 @@ export function buildLexicon(input: { cast: Record<string, { firstName: string; 
   for (const person of people) {
     const forms = own(person);
     if (!forms.length) continue;
-    if (person.kind) entries.push({ id: person.id, kind: person.kind, forms, ...(person.squad ? { squad: person.squad } : {}) });
+    if (person.kind) entries.push({ id: person.id, kind: person.kind, forms, ...(person.squad ? { squad: person.squad, squadName: person.squadName } : {}) });
     else masked.push(...forms);
   }
   const places = [...new Set(input.places.map((place) => place.trim()).filter(Boolean))].sort(longestFirst);
@@ -131,7 +131,7 @@ export function lexiconFor(scenario: ScenarioDefinition, run: Pick<OperationRun,
     const status = factId ? run?.knowledge[factId] ?? initial.get(factId) : undefined;
     return status === 'reported' || status === 'confirmed';
   }));
-  const key = JSON.stringify([[...located].sort(), officers.map((officer) => [officer.id, officer.squad, officer.firstName, officer.surname]), places ?? null]);
+  const key = JSON.stringify([[...located].sort(), officers.map((officer) => [officer.id, officer.squad, officer.squadName, officer.firstName, officer.surname]), places ?? null]);
   let byKey = memo.get(scenario);
   if (!byKey) memo.set(scenario, byKey = new Map());
   const cached = byKey.get(key);

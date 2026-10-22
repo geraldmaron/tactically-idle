@@ -124,7 +124,7 @@ describe('capability dependency (acceptance 3)', () => {
     const s = startRun(swapChenForReyes(makeState()), 'ms_occupancy', ['A']);
     const v = view(s, 'ms_contact');
     expect(v.eligible).toBe(false);
-    expect(v.reason).toBe('Needs a crisis negotiator. Squad A has none');
+    expect(v.reason).toBe('Needs a crisis negotiator. Alpha has none');
     expect(v.summary).toBe('Needs a crisis negotiator');
     expect(apply(s, { type: 'decide', actionId: 'ms_contact', actingSquadIds: ['A'], supportSquadIds: [] }).result.ok).toBe(false);
   });
@@ -133,7 +133,7 @@ describe('capability dependency (acceptance 3)', () => {
     const s = startRun(makeState(), 'ms_occupancy', ['A'], { loadouts: { A: { radio_kit: 1, trauma_kit: 1 } } });
     const v = view(s, 'ms_contact');
     expect(v.eligible).toBe(false);
-    expect(v.reason).toBe("No throw phone or loud hailer in Squad A's loadout");
+    expect(v.reason).toBe("No throw phone or loud hailer in Alpha's loadout");
     expect(v.reason).not.toMatch(/negotiator/);
   });
 
@@ -153,7 +153,7 @@ describe('capability dependency (acceptance 3)', () => {
     const s = startRun(makeState(), 'ms_occupancy', ['A', 'B']);
     const v = view(s, 'ms_contact', 'B');
     expect(v.eligible).toBe(false);
-    expect(v.reason).toBe('Needs a crisis negotiator. Squad B has none. Squad A can.');
+    expect(v.reason).toBe('Needs a crisis negotiator. Bravo has none. Alpha can.');
     expect(view(s, 'ms_contact', 'A').eligible).toBe(true);
     // No focus: the best eligible deployed squad is chosen.
     expect(view(s, 'ms_contact', null).actingSquadIds).toEqual(['A']);
@@ -165,7 +165,7 @@ describe('capability dependency (acceptance 3)', () => {
   it('thermal needs its reusable imager with integrated power', () => {
     const adapt = (s: GameState) => setRun(s, { stage: 'adapt' });
     const none = adapt(startRun(makeState(), 'ms_occupancy', ['A']));
-    expect(view(none, 'ms_thermal').reason).toBe("No thermal imager in Squad A's loadout");
+    expect(view(none, 'ms_thermal').reason).toBe("No thermal imager in Alpha's loadout");
     const inv = { thermal_imager: 1 };
     const noBattery = adapt(startRun(makeState({ inventory: inv }), 'ms_occupancy', ['A'], { loadouts: { A: { thermal_imager: 1 } } }));
     expect(view(noBattery, 'ms_thermal').eligible).toBe(true);
@@ -577,7 +577,7 @@ describe('recovery (acceptance 10)', () => {
     for (const id of others) expect(r.state.officers[id].assignment).toEqual({ kind: 'operation', runId: r.state.activeRun!.id });
     const card = scenarioCards(s, NOW)[0];
     expect(card.eligibleSquadIds).toEqual(['A', 'B']);
-    expect(prepCheck(s, NOW, startCmd('ms_occupancy', ['A'])).warnings).toContain('Squad A: Ortiz is in mandatory recovery and stays home');
+    expect(prepCheck(s, NOW, startCmd('ms_occupancy', ['A'])).warnings).toContain('Alpha: Ortiz is in mandatory recovery and stays home');
   });
 
   it('a squad with nobody ready is refused, with each reason', () => {
@@ -585,7 +585,7 @@ describe('recovery (acceptance 10)', () => {
     for (const id of s.squads.find((squad) => squad.id === 'A')!.officerIds) s.officers[id].stress = 85;
     const r = apply(s, startCmd('ms_occupancy', ['A']));
     expect(r.result.ok).toBe(false);
-    if (!r.result.ok) expect(r.result.reason).toMatch(/^Squad A: nobody is ready \(.*Ortiz is in mandatory recovery/);
+    if (!r.result.ok) expect(r.result.reason).toMatch(/^Alpha: nobody is ready \(.*Ortiz is in mandatory recovery/);
     expect(scenarioCards(s, NOW)[0].eligibleSquadIds).toEqual(['B']);
     expect(apply(s, startCmd('ms_occupancy', ['B'])).result.ok).toBe(true);
   });

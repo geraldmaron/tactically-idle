@@ -78,7 +78,7 @@ export function personInitials(label: string): string {
 function PersonTile({ label, status, tone, icon, avatar, data, personId, children }: { label: string; status: string; tone: PersonTone; icon: IconName; avatar?: ReactNode; data: Record<string, string>; personId?: string; children?: ReactNode }) {
   const who = usePeopleEntry(personId);
   return <li className="person-tile" data-tone={tone} {...data}>
-    <span className="person-avatar" aria-hidden="true" data-kind={who?.kind} title={who ? peopleLabel(who.kind, who.squad) : undefined}>{avatar ?? personInitials(label)}</span>
+    <span className="person-avatar" aria-hidden="true" data-kind={who?.kind} title={who ? peopleLabel(who.kind, who.squadName) : undefined}>{avatar ?? personInitials(label)}</span>
     <div className="person-text">
       <strong>{who && <PeopleGlyph kind={who.kind} tone />}{label}</strong>
       <span className="person-status"><Icon name={icon} size={13} />{status}</span>

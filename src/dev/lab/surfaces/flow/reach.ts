@@ -33,8 +33,7 @@ export const SCOPE_WORDS: Record<Scope, Provenance['scope']> = { call: 'this cal
 /** Who plays: the squad the call runs with, named (spec 5 rule 10), or the drawn day-one squads. */
 export function whoOf(s: Session, scope: Scope): string {
   if (scope === 'type') return 'day-one squads vary per call';
-  const label = squadLine(s.frames[0].state, s.squad).label;
-  return label.charAt(0).toLowerCase() + label.slice(1);
+  return squadLine(s.frames[0].state, s.squad).label;
 }
 
 /** The population in words: the provenance a simulated number carries, its plain form

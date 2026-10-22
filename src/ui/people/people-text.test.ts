@@ -10,7 +10,7 @@ import { PEOPLE_COLOR_KEY, peopleColorOn, setPeopleColor } from './prefs';
 const lexicon = buildLexicon({
   cast: { taker: { firstName: 'Malik', surname: 'Nwachukwu' }, courier: { firstName: 'Tamar', surname: 'Schreiber' }, owner: { firstName: 'Wiremu', surname: 'Banerjee' } },
   publicKind: { taker: 'subject', courier: 'civilian', owner: 'civilian' }, withheld: new Set(), located: new Set(['taker', 'courier', 'owner']),
-  officers: [{ id: 'off_chen', firstName: 'Wen', surname: 'Liu', squad: 'A' }], places: [],
+  officers: [{ id: 'off_chen', firstName: 'Wen', surname: 'Liu', squad: 'A', squadName: 'Night Owls' }], places: [],
 });
 const TEXT = 'Liu waves Tamar out the front. Malik watches Tamar go.';
 const render = (node: ReactNode) => renderToStaticMarkup(createElement('p', null, node));
@@ -31,7 +31,7 @@ const install = (storage: unknown) => Object.defineProperty(globalThis, 'localSt
 describe('PeopleText', () => {
   it('wraps each colored name in a data-kind span with its hover label, and no symbol in prose', () => {
     const html = render(createElement(PeopleProvider, { lexicon, children: createElement(PeopleText, { text: TEXT }) }));
-    expect(html).toContain('<span class="people-name" data-kind="officer" data-person="off_chen" title="Squad A">');
+    expect(html).toContain('<span class="people-name" data-kind="officer" data-person="off_chen" title="Night Owls">');
     expect(html).toContain('data-kind="civilian" data-person="courier" title="Civilian"');
     expect(html).toContain('data-kind="subject" data-person="taker" title="Subject"');
     expect(html.match(/class="people-name"/g)).toHaveLength(4);

@@ -54,6 +54,7 @@ import { hashSeed, next } from './rng';
 import { fullName } from './officer';
 import { deployRoster, runRoster } from './squads';
 import { flushSquadMoves } from './roster';
+import { squadName } from './squad-names';
 import { crewFlags, leadFlags } from './crew';
 import { LEAD_PREFIX } from './crew-flags';
 import { releaseRun, reserveLoadouts, settleRun, squadUnits } from './inventory';
@@ -68,7 +69,6 @@ import {
   getBuilt,
   openingFlag,
   openingOverrides,
-  squadLabel,
   strainFor,
   type Evaluation,
 } from './resolution';
@@ -249,6 +249,7 @@ type StartCmd = Extract<Command, { type: 'startOperation' }>;
 
 /** Everything startOperation validates, without mutating. Selectors reuse it. */
 export function checkStart(state: GameState, now: number, cmd: StartCmd, timer: TimerSetting = 'off'): StartCheck {
+  const squadLabel = (sid: SquadId) => squadName(state.squads, sid);
   const issues: string[] = [];
   const warnings: string[] = [];
   const scenario = getScenario(cmd.scenarioId);
@@ -307,7 +308,7 @@ export function checkStart(state: GameState, now: number, cmd: StartCmd, timer: 
       if (!pos) issues.push(`Choose a starting point for ${squadLabel(sid)}`);
       else if (!built.location.entries.includes(pos)) issues.push(`${squadLabel(sid)} cannot start from that location`);
       else {
-        const st = resolveStart(built, cmd, sid);
+        const st = resolveStart(built, cmd, sid, squadLabel(sid));
         if ('error' in st) issues.push(st.error);
       }
     }
@@ -357,16 +358,16 @@ function startWarnings(state: GameState, now: number, scenario: ScenarioDefiniti
  * must lie in that zone, or on open ground reachable from it (the squad then starts
  * there). The default is the nearest door staging point to the position.
  */
-function resolveStart(built: BuiltLocation, cmd: StartCmd, sid: SquadId): { positionId: Id; stagingId: Id | null; at: Vec } | { error: string } {
+function resolveStart(built: BuiltLocation, cmd: StartCmd, sid: SquadId, label: string): { positionId: Id; stagingId: Id | null; at: Vec } | { error: string } {
   const pos = cmd.positions[sid] ?? '';
   const chosen = cmd.staging?.[sid];
   if (chosen) {
     const sp = stagingPointById(built, chosen);
-    if (!sp) return { error: `${squadLabel(sid)}: unknown staging point` };
+    if (!sp) return { error: `${label}: unknown staging point` };
     if (sp.spaceId === pos) return { positionId: pos, stagingId: sp.id, at: sp.at };
     const isZone = built.location.zones.some((z) => z.id === sp.spaceId);
     if (isZone && reachableOverGround(built, pos, sp.spaceId)) return { positionId: sp.spaceId, stagingId: sp.id, at: sp.at };
-    return { error: `${squadLabel(sid)} cannot stage there: that point is not in the ${spaceLabel(built, pos).toLowerCase()} or on open ground reachable from it` };
+    return { error: `${label} cannot stage there: that point is not in the ${spaceLabel(built, pos).toLowerCase()} or on open ground reachable from it` };
   }
   const sp = defaultStagingFor(built, pos);
   return sp ? { positionId: pos, stagingId: sp.id, at: sp.at } : { positionId: pos, stagingId: null, at: centroidOf(built, pos) };
@@ -388,7 +389,7 @@ function makeRun(state: GameState, built: BuiltLocation, scenario: ScenarioDefin
     rngState,
     squadIds: [...cmd.squadIds],
     squadTasks: cmd.squadIds.map((sid) => {
-      const st = resolveStart(built, cmd, sid);
+      const st = resolveStart(built, cmd, sid, squadName(state.squads, sid));
       return 'error' in st ? { squadId: sid, positionId: cmd.positions[sid] ?? '', task: 'Staging', stagingId: null, at: null } : { squadId: sid, positionId: st.positionId, task: 'Staging', stagingId: st.stagingId, at: st.at };
     }),
     reservationIds: [],
@@ -758,7 +759,8 @@ function explain(
   fillMult = 1,
 ): string[] {
   const out: string[] = [];
-  const who = ev.acting.map(squadLabel).join(' + ') + (ev.support.length ? ` with ${ev.support.map(squadLabel).join(' + ')}` : '');
+  const label = (sid: SquadId) => squadName(state.squads, sid);
+  const who = ev.acting.map(label).join(' + ') + (ev.support.length ? ` with ${ev.support.map(label).join(' + ')}` : '');
   out.push(`${ev.action.title} ${BAND_WORD[band]} (${who}).`);
   out.push(...texts);
   const body = ev.contributors.filter((c) => c.source !== 'difficulty' && c.value !== 0);

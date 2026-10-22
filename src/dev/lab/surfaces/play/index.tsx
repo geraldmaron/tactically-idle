@@ -50,8 +50,6 @@ function commonPrefix(a: readonly Frame[], b: readonly Frame[]): number {
   while (n < a.length && n < b.length && a[n] === b[n]) n++;
   return Math.max(0, n - 1);
 }
-/** "Squad A (719)" → "squad A (719)" for a pill that reads as one phrase. */
-const lower = (text: string) => text.charAt(0).toLowerCase() + text.slice(1);
 
 export default function PlaySurface() {
   const { url, call } = useLab();
@@ -175,7 +173,7 @@ function Play({ session }: { session: Session }) {
   const prior = useMemo(() => priorSteps(session), [session]);
   const chance = useMemo(() => { try { return pathChance({ ...session, frames: session.frames.slice(0, shown + 1) }); } catch { return null; } }, [session, shown]);
   const line = useMemo(() => squadLine(session.frames[0].state, session.squad), [session]);
-  const who = lower(line.label);
+  const who = line.label;
   const tabs = useMemo(() => new Map(rows.map((row, i) => [row.actionId, i + 1])), [rows]);
 
   const node = nodeAt(frame.state, session.tree);

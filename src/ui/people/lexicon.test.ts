@@ -19,10 +19,10 @@ const TEMPLATES = Object.values(INCIDENT_TEMPLATES).filter((template): template 
 const PLACE = 'Cedar Park Apartments';
 /** Officers whose names are ordinary words; Park also sits inside the building's name. */
 const OFFICERS: LexiconOfficer[] = [
-  { id: 'off_park', firstName: 'Dana', surname: 'Park', squad: 'A' },
-  { id: 'off_bell', firstName: 'Sam', surname: 'Bell', squad: 'A' },
-  { id: 'off_may', firstName: 'May Thiri', surname: 'Hale', squad: 'B' },
-  { id: 'off_vale', firstName: 'Te Rangi', surname: 'Vale', squad: 'B' },
+  { id: 'off_park', firstName: 'Dana', surname: 'Park', squad: 'A', squadName: 'Alpha' },
+  { id: 'off_bell', firstName: 'Sam', surname: 'Bell', squad: 'A', squadName: 'Alpha' },
+  { id: 'off_may', firstName: 'May Thiri', surname: 'Hale', squad: 'B', squadName: 'Night Owls' },
+  { id: 'off_vale', firstName: 'Te Rangi', surname: 'Vale', squad: 'B', squadName: 'Night Owls' },
 ];
 
 /** Each group at `size(max)` members, as the instance would draw them. */
@@ -220,7 +220,7 @@ describe('lexiconFor on generated calls', () => {
     throw new Error('no group call with followers in 40 draws');
   }
   const scenario = hostageWithFollowers();
-  const officers: LexiconOfficer[] = [{ id: 'off_a', firstName: 'Wen', surname: 'Liu', squad: 'A' }];
+  const officers: LexiconOfficer[] = [{ id: 'off_a', firstName: 'Wen', surname: 'Liu', squad: 'A', squadName: 'Alpha' }];
 
   it('colors by public kind, withholds every follower, and adds the deployed officers', () => {
     const lex = lexiconFor(scenario, null, officers);
@@ -232,7 +232,7 @@ describe('lexiconFor on generated calls', () => {
       const kind = lex.entries.find(entry => entry.id === id)?.kind;
       if (kind) expect(kind).toBe(binding.publicKind === 'patient' ? 'civilian' : binding.publicKind);
     }
-    expect(lex.entries.find(entry => entry.id === 'off_a')).toMatchObject({ kind: 'officer', squad: 'A' });
+    expect(lex.entries.find(entry => entry.id === 'off_a')).toMatchObject({ kind: 'officer', squad: 'A', squadName: 'Alpha' });
     expect(lex.places).toContain(getBuilt(scenario.locationFamilyId, scenario.locationSeed).location.name);
   });
 
