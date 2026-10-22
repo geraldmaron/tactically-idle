@@ -6,13 +6,18 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 import { CONTENT_DESCRIPTORS, type ContentDescriptor } from '../../content/content-descriptors';
 import { drawableKinds } from '../../sim/incidents';
-import { blockedAlone, canAvoid, leavesCalls } from './avoidable';
+import { ALWAYS_THEMES, AVOIDABLE_THEMES, blockedAlone, canAvoid, leavesCalls } from './avoidable';
 import { FirstRun } from './FirstRun';
-import { ADVISORY_THEMES, CARD_THEME_WORDS, CARD_WARNING_TEXT, MENU_TEXT, SETTINGS_TEXT, SUPPORT_TEXT, THEME_LABELS, THEME_ORDER, TIMER_LABELS, WARNING_LABELS, reasonText, settingsSummary } from './labels';
+import { ADVISORY_THEMES, BLOCKED_BY_CHOICES_REASON, CARD_THEME_WORDS, CARD_WARNING_TEXT, MENU_TEXT, SETTINGS_TEXT, SUPPORT_TEXT, THEME_LABELS, THEME_ORDER, TIMER_LABELS, WARNING_LABELS, joinThemes, settingsSummary } from './labels';
 import { DEFAULT_SETTINGS } from './prefs';
 import { SettingsControls } from './SettingsControls';
 
 vi.mock('../components/Sheet', () => ({ Sheet: ({ open, title, children }: { open: boolean; title: string; children: unknown }) => open ? createElement('section', { role: 'dialog', 'aria-label': title }, children as never) : null }));
+// drawableKinds passes through to the real engine; one test swaps in a fixture pair of themes and restores it.
+vi.mock('../../sim/incidents', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../sim/incidents')>();
+  return { ...actual, drawableKinds: vi.fn(actual.drawableKinds) };
+});
 const { MenuSheet } = await import('./SettingsSheet');
 
 const text = (html: string) => html.replace(/<[^>]+>/g, ' ').replace(/&#x27;/g, "'").replace(/&amp;/g, '&').replace(/\s+/g, ' ');
@@ -50,25 +55,38 @@ describe('settings screens', () => {
     expect(html.match(new RegExp(`<button[^>]*>${SETTINGS_TEXT.continue}</button>`))?.[0]).not.toContain('disabled');
   });
 
-  it('offers a switch for all six descriptors, plus the warning and timer choices', () => {
+  it('offers a switch for every theme a player can avoid, plus the warning and timer choices', () => {
     const html = renderToStaticMarkup(createElement(SettingsControls, { value: { ...DEFAULT_SETTINGS, avoidThemes: ['domestic_violence'] }, onChange: () => {} }));
-    expect(html.match(/type="checkbox"/g)).toHaveLength(6);
-    for (const theme of CONTENT_DESCRIPTORS) expect(text(html)).toContain(THEME_LABELS[theme].name);
+    expect(html.match(/type="checkbox"/g)).toHaveLength(AVOIDABLE_THEMES.length);
+    for (const theme of AVOIDABLE_THEMES) expect(text(html)).toContain(THEME_LABELS[theme].name);
     for (const l of [...Object.values(WARNING_LABELS), ...Object.values(TIMER_LABELS)]) expect(text(html)).toContain(l.name);
     expect(html).not.toContain(SETTINGS_TEXT.avoidHeading.replace('themes', 'mechanics'));
   });
 
-  it('disables a switch that would leave no calls and says why under it, in both wordings', () => {
-    expect(blockedAlone('injury')).toBe(true);
-    const alone = renderToStaticMarkup(createElement(SettingsControls, { value: DEFAULT_SETTINGS, onChange: () => {} }));
-    expect(text(alone)).toContain(reasonText('injury', true));
-    expect(text(alone)).toContain('Every call can involve injury, so turning this off would leave no calls.');
-    expect(alone.match(/disabled=""/g)?.length).toBeGreaterThanOrEqual(1);
-    // A blocked switch that is already on can be turned off; one blocked only by the other choices gets the other line.
-    const stuck = CONTENT_DESCRIPTORS.find((d) => !blockedAlone(d) && !canAvoid(THEME_ORDER.filter((x) => x !== d && !blockedAlone(x)), d));
-    if (stuck) {
-      const others = THEME_ORDER.filter((x) => x !== stuck && !blockedAlone(x));
-      expect(text(renderToStaticMarkup(createElement(SettingsControls, { value: { ...DEFAULT_SETTINGS, avoidThemes: others }, onChange: () => {} })))).toContain(reasonText(stuck, false));
+  it('hides a theme every call carries and names it in one line instead, with no disabled switch', () => {
+    expect(ALWAYS_THEMES).toEqual(THEME_ORDER.filter((theme) => blockedAlone(theme)));
+    expect(ALWAYS_THEMES.length).toBeGreaterThan(0);
+    const html = renderToStaticMarkup(createElement(SettingsControls, { value: DEFAULT_SETTINGS, onChange: () => {} }));
+    for (const theme of ALWAYS_THEMES) expect(text(html)).not.toContain(THEME_LABELS[theme].name);
+    expect(text(html)).toContain(MENU_TEXT.everyCall(joinThemes(ALWAYS_THEMES.map((theme) => CARD_THEME_WORDS[theme]))));
+    expect(html.match(/disabled=""/g)).toBeNull();
+  });
+
+  it('keeps a switch that only the other switches block, disabled, with the reason under it', async () => {
+    // Fixture: with child_at_risk on, domestic_violence would leave no calls. The real content has no
+    // such pair, so the engine call is stubbed for this test only and put back afterwards.
+    const actual = await vi.importActual<typeof import('../../sim/incidents')>('../../sim/incidents');
+    vi.mocked(drawableKinds).mockImplementation((ctx) => ctx.avoid.includes('child_at_risk') && ctx.avoid.includes('domestic_violence') ? [] : actual.drawableKinds(ctx));
+    try {
+      expect(blockedAlone('domestic_violence')).toBe(false);
+      expect(canAvoid(['child_at_risk'], 'domestic_violence')).toBe(false);
+      const html = renderToStaticMarkup(createElement(SettingsControls, { value: { ...DEFAULT_SETTINGS, avoidThemes: ['child_at_risk'] }, onChange: () => {} }));
+      expect(text(html)).toContain(THEME_LABELS.domestic_violence.name);
+      expect(text(html)).toContain(BLOCKED_BY_CHOICES_REASON);
+      expect(html.match(/disabled=""/g)).toHaveLength(1);
+      expect(html).toMatch(/data-blocked="true"/);
+    } finally {
+      vi.mocked(drawableKinds).mockImplementation(actual.drawableKinds);
     }
   });
 

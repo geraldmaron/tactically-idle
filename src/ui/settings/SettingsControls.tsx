@@ -2,8 +2,8 @@ import { useId, useSyncExternalStore } from 'react';
 import { TIMER_SETTINGS } from '../../sim/timer-setting';
 import { Segmented } from '../components/ui';
 import { CARD_WARNING_SETTINGS, readSettings, subscribeSettings, type PlayerSettings } from './prefs';
-import { blockedAlone, canAvoid } from './avoidable';
-import { SETTINGS_TEXT, SUPPORT_TEXT, THEME_LABELS, THEME_ORDER, TIMER_LABELS, WARNING_LABELS, reasonText } from './labels';
+import { ALWAYS_THEMES, AVOIDABLE_THEMES, canAvoid } from './avoidable';
+import { BLOCKED_BY_CHOICES_REASON, CARD_THEME_WORDS, MENU_TEXT, SETTINGS_TEXT, SUPPORT_TEXT, THEME_LABELS, TIMER_LABELS, WARNING_LABELS, joinThemes } from './labels';
 import './settings.css';
 
 /** The saved settings, re-rendering on every change made on this page. */
@@ -20,21 +20,22 @@ export function SettingsControls({ value, onChange }: { value: PlayerSettings; o
       <legend className="settings-heading">{t.avoidHeading}</legend>
       <p className="settings-hint">{t.avoidHint}</p>
       <ul className="settings-topics">
-        {THEME_ORDER.map((theme) => {
+        {AVOIDABLE_THEMES.map((theme) => {
           const on = value.avoidThemes.includes(theme);
           const blocked = !canAvoid(value.avoidThemes, theme);
           const reason = `${id}-${theme}-reason`;
           return <li key={theme} className="settings-topic" data-blocked={blocked || undefined}>
             <label className="toggle settings-topic-toggle">
               <input type="checkbox" checked={on} disabled={blocked} aria-describedby={blocked ? reason : undefined}
-                onChange={(e) => onChange({ avoidThemes: THEME_ORDER.filter((x) => x === theme ? e.target.checked : value.avoidThemes.includes(x)) })} />
+                onChange={(e) => onChange({ avoidThemes: AVOIDABLE_THEMES.filter((x) => x === theme ? e.target.checked : value.avoidThemes.includes(x)) })} />
               <span className="toggle-ui" aria-hidden="true" />
               <span className="toggle-text"><strong>{THEME_LABELS[theme].name}</strong><small className="dim">{THEME_LABELS[theme].detail}</small></span>
             </label>
-            {blocked && <p id={reason} className="settings-reason">{reasonText(theme, blockedAlone(theme))}</p>}
+            {blocked && <p id={reason} className="settings-reason">{BLOCKED_BY_CHOICES_REASON}</p>}
           </li>;
         })}
       </ul>
+      {ALWAYS_THEMES.length > 0 && <p className="settings-hint">{MENU_TEXT.everyCall(joinThemes(ALWAYS_THEMES.map((theme) => CARD_THEME_WORDS[theme])))}</p>}
     </fieldset>
 
     <fieldset className="settings-group">

@@ -9,16 +9,12 @@ import { campaignStatus } from '../components/SaveManager';
 import { usePeopleColor } from '../people/PeopleText';
 import { setPeopleColor } from '../people/prefs';
 import { CARD_WARNING_SETTINGS, updateSettings, type PlayerSettings } from './prefs';
-import { blockedAlone, canAvoid } from './avoidable';
-import { CARD_THEME_WORDS, MENU_TEXT, SETTINGS_TEXT, THEME_LABELS, THEME_ORDER, TIMER_LABELS, WARNING_LABELS, joinThemes, reasonText } from './labels';
+import { ALWAYS_THEMES, AVOIDABLE_THEMES, canAvoid } from './avoidable';
+import { BLOCKED_BY_CHOICES_REASON, CARD_THEME_WORDS, MENU_TEXT, SETTINGS_TEXT, THEME_LABELS, THEME_ORDER, TIMER_LABELS, WARNING_LABELS, joinThemes } from './labels';
 import { SupportPanel, useSettings } from './SettingsControls';
 import './menu.css';
 
 export type MenuPage = 'menu' | 'themes' | 'warnings' | 'timer' | 'support';
-
-/** Themes a player can switch off on their own, and the ones every call can carry. */
-const AVOIDABLE = THEME_ORDER.filter((theme) => !blockedAlone(theme));
-const ALWAYS = THEME_ORDER.filter((theme) => blockedAlone(theme));
 
 export function avoidSummary(avoid: PlayerSettings['avoidThemes']): string {
   if (!avoid.length) return MENU_TEXT.noneAvoided;
@@ -97,16 +93,16 @@ function MenuSwitch({ label, detail, checked, onChange }: { label: string; detai
 function ThemesPage({ settings }: { settings: PlayerSettings }) {
   return <div className="menu-page">
     <p className="menu-hint">{SETTINGS_TEXT.avoidHint}</p>
-    {AVOIDABLE.map((theme) => {
+    {AVOIDABLE_THEMES.map((theme) => {
       const on = settings.avoidThemes.includes(theme);
       const blocked = !canAvoid(settings.avoidThemes, theme);
       return <div key={theme}>
         <MenuSwitchBlocked theme={theme} on={on} blocked={blocked}
           onChange={(checked) => updateSettings({ avoidThemes: THEME_ORDER.filter((x) => x === theme ? checked : settings.avoidThemes.includes(x)) })} />
-        {blocked && <p className="settings-reason">{reasonText(theme, false)}</p>}
+        {blocked && <p className="settings-reason">{BLOCKED_BY_CHOICES_REASON}</p>}
       </div>;
     })}
-    {ALWAYS.length > 0 && <p className="menu-hint">{MENU_TEXT.everyCall(joinThemes(ALWAYS.map((theme) => CARD_THEME_WORDS[theme])))}</p>}
+    {ALWAYS_THEMES.length > 0 && <p className="menu-hint">{MENU_TEXT.everyCall(joinThemes(ALWAYS_THEMES.map((theme) => CARD_THEME_WORDS[theme])))}</p>}
   </div>;
 }
 

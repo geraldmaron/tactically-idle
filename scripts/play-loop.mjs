@@ -267,10 +267,13 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   const { chromium } = await import('playwright-core');
   const browser = await chromium.launch({ executablePath: process.env.CHROME_PATH ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: true });
   const results = [];
+  // The base URL comes from the first argument, then TI_BASE_URL, then the default (127.0.0.1:5174).
+  // Run it on another dev port, e.g. node scripts/play-loop.mjs http://localhost:5182.
+  const baseURL = process.argv[2] ?? process.env.TI_BASE_URL;
   try {
     for (const [width, height] of [[390, 844], [320, 568]]) {
       const context = await browser.newContext({ viewport: { width, height }, hasTouch: true });
-      try { results.push(...await playLiveCalls(await context.newPage(), { width, height, baseURL: process.env.TI_BASE_URL, captureDir: process.env.TI_CAPTURE_DIR })); }
+      try { results.push(...await playLiveCalls(await context.newPage(), { width, height, baseURL, captureDir: process.env.TI_CAPTURE_DIR })); }
       finally { await context.close(); }
     }
     if (process.env.TI_E2E_REPORT) await writeFile(process.env.TI_E2E_REPORT, JSON.stringify(results, null, 2) + '\n');
