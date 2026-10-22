@@ -350,7 +350,7 @@ export function OpsPrepare({ scenarioId, step = 'brief', onCancel }: { scenarioI
     })}
 
     {chosen.length > 0 && brief.entries.length > 0 && <div className="prep-map prep-map-team" aria-label="Where the team goes in">
-      <Blueprint built={built} spaces={spaces} squadTasks={[]} selectedSpaceId={null} focusSquadId={null}
+      <Blueprint built={built} spaces={spaces} squadTasks={[]} squads={g.squads} selectedSpaceId={null} focusSquadId={null}
         highlightSpaceIds={chosen.map((sid) => positions[sid] ?? defaultEntry).filter((id): id is Id => !!id)} {...blueprintExtras} />
     </div>}
 
@@ -394,7 +394,7 @@ export function OpsPrepare({ scenarioId, step = 'brief', onCancel }: { scenarioI
 
       <Sheet open={sheet?.kind === 'map'} onClose={() => setSheet(null)} title="The building" className="cl-map-sheet">
         <div className="prep-map" aria-label="Location preview">
-          <Blueprint built={built} spaces={spaces} squadTasks={[]} selectedSpaceId={null} focusSquadId={null} {...blueprintExtras} />
+          <Blueprint built={built} spaces={spaces} squadTasks={[]} squads={g.squads} selectedSpaceId={null} focusSquadId={null} {...blueprintExtras} />
         </div>
       </Sheet>
       <Sheet open={!!kitSquad} onClose={() => setSheet(null)} title={kitSquad ? `${squadName(kitSquad)} carries` : 'Kit'} footer={<Button variant="primary" block onClick={() => setSheet(null)}>Done</Button>}>
@@ -475,7 +475,7 @@ export function OpsPrepare({ scenarioId, step = 'brief', onCancel }: { scenarioI
         </select>
       </label>
       {brief.entries.length > 0 && <div className="prep-map prep-map-team" aria-label="Starting positions on the building map">
-        <Blueprint built={built} spaces={spaces} squadTasks={[]} selectedSpaceId={way.position ?? null} focusSquadId={null}
+        <Blueprint built={built} spaces={spaces} squadTasks={[]} squads={g.squads} selectedSpaceId={way.position ?? null} focusSquadId={null}
           highlightSpaceIds={brief.entries.map((entry) => entry.id)} onSelectSpace={(id) => { if (brief.entries.some((entry) => entry.id === id)) pickPosition(id); }} {...blueprintExtras} />
       </div>}
       {way.points.length > 0 && <div className="field">

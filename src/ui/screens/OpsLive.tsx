@@ -235,7 +235,7 @@ export function OpsLive({ onStepOut }: { onStepOut?: () => void } = {}) {
       <ActionSheet
         open={panel === 'action'}
         preview={view && <div className="action-sheet-map" aria-label={`Where ${view.title} happens`}>
-          <Blueprint built={model.built} spaces={model.spaces} squadTasks={model.squadTasks} selectedSpaceId={null} focusSquadId={model.focusSquadId}
+          <Blueprint built={model.built} spaces={model.spaces} squadTasks={model.squadTasks} squads={g.squads} selectedSpaceId={null} focusSquadId={model.focusSquadId}
             highlightSpaceIds={model.highlightSpaceIds} onSelectSpace={() => undefined} lastChange={null} overlays={view.overlays} showMaterials={false}
             floor={model.floor} onFloorChange={setFloor} environment={model.environment ?? undefined} />
         </div>}
