@@ -170,7 +170,7 @@ const CHAT: Record<string, ThreatChat | false> = {
     imminent: ['{rider.first} is just staring at the phone', 'still looking at it', 'is the phone moving', 'we lost them', 'hello? still there?'],
   },
   on_the_news: {
-    early: ['{outlet_short} is on tv right now', 'my dad has it on in the other room', 'they put the building on the screen', 'anchor looks serious', 'someone is recording the tv', 'now its on the news 😮'],
+    early: ['{outlet_short} is on tv right now', 'my dad has it on in the other room', 'they put the building on the screen', 'anchor looks serious', 'someone is recording the tv', 'now its on {outlet_short} 😮'],
     closing: ['theyre repeating what the chat said', 'they got it from us', 'anchor knows more than police said', 'going national', 'graphic is up', 'i hope they dont put names up'],
     imminent: ['dont say it on tv', '{rider.first} is listening to that', 'turn the tv off in there', 'anchor is reading off a paper', 'are they going to say who it is'],
   },

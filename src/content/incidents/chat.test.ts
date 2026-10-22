@@ -170,4 +170,24 @@ describe('chat that follows the pressure', () => {
     for (const clock of withChat.clocks ?? []) if (clock.source?.reactions) for (const key of ['stopped', 'slowed', 'surged', 'dropped']) delete clock.source.reactions[key];
     expect(withChat).toEqual(without);
   });
+
+  describe('the compiler refuses a chat that cannot play', () => {
+    const spec = { type: 'hostage_crisis', familyId: 'market_row', buildingSeed: 7, seed: 3, tier: 2, contentVersion: 13 } as const;
+    /** Compile with `change` applied to going_live's chat, then put it back. */
+    const compileWith = (change: (chat: NonNullable<TreeThreat['chat']> & object) => void) => {
+      const threat = HOSTAGE_LIVE.nodes.find(node => node.id === 'going_live')!.threat!;
+      const saved = threat.chat;
+      threat.chat = structuredClone(saved) as typeof threat.chat;
+      try { change(threat.chat as NonNullable<TreeThreat['chat']> & object); return generateIncident(spec); } finally { threat.chat = saved; }
+    };
+    it('throws on a speaker that is neither {handle} nor a role of the call', () => {
+      expect(() => compileWith(chat => { chat.early[0] = { by: '{nobody.first}', text: 'hi' }; })).toThrow(/neither \{handle\} nor a role/);
+    });
+    it('throws on a line waiting for a beat the threat does not have', () => {
+      expect(() => compileWith(chat => { chat.closing[0] = { text: 'hi', after: 'no_such_beat' }; })).toThrow(/not a beat of this threat/);
+    });
+    it('throws when a threat that names a {handle} does not end on that commenter', () => {
+      expect(() => compileWith(chat => { chat.imminent[chat.imminent.length - 1] = 'typing it now'; })).toThrow(/last imminent chat line must be by \{handle\}/);
+    });
+  });
 });
