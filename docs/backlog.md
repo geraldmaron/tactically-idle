@@ -452,7 +452,9 @@ old board and Prepare (`.optile*`, `.prep-title`, `.pickcard*`, `.prep-steps`) s
 the desk screens (the desk session's updated copy is described in its hand-over). Some `.optile*`
 rules still have consumers (`CallTile.tsx`, `CardWarning.tsx`, the Lab's `GameFrame.tsx`), so each
 selector goes only after its consumers are checked. Done: each of these fixed and the capture tool
-walking every screen with no step error.
+walking every screen with no step error. Also found in the lead's 2026-10-22 play: HQ's "your move" card
+says "<call> is the oldest call" with Open, but Open shows the whole board (`src/ui/screens/HQ.tsx`
+`nav.go('ops')`), not that call's brief.
 
 ### squad-names: Every surface names a squad the way the player named it
 Tags: job=command; journeys=answer-a-call, joint-operation; probes=none (labels); lane=engine
