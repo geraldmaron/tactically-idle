@@ -132,16 +132,22 @@ export function SourceTicker({ view, runKey = 'preview', effect = null, chat: sh
     if (before === null) return;
     const reactions = view.reactions;
     if (target < before * 6 / 7) {
-      for (let line = drawStateLine(runKey, view.id, 'dropped', reactions?.dropped ?? []); line; line = drawStateLine(runKey, view.id, 'dropped', reactions?.dropped ?? [])) queue.current.push(line);
+      // A stopped stream outranks a falling count: its own lines play and the dropped pool doesn't.
+      if (!view.stopped) for (let line = drawStateLine(runKey, view.id, 'dropped', reactions?.dropped ?? []); line; line = drawStateLine(runKey, view.id, 'dropped', reactions?.dropped ?? [])) queue.current.push(line);
       return;
     }
     if (!(target > before * 1.08 + 1)) return;
     // Two lines, far enough apart that the first is read before the second pushes it up.
-    [0, 1].forEach(i => window.setTimeout(() => {
+    [0, 1].forEach(i => burst.current.push(window.setTimeout(() => {
       const line = drawChatLine(runKey, `${view.id}:spike`, reactions?.spike ?? [], chatRandom.current) ?? drawChatLine(runKey, view.id, reactions?.pool ?? [], chatRandom.current);
       say(line);
-    }, i * 1600));
+    }, i * 1600)));
   }, [target, showChat]);
+
+  // A burst belongs to the decision that showed it: a result hiding the chat, or a new decision,
+  // cancels what hasn't played, so nothing is consumed unseen or shown late beside the next thread.
+  const burst = useRef<number[]>([]);
+  useEffect(() => () => { burst.current.forEach(id => window.clearTimeout(id)); burst.current = []; }, [showChat, threatId]);
 
   useEffect(() => {
     const before = last.current;

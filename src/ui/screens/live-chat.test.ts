@@ -91,6 +91,9 @@ describe('a threat\'s chat', () => {
     const before = Array.from({ length: 6 }, () => drawThreadLine('r', 't', CHAT, 8, 11)?.text ?? null);
     expect(before).toEqual(['i1', 'i2', 'i3', 'i4', 'i5', null]);
     expect(drawThreadLine('r', 't', CHAT, 10, 11)).toMatchObject({ text: 'i6', by: 'poster' });
+    // The reserved line drops what was still waiting, so a late reload never plays the poster first.
+    expect(drawThreadLine('late', 't', CHAT, 10, 11)).toMatchObject({ text: 'i6' });
+    expect(drawThreadLine('late', 't', CHAT, 10, 11)).toBeNull();
     // A thread the drain has left is never played late.
     expect(drawThreadLine('r', 't', CHAT, 8, 11)).toBeNull();
     expect(drawThreadLine('r2', 't', CHAT, 10, 11)).toMatchObject({ text: 'i6' });

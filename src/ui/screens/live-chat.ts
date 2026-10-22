@@ -73,7 +73,12 @@ export function drawThreadLine(runKey: string, threatId: string, chat: ThreatCha
   const done = threadDone.get(key) ?? new Set<number>();
   threadDone.set(key, done);
   const reserved = phase === 'imminent' ? lines.length - 1 : -1;
-  if (reserved >= 0 && minutes > 0 && dither / minutes >= RESERVED_AT && !done.has(reserved)) { done.add(reserved); return lines[reserved]; }
+  if (reserved >= 0 && minutes > 0 && dither / minutes >= RESERVED_AT && !done.has(reserved)) {
+    // The reserved line is the last thing said: what was still waiting in the phase is dropped, so a
+    // late reload never plays the poster before the lines that lead up to them.
+    lines.forEach((_, i) => done.add(i));
+    return lines[reserved];
+  }
   const at = lines.findIndex((line, i) => i !== reserved && !done.has(i) && (line.afterMin === undefined || line.afterMin <= dither));
   if (at < 0) return null;
   done.add(at);

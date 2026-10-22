@@ -100,7 +100,7 @@ type TreeChat = Exclude<ChatLine, string>;
 const FRIEND = '{friend.first}';
 const CHAT: Record<string, ThreatChat | false> = {
   going_live: {
-    early: [by('{handle}', 'wait where is this place'), 'no clue, counter looks so familiar', 'laundromat one??', 'my phone is dying, dont end yet 😬',
+    early: [by('{handle}', 'wait where is this place'), 'no clue, counter looks so familiar', 'laundromat one??', 'phone at 4 percent 😬',
       { by: '{handle}', text: '{rider.first} just read my question out', after: 'where_is_this' }, 'east side i think', 'is somebody on the floor back there'],
     closing: ['got a map open. two stores on that block', 'not the laundromat, green sign', 'bus stop out front, i know it', 'the one next to the bank',
       after('cross_streets', 'bank corner? 📍'), 'dont post it. whoever has it dont', 'i live near there, they are taping the corner off'],
@@ -109,39 +109,39 @@ const CHAT: Record<string, ThreatChat | false> = {
   },
   on_air: {
     early: ['hold on is that real', 'did {rider.first} just show something', by(FRIEND, 'come out. i got you. im at the tape'), 'everybody chill, let {rider.first} talk', 'woah hold on', after('count_two', 'two thousand already 👀')],
-    closing: ['why bring the gun then', 'if nothing was taken why the gun', 'i got cut off too and never did this', '{rider.first} stop answering them', 'manager is back there somewhere', 'this chat flipped fast', 'so who took the bag then'],
+    closing: ['why bring the gun then', 'so what is the gun for', 'i got cut off too and never did this', '{rider.first} stop answering them', 'manager is back there somewhere', 'this chat flipped fast', 'so who took the bag then'],
     imminent: ['put it down', 'just put it down {rider.first}', 'we were on your side. put it down', 'dont argue with them', 'mute the comments', 'walk out'],
   },
   off_air: false,
   clerk_talks: {
-    early: ['is that the clerks number', 'who keeps calling who', 'why is {rider.first} so focused on the door', 'did the clerk make it out?', 'thats three tries now', 'someone said the clerk left'],
-    closing: ['dialing again', 'nobody picks up', 'is it a landline', 'what is {rider.first} waiting for', 'phone to the ear again'],
-    imminent: ['still nothing', 'give it a rest for a sec', 'is it ringing outside?', 'any word on the clerk', 'ok someone picked up??'],
+    early: ['who is {rider.first} calling', 'who keeps calling who', 'why is {rider.first} so focused on the door', 'did the clerk make it out?', 'is that {manager.first}s phone', 'someone said the clerk left'],
+    closing: ['holding it close', 'nobody picks up', 'is it a landline', 'what is {rider.first} waiting for', 'phone to the ear again'],
+    imminent: ['still nothing', 'give it a rest for a sec', 'is it ringing outside?', 'any word on the clerk', 'pick up pick up'],
   },
   way_out: {
-    early: ['theres a van at the corner, i can see it from my window', 'which channel', '{outlet_short} i think, logo on the side', 'cops let a van park there?', 'did {rider.first} see it', 'can anyone see the van from inside'],
+    early: ['theres a van at the corner, i can see it from my window', 'which channel 👀', '{outlet_short} i think, logo on the side', 'cops let a van park there?', 'did {rider.first} see it', 'can anyone see the van from inside'],
     closing: ['theyre unloading something tall', 'what are they setting up', 'now {outlet_short} sees what we see', after('how_out', 'asking if the walk out is on camera'), 'its so bright out there', 'my mom texted, shes watching on {outlet_short}'],
-    imminent: ['everybody will see this', 'are they allowed that close', 'somebody tell the van to back up', 'wow no', 'count is climbing fast 👀', 'ugh turn it off'],
+    imminent: ['everybody will see this', 'are they allowed that close', 'somebody tell the van to back up', 'wow no', 'count is climbing fast', 'ugh turn it off'],
   },
   cornered: {
     early: ['someone is recording that', 'did anyone catch what {manager.first} said', after('thief', 'people are saying {rider.first} took the bag'), 'who says? nobody proved it', 'stop reading it out loud', 'the clip is better than the stream tbh', 'read the room'],
-    closing: ['comments are split now', 'half of you werent here for the start', 'the clip cut off the part before', '{manager.first} didnt say it like that', 'just keeps climbing 👀', 'everyone is piling on'],
+    closing: ['comments are split now', 'half of you werent here for the start', 'the clip cut off the part before', '{manager.first} didnt say it like that', 'count keeps going', 'everyone is piling on'],
     imminent: ['stop sharing it', 'it makes it worse', 'dont look at it', 'nobody needs that clip', 'just reported it', 'how many shares is that now'],
   },
   threat: {
-    early: ['van moved closer', 'are they going live??', 'the gun is right on {manager.first}', 'turn on {outlet_short}', 'my mom says {outlet_short} keeps teasing it', 'cant look away'],
+    early: ['van moved closer', 'are they going live??', 'the gun is right on {manager.first}', 'turn on {outlet_short}', 'my mom says {outlet_short} keeps teasing it', 'this is bad'],
     closing: ['theyre lining up a shot of the window', 'can they see {rider.first} in there', 'tell them to back off', 'crowd keeps growing, someone near there says', 'people are INSIDE'],
     imminent: ['{outlet_short} is counting down to air', 'theyre going to put this on tv', 'somebody make them wait', 'please wait', 'hold on hold on', 'not the window. anything but the window'],
   },
   fired_on: {
     early: ['WAIT', 'was that a shot', 'the window!!', '{rider.first} what did you do', 'is everybody ok in there', 'did that hit someone outside'],
-    closing: ['picture is shaking', '{rider.first} is down behind the counter', 'is {manager.first} ok', 'somebody stop this', 'drop it'],
-    imminent: ['something lit up by the register', '{rider.first} just looked at it', 'what does it say', 'is that a phone', 'dont ignore it'],
+    closing: ['picture is shaking', '{rider.first} is crouched behind the counter', 'is {manager.first} ok', 'somebody stop this', 'drop it'],
+    imminent: ['what is that buzzing', 'is that a phone', 'dont ignore it', 'somebody say something', 'please let it be someone good'],
   },
   last_word: {
-    early: ['hold on the camera moved', 'where did the counter go', 'is {rider.first} still there', 'hello?', 'picture stopped moving', 'frozen??'],
-    closing: ['picture keeps drifting up', 'someone said {rider.first} went behind the counter', 'cant see anything from down there', 'just the light now', 'ceiling tiles. cooler hum. thats it', 'quiet in here, even the chat'],
-    imminent: ['dont leave us on the ceiling {rider.first}', 'talk to us', 'or talk to the negotiator', 'somebody check on them', 'say something {rider.first}'],
+    early: ['whats going on at the door', 'is {rider.first} still on camera', 'who is waiting out there', 'everybody wants to see what happens', 'hello?', 'count keeps going up'],
+    closing: ['{rider.first} keeps looking at the front', 'is {rider.first} going to walk out', 'is {rider.first} coming out', 'dont go near the window', 'whats the negotiator saying'],
+    imminent: ['picture is moving', 'uh oh', 'where is {rider.first} going', 'dont leave the frame', 'talk to us'],
   },
   address_out: {
     early: ['the address is all over the comments now', 'im ten minutes away, thinking about going', 'dont go over there', 'stay home, you will make it worse', after('past_tape', 'someone got past the tape')],
@@ -150,24 +150,24 @@ const CHAT: Record<string, ThreatChat | false> = {
   },
   chat_turned: {
     early: ['whose gun is that even', 'nobody asked about it till now', 'are the police coming in', 'cops wont go in with people inside', 'you dont know that', after('three_k', 'three thousand and still going 👀')],
-    closing: ['borrowed, i heard', 'from who tho', '{rider.first} answers every single guess', 'stop feeding it', 'thats how this chat works though', 'every answer is more people'],
+    closing: ['borrowed, i heard', 'from who tho', '{rider.first} answers every single guess', 'stop feeding it', 'thats how this chat works though', '{rider.first} stop reading them'],
     imminent: ['enough guessing', 'dont answer them {rider.first}', 'ignore the chat', 'let the negotiator talk', 'ok im muting this'],
   },
   same_question: false,
   phone_rings: {
     early: ['the calls keep going unanswered', 'screen lit up again', 'what is that second phone', 'checking it every ten seconds', 'who is it for'],
     closing: ['nobody answers', 'thumbs going', 'typing and deleting', 'why wont they pick up', 'long message?'],
-    imminent: ['is {rider.first} giving up on the call', 'phone going back down', 'wait is {rider.first} typing', 'whats going on in there', 'send it already'],
+    imminent: ['is {rider.first} giving up on the call', 'phone going back down', 'did it send', 'whats going on in there', 'give them a minute'],
   },
   van_light: {
     early: ['{outlet_short} still on the corner', 'van moved up', 'crowd is bigger than before', 'nobody go near the reporter', 'reporter keeps checking a phone', after('reporter', 'reporter is at the tape now')],
-    closing: ['mic is out', 'is the reporter going to say the name', 'cant they just wait', '{rider.first} can probably hear that', 'did {rider.first} hear that', 'people in here already know it'],
+    closing: ['mic is out', 'is the reporter going to say {rider.first}s full name', 'cant they just wait', '{rider.first} can probably hear that', 'did {rider.first} hear that', 'people in here already know it'],
     imminent: ['reporter is looking right at the door', 'please dont yell it', 'turn the mic off', 'back away from the glass {rider.first}', 'make them stop', 'reporter is lifting the mic 😬'],
   },
   clip_going: {
     early: ['someone tagged {delivery_app} under the clip', 'they never answer anyone', '{rider.first} saw it, i think', 'just sitting there', 'can you hear the clip playing in there'],
     closing: ['{delivery_app} is typing under the clip??', 'brand accounts never reply', 'pr line incoming, watch', '{rider.first} hasnt looked up in a while', 'whats on that screen now', after('still_here', 'negotiator can hear the clip too')],
-    imminent: ['{rider.first} is just staring at the phone', 'still looking at it', 'phone flipped over??', 'we lost them', 'hello? still there?'],
+    imminent: ['{rider.first} is just staring at the phone', 'still looking at it', 'is the phone moving', 'we lost them', 'hello? still there?'],
   },
   on_the_news: {
     early: ['{outlet_short} is on tv right now', 'my dad has it on in the other room', 'they put the building on the screen', 'anchor looks serious', 'someone is recording the tv', 'now its on the news 😮'],
@@ -181,7 +181,7 @@ const CHAT: Record<string, ThreatChat | false> = {
   },
   ceiling: {
     early: ['cant hear {rider.first} now', 'is the sound low or gone', 'turn your volume up', 'i can hear something far away', 'is that the cooler hum', 'wiat did something move'],
-    closing: [after('tap', 'did you hear that tap'), 'a knock?? again', 'thats not the stream, thats the room', 'someone answered it', 'light on the ceiling hasnt changed'],
+    closing: [after('tap', 'did you hear that tap'), 'a knock?? again', 'thats not the stream, thats the room', 'that was a tap right', 'nothing on screen but the light'],
     imminent: ['do it again', 'one more tap', 'please', 'we heard you', 'come on come on'],
   },
 };
