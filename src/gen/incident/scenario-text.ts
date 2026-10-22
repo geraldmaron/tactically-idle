@@ -25,7 +25,7 @@ export function mapScenarioText(input: ScenarioDefinition, text: (value: string)
   if (s.difficulty) s.difficulty.drivers = s.difficulty.drivers.map(text);
   for (const stage of Object.values(s.stages)) {
     fields(stage, ['label', 'prompt']);
-    for (const entry of stage.contextPrompts ?? []) { fields(entry, ['prompt']); lines(entry.exchange); if (entry.threat) fields(entry.threat, ['label']); }
+    for (const entry of stage.contextPrompts ?? []) { fields(entry, ['prompt']); lines(entry.exchange); if (entry.threat) { fields(entry.threat, ['label']); const chat = entry.threat.chat; if (chat) for (const phase of [chat.early, chat.closing, chat.imminent]) for (const line of phase) fields(line, ['text', 'by']); } }
     for (const a of stage.actions) {
       fields(a, ['title', 'summary', 'task', 'hazardReason']);
       if (a.weighing) fields(a.weighing, ['pull', 'cost']);

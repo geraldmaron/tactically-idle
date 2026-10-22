@@ -1,4 +1,4 @@
-import type { CallTree, TreeChoice, TreeIf, TreeNext, TreeOutcome, TreeState, TreeTimeout } from './types';
+import type { CallTree, ChatLine, ThreatChat, TreeChoice, TreeIf, TreeNext, TreeOutcome, TreeState, TreeTimeout } from './types';
 
 // Going Live, the first curated call (design sheet: docs/calls/going-live-design.md). A delivery
 // rider {delivery_app} cut off over a stolen order holds the night manager at the pickup counter of
@@ -89,6 +89,114 @@ const holdTheNight = (text: string): TreeTimeout => ({ text, next: { ending: 'ri
  * isn't true, the rider hears that on the stream, from the clerk's own phone. */
 const foundOut = (text: string, extra: Partial<TreeOutcome> = {}): TreeOutcome => ({ when: { marks: ['lied_clerk'] }, breaks: ['clerk_backs'], mark: ['lie_found'], moves: { rider: 'provoked' }, bump: { stream: 12 }, text, ...extra });
 
+// What the viewers say as each threat drains (docs/call-pressure.md, "Chat that follows the pressure";
+// swat-call-prose references/live-chat.md). Early, closing and imminent are thirds of the threat's
+// minutes. A line is plain text under a generated handle, or says who types it (`by`) and which beat
+// of its threat it waits for (`after`). The last imminent line of a threat that names a {handle} is
+// that commenter's own. Viewers see the rider's phone, the comments and the news, never the radio.
+const after = (beat: string, text: string): TreeChat => ({ text, after: beat });
+const by = (who: string, text: string): TreeChat => ({ by: who, text });
+type TreeChat = Exclude<ChatLine, string>;
+const FRIEND = '{friend.first}';
+const CHAT: Record<string, ThreatChat> = {
+  going_live: {
+    early: [by('{handle}', 'wait where is this place'), 'no clue, that counter looks so familiar', 'is it the one by the laundromat??', 'is {rider.first} streaming from inside the store',
+      after('where_is_this', '{rider.first} just read my question out'), 'someone said its on the east side', 'is someone on the floor back there'],
+    closing: ['got a map open, two stores on that block', 'not the laundromat one, that sign is green', 'look at the bus stop out front, i know it', 'ok the one next to the bank',
+      after('cross_streets', 'bank corner? 📍'), 'dont post it. whoever has it dont', 'i live near there, they are taping the corner off'],
+    imminent: ['{rider.first} dont read it out', 'somebody in the group chat has the street', 'please please dont post it', by(FRIEND, 'dont post the address. i mean it'),
+      '{handle} you have it??', 'its on every map, takes two seconds', by('{handle}', 'ok i got it. typing it now')],
+  },
+  on_air: {
+    early: ['ok but why is there a gun in the picture', by(FRIEND, 'come out. i got you. im at the tape'), 'if {rider.first} took nothing why the gun', 'everybody chill, let {rider.first} talk',
+      'i came for the story, not this 😬', after('count_two', 'count just passed two thousand 👀')],
+    closing: ['nah the gun changes everything', 'ive been cut off before and i never did this', '{rider.first} stop answering them, they want a show', 'the manager is back there somewhere, remember that',
+      'i asked first and nobody answered', 'this chat is turning fast', 'ok so who took the bag then'],
+    imminent: ['put it down {rider.first}', 'just put it down', 'nobody here is on your side with that out', 'mute the comments {rider.first}',
+      'leave the chat alone and talk to the negotiator', '{rider.first} this is not worth it. walk out'],
+  },
+  off_air: {
+    early: ['why is the picture just the floor', 'hello is the camera dead', 'i can still hear something', '{rider.first} turn it back around', 'anyone else see a black screen', 'someone said the stream is lagging for them'],
+    closing: ['the audio is muffled, someone is talking', 'is that {manager.first} or the other voice', 'i cant hear what is being asked', 'did the sound cut again', 'people are leaving this stream', 'somebody tell us whats happening in there'],
+    imminent: ['hello???', 'i dont like the quiet', '{rider.first} come back on camera', 'check the other tab, maybe it moved', 'is the stream even live', 'please say something. anything'],
+  },
+  clerk_talks: {
+    early: ['wait whose phone is that ringing', 'i heard a buzz, was that on the stream', '{rider.first} looked at something off camera', 'is the clerk still in there', 'that sounded like a second phone', 'any word on the clerk?'],
+    closing: ['{rider.first} keeps looking at the stockroom door', 'where did the clerk go', after('rider_asks', '{rider.first} asked where the kid is. who is the kid'), 'they stopped showing the back of the store', 'this is so messy 😬'],
+    imminent: ['something happened off camera', 'is {rider.first} alright', 'why is {rider.first} so quiet now', 'is the phone still buzzing', 'wait did {rider.first} just get a call'],
+  },
+  way_out: {
+    early: ['theres a van at the corner. i can see it from my window', 'which channel is it', '{outlet_short} i think, the logo is on the side', 'they let a van park right there?', '{rider.first} did you see the van', 'turn the camera to the window so we can see 👀'],
+    closing: ['that van is pulling up to the corner', 'now {outlet_short} has the same view we do', 'theyre setting up at the corner', after('how_out', '{rider.first} asked if the walk out is on camera'), 'its so bright out there now', 'my mom just texted, shes watching on {outlet_short}'],
+    imminent: ['everybody is going to see this', '{rider.first} look at the window', 'the crew is setting up near the door', 'somebody tell the van to back up', 'they should turn that light off', 'count is going up fast 👀'],
+  },
+  cornered: {
+    early: ['someone clipped what {manager.first} just said', 'that clip is already on three other apps', after('thief', 'people are saying {rider.first} took the bag'), 'who is saying that, nobody proved it', '{rider.first} stop reading it out loud', 'the clip is better than the stream tbh'],
+    closing: ['the comments here are split now', 'half of you werent even here for the start', 'the clip cut off the part before', '{manager.first} didnt say it like that', 'this just keeps climbing 👀', 'everyone is piling on {rider.first} now'],
+    imminent: ['stop sharing the clip', 'it only makes it worse', '{rider.first} dont look at it', 'cut it off. nobody needs this clip', 'i just reported it', 'its everywhere now'],
+  },
+  threat: {
+    early: ['wait the van is live right now', '{outlet_short} just cut to the corner', 'i can see our picture on their screen', 'this is not a good look for anybody', 'turn on {outlet_short}, theyre live from outside', 'my group chat is blowing up 😮'],
+    closing: ['theyre lining up a shot of the window', 'can they see {rider.first} in there', 'that corner is full of people now', 'theyre telling people to stay back', 'someone near there says the crowd keeps growing', 'this is the last thing anyone in there needs'],
+    imminent: ['{outlet_short} is counting down to air', 'theyre about to put this on tv', 'somebody tell them to wait', 'the whole city will watch this', 'please just let the police finish first', '{rider.first} stay away from the front'],
+  },
+  fired_on: {
+    early: ['was that a phone ringing?', '{rider.first} just looked at something and froze', 'the picture is shaking', 'who is calling', 'the name came up on the screen. didnt catch it', '{rider.first} put the phone down'],
+    closing: ['someone is calling again', 'is it family', '{rider.first} just stares at it', 'answer it {rider.first}', 'my mom would call me too', 'hope they pick up 🙏'],
+    imminent: ['{rider.first} answer it', 'just talk to them', 'it keeps ringing', 'whoever it is keeps calling', 'the stream is so quiet', 'please pick up'],
+  },
+  last_word: {
+    early: ['why are we looking at the ceiling', '{rider.first} sat down?', 'the picture stopped moving', 'is the stream frozen', 'all i get is the light fixture and nothing else', 'hello?'],
+    closing: ['someone said {rider.first} sat down behind the counter', 'so nobody can see them from outside', 'that is on purpose', 'ceiling tiles, cooler hum, thats all we get', 'whats the plan here', 'people are dropping off, picture is boring now'],
+    imminent: ['dont leave us on the ceiling {rider.first}', 'talk to us', 'or pick up for the negotiator', 'this quiet is worse', 'somebody check on them', '{rider.first} say something'],
+  },
+  address_out: {
+    early: ['the address is all over the comments now', 'im ten minutes away, thinking about going', 'dont go over there', 'stay home, you will make it worse', 'i live nearby and its crazy out here', after('past_tape', 'someone got past the tape')],
+    closing: [after('past_tape', 'i can see the store from the corner'), 'patrol is shouting at people to back up', 'dont film through the window', 'this is how people get hurt', after('see_store', 'someone said they can see the register from outside')],
+    imminent: ['nobody go near that glass', 'please stay back everyone', 'patrol is going to grab whoever goes up', 'stay behind the tape', by(FRIEND, 'stay back. all of you. please'), 'someone just ran past me toward the store'],
+  },
+  chat_turned: {
+    early: ['where did {rider.first} even get a gun', 'nobody asked about the gun until now', 'are the police going to come in', 'they wont, there are people inside', 'if its even real', after('three_k', 'three thousand and still going 👀')],
+    closing: ['someone said it was borrowed', 'stop guessing, none of us know', '{rider.first} is answering every guess', 'the more we ask the longer this goes', 'everyone just stop typing', 'guesses are not helping anyone'],
+    imminent: ['enough guessing', '{rider.first} dont answer them', 'ignore the chat', 'let the negotiator do the talking', by(FRIEND, 'everybody stop typing about the gun'), 'ok im muting this chat'],
+  },
+  same_question: {
+    early: ['did {manager.first} just say something', 'i couldnt hear it, who has audio', 'the sound cut out right when {manager.first} started', '{rider.first} is up and moving', 'turn it up, turn it up', 'somebody caption that please'],
+    closing: ['{manager.first} said maybe four words', '{rider.first} is pacing, the picture keeps moving', 'does anyone have a clip of it', 'its too quiet in there', after('slower', '{rider.first} wants {manager.first} to say it again'), 'nobody breathe, {rider.first} is walking back and forth'],
+    imminent: ['{rider.first} sit down for a second', 'ok everybody breathe', 'dont make {manager.first} say it again', 'the pacing is the worst part', 'please let this be over soon', 'i cant watch this part'],
+  },
+  phone_rings: {
+    early: ['{rider.first} is typing on another phone', 'who is that for', 'the calls stopped. why did they stop', '{rider.first} keeps checking the screen', 'does anyone know where the clerk is', 'somebody said theyre texting someone outside'],
+    closing: ['that second phone is {manager.first}s', 'is that who got the text', 'asking about the kid, i saw it', 'so {rider.first} is worried about the clerk too', 'why would {rider.first} do that', 'five minutes ago nobody was this quiet'],
+    imminent: ['someone answer {rider.first}', '{rider.first} is waiting by the phone', 'the clerk better text back', 'i hope the clerk is ok 🙏', 'its just a text, why is everyone so tense', 'reply to it already'],
+  },
+  van_light: {
+    early: ['{outlet_short} is still on the corner', 'the van moved up', 'the crowd is bigger than before', 'ok nobody go near the reporter', 'the reporter is fixing their hair lol', after('reporter', 'reporter is at the tape now')],
+    closing: ['theyve got the mic out', 'is the reporter going to say the name', 'dont say the name on air', '{rider.first} can probably hear that', 'people in the chat already know the name', after('my_name', 'everybody knows {rider.first} now')],
+    imminent: ['reporter is looking right at the door', 'please dont yell it', 'turn the mic off', 'back away from the glass {rider.first}', 'somebody make them stop', 'reporter is lifting the mic 😬'],
+  },
+  clip_going: {
+    early: ['someone tagged {delivery_app} under the clip', 'they never answer anyone', '{rider.first} saw it, i think', '{rider.first} is just sitting there', 'the clip is playing in there, you can hear it', 'turn the clip down, they can hear it too'],
+    closing: ['{delivery_app} replied to the clip', 'they said something about courier safety', 'thats a pr line, nothing else', '{rider.first} hasnt looked up in a while', 'whats on that screen now', after('still_here', 'the negotiator can hear the clip too')],
+    imminent: ['{rider.first} read it', '{rider.first} stopped answering us', 'the stream is just a phone face down', 'we lost them', 'say something {rider.first}', 'hello? still there?'],
+  },
+  on_the_news: {
+    early: ['{outlet_short} is on tv right now', 'my dad has it on in the other room', 'they put the building on the screen', 'the anchor is serious', 'someone is recording the tv', 'this is on the news now 😮'],
+    closing: ['theyre repeating what the chat said', 'they got the details from us', 'the anchor knows more than the police said', 'this is going national', 'theyve got a graphic up', 'i hope they dont put names up'],
+    imminent: ['please keep the name off tv', '{rider.first} is listening to that', 'turn the tv off in there', 'the anchor is reading from a paper', 'someone put a name on the bottom of the screen', 'the anchor is about to say it'],
+  },
+  home_again: {
+    early: ['no more calls? what happened', 'the phone went dark', '{rider.first} flips it over again', 'that was the last call, i counted', 'is anyone calling back', 'they must have given up'],
+    closing: [after('same_number', 'the same number is calling again'), 'they are trying, {rider.first}', '{rider.first} stares at the front window', 'the window is where {rider.first} keeps looking', 'the picture keeps going back to the window', 'i hope someone gets through'],
+    imminent: ['answer the phone', '{rider.first} please pick up', 'ten more seconds and it stops again', 'it only takes a second to answer', 'dont let it ring out', 'pick up pick up'],
+  },
+  ceiling: {
+    early: ['is the audio dead', 'i cant hear anything', '{rider.first} is not moving', 'the picture is just the ceiling', 'anyone else getting nothing', 'refresh the stream, maybe its stuck'],
+    closing: [after('tap', 'i think i heard a tap'), 'a knock?? did you hear that', 'thats not the stream, thats the room', 'no movement on screen at all', 'is the phone just sitting there', 'that light on the ceiling hasnt changed'],
+    imminent: ['somebody please do that again', 'make a sound {rider.first}', 'anything', 'i dont like this at all', 'is it still live or frozen', 'come on come on'],
+  },
+};
+
 export const HOSTAGE_LIVE: CallTree = {
   type: 'hostage_crisis',
   title: 'Going Live',
@@ -152,7 +260,7 @@ export const HOSTAGE_LIVE: CallTree = {
     { id: 'going_live', stage: 'assess',
       // The address threat: a named commenter posts where the store is. The beats are the comments
       // closing in on it, read out by the rider, so the countdown is the guess getting warmer.
-      threat: { label: 'Address posted by {handle}', minutes: 11, text: 'The street address of {place} shows up in the comments, posted by {handle}. {rider.first} reads the address out loud. Shares push the count up, and patrol starts turning cars away at the corner.', pressure: 4, bump: { stream: 10 },
+      threat: { chat: CHAT.going_live, label: 'Address posted by {handle}', minutes: 11, text: 'The street address of {place} shows up in the comments, posted by {handle}. {rider.first} reads the address out loud. Shares push the count up, and patrol starts turning cars away at the corner.', pressure: 4, bump: { stream: 10 },
         beats: [
           { id: 'where_is_this', at: 1.2, by: 'rider', line: 'Somebody called {handle} wants to know where this is. Should I tell them?', bump: { stream: 4 } },
           { id: 'manager_low', at: 3.4, by: 'manager', line: 'Those people don’t pay your rent, {rider.first}.', moves: { rider: 'provoked' }, bump: { stream: 5 } },
@@ -218,7 +326,7 @@ export const HOSTAGE_LIVE: CallTree = {
 
     // ------------------------------------------------------------------ stage 2: the stream is up
     { id: 'on_air', stage: 'adapt',
-      threat: { label: 'The comments turn', minutes: 11, text: 'The comments turn. Viewers ask why {rider.first} needs a handgun if {rider.he} didn’t take anything, and {rider.first} argues with each of them out loud.', pressure: 5, mark: ['turned_chat'], moves: { rider: 'provoked' }, bump: { stream: 10 },
+      threat: { chat: CHAT.on_air, label: 'The comments turn', minutes: 11, text: 'The comments turn. Viewers ask why {rider.first} needs a handgun if {rider.he} didn’t take anything, and {rider.first} argues with each of them out loud.', pressure: 5, mark: ['turned_chat'], moves: { rider: 'provoked' }, bump: { stream: 10 },
         beats: [
           { id: 'friend_types', at: 1.4, by: 'rider', line: '{friend.first} says come out, I got you. {friend.first}, I can’t.' },
           { id: 'count_two', at: 2.8, by: 'radio', line: 'Stream over two thousand. {outlet_short} van two blocks out.', bump: { stream: 6 } },
@@ -317,7 +425,7 @@ export const HOSTAGE_LIVE: CallTree = {
 
     // ------------------------------------------------------------------ stage 2: the stream is down
     { id: 'off_air', stage: 'adapt',
-      threat: { label: '{rider.first} stands over {manager.first}', minutes: 12, text: '{rider.first} stops pacing and stands over {manager.first}, asking {manager.him} who took the bag, over and over.', pressure: 6, moves: { rider: 'provoked' },
+      threat: { chat: CHAT.off_air, label: '{rider.first} stands over {manager.first}', minutes: 12, text: '{rider.first} stops pacing and stands over {manager.first}, asking {manager.him} who took the bag, over and over.', pressure: 6, moves: { rider: 'provoked' },
         beats: [
           { id: 'stops_twice', at: 1.5, by: 'radio', line: 'Window. Subject standing over the manager again.' },
           { id: 'no_one', at: 3.1, by: 'rider', line: 'There’s no camera now. You get that?' },
@@ -376,7 +484,7 @@ export const HOSTAGE_LIVE: CallTree = {
 
     // ------------------------------------------------------------------ stage 2: the clerk is out (the turn)
     { id: 'clerk_talks', stage: 'adapt',
-      threat: { label: 'The clerk’s phone lights up', minutes: 10, text: '{clerk.first}’s phone buzzes in an officer’s hand. It is {manager.first}’s number, calling from inside.', pressure: 4, bump: { stream: 6 },
+      threat: { chat: CHAT.clerk_talks, label: 'The clerk’s phone lights up', minutes: 10, text: '{clerk.first}’s phone buzzes in an officer’s hand. It is {manager.first}’s number, calling from inside.', pressure: 4, bump: { stream: 6 },
         beats: [
           { id: 'clerk_shakes', at: 1.6, by: 'clerk', line: 'Is {manager.first} okay? Just tell me {manager.first} is okay.' },
           { id: 'rider_asks', at: 3.2, by: 'rider', line: 'Where’s the kid? Somebody took the kid.', moves: { rider: 'team_seen' }, bump: { stream: 6 } },
@@ -426,7 +534,7 @@ export const HOSTAGE_LIVE: CallTree = {
 
     // ------------------------------------------------------------------ stage 3
     { id: 'way_out', stage: 'resolve',
-      threat: { label: 'The {outlet_short} van parks', minutes: 12, text: 'A {outlet_short} van parks at the corner, and its crew raises a light on the front door. {rider.first} watches the light from behind the counter.', pressure: 5, bump: { stream: 18 },
+      threat: { chat: CHAT.way_out, label: 'The {outlet_short} van parks', minutes: 12, text: 'A {outlet_short} van parks at the corner, and its crew raises a light on the front door. {rider.first} watches the light from behind the counter.', pressure: 5, bump: { stream: 18 },
         beats: [
           { id: 'medic', at: 1.8, by: 'radio', line: 'Medic staged down the block.' },
           { id: 'how_out', at: 3.4, by: 'rider', line: 'If I walk out, do I walk out on camera? Yes or no.', bump: { stream: 5 } },
@@ -558,7 +666,7 @@ export const HOSTAGE_LIVE: CallTree = {
 
     // ------------------------------------------------------------------ stage 3: exposed on camera (situation 2)
     { id: 'cornered', stage: 'resolve',
-      threat: { label: 'The clip spreads', minutes: 13, text: 'Someone has clipped {manager.first}’s sentence, and the clip is spreading faster than the stream. The count passes five thousand.', pressure: 6, moves: { rider: 'provoked' }, bump: { stream: 15 },
+      threat: { chat: CHAT.cornered, label: 'The clip spreads', minutes: 13, text: 'Someone has clipped {manager.first}’s sentence, and the clip is spreading faster than the stream. The count passes five thousand.', pressure: 6, moves: { rider: 'provoked' }, bump: { stream: 15 },
         beats: [
           { id: 'thief', at: 1.2, by: 'radio', line: 'Comments calling subject a thief. Lots of them.' },
           { id: 'rider_quiet', at: 2.6, by: 'rider', line: 'They were all on my side. Every one of them.' },
@@ -609,7 +717,7 @@ export const HOSTAGE_LIVE: CallTree = {
 
     // ------------------------------------------------------------------ stage 3: the handgun is up
     { id: 'threat', stage: 'resolve',
-      threat: { label: 'The {outlet_short} van goes live', minutes: 10, text: 'The {outlet_short} van goes live from the corner, with its light on the front window and {rider.first} in the middle of it.', pressure: 6, bump: { stream: 20 },
+      threat: { chat: CHAT.threat, label: 'The {outlet_short} van goes live', minutes: 10, text: 'The {outlet_short} van goes live from the corner, with its light on the front window and {rider.first} in the middle of it.', pressure: 6, bump: { stream: 20 },
         timeout: { text: 'Every officer holds position while the broadcast runs.', next: { node: 'on_the_news' } } },
       prompt: 'The handgun is pointed at {manager.first} now. {manager.first} keeps {manager.his} eyes on {rider.first}’s face, not on the handgun.',
       exchange: [{ by: 'radio', line: 'Window. Handgun on the manager. Holding.' }, { by: 'manager', line: '{rider.first}. They’re all watching you.' }],
@@ -681,7 +789,7 @@ export const HOSTAGE_LIVE: CallTree = {
           } },
       ] },
     { id: 'fired_on', stage: 'resolve',
-      threat: { label: 'A call from home', minutes: 10, text: '{rider.first}’s phone lights up with a call from home. {rider.He} {rider~looks|look} at the name on the screen and {rider~lets|let} it ring.', pressure: 8, bump: { stream: 15 },
+      threat: { chat: CHAT.fired_on, label: 'A call from home', minutes: 10, text: '{rider.first}’s phone lights up with a call from home. {rider.He} {rider~looks|look} at the name on the screen and {rider~lets|let} it ring.', pressure: 8, bump: { stream: 15 },
         timeout: { text: 'Both phones ring out, home’s and the negotiator’s.', next: { node: 'home_again' } } },
       prompt: 'The front window has a hole in it now. {rider.first} crouches behind the counter next to {manager.first}, the handgun in {rider.his} hand.',
       exchange: [{ by: 'radio', line: 'Shot through the front glass. Checking officers outside.' }, { by: 'rider', line: 'I didn’t mean it. I didn’t mean that.' }],
@@ -733,7 +841,7 @@ export const HOSTAGE_LIVE: CallTree = {
 
     // ------------------------------------------------------------------ stage 3: the manager is out
     { id: 'last_word', stage: 'resolve',
-      threat: { label: '{rider.first} sits down', minutes: 13, text: '{rider.first} sits down behind the counter, out of sight of the window, and turns the phone so it films the ceiling.', pressure: 4,
+      threat: { chat: CHAT.last_word, label: '{rider.first} sits down', minutes: 13, text: '{rider.first} sits down behind the counter, out of sight of the window, and turns the phone so it films the ceiling.', pressure: 4,
         timeout: { text: '{rider.first} stays down there and stops answering.', next: { node: 'ceiling' } } },
       prompt: '{manager.first} is outside with the medic. {rider.first} is alone behind the counter and wants to know what happens at the door.',
       exchange: [{ by: 'rider', line: 'Everybody’s waiting to see what I do.' }, { by: 'negotiator', line: 'Then walk out with your hands open and leave the phone.' }],
@@ -793,7 +901,7 @@ export const HOSTAGE_LIVE: CallTree = {
 
     // stage 1: the address is out
     { id: 'address_out', stage: 'assess',
-      threat: { label: 'Someone reaches the glass', minutes: 12, text: 'A viewer slips past the tape and presses a phone to the front glass to film inside. Patrol pulls the viewer back to the corner, and the stream shows all of it.', pressure: 5, moves: { rider: 'provoked' }, bump: { stream: 12 },
+      threat: { chat: CHAT.address_out, label: 'Someone reaches the glass', minutes: 12, text: 'A viewer slips past the tape and presses a phone to the front glass to film inside. Patrol pulls the viewer back to the corner, and the stream shows all of it.', pressure: 5, moves: { rider: 'provoked' }, bump: { stream: 12 },
         beats: [
           { id: 'past_tape', at: 3.2, by: 'radio', line: 'One on foot past the corner line. Patrol has them.', bump: { stream: 4 } },
           { id: 'see_store', at: 6.6, by: 'rider', line: 'Somebody out there says they can see the store. Is that true?' },
@@ -839,7 +947,7 @@ export const HOSTAGE_LIVE: CallTree = {
 
     // stage 2: the comments turned, and nobody answered them
     { id: 'chat_turned', stage: 'adapt',
-      threat: { label: 'The chat starts guessing', minutes: 11, text: 'The chat starts guessing where {rider.first} got the handgun and whether the police will use theirs. {rider.first} answers the guesses to the camera, and the count jumps with each answer.', pressure: 6, moves: { rider: 'provoked' }, bump: { stream: 12 },
+      threat: { chat: CHAT.chat_turned, label: 'The chat starts guessing', minutes: 11, text: 'The chat starts guessing where {rider.first} got the handgun and whether the police will use theirs. {rider.first} answers the guesses to the camera, and the count jumps with each answer.', pressure: 6, moves: { rider: 'provoked' }, bump: { stream: 12 },
         beats: [
           { id: 'three_k', at: 3.0, by: 'radio', line: 'Count’s over three thousand and climbing.', bump: { stream: 4 } },
           { id: 'knees', at: 6.2, by: 'manager', line: 'Let me sit up at least. Please, {rider.first}.', moves: { rider: 'contact' } },
@@ -887,7 +995,7 @@ export const HOSTAGE_LIVE: CallTree = {
 
     // stage 2: the same question, unanswered from outside
     { id: 'same_question', stage: 'adapt',
-      threat: { label: '{manager.first} answers', minutes: 12, text: '{manager.first} answers in a few words. {rider.first} stands up fast and paces between the register and the cooler, and the negotiator on the line hears none of it.', pressure: 6, moves: { rider: 'provoked' },
+      threat: { chat: CHAT.same_question, label: '{manager.first} answers', minutes: 12, text: '{manager.first} answers in a few words. {rider.first} stands up fast and paces between the register and the cooler, and the negotiator on the line hears none of it.', pressure: 6, moves: { rider: 'provoked' },
         beats: [
           { id: 'both_quiet', at: 3.4, by: 'radio', line: 'They’re both quiet. Subject hasn’t moved.' },
           { id: 'slower', at: 6.8, by: 'rider', line: 'Say it again. Say it so I can hear it.' },
@@ -937,7 +1045,7 @@ export const HOSTAGE_LIVE: CallTree = {
 
     // stage 2: the clerk is out, and the call from inside went unanswered
     { id: 'phone_rings', stage: 'adapt',
-      threat: { label: 'A text from inside', minutes: 11, text: 'The calls stop, and a text comes up from {manager.first}’s number instead. It asks if the kid is okay. {clerk.first} reads it before the officer can turn the screen away.', pressure: 4, bump: { stream: 4 },
+      threat: { chat: CHAT.phone_rings, label: 'A text from inside', minutes: 11, text: 'The calls stop, and a text comes up from {manager.first}’s number instead. It asks if the kid is okay. {clerk.first} reads it before the officer can turn the screen away.', pressure: 4, bump: { stream: 4 },
         beats: [{ id: 'why_not', at: 3.2, by: 'clerk', line: 'Why won’t anybody pick up? It’s {manager.first}.' }],
         timeout: { text: 'The text sits unanswered on the officer’s screen. {clerk.first} waits by the patrol car in the blanket, and inside, {rider.first} puts {manager.first}’s phone face down.', next: { node: 'way_out' } } },
       prompt: '{manager.first}’s number is calling {clerk.first}’s phone again, in an officer’s hand behind the patrol car. {clerk.first} is standing with {clerk.his} hand out for it. Inside, {rider.first} has {manager.first}’s phone to {rider.his} ear.',
@@ -986,7 +1094,7 @@ export const HOSTAGE_LIVE: CallTree = {
 
     // stage 3: the van parked, and nobody answered about the camera
     { id: 'van_light', stage: 'resolve',
-      threat: { label: 'The reporter comes to the tape', minutes: 13, text: 'The {outlet_short} reporter walks up to the patrol line with a microphone and calls {rider.first}’s name toward the door on air. Through the glass, {rider.first} hears {rider.his} own name.', pressure: 6, moves: { rider: 'provoked' }, bump: { stream: 14 },
+      threat: { chat: CHAT.van_light, label: 'The reporter comes to the tape', minutes: 13, text: 'The {outlet_short} reporter walks up to the patrol line with a microphone and calls {rider.first}’s name toward the door on air. Through the glass, {rider.first} hears {rider.his} own name.', pressure: 6, moves: { rider: 'provoked' }, bump: { stream: 14 },
         beats: [
           { id: 'reporter', at: 3.6, by: 'radio', line: 'Reporter at the tape, calling subject by name.' },
           { id: 'my_name', at: 7.2, by: 'rider', line: 'They know my name out there now. Everybody does.' },
@@ -1037,7 +1145,7 @@ export const HOSTAGE_LIVE: CallTree = {
 
     // stage 3: the clip goes around, and nobody reached the rider
     { id: 'clip_going', stage: 'resolve',
-      threat: { label: '{rider.first} stops answering', minutes: 12, text: 'The clip reaches {delivery_app}’s own account, reposted with a line about courier safety. {rider.first} reads it once, puts the phone face down and stops answering to {rider.his} name.', pressure: 6, moves: { rider: 'provoked' },
+      threat: { chat: CHAT.clip_going, label: '{rider.first} stops answering', minutes: 12, text: 'The clip reaches {delivery_app}’s own account, reposted with a line about courier safety. {rider.first} reads it once, puts the phone face down and stops answering to {rider.his} name.', pressure: 6, moves: { rider: 'provoked' },
         beats: [
           { id: 'sitting', at: 3.0, by: 'radio', line: 'Subject sitting. Handgun up top, in reach.' },
           { id: 'still_here', at: 6.4, by: 'negotiator', line: '{rider.first}, I can hear the clip playing. Turn it down so I can hear you.' },
@@ -1090,7 +1198,7 @@ export const HOSTAGE_LIVE: CallTree = {
 
     // stage 3: the handgun is up, and the van went live while nobody moved
     { id: 'on_the_news', stage: 'resolve',
-      threat: { label: 'The anchor reads {rider.his} name', minutes: 11, text: 'On the broadcast the anchor reads out {rider.first}’s full name and the name of {place}. {rider.first} hears {rider.his} own name come out of the phone on the register.', pressure: 6, moves: { rider: 'provoked' }, bump: { stream: 12 },
+      threat: { chat: CHAT.on_the_news, label: 'The anchor reads {rider.his} name', minutes: 11, text: 'On the broadcast the anchor reads out {rider.first}’s full name and the name of {place}. {rider.first} hears {rider.his} own name come out of the phone on the register.', pressure: 6, moves: { rider: 'provoked' }, bump: { stream: 12 },
         beats: [{ id: 'no_change', at: 4.0, by: 'radio', line: 'Handgun on the manager. No change.' }],
         timeout: holdTheNight('The broadcast runs on with every officer where they stood. Command seals the block and waits for the handgun to come down.') },
       prompt: 'The {outlet_short} broadcast is showing the handgun on {manager.first}. {rider.first} keeps looking from {manager.first} to the phone, where {rider.he} can watch {rider.himself} hold the handgun.',
@@ -1129,7 +1237,7 @@ export const HOSTAGE_LIVE: CallTree = {
 
     // stage 3: the shot, the call from home, and nobody got through
     { id: 'home_again', stage: 'resolve',
-      threat: { label: 'Home stops ringing', minutes: 12, text: 'The calls from home stop. {rider.first} turns the dark screen over twice, then looks at the hole in the front window.', pressure: 5, moves: { rider: 'provoked' },
+      threat: { chat: CHAT.home_again, label: 'Home stops ringing', minutes: 12, text: 'The calls from home stop. {rider.first} turns the dark screen over twice, then looks at the hole in the front window.', pressure: 5, moves: { rider: 'provoked' },
         beats: [{ id: 'same_number', at: 3.4, by: 'radio', line: 'Same number calling again. Subject isn’t picking up.' }],
         timeout: holdTheNight('The phone stays in {rider.first}’s hand, unanswered. Command holds the street, and the team settles in behind the cars for the night.') },
       prompt: 'The call from home has started again. {rider.first} holds the phone out with the screen to the window and the handgun low in {rider.his} other hand. {manager.first} hasn’t moved since the shot.',
@@ -1167,7 +1275,7 @@ export const HOSTAGE_LIVE: CallTree = {
 
     // stage 3: the rider sat down out of sight, and nobody got an answer
     { id: 'ceiling', stage: 'resolve',
-      threat: { label: 'The line goes quiet', minutes: 13, text: 'The line stops carrying anything at all, even breathing. Through the glass the glow on the ceiling hasn’t moved.', pressure: 5,
+      threat: { chat: CHAT.ceiling, label: 'The line goes quiet', minutes: 13, text: 'The line stops carrying anything at all, even breathing. Through the glass the glow on the ceiling hasn’t moved.', pressure: 5,
         beats: [
           { id: 'tap', at: 4.2, by: 'negotiator', line: 'I heard that. Do it again if it was you.' },
           { id: 'no_movement', at: 8.0, by: 'radio', line: 'No movement behind the counter.' },

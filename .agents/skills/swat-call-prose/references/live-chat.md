@@ -60,8 +60,8 @@ The arc depends on what the threat is. Match it, and never run the same arc twic
 
 
 - **Early.** The thing is noticed. One viewer asks, one guesses badly, one sets it aside, and most
-  of the chat is somewhere else (battery, the bus, dinner). The poster and the viewers who will
-  get it right don't appear yet or sound like everyone else.
+  of the chat is somewhere else (battery, the bus, dinner). The poster may ask the question
+  that starts it, and sounds like everyone else.
 - **Closing.** The guesses converge and the chat gets shorter and more sure. Someone gets a detail
   right, someone says they're nearby, someone objects, someone doubts. A wrong guess gets
   corrected. The one closest to the answer says less and less. Early off-topic lines thin out.
@@ -173,7 +173,8 @@ Emoji are on some lines and not most. The numbers are house targets to tune in t
   - 📍 on a question or a guess about where, never on a line that confirms or approves one.
   - 👀 on something new on screen or a jump in the count.
   - 😳 😬 😮 on disbelief about the spectacle or the news.
-  - 🙏 ❤️ 😢 on worry for a person, in plain words, never as the whole line.
+  - 🙏 ❤️ 😢 on a general wish for people, in plain words, never as the whole line and never on a
+    line that describes danger ("hope everybody gets home tonight 🙏").
   Put some emoji on ordinary chatter (the bus, the battery, who just joined), not only on the
   threat's lines.
 - **Banned.** 😂 🤣 💀 😭 🔥 🍿 👏 🔫 🩸 👍 ✅ and any weapon, blood, cheering or approving
