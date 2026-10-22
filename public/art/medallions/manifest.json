@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "readyIds": [
+    "hostage_crisis",
+    "barricaded",
+    "active_armed_incident",
+    "protected_rescue"
+  ],
+  "width": 512,
+  "height": 512
+}
