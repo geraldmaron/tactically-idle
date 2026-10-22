@@ -9,19 +9,16 @@ import type { DevBranch, Id } from '../../sim/types';
 import { Sheet } from '../components/Sheet';
 import { useNav } from '../components/nav';
 import { Button } from '../components/ui';
-import { ChoiceRail } from '../components/ChoiceRail';
 import { BRANCHES, BRANCH_META } from '../components/labels';
 import { Icon } from '../icons';
 import { GearArt } from '../art/GearArt';
 import { EmblemArt, branchEmblemId } from '../art/EmblemArt';
 import { moneyFull as money, money as compactMoney } from '../format';
-import { budget as netBudget } from '../../sim/department-selectors';
 import { useGame } from '../store';
 import type { MilestoneView } from '../../sim/grants';
 import { milestoneShare, milestoneView } from '../../sim/grants';
 import { useDevelopmentPurchase } from '../storefront/useDevelopmentPurchase';
 import './development.css';
-import { ScreenBanner } from '../art/Plates';
 
 export type DevelopmentFilter = 'all' | 'available' | 'owned';
 export function filterDevelopmentOptions(options: NodeOption[], branch: DevBranch | 'all', filter: DevelopmentFilter): NodeOption[] {
@@ -65,7 +62,6 @@ export function DevelopScreen({ highlightedNode, highlightRequest }: { highlight
   const next = nextDevelopment(options);
   const [branch, setBranch] = useState<DevBranch>(() => (highlightedNode && DEV_NODES[highlightedNode]?.branch) || next?.node.branch || BRANCHES[0]);
   const wallet: DevelopmentBudget = { funding: g.department.funding };
-  const rates = netBudget(g);
   const selected = options.find((option) => option.node.id === selectedId);
   const open = (id: Id) => { setSelectedId(id); setPurchased(null); };
   const progress = (id: DevBranch) => {
@@ -87,38 +83,38 @@ export function DevelopScreen({ highlightedNode, highlightRequest }: { highlight
     return () => cancelAnimationFrame(frame);
   }, [highlightedNode, highlightRequest]);
 
-  const granted = options.filter((option) => option.granted).length;
+  const buyNext = async () => {
+    if (!next?.targetTier || !next.quote.ok) { if (next) { setBranch(next.node.branch); open(next.node.id); } return; }
+    const tier = next.targetTier;
+    const result = await purchases.purchase(next.node.id, tier);
+    if (result?.ok) { setBranch(next.node.branch); setSelectedId(next.node.id); setPurchased({ nodeId: next.node.id, tier }); }
+  };
   return <div ref={rootRef} className="page develop-page">
-    <ScreenBanner id="develop" kicker="Development" title="Build the department" line="Buy upgrades now, or earn them free at each milestone" />
-    <header className="dev-head">
-      <h2 className="sr-only">Department development</h2>
-      <span className="dev-stat" aria-label={`${money(g.department.funding)} funding, ${compactMoney(rates.net)} an hour`}><Icon name="cash" size={16} /><b>{compactMoney(g.department.funding)}</b><small className="dev-stat-rate">{rates.net >= 0 ? '+' : ''}{compactMoney(rates.net)}/h</small></span>
-      <span className="dev-stat" aria-label={`Department level ${g.department.level}, ${g.department.callsResolved} calls resolved, trust ${Math.round(g.department.trust)}`}><Icon name="star" size={16} /><b>Lv {g.department.level}</b><small className="dev-stat-rate">{g.department.callsResolved} resolved · trust {Math.round(g.department.trust)}</small></span>
-      {granted > 0 && <span className="dev-stat dev-stat-granted" aria-label={`${granted} granted by milestones`}><Icon name="medal" size={16} /><b>{granted}</b><small className="dev-stat-rate">granted</small></span>}
-    </header>
-    {next && <button type="button" className={`dev-next${next.quote.ok ? ' dev-next-ready' : ''}`} onClick={() => { setBranch(next.node.branch); open(next.node.id); }}
-      aria-label={`Next up: ${next.node.name}${next.maxTier > 1 && next.targetTier ? ` tier ${tierLabel(next.targetTier)}` : ''}, ${costText(next)}${next.milestone ? `, or ${milestoneText(next.milestone)}` : ''}. ${next.quote.ok ? 'Ready to buy' : next.reason ?? ''}`}>
-      <NodeGlyph option={next} size={34} />
-      <span className="dev-next-main">
-        <span className="dev-label">Next up · {BRANCH_META[next.node.branch].label}</span>
-        <strong>{next.node.name}{next.maxTier > 1 && next.targetTier ? ` ${tierLabel(next.targetTier)}` : ''}</strong>
-        <span className="dev-next-fx">{nodeSummary(next)}</span>
-        {next.milestone && <MilestoneLine view={next.milestone} share={milestoneShare(g, next.milestone)} />}
-      </span>
-      <span className="dev-buy-btn" data-ready={next.quote.ok ? 'yes' : undefined}>
-        <span className="dev-buy-btn-label">{next.quote.ok ? next.maxTier > 1 && next.currentTier > 0 ? 'Upgrade' : 'Unlock' : 'Save up'}</span>
-        <span className="dev-buy-btn-cost"><span data-short={g.department.funding < next.quote.cost!.funding ? 'yes' : undefined}>{compactMoney(next.quote.cost!.funding)}</span></span>
-      </span>
-    </button>}
-    {/* Five branches as five equal tabs (icon, owned count, a dot when one is ready), so the rail
-        never scrolls or clips; the chosen branch is named on the line below. */}
-    <div className="dev-branch-tabs"><ChoiceRail value={branch} onChange={setBranch} kind="tabs" grow label="Development branches" options={BRANCHES.map((id) => {
+    {/* Funding, the rate and the level live in the resource bar; this screen says each once there. */}
+    <h2 className="sr-only">Department development</h2>
+    {next && <div className="dev-next" data-ready={next.quote.ok ? 'yes' : undefined}>
+      <button type="button" className="dev-next-open" onClick={() => { setBranch(next.node.branch); open(next.node.id); }}
+        aria-label={`Next up: ${next.node.name}${next.maxTier > 1 && next.targetTier ? ` tier ${tierLabel(next.targetTier)}` : ''}, ${costText(next)}${next.milestone ? `, or ${milestoneText(next.milestone)}` : ''}. ${next.quote.ok ? 'Ready to buy' : next.reason ?? ''}`}>
+        <NodeGlyph option={next} size={44} />
+        <span className="dev-next-main">
+          <span className="sr-only">Next up, {BRANCH_META[next.node.branch].label}</span>
+          <strong>{next.node.name}{next.maxTier > 1 && next.targetTier ? ` ${tierLabel(next.targetTier)}` : ''}</strong>
+          <span className="dev-next-fx">{nodeSummary(next)}</span>
+          {next.milestone && <MilestoneLine view={next.milestone} share={milestoneShare(g, next.milestone)} />}
+        </span>
+      </button>
+      <Button variant={next.quote.ok ? 'primary' : 'quiet'} className="dev-next-buy" disabled={!!purchases.pendingNode}
+        aria-label={next.quote.ok ? `Buy ${next.node.name} for ${money(next.quote.cost!.funding)}` : `${next.node.name} costs ${money(next.quote.cost!.funding)}. ${next.reason ?? ''}`}
+        onClick={() => void buyNext()}>{compactMoney(next.quote.cost!.funding)}</Button>
+    </div>}
+    {/* Five branches as named chips that wrap, a dot when one holds a development ready to buy. */}
+    <div className="dev-branch-chips" role="tablist" aria-label="Development branches">{BRANCHES.map((id) => {
       const { owned, total, ready } = progress(id);
       const name = BRANCH_META[id].label;
-      return { value: id, accessibleLabel: `${name}, ${owned} of ${total} owned${ready ? `, ${ready} ready` : ''}`,
-        label: <><span className="dev-tab-icon"><Icon name={BRANCH_META[id].icon} size={20} />{ready > 0 && <i className="dev-tab-dot" />}</span><span className={`choice-rail-count${ready ? ' dev-rail-ready' : ''}`}>{owned}/{total}</span></> };
-    })} /></div>
-    <p className="dev-branch-blurb"><strong>{BRANCH_META[branch].label}</strong><span className="dim">{BRANCH_META[branch].blurb}</span></p>
+      return <button key={id} type="button" role="tab" aria-selected={branch === id} className={`dev-branch-chip${branch === id ? ' dev-branch-chip-on' : ''}`} onClick={() => setBranch(id)}
+        aria-label={`${name}, ${owned} of ${total} owned${ready ? `, ${ready} ready` : ''}`}>{name}{ready > 0 && <i className="dev-tab-dot" aria-hidden="true" />}</button>;
+    })}</div>
+    <p className="dev-branch-blurb">{BRANCH_META[branch].blurb}</p>
     <Track rows={rows} wallet={wallet} nextId={next?.node.id ?? null} highlightedNode={highlightedNode} onOpen={open} />
     {selected && <DevelopmentDetail option={selected} onClose={() => setSelectedId(null)} pending={!!purchases.pendingNode}
       failure={purchases.failure?.nodeId === selected.node.id ? purchases.failure.reason : null}
@@ -240,7 +236,7 @@ export function DevelopmentTile({ option: o, budget, highlighted, next = false, 
       {state === 'locked' && <span className="dev-medal-badge dev-badge-locked"><Icon name="lock" size={11} /></span>}
     </span>
     <span className="dev-node-main" aria-hidden="true">
-      <span className="dev-node-title"><strong>{o.node.name}</strong>{next && <span className="dev-next-badge">Next</span>}</span>
+      <span className="dev-node-title"><strong>{o.node.name}</strong></span>
       <span className="dev-node-fx">{state === 'owned' ? (o.currentEffects.filter((line) => !UNLOCK_LINE.test(line))[0] ?? 'Active') : nodeSummary(o)}</span>
       {state === 'locked' && <span className="dev-node-needs"><Icon name="lock" size={11} />Needs {needs.join(' and ')}</span>}
       {o.milestone ? <MilestoneLine view={o.milestone} share={milestoneShare(game, o.milestone)} compact />
@@ -248,12 +244,9 @@ export function DevelopmentTile({ option: o, budget, highlighted, next = false, 
     </span>
     <span className="dev-node-side" aria-hidden="true">
       {tiered && <span className="dev-pips">{Array.from({ length: o.maxTier }, (_, index) => <i key={index} data-on={index < o.currentTier ? 'yes' : undefined} />)}</span>}
-      {cost ? state === 'locked' ? <span className="dev-cost"><Icon name="lock" size={11} /><span>{compactMoney(cost.funding)}</span></span>
-        : <span className="dev-buy-btn" data-ready={state === 'ready' ? 'yes' : undefined}>
-          <span className="dev-buy-btn-label">{state === 'ready' ? tiered && o.currentTier > 0 ? 'Upgrade' : 'Unlock' : 'Save up'}</span>
-          <span className="dev-buy-btn-cost"><span data-short={shortFunding ? 'yes' : undefined}>{compactMoney(cost.funding)}</span></span>
-        </span>
-        : <span className="dev-cost dev-cost-done"><Icon name="check" size={11} strokeWidth={3} />{tiered ? 'Max' : 'Owned'}</span>}
+      {/* Prices stay quiet on rows: the sheet buys, and amber belongs to the one Next card. */}
+      {cost ? <span className="dev-price" data-state={state} data-short={shortFunding ? 'yes' : undefined}>{compactMoney(cost.funding)}</span>
+        : <span className="dev-price dev-price-done"><Icon name="check" size={14} strokeWidth={3} />{tiered ? 'Max' : 'Owned'}</span>}
     </span>
   </button>;
 }
@@ -290,8 +283,7 @@ export function DevelopmentDetail({ option: o, onClose, pending, failure, purcha
       <div className="dev-buy-ways">
         <div className="dev-buy-way">
           <span className="dev-label">Buy now</span>
-          <b className="dev-buy-cost">{money(o.quote.cost.funding)}</b>
-          <Button variant="primary" disabled={!o.quote.ok || pending} onClick={onPurchase}>{pending ? 'Upgrading…' : tiered ? `Buy tier ${tierLabel(o.targetTier)}` : 'Unlock'}</Button>
+          <Button variant="primary" disabled={!o.quote.ok || pending} onClick={onPurchase}>{pending ? 'Upgrading…' : `${tiered ? `Buy tier ${tierLabel(o.targetTier)}` : 'Buy'} for ${money(o.quote.cost.funding)}`}</Button>
         </div>
         {o.milestone && <div className="dev-buy-way dev-buy-free">
           <span className="dev-label">Or free</span>
@@ -329,7 +321,7 @@ export function DevelopmentDetail({ option: o, onClose, pending, failure, purcha
         </ol></section>}
       {(training || gear || staff) && <div className="dev-links">
         {training && <Button size="sm" icon="mortarboard" onClick={() => { onClose(); nav.openTraining(trainingCourse ? { certId: COURSES[trainingCourse.courseId]?.grants.cert } : undefined); }}>Open Training</Button>}
-        {gear && <Button size="sm" icon="gear" onClick={() => { onClose(); if (gearItem) nav.openEquipment({ itemId: gearItem.itemId }); else nav.go('gear'); }}>Open Gear</Button>}
+        {gear && <Button size="sm" icon="gear" onClick={() => { onClose(); if (gearItem) nav.openEquipment({ itemId: gearItem.itemId }); else nav.go('gear'); }}>Open Armory</Button>}
         {staff && <Button size="sm" icon="people" onClick={() => { onClose(); nav.go('hq'); }}>Open Command Staff</Button>}
       </div>}
       {failure && <p className="reason" role="alert">{failure}</p>}

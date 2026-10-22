@@ -1,55 +1,56 @@
 import { useGame } from '../store';
-import { Icon } from '../icons';
-import type { IconName } from '../icons';
-import type { Tab } from './nav';
-import { useNav } from './nav';
+import type { TopTab } from './nav';
+import { topTab, useNav } from './nav';
 import { nodeOptions } from '../../sim/department-selectors';
 
-const TABS: { id: Tab; label: string; icon: IconName }[] = [
-  { id: 'hq', label: 'HQ', icon: 'house' },
-  { id: 'squad', label: 'Squad', icon: 'people' },
-  { id: 'ops', label: 'Ops', icon: 'pin' },
-  { id: 'develop', label: 'Develop', icon: 'chart' },
-  { id: 'gear', label: 'Gear', icon: 'gear' },
+const TABS: { id: TopTab; label: string }[] = [
+  { id: 'hq', label: 'HQ' },
+  { id: 'ops', label: 'Calls' },
+  { id: 'squad', label: 'Officers' },
+  { id: 'build', label: 'Build' },
 ];
 
-/** The five destinations, with Ops raised in the center as the game's main action, as management
- * games put their primary button. A badge or dot appears only for something the player can act on
- * now: new calls and an upgrade they can afford. */
+/** The four destinations, equal width (docs/ui-ux-audit.md, "Four destinations"). Calls carries a
+ * count of new calls and, while a call or its debrief waits, the live ring. Other tabs get a dot
+ * only for a move the player can make now; HQ never badges. */
 export function BottomNav() {
-  const { tab, go } = useNav();
+  const nav = useNav();
+  const current = topTab(nav.tab);
   const g = useGame();
   const live = g.activeRun !== null;
   const fresh = ((g as { incidents?: { seen: boolean; expiresAt: number }[] }).incidents ?? []).filter((i) => !i.seen).length;
   const affordable = nodeOptions(g).some((o) => o.targetTier && o.status !== 'locked' && o.quote.ok);
-  const dot: Partial<Record<Tab, string>> = {
-    ...(affordable ? { develop: 'An upgrade is ready to buy' } : {}),
+  const dot: Partial<Record<TopTab, string>> = {
+    ...(affordable ? { build: 'An upgrade is ready to buy' } : {}),
+  };
+  // A dot opens the segment it is about: an upgrade ready to buy opens Upgrades.
+  const open = (id: TopTab) => {
+    if (id === 'build') nav.go(dot.build ? 'develop' : nav.buildSegment);
+    else nav.go(id);
   };
   return (
     <nav className="bottomnav" aria-label="Main">
       {TABS.map((t) => {
-        const on = tab === t.id;
-        const primary = t.id === 'ops';
+        const on = current === t.id;
         return (
           <button
             key={t.id}
             type="button"
-            className={`navbtn${on ? ' navbtn-on' : ''}${primary ? ' navbtn-primary' : ''}`}
+            className={`navbtn${on ? ' navbtn-on' : ''}`}
             aria-current={on ? 'page' : undefined}
-            onClick={() => go(t.id)}
+            onClick={() => open(t.id)}
           >
-            <span className="navicon">
-              <Icon name={t.icon} size={primary ? 26 : 24} />
-              {/* The one motion signal: a call waits on the player and they are looking elsewhere. */}
-              {primary && live && !on && <span className="live-dot" role="img" aria-label={g.activeRun?.status === 'debrief' ? 'A debrief is waiting' : 'A call is waiting on you'} />}
-              {primary && !live && fresh > 0 && !on && (
-                <span className="navbadge" role="img" aria-label={`${fresh} new incident${fresh === 1 ? '' : 's'}`}>
+            <span className="navlabel">
+              <span>{t.label}</span>
+              {/* The one motion signal: a call or its debrief waits and the player is looking elsewhere. */}
+              {t.id === 'ops' && live && !on && <span className="live-dot" role="img" aria-label={g.activeRun?.status === 'debrief' ? 'A debrief is waiting' : 'A call is waiting on you'} />}
+              {t.id === 'ops' && !live && fresh > 0 && !on && (
+                <span className="navbadge" role="img" aria-label={`${fresh} new call${fresh === 1 ? '' : 's'}`}>
                   {fresh}
                 </span>
               )}
               {dot[t.id] && !on && <span className="navdot" role="img" aria-label={dot[t.id]} />}
             </span>
-            <span className="navlabel">{t.label}</span>
           </button>
         );
       })}

@@ -3,8 +3,14 @@ import type { CertId, Id } from '../../sim/types';
 import { DEFAULT_EQUIPMENT_QUERY, type EquipmentQuery } from '../storefront/store-query';
 import { INITIAL_SQUAD_VIEW, updateSquadView, type SquadView, type SquadViewAction } from './squad-view';
 
+/** Route ids. Four tabs show them (docs/ui-ux-audit.md, "Four destinations"): HQ, Calls (`ops`),
+ * Officers (`squad`) and Build, whose two segments keep their own ids (`develop` is Upgrades,
+ * `gear` the Armory), so `go('gear')` opens Build on the Armory. */
 export type Tab = 'hq' | 'squad' | 'ops' | 'develop' | 'gear';
-export type SquadSection = 'roster' | 'training';
+export type TopTab = 'hq' | 'ops' | 'squad' | 'build';
+export const topTab = (tab: Tab): TopTab => tab === 'develop' || tab === 'gear' ? 'build' : tab;
+/** The Officers segments. */
+export type SquadSection = 'squads' | 'roster' | 'hire' | 'training';
 export interface TrainingFocus { officerId?: Id; certId?: CertId; courseId?: Id }
 export interface PlayerRoute {
   tab: Tab;
@@ -17,9 +23,11 @@ export interface PlayerRoute {
   developmentNode?: Id;
   developmentRequest: number;
   returnToItem: Id | null;
+  /** The Build segment the Build tab returns to. */
+  buildSegment: 'develop' | 'gear';
 }
 export const INITIAL_PLAYER_ROUTE: PlayerRoute = {
-  tab: 'hq', squadSection: 'roster', equipmentItemId: null, officerId: null,
+  tab: 'hq', squadSection: 'squads', buildSegment: 'develop', equipmentItemId: null, officerId: null,
   trainingFocus: {}, trainingRequest: 0, developmentRequest: 0, returnToItem: null,
 };
 export const PLAYER_NAV_HISTORY_KEY = 'tacticallyIdlePlayerRoute';
@@ -36,6 +44,7 @@ export function createPlayerNavigation(history: HistoryPort, owner: string, onRo
   };
   const commit = (next: PlayerRoute, replace = false) => {
     if (closing) { pendingRoute = next; return; }
+    if (next.tab === 'develop' || next.tab === 'gear') next = { ...next, buildSegment: next.tab };
     if (JSON.stringify(next) === JSON.stringify(route)) return;
     const detailBack = !!next.equipmentItemId && !route.equipmentItemId && route.tab === 'gear';
     const officerBack = !!next.officerId && next.officerId !== route.officerId && !replace;

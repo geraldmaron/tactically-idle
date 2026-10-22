@@ -15,8 +15,9 @@ import type { Id, Officer, SquadId } from '../../sim/types';
 import { Sheet } from '../components/Sheet';
 import { useNav } from '../components/nav';
 import { ChoiceRail } from '../components/ChoiceRail';
-import { Button, Chip, OfficerStatusChip, RatingBars } from '../components/ui';
-import { RankChip } from '../components/RankInsignia';
+import { Button, Chip, RatingBars } from '../components/ui';
+import { Overflow } from '../components/Overflow';
+import { rankedName } from '../components/OfficerRow';
 import { RetirementChip, useCareerSnapshot } from '../components/Career';
 import { OfficerProgress, RankLadder } from '../components/OfficerProgress';
 import { RANKS } from '../../content/ranks';
@@ -24,12 +25,12 @@ import { formatGameDate } from '../../sim/calendar';
 import { StressDisplay, StressGuide } from '../components/StressDisplay';
 import { useToast } from '../components/toast';
 import type { StatusKey } from '../components/labels';
-import { CERT_ICON, ROLE_META, TRAIT_INFO } from '../components/labels';
+import { CERT_ICON, ROLE_META, STATUS_META, TRAIT_INFO } from '../components/labels';
 import { officerStatus } from './squad-model';
 import { Portrait } from '../portraits/Portrait';
 import { agePortraitProps } from './helpers';
 import { Icon } from '../icons';
-import { money, perHour, rate, ratePerMinute, relativeTime, signedMoney, yearsText } from '../format';
+import { money, perHour, rate, relativeTime, signedMoney, yearsText } from '../format';
 import { officerRates } from '../../sim/economy';
 import { PACE_LABEL } from './Recruit';
 
@@ -42,7 +43,7 @@ export function OfficerSheet({ officerId, onClose, initialTab = 'overview' }: { 
   const [confirmDismiss, setConfirmDismiss] = useState(false);
   const close = () => { setConfirmDismiss(false); setTab('overview'); onClose(); };
   return (
-    <Sheet open={!!o} onClose={close} title={o ? `${o.firstName} ${o.surname}` : ''} className="profile-sheet" interactionKey={confirmDismiss ? 'dismiss' : 'profile'}
+    <Sheet open={!!o} onClose={close} title={o ? rankedName(o) : ''} className="profile-sheet" interactionKey={confirmDismiss ? 'dismiss' : 'profile'}
       footer={o ? <ProfileActions o={o} confirmDismiss={confirmDismiss} setConfirmDismiss={setConfirmDismiss} onClose={close} /> : undefined}>
       {o && <ProfileBody o={o} tab={tab} setTab={setTab} />}
     </Sheet>
@@ -67,32 +68,24 @@ function ProfileBody({ o, tab, setTab }: { o: Officer; tab: ProfileTab; setTab: 
     <div className="profile">
       <section className="profile-hero" aria-label="Officer">
         <div className="profile-portrait">
-          <Portrait officer={o} size={96} {...agePortraitProps(g, o, now)} />
+          <Portrait officer={o} size={72} {...agePortraitProps(g, o, now)} />
           {isLeader && <span className="profile-leader" title="Squad leader"><Icon name="star" size={13} /></span>}
         </div>
         <div className="profile-id">
-          <div className="chips">
-            <Chip icon={ROLE_META[o.role].icon}>{ROLE_META[o.role].label}</Chip>
-            {squad ? <Chip tone="blue" icon={isLeader ? 'star' : 'people'}>{squad.name}{isLeader ? ', leader' : ''}</Chip> : <Chip icon="user">Unassigned</Chip>}
-            <RankChip rank={career.rank} />
-            {career.retirement && <RetirementChip date={career.retirement.date} inDays={career.retirement.inDays} compact />}
-          </div>
-          <p className="profile-facts"><span><Icon name="cake" size={13} />Age {career.age}</span><span><Icon name="medal" size={13} />{yearsText(career.service)} served</span></p>
+          <p className="profile-facts"><span>{ROLE_META[o.role].label}</span><span>{squad ? `${squad.name}${isLeader ? ', leader' : ''}` : 'Unassigned'}</span><span>Age {career.age}</span><span>{yearsText(career.service)} served</span></p>
+          {career.retirement && <div className="chips"><RetirementChip date={career.retirement.date} inDays={career.retirement.inDays} compact /></div>}
+          {/* The one readiness line: status, stress now, and what keeps them off a call. Stress history is in Care. */}
+          <p className={`profile-ready-line tone-${info.blocker ? 'warn' : 'mint'}`} aria-label="Readiness">
+            <Icon name={info.blocker ? 'lock' : STATUS_META[statusKey].icon} size={16} />
+            <span>{statusText ?? STATUS_META[statusKey].label} · stress {Math.floor(o.stress + 1e-9)}{info.blocker ? <> · {info.blocker}{info.deployableAt !== null && <>, ready {relativeTime(info.deployableAt, now)}</>}</> : null}</span>
+          </p>
         </div>
       </section>
       <dl className="profile-value" aria-label="Cost and value">
-        <div><dt>Wage</dt><dd className="tone-danger">-{perHour(o.wage)}</dd></div>
+        <div><dt>Wage</dt><dd>{perHour(o.wage)}</dd></div>
         <div><dt>Learns</dt><dd className={pace === 'fast' ? 'tone-mint' : pace === 'slow' ? 'tone-danger' : undefined}>{PACE_LABEL[pace]}</dd></div>
         <div><dt>Teaching</dt><dd className={detail === null ? 'dim' : 'tone-mint'}>{detail === null ? 'No cert' : `+${perHour(detail)}`}</dd></div>
       </dl>
-      <section className="profile-ready" aria-label="Readiness">
-        <OfficerStatusChip status={statusKey}>{statusText}</OfficerStatusChip>
-        <StressDisplay value={o.stress} compact />
-        <p className={`profile-avail ${info.blocker ? 'tone-warn' : 'tone-mint'}`}>
-          <Icon name={info.blocker ? 'lock' : 'check'} size={14} />
-          {info.blocker ? <>{info.blocker}{info.deployableAt !== null && <> · ready {relativeTime(info.deployableAt, now)}</>}</> : 'Ready for a call'}
-        </p>
-      </section>
       {persona && <p className="dim persona-note">{persona}</p>}
       <ChoiceRail value={tab} kind="tabs" grow label="Profile sections" panelId="profile-panel" onChange={setTab} options={[
         { value: 'overview', label: 'Overview' }, { value: 'career', label: 'Career' }, { value: 'care', label: 'Care' },
@@ -173,7 +166,7 @@ function CareerTab({ o }: { o: Officer }) {
       <div><dt>Went well</dt><dd className="tone-mint">{o.career.favorable}</dd></div>
       <div><dt>Went badly</dt><dd className="tone-danger">{o.career.adverse}</dd></div>
       <div><dt>Brought in</dt><dd>{money(o.career.earned ?? 0)}</dd></div>
-      <div><dt>Net now</dt><dd className={net < 0 ? 'tone-danger' : 'tone-mint'}>{ratePerMinute(net)}</dd></div>
+      <div><dt>Net now</dt><dd className={net < 0 ? 'tone-danger' : 'tone-mint'}>{rate(net)}</dd></div>
     </dl>
     {ret && <div className="note note-warn career-retire"><Icon name="retire" size={16} /><span>Retiring on {ret.date}, {ret.inDays === 1 ? '1 day' : `${ret.inDays} days`} left. {sentence(ret.reason)} They leave the roster and any squad on that day.</span></div>}
     {ret && retainable && !confirm && <Button size="sm" variant="primary" icon="handover" onClick={() => setConfirm(true)}>Offer retention{ret.retainCost ? ` · ${ret.retainCost}` : ''}</Button>}
@@ -201,7 +194,8 @@ function CareTab({ o, factors }: { o: Officer; factors: string[] }) {
   </div>;
 }
 
-/** Train, teach and dismiss: always in reach at the bottom of the sheet. */
+/** Training is the sheet's move; teaching and dismissal sit in the overflow, so the destructive
+ * action is never a peer of the everyday one. */
 function ProfileActions({ o, confirmDismiss, setConfirmDismiss, onClose }: { o: Officer; confirmDismiss: boolean; setConfirmDismiss: (on: boolean) => void; onClose: () => void }) {
   const g = useGame();
   const nav = useNav();
@@ -210,15 +204,17 @@ function ProfileActions({ o, confirmDismiss, setConfirmDismiss, onClose }: { o: 
   const detail = detailCheck(g, o.id);
   const training = o.assignment?.kind === 'training' ? o.assignment : null;
   return <div className="profile-actions">
-    <Button icon="mortarboard" aria-label={training ? `View ${COURSES[training.courseId]?.name ?? 'current course'}` : `Train ${o.surname}`}
-      onClick={() => { onClose(); nav.openTraining({ officerId: o.id, courseId: training?.courseId }); }}>{training ? 'Course' : 'Train'}</Button>
-    <Button icon="book" aria-disabled={!detail.ok} className={detail.ok ? undefined : 'btn-soft-off'}
-      aria-label={detail.ok ? `Send ${o.surname} on a ${detail.hours} hour instructor detail for ${money(detail.fee)}` : `Instructor detail unavailable. ${detail.reason ?? ''}`}
-      onClick={() => {
-        if (!detail.ok) { notify(detail.reason ?? 'Not available now', { tone: 'error' }); return; }
-        act({ type: 'startDetail', officerId: o.id }, `${o.surname} teaches for ${detail.hours} hours, ${money(detail.fee)} on return`);
-      }}>Teach{detail.ok ? ` · +${money(detail.fee)}` : ''}</Button>
-    <Button variant="ghost" icon="trash" aria-label={`Dismiss ${o.surname}`} onClick={() => setConfirmDismiss(true)}>Dismiss</Button>
+    <Button variant="primary" icon="mortarboard" aria-label={training ? `View ${COURSES[training.courseId]?.name ?? 'current course'}` : `Train ${o.surname}`}
+      onClick={() => { onClose(); nav.openTraining({ officerId: o.id, courseId: training?.courseId }); }}>{training ? 'View course' : 'Send to training'}</Button>
+    <Overflow up label={`More for ${o.surname}`}>
+      <Button variant="ghost" icon="book" aria-disabled={!detail.ok} className={detail.ok ? undefined : 'btn-soft-off'}
+        aria-label={detail.ok ? `Send ${o.surname} on a ${detail.hours} hour instructor detail for ${money(detail.fee)}` : `Instructor detail unavailable. ${detail.reason ?? ''}`}
+        onClick={() => {
+          if (!detail.ok) { notify(detail.reason ?? 'Not available now', { tone: 'error' }); return; }
+          act({ type: 'startDetail', officerId: o.id }, `${o.surname} teaches for ${detail.hours} hours, ${money(detail.fee)} on return`);
+        }}>Teach{detail.ok ? ` for ${money(detail.fee)}` : ''}</Button>
+      <Button variant="ghost" icon="trash" aria-label={`Dismiss ${o.surname}`} onClick={() => setConfirmDismiss(true)}>Dismiss</Button>
+    </Overflow>
   </div>;
 }
 

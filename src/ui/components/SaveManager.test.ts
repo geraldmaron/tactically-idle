@@ -7,7 +7,7 @@ import { Button } from './ui';
 
 const manageSave = vi.fn();
 vi.mock('../store', () => ({
-  useCampaigns: () => ({ slots: Array(10).fill(null), activeSlotId: null }),
+  useCampaigns: () => ({ slots: [{ name: 'Campaign 1', valid: true, day: 1, level: 1, officers: 8, funding: 0, savedAt: 0 }, ...Array(9).fill(null)], activeSlotId: 1 }),
   manageSave: (...args: unknown[]) => manageSave(...args),
   isResponsivePreview: true,
 }));
@@ -26,6 +26,8 @@ function capture(onClose = vi.fn()) {
     onClose,
     sheet: all.find((node) => node.type === Sheet)!,
     button: (label: string) => all.find((node) => node.type === Button && Children.toArray(node.props.children).join('') === label)!,
+    /** The active slot's one primary action, Save now. */
+    saveNow: () => (all.find((node) => (node.props as { active?: boolean }).active === true && 'onSave' in node.props)!.props as unknown as { onSave: () => Promise<void> }).onSave,
   };
 }
 
@@ -39,7 +41,7 @@ it('serializes repeated save callbacks immediately and ignores Close during the 
   let complete!: (result: { ok: boolean }) => void;
   manageSave.mockReturnValue(new Promise((resolve) => { complete = resolve; }));
   const f = capture();
-  const save = f.button('Save now').props.onClick!;
+  const save = f.saveNow();
   const first = save();
   const second = save();
   f.sheet.props.onClose?.();
@@ -55,7 +57,7 @@ it('serializes repeated save callbacks immediately and ignores Close during the 
 it('releases the synchronous lock after a failed write so retry stays available', async () => {
   manageSave.mockResolvedValue({ ok: false, reason: 'Storage is full.' });
   const f = capture();
-  const save = f.button('Save now').props.onClick!;
+  const save = f.saveNow();
   await save();
   await save();
   expect(manageSave).toHaveBeenCalledTimes(2);

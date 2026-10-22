@@ -13,14 +13,13 @@ import { equipmentManagerBenefits, maintenanceBudget } from '../../sim/equipment
 import { managerView } from '../../sim/command-staff';
 import { ManagerPortrait } from '../art/ManagerArt';
 import { ManagerSheet } from '../components/CommandStaff';
-import { Button, Card, Chip, EmptyState, Stepper } from '../components/ui';
+import { Button, Card, EmptyState, Row, Stepper } from '../components/ui';
 import { Sheet } from '../components/Sheet';
 import { useToast } from '../components/toast';
 import { Icon } from '../icons';
 import { money } from '../format';
 import { hasNodeEffect } from './helpers';
 import './gear-visual.css';
-import { ScreenBanner } from '../art/Plates';
 
 // The Armory (gear-armory): one list of every item, owned or not. Tapping an item opens one sheet
 // that buys it, shows its stock and units, and sets its restock rule. Standing tools (restock rules,
@@ -30,16 +29,14 @@ export function GearScreen() {
   const opts = storeOptions(g);
   const [tool, setTool] = useState<'rules' | 'presets' | 'reference' | null>(null);
   const nav = useNav();
-  const owned = opts.filter((option) => option.owned > 0);
   return (
     <div className="page gear-page">
-      <ScreenBanner id="gear" kicker="Armory" title="Equipment" line={<ArmoryLine owned={owned} />} />
-      <ArmoryHeader owned={owned} onTool={setTool} />
+      <ArmoryHeader onTool={setTool} />
       <EquipmentStore active />
       <Sheet open={tool === 'rules'} onClose={() => setTool(null)} title="Restock rules" subtitle="At each clock hour, held stock is refilled up to each target within its spending ceiling. Rules never take funding below zero and stop after 24 hours without orders.">
         <RestockSection onOpen={(itemId) => { setTool(null); nav.openEquipment({ itemId }); }} />
       </Sheet>
-      <Sheet open={tool === 'presets'} onClose={() => setTool(null)} title="Loadout presets" subtitle="Specialist gear each squad takes by default. Radios are standard kit: one per deployed officer is loaded automatically.">
+      <Sheet open={tool === 'presets'} onClose={() => setTool(null)} title="Loadout presets" subtitle="Specialist gear each squad takes by default. Basic kit goes with every officer and is never packed.">
         <PresetSection opts={opts} />
       </Sheet>
       <Sheet open={tool === 'reference'} onClose={() => setTool(null)} title="Construction reference">
@@ -49,40 +46,25 @@ export function GearScreen() {
   );
 }
 
-/** What the department holds, as three numbers on the banner. */
-function ArmoryLine({ owned }: { owned: StoreOption[] }) {
-  const ready = owned.reduce((n, o) => n + o.ready, 0);
-  const busy = owned.reduce((n, o) => n + o.reserved + o.inService, 0);
-  return <span className="armory-line">
-    <span className="armory-line-ready"><Icon name="checkcircle" size={13} /><b>{ready}</b> ready</span>
-    {busy > 0 && <span><Icon name="wait" size={13} /><b>{busy}</b> busy</span>}
-    <span><Icon name="box" size={13} /><b>{owned.length}</b> kinds held</span>
-  </span>;
-}
-
-/** The Armory's standing tools: the Quartermaster, then restock rules, presets and the wall guide.
- * They sit above the shop grid in as little height as they can, so the items start on screen one. */
-function ArmoryHeader({ onTool }: { owned: StoreOption[]; onTool: (tool: 'rules' | 'presets' | 'reference') => void }) {
+/** The Armory's standing lines: what every officer carries, the Quartermaster, and the tools
+ * (restock rules, loadout presets, the wall guide) as one row of chips, so the items start on the
+ * first screen. Loadout presets are edited here and nowhere else. */
+function ArmoryHeader({ onTool }: { onTool: (tool: 'rules' | 'presets' | 'reference') => void }) {
   const g = useGame();
   const presets = hasNodeEffect(g, 'loadoutPresets');
   const restock = hasNodeEffect(g, 'restockRules');
   return (
     <section className="armory-head" aria-label="Armory">
+      <p className="armory-basic">{BASIC_KIT_LINE}</p>
       <QuartermasterCard />
-      <p className="dim armory-basic">{BASIC_KIT_LINE}</p>
       <div className="armory-tools">
         <button type="button" className="armory-tool" aria-haspopup="dialog" onClick={() => onTool('rules')}>
-          <Icon name={restock.unlocked ? 'refresh' : 'lock'} size={16} />
-          <span><strong>Restock rules</strong><span className="dim">{restock.unlocked ? `${g.department.restockRules.length} active` : 'Locked'}</span></span>
+          {!restock.unlocked && <Icon name="lock" size={14} />}Restock rules<span>{restock.unlocked ? g.department.restockRules.length : 'Locked'}</span>
         </button>
         <button type="button" className="armory-tool" aria-haspopup="dialog" onClick={() => onTool('presets')}>
-          <Icon name={presets.unlocked ? 'list' : 'lock'} size={16} />
-          <span><strong>Loadout presets</strong><span className="dim">{presets.unlocked ? `${g.squads.filter((s) => Object.keys(s.loadoutPreset).length).length} saved` : 'Locked'}</span></span>
+          {!presets.unlocked && <Icon name="lock" size={14} />}Loadout presets<span>{presets.unlocked ? g.squads.filter((s) => Object.keys(s.loadoutPreset).length).length : 'Locked'}</span>
         </button>
-        <button type="button" className="armory-tool" aria-haspopup="dialog" onClick={() => onTool('reference')}>
-          <Icon name="brick" size={16} />
-          <span><strong>Wall materials</strong><span className="dim">Reference</span></span>
-        </button>
+        <button type="button" className="armory-tool" aria-haspopup="dialog" onClick={() => onTool('reference')}>Wall materials</button>
       </div>
     </section>
   );
@@ -111,26 +93,14 @@ function QuartermasterCard() {
   const view = managerView(g, 'quartermaster');
   const benefits = equipmentManagerBenefits(g);
   const budget = maintenanceBudget(g);
-  const latest = view.log[0];
   const line = !view.hired ? view.activity : budget ? `Services up to ${money(budget)}/hour` : 'Automatic service off';
   return (
     <>
-      <button type="button" className={`qm-card qm-card-${view.status}`} onClick={() => setOpen(true)} aria-haspopup="dialog">
-        <ManagerPortrait person={view.holder?.person ?? null} size={52} />
-        <span className="qm-main">
-          <span className="qm-title"><strong>{view.profile.title}</strong><span className={`staff-pill staff-pill-${view.status}`}>{view.status === 'on' ? 'On' : view.status === 'off' ? 'Off' : view.open ? 'Vacant' : 'Not hired'}</span></span>
-          <span className="qm-line">{line}</span>
-          {view.hired && (
-            <span className="chips qm-chips">
-              <Chip icon="star">Tier {benefits.tier}</Chip>
-              <Chip tone="mint" icon="wrench">{Math.round((1 - benefits.repairMultiplier) * 100)}% cheaper service</Chip>
-              <Chip tone="mint" icon="gauge">{Math.round((1 - benefits.wearMultiplier) * 100)}% less wear</Chip>
-            </span>
-          )}
-          {latest && <span className="qm-log dim">{latest.text}</span>}
-        </span>
-        <Icon name="gear" size={18} />
-      </button>
+      <Row className={`qm-row qm-row-${view.status}`} onClick={() => setOpen(true)}
+        lead={<ManagerPortrait person={view.holder?.person ?? null} size={40} />}
+        title={view.profile.title}
+        detail={view.hired ? <>{line}<br />Tier {benefits.tier} · {Math.round((1 - benefits.repairMultiplier) * 100)}% cheaper service, {Math.round((1 - benefits.wearMultiplier) * 100)}% less wear</> : line}
+        trail={<Icon name="chevronRight" size={18} />} />
       {open && <ManagerSheet id="quartermaster" g={g} now={Date.now()} inGear onClose={() => setOpen(false)} />}
     </>
   );

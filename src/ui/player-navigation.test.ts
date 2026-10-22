@@ -46,9 +46,19 @@ function markup(child: ReactNode, nav: Partial<NavApi> = {}) {
 }
 
 describe('canonical player navigation', () => {
-  it('keeps exactly HQ, Squad, Ops, Develop and Gear as top-level destinations', () => {
+  it('keeps exactly HQ, Calls, Officers and Build as top-level destinations', () => {
     const html = markup(createElement(BottomNav));
-    expect([...html.matchAll(/class="navlabel">([^<]+)/g)].map((match) => match[1])).toEqual(['HQ', 'Squad', 'Ops', 'Develop', 'Gear']);
+    expect([...html.matchAll(/class="navlabel"><span>([^<]+)/g)].map((match) => match[1])).toEqual(['HQ', 'Calls', 'Officers', 'Build']);
+  });
+
+  it('opens Build on the segment an old route id names, and the Build tab returns to the last one', () => {
+    const f = historyFixture();
+    f.nav.go('gear');
+    expect(f.route()).toMatchObject({ tab: 'gear', buildSegment: 'gear' });
+    f.nav.go('hq');
+    expect(f.route()).toMatchObject({ tab: 'hq', buildSegment: 'gear' });
+    f.nav.openDevelopment('patrol_1');
+    expect(f.route()).toMatchObject({ tab: 'develop', buildSegment: 'develop', developmentNode: 'patrol_1' });
   });
 
   it('routes officer, certification and course requests into Squad Training', () => {
@@ -134,12 +144,12 @@ describe('rendered player destinations and persistent drafts', () => {
     expect(html).not.toContain('<details');
     expect(html).toContain('aria-label="Show equipment"');
     expect(html.indexOf('class="armory-head"')).toBeLessThan(html.indexOf('class="inv-grid"'));
-    expect(html).toContain('class="qm-card qm-card-not_hired"');
-    expect(html).toContain('Open the post in Develop');
+    expect(html).toContain('class="ui-row qm-row qm-row-not_hired"');
+    expect(html).toContain('Open the post in Build, Upgrades');
     // Owned items show stock on the same tile that buys more; detail lives in each item's sheet.
     expect(html).toMatch(/class="inv-tile store-tile[^"]*"[^>]* aria-label="Loud hailer[^"]+\d+ owned, \d+ ready, condition \d+%/);
-    expect(html).toContain('<strong>Restock rules</strong>');
-    expect(html).toContain('<strong>Loadout presets</strong>');
+    expect(html).toMatch(/class="armory-tool"[^>]*>(<svg.*?<\/svg>)?Restock rules/);
+    expect(html).toMatch(/class="armory-tool"[^>]*>(<svg.*?<\/svg>)?Loadout presets/);
     expect(html).not.toContain('Hire manager');
     expect(html).not.toContain('Search courses');
   });
@@ -150,11 +160,9 @@ describe('rendered player destinations and persistent drafts', () => {
     state.department.developmentTiers.logistics_equipment_manager = 3;
     fillOpenPostsForTest(state);
     const html = markup(createElement(GearScreen));
-    expect(html).toContain('class="qm-card qm-card-off"');
-    expect(html).toContain('Tier 3</span>');
-    expect(html).toContain('45% cheaper service</span>');
-    expect(html).toContain('40% less wear</span>');
-    expect(html).not.toContain('Open the post in Develop');
+    expect(html).toContain('class="ui-row qm-row qm-row-off"');
+    expect(html).toContain('Tier 3 · 45% cheaper service, 40% less wear');
+    expect(html).not.toContain('Open the post in Build, Upgrades');
     // The budget control lives once, in the Quartermaster's Command Staff sheet.
     const sheet = markup(createElement(ManagerSheet, { id: 'quartermaster', g: state, now: NOW, onClose: () => {}, inGear: true }));
     expect(sheet).toContain('Tier 3: 45% cheaper servicing and 40% less wear');
@@ -181,11 +189,11 @@ describe('rendered player destinations and persistent drafts', () => {
     for (const old of ['Store sections', 'Search courses', 'Get Points', 'Test DP', 'Development branches']) expect(html).not.toContain(old);
   });
 
-  it('renders Training under Squad and removes the duplicated officer course catalog', () => {
+  it('renders Training under Officers and removes the duplicated officer course catalog', () => {
     const id = Object.keys(state.officers)[0];
     const officer = state.officers[id];
     const squad = markup(createElement(SquadScreen), { tab: 'squad', squadSection: 'training', trainingDraft: { officerId: id, search: '' } });
-    expect(squad).toContain('aria-label="Squad sections"');
+    expect(squad).toContain('aria-label="Officers sections"');
     expect(squad).toContain(`data-training-officer-id="${id}"`);
     expect(squad).toContain('Search courses');
     expect(squad).toContain('Choose officer');

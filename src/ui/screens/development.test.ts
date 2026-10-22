@@ -24,9 +24,12 @@ function detail(nodeId: string, tier = 0, patch = {}) {
 }
 
 describe('development browsing and shared detail', () => {
-  it('renders stats with rates, a Next card, branch tabs and the highlighted branch as one track (develop-track)', () => {
+  it('renders one Next card, named branch chips and the highlighted branch as one track, with funding said once in the bar (develop-track)', () => {
     const html = renderToStaticMarkup(createElement(DevelopScreen, { highlightedNode: 'personnel_academy', highlightRequest: 2 }));
-    expect(html).toContain('aria-label="$100,000 funding');
+    expect(html).not.toContain('$100,000');
+    expect(html).not.toContain('/h</small>');
+    expect(html).toMatch(/role="tab" aria-selected="(true|false)" class="dev-branch-chip[^"]*" aria-label="Staff, 0 of 8 owned[^"]*">Staff/);
+    expect(html.match(/class="btn btn-primary/g)?.length ?? 0).toBeLessThanOrEqual(1);
     expect(html).not.toMatch(/development points|Get Points|\bDP\b/);
     expect(html).toContain('Free at Level 3');
     expect(html).toContain('aria-label="Development branches"');
@@ -103,7 +106,7 @@ describe('development browsing and shared detail', () => {
     broke.department.funding = 0;
     const short = renderToStaticMarkup(createElement(DevelopmentTile, { option: nodeOptions(broke).find((entry) => entry.node.id === 'personnel_academy')!, budget: { funding: 0 }, highlighted: false, onOpen: () => {} }));
     expect(short).toContain('Needs more funding');
-    expect(short).toMatch(/<span data-short="yes">\$4,900<\/span>/);
+    expect(short).toMatch(/<span class="dev-price" data-state="short" data-short="yes">\$4,900<\/span>/);
     const owned = option('personnel_negotiation', 1);
     expect(tileState(owned)).toBe('owned');
     expect(renderToStaticMarkup(createElement(DevelopmentTile, { option: owned, budget, highlighted: false, onOpen: () => {} }))).toContain('Negotiation training. Owned');
@@ -114,18 +117,18 @@ describe('development browsing and shared detail', () => {
     expect(academy).toContain('role="dialog" aria-label="Training academy"');
     expect(academy).toContain('1 total training slot');
     expect(academy).toContain('2 total training slots');
-    for (const line of ['$4,900 or Level 3', '$7,200 or Level 5', '$11.3K or Level 7', 'Tier ladder', 'Current', 'Open Training', 'Buy tier I', 'Buy now', 'Or free', 'Free at Level 3']) expect(academy).toContain(line);
+    for (const line of ['$4,900 or Level 3', '$7,200 or Level 5', '$11.3K or Level 7', 'Tier ladder', 'Current', 'Open Training', 'Buy tier I for $4,900', 'Buy now', 'Or free', 'Free at Level 3']) expect(academy).toContain(line);
     expect(academy).not.toContain('Needs first');
-    expect(academy).not.toContain('Open Gear');
+    expect(academy).not.toContain('Open Armory');
     const manager = detail('logistics_equipment_manager');
-    for (const line of ['Standard repair prices', '25% cheaper repairs', '35% cheaper repairs', '45% cheaper repairs', '4 automatic service jobs', 'Open Gear']) expect(manager).toContain(line);
+    for (const line of ['Standard repair prices', '25% cheaper repairs', '35% cheaper repairs', '45% cheaper repairs', '4 automatic service jobs', 'Open Armory']) expect(manager).toContain(line);
     const drone = detail('intel_drone');
     expect(drone).toContain('Needs first');
     expect(drone).toMatch(/Thermal imaging<span class="sr-only"> · Required<\/span>/);
     expect(drone).toContain('Unlocks');
     expect(drone).toContain('Camera drone');
     expect(drone).toContain('Open Training');
-    expect(drone).toContain('Open Gear');
+    expect(drone).toContain('Open Armory');
     expect(drone).toContain('disabled=""');
     expect((drone.match(/btn-primary/g) ?? [])).toHaveLength(1);
   });

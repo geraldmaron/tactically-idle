@@ -31,40 +31,42 @@ const ARCHETYPE: Record<StaffArchetype, { label: string; line: string }> = {
   steady: { label: 'Steady', line: 'Modest at both, costs the least' },
 };
 
-/** HQ roster of hireable managers: a face, a status pill, the loop each automates and its latest action. */
+/** Command Staff on HQ as rows: who holds each post and what they did last. Hired posts come
+ * first, then the next post to open; the rest wait behind Show all, so vacant posts cost no height
+ * before they matter. */
 export function CommandStaff() {
   const g = useGame();
   const [openId, setOpenId] = useState<ManagerId | null>(null);
+  const [all, setAll] = useState(false);
   const now = Date.now();
-  const views = managerViews(g);
+  const views = [...managerViews(g)].sort((x, y) => Number(y.hired) - Number(x.hired) || Number(y.open) - Number(x.open));
   const hired = views.filter((view) => view.hired).length;
+  const shown = all ? views : views.slice(0, Math.min(views.length, hired + 1));
   return <section className="command-staff" aria-labelledby="command-staff-title">
     <div className="section-head">
-      <h2 id="command-staff-title" className="section-title"><Icon name="people" size={18} />Command staff</h2>
-      <span className="command-staff-count" aria-label={`${hired} of ${views.length} hired`}>{hired}/{views.length}</span>
+      <h2 id="command-staff-title" className="section-title">Command staff</h2>
+      <span className="section-count">{hired} of {views.length} hired</span>
     </div>
     <ul className="staff-list">
-      {[...views].sort((x, y) => Number(y.hired) - Number(x.hired)).map((view) => <StaffCard key={view.profile.id} view={view} now={now} open={openId === view.profile.id} onOpen={() => setOpenId(view.profile.id)} />)}
+      {shown.map((view) => <StaffRow key={view.profile.id} view={view} now={now} open={openId === view.profile.id} onOpen={() => setOpenId(view.profile.id)} />)}
     </ul>
+    {shown.length < views.length && <button type="button" className="staff-more" onClick={() => setAll(true)}>Show all {views.length} posts</button>}
     {openId && <ManagerSheet id={openId} g={g} now={now} onClose={() => setOpenId(null)} />}
   </section>;
 }
 
-function StaffCard({ view, now, open, onOpen }: { view: ManagerView; now: number; open: boolean; onOpen: () => void }) {
+function StaffRow({ view, now, open, onOpen }: { view: ManagerView; now: number; open: boolean; onOpen: () => void }) {
   const { profile, status } = view;
   const latest = view.log[0];
-  return <li><button type="button" className={`staff-card staff-card-${status}`} onClick={onOpen} aria-haspopup="dialog" aria-expanded={open}
+  const detail = view.hired ? `${personName(view)}${status === 'off' ? ', off duty' : ''} · ${latest ? `${latest.text}, ${relativeTime(latest.at, now)}` : view.activity}` : view.open ? `Post vacant · ${view.activity}` : view.activity;
+  return <li><button type="button" className={`ui-row staff-row staff-row-${status}`} onClick={onOpen} aria-haspopup="dialog" aria-expanded={open}
     aria-label={`${profile.title}${view.hired ? ` ${personName(view)}` : ', post vacant'}: ${statusLabel(view)}. Automating ${profile.loop.toLowerCase()}. ${latest ? latest.text : view.activity}`}>
-    <ManagerPortrait person={view.holder?.person ?? null} size={44} />
-    <span className="staff-card-main">
-      <span className="staff-card-top">
-        <strong className="staff-card-title">{profile.title}</strong>
-        <span className={`staff-pill staff-pill-${status}${view.open && !view.hired ? ' staff-pill-vacant' : ''}`}>{statusLabel(view)}</span>
-      </span>
-      <span className="staff-card-loop"><Icon name={LOOP_ICON[profile.id]} size={13} /><span>{view.hired ? <>{personName(view)} · </> : <span className="staff-card-vacant">Post vacant · </span>}{profile.loop}</span></span>
-      <span className="staff-card-log">{latest ? <>{latest.text}<span className="staff-card-when"> · {relativeTime(latest.at, now)}</span></> : view.activity}</span>
+    <span className="ui-row-lead"><ManagerPortrait person={view.holder?.person ?? null} size={40} /></span>
+    <span className="ui-row-main" aria-hidden="true">
+      <span className="ui-row-title">{profile.title}</span>
+      <span className="ui-row-detail">{detail}</span>
     </span>
-    <Icon name="chevronRight" size={16} className="staff-card-go" />
+    <span className="ui-row-trail" aria-hidden="true"><Icon name="chevronRight" size={18} /></span>
   </button></li>;
 }
 
@@ -191,7 +193,7 @@ function HireCard({ view, onHire }: { view: ManagerView; onHire: () => void }) {
     {view.hire && <div className="chips"><Chip icon="cash">{moneyFull(view.hire.funding)}</Chip></div>}
     {view.hire?.reason && <p className="reason">{view.hire.reason}</p>}
     <p className="dim">Opening the post puts three candidates on offer. You choose who to hire.</p>
-    <Button variant="primary" block onClick={onHire}>Open the post in Develop</Button>
+    <Button variant="primary" block onClick={onHire}>Open the post in Upgrades</Button>
   </div>;
 }
 
@@ -306,6 +308,6 @@ function QuartermasterPolicy({ g, onOpenGear }: { g: GameState; onOpenGear?: () 
       </select>
     </label>
     <p className="dim">Services idle gear below {EQUIPMENT_MANAGER.serviceBelow}% condition and keeps {moneyFull(EQUIPMENT_MANAGER.fundingReserve)} in reserve. Restock rules set: {g.department.restockRules.length || 'none'}.</p>
-    {onOpenGear && <Button size="sm" onClick={onOpenGear}>Open Gear maintenance</Button>}
+    {onOpenGear && <Button size="sm" onClick={onOpenGear}>Open the Armory</Button>}
   </div>;
 }

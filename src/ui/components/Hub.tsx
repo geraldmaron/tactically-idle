@@ -1,60 +1,42 @@
-// The HQ hub: the department building in cutaway, the familiar home screen of management games,
-// each room a labeled button to the place it stands for. The painting is decoration; every room is
-// a real button with its own name and status, and they read in order as a list, so the hub works
-// without the image (a failed file shows the same buttons on a plain building block).
+// The HQ cutaway: the department building as a picture of its state. Rooms are not buttons to the
+// tabs (docs/ui-ux-audit.md, "HQ"); a room speaks with a pin only when something in it needs the
+// player, and a pin that leads somewhere is a button. Without the painting the pins sit on a plain
+// block, so the hub reads the same without the image.
 import { useState } from 'react';
-import type { CSSProperties } from 'react';
-import { Icon } from '../icons';
-import type { IconName } from '../icons';
 import { plateUrl } from '../art/Plates';
 import './hub.css';
 
-export interface HubRoom {
-  id: string;
-  label: string;
-  icon: IconName;
-  /** One short status, such as "3 calls" or "1 place free". */
-  status: string;
-  /** Something the player can act on now: the room's badge lights. */
-  alert?: boolean;
-  onOpen(): void;
+export type HubRoom = 'dispatch' | 'training' | 'lockers' | 'armory' | 'briefing' | 'garage';
+export interface HubPin {
+  room: HubRoom;
+  text: string;
+  /** act: the player's move (a call waits); harm: something is going wrong. */
+  tone?: 'act' | 'harm';
+  onOpen?: () => void;
 }
 
-/** Where each room sits on the painting, as percentages of its width and height (hub_hq.webp). */
-const ROOM_BOX: Record<string, { x: number; y: number; w: number; h: number }> = {
-  dispatch: { x: 7.5, y: 20.5, w: 40.5, h: 17 },
-  training: { x: 52, y: 20.5, w: 40.5, h: 17 },
-  lockers: { x: 7.5, y: 41, w: 40.5, h: 18 },
-  armory: { x: 52, y: 41, w: 40.5, h: 18 },
-  briefing: { x: 7.5, y: 62, w: 40.5, h: 19 },
-  garage: { x: 52, y: 62, w: 40.5, h: 19 },
+/** Where each room's pin stands on the cropped painting (hub_hq.webp), left or right column and
+ * the room's height as a share of the frame. */
+const PIN_AT: Record<HubRoom, { side: 'left' | 'right'; top: number }> = {
+  dispatch: { side: 'left', top: 17 }, training: { side: 'right', top: 17 },
+  lockers: { side: 'left', top: 49 }, armory: { side: 'right', top: 49 },
+  briefing: { side: 'left', top: 78 }, garage: { side: 'right', top: 78 },
 };
 
-export function Hub({ title, kicker, line, rooms }: { title: string; kicker: string; line: string; rooms: HubRoom[] }) {
+export function Hub({ pins }: { pins: HubPin[] }) {
   const src = plateUrl('hub_hq');
   const [failed, setFailed] = useState(false);
   const painted = !!src && !failed;
   return <section className={`hub${painted ? '' : ' hub-plain'}`} aria-label="Headquarters">
     {painted && <img className="hub-art" src={src} alt="" aria-hidden="true" decoding="async" draggable={false} onError={() => setFailed(true)} />}
-    <header className="hub-sign">
-      <span className="hub-kicker">{kicker}</span>
-      <h2 className="hub-title">{title}</h2>
-      <p className="hub-line">{line}</p>
-    </header>
-    <ul className="hub-rooms">
-      {rooms.map((room) => {
-        const box = ROOM_BOX[room.id];
-        const style = box ? { '--x': `${box.x}%`, '--y': `${box.y}%`, '--w': `${box.w}%`, '--h': `${box.h}%` } as CSSProperties : undefined;
-        return <li key={room.id} className="hub-room" style={style}>
-          <button type="button" onClick={room.onOpen} className={room.alert ? 'hub-room-alert' : undefined} aria-label={`${room.label}: ${room.status}`}>
-            <span className="hub-pin">
-              <Icon name={room.icon} size={15} />
-              <span className="hub-pin-text"><b>{room.label}</b><small>{room.status}</small></span>
-              {room.alert && <i className="hub-badge" aria-hidden="true" />}
-            </span>
-          </button>
+    {pins.length > 0 && <ul className="hub-pins">
+      {pins.map((pin) => {
+        const at = PIN_AT[pin.room];
+        const body = <>{pin.tone === 'act' && <i className="hub-dot" aria-hidden="true" />}{pin.text}</>;
+        return <li key={pin.room} className={`hub-pin${pin.tone ? ` hub-pin-${pin.tone}` : ''}`} style={{ top: `${at.top}%`, [at.side]: 'var(--sp4)' }}>
+          {pin.onOpen ? <button type="button" onClick={pin.onOpen}>{body}</button> : <span>{body}</span>}
         </li>;
       })}
-    </ul>
+    </ul>}
   </section>;
 }

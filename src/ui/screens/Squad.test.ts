@@ -5,7 +5,6 @@ import { createInitialState } from '../../sim/department';
 import { CampaignSlots } from '../../sim/campaign-slots';
 import { dispatch } from '../../sim/game';
 import type { Command, SquadId } from '../../sim/types';
-import { ChoiceRail } from '../components/ChoiceRail';
 import { DEFAULT_NAV, NavContext, type NavApi } from '../components/nav';
 import { INITIAL_SQUAD_VIEW, updateSquadView, type SquadViewAction } from '../components/squad-view';
 import { Button } from '../components/ui';
@@ -46,21 +45,13 @@ function typeName(squadId: SquadId, value: string) {
   const input = elements(panel(squadId).tree).find((element) => element.type === 'input')!;
   input.props.onChange?.({ target: { value } } as never);
 }
-function selectSquad(squadId: SquadId) {
-  const screen = capture(SquadScreen);
-  const rail = elements(screen.tree).find((element) => element.type === ChoiceRail && (element.props as { label?: string }).label === 'Squads')!;
-  (rail.props as unknown as { onChange: (id: SquadId) => void }).onChange(squadId);
-}
-
 beforeEach(() => { state = createInitialState(NOW, 120); view = INITIAL_SQUAD_VIEW; act.mockClear(); });
 
-describe('immediate squad navigation and separate rename drafts', () => {
-  it('keeps A’s open draft away from B through repeated switches, including immediate submit', () => {
+describe('squads as blocks with separate rename drafts', () => {
+  it('keeps A’s open draft away from B, including an immediate submit of B', () => {
     const originalB = state.squads[1].name;
     startRename('A');
     typeName('A', 'Alpha draft');
-    for (const id of ['B', 'A', 'B'] as const) selectSquad(id);
-    expect(view.selectedId).toBe('B');
     expect(panel('B').html).not.toContain('<form');
     expect(panel('B').html).not.toContain('Alpha draft');
     expect(state.squads[1].name).toBe(originalB);
@@ -74,7 +65,6 @@ describe('immediate squad navigation and separate rename drafts', () => {
     expect(state.squads[0].name).toBe('Alpha');
     expect(state.squads[1].name).toBe('Bravo draft');
     expect(view.renameDrafts).toEqual({ A: 'Alpha draft' });
-    selectSquad('A');
     expect(panel('A').html).toContain('value="Alpha draft"');
     expect(panel('A').html).not.toContain('autofocus');
   });
@@ -100,28 +90,23 @@ describe('immediate squad navigation and separate rename drafts', () => {
     expect(panel('A').html).toContain('<form');
   });
 
-  it('recovers selection and drafts on returning from Training or another destination', () => {
-    selectSquad('B'); startRename('B'); typeName('B', 'Keep my draft');
+  it('recovers drafts on returning from Training or another destination', () => {
+    startRename('B'); typeName('B', 'Keep my draft');
     const before = capture(SquadScreen).html;
     expect(capture(SquadScreen, { squadSection: 'training' }).html).toContain('Search courses');
     const after = capture(SquadScreen).html;
     expect(after).toBe(before);
-    expect(after).toContain('id="selected-squad-panel-tab-B" aria-label="Squad B, Bravo" aria-selected="true"');
-    expect(after).toContain('role="tabpanel" aria-labelledby="selected-squad-panel-tab-B" tabindex="0"');
     expect(after).toContain('value="Keep my draft"');
   });
 
-  it('uses a valid first squad immediately when the remembered squad no longer exists', () => {
-    selectSquad('D');
-    const html = capture(SquadScreen).html;
-    expect(html).toContain('role="tabpanel" aria-labelledby="selected-squad-panel-tab-A"');
-    expect(html).toContain('aria-label="Squad A, Alpha" aria-selected="true"');
-  });
-
-  it('reserves roster portrait geometry before the first width measurement', () => {
-    const html = panel('A').html;
-    expect(html.match(/class="ocard-art" style="aspect-ratio:1 \/ 1\.04"/g)).toHaveLength(4);
-    expect(html).not.toContain('class="ocard-art" style="height:83px"');
+  it('shows every squad as a block and each officer once in Squads and once in Roster', () => {
+    const officers = Object.keys(state.officers).length;
+    const squads = capture(SquadScreen).html;
+    for (const squad of state.squads) expect(squads).toContain(`aria-label="Squad ${squad.id}, ${squad.name}"`);
+    expect(squads.match(/class="ui-row officer-row /g)).toHaveLength(officers);
+    expect(squads).not.toContain('ocard-tile');
+    const roster = capture(SquadScreen, { squadSection: 'roster' }).html;
+    expect(roster.match(/class="ui-row officer-row /g)).toHaveLength(officers);
   });
 
   it('recreates the navigation owner on New and Load even though campaigns share squad A/B ids', () => {
@@ -129,7 +114,7 @@ describe('immediate squad navigation and separate rename drafts', () => {
     const saves = new CampaignSlots({ getItem: (key) => entries.get(key) ?? null, setItem: (key, value) => { entries.set(key, value); } }, NOW, () => 120);
     const ownerKey = () => { session = saves.getSnapshot().session; return App().key; };
     const first = ownerKey();
-    startRename('A'); typeName('A', 'First campaign only'); selectSquad('B');
+    startRename('A'); typeName('A', 'First campaign only');
     expect(INITIAL_SQUAD_VIEW).toEqual({ selectedId: null, renameDrafts: {} });
     expect(saves.newGame(2, 'Second campaign', NOW).ok).toBe(true);
     const next = ownerKey();
