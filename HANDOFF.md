@@ -32,6 +32,15 @@ older save.
 | tooling | Haiku | baseline captures first, then the capture tool, the Lab `GameFrame.tsx` and First Run parts of `ui-leftovers` | its own | `docs/captures/`, `src/dev/`, `src/ui/settings/`, `scripts/play-loop.mjs` |
 | design | Sonnet | `monetization-design` | its own | `docs/monetization.md` |
 
+Also running (owner requests, 2026-10-22):
+
+| Session | Model | Work | Writes only |
+|---|---|---|---|
+| going-live-teardown | Opus | hostile teardown of Going Live and a multi-pass depth method | `docs/calls/notes/going-live-teardown.md`, `docs/calls/depth-mesh-method.md`, `docs/calls/notes/pilot/` |
+| live-chat-immersion | Sonnet | chat keyed to each pressure source's drain, reading like a real live | `docs/call-pressure.md`, `.agents/skills/swat-call-prose/` references, chat and pressure lines in `src/content/call-trees/hostage-live.ts`; after visual merges, `src/ui/screens/LiveFeed.tsx`, `live-chat.ts` and their tests |
+
+Merged so far in wave 1: engine (702fc5c), the design note (500bc16), tooling (9497b63).
+
 Wave 2 after the merge: `squad-names` (needs `visual-story`), `owner-visual-picks` once the owner
 picks, then `rewarded-ads` and `real-purchases` from the design note.
 
