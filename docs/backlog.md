@@ -200,7 +200,7 @@ fingerprints and Lab handle a list. Distinct from `new-call-types`, which adds k
 
 ### going-live-spine: Going Live rebuilt structure first
 Tags: job=command; journeys=choices-branch, chance-not-script; probes=none (content structure); lane=calls
-Needs: start=none; integrate=timeout-breaks-commitment; ship=going-live-review
+Needs: start=none; integrate=none; ship=going-live-review
 
 The 2026-10-22 teardown (`docs/calls/notes/going-live-teardown.md`) and Codex's separate read rejected the
 call back to `swat-call-design`. The structural passes are done on branch `claude/going-live-spine-25ad3c`
@@ -221,6 +221,8 @@ situations), but of the first 12 fixes only #4, #10, #11 and #12 hold. Left, in 
 2. Situation 2 draws the rider volatile and situation 1 steady, so the agitation trace before the turn
    tells the situations apart (Codex measured -4.1 against -9.3); the draw is in
    `src/content/incidents/hostage.ts`.
+   A run-out can now break a commitment (`TreeTimeout.breaks`, 2026-10-22): `way_out`'s timeout names the
+   lie, and the lie still needs its outcome breaker.
 3. The prose passes from the briefs in the branch's `docs/calls/notes/going-live-spine.md`: scene, menu,
    consequence and chat layers, each one Sonnet writer across the whole call, then one integration edit
    and `swat-writing-review` by a separate reader.
@@ -230,15 +232,6 @@ situations), but of the first 12 fixes only #4, #10, #11 and #12 hold. Left, in 
    raises it back with choices that really read the building state (Codex: prose cannot fix it).
 Done: the teardown's blocks closed as data with the `npm run check:paths` report attached, `npm run verify`
 green, and a separate review.
-
-### timeout-breaks-commitment: A run-out can break a promise the player made
-Tags: job=command; journeys=chance-not-script; probes=none (commitment state, not odds); lane=engine
-Needs: start=none; integrate=none; ship=none
-
-From the Going Live spine's Codex read: `TreeTimeout` cannot break a commitment, so when the exit decision
-(`way_out`) runs out while the player's lie is standing, the call ends held with the lie still open and
-never charged. Done: a timeout can break the commitments its authored route names, shown by a test on a
-fixture that runs out with a commitment standing.
 
 ### threat-after-close: A threat never lands after the result that ended its scene
 Tags: job=command; journeys=answer-a-call; probes=none (ordering, not odds); lane=engine
