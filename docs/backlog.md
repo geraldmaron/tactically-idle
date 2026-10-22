@@ -215,13 +215,14 @@ fixed it as data: the front release, s2 evidence of non-delivery and retention, 
 69.4), the repost cue true whoever is inside, a reachable `clip_out` beat, the wall prompt, honest ending
 summaries, and the door and window probe back to 12 of 24. `check:paths` holds (turn reach 78/95/93/96).
 Codex's third read (`side-session-notes/local_0ef35909-1f92-43ed-b124-d0236bd4f320/going-live-spine-codex-round3.md`):
-9 of 10 hold, three medium findings, no block. Left, in order:
-1. The three findings, as data: `walk_live` adverse is tagged shame but still reads as crowd, so eight dither
-   minutes still give three crowd escalations; the minute-3 channel cut sets rate 0, which leaves the stream
-   "live, slowed" with chat still running, and the clock keeps advancing past the cut (engine side in
-   `beat-marks-before-clocks`). The pass proposes making the beat a warning, not a cut, and dropping the rate flag.
-   Also asked (spine sheet row O): `way_out`'s run-out text cannot differ by `nextIf` route; per-route text
-   would change `TreeTimeout`, an interface file, so it waits for a lead decision.
+9 of 10 hold, three medium findings, no block; all three fixed as data at 8d8a0fc (2026-10-22): `walk_live`
+adverse is now the shame event its tag names (crowd x3 routes 165 to 0 on the dither-aware walk), and the
+minute-3 beat is a suspension warning, not a cut, with the rate flag gone (the stream reads live throughout).
+The lead re-ran `check:paths` on 8d8a0fc: turn reach 78/95/93/96, uniform 56/57, nothing beaten. Left, in order:
+1. A decision before prose: `go_in` keeps its +8 on `clip_out`, which a warning now sets instead of a
+   suspension, so the entry bonus no longer has the stopped audience behind it. Keep it (the warning is
+   reason enough), shrink it, or move it. Also asked (spine sheet row O): `way_out`'s run-out text cannot
+   differ by `nextIf` route; per-route text would change `TreeTimeout`, an interface file.
 2. The prose passes from the briefs in the branch's `docs/calls/notes/going-live-spine.md`: scene, menu,
    consequence and chat layers, each one Sonnet writer across the whole call, then one integration edit
    and `swat-writing-review` by a separate reader.

@@ -123,8 +123,10 @@ Started together on 2026-10-22 (owner's go), briefs in the same notes folder:
 
 spine-pass2 READY (2026-10-22): `claude/spine-pass2-363cdf` at 44f5470, not merged (placeholder strings).
 All 10 second-read findings fixed as data, `check:paths` holds; Codex's third read: 9 of 10 hold, three
-medium findings, no block, recorded in backlog `going-live-spine` step 1. Stopped per its brief; the next step
-waits for the owner.
+medium findings, no block, recorded in backlog `going-live-spine` step 1. Stopped per its brief. Owner's go: the three
+round 3 findings fixed as data at 8d8a0fc; the lead re-ran `check:paths` there (turn reach 78/95/93/96,
+nothing beaten). Not run on the branch: full verify (the old call's pinned tests fail by design until step 3).
+Prose waits for the owner's next go.
 
 squad-names merged (cde797c; manifest files `src/sim/squad-names.ts` under kernel and re-render, bea1144):
 `npm run verify` 3,025 tests, art, build and no-lab green on the merged tip; the e2e passed 6 live calls at 390
