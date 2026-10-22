@@ -422,6 +422,19 @@ row and the shift report reopenable; assignment has one path; badges open the se
 about. Done: the e2e script reaches every former screen; hire-and-equip passes; the nav round
 trips return; captures at three widths.
 
+### tap-multiplier-content: Upgrades, power-ups and purchases that raise desk tap pay
+Tags: job=build; journeys=hire-and-equip; probes=none (department income, not call odds); lane=deferred
+Needs: start=real-purchases (for entitlements only); integrate=none; ship=none
+
+Tap to earn shipped 2026-10-21 with the base multiplier only (`TAP_MULTIPLIERS` in
+`src/sim/department-taps.ts`): upgrades, timed power-ups and entitlements share one grant path,
+kinds multiply and bonuses of one kind add. Add development-tree desk upgrades granted on
+purchase, timed power-ups with a way to earn them, and store entitlements through
+`grantEntitlement` once `real-purchases` decides what is sold. Entitlements need receipt checks
+before granting, since the local save can be edited. Show the combined multiplier and any running
+power-up near the desk, and decide whether owned upgrades pick up a later rebalance. Done: each
+kind has at least one entry, a test proves it raises tap pay, and the player can see what is active.
+
 ### onboarding: A first call that teaches the loop
 Tags: job=command; journeys=answer-a-call; probes=none (teaching flow); lane=deferred
 Needs: start=none; integrate=none; ship=none
