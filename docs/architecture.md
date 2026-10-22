@@ -16,7 +16,7 @@ syntax tree (`src/dev/import-graph.ts`, with the parser Vite ships), and a dynam
 | scenario | 10 | 3113 | kernel, world, catalog | Turns a drawn call into a playable definition: cast, placement on the blueprint, compiled tree. |
 | engine | 68 | 15299 | kernel, world, catalog, scenario | Game rules and state: department, economy, operations, resolution, outcomes, saves. |
 | qa | 38 | 6033 | kernel, world, catalog, scenario, engine | Content gates, balance measurement, fixtures and test support. Never loaded by the game. |
-| ui | 145 | 19405 | kernel, world, catalog, scenario, engine | Player screens, the blueprint renderer, portraits and the store that dispatches commands. |
+| ui | 148 | 19506 | kernel, world, catalog, scenario, engine | Player screens, the blueprint renderer, portraits and the store that dispatches commands. |
 | lab | 101 | 17694 | kernel, world, catalog, scenario, engine, qa, ui | The dev-only Scenario Lab and dev sheets. Reads everything, never ships. |
 | shell | 3 | 383 | kernel, world, catalog, engine, ui, lab | Entry points that choose which app to mount. |
 
@@ -29,8 +29,8 @@ syntax tree (`src/dev/import-graph.ts`, with the parser Vite ships), and a dynam
 | officer | 19 | 2389 | Who the player sends: ratings, traits, stress, injuries, certifications, careers and squads. |
 | item | 7 | 1394 | What they carry: the item catalog, ratings and capabilities, force risk, inventory and wear. |
 | scenario | 67 | 15315 | What happens: call trees, placement on the blueprint, choices, chance per choice, branches and clocks, and the call-time logistics (loadouts, resupply, outside support) that read the items. |
-| metric | 30 | 5260 | What it meant: outcome scoring, harm, debriefs, department reputation, money and progression, and the Command Staff who run the department. |
-| platform | 240 | 37737 | Everything that serves the systems above: records, randomness, saves, the store, screens and tooling. |
+| metric | 30 | 5261 | What it meant: outcome scoring, harm, debriefs, department reputation, money and progression, and the Command Staff who run the department. |
+| platform | 243 | 37837 | Everything that serves the systems above: records, randomness, saves, the store, screens and tooling. |
 
 ## System dependency chain
 
@@ -101,4 +101,4 @@ Each input a system feeds into a choice's chance, and whether the engine actuall
 None.
 
 
-Cross-layer runtime imports in total: 802.
+Cross-layer runtime imports in total: 803.
