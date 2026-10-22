@@ -46,6 +46,11 @@
   /* Named people in call text keep their role colours; each pairs with a second cue
      (src/ui/people/people.css). */
   --subject: #b99cff;
+  /* Call-type badge colours (src/ui/icons/kit.css) */
+  --ct-hostage: #b99cff;
+  --ct-barricade: #4fc3d9;
+  --ct-armed: #ff7a8a;
+  --ct-rescue: #6ea8ff;
   --civilian: #ffa6da;
   --person: #8d9cb4;
   --officer: #9cc4ff;
