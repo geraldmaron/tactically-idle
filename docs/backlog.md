@@ -200,20 +200,38 @@ fingerprints and Lab handle a list. Distinct from `new-call-types`, which adds k
 
 ### going-live-spine: Going Live rebuilt structure first
 Tags: job=command; journeys=choices-branch, chance-not-script; probes=none (content structure); lane=calls
-Needs: start=none; integrate=none; ship=going-live-review
+Needs: start=none; integrate=timeout-breaks-commitment; ship=going-live-review
 
-The 2026-10-22 teardown (`docs/calls/notes/going-live-teardown.md`) and Codex's separate read both say
-reject, back to `swat-call-design`: one escalation used 34 times (the handgun on the manager); the
-best-odds player learns who took the bag in 0 of 300 drawn calls; `raised` always equals not
-`rider_clear`, so the first adverse roll answers the only unknown; the exit is asked twice
-(`way_out`, `last_word`); the lie is free in situation 1; previews false on a truth; threats land
-after the result that closed their scene; the clerk leaves free in 30 of 43 lines. Rebuild per
-`docs/calls/depth-mesh-method.md`: spine and consequence graph gated on engine measures before prose.
-Done: those blocks closed as data (escalations from four or more mechanisms, no more than two per
-path; truths decoupled or the coupling priced; one exit decision; the lie charged in both situations;
-the turn reached by every balance style (random, best_odds, patient, fast) in at least 50% of drawn
-calls, owner target 2026-10-22; previews true in every situation), the `npm run check:paths`
-report attached, and a separate review.
+The 2026-10-22 teardown (`docs/calls/notes/going-live-teardown.md`) and Codex's separate read rejected the
+call back to `swat-call-design`. The structural passes are done on branch `claude/going-live-spine-25ad3c`
+(tip 123efc8, not merged: every string is a placeholder sketch), following `docs/calls/depth-mesh-method.md`:
+one hidden fact (`rider_clear`), one exit decision, the lie charged in both situations, eight escalation
+mechanisms, stage 3 threats as external events. `npm run check:paths -- hostage_crisis`, re-run by the lead:
+`rider_clear` settled for random 78%, best_odds 95%, patient 93%, fast 96% (owner target 50% in every
+style, 2026-10-22), dominance flags 10 to 0, cross-stage echo on played paths 60 to 85% down to 0 to 1%.
+Left, in order:
+1. Codex's second read of the fixed spine (the first rejected it; all 12 findings were fixed in data and
+   not re-read).
+2. Situation 2 draws the rider volatile and situation 1 steady, so the agitation trace before the turn
+   tells the situations apart (Codex measured -4.1 against -9.3); the draw is in
+   `src/content/incidents/hostage.ts`.
+3. The prose passes from the briefs in the branch's `docs/calls/notes/going-live-spine.md`: scene, menu,
+   consequence and chat layers, each one Sonnet writer across the whole call, then one integration edit
+   and `swat-writing-review` by a separate reader.
+4. The tests that pin the old call's ids, fingerprints and snapshots (53 failures in 27 files on the
+   branch), recaptured or rewritten on purpose, and the `wiring` probe "door and window states" for the
+   hostage call, which reads 0.25 against its 0.27 floor: floors never fall, so the rebuild raises it back.
+Done: the teardown's blocks closed as data with the `npm run check:paths` report attached, `npm run verify`
+green, and a separate review.
+
+### timeout-breaks-commitment: A run-out can break a promise the player made
+Tags: job=command; journeys=chance-not-script; probes=none (commitment state, not odds); lane=engine
+Needs: start=none; integrate=none; ship=none
+
+From the Going Live spine's Codex read: `TreeTimeout` cannot break a commitment, so when the exit decision
+(`way_out`) runs out while the player's lie is standing, the call ends held with the lie still open and
+never charged. Done: a timeout can break the commitments its authored route names, shown by a test on a
+fixture that runs out with a commitment standing.
 
 ### threat-after-close: A threat never lands after the result that ended its scene
 Tags: job=command; journeys=answer-a-call; probes=none (ordering, not odds); lane=engine
@@ -222,7 +240,8 @@ Needs: start=none; integrate=none; ship=none
 Seen in the lead's play and the teardown: after `cut_feed` the result has viewers "turn" on a stream that
 just ended, and after `wait_night` the rider "watches the light from behind the counter" after walking out.
 Done: a threat or clock cue whose text describes a scene the committed result ended does not commit after
-it, shown by a test on Going Live's `wait_night` and `cut_feed` paths. Folds in the cue-after-stop rule
+it, shown by a test on Going Live's `wait_night` and `cut_feed` paths. The stream's repost cue in
+`src/content/incidents/hostage.ts` also reads the rider after a walk-out on a hold. Folds in the cue-after-stop rule
 listed under `live-chat-tooling`.
 
 ### mesh-trial: Compare the depth mesh with one author under the same gates
