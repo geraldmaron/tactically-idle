@@ -119,9 +119,14 @@ pressure a minute, and the debrief's audience factor on trust (`CLOCK_RULES_V1.f
 
 ## Chat that follows the pressure
 
-**Status.** Specified 2026-10-22 and not built. What ships today is the cue-keyed chat above. The
-data shape, the phase pools and the gates are engine and tooling requests, and the writing rules are
-in `swat-call-prose` (`references/live-chat.md`).
+**Status.** Built 2026-10-22 for Going Live. The shape is `TreeThreat.chat` and the state pools on
+`PressureSource.reactions` (`src/content/call-trees/types.ts`, `src/sim/scenario-types.ts`), bound by
+the compiler (`chatFor` in `trees-v13/compile.ts`), and played by `src/ui/screens/live-chat.ts`
+(`chatTick`) through `SourceTicker`. The gates are in `src/content/incidents/chat.test.ts`. A
+`chat` rides on the shown threat and no effect reads it, so a call compiles to the same mechanics with
+and without it (a test says so). The writing rules are in `swat-call-prose`
+(`references/live-chat.md`). Still open: `chatIf`, a `{street}` token, the checker's chat mode, the
+Lab's phase view and the cue-after-stop rule (backlog).
 
 **Why.** A gauge that says viewers are closing in on the store's address, with ten minutes left,
 promises something the chat has to show. Measured on Going Live 2026-10-22, the chat read the
@@ -202,19 +207,23 @@ its line, so a remount never gives one handle two lines.
   and pile-ons, emoji on some lines, rare typos. The writing rules and the numbers are in
   `swat-call-prose` (`references/live-chat.md`).
 
-**What the engine needs** (requests, not built):
+**What the engine has, and what it doesn't yet:**
 
-- `TreeThreat.chat` with the three phase threads (or `false`), `PressureSource.reactions` with
-  `stopped`, `slowed`, `surged` and `dropped` pools, and a chat line that can carry its speaker and
-  an `after` (`src/content/call-trees/types.ts`, `src/sim/scenario-types.ts`, the compiler's
-  binding, `FillView.surged`). `FillView.stopped` today also means the owner is safe or out
-  (`sim/clocks.ts`), so the request settles whether a stop pool means "the stream went dark".
+- Built: `TreeThreat.chat` with the three phase threads (or `false`), `PressureSource.reactions`
+  with `stopped`, `slowed`, `surged` and `dropped` pools, a chat line that carries its speaker and an
+  `after`, and `FillView.surged`. A bad speaker (not a role of the call or `{handle}`), a bad `after`,
+  or a threat that names a `{handle}` and doesn't end on that commenter's line throws at compile.
+  `FillView.stopped` also means the owner is safe or out (`sim/clocks.ts`), so a stop pool reads as
+  "the stream went dark".
+- `chat: false` is used on the two Going Live nodes that are only reached once the stream is down.
+  Nothing yet checks that against the call graph.
 - Later, `chatIf` on a threat: extra early lines when an earlier choice's mark is set, so the chat
   remembers that the door was seen or the lie was found (the same `when` shape as `promptIf`).
 - A `{street}` token for the front street's name, so viewers can guess a street that matches the
   map. Until it exists, chat names no street.
 
-**What a gate can and can't check.** Gates (a tooling request) cover shape and wording: every
+**What a gate can and can't check.** The gates in `src/content/incidents/chat.test.ts` cover shape and
+wording: every
 reachable-with-the-stream threat has all three phases at their floor, line length in graphemes, the
 banned characters and words, no repeated line or four-word run across the call's whole chat, the
 emoji allow list and share, no emoji beside a harm word, the poster's line present and last, `after`

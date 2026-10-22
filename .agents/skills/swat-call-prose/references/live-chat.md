@@ -2,9 +2,10 @@
 
 Rules for every viewer line on a stream or crowd: the stream's cue pools, a threat's phase threads, the
 state pools and the spike pool. The engine rule (what plays when) is in `docs/call-pressure.md`,
-"Chat that follows the pressure". This file is how the lines are written and read. The shape is
-specified and not yet built, so until it ships a call can write only the cue pools and the spike
-pool, and the sections below on threads, `after` and the state pools are the plan for the rest.
+"Chat that follows the pressure". This file is how the lines are written and read. The shape is built:
+a threat's `chat` (`TreeThreat` in `src/content/call-trees/types.ts`) and the state pools on the
+stream's `reactions`. Going Live is the one call that uses it. `src/content/incidents/chat.test.ts`
+holds the gates.
 
 Every example here is invented, from one call that is not in the game (a bartender streams from a
 locked bar and the threat is "Bar named by {handle}"). Never copy one into data.
@@ -239,7 +240,7 @@ These are the rules every line is read against. E numbers are in
 
 ## What a gate can check and what only a reader can
 
-A gate (a tooling request) can check: a thread exists per threat and phase at its floor (or the
+The gates in `chat.test.ts` check, and the Lab can't yet show: a thread exists per threat and phase at its floor (or the
 node is reached only after the stream stops and says `chat: false`), length in graphemes, the banned characters, words and emoji, the share of emoji lines, no emoji beside a
 harm word, no repeated line or four-word run across the call's chat, the poster's line is present
 and last when the threat names `{handle}`, `after` names a real beat, a state pool exists wherever

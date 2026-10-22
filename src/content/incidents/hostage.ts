@@ -35,11 +35,11 @@ const STREAM: Clock = { id: 'stream', label: '{rider.first}’s stream', kind: '
       // strangers off the {outlet} repost.
       byCue: [
         ['{rider.first} you ok??', 'wait where are you', 'looks like a corner store to me', 'they did you so dirty', 'stay safe {rider.first}', 'is the audio ok for everyone',
-          'why is it so dark in there', 'is this a bit', 'just got here whats going on', 'they cut me off last year too', 'who is that on the floor',
+          'why is it so dark in there', 'is this real', 'just got here whats going on', 'they cut me off last year too', 'who is that on the floor',
           'battery at 9 percent cant leave now', 'turn your brightness up', 'answer your phone {rider.first}', 'same thing happened to me in march',
           'post the order number', 'whats with the lights outside 👀', 'thats your scooter out front right'],
         ['wait is that real', 'put it away please', 'cops all over outside', 'whats {manager.first} supposed to say', 'this is insane', 'my order from there was late too',
-          'nah {rider.first} not like this', 'somebody report the stream', 'reporting doesnt do anything lol', 'i can hear sirens from my place',
+          'nah {rider.first} not like this', 'somebody report the stream', 'reporting doesnt do anything', 'i can hear sirens from my place',
           'anyone else in there??', 'who is that by the register', 'just walk out {rider.first}', 'how many people are in there',
           'what did {manager.first} even say', 'clipping this', 'my cousin works two blocks from there', 'dont post where this is'],
         ['so many patrol cars out there', 'let them go', '{rider.first} never took anything from anybody', 'why is the camera shaking', 'are they gonna rush it', 'i know that store',
@@ -52,10 +52,10 @@ const STREAM: Clock = { id: 'stream', label: '{rider.first}’s stream', kind: '
           'watching from three states away', '{outlet_short} comments are way worse', 'yall dont know the whole story', 'who else is in there with them',
           'how is this still up', 'please let everybody walk out', 'i used to work nights there', 'hope the negotiator knows what theyre doing', 'are there reporters outside'],
       ],
-      spike: ['WHAT', 'wait', 'whoa', 'what is this', 'hang on', 'hello??', 'ok what', 'is that new', 'look at the count', 'huh'],
+      spike: ['WHAT', 'wait', 'whoa', 'what is this', 'hang on', 'hello??', 'ok what', 'is that new', 'what was that', 'huh'],
       // Once, in order, when the stream's state begins: a cut, the camera turned to the wall, the rider
       // playing to the chat, or the count falling a seventh or more (a second phone taking over).
-      stopped: ['wait where did the stream go', 'it says offline', 'did someone cut it', '{stream_app} just ended it'],
+      stopped: ['wait where did the stream go', 'it says offline', 'did someone cut it', 'someone said {stream_app} pulled it'],
       slowed: ['why is it a wall now', 'cant see anything', '{rider.first} turn it around', 'the audio still works though'],
       surged: ['{rider.first} is reading us out loud', 'say hi to me', '{rider.first} answered my message', 'ok now everyone is typing'],
       dropped: ['half the chat just left', 'is the stream lagging', 'the count fell off a cliff', 'where did everybody go', 'my feed froze for a second'],
