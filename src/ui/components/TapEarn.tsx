@@ -2,6 +2,8 @@
 // multipliers (sim/department-taps.ts). Taps are batched into one tapEarn command every
 // FLUSH_MS, so a fast thumb saves once per batch instead of once per tap. A tap the books would not
 // credit (over the rate cap) shows nothing, so the chip never promises money the engine drops.
+// The cap itself stays silent, with no meter or warning (owner 2026-10-21, as idle tap games do):
+// a human thumb rarely reaches it, and the button still presses.
 // Self-contained so the desk restyle can move it.
 import { useEffect, useRef, useState } from 'react';
 import { tapAllowance, tapValue } from '../../sim/department-taps';

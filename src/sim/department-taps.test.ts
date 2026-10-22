@@ -56,7 +56,13 @@ describe('a tap', () => {
 });
 
 describe('multipliers', () => {
-  it('stack as a product of every kind', () => {
+  it('add within a kind and multiply across kinds', () => {
+    const s = withAll(createInitialState(T0));
+    grantMultiplier(s.department.taps!, { id: 'filing_cabinet', source: 'upgrade', factor: 1.5 }, T0);
+    expect(tapValue(s.department, T0)).toBe((1 + 1 + 0.5) * 1.5 * 3);
+  });
+
+  it('multiply across kinds, one of each', () => {
     const s = withAll(createInitialState(T0));
     expect(tapValue(s.department, T0)).toBe(1 * 2 * 1.5 * 3);
     const r = tap(s, 4);
@@ -73,11 +79,13 @@ describe('multipliers', () => {
     expect(tapLines(r.state).at(-1)!.amount).toBe(6);
   });
 
-  it('refresh a held power-up instead of stacking it with itself', () => {
+  it('extend a running power-up instead of stacking it with itself, and restart a spent one', () => {
     const taps = structuredClone(createInitialState(T0).department.taps!);
     grantMultiplier(taps, FIXTURES.coffee_run, T0);
     grantMultiplier(taps, FIXTURES.coffee_run, T0 + 10_000);
-    expect(taps.multipliers.filter((m) => m.id === 'coffee_run')).toEqual([expect.objectContaining({ expiresAt: T0 + 70_000 })]);
+    expect(taps.multipliers.filter((m) => m.id === 'coffee_run')).toEqual([expect.objectContaining({ expiresAt: T0 + 120_000, factor: 1.5 })]);
+    grantMultiplier(taps, FIXTURES.coffee_run, T0 + 500_000);
+    expect(taps.multipliers.find((m) => m.id === 'coffee_run')!.expiresAt).toBe(T0 + 560_000);
   });
 
   it('refuse a bad entry, and an entitlement only by an entitlement id', () => {

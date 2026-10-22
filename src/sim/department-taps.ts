@@ -7,7 +7,9 @@
 //
 // Multipliers come from a registry. Granting copies an entry into the save, so a held multiplier
 // keeps the factor it was granted with. Upgrades, power-ups and entitlements share one code path;
-// only the base ships today, and nothing a player can send grants one.
+// only the base ships today, and nothing a player can send grants one. They stack the way the long
+// running idle games stack bonuses (owner 2026-10-21): bonuses of one kind add, and the kinds
+// multiply, so each new source is worth having without one kind compounding on itself.
 import type { ActiveMultiplier, Department, HandlerResult, Id, MultiplierSource, TapState } from './types';
 import { postFunding } from './ledger';
 import { tunable } from './tuning';
@@ -65,14 +67,14 @@ export function multiplierProblem(def: MultiplierDef): string | null {
 }
 
 /** Hold `def` from `at`. Granting what is already held replaces it: an upgrade or entitlement takes
- * the new factor, and a power-up runs to the later of its old expiry and `at + durationMs` (the same
- * power-up never stacks with itself). */
+ * the new factor, and a power-up still running is extended by `durationMs` (owner 2026-10-21) while
+ * one that has run out starts again from `at`. The same power-up never stacks with itself. */
 export function grantMultiplier(taps: TapState, def: MultiplierDef, at: number): HandlerResult {
   const problem = multiplierProblem(def);
   if (problem) return { ok: false, reason: problem };
   const held = taps.multipliers.find((m) => m.id === def.id);
   const next: ActiveMultiplier = { id: def.id, source: def.source, factor: def.factor, grantedAt: at };
-  if (def.source === 'powerup') next.expiresAt = Math.max(held?.expiresAt ?? 0, at + def.durationMs!);
+  if (def.source === 'powerup') next.expiresAt = Math.max(held?.expiresAt ?? 0, at) + def.durationMs!;
   taps.multipliers = [...taps.multipliers.filter((m) => m.id !== def.id), next];
   return { ok: true };
 }
@@ -91,10 +93,17 @@ export function dropExpiredMultipliers(dep: Department, at: number): void {
   if (dep.taps) dep.taps.multipliers = dep.taps.multipliers.filter((m) => counts(m, at));
 }
 
-/** What one tap credits at `at`: the base times every multiplier still counting. */
+/** The combined multiplier at `at`: within a kind the bonuses add (×2 and ×1.5 make ×2.5), and the
+ * kinds multiply (an upgrade ×2 and a power-up ×2 make ×4). */
+export function tapMultiplier(dep: Department, at: number): number {
+  const bonus: Partial<Record<MultiplierSource, number>> = {};
+  for (const m of dep.taps?.multipliers ?? []) if (counts(m, at)) bonus[m.source] = (bonus[m.source] ?? 0) + m.factor - 1;
+  return Object.values(bonus).reduce((product, b) => product * Math.max(0, 1 + b), 1);
+}
+
+/** What one tap credits at `at`: the base times the combined multiplier. */
 export function tapValue(dep: Department, at: number): number {
-  const factor = (dep.taps?.multipliers ?? []).filter((m) => counts(m, at)).reduce((product, m) => product * m.factor, 1);
-  return TAP_TUNING.base * factor;
+  return TAP_TUNING.base * tapMultiplier(dep, at);
 }
 
 /** Taps the books would credit at `at`, fractional: the saved allowance refilled since it was saved,
