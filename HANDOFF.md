@@ -130,8 +130,10 @@ Owner's go for prose (2026-10-22): layers run one at a time, each cut from
 the previous tip. P4a scene: prose-scene (local_31193569, Sonnet), from 8d8a0fc, writes only strings in
 `hostage-live.ts` and `hostage.ts` plus its record; brief `going-live-spine/prose-p4a-brief.md`. P4a READY at
 4a5242f on `claude/prose-scene-6a2c7c` (worktree folder `frosty-goldwasser-fee639`): strings only, no data
-moved, check:strings clean in its fields. P4b menu is proposed as a card for the owner to start (brief
-`going-live-spine/prose-p4b-brief.md`, cut from 4a5242f). Then
+moved, check:strings clean in its fields. P4b menu READY at bc69268 on `claude/trusting-pasteur-41bc4e`; P4c
+consequences READY at 853b510 on `claude/happy-wilson-6259de` (no data moved, compiled-tree diff identical,
+check:paths unchanged). P5 is folded into the integration edit (Opus), proposed as a card (brief
+`going-live-spine/prose-integration-brief.md`). Then
 P4c consequences (P3 folded in), P5 chat variants, one integration edit, `swat-writing-review` by a separate
 reader, the old call's tests, then merge.
 
