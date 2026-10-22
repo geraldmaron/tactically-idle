@@ -1,17 +1,19 @@
-/* The HQ desk tap (TapEarn.tsx). A full-width target well over the 64px thumb minimum; the money
+/* Paid details on HQ (TapEarn.tsx). A full-width target well over the 64px thumb minimum; the money
    chips reuse the top bar's signed chip (finance.css .fund-delta) and float from the target's top. */
-.tap-earn { margin-top: 10px; }
+.tap-earn { margin-top: var(--sp3); }
 .tap-earn-target {
-  position: relative; display: flex; align-items: center; gap: 12px; width: 100%; min-height: 72px; padding: 12px 14px;
-  border: 1px solid var(--line-strong); border-radius: var(--radius); background: var(--panel-grad); box-shadow: var(--shadow-card);
-  color: var(--text); font: inherit; text-align: left; cursor: pointer;
+  position: relative; display: flex; align-items: center; gap: var(--sp3); width: 100%; min-height: 76px; padding: var(--sp3) var(--sp4);
+  border: 1px solid var(--hair-2); border-radius: var(--r2); background: var(--ink-2);
+  color: var(--t1); font: inherit; text-align: left; cursor: pointer;
   touch-action: manipulation; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent;
 }
-.tap-earn-target:active { transform: translateY(1px); border-color: var(--amber); }
-.tap-earn-target:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
-.tap-earn-icon { flex-shrink: 0; color: var(--amber-2); }
-.tap-earn-text { display: grid; gap: 2px; min-width: 0; }
-.tap-earn-text strong { font-family: var(--font-display); font-size: 18px; font-weight: 600; letter-spacing: 0.02em; }
-.tap-earn-text small { font-size: var(--s14); color: var(--text-dim); }
-.tap-earn-target .fund-deltas { top: 6px; left: auto; right: 34px; }
-@media (prefers-reduced-motion: reduce) { .tap-earn-target:active { transform: none; } }
+.tap-earn-target:active:not(:disabled) { transform: translateY(1px); border-color: var(--act); background: var(--act-soft); }
+.tap-earn-target:focus-visible { outline: 2px solid var(--act); outline-offset: 2px; }
+.tap-earn-target:disabled { cursor: default; border-color: var(--hair); background: var(--ink-1); }
+.tap-earn-icon { flex-shrink: 0; color: var(--act-hi); }
+.tap-earn-target:disabled .tap-earn-icon { color: var(--t3); }
+.tap-earn-text { display: grid; gap: var(--sp1); flex: 1; min-width: 0; }
+.tap-earn-text strong { font-family: var(--f-title); font-size: var(--s18); font-weight: 600; letter-spacing: 0.02em; }
+.tap-earn-line { font-size: var(--s14); color: var(--t2); }
+.tap-earn-target .fund-deltas { top: var(--sp2); left: auto; right: var(--sp6); }
+@media (prefers-reduced-motion: reduce) { .tap-earn-target:active:not(:disabled) { transform: none; } }

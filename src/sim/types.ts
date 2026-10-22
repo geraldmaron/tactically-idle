@@ -520,7 +520,7 @@ export interface LedgerEntry {
  * a timed power-up, or a real purchase. */
 export type MultiplierSource = 'upgrade' | 'powerup' | 'entitlement';
 
-/** A multiplier the department holds (save v16), copied from its registry entry when granted. */
+/** A multiplier the department holds (save v17), copied from its registry entry when granted. */
 export interface ActiveMultiplier {
   id: Id;
   source: MultiplierSource;
@@ -531,7 +531,7 @@ export interface ActiveMultiplier {
   expiresAt?: number;
 }
 
-/** Desk taps (save v16, sim/department-taps.ts): the refill-limited allowance and the multipliers. */
+/** Paid detail taps (save v17, sim/department-taps.ts): the refill-limited allowance and the multipliers. */
 export interface TapState {
   /** Taps the books can still credit as of `at`; refills with game time up to a burst. */
   credit: number;
@@ -587,7 +587,7 @@ export interface Department {
   candidateRefreshedAt?: number;
   /** Epoch ms of game-calendar day 0 (see src/sim/calendar.ts). */
   calendarEpoch: number;
-  /** Desk taps and their multipliers (save v16). Optional for fixtures; absent reads as no taps yet. */
+  /** Paid detail taps and their multipliers (save v17). Optional for fixtures; absent reads as no taps yet. */
   taps?: TapState;
 }
 
@@ -1219,7 +1219,7 @@ export type Command =
   | { type: 'offerRetention'; officerId: Id }
   | { type: 'startDetail'; officerId: Id }
   | { type: 'markIncidentsSeen' }
-  /** `count` taps on the HQ desk, batched by the screen (sim/department-taps.ts). */
+  /** `count` taps of paid detail work on HQ, batched by the screen (sim/department-taps.ts). */
   | { type: 'tapEarn'; count: number }
   // command staff (src/sim/command-staff.ts); unlockNode opens a post, hireStaff fills it
   | { type: 'setManagerEnabled'; managerId: ManagerId; enabled: boolean }

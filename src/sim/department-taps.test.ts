@@ -1,14 +1,16 @@
-// tap-earn: one tap credits the base times the held multipliers, as its own ledger line; power-ups
-// stop counting when they run out; the books credit at most TAP_TUNING.maxPerSecond taps a second;
-// taps never accrue offline; and the tap state survives a save round trip.
+// tap-earn: one tap credits the base times the held multipliers, as its own ledger line, and puts
+// strain on the free patrol officers up to the strained line; power-ups stop counting when they run
+// out; the books credit at most TAP_TUNING.maxPerSecond taps a second; taps never accrue offline;
+// and the tap state survives a save round trip.
 import { describe, expect, it } from 'vitest';
 import { createInitialState } from './department';
 import { dispatch } from './game';
 import { deserialize, serialize } from './save';
 import { HOUR_MS } from './economy';
 import { validatePatch } from './tuning';
+import { ratesAt } from './economy';
 import {
-  LEDGER_TAP_LABEL, MAX_COMBINED_MULTIPLIER, MAX_MULTIPLIER_FACTOR, MAX_TAP_BATCH, TAP_MULTIPLIERS, TAP_TUNING, grantEntitlement, grantMultiplier, tapAllowance, tapValue,
+  DETAIL_STRAIN_LINE, detailRoom, strainPerTap, LEDGER_TAP_LABEL, MAX_COMBINED_MULTIPLIER, MAX_MULTIPLIER_FACTOR, MAX_TAP_BATCH, TAP_MULTIPLIERS, TAP_TUNING, grantEntitlement, grantMultiplier, tapAllowance, tapValue,
   type MultiplierDef,
 } from './department-taps';
 import type { Command, GameState } from './types';
@@ -147,6 +149,115 @@ describe('overflow guards (Codex review)', () => {
   it('refuses tuning whose burst holds less than one whole tap', () => {
     expect(validatePatch({ TAP_TUNING: { maxPerSecond: 1, burstSeconds: 0.25 } }).length).toBeGreaterThan(0);
     expect(validatePatch({ TAP_TUNING: { maxPerSecond: 4, burstSeconds: 0.25 } })).toEqual([]);
+  });
+});
+
+describe('paid details strain the free patrol officers', () => {
+  const patrolIds = (s: GameState) => s.squads.filter((sq) => sq.duty === 'patrol').flatMap((sq) => sq.officerIds);
+  const others = (s: GameState) => Object.keys(s.officers).filter((id) => !patrolIds(s).includes(id));
+  const stressOf = (s: GameState, ids: string[]) => ids.map((id) => s.officers[id].stress);
+  const total = (s: GameState, ids: string[]) => stressOf(s, ids).reduce((a, b) => a + b, 0);
+
+  it('splits the strain across them and leaves every other squad alone', () => {
+    const s = createInitialState(T0);
+    const r = tap(s, 20);
+    expect(total(r.state, patrolIds(s)) - total(s, patrolIds(s))).toBeCloseTo(20 * strainPerTap(), 9);
+    expect(stressOf(r.state, others(s))).toEqual(stressOf(s, others(s)));
+    for (const id of patrolIds(s)) expect(r.state.officers[id].stress - s.officers[id].stress).toBeCloseTo(20 * strainPerTap() / patrolIds(s).length, 9);
+  });
+
+  it('skips patrol officers who are on a detail, in training or hurt', () => {
+    const s = createInitialState(T0);
+    const [away, hurt, ...rest] = patrolIds(s);
+    s.officers[away].assignment = { kind: 'training', courseId: 'x', startedAt: T0, endsAt: T0 + HOUR_MS };
+    s.officers[hurt].injury = { ...(s.officers[hurt].injury ?? {}), label: 'sprain', until: T0 + HOUR_MS } as never;
+    const r = tap(s, 10);
+    expect(stressOf(r.state, [away, hurt])).toEqual(stressOf(s, [away, hurt]));
+    expect(total(r.state, rest) - total(s, rest)).toBeCloseTo(10 * strainPerTap(), 9);
+  });
+
+  it('stops every officer at the strained line, then pays nothing and says why', () => {
+    let s = createInitialState(T0);
+    let at = T0;
+    while (detailRoom(s, at).taps > 0) { at += 1000; s = tap(s, 20, at).state; }
+    for (const id of patrolIds(s)) expect(s.officers[id].stress).toBeLessThanOrEqual(DETAIL_STRAIN_LINE);
+    expect(Math.max(...patrolIds(s).map((id) => DETAIL_STRAIN_LINE - s.officers[id].stress))).toBeLessThan(strainPerTap());
+    const blocked = tap(s, 1, at);
+    expect(blocked.result).toEqual({ ok: false, reason: 'Every free patrol officer is at the strain line' });
+    expect(blocked.state).toBe(s);
+    expect(detailRoom(s, at).block).toBe('at-line');
+  });
+
+  it('never strains an officer listed under a patrol squad they do not belong to (third pass)', () => {
+    const s = createInitialState(T0);
+    const a = s.squads.find((sq) => sq.duty === 'patrol')!;
+    const b = s.squads.find((sq) => sq !== a)!;
+    const outsider = b.officerIds[0];
+    a.officerIds = [...a.officerIds, outsider];
+    const r = tap(s, 20);
+    expect(r.state.officers[outsider].stress).toBe(s.officers[outsider].stress);
+    expect(detailRoom(s, T0).officerIds).not.toContain(outsider);
+  });
+
+  it('refuses tuning that would let a tap cost no real strain (third pass)', () => {
+    expect(validatePatch({ TAP_TUNING: { stressPerDollar: 1e-10 } }).length).toBeGreaterThan(0);
+    expect(validatePatch({ TAP_TUNING: { stressPerDollar: 0.01 } })).toEqual([]);
+  });
+
+  it('strains the same for single taps as for one batch', () => {
+    let single = createInitialState(T0);
+    for (let i = 0; i < 20; i++) single = tap(single, 1, T0 + i * 100).state;
+    // The batch settles to the same moment, so recovery matches and only the strain differs.
+    const batch = send(tap(createInitialState(T0), 20).state, { type: 'tick' }, T0 + 1900).state;
+    const sum = (g: GameState) => Object.values(g.officers).reduce((t, o) => t + o.stress, 0);
+    expect(sum(single)).toBeCloseTo(sum(batch), 9);
+  });
+
+  it('counts an officer once even if listed in two patrol squads', () => {
+    const s = createInitialState(T0);
+    const a = s.squads.find((sq) => sq.duty === 'patrol')!;
+    const b = s.squads.find((sq) => sq !== a)!;
+    b.duty = 'patrol';
+    b.officerIds = [...b.officerIds, a.officerIds[0]];
+    const ids = [...new Set([...a.officerIds, ...b.officerIds])];
+    expect(detailRoom(s, T0).room).toBeCloseTo(ids.reduce((sum, id) => sum + Math.max(0, DETAIL_STRAIN_LINE - s.officers[id].stress), 0), 9);
+  });
+
+  it('pays nothing with no squad on patrol', () => {
+    const s = createInitialState(T0);
+    for (const sq of s.squads) sq.duty = 'standby';
+    expect(tap(s, 1).result).toEqual({ ok: false, reason: 'No squad is on patrol to work paid details' });
+    expect(detailRoom(s, T0).block).toBe('no-patrol');
+  });
+
+  it('raises pay with multipliers, not strain', () => {
+    const s = withAll(createInitialState(T0));
+    const r = tap(s, 10);
+    expect(tapLines(r.state).at(-1)!.amount).toBe(90);
+    expect(total(r.state, patrolIds(s)) - total(s, patrolIds(s))).toBeCloseTo(10 * strainPerTap(), 9);
+  });
+
+  it('refills while the officers recover, never while away tapping', () => {
+    const s = createInitialState(T0);
+    const room = detailRoom(s, T0).room;
+    const back = send(s, { type: 'tick' }, T0 + 2 * HOUR_MS).state;
+    expect(detailRoom(back, T0 + 2 * HOUR_MS).room).toBeGreaterThan(room);
+    expect(tapLines(back)).toHaveLength(0);
+  });
+});
+
+describe('balance: one full stretch for the starting department', () => {
+  it('pays $600 at 0.1 strain a dollar, about an hour of the starting net', () => {
+    let s = createInitialState(T0);
+    const start = detailRoom(s, T0);
+    // Alpha patrols at stress 12, 18, 8 and 22: 60 points under the line of 30.
+    expect(start.room).toBe(60);
+    expect(TAP_TUNING.stressPerDollar).toBe(0.1);
+    let at = T0;
+    while (detailRoom(s, at).taps > 0) { at += 1000; s = tap(s, MAX_TAP_BATCH, at).state; }
+    const paid = tapLines(s).reduce((sum, e) => sum + e.amount, 0);
+    expect(paid).toBe(600);
+    expect(paid / ratesAt(createInitialState(T0), T0).net).toBeCloseTo(600 / 620, 6);
   });
 });
 

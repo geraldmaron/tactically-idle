@@ -394,9 +394,10 @@ export const TUNING_META: readonly FieldMeta[] = [
     slowAt: { label: 'Reads "learns slowly" at', help: 'Combined learning rate at or below which the profile says the officer learns slowly. Labels only.', mode: 'display', min: 0.3, max: 1, step: 0.05, unit: '×' },
   }),
   ...table('TAP_TUNING', { group: 'economy', mode: 'department' }, {
-    base: { label: 'Desk tap pays', help: 'Funding one tap on the HQ desk credits before multipliers.', min: 0.1, max: 100, step: 0.1, unit: 'funding' },
-    maxPerSecond: { label: 'Desk taps credited per second', help: 'The most taps a second the books credit; faster taps are dropped, so an autoclicker earns no more.', min: 1, max: 60, step: 1, unit: 'taps' },
-    burstSeconds: { label: 'Desk tap burst', help: 'Seconds of taps the allowance holds, so a short flurry above the rate still counts. It never saves up past this, so taps do not accrue offline.', min: 0.25, max: 10, step: 0.25, unit: 'seconds' },
+    base: { label: 'Paid detail tap pays', help: 'Funding one tap of paid detail work credits before multipliers.', min: 0.1, max: 100, step: 0.1, unit: 'funding' },
+    maxPerSecond: { label: 'Paid detail taps credited per second', help: 'The most taps a second the books credit; faster taps are dropped, so an autoclicker earns no more.', min: 1, max: 60, step: 1, unit: 'taps' },
+    burstSeconds: { label: 'Paid detail tap burst', help: 'Seconds of taps the allowance holds, so a short flurry above the rate still counts. It never saves up past this, so taps do not accrue offline.', min: 0.25, max: 10, step: 0.25, unit: 'seconds' },
+    stressPerDollar: { label: 'Paid detail strain per dollar', help: 'Strain each dollar of base tap pay puts on the free officers of the squads on patrol, split across them; they stop at the strained line. Multipliers raise pay, not strain.', min: 0.01, max: 1, step: 0.01, unit: 'stress' },
   }),
   ...table('DETAIL_TUNING', { group: 'economy', mode: 'department' }, {
     hours: { label: 'Instructor detail length', help: 'Hours an officer is away teaching for a neighbouring department.', min: 1, max: 24, step: 1, unit: 'hours' },
