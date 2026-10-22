@@ -1,7 +1,10 @@
 # UI/UX audit and a new direction: Desk and Street
 
-**Status (2026-10-21):** proposal, challenged by Codex (verdict: needs attention; every finding
-accepted and the plan amended, see [Challenge](#challenge)). Nothing here is built. The owner asked for a full audit of
+**Status (2026-10-22):** built on `claude/angry-edison-cae68b` (local, not pushed): `ui-system`,
+`chrome-contract`, `calls-say-once` and `four-tabs` shipped and left the backlog. The plan was
+challenged by Codex before building (see [Challenge](#challenge)). One gap remains: the plan only
+listed what to remove, so the shipped screens lost art and icons; `visual-story` in
+`docs/backlog.md` puts them back. Results are in [What shipped](#what-shipped). The owner asked for a full audit of
 every player-facing screen, a plan, and the plan challenged. Midway they gave full visual control
 ("Assume complete visual artistic control. Break the approach") and chose a new direction
 delivered in phases. The proposed backlog items are at the end; `docs/backlog.md` is unchanged
@@ -525,6 +528,27 @@ row and the shift report reopenable; assignment has one path; badges open the se
 about. Done: the e2e script reaches every former screen; hire-and-equip passes; the nav round
 trips return; captures at three widths.
 ```
+
+## What shipped
+
+Measured with `tools/capture.mjs` at 390x844 / 320x568 by the sessions that built each phase.
+
+| Measure | Audit | Shipped |
+| --- | --- | --- |
+| Smallest text anywhere | 8.4px / 6.7px | 12px at every width |
+| Live-call targets under 44px | 4 to 5 per screen | 0 |
+| Top bar / tab bar | 52 / 65px | 44 / 60px; none on flows, none on the live call |
+| HQ height to scroll | 1,780 / 1,692px | 1,065px |
+| Squad, now Officers, height | 1,939 / 2,082px | 1,001 / 1,018px |
+| Brief height | 2,534 / 2,764px | 1,924 / 2,251px |
+| Deploy step with a squad | 1,948 / 2,170px | 1,006 / 1,068px |
+| Review sheet body at 320x568 | 124px | 273px |
+| Settings depth | three taps | one |
+
+What it cost: icon uses in `src/ui/` fell from 269 to 228 and plates from 9 to 4, and the icon kit
+is used once. The ratchets guard floors (text size, touch size, hex) and nothing guards the art,
+so `visual-story` adds a ratchet that only rises. Left for later: `ui-leftovers` and
+`roster-save-rule` in the backlog.
 
 ## Notes on basic kit and `worn-kit`
 

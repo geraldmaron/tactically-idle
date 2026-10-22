@@ -8,7 +8,7 @@ This pass addresses decision clarity and comparison, in addition to responsive c
 - Labels stay together. Larger sets scroll within their own rail rather than wrapping into a second row or shrinking text.
 - Filter groups expose radio semantics; view destinations expose navigation semantics; squad tabs identify the panel they control.
 - Arrow keys and Home/End move through available choices. Selection reveals the option horizontally without scrolling the surrounding page.
-- The five main destinations remain HQ, Squad, Ops, Develop and Gear. Shared control styling also covers duties and deployed squads.
+- The four main destinations are HQ, Calls, Officers and Build (2026-10-22, `docs/ui-ux-audit.md`); Develop and Gear are the Upgrades and Armory segments of Build. Shared control styling also covers duties and deployed squads.
 - Recruitment has one ordinary refresh action and keeps shortlisted people. Equipment's nine longer categories use one labeled native select; the current category stays visible when the filter section is closed.
 - Squad selection and separate name drafts survive destination changes. Tab changes activate immediately and keep keyboard focus in the rail; Save, Cancel and Escape finish only that squad's rename. Roster portraits reserve their final height before width measurement, avoiding a two-row jump when switching squads.
 - Hiring starts with **Review hire**, then an explicit priced confirmation or **Cancel**. A repeated confirmation cannot send a second hire command.

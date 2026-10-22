@@ -26,7 +26,7 @@ npm test
 npm run build
 ```
 
-Use **Saves / New** below the header for ten local campaign slots, New Game, loading, named copies, and backup import/export. The active slot autosaves; starting or loading another campaign saves the current one first. Only saves from the current save and content version load; old saves are rejected. See [local campaigns](docs/local-campaigns.md).
+Open the **menu** (top right of the resource bar) and its Saves row for ten local campaign slots, New Game, loading, named copies, and backup import/export. The active slot autosaves; starting or loading another campaign saves the current one first. Only saves from the current save and content version load; old saves are rejected. See [local campaigns](docs/local-campaigns.md).
 
 Every operation is a live tactical call: it uses owned equipment, applies strain and injuries, and pays rewards and department service. The Ops board dispatches barricade, armed incident, hostage and protected rescue calls. Each current v13 call takes one squad; its squad range is derived from its choices.
 
@@ -49,7 +49,7 @@ Dev-only state handle in the browser console: `window.__ti.getState()`, `__ti.se
 | `src/sim/department*.ts`, `economy.ts`, `roster.ts`, `develop.ts`, `save.ts` | Economy and offline settlement, hiring, squads, training, development tree, saves |
 | `src/sim/inventory.ts`, `officer.ts` | Reservations and settlement, stress bands and deployability |
 | `src/ui/blueprint/`, `src/ui/portraits/` | SVG blueprint rendered from location data; painted portraits and personnel-file fallbacks |
-| `src/ui/screens/` | HQ, Squad, Ops (board, prepare, live, debrief), Develop, Gear |
+| `src/ui/screens/` | Four tabs: HQ, Calls (board, brief, deploy, live call, debrief), Officers (squads, roster, hire, training), Build (upgrades, Armory). The shell picks desk, flow or focus chrome (`src/ui/components/chrome.tsx`); design rules in `docs/ui-ux-audit.md`, icons in `docs/visual-kit.md` |
 | `src/dev/lab/` | Scenario Lab, dev only (`/lab`): plays calls on the real engine beside what the player can't see; its shell, surfaces, models and workers. Saved tuning is `src/sim/tuning.json` (registry in `src/sim/tuning.ts`). See [docs/scenario-lab.md](docs/scenario-lab.md) |
 
 ## Current status

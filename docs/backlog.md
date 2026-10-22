@@ -315,13 +315,6 @@ Watch Commander runs it, how it shows on the board without crowding tactical cal
 lead, then the engine loop and its UI. The note is `docs/patrol-work.md` (proposed 2026-10-19); it
 waits on owner answers 2 and 3 listed there (1 is answered: patrol pay stays flat).
 
-### squad-preset-editor: One place to edit loadout presets
-Tags: job=build; journeys=hire-and-equip; probes=none (layout); lane=interface
-Needs: start=none; integrate=none; ship=none
-
-The Squad screen and the Armory both edit `squad.loadoutPreset` (`src/ui/screens/Squad.tsx`).
-Keep one.
-
 ### worn-kit: Light body armor protects the officer who wears it
 Tags: job=build; journeys=team-moves-odds; probes=none (changes harm severity, not a chance input); lane=engine
 Needs: start=none (owner approves this proposal); integrate=none; ship=none
@@ -359,19 +352,6 @@ profile get a `swat-writing-review` read.
 
 ## Player experience
 
-### ops-experience-now: Put the right thing first on the board, Prepare, review and result
-Tags: job=command; journeys=answer-a-call; probes=none (layout); lane=interface
-Needs: start=none; integrate=none; ship=none
-
-From `docs/ops-experience.md` (accepted with controls). Done: the result beat opens on the result
-under the strip, tells each thing once and folds the scene below it. Open: the review
-sheet reads cost and the three previews before the map, keeping every control; the brief opens on
-the orders and the threat with the cold open whole and a Map chip in the header; Team & gear shows
-each squad's kit as an inspectable summary over today's workspace; the board card drops to about
-290px with the hook, warning, fitness, pay and expiry kept, and a type mark that isn't a padlock.
-Done when the captures in the doc are retaken from the game at 390x844 and 320x568, with 200% text,
-two squads and a Lab check of the shared screens.
-
 ### ops-experience-compare: The owner judges the reading serif
 Tags: job=command; journeys=answer-a-call; probes=none (layout); lane=interface
 Needs: start=none; integrate=none; ship=none
@@ -380,50 +360,6 @@ The decide-beat layout is settled (4B, refined, 2026-10-21). The serif is still 
 switch (`src/ui/settings/candidates.ts`). The owner compares it as `docs/ops-experience.md` says
 ("The reading face: still open"). Then ship the winner, delete the loser's rule from
 `candidates.css` and remove the switch.
-
-### ui-system: One visual system under every screen
-Tags: job=command; journeys=answer-a-call, hire-and-equip; probes=none (layout and type); lane=interface
-Needs: start=none; integrate=none; ship=none
-
-Tokens for type (12/14/16/18/22/28), space (4 to 32) and colour roles, one primitive set (Button,
-Chip, Card, Row, Sheet, ActionBar), the duplicate definitions in app.css and skin.css removed,
-hex moved to tokens, and the Desk and Street skin applied through them, story text staying in
-Barlow until ops-experience-compare is settled (docs/ui-ux-audit.md). Done: tests fail on new
-decision text under 14px, interactive elements under 44px and hex outside the theme; captures
-retaken at 390, 320 and 430 with the audit's tool, compared with its probe numbers.
-
-### chrome-contract: One chrome contract for desk screens, flows and the live call
-Tags: job=command; journeys=answer-a-call, save-round-trip; probes=none (layout); lane=interface
-Needs: start=ui-system; integrate=none; ship=none
-
-A 44px resource bar in words and per-hour rates; no banner on tab roots; flows with a head, back
-and one action bar and no tabs; one Menu sheet for the campaign, settings and support. Every row
-of the audit's exit table holds: the Prepare draft survives Back and detours, the debrief settles
-before it is left. Step out comes last, with a pause owned by navigation and not by page
-visibility. Done: no primary button is covered at any width; the review body at 320x568 is at
-least 248px; background, reload and a long wait while stepped out resume the same beat with
-elapsed time kept.
-
-### calls-say-once: Each fact once on every step of a call
-Tags: job=command; journeys=answer-a-call, debrief-explains; probes=none (layout); lane=interface
-Needs: start=chrome-contract; integrate=none; ship=none
-
-The say-it-once ledger by field and the verb ladder in docs/ui-ux-audit.md applied to the board,
-brief, deploy, decide, review, result and debrief, with the squad named one way, designed against
-today's pooled equipment. Folds in ops-experience-now, which is deleted when this ships. Done: for
-every ledger field the keeping field is present and the repeats are gone, and the distinct fields
-(time range, per-choice exposure, completion, projected income) are present, in the game and the
-Lab, with two squads on a call.
-
-### four-tabs: HQ, Calls, Officers and Build
-Tags: job=build; journeys=hire-and-equip, officer-promotes; probes=none (navigation); lane=interface
-Needs: start=chrome-contract (after basic kit reaches main and the owner validates the merge); integrate=none; ship=squad-preset-editor
-
-Officers holds Squads, Roster, Hire and Training; Build holds Upgrades and the Armory; HQ's
-cutaway shows state and stops repeating the tabs, keeping the Watch Commander opt-out on each duty
-row and the shift report reopenable; assignment has one path; badges open the segment they are
-about. Done: the e2e script reaches every former screen; hire-and-equip passes; the nav round
-trips return; captures at three widths.
 
 ### tap-multiplier-content: Upgrades, power-ups and purchases that raise desk tap pay
 Tags: job=build; journeys=hire-and-equip; probes=none (department income, not call odds); lane=deferred
@@ -437,6 +373,51 @@ purchase, timed power-ups with a way to earn them, and store entitlements throug
 before granting, since the local save can be edited. Show the combined multiplier and any running
 power-up near the desk, and decide whether owned upgrades pick up a later rebalance. Done: each
 kind has at least one entry, a test proves it raises tap pay, and the player can see what is active.
+
+### visual-story: Every screen tells its story with art and icons
+Tags: job=command; journeys=answer-a-call, hire-and-equip; probes=none (layout and art); lane=interface
+Needs: start=none; integrate=none; ship=none
+
+Found when the Desk and Street redesign landed (2026-10-22): the plan only listed what to remove,
+so icon uses in `src/ui/` fell from 269 to 228 and banners or plates from 9 to 4, and the icon kit
+(`docs/visual-kit.md`) is adopted in one place (`CallTypeBadge`). `TAB_ICON`, `RESOURCE_ICON`,
+`SKILL_ICON`, `OFFICER_STATUS_ICON`, `OUTCOME_ICON`, `BRANCH_ICON`, the gear icons, `StatusMark`,
+`OutcomeMark` and `Spot` are unused. Adopt the kit across the desk and the calls flow: the four
+tabs and the resource bar carry their icons; each tab root opens on a compact plate (about 96px)
+from its existing banner art, with no kicker or paragraph; every row in Officers, Build, Calls and
+the debrief leads with a face, gear art or a kit icon; the brief, deploy and debrief headings get
+their icons back; empty states use `Spot`. Painted call-type medallions (deferred from the icon
+kit) belong here. This partly reverses the audit's "no banner on tab roots"; the owner confirms
+the plate height before it ships. Done: a design-floors ratchet that only rises counts kit
+adoption (each tab root renders a plate, each listed row has a lead visual, the tabs and the bar
+render their icons), and captures at 390 and 320 are compared with today's.
+
+### ui-leftovers: Finish the redesign in files no lane owned this round
+Tags: job=command; journeys=answer-a-call, hire-and-equip; probes=none (layout and text); lane=interface
+Needs: start=none; integrate=none; ship=none
+
+Left by the 2026-10-22 redesign sessions: the Armory's search, collection bar and filter rail and
+the Training store (`src/ui/storefront/`) are unrestyled; First Run still shows themes a player
+can't avoid as disabled switches; "Squad A" survives in `src/sim/resolution.ts` (`squadLabel`, in
+reasons, contributors and route labels), `src/ui/people/lexicon.ts` and `src/ui/blueprint/Blueprint.tsx`;
+the Lab's `GameFrame.tsx` still passes a Prepare button and "Continue to <stage>"; dead CSS for the
+old board and Prepare (`.optile*`, `.prep-title`, `.pickcard*`, `.prep-steps`) sits in `app.css` and
+`skin.css`; and `docs/captures/ui-ux-audit/tools/capture.mjs` still uses pre-four-tab selectors for
+the desk screens (the desk session's updated copy is described in its hand-over). Done: each of
+these fixed, the squad named "Alpha" with its badge everywhere, and the capture tool walking every
+screen with no step error.
+
+### roster-save-rule: Refuse saves whose squads list officers from other squads
+Tags: job=keep; journeys=save-round-trip; probes=none (save validation); lane=engine
+Needs: start=none; integrate=none; ship=none
+
+Deferred from the paid-details Codex review (2026-10-22): paid details now strain only officers
+who belong to the patrol squad, but a save that lists an officer under two squads still loads.
+Refusing it is a roster rule wider than taps and must be checked against other saved states, such
+as squad moves waiting for a call to end. Also from the calls-flow review: a snapshot saved while a
+decision was unpaused (the browser killed before the page-hide save) still counts that time until
+load; freezing the stall at save time needs `src/sim/campaign-slots.ts`. Done: both rules, with save
+round-trip tests.
 
 ### onboarding: A first call that teaches the loop
 Tags: job=command; journeys=answer-a-call; probes=none (teaching flow); lane=deferred
@@ -510,6 +491,9 @@ decision on whether the lean needs a player-facing explanation (the HQ or the de
   room). This bears on the existing barricade building-family decision above.
 - **Later scope:** districts, career stories, simultaneous tactical incidents.
 - **What purchases sell** now that development points and point packs are gone (`real-purchases`).
+- **Rewarded ads**, optional, and **real-money income multipliers** under `real-purchases`
+  (from the hook-pattern research on `claude/research-hook-patterns`, not merged).
+- **The tab-root plate** that `visual-story` brings back: its height and whether every tab gets one.
 
 Decided 2026-10-19: scenario work is paused (the barricade is parked on its branch); a squad can
 deploy short of injured officers (`short-squad-deploys`); sidearms from day one
@@ -530,6 +514,11 @@ Decided 2026-10-20 (progression): development points are removed and every devel
 or is granted free at a milestone (`src/sim/grants.ts`); officers hold real US police ranks from
 Probationary Officer to Lieutenant, XP stops at Lieutenant, and the experience band is read from the
 rank (`src/content/ranks.ts`, `src/sim/ranks.ts`).
+Decided 2026-10-21 (UI and taps): build the Desk and Street redesign (`docs/ui-ux-audit.md`) in
+phases by parallel sessions, kept local; taps pay $1 each as paid details that strain only free
+officers of a squad on patrol, stopping at stress 30, labeled "Work paid details", with
+multipliers designed in and empty; the stall habit lifts the starting pressure of later calls only
+on the Standard timer, never on Off or Relaxed.
 Decided 2026-10-20 (content rating): the six descriptors in `docs/content-rating.md` stand as
 written; the call-card warning defaults to on; the timer keeps Off, Relaxed and Standard; the
 warning and 988 line wording is drafted for the owner's review, and nothing ships before approval.
