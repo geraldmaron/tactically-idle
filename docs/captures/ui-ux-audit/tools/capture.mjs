@@ -1,5 +1,5 @@
 // Walks every player-facing screen in an isolated browser context and records
-// viewport captures plus a measurement probe. Usage: node capture.mjs <repo> <outDir> <baseURL> [widths]
+// viewport captures through the bottom of each scroll owner, plus a measurement probe. Exits 2 if any step failed. Usage: node capture.mjs <repo> <outDir> <baseURL> [widths]
 import { createRequire } from 'node:module';
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -49,7 +49,7 @@ function probe() {
 }
 
 const scroller = (page) => page.evaluate(() => {
-  const cands = [...document.querySelectorAll('.sheet-body, .sheet, main.screen, main, .app')].filter((el) => el.scrollHeight - el.clientHeight > 4 && getComputedStyle(el).overflowY !== 'visible');
+  const cands = [...document.querySelectorAll('.sheet-body, .sheet, .debrief, .debrief-layout, main.screen, main, .app')].filter((el) => el.scrollHeight - el.clientHeight > 4 && getComputedStyle(el).overflowY !== 'visible');
   const sheet = cands.find((el) => el.closest('.sheet'));
   const el = sheet ?? cands.sort((a, b) => (b.scrollHeight - b.clientHeight) - (a.scrollHeight - a.clientHeight))[0];
   if (!el) return null; el.dataset.capScroll = '1'; return { scroll: el.scrollHeight, client: el.clientHeight };
@@ -57,7 +57,7 @@ const scroller = (page) => page.evaluate(() => {
 
 async function main() {
   const browser = await chromium.launch({ executablePath: CHROME, headless: true });
-  const report = {};
+  const report = {}; const failures = [];
   for (const width of widths) {
     const height = SIZES[width];
     const context = await browser.newContext({ viewport: { width, height }, hasTouch: true, deviceScaleFactor: 2 });
@@ -70,7 +70,7 @@ async function main() {
       await page.waitForTimeout(350);
       await page.evaluate(() => document.querySelectorAll('[data-cap-scroll]').forEach((el) => delete el.dataset.capScroll));
       const s = await scroller(page);
-      const pages = s ? Math.min(segments, Math.ceil(s.scroll / s.client)) : 1;
+      const pages = s ? Math.min(Math.max(segments, 12), Math.ceil(Math.max(0, s.scroll - s.client) / Math.round(s.client * 0.85)) + 1) : 1;
       const entry = { scrollHeight: s?.scroll ?? null, clientHeight: s?.client ?? null, segments: [] };
       for (let i = 0; i < pages; i++) {
         if (s) { await page.evaluate((y) => { const el = document.querySelector('[data-cap-scroll]'); if (el) el.scrollTop = y; }, i * Math.round(s.client * 0.85)); await page.waitForTimeout(200); }
@@ -84,7 +84,7 @@ async function main() {
     };
     const closeSheet = async () => { await page.keyboard.press('Escape'); await page.waitForTimeout(250); };
     page.setDefaultTimeout(8000);
-    const step = async (name, fn) => { try { await fn(); } catch (e) { report[width][`${name}-error`] = String(e).slice(0, 300); console.log(width, name, 'ERROR', String(e).slice(0, 160));
+    const step = async (name, fn) => { try { await fn(); } catch (e) { report[width][`${name}-error`] = String(e).slice(0, 300); console.log(width, name, 'ERROR', String(e).slice(0, 160)); failures.push(`${width} ${name}`);
       for (let i = 0; i < 3 && await page.locator('.sheet').count(); i++) await closeSheet(); } };
     const tab = (t) => page.locator('nav.bottomnav').getByText(t, { exact: true }).click();
     
@@ -140,5 +140,6 @@ async function main() {
   }
   await browser.close();
   await writeFile(path.join(outDir, 'probe.json'), JSON.stringify(report, null, 1));
+  if (failures.length) { console.error('Steps failed:', failures.join(', ')); process.exit(2); }
 }
 main().catch((e) => { console.error(e); process.exit(1); });
