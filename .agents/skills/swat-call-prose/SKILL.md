@@ -110,7 +110,7 @@ wins. The full table, clamps, field reuse and tense rules are in [references/sur
 | Result line | outcome effect text | 450 | 80 words | the act, the reaction, what it changed |
 | Ending | title, summary | 60, 400 | 70 words | who is safe, who is not, one detail |
 | Transcript | node, promptIf and outcome exchange | 90 a line | 2 to 4 lines, 15 words | the voices, speaker named by the UI |
-| Viewer chat | clock `source.reactions` byCue[], spike | 60 | 3 to 8 words | one viewer typing fast, handle added by the UI |
+| Viewer chat | clock `source.reactions` byCue[], spike, threat chat | 60 graphemes | 3 to 8 words | one viewer typing fast, handle added by the UI |
 | Epilogue | ending epilogue | 200 | 30 words | the after, on one named person |
 | Modifier, support, cert, gear | modifiers[].label, support.label, support.task, certBonus.label, equipment[].label | none | 6 words | the reason, in the world |
 
@@ -287,27 +287,26 @@ skill's ledger-backed templates, in slots swat-call-design reserved.
 
 ### Viewer chat on a stream or crowd
 
-A pressure source with `reactions` (PressureSource in `src/sim/scenario-types.ts`)
-floats a viewer's line every few seconds under a generated handle
-(`commenterHandle` in `src/content/world.ts`), and the strip shows each line at
-most once a run. A thin pool runs dry in a minute and the chat goes quiet, so
-stock it.
+A pressure source with `reactions` (PressureSource in `src/sim/scenario-types.ts`) floats a
+viewer's line every few seconds under a generated handle (`commenterHandle` in
+`src/content/world.ts`), and the strip shows each line at most once a run. The chat is part of the
+pressure, not a texture beside it: it follows the open threat's drain and the stream's state, so
+a gauge that says viewers are closing in on the address shows them doing it. The rules, the numbers
+and the emoji and ethics limits are in [references/live-chat.md](references/live-chat.md), and the
+engine rule is `docs/call-pressure.md`, "Chat that follows the pressure". In short:
 
-1. One pool before the first cue, then one per cue, each at least 16 lines.
-   The spike pool, played three at a time on a jump, holds at least 8.
-2. Each pool reads the count it sits at: the subject's own followers first,
-   then strangers as the count climbs, then people who came from the news.
-   A pool names what a viewer at that point could see on the stream.
-3. Viewers are people. Mix worry, support, anger at someone on scene, plain
-   nosiness and the off-topic line a real chat carries. No gore, no cheering
-   force, no line that dares anyone to hurt someone.
-4. Lowercase, few apostrophes, a "??" now and then, no dashes or colons. No
-   handle in the line (the UI adds one), and no gendered word: a viewer uses a
-   role token's name or "they".
-5. No line twice in a source and no 4-word run repeated across its lines.
+1. One cue pool before the first cue and one per cue, each at least 16 lines, and a spike pool of
+   at least 8 (the pool floors the gate enforces today). Each cue pool reads the count it sits at:
+   the subject's own followers, then strangers, then people from the news.
+2. When the threat thread ships, every threat also gets an early, closing and imminent thread of
+   5 to 7 ordered lines, and a state pool wherever an effect can stop, slow, surge or drop the
+   stream.
+3. Lowercase, no dashes or colons, no handle in the line (the UI adds one) and no gendered word. A
+   viewer uses a role token's name or "they". Emoji, typos and pile-ons follow the reference.
+4. No line twice in a call's chat and no 4-word run repeated across its lines.
 
-`src/content/incidents/reactions.test.ts` enforces 1, 4 and 5 on every call
-that uses the pattern. 2 and 3 are read in the Lab's Play view.
+`src/content/incidents/reactions.test.ts` enforces 1, 3 (minus emoji) and 4 on every call that uses
+the pattern. Everything else is read in the Lab's Play view with the Stall scrubber.
 
 ## 7. Tension inside the lint, and the ethics line
 
@@ -501,5 +500,6 @@ Call prose record
 - [references/before-after-rewrites.md](references/before-after-rewrites.md) when a line reads flat, generic or machine-made.
 - [references/dialogue-and-radio.md](references/dialogue-and-radio.md) before anything a person says aloud, and for who stands where.
 - [references/vocabulary-and-lint.md](references/vocabulary-and-lint.md) for lint words, object names, US usage and the ethics minimum.
+- [references/live-chat.md](references/live-chat.md) before any viewer chat line: phases, register, emoji and the ethics limits.
 - [references/string-checks.md](references/string-checks.md), [scripts/game_string_checks.py](scripts/game_string_checks.py) and [references/game-allow-words.txt](references/game-allow-words.txt) at step 10 and for batch review.
 - [references/sources.md](references/sources.md) for where each rule comes from.
