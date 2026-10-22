@@ -512,15 +512,6 @@ fingerprint, give the offer row a consent-pending state, and show the real befor
 proving ad history never moves odds, draws or pressure, the offer surface at 390 and 320, and the
 log fields present on every event.
 
-### ui-leftovers: HQ's Open lands on the named call
-Tags: job=command; journeys=answer-a-call; probes=none (navigation); lane=interface
-Needs: start=none; integrate=none; ship=none
-
-The rest of the redesign leftovers shipped with `visual-story` and the tooling leftovers (2026-10-22).
-Left from the lead's play: HQ's "your move" card says "<call> is the oldest call" with Open, but Open
-shows the whole board (`src/ui/screens/HQ.tsx` `nav.go('ops')`), not that call's brief. Done: Open on
-that card lands on the named call's brief, shown at 390x844.
-
 ### squad-names: Every surface names a squad the way the player named it
 Tags: job=command; journeys=answer-a-call, joint-operation; probes=none (labels); lane=engine
 Needs: start=none; integrate=none; ship=none

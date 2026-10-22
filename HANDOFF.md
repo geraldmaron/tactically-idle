@@ -123,6 +123,10 @@ Started together on 2026-10-22 (owner's go), briefs in the same notes folder:
 
 While squad-names holds `src/sim/operation.ts`, `aftermath` waits.
 
+ui-leftovers merged (92cdf72, re-render cead5e2): `npm run verify` 3,018 tests, art, build and no-lab green on
+the merged tip; the lead played HQ's oldest-call Open at 390x844 on 5182 (fresh context) and it lands on
+Going Live's brief. Its session waits for the owner's go to archive.
+
 ## Locks outside normal ownership
 
 None. live-chat-immersion merged (ad0d329, `npm run verify` 2,992 tests on the merged tip, lead played a
