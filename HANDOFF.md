@@ -113,6 +113,16 @@ the repost cue, ending in a third Codex read. Brief:
 `side-session-notes/local_0ef35909-1f92-43ed-b124-d0236bd4f320/going-live-spine/pass2-brief.md`. The
 prose passes wait for that read.
 
+Queued beside it for the same start (owner's go, 2026-10-22), briefs in the same notes folder:
+
+| Session | Model | Item | Writes only |
+|---|---|---|---|
+| spine-pass2 | Opus | `going-live-spine` structure pass 2 | `src/content/call-trees/hostage-live.ts`, `src/content/incidents/hostage.ts`, `docs/calls/going-live-design.md`, `docs/calls/notes/going-live-spine.md` |
+| ui-leftovers | Haiku | `ui-leftovers` | `src/ui/screens/HQ.tsx` and the navigation Open needs (asks first if that is `store.ts` or `App.tsx`); port 5175 |
+| squad-names | Sonnet | `squad-names` | locks: `src/sim/resolution.ts`, `operation.ts`, `operation-selectors.ts`, `src/ui/people/`, `src/ui/blueprint/` (props need lead approval and Codex review), `src/ui/screens/operation-squads.ts` and the live call screens, the Lab squad files, `src/gen/incident/gates/engine-driver.ts`; never `HQ.tsx` or `src/content/`; port 5183 |
+
+While squad-names holds `src/sim/operation.ts`, `aftermath` waits.
+
 ## Locks outside normal ownership
 
 None. live-chat-immersion merged (ad0d329, `npm run verify` 2,992 tests on the merged tip, lead played a
