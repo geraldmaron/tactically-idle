@@ -39,19 +39,19 @@ describe('Armory filter rail', () => {
   });
 
   it('flags owned stock that needs looking at, and the attention view shows only that', () => {
-    const radio = Object.values(state.units).find((unit) => unit.itemId === 'radio_kit')!;
-    radio.condition = 30; // below unreliableBelow (45), above failAt (15)
+    const hailer = Object.values(state.units).find((unit) => unit.itemId === 'loud_hailer')!;
+    hailer.condition = 30; // below unreliableBelow (40), above failAt (10)
     const entries = catalogEntries(state);
-    const radios = entries.find((entry) => entry.item.id === 'radio_kit')!;
-    expect(radios.needsAttention).toBe(true);
+    const hailers = entries.find((entry) => entry.item.id === 'loud_hailer')!;
+    expect(hailers.needsAttention).toBe(true);
     const shown = queryEquipment(entries, withArmoryView(DEFAULT_EQUIPMENT_QUERY, 'attention'));
     expect(shown.every((entry) => entry.needsAttention)).toBe(true);
-    expect(shown.map((entry) => entry.item.id)).toContain('radio_kit');
-    expect(render()).toMatch(/aria-label="Radio headset[^"]*\d+ owned, \d+ ready, condition \d+%, \d+ unreliable/);
+    expect(shown.map((entry) => entry.item.id)).toContain('loud_hailer');
+    expect(render()).toMatch(/aria-label="Loud hailer[^"]*\d+ owned, \d+ ready, condition \d+%, \d+ unreliable/);
   });
 
   it('opens one sheet for an owned item that holds purchase, stock and units', () => {
-    const html = renderToStaticMarkup(createElement(NavContext.Provider, { value: { ...DEFAULT_NAV, equipmentItemId: 'radio_kit', equipmentQuery: query, setEquipmentQuery: () => {} } }, createElement(EquipmentStore, { active: true })));
+    const html = renderToStaticMarkup(createElement(NavContext.Provider, { value: { ...DEFAULT_NAV, equipmentItemId: 'loud_hailer', equipmentQuery: query, setEquipmentQuery: () => {} } }, createElement(EquipmentStore, { active: true })));
     expect(html).toContain('aria-label="Your stock"');
     expect(html).toContain('aria-label="Units"');
     expect(html).toMatch(/Buy 1 ·/);

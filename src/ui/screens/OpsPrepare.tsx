@@ -6,12 +6,11 @@ import {
   prepCheck,
   spaceViewsForScenario,
 } from '../../sim/operation-selectors';
+import { BASIC_KIT_LINE } from '../../sim/basic-kit';
 import type { StartOperationCommand } from '../../sim/operation-selectors';
 import { squadReadiness, storeOptions } from '../../sim/department-selectors';
 import type { StoreOption } from '../../sim/department-selectors';
 import { unitEffectiveness } from '../../sim/inventory';
-import { standardRadioPlan, STANDARD_RADIO } from '../../sim/standard-kit';
-import { deployRoster } from '../../sim/squads';
 import { projectedCondition } from '../../sim/equipment';
 import { stagingPointsIn } from '../../sim/spatial';
 import { defaultStagingFor, spaceLabel } from '../../sim/spatial-factors';
@@ -31,7 +30,7 @@ import { useToast } from '../components/toast';
 import { UNIT_STATE_META, unitStateOf } from '../components/labels';
 import { Icon } from '../icons';
 import type { IconName } from '../icons';
-import { moneyFull, pct } from '../format';
+import { pct } from '../format';
 import { cardFor, hasNodeEffect, staysHomeLine } from './helpers';
 import { planAuto, preparationEquipmentFix } from './autoPlan';
 import { scenarioActions } from '../../sim/scenario-types';
@@ -90,12 +89,11 @@ export function OpsPrepare({ scenarioId, onCancel, initialStep = 'brief' }: { sc
   const [supportUnitId, setSupportUnitId] = useState<Id | null>(null);
   const [floor, setFloor] = useState(0);
 
-  const radioPlan = useMemo(() => standardRadioPlan(g, chosen, now, departmentUpkeep(g), (sid) => deployRoster(g, sid, now).goes), [g, chosen, now]);
   const loadouts = useMemo<Loadouts>(() => {
     const next = { ...optionalLoadouts };
-    for (const sid of chosen) next[sid] = { ...handCarriedLoadout(next[sid] ?? {}), ...radioPlan.loadouts[sid] };
+    for (const sid of chosen) next[sid] = handCarriedLoadout(next[sid] ?? {});
     return next;
-  }, [optionalLoadouts, chosen, radioPlan]);
+  }, [optionalLoadouts, chosen]);
 
   const range = card?.squadRange ?? scenario?.squadRange ?? { min: 1, max: 3 };
   const defaultEntry = brief.entries[0]?.id;
@@ -120,7 +118,7 @@ export function OpsPrepare({ scenarioId, onCancel, initialStep = 'brief' }: { sc
       const per: Record<Id, ItemUnit[]> = {};
       for (const [itemId, qty] of Object.entries(loadouts[sid] ?? {})) {
         if (qty <= 0) continue;
-        const want = itemId === STANDARD_RADIO ? radioPlan.units[sid] ?? [] : explicit[sid]?.[itemId] ?? [];
+        const want = explicit[sid]?.[itemId] ?? [];
         const usable = autoEquipReadyUnits(g, itemId, now);
         const have = want
           .map((id) => usable.find((u) => u.id === id))
@@ -143,7 +141,7 @@ export function OpsPrepare({ scenarioId, onCancel, initialStep = 'brief' }: { sc
       }
     }
     return out;
-  }, [g, chosen, loadouts, explicit, radioPlan, now]);
+  }, [g, chosen, loadouts, explicit, now]);
 
   const cmd: StartOperationCommand = useMemo(() => {
     const pos: Partial<Record<SquadId, Id>> = {};
@@ -190,7 +188,7 @@ export function OpsPrepare({ scenarioId, onCancel, initialStep = 'brief' }: { sc
       return { ...e, [squad]: omit(e[squad]!, itemId) };
     });
   const setQty = (squad: SquadId, itemId: Id, qty: number) => {
-    if (itemId === STANDARD_RADIO || ITEMS[itemId]?.supportOnly) return;
+    if (ITEMS[itemId]?.supportOnly) return;
     setAutoUndo(null);
     setLoadouts((l) => ({ ...l, [squad]: { ...(l[squad] ?? {}), [itemId]: qty } }));
     dropPicks(squad, itemId);
@@ -380,16 +378,16 @@ export function OpsPrepare({ scenarioId, onCancel, initialStep = 'brief' }: { sc
         {chosen.length > 1 && <>
         <ChoiceRail value={visibleSquad!} kind="tabs" label="Squad setup" panelId="squad-setup-panel" onChange={setSetupSquad}
           options={chosen.map(sid => {
-            const extra = Object.entries(loadouts[sid] ?? {}).filter(([item]) => item !== STANDARD_RADIO).reduce((total, [, qty]) => total + qty, 0);
+            const extra = Object.entries(loadouts[sid] ?? {}).reduce((total, [, qty]) => total + qty, 0);
             const entry = brief.entries.find(entry => entry.id === (positions[sid] ?? defaultEntry));
-            return { value: sid, label: <><b>{sid}</b><span className="squad-tab-detail"><span className="squad-tab-name">{squadName(sid)}</span><small>{entry?.label ?? 'Choose position'} · {extra} extra</small></span></>, accessibleLabel: `Set up squad ${sid}, ${squadName(sid)}, ${entry?.label ?? 'no position'}, ${loadouts[sid]?.[STANDARD_RADIO] ?? 0} radios and ${extra} extra items` };
+            return { value: sid, label: <><b>{sid}</b><span className="squad-tab-detail"><span className="squad-tab-name">{squadName(sid)}</span><small>{entry?.label ?? 'Choose position'} · {extra} extra</small></span></>, accessibleLabel: `Set up squad ${sid}, ${squadName(sid)}, ${entry?.label ?? 'no position'}, ${extra} extra items` };
           })} />
           <p className="operation-squad-hint">Switching tabs keeps each squad's setup. All squads share your stock.</p></>}
       {(visibleSquad ? [visibleSquad] : []).map((sid) => {
         const squad = g.squads.find((s) => s.id === sid)!;
         const hasPreset = Object.values(handCarriedLoadout(squad.loadoutPreset)).some((q) => q > 0);
         const visible = store.filter((o: StoreOption) => !o.item.supportOnly
-          && (o.item.id === STANDARD_RADIO || o.owned > 0 || brief.usefulItemIds.includes(o.item.id)));
+          && (o.owned > 0 || brief.usefulItemIds.includes(o.item.id)));
         const points = pointsFor(sid);
         const position = positions[sid] ?? defaultEntry;
         const nearest = position ? defaultStagingFor(built, position) : null;
@@ -470,6 +468,7 @@ export function OpsPrepare({ scenarioId, onCancel, initialStep = 'brief' }: { sc
                 </Button>
               )}
             </div>
+            <p className="dim prep-basic-kit">{BASIC_KIT_LINE}</p>
             {visible.length === 0 ? (
               <p className="dim">No equipment in stock. Buy gear on the Gear tab.</p>
             ) : (
@@ -480,31 +479,23 @@ export function OpsPrepare({ scenarioId, onCancel, initialStep = 'brief' }: { sc
                   const qty = loadouts[sid]?.[o.item.id] ?? 0;
                   const useful = brief.usefulItemIds.includes(o.item.id);
                   const units = picks[sid]?.[o.item.id] ?? [];
-                  const standard = o.item.id === STANDARD_RADIO;
                   return (
-                    <li key={o.item.id} className={`lo prep-item${useful ? ' lo-useful' : ''}${standard ? ' prep-item-standard' : ''}${qty > 0 ? ' prep-item-on' : ''}`}>
+                    <li key={o.item.id} className={`lo prep-item${useful ? ' lo-useful' : ''}${qty > 0 ? ' prep-item-on' : ''}`}>
                       <span className="prep-item-art" aria-hidden="true">
                         <GearArt itemId={o.item.id} size={34} />
-                        {qty > 0 && !standard && <b className="prep-item-qty">×{qty}</b>}
+                        {qty > 0 && <b className="prep-item-qty">×{qty}</b>}
                       </span>
                       <span className="prep-item-main">
                         <strong>{o.item.name}</strong>
                         <span className="prep-item-sub">
-                          {standard ? `One per officer · ${units.length} of ${qty} ready` : `${free} free${others ? ` · ${others} with other squads` : ''}`}
-                          {useful && !standard && <span className="prep-item-useful"><Icon name="star" size={11} />Useful</span>}
+                          {`${free} free${others ? ` · ${others} with other squads` : ''}`}
+                          {useful && <span className="prep-item-useful"><Icon name="star" size={11} />Useful</span>}
                         </span>
                       </span>
-                      {!standard && <span className="prep-item-ctl">
+                      <span className="prep-item-ctl">
                         <Stepper label={o.item.name} value={qty} max={Math.max(qty, free)} onChange={(n) => setQty(sid, o.item.id, Math.min(n, Math.max(qty, free)))} />
-                      </span>}
-                      {standard && units.length < qty && <div className="prep-item-buy">
-                        <Button size="sm" icon="plus" disabled={g.department.funding < radioPlan.shortage * o.item.cost}
-                          onClick={() => act({ type: 'buyItem', itemId: STANDARD_RADIO, qty: radioPlan.shortage }, `Bought ${radioPlan.shortage} standard radio${radioPlan.shortage === 1 ? '' : 's'}`)}>
-                          Buy {radioPlan.shortage} radio{radioPlan.shortage === 1 ? '' : 's'} · {moneyFull(radioPlan.shortage * o.item.cost)}
-                        </Button>
-                        {g.department.funding < radioPlan.shortage * o.item.cost && <span className="dim">Needs {moneyFull(radioPlan.shortage * o.item.cost - g.department.funding)} more funding, or deploy fewer officers.</span>}
-                      </div>}
-                      {(units.length > 0 || units.length < qty) && (!standard || units.length < qty || units.some((u) => UNIT_STATE_META[unitStateOf(u.condition, o.item.wear)].tone === 'bad')) && (
+                      </span>
+                      {(units.length > 0 || units.length < qty) && (
                         <ul className="lo-units" aria-label={`Units taking ${o.item.name}`}>
                           {units.map((u) => {
                             const condition = projectedCondition(g, u, Math.max(now, g.department.clockHighWater), departmentUpkeep(g));
@@ -523,7 +514,7 @@ export function OpsPrepare({ scenarioId, onCancel, initialStep = 'brief' }: { sc
                           {units.length < qty && (
                             <li className="lo-unit lo-unit-bad lo-unit-missing">
                               <Icon name="warning" size={12} />
-                              <span>{qty - units.length} {standard ? 'standard radios missing. Buy or service radios on the Gear tab, or choose fewer officers.' : `units missing; only ${units.length} of ${qty} ready.`}</span>
+                              <span>{qty - units.length} units missing; only {units.length} of {qty} ready.</span>
                             </li>
                           )}
                         </ul>

@@ -4,6 +4,7 @@
 import type { GameState, HandlerResult, Id, ItemDefinition, ItemUnit, SquadId } from './types';
 import { ITEMS } from '../content/items';
 import { projectedCondition, wearFactor, type Upkeep } from './equipment';
+import { basicUnits } from './basic-kit';
 
 /** Ready, above failAt, not expired. Best condition first. */
 export function readyUnits(state: GameState, itemId: Id, upkeep: Upkeep, now = state.department.clockHighWater): ItemUnit[] {
@@ -143,8 +144,8 @@ export function settleRun(
   return { resources: Object.entries(byItem).map(([itemId, v]) => ({ itemId, ...v })), unitWear };
 }
 
-/** Units reserved by one squad in a run. */
+/** Units one squad carries in a run: its reservations, plus the basic kit every officer carries. */
 export function squadUnits(state: GameState, runId: Id, squadId: SquadId): ItemUnit[] {
   const ids = state.reservations.filter((r) => r.runId === runId && r.squadId === squadId).map((r) => r.unitId);
-  return ids.map((id) => state.units[id]).filter((u): u is ItemUnit => Boolean(u) && !ITEMS[u.itemId]?.supportOnly);
+  return [...ids.map((id) => state.units[id]).filter((u): u is ItemUnit => Boolean(u) && !ITEMS[u.itemId]?.supportOnly), ...basicUnits(squadId)];
 }

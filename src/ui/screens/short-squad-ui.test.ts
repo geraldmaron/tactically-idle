@@ -1,10 +1,6 @@
-// short-squad-ui: the squad card and Prepare say who stays home, and Prepare's radio plan counts
-// only the officers who go (deployRoster), the same crew Deploy reserves radios for.
+// short-squad-ui: the squad card and Prepare say who stays home.
 import { describe, expect, it } from 'vitest';
 import { squadReadiness } from '../../sim/department-selectors';
-import { departmentUpkeep } from '../../sim/equipment-manager-policy';
-import { deployRoster } from '../../sim/squads';
-import { standardRadioPlan } from '../../sim/standard-kit';
 import { makeState, NOW } from '../../sim/test-fixtures';
 import { staysHomeLine } from './helpers';
 
@@ -25,13 +21,5 @@ describe('a squad deploying short', () => {
 
   it('says nothing for a squad where everyone goes', () => {
     expect(squadReadiness(makeState(), 'A', NOW).staysHome).toEqual([]);
-  });
-
-  it('plans one radio per officer who goes, not per squad member', () => {
-    const s = shortA();
-    const everyone = standardRadioPlan(s, ['A'], NOW, departmentUpkeep(s));
-    const crew = standardRadioPlan(s, ['A'], NOW, departmentUpkeep(s), sid => deployRoster(s, sid, NOW).goes);
-    expect(Object.values(everyone.loadouts.A!)[0]).toBe(4);
-    expect(Object.values(crew.loadouts.A!)[0]).toBe(3);
   });
 });

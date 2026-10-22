@@ -5,6 +5,7 @@
 // Wear is linear in time, so splitting a span at any boundary changes nothing.
 import type { GameState, HandlerResult, Id, ItemDefinition, ItemUnit, Officer, ShiftReport, UnitStatus } from './types';
 import { issueKit } from '../content/issue-kit';
+import { isBasicUnit } from './basic-kit';
 import { ITEMS } from '../content/items';
 import { CALENDAR } from './calendar';
 import { hashSeed, next } from './rng';
@@ -108,37 +109,17 @@ export function createUnit(d: GameState, itemId: Id, now: number, seed: UnitSeed
   return unit;
 }
 
-/** Start-up grant: every starting officer's issue kit (content/issue-kit.ts) plus department kit.
+/** Start-up grant: every starting officer's role tool (content/issue-kit.ts) plus department kit.
+ * Basic kit is part of the officer (basic-kit.ts) and is never stock.
  * Seeds give varied condition and age so wear is visible from day one; an item with more units
  * than seeds starts the rest new. */
 const DEPARTMENT_KIT: Record<Id, number> = { throw_phone: 1, ballistic_shield: 2, trauma_kit: 4 };
 const STARTING_SEEDS: Record<Id, UnitSeed[]> = {
-  // One radio sits close to unreliable (45): about 90 game days at its wear rate.
-  radio_kit: [
-    { condition: 96, ageDays: 40, uses: 3 },
-    { condition: 91, ageDays: 120, uses: 8 },
-    { condition: 84, ageDays: 210, uses: 11 },
-    { condition: 78, ageDays: 260, uses: 14 },
-    { condition: 71, ageDays: 330, uses: 19 },
-    { condition: 58, ageDays: 480, uses: 27 },
-  ],
   loud_hailer: [
     { condition: 88, ageDays: 300, uses: 9 },
     { condition: 69, ageDays: 500, uses: 20 },
   ],
   throw_phone: [{ condition: 81, ageDays: 150, uses: 4 }],
-  service_sidearm: [
-    { condition: 90, ageDays: 500, uses: 10 },
-    { condition: 82, ageDays: 650, uses: 18 },
-  ],
-  // Issued to everyone; the oldest is due for service soon. Fixed draws keep the department's dice
-  // where they were before light protection joined the grant.
-  light_protection: [
-    { condition: 92, ageDays: 180, uses: 5, wearRoll: 0.42 },
-    { condition: 86, ageDays: 360, uses: 11, wearRoll: 0.67 },
-    { condition: 74, ageDays: 620, uses: 19, wearRoll: 0.31 },
-    { condition: 63, ageDays: 900, uses: 26, wearRoll: 0.85 },
-  ],
   ballistic_shield: [
     { condition: 93, ageDays: 400, uses: 6 },
     { condition: 77, ageDays: 700, uses: 14 },
@@ -147,6 +128,25 @@ const STARTING_SEEDS: Record<Id, UnitSeed[]> = {
   // Consumables derive condition from age; trauma kits do not fade, only expire (540 days).
   trauma_kit: [{ ageDays: 20 }, { ageDays: 90 }, { ageDays: 150 }, { ageDays: 260 }, { ageDays: 350 }, { ageDays: 490 }],
 };
+
+/** Basic kit was start-up stock until 2026-10-21 (it is part of every officer now, basic-kit.ts).
+ * Its old place in the grant still takes the same dice and ids, in the same order, without making
+ * units, so retiring it moved none of the department's draws, ids or the calls drawn from them.
+ * Only whether each seed used the dice matters here. */
+const RETIRED_SEEDS: Record<Id, { wearRoll?: number }[]> = {
+  radio_kit: [{}, {}, {}, {}, {}, {}],
+  service_sidearm: [{}, {}],
+  light_protection: [{ wearRoll: 0.42 }, { wearRoll: 0.67 }, { wearRoll: 0.31 }, { wearRoll: 0.85 }],
+};
+/** The grant's item order before basic kit retired. */
+const SEED_ORDER: Id[] = ['radio_kit', 'loud_hailer', 'throw_phone', 'service_sidearm', 'light_protection', 'ballistic_shield', 'door_ram', 'trauma_kit'];
+
+/** What the retired basic kit used to add to the grant: a radio and armor for everyone, a sidearm
+ * for each entry-trained officer. */
+function retiredGrant(officers: Iterable<Pick<Officer, 'role' | 'certs'>>): Record<Id, number> {
+  const list = [...officers];
+  return { radio_kit: list.length, light_protection: list.length, service_sidearm: list.filter((o) => (o.certs as string[]).includes('entry_team')).length };
+}
 
 /** Spare stock beyond the seeded units: serviceable, a few years in the store room. */
 const SPARE_SEED: UnitSeed = { condition: 70, ageDays: 720, uses: 6 };
@@ -160,13 +160,24 @@ export function startingGrant(officers: Iterable<Pick<Officer, 'role' | 'certs'>
 
 export function createStartingUnits(d: GameState, now: number): void {
   const grant = startingGrant(Object.values(d.officers));
+  const retired = retiredGrant(Object.values(d.officers));
+  // A retired unit's place: its draw (when it used the dice) and its id, with no unit made.
+  const skip = (seed: { wearRoll?: number }) => {
+    if (seed.wearRoll === undefined) d.rngState = next(d.rngState).state;
+    d.nextId++;
+  };
   // The seeded units come first, in seed order, on the department's dice as they always have. Kit
   // beyond the seeds is older spare stock with its own fixed draw, so how much a department starts
   // with never moves the dice its recruits, board and later purchases use.
-  for (const [itemId, seeds] of Object.entries(STARTING_SEEDS)) {
-    for (const seed of seeds.slice(0, grant[itemId] ?? 0)) createUnit(d, itemId, now, seed);
+  for (const itemId of SEED_ORDER) {
+    if (RETIRED_SEEDS[itemId]) for (const seed of RETIRED_SEEDS[itemId].slice(0, retired[itemId])) skip(seed);
+    else for (const seed of (STARTING_SEEDS[itemId] ?? []).slice(0, grant[itemId] ?? 0)) createUnit(d, itemId, now, seed);
   }
-  for (const itemId of Object.keys(grant).sort()) {
+  for (const itemId of [...new Set([...Object.keys(grant), ...Object.keys(retired).filter((id) => retired[id] > 0)])].sort()) {
+    if (RETIRED_SEEDS[itemId]) {
+      for (let i = RETIRED_SEEDS[itemId].length; i < retired[itemId]; i++) skip({ wearRoll: 0 });
+      continue;
+    }
     for (let i = STARTING_SEEDS[itemId]?.length ?? 0; i < grant[itemId]; i++) {
       createUnit(d, itemId, now, { ...SPARE_SEED, wearRoll: next(hashSeed(`start-grant:${itemId}:${i}`)).value });
     }
@@ -187,7 +198,7 @@ export function ownedCount(state: GameState, itemId: Id): number {
 /** Condition now, projecting unsettled time since the last settlement for units that age. */
 export function projectedCondition(state: GameState, u: ItemUnit, now: number, upkeep: Upkeep): number {
   const def = ITEMS[u.itemId];
-  if (!def || (u.status !== 'ready' && u.status !== 'reserved')) return u.condition;
+  if (!def || isBasicUnit(u.id) || (u.status !== 'ready' && u.status !== 'reserved')) return u.condition;
   const gapDays = Math.max(0, now - state.department.clockHighWater) / CALENDAR.gameDayMs;
   return Math.max(0, u.condition - def.wear.perDay * u.wearRate * wearFactor(def, upkeep) * gapDays);
 }

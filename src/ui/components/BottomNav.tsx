@@ -4,7 +4,6 @@ import type { IconName } from '../icons';
 import type { Tab } from './nav';
 import { useNav } from './nav';
 import { nodeOptions } from '../../sim/department-selectors';
-import { hqOverview } from '../../sim/hq-selectors';
 
 const TABS: { id: Tab; label: string; icon: IconName }[] = [
   { id: 'hq', label: 'HQ', icon: 'house' },
@@ -16,17 +15,15 @@ const TABS: { id: Tab; label: string; icon: IconName }[] = [
 
 /** The five destinations, with Ops raised in the center as the game's main action, as management
  * games put their primary button. A badge or dot appears only for something the player can act on
- * now: new calls, an upgrade they can afford, a radio shortage that blocks a deployment. */
+ * now: new calls and an upgrade they can afford. */
 export function BottomNav() {
   const { tab, go } = useNav();
   const g = useGame();
   const live = g.activeRun !== null;
   const fresh = ((g as { incidents?: { seen: boolean; expiresAt: number }[] }).incidents ?? []).filter((i) => !i.seen).length;
   const affordable = nodeOptions(g).some((o) => o.targetTier && o.status !== 'locked' && o.quote.ok);
-  const shortRadios = hqOverview(g, Date.now()).radios.shortage;
   const dot: Partial<Record<Tab, string>> = {
     ...(affordable ? { develop: 'An upgrade is ready to buy' } : {}),
-    ...(shortRadios ? { gear: 'Radios are short for a deployment' } : {}),
   };
   return (
     <nav className="bottomnav" aria-label="Main">

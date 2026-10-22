@@ -6,6 +6,7 @@ import { makeState, NOW, unitId, apply, startCmd, makeUnit, withCallOnBoard } fr
 
 import { evaluateAction, getBuilt } from './resolution';
 import { actionEquipmentRequirements, requiredEquipmentBundle, missionConsumptionBudget } from './equipment-requirements';
+import { isBasicKit } from './basic-kit';
 import type { ActionDefinition } from './scenario-types';
 const testId = 'requirements-regression';
 afterEach(() => { delete SCENARIOS[testId]; });
@@ -14,7 +15,19 @@ function scenarioWith(actions: ActionDefinition[]) {
   for (const stage of Object.values(scenario.stages)) stage.actions = actions.filter((a) => a.stage === stage.id);
   SCENARIOS[testId] = scenario; return testId;
 }
-const stock = () => makeState({ inventory: Object.fromEntries(Object.values(ITEMS).filter((i) => !i.supportOnly).map((i) => [i.id, i.id === 'radio_kit' ? 8 : 4])) });
+const stock = () => makeState({ inventory: Object.fromEntries(Object.values(ITEMS).filter((i) => !i.supportOnly && !isBasicKit(i.id)).map((i) => [i.id, 4])) });
+/** A less-lethal option for Alpha: the device (+4) and the launcher (+5, +1 min) share one group.
+ * Basic kit adds nothing (basic-kit.ts), so the shotgun is the only packable response weapon. */
+function lessLethalOption() {
+  const state = stock();
+  for (const id of state.squads[0].officerIds) state.officers[id].certs.push('less_lethal', 'advanced_less_lethal');
+  const action = structuredClone(SCENARIOS.ms_occupancy.stages.resolve.actions.find((a) => a.id === 'ms_controlled_entry')!);
+  action.targetId = 'front_yard'; action.approach = 'none'; action.requires = {}; action.entry = undefined; action.equipment = [];
+  // Unconfirmed facts are a planning prerequisite, not a bar to packing.
+  const fact = SCENARIOS.ms_occupancy.facts.find((f) => f.initial !== 'disproved')!.id;
+  action.capabilities = { rules: ['less_lethal_device', 'less_lethal_impact'], safetyFactIds: [fact], subjectFactIds: [fact] };
+  return { state, action };
+}
 
 describe('shared mission equipment requirements', () => {
   it('changes daylight and night kits and rejects a useless solo radio relay', () => {
@@ -35,29 +48,35 @@ describe('shared mission equipment requirements', () => {
     expect(autoLoadout(state, id, ['A'], NOW).loadouts.A?.portable_light).toBe(1);
   });
   it('ranks actual condition contribution before nominal catalog strength', () => {
-    const state = stock();
-    const source = SCENARIOS.ms_occupancy;
-    const action = structuredClone(source.stages.resolve.actions.find((a) => a.id === 'ms_controlled_entry')!);
-    action.targetId = 'front_yard'; action.approach = 'none'; action.requires = {}; action.entry = undefined; action.capabilities = { rules: ['authorized_response'], responseContext: 'constrained' }; action.equipment = [{ tag: 'response_firearm', value: 8, group: 'response', label: 'Response equipment' }];
-    for (const [id, unit] of Object.entries(state.units)) if (unit.itemId === 'response_shotgun') delete state.units[id];
-    for (let i = 1; i <= 4; i++) state.units[unitId('compact_carbine', i)].condition = 11;
+    const { state, action } = lessLethalOption();
+    for (let i = 1; i <= 4; i++) state.units[unitId('impact_launcher', i)].condition = 11;
     const plan = autoLoadout(state, scenarioWith([action]), ['A'], NOW);
-    expect(plan.loadouts.A?.service_sidearm).toBe(1);
-    expect(plan.loadouts.A?.compact_carbine).toBeUndefined();
-    expect(plan.rationale.A?.join(' ')).toMatch(/\+3 points/);
+    expect(plan.loadouts.A?.conducted_energy_device).toBe(1);
+    expect(plan.loadouts.A?.impact_launcher).toBeUndefined();
+    expect(plan.rationale.A?.join(' ')).toMatch(/\+4 points/);
   });
   it('uses setup time as the tie-break for equal condition-adjusted points', () => {
-    const state = stock();
-    const source = SCENARIOS.ms_occupancy;
-    const action = structuredClone(source.stages.resolve.actions.find((a) => a.id === 'ms_controlled_entry')!);
-    action.targetId = 'front_yard'; action.approach = 'none'; action.requires = {}; action.entry = undefined; action.capabilities = { rules: ['authorized_response'], responseContext: 'constrained' }; action.equipment = [{ tag: 'response_firearm', value: 8, group: 'response', label: 'Response equipment' }];
-    for (const [id, unit] of Object.entries(state.units)) {
-      if (unit.itemId === 'response_shotgun') delete state.units[id];
-      if (unit.itemId === 'compact_carbine') unit.condition = 15;
-    }
+    const { state, action } = lessLethalOption();
+    for (const unit of Object.values(state.units)) if (unit.itemId === 'impact_launcher') unit.condition = 30; // 5 x 0.8 = the device's 4
     const plan = autoLoadout(state, scenarioWith([action]), ['A'], NOW);
-    expect(plan.loadouts.A?.service_sidearm).toBe(1);
-    expect(plan.loadouts.A?.compact_carbine).toBeUndefined();
+    expect(plan.loadouts.A?.conducted_energy_device).toBe(1);
+    expect(plan.loadouts.A?.impact_launcher).toBeUndefined();
+  });
+  it('packs the stronger launcher when both are in good condition, so the cases above turn on condition', () => {
+    const { state, action } = lessLethalOption();
+    const plan = autoLoadout(state, scenarioWith([action]), ['A'], NOW);
+    expect(plan.loadouts.A?.impact_launcher).toBe(1);
+    expect(plan.loadouts.A?.conducted_energy_device).toBeUndefined();
+  });
+  it('never packs basic kit for a response action: it adds nothing, and the shotgun is the upgrade', () => {
+    const state = makeState({ inventory: { response_shotgun: 1 } });
+    for (const id of state.squads[0].officerIds) if (!state.officers[id].certs.includes('entry_team')) state.officers[id].certs.push('entry_team');
+    const action = structuredClone(SCENARIOS.ms_occupancy.stages.resolve.actions.find((a) => a.id === 'ms_controlled_entry')!);
+    action.targetId = 'front_yard'; action.approach = 'none'; action.requires = {}; action.entry = undefined; action.capabilities = { rules: ['authorized_response'], responseContext: 'constrained' }; action.equipment = [];
+    const plan = autoLoadout(state, scenarioWith([action]), ['A'], NOW);
+    expect(plan.loadouts.A?.response_shotgun).toBe(1);
+    expect(plan.rationale.A?.join(' ')).toMatch(/Response shotgun.*\+6 points, \+1 game min/);
+    for (const id of ['radio_kit', 'service_sidearm', 'compact_carbine', 'light_protection']) expect(plan.loadouts.A?.[id], id).toBeUndefined();
   });
   it('does not read hidden truth or hidden people positions when recommending stock', () => {
     const state = stock();

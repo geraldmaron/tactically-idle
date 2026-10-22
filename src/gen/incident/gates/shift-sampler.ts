@@ -16,7 +16,6 @@ import { createInitialState } from '../../../sim/department';
 import { CALENDAR } from '../../../sim/calendar';
 import { applyIncidentsDue, nextIncidentAt, takeIncident } from '../../../sim/incidents';
 import type { IncidentType } from '../../../sim/scenario-types';
-import { stockKit } from '../../../sim/test-fixtures';
 import type { GameState } from '../../../sim/types';
 
 /** Crisis calls: a person may harm themselves. No field marks one, so this is a list of call types,
@@ -47,7 +46,6 @@ function department(seed: number, start: number, kind: Department): GameState {
   if (kind === 'every-type') {
     const first = state.squads.find(squad => squad.id === 'A')?.officerIds[0];
     if (first !== undefined) state.officers[first].certs = [...new Set([...state.officers[first].certs, 'vehicle_operations', 'entry_team'] as const)];
-    state = stockKit(state, ['A'], ['service_sidearm']).state;
   }
   return state;
 }

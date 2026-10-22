@@ -4,6 +4,7 @@
 // every choice in every situation), the building as drawn, and the department's own officers and
 // stock. The call's seed, which draws its hidden situation, cast, weapons and fact truth, is never
 // read: `callShortages` takes the call type and building, not the scenario.
+import { isBasicKit } from './basic-kit';
 import type { CertId, GameState, Id, SquadId } from './types';
 import type { ActionDefinition, IncidentType } from './scenario-types';
 import { callTreeAt, type CallTree } from '../content/call-trees';
@@ -18,8 +19,6 @@ export type BoardShortage =
   | { kind: 'cert'; id: CertId; /** Officers holding it who could deploy now: always 0 for a shortage. */ have: number }
   | { kind: 'gear'; /** Item name, or the alternatives joined with "or". */ label: string; itemIds: Id[]; need: number; have: number };
 
-/** Standard kit: one radio per officer is packed on every call. */
-const STANDARD_KIT = new Set<Id>(['radio_kit']);
 
 /** Officers holding `cert` in a squad that is home, who could deploy now (not injured, recovering, training or out). */
 function deployableHolders(state: GameState, cert: CertId, now: number): number {
@@ -44,7 +43,7 @@ export function callNeedsOf(tree: CallTree | undefined): CallNeeds {
   const certs: CertId[] = [];
   const gear = new Map<string, { itemIds: Id[]; label: string; need: number }>();
   const add = (itemIds: Id[], label: string, need: number) => {
-    const ids = itemIds.filter((id) => !STANDARD_KIT.has(id));
+    const ids = itemIds.filter((id) => !isBasicKit(id));
     if (!ids.length) return;
     const key = [...ids].sort().join('|');
     const prev = gear.get(key);

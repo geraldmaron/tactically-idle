@@ -3,14 +3,11 @@ import { createInitialState } from './department';
 import { hqOverview } from './hq-selectors';
 const NOW = Date.UTC(2026, 9, 3);
 describe('truthful department overview', () => {
-  it('separates personnel from standard-radio availability', () => {
+  it('reports personnel only: basic kit is part of every officer and is never short', () => {
     const state = createInitialState(NOW, 1);
-    expect(hqOverview(state, NOW).radios.shortage).toBe(0); // starter-kit: a radio for every officer
-    for (const radio of Object.values(state.units).filter((u) => u.itemId === 'radio_kit').slice(0, 2)) radio.status = 'scrapped';
     const view = hqOverview(state, NOW);
-    expect(view.totalOfficers).toBe(8); expect(view.radios.required).toBe(8);
-    expect(view.radios.shortage).toBe(2);
-    expect(view.deployable).toBeGreaterThan(view.radios.available);
+    expect(view.totalOfficers).toBe(8);
+    expect(view).not.toHaveProperty('radios');
     expect(view.fresh + view.strained).toBe(view.deployable);
   });
   it('counts real injury, training and mandatory-recovery blockers, not stress alone', () => {

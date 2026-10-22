@@ -159,7 +159,7 @@ export const OWNERSHIP: readonly { glob: string; layer: Layer; system: System }[
   { glob: '/src/sim/story-movement.ts', layer: 'engine', system: 'subject' },
   { glob: '/src/sim/sightings.ts', layer: 'engine', system: 'subject' },
   { glob: '/src/sim/personnel.ts', layer: 'engine', system: 'officer' },
-  { glob: '/src/sim/standard-kit.ts', layer: 'engine', system: 'item' },
+  { glob: '/src/sim/basic-kit.ts', layer: 'engine', system: 'item' },
   { glob: '/src/sim/hq-selectors.ts', layer: 'engine', system: 'metric' },
   { glob: '/src/sim/incident-consequences.ts', layer: 'engine', system: 'metric' },
   { glob: '/src/sim/session.ts', layer: 'engine', system: 'platform' },

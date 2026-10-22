@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useGame } from '../store';
 import { useNav } from '../components/nav';
 import { EquipmentStore } from '../storefront/EquipmentStore';
+import { BASIC_KIT_LINE } from '../../sim/basic-kit';
 import { storeOptions } from '../../sim/department-selectors';
 import type { StoreOption } from '../../sim/department-selectors';
 import type { GameState, Id, Squad } from '../../sim/types';
@@ -68,6 +69,7 @@ function ArmoryHeader({ onTool }: { owned: StoreOption[]; onTool: (tool: 'rules'
   return (
     <section className="armory-head" aria-label="Armory">
       <QuartermasterCard />
+      <p className="dim armory-basic">{BASIC_KIT_LINE}</p>
       <div className="armory-tools">
         <button type="button" className="armory-tool" aria-haspopup="dialog" onClick={() => onTool('rules')}>
           <Icon name={restock.unlocked ? 'refresh' : 'lock'} size={16} />
@@ -157,7 +159,7 @@ function PresetEditor({ squad, opts }: { squad: Squad; opts: StoreOption[] }) {
   const { act } = useToast();
   const [draft, setDraft] = useState<Record<Id, number>>(squad.loadoutPreset);
   useEffect(() => setDraft(squad.loadoutPreset), [squad.loadoutPreset]);
-  const rows = opts.filter((o) => o.owned > 0 && o.item.kind !== 'infrastructure' && !o.item.supportOnly && o.item.id !== 'radio_kit');
+  const rows = opts.filter((o) => o.owned > 0 && o.item.kind !== 'infrastructure' && !o.item.supportOnly);
   const dirty = JSON.stringify(normalize(draft)) !== JSON.stringify(normalize(squad.loadoutPreset));
   return (
     <Card className="preset">

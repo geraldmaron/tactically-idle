@@ -1,14 +1,14 @@
 # Field readiness and maintenance
 
-## Standard radios
+## Basic kit
 
-New live deployments automatically load one usable owned radio for each officer in the selected squads. Radios are standard kit, not an optional preset or quantity chore. The preparation screen shows the required count, exact serials and any shortage. A clearly priced purchase button can buy missing radios only when the player clicks it; changing squads recalculates the requirement. Existing operations retain their saved equipment, including older runs that deployed with fewer radios. Practice keeps its simulated equipment rules.
+Every officer carries a radio headset, a service sidearm, a carbine and light body armor as part of the officer (`src/sim/basic-kit.ts`, owner decision 2026-10-21). Basic kit is never stock: it is not granted, issued on hire, listed in the Armory, bought, packed, worn or serviced, and a deploy never waits on it. It needs no certification or development, and it adds no score bonus; the response shotgun, the precision rifle and the less-lethal tools are the upgrades. The preparation screen and the Armory say so in one line.
 
 ## Equipment manager
 
 Hire the equipment manager through Gear or the Logistics development branch for $4,900, or free once the department has resolved 8 calls. This is a one-time department upgrade. Reusable equipment then wears 20% more slowly, both over time and when used; service prices are 25% lower, rounded upward to whole funding units. Consumables retain normal aging, expiry and use. Existing paid repairs are not repriced or refunded.
 
-Automatic servicing starts paused. On Gear, the player can explicitly enable an hourly ceiling or pause it again. Each clock hour, while within the normal 24-hour unattended economy window, the manager considers idle equipment below 75% condition, worst first. It spends at most the chosen ceiling, keeps $1,000 in reserve and starts an automatic job only while fewer than two repairs are underway, counting manual jobs. The player can order additional manual repairs separately. Deployed/reserved equipment and consumables are excluded. Working radios needed by assigned officers stay available; failed radios and spare radios can be repaired. Pausing stops new repair orders; paid work finishes normally. Shift reports show the charges and serials sent for service.
+Automatic servicing starts paused. On Gear, the player can explicitly enable an hourly ceiling or pause it again. Each clock hour, while within the normal 24-hour unattended economy window, the manager considers idle equipment below 75% condition, worst first. It spends at most the chosen ceiling, keeps $1,000 in reserve and starts an automatic job only while fewer than two repairs are underway, counting manual jobs. The player can order additional manual repairs separately. Deployed/reserved equipment and consumables are excluded. Pausing stops new repair orders; paid work finishes normally. Shift reports show the charges and serials sent for service.
 
 ## Equipment at the point of need
 

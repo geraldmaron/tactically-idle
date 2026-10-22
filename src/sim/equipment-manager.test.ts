@@ -43,14 +43,14 @@ describe('equipment manager', () => {
 
   it('uses the same discounted quote and charge, rounds upward, and does not refund pre-hire repairs', () => {
     let state = createInitialState(T0, 71);
-    const radio = Object.values(state.units).find((u) => u.itemId === 'radio_kit' && u.condition < 75)!;
+    const scope = Object.values(state.units).find((u) => u.itemId === 'observation_binoculars' && u.condition < 75)!;
     const before = state.department.funding;
-    state = ok(state, { type: 'serviceUnit', unitId: radio.id });
+    state = ok(state, { type: 'serviceUnit', unitId: scope.id });
     expect(state.department.funding).toBe(before - 60);
-    const until = state.units[radio.id].serviceUntil;
+    const until = state.units[scope.id].serviceUntil;
     state = ok(state, { type: 'unlockNode', nodeId: 'logistics_equipment_manager' });
-    expect(state.units[radio.id].serviceUntil).toBe(until);
-    const other = Object.values(state.units).find((u) => u.itemId === 'radio_kit' && u.status === 'ready' && u.condition < 75)!;
+    expect(state.units[scope.id].serviceUntil).toBe(until);
+    const other = Object.values(state.units).find((u) => u.itemId === 'observation_binoculars' && u.status === 'ready' && u.condition < 75)!;
     expect(serviceCheck(state, other.id, T0, departmentUpkeep(state)).cost).toBe(45);
     const funds = state.department.funding;
     state = ok(state, { type: 'serviceUnit', unitId: other.id });
@@ -61,16 +61,16 @@ describe('equipment manager', () => {
 
   it('reduces reusable time and per-use wear once, while consumables retain their normal aging and consumption', () => {
     const state = hired();
-    const radio = Object.values(state.units).find((u) => u.itemId === 'radio_kit')!;
+    const hailer = Object.values(state.units).find((u) => u.itemId === 'loud_hailer')!;
     const consumable = Object.values(state.units).find((u) => u.itemId === 'trauma_kit')!;
     const next = ok(state, { type: 'tick' }, T0 + HOUR_MS);
-    expect(next.units[radio.id].condition).toBeCloseTo(radio.condition - ITEMS.radio_kit.wear.perDay * radio.wearRate * 0.8, 8);
-    expect(projectedCondition(state, radio, T0 + HOUR_MS, departmentUpkeep(state))).toBeCloseTo(next.units[radio.id].condition, 8);
+    expect(next.units[hailer.id].condition).toBeCloseTo(hailer.condition - ITEMS.loud_hailer.wear.perDay * hailer.wearRate * 0.8, 8);
+    expect(projectedCondition(state, hailer, T0 + HOUR_MS, departmentUpkeep(state))).toBeCloseTo(next.units[hailer.id].condition, 8);
     expect(next.units[consumable.id].condition).toBeCloseTo(consumable.condition - ITEMS.trauma_kit.wear.perDay * consumable.wearRate, 8);
-    expect(reserveLoadouts(next, 'wear-test', { A: { radio_kit: 1, trauma_kit: 1 } }, { A: [radio.id, consumable.id] }, T0 + HOUR_MS, departmentUpkeep(next))).toEqual({ ok: true });
-    const radioBefore = next.units[radio.id].condition;
-    settleRun(next, 'wear-test', [radio.id, consumable.id], departmentUpkeep(next));
-    expect(next.units[radio.id].condition).toBe(Math.round((radioBefore - 6 * radio.wearRate * 0.8) * 10) / 10);
+    expect(reserveLoadouts(next, 'wear-test', { A: { loud_hailer: 1, trauma_kit: 1 } }, { A: [hailer.id, consumable.id] }, T0 + HOUR_MS, departmentUpkeep(next))).toEqual({ ok: true });
+    const hailerBefore = next.units[hailer.id].condition;
+    settleRun(next, 'wear-test', [hailer.id, consumable.id], departmentUpkeep(next));
+    expect(next.units[hailer.id].condition).toBe(Math.round((hailerBefore - ITEMS.loud_hailer.wear.perUse * hailer.wearRate * 0.8) * 10) / 10);
     expect(next.units[consumable.id]).toBeUndefined();
   });
 
@@ -113,9 +113,12 @@ describe('equipment manager', () => {
     }
   });
 
-  it('never services deployed/reserved units or consumables, and keeps working radios for assigned officers', () => {
+  // Basic kit is not stock (basic-kit.ts), so the old rule keeping working radios for officers is gone.
+  it('never services deployed/reserved units or consumables', () => {
     const state = ok(hired(), { type: 'setMaintenanceBudget', perHour: 500 });
-    for (const u of Object.values(state.units)) u.condition = u.itemId === 'radio_kit' ? 50 : 100;
+    for (const u of Object.values(state.units)) u.condition = 100;
+    const kit = Object.values(state.units).find((u) => u.itemId === 'trauma_kit')!;
+    kit.condition = 20;
     const shield = Object.values(state.units).find((u) => u.itemId === 'ballistic_shield')!;
     shield.condition = 20;
     shield.status = 'reserved';
@@ -124,11 +127,10 @@ describe('equipment manager', () => {
     state.reservations.push({ id: 'held', runId: 'elsewhere', squadId: 'A', itemId: otherShield.itemId, unitId: otherShield.id });
     const next = ok(state, { type: 'tick' }, T0 + HOUR_MS);
     expect(Object.values(next.units).filter((u) => u.status === 'service')).toHaveLength(0);
-    expect(Object.values(next.units).filter((u) => u.itemId === 'radio_kit' && u.status === 'ready')).toHaveLength(8);
-    const failedRadio = Object.values(next.units).find((u) => u.itemId === 'radio_kit')!;
-    failedRadio.condition = 0;
+    const failed = Object.values(next.units).find((u) => u.itemId === 'loud_hailer')!;
+    failed.condition = 0;
     const repaired = ok(next, { type: 'tick' }, T0 + 2 * HOUR_MS);
-    expect(repaired.units[failedRadio.id].status).toBe('service');
+    expect(repaired.units[failed.id].status).toBe('service');
   });
 
   it('pausing prevents new charges while allowing a paid repair to finish', () => {

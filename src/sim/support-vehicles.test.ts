@@ -20,10 +20,9 @@ const supply = { type: 'resupplyAction', actionId: 'ms_contact_hall', actingSqua
 const deliver = (state: GameState) => dispatch(state, { ...supply, actingSquadIds: [...supply.actingSquadIds], supportSquadIds: [] }, { now: NOW });
 
 describe('exact exterior support reservation and resupply', () => {
-  it('takes the vehicle only in its explicit slot, leaves radios intact, and releases it on cancel', () => {
+  it('takes the vehicle only in its explicit slot, reserves nothing else, and releases it on cancel', () => {
     const state = withVan();
-    expect(state.reservations.filter((r) => r.itemId === 'radio_kit')).toHaveLength(4);
-    expect(state.reservations.filter((r) => r.itemId === 'support_van')).toHaveLength(1);
+    expect(state.reservations.map((r) => r.itemId)).toEqual(['support_van']);
     expect(state.activeRun!.supportPositionId).toBe('front_yard');
     expect(availableUnits(state, state.activeRun!, 'A').some((u) => ITEMS[u.itemId].supportOnly)).toBe(false);
     const cancelled = apply(state, { type: 'cancelOperation' });

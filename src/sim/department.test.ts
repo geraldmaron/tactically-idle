@@ -55,7 +55,7 @@ describe('starting state', () => {
       expect(o.assignment).toBeNull();
       if (o.id !== 'off_reyes') expect(o.stress).toBeLessThanOrEqual(25);
     }
-    expect(ownedCount(s, 'radio_kit')).toBe(Object.keys(s.officers).length);
+    expect(ownedCount(s, 'radio_kit')).toBe(0); // basic kit is part of every officer, never stock
     expect(ownedCount(s, 'thermal_imager')).toBe(0);
     expect(s.candidates).toHaveLength(3);
   });
@@ -312,11 +312,11 @@ describe('squads', () => {
 
   it('presets and restock rules need their nodes', () => {
     const s = createInitialState(T0);
-    expect(refused(s, { type: 'setLoadoutPreset', squadId: 'A', items: { radio_kit: 2 } }, T0)).toMatch(/not unlocked/);
+    expect(refused(s, { type: 'setLoadoutPreset', squadId: 'A', items: { loud_hailer: 2 } }, T0)).toMatch(/not unlocked/);
     expect(refused(s, { type: 'setRestockRule', rule: { itemId: 'trauma_kit', target: 10, budgetCeiling: 300 } }, T0)).toMatch(/not unlocked/);
     const t = ok(s, { type: 'unlockNode', nodeId: 'logistics_presets' }, T0);
-    const u = ok(t, { type: 'setLoadoutPreset', squadId: 'A', items: { radio_kit: 2, trauma_kit: 0 } }, T0);
-    expect(u.squads[0].loadoutPreset).toEqual({ radio_kit: 2 });
+    const u = ok(t, { type: 'setLoadoutPreset', squadId: 'A', items: { loud_hailer: 2, trauma_kit: 0 } }, T0);
+    expect(u.squads[0].loadoutPreset).toEqual({ loud_hailer: 2 });
     expect(refused(u, { type: 'setLoadoutPreset', squadId: 'A', items: { thermal_imager: 1 } }, T0)).toMatch(/not unlocked/);
   });
 

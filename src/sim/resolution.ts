@@ -1,3 +1,4 @@
+import { isBasicUnit } from './basic-kit';
 import { sourceOdds } from './pressure-sources';
 import { ROLE_CHECKS, TRAIT_EFFECTS, TRAIT_PRESSURE_SHIELD, TYPE_HISTORY, type TraitWhen } from '../content/traits';
 import { actionEquipmentRequirements, effectiveTags, normalizedActionConsumption, operatorQualified, orderActionParticipants } from './equipment-requirements';
@@ -1272,7 +1273,7 @@ export function evaluateAction(input: EvalInput): Evaluation {
   const unconditionalUses = [...(consumption ?? []), ...equipUses, ...toolUses, ...radioUses, ...capability.uses];
   const storyMovementOnlyUnitIds = storyToolUses.filter(use => !unconditionalUses.some(existing => existing.unitId === use.unitId)).map(use => use.unitId);
   for (const u of [...unconditionalUses, ...storyToolUses]) {
-    if (seenUnits.has(u.unitId)) continue;
+    if (seenUnits.has(u.unitId) || isBasicUnit(u.unitId)) continue;
     seenUnits.add(u.unitId);
     allUses.push(u);
   }
