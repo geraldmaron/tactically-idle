@@ -70,6 +70,7 @@ export const OWNERSHIP: readonly { glob: string; layer: Layer; system: System }[
   { glob: '/src/sim/calendar.ts', layer: 'kernel', system: 'platform' },
   { glob: '/src/sim/crew-flags.ts', layer: 'kernel', system: 'officer' },
   { glob: '/src/sim/format.ts', layer: 'kernel', system: 'platform' },
+  { glob: '/src/sim/squad-names.ts', layer: 'kernel', system: 'platform' },
   { glob: '/src/sim/conditions.ts', layer: 'kernel', system: 'platform' },
   // world (blueprint)
   { glob: '/src/gen/building/**', layer: 'world', system: 'blueprint' },

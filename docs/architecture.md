@@ -10,27 +10,27 @@ syntax tree (`src/dev/import-graph.ts`, with the parser Vite ships), and a dynam
 
 | Layer | Modules | Lines | May import | Owns |
 | --- | --- | --- | --- | --- |
-| kernel | 9 | 2577 | nothing | Shared records, ids, seeded randomness, geometry and the tuning registry. No game rules. |
+| kernel | 10 | 2600 | nothing | Shared records, ids, seeded randomness, geometry and the tuning registry. No game rules. |
 | world | 50 | 8307 | kernel | Blueprints: authored and procedural buildings, rooms, openings, furniture, routes and sightlines. |
 | catalog | 27 | 4720 | kernel, world | Authored data: officers, personas, items, courses, unlocks, call templates and call trees. |
 | scenario | 10 | 3149 | kernel, world, catalog | Turns a drawn call into a playable definition: cast, placement on the blueprint, compiled tree. |
-| engine | 68 | 15327 | kernel, world, catalog, scenario | Game rules and state: department, economy, operations, resolution, outcomes, saves. |
-| qa | 39 | 6131 | kernel, world, catalog, scenario, engine | Content gates, balance measurement, fixtures and test support. Never loaded by the game. |
-| ui | 148 | 19695 | kernel, world, catalog, scenario, engine | Player screens, the blueprint renderer, portraits and the store that dispatches commands. |
-| lab | 103 | 18107 | kernel, world, catalog, scenario, engine, qa, ui | The dev-only Scenario Lab and dev sheets. Reads everything, never ships. |
-| shell | 3 | 383 | kernel, world, catalog, engine, ui, lab | Entry points that choose which app to mount. |
+| engine | 68 | 15328 | kernel, world, catalog, scenario | Game rules and state: department, economy, operations, resolution, outcomes, saves. |
+| qa | 39 | 6133 | kernel, world, catalog, scenario, engine | Content gates, balance measurement, fixtures and test support. Never loaded by the game. |
+| ui | 148 | 19698 | kernel, world, catalog, scenario, engine | Player screens, the blueprint renderer, portraits and the store that dispatches commands. |
+| lab | 103 | 18113 | kernel, world, catalog, scenario, engine, qa, ui | The dev-only Scenario Lab and dev sheets. Reads everything, never ships. |
+| shell | 3 | 388 | kernel, world, catalog, engine, ui, lab | Entry points that choose which app to mount. |
 
 ## Systems
 
 | System | Modules | Lines | Job |
 | --- | --- | --- | --- |
-| blueprint | 81 | 13942 | Where things are: buildings, rooms, doors and windows, furniture, routes, cover and sightlines. |
+| blueprint | 81 | 13948 | Where things are: buildings, rooms, doors and windows, furniture, routes, cover and sightlines. |
 | subject | 7 | 1360 | Who is on scene: subjects, hostages, victims, bystanders and animals, their holds, weapons, temper (agitation and rapport) and positions. |
 | officer | 19 | 2389 | Who the player sends: ratings, traits, stress, injuries, certifications, careers and squads. |
 | item | 7 | 1394 | What they carry: the item catalog, ratings and capabilities, force risk, inventory and wear. |
-| scenario | 68 | 15601 | What happens: call trees, placement on the blueprint, choices, chance per choice, branches and clocks, and the call-time logistics (loadouts, resupply, outside support) that read the items. |
-| metric | 30 | 5261 | What it meant: outcome scoring, harm, debriefs, department reputation, money and progression, and the Command Staff who run the department. |
-| platform | 245 | 38449 | Everything that serves the systems above: records, randomness, saves, the store, screens and tooling. |
+| scenario | 68 | 15603 | What happens: call trees, placement on the blueprint, choices, chance per choice, branches and clocks, and the call-time logistics (loadouts, resupply, outside support) that read the items. |
+| metric | 30 | 5263 | What it meant: outcome scoring, harm, debriefs, department reputation, money and progression, and the Command Staff who run the department. |
+| platform | 246 | 38479 | Everything that serves the systems above: records, randomness, saves, the store, screens and tooling. |
 
 ## System dependency chain
 
@@ -101,4 +101,4 @@ Each input a system feeds into a choice's chance, and whether the engine actuall
 None.
 
 
-Cross-layer runtime imports in total: 811.
+Cross-layer runtime imports in total: 823.
