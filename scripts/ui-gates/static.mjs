@@ -11,6 +11,8 @@ export const THEME_FILE = 'src/ui/theme.css';
 /** The spacing scale in px: --sp1 to --sp6 in theme.css. */
 export const SPACING_SCALE = [4, 8, 12, 16, 24, 32];
 export const ICON_SIZES = [16, 20, 24];
+/** The kit's named icon sizes (icons.tsx, ICON_SIZE): 16, 20 and 24. */
+export const ICON_SIZE_NAMES = ['sm', 'md', 'lg'];
 export const ICON_STROKE = 1.75;
 export const SMALL_PX = 14;
 export const FLOOR_PX = 12;
@@ -160,9 +162,14 @@ export function iconFindings(file, tsx) {
     if (el.name !== 'Icon') continue;
     const s = el.attrs.size;
     if (s) {
+      // A kit size name ('sm', 'md', 'lg'), a pixel size, or an expression made of them (compact ? 'md' : 'lg').
+      const tokens = [...s.value.matchAll(/'([^']*)'|"([^"]*)"|(?<![\w.])(\d+(?:\.\d+)?)(?![\w.])/g)].map((m) => m[1] ?? m[2] ?? Number(m[3]));
       const n = s.kind === 'expr' && /^\d+(?:\.\d+)?$/.test(s.value) ? Number(s.value) : s.kind === 'str' && /^\d+$/.test(s.value) ? Number(s.value) : null;
-      if (n === null) dynamic.push({ file, line: el.line, text: `<Icon size={${s.value}}>` });
-      else if (!ICON_SIZES.includes(n)) size.push({ file, line: el.line, text: `<Icon size={${n}}>` });
+      if (s.kind === 'str' && ICON_SIZE_NAMES.includes(s.value)) continue;
+      if (n !== null) { if (!ICON_SIZES.includes(n)) size.push({ file, line: el.line, text: `<Icon size={${n}}>` }); }
+      else if (tokens.length && tokens.every((t) => typeof t === 'string' ? ICON_SIZE_NAMES.includes(t) : ICON_SIZES.includes(t))) continue;
+      else if (tokens.some((t) => typeof t === 'number' && !ICON_SIZES.includes(t))) size.push({ file, line: el.line, text: `<Icon size={${s.value.slice(0, 30)}}>` });
+      else dynamic.push({ file, line: el.line, text: `<Icon size={${s.value}}>` });
     }
     const w = el.attrs.strokeWidth;
     if (w && !(w.kind === 'expr' && Number(w.value) === ICON_STROKE)) stroke.push({ file, line: el.line, text: `<Icon strokeWidth={${w.value}}>` });
@@ -331,18 +338,18 @@ export function switchFindings(file, tsx) {
  * with "No", "None", "Nothing" or "Empty", or whose class names itself empty, outside EmptyState. A
  * bespoke error is an alert built by hand. */
 export function stateFindings(file, tsx) {
-  if (file === 'src/ui/components/ui.tsx' || NOT_UI_SOURCE.test(file)) return { empty: [], error: [] };
+  if (file === 'src/ui/components/ui.tsx' || file === 'src/ui/components/states.tsx' || NOT_UI_SOURCE.test(file)) return { empty: [], error: [] };
   const { src, elements } = scanJsx(tsx);
   const empty = [], error = [];
   for (const el of elements) {
-    if (el.selfClosing || /^(?:Section|Sheet|EmptyState)$/.test(el.name)) continue;
-    const insideEmptyState = elements.some((p) => p.name === 'EmptyState' && !p.selfClosing && el.start >= p.openEnd && el.end <= p.closeStart);
+    if (el.selfClosing || /^(?:Section|Sheet|EmptyState|LoadingState|ErrorState)$/.test(el.name)) continue;
+    const insideEmptyState = elements.some((p) => /^(?:EmptyState|LoadingState|ErrorState)$/.test(p.name) && !p.selfClosing && el.start >= p.openEnd && el.end <= p.closeStart);
     const cls = el.attrs.className?.value ?? '';
     const first = firstChild(childrenOf(src, el));
     const absence = first.kind === 'text' && /^(?:No|None|Nothing|Empty)\b/.test(first.text);
     const namedEmpty = /(?:^|[\s-])empty(?:$|[\s-])/.test(cls);
     if (!insideEmptyState && (absence || namedEmpty)) empty.push({ file, line: el.line, text: `<${el.name}${cls ? ` className="${cls.slice(0, 30)}"` : ''}> ${absence ? first.text.slice(0, 30) : 'is its own empty state'}` });
-    if (el.attrs.role?.value === 'alert' || /^(?:p|div|span)$/.test(el.name) && /(?:^|[\s-])(?:alert|error)(?:$|[\s-])/.test(cls)) error.push({ file, line: el.line, text: `<${el.name}${cls ? ` className="${cls.slice(0, 30)}"` : ''}> is an error built by hand` });
+    if (!insideEmptyState && (el.attrs.role?.value === 'alert' || /^(?:p|div|span)$/.test(el.name) && /(?:^|[\s-])(?:alert|error)(?:$|[\s-])/.test(cls))) error.push({ file, line: el.line, text: `<${el.name}${cls ? ` className="${cls.slice(0, 30)}"` : ''}> is an error built by hand` });
   }
   return { empty, error };
 }

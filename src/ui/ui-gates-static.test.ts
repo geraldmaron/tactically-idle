@@ -117,8 +117,9 @@ describe('ui gates (static): each detector fails what it owns', () => {
   it('R9 holds icons to 16, 20 and 24 at stroke 1.75', () => {
     const bad = iconFindings(TSX, ui('<Icon name="a" size={18} /><Icon name="b" size={n} /><Icon name="c" size={16} strokeWidth={2} />'));
     expect([bad.size.length, bad.dynamic.length, bad.stroke.length]).toEqual([1, 1, 1]);
-    const good = iconFindings(TSX, ui('<Icon name="a" /><Icon name="b" size={16} /><Icon name="c" size={20} strokeWidth={1.75} /><Icon name="d" size={24} />'));
+    const good = iconFindings(TSX, ui('<Icon name="a" /><Icon name="e" size="md" /><Icon name="f" size={compact ? \'md\' : \'lg\'} /><Icon name="b" size={16} /><Icon name="c" size={20} strokeWidth={1.75} /><Icon name="d" size={24} />'));
     expect([good.size.length, good.dynamic.length, good.stroke.length]).toEqual([0, 0, 0]);
+    expect(iconFindings(TSX, ui('<Icon name="a" size={compact ? 18 : \'lg\'} />')).size, 'a pixel size inside an expression is still off the grid').toHaveLength(1);
     expect(iconCssFindings(CSS, '.btn .icon { width: 18px; height: 18px }')).toHaveLength(1);
     expect(iconCssFindings(CSS, '.btn .icon { width: 20px } .card { width: 18px }')).toEqual([]);
   });
@@ -138,7 +139,7 @@ describe('ui gates (static): each detector fails what it owns', () => {
   it('R11 sends empty and failed states through the shared treatment', () => {
     const bad = stateFindings(TSX, ui('<p className="dim">No rules yet.</p><li className="strip-empty">x</li><p className="save-alert" role="alert">Failed</p>'));
     expect([bad.empty.length, bad.error.length]).toEqual([2, 1]);
-    const good = stateFindings(TSX, ui('<EmptyState title="No rules yet"><span>No rules yet.</span></EmptyState><p>Nobody home</p>'));
+    const good = stateFindings(TSX, ui('<EmptyState title="No rules yet"><span>No rules yet.</span></EmptyState><ErrorState title="Failed"><p role="alert">No save</p></ErrorState><p>Nobody home</p>'));
     expect([good.empty.length, good.error.length]).toEqual([0, 0]);
   });
 });
