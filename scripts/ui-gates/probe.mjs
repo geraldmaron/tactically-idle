@@ -83,7 +83,8 @@ export async function probe(cfg) {
   const idOf = (el) => {
     const path = [];
     for (let a = el, n = 0; a && a !== root && a !== document.body && n < 4; a = a.parentElement, n++) path.unshift(a.tagName.toLowerCase() + cls(a) + (n < 2 ? `:${nth(a)}` : ''));
-    const label = nameOf(el);
+    // Live copy (the social ticker draws random handles) would give one element a different id on each run.
+    const label = el.closest('.source-ticker') ? '' : nameOf(el);
     return `${path.join('>')}${label ? ` "${label}"` : ''}`;
   };
 
@@ -238,6 +239,7 @@ export async function probe(cfg) {
   });
 
   // ---- R14 composited contrast
+  const paintedTexts = [];
   guard('R14', () => {
     const backdrop = (el) => {
       const chain = [];
@@ -265,7 +267,27 @@ export async function probe(cfg) {
       const ratio = contrast(fg, bg);
       const px = parseFloat(s.fontSize);
       const need = glyph || largeText(px, s.fontWeight) ? cfg.largeContrast : cfg.textContrast;
-      if (painted) { stats.paintedText = (stats.paintedText ?? 0) + 1; if (ratio < need) add('R14.painted', idOf(el), `${ratio.toFixed(2)}:1 over the base fill, ${label}; art sits behind it`); return; }
+      if (painted) {
+        // Art sits behind this text. The flat fill is all the page can measure, so a pass here is not proof;
+        // UI_GATES_SAMPLE_ART=1 has the walk photograph the pixels behind the words (R14.sampled, not gated).
+        stats.paintedText = (stats.paintedText ?? 0) + 1;
+        if (ratio < need) add('R14.painted', idOf(el), `${ratio.toFixed(2)}:1 needs ${need}:1 on the base fill, ${label}; art sits behind it`);
+        const v = visibleRect(el);
+        const fgRaw = parseColor(s.color);
+        // The lines the words occupy, clipped to what is on screen: decorations around them (dots, rules) are not text.
+        const lines = [];
+        const range = document.createRange();
+        for (const node of el.childNodes) {
+          if (node.nodeType !== 3 || !node.textContent.trim()) continue;
+          range.selectNodeContents(node);
+          for (const q of range.getClientRects()) {
+            const l = Math.max(q.left, v ? v.left : 0), t = Math.max(q.top, v ? v.top : 0), r = Math.min(q.right, v ? v.right : 0), b = Math.min(q.bottom, v ? v.bottom : 0);
+            if (r - l >= 2 && b - t >= 2) lines.push({ x: l, y: t, w: r - l, h: b - t });
+          }
+        }
+        if (v && fgRaw && lines.length) paintedTexts.push({ id: idOf(el), lines, need, fg: [fgRaw[0], fgRaw[1], fgRaw[2], fgRaw[3] * opacityOf(el)], label });
+        return;
+      }
       if (ratio < need) add('R14', idOf(el), `${ratio.toFixed(2)}:1 needs ${need}:1, ${label}`);
     };
     for (const el of textEls) check(el, `${parseFloat(cs(el).fontSize)}px text`, false);
@@ -396,7 +418,7 @@ export async function probe(cfg) {
     };
   })();
   return {
-    legacy, surface, viewport: `${vw}x${vh}`, root: root.className || root.tagName.toLowerCase(),
+    paintedTexts, legacy, surface, viewport: `${vw}x${vh}`, root: root.className || root.tagName.toLowerCase(),
     findings, decision, errors, stats,
     textHash: (() => { let h = 2166136261; for (const ch of root.innerText ?? '') h = Math.imul(h ^ ch.charCodeAt(0), 16777619) >>> 0; return h.toString(16); })(),
   };

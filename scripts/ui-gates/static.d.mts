@@ -17,3 +17,4 @@ export function kitSemanticsFindings(file: string, tsx: string): { basicKit: Fin
 export function variantFindings(file: string, css: string): { redefinition: Finding[]; badge: Finding[] };
 export function switchFindings(file: string, tsx: string): Finding[];
 export function stateFindings(file: string, tsx: string): { empty: Finding[]; error: Finding[] };
+export function loadSources(root: string): { css: { file: string; text: string }[]; ts: { file: string; text: string }[] };

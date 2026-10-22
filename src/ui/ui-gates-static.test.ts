@@ -6,12 +6,12 @@
 import { describe, expect, it } from 'vitest';
 import {
   STATIC_RULES, collectStatic, countByFile, cssColorFindings, hiddenGlyphFindings, iconCssFindings, iconFindings, kitSemanticsFindings,
-  leadFindings, rawLengths, spacingFindings, stateFindings, switchFindings, textSizeFindings, tsColorFindings, tsxSpacingFindings,
+  leadFindings, loadSources, rawLengths, spacingFindings, stateFindings, switchFindings, textSizeFindings, tsColorFindings, tsxSpacingFindings,
   tsxTextFindings, variantFindings,
 } from '../../scripts/ui-gates/static.mjs';
 import { FELL_HELP, RAISED_HELP, compareCounts, readBaseline } from '../../scripts/ui-gates/ratchet.mjs';
 
-declare const process: { cwd(): string };
+declare const process: { cwd(): string; getBuiltinModule(id: 'node:fs'): { readFileSync(path: string, encoding: 'utf8'): string } };
 const ROOT = process.cwd();
 const baseline = readBaseline(ROOT);
 const found = collectStatic(ROOT);
@@ -35,6 +35,19 @@ describe('ui gates (static): the debt only falls', () => {
     const where = (file: string) => found[id].filter((f) => f.file === file.split(':')[0]).slice(-3).map((f) => `    ${f.file}:${f.line} ${f.text}`).join('\n');
     expect(rose.map((r) => `${r}\n${where(r)}`), `${id} rose. ${RAISED_HELP}`).toEqual([]);
     expect(fell, `${id} fell. ${FELL_HELP}`).toEqual([]);
+  });
+});
+
+/** R13, static half. The rendered half runs the inset fixtures (npm run check:ui). The shell draws
+ * the app edge to edge (viewport-fit=cover), so exactly these stylesheets own the insets; a new
+ * reference elsewhere would count one inset twice (padding on a parent and on its child). */
+const SAFE_AREA_OWNERS = ['src/ui/app.css', 'src/ui/player-navigation.css', 'src/ui/components/sheet-viewport.css', 'src/ui/settings/settings.css'];
+
+describe('ui gates (static): safe areas', () => {
+  it('draws edge to edge and declares who owns each inset', () => {
+    expect(process.getBuiltinModule('node:fs').readFileSync(`${ROOT}/index.html`, 'utf8')).toMatch(/viewport-fit=cover/);
+    const users = loadSources(ROOT).css.filter(({ text }) => /env\(\s*safe-area-inset-/.test(text)).map(({ file }) => file).sort();
+    expect(users, 'a stylesheet outside the owners reads a safe-area inset: add it to SAFE_AREA_OWNERS here once it is the only place that insets that edge').toEqual(SAFE_AREA_OWNERS.slice().sort());
   });
 });
 

@@ -12,6 +12,7 @@ import { pathToFileURL } from 'node:url';
 import path from 'node:path';
 import { CAMPAIGN_SEED, FIXED_TIME, HEIGHTS, INSET_FIXTURES, PROBE_CFG, WIDTHS, stateIds, STATES } from '../../../../scripts/ui-gates/manifest.mjs';
 import { probe } from '../../../../scripts/ui-gates/probe.mjs';
+import { measurePainted } from '../../../../scripts/ui-gates/png.mjs';
 
 const CHROME = process.env.CHROME_PATH ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 
@@ -67,21 +68,29 @@ export async function walk({ repo, baseURL, widths = WIDTHS, outDir = null, onFr
         seen.add(name);
         const decision = !!STATES.find((s) => s.id === name)?.decision;
         await page.waitForTimeout(350);
+        // Wait for the copy to stop changing (radio lines and timers settle), so two runs measure the same frame.
+        for (let last = null, n = 0; n < 20; n++) {
+          const hash = await page.evaluate(() => { let h = 2166136261; for (const ch of document.body.innerText) h = Math.imul(h ^ ch.charCodeAt(0), 16777619) >>> 0; return h; });
+          if (hash === last) break;
+          last = hash; await page.waitForTimeout(150);
+        }
         await page.evaluate(() => document.querySelectorAll('[data-cap-scroll]').forEach((el) => delete el.dataset.capScroll));
         const s = await scroller(page);
         const step = s ? Math.max(1, Math.round(s.client * 0.85)) : 0;
         const pages = s ? Math.min(Math.max(segments, 12), Math.ceil(Math.max(0, s.scroll - s.client) / step) + 1) : 1;
         const entry = { scrollHeight: s?.scroll ?? null, clientHeight: s?.client ?? null, segments: [] };
-        for (let i = 0; i < pages; i++) {
-          let scrollTop = 0;
+        // The planned segments, and more if the content grew since it was measured, until the scroll owner's end is on screen.
+        for (let i = 0; i < pages + 16; i++) {
+          let scrollTop = 0, atEnd = true;
           if (s) {
-            scrollTop = await page.evaluate((y) => { const el = document.querySelector('[data-cap-scroll]'); if (!el) return 0; el.scrollTop = y; return el.scrollTop; }, i * step);
+            ({ scrollTop, atEnd } = await page.evaluate((y) => { const el = document.querySelector('[data-cap-scroll]'); if (!el) return { scrollTop: 0, atEnd: true }; el.scrollTop = y; return { scrollTop: el.scrollTop, atEnd: el.scrollTop >= el.scrollHeight - el.clientHeight - 1 }; }, i * step));
             await page.waitForTimeout(200);
           }
           const file = `${name}-s${i}.jpg`;
           if (dir) await page.screenshot({ path: path.join(dir, file), type: 'jpeg', quality: 80 });
           const base = await page.evaluate(probe, { ...PROBE_CFG, decision: decision && i === 0 });
-          const atEnd = !s || scrollTop >= s.scroll - s.client - 1;
+          // Text over art: hide the text, photograph what is behind its box, and measure against that.
+          if (process.env.UI_GATES_SAMPLE_ART) base.findings.push(...await measurePainted(page, base.paintedTexts, { debugDir: process.env.UI_GATES_DEBUG_DIR }));
           const insets = {};
           for (const [fixture, inset] of Object.entries(INSET_FIXTURES)) {
             await setInsets(inset); await page.waitForTimeout(60);
@@ -91,6 +100,7 @@ export async function walk({ repo, baseURL, widths = WIDTHS, outDir = null, onFr
           const frame = { width, name, segment: i, scrollTop, atEnd, probe: base, insets };
           entry.segments.push({ file, scrollTop, atEnd, probe: base, insets });
           onFrame(frame);
+          if (i >= pages - 1 && atEnd) break;
         }
         if (s) await page.evaluate(() => { const el = document.querySelector('[data-cap-scroll]'); if (el) el.scrollTop = 0; });
         report[width][name] = entry;
