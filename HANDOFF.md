@@ -121,7 +121,11 @@ Started together on 2026-10-22 (owner's go), briefs in the same notes folder:
 | ui-leftovers (local_ce760bcd) | Haiku | `ui-leftovers` | `src/ui/screens/HQ.tsx` and the navigation Open needs (asks first if that is `store.ts` or `App.tsx`); port 5175 |
 | squad-names (local_29da4a0d) | Sonnet | `squad-names` | locks: `src/sim/resolution.ts`, `operation.ts`, `operation-selectors.ts`, `src/ui/people/`, `src/ui/blueprint/` (props need lead approval and Codex review), `src/ui/screens/operation-squads.ts` and the live call screens, the Lab squad files, `src/gen/incident/gates/engine-driver.ts`; never `HQ.tsx` or `src/content/`; port 5183 |
 
-While squad-names holds `src/sim/operation.ts`, `aftermath` waits.
+squad-names merged (cde797c; manifest files `src/sim/squad-names.ts` under kernel and re-render, bea1144):
+`npm run verify` 3,025 tests, art, build and no-lab green on the merged tip; the e2e passed 6 live calls at 390
+and 320 on 5182; Codex approved the branch and, separately, the manifest line, with no findings. The lane
+checked a renamed squad on every call surface at 390x844; the lead did not repeat the rename by hand. Not
+handled: log lines written before a mid-call rename keep the old name. `src/sim/operation.ts` is free again.
 
 ui-leftovers merged (92cdf72, re-render cead5e2): `npm run verify` 3,018 tests, art, build and no-lab green on
 the merged tip; the lead played HQ's oldest-call Open at 390x844 on 5182 (fresh context) and it lands on

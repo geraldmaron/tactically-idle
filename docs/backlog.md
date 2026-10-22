@@ -512,20 +512,6 @@ fingerprint, give the offer row a consent-pending state, and show the real befor
 proving ad history never moves odds, draws or pressure, the offer surface at 390 and 320, and the
 log fields present on every event.
 
-### squad-names: Every surface names a squad the way the player named it
-Tags: job=command; journeys=answer-a-call, joint-operation; probes=none (labels); lane=engine
-Needs: start=none; integrate=none; ship=none
-
-"Squad A" survives in `src/sim/resolution.ts` (`squadLabel` takes only an id, and feeds reasons,
-contributors and route labels), `src/ui/people/lexicon.ts`, the Blueprint's accessibility text
-(`src/ui/blueprint/Blueprint.tsx`, whose props carry no squad names), the Lab's own name producers
-(`src/dev/lab/model/squads.ts`, `src/dev/lab/shell/CallStrip.tsx`, `src/dev/lab/surfaces/deps/index.tsx`)
-and the gates' `engine-driver.ts`. Hardcoding "Alpha" would break renamed squads; the UI's
-`squadName` in `src/ui/screens/operation-squads.ts` is the behavior to match. Blueprint props are
-an interface file, so the name-bearing contract gets lead approval and a Codex adversarial review
-first. Done: one name source used by the sim, the UI, the Blueprint and the Lab, a renamed squad
-showing its name on every call surface, and the tests that pinned "Squad A" asserting the name.
-
 ### onboarding: A first call that teaches the loop
 Tags: job=command; journeys=answer-a-call; probes=none (teaching flow); lane=deferred
 Needs: start=none; integrate=none; ship=none
