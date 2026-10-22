@@ -2,7 +2,7 @@
 
 **Status (2026-10-21):** proposal. Nothing here is built. The work is in
 [backlog.md](backlog.md) as `ops-experience-now` (accepted with controls) and
-`ops-experience-compare` (needs the owner's comparison). This doc builds on
+`owner-visual-picks` (needs the owner's comparison). This doc builds on
 [call-presentation.md](call-presentation.md) and the decisions recorded in
 [game-ux-direction.md](game-ux-direction.md). Where it reverses one of those, it says so.
 

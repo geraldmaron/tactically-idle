@@ -352,27 +352,65 @@ profile get a `swat-writing-review` read.
 
 ## Player experience
 
-### ops-experience-compare: The owner judges the reading serif
-Tags: job=command; journeys=answer-a-call; probes=none (layout); lane=interface
+### owner-visual-picks: The owner picks the tab plate and the reading serif from one compare page
+Tags: job=command; journeys=answer-a-call, hire-and-equip; probes=none (layout and type); lane=interface
+Needs: start=none; integrate=visual-story (for the plate options); ship=none
+
+Two open owner decisions are visual, so the owner judges them side by side, not from prose. One
+private compare page (an Artifact) shows, at 390 and 320 and from one fixed-seed campaign:
+
+1. The tab-root plate at no plate, 72px, 96px and 128px on each of HQ, Calls, Officers and Build,
+   so the owner also decides whether every tab gets one. `visual-story` builds the plate with its
+   height as one token so any pick is a one-line change.
+2. The decide beat and a debrief in the current face and in the candidate serif behind the dev
+   switch (`src/ui/settings/candidates.ts`, `docs/ops-experience.md` "The reading face: still open").
+
+Done: the owner's two picks recorded under Owner decisions; the plate token set to the pick; the
+serif winner shipped, the loser's rule deleted from `candidates.css` and the switch removed.
+
+### tap-multiplier-content: Upgrades and power-ups that raise desk tap pay
+Tags: job=build; journeys=hire-and-equip; probes=none (department income, not call odds); lane=engine
 Needs: start=none; integrate=none; ship=none
-
-The decide-beat layout is settled (4B, refined, 2026-10-21). The serif is still behind the dev
-switch (`src/ui/settings/candidates.ts`). The owner compares it as `docs/ops-experience.md` says
-("The reading face: still open"). Then ship the winner, delete the loser's rule from
-`candidates.css` and remove the switch.
-
-### tap-multiplier-content: Upgrades, power-ups and purchases that raise desk tap pay
-Tags: job=build; journeys=hire-and-equip; probes=none (department income, not call odds); lane=deferred
-Needs: start=real-purchases (for entitlements only); integrate=none; ship=none
 
 Tap to earn shipped 2026-10-21 with the base multiplier only (`TAP_MULTIPLIERS` in
 `src/sim/department-taps.ts`): upgrades, timed power-ups and entitlements share one grant path,
-kinds multiply and bonuses of one kind add. Add development-tree desk upgrades granted on
-purchase, timed power-ups with a way to earn them, and store entitlements through
-`grantEntitlement` once `real-purchases` decides what is sold. Entitlements need receipt checks
-before granting, since the local save can be edited. Show the combined multiplier and any running
-power-up near the desk, and decide whether owned upgrades pick up a later rebalance. Done: each
-kind has at least one entry, a test proves it raises tap pay, and the player can see what is active.
+kinds multiply and bonuses of one kind add, and the same power-up twice extends. Add
+development-tree desk upgrades granted on purchase and timed power-ups with a way to earn them in
+play; `rewarded-ads` adds watching an ad as a second way, and `real-purchases` adds the paid
+entitlements. Show the combined multiplier and any running power-up near the desk, and decide
+whether owned upgrades pick up a later rebalance. Done: upgrades and power-ups each have at least
+one entry, a test proves each raises tap pay, and the player can see what is active.
+
+### monetization-design: One design note for rewarded ads and paid income multipliers
+Tags: job=build; journeys=hire-and-equip; probes=none (design note); lane=lead
+Needs: start=none; integrate=none; ship=none
+
+Owner decisions 2026-10-22: watching an ad is rewarded, the ad-watch rate is measured and used the
+way `docs/research/mobile-hook-patterns.md` describes, and real-money income multipliers are sold
+in the store. Before code, `docs/monetization.md` settles: what an ad pays (a timed power-up on the
+shared grant path, or funding), where offers appear and where they never do (never during a live
+decision, never forced, never on a call screen), the ad reader's inputs and window, the hard daily
+cap, what each multiplier sells and stacks with, how purchases restore, the consent and disclosure
+duties (iOS App Tracking Transparency, non-personalized ads by default, the EU personalised-price
+disclosure if prices ever vary, which they don't by default), and the rule that ad history and
+purchases never reach call odds, call draws or pressure. A Codex adversarial review challenges it.
+Done: the note, its challenge record, and `rewarded-ads` and `real-purchases` updated to match it.
+
+### rewarded-ads: Watching an ad is rewarded, and the watch rate is measured
+Tags: job=build; journeys=hire-and-equip; probes=new:ad-history-blind; lane=engine
+Needs: start=monetization-design; integrate=none; ship=store-wrap (the ad network SDK)
+
+The player chooses to watch an ad from an offer and gets the reward `monetization-design` sets.
+The player profile (`src/sim/player-profile.ts`, `docs/player-profile.md`) gains an ad reader:
+offers shown, ads watched to the end, offers declined, over a rolling window, read as a watch rate.
+As the research found, ad history can cap solicitation as easily as push it, so the reader only
+lowers how often offers appear for a player who declines them and never raises the cadence above
+the standard rate or the daily cap. Every offer and watch is logged with the content fingerprint,
+the tuning hash and the timer setting, so `playtests` can compare variants on real people.
+`profile-surface` shows the ad line with the one thing it changes. A dev ad provider stands in for
+the SDK until `store-wrap`. Done: the reader and its effect tested, the `ad-history-blind` probe
+proving ad history never moves odds, draws or pressure, the offer surface at 390 and 320, and the
+log fields present on every event.
 
 ### visual-story: Every screen tells its story with art and icons
 Tags: job=command; journeys=answer-a-call, hire-and-equip; probes=none (layout and art); lane=interface
@@ -387,8 +425,8 @@ tabs and the resource bar carry their icons; each tab root opens on a compact pl
 from its existing banner art, with no kicker or paragraph; every row in Officers, Build, Calls and
 the debrief leads with a face, gear art or a kit icon; the brief, deploy and debrief headings get
 their icons back; empty states use `Spot`. Painted call-type medallions (deferred from the icon
-kit) belong here. This partly reverses the audit's "no banner on tab roots"; the owner confirms
-the plate height before it ships. Done: a design-floors ratchet that only rises counts kit
+kit) belong here. This partly reverses the audit's "no banner on tab roots"; the plate height is
+one token, and the owner picks its value and which tabs carry it in `owner-visual-picks`. Done: a design-floors ratchet that only rises counts kit
 adoption (each tab root renders a plate, each listed row has a lead visual, the tabs and the bar
 render their icons), and captures at 390 and 320 are compared with today's.
 
@@ -398,14 +436,27 @@ Needs: start=none; integrate=none; ship=none
 
 Left by the 2026-10-22 redesign sessions: the Armory's search, collection bar and filter rail and
 the Training store (`src/ui/storefront/`) are unrestyled; First Run still shows themes a player
-can't avoid as disabled switches; "Squad A" survives in `src/sim/resolution.ts` (`squadLabel`, in
-reasons, contributors and route labels), `src/ui/people/lexicon.ts` and `src/ui/blueprint/Blueprint.tsx`;
-the Lab's `GameFrame.tsx` still passes a Prepare button and "Continue to <stage>"; dead CSS for the
+can't avoid as disabled switches; the Lab's `GameFrame.tsx` still passes a Prepare button and "Continue to <stage>"; dead CSS for the
 old board and Prepare (`.optile*`, `.prep-title`, `.pickcard*`, `.prep-steps`) sits in `app.css` and
 `skin.css`; and `docs/captures/ui-ux-audit/tools/capture.mjs` still uses pre-four-tab selectors for
-the desk screens (the desk session's updated copy is described in its hand-over). Done: each of
-these fixed, the squad named "Alpha" with its badge everywhere, and the capture tool walking every
-screen with no step error.
+the desk screens (the desk session's updated copy is described in its hand-over). Some `.optile*`
+rules still have consumers (`CallTile.tsx`, `CardWarning.tsx`, the Lab's `GameFrame.tsx`), so each
+selector goes only after its consumers are checked. Done: each of these fixed and the capture tool
+walking every screen with no step error.
+
+### squad-names: Every surface names a squad the way the player named it
+Tags: job=command; journeys=answer-a-call, joint-operation; probes=none (labels); lane=engine
+Needs: start=visual-story (it edits the live call screens); integrate=none; ship=none
+
+"Squad A" survives in `src/sim/resolution.ts` (`squadLabel` takes only an id, and feeds reasons,
+contributors and route labels), `src/ui/people/lexicon.ts`, the Blueprint's accessibility text
+(`src/ui/blueprint/Blueprint.tsx`, whose props carry no squad names), the Lab's own name producers
+(`src/dev/lab/model/squads.ts`, `src/dev/lab/shell/CallStrip.tsx`, `src/dev/lab/surfaces/deps/index.tsx`)
+and the gates' `engine-driver.ts`. Hardcoding "Alpha" would break renamed squads; the UI's
+`squadName` in `src/ui/screens/operation-squads.ts` is the behavior to match. Blueprint props are
+an interface file, so the name-bearing contract gets lead approval and a Codex adversarial review
+first. Done: one name source used by the sim, the UI, the Blueprint and the Lab, a renamed squad
+showing its name on every call surface, and the tests that pinned "Squad A" asserting the name.
 
 ### roster-save-rule: Refuse saves whose squads list officers from other squads
 Tags: job=keep; journeys=save-round-trip; probes=none (save validation); lane=engine
@@ -434,7 +485,13 @@ Tags: job=command; journeys=answer-a-call, save-round-trip; probes=none (testing
 Needs: start=none; integrate=none; ship=none
 
 First-time players, and a real iOS and Android phone, including keyboard and text zoom. Includes
-the rendered save-slot rejection message, never seen.
+the rendered save-slot rejection message, never seen. From the hook-pattern research
+(`docs/research/mobile-hook-patterns.md`): every session note records the content fingerprint, the
+tuning hash, the timer setting and the profile readers in effect; variants compared in a round
+differ in one setting and run through the Lab's existing controls; observations follow PLAN.md
+criteria 12 and 14; a variant is dropped when testers can't explain an effect it introduced or it
+produces a material issue under criterion 14. The tap-to-idle income ratio and the ad offer
+cadence are read here too.
 
 ### store-wrap: Package the game for the App Store and Play Store
 Tags: job=keep; journeys=save-round-trip; probes=none (packaging); lane=deferred
@@ -444,15 +501,19 @@ Owner decision 2026-10-19: wrap the web app for iOS and Android. Done: a wrapper
 evidence (e.g. Capacitor), the build running on a real iPhone and Android phone with saves surviving
 an app restart, and the safe-area, keyboard and text-zoom checks from `playtests` passing on device.
 
-### real-purchases: Decide what real in-app purchases sell
-Tags: job=build; journeys=hire-and-equip; probes=none (commerce); lane=deferred
-Needs: start=store-wrap (and an owner decision on what is sold); integrate=none; ship=none
+### real-purchases: The store sells real-money income multipliers
+Tags: job=build; journeys=hire-and-equip; probes=funding-balance; lane=engine
+Needs: start=monetization-design; integrate=none; ship=store-wrap (App Store and Play Store billing)
 
-Owner decision 2026-10-19: free to play with purchases. Owner decision 2026-10-20 removed
-development points, the point packs they sold and the simulated store are gone, so
-nothing is for sale now. Open owner decision: what a purchase sells (for example cosmetic portraits
-or a funding pack), weighed against milestones granting developments free. Done: that decision,
-then purchases through App Store and Play Store billing that restore across reinstalls.
+Owner decisions: free to play with purchases (2026-10-19); development points and point packs
+removed (2026-10-20); real-money income multipliers are sold in the store (2026-10-22). A Store
+surface lists the multipliers `monetization-design` defines; a purchase grants an entitlement
+through `grantEntitlement` on the shared multiplier path (`src/sim/department-taps.ts`), only after
+a receipt check, since the local save can be edited. Prices are the same for every player. The
+`funding-balance` probe today checks only added funding (`src/architecture/wiring.ts`); it extends
+to purchase status, so owning a multiplier never moves call odds. A dev store stands in for billing
+until `store-wrap`. Done: each multiplier sold, granted, shown near the desk and restored across a
+reinstall on a real phone, with the probe extended.
 
 ### offline-shell: The game opens with no network
 Tags: job=keep; journeys=save-round-trip; probes=none (packaging); lane=interface
@@ -490,10 +551,13 @@ decision on whether the lean needs a player-facing explanation (the HQ or the de
   on 22 of 30 seeds (the rest are rejected because the first room off the bedroom is the living
   room). This bears on the existing barricade building-family decision above.
 - **Later scope:** districts, career stories, simultaneous tactical incidents.
-- **What purchases sell** now that development points and point packs are gone (`real-purchases`).
-- **Rewarded ads**, optional, and **real-money income multipliers** under `real-purchases`
-  (from the hook-pattern research on `claude/research-hook-patterns`, not merged).
-- **The tab-root plate** that `visual-story` brings back: its height and whether every tab gets one.
+- **The tab-root plate** that `visual-story` brings back (its height and whether every tab gets
+  one) and **the reading serif**: picked from one compare page (`owner-visual-picks`).
+
+Decided 2026-10-22 (monetization): watching an ad is rewarded, and the ad-watch rate is measured
+and used as `docs/research/mobile-hook-patterns.md` describes (`rewarded-ads`); real-money income
+multipliers are sold in the store (`real-purchases`); one design note comes first
+(`monetization-design`).
 
 Decided 2026-10-19: scenario work is paused (the barricade is parked on its branch); a squad can
 deploy short of injured officers (`short-squad-deploys`); sidearms from day one

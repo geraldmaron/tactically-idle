@@ -355,7 +355,7 @@ meets its own floors. Not yet drawn: two squads on one call, and the 200% text l
 
 - **Type.** Barlow for the interface, Barlow Condensed for titles in sentence case, Source Serif 4
   for story text (cold open, prompt, result, ending). Oswald and IBM Plex Mono leave the
-  interface; Kalam stays on the blueprint. The serif is the open `ops-experience-compare` item;
+  interface; Kalam stays on the blueprint. The serif is the open `owner-visual-picks` item;
   this plan recommends it, the owner still judges it at 320 and 200% text, and phase 1 does not
   ship it: story text keeps Barlow until that compare is settled.
 - **Scale.** 12 (meta only), 14 (body), 16 (row titles, buttons), 18 (story, choice titles), 22
@@ -491,7 +491,7 @@ Needs: start=none; integrate=none; ship=none
 Tokens for type (12/14/16/18/22/28), space (4 to 32) and colour roles, one primitive set (Button,
 Chip, Card, Row, Sheet, ActionBar), the duplicate definitions in app.css and skin.css removed,
 hex moved to tokens, and the Desk and Street skin applied through them, story text staying in
-Barlow until ops-experience-compare is settled (docs/ui-ux-audit.md). Done: tests fail on new
+Barlow until owner-visual-picks is settled (docs/ui-ux-audit.md). Done: tests fail on new
 decision text under 14px, interactive elements under 44px and hex outside the theme; captures
 retaken at 390, 320 and 430 with the audit's tool, compared with its probe numbers.
 
