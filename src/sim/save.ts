@@ -274,7 +274,7 @@ function validTaps(t: unknown): boolean {
   return isList(t.multipliers, (m) => {
     if (!isObj(m) || !isStr(m.id) || ids.has(m.id) || !oneOf(m.source, ['upgrade', 'powerup', 'entitlement']) || !numbers(m, ['factor', 'grantedAt'])) return false;
     ids.add(m.id);
-    if ((m.factor as number) <= 0 || (m.factor as number) > MAX_MULTIPLIER_FACTOR) return false;
+    if ((m.factor as number) < 1 || (m.factor as number) > MAX_MULTIPLIER_FACTOR) return false;
     return m.source === 'powerup' ? isNum(m.expiresAt) : m.expiresAt === undefined;
   }) && t.multipliers.length <= MAX_MULTIPLIERS && combinedFactor(t.multipliers as ActiveMultiplier[]) <= MAX_COMBINED_MULTIPLIER;
 }

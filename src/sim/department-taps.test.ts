@@ -92,6 +92,7 @@ describe('multipliers', () => {
   it('refuse a bad entry, and an entitlement only by an entitlement id', () => {
     const taps = structuredClone(createInitialState(T0).department.taps!);
     expect(grantMultiplier(taps, { id: 'x', source: 'upgrade', factor: 0 }, T0).ok).toBe(false);
+    expect(grantMultiplier(taps, { id: 'x', source: 'upgrade', factor: 0.9 }, T0).ok).toBe(false);
     expect(grantMultiplier(taps, { id: 'x', source: 'powerup', factor: 2 }, T0).ok).toBe(false);
     expect(grantMultiplier(taps, { id: 'x', source: 'upgrade', factor: 2, durationMs: 5 }, T0).ok).toBe(false);
     expect(grantEntitlement(taps, 'base', T0).ok).toBe(false);
@@ -121,6 +122,23 @@ describe('overflow guards (Codex review)', () => {
     const r = tap(s, 20);
     expect(r.result.ok).toBe(false);
     expect(r.state).toBe(s);
+  });
+
+  it('refuses a factor below 1, so an expiry can never lift the stack past what was granted (second pass)', () => {
+    const s = createInitialState(T0);
+    expect(grantMultiplier(s.department.taps!, { id: 'drag', source: 'powerup', factor: 0.01, durationMs: 1000 }, T0).ok).toBe(false);
+    const crafted = structuredClone(s);
+    crafted.department.taps!.multipliers.push({ id: 'drag', source: 'powerup', factor: 0.5, grantedAt: T0, expiresAt: T0 + 1000 });
+    expect(deserialize(serialize(crafted, T0))).toBeNull();
+  });
+
+  it('refuses an extension that would run the expiry past a finite time, changing nothing (second pass)', () => {
+    const taps = structuredClone(createInitialState(T0).department.taps!);
+    const forever: MultiplierDef = { id: 'forever', source: 'powerup', factor: 2, durationMs: 1e308 };
+    expect(grantMultiplier(taps, forever, T0).ok).toBe(true);
+    const before = structuredClone(taps);
+    expect(grantMultiplier(taps, forever, T0).ok).toBe(false);
+    expect(taps).toEqual(before);
   });
 
   it('refuses tuning whose burst holds less than one whole tap', () => {

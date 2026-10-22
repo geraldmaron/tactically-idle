@@ -64,7 +64,8 @@ export function createTapState(at: number): TapState {
 
 /** Why `def` can't be held, or null. */
 export function multiplierProblem(def: MultiplierDef): string | null {
-  if (!Number.isFinite(def.factor) || def.factor <= 0 || def.factor > MAX_MULTIPLIER_FACTOR) return `Multiplier ${def.id} needs a factor above 0 and at most ${MAX_MULTIPLIER_FACTOR}`;
+  // A factor below 1 would let the combined multiplier rise when it expires, past what the grant checked.
+  if (!Number.isFinite(def.factor) || def.factor < 1 || def.factor > MAX_MULTIPLIER_FACTOR) return `Multiplier ${def.id} needs a factor from 1 to ${MAX_MULTIPLIER_FACTOR}`;
   if (def.source === 'powerup' && !(Number.isFinite(def.durationMs) && def.durationMs! > 0)) return `Power-up ${def.id} needs a duration`;
   if (def.source !== 'powerup' && def.durationMs !== undefined) return `Only a power-up has a duration (${def.id})`;
   return null;
@@ -78,7 +79,10 @@ export function grantMultiplier(taps: TapState, def: MultiplierDef, at: number):
   if (problem) return { ok: false, reason: problem };
   const held = taps.multipliers.find((m) => m.id === def.id);
   const next: ActiveMultiplier = { id: def.id, source: def.source, factor: def.factor, grantedAt: at };
-  if (def.source === 'powerup') next.expiresAt = Math.max(held?.expiresAt ?? 0, at) + def.durationMs!;
+  if (def.source === 'powerup') {
+    next.expiresAt = Math.max(held?.expiresAt ?? 0, at) + def.durationMs!;
+    if (!Number.isFinite(next.expiresAt)) return { ok: false, reason: `Power-up ${def.id} can't run that long` };
+  }
   const multipliers = [...taps.multipliers.filter((m) => m.id !== def.id), next];
   if (multipliers.length > MAX_MULTIPLIERS) return { ok: false, reason: `A department holds at most ${MAX_MULTIPLIERS} multipliers` };
   if (!(combinedFactor(multipliers) <= MAX_COMBINED_MULTIPLIER)) return { ok: false, reason: `Multipliers may not combine past ${MAX_COMBINED_MULTIPLIER}` };
@@ -110,7 +114,7 @@ export function tapMultiplier(dep: Department, at: number): number {
 export function combinedFactor(multipliers: readonly Pick<ActiveMultiplier, 'source' | 'factor'>[]): number {
   const bonus: Partial<Record<MultiplierSource, number>> = {};
   for (const m of multipliers) bonus[m.source] = (bonus[m.source] ?? 0) + m.factor - 1;
-  return Object.values(bonus).reduce((product, b) => product * Math.max(0, 1 + b), 1);
+  return Object.values(bonus).reduce((product, b) => product * (1 + b), 1);
 }
 
 /** What one tap credits at `at`: the base times the combined multiplier. */

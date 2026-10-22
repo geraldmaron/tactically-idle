@@ -524,7 +524,7 @@ export type MultiplierSource = 'upgrade' | 'powerup' | 'entitlement';
 export interface ActiveMultiplier {
   id: Id;
   source: MultiplierSource;
-  /** Applied to every tap while held; positive and finite. */
+  /** Applied to every tap while held; from 1 to MAX_MULTIPLIER_FACTOR, so expiry never raises the total. */
   factor: number;
   grantedAt: number;
   /** Game time a power-up stops counting. Only power-ups carry one; settlement drops it after. */
