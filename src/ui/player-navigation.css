@@ -56,7 +56,7 @@
 .resource-bar .stats { flex: 1 1 auto; margin: 0; justify-content: flex-start; flex-wrap: nowrap; gap: 0; }
 .resource-bar .stats > li { display: flex; min-width: 0; }
 .resource-bar .stat { position: relative; height: 44px; padding: 0 var(--sp2); border: 0; border-radius: var(--r1); background: none; color: var(--t1); font: 600 var(--s14)/1 var(--f-ui); font-variant-numeric: tabular-nums; white-space: nowrap; cursor: pointer; }
-.resource-bar .stat { display: inline-flex; align-items: center; gap: 4px; }
+.resource-bar .stat { display: inline-flex; align-items: center; justify-content: center; gap: 4px; min-width: var(--touch); }
 .resource-bar .res-icon { flex: none; opacity: 0.85; }
 .resource-bar .stat-rate { color: var(--good-text, var(--good)); font-weight: 500; }
 .resource-bar .stat-rate.stat-neg { color: var(--harm-text, var(--harm)); }
@@ -66,7 +66,9 @@
 .resource-bar button:focus-visible { outline: 2px solid var(--act); outline-offset: -2px; }
 @media (hover: hover) { .resource-bar button:hover { background: rgba(255, 255, 255, .05); } }
 @container game (max-width: 359px) {
-  .resource-bar .stat { padding: 0 6px; }
+  /* At 320 the icons carry trust and level (the buttons keep their full aria-labels). */
+  .resource-bar .res-word { display: none; }
+  .resource-bar .stat { padding: 0 4px; gap: 3px; }
   .app .resource-bar { padding: 0 2px 0 0; gap: 0; }
 }
 

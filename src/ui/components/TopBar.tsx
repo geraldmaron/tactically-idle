@@ -100,10 +100,10 @@ export function DepartmentStatusBar({ g, topic, onOpen, onClose, onOpenMenu, liv
           <Icon name={RESOURCE_ICON.rate} size={16} className="res-icon" />{rate(b.net)}
         </button></li>
         <li><button className="stat stat-trust" {...helpProps('trust', `${Math.round(d.trust)} out of 100`)}>
-          <Icon name={RESOURCE_ICON.trust} size={16} className="res-icon" />Trust {Math.round(d.trust)}
+          <Icon name={RESOURCE_ICON.trust} size={16} className="res-icon" /><span className="res-word">Trust </span>{Math.round(d.trust)}
         </button></li>
       </ul>
-      <button className="stat stat-level" {...helpProps('level', String(d.level))}><Icon name={RESOURCE_ICON.level} size={16} className="res-icon" />Level {d.level}</button>
+      <button className="stat stat-level" {...helpProps('level', String(d.level))}><Icon name={RESOURCE_ICON.level} size={16} className="res-icon" /><span className="res-word">Level </span>{d.level}</button>
       {onOpenMenu && <MenuButton onOpen={onOpenMenu} />}
     </header>
     <Sheet open={topic !== null} onClose={onClose} title={topic === 'funding' || topic === 'income' ? 'Finances' : topic ? STAT_TITLES[topic] : 'Department status'} className="department-stat-sheet">
