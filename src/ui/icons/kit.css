@@ -1,0 +1,50 @@
+/* Desk and Street visual kit: call-type badges, status and outcome marks, empty-state spots.
+   Class-scoped like every game sheet. Tones read the theme's role tokens; the four call-type hues are
+   the only colours defined here (move them into theme.css when the ui-system tokens land). */
+
+/* ---- call-type badges: shape, hue and mark per type */
+.ct-badge { display: inline-flex; align-items: center; gap: 8px; min-width: 0; vertical-align: middle; --ct: var(--text-dim); --ct-ink: var(--bg); }
+.ct-badge-shape { flex: none; display: block; overflow: visible; }
+.ct-badge-fill { fill: var(--ct); stroke: var(--ct); }
+.ct-badge-mark { color: var(--ct-ink); }
+.ct-badge-label { font: 600 14px/1.2 var(--font-ui); color: var(--text); min-width: 0; overflow-wrap: anywhere; }
+.ct-badge--hostage { --ct: #b99cff; }
+.ct-badge--barricade { --ct: #4fc3d9; }
+.ct-badge--armed { --ct: #ff7a8a; }
+.ct-badge--rescue { --ct: #6ea8ff; }
+.ct-badge--unknown { --ct: var(--line-strong); --ct-ink: var(--text); }
+
+/* ---- status and outcome marks: silhouette plus label, colour only reinforces */
+.kit-mark { display: inline-flex; align-items: center; gap: 6px; min-width: 0; vertical-align: middle; color: var(--text); --mk: var(--text-dim); }
+.kit-mark-art { flex: none; display: block; overflow: visible; }
+.kit-mark-shape { fill: var(--mk); stroke: var(--mk); stroke-width: 0; }
+.kit-mark-cut { fill: none; stroke: var(--bg); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.kit-mark-label { font: 500 14px/1.2 var(--font-ui); color: var(--text); min-width: 0; }
+.kit-mark--ready, .kit-mark--favorable { --mk: var(--mint); }
+.kit-mark--strained, .kit-mark--overloaded, .kit-mark--mixed, .kit-mark--retiring { --mk: var(--warn); }
+.kit-mark--recovery, .kit-mark--injured, .kit-mark--adverse { --mk: var(--danger); }
+.kit-mark--training, .kit-mark--detail, .kit-mark--deployed { --mk: var(--people-officer); }
+.kit-mark--resting { --mk: var(--text-dim); }
+
+/* ---- empty-state spots: chalk line work on the night panel, one warm light */
+.kit-spot { display: block; max-width: 100%; height: auto; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.kit-spot .sp-floor { fill: var(--line); }
+.kit-spot .sp-window { fill: var(--paper-edge); stroke: var(--line-strong); stroke-width: 2; }
+.kit-spot .sp-moon { fill: var(--chalk); }
+.kit-spot .sp-desk { fill: var(--panel-3); }
+.kit-spot .sp-panel { fill: var(--panel-2); stroke: var(--line-strong); stroke-width: 2; }
+.kit-spot .sp-screen { fill: var(--bg); stroke: var(--line); stroke-width: 1.5; }
+.kit-spot .sp-paper { fill: var(--panel-3); stroke: var(--text-dim); stroke-width: 1.5; }
+.kit-spot .sp-line { stroke: var(--line-strong); stroke-width: 2; }
+.kit-spot .sp-line-fill { fill: var(--line); }
+.kit-spot .sp-ink { stroke: var(--text-dim); stroke-width: 2; }
+.kit-spot .sp-ink-fill { fill: var(--text-dim); }
+.kit-spot .sp-thin { stroke-width: 1.5; opacity: 0.7; }
+.kit-spot .sp-dash { stroke: var(--muted); stroke-width: 1.5; stroke-dasharray: 4 4; }
+.kit-spot .sp-dash-thin { stroke: var(--muted); stroke-width: 1.5; stroke-dasharray: 2 3; }
+.kit-spot .sp-fig { fill: var(--panel-3); }
+.kit-spot .sp-glow { fill: var(--amber); opacity: 0.12; }
+.kit-spot .sp-led { fill: var(--amber); }
+.kit-spot .sp-dash-act { stroke: var(--amber); stroke-width: 2; stroke-dasharray: 5 4; }
+.kit-spot .sp-act { fill: var(--amber); }
+.kit-spot .sp-cut { stroke: var(--amber-ink); stroke-width: 2.5; }

@@ -17,10 +17,10 @@ type Tone = 'neutral' | 'amber' | 'mint' | 'danger' | 'warn' | 'blue';
 // ---------------------------------------------------------------- incident types and buildings
 
 const INCIDENT_FALLBACK: Record<string, { label: string; icon: IconName }> = {
-  barricaded: { label: 'Barricaded subject', icon: 'steeldoor' },
-  active_armed_incident: { label: 'Active armed incident', icon: 'shield' },
-  hostage_crisis: { label: 'Hostage crisis', icon: 'lock' },
-  protected_rescue: { label: 'Protected rescue', icon: 'medic' },
+  barricaded: { label: 'Barricaded subject', icon: 'barricade' },
+  active_armed_incident: { label: 'Active armed incident', icon: 'activeArmed' },
+  hostage_crisis: { label: 'Hostage crisis', icon: 'hostage' },
+  protected_rescue: { label: 'Protected rescue', icon: 'rescue' },
 };
 
 function titleCase(id: string): string {

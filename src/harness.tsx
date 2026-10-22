@@ -10,6 +10,7 @@ import { Portrait } from './ui/portraits/Portrait';
 import { PERSONAS } from './content/personas';
 import { QA_CAMPAIGN_PARAM, type QaCampaignPreset } from './ui/qa-campaign';
 import { RESPONSIVE_PREVIEW_PARAM, RESPONSIVE_PREVIEW_SANDBOX } from './ui/save-environment';
+import { KitGallery } from './ui/icons/KitGallery';
 
 /**
  * Staging point for an opening: from derived.stagingPoints when the spatial agent has landed them,
@@ -254,7 +255,7 @@ function Harness() {
   const built = useMemo(() => buildLocation('cedar_close', 0), []);
   const spaces = useMemo(() => sampleSpaces(built), [built]);
   const [sel, setSel] = useState<Id | null>(null);
-  // ?only=map&w=760&seed=0 shows one large map; ?only=portraits shows just the portrait grid.
+  // ?only=map&w=760&seed=0 shows one large map; ?only=portraits shows just the portrait grid; ?only=icons the visual kit.
   const q = new URLSearchParams(window.location.search);
   const only = q.get('only');
   if (only === 'app') return <ResponsiveGame />;
@@ -263,6 +264,13 @@ function Harness() {
     return (
       <div className="h-page">
         <Column title={`Cedar Close at ${w} px`} width={w} seed={Number(q.get('seed') ?? 0)} materials={q.get('materials') === '1'} overlay={(q.get('ov') ?? 'none') as OverlayMode} />
+      </div>
+    );
+  }
+  if (only === 'icons') {
+    return (
+      <div className="h-page">
+        <KitGallery />
       </div>
     );
   }

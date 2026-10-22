@@ -553,9 +553,334 @@ const PATHS = {
       <path d="M7.5 20c0-2.8 2-5 4.5-5s4.5 2.2 4.5 5M2 18c0-2 1.5-3.5 3.5-3.5M22 18c0-2-1.5-3.5-3.5-3.5" />
     </>
   ),
+  // ---- Desk and Street kit (docs/visual-kit.md) -------------------------
+  // Tabs
+  hq: (
+    <>
+      <path d="M4.5 21V11l7.5-4 7.5 4v10" />
+      <path d="M2.5 21h19M10 21v-5h4v5M7.5 13.5h2M14.5 13.5h2" />
+      <path d="M12 7V2.5h3.5l-1 1.25 1 1.25H12" />
+    </>
+  ),
+  calls: (
+    <>
+      <path d="M6.5 17.5v-4.5a5.5 5.5 0 0 1 11 0v4.5" />
+      <rect x="4.5" y="17.5" width="15" height="3.5" rx="1" />
+      <path d="M12 3v1.5M5 6l1.1 1.1M19 6l-1.1 1.1M2.5 12.5H4M20 12.5h1.5M10 13a2 2 0 0 1 2-2" />
+    </>
+  ),
+  officers: (
+    <>
+      <path d="M7.5 8h9M9 8l.6-3.5h4.8L15 8" />
+      <path d="M9.4 9.5a2.6 2.6 0 0 0 5.2 0" />
+      <path d="M5.5 21c.5-3.8 3.2-6.5 6.5-6.5s6 2.7 6.5 6.5" />
+      <path d="M12 17.5v.01" />
+    </>
+  ),
+  build: (
+    <>
+      <g transform="rotate(-45 12 12)">
+        <path d="M12 21v-11" />
+        <rect x="8" y="4.5" width="8" height="5" rx="1" />
+      </g>
+      <g transform="rotate(45 12 12)">
+        <path d="M12 21v-9" />
+        <path d="M9 4v3.5a3 3 0 0 0 6 0V4" />
+      </g>
+    </>
+  ),
+  // Resource bar
+  funds: (
+    <>
+      <ellipse cx="12" cy="6.5" rx="7" ry="2.5" />
+      <path d="M5 6.5v4c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5v-4" />
+      <path d="M5 10.5v4c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5v-4" />
+      <path d="M5 14.5v3c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5v-3" />
+    </>
+  ),
+  rate: (
+    <>
+      <path d="M20 12a8 8 0 1 1-8-8" />
+      <path d="M12 8v4l2.5 1.5" />
+      <path d="M16.5 3.5H20.5V7.5M20.5 3.5l-5 5" />
+    </>
+  ),
+  trust: (
+    <>
+      <path d="M12 3l7 3v5.5c0 4.4-3 8-7 9.5-4-1.5-7-5.1-7-9.5V6z" />
+      <path d="M8.5 12l2.5 2.5 4.5-5" />
+    </>
+  ),
+  level: <path d="M6 9.5l6-4 6 4M6 14l6-4 6 4M6 18.5l6-4 6 4" />,
+  menu: <path d="M4 7h16M4 12h16M4 17h16" />,
+  // Skills (one glyph per officer skill)
+  shooting: (
+    <>
+      <circle cx="12" cy="12" r="7" />
+      <path d="M12 2.5v5M12 16.5v5M2.5 12h5M16.5 12h5M12 12h.01" />
+    </>
+  ),
+  communication: (
+    <>
+      <path d="M5 14v-2a7 7 0 0 1 14 0v2" />
+      <rect x="3" y="13" width="4" height="6" rx="1.5" />
+      <rect x="17" y="13" width="4" height="6" rx="1.5" />
+      <path d="M19 19c0 1.7-1.3 2.5-3 2.5h-3" />
+    </>
+  ),
+  medical: (
+    <>
+      <rect x="3" y="7" width="18" height="13" rx="2" />
+      <path d="M9 7V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V7M12 10.5v6M9 13.5h6" />
+    </>
+  ),
+  composure: (
+    <>
+      <rect x="2.5" y="7.5" width="19" height="9" rx="4.5" />
+      <path d="M8.5 10v4M15.5 10v4" />
+      <circle cx="12" cy="12" r="1.8" />
+    </>
+  ),
+  awareness: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <circle cx="12" cy="12" r="4.5" />
+      <path d="M12 12l6.4-6.4M8.2 15.8h.01" />
+    </>
+  ),
+  coordination: (
+    <>
+      <path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1" />
+      <path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1" />
+    </>
+  ),
+  leadership: (
+    <>
+      <circle cx="12" cy="11.5" r="3" />
+      <path d="M5.5 21c.5-3.5 3.2-6 6.5-6s6 2.5 6.5 6" />
+      <path d="M12 2.5l.9 1.8 2 .3-1.45 1.4.35 2-1.8-.95-1.8.95.35-2L9.1 4.6l2-.3z" />
+    </>
+  ),
+  observation: (
+    <>
+      <path d="M3 8V5.5A1.5 1.5 0 0 1 4.5 4H7M17 4h2.5A1.5 1.5 0 0 1 21 5.5V8M21 16v2.5a1.5 1.5 0 0 1-1.5 1.5H17M7 20H4.5A1.5 1.5 0 0 1 3 18.5V16" />
+      <path d="M6.5 12s2.2-3.5 5.5-3.5 5.5 3.5 5.5 3.5-2.2 3.5-5.5 3.5S6.5 12 6.5 12z" />
+      <circle cx="12" cy="12" r="1.4" />
+    </>
+  ),
+  // Officer status: one person figure plus a modifier, so the family reads as one
+  ready: (
+    <>
+      <circle cx="9" cy="7.5" r="3.2" />
+      <path d="M3 20c0-3.4 2.7-6 6-6 1.6 0 3 .6 4 1.5" />
+      <path d="M14.5 17.5l2.2 2.2 4.3-4.7" />
+    </>
+  ),
+  strained: (
+    <>
+      <circle cx="9" cy="7.5" r="3.2" />
+      <path d="M3 20c0-3.4 2.7-6 6-6 1.6 0 3 .6 4 1.5" />
+      <path d="M18 13v3.5M18 19.8h.01" />
+    </>
+  ),
+  injured: (
+    <>
+      <circle cx="9" cy="7.5" r="3.2" />
+      <path d="M3 20c0-3.4 2.7-6 6-6 1.6 0 3 .6 4 1.5" />
+      <rect x="14.5" y="15" width="7" height="3.5" rx="1.75" transform="rotate(-45 18 16.75)" />
+    </>
+  ),
+  training: (
+    <>
+      <circle cx="9" cy="7.5" r="3.2" />
+      <path d="M3 20c0-3.4 2.7-6 6-6 1.6 0 3 .6 4 1.5" />
+      <path d="M18 20v-6.5M15.5 16l2.5-2.5 2.5 2.5" />
+    </>
+  ),
+  deployed: (
+    <>
+      <circle cx="9" cy="7.5" r="3.2" />
+      <path d="M3 20c0-3.4 2.7-6 6-6 1.6 0 3 .6 4 1.5" />
+      <path d="M14 17h7M18 14l3 3-3 3" />
+    </>
+  ),
+  resting: (
+    <>
+      <circle cx="9" cy="7.5" r="3.2" />
+      <path d="M3 20c0-3.4 2.7-6 6-6 1.6 0 3 .6 4 1.5" />
+      <path d="M21 18a3.2 3.2 0 1 1-3.8-3.8 2.5 2.5 0 0 0 3.8 3.8z" />
+    </>
+  ),
+  // Outcomes: circle, diamond and square, matching the filled outcome marks
+  wentWell: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M8 12.5l3 3 5-6" />
+    </>
+  ),
+  complications: (
+    <>
+      <path d="M12 2.5l9.5 9.5-9.5 9.5L2.5 12z" />
+      <path d="M8 12.5c1.3-1.5 2.7-1.5 4 0s2.7 1.5 4 0" />
+    </>
+  ),
+  wentBadly: (
+    <>
+      <rect x="3.5" y="3.5" width="17" height="17" rx="2.5" />
+      <path d="M9 9l6 6M15 9l-6 6" />
+    </>
+  ),
+  // Call types (the marks inside CallTypeBadge)
+  hostage: (
+    <>
+      <circle cx="15.5" cy="6" r="2.5" />
+      <path d="M13.5 10.6c.6-.4 1.3-.6 2-.6 2.5 0 4.5 2.5 4.5 5.5" />
+      <circle cx="9" cy="10" r="3" />
+      <path d="M3 21c0-3.6 2.7-6.5 6-6.5s6 2.9 6 6.5" />
+    </>
+  ),
+  barricade: (
+    <>
+      <path d="M6 21V4.5A1.5 1.5 0 0 1 7.5 3h9A1.5 1.5 0 0 1 18 4.5V21M4 21h16" />
+      <path d="M3.5 8l17 6M3.5 14l17-6" />
+    </>
+  ),
+  activeArmed: (
+    <>
+      <path d="M12 6.5v7M12 17.5h.01" />
+      <path d="M5 5l2 2M19 5l-2 2M3 12h2M19 12h2M5 19l2-2M19 19l-2-2" />
+    </>
+  ),
+  rescue: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <circle cx="12" cy="12" r="4" />
+      <path d="M5.6 5.6l3.6 3.6M14.8 14.8l3.6 3.6M18.4 5.6l-3.6 3.6M9.2 14.8l-3.6 3.6" />
+    </>
+  ),
+  // Gear categories (comms, protection, access, response, less-lethal, supplies, vehicles)
+  walkie: (
+    <>
+      <rect x="4" y="8" width="10" height="13" rx="2" />
+      <path d="M6.5 8V3M7 12h4M7 15h4M17 9.5a4 4 0 0 1 0 5M19.5 7a7.5 7.5 0 0 1 0 10" />
+    </>
+  ),
+  vest: (
+    <>
+      <path d="M8 3.5L5 5v15.5h14V5l-3-1.5" />
+      <path d="M8 3.5c0 2.5 1.8 4 4 4s4-1.5 4-4M8.5 12h7v4.5h-7z" />
+    </>
+  ),
+  ram: (
+    <>
+      <rect x="3" y="9" width="18" height="6" rx="1.5" />
+      <path d="M7 9V6.5h3V9M12 15v2.5h3V15M18 9v6" />
+    </>
+  ),
+  hardcase: (
+    <>
+      <rect x="2.5" y="8" width="19" height="10" rx="2" />
+      <path d="M9 8V6h6v2M2.5 13h19M7 11.5v3M17 11.5v3" />
+    </>
+  ),
+  lessLethal: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M13 6.5l-4.5 6.5h4L11 17.5l4.5-6.5h-4z" />
+    </>
+  ),
+  crate: (
+    <>
+      <rect x="3.5" y="5" width="17" height="14" rx="1.5" />
+      <path d="M3.5 8.5h17M3.5 15.5h17M6.5 15.5l11-7" />
+    </>
+  ),
+  van: (
+    <>
+      <path d="M2.5 17V7.5A1.5 1.5 0 0 1 4 6h10.5l4 5H20a1.5 1.5 0 0 1 1.5 1.5V17M2.5 17H5M9 17h6M19 17h2.5M14.5 6v5h4" />
+      <circle cx="7" cy="17.5" r="2" />
+      <circle cx="17" cy="17.5" r="2" />
+    </>
+  ),
+  // Upgrade branches (staff, field skills, information, equipment support, wellbeing)
+  idcard: (
+    <>
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <circle cx="8.5" cy="10.5" r="2" />
+      <path d="M5.5 15.5c.4-1.4 1.6-2.3 3-2.3s2.6.9 3 2.3M14 10h4M14 13.5h4" />
+    </>
+  ),
+  route: (
+    <>
+      <circle cx="5" cy="19.5" r="1.5" />
+      <path d="M7 19c3-1 4-4 6.5-5s4.5-1 4.5-3" strokeDasharray="2 2.5" />
+      <path d="M18 11V3.5h3.5l-1 1.5 1 1.5H18" />
+    </>
+  ),
+  dossier: (
+    <>
+      <path d="M3 6.5A1.5 1.5 0 0 1 4.5 5H9l2 2h8.5A1.5 1.5 0 0 1 21 8.5v10a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5z" />
+      <path d="M7 12h6M7 15.5h9" />
+    </>
+  ),
+  pallet: (
+    <>
+      <rect x="4" y="10" width="7" height="6.5" rx="1" />
+      <rect x="13" y="10" width="7" height="6.5" rx="1" />
+      <rect x="8.5" y="3" width="7" height="6" rx="1" />
+      <path d="M3 17h18M3 20.5h18M6 17v3.5M12 17v3.5M18 17v3.5" />
+    </>
+  ),
+  mug: (
+    <>
+      <path d="M5 9h11v7a4 4 0 0 1-4 4H9a4 4 0 0 1-4-4z" />
+      <path d="M16 11h1.5a2.5 2.5 0 0 1 0 5H16M8.5 3.5c-.8 1 .8 2 0 3M12.5 3.5c-.8 1 .8 2 0 3" />
+    </>
+  ),
+  // Navigation and actions
+  stepOut: (
+    <>
+      <path d="M14 4H6.5A1.5 1.5 0 0 0 5 5.5v13A1.5 1.5 0 0 0 6.5 20H14" />
+      <path d="M10 12h11M17.5 8.5L21 12l-3.5 3.5" />
+    </>
+  ),
+  map: (
+    <>
+      <path d="M3 6.5L9 4l6 2.5L21 4v13.5L15 20l-6-2.5L3 20z" />
+      <path d="M9 4v13.5M15 6.5V20" />
+    </>
+  ),
+  tap: (
+    <>
+      <path d="M9 12V6.5a1.5 1.5 0 0 1 3 0V11l4.6.9a2 2 0 0 1 1.6 2.2l-.7 4.5a2.5 2.5 0 0 1-2.5 2.1h-3.4a2.5 2.5 0 0 1-2-1l-3.3-4.5a1.5 1.5 0 0 1 2.2-2L9 14" />
+      <path d="M5.5 5.5a6 6 0 0 1 10 0" />
+    </>
+  ),
+  more: (
+    <>
+      <circle cx="5.5" cy="12" r="1.2" fill="currentColor" />
+      <circle cx="12" cy="12" r="1.2" fill="currentColor" />
+      <circle cx="18.5" cy="12" r="1.2" fill="currentColor" />
+    </>
+  ),
+  filter: <path d="M4 5h16l-6 7.5V19l-4 1.5v-8z" />,
+  sort: <path d="M7 4v16M4 17l3 3 3-3M17 20V4M14 7l3-3 3 3" />,
+  arrowLeft: <path d="M19 12H5M11 6l-6 6 6 6" />,
+  arrowUp: <path d="M12 19V5M6 11l6-6 6 6" />,
+  arrowDown: <path d="M12 5v14M6 13l6 6 6-6" />,
+  chevronsUp: <path d="M7 12l5-5 5 5M7 17.5l5-5 5 5" />,
+  play: <path d="M8 5.5v13l10-6.5z" />,
 } satisfies Record<string, ReactNode>;
 
 export type IconName = keyof typeof PATHS;
+
+/** Every icon name, in definition order. The gallery and the resolution test read this. */
+export const ICON_NAMES = Object.keys(PATHS) as IconName[];
+
+/** The bare glyph for one name, for marks that draw an icon inside their own shape. */
+export function iconPaths(name: IconName): ReactNode {
+  return PATHS[name];
+}
 
 export interface IconProps {
   name: IconName;
