@@ -200,7 +200,7 @@ fingerprints and Lab handle a list. Distinct from `new-call-types`, which adds k
 
 ### going-live-spine: Going Live rebuilt structure first
 Tags: job=command; journeys=choices-branch, chance-not-script; probes=none (content structure); lane=calls
-Needs: start=none; integrate=path-measures; ship=going-live-review
+Needs: start=none; integrate=none; ship=going-live-review
 
 The 2026-10-22 teardown (`docs/calls/notes/going-live-teardown.md`) and Codex's separate read both say
 reject, back to `swat-call-design`: one escalation used 34 times (the handgun on the manager); the
@@ -215,16 +215,6 @@ the turn reached by every balance style (random, best_odds, patient, fast) in at
 calls, owner target 2026-10-22; previews true in every situation), the `path-measures`
 report attached, and a separate review.
 
-### path-measures: Path-level measures for a call
-Tags: job=command; journeys=choices-branch, chance-not-script; probes=none (report, not an odds input); lane=tooling
-Needs: start=none; integrate=none; ship=none
-
-`npm run check:paths -- <type>` reuses `src/gen/incident/trees-v13/graph.ts`, `path-key.ts`,
-`src/gen/incident/gates/engine-driver.ts`, `balance.ts` and the Lab's dilemma rows, and reports per call:
-adverse routes to a named node per path, fact reach per balance style, dominance with the payoff grid at
-first and median arrival, and 4-word cross-stage echoes on played paths. Done: each measure has a bad
-fixture that must fail; report-only until the owner sets thresholds.
-
 ### threat-after-close: A threat never lands after the result that ended its scene
 Tags: job=command; journeys=answer-a-call; probes=none (ordering, not odds); lane=engine
 Needs: start=none; integrate=none; ship=none
@@ -237,12 +227,12 @@ listed under `live-chat-tooling`.
 
 ### mesh-trial: Compare the depth mesh with one author under the same gates
 Tags: job=command; journeys=choices-branch; probes=none (process); lane=lead
-Needs: start=path-measures; integrate=none; ship=none
+Needs: start=none; integrate=none; ship=none
 
 `docs/calls/depth-mesh-method.md` stands at "needs validation" after Codex's 19 findings: its gates are
 hypotheses until each has a bad fixture, and the single-author rival is untested. Done: one call built
 twice to the same brief and budget, once by the mesh and once by one author in several passes, both
-held to `path-measures`; the owner reads three paths of each blind, and the record keeps tokens, lead
+held to `npm run check:paths`; the owner reads three paths of each blind, and the record keeps tokens, lead
 time and amendment rounds.
 
 ### going-live-review: A separate read of Going Live before it ships
