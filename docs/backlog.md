@@ -97,23 +97,19 @@ Needs: start=none; integrate=none; ship=none
 the live call and the debrief. The Ops board hook clamps at 3 lines (owner decision B5, 2026-10-19).
 Done: a call that authors them shows them at 390x844, and the checker fails an over-budget line.
 
-### live-chat-build: Going Live's chat follows its pressure
+### live-chat-build: Finish the read of Going Live's chat
 Tags: job=command; journeys=none (text and presentation); probes=none (text and presentation); lane=calls
 Needs: start=none; integrate=none; ship=going-live-review (the same read)
 
-In flight on live-chat-immersion (2026-10-22). The rule is in `docs/call-pressure.md` ("Chat that
-follows the pressure") and the writing rules in `.agents/skills/swat-call-prose/references/live-chat.md`.
-Today the chat reads only the stream's cue count, so the 18 threats never reach it: during "Address
-posted by {handle}" it talks about late orders, and the named poster never types. The build adds an
-optional `ChatLine`/`ThreatChat` shape (interface files `src/content/call-trees/types.ts`,
-`src/sim/scenario-types.ts`, `src/content/incidents/types.ts`, approved by the lead with controls: no
-fingerprint moves while no chat is authored, chat never reaches a mechanic, a bad `by` throws at
-compile, and a Codex adversarial review), threads in thirds of each threat's drain, the stream's
-stopped, slowed, surged and dropped pools, the gates in a calls-owned test beside `reactions.test.ts`
-(phase floors, line shape, repeats, the emoji allow list and harm adjacency, the poster's line, state
-pools over reachable effects) and a playback test at Relaxed and Standard. Done: every threat's chat
-read in the Lab at each phase at 390x844 by a separate reader, fingerprints recaptured on purpose,
-`npm run verify` green.
+The chat shipped 2026-10-22 (merge ad0d329): each threat's chat follows its drain in thirds, the stream's
+stopped, slowed, surged and dropped pools play at onset, gates in `src/content/incidents/chat.test.ts`
+and a playback test in `src/ui/screens/live-chat.test.ts`; the rule is in `docs/call-pressure.md` and
+`.agents/skills/swat-call-prose/references/live-chat.md`. Left: the separate reader's third pass on the
+final text (its second read left 7 fixes, which were applied but not re-read); handles that read as one
+person twice in a thread (`priya1990` then `priya1989`, `vinnie1990` then `vinnie1989`, seen in the lead's
+play), so the generator avoids a shared stem in one call; a copied save loaded in the same page inherits
+lines already shown (chat memory is keyed by run id; presentation only, owner question below). Done:
+the third read approves, and no two handles in one call share a stem.
 
 ### live-chat-tooling: The string checker and the Lab see the chat
 Tags: job=command; journeys=none (tooling); probes=none (tooling); lane=tooling
