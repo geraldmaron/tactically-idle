@@ -39,8 +39,8 @@ The five changes that matter most, in order:
    amber only for the player's move, and red and blue only on a live call.
 5. **Four destinations.** HQ, Calls, Officers, Build. Build joins Develop and the Armory, which
    both spend funding to grow the department; the HQ cutaway stops repeating the tabs and shows
-   state instead. This waits for `worn-kit`, so the Armory is designed after the basic kit moves
-   onto officers.
+   state instead. Basic kit has left inventory (3e000c9), so the Armory now holds only pooled
+   specialist gear; the merge still waits for the owner's validation.
 
 ## How the audit was done
 
@@ -168,9 +168,13 @@ Each finding names the capture it comes from. File references are to `src/ui/`.
 - **Amber everywhere:** every buyable tile ends in an amber price tag, nine on the screen.
 - **Names:** the tab says Gear, the banner Equipment, the kicker and HQ room Armory, Command Staff
   "Gear maintenance".
-- **In flux:** radio headset ×8, light protective kit ×8 and service sidearm ×2 show as stock
-  here and as steppers on the team step. `worn-kit` moves them onto officers; nothing here should
-  be redesigned around them.
+- **Since the walk:** radio headset ×8, light protective kit ×8 and service sidearm ×2 showed as
+  stock here and as steppers on the team step. Basic kit (3e000c9, after this audit's captures)
+  makes a radio, sidearm, carbine and light armor part of every officer: never stock, never sold
+  or packed, no bonus. The Armory and team step now say so in one line, the radio row and its buy
+  button are gone from Prepare, and HQ's "Radios short" state and the Gear dot are gone. The
+  shotgun is the response upgrade, and teams use a less-lethal tool first when a trained officer
+  carries one with its supply.
 - **Item sheet:** "Purchase unlocked" and the price as chips, then "Unlock and qualifications"
   saying the same in prose; the footer shows the total twice ("Total funding $250", "Buy 1 · $250
   funding"). At 320 the body between header and footer is 281px.
@@ -315,7 +319,7 @@ Mockups at 390x844 and 320x568, drawn from
 | | | |
 | --- | --- | --- |
 | ![HQ](captures/ui-ux-audit/mockups/hq-390.jpg) **HQ**: the cutaway shows state; one "your move" card; duty set here only | ![Calls](captures/ui-ux-audit/mockups/board-390.jpg) **Calls**: the card is the tap target; one warning line; pay and readiness on one row | ![Brief](captures/ui-ux-audit/mockups/brief-390.jpg) **Brief**: a pushed flow, orders and threat first, cold open whole, Map in the head |
-| ![Deploy](captures/ui-ux-audit/mockups/deploy-390.jpg) **Deploy**: squad rows, kit as a summary with Adjust, worn kit as one line, "Deploy Alpha" | ![Decide](captures/ui-ux-audit/mockups/decide-390.jpg) **Decide**: strip and Step out, no tabs; one choice card anatomy | ![Review](captures/ui-ux-audit/mockups/review-390.jpg) **Review**: cost and the three outcomes first; odds stated once |
+| ![Deploy](captures/ui-ux-audit/mockups/deploy-390.jpg) **Deploy**: squad rows, kit as a summary with Adjust, basic kit as one line, "Deploy Alpha" | ![Decide](captures/ui-ux-audit/mockups/decide-390.jpg) **Decide**: strip and Step out, no tabs; one choice card anatomy | ![Review](captures/ui-ux-audit/mockups/review-390.jpg) **Review**: cost and the three outcomes first; odds stated once |
 | ![Debrief](captures/ui-ux-audit/mockups/debrief-390.jpg) **Debrief**: ending, what changed as rows, Done | ![Officers](captures/ui-ux-audit/mockups/officers-390.jpg) **Officers**: rows that hold at 320, each officer once | ![Officer](captures/ui-ux-audit/mockups/officer-390.jpg) **Officer**: one readiness line, Dismiss moves into the overflow |
 | ![Upgrades](captures/ui-ux-audit/mockups/upgrades-390.jpg) **Build, Upgrades**: amber on the one Next card; branches named | ![Armory](captures/ui-ux-audit/mockups/armory-390.jpg) **Build, Armory**: pooled gear only, prices quiet | ![Menu](captures/ui-ux-audit/mockups/menu-390.jpg) **Menu**: settings, saves and support in one sheet |
 
@@ -339,7 +343,7 @@ meets its own floors. Not yet drawn: two squads on one call, and the 200% text l
 4. **Officers:** Squads (each squad a block of rows, the leader starred, Arrange on the heading),
    Roster (filter and sort), Hire (candidates as rows with the contract in a sheet), Training.
 5. **Build:** Upgrades (one Next card, named branch chips, rows with quiet prices and milestone
-   progress) and Armory (pooled gear grid, worn kit as one line linking to who wears what).
+   progress) and Armory (pooled gear grid, basic kit as one line).
 6. **HQ:** the cutaway with pins only for state that needs the player, one card for the most
    pressing move, duty rows (where duty is set by hand, with each squad's Watch Commander opt-out
    and its status on the same row), Command Staff as rows, recent results.
@@ -379,7 +383,7 @@ Ranked by player impact for the effort. Each phase ships alone and leaves the ga
 | 1. One visual system | Tokens for type, space and colour roles; one primitive set (Button, Chip, Card, Row, Sheet, ActionBar); the duplicate definitions in `app.css` and `skin.css` deleted; hex moved to tokens; the new skin through the tokens, without the story serif; ratchet tests | High (every screen reads cleaner, small text gone) | Medium | nothing |
 | 2. Chrome contract | Resource bar; no banners on tab roots; flows with a head and one action bar and no tabs, with the exit table below; Menu sheet; toasts never over the strip. Step out only after its pause is built and validated | High | Medium | Phase 1 |
 | 3. Calls flow | Say-it-once by field and the verb ladder on the board, brief, deploy, decide, review, result and debrief, designed against today's pooled equipment; folds in `ops-experience-now` | High | Medium | Phase 2 |
-| 4. Four destinations | Officers and Build tabs; HQ as status; one assignment path; one preset home (`squad-preset-editor`); badge-to-segment routing | High | High | Phase 2, `worn-kit`, owner validation |
+| 4. Four destinations | Officers and Build tabs; HQ as status; one assignment path; one preset home (`squad-preset-editor`); badge-to-segment routing | High | High | Phase 2, basic kit (landed), owner validation |
 
 **Exits from a flow** (required before phase 2 hides the tabs; corrected after review, which found
 that Prepare's draft is component state that Back discards, `screens/OpsPrepare.tsx:73-90` and
@@ -423,7 +427,7 @@ idle (welcome back, an empty board); `npm run verify`. Phase-specific checks:
 ### My own strongest case against each change (before review)
 
 - **Four tabs.** Merging Develop and the Armory buries the Armory one tap deeper, and the radio
-  shortage dot would move to Build. The shortage disappears with `worn-kit`; the merge waits for it.
+  shortage dot would move to Build. Basic kit removed the radio shortage, so that dot is gone.
 - **Hiding the tabs on flows.** A player mid-brief who wants to check an officer has to back out.
   I first wrote that Prepare already keeps its draft. It doesn't; see the exit table.
 - **Step out.** A call left running in the background is a call the player forgets; with the
@@ -522,10 +526,12 @@ about. Done: the e2e script reaches every former screen; hire-and-equip passes; 
 trips return; captures at three widths.
 ```
 
-## Notes for the parallel `worn-kit` work
+## Notes on basic kit and `worn-kit`
 
-The team step and the Armory are drawn here against per-officer kit: one line saying what every
-officer wears, pooled gear as the only stock and the only steppers, and wear shown by officer.
-Codex noted the Armory still carries maintenance after `worn-kit` (daily wear survives, per the
-`worn-kit` item), so Build keeps service and restock. Phases 1 and 2 don't depend on how
-`worn-kit` lands; phase 3 is designed against today's pooled equipment; phase 4 waits for it.
+Basic kit landed in 3e000c9: every officer carries a radio, sidearm, carbine and light armor,
+which is never stock, never sold or packed, and adds no bonus. The team step and the Armory are
+drawn against that: one line saying what every officer carries, pooled specialist gear as the only
+stock and the only steppers. `worn-kit` is now only armor reducing harm to the officer wearing it,
+which doesn't change these screens. Codex noted the Armory still carries maintenance (daily wear
+survives on pooled gear), so Build keeps service and restock. Phase 3 is designed against today's
+pooled equipment; phase 4 waits only for the owner's validation of the merge.
