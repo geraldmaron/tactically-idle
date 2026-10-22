@@ -117,7 +117,7 @@ async function main() {
     await step('saves', async () => { await page.locator('.topbar button').last().click(); await shot('16-saves-sheet', { segments: 3 });
       await page.locator('.settings-entry').click(); await page.waitForTimeout(300); await shot('17-settings-sheet', { segments: 3 }); await closeSheet(); await closeSheet(); });
     // The calls tab is "Calls" with the desk's four tabs and "Ops" before them.
-    const callsTab = () => page.locator('nav').getByRole('button', { name: /Calls|^Ops$/ }).first().click();
+    const callsTab = () => page.locator('nav').getByRole('button', { name: /Calls|Ops/ }).first().click();
     await step('board', async () => { await callsTab(); await page.locator('.cl-card').first().waitFor(); await shot('18-board', { segments: 5 }); });
     await step('brief', async () => { await page.locator('.cl-card-button').first().click(); await page.locator('.cl-flow-body[data-step="brief"]').waitFor(); await shot('19-prepare-brief', { segments: 5 });
       await page.locator('.flow-head').getByRole('button', { name: 'Map', exact: true }).click(); await shot('19b-brief-map-sheet', { segments: 1 }); await closeSheet(); });

@@ -37,7 +37,7 @@ export async function playLiveCalls(page, { baseURL = 'http://127.0.0.1:5174', w
   await page.locator('nav').waitFor();
   const results = [];
   // The calls tab: its accessible name contains "Calls" (the desk's four tabs; "Ops" before them).
-  const callsTab = page.locator('nav').getByRole('button', { name: /Calls|^Ops$/ }).first();
+  const callsTab = page.locator('nav').getByRole('button', { name: /Calls|Ops/ }).first();
   await callsTab.click();
   const casebook = page.locator('.casebook-card');
   await casebook.waitFor();
@@ -45,17 +45,21 @@ export async function playLiveCalls(page, { baseURL = 'http://127.0.0.1:5174', w
   // Every operation on the board is live: no daily featured card and no launcher in the casebook.
   assert.equal(await page.locator('.featured-card, .casebook-row button').count(), 0, 'the Ops board offers live operations only');
 
-  // 1. Locked framework: the requirement, never the content.
+  // 1. A locked framework shows the requirement, never the content. Only the hostage call is live
+  // since the other three were retired (da5c109), so a fresh department may have none locked.
   const locked = casebook.locator('.casebook-row[data-status="locked"]');
-  assert.ok(await locked.count() > 0, 'a new department has a locked framework');
-  const lockedText = await locked.first().innerText();
-  assert.match(lockedText, /Not yet dispatched to your department/);
-  assert.match(lockedText, /Department level \d|An officer certified in \w|in stock$/m);
-  // Tactical calls open at level 1; protected rescue still waits for a vehicle-trained officer.
-  const rescue = await row('protected_rescue').innerText();
-  assert.match(rescue, /An officer certified in \w/);
-  assert.doesNotMatch(rescue, /Department level/);
-  assert.equal(await locked.first().locator('h3, button').count(), 0, 'locked rows carry no call content');
+  if (await locked.count() > 0) {
+    const lockedText = await locked.first().innerText();
+    assert.match(lockedText, /Not yet dispatched to your department/);
+    assert.match(lockedText, /Department level \d|An officer certified in \w|in stock$/m);
+    assert.equal(await locked.first().locator('h3, button').count(), 0, 'locked rows carry no call content');
+  }
+  // Protected rescue, while it is in the casebook, waits for a vehicle-trained officer.
+  if (await row('protected_rescue').count()) {
+    const rescue = await row('protected_rescue').innerText();
+    assert.match(rescue, /An officer certified in \w/);
+    assert.doesNotMatch(rescue, /Department level/);
+  }
   const before0 = await state();
   assert.equal(Object.keys(before0.casebook?.recipes ?? {}).length, 0, 'nothing discovered yet');
   for (const unfound of await casebook.locator('.casebook-row[data-status="unfound"]').all()) {
@@ -63,7 +67,7 @@ export async function playLiveCalls(page, { baseURL = 'http://127.0.0.1:5174', w
     assert.equal(await unfound.locator('h3, button').count(), 0, 'undiscovered rows show counts only');
   }
   await overflow('casebook with locked row');
-  await capture('casebook-locked', locked.first());
+  if (await locked.count() > 0) await capture('casebook-locked', locked.first());
 
   // Open the call -> brief -> Choose team -> Deploy -> choices until the debrief -> Done.
   const play = async (label, { stepOut = false } = {}) => {
@@ -106,8 +110,14 @@ export async function playLiveCalls(page, { baseURL = 'http://127.0.0.1:5174', w
     await page.goForward();
     await page.locator('.cl-flow-body[data-step="deploy"]').waitFor();
     assert.equal(await page.locator('.cl-squads button[aria-pressed="true"]').count(), pick, `${label}: the draft survives Back and Forward`);
-    // Each chosen squad's kit is a summary with Adjust; Deploy names the squads by name.
+    // Each chosen squad's kit is a summary with Adjust; Deploy names the squads by name. Every officer
+    // carries basic kit; pooled gear comes from Adjust, here through Auto-equip as a player would.
     assert.equal(await page.locator('.cl-squad-plan').count(), pick, `${label}: a kit summary per chosen squad`);
+    await page.locator('.cl-squad-plan .cl-link', { hasText: 'Adjust' }).first().click();
+    await page.locator('.cl-kit-workspace').getByRole('button', { name: /^Auto-equip / }).click();
+    await page.getByRole('button', { name: 'Done', exact: true }).click();
+    await page.locator('.cl-kit-workspace').waitFor({ state: 'detached' });
+    const carried = await page.locator('.cl-kit-on, .cl-kit-warn').count();
     // Standard radios come from owned stock, one per officer. A short squad is equipped by
     // buying the missing radios on this screen, as a player would.
     const buyRadios = page.getByRole('button', { name: /^Buy \d+ radios? · / });
@@ -128,7 +138,7 @@ export async function playLiveCalls(page, { baseURL = 'http://127.0.0.1:5174', w
     await deploy.click();
     await page.locator('.call-grid').waitFor(); await overflow(`${label} live`);
     const started = await state();
-    assert.ok(started.activeRun.reservationIds.length > 0, `${label}: a live run reserves owned equipment`);
+    assert.equal(started.activeRun.reservationIds.length > 0, carried > 0, `${label}: a live run reserves the pooled gear its kit summary showed`);
     const used = started.activeRun.squadIds.length;
     if (stepOut) {
       // Step out leaves the call without cancelling it: the decision pauses and only the call resumes it.
@@ -203,36 +213,41 @@ export async function playLiveCalls(page, { baseURL = 'http://127.0.0.1:5174', w
     return { result, started, after };
   };
 
-  // 2. Take every starting call live. Each is the first of its framework, so it carries the badge;
-  // dispatching it discovers its recipe in the casebook.
+  // 2. Take every starting call live. The first of each framework carries the badge; dispatching it
+  // discovers its recipe in the casebook. The first call taken also steps out and back.
   const discovered = [];
+  let taken = 0;
   const start = await state();
   for (const card of [...start.incidents]) {
     const now = await state();
     const index = now.incidents.filter(c => c.expiresAt > Date.now()).findIndex(c => c.id === card.id);
     if (index < 0) continue;
-    assert.equal(card.newKind, true, `${card.type}: first call of its framework is marked new`);
+    const first = !discovered.includes(card.type);
     const view = page.locator('.cl-card').nth(index);
-    assert.match(await view.innerText(), /New kind of call/, `${card.type}: board card shows the badge`);
-    if (discovered.length === 0) await capture('board-new-kind', view);
+    // A new kind of call says so on its card, and only then.
+    if (card.newKind) assert.match(await view.innerText(), /New kind of call/, `${card.type}: board card shows the badge`);
+    else assert.doesNotMatch(await view.innerText(), /New kind of call/, `${card.type}: only the new kind carries the badge`);
+    if (taken === 0) await capture('board-new-kind', view);
     // The page clock is fixed, so the welcome-back sheet stays armed and opens on the first shift
     // report; a player reads it and taps Continue.
     const welcome = page.locator('.welcome-sheet');
     if (await welcome.count()) await welcome.getByRole('button', { name: 'Continue', exact: true }).click();
     await view.locator('.cl-card-button').click();
-    const { after, result } = await play(`${card.type} live`, { stepOut: discovered.length === 0 });
+    const { after, result } = await play(`${card.type} live`, { stepOut: taken++ === 0 });
     Object.assign(result, { type: card.type, kind: 'incident' });
     const keys = Object.keys(after.casebook.recipes).filter(key => key.startsWith(`${card.type}/`));
-    assert.equal(keys.length, 1, `${card.type}: dispatch discovered one recipe`);
+    assert.ok(first ? keys.length === 1 : keys.length >= 1, `${card.type}: dispatch discovered its recipe`);
     const found = await row(card.type).innerText();
-    assert.match(found, /1 of 3/, `${card.type}: casebook counts the situation found`);
+    const [, got, all] = found.match(/(\d+) of (\d+)/) ?? [];
+    assert.ok(Number(got) >= 1 && Number(got) <= Number(all), `${card.type}: casebook counts the situations found`);
     assert.match(found, /Best: /);
-    assert.match(found, /2 more situations to find/);
+    if (Number(got) < Number(all)) assert.match(found, /\d more situations? to find/);
     assert.equal(await row(card.type).locator('button').count(), 0, `${card.type}: the casebook is a record, not a launcher`);
-    discovered.push(card.type);
+    if (first) discovered.push(card.type);
     await overflow(`${card.type} casebook after discovery`);
   }
   assert.ok(discovered.length > 0, 'at least one starting call was taken live');
+  for (const type of discovered) assert.equal(start.incidents.filter(c => c.type === type && c.newKind).length, 1, `${type}: one starting call is marked a new kind`);
   await capture('casebook-found', row(discovered[0]));
   await capture('casebook', casebook);
 
@@ -259,6 +274,6 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
       finally { await context.close(); }
     }
     if (process.env.TI_E2E_REPORT) await writeFile(process.env.TI_E2E_REPORT, JSON.stringify(results, null, 2) + '\n');
-    console.log(`Passed ${results.length} live board calls at 390x844 and 320x568: a locked casebook row, ${new Set(results.map(result => result.type)).size} frameworks discovered, ${results.filter(result => result.squads > 1).length} two-squad deployments (${results.reduce((total, result) => total + result.boughtRadios, 0)} radios bought on Prepare), ${results.filter(result => result.floors > 1).length} with an upper floor, then an empty board.`);
+    console.log(`Passed ${results.length} live board calls at 390x844 and 320x568: ${new Set(results.map(result => result.type)).size} frameworks discovered, ${results.filter(result => result.squads > 1).length} two-squad deployments (${results.reduce((total, result) => total + result.boughtRadios, 0)} radios bought on Prepare), ${results.filter(result => result.floors > 1).length} with an upper floor, then an empty board.`);
   } finally { await browser.close(); }
 }
