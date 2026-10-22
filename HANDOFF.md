@@ -107,8 +107,11 @@ Its session waits for the owner's go to archive.
 
 Codex's second read finished: rejected (10 findings, 5 block; three of the blocks are the known requests
 outside the call's files). Backlog `going-live-spine` step 1 is now a second structure pass, then a third
-read. Held until the weekly reset (2026-10-23 07:00 UTC) and the owner's go: that pass, the s2 agitation
-draw, and the prose passes after both.
+read. Owner's go (2026-10-22): after the weekly reset (2026-10-23 07:00 UTC) the lead starts one fresh Opus
+session for that pass, which also owns `src/content/incidents/hostage.ts` for the s2 volatility draw and
+the repost cue, ending in a third Codex read. Brief:
+`side-session-notes/local_0ef35909-1f92-43ed-b124-d0236bd4f320/going-live-spine/pass2-brief.md`. The
+prose passes wait for that read.
 
 ## Locks outside normal ownership
 
