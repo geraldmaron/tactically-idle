@@ -8,10 +8,10 @@
 .ct-badge-fill { fill: var(--ct); stroke: var(--ct); }
 .ct-badge-mark { color: var(--ct-ink); }
 .ct-badge-label { font: 600 14px/1.2 var(--font-ui); color: var(--text); min-width: 0; overflow-wrap: anywhere; }
-.ct-badge--hostage { --ct: #b99cff; }
-.ct-badge--barricade { --ct: #4fc3d9; }
-.ct-badge--armed { --ct: #ff7a8a; }
-.ct-badge--rescue { --ct: #6ea8ff; }
+.ct-badge--hostage { --ct: var(--ct-hostage); }
+.ct-badge--barricade { --ct: var(--ct-barricade); }
+.ct-badge--armed { --ct: var(--ct-armed); }
+.ct-badge--rescue { --ct: var(--ct-rescue); }
 .ct-badge--unknown { --ct: var(--line-strong); --ct-ink: var(--text); }
 
 /* ---- status and outcome marks: silhouette plus label, colour only reinforces */
