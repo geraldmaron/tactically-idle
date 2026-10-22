@@ -470,29 +470,20 @@ error states. Debt lives in a generated baseline (`npm run ui:baseline`) that on
 regenerates at each merge; rules Astra marks hard zero start as ratchets at today's count. Done: every rule
 has a gate, `npm run verify` and `npm run check:ui` pass on today's UI, and a negative control fails each rule.
 
-### ui-primitives: Shared components and tokens carry the polish
-Tags: job=command; journeys=answer-a-call, hire-and-equip; probes=none (layout and type); lane=interface
-Needs: start=none; integrate=ui-gates; ship=none
-
-Astra's package P1: `theme.css`, `app.css` (all of it), `skin.css`, `player-navigation.css`,
-`components/ui.tsx`, `components/Sheet.tsx`, `components/sheet-viewport.css`, `icons.tsx`, `icons/kit.ts`,
-`icons/kit.css`. Chip insets for wrapped labels (R15), the 320 action-bar gutter matching the content gutter
-(R2), contrast tokens (`--t3` on `--ink-2` is 4.46:1, R14), semantic type styles, shared card, row, chip and
-state variants including loading and error, and the icon size and stroke contract. Screen packages ask this
-lane for any `app.css` change. Done: the shared failures in R2, R14 and R15 at zero, R1, R7, R8 and R9 debt
-lower, and the captures at three widths show no regressions.
-
 ### ui-surfaces: Every screen passes the gates
 Tags: job=command; journeys=answer-a-call, hire-and-equip, debrief-explains; probes=none (layout and art); lane=interface
-Needs: start=ui-gates, ui-primitives; integrate=none; ship=none
+Needs: start=ui-gates; integrate=none; ship=none
 
 Astra's packages P2 to P8, one builder each, no shared files: P2 HQ, finance and command staff; P3 squads,
 officer sheet, hire, arrange and training; P4 Build, upgrades and Armory (essential-copy clamps, hidden
 glyphs, actionable locked states that name Build, Upgrades); P5 first run, settings and saves (one theme
-switch, menu leads, shared save cards); P6 board, brief and deploy (the hook shown in full with no clamp, owner 2026-10-22; Map and basic-kit visuals);
+switch, leads on the Menu's switch rows to match its link rows, shared save cards, and tighten Saves and
+Training, which grew taller when 13px prose went to 14px); P6 board, brief and deploy (the hook shown in full with no clamp, owner 2026-10-22; Map and basic-kit visuals);
 P7 live call, review, result and debrief (compact strip and empty radio, keeping the agreed order in
 `docs/ops-experience.md`, a reachable first choice, outcome and resource marks); P8 portraits, art and the
-blueprint (literal colors, art sizing, fallback floors). File lists per package are in `side-session-notes/local_0ef35909-1f92-43ed-b124-d0236bd4f320/ui-audit/astra-findings.md`. Done: each
+blueprint (literal colors, art sizing, fallback floors). The shared tokens, variants, `LoadingState`,
+`ErrorState`, semantic type classes, `ICON_SIZE` and required `Row.lead` and `Section.icon` landed with
+ui-primitives (2026-10-22). File lists per package are in `side-session-notes/local_0ef35909-1f92-43ed-b124-d0236bd4f320/ui-audit/astra-findings.md`. Done: each
 package's surfaces pass every gate at 320, 390 and 430, a fixed-seed sweep compared with the 2026-10-22
 captures, and a closing Astra read of the after set.
 

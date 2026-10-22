@@ -162,6 +162,13 @@ ui-primitives (Sonnet, `theme.css`, `app.css`, `skin.css`, `player-navigation.cs
 `Sheet.tsx`, `sheet-viewport.css`, `icons.tsx`, `icons/kit.*`, port 5175). Wave B (packages P2 to P8) starts
 once both merge. The lead regenerates `ui-debt.json` at every merge.
 
+ui-primitives merged (2c8d943; small-text ceiling 307 to 275 and architecture re-render 3c840ca): verify
+3,051 tests, art, build and no-lab green; e2e 6 live calls at 390 and 320; Codex approved 7f2cc57 (not
+re-run on 7375045, the owner's direct ask that made `Row.lead` and `Section.icon` required and touched 8
+call sites in `SettingsSheet.tsx`, `HQ.tsx`, `Recruit.tsx` plus `LiveView.tsx` and `live-call.css`). The lead
+looked at the merged captures (`ui-audit/after-primitives/`): chips keep their inset; the Menu's switch rows
+still lack leads (P5). Its dev servers on 5175 and 5176 are its own; it stops them when told.
+
 ## Locks outside normal ownership
 
 None. live-chat-immersion merged (ad0d329, `npm run verify` 2,992 tests on the merged tip, lead played a
