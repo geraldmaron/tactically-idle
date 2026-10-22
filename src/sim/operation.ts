@@ -11,7 +11,7 @@ import { drawnKeys, forceSuppliesSpent, resolveDrawn } from './drawn-effects';
 import { withVariants } from '../gen/incident/drawn-model';
 import { advanceClocks, audienceFactor, bumpClocks, CLOCK_RULES_V1, clockConditionsHold, clockErrors, clockOutEffects, cueEffects, decisionMinutes, ditherCap, filling, fillGauge, fillPressureRate, fillViews, forkMinutes, initialClocks, landingEffects, lapsedThreat, lapseEffects, openThreat, stalledRun, stallFeed, teamMinutes, threatById } from './clocks';
 import { applyMoves, driftMeters, initialMeters, meterConditionsHold } from './meters';
-import { applyCommitments } from './commitments';
+import { applyCommitments, breakCommitments } from './commitments';
 import { forceLines, OUTCOME_SCORE_V1, scoreCall } from './outcome-score';
 import { CAREER_TUNING, awardXp, learnedXp, promotionText } from './career';
 import { creditXp } from './ranks';
@@ -623,7 +623,7 @@ export function traceRun(scenario: ScenarioDefinition, run: OperationRun): { ste
 /** Replay one lapse on the trace's state as the commit applied it (OPERATION_HANDLERS.lapse): the
  * stall's pressure, the window's minutes, the route and the landing, the cues and the clock outs.
  * The saved deltas and knowledge changes are authoritative, as a decision's are. */
-function traceLapse(scenario: ScenarioDefinition, sim: Pick<OperationRun, 'knowledge' | 'flags' | 'pressure' | 'objective' | 'civilianSafety' | 'clock' | 'clocks' | 'personCasualties' | 'meters'>, h: LapseRecord): StepTrace {
+function traceLapse(scenario: ScenarioDefinition, sim: Pick<OperationRun, 'knowledge' | 'flags' | 'pressure' | 'objective' | 'civilianSafety' | 'clock' | 'clocks' | 'personCasualties' | 'meters' | 'commitments'>, h: LapseRecord): StepTrace {
   const threat = threatById(scenario, h.threatId);
   const matched = threat ? lapseEffects(scenario, threat, sim) : [];
   const pressure0 = sim.pressure, obj0 = sim.objective, civ0 = sim.civilianSafety;
@@ -636,6 +636,7 @@ function traceLapse(scenario: ScenarioDefinition, sim: Pick<OperationRun, 'knowl
   applyClockCues(sim, scenario, timed.cues);
   applyEffects(sim, clockOutEffects(scenario, clocksBefore, sim.clocks, sim, matched));
   applyMoves(sim, scenario, matched);
+  breakCommitments(sim, scenario, matched);
   for (const person of h.committed.personCasualties ?? []) { sim.personCasualties ??= {}; sim.personCasualties[person.personId] = { ...person }; }
   syncPersonCasualtyFlags(sim, scenario);
   sim.objective = round1(clamp(obj0 + h.committed.objectiveDelta, 0, 100));
@@ -1270,6 +1271,8 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     const routed = applyEffects(run, outs);
     changes.push(...routed.changes);
     applyMoves(run, scenario, matched);
+    // A route that names a commitment finds it out (sim/commitments.ts breakCommitments).
+    breakCommitments(run, scenario, matched);
     const personConsequences = applyPersonConsequences(run, scenario, null, null, outs);
     const nextStage = routed.ending ? null : routed.stage ?? routeStage;
     const ending = routed.ending ?? routeEnding;

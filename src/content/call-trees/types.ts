@@ -433,7 +433,8 @@ export type ChatLine = string | { text: string; by?: string; after?: string };
 export interface ThreatChat { early: ChatLine[]; closing: ChatLine[]; imminent: ChatLine[] }
 
 /** A threat's run-out route. Like the threat it never harms anyone or fires, and it sets no mark:
- * the moment it leads to does the pressing, with its own threat or by ending the call. */
+ * the moment it leads to does the pressing, with its own threat or by ending the call. It can break
+ * a commitment (`breaks`), since a promise left standing while time runs out is found empty. */
 export interface TreeTimeout {
   /** What the minutes nobody used look like on scene, read in the result after the threat's line. */
   text: string;
@@ -441,6 +442,11 @@ export interface TreeTimeout {
   next: TreeNext;
   /** Replaces `next` in that public state, first match wins: a held ending names who is inside. */
   nextIf?: { when: TreeState; next: TreeNext }[];
+  /** Commitments the run-out breaks, whichever route it takes (TreeOutcome.breaks): the person
+   * learns the promise was empty, so `text` says so. A promise not yet made, or already settled, is
+   * left alone. A run-out never stands in for an outcome on a `lie`, which still needs an outcome
+   * that breaks it (see TreeOutcome.breaks): the timer can be Off, and then nothing runs out. */
+  breaks?: string[];
 }
 
 /** One beat on a threat: the scene moving while the player weighs it. It fires once, live on
