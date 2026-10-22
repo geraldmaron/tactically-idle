@@ -38,12 +38,8 @@ export const CARD_WARNING_TEXT = {
   leaveIt: 'No penalty for skipping this call.',
 } as const;
 
-/** Why a switch can't be turned on: the board would be left with no call to draw. */
-export function reasonText(descriptor: ContentDescriptor, alone: boolean): string {
-  return alone
-    ? `Every call can involve ${CARD_THEME_WORDS[descriptor]}, so turning this off would leave no calls.`
-    : 'With your other choices, turning this off would leave no calls.';
-}
+/** Why a switch can't be turned on while other switches are on. A theme every call carries has no switch and is named by MENU_TEXT.everyCall instead. */
+export const BLOCKED_BY_CHOICES_REASON = 'With your other choices, turning this off would leave no calls.';
 
 /** "A", "A and B", "A, B and C". */
 export function joinThemes(words: readonly string[]): string {

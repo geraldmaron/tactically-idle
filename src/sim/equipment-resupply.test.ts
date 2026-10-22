@@ -182,7 +182,7 @@ describe('contextual equipment resupply', () => {
     expect(saves.send(command(), NOW).ok).toBe(true);
     const after = saves.getSnapshot().state;
     const reloaded = new CampaignSlots(storage, NOW, () => 999);
-    expect(reloaded.getSnapshot().state.activeRun).toEqual(after.activeRun);
+    expect(reloaded.getSnapshot().state.activeRun).toEqual({ ...after.activeRun, decisionPausedAt: expect.any(Number) });
     expect(reloaded.getSnapshot().state.reservations).toEqual(after.reservations);
     expect(JSON.parse(storage.getItem(SLOTS_KEY)!).slots[0]).toEqual(otherSlot);
     expect(actionViews(reloaded.getSnapshot().state, NOW, 'A').find((a) => a.id === request.actionId)?.eligible).toBe(true);

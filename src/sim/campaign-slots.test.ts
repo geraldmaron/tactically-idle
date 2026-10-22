@@ -1,8 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { CampaignSlots, SLOT_COUNT, SLOTS_KEY } from './campaign-slots';
 import { createInitialState } from './department';
-import { serialize } from './save';
+import { deserialize, serialize } from './save';
 import { withSaveLock } from './save-lock';
+import { ditherMinutes } from './clocks';
+import { actionViews, briefing } from './operation-selectors';
+import type { OperationRun } from './types';
+import { startCmd } from './test-fixtures';
 
 const T0 = Date.UTC(2026, 9, 2);
 function memory() {
@@ -216,5 +220,115 @@ describe('ten local campaign slots', () => {
     expect(saves.getSnapshot().dirty).toBe(true);
     expect(saves.save(T0 + 5000).ok).toBe(true);
     expect(saves.getSnapshot().dirty).toBe(false);
+  });
+});
+
+describe('a running stall at save time', () => {
+  const SEC = 1000, HOUR = 3_600_000;
+  type Store = ReturnType<typeof memory>;
+  /** A campaign with a call under way and its first decision open, saved by the engine's own autosave. */
+  function onACall(): { storage: Store; saves: CampaignSlots; live: () => OperationRun } {
+    const storage = memory(); const saves = new CampaignSlots(storage, T0, () => 5);
+    const id = saves.getSnapshot().state.incidents[0].id;
+    expect(saves.send(startCmd(id, ['A'], { positions: { A: briefing(id).entries[0].id } }), T0).ok).toBe(true);
+    return { storage, saves, live: () => saves.getSnapshot().state.activeRun! };
+  }
+  /** What the open decision has cost at `now`, from the run's own saved fields (an explicit cap, so no live content decides it). */
+  const stall = (run: OperationRun, now: number) => ditherMinutes({ openedAt: run.decisionOpenedAt, now, timer: 'standard', textLength: 0, cap: 1000,
+    ...(run.decisionPausedAt !== undefined ? { pausedAt: run.decisionPausedAt } : {}) });
+  const slotRun = (storage: Store, id = 1): OperationRun => {
+    const library = JSON.parse(storage.getItem(SLOTS_KEY)!);
+    return deserialize(library.slots[id - 1].data)!.activeRun!;
+  };
+  /** A slot as a build before the freeze wrote it: the live state, serialized as it was, running. */
+  function writeUnpaused(storage: Store, state: ReturnType<CampaignSlots['getSnapshot']>['state'], id: number, savedAt: number) {
+    const library = JSON.parse(storage.getItem(SLOTS_KEY)!);
+    library.slots[id - 1] = { campaignId: `old_${id}`, name: 'Old build', createdAt: savedAt, savedAt, data: serialize(state, savedAt) };
+    storage.setItem(SLOTS_KEY, JSON.stringify(library));
+  }
+
+  it('stores the snapshot paused and leaves the visible call running', () => {
+    const { storage, saves, live } = onACall();
+    expect(live().decisionPausedAt).toBeUndefined();
+    expect(slotRun(storage).decisionPausedAt).toBe(T0);
+    // Autosaves, a manual save and a tick later: the live decision never takes a pause from them.
+    saves.send({ type: 'tick' }, T0 + 5 * SEC);
+    expect(saves.save(T0 + 10 * SEC).ok).toBe(true);
+    expect(live().decisionPausedAt).toBeUndefined();
+    expect(slotRun(storage).decisionPausedAt).toBe(T0 + 10 * SEC);
+    // The visible timer still moves on after the save.
+    expect(stall(live(), T0 + 20 * SEC)).toBeGreaterThan(stall(live(), T0 + 10 * SEC));
+    expect(stall(live(), T0 + 90 * SEC)).toBeCloseTo(15, 5);
+  });
+
+  it('freezes in every writer and never on the live state', () => {
+    const { storage, saves, live } = onACall();
+    const at = T0 + 30 * SEC;
+    expect(saves.saveAs(3, 'Copy', at).ok).toBe(true);
+    expect(slotRun(storage, 3).decisionPausedAt).toBe(at);
+    expect(deserialize(saves.exportCurrent(at))!.activeRun!.decisionPausedAt).toBe(at);
+    expect(saves.importGame(4, 'Imported', saves.exportCurrent(at), at + SEC).ok).toBe(true);
+    expect(slotRun(storage, 4).decisionPausedAt).toBe(at);
+    // Loading the active slot keeps the live state and rewrites the slot paused.
+    expect(saves.load(3, at + 2 * SEC).ok).toBe(true);
+    expect(slotRun(storage, 3).decisionPausedAt).toBe(at + 2 * SEC);
+    expect(live().decisionPausedAt).toBeUndefined();
+    expect(saves.newGame(5, 'Fresh', at + 3 * SEC).ok).toBe(true);
+    expect(saves.getSnapshot().state.activeRun).toBeNull();
+    // Leaving the call stores it paused where it was last saved, and the fresh game has none.
+    expect(slotRun(storage, 3).decisionPausedAt).toBe(at + 3 * SEC);
+  });
+
+  it('keeps time already counted and a pause already taken', () => {
+    const { storage, saves, live } = onACall();
+    const counted = stall(live(), T0 + 40 * SEC);
+    expect(saves.send({ type: 'pauseDecision', revision: live().revision }, T0 + 40 * SEC).ok).toBe(true);
+    expect(saves.save(T0 + 10 * 60 * SEC).ok).toBe(true);
+    // The save at ten minutes does not move the pause: only the 40 seconds counted.
+    expect(slotRun(storage).decisionPausedAt).toBe(T0 + 40 * SEC);
+    expect(stall(slotRun(storage), T0 + HOUR)).toBeCloseTo(counted, 9);
+  });
+
+  it('leaves a result on screen alone, as it has no stall yet', () => {
+    const { storage, saves, live } = onACall();
+    const view = actionViews(saves.getSnapshot().state, T0, 'A').find((a) => a.eligible)!;
+    expect(saves.send({ type: 'decide', actionId: view.id, actingSquadIds: view.actingSquadIds, supportSquadIds: view.supportSquadIds }, T0 + SEC).ok).toBe(true);
+    expect(live().decisionPending).toBe(true);
+    expect(slotRun(storage).decisionPausedAt).toBeUndefined();
+  });
+
+  it('counts none of the gap when the stored snapshot loads later, and still settles department time', () => {
+    const { storage, saves, live } = onACall();
+    saves.send({ type: 'tick' }, T0 + 60 * SEC);
+    const atSave = stall(live(), T0 + 60 * SEC);
+    // Without the pause the three hours away would count in full: the control.
+    expect(stall(live(), T0 + 3 * HOUR)).toBeGreaterThan(atSave + 100);
+    const back = T0 + 3 * HOUR;
+    const reloaded = new CampaignSlots(storage, back, () => 6);
+    expect(reloaded.getSnapshot().state.department.clockHighWater).toBe(back);
+    expect(reloaded.getSnapshot().state.activeRun!.decisionPausedAt).toBe(T0 + 60 * SEC);
+    expect(reloaded.send({ type: 'resumeDecision', revision: reloaded.getSnapshot().state.activeRun!.revision }, back).ok).toBe(true);
+    const run = reloaded.getSnapshot().state.activeRun!;
+    expect(run.decisionPausedAt).toBeUndefined();
+    expect(stall(run, back)).toBeCloseTo(atSave, 9);
+    expect(stall(run, back + 30 * SEC)).toBeCloseTo(atSave + 5, 9);
+  });
+
+  it('treats a snapshot a build before the freeze left running as saved at its own save time', () => {
+    const { storage, saves } = onACall();
+    saves.send({ type: 'tick' }, T0 + 60 * SEC);
+    writeUnpaused(storage, saves.getSnapshot().state, 1, T0 + 60 * SEC);
+    writeUnpaused(storage, saves.getSnapshot().state, 2, T0 + 60 * SEC);
+    expect(slotRun(storage).decisionPausedAt).toBeUndefined();
+    const back = T0 + 3 * HOUR;
+    const reloaded = new CampaignSlots(storage, back, () => 6);
+    const run = reloaded.getSnapshot().state.activeRun!;
+    expect(run.decisionPausedAt).toBe(T0 + 60 * SEC);
+    expect(stall(run, back)).toBeCloseTo(stall(saves.getSnapshot().state.activeRun!, T0 + 60 * SEC), 9);
+    // Switching to such a slot, and importing such a backup, read it the same way.
+    expect(reloaded.load(2, back + SEC).ok).toBe(true);
+    expect(reloaded.getSnapshot().state.activeRun!.decisionPausedAt).toBe(T0 + 60 * SEC);
+    expect(reloaded.importGame(3, 'Backup', serialize(saves.getSnapshot().state, T0 + 60 * SEC), back + 2 * SEC).ok).toBe(true);
+    expect(slotRun(storage, 3).decisionPausedAt).toBe(T0 + 60 * SEC);
   });
 });

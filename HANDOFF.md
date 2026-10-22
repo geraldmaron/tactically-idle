@@ -35,6 +35,14 @@ older save.
 Wave 2 after the merge: `squad-names` (needs `visual-story`), `owner-visual-picks` once the owner
 picks, then `rewarded-ads` and `real-purchases` from the design note.
 
+Sessions and worktrees (2026-10-22): 11 idle sessions whose work is merged were archived and their
+worktrees and branches removed. Still standing: "UI/UX audit" (owns this lead worktree), its
+parent "Threat run-out" (`claude/eager-elgamal-f0ef34`) and grandparent "Content descriptors"
+(`claude/content-warnings-draft`), kept because archiving a parent also archives its idle
+children; and the pinned "Project patterns review" in the main checkout
+(`claude/department-ux-pass`). All four are merged. The lead branch is backed up at
+`refs/lead-backup/angry-edison`.
+
 Sol's challenge of this split (2026-10-22, accepted with controls): the stall freeze must leave the
 visible call running while the stored snapshot is paused, proved both ways; squad naming waits
 for wave 2 because it crosses sim, the Blueprint props and live call screens; baselines are

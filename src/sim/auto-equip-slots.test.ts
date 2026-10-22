@@ -29,7 +29,8 @@ describe('auto-equip local campaign integration', () => {
     const reloaded = new CampaignSlots(storage, NOW, () => 999);
     expect(reloaded.getSnapshot().activeSlotId).toBe(2);
     expect(reloaded.getSnapshot().state.reservations).toEqual(reserved);
-    expect(reloaded.getSnapshot().state.activeRun).toEqual(saves.getSnapshot().state.activeRun);
+    // The stored call comes back with its stall paused at the save (sim/save.ts freezeStall).
+    expect(reloaded.getSnapshot().state.activeRun).toEqual({ ...saves.getSnapshot().state.activeRun, decisionPausedAt: expect.any(Number) });
     expect(JSON.parse(storage.getItem(SLOTS_KEY)!).slots[0]).toEqual(slotOneBefore);
     expect(reloaded.send({ type: 'cancelOperation' }, NOW).ok).toBe(true);
     expect(reloaded.getSnapshot().state.reservations).toEqual([]);
@@ -54,7 +55,7 @@ describe('auto-equip local campaign integration', () => {
     expect(deployed.activeRun).not.toBeNull();
     expect(deployed.reservations).toEqual([]);
     const restored = new CampaignSlots(storage, NOW, () => 99);
-    expect(restored.getSnapshot().state.activeRun).toEqual(deployed.activeRun);
+    expect(restored.getSnapshot().state.activeRun).toEqual({ ...deployed.activeRun, decisionPausedAt: expect.any(Number) });
     expect(restored.send({ type: 'cancelOperation' }, NOW).ok).toBe(true);
     expect(restored.getSnapshot().state.activeRun).toBeNull();
     expect(JSON.parse(storage.getItem(SLOTS_KEY)!).slots[0]).toEqual(slotOne);

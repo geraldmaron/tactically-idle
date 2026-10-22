@@ -218,7 +218,8 @@ and its form, each with the one thing it changes (`docs/player-profile.md`). An 
 "a quieter call while the team recovers" (`IncidentCard.eased`).
 The stall line says it raises starting pressure only on the Standard timer, and shows nothing
 extra on Off or Relaxed. The eased mark renders on the call card (comebackTier saves it today and
-nothing in `src/ui/` shows it).
+nothing in `src/ui/` shows it). Once `rewarded-ads` ships, the ad line says offers come less often when the
+player skips them, and nothing else.
 
 ### lab-flow-timeouts: The Lab's Flow draws where a threat runs out to
 Tags: job=command; journeys=none (tooling); probes=none (tooling); lane=tooling
@@ -378,37 +379,46 @@ kinds multiply and bonuses of one kind add, and the same power-up twice extends.
 development-tree desk upgrades granted on purchase and timed power-ups with a way to earn them in
 play; `rewarded-ads` adds watching an ad as a second way, and `real-purchases` adds the paid
 entitlements. Show the combined multiplier and any running power-up near the desk, and decide
-whether owned upgrades pick up a later rebalance. Done: upgrades and power-ups each have at least
-one entry, a test proves each raises tap pay, and the player can see what is active.
+whether owned upgrades pick up a later rebalance. Beyond the base it waits on `detail-strain-drain`, and it
+stays inside the budgets in `docs/monetization.md` section 3 (upgrades up to x1.4, earned power-ups up to x2
+including the ad's +0.5, a reachable stack of at most x7). Done: upgrades and power-ups each have at least
+one entry, a test proves each raises tap pay, the ceiling test builds the largest reachable holding through
+`combinedFactor`, and the player can see what is active.
 
-### monetization-design: One design note for rewarded ads and paid income multipliers
-Tags: job=build; journeys=hire-and-equip; probes=none (design note); lane=lead
-Needs: start=none; integrate=none; ship=none
+### detail-strain-drain: Strain from paid details drains at the patrol rate on every duty
+Tags: job=build; journeys=hire-and-equip; probes=none (department economy, not call odds); lane=engine
+Needs: start=none (owner picks option B in `docs/monetization.md` section 3); integrate=none; ship=none
 
-Owner decisions 2026-10-22: watching an ad is rewarded, the ad-watch rate is measured and used the
-way `docs/research/mobile-hook-patterns.md` describes, and real-money income multipliers are sold
-in the store. Before code, `docs/monetization.md` settles: what an ad pays (a timed power-up on the
-shared grant path, or funding), where offers appear and where they never do (never during a live
-decision, never forced, never on a call screen), the ad reader's inputs and window, the hard daily
-cap, what each multiplier sells and stacks with, how purchases restore, the consent and disclosure
-duties (iOS App Tracking Transparency, non-personalized ads by default, the EU personalised-price
-disclosure if prices ever vary, which they don't by default), and the rule that ad history and
-purchases never reach call odds, call draws or pressure. A Codex adversarial review challenges it.
-Done: the note, its challenge record, and `rewarded-ads` and `real-purchases` updated to match it.
+`docs/monetization.md` section 3: resting recovers 6 stress an hour against patrol's 1, the recovery
+upgrade doubles both and duty changes are free, so "rest, then tap" beats "patrol and tap" once the tap
+stack passes x3, or x1.5 with the top upgrade. The ad's own x1.5 sits on that edge. Option B: strain
+earned on paid details drains at `recoveryPerHour.patrol x recoveryMultiplier x ageRecoveryFactor` on
+every duty, with no rest or standby rate and no Watch Commander rest bonus, following the officer across
+squad transfers and while unassigned. The data shape (a balance inside stress, or a separate pool) is
+this item's call, with a save change. Done: a test runs rest-and-tap, standby-and-tap, patrol-and-tap and a
+transfer through the engine at the top recovery upgrade, with and without the commander bonus, and tap
+income per officer-hour is equal on every route and at most the $150 patrol income.
 
 ### rewarded-ads: Watching an ad is rewarded, and the watch rate is measured
 Tags: job=build; journeys=hire-and-equip; probes=new:ad-history-blind; lane=engine
-Needs: start=monetization-design; integrate=none; ship=store-wrap (the ad network SDK)
+Needs: start=detail-strain-drain; integrate=none; ship=store-wrap (the ad network SDK)
 
-The player chooses to watch an ad from an offer and gets the reward `monetization-design` sets.
+The player chooses to watch an ad from an offer and gets the reward `docs/monetization.md` sets: one
+power-up, `ad-overtime`, +0.5 (x1.5) to tap pay for 10 game minutes, no funding. Offers appear only as an
+inline row on the desk, under the gates in its section 4 (never on a call screen, the board, at open, in the
+Store, in a notification or modal, or after harm). The reader lives in a new ad reader module under `src/sim/` with `AD_TUNING`;
+the log is a local ring buffer of 500 outside the save, which the player can delete.
 The player profile (`src/sim/player-profile.ts`, `docs/player-profile.md`) gains an ad reader:
 offers shown, ads watched to the end, offers declined, over a rolling window, read as a watch rate.
 As the research found, ad history can cap solicitation as easily as push it, so the reader only
-lowers how often offers appear for a player who declines them and never raises the cadence above
-the standard rate or the daily cap. Every offer and watch is logged with the content fingerprint,
+lowers how often offers appear for a player who declines them (last 10 offers over 14 days, gap steps of
+30 minutes to 4 hours, a watch never shortens a gap) and never raises the cadence above the standard rate or
+the cap of 4 in a rolling 24 hours. Every offer and watch is logged with the content fingerprint,
 the tuning hash and the timer setting, so `playtests` can compare variants on real people.
 `profile-surface` shows the ad line with the one thing it changes. A dev ad provider stands in for
-the SDK until `store-wrap`. Done: the reader and its effect tested, the `ad-history-blind` probe
+AdMob (`@capacitor-community/admob`, non-personalized by default, the UMP consent form on the first Watch
+tap) until `store-wrap`. Also: confirm whether a live call pauses desk time, expose a runtime content
+fingerprint, give the offer row a consent-pending state, and show the real before and after. Done: the reader and its effect tested, the `ad-history-blind` probe
 proving ad history never moves odds, draws or pressure, the offer surface at 390 and 320, and the
 log fields present on every event.
 
@@ -490,8 +500,9 @@ the rendered save-slot rejection message, never seen. From the hook-pattern rese
 tuning hash, the timer setting and the profile readers in effect; variants compared in a round
 differ in one setting and run through the Lab's existing controls; observations follow PLAN.md
 criteria 12 and 14; a variant is dropped when testers can't explain an effect it introduced or it
-produces a material issue under criterion 14. The tap-to-idle income ratio and the ad offer
-cadence are read here too.
+produces a material issue under criterion 14. The tap-to-idle income ratio is read here too, and from `docs/monetization.md`: ad cadence, the offer's
+shown worth against the tap pay actually earned, an equal-income paid and unpaid journey, a rest-and-tap
+rotation check, and whether testers understand that an ad or a purchase changes pay only.
 
 ### store-wrap: Package the game for the App Store and Play Store
 Tags: job=keep; journeys=save-round-trip; probes=none (packaging); lane=deferred
@@ -500,14 +511,20 @@ Needs: start=none; integrate=none; ship=none
 Owner decision 2026-10-19: wrap the web app for iOS and Android. Done: a wrapper chosen with
 evidence (e.g. Capacitor), the build running on a real iPhone and Android phone with saves surviving
 an app restart, and the safe-area, keyboard and text-zoom checks from `playtests` passing on device.
+Also the release requirements R1 to R6 in `docs/monetization.md`, the App Tracking Transparency and privacy
+label question, the U.S. state privacy path, and Google's rewarded ads policy (not yet read).
 
 ### real-purchases: The store sells real-money income multipliers
 Tags: job=build; journeys=hire-and-equip; probes=funding-balance; lane=engine
-Needs: start=monetization-design; integrate=none; ship=store-wrap (App Store and Play Store billing)
+Needs: start=detail-strain-drain; integrate=none; ship=store-wrap (App Store and Play Store billing)
 
 Owner decisions: free to play with purchases (2026-10-19); development points and point packs
 removed (2026-10-20); real-money income multipliers are sold in the store (2026-10-22). A Store
-surface lists the multipliers `monetization-design` defines; a purchase grants an entitlement
+surface lists the two multipliers in `docs/monetization.md` section 7 (`desk-overtime` +0.5, about $2.99;
+`desk-overtime-plus` +1, about $4.99; non-consumable, per account; the entitlement kind capped at x2.5);
+billing goes through RevenueCat (`@revenuecat/purchases-capacitor`) behind an adapter whose only output is a
+`VerifiedEntitlements` branded type, with Restore in the Store and in Settings. Resolve RevenueCat's receipt
+validation and refund notifications before building. A purchase grants an entitlement
 through `grantEntitlement` on the shared multiplier path (`src/sim/department-taps.ts`), only after
 a receipt check, since the local save can be edited. Prices are the same for every player. The
 `funding-balance` probe today checks only added funding (`src/architecture/wiring.ts`); it extends
@@ -551,13 +568,17 @@ decision on whether the lean needs a player-facing explanation (the HQ or the de
   on 22 of 30 seeds (the rest are rejected because the first room off the bedroom is the living
   room). This bears on the existing barricade building-family decision above.
 - **Later scope:** districts, career stories, simultaneous tactical incidents.
+- **Monetization** (`docs/monetization.md` section 13): 1 option B for detail strain (blocks every
+  multiplier beyond the base); 2 accept that a multiplier lowers the strain needed for equal pay; 3
+  entitlements per account (recommended) or per slot; 4 whether the ad's x1.5 for 10 minutes is too small; 5
+  first-room stock; 6 a funding fallback when an offer would be empty; 7 confirm no server analytics; 8 a
+  mediation network later; 9 the $2.99 and $4.99 price points; 10 personalised ads ever.
 - **The tab-root plate** that `visual-story` brings back (its height and whether every tab gets
   one) and **the reading serif**: picked from one compare page (`owner-visual-picks`).
 
 Decided 2026-10-22 (monetization): watching an ad is rewarded, and the ad-watch rate is measured
 and used as `docs/research/mobile-hook-patterns.md` describes (`rewarded-ads`); real-money income
-multipliers are sold in the store (`real-purchases`); one design note comes first
-(`monetization-design`).
+multipliers are sold in the store (`real-purchases`). The design note is `docs/monetization.md`.
 
 Decided 2026-10-19: scenario work is paused (the barricade is parked on its branch); a squad can
 deploy short of injured officers (`short-squad-deploys`); sidearms from day one

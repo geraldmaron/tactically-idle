@@ -3,7 +3,7 @@ import type { ContentExclusion } from './incidents';
 import type { TimerSetting } from './timer-setting';
 import { dispatch } from './game';
 import { randomCampaignSeed } from './personnel';
-import { deserialize, serialize, type SaveStorage } from './save';
+import { deserialize, freezeStall, loadStored, serialize, type SaveStorage } from './save';
 import type { Command, GameState, HandlerResult } from './types';
 
 export const SLOT_COUNT = 10;
@@ -50,6 +50,9 @@ export interface CampaignSnapshot {
   dirty: boolean;
   campaignId: string | null;
 }
+/** What a writer stores: the state with its running stall frozen at `now` (save.ts freezeStall). The
+ * live state is never changed, so the visible call keeps counting after a save. */
+const stored = (state: GameState, now: number): string => serialize(freezeStall(state, now), now);
 const emptyLibrary = (): SlotLibrary => ({ version: 2, activeSlotId: null, slots: Array(SLOT_COUNT).fill(null) });
 const validId = (id: number) => Number.isInteger(id) && id >= 1 && id <= SLOT_COUNT;
 const cleanName = (name: string, id: number) => name.trim().slice(0, 36) || `Campaign ${id}`;
@@ -109,7 +112,7 @@ export class CampaignSlots {
         } else {
           this.library = library;
           const slot = library.activeSlotId ? library.slots[library.activeSlotId - 1] : null;
-          const loaded = slot ? deserialize(slot.data) : null;
+          const loaded = slot ? loadStored(slot.data) : null;
           if (loaded) {
             try { this.state = dispatch(loaded, { type: 'tick' }, { now }).state; }
             catch {
@@ -158,7 +161,7 @@ export class CampaignSlots {
   }
   private publish() { this.snapshot = this.makeSnapshot(); }
   private record(name: string, now: number, createdAt = now, campaignId = newLocalId()): CampaignSlot {
-    return { campaignId, name, createdAt, savedAt: now, data: serialize(this.state, now) };
+    return { campaignId, name, createdAt, savedAt: now, data: stored(this.state, now) };
   }
   private withCurrent(now: number): SlotLibrary {
     const next = structuredClone(this.library);
@@ -209,14 +212,14 @@ export class CampaignSlots {
     if (!this.library.activeSlotId && !discardUnsaved) return failure('Save or export this in-memory campaign, or explicitly confirm discarding it before switching.');
     const slot = this.library.slots[id - 1];
     if (!slot) return failure('That slot is empty.');
-    const loaded = deserialize(slot.data);
+    const loaded = loadStored(slot.data);
     if (!loaded) return failure('This save is unreadable or uses a different game version. Start a new campaign. Your saved data has not been changed.');
     return this.attempt(() => {
       const next = this.withCurrent(now);
       // Loading the active slot keeps the latest in-memory state, never rewinds it.
       const state = id === this.library.activeSlotId ? this.state : dispatch(loaded, { type: 'tick' }, { now }).state;
       next.activeSlotId = id;
-      next.slots[id - 1] = { ...slot, data: serialize(state, now), savedAt: now };
+      next.slots[id - 1] = { ...slot, data: stored(state, now), savedAt: now };
       this.write(next);
       this.state = state;
       this.session++;
@@ -240,7 +243,7 @@ export class CampaignSlots {
     return this.attempt(() => {
       const next = this.withCurrent(now);
       const state = createInitialState(now, this.seedFactory(), this.exclusion);
-      next.slots[id - 1] = { campaignId: newLocalId(), name: cleanName(name, id), createdAt: now, savedAt: now, data: serialize(state, now) };
+      next.slots[id - 1] = { campaignId: newLocalId(), name: cleanName(name, id), createdAt: now, savedAt: now, data: stored(state, now) };
       next.activeSlotId = id;
       this.write(next);
       this.state = state;
@@ -254,12 +257,12 @@ export class CampaignSlots {
   importGame(id: number, name: string, data: string, now: number, overwrite = false): HandlerResult {
     if (!validId(id)) return failure('Choose a slot from 1 to 10.');
     if (this.library.slots[id - 1] && !overwrite) return failure('Confirm before replacing an occupied slot.');
-    const state = deserialize(data);
+    const state = loadStored(data);
     if (!state) return failure('This backup is unreadable or uses a different game version. Start a new campaign. No saves were changed.');
     return this.attempt(() => {
       const next = this.withCurrent(now);
       // Import stores a dormant copy. Time settles only when the user loads it.
-      next.slots[id - 1] = { campaignId: newLocalId(), name: cleanName(name, id), createdAt: now, savedAt: now, data: serialize(state, now) };
+      next.slots[id - 1] = { campaignId: newLocalId(), name: cleanName(name, id), createdAt: now, savedAt: now, data: stored(state, now) };
       if (id === next.activeSlotId) throw new Error('Choose another slot for an imported backup, then load it.');
       this.write(next);
     });
@@ -285,7 +288,7 @@ export class CampaignSlots {
       const next = this.withCurrent(now); next.slots[target - 1] = slot; delete next.deleted; this.write(next);
     });
   }
-  exportCurrent(now: number): string { return serialize(this.state, now); }
+  exportCurrent(now: number): string { return stored(this.state, now); }
   exportSlot(id: number): string | null { return validId(id) ? this.library.slots[id - 1]?.data ?? null : null; }
   exportRecovery(): string | null {
     if (!this.expectedRaw) return null;
