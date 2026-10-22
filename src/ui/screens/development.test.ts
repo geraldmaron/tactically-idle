@@ -28,7 +28,7 @@ describe('development browsing and shared detail', () => {
     const html = renderToStaticMarkup(createElement(DevelopScreen, { highlightedNode: 'personnel_academy', highlightRequest: 2 }));
     expect(html).not.toContain('$100,000');
     expect(html).not.toContain('/h</small>');
-    expect(html).toMatch(/role="tab" aria-selected="(true|false)" class="dev-branch-chip[^"]*" aria-label="Staff, 0 of 8 owned[^"]*">Staff/);
+    expect(html).toMatch(/role="tab" aria-selected="(true|false)" class="dev-branch-chip[^"]*" aria-label="Staff, 0 of 8 owned[^"]*"><svg[\s\S]*?<\/svg>Staff/);
     expect(html.match(/class="btn btn-primary/g)?.length ?? 0).toBeLessThanOrEqual(1);
     expect(html).not.toMatch(/development points|Get Points|\bDP\b/);
     expect(html).toContain('Free at Level 3');

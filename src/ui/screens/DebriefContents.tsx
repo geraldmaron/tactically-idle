@@ -23,6 +23,7 @@ import { OperationLogContents } from './OperationFeedback';
 import { PersonCasualtyList } from '../components/IncidentPeople';
 import { PeopleText } from '../people/PeopleText';
 import { Disclosure } from '../components/Disclosure';
+import { CallTypeBadge } from '../icons/CallTypeBadge';
 
 /** What OpsDebrief shows inside its scrolling page. `decisions` defaults to the saved log;
  * `reality` (default on) keeps "What was really there"; `heroAction` sits under the hero summary. */
@@ -51,6 +52,7 @@ export function DebriefContents({ result: d, officers, scenario, reality = true,
   return <>
     <div className={`debrief-hero debrief-hero-${tone}${scene ? ' plate' : ''}`}>
       <PlateArt src={scene} />
+      {scenario?.incident?.type && <span className="debrief-type"><CallTypeBadge type={scenario.incident.type} size={44} medallion label /></span>}
       <span className={`result-marks${death ? ' result-marks-muted' : ''}`} role="img" aria-label={death ? 'No commendation: someone died on this call' : `Commendation ${marks} of 3${cap < 3 && worst >= 80 ? open ? ', capped because the call is not resolved' : forced ? ', capped because force was used' : ', capped because the call is only partly resolved' : ''}`}>
         {[1, 2, 3].map((n) => <i key={n} data-on={n <= marks || undefined} />)}
       </span>

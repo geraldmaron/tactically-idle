@@ -143,7 +143,7 @@ export function TrainingStore({ requestedCert, requestedOfficer, requestedCourse
       <span className="training-count" role="status">{options.length} of {Object.keys(COURSES).length}</span>
     </div>
     {search && <Button size="sm" variant="ghost" onClick={() => setSearch('')}>Show all training</Button>}
-    {!officers.length && <EmptyState icon="people" title="No officers to train">Recruit an officer before starting a course.</EmptyState>}
+    {!officers.length && <EmptyState spot="noCandidates" title="No officers to train">Recruit an officer before starting a course.</EmptyState>}
     <div className="course-grid">{options.map(({ course, available, reason }) => {
       const locked = !!course.requiresNode && !game.department.unlockedNodes.includes(course.requiresNode);
       const rating = course.grants.rating;
@@ -172,7 +172,7 @@ export function TrainingStore({ requestedCert, requestedOfficer, requestedCourse
         {feedback?.courseId === course.id && <p role="status">{feedback.text}</p>}
       </article>;
     })}</div>
-    {!options.length && <EmptyState icon="mortarboard" title="No courses match">Clear the course search to see all training.</EmptyState>}
+    {!options.length && <EmptyState spot="nothingInStock" title="No courses match">Clear the course search to see all training.</EmptyState>}
     <Sheet open={!!selectedCourse} onClose={closeChooser} title={choice?.enrolment ? 'Enrolment confirmed' : reviewing ? 'Review enrolment' : 'Choose officer'} subtitle={selectedCourse ? `${selectedCourse.name} · ${money(fee(selectedCourse.cost))} · ${selectedCourse.hours}h` : undefined} className="training-chooser" footer={selectedCourse && <div className="training-chooser-footer">
       {choice?.enrolment ? <TrainingEnrolmentActions course={selectedCourse} paid={fee(selectedCourse.cost)} onDone={closeChooser} /> : reviewing ? <>
         <p className="training-confirm-cost">{money(fee(selectedCourse.cost))} funding · 1 slot · {selectedCourse.hours} real hours</p>
@@ -203,7 +203,7 @@ export function TrainingStore({ requestedCert, requestedOfficer, requestedCourse
           <p className="dim" role="status">{eligible} can enrol · {candidates.length - eligible} unavailable</p>
         </div>
         {selectedCourse.requiresNode && !game.department.unlockedNodes.includes(selectedCourse.requiresNode) && <div className="training-program-lock"><p className="reason">Requires {DEV_NODES[selectedCourse.requiresNode]?.name ?? selectedCourse.requiresNode}</p><Button size="sm" onClick={() => openDevelopment(selectedCourse.requiresNode!)}>View development program</Button></div>}
-        {!candidates.length && <EmptyState icon="people" title="No officers to train">Recruit an officer before starting a course.</EmptyState>}
+        {!candidates.length && <EmptyState spot="noCandidates" title="No officers to train">Recruit an officer before starting a course.</EmptyState>}
         {candidates.map((candidate) => <TrainingOfficerCard key={candidate.officer.id} candidate={candidate} now={game.department.clockHighWater} selected={candidate.officer.id === officerId} onSelect={() => {
           setOfficerId(candidate.officer.id);
           setFeedback(null);

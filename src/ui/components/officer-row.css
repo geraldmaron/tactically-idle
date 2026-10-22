@@ -7,5 +7,7 @@
 .officer-row-name .icon { flex: none; color: var(--t1); }
 .officer-row-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 2px var(--sp2); margin-top: 2px; font-size: var(--s14); color: var(--t3); }
 .officer-row-certs { display: inline-flex; gap: var(--sp1); color: var(--good-text, var(--good)); }
+.officer-row-role { display: inline-flex; align-items: center; gap: var(--sp1); }
+.officer-row-role .icon { flex: none; }
 .officer-row .ui-row-trail { align-self: center; }
 .officer-row-injured .officer-row-face, .officer-row-recovery .officer-row-face { opacity: .7; }

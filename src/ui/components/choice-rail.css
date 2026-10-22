@@ -9,11 +9,11 @@
   overscroll-behavior-x: contain;
   scroll-padding-inline: 4px;
   scrollbar-width: thin;
-  scrollbar-color: var(--line-strong) transparent;
+  scrollbar-color: var(--hair-2) transparent;
   padding: 4px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: var(--panel);
+  border: 1px solid var(--hair);
+  border-radius: var(--r2);
+  background: var(--ink-1);
 }
 .choice-rail-item {
   flex: 0 0 auto;
@@ -25,10 +25,10 @@
   min-width: 44px;
   padding: 8px 12px;
   border: 1px solid transparent;
-  border-radius: 6px;
+  border-radius: var(--r1);
   background: transparent;
-  color: var(--text-dim);
-  font: 600 15px/1.2 var(--font-cond);
+  color: var(--t2);
+  font: 600 var(--s14)/1.2 var(--f-ui);
   cursor: pointer;
   white-space: nowrap;
   overflow-wrap: normal;
@@ -36,24 +36,24 @@
   transition: background-color 120ms ease-out, border-color 120ms ease-out, color 120ms ease-out;
 }
 .choice-rail-grow .choice-rail-item { flex-grow: 1; }
-.choice-rail-selected { color: var(--text); background: var(--panel-3); box-shadow: 0 1px 2px rgba(0, 0, 0, .35), inset 0 1px 0 rgba(255, 255, 255, .05); }
+.choice-rail-selected { color: var(--t1); background: var(--ink-3); }
 .choice-rail-selected b { color: var(--t1); }
 @media (hover: hover) { .choice-rail-item:not(:disabled):not(.choice-rail-selected):hover { color: var(--text); } }
 
 /* Filters and squad tabs: one recessed track with the chosen option raised out of it. */
-.choice-rail-filter, .choice-rail-tabs { padding: 3px; gap: 2px; border-color: rgba(43, 59, 84, .7); background: rgba(8, 13, 24, .55); }
-.choice-rail-filter .choice-rail-item, .choice-rail-tabs .choice-rail-item { border: 0; border-radius: 7px; }
-.choice-rail-tabs .choice-rail-item b { display: inline-grid; place-items: center; min-width: 22px; height: 22px; border-radius: 5px; background: rgba(255, 255, 255, .06); font-size: 13px; }
+.choice-rail-filter, .choice-rail-tabs { padding: 3px; gap: 2px; border-color: var(--hair); background: var(--ink-0); }
+.choice-rail-filter .choice-rail-item, .choice-rail-tabs .choice-rail-item { border: 0; border-radius: var(--r1); }
+.choice-rail-tabs .choice-rail-item b { display: inline-grid; place-items: center; min-width: 22px; height: 22px; border-radius: 5px; background: var(--ink-2); font-size: var(--s14); }
 .choice-rail-tabs .choice-rail-selected b { color: var(--t1); background: var(--ink-3); }
 
 /* Section navigation: plain tabs over a hairline, the current one underlined in amber. */
-.choice-rail-navigation { gap: 0; padding: 0; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; background: transparent; }
-.choice-rail-navigation .choice-rail-item { position: relative; border: 0; border-radius: 0; color: var(--muted); font: 600 16px/1.2 var(--font-display); }
+.choice-rail-navigation { gap: 0; padding: 0; border: 0; border-bottom: 1px solid var(--hair); border-radius: 0; background: transparent; }
+.choice-rail-navigation .choice-rail-item { position: relative; border: 0; border-radius: 0; color: var(--t3); font: 600 var(--s16)/1.2 var(--f-ui); }
 .choice-rail-navigation .choice-rail-selected { color: var(--text); background: transparent; box-shadow: none; }
 .choice-rail-navigation .choice-rail-selected::after { content: ''; position: absolute; left: 12px; right: 12px; bottom: -1px; height: 3px; border-radius: 3px 3px 0 0; background: var(--t1); }
 .choice-rail-item:focus-visible { outline: 2px solid var(--text); outline-offset: 1px; }
 .choice-rail-item:disabled { opacity: .5; cursor: default; }
-.choice-rail-count { min-width: 1.35em; padding: 2px 4px; border-radius: 4px; color: var(--text-dim); background: rgba(255,255,255,.06); font-size: 12px; }
+.choice-rail-count { min-width: 1.35em; padding: 2px 4px; border-radius: 4px; color: var(--t2); background: var(--ink-2); font-size: var(--s14); font-variant-numeric: tabular-nums; }
 @media (prefers-reduced-motion: reduce) {
   .choice-rail-item { transition: none; }
 }

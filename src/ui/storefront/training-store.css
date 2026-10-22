@@ -1,19 +1,19 @@
 .store-training { gap: 12px; }
-.store-training .training-intro { font-size: 13px; }
+.store-training .training-intro { font-size: var(--s14); }
 .store-training .training-course { gap: 9px; }
 .store-training .training-course-gain { font-size: 14px; font-weight: 600; }
 .training-course-personal { padding: 8px 10px; border-left: 2px solid var(--hair-2); background: var(--ink-2); }
 .training-course-personal .training-gain { margin-top: 3px; }
-.training-selected-officer, .training-officer-card { min-width: 0; border: 1px solid var(--line); border-radius: 10px; background: var(--panel-2); padding: 12px; }
+.training-selected-officer, .training-officer-card { min-width: 0; border: 1px solid var(--hair); border-radius: var(--r2); background: var(--ink-1); padding: var(--sp3); }
 .training-selected-officer { display: flex; flex-direction: column; gap: 8px; }
 .training-person { position: relative; display: flex; align-items: center; gap: 10px; min-width: 0; }
 .training-portrait { border-radius: 7px; }
 .training-person-name { display: flex; flex-direction: column; flex: 1; min-width: 0; gap: 3px; }
 .training-person-name > strong { font-size: 15px; line-height: 1.2; overflow-wrap: anywhere; }
 .training-person-name > .kicker { font-size: var(--s12); }
-.training-person-name > .dim, .training-condition { font-size: 13px; line-height: 1.35; overflow-wrap: anywhere; }
+.training-person-name > .dim, .training-condition { font-size: var(--s14); line-height: 1.35; overflow-wrap: anywhere; }
 .training-condition { color: var(--text); }
-.training-strengths { margin: 0; font-size: 13px; line-height: 1.4; }
+.training-strengths { margin: 0; font-size: var(--s14); line-height: 1.4; }
 .training-chooser .btn { white-space: normal; }
 .training-chooser .sheet-title { font-size: 21px; }
 .training-chooser .sheet-sub { font-size: 13px; line-height: 1.4; }
@@ -39,7 +39,7 @@
 .store-training .training-course .reason { font-size: 13px; }
 .training-eligible { color: var(--mint); }
 .training-review-heading { font-size: 14px; margin: 0; line-height: 1.4; }
-.training-review-heading:focus-visible { outline: 2px solid var(--amber); outline-offset: 3px; }
+.training-review-heading:focus-visible { outline: 2px solid var(--act); outline-offset: 3px; }
 .training-confirm-details { display: flex; flex-direction: column; gap: 6px; }
 .training-confirm-details p, .training-confirm-cost { margin: 0; font-size: 13px; line-height: 1.4; }
 .training-chooser-footer { display: flex; flex-direction: column; gap: 9px; }

@@ -32,6 +32,20 @@ older save.
 | tooling | Haiku | baseline captures first, then the capture tool, the Lab `GameFrame.tsx` and First Run parts of `ui-leftovers` | its own | `docs/captures/`, `src/dev/`, `src/ui/settings/`, `scripts/play-loop.mjs` |
 | design | Sonnet | `monetization-design` | its own | `docs/monetization.md` |
 
+Also running (owner requests, 2026-10-22):
+
+| Session | Model | Work | Writes only |
+|---|---|---|---|
+| going-live-teardown | Opus | hostile teardown of Going Live and a multi-pass depth method | `docs/calls/notes/going-live-teardown.md`, `docs/calls/depth-mesh-method.md`, `docs/calls/notes/pilot/` |
+| live-chat-immersion | Sonnet | chat keyed to each pressure source's drain, reading like a real live | `docs/call-pressure.md`, `.agents/skills/swat-call-prose/` references, chat and pressure lines in `src/content/call-trees/hostage-live.ts`; after visual merges, `src/ui/screens/LiveFeed.tsx`, `live-chat.ts` and their tests |
+
+Wave 1 is merged and checked (2026-10-22): engine (702fc5c), the design note (500bc16), tooling
+(9497b63), visual (97b0ba3). On the merged tip `npm run verify` passed (2,966 tests), the e2e passed
+6 calls at 390 and 320, the lead played First Run to a live call at 390 and 320, and Codex's
+adversarial review of the integrated diff approved with no findings. The owner's plate and serif
+compare page: https://claude.ai/artifact/9ZsHsUNZGRo3KFpqvaAxs6. Wave 1 session branches are merged;
+their sessions wait for the owner's go-ahead to archive.
+
 Wave 2 after the merge: `squad-names` (needs `visual-story`), `owner-visual-picks` once the owner
 picks, then `rewarded-ads` and `real-purchases` from the design note.
 
@@ -55,7 +69,14 @@ kit-adoption ratchet counts named obligations per screen, not a global icon coun
 
 ## Locks outside normal ownership
 
-None.
+live-chat-immersion (`live-chat-build`, approved 2026-10-22) holds, until it merges:
+`src/content/call-trees/types.ts`, `src/sim/scenario-types.ts`, `src/content/incidents/types.ts`
+(interface files, approved with controls), `src/gen/incident/trees-v13/compile.ts`,
+`src/gen/incident/instance.ts`, `src/sim/clocks.ts`, `src/ui/screens/fill-gauge.ts`, one pass-through
+in `src/ui/screens/LiveView.tsx`, `STREAM.source.reactions` in `src/content/incidents/hostage.ts`,
+`src/content/world.ts` (`HANDLE_WORDS`), and a viewer-chat carve-out in
+`.agents/skills/swat-writing-review/`. The squad-names session, if started, asks before editing
+`LiveView.tsx` or `scenario-types.ts`.
 
 
 ## Open questions for the owner

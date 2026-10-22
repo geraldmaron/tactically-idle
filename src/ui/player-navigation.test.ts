@@ -48,7 +48,7 @@ function markup(child: ReactNode, nav: Partial<NavApi> = {}) {
 describe('canonical player navigation', () => {
   it('keeps exactly HQ, Calls, Officers and Build as top-level destinations', () => {
     const html = markup(createElement(BottomNav));
-    expect([...html.matchAll(/class="navlabel"><span>([^<]+)/g)].map((match) => match[1])).toEqual(['HQ', 'Calls', 'Officers', 'Build']);
+    expect([...html.matchAll(/class="navlabel">([^<]+)/g)].map((match) => match[1])).toEqual(['HQ', 'Calls', 'Officers', 'Build']);
   });
 
   it('opens Build on the segment an old route id names, and the Build tab returns to the last one', () => {

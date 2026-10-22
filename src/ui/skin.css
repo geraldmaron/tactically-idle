@@ -46,6 +46,11 @@
 .screen-banner-title { margin: 0; font: 600 var(--s28)/1.1 var(--f-title); color: var(--t1); text-shadow: 0 2px 12px rgba(0, 0, 0, 0.8); overflow-wrap: anywhere; }
 .screen-banner-line { margin: 0; font-size: 14px; line-height: 1.35; color: var(--t-plate); text-shadow: 0 1px 8px rgba(0, 0, 0, 0.9); }
 @media (max-width: 340px) { .screen-banner { min-height: 112px; } .screen-banner-title { font-size: var(--s22); } }
+/* The tab-root plate: the room's painting at --plate-h, the tab icon and name on it, one quiet chip. */
+.tab-plate { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--sp3); box-sizing: border-box; height: var(--plate-h); padding: 0 var(--gutter) var(--sp3); border-bottom: 1px solid var(--hair); }
+.tab-plate-title { display: inline-flex; align-items: center; gap: var(--sp2); min-width: 0; margin: 0; font: 600 var(--s22)/1.1 var(--f-title); color: var(--t1); text-shadow: 0 2px 12px rgba(0, 0, 0, 0.8); overflow-wrap: anywhere; }
+.tab-plate-title .icon { flex: none; }
+.tab-plate-meta { flex: none; font: 500 var(--s14)/1.2 var(--f-ui); color: var(--t-plate); text-shadow: 0 1px 8px rgba(0, 0, 0, 0.9); }
 
 @media (prefers-reduced-motion: reduce) { .btn { transition: none; } }
 
@@ -58,25 +63,8 @@
 .hq-away > div { flex-basis: 100%; }
 .hq-attention > div { border-left: 3px solid var(--act) !important; background: var(--ink-1) !important; }
 
-/* ------------------------------------------------------------ Ops board (the command job) */
-/* Each call opens on its painted scene: type, case number and title sit on the plate. */
-.app .card.optile { padding: 0 0 10px; overflow: hidden; }
-.app .card.optile > :not(.optile-scene) { margin-inline: 11px; }
-.optile-scene { min-height: 132px; padding: 14px 12px 12px; align-items: flex-end !important; border-bottom: 1px solid var(--hair); }
-.optile-scene .optile-badge { width: 44px; height: 48px; background: rgba(8, 13, 22, 0.55); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
-.optile-scene .opboard-kind { color: var(--t-plate); text-shadow: 0 1px 6px rgba(0, 0, 0, 0.9); }
-.optile-scene .opboard-code { color: var(--t-plate); font-size: var(--s12); font-variant-numeric: tabular-nums; }
-.optile-scene .opboard-title { font-size: var(--s22); color: var(--t1); text-shadow: 0 2px 12px rgba(0, 0, 0, 0.9); }
-.optile-scene .opboard-where { color: var(--t-plate); text-shadow: 0 1px 6px rgba(0, 0, 0, 0.9); }
-.optile .newbadge.stamp { position: absolute; top: 12px; right: 12px; z-index: 1; background: rgba(8, 13, 22, 0.45); }
-.optile .opboard-summary { font-size: var(--s14); color: var(--t1); }
-
 /* ------------------------------------------------------------ Prepare, Live and Debrief heads */
 /* The call's scene runs edge to edge behind its title through the whole call journey. */
-.app .prepare .prep-title.plate { margin: 4px calc(-1 * var(--gutter)) 0; padding: 56px var(--gutter) 14px; min-height: 150px; align-items: flex-end; border-block: 1px solid var(--hair); }
-.app .prepare .prep-title.plate .live-name { font-size: 26px; text-shadow: 0 2px 12px rgba(0, 0, 0, 0.9); }
-.app .prepare .prep-title.plate .prep-kicker { color: var(--t-plate); text-shadow: 0 1px 6px rgba(0, 0, 0, 0.9); }
-.app .prepare .prep-title.plate .prep-title-badge { background: rgba(8, 13, 22, 0.55); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
 .app .debrief-hero.plate { padding-top: 64px; }
 .app .debrief-hero.plate .debrief-title { text-shadow: 0 2px 12px rgba(0, 0, 0, 0.9); }
 .app .debrief-hero.plate .debrief-narrative { color: var(--t1); text-shadow: 0 1px 8px rgba(0, 0, 0, 0.9); }
@@ -103,12 +91,6 @@
 .navbtn-primary .live-dot { top: 2px; right: 2px; background: var(--danger); border-color: var(--ink-0); }
 .navbtn-primary .navbadge { top: -2px; right: -4px; }
 .navdot { position: absolute; top: -1px; right: -4px; width: 9px; height: 9px; border-radius: 50%; background: var(--danger); border: 2px solid var(--ink-0); }
-
-/* The reward preview on a call card, the way mission cards show what a run pays. */
-.optile-rewards { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; margin: 0; padding: 6px 10px; border-radius: var(--r1); background: var(--ink-2); border: 1px solid var(--hair); font: 600 var(--s14)/1.2 var(--f-ui); color: var(--t1); font-variant-numeric: tabular-nums; }
-.optile-rewards > span { display: inline-flex; align-items: center; gap: 4px; }
-.optile-rewards .icon { color: var(--t2); }
-.optile-rewards-label { font: 500 var(--s12)/1 var(--f-ui); color: var(--t2); }
 
 /* The result grade: three marks, filled from the outcome score; a death leaves them empty and grey. */
 .result-marks { display: inline-flex; gap: 6px; margin: 2px 0 4px; }

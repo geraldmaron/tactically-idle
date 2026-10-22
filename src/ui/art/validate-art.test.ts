@@ -25,7 +25,7 @@ const roots: string[] = [];
 const WEBP = 'RIFF\0\0\0\0WEBPVP8 ';
 
 /** A minimal checkout: one course, two branches, empty art sets except the emblems given. */
-function fixture(emblemIds: string[]): string {
+function fixture(emblemIds: string[], medallionIds: string[] = []): string {
   const root = fs.mkdtempSync(join(node.getBuiltinModule('node:os').tmpdir(), 'ti-art-'));
   roots.push(root);
   const write = (file: string, content: string) => {
@@ -36,6 +36,9 @@ function fixture(emblemIds: string[]): string {
   write('src/content/courses.ts', "export const COURSES = {\n  composure_workshop: {\n    name: 'Composure workshop',\n  },\n};\n");
   write('src/ui/components/labels.ts', "export const BRANCHES: DevBranch[] = ['personnel', 'field'];\n");
   for (const set of ['portraits', 'gear', 'materials', 'managers', 'plates']) write(`public/art/${set}/manifest.json`, JSON.stringify({ version: 1, readyIds: [], width: 512, height: 512 }));
+  write('src/ui/icons/kit.ts', "export const CALL_TYPE_ICON: Record<IncidentType, IconName> = {\n  hostage_crisis: 'hostage',\n  barricaded: 'barricade',\n};\n");
+  write('public/art/medallions/manifest.json', JSON.stringify({ version: 1, readyIds: medallionIds, width: 512, height: 512 }));
+  for (const id of medallionIds) write(`public/art/medallions/${id}.webp`, WEBP);
   write('public/art/emblems/manifest.json', JSON.stringify({ version: 1, readyIds: emblemIds, width: 512, height: 512 }));
   for (const id of emblemIds) write(`public/art/emblems/${id}.webp`, WEBP);
   for (const file of ['header-lockup-dark.svg', 'favicon.svg', 'apple-touch-icon.png']) write(`public/brand/${file}`, '');
@@ -61,5 +64,23 @@ describe('validate-art emblems', () => {
     expect(result.stderr).toContain('emblems/branch_logistics: not a course or development branch');
     expect(result.stderr).toContain('emblems/field: not a course or development branch');
     expect(result.stderr).not.toContain('composure_workshop');
+  });
+});
+
+describe('validate-art medallions', () => {
+  it('accepts a medallion for each call type', () => {
+    const result = run(fixture([], ['hostage_crisis', 'barricaded']));
+    expect(result.stderr).toBe('');
+    expect(result.status).toBe(0);
+    expect(JSON.parse(result.stdout)).toMatchObject({ medallionsReady: 2, callTypeIds: 2 });
+  });
+
+  it('fails on a medallion id that is no call type, and on a ready id with no file', () => {
+    const root = fixture([], ['hostage_crisis', 'barricade']);
+    fs.rmSync(join(root, 'public/art/medallions/hostage_crisis.webp'), { recursive: true, force: true });
+    const result = run(root);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain('medallions/barricade: not a call type');
+    expect(result.stderr).toContain('medallions/hostage_crisis: marked ready but file missing');
   });
 });

@@ -26,9 +26,10 @@ describe('department status explanations', () => {
     const html = render(createElement(DepartmentStatusBar, { g: state, topic: null, onOpen: vi.fn(), onClose: vi.fn() }));
     expect(html).not.toContain('<img');
     expect(html).toContain('>$12,400</span>');
-    expect(html).toContain(`>${rate(budget(state).net)}</button>`);
-    expect(html).toContain(`>Trust ${Math.round(state.department.trust)}</button>`);
-    expect(html).toContain(`>Level ${state.department.level}</button>`);
+    expect(html).toContain(`${rate(budget(state).net)}</button>`);
+    expect(html.match(/<svg class="icon res-icon"/g), 'funds, rate, trust and level each carry their icon').toHaveLength(4);
+    expect(html).toContain(`<span class="res-word">Trust </span>${Math.round(state.department.trust)}</button>`);
+    expect(html).toContain(`<span class="res-word">Level </span>${state.department.level}</button>`);
     expect(html).not.toContain('/min');
     expect(html).toContain('Funding: $12,400. Show explanation');
     expect(html).toContain(`Income after costs: ${budget(state).net < 0 ? "minus " : ""}${moneyFull(Math.abs(budget(state).net))} an hour. Show explanation`);

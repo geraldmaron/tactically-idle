@@ -120,7 +120,7 @@
 .dev-next-fx { font-size: var(--s14); color: var(--t2); }
 .dev-next-buy { flex: none; min-height: 48px; padding: 0 var(--sp4); font-size: var(--s16); font-variant-numeric: tabular-nums; }
 .dev-branch-chips { display: flex; flex-wrap: wrap; gap: var(--sp2); }
-.dev-branch-chip { position: relative; min-height: 44px; padding: 0 var(--sp4); border: 1px solid var(--hair-2); border-radius: 22px; background: none; color: var(--t2); font: 500 var(--s14)/1 var(--f-ui); cursor: pointer; }
+.dev-branch-chip { position: relative; display: inline-flex; align-items: center; gap: var(--sp2); min-height: 44px; padding: 0 var(--sp4); border: 1px solid var(--hair-2); border-radius: 22px; background: none; color: var(--t2); font: 500 var(--s14)/1 var(--f-ui); cursor: pointer; }
 .dev-branch-chip-on { background: var(--ink-3); color: var(--t1); font-weight: 600; }
 .dev-branch-chip:focus-visible { outline: 2px solid var(--act); outline-offset: 2px; }
 .dev-tab-dot { position: absolute; top: 6px; right: 6px; width: 8px; height: 8px; border-radius: 50%; background: var(--act); }

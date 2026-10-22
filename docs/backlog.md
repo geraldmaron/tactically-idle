@@ -97,6 +97,44 @@ Needs: start=none; integrate=none; ship=none
 the live call and the debrief. The Ops board hook clamps at 3 lines (owner decision B5, 2026-10-19).
 Done: a call that authors them shows them at 390x844, and the checker fails an over-budget line.
 
+### live-chat-build: Going Live's chat follows its pressure
+Tags: job=command; journeys=none (text and presentation); probes=none (text and presentation); lane=calls
+Needs: start=none; integrate=none; ship=going-live-review (the same read)
+
+In flight on live-chat-immersion (2026-10-22). The rule is in `docs/call-pressure.md` ("Chat that
+follows the pressure") and the writing rules in `.agents/skills/swat-call-prose/references/live-chat.md`.
+Today the chat reads only the stream's cue count, so the 18 threats never reach it: during "Address
+posted by {handle}" it talks about late orders, and the named poster never types. The build adds an
+optional `ChatLine`/`ThreatChat` shape (interface files `src/content/call-trees/types.ts`,
+`src/sim/scenario-types.ts`, `src/content/incidents/types.ts`, approved by the lead with controls: no
+fingerprint moves while no chat is authored, chat never reaches a mechanic, a bad `by` throws at
+compile, and a Codex adversarial review), threads in thirds of each threat's drain, the stream's
+stopped, slowed, surged and dropped pools, the gates in a calls-owned test beside `reactions.test.ts`
+(phase floors, line shape, repeats, the emoji allow list and harm adjacency, the poster's line, state
+pools over reachable effects) and a playback test at Relaxed and Standard. Done: every threat's chat
+read in the Lab at each phase at 390x844 by a separate reader, fingerprints recaptured on purpose,
+`npm run verify` green.
+
+### live-chat-tooling: The string checker and the Lab see the chat
+Tags: job=command; journeys=none (tooling); probes=none (tooling); lane=tooling
+Needs: start=live-chat-build; integrate=none; ship=none
+
+`check:strings` never sees chat lines (`scripts/check-strings.ts` has no reactions input): add a `--chat`
+mode to `game_string_checks.py` that runs only the dash, colon, gendered, length and banned-word checks.
+The Lab's Stall scrubber names the chat phase and the next three thread lines, and Script lists each
+threat's threads in order. Also from the teardown: a stream cue's text never plays after the stream has
+stopped. Done: a chat line with a dash fails `check:strings`, and the Lab shows the phase at three stall
+points.
+
+### live-chat-memory: The chat remembers the player's last choice
+Tags: job=command; journeys=none (text and presentation); probes=none (text and presentation); lane=engine
+Needs: start=live-chat-build; integrate=none; ship=none
+
+`TreeThreat.chatIf`: extra early lines when an earlier choice's mark is set, with the same `when` shape
+as `promptIf`, so the chat remembers the door it saw or the lie it caught. Only worth building once the
+base chat is read and approved. A `{street}` token for the front street's name belongs here too, so a
+viewer can guess a street that is on the map; until it exists the chat names no street.
+
 ### deception-commitments: Lies and unapproved promises the player can make
 Tags: job=command; journeys=choices-branch; probes=none (commitment state, not a favorable-chance input); lane=engine
 Needs: start=none; integrate=none; ship=none
@@ -452,7 +490,9 @@ old board and Prepare (`.optile*`, `.prep-title`, `.pickcard*`, `.prep-steps`) s
 the desk screens (the desk session's updated copy is described in its hand-over). Some `.optile*`
 rules still have consumers (`CallTile.tsx`, `CardWarning.tsx`, the Lab's `GameFrame.tsx`), so each
 selector goes only after its consumers are checked. Done: each of these fixed and the capture tool
-walking every screen with no step error.
+walking every screen with no step error. Also found in the lead's 2026-10-22 play: HQ's "your move" card
+says "<call> is the oldest call" with Open, but Open shows the whole board (`src/ui/screens/HQ.tsx`
+`nav.go('ops')`), not that call's brief.
 
 ### squad-names: Every surface names a squad the way the player named it
 Tags: job=command; journeys=answer-a-call, joint-operation; probes=none (labels); lane=engine
@@ -573,6 +613,8 @@ decision on whether the lean needs a player-facing explanation (the HQ or the de
   entitlements per account (recommended) or per slot; 4 whether the ad's x1.5 for 10 minutes is too small; 5
   first-room stock; 6 a funding fallback when an offer would be empty; 7 confirm no server analytics; 8 a
   mediation network later; 9 the $2.99 and $4.99 price points; 10 personalised ads ever.
+- **Chat lines on the strip:** the live strip shows 2 lines (`CHAT_LINES`, the owner's 2026-10-21
+  "easy to read"); a pile-on reads better in 3 at 390x844, or the thread could open in its own view.
 - **The tab-root plate** that `visual-story` brings back (its height and whether every tab gets
   one) and **the reading serif**: picked from one compare page (`owner-visual-picks`).
 

@@ -11,6 +11,7 @@ import { useNav } from '../components/nav';
 import { Button } from '../components/ui';
 import { BRANCHES, BRANCH_META } from '../components/labels';
 import { Icon } from '../icons';
+import { BRANCH_ICON } from '../icons/kit';
 import { GearArt } from '../art/GearArt';
 import { EmblemArt, branchEmblemId } from '../art/EmblemArt';
 import { moneyFull as money, money as compactMoney } from '../format';
@@ -112,7 +113,7 @@ export function DevelopScreen({ highlightedNode, highlightRequest }: { highlight
       const { owned, total, ready } = progress(id);
       const name = BRANCH_META[id].label;
       return <button key={id} type="button" role="tab" aria-selected={branch === id} className={`dev-branch-chip${branch === id ? ' dev-branch-chip-on' : ''}`} onClick={() => setBranch(id)}
-        aria-label={`${name}, ${owned} of ${total} owned${ready ? `, ${ready} ready` : ''}`}>{name}{ready > 0 && <i className="dev-tab-dot" aria-hidden="true" />}</button>;
+        aria-label={`${name}, ${owned} of ${total} owned${ready ? `, ${ready} ready` : ''}`}><Icon name={BRANCH_ICON[id]} size={16} />{name}{ready > 0 && <i className="dev-tab-dot" aria-hidden="true" />}</button>;
     })}</div>
     <p className="dev-branch-blurb">{BRANCH_META[branch].blurb}</p>
     <Track rows={rows} wallet={wallet} nextId={next?.node.id ?? null} highlightedNode={highlightedNode} onOpen={open} />
