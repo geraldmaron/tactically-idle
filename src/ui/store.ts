@@ -115,6 +115,9 @@ export function manageSave(action: SaveAction): Promise<HandlerResult> {
     case 'delete': result = campaigns.delete(action.id, now, action.confirmed, action.permanent); break;
     case 'undoDelete': result = campaigns.undoDelete(now); break;
   }
+  // A campaign loaded or started off the call never runs its decision there: pause it now, before
+  // the next tick can settle a lapse (ui/decision-pause.ts).
+  if (result.ok) syncDecisionPause();
   notify();
   return result;
   }).catch(lockFailure);

@@ -8,6 +8,7 @@ import { decisionViews, lastResolution } from '../../sim/operation-selectors';
 import type { Id, SquadId } from '../../sim/types';
 import { decisionsOf } from '../../sim/types';
 import { useToast } from '../components/toast';
+import { ChromeFoot, useChromeMode } from '../components/chrome';
 import { Sheet } from '../components/Sheet';
 import { Button } from '../components/ui';
 import { OpenInLab } from '../components/OpenInLab';
@@ -67,6 +68,8 @@ export function OpsLive({ onStepOut }: { onStepOut?: () => void } = {}) {
     setLiveCallShown(true);
     return () => setLiveCallShown(false);
   }, []);
+  // The call in focus (components/chrome.tsx): its strip replaces the resource bar and Step out the tabs.
+  useChromeMode('focus');
   // Sound starts on the first touch (browsers refuse it before) and fades out when the call ends.
   useEffect(() => {
     const unlock = () => unlockAudio();
@@ -189,6 +192,7 @@ export function OpsLive({ onStepOut }: { onStepOut?: () => void } = {}) {
         if (typeof requestAnimationFrame === 'function') requestAnimationFrame(revealLastDecision);
       }}
       continueLabel="Continue"
+      footWrap={(node) => <ChromeFoot><div className="action-bar live-continue">{node}</div></ChromeFoot>}
       continueNote={nextStage ? `Next: ${nextStage}` : undefined}
       people={people}
       onFocusSquad={(id) => {

@@ -238,8 +238,6 @@
   .live .live-name { font-size: 21px; }
 }
 
-/* A toast never covers a sheet's Confirm footer: while a footed sheet is open, toasts sit at the top. */
-.app:has(.overlay-root .sheet .sheet-foot) > .toasts { top: 10px; bottom: auto; }
 
 /* ------------------------------------------------------------ debrief: outcome first */
 .page.debrief { gap: 12px; }
@@ -293,8 +291,6 @@
 .result-evidence.card { gap: 0; }
 .result-officers .result-officer-heading { flex-direction: column; }
 .result-officers .result-officer-heading strong { overflow-wrap: normal; word-break: normal; hyphens: auto; }
-/* The debrief's Close footer sits where toasts land; keep toasts clear of it too. */
-.app:has(.debrief-footer) > .toasts { top: 10px; bottom: auto; }
 
 /* live: the last decision record reads tighter so care and support stay close */
 .live .operation-feedback { margin: 10px var(--gutter) 12px; }

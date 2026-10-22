@@ -68,11 +68,11 @@ export async function playLiveCalls(page, { baseURL = 'http://127.0.0.1:5174', w
   // Open the call -> brief -> Choose team -> Deploy -> choices until the debrief -> Done.
   const play = async (label, { stepOut = false } = {}) => {
     const before = await state();
-    await page.locator('.cl-flow[data-step="brief"]').waitFor();
+    await page.locator('.cl-flow-body[data-step="brief"]').waitFor();
     // The brief leads with the orders; the map is one tap away, in the head.
-    assert.equal(await page.locator('.cl-flow .pb-orders-panel').count(), 1, `${label}: the brief opens on the orders`);
+    assert.equal(await page.locator('.cl-flow-body .pb-orders-panel').count(), 1, `${label}: the brief opens on the orders`);
     assert.equal(await page.locator('.prepare .toggle input[type="checkbox"]').count(), 0, `${label}: preparation has no mode switch`);
-    await page.locator('.cl-head').getByRole('button', { name: 'Map', exact: true }).click();
+    await page.locator('.flow-head').getByRole('button', { name: 'Map', exact: true }).click();
     const upperTab = page.locator('.cl-map-sheet').getByRole('tab', { name: /^Upper floor/ });
     await page.locator('.cl-map-sheet').waitFor();
     const floors = await upperTab.count() ? 2 : 1;
@@ -86,7 +86,7 @@ export async function playLiveCalls(page, { baseURL = 'http://127.0.0.1:5174', w
     if (await page.locator('.cl-map-sheet').count()) await page.locator('.cl-map-sheet').getByRole('button', { name: /close/i }).first().click();
     // Choose team, then Back keeps the draft: the step and the squads survive the head's Back and Forward.
     await page.getByRole('button', { name: 'Choose team', exact: true }).click();
-    await page.locator('.cl-flow[data-step="deploy"]').waitFor();
+    await page.locator('.cl-flow-body[data-step="deploy"]').waitFor();
     // The squad range is read from the screen, as the player reads it: "Takes 1 squad" or "Takes 1 to 2 squads".
     const takes = (await page.locator('.cl-section-aside').first().innerText()).match(/Takes (\d+)(?: to (\d+))?/);
     const range = { min: Number(takes[1]), max: Number(takes[2] ?? takes[1]) };
@@ -101,10 +101,10 @@ export async function playLiveCalls(page, { baseURL = 'http://127.0.0.1:5174', w
     for (const card of fit.slice(0, pick)) await page.locator('.cl-squads button.cl-squad').nth(card.index).click();
     assert.equal(await page.locator('.cl-squads button[aria-pressed="true"]').count(), pick, `${label}: ${pick} squad${pick > 1 ? 's' : ''} chosen`);
     // Back to the brief and Forward again: the chosen squads are still chosen (the exit table).
-    await page.locator('.cl-head-back').click();
-    await page.locator('.cl-flow[data-step="brief"]').waitFor();
+    await page.locator('.flow-back').click();
+    await page.locator('.cl-flow-body[data-step="brief"]').waitFor();
     await page.goForward();
-    await page.locator('.cl-flow[data-step="deploy"]').waitFor();
+    await page.locator('.cl-flow-body[data-step="deploy"]').waitFor();
     assert.equal(await page.locator('.cl-squads button[aria-pressed="true"]').count(), pick, `${label}: the draft survives Back and Forward`);
     // Each chosen squad's kit is a summary with Adjust; Deploy names the squads by name.
     assert.equal(await page.locator('.cl-squad-plan').count(), pick, `${label}: a kit summary per chosen squad`);
@@ -185,8 +185,9 @@ export async function playLiveCalls(page, { baseURL = 'http://127.0.0.1:5174', w
       await overflow(`${label} live step ${steps}`);
     }
     const ended = await state(); assert.equal(ended.activeRun?.status, 'debrief', `${label}: bounded ending`);
-    assert.equal(await page.locator('.cl-head-title').innerText(), 'Debrief', `${label}: the debrief is a live result`);
-    assert.equal(await page.locator('.cl-head-back').count(), 0, `${label}: the debrief has no Back`);
+    assert.equal(await page.locator('.flow-title').innerText(), 'Debrief', `${label}: the debrief is a live result`);
+    assert.equal(await page.locator('button.flow-back').count(), 0, `${label}: the debrief has no Back`);
+    assert.equal(await page.locator('nav.bottomnav').count(), 0, `${label}: a flow hides the tabs`);
     assert.equal(await page.locator('.result-rewards').count(), 1, `${label}: the debrief lists its rewards`);
     await overflow(`${label} debrief`);
     await page.getByRole('button', { name: 'Done', exact: true }).click();

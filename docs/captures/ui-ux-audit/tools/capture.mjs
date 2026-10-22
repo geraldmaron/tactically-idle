@@ -46,7 +46,7 @@ function probe() {
     viewport: `${vw}x${vh}`,
     docOverflow: document.documentElement.scrollWidth > vw,
     overflowing,
-    chrome: { topbar: h('.topbar'), bottomnav: h('.bottomnav'), sheetFoot: h('.sheet-foot'), stickyFoot: h('.prep-foot, .live-continue, .debrief-foot, .sticky-foot, .opfoot, .cl-flow-foot, .action-bar'), flowHead: h('.cl-head, .flow-head') },
+    chrome: { topbar: h('.topbar'), bottomnav: h('.bottomnav'), sheetFoot: h('.sheet-foot'), stickyFoot: h('.prep-foot, .live-continue, .debrief-foot, .sticky-foot, .opfoot, .action-bar'), flowHead: h('.flow-head') },
     primary: primary ? { label: label(primary), top: Math.round(primary.getBoundingClientRect().top), covered: covered(primary) } : null,
     sheetBodyVisible,
     smallTargets: small.length, smallTargetSamples: small.slice(0, 8),
@@ -119,8 +119,8 @@ async function main() {
     // The calls tab is "Calls" with the desk's four tabs and "Ops" before them.
     const callsTab = () => page.locator('nav').getByRole('button', { name: /Calls|^Ops$/ }).first().click();
     await step('board', async () => { await callsTab(); await page.locator('.cl-card').first().waitFor(); await shot('18-board', { segments: 5 }); });
-    await step('brief', async () => { await page.locator('.cl-card-button').first().click(); await page.locator('.cl-flow[data-step="brief"]').waitFor(); await shot('19-prepare-brief', { segments: 5 });
-      await page.locator('.cl-head').getByRole('button', { name: 'Map', exact: true }).click(); await shot('19b-brief-map-sheet', { segments: 1 }); await closeSheet(); });
+    await step('brief', async () => { await page.locator('.cl-card-button').first().click(); await page.locator('.cl-flow-body[data-step="brief"]').waitFor(); await shot('19-prepare-brief', { segments: 5 });
+      await page.locator('.flow-head').getByRole('button', { name: 'Map', exact: true }).click(); await shot('19b-brief-map-sheet', { segments: 1 }); await closeSheet(); });
     await step('team', async () => { await page.getByRole('button', { name: 'Choose team', exact: true }).click(); await shot('20-prepare-team-empty', { segments: 2 });
       await page.locator('.cl-squads button.cl-squad').first().click(); await shot('21-prepare-team-picked', { segments: 6 });
       await page.locator('.cl-squad-plan .cl-link').first().click(); await shot('21b-kit-sheet', { segments: 2 }); await closeSheet(); });

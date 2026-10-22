@@ -43,7 +43,7 @@ import { lexiconFor } from '../people/lexicon';
 import { preparationOptions } from './preparation-options';
 import { joinNames, squadName as nameOf, toggleDeploymentSquad } from './operation-squads';
 import { callFlow, draftField, type FlowStep } from './call-flow';
-import { CallHead } from './CallHead';
+import { FlowScreen } from '../components/chrome';
 import './preparation-options.css';
 import './operation-squads.css';
 import './ops-visual.css';
@@ -381,17 +381,15 @@ export function OpsPrepare({ scenarioId, step = 'brief', onCancel }: { scenarioI
   const kitSquad = sheet?.kind === 'kit' && chosen.includes(sheet.squad) ? sheet.squad : null;
   const goingSquad = sheet?.kind === 'going' && chosen.includes(sheet.squad) ? sheet.squad : null;
 
+  // A pushed flow (components/chrome.tsx): the shell draws the head and the action bar; the tabs go.
+  const footer = step === 'brief'
+    ? <ActionBar className="cl-actions" primary={{ label: 'Choose team', onClick: () => callFlow.goStep('deploy') }} />
+    : <ActionBar className="cl-actions" summary={<><span className={`cl-tone-${footStatus.tone}`}>{footStatus.text}</span><span>{title} · {chosen.length} of {range.max} squad{range.max > 1 ? 's' : ''}</span></>}
+      primary={{ label: chosen.length ? `Deploy ${names}` : 'Deploy', disabled: !check.ok, onClick: deploy }} />;
   const screen = (
-    <div className="cl-flow prepare" data-step={step}>
-      <CallHead back={{ label: step === 'brief' ? 'Calls' : 'Brief', onClick: back }} title={step === 'brief' ? title : 'Deploy'}
-        action={step === 'brief' ? <button type="button" className="cl-head-chip" onClick={() => setSheet({ kind: 'map' })} aria-haspopup="dialog">Map</button> : undefined} />
-      <div className="page cl-flow-body">{step === 'brief' ? briefStep : deployStep}</div>
-      <div className="cl-flow-foot">
-        {step === 'brief'
-          ? <ActionBar primary={{ label: 'Choose team', onClick: () => callFlow.goStep('deploy') }} />
-          : <ActionBar summary={<><span className={`cl-tone-${footStatus.tone}`}>{footStatus.text}</span><span>{title} · {chosen.length} of {range.max} squad{range.max > 1 ? 's' : ''}</span></>}
-            primary={{ label: chosen.length ? `Deploy ${names}` : 'Deploy', disabled: !check.ok, onClick: deploy }} />}
-      </div>
+    <FlowScreen title={step === 'brief' ? title : 'Deploy'} backLabel={step === 'brief' ? 'Calls' : 'Brief'} onBack={back} footer={footer}
+      trailing={step === 'brief' ? <Button size="sm" className="cl-map-chip" onClick={() => setSheet({ kind: 'map' })} aria-haspopup="dialog">Map</Button> : undefined}>
+      <div className="page cl-flow-body prepare" data-step={step}>{step === 'brief' ? briefStep : deployStep}</div>
 
       <Sheet open={sheet?.kind === 'map'} onClose={() => setSheet(null)} title="The building" className="cl-map-sheet">
         <div className="prep-map" aria-label="Location preview">
@@ -404,7 +402,7 @@ export function OpsPrepare({ scenarioId, step = 'brief', onCancel }: { scenarioI
       <Sheet open={!!goingSquad} onClose={() => setSheet(null)} title={goingSquad ? `Where ${squadName(goingSquad)} goes in` : 'Going in'} footer={<Button variant="primary" block onClick={() => setSheet(null)}>Done</Button>}>
         {goingSquad && goingInWorkspace(goingSquad)}
       </Sheet>
-    </div>
+    </FlowScreen>
   );
 
   /** Today's kit workspace for one squad, in the Adjust sheet: auto-equip and undo, a preset, and a

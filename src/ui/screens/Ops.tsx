@@ -5,7 +5,7 @@ import { OpsPrepare } from './OpsPrepare';
 import { OpsLive } from './OpsLive';
 import { OpsDebrief } from './OpsDebrief';
 import { callFlow, useCallFlow } from './call-flow';
-import { cardFor } from './helpers';
+import { incidentsOf } from './helpers';
 import { useNav } from '../components/nav';
 
 /** The Calls destination. Mode follows state: a live call or its debrief first, then the call the
@@ -17,13 +17,16 @@ export function OpsScreen() {
   const nav = useNav();
   const run = g.activeRun;
   const now = Date.now();
-  const onBoard = (id: string) => !!cardFor(g, id, now);
+  // On the board means a live incident that hasn't expired (cardFor also builds cards for calls
+  // gone from the board, so it can't decide this).
+  const onBoard = (id: string) => incidentsOf(g).some((incident) => incident.id === id && incident.expiresAt > now);
   const prep = open && !run && onBoard(open.scenarioId) ? open : null;
   const surface = run?.status === 'active' ? 'live' : run?.status === 'debrief' ? 'debrief' : prep ? `prepare-${prep.step}` : 'board';
+  // A call that left the board (taken, expired) takes its draft and any open step with it.
   useEffect(() => {
     callFlow.prune(onBoard);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [g.incidents]);
+    if (open && !run && !onBoard(open.scenarioId)) callFlow.close(open.scenarioId);
+  });
   useLayoutEffect(() => {
     // App keeps this scroll owner mounted between call surfaces. Reset before paint, without
     // remounting the live map or reacting to ticks and decisions.

@@ -122,6 +122,9 @@ export interface LiveViewProps {
   continueLabel?: string;
   /** Above Continue: what comes next ("Next: On the stream"). */
   continueNote?: string;
+  /** Where the result beat's Continue goes: the game puts it in the shell's foot slot (ChromeFoot),
+   * so toasts stand clear of it. Left out (the Lab), it pins to the bottom of the screen. */
+  footWrap?: (node: ReactNode) => ReactNode;
   /** The game's people lexicon for this call: names are colored while "Color names by role" is on.
    * Left out (the Scenario Lab), the surrounding PeopleProvider decides. */
   people?: Lexicon | null;
@@ -244,10 +247,10 @@ export function LiveView(p: LiveViewProps) {
   // The story: the decision and its choices, or the result of the last one.
   const story = <div className="live-story">
         {beat === 'result' ? <>          {p.feedback}
-          {p.onContinue && <div className="stickyfoot live-continue">
+          {p.onContinue && (p.footWrap ?? ((node: ReactNode) => <div className="stickyfoot live-continue">{node}</div>))(<>
             {p.continueNote && <p className="live-continue-note">{p.continueNote}</p>}
             <Button variant="primary" block onClick={p.onContinue}>{p.continueLabel ?? 'Continue'}</Button>
-          </div>}
+          </>)}
         </> : <>
           {p.feedback}
           <section className="call operation-choices" aria-label="Your call">

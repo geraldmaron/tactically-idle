@@ -28,10 +28,10 @@ vi.mock('react', async (importOriginal) => ({
 }));
 vi.mock('../store', () => ({ useGame: () => hooks.state }));
 vi.mock('../components/nav', () => ({ useNav: () => ({ go: () => {} }) }));
-vi.mock('./helpers', () => ({ cardFor: () => hooks.onBoard ? {} : null }));
+vi.mock('./helpers', () => ({ incidentsOf: () => hooks.onBoard ? [{ id: 'ms_occupancy', expiresAt: Infinity }] : [] }));
 vi.mock('./call-flow', () => ({
   useCallFlow: () => ({ open: hooks.prep ? { scenarioId: hooks.prep, step: 'brief' } : null, drafts: {} }),
-  callFlow: { openCall: (id: string) => { hooks.prep = id; }, prune: () => {} },
+  callFlow: { openCall: (id: string) => { hooks.prep = id; }, prune: () => {}, close: () => {} },
 }));
 vi.mock('./OpsBoard', () => ({ OpsBoard: () => null }));
 vi.mock('./OpsPrepare', () => ({ OpsPrepare: () => null }));

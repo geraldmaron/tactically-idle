@@ -9,6 +9,16 @@ import { makeState, NOW, startRun, testCallId, withCallOnBoard } from '../../sim
 import { DebriefSummary, OfficerResults } from './DebriefResults';
 import { CivilianOutcomeList, IncidentPeopleStatus, OfficerInjuryResult, PersonCasualtyList } from './IncidentPeople';
 import { LiveView } from '../screens/LiveView';
+// The shell's chrome (components/chrome.tsx) is drawn by App; here the flow's head and footer render inline.
+vi.mock('./chrome', async () => {
+  const { createElement, Fragment } = await import('react');
+  return {
+    useChromeMode: () => {},
+    ChromeFoot: ({ children }: { children: unknown }) => children,
+    FlowScreen: ({ title, footer, trailing, children }: Record<string, never>) => createElement(Fragment, null, createElement('h1', { className: 'flow-title' }, title), trailing, children, footer),
+  };
+});
+
 
 let state = makeState();
 vi.mock('../store', () => ({ useGame: () => state }));

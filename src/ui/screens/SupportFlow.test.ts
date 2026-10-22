@@ -5,6 +5,16 @@ import { RESUPPLY_HANDLERS } from '../../sim/equipment-resupply';
 
 import { previewAction } from '../../sim/operation-selectors';
 import { OpsLive } from './OpsLive';
+// The shell's chrome (components/chrome.tsx) is drawn by App; here the flow's head and footer render inline.
+vi.mock('../components/chrome', async () => {
+  const { createElement, Fragment } = await import('react');
+  return {
+    useChromeMode: () => {},
+    ChromeFoot: ({ children }: { children: unknown }) => children,
+    FlowScreen: ({ title, footer, trailing, children }: Record<string, never>) => createElement(Fragment, null, createElement('h1', { className: 'flow-title' }, title), trailing, children, footer),
+  };
+});
+
 
 const hooks = vi.hoisted(() => ({ values: [] as unknown[], cursor: 0 }));
 vi.mock('react', async (importOriginal) => ({

@@ -44,7 +44,7 @@ export interface LiveUiState {
 }
 
 type LiveCallbacks = 'onFocusSquad' | 'onSelectAction' | 'onContinueStage' | 'onSelectOfficer' | 'onSelectSpace' | 'onFloorChange' | 'onToggleRooms' | 'onCancel' | 'onOpenDetails' | 'onStepOut';
-type LiveSlots = 'feedback' | 'supportContext' | 'situation' | 'lastDecision' | 'failedResponse' | 'children' | 'people';
+type LiveSlots = 'feedback' | 'supportContext' | 'situation' | 'lastDecision' | 'failedResponse' | 'children' | 'people' | 'footWrap';
 /** Every LiveView prop that is data: everything but the callbacks, the slots and the people lexicon. */
 export type LiveViewModel = Omit<LiveViewProps, LiveCallbacks | LiveSlots>;
 

@@ -45,21 +45,11 @@
 .cl-card .optile-bring { position: relative; z-index: 2; }
 .cl-warn { color: var(--warn-text); }
 
-/* ------------------------------------------------------------ a pushed flow: head, body, action bar */
-.cl-flow { flex: 1 0 auto; display: flex; flex-direction: column; min-height: 100%; }
-.cl-head { position: sticky; top: 0; z-index: 6; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: var(--sp2); min-height: 52px; padding: 0 var(--gutter); background: var(--ink-1); border-bottom: 1px solid var(--hair); }
-.cl-head-side { display: flex; align-items: center; min-width: 0; }
-.cl-head-end { justify-content: flex-end; }
-.cl-head-back { display: inline-flex; align-items: center; gap: 2px; min-height: var(--touch); margin-left: calc(-1 * var(--sp2)); padding: 0 var(--sp2); border: 0; background: none; color: var(--t2); font: 500 var(--s16)/1 var(--f-ui); cursor: pointer; }
-.cl-head-back:hover { color: var(--t1); }
-.cl-head-title { margin: 0; max-width: 60vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 600 var(--s18)/1.2 var(--f-title); color: var(--t1); text-align: center; }
-.cl-head-title:focus { outline: none; }
-.cl-head-title:focus-visible { outline: 2px solid var(--act); outline-offset: 4px; }
-.cl-head-chip { min-height: var(--touch); min-width: 64px; padding: 0 var(--sp4); border: 1px solid var(--hair-2); border-radius: 999px; background: transparent; color: var(--t1); font: 600 var(--s14)/1 var(--f-ui); cursor: pointer; }
+/* ------------------------------------------------------------ a pushed flow (components/chrome.tsx FlowScreen) */
 .cl-flow-body { flex: 1 0 auto; gap: var(--sp5); padding-top: var(--sp4); }
-.cl-flow-foot { position: sticky; bottom: 0; z-index: 5; }
-.cl-flow-foot .action-bar-summary { display: flex; justify-content: space-between; gap: var(--sp3); }
-.cl-flow-foot .action-bar-summary > span:last-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: right; }
+.cl-actions .action-bar-summary { display: flex; justify-content: space-between; gap: var(--sp3); }
+.cl-actions .action-bar-summary > span:last-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: right; }
+.action-bar.live-continue .live-continue-note { margin: 0; }
 .cl-tone-good { color: var(--good-text); }
 .cl-tone-warn { color: var(--warn-text); }
 .cl-tone-act { color: var(--act-text); }

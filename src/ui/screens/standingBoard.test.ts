@@ -7,6 +7,16 @@ import { makeState, NOW } from '../../sim/test-fixtures';
 import { BOARD_LIMIT, boardEntries, boardPlan } from './helpers';
 import { OpsPrepare } from './OpsPrepare';
 import { OpsBoard } from './OpsBoard';
+// The shell's chrome (components/chrome.tsx) is drawn by App; here the flow's head and footer render inline.
+vi.mock('../components/chrome', async () => {
+  const { createElement, Fragment } = await import('react');
+  return {
+    useChromeMode: () => {},
+    ChromeFoot: ({ children }: { children: unknown }) => children,
+    FlowScreen: ({ title, footer, trailing, children }: Record<string, never>) => createElement(Fragment, null, createElement('h1', { className: 'flow-title' }, title), trailing, children, footer),
+  };
+});
+
 
 const state = makeState();
 vi.mock('../store', () => ({ useGame: () => state, send: vi.fn() }));

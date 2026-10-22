@@ -3,7 +3,7 @@ import { decisionViews, pendingDebrief } from '../../sim/operation-selectors';
 import type { DebriefResult } from '../../sim/types';
 import { getScenario } from '../../sim/scenario-registry';
 import { ActionBar, Button } from '../components/ui';
-import { CallHead } from './CallHead';
+import { FlowScreen } from '../components/chrome';
 import { callFlow } from './call-flow';
 import { DebriefConsequences, DebriefScore, DebriefSummary, OfficerResults, type DebriefOfficers } from '../components/DebriefResults';
 import { useToast } from '../components/toast';
@@ -43,22 +43,20 @@ export function OpsDebrief() {
   const { act } = useToast();
   const d = pendingDebrief(g);
   const done = () => { if (act({ type: 'closeDebrief' }).ok) callFlow.close(); };
-  if (!d) return <div className="cl-flow">
-    <CallHead title="Debrief" />
+  const footer = <ActionBar className="cl-actions" primary={{ label: 'Done', onClick: done }} />;
+  if (!d) return <FlowScreen title="Debrief" footer={footer}>
     <div className="page cl-flow-body"><p className="dim">The call is over. The debrief is not available yet.</p></div>
-    <div className="cl-flow-foot"><ActionBar primary={{ label: 'Done', onClick: done }} /></div>
-  </div>;
+  </FlowScreen>;
   const decisions = d.decisions ?? decisionViews(g);
   const run = g.activeRun;
   const scenario = getScenario(d.scenarioId);
   // The call's people and the squads that went in, for the names in the debrief.
   const deployed = g.squads.filter((squad) => run?.squadIds.includes(squad.id));
   const people = scenario ? lexiconFor(scenario, run, deployed.flatMap((squad) => (run ? runRoster(g, run, squad.id) : squad.officerIds).flatMap((id) => g.officers[id] ? [{ ...g.officers[id], squad: squad.id }] : []))) : null;
-  return <GamePeopleProvider lexicon={people}><div className="cl-flow debrief-layout">
-    <CallHead title="Debrief" />
+  // A flow with no Back (components/chrome.tsx): the shell draws the head and Done.
+  return <GamePeopleProvider lexicon={people}><FlowScreen title="Debrief" footer={footer}>
     <div className="page debrief cl-flow-body">
       <DebriefContents result={d} officers={g.officers} decisions={decisions} scenario={scenario ?? undefined} heroAction={import.meta.env.DEV && <OpenInLab getState={() => g} />} />
     </div>
-    <div className="cl-flow-foot debrief-footer"><ActionBar primary={{ label: 'Done', onClick: done }} /></div>
-  </div></GamePeopleProvider>;
+  </FlowScreen></GamePeopleProvider>;
 }
