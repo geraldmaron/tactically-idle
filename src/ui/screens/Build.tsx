@@ -1,5 +1,6 @@
 import { ChoiceRail } from '../components/ChoiceRail';
 import { useNav } from '../components/nav';
+import { TabPlate } from '../art/TabPlate';
 import { DevelopScreen } from './Develop';
 import { GearScreen } from './Gear';
 
@@ -10,6 +11,7 @@ export function BuildScreen() {
   const nav = useNav();
   const segment = nav.tab === 'gear' ? 'gear' : 'develop';
   return <>
+    <TabPlate tab="build" surface={segment === 'gear' ? 'armory' : 'upgrades'} title="Build" />
     <div className="build-segments">
       <ChoiceRail value={segment} kind="navigation" label="Build sections" grow onChange={(next) => nav.go(next)} options={[
         { value: 'develop', label: 'Upgrades' }, { value: 'gear', label: 'Armory' },

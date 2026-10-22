@@ -58,6 +58,8 @@ export function ChromeFoot({ children }: { children: ReactNode }) {
 
 export interface FlowHeadProps {
   title: ReactNode;
+  /** A kit icon or badge before the title (the call's type on a brief). Decorative. */
+  icon?: ReactNode;
   /** Leave it out for a flow with no way back (the debrief: Done settles, then leaves). The head
    * then draws no Back and the title stays centred. */
   onBack?: () => void;
@@ -84,7 +86,7 @@ export function FlowScreen({ footer, children, ...head }: FlowHeadProps & { foot
 }
 
 /** The 52px flow head. Focus lands on the title when a flow opens or its title changes. */
-export function FlowHead({ title, onBack, backLabel = 'Back', trailing }: FlowHeadProps) {
+export function FlowHead({ title, icon, onBack, backLabel = 'Back', trailing }: FlowHeadProps) {
   const titleRef = useRef<HTMLHeadingElement>(null);
   const key = typeof title === 'string' ? title : '';
   useEffect(() => { titleRef.current?.focus({ preventScroll: true }); }, [key]);
@@ -94,7 +96,7 @@ export function FlowHead({ title, onBack, backLabel = 'Back', trailing }: FlowHe
         <Icon name="chevronLeft" size={18} />
         <span>{backLabel}</span>
       </button> : <span className="flow-back flow-back-none" aria-hidden="true" />}
-      <h1 className="flow-title" ref={titleRef} tabIndex={-1}>{title}</h1>
+      <h1 className="flow-title" ref={titleRef} tabIndex={-1}>{icon && <span className="flow-title-icon" aria-hidden="true">{icon}</span>}<span className="flow-title-text">{title}</span></h1>
       <span className="flow-trailing">{trailing}</span>
     </header>
   );

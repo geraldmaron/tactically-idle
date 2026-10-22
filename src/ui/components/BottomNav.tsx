@@ -2,12 +2,15 @@ import { useGame } from '../store';
 import type { TopTab } from './nav';
 import { topTab, useNav } from './nav';
 import { nodeOptions } from '../../sim/department-selectors';
+import { Icon } from '../icons';
+import { TAB_ICON } from '../icons/kit';
+import type { TabKey } from '../icons/kit';
 
-const TABS: { id: TopTab; label: string }[] = [
-  { id: 'hq', label: 'HQ' },
-  { id: 'ops', label: 'Calls' },
-  { id: 'squad', label: 'Officers' },
-  { id: 'build', label: 'Build' },
+const TABS: { id: TopTab; label: string; icon: TabKey }[] = [
+  { id: 'hq', label: 'HQ', icon: 'hq' },
+  { id: 'ops', label: 'Calls', icon: 'calls' },
+  { id: 'squad', label: 'Officers', icon: 'officers' },
+  { id: 'build', label: 'Build', icon: 'build' },
 ];
 
 /** The four destinations, equal width (docs/ui-ux-audit.md, "Four destinations"). Calls carries a
@@ -40,8 +43,8 @@ export function BottomNav() {
             aria-current={on ? 'page' : undefined}
             onClick={() => open(t.id)}
           >
-            <span className="navlabel">
-              <span>{t.label}</span>
+            <span className="navicon">
+              <Icon name={TAB_ICON[t.icon]} size={24} />
               {/* The one motion signal: a call or its debrief waits and the player is looking elsewhere. */}
               {t.id === 'ops' && live && !on && <span className="live-dot" role="img" aria-label={g.activeRun?.status === 'debrief' ? 'A debrief is waiting' : 'A call is waiting on you'} />}
               {t.id === 'ops' && !live && fresh > 0 && !on && (
@@ -51,6 +54,7 @@ export function BottomNav() {
               )}
               {dot[t.id] && !on && <span className="navdot" role="img" aria-label={dot[t.id]} />}
             </span>
+            <span className="navlabel">{t.label}</span>
           </button>
         );
       })}

@@ -9,7 +9,7 @@ import { DepartmentContext } from './department-context';
 import { Icon } from '../icons';
 import { CERT_ICON, ROLE_META, STATUS_META } from './labels';
 import { officerGrowth } from './OfficerProgress';
-import { Chip } from './ui';
+import { StatusMark } from '../icons/marks';
 import './officer-row.css';
 
 /** "Cpl. Ellis": the short form rows use. The sheet uses the full name by rank. */
@@ -39,12 +39,12 @@ export function OfficerRow({ officer, now, leader, squadId, onClick }: { officer
     </span>
     <span className="ui-row-main" aria-hidden="true">
       <span className="ui-row-title officer-row-name">{rankedSurname(officer)}{leader && <Icon name="star" size={14} />}</span>
-      <span className="ui-row-detail">{role.label} · stress {stress}</span>
+      <span className="ui-row-detail officer-row-role"><Icon name={role.icon} size={14} />{role.label} · stress {stress}</span>
       <span className="officer-row-meta">
         {officer.certs.length > 0 && <span className="officer-row-certs">{officer.certs.map((cert) => <Icon key={cert} name={CERT_ICON[cert]} size={16} />)}</span>}
         <span>{progress}</span>
       </span>
     </span>
-    <span className="ui-row-trail" aria-hidden="true"><Chip tone={status === 'strained' ? 'warn' : meta.tone}>{meta.label}</Chip></span>
+    <span className="ui-row-trail" aria-hidden="true"><StatusMark status={status} /></span>
   </Tag>;
 }

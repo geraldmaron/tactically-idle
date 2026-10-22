@@ -6,6 +6,7 @@ import { iconPaths } from '../icons';
 import type { IconName } from '../icons';
 import { incidentMeta } from '../components/incident';
 import { CALL_TYPE_ICON } from './kit';
+import { MedallionImage, useMedallion } from '../art/Medallions';
 import type { IncidentType } from '../../sim/scenario-types';
 import './kit.css';
 
@@ -39,12 +40,23 @@ export interface CallTypeBadgeProps {
   /** Show the type's name beside the badge (true), a custom name (string), or the badge alone. */
   label?: boolean | string;
   className?: string;
+  /** Use the painted medallion (docs/art/medallions/README.md) when the type has one and `size` is
+   * at least MEDALLION_MIN. Its ring carries the type's hue; the SVG badge below that size, or
+   * when the file is missing or fails, keeps the shape guarantee. */
+  medallion?: boolean;
 }
 
-export function CallTypeBadge({ type, size = 24, label = false, className }: CallTypeBadgeProps) {
+export function CallTypeBadge({ type, size = 24, label = false, className, medallion = false }: CallTypeBadgeProps) {
   const { kind, shape, icon } = callTypeKind(type);
   const name = typeof label === 'string' ? label : incidentMeta(type).label;
   const { outline, mark } = SHAPES[shape];
+  const painted = useMedallion(type, size, medallion);
+  if (painted.src) return (
+    <span className={['ct-badge', 'ct-badge--medallion', `ct-badge--${kind}`, className].filter(Boolean).join(' ')} role={label ? undefined : 'img'} aria-label={label ? undefined : name}>
+      <MedallionImage src={painted.src} size={size} onFail={painted.fail} />
+      {label ? <span className="ct-badge-label">{name}</span> : null}
+    </span>
+  );
   return (
     <span className={['ct-badge', `ct-badge--${kind}`, className].filter(Boolean).join(' ')}>
       <svg

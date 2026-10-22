@@ -2,23 +2,24 @@ import type { CertId, DevBranch, Officer, RatingKey, Role, SquadDuty, StageId, T
 import type { StressBand } from '../../sim/officer';
 import { stressBand } from '../../sim/officer';
 import type { IconName } from '../icons';
+import { BRANCH_ICON, SKILL_ICON } from '../icons/kit';
 
 /** `short` fits a quarter-width portrait card in the live strip; everything else uses `label`. */
 export const ROLE_META: Record<Role, { label: string; short: string; icon: IconName }> = {
-  comms: { label: 'Communication', short: 'Comms', icon: 'chat' },
+  comms: { label: 'Communication', short: 'Comms', icon: SKILL_ICON.communication },
   breach: { label: 'Entry', short: 'Entry', icon: 'shield' },
-  medic: { label: 'Medical', short: 'Medical', icon: 'medic' },
-  recon: { label: 'Observation', short: 'Recon', icon: 'binoculars' },
-  lead: { label: 'Leadership', short: 'Lead', icon: 'flag' },
+  medic: { label: 'Medical', short: 'Medical', icon: SKILL_ICON.medical },
+  recon: { label: 'Observation', short: 'Recon', icon: SKILL_ICON.observation },
+  lead: { label: 'Leadership', short: 'Lead', icon: SKILL_ICON.leadership },
 };
 
 export const RATING_META: { key: RatingKey; label: string; short: string; icon: IconName }[] = [
-  { key: 'shooting', label: 'Shooting proficiency', short: 'Shooting', icon: 'bullseye' },
-  { key: 'composure', label: 'Composure', short: 'Composure', icon: 'pulse' },
-  { key: 'communication', label: 'Communication', short: 'Communication', icon: 'chat' },
-  { key: 'awareness', label: 'Awareness', short: 'Awareness', icon: 'eye' },
-  { key: 'medical', label: 'Medical response', short: 'Medical', icon: 'medic' },
-  { key: 'coordination', label: 'Coordination', short: 'Coordination', icon: 'nodes' },
+  { key: 'shooting', label: 'Shooting proficiency', short: 'Shooting', icon: SKILL_ICON.shooting },
+  { key: 'composure', label: 'Composure', short: 'Composure', icon: SKILL_ICON.composure },
+  { key: 'communication', label: 'Communication', short: 'Communication', icon: SKILL_ICON.communication },
+  { key: 'awareness', label: 'Awareness', short: 'Awareness', icon: SKILL_ICON.awareness },
+  { key: 'medical', label: 'Medical response', short: 'Medical', icon: SKILL_ICON.medical },
+  { key: 'coordination', label: 'Coordination', short: 'Coordination', icon: SKILL_ICON.coordination },
 ];
 
 export const CERT_ICON: Record<CertId, IconName> = {
@@ -45,11 +46,11 @@ export const TRAIT_INFO: Record<TraitId, { label: string; condition: string; ico
 };
 
 export const BRANCH_META: Record<DevBranch, { label: string; icon: IconName; blurb: string }> = {
-  personnel: { label: 'Staff', icon: 'people', blurb: 'More officers, recruitment and training places.' },
-  field: { label: 'Field skills', icon: 'compass', blurb: 'What squads can attempt on an operation.' },
-  intel: { label: 'Information', icon: 'eye', blurb: 'Learn more before taking action.' },
-  logistics: { label: 'Equipment support', icon: 'box', blurb: 'Saved kits, restocking and equipment access.' },
-  wellbeing: { label: 'Wellbeing', icon: 'heart', blurb: 'Recovery speed and resilience.' },
+  personnel: { label: 'Staff', icon: BRANCH_ICON.personnel, blurb: 'More officers, recruitment and training places.' },
+  field: { label: 'Field skills', icon: BRANCH_ICON.field, blurb: 'What squads can attempt on an operation.' },
+  intel: { label: 'Information', icon: BRANCH_ICON.intel, blurb: 'Learn more before taking action.' },
+  logistics: { label: 'Equipment support', icon: BRANCH_ICON.logistics, blurb: 'Saved kits, restocking and equipment access.' },
+  wellbeing: { label: 'Wellbeing', icon: BRANCH_ICON.wellbeing, blurb: 'Recovery speed and resilience.' },
 };
 export const BRANCHES: DevBranch[] = ['personnel', 'field', 'intel', 'logistics', 'wellbeing'];
 

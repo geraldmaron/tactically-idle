@@ -17,6 +17,7 @@ import { Button, Card, EmptyState, Row, Stepper } from '../components/ui';
 import { Sheet } from '../components/Sheet';
 import { useToast } from '../components/toast';
 import { Icon } from '../icons';
+import { GEAR_CATEGORY_ICON, GEAR_SOURCE_ICON } from '../icons/kit';
 import { money } from '../format';
 import { hasNodeEffect } from './helpers';
 import './gear-visual.css';
@@ -55,16 +56,16 @@ function ArmoryHeader({ onTool }: { onTool: (tool: 'rules' | 'presets' | 'refere
   const restock = hasNodeEffect(g, 'restockRules');
   return (
     <section className="armory-head" aria-label="Armory">
-      <p className="armory-basic">{BASIC_KIT_LINE}</p>
+      <p className="armory-basic"><Icon name={GEAR_SOURCE_ICON.basic} size={18} />{BASIC_KIT_LINE}</p>
       <QuartermasterCard />
       <div className="armory-tools">
         <button type="button" className="armory-tool" aria-haspopup="dialog" onClick={() => onTool('rules')}>
-          {!restock.unlocked && <Icon name="lock" size={14} />}Restock rules<span>{restock.unlocked ? g.department.restockRules.length : 'Locked'}</span>
+          <Icon name={restock.unlocked ? 'refresh' : 'lock'} size={16} />Restock rules<span>{restock.unlocked ? g.department.restockRules.length : 'Locked'}</span>
         </button>
         <button type="button" className="armory-tool" aria-haspopup="dialog" onClick={() => onTool('presets')}>
-          {!presets.unlocked && <Icon name="lock" size={14} />}Loadout presets<span>{presets.unlocked ? g.squads.filter((s) => Object.keys(s.loadoutPreset).length).length : 'Locked'}</span>
+          <Icon name={presets.unlocked ? GEAR_CATEGORY_ICON.response : 'lock'} size={16} />Loadout presets<span>{presets.unlocked ? g.squads.filter((s) => Object.keys(s.loadoutPreset).length).length : 'Locked'}</span>
         </button>
-        <button type="button" className="armory-tool" aria-haspopup="dialog" onClick={() => onTool('reference')}>Wall materials</button>
+        <button type="button" className="armory-tool" aria-haspopup="dialog" onClick={() => onTool('reference')}><Icon name="brick" size={16} />Wall materials</button>
       </div>
     </section>
   );
@@ -81,7 +82,7 @@ function PresetSection({ opts }: { opts: StoreOption[] }) {
   const g = useGame();
   const presets = hasNodeEffect(g, 'loadoutPresets');
   if (!presets.unlocked) return <p className="note note-warn"><Icon name="lock" size={16} />{presets.reason}</p>;
-  if (g.squads.length === 0) return <EmptyState icon="people" title="No squads to set presets for" />;
+  if (g.squads.length === 0) return <EmptyState spot="openSlot" title="No squads to set presets for" />;
   return <div className="stack">{g.squads.map((s) => <PresetEditor key={s.id} squad={s} opts={opts} />)}</div>;
 }
 

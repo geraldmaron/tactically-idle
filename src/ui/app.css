@@ -179,9 +179,6 @@
     gap: 6px;
     font-size: 13px;
   }
-  .stat-rate .icon {
-    display: none;
-  }
   .hexlevel {
     width: 30px;
     height: 34px;
@@ -190,9 +187,6 @@
 @media (max-width: 340px) {
   .wordmark {
     font-size: 14px;
-  }
-  .stat .icon {
-    display: none;
   }
   .stats {
     gap: 5px;
@@ -1615,58 +1609,10 @@ button.ocard {
 }
 
 /* ------------------------------------------------------------ Ops: board and prepare */
-
-.opboard {
-  gap: 10px;
-}
-.opboard-head {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px 10px;
-  align-items: center;
-  justify-content: space-between;
-}
-.opboard-code {
-  font-family: var(--font-cond);
-  font-weight: 700;
-  font-size: 13px;
-  color: var(--t3);
-}
-.opboard-title {
-  margin: 0;
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: 22px;
-  letter-spacing: 0.02em;
-  line-height: 1.05;
-}
-.opboard-summary {
-  margin: 0;
-  font-size: 15px;
-  line-height: 1.4;
-  color: var(--text-dim);
-}
-.opboard-facts {
-  align-items: center;
-  gap: 6px 8px;
-}
-.opboard-facts .timeleft {
-  font-size: 13px;
-}
-.opboard-elig {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-}
 .prep-head {
   display: flex;
   flex-direction: column;
   gap: 0;
-}
-.prep-title {
-  display: flex;
-  flex-direction: column;
 }
 .prep-map {
   position: relative;
@@ -1708,35 +1654,6 @@ button.ocard {
   display: flex;
   flex-direction: column;
   gap: 8px;
-}
-.pickcard {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-height: 58px;
-  padding: 8px 12px;
-  text-align: left;
-  border-radius: var(--radius);
-  border: 1px solid var(--line-strong);
-  background: var(--panel);
-  cursor: pointer;
-}
-.pickcard-on {
-  border-color: var(--t2);
-  background: var(--ink-3);
-}
-.pickcard-check {
-  width: 26px;
-  height: 26px;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  border: 2px solid var(--line-strong);
-  color: var(--amber-ink);
-}
-.pickcard-on .pickcard-check {
-  background: var(--ink-3);
-  border-color: var(--t2);
 }
 .prepsquad {
   gap: 10px;
@@ -3237,46 +3154,6 @@ button.ocard {
   font-size: var(--s12);
   line-height: 1;
 }
-
-.opboard {
-  position: relative;
-}
-.opboard-new {
-  border-color: var(--hair-2);
-}
-.newbadge {
-  position: absolute;
-  top: -9px;
-  right: 12px;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 9px 2px 7px;
-  border-radius: 999px;
-  background: var(--amber);
-  color: var(--amber-ink);
-  font-family: var(--font-cond);
-  font-weight: 700;
-  font-size: 12px;
-}
-.opboard-kind {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-  font-family: var(--font-cond);
-  font-weight: 700;
-  font-size: 14px;
-  color: var(--t2);
-}
-.opboard-where {
-  margin: -4px 0 0;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 14px;
-  color: var(--text-dim);
-}
 .tier {
   display: inline-flex;
   flex-direction: row;
@@ -3318,23 +3195,7 @@ button.ocard {
   color: var(--muted);
 }
 
-.opboard-count {
-  margin: 0 0 10px;
-  font-size: 14px;
-  color: var(--text-dim);
-}
-.opboard-count strong {
-  color: var(--t1);
-  font-weight: 600;
-}
-
 /* briefing intel */
-.prep-kicker {
-  margin: 2px 0 0;
-  font-family: var(--font-cond);
-  font-size: 14px;
-  color: var(--muted);
-}
 .envchips {
   list-style: none;
   margin: 0;
@@ -3619,7 +3480,7 @@ button.ocard {
 .save-edit .save-permanent {
   min-height: var(--touch);
 }
-.save-slot-head .chip, .opcard-icon, .pickcard-check {
+.save-slot-head .chip, .opcard-icon {
   flex-shrink: 0;
 }
 

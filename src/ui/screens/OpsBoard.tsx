@@ -9,6 +9,7 @@ import { Icon } from '../icons';
 import { relativeTime } from '../format';
 import { boardEntries, boardNote, boardPlan, incidentsOf } from './helpers';
 import type { BoardEntry } from './helpers';
+import { TabPlate } from '../art/TabPlate';
 import { Casebook } from './Casebook';
 import { CallTile } from './CallTile';
 import { GamePeopleProvider } from '../people/PeopleText';
@@ -40,7 +41,8 @@ export function OpsBoard({ onOpen }: { onOpen: (id: Id) => void }) {
     if (id) document.querySelector<HTMLElement>(`.cl-card[data-call-id="${CSS.escape(id)}"] .cl-card-button`)?.focus();
   }, []);
 
-  return (
+  return (<>
+    <TabPlate tab="calls" title="Calls" />
     <div className="page cl-board">
       <header className="cl-board-head">
         <h2 className="cl-board-count" role="status">{live.length === 0 ? 'No calls waiting' : `${live.length} ${live.length === 1 ? 'call' : 'calls'} waiting`}</h2>
@@ -50,7 +52,7 @@ export function OpsBoard({ onOpen }: { onOpen: (id: Id) => void }) {
         </p>
       </header>
       {live.length === 0
-        ? <EmptyState icon="clock" title="No calls right now">A call nobody takes goes to another unit. The next one arrives while the department works.</EmptyState>
+        ? <EmptyState spot="noCalls" title="No calls right now">A call nobody takes goes to another unit. The next one arrives while the department works.</EmptyState>
         : <p className="cl-board-note">No penalty for skipping a call. One nobody takes goes to another unit.</p>}
       <div className="cl-board-list">
         {live.map((e) => (
@@ -59,7 +61,7 @@ export function OpsBoard({ onOpen }: { onOpen: (id: Id) => void }) {
       </div>
       <div id="casebook" className="cl-board-casebook"><Casebook state={g} /></div>
     </div>
-  );
+  </>);
 }
 
 /**

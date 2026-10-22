@@ -62,7 +62,7 @@ export function Recruit() {
       hint={full ? `Roster full at ${roster}/${g.department.rosterCap}. Dismiss someone or expand capacity to hire.` : `Roster ${roster}/${g.department.rosterCap}. Each hire adds their wage every hour.`}
     >
       {candidates.length === 0 ? (
-        <EmptyState icon="people" title={recruitment.exhausted ? "Recruitment reserve exhausted" : "No candidates right now"}>
+        <EmptyState spot="noCandidates" title={recruitment.exhausted ? "Recruitment reserve exhausted" : "No candidates right now"}>
           {recruitment.exhausted ? "Every available person in this campaign has served or reached retirement age. Retired officers will not return under a new name." : "Refresh the pool to see new recruits. New personnel arrive as existing officers move through their careers."}
         </EmptyState>
       ) : (

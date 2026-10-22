@@ -12,6 +12,7 @@ import { useToast } from '../components/toast';
 import { Button, Chip, EmptyState } from '../components/ui';
 import { money as moneyShort, moneyFull as money } from '../format';
 import { Icon } from '../icons';
+import { GEAR_CATEGORY_ICON } from '../icons/kit';
 import { hasNodeEffect } from '../screens/helpers';
 import '../screens/gear-visual.css';
 import { RestockRuleEditor } from './RestockRuleEditor';
@@ -75,7 +76,7 @@ export function EquipmentStore({ active, onDevelopment, onTraining }: EquipmentS
       </label>
       {(activeFilters > 0 || query.sort !== 'recommended') && <Button size="sm" variant="ghost" onClick={() => setQuery(DEFAULT_EQUIPMENT_QUERY)}>Clear</Button>}
     </div>
-    {!shown.length ? <div className="card"><EmptyState icon="search" title="No equipment matches these filters">Try a broader search or clear your filters. Locked equipment is included when availability is set to All.</EmptyState><Button block onClick={() => setQuery(DEFAULT_EQUIPMENT_QUERY)}>Clear all filters</Button></div>
+    {!shown.length ? <div className="card"><EmptyState spot="nothingInStock" title="No equipment matches these filters">Try a broader search or clear your filters. Locked equipment is included when availability is set to All.</EmptyState><Button block onClick={() => setQuery(DEFAULT_EQUIPMENT_QUERY)}>Clear all filters</Button></div>
       : grouped ? ITEM_CATEGORIES.map((category) => {
         const tiles = shown.filter((entry) => entry.item.category === category);
         if (!tiles.length) return null;
@@ -83,7 +84,7 @@ export function EquipmentStore({ active, onDevelopment, onTraining }: EquipmentS
         const have = set.filter((entry) => entry.owned > 0).length;
         return <section key={category} className="store-group" aria-label={ITEM_CATEGORY_LABELS[category]}>
           <h3 className="store-group-head">
-            <span>{ITEM_CATEGORY_LABELS[category]}</span>
+            <span><Icon name={GEAR_CATEGORY_ICON[category]} size={18} />{ITEM_CATEGORY_LABELS[category]}</span>
             <span className="store-bar" aria-hidden="true"><i style={{ width: `${(have / set.length) * 100}%` }} /></span>
             <span className="store-group-count" aria-label={`${have} of ${set.length} owned`}>{have}/{set.length}</span>
           </h3>

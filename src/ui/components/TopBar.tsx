@@ -10,6 +10,8 @@ import { frameworksOpeningAt } from '../../content/unlocks';
 import './topbar-help.css';
 import { FinanceDetail, FundingDeltas, useLiveFunding } from './Finance';
 import { MenuButton } from './SaveManager';
+import { Icon } from '../icons';
+import { RESOURCE_ICON } from '../icons/kit';
 
 export type DepartmentStat = 'funding' | 'income' | 'trust' | 'level';
 const STAT_TITLES: Record<DepartmentStat, string> = { funding: 'Funding', income: 'Income after costs', trust: 'Public trust', level: 'Department level' };
@@ -90,17 +92,18 @@ export function DepartmentStatusBar({ g, topic, onOpen, onClose, onOpenMenu, liv
     <header className="topbar resource-bar">
       <ul className="stats" aria-label="Department status">
         <li><button className="stat stat-cash" {...helpProps('funding', moneyFull(d.funding))}>
+          <Icon name={RESOURCE_ICON.funds} size={16} className="res-icon" />
           <span className="stat-cash-value">{liveMoney(live.shown)}</span>
           <FundingDeltas deltas={live.deltas} />
         </button></li>
         <li><button className={`stat stat-rate${b.net < 0 ? ' stat-neg' : ''}`} {...helpProps('income', `${b.net < 0 ? 'minus ' : ''}${moneyFull(Math.abs(b.net))} an hour`)}>
-          {rate(b.net)}
+          <Icon name={RESOURCE_ICON.rate} size={16} className="res-icon" />{rate(b.net)}
         </button></li>
         <li><button className="stat stat-trust" {...helpProps('trust', `${Math.round(d.trust)} out of 100`)}>
-          Trust {Math.round(d.trust)}
+          <Icon name={RESOURCE_ICON.trust} size={16} className="res-icon" />Trust {Math.round(d.trust)}
         </button></li>
       </ul>
-      <button className="stat stat-level" {...helpProps('level', String(d.level))}>Level {d.level}</button>
+      <button className="stat stat-level" {...helpProps('level', String(d.level))}><Icon name={RESOURCE_ICON.level} size={16} className="res-icon" />Level {d.level}</button>
       {onOpenMenu && <MenuButton onOpen={onOpenMenu} />}
     </header>
     <Sheet open={topic !== null} onClose={onClose} title={topic === 'funding' || topic === 'income' ? 'Finances' : topic ? STAT_TITLES[topic] : 'Department status'} className="department-stat-sheet">
