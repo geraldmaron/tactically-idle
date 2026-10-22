@@ -67,6 +67,10 @@ kit-adoption ratchet counts named obligations per screen, not a global icon coun
 
 - `src/gen/incident/second-squad.test.ts`: the engine lane's fixture PR (#73) has merged, so the calls lane may switch the `joint-operation` journey there in the barricade PR (one-PR lock), along with the barricade rows in `src/sim/outcome-score.test.ts`.
 
+The Going Live teardown merged (docs only, 6806a26, backlog 30b4a77): verdict reject, back to call
+design; the depth-mesh method stands at "needs validation". All six sessions started this round are idle
+with their work merged.
+
 ## Locks outside normal ownership
 
 None. live-chat-immersion merged (ad0d329, `npm run verify` 2,992 tests on the merged tip, lead played a
