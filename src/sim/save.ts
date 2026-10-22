@@ -16,11 +16,12 @@ import { normalizeSquadArrangementState } from './squad-optimizer';
 import { validResponseFailure } from './response-failure';
 import { validPromotions } from './ranks';
 import { RANK_IDS } from '../content/ranks';
+import { MAX_MULTIPLIER_FACTOR } from './department-taps';
 
 export const SAVE_KEY = 'tactically-idle/save';
 
 /** Version written by this build. Other versions are rejected. */
-export const CURRENT_SAVE_VERSION = 14;
+export const CURRENT_SAVE_VERSION = 15;
 
 export interface SaveStorage {
   getItem(key: string): string | null;
@@ -265,6 +266,19 @@ function validUnit(u: unknown, key: string): boolean {
   return true;
 }
 
+/** Desk taps (sim/department-taps.ts): a finite allowance and held multipliers, each id once, with
+ * an expiry exactly when it is a power-up. */
+function validTaps(t: unknown): boolean {
+  if (!isObj(t) || !numbers(t, ['credit', 'at']) || (t.credit as number) < 0) return false;
+  const ids = new Set<string>();
+  return isList(t.multipliers, (m) => {
+    if (!isObj(m) || !isStr(m.id) || ids.has(m.id) || !oneOf(m.source, ['upgrade', 'powerup', 'entitlement']) || !numbers(m, ['factor', 'grantedAt'])) return false;
+    ids.add(m.id);
+    if ((m.factor as number) <= 0 || (m.factor as number) > MAX_MULTIPLIER_FACTOR) return false;
+    return m.source === 'powerup' ? isNum(m.expiresAt) : m.expiresAt === undefined;
+  });
+}
+
 /** Structural checks shared by every version. */
 function validBase(s: unknown): s is Record<string, unknown> {
   if (!isObj(s)) return false;
@@ -280,7 +294,8 @@ function validBase(s: unknown): s is Record<string, unknown> {
   if (dep.reputation !== undefined && !(isObj(dep.reputation) && isNum(dep.reputation.lean) && Math.abs(dep.reputation.lean) <= 1 && isNum(dep.reputation.choices) && dep.reputation.choices >= 0)) return false;
   if (dep.habits !== undefined && !(isObj(dep.habits) && isNum(dep.habits.stall) && dep.habits.stall >= 0 && dep.habits.stall <= 1 && isNum(dep.habits.decisions) && dep.habits.decisions >= 0)) return false;
   if (dep.ledger !== undefined && !isList(dep.ledger, (e) => isObj(e) && numbers(e, ['seq', 'at', 'amount', 'before', 'after']) && isStr(e.label) && (e.latest === undefined || isNum(e.latest))
-    && oneOf(e.kind, ['payout', 'signing', 'severance', 'purchase', 'training', 'development', 'service', 'salvage', 'restock', 'staff', 'detail']))) return false;
+    && oneOf(e.kind, ['payout', 'signing', 'severance', 'purchase', 'training', 'development', 'service', 'salvage', 'restock', 'staff', 'detail', 'tap']))) return false;
+  if (dep.taps !== undefined && !validTaps(dep.taps)) return false;
   if (dep.service !== undefined && (!Number.isSafeInteger(dep.service) || (dep.service as number) < 0)) return false;
   if (dep.maintenanceBudgetPerHour !== undefined && (!isNum(dep.maintenanceBudgetPerHour) || !Number.isInteger(dep.maintenanceBudgetPerHour) || dep.maintenanceBudgetPerHour < 0 || dep.maintenanceBudgetPerHour > 500)) return false;
   if (!isObj(s.officers)) return false;

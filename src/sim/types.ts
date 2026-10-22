@@ -500,7 +500,7 @@ export interface Course {
 }
 
 /** What a ledger entry was for (src/sim/ledger.ts). */
-export type LedgerKind = 'payout' | 'signing' | 'severance' | 'purchase' | 'training' | 'development' | 'service' | 'salvage' | 'restock' | 'staff' | 'detail';
+export type LedgerKind = 'payout' | 'signing' | 'severance' | 'purchase' | 'training' | 'development' | 'service' | 'salvage' | 'restock' | 'staff' | 'detail' | 'tap';
 
 /** One discrete change to funding, with the balance either side (save v11). */
 export interface LedgerEntry {
@@ -514,6 +514,29 @@ export interface LedgerEntry {
   label: string;
   /** The newest posting folded into this entry (absent when there is only one). */
   latest?: number;
+}
+
+/** Where a tap multiplier came from (sim/department-taps.ts): a development the department bought,
+ * a timed power-up, or a real purchase. */
+export type MultiplierSource = 'upgrade' | 'powerup' | 'entitlement';
+
+/** A multiplier the department holds (save v15), copied from its registry entry when granted. */
+export interface ActiveMultiplier {
+  id: Id;
+  source: MultiplierSource;
+  /** Applied to every tap while held; positive and finite. */
+  factor: number;
+  grantedAt: number;
+  /** Game time a power-up stops counting. Only power-ups carry one; settlement drops it after. */
+  expiresAt?: number;
+}
+
+/** Desk taps (save v15, sim/department-taps.ts): the refill-limited allowance and the multipliers. */
+export interface TapState {
+  /** Taps the books can still credit as of `at`; refills with game time up to a burst. */
+  credit: number;
+  at: number;
+  multipliers: ActiveMultiplier[];
 }
 
 /** A development a milestone granted free (sim/grants.ts). */
@@ -564,6 +587,8 @@ export interface Department {
   candidateRefreshedAt?: number;
   /** Epoch ms of game-calendar day 0 (see src/sim/calendar.ts). */
   calendarEpoch: number;
+  /** Desk taps and their multipliers (save v15). Optional for fixtures; absent reads as no taps yet. */
+  taps?: TapState;
 }
 
 export interface ShiftReport {
@@ -1194,6 +1219,8 @@ export type Command =
   | { type: 'offerRetention'; officerId: Id }
   | { type: 'startDetail'; officerId: Id }
   | { type: 'markIncidentsSeen' }
+  /** `count` taps on the HQ desk, batched by the screen (sim/department-taps.ts). */
+  | { type: 'tapEarn'; count: number }
   // command staff (src/sim/command-staff.ts); unlockNode opens a post, hireStaff fills it
   | { type: 'setManagerEnabled'; managerId: ManagerId; enabled: boolean }
   | { type: 'setManagerPolicy'; patch: ManagerPolicyPatch }
@@ -1291,6 +1318,7 @@ export type DepartmentCommandType =
   | 'scrapUnit'
   | 'offerRetention'
   | 'markIncidentsSeen'
+  | 'tapEarn'
   | 'setManagerEnabled'
   | 'setManagerPolicy'
   | 'hireStaff'

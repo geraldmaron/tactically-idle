@@ -56,6 +56,7 @@ export const PINNED_BY: Readonly<Record<string, readonly string[]>> = {
   RECRUIT_TUNING: [...sim('department', 'campaign-selection', 'personnel'), 'src/ui/screens/Recruit.test.ts'],
   LEARNING_APTITUDE: sim('officer-value', 'career'),
   DETAIL_TUNING: sim('officer-value'),
+  TAP_TUNING: sim('department-taps'),
   REPUTATION_TUNING: [...sim('reputation'), 'src/architecture/wiring.test.ts', BALANCE],
   PROFILE_TUNING: [...sim('player-profile'), BALANCE],
 };
@@ -391,6 +392,11 @@ export const TUNING_META: readonly FieldMeta[] = [
     max: { label: 'Aptitude at rating 100', help: 'Learning rate multiplier for an officer whose mean composure and awareness is 100.', min: 1, max: 2, step: 0.05, unit: '×' },
     fastAt: { label: 'Reads "learns fast" from', help: 'Combined learning rate at or above which the profile says the officer learns fast. Labels only.', mode: 'display', min: 1, max: 2, step: 0.05, unit: '×' },
     slowAt: { label: 'Reads "learns slowly" at', help: 'Combined learning rate at or below which the profile says the officer learns slowly. Labels only.', mode: 'display', min: 0.3, max: 1, step: 0.05, unit: '×' },
+  }),
+  ...table('TAP_TUNING', { group: 'economy', mode: 'department' }, {
+    base: { label: 'Desk tap pays', help: 'Funding one tap on the HQ desk credits before multipliers.', min: 0.1, max: 100, step: 0.1, unit: 'funding' },
+    maxPerSecond: { label: 'Desk taps credited per second', help: 'The most taps a second the books credit; faster taps are dropped, so an autoclicker earns no more.', min: 1, max: 60, step: 1, unit: 'taps' },
+    burstSeconds: { label: 'Desk tap burst', help: 'Seconds of taps the allowance holds, so a short flurry above the rate still counts. It never saves up past this, so taps do not accrue offline.', min: 0.25, max: 10, step: 0.25, unit: 'seconds' },
   }),
   ...table('DETAIL_TUNING', { group: 'economy', mode: 'department' }, {
     hours: { label: 'Instructor detail length', help: 'Hours an officer is away teaching for a neighbouring department.', min: 1, max: 24, step: 1, unit: 'hours' },
