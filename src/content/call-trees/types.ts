@@ -444,7 +444,8 @@ export interface TreeTimeout {
   nextIf?: { when: TreeState; next: TreeNext }[];
   /** Commitments the run-out breaks, whichever route it takes (TreeOutcome.breaks): the person
    * learns the promise was empty, so `text` says so. A promise not yet made, or already settled, is
-   * left alone. Counts as a breaking route for a `lie` (see TreeOutcome.breaks). */
+   * left alone. A run-out never stands in for an outcome on a `lie`, which still needs an outcome
+   * that breaks it (see TreeOutcome.breaks): the timer can be Off, and then nothing runs out. */
   breaks?: string[];
 }
 

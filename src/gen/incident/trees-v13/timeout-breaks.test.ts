@@ -130,6 +130,6 @@ describe('the static check on a timeout that breaks a commitment', () => {
     expect(deceptionErrors(treeWith({ breaks: ['signs'] }, true))).toEqual(['hostage_crisis: the lie signs is never found out; add an outcome that breaks it']);
   });
   it('refuses a timeout that breaks a promise the call never makes', () => {
-    expect(deceptionErrors(treeWith({ breaks: ['nothing'] }))).toContain('hostage_crisis: an outcome breaks nothing, which no outcome promises');
+    expect(deceptionErrors(treeWith({ breaks: ['nothing'] }))).toContain('hostage_crisis: a timeout breaks nothing, which no outcome promises');
   });
 });

@@ -254,7 +254,8 @@ export function deceptionErrors(tree: CallTree): string[] {
     if (!node.threat!.timeout!.text.trim()) errors.push(`${tree.type}: ${node.id} timeout: breaking ${id} needs text that says the person found out`);
   }
   for (const id of lies) if (!broken.has(id)) errors.push(`${tree.type}: the lie ${id} is never found out; add an outcome that breaks it`);
-  for (const id of [...broken, ...lapsed]) if (!promises.has(id)) errors.push(`${tree.type}: an outcome breaks ${id}, which no outcome promises`);
+  for (const id of broken) if (!promises.has(id)) errors.push(`${tree.type}: an outcome breaks ${id}, which no outcome promises`);
+  for (const id of lapsed) if (!promises.has(id)) errors.push(`${tree.type}: a timeout breaks ${id}, which no outcome promises`);
   return errors;
 }
 
