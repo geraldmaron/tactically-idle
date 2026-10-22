@@ -23,7 +23,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
   const notify = useCallback<ToastApi['notify']>((title, opts) => {
     const id = idRef.current++;
-    // Latest only, above the bottom navigation: stacked or top toasts bury the mission header and blueprint.
+    // Latest only, above the foot: stacked or top toasts bury the mission header and blueprint.
     setItems([{ id, tone: opts?.tone ?? 'info', title, lines: opts?.lines ?? [], onSelect: opts?.onSelect }]);
   }, []);
 
@@ -42,10 +42,14 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <Ctx.Provider value={api}>
       {children}
-      <div className="toasts" role="status" aria-live="polite">
-        {items.map((t) => (
-          <ToastView key={t.id} item={t} onDone={dismiss} />
-        ))}
+      {/* The layer spans the space between the shell's head and foot (the chrome contract), so a
+          toast never covers the resource bar, a flow head, the tabs or an action bar. */}
+      <div className="toast-layer">
+        <div className="toasts" role="status" aria-live="polite">
+          {items.map((t) => (
+            <ToastView key={t.id} item={t} onDone={dismiss} />
+          ))}
+        </div>
       </div>
     </Ctx.Provider>
   );
