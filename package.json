@@ -15,7 +15,8 @@
     "verify": "npm run typecheck && npm test && npm run check:art && npm run build && node scripts/check-no-lab.mjs",
     "test:e2e": "node scripts/play-loop.mjs",
     "capture:locations": "node scripts/capture-locations.mjs",
-    "check:strings": "bun scripts/check-strings.ts"
+    "check:strings": "bun scripts/check-strings.ts",
+    "check:paths": "bun scripts/check-paths.ts"
   },
   "dependencies": {
     "react": "^19.3.0",
