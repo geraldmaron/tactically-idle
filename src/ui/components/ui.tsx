@@ -1,8 +1,6 @@
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
 import { Icon } from '../icons';
 import type { IconName } from '../icons';
-import { Spot } from '../icons/spots';
-import type { SpotName } from '../icons/spots';
 import { RATING_META, STATUS_META, ratingTone } from './labels';
 import type { RatingKey } from '../../sim/types';
 import type { StatusKey } from './labels';
@@ -10,7 +8,9 @@ import { ChoiceRail } from './ChoiceRail';
 import { StressDisplay } from './StressDisplay';
 
 // Small shared primitives, one definition each (docs/ui-ux-audit.md, "Patterns in use"). Styling
-// lives in app.css under "primitives", from the tokens in theme.css.
+// lives in app.css under "primitives", from the tokens in theme.css. Empty, loading and error states
+// are in states.tsx and come through here so a screen has one import.
+export { EmptyState, ErrorState, LoadingState } from './states';
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   /** Primary is the player's move, one per screen and the only amber. Quiet is everything else
@@ -19,16 +19,19 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   size?: 'md' | 'sm';
   icon?: IconName;
   block?: boolean;
+  /** A toggle that is on: the raised slate state, announced through aria-pressed. */
+  selected?: boolean;
 }
 
-export function Button({ variant = 'secondary', size = 'md', icon, block, className, children, type = 'button', ...rest }: ButtonProps) {
+export function Button({ variant = 'secondary', size = 'md', icon, block, selected, className, children, type = 'button', ...rest }: ButtonProps) {
   return (
     <button
       type={type}
-      className={`btn btn-${variant} btn-${size}${block ? ' btn-block' : ''}${className ? ` ${className}` : ''}`}
+      className={`btn btn-${variant} btn-${size}${block ? ' btn-block' : ''}${selected ? ' btn-selected' : ''}${className ? ` ${className}` : ''}`}
       {...rest}
+      aria-pressed={rest['aria-pressed'] ?? selected}
     >
-      {icon && <Icon name={icon} size={size === 'sm' ? 16 : 18} />}
+      {icon && <Icon name={icon} size={size === 'sm' ? 'sm' : 'md'} />}
       {children}
     </button>
   );
@@ -39,6 +42,8 @@ export function Chip({
   tone = 'neutral',
   icon,
   title,
+  selected,
+  disabled,
 }: {
   children: ReactNode;
   /** Neutral, good and harm, plus warn for strain and wear. `mint` and `danger` are the older
@@ -46,16 +51,49 @@ export function Chip({
   tone?: 'neutral' | 'good' | 'harm' | 'warn' | 'amber' | 'mint' | 'danger' | 'blue';
   icon?: IconName;
   title?: string;
+  /** The chip is the chosen one of a set: raised slate fill. */
+  selected?: boolean;
+  /** The chip names something unavailable: dimmed. */
+  disabled?: boolean;
 }) {
   return (
-    <span className={`chip chip-${tone}`} title={title}>
-      {icon && <Icon name={icon} size={13} />}
+    <span className={`chip chip-${tone}${selected ? ' chip-selected' : ''}${disabled ? ' chip-disabled' : ''}`} title={title} aria-disabled={disabled || undefined}>
+      {icon && <Icon name={icon} size="sm" />}
       {children}
     </span>
   );
 }
 
-/** A titled block. The heading is 14px in sentence case, with a quiet count or a link at the right. */
+/** A compact status mark set on a card or beside a title: "Not hired", "+40 XP", "New". Short text only;
+ * a label that can wrap belongs in a Chip. */
+export function Badge({ children, tone = 'neutral', icon }: {
+  children: ReactNode;
+  tone?: 'neutral' | 'good' | 'harm' | 'warn';
+  icon?: IconName;
+}) {
+  return (
+    <span className={`stamp stamp-${tone}`}>
+      {icon && <Icon name={icon} size="sm" />}
+      {children}
+    </span>
+  );
+}
+
+export type TextKind = 'section' | 'row' | 'meta' | 'price' | 'decision';
+
+/** The named type styles (app.css, "Semantic type"): the section heading, a row's title, metadata, a
+ * price and decision text. Meta is the only 12px; the rest read at 14px or more. */
+export function Text({ kind, as: Tag = 'span', className, children }: {
+  kind: TextKind;
+  as?: 'span' | 'p' | 'div' | 'strong';
+  className?: string;
+  children: ReactNode;
+}) {
+  return <Tag className={`t-${kind}${className ? ` ${className}` : ''}`}>{children}</Tag>;
+}
+
+/** A titled block. The heading is 14px in sentence case, with a quiet count or a link at the right.
+ * The `icon` is required, as a Row's `lead` is (docs/visual-kit.md). */
 export function Section({
   title,
   action,
@@ -71,13 +109,14 @@ export function Section({
   children: ReactNode;
   id?: string;
   hint?: ReactNode;
-  icon?: IconName;
+  /** Required: the picture its peers carry. */
+  icon: IconName;
 }) {
   return (
-    <section className="section" aria-labelledby={id}>
+    <section className="section" aria-labelledby={id} data-lead={icon ? undefined : 'none'}>
       <div className="section-head">
         <h2 id={id} className="section-title">
-          {icon && <Icon name={icon} size={18} />}
+          {icon && <Icon name={icon} size="md" />}
           {title}
         </h2>
         {count !== undefined && <span className="section-count">{count}</span>}
@@ -90,15 +129,32 @@ export function Section({
 }
 
 /** A thing you open: a flat panel with one hairline. Lists use Row instead. `amber` marks the one
- * card that needs the player now. */
-export function Card({ children, className, tone }: { children: ReactNode; className?: string; tone?: 'amber' | 'mint' }) {
-  return <div className={`card${tone ? ` card-${tone}` : ''}${className ? ` ${className}` : ''}`}>{children}</div>;
+ * card that needs the player now; `good` and `harm` carry a result. With `onClick` the whole card is
+ * the button. */
+export function Card({ children, className, tone, selected, disabled, onClick, label }: {
+  children: ReactNode;
+  className?: string;
+  tone?: 'amber' | 'mint' | 'good' | 'harm';
+  /** The card is the chosen one of a set. */
+  selected?: boolean;
+  disabled?: boolean;
+  onClick?: () => void;
+  /** The accessible name when the card is a button and its text alone would be unclear. */
+  label?: string;
+}) {
+  const classes = `card${tone ? ` card-${tone}` : ''}${onClick ? ' card-link' : ''}${selected ? ' card-selected' : ''}${disabled ? ' card-disabled' : ''}${className ? ` ${className}` : ''}`;
+  return onClick
+    ? <button type="button" className={classes} onClick={onClick} disabled={disabled} aria-pressed={selected} aria-label={label}>{children}</button>
+    : <div className={classes} aria-disabled={disabled || undefined}>{children}</div>;
 }
 
-/** A list row with a hairline: a lead (face or art), a title and a line, and a trailing value or
- * chevron. With onClick the whole row is the button. */
-export function Row({ lead, title, detail, trail, onClick, className, label }: {
-  lead?: ReactNode;
+/** A list row with a hairline: a lead (face, art or a kit mark), a title and a line, and a trailing
+ * value or chevron. With onClick the whole row is the button. Every row leads with a picture
+ * (docs/visual-kit.md); a falsy lead still renders `data-lead="none"`, which the visual gates count.
+ * `selected` and `disabled` are the shared states. */
+export function Row({ lead, title, detail, trail, onClick, className, label, selected, disabled }: {
+  /** Required: a face, art or a kit mark. Registered art is a node like any other. */
+  lead: ReactNode;
   title: ReactNode;
   detail?: ReactNode;
   trail?: ReactNode;
@@ -106,6 +162,8 @@ export function Row({ lead, title, detail, trail, onClick, className, label }: {
   className?: string;
   /** The accessible name when the row is a button and its text alone would be unclear. */
   label?: string;
+  selected?: boolean;
+  disabled?: boolean;
 }) {
   const body = (
     <>
@@ -117,10 +175,11 @@ export function Row({ lead, title, detail, trail, onClick, className, label }: {
       {trail && <span className="ui-row-trail">{trail}</span>}
     </>
   );
-  const classes = `ui-row${className ? ` ${className}` : ''}`;
+  const classes = `ui-row${selected ? ' ui-row-selected' : ''}${disabled ? ' ui-row-disabled' : ''}${className ? ` ${className}` : ''}`;
+  const leadMark = lead ? undefined : 'none';
   return onClick
-    ? <button type="button" className={classes} onClick={onClick} aria-label={label}>{body}</button>
-    : <div className={classes}>{body}</div>;
+    ? <button type="button" className={classes} onClick={onClick} disabled={disabled} aria-pressed={selected} aria-label={label} data-lead={leadMark}>{body}</button>
+    : <div className={classes} aria-disabled={disabled || undefined} data-lead={leadMark}>{body}</div>;
 }
 
 type ActionBarButton = Omit<ButtonProps, 'variant' | 'children' | 'block'> & { label: ReactNode };
@@ -144,21 +203,11 @@ export function ActionBar({ summary, primary, quiet, className }: {
   );
 }
 
-export function EmptyState({ spot, icon = 'info', title, children }: { /** The kit's picture for this screen (icons/spots.tsx); the icon is the fallback for one with none. */ spot?: SpotName; icon?: IconName; title: string; children?: ReactNode }) {
-  return (
-    <div className="empty">
-      {spot ? <Spot name={spot} width={128} /> : <Icon name={icon} size={26} />}
-      <strong>{title}</strong>
-      {children && <span>{children}</span>}
-    </div>
-  );
-}
-
 export function KV({ k, v, tone, strong, icon }: { k: ReactNode; v: ReactNode; tone?: 'mint' | 'danger' | 'amber'; strong?: boolean; icon?: IconName }) {
   return (
     <div className={`kv${strong ? ' kv-strong' : ''}`}>
       <span className="kv-k">
-        {icon && <Icon name={icon} size={15} />}
+        {icon && <Icon name={icon} size="sm" />}
         {k}
       </span>
       <span className={`kv-v${tone ? ` tone-${tone}` : ''}`}>{v}</span>
@@ -210,7 +259,7 @@ export function RatingBars({ ratings, only, gains, dense = false, label = 'Ratin
         return (
           <li key={meta.key} className="rating-bar">
             <span className="rating-bar-label" title={meta.label}>
-              <Icon name={meta.icon} size={dense ? 12 : 14} />
+              <Icon name={meta.icon} size="sm" />
               <span>{dense ? meta.short : meta.label}</span>
             </span>
             <span className={`rating-bar-value${rising ? ' tone-mint' : ''}`}>
@@ -246,13 +295,13 @@ export function Stepper({
   return (
     <div className="stepper" role="group" aria-label={label}>
       <button type="button" className="stepper-btn" onClick={() => onChange(Math.max(min, value - 1))} disabled={value <= min} aria-label={`Fewer ${label}`}>
-        <Icon name="minus" size={16} />
+        <Icon name="minus" size="sm" />
       </button>
       <output className="stepper-val" aria-live="polite">
         {value}
       </output>
       <button type="button" className="stepper-btn" onClick={() => onChange(Math.min(max, value + 1))} disabled={value >= max} aria-label={`More ${label}`}>
-        <Icon name="plus" size={16} />
+        <Icon name="plus" size="sm" />
       </button>
     </div>
   );
@@ -276,7 +325,7 @@ export function Segmented<T extends string>({
 export function SubHead({ icon, children, tone }: { icon: IconName; children: ReactNode; tone?: 'mint' | 'amber' | 'neutral' }) {
   return (
     <h3 className={`sub-h${tone ? ` tone-${tone}` : ''}`}>
-      <Icon name={icon} size={16} />
+      <Icon name={icon} size="sm" />
       {children}
     </h3>
   );

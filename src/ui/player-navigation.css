@@ -1,12 +1,12 @@
 /* Canonical player destinations share the same controls and equipment presentation. */
-.player-return { padding: 12px var(--gutter) 0; }
+.player-return { padding: var(--sp3) var(--gutter) 0; }
 .player-return .btn { width: 100%; text-align: left; justify-content: flex-start; white-space: normal; }
-.squad-navigation { display: flex; align-items: stretch; gap: 6px; min-width: 0; }
+.squad-navigation { display: flex; align-items: stretch; gap: var(--sp2); min-width: 0; }
 .squad-navigation .choice-rail { flex: 1 1 auto; }
 .squad-tab-name { display: block; max-width: 11rem; overflow: hidden; text-overflow: ellipsis; }
-.squad-add-control { flex: 0 0 44px; min-height: 44px; padding: 6px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); color: var(--text); cursor: pointer; }
+.squad-add-control { flex: 0 0 44px; min-height: 44px; padding: var(--sp2); border: 1px solid var(--line); border-radius: 8px; background: var(--panel); color: var(--text); cursor: pointer; }
 .squad-add-control:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
-.live-squad-rail { padding: 8px var(--gutter); min-width: 0; }
+.live-squad-rail { padding: var(--sp2) var(--gutter); min-width: 0; }
 .gear-art-frame {
   display: inline-grid; place-items: center; flex-shrink: 0; box-sizing: border-box;
   border: 1px solid var(--paper-edge); border-radius: 8px; color: var(--chalk);
@@ -35,7 +35,7 @@
 .chrome-foot > .action-bar { padding-bottom: var(--sp3); }
 
 .flow-head { height: 52px; display: flex; align-items: center; gap: var(--sp2); padding: 0 var(--sp4) 0 var(--sp1); border-bottom: 1px solid var(--hair); background: var(--ink-1); }
-.flow-back { flex: 1 1 0; min-width: 0; height: 44px; display: inline-flex; align-items: center; gap: 2px; padding: 0 var(--sp2); border: 0; border-radius: var(--r1); background: none; color: var(--t2); font: 500 var(--s14)/1 var(--f-ui); cursor: pointer; }
+.flow-back { flex: 1 1 0; min-width: 0; height: 44px; display: inline-flex; align-items: center; gap: var(--sp1); padding: 0 var(--sp2); border: 0; border-radius: var(--r1); background: none; color: var(--t2); font: 500 var(--s14)/1 var(--f-ui); cursor: pointer; }
 .flow-back > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .flow-back:focus-visible, .flow-title:focus-visible { outline: 2px solid var(--act); outline-offset: -2px; }
 @media (hover: hover) { .flow-back:hover { color: var(--t1); } }
@@ -56,7 +56,7 @@
 .resource-bar .stats { flex: 1 1 auto; margin: 0; justify-content: flex-start; flex-wrap: nowrap; gap: 0; }
 .resource-bar .stats > li { display: flex; min-width: 0; }
 .resource-bar .stat { position: relative; height: 44px; padding: 0 var(--sp2); border: 0; border-radius: var(--r1); background: none; color: var(--t1); font: 600 var(--s14)/1 var(--f-ui); font-variant-numeric: tabular-nums; white-space: nowrap; cursor: pointer; }
-.resource-bar .stat { display: inline-flex; align-items: center; justify-content: center; gap: 4px; min-width: var(--touch); }
+.resource-bar .stat { display: inline-flex; align-items: center; justify-content: center; gap: var(--sp1); min-width: var(--touch); }
 .resource-bar .res-icon { flex: none; opacity: 0.85; }
 .resource-bar .stat-rate { color: var(--good-text, var(--good)); font-weight: 500; }
 .resource-bar .stat-rate.stat-neg { color: var(--harm-text, var(--harm)); }
@@ -64,19 +64,19 @@
 .resource-bar .stat-level { flex: none; margin-left: auto; }
 .resource-bar .menu-btn { margin-right: 0; color: var(--t2); }
 .resource-bar button:focus-visible { outline: 2px solid var(--act); outline-offset: -2px; }
-@media (hover: hover) { .resource-bar button:hover { background: rgba(255, 255, 255, .05); } }
+@media (hover: hover) { .resource-bar button:hover { background: color-mix(in srgb, var(--white) 5%, transparent); } }
 @container game (max-width: 359px) {
   /* At 320 the icons carry trust and level (the buttons keep their full aria-labels). */
   .resource-bar .res-word { display: none; }
-  .resource-bar .stat { padding: 0 4px; gap: 3px; }
-  .app .resource-bar { padding: 0 2px 0 0; gap: 0; }
+  .resource-bar .stat { padding: 0 var(--sp1); gap: var(--sp1); }
+  .app .resource-bar { padding: 0 var(--sp1) 0 0; gap: 0; }
 }
 
 .chrome-foot > .bottomnav { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-.bottomnav .navbtn { gap: 3px; }
+.bottomnav .navbtn { gap: var(--sp1); }
 .bottomnav .navlabel { position: relative; font: 600 var(--s14)/1 var(--f-ui); }
 .bottomnav .navicon .icon { display: block; }
-.bottomnav .navbadge { top: -8px; right: -12px; min-width: 18px; height: 18px; padding: 0 4px; border: 0; box-sizing: border-box; font: 700 var(--s12)/1 var(--f-ui); background: var(--act); color: var(--act-ink); }
+.bottomnav .navbadge { top: -8px; right: -12px; min-width: 18px; height: 18px; padding: 0 var(--sp1); border: 0; box-sizing: border-box; font: 700 var(--s12)/1 var(--f-ui); background: var(--act); color: var(--act-ink); }
 .bottomnav .live-dot { top: -4px; right: -6px; }
 .bottomnav .navdot { top: -3px; right: -5px; background: var(--act); }
 
@@ -84,7 +84,7 @@
 .overflow { position: relative; flex: none; }
 .overflow > summary { list-style: none; display: inline-flex; align-items: center; justify-content: center; min-width: 48px; cursor: pointer; }
 .overflow > summary::-webkit-details-marker { display: none; }
-.overflow-menu { position: absolute; right: 0; top: calc(100% + var(--sp1)); z-index: 5; min-width: 220px; display: flex; flex-direction: column; gap: 2px; padding: var(--sp1); border: 1px solid var(--hair-2); border-radius: var(--r2); background: var(--ink-2); box-shadow: 0 12px 32px rgba(0, 0, 0, .5); }
+.overflow-menu { position: absolute; right: 0; top: calc(100% + var(--sp1)); z-index: 5; min-width: 220px; display: flex; flex-direction: column; gap: var(--sp1); padding: var(--sp1); border: 1px solid var(--hair-2); border-radius: var(--r2); background: var(--ink-2); box-shadow: 0 12px 32px color-mix(in srgb, var(--black) 50%, transparent); }
 .overflow-up .overflow-menu { top: auto; bottom: calc(100% + var(--sp1)); }
 .overflow-menu .btn { justify-content: flex-start; width: 100%; }
 
