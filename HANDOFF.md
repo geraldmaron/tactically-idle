@@ -128,7 +128,10 @@ round 3 findings fixed as data at 8d8a0fc; the lead re-ran `check:paths` there (
 nothing beaten). Not run on the branch: full verify (the old call's pinned tests fail by design until step 3).
 Owner's go for prose (2026-10-22): layers run one at a time, each cut from
 the previous tip. P4a scene: prose-scene (local_31193569, Sonnet), from 8d8a0fc, writes only strings in
-`hostage-live.ts` and `hostage.ts` plus its record; brief `going-live-spine/prose-p4a-brief.md`. Then P4b menu,
+`hostage-live.ts` and `hostage.ts` plus its record; brief `going-live-spine/prose-p4a-brief.md`. P4a READY at
+4a5242f on `claude/prose-scene-6a2c7c` (worktree folder `frosty-goldwasser-fee639`): strings only, no data
+moved, check:strings clean in its fields. P4b menu is proposed as a card for the owner to start (brief
+`going-live-spine/prose-p4b-brief.md`, cut from 4a5242f). Then
 P4c consequences (P3 folded in), P5 chat variants, one integration edit, `swat-writing-review` by a separate
 reader, the old call's tests, then merge.
 
